@@ -22,9 +22,11 @@ theorem callElse_tail (reader : List Token → Except String (SAnw × List Token
     subst hr
     obtain ⟨ts, hk⟩ := hk
     rw [hk] at hb ⊢
+    simp only [List.cons_append] at hb
     simp only [parseRufMitElse, strEq_self, ↓reduceIte, List.nil_append, List.cons_append,
       strEq_brace_paren, Bool.false_eq_true, hb, bind, Except.bind, fordereZeichen, pure, Except.pure]
-  · simp only [h, ↓reduceIte, List.cons_append, List.nil_append, parseRufMitElse,
+  · simp only [show strEq reason "" = false by simpa using h, Bool.false_eq_true, ↓reduceIte,
+      List.cons_append, List.nil_append, parseRufMitElse,
       strEq_self, nimmName, nameText_nameTok, fordereZeichen, bind, Except.bind, hb, pure, Except.pure]
 
 /-- Generic statement round trip, retaining either a named or discarded reason. -/

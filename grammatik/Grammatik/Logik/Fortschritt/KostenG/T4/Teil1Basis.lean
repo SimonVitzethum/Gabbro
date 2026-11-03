@@ -58,7 +58,7 @@ theorem spiegel_stmt (c : D.Fn â†’ Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Î
   | .advances .., h => by simp only [spiegelS, Bool.false_eq_true] at h
   | .retires .., h => by simp only [spiegelS, Bool.false_eq_true] at h
   | .assignSlot .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
-  | .assignThru .., _ | .assignSlotRef .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .assignThru .., _ | .assignThruOwn .., _ | .assignSlotRef .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
   | .assignGlob .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
   | .putBytes .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
   | .assignVar .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega

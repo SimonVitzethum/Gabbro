@@ -239,6 +239,16 @@ def rufKopf {α : Type} (toks : List Token)
 
 theorem strEq_paren_doppelpunkt : strEq "(" "::" = false := by decide
 theorem strEq_paren_paren : strEq "(" "(" = true := by decide
+theorem strEq_paren_gleich : strEq "(" "=" = false := by decide
+theorem strEq_paren_plusgleich : strEq "(" "+=" = false := by decide
+theorem strEq_paren_minusgleich : strEq "(" "-=" = false := by decide
+theorem strEq_paren_undgleich : strEq "(" "&=" = false := by decide
+theorem strEq_paren_odergleich : strEq "(" "|=" = false := by decide
+theorem strEq_doppelpunkt_gleich : strEq "::" "=" = false := by decide
+theorem strEq_doppelpunkt_plusgleich : strEq "::" "+=" = false := by decide
+theorem strEq_doppelpunkt_minusgleich : strEq "::" "-=" = false := by decide
+theorem strEq_doppelpunkt_undgleich : strEq "::" "&=" = false := by decide
+theorem strEq_doppelpunkt_odergleich : strEq "::" "|=" = false := by decide
 
 
 -- The expression levels of SYNTAX.md section 4 (`expr` down to

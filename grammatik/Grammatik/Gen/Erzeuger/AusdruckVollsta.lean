@@ -40,6 +40,7 @@ def _root_.Gabbro.Grammatik.NutzlastExpr.teile {o : Option Ty} : NutzlastExpr D 
 def _root_.Gabbro.Grammatik.Expr.teile {τ : Ty} : Expr D Γ Λ τ → List (SE D Γ Λ)
   | .slot _ _ i _ | .oldS _ _ i _ | .getBytes _ _ _ _ i _ _ _ => [⟨_, i⟩]
   | .thru p _ _ _ i _ => [⟨_, p⟩, ⟨_, i⟩]
+  | .thruOwn p _ _ _ i _ _ _ _ _ _ => [⟨_, p⟩, ⟨_, i⟩]
   | .widen _ _ e | .some e | .istSome e => [⟨_, e⟩]
   | .neg a | .not a => [⟨_, a⟩]
   | .slotRef r _ _ _ _ _ => [⟨_, r⟩]

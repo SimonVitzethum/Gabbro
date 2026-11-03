@@ -31,6 +31,7 @@ def nS (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l :
     {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Bool
   | .assignSlot _ _ i e _ _ => i.orte.all S && e.orte.all S
   | .assignThru p _ _ _ i e _ _ => p.orte.all S && i.orte.all S && e.orte.all S
+  | .assignThruOwn p _ _ _ i e _ _ _ _ _ _ _ => p.orte.all S && i.orte.all S && e.orte.all S
   | .assignSlotRef r _ _ _ _ e _ _ => r.orte.all S && e.orte.all S
   | .assignGlob _ e _ _ => e.orte.all S
   | .putBytes _ _ _ _ i _ _ e _ _ => i.orte.all S && e.orte.all S

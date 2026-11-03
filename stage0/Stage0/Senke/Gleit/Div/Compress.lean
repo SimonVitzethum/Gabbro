@@ -56,10 +56,10 @@ theorem softDivQuotientL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
   have highShift : (BitVec.ofInt 64 (Int.ofNat (64 - k))).toNat % 64 = 64 - k := by
     rcases count with rfl | rfl <;> decide
   have limbs := softDivQuotient_limbs an k ab (by rcases count with rfl | rfl <;> decide)
-  have lowCode := WordCode.bin ha (WordCode.const _ literal)
+  have lowCode : WordCode (L := L) ρ W _ _ := WordCode.bin ha (WordCode.const _ literal)
     (g := fun x y => some (x <<< (y.toNat % 64))) rfl rfl (by decide : 11 < 256)
   rw [shift, limbs.1] at lowCode
-  have highCode := WordCode.bin ha (WordCode.const _ highLiteral)
+  have highCode : WordCode (L := L) ρ W _ _ := WordCode.bin ha (WordCode.const _ highLiteral)
     (g := fun x y => some (x >>> (y.toNat % 64))) rfl rfl (by decide : 12 < 256)
   rw [highShift, limbs.2] at highCode
   intro fp K d code top hc ht m pc hp

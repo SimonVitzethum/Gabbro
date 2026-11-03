@@ -22,6 +22,10 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 variable {u : UProg}
 
+/-- Generated transition bodies use a separate lowering, outside the Body simulation. -/
+def OhneGenerierteTransitions (u : UProg) : Prop :=
+  ∀ c : Fin u.fns.length, transitionOfFn u c = none
+
 /-- What the lowering says about the program. -/
 structure Gesenkt (u : UProg) (P : Programm (declOf u)) : Prop where
   req : ∀ f, P.requires f = .tru
@@ -30,23 +34,31 @@ structure Gesenkt (u : UProg) (P : Programm (declOf u)) : Prop where
   rumpf : ∀ f, ∃ b0, lowBody u f (fnAt u f).body (fnAt u f).ret = .ok b0 ∧ HEq (P.rumpf f) b0
 
 theorem lowerFnAt_ok (c : Fin u.fns.length) {v : EnsTy u c × RumpTy u c × ReqTy u c}
+    (hPlain : transitionOfFn u c = none)
     (h : lowerFnAt u c = .ok v) :
     ∃ e0 b0, lowEnsList u (ErgCtx (ctxOf u c) (verOf u c).erg) (resOf u c) (fnAt u c)
       (fnAt u c).ergTy (fnAt u c).gives = .ok e0 ∧
       lowBody u c (fnAt u c).body (fnAt u c).ret = .ok b0 ∧ HEq v.1 e0 ∧ HEq v.2.1 b0 := by
   unfold lowerFnAt at h
+  rw [hPlain] at h
   split at h
   · cases h
-  · split at h
+  · rename_i hName
+    have h : lowerFnPlain u c = .ok v := h
+    clear hName
+    unfold lowerFnPlain at h
+    split at h
     · cases h
-    · rename_i e0 he0
-      split at h
+    · split at h
       · cases h
-      · rename_i b0 hb0
-        cases h
-        refine ⟨e0, b0, he0, hb0, ?_, ?_⟩
-        · dsimp only; exact mpr2_heq _ _ _
-        · dsimp only; exact mpr2_heq _ _ _
+      · rename_i e0 he0
+        split at h
+        · cases h
+        · rename_i b0 hb0
+          cases h
+          refine ⟨e0, b0, he0, hb0, ?_, ?_⟩
+          · dsimp only; exact mpr2_heq _ _ _
+          · dsimp only; exact mpr2_heq _ _ _
 
 theorem lowerAtPair_eq (f : Fin u.fns.length) (h : ∃ v, lowerFnAt u f = .ok v)
     {v : EnsTy u f × RumpTy u f × ReqTy u f} (hv : lowerFnAt u f = .ok v) : lowerAtPair u f h = v := by
@@ -63,6 +75,7 @@ theorem lowerAtPair_eq (f : Fin u.fns.length) (h : ∃ v, lowerFnAt u f = .ok v)
 /-- **What `lowerAllg` says about the program it answers.** -/
 theorem gesenkt_of {P : Programm (declOf u)} {fs : List (declOf u).Fn}
     (hn : ∀ f : Fin u.fns.length, (fnAt u f).needs = [])
+    (hPlain : OhneGenerierteTransitions u)
     (h : lowerAllg u = .ok (P, fs)) : Gesenkt u P := by
   have hreq := lowerAllg_requires u P fs hn h
   unfold lowerAllg at h
@@ -77,14 +90,14 @@ theorem gesenkt_of {P : Programm (declOf u)} {fs : List (declOf u).Fn}
         refine ⟨hreq, fun f => ?_, fun f => ?_⟩
         · have w := lowerEach_all_ok u (List.finRange u.fns.length) f (List.mem_finRange f) hall
           obtain ⟨v, hv⟩ := w
-          obtain ⟨e0, b0, he, hb, he', _⟩ := lowerFnAt_ok f hv
+          obtain ⟨e0, b0, he, hb, he', _⟩ := lowerFnAt_ok f (hPlain f) hv
           refine ⟨e0, he, ?_⟩
           show HEq (lowerAtPair u f _).1 e0
           rw [lowerAtPair_eq f _ hv]
           exact he'
         · have w := lowerEach_all_ok u (List.finRange u.fns.length) f (List.mem_finRange f) hall
           obtain ⟨v, hv⟩ := w
-          obtain ⟨e0, b0, he, hb, _, hb'⟩ := lowerFnAt_ok f hv
+          obtain ⟨e0, b0, he, hb, _, hb'⟩ := lowerFnAt_ok f (hPlain f) hv
           refine ⟨b0, hb, ?_⟩
           show HEq (lowerAtPair u f _).2.1 b0
           rw [lowerAtPair_eq f _ hv]

@@ -39,7 +39,7 @@ theorem mS_mono (hle : MLe A A') {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ
   | _, _, _, _, .forever _ _ body, h => mB_mono hle body h
   | _, _, _, _, .axiomCallElse _ _ _ _ _ _ _ _ err, h => mE_mono hle err h
   | _, _, _, _, .assignSlot .., _ => rfl
-  | _, _, _, _, .assignThru .., _ | _, _, _, _, .assignSlotRef .., _ => rfl
+  | _, _, _, _, .assignThru .., _ | _, _, _, _, .assignThruOwn .., _ | _, _, _, _, .assignSlotRef .., _ => rfl
   | _, _, _, _, .assignGlob .., _ => rfl
   | _, _, _, _, .putBytes .., _ => rfl
   | _, _, _, _, .assignVar .., _ => rfl

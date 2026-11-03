@@ -3,7 +3,7 @@
    releasing body. -/
 module
 
-public import Grammatik.Kern.Syntax.Satz.T1
+public import Grammatik.Kern.Syntax.Satz.T1Frame
 public import Grammatik.Kern.Syntax.Satz.T2.Teil1b
 
 @[expose] public section

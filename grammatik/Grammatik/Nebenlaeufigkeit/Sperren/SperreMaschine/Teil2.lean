@@ -173,6 +173,15 @@ theorem freigabe_schrittG (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
         rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
         exact lese_offen _ _ _
 
+  | g7 hs =>
+    cases hs with
+    | _ =>
+        simp only [execStmt, Ausgang.leave.injEq, Ausgang.next.injEq] at *
+        subst_vars
+        simp only [rufUpdateG_self]
+        refine Or.inl (hgross ?_)
+        simp only [lese_offen] <;> rfl
+
 end Freigabe
 
 /-! ## 4. The invariant of every free lock holds in the machine -/

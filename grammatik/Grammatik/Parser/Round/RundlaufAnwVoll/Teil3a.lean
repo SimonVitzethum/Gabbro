@@ -90,11 +90,14 @@ theorem anw_emit (z w : SExpr) (p : String) (hz : gutPlatz z = true) (hw : gut w
   have hK := kopfP z hz (.zeichen "=" :: (druckToks w ++ .wort "publishes" :: (P ++ .zeichen ";" :: rest)))
     F' rfl (by omega)
   have hO := ausdruck w hw (.wort "publishes" :: (P ++ .zeichen ";" :: rest)) F' rfl rfl rfl (by omega)
+  obtain ⟨hmiss, hgeneric⟩ := zuweis_keineRufOeffnung "=" rfl
+    (druckToks w ++ .wort "publishes" :: (P ++ .zeichen ";" :: rest))
   simp only [parseKopfStmt, hK]
   split
   · simp only [gutPlatz, Bool.false_eq_true] at hz
   · simp only [gutPlatz, Bool.false_eq_true] at hz
-  · simp only [String.reduceEq, imp_self, strEq_self, Bool.true_or, ↓reduceIte, List.tail_cons, hO]
+  · simp only [gutPlatz, Bool.false_eq_true] at hz
+  · simp only [hmiss, imp_self, strEq_self, Bool.true_or, ↓reduceIte, List.tail_cons, hO]
     exact hPk rest
 
 

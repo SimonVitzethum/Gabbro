@@ -57,7 +57,7 @@ theorem wideEng_ok {lo hi lo' hi' : Int} (x : Zahl lo hi) (fallback result : Zah
       obtain ⟨m1, s1, a1, v1⟩ := ihe ce te heqe (by omega) m pc hp'.left
       have h1 := hp'.next a1 (Nat.le_refl d) (by omega)
       obtain ⟨m2, s2, a2, w2⟩ := wideExtend_run (extSigned lo) x.n (integerWords_pos' lo hi) wordsX
-        (wideFits_zahl x) h1.frame h1.small (by omega) h1.left.code h1.left.far v1.2
+        (wideFits_zahl x) h1.frame h1.small (by omega) h1.left.code h1.left.far (by have w := v1.2; erw [encodeWords_int] at w; exact w)
       have h2 := h1.next a2 (Nat.le_refl d) (by omega)
       have fx := signedFits_zahl x signedX
       have fb' := signedFits_endpoints hne signedB

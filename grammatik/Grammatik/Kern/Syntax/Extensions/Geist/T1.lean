@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Kern.Syntax.Extensions.Geist.T1.Teil1
+public import Grammatik.Kern.Syntax.Extensions.Geist.T1.Teil1Sound
 public import Grammatik.Kern.Syntax.Extensions.Geist.T1.Teil2
 public import Grammatik.Kern.Syntax.Extensions.Geist.T1.Teil2b
 public import Grammatik.Kern.Syntax.Extensions.Geist.T1.Teil3

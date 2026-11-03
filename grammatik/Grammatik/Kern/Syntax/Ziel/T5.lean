@@ -93,7 +93,7 @@ theorem kette_mit_zeugen_orakel
   obtain ⟨J', hJ'w, hJ'l, hmem', hLink', hGuard'⟩ :=
     kette_mit_zeugen_schritt P O passes hO sp Nb M _ f hReach hReach' V l Γ Λ Λ
       (Stmt.axiomCall a args hh hw hg hd hgd : Stmt D V l Γ Λ Λ) ρ
-      hΛ σ' neu hstep rfl rfl J hJw hmem hW hG hsingle t₀ L hGuardT hCov hwit_old hneu_wit
+      rfl hΛ σ' neu hstep rfl rfl J hJw hmem hW hG hsingle t₀ L hGuardT hCov hwit_old hneu_wit
   exact ⟨J', _, _, hJ'w, hJ'l, hmem', hLink', hGuard', hPC'⟩
 
 #print axioms Gabbro.Grammatik.kette_mit_zeugen_orakel
@@ -158,6 +158,7 @@ theorem hwitschritt_kleber_reuse
     (hReach' : GenErreichbar P O passes (GenStart sp) M')
     (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
     (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
+    (hleaf : s.istBlatt = true)
     (hΛ : HeldGenau Λ (offen (M.spuren f)))
     (σ' : World D) (neu : List (Ereignis D))
     (hstep : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ')
@@ -188,7 +189,7 @@ theorem hwitschritt_kleber_reuse
       (∀ (g : Faden), g ∈ J'.faeden → TraegerSchreibt (J'.code g) (.inl t₀) = true →
         L ∈ D.haelt (J'.code g)) :=
   kette_mit_zeugen_schritt P O passes hO sp Nb M M' f hReach hReach' V l Γ Λ Λ' s ρ
-    hΛ σ' neu hstep hM'l hM'w J hJw hmem hW hG hsingle t₀ L hGuardT hCov hwit_old hneu_wit
+    hleaf hΛ σ' neu hstep hM'l hM'w J hJw hmem hW hG hsingle t₀ L hGuardT hCov hwit_old hneu_wit
 
 #print axioms Gabbro.Grammatik.hwitschritt_kleber_reuse
 
@@ -213,6 +214,7 @@ theorem hwitschritt_kleber_voll
     (hReach' : GenErreichbar P O passes (GenStart sp) M')
     (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
     (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
+    (hleaf : s.istBlatt = true)
     (hΛ : HeldGenau Λ (offen (M.spuren f)))
     (σ' : World D) (neu : List (Ereignis D))
     (hstep : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ')
@@ -349,7 +351,7 @@ theorem hwitschritt_kleber_voll
         rw [eW2] at hkn
         have hnach0 : σ' = nach0 := Option.some_inj.mp hkn
         rw [hg0, hvor, ← hnach0]
-        have hR := blatt_rahmen_schritt O passes hO M f V l Γ Λ Λ' s ρ hΛ σ' hstep
+        have hR := blatt_rahmen_schritt O passes hO M f V l Γ Λ Λ' s ρ hleaf hΛ σ' hstep
           J.code hW hG
         refine ⟨hmem, ?_, ?_⟩
         · intro t ht k2 fld

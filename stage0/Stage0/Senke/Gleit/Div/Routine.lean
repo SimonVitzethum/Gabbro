@@ -55,12 +55,12 @@ theorem softDivFiniteDirectionalL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Me
     WordCode (L := L) ρ W (fun d => softDivFiniteDirectionalL d a b k)
       (softDivFiniteDirectionalWord av bv k) := by
   have sign := xorSignL_ok (unpackSignL_ok ha) (unpackSignL_ok hb)
-  have leftIndex := WordCode.bin (softMulNormalizeIndexL_word ha) (WordCode.const 2278 (by decide))
+  have leftIndex : WordCode (L := L) ρ W _ _ := WordCode.bin (softMulNormalizeIndexL_word ha) (WordCode.const 2278 (by decide))
     (g := fun x y => some (x + y)) rfl rfl (by decide : 3 < 256)
-  have difference := WordCode.bin leftIndex (softMulNormalizeIndexL_word hb)
+  have difference : WordCode (L := L) ρ W _ _ := WordCode.bin leftIndex (softMulNormalizeIndexL_word hb)
     (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
   have literal : lit32 (Int.ofNat k) = true := by rcases count with rfl | rfl <;> decide
-  have total := WordCode.bin difference (WordCode.const _ literal)
+  have total : WordCode (L := L) ρ W _ _ := WordCode.bin difference (WordCode.const _ literal)
     (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
   have left := softMulNormalizeL_word ha
   have right := softMulNormalizeL_word hb

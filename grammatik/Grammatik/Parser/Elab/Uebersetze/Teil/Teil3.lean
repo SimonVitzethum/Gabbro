@@ -7,68 +7,14 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil2
+public import Grammatik.Parser.Elab.Uebersetze.Kontext.Eigner
+public import Grammatik.Parser.Elab.Uebersetze.Folds.ConstEvaluation
 public import Grammatik.Parser.Elab.Uebersetze.Folds.FloatLiterals
 
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
-
-/-- The constant value of an expression, or `none`: every value stays in `lo .. hi`. Structural in the
-    FUEL (so that the kernel can run it: a well-founded definition here made every probe run away). -/
-def uKonstWert (lo hi : Int) (fns : List UKonstFn) (env : List (String × Int)) :
-    Nat → SExpr → Option Int
-  | 0, _ => none
-  | f + 1, e =>
-    let ok : Int → Option Int := fun v => if lo ≤ v ∧ v ≤ hi then some v else none
-    match e with
-    | .lit n => ok (Int.ofNat n)
-    | .variable x =>
-      match env.find? (fun q => strEq q.1 x) with
-      | some q => ok q.2
-      | none => none
-    | .field (.variable ty) m =>
-      match uTypName [] ty with
-      | .ok (l, h) =>
-        if strEq m "max" then ok h else if strEq m "min" then ok l else none
-      | .error _ => none
-    | .bin op a b =>
-      match uKonstWert lo hi fns env f a, uKonstWert lo hi fns env f b with
-      | some x, some y =>
-        if strEq op "+" then ok (x + y)
-        else if strEq op "-" then ok (x - y)
-        else if strEq op "*" then ok (x * y)
-        else if strEq op "/" then (if 0 < y then ok (x / y) else none)
-        else if strEq op "%" then (if 0 < y then ok (x % y) else none)
-        else if strEq op "&" then
-          (if 0 ≤ x ∧ 0 ≤ y then ok (Int.ofNat (x.toNat &&& y.toNat)) else none)
-        else if strEq op "|" then
-          (if 0 ≤ x ∧ 0 ≤ y then ok (Int.ofNat (x.toNat ||| y.toNat)) else none)
-        else if strEq op "^" then
-          (if 0 ≤ x ∧ 0 ≤ y then ok (Int.ofNat (x.toNat ^^^ y.toNat)) else none)
-        else if strEq op "<<" then
-          (if 0 ≤ x ∧ 0 ≤ y ∧ y < 64 then ok (x * 2 ^ y.toNat) else none)
-        else if strEq op ">>" then
-          (if 0 ≤ x ∧ 0 ≤ y ∧ y < 64 then ok (x / 2 ^ y.toNat) else none)
-        else none
-      | _, _ => none
-    | .call g args =>
-      match fns.find? (fun k => strEq k.name g) with
-      | none => none
-      | some k =>
-        match args.mapM (fun a => uKonstWert lo hi fns env f a) with
-        | none => none
-        | some vals =>
-          match uKonstBinde k.params vals with
-          | none => none
-          | some binds =>
-            match k.erg, k.rumpf with
-            | .int kl kh, .block [] (some (.ret (some expression))) =>
-              match uKonstWert kl kh fns binds f expression with
-              | some v => ok v
-              | none => none
-            | _, _ => none
-    | _ => none
 
 /-- The constant scope of a unit: in source order, each constant may use the ones before it. A literal
     keeps the old rule (any declared type); any other expression needs a builtin-word type and the
@@ -112,27 +58,25 @@ def sTypText : STyp → String
   | .entry n _ => "entry " ++ n
   | .dyn n _ => "dyn " ++ n
 
-/-- Normalize the complete table access rights. Owner flow is still refused by name. -/
-def uTableRight (text : String) : Except String (Bool × Bool) :=
-  match DataRights.decode (fun _ => none) text with
-  | some rights =>
-    if rights.owner.isNone then .ok (rights.read, rights.write)
-    else .error ("pointer rights require checked owner flow: " ++ text)
+/-- Normalize the complete table access rights. Owner identities resolve
+    against the unit's declared owner namespace; anything else (unknown
+    components, unresolved/conflicting owners, execute rights) fails closed.
+    With the empty namespace every `own` spelling is refused by name. -/
+def uTableRight (eigner : List String := []) (text : String) : Except String DataRights :=
+  match DataRights.decode (uEignerNr eigner) text with
+  | some rights => .ok rights
   | none => .error ("pointer rights without checked data/owner form: " ++ text)
 
-/-- Export retains both flags and cannot erase an owner identity. -/
-theorem uTableRight_sound (text : String) (access : Bool × Bool) (h : uTableRight text = .ok access) :
-    ∃ rights : DataRights, DataRights.decode (fun _ => none) text = some rights ∧
-      (rights.read, rights.write) = access ∧ rights.owner = none := by
-  cases hd : DataRights.decode (fun _ => none) text with
+/-- Export retains the complete decoded rights: both flags and any resolved
+    owner identity, never via the read/write flags alone. -/
+theorem uTableRight_sound (eigner : List String) (text : String) (rights : DataRights)
+    (h : uTableRight eigner text = .ok rights) :
+    DataRights.decode (uEignerNr eigner) text = some rights := by
+  cases hd : DataRights.decode (uEignerNr eigner) text with
   | none => simp [uTableRight, hd] at h
-  | some rights =>
-    cases ho : rights.owner with
-    | none =>
-      have he : (rights.read, rights.write) = access := by
-        simpa [uTableRight, hd, ho] using h
-      exact ⟨rights, hd, he, ho⟩
-    | some owner => simp [uTableRight, hd, ho] at h
+  | some r =>
+    have he : r = rights := by simpa [uTableRight, hd] using h
+    subst he; exact hd
 
 /-- Resolve a logical space against the declaration order. Unknown names are refused. -/
 def uDataSpace (spaces : List String) (name : String) : Except String Nat :=
@@ -144,10 +88,12 @@ def uDataSpace (spaces : List String) (name : String) : Except String Nat :=
 
 /-- A surface type as G sees it: a pointer to a table, an index
     into one, or an integer range (the `ParamTy`/`int_range` of
-    `lean_g.rs`). Unknown named address spaces,
-    rights outside owner-free data access unions, the optional index and every
-    other shape are explicit errors. -/
-def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : List (String × Ty)) (spaces : List String := []) : STyp → Except String Ty
+    `lean_g.rs`). `own@m` rights resolve against the unit's declared owner
+    namespace (`eigner`); bare `own` stays refused (it is the consumes/allocs
+    sugar and needs the C09 signature flow). Unknown named address spaces,
+    failing rights unions, the optional index and every other shape are
+    explicit errors. -/
+def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : List (String × Ty)) (spaces : List String := []) (eigner : List String := []) : STyp → Except String Ty
   | .atom "bool" => .ok .bool
   | .atom "f32" | .atom "f64" => .ok uFloatTy
   | .atom a =>
@@ -158,10 +104,14 @@ def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : L
       | .ok (lo, hi) => .ok (.int lo hi)
       | .error e => .error e
   | .range base lo hi o =>
-    match uTypIn alias tabs named spaces base, uSchranke alias lo, uSchranke alias hi with
+    match uTypIn alias tabs named spaces (eigner := eigner) base, uSchranke alias lo, uSchranke alias hi with
     | .ok (.int _ _), some a, some b => .ok (.int a (if o then b - 1 else b))
     | .error e, _, _ => .error e
     | _, _, _ => .error "range requires an integer type and known bounds"
+  | .index true t =>
+    match uTabNr tabs t with
+    | .ok (_, count) => .ok (.opt count)
+    | .error error => .error error
   | .index false t =>
     match uTabNr tabs t with
     | .ok (num, c) =>
@@ -171,13 +121,13 @@ def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : L
     if strEq t "u8" then .error "live byte capability requires C01 value flow, C08 grant generations and C09 loans"
     else do
       let space ← uDataSpace spaces raum
-      let access ← uTableRight rechte
+      let rights ← uTableRight eigner rechte
       let (num, _) ← uTabNr tabs t
-      pure (.ptr (.table num access space))
+      pure (.ptr ⟨space, rights, .table num⟩)
   | .ptr _ _ _ => .error "live byte capability requires C01 value flow, C08 grant generations and C09 loans"
   | .entry _ _ => .error "entry handle requires C08/C14 binding and C09 forwarding flow"
   | .array t n =>
-    match uTypIn alias tabs named spaces t, uSchranke alias n with
+    match uTypIn alias tabs named spaces (eigner := eigner) t, uSchranke alias n with
     | .ok τ, some k => if 0 ≤ k then .ok (.arr τ k.toNat) else .error "array of a negative length"
     | .error e, _ => .error e
     | _, none => .error "array length without G form"
@@ -188,23 +138,26 @@ def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : L
   | t => .error ("type without G form: " ++ sTypText t)
 
 /-- The canonical reader in a declaration environment without named value schemas. -/
-def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) (spaces : List String := []) : STyp → Except String Ty :=
-  uTypIn alias tabs [] spaces
+def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) (spaces : List String := []) (eigner : List String := []) : STyp → Except String Ty :=
+  uTypIn alias tabs [] spaces (eigner := eigner)
 
 /-- Collect constant functions independently of their statement body shape. -/
-def uKonstFns : List SItemTief → List UKonstFn
+def uKonstFnsWith (alias : List (String × (Int × Int))) : List SItemTief → List UKonstFn
   | [] => []
   | .fnT sig body :: rest =>
     if strEq sig.art "const" then
       match sig.res with
       | some result =>
-        match uTyp [] [] result, sig.params.mapM (fun (n, ty) => (uTyp [] [] ty).map (fun t => (n, t))) with
+        match uTyp alias [] result, sig.params.mapM (fun (n, ty) => (uTyp alias [] ty).map (fun t => (n, t))) with
         | .ok resultType, .ok parameters =>
-          { name := sig.name, params := parameters, erg := resultType, rumpf := body, signature := sig } :: uKonstFns rest
-        | _, _ => uKonstFns rest
-      | none => uKonstFns rest
-    else uKonstFns rest
-  | _ :: rest => uKonstFns rest
+          { name := sig.name, params := parameters, erg := resultType, rumpf := body, signature := sig } :: uKonstFnsWith alias rest
+        | _, _ => uKonstFnsWith alias rest
+      | none => uKonstFnsWith alias rest
+    else uKonstFnsWith alias rest
+  | _ :: rest => uKonstFnsWith alias rest
+
+/-- Builtin-only collector retained as the canonical initial discovery pass. -/
+def uKonstFns (items : List SItemTief) : List UKonstFn := uKonstFnsWith [] items
 
 /-- A slot field type as an integer range (the field loop of
     `read_table`; `wrapping` and everything else are explicit
@@ -334,7 +287,7 @@ def uFelder : List (String × (Int × Int)) → List String → List SFeld →
 
 /-- A table of `count` slots with its fields, its invariants and its tree edges. -/
 def uTabelleSlots (consts : List (String × Int)) (alias : List (String × (Int × Int))) (tnames : List String)
-    (n : String) (cnt : SExpr) (sh : Bool) (fds : List SFeld) (invs : List STabTeil) (kanten : List (String × String)) :
+    (n : String) (cnt : SExpr) (sh : Bool) (fds : List SFeld) (invs : List STabTeil) (kanten : List (String × String)) (o : Option String := none) :
     Except String UTab :=
   if !invs.all (fun p => match p with | .tInv _ => true | _ => false) then .error "table without G form" else
   match uAnzahl consts cnt with
@@ -354,28 +307,29 @@ def uTabelleSlots (consts : List (String × Int)) (alias : List (String × (Int 
             wraps := fs.filterMap (fun p => match p.2 with | .wrap m => some (p.1.1, m) | _ => none),
             sumNamen := fs.filterMap (fun p => match p.2 with | .summe a => some (p.1.1, a) | _ => none),
             idxNamen := fs.filterMap (fun p => match p.2 with | .idx tn => some (p.1.1, tn) | _ => none),
-            kanten := kanten, shared := sh, breiten := uFeldBreiten alias fds }
+            kanten := kanten, shared := sh, breiten := uFeldBreiten alias fds, owner := o }
 
 /-- One table: `count` and one integer range per slot field.
-/// Invariants, `ops`, tree edges, the occupancy mark, an
-    `owner` mark, a `backed`/`shared` flag and a missing slot
-    are explicit errors (the refused arms of `read_table`). -/
+/// Invariants, `ops`, tree edges, the occupancy mark,
+    a `backed`/`shared` flag and a missing slot
+    are explicit errors (the refused arms of `read_table`).
+    The `owner` mark travels in `UTab.owner` (`D.eigner`/`braucht`). -/
 def uTabelle (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tnames : List String) : SItemTief → Except String UTab
-  | .tableT n .none (.some cnt) .none _ sh parts =>
+  | .tableT n .none (.some cnt) .none o sh parts =>
     -- `tree { parent p, child c }` names the fields `reaches … via` and the tree domains read; it adds no carrier
     match parts.filter (fun p => match p with | .tTree _ => false | _ => true) with
     | .tSlot fds :: invs => uTabelleSlots consts alias tnames n cnt sh fds invs
-        (parts.flatMap (fun p => match p with | .tTree ks => ks | _ => []))
+        (parts.flatMap (fun p => match p with | .tTree ks => ks | _ => [])) o
     | _ => .error "table without G form"
-  | .tableT n (.some p) .none .none _ sh (.tSlot fds :: invs) =>
+  | .tableT n (.some p) .none .none o sh (.tSlot fds :: invs) =>
     if !invs.all (fun p => match p with | .tInv _ => true | _ => false) then .error "table without G form" else
     match uFelder alias tnames fds with
     | .error e => .error e
     | .ok fs =>
       if fs.all (fun p => match p.2 with | .zahl => true | _ => false) then
         .ok { name := n, count := 0, cols := fs.map (·.1), shared := sh, von := some p,
-               breiten := uFeldBreiten alias fds }
+               breiten := uFeldBreiten alias fds, owner := o }
       else .error "open table with a field other than a number without G form"
   | _ => .error "table without G form"
 

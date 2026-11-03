@@ -239,6 +239,7 @@ theorem kette_mit_zeugen_schritt
     (hReach' : GenErreichbar P O passes (GenStart sp) M')
     (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
     (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
+    (hleaf : s.istBlatt = true)
     (hΛ : HeldGenau Λ (offen (M.spuren f)))
     (σ' : World D) (neu : List (Ereignis D))
     (hstep : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ')
@@ -362,7 +363,7 @@ theorem kette_mit_zeugen_schritt
         rw [eW2] at hkn
         have hnach0 : σ' = nach0 := Option.some_inj.mp hkn
         rw [hg0, hvor, ← hnach0]
-        have hR := blatt_rahmen_schritt O passes hO M f V l Γ Λ Λ' s ρ hΛ σ' hstep
+        have hR := blatt_rahmen_schritt O passes hO M f V l Γ Λ Λ' s ρ hleaf hΛ σ' hstep
           J.code hW hG
         refine ⟨hmem, ?_, ?_⟩
         · intro t ht k2 fld

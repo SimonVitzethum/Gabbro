@@ -1,6 +1,7 @@
 /- Compute simultaneous counter demand from the complete source syntax. Sequential and
-   alternative branches reuse slots; only a nested forever increases the live depth.
-   Each level reserves a counter and an immutable decrement word below lexical locals. -/
+   alternative branches reuse slots; only a nested fuelled loop increases the live depth.
+   Each level reserves two words below lexical locals: fuel and either the
+   immutable decrement word (forever) or the saved measure (consumeTraverse). -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Code
 @[expose] public section
@@ -15,6 +16,7 @@ def counterDepthS {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Nat
   | .assignSlot _ _ _ _ _ _ => 0
   | .assignThru _ _ _ _ _ _ _ _ => 0
+  | .assignThruOwn .. => 0
   | .assignSlotRef _ _ _ _ _ _ _ _ => 0
   | .assignGlob _ _ _ _ => 0
   | .putBytes _ _ _ _ _ _ _ _ _ _ => 0
@@ -44,7 +46,7 @@ def counterDepthS {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .leave _ => 0
   | .next _ => 0
 
-  | .consumeTraverse _ _ _ _ _ _ body => counterDepthB body
+  | .consumeTraverse _ _ _ _ _ _ body => 1 + counterDepthB body
   | .retScoped .. => 0
   | .retWhyScoped .. => 0
 

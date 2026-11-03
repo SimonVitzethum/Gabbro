@@ -55,12 +55,12 @@ theorem caller_present : 0 < unit.fns.length := by decide +kernel
 
 def blockCandidate :=
   lowSeqL (l := false) unit ⟨0, caller_present⟩ [] (fnAt unit ⟨0, caller_present⟩)
-    20 (resOf unit ⟨0, caller_present⟩) (some ⟨rfl⟩) [.bindOptBeg "r" "ax" []]
+    20 (resOf unit ⟨0, caller_present⟩) (some ()) [.bindOptBeg "r" "ax" []]
 
 /-- The actual sequence lowerer constructs the canonical optional axiom block. -/
 theorem optional_constructor :
     (match blockCandidate with
-     | .ok (.bindAxiomOpt .., _) => true
+     | .ok (⟨_, .bindAxiomOpt ..⟩, _) => true
      | _ => false) = true := by decide +kernel
 
 end Gabbro.Stage0.OptionalAxiomWitness

@@ -183,6 +183,9 @@ theorem constExprB_sound (c : ConstProgram) {Γ : Ctx} {τ : Ty} (e : Expr c.D �
   | .thru .. => by
       intro accepted
       simp [constExprB] at accepted
+  | .thruOwn .. => by
+      intro accepted
+      simp [constExprB] at accepted
   | .ptrOf .. => by
       intro accepted
       simp [constExprB] at accepted

@@ -48,6 +48,12 @@ theorem Stmt.blatt_darf (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {
       · exact p.orte_darf o ho
       · exact i.orte_darf o ho
       · exact e.orte_darf o ho
+  | assignThruOwn p t ht f i e m s ho' he hg hw hL =>
+      simp only [stmtOrteP, List.mem_append] at ho
+      rcases ho with (ho | ho) | ho
+      · exact p.orte_darf o ho
+      · exact i.orte_darf o ho
+      · exact e.orte_darf o ho
   | assignSlotRef r t ht ho' f e hw hL =>
       simp only [stmtOrteP, List.mem_append] at ho
       rcases ho with ho | ho

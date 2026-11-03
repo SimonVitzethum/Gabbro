@@ -1,10 +1,7 @@
 module
-
 public import Grammatik.Code.Lower.Stmt
 public import Grammatik.Code.Refine.Struct.Mono.Teil1
-
 @[expose] public section
-
 namespace Gabbro.Code.Lower
 variable [Conf]
 open Gabbro.Grammatik (Deklaration Expr Ctx Var Res Vertrag ErgExpr Args)
@@ -21,15 +18,13 @@ local macro "mono_operands" : tactic => `(tactic| (
   rcases hOperand : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
   · simp only [hOperand, reduceCtorEq] at h
   have m2 := lowerE_mono lay cenv b r1 _ hOperand
-  simp only [hOperand] at h))
+   simp only [hOperand] at h))
 
 mutual
-
 /-- **Registers only go up.** -/
 theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
     ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : GTy} (e : Expr D Γ Λ τ) (r : Nat) (c : LR),
       lowerE lay cenv e r = some c → r ≤ c.2.2
-
   | _, _, _, .lit n, r, c, h => by
       simp only [lowerE] at h
       split at h
@@ -77,6 +72,30 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
           omega
       · simp only [hs', Bool.false_eq_true, ↓reduceIte, reduceCtorEq] at h
   | _, _, _, .thru p t _ f i _, r, c, h => by
+      simp only [lowerE] at h
+      rcases hp : lowerE lay cenv p r with _ | ⟨cp, op, r1⟩
+      · simp only [hp, reduceCtorEq] at h
+      have m0 := lowerE_mono lay cenv p r _ hp
+      simp only [hp] at h
+      rcases hi : lowerE lay cenv i r1 with _ | ⟨ci, oi, r2⟩
+      · simp only [hi, reduceCtorEq] at h
+      have m1 := lowerE_mono lay cenv i r1 _ hi
+      simp only [hi] at h
+      rcases hs : slotAddr lay t f op (.int 0 (D.count t - 1)) oi r2 with _ | ⟨ca, oa, r3⟩
+      · simp only [hs, reduceCtorEq] at h
+      have m2 := slotAddr_mono hs
+      simp only [hs] at h
+      by_cases hs' : supp (D.typ t f) = true
+      · simp only [hs', if_true] at h
+        rcases hl : loadG (D.typ t f) oa r3 with _ | ⟨cl, ol, r4⟩
+        · simp only [hl, reduceCtorEq] at h
+        · have m3 := loadG_mono hl
+          simp only [hl] at h
+          obtain rfl := Option.some.inj h
+          simp only at m0 m1 m2 m3 ⊢
+          omega
+      · simp only [hs', Bool.false_eq_true, ↓reduceIte, reduceCtorEq] at h
+  | _, _, _, .thruOwn p t _ _ i _ _ _ _ _ _, r, c, h => by
       simp only [lowerE] at h
       rcases hp : lowerE lay cenv p r with _ | ⟨cp, op, r1⟩
       · simp only [hp, reduceCtorEq] at h
@@ -342,12 +361,8 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
       simp only [lowerE, reduceCtorEq] at h
   | _, _, _, .reaches .., r, c, h => by
       simp only [lowerE, reduceCtorEq] at h
-
-
-
 theorem lowerNutz_mono (lay : Layout D) (cenv : List Reg) (W L i : Nat) :
-    ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option Gabbro.Grammatik.Ty}
-      (nutz : Gabbro.Grammatik.NutzlastExpr D Γ Λ c) (r : Nat) (c0 : LR),
+    ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option Gabbro.Grammatik.Ty} (nutz : Gabbro.Grammatik.NutzlastExpr D Γ Λ c) (r : Nat) (c0 : LR),
       lowerNutz lay cenv W L i nutz r = some c0 → r ≤ c0.2.2
   | _, _, _, .empty, r, c0, h => by
       rw [lowerNutz_empty, Option.some.injEq] at h
@@ -378,5 +393,4 @@ theorem lowerNutz_mono (lay : Layout D) (cenv : List Reg) (W L i : Nat) :
   | _, _, _, .val (τ := .arr _ _) _, _, _, h => by cases h
   | _, _, _, .val (τ := .str _) _, _, _, h => by cases h
 end
-
 end Gabbro.Code.Lower

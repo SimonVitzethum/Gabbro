@@ -52,6 +52,9 @@ theorem stmtS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Bs : Sz (SB D V l Γ 
   | axiomCallElse =>
     simp only [groesseStmt] at hu
     omega
+  | assignThruOwn _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+    simp only [groesseStmt] at hu
+    omega
   | assignSlot t f i e hw hL =>
     simp only [groesseStmt] at hu hE hB hO ⊢
     have hi := hE _ i (by omega)

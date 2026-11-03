@@ -51,7 +51,7 @@ theorem softFloatRangeL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
       (fun d => softFloatRangeL d lo hi producer) (Runner.IR.bool (softFloatReject lo hi x)) := by
   have field := unpackBexpL_ok hp
   rw [(routineUnpack_canonical x hw).2.1] at field
-  have condition := WordCode.bin field (WordCode.const 2047 (by decide))
+  have condition : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin field (WordCode.const 2047 (by decide))
     (g := fun x y => some (Runner.IR.bool (x == y))) rfl rfl (by decide : 14 < 256)
   have equality : (BitVec.ofNat 64 x.bexp == BitVec.ofInt 64 2047) =
       decide (x.bexp = 2047) := by

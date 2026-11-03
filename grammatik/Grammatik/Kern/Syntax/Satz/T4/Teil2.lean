@@ -1,6 +1,5 @@
 module
-public import Grammatik.Kern.Syntax.Satz.T3
-public import Grammatik.Kern.Syntax.Satz.T4.Teil1
+public import Grammatik.Kern.Syntax.Satz.T4.Teil2Context
 @[expose] public section
 namespace Gabbro.Grammatik
 variable {D : Deklaration} {V : Vertrag D}
@@ -11,7 +10,6 @@ variable (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
 variable (hR : GutR R) (hO : GutO O)
 include hR hO
 set_option linter.unusedSectionVars false
--- Unfold scope-premise abbreviations before simplifying their Boolean checks.
 set_option hygiene false in
 local macro "scopes_gut" : tactic => `(tactic| first
   | exact hscope
@@ -31,6 +29,9 @@ theorem stmt_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append i.orte_darf e.orte_darf) hh.heldIn
       exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldB hh).heldIn)
   | .assignThru p t _ f i e hw hL, σ, ρ, hbo, hscope, hresid, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append (orte_append p.orte_darf i.orte_darf) e.orte_darf) hh.heldIn
+      exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldB hh).heldIn)
+  | .assignThruOwn p t _ f i e _ _ _ _ _ hw hL, σ, ρ, hbo, hscope, hresid, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append (orte_append p.orte_darf i.orte_darf) e.orte_darf) hh.heldIn
       exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldB hh).heldIn)
   | .assignSlotRef r t _ _ f e hw hL, σ, ρ, hbo, hscope, hresid, hh, σ', h => by

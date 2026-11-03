@@ -243,6 +243,19 @@ def lowerE (lay : Layout D) (cenv : List Reg) :
               | none => none
           | none => none
       | none => none
+  | _, _, _, .thruOwn p t _ _ i _ _ _ _ _ _, r =>
+      match lowerE lay cenv p r with
+      | some (cp, op, r1) =>
+          match lowerE lay cenv i r1 with
+          | some (ci, oi, r2) =>
+              match slotAddr lay t f op (.int 0 (D.count t - 1)) oi r2 with
+              | some (ca, oa, r3) =>
+                  match (if supp (D.typ t f) then loadG (D.typ t f) oa r3 else none) with
+                  | some (cl, ol, r4) => some (cp ++ ci ++ ca ++ cl, ol, r4)
+                  | none => none
+              | none => none
+          | none => none
+      | none => none
   | _, _, _, .ptrOf t _ _ _, r => some ([], .glob (lay.gblk t), r)
   | _, _, _, .widen h1 h2 e, r =>
       match lowerE lay cenv e r with

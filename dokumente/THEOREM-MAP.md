@@ -5361,7 +5361,7 @@ Integration evidence: `8abb7bd47` (`feat(grammatik): lower C11 traversal forms w
 * **`lowerS_shape_consumeTraverse`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `l : Bool`, `Γ : Ctx`, `Λ : List (Res D)`, `t`, `member`, `edge`, `inv`, `bound`, `mass`, `body`, `lb : Lbl`, `k : Lbl`, `st : St`, `st' : St`, `blks : List Block`, assuming `h : lowerS lay cenv lv (.consumeTraverse (Λ`, the conclusion is ``.
 * **`lowerB_shape_narrowRequired`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `l : Bool`, `Γ : Ctx`, `Λ : List (Res D)`, `Λ' : List (Res D)`, `lo`, `hi`, `Λ`, `e`, `lo'`, `hi'`, `rest`, `lb : Lbl`, `k : Lbl`, `st : St`, `st' : St`, `blks : List Block`, assuming `h : lowerB lay cenv lv (Gabbro.Grammatik.Block.narrowRequired (lo`, the conclusion is ``.
 * **`lowerEnd_shape_narrowRequired`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `l : Bool`, `Γ : Ctx`, `Λ : List (Res D)`, `lo`, `hi`, `Λ`, `e`, `lo'`, `hi'`, `rest`, `lb : Lbl`, `st : St`, `st' : St`, `blks : List Block`, assuming `h : lowerEnd lay cenv lv (Gabbro.Grammatik.Endblock.narrowRequired (lo`, the conclusion is ``.
-`grammatik/Grammatik/Code/Refine/WitnessC11.lean`:
+`grammatik/Grammatik/Code/Refine/Witnesses/WitnessC11.lean`:
 
 * **`zeuge_c11_consume_lower`**: the conclusion is `∃ blks st', lowerS Wit.wLay [] (0, 0) c11consume 7 8 ⟨10, 30⟩ = some (blks, st')`.
 * **`zeuge_c11_consume_ok`**: For arbitrary `M : Modl`, `S : Sees`, `fn : Nat`, `blks : List Block`, `st' : St`, `σ : World Wit.wD`, `ρ : Env Wit.wD []`, `m : Mem`, `rs : Regs`, `ks : List Frame`, `dst : Option Reg`, `ih : ∀ (lay : Layout Wit.wD) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel Wit.wD) (passes : Nat) (R : (f : Wit.wD.Fn) → World Wit.wD → Env Wit.wD (Wit.wD.params f) → RufAusgang f), ∀ (lb : Lbl), ∀ (k : Lbl), ∀ (st : St), ∀ (st' : St), ∀ (blks : List Block), lowerB lay cenv lv c11consumeBody lb k st = some (blks, st') → ∀ (M : Modl), ∀ (S : Sees), ∀ (fn : Nat), InM M fn blks → KOk M fn k → LvOk M fn lv → FnOk lay M → CallRef lay M S R → ∀ (σ : World Wit.wD), ∀ (ρ : Env Wit.wD _), ∀ (m : Mem), ∀ (rs : Regs), ∀ (ks : List Frame), ∀ (dst : Option Reg), Rep lay σ m → EnvRep lay rs m cenv ρ → WfL lay m → (∀ x ∈ cenv, x < st.r) → OutOk lay cenv lv M S fn lb k st.r st'.r m rs ks dst (execBlock O passes R c11consumeBody σ ρ)`, assuming `h : lowerS Wit.wLay [] (0, 0) c11consume 7 8 ⟨10, 30⟩ = some (blks, st')` and `hM : InM M fn blks` and `hk : KOk M fn 8` and `hlv : LvOk M fn (0, 0)` and `hFn : FnOk Wit.wLay M` and `hCall : CallRef Wit.wLay M S (rufAt Wit.wP Wit.wO 0 1)` and `hR : Rep Wit.wLay σ m` and `hE : EnvRep Wit.wLay rs m [] ρ` and `hW : WfL Wit.wLay m` and `hc : ∀ x ∈ ([] : List Reg), x < 10`, the conclusion is `OutOk Wit.wLay [] (0, 0) M S fn 7 8 10 st'.r m rs ks dst (execStmt Wit.wO 0 (rufAt Wit.wP Wit.wO 0 1) c11consume σ ρ)`.
@@ -6285,3 +6285,260 @@ errors back.
 Open: the lead build of the branch (single-module checks of the new and touched modules and their
 importers, then the guardians); nested folds over row projections, symbolic short upper bounds,
 nested float elements and folds outside a direct return still refuse with named errors.
+
+## 143. C17: original-source normalization and typed const replacements (2026-11-03)
+
+Implementation branch `c17-const2`, continued from `cb63c4f9a`.
+**Implementation attempts only: no Lean/lake/build or runner execution by this worker.**
+`Spec.lean`, machine G and the goal theorem statement are unchanged. The lead must check
+`gabbro_ziel` on the standard axioms; no new compiled source-to-IR case is claimed here.
+
+### Original names and canonical integer evaluation
+
+`Parser/Elab/Konst/Scalar/Expression.lean`, `Names.lean`, `Arguments.lean`:
+
+* `Code.equation`, `expression_denotes`: typed expressions have world-independent G
+  denotations at every typed environment. Arithmetic still uses the canonical G operators.
+  Unary interpretation is shared; Boolean equality uses ordinary Boolean constructors.
+* `SourceMeaning` is a structural source-to-G judgment over original expressions. Its
+  literal, local, resolved-global, result, type-limit, unary and binary rules retain the
+  actual resolved value, typed position and source operator. Qualified names are compared
+  as complete identities; locals shadow globals and type-limit fields keep their namespace.
+* `SourceMeaning.normalized` proves by structural induction that normalization elaborates
+  to exactly the original source-derived G code, including its type. `normalize` constructs
+  this derivation with the code; `Normalized` never asks the caller to supply denotation.
+* `IntegerArgument` retains original argument syntax, its normalization derivation, exact
+  bounded canonical candidate and agreement with its source-derived G value. `checkArguments`
+  checks every argument at its own declared interval and returns `ArgumentMeaning` jointly
+  for the ordered list. Boolean truth cannot become an integer argument.
+* `IntegerArgument.normalized_denotation` states equality between bounded canonical evaluation
+  of the normalized original argument and evaluation of its original G expression at every
+  pair of worlds. The candidate and agreement premises are generated certificate fields.
+
+`Scalar/Export.lean`, `Scalar/KExpr.lean`:
+
+* `SourceFunction` retains the original body/signature, `Normalized` derivation, its equality
+  to the G body, and normalization equations for both original predicate lists.
+* `CheckedCall` retains those fields, original argument derivations, typed bindings, the
+  canonical bounded candidate, the structural KExpr quotation and exact result agreement.
+* `SourceFunction.normalized` connects that structural induction to the exact retained G body.
+  `CheckedCall.normalized_denotation` connects canonical evaluation of the normalized body
+  to the G evaluation of the original source-derived body, with no separate caller duty.
+* `Function.call_equation`, `Function.Certificate.sound`, `CheckedCall.sound` retain the
+  ordinary G call, exact required return narrowing, requires/ensures and unchanged world,
+  for every world/oracle/pass budget and positive call depth.
+* `KExpr.evalInt`, `KExpr.ofInt_eval`, `quote`, `quoteBinary`, `quote_denotes` and
+  `KExpr_to_G_denotation` remain the integer quotation path. Unresolved syntax yields no
+  value; division/remainder retain G truncation. The historical Nat table evaluator is unchanged.
+
+### Portable result shapes and their exact literals
+
+`Parser/Elab/Konst/Values/{Expression,Quotation,Export}.lean`:
+
+* `expression`, `payloadExpression`, `adapt` elaborate results at their declared types.
+  Bool uses typed Boolean expressions; option uses `none`/`some` at its declared finite
+  bound; tags retain named constructors and complete typed payloads; short strings retain
+  checked UTF-8 bytes and their declared maximum. `resultSchemas` keeps ordinary closed
+  reason values tied to their declared owner even when a foreign owner has equal cardinality.
+* `Values.Function.call_equation` and `Certificate.sound` use ordinary typed G return and
+  both original predicates, independent of world/oracle/pass budget/positive call depth.
+  Portable candidates are evaluated by canonical G semantics, not a second source interpreter.
+* `LiteralMeaning`/`PayloadMeaning` relate exact source literals to complete typed values,
+  including resolved tag names, selected cases and payloads. `reify`/`reifyPayload` construct
+  those judgments and G-evaluation equations; `reify_denotes` exposes the generic equation.
+  Quotation never encodes a noninteger as zero. String spelling is retained from source and
+  checked against its complete byte list, including the empty and zero-maximum cases.
+* `Values.CheckedCall.sound` connects original source elaboration, the ordinary G call,
+  the quoted G literal and its source-literal judgment to the same complete result value.
+* The existing `UebersetzeAllg.bytesZahl` and `bytesZahl_laenge` were moved unchanged to
+  `Uebersetze/Folds/ConstantBytes.lean`; both const and runtime literal readers reuse them.
+
+`Parser/Elab/Konst/{Scope,Replacement,Ersetzung,ErsetzungTor}.lean`:
+
+* `collectFunctions` resolves original signatures through canonical types, finite table
+  domains, tagged schemas and exhaustive reasons, retaining original bodies/predicates and
+  the constant environment. The canonical `uTypIn` now resolves optional index types.
+  Units without const functions bypass this additional scope work.
+* `checkReplacement` is the common entry point. `ReplacementEvidence.Sound` and
+  `Replacement.sound` retain either the bounded/KExpr integer theorem or the complete
+  portable-value call/literal theorem, with no unchecked semantic premise.
+* `ersetzeSExpr_call_certified` derives the actual replacement certificate and its complete
+  soundness from success of the production recursive pass. Closedness is derived from that
+  success; callers do not supply it or a denotation proof.
+* Original call arguments reach this checker before names are closed. The former unchecked
+  whole-unit `closeConstantNames` pass is deleted. The traversal explicitly carries parameter,
+  sequential-local, pattern, loop, reason and quantifier scopes; only the last quantifier
+  operand is under its binder. Runtime expressions keep canonical source name resolution.
+* `Generic.constantArgument` also retains original syntax until certified replacement;
+  specialization cannot erase a failing contract or an uncertified global-name rewrite.
+* `checkSourceMetadata_sound`, `checkSourceMetadata_runtime_sound`, `checkSourceConstants_sound`
+  retain original runtime metadata checks and the successful checked rewrite/residual check.
+  Only const function declarations leave that runtime domain.
+
+### Connected consumers, witnesses and remaining boundaries
+
+`stage0/Stage0/Compiler.lean`, `Frontend/Source.lean`, `Frontend/ExportCorrectness.lean`
+continue to consume the original-source gates through ordinary G lowering, old-state
+restoration and `AkzeptiertX`. `compile_source_program`, `Compiled.const_substitution`,
+`Compiled.exports_metadata`, `Compiled.constant_exports_metadata` and the existing image
+proof retain their original metadata and admission guarantees; no runner was added.
+
+`Values/Witness.lean` (included by the grammar root) contains exact-value witnesses for
+both Bool results; None/Some; bare tags and numeric/Boolean/string payloads; closed reason
+owner/case identity; empty/one-byte/zero-maximum strings; original qualified names in body
+and argument; and joint instantiations of the normalization, argument, quotation, common
+replacement and actual substitution theorems. Negative witnesses cover wrong result/payload
+types, option bounds, unknown tags, UTF-8 overflow, wider strings, false requires/ensures, missing payloads, statement calls, a foreign
+reason owner, and parameter/local/pattern/quantifier shadowing.
+
+`stage0/Stage0/Frontend/ConstWitness.lean` retains the previous scalar values 4/6, contracts,
+source/initializer compilation, generic-contract bypass and argument-type refusals.
+`ConstValuesWitness.lean` adds source-text Bool, Some/None, tagged numeric payload, short
+string and original/qualified captured-global compilation declarations, with canonical-admission and conditional
+production-image witnesses. `Stage0.lean` includes both. These witness declarations are
+**unbuilt**; the image theorem still has an explicit successful-emission premise and no
+emitted or executed image is claimed.
+
+This is the expression-result slice with integer parameters. Still refused: noninteger
+parameters, block/control bodies, calls inside bodies/contracts needing parameter binding,
+statement-position const calls, wider/nonportable result types, and operators without a typed
+source rule (including source-width-dependent shifts). Standalone noninteger constant bindings
+still need a typed Stage-0 scope; function-result replacement does not claim that separate A28
+binding path. No safety, metadata, range, contract, cost or hardware obligation was weakened.
+
+Measured locally: static diff/whitespace checks, module headers and <500-line limits for the
+22 changed Lean modules, no forbidden proof tokens added, directory caps, and no cycles among
+2897 reachable local imports. The lead still owes changed-module/dependent checks, final witness
+integration, standard-axiom inspection and the guardians. **Zero new compiled/executed cases.**
+
+## 144. C12: owned access and call-scoped owner loans (2026-11-03)
+
+On `c12-own`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Owned access is a new pair of
+constructors at the end of each inductive (`Expr.thruOwn`, `Stmt.assignThruOwn`): the same guarded carrier as
+`thru`/`assignThru`, plus the resolved owner identity (`D.ownerNr o = some m`), the table's owner entry
+(`m ∈ D.eigner t`) and the guard at the held stage (`Sum.inr (m, s) ∈ D.braucht t`). Machine G evaluates and
+executes them exactly like the plain forms on the underlying table. The borrow/return is the C09
+`OwnerFlow.loans` shape, not `konsumiert`/`produziert`: `eigner_nie_erzeugt` is untouched (ordinary production
+still never mints an owner). A signature that `borrows m` holds `Res.marke m 0` for the call; the caller gets it
+back on normal return (`nachSig` erases and re-appends the loan identity).
+
+`grammatik/Grammatik/Kern/Syntax/Syntax/Teil2Expr.lean`, `Teil2.lean`: the two constructors with the owner
+premises. `grammatik/Grammatik/Kern/Semantik/Semantik/T1/Teil1.lean`, `T2/Teil2.lean`: `orte`/`eval`/`execStmt`
+arms identical to the plain forms. `grammatik/Grammatik/Kern/Semantik/Maschine/T1/Teil1.lean`,
+`T1/Teil3.lean`, `T9/Teil2.lean`: the machine preservation and memory-fixedness arms. `grammatik/Grammatik/Kern/Syntax/Satz/T1.lean`:
+`zeigerOwn_hat_waechter`, `zeigerOwn_schreibt_mit_recht` (same guards as the plain twins).
+
+`grammatik/Grammatik/Parser/Lex/Lexer/Teil1.lean`, `WortStellung.lean`: the `borrows` effect word (vocabulary
+249 to 250 words). `SEffekt.borrows` (constructor at the end) with parser, printer, instantiation-surface,
+name-resolution and reference arms. `UEffekte.leiht`/`UFnKopf.leiht`/`UFn.leiht` thread it to `mkSig.owner.loans`
+(`leihtAt`, owners only, `leihtAt_eigner`/`leihtAt_stufe`); `uMarkenPruef` covers `leiht`, `uLeihtPruef` refuses a
+`borrows` of a non-owner and of a consumed mark (`loan without owner`, `mark both consumed and borrowed`).
+`declOf.ownerNr` is the unit owner namespace (`ownerNr_eq`); the owned place lowerings (`durchOwnTerm`,
+`durchOwnTermB`, `assignDurchOwnStmt`, `assignDurchOwnStmtB` in `UebersetzeAllg/Teil3.lean`,
+`UebersetzeAllg2/Teil1.lean`, with `ownGuard_holds`) build `thruOwn`/`assignThruOwn` from the resolved mark,
+requiring the guard in hand (`access without held guard`, `owned read/write without owner guard` otherwise).
+
+Calls: `ownerReadyB` decides callee escrow readiness (valid over own inputs, disjoint from ordinary consumption,
+every input a table owner) and `ownerReadyB_ok` supplies `RufPasst.ownerReady` at direct calls (`lowRufKopf`)
+and the general check (`rufPasstB`); `signaturOwner`/`sigAt_owner` name the resolved loans, `ende_eq` returns
+them. `Einbettung.ownerNr` transports the registry across embeddings (`einE`, `Einbettung.id`); `exE`/`exS`
+carry `thruOwn`/`assignThruOwn` with renamed marks (`eignerE`, `brauchtE`).
+
+Stage 0 (`Code/Lower`, `Code/Refine`): owned reads/stores lower with the identical bodies as the plain forms;
+`lowerE_ok_thruOwn`/`lowerS_ok_assignThruOwn` (plus label/shape/mono dispatches) prove the same fragments by
+reduction to those arms.
+
+Coverage: `groesseExpr`/`groesseStmt` give owned access `unendlich`-based sizes (not generated yet; the
+`Vollst`/`Kompakt` cases discharge by `omega`, with compact representatives where the induction needs them);
+fine cells number them at the end (`kE` 63, `kS` 29, `kTab` rows, `fzE`/`fzS` cells with `fzE_ok`/`fzS_ok` arms).
+
+Witnesses (`UebersetzeProben11.lean`, decided in the kernel): `ownAtMarke_borrow_ok` (borrow, owned read and
+write, returned mark: `stufe = "OK"`); `ownAtMarke_ohneLeiht_refused` (access without the loan:
+`lower: access without held guard`); `ownAtMarke_fremdLeiht_refused` (borrow of a non-owner:
+`elab: loan without owner: Fremd`).
+
+Open: the lead build of this branch (single-module checks of the touched modules and their importers, then the
+guardians); the generator never draws owned access (no owned-pointer generation yet); byte/raw/entry targets stay
+refused (no live grant/generation interface); callers of borrowing functions lower only when escrow-ready, the
+dynamic escrow replay is C09's.
+
+## 145. C09: checked owner mint end to end (2026-11-03)
+
+On `c09-mint`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. The mint is a separate,
+checked `OwnerFlow` output with provenance and uniqueness, never ordinary production:
+`eigner_nie_erzeugt` still ranges over `produziert` alone. Unbuilt code (no Lean run in this branch);
+the lead builds and reports back.
+
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/Interface.lean`:
+
+* **`OwnerFlow.mints`**: the checked mint list (last field). Mints are start-frame inputs (`inputs`)
+  and both-channel outputs (`outputs`): the admitted minter holds its fresh owner from the start
+  (`anfang`) and returns it (`ende`). `Valid` checks mints owner-only and bounded; conservation
+  (`outputs_nodup`, `output_from_input`, `output_bounded`) and the embedding transport
+  (`escrowReady_map`, with the mapped mint case) cover them; `empty_of_empty` and `map`/`inputs_map`/
+  `outputs_map` carry the third list.
+
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/MintMove.lean` (new):
+
+* **`mint_mem_inputs` / `mint_mem_outputs`**: mints are held from the start frame and returned.
+* **`mint_present_nachSig` / `mint_anfang_mem` / `mint_ende_mem`**: the call transformer appends
+  every mint output; the start frame holds it; the return carries it on either channel (`Stmt.ret`
+  and `Stmt.retWhy` balance against the one `ende`).
+* **`mint_resolved` / `mint_disjoint`**: every minted owner is a declared eigner; no consumed mark
+  is also minted in one signature (both from `EscrowReady`).
+* **`OwnerState.mint_token_identity`**: a successful `recordMint` issues exactly the declared
+  identity and stage. Uniqueness within a signature is `Valid.1` (one input per nominal identity);
+  across a unit it is elaboration (`uMintPruef`); across runs it is the spent set
+  (`mint_spent_refused`, `mint_spent_monotone`, `retire_cannot_remint`) with the root-once
+  admission (`OwnerAdmission.owner_root_once`).
+
+`grammatik/Grammatik/Parser/Elab/Proben/Fruehe/UebersetzeProben11.lean` (decided in the kernel):
+
+* **`mintAtMarke_ok`**: mint then owned read and write: `stufe = "OK"`.
+* **`mintTwice_refused`**: the second mint of the same instance: `elab: duplicate mint: Marke`.
+* **`mintFremd_refused`**: mint of a non-owner: `elab: mint without owner: Fremd`.
+
+Open: the lead build of this branch; the dynamic escrow replay of the mint edge and the C08
+software-call transition (`recordMint` is bookkeeping after the authorized foreign return); wiring
+the root-once admission into `Akzeptiert` (`ownerB`/`OwnerAdmission` exist unwired, as for the
+borrow side, and `Spec.lean` stays unchanged).
+
+## 146. C09: linear handoff end to end (2026-11-03)
+
+On `c09-mint`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. The handoff is the
+`OwnerMove` handback (`after := some` of the input stage): ownership transfers to the callee frame
+for the call and comes back at the same stage on the normal and the reason return alike. Unbuilt
+code (no Lean run in this branch); the lead builds and reports back.
+
+Model (`Owner/MintMove.lean`, `Owner/Witness.lean`):
+
+* **`OwnerMove.before_mem_inputs` / `output_of_some`**: the handoff names its before-stage input
+  and hands back the same identity at the indicated stage, on either channel (`ende` is
+  channel-independent).
+* **`single_none_outputs`**, `escrow_return_transfer`/`escrow_return_advance`/`escrow_return_retire`
+  (existing, `Escrow.lean`): the terminal shape contributes no output; transfer back, advance and
+  retire at the return.
+* **`mintSignature`/`handbackSignature`/`consumeSignatureT`** with escrow-ready, admitted-call,
+  start-frame, return and call-transformer witnesses (`mint_call_present_zeuge`,
+  `mint_anfang_zeuge`, `mint_ende_zeuge`, `handback_output_zeuge`, `consume_outputs_empty_zeuge`,
+  `escrow_mint/handback_admitted_zeuge`).
+* No duplication or loss on any exit: `outputs_nodup` (one input per identity), `output_from_input`
+  (every output has an input), `nachSig` erases exactly the inputs and appends exactly the outputs;
+  `leave`/`next` preserve the resource list structurally (`Stmt … l Γ Λ Λ`).
+
+Elaboration and Stage 0 (`moves` effect, ghost lowering):
+
+* `SEffekt.moves` (last-but-one constructor) with reader, printer, name resolution, surface and
+  `UFnKopf`/`UEffekte`/`UFn` threading; `bewegtAt`/`bewegtMovesAt` resolve handoffs to table owners
+  at stage 0 (`bewegtMovesAt_inputs/outputs`); `mkSig` carries them; `uBewegtPruef` refuses moves of
+  non-owners and marks both consumed or borrowed and moved; `ende_eq`/`signaturOwner` cover the
+  extended flow; calls check `ownerReadyB` generically and lower with no new IR (ghost handoff).
+* Witnesses (`UebersetzeProben11.lean`, decided in the kernel): `moveAtMarke_ok` (handoff through a
+  call: `stufe = "OK"`); `moveReasonAtMarke_ok` (the moved mark comes back on the reason channel:
+  `stufe = "OK"`); `moveFremd_refused` (move of a non-owner: `elab: move without owner: Fremd`);
+  `moveBorrowed_refused` (borrowed and moved: `elab: mark both borrowed and moved: Marke`);
+  `moveDropped_refused` (move without holding: `lower: call without held mark`).
+
+Open: the lead build of this branch; body-level retire lowering for terminal handoffs (as for C16
+`takes`: terminal moves are signature- and ledger-complete with fixture witnesses, their bodies
+cannot yet eliminate the mark from source); the dynamic transfer replay stays C09's.

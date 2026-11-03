@@ -3,7 +3,7 @@
    release (`BravRet`/`GutRet`). -/
 module
 
-public import Grammatik.Kern.Syntax.Satz.T1
+public import Grammatik.Kern.Syntax.Satz.T1Frame
 public import Grammatik.Kern.Syntax.Satz.T2.Teil1a
 
 @[expose] public section
@@ -14,7 +14,7 @@ variable {D : Deklaration} {V : Vertrag D}
 
 mutual
 theorem Stmt.held_mono : (s : Stmt D V l Γ Λ Λ') → ∀ L, Res.held L ∈ Λ' → Res.held L ∈ Λ
-  | .assignSlot .., L, h | .assignThru .., L, h | .assignSlotRef .., L, h | .assignGlob .., L, h | .putBytes .., L, h
+  | .assignSlot .., L, h | .assignThru .., L, h | .assignThruOwn .., L, h | .assignSlotRef .., L, h | .assignGlob .., L, h | .putBytes .., L, h
   | .assignVar .., L, h | .shift .., L, h | .locks .., L, h | .traverse .., L, h
   | .consumeTraverse .., L, h | .retScoped .., L, h | .retWhyScoped .., L, h
   | .retry .., L, h | .forever .., L, h | .axiomCall .., L, h | .regWrite .., L, h
@@ -62,7 +62,7 @@ theorem GrundArms.held_mono : (a : GrundArms D V l Γ Λ Λ' n) → ∀ L, Res.h
 end
 mutual
 theorem Stmt.held_iff : (s : Stmt D V l Γ Λ Λ') → ∀ L, Res.held L ∈ Λ' ↔ Res.held L ∈ Λ
-  | .assignSlot .., _ | .assignThru .., _ | .assignSlotRef .., _ | .assignGlob .., _ | .putBytes .., _
+  | .assignSlot .., _ | .assignThru .., _ | .assignThruOwn .., _ | .assignSlotRef .., _ | .assignGlob .., _ | .putBytes .., _
   | .assignVar .., _ | .shift .., _ | .locks .., _ | .traverse .., _
   | .consumeTraverse .., _ | .retScoped .., _ | .retWhyScoped .., _
   | .retry .., _ | .forever .., _ | .axiomCall .., _ | .regWrite .., _
@@ -308,6 +308,7 @@ theorem stmt_heldCount {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (L : D.Lock
   | .callIndElse (n := n) _ _ _ _ _ _ => count_held_nachSig (D.sigNr n) Λ L
   | .assignSlot .. => rfl
   | .assignThru .. => rfl
+  | .assignThruOwn .. => rfl
   | .assignSlotRef .. => rfl
   | .assignGlob .. => rfl
   | .putBytes .. => rfl

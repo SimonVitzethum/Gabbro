@@ -80,7 +80,7 @@ theorem kette_mit_zeugen
     pcReach_gen P O passes (Extraktion.progAus P fcode tabs globs) (GenStart sp) _ _ hPC'
   obtain ⟨J', hJ'w, hJ'l, hmem', hLink', hGuard'⟩ :=
     kette_mit_zeugen_schritt P O passes hO sp Nb M _ f hReach hReach' V l Γ Λ Λ' s ρ
-      hΛ σ' neu hstep rfl rfl J hJw hmem hW hG hsingle t₀ L hGuardT hCov hwit_old hneu_wit
+      hleaf hΛ σ' neu hstep rfl rfl J hJw hmem hW hG hsingle t₀ L hGuardT hCov hwit_old hneu_wit
   exact ⟨J', _, _, hJ'w, hJ'l, hmem', hLink', hGuard', hPC'⟩
 
 #print axioms Gabbro.Grammatik.kette_mit_zeugen

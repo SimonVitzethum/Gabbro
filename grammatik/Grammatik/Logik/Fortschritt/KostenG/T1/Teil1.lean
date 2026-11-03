@@ -39,7 +39,7 @@ def rufeS (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l
   | .retry _ _ body ueber => rufeB Z ZS EW body && rufeB Z ZS EW ueber
   | .forever _ _ body => EW && rufeB Z ZS EW body
   | .assignSlot .. => true
-  | .assignThru .. | .assignSlotRef .. => true
+  | .assignThru .. | .assignThruOwn .. | .assignSlotRef .. => true
   | .assignGlob .. => true
   | .putBytes .. => true
   | .assignVar .. => true

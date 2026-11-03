@@ -2,7 +2,7 @@ module
 public import Stage0.Frontend.Elaboration
 public import Grammatik.Parser.Elab.Modules.Frontend
 public import Grammatik.Parser.Elab.Generic.Expansion
-public import Grammatik.Parser.Elab.Export.ExportMetadata
+public import Grammatik.Parser.Elab.Konst.ErsetzungTor
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil13
 @[expose] public section
 
@@ -39,12 +39,12 @@ theorem expansionHeader_tagged (declaration : SItemTief) (spec : String) :
     expansionHeader (.taggedByT declaration spec) = true := rfl
 
 /-- The expansion-aware gate: run the very same canonical expansion the
-    elaborator consumes, then check the EXPANDED unit for unbound metadata.
+    elaborator consumes, then check the expanded unit with certified const substitution and runtime metadata checks.
     Acceptance never refuses an original header the expansion consumes. -/
 def checkExpansionGate (declarations : List SItemTief) :
     Except String (List SItemTief × List (STyp × String)) := do
   let (expanded, requirements) ← Modules.prepare declarations
-  ExportMetadata.check (uMembers expanded)
+  Konst.checkSourceMetadata (uMembers expanded)
   .ok (expanded, requirements)
 
 /-- Gate acceptance runs the canonical expansion on the source declarations. -/
@@ -56,7 +56,7 @@ theorem checkExpansionGate_expansion {declarations expanded : List SItemTief}
   | error e => simp [checkExpansionGate, hp] at h
   | ok pr =>
     obtain ⟨e, r⟩ := pr
-    cases hc : ExportMetadata.check (uMembers e) with
+    cases hc : Konst.checkSourceMetadata (uMembers e) with
     | error err => simp [checkExpansionGate, hp, hc] at h
     | ok _ =>
       simp [checkExpansionGate, hp, hc] at h
@@ -67,15 +67,15 @@ theorem checkExpansionGate_expansion {declarations expanded : List SItemTief}
 theorem checkExpansionGate_checked {declarations expanded : List SItemTief}
     {requirements : List (STyp × String)}
     (h : checkExpansionGate declarations = .ok (expanded, requirements)) :
-    (uMembers expanded).any ExportMetadata.itemMetadata = false := by
+    (Konst.ohneKonst (uMembers expanded)).any ExportMetadata.itemMetadata = false := by
   have hp := checkExpansionGate_expansion h
-  cases hc : ExportMetadata.check (uMembers expanded) with
+  cases hc : Konst.checkSourceMetadata (uMembers expanded) with
   | error e =>
     have contra : checkExpansionGate declarations = .error e := by
       simp [checkExpansionGate, hp, hc]
     rw [contra] at h
     cases h
-  | ok _ => exact ExportMetadata.check_sound _ hc
+  | ok _ => exact Konst.checkSourceMetadata_runtime_sound _ hc
 
 /-- The gate checks the exact expansion the elaborator consumes. -/
 theorem checkExpansionGate_expands {declarations expanded : List SItemTief}

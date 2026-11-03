@@ -11,24 +11,40 @@ namespace Gabbro.Grammatik
 -- Shared frame-proof steps; local names are supplied by the calling case.
 set_option hygiene false in
 macro "frame_value" ex:ident world:term:max : tactic => `(tactic| (
-  simp only [$ex, $world, Option.some.injEq] at h; subst h))
+  simp only [$ex:ident, $world:term, Option.some.injEq] at h; subst h))
+
+-- Discharge a `ScopesOk` side goal from the ambient `hscope` (mirrors `scopes_gut`).
+-- Unfold scope-premise abbreviations before simplifying their Boolean checks.
+set_option hygiene false in
+macro "scopes_treu" : tactic => `(tactic| first
+  | exact hscope
+  | (have hsc := hscope
+     dsimp only [Stmt.ScopesOk, Block.ScopesOk, Endblock.ScopesOk, Arms.ScopesOk, GrundArms.ScopesOk] at hsc
+     simp only [Stmt.scopesOk, Block.scopesOk, Endblock.scopesOk, Arms.scopesOk, GrundArms.scopesOk, Bool.and_eq_true] at hsc
+     first | exact hsc | exact hsc.1 | exact hsc.2 | exact hsc.2.1 | exact hsc.2.2 | exact hsc.1.1 | exact hsc.1.2))
 
 -- Shared frame-proof steps; local names are supplied by the calling case.
+-- (Call arms are explicit: the ok exit takes `Treu` from `TreuR` under the
+-- transported entry discipline, a propagated reason collapses via
+-- `TreuRet.toTreu_entry`; both then run the continuation with `vorCall`.)
 set_option hygiene false in
-macro "frame_read_split" ex:ident os:term:max good:term:max bad:term:max : tactic => `(tactic| (
-  simp only [$ex] at h
-  have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ $os
-  split at h
-  · exact $good
-  · exact $bad))
-
--- Shared frame-proof steps; local names are supplied by the calling case.
-set_option hygiene false in
-macro "frame_call_next" next:term:max : tactic => `(tactic| (
-  have h2 := hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)
+macro "frame_call_ok" s0:term : tactic => `(tactic| (
+  have hentry : HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) ($s0).haelt :=
+    heldB_ruf hp hbV (hl.heldB hh)
+  have h2 := hR f $s0 _ hentry σ1 (by rw [hR1]; rfl)
   rw [hR1] at h2
-  have g1 := hl.transRet (h2.weiter hp.hw hp.hg)
-  exact $next))
+  have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)))
+
+-- Shared frame-proof steps; local names are supplied by the calling case.
+set_option hygiene false in
+macro "frame_call_why" s0:term : tactic => `(tactic| (
+  have hentry : HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) ($s0).haelt :=
+    heldB_ruf hp hbV (hl.heldB hh)
+  have h2 := hR f $s0 _ hentry σ1 (by rw [hR1]; rfl)
+  rw [hR1] at h2
+  have gcall : Treu V.schreibt V.gschreibt $s0 σ1 :=
+    (TreuRet.weiter hp.hw hp.hg h2).toTreu_entry hentry
+  have g1 := hl.trans gcall))
 
 -- Shared frame-proof steps; local names are supplied by the calling case.
 set_option hygiene false in
@@ -52,24 +68,5 @@ macro "frame_axiom_advance" hw:term:max hg:term:max next:term:max : tactic => `(
   rw [ha] at h1
   have g1 := hl.trans (Treu.weiter $hw $hg h1)
   exact $next))
-
--- Shared frame-proof steps; local names are supplied by the calling case.
-set_option hygiene false in
-macro "frame_optional" out:ident recurse:term:max : tactic => `(tactic| (
-  have ihr := fun ρ' => $recurse rest σ1 ρ'
-  cases e with
-  | none =>
-      simp only [$out] at h
-      exact g1.trans ((ihr _) σ' h)
-  | some τ =>
-      simp only [$out] at h
-      exact g1.trans ((ihr _).schrumpf σ' h)))
-
--- Open a continuation after recording its expression reads.
-set_option hygiene false in
-macro "frame_read_cases" ex:ident os:term:max : tactic => `(tactic| (
-  simp only [$ex] at h
-  have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ $os
-  split at h))
 
 end Gabbro.Grammatik

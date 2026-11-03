@@ -162,7 +162,7 @@ theorem Stmt.orakel_kOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .callInd .., h, _, _ => by simp only [Stmt.kOk, Bool.false_eq_true] at h
   | .callIndElse .., h, _, _ => by simp only [Stmt.kOk, Bool.false_eq_true] at h
   | .assignSlot .., _, _, _ => rfl
-  | .assignThru .., _, _, _ | .assignSlotRef .., _, _, _ => rfl
+  | .assignThru .., _, _, _ | .assignThruOwn .., _, _, _ | .assignSlotRef .., _, _, _ => rfl
   | .assignGlob .., _, _, _ => rfl
   | .putBytes .., _, _, _ => rfl
   | .assignVar .., _, _, _ => rfl

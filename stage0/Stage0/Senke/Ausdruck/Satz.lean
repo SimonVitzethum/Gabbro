@@ -1,7 +1,7 @@
 /- Generic expression correctness, mutual with payloads and product fields. -/
 module
-public import Stage0.Senke.Ausdruck.Aggregat.ProdSet
-public import Stage0.Senke.Ausdruck.Aggregat.ProdArgsOk
+public import Stage0.Senke.Ausdruck.Aggregat.Prod.ProdSet
+public import Stage0.Senke.Ausdruck.Aggregat.Prod.ProdArgsOk
 public import Stage0.Senke.Ausdruck.Referenz.Lesen
 public import Stage0.Senke.Ausdruck.Gleit.Fall
 public import Stage0.Senke.Ausdruck.Lesen

@@ -95,6 +95,7 @@ def exprM : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}, Expr D Γ Λ τ → Li
       (if (D.gbraucht g).isEmpty then [] else ["Deklaration.gbraucht"]) ++ (if D.atomar g then ["Deklaration.atomar"] else [])
   | _, _, _, .slot t f i _ => "Expr.slot" :: tyM (D.typ t f) ++ ["Deklaration.count", "Deklaration.typ"] ++ exprM i
   | _, _, _, .thru p t _ f i _ => "Expr.thru" :: tyM (D.typ t f) ++ ["Deklaration.tabNr"] ++ exprM p ++ exprM i
+  | _, _, _, .thruOwn p t _ _ i _ _ _ _ _ _ => "Expr.thruOwn" :: tyM (D.typ t f) ++ ["Deklaration.tabNr", "Deklaration.ownerNr", "Deklaration.eigner"] ++ exprM p ++ exprM i
   | _, _, _, .ptrOf .. => ["Expr.ptrOf", "Ty.ptr", "Deklaration.tabNr"]
   | _, _, _, .refEq a b => "Expr.refEq" :: "Ty.bool" :: exprM a ++ exprM b
   | _, _, _, .slotRef r t _ _ f _ => "Expr.slotRef" :: tyM (D.typ t f) ++ ["Deklaration.tabNr", "Deklaration.offen", "Deklaration.typ"] ++ exprM r
@@ -187,6 +188,7 @@ def paare (outer : String) (inner : List String) : List String := inner.map fun 
 def stmtName {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Stmt D V l Γ Λ Λ' → String
   | _, _, _, _, .assignSlot .. => "Stmt.assignSlot"
   | _, _, _, _, .assignThru .. => "Stmt.assignThru"
+  | _, _, _, _, .assignThruOwn .. => "Stmt.assignThruOwn"
   | _, _, _, _, .assignSlotRef .. => "Stmt.assignSlotRef"
   | _, _, _, _, .assignGlob .. => "Stmt.assignGlob"
   | _, _, _, _, .putBytes .. => "Stmt.putBytes"
@@ -286,6 +288,7 @@ mutual
 def stmtM : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Stmt D V l Γ Λ Λ' → List String
   | l, _, Λ, _, .assignSlot _ _ i e _ _ => zelle l Λ "Stmt.assignSlot" ++ ("Vertrag.schreibt" :: exprM i ++ exprM e ++ resM Λ)
   | l, _, Λ, _, .assignThru p _ _ _ i e _ _ => zelle l Λ "Stmt.assignThru" ++ ("Vertrag.schreibt" :: exprM p ++ exprM i ++ exprM e ++ resM Λ)
+  | l, _, Λ, _, .assignThruOwn p _ _ _ i e _ _ _ _ _ _ _ => zelle l Λ "Stmt.assignThruOwn" ++ ("Vertrag.schreibt" :: exprM p ++ exprM i ++ exprM e ++ resM Λ)
   | l, _, Λ, _, .assignSlotRef r _ _ _ _ e _ _ => zelle l Λ "Stmt.assignSlotRef" ++ ("Vertrag.schreibt" :: "Deklaration.offen" :: exprM r ++ exprM e ++ resM Λ)
   | l, _, Λ, _, .assignGlob _ e _ _ => zelle l Λ "Stmt.assignGlob" ++ ("Vertrag.gschreibt" :: exprM e ++ resM Λ)
   | l, _, Λ, _, .putBytes _ _ _ _ i _ _ e _ _ => zelle l Λ "Stmt.putBytes" ++ (exprM i ++ exprM e ++ resM Λ)

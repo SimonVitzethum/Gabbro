@@ -70,10 +70,10 @@ theorem softRoundL_ok_zeuge {Γ : Ctx} (ρ : Env D Γ) (W : Runner.Mem → Prop)
   have hr : 6 < 8 := by decide
   have hd : 8 < 2 ^ 63 := by decide
   have result := softRoundL_ok hr hd (WordCode.konst 13 (by decide))
-    (WordCode.konst 6 (by decide)) (WordCode.konst 8 (by decide))
+    (WordCode.konst 6 (by decide)) (WordCode.konst 8 (by decide)) h hK hp
   have hx : softRoundMag 13 6 8 = 14 := by decide +kernel
   rw [hx] at result
-  exact result h hK hp
+  exact result
 
 #print axioms softRoundMag_model
 #print axioms softRoundL_ok

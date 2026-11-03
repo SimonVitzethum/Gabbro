@@ -308,6 +308,11 @@ theorem rahmenStapelS_akteur (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
     | _ =>
       simp only [rufUpdateG_self]
       exact rahmenStapelS_speicher h hmem
+  | g7 hs =>
+    cases hs with
+    | _ =>
+      simp only [rufUpdateG_self]
+      exact rahmenStapelS_speicher h hmem
 
 /-- **Another thread's step keeps the frame invariant** (every stable
     carrier of every suspended frame is left alone, `stabilS_rely`). -/

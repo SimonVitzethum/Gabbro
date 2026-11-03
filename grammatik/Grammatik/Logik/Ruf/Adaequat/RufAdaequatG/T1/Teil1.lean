@@ -37,7 +37,7 @@ theorem RufLaufG.einzeln {P : Programm D} {O : Orakel D} {passes : Nat} {f : Fad
 theorem rufSchrittG_fremd {P : Programm D} {O : Orakel D} {passes : Nat} {f : Faden}
     {M M' : RufMaschineG D} (h : RufSchrittG P O passes M f M') (g : Faden) (hg : g ≠ f) :
     M'.faeden g = M.faeden g := by
-  (rcases h with h | h | h | h | h | h <;> cases h) <;> exact rufUpdateG_noteq _ _ _ hg _
+  (rcases h with h | h | h | h | h | h | h <;> cases h) <;> exact rufUpdateG_noteq _ _ _ hg _
 
 /-- A run of thread `f` leaves every other thread untouched. -/
 theorem rufLaufG_fremd {P : Programm D} {O : Orakel D} {passes : Nat} {f : Faden}
@@ -231,6 +231,13 @@ inductive BlattG {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List 
       (ht : D.capTab space n = some t) (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t)))
       (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ) :
       BlattG (l := l) (.assignThru p t ht f i e hw hL)
+  | assignThruOwn {read : Bool} (n : Nat) (o : Nat) (p : Expr D Γ Λ (.ptr ⟨space, ⟨read, true, some o⟩, .table n⟩))
+      (t : D.Tab) (ht : D.capTab space n = some t) (f : D.Feld t)
+      (i : Expr D Γ Λ (.index (D.count t))) (e : Expr D Γ Λ (D.typ t f))
+      (m : D.Marke) (s : Nat) (ho : D.ownerNr o = some m) (he : m ∈ D.eigner t)
+      (hg : Sum.inr (m, s) ∈ D.braucht t)
+      (hw : V.schreibt t = true) (hL : darf D t Λ) :
+      BlattG (l := l) (.assignThruOwn p t ht f i e m s ho he hg hw hL)
   | assignSlotRef (n : Nat) (r : Expr D Γ Λ (.ref n)) (t : D.Tab) (ht : D.tabNr n = some t)
       (ho : D.offen t = true) (f : D.Feld t) (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true)
       (hL : darf D t Λ) :
@@ -271,7 +278,7 @@ theorem BlattG.istBlatt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Re
     impossible cases without dependent elimination on the indices). -/
 def Stmt.blattArt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     Stmt D V l Γ Λ Λ' → Bool
-  | .assignSlot .. | .assignThru .. | .assignSlotRef .. | .assignGlob .. | .putBytes .. | .assignVar ..
+  | .assignSlot .. | .assignThru .. | .assignThruOwn .. | .assignSlotRef .. | .assignGlob .. | .putBytes .. | .assignVar ..
   | .shift .. | .regWrite .. | .transition .. | .publish .. | .advances ..
   | .retires .. => true
   | _ => false
@@ -292,6 +299,10 @@ theorem BlattG.erw {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       obtain ⟨rfl, -⟩ := hex
       exact (Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)
   | assignThru n p t ht f i e hw hL =>
+      simp only [execStmt, Ausgang.ok.injEq] at hex
+      obtain ⟨rfl, -⟩ := hex
+      exact (Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)
+  | assignThruOwn n o p t ht f i e m s ho he hg hw hL _ =>
       simp only [execStmt, Ausgang.ok.injEq] at hex
       obtain ⟨rfl, -⟩ := hex
       exact (Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)

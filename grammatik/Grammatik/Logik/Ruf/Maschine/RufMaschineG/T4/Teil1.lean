@@ -460,5 +460,10 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
     | _ =>
         simp only [rufUpdateG_self]
         exact rufFadenPasstG_behalte _ _ _ _ _ _ _ h
+  | g7 hs =>
+    cases hs with
+    | _ =>
+        simp only [rufUpdateG_self]
+        exact rufFadenPasstG_behalte _ _ _ _ _ _ _ h
 
 end Gabbro.Grammatik

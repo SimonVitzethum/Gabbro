@@ -3,7 +3,7 @@
    supplies the low limb. The runner needs no new instruction or float opcode. -/
 module
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Multiply.MulWord
-public import Stage0.Senke.Gleit.RoutineBranch
+public import Stage0.Senke.Gleit.Routine.RoutineBranch
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
@@ -37,46 +37,51 @@ theorem softMulHighL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {a b : Nat → Option (List II × Nat)} {av bv : Runner.W}
     (ha : WordCode (L := L) ρ W a av) (hb : WordCode (L := L) ρ W b bv) :
     WordCode (L := L) ρ W (fun d => softMulHighL d a b) (mulHiW av bv) := by
-  have mask := WordCode.konst (L := L) (ρ := ρ) (W := W) (2 ^ 32 - 1) (by decide)
-  have count := WordCode.const (L := L) (ρ := ρ) (W := W) 32 (by decide)
-  have ah := WordCode.bin ha count (g := fun x y => some (x >>> (y.toNat % 64)))
+  have mask : WordCode (L := L) ρ W _ _ := WordCode.konst (L := L) (ρ := ρ) (W := W) (2 ^ 32 - 1) (by decide)
+  have count : WordCode (L := L) ρ W _ _ := WordCode.const (L := L) (ρ := ρ) (W := W) 32 (by decide)
+  have ah : WordCode (L := L) ρ W _ _ := WordCode.bin ha count (g := fun x y => some (x >>> (y.toNat % 64)))
     rfl rfl (by decide : 12 < 256)
-  have al := WordCode.bin ha mask (g := fun x y => some (x &&& y))
+  have al : WordCode (L := L) ρ W _ _ := WordCode.bin ha mask (g := fun x y => some (x &&& y))
     rfl rfl (by decide : 8 < 256)
-  have bh := WordCode.bin hb count (g := fun x y => some (x >>> (y.toNat % 64)))
+  have bh : WordCode (L := L) ρ W _ _ := WordCode.bin hb count (g := fun x y => some (x >>> (y.toNat % 64)))
     rfl rfl (by decide : 12 < 256)
-  have bl := WordCode.bin hb mask (g := fun x y => some (x &&& y))
+  have bl : WordCode (L := L) ρ W _ _ := WordCode.bin hb mask (g := fun x y => some (x &&& y))
     rfl rfl (by decide : 8 < 256)
-  have p0 := WordCode.bin al bl (g := fun x y => some (x * y))
+  have p0 : WordCode (L := L) ρ W _ _ := WordCode.bin al bl (g := fun x y => some (x * y))
     rfl rfl (by decide : 5 < 256)
-  have p1 := WordCode.bin ah bl (g := fun x y => some (x * y))
+  have p1 : WordCode (L := L) ρ W _ _ := WordCode.bin ah bl (g := fun x y => some (x * y))
     rfl rfl (by decide : 5 < 256)
-  have p2 := WordCode.bin al bh (g := fun x y => some (x * y))
+  have p2 : WordCode (L := L) ρ W _ _ := WordCode.bin al bh (g := fun x y => some (x * y))
     rfl rfl (by decide : 5 < 256)
-  have p3 := WordCode.bin ah bh (g := fun x y => some (x * y))
+  have p3 : WordCode (L := L) ρ W _ _ := WordCode.bin ah bh (g := fun x y => some (x * y))
     rfl rfl (by decide : 5 < 256)
-  have p0h := WordCode.bin p0 count (g := fun x y => some (x >>> (y.toNat % 64)))
+  have p0h : WordCode (L := L) ρ W _ _ := WordCode.bin p0 count (g := fun x y => some (x >>> (y.toNat % 64)))
     rfl rfl (by decide : 12 < 256)
-  have p1l := WordCode.bin p1 mask (g := fun x y => some (x &&& y))
+  have p1l : WordCode (L := L) ρ W _ _ := WordCode.bin p1 mask (g := fun x y => some (x &&& y))
     rfl rfl (by decide : 8 < 256)
-  have p2l := WordCode.bin p2 mask (g := fun x y => some (x &&& y))
+  have p2l : WordCode (L := L) ρ W _ _ := WordCode.bin p2 mask (g := fun x y => some (x &&& y))
     rfl rfl (by decide : 8 < 256)
-  have mid0 := WordCode.bin p0h p1l (g := fun x y => some (x + y))
+  have mid0 : WordCode (L := L) ρ W _ _ := WordCode.bin p0h p1l (g := fun x y => some (x + y))
     rfl rfl (by decide : 3 < 256)
-  have mid := WordCode.bin mid0 p2l (g := fun x y => some (x + y))
+  have mid : WordCode (L := L) ρ W _ _ := WordCode.bin mid0 p2l (g := fun x y => some (x + y))
     rfl rfl (by decide : 3 < 256)
-  have p1h := WordCode.bin p1 count (g := fun x y => some (x >>> (y.toNat % 64)))
+  have p1h : WordCode (L := L) ρ W _ _ := WordCode.bin p1 count (g := fun x y => some (x >>> (y.toNat % 64)))
     rfl rfl (by decide : 12 < 256)
-  have p2h := WordCode.bin p2 count (g := fun x y => some (x >>> (y.toNat % 64)))
+  have p2h : WordCode (L := L) ρ W _ _ := WordCode.bin p2 count (g := fun x y => some (x >>> (y.toNat % 64)))
     rfl rfl (by decide : 12 < 256)
-  have midh := WordCode.bin mid count (g := fun x y => some (x >>> (y.toNat % 64)))
+  have midh : WordCode (L := L) ρ W _ _ := WordCode.bin mid count (g := fun x y => some (x >>> (y.toNat % 64)))
     rfl rfl (by decide : 12 < 256)
-  have hi0 := WordCode.bin p3 p1h (g := fun x y => some (x + y))
+  have hi0 : WordCode (L := L) ρ W _ _ := WordCode.bin p3 p1h (g := fun x y => some (x + y))
     rfl rfl (by decide : 3 < 256)
-  have hi1 := WordCode.bin hi0 p2h (g := fun x y => some (x + y))
+  have hi1 : WordCode (L := L) ρ W _ _ := WordCode.bin hi0 p2h (g := fun x y => some (x + y))
     rfl rfl (by decide : 3 < 256)
-  exact WordCode.bin hi1 midh (g := fun x y => some (x + y))
-    rfl rfl (by decide : 3 < 256)
+  have result : WordCode (L := L) ρ W _ _ :=
+    WordCode.bin hi1 midh (g := fun x y => some (x + y))
+      rfl rfl (by decide : 3 < 256)
+  intro fp K d c top h hK m pc hp
+  have h32 : (32#64).toNat % 64 = 32 := by decide
+  simpa only [mulHiW, m32, BitVec.ofInt_ofNat, h32] using
+    result (fp := fp) (K := K) (d := d) (c := c) (top := top) h hK m pc hp
 
 /-- Both limbs identify one untruncated product, for arbitrary input words.
     This equation also rules out silently discarding the top 42 product bits. -/
@@ -96,7 +101,9 @@ theorem softMulHighL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     rw [← mulHiW_toNat]
     simp only [BitVec.ofNat_toNat, BitVec.setWidth_eq]
   rw [← exactWord]
-  exact softMulHighL_word ha hb
+  have result : WordCode (L := L) ρ W _ _ := softMulHighL_word ha hb
+  intro fp K d c top h hK m pc hp
+  exact result (fp := fp) (K := K) (d := d) (c := c) (top := top) h hK m pc hp
 
 /-- A maximal binary64 significand really occupies both limbs; two maximal
     machine words additionally exercise every carry of the general formula. -/

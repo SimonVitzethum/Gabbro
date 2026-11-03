@@ -362,6 +362,11 @@ theorem Stmt.gut_blatt (O : Orakel D) (passes : Nat)
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _
         (orte_append (orte_append p.orte_darf i.orte_darf) e.orte_darf) hh
       exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldIn hh))
+  | .assignThruOwn p t _ f i e _ _ _ _ _ hw hL, _, _, σ, ρ, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _
+        (orte_append (orte_append p.orte_darf i.orte_darf) e.orte_darf) hh
+      exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldIn hh))
   | .assignSlotRef r t _ _ f e hw hL, _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append r.orte_darf e.orte_darf) hh
@@ -378,16 +383,16 @@ theorem Stmt.gut_blatt (O : Orakel D) (passes : Nat)
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact gut_lese σ Λ _ e.orte_darf hh
   | .shift t f hτ i von nach hn he hw hL, _, _, σ, ρ, hh, σ', h => by
-      simp only [execStmt] at h
-      split at h
+      simp only [execStmt] at h ⊢
+      revert h; split <;> intro h
       · simp only [Ausgang.welt, Option.some.injEq] at h; subst h
         have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_cons (orte_tab hL) i.orte_darf) hh
         exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldIn hh))
       · simp only [Ausgang.welt, reduceCtorEq] at h
   | .axiomCall a args _ hw hg hd hgd, _, _, σ, ρ, hh, σ', h => by
-      simp only [execStmt] at h
+      simp only [execStmt] at h ⊢
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ args.orte_darf hh
-      split at h
+      revert h; split <;> intro h
       · rename_i σ1 v ha
         simp only [Ausgang.welt, Option.some.injEq] at h; subst h
         have := axiomAntwort_gut O hO a (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) hd hgd (hl.heldIn hh)
@@ -408,24 +413,25 @@ theorem Stmt.gut_blatt (O : Orakel D) (passes : Nat)
   | .retires .., _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
   | .ret e _, _, _, σ, ρ, hh, σ', h => by
-      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
-      exact gut_lese σ Λ _ e.orte_darf hh
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h ⊢; subst h
+      exact gutRetV_retScoped [] (gut_lese σ Λ _ e.orte_darf hh) (fun _ h => nomatch h) (fun _ h => nomatch h)
   | .retWhy .., _, _, σ, ρ, hh, σ', h => by
-      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h ⊢; subst h
+      exact gutRetV_retWhyScoped σ [] (fun _ h => nomatch h) (fun _ h => nomatch h)
   | .retScoped e R, _, hscope, σ, ρ, hh, σ', h => by
-      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h ⊢; subst h
       have hsc : scopesOkScopes V.haelt V.boden R.scopes = true := by
         have hsc := hscope
-        simp only [Stmt.scopesOk, Bool.and_eq_true] at hsc
+        simp only [Stmt.ScopesOk, Stmt.scopesOk, Bool.and_eq_true] at hsc
         exact hsc
       exact gutRetV_retScoped R.scopes (gut_lese σ Λ _ e.orte_darf hh)
         (fun L hL => (scopesOkScopes_mem hsc hL).1)
         (fun L hL c hc => (scopesOkScopes_mem hsc hL).2 c hc)
   | .retWhyScoped _ R, _, hscope, σ, ρ, hh, σ', h => by
-      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h ⊢; subst h
       have hsc : scopesOkScopes V.haelt V.boden R.scopes = true := by
         have hsc := hscope
-        simp only [Stmt.scopesOk, Bool.and_eq_true] at hsc
+        simp only [Stmt.ScopesOk, Stmt.scopesOk, Bool.and_eq_true] at hsc
         exact hsc
       exact gutRetV_retWhyScoped σ R.scopes
         (fun L hL => (scopesOkScopes_mem hsc hL).1)

@@ -38,10 +38,11 @@ theorem bruecke_nutzerA {P : Programm (declOf u)} {fs : List (declOf u).Fn}
     (hlow : lowerAllg u = .ok (P, fs)) (S : Stimmig u) (rk : String → Nat) (hR : Rang u rk)
     (hZ : ∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = some body ∧
       meetsU u (wfU u) (fnAt u c) body)
+    (hPtr : PtrVerfeinert P)
     (E : Zielsatz.Einheit (declOf u)) (hP : E.P = P) (hS : E.S = SperrInv.leer (declOf u))
     (hQ : E.Q = axWahr (declOf u)) : Zielsatz.NutzerPflichtA E :=
   Zielsatz.nutzerPflichtA_ohne_atomar (declOf_kein_atomar u S.ohneGlob)
-    (bruecke_nutzer hlow S rk hR hZ E hP hS hQ)
+    (bruecke_nutzer hlow S rk hR hZ hPtr E hP hS hQ)
 
 #print axioms bruecke_nutzerA
 

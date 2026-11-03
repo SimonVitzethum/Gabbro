@@ -21,6 +21,8 @@ theorem stmtOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       blattOk P O passes f fn stapel rho s0 log A (.assignSlot t f' i e hw hL)
   | _, _, _, _, _, .assignThru p t ht f' i e hw hL, _ =>
       blattOk P O passes f fn stapel rho s0 log A (.assignThru _ p t ht f' i e hw hL)
+  | _, _, _, _, _, .assignThruOwn p t ht f' i e m s ho he hg hw hL, _ =>
+      blattOk P O passes f fn stapel rho s0 log A (.assignThruOwn _ _ p t ht f' i e m s ho he hg hw hL)
   | _, _, _, _, _, .assignSlotRef r t ht ho f' e hw hL, _ =>
       blattOk P O passes f fn stapel rho s0 log A (.assignSlotRef _ r t ht ho f' e hw hL)
   | _, _, _, _, _, .assignGlob g e hw hL, _ =>
