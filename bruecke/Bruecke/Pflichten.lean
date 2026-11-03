@@ -73,9 +73,16 @@ def binE (op : BinOp) : Option Expr → Option Expr → Option Expr
     `old`, no `erg`. Integer arithmetic and the bit operations are Body's `bin` (`binop`: exact
     integers, the masks over non-negative operands); an integer conversion `T(e)` is a WIDENING, so
     it leaves the number alone and reads as its operand (P2 wall 2). -/
+def numericParam (f : UFn) (p : String) : Bool :=
+  match f.params.find? (fun q => q.1 == p) with
+  | some (_, .int ..) => true
+  | _ => false
+
+ /-- Only numeric parameter reads belong to the scalar Body fragment.
+     Capabilities are represented only by `argExpr`'s pointer-argument cases. -/
 def sideExpr (u : UProg) (f : UFn) : USide → Option Expr
   | .lit n => some (.lit (.int n))
-  | .param p => some (.name p)
+  | .param p => if numericParam f p then some (.name p) else none
   | .slot p fld i => slotPlace u f (.slot p fld i)
   | .tab t fld i => slotPlace u f (.tab t fld i)
   | .old .. => none
