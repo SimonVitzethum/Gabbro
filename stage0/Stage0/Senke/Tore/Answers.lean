@@ -186,4 +186,43 @@ theorem capability_decoders_zeuge :
       (some (.ref 0)) (-1) = none := by
   exact ⟨by decide +kernel, by decide +kernel, rfl⟩
 
+namespace Region
+open Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
+
+def unit : UProg := { ControlProbe.u with
+  tabs := [{name := "Bytes", count := 4, cols := [("byte", (0, 255))]}]
+  axs := [{name := "region", params := [], kinds := [],
+    res := some (.ptr (.table 0 (false, true)))}] }
+abbrev D := declOf unit
+abbrev entry : D.Fn := ⟨0, by decide⟩
+abbrev gate : D.Ax := ⟨0, by decide⟩
+
+/-- The capability belongs to a real nominal table, and the continuation copies
+    its canonical word through an ordinary local binding before returning. -/
+def body : Endblock D (vertragVon D entry) false [] [] :=
+  .bindAxiom gate .nil rfl (fun _ h => nomatch h) (fun g => Fin.elim0 g)
+    (fun _ h => nomatch h) (fun g => Fin.elim0 g)
+    (.bind (.var .here) (.ret (.val (.widen (by decide) (by decide) (.lit 17))) (.refl [])))
+
+def program : Programm D where
+  invariante _ := .tru
+  requires _ := .tru
+  ensures _ := .tru
+  rumpf f := by
+    obtain ⟨f, hf⟩ := f
+    have zero : f = 0 := by change f < 1 at hf; omega
+    subst f
+    exact body
+
+def image : Except String (List Runner.B) := do
+  let emitted ← bild 1 program (layU unit (fun _ => some ⟨39, regsIn 0, [], none⟩))
+    [entry] Fin.val (fun _ => "main") entry .nil [] 1024
+  pure emitted.bytes
+
+/-- Region-capability results reach a complete image on a nonempty table layout. -/
+theorem region_image_zeuge : image.isOk = true ∧ unit.tabs.length = 1 := by
+  decide +kernel
+
+end Region
+
 end Gabbro.Stage0.Senke.ForeignAnswers
