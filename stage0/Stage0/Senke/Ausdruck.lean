@@ -199,6 +199,8 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
     let ci' ← lowE (currentOld := currentOld) L (reserved := reserved) i (d + valueWords (D.typ t f)); slotValueC L t f d ci'
   | _, _, .thru _ t _ f i _, d => do
     let ci' ← lowE (currentOld := currentOld) L (reserved := reserved) i (d + valueWords (D.typ t f)); slotValueC L t f d ci'
+  | _, _, .thruOwn _ t _ f i _ _ _ _ _ _, d => do
+    let ci' ← lowE (currentOld := currentOld) L (reserved := reserved) i (d + valueWords (D.typ t f)); slotValueC L t f d ci'
   | _, _, @Expr.eng _ _ _ lo hi e lo' hi' b, d =>
     if scalarFits lo hi && scalarFits lo' hi' then
       engL d lo hi lo' hi' (lowE (currentOld := currentOld) L (reserved := reserved) e d) (lowE (currentOld := currentOld) L (reserved := reserved) b d)
