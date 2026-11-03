@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Parser.Expr.Typ
-public import Grammatik.Parser.Stmt.Anweisung.Defs1
+public import Grammatik.Parser.Stmt.Anweisung.IndirectElse
 
 @[expose] public section
 
@@ -38,7 +38,7 @@ def parseKopfStmt (f : Nat) (toks : List Token) :
     | .error e => .error e
     | .ok (e, rest) => match e with
       | .call c args => parseRufMitElse (parseBlock f) c args rest
-      | .ext .call _ (callee :: args) => parseRufMitElse (parseBlock f) (druck callee) args rest
+      | .ext .call _ (callee :: args) => parseIndRufMitElse (parseBlock f) callee args rest
       | .ext .instantiate (name :: words) args => match fordereZeichen ";" rest with
         | .ok rest' => .ok (.genericCall name words args, rest')
         | .error error => .error error
@@ -86,6 +86,8 @@ def parsePlatzStmt (f : Nat) (toks : List Token) :
     | .wort w :: _ =>
       if strEq w "transition" then parseUebergang f toks.tail
       else parseKopfStmt f toks
+    | .zeichen s :: rest =>
+      if strEq s "(" then parseIndRuf f (parseBlock f) rest else parseKopfStmt f toks
     | _ => parseKopfStmt f toks
 
 def parseStmt (f : Nat) (toks : List Token) :
