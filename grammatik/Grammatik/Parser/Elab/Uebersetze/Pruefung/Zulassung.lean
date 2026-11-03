@@ -1,0 +1,181 @@
+/- C16 close-out (4): end-to-end acceptance from source text with a real Duty.
+
+    From `checkText` through lex/parse/elaborate (`elabText`), lowering
+    (`lowerAllg`) and the derived `CheckDecl`s (`uCheckDecls`): the unit's Duty
+    is a declared mark of its own declaration (`checkU_duty_marke`,
+    `checkU_duty_deklariert`), the probe threads it through its lowered
+    signature and the gate wrapper discharges it (`checkU_probe_threadet`,
+    `checkU_tor_threadet`), and `AkzeptiertX` accepts the unit with the derived
+    checks (`checkU_akzeptiert`) -- no vacuous leg. The admission Prop follows
+    (`checkU_admission`). A dropped Duty is refused, never silently admitted:
+    without the wrapper the derivation fails (`checkU_ohne_huelle`), and with
+    the probe's `gibt` emptied `checkB` answers `false`
+    (`checkU_gibt_abgelehnt`). -/
+module
+
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Export
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Ableitung
+public import Grammatik.Parser.Elab.UebersetzeAllg3
+public import Grammatik.Parser.Elab.UebersetzeAllg3.Rest2a
+public import Grammatik.Parser.Cover.Differenz
+public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
+public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide
+public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckProof
+
+@[expose] public section
+
+namespace Gabbro.Grammatik.Parser.Uebersetze
+
+open Gabbro.Grammatik
+open Gabbro.Grammatik.Parser.UebersetzeAllg
+open Gabbro.Grammatik.Parser.UebersetzeAllg2
+open Gabbro.Grammatik.Zielsatz
+
+/-- The source-text unit elaborates. -/
+theorem checkText_ok : (elabText checkText).toOption.isSome = true := by
+  decide +kernel
+
+/-- The elaborated unit behind the end-to-end witness. -/
+def checkU : UProg := (elabText checkText).toOption.get checkText_ok
+
+/-- The unit carries its Duty in the mark table. -/
+theorem checkU_marken : checkU.marken = ["p#duty"] := rfl
+
+/-- The unit lowers. -/
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
+theorem checkU_lowered : (lowerAllg checkU).toOption.isSome = true := by
+  decide +kernel
+
+/-- The lowered program behind the end-to-end witness. -/
+def checkP : Programm (declOf checkU) :=
+  ((lowerAllg checkU).toOption.get checkU_lowered).1
+
+/-- The checks derive. -/
+theorem checkU_checks_ok : (uCheckDecls checkU).toOption.isSome = true := by
+  decide +kernel
+
+/-- The derived checks behind the end-to-end witness. -/
+def checkChecks : List (CheckDecl (declOf checkU)) :=
+  (uCheckDecls checkU).toOption.get checkU_checks_ok
+
+/-! ## The Duty is declared and threaded, non-vacuously -/
+
+/-- The derived check travels under its elaborated name: the acceptance below
+    is non-vacuous. -/
+theorem checkU_checks_namen :
+    (uCheckDecls checkU).map (List.map CheckDecl.name) = .ok ["p"] := rfl
+
+/-- The Duty is the declared mark `p#duty` at stage 0. -/
+theorem checkU_duty_marke :
+    (uCheckDecls checkU).map
+      (List.map fun d => (checkU.marken.get d.duty.1, d.duty.2)) =
+    .ok [("p#duty", 0)] := rfl
+
+/-- Every derived Duty resolves to a name in the mark table: declared, never
+    invented. -/
+theorem checkU_duty_deklariert :
+    (uCheckDecls checkU).map (fun cs => cs.all fun d =>
+      decide (checkU.marken.get d.duty.1 ∈ checkU.marken)) = .ok true := by
+  decide +kernel
+
+/-- The probe consumes and produces exactly the Duty in its lowered
+    signature: nothing is dropped at lowering. -/
+theorem checkU_probe_threadet :
+    (uCheckDecls checkU).map (fun cs => cs.all fun d =>
+      decide (((declOf checkU).signatur d.probe).konsumiert = [d.duty]) &&
+      decide (((declOf checkU).signatur d.probe).produziert = [d.duty])) =
+    .ok true := by
+  decide +kernel
+
+/-- Every gate wrapper discharges that same Duty. -/
+theorem checkU_tor_threadet :
+    (uCheckDecls checkU).map (fun cs => cs.all fun d =>
+      d.gates.all fun g =>
+        decide (d.duty ∈ ((declOf checkU).signatur g).konsumiert)) =
+    .ok true := by
+  decide +kernel
+
+/-! ## Acceptance with the real Duty -/
+
+/-- The lowered unit with its derived checks is admitted by `checkB`: the
+    Duty mark of every check is declared, threaded and discharged. -/
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
+theorem checkU_checkB :
+    checkB checkP [] [] (List.finRange checkU.fns.length) checkChecks = true := by
+  decide +kernel
+
+/-- End-to-end acceptance from source text with a real, non-vacuous Duty:
+    `AkzeptiertX` holds with the derived checks, not the empty leg. -/
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
+theorem checkU_akzeptiert :
+    AkzeptiertX checkP (Cover.Differenz.sperrFamilie checkU)
+      (List.finRange checkU.fns.length) [] [] [] [] checkChecks = true := by
+  decide +kernel
+
+/-- The unit has no tables and no statics: the admission below quantifies over
+    empty carrier lists. -/
+theorem checkU_tabs_leer : checkU.tabs = [] := rfl
+
+theorem checkU_globs_leer : checkU.globs = [] := rfl
+
+/-- The admission Prop follows from the Bool: the derived check expands
+    exactly over the lowered program. -/
+theorem checkU_admission :
+    CheckAdmission checkP (List.finRange checkU.fns.length) checkChecks :=
+  (checkB_iff (fun g => List.mem_finRange g)
+    (fun t => by
+      have h0 : checkU.tabs.length = 0 := by rw [checkU_tabs_leer]
+      have t' : Fin checkU.tabs.length := t
+      exact Fin.elim0 (h0 ▸ t'))
+    (fun g => by
+      have h0 : checkU.globs.length = 0 := by rw [checkU_globs_leer]
+      have g' : Fin checkU.globs.length := g
+      exact Fin.elim0 (h0 ▸ g'))).mp checkU_checkB
+
+/-! ## Refusals: a dropped Duty is refused -/
+
+/-- Without its wrapper the check does not derive: the Duty-consuming gate
+    is gone, refused by name instead of silently admitted. -/
+def checkUOhneHuellen : UProg :=
+  { checkU with fns := checkU.fns.filter fun f => !(strEq f.name "p#tor#g") }
+
+/-- The wrapper-less unit derives nothing. -/
+theorem checkU_ohne_huelle :
+    uCheckDecls checkUOhneHuellen = .error "function unknown: p#tor#g" := rfl
+
+/-- The probe with its `gibt` emptied: the Duty would be dropped. -/
+def checkUOhneGibt : UProg :=
+  { checkU with fns := checkU.fns.map fun f =>
+    if strEq f.name "p#probe" then { f with gibt := [] } else f }
+
+/-- The `gibt`-less unit still lowers: dropping happens in the signature,
+    not in the body. -/
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
+theorem checkUOhneGibt_lowered :
+    (lowerAllg checkUOhneGibt).toOption.isSome = true := by
+  decide +kernel
+
+/-- Its lowered program. -/
+def checkPOhneGibt : Programm (declOf checkUOhneGibt) :=
+  ((lowerAllg checkUOhneGibt).toOption.get checkUOhneGibt_lowered).1
+
+/-- Its checks still derive: the names resolve, the Duty does not thread. -/
+theorem checkUOhneGibt_checks :
+    (uCheckDecls checkUOhneGibt).toOption.isSome = true := by
+  decide +kernel
+
+/-- ... and `checkB` refuses them: the probe produces no Duty. -/
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
+theorem checkU_gibt_abgelehnt :
+    checkB checkPOhneGibt [] []
+      (List.finRange checkUOhneGibt.fns.length)
+      ((uCheckDecls checkUOhneGibt).toOption.get checkUOhneGibt_checks) =
+      false := by
+  decide +kernel
+
+end Gabbro.Grammatik.Parser.Uebersetze
