@@ -144,16 +144,6 @@ def normalizeClauses {D : Deklaration} {Γ : Ctx} (names : Locals Γ)
       else throw "const effect clause is not pure"
     | _ => throw "const clause without a compile-time certificate"
 
-/-- Once the canonical evaluator has been checked against the derived G value,
-    its normalized result denotes the original expression at every pair of worlds.
-    Both premises are fields produced by the checker, not caller obligations. -/
-theorem Normalized.denotes {D : Deklaration} {Γ : Ctx} {names : Locals Γ}
-    {globals : List (String × Int)} {source : SExpr}
-    (normalized : Normalized (D := D) names globals source)
-    (before after : World D) (args : Env D Γ) :
-    eval before normalized.code.2.expr after args = normalized.code.2.denote args := by
-  have _ := normalized.meaning.normalized
-  exact normalized.code.2.equation before after args
 
 end Scalar
 end Gabbro.Grammatik.Parser.Konst
