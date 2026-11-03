@@ -54,7 +54,7 @@ theorem foreignDecode_positive {O : Orakel D} {a : D.Ax} {raw : Int}
     foreignDecode O a raw = sonstPasst O.zeiger (D.aerg a) (D.agruende a) raw := by
   rw [foreignDecode, if_neg (by omega)]
 
-/-- A successful tag is zero and every result word is initialized with the
+/-- A fallible success tag is zero and every result word is initialized with the
     canonical encoding. Listed errors carry their exact nominal reason; an
     invalid answer has an unknown nonzero tag and no usable payload. This is a
     software provider obligation, not a hardware assumption or a runtime proof
@@ -63,11 +63,11 @@ def AreaReply (L : Lay D) (O : Orakel D) (a : D.Ax) (b : TorB)
     (τ : Ty) (he : D.aerg a = some τ) (σ : World D) (ρ : Env D (D.aparams a))
     (m : Runner.Mem) (fp : Runner.W) (base : Nat) (tag : Runner.W) : Prop :=
   (∃ value, foreignDecode O a (O.wirkt a σ ρ).2 = some (.inl value) ∧
-    tag = 0 ∧ ValueAt L m fp base τ (ergWert he value)) ∨
+    (D.agruende a = 0 ∨ tag = 0) ∧ ValueAt L m fp base τ (ergWert he value)) ∨
   (∃ reason errno, foreignDecode O a (O.wirkt a σ ρ).2 = some (.inr reason) ∧
     b.fehler.find? (fun entry => entry.1 == tag.toInt) = some (errno, reason.val)) ∨
   (foreignDecode O a (O.wirkt a σ ρ).2 = none ∧ tag ≠ 0 ∧
-    b.fehler.find? (fun entry => entry.1 == tag.toInt) = none)
+    b.fehler.find? (fun entry => entry.1 == tag.toInt) = none ∧ D.agruende a ≠ 0)
 
 /-- Provider writes may change the declared source world and exactly the
     caller-owned result span. All frame metadata, other locals, code, and
