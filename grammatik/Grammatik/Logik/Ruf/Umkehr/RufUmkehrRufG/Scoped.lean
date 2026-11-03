@@ -8,6 +8,20 @@ namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
 
+/-- Detect reason cleanup without retaining the residue's resource index. -/
+private def GRest.istGrundAufraeumen {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ : List (Res D)} : GRest D V l Γ Λ → Bool
+  | .aufraeumen ⟨.inr _, _⟩ _ => true
+  | _ => false
+
+/-- Invert coverage at an arbitrary residue, before specializing its index
+    to a cleanup list. The converse covers only normal return cleanup. -/
+private theorem RestK.keinGrundAufraeumen {V : Vertrag D}
+    {A : D.Lock → Prop} {C : D.Fn → Prop} {l : Bool} {Γ : Ctx}
+    {Λ : List (Res D)} {r : GRest D V l Γ Λ} (h : RestK A C r) :
+    r.istGrundAufraeumen = false := by
+  cases h <;> rfl
+
 /-- Read the return expression before folding the lexical releases. All
     three source-head positions have the same sequential frame result. -/
 theorem semK_scopedWert (O : Orakel D) (passes : Nat)
@@ -62,7 +76,7 @@ private theorem erhaltK_antwort {P : Programm D} {O : Orakel D} {passes : Nat}
     subst z
     refine Or.inl ⟨false, _, _, (M.faeden f).kopf.rho,
       .zurueckgekehrt ⟨.inl v, vor⟩, σ.spur, ?_,
-      RestK.zurueckgekehrt v vor, ?_⟩
+      RestK.zurueckgekehrt (A := A) (C := C) v vor, ?_⟩
     · simpa only [hst] using hz
     · have hw : M'.weltVon f = σ := by
         unfold RufMaschineG.weltVon
@@ -73,12 +87,11 @@ private theorem erhaltK_antwort {P : Programm D} {O : Orakel D} {passes : Nat}
   | cons caller st =>
     simp only [rufAntwortG, hst] at ha
     cases hr : antwortRestG (M.faeden f).kopf.f (.inl v) caller.rest with
-    | none => simp only [hr, Option.bind] at ha; cases ha
+    | none => simp only [hr] at ha; cases ha
     | some rest =>
-      simp only [hr, Option.bind, Option.some.injEq] at ha
-      subst z
-      exact Or.inr (Or.inl ⟨v, σ, caller, _, st, hst,
-        antwortRestG_wiederauf caller v rest hr, hz, hm, hs⟩)
+      simp only [hr, Option.some.injEq] at ha
+      exact Or.inr (Or.inl ⟨v, σ, caller, _, st, rfl,
+        antwortRestG_wiederauf caller v rest hr, hz.trans ha.symm, hm, hs⟩)
 
 /-- Scoped returns retain the normal-answer converse through every cleanup
     step. Reason returns remain outside its syntactic fragment. -/
@@ -123,7 +136,9 @@ theorem schrittErhaltK_g7 {P : Programm D} {O : Orakel D} {passes : Nat}
     cases hhead
     obtain ⟨answer, vor⟩ := a
     cases answer with
-    | inr grund => cases hcov
+    | inr grund =>
+      have hnormal := RestK.keinGrundAufraeumen hcov
+      simp only [GRest.istGrundAufraeumen, Bool.true_eq_false] at hnormal
     | inl v =>
       unfold ErhaltK
       refine Or.inl ⟨_, _, _, _, .aufraeumen ⟨.inl v, vor⟩ remaining, _,
@@ -135,7 +150,9 @@ theorem schrittErhaltK_g7 {P : Programm D} {O : Orakel D} {passes : Nat}
     cases hhead
     obtain ⟨answer, vor⟩ := a
     cases answer with
-    | inr grund => cases hcov
+    | inr grund =>
+      have hnormal := RestK.keinGrundAufraeumen hcov
+      simp only [GRest.istGrundAufraeumen, Bool.true_eq_false] at hnormal
     | inl v =>
       apply erhaltK_antwort _ _ vor ((M.weltVon f).gibt L) v z' ha
       · exact rufUpdateG_self _ _ _
@@ -170,8 +187,11 @@ theorem semK_scopedWert_zeuge :
       umkehrScopedVor Env.nil =
       .zurueck ((umkehrScopedVor.lese adΛL umkehrScopedExpr.orte).gibt ())
         (evalErg (umkehrScopedVor.lese adΛL umkehrScopedExpr.orte) (.val umkehrScopedExpr)
-          (umkehrScopedVor.lese adΛL umkehrScopedExpr.orte) Env.nil) :=
-  semK_scopedWert adO 0 keinRuf _ _ umkehrScopedR rfl _ _
+          (umkehrScopedVor.lese adΛL umkehrScopedExpr.orte) Env.nil) := by
+  simpa only [umkehrScopedR, List.foldl] using
+    (semK_scopedWert adO 0 keinRuf
+      (.ende (l := false) (.retScoped (.val umkehrScopedExpr) umkehrScopedR))
+      (.val umkehrScopedExpr) umkehrScopedR rfl umkehrScopedVor Env.nil)
 
 def umkehrScopedWert : ErgVal adD (adD.erg adFn) :=
   ⟨7, by decide, by decide⟩
