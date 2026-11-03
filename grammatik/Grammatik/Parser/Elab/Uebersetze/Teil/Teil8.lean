@@ -392,10 +392,12 @@ def uEndeStmt (ctx : UCtx) : Option SEnde → Except String (List UStmt)
     | .error e => .error e
     | .ok r => .ok [UStmt.ret r]
   | .some (.leave m) =>
-    if ctx.loops.head? == some m then .ok [UStmt.leave m]
+    if ctx.loops.head? == some ("#consume:" ++ m) then .error "consuming traversal forbids leave"
+    else if ctx.loops.head? == some m then .ok [UStmt.leave m]
     else .error "leave outside the innermost loop"
   | .some (.next m) =>
-    if ctx.loops.head? == some m then .ok [UStmt.next m]
+    if ctx.loops.head? == some ("#consume:" ++ m) then .error "consuming traversal forbids next"
+    else if ctx.loops.head? == some m then .ok [UStmt.next m]
     else .error "next outside the innermost loop"
 
 /-- The header of `traverse b over slots of S by unvisited [touches …] [invariant p]`: the table (named
