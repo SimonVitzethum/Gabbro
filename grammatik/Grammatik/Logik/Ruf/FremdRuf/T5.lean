@@ -92,7 +92,12 @@ theorem orakelAus_vertrag_neu {ax : ∀ a : D.Ax, CallContract D (D.asignatur a)
   simp only [orakelAus]
   split
   · rename_i hex
-    exact hv a σ0 ρ _ (Classical.choose_spec hex) v
+    intro hfit
+    have hpost := hv a (σ0.fragt (.inl a)) ρ _ (Classical.choose_spec hex) v hfit
+    -- Replay keys include the question event; contract expressions do not read it.
+    exact (congrArg wahr? (eval_spurfrei (ax a).post (σ0.fragt (.inl a)) σ0
+      (Classical.choose hex).1 (Classical.choose hex).1 rfl rfl rfl rfl
+      (ergEnv (D.aerg a) v ρ))).symm.trans hpost
   · exact hQ a σ0 ρ hpre v
 
 /-- The recorded answer world agrees with the machine's answer world on the axiom's
