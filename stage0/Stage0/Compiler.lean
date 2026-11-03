@@ -1,5 +1,6 @@
 module
 public import Stage0.Frontend.Elaboration
+public import Grammatik.Parser.Elab.UebersetzeAllg3.Guest.Connection
 public import Stage0.Frontend.Constants.ArrayConstants
 public import Stage0.Frontend.Initializers
 public import Stage0.Frontend.Measures
@@ -95,7 +96,25 @@ theorem Compiled.invariants {text : String} {options : Profil.Options} (result :
   rw [same]
   exact lowerAllg_traeger result.unit raw fs lowered i
 
-/-- Original-source scalar and function semantics, a unique acyclic alias namespace with a
+/-- Postcondition restoration retains every exported C08 pre/postcondition. -/
+theorem Compiled.foreign_contracts {text : String} {options : Profil.Options}
+    (result : Compiled text options) (a : (declOf result.unit).Ax) :
+    lowerAxContract result.unit a = .ok (result.program.axVertrag a) := by
+  obtain ⟨raw, fs, lowered, restored⟩ := result.lowered
+  rw [OldSource.restore_axVertrag _ result.unit raw result.program restored]
+  exact lowerAllg_axVertrag result.unit raw fs lowered a
+
+/-- The exact source descriptor list reaches production admission after all
+    restoration. Its length and per-descriptor verdict remain observable. -/
+theorem Compiled.guest_descriptors {text : String} {options : Profil.Options}
+    (result : Compiled text options) :
+    ∃ guests, sourceGuests result.unit = .ok guests ∧
+      guests.length = result.unit.guests.length ∧
+      ∀ guest ∈ guests, guest.admittedB = true :=
+  OldSource.accepts_guests result.unit result.program result.accepted
+
+/-- Original-source scalar and function semantics,
+ a unique acyclic alias namespace with a
     certified declaration permutation, and the identical
     UProg/declOf/lowerAllg endpoint of the actual compiler. Supplied scopes are not arbitrary premises:
     they are derived from the original declarations by Source.scopes and the canonical evaluators. -/
