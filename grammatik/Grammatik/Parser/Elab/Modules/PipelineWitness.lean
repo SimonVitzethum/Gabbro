@@ -112,7 +112,8 @@ theorem module_callback_forwarding_zeuge :
       (existingForms result.1, result.2.length)) = .ok (true, 2) := by decide +kernel
 
 /-- One source exercises all four phases: a generative module calls a bounded generic function,
-    that instance resolves a spec call, and the pending callback literal is appended last. -/
+    that instance resolves a spec call, then the pending callback literal is materialized.
+    Final declaration desugaring appends the ordinary spec implementation body. -/
 def completeOrderSource : String :=
   "spec Copy[T] { fn copy(x: T) -> T effects {} costs <= 8 ops; } " ++
   "impl Copy[u8] { fn copy(x: u8) -> u8 effects {} costs <= 3 ops { return x; } } " ++
