@@ -6,7 +6,7 @@ public import Stage0.Senke.Ausdruck.Arithmetik.Adaptiv
 
 
 namespace Gabbro.Stage0.Senke
-open Runner.IR
+open Gabbro.Grammatik Runner.IR
 
 /-- The corrected carry at a halved denominator preserves exact value and
     canonicality for every canonical input, including the old counterexample. -/
@@ -159,7 +159,8 @@ theorem floatNormalizeLoopL_positive_entry [Kern] {D : Deklaration} {L : Lay D}
     Run (Runner.IR.step ⟨pc, fp⟩) m ⟨pc+16, fp⟩ m := by
   have he := floatNormalizeLoopL_head base hc
   have hn : 0 < code.length := by
-    by_contra hh
+    apply Classical.byContradiction
+    intro hh
     have hn : code[0]? = none := List.getElem?_eq_none (by omega)
     rw [hn] at he
     cases he
