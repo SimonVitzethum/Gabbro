@@ -1,7 +1,7 @@
 /- The single-word fast path is a specialization of the complete value encoding. -/
 module
 public import Stage0.Senke.Ausdruck.Sim
-public import Stage0.Senke.Ausdruck.Aggregat.Sum.Model
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.Sum.Model
 @[expose] public section
 
 
