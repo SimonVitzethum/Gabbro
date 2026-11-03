@@ -50,7 +50,7 @@ def bodyMetadata : Nat → SAnw → Bool
     _ + 1, .bindLib .. | _ + 1, .lcall .. => false
 
 def clausesMetadata (clauses : List SKlausel) : Bool := clauses.any fun
-  | .uses effects => effects.any (fun | .mints _ => true | _ => false)
+  | .effs effects => effects.any (fun | .mints _ => true | _ => false)
   | .drops e => (Gabbro.Grammatik.Parser.Uebersetze.uMeasureSource e).toOption.isNone
   | .cost _ | .limit _ | .induc _ | .load _ | .moves .. | .quits _ | .keeps _ | .part _ | .arch _ | .refs _ => true
   | _ => false
@@ -58,7 +58,7 @@ def clausesMetadata (clauses : List SKlausel) : Bool := clauses.any fun
 /-- Payload clauses are consumed by the certified C02 expansion, so they do not refuse a library head. Every other cost/scheduling/proof clause still refuses. -/
 def clausesMetadataWithoutLoad (clauses : List SKlausel) : Bool := clauses.any fun
   | .load _ => false
-  | .uses effects => effects.any (fun | .mints _ => true | _ => false)
+  | .effs effects => effects.any (fun | .mints _ => true | _ => false)
   | .drops e => (Gabbro.Grammatik.Parser.Uebersetze.uMeasureSource e).toOption.isNone
   | .cost _ | .limit _ | .induc _ | .moves .. | .quits _ | .keeps _ | .part _ | .arch _ | .refs _ => true
   | _ => false
@@ -396,6 +396,7 @@ theorem reset_bound_zeuge :
 /-- Plain marks carry no erased body or proof metadata; ghost value types still refuse. -/
 theorem linear_mark_metadata_zeuge :
     itemMetadata (.typeT ["linear"] "Mark" [] [] none) = false ∧
-    bodyMetadata 1 (.retires "Mark") = false := by rfl
+    bodyMetadata 1 (.retires "Mark") = false := by
+  exact ⟨rfl, rfl⟩
 
 end Gabbro.Grammatik.Parser.ExportMetadata
