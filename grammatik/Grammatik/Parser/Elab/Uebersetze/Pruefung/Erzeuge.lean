@@ -4,8 +4,9 @@
    parameterless Boolean function under the generated name
    (`probeFnName`): the head is synthesized (`bool`, no reason channel,
    no held locks, no written tables), the contracts are empty and the
-   body runs through the ordinary `elabFn` pipeline, so a probe accepts
-   exactly what a written `fn` body accepts. Only parser-shaped bodies
+   body runs through the ordinary `elabFn` pipeline after source-indexed
+   recording inserts typed sample/floor calls at its actual returning sites.
+   The bundle includes those private ordinary reporter functions. Only parser-shaped bodies
    (`SAnw.block`, what `parseBlock` produces) elaborate; anything else
    keeps the named refusal. In particular a probe never calls another
    probe: probes elaborate against the written heads only, so naming a
