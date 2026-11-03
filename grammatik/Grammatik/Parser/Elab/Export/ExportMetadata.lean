@@ -75,13 +75,16 @@ def itemMetadata : SItemTief → Bool
       sig.params.any (fun p => typeMetadata p.2) || sig.res.any typeMetadata
   /- Tagged groups expand to ordinary functions before elaboration. Inspect every original
       header and implementation body, so expansion cannot erase cost/proof/type duties. -/
-  | .specGroupT _ _ functions => functions.any fun sig =>
+  | .specGroupT _ _ _ functions => functions.any fun sig =>
       sig.art != "spec" || clausesMetadata sig.klauseln ||
         sig.params.any (fun p => typeMetadata p.2) || sig.res.any typeMetadata
-  | .implGroupT _ receiver functions => typeMetadata receiver || functions.any fun (sig, body) =>
-      sig.art != "impl" || clausesMetadata sig.klauseln || bodyMetadata 10000 body ||
-        sig.params.any (fun p => typeMetadata p.2) || sig.res.any typeMetadata
+  | .implGroupT _ receivers _ functions => receivers.any typeMetadata || functions.any fun
+      | .fnT sig body =>
+        sig.art != "impl" || clausesMetadata sig.klauseln || bodyMetadata 10000 body ||
+          sig.params.any (fun p => typeMetadata p.2) || sig.res.any typeMetadata
+      | _ => true
   | .taggedByT declaration _ => itemMetadata declaration
+  | .moduleTemplateT .. | .moduleUseT .. => true
   | .transT _ translator _ => clausesMetadata translator.klauseln ||
       translator.params.any (fun p => typeMetadata p.2) || translator.res.any typeMetadata
   | .specT .. => true -- Typed macro/proof admission is not supplied by predicate inlining alone.
@@ -215,7 +218,7 @@ set_option maxRecDepth 100000 in
 theorem stateT_zeuge :
     let tr : STrans := ⟨"a", [(.variable "s", .variable "Idle", .variable "Busy")], none, []⟩
     let body := SAnw.block [] (some (.ret (some (.lit 42))))
-    check [.stateT "S" [tr]] = .ok () ∧ check [.stateT "S" [tr], .fnT ⟨"impl", "sample", [], some (.atom "u8"), none, [.cost (.lit 0)]⟩ body] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: sample" := by
+    check [.stateT "S" [tr]] = .ok () ∧ check [.stateT "S" [tr], .fnT ⟨"impl", "sample", [], some (.atom "u8"), none, [.cost (.lit 0)], []⟩ body] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: sample" := by
   exact ⟨rfl, rfl⟩
 
 /-- C02 library calls are bound by the certified expansion. The payload clause is consumed (`exportLibraryKopf` strips `.load`), the call resolves to exactly one library function plus exactly one translator with exactly one payload (`libraryDecl`), and the translator body must be call-free (`callFreeStmt`, otherwise C17). Unexpanded calls never reach ordinary lowering (`ohneBibliothekAnw`, `uAnwReihe`). Costs and other clauses still refuse via `clausesMetadataWithoutLoad`. -/
@@ -231,7 +234,7 @@ theorem library_zeuge :
     let trans : FnSig := ⟨"impl", "build", [], none, none, [], []⟩
     let caller : FnSig := ⟨"impl", "caller", [], some (.atom "u8"), none, [], []⟩
     let cbody := SAnw.block [.lcall ⟨["m"], ["f"], [], []⟩] (some (.ret (some (.lit 1))))
-    check [.transT "f" trans (SAnw.block [] none), .fnT lib (SAnw.block [] none), .fnT caller cbody] = .ok () ∧ check [.fnT ⟨"library", "f", [], none, none, [.load ["P"], .cost (.lit 0)]⟩ (SAnw.block [] none)] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: f" := by
+    check [.transT "f" trans (SAnw.block [] none), .fnT lib (SAnw.block [] none), .fnT caller cbody] = .ok () ∧ check [.fnT ⟨"library", "f", [], none, none, [.load ["P"], .cost (.lit 0)], []⟩ (SAnw.block [] none)] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: f" := by
   exact ⟨rfl, rfl⟩
 
 /-- C16 declared checks are bound by probe, wrapper and admission. Measures resolve by shape (`uMessOrt`), gates must name unit functions (`uCheck`, unknown gates refused), floors lower with the ordinary predicate reader (`uSichert`), probe bodies elaborate as ordinary Boolean producers (`uProbeFn`, non-block refused), generated names must be fresh (`uProbeNeu`, duplicates refused), wrappers consume exactly one Duty (`uTorHuelle`, parameterised or reason-carrying gates refused, sibling-check gates wait for C14), marks are checked (`uMarkenPruef`), and the checker decides read-only Duty threading with call-graph closure (`checkOkB`/`CheckAdmission`). Counterprobes (`sonde`) stay refused: no binding exists. -/
@@ -263,7 +266,7 @@ set_option maxRecDepth 100000 in
 theorem reset_zeuge :
     let body := SAnw.block [.reset "A" (some (.lit 1, .lit 2))] (some (.ret (some (.lit 23))))
     let sig : FnSig := ⟨"impl", "main", [], some (.atom "u64"), none, [], []⟩
-    check [.fnT sig body] = .ok () ∧ check [.fnT ⟨"impl", "main", [], some (.atom "u64"), none, [.cost (.lit 0)]⟩ body] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: main" := by
+    check [.fnT sig body] = .ok () ∧ check [.fnT ⟨"impl", "main", [], some (.atom "u64"), none, [.cost (.lit 0)], []⟩ body] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: main" := by
   exact ⟨rfl, rfl⟩
 
 /-- C05 group and table invariants stay refused: every invariant carries mandatory cost, runs and by duties (`SGruppenInv.kosten/online/proof`), but the exporter only reads the predicate over the declared carriers (`uInv`), ignoring all three. No other checked binding exists, so admitting any shape would silently drop them. -/
