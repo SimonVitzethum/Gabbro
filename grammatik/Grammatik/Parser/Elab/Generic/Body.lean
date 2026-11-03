@@ -15,12 +15,12 @@ def rewriteBody (env : Environment) (bindings : Bindings) : SAnw → RewriteM SA
     | .call target values => pure (.callQ target values)
     | _ => liftResult (.error "reason statement did not produce a direct call")
   | .bindElse n ty value reason body => return .bindElse n (← ty.mapM (rewriteType env bindings))
-      (← rewriteExpression env bindings value) reason (← rewriteBody env bindings body)
+      (← rewriteExpression env bindings value) reason (← rewriteBody env (bindings.without [reason]) body)
   | .bindAxiomOpt n ty value => return .bindAxiomOpt n (← ty.mapM (rewriteType env bindings))
       (← rewriteExpression env bindings value)
   | .bindAxiomOptElse n ty value reason body => return .bindAxiomOptElse n
       (← ty.mapM (rewriteType env bindings)) (← rewriteExpression env bindings value) reason
-      (← rewriteBody env bindings body)
+      (← rewriteBody env (bindings.without [reason]) body)
   | .bindLib mu n ty call => return .bindLib mu n (← ty.mapM (rewriteType env bindings))
       { call with args := ← call.args.mapM (rewriteExpression env bindings) }
   | .set place op value => return .set (← rewriteExpression env bindings place) op
