@@ -46,8 +46,8 @@ theorem akteur_gruppe7 (hK : ∀ f, KoerperGut P O passes f) (e0 : Ereignis D)
           refine ⟨σ.gibt L, Nat.le_succ _, hg, trivial, fun calls => ?_⟩
           obtain ⟨answer, vor⟩ := a
           cases answer <;> exact ZErg.gleich_refl _)
-      apply fadenOk_antwort hK e0 a.1 hdone hL rfl
-      exact ha
+      refine fadenOk_antwort hK e0 _ hdone hL rfl ?_
+      exact (rufAntwortG_rest_irrel (M.faeden u) _ _ _).trans ha
   | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
       rename_i l Γ Λ
       simp only [RufMaschineG.weltVon, rufUpdateG_self, rufAntwortG_spur ha]
@@ -63,8 +63,12 @@ theorem akteur_gruppe7 (hK : ∀ f, KoerperGut P O passes f) (e0 : Ereignis D)
             (ZErg.gleich_of_eq (semZ_scopedWert O passes calls r e R hret σ ρ).symm)
           have hm := World.gibt_foldl_speicher (σ.lese Λ e.orte) R.scopes
           exact ⟨⟨hm.1.symm, hm.2.symm⟩, hv.symm⟩)
-      have hres := fadenOk_antwort hK e0 _ hdone hL rfl ha
-      simpa only [hs₁] using hres
+      have hres := fadenOk_antwort hK e0 _ hdone hL rfl
+        ((rufAntwortG_rest_irrel (M.faeden u) _ _ _).trans ha)
+      have hw : M.speicher.welt σ₁.spur = σ₁ := by
+        subst hs₁
+        exact Speicher.welt_speicher ((M.weltVon u).lese Λ e.orte)
+      simpa only [hw] using hres
   | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
       exact (scopedGrund_nicht_okZ (kopf_okZ hF.1 hhead) hret).elim
   | _ =>
