@@ -54,6 +54,23 @@ def floorCode : Nat → List SExpr → SAnw → Except String SAnw
 def checkProbeCode (c : SCheck) : Except String SAnw :=
   if c.boden.isEmpty then .ok c.canFail else floorCode 100000 c.boden c.canFail
 
+/-- Each step of the actual floor expansion elaborates to the same ordinary
+    conjunction, for any source expressions and any correctly resolved scope.
+    The existing `lowEns` conjunction case and its compiler proof then apply. -/
+theorem uSichert_floor_step (ctx : UCtx) (verdict floor : SExpr)
+    (value outcome : UEns) (hv : uSichert ctx verdict = .ok value)
+    (hf : uSichert ctx floor = .ok outcome) :
+    uSichert ctx (floorUrteil [floor] verdict) = .ok (.and value outcome) := by
+  change uSichert ctx (.bin "&&" verdict floor) = _
+  simp [uSichert, hv, hf]
+
+/-- Non-degenerate instance of the generic expansion: a failing comparison is
+    preserved as code, rather than replaced by a claimed true outcome. -/
+theorem uSichert_floor_step_zeuge (ctx : UCtx) :
+    uSichert ctx (floorUrteil [.bin ">=" (.lit 1) (.lit 2)] .tru) =
+      .ok (.and .tru (.cmp ">=" (.lit 1) (.lit 2))) :=
+  uSichert_floor_step ctx _ _ _ _ rfl rfl
+
 /-- The value of a lowered floor conjunction. Both false and true are ordinary
     completed verdicts; neither removes the returning resource obligation. -/
 theorem floorUrteil_bool (verdict floor : Bool) :
