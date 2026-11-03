@@ -80,9 +80,9 @@ theorem return_inventory :
 theorem retires_ghost {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} (mark : D.Marke) (stage : Nat) (held : Res.marke mark stage ∈ Λ)
     (origin : D.Annahme) (passes : Nat) (address : D.Fn → Nat) (layout : Lay D)
-    (frame : FrameLayout) (post : List II × Nat) (protected : List Nat) (exits : Int × Int)
+    (frame : FrameLayout) (post : List II × Nat) (pinned : List Nat) (exits : Int × Int)
     (reserved : Nat) :
-    lowS (V := V) passes address layout frame post protected exits
+    lowS (V := V) passes address layout frame post pinned exits
       (l := l) (Γ := Γ) (.retires mark stage held origin) reserved =
         some ([], frei Γ reserved) := by rfl
 
