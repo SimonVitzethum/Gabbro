@@ -65,3 +65,4 @@ public import Grammatik.Parser.Elab.Instantiation.Witness
 
 @[expose] public section
 public import Grammatik.Logik.Ruf.Guest.Witness
+public import Grammatik.Parser.Elab.UebersetzeAllg3.Guest.Connection
