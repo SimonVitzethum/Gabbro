@@ -170,4 +170,17 @@ theorem original_parameter_refused_zeuge :
       (.ret (some (.call "captured" [.variable "x"]))) =
       .error "const open argument at `captured`: certified substitution needs closed arguments" := rfl
 
+/-- Quantifier variables, sequential locals and pattern payloads also remain open. -/
+theorem binder_refused_zeuge :
+    ersetzeSExpr [captured] (.ext .all ["x", "slots", "Slots"]
+      [.call "captured" [.variable "x"]]) =
+      .error "const open argument at `captured`: certified substitution needs closed arguments" ∧
+    ersetzeSAnw [captured] (.block [.bind false "x" none (.lit 2)]
+      (some (.ret (some (.call "captured" [.variable "x"]))))) =
+      .error "const open argument at `captured`: certified substitution needs closed arguments" ∧
+    ersetzeSAnw [captured] (.arm "Data" (some "x")
+      (.ret (some (.call "captured" [.variable "x"])))) =
+      .error "const open argument at `captured`: certified substitution needs closed arguments" :=
+  ⟨rfl, rfl, rfl⟩
+
 end Gabbro.Grammatik.Parser.Konst.Values.Witness
