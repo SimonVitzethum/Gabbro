@@ -21,6 +21,7 @@ public import Stage0.Senke.Stopp
 public import Stage0.Senke.Tor
 public import Stage0.Senke.Sperre.Code
 public import Stage0.Senke.Anweisung.Bytes.Code
+public import Stage0.Senke.Anweisung.Bytes.Span.Code
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Allocation
 public import Stage0.Senke.Anweisung.Faelle.Hilfen
 public import Stage0.Senke.Anweisung.Faelle.Gleit.AddCode
@@ -103,7 +104,9 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
       let ci' ← lowE (reserved := reserved) L i ((frei Γ reserved) + 1)
       let cb ← putBytesL L (Γ := Γ) (Λ := Λ) t f lo hi (256 ^ n - 1) hlo reserved n 0 (by simpa using hhi)
       pure (ce.1 ++ ci'.1 ++ cb.1, max ce.2 (max ci'.2 cb.2))
-    else none
+    else putBytesWideL L t f lo hi n hlo hhi
+      (lowE (reserved := reserved) L e (frei Γ reserved))
+      (lowE (reserved := reserved) L i (frei Γ reserved + valueWords (.int 0 (256 ^ n - 1)))) reserved
   | _, Γ, _, _, .assignSlotRef r t _ _ f e _ _, reserved => do
     let ce ← lowE (reserved := reserved) L e (frei Γ reserved)
     let cr ← lowE (reserved := reserved) L r (frei Γ reserved + valueWords (D.typ t f))
