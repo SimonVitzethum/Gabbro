@@ -18,7 +18,7 @@ theorem callElse_tail (reader : List Token → Except String (SAnw × List Token
         (druckAnw body ++ .zeichen ";" :: rest))) =
       .ok (.callElse name args reason body, rest) := by
   by_cases h : strEq reason "" = true
-  · have hr : reason = "" := strEq_eq reason "" h
+  · have hr : reason = "" := (strEq_eq reason "").mp h
     subst hr
     obtain ⟨ts, hk⟩ := hk
     rw [hk] at hb ⊢
