@@ -75,22 +75,22 @@ theorem schrumpfEndGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : 
     {τ : Ty} {o₁ o₂ : EndAusgang V l (τ :: Γ)}
     (h : EndGleich c o₁ o₂) : EndGleich c o₁.schrumpf o₂.schrumpf := by
   cases h with
-  | zurueck _ _ _ _ hS hG hv =>
+  | zurueck hS hG hv =>
     simp only [EndAusgang.schrumpf]
     exact EndGleich.zurueck hS hG hv
-  | why _ _ _ _ hS hG hr =>
+  | why hS hG hr =>
     simp only [EndAusgang.schrumpf]
     exact EndGleich.why hS hG hr
-  | leave _ _ _ _ _ _ hEq hS hG hρ =>
+  | leave hEq hS hG hρ =>
     simp only [EndAusgang.schrumpf]
     exact EndGleich.leave hEq hS hG (envGleichTail c hρ)
-  | next _ _ _ _ _ _ hEq hS hG hρ =>
+  | next hEq hS hG hρ =>
     simp only [EndAusgang.schrumpf]
     exact EndGleich.next hEq hS hG (envGleichTail c hρ)
-  | logik _ _ he =>
+  | logik he =>
     simp only [EndAusgang.schrumpf]
     exact EndGleich.logik he
-  | hardware _ _ he =>
+  | hardware he =>
     simp only [EndAusgang.schrumpf]
     exact EndGleich.hardware he
 
@@ -148,8 +148,17 @@ theorem const_bindCall_ersetzt_single
         (Endblock.bindCall f args_syn he hp hr rest) σ ρ =
       (execEnd O passes (rufAt c.P O passes depth) (hnach ▸ rest) σ'
         (.cons (ergWert he cert.value) ρ)).schrumpf := by
-    cases hnach
+    -- Generalize both resource indices before eliminating their equality.
+    have htransport {X Y : List (Res c.D)} (h : X = Y)
+        (body : Endblock c.D V l (τ :: Γ) X) :
+        execEnd O passes (rufAt c.P O passes depth) (h ▸ body) σ'
+            (.cons (ergWert he cert.value) ρ) =
+          execEnd O passes (rufAt c.P O passes depth) body σ'
+            (.cons (ergWert he cert.value) ρ) := by
+      cases h
+      rfl
     simp only [execEnd, horte, lese_leer, hcall]
+    exact congrArg EndAusgang.schrumpf (htransport hnach rest).symm
   have hR : execEnd O passes (rufAt c.P O passes depth)
         (Endblock.bind e_lit (hnach ▸ rest)) σ ρ =
       (execEnd O passes (rufAt c.P O passes depth) (hnach ▸ rest) σ
