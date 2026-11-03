@@ -70,9 +70,13 @@ theorem areaElse_ok {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D)}
     intro result decoded
     rw [foreignDecode_positive reasons] at decoded
     rw [axiomAntwortSonst_eq, decoded]
-  rcases reply with ⟨value, decoded, zero, payload⟩ | ⟨reason, errno, decoded, found⟩ |
-      ⟨decoded, nonzero, missing⟩
-  · have missing : binding.fehler.find? (fun entry => entry.1 == tag.toInt) = none := by
+  rcases reply with ⟨value, decoded, successTag, payload⟩ | ⟨reason, errno, decoded, found⟩ |
+      ⟨decoded, nonzero, missing, canFail⟩
+  · have zero : tag = 0 := by
+      rcases successTag with noReasons | zero
+      · omega
+      · exact zero
+    have missing : binding.fehler.find? (fun entry => entry.1 == tag.toInt) = none := by
       rw [zero]
       apply List.find?_eq_none.mpr
       intro entry member
