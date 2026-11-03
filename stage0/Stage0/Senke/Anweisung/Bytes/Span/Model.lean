@@ -12,13 +12,16 @@ theorem dropBytes_pow (j : Nat) (z : Int) : dropBytes j z = z / 256 ^ j := by
   induction j with
   | zero => simp [dropBytes]
   | succ j ih =>
-    simp only [dropBytes, ih, Int.ediv_ediv_of_nonneg (by positivity : (0 : Int) ≤ 256 ^ j),
+    change dropBytes j z / 256 = z / 256 ^ (j + 1)
+    rw [ih, Int.ediv_ediv_of_nonneg (Int.pow_nonneg (by decide : (0 : Int) ≤ 256)),
       Int.pow_succ]
 
 theorem dropBytes_add (j k : Nat) (z : Int) : dropBytes (j + k) z = dropBytes k (dropBytes j z) := by
   induction k with
   | zero => simp [dropBytes]
-  | succ k ih => simp only [Nat.add_succ, dropBytes, ih]
+  | succ k ih =>
+    change dropBytes (j + k) z / 256 = dropBytes k (dropBytes j z) / 256
+    exact congrArg (fun v : Int => v / 256) ih
 
 theorem bytesZuZahl_append (as bs : List Byte) :
     bytesZuZahl (as ++ bs) = bytesZuZahl as + 256 ^ as.length * bytesZuZahl bs := by
@@ -26,7 +29,8 @@ theorem bytesZuZahl_append (as bs : List Byte) :
   | nil => simp [bytesZuZahl]
   | cons a as ih =>
     simp only [List.cons_append, bytesZuZahl, ih, List.length_cons, Int.pow_succ]
-    ring
+    rw [Int.mul_add, ← Int.add_assoc, ← Int.mul_assoc,
+      Int.mul_comm 256 (256 ^ as.length)]
 
 theorem dropBytes_bytes (j : Nat) (bs : List Byte) :
     dropBytes j (bytesZuZahl bs) = bytesZuZahl (bs.drop j) := by
@@ -41,8 +45,14 @@ theorem dropBytes_bytes (j : Nat) (bs : List Byte) :
         have := b.le_hi
         simp only [bytesZuZahl]
         omega
-      rw [show j + 1 = 1 + j by omega, dropBytes_add]
-      simp only [dropBytes, div, List.drop_succ_cons, ih]
+      calc
+        dropBytes (j + 1) (bytesZuZahl (b :: bs)) =
+            dropBytes j (dropBytes 1 (bytesZuZahl (b :: bs))) := by
+          rw [Nat.add_comm j 1, dropBytes_add]
+        _ = bytesZuZahl ((b :: bs).drop (j + 1)) := by
+          change dropBytes j (bytesZuZahl (b :: bs) / 256) = bytesZuZahl (bs.drop j)
+          rw [div]
+          exact ih bs
 
 /-- Adjacent chunks concatenate to precisely the original machine-G read span. -/
 theorem World.bytesAb_append (σ : World D) (t : D.Tab) (f : D.Feld t)
@@ -52,10 +62,11 @@ theorem World.bytesAb_append (σ : World D) (t : D.Tab) (f : D.Feld t)
   induction k generalizing p with
   | zero => simp [World.bytesAb]
   | succ k ih =>
-    simp only [Nat.succ_add, World.bytesAb, ih, List.cons_append,
-      Int.natCast_add, Int.natCast_one]
-    congr 1
-    omega
+    rw [Nat.succ_add]
+    have offset : (p + 1) + (k : Int) = p + ((k + 1 : Nat) : Int) := by omega
+    have tail := ih (p + 1)
+    rw [offset] at tail
+    exact congrArg (List.cons _) tail
 
 theorem bytesAb_drop (σ : World D) (t : D.Tab) (f : D.Feld t)
     (hf : D.typ t f = .int 0 255) (k n : Nat) (p : Int) :
@@ -66,10 +77,11 @@ theorem bytesAb_drop (σ : World D) (t : D.Tab) (f : D.Feld t)
     cases n with
     | zero => simp [World.bytesAb]
     | succ n =>
-      simp only [World.bytesAb, List.drop_succ_cons, ih, Nat.succ_sub_succ_eq_sub,
-        Int.natCast_add, Int.natCast_one]
-      congr 1
-      omega
+      rw [Nat.succ_sub_succ_eq_sub]
+      have offset : (p + 1) + (k : Int) = p + ((k + 1 : Nat) : Int) := by omega
+      have tail := ih n (p + 1)
+      rw [offset] at tail
+      exact tail
 
 theorem bytesAb_take (σ : World D) (t : D.Tab) (f : D.Feld t)
     (hf : D.typ t f = .int 0 255) (k n : Nat) (p : Int) :
@@ -79,7 +91,9 @@ theorem bytesAb_take (σ : World D) (t : D.Tab) (f : D.Feld t)
   | succ k ih =>
     cases n with
     | zero => rfl
-    | succ n => simp only [World.bytesAb, List.take_succ_cons, Nat.add_min_add_right, ih]
+    | succ n =>
+      rw [Nat.succ_min_succ]
+      exact congrArg (List.cons _) (ih n (p + 1))
 
 /-- One read kernel returns exactly the low limb of the remaining byte span. -/
 theorem bytes_chunk_word (σ : World D) (t : D.Tab) (f : D.Feld t)
@@ -90,11 +104,10 @@ theorem bytes_chunk_word (σ : World D) (t : D.Tab) (f : D.Feld t)
   · rw [Nat.min_eq_right short]
   · have chunks : σ.bytesAb t f hf n p =
         σ.bytesAb t f hf 8 p ++ σ.bytesAb t f hf (n - 8) (p + 8) := by
-      rw [← World.bytesAb_append]
-      congr 1
-      omega
+      have total : 8 + (n - 8) = n := by omega
+      simpa only [total] using (World.bytesAb_append σ t f hf 8 (n - 8) p)
     rw [chunks, bytesZuZahl_append, World.bytesAb_length, BitVec.ofInt_add, BitVec.ofInt_mul]
-    have zero : BitVec.ofInt 64 ((256 : Int) ^ 8) = 0 := by decide
+    have zero : BitVec.ofInt 64 ((256 : Int) ^ 8) = 0#64 := by decide
     rw [zero, BitVec.zero_mul, BitVec.add_zero]
     rw [Nat.min_eq_left (by omega : 8 ≤ n)]
 
