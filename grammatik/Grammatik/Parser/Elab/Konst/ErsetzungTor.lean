@@ -1,7 +1,6 @@
 module
 
 public import Grammatik.Parser.Elab.Konst.Ersetzung
-public import Grammatik.Parser.Elab.Generic.Body
 public import Grammatik.Parser.Elab.Konst.Scope
 public import Grammatik.Parser.Elab.Export.ExportMetadata
 
@@ -21,14 +20,6 @@ def ersetzeKonstWerte (fns : List UKonstFn) : List SKonstWert → Except String 
   | [] => .ok []
   | value :: rest => do return (← ersetzeKonstWert fns value) :: (← ersetzeKonstWerte fns rest)
 end
-
-/-- Runtime contract operands use exactly the same checked call replacement. -/
-def ersetzeKlausel (fns : List UKonstFn) : SKlausel → Except String SKlausel
-  | .needs source => (ersetzeSExpr fns source).map SKlausel.needs
-  | .gives source => (ersetzeSExpr fns source).map SKlausel.gives
-  | .cost source => (ersetzeSExpr fns source).map SKlausel.cost
-  | .drops source => (ersetzeSExpr fns source).map SKlausel.drops
-  | clause => .ok clause
 
 /-- Replace value calls in function bodies, contracts and constant initializers. -/
 def ersetzeSItem (fns : List UKonstFn) : SItemTief → Except String SItemTief
