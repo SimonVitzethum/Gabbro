@@ -2,22 +2,20 @@
   File:      stage0/Stage0/Senke/Ausdruck.lean
   Subject:   The lowering of stage 0 (`PLAN-SELF-HOSTING.md` §2.1.4), part 1: expressions of machine G into `S0IR`.
 
-  A variable of the context `Γ` lives in a frame slot, counted from the bottom of `Γ` after the frame's first
-  slots (`vslot`, `FB`), so a `bind` adds the slot `frei Γ` and keeps the others. An integer is its 64-bit two's complement, a Boolean 0 or 1
-  (`Enc`). `lowE (currentOld := currentOld) L e d` computes `e` into slot `d`, using the slots above `d` as scratch; it answers the code and the
-  first slot it does not touch. A form outside the fragment, an integer type outside 64 bits where the lowering
-  compares, or a literal outside signed/unsigned 64 bits is refused (`none`); wide integers and the other forms follow.
+  Lexical values occupy complete canonical frame spans, shared with parameters,
+  returns and world cells. lowE computes the whole value at d and reports a scratch
+  ceiling; every accepted path is connected to lowE_ok. Scalars use the first
+  canonical word through Enc only where WordCompatible permits that view.
 
-  A float occupies its IEEE-754 binary64 bit pattern. Its encoding also requires well-formed exponent and
-  fraction fields; finiteness and the declared range are already properties of G's value type.
+  Packed sums retain their eight-bit tag and 56-bit integer offset. Other sums
+  materialize a separate tag, the selected payload's complete encoding and zero
+  padding up to the largest payload span. Float/reference validity follows the
+  selected payload recursively. Strings, products, arrays and wide integers use
+  the same encoding and transport as all other aggregate values.
 
-  A function pointer is the code address `L.fa f`. The layout is explicit in every value and storage encoding;
-  `FunSpec.addr` ties those words to the callee code addresses. This reuses the IR's slot-based call target
-  without a second dispatch mechanism. Function references outside the literal range are refused.
-
-  Empty arrays use zero; singleton arrays reuse their element word recursively. Strings with maximum zero
-  or one use zero for empty and 256 + byte otherwise. Larger aggregates are refused at constructors and reads,
-  including variables, globals and table cells. No allocation, layout or call-ABI change is needed.
+  Byte reads beyond one word emit the <=8-byte kernel once per canonical limb.
+  Float values retain their binary64 representation; function pointers contain
+  the checked layout's code address, never a numerical source pointer conversion.
 
   C13 arithmetic shares complete-value wide kernels and masks wrapping results to the declared width.
   Count borrows and restores the ordinary quantifier binder slot. Scans, popcount, rotations and byte swaps
