@@ -37,7 +37,7 @@ theorem floatShiftRemainderWord_model (a : Runner.W) (k : Nat) :
 
 /-- Every unsigned input is allowed. The count bound makes the denominator a
     positive signed word, as required by floatRoundL's proved comparison. -/
-{reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+theorem floatRoundShiftL_ok {reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {a k : Nat → Option (List II × Nat)} {av : Runner.W} {s : Nat}
     (ha : WordCode (L := L) (reserved := reserved) ρ W a av)
     (hk : WordCode (L := L) (reserved := reserved) ρ W k (BitVec.ofNat 64 s)) (hs : s < 63) :
