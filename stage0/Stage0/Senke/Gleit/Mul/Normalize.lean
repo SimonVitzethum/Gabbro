@@ -130,7 +130,7 @@ theorem softMulNormalizeWord_model (a : GFloat) (ha : wf f64 a)
       Nat.mod_eq_of_lt (by have := bounds.2.2.1; omega : c < 64),
       Nat.mod_eq_of_lt n64, Nat.shiftLeft_eq]
   · have ep : 1 ≤ max a.bexp 1 := Nat.le_max_right _ _
-    rw [show (64 : Runner.W) = BitVec.ofNat 64 64 from rfl, BitVec.ofNat_add,
+    rw [show (64 : Runner.W) = BitVec.ofNat 64 64 from rfl, ← BitVec.ofNat_add,
       BitVec.ofNat_sub_ofNat_of_le _ _ c64 (by have := bounds.2.2.1; omega)]
 
 /-- Normal inputs require no shift; the least subnormal uses all 52 places. -/
