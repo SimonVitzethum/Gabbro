@@ -33,14 +33,14 @@ theorem plainForeignC_ok {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D
       simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at emitted
       obtain ⟨⟨request, requestTop⟩, requestMade, rfl, rfl⟩ := emitted
       have pre0 : PreS L m pc fp K (frei Γ reserved)
-          (request ++ (areaReceive τ (frei Γ reserved) ++ rest)) ρ reserved := by
+          (request ++ (copyWords (valueWords τ) (frei Γ reserved) (foreignResultBase (frei Γ reserved)) ++ rest)) ρ reserved := by
         simpa only [List.append_assoc] using pre
       obtain ⟨binding, bound, m1, tag, run1, change1, input, world1, reply⟩ :=
         areaC_ok he requestMade capacity layout pre0.left world
       have next := pre0.nextW layout change1 (by have := pre.ctx; omega) (Nat.le_refl _) (by omega)
       have span := Nat.le_trans (areaC_top requestMade) capacity
       rcases reply with ⟨value, decoded, success, payload⟩ | ⟨reason, errno, decoded, found⟩ |
-          ⟨decoded, nonzero, missing⟩
+          ⟨decoded, nonzero, missing, canFail⟩
       · have source : einpassenErg O.zeiger (D.aerg a)
             (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).2 = some value := by
           cases result : einpassenErg O.zeiger (D.aerg a)
@@ -51,26 +51,20 @@ theorem plainForeignC_ok {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D
               Option.some.injEq, Sum.inl.injEq] at decoded
             cases decoded
             exact result
-        obtain ⟨m2, run2, change2, value2⟩ :=
-          (areaReceive_ok layout span next.left input).1 success payload
-        refine .inl ⟨value, m2, ?_, ?_, change1.trans (agreeW_of (Agree.widen change2 layout.ks)), value2, ?_⟩
+        obtain ⟨m2, run2, change2, value2⟩ := copyValue_run
+          (frameOK_sub next.frame layout.ks) (by have := pre.small; omega)
+          (by unfold foreignResultBase at span; omega) span
+          (Or.inl (by unfold foreignResultBase; omega)) next.left.code
+          (by simpa only [copyWords_length] using codeFar_sub2 next.left.far layout.ks) payload
+        refine .inl ⟨value, m2, ?_, ?_, change1.trans (agreeW_of (Agree.widen change2 (by omega))), value2, ?_⟩
         · rw [axiomAntwort_eq, source]
-        · exact run1.trans (by rw [List.length_append, ← pc_add]; exact run2)
+        · exact run1.trans (by rw [List.length_append, copyWords_length, ← pc_add]; exact run2)
         · exact weltAt_stab layout.lay (by have := layout.lo; omega) m1 m2 world1
             (change2.mono (Nat.zero_le _))
       · have impossible := reason.isLt
         rw [noReasons] at impossible
         omega
-      · have source : einpassenErg O.zeiger (D.aerg a)
-            (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).2 = none := by
-          cases result : einpassenErg O.zeiger (D.aerg a)
-              (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).2 with
-          | none => exact result
-          | some value =>
-            simp only [foreignDecode_zero noReasons, result, Option.map_some] at decoded
-            cases decoded
-        exact .inr ⟨by rw [axiomAntwort_eq, source],
-          Stops.prefix run1 (areaReceive_nonzero layout span next.left input nonzero)⟩
+      · exact (canFail noReasons).elim
     · cases emitted
   · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at emitted
     obtain ⟨⟨request, requestTop⟩, requestMade, check, checkMade, rfl, rfl⟩ := emitted
