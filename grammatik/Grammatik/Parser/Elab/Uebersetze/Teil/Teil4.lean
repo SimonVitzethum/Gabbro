@@ -260,7 +260,10 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
     | none => blatt (.call name args)
   | e => blatt e
 termination_by expression => sizeOf expression
-decreasing_by all_goals simp_wf; omega
+decreasing_by
+  all_goals simp_wf
+  all_goals try simp_all
+  all_goals omega
 
 /-- A name that is no parameter and no constant: a number static (`Expr.glob`), or an unknown name. -/
 def uGlobLies (ctx : UCtx) (p : String) : Except String USide :=
