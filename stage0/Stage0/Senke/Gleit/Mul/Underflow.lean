@@ -83,8 +83,7 @@ theorem softMulUnderflow_model (s : Bool) (n k : Nat)
       rw [rundeInt_fall _ _ _ (by omega : 2 * (j % 8) < 8)]
       omega
     rw [replay]
-    simp only [softCarryExp, softCarry, if_neg carry, zero]
-    decide +kernel
+    simp only [softCarryExp, softCarry, if_neg carry, zero] <;> rfl
   · rw [if_neg tiny] at replay
     rw [replay]
     simp only [softCarryExp, softCarry, if_neg carry, show (1 : Nat) < 2047 by decide,
