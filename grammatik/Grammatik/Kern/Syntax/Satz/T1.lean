@@ -98,6 +98,14 @@ theorem zeiger_hat_waechter {t : D.Tab} {f : D.Feld t} {p : Expr D Γ Λ (.ptr (
     {ht : D.capTab space n = some t} {i : Expr D Γ Λ (.index (D.count t))} {hL : darf D t Λ}
     (_e : Expr D Γ Λ (D.typ t f)) (_h : _e = .thru p t ht f i hL) : darf D t Λ := hL
 
+/-- Ein Zugriff DURCH eine `own`-Faehigkeit steht unter denselben Waechtern wie `thru` --
+    plus der gehaltenen Eigentumsmarke. -/
+theorem zeigerOwn_hat_waechter {t : D.Tab} {f : D.Feld t} {p : Expr D Γ Λ (.ptr ⟨space, ⟨true, rw, some o⟩, .table n⟩)}
+    {ht : D.capTab space n = some t} {i : Expr D Γ Λ (.index (D.count t))}
+    {m : D.Marke} {s : Nat} {ho : D.ownerNr o = some m} {he : m ∈ D.eigner t}
+    {hg : Sum.inr (m, s) ∈ D.braucht t} {hm : Res.marke m s ∈ Λ} {hL : darf D t Λ}
+    (_e : Expr D Γ Λ (D.typ t f)) (_h : _e = .thruOwn p t ht f i m s ho he hg hm hL) : darf D t Λ := hL
+
 /-- Eine Bytelesung liegt in der Tabelle: `hi + n ≤ count` («SG-16»). -/
 theorem bytes_in_tabelle {t : D.Tab} {f : D.Feld t} {hf} {n : Nat} {i : Expr D Γ Λ (.int lo hi)}
     {hlo : 0 ≤ lo} {hhi : hi + n ≤ D.count t} {hL}
@@ -112,6 +120,12 @@ theorem zuweisung_hat_recht {t : D.Tab} {f : D.Feld t} {i} {e} {hw : V.schreibt 
 theorem zeiger_schreibt_mit_recht {read : Bool} {t : D.Tab} {f : D.Feld t} {p : Expr D Γ Λ (.ptr (.table n (read, true) space))}
     {ht} {i} {e} {hw : V.schreibt t = true} {hL}
     (_s : Stmt D V l Γ Λ Λ) (_h : _s = .assignThru p t ht f i e hw hL) : V.schreibt t = true := hw
+
+/-- Eine Zuweisung DURCH eine `own`-Faehigkeit verlangt dasselbe Schreibrecht wie `assignThru`. -/
+theorem zeigerOwn_schreibt_mit_recht {read : Bool} {t : D.Tab} {f : D.Feld t} {p : Expr D Γ Λ (.ptr ⟨space, ⟨read, true, some o⟩, .table n⟩)}
+    {ht} {i} {e} {m : D.Marke} {s : Nat} {ho : D.ownerNr o = some m} {he : m ∈ D.eigner t}
+    {hg : Sum.inr (m, s) ∈ D.braucht t} {hm : Res.marke m s ∈ Λ} {hw : V.schreibt t = true} {hL}
+    (_s : Stmt D V l Γ Λ Λ) (_h : _s = .assignThruOwn p t ht f i e m s ho he hg hm hw hL) : V.schreibt t = true := hw
 
 /-- Ein `locks L` steht ueber jedem gehaltenen Rang (`H006`): kein zirkulaeres Warten. -/
 theorem sperre_steigt {L : D.Lock} {hr : ∀ M, Res.held M ∈ Λ → D.rang M < D.rang L} {body}
