@@ -250,6 +250,14 @@ theorem softRound_replay (u v : Exakt) (hle : u.zweierExp ≤ v.zweierExp)
   rw [hex] at hS ⊢
   dsimp only at hS ⊢
   have hk := softNormK_bitlen S hSlow hSbound
+  have hbits : 53 ≤ bitlen S := by
+    have hob := bitlen_obere S
+    by_contra hcon
+    have hle : bitlen S ≤ 52 := by omega
+    have hpow := Nat.pow_le_pow_right (show 0 < 2 by decide) hle
+    omega
+  have hEbits : E = u.zweierExp + (bitlen S : Int) - 1 := by
+    omega
   have hQr53 : softRoundMag (softNormQ S) (softNormR S) (softNormDen S) ≤ 2 ^ 53 := by
     have hb : softNormQ S < 2 ^ 53 := by
       unfold softNormQ softNormK
@@ -296,7 +304,7 @@ theorem softRound_replay (u v : Exakt) (hle : u.zweierExp ≤ v.zweierExp)
     have hEpos : findeExp (S * 2 ^ u.zweierExp.toNat) 1 = E := by
       have h1 := findeExp_scaled S u.zweierExp.toNat 0 hSpos
       simp only [Nat.pow_zero] at h1
-      rw [h1]
+      rw [h1, he_nat]
       omega
     rw [hEpos]
     have hQr : normQ 53 E (S * 2 ^ u.zweierExp.toNat) 1
@@ -348,7 +356,7 @@ theorem softRound_replay (u v : Exakt) (hle : u.zweierExp ≤ v.zweierExp)
     have hEpos : findeExp S (2 ^ (-u.zweierExp).toNat) = E := by
       have h1 := findeExp_scaled S 0 (-u.zweierExp).toNat hSpos
       simp only [Nat.pow_zero, Nat.mul_one] at h1
-      rw [h1]
+      rw [h1, he_nat]
       omega
     rw [hEpos]
     have hQr : normQ 53 E S (2 ^ (-u.zweierExp).toNat)
