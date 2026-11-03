@@ -157,4 +157,66 @@ def konst_argument : String :=
   "module m { const fn doppelt(n : u32 in 0 .. 1000) -> u32 in 0 .. 2000 { return n + n; } const C : u32 = doppelt(2000); impl fn f() -> u32 { return C; } }"
 theorem konst_argument_refused : stufe konst_argument = "elab: name unknown: C" := by decide +kernel
 
+/-! ## C09: owner mint and linear handoff -/
+
+/-- C09: the minter holds its fresh owner from the start frame and reads and
+    writes through it: `mints Marke` is the checked `OwnerFlow.mints` output --
+    held at entry (`anfang`), returned (`ende`), never ordinary production. -/
+def mintAtMarke : String :=
+  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn minter(r : ptr<normal, rw+own@Marke> T, i : index into T) -> bool effects { reads r.slots, writes r.slots, mints Marke } { r.slots[i].b = true; return r.slots[i].b; } }"
+theorem mintAtMarke_ok : stufe mintAtMarke = "OK" := by
+  decide +kernel
+
+/-- C09: a linear handoff through a call: the caller holds the mark, the
+    callee receives the same nominal identity for the call and hands it back
+    on return (`moves Marke` is the `OwnerMove` handback). -/
+def moveAtMarke : String :=
+  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn mover(p : ptr<normal, rw+own@Marke> T, i : index into T) -> bool effects { reads p.slots, writes p.slots, moves Marke } { p.slots[i].b = true; return p.slots[i].b; } impl fn caller() -> bool effects { writes T.slots, moves Marke } { mover(&T, 0); return true; } }"
+theorem moveAtMarke_ok : stufe moveAtMarke = "OK" := by
+  decide +kernel
+
+/-- C09: the handed-back mark comes back on the reason channel too: the
+    reason return balances against the same `ende`, so the moved output is
+    received on either channel. -/
+def moveReasonAtMarke : String :=
+  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } reason G { Weg = 1 \"weg\" exhaustive } impl fn mover(p : ptr<normal, rw+own@Marke> T, i : index into T) -> bool or G effects { reads p.slots, writes p.slots, moves Marke } { p.slots[i].b = true; return G::Weg; } }"
+theorem moveReasonAtMarke_ok : stufe moveReasonAtMarke = "OK" := by
+  decide +kernel
+
+/-- C09: the second mint of the same instance is refused: one-shot mint
+    authority per region instance. -/
+def mintTwice : String :=
+  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn a() -> bool effects { mints Marke } { return true; } impl fn b() -> bool effects { mints Marke } { return true; } }"
+theorem mintTwice_refused : stufe mintTwice = "elab: duplicate mint: Marke" := by
+  decide +kernel
+
+/-- C09: minting a mark no table owns is refused: a mint is only an owner
+    handback from a declared owner, never a creation from nothing. -/
+def mintFremd : String :=
+  "module m { linear type Marke; linear type Fremd; table T count 2 owner Marke { slot { b : bool, } } impl fn a() -> bool effects { mints Fremd } { return true; } }"
+theorem mintFremd_refused : stufe mintFremd = "elab: mint without owner: Fremd" := by
+  decide +kernel
+
+/-- C09: moving a mark no table owns is refused, like the loan twin. -/
+def moveFremd : String :=
+  "module m { linear type Marke; linear type Fremd; table T count 2 owner Marke { slot { b : bool, } } impl fn a() -> bool effects { moves Fremd } { return true; } }"
+theorem moveFremd_refused : stufe moveFremd = "elab: move without owner: Fremd" := by
+  decide +kernel
+
+/-- C09: a mark both borrowed and moved is refused: one occurrence per owner
+    identity across stages. -/
+def moveBorrowed : String :=
+  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn a() -> bool effects { borrows Marke, moves Marke } { return true; } }"
+theorem moveBorrowed_refused :
+    stufe moveBorrowed = "elab: mark both borrowed and moved: Marke" := by
+  decide +kernel
+
+/-- C09: moving a mark the caller does not hold is refused at the call: the
+    escrow cannot hand over a binding the caller never had. -/
+def moveDropped : String :=
+  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn mover(p : ptr<normal, rw+own@Marke> T, i : index into T) -> bool effects { reads p.slots, writes p.slots, moves Marke } { p.slots[i].b = true; return p.slots[i].b; } impl fn caller() effects { writes T.slots } { mover(&T, 0); } }"
+theorem moveDropped_refused :
+    stufe moveDropped = "lower: call without held mark" := by
+  decide +kernel
+
 end Gabbro.Grammatik.Parser.UebersetzeProben11
