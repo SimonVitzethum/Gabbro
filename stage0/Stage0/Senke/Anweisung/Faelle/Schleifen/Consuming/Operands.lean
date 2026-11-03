@@ -106,7 +106,9 @@ theorem Ready.borrow (h : x.Ready m σ ρ) {Λ : List (Res D)}
       scratchRoom, frame, ?_⟩
   · simpa only [← origin, show x.addr 20 + BitVec.ofNat 64 (16 * (x.member.length + 3)) =
       x.addr 23 by consume_arith x] using path
-  · simpa only [Enc, bool_word] using encoding ▸ read
+  · have word : value = Runner.IR.bool (wahr? (eval σ member σ (.cons predecessor ρ))) := by
+      simpa only [Enc, bool_word] using encoding
+    simpa only [word] using read
 
 end Image
 end Gabbro.Stage0.Senke.Consuming
