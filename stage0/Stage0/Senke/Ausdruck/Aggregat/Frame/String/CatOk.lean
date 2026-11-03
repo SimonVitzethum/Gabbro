@@ -83,7 +83,7 @@ theorem stringCatC_ok {n q d a b ptr need : Nat} {m : Runner.Mem} {pc : Runner.W
     intro i hi
     rw [agree_rd_above ch12 room (by omega) (by omega)]
     exact bytesB i hi
-  obtain ⟨m3, s3, ch3, appended, kept⟩ := stringAppend_ok (L := L) (stringBytes q vt.1)
+  obtain ⟨m3, s3, ch3, appended, kept⟩ := stringAppend_ok (L := L) (K := K) (stringBytes q vt.1)
     (base := d + 1) (src := b + 1) (lenSlot := a) (ptr := ptr) (index := 0) (len := vs.1.length)
     (by omega) (by omega) (by omega) (by omega) lenA2 bytesB2
     (by simpa only [widthB] using p2'.left)
@@ -98,10 +98,10 @@ theorem stringCatC_ok {n q d a b ptr need : Nat} {m : Runner.Mem} {pc : Runner.W
   obtain ⟨m4, s4, ch4, header⟩ := bin_exact_ok p3 (by omega) (by omega) (by omega)
     readA readB (g := fun a b => some (a + b)) rfl (by decide) rfl
   have bytes3 : WordsAt m3 fp (d + 1)
-      (vs.1.map (fun b => BitVec.ofInt 64 b.n) ++ stringBytes q vt.1 ++ List.replicate (n - vs.1.length) 0) := by
+      (vs.1.map (fun (b : Zahl 0 255) => BitVec.ofInt 64 b.n) ++ stringBytes q vt.1 ++ List.replicate (n - vs.1.length) 0) := by
     have combined := wordsAt_cat (m := m2) (m' := m3) (fp := fp)
       (base := d + 1) (ptr := ptr) (n := n) (q := q)
-      (vs.1.map (fun b => BitVec.ofInt 64 b.n)) (vt.1.map (fun b => BitVec.ofInt 64 b.n))
+      (vs.1.map (fun (b : Zahl 0 255) => BitVec.ofInt 64 b.n)) (vt.1.map (fun (b : Zahl 0 255) => BitVec.ofInt 64 b.n))
       (by simpa only [List.length_map] using la) (by simpa only [List.length_map] using lb) (by omega)
       (by simpa only [stringBytes, List.append_assoc, List.replicate_append_replicate,
         List.length_map] using old)
@@ -109,7 +109,7 @@ theorem stringCatC_ok {n q d a b ptr need : Nat} {m : Runner.Mem} {pc : Runner.W
       (by simpa only [List.length_map, widthB, Nat.add_zero] using kept)
     simpa only [stringBytes, List.length_map, List.append_assoc] using combined
   have payloadWidth :
-      (vs.1.map (fun b => BitVec.ofInt 64 b.n) ++ stringBytes q vt.1 ++
+      (vs.1.map (fun (b : Zahl 0 255) => BitVec.ofInt 64 b.n) ++ stringBytes q vt.1 ++
         List.replicate (n - vs.1.length) 0).length = n + q := by
     simp only [List.length_append, List.length_map, widthB, List.length_replicate]
     omega
