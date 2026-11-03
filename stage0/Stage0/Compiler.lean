@@ -23,7 +23,7 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
     (pre108 source.prepared.elaborierbar)
     source.scopes.values source.scopes.types source.scopes.functions
     (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).map
-      (fun u => {u with exportGate := ExportMetadata.check (uMembers (pre108 source.prepared.elaborierbar))}) = .ok unit
+      (fun u => {u with exportGate := Konst.checkSourceMetadata (uMembers (pre108 source.prepared.elaborierbar))}) = .ok unit
   entry : fnIdx unit.fns "main" = .ok main
   lowered : ∃ raw fs, lowerAllg unit = .ok (raw, fs) ∧
     OldSource.restore (pre108 source.prepared.elaborierbar) unit raw = .ok program
@@ -31,7 +31,7 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
   arrayConstants : ∀ item ∈ uMembers (pre108 source.prepared.elaborierbar), Frontend.ArrayMeaning unit source.scopes item
   initializerExports : Frontend.checkInitializers (uMembers (pre108 source.prepared.elaborierbar)) unit = .ok ()
   constantExports : ExportMetadata.checkConstants (uMembers (pre108 source.prepared.elaborierbar)) = .ok ()
-  metadata : unit.exportGate = ExportMetadata.check (uMembers (pre108 source.prepared.elaborierbar))
+  metadata : unit.exportGate = Konst.checkSourceMetadata (uMembers (pre108 source.prepared.elaborierbar))
   /-- The exact source-derived measure, checked by generic lowering at entry parameters/resources. -/
   measures : {exported : Measures.Export unit // Measures.lowerMeasures unit = .ok exported} :=
     Measures.checkedExport unit (by
@@ -57,11 +57,11 @@ def compile (text : String) (options : Profil.Options := {}) : Except String (Co
         (Frontend.tableWithEmpty source.scopes.values source.scopes.types) with
     | .error e => throw e
     | .ok candidate => do
-      let unit := {candidate with exportGate := ExportMetadata.check members}
+      let unit := {candidate with exportGate := Konst.checkSourceMetadata members}
       have elaborated : (Frontend.elabWithScopes declarations
           source.scopes.values source.scopes.types source.scopes.functions
           (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).map
-            (fun u => {u with exportGate := ExportMetadata.check members}) = .ok unit := by
+            (fun u => {u with exportGate := Konst.checkSourceMetadata members}) = .ok unit := by
         rw [he]
         rfl
       match hi : Frontend.checkInitializers members unit with
@@ -131,12 +131,12 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
     Frontend.compileTimeSafe original = true ∧
     (Frontend.elabWithScopes declarations scope.values scope.types scope.functions
       (Frontend.tableWithEmpty scope.values scope.types)).map
-        (fun u => {u with exportGate := ExportMetadata.check original}) = .ok result.unit ∧
+        (fun u => {u with exportGate := Konst.checkSourceMetadata original}) = .ok result.unit ∧
     (∃ raw fs, lowerAllg result.unit = .ok (raw, fs) ∧
       OldSource.restore declarations result.unit raw = .ok result.program) ∧
     OldSource.accepts result.unit result.program = .ok true ∧
     (∀ item ∈ original, Frontend.ArrayMeaning result.unit scope item) ∧
-    result.unit.exportGate = ExportMetadata.check original ∧
+    result.unit.exportGate = Konst.checkSourceMetadata original ∧
     Measures.lowerMeasures result.unit = .ok result.measures.val ∧
     (∀ f, Measures.SourceTuple result.unit f (result.measures.val.mass f)) ∧
     Measures.cycleLengths result.unit result.program result.measures.val.mass = true ∧
