@@ -97,6 +97,7 @@ structure CheckedCall (k : UKonstFn) (fns : List UKonstFn)
   function : SourceFunction k
   values : List Int
   evaluated : Scalar.argumentValues fns env k.params sources = .ok values
+  argumentsMeaning : ArgumentMeaning fns env k.params sources values
   args : Env (declaration (k.params.map Prod.snd) k.erg) (k.params.map Prod.snd)
   bound : arguments (declaration (k.params.map Prod.snd) k.erg) k.params values = .ok args
   value : Wert (declaration (k.params.map Prod.snd) k.erg) k.erg
@@ -109,9 +110,12 @@ structure CheckedCall (k : UKonstFn) (fns : List UKonstFn)
 def checkCall (k : UKonstFn) (fns : List UKonstFn)
     (env : List (String × Int)) (sources : List SExpr) : Except String (CheckedCall k fns env sources) := do
   let fn ← elaborate k
-  match hv : Scalar.argumentValues fns env k.params sources with
+  match hv : checkArguments fns env k.params sources with
   | .error error => throw ("const argument failure at `" ++ k.name ++ "`: " ++ error)
-  | .ok values =>
+  | .ok checkedArguments =>
+    let values := checkedArguments.values
+    have evaluated : Scalar.argumentValues fns env k.params sources = .ok values := by
+      simp only [Scalar.argumentValues, hv, Except.map]
     match ha : arguments (declaration (k.params.map Prod.snd) k.erg) k.params values with
     | .error error => throw error
     | .ok args =>
@@ -119,7 +123,7 @@ def checkCall (k : UKonstFn) (fns : List UKonstFn)
         let value := fn.model.body.denote args
         if hq : fn.model.post.denote (.cons value args) = true then
           let quoted ← reify k.sums (textLiterals fn.source) 64 k.erg value
-          return ⟨fn, values, hv, args, ha, value, fn.model.body.equation _ _ _,
+          return ⟨fn, values, evaluated, checkedArguments.meaning, args, ha, value, fn.model.body.equation _ _ _,
             ⟨rfl, hp, hq⟩, quoted⟩
         else throw ("const contract violated at `" ++ k.name ++ "`: ensures failed")
       else throw ("const contract violated at `" ++ k.name ++ "`: requires failed")
