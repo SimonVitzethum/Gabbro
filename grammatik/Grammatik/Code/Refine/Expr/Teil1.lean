@@ -282,12 +282,11 @@ theorem lowerE_ok_thruOwn (lay : Layout D) (hL : LayoutOk lay)
     (ho)
     (he)
     (hg)
-    (hm)
     (hL')
     (cenv : List Reg)
     (r : Nat)
     (c : LR)
-    (h : lowerE lay cenv (.thruOwn (n := zi_n) (rw := zi_rw) (space := zi_space) (o := zi_eig) p t ht f i mo s ho he hg hm hL' : Expr D Γ Λ (D.typ t f)) r = some c)
+    (h : lowerE lay cenv (.thruOwn (n := zi_n) (rw := zi_rw) (space := zi_space) (o := zi_eig) p t ht f i mo s ho he hg hL' : Expr D Γ Λ (D.typ t f)) r = some c)
     (σ₀ : World D)
     (σ : World D)
     (ρ : Env D Γ)
@@ -298,7 +297,7 @@ theorem lowerE_ok_thruOwn (lay : Layout D) (hL : LayoutOk lay)
     (hc : (∀ x ∈ cenv, x < r))
     (ih_lowerE_ok_p : ∀ (lay : Layout D) (hL : LayoutOk lay), ∀ (cenv : List Reg), ∀ (r : Nat), ∀ (c : LR), lowerE lay cenv p r = some c → ∀ (σ₀ : World D), ∀ (σ : World D), ∀ (ρ : Env D Γ), ∀ (m : Mem), ∀ (rs : Regs), Rep lay σ m → EnvRep lay rs m cenv ρ → (∀ x ∈ cenv, x < r) → Frag m rs r c (encR lay (Gabbro.Grammatik.Ty.ptr ⟨zi_space, ⟨true, zi_rw, some zi_eig⟩, .table zi_n⟩) (eval σ₀ p σ ρ)) ∧ FitsT (Gabbro.Grammatik.Ty.ptr ⟨zi_space, ⟨true, zi_rw, some zi_eig⟩, .table zi_n⟩))
     (ih_lowerE_ok_i : ∀ (lay : Layout D) (hL : LayoutOk lay), ∀ (cenv : List Reg), ∀ (r : Nat), ∀ (c : LR), lowerE lay cenv i r = some c → ∀ (σ₀ : World D), ∀ (σ : World D), ∀ (ρ : Env D Γ), ∀ (m : Mem), ∀ (rs : Regs), Rep lay σ m → EnvRep lay rs m cenv ρ → (∀ x ∈ cenv, x < r) → Frag m rs r c (encR lay (Gabbro.Grammatik.Ty.index (D.count t)) (eval σ₀ i σ ρ)) ∧ FitsT (Gabbro.Grammatik.Ty.index (D.count t)))
-    : Frag m rs r c (encR lay (D.typ t f) (eval σ₀ (.thruOwn (n := zi_n) (rw := zi_rw) (space := zi_space) (o := zi_eig) p t ht f i mo s ho he hg hm hL' : Expr D Γ Λ (D.typ t f)) σ ρ)) ∧ FitsT (D.typ t f) :=
+    : Frag m rs r c (encR lay (D.typ t f) (eval σ₀ (.thruOwn (n := zi_n) (rw := zi_rw) (space := zi_space) (o := zi_eig) p t ht f i mo s ho he hg hL' : Expr D Γ Λ (D.typ t f)) σ ρ)) ∧ FitsT (D.typ t f) :=
   by
   have htab := (Deklaration.capTab_sound ht).1
   simp only [lowerE] at h
