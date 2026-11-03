@@ -43,7 +43,7 @@ theorem haelt_eq (u : UProg) (i : Fin u.fns.length) :
     declared table owners nothing else consumes. -/
 def ownerReadyB (u : UProg) (S : Signatur (Fin u.tabs.length) (Fin u.globs.length)
     (Fin u.locks.length) (Fin u.marken.length)) : Bool :=
-  S.owner.validB (fun m => decide (m ∈ S.owner.inputs.map Prod.fst)) (fun _ => 1) &&
+  S.owner.validB (fun m => decide (m ∈ S.owner.inputs.map Prod.fst)) (declOf u).stufen &&
   (S.konsumiert.map Prod.fst).all (fun p => !((S.owner.inputs.map Prod.fst).any (· == p))) &&
   (S.owner.inputs.map Prod.fst).all
     (fun m => (List.finRange u.tabs.length).any (fun t => decide (m ∈ eignerAt u t)))
@@ -57,8 +57,6 @@ theorem ownerReadyB_ok (u : UProg) (S : Signatur (Fin u.tabs.length) (Fin u.glob
   simp only [Bool.and_eq_true] at h
   obtain ⟨hV, hD, hR⟩ := h
   have hV' := (OwnerFlow.validB_iff _ _ _).mp hV
-  have hst : (declOf u).stufen = fun _ => 1 := rfl
-  rw [hst]
   refine ⟨hV', ?_, ?_⟩
   · intro p hp
     have hm : p.1 ∈ S.konsumiert.map Prod.fst :=

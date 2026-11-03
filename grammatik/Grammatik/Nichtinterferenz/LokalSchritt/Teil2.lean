@@ -227,8 +227,141 @@ theorem kr_rel (hO : OrakelTreu T AxT O) (hRL : RegLokal O) (hsp : SpeicherGleic
           rw [(hW.lese Λ inv.orte).eval inv (alle_von hST hr.1) ρ]
           exact KRel.ite (fun _ => KRel.lokal _ _ _ _ _ rfl hsp) (fun _ => KRel.none_l _)
   | ewigRest a n inv body k => exact KRel.lokal _ _ _ _ _ rfl hsp
-  | verbrauch t member edge inv bound mass body rest k => exact KRel.none_l _
-  | verbrauchRest t member edge inv bound mass body rest vor k => exact KRel.none_l _
+  | verbrauch t member edge inv bound mass body rest k =>
+      cases rest with
+      | zero => exact KRel.none_l _
+      | succ rest =>
+          simp only [GRest.nR] at hr
+          obtain ⟨hmemS, hedgeS, hinvS, hmassS, -, -⟩ := hr
+          have h1 := hW.lese Λ inv.orte
+          have h2 := h1.lese Λ (member.orte ++ edge.orte)
+          have e1 : (fun (i : Wert D (.index (D.count t))) => wahr?
+              (eval (((sp₁.welt spur).lese Λ inv.orte).lese Λ (member.orte ++ edge.orte))
+                member
+                (((sp₁.welt spur).lese Λ inv.orte).lese Λ (member.orte ++ edge.orte))
+                (.cons i ρ))) =
+              (fun (i : Wert D (.index (D.count t))) => wahr?
+              (eval (((sp₂.welt spur).lese Λ inv.orte).lese Λ (member.orte ++ edge.orte))
+                member
+                (((sp₂.welt spur).lese Λ inv.orte).lese Λ (member.orte ++ edge.orte))
+                (.cons i ρ))) :=
+            funext fun i => congrArg wahr?
+              (h2.eval member (alle_von hST hmemS) (.cons i ρ))
+          have e2 : (fun (i : Wert D (.index (D.count t)))
+              (j : Wert D (.index (D.count t))) => wahr?
+              (eval (((sp₁.welt spur).lese Λ inv.orte).lese Λ (member.orte ++ edge.orte))
+                edge
+                (((sp₁.welt spur).lese Λ inv.orte).lese Λ (member.orte ++ edge.orte))
+                (.cons i (.cons j ρ)))) =
+              (fun (i : Wert D (.index (D.count t)))
+              (j : Wert D (.index (D.count t))) => wahr?
+              (eval (((sp₂.welt spur).lese Λ inv.orte).lese Λ (member.orte ++ edge.orte))
+                edge
+                (((sp₂.welt spur).lese Λ inv.orte).lese Λ (member.orte ++ edge.orte))
+                (.cons i (.cons j ρ)))) :=
+            funext fun i => funext fun j => congrArg wahr?
+              (h2.eval edge (alle_von hST hedgeS) (.cons i (.cons j ρ)))
+          have hscr : verbrauchWahl (alleIndizes (D.count t))
+              (fun (i : Wert D (.index (D.count t))) => wahr?
+                (eval (((sp₁.welt spur).lese Λ inv.orte).lese Λ
+                  (member.orte ++ edge.orte)) member
+                  (((sp₁.welt spur).lese Λ inv.orte).lese Λ
+                  (member.orte ++ edge.orte)) (.cons i ρ)))
+              (fun (i : Wert D (.index (D.count t)))
+                (j : Wert D (.index (D.count t))) => wahr?
+                (eval (((sp₁.welt spur).lese Λ inv.orte).lese Λ
+                  (member.orte ++ edge.orte)) edge
+                  (((sp₁.welt spur).lese Λ inv.orte).lese Λ
+                  (member.orte ++ edge.orte)) (.cons i (.cons j ρ))))
+              (fun i j => decide (i.n = j.n)) =
+            verbrauchWahl (alleIndizes (D.count t))
+              (fun (i : Wert D (.index (D.count t))) => wahr?
+                (eval (((sp₂.welt spur).lese Λ inv.orte).lese Λ
+                  (member.orte ++ edge.orte)) member
+                  (((sp₂.welt spur).lese Λ inv.orte).lese Λ
+                  (member.orte ++ edge.orte)) (.cons i ρ)))
+              (fun (i : Wert D (.index (D.count t)))
+                (j : Wert D (.index (D.count t))) => wahr?
+                (eval (((sp₂.welt spur).lese Λ inv.orte).lese Λ
+                  (member.orte ++ edge.orte)) edge
+                  (((sp₂.welt spur).lese Λ inv.orte).lese Λ
+                  (member.orte ++ edge.orte)) (.cons i (.cons j ρ))))
+              (fun i j => decide (i.n = j.n)) := by
+            rw [e1, e2]
+          have hsome : ∀ v : Wert D (.index (D.count t)),
+              KRel T
+                (kLokal st f rho (.cons v ρ)
+                  (.dann body (.verbrauchRest t member edge inv bound mass body rest
+                    (eval ((((sp₁.welt spur).lese Λ inv.orte).lese Λ
+                      (member.orte ++ edge.orte)).lese Λ mass.orte) mass
+                      ((((sp₁.welt spur).lese Λ inv.orte).lese Λ
+                      (member.orte ++ edge.orte)).lese Λ mass.orte) ρ).n k))
+                  (((((sp₁.welt spur).lese Λ inv.orte).lese Λ
+                      (member.orte ++ edge.orte)).lese Λ mass.orte).spur) sp₁)
+                (kLokal st f rho (.cons v ρ)
+                  (.dann body (.verbrauchRest t member edge inv bound mass body rest
+                    (eval ((((sp₂.welt spur).lese Λ inv.orte).lese Λ
+                      (member.orte ++ edge.orte)).lese Λ mass.orte) mass
+                      ((((sp₂.welt spur).lese Λ inv.orte).lese Λ
+                      (member.orte ++ edge.orte)).lese Λ mass.orte) ρ).n k))
+                  (((((sp₂.welt spur).lese Λ inv.orte).lese Λ
+                      (member.orte ++ edge.orte)).lese Λ mass.orte).spur) sp₂) := by
+            intro v
+            have hma : WRel T
+                (((((sp₁.welt spur).lese Λ inv.orte).lese Λ
+                  (member.orte ++ edge.orte)).lese Λ mass.orte))
+                (((((sp₂.welt spur).lese Λ inv.orte).lese Λ
+                  (member.orte ++ edge.orte)).lese Λ mass.orte)) :=
+              h2.lese Λ mass.orte
+            rw [hma.eval mass (alle_von hST hmassS) ρ]
+            exact KRel.lokal _ _ _ _ _ hma.1 hsp
+          have hnone :
+              KRel T
+                (if ((alleIndizes (D.count t)).all fun i =>
+                    !(wahr? (eval (((sp₁.welt spur).lese Λ inv.orte).lese Λ
+                      (member.orte ++ edge.orte)) member
+                      (((sp₁.welt spur).lese Λ inv.orte).lese Λ
+                      (member.orte ++ edge.orte)) (.cons i ρ)))) = true then
+                  kLokal st f rho ρ k
+                    ((((sp₁.welt spur).lese Λ inv.orte).lese Λ
+                      (member.orte ++ edge.orte)).spur) sp₁
+                else none)
+                (if ((alleIndizes (D.count t)).all fun i =>
+                    !(wahr? (eval (((sp₂.welt spur).lese Λ inv.orte).lese Λ
+                      (member.orte ++ edge.orte)) member
+                      (((sp₂.welt spur).lese Λ inv.orte).lese Λ
+                      (member.orte ++ edge.orte)) (.cons i ρ)))) = true then
+                  kLokal st f rho ρ k
+                    ((((sp₂.welt spur).lese Λ inv.orte).lese Λ
+                      (member.orte ++ edge.orte)).spur) sp₂
+                else none) := by
+            have hmem : ∀ i : Wert D (.index (D.count t)),
+                wahr? (eval (((sp₁.welt spur).lese Λ inv.orte).lese Λ
+                  (member.orte ++ edge.orte)) member
+                  (((sp₁.welt spur).lese Λ inv.orte).lese Λ
+                  (member.orte ++ edge.orte)) (.cons i ρ)) =
+                wahr? (eval (((sp₂.welt spur).lese Λ inv.orte).lese Λ
+                  (member.orte ++ edge.orte)) member
+                  (((sp₂.welt spur).lese Λ inv.orte).lese Λ
+                  (member.orte ++ edge.orte)) (.cons i ρ)) :=
+              fun i => congrArg wahr?
+                (h2.eval member (alle_von hST hmemS) (.cons i ρ))
+            simp only [hmem]
+            exact KRel.ite (fun _ => KRel.lokal _ _ _ _ _ h2.1 hsp)
+              (fun _ => KRel.none_l _)
+          simp only [kr]
+          rw [(hW.lese Λ inv.orte).eval inv (alle_von hST hinvS) ρ]
+          refine KRel.ite (fun _ => ?_) (fun _ => KRel.none_l _)
+          exact KRel.opt hscr hsome hnone
+  | verbrauchRest t member edge inv bound mass body rest vor k =>
+      cases ρ with
+      | cons _ ρ =>
+          simp only [GRest.nR] at hr
+          obtain ⟨-, -, -, hmassS, -, -⟩ := hr
+          simp only [kr]
+          rw [(hW.lese Λ mass.orte).eval mass (alle_von hST hmassS) ρ]
+          exact KRel.ite (fun _ => KRel.lokal _ _ _ _ _ (hW.lese _ _).1 hsp)
+            (fun _ => KRel.none_l _)
   | wartet b k => exact KRel.none_l _
   | wartetSonst n err b k => exact KRel.none_l _
   | abbruch k => exact KRel.none_l _

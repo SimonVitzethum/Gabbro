@@ -27,6 +27,16 @@ theorem kLeave_rel (hST : ∀ c, S c = true → T c = true) (st : List (KRahmen 
       rw [(h.lese _ inv.orte).eval inv (alle_von hST hk.1) ρ.tail]
       exact KRel.ite (fun _ => KRel.lokal _ _ _ _ _ (h.lese _ _).1 (h.lese _ _).2)
         (fun _ => KRel.none_l _)
+  | verbrauchRest t member edge inv bound mass body rest vor k =>
+      simp only [GRest.nR] at hk
+      obtain ⟨-, -, hinv, hmass, -, -⟩ := hk
+      simp only [kLeave]
+      rw [(h.lese _ mass.orte).eval mass (alle_von hST hmass) ρ.tail]
+      refine KRel.ite (fun _ => ?_) (fun _ => KRel.none_l _)
+      rw [((h.lese _ mass.orte).lese _ inv.orte).eval inv (alle_von hST hinv) ρ.tail]
+      exact KRel.ite
+        (fun _ => KRel.lokal _ _ _ _ _ ((h.lese _ mass.orte).lese _ inv.orte).1 h.2)
+        (fun _ => KRel.none_l _)
   | wiederRest n bis body ueber k => exact KRel.lokal _ _ _ _ _ h.1 h.2
   | ewigRest a n inv body k => exact KRel.lokal _ _ _ _ _ h.1 h.2
   | dann b k => exact KRel.lokal _ _ _ _ _ h.1 h.2
@@ -35,13 +45,20 @@ theorem kLeave_rel (hST : ∀ c, S c = true → T c = true) (st : List (KRahmen 
   | abbruch k => exact KRel.lokal _ _ _ _ _ h.1 h.2
   | _ => exact KRel.none_l _
 
-theorem kNext_rel (st : List (KRahmen D)) (f : D.Fn)
+theorem kNext_rel (hST : ∀ c, S c = true → T c = true) (st : List (KRahmen D)) (f : D.Fn)
     (rho : Env D (D.params f)) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
-    (k : GRest D (vertragVon D f) l Γ Λ) (hl : l = true) {σ τ : World D}
+    (k : GRest D (vertragVon D f) l Γ Λ) (hk : k.nR S Ax) (hl : l = true) {σ τ : World D}
     (h : WRel T σ τ) (ρ : Env D Γ) :
     KRel T (kNext st f rho k hl σ ρ) (kNext st f rho k hl τ ρ) := by
   cases k with
   | travRest t inv body is k => exact KRel.lokal _ _ _ _ _ h.1 h.2
+  | verbrauchRest t member edge inv bound mass body rest vor k =>
+      simp only [GRest.nR] at hk
+      obtain ⟨-, -, -, hmass, -, -⟩ := hk
+      simp only [kNext]
+      rw [(h.lese _ mass.orte).eval mass (alle_von hST hmass) ρ.tail]
+      exact KRel.ite (fun _ => KRel.lokal _ _ _ _ _ (h.lese _ _).1 h.2)
+        (fun _ => KRel.none_l _)
   | wiederRest n bis body ueber k => exact KRel.lokal _ _ _ _ _ h.1 h.2
   | ewigRest a n inv body k => exact KRel.lokal _ _ _ _ _ h.1 h.2
   | dann b k => exact KRel.lokal _ _ _ _ _ h.1 h.2
@@ -63,7 +80,7 @@ theorem kAusDann_rel (hST : ∀ c, S c = true → T c = true) (st : List (KRahme
     rw [hw.1]
     exact kPopGrund_rel st f _ hw.2 _
   · obtain ⟨hw, rfl⟩ := h; exact kLeave_rel hST st f rho k hk _ hw _
-  · obtain ⟨hw, rfl⟩ := h; exact kNext_rel st f rho k _ hw _
+  · obtain ⟨hw, rfl⟩ := h; exact kNext_rel hST st f rho k hk _ hw _
   · exact KRel.none_l _
   · exact KRel.none_l _
 
@@ -83,13 +100,6 @@ theorem kAusEnde_rel (st : List (KRahmen D)) (f : D.Fn)
   · exact KRel.none_l _
   · exact KRel.none_l _
   · exact KRel.none_l _
-
-theorem zahl_ext {lo hi : Int} {a b : Zahl lo hi} (h : a.n = b.n) : a = b := by
-  cases a
-  cases b
-  simp only at h
-  subst h
-  rfl
 
 theorem KRel.lokalEnv (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) {l : Bool}
     {Γ : Ctx} {Λ : List (Res D)} {ρ₁ ρ₂ : Env D Γ} (hρ : ρ₁ = ρ₂)

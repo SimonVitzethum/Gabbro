@@ -156,4 +156,16 @@ def ind_else_refused : String :=
 theorem ind_else_refused_stufe :
     stufe ind_else_refused = "elab: let else of a call without a reason channel" := by decide +kernel
 
+/-- Discarding the result uses the same pointer signature and a reason-only error scope. -/
+def ind_discard_else_src : String :=
+  "module m { reason G { Weg = 1 \"weg\" exhaustive } impl fn f(p : fn(x : u32 in 0 .. 9) -> u32 in 0 .. 9 or G effects { pure } costs <= 2 ops) -> u32 in 0 .. 9 { p(4) else (e) { return 0; }; return 1; } }"
+
+theorem callIndElse_zeuge : stufe ind_discard_else_src = "OK" := by decide +kernel
+
+/-- The shared marker also dispatches inside a continuing block. -/
+def ind_discard_else_block_src : String :=
+  "module m { reason G { Weg = 1 \"weg\" exhaustive } impl fn f(c : bool, p : fn(x : u32 in 0 .. 9) -> u32 in 0 .. 9 or G effects { pure } costs <= 2 ops) -> u32 in 0 .. 9 { if c { p(4) else (e) { return 0; }; } return 1; } }"
+
+theorem callIndElse_block_zeuge : stufe ind_discard_else_block_src = "OK" := by decide +kernel
+
 end Gabbro.Grammatik.Parser.UebersetzeProben33

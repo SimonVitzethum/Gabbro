@@ -16,8 +16,8 @@ inductive ReplacementEvidence (k : UKonstFn) (fns : List UKonstFn)
 
 structure Replacement (k : UKonstFn) (fns : List UKonstFn)
     (env : List (String × Int)) (sources : List SExpr) where
-  syntax : SExpr
-  evidence : ReplacementEvidence k fns env sources syntax
+  «syntax» : SExpr
+  evidence : ReplacementEvidence k fns env sources «syntax»
 
 /-- The one production entry point for certified value replacement. -/
 def checkReplacement (k : UKonstFn) (fns : List UKonstFn)
@@ -36,7 +36,7 @@ def checkReplacement (k : UKonstFn) (fns : List UKonstFn)
 /-- A shared semantic interface: each replacement retains the generic ordinary
     G-call theorem, and either the normalized scalar candidate or the complete
     typed literal denotation. No semantic obligation is a caller premise. -/
-def ReplacementEvidence.Sound : {syntax : SExpr} → ReplacementEvidence k fns env sources syntax → Prop
+def ReplacementEvidence.Sound : {«syntax» : SExpr} → ReplacementEvidence k fns env sources «syntax» → Prop
   | _, .integer call =>
     (Scalar.expression (Scalar.locals k.params)
       (Scalar.normalizeNames (Scalar.locals k.params) k.constants call.function.source) =
@@ -56,7 +56,7 @@ def ReplacementEvidence.Sound : {syntax : SExpr} → ReplacementEvidence k fns e
         (Values.resultSchemas k) k.erg call.quoted.syntax call.value
 
 theorem Replacement.sound (replacement : Replacement k fns env sources) : replacement.evidence.Sound := by
-  rcases replacement with ⟨syntax, evidence⟩
+  rcases replacement with ⟨«syntax», evidence⟩
   cases evidence with
   | integer call => exact ⟨call.function.normalized, call.normalized_denotation, call.sound⟩
   | portable call => exact call.sound

@@ -110,6 +110,11 @@ def druckAnw : SAnw → List Token
     [.wort "transition"] ++ druckToks z ++ [.zeichen ":", nameTok a, .zeichen "->", nameTok b, .zeichen ";"]
   | .genericCall name words args =>
     druckToks (.ext .instantiate (name :: words) args) ++ [.zeichen ";"]
+  | .callIndElse p xs reason body =>
+    [.zeichen "("] ++ druckToks p ++ [.zeichen ")", .zeichen "("] ++ druckToksListe xs ++
+      [.zeichen ")", .wort "else"] ++
+      (if strEq reason "" then [] else [.zeichen "(", nameTok reason, .zeichen ")"]) ++
+      druckAnw body ++ [.zeichen ";"]
   | .callElse f xs reason body =>
     rohToks f ++ [.zeichen "("] ++ druckToksListe xs ++ [.zeichen ")", .wort "else"] ++
       (if strEq reason "" then [] else [.zeichen "(", nameTok reason, .zeichen ")"]) ++

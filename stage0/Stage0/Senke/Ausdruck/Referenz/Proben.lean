@@ -248,8 +248,8 @@ def runnerImage (writing : Bool) : List Runner.B :=
   let bs := Runner.Prog.leN 8 (base + 4096) ++ Runner.Prog.leN 8 0 ++ code.flatMap encII
   bs ++ List.replicate (9000 - bs.length) 0
 
-/-- Static images have no supplied region; raw provider words are not accepted as regions. -/
-theorem refused_zeuge : chkC (some (.ref 0)) 5 = none ∧
-    lowEnd 1 (fun _ => 0) layout (⟨[], none, 0, 0, 0⟩ : FrameLayout) ([], 0) [] (0, 0) GRegion.rumpf = none := by decide +kernel
+/-- The existing supplied-region fixture now transports its provider capability. -/
+theorem provider_lowering_zeuge : (chkC (some (.ref 0)) 5).isSome = true ∧
+    (lowEnd 1 (fun _ => 0) layout (⟨[], none, 0, 0, 0⟩ : FrameLayout) ([], 0) [] (0, 0) GRegion.rumpf).isSome = true := by decide +kernel
 
 end Gabbro.Stage0.Senke.ReferenceProbe

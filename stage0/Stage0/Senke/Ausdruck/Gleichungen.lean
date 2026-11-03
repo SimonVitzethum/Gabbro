@@ -21,7 +21,7 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
 @[lowE_eqs] theorem lowE_prod (name : Nat) {fs : List Ty} (args : Args D Γ Λ fs) :
     lowE (currentOld := currentOld) L (reserved := reserved) (.prod name args) d =
       prodL d (prodArgsL (lowE (currentOld := currentOld) L (reserved := reserved)) args d) :=
-  congrArg (prodL d) (lowA_eq_prodArgsL args d)
+  congrArg (prodL d) (lowProdArgs_eq_prodArgsL args d)
 
 @[lowE_eqs] theorem lowE_or (a b : Expr D Γ Λ .bool) :
     lowE (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.or a b) d =

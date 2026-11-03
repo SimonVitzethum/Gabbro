@@ -31,6 +31,7 @@ import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 
+public import Grammatik.Logik.Ruf.Guest.Boundary
 public import Grammatik.Zielsatz.Kern.Spec
 public import Grammatik.Kern.Syntax.Satz.T3
 public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide
@@ -371,16 +372,16 @@ def maskenDisziplinB (P : Programm D) (fs : List D.Fn) (w : D.Fn) : Bool :=
 def maskenB (P : Programm D) (fs : List D.Fn) : Bool :=
   fs.all fun w => !(P.unterbricht w) || maskenDisziplinB P fs w
 
-/-- **`Akzeptiert` -- what the checker decides, as ONE Bool.** The last conjunct is the C02
-    library binding: generated programs are ordinary, so it holds by construction
-    (`libraryB_immer`); the content is source-level (`Uebersetzung.lean`). -/
+/-- The complete program checker, followed by bounded guest admission. Source
+    adapters must supply every source-derived descriptor; the empty default
+    is the guest-free case and never a guest provenance certificate. -/
 def Akzeptiert [DecidableEq D.Ax] (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn)
     (aks : List (Kernzelle.AccumulatorDecl D) := []) (checks : List (CheckDecl D) := [])
-    (aqs : List D.Ax := []) : Bool :=
+    (aqs : List D.Ax := []) (guests : List (GuestBoundary D) := []) : Bool :=
   programmImFragmentG P fs && abgAlleB P fs && fussWB P S fs ws && stufenB P fs &&
     sperrOrteB S ls && wurzelnB ws && einzelnPoolB P fs cs ws && rennB P fs cs ws &&
-    antwortenB P fs && maskenB P fs && schnittstellenB P fs && resetB cs && libraryB P fs && Kernzelle.accumulatorB P fs (tabsOf cs) (globsOf cs) aqs aks && checkB P (tabsOf cs) (globsOf cs) fs checks && scopesOkProgB P fs
+    antwortenB P fs && maskenB P fs && schnittstellenB P fs && resetB cs && libraryB P fs && Kernzelle.accumulatorB P fs (tabsOf cs) (globsOf cs) aqs aks && checkB P (tabsOf cs) (globsOf cs) fs checks && scopesOkProgB P fs && GuestBoundary.admissionB guests
 
 /-! ## 4. Each component decides its field of `AkzeptiertSpec` -/
 

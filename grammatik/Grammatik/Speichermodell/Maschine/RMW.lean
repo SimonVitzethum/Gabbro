@@ -121,7 +121,7 @@ theorem exchange_liest_schreibt {M M' : RufMaschineG D} {u : Faden} {g : D.Glob}
     (hk : ExchangeKopf M u g) (hs : RufSchrittG P O passes M u M') :
     LiestG M M' u (.inr g) ∧ SchreibG M M' u (.inr g) := by
   obtain ⟨l, Γ, Λ, Λ', neuE, hw, hL, rest, k, ρ, hK⟩ := hk
-  rcases hs with hs | hs | hs | hs | hs | hs <;> cases hs
+  rcases hs with hs | hs | hs | hs | hs | hs | hs <;> cases hs
   all_goals (kopf_vergleich hK)
   all_goals (try (cases hk; done))
   case dannExchange σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>

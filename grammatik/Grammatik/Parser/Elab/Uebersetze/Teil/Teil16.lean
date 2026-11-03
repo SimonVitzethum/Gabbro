@@ -68,8 +68,11 @@ def beqUStmt : UStmt → UStmt → Bool
   | .bindOptBeg x c a, .bindOptBeg y d b => strEq x y && strEq c d && beqUArgList a b
   | .bindOptElseBeg x c a e, .bindOptElseBeg y d b f =>
     strEq x y && strEq c d && beqUArgList a b && strEq e f
+  | .callIndElseBeg p c a e, .callIndElseBeg q d b f => strEq p q && strEq c d && beqUArgList a b && strEq e f
   | .axCallElseBeg c a e, .axCallElseBeg d b f => strEq c d && beqUArgList a b && strEq e f
   | .retires a, .retires b => strEq a b
+  | .breakingBeg a, .breakingBeg b => strEq a b
+  | .advances a b, .advances c d => strEq a c && strEq b d
   | .assign a f x s, .assign b g y t =>
     strEq a b && strEq f g && beqUIdx x y && beqUSide s t
   | .assignTab a f x s, .assignTab b g y t =>
@@ -81,18 +84,24 @@ def beqUStmt : UStmt → UStmt → Bool
   | .storeAtom a s, .storeAtom b t => strEq a b && beqUSide s t
   | .storeAtomB a s, .storeAtomB b t => strEq a b && beqUEns s t
   | .call a xs, .call b ys => strEq a b && beqUArgList xs ys
+  | .retireMark a, .retireMark b => strEq a b
   | .lockBeg a, .lockBeg b => strEq a b
   | .blkEnd, .blkEnd => true
   | .bind a d s, .bind b e t => strEq a b && beqOptIntPair d e && beqUSide s t
   | .ifBeg a, .ifBeg b => beqUEns a b
   | .ifElse, .ifElse => true
   | .loopBeg a t i, .loopBeg b u j => strEq a b && strEq t u && beqUEns i j
+  | .consumeLoopBeg a t p m e i mass effects, .consumeLoopBeg b u q n f j measure other =>
+    strEq a b && strEq t u && strEq p q && beqUEns m n && beqUEns e f &&
+      beqUEns i j && beqUSide mass measure && strEq effects other
   | .arrayLoopBeg a source inv, .arrayLoopBeg b target other =>
       strEq a b && beqUSide source target && beqUEns inv other
   | .resetRange a x n, .resetRange b y m =>
     strEq a b && beqUSide x y && beqUSide n m
   | .floatLit a q lo hi, .floatLit b r low high =>
     strEq a b && decide (q = r) && decide (lo = low) && decide (hi = high)
+  | .floatOf a x lo hi, .floatOf b y low high =>
+    strEq a b && beqUSide x y && decide (lo = low) && decide (hi = high)
   | .float a op x y lo hi, .float b other z w low high =>
     strEq a b && decide (op = other) && beqUSide x z && beqUSide y w &&
       decide (lo = low) && decide (hi = high)
@@ -203,7 +212,7 @@ def beqUProg : UProg → UProg → Bool
   | a, b => beqUTabList a.tabs b.tabs &&
     beqULockList a.locks b.locks && beqUFnList a.fns b.fns &&
     beqStrList a.roots b.roots && beqStrList a.hands b.hands && beqUGlobList a.globs b.globs &&
-    decide (a.regs = b.regs) && decide (a.records = b.records)
+    decide (a.regs = b.regs) && decide (a.records = b.records) && decide (a.markOrders = b.markOrders)
 
 /-- Shape equality on elaboration outcomes, as a `Bool`. -/
 def beqElabU : Except String UProg → Except String UProg → Bool

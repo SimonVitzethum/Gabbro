@@ -49,7 +49,7 @@ theorem torC_ok {reserved : Nat} {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : Li
         obtain ⟨rfl, rfl⟩ := hc
         have hg' := hg
         simp only [torGut, Bool.and_eq_true, decide_eq_true_eq] at hg'
-        obtain ⟨⟨hn6, _⟩, hnr⟩ := hg'
+        obtain ⟨⟨hn6, _⟩, hnr, _⟩ := hg'
         refine ⟨b, hb, ?_⟩
         have hsmall := hp.small
         have hFs : FrameOK m fp Ks := frameOK_sub hp.frame hks

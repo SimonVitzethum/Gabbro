@@ -68,7 +68,7 @@ theorem schritt_logArt {M M' : RufMaschineG D} {u : Faden}
     (∃ (g : D.Fn) (rho : Env D (D.params g)) (r : Fin (D.gruende g)) (s0 s1 : World D),
       (M'.faeden u).log = RufEreignisF.why g rho r s0 s1 :: (M.faeden u).log ∧
         s1.speicher = M'.speicher) := by
-  (rcases hs with hs | hs | hs | hs | hs | hs <;> cases hs) <;> (try simp only [rufUpdateG_self]) <;> first
+  (rcases hs with hs | hs | hs | hs | hs | hs | hs <;> cases hs) <;> (try simp only [rufUpdateG_self]) <;> first
     | exact Or.inl trivial
     | exact Or.inl rfl
     | exact Or.inr (Or.inl ⟨_, _, _, rfl⟩)

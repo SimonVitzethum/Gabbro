@@ -162,12 +162,6 @@ theorem traegerGleich_of_nicht_schreib {M M' : RufMaschineG D} {u : Faden} {c : 
     (h : ¬ SchreibG M M' u c) : TraegerGleich M'.speicher M.speicher c :=
   Classical.byContradiction fun hn => h (Or.inr hn)
 
-theorem traegerGleich_trans {s s' s'' : Speicher D} {c : D.Tab ⊕ D.Glob}
-    (h1 : TraegerGleich s s' c) (h2 : TraegerGleich s' s'' c) : TraegerGleich s s'' c := by
-  cases c
-  · exact h1.trans h2
-  · exact h1.trans h2
-
 theorem traegerGleich_symm {s s' : Speicher D} {c : D.Tab ⊕ D.Glob}
     (h : TraegerGleich s s' c) : TraegerGleich s' s c := by
   cases c

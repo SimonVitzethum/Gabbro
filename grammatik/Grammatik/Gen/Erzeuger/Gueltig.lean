@@ -105,6 +105,7 @@ theorem akzeptiertX_iff (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls :
       (∀ c, komp P S fs ls cs ws c = true) ∧
         Gabbro.Grammatik.Kernzelle.accumulatorB P fs (tabsOf cs) (globsOf cs) aqs aks = true ∧ resetB cs = true := by
   unfold AkzeptiertX
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true]
   simp only [Bool.and_eq_true]
   constructor
   · rintro ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h0, h1⟩, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, -⟩, h10⟩, hr⟩

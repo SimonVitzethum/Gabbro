@@ -136,7 +136,7 @@ def anwArt : SAnw → String
   | .swap .. => "exchange" | .step .. => "step" | .ret .. => "return" | .alloc .. => "alloc" | .reset .. => "reset"
   | .grow .. => "grow" | .free .. => "free" | .child .. => "child" | .start .. => "start" | .other w => w
   | .block .. => "block" | .allocVon .. => "alloc from a provider" | .bindQ .. => "let query"
-  | .callQ .. => "call query" | .callElse .. => "call else"
+  | .callIndElse .. => "indirect call else" | .callQ .. => "call query" | .callElse .. => "call else"
   | .genericCall .. => "unexpanded generic call"
   | .retires .. => "retires"
 
@@ -159,6 +159,7 @@ def uAnw1 (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
         | .ok s => .ok (.regWrite rg.dev rg.name s)
     | none => uSetze ctx ziel op wert
   | .retires m => .ok (.retires m)
+  | .step a b => .ok (.advances a b)
   | .emit ziel wert p => uAtomSchreib ctx ziel wert p
   | .shift z von nach =>
     match uZugriff ctx z with

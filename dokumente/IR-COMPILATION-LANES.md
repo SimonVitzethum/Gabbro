@@ -3422,6 +3422,14 @@ Static source audit of `6fa0dfa9f` (`inventory-s0`, forked from `c-runde1`). No 
 Lake, build, runner or guardian was run. These are code/proof-connection findings,
 not a fresh kernel or execution result. Earlier checkpoints above describe older trees.
 
+**Foreign update (`s0-foreign`, 2026-11-03; lead validation pending).** The foreign rows
+and F/R/H/E conditions below include the authored Bool/capability and explicit-result-area
+paths. Their generic proof declarations are connected to the existing lowering dispatchers;
+image, source-outcome and joint provider-contract witness declarations were added. No Lean,
+Lake, runner or guardian was run by the implementation agent. The original aggregate counts
+were not remeasured, and these declarations are not a new kernel-checked result.
+
+
 **Counting rule.** One row per constructor of `Expr` in
 `grammatik/Grammatik/Kern/Syntax/Syntax/Teil2Expr.lean` and `Stmt`, `Block`, `Endblock`
 in `Teil2.lean`. LOWERED means no additional local refusal beyond recursively
@@ -3551,9 +3559,10 @@ Paths below are relative to `stage0/Stage0/Senke/` unless otherwise stated.
 | C | `wennL`: `16 * (then.length + else.length + 2) < 2^31`. `engL/wideEngL`: `16 * (fallback.length + 1) < 2^31`. |
 | P | `lit32 (L.ga g)` and `aggregateFits (D.gtyp g)` (one word AND `wordCompatB`; products fail even if one word). `exchange` also requires `16 * (new.length + 5) < 2^31`. |
 | N | No interval-width refusal remains in `lowB/lowEnd`: `narrowC` evaluates once, extends to `narrowWords` and uses the existing `wideOutC` kernel. Both endpoint singleton widths are included, so inverted intervals select failure too. Scratch is `d + 5*narrowWords + 22`; the ordinary final frame/code representability checks still apply. `narrowRequired` emits logical capacity stop 107 on failure; it does not clip. |
-| F | `Tor.torC`: binding present, `torGut` (at most six parameters, `b.regs=regsIn params.length`, `lit32 b.nr`), every parameter `wortTy` (one-word integer, Bool or pointer); `lowR` must compile. If a pointer parameter exists: exactly one pointer, resolved table and byte field, field type `int 0 255`, `0 ≤ D.count t < 2^20`, and `L.count t = D.count t`. `torC0` additionally requires zero reasons. |
-| R | `Tor.chkC`: a one-word integer whose lower check is omitted for `lo ≤ -2^63`, otherwise `inW lo lo`; upper check omitted for `2^63-1 ≤ hi`, otherwise `inW (hi+1) (hi+1)`. Bool normalizes; `.never` emits stop 110; references, aggregates and multiword answers fail. |
-| E | Fallible foreign bind/statement: F without the zero-reason restriction; binding's `fehlGut` (every errno in -4095..-1 and mapped index below reason count and `2^31`), positive reason count, `W(why count)=1`. Value result must be `int lo hi`, `0 ≤ lo`, and pass R; void is supported only by optional binders/statement. Let `e=b.fehler.length`, `k=check.length` (zero for void), `r=success.length`. Bound for Block: `16+16*(6*e)+16*(k+r+1)<2^31`; Endblock: `16+16*(6*e)+16*(k+r)<2^31`; statement: `16+16*(6*e)+16*(k+1)<2^31`. |
+| F | `Tor.torC`: binding present, `torGut` (at most six parameters, `b.regs=regsIn params.length`, `lit32 b.nr`, no result-area clause), every parameter `wortTy` (one-word integer, Bool or pointer); `lowR` must compile. If a pointer parameter exists: exactly one pointer, resolved table and byte field, field type `int 0 255`, `0 ≤ D.count t < 2^20`, and `L.count t = D.count t`. `torC0` additionally requires zero reasons. |
+| R | Register answer (`Tor.chkC`, `Bindung/Answer.chkAnswer_ok`): a one-word integer whose lower check is omitted for `lo ≤ -2^63`, otherwise `inW lo lo`; upper check omitted for `2^63-1 ≤ hi`, otherwise `inW (hi+1) (hi+1)`. Bool normalizes. A reference rejects negative words and retains nominal open-region bounds through the explicit `TorOK.ref_answer` binding duty; a region capability uses its canonical zero marker. `.never` stops with 110. Multiword results use H; aggregate answers still need their canonical source-model admission. |
+| H | Explicit area answer (`Tore/Code.areaC`): selected `result area REGISTER`, hidden index `j` with `params.length ≤ j < 6`, ordinary `regsIn params.length`, literal syscall number, scalar one-word request arguments without pointer-buffer parameters. The caller reserves `valueWords τ` words at `s+10`; the provider's `TorOK.area` duty preserves every byte outside that exact result span and the declared world effects, including all permission maps. Successful results carry the same `ValueAt` as ordinary calls and are transported by `copyValue_run`. Fallible success has tag zero; infallible calls ignore the tag. Unknown fallible tags stop before payload reads. `IRBild.emit` names a multiword answer missing this clause. Nominal reference freshness/disjointness remains source user logic; this does not provision new region storage. |
+| E | `Tore/Code.fallibleForeignC` (value) or the existing VOID path: register F without the zero-reason restriction, or explicit area H; binding's `fehlGut` (errno -4095..-1, mapped case below the reason count and `2^31`), positive reason count, and `W(why count)=1`. Register values pass R and `fallibleTy` (integer with nonnegative lower bound, Bool, reference or region capability). H transports the full canonical value. VOID uses optional binders/statement. Let `e=b.fehler.length`, `k=check.length` (`7+W(τ)` for a fallible area, zero for VOID), `r=success.length`. Bound: `16+16*(6*e)+16*(k+r)<2^31`; `r` includes the extra skip instruction for Block and statement calls. Generic connection: `fallibleForeignC_ok` via `areaElse_ok`/`torElse_ok`, then the existing Block/Endblock/statement case theorem. |
 
 ### Expressions: exhaustive constructor inventory
 
@@ -3699,8 +3708,8 @@ called by the generic theorem; where the proof is inline that is stated.
 | `bindCall` | LOWERED | Direct call/receive/tail; `blockCall_case`. |
 | `bindCallInd` | LOWERED | Indirect call/receive; zero reasons guaranteed; `lowB_ok_bindCallInd`. |
 | `bindCallElse` | LOWERED | Direct call and both continuations; `lowB_ok_bindCallElse`. |
-| `bindAxiom` | CONDITIONAL | F with zero reasons, R; `lowB_ok_bindAxiom`. |
-| `bindAxiomElse` | CONDITIONAL | E, value only; `lowB_ok_bindAxiomElse`. |
+| `bindAxiom` | CONDITIONAL | Register F/R or area H, zero reasons; `plainForeignC_ok`, `lowB_ok_bindAxiom`. |
+| `bindAxiomElse` | CONDITIONAL | E, complete value; `fallibleForeignC_ok`, `lowB_ok_bindAxiomElse`. |
 | `regRead` | REFUSED | Catch-all `none`, impossible-success `lowB_ok` case; no named witness found; outside userspace scope. |
 | `regReadElse` | REFUSED | Same, fallible register read; outside userspace scope. |
 | `awaits` | CONDITIONAL | P (without exchange's code-size check); `lowB_ok_awaits`. |
@@ -3712,7 +3721,7 @@ called by the generic theorem; where the proof is inline that is stated.
 | `floatOf` | CONDITIONAL | Any integer literal via `floatLiteralL`; the actual computed binary64 hook now uses complete-magnitude normalization and the existing IEEE guard-rounding packer outside signed-word intervals. The interval-width refusal is removed; ordinary recursive operand, frame/address and generated-code limits (C in conversion branches) remain. `integerFloat_round` → `wideComputedFloatOfE_ok` → `computedFloatOfE_ok` → `blockFloatOfComputed_case` → `lowB_ok_floatOf`; `computedFloatRangeL_ok` covers overflow/range Stop 107. Accepted witness declarations: `WideFloatProbe.wide_float_images_zeuge`, `computedFloatOfE_wide_ok_zeuge`; lead Lean/runner checks pending. |
 | `floatNarrow` | LOWERED | Range/else/tail; NaN endpoint selects else directly; `lowB_ok_floatNarrow`. |
 | `narrowRequired` | LOWERED | N; full-span `narrow_ok` through `blockNarrowRequired_case`; capacity failure remains stop 107. Lead check pending. |
-| `bindAxiomOpt` | CONDITIONAL | Value: F with zero reasons + R; void: F with zero reasons, no result decoder; `lowB_ok_bindAxiomOpt_some/_none`. |
+| `bindAxiomOpt` | CONDITIONAL | Value: F/R or H with zero reasons; void: F with zero reasons, no result decoder; `lowB_ok_bindAxiomOpt_some/_none`. |
 | `bindAxiomOptElse` | CONDITIONAL | E, value OR void; `lowB_ok_bindAxiomOptElse_some/_none`. |
 | `bindCallIndElse` | LOWERED | Fallible indirect dispatch and both continuations; `blockIndElse_case`. |
 
@@ -3728,8 +3737,8 @@ called by the generic theorem; where the proof is inline that is stated.
 | `bind` | LOWERED | Expression/tail; `lowEnd_ok_bind`. |
 | `bindCall` | LOWERED | Direct call; `lowEnd_ok_bindCall`. |
 | `bindCallElse` | LOWERED | Direct fallible call; `lowEnd_ok_bindCallElse`. |
-| `bindAxiom` | CONDITIONAL | F with zero reasons, R; `lowEnd_ok_bindAxiom`. |
-| `bindAxiomElse` | CONDITIONAL | E, value only; `lowEnd_ok_bindAxiomElse`. |
+| `bindAxiom` | CONDITIONAL | Register F/R or area H, zero reasons; `plainForeignC_ok`, `lowEnd_ok_bindAxiom`. |
+| `bindAxiomElse` | CONDITIONAL | E, complete value; `fallibleForeignC_ok`, `lowEnd_ok_bindAxiomElse`. |
 | `regRead` | REFUSED | Catch-all `none`, impossible-success `lowEnd_ok` case; no named witness found; outside userspace scope. |
 | `regReadElse` | REFUSED | Same; outside userspace scope. |
 | `awaits` | CONDITIONAL | P without exchange's size check; `lowEnd_ok_awaits`. |
@@ -3740,7 +3749,7 @@ called by the generic theorem; where the proof is inline that is stated.
 | `narrowRequired` | LOWERED | N; full-span `narrow_ok` through `endNarrowRequired_case`; capacity failure remains stop 107. Lead check pending. |
 | `retScoped` | REFUSED | Explicit `none`, no scope-unwind emitter; impossible-success `lowEnd_ok` case. |
 | `retWhyScoped` | REFUSED | Explicit `none`, same missing step. |
-| `bindAxiomOpt` | CONDITIONAL | Value/void F/R distinction as Block; `lowEnd_ok_bindAxiomOpt_some/_none`. |
+| `bindAxiomOpt` | CONDITIONAL | Value/void F/R/H distinction as Block; `lowEnd_ok_bindAxiomOpt_some/_none`. |
 | `bindAxiomOptElse` | CONDITIONAL | E, value OR void; `lowEnd_ok_bindAxiomOptElse_some/_none`. |
 | `bindCallIndElse` | LOWERED | Positive-reason indirect call and handlers; `endIndElse_case`. |
 

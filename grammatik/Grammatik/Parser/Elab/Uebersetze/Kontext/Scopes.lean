@@ -195,6 +195,8 @@ structure UFn where
       mint outputs (`OwnerFlow.mints`) -- the minter holds the fresh owner from
       its start frame and returns it, never ordinary production. -/
   praegt : List String := []
+  /-- Private typed reporter metadata, consumed only by ghost replay. -/
+  checkReturn : Option UCheckReturn := none
   deriving DecidableEq, Repr
 
 /-- The kind of a value of type `τ` that is no pointer, index, option, sum or reason: an aggregate or a number. -/
@@ -266,9 +268,22 @@ structure UAx where
   /-- The resolved `assume` index witnessing a hardware origin (`none` for
       software items and while unresolved; a dangling index reads as `none`). -/
   beleg : Option Nat := none
+  /-- Explicit software origin, resolved from an entrust service binding. -/
+  software : Bool := false
+  names : List String := []
+  needs : List UEns := []
+  gives : List UEns := []
   deriving DecidableEq, Repr
 
 deriving instance DecidableEq for Except
+
+/-- Exact admitted source descriptor; typed admission resolves both names again. -/
+structure UGuest where
+  name : String
+  code : String
+  arch : String
+  service : String
+  deriving DecidableEq, Repr
 
 /-- The elaborated program and its original-source export admission. -/
 structure UProg where
@@ -277,6 +292,7 @@ structure UProg where
   fns : List UFn
   /-- The foreign bodies (`extern fn`). -/
   axs : List UAx := []
+  guests : List UGuest := []
   /-- The `assume` items, in order (`D.Annahme`). -/
   annahmen : List String := []
   /-- The `reason` declarations, in order. -/
@@ -328,7 +344,16 @@ structure UProg where
       (`ownerNr`/`eigner` over a nontrivial `Marke`) waits for the C09 signature
       flow. -/
   eigner : List String := []
+  /-- Declared linear mark orders; an absent or empty order has one stage. -/
+  markOrders : List (String × List String) := []
   deriving DecidableEq, Repr
 
+/-- The declared labels of one nominal mark, in source order. -/
+def markStages (u : UProg) (m : Fin u.marken.length) : List String :=
+  ((u.markOrders.find? (fun p => strEq p.1 (u.marken.get m))).map Prod.snd).getD []
+
+/-- Unstaged marks (including generated Duties) have one stage. -/
+def markStageCount (u : UProg) (m : Fin u.marken.length) : Nat :=
+  max 1 (markStages u m).length
 
 end Gabbro.Grammatik.Parser.Uebersetze

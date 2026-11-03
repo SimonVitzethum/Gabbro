@@ -59,6 +59,9 @@ structure SBind where
   stack : List String
   dirty : List String
   codes : List (String × Option SExpr × String)
+  /-- Hidden request register carrying the caller-owned canonical result area.
+      The provider writes the declared result span under its user contract. -/
+  resultArea : Option String := none
   deriving Repr
 
 def beqErrsList : List (String × Option SExpr × String) →
@@ -71,7 +74,7 @@ def beqErrsList : List (String × Option SExpr × String) →
 def beqSBind : SBind → SBind → Bool
   | a, b => beqSExpr a.id b.id && beqSRegBindList a.ins b.ins &&
     beqSRegBindList a.outs b.outs && beqWorte a.stack b.stack &&
-    beqWorte a.dirty b.dirty && beqErrsList a.codes b.codes
+    beqWorte a.dirty b.dirty && beqErrsList a.codes b.codes && beqOptWort a.resultArea b.resultArea
 
 /- The contract of a gate: SYNTAX.md section 12.1 `syscontract`. -/
 structure SGate where
@@ -181,7 +184,7 @@ inductive SItemTief
   | accT : String → STyp → String → Option SExpr → Option String → SItemTief
   | walkT : SWeg → SItemTief
   | entryT : SEingang → SItemTief
-  | trustT : String → String → String → List SRegBind → String → String → SItemTief
+  | trustT : String → String → String → List SRegBind → String → String → Option String → SItemTief
   | bootT : String → String → List SBootSchritt → List String → SItemTief
   | callT : SSyscall → SItemTief
   /-- `syscall V;`: a system call as a named variable (SYNTAX.md 12.3). -/
@@ -277,9 +280,9 @@ def beqSItemTief : SItemTief → SItemTief → Bool
     strEq a b && beqSTyp t u && strEq m n && beqOptExpr p r && beqOptWort q s
   | .walkT a, .walkT b => beqSWeg a b
   | .entryT a, .entryT b => beqSEingang a b
-  | .trustT a b c r s t, .trustT d e f u v w =>
+  | .trustT a b c r s t x, .trustT d e f u v w y =>
     strEq a d && strEq b e && strEq c f && beqSRegBindList r u &&
-    strEq s v && strEq t w
+    strEq s v && strEq t w && beqOptWort x y
   | .bootT a c s d, .bootT b e t f =>
     strEq a b && strEq c e && beqSBootSchrittList s t && beqWorte d f
   | .callT a, .callT b => beqSSyscall a b

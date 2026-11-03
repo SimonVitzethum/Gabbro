@@ -5413,8 +5413,6 @@ Integration evidence: `13a27e855` (`feat(grammatik): C14 stage 4, userspace entr
 * **`isEmpty_eq`**: For arbitrary `α : Type`, `l : List α`, assuming `h : l.isEmpty = true`, the conclusion is `l = []`.
 * **`eintrittB_sound`**: For arbitrary `fns : List String`, `e : SEingang`, assuming `h : eintrittB fns e = true`, the conclusion is `(∃ a, wertVon .arch e.arch = some a) ∧ e.vektor = none ∧ e.via = none ∧ e.regIn = [] ∧ e.regOut = [] ∧ e.erhaelt = [] ∧ e.kills = [] ∧ e.stapel = "" ∧ e.perCpu = false ∧ e.ist = none ∧ e.nest = none ∧ ∀ w ∈ e.dispatch, ∃ f ∈ fns, strEq f w = true`.
 * **`eintritt_ohne_registerzustand`**: For arbitrary `fns : List String`, `e : SEingang`, assuming `h : eintrittB fns e = true`, the conclusion is `e.regIn = [] ∧ e.regOut = [] ∧ e.stapel = ""`.
-* **`gast_ohne_dienst_abgelehnt`**: For arbitrary `regionen fns : List String`, `reg : List AnnahmeKennung`, `g : GuestBoundary`, assuming `h : g.dienst = none`, the conclusion is `gastB regionen fns reg g = false`.
-* **`gastVon_abgelehnt`**: For arbitrary `regionen fns : List String`, `reg : List AnnahmeKennung`, `name region arch annahme : String`, the conclusion is `gastB regionen fns reg (gastVon name region arch annahme) = false`.
 `grammatik/Grammatik/Parser/Profil/EintrittZeuge.lean`:
 
 * **`ez_zulaessig`**: the conclusion is `eintrittB ["worker"] ezE = true`.
@@ -5428,7 +5426,6 @@ Integration evidence: `13a27e855` (`feat(grammatik): C14 stage 4, userspace entr
 * **`ez_arch`**: the conclusion is `eintrittB ["worker"] { ezE with arch`.
 * **`ez_wurzel`**: the conclusion is `eintrittB ["worker"] { ezE with dispatch`.
 * **`ez_kills`**: the conclusion is `eintrittB ["worker"] { ezE with kills`.
-* **`ez_gast_mit_dienst`**: the conclusion is `gastB ["guest_image"] ["isolate_svc"] ezReg ⟨"jit", "guest_image", "x86_64", some "isolate_svc", "guest_stays_in_room"⟩ = true`.
 `grammatik/Grammatik/Zielsatz/Projekte/Profil.lean`:
 
 * **`hardware_iff_komponenten`**: For arbitrary `O : Orakel D`, `Q : AxEns D`, the conclusion is `HardwareAnnahmen O Q ↔ ∀ k ∈ hwAlle, k.gilt O Q`.
@@ -6400,7 +6397,7 @@ replacement and actual substitution theorems. Negative witnesses cover wrong res
 types, option bounds, unknown tags, UTF-8 overflow, wider strings, false requires/ensures, missing payloads, statement calls, a foreign
 reason owner, and parameter/local/pattern/quantifier shadowing.
 
-`stage0/Stage0/Frontend/ConstWitness.lean` retains the previous scalar values 4/6, contracts,
+`stage0/Stage0/Frontend/Witnesses/ConstWitness.lean` retains the previous scalar values 4/6, contracts,
 source/initializer compilation, generic-contract bypass and argument-type refusals.
 `ConstValuesWitness.lean` adds source-text Bool, Some/None, tagged numeric payload, short
 string and original/qualified captured-global compilation declarations, with canonical-admission and conditional
@@ -6615,3 +6612,287 @@ Measured here: static diff/whitespace check, changed Lean module headers and fil
 500 lines. No Lean, lake, build, guardian or runner invocation; all new proof bodies and witnesses
 await the lead's checks. `Spec.lean` and the `gabbro_ziel` proof are untouched; standard-axiom
 verification remains a required lead check. Dynamic transfer replay and mint admission stay open.
+## 150. C14: bounded guest service from source to Stage 0 (2026-11-03)
+
+Implementation, not build evidence: the implementation worker ran no Lean/lake,
+compiler or guardian checks. Complete proof and reduction attempts are committed;
+the lead must compile them, reduce the witnesses and recheck `gabbro_ziel` on
+exactly the standard axioms. `Spec.lean` and its meaning are unchanged.
+
+`Logik/Ruf/Guest/Boundary.lean` remains the canonical `GuestBoundary`: immutable
+code, an explicit fallible software service, exact pointer inputs, genuine owner
+resources for transferred regions, a closed ordinary userspace ABI and explicit
+return behavior. `Invocation.lower_eq` identifies the existing
+`Block.bindAxiomOptElse`; no guest interpreter, new machine step or hardware
+isolation assumption is introduced. `transfer_owned` connects ownership to the
+actual resource context. `storageDisjointB_iff` decides byte-extent disjointness.
+
+`Guest/Service.lean` retains isolation as `GuestServicePflicht` alongside C08
+`ForeignPflicht`. `guest_service_contract` transports the service's actual C08
+contract under its call-site precondition and implementation-link duties.
+`guest_storage_disjoint` includes initial live grants and all preceding calls;
+`guest_failure_inventory` preserves that same inventory on failure.
+
+The source connections are now implemented:
+
+- `SItemTief.trustT` retains `via SERVICE`; namespace resolution predeclares the
+  generated wrapper and resolves the code region and foreign binding lexically.
+  `Uebersetze/Guest/Source.lean` resolves exactly one C08 prototype or syscall,
+  requires a declared nonempty failure channel and requires/ensures mentioning
+  the code region, and generates one wrapper forwarding every parameter, the
+  success result and every failure reason. The wrapper uses the existing
+  `SAnw.bindAxiomOptElse`; ordinary elaboration and Stage-0 lowering handle it.
+- `guestForeign` elaborates the declared predicates in the binding's parameter
+  and result scope. `UAx.software` records the explicit source binding;
+  `herkunftAt` exports `some .software` and `axBeleg` remains `none`. A conflicting
+  named hardware origin is refused. Direct foreign `requires Held(...)` is
+  refused rather than silently dropped. `Guest/Contracts.lean` lowers every
+  foreign contract; `contractGate` refuses any failed lowering and `progOfFn`
+  fills `Programm.axVertrag`. `lowerAllg_axVertrag` proves exact retention on
+  every successful lowering, including the actual pre/postconditions.
+- `Guest/Export.lean` re-resolves every retained `UGuest` against the actual
+  `declOf u`, constructs the typed boundary and applies its canonical check.
+  `sourceGuests_complete` proves that no descriptor is omitted. Both
+  `Cover.Differenz.akzeptiertU` and production `OldSource.accepts` pass that
+  complete list to `AkzeptiertX`. `OldSource.restore_axVertrag` and
+  `Compiled.foreign_contracts` retain the same foreign contracts through
+  source postcondition restoration; `Compiled.guest_descriptors` exposes
+  completeness and each admitted descriptor after production checking.
+  `SourceGuestPflicht` explicitly ties the software isolation duty to these
+  exported contracts and actual C08 records, never to `HardwareAnnahmen`.
+
+The source frontend now exports resolved owners through C12/C09. This guest
+source adapter still admits immutable code plus scalar inputs and an ordinary
+returning, fallible service; additional region inputs remain refused until it
+retains their exact transfer descriptors and owner resources. No owner is
+fabricated or transferred region discarded.
+Register state, privileged/stack assumption fields, unknown ABI, missing or
+ambiguous service, absent failure channel and absent region contracts remain
+named refusals. Foreign cost claims retain the metadata gate.
+
+`Stage0/Zeugen/Ablehnung/EntrustWitness.lean` now contains the accepted image
+attempt: real source text calls the generated guest wrapper with a code-region
+capability, carries a nontrivial declared region contract and executable C08
+gate, checks both the production `AkzeptiertX` path and explicit `Akzeptiert`,
+and retains the generic canonical-source and image correctness certificates.
+Its source-shape, exact-contract, descriptor-completeness and ordinary fallible
+constructor witnesses prevent an inert or empty-boundary success. Negative
+source twins cover missing service/field, unowned region, register state,
+privileged fields, unknown ABI, infallible service and missing region contract.
+`Guest/Witness.lean` retains the more general owned-region model witnesses.
+None of these new source reductions has yet been measured by this worker.
+
+Worker static checks: 31 changed Lean modules, all using the module system,
+maximum 473 lines; no forbidden proof tokens or folder-entry findings. The
+3,068-file import graph has no cycles and the outgoing diff passes
+`git diff --check`. These checks provide no Lean elaboration or witness-reduction
+evidence.
+
+## 178. C16: samples, floors, completed reports and Duty discharge (2026-11-03)
+
+On `c16-a`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Inventory items 9-12 of the C16/C02 round-3 list: the report data gets its kernel meaning (item 11), the declared-check identity and the completed reports for both verdicts with the linear Duty discharge (items 9/12), and the front-end probes pinning the elaborated identity and the Duty threading (items 9/10/12). The C12 linear marks (`D.Marke`, `markFin`, `konsumiert`/`produziert`) stay the other branch's work; the interface to them is only the existing `konsumiert`/`produziert` signature fields.
+
+`grammatik/Grammatik/Kern/Syntax/Satz/PruefungMessung.lean`:
+
+* **`messWert`**: For arbitrary `r : CheckReport`, `ort : String`, `punkt : Nat`, the first read sample at that place and point (`none` for absence, never zero).
+* **`bodenHalten`**: For arbitrary `r : CheckReport`, every evaluated floor outcome holds.
+* **`berichtDeckt`**: For arbitrary `misst : List String`, `r : CheckReport`, every measured place has a read sample at some point.
+* **`berichtDeckt_leer`**: For arbitrary `r : CheckReport`, the conclusion is `berichtDeckt [] r`.
+* **`messBerichtWahr`/`messBerichtFalsch`**: The completed fixture reports with a positive/negative verdict.
+* **`messWert_zeuge`**, **`messWert_anderer_zeuge`**, **`messWert_ungelesen_zeuge`**: The read sample, the other place absent, the unread entry absent.
+* **`bodenHalten_zeuge`**, **`bodenFehlt_zeuge`**: The held floor, the failed floor.
+* **`berichtDeckt_zeuge`**, **`berichtLuecke_zeuge`**, **`berichtUnvollstaendig_zeuge`**: Coverage, the early-return gap, the incomplete report.
+
+`grammatik/Grammatik/Kern/Syntax/Satz/PruefungAbschluss.lean`:
+
+* **`CheckIdentitaet`**: For arbitrary `fs : List D.Fn`, `c : CheckDecl D`, the probe and every gate are members, the probe is none of its gates, the gates are pairwise distinct.
+* **`identitaet_aus_zulassung`**: For arbitrary `P : Programm D`, `fs : List D.Fn`, `checks : List (CheckDecl D)`, `c : CheckDecl D`, assuming `hA : CheckAdmission P fs checks` and `hc : c ∈ checks`, the conclusion is `CheckIdentitaet fs c`.
+* **`berichtTraegt`**: For arbitrary `r : CheckReport`, `c : CheckDecl D`, every declared floor has exactly one evaluated outcome.
+* **`CheckAbschluss`**: For arbitrary `P : Programm D`, `c : CheckDecl D`, `r : CheckReport`, the probe expands exactly, every sample was observed, every floor has its outcome.
+* **`CheckEntladung`**: For arbitrary `P`, `c`, `r`, `g : D.Fn`, the gate discharges that same report once.
+* **`CheckEntladungErfolg`**: For arbitrary `P`, `c`, `r`, `g`, the success-only precondition (verdict `true`, floors hold).
+* **`entladung_eintrag`**: For arbitrary `P`, `c`, `r`, `g`, assuming `h : CheckEntladung P c r g`, the discharged report travels on as the consumed evidence entry of the goal leg.
+* **`pruef_identitaet_zeuge`**, **`pruefC1`**, **`pruef1_expansion`**: The fixture identity, the floored fixture check, its exact expansion.
+* **`abschluss_wahr_zeuge`**, **`abschluss_falsch_zeuge`**, **`abschluss_falsch_boden_zeuge`**: Both verdicts completed, the failed floor distinguished.
+* **`abschluss_luecke_zeuge`**, **`abschluss_ueberhang_zeuge`**: The unread sample and the surplus outcome complete nothing.
+* **`entladung_wahr_zeuge`**, **`entladung_falsch_zeuge`**, **`entladung_erfolg_zeuge`**, **`entladung_erfolg_abgelehnt_zeuge`**, **`entladung_eintrag_zeuge`**: Both discharges, the success-only admission and refusal, the consumed entry.
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Pruefung/Bericht.lean`:
+
+* **`probenCheckFalsch`**, **`probenCheckSonde`**: The false-verdict probe and the counterprobe fixture. Decided: the elaborated identity record, the counterprobe passthrough, the retained floors, the false probe's generated producer, the Duty in probe `nimmt`/`gibt` and wrapper `nimmt`, the false check's generated shape, the `bool` wrapper forwarding.
+
+`grammatik/Grammatik/Kern/Syntax/Satz/PruefungZeugen.lean`:
+
+* **`messung_abschluss_zeuge`**: Coverage, the held floor, the completed true report and the discharged negative report, jointly.
+
+Open: the lead build of this branch (single-module checks of the touched modules and their importers, then the guardians); the generator never draws `checkT` (no generator change); items 13-16 are proved in §179, pending that build.
+
+## 179. C16: provenance, replay, counterprobe, export/Stage-0 (2026-11-03)
+
+On `c16-a`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Inventory items 13-16 of the C16/C02 round-3 list: the report/token provenance through call push and normal return (item 13), G/GX replay and ownership conservation (item 14), counterprobe binding with artifact identity and measured status (item 15), and the connected export/Stage-0 correctness with emitted sample work (item 16). The elaborator-side provenance/export files are registered in `Alle/Teil1`, not `Satz.lean`: the call machine and the elaborator/`declOf` layers sit above `Satz.lean` in the import order, so `Satz.lean` keeps only the kernel-evidence files. Recommended owner answers kept: completed-report Duty on both verdicts, one fresh producer call per consumption, unrun never means passed.
+
+`grammatik/Grammatik/Kern/Syntax/Satz/PruefungHerkunft.lean`:
+
+* **`BerichtHerkunft`**: For arbitrary `P : Programm D`, `c : CheckDecl D`, `r : CheckReport`, `g : D.Fn`, the discharge plus the discharged entry carrying the completed report unchanged.
+* **`bericht_herkunft_aus_entladung`**: For arbitrary `P`, `c`, `r`, `g`, assuming `h : CheckEntladung P c r g`, the conclusion is `BerichtHerkunft P c r g`.
+* **`herkunft_proben_vollstaendig`**: For arbitrary `P`, `c`, `r`, assuming `h : CheckAbschluss P c r`, every sample of the completed report was actually observed at its push.
+* **`HerkunftSchritt`**: For arbitrary `e₁ e₂ : CheckEvidenz D`, the live-to-consumed travel for the same probe and the same report.
+* **`herkunft_schritt_aus_entladung`**: For arbitrary `P`, `c`, `r`, `g`, assuming `h : CheckEntladung P c r g`, the live completed entry becomes the consumed entry of the discharging gate.
+* **`herkunft_schritt_wahr_zeuge`**, **`herkunft_schritt_falsch_zeuge`**: The travel step on the fixture, for both verdicts.
+* **`herkunft_urteil_zeuge`**, **`herkunft_bericht_wahr_zeuge`**: The consumed false entry carries the negative verdict; the completed true report threads its verdict into the discharge.
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Pruefung/Herkunft.lean`:
+
+* **`istPush`/`istPop`**: For arbitrary `c : CheckDecl D`, whether a `RufEreignisF` event pushes the probe activation (`eintritt`) or is its normal pop (`rueck`).
+* **`urteilAusErg`**: A `Bool` answer read as a verdict.
+* **`rueckUrteil`**: For arbitrary `c : CheckDecl D`, the verdict off the normal-pop event (`none` on pushes, other functions' pops and error-channel returns -- no completed report is synthesized there).
+* **`rueckPasst`**: For arbitrary `c`, `ev : RufEreignisF D`, `r : CheckReport`, the event's verdict is the report's -- the report a caller receives is the one the callee produced.
+* **`herkunft_aus_entladung`**: For arbitrary `P`, `c`, `r`, `g`, `ev`, assuming `h : CheckEntladung P c r g` and `hp : rueckPasst c ev r`, the discharged entry carries the callee-produced verdict.
+* **`herkunft_push_fixture`**, **`herkunft_pop_fixture`**, **`herkunft_fremd_push`**, **`herkunft_grund_kein_pop`**, **`herkunft_fixture_pop`**: Push and pop on the fixture, the foreign push refused, the error-channel return popping nothing with no verdict, the verdict off the normal pop.
+
+`grammatik/Grammatik/Kern/Syntax/Satz/PruefungReplay.lean`:
+
+* **`CheckErhaltung`**: For arbitrary `P : Programm D`, `c : CheckDecl D`, the probe produces exactly the Duty it consumes.
+* **`erhaltung_aus_expansion`**: For arbitrary `P`, `c`, assuming `h : CheckExpansion P c`, the conclusion is `CheckErhaltung P c`.
+* **`erhaltung_kreislauf`**: For arbitrary `P`, `c`, `r`, `g`, assuming `h : CheckEntladung P c r g`, one completed cycle moves one Duty in and one out.
+* **`replayEintrag`**: For arbitrary `c`, `r`, `g`, the replayed evidence entry -- a pure function of probe, report and gate, identical on G and on GX.
+* **`replayEintrag_stabil`**: For arbitrary `c`, `r`, `g`, `e : CheckEvidenz D`, assuming `h : e = replayEintrag c r g`, the same producer, report and consumer.
+* **`erhaltung_zeuge`**, **`erhaltung_kreislauf_zeuge`**, **`replayEintrag_zeuge`**: Conservation and replay on the fixture.
+
+`grammatik/Grammatik/Kern/Syntax/Satz/PruefungGegenprobe.lean`:
+
+* **`sondenNamen`**: For arbitrary `checks : List (CheckDecl D)`, the bound external names in unit order.
+* **`SondenEindeutig`**: For arbitrary `checks`, no two checks share a sonde name.
+* **`sondenEindeutigB`**: The ownership, decided.
+* **`sondenNamen_mem`**: For arbitrary `rest`, `n : String`, assuming `hm : n ∈ sondenNamen rest`, some check of the unit carries that name.
+* **`sondenNamen_mem_of`**: For arbitrary `d`, `rest`, `n`, `t'`, assuming `hd : d ∈ rest` and `ht : d.sonde = some (n, t')`, the conclusion is `n ∈ sondenNamen rest`.
+* **`sondenEindeutigB_ok`**: For arbitrary `checks`, `sondenEindeutigB checks = true ↔ SondenEindeutig checks`.
+* **`SondenBindung`**: For arbitrary `checks`, `c`, `name text : String`, the check carries the name with its exact text and no other-named check carries that name.
+* **`sonde_name_in_namen`**: For arbitrary `checks`, `c`, `name text`, assuming `h : SondenBindung checks c name text`, the name stands in the unit's sonde list.
+* **`SondenArtefakt`**: The external name, the build mode and the image.
+* **`artefaktPasst`**: For arbitrary `c`, `a : SondenArtefakt`, the bound sonde, the same mode and the check's exact text under the name.
+* **`Gemessen`**: For arbitrary `c`, `a`, `st : ProbenStand`, `r : CheckReport`, a `durchgefallen` run on the matching artifact with a false verdict.
+* **`nichtGelaufen_unmeasured`**: For arbitrary `c`, `a`, `st`, `r`, assuming `h : st = .nichtGelaufen`, absence stays unmeasured.
+* **`bestanden_kein_mass`**: For arbitrary `c`, `a`, `st`, `r`, assuming `h : r.urteil = true`, an unexpected true verdict fails that measurement.
+* **`fremd_artefakt`**: For arbitrary `c`, `a`, `st`, `r`, assuming `h : ¬ artefaktPasst c a`, a stale artifact measures nothing.
+* **`pruefCSonde`**, **`sondeTest`**, **`sondeBerichtFalsch`**: The bound fixture check, the matching artifact, the negative report.
+* **`sodenEindeutig_zeuge`**, **`sodenKonflikt_zeuge`**: Single ownership and the duplicated-name refusal.
+* **`sondenBindung_zeuge`**, **`sonde_name_in_namen_zeuge`**, **`gemessen_zeuge`**, **`ungemessen_zeuge`**, **`artefakt_fremd_zeuge`**: The binding, the listed name, the measured run, the unrun refusal, the stale-artifact refusal.
+
+`grammatik/Grammatik/Kern/Syntax/Satz/PruefungExport.lean`:
+
+* **`CheckExportAnspruch`**: For arbitrary `P`, `probe : D.Fn`, `gates : List D.Fn`, `duty : D.Marke × Nat`, `c : CheckDecl D`, the resolved names denote this check's fields and the check expands exactly.
+* **`export_expansion`**: For arbitrary `P`, `probe`, `gates`, `duty`, `c`, assuming the claim, the exact expansion.
+* **`export_gate_treu`**: For arbitrary `P`, `probe`, `gates`, `duty`, `c`, `g`, assuming the claim and `hg : g ∈ gates`, the claimed gates discharge the claimed Duty.
+* **`pruefCAnderes`**, **`expansion_fremd_abgelehnt`**, **`abschluss_fremd_zeuge`**, **`abschluss_fremd_ueberhang_zeuge`**: The forged expansion, its refusal, the forged completion and the surplus-outcome refusal.
+* **`pruefCOhneTor`**, **`entladung_ohne_tor`**: The check with no consuming gate and the dropped Duty discharging nothing.
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Pruefung/Export.lean`:
+
+* **`uCheckIdx`**: For arbitrary `u : UProg`, `c : UCheck`, the probe and gate indices with the Duty checked against the mark table; unknown gates and Duties refused by name.
+* **`uCheckAufloesung`**: The resolution read back as names. Decided on the real `elabU` output, with the unknown-gate and unknown-Duty refusals.
+* **`checkText`**, **`lexStr`**, **`elabText`**: The minimal check unit and the actual lex/parse/elaborate chain.
+* **End-to-end acceptance witness from source text**: the elaborated check name, the probe and wrapper functions, the mark table and the resolution, all decided by kernel evaluation.
+* **Refusal witnesses from source text**: the unknown gate and the duplicate check name, both `isErr` by decision.
+* **`checkB_leer`**: For arbitrary `P`, `tabs`, `globs`, `fns`, the empty admission holds -- today's `pruef` leg.
+* **`uCheckDecl_unbewohnt`**: For arbitrary `u : UProg`, no `CheckDecl (declOf u)` exists -- `declOf` carries `Marke = Empty`, so full closure needs the lead's Marke-carrying declaration.
+* **`treue_aus_entladung`**: For arbitrary `P`, `c`, `r`, `g`, assuming `h : CheckEntladung P c r g`, the discharge satisfies the goal leg `CheckTreueG`.
+
+`stage0/Stage0/Frontend/CheckExport.lean`:
+
+* **`CheckStage0Anspruch`**: For arbitrary `u : UProg`, `c : UCheck`, the resolution to lowered function indices with the probe name retained.
+* **`stage0_pruef_leer`**: For arbitrary `P`, `S`, `fs`, `ls`, `cs`, `ws`, `AkzeptiertX` runs with the default `checks = []` and the empty admission holds.
+* **`emitted_check_correct`**: For arbitrary `Emitted` output, the inherited IR execution certificate -- check-carrying units travel the same pipeline.
+
+Open: the lead build of this branch (single-module checks of the touched modules and their importers, then the guardians); the generator never draws `checkT` (no generator change). Full closure (the lead's Marke-carrying declaration with the derived `CheckDecl` admission in `checkB`/`accepts`, and the machine-indexed evidence fold on GX) is proved in §180, pending that build.
+
+## 180. C16 close-out: derived Duty admission and the GX evidence fold (2026-11-03)
+
+On `c16-close` (`c12-own` at `ee9844da3` merged with `c16-a` at `5517b5333`); model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Implements inventory item 16 of the C16/C02 round-3 list on top of the C12 linear marks, pending lead compilation: `declOf` now carries `Marke = Fin u.marken.length`, so the Duty gap `uCheckDecl_unbewohnt`/`stage0_pruef_leer` is deleted and replaced by the derivation, admission and actual-history fold below. No change to the C12 owner rules (`eigner_nie_erzeugt` untouched; nothing near `thruOwn`/`assignThruOwn` or the OwnerFlow files). Recommended owner answers kept: completed-report Duty on both verdicts, one fresh producer call per consumption, unrun never means passed.
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Pruefung/Ableitung.lean`:
+
+* **`uDutyIdx`**: For arbitrary `u : UProg`, `c : UCheck`, the Duty as a declared mark index, refused by name when undeclared.
+* **`uDutyIdx_trifft`**, **`uDutyIdx_deklariert`**: For arbitrary `u`, `c`, `i : Fin u.marken.length`, assuming the resolution, the mark-table entry and the membership of the Duty name.
+* **`messOrtName`** (`Pruefung/Data.lean`): The canonical measured-place label shared by descriptor derivation and actual samples.
+* **`uCheckDecl`/`uCheckDecls`**: For arbitrary `u`, `c`, the kernel `CheckDecl (declOf u)` -- probe and Duty-consuming gate wrappers resolved by name, Duty at stage 0, one floor entry per elaborated floor. Descriptor derivation also rechecks the counterprobe adapter and unique ownership (`uSondenPruef`).
+* **`uCheckDecl_ok`**, **`uCheckDecl_duty`**: The derivation from resolved parts; the derived Duty is the resolved mark at stage 0.
+* **`nimmtAt_singleton`**, **`gibtAt_singleton`**: The Duty through the signatures -- a singleton `nimmt`/`gibt` resolves to exactly that mark at stage 0, owners excluded.
+* **`checkOkB_abgeleitet`**: For arbitrary `u`, `P`, carriers, functions, check and resolved parts, assuming the elaborated shape (probe `bool`, reason-free, Duty threaded, read-only, wrappers consuming, membership, freshness, distinctness, call-graph frame), the derived check is admitted.
+* **`checkB_einzeln`**: For arbitrary `u`, `P`, carriers, functions, `d`, assuming `checkOkB`, the unit admission over its singleton.
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Pruefung/Falte.lean`:
+
+* **`torAbschluss`/`torPush`**: Gate-wrapper activation recognition, counting nested frames and distinguishing normal returns from reason returns.
+* The old supplied-report fold (`falteEvidenz`/`falteGX` and its shape-only witnesses) is deleted. The sole machine-indexed report fold is `Lauf/History.checkGhostHistory`/`checkGhostGX`, described below; it decodes actual saved arguments instead of accepting a caller-supplied report.
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Pruefung/Zulassung.lean`:
+
+* **`checkU`**, **`checkP`**, **`checkChecks`**: The elaborated, lowered and derived values behind the end-to-end witness, with their success certificates (`checkText_ok`, `checkU_lowered`, `checkU_checks_ok`).
+* **`checkU_checks_namen`**, **`checkU_duty_marke`**, **`checkU_duty_deklariert`**: The derived check is non-vacuously the one check with the declared mark `p#duty` at stage 0.
+* **`checkU_probe_threadet`**, **`checkU_tor_threadet`**: The probe consumes and produces exactly the Duty in its lowered signature; every gate wrapper discharges it -- nothing dropped at lowering.
+* **`checkU_checkB`**, **`checkU_akzeptiert`**: The lowered unit with its derived checks is admitted by `checkB`; `AkzeptiertX` holds with the real checks, not the empty leg.
+* **`checkU_admission`**: The admission Prop through `checkB_iff`.
+* **`checkUOhneHuellen`**, **`checkU_ohne_huelle`**: Without its wrapper the check does not derive, refused by name.
+* **`checkUOhneGibt`**, **`checkU_gibt_abgelehnt`**: Removing `gibt` while the actual body still holds the Duty is refused by ordinary return lowering. The earlier unbuilt claim that this mismatched body lowered is removed.
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Pruefung/Export.lean`, `stage0/Stage0/Frontend/CheckExport.lean`:
+
+* `uCheckDecl_unbewohnt` and `stage0_pruef_leer` deleted; `checkB_leer` kept (the empty admission still holds vacuously).
+* **`stage0_anspruch_erfuellt`**: The derived `CheckDecl`s resolve to the probe and its gate wrapper, and `checkB` admits them.
+
+Open: the lead build of this branch (single-module checks of the touched modules and their importers, then the guardians); the generator never draws `checkT` (no generator change).
+
+Continuation from `a3792f69c` (implementation only; **no Lean/lake/build was run by this sub-agent**):
+
+* **`Pruefung/FloorCode.lean`**: `uSichert_floor_step` and `floorUrteil_bool` retain the generic conjunction elaboration and Boolean meaning. The floor-only `floorCode`/`checkProbeCode` transformation has been replaced and deleted; `Lauf/Recording` below owns actual source-site capture and floor expansion. `Elaborate.uCheck` retains symbolic numeric-local floor descriptors; this metadata is not a typed scope certificate.
+* **`Pruefung/Boden.lean`**: `checkTextBodenWahr`/`checkTextBodenFalsch` now bind the actual measured local `x = 3` and return comparisons against 2/4, with matching floors. Both travel through `elabText`, `lowerAllg`, derived descriptors, `checkB` and `AkzeptiertX`, with the existing both-verdict `CheckAbschluss`/`CheckEntladung` witnesses. Additional witnesses pin the generated comparisons, refuse a local floor before its definition and prevent an unrelated true return bypassing a failed floor.
+* **`Pruefung/SondeCode.lean`**, **`Einheit/Elaboration.lean`**: `uSondenFns` generates `c#sonde#external` as an ordinary Boolean adapter calling the resolved ordinary function or C08 foreign binding. Missing bindings, non-Boolean/parameterized/fallible adapters, mark transfer and duplicate external ownership refuse by name. `uSondenPruef` rechecks the executable call shape when deriving descriptors. The parser's `(text, expects-name)` pair is normalized once to the kernel's `(name, text)` order; the previous counterprobe witnesses had these reversed.
+* **`Satz/PruefungArtefakt.lean`**: `SondenNachweis` adds the unique `SondenBindung` and exact selected-image equality to the existing result metadata `Gemessen`. `sondenNachweisB_sound` proves the executable evidence gate sound for a selected member of the derived checks. `sondenNachweis_stale`/`sondenNachweis_unbound` refuse stale-image and unbound evidence. `Gemessen` alone compares name/mode, not image: measured acceptance uses the stronger gate. These remain evidence metadata, not proof that external hardware ran or a universal prose claim holds.
+* **`Pruefung/Gegenprobe.lean`**: source declares the real Boolean counterprobe function; its private adapter lowers with the unit. `sonde_nachweisB`/`sonde_nachweis` connect executable evidence admission to the generic soundness theorem. Refusals cover absent binding, removed adapter, duplicate ownership, unrun result, stale name and same-name/same-mode stale image.
+* **`Pruefung/Torhuelle.lean`**, **`Fremdtor.lean`**: a fallible C08 foreign gate uses ordinary `bindAxElse`; `torFehler` exhaustively rethrows the exact closed reason case and the wrapper retains that reason channel. No range-bottom or false normal answer is synthesized on error. `fremdTor_fehler_pending` and `torAbschluss_fehler` refuse successful evidence on an error return; `fremdTor_erfolg` witnesses normal completion. The unclosed-handler lowering refusal remains. Parameters have no argument list in `gates`; ordinary reason-channel gates retain their named refusal until an explicit policy is supplied.
+* **`Export.uCheckIdx`**, **`Stage0/Frontend/CheckExport.lean`**: index resolution now names the same Duty wrappers as descriptor derivation, including foreign gates. `stage0_c16_formen_akzeptiert` joins all five source-to-admission cases; `stage0_c16_sondenachweis` retains the stronger artifact gate. Generated work uses the existing ordinary-function compiler and its generic certificate; no second emitter or source interpreter was added. All witness modules are registered in `Alle/Teil1`.
+
+Continuation from `717635600` (implementation attempts only; **no Lean/lake/build was run by this sub-agent**):
+
+* **`Pruefung/Lauf/Consumer.lean`**: `CheckConsumerSelection`, `uCheckConsumer` and `uCheckDriver` select one declared gate. The driver binds the producer Bool and transfers its completed Duty to that consumer. The inherited input mark is the producer's invocation permit, not an already completed report. The consumer invokes the existing wrapper and explicitly retires the physical mark, with empty outputs on both normal and reason channels. Reason dispatch retains the exact foreign reason; retirement happens once before its exhaustive match. `uCheckConsumer_ressourcen`, `uCheckDriver_ressourcen` and `uCheckDriver_reihenfolge` state the exact generated interfaces and call order.
+* **`UStmt.retireMark`**, **`UebersetzeAllg2/Teil4.lowStmtL`**: lower retirement only for a declared check Duty that is actually present. Missing/already consumed marks refuse by name. The target is the existing `Stmt.retires`; no kernel execution constructor, owner-flow change or new hardware assumption is introduced. Stage 0 already erases this zero-effect rule through its generic instruction proof.
+* **`Pruefung/Lauf/Erhaltung.lean`**: `duty_retired_once`, `duty_consumer_conservation`, `duty_cycle_conservation` and `duty_retirement_payload` state physical uniqueness, empty residual resources and payload preservation through the actual consumer rule.
+* **`Pruefung/Lauf/Recording.lean`**, **`Erzeuge.uProbeFn`**: the actual canonical elaborator now emits a private typed reporter per returning source site. It evaluates the written verdict, captures the available numeric/Bool observations once, and substitutes those captured places into the separately evaluated floors. The reporter receives the actual samples, floor Bools and written verdict as ordinary call arguments and returns their conjunction. Missing locals are explicit absent observations, not zero measurements. `UFn.checkReturn` retains the source check/site, parameter positions and floor range. Reporters are ordinary emitted work with the existing call/lowering cost; ghost recording itself emits no runtime log writes.
+* **`Pruefung/Lauf/History.lean`**: `actualCheckReturn` decodes saved typed `Env` arguments and the real returned Bool. `decodeCheckReturn_origin` and `replayEintrag_from_samples` establish sample/floor/verdict provenance. `checkGhostStep_probe_return` appends that capture at the enclosing producer's normal return. `checkGhostHistory_event` respects G/GX's newest-first call log; `checkGhostGX_log` reads the same log without consulting later presented memory. `stampCheckReport_values` preserves values and floors while `checkObservationPoint_distinct` distinguishes repeated producer activations. `consumeCheckEntry_once` refuses a second consumption without another completed producer, and `checkGhostComplete` refuses outstanding entries or invalid reuse.
+* **`Pruefung/Lauf/Treue.lean`**: `consumeCheckEntry_form`, `checkGhostStep_form` and `checkGhostHistory_form` transport producer/consumer conservation through arbitrary actual event logs. `checkGhostHistory_treu`/`checkGhostGX_treu` connect the completed, physically retired history to the unchanged `CheckTreueG` goal leg. `Stage0/Frontend/CheckExport.emitted_check_history_correct` pairs it with the exact emitted source program's existing generic IR execution certificate; completion is a checked ghost condition, not an assumption about measured values or truth of claim text.
+* **`Stage0/Profil.lean`**, **`Stage0/Compiler.lean`**: `--check CHECK GATE` selects one driver entry after the original C14 profile/build selection. A removed test-only declaration cannot be selected. `Compiled.elaborated`, its selected entry and `CanonicalSourceProgram` retain this exact selection before ordinary full lowering and `AkzeptiertX`; declarations alone still execute nothing.
+* **`Pruefung/Lauf/Zeugen.lean`**, **`Stage0/Zeugen/Pruefung/CheckConsumerWitness.lean`**: source-to-acceptance attempts for a complete check/local floor/gate/consumer, physical cycle conservation, actual sample/floor replay and its retained consumed report. Negative twins omit the consumer, call it twice, repeat ghost consumption or fabricate a measured sample. They are registered in `Alle/Teil1` and `Stage0.lean`.
+
+Validation boundary: the implementation and proof attempts above are uncompiled. C16 is not measured complete until the lead compiles the changed modules/importers, checks the generic source/return/history attachment attempts and the standard axioms of `gabbro_ziel`, then runs the guardians. A static finding already present at the task base is `Zielsatz/Kern/Spec/Teil4.lean:33`: it refers to `berich` whereas `CheckEvidenz` declares `bericht`; no file under `Spec` was edited. The pre-existing `Stage0/Zeugen/Annahme` folder has 24 entries; the new witness lives in a separate cohesive folder. No final emitted-image execution or external measurement was performed.
+
+## 181. C11 follow-up: part-4 frame gap closed over disciplined entries (2026-11-03)
+
+On `c11-nurabstieg`; model extension within the C-package rules, `Spec.lean` untouched, `gabbro_ziel` unchanged. The `rufAt_nurAbstieg` discharge relied on an unconditional frame half (`RufRahmenTreu` at every world), but the repaired frame proof (`rufAt_treu`: `TreuAusgang`/`TreuRet` with spare/rank, `vorCall`, entry `HeldB`) needs the entry discipline `HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ.haelt` -- scoped returns may unwind scopes, and collapsing a callee release needs the discipline. Closed the strongest honest way: the discipline is a premise everywhere and is discharged where the theorems are consumed. An unconditional frame is unprovable (an undisciplined `ok` answer need not keep it), so no guarantee was weakened and none added.
+
+`grammatik/Grammatik/Logik/Ruf/Eintritt/RufEintritt.lean` (the entry-gated handler):
+
+* **`treuR_rufFrei`**: the patched handler (`logik` replaced by the hardware default) is `TreuR`.
+* **`treuR_torRuf`**: gating by the entry contract preserves `TreuR`.
+* **`rufEintritt`**: answers like `rufFrei` at disciplined entries, `.hardware .ieee` elsewhere (the `rufAusL` idiom).
+* **`eintritt_agree`**, **`eintritt_agree_tor`**: agreement with the patched handler where the discipline holds, also through the gate.
+* **`eintritt_ohneLogik`**, **`eintritt_ohneVorbedingung`**, **`eintritt_vertrag`**, **`eintritt_rahmen`**, **`eintritt_respektiert`**: the gated handler is in `RespektiertRahmen` (and both `Ohne*` classes), so the user obligation applies to it.
+* **`treuR_eintritt`**: the gated handler is frame-faithful.
+* **`RufRahmenTreu`** (moved here from `RufLogika.lean`): the disciplined frame half.
+
+`grammatik/Grammatik/Logik/Ruf/Eintritt/RufGleichSchleife.lean`, `RufGleichStmt.lean`, `RufGleichBindBlock.lean`, `RufGleichBindAxiom.lean` (joint run equality, mirror of the Treu induction with equality conclusions): `traverseLauf_gleich`, `verbrauchLauf_gleich`, `retryLauf_gleich`, `foreverLauf_gleich`, `stmt_gleich`, `block_gleich`, `end_gleich`, `arms_gleich`, `grundArms_gleich` with the `bind*` arms extracted as helpers taking the mutual IHs as premises. From a disciplined entry, runs under two handlers agreeing there coincide.
+
+`grammatik/Grammatik/Logik/Vertraege/HandlerKongruenz/Teil3.lean` (loop runs under an error set), `Teil4.lean`/`Teil5.lean` (fused `Block`/`Endblock` bind arms), `Teil6.lean` (fused mutual over all five syntax sorts), `Teil7.lean` (decision arms), `Teil8.lean` (remaining arms): handlers agreeing on disciplined entries or failing early with a first-side mark give runs that agree or fail early, from a disciplined entry (`HandlerUnterDisz`, `stmt_unter`, `block_unter`, `end_unter`, `arms_unter`, `grundArms_unter`, with the loop and bind arms as standalone theorems).
+
+`grammatik/Grammatik/Logik/Ruf/RufLogika.lean` (rewired discharge):
+
+* **`NurAbstieg`** carries the entry-discipline premise (restated; the unconditional form is unprovable).
+* **`kong_rufAt_torRuf_diszipliniert`**: step-3 congruence gated by the discipline (replaces the unconditional `kong_rufAt_torRuf`).
+* **`kong_torRuf`** (generalized from `kong_torRuf_rufFrei`): the gate congruence for any inner handler.
+* **`rufSchritt_unter`**: one call unfolding under two gatedly-related handlers, mirror of `rufSchritt_kongruent`.
+* **`rufAt_nurAbstieg`** takes `ScopesOkProg` (derived from the accepted spec via `scopesOkProg_of_spec`, no `Spec` change), applies the obligation to `rufEintritt`, transfers body duties through the run equalities, and classifies call outcomes through the gated step congruence.
+* **`rufAt_respektiertRahmen`** restated as the disciplined pair (contracts plus `RufRahmenTreu`).
+
+`grammatik/Grammatik/Logik/Ruf/RufLogikZeuge.lean`: `nurAbstieg_zeuge_104`/`_108` carry the discipline premise and supply `ScopesOkProg` by computation (`scopes4`, `scopes8`); the undisciplined-frame claim (unprovable in general since C11) is dropped while `heldB_faellt_104` keeps the non-vacuity and the concrete runs keep the non-degeneracy. `RufLogik.lean` header records the closure.
+
+Open: the lead build of this branch (new modules plus `RufLogika.lean`, `RufLogikZeuge.lean` and their importers, then the guardians); `gabbro_ziel` must stay on exactly `propext`/`Classical.choice`/`Quot.sound` with no `sorry`. No language case is claimed complete by these modules.

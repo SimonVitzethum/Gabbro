@@ -125,6 +125,8 @@ theorem call_head : Kopf callLayout 2 callMem 4096 256 0 0 (Env.nil : Env D []) 
 local instance [Kern] : TorOK callLayout O where
   ans a := nomatch a
   puf a := nomatch a
+  ref_answer a := nomatch a
+  area a := nomatch a
 
 local instance : SichtOK O := ⟨fun _ _ => rfl⟩
 

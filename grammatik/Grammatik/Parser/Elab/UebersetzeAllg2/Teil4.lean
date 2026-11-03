@@ -3,6 +3,7 @@ module
 public import Grammatik.Parser.Elab.UebersetzeAllg
 public import Grammatik.Korpus.Programme.Export108
 public import Grammatik.Parser.Elab.UebersetzeAllg2.Teil3
+public import Grammatik.Parser.Elab.UebersetzeAllg2.Marken
 public import Grammatik.Bausteine.Arena.ArenaStaticReset
 public import Grammatik.Kern.Semantik.Semantik.T1.Teil1
 
@@ -12,6 +13,16 @@ namespace Gabbro.Grammatik.Parser.UebersetzeAllg2
 open Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 set_option maxRecDepth 100000
+
+/-- An unstaged source mark cannot supply the successor-stage premise of
+    `Stmt.advances`; only a declared order can provide additional stages. -/
+theorem exportedMark_no_successor (u : UProg) (m : Fin u.marken.length) (stage : Nat)
+    (unstaged : markStages u m = []) :
+    ¬ stage + 1 < (declOf u).stufen m := by
+  change ¬ stage + 1 < max 1 (markStages u m).length
+  rw [unstaged]
+  change ¬ stage + 1 < 1
+  omega
 
 /-- `p(..);` through a function pointer (`Stmt.callInd`): against the signature of `p`'s type,
     stepping to its call transformer (C16). -/
@@ -261,47 +272,6 @@ def lowResetRangeL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
       else .error "reset of a static with a zero-less element type"
     | _ => .error "reset range of a static that is not a static array"
 
-/-- Retire one held stage-0 mark. All exported mark interfaces have one stage;
-    loans belong to the original caller signature, never to a mutable local scope.
-    The annotation `none` adds no named hardware assumption: this is software
-    resource discharge, using the existing canonical `Stmt.retires`. -/
-def lowRetiresL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
-    (Λ : List (Res (declOf u))) (name : String) :
-    Except String (Σ Λ', Stmt (declOf u) (verOf u caller) l Γ Λ Λ') :=
-  if (fnAt u caller).leiht.any (strEq · name) then
-    .error ("retire of borrowed mark: " ++ name)
-  else match markFin u.marken name with
-    | none => .error ("retire of unknown mark: " ++ name)
-    | some m =>
-      if h : Res.marke m 0 ∈ Λ then
-        .ok ⟨Λ.erase (.marke m 0), Stmt.retires m 0 h none⟩
-      else .error ("retire without held mark: " ++ name)
-
-/-- The source lowering is exactly the canonical retire with exactly one erase;
-    the dependent result connects it to the existing block and end-block readers. -/
-theorem lowRetiresL_exact {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
-    (Λ : List (Res (declOf u))) (name : String) (m : Fin u.marken.length)
-    (hb : (fnAt u caller).leiht.any (strEq · name) = false)
-    (hm : markFin u.marken name = some m) (held : Res.marke m 0 ∈ Λ) :
-    lowRetiresL (l := l) u caller Γ Λ name =
-      .ok ⟨Λ.erase (.marke m 0), Stmt.retires m 0 held none⟩ := by
-  simp [lowRetiresL, hb, hm, held]
-
-/-- A callee loan is never a disposable owner, even while held. -/
-theorem lowRetiresL_borrowed {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
-    (Λ : List (Res (declOf u))) (name : String)
-    (hb : (fnAt u caller).leiht.any (strEq · name) = true) :
-    lowRetiresL (l := l) u caller Γ Λ name = .error ("retire of borrowed mark: " ++ name) := by
-  simp [lowRetiresL, hb]
-
-/-- Retiring twice or without an input mark is refused before a G statement exists. -/
-theorem lowRetiresL_unheld {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
-    (Λ : List (Res (declOf u))) (name : String) (m : Fin u.marken.length)
-    (hb : (fnAt u caller).leiht.any (strEq · name) = false)
-    (hm : markFin u.marken name = some m) (held : Res.marke m 0 ∉ Λ) :
-    lowRetiresL (l := l) u caller Γ Λ name = .error ("retire without held mark: " ++ name) := by
-  simp [lowRetiresL, hb, hm, held]
-
 /-- One non-marker statement at the held list `Λ`, in the scope `Γ`/`fn` (the parameters and the
     `let` bindings read so far). Calls step to the call transformer (C16). -/
 def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
@@ -320,7 +290,18 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .storeAtomB n v => (lowStoreAtomBL u caller Γ fn Λ n v).map fun st => ⟨Λ, st⟩
   | .setVar x v => (lowSetVarL u caller Γ fn Λ x v).map fun st => ⟨Λ, st⟩
   | .setVarB x v => (lowSetVarBL u caller Γ fn Λ x v).map fun st => ⟨Λ, st⟩
+  | .retireMark name =>
+    if !u.checks.any (fun c => strEq c.duty name) then
+      .error ("retirement is not a declared check Duty: " ++ name)
+    else match markFin u.marken name with
+    | none => .error ("duty unknown: " ++ name)
+    | some m =>
+      if hm : Res.marke m 0 ∈ Λ then
+        .ok ⟨Λ.erase (.marke m 0), .retires m 0 hm (declOf u).a10⟩
+      else .error ("check Duty already consumed or unavailable: " ++ name)
   | .retires m => lowRetiresL u caller Γ Λ m
+  | .breakingBeg _ => .error "lower: a breaking block opens here"
+  | .advances a b => lowAdvancesL u caller Γ Λ a b
   | .call c args => lowCallL u caller Γ fn Λ c args
   | .regWrite d r v => (lowRegWriteL u caller Γ fn Λ d r v).map fun st => ⟨Λ, st⟩
   | .regWriteB d r v => (lowRegWriteBL u caller Γ fn Λ d r v).map fun st => ⟨Λ, st⟩
@@ -328,11 +309,14 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .shiftTab b fname ix _ von nach => (lowShiftL u caller Γ fn Λ b fname ix von nach).map fun st => ⟨Λ, st⟩
   | .assignRef r f v => (lowAssignRefL u caller Γ fn Λ r f v).map fun st => ⟨Λ, st⟩
   | .lockBeg _ => .error "lower: a locks block opens here"
+  | .consumeLoopBeg .. => .error "lower: a consuming traverse is read by the block reader"
   | .blkEnd => .error "lower: a block closes here without opening"
   | .resetRange a iu nu => lowResetRangeL u caller Γ fn Λ a iu nu
+  | .floatOf .. =>
+    .error "floatOf: canonical Endblock has no integer-to-float introduction"
   | .floatLit .. | .float .. =>
     .error "float: IEEE introduction requires a continuing G block; no canonical Endblock form"
-  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .narrowReqBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .startS | .allocBeg .. | .bindOptBeg .. | .bindOptElseBeg .. | .axCallElseBeg .. | .allocReqBeg .. | .bindElse .. | .matchWhyBeg .. | .bindSum .. | .matchTagBeg .. | .bindAxElse .. | .ifBeg _ | .ifElse | .arrayLoopBeg .. | .loopBeg .. | .regRead .. | .regReadElse .. | .awaitBind .. | .bindFnref .. | .bindCallInd .. | .bindCallIndElse .. | .bindW .. | .tausch .. | .ifEnde .. =>
+  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .narrowReqBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .startS | .allocBeg .. | .bindOptBeg .. | .bindOptElseBeg .. | .callIndElseBeg .. | .axCallElseBeg .. | .allocReqBeg .. | .bindElse .. | .matchWhyBeg .. | .bindSum .. | .matchTagBeg .. | .bindAxElse .. | .ifBeg _ | .ifElse | .arrayLoopBeg .. | .loopBeg .. | .regRead .. | .regReadElse .. | .awaitBind .. | .bindFnref .. | .bindCallInd .. | .bindCallIndElse .. | .bindW .. | .tausch .. | .ifEnde .. =>
     .error "lower: a let, if or traverse is read by the block reader"
   | .ret _ => .error "lower: return in the middle of a body has no G form"
   | .leave _ => .error "lower: leave outside a traverse"

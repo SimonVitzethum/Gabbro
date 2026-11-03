@@ -46,4 +46,16 @@ def uFloatRational (text : String) : Except String (Int × Int) := do
   pure (if scale < 0 then (numerator, (10 : Int)^(-scale).toNat)
     else (numerator * (10 : Int)^scale.toNat, 1))
 
+/-- Float type bounds retain exact rationals; integer constants share the ordinary
+    bound reader. No machine rounding is performed on a declared range. -/
+def uFloatBound (alias : List (String × (Int × Int))) : SExpr → Except String (Int × Int)
+  | .float text => uFloatRational text
+  | .un "-" value | .un "-()" value => do
+    let (numerator, denominator) ← uFloatBound alias value
+    pure (-numerator, denominator)
+  | value =>
+    match uSchranke alias value with
+    | some number => .ok (number, 1)
+    | none => .error "float range: bound is not a known rational"
+
 end Gabbro.Grammatik.Parser.Uebersetze

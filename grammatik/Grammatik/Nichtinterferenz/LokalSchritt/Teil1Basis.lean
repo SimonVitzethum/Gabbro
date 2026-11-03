@@ -49,6 +49,20 @@ theorem KRel.ite {c : Prop} [Decidable c] {x₁ x₂ y₁ y₂ : KErg D} (h1 : c
   · rw [if_pos hc, if_pos hc]; exact h1 hc
   · rw [if_neg hc, if_neg hc]; exact h2 hc
 
+/-- Two `Option` matches with equal discriminants agree when every `some`
+    arm agrees and the `none` arms agree. Used for the deterministic
+    consuming choice (`verbrauchWahl`), whose discriminant is a pure
+    function of low-equivalent member/edge reads. -/
+theorem KRel.opt {α : Type} {x₁ x₂ : Option α} (hx : x₁ = x₂)
+    {A₁ A₂ : α → KErg D} {B₁ B₂ : KErg D}
+    (hs : ∀ v, KRel T (A₁ v) (A₂ v)) (hn : KRel T B₁ B₂) :
+    KRel T (match x₁ with | some v => A₁ v | none => B₁)
+      (match x₂ with | some v => A₂ v | none => B₂) := by
+  subst hx
+  cases x₂ with
+  | some v => exact hs v
+  | none => exact hn
+
 theorem kBinde_rel (f : D.Fn) (rst : List (KRahmen D)) (c : KRahmen D) {σ τ : World D}
     (h : WRel T σ τ) (v : ErgVal D (vertragVon D f).erg) :
     KRel T (kBinde f rst c σ v) (kBinde f rst c τ v) := by

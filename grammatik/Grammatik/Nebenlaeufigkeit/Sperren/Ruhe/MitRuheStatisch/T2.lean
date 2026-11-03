@@ -1,5 +1,5 @@
 module
-public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch.T2aUnd
+public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch.T2aMono
 @[expose] public section
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
@@ -49,6 +49,9 @@ theorem mS_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
   | _, _, _, _, .assignVar .., _, _ => rfl
   | _, _, _, _, .shift .., _, _ => rfl
   | _, _, _, _, .axiomCall .., _, _ => rfl
+  | _, _, _, _, .axiomCallElse _ _ _ _ _ _ _ _ err, h, h' => by
+      simp only [mS] at h h' ⊢
+      exact mE_und err h h'
   | _, _, _, _, .regWrite .., _, _ => rfl
   | _, _, _, _, .transition .., _, _ => rfl
   | _, _, _, _, .publish .., _, _ => rfl
@@ -82,6 +85,10 @@ theorem mB_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
       exact ⟨⟨⟨h.1.1, h'.1.1⟩, mE_und err h.1.2 h'.1.2⟩, mB_und rest h.2 h'.2⟩
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ rest, h, h' => mB_und rest h h'
   | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest, h, h' => by
+      simp only [mB, mUnd, Bool.and_eq_true] at h h' ⊢
+      exact ⟨mE_und err h.1 h'.1, mB_und rest h.2 h'.2⟩
+  | _, _, _, _, .bindAxiomOpt _ _ _ _ _ _ _ rest, h, h' => mB_und rest h h'
+  | _, _, _, _, .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest, h, h' => by
       simp only [mB, mUnd, Bool.and_eq_true] at h h' ⊢
       exact ⟨mE_und err h.1 h'.1, mB_und rest h.2 h'.2⟩
   | _, _, _, _, .regRead _ _ rest, h, h' => mB_und rest h h'
@@ -126,6 +133,10 @@ theorem mE_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       exact ⟨⟨⟨h.1.1, h'.1.1⟩, mE_und err h.1.2 h'.1.2⟩, mE_und rest h.2 h'.2⟩
   | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest, h, h' => mE_und rest h h'
   | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest, h, h' => by
+      simp only [mE, mUnd, Bool.and_eq_true] at h h' ⊢
+      exact ⟨mE_und err h.1 h'.1, mE_und rest h.2 h'.2⟩
+  | _, _, _, .bindAxiomOpt _ _ _ _ _ _ _ rest, h, h' => mE_und rest h h'
+  | _, _, _, .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest, h, h' => by
       simp only [mE, mUnd, Bool.and_eq_true] at h h' ⊢
       exact ⟨mE_und err h.1 h'.1, mE_und rest h.2 h'.2⟩
   | _, _, _, .regRead _ _ rest, h, h' => mE_und rest h h'

@@ -145,11 +145,6 @@ theorem sim_stmt_traverse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
     (alleIndizes (D'.count (E.tab t)))
     (Einbettung.alleIndizes_bild (D' := D') (E.count t)) M σ σ' ρ ρ' hM hρ
 
-/-- Cast index values keep their number (for `same`-transport). -/
-theorem castW_index_n {n n' : Int} (h : Ty.index n = Ty.index n')
-    (v : Wert D (Ty.index n)) : (castW h v).n = v.n := by
-  cases h; rfl
-
 set_option linter.unusedSectionVars false in
 theorem sim_stmt_consumeTraverse {V : Vertrag D}
     {l : Bool}

@@ -16,37 +16,6 @@ section Kern
 
 variable {P : Programm D} {O : Orakel D} {passes : Nat} (R : PlanLauf P O passes)
 
-theorem PlanLauf.fremd (n : Nat) (u : Faden) (h : R.akt n ≠ some u) :
-    (R.M (n + 1)).faeden u = (R.M n).faeden u := by
-  cases ha : R.akt n with
-  | none => rw [(R.stotter n ha).1]
-  | some v =>
-      have hvu : u ≠ v := fun e => h (by rw [ha, e])
-      exact rufSchrittG_fremd (R.schritt n v ha) u hvu
-
-theorem PlanLauf.stet {u : Faden} {m : Nat} :
-    ∀ d, (∀ i, m ≤ i → i < m + d → R.akt i ≠ some u) →
-      (R.M (m + d)).faeden u = (R.M m).faeden u
-  | 0, _ => rfl
-  | d + 1, h => by
-      show (R.M (m + d + 1)).faeden u = _
-      rw [R.fremd (m + d) u (h (m + d) (by omega) (by omega))]
-      exact PlanLauf.stet d (fun i h1 h2 => h i h1 (by omega))
-
-theorem PlanLauf.stet' {u : Faden} {m j : Nat} (hmj : m ≤ j)
-    (h : ∀ i, m ≤ i → i < j → R.akt i ≠ some u) :
-    (R.M j).faeden u = (R.M m).faeden u := by
-  obtain ⟨d, rfl⟩ := Nat.exists_eq_add_of_le hmj
-  exact R.stet d h
-
-theorem PlanLauf.erreichbar {M0 : RufMaschineG D} (h0 : RufErreichbarG P O passes M0 (R.M 0)) :
-    ∀ n, RufErreichbarG P O passes M0 (R.M n)
-  | 0 => h0
-  | n + 1 => by
-      cases ha : R.akt n with
-      | none => rw [(R.stotter n ha).1]; exact PlanLauf.erreichbar h0 n
-      | some u => exact .schritt _ _ u (PlanLauf.erreichbar h0 n) (R.schritt n u ha)
-
 variable {ls : List D.Lock} {Ts : D.Lock → List Faden} {h k : D.Lock → Nat} {F : Nat}
 
 /-! ## 7. The core -/

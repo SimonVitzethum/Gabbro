@@ -20,6 +20,7 @@
 module
 public import Grammatik.GabbroV.GvZensus
 public import Grammatik.Parser.Elab.UebersetzeAllg3
+public import Grammatik.Parser.Elab.UebersetzeAllg3.Guest.Export
 public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -114,7 +115,9 @@ def akzeptiertU (u : UProg) : Except String Bool :=
     let ls : List (declOf u).Lock := List.finRange u.locks.length
     let cs : List ((declOf u).Tab ⊕ (declOf u).Glob) :=
       (List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr
-    .ok (AkzeptiertX P (sperrFamilie u) fs ls cs ws)
+    match sourceGuests u with
+    | .error error => .error error
+    | .ok guests => .ok (AkzeptiertX P (sperrFamilie u) fs ls cs ws [] [] [] guests)
 
 /-- The components of `AkzeptiertX` on an elaborated unit, one digit each (`1` true, `0` false),
     in the order of the definition: fragment, abgeschlossen, fuss, stufen, sperrOrte, wurzeln,

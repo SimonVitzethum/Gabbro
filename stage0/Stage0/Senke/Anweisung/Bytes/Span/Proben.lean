@@ -68,8 +68,16 @@ def imageOf (body : Endblock D (vertragVon D entry) false [] []) : Except String
   let b ← bild 1 (programOf body) (layU u (fun _ => none)) [entry] Fin.val (fun _ => "main") entry .nil [] 4096
   pure b.bytes
 
+/-- Two kernels of eight and five bytes, with a nonzero partial high limb and
+    an overlapping read/write that must capture the complete source first. -/
+def image13 : Except String (List Runner.B) :=
+  imageOf (overlap 13 (by decide) (2 ^ 103 + 2 ^ 64 + 42) (by decide) (by decide))
+
+theorem byteSpan13_image_zeuge : image13.isOk = true := by decide +kernel
+
 def images : List (Except String (List Runner.B)) :=
-  [imageOf (overlap 9 (by decide) (2 ^ 71 + 2 ^ 64 + 42) (by decide) (by decide)),
+  [image13,
+   imageOf (overlap 9 (by decide) (2 ^ 71 + 2 ^ 64 + 42) (by decide) (by decide)),
    imageOf (overlap 16 (by decide) (2 ^ 127 + 2 ^ 64 + 42) (by decide) (by decide)),
    imageOf (overlap 17 (by decide) (2 ^ 135 + 2 ^ 128 + 42) (by decide) (by decide)),
    imageOf (overlap 9 (by decide) 0 (by decide) (by decide))]

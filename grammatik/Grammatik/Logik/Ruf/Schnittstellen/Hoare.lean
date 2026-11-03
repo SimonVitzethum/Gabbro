@@ -32,25 +32,28 @@ theorem hoare_callInd (P : Programm D) (O : Orakel D) (passes : Nat)
           EnsAmRueck P target.val s0 s1 (umsig target.property ρa) v ∧
           (P.ptrVertrag n).postHolds s0 s1 ρa (ptrResult target.property v)) := by
   dsimp only
-  let target := eval s0 p s0 r0
   let ρa := evalArgs s0 args s0 r0
   intro σ ρ hPre s1 ρ' hrun
   obtain ⟨hworld, henv, hpre⟩ := hPre
   subst ρ
-  have hreq := PtrVerfeinert.req hRef target s0 ρa hpre
-  have hrun' : (match R target.val s0 (umsig target.property ρa) with
+  simp only [execStmt] at hrun
+  rw [hworld] at hrun
+  generalize hT : (show { f : D.Fn // D.passt f n = true } from
+    eval s0 p s0 r0) = target at hrun ⊢
+  obtain ⟨tf, thf⟩ := target
+  have hreq := PtrVerfeinert.req hRef ⟨tf, thf⟩ s0 ρa hpre
+  have hrun' : (match R tf s0 (umsig thf ρa) with
     | .ok σ' _ => Ausgang.ok (V := V) (l := l) σ' r0
-    | .why _ r => keinGrundSig target.property hr r
+    | .why _ r => keinGrundSig thf hr r
     | .logik e => Ausgang.logik e
-    | .hardware e => Ausgang.hardware e) = Ausgang.ok s1 ρ' := by
-    simpa only [execStmt, hworld] using hrun
-  cases hout : R target.val s0 (umsig target.property ρa) with
+    | .hardware e => Ausgang.hardware e) = Ausgang.ok s1 ρ' := hrun
+  cases hout : R tf s0 (umsig thf ρa) with
   | ok σ' v =>
     simp only [hout] at hrun'
     cases hrun'
-    have hv := hR target.val s0 (umsig target.property ρa) hreq _ v hout
-    exact ⟨rfl, v, hout, hv, PtrVerfeinert.ens hRef target s0 _ ρa v hpre hv⟩
-  | why σ' r => exact keinGrundSig target.property hr r
+    have hv := hR tf s0 (umsig thf ρa) hreq _ v hout
+    exact ⟨rfl, v, hout, hv, PtrVerfeinert.ens hRef ⟨tf, thf⟩ s0 _ ρa v hpre hv⟩
+  | why σ' r => exact keinGrundSig thf hr r
   | logik e =>
     simp only [hout] at hrun'
     cases hrun'

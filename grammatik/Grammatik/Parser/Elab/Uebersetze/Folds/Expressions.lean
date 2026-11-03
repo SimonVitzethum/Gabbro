@@ -73,6 +73,11 @@ def expandFoldStmt (ctx : UCtx) (statement : SAnw) :
   | .cases value arms =>
     let (code, ctx, _, value) ← expandFoldExpr 1000 ctx serial value
     pure (code, ctx, .cases value arms)
+  | .callIndElse pointer args reason body =>
+    let (left, ctx, serial, pointer) ← expandFoldExpr 1000 ctx serial pointer
+    let (right, ctx, _, value) ← expandFoldExpr 1000 ctx serial (.call "" args)
+    let .call _ args := value | throw "fold: malformed indirect call expansion"
+    pure (left ++ right, ctx, .callIndElse pointer args reason body)
   | .callElse name args reason body =>
     let (code, ctx, _, value) ← expandFoldExpr 1000 ctx serial (.call name args)
     let .call name args := value | throw "fold: malformed call expansion"

@@ -31,10 +31,6 @@ namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
 
-/-- The result of a step of one thread: its new ghost-free state and the
-    new memory, or `none` (no step). -/
-abbrev KErg (D : Deklaration) := Option (KFaden D × Speicher D)
-
 section Fn
 /-- A statement at the head of a `dann` residue. -/
 def kDannCons (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) (spur : List (Ereignis D)) (sp : Speicher D) {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)} (ρ : Env D Γ)

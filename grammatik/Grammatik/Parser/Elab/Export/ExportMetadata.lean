@@ -3,9 +3,29 @@ public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Kern.Syntax.Typen.DataRights
 public import Grammatik.Parser.Elab.Uebersetze.MeasureSource
 public import Grammatik.Parser.Profil.Auswahl
+import all Init.Data.String.Basic
+import all Init.Data.String.Defs
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.ExportMetadata
+
+/-- Read the complete existing consuming header. The contextual exporter checks the
+    measure and declared domain/edge; the structured lowerer checks the retained touches.
+    The original-source gate reuses this reader, so unsupported clauses cannot disappear. -/
+def consumingHeader (raw : String) : Except String (SExpr × String) := do
+  let tokens ← lex raw
+  let rest ← match tokens with
+    | .wort "decreases" :: rest => pure rest
+    | _ => throw "consuming traversal requires decreases"
+  let (expression, rest) ← parseOr 10000 rest
+  let touchTokens ← match rest with
+    | .wort "touches" :: rest => pure rest
+    | _ => throw "consuming traversal requires touches consumes"
+  let (_, rest) ← parseEffektListe 10000 touchTokens
+  match rest with
+  | [.ende] => pure (expression, String.intercalate " " (touchTokens.filterMap fun token =>
+      match token with | .ende => none | _ => some (zeigeTok token)))
+  | _ => throw "consuming traversal has an unsupported or duplicate header clause"
 
 def typeMetadata : STyp → Bool
   | .raw _ | .entry .. | .wrap _ | .embed .. => true
@@ -26,14 +46,16 @@ def bodyMetadata : Nat → SAnw → Bool
   | n + 1, .bindElse _ ty _ _ b | n + 1, .bindAxiomOptElse _ ty _ _ b => ty.any typeMetadata || bodyMetadata n b
   | n + 1, .bindQ _ _ ty _ => ty.any typeMetadata
   | n + 1, .callQ .. => false
-  | n + 1, .callElse _ _ _ body => bodyMetadata n body
+  | n + 1, .callIndElse _ _ _ body | n + 1, .callElse _ _ _ body => bodyMetadata n body
   | n + 1, .waive _ b | n + 1, .locks _ _ b | n + 1, .watch _ b |
     n + 1, .trim _ _ b => bodyMetadata n b
   | n + 1, .cond _ a bs b => bodyMetadata n a || bs.any (bodyMetadata n) || b.any (bodyMetadata n)
   | n + 1, .elsif _ b | n + 1, .arm _ _ b => bodyMetadata n b
   | n + 1, .cases _ arms => arms.any (bodyMetadata n)
   | _ + 1, .bind _ _ ty _ | _ + 1, .bindAxiomOpt _ ty _ => ty.any typeMetadata
-  | n + 1, .each _ _ _ _ mode raw _ body => mode != "unvisited" || raw != "" || bodyMetadata n body
+  | n + 1, .each _ _ _ _ mode raw _ body =>
+    if mode == "consuming" then (consumingHeader raw).toOption.isNone || bodyMetadata n body
+    else mode != "unvisited" || raw != "" || bodyMetadata n body
   /- A required allocation binds a plain index and runs no continuation: the
       counter narrowing is required, so a full arena is `Logik.kapazitaet` under
       the caller's `KoerperGutS/SA` duty -- no provider, storage-availability or
@@ -93,6 +115,8 @@ def itemMetadata : SItemTief → Bool
   | .transT _ translator _ => clausesMetadata translator.klauseln ||
       translator.params.any (fun p => typeMetadata p.2) || translator.res.any typeMetadata
   | .specT .. => true -- Typed macro/proof admission is not supplied by predicate inlining alone.
+  | .callT sc => sc.gate.cost.isSome || sc.params.any (fun p => typeMetadata p.2) ||
+    sc.res.any typeMetadata
   | .protoT sig => clausesMetadata sig.klauseln || sig.params.any (fun p => typeMetadata p.2) ||
       sig.res.any typeMetadata
   | .tableT _ provider _ place _ _ parts => provider.isSome || place.isSome ||
@@ -114,15 +138,19 @@ def itemMetadata : SItemTief → Bool
     clausesMetadata s.klauseln || (b.map (bodyMetadata 10000)).getD false ||
     adapter.vorspiel.any (bodyMetadata 10000) || adapter.sonst.any (fun (_, body) => bodyMetadata 10000 body) ||
     ps.any (fun | .neu _ t => typeMetadata t | _ => false) || s.res.any typeMetadata
-  -- A bare linear declaration introduces only a nominal resource, resolved
-  -- by markFin and checked by the dependent G inventory; it has no value body.
-  | .typeT ["linear"] _ [] [] none => false
   | .typeT ["tagged"] _ [] [] (some (.raw _)) => false
   -- A record schema resolves through the checked record collector, not metadata.
   | .typeT [] _ [] [] (some (.raw text)) => !text.startsWith "{"
-  | .typeT flags _ args order body => !args.isEmpty || !order.isEmpty || body.any typeMetadata ||
+  | .typeT flags _ args order body =>
+    if flags.any (· == "linear") then
+      -- Nominal resources carry checked order metadata, never a copyable value body.
+      !args.isEmpty || body.isSome ||
+        flags.any (fun flag => flag != "linear" && flag != "ghost" && flag != "pub" && flag != "export")
+    else !args.isEmpty || !order.isEmpty || body.any typeMetadata ||
       flags.any (fun flag => flag != "pub" && flag != "export")
   | .constT _ ty _ => typeMetadata ty
+  | .trustT _ _ _ regs stack assumption service =>
+    !regs.isEmpty || !stack.isEmpty || !assumption.isEmpty || service.isNone
   | .whyT .. => false
   | .stateT .. => false
   | .checkT c => c.sonde.isSome || bodyMetadata 10000 c.canFail
@@ -332,11 +360,15 @@ theorem arenaT_zeuge :
     itemMetadata (.arenaT "A" (.lit 1) (.lit 2) none (.atom "u32") (some (["P"], (.lit 1)))) = true := by
   exact ⟨rfl, rfl, rfl⟩
 
-/-- Ghost owner values still lack a checked source binding. Nominal marks
-    travel only as resources; mint effects retain their metadata refusal
-    until their C08 software-call and root-once admission are connected. -/
+/-- A ghost linear declaration carries a nominal resource and its stage order;
+    this does not admit copyable owner values or a mint effect. -/
+theorem linear_ghost_mark_metadata_zeuge :
+    itemMetadata (.typeT ["linear", "ghost"] "Mark" [] ["Raw", "Ready", "Done"] none) = false := by rfl
+
+/-- Nominal ghost marks are admitted, but owner value payloads still lack a
+    checked source binding; mint effects retain their separate refusal. -/
 theorem owner_mint_type_refused_zeuge :
-    itemMetadata (.typeT ["linear", "ghost"] "Mark" [] [] none) = true := by rfl
+    itemMetadata (.typeT ["linear", "ghost"] "Mark" [] [] (some (.raw "u32"))) = true := by rfl
 
 end Gabbro.Grammatik.Parser.ExportMetadata
 
@@ -353,6 +385,23 @@ theorem drops_bound (e : SExpr)
 theorem drops_zeuge :
     clausesMetadata [.drops (.variable "n")] = false ∧
     clausesMetadata [.drops (.old (.variable "n"))] = true := by
+  exact ⟨rfl, rfl⟩
+
+/-- A consuming header is bound only through the same complete parser used by uLoopExport;
+    metadata in every nested continuation is still checked. -/
+theorem consuming_bound (fuel : Nat) (binder kind raw touches : String) (origin : Option SExpr)
+    (subject measure : SExpr) (invariant : Option SExpr) (body : SAnw)
+    (parsed : consumingHeader raw = .ok (measure, touches)) :
+    bodyMetadata (fuel + 1) (.each binder origin kind subject "consuming" raw invariant body) =
+      bodyMetadata fuel body := by
+  simp only [bodyMetadata, BEq.rfl, ↓reduceIte, parsed, Except.toOption,
+    Option.isNone_some, Bool.false_or]
+
+theorem consuming_bound_zeuge :
+    bodyMetadata 3 (.each "k" none "slots" (.variable "T") "consuming"
+      "decreases 1 touches consumes T.slots" none (.block [] none)) = false ∧
+    bodyMetadata 3 (.each "k" none "slots" (.variable "T") "consuming"
+      "touches consumes T.slots" none (.block [] none)) = true := by
   exact ⟨rfl, rfl⟩
 /-- C14 gates are consumed only by canonical build selection, before metadata checking.
     Raw wrappers remain refused; selection never suppresses the retained item's duties. -/
@@ -410,7 +459,7 @@ theorem mint_effect_metadata_refused :
     clausesMetadataWithoutLoad [.effs [.mints "Mark"]] = true := by
   exact ⟨rfl, rfl⟩
 
-/-- Plain marks carry no erased body or proof metadata; ghost value types still refuse. -/
+/-- Plain marks carry no erased body or proof metadata. -/
 theorem linear_mark_metadata_zeuge :
     itemMetadata (.typeT ["linear"] "Mark" [] [] none) = false ∧
     bodyMetadata 1 (.retires "Mark") = false := by

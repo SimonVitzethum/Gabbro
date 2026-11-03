@@ -135,7 +135,7 @@ theorem ownerInvG_schritt {N : OwnerNamespace D} {base : OwnerState D}
     unfold OwnerInvG
     rw [ownerLedger_eq_base]
     exact hbase
-  rcases hs with (h | h | h | h | h | h) <;> cases h <;> exact close
+  rcases hs with (h | h | h | h | h | h | h) <;> cases h <;> exact close
 
 /-- Reachability induction: every machine G reaches from `M0` keeps the ghost
     ledger valid. -/

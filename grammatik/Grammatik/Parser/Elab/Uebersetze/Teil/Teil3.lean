@@ -106,8 +106,13 @@ def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : L
   | .range base lo hi o =>
     match uTypIn alias tabs named spaces (eigner := eigner) base, uSchranke alias lo, uSchranke alias hi with
     | .ok (.int _ _), some a, some b => .ok (.int a (if o then b - 1 else b))
+    | .ok (.fl ..), _, _ => do
+      if o then throw "float range: exclusive upper bound has no closed G export"
+      let low ← uFloatBound alias lo
+      let high ← uFloatBound alias hi
+      pure (.fl low high)
     | .error e, _, _ => .error e
-    | _, _, _ => .error "range requires an integer type and known bounds"
+    | _, _, _ => .error "range requires a numeric type and known bounds"
   | .index true t =>
     match uTabNr tabs t with
     | .ok (_, count) => .ok (.opt count)

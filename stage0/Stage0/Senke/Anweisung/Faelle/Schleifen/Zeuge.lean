@@ -72,6 +72,9 @@ theorem head : Kopf callLayout 2 memory 4096 256 0 0 (Env.nil : Env D []) tiny w
 local instance [Kern] : TorOK callLayout O where
   ans a := nomatch a
   puf a := nomatch a
+  ref_answer a := nomatch a
+  area a := nomatch a
+
 local instance : SichtOK O := ⟨fun _ _ => rfl⟩
 
 /-- The general retry proof has all premises together, and next reaches a true second check. -/

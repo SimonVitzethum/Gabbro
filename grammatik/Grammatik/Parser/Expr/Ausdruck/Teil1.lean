@@ -54,7 +54,7 @@ inductive SExpr
   | float : String → SExpr
   | tru : SExpr
   | fls : SExpr
-  | variable : String → SExpr
+  | «variable» : String → SExpr
   | field : SExpr → String → SExpr
   | index : SExpr → SExpr → SExpr
   | arrow : SExpr → String → SExpr

@@ -3,6 +3,7 @@ module
 public import Stage0.Senke.Anweisung.Bytes.Span.Model
 public import Stage0.Senke.Ausdruck.Wort.Bytes
 public import Stage0.Senke.Ausdruck.Wort.BytesCode
+public import Stage0.Senke.Ausdruck.Aggregat.KopieSatz
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
@@ -60,7 +61,7 @@ theorem readBytesWide_ok {Λ : List (Res D)} {Γ : Ctx} {a b : Int}
     (n : Nat) (lower : 0 ≤ a) (upper : b + n ≤ D.count t) (access : darf D t Λ)
     {σ₀ σ : World D} {fp : Runner.W} {K d top : Nat} {W : Runner.Mem → Prop}
     {ρ : Env D Γ} {m : Runner.Mem} {pc : Runner.W} {c : List II}
-    (world : ∀ m, W m → WeltAt m L σ)
+    (world : ∀ m, W m → WeltAt m L σ) (layout : LayIn L)
     (ih : ∀ d c top, lowE (currentOld := currentOld) L i d reserved = some (c, top) → top ≤ K → ∀ m pc,
       Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c (Enc L (.int a b) (eval σ₀ i σ ρ)))
     (made : readBytesWideL L t f (lowE (currentOld := currentOld) L i (reserved := reserved)) n d = some (c, top))
@@ -69,13 +70,85 @@ theorem readBytesWide_ok {Λ : List (Res D)} {Γ : Ctx} {a b : Int}
       (eval σ₀ (.getBytes t f hf n i lower upper access) σ ρ) := by
   simp only [readBytesWideL] at made
   split at made
-  · next representable =>
-    obtain ⟨m', steps, changed, output⟩ := readBytesWords_ok i hf world lower ih
-      (integerWords 0 (256 ^ n - 1)) n 0 d c top (by simpa using upper)
-      (by simpa using representable) made fits m pc pre
-    refine ⟨m', steps, changed, trivial, ?_⟩
-    simpa only [encodeWords, eval, Int.natCast_zero, Int.add_zero] using output
-  · cases made
+  · next empty =>
+    subst n
+    simp only [Option.some.injEq, Prod.mk.injEq] at made
+    obtain ⟨rfl, rfl⟩ := made
+    refine Ok.value ?_ (by decide)
+    exact (const_ok pre (by decide) (by omega)).mono (fun _ equal => equal)
+  · next nonempty =>
+    split at made
+    · next representable =>
+      simp only [bind, Option.bind_eq_some_iff, pure,
+        Option.some.injEq, Prod.mk.injEq] at made
+      obtain ⟨⟨captured, tc⟩, captureMade, ⟨chunks, tt⟩, chunksMade, rfl, rfl⟩ := made
+      have bound : b < 2 ^ 64 := by
+        by_contra bad
+        have cell := layout.1 t f b.toNat (L.bounded (by omega))
+        have byteWidth : valueWords (D.typ t f) = 1 := by rw [hf]; rfl
+        simp only [Lay.elem, byteWidth] at cell
+        have small := layout.2.2
+        omega
+      have iw : valueWords (.int a b) = 1 := integerWords_unsigned lower bound
+      let words := integerWords 0 (256 ^ n - 1)
+      have p : Pre L m pc fp K d
+          (captured ++ (chunks ++ copyWords words d (d + 1))) ρ W reserved := by
+        simpa only [words, List.append_assoc] using pre
+      obtain ⟨m1, s1, ch1, w, read, encoded⟩ := ih d captured tc captureMade (by omega) m pc p.left
+      have p1 := p.next ch1 (Nat.le_succ d) (by omega)
+      -- View the captured index as a one-binding frame context. Its reservation
+      -- starts at d, independently of the caller's lexical context and scratch.
+      have header : FB ≤ d := by have := p.ctx; unfold frei at this; omega
+      have base : frei ([] : Ctx) (d - FB) = d := by
+        simp only [frei, contextWords_nil]
+        omega
+      have depth : frei [.int a b] (d - FB) = d + 1 := by
+        simp only [frei, contextWords_cons, contextWords_nil, iw]
+        omega
+      let k := eval σ₀ i σ ρ
+      let capturedEnv : Env D [.int a b] := .cons k .nil
+      let capturedExpr : Expr D [.int a b] Λ (.int a b) := .var .here
+      have captureAt : ValueAt L m1 fp (frei ([] : Ctx) (d - FB)) (.int a b) k := by
+        rw [base]
+        exact ValueAt.of_enc iw read encoded
+      have capturedAt : EnvAt L m1 fp capturedEnv (d - FB) :=
+        envAt_cons (by intro τ x; nomatch x) captureAt
+      have emit : (lowE (currentOld := currentOld) L (reserved := d - FB) capturedExpr) =
+          (fun dst => some (copyWords 1 dst d, dst + 1)) := by
+        funext dst
+        simp only [capturedExpr, lowE_eqs, iw, vslot_here, base]
+      have cp : Pre L m1 _ fp K (d + 1) chunks capturedEnv W (d - FB) :=
+        ⟨by rw [depth], p1.small, p1.frame, p1.left.code, p1.left.far,
+          capturedAt, p1.welt, p1.wstab⟩
+      have chunksMade' : readBytesWordsL L t f
+          (lowE (currentOld := currentOld) L (reserved := d - FB) capturedExpr)
+          words n 0 (d + 1) = some (chunks, tt) := by
+        rw [emit]
+        exact chunksMade
+      obtain ⟨m2, s2, ch2, output⟩ := readBytesWords_ok (σ₀ := σ₀) (σ := σ)
+        (reserved := d - FB) capturedExpr hf world lower
+        (fun dst code top made fits m pc hp =>
+          (var_value_ok .here made fits hp).word trivial)
+        words n 0 (d + 1) chunks tt (by simpa using upper)
+        (by simpa using representable) chunksMade' (by omega) m1 _ cp
+      have p2 := p1.next ch2 (Nat.le_refl _) (by omega)
+      have out : WordsAt m2 fp (d + 1)
+          (encodeWords L (.int 0 (256 ^ n - 1))
+            (eval σ₀ (.getBytes t f hf n i lower upper access) σ ρ)) := by
+        erw [encodeWords_int]
+        simpa only [eval, capturedExpr, capturedEnv, Env.get, k, words,
+          Int.natCast_zero, Int.add_zero] using output
+      obtain ⟨m3, s3, ch3, result⟩ := copyValue_run
+        (τ := .int 0 (256 ^ n - 1))
+        (v := eval σ₀ (.getBytes t f hf n i lower upper access) σ ρ) p2.frame p2.small
+        (by change d + words ≤ K; omega) (by change d + 1 + words ≤ K; omega)
+        (Or.inl (by omega)) p2.code (by simpa only [copyWords_length] using p2.far)
+        (show ValueAt L m2 fp (d + 1) (.int 0 (256 ^ n - 1))
+          (eval σ₀ (.getBytes t f hf n i lower upper access) σ ρ) from ⟨trivial, out⟩)
+      refine ⟨m3, ?_, (ch1.trans (ch2.mono (Nat.le_succ d))).trans
+        (Agree.widen ch3 (by change d + words ≤ K; omega)), result⟩
+      simpa only [List.length_append, copyWords_length, pc_add, words] using s1.trans (s2.trans s3)
+    · cases made
 
 /-- Actual expression lowering uses the same complete-value conclusion for both
     the single-word kernel and the chunk-count induction. -/
@@ -84,29 +157,14 @@ theorem getBytes_ok {Λ : List (Res D)} {Γ : Ctx} {a b : Int}
     (n : Nat) (hlo : 0 ≤ a) (hhi : b + n ≤ D.count t) (access : darf D t Λ)
     {σ₀ σ : World D} {fp : Runner.W} {K d top : Nat} {W : Runner.Mem → Prop}
     {ρ : Env D Γ} {m : Runner.Mem} {pc : Runner.W} {c : List II}
-    (hWL : ∀ m, W m → WeltAt m L σ)
+    (hWL : ∀ m, W m → WeltAt m L σ) (layout : LayIn L)
     (ih : ∀ d c top, lowE (currentOld := currentOld) L i d reserved = some (c, top) → top ≤ K → ∀ m pc,
       Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c (Enc L (.int a b) (eval σ₀ i σ ρ)))
     (h : lowE (currentOld := currentOld) L (reserved := reserved) (.getBytes t f hf n i hlo hhi access) d = some (c, top))
     (hK : top ≤ K) (hp : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c (.int 0 (256 ^ n - 1))
       (eval σ₀ (.getBytes t f hf n i hlo hhi access) σ ρ) := by
-    simp only [lowE_eqs] at h
-    split at h
-    · next hn =>
-      have power : (256 : Int) ^ n ≤ (256 : Int) ^ 8 := by
-        have natural := Nat.pow_le_pow_right (n := 256) (i := n) (by decide) hn
-        have cast : ((256 ^ n : Nat) : Int) ≤ ((256 ^ 8 : Nat) : Int) := Int.ofNat_le.mpr natural
-        simpa only [Int.natCast_pow, Int.cast_ofNat_Int] using cast
-      have ceiling : (256 : Int) ^ 8 = 2 ^ 64 := by decide
-      rw [ceiling] at power
-      refine Ok.value ?_ (integerWords_unsigned (by decide) (by omega))
-      have hr := readBytesL_ok i hf hWL hlo
-        ih
-        n 0 d c top (by simpa using hhi) (by omega) h hK m pc hp
-      exact hr.mono (fun w hw => by
-        change w = BitVec.ofInt 64 (bytesZuZahl (σ.bytesAb t f hf n (eval σ₀ i σ ρ).n))
-        simpa only [Int.natCast_zero, Int.add_zero] using hw)
-    · exact readBytesWide_ok i hf n hlo hhi access hWL ih h hK hp
+  simp only [lowE_eqs] at h
+  exact readBytesWide_ok i hf n hlo hhi access hWL layout ih h hK hp
 
 end Gabbro.Stage0.Senke

@@ -417,7 +417,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
         (fun ce te he hte m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay e d ce te he hte m pc ρ hp)
         (fun cb tb hb htb m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay b d cb tb hb htb m pc ρ hp) h hK hp
   | _, _, .getBytes t f hf n i hlo hhi access, d, c, top, h, hK, m, pc, ρ, hp =>
-    getBytes_ok i hf n hlo hhi access hWL
+    getBytes_ok i hf n hlo hhi access hWL hLay
       (fun d ci ti hi ht m pc hp => (lowE_ok (same := same) σ₀ σ hWL hLay i d ci ti hi ht m pc ρ hp).word trivial)
       h hK hp
   | _, _, .forallSlots t body _, d, c, top, h, hK, m, pc, ρ, hp =>
