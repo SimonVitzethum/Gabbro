@@ -105,6 +105,9 @@ theorem kein_schritt_ruhig {M M' : RufMaschineG D} {u : Faden}
     | dannNarrowOk l Γ Λ Λ' Λ'' lo hi lo' hi' e sonst rest k ρ hhead σ₁ hs₁ h neu hneu hΛ =>
       rw [hhead] at hRet
       simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
+    | dannNarrowRequired l Γ Λ Λ' lo hi lo' hi' e rest k ρ hhead σ₁ hs₁ h neu hneu hΛ =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
     | endeBindAxiom l Γ Λ τ a args he hw hg hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
       rw [hhead] at hRet
       simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
