@@ -18,6 +18,40 @@ open Source Body
   `verbrauch` case) at once; `dannLeaveVerbrauch` and `dannNextVerbrauch`
   invert the continuation (`OR`/`OX` have no `verbrauchRest` case). -/
 
+section Kein
+variable {D : Deklaration} {A : FreiForm D} {I : Interfaces A} {V : Vertrag D} {out : Flow.Output A V.erg}
+
+/-- A consuming residue (the loop or its continuation marker). -/
+def restVerbrauchend {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : GRest D V l Γ Λ → Bool
+  | .verbrauch .. => true
+  | .verbrauchRest .. => true
+  | _ => false
+
+/-- A consuming traversal statement. -/
+def stmtVerbrauchend {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Bool
+  | .consumeTraverse .. => true
+  | _ => false
+
+theorem or_kein_verbrauch {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {k c : Context} {r : GRest D V l Γ Λ}
+    (h : OR A I out k c r) : restVerbrauchend r = false := by
+  cases h <;> rfl
+
+theorem ox_kein_verbrauch {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {k : Context} {r : GRest D V l Γ Λ}
+    (h : OX A I out k r) : restVerbrauchend r = false := by
+  cases h <;> rfl
+
+theorem os_kein_verbrauch {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c c2 : Context}
+    {st : Stmt D V l Γ Λ Λ'} (h : OS A I out k c st c2) : stmtVerbrauchend st = false := by
+  cases h <;> rfl
+
+theorem cont_kein_verbrauch {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {k c : Context} {r : GRest D V l Γ Λ}
+    (h : Cont A I out k c r) : restVerbrauchend r = false := by
+  rcases h with h | ⟨_, h⟩
+  · exact or_kein_verbrauch h
+  · exact ox_kein_verbrauch h
+
+end Kein
+
 set_option maxHeartbeats 4000000 in
 theorem ownInv_step_dannVerbrauch {D : Deklaration} {P : Programm D}
   {A : FreiForm D} {I : Interfaces A} {O : Orakel D} {passes : Nat}
@@ -66,7 +100,7 @@ theorem ownInv_step_dannVerbrauch {D : Deklaration} {P : Programm D}
   rw [hhead] at hH
   obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
   obtain ⟨c2, hs, hc⟩ := hr.stmt trivial
-  cases hs
+  simpa [stmtVerbrauchend] using os_kein_verbrauch hs
 
 set_option maxHeartbeats 4000000 in
 theorem ownInv_step_verbrauchWeiter {D : Deklaration} {P : Programm D}
@@ -116,7 +150,7 @@ theorem ownInv_step_verbrauchWeiter {D : Deklaration} {P : Programm D}
       lauf := M.lauf, start := M.start : RufMaschineG D } := by
   rw [hhead] at hH
   obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-  cases hr
+  simpa [restVerbrauchend] using or_kein_verbrauch hr
 
 set_option maxHeartbeats 4000000 in
 theorem ownInv_step_verbrauchLeer {D : Deklaration} {P : Programm D}
@@ -163,7 +197,7 @@ theorem ownInv_step_verbrauchLeer {D : Deklaration} {P : Programm D}
       lauf := M.lauf, start := M.start : RufMaschineG D } := by
   rw [hhead] at hH
   obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-  cases hr
+  simpa [restVerbrauchend] using or_kein_verbrauch hr
 
 set_option maxHeartbeats 4000000 in
 theorem ownInv_step_verbrauchFort {D : Deklaration} {P : Programm D}
@@ -213,7 +247,7 @@ theorem ownInv_step_verbrauchFort {D : Deklaration} {P : Programm D}
       lauf := M.lauf, start := M.start : RufMaschineG D } := by
   rw [hhead] at hH
   obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-  cases hr
+  simpa [restVerbrauchend] using or_kein_verbrauch hr
 
 set_option maxHeartbeats 4000000 in
 theorem ownInv_step_dannLeaveVerbrauch {D : Deklaration} {P : Programm D}
@@ -267,9 +301,8 @@ theorem ownInv_step_dannLeaveVerbrauch {D : Deklaration} {P : Programm D}
       lauf := M.lauf, start := M.start : RufMaschineG D } := by
   rw [hhead] at hH
   obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-  cases hr with
-  | dann _ _ _ hr' => cases hr'
-  | dannDead _ _ _ _ hx => cases hx
+  obtain ⟨_, _, hc⟩ := hr.dann_inv
+  simpa [restVerbrauchend] using cont_kein_verbrauch hc
 
 set_option maxHeartbeats 4000000 in
 theorem ownInv_step_dannNextVerbrauch {D : Deklaration} {P : Programm D}
@@ -299,7 +332,7 @@ theorem ownInv_step_dannNextVerbrauch {D : Deklaration} {P : Programm D}
                 (Λ : List (Res D)) ×
                   Env D (Ty.index (D.count t) :: Γ) ×
                     GRest D (vertragVon D (M.faeden u).kopf.f) true (Ty.index (D.count t) :: Γ) Λ)⟩ :
-            (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
+            (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) true Γ Λ)⟩ :
         (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ))
   (σm : World D) :
   OwnInv A I
@@ -323,8 +356,7 @@ theorem ownInv_step_dannNextVerbrauch {D : Deklaration} {P : Programm D}
       lauf := M.lauf, start := M.start : RufMaschineG D } := by
   rw [hhead] at hH
   obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-  cases hr with
-  | dann _ _ _ hr' => cases hr'
-  | dannDead _ _ _ _ hx => cases hx
+  obtain ⟨_, _, hc⟩ := hr.dann_inv
+  simpa [restVerbrauchend] using cont_kein_verbrauch hc
 
 end Gabbro.Grammatik.ArenaOwnership.Machine
