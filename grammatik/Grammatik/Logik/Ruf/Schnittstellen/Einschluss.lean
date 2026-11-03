@@ -44,7 +44,7 @@ theorem konjunkte_holds {Γ : Ctx} {Λ : List (Res D)} (e : Expr D Γ Λ .bool)
       · exact (ihb.mp hb) c hc
     · exact iha.mpr (fun c hc => h c (.inl hc))
     · exact ihb.mpr (fun c hc => h c (.inr hc))
-  · simp
+  · simp [konjunkte]
 
 /-- Syntactic inclusion of normalised conjunct lists in one context:
     every goal conjunct occurs among the assumptions. -/

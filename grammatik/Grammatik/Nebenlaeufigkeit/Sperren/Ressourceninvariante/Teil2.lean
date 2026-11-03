@@ -133,13 +133,13 @@ theorem refInv81_release (M : GenMaschine refD) (pc : PCStand) (f : Faden)
             exact False.elim (hff hpost)
         | assignThruOwn p t ht f i e m s ho he hg hw hL =>
             simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
-            have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) (M.weltVon f) Λ _
+            have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) (M.weltVon 1) Λ _
               (orte_append (orte_append p.orte_darf i.orte_darf) e.orte_darf) hΛ.heldIn
-            have hG : Gut _ _ (M.weltVon f) σ' := by
+            have hG : Gut V.schreibt V.gschreibt (M.weltVon 1) σ' := by
               rw [← hstep]
               exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldIn hΛ.heldIn))
             have hpost : () ∈ σ'.haelt := by
-              have h1 : () ∈ (M.weltVon f).haelt := hlt1
+              have h1 : () ∈ (M.weltVon 1).haelt := hlt1
               rw [← hG.haelt] at h1
               exact h1
             have hff : () ∉ σ'.haelt := by

@@ -66,9 +66,9 @@ def lowEndF (u : UProg) (c : Fin u.fns.length) (r : URet) :
 
 /-! ## 1. The writes: the lowering's casts are the constructors -/
 
-theorem assignDurchStmt_eq (Γ : Ctx) (Λ : List (Res (declOf u)))
+theorem assignDurchStmt_eq {read : Bool} (Γ : Ctx) (Λ : List (Res (declOf u)))
     (V : Vertrag (declOf u)) (t : Fin u.tabs.length)
-    (fh : FieldHit u t) (p : Expr (declOf u) Γ Λ (.ptr (.table t.val (true, true))))
+    (fh : FieldHit u t) (p : Expr (declOf u) Γ Λ (.ptr (.table t.val (read, true))))
     (ht : (declOf u).tabNr t.val = some t)
     (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
     (e : Expr (declOf u) Γ Λ (.int fh.range.1 fh.range.2))
@@ -76,7 +76,8 @@ theorem assignDurchStmt_eq (Γ : Ctx) (Λ : List (Res (declOf u)))
     (hL : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ) :
     ∃ e2 : Expr (declOf u) Γ Λ ((declOf u).typ t fh.idx), HEq e2 e ∧
       assignDurchStmt (l := false) u Γ Λ V t fh p ht i e hw hL =
-        Stmt.assignThru (D := declOf u) p t ht fh.idx i e2 hw hL :=
+        Stmt.assignThru (D := declOf u) p t
+          (Deklaration.capTab_of ht rfl (by decide)) fh.idx i e2 hw hL :=
   ⟨_, mpr_heq _ _, rfl⟩
 
 theorem assignSlotStmt_eq (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -113,7 +114,7 @@ theorem lowAssignDurch_sim (c : Fin u.fns.length) {b fname : String} {ix : UIdx}
   · cases h
   · rename_i j hj
     split at h
-    · rename_i num hp
+    · rename_i read num hp
       split at h
       · rename_i hlt
         split at h
@@ -136,7 +137,11 @@ theorem lowAssignDurch_sim (c : Fin u.fns.length) {b fname : String} {ix : UIdx}
                     obtain ⟨e2, he2, heq⟩ := assignDurchStmt_eq (ctxOf u c) (resOf u c) (verOf u c)
                       ⟨num, hlt⟩ fh (Expr.var pv) (tabNr_some u num hlt) i e _ hG
                     rw [heq]
-                    have hpt := ptrTab_of (fnAt u c) hA b j num true hj hp hlt
+                    have hparam : ((fnAt u c).params[j]?).map (·.2) =
+                        some (.ptr (.table num (read, true))) := by
+                      simpa only [ctxOf, List.getElem?_map] using
+                        (lowVar_typ (ctxOf u c) j _ pv hpv)
+                    have hpt := ptrTab_of_type (fnAt u c) b j num read true hj hparam hlt
                     simp only [stmtBody, hpt] at hb
                     cases hsv : sideExpr u (fnAt u c) v with
                     | none => rw [hsv] at hb; cases hb
@@ -286,6 +291,7 @@ theorem uIdxOfSide_expr {sd : USide} {ix : UIdx} (h : uIdxOfSide sd = .ok ix) :
 theorem lowCallArgOne_sim (c : Fin u.fns.length) {k : UParamArt} {τ : Ty} {a : UArg}
     {e : Expr (declOf u) (ctxOf u c) (resOf u c) τ} {eB : Gabbro.Body.Expr}
     (h : lowCallArgOne u c k τ a = .ok e) (hb : argExpr u (fnAt u c) a = some eB)
+    (hK : ArtSchlicht k = true)
     (hA : ArtStimmt (fnAt u c)) (hT : TabEindeutig u) (hN : NamenEindeutig (fnAt u c))
     (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) (ctxOf u c)) (s : Gabbro.Body.State)
     (hW : WRel u σ s.world) (hL : LRel (fnAt u c) 0 ρ s.local') :
@@ -295,33 +301,15 @@ theorem lowCallArgOne_sim (c : Fin u.fns.length) {k : UParamArt} {τ : Ty} {a : 
     simp only [argExpr, Option.some.injEq] at hb
     subst hb
     simp only [lowCallArgOne, lowCallArgOneL] at h
-    split at h
-    · split at h
-      · split at h
-        · split at h
-          · cases h
-          · rename_i j hj
-            split at h
-            · rename_i num2 w2 hp
-              obtain ⟨w3, hw3⟩ := hA.1 j num2 w2 hp
-              have hab := lrel_ptr c hL p j hj (.table num2 (true, w3)) hw3
-              have goal : Gabbro.Body.eval s (.name p) = some .absent := by
-                simp only [Gabbro.Body.eval, hab]
-              repeat' split at h
-              all_goals first | (cases h; exact goal) | cases h
-            · cases h
-        · cases h
-      · cases h
+    repeat' split at h
     all_goals first
       | (cases h; done)
-      | (repeat' split at h
-         all_goals first
-           | (cases h; done)
-           | (rename_i hx
-              cases h
-              simp only [Gabbro.Body.eval]
-              rw [hL p _ ‹paramPos (fnAt u c).params p = .ok _›, Nat.zero_add, nthVal_lowVar _ _ _ _ ρ hx]
-              try rfl))
+      | (rename_i x hx
+         cases h
+         simp only [Gabbro.Body.eval]
+         rw [hL p _ ‹paramPos (fnAt u c).params p = .ok _›, Nat.zero_add,
+           nthVal_lowVar _ _ _ _ ρ hx]
+         rfl)
   | freshPtr tname w2 =>
     simp only [argExpr] at hb
     cases hq : ptrParam u (fnAt u c) tname with
@@ -357,7 +345,7 @@ theorem lowCallArgOne_sim (c : Fin u.fns.length) {k : UParamArt} {τ : Ty} {a : 
     simp only [argExpr] at hb
     simp only [lowCallArgOne, lowCallArgOneL] at h
     split at h
-    · cases h
+    · simp at h
     · split at h
       · rename_i num _ lo hi
         split at h
@@ -389,7 +377,7 @@ theorem lowCallArgOne_sim (c : Fin u.fns.length) {k : UParamArt} {τ : Ty} {a : 
         cases h
         cases s
         exact lowWertAt_sim he' hb hA hT σ₀ σ ρ _ _ hW hL
-    all_goals cases h
+    all_goals first | (cases h; done) | (simp [ArtSchlicht] at hK)
   | bval _ | oval _ | gval _ | fnref _ => simp [argExpr] at hb
 
 /-- **The argument list.** -/
@@ -399,9 +387,10 @@ theorem lowCallArgsAux_sim (c : Fin u.fns.length)
     (hW : WRel u σ s.world) (hL : LRel (fnAt u c) 0 ρ s.local') :
     ∀ (ks : List UParamArt) (ts : List Ty) (as : List UArg)
       (a : Args (declOf u) (ctxOf u c) (resOf u c) ts) (es : List Gabbro.Body.Expr),
+      (∀ k ∈ ks, ArtSchlicht k = true) →
       lowCallArgsAux u c ks ts as = .ok a → argsExpr u (fnAt u c) as = some es →
       Gabbro.Body.evalAll s es = some (envVals (evalArgs σ₀ a σ ρ))
-  | [], ts, as, a, es, h, hb => by
+  | [], ts, as, a, es, _, h, hb => by
       simp only [lowCallArgsAux, lowCallArgsAuxL] at h
       split at h
       · cases h
@@ -409,7 +398,7 @@ theorem lowCallArgsAux_sim (c : Fin u.fns.length)
         subst hb
         rfl
       · cases h
-  | k :: ks, ts, as, a, es, h, hb => by
+  | k :: ks, ts, as, a, es, hKs, h, hb => by
       simp only [lowCallArgsAux, lowCallArgsAuxL] at h
       split at h
       · rename_i t ts' x as'
@@ -425,8 +414,10 @@ theorem lowCallArgsAux_sim (c : Fin u.fns.length)
             · rename_i eB esB hx hxs
               simp only [Option.some.injEq] at hb
               subst hb
-              have h1 := lowCallArgOne_sim c he hx hA hT hN σ₀ σ ρ s hW hL
-              have h2 := lowCallArgsAux_sim c hA hT hN σ₀ σ ρ s hW hL ks ts' as' rest esB hrest hxs
+              have h1 := lowCallArgOne_sim c he hx (hKs k (List.mem_cons_self ..))
+                hA hT hN σ₀ σ ρ s hW hL
+              have h2 := lowCallArgsAux_sim c hA hT hN σ₀ σ ρ s hW hL ks ts' as' rest esB
+                (fun k hk => hKs k (List.mem_cons_of_mem _ hk)) hrest hxs
               simp only [Gabbro.Body.evalAll, h1, h2]
               rfl
             · cases hb

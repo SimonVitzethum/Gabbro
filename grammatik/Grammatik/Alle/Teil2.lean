@@ -174,7 +174,7 @@ public import Grammatik.Code.Refine.Expr
 public import Grammatik.Code.Refine.Calls.Func
 public import Grammatik.Code.Refine.Witness
 public import Grammatik.Code.Refine.Witnessa
-public import Grammatik.Code.Refine.WitnessC11
+public import Grammatik.Code.Refine.Witnesses.WitnessC11
 public import Grammatik.Code.Conc.Present
 public import Grammatik.Code.Conc.Thread
 public import Grammatik.Code.Conc.GXStep

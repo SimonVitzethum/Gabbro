@@ -148,6 +148,7 @@ theorem lowCall_sim (c : Fin u.fns.length) {cname : String} {args : List UArg}
     (h : lowCall u c cname args = .ok g)
     (hb : stmtBody u (fnAt u c) (.call cname args) = some bst)
     (hA : ArtStimmt (fnAt u c)) (hT : TabEindeutig u) (hN : ∀ c', NamenEindeutig (fnAt u c'))
+    (hKinds : ∀ c', ∀ k ∈ (fnAt u c').kinds, ArtSchlicht k = true)
     (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
     (σ : World (declOf u)) (ρ : Env (declOf u) (ctxOf u c)) (s : Gabbro.Body.State)
@@ -186,7 +187,8 @@ theorem lowCall_sim (c : Fin u.fns.length) {cname : String} {args : List UArg}
         subst hb
         let σr := σ.lese (resOf u c) a.orte
         have hWr' : WRel u σr s.world := wrel_slots u rfl hW
-        have hev := lowCallArgsAux_sim c hA hT (hN c) σr σr ρ s hWr' hL _ _ _ a es ha hes
+        have hev := lowCallArgsAux_sim c hA hT (hN c) σr σr ρ s hWr' hL _ _ _ a es
+          (hKinds callee) ha hes
         have hlen : (fnAt u callee).params.length = ((declOf u).params callee).length := by
           rw [params_eq]; simp
         have hLc := lrel_bindAll (fnAt u callee) (evalArgs σr a σr ρ) (hN callee) hlen

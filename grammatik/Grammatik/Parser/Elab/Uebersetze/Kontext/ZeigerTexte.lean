@@ -18,6 +18,7 @@ def uZeigerAnw : Nat → SAnw → List String
   | f + 1, a => match a with
     | .bind _ _ (some t) _ => uZeigerTexte [t]
     | .bindElse _ (some t) _ _ b => uZeigerTexte [t] ++ uZeigerAnw f b
+    | .callElse _ _ _ b => uZeigerAnw f b
     | .bindElse _ none _ _ b => uZeigerAnw f b
     | .callElse _ _ _ b => uZeigerAnw f b
     | .bindQ _ _ (some t) _ | .bindAxiomOpt _ (some t) _ => uZeigerTexte [t]

@@ -11,6 +11,7 @@ variable {D : Deklaration}
 -- Identify the covered residue before inverting each machine-step head.
 set_option hygiene false in
 local macro "umkehr_head" : tactic => `(tactic| (
+  try dsimp only [RufDannHeadG, RufEndHeadG] at hhead
   rw [hR] at hhead
   cases hhead))
 

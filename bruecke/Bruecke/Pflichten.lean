@@ -14,9 +14,11 @@ body of every routine as a `Body.Stmt` datum, its precondition, its postconditio
 source text in Lean -- so a wrong Rust print is a failed per-unit check (`Instanz*.lean`), never
 a wrong theorem. The definitions here are the reference; the Rust printer is checked against them.
 
-FRAGMENT: exactly what the Lean parser elaborates (`UStmt`: slot writes through a pointer or at
-a table, direct calls; a trailing `return`; `ensures` comparisons and their boolean
-combination). Everything else is outside the bridge: `zuBody` answers `none` with a reason.
+FRAGMENT: numeric slot writes through a pointer or at a table, direct calls with scalar or
+capability arguments, a trailing numeric or void `return`, and numeric `ensures` comparisons
+and their boolean combinations. This is a subset of the Lean parser's output. Products,
+indirect/fallible/foreign call binders, consuming traversals, scoped returns and required
+narrowing have no Body representation here: the readers' catch-all arms return `none`.
 -/
 
 open Gabbro.Grammatik.Parser.Uebersetze
@@ -69,13 +71,18 @@ def binE (op : BinOp) : Option Expr → Option Expr → Option Expr
   | some x, some y => some (.bin op x y)
   | _, _ => none
 
-/-- A side outside an `ensures` (a call argument, a returned value, an assigned value): no
-    `old`, no `erg`. Integer arithmetic and the bit operations are Body's `bin` (`binop`: exact
-    integers, the masks over non-negative operands); an integer conversion `T(e)` is a WIDENING, so
-    it leaves the number alone and reads as its operand (P2 wall 2). -/
+/-- Scalar parameters are distinguished from the capability parameters of `argExpr`. -/
+def numericParam (f : UFn) (p : String) : Bool :=
+  match f.params.find? (fun q => q.1 == p) with
+  | some (_, .int ..) => true
+  | _ => false
+
+/-- A scalar side outside an `ensures`: no `old` or `erg`. Integer arithmetic and bit
+    operations use Body's exact integer operators; a widening conversion retains its number.
+    Capability values are represented only by `argExpr`'s pointer-argument cases. -/
 def sideExpr (u : UProg) (f : UFn) : USide → Option Expr
   | .lit n => some (.lit (.int n))
-  | .param p => some (.name p)
+  | .param p => if numericParam f p then some (.name p) else none
   | .slot p fld i => slotPlace u f (.slot p fld i)
   | .tab t fld i => slotPlace u f (.tab t fld i)
   | .old .. => none
@@ -200,6 +207,7 @@ def stmtBody (u : UProg) (f : UFn) : UStmt → Option Stmt
       match fnSuch u g, argsExpr u f as with
       | some gf, some es => some (.call g (gf.params.map (·.1)) es (preExpr gf))
       | _, _ => none
+  -- The simulation's `stmtBody = some ...` premise excludes every other statement form.
   | _ => none
 
 def stmtsBody (u : UProg) (f : UFn) : List UStmt → Option (List Stmt)

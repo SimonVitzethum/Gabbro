@@ -1,6 +1,5 @@
 module
-public import Grammatik.Kern.Syntax.Satz.T3
-public import Grammatik.Kern.Syntax.Satz.T4.Teil1
+public import Grammatik.Kern.Syntax.Satz.T4.Teil2Context
 @[expose] public section
 namespace Gabbro.Grammatik
 variable {D : Deklaration} {V : Vertrag D}
@@ -9,7 +8,6 @@ variable (O : Orakel D) (passes : Nat)
 variable (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (hR : GutR R) (hO : GutO O)
 include hR hO
 set_option linter.unusedSectionVars false
--- Unfold scope-premise abbreviations before simplifying their Boolean checks.
 set_option hygiene false in
 local macro "scopes_gut" : tactic => `(tactic| first
   | exact hscope
