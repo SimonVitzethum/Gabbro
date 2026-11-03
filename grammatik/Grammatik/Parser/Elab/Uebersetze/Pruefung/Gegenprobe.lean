@@ -302,11 +302,17 @@ example : (uSonde.fns.find? (fun f => strEq f.name "p#sonde#ext")).map
 
 /-- The matching image and binding yield measured acceptance, beyond the
     structural `checkB`/`AkzeptiertX` admission above. -/
+theorem sonde_nachweisB : checkChecksSonde.all (fun d =>
+    sondenNachweisB checkChecksSonde d "ship" artefaktSonde
+      .durchgefallen berichtSondeFalsch) = true := by
+  decide +kernel
+
 theorem sonde_nachweis (d : CheckDecl (declOf uSonde))
     (hd : d ∈ checkChecksSonde) :
     SondenNachweis checkChecksSonde d "ship" artefaktSonde
       .durchgefallen berichtSondeFalsch :=
-  ⟨⟨"ext text", sonde_bindung d hd⟩, rfl, gemessen_sonde d hd⟩
+  sondenNachweisB_sound _ _ _ _ _ _ hd
+    (List.all_eq_true.mp sonde_nachweisB d hd)
 
 /-- Same name and mode, wrong image: the external result is stale. -/
 theorem sonde_falsches_bild (d : CheckDecl (declOf uSonde)) :
