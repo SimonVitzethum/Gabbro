@@ -1,6 +1,8 @@
 /- Compile checked Gabbro source to an S0IR image. Execution belongs to the assembly runner. -/
 module
 public import Stage0.IRBild
+-- Load transitive compiler IR for `lean --run`; retain the runtime import and native main.
+meta import Stage0.IRBild
 @[expose] public section
 
 
