@@ -180,6 +180,9 @@ public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Herkunft
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Falte
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Export
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Zulassung
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Boden
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Gegenprobe
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Fremdtor
 public import Grammatik.Parser.Elab.Uebersetze.Akku.Proben
 public import Grammatik.Parser.Elab.Uebersetze.Akku.Herkunft
 public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben14
