@@ -196,6 +196,11 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
           (eval ((M.weltVon t).lese Λ e.orte) e ((M.weltVon t).lese Λ e.orte) ρ).n ≤ hi'
       · exact fort_schritt (w_narrowOk rfl lo' hi' e sonst rest k ρ hx rfl h hΛ)
       · exact fort_schritt (w_narrowElse rfl lo' hi' e sonst rest k ρ hx h hΛ)
+  | narrowRequired e lo' hi' rest =>
+      have hBounds := hP.requiredRange l Γ Λ _ ρ _ _ lo' hi' e rest k hx
+      obtain ⟨neu, hneu, -⟩ := Erw.lese (M.weltVon t) Λ e.orte
+      exact fort_schritt' ⟨_, RufSchrittG.dannNarrowRequired M t l Γ Λ _ _ _ lo' hi' e rest k ρ hx
+        ((M.weltVon t).lese Λ e.orte) rfl hBounds neu hneu hΛ⟩
   | check c sonst rest =>
       cases hw : wahr? (eval ((M.weltVon t).lese Λ c.orte) c ((M.weltVon t).lese Λ c.orte) ρ) with
       | true => exact fort_schritt (w_pruefWahr rfl c sonst rest k ρ hx hw hΛ)
