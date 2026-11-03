@@ -68,7 +68,11 @@ namespace Gabbro.Grammatik.C06.Locked
 
 @[expose] def predicate {Γ : Ctx} : Expr decl Γ [.held ()] .bool :=
   .eq (.slot MTab.konto () (.widen (by decide) (by decide) (.lit 0))
-    (by decide)) (.lit 0)
+    (by
+      intro w hw
+      have h : w ∈ [(Sum.inl () : Unit ⊕ (Empty × Nat))] := hw
+      rcases List.mem_singleton.mp h with rfl
+      exact List.mem_cons_self)) (.lit 0)
 
 @[expose] def prog : Programm decl where
   invariante := fun _ => .tru
@@ -104,7 +108,16 @@ theorem footprint : FussS prog locks (fun _ => false) MFn.setze := by
     cases c with
     | inl t =>
         have ht : t = MTab.konto := by
-          cases t <;> revert hc <;> decide
+          cases t with
+          | konto => rfl
+          | privA =>
+              change Sum.inl MTab.privA ∈
+                ([.inl MTab.konto, .inl MTab.konto] : List (MTab ⊕ Empty)) at hc
+              simp at hc
+          | privB =>
+              change Sum.inl MTab.privB ∈
+                ([.inl MTab.konto, .inl MTab.konto] : List (MTab ⊕ Empty)) at hc
+              simp at hc
         subst t
         exact Or.inl rfl
     | inr g => nomatch g
@@ -119,18 +132,19 @@ theorem nondegenerate :
     (decl.sigNr 0).schreibt MTab.konto = true ∧
     Bewacht (D := decl) (.inl MTab.konto) () ∧
     pointer.val = MFn.setze := by
-  decide
+  exact ⟨rfl, rfl, rfl, List.mem_cons_self, rfl⟩
 
 theorem ptr_vertrag_darf_zeuge : () ∈ (decl.sigNr 0).haelt :=
-  ptr_vertrag_darf prog 0 (.inl MTab.konto) (by decide) () (by decide)
+  ptr_vertrag_darf prog 0 (.inl MTab.konto)
+    (List.mem_append_left _ List.mem_cons_self) () List.mem_cons_self
 
 theorem ptr_vertrag_stabil_zeuge :
     (prog.ptrVertrag 0).pre.orte ++ (prog.ptrVertrag 0).post.orte ⊆
       stabilS prog locks (fun _ => false) MFn.setze [.held ()] :=
   ptr_vertrag_stabil (n := 0) footprint permissions (by
     intro c hc
-    cases c with
-    | inl t => cases t <;> revert hc <;> decide
-    | inr g => nomatch g)
+    rcases List.mem_append.mp hc with hc | hc
+    · exact fuss_teilG prog MFn.setze (fuss_req prog MFn.setze hc)
+    · exact fuss_ensG prog MFn.setze hc)
 
 end Gabbro.Grammatik.C06.Locked
