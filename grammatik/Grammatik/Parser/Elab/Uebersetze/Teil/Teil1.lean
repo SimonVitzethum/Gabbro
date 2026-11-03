@@ -359,6 +359,9 @@ inductive UStmt
   | axCallElseBeg : String → List UArg → String → UStmt
   /-- `retires m;`: explicit discharge of one held linear mark. -/
   | retires : String → UStmt
+  /-- Current-state traversal: candidate, table, predecessor, member, edge, invariant,
+      state-reading measure and the source mutation sub-contract. -/
+  | consumeLoopBeg : String → String → String → UEns → UEns → UEns → USide → List SEffekt → UStmt
   deriving DecidableEq, Repr
 /-- One elaborated table: slot count and one integer range per
     slot field (the `TableModel` of `lean_g.rs`). -/
