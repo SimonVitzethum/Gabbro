@@ -1,6 +1,6 @@
 /- Accepted images read product, floating, string and wide integer sum payloads. -/
 module
-public import Stage0.Senke.Anweisung.Faelle.Sum.Statement
+public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Sum.Statement
 public import Stage0.Senke.Anweisung.Faelle.Gleit.Proben
 @[expose] public section
 
