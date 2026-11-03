@@ -43,6 +43,9 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
   | Γ, fn, Λ, pe, .loopBeg bnd tab inv :: rest =>
     (R.struct Γ fn Λ pe (.loopBeg bnd tab inv) rest).bind fun (⟨Λ₁, st⟩, rest') =>
       (R.seq Γ fn Λ₁ pe rest').bind fun (⟨Λ₂, b⟩, r) => .ok (⟨Λ₂, Block.cons st b⟩, r)
+  | Γ, fn, Λ, pe, .consumeLoopBeg b t p m e i mass effects :: rest =>
+    (R.struct Γ fn Λ pe (.consumeLoopBeg b t p m e i mass effects) rest).bind fun (⟨Λ₁, st⟩, rest') =>
+      (R.seq Γ fn Λ₁ pe rest').bind fun (⟨Λ₂, body⟩, remaining) => .ok (⟨Λ₂, Block.cons st body⟩, remaining)
   | Γ, fn, Λ, pe, .retryBeg cnt bis :: rest =>
     (R.struct Γ fn Λ pe (.retryBeg cnt bis) rest).bind fun (⟨Λ₁, st⟩, rest') =>
       (R.seq Γ fn Λ₁ pe rest').bind fun (⟨Λ₂, b⟩, r) => .ok (⟨Λ₂, Block.cons st b⟩, r)
