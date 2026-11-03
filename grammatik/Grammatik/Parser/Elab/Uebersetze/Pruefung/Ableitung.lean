@@ -58,13 +58,6 @@ theorem uDutyIdx_deklariert (u : UProg) (c : UCheck) (i : Fin u.marken.length)
   rw [← he]
   exact List.get_mem u.marken i
 
-/-- A measured place rendered without inventing tables: the variable, the
-    dotted field path, the indexed slot path. -/
-def messOrtName : UMessOrt → String
-  | .variable n => n
-  | .feld b f => b ++ "." ++ f
-  | .stelle b f i => b ++ "." ++ f ++ "[" ++ toString i ++ "]"
-
 /-- One elaborated check as a kernel descriptor over the unit's own declaration:
     the probe and the Duty-consuming gate wrappers resolved by name (the wrapper,
     not the written gate, is what `CheckDecl.gates` names), the Duty resolved
