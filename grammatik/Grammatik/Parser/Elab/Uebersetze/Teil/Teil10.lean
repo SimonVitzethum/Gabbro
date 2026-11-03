@@ -6,6 +6,7 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.CallElse
+public import Grammatik.Parser.Elab.Uebersetze.Branches
 public import Grammatik.Parser.Elab.Uebersetze.Breaking
 public import Grammatik.Parser.Elab.Uebersetze.Folds.Substitution
 @[expose] public section
@@ -41,108 +42,7 @@ def uAnwReiheCore (tabs : List UTab) (koepfe : List UFnKopf) :
       | .error err => .error err
       | .ok (xs, cE) => .ok (st :: xs, cE)
   | f + 1, ctx, .cases scrut arms :: rest =>
-    match (match scrut with
-        | .variable e =>
-          match uParamNr ctx e with
-          | .ok j =>
-            match uArtBei ctx.kinds j with
-            | .ok (.why num) => some (e, 0, num)
-            | .ok (.sum num) => some (e, 1, num)
-            | _ => none
-          | .error _ =>
-            (ctx.globs.find? (fun g => strEq g.name e)).bind fun g => g.sumNum.map fun num => (e, 1, num)
-        | _ =>
-          match uSumPlatz ctx scrut with
-          | .ok (_, num) => some ("#m", 1, num)
-          | .error _ => none : Option (String × Nat × Nat)) with
-    | .some (e, 1, num) =>
-      let (ctxM, vor) : UCtx × List UStmt :=
-        match (if strEq e "#m" then (uSumPlatz ctx scrut).toOption else none), ctx.sums[num]? with
-        | some (sv, _), some sm =>
-          (uMitLokal ctx "#m" (UParamArt.sum num) (Ty.sum sm.spec) ctx.muts, [UStmt.bindSum "#m" num sv])
-        | _, _ => (ctx, [])
-      match ctxM.sums[num]? with
-      | .none => .error "tagged type unknown"
-      | .some sm =>
-        if arms.length != sm.cases.length then .error "match arms without G form"
-        else
-        match uSeq (sm.cases.map fun (cn, pl) =>
-            match arms.find? (fun a => match a with | .arm n _ _ => strEq n cn | _ => false) with
-            | .some (.arm _ bnd (.block ss en)) =>
-              match (match pl, bnd with
-                  | .none, .none => some (ctxM, "")
-                  | .some τ, .some k =>
-                    let kind := match τ with
-                      | .bool => UParamArt.bool
-                      | .ref n => UParamArt.ref n
-                      | .sum cs => ((ctxM.sums.findIdx? (fun s => s.spec = cs)).map UParamArt.sum).getD .wert
-                      | _ => uArtVon τ
-                    some (uMitLokal ctxM k kind τ (ctxM.muts.filter (fun m => !strEq m k)), k)
-                  | _, _ => none : Option (UCtx × String)) with
-              | .none => .error "match arm payload without G form"
-              | .some (cx, k) =>
-                match uAnwReihe tabs koepfe f cx ss with
-                | .error err => .error err
-                | .ok (bd, ctxB) =>
-                  match uFoldEndeStmt ctxB en with
-                  | .error err => .error err
-                  | .ok endS => .ok (k, bd ++ endS)
-            | _ => .error "match arms without G form") with
-        | .error err => .error err
-        | .ok arme =>
-          match uAnwReihe tabs koepfe f ctxM rest with
-          | .error err => .error err
-          | .ok (ys, cE) =>
-            .ok (vor ++ [UStmt.matchTagBeg num e (arme.map (·.1))] ++ uMitTrenner (arme.map (·.2)) ++ [UStmt.blkEnd] ++ ys, cE)
-    | .some (e, _, num) =>
-      match ctx.whys[num]? with
-      | .none => .error "reason unknown"
-      | .some w =>
-        match uWhyArme w.cases arms with
-        | .none => .error "match arms without G form"
-        | .some bodies =>
-          match uSeq (bodies.map fun b =>
-              match b with
-              | .block ss en =>
-                match uAnwReihe tabs koepfe f ctx ss with
-                | .error err => .error err
-                | .ok (bd, ctxB) =>
-                  match uFoldEndeStmt ctxB en with
-                  | .error err => .error err
-                  | .ok endS => .ok (bd ++ endS)
-              | _ => .error "match arm without a block") with
-          | .error err => .error err
-          | .ok arme =>
-            match uAnwReihe tabs koepfe f ctx rest with
-            | .error err => .error err
-            | .ok (ys, cE) => .ok ([UStmt.matchWhyBeg e] ++ uMitTrenner arme ++ [UStmt.blkEnd] ++ ys, cE)
-    | .none =>
-    match uOptEin ctx scrut with
-    | .error err => .error (if uPraemisse err then err else "stmt without G form")
-    | .ok (o, num) =>
-      match ctx.tabs[num]?, (match arms with
-          | [.arm "Some" (.some k) sb, .arm "None" .none nb] => some (k, sb, nb)
-          | [.arm "None" .none nb, .arm "Some" (.some k) sb] => some (k, sb, nb)
-          | _ => none) with
-      | .some tb, .some (k, .block sss se, .block nss ne) =>
-        match uAnwReihe tabs koepfe f (uMitLokal ctx k (UParamArt.index num) (Ty.index tb.count)
-            (ctx.muts.filter (fun m => !strEq m k))) sss with
-        | .error err => .error err
-        | .ok (sbody, ctxS) =>
-          match uFoldEndeStmt ctxS se with
-          | .error err => .error err
-          | .ok sEnd =>
-            match uAnwReihe tabs koepfe f ctx nss with
-            | .error err => .error err
-            | .ok (nbody, ctxN) =>
-              match uFoldEndeStmt ctxN ne with
-              | .error err => .error err
-              | .ok nEnd =>
-                match uAnwReihe tabs koepfe f ctx rest with
-                | .error err => .error err
-                | .ok (ys, cE) =>
-                  .ok ([UStmt.matchBeg num o k] ++ sbody ++ sEnd ++ [UStmt.ifElse] ++ nbody ++ nEnd ++ [UStmt.blkEnd] ++ ys, cE)
-      | _, _ => .error "match arms without G form"
+    uCases (uAnwReihe tabs koepfe f) ctx scrut arms rest
   | f + 1, ctx, .await x ty (.variable a) pl :: rest =>
     match ctx.globs.find? (fun g => strEq g.name a) with
     | .none => .error "awaits without an atomic without G form"
@@ -210,88 +110,8 @@ def uAnwReiheCore (tabs : List UTab) (koepfe : List UFnKopf) :
       match uAnwReihe tabs koepfe f ctx rest with
       | .error err => .error err
       | .ok (xs, cE) => .ok (UStmt.ret r :: xs, cE)
-  | f + 1, ctx, .bindElse y t (.field a r) _ (.block ss en) :: rest =>
-    match uRegOrt ctx (.field a r) with
-    | none => .error "let else without G form"
-    | some (.error err) => .error err
-    | some (.ok rg) =>
-      if t.isSome then .error "let else with a type without G form"
-      else if rg.pruefung.isNone then .error "let else of a register read without a promise to check"
-      else
-        match uAnwReihe tabs koepfe f ctx ss with
-        | .error err => .error err
-        | .ok (ebody, ctxEB) =>
-          match uFoldEndeStmt ctxEB en with
-          | .error err => .error err
-          | .ok endS =>
-            match uAnwReihe tabs koepfe f (uMitLokal ctx y rg.art rg.ty
-                (ctx.muts.filter (fun m => !strEq m y))) rest with
-            | .error err => .error err
-            | .ok (ys, cE) => .ok ([UStmt.regReadElse y rg.dev rg.name] ++ ebody ++ endS ++ [UStmt.blkEnd] ++ ys, cE)
-  | f + 1, ctx, .bindElse y t (.call c args) e (.block ss en) :: rest =>
-    if t.isSome then .error "let else with a type without G form"
-    else
-      match uFnZeiger ctx koepfe c with
-      | some (.error err) => .error err
-      | some (.ok ziel) =>
-        match uRuf ctx tabs koepfe ziel.name args with
-        | .error err => .error err
-        | .ok (callee, xs) =>
-          match callee.kanal with
-          | .none => .error "let else of a call without a reason channel"
-          | .some (num, cnt) =>
-            if callee.ext then .error "let else of an indirect call without G form"
-            else
-              match uWertArt callee with
-              | .none => .error "let else of a call without a value"
-              | .some (k, ty) =>
-                match uAnwReihe tabs koepfe f (uMitLokal ctx e (UParamArt.why num) (Ty.why cnt)
-                    (ctx.muts.filter (fun m => !strEq m e))) ss with
-                | .error err => .error err
-                | .ok (ebody, ctxEB) =>
-                  match uFoldEndeStmt ctxEB en with
-                  | .error err => .error err
-                  | .ok endS =>
-                    match uAnwReihe tabs koepfe f (uMitLokal ctx y k ty (ctx.muts.filter (fun m => !strEq m y))) rest with
-                    | .error err => .error err
-                    | .ok (ys, cE) => .ok ([UStmt.bindCallIndElse y c ziel.name xs e] ++ ebody ++ endS ++ [UStmt.blkEnd] ++ ys, cE)
-      | none =>
-       match uRuf ctx tabs koepfe c args with
-      | .error err => .error err
-      | .ok (callee, xs) =>
-        match callee.kanal with
-        | .none => .error "let else of a call without a reason channel"
-        | .some (num, cnt) =>
-          if callee.ext then
-            match callee.res with
-            | .none => .error "let else of a call without a value"
-            | .some r =>
-              match uAnwReihe tabs koepfe f (uMitLokal ctx e (UParamArt.why num) (Ty.why cnt)
-                  (ctx.muts.filter (fun m => !strEq m e))) ss with
-              | .error err => .error err
-              | .ok (ebody, ctxEB) =>
-                match uFoldEndeStmt ctxEB en with
-                | .error err => .error err
-                | .ok endS =>
-                  match uAnwReihe tabs koepfe f (uMitLokal ctx y UParamArt.int (Ty.int r.1 r.2)
-                      (ctx.muts.filter (fun m => !strEq m y))) rest with
-                  | .error err => .error err
-                  | .ok (ys, cE) => .ok ([UStmt.bindAxElse y c xs e] ++ ebody ++ endS ++ [UStmt.blkEnd] ++ ys, cE)
-          else
-            match uWertArt callee with
-            | .none => .error "let else of a call without a value"
-            | .some (k, ty) =>
-              match uAnwReihe tabs koepfe f (uMitLokal ctx e (UParamArt.why num) (Ty.why cnt)
-                  (ctx.muts.filter (fun m => !strEq m e))) ss with
-              | .error err => .error err
-              | .ok (ebody, ctxEB) =>
-                match uFoldEndeStmt ctxEB en with
-                | .error err => .error err
-                | .ok endS =>
-                  match uAnwReihe tabs koepfe f (uMitLokal ctx y k ty (ctx.muts.filter (fun m => !strEq m y))) rest with
-                  | .error err => .error err
-                  | .ok (ys, cE) => .ok ([UStmt.bindElse y c xs e] ++ ebody ++ endS ++ [UStmt.blkEnd] ++ ys, cE)
-  | f + 1, ctx, .bindElse .. :: _ => .error "let else without G form"
+  | f + 1, ctx, .bindElse y t value e body :: rest =>
+    uBindElse tabs koepfe (uAnwReihe tabs koepfe f) ctx y t value e body rest
   | f + 1, ctx, .bindAxiomOpt x t (.call c args) :: rest =>
     if t.isSome then .error "optional bind with a type without G form"
     else
@@ -443,37 +263,7 @@ def uAnwReiheCore (tabs : List UTab) (koepfe : List UFnKopf) :
             | .ok (xs, cE) => .ok ([UStmt.lockBeg l] ++ body ++ [UStmt.blkEnd] ++ xs, cE)
       | _ => .error "lock expression without G form"
   | f + 1, ctx, .cond c (.block ss e) ei els :: rest =>
-    match uBool ctx c with
-    | .error err => .error err
-    | .ok cv =>
-      match uAnwReihe tabs koepfe f ctx ss with
-      | .error err => .error err
-      | .ok (body, ctxB) =>
-        match uFoldEndeStmt ctxB e with
-        | .error err => .error err
-        | .ok endS =>
-          let ifElse : Option SAnw :=
-            match ei with
-            | .elsif c2 b2 :: ei' => some (.block [.cond c2 b2 ei' els] .none)
-            | _ => els
-          match (match ifElse with
-              | .none => .ok []
-              | .some (.block ss2 e2) =>
-                match uAnwReihe tabs koepfe f ctx ss2 with
-                | .error err => .error err
-                | .ok (b2, ctx2) =>
-                  match uFoldEndeStmt ctx2 e2 with
-                  | .error err => .error err
-                  | .ok end2 => .ok (b2 ++ end2)
-              | .some _ => .error "else without block" : Except String (List UStmt)) with
-          | .error err => .error err
-          | .ok elseS =>
-            match uAnwReihe tabs koepfe f ctx rest with
-            | .error err => .error err
-            | .ok (xs, cE) =>
-              let kopf := if rest.isEmpty && uEndetS 64 (.cond c (.block ss e) ei els) then UStmt.ifEnde cv
-                else UStmt.ifBeg cv
-              .ok ([kopf] ++ body ++ endS ++ [UStmt.ifElse] ++ elseS ++ [UStmt.blkEnd] ++ xs, cE)
+    uCond (uAnwReihe tabs koepfe f) ctx c ss e ei els rest
   | f + 1, ctx, .each bnd o k s m raw inv (.block ss e) :: rest =>
     match uLoopExport ctx bnd o k s m raw inv with
     | .error err => .error err
@@ -496,4 +286,26 @@ def uAnwReiheCore (tabs : List UTab) (koepfe : List UFnKopf) :
       | .error e => .error e
       | .ok (xs, cE) => .ok (st :: xs, cE)
 end
+
+/-- Match dispatch supplies the same recursive reader and predecessor fuel to every arm. -/
+theorem uAnwReiheCore_cases (tabs : List UTab) (koepfe : List UFnKopf) (fuel : Nat)
+    (ctx : UCtx) (scrut : SExpr) (arms rest : List SAnw) :
+    uAnwReiheCore tabs koepfe (fuel + 1) ctx (.cases scrut arms :: rest) =
+      uCases (uAnwReihe tabs koepfe fuel) ctx scrut arms rest := rfl
+
+/-- Fallible binding dispatch preserves all source shapes, including the refusal fallback. -/
+theorem uAnwReiheCore_bindElse (tabs : List UTab) (koepfe : List UFnKopf) (fuel : Nat)
+    (ctx : UCtx) (name : String) (ty : Option STyp) (value : SExpr) (reason : String)
+    (body : SAnw) (rest : List SAnw) :
+    uAnwReiheCore tabs koepfe (fuel + 1) ctx (.bindElse name ty value reason body :: rest) =
+      uBindElse tabs koepfe (uAnwReihe tabs koepfe fuel) ctx name ty value reason body rest := rfl
+
+/-- Conditional dispatch keeps its original body shape and recursive fuel budget. -/
+theorem uAnwReiheCore_cond (tabs : List UTab) (koepfe : List UFnKopf) (fuel : Nat)
+    (ctx : UCtx) (condition : SExpr) (statements : List SAnw) (ending : Option SEnde)
+    (alternatives : List SAnw) (fallback : Option SAnw) (rest : List SAnw) :
+    uAnwReiheCore tabs koepfe (fuel + 1) ctx
+      (.cond condition (.block statements ending) alternatives fallback :: rest) =
+      uCond (uAnwReihe tabs koepfe fuel) ctx condition statements ending alternatives fallback rest := rfl
+
 end Gabbro.Grammatik.Parser.Uebersetze
