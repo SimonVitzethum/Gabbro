@@ -1,4 +1,7 @@
-/- Total source-model and emitted-IR correctness for binary64 multiplication. -/
+/- Total source-model and emitted-IR correctness for binary64 multiplication.
+   The public word theorem has no side conditions on input classes.
+   The emitted-code theorem preserves the caller's memory interface.
+   Block lowering adds its existing finite-result and range checks. -/
 module
 public import Stage0.Senke.Gleit.Mul.FiniteModel
 public import Stage0.Senke.Gleit.Normal.Model
