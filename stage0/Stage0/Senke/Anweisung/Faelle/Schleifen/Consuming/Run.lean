@@ -132,6 +132,9 @@ theorem head (kind : Fin 4) :
 local instance [Kern] : TorOK layout oracle where
   ans a := nomatch a
   puf a := nomatch a
+  ref_answer a := nomatch a
+  area a := nomatch a
+
 local instance : SichtOK oracle := ⟨fun _ _ => rfl⟩
 
 theorem functions_spec [Kern] :
