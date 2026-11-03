@@ -144,11 +144,11 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
   | _, Γ, _, _, .axiomCall a args _ _ _ _ _, reserved => torC0 (reserved := reserved) L a args ((frei Γ reserved))
   | _, Γ, _, _, .axiomCallElse _ a args _ _ _ _ _ err, reserved =>
     match L.tor a, D.aerg a with
-    | some b, some (.int lo' hi') =>
-      if fehlGut (D.agruende a) b.fehler = true ∧ 0 ≤ lo' ∧ 0 < D.agruende a ∧
+    | some b, some answer =>
+      if fehlGut (D.agruende a) b.fehler = true ∧ fallibleTy answer = true ∧ 0 < D.agruende a ∧
           valueWords (.why (D.agruende a)) = 1 then do
         let ct ← torC (reserved := reserved) L a args (frei Γ reserved)
-        let ck ← chkC (some (.int lo' hi')) (frei Γ reserved)
+        let ck ← chkC (some answer) (frei Γ reserved)
         let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
         if 16 + 16 * (6 * b.fehler.length) + 16 * (ck.length + 1) < 2 ^ 31 then
           pure (ct.1 ++ fehlC (frei Γ reserved) b.fehler ((16 * (ck.length + 1) : Nat) : Int) ++
@@ -279,11 +279,11 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
     | _, _ => none
   | _, Γ, _, _, .bindAxiomOptElse (e := some τ) a args _ _ _ _ _ err rest, reserved =>
     match L.tor a, D.aerg a with
-    | some b, some (.int lo' hi') =>
-      if fehlGut (D.agruende a) b.fehler = true ∧ 0 ≤ lo' ∧ 0 < D.agruende a ∧
+    | some b, some answer =>
+      if fehlGut (D.agruende a) b.fehler = true ∧ fallibleTy answer = true ∧ 0 < D.agruende a ∧
           valueWords (.why (D.agruende a)) = 1 then do
         let ct ← torC (reserved := reserved) L a args ((frei Γ reserved))
-        let ck ← chkC (some (.int lo' hi')) ((frei Γ reserved))
+        let ck ← chkC (some answer) ((frei Γ reserved))
         let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
         let cr ← lowB (reserved := reserved) passes A L layout ens pr (exPlus ex (ce.1.length + 1)) rest
         if 16 + 16 * (6 * b.fehler.length) + 16 * (ck.length + (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]).length) < 2 ^ 31 then
@@ -294,11 +294,11 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
     | _, _ => none
   | _, Γ, _, _, .bindAxiomElse a args _ _ _ _ _ _ err rest, reserved =>
     match L.tor a, D.aerg a with
-    | some b, some (.int lo' hi') =>
-      if fehlGut (D.agruende a) b.fehler = true ∧ 0 ≤ lo' ∧ 0 < D.agruende a ∧
+    | some b, some answer =>
+      if fehlGut (D.agruende a) b.fehler = true ∧ fallibleTy answer = true ∧ 0 < D.agruende a ∧
           valueWords (.why (D.agruende a)) = 1 then do
         let ct ← torC (reserved := reserved) L a args ((frei Γ reserved))
-        let ck ← chkC (some (.int lo' hi')) ((frei Γ reserved))
+        let ck ← chkC (some answer) ((frei Γ reserved))
         let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
         let cr ← lowB (reserved := reserved) passes A L layout ens pr (exPlus ex (ce.1.length + 1)) rest
         if 16 + 16 * (6 * b.fehler.length) + 16 * (ck.length + (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]).length) < 2 ^ 31 then
@@ -445,11 +445,11 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) 
     | _, _ => none
   | _, Γ, _, .bindAxiomOptElse (e := some τ) a args _ _ _ _ _ err rest, reserved =>
     match L.tor a, D.aerg a with
-    | some b, some (.int lo' hi') =>
-      if fehlGut (D.agruende a) b.fehler = true ∧ 0 ≤ lo' ∧ 0 < D.agruende a ∧
+    | some b, some answer =>
+      if fehlGut (D.agruende a) b.fehler = true ∧ fallibleTy answer = true ∧ 0 < D.agruende a ∧
           valueWords (.why (D.agruende a)) = 1 then do
         let ct ← torC (reserved := reserved) L a args ((frei Γ reserved))
-        let ck ← chkC (some (.int lo' hi')) ((frei Γ reserved))
+        let ck ← chkC (some answer) ((frei Γ reserved))
         let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
         let cr ← lowEnd (reserved := reserved) passes A L layout ens pr (exPlus ex ce.1.length) rest
         if 16 + 16 * (6 * b.fehler.length) + 16 * (ck.length + cr.1.length) < 2 ^ 31 then
@@ -473,11 +473,11 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) 
     else none
   | _, Γ, _, .bindAxiomElse a args _ _ _ _ _ _ err rest, reserved =>
     match L.tor a, D.aerg a with
-    | some b, some (.int lo' hi') =>
-      if fehlGut (D.agruende a) b.fehler = true ∧ 0 ≤ lo' ∧ 0 < D.agruende a ∧
+    | some b, some answer =>
+      if fehlGut (D.agruende a) b.fehler = true ∧ fallibleTy answer = true ∧ 0 < D.agruende a ∧
           valueWords (.why (D.agruende a)) = 1 then do
         let ct ← torC (reserved := reserved) L a args ((frei Γ reserved))
-        let ck ← chkC (some (.int lo' hi')) ((frei Γ reserved))
+        let ck ← chkC (some answer) ((frei Γ reserved))
         let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
         let cr ← lowEnd (reserved := reserved) passes A L layout ens pr (exPlus ex ce.1.length) rest
         if 16 + 16 * (6 * b.fehler.length) + 16 * (ck.length + cr.1.length) < 2 ^ 31 then
