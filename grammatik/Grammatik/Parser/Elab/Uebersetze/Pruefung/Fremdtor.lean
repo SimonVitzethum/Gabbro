@@ -65,10 +65,10 @@ example : (elabText checkTextFremdFallible).map (fun u => u.axs.map (·.name)) =
 
 /-- The wrappers travel as ordinary functions of the units. -/
 example : (elabText checkTextFremd).map (fun u => u.fns.map (·.name)) =
-    .ok ["g", "p#probe", "p#tor#f"] := rfl
+    .ok ["g", "p#probe", "p#report#0", "p#tor#f"] := rfl
 
 example : (elabText checkTextFremdFallible).map (fun u => u.fns.map (·.name)) =
-    .ok ["g", "p#probe", "p#tor#f"] := rfl
+    .ok ["g", "p#probe", "p#report#0", "p#tor#f"] := rfl
 
 /-- The infallible wrapper calls the foreign body with `axCall`, threading the Duty. -/
 example : (elabText checkTextFremd).map
@@ -334,7 +334,7 @@ theorem uFremdOhneFehler_verweigert :
   decide +kernel
 
 /-- The selected foreign gate wrapper retains the declared reason channel. -/
-def fremdTorIndex : Fin uFremdFallible.fns.length := ⟨2, by decide +kernel⟩
+def fremdTorIndex : Fin uFremdFallible.fns.length := ⟨3, by decide +kernel⟩
 
 example : (declOf uFremdFallible).gruende fremdTorIndex = 1 := rfl
 
