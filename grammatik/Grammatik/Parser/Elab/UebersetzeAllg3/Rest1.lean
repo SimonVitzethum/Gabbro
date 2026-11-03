@@ -1,5 +1,4 @@
 module
-
 public import Grammatik.Parser.Elab.Export.ExportControl
 public import Grammatik.Parser.Elab.UebersetzeSum
 public import Grammatik.Bausteine.Arena.ArenaZucker
@@ -9,7 +8,6 @@ import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Stufe
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Transition
-
 @[expose] public section
 
 
@@ -235,8 +233,12 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
               | .ok e => .ok (Endblock.regReadElse (D := declOf u) g hk zu sonst e)
             | .ok (_, _) => .error "lower: a let else is not closed"
       else .error "lower: register read against its class"
-  | _, _, _ + 1, .allocBeg .. :: _, _ =>
-    .error "lower: an alloc at the top level of a body has no G form (Endblock lacks arenaAlloc)"
+  | Γ, fn, n + 1, (.allocBeg x an v) :: rest, r =>
+    match lowEndL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩)
+        (.allocBeg x an v :: rest ++ [.ret r]) with
+    | .error e => .error e
+    | .ok (b, []) => .ok b
+    | .ok (_, _) => .error "lower: alloc leaves trailing statements"
   | Γ, fn, n + 1, (.bindOptBeg x c args) :: rest, r =>
     match lowEndL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩)
         (.bindOptBeg x c args :: rest ++ [.ret r]) with
@@ -249,8 +251,12 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
     | .error err => .error err
     | .ok (b, []) => .ok b
     | .ok (_, _) => .error "lower: optional bind leaves trailing statements"
-  | _, _, _ + 1, .allocReqBeg .. :: _, _ =>
-    .error "lower: an alloc without else at the top level of a body has no G form (Endblock lacks arenaAllocRequired)"
+  | Γ, fn, n + 1, (.allocReqBeg x an v) :: rest, r =>
+    match lowEndL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩)
+        (.allocReqBeg x an v :: rest ++ [.ret r]) with
+    | .error e => .error e
+    | .ok (b, []) => .ok b
+    | .ok (_, _) => .error "lower: alloc leaves trailing statements"
   | Γ, fn, n + 1, .ret v :: rest, r =>
     match lowRetStmt (l := false) u caller Γ fn (resOf u caller) (some ⟨rfl⟩) v with
     | .error e => .error e

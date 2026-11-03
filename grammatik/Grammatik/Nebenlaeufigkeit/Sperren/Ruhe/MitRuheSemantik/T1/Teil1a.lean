@@ -69,6 +69,14 @@ theorem nimmt_worldR (σ : World D) (L : D.Lock) : (worldR σ).nimmt L = worldR 
 
 theorem gibt_worldR (σ : World D) (L : D.Lock) : (worldR σ).gibt L = worldR (σ.gibt L) := by rfl
 
+theorem gibt_foldl_worldR (σ : World D) (Ls : List D.Lock) :
+    Ls.foldl World.gibt (worldR σ) = worldR (Ls.foldl World.gibt σ) := by
+  induction Ls generalizing σ with
+  | nil => rfl
+  | cons L Ls ih =>
+      simp only [List.foldl_cons, gibt_worldR]
+      exact ih (σ.gibt L)
+
 theorem zahl_ext {lo hi : Int} {a b : Zahl lo hi} (h : a.n = b.n) : a = b := by
   cases a; cases b; simp only at h; subst h; rfl
 

@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Akku.Erzeuge
+public import Grammatik.Parser.Elab.Uebersetze.Einheit.Signatures
 
 @[expose] public section
 
@@ -41,6 +42,7 @@ def uAkkuBinder : Nat → SAnw → List String
   | f + 1, .trim _ _ b => uAkkuBinder f b
   | f + 1, .locks _ _ b => uAkkuBinder f b
   | f + 1, .watch _ b => uAkkuBinder f b
+  | f + 1, .waive _ b => uAkkuBinder f b
   | f + 1, .grow _ _ b => uAkkuBinder f b
   | f + 1, .child b => uAkkuBinder f b
   | f + 1, .block ss _ => ss.flatMap (uAkkuBinder f)
@@ -343,6 +345,8 @@ def uAkkuExpandAnwAtom (ps : List AkkuPlan) (ns : List String) : Nat → SAnw �
   | f + 1, .bindQ mu x t e =>
     if uAkkuInExpr 100000 ns e then uAkkuBareRefuse e
     else .ok [.bindQ mu x t e]
+  | _ + 1, .genericCall .. =>
+    .error "unexpanded generic call without G form"
   | f + 1, .callQ g args =>
     if (uAkkuPlanFuer ps g).isSome || args.any (uAkkuInExpr 100000 ns) then
       uAkkuRufRefuse g args

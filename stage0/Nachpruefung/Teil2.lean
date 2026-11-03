@@ -58,3 +58,32 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel
 #print axioms Gabbro.Stage0.Senke.ReturnProtocolProbe.publishResult_run_zeuge
 #print axioms Gabbro.Stage0.Senke.EntryProtocolProbe.entryFrame_run_zeuge
+
+-- Total binary64 addition, from decoded source operands through the Block hook.
+#print axioms Gabbro.Stage0.Senke.softRound_exaktAdd_aligned
+#print axioms Gabbro.Stage0.Senke.softAlignedMagnitude_bounds
+#print axioms Gabbro.Stage0.Senke.routineDirectionalWord_canonical
+#print axioms Gabbro.Stage0.Senke.routineSource_sum
+#print axioms Gabbro.Stage0.Senke.routineSource_sum_zeuge
+#print axioms Gabbro.Stage0.Senke.routineFiniteDirectionalWord_model
+#print axioms Gabbro.Stage0.Senke.softAddRoutine_ok
+#print axioms Gabbro.Stage0.Senke.softAddRoutineL_ok
+#print axioms Gabbro.Stage0.Senke.softAddRoutine_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.softAddContinuationL_ok
+#print axioms Gabbro.Stage0.Senke.softAddWordsL_ok
+#print axioms Gabbro.Stage0.Senke.softFloatReject_none
+#print axioms Gabbro.Stage0.Senke.softFloatRangeL_ok
+#print axioms Gabbro.Stage0.Senke.blockFloatAddSub_case
+#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_add_accepted_zeuge
+
+-- Binary64 subtraction reuses the total adder after exactly one sign-bit xor.
+#print axioms Gabbro.Stage0.Senke.floatSub_eq_add_neg
+#print axioms Gabbro.Stage0.Senke.softNegWord_model
+#print axioms Gabbro.Stage0.Senke.softNeg_model
+#print axioms Gabbro.Stage0.Senke.softSub_model
+#print axioms Gabbro.Stage0.Senke.softSubRoutine_ok
+#print axioms Gabbro.Stage0.Senke.softAddOperandL_ok
+#print axioms Gabbro.Stage0.Senke.softSub_model_zeuge
+#print axioms Gabbro.Stage0.Senke.softSubRoutine_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.floatAddSubBlockL_addSub
+#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_sub_accepted_zeuge

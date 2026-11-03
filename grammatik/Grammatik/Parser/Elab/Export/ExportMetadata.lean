@@ -42,6 +42,7 @@ def bodyMetadata : Nat → SAnw → Bool
   | _ + 1, .retry .. | _ + 1, .loop .. | _ + 1, .swap .. | _ + 1, .await .. |
     _ + 1, .alloc .. | _ + 1, .allocVon .. | _ + 1, .grow .. |
     _ + 1, .free .. | _ + 1, .child .. | _ + 1, .other .. => true
+  | _ + 1, .genericCall .. => true
   | _ + 1, .set .. | _ + 1, .shift .. | _ + 1, .call .. |
     _ + 1, .leave .. | _ + 1, .next .. | _ + 1, .emit .. | _ + 1, .step .. |
     _ + 1, .ret .. | _ + 1, .start .. |
@@ -72,6 +73,18 @@ def itemMetadata : SItemTief → Bool
     else (sig.art != "" && sig.art != "impl") ||
       clausesMetadata sig.klauseln || bodyMetadata 10000 body ||
       sig.params.any (fun p => typeMetadata p.2) || sig.res.any typeMetadata
+  /- Tagged groups expand to ordinary functions before elaboration. Inspect every original
+      header and implementation body, so expansion cannot erase cost/proof/type duties. -/
+  | .specGroupT _ _ _ functions => functions.any fun sig =>
+      sig.art != "spec" || clausesMetadata sig.klauseln ||
+        sig.params.any (fun p => typeMetadata p.2) || sig.res.any typeMetadata
+  | .implGroupT _ receivers _ functions => receivers.any typeMetadata || functions.any fun
+      | .fnT sig body =>
+        sig.art != "impl" || clausesMetadata sig.klauseln || bodyMetadata 10000 body ||
+          sig.params.any (fun p => typeMetadata p.2) || sig.res.any typeMetadata
+      | _ => true
+  | .taggedByT declaration _ => itemMetadata declaration
+  | .moduleTemplateT .. | .moduleUseT .. => true
   | .transT _ translator _ => clausesMetadata translator.klauseln ||
       translator.params.any (fun p => typeMetadata p.2) || translator.res.any typeMetadata
   | .specT .. => true -- Typed macro/proof admission is not supplied by predicate inlining alone.
@@ -92,8 +105,9 @@ def itemMetadata : SItemTief → Bool
   | .arenaT _ (.lit _) (.lit _) none ty none => typeMetadata ty
   | .groupT .. => true
   | .globT _ _ ty _ bound proof _ => typeMetadata ty || bound.isSome || proof.isSome
-  | .adaptT s ps _ b => (s.art != "" && s.art != "impl") ||
+  | .adaptT s ps adapter b => (s.art != "" && s.art != "impl") ||
     clausesMetadata s.klauseln || (b.map (bodyMetadata 10000)).getD false ||
+    adapter.vorspiel.any (bodyMetadata 10000) || adapter.sonst.any (fun (_, body) => bodyMetadata 10000 body) ||
     ps.any (fun | .neu _ t => typeMetadata t | _ => false) || s.res.any typeMetadata
   | .typeT ["tagged"] _ [] [] (some (.raw _)) => false
   -- A record schema resolves through the checked record collector, not metadata.
@@ -165,7 +179,7 @@ theorem check_clear (items : List SItemTief) (h : items.any itemMetadata = false
 theorem check_sound_zeuge :
     let body := SAnw.block [] (some (.ret (some (.lit 42))))
     let sig : FnSig := ⟨"impl", "sample", [], some (.atom "u8"), none,
-      [.gives (.ext .imp [] [.tru, .tru])]⟩
+      [.gives (.ext .imp [] [.tru, .tru])], []⟩
     check [.fnT sig body] = .ok () ∧
     check [.fnT {sig with klauseln := .cost (.lit 0) :: sig.klauseln} body] =
       .error "source export: declared costs lack a checked source-to-kostenPasst binding: sample" := by
@@ -189,7 +203,7 @@ set_option maxRecDepth 100000 in
 theorem nested_duties_refused_zeuge :
     let held := SAnw.bind false "held" none (.call "Held" [.variable "L"])
     let body := SAnw.block [held] (some (.ret (some (.lit 42))))
-    let sig : FnSig := ⟨"impl", "sample", [], some (.atom "u8"), none, [.cost (.lit 0)]⟩
+    let sig : FnSig := ⟨"impl", "sample", [], some (.atom "u8"), none, [.cost (.lit 0)], []⟩
     check [.fnT sig (.child body)] =
       .error "source export: declared costs lack a checked source-to-kostenPasst binding: sample" ∧
     bodyMetadata 10000 (.alloc false "cell" none "A" (.lit 0) (some body)) = true ∧
@@ -204,7 +218,7 @@ set_option maxRecDepth 100000 in
 theorem stateT_zeuge :
     let tr : STrans := ⟨"a", [(.variable "s", .variable "Idle", .variable "Busy")], none, []⟩
     let body := SAnw.block [] (some (.ret (some (.lit 42))))
-    check [.stateT "S" [tr]] = .ok () ∧ check [.stateT "S" [tr], .fnT ⟨"impl", "sample", [], some (.atom "u8"), none, [.cost (.lit 0)]⟩ body] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: sample" := by
+    check [.stateT "S" [tr]] = .ok () ∧ check [.stateT "S" [tr], .fnT ⟨"impl", "sample", [], some (.atom "u8"), none, [.cost (.lit 0)], []⟩ body] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: sample" := by
   exact ⟨rfl, rfl⟩
 
 /-- C02 library calls are bound by the certified expansion. The payload clause is consumed (`exportLibraryKopf` strips `.load`), the call resolves to exactly one library function plus exactly one translator with exactly one payload (`libraryDecl`), and the translator body must be call-free (`callFreeStmt`, otherwise C17). Unexpanded calls never reach ordinary lowering (`ohneBibliothekAnw`, `uAnwReihe`). Costs and other clauses still refuse via `clausesMetadataWithoutLoad`. -/
@@ -216,11 +230,11 @@ theorem transT_bound (target : String) (translator : FnSig) (body : SAnw) (c : c
 
 set_option maxRecDepth 100000 in
 theorem library_zeuge :
-    let lib : FnSig := ⟨"library", "f", [], none, none, [.load ["P"]]⟩
-    let trans : FnSig := ⟨"impl", "build", [], none, none, []⟩
-    let caller : FnSig := ⟨"impl", "caller", [], some (.atom "u8"), none, []⟩
+    let lib : FnSig := ⟨"library", "f", [], none, none, [.load ["P"]], []⟩
+    let trans : FnSig := ⟨"impl", "build", [], none, none, [], []⟩
+    let caller : FnSig := ⟨"impl", "caller", [], some (.atom "u8"), none, [], []⟩
     let cbody := SAnw.block [.lcall ⟨["m"], ["f"], [], []⟩] (some (.ret (some (.lit 1))))
-    check [.transT "f" trans (SAnw.block [] none), .fnT lib (SAnw.block [] none), .fnT caller cbody] = .ok () ∧ check [.fnT ⟨"library", "f", [], none, none, [.load ["P"], .cost (.lit 0)]⟩ (SAnw.block [] none)] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: f" := by
+    check [.transT "f" trans (SAnw.block [] none), .fnT lib (SAnw.block [] none), .fnT caller cbody] = .ok () ∧ check [.fnT ⟨"library", "f", [], none, none, [.load ["P"], .cost (.lit 0)], []⟩ (SAnw.block [] none)] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: f" := by
   exact ⟨rfl, rfl⟩
 
 /-- C16 declared checks are bound by probe, wrapper and admission. Measures resolve by shape (`uMessOrt`), gates must name unit functions (`uCheck`, unknown gates refused), floors lower with the ordinary predicate reader (`uSichert`), probe bodies elaborate as ordinary Boolean producers (`uProbeFn`, non-block refused), generated names must be fresh (`uProbeNeu`, duplicates refused), wrappers consume exactly one Duty (`uTorHuelle`, parameterised or reason-carrying gates refused, sibling-check gates wait for C14), marks are checked (`uMarkenPruef`), and the checker decides read-only Duty threading with call-graph closure (`checkOkB`/`CheckAdmission`). Counterprobes (`sonde`) stay refused: no binding exists. -/
@@ -255,8 +269,8 @@ theorem reset_bound (n : Nat) (a : String) (r : Option (SExpr × SExpr)) : bodyM
 set_option maxRecDepth 100000 in
 theorem reset_zeuge :
     let body := SAnw.block [.reset "A" (some (.lit 1, .lit 2))] (some (.ret (some (.lit 23))))
-    let sig : FnSig := ⟨"impl", "main", [], some (.atom "u64"), none, []⟩
-    check [.fnT sig body] = .ok () ∧ check [.fnT ⟨"impl", "main", [], some (.atom "u64"), none, [.cost (.lit 0)]⟩ body] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: main" := by
+    let sig : FnSig := ⟨"impl", "main", [], some (.atom "u64"), none, [], []⟩
+    check [.fnT sig body] = .ok () ∧ check [.fnT ⟨"impl", "main", [], some (.atom "u64"), none, [.cost (.lit 0)], []⟩ body] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: main" := by
   exact ⟨rfl, rfl⟩
 
 /-- C05 group and table invariants stay refused: every invariant carries mandatory cost, runs and by duties (`SGruppenInv.kosten/online/proof`), but the exporter only reads the predicate over the declared carriers (`uInv`), ignoring all three. No other checked binding exists, so admitting any shape would silently drop them. -/

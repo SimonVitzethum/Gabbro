@@ -180,4 +180,22 @@ theorem rt_item_adaptkurz :
       none) = true := by
   decide +kernel
 
+/-- A minus in an ordinary parameter's type is not an adapter removal parameter. -/
+theorem rt_item_type_minus :
+    (match lex "fn f(p: string max -x);" with
+      | .ok ts => beqTopTief (parseTopTief ts) (.ok [.protoT
+          { art := "", name := "f", params := [("p", .str (.un "-" (.variable "x")))],
+            res := none, fehler := none, klauseln := [] }])
+      | .error _ => false) = true := by
+  decide +kernel
+
+/-- A real adapter marker still counts after a new parameter with an ordinary type expression. -/
+theorem rt_item_adapt_after_type_minus :
+    rundlaufItem (.adaptT { art := "", name := "g", params := [], res := none,
+                            fehler := none, klauseln := [] }
+      [.neu "p" (.str (.un "-" (.variable "x"))), .alle, .ohne "s"]
+      { quelle := "f", gebunden := none, sonst := none, vorspiel := [] }
+      none) = true := by
+  decide +kernel
+
 end Gabbro.Grammatik.Parser

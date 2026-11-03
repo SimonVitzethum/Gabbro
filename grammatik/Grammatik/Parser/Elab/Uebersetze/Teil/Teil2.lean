@@ -132,6 +132,11 @@ structure UCtx where
   zeigerBasis : Nat := 0
   /-- Complete nominal record schemas, shared by construction and named field resolution. -/
   records : List URecord := []
+  /-- Resolved named value types, separate from runtime local types. -/
+  namedTypes : List (String × Ty) := []
+  /-- Untyped numeric locals whose actual range is deferred to G lowering. A surface
+      fold must not mistake their placeholder type for a proved singleton interval. -/
+  unknownRanges : List String := []
 
 /-- One elaborated function: parameters with their `Ty`,
     the optional result range, the held lock names, the written

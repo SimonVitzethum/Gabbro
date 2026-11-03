@@ -18,8 +18,9 @@ public import Grammatik.Code.Refine.StmtOk.Teil4
   File:      Grammatik/Code/Refine/StmtOk/Teil8.lean
   Subject:   TRACK L, PHASE L1 -- THE REFINEMENT OF THE C11 END-BLOCK FORMS.
 
-  `lowerEnd_ok_retScoped`/`lowerEnd_ok_retWhyScoped` (like `ret`/`retWhy`: the scope evidence is
-  ignored as in `execEnd`; unwinding is OPEN) and `lowerEnd_ok_narrowRequired` (like
+  `lowerEnd_ok_retScoped`/`lowerEnd_ok_retWhyScoped` (like `ret`/`retWhy`: the value is
+  evaluated before the release; the scope list is released in recorded order and the memory
+  presentation survives the release fold by `Rep.gibt_foldl`) and `lowerEnd_ok_narrowRequired` (like
   `Block.narrowRequired`, with an end-block rest: out of range is `Logik.kapazitaet`, so the
   failure case refines vacuously).
 -/
@@ -65,7 +66,8 @@ theorem lowerEnd_ok_retScoped (lay : Layout D) (hL : LayoutOk lay) (cenv : List 
   simp only [execEnd, EndOk]
   obtain ⟨f', hr, hf1, hf2, hret, hFr⟩ := lowerRet_ok lay hL cenv V.gruende e lb st st' blks h M S fn hM
     (σ.lese Λ e.orte) (σ.lese Λ e.orte) ρ m rs ks dst hR hE hc
-  exact ⟨m, f', hr, hf1, hf2, hret, hR, hW, hFr⟩
+  have hRl : Rep lay (σ.lese Λ e.orte) m := hR
+  exact ⟨m, f', hr, hf1, hf2, hret, hRl.gibt_foldl Rr.scopes, hW, hFr⟩
 
 set_option linter.unusedSectionVars false in
 theorem lowerEnd_ok_retWhyScoped (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel D) (passes : Nat) (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)
@@ -102,7 +104,7 @@ theorem lowerEnd_ok_retWhyScoped (lay : Layout D) (hL : LayoutOk lay) (cenv : Li
   simp only [execEnd, EndOk]
   obtain ⟨f', hr, hf1, hf2, hret, hFr⟩ := lowerWhy_ok lay cenv V.gruende V.erg r.val lb st st' blks h M S fn hM
     m rs ks dst
-  exact ⟨m, f', hr, hf1, hf2, hret, hR, hW, hFr⟩
+  exact ⟨m, f', hr, hf1, hf2, hret, hR.gibt_foldl Rr.scopes, hW, hFr⟩
 
 set_option linter.unusedSectionVars false in
 theorem lowerEnd_ok_narrowRequired (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel D) (passes : Nat) (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)

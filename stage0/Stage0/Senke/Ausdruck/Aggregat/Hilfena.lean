@@ -171,6 +171,5 @@ def wordConstant (d : Nat) (n : Int) : List II × Nat :=
   if lit32 n then ([ci 1 d n 0], d + 1)
   else konstWL 4 (BitVec.ofInt 64 n).toNat d
 
-/-- Compare previously evaluated scalar operands, guarding the signed operand
 
 end Gabbro.Stage0.Senke

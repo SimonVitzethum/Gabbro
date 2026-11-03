@@ -1,6 +1,7 @@
 /- Shared add/sub decomposition for the integer software-float lowering.
-   This module proves the specification boundary only. Block.float remains
-   refused until the emitted finite path and its resource bounds are proved. -/
+   This module proves the specification boundary. The emitted add/sub paths
+   and their generic Block simulation are in Senke/Gleit/Normal and
+   Senke/Anweisung/Faelle/Gleit. -/
 module
 public import Stage0.Senke.Ausdruck.Gleit.Runden
 @[expose] public section

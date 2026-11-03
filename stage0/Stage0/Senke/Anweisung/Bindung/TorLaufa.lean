@@ -63,7 +63,7 @@ theorem torC_ok {reserved : Nat} {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : Li
             [ci 1 s b.nr 0, ci 23 s s 0]) ρ reserved := hp
         have hq : PreS L m pc fp K (s + 1) ca ρ reserved := (hp0.up (d' := s + 1) (by omega)).left.left
         have hpw := PreS.welt hq hks hWa hW.lay (by omega)
-        obtain ⟨m1, s1, a1, hA⟩ := lowR_ok σ σ (fun _ h => h) hW.lay args (s + 1) ca ta hca (by omega) (by omega) m pc ρ hpw
+        obtain ⟨m1, s1, a1, hA⟩ := lowR_ok (same := rfl) σ σ (fun _ h => h) hW.lay args (s + 1) ca ta hca (by omega) (by omega) m pc ρ hpw
         have hF1 := hFs.agree a1
         have hfz : CodeFar (pc + BitVec.ofNat 64 (16 * ca.length))
             (6 - (D.aparams a).length) fp Ks :=

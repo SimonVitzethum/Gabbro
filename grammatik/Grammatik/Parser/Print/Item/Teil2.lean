@@ -25,15 +25,13 @@ def druckStarts : List (List String × List SExpr) → List Token
 def druckItem : SItemTief → List Token
   | .taggedByT decl spec =>
     (druckItem decl).dropLast ++ [.wort "by", nameTok spec, .zeichen ";"]
-  | .specGroupT name parameter fs =>
-    [.wort "spec", nameTok name, .zeichen "[", nameTok parameter, .zeichen "]", .zeichen "{"] ++
-      fs.flatMap (fun sig => druckFnSig { sig with art := "" } ++ [.zeichen ";"]) ++ [.zeichen "}"]
-  | .implGroupT name ty fs =>
-    [.wort "impl", nameTok name, .zeichen "["] ++ druckTyp ty ++ [.zeichen "]", .zeichen "{"] ++
-      fs.flatMap (fun (sig, body) => druckFnSig { sig with art := "" } ++ druckAnw body) ++
-      [.zeichen "}"]
   | .modT p its => [.wort "module"] ++ rohToks p ++ [.zeichen "{"] ++ druckItems its ++ [.zeichen "}"]
   | .useT p => ([.wort "use"] ++ pfadToks p ++ [.zeichen ";"])
+  | .moduleTemplateT n params its => [.wort "module"] ++ rohToks n ++
+    druckGenericParams params ++ [.zeichen "{"] ++ druckItems its ++ [.zeichen "}"]
+  | .moduleUseT n path args => [.wort "use", nameTok n, .zeichen "="] ++
+    pfadToks path ++ [.zeichen "::", .zeichen "["] ++
+    rohToks (String.intercalate ", " args) ++ [.zeichen "]", .zeichen ";"]
   | .typeT fl n args ord t =>
     (fl.map (fun w => Token.wort w) ++ [.wort "type", nameTok n] ++
       (match args with
@@ -94,6 +92,17 @@ def druckItem : SItemTief → List Token
   | .concT ps => ([.wort "concurrent", .zeichen "{"] ++ druckStarts ps ++ [.zeichen "}", .zeichen ";"])
   | .gateT it => [.wort "when", .ident "TESTBUILD"] ++ druckItem it
   | .pubT it => .wort "pub" :: druckItem it
+  | .specGroupT n ts es fs =>
+    [.wort "spec", nameTok n, .zeichen "["] ++ druckNamen ts ++
+    (if es.isEmpty then [] else [.zeichen ";", .wort "effects"] ++ druckNamen es) ++
+    [.zeichen "]", .zeichen "{"] ++
+    fs.flatMap (fun s => druckFnSig { s with art := "" } ++ [.zeichen ";"]) ++ [.zeichen "}"]
+  | .implGroupT n ts es fs =>
+    [.wort "impl", nameTok n, .zeichen "["] ++ druckTypListe ts ++
+    (if es.isEmpty then [] else [.zeichen ";", .wort "effects"] ++
+      (es.flatMap fun e => [.zeichen "{"] ++ druckEffekte e ++ [.zeichen "}", .zeichen ","]).dropLast) ++
+    [.zeichen "]", .zeichen "{"] ++ druckItems fs ++ [.zeichen "}"]
+
   | .adaptT sig ps a b =>
     ((if strEq sig.art "" then [] else [.wort sig.art]) ++ [.wort "fn", nameTok sig.name, .zeichen "("] ++
       druckAdaptParams ps ++ [.zeichen ")"] ++
@@ -115,7 +124,7 @@ def druckItem : SItemTief → List Token
         | ss => [.zeichen "["] ++ druckAnwListe ss ++ [.zeichen "]"]) ++
       (match b with
         | some blk => druckAnw blk
-        | none => [.zeichen ";"])
+        | none => [.zeichen ";"]))
   | .assumT n a s k =>
     ([.wort "assume", nameTok n] ++
       (match a with

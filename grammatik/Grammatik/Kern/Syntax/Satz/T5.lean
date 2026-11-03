@@ -10,19 +10,36 @@ variable {D : Deklaration} {V : Vertrag D}
 
 /-- Der RAHMEN, fuer sich. -/
 theorem exec_rahmen (P : Programm D) (O : Orakel D) (passes fuel : Nat) (hO : GutO O) (hP : StufenOk P)
-    (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) (hh : HeldGenau Λ σ.haelt) :
-    ∀ σ', (exec P O passes fuel V b σ ρ).welt = some σ' → Rahmen V.schreibt V.gschreibt σ σ' :=
-  fun σ' h => (exec_gut P O passes fuel hO hP b σ ρ hh σ' h).1
+    (hS : ScopesOkProg P)
+    (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) (hh : HeldGenau Λ σ.haelt)
+    (hscope : b.ScopesOk) (hresid : ResidHeld V Λ) :
+    ∀ σ', (exec P O passes fuel V b σ ρ).welt = some σ' → Rahmen V.schreibt V.gschreibt σ σ' := by
+  intro σ' h
+  have hG := exec_gut P O passes fuel hO hP hS b σ ρ hh hscope hresid σ' h
+  cases he : exec P O passes fuel V b σ ρ with
+  | ok _ _ | zurueck _ _ | why _ _ | leave _ _ _ | next _ _ _ =>
+      rw [he] at hG; exact hG.1
+  | logik _ | hardware _ =>
+      simp only [he, Ausgang.welt, reduceCtorEq] at h
 
 /-- Die SPUR, fuer sich: jedes Ereignis, das ein Rumpf hinterlaesst, traegt die Waechter seines
-    Traegers und haelt jede Sperre, die sein `Λ` nennt -- und am Ende sind die Sperren, was sie
-    am Anfang waren. Das ist der Anschluss an `Wettlauf.lean`. -/
+    Traegers und haelt jede Sperre, die sein `Λ` nennt -- und was am Ende gehalten wird, ist
+    der Anfang minus genau die gekreuzten Scopes (`BravRet`, C11). Das ist der Anschluss
+    an `Wettlauf.lean`. -/
 theorem exec_spur (P : Programm D) (O : Orakel D) (passes fuel : Nat) (hO : GutO O) (hP : StufenOk P)
-    (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) (hh : HeldGenau Λ σ.haelt) :
-    ∀ σ', (exec P O passes fuel V b σ ρ).welt = some σ' →
-      σ'.haelt = σ.haelt ∧ (∀ e ∈ σ'.spur, e ∈ σ.spur ∨ e.gut) ∧
-      (Konsistent σ.spur → Konsistent σ'.spur) :=
-  fun σ' h => (exec_gut P O passes fuel hO hP b σ ρ hh σ' h).2
+    (hS : ScopesOkProg P)
+    (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) (hh : HeldGenau Λ σ.haelt)
+    (hscope : b.ScopesOk) (hresid : ResidHeld V Λ) :
+    ∀ σ', (exec P O passes fuel V b σ ρ).welt = some σ' → BravRet σ σ' := by
+  intro σ' h
+  have hG := exec_gut P O passes fuel hO hP hS b σ ρ hh hscope hresid σ' h
+  cases he : exec P O passes fuel V b σ ρ with
+  | ok _ _ | leave _ _ _ | next _ _ _ =>
+      rw [he] at hG; exact hG.2.toRet
+  | zurueck _ _ | why _ _ =>
+      rw [he] at hG; exact hG.toBravRet
+  | logik _ | hardware _ =>
+      simp only [he, Ausgang.welt, reduceCtorEq] at h
 
 /-! ## 4. Sprechproben -- Saetze der Grammatik, ausgewertet -/
 

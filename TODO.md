@@ -323,7 +323,7 @@ Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md`† §§0-5 and �
 - Stage 0 still refuses `Block.float`: the runner lacks float instructions; the planned route is software IEEE lowering proved against the kernel float model.
 - C11: the Gut side and the `rufAt_gut`/`rufAt_treu` migration remain in progress.
 - C15: per-core accumulator uses elaborate to guarded update/fold bodies whose `add`/`or`/`and` overflow stops with `Logik.kapazitaet` (required narrowing, never a dropped contribution or a neutral restart); admission and link Bools carry the connected core query (`qs`/`aqs` default to `[]`, shadowing refused). Open: the hardware provenance of the generated core-query axiom through elaboration (`declOf` leaves `axHerkunft`/`axBeleg` at `none`, so no elaborated program satisfies `KernAbfrageHerkunft`).
-- C09: escrow call/return theorem witnesses still need a concrete machine fixture with a push and a return.
+- C09: escrow call/return witnesses now share a concrete machine fixture with one push and one return (THEOREM-MAP §132); the lead still needs to check the unbuilt witness modules.
 - C16/C02 round-3 work remains open. Compact implementation inventory (16 items, grouped from the designs in `IR-COMPILATION-LANES.md`):
   1. C02 lossless library-call arguments and region tokens.
   2. C02 resolved translator/library identity and export metadata.
@@ -341,3 +341,6 @@ Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md`† §§0-5 and �
   14. C16 G/GX replay and ownership conservation.
   15. C16 counterprobe binding, artifact identity and measured status.
   16. C16 connected export/Stage-0 correctness with emitted sample work.
+- Generic functions (§5.2, check model A): connect parser, instance closure and exporter;
+  `Parser.Elab.Generic.Substitution` supplies preliminary surface substitution and C17 argument evaluation.
+  TODO (Muse): prove generic expansion soundness for the connected implementation.

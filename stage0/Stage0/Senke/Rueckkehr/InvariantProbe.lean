@@ -159,13 +159,13 @@ theorem lowFun_zeuge (mixed : Bool) :
     (lowFun 1 (program mixed) (fun _ => 0) (layout mixed) CgFn.nurGlob).isSome = true := by
   cases mixed <;> decide +kernel
 
-/-- Entry reads in an invariant remain outside ordinary expression lowering and are refused explicitly. -/
-def unsupported : Programm (D false) := { program false with
+/-- Raw G invariants may contain old; their evaluation uses the current world. -/
+def ordinaryOld : Programm (D false) := { program false with
   invariante := fun i => .eq (.oldG () (globalAccess false i)) (.lit 0) }
 
-theorem unsupported_predicate_refused_zeuge :
-    lowFunE 1 unsupported (layout false) (fun _ => "global-writer") (fun _ => 0) CgFn.nurGlob =
-      .error "ir: the function global-writer owes an invariant whose predicate is outside the IR expression fragment" := by
+theorem ordinary_old_invariant_zeuge :
+    (lowFunE 1 ordinaryOld (layout false) (fun _ => "global-writer")
+      (fun _ => 0) CgFn.nurGlob).isOk = true := by
   decide +kernel
 
 /-- A reason-capable declaration keeps the same owed global/mixed predicates. -/

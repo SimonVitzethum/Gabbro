@@ -65,9 +65,12 @@ mutual
 def hatKonstRufSAnw (namen : List String) : SAnw → Bool
   | .bind _ _ _ v => hatKonstRufSExpr namen v
   | .bindElse _ _ v _ b => hatKonstRufSExpr namen v || hatKonstRufSAnw namen b
+  | .bindQ _ _ _ v | .bindAxiomOpt _ _ v => hatKonstRufSExpr namen v
+  | .bindAxiomOptElse _ _ v _ b => hatKonstRufSExpr namen v || hatKonstRufSAnw namen b
   | .bindLib _ _ _ _ => false
   | .set z _ x => hatKonstRufSExpr namen z || hatKonstRufSExpr namen x
   | .shift z _ _ => hatKonstRufSExpr namen z
+  | .callQ g args | .genericCall g _ args => namen.any (strEq · g) || hatKonstRufSExprList namen args
   | .call g args => namen.any (strEq · g) || hatKonstRufSExprList namen args
   | .lcall _ => false
   | .cond c t eis fb =>

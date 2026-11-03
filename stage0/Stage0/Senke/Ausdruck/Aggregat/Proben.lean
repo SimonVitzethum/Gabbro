@@ -99,7 +99,7 @@ theorem simulation_zeuge [Kern] :
       change 65536 ≤ x at hl
       change x < 65536 at hh
       omega
-  have h := (lowE_ok world world (W := fun _ => True) (fun m _ => hw m) hLay
+  have h := (lowE_ok (same := by intro _; rfl) world world (W := fun _ => True) (fun m _ => hw m) hLay
     checks 4 code top lowering_zeuge (by decide +kernel) memory 0 .nil pre).word trivial
   simpa only [show eval world checks world .nil = true from semantics_zeuge] using h
 
@@ -188,7 +188,7 @@ theorem simulation_zeuge [Kern] :
     change 65536 ≤ x at hl
     change x < 65536 at hh
     omega
-  exact (lowE_ok world world (W := fun _ => True) (fun m _ => hw m) hLay
+  exact (lowE_ok (same := by intro _; rfl) world world (W := fun _ => True) (fun m _ => hw m) hLay
     expr 10 code 12 hl (by decide) memory 0 env hp).word trivial
 end Gabbro.Stage0.Senke.AggregateProbe.Reserved
 
@@ -236,7 +236,7 @@ theorem simulation_zeuge [Kern] :
   have he : Enc layout (.sum [none, some (2 ^ 32, 2 ^ 32 + 100)])
       (eval world expr world .nil) 10753 := by constructor <;> decide +kernel
   refine ⟨hl, by decide +kernel, by decide +kernel, hp, he, ?_⟩
-  exact (lowE_ok world world (W := fun _ => True) (fun m _ => hw m) hLay
+  exact (lowE_ok (same := by intro _; rfl) world world (W := fun _ => True) (fun m _ => hw m) hLay
     expr 4 code top hl (by decide +kernel) memory 0 .nil hp).word (wordCompatB_sound _ (by decide +kernel)) |>.mono (fun _ hn => hn.2.trans he.2.symm)
 
 end Gabbro.Stage0.Senke.AggregateProbe.Case

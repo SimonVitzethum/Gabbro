@@ -3,7 +3,7 @@ module
 public import Grammatik.Parser.Lex.Lexer
 import all Init.Data.Repr
 import all Init.Data.String.Defs
-public import Grammatik.Parser.Expr.Ausdruck.Teil1
+public import Grammatik.Parser.Expr.GenericArguments
 
 @[expose] public section
 
@@ -130,8 +130,26 @@ def parsePrimary (f : Nat) (toks : List Token) :
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match toks with
+    | .wort "dyn" :: name :: .zeichen "(" :: rest => do
+      let some spec := nameText name | .error "dyn.spec.required"
+      let (payload, tail) ← parseOr f rest
+      match tail with
+      | .zeichen ")" :: tail => return (.ext .dyn [spec] [payload], tail)
+      | _ => .error "dyn.producer.parenthesis"
     | .num v :: rest => .ok (.lit v, rest)
     | .text t :: rest => .ok (.ext .text [t] [], rest)
+    | .wort "exists" :: t :: .wort "in" :: rest => match nameText t with
+      | some x => parseQuant f .any x rest
+      | none => .error "exists: binder expected"
+    | .wort "add" :: t :: .wort "in" :: rest => match nameText t with
+      | some x => parseFold f .foldAdd x rest
+      | none => .error "fold: binder expected"
+    | .wort "min" :: t :: .wort "in" :: rest => match nameText t with
+      | some x => parseFold f .foldMin x rest
+      | none => .error "fold: binder expected"
+    | .wort "max" :: t :: .wort "in" :: rest => match nameText t with
+      | some x => parseFold f .foldMax x rest
+      | none => .error "fold: binder expected"
     | .wort "count" :: t :: .wort "in" :: rest => match nameText t with
       | some x => parseQuant f .count x rest
       | none => .error "count without a name"
@@ -211,20 +229,30 @@ def parseKopf (f : Nat) (toks : List Token) :
     | t :: rest => match nameText t with
       | some s =>
         match sammleSegmente rest [s] with
-        | (segs, .zeichen "(" :: rest') =>
-          match parseArgs f rest' with
-          | .ok (args, rest'') =>
-            .ok (.call ("::".intercalate segs) args, rest'')
-          | .error e => .error e
-        | ([a, b], rest') =>
-          if istIntWort a || istZuckerBreite a then
-            .ok (.field (.variable a) b, rest')
-          else if strEq a "Self" then .error "Self:: is not a form"
-          else .ok (.why a b, rest')
-        | ([a], rest') => parseSuffixe f (.variable a) rest'
-        -- A path of three or more segments names an item by its path (`Parser/Namen/Aufloesung.lean`):
-        -- one place head, its segments joined as the parser joins call paths.
-        | (segs, rest') => .ok (.variable ("::".intercalate segs), rest')
+        | (segs, rest') => rufKopf rest'
+          (fun tail => do
+            let (words, after) ← genericArguments tail [] [] []
+            match after with
+            | .zeichen s :: tail =>
+              if strEq s "(" then do
+                let (args, remaining) ← parseArgs f tail
+                pure (.ext .instantiate (("::".intercalate segs) :: words) args, remaining)
+              else .error "generic instantiation without call arguments"
+            | _ => .error "generic instantiation without call arguments")
+          (fun tail =>
+            match parseArgs f tail with
+            | .ok (args, rest'') =>
+              .ok (.call ("::".intercalate segs) args, rest'')
+            | .error e => .error e)
+          (fun _ => match segs with
+          | [a, b] =>
+            if istIntWort a || istZuckerBreite a then
+              .ok (.field (.variable a) b, rest')
+            else if strEq a "Self" then .error "Self:: is not a form"
+            else .ok (.why a b, rest')
+          | [a] => parseSuffixe f (.variable a) rest'
+          -- A longer path names one item, with the same joining as call paths.
+          | _ => .ok (.variable ("::".intercalate segs), rest'))
       | none => .error "expression expected"
     | [] => .error "expression expected"
 def parseSuffixe (f : Nat) (e : SExpr) (toks : List Token) :
@@ -273,6 +301,35 @@ def parseArg (f : Nat) (toks : List Token) :
         | some label => (parseOr f rest).map (fun (value, remaining) => (.ext .label [label] [value], remaining))
         | none => parseOr f toks
       | _ => parseOr f toks
+/-- Fold operands retain their lexical scopes: the filter and value see the binder;
+    the empty value sees only the surrounding context. -/
+def parseFold (f : Nat) (kind : XKind) (binder : String) (tokens : List Token) :
+    Except String (SExpr × List Token) :=
+  match f with
+  | 0 => .error "fold: parser fuel exhausted"
+  | f + 1 => do
+    let ((domain, names, operands), rest) ← match parseDomain f tokens with
+      | .ok domain => pure domain
+      | .error _ => do
+        let (lo, rest) ← parseOr f tokens
+        let rest ← match rest with
+          | .zeichen z :: r => if strEq z "..<" then pure r else .error "wanted ..<"
+          | _ => .error "wanted ..<"
+        let (hi, rest) ← parseOr f rest
+        pure (("range", [], [lo, hi]), rest)
+    let (filter, rest) ← match rest with
+      | .wort "where" :: rest => parsePred f rest
+      | _ => pure (SExpr.tru, rest)
+    let .zeichen ":" :: rest := rest | throw "fold: colon expected"
+    let (value, rest) ← parseOr f rest
+    match rest with
+    | .wort "else" :: rest =>
+      if kind == .foldAdd then throw "fold add: else is not allowed"
+      let (empty, rest) ← parseOr f rest
+      pure (.ext kind (binder :: domain :: names) (operands ++ [filter, value, empty]), rest)
+    | _ =>
+      if kind != .foldAdd then throw "fold min/max: else is required"
+      pure (.ext kind (binder :: domain :: names) (operands ++ [filter, value]), rest)
 /-- `q x in D : pred` behind the `in` (for `forall`, `exists` and `count`): the layout of `ext`. -/
 def parseQuant (f : Nat) (k : XKind) (x : String) (toks : List Token) :
     Except String (SExpr × List Token) :=

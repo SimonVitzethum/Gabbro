@@ -120,8 +120,8 @@ theorem kopf_ruf_head : ∀ (F : Nat) (f : String) (R : List Token),
       | .ok (args, rest'') => .ok (.call f args, rest'')
       | .error e => .error e := by
   intro F f R
-  simp only [parseKopf, nameText_nameTok]
-  rfl
+  simp only [parseKopf, nameText_nameTok, sammleSeg_paren, rufKopf,
+    strEq_paren_doppelpunkt, strEq_paren_paren, Bool.false_eq_true, ↓reduceIte] <;> rfl
 theorem prim_ruf : ∀ (n : Nat) (Rn : R n)
     (f : String) (xs : List SExpr) (rest : List Token) (F : Nat),
     groesse (.call f xs) ≤ n + 1 → gut (.call f xs) = true →

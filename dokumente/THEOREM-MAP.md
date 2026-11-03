@@ -5943,7 +5943,50 @@ On `c08-export-opt`, `stage0/Stage0/Zeugen/Annahme/OptionalAxiomWitness.lean`:
 
 These are elaboration witnesses, not substitutes for generic lowering correctness; this documentation audit ran no Lean checks.
 
-## 132. C15: core-query wiring over the C08 foreign-call path (2026-11-03)
+## 132. C09: escrow call/return witnesses on a shared machine fixture (2026-11-02)
+
+On `c09-witness`: one shared, non-degenerate fixture and `_zeuge` theorems for every C09 escrow call/return
+theorem with a ∀-over-syntax premise. Unbuilt code (no Lean run in this branch); the lead builds and reports back.
+
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/EscrowFixture.lean`:
+
+* **`escrowD`**: One owner mark (`true`, three stages), one guarded table, two functions sharing the single loan
+  signature `escrowSig` (`false` calls, `true` is entered). No ordinary signature produces an owner.
+* **`escrowLoan` / `escrowReadyE`**: The nominal loan roundtrip, proved escrow-ready (valid, disjoint from ordinary
+  consumption, declared eigner).
+* **`mintedE` / `loanedE` / `movedE`**: Post-mint, borrowed and transferred owner states with validity and grant
+  lemmas (`mintedValidE`, `mintGrantE`, `loanedGrantE`, `movedGrantE`).
+
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/EscrowRun.lean`:
+
+* **`progE` / `M0E` / `M1E` / `M2E`**: Caller calls, callee returns at once; concrete `RufMaschineG` run with exactly
+  one push (`schrittPushE`, `ruf` rule) and one return (`schrittPopE`, `rueck` rule).
+* **`invocE` / `pushE` / `popE`**: The one canonical invocation with its `Push` and `Return` evidence.
+
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/EscrowRunZeuge.lean`:
+
+* **`escrow_call_borrow_zeuge`**: The push borrows the loan into the callee frame escrow.
+* **`escrow_call_transfer_zeuge`**: The push transfers the loan to a fresh callee grant.
+* **`escrow_push_preserved_zeuge`**: The ghost ledger survives the push.
+* **`escrow_loan_roundtrip_zeuge`**: Borrow at the push inverts exactly at the return.
+* **`escrow_return_restore_zeuge`**: The return restores the saved identity and stage.
+* **`escrow_return_transfer_zeuge`**: The moved owner hands back at the lender.
+* **`escrow_return_advance_zeuge`**: The stage-changing move advances before the handoff back.
+* **`escrow_return_retire_zeuge`**: The terminal move retires without replenishing mint authority.
+* **`escrow_pop_preserved_zeuge`**: The ghost ledger survives the return.
+* **`escrow_outputs_conserve_full_zeuge`**: Full conservation (no duplication, input provenance, stage bounds).
+* **`escrow_call_ready_run_zeuge`**, **`escrow_call_outputs_present_run_zeuge`**: Input availability and return
+  inventory on the admitted call.
+* **`push_borrow_valid_run_zeuge`**, **`push_transfer_valid_run_zeuge`**, **`pop_restore_valid_run_zeuge`**,
+  **`push_borrow_pop_restore_run_zeuge`**: The ledger engines behind the same edges.
+* **`escrowReady_valid/disjoint/resolved/congr_run_zeuge`**: Projections of the checked escrow condition.
+* **`ownerInvG_erreichbar_zeuge`**: Every machine the run reaches keeps the ghost ledger valid.
+
+Finding (not a weakening): `OwnerFlow.escrowReady_map` has no witness here. It quantifies over an
+`Einbettung D D'`; no identity embedding exists in the tree, and building one is a separate fixture. Transport
+across embeddings is not a call/return edge.
+
+## 133. C15: core-query wiring over the C08 foreign-call path (2026-11-03)
 
 On `c15-uses` (`449dfc4da`, `45c111c1b`, `f3bc0e686`); model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. The accumulator uses (per-core update export, quiescent observation export) and the run-level history existence remain open; the exporter still refuses uses (`uAkkuVerwendung`, `uAkkuFremdVerwendung`).
 
@@ -5976,7 +6019,7 @@ On `c15-uses` (`449dfc4da`, `45c111c1b`, `f3bc0e686`); model extension, `Spec.le
 * **`qFalscherKern_abgelehnt`**: A wrong core identity is refused (thread `0` answering `1`).
 * **`qAusserhalb_abgelehnt`**: An out-of-range answer is refused (`5` outside `0 .. 1`).
 
-## 133. C15: required-narrow overflow and the generated use bodies (2026-11-03)
+## 134. C15: required-narrow overflow and the generated use bodies (2026-11-03)
 
 On `c15-uses` (`0dfcd6009`, `7d036940a`, `a1e1ff839`, `bf18b55fa`); model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Lead decisions: an overflowing merge stops with `Logik.kapazitaet` (no silent drop, no neutral restart); shadowing an accumulator name stays refused (`uAkkuKeinSchatten`, `akkuSchatten_abgelehnt`); the checker/link Bools default the query list to `[]` (`Akzeptiert.aqs`, `Verbund.qs`: an unbound query is refused, never accepted).
 

@@ -322,6 +322,79 @@ def mkAllocRequiredBlock {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ 
     else .error "arena of no slots"
   else .error "arena counter foreign"
 
+/-- **`let i = alloc A (v) else { .. };` at the end of a body** as the sugar
+    `Endblock.arenaAlloc` of `ArenaZucker`: the same arena form, rights and
+    guards as `mkAllocBlock`, but the success continuation is an end block. -/
+def mkAllocEndBlock {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (t : Fin u.tabs.length) (g : Fin u.globs.length) (fh : FieldHit u t)
+    (ev0 : Expr (declOf u) Γ Λ (.int fh.range.1 fh.range.2))
+    (voll : Endblock (declOf u) (verOf u caller) l Γ Λ)
+    (b : Endblock (declOf u) (verOf u caller) l (Ty.index ((declOf u).count t) :: Γ) Λ) :
+    Except String (Endblock (declOf u) (verOf u caller) l Γ Λ) :=
+  if hz : (declOf u).gtyp g = Ty.int 0 ((declOf u).count t) then
+    if hp : 0 < (declOf u).count t then
+      let A : ArenaForm (declOf u) := { tab := t, feld := fh.idx, zaehl := g, hz := hz, hpos := hp }
+      have ev : Expr (declOf u) Γ Λ ((declOf u).typ t fh.idx) := by
+        show Expr (declOf u) Γ Λ (typAt u t fh.idx)
+        rw [fh.hint]
+        exact ev0
+      if hwT : writesAt u (fnAt u caller) t = true then
+        if hwG : writesGAt u (fnAt u caller) g = true then
+          if hLT : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ then
+            if hLG : ∀ wdd ∈ (declOf u).gbraucht g, Res.von (declOf u) wdd ∈ Λ then
+              have hwT' : (verOf u caller).schreibt t = true := by
+                show (vertragVon (declOf u) caller).schreibt t = true
+                rw [vSchreibt_eq u caller t]
+                exact hwT
+              have hwG' : (verOf u caller).gschreibt g = true := by
+                show (vertragVon (declOf u) caller).gschreibt g = true
+                rw [vGSchreibt_eq u caller g]
+                exact hwG
+              .ok (Endblock.arenaAlloc (D := declOf u) A ev hwT' hLT hwG' hLG voll b)
+            else .error "access without held guard"
+          else .error "access without held guard"
+        else .error "write without right"
+      else .error "write without right"
+    else .error "arena of no slots"
+  else .error "arena counter foreign"
+
+/-- **`let i = alloc A (v);` at the end of a body** as the sugar
+    `Endblock.arenaAllocRequired` of `ArenaZucker`: the same arena form, rights
+    and guards as `mkAllocRequiredBlock`, but the success continuation is an end
+    block -- a full arena is `Logik.kapazitaet`, excluded by the caller's
+    capacity duty, never a failure continuation. -/
+def mkAllocRequiredEndBlock {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (t : Fin u.tabs.length) (g : Fin u.globs.length) (fh : FieldHit u t)
+    (ev0 : Expr (declOf u) Γ Λ (.int fh.range.1 fh.range.2))
+    (b : Endblock (declOf u) (verOf u caller) l (Ty.index ((declOf u).count t) :: Γ) Λ) :
+    Except String (Endblock (declOf u) (verOf u caller) l Γ Λ) :=
+  if hz : (declOf u).gtyp g = Ty.int 0 ((declOf u).count t) then
+    if hp : 0 < (declOf u).count t then
+      let A : ArenaForm (declOf u) := { tab := t, feld := fh.idx, zaehl := g, hz := hz, hpos := hp }
+      have ev : Expr (declOf u) Γ Λ ((declOf u).typ t fh.idx) := by
+        show Expr (declOf u) Γ Λ (typAt u t fh.idx)
+        rw [fh.hint]
+        exact ev0
+      if hwT : writesAt u (fnAt u caller) t = true then
+        if hwG : writesGAt u (fnAt u caller) g = true then
+          if hLT : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ then
+            if hLG : ∀ wdd ∈ (declOf u).gbraucht g, Res.von (declOf u) wdd ∈ Λ then
+              have hwT' : (verOf u caller).schreibt t = true := by
+                show (vertragVon (declOf u) caller).schreibt t = true
+                rw [vSchreibt_eq u caller t]
+                exact hwT
+              have hwG' : (verOf u caller).gschreibt g = true := by
+                show (vertragVon (declOf u) caller).gschreibt g = true
+                rw [vGSchreibt_eq u caller g]
+                exact hwG
+              .ok (Endblock.arenaAllocRequired (D := declOf u) A ev hwT' hLT hwG' hLG b)
+            else .error "access without held guard"
+          else .error "access without held guard"
+        else .error "write without right"
+      else .error "write without right"
+    else .error "arena of no slots"
+  else .error "arena counter foreign"
+
 /-! ## Runs of statements -/
 
 /-- The new value of an exchange: the guarded values of an `update` body as nested `Expr.wenn`, at the static's

@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Kern.Syntax.Satz.T1
-public import Grammatik.Kern.Syntax.Satz.T2.Teil1
+public import Grammatik.Kern.Syntax.Satz.T2.Teil1e
 
 @[expose] public section
 
@@ -47,10 +47,31 @@ theorem orte_cons {Λ : List (Res D)} {o : D.Tab ⊕ D.Glob} {os : List (D.Tab �
 
 /-- Die Praemissen ueber die Umgebung, benannt: der Ruf haelt Rahmen und Spur seines Gerufenen
     (das ist der Satz eine Ebene tiefer, `rufAt_gut` unten), und die Hardware den Rahmen ihres
-    `effects` und laesst Sperren und Spur, wie sie sind (H1 -- eine Annahme). -/
+    `effects` und laesst Sperren und Spur, wie sie sind (H1 -- eine Annahme). Ein
+    fortgegebener Grund (`why`) darf die gekreuzten Scopes freigeben, aber nur solche:
+    kein benoetigtes Schloss (`spare`) und keines unter dem Boden (`rank`), sodass der
+    Rufer seine Holdings hinueberrettet (`heldB_weiterRet` mit `RufPasst.hx`). -/
 def GutR (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) : Prop :=
   ∀ f σ ρ, HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ.haelt →
-    ∀ σ', (R f σ ρ).welt = some σ' → Gut (D.schreibt f) (D.gschreibt f) σ σ'
+    ∀ σ', (R f σ ρ).welt = some σ' →
+    match (R f σ ρ) with
+    | .ok _ _ => Gut (D.schreibt f) (D.gschreibt f) σ σ'
+    | .why _ _ => GutRetV (D.schreibt f) (D.gschreibt f) (D.signatur f).haelt
+        (D.signatur f).boden σ σ'
+    | .logik _ => True
+    | .hardware _ => True
+
+/-- Every handler outcome keeps the frame (`Gut` and `GutRetV` carry `Rahmen`). -/
+theorem GutR.rahmen (hR : GutR R) {f : D.Fn} {σ : World D} {ρ : Env D (D.params f)}
+    (hh : HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ.haelt)
+    {σ' : World D} (h : (R f σ ρ).welt = some σ') :
+    Rahmen (D.schreibt f) (D.gschreibt f) σ σ' := by
+  have h2 := hR f σ ρ hh σ' h
+  cases he : R f σ ρ with
+  | ok _ _ => rw [he] at h2; exact h2.1
+  | why _ _ => rw [he] at h2; exact h2.1
+  | logik _ => simp only [he, RufAusgang.welt, reduceCtorEq] at h
+  | hardware _ => simp only [he, RufAusgang.welt, reduceCtorEq] at h
 
 /-- The write events of one axiom over explicit carrier domains, in a fixed
     order (tables, then globals): one `zugriff`-with-`true` per declared table

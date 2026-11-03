@@ -166,8 +166,8 @@ theorem uRestFehler_kopf (hd : SItemTief) (tl : List SItemTief)
   | gateT _ => rfl
   | pubT _ => rfl
   | taggedByT _ _ => rfl
-  | specGroupT _ _ _ => rfl
-  | implGroupT _ _ _ => rfl
+  | specGroupT _ _ _ _ => rfl
+  | implGroupT _ _ _ _ => rfl
 
 /-- **Is this item accepted by the item check?** Exactly the kinds `uRestFehler` recurses on (accepted
     heads step past; off-fragment heads refuse at once). -/
@@ -244,8 +244,8 @@ theorem uRestFehler_kopf_gut (hd : SItemTief) (tl : List SItemTief)
   | gateT _ => simp only [istAngenommen, Bool.false_eq_true] at he
   | pubT _ => simp only [istAngenommen, Bool.false_eq_true] at he
   | taggedByT _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
-  | specGroupT _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
-  | implGroupT _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
+  | specGroupT _ _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
+  | implGroupT _ _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
 
 /-- **A head that is neither accepted nor excused fails at once.** With
     no fragment excuse (`istGegenstand` false) and no accepted shape
@@ -294,8 +294,8 @@ theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief)
   | gateT _ => simp only [istGegenstand, Bool.true_eq_false] at he
   | pubT _ => simp only [istGegenstand, Bool.true_eq_false] at he
   | taggedByT _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
-  | specGroupT _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
-  | implGroupT _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
+  | specGroupT _ _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
+  | implGroupT _ _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
 
 /-- **An off-fragment item anywhere fails the item check.** Induction:
     empty lists hold no witness; a bad head fails at once, otherwise the
@@ -334,19 +334,21 @@ theorem uRestFehler_faellt (l : List SItemTief)
 /-- **A failing item check fails the elaboration.** `elabU` runs the certified expansion and
     then `uRestFehler`; a refused expanded item list refuses the unit. -/
 theorem elabU_bei_RestFehler (ms msE : List SItemTief) (e : String)
-    (hE : exportDeclarationUnit (uMembers ms) = .ok msE)
+    (requirements : List (STyp × String))
+    (hE : expandU ms = .ok (msE, requirements))
     (hR : uRestFehler msE = .error e) :
     elabU ms = .error e := by
-  simp only [elabU, hE, hR]
+  simp only [elabU, hE, bind, Except.bind, elabUExpanded, checkCanonicalConstants, hR]
 
 /-- **Units whose expansion carries an off-fragment item are refused.** The premise is read where
     `elabU` checks: after the certified expansion. -/
 theorem elabU_verweigert_noch (items msE : List SItemTief)
-    (hE : exportDeclarationUnit (uMembers items) = .ok msE)
+    (requirements : List (STyp × String))
+    (hE : expandU items = .ok (msE, requirements))
     (h : ∃ it ∈ msE, istGegenstand it = true) :
     ∃ e, elabU items = .error e := by
   have hR := uRestFehler_faellt _ h
-  exact ⟨_, elabU_bei_RestFehler _ _ _ hE hR⟩
+  exact ⟨_, elabU_bei_RestFehler _ _ _ requirements hE hR⟩
 
 /-- **Witness for `elabU_verweigert_noch`**: a lone `use` item is
     still refused -- minimal synthetic fixture; corpus-scale refusal is

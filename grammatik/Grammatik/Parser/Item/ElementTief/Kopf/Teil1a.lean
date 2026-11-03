@@ -31,10 +31,14 @@ inductive SEffekt
   | posts : SExpr → SEffekt
   | loops : SEffekt
   | pure : SEffekt
+  | param : String → SEffekt
+  | instanceEffects : String → List STyp → SEffekt
   deriving Repr
 
 mutual
 def beqSEffekt : SEffekt → SEffekt → Bool
+  | .param a, .param b => strEq a b
+  | .instanceEffects a ts, .instanceEffects b us => strEq a b && beqSTypList ts us
   | .reads a, .reads b => beqSExpr a b
   | .writes a, .writes b => beqSExpr a b
   | .locks x a, .locks y b => (x == y) && beqSExpr a b
@@ -101,6 +105,27 @@ def beqSKlauselList : List SKlausel → List SKlausel → Bool
   | _, _ => false
 end
 
+/-- Translation-time parameters; ordinary parameter types remain unchanged. -/
+inductive SGenericParam
+  | type : String → List String → SGenericParam
+  | constant : String → STyp → SGenericParam
+  | function : String → STyp → SGenericParam
+  deriving Repr
+
+def SGenericParam.name : SGenericParam → String
+  | .type n _ | .constant n _ | .function n _ => n
+
+def beqSGenericParam : SGenericParam → SGenericParam → Bool
+  | .type n bs, .type m cs => strEq n m && beqWorte bs cs
+  | .constant n t, .constant m u | .function n t, .function m u =>
+    strEq n m && beqSTyp t u
+  | _, _ => false
+
+def beqSGenericParams : List SGenericParam → List SGenericParam → Bool
+  | [], [] => true
+  | x :: xs, y :: ys => beqSGenericParam x y && beqSGenericParams xs ys
+  | _, _ => false
+
 /- One adapter parameter (`ABSTRACTION-SYNTAX-PLAN.md` §4.1 `adaptparam`): `..` takes over every
     parameter of the source in its order, `-x` drops the source parameter `x`, `x : T` adds a
     new parameter. The expansion happens in the desugarer (`Uebersetze/Teil18`); the parser
@@ -155,6 +180,7 @@ structure FnSig where
   res : Option STyp
   fehler : Option String
   klauseln : List SKlausel
+  generics : List SGenericParam := []
   deriving Repr
 
 def beqParam : (String × STyp) → (String × STyp) → Bool
@@ -168,7 +194,8 @@ def beqParamList : List (String × STyp) → List (String × STyp) → Bool
 def beqFnSig : FnSig → FnSig → Bool
   | s, t => strEq s.art t.art && strEq s.name t.name &&
     beqParamList s.params t.params && beqSTypOpt s.res t.res &&
-    beqOptWort s.fehler t.fehler && beqSKlauselList s.klauseln t.klauseln
+    beqOptWort s.fehler t.fehler && beqSKlauselList s.klauseln t.klauseln &&
+    beqSGenericParams s.generics t.generics
 
 /- One slot/format field: SYNTAX.md sections 9-10 `slotfeld`
     and `field`. `pos` is the raw `@bitpos`, `bezug` the raw

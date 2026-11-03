@@ -122,7 +122,7 @@ theorem blockFloatOfComputed_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes
           w = BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 x)) := by
       intro j code t hc ht m pc hp
       exact (computedFloatOfE_ok (σ₀ := σr) (σ := σr) hc hp ht
-        (fun c t hc ht hp => lowE_ok σr σr (fun _ h => h) hW.lay e j c t hc ht m pc ρ hp |>.word trivial)).mono
+        (fun c t hc ht hp => lowE_ok (same := by intro _; rfl) σr σr (fun _ h => h) hW.lay e j c t hc ht m pc ρ hp |>.word trivial)).mono
           (fun w hw => ⟨hwf, hw⟩)
     simp only [floatNarrowC, List.length_append, List.length_singleton] at hs
     simp only [execBlock]

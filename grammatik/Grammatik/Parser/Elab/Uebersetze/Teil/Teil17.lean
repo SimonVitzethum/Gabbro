@@ -148,6 +148,8 @@ def uAkkuInExpr : Nat → List String → SExpr → Bool
   | f + 1, ns, .arrow x _ => uAkkuInExpr f ns x
   | f + 1, ns, .un _ x => uAkkuInExpr f ns x
   | f + 1, ns, .bin _ x y => uAkkuInExpr f ns x || uAkkuInExpr f ns y
+  | f + 1, ns, .genericCall g _ args =>
+    (ns.any fun m => strEq m g) || (args.any fun a => uAkkuInExpr f ns a)
   | f + 1, ns, .call g args =>
     (ns.any fun m => strEq m g) || (args.any fun a => uAkkuInExpr f ns a)
   | f + 1, ns, .fnref g => ns.any fun m => strEq m g

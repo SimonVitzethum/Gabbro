@@ -22,11 +22,14 @@ theorem ValueAt.rebase {m : Runner.Mem} {fp : Runner.W} {base : Nat} {τ : Ty}
   intro i hi
   simpa only [Nat.zero_add, slot_nested] using value.2 i hi
 
-/-- Actual address arithmetic followed by the shared full-span load. The source
-    lies before the two explicit temporaries; every represented limb is copied. -/
-theorem selectFrameSpan_ok {m : Runner.Mem} {pc fp : Runner.W} {K base dst ptr tmp index : Nat}
+/-- Actual address arithmetic followed by the shared full-span load. Source and
+    destination lie before the two explicit temporaries. Forward-safe overlap or
+    a disjoint upward copy is allowed; every represented limb is copied. -/
+theorem selectFrameSpan_checked_ok {m : Runner.Mem} {pc fp : Runner.W} {K base dst ptr tmp index : Nat}
     {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop} {τ : Ty} {v : Wert D τ}
-    (fits : base + (index + 1) * valueWords τ ≤ ptr) (order : dst ≤ base + index * valueWords τ)
+    (fits : base + (index + 1) * valueWords τ ≤ ptr)
+    (order : dst ≤ base + index * valueWords τ ∨ base + (index + 1) * valueWords τ ≤ dst)
+    (dstBound : dst + valueWords τ ≤ ptr)
     (pt : ptr < tmp) (ht : tmp < K) (literal : 8 * valueWords τ < 2 ^ 31)
     (indexWord : m.rd64 (slot fp (BitVec.ofNat 64 ptr)) = some (BitVec.ofNat 64 index))
     (input : ValueAt L m fp (base + index * valueWords τ) τ v)
@@ -35,8 +38,8 @@ theorem selectFrameSpan_ok {m : Runner.Mem} {pc fp : Runner.W} {K base dst ptr t
   let w := valueWords τ
   have positive : 0 < w := valueWords_pos τ
   have sourceBound : base + index * w + w ≤ ptr := by simpa [Nat.add_mul, Nat.add_assoc] using fits
-  have order' : dst ≤ base + index * w := order
-  have dstBound : dst + w ≤ ptr := by omega
+  have order' : dst ≤ base + index * w ∨ base + index * w + w ≤ dst := by
+    simpa only [Nat.add_mul, Nat.one_mul, Nat.add_assoc] using order
   have hp : Pre L m pc fp K ptr
       ([ci 1 tmp (8 * w) 0] ++ ([ci 5 ptr ptr tmp] ++
       ([ci 17 tmp base 0] ++ ([ci 3 ptr tmp ptr] ++ loadPointerSpan w dst ptr tmp 0)))) ρ W reserved := pre
@@ -93,12 +96,29 @@ theorem selectFrameSpan_ok {m : Runner.Mem} {pc fp : Runner.W} {K base dst ptr t
   have addressNat := slot_toNat frame.room (show base + index * w < K by omega)
   obtain ⟨m5, s5, a5, effect, output, pointer⟩ := loadPointerValue_run frame pre.small dstBound pt ht
     (by simpa only [Nat.zero_add] using literal) (by rw [addressNat]; omega)
-    (Or.inl (by rw [addressNat]; omega)) (Or.inl (by rw [addressNat]; omega))
+    (by
+      rw [addressNat]
+      rcases order' with order | order
+      · exact Or.inl (by omega)
+      · exact Or.inr (by omega)) (Or.inl (by rw [addressNat]; omega))
     next.code (by simpa using next.far) r4 source.rebase
   refine ⟨m5, ?_, (a14.mono (by omega : dst ≤ ptr)).trans a5, output⟩
   have steps := s1.trans (s2.trans (s3.trans (s4.trans s5)))
   rw [selectFrameSpan_length, show 16 * (4 + 3 * valueWords τ) = 16 * 4 + 48 * valueWords τ by omega,
     BitVec.ofNat_add, ← BitVec.add_assoc]
   simpa only [List.length_cons, List.length_nil, pc_add, Nat.reduceAdd, Nat.zero_add] using steps
+
+/-- Aggregate extraction retains its original forward-safe contract. -/
+theorem selectFrameSpan_ok {m : Runner.Mem} {pc fp : Runner.W} {K base dst ptr tmp index : Nat}
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop} {τ : Ty} {v : Wert D τ}
+    (fits : base + (index + 1) * valueWords τ ≤ ptr) (order : dst ≤ base + index * valueWords τ)
+    (pt : ptr < tmp) (ht : tmp < K) (literal : 8 * valueWords τ < 2 ^ 31)
+    (indexWord : m.rd64 (slot fp (BitVec.ofNat 64 ptr)) = some (BitVec.ofNat 64 index))
+    (input : ValueAt L m fp (base + index * valueWords τ) τ v)
+    (pre : Pre L m pc fp K ptr (selectFrameSpan (valueWords τ) base dst ptr tmp) ρ W reserved) :
+    ValueOk L m pc fp K dst (selectFrameSpan (valueWords τ) base dst ptr tmp) τ v := by
+  apply selectFrameSpan_checked_ok fits (Or.inl order) ?_ pt ht literal indexWord input pre
+  rw [Nat.add_mul, Nat.one_mul] at fits
+  omega
 
 end Gabbro.Stage0.Senke

@@ -5,6 +5,8 @@ public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEq
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqMixedOk
 @[expose] public section
 
+variable {currentOld : Bool}
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
@@ -119,16 +121,16 @@ theorem strEqLong_ok {n q : Nat} (vs : Wert D (.str n))
 /-- String equality: the packed one-word comparison for capacities up to one, the branch-free span
     comparison for capacities of at least two. -/
 theorem strEq_ok {n q : Nat} (s : Expr D Γ Λ (.str n)) (t : Expr D Γ Λ (.str q)) {σ₀ σ : World D}
-    (ihs : ∀ ca ta, lowE L (reserved := reserved) s d = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (ihs : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) s d = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d ca ρ W reserved → ValueOk L m pc fp K d ca (.str n) (eval σ₀ s σ ρ))
-    (iht : ∀ ca ta, lowE L (reserved := reserved) t (d + 1) = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (iht : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) t (d + 1) = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K (d + 1) ca ρ W reserved → ValueOk L m pc fp K (d + 1) ca (.str q) (eval σ₀ t σ ρ))
-    (ihl : ∀ ca ta, lowE L (reserved := reserved) t (d + (n + 1)) = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (ihl : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) t (d + (n + 1)) = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K (d + (n + 1)) ca ρ W reserved → ValueOk L m pc fp K (d + (n + 1)) ca (.str q) (eval σ₀ t σ ρ))
-    (ihm : ∀ ca ta, lowE L (reserved := reserved) t (d + valueWords (.str n)) = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (ihm : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) t (d + valueWords (.str n)) = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K (d + valueWords (.str n)) ca ρ W reserved →
         ValueOk L m pc fp K (d + valueWords (.str n)) ca (.str q) (eval σ₀ t σ ρ))
-    (h : lowE L (reserved := reserved) (.strEq s t) d = some (c, top)) (hK : top ≤ K)
+    (h : lowE (currentOld := currentOld) L (reserved := reserved) (.strEq s t) d = some (c, top)) (hK : top ≤ K)
     (hp : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c .bool (eval σ₀ (.strEq s t) σ ρ) := by
   simp only [lowE_eqs] at h
