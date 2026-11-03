@@ -163,4 +163,32 @@ theorem ordinary_contract :
 theorem no_hardware_isolation : D.axBeleg false = none ∧
     D.axHerkunft false = some AxOrigin.software := ⟨rfl, rfl⟩
 
+def fits : RufPasst D (vertragVon D ()) (D.asignatur false) [] where
+  hw _ h := by cases h
+  hg e := nomatch e
+  hk := ⟨[], List.Perm.refl _, List.Sublist.refl _⟩
+  hh e := nomatch e
+
+/-- A real code-region argument and two explicit continuations. The call is
+    retained even though this fixture discards its void success result. -/
+def invocation : GuestBoundary.Invocation guest (vertragVon D ()) false [] [] [] where
+  admitted := by decide
+  service := false
+  resolved := rfl
+  context := rfl
+  result := none
+  args := .cons (.ptrOf false 0 (by decide) (true, false)) .nil
+  result_eq := rfl
+  callFits := fits
+  writes _ h := by cases h
+  globalWrites e := nomatch e
+  fallible := by decide
+  failure := .ret .empty (List.Perm.refl _)
+  continuation := .nil
+
+theorem invocation_lower_eq_zeuge :
+    invocation.lower = .bindAxiomOptElse none false invocation.args rfl
+      fits invocation.writes invocation.globalWrites invocation.fallible
+      invocation.failure .nil := GuestBoundary.Invocation.lower_eq invocation
+
 end Gabbro.Grammatik.GuestWitness
