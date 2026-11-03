@@ -67,15 +67,21 @@ theorem encodeWords_length (L : Lay D) (τ : Ty) (v : Wert D τ) :
       have : 1 ≤ n * valueWords τ := Nat.mul_pos (by omega) (by omega)
       omega
   | prod name fs =>
-    have fields : ∀ (vs : ProdVal D.Fn D.passt fs),
+    have fields : (∀ σ ∈ fs, ∀ w : Wert D σ,
+        (encodeWords L σ w).length = valueWords σ) → ∀ (vs : ProdVal D.Fn D.passt fs),
         (encodeProductFields L fs vs).length = productWords fs := by
       clear v
       induction fs with
-      | nil => intro vs; simp only [encodeProductFields, productWords, List.length_nil]
+      | nil => intro _ vs; simp only [encodeProductFields, productWords, List.length_nil]
       | cons σ rest ih =>
-        intro vs
+        intro widths vs
         simp only [encodeProductFields, List.length_append, productWords]
-        rw [encodeWords_length L σ (ProdVal.hd vs), ih]
+        rw [widths σ List.mem_cons_self,
+          ih (fun χ member => widths χ (List.mem_cons_of_mem _ member))]
+    have widths : ∀ σ ∈ fs, ∀ w : Wert D σ,
+        (encodeWords L σ w).length = valueWords σ := by
+      intro σ member w
+      exact encodeWords_length L σ w
     have hp : ∀ vs : ProdVal D.Fn D.passt fs,
         (encodeProduct L fs vs).length = max 1 (productWords fs) := by
       intro vs
@@ -83,7 +89,7 @@ theorem encodeWords_length (L : Lay D) (τ : Ty) (v : Wert D τ) :
       split
       · next h => subst fs; simp [productWords]
       · next h =>
-        rw [fields]
+        rw [fields widths]
         cases fs with
         | nil => exact False.elim (h rfl)
         | cons σ rest =>
@@ -113,6 +119,12 @@ theorem encodeWords_length (L : Lay D) (τ : Ty) (v : Wert D τ) :
   | _ => simp [encodeWords, integerEncoding_length, valueWords]
 
 termination_by sizeOf τ
+decreasing_by
+  all_goals first
+    | decreasing_trivial
+    | have hs := List.sizeOf_lt_of_mem member
+      simp_all only [Ty.prod.sizeOf_spec]
+      omega
 
 /-- Typed parameters use the same tail-first order as lexical variable offsets.
     Starts and ordinary calls therefore share one encoded parameter sequence. -/
@@ -173,18 +185,26 @@ theorem ValueAt.array_element {L : Lay D} {m : Runner.Mem} {fp : Runner.W}
 theorem encodeWords_arrCons {τ : Ty} {n : Nat} (a : Wert D τ) (rest : Wert D (.arr τ n)) :
     encodeWords L (.arr τ (n + 1)) (arrConsW a rest) =
       encodeWords L τ a ++ (if n = 0 then [] else encodeWords L (.arr τ n) rest) := by
-  rw [encodeWords.eq_def]; simp only []; rw [if_neg (by omega), elementEncoding]
-  have head : encodeWords L τ (arrConsW a rest ⟨0, by omega⟩) = encodeWords L τ a := by
-    simp only [arrConsW, ↓reduceDIte]
-  have tail : (fun i : Fin n => encodeWords L τ (arrConsW a rest i.succ)) =
-      (fun i => encodeWords L τ (rest i)) := by
-    funext i
-    simp only [arrConsW, Fin.val_succ, Nat.add_eq_zero_iff, Nat.one_ne_zero, and_false,
-      ↓reduceDIte, Nat.add_sub_cancel]
-  rw [head, tail]
-  by_cases empty : n = 0
-  · subst n; simp [elementEncoding]
-  · rw [if_neg empty, encodeWords (τ := .arr τ n), if_neg empty]
+  have consEncoding (xs : Fin n → Wert D τ) :
+      encodeWords L (.arr τ (n + 1)) (arrConsW a xs) =
+        encodeWords L τ a ++ (if n = 0 then [] else encodeWords L (.arr τ n) xs) := by
+    rw [encodeWords.eq_def L (.arr τ (n + 1)) (arrConsW a xs)]
+    dsimp only
+    rw [if_neg (by omega), elementEncoding]
+    have head : encodeWords L τ (arrConsW a xs ⟨0, by omega⟩) = encodeWords L τ a := by
+      simp only [arrConsW, ↓reduceDIte]
+    have tail : (fun i : Fin n => encodeWords L τ (arrConsW a xs i.succ)) =
+        (fun i => encodeWords L τ (xs i)) := by
+      funext i
+      simp only [arrConsW, Fin.val_succ, Nat.add_eq_zero_iff, Nat.one_ne_zero, and_false,
+        ↓reduceDIte, Nat.add_sub_cancel]
+    rw [head, tail]
+    by_cases empty : n = 0
+    · subst n; simp [elementEncoding]
+    · rw [if_neg empty, encodeWords.eq_def L (.arr τ n) xs]
+      dsimp only
+      rw [if_neg empty]
+  exact consEncoding (fun i => rest i)
 
 theorem ValueValid.arrCons {τ : Ty} {n : Nat} {a : Wert D τ} {rest : Wert D (.arr τ n)}
     (head : ValueValid L τ a) (tail : ValueValid L (.arr τ n) rest) :
