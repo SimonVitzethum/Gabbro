@@ -18,8 +18,8 @@ public import Grammatik.Code.Refine.StmtOk.Teil4
   File:      Grammatik/Code/Refine/StmtOk/Teil7.lean
   Subject:   TRACK L, PHASE L1 -- THE REFINEMENT OF THE C11 STATEMENT FORMS.
 
-  `lowerS_ok_consumeTraverse` (like `traverse`: the placeholder `execStmt` runs the same fixed
-  sweep; re-selection is OPEN), `lowerS_ok_retScoped`/`lowerS_ok_retWhyScoped` (like `ret`/`retWhy`:
+  `lowerS_ok_consumeTraverse` (vacuous: the Code lowering refuses the consuming traversal),
+  `lowerS_ok_retScoped`/`lowerS_ok_retWhyScoped` (like `ret`/`retWhy`:
   the value is evaluated before the release; the scope list is released in recorded order and the
   memory presentation survives the release fold by `Rep.gibt_foldl`) and `lowerB_ok_narrowRequired`
   (like `Block.narrow`, with the failure leg replaced by an unreachable trap: out of range is
@@ -71,63 +71,7 @@ theorem lowerS_ok_consumeTraverse (lay : Layout D) (hL : LayoutOk lay) (cenv : L
     (ih_lowerB_ok_body : ∀ (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel D) (passes : Nat) (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f), ∀ (lb : Lbl), ∀ (k : Lbl), ∀ (st : St), ∀ (st' : St), ∀ (blks : List Block), lowerB lay cenv lv body lb k st = some (blks, st') → ∀ (M : Modl), ∀ (S : Sees), ∀ (fn : Nat), InM M fn blks → KOk M fn k → LvOk M fn lv → FnOk lay M → CallRef lay M S R → ∀ (σ : World D), ∀ (ρ : Env D _), ∀ (m : Mem), ∀ (rs : Regs), ∀ (ks : List Frame), ∀ (dst : Option Reg), Rep lay σ m → EnvRep lay rs m cenv ρ → WfL lay m → (∀ x ∈ cenv, x < st.r) → OutOk lay cenv lv M S fn lb k st.r st'.r m rs ks dst (execBlock O passes R body σ ρ))
     : OutOk lay cenv lv M S fn lb k st.r st'.r m rs ks dst (execStmt O passes R (.consumeTraverse (Λ := Λ) t member edge inv bound mass body : Gabbro.Grammatik.Stmt D V l Γ Λ (Λ)) σ ρ) :=
   by
-  simp only [lowerS] at h
-  by_cases hcn : 0 ≤ D.count t ∧ Ar.Fits 0 (D.count t) 128
-  · simp only [hcn, and_self, if_true] at h
-    rcases hv : cvtG (.int 0 (D.count t)) (.int 0 (D.count t - 1)) (.reg st.r) (st.r + 1) with
-      _ | ⟨cv, ov, r1⟩
-    · simp only [hv, reduceCtorEq] at h
-    simp only [hv] at h
-    rcases hb : bindCode (.int 0 (D.count t - 1)) ov r1 with _ | ⟨cb, a, r2⟩
-    · simp only [hb, reduceCtorEq] at h
-    simp only [hb] at h
-    rcases hb2 : lowerB lay (a :: cenv) (k, st.l + 2) body (st.l + 3) (st.l + 2) ⟨r2, st.l + 4⟩ with
-      _ | ⟨bb, s1⟩
-    · simp only [hb2, reduceCtorEq] at h
-    simp only [hb2] at h
-    have h' := Option.some.inj h
-    simp only [Prod.mk.injEq] at h'
-    obtain ⟨rfl, rfl⟩ := h'
-    have S2 := lowerB_shape lay (a :: cenv) (k, st.l + 2) body (st.l + 3) (st.l + 2) ⟨r2, st.l + 4⟩ s1 bb hb2
-    have hM0 : M.blk fn lb = some ⟨lb, [], [.bin st.r .add (Ar.wid 0 (D.count t))
-        (.int (Ar.wid 0 (D.count t)) 0) (.int (Ar.wid 0 (D.count t)) 0)], .jmp st.l⟩ :=
-      hM _ (List.mem_cons_self ..)
-    have hMH : M.blk fn st.l = some ⟨st.l, [], [], .brc .ult (Ar.wid 0 (D.count t)) (.reg st.r)
-        (.int (Ar.wid 0 (D.count t)) (D.count t)) (st.l + 1) k⟩ :=
-      hM _ (List.mem_cons_of_mem _ (List.mem_cons_self ..))
-    have hMB : M.blk fn (st.l + 1) = some ⟨st.l + 1, [], cv ++ cb, .jmp (st.l + 3)⟩ :=
-      hM _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_self ..)))
-    have hMI : M.blk fn (st.l + 2) = some ⟨st.l + 2, [], [.bin st.r .add (Ar.wid 0 (D.count t))
-        (.reg st.r) (.int (Ar.wid 0 (D.count t)) 1)], .jmp st.l⟩ :=
-      hM _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_self ..))))
-    have hMbb : InM M fn bb := fun b hb' =>
-      hM b (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _
-        (List.mem_cons_of_mem _ hb'))))
-    have hKbd := kok_of_shape S2 hMbb
-    have hKI : KOk M fn (st.l + 2) := ⟨_, hMI, rfl⟩
-    have hKH : KOk M fn st.l := ⟨_, hMH, rfl⟩
-    simp only [execStmt]
-    -- the counter starts at zero
-    have hinit : seqI [Instr.bin st.r .add (Ar.wid 0 (D.count t)) (.int (Ar.wid 0 (D.count t)) 0)
-        (.int (Ar.wid 0 (D.count t)) 0)] m rs
-        = some (m, rs.set st.r (Val.ofInt (Ar.wid 0 (D.count t)) ((0 : Nat) : Int))) := by
-      simp only [seqI, stepI, Opd.ev, val_bin_add, Int.add_zero, Option.map_some, Int.cast_ofNat_Int]
-    obtain ⟨bkh, hbkh, hkph⟩ := hKH
-    have hI0 := reach_block_jmp (S := S) (ks := ks) (dst := dst) hM0 rfl hbkh hkph hinit
-    have hmap : (alleIndizes (D.count t)).map (·.n) =
-        (List.range' 0 ((D.count t).toNat - 0)).map (fun k : Nat => (k : Int)) := by
-      rw [alleIndizes_map, Nat.sub_zero, ← List.range_eq_range']
-    have hE0 := envRep_regs (rs' := rs.set st.r (Val.ofInt (Ar.wid 0 (D.count t)) ((0 : Nat) : Int))) cenv ρ
-      (fun x hx => regs_set_ne rs st.r x _ (Nat.ne_of_lt (hc x hx))) hE
-    exact outok_lift hI0 (fr_regs (fun x hx => regs_set_ne rs st.r x _ (Nat.ne_of_lt hx))) (Nat.le_refl _) hc _
-      (traverse_loop (lay := lay) (lv := lv) (O := O) (passes := passes) (R := R) t inv body
-        (c := st.r) (H := st.l) (Bl := st.l + 1) (I := st.l + 2) (Bd := st.l + 3) (cv := cv) (cb := cb)
-        (ov := ov) (a := a) (r1 := r1) (r2 := r2) (r' := s1.r) hcn.1 hcn.2 hv hb S2.2.2 hMH hMB hMI hk hKbd
-        (fun σ ρ' m rs hR hE hW hc => ih_lowerB_ok_body lay hL (a :: cenv) (k, st.l + 2) O passes R (st.l + 3)
-          (st.l + 2) ⟨r2, st.l + 4⟩ s1 bb hb2 M S fn hMbb hKI ⟨hk, hKI⟩ hFn hCall σ ρ' m rs ks dst hR hE hW hc)
-        (alleIndizes (D.count t)) 0 hmap (Nat.zero_le _) σ ρ m
-        (rs.set st.r (Val.ofInt (Ar.wid 0 (D.count t)) ((0 : Nat) : Int))) hR hE0 hW hc (regs_set_same _ _ _))
-  · simp only [hcn, ↓reduceIte, reduceCtorEq] at h
+  simp only [lowerS, reduceCtorEq] at h
 
 set_option linter.unusedSectionVars false in
 theorem lowerS_ok_retScoped (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel D) (passes : Nat) (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)

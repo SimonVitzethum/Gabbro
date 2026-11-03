@@ -1,4 +1,3 @@
-/- Part 3 of 5 of `Satz` (split by instrumente/teile/lean-teilen.py; the umbrella `Satz.lean` imports all parts). -/
 module
 public import Grammatik.Kern.Syntax.Satz.T2
 @[expose] public section
@@ -87,80 +86,89 @@ theorem verbrauchLauf_gut (t : D.Tab)
       intro σ ρ _ σ' h
       simp only [verbrauchLauf, Ausgang.welt, reduceCtorEq] at h
   | succ n ih =>
-      intro σ ρ hh σ' h
-      simp only [verbrauchLauf] at h ⊢
-      split at h ⊢
-      · simp only [Ausgang.welt, reduceCtorEq] at h
-      · have hinv := hi σ ρ hh
-        have hselg := hsel (inv σ ρ).1 ρ (hinv.heldB hh)
-        split at h ⊢
-        · rename_i σr hsel_eq
-          simp only [Ausgang.welt, Option.some.injEq] at h
-          subst h
-          have hselr : Gut W G (inv σ ρ).1 σr := by
-            rw [hsel_eq] at hselg
-            exact hselg
-          exact hinv.trans hselr
-        · simp only [Ausgang.welt, reduceCtorEq] at h
-        · rename_i σr k hsel_eq
-          have hselr : Gut W G (inv σ ρ).1 σr := by
-            rw [hsel_eq] at hselg
-            exact hselg
-          have gsel : Gut W G σ σr := hinv.trans hselr
-          have hmassg := hmass σr ρ (gsel.heldB hh)
-          have hstep := hs (massW σr ρ).1 (.cons k ρ)
-            ((gsel.trans hmassg).heldB hh)
-          split at h ⊢
-          · rename_i σ1 ρ1 hstep_eq
-            simp only [hstep_eq] at hstep
-            have g1 : Gut W G σ σ1 :=
-              (gsel.trans hmassg).trans (hstep σ1 rfl)
-            have hmassg2 := hmass σ1 ρ1.tail (g1.heldB hh)
-            split at h ⊢
-            · have g2 : Gut W G σ (massW σ1 ρ1.tail).1 :=
-                g1.trans hmassg2
-              exact (GutAusgang.vor g2 (ih (massW σ1 ρ1.tail).1 ρ1.tail
-                (g2.heldB hh))) σ' h
-            · simp only [Ausgang.welt, reduceCtorEq] at h
-          · rename_i σ1 ρ1 hstep_eq
-            simp only [hstep_eq] at hstep
-            have g1 : Gut W G σ σ1 :=
-              (gsel.trans hmassg).trans (hstep σ1 rfl)
-            have hmassg2 := hmass σ1 ρ1.tail (g1.heldB hh)
-            split at h ⊢
-            · have g2 : Gut W G σ (massW σ1 ρ1.tail).1 :=
-                g1.trans hmassg2
-              exact (GutAusgang.vor g2 (ih (massW σ1 ρ1.tail).1 ρ1.tail
-                (g2.heldB hh))) σ' h
-            · simp only [Ausgang.welt, reduceCtorEq] at h
-          · rename_i σ1 ρ1 hstep_eq
-            simp only [hstep_eq] at hstep
-            have g1 : Gut W G σ σ1 :=
-              (gsel.trans hmassg).trans (hstep σ1 rfl)
-            have hmassg2 := hmass σ1 ρ1.tail (g1.heldB hh)
-            split at h ⊢
-            · split at h ⊢
-              · simp only [Ausgang.welt, Option.some.injEq] at h
-                subst h
-                have h3 := hi (massW σ1 ρ1.tail).1 ρ1.tail
-                  ((g1.trans hmassg2).heldB hh)
-                exact g1.trans (hmassg2.trans h3)
-              · simp only [Ausgang.welt, reduceCtorEq] at h
-            · simp only [Ausgang.welt, reduceCtorEq] at h
-          · rename_i σ1 v hstep_eq
-            simp only [hstep_eq] at hstep
-            simp only [Ausgang.welt, Option.some.injEq] at h ⊢
-            subst h
-            exact (gsel.trans hmassg).transRetV
-              (hstep _ rfl)
-          · rename_i σ1 r hstep_eq
-            simp only [hstep_eq] at hstep
-            simp only [Ausgang.welt, Option.some.injEq] at h ⊢
-            subst h
-            exact (gsel.trans hmassg).transRetV
-              (hstep _ rfl)
-          · simp only [Ausgang.welt, reduceCtorEq] at h
-          · simp only [Ausgang.welt, reduceCtorEq] at h
+      intro σ ρ hh
+      have hl : ∀ {σ0 : World D} (e : Logik D),
+          GutAusgang (V := V) (l := l) (Γ := Γ) W G σ0 (.logik e) := by
+        intro σ0 e σ' h; simp only [Ausgang.welt, reduceCtorEq] at h
+      have hw : ∀ {σ0 : World D} (e : Hardware D),
+          GutAusgang (V := V) (l := l) (Γ := Γ) W G σ0 (.hardware e) := by
+        intro σ0 e σ' h; simp only [Ausgang.welt, reduceCtorEq] at h
+      have hok : ∀ {σ0 σ1 : World D} (ρ0 : Env D Γ), Gut W G σ0 σ1 →
+          GutAusgang (V := V) (l := l) W G σ0 (.ok σ1 ρ0) := by
+        intro σ0 σ1 ρ0 hg σ' h
+        simp only [Ausgang.welt, Option.some.injEq] at h; subst h; exact hg
+      rw [verbrauchLauf]
+      by_cases hc : (inv σ ρ).snd = false
+      · rw [if_pos hc]; exact hl _
+      rw [if_neg hc]
+      have hinv := hi σ ρ hh
+      have hselg := hsel (inv σ ρ).1 ρ (hinv.heldB hh)
+      generalize hsel_eq : sel (inv σ ρ).1 ρ = selected at hselg ⊢
+      rcases selected with ⟨σr, _ | k, b⟩
+      · have gsel : Gut W G σ σr := hinv.trans hselg
+        cases b
+        · exact hok ρ gsel
+        · exact hl _
+      have gsel : Gut W G σ σr := hinv.trans hselg
+      dsimp only
+      have hmassg := hmass σr ρ (gsel.heldB hh)
+      generalize hm1 : massW σr ρ = p1 at hmassg ⊢
+      rcases p1 with ⟨σm, m⟩
+      dsimp only
+      have gm : Gut W G σ σm := gsel.trans hmassg
+      have hstep := hs σm (.cons k ρ) (gm.heldB hh)
+      generalize hs1 : schritt σm (.cons k ρ) = o at hstep ⊢
+      cases o with
+      | ok σ1 ρ1 =>
+        dsimp only
+        have g1 : Gut W G σ σ1 := gm.trans (hstep σ1 rfl)
+        have hmassg2 := hmass σ1 ρ1.tail (g1.heldB hh)
+        generalize hm2 : massW σ1 ρ1.tail = p2 at hmassg2 ⊢
+        rcases p2 with ⟨σm', m'⟩
+        dsimp only
+        by_cases hf : 0 ≤ m' ∧ m' ≤ bound ∧ m' < m
+        · rw [if_pos hf]
+          have g2 : Gut W G σ σm' := g1.trans hmassg2
+          exact GutAusgang.vor g2 (ih σm' ρ1.tail (g2.heldB hh))
+        · rw [if_neg hf]; exact hl _
+      | next _ σ1 ρ1 =>
+        dsimp only
+        have g1 : Gut W G σ σ1 := gm.trans (hstep σ1 rfl)
+        have hmassg2 := hmass σ1 ρ1.tail (g1.heldB hh)
+        generalize hm2 : massW σ1 ρ1.tail = p2 at hmassg2 ⊢
+        rcases p2 with ⟨σm', m'⟩
+        dsimp only
+        by_cases hf : 0 ≤ m' ∧ m' ≤ bound ∧ m' < m
+        · rw [if_pos hf]
+          have g2 : Gut W G σ σm' := g1.trans hmassg2
+          exact GutAusgang.vor g2 (ih σm' ρ1.tail (g2.heldB hh))
+        · rw [if_neg hf]; exact hl _
+      | leave _ σ1 ρ1 =>
+        dsimp only
+        have g1 : Gut W G σ σ1 := gm.trans (hstep σ1 rfl)
+        have hmassg2 := hmass σ1 ρ1.tail (g1.heldB hh)
+        generalize hm2 : massW σ1 ρ1.tail = p2 at hmassg2 ⊢
+        rcases p2 with ⟨σm', m'⟩
+        dsimp only
+        by_cases hf : 0 ≤ m' ∧ m' ≤ bound ∧ m' < m
+        · rw [if_pos hf]
+          have g2 : Gut W G σ σm' := g1.trans hmassg2
+          by_cases hc1 : (inv σm' ρ1.tail).snd = true
+          · rw [if_pos hc1]
+            exact hok _ (g2.trans (hi σm' ρ1.tail (g2.heldB hh)))
+          · rw [if_neg hc1]; exact hl _
+        · rw [if_neg hf]; exact hl _
+      | zurueck σ1 v =>
+        intro σ' h
+        simp only [Ausgang.welt, Option.some.injEq] at h; subst h
+        exact gm.transRetV (hstep _ rfl)
+      | why σ1 r =>
+        intro σ' h
+        simp only [Ausgang.welt, Option.some.injEq] at h; subst h
+        exact gm.transRetV (hstep _ rfl)
+      | logik e => exact hl e
+      | hardware e => exact hw e
+
 
 theorem retryLauf_gut (schritt : World D → Env D Γ → Ausgang V true Γ)
     (bis : World D → Env D Γ → World D × Bool) (ueberlauf : World D → Env D Γ → Ausgang V l Γ)
@@ -258,5 +266,4 @@ theorem foreverLauf_gut (a : D.Annahme) (schritt : World D → Env D Γ → Ausg
         | hardware e => simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, reduceCtorEq] at h
 
 end Schleifen
-
 end Gabbro.Grammatik

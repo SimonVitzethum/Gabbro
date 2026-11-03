@@ -1,3 +1,19 @@
+### Statement calls with a reason handler
+
+```ebnf
+statement += path "(" [ arguments ] ")" [ "?" | "else" [ "(" ident ")" ] block ] ";" ;
+```
+
+`f(args) else { ... };` handles failure of a fallible foreign call and discards
+its normal answer. `else (reason) { ... };` additionally names the reason inside
+the handler, using the same reason binding as `let ... else (reason) { ... }`.
+The handler must end with a return or another valid block exit. Success continues
+with the original local scope; the discarded answer introduces no local.
+A user function or an infallible foreign callee with a statement handler is
+refused by the named `call else needs an axiom callee` or
+`call else needs a fallible axiom callee` elaboration error, respectively.
+The existing foreign result-type and contract admission rules still apply.
+
 
 ### Flat record embedding
 

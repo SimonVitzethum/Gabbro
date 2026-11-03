@@ -69,7 +69,7 @@ theorem softMulCompressL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pro
     (k : Nat) (count : k = 49 ∨ k = 50) :
     WordCode (L := L) ρ W (fun d => softMulCompressL d a b k)
       (softMulCompressWord av bv k) := by
-  have low := WordCode.bin ha hb (g := fun x y => some (x * y))
+  have low : WordCode (L := L) ρ W _ _ := WordCode.bin ha hb (g := fun x y => some (x * y))
     rfl rfl (by decide : 5 < 256)
   have literal : lit32 (Int.ofNat k) = true := by rcases count with rfl | rfl <;> decide
   have leftLiteral : lit32 (Int.ofNat (64 - k)) = true := by
@@ -77,7 +77,7 @@ theorem softMulCompressL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pro
   have shift : (BitVec.ofInt 64 (Int.ofNat (64 - k))).toNat % 64 = 64 - k := by
     rcases count with rfl | rfl <;> decide
   have jam := floatShiftJamL_ok low (WordCode.const _ literal)
-  have high := WordCode.bin (softMulHighL_word ha hb) (WordCode.const _ leftLiteral)
+  have high : WordCode (L := L) ρ W _ _ := WordCode.bin (softMulHighL_word ha hb) (WordCode.const _ leftLiteral)
     (g := fun x y => some (x <<< (y.toNat % 64))) rfl rfl (by decide : 11 < 256)
   rw [shift] at high
   exact WordCode.bin jam high (g := fun x y => some (x + y))

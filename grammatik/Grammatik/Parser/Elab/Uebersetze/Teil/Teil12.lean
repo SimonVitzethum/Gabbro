@@ -66,7 +66,7 @@ def uAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : L
         { name, names := ps.map (·.1), kinds := ps.map (·.2.2), types := ps.map (·.2.1), res := .none,
           bits := params.map (fun p => uParamBreite p.2), held := [], ext := true, kanal := kn }
       match res with
-      | .none => if kn.isSome then .error "foreign fn with a reason channel and no answer without G form" else .ok base
+      | .none => .ok base
       | .some (.atom "never") => .ok { base with resNever := true }
       | .some (.atom "bool") => if kn.isSome then .error "fallible foreign fn with a non-number answer without G form" else .ok { base with resBool := true }
       | .some (.index false tn) =>

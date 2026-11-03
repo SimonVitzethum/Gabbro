@@ -2,6 +2,7 @@ module
 public import Stage0.Frontend.Constants.ConstantScopes
 public import Stage0.Frontend.AliasMeaning
 public import Stage0.Frontend.Guard
+public import Grammatik.Parser.Elab.Konst.ErsetzungTor
 public import Stage0.Profil
 @[expose] public section
 
@@ -44,6 +45,7 @@ def source (text : String) (options : Profil.Options := {}) : Except String (Sou
       | .ok prepared =>
         if hv : Oeffentlich.huelleZu prepared.elaborierbar then
           if hc : compileTimeSafe (uMembers (pre108 prepared.elaborierbar)) then do
+            Konst.checkSourceMetadata (uMembers (pre108 prepared.elaborierbar))
             let order ← orderAliases (uMembers (pre108 prepared.elaborierbar))
             let result := normalize (uMembers (pre108 prepared.elaborierbar))
             match hd : elaborateConstantScopes (uMembers (pre108 prepared.elaborierbar)) with

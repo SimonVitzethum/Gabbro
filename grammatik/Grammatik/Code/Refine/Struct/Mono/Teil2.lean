@@ -6,6 +6,20 @@ namespace Gabbro.Code.Lower
 variable [Conf]
 open Gabbro.Grammatik (Deklaration Expr Ctx Var Res Vertrag ErgExpr Args)
 variable {D : Deklaration}
+
+-- Lower the two operands and retain their register monotonicity bounds.
+set_option hygiene false in
+local macro "mono_operands" : tactic => `(tactic| (
+  simp only [lowerE] at h
+  rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
+  · simp only [ha, reduceCtorEq] at h
+  have m1 := lowerE_mono lay cenv a r _ ha
+  simp only [ha] at h
+  rcases hOperand : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
+  · simp only [hOperand, reduceCtorEq] at h
+  have m2 := lowerE_mono lay cenv b r1 _ hOperand
+   simp only [hOperand] at h))
+
 mutual
 /-- **Registers only go up.** -/
 theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
@@ -121,15 +135,7 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
         omega
       · simp only [reduceCtorEq] at h
   | _, _, _, .add a b, r, c, h => by
-      simp only [lowerE] at h
-      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp only [ha, reduceCtorEq] at h
-      have m1 := lowerE_mono lay cenv a r _ ha
-      simp only [ha] at h
-      rcases hb : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp only [hb, reduceCtorEq] at h
-      have m2 := lowerE_mono lay cenv b r1 _ hb
-      simp only [hb] at h
+      mono_operands
       rcases hr : binRest .add (ety (Expr.add a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
       · simp only [List.append_assoc, hr, Option.map_none, reduceCtorEq] at h
       have m3 := binRest_mono hr
@@ -138,15 +144,7 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
       simp only at m1 m2 m3 ⊢
       omega
   | _, _, _, .sub a b, r, c, h => by
-      simp only [lowerE] at h
-      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp only [ha, reduceCtorEq] at h
-      have m1 := lowerE_mono lay cenv a r _ ha
-      simp only [ha] at h
-      rcases hb : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp only [hb, reduceCtorEq] at h
-      have m2 := lowerE_mono lay cenv b r1 _ hb
-      simp only [hb] at h
+      mono_operands
       rcases hr : binRest .sub (ety (Expr.sub a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
       · simp only [List.append_assoc, hr, Option.map_none, reduceCtorEq] at h
       have m3 := binRest_mono hr
@@ -155,15 +153,7 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
       simp only at m1 m2 m3 ⊢
       omega
   | _, _, _, .mul a b, r, c, h => by
-      simp only [lowerE] at h
-      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp only [ha, reduceCtorEq] at h
-      have m1 := lowerE_mono lay cenv a r _ ha
-      simp only [ha] at h
-      rcases hb : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp only [hb, reduceCtorEq] at h
-      have m2 := lowerE_mono lay cenv b r1 _ hb
-      simp only [hb] at h
+      mono_operands
       rcases hr : binRest .mul (ety (Expr.mul a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
       · simp only [List.append_assoc, hr, Option.map_none, reduceCtorEq] at h
       have m3 := binRest_mono hr
@@ -186,15 +176,7 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
       simp only at m1 m3 ⊢
       omega
   | _, _, _, .lt a b, r, c, h => by
-      simp only [lowerE] at h
-      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp only [ha, reduceCtorEq] at h
-      have m1 := lowerE_mono lay cenv a r _ ha
-      simp only [ha] at h
-      rcases hb : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp only [hb, reduceCtorEq] at h
-      have m2 := lowerE_mono lay cenv b r1 _ hb
-      simp only [hb] at h
+      mono_operands
       rcases hr : cmpRest .ult .slt (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
       · simp only [List.append_assoc, hr, Option.map_none, reduceCtorEq] at h
       have m3 := cmpRest_mono hr
@@ -203,15 +185,7 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
       simp only at m1 m2 m3 ⊢
       omega
   | _, _, _, .le a b, r, c, h => by
-      simp only [lowerE] at h
-      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp only [ha, reduceCtorEq] at h
-      have m1 := lowerE_mono lay cenv a r _ ha
-      simp only [ha] at h
-      rcases hb : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp only [hb, reduceCtorEq] at h
-      have m2 := lowerE_mono lay cenv b r1 _ hb
-      simp only [hb] at h
+      mono_operands
       rcases hr : cmpRest .ule .sle (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
       · simp only [List.append_assoc, hr, Option.map_none, reduceCtorEq] at h
       have m3 := cmpRest_mono hr
@@ -220,15 +194,7 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
       simp only at m1 m2 m3 ⊢
       omega
   | _, _, _, .eq a b, r, c, h => by
-      simp only [lowerE] at h
-      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp only [ha, reduceCtorEq] at h
-      have m1 := lowerE_mono lay cenv a r _ ha
-      simp only [ha] at h
-      rcases hb : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp only [hb, reduceCtorEq] at h
-      have m2 := lowerE_mono lay cenv b r1 _ hb
-      simp only [hb] at h
+      mono_operands
       rcases hr : cmpRest .eq .eq (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
       · simp only [List.append_assoc, hr, Option.map_none, reduceCtorEq] at h
       have m3 := cmpRest_mono hr
@@ -237,28 +203,12 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
       simp only at m1 m2 m3 ⊢
       omega
   | _, _, _, .and a b, r, c, h => by
-      simp only [lowerE] at h
-      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp only [ha, reduceCtorEq] at h
-      have m1 := lowerE_mono lay cenv a r _ ha
-      simp only [ha] at h
-      rcases hb : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp only [hb, reduceCtorEq] at h
-      have m2 := lowerE_mono lay cenv b r1 _ hb
-      simp only [hb] at h
+      mono_operands
       obtain rfl := Option.some.inj h
       simp only at m1 m2 ⊢
       omega
   | _, _, _, .or a b, r, c, h => by
-      simp only [lowerE] at h
-      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp only [ha, reduceCtorEq] at h
-      have m1 := lowerE_mono lay cenv a r _ ha
-      simp only [ha] at h
-      rcases hb : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp only [hb, reduceCtorEq] at h
-      have m2 := lowerE_mono lay cenv b r1 _ hb
-      simp only [hb] at h
+      mono_operands
       obtain rfl := Option.some.inj h
       simp only at m1 m2 ⊢
       omega
@@ -278,15 +228,7 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
   | _, _, _, .oldS .., r, c, h => by
       simp only [lowerE, reduceCtorEq] at h
   | _, _, _, .div h0 h1 a b, r, c, h => by
-      simp only [lowerE] at h
-      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp only [ha, reduceCtorEq] at h
-      have m1 := lowerE_mono lay cenv a r _ ha
-      simp only [ha] at h
-      rcases hb : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp only [hb, reduceCtorEq] at h
-      have m2 := lowerE_mono lay cenv b r1 _ hb
-      simp only [hb] at h
+      mono_operands
       rcases hr : divRest .udiv (ety (Expr.div h0 h1 a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
       · simp only [List.append_assoc, hr, Option.map_none, reduceCtorEq] at h
       have m3 := divRest_mono hr
@@ -295,15 +237,7 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
       simp only at m1 m2 m3 ⊢
       omega
   | _, _, _, .rem h0 h1 a b, r, c, h => by
-      simp only [lowerE] at h
-      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp only [ha, reduceCtorEq] at h
-      have m1 := lowerE_mono lay cenv a r _ ha
-      simp only [ha] at h
-      rcases hb : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp only [hb, reduceCtorEq] at h
-      have m2 := lowerE_mono lay cenv b r1 _ hb
-      simp only [hb] at h
+      mono_operands
       rcases hr : divRest .urem (ety (Expr.rem h0 h1 a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
       · simp only [List.append_assoc, hr, Option.map_none, reduceCtorEq] at h
       have m3 := divRest_mono hr
@@ -312,15 +246,7 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
       simp only at m1 m2 m3 ⊢
       omega
   | _, _, _, .sdiv (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) hb a b, r, c, h => by
-      simp only [lowerE] at h
-      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp only [ha, reduceCtorEq] at h
-      have m1 := lowerE_mono lay cenv a r _ ha
-      simp only [ha] at h
-      rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp only [hb', reduceCtorEq] at h
-      have m2 := lowerE_mono lay cenv b r1 _ hb'
-      simp only [hb'] at h
+      mono_operands
       rcases hr : opRest .sdiv (jsdiv l1 h1 l2 h2) (ety (Expr.sdiv hb a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
       · simp only [List.append_assoc, hr, Option.map_none, reduceCtorEq] at h
       have m3 := opRest_mono hr
@@ -329,15 +255,7 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
       simp only at m1 m2 m3 ⊢
       omega
   | _, _, _, .srem (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) hb a b, r, c, h => by
-      simp only [lowerE] at h
-      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp only [ha, reduceCtorEq] at h
-      have m1 := lowerE_mono lay cenv a r _ ha
-      simp only [ha] at h
-      rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp only [hb', reduceCtorEq] at h
-      have m2 := lowerE_mono lay cenv b r1 _ hb'
-      simp only [hb'] at h
+      mono_operands
       rcases hr : opRest .srem (jsrem l1 h1 l2 h2) (ety (Expr.srem hb a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
       · simp only [List.append_assoc, hr, Option.map_none, reduceCtorEq] at h
       have m3 := opRest_mono hr
@@ -348,15 +266,7 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
   | _, _, _, .getBytes .., r, c, h => by
       simp only [lowerE, reduceCtorEq] at h
   | _, _, _, .band (h1 := h1) (h2 := h2) h0 h0' a b, r, c, h => by
-      simp only [lowerE] at h
-      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp only [ha, reduceCtorEq] at h
-      have m1 := lowerE_mono lay cenv a r _ ha
-      simp only [ha] at h
-      rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp only [hb', reduceCtorEq] at h
-      have m2 := lowerE_mono lay cenv b r1 _ hb'
-      simp only [hb'] at h
+      mono_operands
       rcases hr : opRest .and (jbit h1 h2 h1) (ety (Expr.band h0 h0' a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
       · simp only [List.append_assoc, hr, Option.map_none, reduceCtorEq] at h
       have m3 := opRest_mono hr
@@ -365,15 +275,7 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
       simp only at m1 m2 m3 ⊢
       omega
   | _, _, _, .bor (h1 := h1) (h2 := h2) w h0 h0' hw1 hw2 a b, r, c, h => by
-      simp only [lowerE] at h
-      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp only [ha, reduceCtorEq] at h
-      have m1 := lowerE_mono lay cenv a r _ ha
-      simp only [ha] at h
-      rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp only [hb', reduceCtorEq] at h
-      have m2 := lowerE_mono lay cenv b r1 _ hb'
-      simp only [hb'] at h
+      mono_operands
       rcases hr : opRest .or (jbit h1 h2 (2 ^ w - 1)) (ety (Expr.bor w h0 h0' hw1 hw2 a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
       · simp only [List.append_assoc, hr, Option.map_none, reduceCtorEq] at h
       have m3 := opRest_mono hr
@@ -382,15 +284,7 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
       simp only at m1 m2 m3 ⊢
       omega
   | _, _, _, .bxor (h1 := h1) (h2 := h2) w h0 h0' hw1 hw2 a b, r, c, h => by
-      simp only [lowerE] at h
-      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp only [ha, reduceCtorEq] at h
-      have m1 := lowerE_mono lay cenv a r _ ha
-      simp only [ha] at h
-      rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp only [hb', reduceCtorEq] at h
-      have m2 := lowerE_mono lay cenv b r1 _ hb'
-      simp only [hb'] at h
+      mono_operands
       rcases hr : opRest .xor (jbit h1 h2 (2 ^ w - 1)) (ety (Expr.bxor w h0 h0' hw1 hw2 a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
       · simp only [List.append_assoc, hr, Option.map_none, reduceCtorEq] at h
       have m3 := opRest_mono hr
@@ -399,15 +293,7 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
       simp only at m1 m2 m3 ⊢
       omega
   | _, _, _, .shl (h1 := h1) (h2 := h2) w hw1 hw2 h0 h0' a b, r, c, h => by
-      simp only [lowerE] at h
-      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp only [ha, reduceCtorEq] at h
-      have m1 := lowerE_mono lay cenv a r _ ha
-      simp only [ha] at h
-      rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp only [hb', reduceCtorEq] at h
-      have m2 := lowerE_mono lay cenv b r1 _ hb'
-      simp only [hb'] at h
+      mono_operands
       rcases hr : opRest .shl (jshl h1 h2) (ety (Expr.shl w hw1 hw2 h0 h0' a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
       · simp only [List.append_assoc, hr, Option.map_none, reduceCtorEq] at h
       have m3 := opRest_mono hr
@@ -416,15 +302,7 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
       simp only at m1 m2 m3 ⊢
       omega
   | _, _, _, .shr (h1 := h1) (h2 := h2) w hw1 hw2 h0 h0' a b, r, c, h => by
-      simp only [lowerE] at h
-      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp only [ha, reduceCtorEq] at h
-      have m1 := lowerE_mono lay cenv a r _ ha
-      simp only [ha] at h
-      rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp only [hb', reduceCtorEq] at h
-      have m2 := lowerE_mono lay cenv b r1 _ hb'
-      simp only [hb'] at h
+      mono_operands
       rcases hr : opRest .lshr (jshr h1 h2) (ety (Expr.shr w hw1 hw2 h0 h0' a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
       · simp only [List.append_assoc, hr, Option.map_none, reduceCtorEq] at h
       have m3 := opRest_mono hr

@@ -16,7 +16,7 @@ variable (f : D.Fn)
 mutual
 
 /-- Every `locks` admitted by the floor feature respects the floor. -/
-theorem mS_boden_inv {V : vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+theorem mS_boden_inv {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     (s : Stmt D V l Γ Λ Λ') → mS (bodenM f) s = true → s.BodenOk (bodenF f)
   | .ite _ t e, h => by
       simp only [mS, Bool.and_eq_true] at h
@@ -100,7 +100,7 @@ theorem mS_boden_inv {V : vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
   | .leave _, _ => fun _ _ => rfl
   | .next _, _ => fun _ _ => rfl
 
-theorem mB_boden_inv {V : vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+theorem mB_boden_inv {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     (bl : Block D V l Γ Λ Λ') → mB (bodenM f) bl = true → bl.BodenOk (bodenF f)
   | .nil, _ => fun _ _ => rfl
   | .cons s rest, h => by
@@ -209,7 +209,7 @@ theorem mB_boden_inv {V : vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
       simp only [Block.ueberBoden, Bool.and_eq_true]
       exact ⟨mE_boden_inv sonst h.1 c hc, mB_boden_inv rest h.2 c hc⟩
 
-theorem mArms_boden_inv {V : vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+theorem mArms_boden_inv {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → mArms (bodenM f) a = true → a.BodenOk (bodenF f)
   | .nil, _ => fun _ _ => rfl
@@ -219,7 +219,7 @@ theorem mArms_boden_inv {V : vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Re
       simp only [Arms.ueberBoden, Bool.and_eq_true]
       exact ⟨mB_boden_inv bl h.1 c hc, mArms_boden_inv rest h.2 c hc⟩
 
-theorem mGArms_boden_inv {V : vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+theorem mGArms_boden_inv {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {n : Nat} :
     (a : GrundArms D V l Γ Λ Λ' n) → mGArms (bodenM f) a = true → a.BodenOk (bodenF f)
   | .nil, _ => fun _ _ => rfl
@@ -229,7 +229,7 @@ theorem mGArms_boden_inv {V : vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
       simp only [GrundArms.ueberBoden, Bool.and_eq_true]
       exact ⟨mB_boden_inv bl h.1 c hc, mGArms_boden_inv rest h.2 c hc⟩
 
-theorem mE_boden_inv {V : vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+theorem mE_boden_inv {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     (e : Endblock D V l Γ Λ) → mE (bodenM f) e = true → e.BodenOk (bodenF f)
   | .ret .., _ => fun _ _ => rfl
   | .retWhy .., _ => fun _ _ => rfl

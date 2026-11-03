@@ -31,6 +31,7 @@ def uAkkuBinder : Nat → SAnw → List String
   | f + 1, .arm _ bnd b => (match bnd with | none => [] | some y => [y]) ++ uAkkuBinder f b
   | f + 1, .each b _ _ _ _ _ _ body => b :: uAkkuBinder f body
   | f + 1, .bindAxiomOpt x _ _ => [x]
+  | f + 1, .callElse _ _ y b => y :: uAkkuBinder f b
   | f + 1, .bindAxiomOptElse x _ _ y b => x :: y :: uAkkuBinder f b
   | f + 1, .cond _ t ei els =>
     uAkkuBinder f t ++ ei.flatMap (uAkkuBinder f) ++
@@ -347,6 +348,10 @@ def uAkkuExpandAnwAtom (ps : List AkkuPlan) (ns : List String) : Nat → SAnw �
     else .ok [.bindQ mu x t e]
   | _ + 1, .genericCall .. =>
     .error "unexpanded generic call without G form"
+  | f + 1, .callElse g args reason body =>
+    if (uAkkuPlanFuer ps g).isSome || args.any (uAkkuInExpr 100000 ns) then
+      uAkkuRufRefuse g args
+    else (uAkkuExpandEins ps ns f body).map (fun b => [.callElse g args reason b])
   | f + 1, .callQ g args =>
     if (uAkkuPlanFuer ps g).isSome || args.any (uAkkuInExpr 100000 ns) then
       uAkkuRufRefuse g args

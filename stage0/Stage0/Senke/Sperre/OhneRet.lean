@@ -163,7 +163,7 @@ theorem retFreiB_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
     split
     · rw [istZ_schrumpf]; exact retFreiB_istZ r h _ _
     · rfl
-  | _, _, _, _, .bindAxiomOpt (e := some τ) _ _ _ _ _ _ _ r, h, σ, ρ => by
+  | _, _, _, _, .bindAxiomOpt (e := some τ) _ _ _ _ _ _ r, h, σ, ρ => by
     simp only [retFreiB] at h
     simp only [execBlock]
     split

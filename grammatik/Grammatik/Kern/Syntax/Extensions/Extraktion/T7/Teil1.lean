@@ -360,36 +360,45 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
         simp only [List.not_mem_nil] at he'
       · intro e' he' o ho
         simp only [List.not_mem_nil] at he'
-  | retScoped e _ =>
+  | retScoped e Rr =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       have hspur : σ'.spur =
-          (e.orte).map (fun o => match o with
-            | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
-            | .inr g => Ereignis.gzugriff g false Λ σ.haelt) ++ σ.spur := by
-        rw [← hstep]; rfl
+          (Rr.scopes.reverse.map (fun L => Ereignis.gibt (D := D) L) ++
+            (e.orte).map (fun o => match o with
+              | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+              | .inr g => Ereignis.gzugriff g false Λ σ.haelt)) ++ σ.spur := by
+        rw [← hstep, World.gibt_foldl_spur, List.append_assoc]; rfl
       rw [hspur] at hneu
       have hneueq := List.append_cancel_right hneu
       subst hneueq
       constructor
       · intro e' he'
-        refine Or.inl ?_
-        exact (mem_leseEr he').1
+        rcases List.mem_append.mp he' with h | h
+        · obtain ⟨L, -, rfl⟩ := List.mem_map.mp h
+          simp [Ereignis.lambda]
+        · exact Or.inl (mem_leseEr h).1
       · intro e' he' o ho
-        have hmem : o ∈ e.orte := (mem_leseEr he').2 o ho
-        simp only [stmtTraeger, stmtOrte]
-        exact List.mem_append.mpr (Or.inr hmem)
-  | retWhyScoped r _ =>
+        rcases List.mem_append.mp he' with h | h
+        · obtain ⟨L, -, rfl⟩ := List.mem_map.mp h
+          simp [Ereignis.traeger] at ho
+        · have hmem : o ∈ e.orte := (mem_leseEr h).2 o ho
+          simp only [stmtTraeger, stmtOrte]
+          exact List.mem_append.mpr (Or.inr hmem)
+  | retWhyScoped r Rr =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
-      have hspur : σ'.spur = ([] : List (Ereignis D)) ++ σ.spur := by rw [← hstep]; rfl
+      have hspur : σ'.spur =
+          Rr.scopes.reverse.map (fun L => Ereignis.gibt (D := D) L) ++ σ.spur := by
+        rw [← hstep, World.gibt_foldl_spur]
       rw [hspur] at hneu
       have hneueq := List.append_cancel_right hneu
       subst hneueq
       constructor
       · intro e' he'
-        refine Or.inl ?_
-        simp only [List.not_mem_nil] at he'
+        obtain ⟨L, -, rfl⟩ := List.mem_map.mp he'
+        simp [Ereignis.lambda]
       · intro e' he' o ho
-        simp only [List.not_mem_nil] at he'
+        obtain ⟨L, -, rfl⟩ := List.mem_map.mp he'
+        simp [Ereignis.traeger] at ho
   | leave h =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       have hspur : σ'.spur = ([] : List (Ereignis D)) ++ σ.spur := by rw [← hstep]; rfl

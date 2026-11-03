@@ -61,17 +61,17 @@ theorem routineRoundPackL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop
     WordCode (L := L) ρ W (fun d => routineRoundPackL d sign index magnitude)
       (routineRoundPackWord sv ev mv) := by
   have q := routineRoundMagnitudeL_ok hm
-  have hidden := WordCode.konst (L := L) (ρ := ρ) (W := W) (2 ^ 52) (by decide)
-  have carry := WordCode.bin q (WordCode.konst (2 ^ 53) (by decide))
+  have hidden : WordCode (L := L) ρ W _ _ := WordCode.konst (L := L) (ρ := ρ) (W := W) (2 ^ 52) (by decide)
+  have carry : WordCode (L := L) ρ W _ _ := WordCode.bin q (WordCode.konst (2 ^ 53) (by decide))
     (g := fun x y => some (Runner.IR.bool (x == y))) rfl rfl (by decide : 14 < 256)
-  have exponent := WordCode.bin he carry
+  have exponent : WordCode (L := L) ρ W _ _ := WordCode.bin he carry
     (g := fun x y => some (x + y)) rfl rfl (by decide : 3 < 256)
-  have sig := WordCode.bin q carry
+  have sig : WordCode (L := L) ρ W _ _ := WordCode.bin q carry
     (g := fun x y => some (x >>> (y.toNat % 64))) rfl rfl (by decide : 12 < 256)
-  have zero := WordCode.const (L := L) (ρ := ρ) (W := W) 0 (by decide)
-  have maxExp := WordCode.const (L := L) (ρ := ρ) (W := W) 2047 (by decide)
+  have zero : WordCode (L := L) ρ W _ _ := WordCode.const (L := L) (ρ := ρ) (W := W) 0 (by decide)
+  have maxExp : WordCode (L := L) ρ W _ _ := WordCode.const (L := L) (ρ := ρ) (W := W) 2047 (by decide)
   have subnormal := packL_ok hs zero sig
-  have fraction := WordCode.bin sig hidden
+  have fraction : WordCode (L := L) ρ W _ _ := WordCode.bin sig hidden
     (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
   have normal := packL_ok hs exponent fraction
   have finite := routineChooseL_ok (routineLessL_ok sig hidden) (fun _ => subnormal) (fun _ => normal)

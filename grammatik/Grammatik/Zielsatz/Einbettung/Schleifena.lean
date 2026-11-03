@@ -3,16 +3,6 @@ public import Grammatik.Zielsatz.Einbettung.Lauf
 @[expose] public section
 
 
-/-!
-  File:      Grammatik/Zielsatz/Einbettung/Schleifen.lean
-  Subject:   The three loop drivers beside their images (stage E2c, part 3).
-
-  `traverseLauf`, `retryLauf` and `foreverLauf` take the body and the boundary check as
-  functions. When the body of `D` (for every map `Φ` that repeats the keys) runs beside its image
-  and the boundary check does too, the whole loop does: by induction over the indices or the
-  passes, the keys growing at every pass.
--/
-
 namespace Gabbro.Grammatik.Einbettung
 
 open Gabbro.Grammatik
@@ -270,8 +260,6 @@ theorem forever_sim {l : Bool} (a : D.Annahme) (a' : D'.Annahme)
           · simp only [foreverLauf, hb, hsch, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]; exact hR2
 
 end Schleifen
-
-/-! ## Consuming runs beside their images -/
-
 end Einbettung
+
 end Gabbro.Grammatik.Einbettung

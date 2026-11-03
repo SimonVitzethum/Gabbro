@@ -97,6 +97,7 @@ mutual
 def entfalteFrage (k : FrageKontext) : SAnw → Except String SAnw
   | s@(.bindQ _ _ _ _) => entfalteFrageSchritt k s
   | s@(.callQ _ _) => entfalteFrageSchritt k s
+  | .callElse name args reason body => (entfalteFrage k body).map (.callElse name args reason)
   | .cond c t eis s => match entfalteFrage k t with
     | .error e => .error e
     | .ok t' => match entfalteFrageL k eis with

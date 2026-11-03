@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil3
+public import Grammatik.Parser.Elab.Konst.Ersetzung
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Generic
 
@@ -36,10 +37,13 @@ def surfaceType (types : List (String × STyp)) (values : List (String × SExpr)
   | .entry args result => .entry args (result.map (surfaceType types values))
   | t => t
 
-/-- Constant arguments use the existing C17 evaluator and its range checks. -/
+/-- Generic arguments use the same certified call substitution as ordinary source
+    values before bounded integer evaluation. Expansion cannot erase an unchecked call. -/
 def constantArgument (lo hi : Int) (fns : List Uebersetze.UKonstFn)
-    (env : List (String × Int)) (arg : SExpr) : Except String Int :=
-  match Uebersetze.uKonstWert lo hi fns env 64 arg with
+    (env : List (String × Int)) (arg : SExpr) : Except String Int := do
+  let functions := fns.map (fun fn => { fn with constants := env ++ fn.constants })
+  let replaced ← Konst.ersetzeSExpr functions arg
+  match Uebersetze.uKonstWert lo hi [] env 64 replaced with
   | some n => .ok n
   | none => .error "generic constant argument: C17 evaluation failed or exceeded its bound"
 
