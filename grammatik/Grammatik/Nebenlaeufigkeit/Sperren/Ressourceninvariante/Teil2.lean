@@ -78,8 +78,8 @@ theorem refInv81_release (M : GenMaschine refD) (pc : PCStand) (f : Faden)
                   M.speicher.slots () 1 () := by
                 rw [hg.1]
                 rfl
-              rw [e0, e1, hMem]
-              rfl
+              rw [hMem] at e0 e1
+              exact e0.trans (Eq.trans rfl e1.symm)
             exact hgoal
         | retWhyScoped r R =>
             simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
@@ -96,8 +96,8 @@ theorem refInv81_release (M : GenMaschine refD) (pc : PCStand) (f : Faden)
                   M.speicher.slots () 1 () := by
                 rw [hg.1]
                 rfl
-              rw [e0, e1, hMem]
-              rfl
+              rw [hMem] at e0 e1
+              exact e0.trans (Eq.trans rfl e1.symm)
             exact hgoal
         | assignSlot t f i e hw hL =>
             simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep

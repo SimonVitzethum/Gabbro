@@ -110,6 +110,7 @@ theorem rufSchrittG_haeltInv_verbrauchWeiter {D : Deklaration} {P : Programm D} 
   have hh := heldIn_von hhead hh0
   have ho : offen σ₃.spur = offen (M.faeden f).spur := by
     rw [hs₃, offen_lese, hs₂, offen_lese, hs₁, offen_lese]
+    rfl
   refine haeltInvG_kopf h (by intro K hK _; rw [ho]; exact hK)
     (by fr_tac) ⟨hk.1, hk.1, hk.2⟩ ?_
   rw [ho]
@@ -165,6 +166,7 @@ theorem rufSchrittG_haeltInv_verbrauchLeer {D : Deklaration} {P : Programm D} {O
   have hh := heldIn_von hhead hh0
   have ho : offen σ₂.spur = offen (M.faeden f).spur := by
     rw [hs₂, offen_lese, hs₁, offen_lese]
+    rfl
   refine haeltInvG_kopf h (by intro K hK _; rw [ho]; exact hK)
     (by fr_tac) hk.2 ?_
   rw [ho]
@@ -224,6 +226,7 @@ theorem rufSchrittG_haeltInv_verbrauchFort {D : Deklaration} {P : Programm D} {O
   have hh := heldIn_von hhead hh0
   have ho : offen σ₁.spur = offen (M.faeden f).spur := by
     rw [hs₁, offen_lese]
+    rfl
   refine haeltInvG_kopf h (by intro K hK _; rw [ho]; exact hK)
     (by fr_tac) ⟨hk.1, hk.2⟩ ?_
   rw [ho]
