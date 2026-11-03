@@ -333,20 +333,12 @@ def ersetzeSAnwListIn (shadowed : List String) (fns : List UKonstFn) : List SAnw
     match ersetzeSAnwIn shadowed fns a, ersetzeSAnwListIn (boundNames a ++ shadowed) fns rest with
     | .ok a', .ok rest' => .ok (a' :: rest')
     | .error e, _ | _, .error e => .error e
-def ersetzeOptAnwIn (shadowed : List String) (fns : List UKonstFn) : Option SAnw → Except String (Option SAnw)
-  | none => .ok none
-  | some a =>
-    match ersetzeSAnwIn shadowed fns a with
-    | .error e => .error e
-    | .ok a' => .ok (some a')
+
 end
 
 /-- The public empty-context entry points retain the single traversal above. -/
 abbrev ersetzeSExpr := ersetzeSExprIn []
-abbrev ersetzeSExprList := ersetzeSExprListIn []
 abbrev ersetzeSAnw := ersetzeSAnwIn []
-abbrev ersetzeSAnwList := ersetzeSAnwListIn []
-abbrev ersetzeOptAnw := ersetzeOptAnwIn []
 
 /-- Success of the actual call branch supplies its certificate; original argument
     expressions reach checkReplacement before any name normalization is erased. -/
