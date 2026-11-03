@@ -17,7 +17,7 @@ def routineRoundMagnitudeL (d : Nat) (a : Nat → Option (List II × Nat)) :
     Option (List II × Nat) :=
   floatRoundShiftL d a (fun j => some ([ci 1 j 3 0], j + 1))
 
-{reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+theorem routineRoundMagnitudeL_ok {reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {a : Nat → Option (List II × Nat)} {av : Runner.W}
     (ha : WordCode (L := L) (reserved := reserved) ρ W a av) :
     WordCode (L := L) (reserved := reserved) ρ W (fun d => routineRoundMagnitudeL d a) (routineRoundMagnitudeWord av) :=
@@ -53,7 +53,7 @@ def routineRoundPackL (d : Nat) (sign index magnitude : Nat → Option (List II 
 
 /-- Every branch is an existing checked word fragment. This theorem covers
     the emitted integer routine; canonical IEEE identification is separate. -/
-{reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+theorem routineRoundPackL_ok {reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {sign index magnitude : Nat → Option (List II × Nat)} {sv ev mv : Runner.W}
     (hs : WordCode (L := L) (reserved := reserved) ρ W sign sv)
     (he : WordCode (L := L) (reserved := reserved) ρ W index ev)
