@@ -35,20 +35,23 @@ def position (target : Label) : List Piece → Nat → Option Nat
       if name = target then some pc else position target rest pc
   | piece :: rest, pc => position target rest (pc + piece.width)
 
+/-- Resolve one local control-flow piece at its actual instruction position. -/
+def resolve (whole : List Piece) (pc : Nat) : Piece → Option (List II)
+  | .code instructions => some instructions
+  | .label _ => some []
+  | .jump target => do
+      let destination ← position target whole 0
+      pure [ci 18 (16 * ((destination : Int) - pc)) 0 0]
+  | .zero slot target => do
+      let destination ← position target whole 0
+      pure [ci 19 slot (16 * ((destination : Int) - pc)) 0]
+
 private def encode (whole : List Piece) : List Piece → Nat → Option (List II)
   | [], _ => some []
-  | .label _ :: rest, pc => encode whole rest pc
-  | .code instructions :: rest, pc => do
-      let tail ← encode whole rest (pc + instructions.length)
+  | piece :: rest, pc => do
+      let instructions ← resolve whole pc piece
+      let tail ← encode whole rest (pc + piece.width)
       pure (instructions ++ tail)
-  | .jump target :: rest, pc => do
-      let destination ← position target whole 0
-      let tail ← encode whole rest (pc + 1)
-      pure (ci 18 (16 * ((destination : Int) - pc)) 0 0 :: tail)
-  | .zero slot target :: rest, pc => do
-      let destination ← position target whole 0
-      let tail ← encode whole rest (pc + 1)
-      pure (ci 19 slot (16 * ((destination : Int) - pc)) 0 :: tail)
 
 /-- Reject oversized fragments before any signed branch immediate is truncated. -/
 def assemble (pieces : List Piece) : Option (List II) := do
@@ -60,54 +63,52 @@ def width : List Piece → Nat
   | [] => 0
   | piece :: rest => piece.width + width rest
 
-/-- A resolved straight-line block keeps its instruction position. This
-    extracts actual assembled instructions, including all preceding jumps. -/
-private theorem encode_block (whole before : List Piece) (block : List II)
-    (after : List Piece) (start : Nat) (code : List II)
-    (encoded : encode whole (before ++ .code block :: after) start = some code) :
+/-- Resolution preserves the width assigned before body relocation. -/
+theorem resolve_width {whole : List Piece} {pc : Nat} {piece : Piece}
+    {block : List II} (h : resolve whole pc piece = some block) :
+    block.length = piece.width := by
+  cases piece with
+  | code instructions => cases h; rfl
+  | label name => cases h; rfl
+  | jump target =>
+    simp only [resolve, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨destination, found, rfl⟩ := h
+    rfl
+  | zero slot target =>
+    simp only [resolve, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨destination, found, rfl⟩ := h
+    rfl
+
+private theorem encode_piece (whole before : List Piece) (piece : Piece)
+    (after : List Piece) (start : Nat) (code block : List II)
+    (encoded : encode whole (before ++ piece :: after) start = some code)
+    (resolved : resolve whole (start + width before) piece = some block) :
     ∃ prefix suffix : List II,
       code = prefix ++ block ++ suffix ∧ prefix.length = width before := by
   induction before generalizing start code with
   | nil =>
-    simp only [List.nil_append, encode, bind, Option.bind_eq_some_iff,
-      pure, Option.some.injEq] at encoded
+    simp only [width, Nat.add_zero] at resolved
+    simp only [List.nil_append, encode, resolved, bind, Option.bind,
+      Option.bind_eq_some_iff, pure, Option.some.injEq] at encoded
     obtain ⟨suffix, tail, rfl⟩ := encoded
     exact ⟨[], suffix, rfl, rfl⟩
-  | cons piece rest ih =>
-    cases piece with
-    | label name =>
-      simp only [List.cons_append, encode] at encoded
-      obtain ⟨prefix, suffix, eq, len⟩ := ih start code encoded
-      exact ⟨prefix, suffix, eq, by simpa only [width, Piece.width, Nat.zero_add] using len⟩
-    | code instructions =>
-      simp only [List.cons_append, encode, bind, Option.bind_eq_some_iff,
-        pure, Option.some.injEq] at encoded
-      obtain ⟨tail, tailCode, rfl⟩ := encoded
-      obtain ⟨prefix, suffix, eq, len⟩ := ih _ tail tailCode
-      exact ⟨instructions ++ prefix, suffix,
-        by simp only [eq, List.append_assoc],
-        by simp only [List.length_append, len, width, Piece.width]⟩
-    | jump target =>
-      simp only [List.cons_append, encode, bind, Option.bind_eq_some_iff,
-        pure, Option.some.injEq] at encoded
-      obtain ⟨destination, found, tail, tailCode, rfl⟩ := encoded
-      obtain ⟨prefix, suffix, eq, len⟩ := ih _ tail tailCode
-      refine ⟨ci 18 (16 * ((destination : Int) - start)) 0 0 :: prefix, suffix, ?_, ?_⟩
-      · simp only [eq, List.cons_append]
-      · simp only [List.length_cons, len, width, Piece.width]; omega
-    | zero slot target =>
-      simp only [List.cons_append, encode, bind, Option.bind_eq_some_iff,
-        pure, Option.some.injEq] at encoded
-      obtain ⟨destination, found, tail, tailCode, rfl⟩ := encoded
-      obtain ⟨prefix, suffix, eq, len⟩ := ih _ tail tailCode
-      refine ⟨ci 19 slot (16 * ((destination : Int) - start)) 0 :: prefix, suffix, ?_, ?_⟩
-      · simp only [eq, List.cons_append]
-      · simp only [List.length_cons, len, width, Piece.width]; omega
+  | cons head rest ih =>
+    simp only [List.cons_append, encode, bind, Option.bind_eq_some_iff,
+      pure, Option.some.injEq] at encoded
+    obtain ⟨headCode, headResolved, tail, tailCode, rfl⟩ := encoded
+    have resolvedTail : resolve whole (start + head.width + width rest) piece = some block := by
+      simpa only [width, Nat.add_assoc] using resolved
+    obtain ⟨prefix, suffix, eq, len⟩ := ih _ tail tailCode resolvedTail
+    exact ⟨headCode ++ prefix, suffix,
+      by simp only [eq, List.append_assoc],
+      by simp only [List.length_append, resolve_width headResolved, len, width]⟩
 
-/-- Recover a code slice from the checked assembler without maintaining a
-    second collection of offset formulas. `width before` is in instructions. -/
-theorem assemble_block (before : List Piece) (block : List II) (after : List Piece)
-    {code : List II} (assembled : assemble (before ++ .code block :: after) = some code) :
+/-- Recover an actual instruction slice, including resolved conditional and
+    unconditional jumps, without maintaining separate offset formulas. -/
+theorem assemble_piece (before : List Piece) (piece : Piece) (after : List Piece)
+    {code block : List II}
+    (assembled : assemble (before ++ piece :: after) = some code)
+    (resolved : resolve (before ++ piece :: after) (width before) piece = some block) :
     ∃ prefix suffix : List II,
       code = prefix ++ block ++ suffix ∧ prefix.length = width before := by
   unfold assemble at assembled
@@ -116,8 +117,17 @@ theorem assemble_block (before : List Piece) (block : List II) (after : List Pie
   split at accepted
   · simp only [Option.some.injEq] at accepted
     subst code
-    exact encode_block _ before block after 0 instructions encoded
+    exact encode_piece _ before piece after 0 instructions block encoded
+      (by simpa only [Nat.zero_add] using resolved)
   · cases accepted
+
+/-- Straight-line source-expression/body blocks are a special case of the
+    same extraction used for local branches. -/
+theorem assemble_block (before : List Piece) (block : List II) (after : List Piece)
+    {code : List II} (assembled : assemble (before ++ .code block :: after) = some code) :
+    ∃ prefix suffix : List II,
+      code = prefix ++ block ++ suffix ∧ prefix.length = width before :=
+  assemble_piece before (.code block) after assembled rfl
 
 /-- Compare the new measure, preserving it until all three obligations have
     been checked. Typed measure bounds are checked at run time as well. -/
