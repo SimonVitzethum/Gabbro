@@ -101,7 +101,7 @@ def recordCheckReturn (ctx : UCtx) (c : SCheck) (point : Nat) (value : SExpr) :
       kinds := reporter.kinds, res := none, resBool := true, held := [] }
   let captures := present.zipIdx.map fun ((expr, _), i) =>
     (expr, SExpr.variable ("#checkSample#" ++ toString i))
-  let sampleBindings := captures.map fun (expr, local) => match local with
+  let sampleBindings := captures.map fun (expr, captured) => match captured with
     | .variable name => SAnw.bind false name none expr
     | _ => SAnw.other "invalid private sample binding"
   let floors := c.boden.map (checkSampleSubstitute captures 100000)
@@ -121,6 +121,16 @@ def recordCheckCode (heads : List UFnKopf) (c : SCheck) :
     Nat → UCtx → Nat → SAnw → Except String (SAnw × List UFn × List UFnKopf × Nat)
   | 0, _, _, _ => .error "check recording expansion exhausted"
   | fuel + 1, ctx, point, statement => do
+    let one := fun (inner : UCtx) (wrap : SAnw → SAnw) (branch : SAnw) => do
+      let (branch, rs, hs, next) ← recordCheckCode heads c fuel inner point branch
+      pure (wrap branch, rs, hs, next)
+    let reasonCtx := fun (call : SExpr) (reason : String) =>
+      match call with
+      | .call name _ =>
+        match (heads.find? (fun h => strEq h.name name)).bind (·.kanal) with
+        | some (index, count) => uMitLokal ctx reason (.why index) (.why count) ctx.muts
+        | none => ctx
+      | _ => ctx
     match statement with
     | .ret (some value) =>
       let (body, reporter, head) ← recordCheckReturn ctx c point value
@@ -161,6 +171,53 @@ def recordCheckCode (heads : List UFnKopf) (c : SCheck) :
     | .elsif condition branch =>
       let (branch, rs, hs, next) ← recordCheckCode heads c fuel ctx point branch
       pure (.elsif condition branch, rs, hs, next)
+    | .bindElse name ty call reason branch =>
+      one (reasonCtx call reason) (.bindElse name ty call reason) branch
+    | .bindAxiomOptElse name ty call reason branch =>
+      one (reasonCtx call reason) (.bindAxiomOptElse name ty call reason) branch
+    | .each name start kind subject mode measure invariant branch =>
+      let (_, inner, _) ← uLoopExport ctx name start kind subject mode measure invariant
+      one inner (.each name start kind subject mode measure invariant) branch
+    | .retry header branch =>
+      one ctx (.retry header) branch
+    | .loop header branch =>
+      let (label, _) ← uForeverKopf ctx header
+      one { ctx with loops := label :: ctx.loops } (.loop header) branch
+    | .waive names branch => one ctx (.waive names) branch
+    | .trim value ty branch => one ctx (.trim value ty) branch
+    | .locks acquire target branch =>
+      let inner := match target with
+        | .variable name => { ctx with held := name :: ctx.held }
+        | _ => ctx
+      one inner (.locks acquire target) branch
+    | .watch name branch => one ctx (.watch name) branch
+    | .grow arena count branch => one ctx (.grow arena count) branch
+    | .child branch => one ctx SAnw.child branch
+    | .alloc mutable name ty arena count branch =>
+      match branch with
+      | none => pure (statement, [], [], point)
+      | some branch => one ctx (fun branch => .alloc mutable name ty arena count (some branch)) branch
+    | .cases value arms =>
+      let mut reports := []
+      let mut extraHeads := []
+      let mut point := point
+      let mut transformed := []
+      for arm in arms do
+        let inner := match arm, (uSumPlatz ctx value).toOption with
+          | .arm tag (some name) _, some (_, index) =>
+            match (ctx.sums[index]?).bind (fun sum =>
+                (sum.cases.find? (fun entry => strEq entry.1 tag)).bind (·.2)) with
+            | some ty => uMitLokal ctx name
+                (match ty with | .bool => .bool | _ => uArtVon ty) ty ctx.muts
+            | none => ctx
+          | _, _ => ctx
+        let (arm, rs, hs, next) ← recordCheckCode heads c fuel inner point arm
+        transformed := transformed ++ [arm]
+        reports := reports ++ rs
+        extraHeads := extraHeads ++ hs
+        point := next
+      pure (.cases value transformed, reports, extraHeads, point)
+    | .arm tag binding branch => one ctx (.arm tag binding) branch
     | other => pure (other, [], [], point)
 
 def recordCheckStatements (heads : List UFnKopf) (c : SCheck) :
