@@ -58,6 +58,97 @@ theorem strict_compare {Γ : Ctx} {ρ : Env D Γ} {m : Mem} {pc fp : W}
       guardPre.frame (by omega) room hp.small failureBound readFalse
     exact Stops.prefix (move.trans compare) stopped
 
+/-- Full post-body check against the actual lowered measure. The range test
+    remains in the IR; its success follows from the represented typed value.
+    The final strict comparison is still a runtime check against the saved
+    pre-body value and stops on equality or increase. -/
+theorem decrease_ok {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
+    {mass : Expr D Γ Λ (.int 0 bound)} {bound old : Int}
+    {m : Mem} {pc fp : W} {K Ks d saved failure te : Nat} {ce : List II}
+    {σ : World D}
+    (lowered : lowE (reserved := reserved) L mass d = some (ce, te))
+    (top : te ≤ Ks) (room : d + 8 ≤ Ks) (layout : WIn L fp Ks K)
+    (hp : PreS L m pc fp K d (decrease d saved failure bound ce) ρ reserved)
+    (world : WeltAt m L σ) (savedBound : saved < d)
+    (failureBound : failure < 2 ^ 31) (bounds : inW 0 bound = true)
+    (oldBound : -2 ^ 63 ≤ old ∧ old < 2 ^ 63)
+    (oldRead : m.rd64 (slot fp (BitVec.ofNat 64 saved)) = some (BitVec.ofInt 64 old)) :
+    let σm := σ.lese Λ mass.orte
+    let new := (eval σm mass σm ρ).n
+    if new < old then Ok m pc fp K d (decrease d saved failure bound ce) (· = 1)
+    else Stops ⟨pc, fp⟩ m failure := by
+  let σm := σ.lese Λ mass.orte
+  let new := (eval σm mass σm ρ).n
+  let test := (engTest 13 d 0 bound).1
+  let post := [ci 2 (d + 1) saved 0] ++ [ci 13 d d (d + 1)] ++ guardC d failure d
+  let skip := [ci 19 (d + 1) 80 0] ++ stopC failure d ++ [ci 18 (16 * (post.length + 1)) 0 0]
+  have smallRoom : d + 8 ≤ K := by have := layout.ks; omega
+  have pre : PreS L m pc fp K d (ce ++ (test ++ (skip ++ post))) ρ reserved := by
+    simpa only [decrease, narrowC, test, post, skip, stopC, sysC,
+      List.length_cons, List.length_nil, List.length_append, List.length_singleton,
+      List.append_assoc] using hp
+  have preWorld := PreS.welt pre.left layout.ks world layout.lay
+    (by have := layout.lo; omega)
+  obtain ⟨m1, measureRun, measureFrame, value, valueRead, valueEncoding⟩ :=
+    lowE_ok (same := by intro _; rfl) σm σm (fun _ h => h) layout.lay mass d ce te
+      lowered top m pc ρ preWorld |>.word trivial
+  have encoding : value = BitVec.ofInt 64 new := valueEncoding
+  subst value
+  have measureFrameK := Agree.widen measureFrame layout.ks
+  have preTest := pre.next measureFrameK (Nat.le_refl _) (by omega)
+  obtain ⟨m2, testRun, testFrame, outside, outsideRead, outsideEncoding⟩ := eng_test_ok
+    { preTest.left with ctx := by have := hp.ctx; omega }
+    (by have := (engTest_top 13 d 0 bound).2; omega) rfl (by decide) valueRead
+  have newLow : 0 ≤ new := (eval σm mass σm ρ).lo_le
+  have newHigh : new ≤ bound := (eval σm mass σm ρ).le_hi
+  have newBound : -2 ^ 63 ≤ new ∧ new < 2 ^ 63 := inW_spec bounds newLow newHigh
+  have boundWord : -2 ^ 63 ≤ bound ∧ bound < 2 ^ 63 := by
+    have raw := bounds
+    simp only [inW, Bool.and_eq_true, decide_eq_true_eq] at raw
+    omega
+  have outsideZero : outside = 0 := by
+    rw [outsideEncoding]
+    simp only [scalarCmp, ↓reduceIte]
+    rw [slt_in newBound (by decide), slt_in boundWord newBound]
+    simp only [show ¬ new < 0 by omega, show ¬ bound < new by omega,
+      decide_false, Bool.false_or, Runner.IR.bool, ↓reduceIte]
+  subst outside
+  have testFrameD := testFrame.mono (Nat.le_succ d)
+  have preSkip := preTest.next testFrameD (Nat.le_refl _) (by omega)
+  have skipPre : PreS L m2 _ fp K d
+      ([ci 19 (d + 1) 80 0] ++ (stopC failure d ++
+        ([ci 18 (16 * (post.length + 1)) 0 0] ++ post))) ρ reserved := by
+    simpa only [skip, List.append_assoc] using preSkip
+  have rangeJump := brz_go skipPre.left.code (by omega) hp.small (by decide) outsideRead
+  have skipLength : skip.length = 5 := by simp [skip, stopC, sysC]
+  have prePost := preSkip.next (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
+  have oldRead2 : m2.rd64 (slot fp (BitVec.ofNat 64 saved)) = some (BitVec.ofInt 64 old) := by
+    rw [agree_rd_low (measureFrameK.trans testFrameD) hp.frame.room savedBound (by omega)]
+    exact oldRead
+  have newRead2 : m2.rd64 (slot fp (BitVec.ofNat 64 d)) = some (BitVec.ofInt 64 new) := by
+    rw [agree_rd_low testFrame preTest.frame.room (by omega) (by omega)]
+    exact valueRead
+  have checked := strict_compare prePost smallRoom savedBound failureBound oldBound newBound oldRead2 newRead2
+  have enter : Star ⟨pc, fp⟩ m
+      ⟨pc + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofNat 64 (16 * test.length) +
+        BitVec.ofNat 64 (16 * skip.length), fp⟩ m2 := by
+    have jump := rangeJump
+    rw [skipLength]
+    change Star ⟨pc, fp⟩ m
+      ⟨pc + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofNat 64 (16 * test.length) + 80, fp⟩ m2
+    exact measureRun.trans (testRun.trans jump)
+  dsimp only
+  by_cases falls : new < old
+  · simp only [falls, ↓reduceIte] at checked ⊢
+    obtain ⟨m3, strictRun, strictFrame, result, resultRead, resultOne⟩ := checked
+    refine ⟨m3, ?_, (measureFrameK.trans testFrameD).trans strictFrame,
+      result, resultRead, resultOne⟩
+    simpa only [decrease, narrowC, test, post, skip, stopC, sysC,
+      List.length_append, List.length_cons, List.length_nil, List.length_singleton,
+      pc_add, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using enter.trans strictRun
+  · simp only [falls, ↓reduceIte] at checked ⊢
+    exact Stops.prefix enter checked
+
 /-- Both protected words really survive any body outcome that reaches one of
     the post-body checks. This uses the ordinary block simulation's Keeps,
     including bodies with calls or world writes. -/
