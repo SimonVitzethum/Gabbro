@@ -26,20 +26,8 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
   | _, _, _, _, [] => .error "lower: an else branch falls through"
   | _, _, _, _, .blkEnd :: _ => .error "lower: an else branch falls through"
   | _, _, _, _, .ifElse :: _ => .error "lower: an else branch falls through"
-  | Γ, fn, Λ, pe, .ret v :: rest => match pe with
-    | none => .error "lower: return under locks has no G form"
-    | some _ => match v with
-      | .why i =>
-        if hi : i < (verOf u caller).gruende then
-          if hPerm : decide (Λ.Perm (verOf u caller).ende) = true then
-            .ok (Endblock.retWhy (D := declOf u) ⟨i, hi⟩ (of_decide_eq_true hPerm), rest)
-          else .error "lower: return without produced marks"
-        else .error "reason case outside the channel"
-      | _ =>
-      (lowErg u caller Γ Λ fn v).bind fun erg =>
-        if hPerm : decide (Λ.Perm (verOf u caller).ende) = true then
-          .ok (Endblock.ret erg (of_decide_eq_true hPerm), rest)
-        else .error "lower: return without produced marks"
+  | Γ, fn, Λ, pe, .ret v :: rest =>
+    (lowRetEnd u caller Γ fn Λ pe v).map fun ending => (ending, rest)
   | _, _, _, _, .leave _ :: rest =>
     if h : l = true then .ok (Endblock.leave h, rest) else .error "lower: leave outside a traverse"
   | _, _, _, _, .next _ :: rest =>

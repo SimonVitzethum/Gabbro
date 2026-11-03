@@ -23,7 +23,7 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
     pure (prefix ++ code, ctx)
 /-- A run of body statements as a flat list. A `let` extends the context for the rest of the run;
     `locks L { ... }` elaborates its body with `L` HELD (guards, calls) and the bindings made inside it
-    end with it; a shared hold, a `return` inside the block and every other lock expression are refused.
+    end with it; returns retain lexical cleanup scopes, while unsupported lock expressions are refused.
     Structural in a fuel (one unit per statement and per block). -/
 def uAnwReiheCore (tabs : List UTab) (koepfe : List UFnKopf) :
     Nat → UCtx → List SAnw → Except String (List UStmt × UCtx)

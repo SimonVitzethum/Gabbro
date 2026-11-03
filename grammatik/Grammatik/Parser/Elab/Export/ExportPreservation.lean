@@ -163,4 +163,40 @@ theorem nested_else_meaning {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : C
        | .logik error => .logik error
        | .hardware error => .hardware error) := by rfl
 
+/-- Cleanup evidence names exactly the lexical scopes and retains the whole contract end. -/
+theorem scoped_return_resources (u : UProg) (caller : Fin u.fns.length)
+    (Λ : List (Res (declOf u))) (scopes : AtTop u caller Λ)
+    (resources : RueckRessourcen (declOf u) (verOf u caller) Λ)
+    (h : lowReturnResources u caller Λ scopes = .ok resources) :
+    resources.scopes = scopes ∧ Λ.Perm ((verOf u caller).ende ++ scopes.map Res.held) := by
+  unfold lowReturnResources at h
+  split at h
+  · cases h
+    exact ⟨rfl, of_decide_eq_true (by assumption)⟩
+  · contradiction
+
+/-- Both return dispatchers preserve the payload, residual resources and lexical cleanup. -/
+theorem scoped_return_lower {l : Bool} (u : UProg) (caller : Fin u.fns.length)
+    (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u)))
+    (lock : (declOf u).Lock) (scopes : List (declOf u).Lock) (r : URet)
+    (notReason : ∀ i, r ≠ .why i)
+    (resources : RueckRessourcen (declOf u) (verOf u caller) Λ)
+    (erg : ErgExpr (declOf u) Γ Λ (verOf u caller).erg)
+    (hr : lowReturnResources u caller Λ (lock :: scopes) = .ok resources)
+    (he : lowErg u caller Γ Λ fn r = .ok erg) :
+    lowRetStmt (l := l) u caller Γ fn Λ (lock :: scopes) r = .ok (.retScoped erg resources) ∧
+    lowRetEnd (l := l) u caller Γ fn Λ (lock :: scopes) r = .ok (.retScoped erg resources) := by
+  cases r <;> simp_all [lowRetStmt, lowRetEnd, Except.map, bind, Except.bind]
+
+/-- Reason returns retain their original channel bound and the same cleanup evidence. -/
+theorem scoped_reason_return_lower {l : Bool} (u : UProg) (caller : Fin u.fns.length)
+    (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u)))
+    (lock : (declOf u).Lock) (scopes : List (declOf u).Lock)
+    (i : Nat) (hi : i < (verOf u caller).gruende)
+    (resources : RueckRessourcen (declOf u) (verOf u caller) Λ)
+    (hr : lowReturnResources u caller Λ (lock :: scopes) = .ok resources) :
+    lowRetStmt (l := l) u caller Γ fn Λ (lock :: scopes) (.why i) = .ok (.retWhyScoped ⟨i, hi⟩ resources) ∧
+    lowRetEnd (l := l) u caller Γ fn Λ (lock :: scopes) (.why i) = .ok (.retWhyScoped ⟨i, hi⟩ resources) := by
+  simp [lowRetStmt, lowRetEnd, hr, hi, bind, Except.bind]
+
 end Gabbro.Grammatik.Parser.ExportPreservation
