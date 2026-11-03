@@ -28,6 +28,9 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
   | _, _, _, _, [] => .ok (⟨_, Block.nil, []⟩)
   | _, _, _, _, .blkEnd :: rest => .ok (⟨_, Block.nil, .blkEnd :: rest⟩)
   | _, _, _, _, .ifElse :: rest => .ok (⟨_, Block.nil, .ifElse :: rest⟩)
+  | Γ, fn, Λ, pe, .breakingBeg name :: rest =>
+    (R.struct Γ fn Λ pe (.breakingBeg name) rest).bind fun (⟨Λ₁, st⟩, rest') =>
+      (R.seq Γ fn Λ₁ pe rest').bind fun (⟨Λ₂, b⟩, r) => .ok (⟨Λ₂, Block.cons st b⟩, r)
   | Γ, fn, Λ, pe, .lockBeg g :: rest =>
     (R.struct Γ fn Λ pe (.lockBeg g) rest).bind fun (⟨Λ₁, st⟩, rest') =>
       (R.seq Γ fn Λ₁ pe rest').bind fun (⟨Λ₂, b⟩, r) => .ok (⟨Λ₂, Block.cons st b⟩, r)
@@ -202,6 +205,14 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
           | .ok (sonst, .blkEnd :: rest') =>
             (R.seq (l := l) (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) Λ pe rest').bind fun (⟨Λ', b⟩, r) => .ok (⟨Λ', Block.narrow (D := declOf u) (Expr.var v) lo hi sonst b⟩, r)
           | .ok (_, _) => .error "lower: a narrow is not closed"
+      | some (_, .fl l1 h1) =>
+        (lowVar Γ j (.fl l1 h1)).bind fun v => match R.ende (l := l) Γ fn Λ pe rest with
+          | .error e => .error e
+          | .ok (sonst, .blkEnd :: rest') =>
+            (R.seq (l := l) (.fl (lo, 1) (hi, 1) :: Γ)
+              (fn.mitWert x (.fl (lo, 1) (hi, 1))) Λ pe rest').bind fun (⟨Λ', b⟩, r) =>
+                .ok (⟨Λ', Block.floatNarrow (Expr.var v) (lo, 1) (hi, 1) sonst b⟩, r)
+          | .ok (_, _) => .error "lower: a narrow is not closed"
       | _ => .error "lower: narrow of a non-number"
   /-- Required narrowing (C15): no `else`, no `blkEnd`; out of range is
       `Logik.kapazitaet` (`Block.narrowRequired`). -/
@@ -282,5 +293,24 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
   | Γ, fn, Λ, pe, s :: rest =>
     (lowStmtL u caller Γ fn Λ s).bind fun ⟨Λ₁, st⟩ =>
       (R.seq Γ fn Λ₁ pe rest).bind fun (⟨Λ₂, b⟩, r) => .ok (⟨Λ₂, Block.cons st b⟩, r)
+
+/-- Float narrowing uses the same checked local lookup and ending fallback as
+    integer narrowing. The successful continuation alone sees the shadow binding;
+    the fallback retains the original scope and resource inventory. -/
+theorem lowSeqStep_floatNarrow {l : Bool} (u : UProg) (caller : Fin u.fns.length)
+    (R : LowStufe u caller) (Γ : Ctx) (fn : UFn) (Λ Λ' : List (Res (declOf u)))
+    (pe : AtTop u caller Λ) (x : String) (j : Nat) (l1 h1 : Int × Int) (lo hi : Int)
+    (rest tail remaining : List UStmt) (v : Var Γ (.fl l1 h1))
+    (fallback : Endblock (declOf u) (verOf u caller) l Γ Λ)
+    (body : Block (declOf u) (verOf u caller) l (.fl (lo, 1) (hi, 1) :: Γ) Λ Λ')
+    (position : paramPos fn.params x = .ok j)
+    (parameter : fn.params[j]? = some (x, .fl l1 h1))
+    (localVar : lowVar Γ j (.fl l1 h1) = .ok v)
+    (handler : R.ende (l := l) Γ fn Λ pe rest = .ok (fallback, .blkEnd :: tail))
+    (continuation : R.seq (l := l) (.fl (lo, 1) (hi, 1) :: Γ)
+      (fn.mitWert x (.fl (lo, 1) (hi, 1))) Λ pe tail = .ok (⟨Λ', body⟩, remaining)) :
+    lowSeqStep (l := l) u caller R Γ fn Λ pe (.narrowBeg x lo hi :: rest) =
+      .ok (⟨Λ', Block.floatNarrow (Expr.var v) (lo, 1) (hi, 1) fallback body⟩, remaining) := by
+  simp only [lowSeqStep, position, parameter, localVar, handler, continuation, bind, Except.bind, pure, Except.pure] <;> rfl
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg2

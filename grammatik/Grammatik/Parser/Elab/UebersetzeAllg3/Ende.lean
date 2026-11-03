@@ -35,6 +35,9 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
   | Γ, fn, Λ, pe, st@(.callIndElseBeg ..) :: rest | Γ, fn, Λ, pe, st@(.axCallElseBeg ..) :: rest =>
     (R.struct (l := l) Γ fn Λ pe st rest).bind fun (⟨Λ₁, st⟩, rest') =>
       (R.ende (l := l) Γ fn Λ₁ pe rest').bind fun (b, r) => .ok (Endblock.cons st b, r)
+  | Γ, fn, Λ, pe, .breakingBeg name :: rest =>
+    (R.struct (l := l) Γ fn Λ pe (.breakingBeg name) rest).bind fun (⟨Λ₁, st⟩, rest') =>
+      (R.ende (l := l) Γ fn Λ₁ pe rest').bind fun (b, r) => .ok (Endblock.cons st b, r)
   | Γ, fn, Λ, pe, .bind x d v :: rest =>
     (lowBindWert u Γ Λ fn d v).bind fun s =>
       (R.ende (l := l) (.int s.range.1 s.range.2 :: Γ) (fn.mitBindung x s.range) Λ pe rest).bind fun (b, r) => .ok (Endblock.bind s.term b, r)

@@ -516,6 +516,12 @@ out-of-scope device forms; the remaining 8 are userspace gaps. These are structu
 that 129 cases have been compiled successfully. The 13 `Ty` constructors below are a separate representation
 inventory and are not added to the 143 syntax cases. `Ty.index n` is the alias `.int 0 (n - 1)`.
 
+The `front-gaps2` source reinspection annotates individual rows below (no Lean/build execution):
+finite float narrowing and labelled breaking export were added; breaking remains refused by the
+unchanged invariant metadata gate. Retirement already had a producer, so its old row was stale.
+Advance markers now have a named one-stage refusal. Missing conversion, check-statement and byte-span
+syntax is identified explicitly. The original snapshot totals above have not been remeasured.
+
 Locations use these exact file abbreviations (a suffix `:N` is the source line; e.g. `E:64` means
 `stage0/Stage0/Senke/Ausdruck.lean:64`):
 
@@ -574,7 +580,7 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Expr.rem` | yes G2:438 | yes E:110, unsigned or wide remainder | `lowE_ok`, Q:309 | same source range rule |
 | `Expr.sdiv` | yes G2:425 | yes E:113, signed or wide fallback | `lowE_ok`, Q:313 | denominator must exclude zero; minimum-word case uses wide fallback |
 | `Expr.srem` | yes G2:442 | yes E:118, signed or wide fallback | `lowE_ok`, Q:317 | denominator must exclude zero |
-| `Expr.getBytes` | no producer in `Parser/Elab/**` | yes, `readBytesL` / `readBytesWideL` | `lowE_ok`, byte-read helper proofs (unbuilt) | source byte-span export missing; recursive index/layout guards |
+| `Expr.getBytes` | skipped: SYNTAX.md defines no byte-span expression; Lean `parseSuffixe` (`Parser/Expr/Ausdruck/Teil2a.lean:264`–`:285`) parses one index only | yes, `readBytesL` / `readBytesWideL` | `lowE_ok`, byte-read helper proofs (unbuilt) | no defined source byte-span syntax to export; recursive operand/layout guards |
 | `Expr.band` | yes G2:378 | yes E:123, scalar or wide bits | `lowE_ok`, Q:321 | source operands nonnegative |
 | `Expr.bor` | yes G2:395 | yes E:126, scalar resize or wide bits | `lowE_ok`, Q:325 | source width/range rule |
 | `Expr.bxor` | yes G2:409 | yes E:130, scalar resize or wide bits | `lowE_ok`, Q:329 | source width/range rule |
@@ -621,7 +627,7 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Stmt.assignSlot` | yes H1:219 | yes A:88, `slotStoreC` | `lowS_ok`, P:83 | layout/store guards |
 | `Stmt.assignThru` | yes H1:182 | yes A:92, resolved table/index | `lowS_ok`, P:84 | layout/store guards |
 | `Stmt.assignGlob` | yes H3:103 | yes A:80, `globalStoreC` | `lowS_ok`, P:79 | layout/store guards |
-| `Stmt.putBytes` | no producer in `Parser/Elab/**` | yes, `putBytesL` / `putBytesWideL` | `lowS_ok`, `putBytes_ok` (unbuilt) | source byte-span export missing; recursive value/index/layout guards |
+| `Stmt.putBytes` | skipped: SYNTAX.md defines no byte-span store statement; `Parser/Stmt/Anweisung/Defs2a.lean:31`–`:83` has ordinary place assignment only | yes, `putBytesL` / `putBytesWideL` | `lowS_ok`, `putBytes_ok` (unbuilt) | no defined source byte-span syntax to export; recursive operand/layout guards |
 | `Stmt.assignVar` | yes H3:306/:321 | yes A:38, copies complete value | `lowS_ok`, P:66 | A:42: `else none` if parameter/protected span would be overwritten |
 | `Stmt.shift` | yes H4:54 | partial A:107 | `lowS_ok`, P:123 | A:117: `else none` unless source/prestate intervals fit signed word; runtime prestate mismatch stops 106 |
 | `Stmt.ite` | yes J/Struct:46 | yes A:43 | `lowS_ok`, P:69 | recursive branches/code size |
@@ -631,7 +637,7 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Stmt.call` | yes H3:75 | yes A:72, `lowA`/`callC` | `lowS_ok`, P:73 | recursive arguments, image/frame bounds; fallible calls need else form |
 | `Stmt.callInd` | yes H4:29 | yes A:59, `lowInd` | `lowS_ok`, P:129 | signature/address/argument guards |
 | `Stmt.locks` | yes J/Struct:35 | partial A:176, `locksCode` | `lowS_ok`, P:131 | A:180: `else none` unless `retFreiB body` and jump offsets fit; scoped source returns now export through J/Returns |
-| `Stmt.breaking` | no producer; unsupported surface statement U7:216 | yes A:139, recurse into body | `lowS_ok`, P:113 | U7:216: `.error ("stmt without G form: " ++ anwArt s)` |
+| `Stmt.breaking` | added, UNCHECKED: `Uebersetze/Breaking.lean` transports `breaking I { ... }`; `J/Struct` resolves the invariant and emits G | yes A:139, recurse into body | `lowS_ok`, P:113; exporter `uBreaking_exact`/`lowStructStep_breaking` | full source units STILL REFUSED by unchanged invariant cost/runs/by metadata gate; unknown/ambiguous invariant and unclosed scope also refused |
 | `Stmt.traverse` | yes J/Struct:59/:69 | partial A:118, `travC` | `lowS_ok`, P:111 | A:123: `else none` if count not signed-word representable |
 | `Stmt.retry` | yes J/Struct:80 | yes A:127, `retryC` | `lowS_ok`, P:133 | counter/branch/recursive-body guards |
 | `Stmt.forever` | yes J/Struct:138 | partial A:131, `foreverC` | `lowS_ok`, P:135 | A:138: `else none` if reserved/protected counter pair unavailable; bounded compiled passes |
@@ -639,8 +645,8 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Stmt.regWrite` | yes H3:349/:366 | refused by wildcard | refusal-only P:146, not an execution arm | A:183: `\| _, _, _, _, _, reserved => none`; device access out of scope |
 | `Stmt.transition` | no source producer; device declarations refused U12:322 | refused by wildcard | refusal-only P:147 | A:183: `\| _, _, _, _, _, reserved => none`; U12:322: `.error "device transition without G form"`; out of scope |
 | `Stmt.publish` | yes H3:178/:209, payload-free atomics | partial A:83, release store | `lowS_ok`, P:81 | A:87: `else none` unless address and `aggregateFits`; source payload export restricted |
-| `Stmt.advances` | no producer in `Parser/Elab/**` | yes A:140, ghost/no instructions | `lowS_ok`, P:115 | source clause is not an explicit statement exporter; no constructor-producing path |
-| `Stmt.retires` | yes H4:267, C16 generated `retireMark` | yes, ghost/no instructions | `lowS_ok` (unbuilt) | only an actually held, declared check Duty is retired by this producer |
+| `Stmt.advances` | deliberately refused, UNCHECKED named source refusal in `U7/uAnw1`; parser `.step` exists | yes A:140, ghost/no instructions | `lowS_ok`, P:115; `exportedMark_no_successor` proves the missing exporter premise | `declOf.stufen := 1` (`G1:104`) makes `stage + 1 < D.stufen m` impossible; no stage fabricated or marker dropped |
+| `Stmt.retires` | yes H4:267, C16 generated `retireMark`; ordinary `retires` also exports through `U7/uAnw1` → `lowRetiresL` | yes, ghost/no instructions | `lowS_ok` (unbuilt); `retires_export`/`retires_lower` and ordinary-mark source witnesses (unbuilt) | only an actually held, declared check Duty is retired by the generated producer; ordinary retirement rejects borrowed, unknown, unheld or repeated marks |
 | `Stmt.ret` | yes J/Returns:232 | yes A:77, shared ensures epilogue | `lowS_ok`, P:76 | exact contract-end resources required; local scopes use `retScoped` |
 | `Stmt.retWhy` | yes J/Returns:226 | yes A:75 | `lowS_ok`, P:148 | separate reason channel; local scopes use `retWhyScoped` |
 | `Stmt.leave` | yes J/Seq:265 | partial A:142 | `lowS_ok`, P:105 | A:142: `else none` if jump not `lit32`; source loop scope required |
@@ -665,11 +671,11 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Block.awaits` | yes J/Seq:237 | partial A:316, one load | `lowB_ok`, P:211 | A:320: `else none` unless address and `aggregateFits`; no waiting liveness claim |
 | `Block.exchange` | yes J/Seq:230 | partial A:321, CAS loop | `lowB_ok`, P:213 | A:327/:328: `else none` for code-size/address/single-word guards |
 | `Block.narrow` | yes J/Seq | yes, multiword `narrowC` | `lowB_ok` (unbuilt) | recursive operand/continuation and frame/code bounds |
-| `Block.check` | no producer in `Parser/Elab/**` | yes A:310, condition plus end-handler | `lowB_ok`, P:219 | source export absent; no named constructor-specific refusal |
+| `Block.check` | skipped: no standalone surface statement in `SAnw` or `parseStmt` (`Parser/Stmt/Anweisung/Kopf.lean:95`, `Defs2a.lean:92`); C16 `check` is an item | yes A:310, condition plus end-handler | `lowB_ok`, P:219 | no standalone source check syntax; format-field checks are not a statement producer |
 | `Block.float` | yes J/Seq:78 | yes A:330, software IEEE add/sub/mul/div | `lowB_ok`, P:221 | recursive values/range/code guards; stale TODO claim that this constructor is wholly refused is superseded |
 | `Block.floatLit` | yes J/Seq:73 | yes A:211, `floatLiteralL` | `lowB_ok`, P:225 | kernel-rounded binary64 value and range |
-| `Block.floatOf` | no producer in `Parser/Elab/**` | yes A:213, literal or computed conversion | `lowB_ok`, P:227 | source conversion export absent; computed conversion helper's supported integer representation |
-| `Block.floatNarrow` | no producer in `Parser/Elab/**` | yes A:202, range/fallback | `lowB_ok`, P:229 | source export absent; NaN endpoints lower the fallback |
+| `Block.floatOf` | skipped: no integer-to-float surface conversion in the Lean parser (`Parser/Expr/Ausdruck/Teil2a.lean:110`–`:280`); `as f64` is absent from SYNTAX.md | yes A:213, literal or computed conversion | `lowB_ok`, P:227 | no parser conversion to export; computed conversion helper's supported integer representation |
+| `Block.floatNarrow` | added, UNCHECKED: `narrow x to finite else { ... }` in continuing blocks; `U8` `uNarrowKopf`, `J/Seq` float arm | yes A:202, range/fallback | `lowB_ok`, P:229; exporter `lowSeqStep_floatNarrow` | fractional ranges and end-block narrowing remain refused; no canonical Endblock float-narrow constructor; NaN endpoints lower the fallback |
 | `Block.narrowRequired` | yes J/Seq; arena expansion too | yes, multiword `narrowC` | `lowB_ok` (unbuilt) | failed runtime capacity stops 107; recursive operand/continuation guards |
 | `Block.bindAxiomOpt` | yes J/Seq | yes, `plainForeignC` for values, `torC0` for VOID | `lowB_ok`, foreign helper proofs (unbuilt) | explicit register/result-area profile and provider duties for values; existing VOID restrictions |
 | `Block.bindAxiomOptElse` | yes J/Seq | yes, `fallibleForeignC` for values; VOID errno dispatch | `lowB_ok`, foreign helper proofs (unbuilt) | checked reason map and branch bounds; register/result-area profile for values |

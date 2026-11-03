@@ -32,6 +32,11 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
     Except String (Endblock (declOf u) (verOf u caller) false Γ Λ)
   | _, _, 0, _, _, _ => .error "lower: body too long"
   | Γ, fn, _ + 1, Λ, [], r => lowEnd u caller Γ Λ fn r
+  | Γ, fn, n + 1, Λ, .breakingBeg name :: rest, r => do
+    let (⟨Λ', statement⟩, remaining) ←
+      lowStructL (l := false) u caller Γ fn blockFuel Λ [] (.breakingBeg name) rest
+    let ending ← lowBodyF u caller Γ fn n Λ' remaining r
+    pure (Endblock.cons statement ending)
   | Γ, fn, n + 1, Λ, .bind x d v :: rest, r =>
     match lowBindWert u Γ Λ fn d v with
     | .error e => .error e

@@ -83,4 +83,28 @@ def gruppe_ok : String :=
 theorem gruppe_ok_stufe : stufe gruppe_ok = "OK" := by decide +kernel
 theorem gruppe_ok_traeger : traeger gruppe_ok = some [[.inl 0, .inl 1]] := by decide +kernel
 
+/-- Statement text is transported as a labelled scope, rather than dropped.
+    This checks shape only: full invariant declarations retain their metadata gate. -/
+private def breakingText (source : String) : Option (List UStmt) := do
+  let tokens ← (lex source).toOption
+  let statement ← (parseTopStmt tokens).toOption
+  let ctx : UCtx := { names := [], kinds := [], types := [], tabs := [], locks := [],
+    held := [], res := none, fname := "sample", alias := [], lits := [] }
+  ((uAnwReihe [] [] 1000 ctx [statement]).toOption).map (·.1)
+
+theorem breaking_text_export_zeuge :
+    breakingText "breaking I { }" = some [.breakingBeg "I", .blkEnd] := by
+  decide +kernel
+
+theorem breaking_multiple_text_export_zeuge :
+    breakingText "breaking I, J { }" =
+      some [.breakingBeg "I", .breakingBeg "J", .blkEnd, .blkEnd] := by
+  decide +kernel
+
+/-- Adding a scope cannot discharge an invariant's mandatory source duties. -/
+theorem breaking_metadata_still_refused_zeuge :
+    stufe "module m { table T count 2 { slot { v : u32, } invariant I cost O(1) runs offline : true; } impl fn f() { breaking I { } } }" ≠
+      "OK" := by
+  decide +kernel
+
 end Gabbro.Grammatik.Parser.UebersetzeProben32

@@ -71,6 +71,7 @@ def beqUStmt : UStmt → UStmt → Bool
   | .callIndElseBeg p c a e, .callIndElseBeg q d b f => strEq p q && strEq c d && beqUArgList a b && strEq e f
   | .axCallElseBeg c a e, .axCallElseBeg d b f => strEq c d && beqUArgList a b && strEq e f
   | .retires a, .retires b => strEq a b
+  | .breakingBeg a, .breakingBeg b => strEq a b
   | .assign a f x s, .assign b g y t =>
     strEq a b && strEq f g && beqUIdx x y && beqUSide s t
   | .assignTab a f x s, .assignTab b g y t =>

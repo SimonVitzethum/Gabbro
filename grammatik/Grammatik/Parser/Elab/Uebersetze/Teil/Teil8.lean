@@ -82,18 +82,34 @@ def uNarrowBereich (ctx : UCtx) (t : String) : Except String (Int × Int) :=
       | [.wort n] => uTypName ctx.alias n
       | _ => .error "narrow range without G form"
 
-/-- The binding the rest of the block reads after a narrowing: `x` at the narrowed range. -/
+/-- The binding the rest of the block reads after a narrowing: `x` at the narrowed range.
+    The existing `narrowBeg` carries integral bounds; `finite` on a float uses the
+    exact integral endpoints of binary64. Fractional float ranges remain refused. -/
 def uNarrowKopf (ctx : UCtx) (x : String) (t : String) : Except String (Int × Int × UCtx) :=
   match uParamNr ctx x with
   | .error e => .error e
   | .ok j =>
-    match uArtBei ctx.kinds j with
-    | .ok .int =>
+    match uArtBei ctx.kinds j, ctx.types[j]? with
+    | .ok _, some (.fl ..) =>
+      if strEq t "finite" then
+        .ok (-uFloatLimit, uFloatLimit,
+          uMitLokal ctx x .wert uFloatTy (ctx.muts.filter (fun m => !strEq m x)))
+      else .error "float narrow: only finite has a source export"
+    | .ok .int, _ =>
       match uNarrowBereich ctx t with
       | .error e => .error e
       | .ok (lo, hi) =>
         .ok (lo, hi, uMitLokal ctx x UParamArt.int (Ty.int lo hi) (ctx.muts.filter (fun m => !strEq m x)))
-    | _ => .error "narrow of a non-number"
+    | _, _ => .error "narrow of a non-number"
+
+/-- The finite spelling retains a float binding and the exact binary64 bounds.
+    No integer conversion or unchecked expression cast is involved. -/
+theorem uNarrowKopf_floatFinite (ctx : UCtx) (x : String) (j : Nat) (lo hi : Int × Int)
+    (k : UParamArt) (position : uParamNr ctx x = .ok j) (kind : uArtBei ctx.kinds j = .ok k)
+    (typeAt : ctx.types[j]? = some (.fl lo hi)) :
+    uNarrowKopf ctx x "finite" = .ok (-uFloatLimit, uFloatLimit,
+      uMitLokal ctx x .wert uFloatTy (ctx.muts.filter (fun m => !strEq m x))) := by
+  simp only [uNarrowKopf, position, kind, typeAt] <;> rfl
 
 /-- `let [mut] x [: T] = v;`: a number (the binding carries the computed range of `v`, or with `mut` the
     declared one) or a truth value; the statement and the context for the rest of the block. -/
