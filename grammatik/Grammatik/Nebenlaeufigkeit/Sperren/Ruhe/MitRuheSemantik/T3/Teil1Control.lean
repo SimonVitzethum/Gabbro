@@ -112,6 +112,7 @@ theorem execStmt_ru_callIndElse {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}
     {Λ : List (Res D)}
+    {τ : Ty}
     (n)
     (p)
     (args)
@@ -122,7 +123,7 @@ theorem execStmt_ru_callIndElse {V : Vertrag D}
     (σ : World D)
     (ρ : Env D Γ)
     (ih_execEnd_ru_err : ∀ (σ : World D), ∀ (ρ : Env D _), execEnd O.mitRuhe passes R' (ruEnd err) (worldR σ) (envR ρ) = endR (execEnd O passes R err σ ρ))
-    : execStmt O.mitRuhe passes R' (ruS (.callIndElse (n := n) p args he hp hr err : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ) = ausR (execStmt O passes R (.callIndElse (n := n) p args he hp hr err : Stmt D V l Γ Λ _) σ ρ) :=
+    : execStmt O.mitRuhe passes R' (ruS (.callIndElse (τ := τ) (n := n) p args he hp hr err : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ) = ausR (execStmt O passes R (.callIndElse (τ := τ) (n := n) p args he hp hr err : Stmt D V l Γ Λ _) σ ρ) :=
   by
   simp only [ruS]
   erw [execStmt_nachΛ]
@@ -183,7 +184,8 @@ theorem execStmt_ru_traverse {V : Vertrag D}
     (fun σ ρ => (σ.lese (Λ.map resR) (ruE inv).orte,
       wahr? (eval (σ.lese (Λ.map resR) (ruE inv).orte) (ruE inv) (σ.lese (Λ.map resR) (ruE inv).orte) ρ)))
     (fun σ ρ => ih_execBlock_ru_body σ ρ) (fun σ ρ => ?_) (alleIndizes (D.count t)) σ ρ
-  simp only [ruE_orte, lese_worldR, eval_ru, valR_bool, wahr?]
+  erw [ruE_orte, lese_worldR, eval_ru]
+  rfl
 
 set_option linter.unusedSectionVars false in
 theorem execStmt_ru_consumeTraverse {V : Vertrag D}
@@ -214,20 +216,25 @@ theorem execStmt_ru_consumeTraverse {V : Vertrag D}
     (fun σ ρ => let σ := σ.lese (Λ.map resR) (ruE mass).orte; (σ, (eval σ (ruE mass) σ ρ).n))
     bound (fun σ ρ => ih_execBlock_ru_body σ ρ) (fun σ ρ => ?_) ?_ ?_
     ((D.count t).toNat + bound.toNat + 1) σ ρ
-  · simp only [ruE_orte, lese_worldR, eval_ru, valR_bool, wahr?]
+  · erw [ruE_orte, lese_worldR, eval_ru]
+    rfl
   · intro σ' ρ'
-    simp only [verbrauchSel, ruE_orte, lese_worldR, Prod.mk.injEq]
-    refine ⟨rfl, ?_, ?_⟩
+    dsimp only [verbrauchSel]
+    erw [show (ruE member).orte ++ (ruE edge).orte = member.orte ++ edge.orte from
+      kongr₂ (· ++ ·) (ruE_orte member) (ruE_orte edge), lese_worldR]
+    refine kongr₂ Prod.mk rfl (kongr₂ Prod.mk ?_ ?_)
     · change verbrauchWahl (alleIndizes (D.count t)) _ _ _ = _
       conv => lhs; rw [← map_valR_int (D := D) 0 (D.count t - 1) (alleIndizes (D.count t))]
       refine verbrauchWahl_map _ _ _ _ _ _ _ _ ?_ ?_ ?_
       · intro k _
         have henv : Env.cons (valR _ k) (envR ρ') = envR (Env.cons k ρ') := rfl
-        simp only [henv, eval_ru, valR_bool]
+        erw [henv, eval_ru]
+        rfl
       · intro j _ k _
         have henv : Env.cons (valR _ j) (Env.cons (valR _ k) (envR ρ')) =
             envR (Env.cons j (Env.cons k ρ')) := rfl
-        simp only [henv, eval_ru, valR_bool]
+        erw [henv, eval_ru]
+        rfl
       · intro j _ k _
         simp only [valR, Val.relocate]
     · apply congrArg (fun b : Bool => !b)
@@ -235,12 +242,12 @@ theorem execStmt_ru_consumeTraverse {V : Vertrag D}
       conv => lhs; rw [← map_valR_int (D := D) 0 (D.count t - 1) (alleIndizes (D.count t))]
       exact map_all_beibehalt _ _ _ _ (fun k _ => by
         have henv : Env.cons (valR _ k) (envR ρ') = envR (Env.cons k ρ') := rfl
-        simp only [henv, eval_ru, valR_bool])
+        erw [henv, eval_ru]
+        rfl)
   · intro σ' ρ'
-    simp only [ruE_orte, lese_worldR, Prod.mk.injEq]
-    refine ⟨rfl, ?_⟩
-    exact congrArg Zahl.n
-      (eval_ru (σ'.lese Λ mass.orte) (σ'.lese Λ mass.orte) mass ρ')
+    dsimp only
+    erw [ruE_orte, lese_worldR, eval_ru]
+    rfl
 
 set_option linter.unusedSectionVars false in
 theorem execStmt_ru_retry {V : Vertrag D}
@@ -264,7 +271,8 @@ theorem execStmt_ru_retry {V : Vertrag D}
       wahr? (eval (σ.lese (Λ.map resR) (ruE bis).orte) (ruE bis) (σ.lese (Λ.map resR) (ruE bis).orte) ρ)))
     (execBlock O passes R ueber) (execBlock O.mitRuhe passes R' (ruB ueber))
     (fun σ ρ => ih_execBlock_ru_body σ ρ) (fun σ ρ => ?_) (fun σ ρ => ih_execBlock_ru_ueber σ ρ) n σ ρ
-  simp only [ruE_orte, lese_worldR, eval_ru, valR_bool, wahr?]
+  erw [ruE_orte, lese_worldR, eval_ru]
+  rfl
 
 set_option linter.unusedSectionVars false in
 theorem execStmt_ru_forever {V : Vertrag D}
@@ -285,7 +293,8 @@ theorem execStmt_ru_forever {V : Vertrag D}
     (fun σ ρ => (σ.lese (Λ.map resR) (ruE inv).orte,
       wahr? (eval (σ.lese (Λ.map resR) (ruE inv).orte) (ruE inv) (σ.lese (Λ.map resR) (ruE inv).orte) ρ)))
     (fun σ ρ => ih_execBlock_ru_body σ ρ) (fun σ ρ => ?_) passes σ ρ
-  simp only [ruE_orte, lese_worldR, eval_ru, valR_bool, wahr?]
+  erw [ruE_orte, lese_worldR, eval_ru]
+  rfl
 
 end Haupt
 end Gabbro.Grammatik
