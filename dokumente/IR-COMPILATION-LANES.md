@@ -3464,6 +3464,29 @@ embedded zero/255 bytes and packed/long mixtures. The textual regression is
 regression remain UNCHECKED pending the lead's Lean and runner checks; this is an
 implementation/proof-connection update, not newly measured compiled coverage.
 
+**Computed wide conversion follow-up (`s0-gaps1`, 2026-11-03; UNCHECKED).**
+The actual `computedFloatOfE` binary64 hook now accepts every integer interval
+whose recursively emitted expression and generated code fit the ordinary limits.
+`WideFloat.position` uses balanced comparisons of the complete magnitude against
+powers of two. `magnitude`, `shift`, `guard` and `index` synthesize typed expressions
+for the sign-independent magnitude, the retained 56-bit prefix, its sticky bit
+and the saturated exponent index. `integerFloat_round` identifies that input to
+the existing `routineRoundPackL`/`routineRoundPackWord` nearest-even pipeline with
+the kernel `ofInt`; no intermediate float rounding is introduced. Runtime values
+below `2^55` reuse the existing scalar continuation after a proved narrowing.
+The generic chain is `position_value` / field value lemmas →
+`wideComputedFloatOfE_ok` → `computedFloatOfE_ok` → `blockFloatOfComputed_case` →
+`lowB_ok_floatOf`. The shared round/pack word proofs now preserve arbitrary
+reserved prefixes. `computedFloatRangeL` rejects exponent 2047 before the finite
+range decision: overflow still stops with 107 even with infinite endpoints.
+`WideFloatProbe` declares accepted whole-image fixtures for wide ties, sticky
+tails, both signs, carry, maximum finite, overflow and small values in wide
+intervals, plus an accepted multiword-variable witness of the generic hook.
+No Lean, Lake, compiler, runner or guardian was run by the implementation worker.
+Only import traversal, source inspection and `git diff --check` were measured;
+the declarations and their image-acceptance claims need the lead's checks.
+Tagged non-integer payloads and byte spans above eight remain unchanged/open.
+
 **Proof connection.** All producing expression arms occur in `Ausdruck/Satz.lowE_ok`
 (mutual with `lowN_ok` and `lowE_ok_args`). Statement/block/end arms occur in the
 mutual `lowS_ok`, `lowB_ok`, `lowEnd_ok` in `Anweisung/Satz/Teil5.lean`, which calls
@@ -3646,7 +3669,7 @@ called by the generic theorem; where the proof is inline that is stated.
 | `check` | LOWERED | Predicate/else/tail; `lowB_ok_check`. |
 | `float` | CONDITIONAL | Binary64 add/sub/mul through integer kernels and rounded range check (C at internal `routineChooseL` branches); `.div` returns `none`; `blockFloatArithmetic_case` in `lowB_ok`; `FloatArithmeticProbe.float_operations_refused_zeuge`. |
 | `floatLit` | LOWERED | Kernel-rounded constant; out-of-range/nonfinite emits stop 107, not compiler refusal; `lowB_ok_floatLit`. |
-| `floatOf` | CONDITIONAL | Any integer literal via `floatLiteralL`; computed expressions require `-2^63≤lo` and `hi<2^63` in `computedFloatOfE`, plus C in conversion branches; range failure emits stop 107; `lowB_ok_floatOf`. |
+| `floatOf` | CONDITIONAL | Any integer literal via `floatLiteralL`; the actual computed binary64 hook now uses complete-magnitude normalization and the existing IEEE guard-rounding packer outside signed-word intervals. The interval-width refusal is removed; ordinary recursive operand, frame/address and generated-code limits (C in conversion branches) remain. `integerFloat_round` → `wideComputedFloatOfE_ok` → `computedFloatOfE_ok` → `blockFloatOfComputed_case` → `lowB_ok_floatOf`; `computedFloatRangeL_ok` covers overflow/range Stop 107. Accepted witness declarations: `WideFloatProbe.wide_float_images_zeuge`, `computedFloatOfE_wide_ok_zeuge`; lead Lean/runner checks pending. |
 | `floatNarrow` | LOWERED | Range/else/tail; NaN endpoint selects else directly; `lowB_ok_floatNarrow`. |
 | `narrowRequired` | LOWERED | N; full-span `narrow_ok` through `blockNarrowRequired_case`; capacity failure remains stop 107. Lead check pending. |
 | `bindAxiomOpt` | CONDITIONAL | Value: F with zero reasons + R; void: F with zero reasons, no result decoder; `lowB_ok_bindAxiomOpt_some/_none`. |
