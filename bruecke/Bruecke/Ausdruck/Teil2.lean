@@ -399,6 +399,11 @@ theorem ensSide_vor {fn : UFn} {a a' : Acc} {sd : USide} {x : Gabbro.Body.Expr}
     · obtain ⟨_, rfl⟩ := ensSide_sonst h (fun b f ix e => hold ⟨b, f, ix, e⟩) herg
       exact Vor.refl _
 
+/-- The represented comparison sides cannot select the separate bounded-count lowering. -/
+theorem ensSide_ohneCount {fn : UFn} {a a' : Acc} {sd : USide} {x : Gabbro.Body.Expr}
+    (h : ensSide u fn a sd = some (x, a')) : usideHatZaehle sd = false := by
+  cases sd <;> simp_all [ensSide, sideExpr, usideHatZaehle]
+
 theorem ensExpr_vor {fn : UFn} : ∀ (e : UEns) {a a' : Acc} {x : Gabbro.Body.Expr},
     ensExpr u fn a e = some (x, a') → Vor a a'
   | .tru, a, a', x, h => by
