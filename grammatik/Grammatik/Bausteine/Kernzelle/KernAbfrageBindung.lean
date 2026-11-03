@@ -170,12 +170,12 @@ theorem kernAbfrageEinzelB_iff {P : Programm D} {tabs : List D.Tab}
   unfold kernAbfrageEinzelB KernAbfrageVerbunden
   simp only [Bool.and_eq_true]
   constructor
-  · rintro ⟨h1, h2, h3⟩
-    exact ⟨(kernAbfrageGestaltB_iff hT hG).mp h1,
-      (kernAbfrageHerkunftB_iff).mp h2, h3⟩
-  · rintro ⟨h1, h2, h3⟩
-    exact ⟨(kernAbfrageGestaltB_iff hT hG).mpr h1,
-      (kernAbfrageHerkunftB_iff).mpr h2, h3⟩
+  · intro h
+    exact ⟨(kernAbfrageGestaltB_iff hT hG).mp h.1.1,
+      kernAbfrageHerkunftB_iff.mp h.1.2, h.2⟩
+  · intro h
+    exact ⟨⟨(kernAbfrageGestaltB_iff hT hG).mpr h.1,
+      kernAbfrageHerkunftB_iff.mpr h.2.1⟩, h.2.2⟩
 
 #print axioms Gabbro.Grammatik.Kernzelle.kernAbfrageEinzelB_iff
 
@@ -278,8 +278,8 @@ theorem ruB_bindetAx {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, _, .bindAxiom a _ _ _ _ _ _ rest, _ =>
       kongr₂ (· || ·) rfl (ruB_bindetAx rest _)
   | _, _, _, _, .bindAxiomElse a _ _ _ _ _ _ _ err rest, _ =>
-      kongr₂ (· || ·) rfl (kongr₂ (· || ·) (ruEnd_bindetAxE err _) (ruB_bindetAx rest _))
-  | _, _, _, _, .bindAxiomOpt e a _ _ _ _ _ rest, _ => by
+      kongr₂ (· || ·) (kongr₂ (· || ·) rfl (ruEnd_bindetAxE err _)) (ruB_bindetAx rest _)
+  | _, _, _, _, .bindAxiomOpt e a _ _ _ _ _ rest, q => by
       have ih1 := ruB_bindetAx (V := V) rest q
       cases e with
       | none =>
@@ -288,20 +288,20 @@ theorem ruB_bindetAx {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
       | some _ =>
           simp only [ruB, bindetAxB]
           exact kongr₂ (· || ·) rfl ((bindetAxB_vorΛ _ _ _).trans ih1)
-  | _, _, _, _, .bindAxiomOptElse e a _ _ _ _ _ _ err rest, _ => by
+  | _, _, _, _, .bindAxiomOptElse e a _ _ _ _ _ _ err rest, q => by
       have ih0 := ruEnd_bindetAxE (V := V) err q
       have ih1 := ruB_bindetAx (V := V) rest q
       cases e with
       | none =>
           simp only [ruB, bindetAxB]
-          exact kongr₂ (· || ·) rfl
-            (kongr₂ (· || ·) ((bindetAxE_umΛ _ _ _).trans ih0)
-              ((bindetAxB_vorΛ _ _ _).trans ih1))
+          exact kongr₂ (· || ·)
+            (kongr₂ (· || ·) rfl ((bindetAxE_umΛ _ _ _).trans ih0))
+            ((bindetAxB_vorΛ _ _ _).trans ih1)
       | some _ =>
           simp only [ruB, bindetAxB]
-          exact kongr₂ (· || ·) rfl
-            (kongr₂ (· || ·) ((bindetAxE_umΛ _ _ _).trans ih0)
-              ((bindetAxB_vorΛ _ _ _).trans ih1))
+          exact kongr₂ (· || ·)
+            (kongr₂ (· || ·) rfl ((bindetAxE_umΛ _ _ _).trans ih0))
+            ((bindetAxB_vorΛ _ _ _).trans ih1)
   | _, _, _, _, .regRead _ _ rest, _ => ruB_bindetAx rest _
   | _, _, _, _, .regReadElse _ _ _ sonst rest, _ =>
       kongr₂ (· || ·) (ruEnd_bindetAxE sonst _) (ruB_bindetAx rest _)
@@ -338,8 +338,8 @@ theorem ruEnd_bindetAxE {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, .bindAxiom a _ _ _ _ _ _ rest, _ =>
       kongr₂ (· || ·) rfl (ruEnd_bindetAxE rest _)
   | _, _, _, .bindAxiomElse a _ _ _ _ _ _ _ err rest, _ =>
-      kongr₂ (· || ·) rfl (kongr₂ (· || ·) (ruEnd_bindetAxE err _) (ruEnd_bindetAxE rest _))
-  | _, _, _, .bindAxiomOpt e a _ _ _ _ _ rest, _ => by
+      kongr₂ (· || ·) (kongr₂ (· || ·) rfl (ruEnd_bindetAxE err _)) (ruEnd_bindetAxE rest _)
+  | _, _, _, .bindAxiomOpt e a _ _ _ _ _ rest, q => by
       have ih1 := ruEnd_bindetAxE (V := V) rest q
       cases e with
       | none =>
@@ -348,20 +348,20 @@ theorem ruEnd_bindetAxE {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
       | some _ =>
           simp only [ruEnd, bindetAxE]
           exact kongr₂ (· || ·) rfl ((bindetAxE_umΛ _ _ _).trans ih1)
-  | _, _, _, .bindAxiomOptElse e a _ _ _ _ _ _ err rest, _ => by
+  | _, _, _, .bindAxiomOptElse e a _ _ _ _ _ _ err rest, q => by
       have ih0 := ruEnd_bindetAxE (V := V) err q
       have ih1 := ruEnd_bindetAxE (V := V) rest q
       cases e with
       | none =>
           simp only [ruEnd, bindetAxE]
-          exact kongr₂ (· || ·) rfl
-            (kongr₂ (· || ·) ((bindetAxE_umΛ _ _ _).trans ih0)
-              ((bindetAxE_umΛ _ _ _).trans ih1))
+          exact kongr₂ (· || ·)
+            (kongr₂ (· || ·) rfl ((bindetAxE_umΛ _ _ _).trans ih0))
+            ((bindetAxE_umΛ _ _ _).trans ih1)
       | some _ =>
           simp only [ruEnd, bindetAxE]
-          exact kongr₂ (· || ·) rfl
-            (kongr₂ (· || ·) ((bindetAxE_umΛ _ _ _).trans ih0)
-              ((bindetAxE_umΛ _ _ _).trans ih1))
+          exact kongr₂ (· || ·)
+            (kongr₂ (· || ·) rfl ((bindetAxE_umΛ _ _ _).trans ih0))
+            ((bindetAxE_umΛ _ _ _).trans ih1)
   | _, _, _, .regRead _ _ rest, _ => ruEnd_bindetAxE rest _
   | _, _, _, .regReadElse _ _ _ sonst rest, _ =>
       kongr₂ (· || ·) (ruEnd_bindetAxE sonst _) (ruEnd_bindetAxE rest _)
@@ -422,7 +422,7 @@ theorem kernAbfrageVerbunden_mitRuhe (P : Programm D) {a : AccumulatorDecl D}
     KernAbfrageVerbunden P.mitRuhe (AccumulatorDecl.mitRuhe a) q := by
   obtain ⟨hG, hH, hB⟩ := h
   refine ⟨kernAbfrageGestalt_mitRuhe hG, kernAbfrageHerkunft_mitRuhe hH, ?_⟩
-  show bindetAxE q (P.mitRuhe.rumpf (some a.kernAbfrage)) = true
+  show bindetAxE (D := D.mitRuhe) q (P.mitRuhe.rumpf (some a.kernAbfrage)) = true
   rw [bindetAxE_mitRuhe P a.kernAbfrage q]
   exact hB
 
