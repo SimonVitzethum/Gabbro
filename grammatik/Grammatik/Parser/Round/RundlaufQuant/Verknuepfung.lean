@@ -5,6 +5,7 @@ public import Grammatik.Parser.Round.RundlaufQuant.Teil2a
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser
+set_option maxRecDepth 100000
 
 /-- Both Boolean operators preserve an exact expression result; an operand failure
     propagates to the expression attempt, leaving predicate fallback available. -/
@@ -14,20 +15,28 @@ theorem bool_innen_antwort (o : String) (ho : o = "&&" ∨ o = "||")
     AusdruckAntwort (parseOr (G + 4)
       (druckToks l ++ .zeichen o :: (druckToks r ++ .zeichen ")" :: R)))
       (.bin o l r) (.zeichen ")" :: R) := by
+  have uAnd : ∀ T : List Token, opUnd (.zeichen "&&" :: T) = some T := fun _ => rfl
+  have uOr : ∀ T : List Token, opUnd (.zeichen "||" :: T) = none := fun _ => rfl
+  have uEnd : opUnd (.zeichen ")" :: R) = none := rfl
+  have oOr : ∀ T : List Token, opOder (.zeichen "||" :: T) = some T := fun _ => rfl
+  have oEnd : opOder (.zeichen ")" :: R) = none := rfl
   have hRC := bein_cmp r hr (.zeichen ")" :: R)
     (atomFolge_zeichen ")" R (Or.inr (Or.inr (Or.inr rfl)))) (G + 1) (by omega)
   have hLC := bein_cmp l hl (.zeichen o :: (druckToks r ++ .zeichen ")" :: R))
-    (atomFolge_zeichen o _ (by rcases ho with h | h; exact Or.inl h; exact Or.inr (Or.inl h)))
+    (atomFolge_zeichen o _ (by
+      rcases ho with h | h
+      · exact Or.inl h
+      · exact Or.inr (Or.inl h)))
     (G + 2) (by omega)
   rcases ho with rfl | rfl <;>
     rcases hLC with hLC | ⟨m, hLC⟩
   · rcases hRC with hRC | ⟨m, hRC⟩
-    · exact Or.inl (by simp only [parseOr, parseAnd, hLC, parseAndL, opUnd, hRC, parseOrL, opOder])
-    · exact Or.inr ⟨m, by simp only [parseOr, parseAnd, hLC, parseAndL, opUnd, hRC]⟩
+    · exact Or.inl (by simp only [parseOr, parseAnd, hLC, parseAndL, uAnd, uOr, uEnd, hRC, parseOrL, oOr, oEnd])
+    · exact Or.inr ⟨m, by simp only [parseOr, parseAnd, hLC, parseAndL, uAnd, uOr, uEnd, hRC]⟩
   · exact Or.inr ⟨m, by simp only [parseOr, parseAnd, hLC]⟩
   · rcases hRC with hRC | ⟨m, hRC⟩
-    · exact Or.inl (by simp only [parseOr, parseAnd, hLC, parseAndL, opUnd, parseOrL, opOder, hRC])
-    · exact Or.inr ⟨m, by simp only [parseOr, parseAnd, hLC, parseAndL, opUnd, parseOrL, opOder, hRC]⟩
+    · exact Or.inl (by simp only [parseOr, parseAnd, hLC, parseAndL, uAnd, uOr, uEnd, parseOrL, oOr, oEnd, hRC])
+    · exact Or.inr ⟨m, by simp only [parseOr, parseAnd, hLC, parseAndL, uAnd, uOr, uEnd, parseOrL, oOr, oEnd, hRC]⟩
   · exact Or.inr ⟨m, by simp only [parseOr, parseAnd, hLC]⟩
 
 /-- A shared induction step for conjunction and disjunction, independent of whether
