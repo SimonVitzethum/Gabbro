@@ -17,10 +17,10 @@ def routineRoundMagnitudeL (d : Nat) (a : Nat → Option (List II × Nat)) :
     Option (List II × Nat) :=
   floatRoundShiftL d a (fun j => some ([ci 1 j 3 0], j + 1))
 
-theorem routineRoundMagnitudeL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+{reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {a : Nat → Option (List II × Nat)} {av : Runner.W}
-    (ha : WordCode (L := L) ρ W a av) :
-    WordCode (L := L) ρ W (fun d => routineRoundMagnitudeL d a) (routineRoundMagnitudeWord av) :=
+    (ha : WordCode (L := L) (reserved := reserved) ρ W a av) :
+    WordCode (L := L) (reserved := reserved) ρ W (fun d => routineRoundMagnitudeL d a) (routineRoundMagnitudeWord av) :=
   floatRoundShiftL_ok ha (WordCode.const 3 (by decide)) (by decide : 3 < 63)
 
 /-- The rounded hidden-bit carry changes both significand and exponent.
@@ -53,12 +53,12 @@ def routineRoundPackL (d : Nat) (sign index magnitude : Nat → Option (List II 
 
 /-- Every branch is an existing checked word fragment. This theorem covers
     the emitted integer routine; canonical IEEE identification is separate. -/
-theorem routineRoundPackL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+{reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {sign index magnitude : Nat → Option (List II × Nat)} {sv ev mv : Runner.W}
-    (hs : WordCode (L := L) ρ W sign sv)
-    (he : WordCode (L := L) ρ W index ev)
-    (hm : WordCode (L := L) ρ W magnitude mv) :
-    WordCode (L := L) ρ W (fun d => routineRoundPackL d sign index magnitude)
+    (hs : WordCode (L := L) (reserved := reserved) ρ W sign sv)
+    (he : WordCode (L := L) (reserved := reserved) ρ W index ev)
+    (hm : WordCode (L := L) (reserved := reserved) ρ W magnitude mv) :
+    WordCode (L := L) (reserved := reserved) ρ W (fun d => routineRoundPackL d sign index magnitude)
       (routineRoundPackWord sv ev mv) := by
   have q := routineRoundMagnitudeL_ok hm
   have hidden := WordCode.konst (L := L) (ρ := ρ) (W := W) (2 ^ 52) (by decide)
