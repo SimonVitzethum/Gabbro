@@ -1,6 +1,6 @@
 /- The actual concatenation kernel copies both spans and preserves their headers. -/
 module
-public import Stage0.Senke.Ausdruck.Aggregat.Frame.String.CatWords
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.String.Span
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.String.Append
 public import Stage0.Senke.Welt.WeltAt
 @[expose] public section
