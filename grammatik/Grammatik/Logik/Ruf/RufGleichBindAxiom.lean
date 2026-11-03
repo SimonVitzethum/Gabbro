@@ -1,10 +1,9 @@
 /-
   File:      Grammatik/RufGleichBindAxiom.lean
-  Subject:   **RUN EQUALITY FOR `Block` AXIOM-OPTION AND REGISTER ARMS** --
-              the remaining long `Block` arms of the joint induction
-              (`bindAxiomOptElse`, `regReadElse`) as standalone theorems,
-              mirroring `RahmenTreu/Teil2BindBlock`. Kept in their own file
-              so no Lean file grows past the size limit.
+  Subject:   **RUN EQUALITY FOR AXIOM-OPTION AND REGISTER ARMS** -- the
+              remaining long `Block`/`Endblock` arms of the joint induction
+              (`bindAxiomOptElse`, `regReadElse`) as standalone theorems.
+              Kept in their own file so no Lean file grows past the size limit.
 -/
 module
 
@@ -140,6 +139,44 @@ theorem block_regReadElse_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
         simp only [hx] at ⊢
         rw [heq]
       · have heq := ih_sonst _ _ hscope_sonst (hl.heldB hh)
+        simp only [hx] at ⊢
+        rw [heq]
+
+/-! ## Register else arm (Block and Endblock) -/
+
+theorem end_regReadElse_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
+    (zusage : Expr D (D.rtyp r :: Γ) Λ .bool) (sonst : Endblock D V l Γ Λ)
+    (rest : Endblock D V l (D.rtyp r :: Γ) Λ)
+    (ih_rest : ∀ (σ : World D) (ρ : Env D (D.rtyp r :: Γ)), rest.ScopesOk →
+      HeldB bo Λ σ.haelt →
+      execEnd O passes R₁ rest σ ρ = execEnd O passes R₂ rest σ ρ)
+    (ih_sonst : ∀ (σ : World D) (ρ : Env D Γ), sonst.ScopesOk →
+      HeldB bo Λ σ.haelt →
+      execEnd O passes R₁ sonst σ ρ = execEnd O passes R₂ sonst σ ρ)
+    (σ : World D) (ρ : Env D Γ)
+    (hscope : (Endblock.regReadElse r hk zusage sonst rest).ScopesOk)
+    (hh : HeldB bo Λ σ.haelt) :
+    execEnd O passes R₁ (Endblock.regReadElse r hk zusage sonst rest) σ ρ =
+      execEnd O passes R₂ (Endblock.regReadElse r hk zusage sonst rest) σ ρ := by
+  have hscope_rest : rest.ScopesOk := by scopes_treu
+  have hscope_sonst : sonst.ScopesOk := by scopes_treu
+  simp only [execEnd]
+  have hl0 := treu_fragt σ (.inr (.inl r))
+  rw [← fragt_haelt σ (.inr (.inl r))] at hh
+  generalize hg : σ.fragt (.inr (.inl r)) = σq at hh ⊢
+  cases hx : einpassen O.zeiger (D.rtyp r) (O.regLies r σq) with
+  | none => rfl
+  | some v =>
+      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σq Λ zusage.orte
+      by_cases hc : wahr? (eval (σq.lese Λ zusage.orte) zusage
+          (σq.lese Λ zusage.orte) (.cons v ρ)) = true <;>
+        simp only [hx, hc, ite_true, ite_false] at ⊢
+      · have heq := ih_rest _ _ hscope_rest (hl.heldB hh)
+        simp only [hx] at ⊢
+        rw [heq]
+      · have heq := ih_sonst _ ρ hscope_sonst (hl.heldB hh)
         simp only [hx] at ⊢
         rw [heq]
 
