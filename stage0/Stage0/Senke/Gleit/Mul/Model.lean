@@ -58,7 +58,7 @@ theorem softMul_operand (a : GFloat)
     cases a.sign <;> simp [softSig, f64, Format.emin]
   · rw [softWertExakt_normal a.sign a.bexp a.frac ez notMax]
     have index : max a.bexp 1 = a.bexp := Nat.max_eq_left (by omega)
-    cases a.sign <;> simp [softSig, ez, index, f64, Format.bias] <;> congr 1 <;> omega
+    cases a.sign <;> simp [softSig, ez, index, f64, Format.bias] <;> omega
 
 /-- The finite implementation multiplies two Nat significands exactly;
     only its final signed dyadic value is passed to canonical rounding. -/

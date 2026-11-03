@@ -143,7 +143,8 @@ theorem floatShiftJamWord_large (a k : Runner.W) (large : a.toNat < 2 ^ k.toNat)
     simp only [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow,
       show (0 : Runner.W).toNat = 0 by decide]
     exact Nat.div_eq_of_lt large
-  rw [zero, Nat.mod_eq_of_lt large, BitVec.zero_or]
+  rw [zero, Nat.mod_eq_of_lt large]
+  simp
 
 theorem softRound_shiftJam_zeuge :
     floatShiftJamWord 9 3 = 1 ∧
