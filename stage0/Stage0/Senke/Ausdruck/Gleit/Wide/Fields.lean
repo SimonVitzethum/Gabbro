@@ -104,6 +104,7 @@ theorem magnitude_value (bound : ((eval σ₀ e σ ρ).n.natAbs : Int) ≤ upper
     have upper : -(eval σ₀ e σ ρ).n ≤ upper w := by rwa [absolute] at bound
     rw [absolute]
     simp [magnitude, eval, wahr?, Zahl.neg, negative, lower, upper]
+    exact congrArg Zahl.n (dif_pos ⟨lower, upper⟩)
   · have lower : 0 ≤ (eval σ₀ e σ ρ).n := by omega
     have absolute := Int.natAbs_of_nonneg lower
     have upper : (eval σ₀ e σ ρ).n ≤ upper w := by rwa [absolute] at bound
@@ -145,7 +146,7 @@ theorem shift_value (bound : ((eval σ₀ e σ ρ).n.natAbs : Int) ≤ upper w)
     unfold integerFloatShift
     omega
   · have whole : eval σ₀ (shift w e) σ ρ =
-        eval σ₀ (zero (w : Int) (by omega)) σ ρ := by
+        eval σ₀ (zero (Λ := Λ) (w : Int) (by omega)) σ ρ := by
       simp only [shift, eval, Zahl.sub]
       exact dif_neg inside
     rw [whole]
