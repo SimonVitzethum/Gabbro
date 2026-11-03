@@ -236,10 +236,9 @@ theorem akteurA_dannNarrowRequired {D : Deklaration} {P : Programm D} {O : Orake
     { speicher := M.speicher,
       faeden := rufUpdateG M.faeden u
         { stapel := (M.faeden u).stapel,
-          kopf := { f := (M.faeden u).kopf.f, rho := (M.faeden u).kopf.rho,
-            s0 := (M.faeden u).kopf.s0,
-            rest := ⟨l, .int lo' hi' :: Γ, Λ,
-              .cons ⟨(eval σ₁ e σ₁ ρ).n, h.1, h.2⟩ ρ, .dann rest (.schrumpf k)⟩ },
+          kopf := ⟨(M.faeden u).kopf.f, (M.faeden u).kopf.rho,
+            (M.faeden u).kopf.s0, ⟨l, .int lo' hi' :: Γ, Λ,
+              .cons ⟨(eval σ₁ e σ₁ ρ).n, h.1, h.2⟩ ρ, .dann rest (.schrumpf k)⟩⟩,
           spur := σ₁.spur, log := (M.faeden u).log },
       lauf := M.lauf ++ rufEigenG u neu, start := M.start }
   FadenA P O passes Q (next.faeden u) (next.weltVon u) ∧ LogOk P (next.faeden u).log := by
