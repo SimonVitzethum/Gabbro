@@ -43,7 +43,8 @@ theorem encodeSumPayload_selected (L : Lay D) : ∀ (cs : List (Option Ty))
     (i : Fin cs.length) (v : Fall D.Fn D.passt cs i),
     encodeSumPayload L cs i v = payloadEncoding L (cs.get i) (Fall.toNutzlast _ _ _ _ v)
   | [], i, _ => Fin.elim0 i
-  | none :: _, ⟨0, _⟩, _ => rfl
+  | none :: _, ⟨0, _⟩, _ => by
+    rw [encodeSumPayload.eq_def] <;> rfl
   | some _ :: _, ⟨0, _⟩, _ => by
     rw [encodeSumPayload.eq_def] <;> rfl
   | c :: cs, ⟨i + 1, hi⟩, v => by
@@ -73,7 +74,7 @@ private theorem packedPayload_valid (L : Lay D) (c : Option Ty)
   | some τ =>
     cases τ with
     | int lo hi =>
-      rw [PayloadValid, ValueValid.eq_def]
+      change True
       trivial
     | bool | opt _ | sum _ | why _ | never | fl _ _ | fnptr _ | ptr _ | ref _ | arr _ _ | str _ | prod _ _ =>
       exact Bool.noConfusion fits
