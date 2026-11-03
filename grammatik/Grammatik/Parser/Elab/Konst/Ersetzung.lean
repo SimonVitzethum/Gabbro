@@ -357,14 +357,14 @@ theorem ersetzeSExpr_call_certified (shadowed : List String) (fns : List UKonstF
     (success : ersetzeSExprIn shadowed fns (.call name args) = .ok replacement) :
     ∃ checked : Replacement fn fns (fn.constants.filter (fun entry => !shadowed.contains entry.1)) args',
       checkReplacement fn fns (fn.constants.filter (fun entry => !shadowed.contains entry.1)) args' = .ok checked ∧
-      replacement = checked.syntax := by
+      replacement = checked.syntax ∧ checked.evidence.Sound := by
   simp only [ersetzeSExprIn, arguments, callee] at success
   split at success
   · contradiction
   · cases hc : checkReplacement fn fns (fn.constants.filter (fun entry => !shadowed.contains entry.1)) args' with
     | error error => simp [hc] at success
     | ok checked =>
-      refine ⟨checked, hc, ?_⟩
+      refine ⟨checked, hc, ?_, checked.sound⟩
       simpa [hc] using success.symm
 
 end Gabbro.Grammatik.Parser.Konst
