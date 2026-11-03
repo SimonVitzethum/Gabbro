@@ -42,7 +42,7 @@ theorem blattSlots_dispatch (O : Orakel D) (hO : GutO O)
         exact Or.inl ⟨_, assignDurch_neu (Λ' := Λ) O passes σ ρ σ' neu hstep hneu, rfl⟩
       · exact Or.inr (Or.inl fun k f =>
           assignDurch_andere_fest (Λ' := Λ) O passes σ ρ σ' hstep t ht k f)
-  | assignThruOwn p t2 ht2 f2 i e m s ho he hg hm hw hL =>
+  | assignThruOwn p t2 ht2 f2 i e m s ho he hg hw hL =>
       by_cases ht : t2 = t
       · subst ht
         exact Or.inl ⟨_, assignDurchOwn_neu (Λ' := Λ) O passes σ ρ σ' neu hstep hneu, rfl⟩
