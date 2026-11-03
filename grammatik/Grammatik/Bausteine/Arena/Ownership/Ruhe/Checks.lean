@@ -106,6 +106,9 @@ theorem requirements_ruE {τ : Ty} (e : Expr D Γ Λ τ) :
   | thru p t ht f i hL ihp ihi =>
     simp only [requirements, ruE, List.all_cons, List.all_append, ihp, ihi]
     simp only [Requirement.check, liftA, accessCheck, origin_ruE, Bool.ite_true_right]
+  | thruOwn p t ht f i m s ho he hg hL ihp ihi =>
+    simp only [requirements, ruE, List.all_cons, List.all_append, ihp, ihi]
+    simp only [Requirement.check, liftA, accessCheck, origin_ruE, Bool.ite_true_right]
   | oldS t f i hL ih =>
     simp only [requirements, ruE, List.all_cons, ih]
     rfl

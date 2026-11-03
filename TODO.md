@@ -21,6 +21,7 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   C14 `when TESTBUILD` (selection before Stage 0), C17 `decreases` measures, C18 `narrowRequired` (lowered with stop
   code 107; no source syntax yet), and C08 `bindAxiomOpt` with a value. C08 void and fallible optional binders
   now have connected lowering cases and accepted-image/outcome witnesses; lead validation of this completion is pending.
+  - **C09/C12 branch inventory before the round-one merge:**
   - **Stage-0 refusals with their missing step (C09/C12 line):**
     - C08 void `bindAxiomOpt` and `bindAxiomOptElse` (payload `none`): refused; lowering correctness lemmas missing.
     - C08 `axiomCallElse`: no source syntax; statement calls must end in `;`, and `else` exists only for bindings.

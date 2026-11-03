@@ -4,7 +4,7 @@ public import Grammatik.Kern.Syntax.Satz.T3a
 @[expose] public section
 
 namespace Gabbro.Grammatik
-variable {D : Deklaration} {V : vertrag D}
+variable {D : Deklaration} {V : Vertrag D}
 
 /-! ### The lock floor of a body (held-set relaxation, 2026-09-13)
 

@@ -1,7 +1,10 @@
 module
+
 public import Grammatik.Kern.Syntax.Extensions.Extraktion.T2
 public import Grammatik.Kern.Syntax.Extensions.Extraktion.T3.Teil1
+
 @[expose] public section
+
 namespace Gabbro.Grammatik.Extraktion
 variable {D : Deklaration}
 
@@ -18,13 +21,21 @@ local macro "footprint_binary" a:term:max b:term:max : tactic => `(tactic| (
   rw [ha, hb]))
 
 mutual
+
 /-- **Der Fussabdruck-Schlussstein (R1, Ausdruck):** `eval` liest nur
     `Expr.orte`. Stimmen zwei Welten -- Eintritt wie Gegenwart -- auf allen
     Orten von `os` ueberein, und deckt `os` die Orte von `e`, so liefert
     `eval` denselben Wert. Die Liste `os` bleibt durch die Induktion
     unveraendert stehen; nur die Deckung (`hsub`) wandert zu den
     Teilausdruecken. -/
-theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ) (os : List (D.Tab ⊕ D.Glob)) (hsub : ∀ o ∈ e.orte, o ∈ os) (σ₀ σ₀' σ σ' : World D) (ρ : Env D Γ) (hS : ∀ t : D.Tab, .inl t ∈ os → ∀ k f, σ.slots t k f = σ'.slots t k f) (hSG : ∀ g : D.Glob, .inr g ∈ os → σ.globs g = σ'.globs g) (h0T : ∀ t : D.Tab, .inl t ∈ os → ∀ k f, σ₀.slots t k f = σ₀'.slots t k f) (h0G : ∀ g : D.Glob, .inr g ∈ os → σ₀.globs g = σ₀'.globs g) :
+theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    (e : Expr D Γ Λ τ) (os : List (D.Tab ⊕ D.Glob))
+    (hsub : ∀ o ∈ e.orte, o ∈ os)
+    (σ₀ σ₀' σ σ' : World D) (ρ : Env D Γ)
+    (hS : ∀ t : D.Tab, .inl t ∈ os → ∀ k f, σ.slots t k f = σ'.slots t k f)
+    (hSG : ∀ g : D.Glob, .inr g ∈ os → σ.globs g = σ'.globs g)
+    (h0T : ∀ t : D.Tab, .inl t ∈ os → ∀ k f, σ₀.slots t k f = σ₀'.slots t k f)
+    (h0G : ∀ g : D.Glob, .inr g ∈ os → σ₀.globs g = σ₀'.globs g) :
     eval σ₀ e σ ρ = eval σ₀' e σ' ρ := by
   match e with
   | .lit _ => rfl
@@ -42,17 +53,20 @@ theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D
       simp only [eval]
       exact h0G g (hsub _ (by simp only [Expr.orte, List.mem_cons, List.not_mem_nil, or_false]))
   | .slot t f i _ =>
-      have hi := eval_liest_nur_orte i os (fun o ho => hsub o (List.mem_cons_of_mem _ ho))
+      have hi := eval_liest_nur_orte i os
+        (fun o ho => hsub o (List.mem_cons_of_mem _ ho))
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
       simp only [eval, hi]
       exact hS t (hsub _ (by simp only [Expr.orte, List.mem_cons, true_or])) _ _
   | .oldS t f i _ =>
-      have hi := eval_liest_nur_orte i os (fun o ho => hsub o (List.mem_cons_of_mem _ ho))
+      have hi := eval_liest_nur_orte i os
+        (fun o ho => hsub o (List.mem_cons_of_mem _ ho))
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
       simp only [eval, hi]
       exact h0T t (hsub _ (by simp only [Expr.orte, List.mem_cons, true_or])) _ _
   | .thru _ t _ f i _ =>
-      have hi := eval_liest_nur_orte i os (fun o ho => hsub o (List.mem_append.mpr (Or.inr (List.mem_cons_of_mem _ ho))))
+      have hi := eval_liest_nur_orte i os
+        (fun o ho => hsub o (List.mem_append.mpr (Or.inr (List.mem_cons_of_mem _ ho))))
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
       simp only [eval, hi]
       exact hS t (hsub _ (by simp only [Expr.orte, List.mem_append, List.mem_cons, true_or, or_true])) _ _
@@ -299,6 +313,7 @@ theorem evalNutz_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty}
         (fun o ho => hsub o ho) σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
       simp only [evalNutz]
       rw [h]
+
 /-- The field arguments read only their places: the product half of the stone. -/
 theorem evalProd_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {fs : List Ty}
     (args : Args D Γ Λ fs) (os : List (D.Tab ⊕ D.Glob))
@@ -320,5 +335,6 @@ theorem evalProd_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {fs : List Ty}
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
       simp only [evalProd]
       rw [he, hr]
+
 end
 end Gabbro.Grammatik.Extraktion
