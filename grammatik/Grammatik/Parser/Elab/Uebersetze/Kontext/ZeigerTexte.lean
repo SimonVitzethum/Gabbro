@@ -19,6 +19,7 @@ def uZeigerAnw : Nat → SAnw → List String
     | .bind _ _ (some t) _ => uZeigerTexte [t]
     | .bindElse _ (some t) _ _ b => uZeigerTexte [t] ++ uZeigerAnw f b
     | .bindElse _ none _ _ b => uZeigerAnw f b
+    | .callElse _ _ _ b => uZeigerAnw f b
     | .bindQ _ _ (some t) _ | .bindAxiomOpt _ (some t) _ => uZeigerTexte [t]
     | .bindAxiomOptElse _ ty _ _ b => uZeigerTexte ty.toList ++ uZeigerAnw f b
     | .await _ ty _ _ | .swap _ ty _ _ | .allocVon _ _ ty _ => uZeigerTexte ty.toList

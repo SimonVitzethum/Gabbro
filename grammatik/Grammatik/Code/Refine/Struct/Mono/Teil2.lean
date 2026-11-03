@@ -100,7 +100,7 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
           simp only at m0 m1 m2 m3 ⊢
           omega
       · simp only [hs', Bool.false_eq_true, ↓reduceIte, reduceCtorEq] at h
-  | _, _, _, .thruOwn p t _ _ i _ _ _ _ _ _, r, c, h => by
+  | _, _, _, .thruOwn p t _ f i _ _ _ _ _ _, r, c, h => by
       simp only [lowerE] at h
       rcases hp : lowerE lay cenv p r with _ | ⟨cp, op, r1⟩
       · simp only [hp, reduceCtorEq] at h

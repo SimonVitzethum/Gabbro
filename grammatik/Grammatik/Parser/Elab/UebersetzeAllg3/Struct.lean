@@ -24,6 +24,9 @@ set_option maxRecDepth 100000
 def lowStructStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe u caller) :
     (Γ : Ctx) → UFn → (Λ : List (Res (declOf u))) → AtTop u caller Λ → UStmt → List UStmt →
     Except String ((Σ Λ' : List (Res (declOf u)), Stmt (declOf u) (verOf u caller) l Γ Λ Λ') × List UStmt)
+  | Γ, fn, Λ, pe, .axCallElseBeg name args reason, rest =>
+    (lowAxCallElse u caller R Γ fn Λ pe name args reason rest).map fun (st, tail) =>
+      (⟨Λ, st⟩, tail)
   | Γ, fn, Λ, _, .lockBeg g, rest =>
     (lockIdx u.locks g).bind fun L =>
       if hr : rangOkB u Λ L = true then match R.seq Γ fn (Res.held L :: Λ) none rest with
