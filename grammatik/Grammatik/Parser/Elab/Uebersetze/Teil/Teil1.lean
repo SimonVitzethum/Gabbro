@@ -167,6 +167,8 @@ inductive UStmt
   | consumeLoopBeg : String → String → String → UEns → UEns → UEns → USide → String → UStmt
   /-- Integer-to-float introduction, retaining the operand and declared result bounds. -/
   | floatOf : String → USide → (Int × Int) → (Int × Int) → UStmt
+  /-- `advances a -> b;`: adjacent labels in one declared linear order. -/
+  | advances : String → String → UStmt
   deriving DecidableEq, Repr
 /-- One elaborated table: slot count and one integer range per
     slot field (the `TableModel` of `lean_g.rs`). -/

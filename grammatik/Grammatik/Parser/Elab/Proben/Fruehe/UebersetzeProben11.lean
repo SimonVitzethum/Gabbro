@@ -290,4 +290,100 @@ def terminalReasonRetire : String :=
 theorem terminalReasonRetire_ok : stufe terminalReasonRetire = "OK" := by
   decide +kernel
 
+/-! ## Declared linear stages: two checked advances and terminal discharge -/
+
+/-- A three-stage owner, with a terminal signature so the advanced mark is
+    retired rather than silently reset to the stage-0 call interface. -/
+def stagedOwnerSource (body : String) : String :=
+  "module m { linear ghost type Phase order { cold, warm, hot }; table T count 2 owner Phase { slot { b : bool, } } impl fn finish() effects { consumes Phase } { " ++
+    body ++ " } }"
+
+def stagedOwner : String :=
+  stagedOwnerSource "advances cold -> warm; advances warm -> hot; retires Phase;"
+
+/-- Source text reaches canonical G through both consecutive stage changes. -/
+theorem staged_owner_advances_twice_zeuge : stufe stagedOwner = "OK" := by
+  decide +kernel
+
+/-- Measure declaration stage counts after parsing and the actual unit export. -/
+def sourceMarkStageCounts (source : String) : Option (List Nat) := do
+  let tokens ← (lex source).toOption
+  let items ← (parseTopTief tokens).toOption
+  let u ← (elabU (pre108 items)).toOption
+  pure ((List.finRange u.marken.length).map ((declOf u).stufen))
+
+/-- The declaration exported from that same source has three stages. -/
+theorem staged_owner_declared_count_zeuge : sourceMarkStageCounts stagedOwner = some [3] := by
+  decide +kernel
+
+/-- Counts are per nominal mark; an undeclared order retains the one-stage default. -/
+theorem staged_counts_and_default_zeuge :
+    sourceMarkStageCounts
+      "module m { linear type Plain; linear type Phase order { cold, warm, hot }; linear type Pair order { first, second }; impl fn f() { } }" =
+      some [1, 3, 2] := by
+  decide +kernel
+
+/-- An ordinary linear mark uses the same stage bookkeeping without an owner. -/
+def stagedOrdinary : String :=
+  "module m { linear type Phase order { cold, warm, hot }; impl fn finish() effects { consumes Phase } { advances cold -> warm; advances warm -> hot; retires Phase; } }"
+
+theorem staged_ordinary_advances_twice_zeuge : stufe stagedOrdinary = "OK" := by
+  decide +kernel
+
+/-- The declaration bound refuses an advance from the last stage by mark name. -/
+theorem staged_last_stage_refused_zeuge :
+    stufe (stagedOwnerSource "advances cold -> warm; advances warm -> hot; advances hot -> cold;") =
+      "lower: advance from last stage: Phase: hot" := by
+  decide +kernel
+
+/-- Forward skips and backward steps never manufacture a stage. -/
+theorem staged_skip_refused_zeuge :
+    stufe (stagedOwnerSource "advances cold -> hot;") =
+      "lower: advance is not the next declared stage: cold -> hot" := by
+  decide +kernel
+
+theorem staged_backward_refused_zeuge :
+    stufe (stagedOwnerSource "advances cold -> warm; advances warm -> cold;") =
+      "lower: advance is not the next declared stage: warm -> cold" := by
+  decide +kernel
+
+/-- A valid declared edge does not confer possession of its input stage. -/
+theorem staged_wrong_input_refused_zeuge :
+    stufe (stagedOwnerSource "advances warm -> hot;") =
+      "lower: advance without held stage: Phase: warm" := by
+  decide +kernel
+
+theorem staged_repeated_step_refused_zeuge :
+    stufe (stagedOwnerSource "advances cold -> warm; advances cold -> warm;") =
+      "lower: advance without held stage: Phase: cold" := by
+  decide +kernel
+
+theorem staged_unknown_label_refused_zeuge :
+    stufe (stagedOwnerSource "advances missing -> warm;") =
+      "lower: advance of unknown stage: missing" := by
+  decide +kernel
+
+/-- A callee cannot change the stage it owes back under an exclusive loan. -/
+def stagedBorrowed : String :=
+  "module m { linear type Phase order { cold, warm, hot }; table T count 2 owner Phase { slot { b : bool, } } impl fn f() effects { borrows Phase } { advances cold -> warm; } }"
+
+theorem staged_borrowed_refused_zeuge :
+    stufe stagedBorrowed = "lower: advance of borrowed mark: Phase" := by
+  decide +kernel
+
+/-- Unqualified labels cannot select between two nominal protocols. -/
+def stagedAmbiguous : String :=
+  "module m { linear type Phase order { cold, warm, hot }; linear type Other order { cold, warm }; impl fn f() effects { consumes Phase } { advances cold -> warm; } }"
+
+theorem staged_ambiguous_refused_zeuge :
+    stufe stagedAmbiguous = "lower: advance of ambiguous stage: cold" := by
+  decide +kernel
+
+def stagedDuplicate : String :=
+  "module m { linear type Phase order { cold, cold, hot }; impl fn f() { } }"
+
+theorem staged_duplicate_label_refused_zeuge :
+    stufe stagedDuplicate = "elab: duplicate stage in linear mark: Phase" := by
+  decide +kernel
+
 end Gabbro.Grammatik.Parser.UebersetzeProben11

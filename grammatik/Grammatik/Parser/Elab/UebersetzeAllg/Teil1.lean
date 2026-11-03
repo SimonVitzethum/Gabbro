@@ -99,9 +99,8 @@ def declOf (u : UProg) : Deklaration where
   maskiert := fun l => (lockAt u l).masks
   Marke := Fin u.marken.length
   decMarke := inferInstance
-  /-- Every mark at stage 0: ordinary consumption/production and the owner guards
-      below need no order yet (the C09 advance/retire stages come with real flows). -/
-  stufen := fun _ => 1
+  /-- Preserve declared linear orders; unstaged marks have one stage. -/
+  stufen := markStageCount u
   braucht := fun t => needsAt u t ++ (eignerAt u t).map (fun m => Sum.inr (m, 0))
   gbraucht := gneedsAt u
   eigner := eignerAt u

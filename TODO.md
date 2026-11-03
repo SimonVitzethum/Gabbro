@@ -649,8 +649,8 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Stmt.regWrite` | yes H3:349/:366 | refused by wildcard | refusal-only P:146, not an execution arm | A:183: `\| _, _, _, _, _, reserved => none`; device access out of scope |
 | `Stmt.transition` | no source producer; device declarations refused U12:322 | refused by wildcard | refusal-only P:147 | A:183: `\| _, _, _, _, _, reserved => none`; U12:322: `.error "device transition without G form"`; out of scope |
 | `Stmt.publish` | yes H3:178/:209, payload-free atomics | partial A:83, release store | `lowS_ok`, P:81 | A:87: `else none` unless address and `aggregateFits`; source payload export restricted |
-| `Stmt.advances` | deliberately refused, UNCHECKED named source refusal in `U7/uAnw1`; parser `.step` exists | yes A:140, ghost/no instructions | `lowS_ok`, P:115; `exportedMark_no_successor` proves the missing exporter premise | `declOf.stufen := 1` (`G1:104`) makes `stage + 1 < D.stufen m` impossible; no stage fabricated or marker dropped |
-| `Stmt.retires` | yes H4:267, C16 generated `retireMark`; ordinary `retires` also exports through `U7/uAnw1` → `lowRetiresL` | yes, ghost/no instructions | `lowS_ok` (unbuilt); `retires_export`/`retires_lower` and ordinary-mark source witnesses (unbuilt) | only an actually held, declared check Duty is retired by the generated producer; ordinary retirement rejects borrowed, unknown, unheld or repeated marks |
+| `Stmt.advances` | yes `uAnw1` (`SAnw.step`) → `UebersetzeAllg2/Marken.lowAdvancesL`, dispatched by H4:`lowStmtL`; `declOf.stufen` preserves declared orders | yes A:140, ghost/no instructions | `lowAdvancesL_exact`; existing `lowS_ok`, P:115 | checked adjacent labels, unique mark, held input stage and no loan; terminal-stage advance refused by name. Three-stage/two-advance source witnesses added; build/axiom/runner checks pending lead validation. Header `advances` clauses remain refused. |
+| `Stmt.retires` | yes `uAnw1` → `UebersetzeAllg2/Marken.lowRetiresL`, dispatched by H4:`lowStmtL`; C16 generated `retireMark` retains its declared check Duty producer | yes, ghost/no instructions | `lowRetiresL_exact` (any held stage); existing `lowS_ok`, P:116; `retires_export`/`retires_lower` | ordinary retirement rejects borrowed, unknown, unheld or repeated marks and supports the final stage; generated retirement checks an actually held, declared check Duty. Source witnesses added; build/axiom/runner checks pending lead validation. |
 | `Stmt.ret` | yes J/Returns:232 | yes A:77, shared ensures epilogue | `lowS_ok`, P:76 | exact contract-end resources required; local scopes use `retScoped` |
 | `Stmt.retWhy` | yes J/Returns:226 | yes A:75 | `lowS_ok`, P:148 | separate reason channel; local scopes use `retWhyScoped` |
 | `Stmt.leave` | yes J/Seq:265 | partial A:142 | `lowS_ok`, P:105 | A:142: `else none` if jump not `lit32`; source loop scope required |
@@ -765,7 +765,8 @@ listed above, not counted as extra constructors):
   and top-level/end-block float introduction/arithmetic (dangling references above). Device ASM/boot/raw
   addresses and register access/transition are outside this userspace inventory's unfinished-work count.
 - **Front end:** `Expr.getBytes`, `Stmt.putBytes` and `Block.check` still have no surface producer;
-  `Stmt.advances` is deliberately refused because exported marks have only one stage. `Stmt.breaking`
+  `Stmt.advances` has an unchecked exporter preserving declared stage orders and adjacent changes;
+  retirement supports any held stage. Header `advances` clauses remain refused. `Stmt.breaking`
   has an unchecked exporter, but complete source units remain blocked by the invariant metadata gate.
   `Block.floatOf` and `Block.floatNarrow` have unchecked continuing-block exporters; their end-block
   forms remain absent. Retirement, consuming traversal, scoped returns, indirect call handlers and

@@ -50,4 +50,24 @@ def uPruefEigner (linear : List String) (o : Option String) : Except String Unit
 def markFin (marken : List String) (m : String) : Option (Fin marken.length) :=
   (List.finRange marken.length).find? (fun i => strEq (marken.get i) m)
 
+/-- Preserve the order of each linear declaration. Duplicate labels or nominal
+    declarations would make an unqualified source advance ambiguous. Value
+    payloads and unknown modifiers retain a named refusal. -/
+def uMarkOrders (ms : List SItemTief) : Except String (List (String × List String)) := do
+  let orders : List (String × List String) ← ms.foldlM (fun orders item =>
+    match item with
+    | .typeT flags name args stages body =>
+      if flags.any (strEq · "linear") then
+        if !args.isEmpty || body.isSome ||
+            flags.any (fun f => f != "linear" && f != "ghost" && f != "pub" && f != "export") then
+          .error ("linear mark declaration without G form: " ++ name)
+        else if orders.any (fun p => strEq p.1 name) then
+          .error ("duplicate linear mark declaration: " ++ name)
+        else if stages.eraseDups.length != stages.length then
+          .error ("duplicate stage in linear mark: " ++ name)
+        else .ok (orders ++ [(name, stages)])
+      else .ok orders
+    | _ => .ok orders) []
+  pure (orders.filter (fun p => !p.2.isEmpty))
+
 end Gabbro.Grammatik.Parser.Uebersetze

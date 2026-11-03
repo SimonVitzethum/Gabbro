@@ -33,6 +33,9 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   let spaces := ["normal"] ++ uOhneDoppelte ((ms.filterMap (fun | .tableT _ _ _ _ space _ _ => space | _ => none)).filter (fun n => !strEq n "normal"))
   let eigner := uOhneDoppelte (uEignerMs ms)
   let linear := uLinearNamen ms
+  match uMarkOrders ms with
+  | .error error => .error error
+  | .ok markOrders =>
   match uSeq ((ms.filterMap (fun | .tableT _ _ _ _ o _ _ => o | _ => none)).map (uPruefEigner linear)) with
   | .error e => .error e
   | .ok _ =>
@@ -185,7 +188,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
     | .error e => .error e
     | .ok regiert =>
     let u : UProg :=
-      { tabs := tabs, locks := locks, fns := fns ++ torFns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axs, guests := guests, annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := Gabbro.Grammatik.Parser.Konst.checkErsetzt msE msSub, checks := checks, marken := marken, spaces := spaces, records := valueScope.records, eigner := eigner }
+      { tabs := tabs, locks := locks, fns := fns ++ torFns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axs, guests := guests, annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := Gabbro.Grammatik.Parser.Konst.checkErsetzt msE msSub, checks := checks, marken := marken, markOrders := markOrders, spaces := spaces, records := valueScope.records, eigner := eigner }
     let u := uMitBoden u
     match Generic.checkStaticConformance consts alias u staticRequirements valueScope.types with
     | .error error => .error error

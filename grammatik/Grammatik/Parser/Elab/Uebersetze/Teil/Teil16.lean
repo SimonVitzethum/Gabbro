@@ -72,6 +72,7 @@ def beqUStmt : UStmt → UStmt → Bool
   | .axCallElseBeg c a e, .axCallElseBeg d b f => strEq c d && beqUArgList a b && strEq e f
   | .retires a, .retires b => strEq a b
   | .breakingBeg a, .breakingBeg b => strEq a b
+  | .advances a b, .advances c d => strEq a c && strEq b d
   | .assign a f x s, .assign b g y t =>
     strEq a b && strEq f g && beqUIdx x y && beqUSide s t
   | .assignTab a f x s, .assignTab b g y t =>
@@ -211,7 +212,7 @@ def beqUProg : UProg → UProg → Bool
   | a, b => beqUTabList a.tabs b.tabs &&
     beqULockList a.locks b.locks && beqUFnList a.fns b.fns &&
     beqStrList a.roots b.roots && beqStrList a.hands b.hands && beqUGlobList a.globs b.globs &&
-    decide (a.regs = b.regs) && decide (a.records = b.records)
+    decide (a.regs = b.regs) && decide (a.records = b.records) && decide (a.markOrders = b.markOrders)
 
 /-- Shape equality on elaboration outcomes, as a `Bool`. -/
 def beqElabU : Except String UProg → Except String UProg → Bool

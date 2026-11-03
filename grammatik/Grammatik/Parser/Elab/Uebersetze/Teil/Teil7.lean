@@ -159,7 +159,7 @@ def uAnw1 (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
         | .ok s => .ok (.regWrite rg.dev rg.name s)
     | none => uSetze ctx ziel op wert
   | .retires m => .ok (.retires m)
-  | .step _ _ => .error "advances without G form: exported marks have only stage 0"
+  | .step a b => .ok (.advances a b)
   | .emit ziel wert p => uAtomSchreib ctx ziel wert p
   | .shift z von nach =>
     match uZugriff ctx z with
