@@ -84,15 +84,15 @@ theorem unpackSignL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     result (fp := fp) (K := K) (d := d) (c := c) (top := top) h hK m pc hp
 
 /-- Compositional IR simulation for the biased-exponent fragment. -/
-theorem unpackBexpL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+theorem unpackBexpL_ok {reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {a : Nat → Option (List II × Nat)} {av : Runner.W}
-    (ha : WordCode (L := L) ρ W a av) :
-    WordCode (L := L) ρ W (fun d => unpackBexpL d a) (unpackBexpWord av) := by
+    (ha : WordCode (L := L) (reserved := reserved) ρ W a av) :
+    WordCode (L := L) (reserved := reserved) ρ W (fun d => unpackBexpL d a) (unpackBexpWord av) := by
   have hc52 : lit32 (52 : Int) = true := by decide
   have hc2047 : lit32 (2047 : Int) = true := by decide
-  have inner : WordCode (L := L) ρ W _ _ := WordCode.bin ha (WordCode.const 52 hc52)
+  have inner : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin ha (WordCode.const 52 hc52)
     (g := fun x y => some (x >>> (y.toNat % 64))) rfl rfl (by decide : 12 < 256)
-  have result : WordCode (L := L) ρ W _ _ := WordCode.bin inner (WordCode.const 2047 hc2047)
+  have result : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin inner (WordCode.const 2047 hc2047)
     (g := fun x y => some (x &&& y)) rfl rfl (by decide : 8 < 256)
   intro fp K d c top h hK m pc hp
   simpa only [unpackBexpWord, BitVec.ofInt_ofNat, BitVec.ofNat_eq_ofNat] using
