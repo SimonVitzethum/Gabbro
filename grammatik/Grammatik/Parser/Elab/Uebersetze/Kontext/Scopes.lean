@@ -187,6 +187,14 @@ structure UFn where
       call-scoped loans (`OwnerFlow.loans`) -- the callee holds them during the
       call, the caller gets them back on normal return. -/
   leiht : List String := []
+  /-- The owner marks the function hands over for the call (`effects { moves m }`, C09):
+      linear handoffs (`OwnerMove` handbacks) -- the callee holds the same nominal
+      identity during the call and hands it back on every returning channel. -/
+  bewegt : List String := []
+  /-- The owner marks the function mints (`effects { mints m }`, C09): checked
+      mint outputs (`OwnerFlow.mints`) -- the minter holds the fresh owner from
+      its start frame and returns it, never ordinary production. -/
+  praegt : List String := []
   deriving DecidableEq, Repr
 
 /-- The kind of a value of type `τ` that is no pointer, index, option, sum or reason: an aggregate or a number. -/
