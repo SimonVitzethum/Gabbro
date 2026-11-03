@@ -18,7 +18,7 @@ theorem softDivQuotientC_aluIns {K d : Nat} (room : d + 26 ≤ K) :
     ∀ i ∈ softDivQuotientC d, AluIns K d i := by
   intro i member
   simp only [softDivQuotientC, List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | member | rfl | rfl | rfl
+  rcases member with (rfl | member) | rfl | rfl | rfl
   · exact AluIns.const _ _ (by omega) (by omega) (by decide)
   · exact wideDivC_aluIns 2 d (by decide) (by omega) i member
   · exact AluIns.const _ _ (by omega) (by omega) (by decide)
@@ -60,10 +60,16 @@ theorem softDivQuotientC_value (d n b : Nat) (s : Nat → Runner.W)
   have tail : aluRun
       [ci 1 (d + 4) 0 0, ci 27 (d + 4) (d + 4) (d + 2), ci 9 d d (d + 4)] divided d =
       divided d ||| Runner.IR.bool ((0 : Runner.W).ult (divided (d + 2))) := by
-    simp [aluRun_cons, aluRun_nil, aluStep, aluVal, aluFn, ci, slotUpd]
+    have index2 : ((d : Int) + 2).toNat = d + 2 := by omega
+    have index4 : ((d : Int) + 4).toNat = d + 4 := by omega
+    have distinct : d ≠ d + 4 := by omega
+    have distinct2 : d + 2 ≠ d + 4 := by omega
+    simp [aluRun_cons, aluRun_nil, aluStep, aluVal, aluFn, ci, slotUpd,
+      index2, index4, distinct, distinct2]
   have rb : n % b < 2 ^ 64 := Nat.lt_trans (Nat.mod_lt _ bp) bb
   have test : (0 : Runner.W).ult (BitVec.ofNat 64 (n % b)) = decide (n % b ≠ 0) := by
-    simp only [BitVec.ult, BitVec.toNat_zero, BitVec.toNat_ofNat, Nat.mod_eq_of_lt rb]
+    have zeroNat : (0 : Runner.W).toNat = 0 := by decide
+    simp only [BitVec.ult, zeroNat, BitVec.toNat_ofNat, Nat.mod_eq_of_lt rb]
     apply Bool.eq_iff_iff.mpr
     simp only [decide_eq_true_eq]
     omega
