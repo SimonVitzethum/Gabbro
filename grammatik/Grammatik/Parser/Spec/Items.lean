@@ -28,13 +28,18 @@ def Walk.tablePart (w : Walk) : STabTeil → Except String STabTeil
 def Walk.transition (w : Walk) (t : STrans) : Except String STrans := do
   let steps ← t.schritte.mapM fun (a, b, c) =>
     return (← w.expr [] 1000 a, ← w.expr [] 1000 b, ← w.expr [] 1000 c)
-  return { t with schritte := steps, voraus := ← t.voraus.mapM (w.expr [] 1000),
-                  wirkung := ← w.effects [] t.wirkung }
+  return { t with
+    schritte := steps
+    voraus := ← t.voraus.mapM (w.expr [] 1000)
+    wirkung := ← w.effects [] t.wirkung }
 
 def Walk.devicePart (w : Walk) (locals : Locals) : SGerTeil → Except String SGerTeil
   | .copy a b => do return .copy (← w.expr locals 1000 a) (← w.expr locals 1000 b)
-  | .reg r => do return .reg { r with rtyp := ← w.type locals 1000 r.rtyp,
-      addr := ← w.expr locals 1000 r.addr, voraus := ← r.voraus.mapM (w.expr locals 1000) }
+  | .reg r => do
+    return .reg { r with
+      rtyp := ← w.type locals 1000 r.rtyp
+      addr := ← w.expr locals 1000 r.addr
+      voraus := ← r.voraus.mapM (w.expr locals 1000) }
   | .trans t => do return .trans (← w.transition t)
   | .bank raw => do return .bank (← w.raw raw)
 
@@ -89,7 +94,10 @@ def Walk.item (w : Walk) : Nat → SItemTief → Except String SItemTief
     | .axiomT n ps res pred es h =>
       let ps ← ps.mapM fun (n, t) => return (n, ← ty t)
       return .axiomT n ps (← res.mapM ty) (← pred.mapM (w.expr ps f)) (← w.effects ps es) h
-    | .checkT c => return .checkT { c with misst := ← c.misst.mapM ex, boden := ← c.boden.mapM ex,
+    | .checkT c =>
+      return .checkT { c with
+        misst := ← c.misst.mapM ex
+        boden := ← c.boden.mapM ex
         canFail := ← w.statement [] f c.canFail }
     | .atomT n t ps a b => return .atomT n (← ty t) (← ps.mapM (fun es => es.mapM ex)) a b
     | .lockT n ps rk h sh m i => return .lockT n (← ps.mapM ex) (← ex rk)
@@ -103,8 +111,13 @@ def Walk.item (w : Walk) : Nat → SItemTief → Except String SItemTief
         return ([n], args)
       return .concT ps
     | .accT n t c e q => return .accT n (← ty t) c (← e.mapM ex) q
-    | .walkT v => return .walkT { v with stufen := ← ex v.stufen, node := ← ty v.node,
-        dwhen := ← ex v.dwhen, blatt := ← ex v.blatt, invarianten := ← v.invarianten.mapM w.invariant }
+    | .walkT v =>
+      return .walkT { v with
+        stufen := ← ex v.stufen
+        node := ← ty v.node
+        dwhen := ← ex v.dwhen
+        blatt := ← ex v.blatt
+        invarianten := ← v.invarianten.mapM w.invariant }
     | .entryT e => return .entryT { e with vektor := ← e.vektor.mapM ex, ist := ← e.ist.mapM ex }
     | .bootT n arch ss keeps =>
       let ss ← ss.mapM fun
@@ -116,10 +129,15 @@ def Walk.item (w : Walk) : Nat → SItemTief → Except String SItemTief
       return .bootT n arch ss keeps
     | .callT c =>
       let params ← c.params.mapM fun (n, t) => return (n, ← ty t)
-      return .callT { c with params, res := ← c.res.mapM ty, way := ← w.way c.way,
-        gate := { pre := ← c.gate.pre.mapM (w.expr c.params f),
-                  post := ← c.gate.post.mapM (w.expr c.params f), uses := ← w.effects c.params c.gate.uses,
-                  cost := ← c.gate.cost.mapM ex } }
+      return .callT { c with
+        params
+        res := ← c.res.mapM ty
+        way := ← w.way c.way
+        gate := {
+          pre := ← c.gate.pre.mapM (w.expr c.params f)
+          post := ← c.gate.post.mapM (w.expr c.params f)
+          uses := ← w.effects c.params c.gate.uses
+          cost := ← c.gate.cost.mapM ex } }
     | .goalT n bs =>
       let bs ← bs.mapM fun (a, b, binds) => do
         let binds ← binds.mapM fun (v, binding, h) => return (v, ← w.binding binding, h)
@@ -130,6 +148,6 @@ def Walk.item (w : Walk) : Nat → SItemTief → Except String SItemTief
 
 /-- Successful validation certifies the complete output uses ordinary front-end forms. -/
 def ordinary (source output : List SItemTief) : Bool :=
-  (output.mapM ((Walk.mk source false).item 100000)).toOption.isSome
+  (output.mapM (({ source, instantiate := false } : Walk).item 100000)).toOption.isSome
 
 end Gabbro.Grammatik.Parser.Spec
