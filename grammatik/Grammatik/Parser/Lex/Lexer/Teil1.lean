@@ -44,7 +44,7 @@ def wortschatz : List String :=
    "extern", "section", "arch", "when", "requires", "ensures", "maintains",
    "refines", "breaking", "effects", "costs", "deadline", "decreases",
    "where", "in", "exhaustive", "old", "narrow", "to", "induction",
-   "reads", "writes", "locks", "masks", "allocs", "consumes", "borrows", "publishes",
+    "reads", "writes", "locks", "masks", "allocs", "consumes", "borrows", "moves", "mints", "publishes",
    "diverges", "pure", "if", "else", "match", "traverse", "over", "by",
    "touches", "retry", "forever", "until", "bounded", "progress",
    "on_exceeded", "per_pass", "return", "let", "mut", "unvisited",
