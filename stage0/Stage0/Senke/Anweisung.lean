@@ -278,7 +278,7 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
       else none
     else none
   -- Binary64 add uses the proved integer routine; sub, mul and div stay refused.
-  | _, Γ, _, _, .float op a b low high rest, reserved => floatAddBlockL op (frei Γ reserved) low high (lowE (reserved := reserved) L a) (lowE (reserved := reserved) L b) (fun _ => lowB (reserved := reserved) passes A L layout ens pr ex rest)
+  | _, Γ, _, _, .float op a b low high rest, reserved => floatAddSubBlockL op (frei Γ reserved) low high (lowE (reserved := reserved) L a) (lowE (reserved := reserved) L b) (fun _ => lowB (reserved := reserved) passes A L layout ens pr ex rest)
   | _, _, _, _, _, reserved => none
 
 /-- Dispatch in declaration order. Each branch jumps over the remaining arms; loop exits
