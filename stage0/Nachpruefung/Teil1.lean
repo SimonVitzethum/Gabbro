@@ -275,7 +275,7 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.ReferenceProbe.lowering_zeuge
 #print axioms Gabbro.Stage0.Senke.ReferenceProbe.read_simulation_zeuge
 #print axioms Gabbro.Stage0.Senke.ReferenceProbe.write_simulation_zeuge
-#print axioms Gabbro.Stage0.Senke.ReferenceProbe.refused_zeuge
+#print axioms Gabbro.Stage0.Senke.ReferenceProbe.provider_lowering_zeuge
 #print axioms Gabbro.Stage0.Senke.wordL_ok
 #print axioms Gabbro.Stage0.Senke.float_word_injective
 #print axioms Gabbro.Stage0.Senke.float_lt_key
