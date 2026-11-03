@@ -3,6 +3,8 @@ module
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetBeweis
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraet.AkteurGFaelle.Tail.Teil20
 
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraet.AkteurGFaelle.Scoped.Answer
+
 @[expose] public section
 
 namespace Gabbro.Grammatik

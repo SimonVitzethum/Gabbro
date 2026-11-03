@@ -3,6 +3,8 @@ module
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAxBeweis
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx.AkteurAFaelle.Tail.Teil19
 
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx.AkteurAFaelle.Tail.ScopedAnswer
+
 @[expose] public section
 
 namespace Gabbro.Grammatik

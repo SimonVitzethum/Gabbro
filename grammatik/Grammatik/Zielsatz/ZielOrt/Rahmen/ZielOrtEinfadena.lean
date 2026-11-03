@@ -373,6 +373,12 @@ theorem kein_schritt_ruhig {M M' : RufMaschineG D} {u : Faden}
     | rueckScopedGrundDirekt ρ r grund R hhead hret =>
       rcases GRest.scopedGrund_faelle hret with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;> subst r <;>
         rw [hhead] at hRet <;> simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
+    | rueckFreigabe ρ a L remaining hhead =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
+    | rueckFreigabeLetzte ρ a L hhead =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
 
 end Stumm
 end Gabbro.Grammatik
