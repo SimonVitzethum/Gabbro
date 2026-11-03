@@ -57,7 +57,7 @@ theorem integerFloat_normalized (n : Nat) (large : 2 ^ 55 ≤ n) :
   have retained : n / 2 ^ integerFloatShift n ≤ softShiftJamNat n (integerFloatShift n) := by
     unfold softShiftJamNat
     rw [Nat.shiftRight_eq_div_pow]
-    exact Nat.le_or_left _ _
+    exact Nat.left_le_or
   exact ⟨by omega, log⟩
 
 /-- Integer conversion can overflow, but cannot produce a NaN. -/
@@ -67,8 +67,10 @@ theorem integerFloat_not_nan (z : Int) : klasse f64 (ofInt f64 z) ≠ .nan := by
   · have replay := softRound_replay_all z 0 zero
     change ofInt f64 z = _ at replay
     rw [replay]
-    split <;> (try split) <;> (try split) <;> (try split) <;> (try split) <;>
-      simp [klasse, show f64.bexpMax = 2047 from rfl]
+    split <;> (try split) <;> (try split) <;> (try split) <;> (try split)
+    all_goals simp only [klasse]
+    all_goals split <;> (try split) <;> (try split) <;>
+      simp_all [f64, Format.bexpMax, Format.emin, Format.emax] <;> omega
 
 /-- Saturating the exponent index only affects values already rounding to
     infinity. The complete magnitude is compressed once with a sticky bit,
