@@ -63,7 +63,7 @@ theorem Stmt.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Re
       have he : err.gOk K Rg = true ∧ err.regs = [] := Endblock.gOk_of_vOk err h.2
       simp only [Stmt.gOk, Stmt.regs, h.1, he.1, he.2, Bool.and_self, and_self]
   | .assignSlot .., _ => ⟨rfl, rfl⟩
-  | .assignThru .., _ | .assignSlotRef .., _ => ⟨rfl, rfl⟩
+  | .assignThru .., _ | .assignThruOwn .., _ | .assignSlotRef .., _ => ⟨rfl, rfl⟩
   | .assignGlob .., _ => ⟨rfl, rfl⟩
   | .putBytes .., _ => ⟨rfl, rfl⟩
   | .assignVar .., _ => ⟨rfl, rfl⟩

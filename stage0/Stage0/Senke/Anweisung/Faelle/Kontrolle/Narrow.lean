@@ -1,7 +1,7 @@
 /- One signed interval test for block and end-block narrowing. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Check
-public import Stage0.Senke.Ausdruck.Arithmetik.Interval
+public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Eng
 @[expose] public section
 
 
@@ -21,9 +21,8 @@ theorem narrow_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
     {ce cx cr : List II} {te : Nat} {σ : World D} {ρ : Env D Γ}
     {out : Ausgang (vertragVon D f) l Γ}
     (he : lowE L (reserved := reserved) e (frei Γ reserved) = some (ce, te)) (hte : te ≤ Ks)
-    (hw : inW low high = true) (hl : inW low' low' = true) (hh : inW high' high' = true)
-    (hd : frei Γ reserved + 4 ≤ Ks)
-    (hs : 16 * (narrowC (frei Γ reserved) low' high' ce cx cr).length < 2 ^ 31)
+    (hd : narrowTop (frei Γ reserved) low high low' high' ≤ Ks)
+    (hs : 16 * (narrowC (frei Γ reserved) low high low' high' ce cx cr).length < 2 ^ 31)
     (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = (functionFrame P f).internalResult)
     (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     {m : Runner.Mem} {pc : Runner.W}
@@ -40,75 +39,83 @@ theorem narrow_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * cr.length))
         (pc' + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.1)
         (pc' + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.2) out reserved)
-    (hp : PreS L m pc fp K (frei Γ reserved) (narrowC (frei Γ reserved) low' high' ce cx cr) ρ reserved)
+    (hp : PreS L m pc fp K (frei Γ reserved) (narrowC (frei Γ reserved) low high low' high' ce cx cr) ρ reserved)
     (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
-      (pc + BitVec.ofNat 64 (16 * (narrowC (frei Γ reserved) low' high' ce cx cr).length))
-      (pc + BitVec.ofNat 64 (16 * (narrowC (frei Γ reserved) low' high' ce cx cr).length) + BitVec.ofInt 64 ex.1)
-      (pc + BitVec.ofNat 64 (16 * (narrowC (frei Γ reserved) low' high' ce cx cr).length) + BitVec.ofInt 64 ex.2) out reserved := by
+      (pc + BitVec.ofNat 64 (16 * (narrowC (frei Γ reserved) low high low' high' ce cx cr).length))
+      (pc + BitVec.ofNat 64 (16 * (narrowC (frei Γ reserved) low high low' high' ce cx cr).length) + BitVec.ofInt 64 ex.1)
+      (pc + BitVec.ofNat 64 (16 * (narrowC (frei Γ reserved) low high low' high' ce cx cr).length) + BitVec.ofInt 64 ex.2) out reserved := by
+  let d := frei Γ reserved
+  let k := narrowWords low high low' high'
+  have signedX : signedWords low high ≤ k := narrowWords_source _ _ _ _
+  have wordsX : integerWords low high ≤ k :=
+    Nat.le_trans (integerWords_le_signedWords _ _) signedX
+  have wordsB : integerWords low' high' ≤ k :=
+    Nat.le_trans (integerWords_le_signedWords _ _) (narrowWords_target _ _ _ _)
+  have positive : 1 ≤ k := Nat.le_trans (integerWords_pos' low high) wordsX
+  have fits : d + 5 * k + 22 ≤ Ks := hd
   have hks := hW.ks
-  have hq : PreS L m pc fp K (frei Γ reserved) (ce ++ ((engTest 13 (frei Γ reserved) low' high').1 ++
-      [ci 19 (frei Γ reserved + 1) (16 * (cx.length + 2)) 0] ++ cx ++ [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr)) ρ reserved := hp
+  have hq : PreS L m pc fp K d (ce ++
+      (wideExtendC (extSigned low) (integerWords low high) k d ++
+      (wideOutC k d low' high' ++
+      ([ci 19 (d + k + 3) (16 * (cx.length + 2)) 0] ++ cx ++
+        [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr)))) ρ reserved := by
+    simpa only [narrowC, List.append_assoc] using hp
   have hpw := PreS.welt hq.left hks hWa hW.lay (by have := hW.lo; omega)
-  obtain ⟨m1, s1, a1s, w, r1, hen⟩ := (lowE_ok (same := by intro _; rfl) (reserved := reserved) σ σ (fun _ h => h) hW.lay e _ ce te he hte m pc ρ hpw).word trivial
-  have a1 := Agree.widen a1s hks
-  have hn := hq.next a1 (Nat.le_refl _) (by omega)
-  have hw1 : WeltAt m1 L σ := hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _))
-  have hx := inW_spec hw (eval σ e σ ρ).lo_le (eval σ e σ ρ).le_hi
-  have hlW : -2^63 ≤ low' ∧ low' < 2^63 := by
-    simp only [inW, Bool.and_eq_true, decide_eq_true_eq] at hl; omega
-  have hhW : -2^63 ≤ high' ∧ high' < 2^63 := by
-    simp only [inW, Bool.and_eq_true, decide_eq_true_eq] at hh; omega
-  have hsim : Sim L P f σ0 ρ0 rp cfp fp lo K pr
-      ⟨pc + BitVec.ofNat 64 (16 * ce.length), fp⟩ m1
-      (pc + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofNat 64 (16 *
-        ((engTest 13 (frei Γ reserved) low' high').1 ++ [ci 19 (frei Γ reserved + 1) (16 * (cx.length + 2)) 0] ++ cx ++
-          [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr).length))
-      (pc + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofNat 64 (16 *
-        ((engTest 13 (frei Γ reserved) low' high').1 ++ [ci 19 (frei Γ reserved + 1) (16 * (cx.length + 2)) 0] ++ cx ++
-          [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr).length) + BitVec.ofInt 64 ex.1)
-      (pc + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofNat 64 (16 *
-        ((engTest 13 (frei Γ reserved) low' high').1 ++ [ci 19 (frei Γ reserved + 1) (16 * (cx.length + 2)) 0] ++ cx ++
-          [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr).length) + BitVec.ofInt 64 ex.2) out reserved := by
-    have hs' : 16 * (((engTest 13 (frei Γ reserved) low' high').1).length + 1 + cx.length + 1 + cr.length) < 2 ^ 31 := by
-      simp only [narrowC, List.length_append, List.length_singleton] at hs; omega
-    have hc := choice_ok (reserved := reserved) (P := P) (σ0 := σ0) (ex := ex) (d := frei Γ reserved + 1)
-      (b := decide (¬ (low' ≤ (eval σ e σ ρ).n ∧ (eval σ e σ ρ).n ≤ high')))
-      (ot := out) (oe := out) (by omega) (by omega) hs' hW hlo hlo0 hlo2 hpr
-      (m := m1) (σ := σ) (ρ := ρ) ?_ ?_ ?_ hn
-      (hu.agreeW hW (agreeW_of a1) (by omega)) (hk.agreeW hW (agreeW_of a1) (by omega)) hw1
-    · simpa only [ite_self, Int.natCast_add, Int.natCast_one] using hc
-    · intro hpc
-      obtain ⟨m2, s2, a2, w2, r2, hen2⟩ := eng_test_ok
-        { hpc with ctx := by have := hp.ctx; omega }
-        (by have := (engTest_top 13 (frei Γ reserved) low' high').2; omega) rfl (by decide) r1
-      refine ⟨m2, s2, a2, w2, r2, ?_⟩
-      simp only [Enc] at hen
-      subst w
-      simp only [scalarCmp, ↓reduceIte] at hen2
-      rw [hen2, slt_in hx hlW, slt_in hhW hx]
-      by_cases hin : low' ≤ (eval σ e σ ρ).n ∧ (eval σ e σ ρ).n ≤ high'
-      · have h1 : ¬ (eval σ e σ ρ).n < low' := by omega
-        have h2 : ¬ high' < (eval σ e σ ρ).n := by omega
-        simp [Runner.IR.bool, hin, h1, h2]
-      · have hout : (eval σ e σ ρ).n < low' ∨ high' < (eval σ e σ ρ).n := by omega
-        simp [Runner.IR.bool, hin, hout]
-    · intro hout m' pc' hp' _ hu' hk' hw'
-      exact herr (of_decide_eq_true hout) m' pc' hp' hu' hk' hw'
-    · intro hin m' pc' hp' a2 hu' hk' hw'
-      have hin' : low' ≤ (eval σ e σ ρ).n ∧ (eval σ e σ ρ).n ≤ high' := by
-        have := of_decide_eq_false hin; exact Classical.byContradiction this
-      have rv : m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some w := by
-        rw [agree_rd_low a2 hn.frame.room (by omega) (by omega)]; exact r1
-      have wd : valueWords (.int low' high') = 1 := integerWords_word hlW.1 hhW.2
-      have hp'2 : PreS L m' pc' fp K (frei (.int low' high' :: Γ) reserved) cr
-          (Env.cons (τ := .int low' high') ⟨(eval σ e σ ρ).n, hin'.1, hin'.2⟩ ρ) reserved :=
-        { hp' with ctx := by simp only [frei, contextWords_cons, wd]; omega
-                   env := envAt_cons hp'.env (ValueAt.of_enc wd rv (by exact hen)) }
-      exact hrest hin' m' pc' hp'2 hu' hk' hw'
-  refine Sim.prefix hlo s1 (agreeW_of (a1.mono hlo2))
-    (keeps_of_agreeW hW a1 hpr (by omega)) (Sim.cast hsim rfl ?_ ?_ ?_)
-  all_goals simp only [narrowC, List.length_append, List.length_singleton, Nat.mul_add,
-    BitVec.ofNat_add, BitVec.add_assoc]
+  obtain ⟨m1, s1, a1, v1⟩ := lowE_ok (same := by intro _; rfl) (reserved := reserved)
+    σ σ (fun _ h => h) hW.lay e d ce te he hte m pc ρ hpw
+  have h1 := hq.next (a1.widen hks) (Nat.le_refl _) (by omega)
+  obtain ⟨m2, s2, a2, v2⟩ := wideExtend_run (extSigned low) (eval σ e σ ρ).n
+    (integerWords_pos' low high) wordsX (wideFits_zahl (eval σ e σ ρ))
+    h1.frame h1.small (by omega) h1.left.code h1.left.far v1.2
+  have h2 := h1.next a2 (Nat.le_refl _) (by omega)
+  have fx := signedFits_zahl (eval σ e σ ρ) signedX
+  have fl := signedFits_zahl (⟨low', Int.le_refl _, Int.le_refl _⟩ : Zahl low' low')
+    (narrowWords_low low high low' high')
+  have fh := signedFits_zahl (⟨high', Int.le_refl _, Int.le_refl _⟩ : Zahl high' high')
+    (narrowWords_high low high low' high')
+  obtain ⟨m3, s3, a3, v3, flag⟩ := wideOut_run low' high' (eval σ e σ ρ).n
+    h2.frame h2.small (by omega) positive h2.left.code h2.left.far
+    fx.1 fx.2 fl.1 fl.2 fh.1 fh.2 v2
+  have h3 := h2.next a3 (Nat.le_refl _) (by omega)
+  have changed := (a1.widen hks).trans (a2.trans a3)
+  have hw3 : WeltAt m3 L σ :=
+    weltAt_stab hW.lay (by have := hW.top; omega) m m3 hWa (changed.mono (Nat.zero_le _))
+  have branch := choice_ok (reserved := reserved) (P := P) (σ0 := σ0) (ex := ex)
+    (cc := []) (ct := cx) (ce := cr) (d := d + k + 3)
+    (b := decide (¬ (low' ≤ (eval σ e σ ρ).n ∧ (eval σ e σ ρ).n ≤ high')))
+    (ot := out) (oe := out) (by omega) (by omega)
+    (by rw [narrowC_length] at hs; omega) hW hlo hlo0 hlo2 hpr
+    (m := m3) (σ := σ) (ρ := ρ) ?_ ?_ ?_ h3
+    (hu.agreeW hW (agreeW_of changed) (by omega))
+    (hk.agreeW hW (agreeW_of changed) (by omega)) hw3
+  · simp only [ite_self] at branch
+    refine Sim.prefix hlo (s1.trans (s2.trans s3))
+      (agreeW_of (changed.mono hlo2)) (keeps_of_agreeW hW changed hpr (by omega))
+      (Sim.cast branch rfl ?_ ?_ ?_)
+    all_goals simp only [narrowC, d, k, List.length_append, List.length_singleton,
+      List.length_nil, List.nil_append, Nat.zero_add, Nat.add_zero, Nat.mul_zero,
+      Nat.mul_add, BitVec.ofNat_add, BitVec.add_zero, BitVec.add_assoc]
+  · intro _
+    refine ⟨m3, by simpa using Star.refl _ m3, Agree.refl _ _ _ _, _, flag, ?_⟩
+    have equivalent : ((eval σ e σ ρ).n < low' ∨ high' < (eval σ e σ ρ).n) ↔
+        ¬ (low' ≤ (eval σ e σ ρ).n ∧ (eval σ e σ ρ).n ≤ high') := by omega
+    simp only [Runner.IR.bool, equivalent]
+  · intro hout m' pc' hp' _ hu' hk' hw'
+    exact herr (of_decide_eq_true hout) m' pc' hp' hu' hk' hw'
+  · intro hin m' pc' hp' keep hu' hk' hw'
+    have inside : low' ≤ (eval σ e σ ρ).n ∧ (eval σ e σ ρ).n ≤ high' := by
+      have := of_decide_eq_false hin
+      exact Classical.byContradiction this
+    have value : ValueAt L m' fp d (.int low' high')
+        ⟨(eval σ e σ ρ).n, inside.1, inside.2⟩ :=
+      valueAt_int_of_wide _ wordsB (v3.agree_low keep h3.frame.room
+        (by rw [integerEncoding_length]; omega) (by omega))
+    have pre : PreS L m' pc' fp K (frei (.int low' high' :: Γ) reserved) cr
+        (Env.cons (τ := .int low' high') ⟨(eval σ e σ ρ).n, inside.1, inside.2⟩ ρ) reserved :=
+      { hp' with
+        ctx := by simp only [frei, contextWords_cons, valueWords]; omega
+        env := envAt_cons hp'.env value }
+    exact hrest inside m' pc' pre hu' hk' hw'
 
 end Gabbro.Stage0.Senke

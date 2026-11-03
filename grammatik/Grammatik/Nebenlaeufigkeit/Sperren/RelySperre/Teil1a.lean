@@ -108,6 +108,10 @@ theorem blatt_erhaelt_globs
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       rfl
+  | assignThruOwn p u ht fld i e m s ho he hg hw hL =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      rfl
   | assignSlotRef r u ht ho fld e hw hL =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
@@ -230,11 +234,13 @@ theorem blatt_erhaelt_globs
   | retScoped e R =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
-      rfl
+      rw [(World.gibt_foldl_speicher _ _).2]
+      try rfl
   | retWhyScoped r R =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
-      rfl
+      rw [(World.gibt_foldl_speicher _ _).2]
+      try rfl
 
 /-! ## 3. Lock exclusivity: two threads never hold the same lock -/
 

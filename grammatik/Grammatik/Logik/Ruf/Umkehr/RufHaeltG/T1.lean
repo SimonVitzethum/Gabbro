@@ -406,6 +406,8 @@ macro "ho_tac" : tactic => `(tactic|
      | (rw [axiom_offen' hO _ _ _ _ _ hax, hs₁, offen_lese]; exact hK)
      | (rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁, offen_lese]; exact hK)
      | (rw [hs₁, offen_lese, e]; exact hK)
+     | (rw [hs₁, offen_lese, hsm, offen_lese, e]; exact hK)
+     | (rw [hsm, offen_lese, e]; exact hK)
      | (rw [e]; exact hK)))
 
 set_option hygiene false in

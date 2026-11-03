@@ -31,6 +31,10 @@ theorem stmt_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       obtain ⟨x, rfl, op, hop, hrw, htab, hidx⟩ := hok
       simp only [execStmt]
       exact ⟨slotRahmen_schreib σ _ rfl f _ Λ (schreibOk_in hinv hop hrw htab hidx _ _), hinv⟩
+  | .assignThruOwn p t _ _ i e _ _ _ _ _ hw hL, hok, σ, ρ, _, hinv => by
+      obtain ⟨x, rfl, op, hop, hrw, htab, hidx⟩ := hok
+      simp only [execStmt]
+      exact ⟨slotRahmen_schreib σ _ rfl f _ Λ (schreibOk_in hinv hop hrw htab hidx _ _), hinv⟩
   | .assignGlob g e hw hL, _, σ, ρ, _, hinv => by
       simp only [execStmt]
       exact ⟨slotRahmen_gleich rfl, hinv⟩

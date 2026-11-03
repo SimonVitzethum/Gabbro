@@ -1,35 +1,14 @@
-/-
-  Anweisung.lean -- the lowering of stage 0, part 2: statements and blocks of machine G into `S0IR`.
-
-  The first free slot of a context `Γ` is `frei Γ`: an expression of a statement is computed there; a `bind`
-  computes its value there, which is then the new variable's slot. `assignVar x e` moves the value into `x`'s slot;
-  `ite c t e` tests `c` with `brz` and jumps over the other branch; a call (`call`, `bindCall`) places the
-  callee's frame at the first free slot (`callC`). `layout.internalResult` is the lowest slot an assignment may write (a function's
-  body keeps its parameters for `ensures`); `A f` is the code address of `f`; `ens` the shared ensures/invariant epilogue, which
-  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onTag`, `onWhy`, `onOption` (the index word kept for the bound variable), `call`, `callInd`, `ret`, `retWhy`, the writes `assignGlob`, `assignSlot`, `assignThru`, `putBytes` (zero through eight bytes, operands captured once), the checked state transition `shift` (failed prestate: stop 106), `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `axiomCallElse` (discarding a value or VOID answer, binding a reason in its end block), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
-  give on every way out), the scoped returns `retScoped`/`retWhyScoped` (the ordinary `ret`/`retWhy` code: the scope
-  release is ghost), and the blocks `nil`, `cons`, `bind`, `floatLit` (kernel-rounded binary64 bits), `floatOf` (signed-word conversion or arbitrary integer literals), `floatNarrow` (inclusive range with its fallback), `bindCall`, `bindCallElse`, `bindCallInd`, `bindCallIndElse` (fallible indirect: indirect dispatch plus else branch), `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
-  number is an upper bound of the slots the code writes. End blocks also lower `retWhy`, `bindCallElse`, `bindCallIndElse`, `leave`
-  and `next` (keeping the loop targets); statements also lower `callIndElse` (value discarded, reason to its end block).
--/
+/- Stage-0 statement and block lowering. Bindings and payloads occupy complete
+   canonical frame spans; all calls share the result/parameter ABI. Byte writes
+   capture both operands before using the <=8-byte kernel in chunks. Tagged
+   dispatch preserves the whole input until the selected arm binds its payload.
+   The returned top bounds every scratch slot; unsupported forms return none. -/
 module
-public import Stage0.Senke.Ausdruck
-public import Stage0.Senke.Ausdruck.Gleit.Slots.SlotContext
-public import Stage0.Senke.Ausdruck.Gleit.Bereich
-public import Stage0.Senke.Stopp
-public import Stage0.Senke.Tor
-public import Stage0.Senke.Sperre.Code
-public import Stage0.Senke.Anweisung.Bytes.Code
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.Allocation
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.Consuming.Lower
-public import Stage0.Senke.Anweisung.Faelle.Hilfen
-public import Stage0.Senke.Anweisung.Faelle.Gleit.AddCode
+public import Stage0.Senke.Anweisung.Dependencies
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
-
 open Gabbro.Grammatik Runner.IR
-
 variable {D : Deklaration} {V : Vertrag D}
 
 mutual
@@ -61,6 +40,10 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
     if sumFits cs then do
       let cv ← lowE (reserved := reserved) L v ((frei Γ reserved))
       let ca ← lowTags (reserved := reserved) passes A L layout ens pr ex arms 0
+      pure (cv.1 ++ ca.1, max cv.2 ca.2)
+    else if cs.length < 2 ^ 31 then do
+      let cv ← lowE (reserved := reserved) L v (frei Γ reserved)
+      let ca ← lowSumTags (reserved := reserved) passes A L layout ens pr ex arms (valueWords (.sum cs)) 0
       pure (cv.1 ++ ca.1, max cv.2 ca.2)
     else none
   | _, Γ, _, _, .onWhy (n := n) r arms, reserved =>
@@ -99,7 +82,9 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
       let ci' ← lowE (reserved := reserved) L i ((frei Γ reserved) + 1)
       let cb ← putBytesL L (Γ := Γ) (Λ := Λ) t f lo hi (256 ^ n - 1) hlo reserved n 0 (by simpa using hhi)
       pure (ce.1 ++ ci'.1 ++ cb.1, max ce.2 (max ci'.2 cb.2))
-    else none
+    else putBytesWideL L (Γ := Γ) (Λ := Λ) t f lo hi n hlo hhi
+      (lowE (reserved := reserved) L e (frei Γ reserved))
+      (lowE (reserved := reserved) L i (frei Γ reserved + valueWords (.int 0 (256 ^ n - 1)))) reserved
   | _, Γ, _, _, .assignSlotRef r t _ _ f e _ _, reserved => do
     let ce ← lowE (reserved := reserved) L e (frei Γ reserved)
     let cr ← lowE (reserved := reserved) L r (frei Γ reserved + valueWords (D.typ t f))
@@ -207,7 +192,7 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
     match e with
     | .lit n => floatLiteralL ((frei Γ reserved)) (n, 1) low high (fun _ => lowB (reserved := reserved) passes A L layout ens pr ex rest)
     | _ => do
-      let cc ← canonicalFloatRangeL (frei Γ reserved) low high
+      let cc ← computedFloatRangeL (frei Γ reserved) low high
         (fun d => computedFloatOfE (reserved := reserved) L Gleitkomma.f64 e d)
       let ce ← computedFloatOfE (reserved := reserved) L Gleitkomma.f64 e (frei Γ reserved)
       let cr ← lowB (reserved := reserved) passes A L layout ens pr ex rest
@@ -223,19 +208,15 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
     let cr ← lowB (reserved := reserved) passes A L layout ens pr ex rest
     pure (cc.1 ++ receiveC (D.sigNr n) (frei Γ reserved) ++ cr.1,
       max cc.2 (max (receiveTop (D.sigNr n) (frei Γ reserved)) cr.2))
-  | _, Γ, _, _, .narrow (lo := lo') (hi := hi') e low high err rest, reserved =>
-    if inW lo' hi' && inW low low && inW high high then do
-      let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
-      let cr ← lowB (reserved := reserved) passes A L layout ens pr ex rest
-      let cx ← lowEnd (reserved := reserved) passes A L layout ens pr (exPlus ex (cr.1.length + 1)) err
-      pure (narrowC ((frei Γ reserved)) low high ce.1 cx.1 cr.1, max ce.2 (max ((frei Γ reserved) + 4) (max cx.2 cr.2)))
-    else none
-  | _, Γ, _, _, .narrowRequired (lo := lo') (hi := hi') e low high rest, reserved =>
-    if inW lo' hi' && inW low low && inW high high then do
-      let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
-      let cr ← lowB (reserved := reserved) passes A L layout ens pr ex rest
-      pure (narrowC ((frei Γ reserved)) low high ce.1 (stopC 107 (frei Γ reserved)) cr.1, max ce.2 (max ((frei Γ reserved) + 4) (max (frei Γ reserved + 1) cr.2)))
-    else none
+  | _, Γ, _, _, .narrow (lo := lo') (hi := hi') e low high err rest, reserved => do
+    let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
+    let cr ← lowB (reserved := reserved) passes A L layout ens pr ex rest
+    let cx ← lowEnd (reserved := reserved) passes A L layout ens pr (exPlus ex (cr.1.length + 1)) err
+    pure (narrowC ((frei Γ reserved)) lo' hi' low high ce.1 cx.1 cr.1, max ce.2 (max (narrowTop (frei Γ reserved) lo' hi' low high) (max cx.2 cr.2)))
+  | _, Γ, _, _, .narrowRequired (lo := lo') (hi := hi') e low high rest, reserved => do
+    let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
+    let cr ← lowB (reserved := reserved) passes A L layout ens pr ex rest
+    pure (narrowC ((frei Γ reserved)) lo' hi' low high ce.1 (stopC 107 (frei Γ reserved)) cr.1, max ce.2 (max (narrowTop (frei Γ reserved) lo' hi' low high) (max (frei Γ reserved + 1) cr.2)))
   | _, Γ, _, _, .bindAxiom (τ := τ) a args _ _ _ _ _ rest, reserved => do
     let cg ← plainForeignC L a args τ (frei Γ reserved) reserved
     let cr ← lowB (reserved := reserved) passes A L layout ens pr ex rest
@@ -316,6 +297,23 @@ def lowTags (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout)
         max ((frei Γ reserved) + 3) (max cb.2 cr.2))
     else none
 
+/-- Separated sums keep the whole input below the test scratch. Once selected,
+    the complete payload is copied into the arm binder's canonical slots. -/
+def lowSumTags (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout)
+    (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
+    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option Ty)} →
+    Arms D V l Γ Λ Λ' cs → Nat → Nat → (reserved : Nat := 0) → Option (List II × Nat)
+  | _, Γ, _, _, _, .nil, span, _, reserved => some ([], frei Γ reserved + span + 2)
+  | _, Γ, _, _, c :: _, .cons b rest, span, k, reserved => if k < 2 ^ 31 then do
+      let cr ← lowSumTags (reserved := reserved) passes A L layout ens pr ex rest span (k + 1)
+      let cb ← lowB (reserved := reserved) passes A L layout ens pr (exPlus ex (cr.1.length + 1)) b
+      let s := frei Γ reserved
+      let cp := sumSpanPayloadC s c
+      pure (sumSpanTestC s (s + span) k ++ [ci 19 (s + span) (16 * (cp.length + cb.1.length + 2)) 0] ++
+        cp ++ cb.1 ++ [ci 18 (16 * (cr.1.length + 1)) 0 0] ++ cr.1,
+        max (s + span + 2) (max cb.2 cr.2))
+    else none
+
 /-- Reason dispatch uses full word comparisons in declaration order. -/
 def lowGrund (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {n : Nat} →
@@ -367,19 +365,15 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) 
     let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex e
     let ct ← lowEnd (reserved := reserved) passes A L layout ens pr (exPlus ex ce.1.length) t
     pure (cc.1 ++ [ci 19 ((frei Γ reserved)) (16 * (ct.1.length + 1)) 0] ++ ct.1 ++ ce.1, max cc.2 (max ct.2 ce.2))
-  | _, Γ, _, .narrow (lo := lo') (hi := hi') e low high err rest, reserved =>
-    if inW lo' hi' && inW low low && inW high high then do
-      let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
-      let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest
-      let cx ← lowEnd (reserved := reserved) passes A L layout ens pr (exPlus ex (cr.1.length + 1)) err
-      pure (narrowC ((frei Γ reserved)) low high ce.1 cx.1 cr.1, max ce.2 (max ((frei Γ reserved) + 4) (max cx.2 cr.2)))
-    else none
-  | _, Γ, _, .narrowRequired (lo := lo') (hi := hi') e low high rest, reserved =>
-    if inW lo' hi' && inW low low && inW high high then do
-      let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
-      let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest
-      pure (narrowC ((frei Γ reserved)) low high ce.1 (stopC 107 (frei Γ reserved)) cr.1, max ce.2 (max ((frei Γ reserved) + 4) (max (frei Γ reserved + 1) cr.2)))
-    else none
+  | _, Γ, _, .narrow (lo := lo') (hi := hi') e low high err rest, reserved => do
+    let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
+    let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest
+    let cx ← lowEnd (reserved := reserved) passes A L layout ens pr (exPlus ex (cr.1.length + 1)) err
+    pure (narrowC ((frei Γ reserved)) lo' hi' low high ce.1 cx.1 cr.1, max ce.2 (max (narrowTop (frei Γ reserved) lo' hi' low high) (max cx.2 cr.2)))
+  | _, Γ, _, .narrowRequired (lo := lo') (hi := hi') e low high rest, reserved => do
+    let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
+    let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest
+    pure (narrowC ((frei Γ reserved)) lo' hi' low high ce.1 (stopC 107 (frei Γ reserved)) cr.1, max ce.2 (max (narrowTop (frei Γ reserved) lo' hi' low high) (max (frei Γ reserved + 1) cr.2)))
   | _, Γ, _, .bindAxiom (τ := τ) a args _ _ _ _ _ rest, reserved => do
     let cg ← plainForeignC L a args τ (frei Γ reserved) reserved
     let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest

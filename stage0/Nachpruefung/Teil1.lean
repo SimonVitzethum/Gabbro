@@ -180,7 +180,7 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.ControlProbe.blockCheck_case_zeuge
 #print axioms Gabbro.Stage0.Senke.ControlProbe.blockNarrow_case_zeuge
 #print axioms Gabbro.Stage0.Senke.ControlProbe.endNarrow_case_zeuge
-#print axioms Gabbro.Stage0.Senke.ControlProbe.narrow_refused_zeuge
+#print axioms Gabbro.Stage0.Senke.ControlProbe.wide_source_narrow_zeuge
 #print axioms Gabbro.Stage0.Senke.ControlProbe.blockAxiomElse_case_zeuge
 #print axioms Gabbro.Stage0.Senke.stmtAxiomElse_case
 #print axioms Gabbro.Stage0.Senke.AxiomElseProbe.stmtAxiomElse_case_zeuge

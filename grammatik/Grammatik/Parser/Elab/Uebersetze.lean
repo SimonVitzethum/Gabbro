@@ -48,6 +48,8 @@ public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil9
 public import Grammatik.Parser.Elab.Uebersetze.Folds.Substitution
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
+public import Grammatik.Parser.Elab.Uebersetze.Kontext.Eigner
+public import Grammatik.Parser.Elab.Uebersetze.Kontext.ZeigerTexte
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil13
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil14
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil15

@@ -1,12 +1,9 @@
-/- Part 11 of 12 of `RufAdaequatG` (split by instrumente/teile/lean-teilen.py; the umbrella `RufAdaequatG.lean` imports all parts). -/
 module
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T10
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.Steps.T11b
 @[expose] public section
 
-
 namespace Gabbro.Grammatik
-
 variable {D : Deklaration}
 
 /-- **Witness for `rufG_adaequat_umkehr`.** All premises instantiated
@@ -45,7 +42,6 @@ theorem rufG_adaequat_umkehr_zeuge :
     for the frame fires (`trav_falsch_steht`): the frame is stuck, and no
     normal return can follow, matching `logik .schleife`. The old
     counterexample now agrees (`trav_einig`). -/
-
 
 /-- At a head `dann (traverse …; rest) k` every step of `f` is a bare lock
     step or the read-free unfold `dannTrav`. -/

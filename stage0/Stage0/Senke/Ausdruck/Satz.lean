@@ -1,7 +1,7 @@
 /- Generic expression correctness, mutual with payloads and product fields. -/
 module
-public import Stage0.Senke.Ausdruck.Aggregat.ProdSet
-public import Stage0.Senke.Ausdruck.Aggregat.ProdArgsOk
+public import Stage0.Senke.Ausdruck.Aggregat.Prod.ProdSet
+public import Stage0.Senke.Ausdruck.Aggregat.Prod.ProdArgsOk
 public import Stage0.Senke.Ausdruck.Referenz.Lesen
 public import Stage0.Senke.Ausdruck.Gleit.Fall
 public import Stage0.Senke.Ausdruck.Lesen
@@ -10,6 +10,7 @@ public import Stage0.Senke.Ausdruck.Zeiger.Fnptr
 public import Stage0.Senke.Ausdruck.Tops.Eng
 public import Stage0.Senke.Ausdruck.Arithmetik.Mixed
 public import Stage0.Senke.Ausdruck.Tag
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.Sum.Construct
 public import Stage0.Senke.Ausdruck.Aggregat.KopieSatz
 public import Stage0.Senke.Ausdruck.Aggregat.Werte.IntegerResize
 public import Stage0.Senke.Ausdruck.Aggregat.Werte.IntegerOps
@@ -18,7 +19,7 @@ public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Eng
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Builtin
 public import Stage0.Senke.Ausdruck.Aggregat.Werte.StringOps
 public import Stage0.Senke.Ausdruck.Option
-public import Stage0.Senke.Ausdruck.Wort.Bytes
+public import Stage0.Senke.Anweisung.Bytes.Span.Read
 public import Stage0.Senke.Ausdruck.Quant.Satz
 public import Stage0.Senke.Ausdruck.Quant.Count
 public import Stage0.Senke.Ausdruck.Quant.Reach
@@ -29,16 +30,13 @@ public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqOk
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringGetOk
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringTakeOk
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringExpandOk
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.String.Values
 @[expose] public section
-
 variable {currentOld : Bool}
-
-
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
-
 mutual
 /-- Ordinary lowering proves `eval σ e σ ρ`; the equality premise states that choice
     explicitly. The ensures fallback disables current-old reads and retains the generic
@@ -80,8 +78,10 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
   | _, _, .strLen s, d, c, top, h, hK, m, pc, ρ, hp =>
     strLen_ok s (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp) h hK hp
   | _, _, .strCat s t, d, c, top, h, hK, m, pc, ρ, hp =>
-    strCat_ok s t (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay t d ca ta ha hta m pc ρ hp) h hK hp
+    strCatExpr_ok s t (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay t d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay s _ ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay t _ ca ta ha hta m pc ρ hp) h hK hp
   | _, _, .strWeit q s, d, c, top, h, hK, m, pc, ρ, hp =>
     strWeit_ok q s (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp) h hK hp
   | _, _, .strGet s i, d, c, top, h, hK, m, pc, ρ, hp =>
@@ -94,8 +94,10 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay t _ ca ta ha hta m pc ρ hp)
       (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay t _ ca ta ha hta m pc ρ hp) h hK hp
   | _, _, .strLt s t, d, c, top, h, hK, m, pc, ρ, hp =>
-    strCompare_ok true s t (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay t (d + 1) ca ta ha hta m pc ρ hp) h hK hp
+    strLtExpr_ok s t (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay t (d + 1) ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay s _ ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay t _ ca ta ha hta m pc ρ hp) h hK hp
   | _, _, .widen lower upper e, d, c, top, h, hK, m, pc, ρ, hp =>
     resizeIntegerL_ok (eval σ₀ e σ ρ) (Zahl.weiter lower upper (eval σ₀ e σ ρ)) rfl
       (fun cc tt hc ht hp => lowE_ok (same := same) σ₀ σ hWL hLay e d cc tt hc ht m pc ρ hp) h hK hp
@@ -372,7 +374,19 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
             simp only [sumFits, Bool.and_eq_true] at hfit; exact hfit.1))
       exact (lowN_ok (same := same) σ₀ σ hWL hLay i.val (by have := i.isLt; omega) nutz d c top h hK m pc ρ hp).mono
         (fun w hw => ⟨hfit, hw⟩)
-    · cases h
+    · next separate =>
+      have hsep : sumFits cs = false := Bool.eq_false_iff.mpr separate
+      cases nutz with
+      | empty =>
+        exact sumSpan_ok i () hsep (by
+          intro ca ta made fits m pc pre
+          cases made
+          exact ⟨m, by simpa using Star.refl ⟨pc, fp⟩ m,
+            Agree.refl _ _ _ _, trivial, by simp [WordsAt, payloadEncoding]⟩) h hK hp
+      | val e =>
+        exact sumSpan_ok i (eval σ₀ e σ ρ) hsep
+          (fun ca ta made fits m pc pre =>
+            lowE_ok (same := same) σ₀ σ hWL hLay e _ ca ta made fits m pc ρ pre) h hK hp
   | _, _, .wenn cond a b, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs, wennL, bind, Option.bind_eq_some_iff] at h
     obtain ⟨⟨cc, tc⟩, hc, ⟨ca, ta⟩, ha, ⟨cb, tb⟩, hb, h⟩ := h
@@ -402,24 +416,10 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
         (fe := lowE (currentOld := currentOld) L (reserved := reserved) e) (fb := lowE (currentOld := currentOld) L (reserved := reserved) b)
         (fun ce te he hte m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay e d ce te he hte m pc ρ hp)
         (fun cb tb hb htb m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay b d cb tb hb htb m pc ρ hp) h hK hp
-  | _, _, .getBytes t f hf n i hlo hhi _, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE_eqs] at h
-    split at h
-    · next hn =>
-      have power : (256 : Int) ^ n ≤ (256 : Int) ^ 8 := by
-        have natural := Nat.pow_le_pow_right (n := 256) (i := n) (by decide) hn
-        have cast : ((256 ^ n : Nat) : Int) ≤ ((256 ^ 8 : Nat) : Int) := Int.ofNat_le.mpr natural
-        simpa only [Int.natCast_pow, Int.cast_ofNat_Int] using cast
-      have ceiling : (256 : Int) ^ 8 = 2 ^ 64 := by decide
-      rw [ceiling] at power
-      refine Ok.value ?_ (integerWords_unsigned (by decide) (by omega))
-      have hr := readBytesL_ok i hf hWL hlo
-        (fun d ci ti hi ht m pc hp => (lowE_ok (same := same) σ₀ σ hWL hLay i d ci ti hi ht m pc ρ hp).word trivial)
-        n 0 d c top (by simpa using hhi) (by omega) h hK m pc hp
-      exact hr.mono (fun w hw => by
-        change w = BitVec.ofInt 64 (bytesZuZahl (σ.bytesAb t f hf n (eval σ₀ i σ ρ).n))
-        simpa only [Int.natCast_zero, Int.add_zero] using hw)
-    · cases h
+  | _, _, .getBytes t f hf n i hlo hhi access, d, c, top, h, hK, m, pc, ρ, hp =>
+    getBytes_ok i hf n hlo hhi access hWL
+      (fun d ci ti hi ht m pc hp => (lowE_ok (same := same) σ₀ σ hWL hLay i d ci ti hi ht m pc ρ hp).word trivial)
+      h hK hp
   | _, _, .forallSlots t body _, d, c, top, h, hK, m, pc, ρ, hp =>
     (quantL_ok true (D.count t) (lowE (currentOld := currentOld) L (reserved := reserved) body (d + 3)) (fun k => wahr? (eval σ₀ body σ (.cons k ρ))) h hK
       (fun cb tb hb htb k m pc hp => (lowE_ok (same := same) σ₀ σ hWL hLay body (d + 3) cb tb hb htb m pc (.cons k ρ) hp).word trivial) hp).value rfl
@@ -468,7 +468,6 @@ theorem lowE_ok_args {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.M
   | _, _, .cons e rest, ρ =>
     ⟨(fun d c top h hK m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay e d c top h hK m pc ρ hp),
       lowE_ok_args (same := same) σ₀ σ hWL hLay rest ρ⟩
-
 theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
     (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} (tag : Nat) (htag : tag < 256) :
     {Γ : Ctx} → {a : Option Ty} → (nutz : NutzlastExpr D Γ Λ a) → (d : Nat) →

@@ -137,7 +137,7 @@ def spiegelS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .advances .. => false
   | .retires .. => false
   | .assignSlot .. => true
-  | .assignThru .. | .assignSlotRef .. => true
+  | .assignThru .. | .assignThruOwn .. | .assignSlotRef .. => true
   | .assignGlob .. => true
   | .putBytes .. => true
   | .assignVar .. => true

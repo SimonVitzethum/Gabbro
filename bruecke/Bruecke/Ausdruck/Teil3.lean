@@ -2,7 +2,7 @@ module
 
 public import Bruecke.Kodierung
 public import Bruecke.Pflichten
-public import Bruecke.Ausdruck.Teil2
+public import Bruecke.Ausdruck.Accumulator
 
 @[expose] public section
 
@@ -162,8 +162,12 @@ theorem lowEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
         · rename_i re a2 hr
           simp only [Option.some.injEq, Prod.mk.injEq] at hb
           obtain ⟨rfl, rfl⟩ := hb
-          simp only [lowEns, lowCmp] at h
+          simp only [lowEns, ensSide_ohneCount hl, ensSide_ohneCount hr,
+            Bool.false_or, Bool.false_eq_true, ↓reduceIte, lowCmp] at h
           split at h
+          · rename_i hx1 _
+            obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
+            simp [LowSide.wert] at hls
           · rename_i hx1 _
             obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
             simp [LowSide.wert] at hls
@@ -252,6 +256,8 @@ theorem lowEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
           simp only [Gabbro.Body.eval, e1, Gabbro.Body.unop]
           rfl
       · cases hb
+  -- Unrepresented predicates contradict the existing `ensExpr` premise.
+  | _, _, _, _, _, hb, _, _ => by simp [ensExpr] at hb
 
 /-- What a lowered side adds to the accumulator: `old` reads that evaluate in the entry state,
     and `result` only where the function has one. -/
@@ -339,8 +345,12 @@ theorem ensExpr_zuwachs {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
         · rename_i re a2 hr
           simp only [Option.some.injEq, Prod.mk.injEq] at hb
           obtain ⟨rfl, rfl⟩ := hb
-          simp only [lowEns, lowCmp] at h
+          simp only [lowEns, ensSide_ohneCount hl, ensSide_ohneCount hr,
+            Bool.false_or, Bool.false_eq_true, ↓reduceIte, lowCmp] at h
           split at h
+          · rename_i hx1 _
+            obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
+            simp [LowSide.wert] at hls
           · rename_i hx1 _
             obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
             simp [LowSide.wert] at hls
@@ -410,5 +420,7 @@ theorem ensExpr_zuwachs {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
         · rename_i gx hgx
           exact ensExpr_zuwachs hA hT σ₀ σ ρ s₀ hW₀ hL₀ x hx hgx
       · cases hb
+  -- Unrepresented predicates contradict the existing `ensExpr` premise.
+  | _, _, _, _, _, hb, _ => by simp [ensExpr] at hb
 
 end Gabbro.Bruecke

@@ -130,6 +130,7 @@ def Expr.orte : Expr D Γ Λ τ → List (D.Tab ⊕ D.Glob)
   | .glob g _ => [.inr g]
   | .slot t _ i _ => .inl t :: i.orte
   | .thru p t _ _ i _ => p.orte ++ .inl t :: i.orte
+  | .thruOwn p t _ _ i _ _ _ _ _ _ => p.orte ++ .inl t :: i.orte
   | .oldG g _ => [.inr g]
   | .oldS t _ i _ => .inl t :: i.orte
   | .getBytes t _ _ _ i _ _ _ => .inl t :: i.orte
@@ -191,6 +192,7 @@ def eval (σ₀ : World D) : Expr D Γ Λ τ → World D → Env D Γ → Wert D
   | .glob g _, σ, _ => σ.globs g
   | .slot t f i _, σ, ρ => σ.slots t (eval σ₀ i σ ρ).n f
   | .thru _ t _ f i _, σ, ρ => σ.slots t (eval σ₀ i σ ρ).n f
+  | .thruOwn _ t _ f i _ _ _ _ _ _, σ, ρ => σ.slots t (eval σ₀ i σ ρ).n f
   | .ptrOf _ _ _ _, _, _ => ()
   | .fnref f _ h, _, _ => ⟨f, h⟩
   | .refEq a b, σ, ρ => decide ((eval σ₀ a σ ρ).zelle = (eval σ₀ b σ ρ).zelle)

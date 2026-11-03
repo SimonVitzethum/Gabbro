@@ -68,7 +68,7 @@ def mS (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .retry _ _ body ueber => mB A body && mB A ueber
   | .forever _ _ body => mB A body
   | .assignSlot .. => true
-  | .assignThru .. | .assignSlotRef .. => true
+  | .assignThru .. | .assignThruOwn .. | .assignSlotRef .. => true
   | .assignGlob .. => true
   | .putBytes .. => true
   | .assignVar .. => true

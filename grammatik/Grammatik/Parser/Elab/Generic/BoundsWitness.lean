@@ -203,8 +203,24 @@ theorem total_symbolic_traverse_zeuge :
 theorem total_range_length_refused_zeuge :
     SourceFolds.returnFold boundedSource [("xs", .array (.atom "T") (.lit 3))]
       (some (.atom "u64"))
+      (.ret (some (.ext .foldAdd ["i", "range"] [.lit 0, .lit 5, .tru,
+        .call "Shape::area" [.index (.variable "xs") (.variable "i")]]))) =
+      .error "fold range: upper bound exceeds the array length" := rfl
+
+/-- A short upper bound truncates the range with a filter test. -/
+theorem total_range_truncated_zeuge :
+    SourceFolds.returnFold boundedSource [("xs", .array (.atom "T") (.lit 3))]
+      (some (.atom "u64"))
       (.ret (some (.ext .foldAdd ["i", "range"] [.lit 0, .lit 2, .tru,
         .call "Shape::area" [.index (.variable "xs") (.variable "i")]]))) =
-      .error "fold range: upper bound must equal the array length" := rfl
+      .ok (.block
+        [.bind true "$rangeFold$acc$0" (some (.atom "u64")) (.lit 0),
+          .each "i" none "elems" (.variable "xs") "unvisited" "" none
+            (.block [.cond (.bin "<" (.variable "i") (.lit 2))
+              (.block [.bind false "$rangeFold$value$0" none
+                (.call "Shape::area" [.index (.variable "xs") (.variable "i")]),
+                .set (.variable "$rangeFold$acc$0") "+=" (.variable "$rangeFold$value$0")] none)
+              [] none] none)]
+        (some (.ret (some (.variable "$rangeFold$acc$0"))))) := rfl
 
 end Gabbro.Grammatik.Parser.Generic

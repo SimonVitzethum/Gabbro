@@ -33,6 +33,18 @@ inductive SEffekt
   | pure : SEffekt
   | param : String → SEffekt
   | instanceEffects : String → List STyp → SEffekt
+  /-- `borrows m` (C12): a call-scoped loan of the owner mark `m` -- the
+      callee holds it during the call, the caller gets it back on return
+      (`OwnerFlow.loans`). Coverage numbers constructors by position. -/
+  | borrows : String → SEffekt
+  /-- `moves m` (C09): a linear handoff of the owner mark `m` -- the callee
+      receives the same nominal identity at the same stage and hands it back
+      on every returning channel (`OwnerMove` with `after := some 0`). -/
+  | moves : String → SEffekt
+  /-- `mints m` (C09): the checked mint of the owner mark `m` -- the minter
+      holds the fresh owner from its start frame and returns it
+      (`OwnerFlow.mints`), never ordinary production. -/
+  | mints : String → SEffekt
   deriving Repr
 
 mutual
@@ -48,6 +60,9 @@ def beqSEffekt : SEffekt → SEffekt → Bool
   | .posts a, .posts b => beqSExpr a b
   | .loops, .loops => true
   | .pure, .pure => true
+  | .borrows a, .borrows b => strEq a b
+  | .moves a, .moves b => strEq a b
+  | .mints a, .mints b => strEq a b
   | _, _ => false
 def beqSEffektList : List SEffekt → List SEffekt → Bool
   | [], [] => true

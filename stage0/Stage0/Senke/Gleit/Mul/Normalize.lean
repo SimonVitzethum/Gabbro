@@ -2,7 +2,7 @@
    A 64-point offset keeps every effective exponent index nonnegative. -/
 module
 public import Stage0.Senke.Gleit.Normal.Search
-public import Stage0.Senke.Gleit.RoutineOrderModel
+public import Stage0.Senke.Gleit.Routine.RoutineOrderModel
 public import Stage0.Senke.Gleit.Normal.Signed
 @[expose] public section
 

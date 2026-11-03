@@ -208,6 +208,9 @@ theorem invLogA_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (
   | g6 hs =>
     cases hs with
     | _ => ohneRueckA
+  | g7 hs =>
+    cases hs with
+    | _ => ohneRueckA
 
 end Schritte
 end Gabbro.Grammatik

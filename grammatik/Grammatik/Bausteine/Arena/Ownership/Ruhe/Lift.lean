@@ -96,6 +96,10 @@ theorem os_lift : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c c' : Co
   | _, _, _, _, _, _, _, _, .assignThru p t ht f i e hw hL hn hp hi he hs =>
     .assignThru _ _ _ _ _ _ _ _ hn (by rw [checkExpression_ruE]; exact hp) (by rw [checkExpression_ruE]; exact hi)
       (by rw [checkExpression_ruE]; exact he) (by rw [storeCheck_ruE]; exact hs)
+  | _, _, _, _, _, _, _, _, .assignThruOwn p t ht f i e m s ho he hg hw hL hn hp hi he' hs =>
+    .assignThruOwn _ _ _ _ _ _ _ _ _ _ _ _ _ hn (by rw [checkExpression_ruE]; exact hp)
+      (by rw [checkExpression_ruE]; exact hi) (by rw [checkExpression_ruE]; exact he')
+      (by rw [storeCheck_ruE]; exact hs)
   | _, _, _, _, _, _, _, _, .assignGlob g e hw hL hg he =>
     .assignGlob _ _ _ _ hg (by rw [checkExpression_ruE]; exact he)
   | _, _, _, _, _, _, _, _, .putBytes t f hf n i hlo hhi e hw hL ht hi he =>

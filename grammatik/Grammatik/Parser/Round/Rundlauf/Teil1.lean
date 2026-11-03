@@ -110,6 +110,8 @@ def druckExtToks (k : XKind) (ns : List String) (ts : List (List Token)) : List 
   | .foldAdd => druckFold "add" ns ts
   | .foldMin => druckFold "min" ns ts
   | .foldMax => druckFold "max" ns ts
+  | .foldAnd => druckFold "and" ns ts
+  | .foldOr => druckFold "or" ns ts
   | .label => match ns, ts with
     | [name], [value] => nameTok name :: .zeichen ":" :: value
     | _, _ => [.ende]

@@ -150,6 +150,12 @@ def parsePrimary (f : Nat) (toks : List Token) :
     | .wort "max" :: t :: .wort "in" :: rest => match nameText t with
       | some x => parseFold f .foldMax x rest
       | none => .error "fold: binder expected"
+    | .wort "and" :: t :: .wort "in" :: rest => match nameText t with
+      | some x => parseFold f .foldAnd x rest
+      | none => .error "fold: binder expected"
+    | .wort "or" :: t :: .wort "in" :: rest => match nameText t with
+      | some x => parseFold f .foldOr x rest
+      | none => .error "fold: binder expected"
     | .wort "count" :: t :: .wort "in" :: rest => match nameText t with
       | some x => parseQuant f .count x rest
       | none => .error "count without a name"
@@ -324,11 +330,11 @@ def parseFold (f : Nat) (kind : XKind) (binder : String) (tokens : List Token) :
     let (value, rest) ← parseOr f rest
     match rest with
     | .wort "else" :: rest =>
-      if kind == .foldAdd then throw "fold add: else is not allowed"
+      if kind == .foldAdd || kind == .foldAnd || kind == .foldOr then throw "fold add/and/or: else is not allowed"
       let (empty, rest) ← parseOr f rest
       pure (.ext kind (binder :: domain :: names) (operands ++ [filter, value, empty]), rest)
     | _ =>
-      if kind != .foldAdd then throw "fold min/max: else is required"
+      if kind != .foldAdd && kind != .foldAnd && kind != .foldOr then throw "fold min/max: else is required"
       pure (.ext kind (binder :: domain :: names) (operands ++ [filter, value]), rest)
 /-- `q x in D : pred` behind the `in` (for `forall`, `exists` and `count`): the layout of `ext`. -/
 def parseQuant (f : Nat) (k : XKind) (x : String) (toks : List Token) :

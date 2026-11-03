@@ -142,3 +142,12 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Pipeline.ProductValueWitness.image_zeuge
 #print axioms Gabbro.Stage0.exported_records_ir_correct
 #print axioms Gabbro.Stage0.Pipeline.ProductRecordWitness.exported_records_ir_correct_zeuge
+#print axioms Gabbro.Stage0.Senke.bytesLt_keys
+#print axioms Gabbro.Stage0.Senke.keyScan_lex
+#print axioms Gabbro.Stage0.Senke.stringScan_value
+#print axioms Gabbro.Stage0.Senke.stringAppend_ok
+#print axioms Gabbro.Stage0.Senke.stringCatC_ok
+#print axioms Gabbro.Stage0.Senke.strCatExpr_ok
+#print axioms Gabbro.Stage0.Senke.strLtExpr_ok
+#print axioms Gabbro.Stage0.Senke.StringSpanProbe.concatenation_correct
+#print axioms Gabbro.Stage0.Senke.StringSpanProbe.order_correct

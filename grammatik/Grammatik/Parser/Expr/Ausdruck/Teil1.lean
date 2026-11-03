@@ -31,7 +31,7 @@ inductive XKind
       Argument spellings are balanced token groups, interpreted by the declared parameter kind. -/
   | instantiate
   /-- Folds: binder/domain names; domain operands, filter, value, optional empty value. -/
-  | foldAdd | foldMin | foldMax
+  | foldAdd | foldMin | foldMax | foldAnd | foldOr
   deriving DecidableEq, Repr
 
 def beqWorte : List String → List String → Bool

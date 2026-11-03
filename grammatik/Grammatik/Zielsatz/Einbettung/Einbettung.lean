@@ -80,6 +80,9 @@ structure Einbettung (D D' : Deklaration) where
   braucht : ∀ t, D'.braucht (tab t) = (D.braucht t).map (Sum.map lock (Prod.map marke id))
   gbraucht : ∀ g, D'.gbraucht (glob g) = (D.gbraucht g).map (Sum.map lock (Prod.map marke id))
   eigner : ∀ t, D'.eigner (tab t) = (D.eigner t).map marke
+  /-- The capability owner registry follows the mark renaming (C12): a resolved
+      owner number resolves to the renamed mark. -/
+  ownerNr : ∀ o m, D.ownerNr o = some m → D'.ownerNr o = some (marke m)
   -- functions: the project's own and the heads it imports
   fn : D.Fn → D'.Fn
   fnZ : D'.Fn → Option D.Fn
@@ -264,6 +267,7 @@ def Einbettung.id (D : Deklaration) : Einbettung D D where
     funext w
     rcases w with L | ⟨m, s⟩ <;> rfl
   eigner := fun _ => by simp only [List.map_id_fun', id_eq]
+  ownerNr := fun _ _ h => h
   fn := fun f => f
   fnZ := some
   fnZ_fn := fun _ => rfl

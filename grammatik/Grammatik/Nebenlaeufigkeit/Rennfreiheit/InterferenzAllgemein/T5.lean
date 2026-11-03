@@ -63,6 +63,10 @@ theorem eval_liest_nur_speicher {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
       have hi := eval_liest_nur_speicher i σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       simp only [eval, hi]
       exact hS t _ _
+  | .thruOwn _ t _ _ i _ _ _ _ _ _ =>
+      have hi := eval_liest_nur_speicher i σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval, hi]
+      exact hS t _ _
   | .widen _ _ e =>
       have h := eval_liest_nur_speicher e σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       simp only [eval]

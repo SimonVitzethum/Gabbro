@@ -3,6 +3,7 @@ module
 public import Grammatik.Parser.Elab.UebersetzeAllg
 public import Grammatik.Korpus.Programme.Export108
 public import Grammatik.Parser.Elab.UebersetzeAllg2.Teil2
+public import Grammatik.Gen.Erzeuger.Entscheidung
 
 @[expose] public section
 
@@ -62,17 +63,16 @@ def axiomStmt {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
     k.hd
     k.hgd
 
-/-- A direct call as a statement. -/
+/-- A direct call as a statement, stepping to the call transformer (C16). -/
 def lowCallL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u)))
     (cname : String) (args : List UArg) :
-    Except String (Stmt (declOf u) (verOf u caller) l
-      Γ Λ Λ) :=
+    Except String ((Σ Λ' : List (Res (declOf u)), Stmt (declOf u) (verOf u caller) l Γ Λ Λ')) :=
   match lowRufKopf u caller Γ fn Λ cname args with
   | .error e => .error e
   | .ok k =>
     if hr : (declOf u).gruende k.callee = 0 then
-      .ok (castNachStmtL u caller k.callee Γ Λ (Stmt.call (D := declOf u) k.callee k.args k.hp hr))
+      .ok ⟨nach (declOf u) k.callee Λ, Stmt.call (D := declOf u) k.callee k.args k.hp hr⟩
     else .error "call of a function with a reason channel needs `let .. else`"
 
 /-- A write of a static (`Stmt.assignGlob`): only where the function declares `writes X`. -/
@@ -366,16 +366,20 @@ def lowRegWriteBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) 
           .ok (Stmt.regWrite (D := declOf u) g hk e)
         else .error "register written against its class"
 
-/-- The signature after a call through a pointer of the unit: the held set stays (no marks). -/
+/-- The signature after a call through a pointer of the unit: the canonical call
+    transformer of that signature (resolved, C16). -/
 theorem nachSigAt_eq (u : UProg) (n : Nat) (L : List (Res (declOf u))) :
-    nachSig (declOf u) ((declOf u).sigNr n) L = L := by
-  show nachSig (declOf u) (sigAt u n) L = L
-  unfold sigAt
-  split <;> exact List.append_nil L
+    nachSig (declOf u) ((declOf u).sigNr n) L =
+      ((((declOf u).sigNr n).inputMarks.foldl
+        (fun acc p => acc.erase (Res.vonMarke (declOf u) p)) L) ++
+      (((declOf u).sigNr n).outputMarks.map (Res.vonMarke (declOf u))) := by
+  unfold nachSig
 
-/-- `RufPasst` against any signature of the unit, decided over the finite carriers. -/
+/-- `RufPasst` against any signature of the unit, decided over the finite carriers. The
+    admitted boundary holds the callee's input marks (C16) and an escrow-ready
+    owner flow (C12: `ownerReadyB` -- empty flows and resolved borrowing callees). -/
 def rufPasstB (u : UProg) (V : Vertrag (declOf u)) (S : Signatur (Fin u.tabs.length) (Fin u.globs.length)
-    (Fin u.locks.length) Empty) (Λ : List (Res (declOf u))) : Bool :=
+    (Fin u.locks.length) (Fin u.marken.length)) (Λ : List (Res (declOf u))) : Bool :=
   (List.finRange u.tabs.length).all (fun t => !S.schreibt t || V.schreibt t) &&
   (List.finRange u.globs.length).all (fun g => !S.gschreibt g || V.gschreibt g) &&
   S.haelt.all (fun L => decide (Res.held (D := declOf u) L ∈ Λ)) &&
@@ -383,26 +387,23 @@ def rufPasstB (u : UProg) (V : Vertrag (declOf u)) (S : Signatur (Fin u.tabs.len
     decide (L ∈ S.haelt) || (match S.boden with | some c => decide ((lockAt u L).rank < c) | none => false)) &&
   (match V.boden with
     | none => true
-    | some c => match S.boden with | some c' => decide (c ≤ c') | none => false)
+    | some c => match S.boden with | some c' => decide (c ≤ c') | none => false) &&
+  decide (Untermulti (S.inputMarks.map (Res.vonMarke (declOf u))) Λ) &&
+  ownerReadyB u S
 
 theorem rufPasstB_ok {u : UProg} {V : Vertrag (declOf u)} {S : Signatur (Fin u.tabs.length) (Fin u.globs.length)
-    (Fin u.locks.length) Empty} {Λ : List (Res (declOf u))} (h : rufPasstB u V S Λ = true) :
+    (Fin u.locks.length) (Fin u.marken.length)} {Λ : List (Res (declOf u))} (h : rufPasstB u V S Λ = true) :
     RufPasst (declOf u) V S Λ := by
   unfold rufPasstB at h
   simp only [Bool.and_eq_true, decide_eq_true_eq, List.all_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at h
-  obtain ⟨⟨⟨⟨hw, hg⟩, hh⟩, hx⟩, hb⟩ := h
-  refine ⟨fun t ht => ?_, fun g ht => ?_, ?_, fun L hL => hh L hL, fun L hL hn => ?_, fun c hc => ?_, OwnerFlow.escrowReady_of_empty _ _ _ _ (OwnerFlow.empty_of_empty S.owner)⟩
+  obtain ⟨⟨⟨⟨⟨⟨hw, hg⟩, hh⟩, hx⟩, hb⟩, hk⟩, ho⟩ := h
+  refine ⟨fun t ht => ?_, fun g ht => ?_, hk, fun L hL => hh L hL, fun L hL hn => ?_, fun c hc => ?_, ownerReadyB_ok u S ho⟩
   · rcases hw t (List.mem_finRange t) with h1 | h1
     · rw [ht] at h1; cases h1
     · exact h1
   · rcases hg g (List.mem_finRange g) with h1 | h1
     · rw [ht] at h1; cases h1
     · exact h1
-  · have : S.inputMarks = [] := by
-      cases hk : S.inputMarks with
-      | nil => rfl
-      | cons m _ => exact m.1.elim
-    rw [this]; exact ⟨[], List.Perm.refl _, by simp only [List.nil_sublist]⟩
   · rcases hx L (List.mem_finRange L) with (h1 | h1) | h1
     · simp only [decide_eq_false_iff_not] at h1; exact absurd hL h1
     · exact absurd h1 hn

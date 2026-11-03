@@ -20,9 +20,10 @@ set_option maxRecDepth 100000
 def ctxOf (u : UProg) (c : Fin u.fns.length) : Ctx :=
   (fnAt u c).params.map (·.2)
 
-/-- The held resources of a function body. -/
+/-- The held resources of a function body: its held locks and consumed input marks
+    (C16: bodies start holding what the signature consumes). -/
 def resOf (u : UProg) (c : Fin u.fns.length) : List (Res (declOf u)) :=
-  (heldAt u (fnAt u c)).map (Res.held (D := declOf u))
+  Signatur.anfang (declOf u) ((declOf u).signatur c)
 
 /-- The contract of a function body. -/
 def verOf (u : UProg) (c : Fin u.fns.length) : Vertrag (declOf u) :=
@@ -62,16 +63,16 @@ theorem vGSchreibt_eq (u : UProg) (c : Fin u.fns.length) (g : Fin u.globs.length
   rw [sigAt_get u c]
   rfl
 
-/-- No consumed marks travel. -/
-theorem sigKonsumiert_nil (u : UProg) (i : Fin u.fns.length) :
-    ((declOf u).signatur i).konsumiert = [] := by
+/-- The consumed marks travel from `nimmt`. -/
+theorem sigKonsumiert_eq (u : UProg) (i : Fin u.fns.length) :
+    ((declOf u).signatur i).konsumiert = nimmtAt u (fnAt u i) := by
   show (sigAt u i.val).konsumiert = _
   rw [sigAt_get u i]
   rfl
 
-/-- No produced marks travel. -/
-theorem sigProduziert_nil (u : UProg) (i : Fin u.fns.length) :
-    ((declOf u).signatur i).produziert = [] := by
+/-- The produced marks travel from `gibt` (never owners). -/
+theorem sigProduziert_eq (u : UProg) (i : Fin u.fns.length) :
+    ((declOf u).signatur i).produziert = gibtAt u (fnAt u i) := by
   show (sigAt u i.val).produziert = _
   rw [sigAt_get u i]
   rfl
@@ -110,17 +111,11 @@ theorem vErg_eq (u : UProg) (c : Fin u.fns.length) :
   rw [sigAt_get u c]
   rfl
 
-/-- A call keeps the held resources (both mark lists are empty). -/
+/-- A call steps to the canonical call transformer: consumed marks are erased,
+    produced marks appended (definitionally `nachSig` of the signature). -/
 theorem nach_eq (u : UProg) (i : Fin u.fns.length)
     (L : List (Res (declOf u))) :
-    nach (declOf u) i L = L := by
-  have hK := sigKonsumiert_nil u i
-  have hP := sigProduziert_nil u i
-  unfold nach nachSig Signatur.inputMarks Signatur.outputMarks
-  rw [OwnerFlow.empty_of_empty ((declOf u).signatur i).owner]
-  rw [hK, hP]
-  change L ++ [] = L
-  exact List.append_nil L
+    nach (declOf u) i L = nachSig (declOf u) ((declOf u).signatur i) L := rfl
 
 /-- The body context is the declared parameter list. -/
 theorem ctxParams_eq (u : UProg) (c : Fin u.fns.length) :
@@ -128,24 +123,20 @@ theorem ctxParams_eq (u : UProg) (c : Fin u.fns.length) :
   show (fnAt u c).params.map (·.2) = _
   exact (params_eq u c).symm
 
-/-- The held resources are the signature beginning. -/
+/-- The held resources are the signature beginning (bodies start holding inputs). -/
 theorem anfangRes_eq (u : UProg) (c : Fin u.fns.length) :
     resOf u c =
-      Signatur.anfang (declOf u) ((declOf u).signatur c) := by
-  have h1 : ((declOf u).signatur c).haelt =
-    heldAt u (fnAt u c) := haelt_eq u c
-  have h2 : ((declOf u).signatur c).konsumiert = [] :=
-    sigKonsumiert_nil u c
-  show ((heldAt u (fnAt u c)).map (Res.held (D := declOf u))) = _
-  unfold Signatur.anfang Signatur.inputMarks
-  rw [h1, h2, OwnerFlow.empty_of_empty ((declOf u).signatur c).owner]
-  rfl
+      Signatur.anfang (declOf u) ((declOf u).signatur c) := rfl
 
-/-- The held resources are the contract end. -/
-theorem endeRes_eq (u : UProg) (c : Fin u.fns.length) :
-    resOf u c = (vertragVon (declOf u) c).ende := by
-  show ((heldAt u (fnAt u c)).map (Res.held (D := declOf u))) = _
-  exact (ende_eq u c).symm
+/-- The contract end is held locks plus produced marks (resolved, C16). -/
+theorem ende_eq_resolved (u : UProg) (c : Fin u.fns.length) :
+    (vertragVon (declOf u) c).ende =
+      ((declOf u).haelt c).map (Res.held (D := declOf u)) ++
+        ((((declOf u).signatur c).produziert ++
+          ((declOf u).signatur c).owner.outputs).map (Res.vonMarke (declOf u))) := by
+  show Vertrag.ende (vertragVon (declOf u) c) = _
+  unfold Vertrag.ende Vertrag.vonSig
+  rfl
 
 /-- The ensures context through the declaration. -/
 theorem ensCtx_eq (u : UProg) (c : Fin u.fns.length) :
@@ -190,6 +181,27 @@ def assignDurchStmt {read : Bool} {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (
     exact e
   exact Stmt.assignThru (D := declOf u) p t (Deklaration.capTab_of ht rfl (by decide)) fh.idx i e2 hw hL
 
+/-- An owned `durch` write at its recorded range: the same guarded store as
+    `assignDurchStmt` through the `own@m` capability, holding the owner mark. -/
+def assignDurchOwnStmt {read : Bool} {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (V : Vertrag (declOf u)) (t : Fin u.tabs.length)
+    (fh : FieldHit u t) (o : Nat) (m : Fin u.marken.length)
+    (p : Expr (declOf u) Γ Λ (.ptr ⟨0, ⟨read, true, some o⟩, .table t.val⟩))
+    (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
+    (e : Expr (declOf u) Γ Λ (.int fh.range.1 fh.range.2))
+    (hm : eignerMarke u o = some m) (he : m ∈ eignerAt u t)
+    (hw : V.schreibt t = true)
+    (hL : ∀ wdd ∈ (declOf u).braucht t,
+      Res.von (declOf u) wdd ∈ Λ) :
+    Stmt (declOf u) V l Γ Λ Λ := by
+  have e2 : Expr (declOf u) Γ Λ ((declOf u).typ t fh.idx) := by
+    show Expr (declOf u) Γ Λ (typAt u t fh.idx)
+    rw [fh.hint]
+    exact e
+  obtain ⟨ho, he', hg⟩ := ownGuard_holds u Λ t o m hm he hL
+  exact Stmt.assignThruOwn (D := declOf u) p t (capTab_some u t.val t.isLt) fh.idx i e2 m 0
+    ho he' hg hw hL
+
 /-- A `slot` write at its recorded range. -/
 def assignSlotStmt {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (V : Vertrag (declOf u)) (t : Fin u.tabs.length)
@@ -222,6 +234,27 @@ def assignDurchStmtB {read : Bool} {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List 
     rw [bh.hbool]
     exact e
   exact Stmt.assignThru (D := declOf u) p t (Deklaration.capTab_of ht rfl (by decide)) bh.idx i e2 hw hL
+
+/-- An owned `durch` write into a BOOL field: the same guarded store as
+    `assignDurchStmtB` through the `own@m` capability, holding the owner mark. -/
+def assignDurchOwnStmtB {read : Bool} {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (V : Vertrag (declOf u)) (t : Fin u.tabs.length)
+    (bh : BoolHit u t) (o : Nat) (m : Fin u.marken.length)
+    (p : Expr (declOf u) Γ Λ (.ptr ⟨0, ⟨read, true, some o⟩, .table t.val⟩))
+    (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
+    (e : Expr (declOf u) Γ Λ .bool)
+    (hm : eignerMarke u o = some m) (he : m ∈ eignerAt u t)
+    (hw : V.schreibt t = true)
+    (hL : ∀ wdd ∈ (declOf u).braucht t,
+      Res.von (declOf u) wdd ∈ Λ) :
+    Stmt (declOf u) V l Γ Λ Λ := by
+  have e2 : Expr (declOf u) Γ Λ ((declOf u).typ t bh.idx) := by
+    show Expr (declOf u) Γ Λ (typAt u t bh.idx)
+    rw [bh.hbool]
+    exact e
+  obtain ⟨ho, he', hg⟩ := ownGuard_holds u Λ t o m hm he hL
+  exact Stmt.assignThruOwn (D := declOf u) p t (capTab_some u t.val t.isLt) bh.idx i e2 m 0
+    ho he' hg hw hL
 
 /-- A `slot` write into a BOOL field. -/
 def assignSlotStmtB {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -281,6 +314,44 @@ def lowAssignDurchL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx
                       hwV hL)
                   else .error "write without right"
                 else .error "access without held guard"
+      else .error "pointer table unknown"
+    | some (.ptr ⟨0, ⟨read, true, some owner⟩, .table num⟩) =>
+      if h : num < u.tabs.length then
+        match fieldHit u ⟨num, h⟩ fname with
+        | .error e => .error e
+        | .ok fh =>
+          match heig : eignerMarke u owner with
+          | .none => .error "owned write without a declared owner mark"
+          | .some m =>
+            match lowVar Γ j (.ptr ⟨0, ⟨read, true, some owner⟩, .table num⟩) with
+            | .error e => .error e
+            | .ok pv =>
+              match lowIdx u Γ Λ
+                  fn 0 ⟨num, h⟩ ix with
+              | .error e => .error e
+              | .ok i =>
+                match lowWertAt u Γ Λ
+                    fn fh.range.1 fh.range.2 v with
+                | .error e => .error e
+                | .ok e =>
+                  if hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩,
+                      Res.von (declOf u) wdd ∈ Λ then
+                    if he : m ∈ eignerAt u ⟨num, h⟩ then
+                      if hw : writesAt u (fnAt u caller)
+                          ⟨num, h⟩ = true then
+                        have hwV : (verOf u caller).schreibt
+                            ⟨num, h⟩ = true := by
+                          show (vertragVon (declOf u) caller).schreibt
+                            ⟨num, h⟩ = true
+                          rw [vSchreibt_eq u caller ⟨num, h⟩]
+                          exact hw
+                        .ok (assignDurchOwnStmt u Γ
+                          Λ (verOf u caller) ⟨num, h⟩
+                          fh owner m (Expr.var pv) i e
+                          heig he hwV hL)
+                      else .error "write without right"
+                    else .error "owned write without owner guard"
+                  else .error "access without held guard"
       else .error "pointer table unknown"
     | _ => .error "place without G form"
 

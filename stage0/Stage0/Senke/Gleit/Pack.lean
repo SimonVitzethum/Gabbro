@@ -120,20 +120,20 @@ def packL (d : Nat) (s e f : Nat → Option (List II × Nat)) :
     (f (d + 1))
 
 /-- Compositional IR simulation for packing. -/
-theorem packL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+theorem packL_ok {reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {s e f : Nat → Option (List II × Nat)} {sv ev fv : Runner.W}
-    (hs : WordCode (L := L) ρ W s sv) (he : WordCode (L := L) ρ W e ev)
-    (hf : WordCode (L := L) ρ W f fv) :
-    WordCode (L := L) ρ W (fun d => packL d s e f) (packWord sv ev fv) := by
+    (hs : WordCode (L := L) (reserved := reserved) ρ W s sv) (he : WordCode (L := L) (reserved := reserved) ρ W e ev)
+    (hf : WordCode (L := L) (reserved := reserved) ρ W f fv) :
+    WordCode (L := L) (reserved := reserved) ρ W (fun d => packL d s e f) (packWord sv ev fv) := by
   have hc63 : lit32 (63 : Int) = true := by decide
   have hc52 : lit32 (52 : Int) = true := by decide
-  have shS : WordCode (L := L) ρ W _ _ := WordCode.bin hs (WordCode.const 63 hc63)
+  have shS : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin hs (WordCode.const 63 hc63)
     (g := fun x y => some (x <<< (y.toNat % 64))) rfl rfl (by decide : 11 < 256)
-  have shE : WordCode (L := L) ρ W _ _ := WordCode.bin he (WordCode.const 52 hc52)
+  have shE : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin he (WordCode.const 52 hc52)
     (g := fun x y => some (x <<< (y.toNat % 64))) rfl rfl (by decide : 11 < 256)
-  have hi : WordCode (L := L) ρ W _ _ := WordCode.bin shS shE
+  have hi : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin shS shE
     (g := fun x y => some (x ||| y)) rfl rfl (by decide : 9 < 256)
-  have result : WordCode (L := L) ρ W _ _ := WordCode.bin hi hf
+  have result : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin hi hf
     (g := fun x y => some (x ||| y)) rfl rfl (by decide : 9 < 256)
   intro fp K d c top h hK m pc hp
   simpa only [packL, packWord, BitVec.ofInt_ofNat, BitVec.ofNat_eq_ofNat] using

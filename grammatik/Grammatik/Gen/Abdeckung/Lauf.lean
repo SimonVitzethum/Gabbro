@@ -120,6 +120,7 @@ def bekannteLuecken : List (String × String) :=
    ("GleitOp.mul", G_ZAHL),
    ("GleitOp.div", G_ZAHL),
    ("Stmt.assignThru", G_GROESSE),
+   ("Stmt.assignThruOwn", G_GROESSE),
    ("Stmt.onTag", G_ZUSTAND),
    ("Stmt.onWhy", G_ZUSTAND),
    ("Stmt.advances", G_ZUSTAND),
@@ -197,7 +198,7 @@ def istZustand (m : String) : Bool := m.startsWith "DynArena." || m.startsWith "
 def stmtNamen : List String :=
   ["assignSlot", "assignThru", "assignGlob", "putBytes", "assignVar", "shift", "ite", "onOption", "onTag", "onWhy",
    "call", "callInd", "callIndElse", "locks", "breaking", "traverse", "consumeTraverse", "retry", "forever", "axiomCall", "regWrite", "transition",
-   "publish", "advances", "retires", "ret", "retWhy", "retScoped", "retWhyScoped", "leave", "next"].map ("Stmt." ++ ·)
+   "publish", "advances", "retires", "ret", "retWhy", "retScoped", "retWhyScoped", "leave", "next", "assignThruOwn"].map ("Stmt." ++ ·)
 
 /-- The containers of statements (a statement with blocks) and the blocks with an `else` end block. -/
 def behaelter : List String :=

@@ -117,14 +117,14 @@ theorem nested_else_lower {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ
     (hg : u.exportGate = .ok ())
     (hk : lowRufKopf u caller Γ fn Λ callee args = .ok k)
     (hr : 0 < (declOf u).gruende k.callee) (he : (declOf u).erg k.callee = some τ)
-    (err : Endblock (declOf u) (verOf u caller) l (Ty.why ((declOf u).gruende k.callee) :: Γ) Λ)
-    (body : Endblock (declOf u) (verOf u caller) l (τ :: Γ) Λ)
+    (err : Endblock (declOf u) (verOf u caller) l (Ty.why ((declOf u).gruende k.callee) :: Γ) (nach (declOf u) k.callee Λ))
+    (body : Endblock (declOf u) (verOf u caller) l (τ :: Γ) (nach (declOf u) k.callee Λ))
     (herr : lowEndL (l := l) u caller (Ty.why ((declOf u).gruende k.callee) :: Γ)
-      (fn.mitWhy reason 0 ((declOf u).gruende k.callee)) fuel Λ top source = .ok (err, .blkEnd :: tail))
-    (hbody : lowEndL (l := l) u caller (τ :: Γ) (fn.mitTy y τ) fuel Λ top tail = .ok (body, remaining)) :
+      (fn.mitWhy reason 0 ((declOf u).gruende k.callee)) fuel (nach (declOf u) k.callee Λ) top source = .ok (err, .blkEnd :: tail))
+    (hbody : lowEndL (l := l) u caller (τ :: Γ) (fn.mitTy y τ) fuel (nach (declOf u) k.callee Λ) top tail = .ok (body, remaining)) :
     lowEndL (l := l) u caller Γ fn (fuel + 1) Λ top (.bindElse y callee args reason :: source) =
       .ok (nestedElse u caller Γ Λ k τ he hr err body, remaining) := by
-  simp only [lowEndL_succ, lowEndStep, lowStufe_ende, hg, bind, Except.bind, hk, hr, ↓reduceDIte, withErg, herr]
+  simp only [lowEndL_succ, lowEndStep, lowStufe_ende, hg, bind, Except.bind, hk, hr, ↓reduceIte, withErg, herr]
   split
   · rename_i hn
     rw [he] at hn

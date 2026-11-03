@@ -198,6 +198,7 @@ theorem os_top : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c c2 : Con
     OS A I out k c st c2 → STop A I out k c c2 st
   | _, _, _, _, _, _, _, _, .assignSlot .. => trivial
   | _, _, _, _, _, _, _, _, .assignThru .. => trivial
+  | _, _, _, _, _, _, _, _, .assignThruOwn .. => trivial
   | _, _, _, _, _, _, _, _, .assignGlob .. => trivial
   | _, _, _, _, _, _, _, _, .putBytes .. => trivial
   | _, _, _, _, _, _, _, _, .assignSlotRef .. => trivial

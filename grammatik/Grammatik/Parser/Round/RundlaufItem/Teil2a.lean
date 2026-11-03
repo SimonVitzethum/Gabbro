@@ -57,7 +57,8 @@ theorem klausel_rund (k : SKlausel) (hk : KlauselGut k) (R : List Token) (hR : K
       have hE := effekte_rund (e :: es') R F' (by simp only [ne_eq, reduceCtorEq, not_false_eq_true]) hk (by omega)
       have hne : ∀ r, druckEffekte (e :: es') ++ .zeichen "}" :: R ≠ .zeichen "}" :: r := by
         intro r e'
-        cases e <;> cases es' <;> simp only [druckEffekte, druckEffekt, List.cons_append, List.nil_append, List.cons.injEq, reduceCtorEq, false_and, List.append_assoc] at e' <;> (try split at e') <;> simp_all
+        have hke : EffGut e := hk e (by simp only [List.mem_cons, true_or])
+        cases e <;> (try exact (hke : False).elim) <;> cases es' <;> simp only [druckEffekte, druckEffekt, List.cons_append, List.nil_append, List.cons.injEq, reduceCtorEq, false_and, List.append_assoc] at e' <;> (try split at e') <;> simp_all
       simp only [List.cons_append, List.nil_append, List.append_assoc, List.singleton_append]
       simp only [parseKlausel, (by decide : strEq "effects" "requires" = false), (by decide : strEq "effects" "ensures" = false), (by decide : strEq "effects" "maintains" = false), (by decide : strEq "effects" "refines" = false), (by decide : strEq "effects" "effects" = true), Bool.false_eq_true, ite_false, ite_true, List.nil_append, fordereZeichen, strEq_self]
       simp only [hne, hE, fordereZeichen, strEq_self, ite_true]

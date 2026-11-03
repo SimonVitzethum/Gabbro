@@ -172,6 +172,23 @@ theorem hwit_aus_feuerung_ohne_axiomCall
       refine ⟨true, Λ, (σ.lese Λ (p.orte ++ i.orte ++ e.orte)).haelt, ?_⟩
       rw [hteq]
       exact List.mem_append.mpr (Or.inl (List.mem_singleton.mpr rfl))
+  | assignThruOwn p t ht f i e m s ho he hg hw hL =>
+      simp only [stmtTraeger] at hmem
+      have hteq : t₀ = t := by simpa using List.mem_singleton.mp hmem
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      have hspur : σ'.spur =
+          [Ereignis.zugriff t true Λ
+            (σ.lese Λ (p.orte ++ i.orte ++ e.orte)).haelt] ++
+          (p.orte ++ i.orte ++ e.orte).map (fun o => match o with
+            | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+            | .inr g => Ereignis.gzugriff g false Λ σ.haelt) ++ σ.spur := by
+        rw [← hstep]; rfl
+      rw [hspur] at hneu
+      have hneueq := List.append_cancel_right hneu
+      subst hneueq
+      refine ⟨true, Λ, (σ.lese Λ (p.orte ++ i.orte ++ e.orte)).haelt, ?_⟩
+      rw [hteq]
+      exact List.mem_append.mpr (Or.inl (List.mem_singleton.mpr rfl))
   | assignSlotRef r t ht ho f e hw hL =>
       simp only [stmtTraeger] at hmem
       have hteq : t₀ = t := by simpa using List.mem_singleton.mp hmem

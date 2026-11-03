@@ -52,6 +52,25 @@ def lowerS (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
             | none => none
         | none => none
       else none
+  | _, _, _, _, .assignThruOwn p t _ _ i e _ _ _ _ _ _ _, lb, k, s =>
+      if supp (D.typ t f) then
+        match lowerE lay cenv p s.r with
+        | some (cp, op, r1) =>
+            match lowerE lay cenv i r1 with
+            | some (ci, oi, r2) =>
+                match lowerE lay cenv e r2 with
+                | some (ce, oe, r3) =>
+                    match slotAddr lay t f op (.int 0 (D.count t - 1)) oi r3 with
+                    | some (ca, oa, r4) =>
+                        match storeTo (D.typ t f) oe r4 oa with
+                        | some (cs, r5) =>
+                            some ([⟨lb, [], cp ++ ci ++ ce ++ ca ++ cs, .jmp k⟩], { s with r := r5 })
+                        | none => none
+                    | none => none
+                | none => none
+            | none => none
+        | none => none
+      else none
   | _, _, _, _, .assignGlob g e _ _, lb, k, s =>
       if supp (D.gtyp g) then
         match lowerE lay cenv e s.r with

@@ -30,7 +30,7 @@ def CheckTreueG (P : Programm D) (checks : List (CheckDecl D))
     (e.lebt = true ∧ e.tor = none) ∨
     (e.lebt = false ∧ ∃ g ∈ c.gates, e.tor = some g)) ∧
   (∀ c ∈ checks, ∀ e₁ ∈ ev, ∀ e₂ ∈ ev, e₁.erzeuger = c.probe → e₂.erzeuger = c.probe →
-    e₁.berich.urteil = e₂.berich.urteil → e₁.berich.proben = e₂.berich.proben →
+    e₁.bericht.urteil = e₂.bericht.urteil → e₁.bericht.proben = e₂.bericht.proben →
     e₁.lebt = e₂.lebt ∧ e₁.tor = e₂.tor)
 
 /-- The empty history is faithful: the leg holds vacuously. -/

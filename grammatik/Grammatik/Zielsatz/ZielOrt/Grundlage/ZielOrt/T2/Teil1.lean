@@ -201,6 +201,15 @@ theorem offen_schrittG (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
         rw [axiomSonst_offen' hO _ _ _ _ _ ‹axiomAntwortSonst _ _ _ _ = _›]
         exact lese_offen _ _ _
 
+  | g7 hs =>
+    cases hs with
+    | _ =>
+        simp only [execStmt, Ausgang.leave.injEq, Ausgang.next.injEq] at *
+        subst_vars
+        simp only [rufUpdateG_self]
+        refine Or.inl ?_
+        simp only [lese_offen] <;> rfl
+
 /-- The start trace of a thread holds exactly its start function's
     signature locks. -/
 theorem offen_start (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))

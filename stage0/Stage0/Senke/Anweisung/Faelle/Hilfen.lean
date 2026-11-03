@@ -181,10 +181,47 @@ def tagPayloadC (s : Nat) : Option Ty → Option (List II)
     else none
   | some _ => none
 
-/-- An outside flag selects the terminating error arm; the value stays in `d`. -/
-def narrowC (d : Nat) (lo hi : Int) (ce cx cr : List II) : List II :=
-  ce ++ ((engTest 13 d lo hi).1 ++ [ci 19 (d + 1) (16 * (cx.length + 2)) 0] ++ cx ++
-    [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr)
+
+/-- Include each endpoint separately, so even an empty target interval has a
+    representable comparison; an empty interval always selects the error arm. -/
+def narrowWords (lo hi low high : Int) : Nat :=
+  max (engWords lo hi low high) (max (signedWords low low) (signedWords high high))
+
+/-- The comparison kernel's actual scratch extent, also covering the retained value. -/
+def narrowTop (d : Nat) (lo hi low high : Int) : Nat :=
+  d + 5 * narrowWords lo hi low high + 22
+
+/-- The flag is outside the retained limbs. The success arm starts with the
+    target type's complete integer encoding already in its binding span. -/
+def narrowC (d : Nat) (lo hi low high : Int) (ce cx cr : List II) : List II :=
+  ce ++ wideExtendC (extSigned lo) (integerWords lo hi) (narrowWords lo hi low high) d ++
+    wideOutC (narrowWords lo hi low high) d low high ++
+    ([ci 19 (d + narrowWords lo hi low high + 3) (16 * (cx.length + 2)) 0] ++ cx ++
+      [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr)
+
+theorem narrowWords_source (lo hi low high : Int) :
+    signedWords lo hi ≤ narrowWords lo hi low high :=
+  Nat.le_trans (Nat.le_max_left _ _) (Nat.le_max_left _ _)
+
+theorem narrowWords_target (lo hi low high : Int) :
+    signedWords low high ≤ narrowWords lo hi low high :=
+  Nat.le_trans (Nat.le_max_right _ _) (Nat.le_max_left _ _)
+
+theorem narrowWords_low (lo hi low high : Int) :
+    signedWords low low ≤ narrowWords lo hi low high :=
+  Nat.le_trans (Nat.le_max_left _ _) (Nat.le_max_right _ _)
+
+theorem narrowWords_high (lo hi low high : Int) :
+    signedWords high high ≤ narrowWords lo hi low high :=
+  Nat.le_trans (Nat.le_max_right _ _) (Nat.le_max_right _ _)
+
+theorem narrowC_length (d : Nat) (lo hi low high : Int) (ce cx cr : List II) :
+    (narrowC d lo hi low high ce cx cr).length =
+      ce.length + (wideExtendC (extSigned lo) (integerWords lo hi)
+        (narrowWords lo hi low high) d).length +
+      (wideOutC (narrowWords lo hi low high) d low high).length + 1 + cx.length + 1 + cr.length := by
+  simp only [narrowC, List.length_append, List.length_singleton]
+  omega
 
 /-- Compare a reason's entire word, preserving its slot for subsequent arms. -/
 def whyTestC (s k : Nat) : List II :=

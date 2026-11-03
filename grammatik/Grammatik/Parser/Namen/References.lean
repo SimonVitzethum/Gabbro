@@ -27,7 +27,7 @@ def namenA (lok : List String) : SExpr → List String
   | .ext .count (x :: _ :: ns) xs => ns ++ namenL (x :: lok) xs
   | .ext .mem (_ :: ns) xs => ns ++ namenL lok xs
   | .ext kind (binder :: domain :: names) args =>
-    if kind == .foldAdd || kind == .foldMin || kind == .foldMax then
+    if kind == .foldAdd || kind == .foldMin || kind == .foldMax || kind == .foldAnd || kind == .foldOr then
       let count := if domain == "range" then 2 else 1
       names ++ namenFoldArgs lok binder count 2 args
     else namenL lok args
@@ -81,7 +81,7 @@ def namenTO : Option STyp → List String
 /-- The names an effect writes. -/
 def namenE (lok : List String) : SEffekt → List String
   | .reads e | .writes e | .locks _ e | .takes e | .posts e => namenA lok e
-  | .masks n | .allocs n => [n]
+  | .masks n | .allocs n | .borrows n | .moves n | .mints n => [n]
   | .instanceEffects n ts => n :: ts.flatMap namenT
   | _ => []
 
