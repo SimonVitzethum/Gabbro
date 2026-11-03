@@ -30,9 +30,8 @@ def tagBinders (tags : List (SExpr × Nat)) : List String :=
     surrounding names before anything is emitted. -/
 def hoistList (source : List SItemTief) (locals : Spec.Locals)
     (es : List SExpr) : Except String (List SExpr × List SAnw) := do
-  let (tags, _) := tagFoldNodesList es 0
-  if tags.isEmpty then pure (es, [])
-  else do
+  let tags := (tagFoldNodesList es 0).1
+  if hasRangeFoldList es then do
     if hasDuplicateTags tags then throw "fold range: duplicate nested fold"
     let used := locals.map Prod.fst ++ es.flatMap (Oeffentlich.namenA []) ++
       tagBinders tags ++ (Spec.functionHeads source).map (·.name)
@@ -40,6 +39,7 @@ def hoistList (source : List SItemTief) (locals : Spec.Locals)
       throw "fold: generated binding collision"
     let pairs ← es.mapM (expandNested 32 source locals [] tags)
     pure (pairs.map Prod.fst, (pairs.map Prod.snd).flatten)
+  else pure (es, [])
 
 /-- Hoist the single expression, for statement positions with one operand. -/
 def hoistOne (source : List SItemTief) (locals : Spec.Locals)
@@ -57,12 +57,14 @@ def hoistPair (source : List SItemTief) (locals : Spec.Locals)
   | [a', b'] => pure (a', b', prefix)
   | _ => throw "fold range: hoist shape"
 
-/-- Wrap the rewritten statement after its prefix. With no folds the statement
-    is returned unchanged, so fold-free sources keep their exact shape. -/
+/-- Wrap the rewritten statement after its prefix. With an empty prefix the
+    statement is returned unchanged, so fold-free sources keep their exact
+    shape; otherwise the prefix runs first, in order, and the rewritten
+    statement reads only the fresh result variables. -/
 def afterPrefix (s : SAnw) (prefix : List SAnw) : SAnw :=
   match prefix with
   | [] => s
-  | _ => .block prefix [s]
+  | _ => .block (prefix ++ [s]) none
 
 /-- Expand a range fold outside a direct return to a fresh local accumulator
     loop before the statement. The prefix evaluates the folds' loops in
