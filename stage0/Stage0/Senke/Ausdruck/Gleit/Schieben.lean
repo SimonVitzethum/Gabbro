@@ -113,7 +113,7 @@ theorem floatShiftJamWord_signed_exact_zeuge :
 #print axioms floatShiftJamWord_signed_exact
 #print axioms floatShiftJamWord_signed_exact_zeuge
 
-{reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+theorem floatShiftQuotL_ok {reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {a k : Nat → Option (List II × Nat)} {av kv : Runner.W}
     (ha : WordCode (L := L) (reserved := reserved) ρ W a av) (hk : WordCode (L := L) (reserved := reserved) ρ W k kv) :
     WordCode (L := L) (reserved := reserved) ρ W (fun d => floatShiftQuotL d a k) (av >>> kv.toNat) := by
