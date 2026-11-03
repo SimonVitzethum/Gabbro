@@ -80,9 +80,9 @@ theorem cNamen_in_reserviert :
 
 set_option maxRecDepth 100000
 
-/-- The closed Lean front-end vocabulary has 249 words: the earlier 248-word table
-    plus the link-time `dyn` form. Rust mirroring is separate integration work. -/
-theorem wortschatz_249 : wortschatz.length = 249 := by
+/-- The closed Lean front-end vocabulary has 250 words: the earlier 249-word table
+    plus the C12 call-scoped owner loan `borrows`. Rust mirroring is separate integration work. -/
+theorem wortschatz_250 : wortschatz.length = 250 := by
   decide
 
 /-- Every reserved word stands in the closed vocabulary: the split

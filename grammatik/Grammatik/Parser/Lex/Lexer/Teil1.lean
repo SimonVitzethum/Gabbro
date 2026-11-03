@@ -44,7 +44,7 @@ def wortschatz : List String :=
    "extern", "section", "arch", "when", "requires", "ensures", "maintains",
    "refines", "breaking", "effects", "costs", "deadline", "decreases",
    "where", "in", "exhaustive", "old", "narrow", "to", "induction",
-   "reads", "writes", "locks", "masks", "allocs", "consumes", "publishes",
+   "reads", "writes", "locks", "masks", "allocs", "consumes", "borrows", "publishes",
    "diverges", "pure", "if", "else", "match", "traverse", "over", "by",
    "touches", "retry", "forever", "until", "bounded", "progress",
    "on_exceeded", "per_pass", "return", "let", "mut", "unvisited",
@@ -86,7 +86,7 @@ def schluesselTafelC : Char → List (List Char)
   | 'N' => [['N','o','n','e']]
   | 'S' => [['S','e','l','f'], ['S','o','m','e']]
   | 'a' => [['a','r','c','h'], ['a','l','l','o','c','s'], ['a','r','e','n','a'], ['a','l','l','o','c'], ['a','t'], ['a','s','s','u','m','e'], ['a','x','i','o','m'], ['a','d','v','a','n','c','e','s'], ['a','t','o','m','i','c'], ['a','c','q','u','i','r','e'], ['a','c','c','u','m','u','l','a','t','e','s'], ['a','d','d'], ['a','n','d'], ['a','b','i'], ['a','s','m'], ['a','w','a','i','t','s'], ['a','n','c','e','s','t','o','r','s'], ['a','l','i','g','n','e','d']]
-  | 'b' => [['b','r','e','a','k','i','n','g'], ['b','y'], ['b','o','u','n','d','e','d'], ['b','o','o','t'], ['b','a','n','k'], ['b','a','c','k','e','d'], ['b','i','g'], ['b','o','o','l'], ['b','l','w']]
+  | 'b' => [['b','r','e','a','k','i','n','g'], ['b','y'], ['b','o','u','n','d','e','d'], ['b','o','o','t'], ['b','a','n','k'], ['b','a','c','k','e','d'], ['b','i','g'], ['b','o','o','l'], ['b','l','w'], ['b','o','r','r','o','w','s']]
   | 'c' => [['c','o','n','s','t'], ['c','o','s','t','s'], ['c','o','n','s','u','m','e','s'], ['c','o','n','s','u','m','i','n','g'], ['c','o','d','e'], ['c','a','p','a','c','i','t','y'], ['c','l','a','s','s'], ['c','o','u','n','t'], ['c','o','n','c','u','r','r','e','n','t'], ['c','h','e','c','k'], ['c','l','a','i','m'], ['c','a','n','_','f','a','i','l'], ['c','o','u','n','t','e','r','p','r','o','b','e'], ['c','o','s','t'], ['c','h','a','i','n'], ['c','l','o','b','b','e','r','s'], ['c','p','u'], ['c','h','i','l','d']]
   | 'd' => [['d','y','n'], ['d','i','v','e','r','g','e','n','t'], ['d','e','a','d','l','i','n','e'], ['d','e','c','r','e','a','s','e','s'], ['d','i','v','e','r','g','e','s'], ['d','m','a'], ['d','e','v','i','c','e'], ['d','o','w','n'], ['d','i','s','p','a','t','c','h'], ['d','e','s','c','e','n','d','a','n','t','s'], ['d','e','p','e','n','d','s']]
   | 'e' => [['e','x','t','e','r','n'], ['e','n','s','u','r','e','s'], ['e','f','f','e','c','t','s'], ['e','x','h','a','u','s','t','i','v','e'], ['e','l','s','e'], ['e','x','c','h','a','n','g','e'], ['e','x','p','e','c','t','s'], ['e','n','d','i','a','n'], ['e','m','b','e','d','s'], ['e','n','t','r','y'], ['e','r','r','o','r','s'], ['e','n','t','r','u','s','t'], ['e','l','e','m','s'], ['e','x','i','s','t','s']]
