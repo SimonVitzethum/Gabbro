@@ -246,11 +246,23 @@ theorem zeugeOhneRest :
     hatKonstRufSExpr ["add"] (literalVonInt 6) = false := by
   rfl
 
-/-- Check the original declarations through the same certified substitution used
-    by runtime elaboration. Every remaining annotation is checked before export. -/
+/-- Original runtime annotations are checked before rewriting, as well as afterwards.
+    Only const declarations may leave this domain, through the certified call pass. -/
 def checkSourceMetadata (items : List SItemTief) : Except String Unit := do
   let rewritten ← konstErsetzePipeline items
+  ExportMetadata.check (ohneKonst items)
   checkErsetzt items rewritten
+
+/-- The original runtime metadata check is retained without any rewrite assumption. -/
+theorem checkSourceMetadata_runtime_sound (items : List SItemTief)
+    (accepted : checkSourceMetadata items = .ok ()) :
+    (ohneKonst items).any ExportMetadata.itemMetadata = false := by
+  cases hr : konstErsetzePipeline items with
+  | error error => simp [checkSourceMetadata, hr] at accepted
+  | ok rewritten =>
+    cases hm : ExportMetadata.check (ohneKonst items) with
+    | error error => simp [checkSourceMetadata, hr, hm] at accepted
+    | ok value => cases value; exact ExportMetadata.check_sound _ hm
 
 /-- The compiler gate retains an actual successful substitution and the metadata
     check of its remaining runtime declarations. -/
@@ -262,8 +274,10 @@ theorem checkSourceMetadata_sound (items : List SItemTief)
   cases hr : konstErsetzePipeline items with
   | error error => simp [checkSourceMetadata, hr] at accepted
   | ok rewritten =>
+    have original := ExportMetadata.check_clear (ohneKonst items)
+      (checkSourceMetadata_runtime_sound items accepted)
     have gate : checkErsetzt items rewritten = .ok () := by
-      simpa [checkSourceMetadata, hr] using accepted
+      simpa [checkSourceMetadata, hr, original] using accepted
     refine ⟨rewritten, hr, gate, ?_⟩
     unfold checkErsetzt at gate
     split at gate
