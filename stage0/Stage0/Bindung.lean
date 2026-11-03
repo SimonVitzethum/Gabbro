@@ -33,6 +33,7 @@ structure Tor where
   regs : List (Option Nat)
   /-- `-errno` to the case of the gate's reason. -/
   fehler : List (Int × Nat)
+  resultArea : Option Nat := none
   deriving Repr
 
 /-- A literal number. -/
@@ -146,6 +147,15 @@ def torAusBindung (arch : String) (items : List SItemTief) (name : String)
   if b.ins.length != (regs.filterMap id).length then throw s!"gate {name}: a parameter in a register of no argument"
   if !(b.outs.all fun o => match o with | .reg r => r == antwortReg arch | _ => false) then
     throw s!"gate {name}: the answer is not in {antwortReg arch}"
+  let area ← match b.resultArea with
+    | none => pure none
+    | some register =>
+      match (argRegs arch).findIdx? (· == register) with
+      | none => throw s!"gate {name}: result area register {register} is not a request argument register"
+      | some index =>
+        if (regs[index]?).join.isSome then
+          throw s!"gate {name}: result area register {register} overlaps a source argument"
+        else pure (some index)
   let fehler ← match fail with
     | none => if b.codes.isEmpty then pure [] else throw s!"gate {name}: errors without a reason"
     | some r =>
@@ -164,7 +174,7 @@ def torAusBindung (arch : String) (items : List SItemTief) (name : String)
               | some e => pure e
               | none => throw s!"gate {name}: case {fall} has no errno"
           pure (-e, i)
-  pure ⟨name, nummer, regs, fehler⟩
+  pure ⟨name, nummer, regs, fehler, area⟩
 
 /-- **The gate `sc` on this machine.** -/
 def torVonFor (arch : String) (target : Option String) (items : List SItemTief) (sc : SSyscall) : Except String Tor := do
