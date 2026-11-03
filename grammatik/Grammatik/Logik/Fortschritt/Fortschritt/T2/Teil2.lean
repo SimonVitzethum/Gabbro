@@ -130,8 +130,8 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
             ((M.weltVon t).lese Λ args.orte) ρ) hd hgd hh)
         rw [hσ] at herw
         obtain ⟨neu, hneu, -⟩ := herw
-        exact fort_schritt' ⟨_, RufSchrittG.dannBindAxiomOpt M t l Γ Λ _ e a args he hp hd hgd rest
-          k ρ hx _ rfl σ₂ v hax neu hneu hΛ⟩
+        exact fort_schritt' ⟨_, @RufSchrittG.dannBindAxiomOpt D P O passes Λ
+          M t l Γ Λ _ e a args he hp hd hgd rest k ρ hx _ rfl σ₂ v hax neu hneu hΛ⟩
   | bindAxiomOptElse e a args he hp hd hgd hr err rest =>
       rcases hax : axiomAntwortSonst O a ((M.weltVon t).lese Λ args.orte)
           (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ) with
@@ -156,8 +156,8 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
             ((M.weltVon t).lese Λ args.orte) ρ) hd hgd hh)
         rw [hσ] at herw
         obtain ⟨neu, hneu, -⟩ := herw
-      · exact fort_schritt' ⟨_, RufSchrittG.dannBindAxiomOptElseOk M t l Γ Λ _ e a args he hr hp hd hgd err rest
-          k ρ hx _ rfl σ₂ v hax neu hneu hΛ⟩
+      · exact fort_schritt' ⟨_, @RufSchrittG.dannBindAxiomOptElseOk D P O passes Λ
+          M t l Γ Λ _ e a args he hr hp hd hgd err rest k ρ hx _ rfl σ₂ v hax neu hneu hΛ⟩
       · exact fort_schritt' ⟨_, RufSchrittG.dannBindAxiomOptElseGrund M t l Γ Λ _ e a args he hr hp hd hgd err rest
           k ρ hx _ rfl σ₂ r hax neu hneu hΛ⟩
   | regRead r hk rest =>
