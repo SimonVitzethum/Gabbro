@@ -68,13 +68,13 @@ theorem GutRetV.transGut {W G} {haelt : List D.Lock} {boden : Option Int} {a b c
   refine ⟨hr1.trans hr2, ⟨Ls, ?_, hsp1, hrk1, ?_, ?_⟩⟩
   · rw [heq2, heq1]
   · intro e he
-    rcases hgood1 e he with h | h
-    · rcases hgood2 e h with h' | h'
+    rcases hgood2 e he with h | h
+    · rcases hgood1 e h with h' | h'
       · exact .inl h'
       · exact .inr h'
     · exact .inr h
   · intro k
-    exact hkons1 (hkons2 k)
+    exact hkons2 (hkons1 k)
 
 theorem GutRetV.transRetV {W G} {haelt : List D.Lock} {boden : Option Int} {a b c : World D}
     (h1 : GutRetV W G haelt boden a b) (h2 : GutRetV W G haelt boden b c) :
@@ -102,25 +102,6 @@ theorem GutRetV.transRetV {W G} {haelt : List D.Lock} {boden : Option Int} {a b 
   · intro k
     exact hkons2 (hkons1 k)
 
-/-- A read followed by scope releases is a releasing step with exactly those scopes;
-    spare and rank come from the static scope check. -/
-theorem gutRetV_retScoped {W G} {haelt : List D.Lock} {boden : Option Int}
-    {σ σ1 : World D} (Ls : List D.Lock) (hl : Gut W G σ σ1)
-    (hsp : ∀ L ∈ Ls, L ∉ haelt) (hrk : ∀ L ∈ Ls, ∀ c, boden = some c → c ≤ D.rang L) :
-    GutRetV W G haelt boden σ (Ls.foldl World.gibt σ1) := by
-  have hR := gutRet_retScoped (W := W) (G := G) (σ := σ) (σ1 := σ1) Ls hl
-  obtain ⟨hr, ⟨_, heq⟩, hgood, hkons⟩ := hR
-  exact ⟨hr, Ls, heq, hsp, hrk, hgood, hkons⟩
-
-/-- A scope release alone is a releasing step with exactly those scopes. -/
-theorem gutRetV_retWhyScoped {W G} {haelt : List D.Lock} {boden : Option Int}
-    (σ : World D) (Ls : List D.Lock)
-    (hsp : ∀ L ∈ Ls, L ∉ haelt) (hrk : ∀ L ∈ Ls, ∀ c, boden = some c → c ≤ D.rang L) :
-    GutRetV W G haelt boden σ (Ls.foldl World.gibt σ) := by
-  have hR := gutRet_retWhyScoped (W := W) (G := G) (σ := σ) Ls
-  obtain ⟨hr, ⟨_, heq⟩, hgood, hkons⟩ := hR
-  exact ⟨hr, Ls, heq, hsp, hrk, hgood, hkons⟩
-
 /-- Frame widening for releasing steps (spare and rank are frame-free). -/
 theorem GutRetV.weiter {W W' : D.Tab → Bool} {G G' : D.Glob → Bool}
     {haelt : List D.Lock} {boden : Option Int} {a b : World D}
@@ -137,13 +118,13 @@ theorem konsistent_gibt_foldl (Ls : List D.Lock) (σ : World D) :
   | cons L Ls ih =>
       intro k
       simp only [List.foldl_cons]
-      exact konsistent_cons trivial (ih _ (konsistent_cons trivial k))
+      exact ih (σ.gibt L) (konsistent_cons trivial k)
 
 /-- Frame survives scope releases (memory kept). -/
 theorem rahmen_gibt_foldl {W G} (σ : World D) (Ls : List D.Lock) :
     Rahmen W G σ (Ls.foldl World.gibt σ) := by
   obtain ⟨hs, hg⟩ := World.gibt_foldl_speicher σ Ls
-  exact rahmen_gleich (fun _ _ _ _ => by rw [hs]) (fun _ _ => by rw [hg])
+  exact rahmen_gleich hs hg
 
 /-- A read followed by scope releases is a releasing step with exactly those scopes. -/
 theorem gutRet_retScoped {W G} {σ σ1 : World D} (Ls : List D.Lock)
@@ -154,7 +135,7 @@ theorem gutRet_retScoped {W G} {σ σ1 : World D} (Ls : List D.Lock)
     rw [World.gibt_foldl_spur] at he
     simp only [List.mem_append] at he
     rcases he with he | he
-    · simp only [List.mem_map] at he
+    · simp only [List.mem_map, List.mem_reverse] at he
       obtain ⟨_, _, rfl⟩ := he
       exact .inr trivial
     · rcases hl.2.2.1 e he with h1 | h1
@@ -172,12 +153,29 @@ theorem gutRet_retWhyScoped {W G} (σ : World D) (Ls : List D.Lock) :
     rw [World.gibt_foldl_spur] at he
     simp only [List.mem_append] at he
     rcases he with he | he
-    · simp only [List.mem_map] at he
+    · simp only [List.mem_map, List.mem_reverse] at he
       obtain ⟨_, _, rfl⟩ := he
       exact .inr trivial
     · exact .inl he
   · intro k
     exact konsistent_gibt_foldl Ls σ k
+
+/-- A read followed by scope releases is a releasing step with exactly those scopes;
+    spare and rank come from the static scope check. -/
+theorem gutRetV_retScoped {W G} {haelt : List D.Lock} {boden : Option Int}
+    {σ σ1 : World D} (Ls : List D.Lock) (hl : Gut W G σ σ1)
+    (hsp : ∀ L ∈ Ls, L ∉ haelt) (hrk : ∀ L ∈ Ls, ∀ c, boden = some c → c ≤ D.rang L) :
+    GutRetV W G haelt boden σ (Ls.foldl World.gibt σ1) := by
+  have hR := gutRet_retScoped (W := W) (G := G) (σ := σ) (σ1 := σ1) Ls hl
+  exact ⟨hR.1, Ls, by rw [haelt_gibt_foldl, hl.2.1], hsp, hrk, hR.2.2.1, hR.2.2.2⟩
+
+/-- A scope release alone is a releasing step with exactly those scopes. -/
+theorem gutRetV_retWhyScoped {W G} {haelt : List D.Lock} {boden : Option Int}
+    (σ : World D) (Ls : List D.Lock)
+    (hsp : ∀ L ∈ Ls, L ∉ haelt) (hrk : ∀ L ∈ Ls, ∀ c, boden = some c → c ≤ D.rang L) :
+    GutRetV W G haelt boden σ (Ls.foldl World.gibt σ) := by
+  have hR := gutRet_retWhyScoped (W := W) (G := G) (σ := σ) Ls
+  exact ⟨hR.1, Ls, haelt_gibt_foldl σ Ls, hsp, hrk, hR.2.2.1, hR.2.2.2⟩
 
 /-- Erasing through a taken lock then releasing it is erasing without it,
     when the lock was free before (`locks` premise). -/
@@ -202,7 +200,8 @@ theorem erase_nimmt_gibt (L : D.Lock) (Ls : List D.Lock) (h : List D.Lock) (hn :
               simp only [List.foldl_cons]
               exact ih2 _ (fun hm => hn (List.mem_of_mem_erase hm))
         exact List.erase_of_not_mem (h_mem h hn)
-      · simp only [List.erase_cons_tail _ (Ne.symm heq)]
+      · simp only [List.erase_cons_tail (show ¬(L == M) by
+          simpa only [beq_iff_eq] using Ne.symm heq)]
         exact ih _ (fun hm => hn (List.mem_of_mem_erase hm))
 
 /-- `locks L { … }` with a releasing body keeps the release list. -/
@@ -243,7 +242,11 @@ theorem gut_nimmt_gibtRetV {W G} {haelt : List D.Lock} {boden : Option Int}
   obtain ⟨hr, Ls, heq, hsp, hrk, hgood, hkons⟩ := h
   have hR : GutRet W G (σ.nimmt L) σ1 := ⟨hr, ⟨Ls, heq⟩, hgood, hkons⟩
   have hG := gut_nimmt_gibtRet (W := W) (G := G) (σ := σ) (σ1 := σ1) L hn hR
-  obtain ⟨hr', ⟨_, heq'⟩, hgood', hkons'⟩ := hG
-  exact ⟨hr', Ls, heq', hsp, hrk, hgood', hkons'⟩
+  refine ⟨hG.1, Ls, ?_, hsp, hrk, hG.2.2.1, hG.2.2.2⟩
+  change σ1.haelt.erase L = Ls.foldl (fun h M => h.erase M) σ.haelt
+  have e1 : σ1.haelt = Ls.foldl (fun h M => h.erase M) (L :: σ.haelt) := by
+    simpa only [World.haelt, World.nimmt, offen] using heq
+  rw [e1]
+  exact erase_nimmt_gibt L Ls _ hn.2
 
 end Gabbro.Grammatik
