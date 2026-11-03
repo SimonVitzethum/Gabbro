@@ -29,10 +29,10 @@ public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqOk
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringGetOk
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringTakeOk
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringExpandOk
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.String.Values
 @[expose] public section
 
 variable {currentOld : Bool}
-
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
@@ -80,8 +80,10 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
   | _, _, .strLen s, d, c, top, h, hK, m, pc, ρ, hp =>
     strLen_ok s (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp) h hK hp
   | _, _, .strCat s t, d, c, top, h, hK, m, pc, ρ, hp =>
-    strCat_ok s t (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay t d ca ta ha hta m pc ρ hp) h hK hp
+    strCatExpr_ok s t (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay t d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay s _ ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay t _ ca ta ha hta m pc ρ hp) h hK hp
   | _, _, .strWeit q s, d, c, top, h, hK, m, pc, ρ, hp =>
     strWeit_ok q s (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp) h hK hp
   | _, _, .strGet s i, d, c, top, h, hK, m, pc, ρ, hp =>
@@ -94,8 +96,10 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay t _ ca ta ha hta m pc ρ hp)
       (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay t _ ca ta ha hta m pc ρ hp) h hK hp
   | _, _, .strLt s t, d, c, top, h, hK, m, pc, ρ, hp =>
-    strCompare_ok true s t (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay t (d + 1) ca ta ha hta m pc ρ hp) h hK hp
+    strLtExpr_ok s t (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay t (d + 1) ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay s _ ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay t _ ca ta ha hta m pc ρ hp) h hK hp
   | _, _, .widen lower upper e, d, c, top, h, hK, m, pc, ρ, hp =>
     resizeIntegerL_ok (eval σ₀ e σ ρ) (Zahl.weiter lower upper (eval σ₀ e σ ρ)) rfl
       (fun cc tt hc ht hp => lowE_ok (same := same) σ₀ σ hWL hLay e d cc tt hc ht m pc ρ hp) h hK hp
