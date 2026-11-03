@@ -139,7 +139,7 @@ def druckAnw : SAnw → List Token
   | .loop h b => [.wort "forever"] ++ rohToks h ++ druckAnw b
   | .waive ns b => [.wort "breaking"] ++ druckNamen ns ++ druckAnw b
   | .trim o t b => [.wort "narrow"] ++ druckToks o ++ [.wort "to"] ++ rohToks t ++ [.wort "else"] ++ druckAnw b
-  /-- Required narrowing has no source syntax: print a form the parser refuses
+  /- Required narrowing has no source syntax: print a form the parser refuses
       (`required` is no narrow continuation), never a silent `else`. -/
   | .trimReq o t => [.wort "narrow"] ++ druckToks o ++ [.wort "to"] ++ rohToks t ++ [.wort "required", .zeichen ";"]
   | .locks g o b => [.wort "locks"] ++ (if g then [.wort "shared"] else []) ++ druckToks o ++ druckAnw b
