@@ -17,6 +17,8 @@ theorem softRound_power_congr (S t₁ j₁ t₂ j₂ : Nat)
     (scale : t₁ + j₂ = t₂ + j₁) :
     rundeInt ((S * 2 ^ t₁) / 2 ^ j₁) ((S * 2 ^ t₁) % 2 ^ j₁) (2 ^ j₁) =
       rundeInt ((S * 2 ^ t₂) / 2 ^ j₂) ((S * 2 ^ t₂) % 2 ^ j₂) (2 ^ j₂) := by
+  -- The arithmetic transport has an unused kernel parameter, discharged without an assumption.
+  letI : Runner.IR.Kern := ⟨fun _ _ _ _ => False⟩
   apply softRound_congr _ _ _ _ _ _
     (Nat.mod_lt _ (Nat.two_pow_pos _)) (Nat.mod_lt _ (Nat.two_pow_pos _))
   rw [Nat.div_add_mod', Nat.div_add_mod', Nat.mul_assoc, ← Nat.pow_add,
@@ -73,6 +75,7 @@ theorem softRound_replay_fraction (s : Bool) (S t j : Nat) (e : Int)
       else if sub < 2 ^ (f64.p - 1) then ⟨s, 0, sub⟩ else ⟨s, 1, 0⟩ := by
   dsimp only
   have normal := softRound_normQ_dyadic S t j 53 (e + (bitlen S : Int) - 1) (by omega)
+  simp only [show ((53 : Nat) : Int) = (53 : Int) from rfl] at normal
   have sub := softRound_subQ_dyadic S t j
   rw [← scale] at sub
   unfold rundeBruchKern
@@ -109,9 +112,11 @@ theorem softRound_replay_all (z : Int) (e : Int) (nonzero : z ≠ 0) :
         omega
       · intro hz
         exact Int.mul_neg_of_neg_of_pos hz power
+    have signDecision : decide (z * (2 ^ e.toNat : Nat) < 0) = decide (z < 0) := by
+      simp only [sign]
     unfold rundeBruch rundeBruchBei
     dsimp only
-    rw [sign, Int.natAbs_mul, Int.natAbs_natCast,
+    rw [signDecision, Int.natAbs_mul, Int.natAbs_natCast,
       if_neg (by decide : ¬ (1 : Nat) = 0),
       if_neg (ne_of_gt (Nat.mul_pos positive (Nat.two_pow_pos _)))]
     have exponent : findeExp (z.natAbs * 2 ^ e.toNat) 1 = e + (bitlen z.natAbs : Int) - 1 := by
@@ -120,7 +125,8 @@ theorem softRound_replay_all (z : Int) (e : Int) (nonzero : z ≠ 0) :
       rw [position]
       omega
     rw [exponent]
-    exact softRound_replay_fraction _ _ _ 0 e (by omega)
+    have replay := softRound_replay_fraction (decide (z < 0)) z.natAbs e.toNat 0 e (by omega)
+    simpa only [Nat.pow_zero] using replay
   · rw [if_neg ep]
     unfold rundeBruch rundeBruchBei
     dsimp only
@@ -131,7 +137,8 @@ theorem softRound_replay_all (z : Int) (e : Int) (nonzero : z ≠ 0) :
       rw [position]
       omega
     rw [exponent]
-    exact softRound_replay_fraction _ _ 0 _ e (by omega)
+    have replay := softRound_replay_fraction (decide (z < 0)) z.natAbs 0 (-e).toNat e (by omega)
+    simpa only [Nat.pow_zero, Nat.mul_one] using replay
 
 /-- Joint boundaries include an exact numerator wider than any machine word,
     the smallest nonzero cancellation result, subnormal output, and overflow. -/
