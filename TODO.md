@@ -27,7 +27,10 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
     - C11 `by consuming`: refused by design.
     - C17 `const` functions: no certified replacement of call sites by the compile-time value before export.
     - C10 RW locks: reader-wait liveness remains open.
-    - C09 owner flows: escrow simulation in progress.
+    - C09 owner flows: mint (`mints`) and handback moves (`moves`) elaborate with
+      witnesses and refusals (c09-mint, lead to build); terminal moves are signature-complete with
+      fixture witnesses, their body-level retire lowering still open (as for C16 takes). The dynamic
+      escrow replay and the C08 software-call transition remain open.
     - C18 end-block-level required allocation and allocation with `else`: still refused; connected lowering remains open.
     - C12 `own@…` through borrowed marks: owned reads/writes (`thruOwn`/`assignThruOwn`, same carrier
       as `thru`/`assignThru`) and call-scoped `borrows` loans (`OwnerFlow.loans`) lower end to end, with the
