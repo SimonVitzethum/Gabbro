@@ -40,6 +40,7 @@ def AreaContract [Kern] (L : Lay D) (O : Orakel D) : Prop :=
   ∀ (σ : World D) (ρ : Env D (D.aparams a)) (q : Runner.Req)
     (m : Runner.Mem) (fp : Runner.W) (base K : Nat),
   FrameOK m fp K → base + valueWords τ ≤ K →
+  LayIn L → fp.toNat + 8 * K ≤ L.lo →
   q.nr = BitVec.ofNat 64 b.nr →
   ArgsW L (reqArg q) ρ → reqArg q j = slot fp (BitVec.ofNat 64 base) →
   (∀ i, (D.aparams a).length ≤ i → i < 6 → i ≠ j → reqArg q i = 0) →
