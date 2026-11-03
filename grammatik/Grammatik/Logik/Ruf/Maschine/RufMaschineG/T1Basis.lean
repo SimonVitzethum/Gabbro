@@ -211,16 +211,22 @@ theorem GRest.scopedWert_faelle {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List
           obtain ⟨rfl, rfl⟩ := h
           exact Or.inl rfl
       | cons s rest =>
-          cases s <;> simp only [scopedWert, Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          exact Or.inr (Or.inl ⟨rest, rfl⟩)
+          cases s with
+          | retScoped e' R' =>
+              simp only [scopedWert, Option.some.injEq, Prod.mk.injEq] at h
+              obtain ⟨rfl, rfl⟩ := h
+              exact Or.inr (Or.inl ⟨rest, rfl⟩)
+          | _ => cases h
       | _ => cases h
   | dann b k =>
       cases b with
       | cons s rest =>
-          cases s <;> simp only [scopedWert, Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          exact Or.inr (Or.inr ⟨_, rest, k, rfl⟩)
+          cases s with
+          | retScoped e' R' =>
+              simp only [scopedWert, Option.some.injEq, Prod.mk.injEq] at h
+              obtain ⟨rfl, rfl⟩ := h
+              exact Or.inr (Or.inr ⟨_, rest, k, rfl⟩)
+          | _ => cases h
       | _ => cases h
   | _ => cases h
 
@@ -240,16 +246,22 @@ theorem GRest.scopedGrund_faelle {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : Lis
           obtain ⟨rfl, rfl⟩ := h
           exact Or.inl rfl
       | cons s rest =>
-          cases s <;> simp only [scopedGrund, Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          exact Or.inr (Or.inl ⟨rest, rfl⟩)
+          cases s with
+          | retWhyScoped e' R' =>
+              simp only [scopedGrund, Option.some.injEq, Prod.mk.injEq] at h
+              obtain ⟨rfl, rfl⟩ := h
+              exact Or.inr (Or.inl ⟨rest, rfl⟩)
+          | _ => cases h
       | _ => cases h
   | dann b k =>
       cases b with
       | cons s rest =>
-          cases s <;> simp only [scopedGrund, Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          exact Or.inr (Or.inr ⟨_, rest, k, rfl⟩)
+          cases s with
+          | retWhyScoped e' R' =>
+              simp only [scopedGrund, Option.some.injEq, Prod.mk.injEq] at h
+              obtain ⟨rfl, rfl⟩ := h
+              exact Or.inr (Or.inr ⟨_, rest, k, rfl⟩)
+          | _ => cases h
       | _ => cases h
   | _ => cases h
 
