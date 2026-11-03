@@ -48,7 +48,8 @@ theorem escrow_call_outputs_present (S : Signatur D.Tab D.Glob D.Lock D.Marke)
     (Λ : List (Res D)) {m : D.Marke} {s : Nat} (h : (m, s) ∈ S.owner.outputs) :
     Res.marke m s ∈ nachSig D S Λ := by
   unfold nachSig
-  exact List.mem_append_right _ (List.mem_map.mpr ⟨_, h, rfl⟩)
+  exact List.mem_append_right _
+    (List.mem_map.mpr ⟨(m, s), List.mem_append_right _ h, rfl⟩)
 
 /-- The static escrow condition implies the availability its inputs need: the
     canonical call transformer already holds every owner input. -/
@@ -68,7 +69,7 @@ theorem escrow_call_borrow {c : OwnerInvocation D} {P : Programm D} {O : Orakel 
     (hv : s.ledger.valid) (hop : push.borrow N s t = some s') :
     s'.ledger.valid ∧ s'.access N c.frame t ∧ ¬ s'.access N c.caller t ∧
       ¬ s'.owns N c.frame t ∧ s'.spent = s.spent ∧ s'.stage = s.stage :=
-  OwnerInvocation.push_borrow_valid push hv hop
+  push_borrow_valid push hv hop
 
 /-- A canonical call push transferring a move input: the callee frame gains a
     fresh grant for the same owner, every saved use of the old grant dies, and
@@ -79,7 +80,7 @@ theorem escrow_call_transfer {c : OwnerInvocation D} {P : Programm D} {O : Orake
     (hv : s.ledger.valid) (hop : push.transfer N s t = some (s', t')) :
     s'.ledger.valid ∧ s'.owns N c.frame t' ∧ t'.mark = t.mark ∧ t'.stage = t.stage ∧
       (∀ frame, ¬ s'.access N frame t) ∧ s'.spent = s.spent :=
-  OwnerInvocation.push_transfer_valid push hv hop
+  push_transfer_valid push hv hop
 
 /-- Preservation across a call push carrying escrow: the ghost ledger is
     stable (no recorded event carries an owner payload) while the escrow
@@ -100,7 +101,7 @@ theorem escrow_return_restore {c : OwnerInvocation D} {P : Programm D} {O : Orak
     {N : OwnerNamespace D} {s s' : OwnerState D} {t : OwnerToken D}
     (hv : s.ledger.valid) (hop : pop.restore N s t = some s') :
     s'.ledger.valid ∧ s'.access N c.caller t ∧ s'.spent = s.spent ∧ s'.stage = s.stage :=
-  OwnerInvocation.pop_restore_valid pop hv hop
+  pop_restore_valid pop hv hop
 
 /-- A canonical return handing a moved owner back: a fresh grant for the same
     nominal identity at the lender, with spent authority untouched. -/
@@ -175,7 +176,7 @@ private theorem nodup_map_fst {Marke Marke' : Type} {l : List (Marke × Nat)}
 
 /-- Escrow readiness transports across an embedding: the rename is injective,
     stages agree, and eigner tables map over. -/
-theorem OwnerFlow.escrowReady_map {D D' : Deklaration} (E : Einbettung D D')
+theorem OwnerFlow.escrowReady_map {D D' : Deklaration} (E : Einbettung.Einbettung D D')
     (S : Signatur D.Tab D.Glob D.Lock D.Marke)
     (h : S.owner.EscrowReady (fun m => decide (m ∈ S.owner.inputs.map Prod.fst))
       D.stufen (fun m => ∃ t, m ∈ D.eigner t) S.konsumiert) :
@@ -198,14 +199,15 @@ theorem OwnerFlow.escrowReady_map {D D' : Deklaration} (E : Einbettung D D')
   obtain ⟨hv, hd, hr⟩ := h
   refine ⟨?_, ?_, ?_⟩
   · -- Validity: nodup via injectivity, bounds via the stage agreement.
-    rw [OwnerFlow.inputs_map]
-    refine ⟨nodup_map_fst hinj hv.1, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · rw [OwnerFlow.inputs_map]
+      exact nodup_map_fst hinj hv.1
     · intro x hx
       rw [hmoves] at hx
       obtain ⟨y, hym, heq⟩ := List.mem_map.mp hx
-      have e_mark : x.mark = E.marke y.mark := congrArg OwnerMove.mark heq
-      have e_bef : x.before = y.before := congrArg OwnerMove.before heq
-      have e_aft : x.after = y.after := congrArg OwnerMove.after heq
+      have e_mark : x.mark = E.marke y.mark := (congrArg OwnerMove.mark heq).symm
+      have e_bef : x.before = y.before := (congrArg OwnerMove.before heq).symm
+      have e_aft : x.after = y.after := (congrArg OwnerMove.after heq).symm
       have hyin : (y.mark, y.before) ∈ S.owner.inputs := by
         simp only [OwnerFlow.inputs]
         exact List.mem_append.mpr (Or.inl (List.mem_map.mpr ⟨y, hym, rfl⟩))
@@ -217,7 +219,7 @@ theorem OwnerFlow.escrowReady_map {D D' : Deklaration} (E : Einbettung D D')
         rw [decide_eq_true_eq]
         exact List.mem_map.mpr ⟨(E.marke y.mark, y.before), hmem, rfl⟩
       have hb := (hv.2.1 y hym).2
-      rw [e_mark, e_bef, e_aft, E.stufen]
+      simp only [e_mark, e_bef, e_aft, E.stufen]
       exact ⟨htrue, hb.1, hb.2⟩
     · intro p hp
       rw [hloans] at hp
@@ -233,12 +235,8 @@ theorem OwnerFlow.escrowReady_map {D D' : Deklaration} (E : Einbettung D D')
           exact List.mem_map.mpr ⟨q, hqin, rfl⟩
         exact List.mem_map.mpr ⟨(E.marke q.1, q.2), hmem, rfl⟩
       have hb := hv.2.2.1 q hqm
-      rw [f1, f2]
-      refine ⟨?_, ?_⟩
-      · rw [decide_eq_true_eq]
-        exact hqmem
-      · rw [E.stufen]
-        exact hb.2
+      simp only [f1, f2, E.stufen]
+      exact ⟨decide_eq_true hqmem, hb.2⟩
     · intro p hp
       rw [hmints] at hp
       obtain ⟨q, hqm, heq⟩ := List.mem_map.mp hp
@@ -253,12 +251,8 @@ theorem OwnerFlow.escrowReady_map {D D' : Deklaration} (E : Einbettung D D')
           exact List.mem_map.mpr ⟨q, hqin, rfl⟩
         exact List.mem_map.mpr ⟨(E.marke q.1, q.2), hmem, rfl⟩
       have hb := hv.2.2.2 q hqm
-      rw [f1, f2]
-      refine ⟨?_, ?_⟩
-      · rw [decide_eq_true_eq]
-        exact hqmem
-      · rw [E.stufen]
-        exact hb.2
+      simp only [f1, f2, E.stufen]
+      exact ⟨decide_eq_true hqmem, hb.2⟩
   · -- Disjointness: a mapped ordinary consume cannot name a mapped owner.
     intro p hp
     obtain ⟨q, hqm, rfl⟩ := List.mem_map.mp hp

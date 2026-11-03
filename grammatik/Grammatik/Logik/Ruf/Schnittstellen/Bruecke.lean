@@ -21,7 +21,7 @@ namespace Gabbro.Grammatik
   untouched: it quantifies over every program, so nontrivial `ptrVertrag`
   needed no new case. -/
 
-variable {D : Deklaration}
+variable {D : Deklaration} [DecidableEq D.Fn]
 
 /-- From the checker's footprint field: a pointer contract's carriers are
     stable at an indirect call whose interface orte lie in the widened
