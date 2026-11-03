@@ -91,7 +91,7 @@ theorem outputs_nodup {isOwner : Marke → Bool} {stages : Marke → Nat}
     {F : OwnerFlow Marke} (hv : Valid isOwner stages F) : (F.outputs.map Prod.fst).Nodup := by
   have hs := returned_moves_sublist F.moves F.loans F.mints
   have hs' : (F.outputs.map Prod.fst).Sublist (F.inputs.map Prod.fst) := by
-    simpa only [outputs, inputs] using hs
+    simpa only [outputs, inputs, List.map_append] using hs
   exact hs'.nodup hv.1
 
 /-- Every returned identity has an explicit input; only its move stage may
@@ -99,35 +99,35 @@ theorem outputs_nodup {isOwner : Marke → Bool} {stages : Marke → Nat}
 theorem output_from_input (F : OwnerFlow Marke) {m : Marke} {s : Nat}
     (h : (m, s) ∈ F.outputs) : ∃ before, (m, before) ∈ F.inputs := by
   rcases List.mem_append.mp h with h | h
+  · obtain ⟨x, hx, he⟩ := List.mem_filterMap.mp h
+    cases hs : x.after with
+    | none => simp [hs] at he
+    | some stage =>
+      have e : (x.mark, stage) = (m, s) := by simpa [hs] using he
+      have hm : x.mark = m := congrArg Prod.fst e
+      refine ⟨x.before, List.mem_append_left _ ?_⟩
+      exact List.mem_map.mpr ⟨x, hx, by simp only [hm]⟩
   · rcases List.mem_append.mp h with h | h
-    · obtain ⟨x, hx, he⟩ := List.mem_filterMap.mp h
-      cases hs : x.after with
-      | none => simp [hs] at he
-      | some stage =>
-        have e : (x.mark, stage) = (m, s) := by simpa [hs] using he
-        have hm : x.mark = m := congrArg Prod.fst e
-        refine ⟨x.before, List.mem_append_left _ (List.mem_append_left _ ?_)⟩
-        exact List.mem_map.mpr ⟨x, hx, by simp only [hm]⟩
-    · exact ⟨s, List.mem_append_left _ (List.mem_append_right _ h)⟩
-  · exact ⟨s, List.mem_append_right _ h⟩
+    · exact ⟨s, List.mem_append_right _ (List.mem_append_left _ h)⟩
+    · exact ⟨s, List.mem_append_right _ (List.mem_append_right _ h)⟩
 
 /-- The stage of every returned owner is in the declaration's range. -/
 theorem output_bounded {isOwner : Marke → Bool} {stages : Marke → Nat}
     {F : OwnerFlow Marke} (hv : Valid isOwner stages F) {m : Marke} {s : Nat}
     (h : (m, s) ∈ F.outputs) : isOwner m = true ∧ s < stages m := by
   rcases List.mem_append.mp h with h | h
+  · obtain ⟨x, hx, he⟩ := List.mem_filterMap.mp h
+    cases hs : x.after with
+    | none => simp [hs] at he
+    | some stage =>
+      have e : (x.mark, stage) = (m, s) := by simpa [hs] using he
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj e
+      have hb : x.before ≤ stage ∧ stage < stages x.mark := by
+        simpa only [hs, Option.all_some, decide_eq_true_eq] using (hv.2.1 x hx).2.2
+      exact ⟨(hv.2.1 x hx).1, hb.2⟩
   · rcases List.mem_append.mp h with h | h
-    · obtain ⟨x, hx, he⟩ := List.mem_filterMap.mp h
-      cases hs : x.after with
-      | none => simp [hs] at he
-      | some stage =>
-        have e : (x.mark, stage) = (m, s) := by simpa [hs] using he
-        obtain ⟨rfl, rfl⟩ := Prod.mk.inj e
-        have hb : x.before ≤ stage ∧ stage < stages x.mark := by
-          simpa only [hs, Option.all_some, decide_eq_true_eq] using (hv.2.1 x hx).2.2
-        exact ⟨(hv.2.1 x hx).1, hb.2⟩
     · exact hv.2.2.1 (m, s) h
-  · exact hv.2.2.2 (m, s) h
+    · exact hv.2.2.2 (m, s) h
 
 /-- The empty interface is valid for every owner declaration. -/
 theorem empty_valid (isOwner : Marke → Bool) (stages : Marke → Nat) :
