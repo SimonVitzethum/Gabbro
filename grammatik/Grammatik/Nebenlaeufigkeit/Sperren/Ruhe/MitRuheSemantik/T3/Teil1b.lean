@@ -72,7 +72,7 @@ theorem execStmt_ru_axiomCallElse {V : Vertrag D}
       · rfl
       · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply, id]
         erw [execEnd_umΛ]
-        exact (congrArg (fun a => (EndAusgang.schrumpf a).zuAusgang) (ih_execEnd_ru_err σ' _)).trans
+        exact (congrArg (fun a => (EndAusgang.schrumpf a).zuAusgang) (ih_execEnd_ru_err σ' (Env.cons r ρ))).trans
           ((congrArg EndAusgang.zuAusgang (endR_schrumpf _)).trans (endR_zuAusgang _))
 
 end Haupt

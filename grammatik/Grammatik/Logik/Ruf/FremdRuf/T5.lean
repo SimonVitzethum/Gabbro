@@ -26,6 +26,7 @@ module
 public import Grammatik.Logik.Ruf.FremdRuf.T4
 public import Grammatik.Logik.Ruf.FremdRuf.T2
 public import Grammatik.Logik.Vertraege.AxiomVertrag
+public import Grammatik.Logik.Ruf.RufLogik
 public import Grammatik.Zielsatz.Kern.Spec.Teil1
 
 @[expose] public section
