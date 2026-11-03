@@ -150,14 +150,16 @@ def GutRet (W : D.Tab → Bool) (G : D.Glob → Bool) (σ σ' : World D) : Prop 
 
 theorem offen_gibt_foldl (Ls : List D.Lock) (s : List (Ereignis D)) :
     offen (Ls.map (fun L => Ereignis.gibt (D := D) L) ++ s) =
-      Ls.foldl (fun h L => h.erase L) (offen s) := by
+      Ls.reverse.foldl (fun h L => h.erase L) (offen s) := by
   induction Ls generalizing s with
   | nil => rfl
-  | cons L Ls ih => simp only [List.map_cons, List.cons_append, offen, ih]
+  | cons L Ls ih =>
+      simp only [List.map_cons, List.cons_append, offen, ih, List.reverse_cons, List.foldl_append,
+        List.foldl_cons, List.foldl_nil]
 
 theorem haelt_gibt_foldl (σ : World D) (Ls : List D.Lock) :
     (Ls.foldl World.gibt σ).haelt = Ls.foldl (fun h L => h.erase L) σ.haelt := by
-  rw [World.haelt, World.gibt_foldl_spur, offen_gibt_foldl, World.haelt]
+  rw [World.haelt, World.gibt_foldl_spur, offen_gibt_foldl, List.reverse_reverse, World.haelt]
 
 theorem BravRet.refl (σ : World D) : BravRet σ σ :=
   ⟨⟨[], rfl⟩, fun e he => .inl he, id⟩

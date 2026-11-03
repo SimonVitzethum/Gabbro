@@ -61,16 +61,18 @@ theorem World.gibt_foldl_speicher (σ : World D) (Ls : List D.Lock) :
   | nil => exact ⟨rfl, rfl⟩
   | cons L Ls ih =>
       simp only [List.foldl_cons]
-      exact (ih (σ.gibt L)).trans ⟨rfl, rfl⟩
+      exact ih (σ.gibt L)
 
-/-- The trace after releasing a list of scopes: one `gibt` event per scope, then the old trace. -/
+/-- The trace after releasing a list of scopes: one `gibt` event per scope, the last
+    release on top (the trace grows at its head), then the old trace. -/
 theorem World.gibt_foldl_spur (σ : World D) (Ls : List D.Lock) :
-    (Ls.foldl World.gibt σ).spur = Ls.map (fun L => Ereignis.gibt (D := D) L) ++ σ.spur := by
+    (Ls.foldl World.gibt σ).spur = Ls.reverse.map (fun L => Ereignis.gibt (D := D) L) ++ σ.spur := by
   induction Ls generalizing σ with
   | nil => rfl
   | cons L Ls ih =>
-      simp only [List.foldl_cons, World.gibt, List.map_cons, List.cons_append]
-      exact ih (σ.gibt L)
+      rw [List.foldl_cons, ih (σ.gibt L)]
+      simp only [World.gibt, List.reverse_cons, List.map_append, List.map_cons, List.map_nil,
+        List.append_assoc, List.singleton_append]
 
 /-- Ein Schreiben in einen Slot: alle anderen Orte bleiben -- der RAHMEN faellt hier aus. -/
 def World.storeSlot (σ : World D) (t : D.Tab) (k : Int) (f : D.Feld t) (v : Wert D (D.typ t f)) :
