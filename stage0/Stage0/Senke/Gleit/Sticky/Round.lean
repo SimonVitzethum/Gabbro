@@ -8,6 +8,7 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Gleitkomma Runner.IR
 variable [Kern]
 
+omit [Kern] in
 /-- An odd jammed magnitude is strictly between adjacent even endpoints.
     A rounding grid divisible by four has an even midpoint, so every exact
     rational in this open interval makes the same nearest-even decision.
@@ -42,6 +43,7 @@ theorem softRound_odd_interval (j n d t : Nat) (dp : 0 < d) (tp : 0 < t)
     rw [rundeInt_steig _ _ _ (by nlinarith : 4 * t * d < 2 * (n % (4 * t * d))),
       rundeInt_steig _ _ _ (by omega : 4 * t < 2 * (j % (4 * t)))]
 
+omit [Kern] in
 /-- An exact rescaling retains all ties, including both quotient parities. -/
 theorem softRound_scaled (j n d t : Nat) (dp : 0 < d) (tp : 0 < t)
     (exactValue : n = j * d) :
@@ -56,6 +58,7 @@ theorem softRound_scaled (j n d t : Nat) (dp : 0 < d) (tp : 0 < t)
 def softShiftJamNat (a k : Nat) : Nat :=
   (a >>> k) ||| if a % 2 ^ k = 0 then 0 else 1
 
+omit [Kern] in
 /-- A sticky shift is either exact or lies at an odd point whose adjacent
     even endpoints strictly enclose the unshifted value. -/
 theorem softShiftJamNat_interval (a k : Nat) :

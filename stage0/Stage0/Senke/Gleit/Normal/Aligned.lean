@@ -10,7 +10,7 @@ open Gabbro.Grammatik Gleitkomma
     the rounded integer unchanged, including ties and positive scales. -/
 theorem softRoundDyadic_mul_pow (n t : Nat) (e : Int) :
     softRoundDyadic (n * 2 ^ t) e = softRoundDyadic n (e + (t : Int)) := by
-  unfold softRoundDyadic at 1
+  conv_lhs => unfold softRoundDyadic
   rw [Nat.mul_assoc, ← Nat.pow_add]
   exact softRoundDyadic_scale n (t + e.toNat) (-e).toNat _ (by omega)
 
@@ -21,7 +21,7 @@ private theorem guardGrid (n gap k : Nat) (guard : 2 ≤ k) :
   have grid : (2 : Nat) ^ k = 4 * 2 ^ (k - 2) := by
     calc
       2 ^ k = 2 ^ (2 + (k - 2)) := by congr 1; omega
-      _ = 4 * 2 ^ (k - 2) := by rw [Nat.pow_add]; rfl
+      _ = 4 * 2 ^ (k - 2) := by rw [Nat.pow_add]
   have scale : (2 : Nat) ^ (gap + k) = 4 * 2 ^ (k - 2) * 2 ^ gap := by
     rw [Nat.add_comm gap k, Nat.pow_add, grid]
   have result := softRoundDyadic_scale n 0 (gap + k)

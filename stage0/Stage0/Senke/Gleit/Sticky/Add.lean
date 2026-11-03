@@ -7,6 +7,7 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Gleitkomma Runner.IR
 variable [Runner.IR.Kern]
 
+omit [Runner.IR.Kern] in
 /-- Translating an odd interval by an even guard-scaled magnitude preserves
     its rounding decision. This covers the same-sign aligned addition path. -/
 theorem softRoundNat_aligned_add (large small gap : Nat)
@@ -33,6 +34,7 @@ theorem softRoundNat_aligned_add (large small gap : Nat)
     · rw [Nat.add_mul] at *
       nlinarith
 
+omit [Runner.IR.Kern] in
 /-- Subtraction reflects the interval. The ordered magnitude premise keeps
     natural subtraction exact, including the separate exact-zero case.
     In particular the discarded nonzero tail has the correct negative sign. -/
