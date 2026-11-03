@@ -36,7 +36,15 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
       lemma (`layU_ga_lcm_dvd`, connected to `irBild_correct` via `Emitted.Placed`) are proved, with an aligned-16
       witness; named sections are refused by name (flat runner image has no relocation policy). Open: the unconditional
       loader-base duty (`Nat.lcm 8 N ∣ b` for every positive N stays an explicit hypothesis).
-    - C14 `entrust`: refused by the model (no isolation/call service).
+    - C14 `entrust`: the bounded model (`GuestBoundary`, owner/ABI checks, C08
+      `GuestServicePflicht`, ordinary `bindAxiomOptElse` invocation) is implemented
+      with model witnesses, pending the lead's Lean checks (THEOREM-MAP §150).
+      Source remains refused: `trustT` has no explicit service-binding field, and
+      the current C08 source exporter does not yet populate software provenance or
+      `Programm.axVertrag`. Open: retain the source service binding, export its
+      declared requires/ensures without a hardware assumption, pass source-derived
+      descriptors through the actual unit/checker adapter, and add an accepted
+      source-to-Stage-0 image witness. No connected entrust case is counted complete.
     - C07 fallible indirect calls: Stage-0 arms being added.
   - **C18 static-arena allocation:** required allocation and allocation with `else`, at block and end-block level,
     already expand into the connected `lowB_ok`/`lowEnd_ok` narrowing and store arms. Source-image witnesses now
@@ -100,7 +108,7 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
 1. **Track P and Track L**, both running now in parallel with Phase A.
    Track P: complete Lean parser (coverage matrix, then elaboration replaces `lean_g.rs`). Track L: refinement down to the binary with an
    ISA-neutral `Code` and no CPU model. Plans: `PLAN-TRANSLATION-VALIDATION.md`† §9a/§9b.
-2. **Model gaps behind existing lowerings:** `boot` and `entrust` semantics; aarch64 `vector`/`via` meaning; port space and `asm` (LLVM
+2. **Model/export gaps behind existing lowerings:** `boot` semantics; the `entrust` source/service binding; aarch64 `vector`/`via` meaning; port space and `asm` (LLVM
    lowerings exist without a model).
 3. **Remaining O-items:** interrupts and cores (O19 rest), arenas under concurrency (O20), `child` without a model (O21), gate
    preconditions (O23), strings (O24), source forms without a complete G export (O27), linking (O28), regions in G (O37). See §2.
@@ -293,7 +301,7 @@ Full table: `LLVM-BACKEND.md`† §5.
 - **Lowerings without a Lean model** (2026-10-17; rule: language follows the Lean model). Built, evidenced only by text/qemu: aarch64
   `entry` (the meaning of `vector`/`via` on aarch64 is the lowerer's reading; `LANGUAGE.md` and the model are silent), `masks irqs`, the
   x86_64 port space, assembler bodies. REFUSED because lowering would invent semantics: `boot` and `entrust`. To do: put the aarch64
-  meaning of `vector`/`via` into the model, then fix `boot`/`entrust` in the model.
+  meaning of `vector`/`via` into the model, then connect the `boot` model and bounded `entrust` service export.
 - **O22 (group execution and stack lifecycle; built 2026-10-17).** Every invocation owns a guarded mapping and completion word; all roots start
   before any join; kernel `clear_child_tid` ends the join after actual exit. Open: runtime syscall numbers still belong to the Linux profile;
   OS-neutral bindings/profiles and the target-to-GX proof.
