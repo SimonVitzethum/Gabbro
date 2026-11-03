@@ -197,10 +197,8 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
     else lowE (currentOld := currentOld) L (reserved := reserved) e d
   | _, _, .case cs i nutz, d =>
     if sumFits cs then lowN (currentOld := currentOld) L (reserved := reserved) i.val nutz d else
-      sumSpanL cs i d (match cs.get i, nutz with
-        | _, .empty => some ([], d + integerWords 0 (cs.length - 1))
-        | _, .val e => lowE (currentOld := currentOld) L (reserved := reserved) e
-            (d + integerWords 0 (cs.length - 1)))
+      sumSpanL cs i d (lowPayload (currentOld := currentOld) L (reserved := reserved) nutz
+        (d + integerWords 0 (cs.length - 1)))
   | _, _, .why n r, d => some (constWords (encodeWords L (.why n) r) d)
   | _, _, .fnref f _ _, d => if lit32 (L.fa f) then some ([ci 1 d (L.fa f) 0], d + 1) else none
   | _, _, .ptrOf .., d => some ([ci 1 d 0 0], d + 1)
@@ -236,7 +234,17 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
       let index ← lowE (currentOld := currentOld) L (reserved := reserved) i (d + valueWords (D.typ t f))
       slotValueC L t f d index
     else none
+termination_by structural e
 
+/-- Traverse a complete sum payload directly in the canonical expression family. The caller
+    owns its tag and padding; an absent payload emits no words at the supplied payload base. -/
+def lowPayload (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {c : Option Ty}
+    (e : NutzlastExpr D Γ Λ c) (d : Nat) (reserved : Nat := 0) (currentOld : Bool := true) :
+    Option (List II × Nat) :=
+  match c, e with
+  | _, .empty => some ([], d)
+  | _, .val child => lowE (currentOld := currentOld) L (reserved := reserved) child d
+termination_by structural e
 
 /-- Lower a tagged payload through the same expression recursion. -/
 def lowN (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (tag : Nat) {c : Option Ty} (e : NutzlastExpr D Γ Λ c) (d : Nat) (reserved : Nat := 0) (currentOld : Bool := true) : Option (List II × Nat) :=
@@ -246,6 +254,7 @@ def lowN (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (tag : Nat) {c : Option Ty} 
       let ce ← lowE (currentOld := currentOld) L (reserved := reserved) e d
       pure (packSum d lo tag ce)
   | _, .val _ => none
+termination_by structural e
 
 /-- Traverse the actual argument spine in the expression's mutual recursion. -/
 def lowProdArgs (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {fs : List Ty}
@@ -256,6 +265,7 @@ def lowProdArgs (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {fs : List Ty}
     let head ← lowE (currentOld := currentOld) L (reserved := reserved) e d
     let tail ← lowProdArgs (currentOld := currentOld) L (reserved := reserved) rest (d + valueWords τ)
     pure (head.1 ++ tail.1, max head.2 tail.2)
+termination_by structural args
 end
 
 /-- The structural compiler traversal is the parameterized product traversal. -/

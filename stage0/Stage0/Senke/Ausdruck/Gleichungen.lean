@@ -52,10 +52,16 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
       (nutz : NutzlastExpr D Γ Λ (cs.get i)) :
     lowE (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.case cs i nutz) d =
     (if sumFits cs then lowN (currentOld := currentOld) L (reserved := reserved) i.val nutz d else
-      sumSpanL cs i d (match nutz with
-        | .empty => some ([], d + integerWords 0 (cs.length - 1))
-        | .val e => lowE (currentOld := currentOld) L (reserved := reserved) e
-            (d + integerWords 0 (cs.length - 1)))) := by rfl
+      sumSpanL cs i d (lowPayload (currentOld := currentOld) L (reserved := reserved) nutz
+        (d + integerWords 0 (cs.length - 1)))) := by rfl
+
+@[lowE_eqs] theorem lowPayload_empty :
+    lowPayload (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ)
+      .empty d = some ([], d) := rfl
+
+@[lowE_eqs] theorem lowPayload_val (e : Expr D Γ Λ τ) :
+    lowPayload (currentOld := currentOld) L (reserved := reserved) (.val e) d =
+      lowE (currentOld := currentOld) L (reserved := reserved) e d := rfl
 
 @[lowE_eqs] theorem lowN_empty (tag : Nat) :
     lowN (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ) tag .empty d = some ([ci 1 d tag 0], d + 1) := by rfl
