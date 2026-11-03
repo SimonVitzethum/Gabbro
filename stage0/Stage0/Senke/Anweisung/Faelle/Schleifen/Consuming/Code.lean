@@ -88,7 +88,7 @@ private theorem encode_piece (whole before : List Piece) (piece : Piece)
   induction before generalizing start code with
   | nil =>
     simp only [width, Nat.add_zero] at resolved
-    simp only [List.nil_append, encode, resolved, bind, Option.bind,
+    simp only [List.nil_append, encode, resolved, bind, Option.bind_some,
       Option.bind_eq_some_iff, pure, Option.some.injEq] at encoded
     obtain ⟨suffix, tail, rfl⟩ := encoded
     exact ⟨[], suffix, rfl, rfl⟩
