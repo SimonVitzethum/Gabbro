@@ -62,7 +62,7 @@ def binary {D : Deklaration} {Γ : Ctx} (op : String)
   | "|" | "^" =>
     if h0 : 0 ≤ l then
       if h1 : 0 ≤ l' then
-        let width := max h.toNat h'.toNat + 1
+        let width := max h.toNat.log2 h'.toNat.log2 + 1
         if hw : h < 2 ^ width ∧ h' < 2 ^ width then
           if op == "|" then
             return ⟨_, ⟨.bor width h0 h1 hw.1 hw.2 a.expr b.expr,
@@ -88,7 +88,10 @@ def expression {D : Deklaration} {Γ : Ctx} (names : Locals Γ) :
     match names.find? (fun entry => strEq entry.1 name) with
     | some (_, ⟨τ, x⟩) => .ok ⟨τ, Code.variable x⟩
     | none => .error ("const unresolved name: " ++ name)
-  | .res => expression names (.variable "result")
+  | .res =>
+    match names.find? (fun entry => strEq entry.1 "result") with
+    | some (_, ⟨τ, x⟩) => .ok ⟨τ, Code.variable x⟩
+    | none => .error "const result outside ensures"
   | .un op source => do
     let code ← expression names source
     if op == "!" then return ⟨_, Code.boolNot (← boolean code)⟩
@@ -106,7 +109,6 @@ def expression {D : Deklaration} {Γ : Ctx} (names : Locals Γ) :
       else .error "const field without G form"
     | .error error => .error error
   | _ => .error "const expression without a source-to-G derivation"
-termination_by source => sizeOf source
 
 /-- Bind the canonical evaluator's integers at exactly the original parameter types. -/
 def arguments (D : Deklaration) : (params : List (String × Ty)) →
