@@ -61,7 +61,8 @@ theorem kNext_ok {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest D (vertrag
       exact KErgOk.lokal hst _ _ _ (by first | exact hk | (simp only [GRest.nR]; exact hk)) _ _
   | verbrauchRest t member edge inv bound mass body rest vor k =>
       simp only [kNext]
-      exact KErgOk.ite (fun _ => KErgOk.lokal hst _ _ _ hk _ _)
+      exact KErgOk.ite
+        (fun _ => KErgOk.lokal hst _ _ _ (by simp only [GRest.nR] at hk ⊢; exact hk) _ _)
         (fun _ => KErgOk.none)
   | wiederRest n bis body ueber k =>
       try simp only [kNext]
@@ -184,7 +185,7 @@ theorem kEntf_ok {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)} (ρ : Env D 
       simp only [nS, Bool.and_eq_true] at hs
       simp only [kEntf]
       exact KErgOk.lokal hst _ _ _
-        ⟨hs.1.1.1.1, hs.1.1.1.2, hs.1.1.2, hs.1.2, hs.2, hr, hk⟩ _ _
+        (by simp only [GRest.nR]; exact ⟨hs.1.1.1.1, hs.1.1.1.2, hs.1.1.2, hs.1.2, hs.2, hr, hk⟩) _ _
   | retry n bis body ueber =>
       simp only [nS, Bool.and_eq_true] at hs
       try simp only [kEntf]
@@ -197,13 +198,13 @@ theorem kEntf_ok {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)} (ρ : Env D 
       simp only [nS, Bool.and_eq_true] at hs
       simp only [kEntf]
       split
-      exact KErgOk.push hst _ _ _ ⟨hs.2, rfl, hr, hk⟩ _ _ _ _
+      exact KErgOk.push hst _ _ _ (by simp only [GRest.nR]; exact ⟨hs.2, rfl, hr, hk⟩) _ _ _ _
   | axiomCallElse e a args he hp hd hgd hr' err =>
       simp only [nS, Bool.and_eq_true] at hs
       simp only [kEntf]
       split
-      · exact KErgOk.lokal hst _ _ _ ⟨hr, hk⟩ _ _
-      · exact KErgOk.lokal hst _ _ _ ⟨by rw [nB_alsBlock]; exact hs.2, hk⟩ _ _
+      · exact KErgOk.lokal hst _ _ _ (by simp only [GRest.nR]; exact ⟨hr, hk⟩) _ _
+      · exact KErgOk.lokal hst _ _ _ (by simp only [GRest.nR]; exact ⟨by rw [nB_alsBlock]; exact hs.2, hk⟩) _ _
       · exact KErgOk.none
   | _ => exact KErgOk.none
 

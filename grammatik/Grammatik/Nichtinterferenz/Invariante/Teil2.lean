@@ -67,7 +67,7 @@ theorem kEnde_ok {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
   | narrowRequired e lo' hi' rest =>
       simp only [kEnde]
       split
-      · exact KErgOk.lokal hst _ _ _ ⟨by rw [nB_alsBlock]; exact he, trivial⟩ _ _
+      · exact KErgOk.lokal hst _ _ _ (by simp only [GRest.nR]; exact ⟨by rw [nB_alsBlock]; exact he, trivial⟩) _ _
       · exact KErgOk.none
   | exchange g neu hw hL rest =>
       try simp only [kEnde]
@@ -168,7 +168,7 @@ theorem kDann_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ρ : Env D Γ)
         cases e <;> exact hk
       simp only [kDann]
       split
-      · exact KErgOk.lokal hst _ _ _ ⟨hb.2, hweiter⟩ _ _
+      · exact KErgOk.lokal hst _ _ _ (by simp only [GRest.nR]; exact ⟨hb.2, hweiter⟩) _ _
       · exact KErgOk.none
   | bindAxiomOptElse e a args he hp hd hgd hr err rest =>
       simp only [nB, Bool.and_eq_true] at hb
@@ -176,8 +176,8 @@ theorem kDann_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ρ : Env D Γ)
         cases e <;> exact hk
       simp only [kDann]
       split
-      · exact KErgOk.lokal hst _ _ _ ⟨hb.2, hweiter⟩ _ _
-      · exact KErgOk.lokal hst _ _ _ ⟨by rw [nB_alsBlock]; exact hb.1.2, hk⟩ _ _
+      · exact KErgOk.lokal hst _ _ _ (by simp only [GRest.nR]; exact ⟨hb.2, hweiter⟩) _ _
+      · exact KErgOk.lokal hst _ _ _ (by simp only [GRest.nR]; exact ⟨by rw [nB_alsBlock]; exact hb.1.2, hk⟩) _ _
       · exact KErgOk.none
   | regRead r hk' rest =>
       simp only [nB, Bool.and_eq_true] at hb
@@ -208,7 +208,7 @@ theorem kDann_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ρ : Env D Γ)
   | narrowRequired e lo' hi' rest =>
       simp only [nB, Bool.and_eq_true] at hb
       simp only [kDann]
-      exact KErgOk.dite (fun _ => KErgOk.lokal hst _ _ _ ⟨hb.2, hk⟩ _ _)
+      exact KErgOk.dite (fun _ => KErgOk.lokal hst _ _ _ (by simp only [GRest.nR]; exact ⟨hb.2, hk⟩) _ _)
         (fun _ => KErgOk.none)
   | check c sonst rest =>
       simp only [nB, Bool.and_eq_true] at hb
@@ -293,19 +293,22 @@ theorem kr_ok {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
       | zero => exact KErgOk.none
       | succ rest =>
           simp only [GRest.nR] at hr
-          simp only [kr]
+          rw [kr_verbrauch_succ]
+          dsimp only
           refine KErgOk.ite (fun _ => ?_) (fun _ => KErgOk.none)
           split
-          · exact KErgOk.lokal hst _ _ _ ⟨hr.2.2.2.2.1, hr⟩ _ _
+          · exact KErgOk.lokal hst _ _ _ (by simp only [GRest.nR]; exact ⟨hr.2.2.2.2.1, hr⟩) _ _
           · exact KErgOk.ite (fun _ => KErgOk.lokal hst _ _ _ hr.2.2.2.2.2 _ _)
               (fun _ => KErgOk.none)
   | verbrauchRest t member edge inv bound mass body rest vor k =>
       cases ρ
-      simp only [kr]
-      exact KErgOk.ite (fun _ => KErgOk.lokal hst _ _ _ hr _ _)
+      rw [kr_verbrauchRest]
+      dsimp only
+      exact KErgOk.ite (fun _ => KErgOk.lokal hst _ _ _ (by simp only [GRest.nR] at hr ⊢; exact hr) _ _)
         (fun _ => KErgOk.none)
   | wartet b k => exact KErgOk.none
   | wartetSonst n err b k => exact KErgOk.none
+  | rueckBereit scopes k => exact KErgOk.none
   | abbruch k => exact KErgOk.none
   | leer => exact KErgOk.none
 
