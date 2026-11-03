@@ -501,16 +501,19 @@ Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md`† §§0-5 and �
 Code-reading inventory at `25d1da48044bf96eb657385e54b39fdff2111aba` (`s0-inventar2`, integration snapshot).
 Updated by code inspection on `front-gaps1`: scoped returns, indirect discard-else and foreign block/end-block binders now have producers
 and preservation/source-witness arms; all await the lead build.
+Integration correction on `sammel-c3`: retain the already present owned-access lowering/proof arms,
+C16 retirement producer and explicit foreign-answer profiles. Original snapshot line references below
+remain historical unless a row names its current implementation.
 No Lean/lake/build, runner, guardian or executable coverage measurement was run. A **yes** below means an
 implementation/proof arm exists in the inspected source, subject to its guards and recursive operands;
 it does not certify that this snapshot builds or that every parameterization of that constructor compiles.
 Counts are by constructor, not example, operator spelling, type instantiation or helper lemma:
-**143 = 64 Expr + 34 Stmt + 22 Block + 23 Endblock; 135 lowered with a connected generic proof arm,
-0 lowered without such an arm, 8 without lowering (including one missing match arm rather than a refusal).**
-Of the 135, **9 have no connected source producer**, leaving **126 with a source producer and lowering/proof
-arms, 0 with lowering but no proof arm, 17 unavailable at the source-to-IR boundary**. Six of those 17 are
-out-of-scope device forms; the remaining 11 are userspace gaps. These are structural counts, not a claim
-that 126 cases have been compiled successfully. The 13 `Ty` constructors below are a separate representation
+**143 = 64 Expr + 34 Stmt + 22 Block + 23 Endblock; 137 lowered with a connected generic proof arm,
+0 lowered without such an arm, 6 without lowering.**
+Of the 137, **8 have no connected source producer**, leaving **129 with a source producer and lowering/proof
+arms, 0 with lowering but no proof arm, 14 unavailable at the source-to-IR boundary**. Six of those 14 are
+out-of-scope device forms; the remaining 8 are userspace gaps. These are structural counts, not a claim
+that 129 cases have been compiled successfully. The 13 `Ty` constructors below are a separate representation
 inventory and are not added to the 143 syntax cases. `Ty.index n` is the alias `.int 0 (n - 1)`.
 
 Locations use these exact file abbreviations (a suffix `:N` is the source line; e.g. `E:64` means
@@ -571,7 +574,7 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Expr.rem` | yes G2:438 | yes E:110, unsigned or wide remainder | `lowE_ok`, Q:309 | same source range rule |
 | `Expr.sdiv` | yes G2:425 | yes E:113, signed or wide fallback | `lowE_ok`, Q:313 | denominator must exclude zero; minimum-word case uses wide fallback |
 | `Expr.srem` | yes G2:442 | yes E:118, signed or wide fallback | `lowE_ok`, Q:317 | denominator must exclude zero |
-| `Expr.getBytes` | no producer in `Parser/Elab/**` | yes E:206, `readBytesL` | `lowE_ok`, Q:405 | E:207: `else none` for `n > 8`; source byte-span export missing |
+| `Expr.getBytes` | no producer in `Parser/Elab/**` | yes, `readBytesL` / `readBytesWideL` | `lowE_ok`, byte-read helper proofs (unbuilt) | source byte-span export missing; recursive index/layout guards |
 | `Expr.band` | yes G2:378 | yes E:123, scalar or wide bits | `lowE_ok`, Q:321 | source operands nonnegative |
 | `Expr.bor` | yes G2:395 | yes E:126, scalar resize or wide bits | `lowE_ok`, Q:325 | source width/range rule |
 | `Expr.bxor` | yes G2:409 | yes E:130, scalar resize or wide bits | `lowE_ok`, Q:329 | source width/range rule |
@@ -614,11 +617,11 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Expr.prod` | yes G5:167 | yes E:211, `prodL`/`lowA` | `lowE_ok`, Q:438; `prod_ok`/`lowE_ok_args` | complete ordered field arguments |
 | `Expr.prodGet` | yes G5:175 | yes E:212, field-span copy | `lowE_ok`, Q:441; `prodGet_ok` | recursive base |
 | `Expr.prodSet` | yes G5:184 | yes E:213, field-span replacement | `lowE_ok`, Q:445; `prodSet_ok` | recursive base/replacement |
-| `Expr.thruOwn` | yes G3:108/:124 | **missing**, no arm and no wildcard in E:63–226 | **missing** in `lowE_ok` | non-exhaustive source match after new model constructor; no `none` line exists |
+| `Expr.thruOwn` | yes G3:108/:124 | yes E:212, `slotValueC`, same carrier as `thru` | `lowE_ok`, Q:359 (unbuilt) | owned resource and slot-layout guards remain required |
 | `Stmt.assignSlot` | yes H1:219 | yes A:88, `slotStoreC` | `lowS_ok`, P:83 | layout/store guards |
 | `Stmt.assignThru` | yes H1:182 | yes A:92, resolved table/index | `lowS_ok`, P:84 | layout/store guards |
 | `Stmt.assignGlob` | yes H3:103 | yes A:80, `globalStoreC` | `lowS_ok`, P:79 | layout/store guards |
-| `Stmt.putBytes` | no producer in `Parser/Elab/**` | partial A:96, `putBytesL` | `lowS_ok`, P:121 | A:102: `else none` for `n > 8`; source export absent |
+| `Stmt.putBytes` | no producer in `Parser/Elab/**` | yes, `putBytesL` / `putBytesWideL` | `lowS_ok`, `putBytes_ok` (unbuilt) | source byte-span export missing; recursive value/index/layout guards |
 | `Stmt.assignVar` | yes H3:306/:321 | yes A:38, copies complete value | `lowS_ok`, P:66 | A:42: `else none` if parameter/protected span would be overwritten |
 | `Stmt.shift` | yes H4:54 | partial A:107 | `lowS_ok`, P:123 | A:117: `else none` unless source/prestate intervals fit signed word; runtime prestate mismatch stops 106 |
 | `Stmt.ite` | yes J/Struct:46 | yes A:43 | `lowS_ok`, P:69 | recursive branches/code size |
@@ -637,7 +640,7 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Stmt.transition` | no source producer; device declarations refused U12:322 | refused by wildcard | refusal-only P:147 | A:183: `\| _, _, _, _, _, reserved => none`; U12:322: `.error "device transition without G form"`; out of scope |
 | `Stmt.publish` | yes H3:178/:209, payload-free atomics | partial A:83, release store | `lowS_ok`, P:81 | A:87: `else none` unless address and `aggregateFits`; source payload export restricted |
 | `Stmt.advances` | no producer in `Parser/Elab/**` | yes A:140, ghost/no instructions | `lowS_ok`, P:115 | source clause is not an explicit statement exporter; no constructor-producing path |
-| `Stmt.retires` | no producer in `Parser/Elab/**` | yes A:141, ghost/no instructions | `lowS_ok`, P:116 | source retirement export missing |
+| `Stmt.retires` | yes H4:267, C16 generated `retireMark` | yes, ghost/no instructions | `lowS_ok` (unbuilt) | only an actually held, declared check Duty is retired by this producer |
 | `Stmt.ret` | yes J/Returns:232 | yes A:77, shared ensures epilogue | `lowS_ok`, P:76 | exact contract-end resources required; local scopes use `retScoped` |
 | `Stmt.retWhy` | yes J/Returns:226 | yes A:75 | `lowS_ok`, P:148 | separate reason channel; local scopes use `retWhyScoped` |
 | `Stmt.leave` | yes J/Seq:265 | partial A:142 | `lowS_ok`, P:105 | A:142: `else none` if jump not `lit32`; source loop scope required |
@@ -647,30 +650,30 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Stmt.retScoped` | yes J/Returns:242 `lowRetStmt` (unbuilt) | yes A:181, `lowRetScoped` | `lowS_ok`, P:161 | exact contract-end resources plus precisely the lexical locks required |
 | `Stmt.retWhyScoped` | yes J/Returns:240 `lowRetStmt` (unbuilt) | yes A:182, `lowRetWhyScoped` | `lowS_ok`, P:164 | same exact-resource check; reason must be in the declared channel |
 | `Stmt.axiomCallElse` | yes J/CallElse:25 | partial A:145 | `lowS_ok`, P:140 | A:170: `\| _, _ => none`; only VOID or nonnegative integer result, checked reason map and branch bounds |
-| `Stmt.callIndElse` | yes J/CallElse:48 `lowCallIndElse` (unbuilt) | yes A:171, `lowIndElse`/`elseC` | `lowS_ok`, P:144 | pointer result must be a value; nonempty reason channel, signature conformance and closed ending handler required |
-| `Stmt.assignThruOwn` | yes H1:202/:256 | refused by wildcard | **missing** in `lowS_ok` | A:183: `\| _, _, _, _, _, reserved => none`; owned write lowering/proof missing |
+| `Stmt.callIndElse` | yes J/IndirectElse:11 `lowCallIndElse`, both explicit and shared marker dispatch (unbuilt) | yes, `lowIndElse`/`elseC` | `lowS_ok` | pointer result must be a value; nonempty reason channel, signature conformance and closed ending handler required |
+| `Stmt.assignThruOwn` | yes H1:202/:256 | yes A:79, `slotStoreC`, same carrier as `assignThru` | `lowS_ok`, P:85 (unbuilt) | owned resource and slot-layout/store guards remain required |
 | `Block.nil` | yes J/Seq:27–29 | yes A:187 | `lowB_ok`, P:181 | — |
 | `Block.cons` | yes J/Seq:32 | yes A:188 | `lowB_ok`, P:183 | recursive statement/rest |
 | `Block.bind` | yes J/Seq:66/:69 | yes A:192 | `lowB_ok`, P:185 | recursive value/rest |
 | `Block.bindCall` | yes J/Seq:90 | yes A:223 | `lowB_ok`, P:187 | ordinary call/frame bounds |
 | `Block.bindCallInd` | yes J/Seq:213 | yes A:228 | `lowB_ok`, P:191 | indirect dispatch/signature bounds |
 | `Block.bindCallElse` | yes J/Seq:129 | yes A:196 | `lowB_ok`, P:193 | recursive reason handler and rest |
-| `Block.bindAxiom` | yes J/Seq:98/:103 | partial A:246 | `lowB_ok`, P:195 | `chkC` T:166: `\| _, _ => none` for result other than int/bool/never; notably provider `ref` |
-| `Block.bindAxiomElse` | yes J/Seq:114 `bindAxElse` arm (unbuilt) | partial A:295 | `lowB_ok`, P:199 | nonempty foreign reason channel and a closed ending handler required; A:309: `\| _, _ => none` except nonnegative integer result |
+| `Block.bindAxiom` | yes J/Seq:98/:103 | yes A:236, `plainForeignC` | `lowB_ok`, `plainForeignC_ok` (unbuilt) | register answers include checked int/bool/ref/ptr/never; multiword answers require an explicit result area and its provider contract |
+| `Block.bindAxiomElse` | yes J/Seq:114 `bindAxElse` arm (unbuilt) | yes A:265, `fallibleForeignC` | `lowB_ok`, `fallibleForeignC_ok` (unbuilt) | nonempty reason channel and closed ending handler; checked errno map; register or explicit result-area answer profile |
 | `Block.regRead` | yes J/Seq:245 | refused by wildcard | refusal-only P:209 | A:331: `\| _, _, _, _, _, reserved => none`; device access out of scope |
 | `Block.regReadElse` | yes J/Seq:258 | refused by wildcard | refusal-only P:210 | A:331: `\| _, _, _, _, _, reserved => none`; device access out of scope |
 | `Block.awaits` | yes J/Seq:237 | partial A:316, one load | `lowB_ok`, P:211 | A:320: `else none` unless address and `aggregateFits`; no waiting liveness claim |
 | `Block.exchange` | yes J/Seq:230 | partial A:321, CAS loop | `lowB_ok`, P:213 | A:327/:328: `else none` for code-size/address/single-word guards |
-| `Block.narrow` | yes J/Seq:191 | partial A:233 | `lowB_ok`, P:215 | A:239: `else none` unless input/bounds fit signed words |
+| `Block.narrow` | yes J/Seq | yes, multiword `narrowC` | `lowB_ok` (unbuilt) | recursive operand/continuation and frame/code bounds |
 | `Block.check` | no producer in `Parser/Elab/**` | yes A:310, condition plus end-handler | `lowB_ok`, P:219 | source export absent; no named constructor-specific refusal |
 | `Block.float` | yes J/Seq:78 | yes A:330, software IEEE add/sub/mul/div | `lowB_ok`, P:221 | recursive values/range/code guards; stale TODO claim that this constructor is wholly refused is superseded |
 | `Block.floatLit` | yes J/Seq:73 | yes A:211, `floatLiteralL` | `lowB_ok`, P:225 | kernel-rounded binary64 value and range |
 | `Block.floatOf` | no producer in `Parser/Elab/**` | yes A:213, literal or computed conversion | `lowB_ok`, P:227 | source conversion export absent; computed conversion helper's supported integer representation |
 | `Block.floatNarrow` | no producer in `Parser/Elab/**` | yes A:202, range/fallback | `lowB_ok`, P:229 | source export absent; NaN endpoints lower the fallback |
-| `Block.narrowRequired` | yes J/Seq:200; arena expansion too | partial A:240 | `lowB_ok`, P:217 | A:245: `else none` unless signed-word input/bounds; failed runtime capacity stops 107 |
-| `Block.bindAxiomOpt` | yes J/Seq:154 | yes A:251/:256, some/VOID result | `lowB_ok`, P:197 | non-VOID answers still pass `chkC`; gate restrictions |
-| `Block.bindAxiomOptElse` | yes J/Seq:169 | partial A:266/:280 | `lowB_ok`, P:205 | A:279/:294: `\| _, _ => none`; VOID or nonnegative integer result, checked reason map |
-| `Block.bindCallIndElse` | yes J/Seq:224 via `nestedElseN` | yes A:260 | `lowB_ok`, P:203 | see free binder finding below; recursive handler/rest |
+| `Block.narrowRequired` | yes J/Seq; arena expansion too | yes, multiword `narrowC` | `lowB_ok` (unbuilt) | failed runtime capacity stops 107; recursive operand/continuation guards |
+| `Block.bindAxiomOpt` | yes J/Seq | yes, `plainForeignC` for values, `torC0` for VOID | `lowB_ok`, foreign helper proofs (unbuilt) | explicit register/result-area profile and provider duties for values; existing VOID restrictions |
+| `Block.bindAxiomOptElse` | yes J/Seq | yes, `fallibleForeignC` for values; VOID errno dispatch | `lowB_ok`, foreign helper proofs (unbuilt) | checked reason map and branch bounds; register/result-area profile for values |
+| `Block.bindCallIndElse` | yes J/Seq:224 via `nestedElseN` | yes A:260 | `lowB_ok`, P:203 | corrected success binder; recursive handler/rest |
 | `Endblock.ret` | yes J/Ende:41, J/Rest1 via `lowRetL` | yes A:367 | `lowEnd_ok`, P:244 | source lock/resource restrictions |
 | `Endblock.retWhy` | yes J/Ende:35 | yes A:365 | `lowEnd_ok`, P:255 | valid reason/resource transition |
 | `Endblock.leave` | yes J/Ende:44 | partial A:363 | `lowEnd_ok`, P:258 | A:363: `else none` if jump not `lit32` |
@@ -679,20 +682,20 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Endblock.bind` | yes J/Ende:52 | yes A:374 | `lowEnd_ok`, P:249 | recursive value/end block |
 | `Endblock.bindCall` | yes J/Ende:74 | yes A:384 | `lowEnd_ok`, P:251 | ordinary call/frame bounds |
 | `Endblock.bindCallElse` | yes J/Rest1:272 | yes A:378 | `lowEnd_ok`, P:264 | recursive reason handler/rest |
-| `Endblock.bindAxiom` | yes J/Rest1:70/:84 and J/Ende:73/:79 (unbuilt) | partial A:412 | `lowEnd_ok`, P:266 | `chkC` T:166 refuses `ref` etc. |
-| `Endblock.bindAxiomElse` | yes J/Rest1:288 and J/Ende:216 (unbuilt) | partial A:474 | `lowEnd_ok`, P:270 | A:488: `\| _, _ => none` except nonnegative integer result |
+| `Endblock.bindAxiom` | yes J/Rest1:70/:84 and J/Ende:73/:79 (unbuilt) | yes, `plainForeignC` | `lowEnd_ok`, `plainForeignC_ok` (unbuilt) | same checked register/result-area profiles as `Block.bindAxiom`; provider duties remain explicit |
+| `Endblock.bindAxiomElse` | yes J/Rest1:288 and J/Ende:216 (unbuilt) | yes, `fallibleForeignC` | `lowEnd_ok`, `fallibleForeignC_ok` (unbuilt) | same checked reason and answer profiles as `Block.bindAxiomElse` |
 | `Endblock.regRead` | yes J/Ende:143, J/Rest1:206 | refused by wildcard | refusal-only P:280 | A:491: `\| _, _, _, _, reserved => none`; device access out of scope |
 | `Endblock.regReadElse` | yes J/Ende:154, J/Rest1:225 | refused by wildcard | refusal-only P:281 | A:491: `\| _, _, _, _, reserved => none`; device access out of scope |
 | `Endblock.awaits` | yes J/Ende:137 | partial A:461 | `lowEnd_ok`, P:282 | A:465: `else none` unless address and `aggregateFits` |
 | `Endblock.bindCallInd` | yes J/Ende:108, J/Rest1:147 | yes A:389 | `lowEnd_ok`, P:284 | indirect dispatch/signature bounds |
-| `Endblock.narrow` | yes J/Ende:85 | partial A:399 | `lowEnd_ok`, P:286 | A:405: `else none` unless signed-word input/bounds |
+| `Endblock.narrow` | yes J/Ende | yes, multiword `narrowC` | `lowEnd_ok` (unbuilt) | recursive operand/continuation and frame/code bounds |
 | `Endblock.exchange` | yes J/Ende:131, J/Rest1:185 | partial A:466 | `lowEnd_ok`, P:290 | A:472/:473: `else none` for code-size/address/single-word guards |
 | `Endblock.ite` | yes J/Ende:256, J/Rest1:354 | yes A:394 | `lowEnd_ok`, P:253 | recursive branches |
-| `Endblock.narrowRequired` | yes J/Ende:95, J/Rest1:130 | partial A:406 | `lowEnd_ok`, P:288 | A:411: `else none` unless signed-word input/bounds; runtime failure stops 107 |
+| `Endblock.narrowRequired` | yes J/Ende, J/Rest1 | yes, multiword `narrowC` | `lowEnd_ok` (unbuilt) | failed runtime capacity stops 107; recursive operand/continuation guards |
 | `Endblock.retScoped` | yes J/Ende:30 → J/Returns:269 `lowRetEnd` (unbuilt) | yes A:489 | `lowEnd_ok`, P:292 | exact contract-end resources plus precisely the lexical locks required |
 | `Endblock.retWhyScoped` | yes J/Ende:30 → J/Returns:267 `lowRetEnd` (unbuilt) | yes A:490 | `lowEnd_ok`, P:295 | same exact-resource check; reason must be in the declared channel |
-| `Endblock.bindAxiomOpt` | yes J/Ende:176 | yes A:417/:422 | `lowEnd_ok`, P:268 | non-VOID answer passes `chkC`; gate restrictions |
-| `Endblock.bindAxiomOptElse` | yes J/Ende:191 | partial A:432/:446 | `lowEnd_ok`, P:276 | A:445/:460: `\| _, _ => none`; VOID or nonnegative integer answer |
+| `Endblock.bindAxiomOpt` | yes J/Ende | yes, `plainForeignC` for values, `torC0` for VOID | `lowEnd_ok`, foreign helper proofs (unbuilt) | same checked answer profiles and provider duties as the continuing form |
+| `Endblock.bindAxiomOptElse` | yes J/Ende | yes, `fallibleForeignC` for values; VOID errno dispatch | `lowEnd_ok`, foreign helper proofs (unbuilt) | same checked reason/answer profiles as the continuing form |
 | `Endblock.bindCallIndElse` | yes J/Rest1:171; J/Ende uses export helper | yes A:426 | `lowEnd_ok`, P:274 | recursive reason handler/rest |
 | `Ty.int lo hi` (also `index`) | yes U3:104/:108/:118 | `integerWords`, V:21; arbitrary-width local/call copies | `encodeWords_length`, `lowE_ok` arithmetic/variable arms | consumers such as narrowing/byte spans/gates retain the individual bounds above |
 | `Ty.bool` | yes U3:97 | one word | `encodeWords_length`, `lowE_ok` Boolean arms | — |
@@ -702,11 +705,11 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Ty.never` | yes U5R:133, U6:164 | no inhabited value (V:40: `nomatch v`); foreign result checker emits stop T:165 | `encodeWords_length` empty case; generic axiom/return proof | not a materializable value; no extra syntax case counted |
 | `Ty.fl lo hi` | yes U3:98 (`f32`/`f64` map to `uFloatTy`) | binary64 bits V:38; software arithmetic A:330 | `lowE_ok` arms `fllt`/`flle`, `lowB_ok` arm `float`, `blockFloatArithmetic_case` | this inventory does not establish a separate binary32 execution path; top-level source float model gap below |
 | `Ty.fnptr sig` | yes U5R:151, J/Seq:205 | address V:29; ordinary/indirect call ABI | `lowE_ok` arm `fnref`, `lowS_ok`/`lowB_ok`/`lowEnd_ok` indirect arms | E:195: `else none` for non-`lit32` function address |
-| `Ty.ptr cap` | yes U3:120–127; table capabilities only, resolved owner/space | ghost zero V:39; accesses name resolved table | `lowE_ok` arms `ptrOf`/`thru`; ordinary copied-value proofs | owned access arms missing; live byte capability refused U3:121/:127; `DataTarget` has only `table` (`Typen/DataCap.lean:11`) |
-| `Ty.ref t` | yes U3:118; provider result U5R:132 | cell number V:28; `slotRef`/`assignSlotRef`/`refEq` | corresponding `lowE_ok`/`lowS_ok` arms, with `ValueValid` | provider answer cannot enter through `bindAxiom`: T:166 `\| _, _ => none` in `chkC`; type encoding alone is not a connected allocator |
-| `Ty.arr τ n` | yes U3:129–133 | complete recursive element spans V:34 | `encodeWords_length`, `lowE_ok` array arms | element displacement/frame bounds; not a generic foreign gate argument/result |
-| `Ty.str n` | yes U3:134–138 | packed capacities 0/1, otherwise length + padded byte words V:35 | `encodeWords_length`, `lowE_ok` string arms | long concatenation/order still refused; not a generic foreign gate argument/result |
-| `Ty.prod name fields` | yes named record schemas, G5:167/:175/:184 | complete field spans V:33/:43–53 | `encodeWords_length`, `prod_ok`/`prodGet_ok`/`prodSet_ok` via `lowE_ok` | not a generic foreign gate argument/result; no blanket local/ordinary-call refusal |
+| `Ty.ptr cap` | yes U3:120–127; table capabilities only, resolved owner/space | ghost zero V:39; accesses name resolved table | `lowE_ok` arms `ptrOf`/`thru`/`thruOwn`; owned store and copied-value proofs | live byte capability refused U3:121/:127; `DataTarget` has only `table`; source provider admission remains an explicit boundary |
+| `Ty.ref t` | yes U3:118; provider result U5R:132 | cell number V:28; `slotRef`/`assignSlotRef`/`refEq` and foreign register answers | corresponding `lowE_ok`/`lowS_ok` and foreign-answer proofs, with `ValueValid` (unbuilt) | `chkC` checks the nonnegative reference word; freshness, mapped storage and source provider-contract admission are separate duties |
+| `Ty.arr τ n` | yes U3:129–133 | complete recursive element spans V:34 | `encodeWords_length`, `lowE_ok` array arms | element displacement/frame bounds; foreign arguments remain restricted; answers use an explicit result area |
+| `Ty.str n` | yes U3:134–138 | packed capacities 0/1, otherwise length + padded byte words V:35 | `encodeWords_length`, `lowE_ok` string arms | long concatenation/order still refused; foreign arguments remain restricted; answers use an explicit result area |
+| `Ty.prod name fields` | yes named record schemas, G5:167/:175/:184 | complete field spans V:33/:43–53 | `encodeWords_length`, `prod_ok`/`prodGet_ok`/`prodSet_ok` via `lowE_ok` | foreign arguments remain restricted; answers use an explicit result area; no blanket local/ordinary-call refusal |
 
 Shared restrictions and source consistency findings:
 
@@ -722,18 +725,20 @@ Shared restrictions and source consistency findings:
   table pointer, T:29–33); T:131/:132 return `none` for bad/missing binding. The buffer path T:115–130 needs
   exactly one readable normal-space unowned table capability, a byte column, bounded count and matching
   layout. Nonfallible bindings use `torC0` (T:137); fallible forms validate the error map and branch spans.
-  `chkC` accepts one-word integer ranges with supported bound checks, bool or never (T:154–166), **not provider references, strings,
-  products, arrays, function pointers or arbitrary sums**. Thus a represented `Ty.ref` and a proved
-  `slotRef` arm do not complete source allocation through a provider.
+  The integrated `chkC` accepts one-word integer ranges with supported bound checks, normalized bool,
+  nonnegative reference words, ghost table capabilities and never. `Tore/Code.plainForeignC` and
+  `fallibleForeignC` additionally transport complete multiword answers through an explicit checked
+  result-area profile, with `plainForeignC_ok`/`fallibleForeignC_ok`. Missing areas and hidden/source-register
+  overlap refuse; area profiles combined with pointer-buffer arguments still refuse. These unbuilt arms
+  retain provider footprint/freshness/mapping duties and do not establish original-source provider admission.
 - Entry-old reads use `lowEnsAt_ok` (`stage0/Stage0/Senke/Ausdruck/Old/Sound.lean:27`) and `lowEns_ok`
   (same file:296), then `lowPost`/`lowFun`. The numeric old(global) bridge is
   `stage0/Stage0/Senke/Ausdruck/Old/Source.lean:41–66`; other source trees containing it reach
   `.error "ir: unsupported source expression containing old(global)"` at :66. Ordinary `lowE_ok` assumes
   entry=current only when `currentOld = true`; the postcondition fallback sets it false. This is a real
   conditional boundary, not permission to substitute exit state for entry state.
-- **Unbuilt source-level blockers visible by inspection:** `Expr.thruOwn` exists in
-  `grammatik/Grammatik/Kern/Syntax/Syntax/Teil2Expr.lean:157` but has no arm in `lowE` or `lowE_ok`;
-  `Stmt.assignThruOwn` exists in `Syntax/Teil2.lean:147`, falls into A:183 and has no `lowS_ok` arm.
+- **Unbuilt source-level blockers visible by inspection:** the earlier missing owned-access arms
+  are superseded by `s0-c12own`'s `lowE`/`lowS` and generic `lowE_ok`/`lowS_ok` arms retained here.
   The canonical `Endblock` constructor list (`Syntax/Teil2.lean:259–358`) has no `float` or `floatLit`,
   yet J/Ende:58/:63 and J/Rest1:51/:56 reference `Endblock.floatLit`/`Endblock.float`; no definition of
   either name exists in `grammatik/Grammatik/**`. The ordinary function-body path `lowerFnPlain` →
@@ -749,16 +754,15 @@ listed above, not counted as extra constructors):
   forms still lack a canonical form: live byte capabilities (`DataTarget` has no byte target; U3:121/:127),
   and top-level/end-block float introduction/arithmetic (dangling references above). Device ASM/boot/raw
   addresses and register access/transition are outside this userspace inventory's unfinished-work count.
-- **Front end (9 otherwise lowered/proof-connected constructors):** `Expr.getBytes`;
-  `Stmt.putBytes`, `breaking`, `advances`, `retires`, `consumeTraverse`; `Block.check`, `floatOf`, `floatNarrow`.
+- **Front end (8 otherwise lowered/proof-connected constructors):** `Expr.getBytes`;
+  `Stmt.putBytes`, `breaking`, `advances`, `consumeTraverse`; `Block.check`, `floatOf`, `floatNarrow`.
   `oldG` has the Stage-0 numeric bridge, not a general canonical
   parser export. Provider-reference initialization and top-level float source compilation remain separate
   connected-path gaps even though their component constructors appear in the positive structural count.
-- **Lowering (8 constructors):** `Expr.thruOwn` (missing match arm, not an explicit refusal),
-  `Stmt.assignThruOwn`; out-of-scope `Stmt.regWrite`, `Stmt.transition`, `Block.regRead`,
+- **Lowering (6 constructors):** out-of-scope `Stmt.regWrite`, `Stmt.transition`, `Block.regRead`,
   `Block.regReadElse`, `Endblock.regRead`, `Endblock.regReadElse` (wildcards quoted above).
   Partial lowerings additionally refuse large option tests/matches, general tagged payloads,
-  byte spans >8, long string concatenation/order, nonword narrowing/atomics and unsupported gate types.
+  long string concatenation/order, nonword atomics and unsupported gate profiles.
 - **Proof:** no emitted constructor was found with only a detached witness and no connected generic arm.
-  The new owned read/write constructors still lack their generic arms along with their lowerers;
-  their omission also leaves the central syntax matches incomplete. Proof presence is not build evidence.
+  Owned read/write and the integrated foreign-answer profiles have generic proof arms; their lead checks
+  remain open. Proof presence is not build evidence.
