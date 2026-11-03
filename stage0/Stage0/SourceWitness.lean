@@ -115,7 +115,7 @@ local instance clone : Senke.CloneOK where
 theorem emptyGates [Runner.IR.Kern] (u : UProg) (ha : u.axs.length = 0)
     (hr : u.regs.length = 0) (L : Senke.Lay (declOf u)) : Senke.TorOK L (emptyOracle u ha hr) :=
   ⟨(fun a => (noIndex ha a).elim), (fun a => (noIndex ha a).elim),
-    (fun a => (noIndex ha a).elim)⟩
+    (fun a => (noIndex ha a).elim), (fun a => (noIndex ha a).elim)⟩
 
 local instance gates : Senke.TorOK output.image.Y oracle :=
   emptyGates output.compiled.unit carrier_shape.2.2.1 carrier_shape.2.2.2 output.image.Y
