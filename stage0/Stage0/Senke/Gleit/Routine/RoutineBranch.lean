@@ -51,7 +51,7 @@ theorem routineChooseL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
 def routineLessL (d : Nat) (a b : Nat → Option (List II × Nat)) :
     Option (List II × Nat) := wordL 27 d (a d) (b (d + 1))
 
-theorem routineLessL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+theorem routineLessL_ok {reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {a b : Nat → Option (List II × Nat)} {av bv : Runner.W}
     (ha : WordCode (L := L) (reserved := reserved) ρ W a av)
     (hb : WordCode (L := L) (reserved := reserved) ρ W b bv) :

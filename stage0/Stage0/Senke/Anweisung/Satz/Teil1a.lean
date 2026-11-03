@@ -7,6 +7,7 @@
 -/
 module
 public import Stage0.Senke.Anweisung.Schreiben
+public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Sum.Statement
 public import Stage0.Senke.Welt.Spans.CellStore
 public import Stage0.Senke.Welt.WordCell
 public import Stage0.Senke.Sperre.Satz
@@ -130,7 +131,15 @@ theorem lowS_ok_onTag {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R :
     obtain ⟨rfl, rfl⟩ := he
     exact onTag_ok (ih_lowArms_all_arms hS hA hlo0 hens hW hlo) hfit hcv hca (by omega) (by omega)
       (by simpa only [List.length_append] using hs) hW hlo hlo0 hlo2 hpr hp hu hk hWa
-  · cases h
+  · next separate =>
+    split at h
+    · next count =>
+      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨⟨cv, tv⟩, hcv, ⟨ca, ta⟩, hca, rfl, rfl⟩ := h
+      exact onSumTag_ok (ih_lowArms_all_arms hS hA hlo0 hens hW hlo)
+        (Bool.eq_false_iff.mpr separate) count hcv hca (by omega) (by omega)
+        (by simpa only [List.length_append] using hs) hW hlo hlo0 hlo2 hpr hp hu hk hWa
+    · cases h
 
 set_option linter.unusedSectionVars false in
 theorem lowS_ok_assignGlob {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f} {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap) (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W} {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat} (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowPost L (functionFrame P f) P f (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens)) {reserved : Nat} {pr : List Nat} {ex : Int × Int}

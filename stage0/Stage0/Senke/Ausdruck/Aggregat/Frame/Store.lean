@@ -18,24 +18,23 @@ variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 /-- Replace element `index` of a frame array by a complete value: the address arithmetic is the one of
     `selectFrameSpan_ok`, followed by the exact-footprint store loop. Everything below `base`, outside the
     target span and below the index word keeps its words; the target span holds the value's encoding. -/
-theorem storeFrameSpan_ok {m : Runner.Mem} {pc fp : Runner.W} {K base src ptr tmp index : Nat}
-    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop} {τ : Ty} {v : Wert D τ}
-    (fits : base + (index + 1) * valueWords τ ≤ src) (source : src + valueWords τ ≤ ptr)
-    (pt : ptr < tmp) (ht : tmp < K) (literal : 8 * valueWords τ < 2 ^ 31)
+theorem storeFrameWords_ok {m : Runner.Mem} {pc fp : Runner.W} {K base src ptr tmp index : Nat}
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop} (words : List Runner.W)
+    (fits : base + (index + 1) * words.length ≤ src) (source : src + words.length ≤ ptr)
+    (pt : ptr < tmp) (ht : tmp < K) (literal : 8 * words.length < 2 ^ 31)
     (indexWord : m.rd64 (slot fp (BitVec.ofNat 64 ptr)) = some (BitVec.ofNat 64 index))
-    (input : ValueAt L m fp src τ v)
-    (pre : Pre L m pc fp K ptr (storeFrameSpan (valueWords τ) base src ptr tmp) ρ W reserved) :
-    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (4 + 3 * valueWords τ)), fp⟩ m' ∧
+    (input : WordsAt m fp src words)
+    (pre : Pre L m pc fp K ptr (storeFrameSpan (words.length) base src ptr tmp) ρ W reserved) :
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (4 + 3 * words.length)), fp⟩ m' ∧
       Agree fp base K m m' ∧
-      WordsAt m' fp (base + index * valueWords τ) (encodeWords L τ v) ∧
-      ∀ s, s < ptr → (s < base + index * valueWords τ ∨ base + (index + 1) * valueWords τ ≤ s) →
+      WordsAt m' fp (base + index * words.length) words ∧
+      ∀ s, s < ptr → (s < base + index * words.length ∨ base + (index + 1) * words.length ≤ s) →
         m'.rd64 (slot fp (BitVec.ofNat 64 s)) = m.rd64 (slot fp (BitVec.ofNat 64 s)) := by
-  have positive : 0 < valueWords τ := valueWords_pos τ
-  have fits' : (index + 1) * valueWords τ = index * valueWords τ + valueWords τ := by rw [Nat.add_mul, Nat.one_mul]
-  have sourceBound : base + index * valueWords τ + valueWords τ ≤ src := by omega
+  have fits' : (index + 1) * words.length = index * words.length + words.length := by rw [Nat.add_mul, Nat.one_mul]
+  have sourceBound : base + index * words.length + words.length ≤ src := by omega
   have hp : Pre L m pc fp K ptr
-      ([ci 1 tmp (8 * valueWords τ) 0] ++ ([ci 5 ptr ptr tmp] ++
-      ([ci 17 tmp base 0] ++ ([ci 3 ptr tmp ptr] ++ storePointerSpan (valueWords τ) src ptr tmp 0)))) ρ W reserved := pre
+      ([ci 1 tmp (8 * words.length) 0] ++ ([ci 5 ptr ptr tmp] ++
+      ([ci 17 tmp base 0] ++ ([ci 3 ptr tmp ptr] ++ storePointerSpan (words.length) src ptr tmp 0)))) ρ W reserved := pre
   obtain ⟨m1, s1, a1, factor, r1, ef⟩ := const_ok
     { hp.left with ctx := by have := pre.ctx; omega }
     (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; constructor <;> omega) ht
@@ -65,51 +64,70 @@ theorem storeFrameSpan_ok {m : Runner.Mem} {pc fp : Runner.W} {K base src ptr tm
   subst address
   have p3 := p2.next (a3.mono (by omega : ptr ≤ tmp)) (Nat.le_refl _) (by omega)
   have offset3 : m3.rd64 (slot fp (BitVec.ofNat 64 ptr)) =
-      some (BitVec.ofNat 64 index * BitVec.ofInt 64 (8 * valueWords τ)) := by
+      some (BitVec.ofNat 64 index * BitVec.ofInt 64 (8 * words.length)) := by
     rw [agree_rd_low a3 p2.frame.room pt (by omega)]; exact r2
   obtain ⟨m4, s4, a4, selected, r4, es⟩ := eng_bin_ok p3.left (by omega) ht (by omega) r3 offset3
     (g := fun a b => some (a + b)) rfl (by decide) rfl
   subst selected
   have pointerEq : slot fp (BitVec.ofNat 64 base) +
-      BitVec.ofNat 64 index * BitVec.ofInt 64 (8 * valueWords τ) =
-      BitVec.ofNat 64 (fp.toNat + 8 * (base + index * valueWords τ)) := by
+      BitVec.ofNat 64 index * BitVec.ofInt 64 (8 * words.length) =
+      BitVec.ofNat 64 (fp.toNat + 8 * (base + index * words.length)) := by
     rw [← natural_slot]
     simp only [BitVec.ofInt_natCast, slot, BitVec.ofNat_add,
       BitVec.ofNat_mul, BitVec.mul_assoc, BitVec.add_mul, BitVec.add_assoc]
     congr 2
-    have eight : BitVec.ofInt 64 (8 * (valueWords τ : Int)) = BitVec.ofNat 64 (valueWords τ) * 8 := by
-      have : (8 * (valueWords τ : Int)) = ((8 * valueWords τ : Nat) : Int) := by push_cast; rfl
+    have eight : BitVec.ofInt 64 (8 * (words.length : Int)) = BitVec.ofNat 64 (words.length) * 8 := by
+      have : (8 * (words.length : Int)) = ((8 * words.length : Nat) : Int) := by push_cast; rfl
       rw [this, BitVec.ofInt_natCast, BitVec.ofNat_mul, BitVec.mul_comm]; rfl
     rw [eight]
   rw [pointerEq] at r4
   have a14 : Agree fp ptr K m m4 := a1'.trans (a2.trans ((a3.mono (by omega : ptr ≤ tmp)).trans a4))
-  have source' := input.agree a14 pre.frame (by omega) (by omega)
+  have source' := WordsAt.agree_low input a14 pre.frame.room (by omega) (by omega)
   have next := p3.next a4 (Nat.le_refl _) (by omega : ptr ≤ K)
   have frame := pre.frame.agree a14
-  obtain ⟨m5, s5, effect, output, pointer⟩ := storeFramePointerSpan_run (base := base + index * valueWords τ)
-    (encodeWords L τ v) (m := m4) (src := src) (offset := 0) frame
-    pre.small (by simp only [encodeWords_length]; omega) pt ht
-    (by simp only [encodeWords_length, Nat.zero_add]; exact literal)
-    (by simp only [encodeWords_length, Nat.add_zero]; omega)
-    (by simpa only [encodeWords_length] using next.code)
-    (by simpa only [encodeWords_length, storePointerSpan_length] using next.far) r4 source'.2
-  have effect' : SpanEffect fp tmp (fp.toNat + 8 * (base + index * valueWords τ)) (valueWords τ) m4 m5 := by
+  obtain ⟨m5, s5, effect, output, pointer⟩ := storeFramePointerSpan_run (base := base + index * words.length)
+    words (m := m4) (src := src) (offset := 0) frame
+    pre.small (by omega) pt ht
+    (by simp only [Nat.zero_add]; exact literal)
+    (by simp only [Nat.add_zero]; omega)
+    (by simpa only using next.code)
+    (by simpa only [storePointerSpan_length] using next.far) r4 source'
+  have effect' : SpanEffect fp tmp (fp.toNat + 8 * (base + index * words.length)) (words.length) m4 m5 := by
     have h := effect
-    simpa only [encodeWords_length, Nat.add_zero] using h
+    simpa only [Nat.add_zero] using h
   have agreeAll : Agree fp base K m m5 :=
     (a14.mono (by omega : base ≤ ptr)).trans
       ((effect'.agreeFrame (by omega) ht (Nat.le_refl _) (by omega)).mono (by omega))
   refine ⟨m5, ?_, agreeAll, by simpa only [Nat.add_zero] using output, ?_⟩
   · have steps := s1.trans (s2.trans (s3.trans (s4.trans s5)))
-    rw [show 16 * (4 + 3 * valueWords τ) = 16 * 4 + 48 * valueWords τ by omega, BitVec.ofNat_add,
+    rw [show 16 * (4 + 3 * words.length) = 16 * 4 + 48 * words.length by omega, BitVec.ofNat_add,
       ← BitVec.add_assoc]
-    simpa only [List.length_cons, List.length_nil, pc_add, Nat.reduceAdd, Nat.zero_add, encodeWords_length] using steps
+    simpa only [List.length_cons, List.length_nil, pc_add, Nat.reduceAdd, Nat.zero_add] using steps
   · intro s hs outside
     have hlt : s < K := by omega
     rw [natural_slot, effect'.read (by have := pre.frame.room; omega) (Or.inl (by omega))
       (by rcases outside with h | h
           · exact Or.inl (by omega)
           · exact Or.inr (by omega)), ← natural_slot, agree_rd_low a14 pre.frame.room hs (by omega)]
+
+/-- Typed specialization of the shared arbitrary-word frame store. -/
+theorem storeFrameSpan_ok {m : Runner.Mem} {pc fp : Runner.W} {K base src ptr tmp index : Nat}
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop} {τ : Ty} {v : Wert D τ}
+    (fits : base + (index + 1) * valueWords τ ≤ src) (source : src + valueWords τ ≤ ptr)
+    (pt : ptr < tmp) (ht : tmp < K) (literal : 8 * valueWords τ < 2 ^ 31)
+    (indexWord : m.rd64 (slot fp (BitVec.ofNat 64 ptr)) = some (BitVec.ofNat 64 index))
+    (input : ValueAt L m fp src τ v)
+    (pre : Pre L m pc fp K ptr (storeFrameSpan (valueWords τ) base src ptr tmp) ρ W reserved) :
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (4 + 3 * valueWords τ)), fp⟩ m' ∧
+      Agree fp base K m m' ∧
+      WordsAt m' fp (base + index * valueWords τ) (encodeWords L τ v) ∧
+      ∀ s, s < ptr → (s < base + index * valueWords τ ∨ base + (index + 1) * valueWords τ ≤ s) →
+        m'.rd64 (slot fp (BitVec.ofNat 64 s)) = m.rd64 (slot fp (BitVec.ofNat 64 s)) := by
+  simpa only [encodeWords_length] using storeFrameWords_ok (encodeWords L τ v)
+    (by simpa only [encodeWords_length] using fits)
+    (by simpa only [encodeWords_length] using source) pt ht
+    (by simpa only [encodeWords_length] using literal) indexWord input.2
+    (by simpa only [encodeWords_length] using pre)
 
 theorem elementEncoding_get {n width : Nat} (f : Fin n → List Runner.W)
     (lengths : ∀ i, (f i).length = width) (j : Fin n) (k : Nat) (hk : k < width) :

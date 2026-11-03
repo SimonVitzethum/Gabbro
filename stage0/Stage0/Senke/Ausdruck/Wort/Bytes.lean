@@ -26,7 +26,7 @@ theorem readBytesL_ok {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {a b : Int}
     (ih : ∀ d c top, lowE (currentOld := currentOld) L i d reserved = some (c, top) → top ≤ K → ∀ m pc,
       Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c (Enc L (.int a b) (eval σ₀ i σ ρ))) :
     (n j d : Nat) → (c : List II) → (top : Nat) →
-    b + j + n ≤ D.count t → j + n ≤ 8 →
+    b + j + n ≤ D.count t → j + n < 2 ^ 31 →
     readBytesL L t f (lowE (currentOld := currentOld) L i (reserved := reserved)) j n d = some (c, top) → top ≤ K →
     ∀ m pc, Pre L m pc fp K d c ρ W reserved →
     Ok m pc fp K d c (fun w => w = BitVec.ofInt 64

@@ -52,9 +52,8 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
     No builds were run for that audit. Remaining refusals include:
     - Scoped returns inside lock bodies; source `by consuming`. `consumeTraverse` follows `verbrauchLauf` in Stage 0
       (`consumeTraverse_case`); lead elaboration pending.
-    - Computed wide-integer-to-float conversion, long string concatenation/order, wide option
-      tests, non-integer/oversized tagged payloads, byte spans above eight, oversized folds/code/addresses,
-      wide statement narrowing, and unsupported entry-snapshot subtrees.
+    - Unrepresentable tag dispatch / byte spans, oversized folds/code/addresses,
+      and unsupported entry-snapshot subtrees. Aggregate payload and wide byte implementation checks are pending below.
     - Fallible indirect statement-else source syntax; unbound foreign gates; wide/reference/region
       foreign answers and fallible Bool answers. Optional value/void binders and fallible indirect bindings have IR arms.
     - Original source metadata without a checked duty binding: invariants, declared costs/scheduling, providers,
@@ -62,11 +61,48 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
       annotated placement and allocation-with-else. Required static-arena allocation has connected narrowing/store arms.
       Residual generic calls and module-template/use headers now go through the expansion-aware Stage-0 gate
       (`syntax-s0`, needs the lead build): the gate checks the expanded unit, with the expansion certificate.
+      owner-qualified/byte/raw/entry capabilities, shared locks/RCU, const functions, residual generic calls/module headers, counterprobes,
+      annotated placement. Static-arena allocation has connected narrowing/store arms.
     - Boot/device-register forms (outside userspace scope), entrust, hardware entry obligations, named sections and
       incompatible runner ABI; supported TESTBUILD selection and consistent profile preparation are present.
-  - **C18 static-arena allocation:** canonical required/else lowering and source-image witness declarations exist.
-    The 2026-11-03 source audit finds the original metadata gate still rejects allocation-with-else; required
-    immutable unannotated allocation is admitted. The witnesses were not rebuilt in that audit.
+  - **Conditional refusal follow-up (`s0-gaps1`, 2026-11-03; lead checks pending).** The original metadata
+    gate now admits immutable unannotated static-arena allocation with an explicit else, recursively checking
+    that continuation. `EndAllocWitness` connects original-gate acceptance, canonical source and image correctness.
+    Block/end `narrow` and `narrowRequired` reuse the complete-span interval kernel; empty target intervals
+    select failure, and required failure remains stop 107. Wide `istSome` uses the canonical presence tag.
+    Generic proof arms and accepted witness declarations cover these changes; no Lean or execution checks
+    were run by the implementation worker. Long `strCat` now copies into a fresh complete span at
+    the runtime first length; long/mixed `strLt` uses the descending presence/byte-key scan.
+    Generic helper proofs are attached to `lowE_ok`; typed acceptance/model witnesses and
+    `str-span-cat-order.gab` cover both operand orders, prefixes and different lengths.
+    Only actual capacity/frame/code representability checks remain on these string paths.
+    Open: lead Lean validation of the changed closure, axiom checks and runner regression;
+    the implementation worker ran no Lean, Lake, compiler, runner or guardian checks.
+  - **Computed wide `floatOf` implementation (`s0-gaps1`, 2026-11-03; UNCHECKED).** The binary64
+    compiler hook now normalizes the complete integer magnitude with balanced leading-position
+    comparisons, retains a 56-bit prefix with sticky and reuses the existing IEEE nearest-even packer.
+    Small runtime values inside wide intervals use the proved scalar continuation. Generic field,
+    rounding and hook proofs connect through `blockFloatOfComputed_case` and `lowB_ok_floatOf`;
+    exponent overflow is rejected before the ordinary range test and remains stop 107.
+    `WideFloatProbe` declares accepted image fixtures for ties, sticky tails, signs, carry, maximum
+    finite, overflow and small values in wide intervals, plus a generic-hook variable witness.
+    Open: lead single-module Lean checks, axiom audits, image acceptance and runner execution.
+    No new compiled-coverage measurement is claimed. The implementation worker ran no Lean,
+    Lake, compiler, runner or guardian checks.
+  - **Aggregate sums and byte spans (`s0-gaps1`, 2026-11-03; UNCHECKED).** Actual `.case` and
+    `onTag` lowering now embed and bind complete product/float/string/wide payloads using the
+    shared aggregate encoding, with recursive validity and zero padding; packed integer tags
+    retain `sumOff`. Generic construction/dispatch proofs connect through `lowE_ok` and
+    `lowS_ok_onTag`; constant initialization preserves the selected payload's validity too.
+    `getBytes` emits <=8-byte kernels per canonical limb. `putBytes` captures the full value
+    and index before iterating the existing write kernel; chunk-count induction preserves
+    byte order, overlapping-copy reads and the complete write trace. The actual dispatch /
+    wide-byte paths keep only ordinary layout/frame/code checks and an explicit `<2^31`
+    tag-count / byte-span representability gate. Accepted-image witness declarations cover
+    all payload kinds and 9/16/17-byte boundaries, high limbs, zeros and overlap; boundary
+    refusal declarations pin the wrappers. Coverage rows are updated as a source audit only.
+    Open: lead Lean checks of the changed dependency closure, standard-axiom audits, witness
+    image acceptance and runner execution. No Lean, Lake, compiler, runner or guardian ran.
 - **Lean module system and the 500-line limit (2026-11-01).** Every Lean file becomes a module and drops below 500 lines
   (AGENTS.md). Measured 2026-11-01 with grep/wc: 0 of about 1500 Lean files start with `module`; 214 files have 500 lines or
   more (194 in `grammatik/`, largest `Parser/Elab/Uebersetze.lean` with 6455). No `grammatik/` change until this is merged.
