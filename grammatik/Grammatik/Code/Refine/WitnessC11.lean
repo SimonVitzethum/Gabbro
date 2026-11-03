@@ -66,10 +66,10 @@ def c11retWhyR : Gabbro.Grammatik.RueckRessourcen Wit.wD (vertragVon Wit.wD Wit.
 def c11retWhy : Gabbro.Grammatik.Endblock Wit.wD (vertragVon Wit.wD Wit.WFn.fail) false [.int 0 3] [] :=
   .retWhyScoped ⟨1, by decide⟩ c11retWhyR
 
-/-- The consuming traversal lowers (closed evaluation). -/
-theorem zeuge_c11_consume_lower :
-    ∃ blks st', lowerS Wit.wLay [] (0, 0) c11consume 7 8 ⟨10, 30⟩ = some (blks, st') :=
-  ⟨_, _, rfl⟩
+/-- The Code lowering refuses the consuming traversal (closed evaluation). -/
+theorem zeuge_c11_consume_refused :
+    lowerS Wit.wLay [] (0, 0) c11consume 7 8 ⟨10, 30⟩ = none :=
+  rfl
 
 /-- The generic `traverse`-family correctness lemma instantiates on the fixture. -/
 theorem zeuge_c11_consume_ok (M : Modl) (S : Sees) (fn : Nat) (blks : List Block) (st' : St)

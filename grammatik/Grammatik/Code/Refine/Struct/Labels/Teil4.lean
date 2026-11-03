@@ -12,15 +12,15 @@ variable {V : Vertrag D}
 set_option hygiene false in
 local macro "lbl_value" eqn:ident call:term:max a:ident b:ident c:ident : tactic => `(tactic| (
   rcases $eqn:ident : $call with _ | ⟨$a:ident, $b:ident, $c:ident⟩
-  · simp only [$eqn, reduceCtorEq] at h
-  simp only [$eqn] at h))
+  · simp only [$eqn:ident, reduceCtorEq] at h
+  simp only [$eqn:ident] at h))
 
 -- Block lowering returns a pair rather than a code/value/register triple.
 set_option hygiene false in
 local macro "lbl_blocks" eqn:ident call:term:max a:ident b:ident : tactic => `(tactic| (
   rcases $eqn:ident : $call with _ | ⟨$a:ident, $b:ident⟩
-  · simp only [$eqn, reduceCtorEq] at h
-  simp only [$eqn] at h))
+  · simp only [$eqn:ident, reduceCtorEq] at h
+  simp only [$eqn:ident] at h))
 
 mutual
 theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
@@ -162,7 +162,9 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .breaking .., lb, k, st, st', blks, hlt, h => by
       simp only [lowerS, reduceCtorEq] at h
-  | _, _, _, _, .traverse t _ body, lb, k, st, st', blks, hlt, h | _, _, _, _, .consumeTraverse t _ _ _ _ _ body, lb, k, st, st', blks, hlt, h => by
+  | _, _, _, _, .consumeTraverse .., lb, k, st, st', blks, hlt, h => by
+      simp only [lowerS, reduceCtorEq] at h
+  | _, _, _, _, .traverse t _ body, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
       by_cases hc : 0 ≤ D.count t ∧ Ar.Fits 0 (D.count t) 128
       · simp only [hc, and_self, if_true] at h
