@@ -98,12 +98,9 @@ theorem indSonst_gutB (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufA
     have h2 := hR f s0 (umsig hf (evalArgs s0 args s0 ρ))
       (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hR1]; rfl)
     rw [hR1] at h2
-    have h2w := h2.weiter hp.hw hp.hg
-    have g1S := hl.transRetV h2w
-    have hh1 := heldB_weiterRet (fun L => held_nachSig_iff _ _ L) g1S hh
-      (fun L hL hnS => hp.hx L hL hnS)
-    have g1V := g1S.widen_resid hp hresid
-    exact (GutAusgang.vorRetV g1V (runWhy σ1 (grundSig hf r) hh1)) σ' h
+    have g1 := hl.trans ((h2.toGut_entry (heldB_ruf hp hbV (hl.heldB hh))).weiter hp.hw hp.hg)
+    exact (GutAusgang.vor g1 (runWhy σ1 (grundSig hf r)
+      (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh))) σ' h
   · simp only [Ausgang.welt, reduceCtorEq] at h
   · simp only [Ausgang.welt, reduceCtorEq] at h
 
@@ -148,12 +145,9 @@ theorem indSonstE_gutB (R : ∀ f : D.Fn, World D → Env D (D.params f) → Ruf
     have h2 := hR f s0 (umsig hf (evalArgs s0 args s0 ρ))
       (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hR1]; rfl)
     rw [hR1] at h2
-    have h2w := h2.weiter hp.hw hp.hg
-    have g1S := hl.transRetV h2w
-    have hh1 := heldB_weiterRet (fun L => held_nachSig_iff _ _ L) g1S hh
-      (fun L hL hnS => hp.hx L hL hnS)
-    have g1V := g1S.widen_resid hp hresid
-    exact (GutEnd.vorRetV g1V (runWhy σ1 (grundSig hf r) hh1)) σ' h
+    have g1 := hl.trans ((h2.toGut_entry (heldB_ruf hp hbV (hl.heldB hh))).weiter hp.hw hp.hg)
+    exact (GutEnd.vor g1 (runWhy σ1 (grundSig hf r)
+      (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh))) σ' h
   · simp only [EndAusgang.welt, reduceCtorEq] at h
   · simp only [EndAusgang.welt, reduceCtorEq] at h
 
