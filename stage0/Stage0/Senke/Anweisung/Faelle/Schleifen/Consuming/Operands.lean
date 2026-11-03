@@ -36,28 +36,22 @@ theorem Ready.literals (h : x.Ready m σ ρ) {i a b : Nat} {va vb : Int}
   have slice := (h.slice i (.code [ci 1 a va 0, ci 1 b vb 0]) _ found rfl).1
   obtain ⟨run1, a1, ready1, ra⟩ := h.literal (codeAt_left (a := [ci 1 a va 0]) slice)
     (by omega) (by omega) insideA literalA
+  have wholeFar := (h.slice i (.code [ci 1 a va 0, ci 1 b vb 0]) _ found rfl).2
   have tail := (codeAt_right (a := [ci 1 a va 0]) slice).agree a1
-    (codeFar_at x.far (by
-      have len := assemble_length x.assembled
-      simp only [fragment, pieces, width, Piece.width] at len
-      omega))
+    (codeFar_right (n := 1) (k := 1) wholeFar)
   obtain ⟨run2, a2, ready2, rb⟩ := ready1.literal tail
     (by omega) (by omega) insideB literalB
   have aa := (a1.mono (Nat.min_le_left a b)).trans (a2.mono (Nat.min_le_right a b))
-  have result : Ok m (x.at i) x.fp x.K (min a b) [ci 1 a va 0, ci 1 b vb 0]
-      (fun _ => True) := by
-    refine ⟨_, ?_, aa, ?_, ?_, trivial⟩
-    · simpa only [List.length_cons, List.length_nil, addr_norm, endAt] using run1.trans run2
-    · exact BitVec.ofNat 64 ((write (write m (slot x.fp (BitVec.ofNat 64 a)) 8
-        (BitVec.ofInt 64 va).toNat) (slot x.fp (BitVec.ofNat 64 b)) 8
-        (BitVec.ofInt 64 vb).toNat).le (slot x.fp (BitVec.ofNat 64 (min a b))) 8)
-    · simp only [Runner.Mem.rd64, ready2.frame.rd (min a b) (by omega), ↓reduceIte]
-  obtain ⟨m', path, frame, kept, ready, localFrame, value, read, trivial⟩ := h.ok result
-    (by simpa using endAt) ctx low (by omega)
-  refine ⟨m', path, frame, kept, ready, localFrame, ?_, ?_⟩
+  refine ⟨_, ?_, agreeW_of (aa.mono (by have := x.controls; have := x.scratch; omega)),
+    keeps_of_agree aa h.frame.room (by
+      intro j hj
+      have := x.controls; have := x.scratch
+      simp only [List.mem_cons] at hj
+      rcases hj with rfl | rfl | hj <;> try omega
+      have := x.protected j hj; omega) (by omega), ready2, aa, ?_, rb⟩
+  · simpa only [addr_norm, show (16 : Nat) + 16 = 32 by decide, endAt] using run1.trans run2
   · rw [Image.read, rd_other ready1.frame.room insideB insideA (Ne.symm distinct)]
     exact ra
-  · exact rb
 
 /-- Run the existing membership borrowing proof on slices 20,21,22. -/
 theorem Ready.borrow (h : x.Ready m σ ρ) {Λ : List (Res D)}
@@ -92,13 +86,14 @@ theorem Ready.borrow (h : x.Ready m σ ρ) {Λ : List (Res D)}
     exact this
   have pre := mkPreS (L := L) (ρ := ρ) (d := x.s + 4) (by omega)
     x.small h.frame code (by simpa using far) h.env
-  obtain ⟨m', path, frame, candidateRead, value, read, encoding⟩ := member_borrow_ok
-    indexWidth (by have := x.scratch; have := x.layout.ks; omega)
-    (by simpa only [← origin] using pre) rc rp (by
+  have pw := PreS.welt pre x.layout.ks h.world x.layout.lay x.layout.top
+  obtain ⟨m', path, frameS, candidateRead, value, read, encoding⟩ := member_borrow_ok
+    indexWidth (by have := x.scratch; omega)
+    (by simpa only [← origin] using pw) rc rp (by
       intro mem pc hp
-      have pw := PreS.welt hp x.layout.ks h.world x.layout.lay x.layout.top
       exact lowE_ok (same := by intro _; rfl) σ σ (fun _ h => h) x.layout.lay
-        member (x.s + 4) x.member top lowered topBound mem pc (.cons predecessor ρ) pw |>.word trivial)
+        member (x.s + 4) x.member top lowered topBound mem pc (.cons predecessor ρ) hp |>.word trivial)
+  have frame := Agree.widen frameS x.layout.ks
   have scratchRoom : x.s + 3 ≤ x.K := by have := x.scratch; have := x.layout.ks; omega
   refine ⟨m', ?_, agreeW_of (frame.mono (by have := x.controls; have := x.scratch; omega)),
     keeps_of_agree frame h.frame.room (by
