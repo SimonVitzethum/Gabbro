@@ -78,4 +78,23 @@ def strCatSpanL (n q d : Nat) (s t : Option (List II × Nat)) : Option (List II 
       max (max cs.2 ct.2) (max (ptr + 2) (constWords (List.replicate q 0) (d + 1 + n)).2))
   else none
 
+@[simp] theorem stringKeyC_length (n a k out tmp : Nat) :
+    (stringKeyC n a k out tmp).length = if k < n then 5 else 1 := by
+  unfold stringKeyC
+  split <;> rfl
+
+@[simp] theorem stringCompareC_length (x y acc tmp : Nat) :
+    (stringCompareC x y acc tmp).length = 4 := by rfl
+
+/-- Every scanned byte emits at most two key computations and one comparison.
+    Code-size acceptance remains the common image check. -/
+theorem stringScanC_length_le (k n q a b acc : Nat) :
+    (stringScanC k n q a b acc).length ≤ 14 * k := by
+  induction k with
+  | zero => simp [stringScanC]
+  | succ k ih =>
+    simp only [stringScanC, List.length_append, stringKeyC_length, stringCompareC_length]
+    split <;> split <;> omega
+
 end Gabbro.Stage0.Senke
+
