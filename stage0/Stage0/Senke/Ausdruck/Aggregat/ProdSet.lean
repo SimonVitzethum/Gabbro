@@ -38,7 +38,7 @@ theorem encodeProductFields_set_split (L : Lay D) {fs : List Ty} {σ : Ty}
     · simp only [encodeProductFields_cons, prodGetW]
       rw [old]
       simp only [List.append_assoc]
-    · simp only [prodSetW, encodeProductFields_cons, ProdVal.hd, ProdVal.tl]
+    · simp only [prodSetW, encodeProductFields_cons, ProdVal.hd_pcons, ProdVal.tl_pcons]
       rw [updated]
       simp only [List.append_assoc]
     · simp only [List.length_append, encodeWords_length, productOffset]
