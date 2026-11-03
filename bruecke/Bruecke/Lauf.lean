@@ -281,7 +281,7 @@ theorem lauf {P : Programm (declOf u)} (G : Gesenkt u P) (S : Stimmig u) (c : Fi
           exact schreib σ₁ cn k fld v' hex hstep hW₁
         case call cname args =>
           obtain ⟨callee, σr, envA, hname, hfs, hsl, hstep, hLt, _, hcases, _⟩ :=
-            lowCall_sim c hgst hx (S.art c) S.tab S.namen O passes R σ ρ s hW hL
+            lowCall_sim c hgst hx (S.art c) S.tab S.namen (fun c' => (S.art c').2.1) O passes R σ ρ s hW hL
           have hWr : WRel u σr s.world := wrel_slots u hsl hW
           rcases hcases with ⟨σ', v, hR, hex⟩ | ⟨e, hR, hex⟩ | ⟨e, hR, hex⟩
           · have hrun : execEnd O passes R (Endblock.cons gst rest) σ ρ =
