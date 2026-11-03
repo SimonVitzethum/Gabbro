@@ -33,9 +33,23 @@ def checkSampleType (ctx : UCtx) (expr : SExpr) : Except String Ty :=
   match uWertBody ctx expr with
   | .ok value => match foldRange ctx value with
     | some (lo, hi) => .ok (.int lo hi)
-    | none => do
-      let _ ← uBool ctx expr
-      pure .bool
+    | none =>
+      match uValueType ctx value with
+      | some (.int lo hi) =>
+        if (match value with | .param name => ctx.unknownRanges.contains name | _ => false) then
+          .error "check sample interval is unresolved"
+        else .ok (.int lo hi)
+      | some .bool => .ok .bool
+      | _ =>
+        match uZugriff ctx expr with
+        | .ok (_, table, field, _) =>
+          match (ctx.tabs.find? (fun t => strEq t.name table)).bind
+              (fun t => t.cols.find? (fun entry => strEq entry.1 field)) with
+          | some (_, (lo, hi)) => .ok (.int lo hi)
+          | none => .error "check sample field type is unresolved"
+        | .error _ => do
+          let _ ← uBool ctx expr
+          pure .bool
   | .error _ => do
     let _ ← uBool ctx expr
     pure .bool
