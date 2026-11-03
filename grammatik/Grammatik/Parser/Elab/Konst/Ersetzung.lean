@@ -22,14 +22,13 @@ open Gabbro.Grammatik.Parser.ExportMetadata
   (`elabWithScopes`) drop `const` declarations; programs that CALL them are
   refused unless this pass replaces every such call by the literal of its
   certified value. `uKonstWert` is only the candidate generator: the
-  justification is `ConstAdmissible` (`constAdmissibleB_iff`), the checked
-  certificate (`ConstCallCertificate`, `evalConstCall`), its generic meaning
-  (`const_call_sound`), the source derivation (`ConstElaborates`) and its
-  source meaning (`const_source_call_sound`).
+  checked `Scalar.CheckedCall` retains the original parameter types, the
+  body/predicate elaboration equations, the candidate computation and
+  `Scalar.Function.Certificate.sound` for the ordinary machine G call.
 
   A const call contributes no runtime trace/call-log entry and no budget:
   closed arguments and exact literals read no places, so `World.lese` is the
-  identity, and the work bound is checked at compile time. Statement calls
+  identity. Candidate evaluation is bounded by explicit compile-time fuel. Statement calls
   (`SAnw.call`) are NOT substituted here: they would appear in a thread
   call log observed by `FolgeG`, so they keep their refusal; likewise any
   timing duty `ZeitAb` would observe stays refused. Only value positions
@@ -322,5 +321,24 @@ def ersetzeOptAnw (fns : List UKonstFn) : Option SAnw → Except String (Option 
     | .error e => .error e
     | .ok a' => .ok (some a')
 end
+
+/-- A successful replacement in the actual recursive pass has a source-bound G
+    certificate. The certificate is derived from success, not supplied as a premise. -/
+theorem ersetzeSExpr_call_certified (fns : List UKonstFn) (name : String)
+    (args args' : List SExpr) (fn : UKonstFn) (replacement : SExpr)
+    (arguments : ersetzeSExprList fns args = .ok args')
+    (callee : fns.find? (fun k => strEq k.name name) = some fn)
+    (closed : geschlossenSExprListB args' = true)
+    (success : ersetzeSExpr fns (.call name args) = .ok replacement) :
+    ∃ checked : Scalar.CheckedCall fn fns [] args',
+      Scalar.checkCall fn fns [] args' = .ok checked ∧
+      replacement = literalVonInt checked.value := by
+  simp only [ersetzeSExpr, arguments, callee, closed, Bool.not_true,
+    Bool.false_eq_true, ↓reduceIte] at success
+  cases hc : Scalar.checkCall fn fns [] args' with
+  | error error => simp [hc] at success
+  | ok checked =>
+    refine ⟨checked, hc, ?_⟩
+    simpa [hc] using success.symm
 
 end Gabbro.Grammatik.Parser.Konst
