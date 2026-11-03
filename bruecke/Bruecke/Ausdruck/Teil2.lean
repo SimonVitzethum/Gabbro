@@ -33,13 +33,18 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
     subst hb
     exact ⟨_, rfl, rfl⟩
   | param p =>
-    simp only [lowWertE, lowParamWert_none hA] at h
+    have hN : numericParam fn p = true := by
+      simp only [sideExpr] at hb
+      split at hb
+      · assumption
+      · cases hb
+    simp only [lowWertE, lowParamWert_none hA hN] at h
     cases hp : lowParamSide u Γ Λ fn (if er.isSome then 1 else 0) p with
     | error e => simp [hp, Except.map] at h
     | ok ls =>
       simp only [hp, Except.map, Except.ok.injEq] at h
       subst h
-      simp only [sideExpr, Option.some.injEq] at hb
+      simp only [sideExpr, hN, ↓reduceIte, Option.some.injEq] at hb
       subst hb
       refine ⟨ls, rfl, ?_⟩
       simp only [Gabbro.Body.eval]
