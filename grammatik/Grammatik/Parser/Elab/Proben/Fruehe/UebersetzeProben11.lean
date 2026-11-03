@@ -298,13 +298,22 @@ def stagedOwner : String :=
 theorem staged_owner_advances_twice_zeuge : stufe stagedOwner = "OK" := by
   decide +kernel
 
+/-- Measure declaration stage counts after parsing and the actual unit export. -/
+def sourceMarkStageCounts (source : String) : Option (List Nat) := do
+  let tokens ← (lex source).toOption
+  let items ← (parseTopTief tokens).toOption
+  let u ← (elabU (pre108 items)).toOption
+  pure ((List.finRange u.marken.length).map ((declOf u).stufen))
+
 /-- The declaration exported from that same source has three stages. -/
-theorem staged_owner_declared_count_zeuge :
-    (do
-      let tokens ← (lex stagedOwner).toOption
-      let items ← (parseTopTief tokens).toOption
-      let u ← (elabU (pre108 items)).toOption
-      pure ((List.finRange u.marken.length).map ((declOf u).stufen))) = some [3] := by
+theorem staged_owner_declared_count_zeuge : sourceMarkStageCounts stagedOwner = some [3] := by
+  decide +kernel
+
+/-- Counts are per nominal mark; an undeclared order retains the one-stage default. -/
+theorem staged_counts_and_default_zeuge :
+    sourceMarkStageCounts
+      "module m { linear type Plain; linear type Phase order { cold, warm, hot }; linear type Pair order { first, second }; impl fn f() { } }" =
+      some [1, 3, 2] := by
   decide +kernel
 
 /-- An ordinary linear mark uses the same stage bookkeeping without an owner. -/
