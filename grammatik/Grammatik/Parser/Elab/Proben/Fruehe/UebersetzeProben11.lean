@@ -79,6 +79,14 @@ def ownAtMarke : String :=
 theorem ownAtMarke_refused : stufe ownAtMarke = "elab: write through an owned pointer needs the checked C09 owner flow" := by
   decide +kernel
 
+/-- C12: a table `owner M` where `M` is no declared linear mark is refused by name.
+    The guard would be unholdable (no mark to hold), so the front end refuses it
+    instead of elaborating it. Mirrors gift probe 0934 (Rust D265). -/
+def ownerOhneLinear : String :=
+  "module m { table T count 2 owner Marke { slot { b : bool, } } type Marke = u32; }"
+theorem ownerOhneLinear_refused : stufe ownerOhneLinear = "elab: owner without declared linear mark: Marke" := by
+  decide +kernel
+
 /-- WITNESS (`beispiele/62`, `61`): `~p` is `p ^ (2^w - 1)` over the parameter's declared storage width. -/
 def bnot1 : String :=
   "module m { impl fn f(m : u8) -> u8 { return ~m; } impl fn g(w : u8) -> bool { return (w ^ u8::max) == ~w; } }"

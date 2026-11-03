@@ -198,6 +198,10 @@ def elabUroh : List SItemTief → Except String UProg
     | .ok globs0 =>
     let spaces := ["normal"] ++ uOhneDoppelte ((ms.filterMap (fun | .tableT _ _ _ _ space _ _ => space | _ => none)).filter (fun n => !strEq n "normal"))
     let eigner := uOhneDoppelte (uEignerMs ms)
+    let linear := uLinearNamen ms
+    match uSeq ((ms.filterMap (fun | .tableT _ _ _ _ o _ _ => o | _ => none)).map (uPruefEigner linear)) with
+    | .error e => .error e
+    | .ok _ =>
     let tnames := ms.filterMap (fun | .tableT n _ _ _ _ _ _ => some n | _ => none)
     match uSeq ((ms.filter (fun
         | .tableT _ _ _ _ _ _ _ => true | _ => false)).map (uTabelle consts alias tnames)) with

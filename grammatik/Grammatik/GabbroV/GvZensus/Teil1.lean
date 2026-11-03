@@ -345,6 +345,13 @@ def befundeElab (ms : List SItemTief) : List Befund :=
   let tabF := tabs.filterMap fun (n, r) => match r with
     | .error e => some ({ stufe := "tabelle", art := "tabelle", name := n, meldung := e } : Befund)
     | .ok _ => none
+  let linear := uLinearNamen ms
+  let eigF := ms.filterMap fun
+    | .tableT n _ _ _ (some m) _ _ =>
+      if linear.any (fun l => strEq l m) then none
+      else some ({ stufe := "tabelle", art := "tabelle", name := n,
+        meldung := "owner without declared linear mark: " ++ m } : Befund)
+    | _ => none
   let lockF := locks.filterMap fun (n, r) => match r with
     | .error e => some ({ stufe := "sperre", art := "sperre", name := n, meldung := e } : Befund)
     | .ok _ => none
@@ -364,7 +371,7 @@ def befundeElab (ms : List SItemTief) : List Befund :=
     match uWurzeln tabOk fnsOk [it] with
     | .error e => some ({ stufe := "eintritt", art := "entry", name := "", meldung := e } : Befund)
     | .ok _ => none
-  globF ++ tabF ++ lockF ++ fnF.flatten ++ wurzF
+  globF ++ tabF ++ eigF ++ lockF ++ fnF.flatten ++ wurzF
 
 /-! ## Drivers: one source text to findings and markers -/
 

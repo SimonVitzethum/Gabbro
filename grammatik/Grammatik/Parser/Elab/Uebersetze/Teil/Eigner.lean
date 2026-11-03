@@ -25,6 +25,21 @@ def uEignerMs (ms : List SItemTief) : List String :=
     if flags.any (fun f => strEq f "linear") then some n else none | _ => none) ++
     (ms.filterMap fun | .tableT _ _ _ _ o _ _ => o | _ => none)
 
+/-- The declared linear marks (C12): the `linear`-flagged type names in
+    declaration order. A table `owner M` must name one of them; anything else
+    is refused (`uPruefEigner`), never elaborated to an unholdable guard. -/
+def uLinearNamen (ms : List SItemTief) : List String :=
+  ms.filterMap fun | .typeT flags n _ _ _ =>
+    if flags.any (fun f => strEq f "linear") then some n else none | _ => none
+
+/-- A table `owner` mark against the declared linear marks (C12): `none` travels,
+    a declared linear mark travels, anything else is refused by name. -/
+def uPruefEigner (linear : List String) (o : Option String) : Except String Unit :=
+  match o with
+  | none => .ok ()
+  | some m => if linear.any (fun l => strEq l m) then .ok ()
+    else .error ("owner without declared linear mark: " ++ m)
+
 /-- A mark name as a declaration mark: its index in the unit's mark table
     (`u.marken`), if declared. Undeclared names have no mark and can never
     satisfy a guard. -/
