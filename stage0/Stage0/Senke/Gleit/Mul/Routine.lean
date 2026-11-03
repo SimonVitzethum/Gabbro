@@ -1,4 +1,5 @@
-/- Complete integer-only binary64 multiplication routine. -/
+/- Complete integer-only binary64 multiplication routine.
+   Canonical source correspondence is connected in FiniteModel and Correct. -/
 module
 public import Stage0.Senke.Gleit.Mul.Normalize
 public import Stage0.Senke.Gleit.Mul.Special
