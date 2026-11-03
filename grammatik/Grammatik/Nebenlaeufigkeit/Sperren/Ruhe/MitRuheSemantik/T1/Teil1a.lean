@@ -235,7 +235,7 @@ theorem eval_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : 
       show arrConsW _ _ = valR (.arr _ _) (arrConsW (eval σ₀ a σ ρ) (eval σ₀ b σ ρ))
       erw [eval_ru σ₀ σ a ρ, eval_ru σ₀ σ b ρ]
       funext j
-      simp only [arrConsW, valR]
+      simp only [arrConsW, valR, Val.relocate]
       split <;> rfl
   | _, _, _, .arrGet a i, ρ => by
       show (eval (worldR σ₀) (ruE a) (worldR σ) (envR ρ)) _ = _
@@ -245,8 +245,8 @@ theorem eval_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : 
       show arrSetW _ _ _ = valR (.arr _ _) (arrSetW (eval σ₀ a σ ρ) (eval σ₀ i σ ρ).fin (eval σ₀ v σ ρ))
       erw [eval_ru σ₀ σ a ρ, eval_ru σ₀ σ i ρ, eval_ru σ₀ σ v ρ]
       funext j
-      simp only [arrSetW, valR]
-      split <;> rfl
+      simp only [arrSetW, valR, Val.relocate]
+      split <;> (rename_i h; simp only [h, if_true, if_false])
   | _, _, _, .strLit _ _, _ => rfl
   | _, _, _, .strLen e, ρ => by
       show strLenW _ = _
