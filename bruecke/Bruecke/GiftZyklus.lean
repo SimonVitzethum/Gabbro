@@ -81,7 +81,7 @@ def fsZ : List (declOf uZ).Fn := ((lowerAllg uZ).toOption.get low_some).2
 
 theorem lowZ : lowerAllg uZ = .ok (PZ, fsZ) := except_ok_get low_some
 
-theorem stimmigZ : Stimmig uZ := stimmig_of (by decide)
+theorem stimmigZ : Stimmig uZ := stimmig_of (by decide) (by decide)
 
 /-- The rank check refuses the unit: `h` calls itself. -/
 theorem rang_faellt : rangB uZ (rangAuto uZ) = false := by decide
@@ -236,7 +236,7 @@ theorem rz_nlogik (f : (declOf uZ).Fn) (σ : World (declOf uZ)) (ρ : Env (declO
     split <;> (intro h; cases h)
   · intro h; cases h
 
-theorem gesenktZ : Gesenkt uZ PZ := gesenkt_of stimmigZ.ohneReq lowZ
+theorem gesenktZ : Gesenkt uZ PZ := gesenkt_of stimmigZ.ohneReq stimmigZ.ohneTransition lowZ
 
 theorem tabZ : tabIdx uZ.tabs "T" = .ok tT := rfl
 
