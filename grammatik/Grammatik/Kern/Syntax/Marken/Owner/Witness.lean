@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Kern.Syntax.Marken.Owner.Fixture
 public import Grammatik.Kern.Syntax.Marken.Owner.Escrow
+public import Grammatik.Kern.Syntax.Marken.Owner.MintMove
 
 @[expose] public section
 
@@ -127,7 +128,7 @@ theorem escrow_handoff_ready_zeuge :
   · intro p hp
     have hk : handoffSignature.konsumiert = [] := rfl
     rw [hk] at hp
-    exact (List.not_mem_nil p hp).elim
+    exact (List.not_mem_nil hp).elim
   · intro m hm
     have hm' : m = true := by
       simpa [handoffSignature, handoff, OwnerFlow.inputs] using hm
@@ -154,7 +155,8 @@ theorem escrow_call_admitted_zeuge :
 theorem escrow_call_missing_input_refused :
     ¬ RufPasst D contract handoffSignature [] := by
   intro h
-  exact (List.not_mem_nil _ (h.owner_input_available (by decide))).elim
+  exact (List.not_mem_nil (h.owner_input_available
+    (by decide : (true, 0) ∈ handoffSignature.owner.inputs))).elim
 
 /-- The admitted call conserves owners: no duplication, and every returned
     owner has an explicit input. -/
@@ -162,20 +164,10 @@ theorem escrow_outputs_conserve_zeuge :
     (handoffSignature.owner.outputs.map Prod.fst).Nodup ∧
       (∀ m s, (m, s) ∈ handoffSignature.owner.outputs →
         ∃ before, (m, before) ∈ handoffSignature.owner.inputs) :=
-  ⟨(OwnerFlow.escrow_outputs_conserve escrow_handoff_ready_zeuge).1,
-    fun m s hm => (OwnerFlow.escrow_outputs_conserve escrow_handoff_ready_zeuge).2.1 m s hm⟩
-
-/-- A moved owner can come back at the return: from the grandchild frame the
-    transfer to the child frame succeeds with a fresh grant. -/
-theorem escrow_move_return_exists_zeuge :
-    ∃ s' t', OwnerState.transfer names movedTwice grandchild child movedTwiceToken =
-      some (s', t') := by
-  have hown := (OwnerState.transfer_grant mint_grant_zeuge.1 two_call_handoff).2.1
-  obtain ⟨ledger', h', he⟩ := ArenaOwnership.State.move_exists hown.2.2 rfl
-  have hne : grandchild ≠ child := by decide
-  refine ⟨_, _, ?_⟩
-  unfold OwnerState.transfer
-  rw [if_pos ⟨hown, hne⟩, he]
+  ⟨(OwnerFlow.escrow_outputs_conserve (D := D) (S := handoffSignature)
+      escrow_handoff_ready_zeuge).1,
+    fun m s hm => (OwnerFlow.escrow_outputs_conserve (D := D) (S := handoffSignature)
+      escrow_handoff_ready_zeuge).2.1 m s hm⟩
 
 theorem pointer_flow_mismatch_refused : ¬ SigPasst D.rang handoffSignature (D.signatur 0) := by
   intro h
@@ -223,6 +215,18 @@ theorem transfer_grant_zeuge : moved.ledger.valid ∧ moved.owns names child mov
 theorem two_call_handoff :
     OwnerState.transfer names moved child grandchild movedToken = some (movedTwice, movedTwiceToken) := rfl
 
+/-- A moved owner can come back at the return: from the grandchild frame the
+    transfer to the child frame succeeds with a fresh grant. -/
+theorem escrow_move_return_exists_zeuge :
+    ∃ s' t', OwnerState.transfer names movedTwice grandchild child movedTwiceToken =
+      some (s', t') := by
+  have hown := (OwnerState.transfer_grant transfer_grant_zeuge.1 two_call_handoff).2.1
+  obtain ⟨ledger', h', he⟩ := ArenaOwnership.State.move_exists hown.2.2 rfl
+  have hne : grandchild ≠ child := by decide
+  refine ⟨movedTwice.withLedger ledger', { movedTwiceToken with handle := h' }, ?_⟩
+  unfold OwnerState.transfer
+  rw [if_pos ⟨hown, hne⟩, he]
+
 theorem cross_thread_move_refused : OwnerState.transfer names minted root foreignThread token = none := rfl
 
 theorem borrow_step : OwnerState.borrow names minted root child token = some loaned := rfl
@@ -232,7 +236,16 @@ theorem borrow_grant_zeuge : loaned.ledger.valid ∧ loaned.access names child t
     loaned.spent = minted.spent ∧ loaned.stage = minted.stage :=
   OwnerState.borrow_grant mint_grant_zeuge.1 borrow_step
 
-theorem nested_borrow : OwnerState.borrow names loaned child grandchild token = some nested := rfl
+theorem nested_borrow : OwnerState.borrow names loaned child grandchild token = some nested := by
+  change some (loaned.withLedger
+    (loaned.ledger.put 0 (some ⟨0, 0, root, [grandchild, child]⟩))) = some nested
+  have hledger : loaned.ledger.put 0 (some ⟨0, 0, root, [grandchild, child]⟩) =
+      nested.ledger := by
+    apply ArenaOwnership.State.ext' rfl
+    funext i
+    by_cases hi : i = 0 <;>
+      simp [loaned, nested, OwnerState.withLedger, ArenaOwnership.State.put, hi]
+  exact congrArg (fun ledger => some (minted.withLedger ledger)) hledger
 
 theorem borrow_return_zeuge : OwnerState.returnBorrow names loaned child root token = some minted :=
   OwnerState.borrow_return mint_grant_zeuge.1 borrow_step
@@ -311,15 +324,11 @@ theorem escrow_mint_ready_zeuge :
     mintSignature.owner.EscrowReady
       (fun m => decide (m ∈ mintSignature.owner.inputs.map Prod.fst))
       D.stufen (fun m => ∃ t, m ∈ D.eigner t) mintSignature.konsumiert := by
-  have e : (fun m => decide (m ∈ mintSignature.owner.inputs.map Prod.fst)) = id := by
-    funext m
-    cases m <;> rfl
-  rw [e]
   refine ⟨mint_valid_zeuge', ?_, ?_⟩
   · intro p hp
     have hk : mintSignature.konsumiert = [] := rfl
     rw [hk] at hp
-    exact (List.not_mem_nil p hp).elim
+    exact (List.not_mem_nil hp).elim
   · intro m hm
     have hm' : m = true := by
       simpa [mintSignature, OwnerFlow.inputs] using hm
@@ -366,15 +375,11 @@ theorem escrow_handback_ready_zeuge :
     handbackSignature.owner.EscrowReady
       (fun m => decide (m ∈ handbackSignature.owner.inputs.map Prod.fst))
       D.stufen (fun m => ∃ t, m ∈ D.eigner t) handbackSignature.konsumiert := by
-  have e : (fun m => decide (m ∈ handbackSignature.owner.inputs.map Prod.fst)) = id := by
-    funext m
-    cases m <;> rfl
-  rw [e]
   refine ⟨handback_valid_zeuge, ?_, ?_⟩
   · intro p hp
     have hk : handbackSignature.konsumiert = [] := rfl
     rw [hk] at hp
-    exact (List.not_mem_nil p hp).elim
+    exact (List.not_mem_nil hp).elim
   · intro m hm
     have hm' : m = true := by
       simpa [handbackSignature, OwnerFlow.inputs] using hm
@@ -418,7 +423,7 @@ theorem consume_ready_zeuge :
   · intro p hp
     have hk : consumeSignatureT.konsumiert = [] := rfl
     rw [hk] at hp
-    exact (List.not_mem_nil p hp).elim
+    exact (List.not_mem_nil hp).elim
   · intro m hm
     have hm' : m = true := by
       simpa [consumeSignatureT, OwnerFlow.inputs] using hm
