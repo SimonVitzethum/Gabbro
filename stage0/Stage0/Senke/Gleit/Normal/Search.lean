@@ -111,13 +111,16 @@ theorem routineTopAuxL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
       have := Nat.pow_le_pow_right (show 0 < 2 by decide) (show fuel ≤ 5 by omega)
       exact this
     have literal : lit32 (Int.ofNat (2 ^ fuel)) = true := by
+      have hn : (0 : Int) ≤ Int.ofNat (2 ^ fuel) := Int.ofNat_nonneg _
+      have hu : Int.ofNat (2 ^ fuel) ≤ (32 : Int) := Int.ofNat_le.mpr shiftBound
       simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]
       omega
     have count : (BitVec.ofInt 64 (Int.ofNat (2 ^ fuel))).toNat % 64 = 2 ^ fuel := by
       have below64 : (2 : Nat) ^ fuel < 64 := by omega
       have belowWord : (2 : Nat) ^ fuel < 2 ^ 64 := by omega
-      simp only [BitVec.ofInt_natCast, BitVec.toNat_ofNat,
-        Nat.mod_eq_of_lt belowWord, Nat.mod_eq_of_lt below64]
+      have hc : Int.ofNat (2 ^ fuel) = ((2 ^ fuel : Nat) : Int) := rfl
+      rw [hc, BitVec.ofInt_natCast, BitVec.toNat_ofNat, Nat.mod_eq_of_lt belowWord,
+        Nat.mod_eq_of_lt below64]
     have shifted : WordCode (L := L) ρ W _ _ := WordCode.bin ha (WordCode.const _ literal)
       (g := fun x y => some (x >>> (y.toNat % 64))) rfl rfl (by decide : 12 < 256)
     rw [count] at shifted
@@ -128,7 +131,9 @@ theorem routineTopAuxL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     have result : WordCode (L := L) ρ W _ _ :=
       routineChooseL_ok zero (fun _ => ih ha (by omega)) (fun _ => high)
     intro fp K d c top h hK m pc hp
-    simpa only [routineTopAuxL, routineTopWordAux, BitVec.ofInt_natCast] using
+    have h0 : (BitVec.ofInt 64 0 : Runner.W) = 0 := by decide
+    have hc : Int.ofNat (2 ^ fuel) = ((2 ^ fuel : Nat) : Int) := rfl
+    simpa only [routineTopAuxL, routineTopWordAux, hc, BitVec.ofInt_natCast, h0] using
       result (fp := fp) (K := K) (d := d) (c := c) (top := top) h hK m pc hp
 
 /-- Count the zeros before the leading bit. Zero's result is 64. -/
@@ -192,7 +197,7 @@ theorem routineTopAuxL_ok_zeuge {Γ : Ctx} (ρ : Env D Γ) (W : Runner.Mem → P
   have search : WordCode (L := L) ρ W _ _ := routineTopAuxL_ok (L := L) (ρ := ρ) (W := W)
     (WordCode.const 8 (by decide)) 6 (by decide)
   intro fp K d c top h hK m pc hp
-  simpa only [show routineTopWordAux 6 8 = 3 from by decide +kernel] using
+  simpa only [show routineTopWordAux 6 (BitVec.ofInt 64 8) = 3 from by decide +kernel] using
     search (fp := fp) (K := K) (d := d) (c := c) (top := top) h hK m pc hp
 
 #print axioms routineTopNat_bounds
