@@ -14,7 +14,7 @@ def libraryChildren : SAnw → List SAnw
   | .bindElse _ _ _ _ body | .elsif _ body | .arm _ _ body |
     .each _ _ _ _ _ _ _ body | .retry _ body | .loop _ body |
     .waive _ body | .trim _ _ body | .locks _ _ body | .watch _ body |
-    .grow _ _ body | .child body => [body]
+    .grow _ _ body | .child body | .callIndElse _ _ _ body | .callElse _ _ _ body => [body]
   | .alloc _ _ _ _ _ no => no.toList
   | _ => []
 
@@ -98,7 +98,7 @@ def ohneBibliothekAnw : SAnw → Bool
   | .bindLib .. | .lcall .. => false
   | .bindElse _ _ _ _ body | .elsif _ body | .arm _ _ body | .retry _ body | .loop _ body |
     .waive _ body | .trim _ _ body | .locks _ _ body | .watch _ body | .grow _ _ body |
-    .child body | .each _ _ _ _ _ _ _ body => ohneBibliothekAnw body
+    .child body | .each _ _ _ _ _ _ _ body | .callIndElse _ _ _ body | .callElse _ _ _ body => ohneBibliothekAnw body
   | .cond _ yes branches no =>
     ohneBibliothekAnw yes && ohneBibliothekAnwListe branches && ohneBibliothekAnwOpt no
   | .cases _ arms => ohneBibliothekAnwListe arms
