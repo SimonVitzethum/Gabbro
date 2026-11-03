@@ -81,7 +81,7 @@ theorem valueAt_int_of_wide {D : Deklaration} {L : Lay D} {lo hi : Int} (v : Zah
     (hk : integerWords lo hi ≤ k) {m : Runner.Mem} {fp : Runner.W} {base : Nat}
     (h : WordsAt m fp base (integerEncoding k v.n)) : ValueAt L m fp base (.int lo hi) v := by
   refine ⟨trivial, ?_⟩
-  change WordsAt m fp base (integerEncoding (integerWords lo hi) v.n)
+  erw [encodeWords_int]
   rw [← integerEncoding_take v.n hk]
   exact h.take _
 
