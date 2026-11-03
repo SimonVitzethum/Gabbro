@@ -35,6 +35,9 @@ def lowBasisTab (u : UProg) (fn : UFn) (b : String) :
     | some (.ptr ⟨0, ⟨true, _, none⟩, .table num⟩) =>
       if h : num < u.tabs.length then .ok ⟨num, h⟩
       else .error "pointer table unknown"
+    | some (.ptr ⟨0, ⟨true, _, some _⟩, .table num⟩) =>
+      if h : num < u.tabs.length then .ok ⟨num, h⟩
+      else .error "pointer table unknown"
     | _ => .error "place without G form"
   | .error _ =>
     match tabIdx u.tabs b with
@@ -104,6 +107,22 @@ def durchOwnTerm (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   exact Expr.thruOwn (D := declOf u) (Expr.var v) ⟨num, h⟩
     (capTab_some u num h) fh.idx i m 0 ho he' hg hmΛ hL
 
+/-- An owned `durch` term for a bool field: the same guarded carrier as the
+    plain bool `durch`, holding the owner mark. -/
+def durchOwnTermB (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (num : Nat) (w : Bool) (h : num < u.tabs.length)
+    (fh : BoolHit u ⟨num, h⟩) (o : Nat) (m : Fin u.marken.length)
+    (v : Var Γ (.ptr ⟨0, ⟨true, w, some o⟩, .table num⟩))
+    (i : Expr (declOf u) Γ Λ (.index ((declOf u).count ⟨num, h⟩)))
+    (hm : eignerMarke u o = some m) (he : m ∈ eignerAt u ⟨num, h⟩)
+    (hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩,
+      Res.von (declOf u) wdd ∈ Λ) :
+    Expr (declOf u) Γ Λ .bool := by
+  rw [← fh.hbool]
+  obtain ⟨ho, he', hg, hmΛ⟩ := ownGuard_holds u Λ ⟨num, h⟩ o m hm he hL
+  exact Expr.thruOwn (D := declOf u) (Expr.var v) ⟨num, h⟩
+    (capTab_some u num h) fh.idx i m 0 ho he' hg hmΛ hL
+
 /-- A `slot` term at its recorded range. -/
 def slotTerm (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (t : Fin u.tabs.length) (fh : FieldHit u t)
@@ -146,6 +165,28 @@ def lowDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
                   Res.von (declOf u) wdd ∈ Λ) then
                 .ok { range := fh.range, term := durchTerm u Γ Λ num w h fh v i hL }
               else .error "access without held guard"
+      else .error "pointer table unknown"
+    | some (.ptr ⟨0, ⟨true, w, some owner⟩, .table num⟩) =>
+      if h : num < u.tabs.length then
+        match fieldHit u ⟨num, h⟩ fname with
+        | .error e => .error e
+        | .ok fh =>
+          match heig : eignerMarke u owner with
+          | .none => .error "owned read without a declared owner mark"
+          | .some m =>
+            match lowVar Γ (sh + j) (.ptr ⟨0, ⟨true, w, some owner⟩, .table num⟩) with
+            | .error e => .error e
+            | .ok v =>
+              match lowIdx u Γ Λ fn sh ⟨num, h⟩ ix with
+              | .error e => .error e
+              | .ok i =>
+                if hL : (∀ wdd ∈ (declOf u).braucht ⟨num, h⟩,
+                    Res.von (declOf u) wdd ∈ Λ) then
+                  if he : m ∈ eignerAt u ⟨num, h⟩ then
+                    .ok { range := fh.range,
+                      term := durchOwnTerm u Γ Λ num w h fh owner m v i heig he hL }
+                  else .error "owned read without owner guard"
+                else .error "access without held guard"
       else .error "pointer table unknown"
     | _ => .error "place without G form"
 
@@ -287,6 +328,27 @@ def lowBoolDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
                   exact Expr.thru (D := declOf u) (Expr.var v) ⟨num, h⟩
                     (capTab_some u num h) fh.idx i hL)
               else .error "access without held guard"
+      else .error "pointer table unknown"
+    | some (.ptr ⟨0, ⟨true, w, some owner⟩, .table num⟩) =>
+      if h : num < u.tabs.length then
+        match fieldHitB u ⟨num, h⟩ fname with
+        | .error e => .error e
+        | .ok fh =>
+          match heig : eignerMarke u owner with
+          | .none => .error "owned read without a declared owner mark"
+          | .some m =>
+            match lowVar Γ (sh + j) (.ptr ⟨0, ⟨true, w, some owner⟩, .table num⟩) with
+            | .error e => .error e
+            | .ok v =>
+              match lowIdx u Γ Λ fn sh ⟨num, h⟩ ix with
+              | .error e => .error e
+              | .ok i =>
+                if hL : (∀ wdd ∈ (declOf u).braucht ⟨num, h⟩,
+                    Res.von (declOf u) wdd ∈ Λ) then
+                  if he : m ∈ eignerAt u ⟨num, h⟩ then
+                    .ok (durchOwnTermB u Γ Λ num w h fh owner m v i heig he hL)
+                  else .error "owned read without owner guard"
+                else .error "access without held guard"
       else .error "pointer table unknown"
     | _ => .error "place without G form"
 
