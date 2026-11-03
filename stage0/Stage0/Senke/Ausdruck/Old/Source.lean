@@ -190,4 +190,3 @@ theorem accepts_guests (u : UProg) (P : Programm (declOf u))
         GuestBoundary.admissionB_each (Bool.and_eq_true.mp accepted).2 guest member
 
 end Gabbro.Stage0.OldSource
-
