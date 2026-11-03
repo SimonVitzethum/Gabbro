@@ -17,7 +17,7 @@ theorem readBytesWords_ok {Λ : List (Res D)} {Γ : Ctx} {a b : Int}
     (world : ∀ m, W m → WeltAt m L σ) (lower : 0 ≤ a)
     (ih : ∀ d c top, lowE (currentOld := currentOld) L i d reserved = some (c, top) → top ≤ K → ∀ m pc,
       Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c (Enc L (.int a b) (eval σ₀ i σ ρ))) :
-    ∀ words n j d c top, b + j + n ≤ D.count t → j + n < 2 ^ 31 →
+    ∀ (words n j d : Nat) (c : List II) (top : Nat), b + j + n ≤ D.count t → j + n < 2 ^ 31 →
       readBytesWordsL L t f (lowE (currentOld := currentOld) L i (reserved := reserved)) words n j d = some (c, top) →
       top ≤ K → ∀ m pc, Pre L m pc fp K d c ρ W reserved →
       Executes m pc fp K d c (fun m' => WordsAt m' fp d
@@ -35,26 +35,34 @@ theorem readBytesWords_ok {Λ : List (Res D)} {Γ : Ctx} {a b : Int}
       Option.some.injEq, Prod.mk.injEq] at made
     obtain ⟨⟨head, ht⟩, headMade, ⟨tail, tt⟩, tailMade, rfl, rfl⟩ := made
     have tailTop := readBytesWordsL_top tailMade
+    have headFits : ht ≤ K := by omega
+    have tailFits : tt ≤ K := by omega
+    have scratch : d + 1 ≤ K := by omega
     have chunk := readBytesL_ok i hf world lower ih (min 8 n) j d head ht
-      (by omega) (by omega) headMade (by omega) m pc pre.left
+      (by omega) (by omega) headMade headFits m pc pre.left
     obtain ⟨m1, s1, ch1, w, read, value⟩ := chunk
     have p1 := pre.next ch1 (Nat.le_succ d) (by omega)
     obtain ⟨m2, s2, ch2, output⟩ := tailIH (n - 8) (j + min 8 n) (d + 1) tail tt
-      (by omega) (by omega) tailMade (by omega) m1 _ p1
+      (by omega) (by omega) tailMade tailFits m1 _ p1
     refine ⟨m2, ?_, ch1.trans (ch2.mono (Nat.le_succ d)), ?_⟩
     · simpa only [List.length_append, pc_add] using s1.trans s2
-    · simp only [integerEncoding]
-      intro limb bound
-      cases limb with
-      | zero =>
-        rw [Nat.add_zero, agree_rd_low ch2 p1.frame.room (by omega) (by omega), read]
-        congr 1
-        rw [value, bytes_chunk_word σ t f hf n ((eval σ₀ i σ ρ).n + j)]
-      | succ limb =>
-        have quotient := bytes_chunk_quotient σ t f hf n ((eval σ₀ i σ ρ).n + j)
-        rw [quotient]
-        simpa only [List.getElem_cons_succ, Nat.add_assoc, Int.natCast_add, Int.add_assoc] using
-          output limb (by simpa only [List.length_cons] using bound)
+    · let start := (eval σ₀ i σ ρ).n + (j : Int)
+      change WordsAt m2 fp d
+        ([BitVec.ofInt 64 (bytesZuZahl (σ.bytesAb t f hf n start))] ++
+          integerEncoding words (bytesZuZahl (σ.bytesAb t f hf n start) / 2 ^ 64))
+      rw [wordsAt_append]
+      constructor
+      · intro limb bound
+        have zero : limb = 0 := by simpa only [List.length_singleton, Nat.lt_one_iff] using bound
+        subst limb
+        change m2.rd64 (slot fp (BitVec.ofNat 64 d)) =
+          some (BitVec.ofInt 64 (bytesZuZahl (σ.bytesAb t f hf n start)))
+        rw [agree_rd_low ch2 p1.frame.room (Nat.lt_succ_self d) scratch, read, value,
+          bytes_chunk_word σ t f hf n start]
+      · change WordsAt m2 fp (d + 1)
+          (integerEncoding words (bytesZuZahl (σ.bytesAb t f hf n start) / 2 ^ 64))
+        rw [bytes_chunk_quotient σ t f hf n start]
+        simpa only [start, Int.natCast_add, Int.add_assoc] using output
 
 theorem readBytesWide_ok {Λ : List (Res D)} {Γ : Ctx} {a b : Int}
     (i : Expr D Γ Λ (.int a b)) {t : D.Tab} {f : D.Feld t} (hf : D.typ t f = .int 0 255)
@@ -69,26 +77,28 @@ theorem readBytesWide_ok {Λ : List (Res D)} {Γ : Ctx} {a b : Int}
     ValueOk L m pc fp K d c (.int 0 (256 ^ n - 1))
       (eval σ₀ (.getBytes t f hf n i lower upper access) σ ρ) := by
   simp only [readBytesWideL] at made
-  split at made
-  · next empty =>
+  by_cases empty : n = 0
+  · rw [if_pos empty] at made
     subst n
     simp only [Option.some.injEq, Prod.mk.injEq] at made
     obtain ⟨rfl, rfl⟩ := made
     refine Ok.value ?_ (by decide)
     exact (const_ok pre (by decide) (by omega)).mono (fun _ equal => equal)
-  · next nonempty =>
-    split at made
-    · next representable =>
+  · rw [if_neg empty] at made
+    by_cases representable : n < 2 ^ 31
+    · rw [if_pos representable] at made
       simp only [bind, Option.bind_eq_some_iff, pure,
         Option.some.injEq, Prod.mk.injEq] at made
       obtain ⟨⟨captured, tc⟩, captureMade, ⟨chunks, tt⟩, chunksMade, rfl, rfl⟩ := made
       have bound : b < 2 ^ 64 := by
-        by_contra bad
-        have cell := layout.1 t f b.toNat (L.bounded (by omega))
-        have byteWidth : valueWords (D.typ t f) = 1 := by rw [hf]; rfl
-        simp only [Lay.elem, byteWidth] at cell
-        have small := layout.2.2
-        omega
+        by_cases nonnegative : 0 ≤ b
+        · have cast : (b.toNat : Int) = b := Int.toNat_of_nonneg nonnegative
+          have cell := layout.1 t f b.toNat (L.bounded (by omega))
+          have byteWidth : valueWords (D.typ t f) = 1 := by rw [hf]; rfl
+          simp only [Lay.elem, byteWidth, Nat.mul_one] at cell
+          have small := layout.2.2
+          omega
+        · omega
       have iw : valueWords (.int a b) = 1 := integerWords_unsigned lower bound
       let words := integerWords 0 (256 ^ n - 1)
       have p : Pre L m pc fp K d
@@ -148,7 +158,8 @@ theorem readBytesWide_ok {Λ : List (Res D)} {Γ : Ctx} {a b : Int}
       refine ⟨m3, ?_, (ch1.trans (ch2.mono (Nat.le_succ d))).trans
         (Agree.widen ch3 (by change d + words ≤ K; omega)), result⟩
       simpa only [List.length_append, copyWords_length, pc_add, words] using s1.trans (s2.trans s3)
-    · cases made
+    · rw [if_neg representable] at made
+      cases made
 
 /-- Actual expression lowering uses the same complete-value conclusion for both
     the single-word kernel and the chunk-count induction. -/
