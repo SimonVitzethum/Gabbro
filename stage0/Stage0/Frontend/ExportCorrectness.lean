@@ -78,12 +78,15 @@ theorem implication_old_export (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)
     Bool.false_eq_true, ↓reduceIte, hg, bind, Except.bind, ha, hb]
   rfl
 
-/-- New constant headers are checked on the original source, before normalization. -/
+/-- Constant header admission retains its successful original-source expansion. -/
 theorem Compiled.constant_exports_metadata {text : String} {options : Profil.Options}
     (result : Compiled text options)
     (used : (uMembers (pre108 result.source.prepared.elaborierbar)).any ExportMetadata.constantExpansion = true) :
-    (uMembers (pre108 result.source.prepared.elaborierbar)).any ExportMetadata.itemMetadata = false :=
-  ExportMetadata.checkConstants_sound _ used result.constantExports
+    ∃ rewritten,
+      Konst.konstErsetzePipeline (uMembers (pre108 result.source.prepared.elaborierbar)) = .ok rewritten ∧
+      Konst.checkErsetzt (uMembers (pre108 result.source.prepared.elaborierbar)) rewritten = .ok () ∧
+      (Konst.ohneKonst rewritten).any ExportMetadata.itemMetadata = false :=
+  Konst.checkSourceConstants_sound _ used result.constantExports
 
 /-- The actual compiler refuses new nonzero scalar initializers until image memory is initialized. -/
 theorem Compiled.initializer_exports {text : String} {options : Profil.Options} (result : Compiled text options) :
