@@ -113,11 +113,14 @@ theorem istSome_ok {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {n : Int}
           some (Runner.IR.bool (eval σ₀ e σ ρ).isSome) := by
         cases hv : eval σ₀ e σ ρ with
         | none =>
-          have first := value.2 0 (by simp [encodeWords, hn, hv])
-          simpa [encodeWords, hn, hv, Runner.IR.bool] using first
+          have first := value.2 0 (by rw [encodeWords_length]; exact valueWords_pos (.opt n))
+          simpa only [encodeWords, hv, if_neg hn, List.getElem_cons_zero, Nat.add_zero,
+            Runner.IR.bool, Option.isSome_none, Bool.false_eq_true, ↓reduceIte] using first
         | some k =>
-          have first := value.2 0 (by simp [encodeWords, hn, hv])
-          simpa [encodeWords, hn, hv, Runner.IR.bool] using first
-      exact ⟨m', run, changed, _, read, by simp only [Enc, eval, wahr?, Runner.IR.bool]⟩
+          have first := value.2 0 (by rw [encodeWords_length]; exact valueWords_pos (.opt n))
+          simpa only [encodeWords, hv, if_neg hn, List.getElem_cons_zero, Nat.add_zero,
+            Runner.IR.bool, Option.isSome_some, ↓reduceIte] using first
+      exact ⟨m', run, changed, _, read, by
+        cases hv : eval σ₀ e σ ρ <;> simp [Enc, eval, wahr?, Runner.IR.bool, hv]⟩
 
 end Gabbro.Stage0.Senke
