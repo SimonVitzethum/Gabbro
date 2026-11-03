@@ -25,15 +25,20 @@ def lowerAxContract (u : UProg) (a : Fin u.axs.length) :
 def axContractsB (u : UProg) : Bool :=
   (List.finRange u.axs.length).all fun a => (lowerAxContract u a).isOk
 
-/-- Total projection for program assembly, used only behind axContractsB.
-    The success theorem below identifies the exact retained contract. -/
-def axVertragOf (u : UProg) (a : Fin u.axs.length) :
+/-- Program assembly projects only contracts known to lower successfully.
+    The failure arm is contradictory; there is no substitute contract. -/
+def axVertragOf (u : UProg) (a : Fin u.axs.length) (checked : axContractsB u = true) :
     CallContract (declOf u) ((declOf u).asignatur a) :=
-  (lowerAxContract u a).toOption.getD (callVertragWahr (declOf u) _)
+  match hl : lowerAxContract u a with
+  | .ok contract => contract
+  | .error _ => by
+    exfalso
+    have ha := List.all_eq_true.mp checked a (List.mem_finRange a)
+    simp [hl] at ha
 
 theorem axVertragOf_exact (u : UProg) (a : Fin u.axs.length)
     (h : axContractsB u = true) :
-    lowerAxContract u a = .ok (axVertragOf u a) := by
+    lowerAxContract u a = .ok (axVertragOf u a h) := by
   have ha := List.all_eq_true.mp h a (List.mem_finRange a)
   cases hl : lowerAxContract u a with
   | error error => simp [hl] at ha
