@@ -205,12 +205,12 @@ theorem binder_refused_zeuge :
 theorem source_meaning_normalized_zeuge :
     let D := declaration [] (.int 0 10)
     let source := SExpr.bin "+" (.variable "module::K") (.lit 1)
-    ∃ normalized : Normalized (D := D) [] [("module::K", 5)] source,
+    ∃ normalized : Normalized (D := D) (Γ := []) [] [("module::K", 5)] source,
       normalize [] [("module::K", 5)] source = .ok normalized ∧
       Scalar.expression [] (normalizeNames ([] : Locals []) [("module::K", 5)] source) =
         .ok normalized.code ∧ normalized.code.1 = .int 6 6 := by
   dsimp only
-  let normalized := (normalize (D := declaration [] (.int 0 10)) [] [("module::K", 5)]
+  let normalized := (normalize (D := declaration [] (.int 0 10)) (Γ := []) [] [("module::K", 5)]
     (.bin "+" (.variable "module::K") (.lit 1))).toOption.get (by decide)
   exact ⟨normalized, by rfl, normalized.meaning.normalized, by rfl⟩
 
@@ -222,7 +222,7 @@ theorem integer_argument_normalized_denotation_zeuge :
           (normalizeNames ([] : Locals []) [("module::K", 5)]
             (.bin "+" (.variable "module::K") (.lit 1))) =
           some (eval before argument.code.expr after .nil).n := by
-  let normalized := (normalize (D := declaration [] (.int 0 10)) [] [("module::K", 5)]
+  let normalized := (normalize (D := declaration [] (.int 0 10)) (Γ := []) [] [("module::K", 5)]
     (.bin "+" (.variable "module::K") (.lit 1))).toOption.get (by decide)
   let argument : IntegerArgument [] [("module::K", 5)] 0 10
       (.bin "+" (.variable "module::K") (.lit 1)) 6 :=
