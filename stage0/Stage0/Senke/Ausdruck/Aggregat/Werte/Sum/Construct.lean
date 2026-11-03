@@ -28,31 +28,49 @@ theorem sumSpan_ok {cs : List (Option Ty)} (i : Fin cs.length)
   let header := constWords (integerEncoding (integerWords 0 (cs.length - 1)) i.val) d
   let z := d + integerWords 0 (cs.length - 1) + payloadWords (cs.get i)
   let zeros := constWords (List.replicate (sumPayloadWords cs - payloadWords (cs.get i)) 0) z
+  let result : Wert D (.sum cs) := ⟨i, Fall.ofNutzlast D.Fn D.passt cs i v⟩
+  change max (max header.2 childTop) (max zeros.2 (d + valueWords (.sum cs))) ≤ K at fits
+  simp only [Nat.max_le] at fits
   have pw := payloadWords_bound cs i
   have hw : 0 < integerWords 0 (cs.length - 1) := by unfold integerWords; omega
   have full : valueWords (.sum cs) = integerWords 0 (cs.length - 1) + sumPayloadWords cs := by
     simp only [valueWords, separate, Bool.false_eq_true, ↓reduceIte]
+  have spanFits : d + integerWords 0 (cs.length - 1) + sumPayloadWords cs ≤ K := by
+    simpa only [full, Nat.add_assoc] using fits.2.2
+  have payloadBaseFits : d + integerWords 0 (cs.length - 1) ≤ K := by omega
+  have paddingBaseFits : z ≤ K := by
+    change d + integerWords 0 (cs.length - 1) + payloadWords (cs.get i) ≤ K
+    omega
   have p : Pre L m pc fp K d (header.1 ++ (child ++ zeros.1)) ρ W reserved := by
     simpa only [header, zeros, z, List.append_assoc] using pre
   obtain ⟨m1, s1, ch1, tag⟩ := constWords_ok (L := L)
-    (integerEncoding (integerWords 0 (cs.length - 1)) i.val) (by omega) p.left
+    (integerEncoding (integerWords 0 (cs.length - 1)) i.val) fits.1.1 p.left
   have p1 := p.next ch1 (by omega : d ≤ d + integerWords 0 (cs.length - 1)) (by omega)
-  obtain ⟨m2, s2, ch2, valid, value⟩ := ih child childTop childMade (by omega) m1 _ p1.left
+  obtain ⟨m2, s2, ch2, valid, value⟩ := ih child childTop childMade fits.1.2 m1 _ p1.left
   have p2 := p1.next ch2 (by omega : d + integerWords 0 (cs.length - 1) ≤ z)
-    (by dsimp only [z]; omega)
+    payloadBaseFits
   obtain ⟨m3, s3, ch3, padding⟩ := constWords_ok (L := L)
-    (List.replicate (sumPayloadWords cs - payloadWords (cs.get i)) 0) (by omega) p2
+    (List.replicate (sumPayloadWords cs - payloadWords (cs.get i)) 0) fits.2.1 p2
   have tag2 : WordsAt m2 fp d (integerEncoding (integerWords 0 (cs.length - 1)) i.val) :=
-    tag.agree_low ch2 p1.frame.room (by simp only [integerEncoding_length]; omega) (by omega)
+    tag.agree_low ch2 p1.frame.room (by simp only [integerEncoding_length]; omega) payloadBaseFits
   have tag3 : WordsAt m3 fp d (integerEncoding (integerWords 0 (cs.length - 1)) i.val) :=
-    tag2.agree_low ch3 p2.frame.room (by simp only [integerEncoding_length]; dsimp only [z]; omega) (by omega)
+    tag2.agree_low ch3 p2.frame.room (by simp only [integerEncoding_length]; dsimp only [z]; omega) paddingBaseFits
   have value3 := value.agree_low ch3 p2.frame.room
-    (by simp only [payloadEncoding_length]; dsimp only [z]; omega) (by omega)
+    (by simp only [payloadEncoding_length]; dsimp only [z]; omega) paddingBaseFits
   refine ⟨m3, ?_, ch1.trans ((ch2.mono (by omega)).trans (ch3.mono (by dsimp only [z]; omega))), ?_, ?_⟩
-  · simpa only [List.length_append, pc_add, BitVec.add_assoc] using s1.trans (s2.trans s3)
-  · exact (sumValid_selected L cs i _).mpr (by simpa only [Fall.of_to] using valid)
-  · rw [encodeWords_sum L separate, List.append_assoc, wordsAt_append, wordsAt_append]
-    simpa only [Fall.of_to, integerEncoding_length, payloadEncoding_length, z] using
+  · simpa only [header, zeros, z, List.length_append, pc_add] using s1.trans (s2.trans s3)
+  · exact (sumValid_selected L cs i (Fall.ofNutzlast D.Fn D.passt cs i v)).mpr
+      (by simpa only [Fall.to_of] using valid)
+  · have encoding := encodeWords_sum L separate result
+    change encodeWords L (.sum cs) result =
+        integerEncoding (integerWords 0 (cs.length - 1)) i.val ++
+        payloadEncoding L (cs.get i)
+          (Fall.toNutzlast D.Fn D.passt cs i (Fall.ofNutzlast D.Fn D.passt cs i v)) ++
+        List.replicate (sumPayloadWords cs - payloadWords (cs.get i)) 0 at encoding
+    rw [Fall.to_of] at encoding
+    change WordsAt m3 fp d (encodeWords L (.sum cs) result)
+    rw [encoding, List.append_assoc, wordsAt_append, wordsAt_append]
+    simpa only [integerEncoding_length, payloadEncoding_length, z] using
       And.intro tag3 (And.intro value3 padding)
 
 end Gabbro.Stage0.Senke
