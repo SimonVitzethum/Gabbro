@@ -127,6 +127,14 @@ theorem boolean_binder_images_zeuge :
     (image true false).isOk = true ∧ (image true true).isOk = true := by
   decide +kernel
 
+/-- Error handling and both Boolean payloads retain canonical admission. -/
+theorem boolean_binder_admission_zeuge :
+    Akzeptiert (program false false) ⟨fun l => l.elim, fun l => l.elim⟩
+      [entry] [] [] [entry] = true ∧
+    Akzeptiert (program true true) ⟨fun l => l.elim, fun l => l.elim⟩
+      [entry] [] [] [entry] = true := by
+  decide +kernel
+
 def oracle (raw : Runner.W) : Orakel D where
   wirkt _ σ _ := (σ, rohW AxiomElseProbe.binding 1 raw)
   regLies r := Fin.elim0 r
