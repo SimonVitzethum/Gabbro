@@ -29,10 +29,13 @@ theorem bytesLt_keys : ∀ (as bs : List Int),
       have a0 := ha a (by simp)
       have b0 := hb b (by simp)
       have lt : decide (a < b) = decide (a.toNat + 1 < b.toNat + 1) := by
-        congr 1; omega
+        apply Bool.eq_iff_iff.mpr
+        simp only [decide_eq_true_eq]
+        omega
       have eq : (a == b) = (a.toNat + 1 == b.toNat + 1) := by
-        simp only [beq_iff_eq, Bool.beq_eq_decide_eq]
-        congr 1; omega
+        apply Bool.eq_iff_iff.mpr
+        simp only [beq_iff_eq]
+        omega
       simp only [bytesLt, keys, List.map_cons, lexLt]
       rw [lt, eq, ih bs (fun x hx => ha x (by simp [hx])) (fun x hx => hb x (by simp [hx]))]
 
