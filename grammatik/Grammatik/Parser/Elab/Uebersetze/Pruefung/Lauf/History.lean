@@ -141,6 +141,13 @@ structure CheckGhostState (D : Deklaration) where
   nextActivation : Nat := 0
   activation : Nat := 0
 
+/-- A consumer preserves completed data and changes only its linear status. -/
+def checkGhostConsume {D : Deklaration} (gate : D.Fn) (state : CheckGhostState D) :
+    CheckGhostState D :=
+  match consumeCheckEntry gate state.history with
+  | some history => { state with history }
+  | none => { state with refused := true }
+
 /-- The ghost update at the actual return. A reporter belongs to the current
     probe activation; only that probe's normal pop appends completed evidence.
     A consumer's return retires one existing entry, including its explicit
@@ -153,37 +160,32 @@ def checkGhostStep (u : UProg) (c : CheckDecl (declOf u))
       pending := if f = c.probe then none else state.pending,
       activation := if f = c.probe then state.nextActivation else state.activation,
       nextActivation := if f = c.probe then state.nextActivation + 1 else state.nextActivation }
-  | .rueck f env value s0 s1 => Id.run do
-    let mut result := { state with frames := state.frames.drop 1 }
+  | .rueck f env value s0 s1 =>
+    let result := { state with frames := state.frames.drop 1 }
     if state.frames.head? != some f then
-      return { result with refused := true }
-    if f = c.probe then
+      { result with refused := true }
+    else if f = c.probe then
       match state.pending with
       | some report =>
         if rueckUrteil c (.rueck f env value s0 s1) = some report.urteil then
-          result := { result with pending := none,
+          { result with pending := none,
             history := ⟨c.probe, report, true, none⟩ :: state.history }
-        else result := { result with pending := none, refused := true }
-      | none => result := { result with refused := true }
-    else if f = consumer then
-      match consumeCheckEntry gate state.history with
-      | some history => result := { result with history }
-      | none => result := { result with refused := true }
+        else { result with pending := none, refused := true }
+      | none => { result with refused := true }
+    else if f = consumer then checkGhostConsume gate result
     else if (state.frames.drop 1).head? == some c.probe then
       match actualCheckReturn u f env value with
       | some (name, report) =>
-        if name == c.name then result :=
+        if name == c.name then
           { result with pending := some (stampCheckReport state.activation report) }
-      | none => pure ()
-    return result
+        else result
+      | none => result
+    else result
   | .why f _ _ _ _ =>
     let result := { state with frames := state.frames.drop 1,
       pending := if f = c.probe then none else state.pending }
     if state.frames.head? != some f then { result with refused := true }
-    else if f = consumer then
-      match consumeCheckEntry gate state.history with
-      | some history => { result with history }
-      | none => { result with refused := true }
+    else if f = consumer then checkGhostConsume gate result
     else result
 
 /-- G/GX logs are newest-first. Fold in execution order, append evidence only
