@@ -181,6 +181,27 @@ def assignDurchStmt {read : Bool} {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (
     exact e
   exact Stmt.assignThru (D := declOf u) p t (Deklaration.capTab_of ht rfl (by decide)) fh.idx i e2 hw hL
 
+/-- An owned `durch` write at its recorded range: the same guarded store as
+    `assignDurchStmt` through the `own@m` capability, holding the owner mark. -/
+def assignDurchOwnStmt {read : Bool} {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (V : Vertrag (declOf u)) (t : Fin u.tabs.length)
+    (fh : FieldHit u t) (o : Nat) (m : Fin u.marken.length)
+    (p : Expr (declOf u) Γ Λ (.ptr ⟨0, ⟨read, true, some o⟩, .table t.val⟩))
+    (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
+    (e : Expr (declOf u) Γ Λ (.int fh.range.1 fh.range.2))
+    (hm : eignerMarke u o = some m) (he : m ∈ eignerAt u t)
+    (hw : V.schreibt t = true)
+    (hL : ∀ wdd ∈ (declOf u).braucht t,
+      Res.von (declOf u) wdd ∈ Λ) :
+    Stmt (declOf u) V l Γ Λ Λ := by
+  have e2 : Expr (declOf u) Γ Λ ((declOf u).typ t fh.idx) := by
+    show Expr (declOf u) Γ Λ (typAt u t fh.idx)
+    rw [fh.hint]
+    exact e
+  obtain ⟨ho, he', hg, hmΛ⟩ := ownGuard_holds u Λ t o m hm he hL
+  exact Stmt.assignThruOwn (D := declOf u) p t (capTab_some u t.val t.isLt) fh.idx i e2 m 0
+    ho he' hg hmΛ hw hL
+
 /-- A `slot` write at its recorded range. -/
 def assignSlotStmt {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (V : Vertrag (declOf u)) (t : Fin u.tabs.length)
@@ -213,6 +234,27 @@ def assignDurchStmtB {read : Bool} {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List 
     rw [bh.hbool]
     exact e
   exact Stmt.assignThru (D := declOf u) p t (Deklaration.capTab_of ht rfl (by decide)) bh.idx i e2 hw hL
+
+/-- An owned `durch` write into a BOOL field: the same guarded store as
+    `assignDurchStmtB` through the `own@m` capability, holding the owner mark. -/
+def assignDurchOwnStmtB {read : Bool} {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (V : Vertrag (declOf u)) (t : Fin u.tabs.length)
+    (bh : BoolHit u t) (o : Nat) (m : Fin u.marken.length)
+    (p : Expr (declOf u) Γ Λ (.ptr ⟨0, ⟨read, true, some o⟩, .table t.val⟩))
+    (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
+    (e : Expr (declOf u) Γ Λ .bool)
+    (hm : eignerMarke u o = some m) (he : m ∈ eignerAt u t)
+    (hw : V.schreibt t = true)
+    (hL : ∀ wdd ∈ (declOf u).braucht t,
+      Res.von (declOf u) wdd ∈ Λ) :
+    Stmt (declOf u) V l Γ Λ Λ := by
+  have e2 : Expr (declOf u) Γ Λ ((declOf u).typ t bh.idx) := by
+    show Expr (declOf u) Γ Λ (typAt u t bh.idx)
+    rw [bh.hbool]
+    exact e
+  obtain ⟨ho, he', hg, hmΛ⟩ := ownGuard_holds u Λ t o m hm he hL
+  exact Stmt.assignThruOwn (D := declOf u) p t (capTab_some u t.val t.isLt) bh.idx i e2 m 0
+    ho he' hg hmΛ hw hL
 
 /-- A `slot` write into a BOOL field. -/
 def assignSlotStmtB {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
