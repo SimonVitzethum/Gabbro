@@ -94,7 +94,7 @@ example : (elabText checkText).map (fun u => u.checks.map (·.name)) =
 /-- End-to-end from source text: the probe and its gate wrapper travel with
     the written gate. -/
 example : (elabText checkText).map (fun u => u.fns.map (·.name)) =
-    .ok ["g", "p#probe", "p#tor#g"] := rfl
+    .ok ["g", "p#probe", "p#report#0", "p#tor#g"] := rfl
 
 /-- End-to-end from source text: the mark table carries the check's Duty. -/
 example : (elabText checkText).map (fun u => u.marken) = .ok ["p#duty"] := rfl
