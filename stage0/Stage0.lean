@@ -47,6 +47,8 @@ public import Stage0.Senke.Ausdruck.Zeiger.FnptrProben
 public import Stage0.Senke.Ausdruck.Zeiger.FnptrAufrufProben
 public import Stage0.Senke.Ausdruck.Quant.Proben
 public import Stage0.Senke.Anweisung.Bytes.Proben
+public import Stage0.Senke.Anweisung.Bytes.Span.Proben
+public import Stage0.Senke.Anweisung.Faelle.Sum.Proben
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 
@@ -114,6 +116,7 @@ public import Stage0.Senke.Rueckkehr.EntryProbe
 public import Stage0.Senke.Rueckkehr.ScopedZeuge
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.BitBuiltin.Probes
 public import Stage0.Zeugen.Annahme.TypedSumWitness
+public import Stage0.Zeugen.Pipeline.TaggedDispatchWitness
 public import Stage0.Zeugen.Annahme.PointerContractWitness
 public import Stage0.Zeugen.Annahme.MeasureWitness
 public import Stage0.Zeugen.Ablehnung.ConstControlWitness
