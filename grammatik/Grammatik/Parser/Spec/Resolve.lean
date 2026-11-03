@@ -24,8 +24,9 @@ def materialize (items : List SItemTief) : List SItemTief :=
 
 def functionHeads (items : List SItemTief) : List FnSig := items.filterMap fun
   | .fnT s _ | .protoT s | .specT s _ | .asmT s _ => some s
-  | .callT s => some { art := "", name := s.name, params := s.params, res := s.res,
-                      fehler := s.fail, klauseln := [] }
+  | .callT s => some
+    { art := "", name := s.name, params := s.params, res := s.res,
+      fehler := s.fail, klauseln := [], generics := [] }
   | _ => none
 
 /-- Read the table field type from the existing surface declaration. -/
@@ -107,10 +108,10 @@ def resolveCall (items : List SItemTief) (locals : Locals) (name : String)
           | some (_, t) => pure t
           | none => throw ("spec.call.type.required: " ++ n)
     if types.length != g.types.length then throw "spec.call.arguments"
-    let matches := ((instances items).zipIdx).filter fun (i, _) =>
+    let selected := ((instances items).zipIdx).filter fun (i, _) =>
       strEq i.group g.name && beqSTypList (i.types.map (canonicalType items 128))
         (types.map (canonicalType items 128))
-    match matches with
+    match selected with
     | [(_, n)] => return implementationName n s.name
     | [] => throw "spec.call.implementation.missing"
     | _ => throw "spec.call.implementation.ambiguous"
@@ -118,7 +119,9 @@ def resolveCall (items : List SItemTief) (locals : Locals) (name : String)
 
 /-- Parse only type arguments here; generic-function argument kinds are a preceding pass (§5.4). -/
 def explicitTypes (raw : String) : Except String (List STyp) := do
-  let tokens ← lex raw
+  let tokens ← match lex raw with
+    | .ok tokens => pure tokens
+    | .error _ => throw "spec.call.arguments"
   let (types, r) ← parseSpecTypes (tokens.length * 8 + 32) tokens
   match r with
   | [.ende] => return types
