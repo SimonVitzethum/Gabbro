@@ -55,6 +55,70 @@ def assemble (pieces : List Piece) : Option (List II) := do
   let instructions ← encode pieces pieces 0
   if 16 * instructions.length < 2 ^ 31 then some instructions else none
 
+/-- Width of a symbolic prefix, shared by code extraction and label addresses. -/
+def width : List Piece → Nat
+  | [] => 0
+  | piece :: rest => piece.width + width rest
+
+/-- A resolved straight-line block keeps its instruction position. This
+    extracts actual assembled instructions, including all preceding jumps. -/
+private theorem encode_block (whole before : List Piece) (block : List II)
+    (after : List Piece) (start : Nat) (code : List II)
+    (encoded : encode whole (before ++ .code block :: after) start = some code) :
+    ∃ prefix suffix : List II,
+      code = prefix ++ block ++ suffix ∧ prefix.length = width before := by
+  induction before generalizing start code with
+  | nil =>
+    simp only [List.nil_append, encode, bind, Option.bind_eq_some_iff,
+      pure, Option.some.injEq] at encoded
+    obtain ⟨suffix, tail, rfl⟩ := encoded
+    exact ⟨[], suffix, rfl, rfl⟩
+  | cons piece rest ih =>
+    cases piece with
+    | label name =>
+      simp only [List.cons_append, encode] at encoded
+      obtain ⟨prefix, suffix, eq, len⟩ := ih start code encoded
+      exact ⟨prefix, suffix, eq, by simpa only [width, Piece.width, Nat.zero_add] using len⟩
+    | code instructions =>
+      simp only [List.cons_append, encode, bind, Option.bind_eq_some_iff,
+        pure, Option.some.injEq] at encoded
+      obtain ⟨tail, tailCode, rfl⟩ := encoded
+      obtain ⟨prefix, suffix, eq, len⟩ := ih _ tail tailCode
+      exact ⟨instructions ++ prefix, suffix,
+        by simp only [eq, List.append_assoc],
+        by simp only [List.length_append, len, width, Piece.width]⟩
+    | jump target =>
+      simp only [List.cons_append, encode, bind, Option.bind_eq_some_iff,
+        pure, Option.some.injEq] at encoded
+      obtain ⟨destination, found, tail, tailCode, rfl⟩ := encoded
+      obtain ⟨prefix, suffix, eq, len⟩ := ih _ tail tailCode
+      refine ⟨ci 18 (16 * ((destination : Int) - start)) 0 0 :: prefix, suffix, ?_, ?_⟩
+      · simp only [eq, List.cons_append]
+      · simp only [List.length_cons, len, width, Piece.width]; omega
+    | zero slot target =>
+      simp only [List.cons_append, encode, bind, Option.bind_eq_some_iff,
+        pure, Option.some.injEq] at encoded
+      obtain ⟨destination, found, tail, tailCode, rfl⟩ := encoded
+      obtain ⟨prefix, suffix, eq, len⟩ := ih _ tail tailCode
+      refine ⟨ci 19 slot (16 * ((destination : Int) - start)) 0 :: prefix, suffix, ?_, ?_⟩
+      · simp only [eq, List.cons_append]
+      · simp only [List.length_cons, len, width, Piece.width]; omega
+
+/-- Recover a code slice from the checked assembler without maintaining a
+    second collection of offset formulas. `width before` is in instructions. -/
+theorem assemble_block (before : List Piece) (block : List II) (after : List Piece)
+    {code : List II} (assembled : assemble (before ++ .code block :: after) = some code) :
+    ∃ prefix suffix : List II,
+      code = prefix ++ block ++ suffix ∧ prefix.length = width before := by
+  unfold assemble at assembled
+  simp only [bind, Option.bind_eq_some_iff] at assembled
+  obtain ⟨instructions, encoded, accepted⟩ := assembled
+  split at accepted
+  · simp only [Option.some.injEq] at accepted
+    subst code
+    exact encode_block _ before block after 0 instructions encoded
+  · cases accepted
+
 /-- Compare the new measure, preserving it until all three obligations have
     been checked. Typed measure bounds are checked at run time as well. -/
 def decrease (scratch saved failure : Nat) (bound : Int) (measure : List II) : List II :=
