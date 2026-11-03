@@ -34,30 +34,34 @@ theorem traverseLauf_gut (schritt : World D → Env D (τ :: Γ) → Ausgang V t
       · simp only [Ausgang.welt, reduceCtorEq] at h
       · have hinv := hi σ ρ hh
         have hstep := hs (inv σ ρ).1 (.cons k ρ) (hinv.heldB hh)
-        split at h
-        · rename_i σ1 ρ1 hs1
-          simp only [hs1] at hstep ⊢
+        cases hs1 : schritt (inv σ ρ).1 (.cons k ρ) with
+        | ok σ1 ρ1 =>
+          simp only [hs1] at hstep h ⊢
           have g1 := hinv.trans (hstep σ1 rfl)
           exact (GutAusgang.vor g1 (ih σ1 ρ1.tail (g1.heldB hh))) σ' h
-        · rename_i σ1 ρ1 hs1
-          simp only [hs1] at hstep ⊢
+        | next _ σ1 ρ1 =>
+          simp only [hs1] at hstep h ⊢
           have g1 := hinv.trans (hstep σ1 rfl)
           exact (GutAusgang.vor g1 (ih σ1 ρ1.tail (g1.heldB hh))) σ' h
-        · rename_i σ1 ρ1 hs1
-          simp only [hs1] at hstep ⊢
+        | leave _ σ1 ρ1 =>
+          simp only [hs1] at hstep h ⊢
           have g1 := hinv.trans (hstep σ1 rfl)
           by_cases hc1 : (inv σ1 ρ1.tail).snd = true <;>
             simp only [hc1, ite_true, ite_false, Ausgang.welt, Option.some.injEq,
               reduceCtorEq] at h ⊢
           subst h; exact g1.trans (hi σ1 ρ1.tail (g1.heldB hh))
-        · rename_i σ1 v hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
+        | zurueck σ1 v =>
+          simp only [hs1, Ausgang.welt, Option.some.injEq] at h
+          subst h
           simp only [hs1] at hstep ⊢
           exact hinv.transRetV (hstep _ rfl)
-        · rename_i σ1 r hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
+        | why σ1 r =>
+          simp only [hs1, Ausgang.welt, Option.some.injEq] at h
+          subst h
           simp only [hs1] at hstep ⊢
           exact hinv.transRetV (hstep _ rfl)
-        · simp only [Ausgang.welt, reduceCtorEq] at h
-        · simp only [Ausgang.welt, reduceCtorEq] at h
+        | logik e => simp only [hs1, Ausgang.welt, reduceCtorEq] at h
+        | hardware e => simp only [hs1, Ausgang.welt, reduceCtorEq] at h
 
 theorem retryLauf_gut (schritt : World D → Env D Γ → Ausgang V true Γ)
     (bis : World D → Env D Γ → World D × Bool) (ueberlauf : World D → Env D Γ → Ausgang V l Γ)
@@ -83,26 +87,32 @@ theorem retryLauf_gut (schritt : World D → Env D Γ → Ausgang V true Γ)
       · simp only [Ausgang.welt, Option.some.injEq] at h; subst h; exact hb σ ρ hh
       · have hinv := hb σ ρ hh
         have hstep := hs (bis σ ρ).1 ρ (hinv.heldB hh)
-        split at h
-        · rename_i σ1 ρ1 hs1
-          simp only [hs1] at hstep ⊢
+        cases hs1 : schritt (bis σ ρ).1 ρ with
+        | ok σ1 ρ1 =>
+          simp only [hs1] at hstep h ⊢
           have g1 := hinv.trans (hstep σ1 rfl)
           exact (GutAusgang.vor g1 (ih σ1 ρ1 (g1.heldB hh))) σ' h
-        · rename_i σ1 ρ1 hs1
-          simp only [hs1] at hstep ⊢
+        | next _ σ1 ρ1 =>
+          simp only [hs1] at hstep h ⊢
           have g1 := hinv.trans (hstep σ1 rfl)
           exact (GutAusgang.vor g1 (ih σ1 ρ1 (g1.heldB hh))) σ' h
-        · rename_i σ1 ρ1 hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
+        | leave _ σ1 ρ1 =>
+          simp only [hs1, Ausgang.welt, Option.some.injEq] at h
+          subst h
           simp only [hs1] at hstep ⊢
           exact hinv.trans (hstep _ rfl)
-        · rename_i σ1 v hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
+        | zurueck σ1 v =>
+          simp only [hs1, Ausgang.welt, Option.some.injEq] at h
+          subst h
           simp only [hs1] at hstep ⊢
           exact hinv.transRetV (hstep _ rfl)
-        · rename_i σ1 r hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
+        | why σ1 r =>
+          simp only [hs1, Ausgang.welt, Option.some.injEq] at h
+          subst h
           simp only [hs1] at hstep ⊢
           exact hinv.transRetV (hstep _ rfl)
-        · simp only [Ausgang.welt, reduceCtorEq] at h
-        · simp only [Ausgang.welt, reduceCtorEq] at h
+        | logik e => simp only [hs1, Ausgang.welt, reduceCtorEq] at h
+        | hardware e => simp only [hs1, Ausgang.welt, reduceCtorEq] at h
 
 theorem foreverLauf_gut (a : D.Annahme) (schritt : World D → Env D Γ → Ausgang V true Γ)
     (inv : World D → Env D Γ → World D × Bool)
@@ -121,26 +131,32 @@ theorem foreverLauf_gut (a : D.Annahme) (schritt : World D → Env D Γ → Ausg
       · simp only [Ausgang.welt, reduceCtorEq] at h
       · have hinv := hi σ ρ hh
         have hstep := hs (inv σ ρ).1 ρ (hinv.heldB hh)
-        split at h
-        · rename_i σ1 ρ1 hs1
-          simp only [hs1] at hstep ⊢
+        cases hs1 : schritt (inv σ ρ).1 ρ with
+        | ok σ1 ρ1 =>
+          simp only [hs1] at hstep h ⊢
           have g1 := hinv.trans (hstep σ1 rfl)
           exact (GutAusgang.vor g1 (ih σ1 ρ1 (g1.heldB hh))) σ' h
-        · rename_i σ1 ρ1 hs1
-          simp only [hs1] at hstep ⊢
+        | next _ σ1 ρ1 =>
+          simp only [hs1] at hstep h ⊢
           have g1 := hinv.trans (hstep σ1 rfl)
           exact (GutAusgang.vor g1 (ih σ1 ρ1 (g1.heldB hh))) σ' h
-        · rename_i σ1 ρ1 hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
+        | leave _ σ1 ρ1 =>
+          simp only [hs1, Ausgang.welt, Option.some.injEq] at h
+          subst h
           simp only [hs1] at hstep ⊢
           exact hinv.trans (hstep _ rfl)
-        · rename_i σ1 v hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
+        | zurueck σ1 v =>
+          simp only [hs1, Ausgang.welt, Option.some.injEq] at h
+          subst h
           simp only [hs1] at hstep ⊢
           exact hinv.transRetV (hstep _ rfl)
-        · rename_i σ1 r hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
+        | why σ1 r =>
+          simp only [hs1, Ausgang.welt, Option.some.injEq] at h
+          subst h
           simp only [hs1] at hstep ⊢
           exact hinv.transRetV (hstep _ rfl)
-        · simp only [Ausgang.welt, reduceCtorEq] at h
-        · simp only [Ausgang.welt, reduceCtorEq] at h
+        | logik e => simp only [hs1, Ausgang.welt, reduceCtorEq] at h
+        | hardware e => simp only [hs1, Ausgang.welt, reduceCtorEq] at h
 
 end Schleifen
 /-! ### The lock floor of a body (held-set relaxation, 2026-09-13)
