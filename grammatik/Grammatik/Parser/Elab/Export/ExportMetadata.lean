@@ -115,6 +115,8 @@ def itemMetadata : SItemTief → Bool
   | .typeT flags _ args order body => !args.isEmpty || !order.isEmpty || body.any typeMetadata ||
       flags.any (fun flag => flag != "pub" && flag != "export")
   | .constT _ ty _ => typeMetadata ty
+  | .trustT _ _ _ regs stack assumption service =>
+    !regs.isEmpty || !stack.isEmpty || !assumption.isEmpty || service.isNone
   | .whyT .. => false
   | .stateT .. => false
   | .checkT c => c.sonde.isSome || bodyMetadata 10000 c.canFail
