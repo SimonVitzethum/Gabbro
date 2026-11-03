@@ -275,7 +275,7 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
     simp only [lowE_eqs] at h
     split at h
     · exact lowN_top nutz _ _ _ h
-    · cases h
+    · exact sumSpanL_top h
   | _, _, .wenn cond a b, d, c, top, h => by
     simp only [lowE_eqs, wennL, bind, Option.bind_eq_some_iff] at h
     obtain ⟨⟨cc, tc⟩, hc, ⟨ca, ta⟩, _, ⟨cb, tb⟩, _, h⟩ := h
