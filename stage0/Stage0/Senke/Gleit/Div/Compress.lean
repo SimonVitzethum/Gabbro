@@ -9,7 +9,9 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D}
 
 /-- Retain the shifted low limb, the shifted high limb, and the divisor.
-    The two source producers are pure and may be reread before the loop. -/
+    The two source producers are pure and may be reread before the loop.
+    The 26-word suffix ceiling is the shared two-limb divider's exact
+    reservation, including its comparison and carry temporaries. -/
 def softDivQuotientL (d : Nat) (a b : Nat → Option (List II × Nat)) (k : Nat) :
     Option (List II × Nat) := do
   let low ← wordK 11 d (a d) (Int.ofNat k)
