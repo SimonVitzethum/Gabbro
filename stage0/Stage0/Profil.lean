@@ -48,7 +48,7 @@ def selectUnit (options : Options) (unit : Uebersetze.UProg) : Except String Ueb
   | some selection =>
     Uebersetze.uSelectCheckConsumers
       { unit with checks := unit.checks.map fun c =>
-          { c with testbau := options.mode == .pruefbau } } [selection]
+          { c with testbau := decide (options.mode = .pruefbau) } } [selection]
 
 /-- The current image startup emits the x86_64 runner's syscall and thread ABI. -/
 def runnerCompatible (options : Options) : Prop := options.arch = "x86_64"
