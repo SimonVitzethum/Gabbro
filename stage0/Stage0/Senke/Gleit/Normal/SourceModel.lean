@@ -6,7 +6,7 @@ public import Stage0.Senke.Gleit.Normal.SourceBounds
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Gleitkomma Runner.IR
 
-private theorem decodedFinite (a : GFloat) (u : Exakt)
+theorem routineSource_finite (a : GFloat) (u : Exakt)
     (hu : wertExakt f64 a = some u) : a.bexp ≠ 2047 := by
   intro maximum
   have absent : wertExakt f64 a = none := by
@@ -20,7 +20,7 @@ private theorem decodedNonzero (a : GFloat) (u : Exakt)
     (hu : wertExakt f64 a = some u) (nonzero : a.bexp ≠ 0 ∨ a.frac ≠ 0) :
     u = ⟨if a.sign then -(softSig a.bexp a.frac : Int) else (softSig a.bexp a.frac : Int),
       (max a.bexp 1 : Int) - 1075⟩ := by
-  have finite := decodedFinite a u hu
+  have finite := routineSource_finite a u hu
   by_cases zero : a.bexp = 0
   · have fraction : a.frac ≠ 0 := by rcases nonzero with h | h <;> omega
     have value := softWertExakt_subnormal a.sign a.frac fraction
