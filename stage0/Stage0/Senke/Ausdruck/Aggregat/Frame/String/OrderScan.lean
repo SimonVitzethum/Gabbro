@@ -54,12 +54,12 @@ theorem stringScan_value {K n q a b acc : Nat}
     let sx := aluRun cx s
     let sy := aluRun cy sx
     let sc := aluRun cc sy
-    have sax : StringSlots sx a n as := sa.low ax (by omega) s as
-    have sbx : StringSlots sx b q bs := sb.low ax (by omega) s bs
-    have say : StringSlots sy a n as := sax.low ay (by omega) sx as
-    have sby : StringSlots sy b q bs := sbx.low ay (by omega) sx bs
-    have sac : StringSlots sc a n as := say.low ac ha sy as
-    have sbc : StringSlots sc b q bs := sby.low ac hb sy bs
+    have sax : StringSlots sx a n as := StringSlots.low ax (by omega) s as sa
+    have sbx : StringSlots sx b q bs := StringSlots.low ax (by omega) s bs sb
+    have say : StringSlots sy a n as := StringSlots.low ay (by omega) sx as sax
+    have sby : StringSlots sy b q bs := StringSlots.low ay (by omega) sx bs sbx
+    have sac : StringSlots sc a n as := StringSlots.low ac ha sy as say
+    have sbc : StringSlots sc b q bs := StringSlots.low ac hb sy bs sby
     have rx : sx (acc + 1) = BitVec.ofNat 64 (keyAt (as.map (·.n)) k) :=
       stringKey_value s as la hn (by omega) (by omega) sa.1 sa.2
     have ry : sy (acc + 2) = BitVec.ofNat 64 (keyAt (bs.map (·.n)) k) :=
@@ -90,10 +90,11 @@ theorem stringSlots_of_span {D : Deklaration} {L : Lay D} {n a K : Nat}
   · intro j hj
     have read := span.2 (j + 1)
       (by rw [encodeWords_length]; simp only [valueWords, if_neg (show ¬ n ≤ 1 by omega)]; omega)
-    have get := strBytes_word v j hj
+    have get : (encodeWords L (.str n) v)[j + 1]? =
+        some (BitVec.ofInt 64 (strGetW v (j : Int)).n) := by
+      simpa only [encodeWords, if_neg (show ¬ n ≤ 1 by omega)] using strBytes_word v j hj
     have range : j + 1 < (encodeWords L (.str n) v).length := by
       rw [encodeWords_length]; simp only [valueWords, if_neg (show ¬ n ≤ 1 by omega)]; omega
-    change (encodeWords L (.str n) v)[j + 1]? = _ at get
     rw [List.getElem?_eq_getElem range] at get
     rw [slotVal_rd frame (by omega)] at read
     rw [show a + 1 + j = a + (j + 1) by omega, Option.some.inj read, Option.some.inj get]
