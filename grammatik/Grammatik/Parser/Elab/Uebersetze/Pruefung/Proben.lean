@@ -50,7 +50,7 @@ example : uChecks [] [] [probenFn, .checkT probenCheck, .checkT probenCheck] =
 
 /-- The probe elaborates to one function under the generated name. -/
 example : (uProbeFns [] [] [] [] [] [] [] [] [] [] [] [] [] [] 0 ["g"] [probenCheck]).map (List.map (·.name)) =
-    .ok ["p#probe"] := rfl
+    .ok ["p#probe", "p#report#0"] := rfl
 
 /-- A generated name that meets a written function is refused, never merged. -/
 example : uProbeFns [] [] [] [] [] [] [] [] [] [] [] [] [] [] 0 ["p#probe"] [probenCheck] =
@@ -63,14 +63,14 @@ example : uProbeFn [] [] [] [] [] [] [] [] [] [] [] [] [] [] 0 { probenCheck wit
 /-- A unit with a check elaborates, carrying its generated probe. -/
 example : (elabU [probenFn, .checkT probenCheck]).isOk = true := rfl
 
-example : (elabU [probenFn, .checkT probenCheck]).map (fun u => u.fns.length) = .ok 3 := rfl
+example : (elabU [probenFn, .checkT probenCheck]).map (fun u => u.fns.length) = .ok 4 := rfl
 
 example : (elabU [probenFn, .checkT probenCheck]).map (fun u => u.checks.map (·.probe)) =
-    .ok ["p#probe"] := rfl
+    .ok ["p#probe", "p#report#0"] := rfl
 
 /-- The wrapper travels with the probe. -/
 example : (elabU [probenFn, .checkT probenCheck]).map (fun u => u.fns.map (·.name)) =
-    .ok ["g", "p#probe", "p#tor#g"] := rfl
+    .ok ["g", "p#probe", "p#report#0", "p#tor#g"] := rfl
 
 /-- The mark table carries the check's Duty. -/
 example : (elabU [probenFn, .checkT probenCheck]).map (fun u => u.marken) = .ok ["p#duty"] := rfl
