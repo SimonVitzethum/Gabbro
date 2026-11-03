@@ -140,9 +140,11 @@ theorem wideNarrow_case_zeuge :
       (retN 41 (by decide) (by decide)) .nil)).isOk = true := by
   decide +kernel
 
-/-- The value never fits an unrepresentable source interval or bound. -/
-theorem narrow_refused_zeuge :
-    lowEnd 1 (fun _ => 0) (layU u (fun _ => none) 0) (⟨[], none, 0, 0, 0⟩ : FrameLayout) ([], 0) [] (0, 0) (narrowEnd (2^63)) = none := by
+/-- A source value beyond the signed word takes the ordinary error branch;
+    its representable multiword encoding no longer refuses compilation. -/
+theorem wide_source_narrow_zeuge :
+    (imageOf (narrowEnd (2^63))).isOk = true ∧
+    (blockImageOf (narrowBlock (-(2^80)))).isOk = true := by
   decide +kernel
 
 end Gabbro.Stage0.Senke.ControlProbe
