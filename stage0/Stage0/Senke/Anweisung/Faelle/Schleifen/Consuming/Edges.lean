@@ -167,16 +167,7 @@ theorem Ready.same (h : x.Ready m σ ρ) {a b : Zahl 0 (D.count x.table - 1)}
       (g := fun a b => some (Runner.IR.bool (a == b))) rfl (by decide) rfl)
     (by consume_arith x) ctx (by omega) (by have := x.scratch; have := x.layout.ks; omega)
   refine ⟨m', run, frame, kept, ready, localFrame, ?_⟩
-  have eq : (BitVec.ofInt 64 a.n == BitVec.ofInt 64 b.n) = decide (a.n = b.n) := by
-    simp only [beq_iff_eq, decide_eq_decide]
-    constructor
-    · intro equal
-      have value := congrArg BitVec.toInt equal
-      rw [BitVec.toInt_ofInt_of_le_of_lt ae.1 ae.2,
-        BitVec.toInt_ofInt_of_le_of_lt be.1 be.2] at value
-      exact value
-    · exact congrArg (BitVec.ofInt 64)
-  simpa only [eq] using read
+  simpa only [beq_in ae be] using read
 
 end Image
 end Gabbro.Stage0.Senke.Consuming
