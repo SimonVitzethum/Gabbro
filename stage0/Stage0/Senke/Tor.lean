@@ -131,6 +131,14 @@ def torC (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (a : D.Ax) (args : Args D Γ
     else none
   | none => none
 
+/-- Every emitted request names a selected profile binding. -/
+theorem torC_bound {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {a : D.Ax}
+    {args : Args D Γ Λ (D.aparams a)} {s reserved top : Nat} {code : List II}
+    (emitted : torC L a args s reserved = some (code, top)) : L.tor a ≠ none := by
+  intro absent
+  simp only [torC, absent] at emitted
+  cases emitted
+
 /-- The call of a gate without a reason channel: its raw answer is the kernel's word. -/
 def torC0 (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (s : Nat) (reserved : Nat := 0) :
     Option (List II × Nat) :=
@@ -162,6 +170,8 @@ def chkC : Option Ty → Nat → Option (List II)
     else none
   | some .bool, s => some [ci 1 (s + 1) 0 0, ci 14 s s (s + 1),
       ci 1 (s + 1) 0 0, ci 14 s s (s + 1)]
+  | some (.ref _), s => some (loC s 0)
+  | some (.ptr _), s => some [ci 1 s 0 0]
   | some .never, s => some (stopC 110 s)
   | _, _ => none
 
@@ -169,7 +179,7 @@ def chkC : Option Ty → Nat → Option (List II)
     Boolean payloads are normalized after errno dispatch. -/
 def fallibleTy : Ty → Bool
   | .int lo _ => decide (0 ≤ lo)
-  | .bool => true
+  | .bool | .ref _ | .ptr _ => true
   | _ => false
 
 /-- This register profile materializes every returning result in exactly one word. -/
@@ -182,6 +192,8 @@ theorem chkC_width {τ : Ty} {s : Nat} {c : List II}
     · assumption
     · cases h
   | bool => rfl
+  | ref _ => rfl
+  | ptr _ => rfl
   | never => rfl
   | _ => simp [chkC] at h
 
