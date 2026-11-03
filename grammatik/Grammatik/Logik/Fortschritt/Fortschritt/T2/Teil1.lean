@@ -100,7 +100,7 @@ theorem fort_abb {M : RufMaschineG D} {t : Faden} (hP : PrueftG O passes M t) (w
   | verbrauchRest tb member edge inv bound mass body nr vor k' =>
       cases ρ with
       | cons i ρ₀ =>
-          have hp := hP.2.2.2.2.2.2.2 _ _ _ _ ρ₀ tb member edge inv bound mass body nr vor k'
+          have hp := hP.2.2.2.2.2.2.2.1 _ _ _ _ ρ₀ tb member edge inv bound mass body nr vor k'
             rest i w hx
           obtain ⟨neum, hneum, _⟩ := Erw.lese (M.weltVon t) Λ1 mass.orte
           cases w with
@@ -312,7 +312,9 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
         · exact fort_schritt (w_blatt rfl s rest ρ hbl.1 hx hΛ σ' ρ' hst herw)
         · refine fort_hw ⟨l, Γ, Λ, ρ, _, hx, ?_⟩
           simp only [Zielsatz.RestHalt]
-          exact ⟨hbl.1, h, hh⟩
+          cases s <;> first
+            | exact ⟨hbl.1, h, hh⟩
+            | simp only [Stmt.istBlatt, Bool.false_eq_true, false_and] at hbl
         · exact absurd he (hP.2.2.2.1 l Γ Λ _ ρ s rest hbl.1 hx e)
       · cases s with
         | call g args hp hr => exact fort_schritt (w_rufEnde rfl g args hp hr rest ρ hx hΛ)
