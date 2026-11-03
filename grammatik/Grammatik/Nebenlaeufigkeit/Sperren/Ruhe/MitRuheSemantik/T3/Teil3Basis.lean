@@ -30,7 +30,7 @@ theorem execBlock_ru_check {V : Vertrag D}
     : execBlock O.mitRuhe passes R' (ruB (.check c sonst rest : Block D V l Γ Λ Λ')) (worldR σ) (envR ρ) = ausR (execBlock O passes R (.check c sonst rest : Block D V l Γ Λ Λ') σ ρ) :=
   by
   simp only [ruB, execBlock]
-  rw [ruE_orte, lese_worldR, eval_ru]
+  erw [ruE_orte, lese_worldR, eval_ru]
   cases h : (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ : Bool) with
   | false =>
       simp only [wahr?, valR_bool, h, Bool.false_eq_true, if_false]
@@ -61,7 +61,7 @@ theorem execBlock_ru_float {V : Vertrag D}
     : execBlock O.mitRuhe passes R' (ruB (.float (l1 := zi_l1) (h1 := zi_h1) (l2 := zi_l2) (h2 := zi_h2) op a b lo hi rest : Block D V l Γ Λ Λ')) (worldR σ) (envR ρ) = ausR (execBlock O passes R (.float (l1 := zi_l1) (h1 := zi_h1) (l2 := zi_l2) (h2 := zi_h2) op a b lo hi rest : Block D V l Γ Λ Λ') σ ρ) :=
   by
   simp only [ruB, execBlock]
-  rw [orte2, lese_worldR, eval_ru, eval_ru]
+  erw [orte2, lese_worldR, eval_ru, eval_ru]
   try simp only [valR_int, valR_opt, valR_fl, valR_fnptr]
   cases gleitPasst lo hi (gleitRechne op
       (eval (σ.lese Λ (a.orte ++ b.orte)) a (σ.lese Λ (a.orte ++ b.orte)) ρ).x
@@ -111,7 +111,7 @@ theorem execBlock_ru_floatOf {V : Vertrag D}
     : execBlock O.mitRuhe passes R' (ruB (.floatOf (l1 := zi_l1) (h1 := zi_h1) e lo hi rest : Block D V l Γ Λ Λ')) (worldR σ) (envR ρ) = ausR (execBlock O passes R (.floatOf (l1 := zi_l1) (h1 := zi_h1) e lo hi rest : Block D V l Γ Λ Λ') σ ρ) :=
   by
   simp only [ruB, execBlock]
-  rw [ruE_orte, lese_worldR, eval_ru]
+  erw [ruE_orte, lese_worldR, eval_ru]
   try simp only [valR_int, valR_opt, valR_fl, valR_fnptr]
   cases gleitPasst lo hi (gleitAusInt (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n) with
   | none => rfl
@@ -139,7 +139,7 @@ theorem execBlock_ru_floatNarrow {V : Vertrag D}
     : execBlock O.mitRuhe passes R' (ruB (.floatNarrow (l1 := zi_l1) (h1 := zi_h1) e lo hi sonst rest : Block D V l Γ Λ Λ')) (worldR σ) (envR ρ) = ausR (execBlock O passes R (.floatNarrow (l1 := zi_l1) (h1 := zi_h1) e lo hi sonst rest : Block D V l Γ Λ Λ') σ ρ) :=
   by
   simp only [ruB, execBlock]
-  rw [ruE_orte, lese_worldR, eval_ru]
+  erw [ruE_orte, lese_worldR, eval_ru]
   try simp only [valR_int, valR_opt, valR_fl, valR_fnptr]
   cases gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x with
   | none => rw [← endR_zuAusgang, ih_execEnd_ru_sonst _ ρ]

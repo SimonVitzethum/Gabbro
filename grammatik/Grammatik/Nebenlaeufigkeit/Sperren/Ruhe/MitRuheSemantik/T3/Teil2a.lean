@@ -47,7 +47,7 @@ theorem execStmt_ru_publish {V : Vertrag D}
     : execStmt O.mitRuhe passes R' (ruS (.publish g e payload hp hw hL : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ) = ausR (execStmt O passes R (.publish g e payload hp hw hL : Stmt D V l Γ Λ _) σ ρ) :=
   by
   simp only [ruS, execStmt]
-  rw [ruE_orte, lese_worldR, eval_ru, schreibGlob_worldR]
+  erw [ruE_orte, lese_worldR, eval_ru, schreibGlob_worldR]
   rfl
 
 set_option linter.unusedSectionVars false in
@@ -130,7 +130,7 @@ theorem execBlock_ru_bind {V : Vertrag D}
     : execBlock O.mitRuhe passes R' (ruB (.bind (τ := zi_τ) e rest : Block D V l Γ Λ Λ')) (worldR σ) (envR ρ) = ausR (execBlock O passes R (.bind (τ := zi_τ) e rest : Block D V l Γ Λ Λ') σ ρ) :=
   by
   simp only [ruB, execBlock]
-  rw [ruE_orte, lese_worldR, eval_ru, ← ausR_schrumpf, ← ih_execBlock_ru_rest _ _]
+  erw [ruE_orte, lese_worldR, eval_ru, ← ausR_schrumpf, ← ih_execBlock_ru_rest _ _]
   rfl
 
 set_option linter.unusedSectionVars false in

@@ -28,7 +28,7 @@ theorem execEnd_ru_bind {V : Vertrag D}
     : execEnd O.mitRuhe passes R' (ruEnd (.bind (τ := zi_τ) e rest : Endblock D V l Γ Λ)) (worldR σ) (envR ρ) = endR (execEnd O passes R (.bind (τ := zi_τ) e rest : Endblock D V l Γ Λ) σ ρ) :=
   by
   simp only [ruEnd, execEnd]
-  rw [ruE_orte, lese_worldR, eval_ru, ← endR_schrumpf, ← ih_execEnd_ru_rest _ _]
+  erw [ruE_orte, lese_worldR, eval_ru, ← endR_schrumpf, ← ih_execEnd_ru_rest _ _]
   rfl
 
 set_option linter.unusedSectionVars false in

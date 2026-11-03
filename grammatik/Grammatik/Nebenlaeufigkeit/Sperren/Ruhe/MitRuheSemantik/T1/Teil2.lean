@@ -47,7 +47,8 @@ theorem einpassen_ru (z : Int → Option D.Fn) (z' : Int → Option D.mitRuhe.Fn
       · rfl
       · split <;> rfl
   | .sum cs, n => by
-      exact summePasst_relocate (fun k => k + 1) id (fun _ v => ⟨some v.1, v.2⟩) cs n
+      exact summePasst_relocate (D := D) (D' := D.mitRuhe)
+        (fun k => k + 1) id (fun _ v => ⟨some v.1, v.2⟩) cs n
   | .why m, n => by
       show einpassen (D := D.mitRuhe) z' (.why m) n =
         Option.map (valR (.why m)) (einpassen (D := D) z (.why m) n)

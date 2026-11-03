@@ -222,7 +222,9 @@ theorem execBlock_ru_narrow {V : Vertrag D}
     : execBlock O.mitRuhe passes R' (ruB (.narrow (lo := zi_lo) (hi := zi_hi) e lo' hi' sonst rest : Block D V l Γ Λ Λ')) (worldR σ) (envR ρ) = ausR (execBlock O passes R (.narrow (lo := zi_lo) (hi := zi_hi) e lo' hi' sonst rest : Block D V l Γ Λ Λ') σ ρ) :=
   by
   simp only [ruB, execBlock]
-  simp only [ruE_orte, lese_worldR, eval_ru, valR_int]
+  simp only [ruE_orte, lese_worldR]
+  erw [eval_ru]
+  simp only [valR_int]
   by_cases hc : lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
       (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi'
   · erw [dif_pos hc, dif_pos hc]
@@ -249,7 +251,9 @@ theorem execBlock_ru_narrowRequired {V : Vertrag D}
     : execBlock O.mitRuhe passes R' (ruB (.narrowRequired (lo := zi_lo) (hi := zi_hi) e lo' hi' rest : Block D V l Γ Λ Λ')) (worldR σ) (envR ρ) = ausR (execBlock O passes R (.narrowRequired (lo := zi_lo) (hi := zi_hi) e lo' hi' rest : Block D V l Γ Λ Λ') σ ρ) :=
   by
   simp only [ruB, execBlock]
-  simp only [ruE_orte, lese_worldR, eval_ru, valR_int]
+  simp only [ruE_orte, lese_worldR]
+  erw [eval_ru]
+  simp only [valR_int]
   by_cases hc : lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
       (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi'
   · erw [dif_pos hc, dif_pos hc]
