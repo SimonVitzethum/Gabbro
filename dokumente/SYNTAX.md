@@ -262,20 +262,19 @@ entrydecl  = "entry" ident [ "vector" constexpr ] [ "via" ident ] "arch" ident "
                entryextra
                "dispatch" path ";"
              "}" ;
-entrustdecl = "entrust" ident "at" ident "arch" ident "{"
-                "regs" "in" "{" [ regbind { "," regbind } [ "," ] ] "}"
-                "stack"  ident
-                "assume" ident ";"
-              "}" ;
-(* Bounded userspace meaning: `at` names a code-region capability, never a
-   computed address. Guest interaction is an ordinary fallible call to an
-   explicitly bound isolation service with declared Gabbro requires/ensures;
-   isolation and the implementation are user-logic duties. Guest instructions
-   are never executed as G code. `assume` can name genuine hardware only and
-   cannot assert OS isolation. Register-state and privileged handover remain
-   excluded. The current surface has no service-binding field yet, so canonical
-   source compilation refuses it by name; the typed model is not a completed
-   source-to-IR feature. *)
+entrustdecl = "entrust" ident "at" ident "arch" ident "via" ident ";" ;
+(* `at` names an immutable code-region capability, never a computed address.
+   `via` resolves one declared C08 foreign binding with an explicit failure
+   channel and requires/ensures mentioning the region. The item defines an
+   ordinary wrapper with the binding's parameter, result and reason types;
+   calling it forwards through the existing fallible foreign-call binder.
+   Isolation and implementation correctness are software user-logic duties
+   on that contract; guest instructions receive no Gabbro body guarantee.
+   The Lean source path exports software provenance without a hardware
+   assumption. Additional region arguments need real owner resources and
+   remain refused while the source unit has no owner export. Historical
+   register/stack/assume blocks are parsed only to report named exclusions;
+   they cannot establish software isolation. Unknown ABIs are refused. *)
 entryextra = "stack" ident [ "per" "cpu" ] [ "ist" constexpr ]
              [ "nested" ( "never" | "masked" | "bounded" constexpr ) ] ;
 (* Checked since lane S5 («SS-1», §12.1): the user side of a
