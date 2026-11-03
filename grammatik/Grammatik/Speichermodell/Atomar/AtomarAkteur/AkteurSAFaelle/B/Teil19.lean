@@ -280,12 +280,13 @@ theorem akteurSA_dannBindCallIndElse {D : Deklaration} {P : Programm D} {O : Ora
                       (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
                     (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ) :
                   RufRahmenG D } :: (M.faeden u).stapel,
-              kopf := { f := g, rho := rho, s0 := s0,
-                rest := (⟨false, (⟨D.params g, (⟨Signatur.anfang D (D.signatur g), (rho, GRest.ende (P.rumpf g))⟩ :
-                  (Λ : List (Res D)) × Env D (D.params g) × GRest D (vertragVon D g) false (D.params g) Λ)⟩ :
-                  (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D g) false Γ Λ)⟩ :
-                  (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D g) l Γ Λ) :
-                RufRahmenG D },
+              kopf :=
+                { f := g, rho := rho, s0 := s0,
+                  rest := (⟨false, (⟨D.params g, (⟨Signatur.anfang D (D.signatur g), (rho, GRest.ende (P.rumpf g))⟩ :
+                    (Λ : List (Res D)) × Env D (D.params g) × GRest D (vertragVon D g) false (D.params g) Λ)⟩ :
+                    (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D g) false Γ Λ)⟩ :
+                    (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D g) l Γ Λ) :
+                  RufRahmenG D },
               spur := s0.spur, log := RufEreignisF.eintritt g rho s0 :: (M.faeden u).log : RufFadenG D },
           lauf := M.lauf ++ rufEigenG u neu, start := M.start : RufMaschineG D }.faeden u)
       ({ speicher := M.speicher,
@@ -298,12 +299,13 @@ theorem akteurSA_dannBindCallIndElse {D : Deklaration} {P : Programm D} {O : Ora
                       (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
                     (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ) :
                   RufRahmenG D } :: (M.faeden u).stapel,
-              kopf := { f := g, rho := rho, s0 := s0,
-                rest := (⟨false, (⟨D.params g, (⟨Signatur.anfang D (D.signatur g), (rho, GRest.ende (P.rumpf g))⟩ :
-                  (Λ : List (Res D)) × Env D (D.params g) × GRest D (vertragVon D g) false (D.params g) Λ)⟩ :
-                  (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D g) false Γ Λ)⟩ :
-                  (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D g) l Γ Λ) :
-                RufRahmenG D },
+              kopf :=
+                { f := g, rho := rho, s0 := s0,
+                  rest := (⟨false, (⟨D.params g, (⟨Signatur.anfang D (D.signatur g), (rho, GRest.ende (P.rumpf g))⟩ :
+                    (Λ : List (Res D)) × Env D (D.params g) × GRest D (vertragVon D g) false (D.params g) Λ)⟩ :
+                    (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D g) false Γ Λ)⟩ :
+                    (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D g) l Γ Λ) :
+                  RufRahmenG D },
               spur := s0.spur, log := RufEreignisF.eintritt g rho s0 :: (M.faeden u).log : RufFadenG D },
           lauf := M.lauf ++ rufEigenG u neu, start := M.start : RufMaschineG D }.weltVon u) ∧
       LogOk P
@@ -317,12 +319,13 @@ theorem akteurSA_dannBindCallIndElse {D : Deklaration} {P : Programm D} {O : Ora
                       (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
                     (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ) :
                     RufRahmenG D } :: (M.faeden u).stapel,
-                kopf := { f := g, rho := rho, s0 := s0,
-                  rest := (⟨false, (⟨D.params g, (⟨Signatur.anfang D (D.signatur g), (rho, GRest.ende (P.rumpf g))⟩ :
-                    (Λ : List (Res D)) × Env D (D.params g) × GRest D (vertragVon D g) false (D.params g) Λ)⟩ :
-                    (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D g) false Γ Λ)⟩ :
-                    (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D g) l Γ Λ) :
-                  RufRahmenG D },
+                kopf :=
+                  { f := g, rho := rho, s0 := s0,
+                    rest := (⟨false, (⟨D.params g, (⟨Signatur.anfang D (D.signatur g), (rho, GRest.ende (P.rumpf g))⟩ :
+                      (Λ : List (Res D)) × Env D (D.params g) × GRest D (vertragVon D g) false (D.params g) Λ)⟩ :
+                      (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D g) false Γ Λ)⟩ :
+                      (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D g) l Γ Λ) :
+                    RufRahmenG D },
                 spur := s0.spur, log := RufEreignisF.eintritt g rho s0 :: (M.faeden u).log : RufFadenG D },
             lauf := M.lauf ++ rufEigenG u neu, start := M.start : RufMaschineG D }.faeden u).log := by
   subst hs0 hrho
@@ -356,11 +359,11 @@ theorem akteurSA_dannBindCallIndElse {D : Deklaration} {P : Programm D} {O : Ora
       exact ⟨hks.1.2, hss.1.2, hks.2, hss.2, hk⟩)
     (fun O' U A R σ κ e hgκ hκ h => by
       rw [semHA_dann]
-      simp only [execBlockHA, hκ, hev κ hgκ, h]
+      simp only [execBlockHA, indSonst, hκ, hev κ hgκ, h]
       exact weiterHA_logik S O' U A passes R _ e)
     (fun O' U A R σ κ hgκ hκ => by
       rw [semHA_dann]
-      simp only [execBlockHA, hκ, hev κ hgκ]
+      simp only [execBlockHA, indSonst, hκ, hev κ hgκ]
       cases R g κ (umsig hg (evalArgs κ args κ ρ)) with
       | ok σa v =>
           refine ⟨fun hw => by simp only [RufRahmenG.wartend, GRest.wartend, Bool.true_eq_false] at hw,
@@ -373,6 +376,7 @@ theorem akteurSA_dannBindCallIndElse {D : Deklaration} {P : Programm D} {O : Ora
           intro _ _ _ _ _ _ _ _ _ _ hc hn
           cases hc
           rw [semHA_alsBlock_schrumpf]
+          simp only [grundSig_eq_cast hg hn r]
           exact ZErgG.folgt_refl _
       | logik e => trivial
       | hardware e => trivial)
