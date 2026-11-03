@@ -26,6 +26,8 @@ theorem g001Stmt_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       g001Stmt_korrekt_ite (c := c) (t := t) (e := e) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001_korrekt_t := g001_korrekt t) (ih_g001_korrekt_e := g001_korrekt e)
   | .assignThru p t ht f i e hw hL, zr_h, o, zr_ho =>
       g001Stmt_korrekt_assignThru (p := p) (t := t) (ht := ht) (f := f) (i := i) (e := e) (hw := hw) (hL := hL) (zr_h := zr_h) (o := o) (zr_ho := zr_ho)
+  | .assignThruOwn p t ht f i e m s ho he hg hw hL, zr_h, o, zr_ho =>
+      g001Stmt_korrekt_assignThruOwn (p := p) (t := t) (ht := ht) (f := f) (i := i) (e := e) (m := m) (s := s) (ho := ho) (he := he) (hg := hg) (hw := hw) (hL := hL) (zr_h := zr_h) (o := o) (zr_ho := zr_ho)
   | .assignSlotRef r t ht ho f e hw hL, zr_h, o, zr_ho =>
       g001Stmt_korrekt_assignSlotRef (r := r) (t := t) (ht := ht) (ho := ho) (f := f) (e := e) (hw := hw) (hL := hL) (zr_h := zr_h) (o := o) (zr_ho := zr_ho)
   | .assignGlob g e hw hL, zr_h, o, zr_ho =>
