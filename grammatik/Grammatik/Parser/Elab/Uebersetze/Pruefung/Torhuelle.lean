@@ -30,15 +30,15 @@ set_option maxRecDepth 100000
 def uMarken (ms : List SItemTief) (checks : List UCheck) : List String :=
   uEindeutig ((ms.filterMap fun | .typeT flags n _ _ _ => if flags.any (fun f => strEq f "linear") then some n else none | _ => none) ++ checks.map fun c => c.duty)
 
-/-- Every consumed or produced mark of every function names a member of the mark table. -/
+/-- Every consumed, produced or borrowed mark of every function names a member of the mark table. -/
 def uMarkenPruefAux (marken : List String) : List UFn → Except String Unit
   | [] => .ok ()
   | f :: rest =>
-    match (f.nimmt ++ f.gibt).find? (fun m => !(marken.any (fun n => strEq n m))) with
+    match (f.nimmt ++ f.gibt ++ f.leiht).find? (fun m => !(marken.any (fun n => strEq n m))) with
     | some m => .error ("mark unknown: " ++ m)
     | none => uMarkenPruefAux marken rest
 
-/-- The mark check of the unit: every `nimmt`/`gibt` names a declared mark. -/
+/-- The mark check of the unit: every `nimmt`/`gibt`/`leiht` names a declared mark. -/
 def uMarkenPruef (marken : List String) (fns : List UFn) : Except String Unit :=
   uMarkenPruefAux marken fns
 
@@ -55,6 +55,26 @@ def uGibtPruefAux (owners : List String) : List UFn → Except String Unit
 /-- The owner-production check of the unit: no `gibt` names a table owner. -/
 def uGibtPruef (owners : List String) (fns : List UFn) : Except String Unit :=
   uGibtPruefAux owners fns
+
+/-- A borrowed mark is a table owner, borrowed alone (C12): every `leiht` names a
+    table's `owner` mark, and no `leiht` names a `nimmt` of the same function
+    (a call-scoped loan is disjoint from ordinary consumption: `OwnerFlow.Valid`
+    keeps one occurrence per owner identity across stages, `RufPasst.ownerReady`
+    the disjointness). Both violations are refused by name. -/
+def uLeihtPruefAux (owners : List String) : List UFn → Except String Unit
+  | [] => .ok ()
+  | f :: rest =>
+    match f.leiht.find? (fun m => !(owners.any (fun o => strEq o m))) with
+    | some m => .error ("loan without owner: " ++ m)
+    | none =>
+      match f.leiht.find? (fun m => f.nimmt.any (fun n => strEq n m)) with
+      | some m => .error ("mark both consumed and borrowed: " ++ m)
+      | none => uLeihtPruefAux owners rest
+
+/-- The owner-loan check of the unit: every `leiht` names a table owner no
+    `nimmt` of the same function takes. -/
+def uLeihtPruef (owners : List String) (fns : List UFn) : Except String Unit :=
+  uLeihtPruefAux owners fns
 
 /-- The wrapper of gate `gate` of check `cname`: it cannot collide with a written
     function, since `#` never stands in a source identifier. -/
