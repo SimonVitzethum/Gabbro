@@ -52,14 +52,17 @@ theorem rufKopf_ohne {α : Type} (toks : List Token)
           have heq := strKlingt _ _ hs
           subst s
           exact (hgeneric tail rfl).elim
-        · simp only [hs, ite_false]
-    · simp only [hs, ite_false]
+        · have hfalse : strEq s "[" = false := Bool.eq_false_iff.mpr hs
+          simp only [hfalse, Bool.false_eq_true, ite_false]
+    · have hfalse : strEq s "::" = false := Bool.eq_false_iff.mpr hs
+      simp only [hfalse, Bool.false_eq_true, ite_false]
       by_cases hs : strEq s "(" = true
       · simp only [hs, ite_true]
         have heq := strKlingt _ _ hs
         subst s
         exact (hmiss rest rfl).elim
-      · simp only [hs, ite_false]
+      · have hfalse : strEq s "(" = false := Bool.eq_false_iff.mpr hs
+        simp only [hfalse, Bool.false_eq_true, ite_false]
 
 /-- Word-list equality is sound. -/
 theorem beqWorte_klingt : ∀ (a b : List String), beqWorte a b = true → a = b := by
