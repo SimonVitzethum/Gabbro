@@ -346,7 +346,7 @@ theorem akteurG_dannNextVerbrauch {D : Deklaration} {P : Programm D} {O : Orakel
   refine ⟨fadenG_lokal hF hhead ρ (.verbrauch t member edge inv bound mass body rest k) σm.spur
     (fun σ hg hok => ?_), hL⟩
   obtain ⟨_, _, hTR⟩ := hok
-  obtain ⟨hmem, hedge, hinv, hmass, hb, hbS, hk⟩ := hTR
+  obtain ⟨hmem, hedge, hinv, hmass, hb, hbS, hk⟩ := id hTR
   have hm'' : (eval (σ.lese Λ mass.orte) mass (σ.lese Λ mass.orte) ρ).n = m' := by
     have hg1 : GleichAuf (fussOrteG P (M.faeden u).kopf.f) (σ.lese Λ mass.orte) σm := by
       rw [hsm]; exact hg.lese Λ Λ mass.orte mass.orte
