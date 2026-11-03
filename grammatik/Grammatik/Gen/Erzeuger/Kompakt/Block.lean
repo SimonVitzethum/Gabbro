@@ -114,6 +114,8 @@ theorem blockS_rep (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ Λ
         mem_mitSome he <| Sz.mem_wenn hw <| Sz.mem_wenn hg <| Sz.mem_wenn hd <| Sz.mem_wenn hgd <|
         Sz.mem_bindR hargs hr' <| Sz.mem_pure _) (by omega)
     · glfertig
+  | bindAxiomOpt => simp only [groesseBlock] at hu; omega
+  | bindAxiomOptElse => simp only [groesseBlock] at hu; omega
   | bindAxiomElse a args he hr hw hg hd hgd err rest =>
     simp only [groesseBlock] at hu hE hS hB hN hO
     obtain ⟨err', herrm, ⟨_, _, _, _, _, _⟩⟩ := hO.en _ _ _ err (by omega)
@@ -344,6 +346,8 @@ theorem endS_rep (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ Λ))
         mem_mitSome he <| Sz.mem_wenn hw <| Sz.mem_wenn hg <| Sz.mem_wenn hd <| Sz.mem_wenn hgd <|
         Sz.mem_bindR hargs hr <| Sz.mem_pure _) (by omega)
     · glfertig
+  | bindAxiomOpt => simp only [groesseEnd] at hu; omega
+  | bindAxiomOptElse => simp only [groesseEnd] at hu; omega
   | bindAxiomElse a args he hr hw hg hd hgd err rest =>
     simp only [groesseEnd] at hu hE hS hO
     obtain ⟨err', herrm, ⟨_, _, _, _, _, _⟩⟩ := hO.en _ _ _ err (by omega)

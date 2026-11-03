@@ -72,6 +72,11 @@ def faelle : List (Option Ty) → String
   | some τ :: cs => s!"(some {typ τ} :: {faelle cs})"
 end
 
+/-- A result option as a closed Lean type expression. -/
+def ergebnisTyp : Option Ty → String
+  | none => "none"
+  | some τ => s!"(some {typ τ})"
+
 /-- A closed integer builtin (lane C13). -/
 def ib : {ts : List Ty} → {τ : Ty} → IntBuiltin ts τ → String
   | _, _, .addW w => s!"(IntBuiltin.addW {w})"
@@ -211,6 +216,7 @@ def drS (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res 
   | .retry n bis body ueberlauf => do .ok s!"(Stmt.retry (D := z.deklaration) {n} {← drE N bis} {← drB N body} {← drB N ueberlauf})"
   | .forever a inv body => do .ok s!"(Stmt.forever (D := z.deklaration) {fin (N.annahme a) "(z.annahmen + 1)"} {← drE N inv} {← drB N body})"
   | .axiomCall a args _ _ _ _ _ => do .ok s!"(Stmt.axiomCall (D := z.deklaration) {fin (N.ax a) "z.axs.length"} {← drA N args} {bew} {bew} {bew} {bew} {bew})"
+  | .axiomCallElse res a args _ _ _ _ _ err => do .ok s!"(Stmt.axiomCallElse (D := z.deklaration) {ergebnisTyp res} {fin (N.ax a) "z.axs.length"} {← drA N args} {bew} {bew} {bew} {bew} {bew} {← drEnd N err})"
   | .regWrite r _ e => do .ok s!"(Stmt.regWrite (D := z.deklaration) {fin (N.reg r) "z.regs.length"} {bew} {← drE N e})"
   | .transition r _ m _ _ maske bits => .ok s!"(Stmt.transition (D := z.deklaration) {fin (N.reg r) "z.regs.length"} {bew} {fin (N.reg m) "z.regs.length"} {bew} {bew} {zahl maske} {zahl bits})"
   | .publish g e _ _ _ _ => do .ok s!"(Stmt.publish (D := z.deklaration) {fin (N.glob g) "z.globs.length"} {← drE N e} _ rfl {bew} {bew})"
@@ -234,6 +240,8 @@ def drB (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res 
   | .bindCallElse f args _ _ _ err rest => do .ok s!"(Block.bindCallElse (D := z.deklaration) {fin (N.fn f) "z.fns.length"} {← drA N args} {bew} {bew} {bew} {← drEnd N err} {← drB N rest})"
   | .bindAxiom a args _ _ _ _ _ rest => do .ok s!"(Block.bindAxiom (D := z.deklaration) {fin (N.ax a) "z.axs.length"} {← drA N args} {bew} {bew} {bew} {bew} {bew} {← drB N rest})"
   | .bindAxiomElse a args _ _ _ _ _ _ err rest => do .ok s!"(Block.bindAxiomElse (D := z.deklaration) {fin (N.ax a) "z.axs.length"} {← drA N args} {bew} {bew} {bew} {bew} {bew} {bew} {← drEnd N err} {← drB N rest})"
+  | .bindAxiomOpt res a args _ _ _ _ rest => do .ok s!"(Block.bindAxiomOpt (D := z.deklaration) {ergebnisTyp res} {fin (N.ax a) "z.axs.length"} {← drA N args} {bew} {bew} {bew} {bew} {← drB N rest})"
+  | .bindAxiomOptElse res a args _ _ _ _ _ err rest => do .ok s!"(Block.bindAxiomOptElse (D := z.deklaration) {ergebnisTyp res} {fin (N.ax a) "z.axs.length"} {← drA N args} {bew} {bew} {bew} {bew} {bew} {← drEnd N err} {← drB N rest})"
   | .regRead r _ rest => do .ok s!"(Block.regRead (D := z.deklaration) {fin (N.reg r) "z.regs.length"} {bew} {← drB N rest})"
   | .regReadElse r _ zusage sonst rest => do .ok s!"(Block.regReadElse (D := z.deklaration) {fin (N.reg r) "z.regs.length"} {bew} {← drE N zusage} {← drEnd N sonst} {← drB N rest})"
   | .awaits g _ _ _ _ rest => do .ok s!"(Block.awaits (D := z.deklaration) {fin (N.glob g) "z.globs.length"} _ rfl {bew} {bew} {← drB N rest})"
@@ -260,6 +268,8 @@ def drEnd (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)
   | .bindCallElse f args _ _ _ err rest => do .ok s!"(Endblock.bindCallElse (D := z.deklaration) {fin (N.fn f) "z.fns.length"} {← drA N args} {bew} {bew} {bew} {← drEnd N err} {← drEnd N rest})"
   | .bindAxiom a args _ _ _ _ _ rest => do .ok s!"(Endblock.bindAxiom (D := z.deklaration) {fin (N.ax a) "z.axs.length"} {← drA N args} {bew} {bew} {bew} {bew} {bew} {← drEnd N rest})"
   | .bindAxiomElse a args _ _ _ _ _ _ err rest => do .ok s!"(Endblock.bindAxiomElse (D := z.deklaration) {fin (N.ax a) "z.axs.length"} {← drA N args} {bew} {bew} {bew} {bew} {bew} {bew} {← drEnd N err} {← drEnd N rest})"
+  | .bindAxiomOpt res a args _ _ _ _ rest => do .ok s!"(Endblock.bindAxiomOpt (D := z.deklaration) {ergebnisTyp res} {fin (N.ax a) "z.axs.length"} {← drA N args} {bew} {bew} {bew} {bew} {← drEnd N rest})"
+  | .bindAxiomOptElse res a args _ _ _ _ _ err rest => do .ok s!"(Endblock.bindAxiomOptElse (D := z.deklaration) {ergebnisTyp res} {fin (N.ax a) "z.axs.length"} {← drA N args} {bew} {bew} {bew} {bew} {bew} {← drEnd N err} {← drEnd N rest})"
   | .regRead r _ rest => do .ok s!"(Endblock.regRead (D := z.deklaration) {fin (N.reg r) "z.regs.length"} {bew} {← drEnd N rest})"
   | .regReadElse r _ zusage sonst rest => do .ok s!"(Endblock.regReadElse (D := z.deklaration) {fin (N.reg r) "z.regs.length"} {bew} {← drE N zusage} {← drEnd N sonst} {← drEnd N rest})"
   | .awaits g _ _ _ _ rest => do .ok s!"(Endblock.awaits (D := z.deklaration) {fin (N.glob g) "z.globs.length"} _ rfl {bew} {bew} {← drEnd N rest})"
