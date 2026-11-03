@@ -24,6 +24,7 @@ public import Stage0.Senke.Gleit.Round
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik
 open Gleitkomma
+variable [Runner.IR.Kern]
 
 /-! ## The routine triple names the exact sum. -/
 
@@ -217,16 +218,18 @@ theorem softRound_kern (S n d : Nat) (E : Int) (s : Bool)
   unfold rundeBruchKern
   rw [hp53, hfp]
   have c1 : ¬ (f64.emax : Int) < E := by omega
-  have c2 : ¬ E < (f64.emin : Int) - (53 : Int) := by omega
+  have c2 : ¬ E < (f64.emin : Int) - ((53 : Nat) : Int) := by omega
   rw [if_neg c1, if_neg c2, if_pos hlo, hQr]
   by_cases hcar : softRoundMag (softNormQ S) (softNormR S) (softNormDen S) = 2 ^ 53
   · have hlt : ¬ softRoundMag (softNormQ S) (softNormR S) (softNormDen S) < 2 ^ 53 := by omega
     rw [if_neg hlt, if_pos hhi, if_pos hcar]
     have exponent : (E - f64.emin + 2).toNat = (E - f64.emin + 1).toNat + 1 := by
       omega
-    rw [exponent, Nat.sub_self]
+    rw [exponent]
+    simp only [hcar, ite_true, Nat.sub_self]
   · have hlt : softRoundMag (softNormQ S) (softNormR S) (softNormDen S) < 2 ^ 53 := by omega
-    rw [if_pos hlt, if_neg hcar, Nat.add_zero]
+    rw [if_pos hlt]
+    simp only [hcar, ite_false, Nat.add_zero]
 
 /-- The normal replay: on the ordered finite path with a set top bit, the
     kernel `rundeExakt` of the exact sum is the routine's rounded significand
