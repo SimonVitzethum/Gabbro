@@ -231,10 +231,38 @@ theorem RestK.schrumpf_inv {Λ : List (Res D)} {τ : Ty} {k : GRest D V l Γ Λ}
   cases h with
   | schrumpf _ hk => exact hk
 
-theorem RestK.frei_inv {Λ : List (Res D)} {L : D.Lock} {k : GRest D V l Γ Λ}
-    (h : RestK A C (.frei L k)) : RestK A C k := by
+/-- Release markers, with an index-free test (used to invert `RestK` at `frei`). -/
+private def GRest.istFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+    GRest D V l Γ Λ → Bool
+  | .frei .. => true
+  | _ => false
+
+private theorem GRest.istFrei_heq {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ1 Λ2 : List (Res D)}
+    (a : GRest D V l Γ Λ1) (b : GRest D V l Γ Λ2) (h : Λ1 = Λ2) (hab : HEq a b) :
+    a.istFrei = b.istFrei := by
+  subst h
+  exact congrArg _ (eq_of_heq hab)
+
+private theorem RestK.frei_inv_aux {Λ' : List (Res D)} {r : GRest D V l Γ Λ'}
+    (h : RestK A C r) {Λ : List (Res D)} {L : D.Lock} {k : GRest D V l Γ Λ}
+    (hΛ : Λ' = Res.held L :: Λ) (hr : HEq r (GRest.frei L k)) : RestK A C k := by
   cases h with
-  | frei _ _ hk => exact hk
+  | frei L' k' hk =>
+      injection hΛ with h1 h2
+      injection h1 with h3
+      subst h3
+      subst h2
+      have h4 := eq_of_heq hr
+      cases h4
+      exact hk
+  | _ =>
+      exfalso
+      have := GRest.istFrei_heq _ _ hΛ hr
+      simp [GRest.istFrei] at this
+
+theorem RestK.frei_inv {Λ : List (Res D)} {L : D.Lock} {k : GRest D V l Γ Λ}
+    (h : RestK A C (.frei L k)) : RestK A C k :=
+  RestK.frei_inv_aux h rfl HEq.rfl
 
 /-- The head statement of a covered `dann` block is in the fragment. -/
 theorem RestK.dann_cons_kOk {Λ Λ' Λ'' : List (Res D)} {s : Stmt D V l Γ Λ Λ'}
