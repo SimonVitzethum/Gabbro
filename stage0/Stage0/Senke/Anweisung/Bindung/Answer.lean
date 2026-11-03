@@ -9,18 +9,19 @@ variable [Kern] {D : Deklaration} {L : Lay D}
 
 /-- The result check implements canonical decoding, including Boolean
     normalization. Its output may differ from the raw answer word. -/
-theorem chkAnswer_ok {τ : Ty} {s reserved : Nat} {c : List II}
+theorem chkAnswer_ok {e : Option Ty} {τ : Ty} (he : e = some τ) {s reserved : Nat} {c : List II}
     {z : Int → Option D.Fn} (h : chkC (some τ) s = some c)
     {m : Runner.Mem} {pc fp : Runner.W} {K : Nat} {Γ : Ctx}
     {ρ : Env D Γ} {w : Runner.W}
     (hp : PreS L m pc fp K s c ρ reserved) (room : s + 10 ≤ K)
     (input : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some w) :
-    match einpassenErg z (some τ) w.toInt with
+    match einpassenErg z e w.toInt with
     | some v => ∃ m' w',
         Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧
         Agree fp s K m m' ∧
-        m'.rd64 (slot fp (BitVec.ofNat 64 s)) = some w' ∧ Enc L τ v w'
+        m'.rd64 (slot fp (BitVec.ofNat 64 s)) = some w' ∧ Enc L τ (ergWert he v) w'
     | none => Stops ⟨pc, fp⟩ m 110 := by
+  subst e
   cases τ with
   | int lo hi =>
     have test := chkC_ok h (hp.up (by omega)) room input
@@ -95,12 +96,14 @@ theorem fallible_hit {z : Int → Option D.Fn} {e : Option Ty} {n : Nat}
 
 /-- All admitted scalar success types share the same canonical decoder after
     an errno miss. The integer rule retains its nonnegative lower bound. -/
-theorem fallible_decode {z : Int → Option D.Fn} {τ : Ty} {n : Nat}
+theorem fallible_decode {z : Int → Option D.Fn} {e : Option Ty} {τ : Ty} {n : Nat}
+    (he : e = some τ)
     (accepted : fallibleTy τ = true) (positive : 0 < n)
     {b : TorB} (valid : fehlGut n b.fehler = true) (w : Runner.W)
     (miss : b.fehler.find? (fun x => x.1 == w.toInt) = none) :
-    sonstPasst z (some τ) n (rohW b n w) =
-      (einpassenErg z (some τ) w.toInt).map Sum.inl := by
+    sonstPasst z e n (rohW b n w) =
+      (einpassenErg z e w.toInt).map Sum.inl := by
+  subst e
   cases τ with
   | int lo hi =>
     have lower : 0 ≤ lo := of_decide_eq_true accepted
