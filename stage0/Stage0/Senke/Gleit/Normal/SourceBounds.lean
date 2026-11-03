@@ -88,8 +88,8 @@ theorem softAlignedMagnitude_bounds (sa sb : Bool) (l r e f : Nat)
     have leading := different (by omega)
     have jb : j ≤ 2 ^ 54 := by
       rcases certificate with exactValue | ⟨odd, lo, hi⟩
-      · change r * 8 = j * 2 ^ gap at exactValue.2
-        nlinarith
+      · have exactR : r * 8 = j * 2 ^ gap := exactValue.2
+        nlinarith [exactR]
       · change (j - 1) * 2 ^ gap < r * 8 at lo
         by_cases positive : 0 < j
         · have pred : j - 1 + 1 = j := by omega
