@@ -91,7 +91,19 @@ theorem torElse_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {�
       (Nat.le_refl _) (by omega)
     have hpk : PreS L m2 _ fp Ks (frei Γ reserved) ck ρ reserved :=
       mkPreS (by have := hp.ctx; omega) (by omega) (frameOK_sub hnF.frame hks) hnF.left.code (codeFar_sub2 hnF.left.far hks) hnF.env
-    have checked := chkAnswer_ok (L := L) (z := O.zeiger) he hck hpk htk hw2
+    have valid : ∀ n, τ = .ref n → 0 ≤ w.toInt →
+        ValueValid L (.ref n) (Val.vonZelle w.toInt.toNat) := by
+      intro n type nonnegative
+      have quotient : w.toInt =
+          (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).2 /
+            ((D.agruende a : Int) + 1) := by
+        rw [hroh]
+        simp only [rohW, if_neg (show D.agruende a ≠ 0 by omega),
+          if_neg (show ¬ (-4095 ≤ w.toInt ∧ w.toInt ≤ -1) by omega)]
+        rw [Int.mul_ediv_cancel _ (by omega)]
+      exact TorOK.ref_answer a n (he.trans (congrArg some type)) (torC_bound ht)
+        (σ.fragt (.inl a)) (evalArgs σ args σ ρ) w.toInt (.inr quotient) nonnegative
+    have checked := chkAnswer_ok (L := L) (z := O.zeiger) he hck hpk htk hw2 valid
     have s12 := s1.trans s2
     rw [pc_add] at s12
     have decoded := fallible_decode (z := O.zeiger) he accepted hn hf w found
