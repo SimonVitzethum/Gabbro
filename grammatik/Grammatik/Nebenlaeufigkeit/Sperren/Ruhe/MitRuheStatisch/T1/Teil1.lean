@@ -252,12 +252,18 @@ theorem ruS_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | _, _, _, _, .onWhy _ arms => ruGArms_regs arms
   | _, _, _, _, .call .. => regs_nachΛ _ _
   | _, _, _, _, .callInd .. => regs_nachΛ _ _
+  | _, _, _, _, .callIndElse _ _ _ _ _ err =>
+      (regs_nachΛ _ _).trans ((regs_umΛ _ _).trans (ruEnd_regs err))
   | _, _, _, _, .locks _ _ body => ruB_regs body
   | _, _, _, _, .breaking _ body => ruB_regs body
   | _, _, _, _, .traverse _ _ body => ruB_regs body
+  | _, _, _, _, .consumeTraverse _ _ _ _ _ _ body => ruB_regs body
   | _, _, _, _, .retry _ _ body ueber => kongr₂ (· ++ ·) (ruB_regs body) (ruB_regs ueber)
   | _, _, _, _, .forever _ _ body => ruB_regs body
   | _, _, _, _, .axiomCall .. => rfl
+  | _, _, _, _, .axiomCallElse e _ _ _ _ _ _ _ err => by
+      have ih := ruEnd_regs err
+      cases e <;> exact (regs_nachΛ _ _).trans ((regs_umΛ _ _).trans ih)
   | _, _, _, _, .regWrite .. => rfl
   | _, _, _, _, .transition .. => rfl
   | _, _, _, _, .publish .. => rfl
@@ -265,6 +271,8 @@ theorem ruS_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | _, _, _, _, .retires .. => regs_nachΛ _ _
   | _, _, _, _, .ret .. => rfl
   | _, _, _, _, .retWhy .. => rfl
+  | _, _, _, _, .retScoped .. => rfl
+  | _, _, _, _, .retWhyScoped .. => rfl
   | _, _, _, _, .leave _ => rfl
   | _, _, _, _, .next _ => rfl
 
@@ -275,10 +283,21 @@ theorem ruB_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | _, _, _, _, .bind _ rest => ruB_regs rest
   | _, _, _, _, .bindCall _ _ _ _ _ rest => (regs_vorΛ _ _).trans (ruB_regs rest)
   | _, _, _, _, .bindCallInd _ _ _ _ _ rest => (regs_vorΛ _ _).trans (ruB_regs rest)
+  | _, _, _, _, .bindCallIndElse _ _ _ _ _ err rest =>
+      kongr₂ (· ++ ·) ((regs_umΛ _ _).trans (ruEnd_regs err))
+        ((regs_vorΛ _ _).trans (ruB_regs rest))
   | _, _, _, _, .bindCallElse _ _ _ _ _ err rest =>
       kongr₂ (· ++ ·) ((regs_umΛ _ _).trans (ruEnd_regs err))
         ((regs_vorΛ _ _).trans (ruB_regs rest))
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => ruB_regs rest
+  | _, _, _, _, .bindAxiomOpt e _ _ _ _ _ _ rest => by
+      have ih := ruB_regs rest
+      cases e <;> exact (regs_vorΛ _ _).trans ih
+  | _, _, _, _, .bindAxiomOptElse e _ _ _ _ _ _ _ err rest => by
+      have ih0 := ruEnd_regs err
+      have ih1 := ruB_regs rest
+      cases e <;> exact kongr₂ (· ++ ·) ((regs_umΛ _ _).trans ih0)
+        ((regs_vorΛ _ _).trans ih1)
   | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => kongr₂ (· ++ ·) (ruEnd_regs err) (ruB_regs rest)
   | _, _, _, _, .regRead r _ rest => congrArg (r :: ·) (ruB_regs rest)
   | _, _, _, _, .regReadElse r _ _ sonst rest =>
@@ -286,6 +305,7 @@ theorem ruB_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | _, _, _, _, .awaits _ _ _ _ _ rest => ruB_regs rest
   | _, _, _, _, .exchange _ _ _ _ rest => ruB_regs rest
   | _, _, _, _, .narrow _ _ _ sonst rest => kongr₂ (· ++ ·) (ruEnd_regs sonst) (ruB_regs rest)
+  | _, _, _, _, .narrowRequired _ _ _ rest => ruB_regs rest
   | _, _, _, _, .check _ sonst rest => kongr₂ (· ++ ·) (ruEnd_regs sonst) (ruB_regs rest)
   | _, _, _, _, .float _ _ _ _ _ rest => ruB_regs rest
   | _, _, _, _, .floatLit _ _ _ rest => ruB_regs rest
@@ -297,15 +317,28 @@ theorem ruEnd_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
     (e : Endblock D V l Γ Λ), (ruEnd e).regs = e.regs
   | _, _, _, .ret .. => rfl
   | _, _, _, .retWhy .. => rfl
+  | _, _, _, .retScoped .. => rfl
+  | _, _, _, .retWhyScoped .. => rfl
   | _, _, _, .leave _ => rfl
   | _, _, _, .next _ => rfl
   | _, _, _, .cons s rest => kongr₂ (· ++ ·) (ruS_regs s) (ruEnd_regs rest)
   | _, _, _, .bind _ rest => ruEnd_regs rest
   | _, _, _, .bindCall _ _ _ _ _ rest => (regs_umΛ _ _).trans (ruEnd_regs rest)
+  | _, _, _, .bindCallIndElse _ _ _ _ _ err rest =>
+      kongr₂ (· ++ ·) ((regs_umΛ _ _).trans (ruEnd_regs err))
+        ((regs_umΛ _ _).trans (ruEnd_regs rest))
   | _, _, _, .bindCallElse _ _ _ _ _ err rest =>
       kongr₂ (· ++ ·) ((regs_umΛ _ _).trans (ruEnd_regs err))
         ((regs_umΛ _ _).trans (ruEnd_regs rest))
   | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => ruEnd_regs rest
+  | _, _, _, .bindAxiomOpt e _ _ _ _ _ _ rest => by
+      have ih := ruEnd_regs rest
+      cases e <;> exact (regs_umΛ _ _).trans ih
+  | _, _, _, .bindAxiomOptElse e _ _ _ _ _ _ _ err rest => by
+      have ih0 := ruEnd_regs err
+      have ih1 := ruEnd_regs rest
+      cases e <;> exact kongr₂ (· ++ ·) ((regs_umΛ _ _).trans ih0)
+        ((regs_umΛ _ _).trans ih1)
   | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => kongr₂ (· ++ ·) (ruEnd_regs err) (ruEnd_regs rest)
   | _, _, _, .regRead r _ rest => congrArg (r :: ·) (ruEnd_regs rest)
   | _, _, _, .regReadElse r _ _ sonst rest =>
@@ -313,6 +346,7 @@ theorem ruEnd_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
   | _, _, _, .awaits _ _ _ _ _ rest => ruEnd_regs rest
   | _, _, _, .bindCallInd _ _ _ _ _ rest => (regs_umΛ _ _).trans (ruEnd_regs rest)
   | _, _, _, .narrow _ _ _ sonst rest => kongr₂ (· ++ ·) (ruEnd_regs sonst) (ruEnd_regs rest)
+  | _, _, _, .narrowRequired _ _ _ rest => ruEnd_regs rest
   | _, _, _, .exchange _ _ _ _ rest => ruEnd_regs rest
   | _, _, _, .ite _ t e => kongr₂ (· ++ ·) (ruEnd_regs e) (ruEnd_regs t)
 

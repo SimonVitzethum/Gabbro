@@ -273,6 +273,10 @@ theorem Endblock.execHA_gleich {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [endblockOrteP] at hT
       simp only [execEndHA, hG _ hT] <;> (try rfl)
   | .retWhy .., _, _, _ => rfl
+  | .retScoped e _, hT, σ, ρ => by
+      simp only [endblockOrteP] at hT
+      simp only [execEndHA, hG _ hT] <;> (try rfl)
+  | .retWhyScoped .., _, _, _ => rfl
   | .leave .., _, _, _ => rfl
   | .next .., _, _, _ => rfl
   | .cons s rest, hT, σ, ρ => by
