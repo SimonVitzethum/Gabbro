@@ -42,11 +42,14 @@ def geschlossenSExprB : SExpr → Bool
   | .lit _ => true
   | .tru => true
   | .fls => true
-  | .un "-" (.lit _) => true
+  | .field (.variable _) _ => true
+  | .un op e => (strEq op "-" || strEq op "!") && geschlossenSExprB e
   | .bin op a b =>
     (strEq op "+" || strEq op "-" || strEq op "*" || strEq op "/" ||
      strEq op "%" || strEq op "&" || strEq op "|" || strEq op "^" ||
-     strEq op "<<" || strEq op ">>") && geschlossenSExprB a && geschlossenSExprB b
+     strEq op "<<" || strEq op ">>" || strEq op "==" || strEq op "!=" ||
+     strEq op "<" || strEq op "<=" || strEq op ">" || strEq op ">=" ||
+     strEq op "&&" || strEq op "||") && geschlossenSExprB a && geschlossenSExprB b
   | _ => false
 
 def geschlossenSExprListB : List SExpr → Bool
