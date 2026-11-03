@@ -92,9 +92,9 @@ def bindetAxB (q : D.Ax) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .narrow _ _ _ sonst rest => bindetAxE q sonst || bindetAxB q rest
   | .narrowRequired _ _ _ rest => bindetAxB q rest
   | .check _ sonst rest => bindetAxE q sonst || bindetAxB q rest
-  | .float _ _ _ _ rest => bindetAxB q rest
-  | .floatLit _ _ rest => bindetAxB q rest
-  | .floatOf _ _ rest => bindetAxB q rest
+  | .float _ _ _ _ _ rest => bindetAxB q rest
+  | .floatLit _ _ _ rest => bindetAxB q rest
+  | .floatOf _ _ _ rest => bindetAxB q rest
   | .floatNarrow _ _ _ sonst rest => bindetAxE q sonst || bindetAxB q rest
 
 /-- Some tagged arm binds the core-query axiom. -/
@@ -135,7 +135,7 @@ def bindetAxE (q : D.Ax) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .bindCallIndElse _ _ _ _ _ err rest => bindetAxE q err || bindetAxE q rest
   | .narrow _ _ _ sonst rest => bindetAxE q sonst || bindetAxE q rest
   | .narrowRequired _ _ _ rest => bindetAxE q rest
-  | .exchange _ _ _ rest => bindetAxE q rest
+  | .exchange _ _ _ _ rest => bindetAxE q rest
   | .ite _ t e => bindetAxE q t || bindetAxE q e
 
 end
@@ -234,7 +234,7 @@ theorem ruS_bindetAx {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, _, .onWhy _ arms, _ => ruGArms_bindetAx arms _
   | _, _, _, _, .call .., _ => (bindetAxS_nachΛ _ _ _).trans rfl
   | _, _, _, _, .callInd .., _ => (bindetAxS_nachΛ _ _ _).trans rfl
-  | _, _, _, _, .callIndElse _ _ _ _ _ _ err, _ =>
+  | _, _, _, _, .callIndElse _ _ _ _ _ err, _ =>
       (bindetAxS_nachΛ _ _ _).trans ((bindetAxE_umΛ _ _ _).trans (ruEnd_bindetAxE err _))
   | _, _, _, _, .locks _ _ body, _ => ruB_bindetAx body _
   | _, _, _, _, .breaking _ body, _ => ruB_bindetAx body _
@@ -269,7 +269,7 @@ theorem ruB_bindetAx {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
       (bindetAxB_vorΛ _ _ _).trans (ruB_bindetAx rest _)
   | _, _, _, _, .bindCallInd _ _ _ _ _ rest, _ =>
       (bindetAxB_vorΛ _ _ _).trans (ruB_bindetAx rest _)
-  | _, _, _, _, .bindCallIndElse _ _ _ _ _ _ err rest, _ =>
+  | _, _, _, _, .bindCallIndElse _ _ _ _ _ err rest, _ =>
       kongr₂ (· || ·) ((bindetAxE_umΛ _ _ _).trans (ruEnd_bindetAxE err _))
         ((bindetAxB_vorΛ _ _ _).trans (ruB_bindetAx rest _))
   | _, _, _, _, .bindCallElse _ _ _ _ _ err rest, _ =>
@@ -305,7 +305,7 @@ theorem ruB_bindetAx {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, _, .regRead _ _ rest, _ => ruB_bindetAx rest _
   | _, _, _, _, .regReadElse _ _ _ sonst rest, _ =>
       kongr₂ (· || ·) (ruEnd_bindetAxE sonst _) (ruB_bindetAx rest _)
-  | _, _, _, _, .awaits _ _ _ _ rest, _ => ruB_bindetAx rest _
+  | _, _, _, _, .awaits _ _ _ _ _ rest, _ => ruB_bindetAx rest _
   | _, _, _, _, .exchange _ _ _ _ rest, _ => ruB_bindetAx rest _
   | _, _, _, _, .narrow _ _ _ sonst rest, _ =>
       kongr₂ (· || ·) (ruEnd_bindetAxE sonst _) (ruB_bindetAx rest _)
@@ -313,8 +313,8 @@ theorem ruB_bindetAx {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, _, .check _ sonst rest, _ =>
       kongr₂ (· || ·) (ruEnd_bindetAxE sonst _) (ruB_bindetAx rest _)
   | _, _, _, _, .float _ _ _ _ _ rest, _ => ruB_bindetAx rest _
-  | _, _, _, _, .floatLit _ _ rest, _ => ruB_bindetAx rest _
-  | _, _, _, _, .floatOf _ _ rest, _ => ruB_bindetAx rest _
+  | _, _, _, _, .floatLit _ _ _ rest, _ => ruB_bindetAx rest _
+  | _, _, _, _, .floatOf _ _ _ rest, _ => ruB_bindetAx rest _
   | _, _, _, _, .floatNarrow _ _ _ sonst rest, _ =>
       kongr₂ (· || ·) (ruEnd_bindetAxE sonst _) (ruB_bindetAx rest _)
 
@@ -368,13 +368,13 @@ theorem ruEnd_bindetAxE {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, .awaits _ _ _ _ _ rest, _ => ruEnd_bindetAxE rest _
   | _, _, _, .bindCallInd _ _ _ _ _ rest, _ =>
       (bindetAxE_umΛ _ _ _).trans (ruEnd_bindetAxE rest _)
-  | _, _, _, .bindCallIndElse _ _ _ _ _ _ err rest, _ =>
+  | _, _, _, .bindCallIndElse _ _ _ _ _ err rest, _ =>
       kongr₂ (· || ·) ((bindetAxE_umΛ _ _ _).trans (ruEnd_bindetAxE err _))
         ((bindetAxE_umΛ _ _ _).trans (ruEnd_bindetAxE rest _))
   | _, _, _, .narrow _ _ _ sonst rest, _ =>
       kongr₂ (· || ·) (ruEnd_bindetAxE sonst _) (ruEnd_bindetAxE rest _)
   | _, _, _, .narrowRequired _ _ _ rest, _ => ruEnd_bindetAxE rest _
-  | _, _, _, .exchange _ _ _ rest, _ => ruEnd_bindetAxE rest _
+  | _, _, _, .exchange _ _ _ _ rest, _ => ruEnd_bindetAxE rest _
   | _, _, _, .ite _ t e, _ => kongr₂ (· || ·) (ruEnd_bindetAxE t _) (ruEnd_bindetAxE e _)
 
 /-- The body translation keeps the binding observation on tagged arms. -/

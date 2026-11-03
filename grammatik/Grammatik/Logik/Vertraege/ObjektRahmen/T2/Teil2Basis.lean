@@ -39,6 +39,7 @@ theorem stmt_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [execStmt]
       exact ⟨slotRahmen_gleich rfl, hinv⟩
   | .putBytes .., hok, _, _, _, _ => hok.elim
+  | .assignSlotRef .., hok, _, _, _, _ => hok.elim
   | .assignVar x e, hok, σ, ρ, _, hinv => by
       simp only [execStmt]
       refine ⟨slotRahmen_gleich rfl, ?_⟩
