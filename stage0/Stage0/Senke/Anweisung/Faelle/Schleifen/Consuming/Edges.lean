@@ -15,7 +15,8 @@ macro "consume_arith " x:ident : tactic => `(tactic| (
   simp [Image.addr, Image.offset, Image.fragment, pieces, position, width, Piece.width,
     travCountC_length, travCountSize, initialLiteral, decrease, narrowC,
     stopC, sysC, List.length_append] at imageLength imageSize ⊢
-  first | omega | rfl | ac_rfl | (rw [addr_norm]; congr 2 <;> omega)))
+  all_goals first | omega | rfl | ac_rfl | (rw [addr_norm]; congr 2 <;> omega)
+    | (apply adr_eq; omega)))
 
 namespace Image
 variable {reserved : Nat} {x : Image L P f reserved}
