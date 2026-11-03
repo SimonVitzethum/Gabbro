@@ -6122,56 +6122,71 @@ On `c02-a`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Tak
 
 Open: the lead build of this branch (single-module checks of the four new modules and their importers, then the guardians); the Stage-0/IR payload spans (IR-03/06) and the C01 schema export stay with their owners; no language case is claimed complete by these modules.
 
-## 150. C14: bounded guest-service model and remaining source cut (2026-11-03)
+## 150. C14: bounded guest service from source to Stage 0 (2026-11-03)
 
-Implementation, not build evidence: the implementation agent ran no Lean/lake
-checks; the lead must compile these modules and recheck the goal's standard
-axioms. `Spec.lean` and its meaning are unchanged. No connected source-to-IR
-`entrust` case is claimed complete.
+Implementation, not build evidence: the implementation worker ran no Lean/lake,
+compiler or guardian checks. Complete proof and reduction attempts are committed;
+the lead must compile them, reduce the witnesses and recheck `gabbro_ziel` on
+exactly the standard axioms. `Spec.lean` and its meaning are unchanged.
 
-`Logik/Ruf/Guest/Boundary.lean` is the canonical `GuestBoundary` (the former
-name-only candidate in `Parser/Profil/Eintritt.lean` is removed). It binds an
-immutable code-input capability, an ordinary fallible software service, the
-exact pointer-input list, real owner resources for each transferred region,
-a closed userspace ABI and return-or-noreturn behavior. Owner identity must
-resolve and belong to the actual target table. It refuses missing service,
-missing/forged ownership, duplicate owners, argument mismatch, unknown ABI,
-register/privileged state and mismatched return behavior by name.
+`Logik/Ruf/Guest/Boundary.lean` remains the canonical `GuestBoundary`: immutable
+code, an explicit fallible software service, exact pointer inputs, genuine owner
+resources for transferred regions, a closed ordinary userspace ABI and explicit
+return behavior. `Invocation.lower_eq` identifies the existing
+`Block.bindAxiomOptElse`; no guest interpreter, new machine step or hardware
+isolation assumption is introduced. `transfer_owned` connects ownership to the
+actual resource context. `storageDisjointB_iff` decides byte-extent disjointness.
 
-- `transfer_owned`: admission of an owned transfer establishes membership of
-  the actual owner mark in the call-site resource context.
-- `storageDisjointB_iff`: the finite byte-overlap check decides disjointness
-  of all protected live grants and all guest-owned extents.
-- `Invocation.lower_eq`: typed guest invocation is exactly the existing
-  `Block.bindAxiomOptElse`, with ordinary argument, write, resource and
-  failure-continuation premises. There is no guest instruction interpreter
-  or new G/GX step rule.
+`Guest/Service.lean` retains isolation as `GuestServicePflicht` alongside C08
+`ForeignPflicht`. `guest_service_contract` transports the service's actual C08
+contract under its call-site precondition and implementation-link duties.
+`guest_storage_disjoint` includes initial live grants and all preceding calls;
+`guest_failure_inventory` preserves that same inventory on failure.
 
-`Guest/Service.lean` places isolation in `GuestServicePflicht`, alongside C08
-`ForeignPflicht`, never in the hardware premise. `guest_service_contract`
-reuses C08's actual-record contract transport under its caller-pre and
-implementation-link duties. `guest_storage_disjoint` includes the initial
-live grants and all preceding calls. `guest_failure_inventory` preserves the
-same shared grant inventory on failure.
+The source connections are now implemented:
 
-`Zielsatz/Kern/Akzeptiert/Guest.lean` exposes the final guest component appended
-to `Akzeptiert` and `AkzeptiertX`; the empty default preserves prior verdicts.
-`Pruefer.withGuests` and `PrueferX.withGuests` retain descriptor admission
-without changing the goal interface. The adapter's descriptor extractor still
-needs to be connected to the actual source-derived unit; accepting `[]` is
-not a source provenance certificate.
+- `SItemTief.trustT` retains `via SERVICE`; namespace resolution predeclares the
+  generated wrapper and resolves the code region and foreign binding lexically.
+  `Uebersetze/Guest/Source.lean` resolves exactly one C08 prototype or syscall,
+  requires a declared nonempty failure channel and requires/ensures mentioning
+  the code region, and generates one wrapper forwarding every parameter, the
+  success result and every failure reason. The wrapper uses the existing
+  `SAnw.bindAxiomOptElse`; ordinary elaboration and Stage-0 lowering handle it.
+- `guestForeign` elaborates the declared predicates in the binding's parameter
+  and result scope. `UAx.software` records the explicit source binding;
+  `herkunftAt` exports `some .software` and `axBeleg` remains `none`. A conflicting
+  named hardware origin is refused. Direct foreign `requires Held(...)` is
+  refused rather than silently dropped. `Guest/Contracts.lean` lowers every
+  foreign contract; `contractGate` refuses any failed lowering and `progOfFn`
+  fills `Programm.axVertrag`. `lowerAllg_axVertrag` proves exact retention on
+  every successful lowering, including the actual pre/postconditions.
+- `Guest/Export.lean` re-resolves every retained `UGuest` against the actual
+  `declOf u`, constructs the typed boundary and applies its canonical check.
+  `sourceGuests_complete` proves that no descriptor is omitted. Both
+  `Cover.Differenz.akzeptiertU` and production `OldSource.accepts` pass that
+  complete list to `AkzeptiertX`. `OldSource.restore_axVertrag` and
+  `Compiled.foreign_contracts` retain the same foreign contracts through
+  source postcondition restoration; `Compiled.guest_descriptors` exposes
+  completeness and each admitted descriptor after production checking.
+  `SourceGuestPflicht` explicitly ties the software isolation duty to these
+  exported contracts and actual C08 records, never to `HardwareAnnahmen`.
 
-`Guest/Witness.lean` provides a two-region fixture with a real owner and two
-software services: accepted code-only and owned-region boundaries, named
-negative twins, protected/guest overlap refusal, whole-program Bool admission
-and a typed invocation with an actual code capability. These are model
-witnesses, not a source-to-IR acceptance witness.
+The source frontend currently exports `Marke := Empty`. Consequently, the
+admitted source slice is immutable code plus scalar inputs and an ordinary
+returning, fallible service; additional region inputs are refused by the named
+ownership diagnostic. No owner is fabricated or transferred region discarded.
+Register state, privileged/stack assumption fields, unknown ABI, missing or
+ambiguous service, absent failure channel and absent region contracts remain
+named refusals. Foreign cost claims retain the metadata gate.
 
-Open in the actual source path: `SItemTief.trustT` retains no service binding;
-`uAxKlauseln` still refuses requires/ensures, `herkunftAt` only exports hardware
-provenance, and `progOfFn` does not populate `axVertrag`. Canonical elaboration
-and Stage 0 therefore retain the shared named missing-service refusal. The
-historical `EntrustDecl.annahme` cannot prove OS isolation. Finish these source
-connections under C08, preserve every descriptor in the actual checker call,
-and add accepted source-to-unit-to-IR and negative source witnesses before
-claiming C14 complete.
+`Stage0/Zeugen/Ablehnung/EntrustWitness.lean` now contains the accepted image
+attempt: real source text calls the generated guest wrapper with a code-region
+capability, carries a nontrivial declared region contract and executable C08
+gate, checks both the production `AkzeptiertX` path and explicit `Akzeptiert`,
+and retains the generic canonical-source and image correctness certificates.
+Its source-shape, exact-contract, descriptor-completeness and ordinary fallible
+constructor witnesses prevent an inert or empty-boundary success. Negative
+source twins cover missing service/field, unowned region, register state,
+privileged fields, unknown ABI, infallible service and missing region contract.
+`Guest/Witness.lean` retains the more general owned-region model witnesses.
+None of these new source reductions has yet been measured by this worker.
