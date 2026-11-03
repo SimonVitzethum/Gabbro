@@ -140,11 +140,11 @@ theorem execStmtH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
       rfl
   | _, _, Λ, _, .ret e hΛ, σ, ρ =>
       execStmtH_ru_ret (e := e) (hΛ := hΛ) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
-  | _, _, Λ, _, .retScoped e R, σ, ρ =>
-      execStmtH_ru_retScoped (e := e) (R := R) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
+  | _, _, Λ, _, .retScoped e cleanup, σ, ρ =>
+      execStmtH_ru_retScoped (e := e) (cleanup := cleanup) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
   | _, _, _, _, .retWhy .., σ, ρ => Or.inl rfl
   | _, _, _, _, .retWhyScoped r Rr, σ, ρ =>
-      execStmtH_ru_retWhyScoped (r := r) (R := Rr) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
+      execStmtH_ru_retWhyScoped (r := r) (cleanup := Rr) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
   | _, _, _, _, .leave _, σ, ρ => Or.inl rfl
   | _, _, _, _, .next _, σ, ρ => Or.inl rfl
 
