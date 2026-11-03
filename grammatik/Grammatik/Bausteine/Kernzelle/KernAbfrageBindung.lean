@@ -15,6 +15,8 @@ open Gabbro.Grammatik
 
 variable {D : Deklaration}
 
+section BoolObservers
+
 variable [DecidableEq D.Ax]
 
 /-! ## 1. Where a body queries the core
@@ -140,6 +142,17 @@ def bindetAxE (q : D.Ax) {V : Vertrag D} {l : Bool} {Γ : Ctx}
 
 end
 
+end BoolObservers
+
+/-- The binding observation is independent of the chosen equality procedure. -/
+theorem bindetAxE_inst (inst : DecidableEq D.Ax) (q : D.Ax)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (e : Endblock D V l Γ Λ) :
+    @bindetAxE D inst q V l Γ Λ e =
+      @bindetAxE D (fun x y => Classical.propDecidable (x = y)) q V l Γ Λ e := by
+  exact congrArg (fun dec : DecidableEq D.Ax => @bindetAxE D dec q V l Γ Λ e)
+    (Subsingleton.elim _ _)
+
 /-! ## 2. The connected query
 
     The wrapper (`a.kernAbfrage`, already admitted by `akkuZulaessig` with
@@ -150,10 +163,16 @@ end
     hardware assumption beyond the named `AxVertragO` ensures on the answer. -/
 
 /-- **The connected core query**: the shape, the hardware provenance and the
-    wrapper's foreign bind. -/
+    wrapper's foreign bind. Classical equality keeps this proposition independent
+    of a checker's equality procedure; the Bool observer remains computable. -/
 def KernAbfrageVerbunden (P : Programm D) (a : AccumulatorDecl D) (q : D.Ax) : Prop :=
   KernAbfrageGestalt D q a.kernZahl ∧ KernAbfrageHerkunft D q ∧
-    bindetAxE q (P.rumpf a.kernAbfrage) = true
+    (haveI : DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)
+     bindetAxE q (P.rumpf a.kernAbfrage)) = true
+
+section BoolChecks
+
+variable [DecidableEq D.Ax]
 
 /-- The connected query, decided over the member lists. -/
 def kernAbfrageEinzelB (P : Programm D) (tabs : List D.Tab) (globs : List D.Glob)
@@ -168,6 +187,7 @@ theorem kernAbfrageEinzelB_iff {P : Programm D} {tabs : List D.Tab}
     (hT : ∀ t : D.Tab, t ∈ tabs) (hG : ∀ g : D.Glob, g ∈ globs) :
     kernAbfrageEinzelB P tabs globs a q = true ↔ KernAbfrageVerbunden P a q := by
   unfold kernAbfrageEinzelB KernAbfrageVerbunden
+  rw [bindetAxE_inst]
   simp only [Bool.and_eq_true]
   constructor
   · intro h
@@ -404,6 +424,8 @@ theorem bindetAxE_mitRuhe (P : Programm D) (f : D.Fn) (q : D.Ax) :
     bindetAxE (D := D.mitRuhe) q (P.mitRuhe.rumpf (some f)) = bindetAxE q (P.rumpf f) :=
   (bindetAxE_umΛ _ _ _).trans (ruEnd_bindetAxE _ _)
 
+end BoolChecks
+
 /-- The core-query shape rides the idle-root declaration. -/
 theorem kernAbfrageGestalt_mitRuhe {q : D.Ax} {N : Nat}
     (h : KernAbfrageGestalt D q N) : KernAbfrageGestalt D.mitRuhe q N := by
@@ -425,6 +447,7 @@ theorem kernAbfrageHerkunft_mitRuhe {q : D.Ax}
 theorem kernAbfrageVerbunden_mitRuhe (P : Programm D) {a : AccumulatorDecl D}
     {q : D.Ax} (h : KernAbfrageVerbunden P a q) :
     KernAbfrageVerbunden P.mitRuhe (AccumulatorDecl.mitRuhe a) q := by
+  letI : DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)
   obtain ⟨hG, hH, hB⟩ := h
   refine ⟨kernAbfrageGestalt_mitRuhe hG, kernAbfrageHerkunft_mitRuhe hH, ?_⟩
   show bindetAxE (D := D.mitRuhe) q (P.mitRuhe.rumpf (some a.kernAbfrage)) = true

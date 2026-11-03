@@ -88,8 +88,6 @@ theorem finRangeAll_iff {n : Nat} {p : Fin n → Bool} :
 
 variable [DecidableEq D.Fn]
 
-variable [DecidableEq D.Ax]
-
 /-- The descriptor validity, decided. -/
 def akkuOkB (a : AccumulatorDecl D) : Bool :=
   decide (1 ≤ a.kernZahl) && decide (1 ≤ a.breite) &&
@@ -188,6 +186,10 @@ theorem accumulatorAdmission_leer (P : Programm D) (fs : List D.Fn) :
     List.flatMap_nil, List.nodup_nil]
 
 /-! ## 5. The Bool -/
+
+section BoolChecks
+
+variable [DecidableEq D.Ax]
 
 /-- One declaration, decided (over the member lists `fs`/`tabs`/`globs` and
     the listed query axioms `qs`). -/
@@ -445,6 +447,8 @@ theorem accumulatorB_leer {P : Programm D} {fs : List D.Fn} {tabs : List D.Tab}
   unfold accumulatorB
   simp only [List.all_nil, Bool.true_and, Bool.and_eq_true, decide_eq_true_eq]
   constructor <;> simp only [alleZellen, alleSperren, List.flatMap_nil, List.nodup_nil]
+
+end BoolChecks
 
 #print axioms Gabbro.Grammatik.Kernzelle.akkuGueltigB_iff
 #print axioms Gabbro.Grammatik.Kernzelle.akkuBreitePasstB_iff
