@@ -69,5 +69,9 @@ theorem intBuiltin2L_top {τ1 τ2 τ : Ty} (op : IntBuiltin [τ1, τ2] τ)
     | exact wideEngL_top h
     | exact wideBinaryL_top h
     | exact BitBuiltin.cast_top h
+    | (simp only [BitBuiltin.rotate, BitBuiltin.add] at h; exact BitBuiltin.cast_top h)
+    | (simp only [wrappingAddL, wrappingSubL, wrappingMulL, wrappingShlL, wrapL, wideBitL] at h
+       exact wideBinaryL_top h)
+    | (simp only [saturatingAddL] at h; exact wideEngL_top h)
 
 end Gabbro.Stage0.Senke
