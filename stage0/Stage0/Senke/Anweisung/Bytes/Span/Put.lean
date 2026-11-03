@@ -17,7 +17,7 @@ theorem putBytesWide_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     (lower : 0 ≤ a) (upper : b + n ≤ D.count t) (e : Expr D Γ Λ (.int 0 (256 ^ n - 1)))
     (hw : (vertragVon D f).schreibt t = true) (hl : darf D t Λ)
     {c : List II} {top : Nat} {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
-    (made : putBytesWideL L t field a b n lower upper
+    (made : putBytesWideL L (Γ := Γ) (Λ := Λ) t field a b n lower upper
       (lowE (reserved := reserved) L e (frei Γ reserved))
       (lowE (reserved := reserved) L i (frei Γ reserved + valueWords (.int 0 (256 ^ n - 1)))) reserved = some (c, top))
     (fits : top ≤ Ks) (hW : WIn L fp Ks K) (pre : PreS L m pc fp K (frei Γ reserved) c ρ reserved)
