@@ -147,7 +147,7 @@ def aus (k : Kontext) : SExpr → SExpr
   | .ext .dyn [n] xs => .ext .dyn [k.ref n] (ausL k xs)
   | .ext .mem (d :: ns) xs => .ext .mem (d :: ns.map k.ref) (ausL k xs)
   | .ext kind (binder :: domain :: names) args =>
-    if kind == .foldAdd || kind == .foldMin || kind == .foldMax then
+    if kind == .foldAdd || kind == .foldMin || kind == .foldMax || kind == .foldAnd || kind == .foldOr then
       let count := if domain == "range" then 2 else 1
       .ext kind (binder :: domain :: names.map k.ref)
         (ausL k (args.take count) ++ ausL (k.mit [binder]) ((args.drop count).take 2) ++
