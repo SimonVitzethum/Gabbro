@@ -6107,6 +6107,8 @@ lead check, not a result of static inspection. Zero new source-to-IR cases have 
 * `checkSourceMetadata_sound`, `checkSourceMetadata_runtime_sound`, `checkSourceConstants_sound`:
   original-source gates retain the successful certified rewrite, the original runtime metadata check
   and the residual runtime metadata check. Only const declarations leave this runtime domain.
+* `Generic.constantArgument` also runs the certified source call substitution before specialization
+  removes a constant call; a failing predicate keeps its named refusal.
 * Known global constants reuse Generic's capture-free traversal, including parameter/local/pattern/loop
   shadowing and the repaired reason binders in `bindElse`/`bindAxiomOptElse`. A full denotational theorem
   for this global-name normalization is still open; post-normalization elaboration equations alone do
@@ -6124,7 +6126,8 @@ lead check, not a result of static inspection. Zero new source-to-IR cases have 
 `stage0/Stage0/Frontend/ConstWitness.lean` (included by `Stage0.lean`): two contracted calls with
 values 4 and 6 and their G/KExpr certificates; named requires/ensures failures; open argument and
 intermediate overflow; source-text compilation and checker witness; contracted initializer; parameter
-and reason shadowing. The image witness reuses `irBild_correct` under an explicit successful-emission
+and reason shadowing, generic-argument contract failure and Boolean-to-integer argument refusal.
+The image witness reuses `irBild_correct` under an explicit successful-emission
 premise; it does not claim that an image was emitted or run. All witnesses await the lead's checks.
 
 The canonical evaluator is centralized in `Uebersetze/Folds/ConstEvaluation.lean`; bounded integer
