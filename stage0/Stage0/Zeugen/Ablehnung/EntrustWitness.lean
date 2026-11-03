@@ -88,17 +88,31 @@ theorem ordinary_fallible_lowering :
     | .bindAxiomOptElse .. => true
     | _ => false) = true := by decide +kernel
 
-theorem service_provenance :
+theorem source_software_origin_zeuge :
     (declOf output.compiled.unit).axHerkunft ⟨0, by decide +kernel⟩ = some AxOrigin.software ∧
     (declOf output.compiled.unit).axBeleg ⟨0, by decide +kernel⟩ = none := by decide +kernel
 
 /-- Generic exact-contract transport instantiated at the actual source image. -/
-theorem exact_contract :
+theorem lowerAllg_axVertrag_zeuge :
     lowerAxContract output.compiled.unit ⟨0, by decide +kernel⟩ =
       .ok (output.compiled.program.axVertrag ⟨0, by decide +kernel⟩) :=
   output.compiled.foreign_contracts _
 
-theorem canonical_source : CanonicalSourceProgram output.compiled :=
+/-- Joint nonempty fixture for descriptor completeness and canonical admission. -/
+theorem sourceGuests_complete_zeuge :
+    output.compiled.unit.guests.length = 1 ∧
+    ∃ guests, sourceGuests output.compiled.unit = .ok guests ∧
+      guests.length = output.compiled.unit.guests.length ∧
+      ∀ guest ∈ guests, guest.admittedB = true :=
+  ⟨by decide +kernel, output.compiled.guest_descriptors⟩
+
+theorem axVertragOf_exact_zeuge :
+    lowerAxContract output.compiled.unit ⟨0, by decide +kernel⟩ =
+      .ok (axVertragOf output.compiled.unit ⟨0, by decide +kernel⟩) :=
+  axVertragOf_exact _ _ (by decide +kernel)
+
+theorem canonical_source :
+ CanonicalSourceProgram output.compiled :=
   compile_source_program text output.compiled
 
 theorem image_correct [Runner.IR.Kern] [Senke.CloneOK] : output.Correct := output.correct
