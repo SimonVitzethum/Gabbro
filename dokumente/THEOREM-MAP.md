@@ -6920,3 +6920,88 @@ On `c11-nurabstieg`; model extension within the C-package rules, `Spec.lean` unt
 `grammatik/Grammatik/Logik/Ruf/RufLogikZeuge.lean`: `nurAbstieg_zeuge_104`/`_108` carry the discipline premise and supply `ScopesOkProg` by computation (`scopes4`, `scopes8`); the undisciplined-frame claim (unprovable in general since C11) is dropped while `heldB_faellt_104` keeps the non-vacuity and the concrete runs keep the non-degeneracy. `RufLogik.lean` header records the closure.
 
 Open: the lead build of this branch (new modules plus `RufLogika.lean`, `RufLogikZeuge.lean` and their importers, then the guardians); `gabbro_ziel` must stay on exactly `propext`/`Classical.choice`/`Quot.sound` with no `sorry`. No language case is claimed complete by these modules.
+
+## 182. Integration-round source audit and unmerged scoped returns (2026-11-03)
+
+Snapshot: `c-runde1` at `61299ab5d`. Evidence: `git log --stat bbcbeed51..c-runde1`
+and inspection of the definitions below. This documentation task ran no Lean, Lake,
+Cargo, runner, guardian or axiom checks. The integration changes **need the lead build**:
+no full green build or newly verified source-to-IR case is claimed here.
+
+* **Named optional foreign stops (`87a2d784e`).** In
+  `Zielsatz/Kern/Spec/Teil1.lean`, `KopfHalt` covers Block heads and `RestHalt`
+  Endblock heads. `bindAxiomOpt` gets `.hardware` when the oracle answer fails
+  and the answer type is not empty, and `.nieZurueck` when `D.aerg a = some .never`.
+  `bindAxiomOptElse` gets `.hardware` when `axiomAntwortSonst` fails, just like
+  `bindAxiomElse`; it does not get a separate never-return arm. These extend
+  coverage using existing stop kinds and hardware assumptions.
+* **Consuming-loop checks (`5a1e5c60c`, repaired in `f326159a3`).**
+  `ZielOrt/Grundlage/ZielOrtGanz/T2/Teil2.lean` extends `PrueftG` with selection/fuel,
+  completed-round descent and abrupt-exit premises. Its sibling
+  `ZielOrtGanz/VerbrauchPruefung.lean` defines `verbrauchKopfPrueft`,
+  `verbrauchAbstiegPrueft` and `verbrauchAbbruchPrueft`: positive fuel, a true invariant,
+  no absent minimum on a nonempty domain, bounded strict descent, and the invariant on `leave`.
+  `verbrauchKopfWerte_gleich` transports the boundary values along two footprint agreements:
+  one for the invariant read, another for the member/edge reads. Failed-check lemmas expose
+  the existing `.logik .schleife`. `fadenR_prueft`, `ZielOrtSperre/T2.lean` and
+  `Speichermodell/Atomar/AtomarLauf.lean` carry the corresponding plain, lock and atomic
+  replay checks; consuming progress/leave/next consumers are updated. Presence of these
+  generic proof bodies is source evidence, not a kernel-check result.
+* **Spec-fixed checker adapter (`6be546b7d`).**
+  `Zielsatz/Kern/Akzeptiert/Teil2.lean` declares `akzeptiert_pruefer` noncomputable.
+  Both its Bool and correctness field install
+  `DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)`.
+  `Pruefer` in `Spec/Teil1.lean` supplies function equality but no axiom equality;
+  the adapter satisfies that existing interface internally rather than changing it.
+* **Existential check admission (`fc7f88f29`).** `AkzeptiertSpec.pruef` and its X
+  counterpart store `∃ checks : List (CheckDecl D), CheckAdmission P fs checks`.
+  As documented in `Zielsatz/Kern/Akzeptiert.lean`, this field alone is vacuous:
+  `CheckAdmission.nil` witnesses it and does not identify a unit's declarations.
+  The forward proof uses the actual checked list; the reverse takes explicit admission
+  for its chosen list. Concrete and linking Bools still check the declared lists.
+
+**Unmerged scoped-return work.** At this snapshot, `scoped-fin` (`575d97bcf`) and
+`merge-void`, `merge-meta`, `merge-c10`, `merge-async` are not ancestors of `c-runde1`.
+Their presence in separate worktrees does not establish integration or build success.
+The owner decision of 2026-11-03 strengthens `StartEndeG` by conjoining `StartScopedEndeG`:
+completed empty-stack scoped roots owe ensures and invariants at the saved pre-release
+world, preserving the ordinary-return conjunct. Evaluation and cleanup must be separate
+and the protocol must preserve existing source costs. This is open model work, not a
+merged theorem extension.
+
+The scoped-fin handoff (`/home/simon/.cache/gabbro-scoped-fin-handoff.txt`) and branch
+source show a partial split: `.aufraeumen` stores the answer and pre-release world;
+`rueckScopedWert`/`rueckScopedGrund` save it, `rueckFreigabe` releases one lock,
+`rueckAntwort` delivers it. The split preserves the intended strict read-before-release
+ordering rather than relaxing `GeordnetG`. The handoff explicitly reports no build and
+lists these open boundaries (older handoff entries are superseded where implementation moved):
+
+* **Cost neutrality:** even `.retScoped .empty` with no scopes now takes evaluation
+  plus delivery, while the existing source cost is one. This is source reasoning,
+  not a kernel-checked counterexample. Changing `kostenEnd` would change `ZeitAb`/`ZeitAbX`
+  transitively and is outside the approved strengthening. The handoff proposes direct
+  evaluation/completion for empty scopes and delivery with the final release otherwise,
+  with lexical-marker provenance paying for releases. That repair is not implemented.
+* **Lock provenance:** prove that non-signature frame holdings originate in active lexical
+  markers; `HaeltInvG` does not yet provide it. `RufHaeltG/T2` lacks the four split-rule
+  proofs. Preserve `rufG_haelt_statisch` without arbitrary caller-preservation premises.
+* **Replay:** complete `FadenR`/`FadenS`/`FadenSA` and actor replay through evaluation,
+  cleanup, releases and root/callee delivery, including `rahmenStapelS` and answer pops.
+* **Saved completion:** extend `fertig_retKopf`/`fertig_wert`, `invRuhe_erreichbar`,
+  `AtomarInvarianten` and `ZielOrtGrund` to saved answers, with justified transfer from
+  the saved world to live memory. Neither shared-memory equality nor replacement of
+  the approved `StartEndeG` conjuncts is available.
+* **Remaining cases:** finish/check atomic and goal-location cases (`AtomarInv/Inva`,
+  `ZielOrtVoll`, `ZielOrtAx/Rahmen`), `KernHaltE`, `Hungerfrei` and other consumers
+  for all four rules and the new residue. Existing patches to rank, release and cleanup
+  guards do not establish a connected preservation proof.
+* **Noninterference and validation:** K projection now erases saved snapshots; check
+  `schrittK_von`, relational leaf/pop lemmas, flow initialization and all K patches.
+  `AnswerPositionG`, `rufAntwortG_fort` and every new proof remain unverified.
+  Complete the generic compiler/source-to-IR connection, then the lead's full build,
+  witnesses, guardians and standard-axiom audit. No source-to-IR case was measured complete.
+
+**Later low-level scope.** `AGENTS.md` already orders the low-level plan after the C
+packages, outside the assembly runner and Stage 0, with no `unsafe`. Boot behaviour is
+user logic; the x86-64 binding offers the bundled once-proved boot-stub ASM item.
+This audit adds no low-level implementation or new execution path.

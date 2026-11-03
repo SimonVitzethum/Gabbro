@@ -13,6 +13,25 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
 
 ## Right now
 
+- **Integration-round source audit (2026-11-03, `bbcbeed51..61299ab5d` on `c-runde1`).**
+  History (`git log --stat`) and definitions were inspected; these changes **need the lead build** before being called Lean-verified.
+  `KopfHalt`/`RestHalt` cover optional axiom binders (`87a2d784e`): `bindAxiomOpt` has hardware/never-return stops,
+  `bindAxiomOptElse` the hardware stop, matching their ordinary counterparts. Consuming-loop premises now extend `PrueftG`,
+  with footprint transport and plain/lock/atomic replay updates (`5a1e5c60c`, `f326159a3`).
+  `akzeptiert_pruefer` is noncomputable with classical `D.Ax` equality inside the Spec-fixed interface;
+  `AkzeptiertSpec.pruef` is existential and vacuous alone (the empty list witnesses it), while concrete Bools check declared lists.
+  Open: full lead build and standard-axiom audit; `merge-void`, `merge-meta`, `merge-c10`, `merge-async` and `scoped-fin`
+  are not integrated into this snapshot. Details and scoped-return blockers: [theorem map §182](dokumente/THEOREM-MAP.md#182-integration-round-source-audit-and-unmerged-scoped-returns-2026-11-03).
+- **Scoped-return model completion remains open (`scoped-fin`, `575d97bcf`).** The owner decision of 2026-11-03 strengthens
+  `StartEndeG` with `StartScopedEndeG` and requires separate evaluation/cleanup with a cost-neutral protocol.
+  The partial implementation saves the answer/pre-release world, releases locks individually, then delivers the answer;
+  it is unmerged and **needs the lead build**. Open: the extra delivery step exceeds the unchanged cost bound even with no scopes;
+  lock provenance and `RufHaeltG/T2`; complete thread/actor replay and answer-pop handling; saved-answer completion/invariant
+  consumers; atomic/location/deadlock case analyses; K projection/noninterference and all new proofs; generic source-to-IR connection.
+  Preserve the approved goal conjuncts, strict race ordering and existing time bounds; see §182 for the handoff's proposed cost repair.
+- **Later low-level work.** The order is already fixed in [AGENTS.md](AGENTS.md): after the C packages, outside the runner/Stage 0,
+  no `unsafe`, and a bundled once-proved x86-64 boot-stub ASM binding. This is not current Stage-0 completion work.
+
 - **Stage 0: every userspace Gabbro form to IR, formally verified.** Designs and lane checkpoints:
   [IR-COMPILATION-LANES.md](dokumente/IR-COMPILATION-LANES.md); scope and operating rules: [AGENTS.md](AGENTS.md).
   The following is a **source audit of `4f1bb9134`, 2026-11-03**, not a compilation or execution measurement.
