@@ -15,6 +15,7 @@ public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil3
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenSem.Teil1
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis.Teil1
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz.T2.Teil1
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz.T2.Teil1b
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreFuss.Teil1
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
 
