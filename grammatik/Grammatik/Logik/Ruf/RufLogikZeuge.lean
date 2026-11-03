@@ -126,7 +126,7 @@ theorem nurAbstieg_zeuge_104 :
     (rufAt P4 O4 0 2 ein4 (sp4.welt []) rho7 = .ok wEin () ∧
       (wEin.slots t4 0 f4).n = 100 ∧
       D4.schreibt lies4 t4 = false ∧
-      ∃ (σ'' : World D4) (v : ErgVal D4 (D.erg lies4)),
+      ∃ (σ'' : World D4) (v : ErgVal D4 (D4.erg lies4)),
         rufAt P4 O4 0 1 lies4 wEin rhoL = .ok σ'' v ∧
         (σ''.slots t4 0 f4).n = 100) := by
   have hL : rufAt P4 O4 0 1 lies4 wEin rhoL = .ok _ _ := rfl
@@ -171,7 +171,7 @@ theorem nurAbstieg_zeuge_108 :
       HeldB (D8.signatur f).boden (Signatur.anfang D8 (D8.signatur f)) σ.haelt →
       ReqAmEintritt P8 f σ ρG → rufAt P8 O8 passes n f σ ρG = .logik e →
         ∃ h : D8.Fn, e = .abstieg h) ∧
-    (∃ (σ' : World D8) (v : ErgVal D8 (D.erg a8)),
+    (∃ (σ' : World D8) (v : ErgVal D8 (D8.erg a8)),
       rufAt P8 O8 0 1 a8 (sp8.welt []) .nil = .ok σ' v) := by
   refine ⟨?_, ?_⟩
   · intro passes n f σ ρG e hh hq hl

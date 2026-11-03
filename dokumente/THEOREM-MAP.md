@@ -6397,7 +6397,7 @@ replacement and actual substitution theorems. Negative witnesses cover wrong res
 types, option bounds, unknown tags, UTF-8 overflow, wider strings, false requires/ensures, missing payloads, statement calls, a foreign
 reason owner, and parameter/local/pattern/quantifier shadowing.
 
-`stage0/Stage0/Frontend/ConstWitness.lean` retains the previous scalar values 4/6, contracts,
+`stage0/Stage0/Frontend/Witnesses/ConstWitness.lean` retains the previous scalar values 4/6, contracts,
 source/initializer compilation, generic-contract bypass and argument-type refusals.
 `ConstValuesWitness.lean` adds source-text Bool, Some/None, tagged numeric payload, short
 string and original/qualified captured-global compilation declarations, with canonical-admission and conditional

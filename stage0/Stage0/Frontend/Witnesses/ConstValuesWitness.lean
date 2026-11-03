@@ -1,5 +1,5 @@
 module
-public import Stage0.Frontend.ConstWitness
+public import Stage0.Frontend.Witnesses.ConstWitness
 public import Grammatik.Parser.Elab.Konst.Values.Witness
 
 @[expose] public section
