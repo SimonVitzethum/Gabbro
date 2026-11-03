@@ -69,7 +69,7 @@ theorem stringPair_ok {n q d a b need top : Nat} {s t : Option (List II × Nat)}
         by simpa only [List.append_assoc] using pre) with ctx := Nat.le_trans pre.ctx da }
   obtain ⟨m1, s1, ch1, v1⟩ := stringSpan_ok vs s ihs hs (by omega) p.left
   have p1 := p.next ch1 (by have := stringCapacity_ge n; omega : a ≤ b) (by omega)
-  obtain ⟨m2, s2, ch2, v2⟩ := stringSpan_ok vt t iht ht (by omega) m1 _ p1.left
+  obtain ⟨m2, s2, ch2, v2⟩ := stringSpan_ok (m := m1) vt t iht ht (by omega) p1.left
   have p2 : Pre L m2 _ fp K d tail ρ W reserved :=
     { p1.next ch2 (Nat.le_refl _) (by omega) with ctx := pre.ctx }
   have kept := v1.agree_low ch2 p1.frame.room
