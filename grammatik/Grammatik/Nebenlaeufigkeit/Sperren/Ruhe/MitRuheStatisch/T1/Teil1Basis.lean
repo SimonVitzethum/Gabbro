@@ -28,7 +28,7 @@ theorem ruE_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ �
   | _, _, _, .glob _ _ => rfl
   | _, _, _, .slot t f i hL => congrArg (Sum.inl t :: ·) (ruE_orte i)
   | _, _, _, .thru p t ht f i hL => kongr₂ (fun x y => x ++ Sum.inl t :: y) (ruE_orte p) (ruE_orte i)
-  | _, _, _, .thruOwn p t ht f i m s ho he hg hm hL =>
+  | _, _, _, .thruOwn p t ht f i m s ho he hg hL =>
       kongr₂ (fun x y => x ++ Sum.inl t :: y) (ruE_orte p) (ruE_orte i)
   | _, _, _, .ptrOf .. => rfl
   | _, _, _, .fnref .. => rfl
