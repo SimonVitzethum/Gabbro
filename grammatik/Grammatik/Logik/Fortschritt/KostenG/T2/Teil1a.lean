@@ -270,10 +270,12 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       · omega
   | g5 hs =>
     cases hs with
-    | dannBindAxiomOpt _ _ l Γ Λ Λ' e =>
+    | dannBindAxiomOpt l Γ Λ Λ' e a args he hp hd hgd rest k ρ hhead
+        σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
       cases e <;> kopfA
       all_goals first | (solve | simp_all) | omega
-    | dannBindAxiomOptElseOk _ _ l Γ Λ Λ' e =>
+    | dannBindAxiomOptElseOk l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead
+        σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
       cases e <;> kopfA
       all_goals first | (solve | simp_all) | omega
     | rueckConsGrund _ _ r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
@@ -302,9 +304,35 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       · omega
   | g7 hs =>
     cases hs with
-    | _ =>
+    | dannVerbrauch l Γ Λ Λ'' t member edge inv bound mass body rest k ρ hhead =>
       kopfA
-      · cases EW <;> simp_all
+      · simp_all
+      · omega
+    | verbrauchWeiter l Γ Λ t member edge inv bound mass body rest k ρ hhead
+        σ₁ hs₁ hw σ₂ hs₂ v hv σ₃ hs₃ m hm neu hneu hΛ =>
+      kopfA
+      · simp_all
+      · omega
+    | verbrauchLeer l Γ Λ t member edge inv bound mass body rest k ρ hhead
+        σ₁ hs₁ hw σ₂ hs₂ hleer hkein neu hneu hΛ =>
+      kopfA
+      · simp_all
+      · omega
+    | verbrauchFort l Γ Λ t member edge inv bound mass body rest vor k i ρ hhead
+        σ₁ hs₁ m' hm' hfall neu hneu hΛ =>
+      kopfA
+      · simp_all
+      · omega
+    | dannLeaveVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ
+        hleave hhead σ' ρ' neu hstep hneu hkein_nimmt σm hsm m' hm' hfall
+        σ₁ hs₁ hw neu₁ hneu₁ hΛ =>
+      kopfA
+      · simp_all
+      · omega
+    | dannNextVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ
+        hnext hhead σ' ρ' neu hstep hneu hkein_nimmt σm hsm m' hm' hfall neum hneum hΛ =>
+      kopfA
+      · simp_all
       · omega
 /-! ## 6. Counting one thread's steps -/
 
