@@ -365,12 +365,14 @@ def lowRegWriteBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) 
           .ok (Stmt.regWrite (D := declOf u) g hk e)
         else .error "register written against its class"
 
-/-- The signature after a call through a pointer of the unit: the held set stays (no marks). -/
+/-- The signature after a call through a pointer of the unit: the canonical call
+    transformer of that signature (resolved, C16). -/
 theorem nachSigAt_eq (u : UProg) (n : Nat) (L : List (Res (declOf u))) :
-    nachSig (declOf u) ((declOf u).sigNr n) L = L := by
-  show nachSig (declOf u) (sigAt u n) L = L
-  unfold sigAt
-  split <;> exact List.append_nil L
+    nachSig (declOf u) ((declOf u).sigNr n) L =
+      ((((declOf u).sigNr n).inputMarks.foldl
+        (fun acc p => acc.erase (Res.vonMarke (declOf u) p)) L) ++
+      (((declOf u).sigNr n).outputMarks.map (Res.vonMarke (declOf u))) := by
+  unfold nachSig
 
 /-- `RufPasst` against any signature of the unit, decided over the finite carriers. The
     admitted boundary is still mark-free: no consumed marks and no owner flow travel yet

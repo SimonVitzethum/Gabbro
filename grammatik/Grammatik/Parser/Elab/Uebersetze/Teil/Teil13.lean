@@ -317,6 +317,9 @@ def elabUroh : List SItemTief → Except String UProg
     match uMarkenPruef marken (fns ++ torFns) with
     | .error e => .error e
     | .ok _ =>
+    match uGibtPruef (ms.filterMap (fun | .tableT _ _ _ _ o _ _ => o | _ => none)) (fns ++ torFns) with
+    | .error e => .error e
+    | .ok _ =>
     match uWurzeln tabs fns ms with
     | .error e => .error e
     | .ok roots =>

@@ -20,9 +20,10 @@ set_option maxRecDepth 100000
 def ctxOf (u : UProg) (c : Fin u.fns.length) : Ctx :=
   (fnAt u c).params.map (·.2)
 
-/-- The held resources of a function body. -/
+/-- The held resources of a function body: its held locks and consumed input marks
+    (C16: bodies start holding what the signature consumes). -/
 def resOf (u : UProg) (c : Fin u.fns.length) : List (Res (declOf u)) :=
-  (heldAt u (fnAt u c)).map (Res.held (D := declOf u))
+  Signatur.anfang (declOf u) ((declOf u).signatur c)
 
 /-- The contract of a function body. -/
 def verOf (u : UProg) (c : Fin u.fns.length) : Vertrag (declOf u) :=
@@ -62,16 +63,16 @@ theorem vGSchreibt_eq (u : UProg) (c : Fin u.fns.length) (g : Fin u.globs.length
   rw [sigAt_get u c]
   rfl
 
-/-- No consumed marks travel. -/
-theorem sigKonsumiert_nil (u : UProg) (i : Fin u.fns.length) :
-    ((declOf u).signatur i).konsumiert = [] := by
+/-- The consumed marks travel from `nimmt`. -/
+theorem sigKonsumiert_eq (u : UProg) (i : Fin u.fns.length) :
+    ((declOf u).signatur i).konsumiert = nimmtAt u (fnAt u i) := by
   show (sigAt u i.val).konsumiert = _
   rw [sigAt_get u i]
   rfl
 
-/-- No produced marks travel. -/
-theorem sigProduziert_nil (u : UProg) (i : Fin u.fns.length) :
-    ((declOf u).signatur i).produziert = [] := by
+/-- The produced marks travel from `gibt` (never owners). -/
+theorem sigProduziert_eq (u : UProg) (i : Fin u.fns.length) :
+    ((declOf u).signatur i).produziert = gibtAt u (fnAt u i) := by
   show (sigAt u i.val).produziert = _
   rw [sigAt_get u i]
   rfl
@@ -110,17 +111,11 @@ theorem vErg_eq (u : UProg) (c : Fin u.fns.length) :
   rw [sigAt_get u c]
   rfl
 
-/-- A call keeps the held resources (both mark lists are empty). -/
+/-- A call steps to the canonical call transformer: consumed marks are erased,
+    produced marks appended (definitionally `nachSig` of the signature). -/
 theorem nach_eq (u : UProg) (i : Fin u.fns.length)
     (L : List (Res (declOf u))) :
-    nach (declOf u) i L = L := by
-  have hK := sigKonsumiert_nil u i
-  have hP := sigProduziert_nil u i
-  unfold nach nachSig Signatur.inputMarks Signatur.outputMarks
-  rw [signaturOwner_nil u i]
-  rw [hK, hP]
-  change L ++ [] = L
-  exact List.append_nil L
+    nach (declOf u) i L = nachSig (declOf u) ((declOf u).signatur i) L := rfl
 
 /-- The body context is the declared parameter list. -/
 theorem ctxParams_eq (u : UProg) (c : Fin u.fns.length) :
@@ -128,24 +123,20 @@ theorem ctxParams_eq (u : UProg) (c : Fin u.fns.length) :
   show (fnAt u c).params.map (·.2) = _
   exact (params_eq u c).symm
 
-/-- The held resources are the signature beginning. -/
+/-- The held resources are the signature beginning (bodies start holding inputs). -/
 theorem anfangRes_eq (u : UProg) (c : Fin u.fns.length) :
     resOf u c =
-      Signatur.anfang (declOf u) ((declOf u).signatur c) := by
-  have h1 : ((declOf u).signatur c).haelt =
-    heldAt u (fnAt u c) := haelt_eq u c
-  have h2 : ((declOf u).signatur c).konsumiert = [] :=
-    sigKonsumiert_nil u c
-  show ((heldAt u (fnAt u c)).map (Res.held (D := declOf u))) = _
-  unfold Signatur.anfang Signatur.inputMarks
-  rw [h1, h2, signaturOwner_nil u c]
-  rfl
+      Signatur.anfang (declOf u) ((declOf u).signatur c) := rfl
 
-/-- The held resources are the contract end. -/
-theorem endeRes_eq (u : UProg) (c : Fin u.fns.length) :
-    resOf u c = (vertragVon (declOf u) c).ende := by
-  show ((heldAt u (fnAt u c)).map (Res.held (D := declOf u))) = _
-  exact (ende_eq u c).symm
+/-- The contract end is held locks plus produced marks (resolved, C16). -/
+theorem ende_eq_resolved (u : UProg) (c : Fin u.fns.length) :
+    (vertragVon (declOf u) c).ende =
+      ((declOf u).haelt c).map (Res.held (D := declOf u)) ++
+        ((((declOf u).signatur c).produziert ++
+          ((declOf u).signatur c).owner.outputs).map (Res.vonMarke (declOf u))) := by
+  show Vertrag.ende (vertragVon (declOf u) c) = _
+  unfold Vertrag.ende Vertrag.vonSig
+  rfl
 
 /-- The ensures context through the declaration. -/
 theorem ensCtx_eq (u : UProg) (c : Fin u.fns.length) :

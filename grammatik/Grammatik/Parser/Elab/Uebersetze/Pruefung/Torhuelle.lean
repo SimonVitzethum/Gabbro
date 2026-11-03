@@ -42,6 +42,20 @@ def uMarkenPruefAux (marken : List String) : List UFn → Except String Unit
 def uMarkenPruef (marken : List String) (fns : List UFn) : Except String Unit :=
   uMarkenPruefAux marken fns
 
+/-- A produced mark is never a table owner (C16): signatures never produce owners
+    (`eigner_nie_erzeugt`); only the one-shot C09 mint creates one. A `gibt` naming
+    a table's `owner` mark is refused by name. -/
+def uGibtPruefAux (owners : List String) : List UFn → Except String Unit
+  | [] => .ok ()
+  | f :: rest =>
+    match f.gibt.find? (fun m => owners.any (fun o => strEq o m)) with
+    | some m => .error ("owner produced without mint: " ++ m)
+    | none => uGibtPruefAux owners rest
+
+/-- The owner-production check of the unit: no `gibt` names a table owner. -/
+def uGibtPruef (owners : List String) (fns : List UFn) : Except String Unit :=
+  uGibtPruefAux owners fns
+
 /-- The wrapper of gate `gate` of check `cname`: it cannot collide with a written
     function, since `#` never stands in a source identifier. -/
 def torHuellenName (cname gate : String) : String := cname ++ "#tor#" ++ gate

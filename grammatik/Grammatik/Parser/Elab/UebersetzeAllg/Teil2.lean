@@ -14,11 +14,11 @@ theorem sigAt_haelt (u : UProg) (i : Fin u.fns.length) :
   rw [sigAt_get]; rfl
 
 theorem sigAt_konsumiert (u : UProg) (i : Fin u.fns.length) :
-    (sigAt u i.val).konsumiert = [] := by
+    (sigAt u i.val).konsumiert = nimmtAt u (fnAt u i) := by
   rw [sigAt_get]; rfl
 
 theorem sigAt_produziert (u : UProg) (i : Fin u.fns.length) :
-    (sigAt u i.val).produziert = [] := by
+    (sigAt u i.val).produziert = gibtAt u (fnAt u i) := by
   rw [sigAt_get]; rfl
 
 /-- No signature number carries an owner flow yet (the C09 handoff wires real flows). -/
@@ -47,13 +47,15 @@ theorem haelt_eq (u : UProg) (i : Fin u.fns.length) :
     (declOf u).haelt i = heldAt u (fnAt u i) := by
   simp only [declOf, Deklaration.haelt, Deklaration.signatur, sigAt_haelt]
 
-/-- The contract end: held locks only (no marks travel). -/
+/-- The contract end: held locks plus produced marks (resolved, C16). -/
 theorem ende_eq (u : UProg) (f : Fin u.fns.length) :
     (vertragVon (declOf u) f).ende =
-      (heldAt u (fnAt u f)).map (Res.held (D := declOf u)) := by
+      (heldAt u (fnAt u f)).map (Res.held (D := declOf u)) ++
+        ((gibtAt u (fnAt u f)).map (Res.vonMarke (declOf u))) := by
+  have hO : ((declOf u).signatur f).owner = {} := signaturOwner_nil u f
   simp only [vertragVon, Vertrag.vonSig, Vertrag.ende, Deklaration.signatur,
-    declOf, sigAt_haelt, sigAt_produziert]
-  exact List.append_nil _
+    declOf, sigAt_haelt, sigAt_produziert, hO, OwnerFlow.outputs,
+    List.filterMap_nil, List.append_nil]
 
 /-- Every field index has its recorded range. -/
 theorem rangeO_some (u : UProg) (t : Fin u.tabs.length)
