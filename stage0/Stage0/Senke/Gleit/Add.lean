@@ -65,7 +65,7 @@ theorem softAdd_model (a b : UInt64) :
   have hlt : zuBits f64 (add f64 (u64ToG a) (u64ToG b)) < 2 ^ 64 :=
     zuBits_f64_lt _ hw
   have hsize : zuBits f64 (add f64 (u64ToG a) (u64ToG b)) < UInt64.size :=
-    lt_of_lt_of_le hlt (by decide)
+    Nat.lt_of_lt_of_le hlt (by decide)
   have hround : (UInt64.ofNat (zuBits f64 (add f64 (u64ToG a) (u64ToG b)))).toNat
       = zuBits f64 (add f64 (u64ToG a) (u64ToG b)) :=
     UInt64.toNat_ofNat_of_lt' hsize
@@ -86,6 +86,8 @@ theorem softAdd_special (a b : UInt64) :
         | some u, some v => rundeExakt f64 (exaktAdd u v)
         | _, _ => nanQ f64 := by
   rw [softAdd_model, floatAddSpecial_model]
+  cases floatAddSpecial f64 (u64ToG a) (u64ToG b) <;> dsimp only <;>
+    cases wertExakt f64 (u64ToG a) <;> cases wertExakt f64 (u64ToG b) <;> rfl
 
 /-- Joint witness: finite rounding (`1.0 + 2.0 = 3.0`), signed zeros
     (`+0 + +0 = +0`, `-0 + -0 = -0`), subnormal exactness (`1 + 1 = 2`),

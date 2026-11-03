@@ -56,7 +56,7 @@ def routineSpecialL (d : Nat) (a b finite : Nat → Option (List II × Nat)) :
   let sb := fun j => unpackSignL j b
   let sameSign := fun j => wordL 14 j (sa j) (sb (j + 1))
   let bothZero := fun j => wordL 8 j (za j) (zb (j + 1))
-  let zero := fun j => some ([ci 1 j 0 0], j + 1)
+  let zero := fun (j : Nat) => some ([ci 1 j 0 0], j + 1)
   let zeroSign := fun j => wordL 8 j (sa j) (sb (j + 1))
   let signedZero := fun j => packL j zeroSign zero zero
   let nan := fun j => some (konstWL 4 9218868437227405313 j)
@@ -84,7 +84,8 @@ theorem routineNanL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     WordCode (L := L) ρ W (fun d => isNanL d
       (fun j => unpackBexpL j a) (fun j => unpackFracL j a))
       (Runner.IR.bool (routineNanFlag av)) := by
-  have h := isNanL_ok (unpackBexpL_ok ha) (unpackFracL_ok ha)
+  intro fp K d c top hh hK m pc hp
+  have h := (isNanL_ok (unpackBexpL_ok ha) (unpackFracL_ok ha)) hh hK m pc hp
   simpa only [isNanWord, isFracNonzeroWord, flagAndNot, routineNanFlag] using h
 
 theorem routineInfL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
@@ -93,7 +94,8 @@ theorem routineInfL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     WordCode (L := L) ρ W (fun d => isInfL d
       (fun j => unpackBexpL j a) (fun j => unpackFracL j a))
       (Runner.IR.bool (routineInfFlag av)) := by
-  have h := isInfL_ok (unpackBexpL_ok ha) (unpackFracL_ok ha)
+  intro fp K d c top hh hK m pc hp
+  have h := (isInfL_ok (unpackBexpL_ok ha) (unpackFracL_ok ha)) hh hK m pc hp
   simpa only [isInfWord, flagAnd, routineInfFlag] using h
 
 theorem routineZeroL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
@@ -102,7 +104,8 @@ theorem routineZeroL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     WordCode (L := L) ρ W (fun d => isZeroL d
       (fun j => unpackBexpL j a) (fun j => unpackFracL j a))
       (Runner.IR.bool (routineZeroFlag av)) := by
-  have h := isZeroL_ok (unpackBexpL_ok ha) (unpackFracL_ok ha)
+  intro fp K d c top hh hK m pc hp
+  have h := (isZeroL_ok (unpackBexpL_ok ha) (unpackFracL_ok ha)) hh hK m pc hp
   simpa only [isZeroWord, flagAnd, routineZeroFlag] using h
 
 /-- Composition of the actual dispatcher IR. The only finite-path premise
@@ -113,27 +116,31 @@ theorem routineSpecialL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     (hf : WordCode (L := L) ρ W finite fv) :
     WordCode (L := L) ρ W (fun d => routineSpecialL d a b finite)
       (routineSpecialWord av bv fv) := by
-  have sa := unpackSignL_ok ha
-  have sb := unpackSignL_ok hb
-  have sameSign := WordCode.bin sa sb
+  have sa : WordCode (L := L) ρ W _ _ := unpackSignL_ok ha
+  have sb : WordCode (L := L) ρ W _ _ := unpackSignL_ok hb
+  have sameSign : WordCode (L := L) ρ W _ _ := WordCode.bin sa sb
     (g := fun x y => some (Runner.IR.bool (x == y))) rfl rfl (by decide : 14 < 256)
-  have bothZero := WordCode.bin (routineZeroL_ok ha) (routineZeroL_ok hb)
+  have bothZero : WordCode (L := L) ρ W _ _ := WordCode.bin (routineZeroL_ok ha) (routineZeroL_ok hb)
     (g := fun x y => some (x &&& y)) rfl rfl (by decide : 8 < 256)
   rw [flagAnd] at bothZero
-  have zeroSign := WordCode.bin sa sb (g := fun x y => some (x &&& y))
+  have zeroSign : WordCode (L := L) ρ W _ _ := WordCode.bin sa sb (g := fun x y => some (x &&& y))
     rfl rfl (by decide : 8 < 256)
   have zero : WordCode (L := L) ρ W
       (fun j => some ([ci 1 j 0 0], j + 1)) 0 := WordCode.const 0 (by decide)
-  have signedZero := packL_ok zeroSign zero zero
-  have nan := WordCode.konst (L := L) (ρ := ρ) (W := W)
+  have signedZero : WordCode (L := L) ρ W _ _ := packL_ok zeroSign zero zero
+  have nan : WordCode (L := L) ρ W _ _ := WordCode.konst (L := L) (ρ := ρ) (W := W)
     9218868437227405313 (by decide)
-  have infPair := routineChooseL_ok sameSign (fun _ => ha) (fun _ => nan)
-  have infLeft := routineChooseL_ok (routineInfL_ok hb) (fun _ => infPair) (fun _ => ha)
-  have finiteOrZero := routineChooseL_ok bothZero (fun _ => signedZero) (fun _ => hf)
-  have infRight := routineChooseL_ok (routineInfL_ok hb) (fun _ => hb) (fun _ => finiteOrZero)
-  have infinities := routineChooseL_ok (routineInfL_ok ha) (fun _ => infLeft) (fun _ => infRight)
-  have rightNan := routineChooseL_ok (routineNanL_ok hb) (fun _ => hb) (fun _ => infinities)
-  exact routineChooseL_ok (routineNanL_ok ha) (fun _ => ha) (fun _ => rightNan)
+  have infPair : WordCode (L := L) ρ W _ _ := routineChooseL_ok sameSign (fun _ => ha) (fun _ => nan)
+  have infLeft : WordCode (L := L) ρ W _ _ := routineChooseL_ok (routineInfL_ok hb) (fun _ => infPair) (fun _ => ha)
+  have finiteOrZero : WordCode (L := L) ρ W _ _ := routineChooseL_ok bothZero (fun _ => signedZero) (fun _ => hf)
+  have infRight : WordCode (L := L) ρ W _ _ := routineChooseL_ok (routineInfL_ok hb) (fun _ => hb) (fun _ => finiteOrZero)
+  have infinities : WordCode (L := L) ρ W _ _ := routineChooseL_ok (routineInfL_ok ha) (fun _ => infLeft) (fun _ => infRight)
+  have rightNan : WordCode (L := L) ρ W _ _ := routineChooseL_ok (routineNanL_ok hb) (fun _ => hb) (fun _ => infinities)
+  have result : WordCode (L := L) ρ W _ _ :=
+    routineChooseL_ok (routineNanL_ok ha) (fun _ => ha) (fun _ => rightNan)
+  intro fp K d c top h hK m pc hp
+  simpa only [routineSpecialL, routineSpecialWord] using
+    result (fp := fp) (K := K) (d := d) (c := c) (top := top) h hK m pc hp
 
 /-- Payload priority, opposite infinities, negative zeros and finite fallthrough
     all exercise the same dispatcher used in the emitted routine. -/

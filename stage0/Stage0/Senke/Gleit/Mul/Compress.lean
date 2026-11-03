@@ -7,6 +7,7 @@ public import Stage0.Senke.Gleit.Sticky.Round
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Gleitkomma Runner.IR Runner.Mem
+variable [Runner.IR.Kern]
 
 /-- Arithmetic characterization of jam, useful when the exact numerator is
     wider than a word. Its quotient's upper bits and its parity are retained. -/
@@ -53,14 +54,14 @@ theorem softMulJam_bounds (n k : Nat) (count : k = 49 ∨ k = 50)
 def softMulCompressWord (a b : Runner.W) (k : Nat) : Runner.W :=
   floatShiftJamWord (a * b) (BitVec.ofNat 64 k) + (mulHiW a b <<< (64 - k))
 
-variable [Kern] {D : Deklaration} {L : Lay D}
+variable {D : Deklaration} {L : Lay D}
 
 def softMulCompressL (d : Nat) (a b : Nat → Option (List II × Nat)) (k : Nat) :
     Option (List II × Nat) :=
-  let low := fun j => wordL 5 j (a j) (b (j + 1))
-  let high := fun j => softMulHighL j a b
-  let jam := fun j => floatShiftJamL j low
-    (fun v => some ([ci 1 v (Int.ofNat k) 0], v + 1))
+  let low := fun (j : Nat) => wordL 5 j (a j) (b (j + 1))
+  let high := fun (j : Nat) => softMulHighL j a b
+  let jam := fun (j : Nat) => floatShiftJamL j low
+    (fun (v : Nat) => some ([ci 1 v (Int.ofNat k) 0], v + 1))
   wordL 3 d (jam d) (wordK 11 (d + 1) (high (d + 1)) (Int.ofNat (64 - k)))
 
 theorem softMulCompressL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
@@ -69,19 +70,21 @@ theorem softMulCompressL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pro
     (k : Nat) (count : k = 49 ∨ k = 50) :
     WordCode (L := L) ρ W (fun d => softMulCompressL d a b k)
       (softMulCompressWord av bv k) := by
-  have low := WordCode.bin ha hb (g := fun x y => some (x * y))
+  have low : WordCode (L := L) ρ W _ _ := WordCode.bin ha hb (g := fun x y => some (x * y))
     rfl rfl (by decide : 5 < 256)
   have literal : lit32 (Int.ofNat k) = true := by rcases count with rfl | rfl <;> decide
   have leftLiteral : lit32 (Int.ofNat (64 - k)) = true := by
     rcases count with rfl | rfl <;> decide
   have shift : (BitVec.ofInt 64 (Int.ofNat (64 - k))).toNat % 64 = 64 - k := by
     rcases count with rfl | rfl <;> decide
-  have jam := floatShiftJamL_ok low (WordCode.const _ literal)
-  have high := WordCode.bin (softMulHighL_word ha hb) (WordCode.const _ leftLiteral)
+  have jam : WordCode (L := L) ρ W _ _ := floatShiftJamL_ok low (WordCode.const _ literal)
+  have high : WordCode (L := L) ρ W _ _ := WordCode.bin (softMulHighL_word ha hb) (WordCode.const _ leftLiteral)
     (g := fun x y => some (x <<< (y.toNat % 64))) rfl rfl (by decide : 11 < 256)
   rw [shift] at high
-  exact WordCode.bin jam high (g := fun x y => some (x + y))
+  have result : WordCode (L := L) ρ W _ _ := WordCode.bin jam high (g := fun x y => some (x + y))
     rfl rfl (by decide : 3 < 256)
+  intro fp K d c top h hK m pc hp
+  simpa only [softMulCompressWord, BitVec.ofInt_ofNat, Int.ofNat_eq_coe, BitVec.ofInt_natCast] using result h hK m pc hp
 
 /-- Relate the compressed word to the full product, not to its wrapped low
     limb. Every discarded product bit is represented by the sticky bit. -/

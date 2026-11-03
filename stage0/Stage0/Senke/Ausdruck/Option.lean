@@ -20,13 +20,22 @@ theorem some_ok {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {n : Int}
     (h : lowE (currentOld := currentOld) L (.some e) d reserved = some (c, top)) (hK : top ≤ K)
     (hp : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c (.opt n) (eval σ₀ (.some e) σ ρ) := by
+  have optionEncoding (k : Zahl 0 (n - 1)) :
+      encodeWords L (.opt n) (some k) =
+        if n ≤ 2 ^ 63 then [BitVec.ofInt 64 k.n]
+        else 1 :: integerEncoding (integerWords 0 (n - 1)) k.n := by
+    simp only [encodeWords, optN]
   simp only [lowE_eqs] at h
   split at h
   · next short =>
     obtain ⟨m', run, changed, value⟩ := ih d c top h hK m pc hp
     have width : integerWords 0 (n - 1) = 1 := integerWords_unsigned (by decide) (by omega)
     refine ⟨m', run, changed, trivial, ?_⟩
-    simpa only [encodeWords, width, integerEncoding, if_pos short, eval, optN] using value.2
+    change WordsAt m' fp d (encodeWords L (.opt n) (some (eval σ₀ e σ ρ)))
+    erw [optionEncoding, if_pos short]
+    have words := value.2
+    erw [encodeWords_int] at words
+    simpa only [width, integerEncoding] using words
   · next long =>
     simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨⟨ce, te⟩, he, rfl, rfl⟩ := h
@@ -39,7 +48,7 @@ theorem some_ok {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {n : Int}
     refine ⟨m2, ?_, changed1.trans (changed2.mono (Nat.le_succ d)), trivial, ?_⟩
     · simpa only [List.length_append, pc_add] using run1.trans run2
     · change WordsAt m2 fp d (encodeWords L (.opt n) (some (eval σ₀ e σ ρ)))
-      simp only [encodeWords, if_neg long]
+      erw [optionEncoding, if_neg long]
       rw [show (1 : Runner.W) :: integerEncoding (integerWords 0 (n - 1)) (eval σ₀ e σ ρ).n =
         [1] ++ integerEncoding (integerWords 0 (n - 1)) (eval σ₀ e σ ρ).n from rfl,
         wordsAt_append]
@@ -49,7 +58,9 @@ theorem some_ok {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {n : Int}
         subst i
         rw [agree_rd_low changed2 next.frame.room (by omega) (by omega)]
         exact read1
-      · exact value.2
+      · have words := value.2
+        erw [encodeWords_int] at words
+        exact words
 
 theorem istSome_ok {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {n : Int}
     (e : Expr D Γ Λ (.opt n)) {σ₀ σ : World D} {fp : Runner.W} {K d top : Nat}

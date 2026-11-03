@@ -89,12 +89,23 @@ theorem routineChooseL_zeuge {Γ : Ctx} (ρ : Env D Γ) (W : Runner.Mem → Prop
           (fun k => some ([ci 1 k 3 0], k + 1)))
         (fun j => some ([ci 1 j 7 0], j + 1))
         (fun j => some ([ci 1 j 9 0], j + 1))) 7 := by
-  have cond := routineLessL_ok (L := L) (reserved := reserved) (ρ := ρ) (W := W)
+  have cond : WordCode (L := L) (reserved := reserved) ρ W
+      (fun d => routineLessL d (fun k => some ([ci 1 k 2 0], k + 1)) (fun k => some ([ci 1 k 3 0], k + 1)))
+      (Runner.IR.bool ((BitVec.ofInt 64 2).ult (BitVec.ofInt 64 3))) := routineLessL_ok (L := L) (reserved := reserved) (ρ := ρ) (W := W)
     (WordCode.const 2 (by decide)) (WordCode.const 3 (by decide))
   have eq : (BitVec.ofInt 64 2).ult (BitVec.ofInt 64 3) = true := by decide
   rw [eq] at cond
-  exact routineChooseL_ok cond (fun _ => WordCode.const 7 (by decide))
-    (fun _ => WordCode.const 9 (by decide))
+  have r : WordCode (L := L) (reserved := reserved) ρ W
+      (fun d => routineChooseL d
+        (fun j => routineLessL j (fun k => some ([ci 1 k 2 0], k + 1)) (fun k => some ([ci 1 k 3 0], k + 1)))
+        (fun j => some ([ci 1 j 7 0], j + 1)) (fun j => some ([ci 1 j 9 0], j + 1)))
+      (if true then BitVec.ofInt 64 7 else BitVec.ofInt 64 9) :=
+    routineChooseL_ok cond (fun _ => WordCode.const 7 (by decide)) (fun _ => WordCode.const 9 (by decide))
+  have h7 : (if true then BitVec.ofInt 64 7 else BitVec.ofInt 64 9 : Runner.W) = 7 := by decide
+  intro fp K d code top h hK m pc hp
+  have res := r h hK m pc hp
+  rw [h7] at res
+  exact res
 
 #print axioms routineChooseL_ok
 #print axioms routineLessL_ok

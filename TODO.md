@@ -24,8 +24,8 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   - **Stage-0 refusals (source audit 2026-11-03).** Exact constructor tables, checks, proof connections and
     refusal witnesses: [measured coverage](dokumente/IR-COMPILATION-LANES.md#stage-0-coverage-measured-2026-11-03).
     No builds were run for that audit. Remaining refusals include:
-    - Scoped returns inside lock bodies; source `by consuming`; `consumeTraverse` (Stage 0 still lowers the old
-      fixed-sweep placeholder, not the new `verbrauchLauf` semantics; re-lowering in progress).
+    - Scoped returns inside lock bodies; source `by consuming`. `consumeTraverse` follows `verbrauchLauf` in Stage 0
+      (`consumeTraverse_case`); lead elaboration pending.
     - Unrepresentable tag dispatch / byte spans, oversized folds/code/addresses,
       and unsupported entry-snapshot subtrees. Aggregate payload and wide byte implementation checks are pending below.
     - Fallible indirect statement-else source syntax; unbound foreign gates; wide/reference/region

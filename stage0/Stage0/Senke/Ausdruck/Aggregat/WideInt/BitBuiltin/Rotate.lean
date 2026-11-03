@@ -60,7 +60,8 @@ theorem rotate_ok (right : Bool) (w : Nat) (x : Zahl 0 ((2 : Int) ^ (w + 1) - 1)
   have lowCode : Runs (mask (u * 2 ^ (w + 1)) (w + 1) (shl u (w + 1) fa fl)) (.int 0 u) low :=
     mask_ok (w + 1) shifted low (by
       change _ = ((shifted.n.toNat % 2 ^ (w + 1) : Nat) : Int)
-      rw [shiftValue, Int.toNat_natCast])
+      rw [shiftValue, Int.toNat_natCast]
+      rfl)
       (shl_ok (w + 2) (w + 1) inputBound (by omega) x left shifted shiftValue ia leftCode)
   have highCode : Runs (shr u (w + 1) fa fr) (.int 0 u) high :=
     shr_ok (w + 2) (w + 1) inputBound (by omega) x rcount high highValue ia rightCode

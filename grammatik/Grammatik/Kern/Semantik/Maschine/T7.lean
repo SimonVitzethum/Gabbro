@@ -123,7 +123,7 @@ variable {D : Deklaration}
 theorem blatt_rahmen_vertrag
     (O : Orakel D) (passes : Nat) (hO : GutO O)
     (M : GenMaschine D) (f : Faden)
-    (V : vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
+    (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
     (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
     (hleaf : s.istBlatt = true)
     (hΛ : HeldGenau Λ (offen (M.spuren f)))
@@ -141,7 +141,7 @@ theorem blatt_rahmen_vertrag
 theorem blatt_rahmen_schritt
     (O : Orakel D) (passes : Nat) (hO : GutO O)
     (M : GenMaschine D) (f : Faden)
-    (V : vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
+    (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
     (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
     (hleaf : s.istBlatt = true)
     (hΛ : HeldGenau Λ (offen (M.spuren f)))

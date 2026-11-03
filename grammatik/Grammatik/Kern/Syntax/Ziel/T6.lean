@@ -58,10 +58,10 @@ theorem kette_aus_lauf_bezeugt_closed
         L ∈ D.haelt (J.code g)) := by
   exact kette_aus_lauf_bezeugt P O passes hO sp Nb prog M pc h f code t₀ L hGuardT hCov
     hsingle_prog hsingle_run hRahmen hEintritt hSchuld hInvSicht hwit_leaf hwit_lock
-    (fun Mx Mx' hReach hReach' V l Γ Λ Λ' s ρ hΛ σ' neu hstep hM'l hM'w J hJw hmem hW hG
+    (fun Mx Mx' hReach hReach' V l Γ Λ Λ' s ρ hleaf hΛ σ' neu hstep hM'l hM'w J hJw hmem hW hG
       hsingle hGuardT hCov hwit_old hneu_wit =>
       hwitschritt_kleber_voll P O passes hO sp Nb Mx Mx' f hReach hReach' V l Γ Λ Λ' s ρ
-        hΛ σ' neu hstep hM'l hM'w J hJw hmem hW hG hsingle t₀ L hGuardT hCov hwit_old hneu_wit)
+        hleaf hΛ σ' neu hstep hM'l hM'w J hJw hmem hW hG hsingle t₀ L hGuardT hCov hwit_old hneu_wit)
 
 #print axioms Gabbro.Grammatik.kette_aus_lauf_bezeugt_closed
 

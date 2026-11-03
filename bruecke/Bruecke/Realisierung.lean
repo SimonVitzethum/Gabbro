@@ -49,14 +49,18 @@ theorem stmt_statisch (S : Stimmig u) (c : Fin u.fns.length) (st : UStmt)
     · cases h
     · rename_i j hj
       split at h
-      · rename_i num hp
+      · rename_i read num hp
         split at h
         · rename_i hlt
           repeat' split at h
           all_goals try cases h
           rename_i hw
           left
-          have hpt := ptrTab_of (fnAt u c) (S.art c) b j num true hj hp hlt
+          have hparam : ((fnAt u c).params[j]?).map (·.2) =
+              some (.ptr (.table num (read, true))) := by
+            rw [← ctxOf_get]
+            exact lowVar_typ (ctxOf u c) j _ _ (by assumption)
+          have hpt := ptrTab_of_type (fnAt u c) b j num read true hj hparam hlt
           simp only [stmtBody, hpt] at hb
           cases hsv : sideExpr u (fnAt u c) v with
           | none => rw [hsv] at hb; cases hb

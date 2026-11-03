@@ -44,71 +44,77 @@ theorem integerEncoding_read_first {m : Runner.Mem} {fp : Runner.W} {base n : Na
 
 theorem ValueAt.word {m : Runner.Mem} {fp : Runner.W} {base : Nat} :
     (τ : Ty) → (v : Wert D τ) → WordCompatible τ → ValueAt L m fp base τ v →
-      ∃ w, m.rd64 (slot fp (BitVec.ofNat 64 base)) = some w ∧ Enc L τ v w := by
-  intro τ
-  induction τ with
-  | int lo hi =>
+      ∃ w, m.rd64 (slot fp (BitVec.ofNat 64 base)) = some w ∧ Enc L τ v w
+  | .int lo hi => by
     intro v compatible value
-    refine ⟨_, integerEncoding_read_first ?_ value.2, rfl⟩
+    have value2 := value.2; simp only [encodeWords] at value2
+    refine ⟨_, integerEncoding_read_first ?_ value2, rfl⟩
     unfold integerWords
     omega
-  | why n =>
+  | .why n => by
     intro v compatible value
-    refine ⟨BitVec.ofInt 64 v.val, integerEncoding_read_first (valueWords_pos (.why n)) value.2, ?_⟩
+    have value2 := value.2; simp only [encodeWords] at value2
+    refine ⟨BitVec.ofInt 64 v.val, integerEncoding_read_first (valueWords_pos (.why n)) value2, ?_⟩
     exact BitVec.ofInt_natCast 64 v.val
-  | bool =>
+  | .bool => by
     intro v compatible value
-    exact ⟨_, value.2 0 (by simp [encodeWords]), rfl⟩
-  | fnptr n =>
+    have value2 := value.2; simp only [encodeWords] at value2
+    exact ⟨_, value2 0 (by simp [encodeWords]), rfl⟩
+  | .fnptr n => by
     intro v compatible value
-    exact ⟨_, value.2 0 (by simp [encodeWords]), rfl⟩
-  | ref n =>
+    have value2 := value.2; simp only [encodeWords] at value2
+    exact ⟨_, value2 0 (by simp [encodeWords]), rfl⟩
+  | .ref n => by
     intro v compatible value
-    exact ⟨_, value.2 0 (by simp [encodeWords]), rfl, value.1⟩
-  | fl lo hi =>
+    have value2 := value.2; simp only [encodeWords] at value2
+    exact ⟨_, value2 0 (by simp [encodeWords]), rfl, value.1⟩
+  | .fl lo hi => by
     intro v compatible value
-    exact ⟨_, value.2 0 (by simp [encodeWords]), value.1, rfl⟩
-  | ptr cap =>
+    have value2 := value.2; simp only [encodeWords] at value2
+    exact ⟨_, value2 0 (by simp [encodeWords]), value.1, rfl⟩
+  | .ptr cap => by
     intro v compatible value
-    exact ⟨_, value.2 0 (by simp [encodeWords]), rfl⟩
-  | opt n =>
+    have value2 := value.2; simp only [encodeWords] at value2
+    exact ⟨_, value2 0 (by simp [encodeWords]), rfl⟩
+  | .opt n => by
     intro v compatible value
+    have value2 := value.2; rw [encodeWords.eq_def] at value2
     change n ≤ 2 ^ 63 at compatible
     have words : WordsAt m fp base [BitVec.ofInt 64 (optN v)] := by
-      simpa only [encodeWords, if_pos compatible] using value.2
+      simpa only [encodeWords, if_pos compatible] using value2
     exact ⟨_, words 0 (by simp), rfl⟩
-  | sum cs =>
+  | .sum cs => by
     intro v compatible value
+    have value2 := value.2; simp only [encodeWords] at value2
     change sumFits cs = true at compatible
     have words : WordsAt m fp base [BitVec.ofNat 64 (sumN v)] := by
-      simpa only [encodeWords, compatible, ite_true] using value.2
+      simpa only [encodeWords, compatible, ite_true] using value2
     exact ⟨_, words 0 (by simp), compatible, rfl⟩
-  | str n =>
+  | .str n => by
     intro v compatible value
+    have value2 := value.2; simp only [encodeWords] at value2
     change n ≤ 1 at compatible
     have words : WordsAt m fp base [BitVec.ofNat 64 (strN v.1)] := by
-      simpa only [encodeWords, if_pos compatible] using value.2
+      simpa only [encodeWords, if_pos compatible] using value2
     exact ⟨_, words 0 (by simp), compatible, rfl⟩
-  | arr τ n ih =>
+  | .arr τ n => by
     intro v compatible value
     cases n with
-    | zero => exact ⟨_, value.2 0 (by simp [encodeWords]), rfl⟩
+    | zero => exact ⟨_, value.2 0 (by simp [encodeWords]), by simp [Enc, encodeWords]⟩
     | succ n =>
       cases n with
       | zero =>
         have child : ValueAt L m fp base τ (v ⟨0, by decide⟩) :=
           ⟨value.1 ⟨0, by decide⟩, by simpa [encodeWords, elementEncoding] using value.2⟩
-        exact ih _ compatible child
+        exact ValueAt.word τ _ compatible child
       | succ n => exact False.elim compatible
-  | prod name fs => intro v compatible; exact False.elim compatible
-  | never => intro v; exact Empty.elim v
+  | .prod name fs => by intro v compatible; exact False.elim compatible
+  | .never => by intro v; exact Empty.elim v
 
 theorem Enc.single : (τ : Ty) → (v : Wert D τ) → (w : Runner.W) →
     valueWords τ = 1 → Enc L τ v w →
-    ValueValid L τ v ∧ encodeWords L τ v = [w] := by
-  intro τ
-  induction τ with
-  | int lo hi =>
+    ValueValid L τ v ∧ encodeWords L τ v = [w]
+  | .int lo hi => by
     intro v w width encoded
     constructor
     · trivial
@@ -116,7 +122,7 @@ theorem Enc.single : (τ : Ty) → (v : Wert D τ) → (w : Runner.W) →
       change w = BitVec.ofInt 64 v.n at encoded
       subst w
       simp [encodeWords, width, integerEncoding]
-  | arr τ n ih =>
+  | .arr τ n => by
     intro v w width encoded
     cases n with
     | zero =>
@@ -133,7 +139,7 @@ theorem Enc.single : (τ : Ty) → (v : Wert D τ) → (w : Runner.W) →
           have positive := valueWords_pos τ
           simp only [Nat.one_mul] at width
           omega
-        obtain ⟨valid, words⟩ := ih (v ⟨0, by decide⟩) w childWidth encoded
+        obtain ⟨valid, words⟩ := Enc.single τ (v ⟨0, by decide⟩) w childWidth encoded
         constructor
         · intro i
           have eq : i = (⟨0, by decide⟩ : Fin 1) := by
@@ -144,7 +150,7 @@ theorem Enc.single : (τ : Ty) → (v : Wert D τ) → (w : Runner.W) →
           exact valid
         · simpa [encodeWords, elementEncoding] using words
       | succ n => exact False.elim encoded
-  | opt n =>
+  | .opt n => by
     intro v w width encoded
     have short : n ≤ 2 ^ 63 := by
       by_cases hn : n ≤ 2 ^ 63
@@ -155,38 +161,38 @@ theorem Enc.single : (τ : Ty) → (v : Wert D τ) → (w : Runner.W) →
     constructor
     · trivial
     · change w = BitVec.ofInt 64 (optN v) at encoded
-      simp only [encodeWords, if_pos short, encoded]
-  | sum cs =>
+      rw [encodeWords.eq_def]; simp only [if_pos short, encoded]
+  | .sum cs => by
     intro v w width encoded
     obtain ⟨fits, word⟩ := encoded
     exact ⟨packedSum_valid L cs fits v.1 v.2, by simp [encodeWords, fits, word]⟩
-  | why n =>
+  | .why n => by
     intro v w width encoded
     constructor
     · trivial
     · change w = BitVec.ofNat 64 v.val at encoded
       simp [encodeWords, width, integerEncoding, BitVec.ofInt_natCast, encoded]
-  | ref n =>
+  | .ref n => by
     intro v w width encoded
     exact ⟨encoded.2, by simp only [encodeWords, encoded.1]⟩
-  | fl low high =>
+  | .fl low high => by
     intro v w width encoded
     exact ⟨encoded.1, by simp only [encodeWords, encoded.2]⟩
-  | bool =>
+  | .bool => by
     intro v w width encoded
     exact ⟨trivial, by simpa only [encodeWords, List.singleton_inj] using encoded.symm⟩
-  | fnptr n =>
+  | .fnptr n => by
     intro v w width encoded
     exact ⟨trivial, by simpa only [encodeWords, List.singleton_inj] using encoded.symm⟩
-  | ptr cap =>
+  | .ptr cap => by
     intro v w width encoded
     exact ⟨trivial, by simpa only [encodeWords, List.singleton_inj] using encoded.symm⟩
-  | str n =>
+  | .str n => by
     intro v w width encoded
     obtain ⟨short, word⟩ := encoded
     exact ⟨trivial, by simp [encodeWords, short, word]⟩
-  | prod name fs => intro v w width encoded; exact False.elim encoded
-  | never => intro v; exact Empty.elim v
+  | .prod name fs => by intro v w width encoded; exact False.elim encoded
+  | .never => by intro v; exact Empty.elim v
 
 theorem Ok.value [Kern] {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {code : List II}
     {τ : Ty} {v : Wert D τ} (run : Ok m pc fp K d code (Enc L τ v))

@@ -53,7 +53,7 @@ public import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Zeuge
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.ConsumeRun
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Consuming.Run
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Proben
 public import Stage0.Senke.Tore.Proben
 
@@ -111,6 +111,8 @@ public import Stage0.Frontend.ExportCorrectness
 public import Stage0.Zeugen.Pipeline.ProductRecordWitness
 public import Stage0.Zeugen.Pipeline.ProductValueWitness
 public import Stage0.Frontend.MeasureWitness
+public import Stage0.Frontend.ConstWitness
+public import Stage0.Frontend.ConstValuesWitness
 public import Stage0.Senke.Rueckkehr.Proben
 public import Stage0.Senke.Rueckkehr.EntryProbe
 public import Stage0.Senke.Rueckkehr.ScopedZeuge

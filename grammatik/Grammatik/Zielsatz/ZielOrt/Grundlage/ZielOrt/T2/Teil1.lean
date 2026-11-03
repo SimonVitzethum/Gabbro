@@ -17,7 +17,7 @@ variable {P : Programm D} {O : Orakel D} {passes : Nat}
 /-- A leaf keeps the held locks (`gut_blatt`, `Brav` leg). The firing equation
     is `.ok`, so scoped returns are impossible and the static scope check
     comes from the leaf itself (`scopesOk_of_ok`). -/
-theorem blatt_offen (hO : GutO O) {V : vertrag D} {l : Bool} {Γ : Ctx}
+theorem blatt_offen (hO : GutO O) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') (hleaf : s.istBlatt = true) (σ : World D)
     (ρ : Env D Γ) (hΛ : HeldIn Λ (offen σ.spur)) (σ' : World D) (ρ' : Env D Γ)
     (hst : execStmt O passes keinRuf s σ ρ = Ausgang.ok σ' ρ') :

@@ -45,7 +45,7 @@ theorem integerTop_read {lo hi : Int} {v : Zahl lo hi} {m : Runner.Mem} {fp : Ru
   have bounds := integerWords_signed negative v.lo_le v.le_hi
   have top := integerEncoding_top_signed positive v.n bounds.1 bounds.2
   have words := value.2
-  change WordsAt m fp base (integerEncoding (integerWords lo hi) v.n) at words
+  erw [encodeWords_int] at words
   rw [integerEncoding_last positive v.n, wordsAt_append] at words
   have read := words.2 0 (by simp)
   simp only [integerEncoding_length, Nat.add_zero, List.getElem_cons_zero] at read
@@ -117,11 +117,11 @@ theorem resizeIntegerL_ok {lo hi lo' hi' : Int} (v : Zahl lo hi) (result : Zahl 
     obtain ⟨rfl, rfl⟩ := lower
     obtain ⟨m', run, changed, source⟩ := ih cc tt hc (by omega) pre
     refine ⟨m', run, changed, trivial, ?_⟩
-    change WordsAt m' fp d (integerEncoding (integerWords lo' hi') result.n)
+    erw [encodeWords_int]
     rw [same, ← integerEncoding_take v.n shorter]
     intro i indexBound
     have sourceWords := source.2
-    change WordsAt m' fp d (integerEncoding (integerWords lo hi) v.n) at sourceWords
+    erw [encodeWords_int] at sourceWords
     have bound : i < integerWords lo hi := by
       simp only [List.length_take, integerEncoding_length] at indexBound
       omega
@@ -142,8 +142,8 @@ theorem resizeIntegerL_ok {lo hi lo' hi' : Int} (v : Zahl lo hi) (result : Zahl 
     rw [show integerWords lo hi + (integerWords lo' hi' - integerWords lo hi) = integerWords lo' hi' by omega] at encoding
     refine ⟨m2, ?_, changed1.trans (changed2.mono (by omega)), trivial, ?_⟩
     · simpa only [List.length_append, pc_add] using run1.trans run2
-    · change WordsAt m2 fp d (integerEncoding (integerWords lo' hi') result.n)
+    · erw [encodeWords_int]
       rw [same, encoding, wordsAt_append]
-      exact ⟨keptSource.2, by simpa only [integerEncoding_length] using extension⟩
+      exact ⟨by have k2 := keptSource.2; erw [encodeWords_int] at k2; exact k2, by simpa only [integerEncoding_length] using extension⟩
 
 end Gabbro.Stage0.Senke

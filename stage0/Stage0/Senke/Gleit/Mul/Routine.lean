@@ -55,10 +55,10 @@ theorem softMulFiniteDirectionalL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Me
     WordCode (L := L) ρ W (fun d => softMulFiniteDirectionalL d a b k)
       (softMulFiniteDirectionalWord av bv k) := by
   have sign := xorSignL_ok (unpackSignL_ok ha) (unpackSignL_ok hb)
-  have index := WordCode.bin (softMulNormalizeIndexL_word ha) (softMulNormalizeIndexL_word hb)
+  have index : WordCode (L := L) ρ W _ _ := WordCode.bin (softMulNormalizeIndexL_word ha) (softMulNormalizeIndexL_word hb)
     (g := fun x y => some (x + y)) rfl rfl (by decide : 3 < 256)
   have literal : lit32 (Int.ofNat k) = true := by rcases count with rfl | rfl <;> decide
-  have total := WordCode.bin index (WordCode.const _ literal)
+  have total : WordCode (L := L) ρ W _ _ := WordCode.bin index (WordCode.const _ literal)
     (g := fun x y => some (x + y)) rfl rfl (by decide : 3 < 256)
   have magnitude := softMulCompressL_word (softMulNormalizeL_word ha) (softMulNormalizeL_word hb) k count
   exact softMulRoundL_word sign total magnitude

@@ -225,13 +225,17 @@ theorem zeuge_getrennt_rahmen : RahmenUeberParams gD gGetrennt := by
   · exact absurd ht (by decide)
 
 /-- **`getrennt_ruf_rahmen` on the fixture**: every run of `getrennt`, at every depth and
-    every world, leaves every slot of `U` -- the carrier of the read-only `q` -- as it was. -/
+    every disciplined world, leaves every slot of `U` -- the carrier of the read-only
+    `q` -- as it was. -/
 theorem getrennt_ruf_rahmen_zeuge (passes fuel : Nat) (σ : World gD)
     (ρ : Env gD (gD.params gGetrennt)) (σ' : World gD)
+    (hS : ScopesOkProg gP)
+    (hh : HeldB (gD.signatur gGetrennt).boden
+      (Signatur.anfang gD (gD.signatur gGetrennt)) σ.haelt)
     (h : (rufAt gP gO passes fuel gGetrennt σ ρ).welt = some σ') :
     ∀ k (fld : gD.Feld GTab.U), σ'.slots GTab.U k fld = σ.slots GTab.U k fld :=
-  getrennt_ruf_rahmen gP gO passes fuel gO_treu zeuge_getrennt zeuge_getrennt_rahmen
-    ⟨1, by decide⟩ rfl (t := GTab.U) rfl σ ρ σ' h
+  getrennt_ruf_rahmen gP gO passes fuel gO_treu hS zeuge_getrennt zeuge_getrennt_rahmen
+    ⟨1, by decide⟩ rfl (t := GTab.U) rfl σ ρ σ' hh h
 
 /-- **Non-degenerate**: the run of `getrennt` really writes -- `T` changes -- so the frame
     statement about `U` is about a body that does something. -/

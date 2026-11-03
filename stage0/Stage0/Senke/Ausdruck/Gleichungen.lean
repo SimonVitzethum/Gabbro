@@ -86,7 +86,7 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
     lowE (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.refEq a b) d =
     wordL 14 d (lowE (currentOld := currentOld) L (reserved := reserved) a d) (lowE (currentOld := currentOld) L (reserved := reserved) b (d + 1)) := by rfl
 
-@[lowE_eqs] theorem lowE_slotRef (r : Expr D Γ Λ (.ref n)) (t : D.Tab) (ht : D.capTab space n = some t) (ho : D.offen t = true)
+@[lowE_eqs] theorem lowE_slotRef (r : Expr D Γ Λ (.ref n)) (t : D.Tab) (ht : D.tabNr n = some t) (ho : D.offen t = true)
       (f : D.Feld t) (hL : darf D t Λ) :
     lowE (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.slotRef r t ht ho f hL) d =
     (do let cr ← lowE (currentOld := currentOld) L (reserved := reserved) r (d + valueWords (D.typ t f)); slotValueC L t f d cr) := rfl

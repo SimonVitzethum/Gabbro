@@ -7,7 +7,7 @@ Stages (each prints what it measured; a stage that cannot run is NOT a pass):
   1. `lake build` of `grammatik/` -- every module builds.
   2. `NachpruefungZiel.lean` -- `gabbro_ziel` (and its siblings) depend on exactly
      `propext`, `Classical.choice`, `Quot.sound`.
-  3. No `sorry`, `admit`, `native_decide`, `sorryAx`, `unsafe` in Lean code (comments
+  3. No `sorry`, `admit`, `native_decide`, `bv_decide`, `ofReduceBool`, `sorryAx`, `unsafe` in Lean code (comments
      stripped) and no `axiom` outside `teile/kein-sorry-allowlist.txt`.
   4. Layout: no folder holds more than 20 entries (`teile/lean-layout.py --check`).
   4b. Module: every tracked Lean file except `lakefile.lean` starts with `module` (owner rule 2026-11-01).
@@ -44,7 +44,7 @@ RN = W / "runner"
 ENV = {**os.environ, "LC_ALL": "C"}
 ENV.pop("ELAN_TOOLCHAIN", None)
 STANDARD = {"propext", "Classical.choice", "Quot.sound"}
-VERBOTEN = re.compile(r"\b(sorry|admit|native_decide|sorryAx|unsafe)\b")
+VERBOTEN = re.compile(r"\b(sorry|admit|native_decide|bv_decide|ofReduceBool|sorryAx|unsafe)\b")
 AXIOM = re.compile(r"^\s*axiom\s+([A-Za-z0-9_.']+)", re.M)
 
 

@@ -72,8 +72,8 @@ def softCarryExp (e q : Nat) : Nat := if q = 2 ^ 53 then e + 1 else e
 /-- Doubling the significand halves the exponent step: the carry keeps the
     exact value. -/
 theorem softCarry_halves (e : Nat) : 2 ^ 53 * 2 ^ e = 2 ^ 52 * 2 ^ (e + 1) := by
-  rw [show (53 : Nat) = 52 + 1 from rfl, Nat.pow_succ, Nat.pow_succ, mul_assoc,
-    mul_comm (2 : Nat) (2 ^ e)]
+  rw [show (2 : Nat) ^ 53 = 2 ^ 52 * 2 from Nat.pow_succ 2 52,
+    Nat.pow_succ 2 e, Nat.mul_assoc, Nat.mul_comm (2 : Nat) (2 ^ e)]
 
 /-- The carry adjust preserves the exact value on every input. -/
 theorem softCarry_exact (q e : Nat) :
@@ -145,26 +145,26 @@ theorem pack_zeuge :
     softPack false 1023 0 = 4607182418800017408 ∧
     softPack true 0 0 = 9223372036854775808 ∧
     softPack false 2047 0 = 9218868437227405312 ∧
-    packWord 1 (BitVec.ofNat 64 1023) (BitVec.ofNat 64 0) =
+    packWord 0 (BitVec.ofNat 64 1023) (BitVec.ofNat 64 0) =
       BitVec.ofNat 64 4607182418800017408 := by
   decide +kernel
 
 /-- Packing on closed inputs computes and emits. -/
 theorem packL_ok_zeuge {Γ : Ctx} (ρ : Env D Γ) (W : Runner.Mem → Prop) :
     WordCode (L := L) ρ W (fun d => packL d
-      (fun j => some (konstWL 4 1 j))
+      (fun j => some (konstWL 4 0 j))
       (fun j => some (konstWL 4 1023 j))
       (fun j => some (konstWL 4 0 j)))
       (BitVec.ofNat 64 4607182418800017408) ∧
-    (packL 8 (fun j => some (konstWL 4 1 j))
+    (packL 8 (fun j => some (konstWL 4 0 j))
       (fun j => some (konstWL 4 1023 j))
       (fun j => some (konstWL 4 0 j))).isSome = true := by
   constructor
   · intro fp K d c top h hK m pc hp
     have result : WordCode (L := L) ρ W _ _ := packL_ok
-      (WordCode.konst 1 (by decide)) (WordCode.konst 1023 (by decide))
+      (WordCode.konst 0 (by decide)) (WordCode.konst 1023 (by decide))
       (WordCode.konst 0 (by decide))
-    have hx : packWord (BitVec.ofNat 64 1) (BitVec.ofNat 64 1023)
+    have hx : packWord (BitVec.ofNat 64 0) (BitVec.ofNat 64 1023)
         (BitVec.ofNat 64 0) = BitVec.ofNat 64 4607182418800017408 := by decide
     rw [hx] at result
     exact result h hK m pc hp
