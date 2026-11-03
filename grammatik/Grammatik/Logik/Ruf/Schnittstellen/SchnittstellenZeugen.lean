@@ -56,20 +56,18 @@ namespace Gabbro.Grammatik.C06.Locked
 -- have the same writing signature, including the admitted pointer target.
 @[expose] def decl : Deklaration :=
   { mD with
-    sigNr := fun _ => by
-      exact (show Signatur mD.Tab mD.Glob mD.Lock mD.Marke from
-        mSig [.int 0 100] [()] [.konto])
+    sigNr := fun _ => (mSig [.int 0 100] [()] [MTab.konto] : Signatur MTab Empty Unit Empty)
     passt := fun _ _ => true
     passt_ok := fun _ _ _ => SigPasst.refl _ _
     rzusage := fun r => nomatch r
-    eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
+    eigner_nie_erzeugt := fun _ _ _ _ h => nomatch h
     invarianten_gehalten := fun _ _ _ c hc _ hL => by
       have hc' : c = Sum.inl MTab.privA := List.mem_singleton.mp hc
       subst c
       cases hL }
 
 @[expose] def predicate {Γ : Ctx} : Expr decl Γ [.held ()] .bool :=
-  .eq (.slot .konto () (.widen (by decide) (by decide) (.lit 0))
+  .eq (.slot MTab.konto () (.widen (by decide) (by decide) (.lit 0))
     (by decide)) (.lit 0)
 
 @[expose] def prog : Programm decl where
@@ -82,7 +80,7 @@ namespace Gabbro.Grammatik.C06.Locked
 @[expose] def pointer : Wert decl (.fnptr 0) := ⟨MFn.setze, rfl⟩
 
 @[expose] def locks : SperrInv decl :=
-  ⟨fun _ => [.inl .konto], fun _ s => decide ((s.slots .konto 0 ()).n = 0)⟩
+  ⟨fun _ => [.inl MTab.konto], fun _ s => decide ((s.slots MTab.konto 0 ()).n = 0)⟩
 
 theorem permissions :
     RufPasst decl (vertragVon decl MFn.setze) (decl.sigNr 0) [.held ()] where
@@ -118,7 +116,7 @@ theorem footprint : FussS prog locks (fun _ => false) MFn.setze := by
 theorem nondegenerate :
     (prog.ptrVertrag 0).pre.orte = [.inl MTab.konto] ∧
     (prog.ptrVertrag 0).post.orte = [.inl MTab.konto] ∧
-    (decl.sigNr 0).schreibt .konto = true ∧
+    (decl.sigNr 0).schreibt MTab.konto = true ∧
     Bewacht (D := decl) (.inl MTab.konto) () ∧
     pointer.val = MFn.setze := by
   decide
