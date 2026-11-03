@@ -354,10 +354,23 @@ def uSideEng (v : String) (lo hi : Int) : USide → USide
   | .ib1 o w a => .ib1 o w (uSideEng v lo hi a)
   | .ib2 o w a b => .ib2 o w (uSideEng v lo hi a) (uSideEng v lo hi b)
   | .product identity reordered fields =>
-    .product identity reordered (fields.map (fun (ty, side) => (ty, uSideEng v lo hi side)))
+    .product identity reordered (fields.attach.map (fun field => (field.val.1, uSideEng v lo hi field.val.2)))
   | .field base name => .field (uSideEng v lo hi base) name
   | .replace base name value => .replace (uSideEng v lo hi base) name (uSideEng v lo hi value)
   | s => s
+termination_by side => sizeOf side
+decreasing_by
+  all_goals simp_wf
+  all_goals first
+    | omega
+    | have smaller := recordField_sizeOf_lt fields field.val field.property
+      omega
+
+/-- Narrowing retains exactly the original ordered product fields. -/
+theorem uSideEng_product (v : String) (lo hi : Int) (identity : Nat) (reordered : Bool) (fields : List (Ty × USide)) :
+    uSideEng v lo hi (.product identity reordered fields) =
+      .product identity reordered (fields.map (fun field => (field.1, uSideEng v lo hi field.2))) := by
+  rw [uSideEng, List.attach_map_val]
 
 /-- The value of an `update` arm with `v` narrowed by the arm's guard (`pos` the arm's own condition, `negs` the
     conditions of the arms before it, all false there), inside the static's range `slo .. shi`. -/
