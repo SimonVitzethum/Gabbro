@@ -98,30 +98,24 @@ def reify {D : Deklaration} {Γ : Ctx} (schemas : List USum) (texts : List Strin
     return ⟨.ext .text [spelling.text] [], .strLit value.val value.property,
       .text spelling.text value.val spelling.decoded value.property, by intros; rfl⟩
   | fuel + 1, .sum cases, ⟨i, value⟩ => do
-    let schema ← match schemas.find? (fun schema => schema.spec = cases) with
-      | some schema => pure schema
-      | none => throw "const tagged quotation has no resolved schema"
-    if hs : schema.spec = cases then
-      let some name := (schema.cases[i.val]?).map Prod.fst
-        | throw "const tagged quotation has no constructor name"
-      match hn : (schema.cases[i.val]?).map Prod.fst with
-      | none => throw "const tagged quotation has no constructor name"
-      | some actualName =>
-        let payload ← reifyPayload schemas texts fuel (cases.get i)
-          (Fall.toNutzlast D.Fn D.passt cases i value)
-        let source := match payload.syntax with
-          | none => SExpr.variable actualName
-          | some literal => .call actualName [literal]
-        have hm : schema ∈ schemas := by
-          have found : schemas.find? (fun schema => schema.spec = cases) = some schema := by
-            -- The selected schema is rechecked; membership is not inferred from shape.
-            simp_all
-          exact List.mem_of_find?_eq_some found
-        return ⟨source, .case cases i payload.expr,
-          by simpa only [Fall.of_to] using
-            (LiteralMeaning.tag schema hm hs i actualName hn payload.syntax _ payload.source),
-          by intros; simp only [eval, payload.equation, Fall.of_to]⟩
-    else throw "const tagged quotation schema mismatch"
+    match hf : schemas.find? (fun schema => schema.spec = cases) with
+    | none => throw "const tagged quotation has no resolved schema"
+    | some schema =>
+      if hs : schema.spec = cases then
+        match hn : (schema.cases[i.val]?).map Prod.fst with
+        | none => throw "const tagged quotation has no constructor name"
+        | some actualName =>
+          let payload ← reifyPayload schemas texts fuel (cases.get i)
+            (Fall.toNutzlast D.Fn D.passt cases i value)
+          let source := match payload.syntax with
+            | none => SExpr.variable actualName
+            | some literal => .call actualName [literal]
+          return ⟨source, .case cases i payload.expr,
+            by simpa only [Fall.of_to] using
+              (LiteralMeaning.tag schema (List.mem_of_find?_eq_some hf) hs i actualName hn
+                payload.syntax _ payload.source),
+            by intros; simp only [eval, payload.equation, Fall.of_to]⟩
+      else throw "const tagged quotation schema mismatch"
   | _ + 1, _, _ => .error "const result type is outside the portable A28 fragment"
 
 def reifyPayload {D : Deklaration} {Γ : Ctx} (schemas : List USum) (texts : List String) :
