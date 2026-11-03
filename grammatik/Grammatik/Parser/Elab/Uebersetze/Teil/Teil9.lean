@@ -15,7 +15,7 @@ set_option maxRecDepth 100000
 
 /-- A finite filtered traversal keeps its outer seed separate from the body's binder.
     A raw decreases/touches header has no source-duty binding here and stays refused. -/
-def uLoopExport (ctx : UCtx) (binder : String) (origin : Option SExpr) (kind : String)
+def uUnvisitedLoopExport (ctx : UCtx) (binder : String) (origin : Option SExpr) (kind : String)
     (subject : SExpr) (mode raw : String) (invariant : Option SExpr) :
     Except String (UStmt × UCtx × Option UEns) :=
   if kind == "slots" then
@@ -54,6 +54,49 @@ def uLoopExport (ctx : UCtx) (binder : String) (origin : Option SExpr) (kind : S
       let filter := if kind == "ancestors" then UEns.reach table edge (.param binder) seed
         else UEns.reach table edge seed (.param binder)
       pure (.loopBeg binder table predicate, context, some filter)
+
+/-- A consuming traversal uses the same single declared optional-self child edge as A14.
+    The predecessor name is private source metadata, never a new surface binder. -/
+def uConsumingEdge (ctx : UCtx) (table : String) : Except String String := do
+  let (number, _) ← uTabNr ctx.tabs table
+  match ctx.tabs[number]? with
+  | some declared =>
+    if declared.von.isSome then throw "consuming traversal requires a finite table"
+    match declared.kanten with
+    | [("child", field)] =>
+      if declared.opts.any (fun pair => pair.1 == field && pair.2 == number) then pure field
+      else throw "consuming traversal edge must be option index into Self"
+    | [] => throw "consuming traversal requires one declared child edge"
+    | _ => throw "consuming traversal requires exactly one declared child edge"
+  | none => throw "consuming traversal table is not declared"
+
+/-- Read the existing decreases and touches clauses completely; neither is inferred or erased.
+    The state-reading measure is elaborated in the outer scope, not under the selected index. -/
+def uConsumingClauses (ctx : UCtx) (raw : String) : Except String (USide × String) := do
+  let (expression, touches) ← ExportMetadata.consumingHeader raw
+  let mass ← (uZSeite ctx expression).mapError ("consuming traversal decreases: " ++ ·)
+  pure (mass, touches)
+
+/-- Consuming keeps A14's domain predicate as a current-world member test. The declared
+    edge is the canonical reach relation over its optional-self field, in predecessor/candidate
+    order. Selection and strict decrease are performed by consumeTraverse, never a fixed sweep. -/
+def uLoopExport (ctx : UCtx) (binder : String) (origin : Option SExpr) (kind : String)
+    (subject : SExpr) (mode raw : String) (invariant : Option SExpr) :
+    Except String (UStmt × UCtx × Option UEns) := do
+  if mode != "consuming" then
+    uUnvisitedLoopExport ctx binder origin kind subject mode raw invariant
+  else
+    let (mass, effects) ← uConsumingClauses ctx raw
+    let (header, context, filter) ←
+      uUnvisitedLoopExport ctx binder origin kind subject "unvisited" "" invariant
+    let (table, inv) ← match header with
+      | .loopBeg _ table inv => pure (table, inv)
+      | _ => throw "consuming traversal requires a represented table domain"
+    let field ← uConsumingEdge ctx table
+    let predecessor := "#consume:predecessor"
+    let edge := UEns.reach table field (.param predecessor) (.param binder)
+    pure (.consumeLoopBeg binder table predecessor (filter.getD .tru) edge inv mass effects,
+      {context with loops := ("#consume:" ++ binder) :: ctx.loops}, none)
 
 /-- The existing conditional block carries leave/next/return unchanged on visited nodes. -/
 def uFilteredBody (filter : Option UEns) (body : List UStmt) : List UStmt :=

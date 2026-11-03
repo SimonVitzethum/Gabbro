@@ -162,6 +162,9 @@ inductive UStmt
   | retireMark : String → UStmt
   /-- One named invariant scope, closed by `blkEnd`. Source metadata duties stay gated. -/
   | breakingBeg : String → UStmt
+  /-- Current-state traversal: candidate, table, predecessor, member, edge, invariant,
+      state-reading measure and the source mutation sub-contract. -/
+  | consumeLoopBeg : String → String → String → UEns → UEns → UEns → USide → String → UStmt
   deriving DecidableEq, Repr
 /-- One elaborated table: slot count and one integer range per
     slot field (the `TableModel` of `lean_g.rs`). -/

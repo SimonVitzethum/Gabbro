@@ -26,7 +26,8 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
     - C08 void `bindAxiomOpt` and `bindAxiomOptElse` (payload `none`): refused; lowering correctness lemmas missing.
     - C08 `axiomCallElse`: no source syntax; statement calls must end in `;`, and `else` exists only for bindings.
     - C11 `retScoped`/`retWhyScoped`: refused; scope unwinding is not lowered to Stage-0 IR.
-    - C11 `by consuming`: refused by design.
+    - C11 `by consuming`: source export and its generic elaboration arms are implemented on
+      `front-consume`, UNBUILT; the lead must check the connected pipeline.
     - C17 `const` functions: no certified replacement of call sites by the compile-time value before export.
     - C10 RW locks: reader-wait liveness remains open.
     - C09 owner flows: mint (`mints`) and handback moves (`moves`) elaborate with
@@ -55,8 +56,10 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   - **Stage-0 refusals (source audit 2026-11-03).** Exact constructor tables, checks, proof connections and
     refusal witnesses: [measured coverage](dokumente/IR-COMPILATION-LANES.md#stage-0-coverage-measured-2026-11-03).
     No builds were run for that audit. Remaining refusals include:
-    - Scoped returns inside lock bodies; source `by consuming`. `consumeTraverse` follows `verbrauchLauf` in Stage 0
-      (`consumeTraverse_case`); lead elaboration pending.
+    - Scoped returns inside lock bodies. `consumeTraverse` follows `verbrauchLauf` in Stage 0
+      (`consumeTraverse_case`); its consuming source producer, typed contexts, metadata binding and source witness
+      are implemented on `front-consume`, UNBUILT. Missing decreases/touches, absent/ambiguous/non-self edges,
+      invalid measures, insufficient write effects and leave/next of the consuming binder remain named refusals.
     - Unrepresentable tag dispatch / byte spans, oversized folds/code/addresses,
       and unsupported entry-snapshot subtrees. Aggregate payload and wide byte implementation checks are pending below.
     - Foreign gates without an explicit selected binding
@@ -652,7 +655,7 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Stmt.leave` | yes J/Seq:265 | partial A:142 | `lowS_ok`, P:105 | A:142: `else none` if jump not `lit32`; source loop scope required |
 | `Stmt.next` | yes J/Seq:268 | partial A:143 | `lowS_ok`, P:108 | A:143: `else none` if jump not `lit32`; source loop scope required |
 | `Stmt.assignSlotRef` | yes H1:370 | yes A:103, `slotStoreC` | `lowS_ok`, P:151 | valid provider reference/layout required |
-| `Stmt.consumeTraverse` | refused U9:25 | yes A:124, `Consuming.lower` | `lowS_ok`, P:155 | U9:25: `if mode != "unvisited" then throw "traverse by consuming without G form"` (also U8:409); source connection missing |
+| `Stmt.consumeTraverse` | yes U9:83, J/Struct:109; UNBUILT | yes A:124, `Consuming.lower` | `lowS_ok`, P:155; `ExportQuantifiers.consuming_traversal_lower` | Existing A14 domain/filter and one declared optional-self child edge; explicit `decreases` and `touches consumes` required. Outer invariant/measure, one member binder, two ordered edge binders; no source leave/next of the consuming binder. Shared header reader binds original metadata. Source-text `UebersetzeProben35.consuming_traversal_source_zeuge` added; no Lean/build/execution measurement, lead validation pending. Baseline inventory counts above were not remeasured. |
 | `Stmt.retScoped` | yes J/Returns:242 `lowRetStmt` (unbuilt) | yes A:181, `lowRetScoped` | `lowS_ok`, P:161 | exact contract-end resources plus precisely the lexical locks required |
 | `Stmt.retWhyScoped` | yes J/Returns:240 `lowRetStmt` (unbuilt) | yes A:182, `lowRetWhyScoped` | `lowS_ok`, P:164 | same exact-resource check; reason must be in the declared channel |
 | `Stmt.axiomCallElse` | yes J/CallElse:25 | partial A:145 | `lowS_ok`, P:140 | A:170: `\| _, _ => none`; only VOID or nonnegative integer result, checked reason map and branch bounds |

@@ -345,6 +345,7 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .shiftTab b fname ix _ von nach => (lowShiftL u caller Γ fn Λ b fname ix von nach).map fun st => ⟨Λ, st⟩
   | .assignRef r f v => (lowAssignRefL u caller Γ fn Λ r f v).map fun st => ⟨Λ, st⟩
   | .lockBeg _ => .error "lower: a locks block opens here"
+  | .consumeLoopBeg .. => .error "lower: a consuming traverse is read by the block reader"
   | .blkEnd => .error "lower: a block closes here without opening"
   | .resetRange a iu nu => lowResetRangeL u caller Γ fn Λ a iu nu
   | .floatLit .. | .float .. =>

@@ -3,9 +3,29 @@ public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Kern.Syntax.Typen.DataRights
 public import Grammatik.Parser.Elab.Uebersetze.MeasureSource
 public import Grammatik.Parser.Profil.Auswahl
+import all Init.Data.String.Basic
+import all Init.Data.String.Defs
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.ExportMetadata
+
+/-- Read the complete existing consuming header. The contextual exporter checks the
+    measure and declared domain/edge; the structured lowerer checks the retained touches.
+    The original-source gate reuses this reader, so unsupported clauses cannot disappear. -/
+def consumingHeader (raw : String) : Except String (SExpr × String) := do
+  let tokens ← lex raw
+  let rest ← match tokens with
+    | .wort "decreases" :: rest => pure rest
+    | _ => throw "consuming traversal requires decreases"
+  let (expression, rest) ← parseOr 10000 rest
+  let touchTokens ← match rest with
+    | .wort "touches" :: rest => pure rest
+    | _ => throw "consuming traversal requires touches consumes"
+  let (_, rest) ← parseEffektListe 10000 touchTokens
+  match rest with
+  | [.ende] => pure (expression, String.intercalate " " (touchTokens.filterMap fun token =>
+      match token with | .ende => none | _ => some (zeigeTok token)))
+  | _ => throw "consuming traversal has an unsupported or duplicate header clause"
 
 def typeMetadata : STyp → Bool
   | .raw _ | .entry .. | .wrap _ | .embed .. => true
@@ -33,7 +53,9 @@ def bodyMetadata : Nat → SAnw → Bool
   | n + 1, .elsif _ b | n + 1, .arm _ _ b => bodyMetadata n b
   | n + 1, .cases _ arms => arms.any (bodyMetadata n)
   | _ + 1, .bind _ _ ty _ | _ + 1, .bindAxiomOpt _ ty _ => ty.any typeMetadata
-  | n + 1, .each _ _ _ _ mode raw _ body => mode != "unvisited" || raw != "" || bodyMetadata n body
+  | n + 1, .each _ _ _ _ mode raw _ body =>
+    if mode == "consuming" then (consumingHeader raw).toOption.isNone || bodyMetadata n body
+    else mode != "unvisited" || raw != "" || bodyMetadata n body
   /- A required allocation binds a plain index and runs no continuation: the
       counter narrowing is required, so a full arena is `Logik.kapazitaet` under
       the caller's `KoerperGutS/SA` duty -- no provider, storage-availability or
@@ -357,6 +379,23 @@ theorem drops_bound (e : SExpr)
 theorem drops_zeuge :
     clausesMetadata [.drops (.variable "n")] = false ∧
     clausesMetadata [.drops (.old (.variable "n"))] = true := by
+  exact ⟨rfl, rfl⟩
+
+/-- A consuming header is bound only through the same complete parser used by uLoopExport;
+    metadata in every nested continuation is still checked. -/
+theorem consuming_bound (fuel : Nat) (binder kind raw touches : String) (origin : Option SExpr)
+    (subject measure : SExpr) (invariant : Option SExpr) (body : SAnw)
+    (parsed : consumingHeader raw = .ok (measure, touches)) :
+    bodyMetadata (fuel + 1) (.each binder origin kind subject "consuming" raw invariant body) =
+      bodyMetadata fuel body := by
+  simp only [bodyMetadata, BEq.rfl, ↓reduceIte, parsed, Except.toOption,
+    Option.isNone_some, Bool.false_or]
+
+theorem consuming_bound_zeuge :
+    bodyMetadata 3 (.each "k" none "slots" (.variable "T") "consuming"
+      "decreases 1 touches consumes T.slots" none (.block [] none)) = false ∧
+    bodyMetadata 3 (.each "k" none "slots" (.variable "T") "consuming"
+      "touches consumes T.slots" none (.block [] none)) = true := by
   exact ⟨rfl, rfl⟩
 /-- C14 gates are consumed only by canonical build selection, before metadata checking.
     Raw wrappers remain refused; selection never suppresses the retained item's duties. -/
