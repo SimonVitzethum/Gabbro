@@ -155,13 +155,11 @@ def uParam (alias : List (String × (Int × Int))) (tabs : List UTab) (sums : Li
       match uTypIn alias tabs named spaces eigner (.raw r) with
       | .error e => .error e
       | .ok ty => .ok (n, ty, uArtVon ty)
-  | (n, .ptr raum rechte (.atom t)) =>
-    if !strEq raum "normal" then .error "space without G form"
-    else if strEq t "u8" then .error "live byte capability requires C01 value flow, C08 grant generations and C09 loans"
-    else do
-      let access ← uTableRight eigner rechte
-      let (num, _) ← uTabNr tabs t
-      pure (n, .ptr (.table num access), .ptr (.table num access))
+  | (n, source@(.ptr _ _ (.atom _))) =>
+    match uTypIn alias tabs named spaces eigner source with
+    | .error error => .error error
+    | .ok (.ptr cap) => .ok (n, .ptr cap, .ptr cap)
+    | .ok _ => .error "pointer parameter without G form"
   | (n, .index false t) =>
     match uTabNr tabs t with
     | .error e => .error e
@@ -191,6 +189,25 @@ def uParam (alias : List (String × (Int × Int))) (tabs : List UTab) (sums : Li
     match uTypIn alias tabs named spaces eigner t with
     | .error e => .error e
     | .ok ty => .ok (n, ty, uArtVon ty)
+
+private theorem uArtVon_ne_ptr (ty : Ty) (cap : DataCapTy) : uArtVon ty ≠ .ptr cap := by
+  cases ty <;> simp [uArtVon]
+
+/-- Every successful pointer parameter producer writes the same complete capability into
+    its type and kind. Spaces, rights and owners are never reconstructed from flag pairs. -/
+theorem uParam_pointer_coherent
+    (alias : List (String × (Int × Int))) (tabs : List UTab) (sums : List USum)
+    (whys : List UWhy) (zeiger : List String) (zb : Nat) (spaces : List String)
+    (named : List (String × Ty)) (eigner : List String)
+    {source : String × STyp} {result : String × Ty × UParamArt}
+    (accepted : uParam alias tabs sums whys zeiger zb spaces named eigner source = .ok result)
+    (cap : DataCapTy) (kind : result.2.2 = .ptr cap) : result.2.1 = .ptr cap := by
+  unfold uParam at accepted
+  repeat' split at accepted
+  all_goals cases accepted
+  all_goals first
+    | exact False.elim (uArtVon_ne_ptr _ _ kind)
+    | (cases kind; rfl)
 
 /-- A result range (the `int_range` of `lean_g.rs` on the
     result type). -/

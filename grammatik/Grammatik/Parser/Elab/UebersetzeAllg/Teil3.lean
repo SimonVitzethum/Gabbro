@@ -4,6 +4,7 @@ public import Grammatik.Parser.Elab.Uebersetze.Folds.ConstantBytes
 public import Grammatik.Kern.Syntax.Zucker
 public import Grammatik.Parser.Elab.Uebersetze
 public import Grammatik.Parser.Elab.UebersetzeAllg.Teil2
+public import Grammatik.Parser.Elab.UebersetzeAllg.PointerMetadata
 
 @[expose] public section
 
@@ -33,9 +34,10 @@ def lowBasisTab (u : UProg) (fn : UFn) (b : String) :
   match paramPos fn.params b with
   | .ok j =>
     match fn.kinds[j]? with
-    | some (.ptr ⟨space, ⟨true, _, _⟩, .table num⟩) =>
+    | some (.ptr cap@⟨space, ⟨true, _, _⟩, .table num⟩) =>
       if h : num < u.tabs.length then do
         let _ ← checkedTableCap u space num h
+        let _ ← checkedPointerParam fn j cap
         pure ⟨num, h⟩
       else .error "pointer table unknown"
     | _ => .error "place without G form"
@@ -168,6 +170,7 @@ def lowDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
                   Res.von (declOf u) wdd ∈ Λ) then
                 do
                   let cap ← checkedTableCap u space num h
+                  let _ ← checkedPointerParam fn j ⟨space, ⟨true, w, none⟩, .table num⟩
                   pure { range := fh.range, term := durchTerm u Γ Λ num w h fh v cap.down i hL }
               else .error "access without held guard"
       else .error "pointer table unknown"
@@ -190,6 +193,7 @@ def lowDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
                   if he : m ∈ eignerAt u ⟨num, h⟩ then
                     do
                       let cap ← checkedTableCap u space num h
+                      let _ ← checkedPointerParam fn j ⟨space, ⟨true, w, some owner⟩, .table num⟩
                       pure { range := fh.range,
                         term := durchOwnTerm u Γ Λ num w h fh owner m v cap.down i heig he hL }
                   else .error "owned read without owner guard"

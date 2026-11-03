@@ -34,6 +34,22 @@ theorem checkedTableCap_complete (u : UProg) (space num : Nat) (h : num < u.tabs
     Deklaration.capTab_of (tabNr_some u num h) same registered
   exact ⟨⟨resolved⟩, by simp only [checkedTableCap, resolved, ↓reduceDIte]⟩
 
+/-- A resolved pointer parameter retains one exact capability in both canonical metadata
+    lists. This rejects fabricated inconsistent UFn values before their slots are lowered. -/
+def checkedPointerParam (fn : UFn) (j : Nat) (cap : DataCapTy) :
+    Except String (PLift (fn.kinds[j]? = some (.ptr cap) ∧
+      (fn.params[j]?).map (·.2) = some (.ptr cap))) :=
+  if consistent : fn.kinds[j]? = some (.ptr cap) ∧
+      (fn.params[j]?).map (·.2) = some (.ptr cap) then .ok ⟨consistent⟩
+  else .error "pointer parameter kind and type disagree"
+
+/-- Exact canonical metadata passes the same gate consumed by the actual readers. -/
+theorem checkedPointerParam_complete (fn : UFn) (j : Nat) (cap : DataCapTy)
+    (kind : fn.kinds[j]? = some (.ptr cap))
+    (type : (fn.params[j]?).map (·.2) = some (.ptr cap)) :
+    ∃ certificate, checkedPointerParam fn j cap = .ok certificate := by
+  exact ⟨⟨kind, type⟩, by simp only [checkedPointerParam, kind, type, and_self, ↓reduceDIte]⟩
+
 private def customSpaceFixture : UProg :=
   { tabs := [{name := "T", count := 1, cols := [("value", (0, 255))], space := 1}],
     locks := [], fns := [], spaces := ["normal", "custom"] }

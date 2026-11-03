@@ -80,11 +80,9 @@ theorem uTableRight_sound (eigner : List String) (text : String) (rights : DataR
 
 /-- Resolve a logical space against the declaration order. Unknown names are refused. -/
 def uDataSpace (spaces : List String) (name : String) : Except String Nat :=
-  if strEq name "normal" then .ok 0
-  else
-    match spaces.zipIdx.find? (fun entry => strEq entry.1 name) with
-    | some (_, index) => .ok (index + 1)
-    | none => .error ("unknown data space: " ++ name)
+  match spaces.zipIdx.find? (fun entry => strEq entry.1 name) with
+  | some (_, index) => .ok index
+  | none => .error ("unknown data space: " ++ name)
 
 /-- A surface type as G sees it: a pointer to a table, an index
     into one, or an integer range (the `ParamTy`/`int_range` of
