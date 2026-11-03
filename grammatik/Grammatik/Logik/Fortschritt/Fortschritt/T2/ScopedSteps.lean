@@ -14,7 +14,10 @@ theorem rufAntwortG_moeglich (z : RufFadenG D) (vor σ : World D)
     (a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende)
     (hkt : FormKette z.kopf.f z.stapel) : ∃ z', rufAntwortG z vor σ a = some z' := by
   cases hst : z.stapel with
-  | nil => exact ⟨_, by simp only [rufAntwortG, hst]⟩
+  | nil =>
+      refine ⟨_, ?_⟩
+      simp only [rufAntwortG, hst]
+      rfl
   | cons c st =>
       rw [hst] at hkt
       cases a with
@@ -25,8 +28,14 @@ theorem rufAntwortG_moeglich (z : RufFadenG D) (vor σ : World D)
           · obtain ⟨cf, crho, cs0, ⟨l, Γ, Λ, ρ, r⟩⟩ := c
             cases r <;>
               simp_all [rufAntwortG, antwortRestG, RufRahmenG.wartend, GRest.wartend]
-          · simp [rufAntwortG, hst, hc, antwortRestG, he]
-          · simp [rufAntwortG, hst, hc, antwortRestG, he]
+          · have he' : (vertragVon D z.kopf.f).erg = some τ := he
+            refine ⟨_, ?_⟩
+            simp only [rufAntwortG, hst, hc, antwortRestG, dif_pos he']
+            rfl
+          · have he' : (vertragVon D z.kopf.f).erg = some τ := he
+            refine ⟨_, ?_⟩
+            simp only [rufAntwortG, hst, hc, antwortRestG, dif_pos he']
+            rfl
       | inr grund =>
           rcases hkt.1 with ⟨_, h0⟩ |
               ⟨_, _, _, _, _, _, _, _, _, _, h0⟩ |
@@ -37,7 +46,10 @@ theorem rufAntwortG_moeglich (z : RufFadenG D) (vor σ : World D)
           · have hlt := grund.2
             change grund.val < D.gruende z.kopf.f at hlt
             omega
-          · simp [rufAntwortG, hst, hc, antwortRestG, hn]
+          · have hn' : (vertragVon D z.kopf.f).gruende = n := hn
+            refine ⟨_, ?_⟩
+            simp only [rufAntwortG, hst, hc, antwortRestG, dif_pos hn']
+            rfl
 
 section Schritt
 
