@@ -28,20 +28,33 @@ theorem stringSpan_ok {n d top : Nat} {c : List II} {m : Runner.Mem} {pc : Runne
   split at made
   · next short =>
     have cap : stringCapacity n = 2 := Nat.max_eq_left (by omega)
-    have value : strWeitW (n := n) 2 v = (⟨v.1, by have := v.2; omega⟩ : Wert D (.str 2)) := by
-      apply Subtype.ext
-      exact List.take_of_length_le (by have := v.2; omega)
-    have run := strExpand_ok short (by omega : 2 ≤ 2) v child (constWords [0] (d + 2))
+    have length : v.1.length ≤ 2 := by have := v.2; omega
+    obtain ⟨m', run, changed, output⟩ :=
+      strExpand_ok short (by omega : 2 ≤ 2) v child (constWords [0] (d + 2))
       rfl ih made fits pre
-    simpa only [cap, stringSpanValue, value] using run
+    have encoding : encodeWords L (.str (stringCapacity n)) (stringSpanValue v) =
+        encodeWords L (.str 2) (strWeitW (n := n) 2 v) := by
+      erw [encodeWords.eq_def L (.str (stringCapacity n)) (stringSpanValue v),
+        encodeWords.eq_def L (.str 2) (strWeitW (n := n) 2 v)]
+      simp only [cap, stringSpanValue, strWeitW, List.take_of_length_le length,
+        ite_eq_right (by decide : ¬ (2 : Nat) ≤ 1)]
+    refine ⟨m', run, changed, trivial, ?_⟩
+    rw [encoding]
+    exact output.2
   · next long =>
     simp only [Option.map_eq_some_iff] at made
     obtain ⟨⟨cs, ts⟩, childMade, out⟩ := made
     cases out
     obtain ⟨m', run, changed, value⟩ := ih cs ts childMade (by omega) m pc pre
     have cap : stringCapacity n = n := Nat.max_eq_right (by omega)
+    have encoding : encodeWords L (.str (stringCapacity n)) (stringSpanValue v) =
+        encodeWords L (.str n) v := by
+      erw [encodeWords.eq_def L (.str (stringCapacity n)) (stringSpanValue v),
+        encodeWords.eq_def L (.str n) v]
+      simp only [cap, stringSpanValue]
     refine ⟨m', run, changed, trivial, ?_⟩
-    simpa only [encodeWords, cap, stringSpanValue] using value.2
+    rw [encoding]
+    exact value.2
 
 /-- Shared sequential operand evaluation. The continuation sees both complete spans;
     all input words lie below the second child's destination and survive its writes. -/
@@ -78,7 +91,7 @@ theorem stringPair_ok {n q d a b need top : Nat} {s t : Option (List II × Nat)}
     (by omega)
   obtain ⟨m3, s3, ch3, out⟩ := finish m2 _ p2 (by omega) kept v2
   refine ⟨m3, ?_, (ch1.mono da).trans ((ch2.mono (by omega)).trans ch3), out⟩
-  simpa only [List.length_append, pc_add, BitVec.add_assoc] using s1.trans (s2.trans s3)
+  simpa only [List.length_append, pc_add, Nat.add_assoc] using s1.trans (s2.trans s3)
 
 def stringBytes (n : Nat) (bs : List (Zahl 0 255)) : List Runner.W :=
   bs.map (fun b => BitVec.ofInt 64 b.n) ++ List.replicate (n - bs.length) 0
@@ -100,18 +113,22 @@ theorem stringSpan_bytes {D : Deklaration} {L : Lay D} {cap n base : Nat}
     (span : ValueAt L m fp base (.str cap) v) : WordsAt m fp (base + 1) (stringBytes n v.1) := by
   intro j hj
   have bound : j < n := by simpa only [stringBytes_length v.1 length] using hj
-  have read := span.2 (j + 1)
-    (by rw [encodeWords_length]; simp only [valueWords, if_neg (show ¬ cap ≤ 1 by omega)]; omega)
+  have inRange : j + 1 < (encodeWords L (.str cap) v).length := by
+    rw [encodeWords_length]
+    simp only [valueWords, ite_eq_right (show ¬ cap ≤ 1 by omega)]
+    omega
+  have read := span.2 (j + 1) inRange
   have capGet : (encodeWords L (.str cap) v)[j + 1]? =
       some (BitVec.ofInt 64 (strGetW v (j : Int)).n) := by
-    simpa only [encodeWords, if_neg (show ¬ cap ≤ 1 by omega)] using strBytes_word v j (by omega)
-  rw [List.getElem?_eq_getElem (by rw [encodeWords_length];
-    simp only [valueWords, if_neg (show ¬ cap ≤ 1 by omega)]; omega)] at capGet
+    erw [encodeWords.eq_def L (.str cap) v]
+    rw [ite_eq_right (show ¬ cap ≤ 1 by omega)]
+    exact strBytes_word v j (by omega)
+  rw [List.getElem?_eq_getElem inRange] at capGet
   have get := stringBytes_get v.1 length j bound
   rw [List.getElem?_eq_getElem hj] at get
   rw [show base + 1 + j = base + (j + 1) by omega, read]
-  rw [Option.some.inj capGet, Option.some.inj get]
-  rfl
+  simp only [Option.some.inj capGet, Option.some.inj get, strGetW,
+    Int.natCast_nonneg, Int.toNat_natCast, ↓reduceIte]
 
 theorem stringCat_encoding {D : Deklaration} (L : Lay D) {n q : Nat} (long : 2 ≤ n + q)
     (vs : Wert D (.str n)) (vt : Wert D (.str q)) :
@@ -121,11 +138,12 @@ theorem stringCat_encoding {D : Deklaration} (L : Lay D) {n q : Nat} (long : 2 �
           stringBytes q vt.1 ++ List.replicate (n - vs.1.length) 0) := by
   have la := vs.2
   have lb := vt.2
-  simp only [encodeWords, if_neg (show ¬ n + q ≤ 1 by omega), strCatW,
+  have padding : n + q - (vs.1.length + vt.1.length) =
+      (q - vt.1.length) + (n - vs.1.length) := by omega
+  erw [encodeWords.eq_def L (.str (n + q)) (strCatW vs vt)]
+  simp only [ite_eq_right (show ¬ n + q ≤ 1 by omega), strCatW,
     List.length_append, List.map_append, stringBytes, List.cons_append, List.append_assoc]
-  rw [List.replicate_append_replicate]
-  congr 3
-  omega
+  rw [padding, List.replicate_append_replicate]
 
 /-- Overlay the padded second span on the first span's zero padding. The untouched
     prefix and suffix complete the exact canonical concatenation encoding. -/
