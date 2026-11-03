@@ -79,7 +79,20 @@ theorem concatenation_correct [Kern] {m : Runner.Mem} {pc fp : Runner.W} {K top 
     ValueOk layout m pc fp K 4 c (.str 23) (eval world combined world .nil) :=
   lowE_ok (same := by intro _; rfl) world world (fun _ h => h) placed combined 4 c top lower fits m pc .nil pre
 
+/-- The two accepted comparison directions instantiate the same generic theorem. -/
+theorem order_correct [Kern] (reverse : Bool) {m : Runner.Mem} {pc fp : Runner.W}
+    {K top : Nat} {c : List II}
+    (lower : lowE layout (if reverse then .strLt right left else .strLt left right) 4 = some (c, top))
+    (fits : top ≤ K)
+    (pre : Pre layout m pc fp K 4 c (Env.nil : Env D []) (fun m => WeltAt m layout world))
+    (placed : LayIn layout) :
+    ValueOk layout m pc fp K 4 c .bool
+      (eval world (if reverse then .strLt right left else .strLt left right) world .nil) :=
+  lowE_ok (same := by intro _; rfl) world world (fun _ h => h) placed
+    (if reverse then .strLt right left else .strLt left right) 4 c top lower fits m pc .nil pre
+
 #print axioms bytesLt_keys
+
 #print axioms stringScan_value
 #print axioms strCatExpr_ok
 #print axioms strLtExpr_ok
