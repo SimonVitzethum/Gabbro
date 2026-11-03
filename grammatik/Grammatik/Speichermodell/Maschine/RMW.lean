@@ -48,14 +48,15 @@ open Speichermodell
 
 open Lean Elab Tactic Meta in
 /-- For a hypothesis `hR : lhs = rhs`, find another hypothesis `h : lhs = rhs'` and add
-    `hk : rhs = rhs'` (the head of a thread, known two ways, after `cases` on a step). -/
+    `hk : rhs = rhs'` (the head of a thread, known two ways, after `cases` on a step).
+    Head predicates such as `RufDannHeadG` reduce to the same equality. -/
 elab "kopf_vergleich " hR:term : tactic => withMainContext do
   let hRe ← Term.elabTerm hR none
   let some (_, lhs, _) := (← instantiateMVars (← inferType hRe)).eq? | throwError "hR no eq"
   for d in (← getLCtx) do
     if d.isImplementationDetail then continue
     if d.toExpr == hRe then continue
-    let ty ← instantiateMVars d.type
+    let ty ← whnf (← instantiateMVars d.type)
     if let some (_, a, _) := ty.eq? then
       if a == lhs then
         let pr ← mkEqTrans (← mkEqSymm hRe) d.toExpr
@@ -67,6 +68,12 @@ elab "kopf_vergleich " hR:term : tactic => withMainContext do
   throwError "no head hypothesis"
 
 variable {D : Deklaration}
+
+/-- Distinguish exchange heads without eliminating their dependent context indices. -/
+private def exchangeRest {V : Vertrag D} :
+    (Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D), Env D Γ × GRest D V l Γ Λ) → Bool
+  | ⟨_, _, _, _, .dann (.exchange ..) _⟩ => true
+  | _ => false
 
 /-! ## 1. The machine -/
 
@@ -123,7 +130,7 @@ theorem exchange_liest_schreibt {M M' : RufMaschineG D} {u : Faden} {g : D.Glob}
   obtain ⟨l, Γ, Λ, Λ', neuE, hw, hL, rest, k, ρ, hK⟩ := hk
   rcases hs with hs | hs | hs | hs | hs | hs | hs <;> cases hs
   all_goals (kopf_vergleich hK)
-  all_goals (try (cases hk; done))
+  all_goals (try (exact Bool.noConfusion (congrArg exchangeRest hk)))
   case dannExchange σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
     cases hk
     have hX : (rufUpdateG M.faeden u ⟨(M.faeden u).stapel,

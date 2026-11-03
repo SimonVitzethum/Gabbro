@@ -144,7 +144,10 @@ theorem ownerInvG_erreichbar (N : OwnerNamespace D) (base : OwnerState D)
     (threads : List Faden) (hv : base.Valid N) (M : RufMaschineG D)
     (hr : RufErreichbarG P O passes M0 M) : OwnerInvG N base M threads := by
   induction hr with
-  | start => exact ownerInvG_start N base P _ _ threads hv
+  | start =>
+      unfold OwnerInvG
+      rw [ownerLedger_eq_base]
+      exact hv
   | schritt _ _ _ _ hs ih => exact ownerInvG_schritt ih hs
 
 /-! ## Edge compatibility: transfer, borrow, restore
@@ -194,9 +197,9 @@ theorem push_borrow_pop_restore {c : OwnerInvocation D} {P : Programm D} {O : Or
     pop.restore N loaned t = some s :=
   OwnerInvocation.borrow_restore push pop hv hb
 
-/-- Every owner is held by exactly one place in the ghost ledger. -/
+/-- Every owner is held by exactly one activation frame in the ghost ledger. -/
 theorem ownerLedger_access_unique {N : OwnerNamespace D} {base : OwnerState D}
-    {M : RufMaschineG D} {threads : List Faden} {f g : Faden} {t : OwnerToken D}
+    {M : RufMaschineG D} {threads : List Faden} {f g : ArenaOwnership.Frame} {t : OwnerToken D}
     (hf : (ownerLedgerOf N base M threads).access N f t)
     (hg : (ownerLedgerOf N base M threads).access N g t) : f = g := by
   have e := ownerLedger_eq_base N base M threads
@@ -205,7 +208,7 @@ theorem ownerLedger_access_unique {N : OwnerNamespace D} {base : OwnerState D}
 
 /-- Uniqueness is nominal: a copied handle cannot supply a second accessor. -/
 theorem ownerLedger_access_owner_unique {N : OwnerNamespace D} {base : OwnerState D}
-    {M : RufMaschineG D} {threads : List Faden} {f g : Faden} {t u : OwnerToken D}
+    {M : RufMaschineG D} {threads : List Faden} {f g : ArenaOwnership.Frame} {t u : OwnerToken D}
     (hf : (ownerLedgerOf N base M threads).access N f t)
     (hu : (ownerLedgerOf N base M threads).access N g u) (hm : t.mark = u.mark) :
     f = g ∧ t.stage = u.stage := by
@@ -224,9 +227,9 @@ theorem ownerInvF_schritt_G {N : OwnerNamespace D} {base : OwnerState D}
     (hI : OwnerInvG N base K.m threads) (hs : FadenSchritt P O passes K K') :
     OwnerInvG N base K'.m threads := by
   cases hs with
-  | lauf K f M' hf hw hs' => exact ownerInvG_schritt hI hs'
-  | start K p cs hp hw hfrei hcs => exact hI
-  | kind K p c hp hw hc => exact hI
-  | join K p hp hw hf => exact hI
+  | lauf f M' hf hw hs' => exact ownerInvG_schritt hI hs'
+  | start p cs hp hw hfrei hcs => exact hI
+  | kind p c hp hw hc => exact hI
+  | join p hp hw hf => exact hI
 
 end Gabbro.Grammatik
