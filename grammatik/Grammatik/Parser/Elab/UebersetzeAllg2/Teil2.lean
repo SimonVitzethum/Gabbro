@@ -345,16 +345,6 @@ theorem heldLocksD_mem (u : UProg) (Λ : List (Res (declOf u)))
       | inr hm =>
         exact ih hm
 
-/-- A `nach` step back at the held resources. -/
-def castNachStmtL {l : Bool} (u : UProg) (caller callee : Fin u.fns.length) (Γ : Ctx)
-    (Λ : List (Res (declOf u)))
-    (s : Stmt (declOf u) (verOf u caller) l Γ
-      Λ (nach (declOf u) callee Λ)) :
-    Stmt (declOf u) (verOf u caller) l Γ
-      Λ Λ := by
-  rw [nach_eq u callee Λ] at s
-  exact s
-
 /-- The head of a direct call: the callee, its arguments and the harvested `RufPasst` (`hw` over the write
     flags, `hh` over the callee held list, `hx` over the lock carrier -- vacuous past the exact held set,
     since every floor is `none`). The statement `Stmt.call` and the binding `Block.bindCall` share it. -/

@@ -53,17 +53,9 @@ set_option maxRecDepth 100000
 
 /-! ## Returns -/
 
-/-- The held resources are the contract end, as a `Perm`. -/
-theorem endPerm_ok (u : UProg) (caller : Fin u.fns.length) :
-    (resOf u caller).Perm (verOf u caller).ende := by
-  show ((heldAt u (fnAt u caller)).map
-    (Res.held (D := declOf u))).Perm (verOf u caller).ende
-  rw [show (verOf u caller).ende =
-    (vertragVon (declOf u) caller).ende from rfl, ende_eq u caller]
-
-/-- The value of a return, at the function's held resources `resOf`. -/
-def lowErg (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn) : URet →
-    Except String (ErgExpr (declOf u) Γ (resOf u caller) (verOf u caller).erg)
+/-- The value of a return, at the current resources `Λ`. -/
+def lowErg (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) : URet →
+    Except String (ErgExpr (declOf u) Γ Λ (verOf u caller).erg)
   | .keins => .error "fn with a result falls off"
   | .empty =>
     match hE : (fnAt u caller).ergTy with
@@ -71,7 +63,7 @@ def lowErg (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn) : URet 
       have hV : (verOf u caller).erg = none := by
         show (vertragVon (declOf u) caller).erg = none
         rw [vErg_eq u caller, hE]
-      have eK : ErgExpr (declOf u) Γ (resOf u caller) (verOf u caller).erg := by
+      have eK : ErgExpr (declOf u) Γ Λ (verOf u caller).erg := by
         rw [hV]
         exact ErgExpr.empty
       .ok eK
@@ -79,14 +71,14 @@ def lowErg (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn) : URet 
   | .val s =>
     match hE : (fnAt u caller).ergTy with
     | some (.int lo hi) =>
-      match lowWertAt u Γ (resOf u caller) fn lo hi s with
+      match lowWertAt u Γ Λ fn lo hi s with
       | .error e => .error e
       | .ok v =>
-        have eW : ErgExpr (declOf u) Γ (resOf u caller) (verOf u caller).erg := by
+        have eW : ErgExpr (declOf u) Γ Λ (verOf u caller).erg := by
           rw [show (verOf u caller).erg =
             (vertragVon (declOf u) caller).erg from rfl,
             vErg_eq u caller, hE]
-          show ErgExpr (declOf u) Γ (resOf u caller) (Option.some (.int lo hi))
+          show ErgExpr (declOf u) Γ Λ (Option.some (.int lo hi))
           exact ErgExpr.val v
         .ok eW
     | some _ => .error "number returned for a non-number result"
@@ -95,10 +87,10 @@ def lowErg (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn) : URet 
   | .wert s =>
     match hE : (fnAt u caller).ergTy with
     | some τ =>
-      match lowWertAtE u Γ (resOf u caller) fn none τ s with
+      match lowWertAtE u Γ Λ fn none τ s with
       | .error e => .error e
       | .ok v =>
-        have eW : ErgExpr (declOf u) Γ (resOf u caller) (verOf u caller).erg := by
+        have eW : ErgExpr (declOf u) Γ Λ (verOf u caller).erg := by
           rw [show (verOf u caller).erg =
             (vertragVon (declOf u) caller).erg from rfl,
             vErg_eq u caller, hE]
@@ -108,10 +100,10 @@ def lowErg (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn) : URet 
   | .grund g =>
     match hE : (fnAt u caller).ergTy with
     | some (.why n) =>
-      match lowGrund u Γ (resOf u caller) fn n g with
+      match lowGrund u Γ Λ fn n g with
       | .error e => .error e
       | .ok v =>
-        have eW : ErgExpr (declOf u) Γ (resOf u caller) (verOf u caller).erg := by
+        have eW : ErgExpr (declOf u) Γ Λ (verOf u caller).erg := by
           rw [show (verOf u caller).erg =
             (vertragVon (declOf u) caller).erg from rfl,
             vErg_eq u caller, hE]
@@ -126,14 +118,14 @@ def lowErg (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn) : URet 
       | some (sidx, _) =>
         if hs : sidx < u.sums.length then
           if hc : (u.sums.get ⟨sidx, hs⟩).spec = cs then
-            match lowSVal u Γ (resOf u caller) fn 0 sidx hs v with
+            match lowSVal u Γ Λ fn 0 sidx hs v with
             | .error e => .error e
             | .ok ev =>
-              have eW : ErgExpr (declOf u) Γ (resOf u caller) (verOf u caller).erg := by
+              have eW : ErgExpr (declOf u) Γ Λ (verOf u caller).erg := by
                 rw [show (verOf u caller).erg =
                   (vertragVon (declOf u) caller).erg from rfl,
                   vErg_eq u caller, hE]
-                show ErgExpr (declOf u) Γ (resOf u caller) (Option.some (.sum cs))
+                show ErgExpr (declOf u) Γ Λ (Option.some (.sum cs))
                 exact ErgExpr.val (by rw [← hc]; exact ev)
               .ok eW
           else .error "result type foreign"
@@ -148,14 +140,14 @@ def lowErg (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn) : URet 
       | some (num, _) =>
         if hnum : num < u.tabs.length then
           if hn : (declOf u).count ⟨num, hnum⟩ = n then
-            match lowOpt u Γ (resOf u caller) fn 0 num hnum o with
+            match lowOpt u Γ Λ fn 0 num hnum o with
             | .error e => .error e
             | .ok v =>
-              have eW : ErgExpr (declOf u) Γ (resOf u caller) (verOf u caller).erg := by
+              have eW : ErgExpr (declOf u) Γ Λ (verOf u caller).erg := by
                 rw [show (verOf u caller).erg =
                   (vertragVon (declOf u) caller).erg from rfl,
                   vErg_eq u caller, hE]
-                show ErgExpr (declOf u) Γ (resOf u caller) (Option.some (.opt n))
+                show ErgExpr (declOf u) Γ Λ (Option.some (.opt n))
                 exact ErgExpr.val (by rw [← hn]; exact v)
               .ok eW
           else .error "option result table foreign"
@@ -166,10 +158,10 @@ def lowErg (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn) : URet 
   | .bool b =>
     match hE : (fnAt u caller).ergTy with
     | some .bool =>
-      match lowEns u Γ (resOf u caller) fn none b with
+      match lowEns u Γ Λ fn none b with
       | .error e => .error e
       | .ok v =>
-        have eW : ErgExpr (declOf u) Γ (resOf u caller) (verOf u caller).erg := by
+        have eW : ErgExpr (declOf u) Γ Λ (verOf u caller).erg := by
           rw [show (verOf u caller).erg =
             (vertragVon (declOf u) caller).erg from rfl,
             vErg_eq u caller, hE]
@@ -186,43 +178,55 @@ def keinsWert : Option Ty → Option URet
   | some .bool => some (.bool .fls)
   | _ => none
 
-/-- The trailing return. -/
-def lowEnd (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn) (r0 : URet) :
-    Except String (Endblock (declOf u) (verOf u caller) false Γ (resOf u caller)) :=
+/-- The trailing return. The current resources must be the contract end up to
+    order (C16): a body that consumed or produced marks ends where the flow leaves it. -/
+def lowEnd (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (r0 : URet) :
+    Except String (Endblock (declOf u) (verOf u caller) false Γ Λ) :=
   let r := match r0 with
     | .keins => (keinsWert (fnAt u caller).ergTy).getD .keins
     | r => r
   match r with
   | .why i =>
-    if h : i < (verOf u caller).gruende then .ok (Endblock.retWhy (D := declOf u) ⟨i, h⟩ (endPerm_ok u caller))
+    if h : i < (verOf u caller).gruende then
+      if hPerm : decide (Λ.Perm (verOf u caller).ende) = true then
+        .ok (Endblock.retWhy (D := declOf u) ⟨i, h⟩ (of_decide_eq_true hPerm))
+      else .error "lower: return without produced marks"
     else .error "reason case outside the channel"
   | _ =>
-  match lowErg u caller Γ fn r with
+  match lowErg u caller Γ Λ fn r with
   | .error e => .error e
-  | .ok e => .ok (Endblock.ret e (endPerm_ok u caller))
+  | .ok e =>
+    if hPerm : decide (Λ.Perm (verOf u caller).ende) = true then
+      .ok (Endblock.ret e (of_decide_eq_true hPerm))
+    else .error "lower: return without produced marks"
 
-/-- `Λ` is exactly the function's held resources (not inside a `locks` block): where a `return` may
-    stand (`Stmt.ret` needs `Λ` to be the contract end). -/
-abbrev AtTop (u : UProg) (caller : Fin u.fns.length) (Λ : List (Res (declOf u))) : Type :=
-  Option (PLift (Λ = resOf u caller))
+/-- At the top level (not inside a `locks` block): where a `return` may stand, with
+    whatever resources the flow holds there (a `return` needs `Λ` to be the contract
+    end up to order). The payload is trivial; the option marks top-level code. -/
+abbrev AtTop (u : UProg) (caller : Fin u.fns.length) (_ : List (Res (declOf u))) : Type :=
+  Option Unit
 
-/-- A `return` inside a block, at the top held list only. -/
+/-- A `return` inside a block, at the top level only. -/
 def lowRetStmt {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u))) (pe : AtTop u caller Λ) (r : URet) :
     Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
   match pe with
   | none => .error "lower: return under locks has no G form"
-  | some ⟨h⟩ =>
+  | some _ =>
     match r with
     | .why i =>
       if hi : i < (verOf u caller).gruende then
-        .ok (by subst h; exact Stmt.retWhy (D := declOf u) ⟨i, hi⟩ (endPerm_ok u caller))
+        if hPerm : decide (Λ.Perm (verOf u caller).ende) = true then
+          .ok (Stmt.retWhy (D := declOf u) ⟨i, hi⟩ (of_decide_eq_true hPerm))
+        else .error "lower: return without produced marks"
       else .error "reason case outside the channel"
     | _ =>
-    match lowErg u caller Γ fn r with
+    match lowErg u caller Γ Λ fn r with
     | .error e => .error e
     | .ok erg =>
-      .ok (by subst h; exact Stmt.ret erg (endPerm_ok u caller))
+      if hPerm : decide (Λ.Perm (verOf u caller).ende) = true then
+        .ok (Stmt.ret erg (of_decide_eq_true hPerm))
+      else .error "lower: return without produced marks"
 
 /-- The rank rule of `locks L`: every held lock ranks below `L` (`H006`), as a Bool. -/
 def rangOkB (u : UProg) (Λ : List (Res (declOf u))) (L : (declOf u).Lock) : Bool :=
@@ -338,12 +342,15 @@ def lowTauschNeu (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) 
 /-- **The five lowerings one fuel level down**, as a lowering at the next level calls them. The
     lowerings of statements, blocks, match arms, reason arms and end blocks call each other one fuel level
     down; giving the step at level `n + 1` the record of level `n` keeps every step a plain definition in
-    its own file (`lowStufe` ties the levels), with exactly the results of the former `mutual` block. -/
+    its own file (`lowStufe` ties the levels), with exactly the results of the former `mutual` block.
+    Calls change the held resources (`nach`), so runs thread the out-list: `seq` and `struct` return
+    it (joins decide equality); match arms and structured bodies preserve it (decided); end blocks
+    pin the entry list. -/
 structure LowStufe (u : UProg) (caller : Fin u.fns.length) where
   seq : {l : Bool} → (Γ : Ctx) → UFn → (Λ : List (Res (declOf u))) → AtTop u caller Λ → List UStmt →
-    Except String (Block (declOf u) (verOf u caller) l Γ Λ Λ × List UStmt)
+    Except String ((Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u caller) l Γ Λ Λ') × List UStmt)
   struct : {l : Bool} → (Γ : Ctx) → UFn → (Λ : List (Res (declOf u))) → AtTop u caller Λ → UStmt → List UStmt →
-    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ × List UStmt)
+    Except String ((Σ Λ' : List (Res (declOf u)), Stmt (declOf u) (verOf u caller) l Γ Λ Λ') × List UStmt)
   arms : {l : Bool} → (Γ : Ctx) → UFn → (Λ : List (Res (declOf u))) → AtTop u caller Λ →
     (cs : List (Option Ty)) → List String → List UStmt →
     Except String (Arms (declOf u) (verOf u caller) l Γ Λ Λ cs × List UStmt)

@@ -13,10 +13,11 @@ open Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 set_option maxRecDepth 100000
 
-/-- `p(..);` through a function pointer (`Stmt.callInd`): against the signature of `p`'s type. -/
+/-- `p(..);` through a function pointer (`Stmt.callInd`): against the signature of `p`'s type,
+    stepping to its call transformer (C16). -/
 def lowCallIndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u))) (p _cname : String) (args : List UArg) :
-    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
+    Except String ((Σ Λ' : List (Res (declOf u)), Stmt (declOf u) (verOf u caller) l Γ Λ Λ')) :=
   match lowZeigerN u Γ fn p with
   | .error e => .error e
   | .ok ⟨n, v⟩ =>
@@ -24,8 +25,8 @@ def lowCallIndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (f
     | .error e => .error e
     | .ok k =>
       if hr : ((declOf u).sigNr n).gruende = 0 then
-        have s := Stmt.callInd (D := declOf u) (l := l) (n := n) (Expr.var v) k.args k.hp hr
-        .ok (by rw [nachSigAt_eq u n Λ] at s; exact s)
+        .ok ⟨nachSig (declOf u) ((declOf u).sigNr n) Λ,
+          Stmt.callInd (D := declOf u) (l := l) (n := n) (Expr.var v) k.args k.hp hr⟩
       else .error "call of a function with a reason channel needs `let .. else`"
 
 /-- `transition T.slots[i].f : A -> B;` (`Stmt.shift`): the stage `B` in the field's range, the pair declared
@@ -261,29 +262,29 @@ def lowResetRangeL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
     | _ => .error "reset range of a static that is not a static array"
 
 /-- One non-marker statement at the held list `Λ`, in the scope `Γ`/`fn` (the parameters and the
-    `let` bindings read so far). -/
+    `let` bindings read so far). Calls step to the call transformer (C16). -/
 def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u))) : UStmt →
-    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ)
-  | .assign b f ix v => (lowAssignDurchW u caller Γ fn Λ b f ix v).getD (lowAssignDurchL u caller Γ fn Λ b f ix v)
-  | .assignTab b f ix v => (lowAssignTabW u caller Γ fn Λ b f ix v).getD (lowAssignTabL u caller Γ fn Λ b f ix v)
-  | .assignB b f ix v => lowAssignDurchBL u caller Γ fn Λ b f ix v
-  | .assignTabB b f ix v => lowAssignTabBL u caller Γ fn Λ b f ix v
-  | .assignOpt b f ix v => lowAssignDurchOL u caller Γ fn Λ b f ix v
-  | .assignTabOpt b f ix v => lowAssignTabOL u caller Γ fn Λ b f ix v
-  | .assignGlob n v => lowAssignGlobL u caller Γ fn Λ n v
-  | .assignGlobB n v => lowAssignGlobBL u caller Γ fn Λ n v
-  | .assignGlobO n o => lowAssignGlobOL u caller Γ fn Λ n o
-  | .storeAtom n v => lowStoreAtomL u caller Γ fn Λ n v
-  | .storeAtomB n v => lowStoreAtomBL u caller Γ fn Λ n v
-  | .setVar x v => lowSetVarL u caller Γ fn Λ x v
-  | .setVarB x v => lowSetVarBL u caller Γ fn Λ x v
+    Except String ((Σ Λ' : List (Res (declOf u)), Stmt (declOf u) (verOf u caller) l Γ Λ Λ'))
+  | .assign b f ix v => ((lowAssignDurchW u caller Γ fn Λ b f ix v).getD (lowAssignDurchL u caller Γ fn Λ b f ix v)).map fun st => ⟨Λ, st⟩
+  | .assignTab b f ix v => ((lowAssignTabW u caller Γ fn Λ b f ix v).getD (lowAssignTabL u caller Γ fn Λ b f ix v)).map fun st => ⟨Λ, st⟩
+  | .assignB b f ix v => (lowAssignDurchBL u caller Γ fn Λ b f ix v).map fun st => ⟨Λ, st⟩
+  | .assignTabB b f ix v => (lowAssignTabBL u caller Γ fn Λ b f ix v).map fun st => ⟨Λ, st⟩
+  | .assignOpt b f ix v => (lowAssignDurchOL u caller Γ fn Λ b f ix v).map fun st => ⟨Λ, st⟩
+  | .assignTabOpt b f ix v => (lowAssignTabOL u caller Γ fn Λ b f ix v).map fun st => ⟨Λ, st⟩
+  | .assignGlob n v => (lowAssignGlobL u caller Γ fn Λ n v).map fun st => ⟨Λ, st⟩
+  | .assignGlobB n v => (lowAssignGlobBL u caller Γ fn Λ n v).map fun st => ⟨Λ, st⟩
+  | .assignGlobO n o => (lowAssignGlobOL u caller Γ fn Λ n o).map fun st => ⟨Λ, st⟩
+  | .storeAtom n v => (lowStoreAtomL u caller Γ fn Λ n v).map fun st => ⟨Λ, st⟩
+  | .storeAtomB n v => (lowStoreAtomBL u caller Γ fn Λ n v).map fun st => ⟨Λ, st⟩
+  | .setVar x v => (lowSetVarL u caller Γ fn Λ x v).map fun st => ⟨Λ, st⟩
+  | .setVarB x v => (lowSetVarBL u caller Γ fn Λ x v).map fun st => ⟨Λ, st⟩
   | .call c args => lowCallL u caller Γ fn Λ c args
-  | .regWrite d r v => lowRegWriteL u caller Γ fn Λ d r v
-  | .regWriteB d r v => lowRegWriteBL u caller Γ fn Λ d r v
+  | .regWrite d r v => (lowRegWriteL u caller Γ fn Λ d r v).map fun st => ⟨Λ, st⟩
+  | .regWriteB d r v => (lowRegWriteBL u caller Γ fn Λ d r v).map fun st => ⟨Λ, st⟩
   | .callInd p f args => lowCallIndL u caller Γ fn Λ p f args
-  | .shiftTab b f ix _ von nach => lowShiftL u caller Γ fn Λ b f ix von nach
-  | .assignRef r f v => lowAssignRefL u caller Γ fn Λ r f v
+  | .shiftTab b fname ix _ von nach => (lowShiftL u caller Γ fn Λ b fname ix von nach).map fun st => ⟨Λ, st⟩
+  | .assignRef r f v => (lowAssignRefL u caller Γ fn Λ r f v).map fun st => ⟨Λ, st⟩
   | .lockBeg _ => .error "lower: a locks block opens here"
   | .blkEnd => .error "lower: a block closes here without opening"
   | .resetRange a iu nu => lowResetRangeL u caller Γ fn Λ a iu nu

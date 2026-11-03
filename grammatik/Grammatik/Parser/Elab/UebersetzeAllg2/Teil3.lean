@@ -63,17 +63,16 @@ def axiomStmt {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
     k.hd
     k.hgd
 
-/-- A direct call as a statement. -/
+/-- A direct call as a statement, stepping to the call transformer (C16). -/
 def lowCallL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u)))
     (cname : String) (args : List UArg) :
-    Except String (Stmt (declOf u) (verOf u caller) l
-      Γ Λ Λ) :=
+    Except String ((Σ Λ' : List (Res (declOf u)), Stmt (declOf u) (verOf u caller) l Γ Λ Λ')) :=
   match lowRufKopf u caller Γ fn Λ cname args with
   | .error e => .error e
   | .ok k =>
     if hr : (declOf u).gruende k.callee = 0 then
-      .ok (castNachStmtL u caller k.callee Γ Λ (Stmt.call (D := declOf u) k.callee k.args k.hp hr))
+      .ok ⟨nach (declOf u) k.callee Λ, Stmt.call (D := declOf u) k.callee k.args k.hp hr⟩
     else .error "call of a function with a reason channel needs `let .. else`"
 
 /-- A write of a static (`Stmt.assignGlob`): only where the function declares `writes X`. -/
