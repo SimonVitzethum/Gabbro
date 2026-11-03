@@ -108,8 +108,10 @@ private theorem antwortGut_schritt {P : Programm D} {O : Orakel D} {pa : Nat}
           refine ⟨?_, h.2⟩
           subst σ₁
           unfold rahmenAntwortGut
-          simpa only [GRest.antwortGut, antwortGut] using
-            (hsc t _ _ _ ρ r e R hhead hret)
+          dsimp only [GRest.antwortGut, antwortGut]
+          constructor
+          · exact (hsc t _ _ _ ρ r e R hhead hret).1
+          · exact (hsc t _ _ _ ρ r e R hhead hret).2
       | rueckScopedGrund ρ r grund R hhead hret hscope hΛ hnonempty =>
           dsimp only
           rw [rufUpdateG_self]
@@ -150,9 +152,7 @@ private theorem antwortGut_schritt {P : Programm D} {O : Orakel D} {pa : Nat}
           rw [rufUpdateG_self]
           have hh := h.1
           unfold rahmenAntwortGut at hh
-          refine (fun headRest : (M.faeden t).kopf.rest = _ => ?_) ?_
-          swap
-          · assumption
+          refine (fun headRest : (M.faeden t).kopf.rest = _ => ?_) (by assumption)
           rw [headRest] at hh
           simp_all [fadenAntwortGut, rahmenAntwortGut,
             GRest.antwortGut, RufDannHeadG, RufEndHeadG]
@@ -161,19 +161,22 @@ private theorem antwortGut_schritt {P : Programm D} {O : Orakel D} {pa : Nat}
       all_goals
         have hh := h.1
         unfold rahmenAntwortGut at hh
-        refine (fun headRest : (M.faeden t).kopf.rest = _ => ?_) ?_
-        swap
-        · assumption
+        refine (fun headRest : (M.faeden t).kopf.rest = _ => ?_) (by assumption)
         rw [headRest] at hh
       all_goals first
-        | (refine (fun waiting : RufWartetHeadG (D := D) _ _ _ _ => ?_) ?_
-           swap
-           · assumption
+        | (refine (fun waiting : RufWartetHeadG (D := D) _ _ _ _ => ?_) (by assumption)
            rcases waiting with hc | ⟨n, err, hc⟩)
         | skip
       all_goals
         simp_all [fadenAntwortGut, rahmenAntwortGut, GRest.antwortGut,
           antwortGut_weiterOpt, RufDannHeadG, RufEndHeadG]
+      all_goals try
+        rw [hc] at h
+        exact h.2.1
+      all_goals
+        expose_names
+        rw [hcaller] at h
+        exact h.2.1
 
 /-- Replay supplies the guarantee at the cleanup source; a structural
     invariant carries it with the saved snapshot through all later steps.
