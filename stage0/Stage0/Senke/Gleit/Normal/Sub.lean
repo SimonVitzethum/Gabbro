@@ -2,8 +2,7 @@
    The kernel defines sub as add with negation, including NaN propagation. -/
 module
 public import Stage0.Senke.Gleit.Normal.Inputs
-import Std.Tactic.BVDecide
-meta import Std.Tactic.BVDecide.Reflect
+import Init.Data.BitVec.Bitblast
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
@@ -18,7 +17,16 @@ def softNegWord (b : Runner.W) : Runner.W := b ^^^ BitVec.ofNat 64 (2 ^ 63)
 
 private theorem xorHighBit (b : Runner.W) :
     b ^^^ BitVec.ofNat 64 (2 ^ 63) = b + BitVec.ofNat 64 (2 ^ 63) := by
-  bv_decide
+  apply BitVec.eq_of_getLsbD_eq_iff.mpr
+  intro i hi
+  have lowMask : (2 ^ 63 : Nat) % 2 ^ i = 0 :=
+    Nat.mod_eq_zero_of_dvd (Nat.pow_dvd_pow 2 (by omega : i ≤ 63))
+  have noCarry : BitVec.carry i b (BitVec.ofNat 64 (2 ^ 63)) false = false := by
+    simp only [BitVec.carry, BitVec.toNat_ofNat,
+      Nat.mod_eq_of_lt (by decide : 2 ^ 63 < 2 ^ 64), lowMask,
+      Bool.toNat_false, Nat.add_zero, decide_eq_false_iff_not]
+    exact Nat.not_le_of_lt (Nat.mod_lt _ (Nat.two_pow_pos i))
+  simp only [BitVec.getLsbD_xor, BitVec.getLsbD_add hi, noCarry, Bool.xor_false]
 
 /-- The single xor implements model negation on every well-formed triple. -/
 theorem softNegWord_model (b : GFloat) (hb : wf f64 b) :

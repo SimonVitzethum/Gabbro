@@ -2,8 +2,6 @@
 module
 public import Stage0.Senke.Gleit.Normal.Pack
 public import Stage0.Senke.Gleit.RoutineModel
-import Std.Tactic.BVDecide
-meta import Std.Tactic.BVDecide.Reflect
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
@@ -11,8 +9,22 @@ open Gabbro.Grammatik Gleitkomma Runner.IR
 
 private theorem packUnpack (w : Runner.W) :
     packWord (unpackSignWord w) (unpackBexpWord w) (unpackFracWord w) = w := by
-  simp only [packWord, unpackSignWord, unpackBexpWord, unpackFracWord]
-  bv_decide
+  change ((((w >>> 63) <<< 63) |||
+      (((w >>> 52) &&& BitVec.ofNat 64 (2 ^ 11 - 1)) <<< 52)) |||
+      (w &&& BitVec.ofNat 64 (2 ^ 52 - 1))) = w
+  apply BitVec.eq_of_getLsbD_eq_iff.mpr
+  intro i hi
+  simp only [BitVec.getLsbD_or, BitVec.getLsbD_and,
+    BitVec.getLsbD_shiftLeft, BitVec.getLsbD_ushiftRight,
+    BitVec.getLsbD_ofNat, Nat.testBit_two_pow_sub_one]
+  by_cases low : i < 52
+  · simp [hi, low, show i < 63 by omega]
+  · by_cases middle : i < 63
+    · simp [hi, low, middle, show i - 52 < 64 by omega,
+        show i - 52 < 11 by omega, show 52 + (i - 52) = i by omega]
+    · have top : i = 63 := by omega
+      subst i
+      simp
 
 /-- Reconstruct the canonical encoding from the existing field extraction
     correspondence. Packing introduces neither a second decoder nor masks. -/
