@@ -171,6 +171,10 @@ def ersetzeSAnw (fns : List UKonstFn) : SAnw → Except String SAnw
     match ersetzeSExprList fns args with
     | .error e => .error e
     | .ok args' => .ok (.call f args')
+  | .callElse name args reason body => do
+    let args ← ersetzeSExprList fns args
+    let body ← ersetzeSAnw fns body
+    pure (.callElse name args reason body)
   | .callQ f args =>
     (ersetzeSExprList fns args).map (fun args' => .callQ f args')
   | .genericCall f words args =>
