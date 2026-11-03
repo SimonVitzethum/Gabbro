@@ -112,8 +112,9 @@ def elabKopf (_consts : List (String × Int))
     (locks : List ULock) (globs : List UGlob) (whys : List UWhy) (sums : List USum := [])
     (sig : FnSig) (devs : List String := []) (zeiger : List String := []) (zb : Nat := 0) (spaces : List String := []) (named : List (String × Ty) := []) (eigner : List String := []) :
     Except String (UFnKopf × List String) :=
+  if !sig.generics.isEmpty then .error "unexpanded generic function signature" else
   match sig with
-  | { art, name, params := params0, res, fehler, klauseln } =>
+  | { art, name, params := params0, res, fehler, klauseln, generics := _ } =>
     let params := uOhneGriffe devs params0
     -- a `fn` without a kind word and with a body is an implemented function, like `impl fn` (the checker's
     -- `None | Some(Impl)`)

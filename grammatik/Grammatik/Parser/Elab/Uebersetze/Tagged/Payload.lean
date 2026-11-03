@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil5
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil5Rest
 
 @[expose] public section
 
