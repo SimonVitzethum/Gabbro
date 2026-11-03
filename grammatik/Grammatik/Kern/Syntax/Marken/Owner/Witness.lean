@@ -221,7 +221,7 @@ theorem escrow_move_return_exists_zeuge :
     ∃ s' t', OwnerState.transfer names movedTwice grandchild child movedTwiceToken =
       some (s', t') := by
   have hown := (OwnerState.transfer_grant transfer_grant_zeuge.1 two_call_handoff).2.1
-  obtain ⟨ledger', h', he⟩ := ArenaOwnership.State.move_exists hown.2.2 rfl
+  obtain ⟨ledger', h', he⟩ := ArenaOwnership.State.move_exists (g := child) hown.2.2 rfl
   have hne : grandchild ≠ child := by decide
   refine ⟨movedTwice.withLedger ledger', { movedTwiceToken with handle := h' }, ?_⟩
   unfold OwnerState.transfer
@@ -241,7 +241,8 @@ theorem nested_borrow : OwnerState.borrow names loaned child grandchild token = 
     (loaned.ledger.put 0 (some ⟨0, 0, root, [grandchild, child]⟩))) = some nested
   have hledger : loaned.ledger.put 0 (some ⟨0, 0, root, [grandchild, child]⟩) =
       nested.ledger := by
-    apply ArenaOwnership.State.ext' rfl
+    refine ArenaOwnership.State.ext' ?_ ?_
+    · first | rfl | simp [loaned, nested, OwnerState.withLedger, ArenaOwnership.State.put]
     funext i
     by_cases hi : i = 0 <;>
       simp [loaned, nested, OwnerState.withLedger, ArenaOwnership.State.put, hi]

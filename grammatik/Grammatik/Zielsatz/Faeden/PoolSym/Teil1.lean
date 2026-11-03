@@ -272,7 +272,7 @@ noncomputable def pruefer_vor_neu
     akz E fs ls cs && maskenB E.P fs && resetB cs &&
       Kernzelle.accumulatorB E.P fs (tabsOf cs) (globsOf cs) [] E.akku
   korrekt := fun {D} _ E fs ls cs h => by
-    haveI : DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)
+    letI : DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)
     simp only [Bool.and_eq_true] at h
     exact (akzeptiertSpecVor_neu (korr E fs ls cs h.1.1.1) ((maskenB_iff fs.2).mp h.1.1.2)
       ((resetB_iff cs.2).mp h.1.2)).mitAkku (((Kernzelle.accumulatorB_iff fs.2 (tabsOf_voll cs.2) (globsOf_voll cs.2)).mp h.2).1)

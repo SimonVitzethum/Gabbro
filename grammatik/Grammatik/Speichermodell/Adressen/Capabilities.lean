@@ -18,7 +18,7 @@ def writeOnly : Stmt GetrenntZeuge.gD (vertragVon GetrenntZeuge.gD gAendern) fal
 def writeEnv : Env GetrenntZeuge.gD [writeType] := .cons () .nil
 
 theorem write_only_store_zeuge :
-    ((execStmt gO 0 keinRuf writeOnly σ0 writeEnv).welt.map
+    ((execStmt GetrenntZeuge.gO 0 keinRuf writeOnly GetrenntZeuge.σ0 writeEnv).welt.map
       (fun world => (world.slots GTab.T 0 GFeld.x).n)) = some 5 ∧
     (DataCapTy.table 0 (false, true)).rights.read = false ∧
     zaehltFuerTrennung writeType = true := by
