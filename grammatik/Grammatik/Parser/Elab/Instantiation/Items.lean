@@ -47,7 +47,9 @@ def item (scope : Scope) : SItemTief → SurfaceFacts
   | .specGroupT _ _ _ functions => merge ⟨false, []⟩ (gather (functions.map (signature scope)))
   | .implGroupT _ types effects body => gather [⟨false, []⟩,
       gather (types.map (inspectType scope)), gather (effects.flatten.map (effect scope)), items scope body]
-  | .useT _ | .assumT _ _ _ _ | .trustT _ _ _ _ _ _ _ | .varT _ | .profT _ _ => {}
+  | .useT _ | .assumT _ _ _ _ | .varT _ | .profT _ _ => {}
+  | .trustT _ code _ _ _ _ service =>
+    merge (globalReference code) (optional globalReference service)
   | .typeT _ _ args _ result => merge (gather (args.map (inspectType scope)))
       (optional (inspectType scope) result)
   | .constT _ ty value => merge (inspectType scope ty) (constant scope value)
