@@ -45,6 +45,7 @@ public import Stage0.Senke.Welt.Anordnung
 public import Stage0.Senke.Welt.MainEnv
 public import Stage0.Senke.Ausdruck.Zeiger.FnptrProben
 public import Stage0.Senke.Ausdruck.Zeiger.FnptrAufrufProben
+public import Stage0.Senke.Ausdruck.Zeiger.OwnProben
 public import Stage0.Senke.Ausdruck.Quant.Proben
 public import Stage0.Senke.Anweisung.Bytes.Proben
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
