@@ -37,8 +37,7 @@ theorem encodeProduct_field_split (L : Lay D) {name : Nat} {fs : List Ty} {τ : 
       before.length = productOffset i := by
   have nonempty : fs ≠ [] := by
     cases i <;> simp
-  rw [encodeWords.eq_def]
-  dsimp only
+  erw [encodeWords_prod]
   simpa only [encodeProduct.eq_def, if_neg nonempty] using
     encodeProductFields_field_split L i v
 
@@ -95,7 +94,7 @@ theorem prodGet_ok [Runner.IR.Kern] {L : Lay D} {Γ : Ctx} {Λ : List (Res D)}
   obtain ⟨m2, run2, changed2, result⟩ := copyValue_run tail.frame tail.small
     (by omega) span (Or.inl (Nat.le_add_right _ _)) tail.code
     (by simpa only [copyWords_length] using tail.far) selected
-  refine ⟨m2, ?_, changed1.trans (changed2.mono (by omega)), result⟩
+  refine ⟨m2, ?_, changed1.trans (Agree.widen changed2 (by omega)), result⟩
   simpa only [List.length_append, copyWords_length, pc_add] using run1.trans run2
 
 end Gabbro.Stage0.Senke

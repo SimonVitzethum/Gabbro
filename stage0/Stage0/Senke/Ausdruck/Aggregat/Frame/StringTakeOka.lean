@@ -49,7 +49,7 @@ theorem strTake_encode (L : Lay D) {n m : Nat} (hn2 : 2 ≤ n) (hm2 : 2 ≤ m) (
     rw [encodeWords.eq_def]
     dsimp only
     rw [if_neg (show ¬ k ≤ 1 by omega)]
-  rw [encodeLong hm2, encodeLong hn2]
+  erw [encodeLong hm2, encodeLong hn2]
   simp only [strWeitW,
     List.length_take, List.cons_append, List.drop_succ_cons, List.drop_zero]
   rw [Nat.min_comm w.1.length m]

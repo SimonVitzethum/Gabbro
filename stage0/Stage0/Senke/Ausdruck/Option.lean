@@ -24,7 +24,7 @@ theorem some_ok {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {n : Int}
       encodeWords L (.opt n) (some k) =
         if n ≤ 2 ^ 63 then [BitVec.ofInt 64 k.n]
         else 1 :: integerEncoding (integerWords 0 (n - 1)) k.n := by
-    rw [encodeWords.eq_def]
+    simp only [encodeWords, optN]
   simp only [lowE_eqs] at h
   split at h
   · next short =>
