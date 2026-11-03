@@ -90,7 +90,7 @@ theorem indSonst_treu (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufA
       have h2 := hR f s0 _ hentry σ1 (by rw [hR1]; rfl)
       rw [hR1] at h2
       have gcall : Treu V.schreibt V.gschreibt s0 σ1 :=
-        (Treu.weiter hp.hw hp.hg h2).toTreu_entry hentry
+        (TreuRet.weiter hp.hw hp.hg h2).toTreu_entry hentry
       have g1 := hl.trans gcall
       exact (TreuAusgang.vorCall g1 (runWhy σ1 (grundSig hf r)
         (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh)))) σ' h
@@ -137,7 +137,7 @@ theorem indSonstE_treu (R : ∀ f : D.Fn, World D → Env D (D.params f) → Ruf
       have h2 := hR f s0 _ hentry σ1 (by rw [hR1]; rfl)
       rw [hR1] at h2
       have gcall : Treu V.schreibt V.gschreibt s0 σ1 :=
-        (Treu.weiter hp.hw hp.hg h2).toTreu_entry hentry
+        (TreuRet.weiter hp.hw hp.hg h2).toTreu_entry hentry
       have g1 := hl.trans gcall
       exact (TreuEnd.vorCall g1 (runWhy σ1 (grundSig hf r)
         (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh)))) σ' h

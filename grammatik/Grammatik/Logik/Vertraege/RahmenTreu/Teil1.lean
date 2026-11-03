@@ -44,10 +44,12 @@ theorem traverseLauf_treu (bo : Option Int) (Λ : List (Res D))
       have hstep := hs (inv σ ρ).1 (.cons k ρ) (hinv.heldB hh)
       generalize hs1 : schritt (inv σ ρ).1 (.cons k ρ) = o at hstep ⊢
       cases o with
-      | ok σ1 ρ1 => exact TreuAusgang.vor (hinv.trans (hstep σ1 rfl))
-          (ih σ1 ρ1.tail ((hinv.trans (hstep σ1 rfl)).heldB hh))
-      | next _ σ1 ρ1 => exact TreuAusgang.vor (hinv.trans (hstep σ1 rfl))
-          (ih σ1 ρ1.tail ((hinv.trans (hstep σ1 rfl)).heldB hh))
+      | ok σ1 ρ1 =>
+        have g1 := hinv.trans (hstep σ1 rfl)
+        exact TreuAusgang.vor g1 (ih σ1 ρ1.tail (g1.heldB hh))
+      | next _ σ1 ρ1 =>
+        have g1 := hinv.trans (hstep σ1 rfl)
+        exact TreuAusgang.vor g1 (ih σ1 ρ1.tail (g1.heldB hh))
       | leave _ σ1 ρ1 =>
         have g1 := hinv.trans (hstep σ1 rfl)
         dsimp only
