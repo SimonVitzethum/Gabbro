@@ -5,7 +5,7 @@ public import Stage0.Senke.Ausdruck.Gleit.Slots.SlotBasics
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
-open Gabbro.Grammatik Runner.IR Runner.Mem
+open Gabbro.Grammatik Gleitkomma Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D}
 
 /-- Small runtime values reuse the scalar conversion. Large values retain
@@ -166,4 +166,5 @@ theorem computedFloatOfE_ok {Γ : Ctx} {Λ : List (Res D)}
     · cases hc
 
 #print axioms computedFloatOfE_ok
+#print axioms wideComputedFloatOfE_ok
 end Gabbro.Stage0.Senke
