@@ -360,8 +360,13 @@ Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md`† §§0-5 and �
 - Range folds (§4.4, step 1b): generalized on `syntax-s0` (2026-11-04, needs the lead build) beyond the
   direct integer add-fold return: arbitrary literal bounds, `min`/`max`/`and`/`or` folds and nested folds
   over array variables, by expansion to the existing traverse forms, with the `expandNested_ok`
-  elimination theorem and source-text-to-image witnesses (THEOREM-MAP §142). Open: the lead build of
-  the branch; row-projection nesting, symbolic short bounds and non-return positions still refuse.
+  elimination theorem and source-text-to-image witnesses (THEOREM-MAP §142). Closed on `syntax-s0`
+  (needs the lead build): nested folds over table row projections (traverse over the table domain,
+  value type inferred from the row expression, one loop per collection) and folds outside direct
+  returns (`let` bindings and subexpressions hoist to a fresh accumulator loop before the statement,
+  with order-shape and freshness-gate theorems), with front-end and image witnesses. Open: symbolic
+  short bounds, nested float elements, provider-backed tables and folds in contract/cost clauses,
+  constant initializers, type bounds and traverse/lock headers still refuse.
 - C02 items 1-4 on branch `c02-a` (2026-11-03, needs the lead build): `Logik/Vertraege/UebersetzungDecoder.lean`
   (decoder soundness, immutable payload typing, expansion shape, token-grammar refusals) and
   `Parser/Stmt/LibraryIdentity.lean` (payload position, key correspondence, head normalization,
