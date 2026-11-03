@@ -290,8 +290,8 @@ theorem softRound_replay (u v : Exakt) (hle : u.zweierExp ≤ v.zweierExp)
       simp only [hsign]
     have hn0 : S * 2 ^ u.zweierExp.toNat ≠ 0 :=
       ne_of_gt (Nat.mul_pos hSpos (Nat.two_pow_pos _))
-    rw [hsb, Int.natAbs_mul, Int.natAbs_natCast, ← hS,
-      if_neg (by decide : ¬ ((1 : Nat)) = 0), if_neg hn0]
+    rw [hsb, Int.natAbs_mul, Int.natAbs_natCast, ← hS]
+    simp only [rundeBruchBei, show (1 : Nat) ≠ 0 by decide, hn0, ite_false]
     have he_nat : ((u.zweierExp.toNat : Nat) : Int) = u.zweierExp := by omega
     have hEpos : findeExp (S * 2 ^ u.zweierExp.toNat) 1 = E := by
       have h1 := findeExp_scaled S u.zweierExp.toNat 0 hSpos
@@ -342,7 +342,8 @@ theorem softRound_replay (u v : Exakt) (hle : u.zweierExp ≤ v.zweierExp)
     dsimp only
     have hd0 : 2 ^ (-u.zweierExp).toNat ≠ 0 :=
       ne_of_gt (Nat.two_pow_pos _)
-    rw [if_neg hd0, ← hS, if_neg (by omega : S ≠ 0)]
+    rw [← hS]
+    simp only [rundeBruchBei, hd0, show S ≠ 0 by omega, ite_false]
     have he_nat : (((-u.zweierExp).toNat : Nat) : Int) = -u.zweierExp := by omega
     have hEpos : findeExp S (2 ^ (-u.zweierExp).toNat) = E := by
       have h1 := findeExp_scaled S 0 (-u.zweierExp).toNat hSpos
