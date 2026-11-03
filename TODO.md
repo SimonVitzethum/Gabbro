@@ -324,7 +324,10 @@ Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md`† §§0-5 and �
 
 ## Round 2 / round 3 compilation follow-up (2026-11-02)
 
-- Stage 0 still refuses C01 `prod` and `prodSet`; `prodGet` lowering is in progress.
+- C01 `prod`, `prodGet` and `prodSet` have actual Stage-0 emitters and generic `lowE_ok` arms;
+  ordinary block bindings/assignments reuse them. Product source-image, local build/read/update/read,
+  and multiword-field preservation witnesses are included in the package and axiom audit.
+  Open: the lead's Lean checks of these connected modules and witnesses; no build was run by the implementation worker.
 - Stage 0 still refuses `Block.float`: the runner lacks float instructions; the planned route is software IEEE lowering proved against the kernel float model.
 - C11: the Gut side and the `rufAt_gut`/`rufAt_treu` migration remain in progress.
 - C15: per-core accumulator uses elaborate to guarded update/fold bodies whose `add`/`or`/`and` overflow stops with `Logik.kapazitaet` (required narrowing, never a dropped contribution or a neutral restart); admission and link Bools carry the connected core query (`qs`/`aqs` default to `[]`, shadowing refused). The hardware provenance of the generated core-query axiom now elaborates (THEOREM-MAP §135): `accumulates … assume a` names the assumption, the `n#query` wrapper binds the foreign query, `declOf` sets `axHerkunft`/`axBeleg`, and the fixture (`assume` + `accumulates` + update + read) is accepted by `Akzeptiert` with the query list. Open: the lead build of the branch.
