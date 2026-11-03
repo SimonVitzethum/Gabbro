@@ -38,6 +38,7 @@ public import Grammatik.Parser.Elab.UebersetzeAllg3.Stufe
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Rest1
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Export
 public import Grammatik.Parser.Elab.Generic.Signatures
+public import Grammatik.Parser.Elab.UebersetzeAllg3.Guest.Contracts
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg2
 open Gabbro.Grammatik.Parser.Uebersetze
@@ -185,7 +186,7 @@ def ptrLowerOk (u : UProg) : Bool :=
 
 /-- The lowering gate: per-pair inclusion plus successful contract lowering. -/
 def ptrGate (u : UProg) : Bool :=
-  ptrPaarGate u && ptrLowerOk u
+  ptrPaarGate u && ptrLowerOk u && axContractsB u
 
 /-- The lowered pointer contract, or `trivial` where lowering failed (the
     gate `ptrGate` refuses such units, so the fallback never silences a bad
@@ -207,6 +208,7 @@ def progOfFn (u : UProg) (E : ∀ f : Fin u.fns.length, EnsTy u f)
   rumpf := fun f => B f
   unterbricht := fun f => u.hands.any (fun n => strEq n (fnAt u f).name)
   ptrVertrag := Pt
+  axVertrag := axVertragOf u
 
 /-- The function of no parameter in whose scope an invariant is read. -/
 def leerFn : UFn :=
