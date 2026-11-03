@@ -84,25 +84,26 @@ theorem indSonst_gutB (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufA
   generalize hpv : eval s0 p s0 ρ = pv at h ⊢
   obtain ⟨f, hf⟩ := pv
   simp only at h ⊢
-  split at h ⊢
-  · rename_i σ1 v hR1
+  generalize hRr : R f s0 (umsig hf (evalArgs s0 args s0 ρ)) = r at h ⊢
+  cases r with
+  | ok σ1 v =>
     replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
     have h2 := hR f s0 (umsig hf (evalArgs s0 args s0 ρ))
-      (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hR1]; rfl)
-    rw [hR1] at h2
+      (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hRr]; rfl)
+    rw [hRr] at h2
     have g1 := hl.trans (Gut.weiter hp.hw hp.hg h2)
     exact (GutAusgang.vor g1 (runOk σ1 (ergWert (ergSig hf he) v)
       (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh))) σ' h
-  · rename_i σ1 r hR1
+  | why σ1 r =>
     replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
     have h2 := hR f s0 (umsig hf (evalArgs s0 args s0 ρ))
-      (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hR1]; rfl)
-    rw [hR1] at h2
+      (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hRr]; rfl)
+    rw [hRr] at h2
     have g1 := hl.trans ((h2.toGut_entry (heldB_ruf hp hbV (hl.heldB hh))).weiter hp.hw hp.hg)
     exact (GutAusgang.vor g1 (runWhy σ1 (grundSig hf r)
       (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh))) σ' h
-  · simp only [Ausgang.welt, reduceCtorEq] at h
-  · simp only [Ausgang.welt, reduceCtorEq] at h
+  | logik e => simp only [Ausgang.welt, reduceCtorEq] at h
+  | hardware e => simp only [Ausgang.welt, reduceCtorEq] at h
 
 /-- Joint frame for the two exits of an indirect else-call at the end of a body («C07»):
     the `GutEnd` variant of `indSonst_gutB`, for the `end_gutB` case. The `why`
@@ -131,24 +132,25 @@ theorem indSonstE_gutB (R : ∀ f : D.Fn, World D → Env D (D.params f) → Ruf
   generalize hpv : eval s0 p s0 ρ = pv at h ⊢
   obtain ⟨f, hf⟩ := pv
   simp only at h ⊢
-  split at h ⊢
-  · rename_i σ1 v hR1
+  generalize hRr : R f s0 (umsig hf (evalArgs s0 args s0 ρ)) = r at h ⊢
+  cases r with
+  | ok σ1 v =>
     replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
     have h2 := hR f s0 (umsig hf (evalArgs s0 args s0 ρ))
-      (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hR1]; rfl)
-    rw [hR1] at h2
+      (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hRr]; rfl)
+    rw [hRr] at h2
     have g1 := hl.trans (Gut.weiter hp.hw hp.hg h2)
     exact (GutEnd.vor g1 (runOk σ1 (ergWert (ergSig hf he) v)
       (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh))) σ' h
-  · rename_i σ1 r hR1
+  | why σ1 r =>
     replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
     have h2 := hR f s0 (umsig hf (evalArgs s0 args s0 ρ))
-      (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hR1]; rfl)
-    rw [hR1] at h2
+      (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hRr]; rfl)
+    rw [hRr] at h2
     have g1 := hl.trans ((h2.toGut_entry (heldB_ruf hp hbV (hl.heldB hh))).weiter hp.hw hp.hg)
     exact (GutEnd.vor g1 (runWhy σ1 (grundSig hf r)
       (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh))) σ' h
-  · simp only [EndAusgang.welt, reduceCtorEq] at h
-  · simp only [EndAusgang.welt, reduceCtorEq] at h
+  | logik e => simp only [EndAusgang.welt, reduceCtorEq] at h
+  | hardware e => simp only [EndAusgang.welt, reduceCtorEq] at h
 
 end Gabbro.Grammatik
