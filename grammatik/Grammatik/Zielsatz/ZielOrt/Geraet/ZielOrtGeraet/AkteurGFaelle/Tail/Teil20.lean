@@ -99,7 +99,8 @@ theorem akteurG_dannVerbrauch {D : Deklaration} {P : Programm D} {O : Orakel D} 
     (M.faeden u).spur (fun σ hg hok => ?_), hL⟩
   obtain ⟨hks, hss, hrest⟩ := okG_dann_cons hok
   simp only [stmtOrteP, List.append_subset] at hss
-  exact ⟨σ, Nat.le_refl _, hg, ⟨hss.1, hss.2.1, hss.2.2.1, hss.2.2.2.1, hks, hss.2.2.2.2, hrest⟩,
+  obtain ⟨⟨⟨⟨hmem, hedge⟩, hinv⟩, hmass⟩, hbS⟩ := hss
+  exact ⟨σ, Nat.le_refl _, hg, ⟨hmem, hedge, hinv, hmass, hks, hbS, hrest⟩,
     fun R O' => ZErg.folgt_of_eq
       (semV_dannVerbrauch O' passes R t member edge inv bound mass body rest k σ ρ)⟩
 
@@ -244,16 +245,13 @@ theorem akteurG_verbrauchWeiter {D : Deklaration} {P : Programm D} {O : Orakel D
     exact hm.symm
   obtain ⟨b, hsel⟩ : ∃ b, verbrauchSel t member edge (σ.lese Λ inv.orte) ρ =
       (((σ.lese Λ inv.orte).lese Λ (member.orte ++ edge.orte)), some v, b) := by
-    refine ⟨_, ?_⟩
-    simp only [verbrauchSel]
-    refine ⟨rfl, ?_, rfl⟩
-    rw [hW, hE]
-    exact hv
+    refine ⟨(verbrauchSel t member edge (σ.lese Λ inv.orte) ρ).2.2, ?_⟩
+    simp only [verbrauchSel, hW, hE, hv]
   exact ⟨((((σ.lese Λ inv.orte).lese Λ (member.orte ++ edge.orte))).lese Λ mass.orte),
     Nat.le_trans (Nat.le_trans (lese_laenge _ _ _) (lese_laenge _ _ _)) (lese_laenge _ _ _), hg,
     ⟨hb, hbS, hmem, hedge, hinv, hmass, hb, hbS, hk⟩,
     fun R O' => ZErg.folgt_of_eq (semV_verbrauchWeiter O' passes R t member edge inv bound mass body rest k
-      σ ρ hw' _ v b m hsel hm')⟩
+      σ ρ hw' ((σ.lese Λ inv.orte).lese Λ (member.orte ++ edge.orte)) v b m hsel hm')⟩
 
 set_option maxHeartbeats 4000000 in
 theorem akteurG_verbrauchLeer {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
@@ -378,20 +376,18 @@ theorem akteurG_verbrauchLeer {D : Deklaration} {P : Programm D} {O : Orakel D} 
   have hall : ((alleIndizes (D.count t)).all fun k =>
       !(wahr? (eval ((σ.lese Λ inv.orte).lese Λ (member.orte ++ edge.orte)) member
         (((σ.lese Λ inv.orte).lese Λ (member.orte ++ edge.orte))) (.cons k ρ)))) = true := by
-    have heq : (fun k => !(wahr? (eval ((σ.lese Λ inv.orte).lese Λ (member.orte ++ edge.orte)) member
-        (((σ.lese Λ inv.orte).lese Λ (member.orte ++ edge.orte))) (.cons k ρ)))) =
-        (fun k => !(wahr? (eval σ₂ member σ₂ (.cons k ρ)))) :=
-      funext fun k => by rw [eM k]
-    rw [heq]; exact hkein
+    apply List.all_eq_true.mpr
+    intro k hk
+    exact (congrArg (fun b : Bool => !b) (eM k)).trans ((List.all_eq_true.mp hkein) k hk)
   have hsel : verbrauchSel t member edge (σ.lese Λ inv.orte) ρ =
       (((σ.lese Λ inv.orte).lese Λ (member.orte ++ edge.orte)), none, false) := by
-    simp only [verbrauchSel]
-    refine ⟨rfl, ?_, ?_⟩
-    · rw [hW, hE]; exact hleer
-    · rw [hall]
+    apply Prod.ext rfl
+    apply Prod.ext
+    · simp only [verbrauchSel, hW, hE, hleer]
+    · exact congrArg (fun b : Bool => !b) hall
   exact ⟨((σ.lese Λ inv.orte).lese Λ (member.orte ++ edge.orte)),
     Nat.le_trans (lese_laenge _ _ _) (lese_laenge _ _ _), hg, hk,
     fun R O' => ZErg.folgt_of_eq (semV_verbrauchLeer O' passes R t member edge inv bound mass body rest k
-      σ ρ hw' _ hsel)⟩
+      σ ρ hw' ((σ.lese Λ inv.orte).lese Λ (member.orte ++ edge.orte)) hsel)⟩
 
 end Gabbro.Grammatik

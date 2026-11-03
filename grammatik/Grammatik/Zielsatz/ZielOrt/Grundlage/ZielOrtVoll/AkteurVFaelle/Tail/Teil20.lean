@@ -214,10 +214,11 @@ theorem akteurV_dannLeaveVerbrauch {D : Deklaration} {P : Programm D} {O : Orake
               lauf := M.lauf ++ rufEigenG u (neu ++ neu₁), start := M.start : RufMaschineG D }.faeden
           u).log := by
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
-  simp only [execStmt] at hstep
-  cases hstep
-  subst hs₁
-  refine ⟨fadenV_lokal hF hhead ρ k _ (fun σ hg hok => ?_), hL⟩
+  simp only [execStmt, Ausgang.leave.injEq] at hstep
+  obtain ⟨hσ, hρ⟩ := hstep
+  subst σ' ρ'
+  subst σ₁
+  refine ⟨fadenV_lokal hF hhead ρ k (σm.lese Λ inv.orte).spur (fun σ hg hok => ?_), hL⟩
   obtain ⟨_, _, hTR⟩ := hok
   obtain ⟨hmem, hedge, hinv, hmass, hb, hbS, hk⟩ := hTR
   have hg1 : GleichAuf (fussOrte P (M.faeden u).kopf.f) (σ.lese Λ mass.orte) σm := by
@@ -338,9 +339,11 @@ theorem akteurV_dannNextVerbrauch {D : Deklaration} {P : Programm D} {O : Orakel
               lauf := M.lauf ++ rufEigenG u (neu ++ neum), start := M.start : RufMaschineG D }.faeden
           u).log := by
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
-  simp only [execStmt] at hstep
-  cases hstep
-  refine ⟨fadenV_lokal hF hhead ρ (.verbrauch t member edge inv bound mass body rest k) _
+  simp only [execStmt, Ausgang.next.injEq] at hstep
+  obtain ⟨hσ, hρ⟩ := hstep
+  subst σ' ρ'
+  simp only [Env.tail] at hm' ⊢
+  refine ⟨fadenV_lokal hF hhead ρ (.verbrauch t member edge inv bound mass body rest k) σm.spur
     (fun σ hg hok => ?_), hL⟩
   obtain ⟨_, _, hTR⟩ := hok
   obtain ⟨hmem, hedge, hinv, hmass, hb, hbS, hk⟩ := hTR

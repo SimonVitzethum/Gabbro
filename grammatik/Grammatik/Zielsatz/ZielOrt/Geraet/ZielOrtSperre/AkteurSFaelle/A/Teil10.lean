@@ -222,11 +222,13 @@ theorem akteurS_dannLeaveVerbrauch {D : Deklaration} {P : Programm D} {O : Orake
               lauf := M.lauf ++ rufEigenG u (neu ++ neu₁), start := M.start : RufMaschineG D }.faeden
           u).log := by
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
-  simp only [execStmt] at hstep
-  cases hstep
-  subst hs₁
-  refine ⟨fadenS_lokal hF hhead ρ k _ (fun σ hg hok => ?_), hL⟩
+  simp only [execStmt, Ausgang.leave.injEq] at hstep
+  obtain ⟨hσ, hρ⟩ := hstep
+  subst σ' ρ'
+  subst σ₁
+  refine ⟨fadenS_lokal hF hhead ρ k (σm.lese Λ inv.orte).spur (fun σ hg hok => ?_), hL⟩
   obtain ⟨_, _, hTR⟩ := hok
+  have hg := gleichAuf_stabil_iff (fun L => Block.held_iff restb L) hg
   obtain ⟨hmem, hedge, hinv, hmass, hb, hbS, hk⟩ := hTR
   have hg1 : GleichAuf (stabilS P S lok (M.faeden u).kopf.f Λ) (σ.lese Λ mass.orte) σm := by
     rw [hsm]; exact hg.lese Λ Λ mass.orte mass.orte
@@ -240,9 +242,8 @@ theorem akteurS_dannLeaveVerbrauch {D : Deklaration} {P : Programm D} {O : Orake
       hg1.lese Λ Λ inv.orte inv.orte
     rw [eval_gleichAuf inv (fun _ h => expr_stabil (hFS _) inv (fun _ h' => hinv h') h) hg2 ρ]
     exact hw
-  have hg' := gleichAuf_stabil_iff (fun L => Block.held_iff restb L) hg
   exact ⟨((σ.lese Λ mass.orte).lese Λ inv.orte),
-    Nat.le_trans (lese_laenge _ _ _) (lese_laenge _ _ _), hg', hk,
+    Nat.le_trans (lese_laenge _ _ _) (lese_laenge _ _ _), hg, hk,
     fun R O' U => ZErgG.folgt_of_eq (semH_leaveVerbrauch S O' U passes R t member edge inv bound mass body rest vor k
       restb i σ ρ hleave (σ.lese Λ mass.orte) rfl m' hm'' hfall hw'')⟩
 
@@ -351,19 +352,21 @@ theorem akteurS_dannNextVerbrauch {D : Deklaration} {P : Programm D} {O : Orakel
               lauf := M.lauf ++ rufEigenG u (neu ++ neum), start := M.start : RufMaschineG D }.faeden
           u).log := by
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
-  simp only [execStmt] at hstep
-  cases hstep
-  refine ⟨fadenS_lokal hF hhead ρ (.verbrauch t member edge inv bound mass body rest k) _ (fun σ hg hok => ?_),
+  simp only [execStmt, Ausgang.next.injEq] at hstep
+  obtain ⟨hσ, hρ⟩ := hstep
+  subst σ' ρ'
+  simp only [Env.tail] at hm' ⊢
+  refine ⟨fadenS_lokal hF hhead ρ (.verbrauch t member edge inv bound mass body rest k) σm.spur (fun σ hg hok => ?_),
     hL⟩
   obtain ⟨_, _, hTR⟩ := hok
+  have hg := gleichAuf_stabil_iff (fun L => Block.held_iff restb L) hg
   obtain ⟨hmem, hedge, hinv, hmass, hb, hbS, hk⟩ := hTR
   have hm'' : (eval (σ.lese Λ mass.orte) mass (σ.lese Λ mass.orte) ρ).n = m' := by
     have hg1 : GleichAuf (stabilS P S lok (M.faeden u).kopf.f Λ) (σ.lese Λ mass.orte) σm := by
       rw [hsm]; exact hg.lese Λ Λ mass.orte mass.orte
     rw [eval_gleichAuf mass (fun _ h => expr_stabil (hFS _) mass (fun _ h' => hmass h') h) hg1 ρ]
     exact hm'.symm
-  have hg' := gleichAuf_stabil_iff (fun L => Block.held_iff restb L) hg
-  exact ⟨σ.lese Λ mass.orte, lese_laenge _ _ _, hg', hTR, fun R O' U => ZErgG.folgt_of_eq
+  exact ⟨σ.lese Λ mass.orte, lese_laenge _ _ _, hg, hTR, fun R O' U => ZErgG.folgt_of_eq
     (semH_nextVerbrauch S O' U passes R t member edge inv bound mass body rest vor k restb i σ ρ hnext
       (σ.lese Λ mass.orte) rfl m' hm'' hfall)⟩
 
