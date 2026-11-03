@@ -66,7 +66,7 @@ example : (elabU [probenFn, .checkT probenCheck]).isOk = true := rfl
 example : (elabU [probenFn, .checkT probenCheck]).map (fun u => u.fns.length) = .ok 4 := rfl
 
 example : (elabU [probenFn, .checkT probenCheck]).map (fun u => u.checks.map (·.probe)) =
-    .ok ["p#probe", "p#report#0"] := rfl
+    .ok ["p#probe"] := rfl
 
 /-- The wrapper travels with the probe. -/
 example : (elabU [probenFn, .checkT probenCheck]).map (fun u => u.fns.map (·.name)) =

@@ -180,6 +180,9 @@ def recordCheckCode (heads : List UFnKopf) (c : SCheck) :
     | .elsif condition branch =>
       let (branch, rs, hs, next) ← recordCheckCode heads c fuel ctx point branch
       pure (.elsif condition branch, rs, hs, next)
+    | .callElse name args reason branch =>
+      let inner := if reason.isEmpty then ctx else reasonCtx (.call name args) reason
+      one inner (.callElse name args reason) branch
     | .bindElse name ty call reason branch =>
       one (reasonCtx call reason) (.bindElse name ty call reason) branch
     | .bindAxiomOptElse name ty call reason branch =>
