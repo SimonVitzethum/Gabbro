@@ -354,3 +354,9 @@ Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md`† §§0-5 and �
   `Parser/Stmt/LibraryIdentity.lean` (payload position, key correspondence, head normalization,
   translator-free expansion, qualifier selection, nested-region round-trip), wired into `Alle/Teil1`
   (THEOREM-MAP §136). Items 5-16 stay open.
+- C02 items 5-8 on branch `c02-a` (2026-11-03, needs the lead build): `Logik/Vertraege/UebersetzungReinheit.lean`
+  (pure execution, termination, effect obligations), `Parser/Stmt/LibraryZertifikat.lean` (recomputed
+  certificate identity, Rust-output cross-check), `Parser/Stmt/LibraryErweiterung.lean` (actual-path
+  expansion identity, purity and resolution refusals) and `Parser/Stmt/LibraryAnnahme.lean` (end-to-end
+  acceptance of the unqualified call, expansion ordinariness through the generic lowering), wired into
+  `Alle/Teil1` (THEOREM-MAP §137). Items 9-16 stay open.

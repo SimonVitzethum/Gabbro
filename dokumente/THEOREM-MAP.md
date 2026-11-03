@@ -6088,3 +6088,39 @@ On `c02-a`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Tak
 * **`library_region_geschachtelt_zeuge`**: Nested regions round-trip with their token kinds intact.
 
 Open: the lead build of this branch (single-module checks of the two new modules and their importers, then the guardians); general translator maps still need C17, product schemas still need C01, both refused by name; source coordinates on `SLibraryCall` remain future diagnostics work.
+
+## 137. C02 items 5-8: certificates, obligations, actual-path expansion, connected correctness (2026-11-03)
+
+On `c02-a`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Takes the recommended owner answers: exact source-bound map correspondence with kernel-checked execution certificates, and table-shaped translator inputs as immutable by-value row values. Covers inventory items 5-8 (source-bound certificates, pure execution/termination/effect-cost obligations, immutable payload initialization and ordinary call expansion in the actual compiler path, connected source/image correctness with refusal witnesses and one end-to-end acceptance witness); items 9-16 stay with their owners. No new execution constructor, no new `Akzeptiert` component: `libraryB`/`LibraryAdmission` still record library-closedness, certificate correctness stays a separate proof.
+
+`grammatik/Grammatik/Parser/Stmt/LibraryZertifikat.lean` (fixtures from `LibraryFixtures.lean`, certificates from `LibraryCertificates.lean`):
+
+* **`zertifikat_eingabe_nachgerechnet_zeuge`**: The certificate input is the decoder re-derivation from the exact retained source region.
+* **`zertifikat_aufgeloest_zeuge`**: The certificate resolves the exact source call against the retained items.
+* **`zertifikat_uebersetzer_name_zeuge`**: Both fixtures select the translator named `build` by key.
+* **`nutzlast_inhalt_eindeutig`**: Two payloads of one certificate agree on content.
+* **`zertifikat_standort_gebunden_zeuge`**: The identity payload sits at the exact source call site.
+* **`rust_ausgabe_nachgerechnet_zeuge`**: The Rust printer's claimed payload re-decodes from raw tokens in Lean.
+
+`grammatik/Grammatik/Logik/Vertraege/UebersetzungReinheit.lean`:
+
+* **`effekteRein`**, **`effekteRein_leer`**, **`effekteRein_rein`**: The declared source effects of a stage-1 translator are pure.
+* **`effekteRein_schreibt_verweigert`**, **`effekteRein_sperrt_verweigert`**: `writes` and `locks` arms refuse.
+* **`translation_antwort_gleich_ausfuehrung`**: The certified execution answers exactly the declared translator's map in the unchanged world.
+* **`translation_ohne_ewig`**, **`translation_ohne_rufe`**, **`translation_ohne_sigs`**: No `forever` pass, no direct or indirect callees.
+
+`grammatik/Grammatik/Parser/Stmt/LibraryErweiterung.lean`:
+
+* **`translation_erweitert_form_zeuge`**, **`translation_erweitert_bind_zeuge`**: The actual pre-pass output equals the export shape, in both call forms.
+* **`translation_erweitert_zertifikat_form_zeuge`**, **`translation_erweitert_bind_zertifikat_form_zeuge`**: The export shape is the certified shape.
+* **`translation_translator_rein_zeuge`**: Both fixture translators declare pure effects.
+* **`translation_schreib_nutzlast_verweigert_zeuge`**: A writable payload parameter refuses (read-only channel).
+* **`translation_nutzlast_stelligkeit_verweigert_zeuge`**: A caller-supplied payload refuses.
+* **`export_mehrdeutig_verweigert_zeuge`**: An ambiguous library refuses through the actual pre-pass.
+
+`grammatik/Grammatik/Parser/Stmt/LibraryAnnahme.lean` (connected export witness for the unqualified call):
+
+* **`export_ident_elab_zeuge`**, **`export_ident_tor_zeuge`**, **`export_ident_ohne_zeuge`**, **`export_ident_lower_ok`**, **`export_ident_akzeptiert_zeuge`**, **`export_ident_kette_zeuge`**: Source text with an unqualified library call elaborates through the actual export path, lowers, and the checker Bool holds.
+* **`ohneBibliothekAnw_kein_lcall`**, **`ohneBibliothekAnw_kein_bindLib`**, **`libraryExpansion_trifft_kein_bibliothekruf`**: Every certified expansion is definitionally no library call, so the generic lowering treats it exactly like an ordinary call.
+
+Open: the lead build of this branch (single-module checks of the four new modules and their importers, then the guardians); the Stage-0/IR payload spans (IR-03/06) and the C01 schema export stay with their owners; no language case is claimed complete by these modules.
