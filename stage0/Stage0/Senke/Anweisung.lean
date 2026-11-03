@@ -3,7 +3,6 @@
    capture both operands before using the <=8-byte kernel in chunks. Tagged
    dispatch preserves the whole input until the selected arm binds its payload.
    The returned top bounds every scratch slot; unsupported forms return none. -/
-
 module
 public import Stage0.Senke.Ausdruck
 public import Stage0.Senke.Ausdruck.Gleit.Slots.SlotContext
@@ -20,9 +19,7 @@ public import Stage0.Senke.Anweisung.Faelle.Gleit.AddCode
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
-
 open Gabbro.Grammatik Runner.IR
-
 variable {D : Deklaration} {V : Vertrag D}
 
 mutual
