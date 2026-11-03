@@ -255,8 +255,7 @@ theorem bodenWahr_abschluss (d : CheckDecl (declOf uBodenWahr))
   obtain ⟨hexp, _, _, _, _⟩ := bodenWahr_admission
   refine ⟨hexp d hd, by decide, ?_⟩
   show messBerichtWahr.boeden.length = d.boden.length
-  rw [bodenWahr_boden_laenge d hd]
-  rfl
+  rw [show messBerichtWahr.boeden.length = 1 from rfl, bodenWahr_boden_laenge d hd]
 
 /-- The failing report completes every derived check of the failing unit:
     the sample was read, the one floor failed, the negative verdict records it --
@@ -267,8 +266,7 @@ theorem bodenFalsch_abschluss (d : CheckDecl (declOf uBodenFalsch))
   obtain ⟨hexp, _, _, _, _⟩ := bodenFalsch_admission
   refine ⟨hexp d hd, by decide, ?_⟩
   show messBerichtFalsch.boeden.length = d.boden.length
-  rw [bodenFalsch_boden_laenge d hd]
-  rfl
+  rw [show messBerichtFalsch.boeden.length = 1 from rfl, bodenFalsch_boden_laenge d hd]
 
 /-- The gate wrapper discharges the completed passing report. -/
 theorem bodenWahr_entladung (d : CheckDecl (declOf uBodenWahr))
