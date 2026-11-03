@@ -3,6 +3,11 @@ public import Runner.Prog.Elf
 public import Runner.Prog.Proben
 public import Runner.Prog.Liste
 public import Runner.Test.Diff
+-- `lean --run` needs the generators' IR and that of their transitive dependencies.
+-- Keep the ordinary imports and definitions for the native Lake executable as well.
+meta import Runner.Prog.Proben
+meta import Runner.Prog.Liste
+meta import Runner.Test.Diff
 @[expose] public section
 
 
