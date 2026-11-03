@@ -136,13 +136,19 @@ def recordCheckStatements (heads : List UFnKopf) (c : SCheck) :
     let (_, nextCtx) ← uAnwReihe ctx.tabs heads 1000000 ctx [statement]
     let (rest, endCtx, more, moreHeads, point) ←
       recordCheckStatements heads c fuel nextCtx point rest
-    pure (transformed :: rest, endCtx, reporters ++ more, extraHeads ++ moreHeads, point)
+    let prefix := match statement, transformed with
+      | .ret _, .block prefix (some (.ret result)) => prefix ++ [.ret result]
+      | _, _ => [transformed]
+    pure (prefix ++ rest, endCtx, reporters ++ more, extraHeads ++ moreHeads, point)
 
 end
 
 /-- A private reporter's result is exactly the executable floor verdict. -/
 theorem report_conjunction (floors : List Bool) (verdict : Bool) :
-    floors.foldl (fun result floor => result && floor) verdict =
-      floors.foldl (fun result floor => result && floor) verdict := rfl
+    floors.foldl (fun result floor => result && floor) verdict = true ↔
+      verdict = true ∧ ∀ floor ∈ floors, floor = true := by
+  induction floors generalizing verdict with
+  | nil => simp
+  | cons floor rest ih => simp [ih, Bool.and_eq_true, and_assoc]
 
 end Gabbro.Grammatik.Parser.Uebersetze
