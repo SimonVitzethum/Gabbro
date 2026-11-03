@@ -134,6 +134,7 @@ def artAnw : SAnw → String
   | .await .. => "await"
   | .swap .. => "exchange"
   | .step .. => "advance"
+  | .retires .. => "retire"
   | .ret .. => "mid-return"
   | .alloc .. => "alloc"
   | .reset .. => "reset"
