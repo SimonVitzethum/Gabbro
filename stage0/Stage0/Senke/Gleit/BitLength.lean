@@ -21,7 +21,7 @@ theorem bitlen_unique (n b : Nat) (hlo : 2 ^ (b - 1) ≤ n) (hhi : n < 2 ^ b)
   have hob := bitlen_obere n
   have hun := bitlen_untere n (by omega : n ≠ 0)
   refine Classical.byContradiction fun hne => ?_
-  rcases lt_or_gt_of_ne hne with hlt | hgt
+  rcases Nat.lt_or_gt_of_ne hne with hlt | hgt
   · have h1 := Nat.pow_le_pow_right (show 0 < 2 by decide) (show bitlen n ≤ b - 1 by omega)
     omega
   · have h1 := Nat.pow_le_pow_right (show 0 < 2 by decide) (show b + 1 ≤ bitlen n by omega)
@@ -33,6 +33,7 @@ theorem bitlen_pow2 (j : Nat) : bitlen (2 ^ j) = j + 1 := by
   apply bitlen_unique
   · have : j + 1 - 1 = j := by omega
     rw [this]
+    exact Nat.le_refl _
   · exact (Nat.pow_lt_pow_iff_right (by decide : 1 < 2)).mpr (by omega)
   · exact Nat.pow_pos (by decide)
 
@@ -87,18 +88,14 @@ theorem findeExp_scaled (A t j : Nat) (hA : 0 < A) :
     omega
   unfold findeExp
   rw [hbit, hAm]
-  have hE0 : (bitlen A : Int) + (t : Int) - (((j + 1 : Nat)) : Int)
+  have hE0 : ((bitlen A + t : Nat) : Int) - ((j + 1 : Nat) : Int)
       = (bitlen A : Int) + (t : Int) - 1 - (j : Int) := by
-    push_cast; ring
+    omega
   rw [hE0]
   unfold findeExpBei
   by_cases hE : 0 ≤ (bitlen A : Int) + (t : Int) - 1 - (j : Int)
   · rw [if_pos hE]
-    have hbj : j + 1 ≤ bitlen A + t := by
-      refine Classical.byContradiction fun hcon => ?_
-      push_neg at hcon
-      have : (bitlen A : Int) + (t : Int) - 1 - (j : Int) < 0 := by omega
-      omega
+    have hbj : j + 1 ≤ bitlen A + t := by omega
     have hE0n : ((bitlen A : Int) + (t : Int) - 1 - (j : Int)).toNat
         = bitlen A + t - 1 - j := by
       omega
@@ -111,11 +108,7 @@ theorem findeExp_scaled (A t j : Nat) (hA : 0 < A) :
       rw [hpow]; exact hle
     rw [if_pos hcheck]
   · rw [if_neg hE]
-    have hbj : bitlen A + t ≤ j := by
-      refine Classical.byContradiction fun hcon => ?_
-      push_neg at hcon
-      have : 0 ≤ (bitlen A : Int) + (t : Int) - 1 - (j : Int) := by omega
-      omega
+    have hbj : bitlen A + t ≤ j := by omega
     have hE0n : (-((bitlen A : Int) + (t : Int) - 1 - (j : Int))).toNat
         = j + 1 - (bitlen A + t) := by
       omega

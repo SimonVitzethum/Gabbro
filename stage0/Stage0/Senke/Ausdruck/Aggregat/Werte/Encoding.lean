@@ -69,15 +69,17 @@ theorem encodeWords_length (L : Lay D) (τ : Ty) (v : Wert D τ) :
   | prod name fs =>
     have fields : ∀ (vs : ProdVal D.Fn D.passt fs),
         (encodeProductFields L fs vs).length = productWords fs := by
+      clear v
       induction fs with
-      | nil => intro vs; rfl
+      | nil => intro vs; simp only [encodeProductFields, productWords, List.length_nil]
       | cons σ rest ih =>
         intro vs
         simp only [encodeProductFields, List.length_append, productWords]
         rw [encodeWords_length L σ (ProdVal.hd vs), ih]
-    simp only [encodeWords, encodeProduct, valueWords]
+    simp only [encodeWords, valueWords]
+    unfold encodeProduct
     split
-    · next h => subst fs; rfl
+    · next h => subst fs; simp [productWords]
     · next h =>
       rw [fields]
       cases fs with
@@ -93,7 +95,9 @@ theorem encodeWords_length (L : Lay D) (τ : Ty) (v : Wert D τ) :
     · simp only [List.length_append, List.length_cons, List.length_map, List.length_replicate]
       have := v.2; omega
   | opt n =>
-    simp only [encodeWords, valueWords]
+    change Option (Zahl 0 (n - 1)) at v
+    unfold encodeWords
+    simp only [valueWords]
     split
     · rfl
     · cases v <;> simp [integerEncoding_length, Nat.add_comm]
@@ -119,10 +123,10 @@ def encodeEnv (L : Lay D) : {Γ : Ctx} → Env D Γ → List Runner.W
   | nil => rfl
   | cons v ρ ih => simp only [encodeEnv, List.length_append, ih, encodeWords_length, contextWords_cons]
 
+mutual
 /-- Representation validity retains the target obligations of scalar references
     and IEEE values recursively through every aggregate element. Source ranges,
     string bounds and tag membership are already carried by `Wert`. -/
-mutual
 def ValueValid (L : Lay D) : (τ : Ty) → Wert D τ → Prop
   | .ref n, v => v.zelle < 2 ^ 64 ∧
       ∃ t, D.tabNr n = some t ∧ D.offen t = true ∧ (v.zelle : Int) < L.count t
@@ -142,7 +146,7 @@ end
 theorem ProdValid.field {L : Lay D} {fs : List Ty} {σ : Ty}
     (i : FieldAt fs σ) (v : ProdVal D.Fn D.passt fs)
     (valid : ProdValid L fs v) : ValueValid L σ (prodGetW i v) := by
-  induction i generalizing v with
+  induction i with
   | head => exact valid.1
   | tail i ih => exact ih (ProdVal.tl v) valid.2
 
@@ -166,18 +170,23 @@ theorem ValueAt.array_element {L : Lay D} {m : Runner.Mem} {fp : Runner.W}
 theorem encodeWords_arrCons {τ : Ty} {n : Nat} (a : Wert D τ) (rest : Wert D (.arr τ n)) :
     encodeWords L (.arr τ (n + 1)) (arrConsW a rest) =
       encodeWords L τ a ++ (if n = 0 then [] else encodeWords L (.arr τ n) rest) := by
-  simp only [encodeWords, Nat.add_eq_zero_iff, Nat.one_ne_zero, and_false, if_false,
-    elementEncoding, arrConsW, ↓reduceDIte]
-  have tail : (fun i : Fin n => encodeWords L τ
-      (if h : i.succ.val = 0 then a else rest ⟨i.succ.val - 1, by have := i.isLt; omega⟩)) =
+  change Fin n → Wert D τ at rest
+  have nonempty : n + 1 ≠ 0 := by omega
+  conv => lhs; unfold encodeWords
+  rw [if_neg nonempty, elementEncoding]
+  change encodeWords L τ a ++
+      elementEncoding n (fun i => encodeWords L τ (arrConsW a rest i.succ)) = _
+  have tail : (fun i : Fin n => encodeWords L τ (arrConsW a rest i.succ)) =
       (fun i => encodeWords L τ (rest i)) := by
     funext i
-    simp only [Fin.val_succ, Nat.add_eq_zero_iff, Nat.one_ne_zero, and_false, ↓reduceDIte,
-      Nat.add_sub_cancel]
+    simp only [arrConsW, Fin.val_succ, Nat.add_eq_zero_iff, Nat.one_ne_zero, and_false,
+      ↓reduceDIte, Nat.add_sub_cancel]
   rw [tail]
   by_cases empty : n = 0
   · subst n; simp [elementEncoding]
-  · simp only [if_neg empty]
+  · rw [if_neg empty]
+    conv => rhs; arg 2; unfold encodeWords
+    rw [if_neg empty]
 
 theorem ValueValid.arrCons {τ : Ty} {n : Nat} {a : Wert D τ} {rest : Wert D (.arr τ n)}
     (head : ValueValid L τ a) (tail : ValueValid L (.arr τ n) rest) :
