@@ -61,8 +61,9 @@ theorem akteurR_gruppe7 (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (
         (.gibt L :: (M.faeden u).spur) (W' := (M.weltVon u).gibt L) (fun σ hg hok => by
           refine ⟨σ.gibt L, Nat.le_succ _, hg, trivial, fun calls O' => ?_⟩
           cases a.1 <;> exact ZErg.folgt_refl _)
-      apply fadenR_antwort hO hRL hQ hK e0 a.1 hdone hL rfl (by simpa only [World.speicher, World.gibt, RufMaschineG.weltVon, Speicher.welt, RufSchluesselG] using hRS)
-      exact ha
+      refine fadenR_antwort hO hRL hQ hK e0 _ hdone hL rfl
+        (by simpa only [World.speicher, World.gibt, RufMaschineG.weltVon, Speicher.welt, RufSchluesselG] using hRS) ?_
+      exact (rufAntwortG_rest_irrel (M.faeden u) _ _ _).trans ha
   | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
       rename_i l Γ Λ
       simp only [RufMaschineG.weltVon, rufUpdateG_self, rufAntwortG_spur ha]
@@ -77,8 +78,13 @@ theorem akteurR_gruppe7 (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (
           exact ZErg.folgt_of_gleich (ZErg.gleich_trans
             (semV_scopedWert O' passes calls r e R hret σ ρ) ⟨⟨rfl, rfl⟩, hv⟩))
       have hmem : σ₁.speicher = M.speicher := by subst σ₁; rfl
-      have hres := fadenR_antwort hO hRL hQ hK e0 _ hdone hL rfl (by simpa only [hmem, RufSchluesselG] using hRS) ha
-      simpa only [hs₁] using hres
+      have hres := fadenR_antwort hO hRL hQ hK e0 _ hdone hL rfl
+        (by simpa only [hmem, RufSchluesselG] using hRS)
+        ((rufAntwortG_rest_irrel (M.faeden u) _ _ _).trans ha)
+      have hw : M.speicher.welt σ₁.spur = σ₁ := by
+        subst hs₁
+        exact Speicher.welt_speicher ((M.weltVon u).lese Λ e.orte)
+      simpa only [hw] using hres
   | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
       simp only [RufMaschineG.weltVon, rufUpdateG_self, rufAntwortG_spur ha]
       have hdone := fadenR_lokal hF hhead (M.faeden u).kopf.rho
@@ -86,6 +92,8 @@ theorem akteurR_gruppe7 (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (
         (M.faeden u).spur (W' := M.weltVon u) (fun σ hg hok => by
           exact ⟨σ, Nat.le_refl _, hg, trivial, fun calls O' =>
             ZErg.folgt_of_eq (semV_scopedGrund O' passes calls r grund R hret σ ρ)⟩)
-      exact fadenR_antwort hO hRL hQ hK e0 _ hdone hL rfl (by simpa only [World.speicher, World.gibt, RufMaschineG.weltVon, Speicher.welt, RufSchluesselG] using hRS) ha
+      refine fadenR_antwort hO hRL hQ hK e0 _ hdone hL rfl
+        (by simpa only [World.speicher, World.gibt, RufMaschineG.weltVon, Speicher.welt, RufSchluesselG] using hRS) ?_
+      exact (rufAntwortG_rest_irrel (M.faeden u) _ _ _).trans ha
 
 end Gabbro.Grammatik

@@ -61,8 +61,8 @@ theorem akteurA_gruppe7 (hO : GutO O) (hQ : AxVertragO Q O) (hK : ∀ f, Koerper
         (.gibt L :: (M.faeden u).spur) (W' := (M.weltVon u).gibt L) (fun σ hg hok => by
           refine ⟨σ.gibt L, Nat.le_succ _, hg, trivial, fun calls O' => ?_⟩
           cases a.1 <;> exact ZErg.folgt_refl _)
-      apply fadenA_antwort hO hQ hK e0 a.1 hdone hL rfl
-      exact ha
+      refine fadenA_antwort hO hQ hK e0 _ hdone hL rfl ?_
+      exact (rufAntwortG_rest_irrel (M.faeden u) _ _ _).trans ha
   | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
       rename_i l Γ Λ
       simp only [RufMaschineG.weltVon, rufUpdateG_self, rufAntwortG_spur ha]
@@ -76,8 +76,12 @@ theorem akteurA_gruppe7 (hO : GutO O) (hQ : AxVertragO Q O) (hK : ∀ f, Koerper
           refine ⟨σ.lese Λ e.orte, lese_laenge σ Λ e.orte, hgl, trivial, fun calls O' => ?_⟩
           exact ZErg.folgt_of_gleich (ZErg.gleich_trans
             (semV_scopedWert O' passes calls r e R hret σ ρ) ⟨⟨rfl, rfl⟩, hv⟩))
-      have hres := fadenA_antwort hO hQ hK e0 _ hdone hL rfl  ha
-      simpa only [hs₁] using hres
+      have hres := fadenA_antwort hO hQ hK e0 _ hdone hL rfl
+        ((rufAntwortG_rest_irrel (M.faeden u) _ _ _).trans ha)
+      have hw : M.speicher.welt σ₁.spur = σ₁ := by
+        subst hs₁
+        exact Speicher.welt_speicher ((M.weltVon u).lese Λ e.orte)
+      simpa only [hw] using hres
   | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
       simp only [RufMaschineG.weltVon, rufUpdateG_self, rufAntwortG_spur ha]
       have hdone := fadenA_lokal hF hhead (M.faeden u).kopf.rho
@@ -85,6 +89,7 @@ theorem akteurA_gruppe7 (hO : GutO O) (hQ : AxVertragO Q O) (hK : ∀ f, Koerper
         (M.faeden u).spur (W' := M.weltVon u) (fun σ hg hok => by
           exact ⟨σ, Nat.le_refl _, hg, trivial, fun calls O' =>
             ZErg.folgt_of_eq (semV_scopedGrund O' passes calls r grund R hret σ ρ)⟩)
-      exact fadenA_antwort hO hQ hK e0 _ hdone hL rfl  ha
+      refine fadenA_antwort hO hQ hK e0 _ hdone hL rfl ?_
+      exact (rufAntwortG_rest_irrel (M.faeden u) _ _ _).trans ha
 
 end Gabbro.Grammatik

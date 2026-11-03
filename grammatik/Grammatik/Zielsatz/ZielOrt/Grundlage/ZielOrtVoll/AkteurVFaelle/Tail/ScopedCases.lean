@@ -42,18 +42,21 @@ theorem akteurV_g7 (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
   | rueckFreigabeLetzte ρ a L hhead z hantwort =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     have hclean := fadenV_scopedFreigabe hF ρ a L [] hhead ((M.weltVon u).gibt L).spur
-    exact fadenV_scopedAntwort hO hK e0 hclean hL ρ a rfl hantwort
+    refine fadenV_scopedAntwort hO hK e0 hclean hL ρ _ rfl ?_
+    exact (rufAntwortG_rest_irrel (M.faeden u) _ _ _).trans hantwort
   | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z hantwort =>
     subst σ₁
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     have hclean := fadenV_scopedWert hF ρ r e R hhead hret
       ((M.weltVon u).lese _ e.orte).spur
-    apply fadenV_scopedAntwort hO hK e0 hclean hL ρ _ _ hantwort
-    simp only [hempty]
+    refine fadenV_scopedAntwort hO hK e0 hclean hL ρ _ ?_ ?_
+    · simp only [hempty]
+    · exact (rufAntwortG_rest_irrel (M.faeden u) _ _ _).trans hantwort
   | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z hantwort =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     have hclean := fadenV_scopedGrund hF ρ r grund R hhead hret (M.faeden u).spur
-    apply fadenV_scopedAntwort hO hK e0 hclean hL ρ _ _ hantwort
-    simp only [hempty]
+    refine fadenV_scopedAntwort hO hK e0 hclean hL ρ _ ?_ ?_
+    · simp only [hempty]
+    · exact (rufAntwortG_rest_irrel (M.faeden u) _ _ _).trans hantwort
 
 end Gabbro.Grammatik

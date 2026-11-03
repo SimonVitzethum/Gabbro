@@ -102,6 +102,27 @@ theorem rahmenStapel_pop {P : Programm D} {S S' : Speicher D}
   | false => rfl
   | true => exact absurd ((hk c hG).symm.trans hw) Bool.noConfusion
 
+/-- Answer delivery completes a root or resumes the caller with its original key. -/
+private theorem rahmenStapel_antwort {P : Programm D} {S S' : Speicher D}
+    {z z' : RufFadenG D} {vor σ : World D}
+    {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
+    (h : RahmenStapel P S (RufSchluesselG z.kopf) z.stapel)
+    (hmem : ∀ c, TraegerSchreibt z.kopf.f c = false → TraegerGleich S' S c)
+    (ha : rufAntwortG z vor σ a = some z') :
+    RahmenStapel P S' (RufSchluesselG z'.kopf) z'.stapel := by
+  cases hst : z.stapel with
+  | nil =>
+    rw [rufAntwortG_stapel ha, hst]
+    trivial
+  | cons caller rest =>
+    cases hr : antwortRestG z.kopf.f a caller.rest with
+    | none => simp [rufAntwortG, hst, hr] at ha
+    | some r =>
+      simp [rufAntwortG, hst, hr] at ha
+      subst ha
+      rw [hst] at h
+      exact rahmenStapel_pop h hmem
+
 /-- The suspended frame's agreement, read at a return world over the same
     memory. -/
 theorem gleichOhne_of_stapel {P : Programm D} {S : Speicher D}
@@ -260,6 +281,15 @@ theorem rahmenStapel_akteur (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
       exact rahmenStapel_speicher h hmem
   | g7 hs =>
     cases hs with
+    | rueckFreigabeLetzte ρ a L hhead z ha =>
+      simp only [rufUpdateG_self]
+      exact rahmenStapel_antwort h hmem ha
+    | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
+      simp only [rufUpdateG_self]
+      exact rahmenStapel_antwort h hmem ha
+    | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
+      simp only [rufUpdateG_self]
+      exact rahmenStapel_antwort h hmem ha
     | _ =>
       simp only [rufUpdateG_self]
       exact rahmenStapel_speicher h hmem

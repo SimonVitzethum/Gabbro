@@ -170,24 +170,32 @@ theorem fadenV_scopedAntwort (hO : GutO O)
         subst hantwort
         refine ⟨⟨?_, hSt'⟩, logOk_rueck hL hens⟩
         rcases caller with ⟨cf, crho, cs0, lc, Γc, Λc, ρc, rc⟩
-        cases rc <;> simp only [antwortRestG] at ha
-        all_goals first
-          | (cases ha
-             apply popV_kopf e0 hWc W (fun σa => .ok σa v) (Or.inl ⟨v, fun _ => rfl, hens⟩)
-               _ _ id
-               (fun calls O' σa X h => h.1 rfl) _ ⟨rfl, rfl⟩)
-          | (split at ha <;> (try contradiction)
-             rename_i he
-             cases ha
-             apply popV_kopf e0 hWc W (fun σa => .ok σa v) (Or.inl ⟨v, fun _ => rfl, hens⟩)
-               _ _ id
-               (fun calls O' σa X h => h.2 _ _ _ _ _ _ _ _ (Or.inl rfl) he) _ ⟨rfl, rfl⟩)
-          | (split at ha <;> (try contradiction)
-             rename_i he
-             cases ha
-             apply popV_kopf e0 hWc W (fun σa => .ok σa v) (Or.inl ⟨v, fun _ => rfl, hens⟩)
-               _ _ (fun hok => ⟨hok.2.2.1, hok.2.2.2.1, hok.2.2.2.2⟩)
-               (fun calls O' σa X h => h.2 _ _ _ _ _ _ _ _ (Or.inr ⟨_, _, rfl⟩) he) _ ⟨rfl, rfl⟩)
+        cases rc with
+        | wartet rest k =>
+          simp only [antwortRestG] at ha
+          split at ha
+          · rename_i he
+            cases ha
+            exact popV_kopf e0 hWc W (fun σa => .ok σa v) (Or.inl ⟨v, fun _ => rfl, hens⟩)
+              (.cons (ergWert he v) ρc) (.dann rest (.schrumpf k)) id
+              (fun calls O' σa X h => h.2 _ _ _ _ _ rest k ρc (Or.inl rfl) he) _ ⟨rfl, rfl⟩
+          · cases ha
+        | wartetSonst n err rest k =>
+          simp only [antwortRestG] at ha
+          split at ha
+          · rename_i he
+            cases ha
+            exact popV_kopf e0 hWc W (fun σa => .ok σa v) (Or.inl ⟨v, fun _ => rfl, hens⟩)
+              (.cons (ergWert he v) ρc) (.dann rest (.schrumpf k))
+              (fun hok => ⟨hok.2.2.1, hok.2.2.2.1, hok.2.2.2.2⟩)
+              (fun calls O' σa X h => h.2 _ _ _ _ _ rest k ρc (Or.inr ⟨n, err, rfl⟩) he)
+              _ ⟨rfl, rfl⟩
+          · cases ha
+        | _ =>
+          simp only [antwortRestG] at ha
+          cases ha
+          exact popV_kopf e0 hWc W (fun σa => .ok σa v) (Or.inl ⟨v, fun _ => rfl, hens⟩)
+            ρc _ id (fun calls O' σa X h => h.1 rfl) _ ⟨rfl, rfl⟩
     | inr grund =>
       cases ha : antwortRestG z.kopf.f (.inr grund) caller.rest with
       | none => simp [rufAntwortG, hs, ha] at hantwort
@@ -196,19 +204,19 @@ theorem fadenV_scopedAntwort (hO : GutO O)
         subst hantwort
         refine ⟨⟨?_, hSt'⟩, logOk_grund hL⟩
         rcases caller with ⟨cf, crho, cs0, lc, Γc, Λc, ρc, rc⟩
-        cases rc <;> simp only [antwortRestG] at ha
-        all_goals try contradiction
-        all_goals
-          split at ha <;> (try contradiction)
-          rename_i hn
-          cases ha
-          apply popV_kopf e0 hWc W (fun σa => .why σa grund) (Or.inr ⟨grund, fun _ => rfl⟩)
-            _ _
-            (fun hok => by
-              apply okV_alsBlock _ _ _ hok.1 hok.2.1 hok.2.2.2.2
-              intro L
-              exact Block.held_iff (by assumption) L)
-            (fun calls O' σa X h => h _ _ _ _ _ _ _ _ _ _ rfl hn) _ ⟨rfl, rfl⟩
+        cases rc with
+        | wartetSonst n err rest k =>
+          simp only [antwortRestG] at ha
+          split at ha
+          · rename_i hn
+            cases ha
+            exact popV_kopf e0 hWc W (fun σa => .why σa grund) (Or.inr ⟨grund, fun _ => rfl⟩)
+              (Env.cons (τ := .why n) (Fin.cast hn grund) ρc)
+              (.dann err.alsBlock.2 (.abbruch (.schrumpf k)))
+              (fun hok => okV_alsBlock err (.schrumpf k) rest.held_iff hok.1 hok.2.1 hok.2.2.2.2)
+              (fun calls O' σa X h => h _ _ _ _ _ n err rest k ρc rfl hn) _ ⟨rfl, rfl⟩
+          · cases ha
+        | _ => cases ha
 
 end Replay
 
