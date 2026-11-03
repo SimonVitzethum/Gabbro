@@ -76,7 +76,8 @@ theorem assignDurchStmt_eq (Γ : Ctx) (Λ : List (Res (declOf u)))
     (hL : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ) :
     ∃ e2 : Expr (declOf u) Γ Λ ((declOf u).typ t fh.idx), HEq e2 e ∧
       assignDurchStmt (l := false) u Γ Λ V t fh p ht i e hw hL =
-        Stmt.assignThru (D := declOf u) p t ht fh.idx i e2 hw hL :=
+        Stmt.assignThru (D := declOf u) p t
+          (Deklaration.capTab_of ht rfl (by decide)) fh.idx i e2 hw hL :=
   ⟨_, mpr_heq _ _, rfl⟩
 
 theorem assignSlotStmt_eq (Γ : Ctx) (Λ : List (Res (declOf u)))
