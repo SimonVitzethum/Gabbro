@@ -99,36 +99,23 @@ theorem blockFloatOfComputed_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes
     obtain ⟨⟨cc, tc⟩, hcc, ⟨ce, te⟩, he, ⟨cr, tr⟩, hr, hc⟩ := h
     cases hc
     have het := computedFloatOfE_bounds he
-    have hguard : -2^63 ≤ a ∧ b < 2^63 := by
-      unfold computedFloatOfE at he
-      split at he
-      · next hg => exact hg.2
-      · cases he
     let σr := σ.lese Λ e.orte
     let x := gleitAusInt (eval σr e σr ρ).n
     have hwf : Gleitkomma.wf Gleitkomma.f64 x :=
       Gleitkomma.ofInt_wf _ Gleitkomma.f64_p _
-    have hfinite : gleitEndlich x = true := by
-      let v := (eval σr e σr ρ)
-      have habs : v.n.natAbs ≤ 2^63 := by
-        have := v.lo_le; have := v.le_hi
-        omega
-      have hf := Gleitkomma.ofInt_finite Gleitkomma.f64 (by decide) v.n
-        (by change v.n.natAbs < 2^1023; omega)
-      rcases hf with hf | hf | hf <;> change gleitEndlich (Gleitkomma.ofInt Gleitkomma.f64 v.n) = true <;> simp [gleitEndlich, hf]
     have conv : ∀ j code t, computedFloatOfE (reserved := reserved) L Gleitkomma.f64 e j = some (code, t) → t ≤ Ks →
         ∀ m pc, Pre L m pc fp Ks j code ρ (fun m => WeltAt m L σr) reserved →
         Ok m pc fp Ks j code (fun w => Gleitkomma.wf Gleitkomma.f64 x ∧
           w = BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 x)) := by
       intro j code t hc ht m pc hp
-      exact (computedFloatOfE_ok (σ₀ := σr) (σ := σr) hc hp ht
-        (fun c t hc ht hp => lowE_ok (same := by intro _; rfl) σr σr (fun _ h => h) hW.lay e j c t hc ht m pc ρ hp |>.word trivial)).mono
+      exact (computedFloatOfE_ok (σ₀ := σr) (σ := σr) hc hp ht hW.lay rfl
+        (fun _ h => h)).mono
           (fun w hw => ⟨hwf, hw⟩)
     simp only [floatNarrowC, List.length_append, List.length_singleton] at hs
     simp only [execBlock]
     have hchoice := choice_ok (P := P) (σ0 := σ0) (ex := ex) (d := frei Γ reserved)
       (cc := cc) (ct := stopC 107 (frei Γ reserved)) (ce := ce ++ cr)
-      (b := floatRangeReject low high x)
+      (b := computedFloatRangeReject low high x)
       (ot := match gleitPasst low high x with
         | some v => (execBlock O passes R rest σr (Env.cons v ρ)).schrumpf
         | none => .logik .bereich)
@@ -142,17 +129,18 @@ theorem blockFloatOfComputed_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes
         simpa only [ite_self, hv, floatNarrowC, List.length_append, Int.natCast_add] using hchoice
     · intro hpc
       have hpw := PreS.welt hpc hW.ks hWa hW.lay (by have := hW.lo; omega)
-      obtain ⟨m1, st, a1, w, hw, hen⟩ := canonicalFloatRangeL_ok x hwf hfinite
-        (fun j => computedFloatOfE (reserved := reserved) L Gleitkomma.f64 e j) conv hcc (by omega) hpw
+      obtain ⟨m1, st, a1, w, hw, hen⟩ := computedFloatRangeL_ok x hwf low high
+        (fun j => computedFloatOfE (reserved := reserved) L Gleitkomma.f64 e j)
+        (fun hc ht m pc hp => conv _ _ _ hc ht m pc hp) hcc (by omega) m pc hpw
       exact ⟨m1, st, Agree.widen a1 hW.ks, w, hw, by simpa only [bool_word] using hen⟩
     · intro hb m' pc' hp' _ hu' hk' hw'
-      rw [(floatRangeReject_none hwf hfinite).mpr hb]
+      rw [(computedFloatRangeReject_none hwf).mpr hb]
       change Stops ⟨pc', fp⟩ m' 107
       exact stop_ok hp'.code hp'.far hp'.frame (by have := hW.ks; omega) hp'.small (by decide)
     · intro hb m' pc' hp' _ hu' hk' hw'
       cases hv : gleitPasst low high x with
       | none =>
-        have hf := (floatRangeReject_none hwf hfinite).mp hv
+        have hf := (computedFloatRangeReject_none hwf).mp hv
         rw [hb] at hf
         cases hf
       | some v =>
