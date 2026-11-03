@@ -104,9 +104,10 @@ theorem constStmtGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ct
   | .ite (condition := condition) hc hyes hno => by
     let s₁ := σ₁.lese [] condition.orte
     let s₂ := σ₂.lese [] condition.orte
-    have hcEq := constEvalGleichExpr c hc s₁ s₂ ρ₁ ρ₂ hW hρ
-    simp only [execStmt, hcEq]
-    by_cases hcond : wahr? (eval s₂ condition s₂ ρ₂) = true
+    have hcEq := constEvalGleichExpr c hc (σ₁.lese [] condition.orte) (σ₂.lese [] condition.orte) ρ₁ ρ₂ hW hρ
+    simp only [execStmt]
+    rw [hcEq]
+    by_cases hcond : wahr? (eval (σ₂.lese [] condition.orte) condition (σ₂.lese [] condition.orte) ρ₂) = true
     · simp only [if_pos hcond]
       exact constBlockGleich c hyes O₁ O₂ p₁ p₂ R₁ R₂ s₁ s₂ ρ₁ ρ₂ hW hρ agree
     · simp only [if_neg hcond]
@@ -114,7 +115,7 @@ theorem constStmtGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ct
   | .onOption (value := value) hv hpresent habsent => by
     let s₁ := σ₁.lese [] value.orte
     let s₂ := σ₂.lese [] value.orte
-    have hvEq := constEvalGleichExpr c hv s₁ s₂ ρ₁ ρ₂ hW hρ
+    have hvEq := constEvalGleichExpr c hv (σ₁.lese [] value.orte) (σ₂.lese [] value.orte) ρ₁ ρ₂ hW hρ
     simp only [execStmt]
     rw [hvEq]
     cases hval : (eval s₂ value s₂ ρ₂ : Option _) with
@@ -123,7 +124,10 @@ theorem constStmtGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ct
       exact constBlockGleich c habsent O₁ O₂ p₁ p₂ R₁ R₂ s₁ s₂ ρ₁ ρ₂ hW hρ agree
     | some k =>
       simp only [hval]
-      cases constBlockGleich c hpresent O₁ O₂ p₁ p₂ R₁ R₂ s₁ s₂ (.cons k ρ₁) (.cons k ρ₂) hW (.cons rfl hρ) agree with
+      have hh := constBlockGleich c hpresent O₁ O₂ p₁ p₂ R₁ R₂ s₁ s₂ (.cons k ρ₁) (.cons k ρ₂) hW (.cons rfl hρ) agree
+      generalize execBlock O₁ p₁ R₁ _ _ _ = o₁ at hh ⊢
+      generalize execBlock O₂ p₂ R₂ _ _ _ = o₂ at hh ⊢
+      cases hh with
       | ok hS hG hρ' => simp only [Ausgang.schrumpf]; exact AusgangGleich.ok hS hG (envGleichTail c hρ')
       | zurueck hS hG hv' => simp only [Ausgang.schrumpf]; exact AusgangGleich.zurueck hS hG hv'
       | why hS hG hr' => simp only [Ausgang.schrumpf]; exact AusgangGleich.why hS hG hr'
@@ -134,31 +138,33 @@ theorem constStmtGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ct
   | .onTag (value := value) hv harms => by
     let s₁ := σ₁.lese [] value.orte
     let s₂ := σ₂.lese [] value.orte
-    have hvEq := constEvalGleichExpr c hv s₁ s₂ ρ₁ ρ₂ hW hρ
+    have hvEq := constEvalGleichExpr c hv (σ₁.lese [] value.orte) (σ₂.lese [] value.orte) ρ₁ ρ₂ hW hρ
     simp only [execStmt]
     rw [hvEq]
     exact constArmsGleich c harms O₁ O₂ p₁ p₂ R₁ R₂ _ _ rfl s₁ s₂ ρ₁ ρ₂ hW hρ agree
   | .onWhy (reason := reason) hv harms => by
     let s₁ := σ₁.lese [] reason.orte
     let s₂ := σ₂.lese [] reason.orte
-    have hvEq := constEvalGleichExpr c hv s₁ s₂ ρ₁ ρ₂ hW hρ
+    have hvEq := constEvalGleichExpr c hv (σ₁.lese [] reason.orte) (σ₂.lese [] reason.orte) ρ₁ ρ₂ hW hρ
     simp only [execStmt]
     rw [hvEq]
     exact constReasonGleich c harms O₁ O₂ p₁ p₂ R₁ R₂ _ _ rfl s₁ s₂ ρ₁ ρ₂ hW hρ agree
   | .call f args hp hr resourceEq hargs => by
     let s₁ := σ₁.lese [] args.orte
     let s₂ := σ₂.lese [] args.orte
-    have harg := constEvalGleichArgs c hargs s₁ s₂ ρ₁ ρ₂ hW hρ
+    have harg := constEvalGleichArgs c hargs (σ₁.lese [] args.orte) (σ₂.lese [] args.orte) ρ₁ ρ₂ hW hρ
     rw [constExecStmtCast c, constExecStmtCast c]
     simp only [execStmt]
     rw [harg]
-    cases (agree f s₁ s₂ (evalArgs s₂ args s₂ ρ₂) hW) with
+    have hh := agree f s₁ s₂ (evalArgs s₂ args s₂ ρ₂) hW
+    generalize R₁ f s₁ _ = r₁ at hh ⊢
+    generalize R₂ f s₂ _ = r₂ at hh ⊢
+    cases hh with
     | ok hS hG _ => dsimp only; exact AusgangGleich.ok hS hG hρ
     | logik he => dsimp only; exact AusgangGleich.logik he
     | hardware he => dsimp only; exact AusgangGleich.hardware he
     | why hS hG hreason =>
-      rename_i s₁' s₂' r₁ r₂
-      exact Fin.elim0 (Fin.cast hr r₁)
+      exact Fin.elim0 (Fin.cast hr (by assumption))
   | .ret (value := value) hres => by
     have hev := constEvalGleichResult c hres (σ₁.lese [] value.orte) (σ₂.lese [] value.orte) ρ₁ ρ₂ hW hρ
     simp only [execStmt]
@@ -176,7 +182,10 @@ theorem constBlockGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : C
   | .nil => by simp only [execBlock]; exact AusgangGleich.ok hW.1 hW.2 hρ
   | .cons hs hrest => by
     simp only [execBlock]
-    cases constStmtGleich c hs O₁ O₂ p₁ p₂ R₁ R₂ σ₁ σ₂ ρ₁ ρ₂ hW hρ agree with
+    have hh := constStmtGleich c hs O₁ O₂ p₁ p₂ R₁ R₂ σ₁ σ₂ ρ₁ ρ₂ hW hρ agree
+    generalize execStmt O₁ p₁ R₁ _ _ _ = o₁ at hh ⊢
+    generalize execStmt O₂ p₂ R₂ _ _ _ = o₂ at hh ⊢
+    cases hh with
     | ok hS hG hρ' => exact constBlockGleich c hrest O₁ O₂ p₁ p₂ R₁ R₂ _ _ _ _ ⟨hS, hG⟩ hρ' agree
     | zurueck hS hG hv' => dsimp only; exact AusgangGleich.zurueck hS hG hv'
     | why hS hG hr' => dsimp only; exact AusgangGleich.why hS hG hr'
@@ -187,9 +196,12 @@ theorem constBlockGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : C
   | .bind (value := value) hv hrest => by
     let s₁ := σ₁.lese [] value.orte
     let s₂ := σ₂.lese [] value.orte
-    have hvEq := constEvalGleichExpr c hv s₁ s₂ ρ₁ ρ₂ hW hρ
-    simp only [execBlock, hvEq]
-    cases constBlockGleich c hrest O₁ O₂ p₁ p₂ R₁ R₂ s₁ s₂ _ _ hW (.cons rfl hρ) agree with
+    have hvEq := constEvalGleichExpr c hv (σ₁.lese [] value.orte) (σ₂.lese [] value.orte) ρ₁ ρ₂ hW hρ
+    simp only [execBlock]
+    have hh := constBlockGleich c hrest O₁ O₂ p₁ p₂ R₁ R₂ (σ₁.lese [] value.orte) (σ₂.lese [] value.orte) (.cons (eval (σ₁.lese [] value.orte) value (σ₁.lese [] value.orte) ρ₁) ρ₁) (.cons (eval (σ₂.lese [] value.orte) value (σ₂.lese [] value.orte) ρ₂) ρ₂) hW (.cons hvEq hρ) agree
+    generalize execBlock O₁ p₁ R₁ _ _ _ = o₁ at hh ⊢
+    generalize execBlock O₂ p₂ R₂ _ _ _ = o₂ at hh ⊢
+    cases hh with
     | ok hS hG hρ' => simp only [Ausgang.schrumpf]; exact AusgangGleich.ok hS hG (envGleichTail c hρ')
     | zurueck hS hG hv' => simp only [Ausgang.schrumpf]; exact AusgangGleich.zurueck hS hG hv'
     | why hS hG hr' => simp only [Ausgang.schrumpf]; exact AusgangGleich.why hS hG hr'
@@ -200,15 +212,20 @@ theorem constBlockGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : C
   | .bindCall f args he hp hr resourceEq rest hargs hrest => by
     let s₁ := σ₁.lese [] args.orte
     let s₂ := σ₂.lese [] args.orte
-    have harg := constEvalGleichArgs c hargs s₁ s₂ ρ₁ ρ₂ hW hρ
+    have harg := constEvalGleichArgs c hargs (σ₁.lese [] args.orte) (σ₂.lese [] args.orte) ρ₁ ρ₂ hW hρ
     simp only [execBlock]
     rw [harg]
-    cases (agree f s₁ s₂ (evalArgs s₂ args s₂ ρ₂) hW) with
+    have hh := agree f s₁ s₂ (evalArgs s₂ args s₂ ρ₂) hW
+    generalize R₁ f s₁ _ = r₁ at hh ⊢
+    generalize R₂ f s₂ _ = r₂ at hh ⊢
+    cases hh with
     | ok hS hG hv =>
       dsimp only
       have herg := congrArg (ergWert he) hv
       have hrec := constBlockGleich c hrest O₁ O₂ p₁ p₂ R₁ R₂ _ _ _ _ ⟨hS, hG⟩ (.cons herg hρ) agree
       simp only [constExecBlockCast c] at hrec
+      generalize execBlock O₁ p₁ R₁ _ _ _ = o₁ at hrec ⊢
+      generalize execBlock O₂ p₂ R₂ _ _ _ = o₂ at hrec ⊢
       cases hrec with
       | ok hS' hG' hρ' => simp only [Ausgang.schrumpf]; exact AusgangGleich.ok hS' hG' (envGleichTail c hρ')
       | zurueck hS' hG' hv' => simp only [Ausgang.schrumpf]; exact AusgangGleich.zurueck hS' hG' hv'
@@ -220,8 +237,7 @@ theorem constBlockGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : C
     | logik he => dsimp only; exact AusgangGleich.logik he
     | hardware he => dsimp only; exact AusgangGleich.hardware he
     | why hS hG hreason =>
-      rename_i s₁' s₂' r₁ r₂
-      exact Fin.elim0 (Fin.cast hr r₁)
+      exact Fin.elim0 (Fin.cast hr (by assumption))
 theorem constEndGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {body : Endblock c.D V l Γ []} (h : ConstEnd c body)
     (O₁ O₂ : Orakel c.D) (p₁ p₂ : Nat)
@@ -238,7 +254,10 @@ theorem constEndGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx
     exact EndGleich.zurueck hW.1 hW.2 hev
   | .cons hs hrest => by
     simp only [execEnd]
-    cases constStmtGleich c hs O₁ O₂ p₁ p₂ R₁ R₂ σ₁ σ₂ ρ₁ ρ₂ hW hρ agree with
+    have hh := constStmtGleich c hs O₁ O₂ p₁ p₂ R₁ R₂ σ₁ σ₂ ρ₁ ρ₂ hW hρ agree
+    generalize execStmt O₁ p₁ R₁ _ _ _ = o₁ at hh ⊢
+    generalize execStmt O₂ p₂ R₂ _ _ _ = o₂ at hh ⊢
+    cases hh with
     | ok hS hG hρ' => exact constEndGleich c hrest O₁ O₂ p₁ p₂ R₁ R₂ _ _ _ _ ⟨hS, hG⟩ hρ' agree
     | zurueck hS hG hv' => dsimp only; exact EndGleich.zurueck hS hG hv'
     | why hS hG hr' => dsimp only; exact EndGleich.why hS hG hr'
@@ -249,9 +268,12 @@ theorem constEndGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx
   | .bind (value := value) hv hrest => by
     let s₁ := σ₁.lese [] value.orte
     let s₂ := σ₂.lese [] value.orte
-    have hvEq := constEvalGleichExpr c hv s₁ s₂ ρ₁ ρ₂ hW hρ
-    simp only [execEnd, hvEq]
-    cases constEndGleich c hrest O₁ O₂ p₁ p₂ R₁ R₂ s₁ s₂ _ _ hW (.cons rfl hρ) agree with
+    have hvEq := constEvalGleichExpr c hv (σ₁.lese [] value.orte) (σ₂.lese [] value.orte) ρ₁ ρ₂ hW hρ
+    simp only [execEnd]
+    have hh := constEndGleich c hrest O₁ O₂ p₁ p₂ R₁ R₂ (σ₁.lese [] value.orte) (σ₂.lese [] value.orte) (.cons (eval (σ₁.lese [] value.orte) value (σ₁.lese [] value.orte) ρ₁) ρ₁) (.cons (eval (σ₂.lese [] value.orte) value (σ₂.lese [] value.orte) ρ₂) ρ₂) hW (.cons hvEq hρ) agree
+    generalize execEnd O₁ p₁ R₁ _ _ _ = o₁ at hh ⊢
+    generalize execEnd O₂ p₂ R₂ _ _ _ = o₂ at hh ⊢
+    cases hh with
     | zurueck hS hG hv' => simp only [EndAusgang.schrumpf]; exact EndGleich.zurueck hS hG hv'
     | why hS hG hr' => simp only [EndAusgang.schrumpf]; exact EndGleich.why hS hG hr'
     | leave hEq hS hG hρ' => simp only [EndAusgang.schrumpf]; exact EndGleich.leave hEq hS hG (envGleichTail c hρ')
@@ -261,15 +283,20 @@ theorem constEndGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx
   | .bindCall f args he hp hr resourceEq rest hargs hrest => by
     let s₁ := σ₁.lese [] args.orte
     let s₂ := σ₂.lese [] args.orte
-    have harg := constEvalGleichArgs c hargs s₁ s₂ ρ₁ ρ₂ hW hρ
+    have harg := constEvalGleichArgs c hargs (σ₁.lese [] args.orte) (σ₂.lese [] args.orte) ρ₁ ρ₂ hW hρ
     simp only [execEnd]
     rw [harg]
-    cases (agree f s₁ s₂ (evalArgs s₂ args s₂ ρ₂) hW) with
+    have hh := agree f s₁ s₂ (evalArgs s₂ args s₂ ρ₂) hW
+    generalize R₁ f s₁ _ = r₁ at hh ⊢
+    generalize R₂ f s₂ _ = r₂ at hh ⊢
+    cases hh with
     | ok hS hG hv =>
       dsimp only
       have herg := congrArg (ergWert he) hv
       have hrec := constEndGleich c hrest O₁ O₂ p₁ p₂ R₁ R₂ _ _ _ _ ⟨hS, hG⟩ (.cons herg hρ) agree
       simp only [constExecEndCast c] at hrec
+      generalize execEnd O₁ p₁ R₁ _ _ _ = o₁ at hrec ⊢
+      generalize execEnd O₂ p₂ R₂ _ _ _ = o₂ at hrec ⊢
       cases hrec with
       | zurueck hS' hG' hv' => simp only [EndAusgang.schrumpf]; exact EndGleich.zurueck hS' hG' hv'
       | why hS' hG' hr' => simp only [EndAusgang.schrumpf]; exact EndGleich.why hS' hG' hr'
@@ -280,14 +307,14 @@ theorem constEndGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx
     | logik he => dsimp only; exact EndGleich.logik he
     | hardware he => dsimp only; exact EndGleich.hardware he
     | why hS hG hreason =>
-      rename_i s₁' s₂' r₁ r₂
-      exact Fin.elim0 (Fin.cast hr r₁)
+      exact Fin.elim0 (Fin.cast hr (by assumption))
   | .ite (condition := condition) hc hyes hno => by
     let s₁ := σ₁.lese [] condition.orte
     let s₂ := σ₂.lese [] condition.orte
-    have hcEq := constEvalGleichExpr c hc s₁ s₂ ρ₁ ρ₂ hW hρ
-    simp only [execEnd, hcEq]
-    by_cases hcond : wahr? (eval s₂ condition s₂ ρ₂) = true
+    have hcEq := constEvalGleichExpr c hc (σ₁.lese [] condition.orte) (σ₂.lese [] condition.orte) ρ₁ ρ₂ hW hρ
+    simp only [execEnd]
+    rw [hcEq]
+    by_cases hcond : wahr? (eval (σ₂.lese [] condition.orte) condition (σ₂.lese [] condition.orte) ρ₂) = true
     · simp only [if_pos hcond]
       exact constEndGleich c hyes O₁ O₂ p₁ p₂ R₁ R₂ s₁ s₂ ρ₁ ρ₂ hW hρ agree
     · simp only [if_neg hcond]
@@ -302,14 +329,14 @@ theorem constArmsGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ct
     (agree : ∀ g (σ₁ σ₂ : World c.D) (ρ : Env c.D (c.D.params g)),
       WeltRahmen c σ₁ σ₂ → RufGleich c (R₁ g σ₁ ρ) (R₂ g σ₂ ρ)) :
     AusgangGleich c (execArms O₁ p₁ R₁ arms v₁ σ₁ ρ₁) (execArms O₂ p₂ R₂ arms v₂ σ₂ ρ₂) :=
-  match h with
-  | .nil => by
+  match cs, arms, h, v₁, v₂, hv with
+  | _, _, .nil, v₁, v₂, hv => by
     have _ := hv
     obtain ⟨i, _⟩ := v₁
     exact i.elim0
-  | .cons hbody hrest => by
+  | _, _, .cons hbody hrest, v₁, v₂, hv => by
     subst hv
-    obtain ⟨⟨tag, htag⟩, nutz⟩ := v₂
+    obtain ⟨⟨tag, htag⟩, nutz⟩ := v₁
     cases tag with
     | zero =>
       simp only [execArms]
@@ -327,13 +354,13 @@ theorem constReasonGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : 
     (agree : ∀ g (σ₁ σ₂ : World c.D) (ρ : Env c.D (c.D.params g)),
       WeltRahmen c σ₁ σ₂ → RufGleich c (R₁ g σ₁ ρ) (R₂ g σ₂ ρ)) :
     AusgangGleich c (execGrund O₁ p₁ R₁ arms v₁ σ₁ ρ₁) (execGrund O₂ p₂ R₂ arms v₂ σ₂ ρ₂) :=
-  match h with
-  | .nil => by
+  match n, arms, h, v₁, v₂, hv with
+  | _, _, .nil, v₁, v₂, hv => by
     have _ := hv
     exact Fin.elim0 v₁
-  | .cons hbody hrest => by
+  | _, _, .cons hbody hrest, v₁, v₂, hv => by
     subst hv
-    cases v₂ with
+    cases v₁ with
     | mk tag _ =>
       cases tag with
       | zero =>
@@ -369,8 +396,8 @@ theorem constRufGleich (c : ConstProgram) (hadm : ConstAdmissible c) :
     intro g σ₁ σ₂ ρ O₁ O₂ p₁ p₂ hW
     rw [rufAt_succ_eq (c.P) O₁ p₁ d, rufAt_succ_eq (c.P) O₂ p₂ d]
     simp only [rufSchritt]
-    let s₁ := σ₁.lese (Signatur.anfang c.D (c.D.signatur g)) (c.P.requires g).orte
-    let s₂ := σ₂.lese (Signatur.anfang c.D (c.D.signatur g)) (c.P.requires g).orte
+    generalize hs₁def : σ₁.lese (Signatur.anfang c.D (c.D.signatur g)) (c.P.requires g).orte = s₁
+    generalize hs₂def : σ₂.lese (Signatur.anfang c.D (c.D.signatur g)) (c.P.requires g).orte = s₂
     have hW0 := constWeltRahmenAlle c s₁ s₂
     have hreq : wahr? (eval s₁ (c.P.requires g) s₁ ρ) =
         wahr? (eval s₂ (c.P.requires g) s₂ ρ) :=
@@ -386,25 +413,34 @@ theorem constRufGleich (c : ConstProgram) (hadm : ConstAdmissible c) :
         (rufAt c.P O₁ p₁ d) (rufAt c.P O₂ p₂ d) s₁ s₂ ρ ρ hW0
         (envGleichRefl c ρ) (fun h s₁ s₂ r w => ih h s₁ s₂ r O₁ O₂ p₁ p₂ w)
       rw [hbridge₁, hbridge₂] at hbody
+      generalize execEnd O₁ p₁ _ _ _ _ = o₁ at hbody ⊢
+      generalize execEnd O₂ p₂ _ _ _ _ = o₂ at hbody ⊢
       cases hbody with
-      | zurueck hS hG hv =>
-        rename_i s1 s2 w1 w2
+      | @zurueck w1 w2 s1 s2 hS hG hv =>
         have hρe : ergEnv (c.D.erg g) w1 ρ = ergEnv (c.D.erg g) w2 ρ := by rw [hv]
-        let t₁ := s1.lese (vertragVon c.D g).ende (c.P.ensures g).orte
-        let t₂ := s2.lese (vertragVon c.D g).ende (c.P.ensures g).orte
-        have hens : wahr? (eval s₁ (c.P.ensures g) t₁ (ergEnv (c.D.erg g) w1 ρ)) =
-            wahr? (eval s₂ (c.P.ensures g) t₂ (ergEnv (c.D.erg g) w2 ρ)) := by
+        have hempty : c.D.invs = [] := by
+          cases h : c.D.invs with
+          | nil => rfl
+          | cons i _ => exact (c.noInvariants i).elim
+        have hens : wahr? (eval s₁ (c.P.ensures g)
+              (s1.lese (Vertrag.ende c.D (vertragVon c.D g)) (c.P.ensures g).orte)
+              (ergEnv (c.D.erg g) w1 ρ)) =
+            wahr? (eval s₂ (c.P.ensures g)
+              (s2.lese (Vertrag.ende c.D (vertragVon c.D g)) (c.P.ensures g).orte)
+              (ergEnv (c.D.erg g) w2 ρ)) := by
           rw [hρe]
-          exact congrArg wahr? (eval_spurfrei (c.P.ensures g) s₁ s₂ t₁ t₂ hW0.1 hW0.2 hS hG _)
-        simp only [hens]
-        by_cases hensgate : wahr? (eval s₂ (c.P.ensures g) t₂ (ergEnv (c.D.erg g) w2 ρ)) = false
-        · simp only [if_pos hensgate]
+          exact congrArg wahr? (eval_spurfrei (c.P.ensures g) s₁ s₂ _ _ hW0.1 hW0.2
+            (constWeltRahmenAlle c _ _).1 (constWeltRahmenAlle c _ _).2 _)
+        dsimp only
+        rw [hens]
+        by_cases hensgate : wahr? (eval s₂ (c.P.ensures g)
+            (s2.lese (Vertrag.ende c.D (vertragVon c.D g)) (c.P.ensures g).orte)
+            (ergEnv (c.D.erg g) w2 ρ)) = false
+        · rw [if_pos hensgate, if_pos hensgate]
           exact RufGleich.logik rfl
-        · simp only [if_neg hensgate]
-          have hempty : c.D.invs = [] := by cases h : c.D.invs with | nil => rfl | cons i _ => exact (c.noInvariants i).elim
-          rw [hempty]
-          dsimp only
-          exact RufGleich.ok hS hG hv
+        · rw [if_neg hensgate, if_neg hensgate, hempty]
+          simp only [List.filter_nil, List.foldl_nil, List.find?_nil]
+          exact RufGleich.ok (constWeltRahmenAlle c _ _).1 (constWeltRahmenAlle c _ _).2 hv
       | logik he => dsimp only; exact RufGleich.logik he
       | hardware he => dsimp only; exact RufGleich.hardware he
       | why hS hG hr' => dsimp only; exact RufGleich.why hS hG hr'
