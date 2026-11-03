@@ -214,8 +214,8 @@ theorem execStmt_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (
       execStmt_ru_assignSlot (t := t) (f := f) (i := i) (e := e) (hw := hw) (hL := hL) (σ := σ) (ρ := ρ) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
   | _, _, Λ, _, .assignThru p t ht f i e hw hL, σ, ρ =>
       execStmt_ru_assignThru (p := p) (t := t) (ht := ht) (f := f) (i := i) (e := e) (hw := hw) (hL := hL) (σ := σ) (ρ := ρ) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
-  | _, _, Λ, _, .assignThruOwn p t ht f i e m s ho he hg hm hw hL, σ, ρ =>
-      execStmt_ru_assignThruOwn (p := p) (t := t) (ht := ht) (f := f) (i := i) (e := e) (m := m) (s := s) (ho := ho) (he := he) (hg := hg) (hm := hm) (hw := hw) (hL := hL) (σ := σ) (ρ := ρ) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
+  | _, _, Λ, _, .assignThruOwn p t ht f i e m s ho he hg hw hL, σ, ρ =>
+      execStmt_ru_assignThruOwn (p := p) (t := t) (ht := ht) (f := f) (i := i) (e := e) (m := m) (s := s) (ho := ho) (he := he) (hg := hg) (hw := hw) (hL := hL) (σ := σ) (ρ := ρ) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
   | _, _, Λ, _, .assignSlotRef r t ht ho f e hw hL, σ, ρ =>
       execStmt_ru_assignSlotRef (r := r) (t := t) (ht := ht) (ho := ho) (f := f) (e := e) (hw := hw) (hL := hL) (σ := σ) (ρ := ρ) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
   | _, _, Λ, _, .assignGlob g e hw hL, σ, ρ =>
