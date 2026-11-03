@@ -17,6 +17,7 @@ theorem rufSchrittG_log {P : Programm D} {O : Orakel D} {passes : Nat} {M M' : R
     first
     | exact Or.inl rfl
     | exact Or.inr ⟨_, rfl⟩
+    | exact rufAntwortG_log (by assumption)
 
 /-! ## 17. TARGET B: the converse for the value -/
 

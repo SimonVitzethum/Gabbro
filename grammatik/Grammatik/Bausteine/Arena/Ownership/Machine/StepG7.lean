@@ -10,6 +10,20 @@ namespace Gabbro.Grammatik.ArenaOwnership.Machine
 open Source Body
 variable {D : Deklaration}
 
+/-- The scoped-return statements; ownership judgments have no rule for them. -/
+def _root_.Gabbro.Grammatik.Stmt.istScoped {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    Stmt D V l Γ Λ Λ' → Bool
+  | .retScoped .. => true
+  | .retWhyScoped .. => true
+  | _ => false
+
+/-- A judged statement is no scoped return (stated for a variable statement so that the
+    case split never has to unify the output holdings). -/
+theorem OS.not_scoped {A : FreiForm D} {I : Interfaces A} {V : Vertrag D}
+    {out : Flow.Output A V.erg} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c c2 : Context}
+    {st : Stmt D V l Γ Λ Λ'} (h : OS A I out k c st c2) : st.istScoped = false := by
+  cases h <;> rfl
+
 /-- Group 7 preserves ownership; pending-return residues are outside the
     ownership checker's currently admitted source fragment. -/
 theorem ownInv_step_g7 {P : Programm D} {A : FreiForm D} {I : Interfaces A}
@@ -36,15 +50,15 @@ theorem ownInv_step_g7 {P : Programm D} {A : FreiForm D} {I : Interfaces A}
     rcases GRest.scopedWert_faelle hret with hr | ⟨rest, hr⟩ | ⟨Λ', rest, k, hr⟩ <;> subst r <;>
       rw [hhead] at hH <;> obtain ⟨k0, c, g, hk, hf, hor⟩ := head_run hH rfl
     · cases hor with | ende _ he => cases he
-    · obtain ⟨c2, hs, _⟩ := hor.stmtEnde; cases hs
-    · obtain ⟨c2, hs, _⟩ := hor.stmt trivial; cases hs
+    · obtain ⟨c2, hs, _⟩ := hor.stmtEnde; have h0 := OS.not_scoped hs; simp [Stmt.istScoped] at h0
+    · obtain ⟨c2, hs, _⟩ := hor.stmt trivial; have h0 := OS.not_scoped hs; simp [Stmt.istScoped] at h0
   | rueckScopedGrund ρ r grund R hhead hret
   | rueckScopedGrundDirekt ρ r grund R hhead hret =>
     rcases GRest.scopedGrund_faelle hret with hr | ⟨rest, hr⟩ | ⟨Λ', rest, k, hr⟩ <;> subst r <;>
       rw [hhead] at hH <;> obtain ⟨k0, c, g, hk, hf, hor⟩ := head_run hH rfl
     · cases hor with | ende _ he => cases he
-    · obtain ⟨c2, hs, _⟩ := hor.stmtEnde; cases hs
-    · obtain ⟨c2, hs, _⟩ := hor.stmt trivial; cases hs
+    · obtain ⟨c2, hs, _⟩ := hor.stmtEnde; have h0 := OS.not_scoped hs; simp [Stmt.istScoped] at h0
+    · obtain ⟨c2, hs, _⟩ := hor.stmt trivial; have h0 := OS.not_scoped hs; simp [Stmt.istScoped] at h0
   | rueckFreigabe ρ a L remaining hhead =>
     rw [hhead] at hH
     obtain ⟨k0, c, g, hk, hf, hor⟩ := head_run hH rfl

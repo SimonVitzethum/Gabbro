@@ -131,6 +131,19 @@ theorem rufAntwortG_spur {z z' : RufFadenG D} {vor σ : World D}
         simp_all [Option.bind]
       all_goals first | (subst h; rfl) | (subst h; simp [hs])
 
+/-- Answering keeps the log or prepends the recorded return event. -/
+theorem rufAntwortG_log {z z' : RufFadenG D} {vor σ : World D}
+    {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
+    (h : rufAntwortG z vor σ a = some z') :
+    z'.log = z.log ∨ ∃ e, z'.log = e :: z.log := by
+  cases hs : z.stapel with
+  | nil => simp only [rufAntwortG, hs, Option.some.injEq] at h; subst z'; exact Or.inl rfl
+  | cons c st =>
+      simp only [rufAntwortG, hs] at h
+      cases hr : antwortRestG z.kopf.f a c.rest <;>
+        simp_all [Option.bind]
+      all_goals (subst h; exact Or.inr ⟨_, rfl⟩)
+
 /-- Answering either keeps an empty root stack or removes its first frame. -/
 theorem rufAntwortG_stapel {z z' : RufFadenG D} {vor σ : World D}
     {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}

@@ -59,7 +59,7 @@ def GRest.kette {V : Vertrag D} (A : List D.Lock) :
   | _, _, Λ, .wartetSonst _ _ _ k => (∀ L ∈ A, Res.held L ∈ Λ) ∧ k.kette A
   | _, _, Λ, @GRest.abbruch _ _ _ _ _ Λk k =>
       (∀ L ∈ A, Res.held L ∈ Λ) ∧ (∀ L, Res.held L ∈ Λk → Res.held L ∈ Λ) ∧ k.kette A
-  | _, _, Λ, .zurueckgekehrt _ => ∀ L ∈ A, Res.held L ∈ Λ
+  | _, _, _, .zurueckgekehrt _ => ∀ L ∈ A, Res.held L ∈ V.ende
   | _, _, _, .aufraeumen _ remaining =>
       (∀ L ∈ A, Res.held L ∈ V.ende) ∧ remaining.Nodup ∧
         ∀ L ∈ remaining, Res.held L ∉ V.ende

@@ -56,6 +56,6 @@ theorem GRest.kern_scopedGrund {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List 
 /-- The projection is stable under repeated observation. -/
 theorem GRest.kern_kern {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (r : GRest D V l Γ Λ) : r.kern.kern = r.kern := by
-  induction r <;> simp_all only [GRest.kern]
+  induction r <;> simp_all only [GRest.kern] <;> rfl
 
 end Gabbro.Grammatik
