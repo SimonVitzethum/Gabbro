@@ -462,6 +462,12 @@ out-of-scope device forms; the remaining 17 are userspace gaps. These are struct
 that 120 cases have been compiled successfully. The 13 `Ty` constructors below are a separate representation
 inventory and are not added to the 143 syntax cases. `Ty.index n` is the alias `.int 0 (n - 1)`.
 
+The `front-gaps2` source reinspection annotates individual rows below (no Lean/build execution):
+finite float narrowing and labelled breaking export were added; breaking remains refused by the
+unchanged invariant metadata gate. Retirement already had a producer, so its old row was stale.
+Advance markers now have a named one-stage refusal. Missing conversion, check-statement and byte-span
+syntax is identified explicitly. The original snapshot totals above have not been remeasured.
+
 Locations use these exact file abbreviations (a suffix `:N` is the source line; e.g. `E:64` means
 `stage0/Stage0/Senke/Ausdruck.lean:64`):
 
@@ -567,7 +573,7 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Stmt.assignSlot` | yes H1:219 | yes A:88, `slotStoreC` | `lowS_ok`, P:83 | layout/store guards |
 | `Stmt.assignThru` | yes H1:182 | yes A:92, resolved table/index | `lowS_ok`, P:84 | layout/store guards |
 | `Stmt.assignGlob` | yes H3:103 | yes A:80, `globalStoreC` | `lowS_ok`, P:79 | layout/store guards |
-| `Stmt.putBytes` | no producer in `Parser/Elab/**` | partial A:96, `putBytesL` | `lowS_ok`, P:121 | A:102: `else none` for `n > 8`; source export absent |
+| `Stmt.putBytes` | skipped: SYNTAX.md defines no byte-span store statement; `Parser/Stmt/Anweisung/Defs2a.lean:31`–`:83` has ordinary place assignment only | partial A:96, `putBytesL` | `lowS_ok`, P:121 | A:102: `else none` for `n > 8`; no defined source byte-span syntax to export |
 | `Stmt.assignVar` | yes H3:306/:321 | yes A:38, copies complete value | `lowS_ok`, P:66 | A:42: `else none` if parameter/protected span would be overwritten |
 | `Stmt.shift` | yes H4:54 | partial A:107 | `lowS_ok`, P:123 | A:117: `else none` unless source/prestate intervals fit signed word; runtime prestate mismatch stops 106 |
 | `Stmt.ite` | yes J/Struct:46 | yes A:43 | `lowS_ok`, P:69 | recursive branches/code size |
