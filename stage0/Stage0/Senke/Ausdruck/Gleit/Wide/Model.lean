@@ -27,8 +27,9 @@ theorem integerFloat_bounds (n : Nat) :
     · have bounds := (Nat.log2_eq_iff zero).mp rfl
       have exponent : n.log2 + 1 ≤ 56 + integerFloatShift n := by
         unfold integerFloatShift; omega
-      have power := Nat.pow_le_pow_right (by decide : 0 < 2) exponent
-      rw [Nat.pow_add] at power
+      have power : 2 ^ (n.log2 + 1) ≤ 2 ^ 56 * 2 ^ integerFloatShift n := by
+        rw [← Nat.pow_add]
+        exact Nat.pow_le_pow_right (by decide : 0 < 2) exponent
       exact (Nat.div_lt_iff_lt_mul (Nat.two_pow_pos _)).mpr (by omega)
   refine ⟨quotient, ?_⟩
   unfold softShiftJamNat
@@ -71,12 +72,19 @@ theorem integerFloat_round (z : Int) (large : 2 ^ 55 ≤ z.natAbs) :
   let n := z.natAbs
   let k := integerFloatShift n
   let j := softShiftJamNat n k
-  have normalized := integerFloat_normalized n large
-  have bounded := integerFloat_bounds n
+  change routineRoundPackWord (Runner.IR.bool (decide (z < 0)))
+    (BitVec.ofNat 64 (integerFloatIndex n)) (BitVec.ofNat 64 j) = _
+  have largeN : 2 ^ 55 ≤ n := large
+  have normalized : 2 ^ 55 ≤ j ∧ 55 ≤ n.log2 := integerFloat_normalized n largeN
+  have bounded : n / 2 ^ k < 2 ^ 56 ∧ j < 2 ^ 56 := integerFloat_bounds n
   have bits : bitlen j = 56 := bitlen_unique j 56 normalized.1 bounded.2 (by omega)
   have nonzero : z ≠ 0 := by intro hz; simp [hz, n] at large
   have signed : (if decide (z < 0) then -(n : Int) else (n : Int)) = z := by
-    by_cases negative : z < 0 <;> simp [negative, n] <;> omega
+    by_cases negative : z < 0
+    · simp only [negative, decide_true, ite_true, n]
+      exact (Int.eq_neg_natAbs_of_nonpos (Int.le_of_lt negative)).symm
+    · simp only [negative, decide_false, Bool.false_eq_true, ite_false, n]
+      exact (Int.eq_natAbs_of_nonneg (by omega)).symm
   have certificate : n = j * 2 ^ k ∨
       (j % 2 = 1 ∧ (j - 1) * 2 ^ k < n ∧ n < (j + 1) * 2 ^ k) := by
     rcases softShiftJamNat_interval n k with h | h
@@ -91,7 +99,7 @@ theorem integerFloat_round (z : Int) (large : 2 ^ 55 ≤ z.natAbs) :
       (by omega) (by rw [bits]; change (-1022 : Int) ≤ _; omega) certificate
     simp only [sub_self, signed] at interval
     have scale : ((k + 1078 : Nat) : Int) - 1078 = (k : Int) := by omega
-    simpa only [scale] using interval.symm
+    simpa only [scale, ofInt] using interval.symm
   · have index : integerFloatIndex n = 2047 := Nat.min_eq_left (by omega)
     have overflow : (f64.emax : Int) < (bitlen n : Int) - 1 := by
       rw [integerFloat_bitlen n (by omega)]
@@ -100,12 +108,14 @@ theorem integerFloat_round (z : Int) (large : 2 ^ 55 ≤ z.natAbs) :
       omega
     have replay := softRound_replay_all z 0 nonzero
     dsimp only at replay
-    rw [show 0 + (bitlen z.natAbs : Int) - 1 = (bitlen n : Int) - 1 by rfl,
+    rw [show 0 + (bitlen z.natAbs : Int) - 1 = (bitlen n : Int) - 1 by simp only [n, zero_add],
       if_pos overflow] at replay
-    change ofInt f64 z = ⟨decide (z < 0), 2047, 0⟩ at replay
-    rw [replay, index, routineRoundPackWord_model _ _ _ (by omega) bounded.2]
+    have rounded : ofInt f64 z = ⟨decide (z < 0), 2047, 0⟩ := by
+      simpa only [ofInt, show f64.bexpMax = 2047 from rfl] using replay
+    rw [rounded, index, routineRoundPackWord_model (decide (z < 0)) 2047 j (by decide) bounded.2]
     have exp : ¬ softCarryExp 2047 (rundeInt (j / 8) (j % 8) 8) < 2047 := by
       unfold softCarryExp; split <;> omega
+    dsimp only
     simp only [if_neg exp]
 
 /-- Wide halfway cases retain the entire discarded tail, in both signs. -/
@@ -119,8 +129,27 @@ theorem integerFloat_round_zeuge :
         BitVec.ofNat 64 (zuBits f64 (ofInt f64 z)) := by
   intro z member
   have large : 2 ^ 55 ≤ z.natAbs := by
+    have power127 : (2 : Nat) ^ 55 ≤ 2 ^ 127 :=
+      Nat.pow_le_pow_right (by decide : 0 < 2) (by decide : 55 ≤ 127)
+    have power1024 : (2 : Nat) ^ 55 ≤ 2 ^ 1024 :=
+      Nat.pow_le_pow_right (by decide : 0 < 2) (by decide : 55 ≤ 1024)
+    have nonnegative127 : (0 : Int) ≤ 2 ^ 127 := Int.pow_nonneg (by decide)
+    have nonnegative74 : (0 : Int) ≤ 2 ^ 74 := Int.pow_nonneg (by decide)
+    have sumMagnitude : (2 ^ 127 + 2 ^ 74 : Int).natAbs = (2 : Nat) ^ 127 + 2 ^ 74 := by
+      simp only [Int.natAbs_add_of_nonneg nonnegative127 nonnegative74, Int.natAbs_pow,
+        show (2 : Int).natAbs = 2 from rfl]
+    have bumpedMagnitude : (2 ^ 127 + 2 ^ 74 + 1 : Int).natAbs =
+        (2 : Nat) ^ 127 + 2 ^ 74 + 1 := by
+      simp only [Int.natAbs_add_of_nonneg (Int.add_nonneg nonnegative127 nonnegative74)
+        (by decide : (0 : Int) ≤ 1), sumMagnitude, show (1 : Int).natAbs = 1 from rfl]
+    have sumBound := power127.trans (Nat.le_add_right (2 ^ 127) (2 ^ 74))
+    have bumpedBound := sumBound.trans (Nat.le_add_right _ 1)
     simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-    rcases member with rfl | rfl | rfl | rfl <;> decide
+    rcases member with rfl | rfl | rfl | rfl
+    · simpa only [sumMagnitude] using sumBound
+    · simpa only [bumpedMagnitude] using bumpedBound
+    · simpa only [Int.natAbs_neg, bumpedMagnitude] using bumpedBound
+    · simpa only [Int.natAbs_pow, show (2 : Int).natAbs = 2 from rfl] using power1024
   exact ⟨large, integerFloat_round z large⟩
 
 #print axioms integerFloat_round
