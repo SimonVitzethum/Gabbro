@@ -109,9 +109,17 @@ theorem all_grundWahlG (P : Programm D) (C : D.Tab ⊕ D.Glob → Bool) {Γ : Ct
       exact all_grundWahlG P C rest _ h.2
 
 end Wahl
-set_option hygiene false in
+
+/-- An optional foreign result changes the local context, not the read bound. -/
+private theorem GRest.oR_weiterOpt (P : Programm D) (C : D.Tab ⊕ D.Glob → Bool)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (e : Option Ty) (k : GRest D V l Γ Λ') :
+    (GRest.weiterOpt (Λ := Λ) e k).oR P C ↔ k.oR P C := by
+  cases e <;> exact Iff.rfl
+
 /-! ## 2. Every rule keeps the read bound -/
 
+set_option hygiene false in
 /-- Case (A) of `schrittOrte`: a head-local step. -/
 macro "kopfO" : tactic => `(tactic| (
   refine Or.inl ⟨by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self],
@@ -119,7 +127,7 @@ macro "kopfO" : tactic => `(tactic| (
   dsimp only; rw [rufUpdateG_self]
   rw [‹(M.faeden f).kopf.rest = _›] at hok
   dsimp only at hok ⊢
-  simp only [GRest.oR, endblockOrteP, blockOrteP, stmtOrteP, blockOrteP_alsBlock,
+  simp only [GRest.oR, GRest.oR_weiterOpt, endblockOrteP, blockOrteP, stmtOrteP, blockOrteP_alsBlock,
     List.all_append, List.all_cons, List.all_nil, Bool.and_eq_true, Bool.and_true,
     Bool.true_and] at hok ⊢))
 
