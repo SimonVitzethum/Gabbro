@@ -85,4 +85,12 @@ theorem uCheckDriver_ressourcen (c : UCheck) (gate : String) (consumer : UFn) :
     (uCheckDriver c gate consumer).nimmt = [c.duty] ∧
       (uCheckDriver c gate consumer).gibt = [] := ⟨rfl, rfl⟩
 
+/-- The selected infallible driver has one producer completion followed by
+    one consumer call. It never fans one completed token out across gates. -/
+theorem uCheckDriver_reihenfolge (c : UCheck) (gate : String) (consumer : UFn)
+    (normal : consumer.gruende = 0) :
+    (uCheckDriver c gate consumer).body =
+      [.bindCall "verdict" c.probe [], .call consumer.name []] := by
+  simp [uCheckDriver, normal]
+
 end Gabbro.Grammatik.Parser.Uebersetze
