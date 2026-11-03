@@ -108,3 +108,23 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.AlignedStaticWitness.addr_aligned
 #print axioms Gabbro.Stage0.ProfileMismatchWitness.candidate_refused
 #print axioms Gabbro.Stage0.SectionWitness.candidate_refused
+
+-- C01 products: actual emitters, generic simulation and jointly inhabited value flow.
+#print axioms Gabbro.Stage0.Senke.prodArgs_ok
+#print axioms Gabbro.Stage0.Senke.prod_ok
+#print axioms Gabbro.Stage0.Senke.prodGet_ok
+#print axioms Gabbro.Stage0.Senke.prodSet_ok
+#print axioms Gabbro.Stage0.Senke.wordsAt_prodSet
+#print axioms Gabbro.Stage0.Senke.AggregateProbe.Product.prod_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.AggregateProbe.Product.prodGet_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.AggregateProbe.Product.prodSet_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.AggregateProbe.Product.prod_empty_zeuge
+#print axioms Gabbro.Stage0.Pipeline.ProductValueWitness.semantics_zeuge
+#print axioms Gabbro.Stage0.Pipeline.ProductValueWitness.encoding_zeuge
+#print axioms Gabbro.Stage0.Pipeline.ProductValueWitness.wide_encoding_zeuge
+#print axioms Gabbro.Stage0.Pipeline.ProductValueWitness.wide_lowering_zeuge
+#print axioms Gabbro.Stage0.Pipeline.ProductValueWitness.simulation_zeuge
+#print axioms Gabbro.Stage0.Pipeline.ProductValueWitness.block_lowering_zeuge
+#print axioms Gabbro.Stage0.Pipeline.ProductValueWitness.image_zeuge
+#print axioms Gabbro.Stage0.exported_records_ir_correct
+#print axioms Gabbro.Stage0.Pipeline.ProductRecordWitness.exported_records_ir_correct_zeuge
