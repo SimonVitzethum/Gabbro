@@ -43,7 +43,7 @@ theorem block_bindCall_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
       cases rv with
       | ok σ1 v =>
           frame_call_ok (σ.lese Λ args.orte)
-          exact (TreuAusgang.vorCall g1 ((ih_rest rest σ1 _ hscope_rest
+          exact (TreuAusgang.vorCall g1 ((ih_rest σ1 _ hscope_rest
             (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf)) σ' h
       | why σ1 r => exact keinGrund hr r
       | logik _ => simp only [Ausgang.welt, reduceCtorEq] at h
@@ -74,7 +74,7 @@ theorem block_bindCallInd_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
       cases rv with
       | ok σ1 v =>
           frame_call_ok (σ.lese Λ (p.orte ++ args.orte))
-          have g2 := ih_rest rest σ1 (.cons (ergWert (ergSig hf he) v) ρ) hscope_rest
+          have g2 := ih_rest σ1 (.cons (ergWert (ergSig hf he) v) ρ) hscope_rest
             (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
           exact (TreuAusgang.vorCall g1 g2.schrumpf) σ' h
       | why σ1 r => exact keinGrundSig hf hr r
@@ -107,11 +107,11 @@ theorem block_bindCallElse_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
       cases rv with
       | ok σ1 v =>
           frame_call_ok (σ.lese Λ args.orte)
-          exact (TreuAusgang.vorCall g1 ((ih_rest rest σ1 _ hscope_rest
+          exact (TreuAusgang.vorCall g1 ((ih_rest σ1 _ hscope_rest
             (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf)) σ' h
       | why σ1 r =>
           frame_call_why (σ.lese Λ args.orte)
-          exact (TreuAusgang.vorCall g1 ((ih_err err σ1 _ hscope_err
+          exact (TreuAusgang.vorCall g1 ((ih_err σ1 _ hscope_err
             (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf.zuAusgang)) σ' h
       | logik _ => simp only [Ausgang.welt, reduceCtorEq] at h
       | hardware _ => simp only [Ausgang.welt, reduceCtorEq] at h
@@ -143,7 +143,7 @@ theorem block_bindAxiom_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
           (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
         rw [ha] at h1
         have g1 := hl.trans (Treu.weiter hw hg h1)
-        exact (TreuAusgang.vorCall g1 ((ih_rest rest σ1 _ hscope_rest
+        exact (TreuAusgang.vorCall g1 ((ih_rest σ1 _ hscope_rest
           (g1.heldB hh)).schrumpf)) σ' h
 
 theorem block_bindAxiomElse_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
@@ -178,10 +178,10 @@ theorem block_bindAxiomElse_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
       · simp only [Ausgang.welt, reduceCtorEq] at h
       · rw [ha] at h1
         have g1 := hl.trans (Treu.weiter hw hg h1)
-        exact (TreuAusgang.vorCall g1 ((ih_rest rest σ1 _ hscope_rest (g1.heldB hh)).schrumpf)) σ' h
+        exact (TreuAusgang.vorCall g1 ((ih_rest σ1 _ hscope_rest (g1.heldB hh)).schrumpf)) σ' h
       · rw [ha] at h1
         have g1 := hl.trans (Treu.weiter hw hg h1)
-        exact (TreuAusgang.vorCall g1 ((ih_err err σ1 _ hscope_err (g1.heldB hh)).schrumpf.zuAusgang)) σ' h
+        exact (TreuAusgang.vorCall g1 ((ih_err σ1 _ hscope_err (g1.heldB hh)).schrumpf.zuAusgang)) σ' h
 
 theorem block_bindAxiomOpt_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -209,7 +209,7 @@ theorem block_bindAxiomOpt_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
           (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
         rw [ha] at h1
         have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-        have ihr := fun ρ' => ih_rest rest σ1 ρ' hscope_rest
+        have ihr := fun ρ' => ih_rest σ1 ρ' hscope_rest
           (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
         cases e with
         | none =>
@@ -247,7 +247,7 @@ theorem block_bindAxiomOptElse_treu (bo : Option Int) (hbV : BodenUnter bo V.bod
       · simp only [Ausgang.welt, reduceCtorEq] at h
       · rw [ha] at h1
         have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-        have ihr := fun ρ' => ih_rest rest σ1 ρ' hscope_rest
+        have ihr := fun ρ' => ih_rest σ1 ρ' hscope_rest
           (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
         cases e with
         | none =>
@@ -256,7 +256,7 @@ theorem block_bindAxiomOptElse_treu (bo : Option Int) (hbV : BodenUnter bo V.bod
             simp only [Ausgang.weiterOpt] at h; exact (TreuAusgang.vorCall g1 ((ihr _).schrumpf)) σ' h
       · rw [ha] at h1
         have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-        exact (TreuAusgang.vorCall g1 ((ih_err err σ1 _ hscope_err
+        exact (TreuAusgang.vorCall g1 ((ih_err σ1 _ hscope_err
           (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf.zuAusgang)) σ' h
 
 theorem block_regReadElse_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
@@ -287,8 +287,8 @@ theorem block_regReadElse_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
       | some v =>
         have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ zusage.orte
         by_cases hc : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) = true <;> simp only [hc, ite_true, ite_false, Bool.true_eq_false, Bool.false_eq_true] at h ⊢
-        · exact (TreuAusgang.vor hl (ih_rest rest _ _ hscope_rest (hl.heldB hh))).schrumpf σ' h
-        · exact (TreuEnd.vor hl (ih_sonst sonst _ ρ hscope_sonst (hl.heldB hh))).zuAusgang σ' h
+        · exact (TreuAusgang.vor hl (ih_rest _ _ hscope_rest (hl.heldB hh))).schrumpf σ' h
+        · exact (TreuEnd.vor hl (ih_sonst _ ρ hscope_sonst (hl.heldB hh))).zuAusgang σ' h
       | none => simp only [Ausgang.welt, reduceCtorEq] at h
 
 
