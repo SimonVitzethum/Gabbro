@@ -159,7 +159,7 @@ theorem akteurSA_dannVerbrauch {D : Deklaration} {P : Programm D} {O : Orakel D}
     ((D.count t).toNat + bound.toNat + 1) (.dann rest k))
     (M.faeden u).spur (fun σ hg hok => ?_), hL⟩
   obtain ⟨hks, hss, hrest⟩ := okS_dann_cons hok
-  simp only [stmtOrteP, List.append_subset] at hss
+  simp only [stmtOrteP, List.append_subset, and_assoc] at hss
   exact ⟨rfl, hg, ⟨hss.1, hss.2.1, hss.2.2.1, hss.2.2.2.1, hks, hss.2.2.2.2, hrest⟩,
     fun R O' U A => ZErgG.folgt_of_eq
       (semHA_dannVerbrauch S O' U A passes R t member edge inv bound mass body rest k σ ρ)⟩

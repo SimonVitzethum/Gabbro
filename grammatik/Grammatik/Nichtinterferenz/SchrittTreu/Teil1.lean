@@ -68,6 +68,20 @@ theorem schrittK_von_g3 (P : Programm D) (O : Orakel D) (passes : Nat)
       simp only [RufMaschineG.weltVon] at hv
       rw [hv]
       rfl
+  | dannAxiomCallElseOk l Γ Λ Λ' e a args he hp hd hgd hr err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+      kstart
+      subst hs₁
+      simp only [kr, kDann, kDannCons, GEntfaltbar, Stmt.istBlatt]
+      simp only [RufMaschineG.weltVon] at hax
+      rw [hax]
+      rfl
+  | dannAxiomCallElseGrund l Γ Λ Λ' e a args he hp hd hgd hr err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
+      kstart
+      subst hs₁
+      simp only [kr, kDann, kDannCons, GEntfaltbar, Stmt.istBlatt]
+      simp only [RufMaschineG.weltVon] at hax
+      rw [hax]
+      rfl
   | rueckBind caller rest hpop l Γ Λ Λ' τ restb k ρc hcaller Γc Λc e hperm ρ hh g hfg rho hrho s0
       hs0 hΛ s1 hs1 v hv he neu hneu =>
       subst hfg hrho hv hs1

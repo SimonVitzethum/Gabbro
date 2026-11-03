@@ -156,6 +156,13 @@ theorem schrittK_von_g1 (P : Programm D) (O : Orakel D) (passes : Nat)
       simp only [RufMaschineG.weltVon] at hax
       rw [hax]
       rfl
+  | endeBindAxiomOpt l Γ Λ e a args he hp hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+      kstart
+      subst hs₁
+      simp only [kr, kEnde]
+      simp only [RufMaschineG.weltVon] at hax
+      rw [hax]
+      rfl
 
 theorem schrittK_von_g2 (P : Programm D) (O : Orakel D) (passes : Nat)
     {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG2 P O passes M f M') :

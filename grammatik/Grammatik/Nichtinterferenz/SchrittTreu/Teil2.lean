@@ -122,6 +122,27 @@ theorem schrittK_von_g5 (P : Programm D) (O : Orakel D) (passes : Nat)
       simp only [RufMaschineG.weltVon] at hax
       rw [hax]
       rfl
+  | dannBindAxiomOpt _ _ l Γ Λ Λ' e a args he hp hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+      kstart
+      subst hs₁
+      simp only [kr, kDann]
+      simp only [RufMaschineG.weltVon] at hax
+      rw [hax]
+      rfl
+  | dannBindAxiomOptElseOk _ _ l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+      kstart
+      subst hs₁
+      simp only [kr, kDann]
+      simp only [RufMaschineG.weltVon] at hax
+      rw [hax]
+      rfl
+  | dannBindAxiomOptElseGrund _ _ l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
+      kstart
+      subst hs₁
+      simp only [kr, kDann]
+      simp only [RufMaschineG.weltVon] at hax
+      rw [hax]
+      rfl
 
 theorem schrittK_von_g6 (P : Programm D) (O : Orakel D) (passes : Nat)
     {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG6 P O passes M f M') :
@@ -135,6 +156,20 @@ theorem schrittK_von_g6 (P : Programm D) (O : Orakel D) (passes : Nat)
       rw [hax]
       rfl
   | endeBindAxiomElseGrund l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
+      kstart
+      subst hs₁
+      simp only [kr, kEnde]
+      simp only [RufMaschineG.weltVon] at hax
+      rw [hax]
+      rfl
+  | endeBindAxiomOptElseOk l Γ Λ e a args he hr hp hd hgd err rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+      kstart
+      subst hs₁
+      simp only [kr, kEnde]
+      simp only [RufMaschineG.weltVon] at hax
+      rw [hax]
+      rfl
+  | endeBindAxiomOptElseGrund l Γ Λ e a args he hr hp hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
       kstart
       subst hs₁
       simp only [kr, kEnde]

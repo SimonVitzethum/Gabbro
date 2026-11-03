@@ -78,9 +78,6 @@ theorem kong_rufAt_torRuf_diszipliniert (P : Programm D) (O : Orakel D) (passes 
     cases n with
     | zero => exact Or.inr ⟨.logik (.abstieg g), rfl, ⟨g, rfl⟩⟩
     | succ m =>
-        have hgate : torRuf P (rufFrei P O passes m) g σ ρ = .logik (.vorbedingung g) := by
-          unfold torRuf; rw [if_neg hq]
-        rw [hgate]
         exact Or.inl (rufAt_vorbed P O passes m g σ ρ (by simpa [ReqAmEintritt] using hq))
 
 /-- **The congruence at the call level, gated by the entry discipline.**
@@ -233,7 +230,7 @@ theorem rufAt_nurAbstieg (hTO : TreuO O) (hRL : RegLokal O) (hQ : AxVertragO Q O
               (σ.lese (Signatur.anfang D (D.signatur g)) (P.requires g).orte) ρ ≠
                 EndAusgang.logik e' := by
           intro e' hcon
-          rw [← hEqTor m g σ ρ hh, ← hYYstar] at hcon
+          rw [← hEqTor m g σ ρ hh, hYYstar] at hcon
           refine (hK g).2 O hRO hRL hQ U hU (rufEintritt P O passes m) (hRE m)
             (eintritt_ohneLogik P O passes m)
             (σ.lese (Signatur.anfang D (D.signatur g)) (P.requires g).orte) ρ hreq1 e' ?_
@@ -246,7 +243,7 @@ theorem rufAt_nurAbstieg (hTO : TreuO O) (hRL : RegLokal O) (hQ : AxVertragO Q O
               EnsAmRueck P g (σ.lese (Signatur.anfang D (D.signatur g)) (P.requires g).orte)
                 σ₂ ρ v := by
           intro σ₂ v hz
-          rw [← hEqTor m g σ ρ hh, ← hYYstar] at hz
+          rw [← hEqTor m g σ ρ hh, hYYstar] at hz
           refine ((hK g).1 O hRO hRL hQ U hU (rufEintritt P O passes m) (hRE m)
             (eintritt_ohneVorbedingung P O passes m)
             (σ.lese (Signatur.anfang D (D.signatur g)) (P.requires g).orte) ρ hreq1).1 σ₂ v ?_
@@ -257,7 +254,7 @@ theorem rufAt_nurAbstieg (hTO : TreuO O) (hRL : RegLokal O) (hQ : AxVertragO Q O
               (σ.lese (Signatur.anfang D (D.signatur g)) (P.requires g).orte) ρ =
                 .zurueck σ₂ v → InvAmRueck P g σ₂ := by
           intro σ₂ v hz
-          rw [← hEqTor m g σ ρ hh, ← hYYstar] at hz
+          rw [← hEqTor m g σ ρ hh, hYYstar] at hz
           refine hI g O hRO hRL hQ U hU (rufEintritt P O passes m) (hRE m)
             (eintritt_ohneVorbedingung P O passes m)
             (σ.lese (Signatur.anfang D (D.signatur g)) (P.requires g).orte) ρ hreq1 σ₂ v ?_

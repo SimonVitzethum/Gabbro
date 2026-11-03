@@ -98,13 +98,13 @@ theorem blatt_ev (P : Programm D) (O : Orakel D) (passes : Nat)
       exact ⟨[], rfl, evOk_nil⟩
   | .retScoped e Rr, _, hC, σ, ρ, _, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
-      refine ⟨Rr.scopes.map (fun L => Ereignis.gibt L) ++ leseEv σ Λ e.orte, ?_,
+      refine ⟨Rr.scopes.reverse.map (fun L => Ereignis.gibt L) ++ leseEv σ Λ e.orte, ?_,
         evOk_append (evOk_gibt _) (evOk_lese σ Λ hC)⟩
       rw [World.gibt_foldl_spur, List.append_assoc]
       rfl
   | .retWhyScoped r Rr, _, _, σ, ρ, _, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
-      refine ⟨Rr.scopes.map (fun L => Ereignis.gibt L), ?_, evOk_gibt _⟩
+      refine ⟨Rr.scopes.reverse.map (fun L => Ereignis.gibt L), ?_, evOk_gibt _⟩
       rw [World.gibt_foldl_spur]
   | .leave _, _, _, σ, ρ, _, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
