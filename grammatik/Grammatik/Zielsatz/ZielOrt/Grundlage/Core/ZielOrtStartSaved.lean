@@ -60,7 +60,10 @@ private theorem antwortRestG_gut {V : Vertrag D} (g : D.Fn)
   obtain ⟨l, Γ, Λ, ρ, r⟩ := c
   cases a <;> cases r <;>
     simp_all [antwortRestG, GRest.antwortGut]
-  all_goals split at ha <;> simp_all [GRest.antwortGut]
+  all_goals first
+    | (subst ha; simp_all [GRest.antwortGut])
+    | (obtain ⟨_, ha⟩ := ha; subst ha; simp_all [GRest.antwortGut])
+    | (split at ha <;> simp_all [GRest.antwortGut])
 
 private theorem rufAntwortG_gut {P : Programm D} {z z' : RufFadenG D}
     {vor σ : World D}

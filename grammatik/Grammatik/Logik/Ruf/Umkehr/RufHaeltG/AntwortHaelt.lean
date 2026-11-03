@@ -54,7 +54,10 @@ private theorem antwortRestG_freis {V : Vertrag D} (g : D.Fn)
     (ha : antwortRestG g a c = some c') : c'.2.2.2.2.freis = c.2.2.2.2.freis := by
   obtain ⟨l, Γ, Λ, ρ, r⟩ := c
   cases a <;> cases r <;> simp_all [antwortRestG, GRest.freis]
-  all_goals split at ha <;> simp_all [GRest.freis]
+  all_goals first
+    | (subst ha; simp_all [GRest.freis])
+    | (obtain ⟨_, ha⟩ := ha; subst ha; simp_all [GRest.freis])
+    | (split at ha <;> simp_all [GRest.freis])
 
 /-- Delivering an evaluated answer preserves static holdings and caller
     protection whenever the held set of the supplied world is unchanged.
@@ -85,7 +88,7 @@ theorem haeltInvG_rufAntwort {z z' : RufFadenG D} {vor σ : World D}
       simp [rufAntwortG, hst, hr] at ha
       subst z'
       have hc := h.2.1 c (by rw [hst]; exact List.mem_cons_of_mem _ List.mem_cons_self)
-      apply haeltInvG_pop h hst _ _ _ rfl
+      refine haeltInvG_pop h hst ⟨c.f, c.rho, c.s0, r⟩ σ.spur _ rfl ?_ ?_ ?_ ho
       · intro L hL
         change Res.held L ∈ c.rest.2.2.1
         rw [← antwortRestG_ressourcen _ _ _ _ hr]
@@ -95,6 +98,5 @@ theorem haeltInvG_rufAntwort {z z' : RufFadenG D} {vor σ : World D}
         rw [← antwortRestG_freis _ _ _ _ hr]
         exact hL
       · exact antwortRestG_kette _ _ _ _ hc hr
-      · exact ho
 
 end Gabbro.Grammatik

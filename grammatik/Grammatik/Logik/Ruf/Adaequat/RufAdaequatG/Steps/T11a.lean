@@ -274,10 +274,8 @@ theorem trav_dann_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
     | rueckFreigabe ρ a L remaining hhead =>
       rw [hR] at hhead
       cases hhead
-      cases hcov
     | rueckFreigabeLetzte ρ a L hhead z hantwort =>
       rw [hR] at hhead
       cases hhead
-      cases hcov
 
 end Gabbro.Grammatik

@@ -32,7 +32,10 @@ private theorem antwortRestG_fR {V : Vertrag D} (g : D.Fn)
   obtain ⟨l, Γ, Λ, ρ, r⟩ := c
   cases a <;> cases r <;>
     simp_all [antwortRestG, GRest.fR, fB_alsBlock]
-  all_goals split at ha <;> simp_all [GRest.fR, fB_alsBlock]
+  all_goals first
+    | (subst ha; simp_all [GRest.fR, fB_alsBlock])
+    | (obtain ⟨_, ha⟩ := ha; subst ha; simp_all [GRest.fR, fB_alsBlock])
+    | (split at ha <;> simp_all [GRest.fR, fB_alsBlock])
 
 /-- Cleanup leaves the log silent for a root and appends exactly one answer
     event for a callee. Both channels demand the predecessor before cleanup. -/

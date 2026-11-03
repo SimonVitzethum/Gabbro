@@ -20,7 +20,10 @@ private theorem antwortRestG_scopesGut {V : Vertrag D} (g : D.Fn)
   obtain ⟨l, Γ, Λ, ρ, r⟩ := c
   cases a <;> cases r <;>
     simp_all [antwortRestG, GRest.scopesGut, scopesOk_alsBlock]
-  all_goals split at ha <;> simp_all [GRest.scopesGut, scopesOk_alsBlock]
+  all_goals first
+    | (subst ha; simp_all [GRest.scopesGut, scopesOk_alsBlock])
+    | (obtain ⟨_, ha⟩ := ha; subst ha; simp_all [GRest.scopesGut, scopesOk_alsBlock])
+    | (split at ha <;> simp_all [GRest.scopesGut, scopesOk_alsBlock])
 
 private theorem rufAntwortG_scopesGut {z z' : RufFadenG D} {vor σ : World D}
     {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
