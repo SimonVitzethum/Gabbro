@@ -219,9 +219,9 @@ theorem block_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       have hscope_rest : rest.ScopesOk := by scopes_treu
       exact (TreuAusgang.vor hl (block_treu bo hbV rest _ _ hscope_rest (hl.heldB hh))).schrumpf σ' h
   | .bindCall f args he hp hr rest, σ, ρ, hscope, hh, σ', h => by
-      exact block_bindCall_treu bo hbV (block_treu bo hbV) f args he hp hr rest σ ρ hscope hh σ' h
+      exact block_bindCall_treu O passes R hR hO bo hbV (block_treu bo hbV) f args he hp hr rest σ ρ hscope hh σ' h
   | .bindCallInd p args he hp hr rest, σ, ρ, hscope, hh, σ', h => by
-      exact block_bindCallInd_treu bo hbV (block_treu bo hbV) p args he hp hr rest σ ρ hscope hh σ' h
+      exact block_bindCallInd_treu O passes R hR hO bo hbV (block_treu bo hbV) p args he hp hr rest σ ρ hscope hh σ' h
   | .bindCallIndElse p args he hp hr err rest, σ, ρ, hscope, hh, σ', h => by
       simp only [execBlock] at h
       have hscope_rest : rest.ScopesOk := by scopes_treu
@@ -231,15 +231,15 @@ theorem block_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         _ _
         (fun s1 v hh1 => (block_treu bo hbV rest s1 _ hscope_rest hh1).schrumpf) (fun s1 r hh1 => (end_treu bo hbV err s1 _ hscope_err hh1).schrumpf.zuAusgang) σ' h
   | .bindCallElse f args he hp hr err rest, σ, ρ, hscope, hh, σ', h => by
-      exact block_bindCallElse_treu bo hbV (block_treu bo hbV) (end_treu bo hbV) f args he hp hr err rest σ ρ hscope hh σ' h
+      exact block_bindCallElse_treu O passes R hR hO bo hbV (block_treu bo hbV) (end_treu bo hbV) f args he hp hr err rest σ ρ hscope hh σ' h
   | .bindAxiom a args he hw hg hd hgd rest, σ, ρ, hscope, hh, σ', h => by
-      exact block_bindAxiom_treu bo hbV (block_treu bo hbV) a args he hw hg hd hgd rest σ ρ hscope hh σ' h
+      exact block_bindAxiom_treu O passes R hR hO bo hbV (block_treu bo hbV) a args he hw hg hd hgd rest σ ρ hscope hh σ' h
   | .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ, hscope, hh, σ', h => by
-      exact block_bindAxiomElse_treu bo hbV (block_treu bo hbV) (end_treu bo hbV) a args he hr hw hg hd hgd err rest σ ρ hscope hh σ' h
+      exact block_bindAxiomElse_treu O passes R hR hO bo hbV (block_treu bo hbV) (end_treu bo hbV) a args he hr hw hg hd hgd err rest σ ρ hscope hh σ' h
   | .bindAxiomOpt e a args he hp hd hgd rest, σ, ρ, hscope, hh, σ', h => by
-      exact block_bindAxiomOpt_treu bo hbV (block_treu bo hbV) e a args he hp hd hgd rest σ ρ hscope hh σ' h
+      exact block_bindAxiomOpt_treu O passes R hR hO bo hbV (block_treu bo hbV) e a args he hp hd hgd rest σ ρ hscope hh σ' h
   | .bindAxiomOptElse e a args he hp hd hgd hr err rest, σ, ρ, hscope, hh, σ', h => by
-      exact block_bindAxiomOptElse_treu bo hbV (block_treu bo hbV) (end_treu bo hbV) e a args he hp hd hgd hr err rest σ ρ hscope hh σ' h
+      exact block_bindAxiomOptElse_treu O passes R hR hO bo hbV (block_treu bo hbV) (end_treu bo hbV) e a args he hp hd hgd hr err rest σ ρ hscope hh σ' h
   | .regRead r _ rest, σ, ρ, hscope, hh, σ', h => by
       have hscope_rest : rest.ScopesOk := by scopes_treu
       simp only [execBlock] at h ⊢
@@ -254,7 +254,7 @@ theorem block_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
           · simp only [Ausgang.welt, reduceCtorEq] at h
       | none => simp only [Ausgang.welt, reduceCtorEq] at h
   | .regReadElse r hk zusage sonst rest, σ, ρ, hscope, hh, σ', h => by
-      exact block_regReadElse_treu bo hbV (block_treu bo hbV) (end_treu bo hbV) r hk zusage sonst rest σ ρ hscope hh σ' h
+      exact block_regReadElse_treu O passes R hR hO bo hbV (block_treu bo hbV) (end_treu bo hbV) r hk zusage sonst rest σ ρ hscope hh σ' h
   | .awaits g _ _ hL _ rest, σ, ρ, hscope, hh, σ', h => by
       have hscope_rest : rest.ScopesOk := by scopes_treu
       simp only [execBlock] at h ⊢
@@ -368,17 +368,17 @@ theorem end_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       have hscope_rest : rest.ScopesOk := by scopes_treu
       exact (TreuEnd.vor hl (end_treu bo hbV rest _ _ hscope_rest (hl.heldB hh))).schrumpf σ' h
   | .bindCall f args he hp hr rest, σ, ρ, hscope, hh, σ', h => by
-      exact end_bindCall_treu bo hbV (end_treu bo hbV) f args he hp hr rest σ ρ hscope hh σ' h
+      exact end_bindCall_treu O passes R hR hO bo hbV (end_treu bo hbV) f args he hp hr rest σ ρ hscope hh σ' h
   | .bindCallElse f args he hp hr err rest, σ, ρ, hscope, hh, σ', h => by
-      exact end_bindCallElse_treu bo hbV (end_treu bo hbV) f args he hp hr err rest σ ρ hscope hh σ' h
+      exact end_bindCallElse_treu O passes R hR hO bo hbV (end_treu bo hbV) f args he hp hr err rest σ ρ hscope hh σ' h
   | .bindAxiom a args he hw hg hd hgd rest, σ, ρ, hscope, hh, σ', h => by
-      exact end_bindAxiom_treu bo hbV (end_treu bo hbV) a args he hw hg hd hgd rest σ ρ hscope hh σ' h
+      exact end_bindAxiom_treu O passes R hR hO bo hbV (end_treu bo hbV) a args he hw hg hd hgd rest σ ρ hscope hh σ' h
   | .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ, hscope, hh, σ', h => by
-      exact end_bindAxiomElse_treu bo hbV (end_treu bo hbV) a args he hr hw hg hd hgd err rest σ ρ hscope hh σ' h
+      exact end_bindAxiomElse_treu O passes R hR hO bo hbV (end_treu bo hbV) a args he hr hw hg hd hgd err rest σ ρ hscope hh σ' h
   | .bindAxiomOpt e a args he hp hd hgd rest, σ, ρ, hscope, hh, σ', h => by
-      exact end_bindAxiomOpt_treu bo hbV (end_treu bo hbV) e a args he hp hd hgd rest σ ρ hscope hh σ' h
+      exact end_bindAxiomOpt_treu O passes R hR hO bo hbV (end_treu bo hbV) e a args he hp hd hgd rest σ ρ hscope hh σ' h
   | .bindAxiomOptElse e a args he hp hd hgd hr err rest, σ, ρ, hscope, hh, σ', h => by
-      exact end_bindAxiomOptElse_treu bo hbV (end_treu bo hbV) e a args he hp hd hgd hr err rest σ ρ hscope hh σ' h
+      exact end_bindAxiomOptElse_treu O passes R hR hO bo hbV (end_treu bo hbV) e a args he hp hd hgd hr err rest σ ρ hscope hh σ' h
   | .regRead r _ rest, σ, ρ, hscope, hh, σ', h => by
       have hscope_rest : rest.ScopesOk := by scopes_treu
       simp only [execEnd] at h ⊢
@@ -393,7 +393,7 @@ theorem end_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
           · simp only [EndAusgang.welt, reduceCtorEq] at h
       | none => simp only [EndAusgang.welt, reduceCtorEq] at h
   | .regReadElse r hk zusage sonst rest, σ, ρ, hscope, hh, σ', h => by
-      exact end_regReadElse_treu bo hbV (end_treu bo hbV) r hk zusage sonst rest σ ρ hscope hh σ' h
+      exact end_regReadElse_treu O passes R hR hO bo hbV (end_treu bo hbV) r hk zusage sonst rest σ ρ hscope hh σ' h
   | .awaits g _ _ hL _ rest, σ, ρ, hscope, hh, σ', h => by
       have hscope_rest : rest.ScopesOk := by scopes_treu
       simp only [execEnd] at h ⊢
@@ -405,7 +405,7 @@ theorem end_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         exact (TreuEnd.vor hl (end_treu bo hbV rest _ _ hscope_rest (hl.heldB hh))).schrumpf σ' h
       · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .bindCallInd p args he hp hr rest, σ, ρ, hscope, hh, σ', h => by
-      exact end_bindCallInd_treu bo hbV (end_treu bo hbV) p args he hp hr rest σ ρ hscope hh σ' h
+      exact end_bindCallInd_treu O passes R hR hO bo hbV (end_treu bo hbV) p args he hp hr rest σ ρ hscope hh σ' h
   | .bindCallIndElse p args he hp hr err rest, σ, ρ, hscope, hh, σ', h => by
       simp only [execEnd] at h
       have hscope_rest : rest.ScopesOk := by scopes_treu
