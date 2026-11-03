@@ -230,11 +230,13 @@ theorem blatt_erhaelt_globs
   | retScoped e R =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
-      rfl
+      rw [(World.gibt_foldl_speicher _ _).2]
+      try rfl
   | retWhyScoped r R =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
-      rfl
+      rw [(World.gibt_foldl_speicher _ _).2]
+      try rfl
 
 /-! ## 3. Lock exclusivity: two threads never hold the same lock -/
 
