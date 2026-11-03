@@ -74,6 +74,11 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
   | Γ, fn, Λ, pe, .floatLit x q lo hi :: rest =>
     (R.seq (.fl lo hi :: Γ) (fn.mitWert x (.fl lo hi)) Λ pe rest).bind fun (⟨Λ', b⟩, r) =>
       .ok (⟨Λ', Block.floatLit q lo hi b⟩, r)
+  | Γ, fn, Λ, pe, .floatOf x operand lo hi :: rest => do
+    let ⟨.int _ _, value⟩ ← lowWertE u Γ Λ fn none operand
+      | .error "floatOf: operand is not an integer"
+    let (⟨Λ', body⟩, remaining) ← R.seq (.fl lo hi :: Γ) (fn.mitWert x (.fl lo hi)) Λ pe rest
+    pure (⟨Λ', Block.floatOf value lo hi body⟩, remaining)
   | Γ, fn, Λ, pe, .float x op a b lo hi :: rest => do
     let ⟨.fl _ _, left⟩ ← lowWertE u Γ Λ fn none a | .error "float: left operand is not a float"
     let ⟨.fl _ _, right⟩ ← lowWertE u Γ Λ fn none b | .error "float: right operand is not a float"
@@ -281,6 +286,22 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
   | Γ, fn, Λ, pe, s :: rest =>
     (lowStmtL u caller Γ fn Λ s).bind fun ⟨Λ₁, st⟩ =>
       (R.seq Γ fn Λ₁ pe rest).bind fun (⟨Λ₂, b⟩, r) => .ok (⟨Λ₂, Block.cons st b⟩, r)
+
+/-- A computed integer is passed unchanged to the canonical IEEE introduction.
+    Only the continuation sees the declared float range; the model retains its
+    finite/range failure as `Logik.bereich`. -/
+theorem lowSeqStep_floatOf {l : Bool} (u : UProg) (caller : Fin u.fns.length)
+    (R : LowStufe u caller) (Γ : Ctx) (fn : UFn) (Λ Λ' : List (Res (declOf u)))
+    (pe : AtTop u caller Λ) (x : String) (side : USide) (lo hi : Int × Int)
+    (l1 h1 : Int) (rest remaining : List UStmt)
+    (value : Expr (declOf u) Γ Λ (.int l1 h1))
+    (body : Block (declOf u) (verOf u caller) l (.fl lo hi :: Γ) Λ Λ')
+    (operand : lowWertE u Γ Λ fn none side = .ok ⟨.int l1 h1, value⟩)
+    (continuation : R.seq (l := l) (.fl lo hi :: Γ) (fn.mitWert x (.fl lo hi)) Λ pe rest =
+      .ok (⟨Λ', body⟩, remaining)) :
+    lowSeqStep (l := l) u caller R Γ fn Λ pe (.floatOf x side lo hi :: rest) =
+      .ok (⟨Λ', Block.floatOf value lo hi body⟩, remaining) := by
+  simp only [lowSeqStep, operand, continuation, bind, Except.bind, pure, Except.pure] <;> rfl
 
 /-- Float narrowing uses the same checked local lookup and ending fallback as
     integer narrowing. The successful continuation alone sees the shadow binding;
