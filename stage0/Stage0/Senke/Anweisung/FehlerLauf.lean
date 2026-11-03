@@ -101,8 +101,13 @@ theorem torElse_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {�
         simp only [rohW, if_neg (show D.agruende a ≠ 0 by omega),
           if_neg (show ¬ (-4095 ≤ w.toInt ∧ w.toInt ≤ -1) by omega)]
         rw [Int.mul_ediv_cancel _ (by omega)]
+      have tag : (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).2 %
+          ((D.agruende a : Int) + 1) = 0 := by
+        rw [hroh]
+        simp only [rohW, if_neg (show D.agruende a ≠ 0 by omega),
+          if_neg (show ¬ (-4095 ≤ w.toInt ∧ w.toInt ≤ -1) by omega), Int.mul_emod_left]
       exact TorOK.ref_answer a n (he.trans (congrArg some type)) (torC_bound ht)
-        (σ.fragt (.inl a)) (evalArgs σ args σ ρ) w.toInt (.inr quotient) nonnegative
+        (σ.fragt (.inl a)) (evalArgs σ args σ ρ) w.toInt (.inr ⟨tag, quotient⟩) nonnegative
     have checked := chkAnswer_ok (L := L) (z := O.zeiger) he hck hpk htk hw2 valid
     have s12 := s1.trans s2
     rw [pc_add] at s12
