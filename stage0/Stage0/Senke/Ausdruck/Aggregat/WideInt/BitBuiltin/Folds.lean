@@ -142,7 +142,7 @@ theorem logarithm_ok {hi : Int} (width : Nat) (bound : hi < (2 : Int) ^ width)
         have := Int.toNat_of_nonneg x.lo_le; omega
       apply Zahl.ext_n
       change (x.n.toNat.log2 : Int) = _
-      conv_lhs => rw [Nat.log2_def]
+      rw [Nat.log2_def]
       by_cases hx : x.n < 2
       · have hn : ¬ 2 ≤ x.n.toNat := small.mp hx
         simp only [hx, hn, decide_true, ite_true, ite_false, zero]
