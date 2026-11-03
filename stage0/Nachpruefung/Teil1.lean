@@ -463,3 +463,25 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Grammatik.Parser.ExportWitnesses2.arrays_source_zeuge
 #print axioms Gabbro.Grammatik.Parser.ExportPreservation.array_traversal_lower
 #print axioms Gabbro.Grammatik.Parser.ExportWitnesses2.treeTraversal_source_zeuge
+
+-- General software-addition replay and emitted word simulation (finite IEEE equality remains open).
+#print axioms Gabbro.Stage0.Senke.routineTopNat_bounds
+#print axioms Gabbro.Stage0.Senke.routineLeadingZerosWord_model
+#print axioms Gabbro.Stage0.Senke.routineLeadingZerosL_ok
+#print axioms Gabbro.Stage0.Senke.routineLeftCount_normalizes
+#print axioms Gabbro.Stage0.Senke.routineLeftCount_exact
+#print axioms Gabbro.Stage0.Senke.routineLeftCount_round_exact
+#print axioms Gabbro.Stage0.Senke.routineLeftCountL_ok
+#print axioms Gabbro.Stage0.Senke.routineLeftShiftL_exact
+#print axioms Gabbro.Stage0.Senke.softRound_odd_interval
+#print axioms Gabbro.Stage0.Senke.softRound_shiftJam
+#print axioms Gabbro.Stage0.Senke.softRound_aligned_add
+#print axioms Gabbro.Stage0.Senke.softRound_aligned_sub
+#print axioms Gabbro.Stage0.Senke.softRound_replay_all
+#print axioms Gabbro.Stage0.Senke.routineRoundPackL_ok
+#print axioms Gabbro.Stage0.Senke.softAddRoutineL_word
+#print axioms Gabbro.Stage0.Senke.softAddRoutineL_special_ok
+#print axioms Gabbro.Stage0.Senke.softAddRoutineWord_zeuge
+#print axioms Gabbro.Stage0.Senke.softAddRoutineL_word_zeuge
+#print axioms Gabbro.Stage0.Senke.softRound_replay_all_zeuge
+#print axioms Gabbro.Stage0.Senke.routineLeftCount_zeuge
