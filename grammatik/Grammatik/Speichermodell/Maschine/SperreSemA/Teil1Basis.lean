@@ -274,12 +274,18 @@ theorem Endblock.execBlockHA_alsBlock :
       execBlockHA S O U A passes R e.alsBlock.2 σ ρ = (execEndHA S O U A passes R e σ ρ).zuAusgang
   | _, _, .ret _ _, _, _ => rfl
   | _, _, .retWhy _ _, _, _ => rfl
-  | _, _, .retScoped _ _, _, _ => by
-      simp only [Endblock.alsBlock, execBlockHA, execStmtHA, execEndHA]
-      split <;> rfl
-  | _, _, .retWhyScoped _ _, _, _ => by
-      simp only [Endblock.alsBlock, execBlockHA, execStmtHA, execEndHA]
-      split <;> rfl
+  | _, Λ, .retScoped e cleanup, σ, _ => by
+      by_cases h : scopesInvH S cleanup.scopes (leseA A σ Λ e.orte) = true
+      · simp only [Endblock.alsBlock, execBlockHA, execStmtHA, execEndHA, h, ite_true]
+        rfl
+      · simp only [Endblock.alsBlock, execBlockHA, execStmtHA, execEndHA, h, ite_false]
+        rfl
+  | _, _, .retWhyScoped r cleanup, σ, _ => by
+      by_cases h : scopesInvH S cleanup.scopes σ = true
+      · simp only [Endblock.alsBlock, execBlockHA, execStmtHA, execEndHA, h, ite_true]
+        rfl
+      · simp only [Endblock.alsBlock, execBlockHA, execStmtHA, execEndHA, h, ite_false]
+        rfl
   | _, _, .leave _, _, _ => rfl
   | _, _, .next _, _, _ => rfl
   | _, _, .cons s rest, σ, ρ => by
