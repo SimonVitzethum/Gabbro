@@ -56,9 +56,11 @@ theorem stringCatC_ok {n q d a b ptr need : Nat} {m : Runner.Mem} {pc : Runner.W
     (by omega) (by omega) (Or.inl (by omega))
     (by simpa only [widthA] using p.left.code)
     (by simpa only [widthA, copyWords_length] using p.left.far) bytesA
+  simp only [widthA] at s1
   have ch1' : Agree fp (d + 1) (d + 1 + n) m m1 := by simpa only [widthA] using ch1
   have p1 := p.next ((Agree.widen ch1' (by omega)).mono (by omega : d ≤ d + 1))
     (by omega : d ≤ d + 1 + n) (by omega)
+  simp only [copyWords_length] at p1
   have pz := trimPre p1.left (by omega : a ≤ K)
   obtain ⟨m2, s2, ch2, zeros⟩ := constWords_ok (L := L) (List.replicate q 0)
     (by rw [zeros_top]; omega) pz
@@ -83,6 +85,7 @@ theorem stringCatC_ok {n q d a b ptr need : Nat} {m : Runner.Mem} {pc : Runner.W
   obtain ⟨m3, s3, ch3, appended, kept⟩ := stringAppend_ok (L := L) (stringBytes q vt.1)
     (by omega) (by omega) (by omega) (by omega) lenA2 bytesB2
     (by simpa only [widthB] using p2'.left)
+  simp only [widthB] at s3
   have p3 : Pre L m3 _ fp K d [ci 3 d a b] ρ W reserved :=
     { p2'.next ch3 (Nat.le_refl _) (by omega) with ctx := pre.ctx }
   have readA : m3.rd64 (slot fp (BitVec.ofNat 64 a)) = some (BitVec.ofNat 64 vs.1.length) := by
