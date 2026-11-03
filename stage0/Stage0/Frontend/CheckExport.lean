@@ -19,7 +19,7 @@ public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
 namespace Gabbro.Stage0
 open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
-  Gabbro.Grammatik.Parser.ExportPreservation
+  Gabbro.Grammatik.Parser.ExportPreservation Gabbro.Grammatik.Zielsatz
 
 /-- What full closure needs at the Stage-0 gate: every elaborated check
     resolves to lowered function indices -- its probe and gate wrappers,

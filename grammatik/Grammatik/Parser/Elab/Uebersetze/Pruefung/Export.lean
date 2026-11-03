@@ -38,15 +38,15 @@ variable {D : Deklaration} [DecidableEq D.Fn]
 def uCheckIdx (u : UProg) (c : UCheck) : Except String (Fin u.fns.length × List (Fin u.fns.length)) := do
   if !(u.marken.any fun m => strEq m c.duty) then .error ("duty unknown: " ++ c.duty)
   else
-    let p ← fnIdx u.fns c.probe
-    let gs ← uSeq (c.tore.map (fnIdx u.fns))
+    let p ← UebersetzeAllg.fnIdx u.fns c.probe
+    let gs ← uSeq (c.tore.map (UebersetzeAllg.fnIdx u.fns))
     .ok (p, gs)
 
 /-- The resolution read back as names. -/
 def uCheckAufloesung (u : UProg) (c : UCheck) :
     Except String (String × List String) := do
   let (p, gs) ← uCheckIdx u c
-  .ok ((fnAt u p).name, gs.map fun g => (fnAt u g).name)
+  .ok ((UebersetzeAllg.fnAt u p).name, gs.map fun g => (UebersetzeAllg.fnAt u g).name)
 
 /-- The elaborated check resolves to its generated producer and its gate. -/
 example : ((elabU [probenFn, .checkT probenCheck]).bind fun u =>
@@ -128,7 +128,7 @@ theorem checkB_leer (P : Programm D) (tabs : List D.Tab) (globs : List D.Glob)
 /-- No `CheckDecl` exists over an elaborated unit yet: `declOf` carries
     `Marke = Empty`, so the Duty has no denotation. Full closure needs the
     lead's Marke-carrying declaration. -/
-theorem uCheckDecl_unbewohnt (u : UProg) : IsEmpty (CheckDecl (declOf u)) :=
+theorem uCheckDecl_unbewohnt (u : UProg) : IsEmpty (CheckDecl (UebersetzeAllg.declOf u)) :=
   ⟨fun c => Empty.elim c.duty.1⟩
 
 /-- The discharge satisfies the goal leg: the consumed entry of the probe
