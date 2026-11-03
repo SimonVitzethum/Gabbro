@@ -419,8 +419,7 @@ def returnFold (source : List SItemTief) (locals : Spec.Locals)
     match matchFoldNode e with
     | none => pure (.ret (some e))
     | some _ => do
-      let some _ := result | throw "fold range: explicit result required"
-      let tags := (tagFoldNodes e 0).1
+      let some _ := result | throw "fold range: explicit result required"      let tags := (tagFoldNodes e 0).1
       if hasDuplicateTags tags then throw "fold range: duplicate nested fold"
       let (d, idx, tests) ← parseAndCheck source locals [] tags result e
       let used := d.binder :: locals.map Prod.fst ++
@@ -440,23 +439,5 @@ def returnFold (source : List SItemTief) (locals : Spec.Locals)
       let prefix := buildFoldPrefix d idx filter' value' sF sV sE empty' tests
       pure (.block prefix (some (.ret (some (.variable acc)))))
   | statement => pure statement
-
-/-- Range folds in any other position refuse instead of reaching another fold path. -/
-private def expression (expr : SExpr) : Except String SExpr :=
-  match expr with
-  | .ext .foldAdd (_ :: "range" :: _) _ | .ext .foldMin (_ :: "range" :: _) _ |
-    .ext .foldMax (_ :: "range" :: _) _ | .ext .foldAnd (_ :: "range" :: _) _ |
-    .ext .foldOr (_ :: "range" :: _) _ =>
-    .error "fold range: range folds are only supported as a direct return"
-  | expr => .ok expr
-
-/-- Reuse the shared lexical visitor before generic checks and before spec resolution.
-    Symbolic N is compared to the symbolic array length; instantiation substitutes
-    both through the existing constant-parameter machinery. -/
-def prepare (source : List SItemTief) : Except String (List SItemTief) :=
-  let walk : Spec.Walk := { source, instantiate := false, resolveSpecs := false,
-    statementRewrite := returnFold source,
-    exprRewrite := fun _ _ e => expression e }
-  source.mapM (walk.item 100000)
 
 end Gabbro.Grammatik.Parser.SourceFolds
