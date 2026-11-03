@@ -6,11 +6,9 @@
     probes run on the real `elabU` output (`uCheckAufloesung`, decided by
     kernel evaluation). `elabText` chains the actual stages -- lex, parse,
     elaborate -- on source text, with one end-to-end acceptance witness and
-    refusal witnesses (unknown gate, duplicate check). `checkB_leer` and
-    `akzeptiertX`'s default pin today's Stage-0 behavior (the `pruef` leg
-    runs on `[]`); `uCheckDecl_unbewohnt` pins why full closure needs the
-    lead's Marke-carrying declaration (`declOf` has `Marke = Empty`, so no
-    Duty exists yet). `treue_aus_entladung` connects the discharge to the
+    refusal witnesses (unknown gate, duplicate check). `checkB_leer` pins the
+    empty leg, which still holds vacuously. The Duty gap is closed
+    (`Ableitung.uCheckDecls`, `Zulassung.checkU_akzeptiert`). `treue_aus_entladung` connects the discharge to the
     goal leg `CheckTreueG`. -/
 module
 
@@ -118,18 +116,11 @@ def checkTextDoppelt : String :=
 
 example : (elabText checkTextDoppelt).isErr = true := by decide
 
-/-! ## Today's Stage-0 behavior and the open Duty gap -/
+/-! ## The empty leg still holds vacuously; the Duty gap is closed -/
 
-/-- Today's Stage-0 acceptance runs the `pruef` leg on no checks: the empty
-    admission holds vacuously. -/
+/-- The empty admission holds vacuously: no checks, nothing to discharge. -/
 theorem checkB_leer (P : Programm D) (tabs : List D.Tab) (globs : List D.Glob)
     (fns : List D.Fn) : checkB P tabs globs fns [] = true := rfl
-
-/-- No `CheckDecl` exists over an elaborated unit yet: `declOf` carries
-    `Marke = Empty`, so the Duty has no denotation. Full closure needs the
-    lead's Marke-carrying declaration. -/
-theorem uCheckDecl_unbewohnt (u : UProg) : IsEmpty (CheckDecl (UebersetzeAllg.declOf u)) :=
-  ⟨fun c => Empty.elim c.duty.1⟩
 
 /-- The discharge satisfies the goal leg: the consumed entry of the probe
     with the completed report names exactly one declared gate of the check. -/
