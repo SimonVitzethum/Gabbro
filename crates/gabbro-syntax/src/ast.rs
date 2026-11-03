@@ -2363,32 +2363,27 @@ pub enum Verschachtelt {
     Begrenzt(Expr),
 }
 
-/// **«entrust» -- der Raum, dessen INHALT Gabbro nicht kennt** (2026-08-18).
+/// A guest code region whose contents are outside Gabbro's body semantics.
 ///
-/// Gabbro sagt ueber den Gast **nichts**: keine Kosten, keine Wirkungen, keine Terminierung,
-/// keine Blattheit. Was es sagt, ist der **Vertrag am Eintritt**. *Das ist keine Luecke,
-/// sondern der Zweck eines Mikrokernels -- fuer den Gast gilt Isolation statt Beweis.*
-///
-/// **Der Vertrag ist derselbe wie bei `entry`** -- und der war am Tag, an dem dieses Item
-/// entstand, gemessen leer: zwoelf Felder, und keine Datei ausserhalb des Lesers nannte
-/// `EntryDecl` (`pruefe-klauseln.py`). *Wer `entrust` baut, baut ihn zum ersten Mal.*
+/// The bounded userspace meaning invokes an explicitly bound isolation service
+/// through an ordinary fallible foreign call. Its requires/ensures and isolation
+/// are software user-logic obligations. Guest instructions receive no Gabbro body,
+/// termination or cost guarantee; register-state or privileged entry stays excluded.
+/// The source-to-model service binding remains required before compilation.
 #[derive(Debug, Clone)]
 pub struct EntrustDecl {
     pub name: Ident,
-    /// Der `code`-Raum -- ein **Name**, kein Ausdruck.
-    ///
-    /// *Ein `entrust` auf einen gerechneten Wert waere ein Sprung an eine ausgerechnete
-    /// Adresse* -- genau das, was nicht nennbar sein soll. `N006` haelt ihn gegen die
-    /// Deklarationen dieser Einheit.
+    /// A named code-region capability; never an integer or a computed address.
     pub raum: Ident,
     pub arch: Ident,
-    /// Was der Gast beim Eintritt in den Registern hat.
+    /// Retained source fields for a supported ordinary userspace ABI adapter.
+    /// They do not authorize manipulating architectural register state.
     pub regs_gast: Vec<(Ident, Ident)>,
-    /// Auf welchem Stapel er laeuft.
+    /// The stack region, passed through the proved service binding.
     pub stapel: Ident,
-    /// **Pflicht, und nicht schmueckend.** Dass der Gast seinen Vertrag haelt, ist eine
-    /// Aussage ueber die Umgebung; sie muss erklaert und FALSIFIZIERBAR sein
-    /// (`N004`/`N005`) -- dieselbe Regel wie `progress` (`S003`/`S004`).
+    /// A genuine named hardware assumption only. This field cannot assert OS
+    /// isolation, authorize guest execution, or discharge the service contract.
+    /// Software isolation belongs to the C08 user-logic proof obligation.
     pub annahme: Ident,
     pub span: Span,
 }
