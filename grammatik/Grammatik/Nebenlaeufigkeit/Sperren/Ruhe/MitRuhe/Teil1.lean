@@ -161,7 +161,7 @@ theorem valR_valZ (τ : Ty) (v : Val (Option D.Fn) (passtM D) (tyR τ)) : valR �
   axBeleg := D.axBeleg
   anbieter_passt := fun t a h => by
     obtain ⟨h1, h2, n, h3, h4⟩ := D.anbieter_passt t a h
-    exact ⟨h1, by simp only [h2, List.map_nil], n, by simp only [h3, Option.map_some, tyR], h4⟩
+    exact ⟨h1, by simp only [h2, List.map_nil], n, by simp only [h3, Option.map_some, tyR, Ty.mapNumbers, id], h4⟩
   Reg := D.Reg
   rtyp := fun r => tyR (D.rtyp r)
   rklasse := D.rklasse
