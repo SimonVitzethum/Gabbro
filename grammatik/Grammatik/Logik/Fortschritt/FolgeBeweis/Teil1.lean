@@ -251,6 +251,8 @@ theorem fR_anRueck (e : Bool) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       cases b with
       | ret _ _ => simpa [GRest.fR, fE] using h
       | retWhy _ _ => simpa [GRest.fR, fE] using h
+      | retScoped _ _ => simpa [GRest.fR, fE] using h
+      | retWhyScoped _ _ => simpa [GRest.fR, fE] using h
       | cons s _ =>
           cases s <;> simp_all [GRest.anRueck, Endblock.istRueck, Stmt.istRueck, GRest.fR, fE, fS]
       | _ => simp only [GRest.anRueck, Endblock.istRueck, Bool.false_eq_true] at ha

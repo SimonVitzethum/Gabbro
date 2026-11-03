@@ -309,7 +309,6 @@ theorem semH_leaveVerbrauch {Λ Λx : List (Res D)} (t : D.Tab)
   have hl : (leseB inv σm ρ).2 = true := hw
   subst σm
   simp only [weiterH, Env.tail, hm', hfall, if_true, hl]
-  rfl
 
 theorem semH_nextVerbrauch {Λ Λx : List (Res D)} (t : D.Tab)
     (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
