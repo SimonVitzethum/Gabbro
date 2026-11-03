@@ -51,7 +51,11 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
 @[lowE_eqs] theorem lowE_case (cs : List (Option Ty)) (i : Fin cs.length)
       (nutz : NutzlastExpr D Γ Λ (cs.get i)) :
     lowE (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.case cs i nutz) d =
-    (if sumFits cs then lowN (currentOld := currentOld) L (reserved := reserved) i.val nutz d else none) := by rfl
+    (if sumFits cs then lowN (currentOld := currentOld) L (reserved := reserved) i.val nutz d else
+      sumSpanL cs i d (match nutz with
+        | .empty => some ([], d + integerWords 0 (cs.length - 1))
+        | .val e => lowE (currentOld := currentOld) L (reserved := reserved) e
+            (d + integerWords 0 (cs.length - 1)))) := by rfl
 
 @[lowE_eqs] theorem lowN_empty (tag : Nat) :
     lowN (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ) tag .empty d = some ([ci 1 d tag 0], d + 1) := by rfl
