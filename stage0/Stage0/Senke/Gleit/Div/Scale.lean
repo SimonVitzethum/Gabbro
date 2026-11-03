@@ -87,8 +87,16 @@ theorem softDiv_exponent (a b ca cb t j : Nat) (ap : 0 < a) (bp : 0 < b)
     · rw [if_neg (by omega), if_pos small]
     · rw [if_pos (by omega), if_neg small]
 
+/-- Both directions of exponent subtraction instantiate the same search,
+    including the one-place correction for a significand ratio below one. -/
+theorem softDiv_exponent_zeuge :
+    findeExp ((2 ^ 52) * 2 ^ 7) ((3 * 2 ^ 51) * 2 ^ 2) = 4 ∧
+    findeExp ((3 * 2 ^ 51) * 2 ^ 2) ((2 ^ 52) * 2 ^ 7) = -5 := by
+  decide +kernel
+
 #print axioms softDiv_power_compare
 #print axioms softRoundRatio_power
 #print axioms softRoundRatio_normalize
 #print axioms softDiv_exponent
+#print axioms softDiv_exponent_zeuge
 end Gabbro.Stage0.Senke
