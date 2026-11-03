@@ -38,6 +38,8 @@ def ruE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .glob g hL => Expr.glob (D := D.mitRuhe) g (gdarfR hL)
   | _, _, _, .slot t f i hL => Expr.slot (D := D.mitRuhe) t f (ruE i) (darfR hL)
   | _, _, _, .thru p t ht f i hL => Expr.thru (D := D.mitRuhe) (ruE p) t ht f (ruE i) (darfR hL)
+  | _, _, _, .thruOwn p t ht f i m s ho he hg hm hL =>
+      Expr.thruOwn (D := D.mitRuhe) (ruE p) t ht f (ruE i) m s ho he hg (mem_map_rm.mpr hm) (darfR hL)
   | _, _, _, .ptrOf t n ht rw => Expr.ptrOf (D := D.mitRuhe) t n ht rw
   | _, _, _, .fnref f n h => .fnref (D := D.mitRuhe) (some f) (n + 1) h
   | _, _, _, .refEq a b => .refEq (ruE a) (ruE b)
@@ -131,6 +133,8 @@ def ruS {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} 
   | _, _, _, _, .assignSlot t f i e hw hL => .assignSlot t f (ruE i) (ruE e) hw (darfR hL)
   | _, _, _, _, .assignThru p t ht f i e hw hL =>
       .assignThru (ruE p) t ht f (ruE i) (ruE e) hw (darfR hL)
+  | _, _, _, _, .assignThruOwn p t ht f i e m s ho he hg hm hw hL =>
+      .assignThruOwn (ruE p) t ht f (ruE i) (ruE e) m s ho he hg (mem_map_rm.mpr hm) hw (darfR hL)
   | _, _, _, _, .assignSlotRef r t ht ho f e hw hL =>
       .assignSlotRef (ruE r) t ht ho f (ruE e) hw (darfR hL)
   | _, _, _, _, .assignGlob g e hw hL => .assignGlob g (ruE e) hw (gdarfR hL)
