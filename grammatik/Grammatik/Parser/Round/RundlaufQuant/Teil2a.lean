@@ -222,13 +222,16 @@ theorem exists_unary_rund (x dk : String) (ns : List String) (ops : List SExpr)
         (druckToks body ++ .zeichen ")" :: R))) =
       .ok (.ext .any (x :: dk :: ns) (ops ++ [body]), .zeichen ")" :: R) := by
     simp only [parseUnary, hP]
+  have hStop : CmpStop (.zeichen ")" :: R) := ⟨rfl, rfl, rfl, rfl⟩
+  have hUnd : opUnd (.zeichen ")" :: R) = none := rfl
+  have hOder : opOder (.zeichen ")" :: R) = none := rfl
   have hO : parseOr (g + 9) (.wort "exists" :: nameTok x :: .wort "in" ::
       (domToks dk ns (druckToksViele ops) ++ .zeichen ":" ::
         (druckToks body ++ .zeichen ")" :: R))) =
       .ok (.ext .any (x :: dk :: ns) (ops ++ [body]), .zeichen ")" :: R) := by
     simp only [parseOr, parseAnd, parseCmp, parseBit, parseAdd, parseMul, hU,
-      parseMulL, parseAddL, parseBitL, parseAndL, parseOrL, opMul, opAdd, opBit,
-      opVgl, opUnd, opOder]
+      parseMulL, parseAddL, parseBitL, parseAndL, parseOrL, hStop.mul, hStop.add,
+      hStop.bit, hStop.vgl, hUnd, hOder]
   exact un_paren_fall _ _ _ _ (paren_arm _ _ _ _ hO)
 
 theorem bein_quant (k : XKind) (hk : k = .all ∨ k = .any) (x dk : String) (ns : List String) (ops : List SExpr)
