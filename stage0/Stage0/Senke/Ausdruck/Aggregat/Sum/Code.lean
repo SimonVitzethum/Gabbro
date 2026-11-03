@@ -45,4 +45,13 @@ theorem sumSpanL_span {cs : List (Option Ty)} {i : Fin cs.length} {d top : Nat}
   obtain ⟨child, _, _, rfl⟩ := made
   omega
 
+/-- Test a separated tag above the complete input span, preserving all payload words. -/
+def sumSpanTestC (s scratch k : Nat) : List II :=
+  [ci 2 scratch s 0, ci 1 (scratch + 1) k 0, ci 14 scratch scratch (scratch + 1)]
+
+/-- Selected payloads move forward into the binder's ordinary context span. -/
+def sumSpanPayloadC (s : Nat) (c : Option Ty) : List II :=
+  copyWords (payloadWords c) s (s + 1)
+
 end Gabbro.Stage0.Senke
+
