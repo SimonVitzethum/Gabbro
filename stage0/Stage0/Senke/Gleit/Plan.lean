@@ -1,17 +1,16 @@
 /-
-Design note: software IEEE-754 binary64 addition for `Block.float` (`op = add`).
+Design note: software IEEE-754 binary64 add/sub for `Block.float`.
 
-Status. `lowB` refuses every `Block.float`
-(`stage0/Stage0/Senke/Anweisung.lean`): `Runner.IR.op` has no float
-arithmetic instruction, and integer opcodes 3-6 do not implement
-`gleitRechne`. `floatLit` (kernel-rounded bits), `floatOf` (software
-conversion) and `floatNarrow` (range check with fallback) are lowered
-with lemmas; float arithmetic is not. Lead decision (strongest variant,
-no new hardware assumption): lower addition in SOFTWARE, as a Stage-0
-IR routine built only from existing integer instructions of the runner,
-proved equal to the kernel IEEE model on all inputs (NaN, infinities,
-signed zeros, subnormals, round-to-nearest-even). The runner is NOT
-extended. `sub`/`mul`/`div` stay refused until their own routines land.
+Status. `lowB` routes addition and subtraction through `floatAddSubBlockL`.
+The existing integer-only adder has `softAddRoutine_ok`; subtraction
+flips bit 63 of the right operand with one xor before reusing that adder.
+`Normal/Sub.lean` supplies `softSub_model` from `softAddComposed_model`
+and the kernel's definitional `sub = add (neg right)` identity, including
+NaN payloads/signs and signed zeros. `blockFloatAddSub_case` connects both
+operations to `lowB_ok` with the shared rounded-result range guard and
+stop 107. The subtraction extension and witnesses await the lead's Lean
+checks and runner measurement. Multiplication and division remain refused.
+No float opcode, runner extension or hardware assumption is introduced.
 
 1. Kernel specification (grammatik).
    `Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean`:
@@ -71,10 +70,12 @@ extended. `sub`/`mul`/`div` stay refused until their own routines land.
    (b) The IR routine is proved to compute `softAdd` by `WordCode`
    composition (`WordCode.bin`/`const`, the `Eng` lemmas), reusing the
    `floatOfInt` emitter pattern and `FloatEmission` ceilings.
-   (c) Only then: a `lowB` arm for `Block.float` with `op = .add`,
-   reusing `floatNarrowC` with `stop 107` on a range miss; `sub`/`mul`/
-   `div` stay refused. Each layer carries its `_zeuge` witness and
-   `#print axioms` check.
+   (c) `lowB` selects the shared `Block.float` add/sub template,
+   reusing `floatNarrowC` with `stop 107` on a nonfinite result or a
+   range miss. Subtraction adapts only the right producer before operand
+   retention; the finite arithmetic and Block proof are shared. Each layer
+   carries its `_zeuge` witness and `#print axioms` check. Multiplication
+   and division remain refused.
 -/
 module
 public import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
