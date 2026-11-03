@@ -165,6 +165,13 @@ def chkC : Option Ty → Nat → Option (List II)
   | some .never, s => some (stopC 110 s)
   | _, _ => none
 
+/-- Types whose successful words cannot be confused with the errno channel.
+    Boolean payloads are normalized after errno dispatch. -/
+def fallibleTy : Ty → Bool
+  | .int lo _ => decide (0 ≤ lo)
+  | .bool => true
+  | _ => false
+
 /-- This register profile materializes every returning result in exactly one word. -/
 theorem chkC_width {τ : Ty} {s : Nat} {c : List II}
     (h : chkC (some τ) s = some c) : valueWords τ = 1 := by
