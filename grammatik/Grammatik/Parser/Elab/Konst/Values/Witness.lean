@@ -201,4 +201,58 @@ theorem binder_refused_zeuge :
       .error "const open argument at `captured`: certified substitution needs closed arguments" :=
   ⟨rfl, rfl, rfl⟩
 
+/-- The normalization induction has a non-degenerate original qualified-name fixture. -/
+theorem source_meaning_normalized_zeuge :
+    let D := declaration [] (.int 0 10)
+    let source := SExpr.bin "+" (.variable "module::K") (.lit 1)
+    ∃ normalized : Normalized (D := D) [] [("module::K", 5)] source,
+      normalize [] [("module::K", 5)] source = .ok normalized ∧
+      Scalar.expression [] (normalizeNames ([] : Locals []) [("module::K", 5)] source) =
+        .ok normalized.code ∧ normalized.code.1 = .int 6 6 := by
+  dsimp only
+  let normalized := (normalize (D := declaration [] (.int 0 10)) [] [("module::K", 5)]
+    (.bin "+" (.variable "module::K") (.lit 1))).toOption.get (by decide)
+  exact ⟨normalized, by rfl, normalized.meaning.normalized, by rfl⟩
+
+theorem integer_argument_normalized_denotation_zeuge :
+    ∃ argument : IntegerArgument [] [("module::K", 5)] 0 10
+        (.bin "+" (.variable "module::K") (.lit 1)) 6,
+      ∀ before after,
+        uKonstWert 0 10 [] [] 64
+          (normalizeNames ([] : Locals []) [("module::K", 5)]
+            (.bin "+" (.variable "module::K") (.lit 1))) =
+          some (eval before argument.code.expr after .nil).n := by
+  let normalized := (normalize (D := declaration [] (.int 0 10)) [] [("module::K", 5)]
+    (.bin "+" (.variable "module::K") (.lit 1))).toOption.get (by decide)
+  let argument : IntegerArgument [] [("module::K", 5)] 0 10
+      (.bin "+" (.variable "module::K") (.lit 1)) 6 :=
+    ⟨normalized, 6, 6, Code.add (Code.literal 5) (Code.literal 1), by rfl, by rfl, by rfl⟩
+  exact ⟨argument, argument.normalized_denotation⟩
+
+/-- The common replacement theorem has success, exact value and soundness jointly. -/
+theorem replacement_sound_zeuge :
+    ∃ replacement : Replacement optional [optional] [] [.lit 3],
+      checkReplacement optional [optional] [] [.lit 3] = .ok replacement ∧
+      replacement.syntax = .call "Some" [.lit 3] ∧ replacement.evidence.Sound := by
+  let replacement := (checkReplacement optional [optional] [] [.lit 3]).toOption.get (by decide)
+  exact ⟨replacement, by rfl, by rfl, replacement.sound⟩
+
+/-- The production theorem derives the certificate from actual substitution success. -/
+theorem substitution_certified_zeuge :
+    ∃ checked : Replacement optional [optional] [] [.lit 3],
+      checkReplacement optional [optional] [] [.lit 3] = .ok checked ∧
+      SExpr.call "Some" [.lit 3] = checked.syntax ∧ checked.evidence.Sound := by
+  exact ersetzeSExpr_call_certified [] [optional] "optional" [.lit 3] [.lit 3]
+    optional (.call "Some" [.lit 3]) (by rfl) (by rfl) (by rfl)
+
+/-- Generic quotation is instantiated with a complete noninteger G value. -/
+theorem reify_denotes_zeuge :
+    let D := declaration [] .bool
+    ∃ literal : Reified D [] [] .bool true,
+      reify [] [] 64 .bool true = .ok literal ∧ literal.syntax = .tru ∧
+      ∀ before after, eval before literal.expr after .nil = true := by
+  dsimp only
+  let literal := (reify (D := declaration [] .bool) (Γ := []) [] [] 64 .bool true).toOption.get (by decide)
+  exact ⟨literal, by rfl, by rfl, fun before after => reify_denotes literal before after .nil⟩
+
 end Gabbro.Grammatik.Parser.Konst.Values.Witness
