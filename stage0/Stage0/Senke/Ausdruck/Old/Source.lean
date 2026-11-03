@@ -155,4 +155,39 @@ def accepts (u : UProg) (P : Programm (declOf u)) : Except String Bool := do
   let guests ← sourceGuests u
   pure (AkzeptiertX P (sperrFamilie u) (List.finRange u.fns.length) ls cs ws [] [] [] guests)
 
+/-- Restoring function postconditions retains the exact foreign contract family. -/
+theorem restore_axVertrag (items : List SItemTief) (u : UProg)
+    (P Q : Programm (declOf u)) (h : restore items u P = .ok Q) :
+    Q.axVertrag = P.axVertrag := by
+  unfold restore at h
+  cases hx : expandU items with
+  | error error => simp only [hx, bind, Except.bind, reduceCtorEq] at h
+  | ok expanded =>
+    simp only [hx, bind, Except.bind] at h
+    cases hs : collect u.fns.length (EnsTy u) (atFunction expanded.1 u P) with
+    | error error => simp only [hs, bind, Except.bind, reduceCtorEq] at h
+    | ok es =>
+      simp only [hs, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at h
+      subst Q
+      rfl
+
+/-- Successful production admission retains one canonically admitted descriptor
+    per source guest. In particular, an empty adapter cannot hide a guest. -/
+theorem accepts_guests (u : UProg) (P : Programm (declOf u))
+    (accepted : accepts u P = .ok true) :
+    ∃ guests, sourceGuests u = .ok guests ∧ guests.length = u.guests.length ∧
+      ∀ guest ∈ guests, guest.admittedB = true := by
+  unfold accepts at accepted
+  split at accepted
+  · cases accepted
+  · cases hg : sourceGuests u with
+    | error error => simp [hg] at accepted
+    | ok guests =>
+      simp only [hg, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at accepted
+      refine ⟨guests, hg, sourceGuests_complete u guests hg, ?_⟩
+      unfold AkzeptiertX at accepted
+      exact fun guest member =>
+        GuestBoundary.admissionB_each (Bool.and_eq_true.mp accepted).2 guest member
+
 end Gabbro.Stage0.OldSource
+
