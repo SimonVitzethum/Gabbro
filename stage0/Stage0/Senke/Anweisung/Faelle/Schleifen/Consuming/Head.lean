@@ -30,7 +30,7 @@ def massW (σ : World D) (ρ : Env D Γ) : World D × Int :=
 def sel (σ : World D) (ρ : Env D Γ) :=
   verbrauchSel x.table q.selector.member q.selector.edge σ ρ
 
-def Entry (n : Nat) (m : Mem) (σ : World D) (ρ : Env D Γ) : Prop :=
+def Entry (q : Loop x Γ Λ) (n : Nat) (m : Mem) (σ : World D) (ρ : Env D Γ) : Prop :=
   x.Ready m σ ρ ∧ x.read m x.counter (BitVec.ofNat 64 n) ∧ n ≤ x.fuel
 
 variable {q} {n : Nat} {m : Mem} {σ : World D} {ρ : Env D Γ}
