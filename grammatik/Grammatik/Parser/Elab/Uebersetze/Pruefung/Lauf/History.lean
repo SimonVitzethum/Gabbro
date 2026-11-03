@@ -181,6 +181,28 @@ theorem checkGhostHistory_event (u : UProg) (c : CheckDecl (declOf u))
 def checkGhostComplete {D : Deklaration} (state : CheckGhostState D) : Bool :=
   !state.refused && state.pending.isNone && state.history.all (fun entry => !entry.lebt)
 
+/-- A reporter's actual parameter capture is appended at its enclosing
+    probe's actual normal return. This is the generic return-site law used
+    with `checkGhostHistory_event`, for G and GX alike. -/
+theorem checkGhostStep_probe_return (u : UProg) (c : CheckDecl (declOf u))
+    (consumer gate reporter : (declOf u).Fn)
+    (notProbe : reporter ≠ c.probe) (notConsumer : reporter ≠ consumer)
+    (args : Env (declOf u) ((declOf u).params reporter))
+    (value : ErgVal (declOf u) ((declOf u).erg reporter))
+    (probeArgs : Env (declOf u) ((declOf u).params c.probe))
+    (probeValue : ErgVal (declOf u) ((declOf u).erg c.probe))
+    (before after : World (declOf u)) (report : CheckReport)
+    (actual : actualCheckReturn u reporter args value = some (c.name, report))
+    (verdict : rueckUrteil c (.rueck c.probe probeArgs probeValue before after) =
+      some report.urteil) (history : List (CheckEvidenz (declOf u))) :
+    (checkGhostStep u c consumer gate
+      (checkGhostStep u c consumer gate
+        { frames := [reporter, c.probe], history := history }
+        (.rueck reporter args value before after))
+      (.rueck c.probe probeArgs probeValue before after)).history =
+        ⟨c.probe, report, true, none⟩ :: history := by
+  simp [checkGhostStep, notProbe, notConsumer, actual, verdict]
+
 /-- A real report's samples and floor outcomes survive consumption verbatim.
     This strengthens replay with its actual parameter provenance. -/
 theorem replayEintrag_from_samples (u : UProg) (c : CheckDecl (declOf u))
