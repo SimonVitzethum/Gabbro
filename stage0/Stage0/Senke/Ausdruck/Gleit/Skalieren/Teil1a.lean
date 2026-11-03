@@ -37,11 +37,11 @@ theorem floatShiftRemainderWord_model (a : Runner.W) (k : Nat) :
 
 /-- Every unsigned input is allowed. The count bound makes the denominator a
     positive signed word, as required by floatRoundL's proved comparison. -/
-theorem floatRoundShiftL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+{reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {a k : Nat → Option (List II × Nat)} {av : Runner.W} {s : Nat}
-    (ha : WordCode (L := L) ρ W a av)
-    (hk : WordCode (L := L) ρ W k (BitVec.ofNat 64 s)) (hs : s < 63) :
-    WordCode (L := L) ρ W (fun d => floatRoundShiftL d a k)
+    (ha : WordCode (L := L) (reserved := reserved) ρ W a av)
+    (hk : WordCode (L := L) (reserved := reserved) ρ W k (BitVec.ofNat 64 s)) (hs : s < 63) :
+    WordCode (L := L) (reserved := reserved) ρ W (fun d => floatRoundShiftL d a k)
       (BitVec.ofNat 64 (Gleitkomma.rundeInt (av.toNat / 2^s) (av.toNat % 2^s) (2^s))) := by
   have hkn : (BitVec.ofNat 64 s).toNat = s := by
     rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
@@ -53,12 +53,12 @@ theorem floatRoundShiftL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
   have hdv : (BitVec.ofInt 64 1) <<< s = BitVec.ofNat 64 (2^s) := by
     apply BitVec.eq_of_toNat_eq
     simp [BitVec.toNat_shiftLeft, Nat.shiftLeft_eq]
-  have q : WordCode (L := L) ρ W _ _ := floatShiftQuotL_ok ha hk
-  have back : WordCode (L := L) ρ W _ _ := WordCode.bin q hk
+  have q : WordCode (L := L) (reserved := reserved) ρ W _ _ := floatShiftQuotL_ok ha hk
+  have back : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin q hk
     (g := fun a b => some (a <<< (b.toNat % 64))) rfl rfl (by decide : 11 < 256)
-  have rem : WordCode (L := L) ρ W _ _ := WordCode.bin ha back
+  have rem : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin ha back
     (g := fun a b => some (a - b)) rfl rfl (by decide : 4 < 256)
-  have den : WordCode (L := L) ρ W _ _ := WordCode.bin
+  have den : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin
     (WordCode.const 1 (by decide)) hk (g := fun a b => some (a <<< (b.toNat % 64)))
     rfl rfl (by decide : 11 < 256)
   intro fp K d c top h hK m pc hp
