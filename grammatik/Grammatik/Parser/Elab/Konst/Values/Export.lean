@@ -33,7 +33,7 @@ theorem call_equation (fn : Function params result)
     List.nil_append, Code.equation, wahr?]
   split
   · rfl
-  · simp only [execEnd, footprint, World.lese, List.map_nil, World.merke,
+  · simp only [execEnd, ErgExpr.orte, footprint, World.lese, List.map_nil, World.merke,
       List.nil_append, evalErg, Code.equation, EndAusgang.schrumpf, ergEnv, wahr?]
     rfl
 
