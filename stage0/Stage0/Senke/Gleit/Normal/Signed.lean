@@ -10,7 +10,7 @@ private theorem signedData (s : Bool) (n : Nat) (positive : 0 < n) :
     (if s then -(n : Int) else (n : Int)) ≠ 0 ∧
       (if s then -(n : Int) else (n : Int)).natAbs = n ∧
       decide ((if s then -(n : Int) else (n : Int)) < 0) = s := by
-  cases s <;> simp [show (0 : Int) < n by omega, show n ≠ 0 by omega]
+  cases s <;> simp [positive, show n ≠ 0 by omega]
 
 /-- The replay depends on the sign, the positioned leading bit, and the
     rounded significand. A subnormal decision is needed only below `emin`. -/

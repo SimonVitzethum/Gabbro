@@ -24,8 +24,9 @@ theorem bitlen_odd_interval (j n gap : Nat) (jp : 2 ≤ j)
     rw [show bitlen j - 1 = (bitlen j - 2) + 1 by omega,
       Nat.pow_succ, Nat.mul_comm]
   have highPower : 2 ^ bitlen j = 2 * 2 ^ (bitlen j - 1) := by
-    rw [show bitlen j = (bitlen j - 1) + 1 by omega,
-      Nat.pow_succ, Nat.mul_comm]
+    calc
+      2 ^ bitlen j = 2 ^ ((bitlen j - 1) + 1) := by congr 1; omega
+      _ = 2 * 2 ^ (bitlen j - 1) := by rw [Nat.pow_succ, Nat.mul_comm]
   have powerEven : 2 ^ (bitlen j - 1) % 2 = 0 := by rw [lowPower]; omega
   have different : 2 ^ (bitlen j - 1) ≠ j := by
     intro same
