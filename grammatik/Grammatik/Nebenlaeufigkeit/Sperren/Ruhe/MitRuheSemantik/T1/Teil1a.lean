@@ -160,7 +160,7 @@ theorem eval_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : 
   | _, _, _, .fnref .., _ => rfl
   | _, _, _, .refEq a b, ρ => by
       show decide (_ = _) = decide (_ = _)
-      rw [eval_ru σ₀ σ a ρ, eval_ru σ₀ σ b ρ]
+      erw [eval_ru σ₀ σ a ρ, eval_ru σ₀ σ b ρ]
       rfl
   | _, _, _, .slotRef r t _ _ f _, ρ =>
       congrArg (fun z : Nat => valR (D.typ t f) (σ.slots t (z : Int) f))
@@ -233,48 +233,48 @@ theorem eval_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : 
   | _, _, _, .arrNil, _ => funext fun j => j.elim0
   | _, _, _, .arrCons a b, ρ => by
       show arrConsW _ _ = valR (.arr _ _) (arrConsW (eval σ₀ a σ ρ) (eval σ₀ b σ ρ))
-      rw [eval_ru σ₀ σ a ρ, eval_ru σ₀ σ b ρ]
+      erw [eval_ru σ₀ σ a ρ, eval_ru σ₀ σ b ρ]
       funext j
       simp only [arrConsW, valR]
       split <;> rfl
   | _, _, _, .arrGet a i, ρ => by
       show (eval (worldR σ₀) (ruE a) (worldR σ) (envR ρ)) _ = _
-      rw [eval_ru σ₀ σ a ρ, eval_ru σ₀ σ i ρ]
+      erw [eval_ru σ₀ σ a ρ, eval_ru σ₀ σ i ρ]
       rfl
   | _, _, _, .arrSet a i v, ρ => by
       show arrSetW _ _ _ = valR (.arr _ _) (arrSetW (eval σ₀ a σ ρ) (eval σ₀ i σ ρ).fin (eval σ₀ v σ ρ))
-      rw [eval_ru σ₀ σ a ρ, eval_ru σ₀ σ i ρ, eval_ru σ₀ σ v ρ]
+      erw [eval_ru σ₀ σ a ρ, eval_ru σ₀ σ i ρ, eval_ru σ₀ σ v ρ]
       funext j
       simp only [arrSetW, valR]
       split <;> rfl
   | _, _, _, .strLit _ _, _ => rfl
   | _, _, _, .strLen e, ρ => by
       show strLenW _ = _
-      rw [eval_ru σ₀ σ e ρ]
+      erw [eval_ru σ₀ σ e ρ]
       rfl
   | _, _, _, .strCat e e', ρ => by
       show strCatW _ _ = _
-      rw [eval_ru σ₀ σ e ρ, eval_ru σ₀ σ e' ρ]
+      erw [eval_ru σ₀ σ e ρ, eval_ru σ₀ σ e' ρ]
       rfl
   | _, _, _, .strGet e e', ρ => by
       show strGetW _ _ = _
-      rw [eval_ru σ₀ σ e ρ, eval_ru σ₀ σ e' ρ]
+      erw [eval_ru σ₀ σ e ρ, eval_ru σ₀ σ e' ρ]
       rfl
   | _, _, _, .strEq e e', ρ => by
       show strEqW _ _ = _
-      rw [eval_ru σ₀ σ e ρ, eval_ru σ₀ σ e' ρ]
+      erw [eval_ru σ₀ σ e ρ, eval_ru σ₀ σ e' ρ]
       rfl
   | _, _, _, .strLt e e', ρ => by
       show strLtW _ _ = _
-      rw [eval_ru σ₀ σ e ρ, eval_ru σ₀ σ e' ρ]
+      erw [eval_ru σ₀ σ e ρ, eval_ru σ₀ σ e' ρ]
       rfl
   | _, _, _, .strWeit _ e, ρ => by
       show strWeitW _ _ = _
-      rw [eval_ru σ₀ σ e ρ]
+      erw [eval_ru σ₀ σ e ρ]
       rfl
   | _, _, _, .wenn c a b, ρ => by
       show (if wahr? (eval _ (ruE c) _ _) then eval _ (ruE a) _ _ else eval _ (ruE b) _ _) = _
-      rw [eval_ru σ₀ σ c ρ, eval_ru σ₀ σ a ρ, eval_ru σ₀ σ b ρ]
+      erw [eval_ru σ₀ σ c ρ, eval_ru σ₀ σ a ρ, eval_ru σ₀ σ b ρ]
       show (if wahr? (eval σ₀ c σ ρ) then _ else _) = valR _ (if wahr? (eval σ₀ c σ ρ) then _ else _)
       split <;> rfl
   | _, _, _, .eng e lo' hi' s, ρ => by

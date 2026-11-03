@@ -109,15 +109,15 @@ theorem akteurSA_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel 
                       (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
                     (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ) :
                   RufRahmenG D } :: (M.faeden u).stapel,
-              kopf :=
-                { f := g, rho := rho, s0 := s0,
-                  rest := (⟨false, (⟨D.params g,
-                    (⟨Signatur.anfang D (D.signatur g), (rho, GRest.ende (P.rumpf g))⟩ :
-                      (Λ : List (Res D)) × Env D (D.params g) × GRest D (vertragVon D g) false (D.params g) Λ)⟩ :
-                    (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D g) false Γ Λ)⟩ :
-                    (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D g) l Γ Λ) :
-                  RufRahmenG D },
-              spur := s0.spur, log := RufEreignisF.eintritt g rho s0 :: (M.faeden u).log : RufFadenG D },
+                kopf :=
+                  { f := g, rho := rho, s0 := s0,
+                    rest := (⟨false, (⟨D.params g,
+                      (⟨Signatur.anfang D (D.signatur g), (rho, GRest.ende (P.rumpf g))⟩ :
+                        (Λ : List (Res D)) × Env D (D.params g) × GRest D (vertragVon D g) false (D.params g) Λ)⟩ :
+                      (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D g) false Γ Λ)⟩ :
+                      (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D g) l Γ Λ) :
+                    RufRahmenG D },
+                spur := s0.spur, log := RufEreignisF.eintritt g rho s0 :: (M.faeden u).log : RufFadenG D },
             lauf := M.lauf ++ rufEigenG u neu, start := M.start : RufMaschineG D }.faeden u).log := by
   subst hs0 hrho
   simp only [RufMaschineG.weltVon, rufUpdateG_self]

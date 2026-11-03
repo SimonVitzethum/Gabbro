@@ -408,6 +408,7 @@ theorem akkuEinzelB_iff {P : Programm D} {fs : List D.Fn} {tabs : List D.Tab}
       List.any_eq_true.mpr ⟨q, hmem, (kernAbfrageEinzelB_iff hT hG).mpr hq⟩
     have b7 : akkuRangOrdnungB a = true := (akkuRangOrdnungB_iff).mpr h7
     rw [b0, b1, b2, b3, b4, b5, b6, b7]
+    rfl
 
 /-! ## 6. The admission Bool -/
 
