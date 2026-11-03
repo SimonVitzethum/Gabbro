@@ -53,9 +53,9 @@ def routineLessL (d : Nat) (a b : Nat → Option (List II × Nat)) :
 
 theorem routineLessL_ok {reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {a b : Nat → Option (List II × Nat)} {av bv : Runner.W}
-    (ha : WordCode (L := L) (reserved := reserved) (reserved := reserved) ρ W a av)
-    (hb : WordCode (L := L) (reserved := reserved) (reserved := reserved) ρ W b bv) :
-    WordCode (L := L) (reserved := reserved) (reserved := reserved) ρ W (fun d => routineLessL d a b)
+    (ha : WordCode (L := L) (reserved := reserved) ρ W a av)
+    (hb : WordCode (L := L) (reserved := reserved) ρ W b bv) :
+    WordCode (L := L) (reserved := reserved) ρ W (fun d => routineLessL d a b)
       (Runner.IR.bool (av.ult bv)) :=
   WordCode.bin ha hb (g := fun x y => some (Runner.IR.bool (x.ult y)))
     rfl rfl (by decide : 27 < 256)

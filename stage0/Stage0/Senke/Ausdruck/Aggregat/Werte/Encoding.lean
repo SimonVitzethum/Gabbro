@@ -133,7 +133,7 @@ theorem encodeWords_length (L : Lay D) (τ : Ty) (v : Wert D τ) :
     simp only [encodeWords, valueWords]
     split
     · rfl
-· have selected : ∀ (cs : List (Option Ty)) (i : Fin cs.length)
+    · have selected : ∀ (cs : List (Option Ty)) (i : Fin cs.length)
           (v : Fall D.Fn D.passt cs i),
           (∀ τ, some τ ∈ cs → ∀ w : Wert D τ,
             (encodeWords L τ w).length = valueWords τ) →
