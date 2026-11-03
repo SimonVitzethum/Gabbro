@@ -38,6 +38,7 @@ theorem bytesLt_keys : ∀ (as bs : List Int),
         omega
       simp only [bytesLt, keys, List.map_cons, lexLt]
       rw [lt, eq, ih bs (fun x hx => ha x (by simp [hx])) (fun x hx => hb x (by simp [hx]))]
+      rfl
 
 def keyAt (bs : List Int) (i : Nat) : Nat := ((keys bs)[i]?).getD 0
 
