@@ -85,9 +85,16 @@ theorem softDivJam_round_zeuge :
     softDivJam_round _ _ _ (by decide) (by decide) (by decide),
     softDivJam_round _ _ _ (by decide) (by decide) (by decide)⟩
 
+/-- Exact rational ties retain quotient parity before any packing step.
+    Both decisions use the kernel round-to-nearest-even operation. -/
+theorem softRoundRatio_ties_zeuge :
+    softRoundRatio 1 2 0 = 0 ∧ softRoundRatio 3 2 0 = 2 := by
+  decide +kernel
+
 #print axioms softDiv_normQ
 #print axioms softDiv_subQ
 #print axioms softDivJam_round
 #print axioms softDiv_normalize_round
 #print axioms softDivJam_round_zeuge
+#print axioms softRoundRatio_ties_zeuge
 end Gabbro.Stage0.Senke
