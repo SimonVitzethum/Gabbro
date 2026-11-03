@@ -5,6 +5,7 @@ public import Stage0.Senke.Gleit.Sticky.Round
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Gleitkomma Runner.IR
+variable [Runner.IR.Kern]
 
 /-- Translating an odd interval by an even guard-scaled magnitude preserves
     its rounding decision. This covers the same-sign aligned addition path. -/
