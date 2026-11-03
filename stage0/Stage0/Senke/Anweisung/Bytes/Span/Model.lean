@@ -105,7 +105,8 @@ theorem bytes_chunk_word (σ : World D) (t : D.Tab) (f : D.Feld t)
   · have chunks : σ.bytesAb t f hf n p =
         σ.bytesAb t f hf 8 p ++ σ.bytesAb t f hf (n - 8) (p + 8) := by
       have total : 8 + (n - 8) = n := by omega
-      simpa only [total] using (World.bytesAb_append σ t f hf 8 (n - 8) p)
+      simpa only [total, show ((8 : Nat) : Int) = (8 : Int) from rfl] using
+        (World.bytesAb_append σ t f hf 8 (n - 8) p)
     rw [chunks, bytesZuZahl_append, World.bytesAb_length, BitVec.ofInt_add, BitVec.ofInt_mul]
     have zero : BitVec.ofInt 64 ((256 : Int) ^ 8) = 0#64 := by decide
     rw [zero, BitVec.zero_mul, BitVec.add_zero]
