@@ -4,6 +4,7 @@ module
 public import Grammatik.Parser.Profil.Auswahl
 public import Grammatik.Parser.Profil.Pipeline
 public import Grammatik.Parser.Profil.Register
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.Consumer
 @[expose] public section
 
 
@@ -15,6 +16,7 @@ structure Options where
   arch : String := "x86_64"
   target : Option String := none
   mode : Auswahl.BauModus := .auslieferung
+  checkConsumer : Option Uebersetze.CheckConsumerSelection := none
   deriving Repr
 
 /-- Parse explicit image-binding options after the source and image paths. Repeated flags
@@ -22,11 +24,31 @@ structure Options where
 def parseOptions : List String → Options → Except String Options
   | [], options => .ok options
   | "--testbuild" :: rest, options => parseOptions rest { options with mode := .pruefbau }
+  | "--check" :: check :: gate :: rest, options =>
+    parseOptions rest { options with checkConsumer := some ⟨check, gate⟩ }
+  | "--check" :: _, _ => .error "--check requires a check and one declared gate"
   | "--arch" :: arch :: rest, options => parseOptions rest { options with arch := arch }
   | "--target" :: target :: rest, options => parseOptions rest { options with target := some target }
   | "--arch" :: [], _ => .error "--arch requires an architecture"
   | "--target" :: [], _ => .error "--target requires a target name"
   | flag :: _, _ => .error ("unknown image option: " ++ flag)
+
+/-- An explicit test-driver image enters one selected producer/consumer
+    cycle. Source-only declarations still do not execute a check. -/
+def entryName (options : Options) : String :=
+  match options.checkConsumer with
+  | none => "main"
+  | some selection => Uebersetze.driverFnName selection.check selection.gate
+
+/-- Selection runs after canonical profile/build selection and elaboration,
+    before declaration lowering. Removed test-only checks cannot be selected. -/
+def selectUnit (options : Options) (unit : Uebersetze.UProg) : Except String Uebersetze.UProg :=
+  match options.checkConsumer with
+  | none => .ok unit
+  | some selection =>
+    Uebersetze.uSelectCheckConsumers
+      { unit with checks := unit.checks.map fun c =>
+          { c with testbau := options.mode == .pruefbau } } [selection]
 
 /-- The current image startup emits the x86_64 runner's syscall and thread ABI. -/
 def runnerCompatible (options : Options) : Prop := options.arch = "x86_64"
