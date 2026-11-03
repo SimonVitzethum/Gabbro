@@ -13,9 +13,9 @@ public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein.T3a
 
 namespace Gabbro.Grammatik.Kernzelle
 
-open Gabbro.Grammatik Gabbro.Grammatik.Isabelle.AccumulatesMonoid
+open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Isabelle.AccumulatesMonoid
 
-variable {D : Deklaration}
+variable {D : Deklaration} [DecidableEq D.Fn]
 
 /-! ## 1. The per-cell lock protocol -/
 
@@ -26,8 +26,9 @@ variable {D : Deklaration}
 theorem akkuZelleBewacht {P : Programm D} {fs : List D.Fn} {a : AccumulatorDecl D}
     (h : akkuZulaessig P fs a) (i : Fin a.kernZahl) :
     Bewacht (.inr (a.zellen i)) (a.sperren i) := by
-  obtain ⟨_, h1, _, _, _, _⟩ := h
-  simpa only [Bewacht, h1 i]
+  change Sum.inl (a.sperren i) ∈ D.gbraucht (a.zellen i)
+  rw [h.2.1 i]
+  exact List.mem_cons_self
 
 /-- Every cell of an admitted accumulator has a guard lock. -/
 theorem akkuZellenBewacht {P : Programm D} {fs : List D.Fn} {a : AccumulatorDecl D}

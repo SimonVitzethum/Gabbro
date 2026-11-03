@@ -32,7 +32,7 @@ variable {D : Deklaration}
 /-- **Owner admission**: the root carrying the distinguished mint is
     declared once, has no caller in the checked graph, starts clean, and is
     the unit's only mint origin. -/
-structure OwnerAdmission (P : Programm D) (fs : List D.Fn)
+structure OwnerAdmission [DecidableEq D.Fn] (P : Programm D) (fs : List D.Fn)
     (d : OwnerMintDecl D) (ws : List D.Fn) : Prop where
   root_declared : d.root ∈ ws
   root_single : ((ws.filter (fun v => decide (v = d.root)))).length = 1
@@ -53,7 +53,7 @@ theorem ownerB_iff [DecidableEq D.Fn] (P : Programm D) (fs : List D.Fn)
       ((ws.filter (fun v => decide (v = d.root)))).length = 1 ∧
       (∀ f ∈ fs, ruftB P f d.root = false) ∧
       D.haelt d.root = [] ∧ D.gruende d.root = 0 := by
-  simp only [ownerB, Bool.and_eq_true, decide_eq_true_eq, List.all_eq_true]
+  simp only [ownerB, Bool.and_eq_true, decide_eq_true_eq, List.all_eq_true, and_assoc]
 
 theorem ownerAdmission_of_ownerB [DecidableEq D.Fn] (P : Programm D)
     (fs : List D.Fn) (d : OwnerMintDecl D) (ws : List D.Fn)
@@ -75,8 +75,8 @@ theorem owner_single_not_twice [DecidableEq D.Fn] (d : OwnerMintDecl D)
 /-- The admitted root runs on at most one thread: two threads starting at
     the root contradict `Laufzeit.einmal` with the single occurrence. -/
 theorem owner_root_once [DecidableEq D.Fn] (E : Zielsatz.Einheit D)
-    (d : OwnerMintDecl D) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f))
+    (d : OwnerMintDecl D) (sp : Speicher D.mitRuhe)
+    (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f))
     (hL : Zielsatz.Laufzeit E sp init)
     (hsingle : (((Zielsatz.Einheit.ws E).filter
       (fun v => decide (v = d.root)))).length = 1)
