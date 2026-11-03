@@ -83,8 +83,13 @@ theorem fadenScopesG_schritt {P : Programm D} {O : Orakel D} {pa : Nat}
           rw [hwahl] at hb
           exact ⟨hb, hk.1.2, hk.2⟩
       | _ =>
+          dsimp only
+          rw [rufUpdateG_self]
+          refine (fun headRest : (M.faeden t).kopf.rest = _ => ?_) (by assumption)
+          rw [headRest] at hk
           simp_all [FadenScopesG, GRest.scopesGut, Endblock.scopesOk,
-            Block.scopesOk, Stmt.scopesOk, scopesOk_alsBlock, rufUpdateG_self]
+            Block.scopesOk, Stmt.scopesOk, scopesOk_alsBlock,
+            RufDannHeadG, RufEndHeadG]
   | g7 hs =>
       cases hs with
       | rueckFreigabeLetzte _ _ _ _ z ha
@@ -94,13 +99,32 @@ theorem fadenScopesG_schritt {P : Programm D} {O : Orakel D} {pa : Nat}
           rw [rufUpdateG_self]
           exact rufAntwortG_scopesGut ⟨hk, hst⟩ ha
       | _ =>
+          dsimp only
+          rw [rufUpdateG_self]
+          refine (fun headRest : (M.faeden t).kopf.rest = _ => ?_) (by assumption)
+          rw [headRest] at hk
           simp_all [FadenScopesG, GRest.scopesGut, Endblock.scopesOk,
-            Block.scopesOk, Stmt.scopesOk, rufUpdateG_self]
+            Block.scopesOk, Stmt.scopesOk, RufDannHeadG, RufEndHeadG]
   | g2 hs | g3 hs | g4 hs | g5 hs | g6 hs =>
-      cases hs <;>
+      cases hs <;> dsimp only <;> rw [rufUpdateG_self]
+      all_goals
+        refine (fun headRest : (M.faeden t).kopf.rest = _ => ?_) (by assumption)
+        rw [headRest] at hk
+      all_goals first
+        | (refine (fun waiting : RufWartetHeadG (D := D) _ _ _ _ => ?_) (by assumption)
+           rcases waiting with hc | ⟨n, err, hc⟩)
+        | skip
+      all_goals
         simp_all [FadenScopesG, GRest.scopesGut, Endblock.scopesOk,
           Block.scopesOk, Stmt.scopesOk, scopesOk_alsBlock, scopesGut_weiterOpt,
-          rufUpdateG_self]
+          RufDannHeadG, RufEndHeadG]
+      all_goals try
+        rw [hc] at hst
+        simp_all [GRest.scopesGut, scopesOk_alsBlock]
+      all_goals
+        expose_names
+        rw [hcaller] at hst
+        simp_all [GRest.scopesGut, scopesOk_alsBlock]
 
 /-- Scope validity at every reachable head follows from the program check,
     without adding a field or a premise to `Spec`. -/
