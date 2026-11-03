@@ -45,35 +45,38 @@ theorem semV_verbrauchWeiter {Λ : List (Res D)} (t : D.Tab)
         (.verbrauchRest t member edge inv bound mass body rest m k))
         (σ₂.lese Λ mass.orte) (.cons v ρ) := by
   have hl : (leseB inv σ ρ).2 = true := hw
-  show weiterZ O passes R k (verbrauchLauf _ _ (rest + 1) σ ρ) =
+  show weiterZ O passes R k (verbrauchLauf t (fun σ ρ => execBlock O passes R body σ ρ)
+      (leseB inv) (verbrauchSel t member edge)
+      (fun σ ρ => let σ := σ.lese Λ mass.orte; (σ, (eval σ mass σ ρ).n))
+      bound (rest + 1) σ ρ) =
     weiterZ O passes R (.verbrauchRest t member edge inv bound mass body rest m k)
       (execBlock O passes R body (σ₂.lese Λ mass.orte) (.cons v ρ))
-  simp only [verbrauchLauf, hl, Bool.true_eq_false, if_false, hsel]
+  simp only [verbrauchLauf, hl, Bool.true_eq_false, ite_false, hsel, hm]
   cases execBlock O passes R body (σ₂.lese Λ mass.orte) (.cons v ρ) with
   | ok σ' ρ' =>
+      dsimp only [weiterZ]
       by_cases hfall : 0 ≤ (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n ∧
           (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n ≤ bound ∧
           (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n < m
-      · simp only [hfall, if_true]
-      · simp only [hfall, if_false]
+      · simp only [hfall, ite_true]
+      · simp only [hfall, ite_false]
   | next _ σ' ρ' =>
+      dsimp only [weiterZ]
       by_cases hfall : 0 ≤ (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n ∧
           (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n ≤ bound ∧
           (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n < m
-      · simp only [hfall, if_true]
-      · simp only [hfall, if_false]
+      · simp only [hfall, ite_true]
+      · simp only [hfall, ite_false]
   | leave _ σ' ρ' =>
+      dsimp only [weiterZ]
       by_cases hfall : 0 ≤ (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n ∧
           (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n ≤ bound ∧
           (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n < m
-      · simp only [hfall, if_true]
+      · simp only [hfall, ite_true]
         by_cases hc' : (leseB inv (σ'.lese Λ mass.orte) ρ'.tail).2 = true
-        · simp only [hc', if_true]
-        · simp only [show (leseB inv (σ'.lese Λ mass.orte) ρ'.tail).2 = false from by
-            cases h' : (leseB inv (σ'.lese Λ mass.orte) ρ'.tail).2 with
-            | false => rfl
-            | true => exact absurd h' hc', if_false]
-      · simp only [hfall, if_false]
+        · simp only [hc', ite_true]
+        · simp only [hc', ite_false]
+      · simp only [hfall, ite_false]
   | zurueck σ' v => rfl
   | why σ' r => rfl
   | logik e => rfl
@@ -92,9 +95,12 @@ theorem semV_verbrauchLeer {Λ : List (Res D)} (t : D.Tab)
     semV O passes R (.verbrauch t member edge inv bound mass body (rest + 1) k) σ ρ =
       semV O passes R k σ₂ ρ := by
   have hl : (leseB inv σ ρ).2 = true := hw
-  show weiterZ O passes R k (verbrauchLauf _ _ (rest + 1) σ ρ) =
+  show weiterZ O passes R k (verbrauchLauf t (fun σ ρ => execBlock O passes R body σ ρ)
+      (leseB inv) (verbrauchSel t member edge)
+      (fun σ ρ => let σ := σ.lese Λ mass.orte; (σ, (eval σ mass σ ρ).n))
+      bound (rest + 1) σ ρ) =
     weiterZ O passes R k (.ok σ₂ ρ)
-  simp only [verbrauchLauf, hl, hsel, Bool.true_eq_false, if_false]
+  simp only [verbrauchLauf, hl, hsel, Bool.true_eq_false, ite_false]
 
 theorem semV_verbrauchFort {Λ : List (Res D)} (t : D.Tab)
     (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
@@ -113,7 +119,8 @@ theorem semV_verbrauchFort {Λ : List (Res D)} (t : D.Tab)
   show weiterZ O passes R (.verbrauchRest t member edge inv bound mass body rest vor k)
       (.ok σ (.cons i ρ)) =
     weiterZ O passes R (.verbrauch t member edge inv bound mass body rest k) (.ok σ₁ ρ)
-  simp only [weiterZ, hs₁, hm', hfall, if_true, laufA]
+  dsimp only [weiterZ, laufA, Env.tail]
+  rw [← hs₁, hm', if_pos hfall]
 
 theorem semV_leaveVerbrauch {Λ Λx : List (Res D)} (t : D.Tab)
     (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
@@ -134,9 +141,10 @@ theorem semV_leaveVerbrauch {Λ Λx : List (Res D)} (t : D.Tab)
   rw [semV_dann_cons]
   show weiterZ O passes R (.verbrauchRest t member edge inv bound mass body rest vor k)
       (.leave h σ (.cons i ρ)) = _
-  simp only [weiterZ, hsm, hm', hfall, if_true]
+  dsimp only [weiterZ, Env.tail]
+  rw [← hsm, hm', if_pos hfall]
   have hl : (leseB inv σm ρ).2 = true := hw
-  simp only [hl, if_true]
+  rw [if_pos hl] <;> rfl
 
 theorem semV_nextVerbrauch {Λ Λx : List (Res D)} (t : D.Tab)
     (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
@@ -155,8 +163,10 @@ theorem semV_nextVerbrauch {Λ Λx : List (Res D)} (t : D.Tab)
       semV O passes R (.verbrauch t member edge inv bound mass body rest k) σm ρ := by
   rw [semV_dann_cons]
   show weiterZ O passes R (.verbrauchRest t member edge inv bound mass body rest vor k)
-      (.next h σ (.cons i ρ)) = _
-  simp only [weiterZ, hsm, hm', hfall, if_true, laufA]
+      (.next h σ (.cons i ρ)) =
+    weiterZ O passes R (.verbrauch t member edge inv bound mass body rest k) (.ok σm ρ)
+  dsimp only [weiterZ, laufA, Env.tail]
+  rw [← hsm, hm', if_pos hfall]
 
 end Stufen
 end Gabbro.Grammatik

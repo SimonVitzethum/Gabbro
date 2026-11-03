@@ -327,7 +327,7 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
           (leseEv (((M.weltVon f).lese Λ inv.orte).lese Λ (member.orte ++ edge.orte)) Λ mass.orte ++
             (leseEv ((M.weltVon f).lese Λ inv.orte) Λ (member.orte ++ edge.orte) ++
               leseEv (M.weltVon f) Λ inv.orte)) ?_ ?_
-        · simp only [lese_spur]
+        · simp only [lese_spur, List.append_assoc]
         · intro L h hm
           rcases List.mem_append.mp hm with hm | hm
           · exact kein_nimmt (leseEv_zugriff _ _ _) L h hm
@@ -348,7 +348,7 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
         refine zugriffsDelta_brav hB
           (leseEv ((M.weltVon f).lese Λ inv.orte) Λ (member.orte ++ edge.orte) ++
             leseEv (M.weltVon f) Λ inv.orte) ?_ ?_
-        · simp only [lese_spur]
+        · simp only [lese_spur, List.append_assoc]
         · intro L h hm
           rcases List.mem_append.mp hm with hm | hm
           · exact kein_nimmt (leseEv_zugriff _ _ _) L h hm
@@ -360,27 +360,30 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
         exact zugriffsDelta_lese _ _ _ mass.orte_darf (heldIn_weltVon hΛ)
     | dannLeaveVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hleave hhead σ' ρ' neu hstep hneu hkein_nimmt σm hsm m' hm' hfall σ₁ hs₁ hw neu₁ hneu₁ hΛ =>
         simp only [rufUpdateG_self]
-        subst hsm; subst hs₁
         left
+        rw [hs₁, hsm, leave_welt' _ _ _ _ _ _ _ _ hstep]
+        have hh : HeldIn Λ (M.weltVon f).haelt :=
+          fun L hL => hΛ L (Block.held_mono restb L hL)
         have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ
-          mass.orte mass.orte_darf hΛ
+          mass.orte mass.orte_darf hh
         have ha := gut_lese (W := fun _ => true) (G := fun _ => true)
-          ((M.weltVon f).lese Λ mass.orte) Λ inv.orte inv.orte_darf (hl.heldIn hΛ)
+          ((M.weltVon f).lese Λ mass.orte) Λ inv.orte inv.orte_darf (hl.heldIn hh)
         have hB : Brav (M.weltVon f) (((M.weltVon f).lese Λ mass.orte).lese Λ inv.orte) :=
           hl.2.trans ha.2
         refine zugriffsDelta_brav hB
           (leseEv ((M.weltVon f).lese Λ mass.orte) Λ inv.orte ++
             leseEv (M.weltVon f) Λ mass.orte) ?_ ?_
-        · simp only [lese_spur]
+        · simp only [lese_spur, List.append_assoc]
         · intro L h hm
           rcases List.mem_append.mp hm with hm | hm
           · exact kein_nimmt (leseEv_zugriff _ _ _) L h hm
           · exact kein_nimmt (leseEv_zugriff _ _ _) L h hm
     | dannNextVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hnext hhead σ' ρ' neu hstep hneu hkein_nimmt σm hsm m' hm' hfall neum hneum hΛ =>
         simp only [rufUpdateG_self]
-        subst hsm
         left
-        exact zugriffsDelta_lese _ _ _ mass.orte_darf (heldIn_weltVon hΛ)
+        rw [hsm, next_welt' _ _ _ _ _ _ _ _ hstep]
+        exact zugriffsDelta_lese _ _ _ mass.orte_darf
+          (fun L hL => hΛ L (Block.held_mono restb L hL))
 
 end Delta
 
