@@ -114,7 +114,7 @@ inductive USide
   | present : Int → USide → USide
   | reason : Nat → Nat → USide
   | function : Nat → String → USide
-  deriving DecidableEq, Repr
+  deriving Repr
 /-- One `ensures` predicate: a comparison, truth values, or a
     boolean combination (the `tr_ensures` fragment). -/
 inductive UEns
@@ -151,9 +151,224 @@ inductive UEns
   | filtered : Bool → String → String → String → Bool → UIdx → UEns → UEns
   /-- Universal/existential iteration over the exact index domain of a fixed array. -/
   | arrayElements : Bool → USide → String → UEns → UEns
-  deriving DecidableEq, Repr
+  deriving Repr
 end
+
+/-- Decidable equality follows the finite mutual value/predicate tree, including record fields.
+    The deriving handler does not support the nested record-field list. -/
+mutual
+def USide.decEq (a b : USide) : Decidable (a = b) := by
+  cases a <;> cases b <;> try exact isFalse (by intro h; cases h)
+  case lit.lit a0 b0 =>
+    exact decidable_of_iff (a0 = b0) (by simp only [USide.lit.injEq])
+  case param.param a0 b0 =>
+    exact decidable_of_iff (a0 = b0) (by simp only [USide.param.injEq])
+  case slot.slot a0 a1 a2 b0 b1 b2 =>
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2) (by simp only [USide.slot.injEq])
+  case tab.tab a0 a1 a2 b0 b1 b2 =>
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2) (by simp only [USide.tab.injEq])
+  case old.old a0 a1 a2 b0 b1 b2 =>
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2) (by simp only [USide.old.injEq])
+  case glob.glob a0 b0 =>
+    exact decidable_of_iff (a0 = b0) (by simp only [USide.glob.injEq])
+  case erg.erg =>
+    exact isTrue rfl
+  case add.add a0 a1 b0 b1 =>
+    letI := USide.decEq a0 b0
+    letI := USide.decEq a1 b1
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.add.injEq])
+  case sub.sub a0 a1 b0 b1 =>
+    letI := USide.decEq a0 b0
+    letI := USide.decEq a1 b1
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.sub.injEq])
+  case mul.mul a0 a1 b0 b1 =>
+    letI := USide.decEq a0 b0
+    letI := USide.decEq a1 b1
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.mul.injEq])
+  case conv.conv a0 a1 a2 b0 b1 b2 =>
+    letI := USide.decEq a2 b2
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2) (by simp only [USide.conv.injEq])
+  case band.band a0 a1 b0 b1 =>
+    letI := USide.decEq a0 b0
+    letI := USide.decEq a1 b1
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.band.injEq])
+  case bor.bor a0 a1 b0 b1 =>
+    letI := USide.decEq a0 b0
+    letI := USide.decEq a1 b1
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.bor.injEq])
+  case bxor.bxor a0 a1 b0 b1 =>
+    letI := USide.decEq a0 b0
+    letI := USide.decEq a1 b1
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.bxor.injEq])
+  case div.div a0 a1 b0 b1 =>
+    letI := USide.decEq a0 b0
+    letI := USide.decEq a1 b1
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.div.injEq])
+  case rem.rem a0 a1 b0 b1 =>
+    letI := USide.decEq a0 b0
+    letI := USide.decEq a1 b1
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.rem.injEq])
+  case shl.shl a0 a1 b0 b1 =>
+    letI := USide.decEq a0 b0
+    letI := USide.decEq a1 b1
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.shl.injEq])
+  case shr.shr a0 a1 b0 b1 =>
+    letI := USide.decEq a0 b0
+    letI := USide.decEq a1 b1
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.shr.injEq])
+  case neg.neg a0 b0 =>
+    letI := USide.decEq a0 b0
+    exact decidable_of_iff (a0 = b0) (by simp only [USide.neg.injEq])
+  case refSlot.refSlot a0 a1 b0 b1 =>
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.refSlot.injEq])
+  case idx.idx a0 a1 b0 b1 =>
+    letI := USide.decEq a0 b0
+    letI := USide.decEq a1 b1
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.idx.injEq])
+  case len.len a0 b0 =>
+    letI := USide.decEq a0 b0
+    exact decidable_of_iff (a0 = b0) (by simp only [USide.len.injEq])
+  case text.text a0 b0 =>
+    exact decidable_of_iff (a0 = b0) (by simp only [USide.text.injEq])
+  case arrNil.arrNil =>
+    exact isTrue rfl
+  case arrCons.arrCons a0 a1 b0 b1 =>
+    letI := USide.decEq a0 b0
+    letI := USide.decEq a1 b1
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.arrCons.injEq])
+  case upd.upd a0 a1 a2 b0 b1 b2 =>
+    letI := USide.decEq a0 b0
+    letI := USide.decEq a1 b1
+    letI := USide.decEq a2 b2
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2) (by simp only [USide.upd.injEq])
+  case typed.typed a0 a1 b0 b1 =>
+    letI := USide.decEq a1 b1
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.typed.injEq])
+  case eng.eng a0 a1 a2 b0 b1 b2 =>
+    letI := USide.decEq a0 b0
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2) (by simp only [USide.eng.injEq])
+  case ib1.ib1 a0 a1 a2 b0 b1 b2 =>
+    letI := USide.decEq a2 b2
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2) (by simp only [USide.ib1.injEq])
+  case ib2.ib2 a0 a1 a2 a3 b0 b1 b2 b3 =>
+    letI := USide.decEq a2 b2
+    letI := USide.decEq a3 b3
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2 ∧ a3 = b3) (by simp only [USide.ib2.injEq])
+  case zaehle.zaehle a0 a1 a2 b0 b1 b2 =>
+    letI := UEns.decEq a2 b2
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2) (by simp only [USide.zaehle.injEq])
+  case zaehleBaum.zaehleBaum a0 a1 a2 a3 a4 a5 b0 b1 b2 b3 b4 b5 =>
+    letI := UEns.decEq a5 b5
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2 ∧ a3 = b3 ∧ a4 = b4 ∧ a5 = b5) (by simp only [USide.zaehleBaum.injEq])
+  case zaehleFeld.zaehleFeld a0 a1 a2 b0 b1 b2 =>
+    letI := USide.decEq a0 b0
+    letI := UEns.decEq a2 b2
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2) (by simp only [USide.zaehleFeld.injEq])
+  case product.product a0 a1 a2 b0 b1 b2 =>
+    letI := USide.decFields a2 b2
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2) (by simp only [USide.product.injEq])
+  case field.field a0 a1 b0 b1 =>
+    letI := USide.decEq a0 b0
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.field.injEq])
+  case replace.replace a0 a1 a2 b0 b1 b2 =>
+    letI := USide.decEq a0 b0
+    letI := USide.decEq a2 b2
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2) (by simp only [USide.replace.injEq])
+  case truth.truth a0 b0 =>
+    exact decidable_of_iff (a0 = b0) (by simp only [USide.truth.injEq])
+  case taggedEmpty.taggedEmpty a0 a1 b0 b1 =>
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.taggedEmpty.injEq])
+  case taggedValue.taggedValue a0 a1 a2 b0 b1 b2 =>
+    letI := USide.decEq a2 b2
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2) (by simp only [USide.taggedValue.injEq])
+  case predicate.predicate a0 b0 =>
+    letI := UEns.decEq a0 b0
+    exact decidable_of_iff (a0 = b0) (by simp only [USide.predicate.injEq])
+  case option.option a0 a1 b0 b1 =>
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.option.injEq])
+  case absent.absent a0 b0 =>
+    exact decidable_of_iff (a0 = b0) (by simp only [USide.absent.injEq])
+  case present.present a0 a1 b0 b1 =>
+    letI := USide.decEq a1 b1
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.present.injEq])
+  case reason.reason a0 a1 b0 b1 =>
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.reason.injEq])
+  case function.function a0 a1 b0 b1 =>
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.function.injEq])
+termination_by sizeOf a
+
+def UEns.decEq (a b : UEns) : Decidable (a = b) := by
+  cases a <;> cases b <;> try exact isFalse (by intro h; cases h)
+  case cmp.cmp a0 a1 a2 b0 b1 b2 =>
+    letI := USide.decEq a1 b1
+    letI := USide.decEq a2 b2
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2) (by simp only [UEns.cmp.injEq])
+  case tru.tru =>
+    exact isTrue rfl
+  case fls.fls =>
+    exact isTrue rfl
+  case and.and a0 a1 b0 b1 =>
+    letI := UEns.decEq a0 b0
+    letI := UEns.decEq a1 b1
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [UEns.and.injEq])
+  case or.or a0 a1 b0 b1 =>
+    letI := UEns.decEq a0 b0
+    letI := UEns.decEq a1 b1
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [UEns.or.injEq])
+  case not.not a0 b0 =>
+    letI := UEns.decEq a0 b0
+    exact decidable_of_iff (a0 = b0) (by simp only [UEns.not.injEq])
+  case slotB.slotB a0 a1 a2 b0 b1 b2 =>
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2) (by simp only [UEns.slotB.injEq])
+  case tabB.tabB a0 a1 a2 b0 b1 b2 =>
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2) (by simp only [UEns.tabB.injEq])
+  case globB.globB a0 b0 =>
+    exact decidable_of_iff (a0 = b0) (by simp only [UEns.globB.injEq])
+  case var.var a0 b0 =>
+    exact decidable_of_iff (a0 = b0) (by simp only [UEns.var.injEq])
+  case alle.alle a0 a1 a2 b0 b1 b2 =>
+    letI := UEns.decEq a2 b2
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2) (by simp only [UEns.alle.injEq])
+  case einige.einige a0 a1 a2 b0 b1 b2 =>
+    letI := UEns.decEq a2 b2
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2) (by simp only [UEns.einige.injEq])
+  case ergB.ergB =>
+    exact isTrue rfl
+  case istSome.istSome a0 a1 b0 b1 =>
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [UEns.istSome.injEq])
+  case held.held a0 b0 =>
+    exact decidable_of_iff (a0 = b0) (by simp only [UEns.held.injEq])
+  case imp.imp a0 a1 b0 b1 =>
+    letI := UEns.decEq a0 b0
+    letI := UEns.decEq a1 b1
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [UEns.imp.injEq])
+  case reach.reach a0 a1 a2 a3 b0 b1 b2 b3 =>
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2 ∧ a3 = b3) (by simp only [UEns.reach.injEq])
+  case member.member a0 a1 b0 b1 =>
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [UEns.member.injEq])
+  case filtered.filtered a0 a1 a2 a3 a4 a5 a6 b0 b1 b2 b3 b4 b5 b6 =>
+    letI := UEns.decEq a6 b6
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2 ∧ a3 = b3 ∧ a4 = b4 ∧ a5 = b5 ∧ a6 = b6) (by simp only [UEns.filtered.injEq])
+  case arrayElements.arrayElements a0 a1 a2 a3 b0 b1 b2 b3 =>
+    letI := USide.decEq a1 b1
+    letI := UEns.decEq a3 b3
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2 ∧ a3 = b3) (by simp only [UEns.arrayElements.injEq])
+termination_by sizeOf a
+
+def USide.decFields : (a b : List (Ty × USide)) → Decidable (a = b)
+  | [], [] => isTrue rfl
+  | (ta, a) :: as, (tb, b) :: bs => by
+      letI := USide.decEq a b
+      letI := USide.decFields as bs
+      exact decidable_of_iff ((ta = tb ∧ a = b) ∧ as = bs)
+        (by simp only [List.cons.injEq, Prod.mk.injEq])
+  | [], _ :: _ | _ :: _, [] => isFalse (by intro h; cases h)
+termination_by a _ => sizeOf a
 end
+
+instance : DecidableEq USide := USide.decEq
+instance : DecidableEq UEns := UEns.decEq
+
 /-- A value of a tagged type over the declaration `T`: a case with its payload (`Expr.case`), or a variable. -/
 inductive USVal
   | fall : Nat → Option USide → USVal

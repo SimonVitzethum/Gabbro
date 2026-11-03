@@ -36,7 +36,7 @@ namespace Gabbro.Grammatik.NamedSpaces
   eigner := fun _ => []
   Fn := Empty
   sig := fun f => f.elim
-  sigNr := fun _ => ⟨[], none, 0, [], fun _ => false, fun _ => false, [], [], none⟩
+  sigNr := fun _ => ⟨[], none, 0, [], fun _ => false, fun _ => false, [], [], none, {}⟩
   eigner_nie_erzeugt := fun _ _ _ _ h => nomatch h
   Inv := Empty
   traeger := fun i => i.elim
@@ -73,15 +73,15 @@ def layout : AdressLayout declaration where
   nominal := fun _ => 1
 
 theorem layout_ok : LayoutOk layout where
-  tabellenRaum := fun _ => ⟨by decide, rfl⟩
+  tabellenRaum := fun _ => ⟨by change 1 < 2; decide, rfl⟩
   offen := by
     intro t _
     constructor
     · intro t' hne
       cases t <;> cases t' <;> simp_all [layout]
     · intro g
-      cases t <;> decide
-  feld := fun _ _ => by decide
+      cases t <;> simp [layout]
+  feld := fun _ _ => by change 0 + 1 ≤ 1; decide
   felder := fun _ _ _ h => absurd rfl h
   tabellen := by
     intro t t' a hne ha ha'
@@ -92,7 +92,7 @@ theorem layout_ok : LayoutOk layout where
     have h := ha.1.symm.trans ha'.1
     cases t <;> simp [layout] at h
   globale := fun _ _ _ h => absurd rfl h
-  globalerRaum := fun _ => ⟨by decide, rfl⟩
+  globalerRaum := fun _ => ⟨by change 1 < 2; decide, rfl⟩
 
 /-- Nonempty, unbounded regions may share a declared space without sharing a byte. -/
 theorem named_spaces_zeuge :
@@ -100,6 +100,8 @@ theorem named_spaces_zeuge :
     layout.raum false ≠ layout.raum true ∧ LayoutOk layout ∧
     layout.inZelle false 100 () (1, 100) ∧ layout.inZelle true 100 () (2, 100) ∧
     layout.inGlobal () (3, 0) := by
-  exact ⟨rfl, by decide, layout_ok, by decide, by decide, by decide⟩
+  exact ⟨rfl, by decide, layout_ok,
+    ⟨rfl, by decide, by decide⟩, ⟨rfl, by decide, by decide⟩,
+    ⟨rfl, by decide, by decide⟩⟩
 
 end Gabbro.Grammatik.NamedSpaces
