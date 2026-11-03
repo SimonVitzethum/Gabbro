@@ -73,58 +73,6 @@ theorem GutEnd.vor {W G} {σ σ1 : World D} {o : EndAusgang V l Γ}
   | logik _ => cases hs
   | hardware _ => cases hs
 
-/-- A releasing step pulls through a sub-block: non-returns keep the release,
-    returns concatenate it. -/
-theorem GutAusgang.vorRetV {W G} {haelt : List D.Lock} {boden : Option Int}
-    {σ σ1 : World D} {o : Ausgang V l Γ}
-    (h1 : GutRetV W G haelt boden σ σ1) (h : GutAusgang W G σ1 o) :
-    GutAusgang W G σ o := by
-  intro σ' hs
-  cases o with
-  | ok _ _ => exact h1.transGut (h _ hs)
-  | zurueck _ _ => exact h1.transRetV (h _ hs)
-  | why _ _ => exact h1.transRetV (h _ hs)
-  | leave _ _ _ => exact h1.transGut (h _ hs)
-  | next _ _ _ => exact h1.transGut (h _ hs)
-  | logik _ => cases hs
-  | hardware _ => cases hs
-
-theorem GutEnd.vorRetV {W G} {haelt : List D.Lock} {boden : Option Int}
-    {σ σ1 : World D} {o : EndAusgang V l Γ}
-    (h1 : GutRetV W G haelt boden σ σ1) (h : GutEnd W G σ1 o) : GutEnd W G σ o := by
-  intro σ' hs
-  cases o with
-  | zurueck _ _ => exact h1.transRetV (h _ hs)
-  | why _ _ => exact h1.transRetV (h _ hs)
-  | leave _ _ _ => exact h1.transGut (h _ hs)
-  | next _ _ _ => exact h1.transGut (h _ hs)
-  | logik _ => cases hs
-  | hardware _ => cases hs
-
-/-- A releasing step pulls through a sub-block (plain release, no spare/rank). -/
-theorem GutAusgang.vorRet {W G} {σ σ1 : World D} {o : Ausgang V l Γ}
-    (h1 : GutRet W G σ σ1) (h : GutAusgang W G σ1 o) : GutAusgang W G σ o := by
-  intro σ' hs
-  cases o with
-  | ok _ _ => exact h1.transGut (h _ hs)
-  | zurueck _ _ => exact h1.transRet (h _ hs)
-  | why _ _ => exact h1.transRet (h _ hs)
-  | leave _ _ _ => exact h1.transGut (h _ hs)
-  | next _ _ _ => exact h1.transGut (h _ hs)
-  | logik _ => cases hs
-  | hardware _ => cases hs
-
-theorem GutEnd.vorRet {W G} {σ σ1 : World D} {o : EndAusgang V l Γ}
-    (h1 : GutRet W G σ σ1) (h : GutEnd W G σ1 o) : GutEnd W G σ o := by
-  intro σ' hs
-  cases o with
-  | zurueck _ _ => exact h1.transRet (h _ hs)
-  | why _ _ => exact h1.transRet (h _ hs)
-  | leave _ _ _ => exact h1.transGut (h _ hs)
-  | next _ _ _ => exact h1.transGut (h _ hs)
-  | logik _ => cases hs
-  | hardware _ => cases hs
-
 /-- `locks L { … }`: nehmen, Rumpf, geben. -/
 theorem GutAusgang.gibt {W G} {σ : World D} (L : D.Lock)
     (hn : (∀ M ∈ σ.haelt, D.rang M < D.rang L) ∧ L ∉ σ.haelt) {o : Ausgang V l Γ}

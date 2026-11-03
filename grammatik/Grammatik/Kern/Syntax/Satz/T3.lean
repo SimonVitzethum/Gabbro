@@ -35,23 +35,23 @@ theorem traverseLauf_gut (schritt : World D → Env D (τ :: Γ) → Ausgang V t
         split at h ⊢
         · rename_i σ1 ρ1 hs1
           rw [hs1] at hstep
-          have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
+          have g1 := hinv.trans (hstep σ1 rfl)
           exact (GutAusgang.vor g1 (ih σ1 ρ1.tail (g1.heldB hh))) σ' h
         · rename_i σ1 ρ1 hs1
           rw [hs1] at hstep
-          have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
+          have g1 := hinv.trans (hstep σ1 rfl)
           exact (GutAusgang.vor g1 (ih σ1 ρ1.tail (g1.heldB hh))) σ' h
         · rename_i σ1 ρ1 hs1
           rw [hs1] at hstep
-          have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
+          have g1 := hinv.trans (hstep σ1 rfl)
           split at h ⊢ <;> simp only [Ausgang.welt, Option.some.injEq, reduceCtorEq] at h
           subst h; exact g1.trans (hi σ1 ρ1.tail (g1.heldB hh))
         · rename_i σ1 v hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           rw [hs1] at hstep
-          exact hinv.transRetV (hstep _ (by rw [hs1]; rfl))
+          exact hinv.transRetV (hstep _ rfl)
         · rename_i σ1 r hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           rw [hs1] at hstep
-          exact hinv.transRetV (hstep _ (by rw [hs1]; rfl))
+          exact hinv.transRetV (hstep _ rfl)
         · simp only [Ausgang.welt, reduceCtorEq] at h
         · simp only [Ausgang.welt, reduceCtorEq] at h
 
@@ -80,21 +80,21 @@ theorem retryLauf_gut (schritt : World D → Env D Γ → Ausgang V true Γ)
         split at h ⊢
         · rename_i σ1 ρ1 hs1
           rw [hs1] at hstep
-          have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
+          have g1 := hinv.trans (hstep σ1 rfl)
           exact (GutAusgang.vor g1 (ih σ1 ρ1 (g1.heldB hh))) σ' h
         · rename_i σ1 ρ1 hs1
           rw [hs1] at hstep
-          have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
+          have g1 := hinv.trans (hstep σ1 rfl)
           exact (GutAusgang.vor g1 (ih σ1 ρ1 (g1.heldB hh))) σ' h
         · rename_i σ1 ρ1 hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           rw [hs1] at hstep
-          exact hinv.trans (hstep _ (by rw [hs1]; rfl))
+          exact hinv.trans (hstep _ rfl)
         · rename_i σ1 v hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           rw [hs1] at hstep
-          exact hinv.transRetV (hstep _ (by rw [hs1]; rfl))
+          exact hinv.transRetV (hstep _ rfl)
         · rename_i σ1 r hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           rw [hs1] at hstep
-          exact hinv.transRetV (hstep _ (by rw [hs1]; rfl))
+          exact hinv.transRetV (hstep _ rfl)
         · simp only [Ausgang.welt, reduceCtorEq] at h
         · simp only [Ausgang.welt, reduceCtorEq] at h
 
@@ -117,21 +117,21 @@ theorem foreverLauf_gut (a : D.Annahme) (schritt : World D → Env D Γ → Ausg
         split at h ⊢
         · rename_i σ1 ρ1 hs1
           rw [hs1] at hstep
-          have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
+          have g1 := hinv.trans (hstep σ1 rfl)
           exact (GutAusgang.vor g1 (ih σ1 ρ1 (g1.heldB hh))) σ' h
         · rename_i σ1 ρ1 hs1
           rw [hs1] at hstep
-          have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
+          have g1 := hinv.trans (hstep σ1 rfl)
           exact (GutAusgang.vor g1 (ih σ1 ρ1 (g1.heldB hh))) σ' h
         · rename_i σ1 ρ1 hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           rw [hs1] at hstep
-          exact hinv.trans (hstep _ (by rw [hs1]; rfl))
+          exact hinv.trans (hstep _ rfl)
         · rename_i σ1 v hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           rw [hs1] at hstep
-          exact hinv.transRetV (hstep _ (by rw [hs1]; rfl))
+          exact hinv.transRetV (hstep _ rfl)
         · rename_i σ1 r hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           rw [hs1] at hstep
-          exact hinv.transRetV (hstep _ (by rw [hs1]; rfl))
+          exact hinv.transRetV (hstep _ rfl)
         · simp only [Ausgang.welt, reduceCtorEq] at h
         · simp only [Ausgang.welt, reduceCtorEq] at h
 
@@ -265,7 +265,7 @@ theorem stufenOk_ohne (P : Programm D) (h : ∀ f : D.Fn, (D.signatur f).boden =
 
 section Scopes
 
-variable {V : vertrag D}
+variable {V : Vertrag D}
 
 def scopesOkScopes (haelt : List D.Lock) (boden : Option Int) : List D.Lock → Bool
   | [] => true
@@ -414,7 +414,7 @@ theorem scopesOkScopes_of_forall {haelt : List D.Lock} {boden : Option Int} {Ls 
           exact decide_eq_true (hrK c hb)
 
 /-- A scoped return at a counted frame meets the scope check. -/
-theorem scopesOk_retScopedAux {V : vertrag D} {Λ : List (Res D)}
+theorem scopesOk_retScopedAux {V : Vertrag D} {Λ : List (Res D)}
     (R : RueckRessourcen D V Λ) (hcount : HCountScope V Λ) :
     scopesOkScopes V.haelt V.boden R.scopes = true := by
   apply scopesOkScopes_of_forall

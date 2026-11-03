@@ -29,7 +29,7 @@ theorem mem_foldl_erase (L : D.Lock) (Ks : List D.Lock) (h : List D.Lock)
   | cons M Ms ih =>
       simp only [List.foldl_cons]
       have hne : L ≠ M := by intro e; subst e; exact hn List.mem_cons_self
-      refine ih _ (List.mem_erase_of_ne hne hm) (fun hcon => hn (List.mem_cons_of_mem _ hcon))
+      exact ih _ ((List.mem_erase_of_ne hne).mpr hm) (fun hcon => hn (List.mem_cons_of_mem _ hcon))
 
 /-- Transport through a spare+rank release: every needed lock survives. Required
     locks survive by spare; extras (held, not required) survive by rank — they
@@ -161,7 +161,7 @@ theorem GutRetV.toGut_entry {S : Signatur D.Tab D.Glob D.Lock D.Marke}
 /-- A taken lock is fresh and above the floor (C11 scope discipline): it is
     outside the residual (strictness against `ResidHeld`) and respects the
     floor (the rank premise). -/
-theorem HCountScope.of_locks {V : vertrag D} {Λ : List (Res D)} {K : D.Lock}
+theorem HCountScope.of_locks {V : Vertrag D} {Λ : List (Res D)} {K : D.Lock}
     (hresid : ResidHeld V Λ) (hr : ∀ M, Res.held M ∈ Λ → D.rang M < D.rang K)
     (hrk : ∀ c, V.boden = some c → c ≤ D.rang K)
     (hcount : HCountScope V Λ) : HCountScope V (Res.held K :: Λ) := by
@@ -179,7 +179,7 @@ theorem HCountScope.of_locks {V : vertrag D} {Λ : List (Res D)} {K : D.Lock}
       intro hKK
       cases hKK
       exact hLK rfl
-    rw [List.count_cons_of_ne hne]
+    rw [List.count_cons_of_ne hne.symm]
     exact hcount L
 
 end Gabbro.Grammatik

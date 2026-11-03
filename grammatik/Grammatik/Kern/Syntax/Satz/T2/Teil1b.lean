@@ -172,11 +172,6 @@ theorem Brav.toRet {a b : World D} (h : Brav a b) : BravRet a b :=
 theorem Gut.toRet {W G} {a b : World D} (h : Gut W G a b) : GutRet W G a b :=
   ⟨h.1, h.2.toRet⟩
 
-/-- `Brav` is `BravRet` with no release. -/
-theorem Brav.toRet {a b : World D} (h : Brav a b) : BravRet a b := by
-  obtain ⟨heq, hgood, hkons⟩ := h
-  exact ⟨⟨[], by rw [heq]⟩, hgood, hkons⟩
-
 /-- Membership survives releases: a held lock after releasing was held before. -/
 theorem BravRet.mem {a b : World D} (h : BravRet a b) {L : D.Lock} (hm : L ∈ b.haelt) :
     L ∈ a.haelt := by
@@ -206,9 +201,9 @@ theorem Gut.transRet {W G} {a b c : World D} (h1 : Gut W G a b) (h2 : GutRet W G
 /-- Release then no release is the same release. -/
 theorem BravRet.transGut {a b c : World D} (h1 : BravRet a b) (h2 : Brav b c) : BravRet a c := by
   obtain ⟨Ls, hLs⟩ := h1.1
-  refine ⟨⟨Ls, by rw [h2.1, hLs]⟩, fun e he => match h1.2.1 e he with
-    | .inl hb => h2.2.1 e hb
-    | .inr g => .inr g, fun k => h1.2.2 (h2.2.2 k)⟩
+  refine ⟨⟨Ls, by rw [h2.1, hLs]⟩, fun e he => match h2.2.1 e he with
+    | .inl hb => h1.2.1 e hb
+    | .inr g => .inr g, fun k => h2.2.2 (h1.2.2 k)⟩
 
 theorem GutRet.transGut {W G} {a b c : World D} (h1 : GutRet W G a b) (h2 : Gut W G b c) :
     GutRet W G a c :=
@@ -231,7 +226,7 @@ theorem BravRet.transRet {a b c : World D} (h1 : BravRet a b) (h2 : BravRet b c)
     exact h2.2.2 (h1.2.2 k)
 
 /-- A releasing step followed by another is releasing with the concatenated scopes. -/
-theorem GutRet.transRet {W G} {a b c : World D} (h1 : GutRet W G b c) (h2 : GutRet W G b c) :
+theorem GutRet.transRet {W G} {a b c : World D} (h1 : GutRet W G a b) (h2 : GutRet W G b c) :
     GutRet W G a c :=
   ⟨h1.1.trans h2.1, h1.2.transRet h2.2⟩
 
@@ -268,7 +263,7 @@ theorem count_held_map (L : D.Lock) (Ks : List D.Lock) :
 theorem count_held_marke_map (L : D.Lock) (ms : List (D.Marke × Nat)) :
     (ms.map (Res.vonMarke D)).count (Res.held L) = 0 := by
   rw [List.count_eq_zero]
-  intro r hr
+  intro hr
   simp only [List.mem_map] at hr
   obtain ⟨m, _, heq⟩ := hr
   obtain ⟨m1, m2⟩ := m
@@ -321,8 +316,13 @@ theorem stmt_heldCount {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (L : D.Lock
   | .regWrite .. => rfl
   | .transition .. => rfl
   | .publish .. => rfl
-  | .advances .. => rfl
-  | .retires .. => rfl
+  | .advances m a _ _ => by
+      simp only [List.count_append,
+        List.count_erase_of_ne (show Res.held L ≠ Res.marke m a by intro h; cases h),
+        List.count_cons_of_ne (show Res.marke m (a + 1) ≠ Res.held L by intro h; cases h),
+        List.count_nil, Nat.add_zero]
+  | .retires m s _ _ =>
+      List.count_erase_of_ne (show Res.held L ≠ Res.marke m s by intro h; cases h)
   | .ret .. => rfl
   | .retWhy .. => rfl
   | .retScoped .. => rfl
@@ -393,12 +393,12 @@ end
     the scope check. -/
 
 /-- Extra held locks beyond the residual are fresh and above the floor. -/
-def HCountScope (V : vertrag D) (Λ : List (Res D)) : Prop :=
+def HCountScope (V : Vertrag D) (Λ : List (Res D)) : Prop :=
   ∀ L : D.Lock, Λ.count (Res.held L) = (V.haelt.map Res.held).count (Res.held L) ∨
     (L ∉ V.haelt ∧ ∀ c, V.boden = some c → c ≤ D.rang L)
 
 /-- HCount survives a frame whose held counts agree. -/
-theorem HCountScope.of_countEq {V : vertrag D} {Λ Λ' : List (Res D)} (h : HCountScope V Λ)
+theorem HCountScope.of_countEq {V : Vertrag D} {Λ Λ' : List (Res D)} (h : HCountScope V Λ)
     (heq : ∀ L, (Λ'.count (Res.held L)) = (Λ.count (Res.held L))) :
     HCountScope V Λ' := fun L => by
   rw [heq L]
