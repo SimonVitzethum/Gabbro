@@ -9,47 +9,6 @@ public import Grammatik.Parser.TaggedDispatch.Declarations
 namespace Gabbro.Grammatik.Parser
 set_option maxRecDepth 100000
 
-/-- Whether the tokens at depth 0 hold an adapter parameter: `..` before `,`/`)` or `-name`
-    before `,`/`)`. Ordinary parameters always carry a colon, so neither occurs there; the
-    variadic `...` (`..` before `.`) and negative numbers (`-` before a numeral) fall through. -/
-def istAdaptSeg : List Token → Nat → Bool
-  | [], _ => false
-  | .zeichen "(" :: rest, tiefe => istAdaptSeg rest (tiefe + 1)
-  | .zeichen "[" :: rest, tiefe => istAdaptSeg rest (tiefe + 1)
-  | .zeichen "{" :: rest, tiefe => istAdaptSeg rest (tiefe + 1)
-  | .zeichen ")" :: rest, tiefe =>
-    if tiefe == 0 then false else istAdaptSeg rest (tiefe - 1)
-  | .zeichen "]" :: rest, tiefe =>
-    if tiefe == 0 then false else istAdaptSeg rest (tiefe - 1)
-  | .zeichen "}" :: rest, tiefe =>
-    if tiefe == 0 then false else istAdaptSeg rest (tiefe - 1)
-  | .zeichen ".." :: rest, tiefe =>
-    if tiefe == 0 then match rest with
-      | .zeichen "," :: _ => true
-      | .zeichen ")" :: _ => true
-      | _ => istAdaptSeg rest tiefe
-    else istAdaptSeg rest tiefe
-  | .zeichen "-" :: rest, tiefe =>
-    if tiefe == 0 then match rest with
-      | t :: .zeichen "," :: _ => match nameText t with
-        | some _ => true
-        | none => istAdaptSeg rest tiefe
-      | t :: .zeichen ")" :: _ => match nameText t with
-        | some _ => true
-        | none => istAdaptSeg rest tiefe
-      | _ => istAdaptSeg rest tiefe
-    else istAdaptSeg rest tiefe
-  | _ :: rest, tiefe => istAdaptSeg rest tiefe
-
-/-- Whether `fn name (` opens adapter parameters (behind the `fn`). -/
-def istAdaptKopf : List Token → Bool
-  | .wort _ :: rest => match rest with
-    | t :: .zeichen "(" :: rest' => match nameText t with
-      | some _ => istAdaptSeg rest' 0
-      | none => false
-    | _ => false
-  | _ => false
-
 /-- One adapter parameter: `..`, `-x`, or a new `x : T`. -/
 def parseAdaptParamEinzel (f : Nat) (toks : List Token) :
     Except String (SAdaptParam × List Token) :=
@@ -97,6 +56,21 @@ def parseAdaptParams (f : Nat) (toks : List Token) :
         | .ok (ps, r') => match fordereZeichen ")" r' with
           | .error e => .error e
           | .ok r'' => .ok (ps, r'')
+
+/-- Whether a function head contains an adapter-only parameter. Reuse the parameter
+    reader so `..` and `-name` count only at the start of a parameter, never inside
+    its type or expressions. Malformed parameters fall through to the ordinary
+    reader, which reports the error; the variadic `...` marker is not an adapter. -/
+def istAdaptKopf (toks : List Token) : Bool :=
+  match toks with
+  | .wort _ :: t :: rest => match nameText t with
+    | some _ => match parseAdaptParams (8 * toks.length + 40) rest with
+      | .ok (ps, _) => ps.any fun p => match p with
+        | .alle | .ohne _ => true
+        | .neu _ _ => false
+      | .error _ => false
+    | none => false
+  | _ => false
 
 /-- The optional `=> a [else (e) block]` behind the source. -/
 def parseAdaptBindung (f : Nat) (toks : List Token) :
