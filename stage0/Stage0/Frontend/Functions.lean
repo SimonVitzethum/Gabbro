@@ -53,7 +53,7 @@ def constantFunction (env : List (String × (Int × Int))) : SItemTief → Optio
     let range ← (uFeldTyp env result).toOption
     let args ← params.mapM fun (name, ty) =>
       ((uFeldTyp env ty).toOption).map fun r => (name, r)
-    pure ⟨name, args.map (fun (n, r) => (n, .int r.1 r.2)), .int range.1 range.2, .block [] (some (.ret (some body))), ⟨"const", name, params, some result, none, clauses⟩⟩
+    pure ⟨name, args.map (fun (n, r) => (n, .int r.1 r.2)), .int range.1 range.2, .block [] (some (.ret (some body))), ⟨"const", name, params, some result, none, clauses⟩, [], []⟩
   | _ => none
 
 /-- The origin of a compile-time function candidate, expressed in canonical type elaborations. -/
@@ -105,7 +105,7 @@ theorem constantFunction_sound_zeuge :
     FunctionMeaning [("Count", (0, 100))]
       (.fnT ⟨"const", "identity", [("x", .atom "Count")], some (.atom "Count"), none, []⟩
         (.block [] (some (.ret (some (.variable "x"))))))
-      ⟨"identity", [("x", .int 0 100)], .int 0 100, .block [] (some (.ret (some (.variable "x")))), ⟨"const", "identity", [("x", .atom "Count")], some (.atom "Count"), none, []⟩⟩ :=
+      ⟨"identity", [("x", .int 0 100)], .int 0 100, .block [] (some (.ret (some (.variable "x")))), ⟨"const", "identity", [("x", .atom "Count")], some (.atom "Count"), none, []⟩, [], []⟩ :=
   constantFunction_sound _ _ _ (by rfl)
 
 end Gabbro.Stage0.Frontend
