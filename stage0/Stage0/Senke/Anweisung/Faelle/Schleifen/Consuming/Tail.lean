@@ -11,7 +11,7 @@ variable (q : Loop x Γ Λ) {n : Nat} {m : Mem} {σ : World D} {ρ : Env D Γ}
 
 /-- Save the measured pre-body value, then install the selected body binder. -/
 theorem before_body (k : Wert D (.index (D.count x.table)))
-    (h : q.selector.CandResult σ ρ (some k) true m)
+    {live : Bool} (h : q.selector.CandResult σ ρ (some k) live m)
     (fuelRead : x.read m x.counter (BitVec.ofNat 64 n)) :
     let measured := q.massW σ ρ
     ∃ m', Star ⟨x.at 37, x.fp⟩ m ⟨x.at 39, x.fp⟩ m' ∧
