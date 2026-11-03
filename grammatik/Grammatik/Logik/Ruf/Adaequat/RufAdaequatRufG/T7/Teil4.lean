@@ -185,9 +185,9 @@ theorem stmtRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .assignThru p t ht f' i e hw hL, _ =>
       blattRetR P O passes f fn caller rst rho s0 A R ziel zielG
         (.assignThru _ p t ht f' i e hw hL)
-  | _, _, _, _, .assignThruOwn p t ht f' i e m s ho he hg hm hw hL, _ =>
+  | _, _, _, _, .assignThruOwn p t ht f' i e m s ho he hg hw hL, _ =>
       blattRetR P O passes f fn caller rst rho s0 A R ziel zielG
-        (.assignThruOwn _ _ p t ht f' i e m s ho he hg hm hw hL)
+        (.assignThruOwn _ _ p t ht f' i e m s ho he hg hw hL)
   | _, _, _, _, .assignSlotRef r t ht ho f' e hw hL, _ =>
       blattRetR P O passes f fn caller rst rho s0 A R ziel zielG
         (.assignSlotRef _ r t ht ho f' e hw hL)
