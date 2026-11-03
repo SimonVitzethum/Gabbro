@@ -97,7 +97,7 @@ theorem block_bindCall_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
       have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
       have heq := ih_rest σ1 (.cons (ergWert he v) ρ) hscope_rest
         (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-      rw [heq]
+      first | exact heq | simp only [heq] | exact congrArg _ heq
   | why σ1 r => rfl
   | logik e => rfl
   | hardware e => rfl
@@ -144,7 +144,7 @@ theorem block_bindCallInd_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
       have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
       have heq := ih_rest σ1 (.cons (ergWert (ergSig hg he) v) ρ) hscope_rest
         (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-      rw [heq]
+      first | exact heq | simp only [heq] | exact congrArg _ heq
   | why σ1 r => rfl
   | logik e => rfl
   | hardware e => rfl
@@ -187,7 +187,7 @@ theorem block_bindCallElse_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden
       have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
       have heq := ih_rest σ1 (.cons (ergWert he v) ρ) hscope_rest
         (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-      rw [heq]
+      first | exact heq | simp only [heq] | exact congrArg _ heq
   | why σ1 r =>
       have h2 := hT₁ f _ _ hentry σ1 (by rw [hEqCall, hx]; rfl)
       rw [hEqCall, hx] at h2
@@ -196,7 +196,7 @@ theorem block_bindCallElse_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden
       have g1 := hl.trans gcall
       have heq := ih_err σ1 (.cons r ρ) hscope_err
         (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-      rw [heq]
+      first | exact heq | simp only [heq] | exact congrArg _ heq
   | logik e => rfl
   | hardware e => rfl
 
@@ -247,7 +247,7 @@ theorem block_bindCallIndElse_gleich (bo : Option Int) (hbV : BodenUnter bo V.bo
       have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
       have heq := ih_rest σ1 (.cons (ergWert (ergSig hg he) v) ρ) hscope_rest
         (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-      rw [heq]
+      first | exact heq | simp only [heq] | exact congrArg _ heq
   | why σ1 r =>
       have h2 := hT₁ g _ _ hentry σ1 (by rw [hEqCall, hx]; rfl)
       rw [hEqCall, hx] at h2
@@ -257,7 +257,7 @@ theorem block_bindCallIndElse_gleich (bo : Option Int) (hbV : BodenUnter bo V.bo
       have g1 := hl.trans gcall
       have heq := ih_err σ1 (.cons (grundSig hg r) ρ) hscope_err
         (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-      rw [heq]
+      first | exact heq | simp only [heq] | exact congrArg _ heq
   | logik e => rfl
   | hardware e => rfl
 
@@ -291,7 +291,7 @@ theorem block_bindAxiom_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
           rw [hx] at h1
           have g1 := hl.trans (Treu.weiter hw hg h1)
           have heq := ih_rest σ1 (.cons (ergWert he v) ρ) hscope_rest (g1.heldB hh)
-          rw [heq]
+          first | exact heq | simp only [heq] | exact congrArg _ heq
 
 theorem block_bindAxiomElse_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty}
@@ -328,13 +328,13 @@ theorem block_bindAxiomElse_gleich (bo : Option Int) (hbV : BodenUnter bo V.bode
         rw [← axiomAntwortSonst_fst, hx] at h1
         have g1 := hl.trans (Treu.weiter hw hg h1)
         have heq := ih_rest σ1 (.cons (ergWert he v) ρ) hscope_rest (g1.heldB hh)
-        rw [heq]
+        first | exact heq | simp only [heq] | exact congrArg _ heq
       · have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
           (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
         rw [← axiomAntwortSonst_fst, hx] at h1
         have g1 := hl.trans (Treu.weiter hw hg h1)
         have heq := ih_err σ1 (.cons r ρ) hscope_err (g1.heldB hh)
-        rw [heq]
+        first | exact heq | simp only [heq] | exact congrArg _ heq
 
 theorem block_bindAxiomOpt_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -369,7 +369,7 @@ theorem block_bindAxiomOpt_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden
               have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
               have heq := ihr σ1 (ergEnv none (he ▸ v) ρ)
                 (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-              rw [heq]
+              first | exact heq | simp only [heq] | exact congrArg _ heq
   | some τ =>
       simp only [execBlock, Ausgang.weiterOpt]
       cases hx : axiomAntwort O a (σ.lese Λ args.orte)
@@ -384,7 +384,7 @@ theorem block_bindAxiomOpt_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden
               have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
               have heq := ih_rest σ1 (ergEnv (some τ) (he ▸ v) ρ) hscope_rest
                 (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-              rw [heq]
+              first | exact heq | simp only [heq] | exact congrArg _ heq
 
 end GleichBind
 end Gabbro.Grammatik

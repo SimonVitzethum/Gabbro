@@ -77,7 +77,7 @@ theorem stmt_callIndElse_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
       have g1 := hl.trans gcall
       have heq := ih_err σ' (.cons (grundSig hg r) ρ) hscope_err
         (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-      rw [heq]
+      first | exact heq | simp only [heq] | exact congrArg _ heq
   | logik e => rfl
   | hardware e => rfl
 
@@ -161,7 +161,7 @@ theorem block_float_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
   | some v =>
       have heq := ih_rest (σ.lese Λ (a.orte ++ b.orte)) (.cons v ρ)
         hscope_rest (hl.heldB hh)
-      rw [heq]
+      first | exact heq | simp only [heq] | exact congrArg _ heq
 
 theorem block_floatLit_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -180,7 +180,7 @@ theorem block_floatLit_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
   | none => rfl
   | some v =>
       have heq := ih_rest σ (.cons v ρ) hscope_rest hh
-      rw [heq]
+      first | exact heq | simp only [heq] | exact congrArg _ heq
 
 theorem block_floatOf_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {l1 h1 : Int}
@@ -202,7 +202,7 @@ theorem block_floatOf_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
   | none => rfl
   | some v =>
       have heq := ih_rest (σ.lese Λ e.orte) (.cons v ρ) hscope_rest (hl.heldB hh)
-      rw [heq]
+      first | exact heq | simp only [heq] | exact congrArg _ heq
 
 theorem block_floatNarrow_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {l1 h1 : Int × Int}
@@ -227,7 +227,7 @@ theorem block_floatNarrow_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
       (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x with
   | some v =>
       have heq := ih_rest (σ.lese Λ e.orte) (.cons v ρ) hscope_rest (hl.heldB hh)
-      rw [heq]
+      first | exact heq | simp only [heq] | exact congrArg _ heq
   | none =>
       have heq := ih_sonst (σ.lese Λ e.orte) ρ hscope_sonst (hl.heldB hh)
       rw [heq]

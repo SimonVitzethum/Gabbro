@@ -60,13 +60,13 @@ theorem traverseLauf_unter (bo : Option Int)
           cases hx : execBlock O passes R₂ body₂ (inv σ ρ).1 (Env.cons k ρ) with
           | ok σ' ρ' =>
               have hT' := treuAus_ok (hT (inv σ ρ).1 (.cons k ρ) hscope₁ (hinv.heldB hh))
-                (by rw [heq, hx]; rfl)
+                (by rw [heq, hx])
               have g1 := hinv.trans hT'
               exact traverseLauf_unter bo body₁ body₂ inv ih hT hi hscope₁ hscope₂
                 ks σ' ρ'.tail (g1.heldB hh)
           | next hl σ' ρ' =>
               have hT' := treuAus_next (hT (inv σ ρ).1 (.cons k ρ) hscope₁ (hinv.heldB hh))
-                (by rw [heq, hx]; rfl)
+                (by rw [heq, hx])
               have g1 := hinv.trans hT'
               exact traverseLauf_unter bo body₁ body₂ inv ih hT hi hscope₁ hscope₂
                 ks σ' ρ'.tail (g1.heldB hh)
@@ -130,7 +130,7 @@ theorem verbrauchLauf_unter (bo : Option Int)
               | ok σ' ρ' =>
                   dsimp only
                   have hT' := treuAus_ok (hT σm (.cons v ρ) hscope₁ (gm.heldB hh))
-                    (by rw [heq, hx]; rfl)
+                    (by rw [heq, hx])
                   have g1 : Treu V.schreibt V.gschreibt σ σ' := gm.trans hT'
                   have hmassg2 := hmass σ' ρ'.tail (g1.heldB hh)
                   generalize heq_mass2 : massW σ' ρ'.tail = p2 at hmassg2 ⊢
@@ -145,7 +145,7 @@ theorem verbrauchLauf_unter (bo : Option Int)
               | next hl σ' ρ' =>
                   dsimp only
                   have hT' := treuAus_next (hT σm (.cons v ρ) hscope₁ (gm.heldB hh))
-                    (by rw [heq, hx]; rfl)
+                    (by rw [heq, hx])
                   have g1 : Treu V.schreibt V.gschreibt σ σ' := gm.trans hT'
                   have hmassg2 := hmass σ' ρ'.tail (g1.heldB hh)
                   generalize heq_mass2 : massW σ' ρ'.tail = p2 at hmassg2 ⊢
@@ -213,14 +213,14 @@ theorem retryLauf_unter (bo : Option Int)
           cases hx : execBlock O passes R₂ body₂ (bis σ ρ).1 ρ with
           | ok σ' ρ' =>
               have hT' := treuAus_ok (hT (bis σ ρ).1 ρ hscope₁ (hinv.heldB hh))
-                (by rw [heq, hx]; rfl)
+                (by rw [heq, hx])
               have g1 := hinv.trans hT'
               exact retryLauf_unter bo body₁ body₂ bis ueber₁ ueber₂
                 ih hT ihu hb hscope₁ hscope₂ hscope_u1 hscope_u2
                 n σ' ρ' (g1.heldB hh)
           | next hl σ' ρ' =>
               have hT' := treuAus_next (hT (bis σ ρ).1 ρ hscope₁ (hinv.heldB hh))
-                (by rw [heq, hx]; rfl)
+                (by rw [heq, hx])
               have g1 := hinv.trans hT'
               exact retryLauf_unter bo body₁ body₂ bis ueber₁ ueber₂
                 ih hT ihu hb hscope₁ hscope₂ hscope_u1 hscope_u2
@@ -261,13 +261,13 @@ theorem foreverLauf_unter (bo : Option Int)
           cases hx : execBlock O passes R₂ body₂ (inv σ ρ).1 ρ with
           | ok σ' ρ' =>
               have hT' := treuAus_ok (hT (inv σ ρ).1 ρ hscope₁ (hinv.heldB hh))
-                (by rw [heq, hx]; rfl)
+                (by rw [heq, hx])
               have g1 := hinv.trans hT'
               exact foreverLauf_unter bo a body₁ body₂ inv ih hT hi
                 hscope₁ hscope₂ n σ' ρ' (g1.heldB hh)
           | next hl σ' ρ' =>
               have hT' := treuAus_next (hT (inv σ ρ).1 ρ hscope₁ (hinv.heldB hh))
-                (by rw [heq, hx]; rfl)
+                (by rw [heq, hx])
               have g1 := hinv.trans hT'
               exact foreverLauf_unter bo a body₁ body₂ inv ih hT hi
                 hscope₁ hscope₂ n σ' ρ' (g1.heldB hh)
