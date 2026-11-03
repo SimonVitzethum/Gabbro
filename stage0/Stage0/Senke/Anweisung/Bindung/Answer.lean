@@ -37,7 +37,8 @@ theorem chkAnswer_ok {τ : Ty} {s reserved : Nat} {c : List II}
   | bool =>
     simp only [chkC, Option.some.injEq] at h
     subst c
-    exact boolC_ok hp (by omega) input
+    obtain ⟨m', run, changed, w', output, encoded⟩ := boolC_ok hp (by omega) input
+    exact ⟨m', w', run, changed, output, encoded⟩
   | never =>
     simp only [chkC, Option.some.injEq] at h
     subst c
@@ -70,6 +71,27 @@ theorem bool_errno_decode {z : Int → Option D.Fn} {n : Nat} (positive : 0 < n)
     rw [raw]
     simp only [sonstPasst, Int.mul_emod_left, ↓reduceIte,
       Int.mul_ediv_cancel _ divisor]
+
+/-- Listed errnos select the same nominal reason for every answer type. -/
+theorem fallible_hit {z : Int → Option D.Fn} {e : Option Ty} {n : Nat}
+    {b : TorB} (valid : fehlGut n b.fehler = true) (w : Runner.W)
+    {x : Int × Nat} (hit : b.fehler.find? (fun x => x.1 == w.toInt) = some x) :
+    ∃ hx : x.2 < n, sonstPasst z e n (rohW b n w) = some (.inr ⟨x.2, hx⟩) := by
+  have member := List.mem_of_find?_eq_some hit
+  have equal := List.find?_some hit
+  simp only [fehlGut, List.all_eq_true, Bool.and_eq_true, decide_eq_true_eq] at valid
+  obtain ⟨⟨⟨lower, upper⟩, bound⟩, _⟩ := valid x member
+  simp only [beq_iff_eq] at equal
+  have nz : n ≠ 0 := by omega
+  have raw : rohW b n w = (x.2 : Int) + 1 := by
+    simp only [rohW, nz, ↓reduceIte]
+    rw [if_pos ⟨by omega, by omega⟩, hit]
+  have tag : ((x.2 : Int) + 1) % ((n : Int) + 1) = (x.2 : Int) + 1 :=
+    Int.emod_eq_of_lt (by omega) (by omega)
+  refine ⟨bound, ?_⟩
+  simp only [sonstPasst, raw, tag]
+  rw [if_neg (by omega), dif_pos ⟨by omega, by omega⟩]
+  simp
 
 /-- All admitted scalar success types share the same canonical decoder after
     an errno miss. The integer rule retains its nonnegative lower bound. -/
