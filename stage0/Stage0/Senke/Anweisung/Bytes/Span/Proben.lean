@@ -65,7 +65,7 @@ def programOf (body : Endblock D (vertragVon D entry) false [] []) : Programm D 
     exact body
 
 def imageOf (body : Endblock D (vertragVon D entry) false [] []) : Except String (List Runner.B) := do
-  let b ← bild 1 (programOf body) (layU u (fun _ => none)) [entry] Fin.val (fun _ => "main") entry .nil [] 4096
+  let b ← bild 1 (programOf body) (layU u (fun _ => none)) [entry] Fin.val (fun _ => "main") entry .nil [] 4096 0
   pure b.bytes
 
 /-- Two kernels of eight and five bytes, with a nonzero partial high limb and

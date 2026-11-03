@@ -101,7 +101,7 @@ def gateBinding : TorB :=
   ⟨1, [some 0, some 1, some 2, none, none, none], [(-9, 0), (-4, 1)]⟩
 
 def imageOf (body : Endblock D (vertragVon D entry) false [] []) : Except String (List Runner.B) := do
-  let b ← bild 1 (programOf body) (layU u (fun _ => some gateBinding)) [entry] Fin.val (fun _ => "main") entry .nil [] 1024
+  let b ← bild 1 (programOf body) (layU u (fun _ => some gateBinding)) [entry] Fin.val (fun _ => "main") entry .nil [] 1024 0
   pure b.bytes
 
 def blockImageOf (body : Block D (vertragVon D entry) false [] [] []) : Except String (List Runner.B) :=
@@ -205,7 +205,7 @@ theorem traverse_wide_checker_zeuge :
     claim the missing empty-table source exporter has been implemented. -/
 theorem traverse_wide_image_zeuge :
     (bild 1 program (layU u (fun _ => none)) [entry] Fin.val
-      (fun _ => "main") entry .nil [] 1024).isOk = true := by
+      (fun _ => "main") entry .nil [] 1024 0).isOk = true := by
   decide +kernel
 
 end Gabbro.Stage0.Senke.WideTraverseProbe

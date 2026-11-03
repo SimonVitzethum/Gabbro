@@ -118,7 +118,7 @@ def program (optional nested : Bool) : Programm D where
 def image (optional nested : Bool) : Except String (List Runner.B) := do
   let emitted ← bild 1 (program optional nested)
     (layU (AxiomElseProbe.u result) (fun _ => some AxiomElseProbe.binding))
-    [entry] Fin.val (fun _ => "main") entry .nil [] 1024
+    [entry] Fin.val (fun _ => "main") entry .nil [] 1024 0
   pure emitted.bytes
 
 /-- Both binder APIs, in both contexts, reach complete images. -/
@@ -224,7 +224,7 @@ def program : Programm D where
 
 def image : Except String (List Runner.B) := do
   let emitted ← bild 1 program (layU unit (fun _ => some ⟨39, regsIn 0, [], none⟩))
-    [entry] Fin.val (fun _ => "main") entry .nil [] 1024
+    [entry] Fin.val (fun _ => "main") entry .nil [] 1024 0
   pure emitted.bytes
 
 /-- Region-capability results reach a complete image on a nonempty table layout. -/

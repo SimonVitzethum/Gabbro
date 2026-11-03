@@ -86,7 +86,7 @@ def binding (canFail : Bool) : TorB :=
 def image (bits : Nat) (canFail inBlock : Bool) : Except String (List Runner.B) := do
   let emitted ← bild 1 (program bits canFail inBlock)
     (layU (u bits canFail) (fun _ => some (binding canFail)))
-    [entry bits canFail] Fin.val (fun _ => "main") (entry bits canFail) .nil [] 4096
+    [entry bits canFail] Fin.val (fun _ => "main") (entry bits canFail) .nil [] 4096 0
   pure emitted.bytes
 
 /-- Two-word and three-word answers, with live success and failure branches. -/

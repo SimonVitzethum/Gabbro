@@ -94,7 +94,7 @@ def binding : TorB := ⟨1, [none, none, none, none, none, none], [(-9, 0)]⟩
 
 def image (result : Option Ty) (nested : Bool) : Except String (List Runner.B) := do
   let b ← bild 1 (program result nested) (layU (u result) (fun _ => some binding))
-    [entry result] Fin.val (fun _ => "main") (entry result) .nil [] 1024
+    [entry result] Fin.val (fun _ => "main") (entry result) .nil [] 1024 0
   pure b.bytes
 
 def initial (result : Option Ty) : World (D result) where

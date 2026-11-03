@@ -87,7 +87,7 @@ def params : Env D (D.params function) := .cons ⟨1, by decide, by decide⟩ .n
 
 def image : Except String (Bild D) :=
   bild 1 program (layU unit (fun _ => none)) [function] Fin.val (fun _ => "increment")
-    function params [] 1024
+    function params [] 1024 0
 
 /-- The real function compiler emits snapshots for G and all four field cells. -/
 theorem increment_oldG_zeuge :

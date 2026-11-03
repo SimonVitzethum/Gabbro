@@ -66,7 +66,7 @@ theorem byte_roundtrip_zeuge :
 
 /-- The same G program is lowered by the ordinary image builder. -/
 def imageOf (code : Endblock D (vertragVon D entry) false [] []) : Except String (List Runner.B) := do
-  let b ← bild 1 (programOf code) (layU u (fun _ => none)) [entry] Fin.val (fun _ => "main") entry .nil [] 1024
+  let b ← bild 1 (programOf code) (layU u (fun _ => none)) [entry] Fin.val (fun _ => "main") entry .nil [] 1024 0
   pure b.bytes
 
 def image : Except String (List Runner.B) := imageOf body
