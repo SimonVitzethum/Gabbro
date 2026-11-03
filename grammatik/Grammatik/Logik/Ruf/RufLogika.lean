@@ -71,24 +71,30 @@ theorem kong_rufAt_torRuf (P : Programm D) (O : Orakel D) (passes n : Nat)
 
 /-- **The frame half of `RespektiertRahmen`, for a handler**: an `ok` answer
     keeps the callee's declared frame and gives back every lock it took, at
-    EVERY world. `rufAt_gut` (`Satz.lean`) gives it only at worlds meeting
-    `HeldB`, and part 4 quantifies over all of them; `rufAt_treu`
-    (`RahmenTreu.lean`) gives it at all of them. -/
+    every world meeting the callee-entry discipline. `rufAt_gut` (`Satz.lean`)
+    gives it only at worlds meeting `HeldB`; `rufAt_treu` (`RahmenTreu.lean`)
+    gives it wherever the entry discipline holds -- collapsing the callee's
+    release needs it, and an arbitrary world does not meet it. -/
 def RufRahmenTreu (P : Programm D)
     (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) : Prop :=
   ∀ (f : D.Fn) (σ : World D) (ρ : Env D (D.params f)) (σ' : World D) (v : ErgVal D (D.erg f)),
+    HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ.haelt →
     R f σ ρ = RufAusgang.ok σ' v →
       Rahmen (D.schreibt f) (D.gschreibt f) σ σ' ∧ offen σ'.spur = offen σ.spur
 
-/-- **THE FRAME HALF OF `RespektiertRahmen` FOR `rufAt`, AT EVERY WORLD --
-    PROVED** (`rufAt_treu`, RahmenTreu.lean). The only premise is the
-    hardware's: an axiom keeps the frame of its declared `effects` and leaves
-    the held locks alone. Together with `rufAt_vertraege` this puts `rufAt`
-    into `RespektiertRahmen` wherever the caller's duty holds. -/
-theorem rufAt_rahmenTreu (P : Programm D) (O : Orakel D) (passes : Nat) (hO : TreuO O) :
+/-- **THE FRAME HALF OF `RespektiertRahmen` FOR `rufAt`, AT EVERY DISCIPLINED
+    WORLD -- PROVED** (`rufAt_treu`, RahmenTreu.lean). The premises are the
+    hardware's (an axiom keeps the frame of its declared `effects` and leaves
+    the held locks alone) and the static scope discipline (`ScopesOkProg`).
+    Together with `rufAt_vertraege` this puts `rufAt` into `RespektiertRahmen`
+    wherever the caller's duty and the entry discipline hold. -/
+theorem rufAt_rahmenTreu (P : Programm D) (O : Orakel D) (passes : Nat) (hO : TreuO O)
+    (hS : ScopesOkProg P) :
     ∀ n : Nat, RufRahmenTreu P (rufAt P O passes n) := by
-  intro n f σ ρ σ' v h
-  exact rufAt_treu P O passes hO n f σ ρ σ' (by rw [h]; rfl)
+  intro n f σ ρ σ' v hh h
+  have hT := rufAt_treu P O passes hO hS n f σ ρ hh σ' (by rw [h]; rfl)
+  rw [h] at hT
+  exact ⟨hT.1, hT.2⟩
 
 section Entladung
 

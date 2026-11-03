@@ -1,18 +1,66 @@
 module
+
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiG
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll.Teil1
+
 @[expose] public section
+
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
 section Delta
 variable {P : Programm D} {O : Orakel D} {passes : Nat}
+
+-- The same access delta covers success and reason answers of foreign calls.
+set_option hygiene false in
+local macro "delta_axiom" antwort:ident : tactic => `(tactic| (
+  simp only [rufUpdateG_self]
+  left
+  subst hs₁
+  have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _
+    (Args.orte_darf args) hΛ
+  have hh1 : HeldIn Λ ((M.weltVon f).lese Λ args.orte).haelt := hl.heldIn hΛ
+  have ha := axiomAntwort_gut O hO a ((M.weltVon f).lese Λ args.orte)
+    (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)
+    hd hgd hh1
+  have e2 : σ₂ = (O.wirkt a (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
+      (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)).1 := by
+    have := congrArg Prod.fst hax
+    simp only [$antwort] at this
+    exact this.symm
+  have hgt : ∀ t, D.aschreibt a t = true → ∀ L, Sum.inl L ∈ D.braucht t →
+      L ∈ ((M.weltVon f).lese Λ args.orte).haelt :=
+    fun t hwr L hL => hh1 L (hd t hwr _ hL)
+  have hgg : ∀ g, D.agschreibt a g = true → ∀ L, Sum.inl L ∈ D.gbraucht g →
+      L ∈ ((M.weltVon f).lese Λ args.orte).haelt :=
+    fun g hwr L hL => hh1 L (hgd g hwr _ hL)
+  obtain ⟨_, _, hcond⟩ := hO a (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
+    (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)
+  obtain ⟨tabs, globs, Λe, _, _, _, _, _, _, hspur⟩ := hcond hgt hgg
+  have hB : Brav (M.weltVon f) σ₂ := by
+    have := hl.2.trans ha.2
+    simp only [axiomAntwort] at this
+    rw [e2]
+    exact this
+  refine zugriffsDelta_brav hB
+    (axiomSpur tabs globs a Λe ((M.weltVon f).lese Λ args.orte).haelt ++
+      (Ereignis.fremd (.inl a) :: leseEv (M.weltVon f) Λ args.orte))
+    (by rw [e2, hspur, List.append_assoc]; rfl) ?_
+  intro L h hm
+  rcases List.mem_append.mp hm with hm | hm
+  · rcases axiomSpur_mem hm with ⟨_, _, _, e⟩ | ⟨_, _, _, e⟩ <;> cases e
+  · rcases List.mem_cons.mp hm with e | hm
+    · cases e
+    · exact kein_nimmt (leseEv_zugriff _ _ _) L h hm))
+
 /-- **The trace delta of one step.** Every step of thread `f` either is an
     access step (`ZugriffsDelta`: no lock taken, held locks unchanged, new
     access events good) or a lock step (`SperrDelta`: only lock events, and
     shared memory unchanged). The lock steps are exactly `dannLocks`,
     `freiGib` and the two `frei` peels. -/
-theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M') :
-    ZugriffsDelta (M.faeden f).spur (M'.faeden f).spur ∨ (SperrDelta (M.faeden f).spur (M'.faeden f).spur ∧ M'.speicher = M.speicher) := by
+theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
+    (hs : RufSchrittG P O passes M f M') :
+    ZugriffsDelta (M.faeden f).spur (M'.faeden f).spur ∨
+      (SperrDelta (M.faeden f).spur (M'.faeden f).spur ∧ M'.speicher = M.speicher) := by
   cases hs with
   | g1 hs =>
     cases hs with
@@ -39,37 +87,7 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden} (hs : Ru
         rw [hstep] at hG
         exact zugriffsDelta_brav hG.2 neu hneu hkein
     | endeBindAxiom l Γ Λ τ a args he hw hg hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
-        simp only [rufUpdateG_self]
-        left
-        subst hs₁
-        have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _ (Args.orte_darf args) hΛ
-        have hh1 : HeldIn Λ ((M.weltVon f).lese Λ args.orte).haelt := hl.heldIn hΛ
-        have ha := axiomAntwort_gut O hO a ((M.weltVon f).lese Λ args.orte) (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)
-          hd hgd hh1
-        have e2 : σ₂ = (O.wirkt a (((M.weltVon f).lese Λ args.orte).fragt (.inl a)) (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)).1 := by
-          have := congrArg Prod.fst hax
-          simp only [axiomAntwort] at this
-          exact this.symm
-        have hgt : ∀ t, D.aschreibt a t = true → ∀ L, Sum.inl L ∈ D.braucht t →
-            L ∈ ((M.weltVon f).lese Λ args.orte).haelt :=
-          fun t hwr L hL => hh1 L (hd t hwr _ hL)
-        have hgg : ∀ g, D.agschreibt a g = true → ∀ L, Sum.inl L ∈ D.gbraucht g →
-            L ∈ ((M.weltVon f).lese Λ args.orte).haelt :=
-          fun g hwr L hL => hh1 L (hgd g hwr _ hL)
-        obtain ⟨_, _, hcond⟩ := hO a (((M.weltVon f).lese Λ args.orte).fragt (.inl a)) (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)
-        obtain ⟨tabs, globs, Λe, _, _, _, _, _, _, hspur⟩ := hcond hgt hgg
-        have hB : Brav (M.weltVon f) σ₂ := by
-          have := hl.2.trans ha.2
-          simp only [axiomAntwort] at this
-          rw [e2]
-          exact this
-        refine zugriffsDelta_brav hB (axiomSpur tabs globs a Λe ((M.weltVon f).lese Λ args.orte).haelt ++ (Ereignis.fremd (.inl a) :: leseEv (M.weltVon f) Λ args.orte)) (by rw [e2, hspur, List.append_assoc]; rfl) ?_
-        intro L h hm
-        rcases List.mem_append.mp hm with hm | hm
-        · rcases axiomSpur_mem hm with ⟨_, _, _, e⟩ | ⟨_, _, _, e⟩ <;> cases e
-        · rcases List.mem_cons.mp hm with e | hm
-          · cases e
-          · exact kein_nimmt (leseEv_zugriff _ _ _) L h hm
+        delta_axiom axiomAntwort
     | _ =>
         simp only [rufUpdateG_self]
         subst_vars
@@ -79,12 +97,16 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden} (hs : Ru
           | exact zugriffsDelta_lese _ _ _ (Expr.orte_darf _) (heldIn_weltVon (by assumption))
           | exact zugriffsDelta_lese _ _ _ (Args.orte_darf _) (heldIn_weltVon (by assumption))
           | exact zugriffsDelta_lese _ _ _ (ErgExpr.orte_darf _) (heldIn_weltVon (by assumption))
-          | exact zugriffsDelta_lese _ _ _ (orte_append (Expr.orte_darf _) (Args.orte_darf _)) (heldIn_weltVon (by assumption))
-          | exact zugriffsDelta_lese _ _ _ (orte_append (Expr.orte_darf _) (Expr.orte_darf _)) (heldIn_weltVon (by assumption))
-          | exact zugriffsDelta_lese _ _ _ (fun o ho => by
+          | exact zugriffsDelta_lese _ _ _ (orte_append (Expr.orte_darf _) (Args.orte_darf _))
+              (heldIn_weltVon (by assumption))
+          | exact zugriffsDelta_lese _ _ _ (orte_append (Expr.orte_darf _) (Expr.orte_darf _))
+              (heldIn_weltVon (by assumption))
+          | exact zugriffsDelta_lese _ _ _
+              (fun o ho => by
                 rw [List.mem_singleton] at ho
                 subst ho
-                assumption) (heldIn_weltVon (by assumption))
+                assumption)
+              (heldIn_weltVon (by assumption))
   | g2 hs =>
     cases hs with
     | dannLocks l Γ Λ Λ'' L hr body rest k ρ hhead hself hrang hfrei =>
@@ -102,12 +124,16 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden} (hs : Ru
           | exact zugriffsDelta_lese _ _ _ (Expr.orte_darf _) (heldIn_weltVon (by assumption))
           | exact zugriffsDelta_lese _ _ _ (Args.orte_darf _) (heldIn_weltVon (by assumption))
           | exact zugriffsDelta_lese _ _ _ (ErgExpr.orte_darf _) (heldIn_weltVon (by assumption))
-          | exact zugriffsDelta_lese _ _ _ (orte_append (Expr.orte_darf _) (Args.orte_darf _)) (heldIn_weltVon (by assumption))
-          | exact zugriffsDelta_lese _ _ _ (orte_append (Expr.orte_darf _) (Expr.orte_darf _)) (heldIn_weltVon (by assumption))
-          | exact zugriffsDelta_lese _ _ _ (fun o ho => by
+          | exact zugriffsDelta_lese _ _ _ (orte_append (Expr.orte_darf _) (Args.orte_darf _))
+              (heldIn_weltVon (by assumption))
+          | exact zugriffsDelta_lese _ _ _ (orte_append (Expr.orte_darf _) (Expr.orte_darf _))
+              (heldIn_weltVon (by assumption))
+          | exact zugriffsDelta_lese _ _ _
+              (fun o ho => by
                 rw [List.mem_singleton] at ho
                 subst ho
-                assumption) (heldIn_weltVon (by assumption))
+                assumption)
+              (heldIn_weltVon (by assumption))
   | g3 hs =>
     cases hs with
     | dannLeaveTrav l Γ Λ t inv body is k rest i ρ hl hhead σ' ρ' neu hstep hneu hkein σ₁ hs₁ hw
@@ -115,7 +141,8 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden} (hs : Ru
         simp only [rufUpdateG_self]
         left
         rw [hs₁, leave_welt' _ _ _ _ _ _ _ _ hstep]
-        exact zugriffsDelta_lese _ Λ _ (Expr.orte_darf inv) (fun L hL => hΛ L (Block.held_mono rest L hL))
+        exact zugriffsDelta_lese _ Λ _ (Expr.orte_darf inv)
+          (fun L hL => hΛ L (Block.held_mono rest L hL))
     | dannNextTrav l Γ Λ t inv body is k rest i ρ hl hhead σ' ρ' neu hstep =>
         simp only [rufUpdateG_self]
         left
@@ -145,12 +172,16 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden} (hs : Ru
           | exact zugriffsDelta_lese _ _ _ (Expr.orte_darf _) (heldIn_weltVon (by assumption))
           | exact zugriffsDelta_lese _ _ _ (Args.orte_darf _) (heldIn_weltVon (by assumption))
           | exact zugriffsDelta_lese _ _ _ (ErgExpr.orte_darf _) (heldIn_weltVon (by assumption))
-          | exact zugriffsDelta_lese _ _ _ (orte_append (Expr.orte_darf _) (Args.orte_darf _)) (heldIn_weltVon (by assumption))
-          | exact zugriffsDelta_lese _ _ _ (orte_append (Expr.orte_darf _) (Expr.orte_darf _)) (heldIn_weltVon (by assumption))
-          | exact zugriffsDelta_lese _ _ _ (fun o ho => by
+          | exact zugriffsDelta_lese _ _ _ (orte_append (Expr.orte_darf _) (Args.orte_darf _))
+              (heldIn_weltVon (by assumption))
+          | exact zugriffsDelta_lese _ _ _ (orte_append (Expr.orte_darf _) (Expr.orte_darf _))
+              (heldIn_weltVon (by assumption))
+          | exact zugriffsDelta_lese _ _ _
+              (fun o ho => by
                 rw [List.mem_singleton] at ho
                 subst ho
-                assumption) (heldIn_weltVon (by assumption))
+                assumption)
+              (heldIn_weltVon (by assumption))
   | g4 hs =>
     cases hs with
     | peelFreiLeave l Γ Λ L rest k ρ hl hhead =>
@@ -173,12 +204,16 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden} (hs : Ru
           | exact zugriffsDelta_lese _ _ _ (Expr.orte_darf _) (heldIn_weltVon (by assumption))
           | exact zugriffsDelta_lese _ _ _ (Args.orte_darf _) (heldIn_weltVon (by assumption))
           | exact zugriffsDelta_lese _ _ _ (ErgExpr.orte_darf _) (heldIn_weltVon (by assumption))
-          | exact zugriffsDelta_lese _ _ _ (orte_append (Expr.orte_darf _) (Args.orte_darf _)) (heldIn_weltVon (by assumption))
-          | exact zugriffsDelta_lese _ _ _ (orte_append (Expr.orte_darf _) (Expr.orte_darf _)) (heldIn_weltVon (by assumption))
-          | exact zugriffsDelta_lese _ _ _ (fun o ho => by
+          | exact zugriffsDelta_lese _ _ _ (orte_append (Expr.orte_darf _) (Args.orte_darf _))
+              (heldIn_weltVon (by assumption))
+          | exact zugriffsDelta_lese _ _ _ (orte_append (Expr.orte_darf _) (Expr.orte_darf _))
+              (heldIn_weltVon (by assumption))
+          | exact zugriffsDelta_lese _ _ _
+              (fun o ho => by
                 rw [List.mem_singleton] at ho
                 subst ho
-                assumption) (heldIn_weltVon (by assumption))
+                assumption)
+              (heldIn_weltVon (by assumption))
   | g5 hs =>
     cases hs with
     | dannExchange l Γ Λ Λ' g neuE hw hL rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
@@ -191,111 +226,25 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden} (hs : Ru
           · exact hL
           · exact Expr.orte_darf neuE o ho
         have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _ ho hΛ
-        have hs := gut_schreibGlob (W := fun _ => true) (G := fun _ => true) ((M.weltVon f).lese Λ (Sum.inr g :: neuE.orte)) g Λ (eval ((M.weltVon f).lese Λ (Sum.inr g :: neuE.orte)) neuE ((M.weltVon f).lese Λ (Sum.inr g :: neuE.orte)) (.cons (((M.weltVon f).lese Λ (Sum.inr g :: neuE.orte)).globs g) ρ)) rfl hL (hl.heldIn hΛ)
-        refine zugriffsDelta_brav (hl.2.trans hs.2) (Ereignis.gzugriff g true Λ ((M.weltVon f).lese Λ (Sum.inr g :: neuE.orte)).haelt ::
+        have hs := gut_schreibGlob (W := fun _ => true) (G := fun _ => true)
+          ((M.weltVon f).lese Λ (Sum.inr g :: neuE.orte)) g Λ
+          (eval ((M.weltVon f).lese Λ (Sum.inr g :: neuE.orte)) neuE
+            ((M.weltVon f).lese Λ (Sum.inr g :: neuE.orte))
+            (.cons (((M.weltVon f).lese Λ (Sum.inr g :: neuE.orte)).globs g) ρ)) rfl hL
+          (hl.heldIn hΛ)
+        refine zugriffsDelta_brav (hl.2.trans hs.2)
+          (Ereignis.gzugriff g true Λ ((M.weltVon f).lese Λ (Sum.inr g :: neuE.orte)).haelt ::
             leseEv (M.weltVon f) Λ (Sum.inr g :: neuE.orte)) rfl ?_
         intro L h hm
         rcases List.mem_cons.mp hm with hm | hm
         · cases hm
         · exact kein_nimmt (leseEv_zugriff _ _ _) L h hm
     | dannBindAxiom l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
-        simp only [rufUpdateG_self]
-        left
-        subst hs₁
-        have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _ (Args.orte_darf args) hΛ
-        have hh1 : HeldIn Λ ((M.weltVon f).lese Λ args.orte).haelt := hl.heldIn hΛ
-        have ha := axiomAntwort_gut O hO a ((M.weltVon f).lese Λ args.orte) (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)
-          hd hgd hh1
-        have e2 : σ₂ = (O.wirkt a (((M.weltVon f).lese Λ args.orte).fragt (.inl a)) (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)).1 := by
-          have := congrArg Prod.fst hax
-          simp only [axiomAntwort] at this
-          exact this.symm
-        have hgt : ∀ t, D.aschreibt a t = true → ∀ L, Sum.inl L ∈ D.braucht t →
-            L ∈ ((M.weltVon f).lese Λ args.orte).haelt :=
-          fun t hwr L hL => hh1 L (hd t hwr _ hL)
-        have hgg : ∀ g, D.agschreibt a g = true → ∀ L, Sum.inl L ∈ D.gbraucht g →
-            L ∈ ((M.weltVon f).lese Λ args.orte).haelt :=
-          fun g hwr L hL => hh1 L (hgd g hwr _ hL)
-        obtain ⟨_, _, hcond⟩ := hO a (((M.weltVon f).lese Λ args.orte).fragt (.inl a)) (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)
-        obtain ⟨tabs, globs, Λe, _, _, _, _, _, _, hspur⟩ := hcond hgt hgg
-        have hB : Brav (M.weltVon f) σ₂ := by
-          have := hl.2.trans ha.2
-          simp only [axiomAntwort] at this
-          rw [e2]
-          exact this
-        refine zugriffsDelta_brav hB (axiomSpur tabs globs a Λe ((M.weltVon f).lese Λ args.orte).haelt ++ (Ereignis.fremd (.inl a) :: leseEv (M.weltVon f) Λ args.orte)) (by rw [e2, hspur, List.append_assoc]; rfl) ?_
-        intro L h hm
-        rcases List.mem_append.mp hm with hm | hm
-        · rcases axiomSpur_mem hm with ⟨_, _, _, e⟩ | ⟨_, _, _, e⟩ <;> cases e
-        · rcases List.mem_cons.mp hm with e | hm
-          · cases e
-          · exact kein_nimmt (leseEv_zugriff _ _ _) L h hm
+        delta_axiom axiomAntwort
     | dannBindAxiomElseOk l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
-        simp only [rufUpdateG_self]
-        left
-        subst hs₁
-        have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _ (Args.orte_darf args) hΛ
-        have hh1 : HeldIn Λ ((M.weltVon f).lese Λ args.orte).haelt := hl.heldIn hΛ
-        have ha := axiomAntwort_gut O hO a ((M.weltVon f).lese Λ args.orte) (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)
-          hd hgd hh1
-        have e2 : σ₂ = (O.wirkt a (((M.weltVon f).lese Λ args.orte).fragt (.inl a)) (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)).1 := by
-          have := congrArg Prod.fst hax
-          simp only [axiomAntwortSonst] at this
-          exact this.symm
-        have hgt : ∀ t, D.aschreibt a t = true → ∀ L, Sum.inl L ∈ D.braucht t →
-            L ∈ ((M.weltVon f).lese Λ args.orte).haelt :=
-          fun t hwr L hL => hh1 L (hd t hwr _ hL)
-        have hgg : ∀ g, D.agschreibt a g = true → ∀ L, Sum.inl L ∈ D.gbraucht g →
-            L ∈ ((M.weltVon f).lese Λ args.orte).haelt :=
-          fun g hwr L hL => hh1 L (hgd g hwr _ hL)
-        obtain ⟨_, _, hcond⟩ := hO a (((M.weltVon f).lese Λ args.orte).fragt (.inl a)) (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)
-        obtain ⟨tabs, globs, Λe, _, _, _, _, _, _, hspur⟩ := hcond hgt hgg
-        have hB : Brav (M.weltVon f) σ₂ := by
-          have := hl.2.trans ha.2
-          simp only [axiomAntwort] at this
-          rw [e2]
-          exact this
-        refine zugriffsDelta_brav hB (axiomSpur tabs globs a Λe ((M.weltVon f).lese Λ args.orte).haelt ++ (Ereignis.fremd (.inl a) :: leseEv (M.weltVon f) Λ args.orte)) (by rw [e2, hspur, List.append_assoc]; rfl) ?_
-        intro L h hm
-        rcases List.mem_append.mp hm with hm | hm
-        · rcases axiomSpur_mem hm with ⟨_, _, _, e⟩ | ⟨_, _, _, e⟩ <;> cases e
-        · rcases List.mem_cons.mp hm with e | hm
-          · cases e
-          · exact kein_nimmt (leseEv_zugriff _ _ _) L h hm
+        delta_axiom axiomAntwortSonst
     | dannBindAxiomElseGrund l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
-        simp only [rufUpdateG_self]
-        left
-        subst hs₁
-        have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _ (Args.orte_darf args) hΛ
-        have hh1 : HeldIn Λ ((M.weltVon f).lese Λ args.orte).haelt := hl.heldIn hΛ
-        have ha := axiomAntwort_gut O hO a ((M.weltVon f).lese Λ args.orte) (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)
-          hd hgd hh1
-        have e2 : σ₂ = (O.wirkt a (((M.weltVon f).lese Λ args.orte).fragt (.inl a)) (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)).1 := by
-          have := congrArg Prod.fst hax
-          simp only [axiomAntwortSonst] at this
-          exact this.symm
-        have hgt : ∀ t, D.aschreibt a t = true → ∀ L, Sum.inl L ∈ D.braucht t →
-            L ∈ ((M.weltVon f).lese Λ args.orte).haelt :=
-          fun t hwr L hL => hh1 L (hd t hwr _ hL)
-        have hgg : ∀ g, D.agschreibt a g = true → ∀ L, Sum.inl L ∈ D.gbraucht g →
-            L ∈ ((M.weltVon f).lese Λ args.orte).haelt :=
-          fun g hwr L hL => hh1 L (hgd g hwr _ hL)
-        obtain ⟨_, _, hcond⟩ := hO a (((M.weltVon f).lese Λ args.orte).fragt (.inl a)) (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)
-        obtain ⟨tabs, globs, Λe, _, _, _, _, _, _, hspur⟩ := hcond hgt hgg
-        have hB : Brav (M.weltVon f) σ₂ := by
-          have := hl.2.trans ha.2
-          simp only [axiomAntwort] at this
-          rw [e2]
-          exact this
-        refine zugriffsDelta_brav hB (axiomSpur tabs globs a Λe ((M.weltVon f).lese Λ args.orte).haelt ++
-            (Ereignis.fremd (.inl a) :: leseEv (M.weltVon f) Λ args.orte))
-          (by rw [e2, hspur, List.append_assoc]; rfl) ?_
-        intro L h hm
-        rcases List.mem_append.mp hm with hm | hm
-        · rcases axiomSpur_mem hm with ⟨_, _, _, e⟩ | ⟨_, _, _, e⟩ <;> cases e
-        · rcases List.mem_cons.mp hm with e | hm
-          · cases e
-          · exact kein_nimmt (leseEv_zugriff _ _ _) L h hm
+        delta_axiom axiomAntwortSonst
     | dannRegLies l Γ Λ Λ' r hk rest k ρ hhead v hv hz hΛ =>
         simp only [rufUpdateG_self]
         exact Or.inl (zugriffsDelta_fragt (M.weltVon f) _)
@@ -334,83 +283,9 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden} (hs : Ru
   | g6 hs =>
     cases hs with
     | endeBindAxiomElseOk l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
-        simp only [rufUpdateG_self]
-        left
-        subst hs₁
-        have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _
-          (Args.orte_darf args) hΛ
-        have hh1 : HeldIn Λ ((M.weltVon f).lese Λ args.orte).haelt := hl.heldIn hΛ
-        have ha := axiomAntwort_gut O hO a ((M.weltVon f).lese Λ args.orte)
-          (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)
-          hd hgd hh1
-        have e2 : σ₂ = (O.wirkt a (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
-            (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)).1 := by
-          have := congrArg Prod.fst hax
-          simp only [axiomAntwortSonst] at this
-          exact this.symm
-        have hgt : ∀ t, D.aschreibt a t = true → ∀ L, Sum.inl L ∈ D.braucht t →
-            L ∈ ((M.weltVon f).lese Λ args.orte).haelt :=
-          fun t hwr L hL => hh1 L (hd t hwr _ hL)
-        have hgg : ∀ g, D.agschreibt a g = true → ∀ L, Sum.inl L ∈ D.gbraucht g →
-            L ∈ ((M.weltVon f).lese Λ args.orte).haelt :=
-          fun g hwr L hL => hh1 L (hgd g hwr _ hL)
-        obtain ⟨_, _, hcond⟩ := hO a (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
-          (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)
-        obtain ⟨tabs, globs, Λe, _, _, _, _, _, _, hspur⟩ := hcond hgt hgg
-        have hB : Brav (M.weltVon f) σ₂ := by
-          have := hl.2.trans ha.2
-          simp only [axiomAntwort] at this
-          rw [e2]
-          exact this
-        refine zugriffsDelta_brav hB
-          (axiomSpur tabs globs a Λe ((M.weltVon f).lese Λ args.orte).haelt ++
-            (Ereignis.fremd (.inl a) :: leseEv (M.weltVon f) Λ args.orte))
-          (by rw [e2, hspur, List.append_assoc]; rfl) ?_
-        intro L h hm
-        rcases List.mem_append.mp hm with hm | hm
-        · rcases axiomSpur_mem hm with ⟨_, _, _, e⟩ | ⟨_, _, _, e⟩ <;> cases e
-        · rcases List.mem_cons.mp hm with e | hm
-          · cases e
-          · exact kein_nimmt (leseEv_zugriff _ _ _) L h hm
+        delta_axiom axiomAntwortSonst
     | endeBindAxiomElseGrund l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
-        simp only [rufUpdateG_self]
-        left
-        subst hs₁
-        have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _
-          (Args.orte_darf args) hΛ
-        have hh1 : HeldIn Λ ((M.weltVon f).lese Λ args.orte).haelt := hl.heldIn hΛ
-        have ha := axiomAntwort_gut O hO a ((M.weltVon f).lese Λ args.orte)
-          (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)
-          hd hgd hh1
-        have e2 : σ₂ = (O.wirkt a (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
-            (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)).1 := by
-          have := congrArg Prod.fst hax
-          simp only [axiomAntwortSonst] at this
-          exact this.symm
-        have hgt : ∀ t, D.aschreibt a t = true → ∀ L, Sum.inl L ∈ D.braucht t →
-            L ∈ ((M.weltVon f).lese Λ args.orte).haelt :=
-          fun t hwr L hL => hh1 L (hd t hwr _ hL)
-        have hgg : ∀ g, D.agschreibt a g = true → ∀ L, Sum.inl L ∈ D.gbraucht g →
-            L ∈ ((M.weltVon f).lese Λ args.orte).haelt :=
-          fun g hwr L hL => hh1 L (hgd g hwr _ hL)
-        obtain ⟨_, _, hcond⟩ := hO a (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
-          (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)
-        obtain ⟨tabs, globs, Λe, _, _, _, _, _, _, hspur⟩ := hcond hgt hgg
-        have hB : Brav (M.weltVon f) σ₂ := by
-          have := hl.2.trans ha.2
-          simp only [axiomAntwort] at this
-          rw [e2]
-          exact this
-        refine zugriffsDelta_brav hB
-          (axiomSpur tabs globs a Λe ((M.weltVon f).lese Λ args.orte).haelt ++
-            (Ereignis.fremd (.inl a) :: leseEv (M.weltVon f) Λ args.orte))
-          (by rw [e2, hspur, List.append_assoc]; rfl) ?_
-        intro L h hm
-        rcases List.mem_append.mp hm with hm | hm
-        · rcases axiomSpur_mem hm with ⟨_, _, _, e⟩ | ⟨_, _, _, e⟩ <;> cases e
-        · rcases List.mem_cons.mp hm with e | hm
-          · cases e
-          · exact kein_nimmt (leseEv_zugriff _ _ _) L h hm
+        delta_axiom axiomAntwortSonst
   | g7 hs =>
     cases hs with
     | dannVerbrauch _ _ l Γ Λ Λ'' t member edge inv bound mass body rest k ρ hhead =>
@@ -490,5 +365,7 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden} (hs : Ru
         subst hsm
         left
         exact zugriffsDelta_lese _ _ _ mass.orte_darf (heldIn_weltVon hΛ)
+
 end Delta
+
 end Gabbro.Grammatik

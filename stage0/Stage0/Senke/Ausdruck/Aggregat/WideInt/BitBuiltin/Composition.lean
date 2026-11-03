@@ -70,7 +70,7 @@ theorem shl_ok {hi : Int} (width s : Nat) (bound : hi < (2 : Int) ^ width)
     rw [same]
     change ((x.n.toNat * 2 ^ y.n.toNat : Nat) : Int) = x.n * 2 ^ y.n.toNat
     rw [Int.natCast_mul, Int.natCast_pow, Int.cast_ofNat_Int, Int.toNat_of_nonneg x.lo_le]
-  subst r
+  rw [value]
   intro d c top emitted fits m pc pre
   simpa only [Int.toNat_natCast] using
     wideShl_ok width bound (by omega) (by decide) (by decide) x y (ia d) (ib _) emitted fits pre
@@ -85,7 +85,7 @@ theorem shr_ok {hi : Int} (width s : Nat) (bound : hi < (2 : Int) ^ width)
     rw [same]
     change ((x.n.toNat / 2 ^ y.n.toNat : Nat) : Int) = x.n / 2 ^ y.n.toNat
     rw [Int.natCast_ediv, Int.natCast_pow, Int.cast_ofNat_Int, Int.toNat_of_nonneg x.lo_le]
-  subst r
+  rw [value]
   intro d c top emitted fits m pc pre
   exact wideShr_ok width bound (by omega) (by decide) (by decide) x y (ia d) (ib _) emitted fits pre
 
@@ -106,7 +106,7 @@ theorem mask_ok {hi : Int} (bits : Nat) (x : Zahl 0 hi)
     apply Zahl.ext_n
     change r.n = ((z.n.toNat &&& x.n.toNat : Nat) : Int)
     rw [zn, Nat.and_comm, Nat.and_two_pow_sub_one_eq_mod, same]
-  subst r
+  rw [value]
   intro d c top emitted fits m pc pre
   exact wideBand_ok (by decide) (by decide) z x
     (constant_ok z d) (ia _) emitted fits pre
@@ -139,9 +139,9 @@ theorem choose_ok {τ : Ty} (b : Bool) (x y : Wert D τ) {fc fa fb : Emitter}
     · intro hp
       exact (ic d cc tc hc (by omega) m pc hp).word trivial
     · intro yes m pc hp
-      simpa only [yes, if_true] using ia d ca ta ha (by omega) m pc hp
+      simpa only [ValueOk, yes, ite_true] using ia d ca ta ha (by omega) m pc hp
     · intro no m pc hp
-      simpa only [no, Bool.false_eq_true, if_false] using ib d cb tb hb (by omega) m pc hp
+      simpa only [ValueOk, no, Bool.false_eq_true, ite_false] using ib d cb tb hb (by omega) m pc hp
   · cases lowered
 
 end Gabbro.Stage0.Senke.BitBuiltin

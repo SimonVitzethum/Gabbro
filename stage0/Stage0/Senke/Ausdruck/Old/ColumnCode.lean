@@ -43,7 +43,7 @@ theorem entryColumnL_ok [Kern] {τ : Ty} {n : Int} (k : Zahl 0 (n - 1)) (v : Wer
   have idxPre : Pre L m pc fp K ptr ci ρ W reserved :=
     { pre.left with ctx := by have := pre.ctx; dsimp only [ptr]; omega }
   obtain ⟨m1, run1, changed1, indexValue⟩ := child ci ti hi (by omega) m pc idxPre
-  have tail := pre.next (d' := ptr) (changed1.mono (by dsimp only [ptr]; omega))
+  have tail := pre.next (d' := ptr) (changed1.mono (by omega))
     (by dsimp only [ptr]; omega) (by omega : d ≤ K)
   have input := saved tail.env
   obtain ⟨word, read, encoded⟩ := ValueAt.word (.index n) k trivial indexValue
@@ -58,8 +58,8 @@ theorem entryColumnL_ok [Kern] {τ : Ty} {n : Int} (k : Zahl 0 (n - 1)) (v : Wer
     omega
   obtain ⟨m2, run2, changed2, result⟩ := selectFrameSpan_checked_ok
     (by dsimp only [ptr]; omega) (Or.inr selectedBound) (Nat.le_refl ptr)
-    (by omega) (by dsimp only [ptr]; omega) literal indexWord input tail
-  refine ⟨m2, ?_, (changed1.mono (by dsimp only [ptr]; omega)).trans changed2, result⟩
+    (by omega) (by omega) literal indexWord input tail
+  refine ⟨m2, ?_, (changed1.mono (by omega)).trans changed2, result⟩
   simpa only [List.length_append, pc_add] using run1.trans run2
 
 end Gabbro.Stage0.Senke

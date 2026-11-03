@@ -1,6 +1,6 @@
 /- Six-step binary search for the leading bit of a binary64 magnitude. -/
 module
-public import Stage0.Senke.Gleit.RoutineBranch
+public import Stage0.Senke.Gleit.Routine.RoutineBranch
 public import Stage0.Senke.Gleit.BitLength
 @[expose] public section
 
@@ -67,8 +67,9 @@ theorem routineTopWordAux_model (fuel : Nat) (a : Runner.W) :
   | succ fuel ih =>
     have zero : ((a >>> (2 ^ fuel)) == 0) = decide (a.toNat < 2 ^ (2 ^ fuel)) := by
       apply Bool.eq_iff_iff.mpr
-      simp only [beq_iff_eq, BitVec.toNat_eq, BitVec.toNat_zero,
+      simp only [beq_iff_eq, BitVec.toNat_eq,
         BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow, decide_eq_true_eq]
+      change a.toNat / 2 ^ (2 ^ fuel) = 0 ↔ a.toNat < 2 ^ (2 ^ fuel)
       rw [Nat.div_eq_zero_iff, or_iff_right (Nat.ne_of_gt (Nat.two_pow_pos _))]
     simp only [routineTopWordAux, routineTopNat, zero]
     by_cases small : a.toNat < 2 ^ (2 ^ fuel)
@@ -110,19 +111,30 @@ theorem routineTopAuxL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
       have := Nat.pow_le_pow_right (show 0 < 2 by decide) (show fuel ≤ 5 by omega)
       exact this
     have literal : lit32 (Int.ofNat (2 ^ fuel)) = true := by
-      simp [lit32]
+      have hn : (0 : Int) ≤ Int.ofNat (2 ^ fuel) := Int.ofNat_nonneg _
+      have hu : Int.ofNat (2 ^ fuel) ≤ (32 : Int) := Int.ofNat_le.mpr shiftBound
+      simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]
       omega
     have count : (BitVec.ofInt 64 (Int.ofNat (2 ^ fuel))).toNat % 64 = 2 ^ fuel := by
-      change ((2 ^ fuel) % 2 ^ 64) % 64 = 2 ^ fuel
-      rw [Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega)]
-    have shifted := WordCode.bin ha (WordCode.const _ literal)
+      have below64 : (2 : Nat) ^ fuel < 64 := by omega
+      have belowWord : (2 : Nat) ^ fuel < 2 ^ 64 := by omega
+      have hc : Int.ofNat (2 ^ fuel) = ((2 ^ fuel : Nat) : Int) := rfl
+      rw [hc, BitVec.ofInt_natCast, BitVec.toNat_ofNat, Nat.mod_eq_of_lt belowWord,
+        Nat.mod_eq_of_lt below64]
+    have shifted : WordCode (L := L) ρ W _ _ := WordCode.bin ha (WordCode.const _ literal)
       (g := fun x y => some (x >>> (y.toNat % 64))) rfl rfl (by decide : 12 < 256)
     rw [count] at shifted
-    have zero := WordCode.bin shifted (WordCode.const 0 (by decide))
+    have zero : WordCode (L := L) ρ W _ _ := WordCode.bin shifted (WordCode.const 0 (by decide))
       (g := fun x y => some (Runner.IR.bool (x == y))) rfl rfl (by decide : 14 < 256)
-    have high := WordCode.bin (WordCode.const _ literal) (ih shifted (by omega))
+    have high : WordCode (L := L) ρ W _ _ := WordCode.bin (WordCode.const _ literal) (ih shifted (by omega))
       (g := fun x y => some (x + y)) rfl rfl (by decide : 3 < 256)
-    exact routineChooseL_ok zero (fun _ => ih ha (by omega)) (fun _ => high)
+    have result : WordCode (L := L) ρ W _ _ :=
+      routineChooseL_ok zero (fun _ => ih ha (by omega)) (fun _ => high)
+    intro fp K d c top h hK m pc hp
+    have h0 : (BitVec.ofInt 64 0 : Runner.W) = 0 := by decide
+    have hc : Int.ofNat (2 ^ fuel) = ((2 ^ fuel : Nat) : Int) := rfl
+    simpa only [routineTopAuxL, routineTopWordAux, hc, BitVec.ofInt_natCast, h0] using
+      result (fp := fp) (K := K) (d := d) (c := c) (top := top) h hK m pc hp
 
 /-- Count the zeros before the leading bit. Zero's result is 64. -/
 def routineLeadingZerosWord (a : Runner.W) : Runner.W :=
@@ -143,9 +155,11 @@ theorem routineLeadingZerosWord_model (av : Runner.W) :
     have topBound : bitlen av.toNat - 1 ≤ 63 := by omega
     simp only [routineLeadingZerosWord, beq_eq_false_iff_ne.mpr hz, Bool.false_eq_true,
       ite_false, routineTopWordAux_canonical av nonzero,
-      show (63 : Runner.W) = BitVec.ofNat 64 63 from rfl,
-      BitVec.ofNat_sub_ofNat_of_le 63 (bitlen av.toNat - 1) (by omega) topBound,
-      show 63 - (bitlen av.toNat - 1) = 64 - bitlen av.toNat by omega]
+      show (63 : Runner.W) = BitVec.ofNat 64 63 from rfl]
+    rw [BitVec.ofNat_sub_ofNat_of_le (w := 64) 63 (bitlen av.toNat - 1)
+      (by omega) topBound]
+    congr 1
+    omega
 
 def routineLeadingZerosL (d : Nat) (a : Nat → Option (List II × Nat)) :
     Option (List II × Nat) :=
@@ -180,9 +194,11 @@ theorem routineLeadingZeros_zeuge :
 theorem routineTopAuxL_ok_zeuge {Γ : Ctx} (ρ : Env D Γ) (W : Runner.Mem → Prop) :
     WordCode (L := L) ρ W
       (routineTopAuxL (fun d => some ([ci 1 d 8 0], d + 1)) 6) 3 := by
-  have search := routineTopAuxL_ok (L := L) (ρ := ρ) (W := W)
+  have search : WordCode (L := L) ρ W _ _ := routineTopAuxL_ok (L := L) (ρ := ρ) (W := W)
     (WordCode.const 8 (by decide)) 6 (by decide)
-  simpa only [show routineTopWordAux 6 8 = 3 from by decide +kernel] using search
+  intro fp K d c top h hK m pc hp
+  simpa only [show routineTopWordAux 6 (BitVec.ofInt 64 8) = 3 from by decide +kernel] using
+    search (fp := fp) (K := K) (d := d) (c := c) (top := top) h hK m pc hp
 
 #print axioms routineTopNat_bounds
 #print axioms routineTopWordAux_canonical

@@ -207,62 +207,25 @@ def parseRufSchwanz (c : String) (args : List SExpr) : List Token → Except Str
 
 theorem strEq_semi_frage : strEq ";" "?" = false := by decide
 
-/-- After the head word: a call through a path or a place, or an
-    assignment (`parse.rs` `zuweisung_oder_ruf`). -/
-def parseKopfStmt (f : Nat) (toks : List Token) :
-    Except String (SAnw × List Token) :=
-  match f with
-  | 0 => .error "out of fuel"
-  | f + 1 => match parseKopf f toks with
-    | .error e => .error e
-    | .ok (e, rest) => match e with
-      | .call c args => parseRufSchwanz c args rest
-      | .ext .call _ (callee :: args) => parseRufSchwanz (druck callee) args rest
-      | .ext .instantiate (name :: words) args => match fordereZeichen ";" rest with
-        | .ok rest' => .ok (.genericCall name words args, rest')
-        | .error error => .error error
-      | _ => match rest with
-        | .zeichen "(" :: _ => match parseArgs f rest.tail with
-          | .ok (args, rest') => parseRufSchwanz (druck e) args rest'
-          | .error e => .error e
-        | .zeichen op :: _ =>
-          if strEq op "=" || strEq op "+=" || strEq op "-=" ||
-             strEq op "&=" || strEq op "|=" then
-            match parseOr f rest.tail with
-            | .error e => .error e
-            | .ok (w, rest') => match rest' with
-              | .wort s :: _ =>
-                if strEq s "publishes" then
-                  if strEq op "=" then match rest'.tail with
-                    | .wort p :: rest'' =>
-                      if strEq p "nothing" then match fordereZeichen ";" rest'' with
-                        | .ok rest3 => .ok (.emit e w "nothing", rest3)
-                        | .error e => .error e
-                      else .error "publishes without payload"
-                    | .zeichen "{" :: rest'' => match nimmBisZeichen "}" rest'' 0 with
-                      | .ok (pl, rest3) => match fordereZeichen "}" rest3 with
-                        | .ok rest4 => match fordereZeichen ";" rest4 with
-                          | .ok rest5 => .ok (.emit e w pl, rest5)
-                          | .error e => .error e
-                        | .error e => .error e
-                      | .error e => .error e
-                    | _ => .error "publishes without payload"
-                  else .error "a publication sits on `=`, not on a compound assignment"
-                else match fordereZeichen ";" rest' with
-                  | .ok rest'' => .ok (.set e op w, rest'')
-                  | .error e => .error e
-              | _ => match fordereZeichen ";" rest' with
-                | .ok rest'' => .ok (.set e op w, rest'')
-                | .error e => .error e
-          else .error "assignment or call expected"
-        | _ => .error "assignment or call expected"
+/-- Read the reason handler after a statement call, using the enclosing block reader.
+    With no written binder the reason remains inaccessible to source identifiers. -/
+def parseRufMitElse (block : List Token → Except String (SAnw × List Token))
+    (c : String) (args : List SExpr) (toks : List Token) : Except String (SAnw × List Token) :=
+  match toks with
+  | .wort w :: rest =>
+    if strEq w "else" then do
+      let (reason, rest) ← match rest with
+        | .zeichen s :: tail =>
+          if strEq s "(" then do
+            let (name, tail) ← nimmName tail
+            let tail ← fordereZeichen ")" tail
+            pure (name, tail)
+          else pure ("", rest)
+        | _ => pure ("", rest)
+      let (body, rest) ← block rest
+      let rest ← fordereZeichen ";" rest
+      pure (.callElse c args reason body, rest)
+    else parseRufSchwanz c args toks
+  | _ => parseRufSchwanz c args toks
 
-def parsePlatzStmt (f : Nat) (toks : List Token) :
-    Except String (SAnw × List Token) :=
-  match f with
-  | 0 => .error "out of fuel"
-  | f + 1 => match toks with
-    | .wort w :: _ =>
-      if strEq w "transition" then parseUebergang f toks.tail
-      else parseKopfStmt f toks
-    | _ => parseKopfStmt f toks
+end Gabbro.Grammatik.Parser

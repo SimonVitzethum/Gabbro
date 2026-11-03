@@ -69,7 +69,7 @@ def unpackBexpL (d : Nat) (a : Nat → Option (List II × Nat)) :
     the mask does not fit a signed 32-bit immediate). -/
 def unpackFracL (d : Nat) (a : Nat → Option (List II × Nat)) :
     Option (List II × Nat) :=
-  wordL 8 d (a d) (fun j => some (konstWL 4 4503599627370495 j))
+  wordL 8 d (a d) (some (konstWL 4 4503599627370495 (d + 1)))
 
 /-- Compositional IR simulation for the sign fragment. -/
 theorem unpackSignL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}

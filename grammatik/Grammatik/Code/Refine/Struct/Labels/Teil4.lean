@@ -8,6 +8,20 @@ namespace Gabbro.Code.Lower
 open Gabbro.Grammatik (Deklaration Expr Ctx Var Res Vertrag ErgExpr Args)
 variable [Conf] {D : Deklaration}
 variable {V : Vertrag D}
+-- Keep the successful lowering result; the failed alternative contradicts h.
+set_option hygiene false in
+local macro "lbl_value" eqn:ident call:term:max a:ident b:ident c:ident : tactic => `(tactic| (
+  rcases $eqn:ident : $call with _ | ⟨$a:ident, $b:ident, $c:ident⟩
+  · simp only [$eqn:ident, reduceCtorEq] at h
+  simp only [$eqn:ident] at h))
+
+-- Block lowering returns a pair rather than a code/value/register triple.
+set_option hygiene false in
+local macro "lbl_blocks" eqn:ident call:term:max a:ident b:ident : tactic => `(tactic| (
+  rcases $eqn:ident : $call with _ | ⟨$a:ident, $b:ident⟩
+  · simp only [$eqn:ident, reduceCtorEq] at h
+  simp only [$eqn:ident] at h))
+
 mutual
 theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Gabbro.Grammatik.Stmt D V l Γ Λ Λ') (lb k : Lbl) (st st' : St) (blks : List Block), (lb : Nat) < st.l →
@@ -38,19 +52,13 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .onOption (n := n) o p a, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
-      rcases ho : lowerE lay cenv o st.r with _ | ⟨co, oo, r1⟩
-      · simp only [ho, reduceCtorEq] at h
-      simp only [ho] at h
+      lbl_value ho (lowerE lay cenv o st.r) co oo r1
       split at h
       · rcases hv : cvtG (.int (-1) (n - 1)) (.int 0 (n - 1)) oo r1 with _ | ⟨cv, ov, r2⟩
         · simp only [Int.reduceNeg, hv, reduceCtorEq] at h
         simp only [hv] at h
-        rcases hb : bindCode (.int 0 (n - 1)) ov r2 with _ | ⟨cb, c, r3⟩
-        · simp only [hb, reduceCtorEq] at h
-        simp only [hb] at h
-        rcases hb1 : lowerB lay cenv lv a st.l k ⟨r3, st.l + 3⟩ with _ | ⟨ba, s1⟩
-        · simp only [hb1, reduceCtorEq] at h
-        simp only [hb1] at h
+        lbl_value hb (bindCode (.int 0 (n - 1)) ov r2) cb c r3
+        lbl_blocks hb1 (lowerB lay cenv lv a st.l k ⟨r3, st.l + 3⟩) ba s1
         rcases hb2 : lowerB lay (c :: cenv) lv p (st.l + 2) k s1 with _ | ⟨bp, s2⟩
         · simp only [hb2, reduceCtorEq] at h
         simp only [hb2, Option.some.injEq, Prod.mk.injEq] at h
@@ -62,9 +70,7 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       · simp only [reduceCtorEq] at h
   | _, _, _, _, .onTag (cs := cs) v arms, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
-      rcases hv : lowerE lay cenv v st.r with _ | ⟨cv, ov, r1⟩
-      · simp only [hv, reduceCtorEq] at h
-      simp only [hv] at h
+      lbl_value hv (lowerE lay cenv v st.r) cv ov r1
       split at h
       · rcases hga : lowerAr lay cenv lv (sumTop cs) (Ar.wid 0 (sumTop cs)) cs.length ov arms (st.l + 1) k
             ⟨r1 + 1, st.l + 1 + cs.length⟩ with _ | ⟨ba, s1⟩
@@ -106,9 +112,7 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       · simp only [reduceCtorEq] at h
   | _, _, _, _, .onWhy (n := n) r arms, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
-      rcases hr : lowerE lay cenv r st.r with _ | ⟨cr, orr, r1⟩
-      · simp only [hr, reduceCtorEq] at h
-      simp only [hr] at h
+      lbl_value hr (lowerE lay cenv r st.r) cr orr r1
       split at h
       · rcases hga : lowerGA lay cenv lv arms (st.l + 1) k ⟨r1, st.l + 1 + n⟩ with _ | ⟨ba, s1⟩
         · simp only [hga, reduceCtorEq] at h
@@ -154,7 +158,9 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .breaking .., lb, k, st, st', blks, hlt, h => by
       simp only [lowerS, reduceCtorEq] at h
-  | _, _, _, _, .traverse t _ body, lb, k, st, st', blks, hlt, h | _, _, _, _, .consumeTraverse t _ _ _ _ _ body, lb, k, st, st', blks, hlt, h => by
+  | _, _, _, _, .consumeTraverse .., lb, k, st, st', blks, hlt, h => by
+      simp only [lowerS, reduceCtorEq] at h
+  | _, _, _, _, .traverse t _ body, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
       by_cases hc : 0 ≤ D.count t ∧ Ar.Fits 0 (D.count t) 128
       · simp only [hc, and_self, if_true] at h
@@ -162,9 +168,7 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
           _ | ⟨cv, ov, r1⟩
         · simp only [hv, reduceCtorEq] at h
         simp only [hv] at h
-        rcases hb : bindCode (.int 0 (D.count t - 1)) ov r1 with _ | ⟨cb, a, r2⟩
-        · simp only [hb, reduceCtorEq] at h
-        simp only [hb] at h
+        lbl_value hb (bindCode (.int 0 (D.count t - 1)) ov r1) cb a r2
         rcases hb2 : lowerB lay (a :: cenv) (k, st.l + 2) body (st.l + 3) (st.l + 2) ⟨r2, st.l + 4⟩ with
           _ | ⟨bb, s1⟩
         · simp only [hb2, reduceCtorEq] at h
@@ -180,12 +184,8 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp only [lowerS] at h
       by_cases hc : retryOk n = true
       · simp only [hc, if_true] at h
-        rcases hcb : lowerE lay cenv bis (st.r + 1) with _ | ⟨cb, ob, r1⟩
-        · simp only [hcb, reduceCtorEq] at h
-        simp only [hcb] at h
-        rcases hb1 : lowerB lay cenv (k, st.l + 3) body (st.l + 4) (st.l + 3) ⟨r1, st.l + 5⟩ with _ | ⟨bb, s1⟩
-        · simp only [hb1, reduceCtorEq] at h
-        simp only [hb1] at h
+        lbl_value hcb (lowerE lay cenv bis (st.r + 1)) cb ob r1
+        lbl_blocks hb1 (lowerB lay cenv (k, st.l + 3) body (st.l + 4) (st.l + 3) ⟨r1, st.l + 5⟩) bb s1
         rcases hb2 : lowerB lay cenv lv ueb (st.l + 2) k s1 with _ | ⟨bo, s2⟩
         · simp only [hb2, reduceCtorEq] at h
         simp only [hb2, Option.some.injEq, Prod.mk.injEq] at h
@@ -231,12 +231,8 @@ theorem lowerB_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       lowerB_lbl_cons (lay := lay) (cenv := cenv) (lv := lv) (s := s) (rest := rest) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (hlt := hlt) (h := h) (ih_lowerS_lbl_s := lowerS_lbl lay cenv lv s) (ih_lowerB_lbl_rest := lowerB_lbl lay cenv lv rest)
   | _, _, _, _, Gabbro.Grammatik.Block.bind (τ := τ) e rest, lb, k, st, st', blks, hlt, h => by
       simp only [lowerB] at h
-      rcases he : lowerE lay cenv e st.r with _ | ⟨ce, oe, r1⟩
-      · simp only [he, reduceCtorEq] at h
-      simp only [he] at h
-      rcases hb : bindCode τ oe r1 with _ | ⟨cb, a, r2⟩
-      · simp only [hb, reduceCtorEq] at h
-      simp only [hb] at h
+      lbl_value he (lowerE lay cenv e st.r) ce oe r1
+      lbl_value hb (bindCode τ oe r1) cb a r2
       rcases hr : lowerB lay (a :: cenv) lv rest st.l k ⟨r2, st.l + 1⟩ with _ | ⟨b2, s2⟩
       · simp only [hr, reduceCtorEq] at h
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
@@ -248,12 +244,8 @@ theorem lowerB_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       lowerB_lbl_check (lay := lay) (cenv := cenv) (lv := lv) (c := c) (sonst := sonst) (rest := rest) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (hlt := hlt) (h := h) (ih_lowerB_lbl_rest := lowerB_lbl lay cenv lv rest) (ih_lowerEnd_lbl_sonst := lowerEnd_lbl lay cenv lv sonst)
   | _, _, _, _, Gabbro.Grammatik.Block.bindCall (τ := τ) f args _ _ _ rest, lb, k, st, st', blks, hlt, h => by
       simp only [lowerB] at h
-      rcases hla : lowerArgs lay cenv args st.r with _ | ⟨ca, ops, r1⟩
-      · simp only [hla, reduceCtorEq] at h
-      simp only [hla] at h
-      rcases hb : bindCode τ (.reg r1) (r1 + 1) with _ | ⟨cb, a, r2⟩
-      · simp only [hb, reduceCtorEq] at h
-      simp only [hb] at h
+      lbl_value hla (lowerArgs lay cenv args st.r) ca ops r1
+      lbl_value hb (bindCode τ (.reg r1) (r1 + 1)) cb a r2
       rcases hr : lowerB lay (a :: cenv) lv rest st.l k ⟨r2, st.l + 1⟩ with _ | ⟨b2, s2⟩
       · simp only [hr, reduceCtorEq] at h
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
@@ -289,18 +281,10 @@ theorem lowerB_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
         _ | ⟨cc, oc, r1⟩
       · simp only [hc, reduceCtorEq] at h
       simp only [hc] at h
-      rcases he : lowerE lay cenv e r1 with _ | ⟨ce, oe, r2⟩
-      · simp only [he, reduceCtorEq] at h
-      simp only [he] at h
-      rcases hv : cvtG (.int lo hi) (.int lo' hi') oe r2 with _ | ⟨cv, ov, r3⟩
-      · simp only [hv, reduceCtorEq] at h
-      simp only [hv] at h
-      rcases hb : bindCode (.int lo' hi') ov r3 with _ | ⟨cb, a, r4⟩
-      · simp only [hb, reduceCtorEq] at h
-      simp only [hb] at h
-      rcases hb1 : lowerEnd lay cenv lv sonst st.l ⟨r4, st.l + 3⟩ with _ | ⟨be, s1⟩
-      · simp only [hb1, reduceCtorEq] at h
-      simp only [hb1] at h
+      lbl_value he (lowerE lay cenv e r1) ce oe r2
+      lbl_value hv (cvtG (.int lo hi) (.int lo' hi') oe r2) cv ov r3
+      lbl_value hb (bindCode (.int lo' hi') ov r3) cb a r4
+      lbl_blocks hb1 (lowerEnd lay cenv lv sonst st.l ⟨r4, st.l + 3⟩) be s1
       rcases hb2 : lowerB lay (a :: cenv) lv rest (st.l + 2) k s1 with _ | ⟨br, s2⟩
       · simp only [hb2, reduceCtorEq] at h
       simp only [hb2, Option.some.injEq, Prod.mk.injEq] at h
@@ -334,12 +318,8 @@ theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       lowerEnd_lbl_cons (lay := lay) (cenv := cenv) (lv := lv) (s := s) (rest := rest) (lb := lb) (st := st) (st' := st') (blks := blks) (hlt := hlt) (h := h) (ih_lowerS_lbl_s := lowerS_lbl lay cenv lv s) (ih_lowerEnd_lbl_rest := lowerEnd_lbl lay cenv lv rest)
   | _, _, _, Gabbro.Grammatik.Endblock.bind (τ := τ) e rest, lb, st, st', blks, hlt, h => by
       simp only [lowerEnd] at h
-      rcases he : lowerE lay cenv e st.r with _ | ⟨ce, oe, r1⟩
-      · simp only [he, reduceCtorEq] at h
-      simp only [he] at h
-      rcases hb : bindCode τ oe r1 with _ | ⟨cb, a, r2⟩
-      · simp only [hb, reduceCtorEq] at h
-      simp only [hb] at h
+      lbl_value he (lowerE lay cenv e st.r) ce oe r1
+      lbl_value hb (bindCode τ oe r1) cb a r2
       rcases hr : lowerEnd lay (a :: cenv) lv rest st.l ⟨r2, st.l + 1⟩ with _ | ⟨b2, s2⟩
       · simp only [hr, reduceCtorEq] at h
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
@@ -398,9 +378,7 @@ theorem lowerAr_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : 
       exact ⟨Nat.le_refl _, by simp only [List.map_nil, List.nodup_nil], by simp only [List.not_mem_nil, List.length_nil, Nat.add_zero, false_implies, implies_true]⟩
   | _, _, _, _, _, .cons (c := none) (cs := cs') b rest, lb, k, st, st', blks, hn, h => by
       simp only [lowerAr] at h
-      rcases hb : lowerB lay cenv lv b lb k st with _ | ⟨b1, s1⟩
-      · simp only [hb, reduceCtorEq] at h
-      simp only [hb] at h
+      lbl_blocks hb (lowerB lay cenv lv b lb k st) b1 s1
       rcases hr : lowerAr lay cenv lv top W L ov rest (lb + 1) k s1 with _ | ⟨b2, s2⟩
       · simp only [hr, reduceCtorEq] at h
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
@@ -412,15 +390,9 @@ theorem lowerAr_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : 
       exact lw_arm_cons (n' := cs'.length) hn' W1 ⟨m2, n2, a2⟩
   | _, _, _, _, _, .cons (c := some (.int lo hi)) (cs := cs') b rest, lb, k, st, st', blks, hn, h => by
       simp only [lowerAr] at h
-      rcases hp : payCode top W L lo hi ov st.r with _ | ⟨cp, op, r1⟩
-      · simp only [hp, reduceCtorEq] at h
-      simp only [hp] at h
-      rcases hb : bindCode (.int lo hi) op r1 with _ | ⟨cb, a, r2⟩
-      · simp only [hb, reduceCtorEq] at h
-      simp only [hb] at h
-      rcases hb1 : lowerB lay (a :: cenv) lv b st.l k ⟨r2, st.l + 1⟩ with _ | ⟨bb, s1⟩
-      · simp only [hb1, reduceCtorEq] at h
-      simp only [hb1] at h
+      lbl_value hp (payCode top W L lo hi ov st.r) cp op r1
+      lbl_value hb (bindCode (.int lo hi) op r1) cb a r2
+      lbl_blocks hb1 (lowerB lay (a :: cenv) lv b st.l k ⟨r2, st.l + 1⟩) bb s1
       rcases hr : lowerAr lay cenv lv top W L ov rest (lb + 1) k s1 with _ | ⟨b2, s2⟩
       · simp only [hr, reduceCtorEq] at h
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
@@ -471,9 +443,7 @@ theorem lowerGA_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       exact ⟨Nat.le_refl _, by simp only [List.map_nil, List.nodup_nil], by simp only [List.not_mem_nil, Nat.add_zero, false_implies, implies_true]⟩
   | _, _, _, _, _, .cons (n := n') b rest, lb, k, st, st', blks, hn, h => by
       simp only [lowerGA] at h
-      rcases hb : lowerB lay cenv lv b lb k st with _ | ⟨b1, s1⟩
-      · simp only [hb, reduceCtorEq] at h
-      simp only [hb] at h
+      lbl_blocks hb (lowerB lay cenv lv b lb k st) b1 s1
       rcases hr : lowerGA lay cenv lv rest (lb + 1) k s1 with _ | ⟨b2, s2⟩
       · simp only [hr, reduceCtorEq] at h
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h

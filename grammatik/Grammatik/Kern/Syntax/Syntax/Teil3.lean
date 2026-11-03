@@ -277,10 +277,10 @@ theorem verbrauchWahl_zeuge_zwei :
 theorem keinVorgaenger_map {α β : Type} (f : α → β) (ganz : List α)
     (p : α → Bool) (p' : β → Bool) (e : α → α → Bool) (e' : β → β → Bool)
     (same : α → α → Bool) (same' : β → β → Bool)
+    (k : α)
     (hp : ∀ k ∈ ganz, p' (f k) = p k)
     (he : ∀ j ∈ ganz, e' (f j) (f k) = e j k)
-    (hsame : ∀ j ∈ ganz, same' (f j) (f k) = same j k)
-    (k : α) :
+    (hsame : ∀ j ∈ ganz, same' (f j) (f k) = same j k) :
     keinVorgaenger (ganz.map f) p' e' same' (f k) =
       keinVorgaenger ganz p e same k := by
   induction ganz with
@@ -306,8 +306,8 @@ theorem istMinimalVerbrauch_map {α β : Type} (f : α → β) (ganz : List α)
     istMinimalVerbrauch (ganz.map f) p' e' same' (f k) =
       istMinimalVerbrauch ganz p e same k := by
   simp only [istMinimalVerbrauch, hp k hk,
-    keinVorgaenger_map f ganz p p' e e' same same' hp
-      (fun j hj => he j hj hk) (fun j hj => hsame j hj hk) k]
+    keinVorgaenger_map f ganz p p' e e' same same' k hp
+      (fun j hj => he j hj k hk) (fun j hj => hsame j hj k hk)]
 
 /-- Selection follows a value map with pointwise-equal tests over the
     scanned sublist. -/
@@ -328,7 +328,7 @@ theorem verbrauchWahlAux_map {α β : Type} (f : α → β) (ganz ks : List α)
         hp he hsame k hk
       simp only [verbrauchWahlAux, List.map_cons, hm]
       by_cases ht : istMinimalVerbrauch ganz p e same k = true
-      · simp only [ht, ↓reduceIte]
+      · simp only [ht, ↓reduceIte]; rfl
       · have htf : istMinimalVerbrauch ganz p e same k = false := by
           cases hpk : istMinimalVerbrauch ganz p e same k with
           | false => rfl

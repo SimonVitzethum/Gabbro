@@ -110,6 +110,10 @@ def druckAnw : SAnw → List Token
     [.wort "transition"] ++ druckToks z ++ [.zeichen ":", nameTok a, .zeichen "->", nameTok b, .zeichen ";"]
   | .genericCall name words args =>
     druckToks (.ext .instantiate (name :: words) args) ++ [.zeichen ";"]
+  | .callElse f xs reason body =>
+    rohToks f ++ [.zeichen "("] ++ druckToksListe xs ++ [.zeichen ")", .wort "else"] ++
+      (if strEq reason "" then [] else [.zeichen "(", nameTok reason, .zeichen ")"]) ++
+      druckAnw body ++ [.zeichen ";"]
   | .call f xs => rohToks f ++ [.zeichen "("] ++ druckToksListe xs ++ [.zeichen ")", .zeichen ";"]
   | .lcall c => druckLibraryCall c ++ [.zeichen ";"]
   | .cond c t eis s =>
@@ -139,7 +143,7 @@ def druckAnw : SAnw → List Token
   | .loop h b => [.wort "forever"] ++ rohToks h ++ druckAnw b
   | .waive ns b => [.wort "breaking"] ++ druckNamen ns ++ druckAnw b
   | .trim o t b => [.wort "narrow"] ++ druckToks o ++ [.wort "to"] ++ rohToks t ++ [.wort "else"] ++ druckAnw b
-  /-- Required narrowing has no source syntax: print a form the parser refuses
+  /- Required narrowing has no source syntax: print a form the parser refuses
       (`required` is no narrow continuation), never a silent `else`. -/
   | .trimReq o t => [.wort "narrow"] ++ druckToks o ++ [.wort "to"] ++ rohToks t ++ [.wort "required", .zeichen ";"]
   | .locks g o b => [.wort "locks"] ++ (if g then [.wort "shared"] else []) ++ druckToks o ++ druckAnw b

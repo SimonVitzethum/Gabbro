@@ -1,7 +1,7 @@
 /- Bounds of the actual three-guard-bit alignment, before normalization. -/
 module
 public import Stage0.Senke.Gleit.Normal.Source
-public import Stage0.Senke.Gleit.RoutineOrderModel
+public import Stage0.Senke.Gleit.Routine.RoutineOrderModel
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke

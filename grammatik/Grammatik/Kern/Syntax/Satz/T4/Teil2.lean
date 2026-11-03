@@ -1,17 +1,13 @@
 module
-public import Grammatik.Kern.Syntax.Satz.T3
-public import Grammatik.Kern.Syntax.Satz.T4.Teil1
+public import Grammatik.Kern.Syntax.Satz.T4.Teil2Context
 @[expose] public section
 namespace Gabbro.Grammatik
 variable {D : Deklaration} {V : Vertrag D}
 section Rumpf
-variable (O : Orakel D)
-variable (passes : Nat)
-variable (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
-variable (hR : GutR R) (hO : GutO O)
+variable (O : Orakel D) (passes : Nat)
+variable (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (hR : GutR R) (hO : GutO O)
 include hR hO
 set_option linter.unusedSectionVars false
--- Unfold scope-premise abbreviations before simplifying their Boolean checks.
 set_option hygiene false in
 local macro "scopes_gut" : tactic => `(tactic| first
   | exact hscope
@@ -20,9 +16,7 @@ local macro "scopes_gut" : tactic => `(tactic| first
      simp only [Stmt.scopesOk, Block.scopesOk, Endblock.scopesOk, Arms.scopesOk, GrundArms.scopesOk, Bool.and_eq_true] at hsc
      first | exact hsc | exact hsc.1 | exact hsc.2 | exact hsc.2.1 | exact hsc.2.2 | exact hsc.1.1 | exact hsc.1.2))
 mutual
-/-- Statement frame and trace: only writable carriers may change, ordinary
-    outcomes keep the held locks, returns release only checked scopes, and
-    every new event carries its guards. -/
+/-- Statement frame and trace: only writable carriers may change, ordinary outcomes keep the held locks, returns release only checked scopes, and every new event carries its guards. -/
 theorem stmt_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
     ∀ (s : Stmt D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ), s.BodenOk bo → s.ScopesOk →
     ResidHeld V Λ → HeldB bo Λ σ.haelt →

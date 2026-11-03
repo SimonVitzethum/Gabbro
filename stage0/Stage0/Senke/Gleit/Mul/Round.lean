@@ -33,11 +33,11 @@ theorem softMulRoundL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     (hm : WordCode (L := L) ρ W magnitude mv) :
     WordCode (L := L) ρ W (fun d => softMulRoundL d sign total magnitude)
       (softMulRoundWord sv tv mv) := by
-  have count := WordCode.bin (WordCode.const 1201 (by decide)) ht
+  have count : WordCode (L := L) ρ W _ _ := WordCode.bin (WordCode.const 1201 (by decide)) ht
     (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
   have jam := floatShiftJamL_ok hm count
   have sub := routineRoundPackL_ok hs (WordCode.const 1 (by decide)) jam
-  have index := WordCode.bin ht (WordCode.const 1200 (by decide))
+  have index : WordCode (L := L) ρ W _ _ := WordCode.bin ht (WordCode.const 1200 (by decide))
     (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
   have normal := routineRoundPackL_ok hs index hm
   have overflow := packL_ok hs (WordCode.const 2047 (by decide)) (WordCode.const 0 (by decide))

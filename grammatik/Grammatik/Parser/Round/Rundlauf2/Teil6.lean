@@ -33,7 +33,7 @@ theorem kern_prim_platz : ∀ (n : Nat) (rkn : RKern n)
       suffToks suff ++ rest ≠ .zeichen "(" :: R := by
     intro R hcon
     exact suffToks_nopar suff rest R hr hcon
-  simp only [rufKopf_ohne, suffToks_nogeneric suff rest hr, hmiss] at ⊢
+  rw [rufKopf_ohne _ _ _ _ (suffToks_nogeneric suff rest hr) hmiss]
   have hs2 : suffGroesse suff + groesse (.variable a) ≤ n + 1 := by
     simp only [groesse] at ⊢
     omega

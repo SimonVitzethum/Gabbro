@@ -52,63 +52,62 @@ theorem refInv81_release (M : GenMaschine refD) (pc : PCStand) (f : Faden)
           rw [eprog] at hpc
           cases h2 : pc 1 with
           | zero =>
-              simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd,
-                Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero,
+              simp only [h2, List.getElem?_cons_zero,
                 Option.some.injEq, reduceCtorEq] at hpc
           | succ n =>
               cases n with
               | zero => omega
               | succ m =>
-                  simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd,
-                    Nat.not_lt, Nat.le_add_left, getElem?_neg, reduceCtorEq] at hpc
+                  simp only [h2, List.getElem?_cons_succ, List.length_nil,
+                    Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hpc
         have hle : pc 1 ≤ 1 := by omega
         have hMem : M.speicher = refSp0 := pc1_speicher_le M pc hreach hle
         cases s with
         | retScoped e R =>
             simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
-            have hgoal : refInv81 M'.speicher := by
+            have hgoal : refInv81 σ'.speicher := by
               show refInv81 σ'.speicher
               rw [← hstep]
               unfold refInv81
-              have hg := World.gibt_foldl_speicher ((M.weltVon f).lese Λ e.orte) R.scopes
-              have e0 : (R.scopes.foldl World.gibt ((M.weltVon f).lese Λ e.orte)).slots () 0 () =
+              have hg := World.gibt_foldl_speicher ((M.weltVon 1).lese Λ e.orte) R.scopes
+              have e0 : (R.scopes.foldl World.gibt ((M.weltVon 1).lese Λ e.orte)).slots () 0 () =
                   M.speicher.slots () 0 () := by
                 rw [hg.1]
                 rfl
-              have e1 : (R.scopes.foldl World.gibt ((M.weltVon f).lese Λ e.orte)).slots () 1 () =
+              have e1 : (R.scopes.foldl World.gibt ((M.weltVon 1).lese Λ e.orte)).slots () 1 () =
                   M.speicher.slots () 1 () := by
                 rw [hg.1]
                 rfl
-              rw [e0, e1, hMem]
-              rfl
+              rw [hMem] at e0 e1
+              exact e0.trans (Eq.trans rfl e1.symm)
             exact hgoal
         | retWhyScoped r R =>
             simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
-            have hgoal : refInv81 M'.speicher := by
+            have hgoal : refInv81 σ'.speicher := by
               show refInv81 σ'.speicher
               rw [← hstep]
               unfold refInv81
-              have hg := World.gibt_foldl_speicher (M.weltVon f) R.scopes
-              have e0 : (R.scopes.foldl World.gibt (M.weltVon f)).slots () 0 () =
+              have hg := World.gibt_foldl_speicher (M.weltVon 1) R.scopes
+              have e0 : (R.scopes.foldl World.gibt (M.weltVon 1)).slots () 0 () =
                   M.speicher.slots () 0 () := by
                 rw [hg.1]
                 rfl
-              have e1 : (R.scopes.foldl World.gibt (M.weltVon f)).slots () 1 () =
+              have e1 : (R.scopes.foldl World.gibt (M.weltVon 1)).slots () 1 () =
                   M.speicher.slots () 1 () := by
                 rw [hg.1]
                 rfl
-              rw [e0, e1, hMem]
-              rfl
+              rw [hMem] at e0 e1
+              exact e0.trans (Eq.trans rfl e1.symm)
             exact hgoal
         | assignSlot t f i e hw hL =>
             simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
-            have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) (M.weltVon f) Λ _
+            have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) (M.weltVon 1) Λ _
               (orte_append i.orte_darf e.orte_darf) hΛ.heldIn
-            have hG : Gut _ _ (M.weltVon f) σ' := by
+            have hG : Gut V.schreibt V.gschreibt (M.weltVon 1) σ' := by
               rw [← hstep]
               exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldIn hΛ.heldIn))
             have hpost : () ∈ σ'.haelt := by
-              have h1 : () ∈ (M.weltVon f).haelt := hlt1
+              have h1 : () ∈ (M.weltVon 1).haelt := hlt1
               rw [← hG.haelt] at h1
               exact h1
             have hff : () ∉ σ'.haelt := by
@@ -118,13 +117,13 @@ theorem refInv81_release (M : GenMaschine refD) (pc : PCStand) (f : Faden)
             exact False.elim (hff hpost)
         | assignThru p t ht f i e hw hL =>
             simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
-            have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) (M.weltVon f) Λ _
+            have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) (M.weltVon 1) Λ _
               (orte_append (orte_append p.orte_darf i.orte_darf) e.orte_darf) hΛ.heldIn
-            have hG : Gut _ _ (M.weltVon f) σ' := by
+            have hG : Gut V.schreibt V.gschreibt (M.weltVon 1) σ' := by
               rw [← hstep]
               exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldIn hΛ.heldIn))
             have hpost : () ∈ σ'.haelt := by
-              have h1 : () ∈ (M.weltVon f).haelt := hlt1
+              have h1 : () ∈ (M.weltVon 1).haelt := hlt1
               rw [← hG.haelt] at h1
               exact h1
             have hff : () ∉ σ'.haelt := by
@@ -134,13 +133,13 @@ theorem refInv81_release (M : GenMaschine refD) (pc : PCStand) (f : Faden)
             exact False.elim (hff hpost)
         | assignThruOwn p t ht f i e m s ho he hg hw hL =>
             simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
-            have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) (M.weltVon f) Λ _
+            have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) (M.weltVon 1) Λ _
               (orte_append (orte_append p.orte_darf i.orte_darf) e.orte_darf) hΛ.heldIn
-            have hG : Gut _ _ (M.weltVon f) σ' := by
+            have hG : Gut V.schreibt V.gschreibt (M.weltVon 1) σ' := by
               rw [← hstep]
               exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldIn hΛ.heldIn))
             have hpost : () ∈ σ'.haelt := by
-              have h1 : () ∈ (M.weltVon f).haelt := hlt1
+              have h1 : () ∈ (M.weltVon 1).haelt := hlt1
               rw [← hG.haelt] at h1
               exact h1
             have hff : () ∉ σ'.haelt := by
@@ -150,13 +149,13 @@ theorem refInv81_release (M : GenMaschine refD) (pc : PCStand) (f : Faden)
             exact False.elim (hff hpost)
         | assignSlotRef r t ht ho f e hw hL =>
             simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
-            have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) (M.weltVon f) Λ _
+            have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) (M.weltVon 1) Λ _
               (orte_append r.orte_darf e.orte_darf) hΛ.heldIn
-            have hG : Gut _ _ (M.weltVon f) σ' := by
+            have hG : Gut V.schreibt V.gschreibt (M.weltVon 1) σ' := by
               rw [← hstep]
               exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldIn hΛ.heldIn))
             have hpost : () ∈ σ'.haelt := by
-              have h1 : () ∈ (M.weltVon f).haelt := hlt1
+              have h1 : () ∈ (M.weltVon 1).haelt := hlt1
               rw [← hG.haelt] at h1
               exact h1
             have hff : () ∉ σ'.haelt := by
@@ -166,13 +165,13 @@ theorem refInv81_release (M : GenMaschine refD) (pc : PCStand) (f : Faden)
             exact False.elim (hff hpost)
         | assignGlob g e hw hL =>
             simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
-            have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) (M.weltVon f) Λ _
+            have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) (M.weltVon 1) Λ _
               e.orte_darf hΛ.heldIn
-            have hG : Gut _ _ (M.weltVon f) σ' := by
+            have hG : Gut V.schreibt V.gschreibt (M.weltVon 1) σ' := by
               rw [← hstep]
               exact hl.trans (gut_schreibGlob _ g Λ _ hw hL (hl.heldIn hΛ.heldIn))
             have hpost : () ∈ σ'.haelt := by
-              have h1 : () ∈ (M.weltVon f).haelt := hlt1
+              have h1 : () ∈ (M.weltVon 1).haelt := hlt1
               rw [← hG.haelt] at h1
               exact h1
             have hff : () ∉ σ'.haelt := by
@@ -182,13 +181,13 @@ theorem refInv81_release (M : GenMaschine refD) (pc : PCStand) (f : Faden)
             exact False.elim (hff hpost)
         | putBytes t f hf n i hlo hhi e hw hL =>
             simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
-            have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) (M.weltVon f) Λ _
+            have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) (M.weltVon 1) Λ _
               (orte_append i.orte_darf e.orte_darf) hΛ.heldIn
-            have hG : Gut _ _ (M.weltVon f) σ' := by
+            have hG : Gut V.schreibt V.gschreibt (M.weltVon 1) σ' := by
               rw [← hstep]
               exact hl.trans (gut_schreibBytes _ t f hf Λ hw hL _ _ (hl.heldIn hΛ.heldIn))
             have hpost : () ∈ σ'.haelt := by
-              have h1 : () ∈ (M.weltVon f).haelt := hlt1
+              have h1 : () ∈ (M.weltVon 1).haelt := hlt1
               rw [← hG.haelt] at h1
               exact h1
             have hff : () ∉ σ'.haelt := by
@@ -198,11 +197,11 @@ theorem refInv81_release (M : GenMaschine refD) (pc : PCStand) (f : Faden)
             exact False.elim (hff hpost)
         | assignVar x e =>
             simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
-            have hG : Gut _ _ (M.weltVon f) σ' := by
+            have hG : Gut V.schreibt V.gschreibt (M.weltVon 1) σ' := by
               rw [← hstep]
-              exact gut_lese (M.weltVon f) Λ _ e.orte_darf hΛ.heldIn
+              exact gut_lese (M.weltVon 1) Λ _ e.orte_darf hΛ.heldIn
             have hpost : () ∈ σ'.haelt := by
-              have h1 : () ∈ (M.weltVon f).haelt := hlt1
+              have h1 : () ∈ (M.weltVon 1).haelt := hlt1
               rw [← hG.haelt] at h1
               exact h1
             have hff : () ∉ σ'.haelt := by
@@ -214,13 +213,13 @@ theorem refInv81_release (M : GenMaschine refD) (pc : PCStand) (f : Faden)
             simp only [execStmt] at hstep
             split at hstep
             · simp only [Ausgang.welt, Option.some.injEq] at hstep
-              have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) (M.weltVon f) Λ _
+              have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) (M.weltVon 1) Λ _
                 (orte_cons (orte_tab hL) i.orte_darf) hΛ.heldIn
-              have hG : Gut _ _ (M.weltVon f) σ' := by
+              have hG : Gut V.schreibt V.gschreibt (M.weltVon 1) σ' := by
                 rw [← hstep]
                 exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldIn hΛ.heldIn))
               have hpost : () ∈ σ'.haelt := by
-                have h1 : () ∈ (M.weltVon f).haelt := hlt1
+                have h1 : () ∈ (M.weltVon 1).haelt := hlt1
                 rw [← hG.haelt] at h1
                 exact h1
               have hff : () ∉ σ'.haelt := by
@@ -231,21 +230,21 @@ theorem refInv81_release (M : GenMaschine refD) (pc : PCStand) (f : Faden)
             · simp only [Ausgang.welt, reduceCtorEq] at hstep
         | axiomCall a args he hw hg hd hgd =>
             simp only [execStmt] at hstep
-            have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) (M.weltVon f) Λ _
+            have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) (M.weltVon 1) Λ _
               args.orte_darf hΛ.heldIn
             split at hstep
             · rename_i σ1 v ha
               simp only [Ausgang.welt, Option.some.injEq] at hstep
-              have hG : Gut _ _ (M.weltVon f) σ' := by
+              have hG : Gut V.schreibt V.gschreibt (M.weltVon 1) σ' := by
                 rw [← hstep]
                 have hax := axiomAntwort_gut refO refO_gut a
-                  ((M.weltVon f).lese Λ args.orte)
-                  (evalArgs ((M.weltVon f).lese Λ args.orte) args
-                    ((M.weltVon f).lese Λ args.orte) ρ) hd hgd (hl.heldIn hΛ.heldIn)
+                  ((M.weltVon 1).lese Λ args.orte)
+                  (evalArgs ((M.weltVon 1).lese Λ args.orte) args
+                    ((M.weltVon 1).lese Λ args.orte) ρ) hd hgd (hl.heldIn hΛ.heldIn)
                 rw [ha] at hax
                 exact hl.trans (Gut.weiter hw hg hax)
               have hpost : () ∈ σ'.haelt := by
-                have h1 : () ∈ (M.weltVon f).haelt := hlt1
+                have h1 : () ∈ (M.weltVon 1).haelt := hlt1
                 rw [← hG.haelt] at h1
                 exact h1
               have hff : () ∉ σ'.haelt := by
@@ -256,11 +255,11 @@ theorem refInv81_release (M : GenMaschine refD) (pc : PCStand) (f : Faden)
             · simp only [Ausgang.welt, reduceCtorEq] at hstep
         | regWrite r hk e =>
             simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
-            have hG : Gut _ _ (M.weltVon f) σ' := by
+            have hG : Gut V.schreibt V.gschreibt (M.weltVon 1) σ' := by
               rw [← hstep]
-              exact gut_lese (M.weltVon f) Λ _ e.orte_darf hΛ.heldIn
+              exact gut_lese (M.weltVon 1) Λ _ e.orte_darf hΛ.heldIn
             have hpost : () ∈ σ'.haelt := by
-              have h1 : () ∈ (M.weltVon f).haelt := hlt1
+              have h1 : () ∈ (M.weltVon 1).haelt := hlt1
               rw [← hG.haelt] at h1
               exact h1
             have hff : () ∉ σ'.haelt := by
@@ -270,11 +269,11 @@ theorem refInv81_release (M : GenMaschine refD) (pc : PCStand) (f : Faden)
             exact False.elim (hff hpost)
         | transition =>
             simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
-            have hG : Gut _ _ (M.weltVon f) σ' := by
+            have hG : Gut V.schreibt V.gschreibt (M.weltVon 1) σ' := by
               rw [← hstep]
               exact gut_fragt _ _
             have hpost : () ∈ σ'.haelt := by
-              have h1 : () ∈ (M.weltVon f).haelt := hlt1
+              have h1 : () ∈ (M.weltVon 1).haelt := hlt1
               rw [← hG.haelt] at h1
               exact h1
             have hff : () ∉ σ'.haelt := by
@@ -284,13 +283,13 @@ theorem refInv81_release (M : GenMaschine refD) (pc : PCStand) (f : Faden)
             exact False.elim (hff hpost)
         | publish g e payload hp hw hL =>
             simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
-            have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) (M.weltVon f) Λ _
+            have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) (M.weltVon 1) Λ _
               e.orte_darf hΛ.heldIn
-            have hG : Gut _ _ (M.weltVon f) σ' := by
+            have hG : Gut V.schreibt V.gschreibt (M.weltVon 1) σ' := by
               rw [← hstep]
               exact hl.trans (gut_schreibGlob _ g Λ _ hw hL (hl.heldIn hΛ.heldIn))
             have hpost : () ∈ σ'.haelt := by
-              have h1 : () ∈ (M.weltVon f).haelt := hlt1
+              have h1 : () ∈ (M.weltVon 1).haelt := hlt1
               rw [← hG.haelt] at h1
               exact h1
             have hff : () ∉ σ'.haelt := by
@@ -300,11 +299,11 @@ theorem refInv81_release (M : GenMaschine refD) (pc : PCStand) (f : Faden)
             exact False.elim (hff hpost)
         | advances =>
             simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
-            have hG : Gut _ _ (M.weltVon f) σ' := by
+            have hG : Gut V.schreibt V.gschreibt (M.weltVon 1) σ' := by
               rw [← hstep]
               exact Gut.refl _ _ _
             have hpost : () ∈ σ'.haelt := by
-              have h1 : () ∈ (M.weltVon f).haelt := hlt1
+              have h1 : () ∈ (M.weltVon 1).haelt := hlt1
               rw [← hG.haelt] at h1
               exact h1
             have hff : () ∉ σ'.haelt := by
@@ -314,11 +313,11 @@ theorem refInv81_release (M : GenMaschine refD) (pc : PCStand) (f : Faden)
             exact False.elim (hff hpost)
         | retires =>
             simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
-            have hG : Gut _ _ (M.weltVon f) σ' := by
+            have hG : Gut V.schreibt V.gschreibt (M.weltVon 1) σ' := by
               rw [← hstep]
               exact Gut.refl _ _ _
             have hpost : () ∈ σ'.haelt := by
-              have h1 : () ∈ (M.weltVon f).haelt := hlt1
+              have h1 : () ∈ (M.weltVon 1).haelt := hlt1
               rw [← hG.haelt] at h1
               exact h1
             have hff : () ∉ σ'.haelt := by
@@ -328,11 +327,11 @@ theorem refInv81_release (M : GenMaschine refD) (pc : PCStand) (f : Faden)
             exact False.elim (hff hpost)
         | ret e _ =>
             simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
-            have hG : Gut _ _ (M.weltVon f) σ' := by
+            have hG : Gut V.schreibt V.gschreibt (M.weltVon 1) σ' := by
               rw [← hstep]
-              exact gut_lese (M.weltVon f) Λ _ e.orte_darf hΛ.heldIn
+              exact gut_lese (M.weltVon 1) Λ _ e.orte_darf hΛ.heldIn
             have hpost : () ∈ σ'.haelt := by
-              have h1 : () ∈ (M.weltVon f).haelt := hlt1
+              have h1 : () ∈ (M.weltVon 1).haelt := hlt1
               rw [← hG.haelt] at h1
               exact h1
             have hff : () ∉ σ'.haelt := by
@@ -342,11 +341,11 @@ theorem refInv81_release (M : GenMaschine refD) (pc : PCStand) (f : Faden)
             exact False.elim (hff hpost)
         | retWhy _ _ =>
             simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
-            have hG : Gut _ _ (M.weltVon f) σ' := by
+            have hG : Gut V.schreibt V.gschreibt (M.weltVon 1) σ' := by
               rw [← hstep]
               exact Gut.refl _ _ _
             have hpost : () ∈ σ'.haelt := by
-              have h1 : () ∈ (M.weltVon f).haelt := hlt1
+              have h1 : () ∈ (M.weltVon 1).haelt := hlt1
               rw [← hG.haelt] at h1
               exact h1
             have hff : () ∉ σ'.haelt := by
@@ -356,11 +355,11 @@ theorem refInv81_release (M : GenMaschine refD) (pc : PCStand) (f : Faden)
             exact False.elim (hff hpost)
         | leave _ =>
             simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
-            have hG : Gut _ _ (M.weltVon f) σ' := by
+            have hG : Gut V.schreibt V.gschreibt (M.weltVon 1) σ' := by
               rw [← hstep]
               exact Gut.refl _ _ _
             have hpost : () ∈ σ'.haelt := by
-              have h1 : () ∈ (M.weltVon f).haelt := hlt1
+              have h1 : () ∈ (M.weltVon 1).haelt := hlt1
               rw [← hG.haelt] at h1
               exact h1
             have hff : () ∉ σ'.haelt := by
@@ -370,11 +369,11 @@ theorem refInv81_release (M : GenMaschine refD) (pc : PCStand) (f : Faden)
             exact False.elim (hff hpost)
         | next _ =>
             simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
-            have hG : Gut _ _ (M.weltVon f) σ' := by
+            have hG : Gut V.schreibt V.gschreibt (M.weltVon 1) σ' := by
               rw [← hstep]
               exact Gut.refl _ _ _
             have hpost : () ∈ σ'.haelt := by
-              have h1 : () ∈ (M.weltVon f).haelt := hlt1
+              have h1 : () ∈ (M.weltVon 1).haelt := hlt1
               rw [← hG.haelt] at h1
               exact h1
             have hff : () ∉ σ'.haelt := by

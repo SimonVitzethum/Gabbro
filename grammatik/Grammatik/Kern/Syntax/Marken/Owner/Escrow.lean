@@ -52,7 +52,7 @@ theorem escrow_call_outputs_present (S : Signatur D.Tab D.Glob D.Lock D.Marke)
 
 /-- The static escrow condition implies the availability its inputs need: the
     canonical call transformer already holds every owner input. -/
-theorem escrow_call_ready {V : vertrag D} {S : Signatur D.Tab D.Glob D.Lock D.Marke}
+theorem escrow_call_ready {V : Vertrag D} {S : Signatur D.Tab D.Glob D.Lock D.Marke}
     {Λ : List (Res D)} (hp : RufPasst D V S Λ) {p : D.Marke × Nat}
     (hmem : p ∈ S.owner.inputs) : Res.vonMarke D p ∈ Λ :=
   hp.owner_input_available hmem

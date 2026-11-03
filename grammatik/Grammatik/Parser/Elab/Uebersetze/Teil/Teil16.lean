@@ -44,9 +44,6 @@ set_option maxRecDepth 100000
 def beqUEnsList : List UEns → List UEns → Bool
   | [], [] => true
   | x :: xs, y :: ys => beqUEns x y && beqUEnsList xs ys
-  | .bindOptBeg x c a, .bindOptBeg y d b => strEq x y && strEq c d && beqUArgList a b
-  | .bindOptElseBeg x c a e, .bindOptElseBeg y d b f =>
-    strEq x y && strEq c d && beqUArgList a b && strEq e f
   | _, _ => false
 
 def beqUArg : UArg → UArg → Bool
@@ -68,6 +65,10 @@ def beqURet : URet → URet → Bool
   | _, _ => false
 
 def beqUStmt : UStmt → UStmt → Bool
+  | .bindOptBeg x c a, .bindOptBeg y d b => strEq x y && strEq c d && beqUArgList a b
+  | .bindOptElseBeg x c a e, .bindOptElseBeg y d b f =>
+    strEq x y && strEq c d && beqUArgList a b && strEq e f
+  | .axCallElseBeg c a e, .axCallElseBeg d b f => strEq c d && beqUArgList a b && strEq e f
   | .retires a, .retires b => strEq a b
   | .assign a f x s, .assign b g y t =>
     strEq a b && strEq f g && beqUIdx x y && beqUSide s t

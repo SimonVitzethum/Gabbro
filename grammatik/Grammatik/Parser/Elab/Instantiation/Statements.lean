@@ -23,6 +23,8 @@ def statement (scope : Scope) : SAnw → SurfaceFacts
   | .bindLib _ _ ty call => merge (optional (inspectType scope) ty) (libraryCall scope call)
   | .set place _ value | .emit place value _ => merge (expression scope place) (expression scope value)
   | .shift place _ _ | .free place | .trimReq place _ => expression scope place
+  | .callElse name args reason body => gather [reference scope name, expressions scope args,
+      statement (scope.bind [reason]) body]
   | .call name args => merge (reference scope name) (expressions scope args)
   | .genericCall _ _ args => merge ⟨false, []⟩ (expressions scope args)
   | .bindQ _ _ ty value => gather [⟨false, []⟩, optional (inspectType scope) ty, expression scope value]

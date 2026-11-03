@@ -32,7 +32,6 @@ def reverseValue {hi : Int} (bytes : Nat) (x : Zahl 0 hi) : Zahl 0 ((256 : Int) 
 
 theorem pow_byte (bytes : Nat) : (2 : Nat) ^ (8 * bytes) = 256 ^ bytes := by
   rw [Nat.pow_mul]
-  rfl
 
 theorem reverseNat_bswap16 (x : Nat) : reverseNat 2 x = bswap16n x := by
   simp [reverseNat, bswap16n, byteOf, Nat.div_div_eq_div_mul, Nat.add_assoc]
@@ -52,7 +51,9 @@ theorem reverseBytes_ok {hi : Int} (width : Nat) (bound : hi < (2 : Int) ^ width
     (ia : Runs fa (.int 0 hi) x) :
     Runs (reverseBytes hi bytes fa) (.int 0 ((256 : Int) ^ bytes - 1)) (reverseValue bytes x) := by
   induction bytes generalizing x fa with
-  | zero => exact constant_ok _
+  | zero =>
+    change Runs (constant 0 0) (.int 0 0) (⟨0, by decide, by decide⟩ : Zahl 0 0)
+    exact constant_ok (⟨0, by decide, by decide⟩ : Zahl 0 0)
   | succ bytes ih =>
     let eight : Zahl 0 8 := ⟨8, by decide, by decide⟩
     let next : Zahl 0 hi := natural hi (x.n.toNat / 256) (by

@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Kern.Syntax.Satz.T1
+public import Grammatik.Kern.Syntax.Satz.T1Frame
 
 @[expose] public section
 

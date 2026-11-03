@@ -1,7 +1,7 @@
 /-
 Design note: software IEEE-754 binary64 arithmetic for `Block.float`.
 
-Status. `lowB` routes addition, subtraction and multiplication through
+Status. `lowB` routes addition, subtraction, multiplication and division through
 `floatArithmeticBlockL`, with one retained-operand pipeline.
 The existing integer-only adder has `softAddRoutine_ok`; subtraction
 flips bit 63 of the right operand with one xor before reusing that adder.
@@ -10,9 +10,9 @@ and the kernel's definitional `sub = add (neg right)` identity, including
 NaN payloads/signs and signed zeros. `blockFloatArithmetic_case` connects
 the supported operations to `lowB_ok` with the shared rounded-result range
 guard and stop 107. `Mul/Correct.lean` connects the integer-only product to
-the kernel operation through `softMulRoutine_ok`. The new multiplication
-proofs and witnesses await the lead's Lean checks and runner measurement.
-Division remains refused.
+the kernel operation through `softMulRoutine_ok`. `Div/Correct.lean` supplies
+the corresponding `softDivRoutine_ok` and emitted-code theorem. Division's
+new proofs and witnesses await the lead's Lean checks and runner measurement.
 No float opcode, runner extension or hardware assumption is introduced.
 
 1. Kernel specification (grammatik).
@@ -77,8 +77,8 @@ No float opcode, runner extension or hardware assumption is introduced.
    reusing `floatNarrowC` with `stop 107` on a nonfinite result or a
    range miss. Subtraction adapts only the right producer before operand
    retention; the finite arithmetic and Block proof are shared. Each layer
-   carries its `_zeuge` witness and `#print axioms` check. Division remains
-   refused until its generic routine and connected proof exist.
+   carries its `_zeuge` witness and `#print axioms` check. Division uses this
+   same template and retains the finite-result guard.
 
 5. Multiplication (the `Mul/` modules).
    `Model` reproduces kernel special-case priority and identifies the exact
@@ -101,6 +101,23 @@ No float opcode, runner extension or hardware assumption is introduced.
    `Correct` composes the finite theorem with special dispatch on all words.
    `SoftFloatKernel` shares operand retention, frame preservation, packing
    guards and Block continuation logic with addition and subtraction.
+
+6. Division (the `Div/` modules).
+   `Model` follows kernel special-case priority, including 0/0 and inf/inf
+   as NaN, finite/zero as infinity, and xor-signed zero for finite/inf.
+   `Normalize` reuses multiplication's lossless 53-bit significands.
+   `Quotient` and `Code` reuse the existing restoring shift/subtract divider
+   for a numerator shifted by 55 or 56 places. Its exact remainder sets
+   sticky in a 56-bit guard word; a comparison of the normalized operands
+   chooses the shift. `Scale`, `RoundRatio` and `Replay` connect that rational
+   certificate to the existing dyadic rounding replay at every exponent.
+   No rational is equated to its truncated quotient. The exponent total is
+   leftIndex + 2278 - rightIndex - quotientShift, which reuses `Mul/Round`
+   and its underflow continuation directly. `Compress` preserves the
+   prepared numerator and divisor in the temporary frame. `FiniteModel`
+   and `Correct` connect the routine to the kernel and shared Block proof.
+   `DivProben` supplies accepted source cases and raw-word runner images;
+   nonfinite source results still use the unchanged stop-107 guard.
 -/
 module
 public import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
