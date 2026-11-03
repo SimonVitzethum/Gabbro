@@ -92,6 +92,10 @@ theorem execStmt_blatt_aussen {O : Orakel D} (hI : ImBereichO O) (p : Nat)
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, -⟩ := h
       exact schreibSlot_aussen (σ.lese Λ _) t Λ _ f _ (index_imBereich _)
+  | assignThruOwn pp t _ _ f i e _ _ _ _ _ _ _ =>
+      simp only [execStmt, Ausgang.ok.injEq] at h
+      obtain ⟨rfl, -⟩ := h
+      exact schreibSlot_aussen (σ.lese Λ _) t Λ _ f _ (index_imBereich _)
   | assignSlotRef r t _ ho f e _ _ =>
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, -⟩ := h
