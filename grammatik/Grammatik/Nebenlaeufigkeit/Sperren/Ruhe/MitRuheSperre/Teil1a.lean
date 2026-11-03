@@ -133,81 +133,89 @@ theorem verbrauchLauf_rel (t : D.Tab)
         have hselc := hsel (inv σ ρ).1 ρ
         generalize hgen : sel (inv σ ρ).1 ρ = sw at hselc ⊢
         obtain ⟨σr, w, b⟩ := sw
-        rw [hselc]
+        erw [hselc]
         cases w with
         | none =>
             simp only [Option.map_none]
             cases b with
             | false =>
                 refine Or.inl ?_
-                simp only [ausR]
+                simp only [Bool.true_eq_false, ite_false, ausR]
             | true =>
                 refine Or.inl ?_
-                simp only [ausR, logikR]
+                simp only [Bool.true_eq_false, ite_false, ausR, logikR]
         | some v =>
             simp only [Option.map_some]
             have hmc := hm σr ρ
             generalize hgm : massW σr ρ = mw at hmc ⊢
             obtain ⟨σm, m⟩ := mw
-            rw [hmc]
-            simp only []
+            erw [hmc]
+            simp only [Bool.true_eq_false, ite_false]
             have e := hs σm (Env.cons v ρ)
             change AusRelRu (Γ := .index (D.count t) :: Γ)
               (schritt' (worldR σm) (Env.cons (valR _ v) (envR ρ))) _ at e
             rcases e with e | ⟨e', e0, h1, h2, ht⟩
-            · rw [e]
+            · erw [e]
               cases schritt σm (Env.cons v ρ) with
               | ok σ' ρ' =>
                   simp only [ausR, envR_tail]
                   have hmc' := hm σ' ρ'.tail
-                  generalize hgm' : massW σ' ρ'.tail = mw' at hmc' ⊢
+                  have hmc'' : massW' (worldR σ') (envR ρ').tail =
+                      (worldR (massW σ' ρ'.tail).1, (massW σ' ρ'.tail).2) := by
+                    rw [envR_tail]; exact hmc'
+                  erw [hmc'']
+                  generalize hgm' : massW σ' ρ'.tail = mw'
                   obtain ⟨σm', m'⟩ := mw'
-                  rw [hmc']
-                  simp only []
                   by_cases hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < m
-                  · simp only [hfall, if_true]
-                    exact verbrauchLauf_rel t schritt schritt' inv inv' sel sel'
+                  · erw [if_pos hfall, if_pos hfall]
+                    have hrec := verbrauchLauf_rel t schritt schritt' inv inv' sel sel'
                       massW massW' bound hs hi hsel hm n σm' ρ'.tail
-                  · refine Or.inl ?_
-                    simp only [hfall, if_false, ausR, logikR]
+                    first | exact hrec | (rw [← envR_tail] at hrec; exact hrec)
+                  · erw [if_neg hfall, if_neg hfall]
+                    exact Or.inl rfl
               | next h σ' ρ' =>
                   simp only [ausR, envR_tail]
                   have hmc' := hm σ' ρ'.tail
-                  generalize hgm' : massW σ' ρ'.tail = mw' at hmc' ⊢
+                  have hmc'' : massW' (worldR σ') (envR ρ').tail =
+                      (worldR (massW σ' ρ'.tail).1, (massW σ' ρ'.tail).2) := by
+                    rw [envR_tail]; exact hmc'
+                  erw [hmc'']
+                  generalize hgm' : massW σ' ρ'.tail = mw'
                   obtain ⟨σm', m'⟩ := mw'
-                  rw [hmc']
-                  simp only []
                   by_cases hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < m
-                  · simp only [hfall, if_true]
-                    exact verbrauchLauf_rel t schritt schritt' inv inv' sel sel'
+                  · erw [if_pos hfall, if_pos hfall]
+                    have hrec := verbrauchLauf_rel t schritt schritt' inv inv' sel sel'
                       massW massW' bound hs hi hsel hm n σm' ρ'.tail
-                  · refine Or.inl ?_
-                    simp only [hfall, if_false, ausR, logikR]
+                    first | exact hrec | (rw [← envR_tail] at hrec; exact hrec)
+                  · erw [if_neg hfall, if_neg hfall]
+                    exact Or.inl rfl
               | leave h σ' ρ' =>
                   simp only [ausR, envR_tail]
                   have hmc' := hm σ' ρ'.tail
-                  generalize hgm' : massW σ' ρ'.tail = mw' at hmc' ⊢
+                  have hmc'' : massW' (worldR σ') (envR ρ').tail =
+                      (worldR (massW σ' ρ'.tail).1, (massW σ' ρ'.tail).2) := by
+                    rw [envR_tail]; exact hmc'
+                  erw [hmc'']
+                  generalize hgm' : massW σ' ρ'.tail = mw'
                   obtain ⟨σm', m'⟩ := mw'
-                  rw [hmc']
-                  simp only []
+                  have hi' : inv' (worldR σm') (envR ρ').tail =
+                      (worldR (inv σm' ρ'.tail).1, (inv σm' ρ'.tail).2) := by
+                    rw [envR_tail]; exact hi σm' ρ'.tail
                   by_cases hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < m
-                  · simp only [hfall, if_true]
+                  · erw [if_pos hfall, if_pos hfall, hi']
                     by_cases hc' : (inv σm' ρ'.tail).2 = true
-                    · refine Or.inl ?_
-                      simp only [hc', if_true, ausR]
-                    · have hcf : (inv σm' ρ'.tail).2 = false := by
-                        cases h' : (inv σm' ρ'.tail).2 with
-                        | false => rfl
-                        | true => exact absurd h' hc'
+                    · erw [if_pos hc', if_pos hc']
                       refine Or.inl ?_
-                      simp only [hcf, if_false, ausR, logikR]
-                  · refine Or.inl ?_
-                    simp only [hfall, if_false, ausR, logikR]
+                      first | rfl | exact congrArg (Ausgang.ok _) (envR_tail ρ')
+                    · erw [if_neg hc', if_neg hc']
+                      exact Or.inl rfl
+                  · erw [if_neg hfall, if_neg hfall]
+                    exact Or.inl rfl
               | zurueck => exact Or.inl rfl
               | why => exact Or.inl rfl
               | logik => exact Or.inl rfl
               | hardware => exact Or.inl rfl
-            · rw [h1, h2]
+            · erw [h1, h2]
               exact Or.inr ⟨e', e0, rfl, rfl, ht⟩
 
 theorem retryLauf_rel
@@ -334,7 +342,7 @@ theorem execStmtH_ru_assignSlot {V : Vertrag D}
   by
   refine Or.inl ?_
   simp only [ruS, execStmtH]
-  rw [orte2, lese_worldR, eval_ru, eval_ru, schreibSlot_worldR]
+  erw [orte2, lese_worldR, eval_ru, eval_ru, schreibSlot_worldR]
   rfl
 
 set_option linter.unusedSectionVars false in
@@ -357,7 +365,7 @@ theorem execStmtH_ru_assignThru {V : Vertrag D}
   by
   refine Or.inl ?_
   simp only [ruS, execStmtH]
-  rw [show (ruE p).orte ++ (ruE i).orte ++ (ruE e).orte = p.orte ++ i.orte ++ e.orte from
+  erw [show (ruE p).orte ++ (ruE i).orte ++ (ruE e).orte = p.orte ++ i.orte ++ e.orte from
     kongr₂ (· ++ ·) (orte2 p i) (ruE_orte e), lese_worldR, eval_ru, eval_ru, schreibSlot_worldR]
   rfl
 
@@ -386,7 +394,7 @@ theorem execStmtH_ru_assignThruOwn {V : Vertrag D}
   by
   refine Or.inl ?_
   simp only [ruS, execStmtH]
-  rw [show (ruE p).orte ++ (ruE i).orte ++ (ruE e).orte = p.orte ++ i.orte ++ e.orte from
+  erw [show (ruE p).orte ++ (ruE i).orte ++ (ruE e).orte = p.orte ++ i.orte ++ e.orte from
     kongr₂ (· ++ ·) (orte2 p i) (ruE_orte e), lese_worldR, eval_ru, eval_ru, schreibSlot_worldR]
   rfl
 
@@ -410,7 +418,7 @@ theorem execStmtH_ru_assignSlotRef {V : Vertrag D}
   by
   refine Or.inl ?_
   simp only [ruS, execStmtH]
-  rw [show (ruE r).orte ++ (ruE e).orte = r.orte ++ e.orte from
+  erw [show (ruE r).orte ++ (ruE e).orte = r.orte ++ e.orte from
     kongr₂ (· ++ ·) (ruE_orte r) (ruE_orte e), lese_worldR, eval_ru, eval_ru, schreibSlot_worldR]
   rfl
 
