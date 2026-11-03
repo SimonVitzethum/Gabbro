@@ -119,6 +119,8 @@ structure Stimmig (u : UProg) : Prop where
   ohneInv : u.invs = []
   /-- No static: the Body model has no globals, and no atomic carrier exists. -/
   ohneGlob : u.globs = []
+  /-- Generated transition bodies have no simulation in the bridge's Body fragment. -/
+  ohneTransition : OhneGenerierteTransitions u
 
 /-! ## 3. The entry of one call -/
 
