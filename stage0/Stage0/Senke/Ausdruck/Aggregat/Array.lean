@@ -151,7 +151,8 @@ theorem arrSet_ok {n : Nat} (a : Expr D Γ Λ (.arr τ n)) (i : Expr D Γ Λ (.i
     · change WordsAt m' fp d (encodeWords L (.arr τ 1)
         (arrSetW (eval σ₀ a σ ρ) (eval σ₀ i σ ρ).fin (eval σ₀ v σ ρ)))
       rw [singleton_index (eval σ₀ i σ ρ)]
-      simpa only [encodeWords, if_neg (by decide : ¬(1 : Nat) = 0), elementEncoding,
+      rw [encodeWords.eq_def]
+      simpa only [if_neg (by decide : ¬(1 : Nat) = 0), elementEncoding,
         List.append_nil, arrSetW, ↓reduceIte] using words
   · simp only [arrSetL] at h
     split at h
