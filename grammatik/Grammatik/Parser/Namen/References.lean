@@ -29,14 +29,24 @@ def namenA (lok : List String) : SExpr → List String
   | .ext kind (binder :: domain :: names) args =>
     if kind == .foldAdd || kind == .foldMin || kind == .foldMax then
       let count := if domain == "range" then 2 else 1
-      names ++ namenL lok (args.take count) ++ namenL (binder :: lok) ((args.drop count).take 2) ++
-        namenL lok ((args.drop count).drop 2)
+      names ++ namenFoldArgs lok binder count 2 args
     else namenL lok args
   | .ext _ _ xs => namenL lok xs
   | _ => []
 def namenL (lok : List String) : List SExpr → List String
   | [] => []
   | x :: xs => namenA lok x ++ namenL lok xs
+
+/-- Traverse domain operands, then the binder-scoped filter/value, then outer-scope
+    fallback arguments. Matching the original list keeps nested recursion structural. -/
+private def namenFoldArgs (lok : List String) (binder : String) :
+    Nat → Nat → List SExpr → List String
+  | _, _, [] => []
+  | domain + 1, scoped, x :: xs =>
+    namenA lok x ++ namenFoldArgs lok binder domain scoped xs
+  | 0, scoped + 1, x :: xs =>
+    namenA (binder :: lok) x ++ namenFoldArgs lok binder 0 scoped xs
+  | 0, 0, x :: xs => namenA lok x ++ namenL lok xs
 end
 
 /-- The names of an optional expression. -/
