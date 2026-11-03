@@ -55,7 +55,7 @@ theorem PredState.agree (h : q.PredState σ ρ candidate live j m)
 
 /-- Increment and backedge of the predecessor scan. -/
 theorem predecessor_next (h : q.PredState σ ρ candidate live j m) :
-    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.at 28) (x.at 14) m
+    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.addr 28) (x.addr 14) m
       (q.PredState σ ρ candidate live (j + 1)) := by
   apply (h.ready.increment (i := 28) (j := 29)
     (by rw [← q.origin]; omega) (by omega) (by omega) h.predecessorRead rfl
@@ -73,8 +73,8 @@ theorem predecessor_next (h : q.PredState σ ρ candidate live j m) :
 theorem predecessor_test (a : Wert D (.index (D.count x.table))) (ha : a.n = j)
     (h : q.PredState σ ρ candidate live j m) :
     let hit := q.memberAt σ ρ a && q.edgeAt σ ρ a candidate && !decide (a.n = candidate.n)
-    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.at 16)
-      (if hit then x.at 31 else x.at 14) m
+    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.addr 16)
+      (if hit then x.addr 31 else x.addr 14) m
       (fun m' => if hit then q.PredDone σ ρ candidate live m'
         else q.PredState σ ρ candidate live (j + 1) m') := by
   have room : x.s + 4 ≤ x.K := by have := x.scratch; have := x.layout.ks; omega
@@ -150,10 +150,10 @@ theorem predecessor_path (candidate : Wert D (.index (D.count x.table))) (live :
       q.PredState σ ρ candidate live j m →
       let answer := keinVorgaenger (idxAb (D.count x.table) j remaining)
         (q.memberAt σ ρ) (q.edgeAt σ ρ) (fun a b => decide (a.n = b.n)) candidate
-      ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.at 14)
-        (if answer then x.at 37 else x.at 31) m (q.PredDone σ ρ candidate live) := by
+      ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.addr 14)
+        (if answer then x.addr 37 else x.addr 31) m (q.PredDone σ ρ candidate live) := by
   apply predecessor_scan (D.count x.table) candidate (q.memberAt σ ρ) (q.edgeAt σ ρ)
-    (x.at 14) (x.at 37) (x.at 31) (q.PredState σ ρ candidate live)
+    (x.addr 14) (x.addr 37) (x.addr 31) (q.PredState σ ρ candidate live)
     (fun _ => q.PredDone σ ρ candidate live)
   · intro mem h
     apply (h.ready.bound (i := 14) (by rw [← q.origin]; omega) (by omega)
