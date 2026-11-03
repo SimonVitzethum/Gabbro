@@ -50,12 +50,21 @@ def strLtSpanL (n q d : Nat) (s t : Option (List II × Nat)) : Option (List II �
       max (max cs.2 ct.2) (acc + 5))
   else none
 
+/-- Copy each byte through the existing dynamic-offset frame store. Its stride is
+    always eight bytes, so large capacities do not introduce a stride-literal refusal. -/
+def stringAppendC : Nat → Nat → Nat → Nat → Nat → Nat → List II
+  | 0, _, _, _, _, _ => []
+  | k + 1, base, src, len, ptr, index =>
+      [⟨1, ptr, index, 0⟩, ⟨3, ptr, len, ptr⟩] ++
+      storeFrameSpan 1 base src ptr (ptr + 1) ++
+      stringAppendC k base (src + 1) len ptr (index + 1)
+
 /-- Copy the complete padded second byte span at the first string's runtime length.
     The output starts below both operand spans and has exactly the declared capacity. -/
 def stringCatC (n q d a b ptr : Nat) : List II :=
   copyWords n (d + 1) (a + 1) ++
   (constWords (List.replicate q 0) (d + 1 + n)).1 ++
-  (if q = 0 then [] else [⟨2, ptr, a, 0⟩] ++ storeFrameSpan q (d + 1) (b + 1) ptr (ptr + 1)) ++
+  stringAppendC q (d + 1) (b + 1) a ptr 0 ++
   [⟨3, d, a, b⟩]
 
 def strCatSpanL (n q d : Nat) (s t : Option (List II × Nat)) : Option (List II × Nat) :=
