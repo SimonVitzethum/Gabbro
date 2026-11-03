@@ -28,6 +28,19 @@ private theorem guardGrid (n gap k : Nat) (guard : 2 ≤ k) :
     (-((gap + k : Nat) : Int)) (by omega)
   simpa only [Nat.pow_zero, Nat.mul_one, scale] using result.symm
 
+/-- An odd interval is preserved at every dyadic replay precision with at
+    least two retained low bits. -/
+theorem softRoundDyadic_odd_interval (j n gap k : Nat) (guard : 2 ≤ k)
+    (odd : j % 2 = 1) (lo : (j - 1) * 2 ^ gap < n)
+    (hi : n < (j + 1) * 2 ^ gap) :
+    softRoundDyadic n (-((gap + k : Nat) : Int)) =
+      softRoundDyadic j (-(k : Int)) := by
+  rw [guardGrid n gap k guard]
+  have right := guardGrid j 0 k guard
+  simp only [Nat.zero_add, Nat.pow_zero, Nat.mul_one] at right
+  rw [right]
+  exact softRound_odd_interval _ _ _ _ (Nat.two_pow_pos _) (Nat.two_pow_pos _) odd lo hi
+
 /-- At least two retained low bits keep sticky information below every
     halfway boundary. The exact numerator may be arbitrarily wide. -/
 theorem softRoundDyadic_shiftJam (small gap k : Nat) (guard : 2 ≤ k) :
@@ -81,6 +94,7 @@ theorem softRoundDyadic_aligned_zeuge :
   decide +kernel
 
 #print axioms softRoundDyadic_mul_pow
+#print axioms softRoundDyadic_odd_interval
 #print axioms softRoundDyadic_shiftJam
 #print axioms softRoundDyadic_aligned_add
 #print axioms softRoundDyadic_aligned_sub
