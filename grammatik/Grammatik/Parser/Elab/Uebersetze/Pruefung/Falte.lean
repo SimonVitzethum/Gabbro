@@ -2,7 +2,7 @@
 
     The fold reads the completed cycle off the machine's per-thread call log:
     a probe push, then the probe's normal pop with the report's verdict, then a
-    gate push -- unrelated calls preserve it (`torPush`/`zyklusPop`/`checkZyklus`
+    gate push and its normal return -- unrelated calls preserve it (`torPush`/`zyklusPop`/`checkZyklus`
     skip every other event). Where the cycle is complete the fold yields exactly
     `replayEintrag c r g`; elsewhere it yields nothing: a push, a foreign pop,
     an error-channel return, a missing gate or a mismatched verdict synthesizes
@@ -35,11 +35,30 @@ section Falte
 
 variable [DecidableEq D.Fn]
 
-/-- A gate push occurs in the log: the admitted consumer was invoked. -/
+/-- Match the selected gate activation's normal return, counting nested frames.
+    An error return leaves the Duty pending; a later unrelated normal return
+    cannot turn that failed activation into a successful consumption. -/
+def torAbschluss (g : D.Fn) : Nat → List (RufEreignisF D) → Bool
+  | _, [] => false
+  | depth, .eintritt _ _ _ :: rest => torAbschluss g (depth + 1) rest
+  | 0, .rueck f _ _ _ _ :: _ => decide (f = g)
+  | 0, .why _ _ _ _ _ :: _ => false
+  | depth + 1, .rueck _ _ _ _ _ :: rest => torAbschluss g depth rest
+  | depth + 1, .why _ _ _ _ _ :: rest => torAbschluss g depth rest
+
+/-- An admitted gate activation completes normally. Merely entering a gate,
+    or returning through its foreign error channel, consumes no report. -/
 def torPush (g : D.Fn) : List (RufEreignisF D) → Bool
   | [] => false
-  | .eintritt f _ _ :: rest => decide (f = g) || torPush g rest
+  | .eintritt f _ _ :: rest =>
+    (decide (f = g) && torAbschluss g 0 rest) || torPush g rest
   | _ :: rest => torPush g rest
+
+/-- A foreign gate's error channel never completes its activation. -/
+theorem torAbschluss_fehler (g : D.Fn) (rho : Env D (D.params g))
+    (reason : Fin (D.gruende g)) (s0 s1 : World D)
+    (rest : List (RufEreignisF D)) :
+    torAbschluss g 0 (.why g rho reason s0 s1 :: rest) = false := rfl
 
 /-- The probe pops with the report's verdict and a gate push follows: the
     report a caller receives is the one the callee produced, consumed once. -/
@@ -108,7 +127,7 @@ theorem falte_fixture_vollstaendig (rho : Env pruefD (pruefD.params true))
     (s0 s1 : World pruefD) :
     falteEvidenz pruefC1 messBerichtFalsch false
       [.eintritt true rho s0, .rueck true rho' false s0 s1,
-        .eintritt false rho'' s1] =
+        .eintritt false rho'' s1, .rueck false rho'' () s1 s1] =
       some (replayEintrag pruefC1 messBerichtFalsch false) := rfl
 
 /-- Without the gate push nothing folds: a completed report with no admitted
@@ -125,7 +144,7 @@ theorem falte_falsches_urteil (rho : Env pruefD (pruefD.params true))
     (rho'' : Env pruefD (pruefD.params false)) (s0 s1 : World pruefD) :
     falteEvidenz pruefC1 messBerichtFalsch false
       [.eintritt true rho s0, .rueck true rho' true s0 s1,
-        .eintritt false rho'' s1] = none := rfl
+        .eintritt false rho'' s1, .rueck false rho'' () s1 s1] = none := rfl
 
 /-- A foreign pop folds nothing: another function's answer is not this
     check's report. -/
@@ -134,7 +153,7 @@ theorem falte_fremd_pop (rho : Env pruefD (pruefD.params true))
     (rho'' : Env pruefD (pruefD.params false)) (s0 s1 : World pruefD) :
     falteEvidenz pruefC1 messBerichtFalsch false
       [.eintritt true rho s0, .rueck false rho' () s0 s1,
-        .eintritt false rho'' s1] = none := rfl
+        .eintritt false rho'' s1, .rueck false rho'' () s1 s1] = none := rfl
 
 /-- The folded negative entry is the consumed one of the goal leg. -/
 theorem falte_eintrag_fixture (rho : Env pruefD (pruefD.params true))
@@ -142,11 +161,11 @@ theorem falte_eintrag_fixture (rho : Env pruefD (pruefD.params true))
     (rho'' : Env pruefD (pruefD.params false)) (s0 s1 : World pruefD) :
     ∃ e, falteEvidenz pruefC1 messBerichtFalsch false
         [.eintritt true rho s0, .rueck true rho' false s0 s1,
-          .eintritt false rho'' s1] = some e ∧
+          .eintritt false rho'' s1, .rueck false rho'' () s1 s1] = some e ∧
         Zielsatz.CheckTreueG pruefP [pruefC1] [e] :=
   falte_treu entladung_falsch_zeuge
     [.eintritt true rho s0, .rueck true rho' false s0 s1,
-      .eintritt false rho'' s1] rfl
+      .eintritt false rho'' s1, .rueck false rho'' () s1 s1] rfl
 
 end FixtureFalte
 
