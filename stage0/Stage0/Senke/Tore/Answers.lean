@@ -115,14 +115,19 @@ theorem reference_function_zeuge :
     region; it is not hidden in an impossible reference layout. -/
 theorem reference_contract_zeuge :
     @TorOK ⟨fun _ _ _ _ => True⟩ GRegion.rD ReferenceProbe.layout (GRegion.oK 0) := by
-  apply torOK_zeuge _ _ (by intro a σ ρ; rfl)
-  intro a n type bound
-  have same : n = 0 := by
-    have eq : some (.ref 0) = some (.ref n) := type
-    cases eq
+  refine torOK_zeuge _ _ (by intro a σ ρ; rfl) ?_ ?_
+  · intro a n type bound
+    have same : n = 0 := by
+      have eq : some (.ref 0) = some (.ref n) := type
+      cases eq
+      rfl
+    subst n
+    exact ⟨by decide, (), rfl, rfl, by decide⟩
+  · apply areaContract_register_only
+    intro a binding bound
+    have same : some ⟨39, regsIn 0, [], none⟩ = some binding := bound
+    cases same
     rfl
-  subst n
-  exact ⟨by decide, (), rfl, rfl, by decide⟩
 
 /-- Region capabilities keep nominal table identity and the canonical zero
     marker; no physical address is reconstructed from the provider's number. -/
