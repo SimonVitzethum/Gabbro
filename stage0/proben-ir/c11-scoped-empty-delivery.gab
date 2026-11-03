@@ -1,0 +1,20 @@
+// Unexecuted regression: expected exit 46; no lexical lock was entered by either callee.
+// Source exact returns use ret/retWhy; the typed companion also exercises G7's empty scopes.
+module ir_c11_scoped_empty_delivery {
+reason Fault { Failed = 19 "failed" exhaustive }
+impl fn identity(x : u32 in 0 .. 100) -> u32 in 0 .. 100
+    effects { pure } ensures result == x
+{ return x; }
+impl fn fail() -> u32 in 0 .. 100 or Fault effects { pure } ensures false
+{ return Fault::Failed; }
+impl fn main() -> u32 in 0 .. 200 effects { pure } {
+    let first = identity(23);
+    let value = fail() else (reason) {
+        match reason {
+            Failed => { let second = identity(first); return second + first; }
+        }
+        return 0;
+    }
+    return value;
+}
+}

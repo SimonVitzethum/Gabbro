@@ -1,0 +1,29 @@
+// Unexecuted regression: expected exit 47; a callee releases Inner but retains caller's Outer.
+// Reacquire Inner while Outer is still held, then reacquire Outer after its lexical exit.
+module ir_c11_scoped_inherited_lock {
+table state count 1 { slot { value : u32 in 0 .. 100, } }
+lock Outer protects { state } rank 0;
+lock Inner protects { } rank 1;
+impl fn read(x : u32 in 0 .. 100) -> u32 in 0 .. 100
+    effects { reads state.slots, locks Inner }
+    requires Held(Outer)
+    ensures result == x
+{
+    locks Inner { return x; }
+    return 0;
+}
+impl fn main() -> u32 in 0 .. 100
+    effects { reads state.slots, writes state.slots, locks Outer, locks Inner }
+{
+    let mut answer : u32 in 0 .. 100 = 0;
+    locks Outer {
+        state.slots[0].value = 47;
+        let value = read(47);
+        locks Inner {
+            if value == state.slots[0].value { answer = value; }
+        }
+    }
+    locks Outer { if state.slots[0].value != 47 { answer = 0; } }
+    return answer;
+}
+}

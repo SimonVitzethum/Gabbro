@@ -1,0 +1,46 @@
+// Unexecuted regression: expected exit 44; both lexical scopes cross a reason return.
+// Repeated recovery and nested reacquisition expose a missing inner or outer release.
+module ir_c11_scoped_reason_two_locks {
+reason Fault { First = 7 "first" Second = 19 "second" exhaustive }
+table left_state count 1 { slot { value : u32 in 0 .. 100, } }
+table right_state count 1 { slot { value : u32 in 0 .. 100, } }
+lock Outer protects { left_state } rank 0;
+lock Inner protects { right_state } rank 1;
+impl fn fail() -> u32 in 0 .. 100 or Fault
+    effects { writes left_state.slots, writes right_state.slots, locks Outer, locks Inner }
+    ensures false
+{
+    locks Outer {
+        left_state.slots[0].value = 7;
+        locks Inner {
+            right_state.slots[0].value = 19;
+            return Fault::First;
+        }
+    }
+    return 0;
+}
+impl fn recover() -> u32 in 0 .. 100
+    effects { reads left_state.slots, writes left_state.slots, reads right_state.slots, writes right_state.slots, locks Outer, locks Inner }
+{
+    let value = fail() else (reason) {
+        let mut answer : u32 in 0 .. 100 = 0;
+        locks Outer {
+            locks Inner {
+                match reason {
+                    First => { if left_state.slots[0].value == 7 && right_state.slots[0].value == 19 { answer = 22; } }
+                    Second => { answer = 1; }
+                }
+            }
+        }
+        return answer;
+    }
+    return value;
+}
+impl fn main() -> u32 in 0 .. 200
+    effects { reads left_state.slots, writes left_state.slots, reads right_state.slots, writes right_state.slots, locks Outer, locks Inner }
+{
+    let first = recover();
+    let second = recover();
+    return first + second;
+}
+}

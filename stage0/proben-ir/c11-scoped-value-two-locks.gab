@@ -1,0 +1,36 @@
+// Unexecuted regression: expected exit 42 from canonical source semantics.
+// Both calls and the final observation reacquire BOTH locks after an early return.
+module ir_c11_scoped_value_two_locks {
+table outer_state count 1 { slot { value : u32 in 0 .. 100, } }
+table inner_state count 1 { slot { value : u32 in 0 .. 100, } }
+lock Outer protects { outer_state } rank 0;
+lock Inner protects { inner_state } rank 1;
+impl fn save(x : u32 in 0 .. 100) -> u32 in 0 .. 100
+    effects { writes outer_state.slots, reads inner_state.slots, writes inner_state.slots, locks Outer, locks Inner }
+    ensures result == x
+{
+    locks Outer {
+        outer_state.slots[0].value = x;
+        locks Inner {
+            inner_state.slots[0].value = x;
+            return inner_state.slots[0].value;
+        }
+    }
+    return 0;
+}
+impl fn main() -> u32 in 0 .. 100
+    effects { reads outer_state.slots, writes outer_state.slots, reads inner_state.slots, writes inner_state.slots, locks Outer, locks Inner }
+{
+    let first = save(17);
+    let second = save(19);
+    let mut answer : u32 in 0 .. 100 = 0;
+    locks Outer {
+        locks Inner {
+            if first == 17 && second == 19 && outer_state.slots[0].value == 19 && inner_state.slots[0].value == 19 {
+                answer = 42;
+            }
+        }
+    }
+    return answer;
+}
+}

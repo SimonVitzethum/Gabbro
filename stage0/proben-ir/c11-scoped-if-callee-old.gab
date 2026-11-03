@@ -1,0 +1,35 @@
+// Unexecuted regression: expected exit 45. Both if arms return across two locks.
+// A nested call mutates g; ensures must retain entry old(g) and the original x.
+module ir_c11_scoped_if_callee_old {
+static mut g : u32 in 0 .. 100 = 0;
+lock Outer protects { } rank 0;
+lock Inner protects { } rank 1;
+impl fn write() effects { writes g } { g = 19; }
+impl fn choose(x : u32 in 0 .. 100, flag : bool) -> u32 in 0 .. 100
+    effects { reads g, writes g, locks Outer, locks Inner }
+    ensures result == x && g == old(g) + 12
+{
+    locks Outer {
+        locks Inner {
+            write();
+            if flag { return x; } else { return x; }
+        }
+    }
+    return 0;
+}
+impl fn main() -> u32 in 0 .. 100
+    effects { reads g, writes g, locks Outer, locks Inner }
+{
+    g = 7;
+    let first = choose(21, true);
+    g = 7;
+    let second = choose(24, false);
+    let mut answer : u32 in 0 .. 100 = 0;
+    locks Outer {
+        locks Inner {
+            if first == 21 && second == 24 && g == 19 { answer = 45; }
+        }
+    }
+    return answer;
+}
+}

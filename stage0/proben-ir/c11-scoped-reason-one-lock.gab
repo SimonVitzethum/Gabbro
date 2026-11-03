@@ -1,0 +1,32 @@
+// Unexecuted regression: expected exit 43; reason returns bypass normal ensures.
+// The handler must reacquire the lock and observe the store made before the reason.
+module ir_c11_scoped_reason_one_lock {
+reason Fault { First = 7 "first" Second = 19 "second" exhaustive }
+table state count 1 { slot { value : u32 in 0 .. 100, } }
+lock L protects { state } rank 0;
+impl fn fail() -> u32 in 0 .. 100 or Fault
+    effects { writes state.slots, locks L }
+    ensures false
+{
+    locks L {
+        state.slots[0].value = 19;
+        return Fault::Second;
+    }
+    return 0;
+}
+impl fn main() -> u32 in 0 .. 100
+    effects { reads state.slots, writes state.slots, locks L }
+{
+    let value = fail() else (reason) {
+        let mut answer : u32 in 0 .. 100 = 0;
+        locks L {
+            match reason {
+                First => { answer = 1; }
+                Second => { if state.slots[0].value == 19 { answer = 43; } }
+            }
+        }
+        return answer;
+    }
+    return value;
+}
+}

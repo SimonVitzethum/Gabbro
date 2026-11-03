@@ -1,0 +1,10 @@
+// Unexecuted refusal twin: a scoped return does not authorize descending lock acquisition.
+// Expected text is the canonical lowStruct locks rank check in UebersetzeAllg3/Struct.
+module ir_c11_scoped_rank_refused {
+lock Outer protects { } rank 1;
+lock Inner protects { } rank 0;
+impl fn main() -> u32 in 0 .. 100 effects { locks Outer, locks Inner } {
+    locks Outer { locks Inner { return 42; } }
+    return 0;
+}
+}

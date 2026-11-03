@@ -1,0 +1,24 @@
+// Unexecuted regression: expected exit 49; cleanup preserves the complete two-word result.
+// A second callee call and final nested acquisition require real releases of both locks.
+module ir_c11_scoped_wide_value {
+lock Outer protects { } rank 0;
+lock Inner protects { } rank 1;
+impl fn identity(x : u64 in 0 .. 340282366920938463463374607431768211455) -> u64 in 0 .. 340282366920938463463374607431768211455
+    effects { locks Outer, locks Inner }
+    ensures result == x
+{
+    locks Outer { locks Inner { return x; } }
+    return 0;
+}
+impl fn main() -> u32 in 0 .. 100 effects { locks Outer, locks Inner } {
+    let first = identity(18446744073709551623);
+    let second = identity(36893488147419103239);
+    let mut answer : u32 in 0 .. 100 = 0;
+    locks Outer {
+        locks Inner {
+            if first == 18446744073709551623 && second == 36893488147419103239 { answer = 49; }
+        }
+    }
+    return answer;
+}
+}

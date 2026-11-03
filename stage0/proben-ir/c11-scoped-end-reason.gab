@@ -1,0 +1,30 @@
+// Unexecuted regression: expected exit 48; narrowing's ending else returns a reason.
+// The caller reacquires both locks and sees the pre-return global store.
+module ir_c11_scoped_end_reason {
+reason Fault { Failed = 19 "failed" exhaustive }
+static mut g : u32 in 0 .. 100 = 0;
+lock Outer protects { } rank 0;
+lock Inner protects { } rank 1;
+impl fn narrow_or_fail(x : u32 in 0 .. 100) -> u32 in 0 .. 100 or Fault
+    effects { writes g, locks Outer, locks Inner }
+    ensures false
+{
+    locks Outer {
+        locks Inner {
+            g = 48;
+            narrow x to 0 .. 1 else { return Fault::Failed; }
+        }
+    }
+    return 0;
+}
+impl fn main() -> u32 in 0 .. 100
+    effects { reads g, writes g, locks Outer, locks Inner }
+{
+    let value = narrow_or_fail(2) else (reason) {
+        let mut answer : u32 in 0 .. 100 = 0;
+        locks Outer { locks Inner { answer = g; } }
+        return answer;
+    }
+    return value;
+}
+}

@@ -1,0 +1,29 @@
+// Unexecuted negative twin: expected stop 102, the existing failed-ensures code.
+// old(g) is 7 and g becomes 19; a false contract must survive scoped cleanup.
+module ir_c11_scoped_if_callee_old_fail {
+static mut g : u32 in 0 .. 100 = 0;
+lock Outer protects { } rank 0;
+lock Inner protects { } rank 1;
+impl fn write() effects { writes g } { g = 19; }
+impl fn choose(x : u32 in 0 .. 100) -> u32 in 0 .. 100
+    effects { reads g, writes g, locks Outer, locks Inner }
+    ensures result == x && g == old(g) + 11
+{
+    locks Outer {
+        locks Inner {
+            write();
+            if true { return x; }
+        }
+    }
+    return 0;
+}
+impl fn main() -> u32 in 0 .. 100
+    effects { reads g, writes g, locks Outer, locks Inner }
+{
+    g = 7;
+    let value = choose(45);
+    let mut answer : u32 in 0 .. 100 = 0;
+    locks Outer { locks Inner { answer = value; } }
+    return answer;
+}
+}
