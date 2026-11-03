@@ -376,7 +376,7 @@ theorem reihe_each (f : Nat) (ctx ctxS : UCtx) (bnd : String) (s : SExpr) (inv :
       .ok ([.loopBeg bnd tab iv] ++ body ++ [.blkEnd] ++ xs, cE) := by
   have header : uLoopExport ctx bnd none "slots" s "unvisited" "" inv =
       .ok (.loopBeg bnd tab iv, ctxS, none) := by
-    simp only [uLoopExport, BEq.rfl, ↓reduceIte, hk]
+    simp only [uLoopExport, uUnvisitedLoopExport, BEq.rfl, ↓reduceIte, hk]
     rfl
   rw [uAnwReihe] <;> first | (simp only [header, h1, uEndeStmt, h2, uFilteredBody, List.cons_append, List.nil_append, List.append_nil, List.append_assoc]) | (intros; simp_all)
 
