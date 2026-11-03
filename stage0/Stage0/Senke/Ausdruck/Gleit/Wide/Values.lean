@@ -26,7 +26,7 @@ theorem denominator_value (bound : ((eval σ₀ e σ ρ).n.natAbs : Int) ≤ upp
   have limit := (eval σ₀ (shift w e) σ ρ).le_hi
   have count : integerFloatShift (eval σ₀ e σ ρ).n.natAbs ≤ w := by omega
   have lower : (1 : Int) ≤ 2 ^ integerFloatShift (eval σ₀ e σ ρ).n.natAbs := by
-    have := Int.pow_pos (a := (2 : Int)) (n := integerFloatShift (eval σ₀ e σ ρ).n.natAbs) (by decide)
+    have := Int.pow_pos (n := (2 : Int)) (m := integerFloatShift (eval σ₀ e σ ρ).n.natAbs) (by decide)
     omega
   have upper : (2 : Int) ^ integerFloatShift (eval σ₀ e σ ρ).n.natAbs ≤ 2 ^ w := by
     exact_mod_cast Nat.pow_le_pow_right (by decide : 0 < 2) count
