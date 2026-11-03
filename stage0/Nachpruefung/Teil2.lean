@@ -87,3 +87,11 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.softSubRoutine_ok_zeuge
 #print axioms Gabbro.Stage0.Senke.floatAddSubBlockL_addSub
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_sub_accepted_zeuge
+
+-- C14 Stage-0 image placement and profile certificate transport.
+#print axioms Gabbro.Stage0.Senke.layU_ga_lcm_dvd
+#print axioms Gabbro.Stage0.Emitted.placed
+#print axioms Gabbro.Stage0.Compiled.profile_binding
+#print axioms Gabbro.Stage0.AlignedStaticWitness.addr_aligned
+#print axioms Gabbro.Stage0.ProfileMismatchWitness.candidate_refused
+#print axioms Gabbro.Stage0.SectionWitness.candidate_refused

@@ -10,7 +10,7 @@ import all Init.Data.String.FindPos
 import all Init.Data.String.Hashable
 import all Init.Data.String.Iter
 import all Init.Data.String.Iter.Basic
-import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Intercalate
 import all Init.Data.String.Iterate
 import all Init.Data.String.Iterator
 import all Init.Data.String.Legacy
@@ -33,18 +33,20 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 @[expose] public section
 
-namespace Gabbro.Stage0.AlignmentWitness
+namespace Gabbro.Stage0.ProfileMismatchWitness
 
 set_option maxRecDepth 2000
 set_option maxHeartbeats 400000
 
 def text : String :=
-  "module alignment_probe { static VALUE : u32 = 1 aligned 8; impl fn main() -> u64 in 0 .. 100 { return 23; } }"
+  "module profile_mismatch_probe { profile { arch x86_64; arch aarch64; }; impl fn main() -> u64 in 0 .. 100 { return 23; } }"
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
-/-- Placement requests exist in `Parser.Profil.Platzierung`; its policy and
-    layout correspondence are not connected to static elaboration or the Stage0 image. -/
-theorem candidate_refused : emit text 64 = .error "static placement without G form" := by decide +kernel
+/-- Conflicting profile modes are refused by name: the checked binding is
+    inconsistent, so no image is built for it. -/
+theorem candidate_refused :
+    (match candidate with | .error message => some message | .ok _ => none) =
+      some "ir: profile binding refused: modes, assumptions or library requirements are not consistent" := by decide +kernel
 
-end Gabbro.Stage0.AlignmentWitness
+end Gabbro.Stage0.ProfileMismatchWitness

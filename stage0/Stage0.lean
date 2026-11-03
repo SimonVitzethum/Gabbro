@@ -17,6 +17,7 @@ public import Stage0.Zeugen.Ablehnung.OwnerMintWitness
 public import Stage0.Zeugen.Annahme.LibraryWitness
 public import Stage0.Zeugen.Annahme.CheckWitness
 public import Stage0.Zeugen.Annahme.AccWitness
+public import Stage0.Zeugen.Annahme.AlignedStaticWitness
 public import Stage0.Zeugen.Annahme.ResetRangeWitness
 public import Stage0.Zeugen.Annahme.NamedSpaceWitness
 public import Stage0.Senke.Ausdruck
@@ -113,10 +114,10 @@ public import Stage0.Zeugen.Annahme.TransitionContractWitness
 public import Stage0.Zeugen.Annahme.WriteOnlyCapabilityWitness
 public import Stage0.Zeugen.Annahme.RightsUnionWitness
 public import Stage0.Zeugen.Annahme.LibraryBindWitness
-public import Stage0.Zeugen.Ablehnung.ProfileWitness
-public import Stage0.Zeugen.Ablehnung.RequiresProfileWitness
+public import Stage0.Zeugen.Annahme.ProfileWitness
+public import Stage0.Zeugen.Ablehnung.ProfileMismatchWitness
+public import Stage0.Zeugen.Annahme.RequiresProfileWitness
 public import Stage0.Zeugen.Annahme.TestBuildWitness
-public import Stage0.Zeugen.Ablehnung.AlignmentWitness
 public import Stage0.Zeugen.Ablehnung.SectionWitness
 public import Stage0.Zeugen.Ablehnung.EntrustWitness
 public import Stage0.Senke.Gleit.Plan
