@@ -16,7 +16,7 @@ theorem quotient_value (bound : ((eval σ₀ e σ ρ).n.natAbs : Int) ≤ upper 
   simp only [quotient, eval, Zahl.shr]
   dsimp only
   rw [magnitude_value bound, shift_value bound positive, Int.toNat_natCast]
-  simp only [Int.natCast_div, Int.natCast_pow, Int.cast_ofNat_Int]
+  simp only [Int.natCast_ediv, Int.natCast_pow, Int.cast_ofNat_Int]
 
 theorem denominator_value (bound : ((eval σ₀ e σ ρ).n.natAbs : Int) ≤ upper w)
     (positive : 0 < (eval σ₀ e σ ρ).n.natAbs) :
@@ -43,7 +43,7 @@ theorem sticky_value (bound : ((eval σ₀ e σ ρ).n.natAbs : Int) ≤ upper w)
     simp only [eval, Zahl.rem]
     dsimp only
     rw [magnitude_value bound, denominator_value bound positive]
-    simp only [Int.natCast_mod, Int.natCast_pow, Int.cast_ofNat_Int]
+    simp only [Int.natCast_emod, Int.natCast_pow, Int.cast_ofNat_Int]
   simp only [sticky, eval]
   change (if decide (_ = 0) then _ else _) = _
   rw [remainder]
