@@ -79,6 +79,7 @@ theorem execStmt_ru_retScoped {V : Vertrag D}
   simp only [ruS, execStmt]
   erw [ruErg_orte, lese_worldR, evalErg_ru]
   rw [gibt_foldl_worldR]
+  rfl
 
 set_option linter.unusedSectionVars false in
 theorem execStmt_ru_retWhyScoped {V : Vertrag D}
@@ -93,6 +94,7 @@ theorem execStmt_ru_retWhyScoped {V : Vertrag D}
   by
   simp only [ruS, execStmt]
   rw [gibt_foldl_worldR]
+  rfl
 
 set_option linter.unusedSectionVars false in
 theorem execBlock_ru_cons {V : Vertrag D}
