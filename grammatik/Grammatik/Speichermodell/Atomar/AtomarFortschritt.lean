@@ -72,14 +72,17 @@ theorem ga_scopes (hsc : ScopesOkProg P) (sp : Speicher D)
 
 theorem ga_haeltInv (hO : GutO O) (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
     {M : RufMaschineG D} (hr : RufErreichbarGA P O passes (RufStartG P sp init) M) :
-    ∀ t, HaeltInvG (M.faeden t) :=
-  gaInvF (J := fun fa => ∀ t, HaeltInvG (fa t)) (haeltInvG_start P sp init)
+    ∀ t, HaeltInvG (M.faeden t) := by
+  have h := gaInvF (J := fun fa => ∀ t, HaeltInvG (fa t) ∧ FadenScopeBalanceG (fa t))
+    (fun t => ⟨haeltInvG_start P sp init t, fadenScopeBalanceG_start P sp init t⟩)
     (fun M M' g h hs t => by
       by_cases htg : t = g
-      · subst htg
-        exact rufSchrittG_haeltInv hO hs (h t)
+      · subst t
+        exact ⟨rufSchrittG_haeltInv hO hs (h g).1 (h g).2,
+          fadenScopeBalanceG_schritt hs (h g).2⟩
       · rw [rufSchrittG_passt_anders P O passes M M' g t htg hs]
         exact h t) hr
+  exact fun t => (h t).1
 
 theorem ga_antInv {C : D.Ax ⊕ D.Reg → Bool} (hB : ∀ g, (P.rumpf g).ants.all C = true)
     (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))

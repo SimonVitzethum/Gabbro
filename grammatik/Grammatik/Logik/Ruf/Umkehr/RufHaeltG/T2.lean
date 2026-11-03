@@ -2,6 +2,7 @@
 module
 public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.T1
 public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.AntwortHaelt
+public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.ScopeBalanceReplay
 public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.RufSchrittG_haeltInvFaelle.Teil7
 public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.RufSchrittG_haeltInvFaelle.Teil8
 public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.RufSchrittG_haeltInvFaelle.Teil8b
@@ -15,7 +16,7 @@ set_option maxHeartbeats 1000000 in
 /-- **Every rule keeps the thread invariant of the acting thread.** -/
 theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
     {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M')
-    (h : HaeltInvG (M.faeden f)) : HaeltInvG (M'.faeden f) := by
+    (h : HaeltInvG (M.faeden f)) (hb : FadenScopeBalanceG (M.faeden f)) : HaeltInvG (M'.faeden f) := by
   have hk0 := h.2.1 _ List.mem_cons_self
   have hh0 := h.kopf
   cases hs with
@@ -374,6 +375,14 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
       refine haeltInvG_kopf h (by ho_tac) (by fr_tac) hk.2 ?_
       simp only [hsm, offen_lese]
       rw [e]; exact heldIn_block restb hh
+    | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hnonempty =>
+      simp only [rufUpdateG_self]
+      apply haeltInvG_scopedEval ρ r R hhead h (hb.kopf hhead) hscope
+      subst σ₁
+      exact offen_lese _ _ _
+    | rueckScopedGrund ρ r grund R hhead hret hscope hΛ hnonempty =>
+      simp only [rufUpdateG_self]
+      exact haeltInvG_scopedEval ρ r R hhead h (hb.kopf hhead) hscope _ _ rfl
     | rueckFreigabe ρ a L remaining hhead =>
       simp only [rufUpdateG_self]
       exact haeltInvG_scopedRelease ρ a L remaining hhead h

@@ -95,12 +95,13 @@ theorem ownInv_reachGA (hO : GutO O) (hc : Checked P A I) (hvoll : ∀ g : D.Fn,
     (hT : ThreadFacts P A fs init) (hs : StartOwn A I sp init) (hp : ArenaPlain A) {M : RufMaschineG D}
     (hr : RufErreichbarGA P O passes (RufStartG P sp init) M) : OwnInv A I M := by
   have hHalt : ∀ {M}, RufErreichbarGA P O passes (RufStartG P sp init) M → ∀ t, HaeltInvG (M.faeden t) :=
-    fun hr => gaInv (I := fun M => ∀ t, HaeltInvG (M.faeden t)) (fun M M' e h t => by rw [← e]; exact h t)
-      (fun t => haeltInvG_start P sp init t)
+    fun hr t => (gaInv (I := fun M => ∀ t, HaeltInvG (M.faeden t) ∧ FadenScopeBalanceG (M.faeden t)) (fun M M' e h t => by rw [← e]; exact h t)
+      (fun t => ⟨haeltInvG_start P sp init t, fadenScopeBalanceG_start P sp init t⟩)
       (fun M M' u h hs t => by
         by_cases htu : t = u
-        · subst htu; exact rufSchrittG_haeltInv hO hs (h t)
-        · rw [rufSchrittG_passt_anders P O passes M M' u t htu hs]; exact h t) hr
+        · subst t; exact ⟨rufSchrittG_haeltInv hO hs (h u).1 (h u).2,
+            fadenScopeBalanceG_schritt hs (h u).2⟩
+        · rw [rufSchrittG_passt_anders P O passes M M' u t htu hs]; exact h t) hr t).1
   have hK : ∀ {M}, RufErreichbarGA P O passes (RufStartG P sp init) M → ∀ v, hT.K v (M.faeden v).kopf.f = true :=
     fun hr v => ((gaInv_merk sp init (fun t g => hT.K t g = true) (fun t _ => rufM fs (hT.K t))
       (fun t => merkAbg_rufM hvoll (hT.abg t)) hT.wurzel hr) v _ List.mem_cons_self).1

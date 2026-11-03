@@ -47,13 +47,14 @@ def EFR (P : Programm D) (fs : List D.Fn) (r : RufRahmenG D) : Prop :=
 
 theorem ewigFrei_schritt (hvoll : ∀ g : D.Fn, g ∈ fs) {M M' : RufMaschineG D} {t : Faden}
     (hs : RufSchrittGX P O pa Tg M t M')
+    (hb : RestScopeBalance (M.faeden t).kopf.rest)
     (hI : ∀ r ∈ (M.faeden t).kopf :: (M.faeden t).stapel, EFR P fs r) :
     ∀ r ∈ (M'.faeden t).kopf :: (M'.faeden t).stapel, EFR P fs r := by
   obtain ⟨σ, M'', hg, _, _, _, hfa, _, _⟩ := hs
   have hfa' : M'.faeden t = M''.faeden t := by rw [hfa]
   rw [hfa']
   have hI' : ∀ r ∈ ((mitSpeicher M σ).faeden t).kopf :: ((mitSpeicher M σ).faeden t).stapel, EFR P fs r := hI
-  rcases schrittArt hg (fun _ => 0) (ewigFrei P fs) (ewigFreiS P fs) false with
+  rcases schrittArt hg hb (fun _ => 0) (ewigFrei P fs) (ewigFreiS P fs) false with
     ⟨hst, hpot⟩ | ⟨g, caller', rho, s0, hst, hkopf, hpush⟩ | ⟨caller, rst, hst, hst', hpop⟩
   · intro r hr
     rw [hst] at hr
@@ -108,7 +109,7 @@ theorem ewigFrei_ohne_budget (hvoll : ∀ g : D.Fn, g ∈ fs) (sp : Speicher D)
       | some u =>
         by_cases htu : t = u
         · subst htu
-          exact ewigFrei_schritt hvoll (R.schritt j t h) ih
+          exact ewigFrei_schritt hvoll (R.schritt j t h) (R.scopeBalance h0 j t).1 ih
         · rw [Zielsatz.gx_fremd (R.schritt j u h) t htu]; exact ih
   intro j
   exact rufeR_istEwig (hI j _ List.mem_cons_self)

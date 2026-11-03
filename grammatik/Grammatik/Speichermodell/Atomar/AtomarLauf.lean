@@ -193,12 +193,17 @@ theorem fadenFakten_GX {fs : List D.Fn} (hO : GutO O) (hvoll : ∀ g : D.Fn, g �
     FadenFakten P K M := by
   have hrA := gx_ga_lauf hTA hr
   refine ⟨?_, gaInv_exklusiv hO sp init hex hrA, fun t F hF => ?_⟩
-  · refine gaInv (I := fun M => ∀ t, HaeltInvG (M.faeden t))
-      (fun M M' e h t => by rw [← e]; exact h t) (haeltInvG_start P sp init) ?_ hrA
-    intro M M' u h hs t
-    by_cases htu : t = u
-    · subst htu; exact rufSchrittG_haeltInv hO hs (h t)
-    · rw [rufSchrittG_fremd hs t htu]; exact h t
+  · have hh := gaInv (I := fun M => ∀ t, HaeltInvG (M.faeden t) ∧ FadenScopeBalanceG (M.faeden t))
+      (fun M M' e h t => by rw [← e]; exact h t)
+      (fun t => ⟨haeltInvG_start P sp init t, fadenScopeBalanceG_start P sp init t⟩)
+      (fun M M' u h hs t => by
+        by_cases htu : t = u
+        · subst t
+          exact ⟨rufSchrittG_haeltInv hO hs (h u).1 (h u).2,
+            fadenScopeBalanceG_schritt hs (h u).2⟩
+        · rw [rufSchrittG_fremd hs t htu]
+          exact h t) hrA
+    exact fun t => (hh t).1
   · exact (gaInv_merk (P := P) (O := O) (passes := passes) sp init (fun t f => K t f = true)
       (fun t _ => rufM fs (K t)) (fun t => merkAbg_rufM hvoll (hAbg t)) hWurzel hrA t F hF).1
 

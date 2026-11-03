@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Logik.Fortschritt.KostenG.T1.Teil2
-public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.ScopeMarkers
+public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.ScopeBalanceReplay
 
 @[expose] public section
 
@@ -9,38 +9,72 @@ namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
 
-/-- Every pending lexical marker contributes a unit to the unchanged
-    residue potential, in addition to its terminal unit. -/
+/-- Every pending lexical marker contributes at least one unit. Completed
+    residues contribute zero, and cleanup contains exactly its pending units. -/
 theorem GRest.freis_budget (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (r : GRest D V l Γ Λ) :
-    r.freis.length + 1 ≤ potRest c pa r := by
-  induction r <;> simp only [GRest.freis, potRest, List.length_cons] at *
-  all_goals first
-    | exact kostenEnd_pos c pa _
-    | omega
+    r.freis.length ≤ potRest c pa r := by
+  induction r <;> simp only [GRest.freis, potRest, List.length_cons, List.length_nil] at *
+  all_goals omega
 
-/-- Evaluation costs one step. A nonempty cleanup costs exactly one more
-    step per scope, because the final release also delivers the answer.
-    Thus there is neither an empty cleanup step nor a delivery surcharge. -/
-def scopedReturnSteps (scopes : List D.Lock) : Nat :=
-  match scopes with
-  | [] => 1
-  | _ :: _ => 1 + scopes.length
+/-- Evaluation plus one step per scope. The last release delivers the answer. -/
+def scopedReturnSteps (scopes : List D.Lock) : Nat := 1 + scopes.length
 
-/-- The cleanup budget is already present in the lexical scope markers;
-    this argument does not change any source cost or the numerical goal.
-    Its use in the cost engine requires the reachable balance invariant. -/
-theorem GRest.scopedReturn_budget (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
+/-- The source return pays for evaluation, and its skipped continuation
+    already pays for the releases. No source cost changes. -/
+theorem GRest.scopedWert_budget (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (r : GRest D V l Γ Λ)
-    (R : RueckRessourcen D V Λ) (h : r.scopeBalance) :
+    (e : ErgExpr D Γ Λ V.erg) (R : RueckRessourcen D V Λ)
+    (hb : r.scopeBalance) (hr : r.scopedWert = some (e, R)) :
     scopedReturnSteps R.scopes ≤ potRest c pa r := by
-  have heq := r.scopes_length R h
-  have hbudget := r.freis_budget c pa
-  cases hs : R.scopes with
-  | nil => simp only [scopedReturnSteps]; omega
-  | cons L Ls =>
-      simp only [scopedReturnSteps, List.length_cons]
-      simp only [hs, List.length_cons] at heq
-      omega
+  have hlen := r.scopes_length R hb
+  rcases GRest.scopedWert_faelle hr with rfl | ⟨rest, rfl⟩ | ⟨Λ', rest, k, rfl⟩
+  · simp only [GRest.freis, List.length_nil] at hlen
+    simp only [scopedReturnSteps, potRest, kostenEnd]
+    omega
+  · simp only [GRest.freis, List.length_nil] at hlen
+    simp only [scopedReturnSteps, potRest, kostenEnd, kostenStmt]
+    omega
+  · have hk := k.freis_budget c pa
+    simp only [GRest.freis] at hlen
+    simp only [scopedReturnSteps, potRest, kostenBlock, kostenStmt]
+    omega
+
+theorem GRest.scopedGrund_budget (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (r : GRest D V l Γ Λ)
+    (grund : Fin V.gruende) (R : RueckRessourcen D V Λ)
+    (hb : r.scopeBalance) (hr : r.scopedGrund = some (grund, R)) :
+    scopedReturnSteps R.scopes ≤ potRest c pa r := by
+  have hlen := r.scopes_length R hb
+  rcases GRest.scopedGrund_faelle hr with rfl | ⟨rest, rfl⟩ | ⟨Λ', rest, k, rfl⟩
+  · simp only [GRest.freis, List.length_nil] at hlen
+    simp only [scopedReturnSteps, potRest, kostenEnd]
+    omega
+  · simp only [GRest.freis, List.length_nil] at hlen
+    simp only [scopedReturnSteps, potRest, kostenEnd, kostenStmt]
+    omega
+  · have hk := k.freis_budget c pa
+    simp only [GRest.freis] at hlen
+    simp only [scopedReturnSteps, potRest, kostenBlock, kostenStmt]
+    omega
+
+/-- A rule can fire only at a residue with positive own-step potential. -/
+theorem rufSchrittG_arbeitsfaehig {P : Programm D} {O : Orakel D} {pa : Nat}
+    {M M' : RufMaschineG D} {t : Faden} (hs : RufSchrittG P O pa M t M') :
+    (M.faeden t).kopf.rest.2.2.2.2.arbeitsfaehig = true := by
+  cases hs with
+  | g7 hs =>
+      cases hs with
+      | rueckScopedWert ρ r e R hhead hret
+      | rueckScopedWertDirekt ρ r e R hhead hret =>
+          rw [hhead]
+          rcases GRest.scopedWert_faelle hret with rfl | ⟨_, rfl⟩ | ⟨_, _, _, rfl⟩ <;> rfl
+      | rueckScopedGrund ρ r grund R hhead hret
+      | rueckScopedGrundDirekt ρ r grund R hhead hret =>
+          rw [hhead]
+          rcases GRest.scopedGrund_faelle hret with rfl | ⟨_, rfl⟩ | ⟨_, _, _, rfl⟩ <;> rfl
+      | _ => simp_all [GRest.arbeitsfaehig]
+  | g1 hs | g2 hs | g3 hs | g4 hs | g5 hs | g6 hs =>
+      cases hs <;> simp_all [GRest.arbeitsfaehig]
 
 end Gabbro.Grammatik

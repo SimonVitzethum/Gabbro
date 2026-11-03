@@ -31,6 +31,7 @@ theorem schritt_rang (hvoll : ∀ g, g ∈ fs)
     (hR : ∀ f, rufeE (tor zyk rk f) (torS zyk rk fs f) true (P.rumpf f) = true)
     {M M' : RufMaschineG D} {t : Faden} (hP0 : RufMaschinePasstG M) (hP1 : RufMaschinePasstG M')
     (hs : RufSchrittGX P O pa Tg M t M')
+    (hb : RestScopeBalance (M.faeden t).kopf.rest)
     (hG : Glieder zyk rk fs (M.faeden t).kopf (M.faeden t).stapel) :
     slt (rangF pa m rk (M'.faeden t)) (rangF pa m rk (M.faeden t)) ∧
       Glieder zyk rk fs (M'.faeden t).kopf (M'.faeden t).stapel := by
@@ -40,7 +41,7 @@ theorem schritt_rang (hvoll : ∀ g, g ∈ fs)
   have hfm : (mitSpeicher M σ).faeden t = M.faeden t := rfl
   have hlen : ∀ z : RufFadenG D, (RufFadenSchluesselG z).length = z.stapel.length + 1 := by
     intro z; simp only [RufFadenSchluesselG, List.map_cons, List.length_cons, List.length_map, Nat.add_left_cancel_iff]
-  rcases schrittArt hg (fun _ => 0) (tor zyk rk (M.faeden t).kopf.f) (torS zyk rk fs (M.faeden t).kopf.f) true with
+  rcases schrittArt hg hb (fun _ => 0) (tor zyk rk (M.faeden t).kopf.f) (torS zyk rk fs (M.faeden t).kopf.f) true with
     ⟨hst, hpot⟩ | ⟨g, caller', rho, s0, hst, hkopf, hpush⟩ | ⟨caller, rst, hst, hst', hpop⟩
   · -- the head steps: same stack, same key, lower potential
     rw [hfm, ← hfa'] at hst hpot
@@ -185,14 +186,14 @@ theorem rekursion_endlich (Q : AxEns D) (S : SperrInv D) (lok : D.Tab ⊕ D.Glob
       | some u =>
         by_cases htu : t = u
         · subst htu
-          exact (schritt_rang m zyk rk fs hvoll hR (hP j) (hP (j + 1)) (R.schritt j t h) ih).2
+          exact (schritt_rang m zyk rk fs hvoll hR (hP j) (hP (j + 1)) (R.schritt j t h) (R.scopeBalance h0 j t).1 ih).2
         · rw [Zielsatz.gx_fremd (R.schritt j u h) t htu]; exact ih
   have hK : ∀ j, KetteW (rangF pa m rk ((R.M j).faeden t)) := fun j =>
     ketteT_reverse _ (kette_aus pa m zyk rk fs hL _ _ (hGl j)
       (stapelSA_massFaellt P O pa Q S lok Tg m zyk _ _ ((hInv _ (hre j)).1 t).2))
   obtain ⟨N, hN⟩ := endlich_aus_wf sltK (fun j => rangF pa m rk ((R.M j).faeden t))
     (fun j => R.akt j = some t) (fun j => acc_sltK _ (hK j))
-    (fun j h => ⟨hK (j + 1), (schritt_rang m zyk rk fs hvoll hR (hP j) (hP (j + 1)) (R.schritt j t h) (hGl j)).1⟩)
+    (fun j h => ⟨hK (j + 1), (schritt_rang m zyk rk fs hvoll hR (hP j) (hP (j + 1)) (R.schritt j t h) (R.scopeBalance h0 j t).1 (hGl j)).1⟩)
     (fun j h => by
       cases ha : R.akt j with
       | none => show rangF pa m rk ((R.M (j + 1)).faeden t) = _; rw [R.stotter j ha]

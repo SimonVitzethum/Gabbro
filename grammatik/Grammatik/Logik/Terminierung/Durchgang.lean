@@ -27,10 +27,12 @@ variable {D : Deklaration}
     index `i0`, and their total potential. -/
 inductive SegU {ι : Type} (T : ι → D.Fn → Nat) (S : ι → D.Fn → Bool) (pa : Nat) (i0 : ι) :
     List (RufRahmenG D) → Nat → Prop where
-  | eins (r : RufRahmenG D) (hok : rufeR (S i0) (fun _ => false) true r.rest.2.2.2.2 = true) :
+  | eins (r : RufRahmenG D) (hok : rufeR (S i0) (fun _ => false) true r.rest.2.2.2.2 = true)
+      (hb : RestScopeBalance r.rest) :
       SegU T S pa i0 [r] (potRest (T i0) pa r.rest.2.2.2.2)
   | cons (r : RufRahmenG D) (i : ι) (rs : List (RufRahmenG D)) (p : Nat)
-      (hok : rufeR (S i) (fun _ => false) true r.rest.2.2.2.2 = true) (h : SegU T S pa i0 rs p) :
+      (hok : rufeR (S i) (fun _ => false) true r.rest.2.2.2.2 = true)
+      (hb : RestScopeBalance r.rest) (h : SegU T S pa i0 rs p) :
       SegU T S pa i0 (r :: rs) (potRest (T i) pa r.rest.2.2.2.2 + p)
 
 /-- **The invariant**: as `KInv`, with the entry frame's index kept. -/
@@ -63,12 +65,12 @@ theorem dinv_schritt
     simp only [if_true]
     obtain ⟨oben, unten, Φ, hst, hul, hseg, hB⟩ := hI
     cases hseg with
-    | eins _ hok =>
+    | eins _ hok hb =>
       -- the entry frame alone: index `i0`
-      rcases schrittArt hs (T i0) (S i0) (fun _ => false) true with
+      rcases schrittArt hs hb (T i0) (S i0) (fun _ => false) true with
         ⟨hst', hA⟩ | ⟨g', caller', rho, s0, hst', hk', hB'⟩ | ⟨caller, rst, hpop, hst', hC⟩
       · obtain ⟨hok', hpot⟩ := hA hok
-        exact ⟨by omega, fun _ => ⟨[], unten, _, by rw [hst', hst], hul, SegU.eins _ hok', by omega⟩⟩
+        exact ⟨by omega, fun _ => ⟨[], unten, _, by rw [hst', hst], hul, SegU.eins _ hok' ((rufSchrittG_scopeMove hs).same hst' hb), by omega⟩⟩
       · obtain ⟨hokc, hdir⟩ := hB' hok
         obtain ⟨hZ, hpot⟩ := hdir.resolve_right (fun ⟨_, hn, _⟩ => Bool.false_ne_true hn)
         have h1 := hS1 i0 g' hZ
@@ -77,19 +79,20 @@ theorem dinv_schritt
           kostenEnd (T (nx i0 g')) pa (P.rumpf g') + potRest (T i0) pa caller'.rest.2.2.2.2,
           by rw [hst', hst]; rfl, hul, ?_, by omega⟩⟩
         rw [hk']
-        exact SegU.cons _ (nx i0 g') _ _ h2 (SegU.eins caller' hokc)
-      · have hpos := potRest_pos (T i0) pa (M.faeden g).kopf.rest.2.2.2.2
+        exact SegU.cons _ (nx i0 g') _ _ h2 (GRest.scopeChain_eintritt (P := P) _)
+          (SegU.eins caller' hokc ((rufSchrittG_scopeMove hs).push caller' hst' hb))
+      · have hpos := potRest_pos (T i0) pa (M.faeden g).kopf.rest.2.2.2.2 (rufSchrittG_arbeitsfaehig hs)
         refine ⟨by omega, fun hk => ?_⟩
         rw [hst, List.nil_append] at hpop
         rw [hpop] at hul
         rw [hst'] at hk
         simp only [List.length_cons] at hul
         omega
-    | cons _ i _ p hok hrest =>
-      rcases schrittArt hs (T i) (S i) (fun _ => false) true with
+    | cons _ i _ p hok hb hrest =>
+      rcases schrittArt hs hb (T i) (S i) (fun _ => false) true with
         ⟨hst', hA⟩ | ⟨g', caller', rho, s0, hst', hk', hB'⟩ | ⟨caller, rst, hpop, hst', hC⟩
       · obtain ⟨hok', hpot⟩ := hA hok
-        exact ⟨by omega, fun _ => ⟨oben, unten, _, by rw [hst', hst], hul, SegU.cons _ i oben p hok' hrest,
+        exact ⟨by omega, fun _ => ⟨oben, unten, _, by rw [hst', hst], hul, SegU.cons _ i oben p hok' ((rufSchrittG_scopeMove hs).same hst' hb) hrest,
           by omega⟩⟩
       · obtain ⟨hokc, hdir⟩ := hB' hok
         obtain ⟨hZ, hpot⟩ := hdir.resolve_right (fun ⟨_, hn, _⟩ => Bool.false_ne_true hn)
@@ -99,8 +102,9 @@ theorem dinv_schritt
           kostenEnd (T (nx i g')) pa (P.rumpf g') + (potRest (T i) pa caller'.rest.2.2.2.2 + p),
           by rw [hst', hst]; rfl, hul, ?_, by omega⟩⟩
         rw [hk']
-        exact SegU.cons _ (nx i g') _ _ h2 (SegU.cons caller' i oben p hokc hrest)
-      · have hpos := potRest_pos (T i) pa (M.faeden g).kopf.rest.2.2.2.2
+        exact SegU.cons _ (nx i g') _ _ h2 (GRest.scopeChain_eintritt (P := P) _)
+          (SegU.cons caller' i oben p hokc ((rufSchrittG_scopeMove hs).push caller' hst' hb) hrest)
+      · have hpos := potRest_pos (T i) pa (M.faeden g).kopf.rest.2.2.2.2 (rufSchrittG_arbeitsfaehig hs)
         refine ⟨by omega, fun _ => ?_⟩
         cases oben with
         | nil => exact absurd rfl (segU_pos T S pa hrest)
@@ -109,13 +113,15 @@ theorem dinv_schritt
           simp only [List.cons_append, List.cons.injEq] at hpop
           obtain ⟨rfl, rfl⟩ := hpop
           cases hrest with
-          | eins _ hokj =>
+          | eins _ hokj hbj =>
             obtain ⟨hokc, hpotc⟩ := hC (T i0) (S i0) (fun _ => false) true
-            refine ⟨[], unten, _, hst', hul, SegU.eins _ (hokc hokj), ?_⟩
+            refine ⟨[], unten, _, hst', hul, SegU.eins _ (hokc hokj)
+              ((rufSchrittG_scopeMove hs).pop caller rst (by rw [hst]; rfl) hst' hbj), ?_⟩
             omega
-          | cons _ j _ q hokj hrest' =>
+          | cons _ j _ q hokj hbj hrest' =>
             obtain ⟨hokc, hpotc⟩ := hC (T j) (S j) (fun _ => false) true
-            refine ⟨oben', unten, _, hst', hul, SegU.cons _ j oben' q (hokc hokj) hrest', ?_⟩
+            refine ⟨oben', unten, _, hst', hul, SegU.cons _ j oben' q (hokc hokj)
+              ((rufSchrittG_scopeMove hs).pop caller rst (by rw [hst]; rfl) hst' hbj) hrest', ?_⟩
             omega
   · simp only [hgf, ite_false, Nat.add_zero]
     have hEq : M'.faeden f = M.faeden f := rufSchrittG_fremd hs f (Ne.symm hgf)
@@ -172,7 +178,7 @@ theorem durchgang_schritte
     {inv : Expr D Γ Λ .bool} {body : Block D (vertragVon D g) true Γ Λ Λ}
     {k : GRest D (vertragVon D g) l Γ Λ} {ρ1 ρ2 : Env D Γ} {M1 M2 : RufMaschineG D} (i0 : ι)
     (h1 : (M1.faeden f).kopf = ⟨g, rho, s0, ⟨l, Γ, Λ, ρ1, .ewig a (n + 1) inv body k⟩⟩)
-    (hl1 : (M1.faeden f).stapel.length = kk)
+    (hl1 : (M1.faeden f).stapel.length = kk) (hb : k.scopeChain)
     (hok : rufeR (S i0) (fun _ => false) true (GRest.ewig a (n + 1) inv body k) = true)
     (run : SegLauf P O pa M1 M2) (hA : aktivVor f kk run)
     (h2 : (M2.faeden f).kopf = ⟨g, rho, s0, ⟨l, Γ, Λ, ρ2, .ewig a n inv body k⟩⟩)
@@ -180,7 +186,7 @@ theorem durchgang_schritte
     segZaehle run f ≤ passKosten pa (T i0) inv body := by
   -- the invariant at the boundary, budget = the potential there
   have h0 : DInv T S pa (potRest (T i0) pa (GRest.ewig a (n + 1) inv body k)) i0 f kk M1 0 := by
-    have hs := SegU.eins (T := T) (S := S) (pa := pa) (i0 := i0) (M1.faeden f).kopf (by rw [h1]; exact hok)
+    have hs := SegU.eins (T := T) (S := S) (pa := pa) (i0 := i0) (M1.faeden f).kopf (by rw [h1]; exact hok) (by rw [h1]; exact hb)
     rw [h1] at hs
     refine ⟨[], (M1.faeden f).stapel, _, rfl, hl1, ?_, Nat.le_of_eq (Nat.zero_add _)⟩
     rw [h1]
@@ -195,11 +201,11 @@ theorem durchgang_schritte
   subst hoben
   rw [h2] at hseg
   cases hseg with
-  | eins _ _ =>
+  | eins _ _ _ =>
     simp only [potRest, passKosten] at hB ⊢
     rw [Nat.succ_mul] at hB
     omega
-  | cons _ _ _ _ _ hrest => exact absurd rfl (segU_pos T S pa hrest)
+  | cons _ _ _ _ _ _ hrest => exact absurd rfl (segU_pos T S pa hrest)
 
 end Durchgang
 

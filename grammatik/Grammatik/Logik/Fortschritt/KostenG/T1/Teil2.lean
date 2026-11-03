@@ -169,7 +169,7 @@ theorem alleIndizes_length_toNat (n : Int) : (alleIndizes n).length ≤ n.toNat 
       it, and the caller's potential drops by at least one PLUS the cost
       `c g` it counted for the callee (an indirect call admitted by `ZS`:
       by at least one, its callee uncounted);
-    * (C) a pop -- the head frame (potential at least one, `potRest_pos`)
+    * (C) a pop -- the stepping head frame (potential at least one, `potRest_pos`)
       leaves and the caller below resumes with at most its old potential.
     And the callees named in the residue stay admitted (`rufeR`). With
     `ZS = fun _ => false` an indirect-call push falls in (B) only
