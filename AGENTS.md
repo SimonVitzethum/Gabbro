@@ -44,7 +44,8 @@ programs into Stage-0 IR and build the connected translation pipeline, formally 
 (owner), to implement [LOW-LEVEL-SYNTAX-PLAN.md](dokumente/LOW-LEVEL-SYNTAX-PLAN.md) completely**: source ASM bodies,
 boot code, privileged instructions, address/context/view types with the raw-address syntax, device-register
 reads/writes/fallible reads/register transitions, and the proof boundary of that plan (ASM/boot behaviour is user
-logic with explicit proof obligations, never silently a hardware assumption). The low-level work follows the plan's
+logic with explicit proof obligations, never silently a hardware assumption). The low-level work starts only AFTER the C packages are finished and does NOT touch the assembly IR runner or Stage 0
+(owner, 2026-11-03): its scope is the Lean model, checker, parser/exporter and the Rust front end. It follows the plan's
 own order (canonical Lean model first, then generic refinement and bridge, then parser/exporter/checker/lowering);
 the recommended answers to its four owner questions are approved, EXCEPT that the proposed diff of `Spec.lean`
 (question 2: splitting the software foreign assumptions into user obligations) is shown to the owner before it is
