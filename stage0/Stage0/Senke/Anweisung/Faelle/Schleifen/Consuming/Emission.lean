@@ -67,6 +67,16 @@ theorem emit_actual {s counter saved fuel failure : Nat} {count bound : Int}
     · cases h
   · cases h
 
+/-- The public emission result inherits the assembler's actual image gate. -/
+theorem emit_size {s counter saved fuel failure : Nat} {count bound : Int}
+    {invariant member preMember edge measure : List II × Nat}
+    {body : Int × Int → Option (List II × Nat)} {code : List II} {top : Nat}
+    (h : emit s counter saved fuel failure count bound
+      invariant member preMember edge measure body = some (code, top)) :
+    16 * code.length < 2 ^ 31 := by
+  obtain ⟨actual, exits, bodyCode, exitCode, assembled, bounds⟩ := emit_actual h
+  exact assemble_size assembled
+
 /-- Every successful candidate carries the bounded fuel and operand domain
     checks needed by the concrete signed comparisons. -/
 theorem emit_bounds {s counter saved fuel failure : Nat} {count bound : Int}
