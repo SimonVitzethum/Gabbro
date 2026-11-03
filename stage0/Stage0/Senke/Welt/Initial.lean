@@ -66,7 +66,7 @@ theorem initialConstant_valid {D : Deklaration} (L : Lay D) (τ : Ty) :
           · simp [items, values, length] at made
   | sum cs =>
     intro k v made
-    cases k <;> simp only [GabbroV.konstWert] at made
+    cases k <;> simp only [GabbroV.konstWert, reduceCtorEq] at made
     all_goals
       split at made
       · next bound =>
@@ -87,7 +87,7 @@ termination_by sizeOf τ
 decreasing_by
   all_goals first
     | decreasing_trivial
-    | (have hs := List.sizeOf_get cs _
+    | (have hs := List.sizeOf_get cs ⟨_, ‹_ < cs.length›⟩
        simp only [Ty.sum.sizeOf_spec]
        omega)
 
