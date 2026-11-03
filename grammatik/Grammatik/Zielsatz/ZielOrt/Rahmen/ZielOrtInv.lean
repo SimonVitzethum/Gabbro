@@ -244,6 +244,9 @@ theorem invLog_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (h
   | g6 hs =>
     cases hs with
     | _ => ohneRueck
+  | g7 hs =>
+    cases hs with
+    | _ => ohneRueck
 
 end Schritte
 
