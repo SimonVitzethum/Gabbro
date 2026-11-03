@@ -486,6 +486,7 @@ def uAxKlauseln (kopf : UFnKopf) (tabs : List UTab) (globs : List UGlob) :
       | .ok eff =>
         uAxKlauseln { kopf with puts := uEindeutig (kopf.puts ++ eff.puts), gputs := uEindeutig (kopf.gputs ++ eff.gputs) } tabs globs rest
     else .error "foreign fn effect without G form"
+  | .needs (.call "Held" _) :: _ => .error "foreign fn precondition cannot borrow a held lock"
   | .needs _ :: rest | .gives _ :: rest => uAxKlauseln kopf tabs globs rest
   | .cost _ :: rest => uAxKlauseln kopf tabs globs rest
   | .arch _ :: rest => uAxKlauseln kopf tabs globs rest
