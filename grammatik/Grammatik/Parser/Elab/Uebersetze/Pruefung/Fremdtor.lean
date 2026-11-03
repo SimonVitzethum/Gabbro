@@ -80,7 +80,7 @@ example : (elabText checkTextFremd).map
 example : (elabText checkTextFremdFallible).map
     (fun u => (u.fns.find? fun f => strEq f.name "p#tor#f").map
       fun f => (f.nimmt, f.gibt, f.body.length)) =
-    .ok (some (["p#duty"], ["p#duty"], 5)) := rfl
+    .ok (some (["p#duty"], ["p#duty"], 6)) := rfl
 
 /-- The units have no tables and no statics. -/
 theorem uFremd_tabs_leer : uFremd.tabs = [] := rfl
