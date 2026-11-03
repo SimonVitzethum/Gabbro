@@ -20,6 +20,7 @@ public import Stage0.Senke.Tor
 public import Stage0.Senke.Sperre.Code
 public import Stage0.Senke.Anweisung.Bytes.Code
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Allocation
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Consuming.Lower
 public import Stage0.Senke.Anweisung.Faelle.Hilfen
 public import Stage0.Senke.Anweisung.Faelle.Gleit.AddCode
 @[expose] public section
@@ -119,9 +120,9 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
       let cb ← lowB (reserved := reserved) passes A L layout ens ((frei Γ reserved) :: pr) (48, 0) body
       travC ((frei Γ reserved)) (D.count t) ci' cb
     else none
-  -- Current-state consuming selection must never reuse the fixed sweep.
-  -- Consuming.lower remains a candidate until its concrete simulation is connected.
-  | _, _, _, _, .consumeTraverse .., _ => none
+  | _, _, _, _, .consumeTraverse t member edge inv bound mass body, reserved =>
+    Consuming.lower L layout t member edge inv bound mass reserved (counterDepthB body) pr
+      (fun protected targets => lowB (reserved := reserved) passes A L layout ens protected targets body)
   | _, Γ, _, _, .retry n bis body overflow, reserved => do
     let cc ← lowE (reserved := reserved) L bis ((frei Γ reserved))
     let cu ← lowB (reserved := reserved) passes A L layout ens pr ex overflow
