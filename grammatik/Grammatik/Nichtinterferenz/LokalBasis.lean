@@ -156,6 +156,7 @@ def GRest.nR (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D
   | _, _, _, .wartet b k => nB S Ax b = true ∧ k.nR S Ax
   | _, _, _, .wartetSonst _ err b k => nE S Ax err = true ∧ nB S Ax b = true ∧ k.nR S Ax
   | _, _, _, .abbruch k => k.nR S Ax
+  | _, _, _, .rueckBereit .. => False
   | _, _, _, .leer => true
 
 /-- The flow check on every frame of a ghost-free thread state. -/

@@ -307,6 +307,7 @@ theorem kr_ok {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
   | wartet b k => exact KErgOk.none
   | wartetSonst n err b k => exact KErgOk.none
   | abbruch k => exact KErgOk.none
+  | rueckBereit => exact KErgOk.none
   | leer => exact KErgOk.none
 
 end Ok

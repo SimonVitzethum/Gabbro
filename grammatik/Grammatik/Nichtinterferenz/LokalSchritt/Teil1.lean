@@ -199,7 +199,7 @@ theorem kEntf_rel (hO : OrakelTreu T AxT O) (hsp : SpeicherGleich T sp₁ sp₂)
       simp only [kEntf]
       rw [(hW.lese Λ v.orte).eval v (alle_von hST hs.1) ρ]
       generalize armWahlG arms _ = x
-      rcases x with ⟨_ | ⟨lo, hi⟩, b, nutz⟩
+      rcases x with ⟨_ | τ, b, nutz⟩
       · exact KRel.lokal _ _ _ _ _ rfl hsp
       · exact KRel.lokal _ _ _ _ _ rfl hsp
   | onWhy r arms =>
