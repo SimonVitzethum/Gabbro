@@ -33,7 +33,7 @@ example : (uCheck [] [] ["g"] ["p"] [] probenCheck).map
 
 /-- The counterprobe identity travels with the record. -/
 def probenCheckSonde : SCheck :=
-  { probenCheck with sonde := some ("ext", "assert x") }
+  { probenCheck with sonde := some ("assert x", "ext") }
 
 example : (uCheck [] [] ["g"] ["p"] [] probenCheckSonde).map (·.sonde) =
     .ok (some ("ext", "assert x")) := rfl
