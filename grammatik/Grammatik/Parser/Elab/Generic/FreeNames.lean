@@ -45,7 +45,7 @@ def checkLiteralExpression (globals locals : List String) : SExpr → Except Str
   | .ext .instantiate (name :: words) args => do
     checkLiteralName globals locals name
     for word in words do checkLiteralArgument globals locals word
-    args.forM (checkLiteralExpression globals locals)
+    checkLiteralExpressions globals locals args
   | .ext .all (binder :: _ :: names) args | .ext .any (binder :: _ :: names) args |
     .ext .count (binder :: _ :: names) args => do
     checkLiteralNames globals locals names
@@ -60,12 +60,18 @@ def checkLiteralExpression (globals locals : List String) : SExpr → Except Str
   | .call name args => do
     if name != "Some" && name != "None" && !istIntWort name && !istZuckerBreite name then
       checkLiteralName globals locals name
-    args.forM (checkLiteralExpression globals locals)
-  | .built _ args => args.forM (checkLiteralExpression globals locals)
+    checkLiteralExpressions globals locals args
+  | .built _ args => checkLiteralExpressions globals locals args
   | .ext kind names args => do
     if kind == .mem then checkLiteralNames globals locals (names.drop 1)
-    args.forM (checkLiteralExpression globals locals)
+    checkLiteralExpressions globals locals args
   | e => checkLiteralNames globals locals (Oeffentlich.namenA locals e)
+
+def checkLiteralExpressions (globals locals : List String) : List SExpr → Except String Unit
+  | [] => pure ()
+  | expression :: rest => do
+    checkLiteralExpression globals locals expression
+    checkLiteralExpressions globals locals rest
 
 def checkLiteralQuantifier (globals locals : List String) (binder : String) :
     List SExpr → Except String Unit
@@ -109,7 +115,7 @@ def checkLiteralBody (globals locals : List String) : SAnw → Except String Uni
     checkLiteralBody globals locals body
   | .bindLib _ _ ty call => do
     ty.toList.forM (checkLiteralType globals locals)
-    call.args.forM (checkLiteralExpression globals locals)
+    checkLiteralExpressions globals locals call.args
   | .set place _ value | .emit place value _ => do
     checkLiteralExpression globals locals place
     checkLiteralExpression globals locals value
@@ -117,37 +123,33 @@ def checkLiteralBody (globals locals : List String) : SAnw → Except String Uni
   | .call name args | .callQ name args => checkLiteralExpression globals locals (.call name args)
   | .genericCall name words args =>
     checkLiteralExpression globals locals (.ext .instantiate (name :: words) args)
-  | .lcall call => call.args.forM (checkLiteralExpression globals locals)
+  | .lcall call => checkLiteralExpressions globals locals call.args
   | .cond e yes branches no => do
     checkLiteralExpression globals locals e
     checkLiteralBody globals locals yes
-    branches.forM (checkLiteralBody globals locals)
-    match no with
-    | some body => checkLiteralBody globals locals body
-    | none => pure ()
+    checkLiteralBodies globals locals branches
+    checkLiteralOptionalBody globals locals no
   | .cases e arms => do
     checkLiteralExpression globals locals e
-    arms.forM (checkLiteralBody globals locals)
+    checkLiteralBodies globals locals arms
   | .arm _ binder body => checkLiteralBody globals (binder.toList ++ locals) body
   | .each binder start _ subject _ raw invariant body => do
-    start.toList.forM (checkLiteralExpression globals locals)
+    checkLiteralExpressions globals locals start.toList
     checkLiteralExpression globals locals subject
     checkLiteralRaw globals (binder :: locals) raw
-    invariant.toList.forM (checkLiteralExpression globals (binder :: locals))
+    checkLiteralExpressions globals (binder :: locals) invariant.toList
     checkLiteralBody globals (binder :: locals) body
   | .elsif e body | .trim e _ body | .locks _ e body => do
     checkLiteralExpression globals locals e
     checkLiteralBody globals locals body
   | .retry _ body | .loop _ body | .waive _ body | .watch _ body | .child body =>
     checkLiteralBody globals locals body
-  | .ret value => value.toList.forM (checkLiteralExpression globals locals)
+  | .ret value => checkLiteralExpressions globals locals value.toList
   | .alloc _ _ ty arena count no => do
     ty.toList.forM (checkLiteralType globals locals)
     checkLiteralName globals locals arena
     checkLiteralExpression globals locals count
-    match no with
-    | some body => checkLiteralBody globals locals body
-    | none => pure ()
+    checkLiteralOptionalBody globals locals no
   | .allocVon _ _ ty arena => do
     ty.toList.forM (checkLiteralType globals locals)
     checkLiteralName globals locals arena
@@ -164,10 +166,21 @@ def checkLiteralBody (globals locals : List String) : SAnw → Except String Uni
   | .block statements ending => do
     let final ← checkLiteralStatements globals locals statements
     match ending with
-    | some (.ret value) => value.toList.forM (checkLiteralExpression globals final)
+    | some (.ret value) => checkLiteralExpressions globals final value.toList
     | _ => pure ()
   | .other raw => checkLiteralRaw globals locals raw
   | _ => pure ()
+
+/-- Branches share the incoming scope; bindings do not flow between them. -/
+def checkLiteralBodies (globals locals : List String) : List SAnw → Except String Unit
+  | [] => pure ()
+  | body :: rest => do
+    checkLiteralBody globals locals body
+    checkLiteralBodies globals locals rest
+
+def checkLiteralOptionalBody (globals locals : List String) : Option SAnw → Except String Unit
+  | some body => checkLiteralBody globals locals body
+  | none => pure ()
 
 def checkLiteralStatements (globals locals : List String) :
     List SAnw → Except String (List String)
