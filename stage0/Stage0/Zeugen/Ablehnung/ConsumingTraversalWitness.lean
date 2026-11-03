@@ -43,7 +43,8 @@ def text : String :=
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
+/-- This source omits the required state-reading measure; consuming itself has a G form. -/
 theorem candidate_refused :
-    emit text 64 = .error "traverse by consuming without G form" := by decide +kernel
+    emit text 64 = .error "consuming traversal requires decreases" := by decide +kernel
 
 end Gabbro.Stage0.ConsumingTraversalWitness
