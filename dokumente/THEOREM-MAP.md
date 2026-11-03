@@ -6380,3 +6380,31 @@ Elaboration and Stage 0 (`moves` effect, ghost lowering):
 Open: the lead build of this branch; body-level retire lowering for terminal handoffs (as for C16
 `takes`: terminal moves are signature- and ledger-complete with fixture witnesses, their bodies
 cannot yet eliminate the mark from source); the dynamic transfer replay stays C09's.
+
+## 177. C12: Stage-0 Senke lowering of owned access (2026-11-03)
+
+On `s0-c12own` (from integration branch `c-runde1`); no model change, `Spec.lean` untouched,
+`gabbro_ziel` unchanged. The C12 constructors `Expr.thruOwn` / `Stmt.assignThruOwn` (same guarded
+carrier as `thru`/`assignThru`, §145) now lower in the Stage-0 Senke (`stage0/Stage0/Senke/…`),
+which previously refused them by name (no `thruOwn` in `stage0/` except the `counterDepthS`
+ghost count): `lowE` reuses the plain slot read path (`slotValueC`; the owner mark emits
+nothing), `lowS` reuses the plain slot store path (`slotStoreC`), `lowE_thruOwn` joins the
+`lowE_eqs` family. Correctness reuses the plain arms: `lowE_ok` / `lowE_top` cover `thruOwn`
+in their combined slot/thru arms (same G `eval` and `orte` on the success path), the
+`Old/Basic` and `Old/Sound` fallback groups delegate to them, and the combined
+`assignSlot`/`assignThru` case of `lowS_ok` covers `assignThruOwn` (same `execStmt` shape, so
+every stop maps to the runner's stop exactly as the plain form's); owned writes are admitted
+in lock bodies (`retFreiS`, `retFreiS_istZ`: same non-returning shape as `assignThru`).
+No check or semantics was weakened; no other C12 form refused by name in Stage 0 is a pure
+refinement (borrow/return marks are the C09 ghost `OwnerFlow` flow with no IR word; byte/raw/entry
+targets stay refused for want of a live grant/history interface).
+
+Witness (`Senke/Ausdruck/Zeiger/OwnProben.lean`, wired into `Stage0.lean`): a two-cell table
+guarded by one declared linear mark, an owned pointer with its held guard, an owned read of
+cell 1 then an owned write of 7 to cell 0. `ownEval_zeuge` / `ownLowerEq_zeuge` pin the shared
+evaluation and fragment with the plain read; `ownRead_image_zeuge` / `ownWrite_image_zeuge`
+pin nonempty images within the scratch bound (`decide +kernel`); `own_access_zeuge` joins them.
+
+Open: the lead build of this branch (changed-module and dependent checks of the touched Senke
+modules, the new witness module, standard-axiom inspection, guardians); byte/raw/entry targets
+stay refused.
