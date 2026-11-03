@@ -31,7 +31,7 @@ theorem mS_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
       simp only [mS, mUnd, Bool.and_eq_true] at h h' ⊢; exact ⟨h, h'⟩
   | _, _, _, _, .callIndElse (n := n) _ _ _ _ _ err, h, h' => by
       simp only [mS, mUnd, Bool.and_eq_true] at h h' ⊢
-      exact ⟨⟨h.1.1, h'.1.1⟩, mE_und err h.1.2 h'.1.2⟩
+      exact ⟨⟨h.1, h'.1⟩, mE_und err h.2 h'.2⟩
   | _, _, _, _, .locks L _ body, h, h' => by
       simp only [mS, mUnd, Bool.and_eq_true] at h h' ⊢
       exact ⟨⟨h.1, h'.1⟩, mB_und body h.2 h'.2⟩

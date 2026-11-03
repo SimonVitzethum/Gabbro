@@ -10,6 +10,11 @@ variable {D : Deklaration}
 section Schritt
 variable {P : Programm D} {O : Orakel D} {pa : Nat} (Φ : Folge D)
 
+private theorem fR_weiterOpt {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} (e : Option Ty) (k : GRest D V l Γ Λ') (b w : Bool) :
+    (GRest.weiterOpt (Λ := Λ) e k).fR Φ b w ↔ k.fR Φ b w := by
+  cases e <;> exact Iff.rfl
+
 set_option maxHeartbeats 4000000 in
 /-- **Every rule of G keeps the order invariant.** -/
 theorem folgeInvG_schritt (hΦ : FolgeOk P Φ) {M M' : RufMaschineG D} {f : Faden}
@@ -164,6 +169,9 @@ theorem folgeInvG_schritt (hΦ : FolgeOk P Φ) {M M' : RufMaschineG D} {f : Fade
         fun _ hp => ?_, hlog⟩
       rw [hw]
       exact armiert_aus hk.1.1.1 (hΦ.2 g _ (by simpa [Pflichtig] using hp) hg)
+    | dannAxiomCallElseGrund =>
+      kopfF
+      exact ⟨fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1.1, hk.2⟩
     | rueckBind caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller Γc Λc e hperm ρ hh g hfg rho hrho
         s0 hs0 hΛ s1 hs1 v hv he neu hneu =>
       subst hfg
@@ -297,12 +305,18 @@ theorem folgeInvG_schritt (hΦ : FolgeOk P Φ) {M M' : RufMaschineG D} {f : Fade
       first
         | exact ⟨fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1.1, hk.2⟩
         | exact fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1.1
+    | dannBindAxiomOptElseGrund =>
+      kopfF
+      exact ⟨fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1.1, hk.2⟩
     | _ =>
       kopfF
-      all_goals (simp_all [fB_von_false, fR_von_false]; done)
+      all_goals (simp_all [fB_von_false, fR_von_false, fR_weiterOpt]; done)
   | g6 hs =>
     cases hs with
     | endeBindAxiomElseGrund =>
+      kopfF
+      exact fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1
+    | endeBindAxiomOptElseGrund =>
       kopfF
       exact fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1
     | _ =>
