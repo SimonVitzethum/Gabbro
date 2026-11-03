@@ -268,6 +268,65 @@ theorem lowerS_shape_assignThru (lay : Layout D) (cenv : List Reg) (lv : Lbl × 
   · simp only [hs, Bool.false_eq_true, ↓reduceIte, reduceCtorEq] at h
 
 set_option linter.unusedSectionVars false in
+theorem lowerS_shape_assignThruOwn (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl)
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {zi_n}
+    (p)
+    (t)
+    (zz1)
+    (f)
+    (i)
+    (e)
+    (mo)
+    (s)
+    (ho)
+    (he)
+    (hg)
+    (hm)
+    (zz2)
+    (zz3)
+    (lb : Lbl)
+    (k : Lbl)
+    (st : St)
+    (st' : St)
+    (blks : List Block)
+    (h : lowerS lay cenv lv (.assignThruOwn (n := zi_n) (read := zi_read) (space := zi_space) (o := zi_eig) p t zz1 f i e mo s ho he hg hm zz2 zz3 : Gabbro.Grammatik.Stmt D V l Γ Λ _) lb k st = some (blks, st'))
+    : Shape lb st st' blks :=
+  by
+  simp only [lowerS] at h
+  by_cases hs : supp (D.typ t f) = true
+  · simp only [hs, if_true] at h
+    rcases hp : lowerE lay cenv p st.r with _ | ⟨cp, op, r1⟩
+    · simp only [hp, reduceCtorEq] at h
+    have m0 := lowerE_mono lay cenv p st.r _ hp
+    simp only [hp] at h
+    rcases hi : lowerE lay cenv i r1 with _ | ⟨ci, oi, r2⟩
+    · simp only [hi, reduceCtorEq] at h
+    have m1 := lowerE_mono lay cenv i r1 _ hi
+    simp only [hi] at h
+    rcases he : lowerE lay cenv e r2 with _ | ⟨ce, oe, r3⟩
+    · simp only [he, reduceCtorEq] at h
+    have m2 := lowerE_mono lay cenv e r2 _ he
+    simp only [he] at h
+    rcases hsa : slotAddr lay t f op (.int 0 (D.count t - 1)) oi r3 with _ | ⟨ca, oa, r4⟩
+    · simp only [hsa, reduceCtorEq] at h
+    have m3 := slotAddr_mono hsa
+    simp only [hsa] at h
+    rcases hst : storeTo (D.typ t f) oe r4 oa with _ | ⟨cs, r5⟩
+    · simp only [hst, reduceCtorEq] at h
+    have m4 := storeTo_mono hst
+    simp only [hst] at h
+    have := Option.some.inj h
+    simp only [Prod.mk.injEq] at this
+    obtain ⟨rfl, rfl⟩ := this
+    refine ⟨⟨_, _, rfl, rfl⟩, by simp only [List.append_assoc, List.mem_cons, List.not_mem_nil, or_false, forall_eq], ?_⟩
+    simp only at m0 m1 m2 m3 ⊢
+    omega
+  · simp only [hs, Bool.false_eq_true, ↓reduceIte, reduceCtorEq] at h
+
+set_option linter.unusedSectionVars false in
 theorem lowerS_shape_assignGlob (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl)
     {l : Bool}
     {Γ : Ctx}
