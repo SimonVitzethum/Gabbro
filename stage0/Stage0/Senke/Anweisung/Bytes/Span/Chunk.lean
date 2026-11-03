@@ -52,11 +52,12 @@ theorem putBytesChunk_ok {Γ : Ctx} {Λ : List (Res D)} {a b H : Int}
     omega
   have stored := (pre.env (.int 0 H) (.there .here)).2 q
     (by rw [encodeWords_length]; exact limb)
-  simp only [vslot_there, vslot_here, encodeWords, integerEncoding_byteLimb] at stored
+  simp only [vslot_there, vslot_here, Env.get, encodeWords, integerEncoding_byteLimb] at stored
   have p : PreS L m pc fp K s
       ([ci 2 s (frei Γ reserved + q) 0] ++ (idx ++ kernel)) env reserved := by
     simpa only [s, env, List.append_assoc] using pre
-  obtain ⟨m1, s1, ch1, w, read, equal⟩ := mov_ok p.left (by omega) (by omega) stored
+  have movePre := PreS.welt p.left hks world hW.lay (by have := hW.lo; omega)
+  obtain ⟨m1, s1, ch1, w, read, equal⟩ := mov_ok movePre (by omega) (by omega) stored
   have enc : Enc L (.int 0 (2 ^ 64 - 1)) part w := equal
   have partAt : ValueAt L m1 fp s (.int 0 (2 ^ 64 - 1)) part := ValueAt.of_enc vw read enc
   have p1 := p.next ch1 (Nat.le_succ s) (by omega)
@@ -64,7 +65,7 @@ theorem putBytesChunk_ok {Γ : Ctx} {Λ : List (Res D)} {a b H : Int}
   have ip : PreS L m1 _ fp K (s + 1) idx (Env.cons part env) reserved :=
     ⟨by simp only [frei, contextWords_cons, vw]; have := p1.ctx; dsimp only [s] at *; omega,
       p1.small, p1.frame, p1.left.code, p1.left.far, env1, trivial, wstab_true _ _⟩
-  have ipw := PreS.welt ip hks (p.left.wstab m m1 world (ch1.mono (Nat.zero_le _)))
+  have ipw := PreS.welt ip hks (movePre.wstab m m1 world (ch1.mono (Nat.zero_le _)))
     hW.lay (by have := hW.lo; omega)
   obtain ⟨m2, s2, ch2, indexAt⟩ := lowE_ok (same := by intro _; rfl) σ σ (fun _ h => h)
     hW.lay (chunkIndex (Γ := Γ) (Λ := Λ) a b H q) _ idx ti indexMade (by omega) m1 _ _ ipw
