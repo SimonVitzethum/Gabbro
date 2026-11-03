@@ -12,8 +12,8 @@ def KBinOp.evalInt : KBinOp → Int → Int → Int
   | .add, a, b => a + b
   | .sub, a, b => a - b
   | .mul, a, b => a * b
-  | .div, a, b => a / b
-  | .mod, a, b => a % b
+  | .div, a, b => a.tdiv b
+  | .mod, a, b => a.tmod b
   | .land, a, b => Int.ofNat (a.toNat &&& b.toNat)
   | .lor, a, b => Int.ofNat (a.toNat ||| b.toNat)
   | .xor, a, b => Int.ofNat (a.toNat ^^^ b.toNat)
