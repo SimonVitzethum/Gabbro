@@ -32,14 +32,14 @@ def number := numberFrom source "x86_64"
 
 def binding : SBind :=
   ⟨.lit 39, [.binds "rdi" "fd"], [.reg "rax"], [], ["rcx", "r11"],
-    [("EBADF", some (.lit 9), "BadFd")]⟩
+    [("EBADF", some (.lit 9), "BadFd")], none⟩
 
 /-- A selected binding retains nonempty registers, clobbers and error channels jointly. -/
 theorem uniqueBinding_ok_zeuge : uniqueBinding "sys_gate" "x86_64" [binding] = .ok binding := by rfl
 
 def errorBinding : SBind :=
   ⟨.lit 1, [], [.reg "rax"], [], ["rcx", "r11"],
-    [("EBADF", some (.lit 9), "BadFd"), ("EBADF", some (.lit 9), "Other")]⟩
+    [("EBADF", some (.lit 9), "BadFd"), ("EBADF", some (.lit 9), "Other")], none⟩
 
 def errorCall : SSyscall :=
   ⟨"probe", [], none, some "Error", .via "sys_gate", ⟨[], [], [], none⟩⟩
@@ -80,7 +80,7 @@ example : (torVonFor "x86_64" (some "selected") errorItems errorCall).toOption.m
     some [(-9, 0), (-9, 1)] := by rfl
 
 def foreignSignature : FnSig :=
-  ⟨"extern", "probe", [], some (.atom "bool"), some "Error", []⟩
+  ⟨"extern", "probe", [], some (.atom "bool"), some "Error", [], []⟩
 
 def foreignItems : List SItemTief :=
   [.protoT foreignSignature,

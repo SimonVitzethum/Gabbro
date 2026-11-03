@@ -200,6 +200,9 @@ def parseStackClauses (f : Nat) (toks : List Token) :
     pointer conversion or an implicit choice of provider ABI. -/
 def parseResultArea (toks : List Token) : Except String (Option String × List Token) :=
   match toks with
+  | .wort "result" :: .ident "area" :: rest => do
+    let (register, rest) ← nimmName rest
+    pure (some register, rest)
   | .wort "result" :: rest => do
     let rest ← nimmWort "area" rest
     let (register, rest) ← nimmName rest

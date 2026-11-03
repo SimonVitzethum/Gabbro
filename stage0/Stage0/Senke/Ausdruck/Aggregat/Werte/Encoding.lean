@@ -147,9 +147,13 @@ theorem encodeWords_length (L : Lay D) (τ : Ty) (v : Wert D τ) :
           cases i with
           | zero =>
             cases c with
-            | none => simp [encodeSumPayload, sumPayloadWords]
+            | none =>
+              simp only [encodeSumPayload, List.length_nil]
+              exact Nat.zero_le _
             | some τ =>
-              simp only [encodeSumPayload, widths τ List.mem_cons_self, sumPayloadWords]
+              have hw := widths τ List.mem_cons_self (v : Wert D τ)
+              simp only [encodeSumPayload]
+              rw [hw]
               exact Nat.le_max_left _ _
           | succ i =>
             have tail := ih ⟨i, Nat.lt_of_succ_lt_succ hi⟩ v
