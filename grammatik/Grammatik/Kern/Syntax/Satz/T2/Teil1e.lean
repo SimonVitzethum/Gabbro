@@ -42,6 +42,7 @@ theorem heldB_weiterRet {W G} {haelt : List D.Lock} {boden : Option Int} {bo : O
     (hg : GutRetV W G haelt boden σ σ1) (hh : HeldB bo Λ σ.haelt)
     (hx : ∀ L, Res.held L ∈ Λ → L ∉ haelt → ∃ c, boden = some c ∧ D.rang L < c) :
     HeldB bo Λ' σ1.haelt := by
+  have hbR : BravRet σ σ1 := hg.toBravRet
   obtain ⟨_, Ls, heq, hsp, hrk, _, _⟩ := hg
   have hsurv : ∀ L, Res.held L ∈ Λ' → L ∈ σ1.haelt := by
     intro L hL
@@ -56,7 +57,6 @@ theorem heldB_weiterRet {W G} {haelt : List D.Lock} {boden : Option Int} {bo : O
         omega
     rw [heq]
     exact mem_foldl_erase L Ls σ.haelt hLh hnotin
-  have hbR : BravRet σ σ1 := hg.toBravRet
   exact ⟨fun L hL => hsurv L hL,
     fun L hL hn => hh.2 L (hbR.mem hL) (fun h => hn ((hm L).mpr h))⟩
 
@@ -173,7 +173,7 @@ theorem HCountScope.of_locks {V : Vertrag D} {Λ : List (Res D)} {K : D.Lock}
     · intro hKh
       have hmem : Res.held K ∈ Λ := hresid K hKh
       have hlt := hr K hmem
-      exact absurd hlt (lt_irrefl _)
+      exact absurd hlt (Int.lt_irrefl _)
     · exact hrk
   · have hne : Res.held L ≠ Res.held K := by
       intro hKK
