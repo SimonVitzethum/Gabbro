@@ -35,8 +35,8 @@ import all Init.Data.String.ToSlice
 
 namespace Gabbro.Stage0.EntrustWitness
 
-set_option maxRecDepth 2000
-set_option maxHeartbeats 400000
+set_option maxRecDepth 100000
+set_option maxHeartbeats 4000000
 
 open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
