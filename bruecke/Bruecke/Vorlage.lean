@@ -98,7 +98,7 @@ def vorlage (name src : String) : String :=
     let wide (x : Std.Format) : String := x.pretty 1000000
     let zeilen := String.intercalate ",\n   " ((stuecke src).map fun s => literal s ++ ".toList")
     let kopf :=
-      "import Bruecke.Quelle\n\n" ++
+      "module\npublic import Bruecke.Quelle\n@[expose] public section\n\n" ++
       "/-! Written by `gabbro prove --template --source`. The statements below are COMPUTED from the\n" ++
       "    pinned source by the Lean front end; nothing in them was printed by Rust. The stage\n" ++
       "    outputs `toks`, `items` and `u` are hints the kernel checks against the text. Replace\n" ++
