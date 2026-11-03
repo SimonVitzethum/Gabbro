@@ -82,10 +82,12 @@ class TorOK (L : Lay D) (O : Orakel D) : Prop where
   /-- Provider representation duty: a returned reference names an existing cell
       of its nominal open region. Freshness and disjointness remain the source
       binding's user-logic contract; this is only its checked-layout realization.
-      The quotient is the success payload of the canonical fallible channel. -/
+      The zero remainder identifies the success payload of a fallible channel. -/
   ref_answer : ∀ (a : D.Ax) (n : Nat), D.aerg a = some (.ref n) →
     L.tor a ≠ none → ∀ (σ : World D) (ρ : Env D (D.aparams a)) (raw : Int),
-    (raw = (O.wirkt a σ ρ).2 ∨ raw = (O.wirkt a σ ρ).2 / ((D.agruende a : Int) + 1)) →
+    ((D.agruende a = 0 ∧ raw = (O.wirkt a σ ρ).2) ∨
+      (O.wirkt a σ ρ).2 % ((D.agruende a : Int) + 1) = 0 ∧
+        raw = (O.wirkt a σ ρ).2 / ((D.agruende a : Int) + 1)) →
     0 ≤ raw → ValueValid L (.ref n) (Val.vonZelle raw.toNat)
   /-- Explicit software-provider duty for caller-owned multiword results. -/
   area : AreaContract L O
