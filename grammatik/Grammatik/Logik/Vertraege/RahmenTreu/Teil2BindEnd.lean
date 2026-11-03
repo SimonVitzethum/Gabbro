@@ -23,13 +23,13 @@ set_option linter.unusedSectionVars false
 /-! ## End bind arms -/
 
 theorem end_bindCall_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
-    (end_IH : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (b : Endblock D V l Γ Λ)
-      (σ : World D) (ρ : Env D Γ), b.ScopesOk → HeldB bo Λ σ.haelt →
-      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R b σ ρ))
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     (f : D.Fn) (args : Args D Γ Λ (D.params f)) (he : D.erg f = some τ)
     (hp : RufPasst D V (D.signatur f) Λ) (hr : D.gruende f = 0)
     (rest : Endblock D V l (τ :: Γ) (nach D f Λ))
+    (ih_rest : ∀ (σ : World D) (ρ : Env D (τ :: Γ)), rest.ScopesOk →
+      HeldB bo (nach D f Λ) σ.haelt →
+      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R rest σ ρ))
     (σ : World D) (ρ : Env D Γ)
     (hscope : (Endblock.bindCall f args he hp hr rest).ScopesOk)
     (hh : HeldB bo Λ σ.haelt) :
@@ -43,21 +43,24 @@ theorem end_bindCall_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
       cases rv with
       | ok σ1 v =>
           frame_call_ok (σ.lese Λ args.orte)
-          exact (TreuEnd.vorCall g1 ((end_IH rest σ1 _ hscope_rest
+          exact (TreuEnd.vorCall g1 ((ih_rest rest σ1 _ hscope_rest
             (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf)) σ' h
       | why σ1 r => exact keinGrund hr r
       | logik _ => simp only [EndAusgang.welt, reduceCtorEq] at h
       | hardware _ => simp only [EndAusgang.welt, reduceCtorEq] at h
 
 theorem end_bindCallElse_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
-    (end_IH : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (b : Endblock D V l Γ Λ)
-      (σ : World D) (ρ : Env D Γ), b.ScopesOk → HeldB bo Λ σ.haelt →
-      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R b σ ρ))
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     (f : D.Fn) (args : Args D Γ Λ (D.params f)) (he : D.erg f = some τ)
     (hp : RufPasst D V (D.signatur f) Λ) (hr : 0 < D.gruende f)
     (err : Endblock D V l (.why (D.gruende f) :: Γ) (nach D f Λ))
     (rest : Endblock D V l (τ :: Γ) (nach D f Λ))
+    (ih_rest : ∀ (σ : World D) (ρ : Env D (τ :: Γ)), rest.ScopesOk →
+      HeldB bo (nach D f Λ) σ.haelt →
+      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R rest σ ρ))
+    (ih_err : ∀ (σ : World D) (ρ : Env D (.why (D.gruende f) :: Γ)), err.ScopesOk →
+      HeldB bo (nach D f Λ) σ.haelt →
+      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R err σ ρ))
     (σ : World D) (ρ : Env D Γ)
     (hscope : (Endblock.bindCallElse f args he hp hr err rest).ScopesOk)
     (hh : HeldB bo Λ σ.haelt) :
@@ -72,19 +75,16 @@ theorem end_bindCallElse_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
       cases rv with
       | ok σ1 v =>
           frame_call_ok (σ.lese Λ args.orte)
-          exact (TreuEnd.vorCall g1 ((end_IH rest σ1 _ hscope_rest
+          exact (TreuEnd.vorCall g1 ((ih_rest rest σ1 _ hscope_rest
             (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf)) σ' h
       | why σ1 r =>
           frame_call_why (σ.lese Λ args.orte)
-          exact (TreuEnd.vorCall g1 ((end_IH err σ1 _ hscope_err
+          exact (TreuEnd.vorCall g1 ((ih_err err σ1 _ hscope_err
             (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf)) σ' h
       | logik _ => simp only [EndAusgang.welt, reduceCtorEq] at h
       | hardware _ => simp only [EndAusgang.welt, reduceCtorEq] at h
 
 theorem end_bindAxiom_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
-    (end_IH : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (b : Endblock D V l Γ Λ)
-      (σ : World D) (ρ : Env D Γ), b.ScopesOk → HeldB bo Λ σ.haelt →
-      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R b σ ρ))
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (he : D.aerg a = some τ)
     (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
@@ -92,6 +92,9 @@ theorem end_bindAxiom_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
     (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
     (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
     (rest : Endblock D V l (τ :: Γ) Λ)
+    (ih_rest : ∀ (σ : World D) (ρ : Env D (τ :: Γ)), rest.ScopesOk →
+      HeldB bo Λ σ.haelt →
+      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R rest σ ρ))
     (σ : World D) (ρ : Env D Γ)
     (hscope : (Endblock.bindAxiom a args he hw hg hd hgd rest).ScopesOk)
     (hh : HeldB bo Λ σ.haelt) :
@@ -108,12 +111,9 @@ theorem end_bindAxiom_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
           (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
         rw [ha] at h1
         have g1 := hl.trans (Treu.weiter hw hg h1)
-        exact (TreuEnd.vorCall g1 ((end_IH rest σ1 _ hscope_rest (g1.heldB hh)).schrumpf)) σ' h
+        exact (TreuEnd.vorCall g1 ((ih_rest rest σ1 _ hscope_rest (g1.heldB hh)).schrumpf)) σ' h
 
 theorem end_bindAxiomElse_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
-    (end_IH : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (b : Endblock D V l Γ Λ)
-      (σ : World D) (ρ : Env D Γ), b.ScopesOk → HeldB bo Λ σ.haelt →
-      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R b σ ρ))
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (he : D.aerg a = some τ)
     (hr : 0 < D.agruende a)
@@ -123,6 +123,12 @@ theorem end_bindAxiomElse_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
     (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
     (err : Endblock D V l (.why (D.agruende a) :: Γ) Λ)
     (rest : Endblock D V l (τ :: Γ) Λ)
+    (ih_rest : ∀ (σ : World D) (ρ : Env D (τ :: Γ)), rest.ScopesOk →
+      HeldB bo Λ σ.haelt →
+      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R rest σ ρ))
+    (ih_err : ∀ (σ : World D) (ρ : Env D (.why (D.agruende a) :: Γ)), err.ScopesOk →
+      HeldB bo Λ σ.haelt →
+      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R err σ ρ))
     (σ : World D) (ρ : Env D Γ)
     (hscope : (Endblock.bindAxiomElse a args he hr hw hg hd hgd err rest).ScopesOk)
     (hh : HeldB bo Λ σ.haelt) :
@@ -139,21 +145,21 @@ theorem end_bindAxiomElse_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
       · simp only [EndAusgang.welt, reduceCtorEq] at h
       · rw [ha] at h1
         have g1 := hl.trans (Treu.weiter hw hg h1)
-        exact (TreuEnd.vorCall g1 ((end_IH rest σ1 _ hscope_rest (g1.heldB hh)).schrumpf)) σ' h
+        exact (TreuEnd.vorCall g1 ((ih_rest rest σ1 _ hscope_rest (g1.heldB hh)).schrumpf)) σ' h
       · rw [ha] at h1
         have g1 := hl.trans (Treu.weiter hw hg h1)
-        exact (TreuEnd.vorCall g1 ((end_IH err σ1 _ hscope_err (g1.heldB hh)).schrumpf)) σ' h
+        exact (TreuEnd.vorCall g1 ((ih_err err σ1 _ hscope_err (g1.heldB hh)).schrumpf)) σ' h
 
 theorem end_bindAxiomOpt_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
-    (end_IH : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (b : Endblock D V l Γ Λ)
-      (σ : World D) (ρ : Env D Γ), b.ScopesOk → HeldB bo Λ σ.haelt →
-      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R b σ ρ))
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (e : Option Ty) (a : D.Ax) (args : Args D Γ Λ (D.aparams a))
     (he : D.aerg a = e) (hp : RufPasst D V (D.asignatur a) Λ)
     (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
     (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
     (rest : Endblock D V l (ErgCtx Γ e) (nachSig D (D.asignatur a) Λ))
+    (ih_rest : ∀ (σ : World D) (ρ : Env D (ErgCtx Γ e)), rest.ScopesOk →
+      HeldB bo (nachSig D (D.asignatur a) Λ) σ.haelt →
+      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R rest σ ρ))
     (σ : World D) (ρ : Env D Γ)
     (hscope : (Endblock.bindAxiomOpt e a args he hp hd hgd rest).ScopesOk)
     (hh : HeldB bo Λ σ.haelt) :
@@ -170,7 +176,7 @@ theorem end_bindAxiomOpt_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
           (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
         rw [ha] at h1
         have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-        have ihr := fun ρ' => end_IH rest σ1 ρ' hscope_rest
+        have ihr := fun ρ' => ih_rest rest σ1 ρ' hscope_rest
           (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
         cases e with
         | none =>
@@ -179,9 +185,6 @@ theorem end_bindAxiomOpt_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
             simp only [EndAusgang.weiterOpt] at h; exact (TreuEnd.vorCall g1 ((ihr _).schrumpf)) σ' h
 
 theorem end_bindAxiomOptElse_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
-    (end_IH : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (b : Endblock D V l Γ Λ)
-      (σ : World D) (ρ : Env D Γ), b.ScopesOk → HeldB bo Λ σ.haelt →
-      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R b σ ρ))
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (e : Option Ty) (a : D.Ax) (args : Args D Γ Λ (D.aparams a))
     (he : D.aerg a = e) (hp : RufPasst D V (D.asignatur a) Λ)
@@ -189,6 +192,12 @@ theorem end_bindAxiomOptElse_treu (bo : Option Int) (hbV : BodenUnter bo V.boden
     (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ) (hr : 0 < D.agruende a)
     (err : Endblock D V l (reasonTy (D.agruende a) :: Γ) (nachSig D (D.asignatur a) Λ))
     (rest : Endblock D V l (ErgCtx Γ e) (nachSig D (D.asignatur a) Λ))
+    (ih_rest : ∀ (σ : World D) (ρ : Env D (ErgCtx Γ e)), rest.ScopesOk →
+      HeldB bo (nachSig D (D.asignatur a) Λ) σ.haelt →
+      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R rest σ ρ))
+    (ih_err : ∀ (σ : World D) (ρ : Env D (reasonTy (D.agruende a) :: Γ)), err.ScopesOk →
+      HeldB bo (nachSig D (D.asignatur a) Λ) σ.haelt →
+      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R err σ ρ))
     (σ : World D) (ρ : Env D Γ)
     (hscope : (Endblock.bindAxiomOptElse e a args he hp hd hgd hr err rest).ScopesOk)
     (hh : HeldB bo Λ σ.haelt) :
@@ -205,7 +214,7 @@ theorem end_bindAxiomOptElse_treu (bo : Option Int) (hbV : BodenUnter bo V.boden
       · simp only [EndAusgang.welt, reduceCtorEq] at h
       · rw [ha] at h1
         have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-        have ihr := fun ρ' => end_IH rest σ1 ρ' hscope_rest
+        have ihr := fun ρ' => ih_rest rest σ1 ρ' hscope_rest
           (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
         cases e with
         | none =>
@@ -214,17 +223,20 @@ theorem end_bindAxiomOptElse_treu (bo : Option Int) (hbV : BodenUnter bo V.boden
             simp only [EndAusgang.weiterOpt] at h; exact (TreuEnd.vorCall g1 ((ihr _).schrumpf)) σ' h
       · rw [ha] at h1
         have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-        exact (TreuEnd.vorCall g1 ((end_IH err σ1 _ hscope_err
+        exact (TreuEnd.vorCall g1 ((ih_err err σ1 _ hscope_err
           (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf)) σ' h
 
 theorem end_regReadElse_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
-    (end_IH : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (b : Endblock D V l Γ Λ)
-      (σ : World D) (ρ : Env D Γ), b.ScopesOk → HeldB bo Λ σ.haelt →
-      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R b σ ρ))
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
     (zusage : Expr D (D.rtyp r :: Γ) Λ .bool) (sonst : Endblock D V l Γ Λ)
     (rest : Endblock D V l (D.rtyp r :: Γ) Λ)
+    (ih_rest : ∀ (σ : World D) (ρ : Env D (D.rtyp r :: Γ)), rest.ScopesOk →
+      HeldB bo Λ σ.haelt →
+      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R rest σ ρ))
+    (ih_sonst : ∀ (σ : World D) (ρ : Env D Γ), sonst.ScopesOk →
+      HeldB bo Λ σ.haelt →
+      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R sonst σ ρ))
     (σ : World D) (ρ : Env D Γ)
     (hscope : (Endblock.regReadElse r hk zusage sonst rest).ScopesOk)
     (hh : HeldB bo Λ σ.haelt) :
@@ -242,18 +254,18 @@ theorem end_regReadElse_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
       | some v =>
         have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ zusage.orte
         by_cases hc : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) = true <;> simp only [hc, ite_true, ite_false, Bool.true_eq_false, Bool.false_eq_true] at h ⊢
-        · exact (TreuEnd.vor hl (end_IH rest _ _ hscope_rest (hl.heldB hh))).schrumpf σ' h
-        · exact (TreuEnd.vor hl (end_IH sonst _ ρ hscope_sonst (hl.heldB hh))) σ' h
+        · exact (TreuEnd.vor hl (ih_rest rest _ _ hscope_rest (hl.heldB hh))).schrumpf σ' h
+        · exact (TreuEnd.vor hl (ih_sonst sonst _ ρ hscope_sonst (hl.heldB hh))) σ' h
       | none => simp only [EndAusgang.welt, reduceCtorEq] at h
 
 theorem end_bindCallInd_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
-    (end_IH : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (b : Endblock D V l Γ Λ)
-      (σ : World D) (ρ : Env D Γ), b.ScopesOk → HeldB bo Λ σ.haelt →
-      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R b σ ρ))
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {τ : Ty}
     (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)
     (he : (D.sigNr n).erg = some τ) (hp : RufPasst D V (D.sigNr n) Λ) (hr : (D.sigNr n).gruende = 0)
     (rest : Endblock D V l (τ :: Γ) (nachSig D (D.sigNr n) Λ))
+    (ih_rest : ∀ (σ : World D) (ρ : Env D (τ :: Γ)), rest.ScopesOk →
+      HeldB bo (nachSig D (D.sigNr n) Λ) σ.haelt →
+      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R rest σ ρ))
     (σ : World D) (ρ : Env D Γ)
     (hscope : (Endblock.bindCallInd p args he hp hr rest).ScopesOk)
     (hh : HeldB bo Λ σ.haelt) :
@@ -271,7 +283,7 @@ theorem end_bindCallInd_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
       cases rv with
       | ok σ1 v =>
           frame_call_ok (σ.lese Λ (p.orte ++ args.orte))
-          have g2 := end_IH rest σ1 (.cons (ergWert (ergSig hf he) v) ρ) hscope_rest
+          have g2 := ih_rest rest σ1 (.cons (ergWert (ergSig hf he) v) ρ) hscope_rest
             (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
           exact (TreuEnd.vorCall g1 (g2.schrumpf)) σ' h
       | why σ1 r => exact keinGrundSig hf hr r
