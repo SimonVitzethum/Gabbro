@@ -15,7 +15,7 @@ variable {D : Deklaration}
 
 private theorem plus_weiterOpt (j : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} (e : Option Ty) (k : GRest D V l Γ Λ) :
-    (GRest.weiterOpt e k).plus j = GRest.weiterOpt e (k.plus j) := by
+    (GRest.weiterOpt (Λ := Λ) e k).plus j = GRest.weiterOpt (Λ := Λ) e (k.plus j) := by
   cases e <;> rfl
 
 theorem rufSchrittG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) {M M' : RufMaschineG D}
