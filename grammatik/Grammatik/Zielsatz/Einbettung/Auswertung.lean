@@ -181,6 +181,12 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
       simp only [exE, eval_umTy, eval]
       rw [castW_n, hi]
       exact h.1 t _ f
+  | _, _, _, .thruOwn _ t _ f i _ _ _ _ _ _, ρ, ρ', hρ => by
+      have hi := eval_exE h₀ h i ρ ρ' hρ
+      simp only [VRel] at hi
+      simp only [exE, eval_umTy, eval]
+      rw [castW_n, hi]
+      exact h.1 t _ f
   | _, _, _, .ptrOf _ _ _ _, _, _, _ => rfl
   | _, _, _, .fnref _ _ _, _, _, _ => Or.inl rfl
   | _, _, _, .refEq a b, ρ, ρ', hρ => by
