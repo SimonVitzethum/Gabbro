@@ -20,6 +20,13 @@ def adapt {D : Deklaration} {Γ : Ctx} (target : Ty) (source : SomeCode D Γ) :
     if h : actual = target then .ok (h ▸ code)
     else .error "const value has a different declared type"
 
+/-- Typed payload code keeps dependent case selection out of the source reader. -/
+structure PayloadCode (D : Deklaration) (Γ : Ctx) (c : Option Ty) where
+  expr : NutzlastExpr D Γ [] c
+  denote : Env D Γ → Nutzlast D.Fn D.passt c
+  equation : ∀ before after args, evalNutz before expr after args = denote args
+
+mutual
 /-- One checked value constructor, using the canonical G value semantics. The
     fuel bounds elaboration of nested payloads, not execution or source recursion. -/
 def expression {D : Deklaration} {Γ : Ctx} (names : Locals Γ)
@@ -54,21 +61,26 @@ def expression {D : Deklaration} {Γ : Ctx} (names : Locals Γ)
         | throw ("const tagged constructor is unknown: " ++ name)
       if hi : index < cases.length then
         let i : Fin cases.length := ⟨index, hi⟩
-        match ht : cases.get i, payload with
-        | none, none =>
-          let term : Expr D Γ [] (.sum cases) := .case cases i (ht ▸ .empty)
-          return ⟨term, fun _ => ⟨i, Fall.ofNutzlast D.Fn D.passt cases i (ht ▸ ())⟩,
-            by intros; simp only [term, eval, evalNutz]; cases ht; rfl⟩
-        | some τ, some value =>
-          let value ← expression names globals schemas fuel τ value
-          let term : Expr D Γ [] (.sum cases) := .case cases i (ht ▸ .val value.expr)
-          return ⟨term, fun args => ⟨i, Fall.ofNutzlast D.Fn D.passt cases i (ht ▸ value.denote args)⟩,
-            by intros; simp only [term, eval, evalNutz]; cases ht; simp only [value.equation]⟩
-        | _, _ => throw "const tagged constructor payload does not match its declared type"
+        let value ← payloadExpression names globals schemas fuel (cases.get i) payload
+        return ⟨.case cases i value.expr,
+          fun args => ⟨i, Fall.ofNutzlast D.Fn D.passt cases i (value.denote args)⟩,
+          by intros; simp only [eval, value.equation]⟩
       else throw "const tagged constructor lies outside its declared schema"
     | _, _ => do
       let normalized ← Scalar.normalize names globals source
       adapt target normalized.code
+
+/-- Payload presence and its declared type are checked together. -/
+def payloadExpression {D : Deklaration} {Γ : Ctx} (names : Locals Γ)
+    (globals : List (String × Int)) (schemas : List USum) :
+    Nat → (target : Option Ty) → Option SExpr → Except String (PayloadCode D Γ target)
+  | 0, _, _ => .error "const payload elaboration exhausted its structural limit"
+  | _ + 1, none, none => .ok ⟨.empty, fun _ => (), by intros; rfl⟩
+  | fuel + 1, some τ, some source => do
+    let code ← expression names globals schemas fuel τ source
+    return ⟨.val code.expr, code.denote, by intros; simp only [evalNutz, code.equation]⟩
+  | _ + 1, _, _ => .error "const tagged constructor payload does not match its declared type"
+end
 
 /-- Only portable A28 results enter this additional value path. Other types keep
     a named refusal; integer calls retain the existing bounded/KExpr certificate. -/
