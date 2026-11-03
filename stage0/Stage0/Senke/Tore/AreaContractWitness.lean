@@ -75,13 +75,11 @@ theorem gate_contract_zeuge : @TorOK ⟨fun _ _ _ _ => True⟩ D layout provider
   · intro a b bound accepted
     have same : some (binding false) = some b := bound
     cases same
-    simp only [torGut, binding, Option.isNone_some, Bool.and_false] at accepted
-    cases accepted
+    simp [torGut, binding] at accepted
   · intro a b bound accepted
     have same : some (binding false) = some b := bound
     cases same
-    simp only [torGut, binding, Option.isNone_some, Bool.and_false] at accepted
-    cases accepted
+    simp [torGut, binding] at accepted
   · intro a n he
     obtain ⟨a, ha⟩ := a
     have zero : a = 0 := by change a < 1 at ha; omega
