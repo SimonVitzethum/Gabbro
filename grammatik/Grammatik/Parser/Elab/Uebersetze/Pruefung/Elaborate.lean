@@ -4,8 +4,8 @@
    the named refusal. `uCheck` resolves one item: the gates must name unit functions,
    C08 foreign bodies or sibling checks (a gate that is none of the three is refused,
    never auto-run), the floors elaborate with the ordinary predicate reader (a floor
-   over a place whose scope exists only inside the not-yet-generated probe keeps its
-   refusal), and `probe` records the generated producer name (`Erzeuge.uProbeFns`
+   over measured numeric locals retain symbolic references; their actual type and
+   scope are checked at every generated return), and `probe` records the generated producer name (`Erzeuge.uProbeFns`
    elaborates the `can_fail` body under that name; a probe never shares its name with
    a written function). -/
 module
@@ -53,10 +53,15 @@ def uCheck (tabs : List UTab) (globs : List UGlob) (fns : List String)
     if fns.any (fun n => strEq n g) || checks.any (fun n => strEq n g) ||
         fremd.any (fun n => strEq n g) then .ok g
     else .error ("unknown gate: " ++ g))
+  -- This is the symbolic floor descriptor, not a typed scope certificate. The
+  -- generated ordinary probe resolves these references again at each return;
+  -- missing locals, wrong types and early returns are refused there.
+  let locals := c.misst.filterMap fun | .variable name => some name | _ => none
   let ctx : UCtx :=
-    { names := [], kinds := [], types := [], tabs := tabs, locks := [], held := [], res := none, fname := c.cname, globs := globs }
+    { names := locals, kinds := locals.map fun _ => .int, types := [], tabs := tabs, locks := [], held := [], res := none, fname := c.cname, globs := globs }
   let boeden ← uSeq (c.boden.map (uSichert ctx))
-  .ok { name := c.cname, claim := c.claim, misst := misst, tore := tore, boeden := boeden, sonde := c.sonde, probe := probeFnName c.cname, duty := dutyName c.cname }
+  -- The parser stores (text, expects-name); the kernel stores (name, text).
+  .ok { name := c.cname, claim := c.claim, misst := misst, tore := tore, boeden := boeden, sonde := c.sonde.map fun pair => (pair.2, pair.1), probe := probeFnName c.cname, duty := dutyName c.cname }
 
 def uChecksAux (tabs : List UTab) (globs : List UGlob) (fns namen fremd bekannt : List String) :
     List SCheck → Except String (List UCheck)
