@@ -12,6 +12,9 @@ public import Stage0.IRBild
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Export
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Ableitung
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Zulassung
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Boden
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Gegenprobe
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Fremdtor
 public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
 @[expose] public section
 
@@ -37,6 +40,29 @@ theorem stage0_anspruch_erfuellt :
       .ok [("p#probe", ["p#tor#g"])] ∧
     checkB checkP [] [] (List.finRange checkU.fns.length) checkChecks = true :=
   ⟨rfl, checkU_checkB⟩
+
+/-- Both floor verdicts, the executable bound counterprobe, and both foreign
+    gate forms use the same source/elaboration/lowering/admission path. No
+    separate emitter or interpreter implements these forms. -/
+theorem stage0_c16_formen_akzeptiert :
+    AkzeptiertX checkPBodenWahr (Cover.Differenz.sperrFamilie uBodenWahr)
+      (List.finRange uBodenWahr.fns.length) [] [] [] [] checkChecksBodenWahr = true ∧
+    AkzeptiertX checkPBodenFalsch (Cover.Differenz.sperrFamilie uBodenFalsch)
+      (List.finRange uBodenFalsch.fns.length) [] [] [] [] checkChecksBodenFalsch = true ∧
+    AkzeptiertX checkPSonde (Cover.Differenz.sperrFamilie uSonde)
+      (List.finRange uSonde.fns.length) [] [] [] [] checkChecksSonde = true ∧
+    AkzeptiertX checkPFremd (Cover.Differenz.sperrFamilie uFremd)
+      (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = true ∧
+    AkzeptiertX checkPFremdFallible (Cover.Differenz.sperrFamilie uFremdFallible)
+      (List.finRange uFremdFallible.fns.length) [] [] [] [] checkChecksFremdFallible = true :=
+  ⟨bodenWahr_akzeptiert, bodenFalsch_akzeptiert, sonde_akzeptiert,
+    fremd_akzeptiert, fremdFallible_akzeptiert⟩
+
+/-- Measured counterprobe evidence additionally passes the executable binding
+    and exact-image gate; structural admission alone claims no external run. -/
+theorem stage0_c16_sondenachweis : checkChecksSonde.all (fun d =>
+    sondenNachweisB checkChecksSonde d "ship" artefaktSonde
+      .durchgefallen berichtSondeFalsch) = true := sonde_nachweisB
 
 /-- Every emitted image -- including check-carrying units -- carries the
     inherited IR execution certificate for its exact source program. -/
