@@ -74,3 +74,31 @@ on the first matching slot. It introduces no source interpreter or new G form.
 Fold costs use the existing traversal and statement cost computation: capacity
 times the per-slot work, including filter and update, plus loop and binding
 overhead. These syntax extensions do not change the model's guarantees.
+
+### Call-scoped owner loans and owned access
+
+```ebnf
+effect     += "borrows" name ;
+```
+
+A function that touches an `owner`-guarded table through an `own@m` capability
+borrows the owner mark for the call: `effects { …, borrows Marke }`. The loan is
+the C09 `OwnerFlow.loans` entry: the callee holds the mark during the call, the
+caller gets the same mark back on normal return. A `borrows` that names no
+table owner is refused (`loan without owner`); a mark both `consumes`d
+(`takes`) and borrowed is refused (`mark both consumed and borrowed`); ordinary
+`allocs` of an owner stays refused (`owner produced without mint`).
+
+```gabbro
+impl fn u(r : ptr<normal, rw+own@Marke> T, i : index into T) -> bool
+  effects { reads r.slots, writes r.slots, borrows Marke }
+  { r.slots[i].b = true; return r.slots[i].b; }
+```
+
+Reads and writes through the owned capability elaborate to the canonical owned
+accesses `Expr.thruOwn` / `Stmt.assignThruOwn`: the same guarded carrier as
+`thru` / `assignThru`, plus the resolved owner mark, the table's owner entry
+and the guard at the held stage. Machine G evaluates and executes them exactly
+like the plain forms. Access without the held mark is refused
+(`access without held guard`); an unresolvable owner is refused
+(`owned read/write without a declared owner mark`).
