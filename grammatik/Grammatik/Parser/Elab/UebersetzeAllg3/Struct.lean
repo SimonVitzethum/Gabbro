@@ -28,10 +28,10 @@ def lowStructStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStu
   | Γ, fn, Λ, pe, .callIndElseBeg p _ args reason, rest =>
     lowCallIndElse u caller R Γ fn Λ pe p args reason rest
   | Γ, fn, Λ, pe, .axCallElseBeg c args reason, rest =>
-    (lowAxCallElse u caller R Γ fn Λ pe c args reason rest).map fun (st, rest') => (⟨Λ, st⟩, rest')
-  | Γ, fn, Λ, _, .lockBeg g, rest =>
+    lowCallElse u caller R Γ fn Λ pe c args reason rest
+  | Γ, fn, Λ, pe, .lockBeg g, rest =>
     (lockIdx u.locks g).bind fun L =>
-      if hr : rangOkB u Λ L = true then match R.seq Γ fn (Res.held L :: Λ) none rest with
+      if hr : rangOkB u Λ L = true then match R.seq Γ fn (Res.held L :: Λ) (L :: pe) rest with
         | .error e => .error e
         | .ok ((⟨Λ', body⟩, .blkEnd :: rest')) =>
           if h : Λ' = Res.held L :: Λ then

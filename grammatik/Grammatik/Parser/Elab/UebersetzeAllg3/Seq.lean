@@ -102,7 +102,19 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
           (R.seq (l := l) (τ :: Γ) (fn.mitTy x τ) Λ pe rest).bind fun (⟨Λ', b⟩, r) =>
             .ok (⟨Λ', Block.bindAxiom (D := declOf u) k.ax k.args hE k.hw k.hg k.hd k.hgd b⟩, r))
   | Γ, fn, Λ, pe, .startS :: rest => R.seq (l := l) Γ fn Λ pe rest
-  | _, _, _, _, .bindAxElse .. :: _ => .error "lower: a foreign let else in a continuing block has no G export"
+  | Γ, fn, Λ, pe, .bindAxElse y c args e :: rest =>
+    (lowAxKopf u caller Γ fn Λ c args).bind fun k =>
+      if hr : 0 < (declOf u).agruende k.ax then
+        withAxErg u k.ax (fun _ => .error "call without a value") fun τ hE =>
+          match R.ende (l := l) (Ty.why ((declOf u).agruende k.ax) :: Γ)
+              (fn.mitWhy e 0 ((declOf u).agruende k.ax)) Λ pe rest with
+          | .error err => .error err
+          | .ok (errb, .blkEnd :: tail) =>
+            (R.seq (l := l) (τ :: Γ) (fn.mitTy y τ) Λ pe tail).bind fun (⟨Λ', body⟩, remaining) =>
+              .ok (⟨Λ', Block.bindAxiomElse (D := declOf u) k.ax k.args hE hr
+                k.hw k.hg k.hd k.hgd errb body⟩, remaining)
+          | .ok (_, _) => .error "lower: a let else is not closed"
+      else .error "lower: let else of a foreign call without a reason channel"
   | Γ, fn, Λ, pe, .matchTagBeg sidx m bs :: rest =>
     (R.struct Γ fn Λ pe (.matchTagBeg sidx m bs) rest).bind fun (⟨Λ₁, st⟩, rest') =>
       (R.seq Γ fn Λ₁ pe rest').bind fun (⟨Λ₂, b⟩, r) => .ok (⟨Λ₂, Block.cons st b⟩, r)
@@ -219,7 +231,7 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
           withErgN u m fun τ hE =>
             match R.ende (l := l) (Ty.why (((declOf u).sigNr m).gruende) :: Γ) (fn.mitWhy e 0 (((declOf u).sigNr m).gruende)) (nachSig (declOf u) ((declOf u).sigNr m) Λ) pe rest with
             | .error err => .error err
-            | .ok (errb, .blkEnd :: tail) => match R.seq (l := l) (τ :: Γ) (fn.mitTy y τ) (nachSig (declOf u) ((declOf u).sigNr m) Λ) pe tail with
+            | .ok (errb, .blkEnd :: tail) => match R.seq (l := l) (τ :: Γ) (fn.mitTy x τ) (nachSig (declOf u) ((declOf u).sigNr m) Λ) pe tail with
               | .error err => .error err
               | .ok ((⟨Λ', body⟩, remaining)) => .ok (⟨Λ', nestedElseN u caller Γ Λ m v k τ hE hr errb body⟩, remaining)
             | .ok (_, _) => .error "lower: a let else is not closed"

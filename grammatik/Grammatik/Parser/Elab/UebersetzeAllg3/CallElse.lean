@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Kopf
+public import Grammatik.Parser.Elab.UebersetzeAllg3.IndirectElse
 
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg2
@@ -28,5 +29,16 @@ def lowAxCallElse {l : Bool} (u : UProg) (caller : Fin u.fns.length)
       | .ok (_, _) => .error "lower: a call else is not closed"
     else .error "lower: call else needs a fallible axiom callee"
   else .error "foreign call does not conform to caller contract"
+
+/-- Resolve the first local binding, just as `lowZeigerN` does; a foreign callee
+    keeps the existing handler. The flat marker is shared, without a new syntax constructor. -/
+def lowCallElse {l : Bool} (u : UProg) (caller : Fin u.fns.length)
+    (R : LowStufe u caller) (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u)))
+    (pe : AtTop u caller Λ) (name : String) (args : List UArg) (reason : String)
+    (rest : List UStmt) :
+    Except String ((Σ Λ', Stmt (declOf u) (verOf u caller) l Γ Λ Λ') × List UStmt) :=
+  match (fn.params.find? (fun binding => strEq binding.1 name)).map (·.2) with
+  | some (.fnptr _) => lowCallIndElse u caller R Γ fn Λ pe name args reason rest
+  | _ => (lowAxCallElse u caller R Γ fn Λ pe name args reason rest).map fun (st, tail) => (⟨Λ, st⟩, tail)
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg2

@@ -26,20 +26,8 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
   | _, _, _, _, [] => .error "lower: an else branch falls through"
   | _, _, _, _, .blkEnd :: _ => .error "lower: an else branch falls through"
   | _, _, _, _, .ifElse :: _ => .error "lower: an else branch falls through"
-  | Γ, fn, Λ, pe, .ret v :: rest => match pe with
-    | none => .error "lower: return under locks has no G form"
-    | some _ => match v with
-      | .why i =>
-        if hi : i < (verOf u caller).gruende then
-          if hPerm : decide (Λ.Perm (verOf u caller).ende) = true then
-            .ok (Endblock.retWhy (D := declOf u) ⟨i, hi⟩ (of_decide_eq_true hPerm), rest)
-          else .error "lower: return without produced marks"
-        else .error "reason case outside the channel"
-      | _ =>
-      (lowErg u caller Γ Λ fn v).bind fun erg =>
-        if hPerm : decide (Λ.Perm (verOf u caller).ende) = true then
-          .ok (Endblock.ret erg (of_decide_eq_true hPerm), rest)
-        else .error "lower: return without produced marks"
+  | Γ, fn, Λ, pe, .ret v :: rest =>
+    (lowRetEnd u caller Γ fn Λ pe v).map fun ending => (ending, rest)
   | _, _, _, _, .leave _ :: rest =>
     if h : l = true then .ok (Endblock.leave h, rest) else .error "lower: leave outside a traverse"
   | _, _, _, _, .next _ :: rest =>
@@ -74,8 +62,22 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
           if hr : (declOf u).gruende k.callee = 0 then
             .ok (Endblock.bindCall (D := declOf u) k.callee k.args hE k.hp hr b, r)
           else .error "call of a function with a reason channel needs `let .. else`"
-  | _, _, _, _, .axCall .. :: _ => .error "lower: a foreign call in an else branch has no G form here"
-  | _, _, _, _, .bindAx .. :: _ => .error "lower: a foreign call in an else branch has no G form here"
+  | Γ, fn, Λ, pe, .axCall c args :: rest =>
+    (lowAxKopf u caller Γ fn Λ c args).bind fun k =>
+      withAxErg u k.ax
+        (fun h =>
+          (R.ende (l := l) Γ fn Λ pe rest).bind fun (body, remaining) =>
+            .ok (Endblock.cons (axiomStmt u caller Γ Λ k h) body, remaining))
+        (fun τ hE =>
+          (R.ende (l := l) (τ :: Γ) (fn.mitTy "#ax" τ) Λ pe rest).bind fun (body, remaining) =>
+            .ok (Endblock.bindAxiom (D := declOf u) k.ax k.args hE
+              k.hw k.hg k.hd k.hgd body, remaining))
+  | Γ, fn, Λ, pe, .bindAx x c args :: rest =>
+    (lowAxKopf u caller Γ fn Λ c args).bind fun k =>
+      withAxErg u k.ax (fun _ => .error "call without a value") fun τ hE =>
+        (R.ende (l := l) (τ :: Γ) (fn.mitTy x τ) Λ pe rest).bind fun (body, remaining) =>
+          .ok (Endblock.bindAxiom (D := declOf u) k.ax k.args hE
+            k.hw k.hg k.hd k.hgd body, remaining)
   | Γ, fn, Λ, pe, .narrowBeg x lo hi :: rest =>
     (paramPos fn.params x).bind fun j => match fn.params[j]? with
       | some (_, .int l1 h1) =>
@@ -206,8 +208,14 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
     | .ok k =>
       if hr : 0 < (declOf u).agruende k.ax then
         withAxErg u k.ax (fun _ => .error "call without a value") fun τ hE =>
-          match R.ende (l := l) (Ty.why ((declOf u).agruende k.ax) :: Γ) (fn.mitWhy e 0 ((declOf u).agruende k.ax)) Λ pe [] with
-          | _ => .error "lower: a let else in an else branch has no G form here"
+          match R.ende (l := l) (Ty.why ((declOf u).agruende k.ax) :: Γ)
+              (fn.mitWhy e 0 ((declOf u).agruende k.ax)) Λ pe rest with
+          | .error err => .error err
+          | .ok (errb, .blkEnd :: tail) =>
+            (R.ende (l := l) (τ :: Γ) (fn.mitTy y τ) Λ pe tail).bind fun (body, remaining) =>
+              .ok (Endblock.bindAxiomElse (D := declOf u) k.ax k.args hE hr
+                k.hw k.hg k.hd k.hgd errb body, remaining)
+          | .ok (_, _) => .error "lower: a let else is not closed"
       else .error "lower: let else of a foreign call without a reason channel"
   | Γ, fn, Λ, pe, .bindElse y c args e :: rest => do
     u.exportGate

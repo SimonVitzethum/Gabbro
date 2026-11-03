@@ -80,9 +80,9 @@ theorem binder_scope :
     ok? (prog [.loopBeg "i" "T" .tru, .blkEnd, .assignB "k" "f" (.param "i") .fls])
       = "name unknown: i" := by decide +kernel
 
-/-- A `return` under `locks` has no G form: `Stmt.ret` needs the held list to be the contract end. -/
+/-- A return under a locally acquired lock carries exact lexical cleanup evidence. -/
 theorem ret_under_locks :
-    ok? (prog [.lockBeg "L", .ret .empty, .blkEnd] []) = "lower: return under locks has no G form" := by
+    ok? (prog [.lockBeg "L", .ret .empty, .blkEnd] []) = "OK" := by
   decide +kernel
 
 /-- A traverse over an unknown table is refused by name. -/
@@ -92,5 +92,26 @@ theorem traverse_unknown :
 /-- An unclosed traverse is refused. -/
 theorem traverse_unclosed :
     ok? (prog [.loopBeg "i" "T" .tru]) = "lower: a traverse is not closed" := by decide +kernel
+
+/-- Source-text witnesses for value/reason returns in continuing and ending blocks. -/
+def scoped_value_src : String :=
+  "module m { lock L protects { } rank 0; impl fn f() -> u32 in 0 .. 9 effects { locks L } { locks L { return 1; } return 0; } }"
+
+theorem retScoped_zeuge : UebersetzeProben3.stufe scoped_value_src = "OK" := by decide +kernel
+
+def scoped_reason_src : String :=
+  "module m { reason R { No = 1 \"no\" exhaustive } lock L protects { } rank 0; impl fn f() -> u32 in 0 .. 9 or R effects { locks L } { locks L { return R::No; } return 0; } }"
+
+theorem retWhyScoped_zeuge : UebersetzeProben3.stufe scoped_reason_src = "OK" := by decide +kernel
+
+def scoped_end_value_src : String :=
+  "module m { lock L protects { } rank 0; impl fn f(x : u32 in 0 .. 9) -> u32 in 0 .. 9 effects { locks L } { locks L { narrow x to 0 .. 1 else { return 2; } } return 0; } }"
+
+theorem end_retScoped_zeuge : UebersetzeProben3.stufe scoped_end_value_src = "OK" := by decide +kernel
+
+def scoped_end_reason_src : String :=
+  "module m { reason R { No = 1 \"no\" exhaustive } lock L protects { } rank 0; impl fn f(x : u32 in 0 .. 9) -> u32 in 0 .. 9 or R effects { locks L } { locks L { narrow x to 0 .. 1 else { return R::No; } } return 0; } }"
+
+theorem end_retWhyScoped_zeuge : UebersetzeProben3.stufe scoped_end_reason_src = "OK" := by decide +kernel
 
 end Gabbro.Grammatik.Parser.UebersetzeProben9

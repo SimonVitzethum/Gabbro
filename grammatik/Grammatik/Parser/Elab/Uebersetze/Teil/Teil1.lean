@@ -355,6 +355,7 @@ inductive UStmt
       capacity duty (`Block/Endblock.narrowRequired`); no failure continuation or `blkEnd`.
       Appended at the end, so earlier constructor positions keep their names. -/
   | narrowReqBeg : String → Int → Int → UStmt
+  /-- Shared discard-call handler marker: foreign callee or local function pointer. -/
   | axCallElseBeg : String → List UArg → String → UStmt
   /-- `retires m;`: explicit discharge of one held linear mark. -/
   | retires : String → UStmt
