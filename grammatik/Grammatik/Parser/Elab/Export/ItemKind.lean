@@ -1,0 +1,50 @@
+/- Stable constructor names for source-export refusals. Keep this match exhaustive. -/
+module
+public import Grammatik.Parser.Item.ElementTief
+
+namespace Gabbro.Grammatik.Parser.ExportMetadata
+
+@[expose] public def itemKind : SItemTief → String
+  | .modT .. => "SItemTief.modT"
+  | .useT .. => "SItemTief.useT"
+  | .typeT .. => "SItemTief.typeT"
+  | .constT .. => "SItemTief.constT"
+  | .globT .. => "SItemTief.globT"
+  | .fnT .. => "SItemTief.fnT"
+  | .protoT .. => "SItemTief.protoT"
+  | .specT .. => "SItemTief.specT"
+  | .asmT .. => "SItemTief.asmT"
+  | .formatT .. => "SItemTief.formatT"
+  | .tableT .. => "SItemTief.tableT"
+  | .arenaT .. => "SItemTief.arenaT"
+  | .whyT .. => "SItemTief.whyT"
+  | .stateT .. => "SItemTief.stateT"
+  | .devT .. => "SItemTief.devT"
+  | .assumT .. => "SItemTief.assumT"
+  | .axiomT .. => "SItemTief.axiomT"
+  | .checkT .. => "SItemTief.checkT"
+  | .atomT .. => "SItemTief.atomT"
+  | .lockT .. => "SItemTief.lockT"
+  | .rcuT .. => "SItemTief.rcuT"
+  | .groupT .. => "SItemTief.groupT"
+  | .concT .. => "SItemTief.concT"
+  | .accT .. => "SItemTief.accT"
+  | .walkT .. => "SItemTief.walkT"
+  | .entryT .. => "SItemTief.entryT"
+  | .trustT .. => "SItemTief.trustT"
+  | .bootT .. => "SItemTief.bootT"
+  | .callT .. => "SItemTief.callT"
+  | .varT .. => "SItemTief.varT"
+  | .goalT .. => "SItemTief.goalT"
+  | .transT .. => "SItemTief.transT"
+  | .profT .. => "SItemTief.profT"
+  | .gateT .. => "SItemTief.gateT"
+  | .pubT .. => "SItemTief.pubT"
+  | .adaptT .. => "SItemTief.adaptT"
+  | .taggedByT .. => "SItemTief.taggedByT"
+  | .specGroupT .. => "SItemTief.specGroupT"
+  | .implGroupT .. => "SItemTief.implGroupT"
+  | .moduleTemplateT .. => "SItemTief.moduleTemplateT"
+  | .moduleUseT .. => "SItemTief.moduleUseT"
+
+end Gabbro.Grammatik.Parser.ExportMetadata
