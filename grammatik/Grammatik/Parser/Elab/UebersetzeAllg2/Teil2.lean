@@ -82,6 +82,44 @@ def lowAssignDurchBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ct
                   else .error "write without right"
                 else .error "access without held guard"
       else .error "pointer table unknown"
+    | some (.ptr ⟨0, ⟨read, true, some owner⟩, .table num⟩) =>
+      if h : num < u.tabs.length then
+        match fieldHitB u ⟨num, h⟩ fname with
+        | .error e => .error e
+        | .ok bh =>
+          match heig : eignerMarke u owner with
+          | .none => .error "owned write without a declared owner mark"
+          | .some m =>
+            match lowVar Γ j (.ptr ⟨0, ⟨read, true, some owner⟩, .table num⟩) with
+            | .error e => .error e
+            | .ok pv =>
+              match lowIdx u Γ Λ
+                  fn 0 ⟨num, h⟩ ix with
+              | .error e => .error e
+              | .ok i =>
+                match lowEns u Γ Λ
+                    fn none v with
+                | .error e => .error e
+                | .ok e =>
+                  if hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩,
+                      Res.von (declOf u) wdd ∈ Λ then
+                    if he : m ∈ eignerAt u ⟨num, h⟩ then
+                      if hw : writesAt u (fnAt u caller)
+                          ⟨num, h⟩ = true then
+                        have hwV : (verOf u caller).schreibt
+                            ⟨num, h⟩ = true := by
+                          show (vertragVon (declOf u) caller).schreibt
+                            ⟨num, h⟩ = true
+                          rw [vSchreibt_eq u caller ⟨num, h⟩]
+                          exact hw
+                        .ok (assignDurchOwnStmtB u Γ
+                          Λ (verOf u caller) ⟨num, h⟩
+                          bh owner m (Expr.var pv) i e
+                          heig he hwV hL)
+                      else .error "write without right"
+                    else .error "owned write without owner guard"
+                  else .error "access without held guard"
+      else .error "pointer table unknown"
     | _ => .error "place without G form"
 
 /-- A truth value written at a table into a bool field. -/
