@@ -133,4 +133,14 @@ theorem reason_shadow_zeuge :
       (.block [] (some (.ret (some (.call "increment" [.variable "reason"])))) )
     (Generic.rewriteBody env bindings body).run [] = .ok (body, []) := by rfl
 
+/-- Generic specialization cannot bypass the original const contract. -/
+theorem generic_contract_refused_zeuge :
+    Generic.constantArgument 0 255 [function] [] (.call "increment" [.lit 0]) =
+      .error "const contract violated at `increment`: requires failed" := rfl
+
+/-- Boolean truth is not silently accepted as the integer one. -/
+theorem argument_type_refused_zeuge :
+    ersetzeSExpr [function] (.call "increment" [.tru]) =
+      .error "const argument failure at `increment`: const type failure: expected an integer expression" := rfl
+
 end Gabbro.Stage0.Frontend.ConstWitness
