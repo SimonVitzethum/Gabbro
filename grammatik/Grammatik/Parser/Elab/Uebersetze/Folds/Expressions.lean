@@ -59,7 +59,7 @@ def expandFoldStmt (ctx : UCtx) (statement : SAnw) :
       match ty with
       | none => pure none
       | some ty => do
-        match ← uTyp ctx.alias ctx.tabs ty with
+        match ← uTyp ctx.alias ctx.tabs ctx.spaces ctx.eigner ty with
         | .fl .. => pure none
         | _ => (uErgBereich ctx.alias ty).map some
     foldCheckResult ctx code value target
