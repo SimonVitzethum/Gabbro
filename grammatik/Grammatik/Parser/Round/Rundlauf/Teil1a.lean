@@ -25,6 +25,40 @@ theorem strKlingt : ∀ (a b : String), strEq a b = true → a = b := by
 theorem strEq_eq (a b : String) : strEq a b = true ↔ a = b :=
   ⟨strKlingt a b, by intro h; subst h; exact beq_self_eq_true _⟩
 
+/-- A tail excluding both call openers takes the ordinary name branch. -/
+theorem rufKopf_ohne {α : Type} (toks : List Token)
+    (generic call : List Token → α) (other : Unit → α)
+    (hgeneric : ∀ R, toks ≠ .zeichen "::" :: .zeichen "[" :: R)
+    (hmiss : ∀ R, toks ≠ .zeichen "(" :: R) :
+    rufKopf toks generic call other = other () := by
+  cases toks with
+  | nil => rfl
+  | cons tok rest =>
+    cases tok <;> try rfl
+    rename_i s
+    simp only [rufKopf]
+    split
+    · rename_i hs
+      have heq := strKlingt _ _ hs
+      subst s
+      cases rest with
+      | nil => rfl
+      | cons tok tail =>
+        cases tok <;> try rfl
+        rename_i s
+        split
+        · rename_i hs
+          have heq := strKlingt _ _ hs
+          subst s
+          exact (hgeneric tail rfl).elim
+        · rfl
+    · split
+      · rename_i hs
+        have heq := strKlingt _ _ hs
+        subst s
+        exact (hmiss rest rfl).elim
+      · rfl
+
 /-- Word-list equality is sound. -/
 theorem beqWorte_klingt : ∀ (a b : List String), beqWorte a b = true → a = b := by
   intro a

@@ -219,7 +219,7 @@ theorem prim_platzM (a : String) (suff : List SuffFrag) (rest : List Token) (F :
   have hmiss : ∀ (R : List Token), suffToks suff ++ rest ≠ .zeichen "(" :: R := by
     intro R hcon
     exact suffToks_nopar suff rest R hr hcon
-  simp only [hmiss]
+  simp only [rufKopf_ohne, suffToks_nogeneric suff rest hr, hmiss]
   exact suffM suff (.variable a) rest F'' hs hr (by omega)
 
 

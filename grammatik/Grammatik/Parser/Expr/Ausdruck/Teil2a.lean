@@ -229,27 +229,30 @@ def parseKopf (f : Nat) (toks : List Token) :
     | t :: rest => match nameText t with
       | some s =>
         match sammleSegmente rest [s] with
-        | (segs, .zeichen "::" :: .zeichen "[" :: rest') => do
-          let (words, after) ← genericArguments rest' [] [] []
-          match after with
-          | .zeichen "(" :: tail => do
-            let (args, remaining) ← parseArgs f tail
-            pure (.ext .instantiate (("::".intercalate segs) :: words) args, remaining)
-          | _ => .error "generic instantiation without call arguments"
-        | (segs, .zeichen "(" :: rest') =>
-          match parseArgs f rest' with
-          | .ok (args, rest'') =>
-            .ok (.call ("::".intercalate segs) args, rest'')
-          | .error e => .error e
-        | ([a, b], rest') =>
-          if istIntWort a || istZuckerBreite a then
-            .ok (.field (.variable a) b, rest')
-          else if strEq a "Self" then .error "Self:: is not a form"
-          else .ok (.why a b, rest')
-        | ([a], rest') => parseSuffixe f (.variable a) rest'
-        -- A path of three or more segments names an item by its path (`Parser/Namen/Aufloesung.lean`):
-        -- one place head, its segments joined as the parser joins call paths.
-        | (segs, rest') => .ok (.variable ("::".intercalate segs), rest')
+        | (segs, rest') => rufKopf rest'
+          (fun tail => do
+            let (words, after) ← genericArguments tail [] [] []
+            match after with
+            | .zeichen s :: tail =>
+              if strEq s "(" then do
+                let (args, remaining) ← parseArgs f tail
+                pure (.ext .instantiate (("::".intercalate segs) :: words) args, remaining)
+              else .error "generic instantiation without call arguments"
+            | _ => .error "generic instantiation without call arguments")
+          (fun tail =>
+            match parseArgs f tail with
+            | .ok (args, rest'') =>
+              .ok (.call ("::".intercalate segs) args, rest'')
+            | .error e => .error e)
+          (fun _ => match segs with
+          | [a, b] =>
+            if istIntWort a || istZuckerBreite a then
+              .ok (.field (.variable a) b, rest')
+            else if strEq a "Self" then .error "Self:: is not a form"
+            else .ok (.why a b, rest')
+          | [a] => parseSuffixe f (.variable a) rest'
+          -- A longer path names one item, with the same joining as call paths.
+          | _ => .ok (.variable ("::".intercalate segs), rest'))
       | none => .error "expression expected"
     | [] => .error "expression expected"
 def parseSuffixe (f : Nat) (e : SExpr) (toks : List Token) :

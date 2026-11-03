@@ -19,6 +19,14 @@ theorem kette_nopar (suff : List SuffFrag) (hne : suff ≠ []) (R R2 : List Toke
   | nil => exact absurd rfl hne
   | cons f s => cases f <;> simp only [suffToks, List.cons_append, ne_eq, List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and, not_false_eq_true, List.append_assoc, List.nil_append]
 
+theorem kette_nogeneric (suff : List SuffFrag) (hne : suff ≠ []) (R R2 : List Token) :
+    suffToks suff ++ R ≠ .zeichen "::" :: .zeichen "[" :: R2 := by
+  cases suff with
+  | nil => exact absurd rfl hne
+  | cons f s =>
+    cases f <;> simp only [suffToks, List.cons_append, ne_eq, List.cons.injEq,
+      Token.zeichen.injEq, String.reduceEq, false_and, not_false_eq_true]
+
 /-- Calls through a place through `parsePrimary` at token fuel. -/
 theorem prim_methM (a : String) (suff : List SuffFrag) (xs : List SExpr) (rest : List Token) (F : Nat)
     (hka : (!istKopfWort a) = true) (hs : SuffLegs suff) (hne : suff ≠ [])
@@ -36,7 +44,7 @@ theorem prim_methM (a : String) (suff : List SuffFrag) (xs : List SExpr) (rest :
   rw [sammleSeg_kette suff hne]
   have hmiss : ∀ (R2 : List Token), suffToks suff ++ (.zeichen "(" :: (druckToksListe xs ++
       (.zeichen ")" :: rest))) ≠ .zeichen "(" :: R2 := kette_nopar suff hne _
-  simp only [hmiss]
+  simp only [rufKopf_ohne, kette_nogeneric suff hne, hmiss]
   rw [suffWeiterM suff (.variable a) _ F'' hs (by omega)]
   obtain ⟨G, hG⟩ : ∃ G, F'' - suff.length = G + 1 := ⟨F'' - suff.length - 1, by omega⟩
   rw [hG, suff_ruf G _ _ (istVar_kette a suff hne)]

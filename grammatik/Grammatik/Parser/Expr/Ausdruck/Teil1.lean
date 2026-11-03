@@ -224,6 +224,22 @@ def sammleSegmente : List Token → List String → List String × List Token
     | none => (acc, .zeichen "::" :: t :: rest)
   | toks, acc => (acc, toks)
 
+/-- Dispatch a generic call, an ordinary call, or the unchanged name tail.
+    Constructor-only patterns keep delimiter tests available to rewriting. -/
+def rufKopf {α : Type} (toks : List Token)
+    (generic call : List Token → α) (other : Unit → α) : α :=
+  match toks with
+  | .zeichen s :: rest =>
+    if strEq s "::" then
+      match rest with
+      | .zeichen t :: tail => if strEq t "[" then generic tail else other ()
+      | _ => other ()
+    else if strEq s "(" then call rest else other ()
+  | _ => other ()
+
+theorem strEq_paren_doppelpunkt : strEq "(" "::" = false := by decide
+theorem strEq_paren_paren : strEq "(" "(" = true := by decide
+
 
 -- The expression levels of SYNTAX.md section 4 (`expr` down to
 -- `primary`), each with fuel: every call passes strictly less fuel,
