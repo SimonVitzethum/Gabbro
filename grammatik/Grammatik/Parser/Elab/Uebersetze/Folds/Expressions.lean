@@ -73,6 +73,10 @@ def expandFoldStmt (ctx : UCtx) (statement : SAnw) :
   | .cases value arms =>
     let (code, ctx, _, value) ← expandFoldExpr 1000 ctx serial value
     pure (code, ctx, .cases value arms)
+  | .callElse name args reason body =>
+    let (code, ctx, _, value) ← expandFoldExpr 1000 ctx serial (.call name args)
+    let .call name args := value | throw "fold: malformed call expansion"
+    pure (code, ctx, .callElse name args reason body)
   | .call name args =>
     let (code, ctx, _, value) ← expandFoldExpr 1000 ctx serial (.call name args)
     let .call name args := value | throw "fold: malformed call expansion"
