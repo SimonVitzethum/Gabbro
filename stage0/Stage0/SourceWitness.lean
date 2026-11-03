@@ -47,13 +47,8 @@ set_option maxHeartbeats 100000
 theorem loaded_initial_world [Runner.IR.Kern]
     {src : String} {K : Nat} {options : Profil.Options} {image : Emitted src K options}
     {memory : Runner.Mem} (loaded : Senke.BytesAt memory Runner.Prog.IMG image.bytes) :
-    Senke.WeltAt memory image.image.Y (Senke.initialWorld image.compiled.unit image.initialValid) := by
-  have positions : ∀ g : (declOf image.compiled.unit).Fn,
-      (List.finRange image.compiled.unit.fns.length)[g.val]? = some g := by
-    intro g
-    simp only [List.finRange, List.getElem?_ofFn, g.isLt, ↓reduceDIte]
-    congr 1
-  exact (Senke.bild_initialized_loaded_u image.initialValid image.emission positions loaded).1
+    Senke.WeltAt memory image.image.Y (Senke.initialWorld image.compiled.unit image.initialValid) :=
+  image.loaded_initial_world loaded
 
 /-- All initial contracts of the existing image theorem, attached to one emitted image. -/
 structure InitialState [Runner.IR.Kern] {src : String} {K : Nat} {options : Profil.Options}
@@ -78,8 +73,7 @@ theorem InitialState.loaded [Runner.IR.Kern]
 theorem InitialState.simulates [Runner.IR.Kern] [Senke.CloneOK]
     {src : String} {K : Nat} {options : Profil.Options} {image : Emitted src K options}
     (state : InitialState image) : image.Simulates state.oracle state.memory state.world :=
-  (image.correct.2 state.oracle state.memory state.world
-    state.bytes state.loaded state.gates state.view).1
+  (image.source_correct.2 state.oracle state.memory state.bytes state.gates state.view).1
 
 /-- The same loaded image and canonical world realize every ordered root occurrence,
     with the exact typed environment selected by its source start plan. -/
@@ -87,8 +81,7 @@ theorem InitialState.roots_simulate [Runner.IR.Kern] [Senke.CloneOK]
     {src : String} {K : Nat} {options : Profil.Options} {image : Emitted src K options}
     (state : InitialState image) :
     ∀ j (hj : j < image.starts.length), image.RootSimulates state.oracle state.memory state.world j hj :=
-  (image.correct.2 state.oracle state.memory state.world
-    state.bytes state.loaded state.gates state.view).2
+  (image.source_correct.2 state.oracle state.memory state.bytes state.gates state.view).2
 
 /-- The loaded witness retains the constructor's complete main environment and one
     encoded environment per source-derived root occurrence, with the same list order. -/
@@ -248,11 +241,13 @@ theorem source_image_joint_zeuge :
     output.image.roots = output.starts.map (·.1) ∧
     output.image.rootArgs = output.starts.map (fun start => Senke.encodeEnv output.image.Y start.2) ∧
     output.startPlan.concurrent.map (fun start => (start.path, start.sourceArgs)) =
-      StartArgument.sourceIdentities (uMembers (pre108 output.compiled.source.prepared.elaborierbar)) :=
+      StartArgument.sourceIdentities (uMembers (pre108 output.compiled.source.prepared.elaborierbar)) ∧
+    irBild text 64 = .ok output.bytes ∧ CanonicalSourceProgram output.compiled :=
   ⟨accepted_image, source_scopes.1, source_scopes.2.1, source_scopes.2.2.1,
     source_scopes.2.2.2, table_count, aliases_final, ⟨initial⟩, rfl,
     initial.start_environments.1, initial.start_environments.2.1,
-    initial.start_environments.2.2, output.starts_source⟩
+    initial.start_environments.2.2, output.starts_source,
+    (by unfold irBild; rw [accepted_image]; rfl), compile_source_program text output.compiled⟩
 
 /-- Instantiation of the generic execution theorem at this concrete, inhabited entry state. -/
 theorem entry_ir_simulation_zeuge :

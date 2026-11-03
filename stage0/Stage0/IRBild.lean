@@ -138,8 +138,23 @@ def Emitted.RootSimulates [Runner.IR.Kern] {src : String} {K : Nat} {options : P
   | .hardware h => Senke.Stops entry m (Senke.hwCode h)
   | _ => False
 
-/-- Original-source canonical elaboration, exact invariant carriers/read bounds, and execution\n    of that identical program (including ordered normal-return restoration) by this image,
-    under the existing image theorem's gate/view and initial-memory contracts. -/
+/-- Loading the sole production payload establishes the canonical source world.
+    Layout, initialized storage, locks and stack bounds come from the accepted builder. -/
+theorem Emitted.loaded_initial_world [Runner.IR.Kern]
+    {src : String} {K : Nat} {options : Profil.Options} (output : Emitted src K options)
+    {m : Runner.Mem} (loaded : Senke.BytesAt m Runner.Prog.IMG output.bytes) :
+    Senke.WeltAt m output.image.Y (Senke.initialWorld output.compiled.unit output.initialValid) := by
+  have positions : ∀ g : (declOf output.compiled.unit).Fn,
+      (List.finRange output.compiled.unit.fns.length)[g.val]? = some g := by
+    intro g
+    simp only [List.finRange, List.getElem?_ofFn, g.isLt, ↓reduceDIte]
+    congr 1
+  exact (Senke.bild_initialized_loaded_u output.initialValid output.emission positions loaded).1
+
+/-- Original-source canonical elaboration and execution of that identical program
+    in every compatible world under the inherited image contracts. Ordered roots
+    retain their source environments; their individual simulations make no
+    simultaneous GX execution claim. -/
 def Emitted.Correct [Runner.IR.Kern] {src : String} {K : Nat} {options : Profil.Options} (output : Emitted src K options) : Prop :=
   CanonicalSourceProgram output.compiled ∧
   ∀ (O : Orakel (declOf output.compiled.unit)) (m : Runner.Mem)
@@ -168,6 +183,24 @@ theorem Emitted.correct [Runner.IR.Kern] [Senke.CloneOK] {src : String} {K : Nat
     exact Senke.bild_initialized_wurzel_ok_u output.initialValid output.emission hfs hm j hj σ
       (output.startPlan.starts_valid _ output.image.Y output.starts[j] (List.getElem_mem hj)) hWa hT hV
 
+/-- Canonical source startup is an instance of the all-compatible-world theorem.
+    The actual initialized payload establishes its world relation internally; no
+    independent initial world or source execution is supplied by the caller. -/
+theorem Emitted.source_correct [Runner.IR.Kern] [Senke.CloneOK]
+    {src : String} {K : Nat} {options : Profil.Options} (output : Emitted src K options) :
+    CanonicalSourceProgram output.compiled ∧
+    ∀ (O : Orakel (declOf output.compiled.unit)) (m : Runner.Mem),
+      Senke.BytesAt m Runner.Prog.IMG output.bytes →
+      Senke.TorOK output.image.Y O → Senke.SichtOK O →
+      output.Simulates O m (Senke.initialWorld output.compiled.unit output.initialValid) ∧
+        ∀ j (hj : j < output.starts.length),
+          output.RootSimulates O m (Senke.initialWorld output.compiled.unit output.initialValid) j hj := by
+  have generic := output.correct
+  refine ⟨generic.1, ?_⟩
+  intro O m loaded gates view
+  exact generic.2 O m (Senke.initialWorld output.compiled.unit output.initialValid)
+    loaded (output.loaded_initial_world loaded) gates view
+
 /-- The emitted root prefix preserves every original concurrent member, including duplicate names. -/
 theorem Emitted.starts_source {src : String} {K : Nat} {options : Profil.Options}
     (output : Emitted src K options) :
@@ -175,8 +208,6 @@ theorem Emitted.starts_source {src : String} {K : Nat} {options : Profil.Options
       StartArgument.sourceIdentities (uMembers (pre108 output.compiled.source.prepared.elaborierbar)) :=
   output.startPlan.source_identity
 
-/-- The actual successful CLI byte result realizes its original source's canonical program.
-    This includes C05 through `compile_source_program` and the generic return epilogue theorem.\n    Reason exits keep the original program and its separate `InvGutGrundA` user duty.\n    This is conditional on successful compilation and inherited runner contracts, not total coverage. -/
 /-- The image is built for exactly the profile the program was checked against:
     the checked binding travels from `Prepared` into the canonical program. -/
 theorem Emitted.profile_binding {src : String} {K : Nat} {options : Profil.Options}
@@ -231,10 +262,30 @@ theorem Emitted.placed {src : String} {K : Nat} {options : Profil.Options}
         repeat' split
         all_goals intro hb; cases hb
 
+/-- The actual CLI payload retains the original canonical source, initialized main/root
+    execution certificate and alignment guarantees under the inherited runner contracts. -/
 theorem irBild_correct [Runner.IR.Kern] [Senke.CloneOK] (src : String) (K : Nat) (bytes : List Runner.B) {options : Profil.Options}
     (h : irBild src K options = .ok bytes) :
     ∃ output : Emitted src K options, emit src K options = .ok output ∧ output.bytes = bytes ∧ output.Correct ∧ output.Placed := by
   obtain ⟨output, he, hb⟩ := irBild_emitted src K bytes h
   exact ⟨output, he, hb, output.correct, output.placed⟩
+
+/-- The exact bytes returned by the CLI also realize canonical source startup.
+    The general compatible-world certificate remains available for the same image. -/
+theorem irBild_source_correct [Runner.IR.Kern] [Senke.CloneOK]
+    (src : String) (K : Nat) (bytes : List Runner.B) {options : Profil.Options}
+    (h : irBild src K options = .ok bytes) :
+    ∃ output : Emitted src K options,
+      emit src K options = .ok output ∧ output.bytes = bytes ∧ output.Correct ∧ output.Placed ∧
+      ∀ (O : Orakel (declOf output.compiled.unit)) (m : Runner.Mem),
+        Senke.BytesAt m Runner.Prog.IMG bytes →
+        Senke.TorOK output.image.Y O → Senke.SichtOK O →
+        output.Simulates O m (Senke.initialWorld output.compiled.unit output.initialValid) ∧
+          ∀ j (hj : j < output.starts.length),
+            output.RootSimulates O m (Senke.initialWorld output.compiled.unit output.initialValid) j hj := by
+  obtain ⟨output, emitted, payload, generic, placed⟩ := irBild_correct src K bytes h
+  refine ⟨output, emitted, payload, generic, placed, ?_⟩
+  rw [← payload]
+  exact output.source_correct.2
 
 end Gabbro.Stage0

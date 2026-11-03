@@ -85,10 +85,14 @@ theorem source_image_joint_zeuge : emit text 64 = .ok output ∧ exactShape = tr
     output.image.roots = output.starts.map (·.1) ∧
     output.image.rootArgs = output.starts.map (fun start => Senke.encodeEnv output.image.Y start.2) ∧
     output.startPlan.concurrent.map (fun start => (start.path, start.sourceArgs)) =
-      StartArgument.sourceIdentities (uMembers (pre108 output.compiled.source.prepared.elaborierbar)) :=
+      StartArgument.sourceIdentities (uMembers (pre108 output.compiled.source.prepared.elaborierbar)) ∧
+    irBild text 64 = .ok output.bytes ∧ CanonicalSourceProgram output.compiled ∧
+    (∃ name, Frontend.ArrayCollected output.compiled.unit output.compiled.source.scopes name) :=
   ⟨accepted_image, array_shape, array_constant_typed_zeuge, ⟨initial⟩, rfl,
     initial.start_environments.1, initial.start_environments.2.1,
-    initial.start_environments.2.2, output.starts_source⟩
+    initial.start_environments.2.2, output.starts_source,
+    (by unfold irBild; rw [accepted_image]; rfl), compile_source_program text output.compiled,
+    arrayMeaning_collected_zeuge⟩
 
 theorem entry_ir_simulation_zeuge :
     output.Simulates initial.oracle initial.memory initial.world := initial.simulates

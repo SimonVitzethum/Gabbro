@@ -168,9 +168,10 @@ theorem Compiled.guest_descriptors {text : String} {options : Profil.Options}
   OldSource.accepts_guests result.unit result.program result.accepted
 
 /-- Original-source scalar and function semantics, a unique acyclic alias namespace with a
-    certified declaration permutation, and the identical
-    UProg/declOf/lowerAllg endpoint of the actual compiler. Supplied scopes are not arbitrary premises:
-    they are derived from the original declarations by Source.scopes and the canonical evaluators. -/
+    certified declaration permutation, and the identical UProg/declOf/lowerAllg endpoint
+    and selected entry of the actual compiler. Every original constant retains its source
+    type, canonical value and typed literal in that unit's collector, even when unused.
+    Scopes are derived from the original declarations by the canonical evaluators. -/
 def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : Compiled text options) : Prop :=
     let declarations := pre108 result.source.prepared.elaborierbar
     let original := uMembers declarations
@@ -221,7 +222,15 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
       (declOf result.unit).traeger i = invTraeger result.unit i ∧
       ∀ c ∈ (result.program.invariante i).orte, c ∈ (declOf result.unit).traeger i) ∧
     Gabbro.Grammatik.Parser.ProfilBindung.bindungB result.source.prepared.bindung = true ∧
-    Gabbro.Stage0.Profil.abschnittFehler result.source.prepared.selected = none
+    Gabbro.Stage0.Profil.abschnittFehler result.source.prepared.selected = none ∧
+    fnIdx result.unit.fns (Profil.entryName options) = .ok result.main ∧
+    (∀ name ty payload, SItemTief.constT name ty payload ∈ original →
+      ∃ τ raw, ∃ term : Expr (declOf result.unit) [] [] τ,
+        uTypIn scope.types [] (uRecordConstantTypes result.unit.records) [] [] ty = .ok τ ∧
+        uKonstZeile scope.types scope.functions scope.values τ payload
+          (uRecordConstant result.unit.records scope.types scope.functions scope.values) = some raw ∧
+        (name, USide.typed τ raw) ∈ Frontend.constantValues result.unit scope ∧
+        lowLit (u := result.unit) (Γ := []) (Λ := []) τ raw = .ok term)
 
 theorem compile_source_program (text : String) {options : Profil.Options} (result : Compiled text options) :
     CanonicalSourceProgram result := by
@@ -232,7 +241,9 @@ theorem compile_source_program (text : String) {options : Profil.Options} (resul
     ⟨result.expanded, result.requirements, result.gateExpansion, result.gateChecked⟩,
     result.metadata, result.measures.property,
     result.measures.val.source, result.measureLengths, result.invariants,
-    result.source.prepared.bindungOk, result.source.prepared.abschnittFrei⟩
+    result.source.prepared.bindungOk, result.source.prepared.abschnittFrei, result.entry,
+    fun name ty payload original => Frontend.constantMeaning_typed_retained
+      result.unit result.source.scopes name ty payload original (result.arrayConstants _ original)⟩
 
 /-- The actual compiler certificate retains every original constant in the same canonical
     collector used for function expressions, with its complete source type and value. -/
