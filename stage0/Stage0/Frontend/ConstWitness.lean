@@ -1,6 +1,7 @@
 module
 public import Stage0.Frontend.ExportCorrectness
 public import Grammatik.Parser.Elab.Konst.Scalar.Export
+public import Grammatik.Parser.Elab.Generic.Body
 
 @[expose] public section
 namespace Gabbro.Stage0.Frontend.ConstWitness
