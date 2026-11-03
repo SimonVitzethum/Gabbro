@@ -181,7 +181,7 @@ inductive SItemTief
   | accT : String → STyp → String → Option SExpr → Option String → SItemTief
   | walkT : SWeg → SItemTief
   | entryT : SEingang → SItemTief
-  | trustT : String → String → String → List SRegBind → String → String → SItemTief
+  | trustT : String → String → String → List SRegBind → String → String → Option String → SItemTief
   | bootT : String → String → List SBootSchritt → List String → SItemTief
   | callT : SSyscall → SItemTief
   /-- `syscall V;`: a system call as a named variable (SYNTAX.md 12.3). -/
@@ -277,9 +277,9 @@ def beqSItemTief : SItemTief → SItemTief → Bool
     strEq a b && beqSTyp t u && strEq m n && beqOptExpr p r && beqOptWort q s
   | .walkT a, .walkT b => beqSWeg a b
   | .entryT a, .entryT b => beqSEingang a b
-  | .trustT a b c r s t, .trustT d e f u v w =>
+  | .trustT a b c r s t x, .trustT d e f u v w y =>
     strEq a d && strEq b e && strEq c f && beqSRegBindList r u &&
-    strEq s v && strEq t w
+    strEq s v && strEq t w && beqOptWort x y
   | .bootT a c s d, .bootT b e t f =>
     strEq a b && strEq c e && beqSBootSchrittList s t && beqWorte d f
   | .callT a, .callT b => beqSSyscall a b
