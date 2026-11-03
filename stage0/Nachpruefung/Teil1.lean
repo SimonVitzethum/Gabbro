@@ -485,3 +485,8 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.softAddRoutineL_word_zeuge
 #print axioms Gabbro.Stage0.Senke.softRound_replay_all_zeuge
 #print axioms Gabbro.Stage0.Senke.routineLeftCount_zeuge
+#print axioms Gabbro.Stage0.Senke.packWord_canonical
+#print axioms Gabbro.Stage0.Senke.routineRoundPackWord_model
+#print axioms Gabbro.Stage0.Senke.routineRoundPackWord_model_zeuge
+#print axioms Gabbro.Stage0.Senke.routineRoundPackWord_exact
+#print axioms Gabbro.Stage0.Senke.routineRoundPackWord_exact_zeuge
