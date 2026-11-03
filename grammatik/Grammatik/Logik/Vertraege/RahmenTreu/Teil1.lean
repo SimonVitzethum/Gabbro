@@ -26,35 +26,40 @@ theorem traverseLauf_treu (schritt : World D → Env D (τ :: Γ) → Ausgang V 
   intro ks
   induction ks with
   | nil =>
-      intro σ ρ σ' h
-      simp only [traverseLauf] at h
-      split at h
-      · simp only [Ausgang.welt, Option.some.injEq] at h; subst h; exact hi σ ρ
-      · simp only [Ausgang.welt, reduceCtorEq] at h
+      intro σ ρ
+      rw [traverseLauf]
+      by_cases hc : (inv σ ρ).snd = true
+      · rw [if_pos hc]; intro σ' h
+        simp only [Ausgang.welt, Option.some.injEq] at h; subst h; exact hi σ ρ
+      · rw [if_neg hc]; intro σ' h; simp only [Ausgang.welt, reduceCtorEq] at h
   | cons k ks ih =>
-      intro σ ρ σ' h
-      simp only [traverseLauf] at h
-      split at h
-      · simp only [Ausgang.welt, reduceCtorEq] at h
-      · have hinv := hi σ ρ
-        have hstep := hs (inv σ ρ).1 (.cons k ρ)
-        split at h
-        · rename_i σ1 ρ1 hs1
-          have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
-          exact g1.trans (ih σ1 ρ1.tail σ' h)
-        · rename_i σ1 ρ1 hs1
-          have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
-          exact g1.trans (ih σ1 ρ1.tail σ' h)
-        · rename_i σ1 ρ1 hs1
-          have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
-          split at h <;> simp only [Ausgang.welt, Option.some.injEq, reduceCtorEq] at h
-          subst h; exact g1.trans (hi σ1 ρ1.tail)
-        · rename_i σ1 v hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · rename_i σ1 r hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · simp only [Ausgang.welt, reduceCtorEq] at h
-        · simp only [Ausgang.welt, reduceCtorEq] at h
+      intro σ ρ
+      rw [traverseLauf]
+      by_cases hc : (inv σ ρ).snd = false
+      · rw [if_pos hc]; intro σ' h; simp only [Ausgang.welt, reduceCtorEq] at h
+      rw [if_neg hc]
+      have hinv := hi σ ρ
+      have hstep := hs (inv σ ρ).1 (.cons k ρ)
+      generalize hs1 : schritt (inv σ ρ).1 (.cons k ρ) = o at hstep ⊢
+      cases o with
+      | ok σ1 ρ1 => exact TreuAusgang.vor (hinv.trans (hstep σ1 rfl)) (ih σ1 ρ1.tail)
+      | next _ σ1 ρ1 => exact TreuAusgang.vor (hinv.trans (hstep σ1 rfl)) (ih σ1 ρ1.tail)
+      | leave _ σ1 ρ1 =>
+        have g1 := hinv.trans (hstep σ1 rfl)
+        dsimp only
+        by_cases hc1 : (inv σ1 ρ1.tail).snd = true
+        · rw [if_pos hc1]; intro σ' h
+          simp only [Ausgang.welt, Option.some.injEq] at h; subst h
+          exact g1.trans (hi σ1 ρ1.tail)
+        · rw [if_neg hc1]; intro σ' h; simp only [Ausgang.welt, reduceCtorEq] at h
+      | zurueck σ1 v =>
+        intro σ' h; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
+        exact hinv.transRet (hstep _ rfl)
+      | why σ1 r =>
+        intro σ' h; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
+        exact hinv.transRet (hstep _ rfl)
+      | logik e => intro σ' h; simp only [Ausgang.welt, reduceCtorEq] at h
+      | hardware e => intro σ' h; simp only [Ausgang.welt, reduceCtorEq] at h
 
 /-- Frame of a consuming run: like `traverseLauf_treu`, by induction on
     the fuel. Selection, measure and invariant reads are premises; every
@@ -79,76 +84,90 @@ theorem verbrauchLauf_treu (t : D.Tab)
       intro σ ρ σ' h
       simp only [verbrauchLauf, Ausgang.welt, reduceCtorEq] at h
   | succ n ih =>
-      intro σ ρ σ' h
-      simp only [verbrauchLauf] at h ⊢
-      split at h ⊢
-      · simp only [Ausgang.welt, reduceCtorEq] at h
-      · have hinv := hi σ ρ
-        have hselg := hsel (inv σ ρ).1 ρ
-        split at h ⊢
-        · rename_i σr hsel_eq
-          simp only [Ausgang.welt, Option.some.injEq] at h
-          subst h
-          have hselr : Treu W G (inv σ ρ).1 σr := by
-            rw [hsel_eq] at hselg
-            exact hselg
-          exact hinv.trans hselr
-        · simp only [Ausgang.welt, reduceCtorEq] at h
-        · rename_i σr k hsel_eq
-          have hselr : Treu W G (inv σ ρ).1 σr := by
-            rw [hsel_eq] at hselg
-            exact hselg
-          have gsel : Treu W G σ σr := hinv.trans hselr
-          have hmassg := hmass σr ρ
-          have hstep := hs (massW σr ρ).1 (.cons k ρ)
-          split at h ⊢
-          · rename_i σ1 ρ1 hstep_eq
-            simp only [hstep_eq] at hstep
-            have g1 : Treu W G σ σ1 :=
-              (gsel.trans hmassg).trans (hstep σ1 rfl)
-            have hmassg2 := hmass σ1 ρ1.tail
-            split at h ⊢
-            · have g2 : Treu W G σ (massW σ1 ρ1.tail).1 :=
-                g1.trans hmassg2
-              exact (TreuAusgang.vor g2 (ih (massW σ1 ρ1.tail).1 ρ1.tail)) σ' h
-            · simp only [Ausgang.welt, reduceCtorEq] at h
-          · rename_i σ1 ρ1 hstep_eq
-            simp only [hstep_eq] at hstep
-            have g1 : Treu W G σ σ1 :=
-              (gsel.trans hmassg).trans (hstep σ1 rfl)
-            have hmassg2 := hmass σ1 ρ1.tail
-            split at h ⊢
-            · have g2 : Treu W G σ (massW σ1 ρ1.tail).1 :=
-                g1.trans hmassg2
-              exact g2.trans (ih (massW σ1 ρ1.tail).1 ρ1.tail σ' h)
-            · simp only [Ausgang.welt, reduceCtorEq] at h
-          · rename_i σ1 ρ1 hstep_eq
-            simp only [hstep_eq] at hstep
-            have g1 : Treu W G σ σ1 :=
-              (gsel.trans hmassg).trans (hstep σ1 rfl)
-            have hmassg2 := hmass σ1 ρ1.tail
-            split at h ⊢
-            · split at h ⊢
-              · simp only [Ausgang.welt, Option.some.injEq] at h
-                subst h
-                have h3 := hi (massW σ1 ρ1.tail).1 ρ1.tail
-                exact g1.trans (hmassg2.trans h3)
-              · simp only [Ausgang.welt, reduceCtorEq] at h
-            · simp only [Ausgang.welt, reduceCtorEq] at h
-          · rename_i σ1 v hstep_eq
-            simp only [hstep_eq] at hstep
-            simp only [Ausgang.welt, Option.some.injEq] at h ⊢
-            subst h
-            exact (gsel.trans hmassg).transRet
-              (hstep _ rfl)
-          · rename_i σ1 r hstep_eq
-            simp only [hstep_eq] at hstep
-            simp only [Ausgang.welt, Option.some.injEq] at h ⊢
-            subst h
-            exact (gsel.trans hmassg).transRet
-              (hstep _ rfl)
-          · simp only [Ausgang.welt, reduceCtorEq] at h
-          · simp only [Ausgang.welt, reduceCtorEq] at h
+      intro σ ρ
+      have hl : ∀ {σ0 : World D} (e : Logik D),
+          TreuAusgang (V := V) (l := l) (Γ := Γ) W G σ0 (.logik e) := by
+        intro σ0 e σ' h; simp only [Ausgang.welt, reduceCtorEq] at h
+      have hw : ∀ {σ0 : World D} (e : Hardware D),
+          TreuAusgang (V := V) (l := l) (Γ := Γ) W G σ0 (.hardware e) := by
+        intro σ0 e σ' h; simp only [Ausgang.welt, reduceCtorEq] at h
+      have hok : ∀ {σ0 σ1 : World D} (ρ0 : Env D Γ), Treu W G σ0 σ1 →
+          TreuAusgang (V := V) (l := l) W G σ0 (.ok σ1 ρ0) := by
+        intro σ0 σ1 ρ0 hg σ' h
+        simp only [Ausgang.welt, Option.some.injEq] at h; subst h; exact hg
+      rw [verbrauchLauf]
+      by_cases hc : (inv σ ρ).snd = false
+      · rw [if_pos hc]; exact hl _
+      rw [if_neg hc]
+      have hinv := hi σ ρ
+      have hselg := hsel (inv σ ρ).1 ρ
+      generalize hsel_eq : sel (inv σ ρ).1 ρ = selected at hselg ⊢
+      rcases selected with ⟨σr, _ | k, b⟩
+      · have gsel : Treu W G σ σr := hinv.trans hselg
+        cases b
+        · exact hok ρ gsel
+        · exact hl _
+      have gsel : Treu W G σ σr := hinv.trans hselg
+      dsimp only
+      have hmassg := hmass σr ρ
+      generalize hm1 : massW σr ρ = p1 at hmassg ⊢
+      rcases p1 with ⟨σm, m⟩
+      dsimp only
+      have gm : Treu W G σ σm := gsel.trans hmassg
+      have hstep := hs σm (.cons k ρ)
+      generalize hs1 : schritt σm (.cons k ρ) = o at hstep ⊢
+      cases o with
+      | ok σ1 ρ1 =>
+        dsimp only
+        have g1 : Treu W G σ σ1 := gm.trans (hstep σ1 rfl)
+        have hmassg2 := hmass σ1 ρ1.tail
+        generalize hm2 : massW σ1 ρ1.tail = p2 at hmassg2 ⊢
+        rcases p2 with ⟨σm', m'⟩
+        dsimp only
+        by_cases hf : 0 ≤ m' ∧ m' ≤ bound ∧ m' < m
+        · rw [if_pos hf]
+          have g2 : Treu W G σ σm' := g1.trans hmassg2
+          exact TreuAusgang.vor g2 (ih σm' ρ1.tail)
+        · rw [if_neg hf]; exact hl _
+      | next _ σ1 ρ1 =>
+        dsimp only
+        have g1 : Treu W G σ σ1 := gm.trans (hstep σ1 rfl)
+        have hmassg2 := hmass σ1 ρ1.tail
+        generalize hm2 : massW σ1 ρ1.tail = p2 at hmassg2 ⊢
+        rcases p2 with ⟨σm', m'⟩
+        dsimp only
+        by_cases hf : 0 ≤ m' ∧ m' ≤ bound ∧ m' < m
+        · rw [if_pos hf]
+          have g2 : Treu W G σ σm' := g1.trans hmassg2
+          exact TreuAusgang.vor g2 (ih σm' ρ1.tail)
+        · rw [if_neg hf]; exact hl _
+      | leave _ σ1 ρ1 =>
+        dsimp only
+        have g1 : Treu W G σ σ1 := gm.trans (hstep σ1 rfl)
+        have hmassg2 := hmass σ1 ρ1.tail
+        generalize hm2 : massW σ1 ρ1.tail = p2 at hmassg2 ⊢
+        rcases p2 with ⟨σm', m'⟩
+        dsimp only
+        by_cases hf : 0 ≤ m' ∧ m' ≤ bound ∧ m' < m
+        · rw [if_pos hf]
+          have g2 : Treu W G σ σm' := g1.trans hmassg2
+          by_cases hc1 : (inv σm' ρ1.tail).snd = true
+          · rw [if_pos hc1]
+            exact hok _ (g2.trans (hi σm' ρ1.tail))
+          · rw [if_neg hc1]; exact hl _
+        · rw [if_neg hf]; exact hl _
+      | zurueck σ1 v =>
+        intro σ' h
+        simp only [Ausgang.welt, Option.some.injEq] at h; subst h
+        exact gm.transRet (hstep _ rfl)
+      | why σ1 r =>
+        intro σ' h
+        simp only [Ausgang.welt, Option.some.injEq] at h; subst h
+        exact gm.transRet (hstep _ rfl)
+      | logik e => exact hl e
+      | hardware e => exact hw e
+
+
 
 theorem retryLauf_treu (schritt : World D → Env D Γ → Ausgang V true Γ)
     (bis : World D → Env D Γ → World D × Bool) (ueberlauf : World D → Env D Γ → Ausgang V l Γ)
@@ -161,32 +180,46 @@ theorem retryLauf_treu (schritt : World D → Env D Γ → Ausgang V true Γ)
   induction n with
   | zero =>
       intro σ ρ σ' h
-      simp only [retryLauf] at h
-      split at h
+      simp only [retryLauf] at h ⊢
+      by_cases hc : (bis σ ρ).snd = true <;>
+        simp only [hc, ite_true, ite_false] at h ⊢
       · simp only [Ausgang.welt, Option.some.injEq] at h; subst h; exact hb σ ρ
-      · exact (hb σ ρ).trans (hu _ ρ σ' h)
+      · exact (TreuAusgang.vor (hb σ ρ) (hu _ ρ)) σ' h
   | succ n ih =>
       intro σ ρ σ' h
-      simp only [retryLauf] at h
-      split at h
+      simp only [retryLauf] at h ⊢
+      by_cases hc : (bis σ ρ).snd = true <;>
+        simp only [hc, ite_true, ite_false] at h ⊢
       · simp only [Ausgang.welt, Option.some.injEq] at h; subst h; exact hb σ ρ
       · have hinv := hb σ ρ
         have hstep := hs (bis σ ρ).1 ρ
-        split at h
-        · rename_i σ1 ρ1 hs1
-          have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
-          exact g1.trans (ih σ1 ρ1 σ' h)
-        · rename_i σ1 ρ1 hs1
-          have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
-          exact g1.trans (ih σ1 ρ1 σ' h)
-        · rename_i σ1 ρ1 hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · rename_i σ1 v hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · rename_i σ1 r hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · simp only [Ausgang.welt, reduceCtorEq] at h
-        · simp only [Ausgang.welt, reduceCtorEq] at h
+        cases hs1 : schritt (bis σ ρ).1 ρ with
+        | ok σ1 ρ1 =>
+          simp only [hs1] at hstep h ⊢
+          have g1 := hinv.trans (hstep σ1 rfl)
+          exact (TreuAusgang.vor g1 (ih σ1 ρ1)) σ' h
+        | next _ σ1 ρ1 =>
+          simp only [hs1] at hstep h ⊢
+          have g1 := hinv.trans (hstep σ1 rfl)
+          exact (TreuAusgang.vor g1 (ih σ1 ρ1)) σ' h
+        | leave _ σ1 ρ1 =>
+          simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, Option.some.injEq] at h
+          subst h
+          simp only [hs1] at hstep ⊢
+          exact hinv.trans (hstep _ rfl)
+        | zurueck σ1 v =>
+          simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, Option.some.injEq] at h
+          subst h
+          simp only [hs1] at hstep ⊢
+          exact hinv.transRet (hstep _ rfl)
+        | why σ1 r =>
+          simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, Option.some.injEq] at h
+          subst h
+          simp only [hs1] at hstep ⊢
+          exact hinv.transRet (hstep _ rfl)
+        | logik e => simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, reduceCtorEq] at h
+        | hardware e => simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, reduceCtorEq] at h
+
 
 theorem foreverLauf_treu (a : D.Annahme) (schritt : World D → Env D Γ → Ausgang V true Γ)
     (inv : World D → Env D Γ → World D × Bool)
@@ -199,26 +232,39 @@ theorem foreverLauf_treu (a : D.Annahme) (schritt : World D → Env D Γ → Aus
   | zero => intro σ ρ σ' h; simp only [Ausgang.welt, foreverLauf, reduceCtorEq] at h
   | succ n ih =>
       intro σ ρ σ' h
-      simp only [foreverLauf] at h
-      split at h
+      simp only [foreverLauf] at h ⊢
+      by_cases hc : (inv σ ρ).snd = false <;>
+        simp only [hc, ite_true, ite_false] at h ⊢
       · simp only [Ausgang.welt, reduceCtorEq] at h
       · have hinv := hi σ ρ
         have hstep := hs (inv σ ρ).1 ρ
-        split at h
-        · rename_i σ1 ρ1 hs1
-          have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
-          exact g1.trans (ih σ1 ρ1 σ' h)
-        · rename_i σ1 ρ1 hs1
-          have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
-          exact g1.trans (ih σ1 ρ1 σ' h)
-        · rename_i σ1 ρ1 hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · rename_i σ1 v hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · rename_i σ1 r hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · simp only [Ausgang.welt, reduceCtorEq] at h
-        · simp only [Ausgang.welt, reduceCtorEq] at h
+        cases hs1 : schritt (inv σ ρ).1 ρ with
+        | ok σ1 ρ1 =>
+          simp only [hs1] at hstep h ⊢
+          have g1 := hinv.trans (hstep σ1 rfl)
+          exact (TreuAusgang.vor g1 (ih σ1 ρ1)) σ' h
+        | next _ σ1 ρ1 =>
+          simp only [hs1] at hstep h ⊢
+          have g1 := hinv.trans (hstep σ1 rfl)
+          exact (TreuAusgang.vor g1 (ih σ1 ρ1)) σ' h
+        | leave _ σ1 ρ1 =>
+          simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, Option.some.injEq] at h
+          subst h
+          simp only [hs1] at hstep ⊢
+          exact hinv.trans (hstep _ rfl)
+        | zurueck σ1 v =>
+          simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, Option.some.injEq] at h
+          subst h
+          simp only [hs1] at hstep ⊢
+          exact hinv.transRet (hstep _ rfl)
+        | why σ1 r =>
+          simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, Option.some.injEq] at h
+          subst h
+          simp only [hs1] at hstep ⊢
+          exact hinv.transRet (hstep _ rfl)
+        | logik e => simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, reduceCtorEq] at h
+        | hardware e => simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, reduceCtorEq] at h
+
 
 end Schleifen
 
