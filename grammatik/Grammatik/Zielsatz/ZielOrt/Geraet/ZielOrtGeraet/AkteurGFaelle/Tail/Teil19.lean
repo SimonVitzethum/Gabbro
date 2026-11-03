@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetBeweis
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraet.AkteurGFaelle.Tail.Teil18
+import Mathlib.Tactic.Tauto
 
 @[expose] public section
 

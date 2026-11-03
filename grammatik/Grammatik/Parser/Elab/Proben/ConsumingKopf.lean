@@ -16,6 +16,6 @@ theorem consuming_bound_zeuge :
       "decreases 1 touches consumes T.slots" none (.block [] none)) = false ∧
     bodyMetadata 3 (.each "k" none "slots" (.variable "T") "consuming"
       "touches consumes T.slots" none (.block [] none)) = true := by
-  exact ⟨rfl, rfl⟩
+  decide +kernel
 
 end Gabbro.Grammatik.Parser.ExportMetadata

@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreMaschine
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre.AkteurSFaelle.Teil18
+import Mathlib.Tactic.Tauto
 
 @[expose] public section
 

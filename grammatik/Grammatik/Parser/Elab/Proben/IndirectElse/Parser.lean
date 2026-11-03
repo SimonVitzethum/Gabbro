@@ -14,7 +14,9 @@ def unnamed : SAnw := .callIndElse (.fnref "read") [.lit 1] ""
   (.block [] (some (.ret none)))
 
 def statementText (text : String) : Except String SAnw := do
-  parseTopStmt (← lex text)
+  match lex text with
+  | .ok tokens => parseTopStmt tokens
+  | .error _ => .error "statement does not lex"
 
 theorem named_source_zeuge :
     beqTopStmt (statementText "(p)(1) else (reason) { return; };") (.ok named) = true := by decide +kernel

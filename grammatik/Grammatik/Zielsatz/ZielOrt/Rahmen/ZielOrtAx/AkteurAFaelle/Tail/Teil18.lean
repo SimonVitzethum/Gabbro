@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAxBeweis
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx.AkteurAFaelle.Tail.Teil17
+import Mathlib.Tactic.Tauto
 
 @[expose] public section
 

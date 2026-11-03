@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollBeweis
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll.AkteurVFaelle.Tail.Teil17
+import Mathlib.Tactic.Tauto
 
 @[expose] public section
 
@@ -239,7 +240,7 @@ theorem akteurV_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D
                         (⟨l,
                             (⟨Γ,
                                 (⟨nachSig D (D.sigNr n) Λ,
-                                  (ρ, GRest.wartetSonst (D.sigNr n).gruende err .nil
+                                  (ρ, GRest.wartetSonst (τ := τ) (D.sigNr n).gruende err .nil
                                     (GRest.dann rest k))⟩ :
                                   (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
                               (Γ : Ctx) ×
@@ -273,7 +274,7 @@ theorem akteurV_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D
                         (⟨l,
                             (⟨Γ,
                                 (⟨nachSig D (D.sigNr n) Λ,
-                                  (ρ, GRest.wartetSonst (D.sigNr n).gruende err .nil
+                                  (ρ, GRest.wartetSonst (τ := τ) (D.sigNr n).gruende err .nil
                                     (GRest.dann rest k))⟩ :
                                   (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
                               (Γ : Ctx) ×
@@ -308,7 +309,7 @@ theorem akteurV_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D
                         (⟨l,
                             (⟨Γ,
                                 (⟨nachSig D (D.sigNr n) Λ,
-                                  (ρ, GRest.wartetSonst (D.sigNr n).gruende err .nil
+                                  (ρ, GRest.wartetSonst (τ := τ) (D.sigNr n).gruende err .nil
                                     (GRest.dann rest k))⟩ :
                                   (Λ : List (Res D)) ×
                                     Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
@@ -357,7 +358,7 @@ theorem akteurV_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D
     (fun _ σ hgσ => by
       show umsig hg _ = umsig hg _
       rw [evalArgs_gleichAuf args (fun _ h => hargs h) (hgσ.lese Λ Λ _ _) ρ])
-    ρ (.wartetSonst (D.sigNr n).gruende err .nil (.dann rest k))
+    ρ (.wartetSonst (τ := τ) (D.sigNr n).gruende err .nil (.dann rest k))
     (fun hok => by
       obtain ⟨hks', hss', hk'⟩ := hok
       simp only [Block.vOk, Bool.and_eq_true] at hks'

@@ -12,7 +12,9 @@ def named : SAnw := .callElse "rd" [.lit 1] "reason" (.block [] (some (.ret none
 def unnamed : SAnw := .callElse "rd" [.lit 1] "" (.block [] (some (.ret none)))
 
 def statementText (text : String) : Except String SAnw := do
-  parseTopStmt (← lex text)
+  match lex text with
+  | .ok tokens => parseTopStmt tokens
+  | .error _ => .error "statement does not lex"
 
 theorem named_source_zeuge :
     beqTopStmt (statementText "rd(1) else (reason) { return; };") (.ok named) = true := by decide +kernel

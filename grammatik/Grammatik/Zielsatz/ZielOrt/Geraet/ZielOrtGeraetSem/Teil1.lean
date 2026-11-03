@@ -91,6 +91,7 @@ def Stmt.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : 
   | .forever _ _ body => body.gOk K Rg
   | .callInd (n := n) .. => K n
   | .callIndElse (n := n) _ _ _ _ _ err => K n && err.gOk K Rg
+  | .axiomCallElse (err := err) .. => err.gOk K Rg
   | _ => true
 
 /-- The block is in the widened fragment: a register read of `r` where
@@ -165,6 +166,14 @@ theorem Endblock.gOk_alsBlock {V : Vertrag D} {l : Bool} (K : Nat → Bool) (Rg 
   | _, _, .retWhy _ _ => rfl
   | _, _, .leave _ => rfl
   | _, _, .next _ => rfl
+  | _, _, .retScoped _ _ => rfl
+  | _, _, .retWhyScoped _ _ => rfl
+  | _, _, .narrowRequired _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
+  | _, _, .bindAxiomOpt (rest := rest) .. => by
+      simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
+  | _, _, .bindAxiomOptElse (rest := rest) .. => by
+      simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
   | _, _, .cons s rest => by
       simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
   | _, _, .bind _ rest => by
@@ -211,6 +220,7 @@ def Stmt.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retry _ _ body ueber => body.regs ++ ueber.regs
   | .forever _ _ body => body.regs
   | .callIndElse _ _ _ _ _ err => err.regs
+  | .axiomCallElse (err := err) .. => err.regs
   | _ => []
 
 /-- The registers a block reads (`let x = R`, `let x = R else …`). -/
@@ -225,6 +235,8 @@ def Block.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallElse _ _ _ _ _ err rest => err.regs ++ rest.regs
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.regs ++ rest.regs
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.regs
+  | .bindAxiomOpt (rest := rest) .. => rest.regs
+  | .bindAxiomOptElse (err := err) (rest := rest) .. => err.regs ++ rest.regs
   | .regRead r _ rest => r :: rest.regs
   | .regReadElse r _ _ sonst rest => r :: (sonst.regs ++ rest.regs)
   | .awaits _ _ _ _ _ rest => rest.regs
@@ -250,6 +262,8 @@ def Endblock.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCall _ _ _ _ _ rest => rest.regs
   | .bindCallElse _ _ _ _ _ err rest => err.regs ++ rest.regs
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.regs
+  | .bindAxiomOpt (rest := rest) .. => rest.regs
+  | .bindAxiomOptElse (err := err) (rest := rest) .. => err.regs ++ rest.regs
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.regs ++ rest.regs
   | .regRead r _ rest => r :: rest.regs
   | .regReadElse r _ _ sonst rest => r :: (sonst.regs ++ rest.regs)
