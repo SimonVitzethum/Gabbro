@@ -35,7 +35,7 @@ theorem bein_cmp_klammer (e : SExpr) (h : PredBein e) (R : List Token) (hR : Cmp
     exact bein_prim_klammer e h R f (by omega)
   have hC := antwort_cmp (bE e + 10) (.zeichen "(" :: (druckToks e ++ [.zeichen ")"]))
     R e hR hU G hG
-  simpa only [List.cons_append, List.append_assoc, List.singleton_append] using hC
+  simpa only [List.cons_append, List.append_assoc, List.nil_append] using hC
 
 theorem bein_nicht (x : SExpr) (hx : PredBein x) : PredBein (.un "!" x) := by
   by_cases hg : gut (.un "!" x) = true
