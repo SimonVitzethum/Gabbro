@@ -68,7 +68,7 @@ theorem areaElse_ok {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D)}
       axiomAntwortSonst O a σ (evalArgs σ args σ ρ) =
         ((O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1, result) := by
     intro result decoded
-    simp only [foreignDecode, if_neg (show D.agruende a ≠ 0 by omega)] at decoded
+    rw [foreignDecode_positive reasons] at decoded
     rw [axiomAntwortSonst_eq, decoded]
   rcases reply with ⟨value, decoded, zero, payload⟩ | ⟨reason, errno, decoded, found⟩ |
       ⟨decoded, nonzero, missing⟩
