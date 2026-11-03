@@ -51,6 +51,12 @@ def guestSource (items : List SItemTief) : SItemTief → Except String (UGuest �
       | some name => pure name
       | none => throw "entrust: missing isolation service binding"
     let sig ← guestService items service
+    if strEq sig.art "divergent" then throw "entrust: returning service has a never result"
+    match sig.res with
+    | some (.atom "never") => throw "entrust: returning service has a never result"
+    | some (.atom "bool") | some (.index ..) =>
+      throw "entrust: isolation service result has no fallible C08 form"
+    | _ => pure ()
     let reason ← match sig.fehler with
       | some reason => pure reason
       | none => throw "entrust: isolation service needs a failure channel"
