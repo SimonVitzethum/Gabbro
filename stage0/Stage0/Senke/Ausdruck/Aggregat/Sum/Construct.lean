@@ -2,6 +2,7 @@
 module
 public import Stage0.Senke.Ausdruck.Aggregat.Sum.Code
 public import Stage0.Senke.Ausdruck.Aggregat.Materialize
+public import Stage0.Senke.Welt.Spans.Cell
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
