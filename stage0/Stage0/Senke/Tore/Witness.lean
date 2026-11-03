@@ -44,7 +44,7 @@ theorem torOK_zeuge (L : Lay D) (O : Orakel D) (hO : ∀ a σ ρ, O.wirkt a σ �
 
   · intro a n he hb σ ρ raw relation nonnegative
     have zero : raw = 0 := by
-      rcases relation with direct | fallible
+      rcases relation with ⟨_, direct⟩ | ⟨_, fallible⟩
       · simpa only [hO] using direct
       · simpa only [hO, Int.zero_ediv] using fallible
     subst raw
