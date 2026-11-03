@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil3
+public import Grammatik.Parser.Elab.Konst.Scalar.Export
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.Export.ExportMetadata
 import all Init.Data.Repr
@@ -103,17 +103,9 @@ def ersetzeSExpr (fns : List UKonstFn) : SExpr → Except String SExpr
       | some k =>
         if !geschlossenSExprListB args' then
           .error ("const open argument at `" ++ g ++ "`: certified substitution needs closed arguments")
-        else
-          match k.erg, k.rumpf with
-          | .int lo hi, .block [] (some (.ret (some _))) =>
-            match uKonstWert lo hi fns [] 64 (.call g args') with
-            | some v => .ok (literalVonInt v)
-            | none => .error ("const uncertified call at `" ++ g ++ "`: no certified value in range")
-          | .bool, .block [] (some (.ret (some _))) =>
-            match uKonstWert 0 1 fns [] 64 (.call g args') with
-            | some v => .ok (literalVonBool (v != 0))
-            | none => .error ("const uncertified call at `" ++ g ++ "`: no certified value in range")
-          | _, _ => .error ("const block body at `" ++ g ++ "`: certified evaluation unavailable")
+        else do
+          let checked ← Scalar.checkCall k fns [] args'
+          pure (literalVonInt checked.value)
   | .fnref f => .ok (.fnref f)
   | .built f args =>
     match ersetzeSExprList fns args with
