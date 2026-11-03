@@ -24,14 +24,16 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   - **Stage-0 refusals with their missing step:**
     - C08 `axiomCallElse`: no source syntax; statement calls must end in `;`, and `else` exists only for bindings.
     - C11 `retScoped`/`retWhyScoped`: refused; scope unwinding is not lowered to Stage-0 IR.
-    - C11 `by consuming` (2026-11-03): `lowS` now explicitly refuses the obsolete fixed-sweep
-      alias after the model changed to `verbrauchLauf`. A replacement instruction candidate in
-      `Schleifen/Consuming/` lowers every operand, scans candidates/predecessors in the current state,
-      preserves fuel/previous measure and checks decrease on normal/next/leave paths. Generic fuel
-      composition, emission facts and source-semantic witnesses are written; the worker ran no Lean checks.
-      Open: concrete header/scan/post-body simulations, reservation in `counterDepthS`, admission through
-      `lowS`/`consumeTraverse_case`, and connected accepted-image/assembly-runner witnesses. Candidate emission
-      and source witnesses do not complete this language case; lead elaboration is still required.
+    - C11 `by consuming` (2026-11-03): `lowS` still refuses the obsolete fixed-sweep alias.
+      The current-state candidate reserves its fuel/saved-measure pair through `counterDepthS`
+      and uses source-derived frame placement in its fixture. Written, not elaborated by the worker:
+      assembler-derived instruction extraction, concrete initialization, both scan bound tests,
+      membership-binder save/restore, the complete post-body range/decrease check, protected control
+      retention and both suffix-scan inductions. These modules are imported by `Consume.lean`.
+      Open: instantiate the concrete per-iteration scan paths and compose the complete round/body
+      dispatch in `consumeTraverse_case`, then admit the emitter through `lowS` and replace the
+      source/refusal witnesses by connected lowering/execution witnesses. The scan inductions still
+      have explicit edge premises; candidate production and source witnesses do not complete the case.
     - C17 `const` functions: no certified replacement of call sites by the compile-time value before export.
     - C10 RW locks: reader-wait liveness remains open.
     - C09 owner flows: escrow simulation in progress.
