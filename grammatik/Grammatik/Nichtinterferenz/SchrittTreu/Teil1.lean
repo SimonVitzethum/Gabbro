@@ -2,7 +2,7 @@
   File:      Grammatik/Nichtinterferenz/SchrittTreu.lean
   Subject:   EVERY RULE OF MACHINE G COMPUTES `kSchrittK` (`schrittK_von`).
 
-  One case per rule (74): the head residue named by the rule's `hhead` is
+  One case per rule: the head residue named by the rule's `hhead` is
   put into the ghost-free state (`kSchrittK_kern`), the side conditions are
   dropped, the value premises (`hw`, `hv`, `hstep`, …) decide the branch of
   the function, and both sides are the same term.
@@ -64,21 +64,21 @@ theorem schrittK_von_g3 (P : Programm D) (O : Orakel D) (passes : Nat)
       hrho neu hneu =>
       kstart
       subst hs0 hrho
-      simp only [kr, kDann]
+      simp only [kr, kDann, kDannCons, GEntfaltbar, kEntf, if_true]
       simp only [RufMaschineG.weltVon] at hv
       rw [hv]
       rfl
   | dannAxiomCallElseOk l Γ Λ Λ' e a args he hp hd hgd hr err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
       kstart
       subst hs₁
-      simp only [kr, kDann, kDannCons, GEntfaltbar, Stmt.istBlatt]
+      simp only [kr, kDann, kDannCons, GEntfaltbar, kEntf, if_true]
       simp only [RufMaschineG.weltVon] at hax
       rw [hax]
       rfl
   | dannAxiomCallElseGrund l Γ Λ Λ' e a args he hp hd hgd hr err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
       kstart
       subst hs₁
-      simp only [kr, kDann, kDannCons, GEntfaltbar, Stmt.istBlatt]
+      simp only [kr, kDann, kDannCons, GEntfaltbar, kEntf, if_true]
       simp only [RufMaschineG.weltVon] at hax
       rw [hax]
       rfl

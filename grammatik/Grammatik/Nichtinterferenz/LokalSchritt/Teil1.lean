@@ -173,11 +173,12 @@ theorem kRufDann_rel (hsp : SpeicherGleich T sp₁ sp₂) {l : Bool} {Γ : Ctx}
       exact KRel.push _ _ _ _ _ _ _ _ rfl hsp
   | _ => exact KRel.none_l _
 
-theorem kEntf_rel (hsp : SpeicherGleich T sp₁ sp₂) {l : Bool} {Γ : Ctx}
+include hAx in
+theorem kEntf_rel (hO : OrakelTreu T AxT O) (hsp : SpeicherGleich T sp₁ sp₂) {l : Bool} {Γ : Ctx}
     {Λ Λ' Λ'' : List (Res D)} (ρ : Env D Γ) (s : Stmt D (vertragVon D f) l Γ Λ Λ')
     (rest : Block D (vertragVon D f) l Γ Λ' Λ'') (k : GRest D (vertragVon D f) l Γ Λ'')
     (hs : nS S Ax s = true) :
-    KRel T (kEntf passes st f rho spur sp₁ ρ s rest k) (kEntf passes st f rho spur sp₂ ρ s rest k) := by
+    KRel T (kEntf P O passes st f rho spur sp₁ ρ s rest k) (kEntf P O passes st f rho spur sp₂ ρ s rest k) := by
   have hW := WRel.welt hsp spur
   cases s with
   | ite c t e =>
@@ -212,7 +213,33 @@ theorem kEntf_rel (hsp : SpeicherGleich T sp₁ sp₂) {l : Bool} {Γ : Ctx}
   | traverse t inv body => exact KRel.lokal _ _ _ _ _ rfl hsp
   | retry n bis body ueber => exact KRel.lokal _ _ _ _ _ rfl hsp
   | forever a inv body => exact KRel.lokal _ _ _ _ _ rfl hsp
-  | callIndElse p args he hp hr err => exact KRel.lokal _ _ _ _ _ rfl hsp
+  | callIndElse p args he hp hr err =>
+      simp only [nS, Bool.and_eq_true] at hs
+      simp only [kEntf]
+      have h1 := hW.lese Λ (p.orte ++ args.orte)
+      rw [h1.eval p (alle_von hST hs.1.1) ρ, h1.evalArgs args (alle_von hST hs.1.2) ρ]
+      generalize eval _ p _ ρ = x
+      obtain ⟨g, hg⟩ := x
+      exact KRel.push _ _ _ _ _ _ _ _ rfl hsp
+  | axiomCallElse e a args he hp hd hgd hr err =>
+      simp only [nS, Bool.and_eq_true] at hs
+      have h1 := hW.lese Λ args.orte
+      obtain ⟨e1, e2⟩ := axiomAntwortSonst_rel O hO (hAx a hs.1.1) h1
+        (evalArgs ((sp₂.welt spur).lese Λ args.orte) args ((sp₂.welt spur).lese Λ args.orte) ρ)
+      simp only [kEntf]
+      rw [h1.evalArgs args (alle_von hST hs.1.2) ρ]
+      revert e1 e2
+      generalize axiomAntwortSonst O a ((sp₁.welt spur).lese Λ args.orte) _ = p₁
+      generalize axiomAntwortSonst O a ((sp₂.welt spur).lese Λ args.orte) _ = p₂
+      rintro e1 e2
+      obtain ⟨w1, r1⟩ := p₁
+      obtain ⟨w2, r2⟩ := p₂
+      simp only at e1 e2 ⊢
+      subst e1
+      rcases r1 with _ | v | r
+      · exact KRel.none_l _
+      · exact KRel.lokal _ _ _ _ _ e2.1 e2.2
+      · exact KRel.lokal _ _ _ _ _ e2.1 e2.2
   | _ => exact KRel.none_l _
 
 include hAx in
@@ -225,7 +252,7 @@ theorem kDannCons_rel (hO : OrakelTreu T AxT O) (hsp : SpeicherGleich T sp₁ sp
   unfold kDannCons
   by_cases h1 : GEntfaltbar s = true
   · rw [if_pos h1, if_pos h1]
-    exact kEntf_rel hST passes st f rho spur hsp ρ s rest k hs
+    exact kEntf_rel hST hAx P O passes st f rho spur hO hsp ρ s rest k hs
   · rw [if_neg h1, if_neg h1]
     by_cases h2 : s.istBlatt = true
     · rw [if_pos h2, if_pos h2]
@@ -295,7 +322,44 @@ theorem kEnde_rel (hO : OrakelTreu T AxT O) (hsp : SpeicherGleich T sp₁ sp₂)
       cases r1 with
       | none => exact KRel.none_l _
       | some v => exact KRel.lokal _ _ _ _ _ e2.1 e2.2
+  | bindAxiomOpt e a args he' hp hd hgd rest =>
+      simp only [nE, Bool.and_eq_true] at he
+      have h1 := hW.lese Λ args.orte
+      obtain ⟨e1, e2⟩ := axiomAntwort_rel O hO (hAx a he.1.1) h1
+        (evalArgs ((sp₂.welt spur).lese Λ args.orte) args ((sp₂.welt spur).lese Λ args.orte) ρ)
+      simp only [kEnde]
+      rw [h1.evalArgs args (alle_von hST he.1.2) ρ]
+      revert e1 e2
+      generalize axiomAntwort O a ((sp₁.welt spur).lese Λ args.orte) _ = p₁
+      generalize axiomAntwort O a ((sp₂.welt spur).lese Λ args.orte) _ = p₂
+      rintro e1 e2
+      obtain ⟨w1, r1⟩ := p₁
+      obtain ⟨w2, r2⟩ := p₂
+      simp only at e1 e2 ⊢
+      subst e1
+      cases r1 with
+      | none => exact KRel.none_l _
+      | some v => exact KRel.lokal _ _ _ _ _ e2.1 e2.2
   | bindAxiomElse a args he' hr hw hg hd hgd err rest =>
+      simp only [nE, Bool.and_eq_true] at he
+      have h1 := hW.lese Λ args.orte
+      obtain ⟨e1, e2⟩ := axiomAntwortSonst_rel O hO (hAx a he.1.1.1) h1
+        (evalArgs ((sp₂.welt spur).lese Λ args.orte) args ((sp₂.welt spur).lese Λ args.orte) ρ)
+      simp only [kEnde]
+      rw [h1.evalArgs args (alle_von hST he.1.1.2) ρ]
+      revert e1 e2
+      generalize axiomAntwortSonst O a ((sp₁.welt spur).lese Λ args.orte) _ = p₁
+      generalize axiomAntwortSonst O a ((sp₂.welt spur).lese Λ args.orte) _ = p₂
+      rintro e1 e2
+      obtain ⟨w1, r1⟩ := p₁
+      obtain ⟨w2, r2⟩ := p₂
+      simp only at e1 e2 ⊢
+      subst e1
+      rcases r1 with _ | v | r
+      · exact KRel.none_l _
+      · exact KRel.lokal _ _ _ _ _ e2.1 e2.2
+      · exact KRel.lokal _ _ _ _ _ e2.1 e2.2
+  | bindAxiomOptElse e a args he' hp hd hgd hr err rest =>
       simp only [nE, Bool.and_eq_true] at he
       have h1 := hW.lese Λ args.orte
       obtain ⟨e1, e2⟩ := axiomAntwortSonst_rel O hO (hAx a he.1.1.1) h1
@@ -340,6 +404,11 @@ theorem kEnde_rel (hO : OrakelTreu T AxT O) (hsp : SpeicherGleich T sp₁ sp₂)
       · exact KRel.lokal _ _ _ _ _ rfl hsp
       · exact KRel.none_l _
   | narrow e lo' hi' sonst rest =>
+      simp only [kEnde]
+      split
+      · exact KRel.lokal _ _ _ _ _ rfl hsp
+      · exact KRel.none_l _
+  | narrowRequired e lo' hi' rest =>
       simp only [kEnde]
       split
       · exact KRel.lokal _ _ _ _ _ rfl hsp

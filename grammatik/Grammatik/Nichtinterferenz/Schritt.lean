@@ -36,7 +36,7 @@ section Fn
 def kDannCons (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) (spur : List (Ereignis D)) (sp : Speicher D) {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)} (ρ : Env D Γ)
     (s : Stmt D (vertragVon D f) l Γ Λ Λ') (rest : Block D (vertragVon D f) l Γ Λ' Λ'')
     (k : GRest D (vertragVon D f) l Γ Λ'') : KErg D :=
-  if GEntfaltbar s = true then kEntf passes st f rho spur sp ρ s rest k
+  if GEntfaltbar s = true then kEntf P O passes st f rho spur sp ρ s rest k
   else if s.istBlatt = true then
     kAusDann st f rho rest k (execStmt O passes keinRuf s (sp.welt spur) ρ)
   else kRufDann P st f rho spur sp ρ s rest k
