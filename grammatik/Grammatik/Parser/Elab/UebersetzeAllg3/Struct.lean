@@ -18,6 +18,37 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg
 
 set_option maxRecDepth 100000
 
+/-- Consuming keeps the written mutation sub-contract. A consumes of slots grants the
+    same write footprint as writes, but must name the selected domain explicitly. -/
+def lowConsumingEffects (u : UProg) (fn : UFn) (table : String) (effects : List SEffekt) :
+    Except String Unit := do
+  let head : UFnKopf := {name := fn.name, names := fn.params.map (·.1), kinds := fn.kinds,
+    types := fn.params.map (·.2), res := none, held := fn.held}
+  let consumed ← (effects.filterMap fun effect => match effect with
+    | .takes place => some place
+    | _ => none).mapM (uSchreibtOrt head u.tabs)
+  if !(consumed.any (strEq · table)) then
+    throw "consuming traversal touches must consume its domain"
+  let normalized ← effects.mapM fun effect => match effect with
+    | .takes place => pure (SEffekt.writes place)
+    | .reads _ | .writes _ | .locks .. | .pure => pure effect
+    | _ => throw "consuming traversal touches effect without G form"
+  let checked ← uEffekteAux head u.tabs u.locks u.globs normalized
+  if !(checked.puts.all (fun name => fn.puts.any (strEq · name))) ||
+      !(checked.gputs.all (fun name => fn.gputs.any (strEq · name))) then
+    throw "consuming traversal touches exceeds function writes"
+  pure ()
+
+/-- The existing value elaborator computes the finite bound. Negative measures are
+    refused; widening to 0 .. bound never narrows or changes the value. -/
+def lowConsumingMass (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) (source : USide) :
+    Except String (Σ bound : Int, Expr (declOf u) Γ Λ (.int 0 bound)) := do
+  let mass ← (lowSideVal u Γ Λ fn source).mapError ("consuming traversal decreases: " ++ ·)
+  if lower : 0 ≤ mass.range.1 then
+    pure ⟨mass.range.2, Expr.widen lower (Int.le_refl _) mass.term⟩
+  else throw "consuming traversal decreases must have a nonnegative range"
+
 /-- The structured statements, each with the rest of the run after its body: `locks g { … }` (the lock
     by name, the rank rule; no `return` inside), `if c { … } else { … }` and `traverse` (its body is a
     block with `l = true`, the binder an index into the table, the invariant read in the OUTER scope). -/
@@ -69,6 +100,22 @@ def lowStructStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStu
             .ok (⟨Λ, Stmt.traverse t iv (by subst h; exact body)⟩, rest')
           else .error "lower: a traverse body changes held marks"
         | .ok (_, _) => .error "lower: a traverse is not closed"
+  | Γ, fn, Λ, pe, .consumeLoopBeg binder table predecessor member edge inv mass effects, rest => do
+    let t ← tabIdx u.tabs table
+    lowConsumingEffects u fn table effects
+    let iv ← lowEns u Γ Λ fn none inv
+    let ⟨bound, measure⟩ ← lowConsumingMass u Γ Λ fn mass
+    let inner := fn.mitIndex binder t.val ((declOf u).count t)
+    let membership ← lowEns u (.index ((declOf u).count t) :: Γ) Λ inner none member
+    let relation ← lowEns u (.index ((declOf u).count t) :: .index ((declOf u).count t) :: Γ) Λ
+      (inner.mitIndex predecessor t.val ((declOf u).count t)) none edge
+    match R.seq (l := true) (.index ((declOf u).count t) :: Γ) inner Λ pe rest with
+    | .error error => .error error
+    | .ok ((⟨Λ', body⟩, .blkEnd :: remaining)) =>
+      if h : Λ' = Λ then
+        .ok (⟨Λ, Stmt.consumeTraverse t membership relation iv bound measure (by subst h; exact body)⟩, remaining)
+      else .error "lower: a consuming traverse body changes held marks"
+    | .ok (_, _) => .error "lower: a consuming traverse is not closed"
   | Γ, fn, Λ, pe, .retryBeg cnt bis, rest =>
     (lowEns u Γ Λ fn none bis).bind fun bv => match R.seq (l := true) Γ fn Λ pe rest with
       | .error e => .error e
