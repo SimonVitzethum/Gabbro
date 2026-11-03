@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
-public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil16
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 
 @[expose] public section
 
