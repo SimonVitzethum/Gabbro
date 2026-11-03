@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.Elab.Konst.Ersetzung
+public import Grammatik.Parser.Elab.Generic.Body
 public import Grammatik.Parser.Elab.Export.ExportMetadata
 
 @[expose] public section
@@ -10,14 +11,34 @@ namespace Gabbro.Grammatik.Parser.Konst
 open Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.ExportMetadata
 
-/-- Substitute in one unit item: function bodies recurse, everything else
-    travels unchanged (type positions keep the existing refusal). -/
+/-- Source constant payloads recurse element-wise, including nested rows. -/
+mutual
+def ersetzeKonstWert (fns : List UKonstFn) : SKonstWert → Except String SKonstWert
+  | .one source => (ersetzeSExpr fns source).map SKonstWert.one
+  | .rows rows => (ersetzeKonstWerte fns rows).map SKonstWert.rows
+def ersetzeKonstWerte (fns : List UKonstFn) : List SKonstWert → Except String (List SKonstWert)
+  | [] => .ok []
+  | value :: rest => do return (← ersetzeKonstWert fns value) :: (← ersetzeKonstWerte fns rest)
+end
+
+/-- Runtime contract operands use exactly the same checked call replacement. -/
+def ersetzeKlausel (fns : List UKonstFn) : SKlausel → Except String SKlausel
+  | .needs source => (ersetzeSExpr fns source).map SKlausel.needs
+  | .gives source => (ersetzeSExpr fns source).map SKlausel.gives
+  | .cost source => (ersetzeSExpr fns source).map SKlausel.cost
+  | .drops source => (ersetzeSExpr fns source).map SKlausel.drops
+  | clause => .ok clause
+
+/-- Replace value calls in function bodies, contracts and constant initializers. -/
 def ersetzeSItem (fns : List UKonstFn) : SItemTief → Except String SItemTief
-  | .fnT sig body =>
-    match ersetzeSAnw fns body with
-    | .error e => .error e
-    | .ok body' => .ok (.fnT sig body')
-  | m => .ok m
+  | .fnT sig body => do
+    let body' ← ersetzeSAnw fns body
+    let clauses ← sig.klauseln.mapM (ersetzeKlausel fns)
+    return .fnT {sig with klauseln := clauses} body'
+  | .constT name ty value => do return .constT name ty (← ersetzeKonstWert fns value)
+  | .globT mutable name ty value bound proof shared => do
+    return .globT mutable name ty (← ersetzeKonstWert fns value) bound proof shared
+  | item => .ok item
 
 /-- The whole pass over a unit: every function body substituted. -/
 def ersetzeItems (fns : List UKonstFn) : List SItemTief → Except String (List SItemTief)
@@ -27,12 +48,33 @@ def ersetzeItems (fns : List UKonstFn) : List SItemTief → Except String (List 
     | .ok m', .ok rest' => .ok (m' :: rest')
     | .error e, _ | _, .error e => .error e
 
-/-- The pipeline hook: checked const/type views first, then this pass,
-    BEFORE `fnItems`/`elabUFunktion` and the export metadata gate.
-    `uKonstWert` inside `ersetzeSExpr` is only the candidate generator;
-    the failing cases below stay refused. -/
-def konstErsetzePipeline (ms : List SItemTief) : Except String (List SItemTief) :=
-  ersetzeItems (uKonstFns ms) ms
+/-- Reuse the existing capture-free surface traversal for known global constants.
+    Parameter, local, pattern and loop binders remove shadowed bindings. -/
+def closeConstantNames (items : List SItemTief) : Except String (List SItemTief) := do
+  let initial := uConstsRech (uKonstFns items) items []
+  let types := uAliase initial items
+  let functions := uKonstFnsWith types items
+  let values := uConstsRech functions items []
+  let bindings : Generic.Bindings := { values := values.map (fun (n, v) => (n, literalVonInt v)) }
+  let env : Generic.Environment :=
+    { declarations := [], constants := values, constantFunctions := functions,
+      aliases := types, deferApplications := true }
+  items.mapM fun
+    | .fnT sig body => do
+      let ((sig', body'), _) ← (do
+        let sig' ← Generic.rewriteSignature env bindings sig
+        let body' ← Generic.rewriteBody env (bindings.without (sig.params.map Prod.fst)) body
+        pure (sig', body')).run []
+      pure (.fnT sig' body')
+    | .constT name ty (.one source) =>
+      pure (.constT name ty (.one (Generic.expression bindings.values source)))
+    | item => pure item
+
+/-- Close known constant names, resolve signatures, then certify every replacement. -/
+def konstErsetzePipeline (ms : List SItemTief) : Except String (List SItemTief) := do
+  let closed ← closeConstantNames ms
+  let values := uConstsRech (uKonstFns closed) closed []
+  ersetzeItems (uKonstFnsWith (uAliase values closed) closed) closed
 
 mutual
 /-- A surface call still names a dropped const function. -/
@@ -144,7 +186,7 @@ def ohneKonst : List SItemTief → List SItemTief
     upstream (`ersetzeSExpr` errors); anything else keeps the exact
     `ExportMetadata.check` refusal. -/
 def checkErsetzt (ms msErs : List SItemTief) : Except String Unit :=
-  let namen := (uKonstFns ms).map (·.name)
+  let namen := ms.filterMap (fun | .fnT sig _ => if strEq sig.art "const" then some sig.name else none | _ => none)
   if hatKonstRufItems namen msErs then
     .error "const call without certified value: refusing runtime export"
   else ExportMetadata.check (ohneKonst msErs)
