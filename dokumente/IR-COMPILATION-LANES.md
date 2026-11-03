@@ -3446,7 +3446,23 @@ The original allocation-with-else metadata gate now checks its continuation
 recursively. Generic proof connections and accepted witness declarations were
 updated; the implementation worker ran no Lean, Lake, compiler or runner checks.
 The lead must check these modules before treating the changes as measured coverage.
-Long `strCat` and `strLt` retain their original refusals.
+Long-string follow-up now replaces the `strCat`/`strLt` width refusals in the actual
+`lowE` path. `Frame/String/Code` normalizes packed operands through the existing
+`strExpandL` length/byte span. `strCat` copies the first padded span, zeroes the
+extension and stores each second-operand byte at the runtime first length through
+`storeFrameSpan 1`; the result capacity is exactly `n + m`. Canonical `eval` calls
+`strCatW`, which appends the complete lists: operand length proofs imply the sum
+fits, so no truncation, failure branch or invented overflow behavior is introduced.
+`strLt` uses a descending scan of keys `[present] * (byte + 1)` and the existing
+unsigned comparison/equality ALU operations. `bytesLt_keys`, `keyScan_lex`,
+`stringScan_value`, `stringCatC_ok`, `strCatExpr_ok` and `strLtExpr_ok` connect the
+span kernels to `lowE_ok`; the typed dynamic store theorem remains a specialization
+of the shared exact-word store proof. Accepted witness declarations include two
+long operands, both comparison directions, equal prefixes, differing lengths,
+embedded zero/255 bytes and packed/long mixtures. The textual regression is
+`str-span-cat-order.gab` (expected result 42). All new proof declarations and the
+regression remain UNCHECKED pending the lead's Lean and runner checks; this is an
+implementation/proof-connection update, not newly measured compiled coverage.
 
 **Proof connection.** All producing expression arms occur in `Ausdruck/Satz.lowE_ok`
 (mutual with `lowN_ok` and `lowE_ok_args`). Statement/block/end arms occur in the
@@ -3534,10 +3550,10 @@ are alternative emitters, not width refusals: wide fallbacks exist.
 | `arrSet` | CONDITIONAL | A; `arrSet_ok`. |
 | `strLit` | LOWERED | Full constant words, including long strings; `strLit_ok`. |
 | `strLen` | LOWERED | Packed shift or leading length word; `strLen_ok`. |
-| `strCat` | CONDITIONAL | Only declared maxima `n+m ≤ 1`; `strCat_ok`; `AggregateProbe.refused_zeuge`. |
+| `strCat` | CONDITIONAL | Packed fast path for `n+m ≤ 1`; otherwise fresh length/byte span for `n+m < 2^31`, with exact append semantics and dynamic per-byte stores. `strCatExpr_ok` → `stringPair_ok`/`stringCatC_ok`; `StringSpanProbe.accepted_zeuge`. Lead checks pending. |
 | `strGet` | CONDITIONAL | Packed: `n ≤ 1` and signed-word index, plus C inside `strGetL`; otherwise scalar index AND `2 ≤ n < 2^31`. Short string with unsigned-only index fails the wide helper. Multiword index refused; `strGet_ok`; same witness. |
 | `strEq` | CONDITIONAL | Both maxima ≤1, or each long maximum <`2^31` for mixed/long helpers; `strEq_ok`. |
-| `strLt` | CONDITIONAL | Both declared maxima ≤1; `strCompare_ok true`. |
+| `strLt` | CONDITIONAL | Packed comparison for both maxima ≤1; otherwise descending byte-key scan, including mixed spans, for each `max 2 capacity < 2^31`. `strLtExpr_ok` → `strLtSpan_ok`/`stringScan_value`/`bytesLt_keys`; accepted prefix/length/both-direction witnesses. Lead checks pending. |
 | `strWeit` | CONDITIONAL | Short→short and long widening `2≤n≤m` succeed; short→long requires `m<2^31`; long narrowing `m<n` requires `n<2^31`; `strWeit_ok`. |
 | `wenn` | CONDITIONAL | C; `wenn_ok` in `lowE_ok`. |
 | `eng` | CONDITIONAL | Scalar or wide interval test, C for fallback jump; `eng_ok/wideEng_ok`. |
