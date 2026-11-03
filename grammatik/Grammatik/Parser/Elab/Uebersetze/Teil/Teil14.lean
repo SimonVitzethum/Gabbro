@@ -164,7 +164,7 @@ def lowerNachLies (tabs : List UTab) (names : List String)
   | .assignGlob .. :: _, _ | .assignGlobB .. :: _, _ | .storeAtom .. :: _, _ | .storeAtomB .. :: _, _ =>
     .error "static without G form in the 104 lowering"
   | .assignRef .. :: _, _ => .error "reference without G form in the 104 lowering"
-  | .floatLit .. :: _, _ | .float .. :: _, _ => .error "float without G form in the 104 lowering"
+  | .floatLit .. :: _, _ | .floatOf .. :: _, _ | .float .. :: _, _ => .error "float without G form in the 104 lowering"
   | .bindW .. :: _, _ | .assignGlobO .. :: _, _ | [], .wert _ => .error "aggregate without G form in the 104 lowering"
   | .tausch .. :: _, _ => .error "exchange without G form in the 104 lowering"
   | .ifEnde .. :: _, _ | [], .keins => .error "terminal if without G form in the 104 lowering"
@@ -208,7 +208,7 @@ def lowerSaetzeEin (tabs : List UTab) (names : List String)
   | .assignGlob .. :: _, _ | .assignGlobB .. :: _, _ | .storeAtom .. :: _, _ | .storeAtomB .. :: _, _ =>
     .error "static without G form in the 104 lowering"
   | .assignRef .. :: _, _ => .error "reference without G form in the 104 lowering"
-  | .floatLit .. :: _, _ | .float .. :: _, _ => .error "float without G form in the 104 lowering"
+  | .floatLit .. :: _, _ | .floatOf .. :: _, _ | .float .. :: _, _ => .error "float without G form in the 104 lowering"
   | .bindW .. :: _, _ | .assignGlobO .. :: _, _ | [], .wert _ => .error "aggregate without G form in the 104 lowering"
   | .tausch .. :: _, _ => .error "exchange without G form in the 104 lowering"
   | .ifEnde .. :: _, _ | [], .keins => .error "terminal if without G form in the 104 lowering"
