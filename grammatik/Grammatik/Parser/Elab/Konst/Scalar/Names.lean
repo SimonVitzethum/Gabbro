@@ -126,6 +126,24 @@ def normalize {D : Deklaration} {Γ : Ctx} (names : Locals Γ)
     | .ok code => return ⟨code, .binary op left right a.code b.code code a.meaning b.meaning ht⟩
   | _ => .error "const expression without a source-to-G derivation"
 
+/-- Contracts normalize in their own entry/result context and preserve clause order. -/
+def normalizeClauses {D : Deklaration} {Γ : Ctx} (names : Locals Γ)
+    (globals : List (String × Int)) (post : Bool) : List SKlausel → Except String (Code D Γ .bool)
+  | [] => .ok (Code.truth true)
+  | clause :: rest => do
+    let tail ← normalizeClauses names globals post rest
+    match clause with
+    | .needs source =>
+      if post then return tail
+      else return Code.boolAnd (← boolean (← normalize names globals source).code) tail
+    | .gives source =>
+      if post then return Code.boolAnd (← boolean (← normalize names globals source).code) tail
+      else return tail
+    | .effs effects =>
+      if effects.all (fun | .pure => true | _ => false) then return tail
+      else throw "const effect clause is not pure"
+    | _ => throw "const clause without a compile-time certificate"
+
 /-- Once the canonical evaluator has been checked against the derived G value,
     its normalized result denotes the original expression at every pair of worlds.
     Both premises are fields produced by the checker, not caller obligations. -/
