@@ -90,7 +90,7 @@ def inspectType (scope : Scope) : STyp → SurfaceFacts
 
 def effect (scope : Scope) : SEffekt → SurfaceFacts
   | .reads e | .writes e | .locks _ e | .takes e | .posts e => expression scope e
-  | .masks _ | .allocs _ | .borrows _ | .loops | .pure => {}
+  | .masks _ | .allocs _ | .borrows _ | .moves _ | .mints _ | .loops | .pure => {}
   | .param _ => ⟨false, []⟩
   | .instanceEffects _ types => merge ⟨false, []⟩ (gather (types.map (inspectType scope)))
 
