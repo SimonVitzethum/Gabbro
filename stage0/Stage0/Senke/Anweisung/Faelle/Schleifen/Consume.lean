@@ -4,6 +4,8 @@ module
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Traversal
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Consuming.Lower
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Consuming.Runtime
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Consuming.Selection
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Consuming.Decrease
 public section
 
 namespace Gabbro.Stage0.Senke
@@ -59,7 +61,11 @@ variable [Kern] {L : Lay D}
 
     OPEN: discharge the instruction-level premises of `Consuming.runtime`
     for `Consuming.lower`, then replace this refusal case with that proof.
-    Required premises include current-world first-minimal selection, cycle
+    Initialization, selector bounds, membership binder restoration and the
+    post-body measure check now have concrete instruction lemmas in Blocks,
+    Selection and Decrease. The scan induction lemmas in Scan still require
+    their concrete per-iteration paths to be instantiated here.
+    Remaining premises include current-world first-minimal selection, cycle
     versus empty-domain distinction, saved measure preservation across every
     actual body outcome, bounded strict decrease and the leave invariant.
     The body hypothesis below is retained for that structural proof. -/
