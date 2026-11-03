@@ -253,7 +253,7 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
         obtain ⟨neu, hneu, -⟩ := herw
         exact fort_schritt' ⟨_, RufSchrittG.endeBindAxiomOpt M t l Γ Λ e a args he hp hd hgd rest
           ρ hx _ rfl σ₂ v hax neu hneu hΛ⟩
-  | bindAxiomOptElse e a args he hr hp hd hgd err rest =>
+  | bindAxiomOptElse e a args he hp hd hgd hr err rest =>
       rcases hax : axiomAntwortSonst O a ((M.weltVon t).lese Λ args.orte)
           (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ) with
         ⟨σ₂, _ | v | r⟩
