@@ -52,7 +52,9 @@ theorem putBytesChunk_ok {Γ : Ctx} {Λ : List (Res D)} {a b H : Int}
     omega
   have stored := (pre.env (.int 0 H) (.there .here)).2 q
     (by rw [encodeWords_length]; exact limb)
-  simp only [vslot_there, vslot_here, Env.get, encodeWords, integerEncoding_byteLimb] at stored
+  simp only [vslot_there, vslot_here, Env.get] at stored
+  erw [encodeWords_int] at stored
+  simp only [integerEncoding_byteLimb] at stored
   have p : PreS L m pc fp K s
       ([ci 2 s (frei Γ reserved + q) 0] ++ (idx ++ kernel)) env reserved := by
     simpa only [s, env, List.append_assoc] using pre
