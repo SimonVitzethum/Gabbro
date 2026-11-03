@@ -76,6 +76,7 @@ def zD : Deklaration where
 instance : DecidableEq zD.Fn := inferInstanceAs (DecidableEq (Fin 6))
 instance : DecidableEq zD.Glob := inferInstanceAs (DecidableEq (Fin 10))
 instance : DecidableEq zD.Lock := inferInstanceAs (DecidableEq (Fin 4))
+instance : DecidableEq zD.Ax := inferInstanceAs (DecidableEq (Fin 1))
 
 /-- A signed `max` accumulator over two cells. -/
 def zMax : AccumulatorDecl zD where
@@ -408,14 +409,14 @@ def zAQs : List zAD.Ax := [zAX]
 
 theorem zAFs_voll : ∀ g : zAD.Fn, g ∈ zAFs := by
   intro g
-  cases g <;> simp [zAFs, zAQ, zAU, zAF]
+  cases g <;> (simp only [zAFs, zAQ, zAU, zAF]; first | exact List.mem_cons_self | exact List.mem_cons_of_mem _ List.mem_cons_self | exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))
 
 theorem zATabs_voll : ∀ t : zAD.Tab, t ∈ zATabs := fun t => nomatch t
 
 theorem zAGlobs_voll : ∀ g : zAD.Glob, g ∈ zAGlobs := by
   intro ⟨n, hn⟩
   have h : n = 0 ∨ n = 1 := by omega
-  rcases h with rfl | rfl <;> simp [zAGlobs]
+  rcases h with rfl | rfl <;> (simp only [zAGlobs]; first | exact List.mem_cons_self | exact List.mem_cons_of_mem _ List.mem_cons_self | exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))
 
 /-- The fixture descriptor is valid, decided. -/
 theorem zA_okB : akkuOkB zA = true := by decide +kernel

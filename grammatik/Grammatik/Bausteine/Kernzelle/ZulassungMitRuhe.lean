@@ -55,7 +55,7 @@ theorem akkuZulaessig_mitRuhe (P : Programm D) {fs : List D.Fn}
     | none =>
         refine ⟨traegerSchreibt_mitRuhe_ruhe P _, ?_⟩
         rw [fussOrteG_mitRuhe_ruhe P]
-        exact List.not_mem_nil _
+        exact fun h => List.not_mem_nil h
     | some f =>
         have hf1' : f ≠ a.aktualisiere := fun hcon => hf1 (congrArg some hcon)
         have hf2' : f ≠ a.falte := fun hcon => hf2 (congrArg some hcon)
@@ -84,11 +84,13 @@ theorem akkuZulaessig_mitRuhe (P : Programm D) {fs : List D.Fn}
       exact h41
     · cases f' with
       | none =>
-          rw [reachB_mitRuhe_nicht_ruhe P hAbg] at hf'
-          cases hf'
+          have hf2 : reachB P.mitRuhe (fsRuhe fs) (some a.aktualisiere) none = true := hf'
+          rw [reachB_mitRuhe_nicht_ruhe P hAbg] at hf2
+          cases hf2
       | some f =>
-          rw [reachB_mitRuhe P hvoll hAbg] at hf'
-          obtain ⟨hcc, hm⟩ := h42 f hf'
+          have hf2 : reachB P.mitRuhe (fsRuhe fs) (some a.aktualisiere) (some f) = true := hf'
+          rw [reachB_mitRuhe P hvoll hAbg] at hf2
+          obtain ⟨hcc, hm⟩ := h42 f hf2
           refine ⟨fun c hc => ?_, ?_⟩
           · have hc' : TraegerSchreibt f c = true := by
               cases c <;> exact hc
@@ -109,11 +111,13 @@ theorem akkuZulaessig_mitRuhe (P : Programm D) {fs : List D.Fn}
       exact congrArg (Option.map tyR) h52
     · cases f' with
       | none =>
-          rw [reachB_mitRuhe_nicht_ruhe P hAbg] at hf'
-          cases hf'
+          have hf2 : reachB P.mitRuhe (fsRuhe fs) (some a.falte) none = true := hf'
+          rw [reachB_mitRuhe_nicht_ruhe P hAbg] at hf2
+          cases hf2
       | some f =>
-          rw [reachB_mitRuhe P hvoll hAbg] at hf'
-          obtain ⟨hcc, hm⟩ := h53 f hf'
+          have hf2 : reachB P.mitRuhe (fsRuhe fs) (some a.falte) (some f) = true := hf'
+          rw [reachB_mitRuhe P hvoll hAbg] at hf2
+          obtain ⟨hcc, hm⟩ := h53 f hf2
           refine ⟨fun c => ?_, ?_⟩
           · have hw := hcc c
             cases c <;> exact hw

@@ -203,7 +203,7 @@ def qAGlobs : List qD.Glob := [⟨0, by decide⟩, ⟨1, by decide⟩]
 theorem qAGlobs_voll : ∀ g : qD.Glob, g ∈ qAGlobs := by
   intro ⟨n, hn⟩
   have h : n = 0 ∨ n = 1 := by omega
-  rcases h with rfl | rfl <;> simp [qAGlobs]
+  rcases h with rfl | rfl <;> (simp only [qAGlobs]; first | exact List.mem_cons_self | exact List.mem_cons_of_mem _ List.mem_cons_self | exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))
 
 /-! ## 2. The descriptor and the connected query, decided -/
 
