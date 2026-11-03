@@ -27,12 +27,12 @@ def memberAt (k : Wert D (.index (D.count x.table))) : Bool :=
 def edgeAt (a b : Wert D (.index (D.count x.table))) : Bool :=
   wahr? (eval σ q.edge σ (.cons a (.cons b ρ)))
 
-structure PredDone (candidate : Wert D (.index (D.count x.table))) (live : Bool) (m : Mem) : Prop where
+structure PredDone (q : Selector x Γ Λ) (σ : World D) (ρ : Env D Γ) (candidate : Wert D (.index (D.count x.table))) (live : Bool) (m : Mem) : Prop where
   ready : x.Ready m σ ρ
   candidateRead : x.read m x.s (BitVec.ofInt 64 candidate.n)
   liveRead : x.read m (x.s + 2) (Runner.IR.bool live)
 
-structure PredState (candidate : Wert D (.index (D.count x.table))) (live : Bool)
+structure PredState (q : Selector x Γ Λ) (σ : World D) (ρ : Env D Γ) (candidate : Wert D (.index (D.count x.table))) (live : Bool)
     (j : Nat) (m : Mem) : Prop extends q.PredDone σ ρ candidate live m where
   predecessorRead : x.read m (x.s + 1) (BitVec.ofNat 64 j)
 
