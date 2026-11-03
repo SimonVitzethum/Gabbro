@@ -79,6 +79,12 @@ def Resolved.start {u : UProg} {name : String} {sourceArgs : List SExpr}
     Σ f : (declOf u).Fn, Env (declOf u) ((declOf u).params f) :=
   ⟨start.function, start.environment world⟩
 
+/-- The actual canonical start does not depend on the world chosen for closed source arguments. -/
+theorem Resolved.environment_pure {u : UProg} {name : String} {sourceArgs : List SExpr}
+    (start : Resolved u name sourceArgs) (world world' : World (declOf u)) :
+    start.environment world = start.environment world' :=
+  arguments_pure u _ sourceArgs start.checked world world world' world'
+
 /-- Source origin for one typed start. Duplicate functions with different arguments remain
     distinct entries: a names-only deduplication would lose the specified environments. -/
 structure SourceStart (u : UProg) (items : List SItemTief) where

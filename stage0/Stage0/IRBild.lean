@@ -12,6 +12,8 @@ public import Stage0.Senke.Images.Bild
 public import Stage0.Senke.Welt.Anordnung
 public import Stage0.Senke.Welt.GlobalAlignment
 public import Stage0.Senke.Welt.MainEnv
+public import Stage0.Senke.Welt.Initial
+public import Stage0.Senke.Images.SourceStarts
 @[expose] public section
 
 
@@ -31,14 +33,18 @@ def irDurchlaeufe : Nat := 2 ^ 20
 structure Emitted (text : String) (K : Nat) (options : Profil.Options := {}) where
   compiled : Compiled text options
   tor : (declOf compiled.unit).Ax → Option Senke.TorB
-  roots : List (declOf compiled.unit).Fn
+  /-- Starts recovered from the selected original source, before names could erase arguments. -/
+  startPlan : StartArgument.Plan compiled.unit
+    (uMembers (pre108 compiled.source.prepared.elaborierbar)) compiled.main
+  initialValid : sp0OkB compiled.unit = true
   /-- the environment `main` starts with: the pointer to the table each parameter's type names -/
   args : Env (declOf compiled.unit) ((declOf compiled.unit).params compiled.main)
   pointers : Senke.mainEnv ((declOf compiled.unit).params compiled.main) = some args
   image : Senke.Bild (declOf compiled.unit)
   emission : Senke.bild irDurchlaeufe compiled.program (Senke.layU compiled.unit tor)
     (List.finRange compiled.unit.fns.length) Fin.val
-    (fun g => (compiled.unit.fns[g.val]?.map (·.name)).getD "?") compiled.main args roots K
+    (fun g => (compiled.unit.fns[g.val]?.map (·.name)).getD "?") compiled.main args
+    (startPlan.starts (Senke.initialWorld compiled.unit initialValid)) K
     (Senke.bodenAusrichtung compiled.unit) = .ok image
 
 /-- One source-to-image path; no separate unchecked emitter is retained. -/
@@ -61,16 +67,23 @@ def emit (src : String) (K : Nat := irStapel) (options : Profil.Options := {}) :
     | none => pure ()
   let tor : (declOf u).Ax → Option Senke.TorB := fun a =>
     (tore.find? (·.name == (uaxAt u a).name)).map fun t => ⟨t.nummer, t.regs, t.fehler, t.resultArea⟩
-  let rs ← (uOhneDoppelte (u.roots ++ u.gestartet)).mapM (fnIdx u.fns)
-  let roots := rs.filter (· != main)
-  match hp : Senke.mainEnv ((declOf u).params main) with
-  | none => throw "ir: main takes a parameter that is not a table pointer: no start-argument form"
-  | some args =>
-    match he : Senke.bild irDurchlaeufe P (Senke.layU u tor) (List.finRange u.fns.length) Fin.val
-        (fun g => (u.fns[g.val]?.map (·.name)).getD "?") main args roots K
-        (Senke.bodenAusrichtung u) with
-    | .error e => throw e
-    | .ok image => pure ⟨compiled, tor, roots, args, hp, image, he⟩
+  let startPlan ← StartArgument.plan u (uMembers (pre108 compiled.source.prepared.elaborierbar)) main
+  if initialValid : sp0OkB u = true then
+    match hp : Senke.mainEnv ((declOf u).params main) with
+    | none => throw "ir: main takes a parameter that is not a table pointer: no start-argument form"
+    | some args =>
+      match he : Senke.bild irDurchlaeufe P (Senke.layU u tor) (List.finRange u.fns.length) Fin.val
+          (fun g => (u.fns[g.val]?.map (·.name)).getD "?") main args
+          (startPlan.starts (Senke.initialWorld u initialValid)) K
+          (Senke.bodenAusrichtung u) with
+      | .error e => throw e
+      | .ok image => pure ⟨compiled, tor, startPlan, initialValid, args, hp, image, he⟩
+  else throw "ir: canonical initial memory is outside its declared types"
+
+/-- The exact typed occurrences supplied to the image constructor. -/
+def Emitted.starts {src : String} {K : Nat} {options : Profil.Options} (output : Emitted src K options) :
+    List (Σ f : (declOf output.compiled.unit).Fn, Env (declOf output.compiled.unit) ((declOf output.compiled.unit).params f)) :=
+  output.startPlan.starts (Senke.initialWorld output.compiled.unit output.initialValid)
 
 def irBild (src : String) (K : Nat := irStapel) (options : Profil.Options := {}) : Except String (List Runner.B) :=
   (emit src K options).map (fun output => output.image.bytes)
@@ -103,6 +116,22 @@ def Emitted.Simulates [Runner.IR.Kern] {src : String} {K : Nat} {options : Profi
         (Senke.hwCode h)
     | _ => False
 
+/-- A root occurrence runs with its own original typed environment on stack `j + 1`.
+    This is the existing individual-thread theorem, with no simultaneous GX claim. -/
+def Emitted.RootSimulates [Runner.IR.Kern] {src : String} {K : Nat} {options : Profil.Options}
+    (output : Emitted src K options) (O : Orakel (declOf output.compiled.unit))
+    (m : Runner.Mem) (σ : World (declOf output.compiled.unit))
+    (j : Nat) (hj : j < output.starts.length) : Prop :=
+  let root := output.starts[j]
+  let entry : Runner.IR.T :=
+    ⟨BitVec.ofNat 64 (Senke.codeBase + 16 * (3 * output.starts.length + Senke.startLen + Senke.startLen * j)),
+      BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (j + 1)))⟩
+  match rufAt output.compiled.program O output.image.passes output.image.depth root.1 σ root.2 with
+  | .ok _ _ => ∃ t' m' q, Runner.IR.Star entry m t' m' ∧ Runner.IR.StopAt t' m' q ∧ q.nr = 60
+  | .logik e => Senke.Stops entry m (Senke.logikCode e)
+  | .hardware h => Senke.Stops entry m (Senke.hwCode h)
+  | _ => False
+
 /-- Original-source canonical elaboration, exact invariant carriers/read bounds, and execution\n    of that identical program (including ordered normal-return restoration) by this image,
     under the existing image theorem's gate/view and initial-memory contracts. -/
 def Emitted.Correct [Runner.IR.Kern] {src : String} {K : Nat} {options : Profil.Options} (output : Emitted src K options) : Prop :=
@@ -111,7 +140,7 @@ def Emitted.Correct [Runner.IR.Kern] {src : String} {K : Nat} {options : Profil.
     (σ : World (declOf output.compiled.unit)),
     Senke.BytesAt m Runner.Prog.IMG output.image.bytes →
     Senke.WeltAt m output.image.Y σ → Senke.TorOK output.image.Y O → Senke.SichtOK O →
-    output.Simulates O m σ
+    output.Simulates O m σ ∧ ∀ j (hj : j < output.starts.length), output.RootSimulates O m σ j hj
 
 theorem Emitted.correct [Runner.IR.Kern] [Senke.CloneOK] {src : String} {K : Nat} {options : Profil.Options}
     (output : Emitted src K options) : output.Correct := by
@@ -122,12 +151,23 @@ theorem Emitted.correct [Runner.IR.Kern] [Senke.CloneOK] {src : String} {K : Nat
     intro g
     simp only [List.finRange, List.getElem?_ofFn, g.isLt, ↓reduceDIte]
     congr 1
-  unfold Emitted.Simulates
-  have hr := Senke.bild_ok_u output.emission hfs hm σ
-    (fun τ x => Senke.mainEnv_valid output.image.Y _ output.args output.pointers τ x) hWa hT hV
-  generalize rufAt output.compiled.program O output.image.passes output.image.depth
-    output.compiled.main σ output.args = outcome at hr ⊢
-  cases outcome <;> exact hr
+  constructor
+  · unfold Emitted.Simulates
+    have hr := Senke.bild_ok_u output.emission hfs hm σ
+      (fun τ x => Senke.mainEnv_valid output.image.Y _ output.args output.pointers τ x) hWa hT hV
+    generalize rufAt output.compiled.program O output.image.passes output.image.depth
+      output.compiled.main σ output.args = outcome at hr ⊢
+    cases outcome <;> exact hr
+  · intro j hj
+    exact Senke.bild_wurzel_ok_u output.emission hfs hm j hj σ
+      (output.startPlan.starts_valid _ output.image.Y output.starts[j] (List.getElem_mem hj)) hWa hT hV
+
+/-- The emitted root prefix preserves every original concurrent member, including duplicate names. -/
+theorem Emitted.starts_source {src : String} {K : Nat} {options : Profil.Options}
+    (output : Emitted src K options) :
+    output.startPlan.concurrent.map (fun start => (start.path, start.sourceArgs)) =
+      StartArgument.sourceIdentities (uMembers (pre108 output.compiled.source.prepared.elaborierbar)) :=
+  output.startPlan.source_identity
 
 /-- The actual successful CLI byte result realizes its original source's canonical program.
     This includes C05 through `compile_source_program` and the generic return epilogue theorem.\n    Reason exits keep the original program and its separate `InvGutGrundA` user duty.\n    This is conditional on successful compilation and inherited runner contracts, not total coverage. -/

@@ -2,6 +2,8 @@
 module
 public import Stage0.Senke.Welt.MainEnv
 public import Stage0.Senke.Welt.Anordnung
+public import Stage0.Senke.Welt.Initial
+public import Stage0.Senke.Images.SourceStarts
 public import Stage0.Senke.Anweisung.Bindung.TorLauf
 public import Grammatik.Parser.Elab.UebersetzeAllg3
 import all Init.Data.Repr
@@ -147,13 +149,17 @@ def startRoots : Except String (List Nat) := do
   let p ← startUnit
   let entry ← fnIdx p.fns "main"
   let (P, _) ← lowerAllg p
-  let rs ← (uOhneDoppelte (p.roots ++ p.gestartet)).mapM (fnIdx p.fns)
-  match mainEnv ((declOf p).params entry) with
-  | none => throw "main takes a parameter that is not a table pointer"
-  | some ρ =>
-    let b ← bild 1 P (layU p (fun _ => none)) (List.finRange p.fns.length) Fin.val
-      (fun _ => "probe") entry ρ (rs.filter (fun f => f.val != entry.val)) 1024
-    pure (b.roots.map Fin.val)
+  let rs ← (uOhneDoppelte (p.roots ++ p.gestartet)).mapM (StartArgument.namedStart p)
+  if initialValid : GabbroV.sp0OkB p = true then
+    let roots := (rs.map (fun source => source.resolved.start (initialWorld p initialValid))).filter
+      (fun start => start.1 != entry)
+    match mainEnv ((declOf p).params entry) with
+    | none => throw "main takes a parameter that is not a table pointer"
+    | some ρ =>
+      let b ← bild 1 P (layU p (fun _ => none)) (List.finRange p.fns.length) Fin.val
+        (fun _ => "probe") entry ρ roots 1024 0
+      pure (b.roots.map Fin.val)
+  else throw "invalid canonical initial memory"
 
 theorem start_image_zeuge : startRoots.toOption = some [0] := by decide +kernel
 

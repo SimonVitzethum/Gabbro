@@ -1,5 +1,5 @@
 /- Canonical source start arguments become static parameter bytes through the shared encoder.
-   This does not activate parameterized image startup or replace its full ABI proof. -/
+   Images/StartupLayout and StartupExecution compose these facts with the full startup ABI. -/
 module
 public import Stage0.StartArgument
 public import Stage0.Senke.Welt.StartBytes

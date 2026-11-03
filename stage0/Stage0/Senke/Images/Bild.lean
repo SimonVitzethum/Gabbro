@@ -22,7 +22,7 @@
   functions out by those lengths, lowers again with the real addresses and refuses unless every length came out
   the same (checked, not assumed).
 
-  `bild` then checks the finished layout as one decidable proposition (`BildGut`): the roots without parameters,
+  `bild` then checks the finished layout as one decidable proposition (`BildGut`): the typed root environments,
   the lengths unmoved, the image below `2^31`, room for one call and for each start's scratch, every opcode a byte.
 
   The start code sets the depth to `n + 1` (G's `fuel`: `main` runs as `rufAt n`), calls `main` with its frame at
@@ -31,7 +31,8 @@
 
   **Parameters of `main`.** The words of `main`'s environment (`encodeEnv`, the one parameter encoding of every call)
   are the image's own bytes: the first stack frame holds them at the slots `FB + FB ..` where the callee's parameter
-  span lies, every other slot of the stack and the world is zero. The scratch of a start (the spawns, the exit code)
+  span lies. Each concurrent start has its own initialized stack, including repeated functions with distinct
+  arguments; every other slot of the stacks and the world is zero. The scratch of a start (the spawns, the exit code)
   lies above that span, the shared result area and the status word (`startScratch`, the `receiveTop` of the root's
   signature), so neither the spawns nor the call write a parameter word.
 -/
@@ -122,6 +123,8 @@ structure Bild (D : Deklaration) where
   roots : List D.Fn
   /-- the words of `main`'s environment, in the first stack frame at the callee's parameter span -/
   args : List Runner.W
+  /-- Complete parameter spans of the ordered root occurrences, encoded under the final layout. -/
+  rootArgs : List (List Runner.W)
   /-- the required base alignment the world base was aligned up to (`bodenAusrichtung` of the unit);
       `Y.lo` is a multiple of it, so every placed global is absolutely aligned -/
   baseReq : Nat
@@ -156,8 +159,7 @@ def depthOf (K L : Nat) : Nat := (K - FB) / L - 1
 /-- What `bild` checks of the finished layout. -/
 def BildGut (D : Deklaration) (main : D.Fn) (roots : List D.Fn) (lens : List Nat) (cs : List (List II × Nat))
     (fp0 Ks K : Nat) (Y : Lay D) (code : List II) : Prop :=
-  roots.all (fun f => (D.params f).isEmpty) = true ∧
-    D.gruende main = 0 ∧ roots.all (fun f => decide (D.gruende f = 0)) = true ∧ cs.map (·.1.length) = lens ∧
+  D.gruende main = 0 ∧ roots.all (fun f => decide (D.gruende f = 0)) = true ∧ cs.map (·.1.length) = lens ∧
     fp0 + 8 * K < 2 ^ 31 ∧ FB + 2 * maxTop cs ≤ Ks ∧ (main :: roots).all (fun f => decide (startScratch f + 8 ≤ Ks)) = true ∧
     code.all (fun i => decide (i.o < 256)) = true ∧ fp0 + 8 * (Ks * (roots.length + 1)) ≤ Y.lo ∧ Y.hi ≤ fp0 + 8 * K ∧
     Y.sye ≤ fp0 + 8 * K
@@ -171,7 +173,8 @@ instance (D : Deklaration) (main : D.Fn) (roots : List D.Fn) (lens : List Nat) (
     stack end aligned up to the required base alignment `req` (`alignUp`: `0` imposes no alignment);
     `K` covers the stacks, the alignment padding and the world. -/
 def bild (passes : Nat) (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (pos : D.Fn → Nat) (name : D.Fn → String) (main : D.Fn)
-    (ρ : Env D (D.params main)) (roots : List D.Fn) (Ks : Nat) (req : Nat) : Except String (Bild D) :=
+    (ρ : Env D (D.params main)) (starts : List (Σ f : D.Fn, Env D (D.params f))) (Ks : Nat) (req : Nat) : Except String (Bild D) :=
+  let roots := starts.map (·.1)
   match lowAll passes P (Y 0) name (fun _ => 0) fs with
   | .error e => .error e
   | .ok cs0 =>
@@ -189,11 +192,11 @@ def bild (passes : Nat) (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (p
       let n := depthOf Ks (maxTop cs)
       let sp := (List.range k).map fun j => (codeBase + 16 * (3 * k + startLen + startLen * j), fp0 + 8 * (Ks * (j + 1)))
       let code := spawnC (startScratch main) sp ++ startC A main n 231 true ++ rootsC A n roots ++ body
-      if BildGut D main roots lens cs fp0 K Ks Yb code ∧ fp0 = codeBase + 16 * (headLen k + body.length) then
-        .ok ⟨code, A, fp0, K, Ks, Yb, n, passes, roots, encodeEnv Yb ρ, req⟩
+      if BildGut D main roots lens cs fp0 Ks K Yb code ∧ fp0 = codeBase + 16 * (headLen k + body.length) then
+        .ok ⟨code, A, fp0, K, Ks, Yb, n, passes, roots, encodeEnv Yb ρ,
+          starts.map (fun start => encodeEnv Yb start.2), req⟩
       else if D.gruende main != 0 then .error "ir: main has an uncaught reason channel"
       else if (roots.all fun f => decide (D.gruende f = 0)) = false then .error "ir: a root has an uncaught reason channel"
-      else if (roots.all fun f => (D.params f).isEmpty) = false then .error "ir: a root takes parameters"
       else if cs.map (·.1.length) != lens then .error "ir: a code length moved with the addresses"
       else if fp0 + 8 * K ≥ 2 ^ 31 then .error "ir: the image does not fit below 2^31"
       else if Ks < FB + 2 * maxTop cs ∨ ((main :: roots).all fun f => decide (startScratch f + 8 ≤ Ks)) = false then
@@ -203,10 +206,11 @@ def bild (passes : Nat) (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (p
 
 def encII (i : II) : List Runner.B := Runner.Prog.insB i.o i.a i.b i.c
 
-/-- The file the runner loads: header, code, `main`'s frame with its parameter words, then the zero bytes of the roots'
-    stacks, the alignment padding and the world. -/
+/-- The file the runner loads: header, code, one initialized frame per semantic start,
+    then the alignment padding and world. The checked scratch bound includes each complete parameter span. -/
 def Bild.bytes (b : Bild D) : List Runner.B :=
   Runner.Prog.leN 8 b.fp0 ++ Runner.Prog.leN 8 b.baseReq ++ b.code.flatMap encII ++
-    ((startFrameBytes b.Ks (FB + FB) b.args).getD [] ++ List.replicate (8 * (b.K - b.Ks)) (0 : Runner.B))
+    ((startStackBytes b.Ks (FB + FB) (b.args :: b.rootArgs)).getD [] ++
+      List.replicate (8 * (b.K - b.Ks * (b.roots.length + 1))) (0 : Runner.B))
 
 end Gabbro.Stage0.Senke
