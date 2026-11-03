@@ -77,7 +77,13 @@ def execStmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ
       indSonst R p args he hr (σ.lese Λ (p.orte ++ args.orte)) ρ
         (fun σ' _ => .ok σ' ρ)
         (fun σ' r => (execEnd err σ' (.cons r ρ)).schrumpf.zuAusgang)
-  | .locks L _ body, σ, ρ => (execBlock body (σ.nimmt L) ρ).mapWelt (·.gibt L)
+  | .locks L _ body, σ, ρ =>
+      /- Returns already discharged their exact lexical cleanup. Only a local
+         continuation (ok/leave/next) still crosses this wrapper's release. -/
+      match execBlock body (σ.nimmt L) ρ with
+      | .zurueck σ' v => .zurueck σ' v
+      | .why σ' r => .why σ' r
+      | outcome => outcome.mapWelt (·.gibt L)
   | .breaking _ body, σ, ρ => execBlock body σ ρ
   | .traverse t inv body, σ, ρ =>
       traverseLauf (fun σ ρ => execBlock body σ ρ)
