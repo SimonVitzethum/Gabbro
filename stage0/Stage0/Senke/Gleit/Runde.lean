@@ -307,7 +307,7 @@ theorem softRound_replay (u v : Exakt) (hle : u.zweierExp ≤ v.zweierExp)
           normQD_pos E _ _ M hM hm
         have hnorm : normQ 53 E (S * 2 ^ u.zweierExp.toNat) 1
             = rundeInt ((S * 2 ^ u.zweierExp.toNat * 2 ^ M) / 1) ((S * 2 ^ u.zweierExp.toNat * 2 ^ M) % 1) 1 := by
-          unfold normQ; rw [hQD]; dsimp only
+          unfold normQ; rw [hQD]; try dsimp only
         rw [hnorm]
         have hRd : (S * 2 ^ u.zweierExp.toNat * 2 ^ M) % 1 < 1 := Nat.mod_lt _ (by decide)
         have e2 : (S * 2 ^ u.zweierExp.toNat * 2 ^ M) * softNormDen S
@@ -323,7 +323,7 @@ theorem softRound_replay (u v : Exakt) (hle : u.zweierExp ≤ v.zweierExp)
         have hnorm : normQ 53 E (S * 2 ^ u.zweierExp.toNat) 1
             = rundeInt ((S * 2 ^ u.zweierExp.toNat) / (1 * 2 ^ M))
               ((S * 2 ^ u.zweierExp.toNat) % (1 * 2 ^ M)) (1 * 2 ^ M) := by
-          unfold normQ; rw [hQD]; dsimp only
+          unfold normQ; rw [hQD]; try dsimp only
         rw [hnorm]
         have hRd : (S * 2 ^ u.zweierExp.toNat) % (1 * 2 ^ M) < 1 * 2 ^ M :=
           Nat.mod_lt _ (Nat.mul_pos (by decide) (Nat.two_pow_pos _))
@@ -360,7 +360,7 @@ theorem softRound_replay (u v : Exakt) (hle : u.zweierExp ≤ v.zweierExp)
         have hnorm : normQ 53 E S (2 ^ (-u.zweierExp).toNat)
             = rundeInt ((S * 2 ^ M) / (2 ^ (-u.zweierExp).toNat))
               ((S * 2 ^ M) % (2 ^ (-u.zweierExp).toNat)) (2 ^ (-u.zweierExp).toNat) := by
-          unfold normQ; rw [hQD]; dsimp only
+          unfold normQ; rw [hQD]; try dsimp only
         rw [hnorm]
         have hRd : (S * 2 ^ M) % (2 ^ (-u.zweierExp).toNat) < 2 ^ (-u.zweierExp).toNat :=
           Nat.mod_lt _ (Nat.two_pow_pos _)
@@ -378,7 +378,7 @@ theorem softRound_replay (u v : Exakt) (hle : u.zweierExp ≤ v.zweierExp)
         have hnorm : normQ 53 E S (2 ^ (-u.zweierExp).toNat)
             = rundeInt (S / (2 ^ (-u.zweierExp).toNat * 2 ^ M))
               (S % (2 ^ (-u.zweierExp).toNat * 2 ^ M)) (2 ^ (-u.zweierExp).toNat * 2 ^ M) := by
-          unfold normQ; rw [hQD]; dsimp only
+          unfold normQ; rw [hQD]; try dsimp only
         rw [hnorm]
         have hRd : S % (2 ^ (-u.zweierExp).toNat * 2 ^ M) < 2 ^ (-u.zweierExp).toNat * 2 ^ M :=
           Nat.mod_lt _ (Nat.mul_pos (Nat.two_pow_pos _) (Nat.two_pow_pos _))
