@@ -51,7 +51,7 @@ theorem call_equation (fn : Function params lo hi)
 /-- A successful call is certified at its original argument and result types.
     The generic equation includes all worlds, oracles, budgets and positive depths. -/
 structure Certificate (fn : Function params lo hi)
-    (args : Env (declaration params (.int lo hi)) params) (value : Int) : Prop where
+    (args : Env (declaration params (.int lo hi)) params) (value : Int) where
   range : lo ≤ value ∧ value ≤ hi
   body : (fn.body.2.2.denote args).n = value
   requires : fn.pre.denote args = true
