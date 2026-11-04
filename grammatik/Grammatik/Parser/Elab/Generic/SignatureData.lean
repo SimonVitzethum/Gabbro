@@ -111,16 +111,24 @@ private theorem markFlow_origin (marken names : List String) (keep : String → 
 theorem gibtAt_keinEigner (u : UProg) (f : UFn) (i : Fin u.marken.length) (s : Nat)
     (h : (i, s) ∈ gibtAt u f) :
     u.tabs.all (fun t => decide (t.owner ≠ some (u.marken.get i))) = true := by
+  unfold gibtAt at h
   obtain ⟨m, _, hm, hall, _⟩ := markFlow_origin u.marken f.gibt
-    (fun m => u.tabs.all (fun t => decide (t.owner ≠ some m))) h
+    (fun m => u.tabs.all (fun t => decide (t.owner ≠ some m))) (i := i) (s := s) (by
+      obtain ⟨m, member, value⟩ := List.mem_filterMap.mp h
+      refine List.mem_filterMap.mpr ⟨m, member, ?_⟩
+      cases resolved : markFin u.marken m <;> simpa only [resolved] using value)
   rw [markFin_get u.marken m i hm]
   exact hall
 
 /-- Every resolved production is a stage-0 mark. -/
 theorem gibtAt_stufe (u : UProg) (f : UFn) (i : Fin u.marken.length) (s : Nat)
     (h : (i, s) ∈ gibtAt u f) : s = 0 := by
+  unfold gibtAt at h
   obtain ⟨_, _, _, _, hs⟩ := markFlow_origin u.marken f.gibt
-    (fun m => u.tabs.all (fun t => decide (t.owner ≠ some m))) h
+    (fun m => u.tabs.all (fun t => decide (t.owner ≠ some m))) (i := i) (s := s) (by
+      obtain ⟨m, member, value⟩ := List.mem_filterMap.mp h
+      refine List.mem_filterMap.mpr ⟨m, member, ?_⟩
+      cases resolved : markFin u.marken m <;> simpa only [resolved] using value)
   exact hs
 
 /-! ## C12 loan flow: `leiht` through the mark table -/
@@ -139,8 +147,12 @@ def leihtAt (u : UProg) (f : UFn) : List (Fin u.marken.length × Nat) :=
 theorem leihtAt_eigner (u : UProg) (f : UFn) (i : Fin u.marken.length) (s : Nat)
     (h : (i, s) ∈ leihtAt u f) :
     ∃ t : Fin u.tabs.length, (tabAt u t).owner = some (u.marken.get i) := by
+  unfold leihtAt at h
   obtain ⟨m, _, hm, hall, _⟩ := markFlow_origin u.marken f.leiht
-    (fun m => u.tabs.any (fun t => decide (t.owner = some m))) h
+    (fun m => u.tabs.any (fun t => decide (t.owner = some m))) (i := i) (s := s) (by
+      obtain ⟨m, member, value⟩ := List.mem_filterMap.mp h
+      refine List.mem_filterMap.mpr ⟨m, member, ?_⟩
+      cases resolved : markFin u.marken m <;> simpa only [resolved] using value)
   obtain ⟨x, hxu, hx⟩ := List.any_eq_true.mp hall
   have hxown : x.owner = some m := of_decide_eq_true hx
   obtain ⟨t, ht⟩ := List.mem_iff_get.mp hxu
@@ -151,8 +163,12 @@ theorem leihtAt_eigner (u : UProg) (f : UFn) (i : Fin u.marken.length) (s : Nat)
 /-- Every resolved loan is a stage-0 mark. -/
 theorem leihtAt_stufe (u : UProg) (f : UFn) (i : Fin u.marken.length) (s : Nat)
     (h : (i, s) ∈ leihtAt u f) : s = 0 := by
+  unfold leihtAt at h
   obtain ⟨_, _, _, _, hs⟩ := markFlow_origin u.marken f.leiht
-    (fun m => u.tabs.any (fun t => decide (t.owner = some m))) h
+    (fun m => u.tabs.any (fun t => decide (t.owner = some m))) (i := i) (s := s) (by
+      obtain ⟨m, member, value⟩ := List.mem_filterMap.mp h
+      refine List.mem_filterMap.mpr ⟨m, member, ?_⟩
+      cases resolved : markFin u.marken m <;> simpa only [resolved] using value)
   exact hs
 
 /-- The lock at an index. -/
