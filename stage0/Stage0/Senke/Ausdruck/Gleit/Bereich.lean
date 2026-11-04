@@ -65,7 +65,7 @@ theorem floatRangeReject_accept {lo hi : Int × Int} {x : GFloat} :
       have rejected := floatRangeReject_none.mp result
       rw [accepted] at rejected
       cases rejected
-    | some v => exact ⟨v, result⟩
+    | some v => exact ⟨v, rfl⟩
   · rintro ⟨v, result⟩
     apply Bool.eq_false_iff.mpr
     intro rejected

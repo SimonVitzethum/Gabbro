@@ -1,6 +1,6 @@
 /- Native CPU float words and the existing complete-value frame encoding. -/
 module
-public import Grammatik.Kern.Syntax.Typen.FloatTransport
+public import NativeFloat.Transport
 public import Runner.Basis.Floating
 public import Stage0.Senke.Ausdruck.Aggregat.Werte.Encoding
 @[expose] public section
@@ -12,7 +12,7 @@ open Gabbro.Grammatik
 theorem nativeFloat_read_word (value : Float) :
     Runner.readFloat value.toBits.toBitVec = value := by
   simpa only [Runner.readFloat, UInt64.ofBitVec_toBitVec] using
-    NativeFloat.bits_roundtrip value
+    RootNativeFloat.bits_roundtrip value
 
 /-- A finite CPU result has exactly the word used by the existing frame ABI.
     The premise intentionally excludes any demand on NaN payload encodings. -/
@@ -23,7 +23,20 @@ theorem nativeFloat_word_eq {value : Float} {word : Runner.W}
     change (Runner.readFloat word).isFinite = true
     rw [decoded]
     exact finite
-  have inverse := NativeFloat.finite_bits_inverse finiteWord
+  have inverse := RootNativeFloat.finite_bits_inverse finiteWord
+  have encoded : UInt64.ofBitVec word = value.toBits :=
+    inverse.symm.trans (congrArg Float.toBits decoded)
+  simpa only [UInt64.toBitVec_ofBitVec] using congrArg UInt64.toBitVec encoded
+
+/-- Non-NaN conversion results retain their complete encoding on overflow too. -/
+theorem nativeFloat_word_eq_nonNaN {value : Float} {word : Runner.W}
+    (notNaN : value.isNaN = false) (decoded : Runner.readFloat word = value) :
+    word = value.toBits.toBitVec := by
+  have valid : (Float.ofBits (UInt64.ofBitVec word)).isNaN = false := by
+    change (Runner.readFloat word).isNaN = false
+    rw [decoded]
+    exact notNaN
+  have inverse := RootNativeFloat.bits_ofBits_notNaN valid
   have encoded : UInt64.ofBitVec word = value.toBits :=
     inverse.symm.trans (congrArg Float.toBits decoded)
   simpa only [UInt64.toBitVec_ofBitVec] using congrArg UInt64.toBitVec encoded
