@@ -41,9 +41,9 @@ theorem floatRetainedRangeL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pr
     rw [location] at hr
     change w = BitVec.ofInt 64 raw.n at hw
     have actual : w = word := hw.trans BitVec.ofInt_toInt
-    subst w
-    have room := hp.ctx
-    simp only [frei, contextWords_cons, frameWordTy_width] at room
+    rw [actual] at hr
+    have room : frei Γ reserved + 1 ≤ j := by
+      simpa only [frei_cons, frameWordTy_width] using hp.ctx
     exact (mov_ok hp (by omega) (by omega) hr).mono (fun v hv => by rw [hv]; exact decoded))
     emitted fits auxiliary
 
