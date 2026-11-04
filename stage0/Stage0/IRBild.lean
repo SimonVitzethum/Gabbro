@@ -180,8 +180,15 @@ theorem Emitted.correct [Runner.IR.Kern] [Senke.CloneOK] {src : String} {K : Nat
       output.compiled.main σ output.args = outcome at hr ⊢
     cases outcome <;> exact hr
   · intro j hj
-    exact Senke.bild_initialized_wurzel_ok_u output.initialValid output.emission hfs hm j hj σ
+    have hr := Senke.bild_initialized_wurzel_ok_u output.initialValid output.emission hfs hm j hj σ
       (output.startPlan.starts_valid _ output.image.Y output.starts[j] (List.getElem_mem hj)) hWa hT hV
+    dsimp only [Emitted.RootSimulates, Emitted.starts] at hr ⊢
+    generalize rufAt (D := declOf output.compiled.unit) output.compiled.program O
+      output.image.passes output.image.depth
+      ((output.startPlan.starts (Senke.initialWorld output.compiled.unit output.initialValid))[j]'hj).1 σ
+      ((output.startPlan.starts (Senke.initialWorld output.compiled.unit output.initialValid))[j]'hj).2 =
+        outcome at hr ⊢
+    cases outcome <;> exact hr
 
 /-- Canonical source startup is an instance of the all-compatible-world theorem.
     The actual initialized payload establishes its world relation internally; no
@@ -227,7 +234,7 @@ theorem Emitted.sections_free {src : String} {K : Nat} {options : Profil.Options
     combined grid divides (`boden_teilt`), so no loader base-placement duty remains. -/
 def Emitted.Placed {src : String} {K : Nat} {options : Profil.Options}
     (output : Emitted src K options) : Prop :=
-  ∀ g : Fin (declOf output.compiled.unit).globs.length,
+  ∀ g : Fin output.compiled.unit.globs.length,
     0 < Senke.globAlign output.compiled.unit g →
     Senke.globAlign output.compiled.unit g ∣ output.image.Y.ga g ∧
       8 ∣ output.image.Y.ga g
@@ -251,9 +258,10 @@ theorem Emitted.placed {src : String} {K : Nat} {options : Profil.Options}
       split at hb
       · next hg =>
         simp only [Except.ok.injEq] at hb
+        have hbase : Nat.lcm 8 (Senke.globAlign output.compiled.unit g) ∣ bimg.Y.lo := by
+          rw [← hb]
+          exact Nat.dvd_trans hdvd (Senke.alignUp_dvd _ _ hreq)
         subst hb
-        have hbase : Nat.lcm 8 (Senke.globAlign output.compiled.unit g) ∣ bimg.Y.lo :=
-          Nat.dvd_trans hdvd (Senke.alignUp_dvd _ _ hreq)
         dsimp only at hbase ⊢
         exact ⟨Senke.layU_ga_aligned _ _ _ _ hpos hbase,
           Senke.layU_ga_word_aligned _ _ _ _ hpos hbase⟩
