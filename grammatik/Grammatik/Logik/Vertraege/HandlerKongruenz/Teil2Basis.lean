@@ -27,7 +27,10 @@ theorem Stmt.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
   | .onWhy r arms, σ, ρ => by
       simp only [execStmt]; exact GrundArms.kongruent hR arms _ _ ρ
   | .locks L hr body, σ, ρ => by
-      simp only [execStmt]; exact (Block.kongruent hR body (σ.nimmt L) ρ).mapWelt
+      simp only [execStmt]
+      rcases Block.kongruent hR body (σ.nimmt L) ρ with h | ⟨m, h1, hE⟩
+      · rw [h]; exact Or.inl rfl
+      · exact Or.inr ⟨m, by rw [h1]; cases m <;> rfl, hE⟩
   | .breaking i body, σ, ρ => by
       simp only [execStmt]; exact Block.kongruent hR body σ ρ
   | .traverse t inv body, σ, ρ => by
