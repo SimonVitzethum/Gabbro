@@ -171,7 +171,7 @@ def lowWertE (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     let v ← lowWertAtE u Γ Λ fn er fieldTy value
     pure ⟨sch.ty, Expr.prodSet baseE pos v⟩
 termination_by value => 3 * sizeOf value
-decreasing_by all_goals simp_wf; omega
+decreasing_by all_goals (simp_wf <;> omega)
 
 /-- A value at the type `τ` (checking mode): an array literal element by element, everything else by `fitW`. -/
 def lowWertAtE (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (er : Option Ty) :
@@ -187,7 +187,7 @@ def lowWertAtE (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (e
     | .error e => .error e
 
 termination_by _ value => 3 * sizeOf value + 1
-decreasing_by all_goals simp_wf; omega
+decreasing_by all_goals (simp_wf <;> omega)
 
 /-- Elaborate the existing ordered typed field list, keeping recursive calls visible to the
     shared termination proof. Every component uses the same canonical checking-mode lowerer. -/
@@ -199,7 +199,7 @@ def lowProductArgs (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn
     let tail ← lowProductArgs u Γ Λ fn er rest
     pure (.cons head tail)
 termination_by sides => 3 * sizeOf sides + 2
-decreasing_by all_goals simp_wf; omega
+decreasing_by all_goals (simp_wf <;> omega)
 
 /-- One comparison in `ensures` (G folds all but `lt`/`le`/`eq`). -/
 def lowCmp (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -249,7 +249,7 @@ def lowCmp (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
         | _ => .error "operator without G form"
 
 termination_by _ a b => 3 * (sizeOf a + sizeOf b) + 1
-decreasing_by all_goals simp_wf; omega
+decreasing_by all_goals (simp_wf <;> omega)
 
 /-- One `ensures` predicate. -/
 def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -364,7 +364,7 @@ def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       else .error "access without held guard"
 
 termination_by predicate => 3 * sizeOf predicate
-decreasing_by all_goals simp_wf; omega
+decreasing_by all_goals (simp_wf <;> omega)
 
 def lowArrayValue (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (er : Option Ty)
     (source : USide) : Except String (ArrayValue u Γ Λ) := do
@@ -375,7 +375,7 @@ def lowArrayValue (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
   | _ => .error "source export: elems domain is not an array"
 
 termination_by 3 * sizeOf source + 1
-decreasing_by all_goals simp_wf; omega
+decreasing_by all_goals (simp_wf <;> omega)
 
 /-- C13: one side of a comparison that holds `count x in D : p` as a number (`Expr.count`), at the arithmetic layer
     `+ - *`; every other side is the side of `lowSideEns`. The binder `x` is an index into the exact domain:
@@ -430,7 +430,7 @@ def lowSeiteZ (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   | .mul a b => lowZwei (fun x y => .ok (LowSide.times x y)) (lowSeiteZ u Γ Λ fn er a) (lowSeiteZ u Γ Λ fn er b)
   | s => zahlVon (lowWertE u Γ Λ fn er s)
 termination_by source => 3 * sizeOf source + 1
-decreasing_by all_goals simp_wf; omega
+decreasing_by all_goals (simp_wf <;> omega)
 end
 
 /-- A comparison side in `ensures`: literals, numeric parameters,
