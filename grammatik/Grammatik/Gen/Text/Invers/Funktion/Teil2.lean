@@ -89,27 +89,45 @@ private theorem elabKopf_scalar
   unfold elabKopf
   simp only [List.isEmpty_nil, himpl, Bool.true_or, Bool.not_true, Bool.false_eq_true,
     ite_false, hmc, hok, hfilter, hseq, hnames, htypes, hkinds, hheld]
-  -- Transport the whole reason result across the reader's generated matcher first.
-  erw [hkn, heff]
-  cases erg with
-  | none =>
-    simp only [pure, Except.pure, Except.ok.injEq] at hres
-    subst res
-    simp only [ergBereich, reduceCtorEq, decide_false]
-  | some t =>
-    cases t with
-    | bool =>
-      simp only [typS, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hres
+  -- Reduce both generated reason matchers on the same actual lookup results.
+  cases fehler
+  case' none =>
+    simp only [Except.ok.injEq] at hkn
+    subst kn
+    simp only [heff]
+  case' some r =>
+    cases hi : whys.findIdx? (fun w => strEq w.name r)
+    case none => simp only [hi, reduceCtorEq] at hkn
+    case' some k =>
+      cases hw : whys[k]?
+      case none => simp only [hi, hw, reduceCtorEq] at hkn
+      case' some w =>
+        cases hb : w.cases.isEmpty
+        case true => simp only [hi, hw, hb, ↓reduceIte, reduceCtorEq] at hkn
+        case' false =>
+          simp only [hi, hw, hb, Bool.false_eq_true, ↓reduceIte, Except.ok.injEq] at hkn
+          subst kn
+          simp only [hi, hw, hb, Bool.false_eq_true, ↓reduceIte, heff]
+  all_goals
+    cases erg with
+    | none =>
+      simp only [pure, Except.pure, Except.ok.injEq] at hres
       subst res
-      simp only [ergBereich, decide_true]
-    | int lo hi =>
-      simp only [typS, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hres
-      subst res
-      simp only [ergBereich, uErgBereich, schranke_zahlE, Bool.false_eq_true, ↓reduceIte,
-        Option.some.injEq, reduceCtorEq, decide_false]
-    | _ =>
-      have impossible := herg _ rfl
-      simp only [artErg, Option.isSome_none, Bool.false_eq_true] at impossible
+      simp only [ergBereich, reduceCtorEq, decide_false]
+    | some t =>
+      cases t with
+      | bool =>
+        simp only [typS, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hres
+        subst res
+        simp only [ergBereich, decide_true]
+      | int lo hi =>
+        simp only [typS, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hres
+        subst res
+        simp only [ergBereich, uErgBereich, schranke_zahlE, Bool.false_eq_true, ↓reduceIte,
+          Option.some.injEq, reduceCtorEq, decide_false]
+      | _ =>
+        have impossible := herg _ rfl
+        simp only [artErg, Option.isSome_none, Bool.false_eq_true] at impossible
 
 section Kopf
 variable (z : Spez)
@@ -260,7 +278,8 @@ theorem kopf_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklarat
     (types := S.params) (kinds := ks)
     (hfilter := hog) (hseq := hseq) (hnames := p1) (htypes := p2) (hkinds := p3)
     (hmc := hmc) (hok := hok) (hheld := hgeh) (hkn := hkn)
-    (heff := hrun) (hres := by simpa only [delabRes, ← hS] using hres)
+    (heff := hrun) (hres := by
+      cases he : S.erg <;> simpa only [delabRes, ← hS, he] using hres)
     (herg := hV.erg) (hout := rfl)
 
 end Kopf
