@@ -49,7 +49,7 @@ theorem endFloatLit_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
     have hks := hW.ks
     have htop : frei Γ reserved + 2 ≤ max cw.2 tr := by simp only [cw, konstWL, bin2]; omega
     change max cw.2 tr + cap ≤ Ks at hK
-    simp only [execEnd, hv, EndAusgang.zuAusgang, floatEnd_schrumpf]
+    simp only [execEnd, hv, floatEnd_schrumpf]
     refine bindValue_ok (L := L) (τ := .fl low high) (v := v) hW hlo hlo0 hlo2 hpr (by omega) ?_ ?_ hp hu hk hWa
     · intro m pc hp
       refine Ok.value (width := rfl) ?_
@@ -114,7 +114,7 @@ theorem endFloatOfComputed_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes :
         (fun _ h => h)).mono
           (fun w hw => ⟨hwf, hw⟩)
     simp only [floatNarrowC, List.length_append, List.length_singleton] at hs
-    simp only [execEnd, EndAusgang.zuAusgang]
+    simp only [execEnd]
     have hchoice := choice_ok (P := P) (σ0 := σ0) (ex := ex) (d := frei Γ reserved)
       (cc := cc) (ct := stopC 107 (frei Γ reserved)) (ce := ce ++ cr)
       (b := computedFloatRangeReject low high x)
@@ -128,7 +128,7 @@ theorem endFloatOfComputed_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes :
       hW hlo hlo0 hlo2 hpr (σ := σr) ?_ ?_ ?_
       (by simpa only [floatNarrowC, List.length_append, Int.natCast_add] using hp) hu hk hWa
     · cases hv : gleitPasst low high x <;>
-        simpa only [ite_self, hv, EndAusgang.zuAusgang, floatEnd_schrumpf, floatNarrowC, List.length_append, Int.natCast_add] using hchoice
+        simpa only [ite_self, hv, floatEnd_schrumpf, floatNarrowC, List.length_append, Int.natCast_add] using hchoice
     · intro hpc
       have hpw := PreS.welt hpc hW.ks hWa hW.lay (by have := hW.lo; omega)
       obtain ⟨m1, st, a1, w, hw, hen⟩ := computedFloatRangeL_ok x hwf low high
