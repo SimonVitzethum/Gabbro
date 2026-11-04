@@ -113,8 +113,15 @@ theorem member_borrow_ok {Γ : Ctx} {ρ : Env D Γ} {m : Mem} {pc fp : W}
   refine ⟨m4, ?_, restored, rd_same h3.frame (by omega) candidate,
     result, ?_, resultProperty⟩
   · have run := save.trans (install.trans (memberRun.trans restore))
-    simpa only [m4, List.length_singleton, pc_add, pc_add16, Nat.add_assoc, Nat.add_comm,
-      Nat.add_left_comm, Nat.reduceAdd] using run
+    simp only [m4, List.length_singleton, pc_add, Nat.add_assoc, Nat.add_comm,
+      Nat.add_left_comm, Nat.reduceAdd] at run
+    have finish : pc + BitVec.ofNat 64 (16 * (cb.length + 2)) + 16 =
+        pc + BitVec.ofNat 64 (16 * (cb.length + 3)) := by
+      change pc + BitVec.ofNat 64 (16 * (cb.length + 2)) + BitVec.ofNat 64 16 = _
+      rw [BitVec.add_assoc, ← BitVec.ofNat_add]
+      congr 2 <;> omega
+    rw [finish] at run
+    exact run
   · rw [rd_other h3.frame.room (by omega) (by omega) (by omega)]
     exact resultRead
 
