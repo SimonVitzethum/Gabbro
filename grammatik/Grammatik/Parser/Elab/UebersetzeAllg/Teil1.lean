@@ -121,6 +121,7 @@ def declOf (u : UProg) : Deklaration where
     · have hsig : (sigAt u n).produziert = gibtAt u ((sigFns u).get ⟨n, hlt⟩) := by
         unfold sigAt
         rw [dif_pos hlt]
+        rfl
       rw [hsig] at hprod
       have hall := gibtAt_keinEigner u _ m s hprod
       have hmem : (tabAt u t) ∈ u.tabs := List.get_mem u.tabs t
@@ -131,6 +132,7 @@ def declOf (u : UProg) : Deklaration where
     · have hsig : (sigAt u n).produziert = [] := by
         unfold sigAt
         rw [dif_neg hlt]
+        rfl
       rw [hsig] at hprod
       exact (List.not_mem_nil hprod).elim
   Inv := Fin u.invs.length
