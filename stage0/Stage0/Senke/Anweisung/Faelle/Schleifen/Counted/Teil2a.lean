@@ -44,11 +44,20 @@ theorem lowE_literal_value_counted {Γ : Ctx} {Λ : List (Res D)} {k : Int}
     dsimp only at codeEq topEq
     subst code
     subst top
+    have literalEncoding : encodeWords L (.int k k)
+        (⟨k, Int.le_refl k, Int.le_refl k⟩ : Zahl k k) =
+          integerEncoding (integerWords k k) k :=
+      encodeWords_int L k k _
+    have canonicalPre : Pre L m pc fp K d
+        (constWords (integerEncoding (integerWords k k) k) d).1 ρ W reserved := by
+      simpa only [literalEncoding] using pre
+    have canonicalFits : (constWords (integerEncoding (integerWords k k) k) d).2 ≤ K := by
+      simpa only [literalEncoding] using fits
     obtain ⟨m', run, changed, output⟩ := constWords_counted
-      (integerEncoding (integerWords k k) k) fits pre
+      (integerEncoding (integerWords k k) k) canonicalFits canonicalPre
     refine ⟨m', ?_, changed, trivial, ?_⟩
-    · simpa only [literalCount, large, Bool.false_eq_true, ↓reduceIte, encodeWords] using run
-    · simpa only [encodeWords, number] using output
+    · simpa only [literalCount, large, Bool.false_eq_true, ↓reduceIte, literalEncoding] using run
+    · simpa only [encodeWords_int, number] using output
 
 theorem ExprCost.sound_value {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     {e : Expr D Γ Λ τ} {d n : Nat} {v : Wert D τ}
