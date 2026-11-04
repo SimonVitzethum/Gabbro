@@ -36,7 +36,7 @@ private theorem magnitude_fields (F : Format) (s : Sign)
     (packComponents F s e m &&& magnitudeMask F).toNat =
       e.toNat * 2 ^ F.mantissaBitsWithoutImplicit + m.toNat := by
   have erased : packComponents F s e m &&& magnitudeMask F = packComponents F .positive e m := by
-    simp only [packComponents, magnitudeMask, BitVec.and_append, BitVec.and_zero,
+    simp only [packComponents, magnitudeMask, Sign.toBitVec, BitVec.and_append, BitVec.and_zero,
       BitVec.neg_one_eq_allOnes, BitVec.and_allOnes]
   rw [erased, fields_nat]
   simp only [Sign.toBitVec, BitVec.toNat_zero, Nat.zero_mul, Nat.zero_add]
@@ -57,8 +57,10 @@ private theorem threshold_nat (F : Format) (standard : F = .binary32 ∨ F = .bi
 
 private theorem infinity_nat (F : Format) :
     (packedInfinity F .positive).toNat = (2 ^ F.exponentBits - 1) * 2 ^ F.mantissaBitsWithoutImplicit := by
+  have mantissaZero : (0 : BitVec F.mantissaBitsWithoutImplicit).toNat = 0 := by
+    simp only [BitVec.toNat_ofNat, Nat.zero_mod]
   rw [packedInfinity, fields_nat]
-  simp only [Sign.toBitVec, BitVec.toNat_zero, BitVec.neg_one_eq_allOnes,
+  simp only [Sign.toBitVec, BitVec.toNat_zero, mantissaZero, BitVec.neg_one_eq_allOnes,
     BitVec.toNat_allOnes, Nat.zero_mul, Nat.zero_add, Nat.add_zero]
 
 private theorem range_guard (F : Format) (standard : F = .binary32 ∨ F = .binary64)
@@ -137,7 +139,8 @@ private theorem small_cases (F : Format) (standard : F = .binary32 ∨ F = .bina
   have eb : e.toNat < F.exponentBias + 63 := of_decide_eq_true hs
   have notMax : e ≠ -1#_ := by
     intro eq
-    have value : e.toNat = 2 ^ F.exponentBits - 1 := by simp [eq]
+    have value : e.toNat = 2 ^ F.exponentBits - 1 := by
+      simp only [eq, BitVec.neg_one_eq_allOnes, BitVec.toNat_allOnes]
     rcases standard with rfl | rfl <;> dsimp [Format.exponentBias] at * <;> omega
   simp only [UnpackedFloat.unpack, unpackMantissa_packComponents, unpackExponent_packComponents,
     unpack_sign_components, sign_unbits, notMax, ↓reduceIte]
