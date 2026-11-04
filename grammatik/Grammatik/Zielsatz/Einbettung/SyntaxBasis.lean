@@ -4,8 +4,8 @@ public import Grammatik.Zielsatz.Einbettung.Ressourcen
 
 
 /-!
-  File:      Grammatik/Zielsatz/Einbettung/Syntax.lean
-  Subject:   The syntax of `D` as syntax of `D'` under an embedding (stage E0).
+  File:      Grammatik/Zielsatz/Einbettung/SyntaxBasis.lean
+  Subject:   Transports and side conditions for the syntax embedding (stage E0).
 
   Every constructor goes to the same constructor: items to their images, types by `tyE`,
   holdings by `resE`, contracts by `vertragE`. Where `D'` meets a side condition only
@@ -131,11 +131,11 @@ theorem rufPasstE_fn (hS : E.SigTreu) {V : Vertrag D} {f : D.Fn} {Λ : List (Res
 
 theorem rufPasstE_nr (hS : E.SigTreu) {V : Vertrag D} {n : Nat} {Λ : List (Res D)}
     (h : RufPasst D V (D.sigNr n) Λ) :
-    RufPasst D' (E.vertragE V) (D'.sigNr (E.val n)) (Λ.map E.resE) := by
+    RufPasst D' (E.vertragE V) (D'.sigNr (E.num n)) (Λ.map E.resE) := by
   rw [hS.sigNr]; exact E.rufPasstE h
 
 theorem nachSigE_nr (hS : E.SigTreu) (n : Nat) (Λ : List (Res D)) :
-    (nachSig D (D.sigNr n) Λ).map E.resE = nachSig D' (D'.sigNr (E.val n)) (Λ.map E.resE) := by
+    (nachSig D (D.sigNr n) Λ).map E.resE = nachSig D' (D'.sigNr (E.num n)) (Λ.map E.resE) := by
   rw [hS.sigNr]; exact E.nachSigE _ Λ
 
 variable (E)
