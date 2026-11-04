@@ -105,8 +105,9 @@ theorem sim_stmt_assignThru {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
   have tailReads : index.orte ++ value.orte = (i.orte ++ e.orte).map E.ortE :=
     (congr (congrArg List.append ((Expr.orte_umTy (E.countE t) (exE E i)).trans (E.orte_exE i)))
       ((Expr.orte_umTy (E.typ t f).symm (exE E e)).trans (E.orte_exE e))).trans List.map_append.symm
-  have reads : (exE E p).orte ++ index.orte ++ value.orte = (p.orte ++ i.orte ++ e.orte).map E.ortE :=
-    (congr (congrArg List.append (E.orte_exE p)) tailReads).trans List.map_append.symm
+  have reads : (exE E p).orte ++ index.orte ++ value.orte = (p.orte ++ i.orte ++ e.orte).map E.ortE := by
+    simpa only [List.append_assoc] using
+      (congr (congrArg List.append (E.orte_exE p)) tailReads).trans List.map_append.symm
   obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval hZ hM T hB.havocA hB.atom Λ (Λ.map E.resE)
     (p.orte ++ i.orte ++ e.orte)
   let W := leseA A' σ' (Λ.map E.resE) ((p.orte ++ i.orte ++ e.orte).map E.ortE)
@@ -155,8 +156,9 @@ theorem sim_stmt_assignThruOwn {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List 
   have tailReads : index.orte ++ value.orte = (i.orte ++ e.orte).map E.ortE :=
     (congr (congrArg List.append ((Expr.orte_umTy (E.countE t) (exE E i)).trans (E.orte_exE i)))
       ((Expr.orte_umTy (E.typ t f).symm (exE E e)).trans (E.orte_exE e))).trans List.map_append.symm
-  have reads : (exE E p).orte ++ index.orte ++ value.orte = (p.orte ++ i.orte ++ e.orte).map E.ortE :=
-    (congr (congrArg List.append (E.orte_exE p)) tailReads).trans List.map_append.symm
+  have reads : (exE E p).orte ++ index.orte ++ value.orte = (p.orte ++ i.orte ++ e.orte).map E.ortE := by
+    simpa only [List.append_assoc] using
+      (congr (congrArg List.append (E.orte_exE p)) tailReads).trans List.map_append.symm
   obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval hZ hM T hB.havocA hB.atom Λ (Λ.map E.resE)
     (p.orte ++ i.orte ++ e.orte)
   let W := leseA A' σ' (Λ.map E.resE) ((p.orte ++ i.orte ++ e.orte).map E.ortE)
@@ -320,26 +322,27 @@ theorem sim_stmt_shift {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   have hi : (eval W index W ρ').n = (eval σ₁ i σ₁ ρ).n := eval_index_n E hZ i ρ ρ' (hev i ρ ρ' hρ)
   have hn' := E.zahl_cast_n hZ hτ hτ' (E.typ t f)
     (σ₁.slots t (eval σ₁ i σ₁ ρ).n f) _ (hI.treu.1 t (eval σ₁ i σ₁ ρ).n f)
-  have slot : (hτ' ▸ W.slots (E.tab t) (eval W index W ρ').n (E.feld t f) : Zahl zi_lo zi_hi).n =
-      (hτ ▸ σ₁.slots t (eval σ₁ i σ₁ ρ).n f : Zahl zi_lo zi_hi).n :=
-    (congrArg (fun k : Int => (hτ' ▸ W.slots (E.tab t) k (E.feld t f) : Zahl zi_lo zi_hi).n) hi).trans hn'
+  have slot : (castW (D := D') hτ' (W.slots (E.tab t) (eval W index W ρ').n (E.feld t f))).n =
+      (castW (D := D) hτ (σ₁.slots t (eval σ₁ i σ₁ ρ).n f)).n :=
+    (congrArg (fun k : Int => (castW (D := D') hτ' (W.slots (E.tab t) k (E.feld t f))).n) hi).trans hn'
   have target : execStmtHA S' O' U' A' passes R'
       (exS hS (.shift t f hτ i von nach hn he hw hL : Stmt D V l Γ Λ Λ)) σ' ρ' =
-      if (hτ ▸ σ₁.slots t (eval σ₁ i σ₁ ρ).n f : Zahl zi_lo zi_hi).n = von then
+      (if (castW (D := D) hτ (σ₁.slots t (eval σ₁ i σ₁ ρ).n f)).n = von then
         .ok (W.schreibSlot (E.tab t) (Λ.map E.resE) (eval σ₁ i σ₁ ρ).n (E.feld t f)
           (hτ' ▸ (⟨nach, hn.1, hn.2⟩ : Zahl zi_lo zi_hi))) ρ'
-      else .logik .vorzustand := by
-    change (let w := leseA A' σ' (Λ.map E.resE) (Sum.inl (E.tab t) :: index.orte)
-      if (hτ' ▸ w.slots (E.tab t) (eval w index w ρ').n (E.feld t f) : Zahl zi_lo zi_hi).n = von then
+      else .logik .vorzustand : Ausgang (E.vertragE V) l (Γ.map E.tyE)) := by
+    change (let w : World D' := leseA A' σ' (Λ.map E.resE) (Sum.inl (E.tab t) :: index.orte)
+      (if (castW (D := D') hτ' (w.slots (E.tab t) (eval w index w ρ').n (E.feld t f))).n = von then
         .ok (w.schreibSlot (E.tab t) (Λ.map E.resE) (eval w index w ρ').n (E.feld t f)
           (hτ' ▸ (⟨nach, hn.1, hn.2⟩ : Zahl zi_lo zi_hi))) ρ'
-      else .logik .vorzustand) = _
+      else .logik .vorzustand : Ausgang (E.vertragE V) l (Γ.map E.tyE))) = _
     rw [reads]
-    change (if (hτ' ▸ W.slots (E.tab t) (eval W index W ρ').n (E.feld t f) : Zahl zi_lo zi_hi).n = von then
+    change (if (castW (D := D') hτ' (W.slots (E.tab t) (eval W index W ρ').n (E.feld t f))).n = von then
       .ok (W.schreibSlot (E.tab t) (Λ.map E.resE) (eval W index W ρ').n (E.feld t f)
-        (hτ' ▸ (⟨nach, hn.1, hn.2⟩ : Zahl zi_lo zi_hi))) ρ' else .logik .vorzustand) = _
+        (hτ' ▸ (⟨nach, hn.1, hn.2⟩ : Zahl zi_lo zi_hi))) ρ' else .logik .vorzustand :
+        Ausgang (E.vertragE V) l (Γ.map E.tyE)) = _
     rw [slot, hi]
-  by_cases hc : (hτ ▸ σ₁.slots t (eval σ₁ i σ₁ ρ).n f : Zahl _ _).n = von
+  by_cases hc : (castW (D := D) hτ (σ₁.slots t (eval σ₁ i σ₁ ρ).n f)).n = von
   · refine ⟨M₁, .ok (σ₁.schreibSlot t Λ (eval σ₁ i σ₁ ρ).n f (hτ ▸ (⟨nach, hn.1, hn.2⟩ : Zahl _ _))) ρ,
       hs, fun Φ hP => ?_, ?_⟩
     · simp only [execStmtHA, hΦ Φ hP]
@@ -372,7 +375,7 @@ theorem sim_stmt_ite {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
     change (eval W condition W ρ' : Bool) = eval σ₁ c σ₁ ρ at same
     exact same
   have target : execStmtHA S' O' U' A' passes R' (exS hS (.ite c t e : Stmt D V l Γ Λ Λ')) σ' ρ' =
-      if (eval W condition W ρ' : Bool) then execBlockHA S' O' U' A' passes R' (exB hS t) W ρ'
+      if (eval (D := D') (τ := .bool) W condition W ρ' : Bool) = true then execBlockHA S' O' U' A' passes R' (exB hS t) W ρ'
       else execBlockHA S' O' U' A' passes R' (exB hS e) W ρ' := rfl
   cases hb : (eval σ₁ c σ₁ ρ : Bool)
   · obtain ⟨M₂, o, hs2, hΦ2, hR⟩ := ih_sim_block_e M₁ σ₁ _ ρ ρ' hI hρ
@@ -415,8 +418,12 @@ theorem sim_stmt_onOption {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (
       (execBlockHA S' O' U' A' passes R' present) := ih_sim_block_p
   have target : execStmtHA S' O' U' A' passes R' (exS hS (.onOption o p a : Stmt D V l Γ Λ Λ')) σ' ρ' =
       match (eval W option W ρ' : Option (Zahl 0 (n - 1))) with
-      | none => execBlockHA S' O' U' A' passes R' (exB hS a) W ρ'
-      | some k => (execBlockHA S' O' U' A' passes R' present W (.cons k ρ')).schrumpf := rfl
+      | some k => (execBlockHA S' O' U' A' passes R' present W (Env.cons (τ := .index n) k ρ')).schrumpf
+      | none => execBlockHA S' O' U' A' passes R' (exB hS a) W ρ' := by
+    change execStmtHA (D := D') (V := E.vertragE V) (l := l) (Γ := Γ.map E.tyE) S' O' U' A' passes R'
+      (Stmt.onOption (n := n) option present (exB hS a)) σ' ρ' = _
+    simp only [execStmtHA] <;>
+      cases (eval W option W ρ' : Option (Zahl 0 (n - 1))) <;> rfl
   cases hv : eval σ₁ o σ₁ ρ with
   | none =>
       obtain ⟨M₂, o', hs2, hΦ2, hR⟩ := ih_sim_block_a M₁ σ₁ _ ρ ρ' hI hρ
