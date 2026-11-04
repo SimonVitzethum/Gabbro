@@ -53,10 +53,10 @@ theorem predecessor_scan (count : Int) (candidate : Zahl 0 (count - 1))
     (ready : Nat → Mem → Prop) (result : Bool → Mem → Prop)
     (exhausted : ∀ m, ready count.toNat m →
       ScanRun L fp lo K pr header selected m (result true))
-    (blocked : ∀ j (x : Zahl 0 (count - 1)), x.n = j →
+    (blocked : ∀ (j : Nat) (x : Zahl 0 (count - 1)), x.n = j →
       (member x && edge x candidate && !decide (x.n = candidate.n)) = true →
       ∀ m, ready j m → ScanRun L fp lo K pr header rejected m (result false))
-    (advance : ∀ j (x : Zahl 0 (count - 1)), x.n = j →
+    (advance : ∀ (j : Nat) (x : Zahl 0 (count - 1)), x.n = j →
       (member x && edge x candidate && !decide (x.n = candidate.n)) = false →
       ∀ m, ready j m → ScanRun L fp lo K pr header header m (ready (j + 1))) :
     ∀ remaining j, j + remaining = count.toNat → ∀ m, ready j m →
@@ -76,7 +76,7 @@ theorem predecessor_scan (count : Int) (candidate : Zahl 0 (count - 1))
     rw [suffix]
     dsimp only [keinVorgaenger]
     by_cases hit : (member x && edge x candidate && !decide (x.n = candidate.n)) = true
-    · simpa only [hit, Bool.not_true, Bool.false_and, ↓reduceIte] using
+    · simpa only [hit, Bool.not_true, Bool.false_and, Bool.false_eq_true, ↓reduceIte] using
         blocked j x hx hit m hm
     · have miss : (member x && edge x candidate && !decide (x.n = candidate.n)) = false := by
         cases h : member x && edge x candidate && !decide (x.n = candidate.n)
@@ -101,7 +101,7 @@ theorem candidate_scan (count : Int)
     (result : Option (Zahl 0 (count - 1)) → Bool → Mem → Prop)
     (endScan : ∀ seen m, ready count.toNat seen m →
       ScanRun L fp lo K pr header exhausted m (result none seen))
-    (minimal : ∀ j (x : Zahl 0 (count - 1)), x.n = j → ∀ seen m,
+    (minimal : ∀ (j : Nat) (x : Zahl 0 (count - 1)), x.n = j → ∀ seen m,
       ready j seen m →
       let test := istMinimalVerbrauch (alleIndizes count) member edge
         (fun a b => decide (a.n = b.n)) x
@@ -121,7 +121,7 @@ theorem candidate_scan (count : Int)
     have hj : j = count.toNat := by omega
     subst j
     simpa only [idxAb_zero, verbrauchWahlAux, List.any_nil, Bool.or_false,
-      Option.isSome_none, ↓reduceIte] using endScan seen m hm
+      Option.isSome_none, Bool.false_eq_true, ↓reduceIte] using endScan seen m hm
   | succ remaining ih =>
     intro j bound seen m hm
     obtain ⟨x, hx, suffix⟩ := idxAb_succ count j remaining (by omega)
@@ -131,13 +131,12 @@ theorem candidate_scan (count : Int)
     have step := minimal j x hx seen m hm
     by_cases good : istMinimalVerbrauch (alleIndizes count) member edge
         (fun a b => decide (a.n = b.n)) x = true
-    · have live : member x = true := (Bool.and_eq_true.mp good).1
+    · have live : member x = true := (Bool.and_eq_true_iff.mp good).1
       simp only [good, ↓reduceIte] at step ⊢
       simpa only [live, Bool.true_or, Bool.or_true, Option.isSome_some, ↓reduceIte]
         using step
-    · simp only [good, ↓reduceIte] at step ⊢
+    · simp only [good, Bool.false_eq_true, ↓reduceIte] at step ⊢
       have rest := step.bind (fun m' h' => ih (j + 1) (by omega) (seen || member x) m' h')
-      cases seen <;> cases hp : member x <;> simpa only [hp, Bool.false_or, Bool.true_or]
-        using rest
+      simpa only [Bool.or_assoc, Bool.false_eq_true, ↓reduceIte] using rest
 
 end Gabbro.Stage0.Senke.Consuming
