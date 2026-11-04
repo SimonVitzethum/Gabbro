@@ -30,12 +30,14 @@ theorem call_equation (fn : Function params lo hi)
     (σ : World (declaration params (.int lo hi)))
     (O : Orakel (declaration params (.int lo hi))) (passes depth : Nat) :
     rufAt fn.program O passes (depth + 1) () σ args =
-      (if @Eq Bool (fn.pre.denote args) false then .logik (.vorbedingung ()) else
-      if h : lo ≤ (fn.body.2.2.denote args).n ∧ (fn.body.2.2.denote args).n ≤ hi then
-        let value : Zahl lo hi := ⟨(fn.body.2.2.denote args).n, h.1, h.2⟩
-        if @Eq Bool (fn.post.denote (.cons value args)) false then .logik (.nachbedingung ())
-        else .ok σ value
-      else .logik .kapazitaet : RufAusgang (D := declaration params (.int lo hi)) ()) := by
+      (letI : Decidable (@Eq Bool (fn.pre.denote args) false) := Bool.decEq _ _
+       if @Eq Bool (fn.pre.denote args) false then .logik (.vorbedingung ()) else
+       if h : lo ≤ (fn.body.2.2.denote args).n ∧ (fn.body.2.2.denote args).n ≤ hi then
+         let value : Zahl lo hi := ⟨(fn.body.2.2.denote args).n, h.1, h.2⟩
+         letI : Decidable (@Eq Bool (fn.post.denote (.cons value args)) false) := Bool.decEq _ _
+         if @Eq Bool (fn.post.denote (.cons value args)) false then .logik (.nachbedingung ())
+         else .ok σ value
+       else .logik .kapazitaet : RufAusgang (D := declaration params (.int lo hi)) ()) := by
   have prePlaces : (fn.program.requires ()).orte = [] := by
     change fn.pre.expr.orte = []
     exact footprint _
@@ -67,6 +69,7 @@ theorem call_equation (fn : Function params lo hi)
   have noInvariants : (declaration params (.int lo hi)).invs = [] := rfl
   simp only [rufAt, prePlaces, World.lese, List.map_nil, World.merke,
     List.nil_append, preEval, wahr?]
+  letI : Decidable (@Eq Bool (fn.pre.denote args) false) := Bool.decEq _ _
   by_cases hp : @Eq Bool (fn.pre.denote args) false
   · simp only [hp, ↓reduceIte] <;> rfl
   · simp only [hp, ↓reduceIte]
@@ -103,7 +106,10 @@ def certify (name : String) (fn : Function params lo hi)
     Except String (Certificate fn args value) :=
   if hr : lo ≤ value ∧ value ≤ hi then
     if hb : (fn.body.2.2.denote args).n = value then
+      letI : Decidable (@Eq Bool (fn.pre.denote args) true) := Bool.decEq _ _
       if hp : @Eq Bool (fn.pre.denote args) true then
+        letI : Decidable (@Eq Bool (fn.post.denote (.cons ⟨value, hr.1, hr.2⟩ args)) true) :=
+          Bool.decEq _ _
         if hq : @Eq Bool (fn.post.denote (.cons ⟨value, hr.1, hr.2⟩ args)) true then
           .ok ⟨hr, hb, hp, hq⟩
         else .error ("const contract violated at `" ++ name ++ "`: ensures failed")
@@ -193,6 +199,7 @@ def checkCall (k : UKonstFn) (fns : List UKonstFn)
     match ha : arguments (declaration (k.params.map Prod.snd) (.int lo hi)) k.params values with
     | .error error => throw error
     | .ok args =>
+      letI : Decidable (@Eq Bool (fn.model.pre.denote args) false) := Bool.decEq _ _
       if @Eq Bool (fn.model.pre.denote args) false then
         throw ("const contract violated at `" ++ k.name ++ "`: requires failed")
       else
