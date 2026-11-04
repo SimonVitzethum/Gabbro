@@ -13,17 +13,21 @@ open Gabbro.Grammatik Gleitkomma Runner.IR Runner.Mem
 def computedFloatRangeReject (lo hi : Int × Int) (x : GFloat) : Bool :=
   if x.bexp = 2047 then true else floatRangeReject lo hi x
 
+private theorem computedFloat_finite (x : GFloat) :
+    gleitEndlich x = decide (x.bexp ≠ 2047) := by
+  by_cases maximum : x.bexp = 2047 <;>
+    by_cases zero : x.bexp = 0 <;> by_cases frac : x.frac = 0 <;>
+    simp [gleitEndlich, klasse, show f64.bexpMax = 2047 from rfl, maximum, zero, frac]
+
 theorem computedFloatRangeReject_none {lo hi : Int × Int} {x : GFloat}
     (hw : wf f64 x) :
     gleitPasst lo hi x = none ↔ computedFloatRangeReject lo hi x = true := by
   by_cases infinite : x.bexp = 2047
   · have notFinite : gleitEndlich x = false := by
-      simp only [gleitEndlich, klasse, show f64.bexpMax = 2047 from rfl, infinite, ite_true]
-      split <;> rfl
+      simp [computedFloat_finite, infinite]
     simp [computedFloatRangeReject, infinite, gleitPasst, notFinite]
   · have finite : gleitEndlich x = true := by
-      simp only [gleitEndlich, klasse, show f64.bexpMax = 2047 from rfl, if_neg infinite]
-      split <;> (try split) <;> rfl
+      simpa only [computedFloat_finite, decide_eq_true_eq] using infinite
     simpa only [computedFloatRangeReject, if_neg infinite] using floatRangeReject_none hw finite
 
 def computedFloatRangeL (d : Nat) (lo hi : Int × Int)
@@ -48,15 +52,22 @@ theorem computedFloatRangeL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pr
   have source : WordCode (L := L) ρ W producer (BitVec.ofNat 64 (zuBits f64 x)) reserved := by
     intro fp K d c top emitted fits m pc pre
     exact (run emitted fits m pc pre).mono (fun _ h => h.2)
-  have exponent := unpackBexpL_ok source
+  have exponent : WordCode (L := L) ρ W (fun d => unpackBexpL d producer)
+      (unpackBexpWord (BitVec.ofNat 64 (zuBits f64 x))) reserved := unpackBexpL_ok source
   rw [(routineUnpack_canonical x hw).2.1] at exponent
   have equal : (BitVec.ofNat 64 x.bexp == (2047 : Runner.W)) = decide (x.bexp = 2047) := by
     apply Bool.eq_iff_iff.mpr
+    have bound : x.bexp < 2 ^ 64 := by
+      have := hw.1
+      change x.bexp ≤ 2047 at this
+      omega
     simp only [beq_iff_eq, decide_eq_true_eq, ← BitVec.toNat_inj,
-      BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by have := hw.1; change x.bexp ≤ 2047 at this; omega)]
-    rfl
-  have check := WordCode.bin exponent (WordCode.const 2047 (by decide))
-    (g := fun a b => some (Runner.IR.bool (a == b))) rfl rfl (by decide : 14 < 256)
+      BitVec.toNat_ofNat, Nat.mod_eq_of_lt bound] <;> rfl
+  have check : WordCode (L := L) ρ W
+      (fun j => wordK 14 j (unpackBexpL j producer) 2047)
+      (Runner.IR.bool (BitVec.ofNat 64 x.bexp == BitVec.ofInt 64 2047)) reserved :=
+    WordCode.bin exponent (WordCode.const 2047 (by decide))
+      (g := fun a b => some (Runner.IR.bool (a == b))) rfl rfl (by decide : 14 < 256)
   rw [show BitVec.ofInt 64 2047 = (2047 : Runner.W) from rfl, equal] at check
   have yes : decide (x.bexp = 2047) = true →
       WordCode (L := L) ρ W (fun j => some ([ci 1 j 1 0], j + 1))
@@ -67,11 +78,15 @@ theorem computedFloatRangeL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pr
     intro flag fp K d c top emitted fits m pc pre
     have nonmax : x.bexp ≠ 2047 := by simpa using flag
     have finite : gleitEndlich x = true := by
-      simp only [gleitEndlich, klasse, show f64.bexpMax = 2047 from rfl, if_neg nonmax]
-      split <;> (try split) <;> rfl
-    exact canonicalFloatRangeL_ok x hw finite producer
-      (fun d c top hc ht m pc hp => run hc ht m pc hp) emitted fits pre
-  have result := routineChooseL_ok check yes no
+      simpa only [computedFloat_finite, decide_eq_true_eq] using nonmax
+    exact canonicalFloatRangeL_ok (fp := fp) (K := K) (d := d) (top := top)
+      (reserved := reserved) x hw finite producer
+      (fun d c top hc ht m pc hp => run (fp := fp) (K := K) hc ht m pc hp)
+      emitted fits pre
+  have result : WordCode (L := L) ρ W (fun d => computedFloatRangeL d lo hi producer)
+      (if decide (x.bexp = 2047) then Runner.IR.bool true
+        else Runner.IR.bool (floatRangeReject lo hi x)) reserved :=
+    routineChooseL_ok check yes no
   by_cases nonfinite : x.bexp = 2047
   · simpa only [computedFloatRangeL, computedFloatRangeReject, nonfinite,
       decide_true, ite_true] using result
@@ -84,10 +99,7 @@ theorem computedFloatRangeReject_finite {lo hi : Int × Int} {x : GFloat}
     (finite : gleitEndlich x = true) :
     computedFloatRangeReject lo hi x = floatRangeReject lo hi x := by
   have notMax : x.bexp ≠ 2047 := by
-    intro maxExp
-    simp only [gleitEndlich, klasse, show f64.bexpMax = 2047 from rfl,
-      maxExp, ite_true] at finite
-    split at finite <;> cases finite
+    simpa only [computedFloat_finite, decide_eq_true_eq] using finite
   exact if_neg notMax
 
 /-- Overflow must reject even when the declared upper endpoint is infinite. -/
