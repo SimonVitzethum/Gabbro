@@ -13,11 +13,25 @@ structure Image (L : Lay D) (P : Programm D) (f : D.Fn) (reserved : Nat) where
   A : D.Fn → Nat
   C : D.Fn → List II
   dv : W
-  fp pc rp cfp : W
-  K Ks lo s counter saved fuel : Nat
+  fp : W
+  pc : W
+  rp : W
+  cfp : W
+  K : Nat
+  Ks : Nat
+  lo : Nat
+  s : Nat
+  counter : Nat
+  saved : Nat
+  fuel : Nat
   table : D.Tab
   bound : Int
-  invariant member edge measure body code : List II
+  invariant : List II
+  member : List II
+  edge : List II
+  measure : List II
+  body : List II
+  code : List II
   σ0 : World D
   ρ0 : Env D (D.params f)
   pr : List Nat
@@ -192,8 +206,8 @@ theorem Ready.eval {Λ : List (Res D)} {τ : Ty} (h : x.Ready m σ ρ)
       intro hn
       simp only [List.getElem?_eq_none (by omega)] at found
       cases found
-    have element : x.fragment[i] = .code block := by simpa only
-      [List.getElem?_eq_getElem inside, Option.some.injEq] using found
+    have element : x.fragment[i] = .code block := by
+      simpa only [List.getElem?_eq_getElem inside, Option.some.injEq] using found
     simp only [addr, offset, List.take_succ_eq_append_getElem inside, element]
     have widths : ∀ a b : List Piece, width (a ++ b) = width a + width b := by
       intro a b; induction a with
