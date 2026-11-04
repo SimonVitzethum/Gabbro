@@ -53,7 +53,7 @@ theorem lowLit_product (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
 theorem lowLit_bool (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (value : Bool) :
     lowLit (u := u) (Γ := Γ) (Λ := Λ) .bool (.truth value) =
       .ok (if value then Expr.tru else Expr.fls) := by
-  cases value <;> rw [lowLit]
+  cases value <;> simp only [lowLit, Bool.false_eq_true, ↓reduceIte]
 
 /-- The literal field helper also checks the carried field type before its recursive step. -/
 theorem lowLitFields_cons (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -77,6 +77,8 @@ theorem lowLit_array_cons (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
        | .ok first, .ok rest => .ok (Expr.arrCons first rest)
        | .error error, _ | _, .error error => .error error) := by
   rw [lowLit]
+  cases lowLit (u := u) (Γ := Γ) (Λ := Λ) ty head <;>
+    cases lowLit (u := u) (Γ := Γ) (Λ := Λ) (.arr ty count) tail <;> rfl
 
 /-- Product projection and replacement use the canonical semantics, with the whole base footprint. -/
 theorem record_replace_meaning {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {identity : Nat}
