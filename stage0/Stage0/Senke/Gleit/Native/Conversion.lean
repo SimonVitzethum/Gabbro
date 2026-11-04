@@ -1,7 +1,7 @@
 /- Native conversion primitives and their actual word-code composition. -/
 module
 public import Stage0.Senke.Gleit.Native.Values
-public import Grammatik.Kern.Syntax.Typen.NativeIntConversion
+public import NativeFloat.IntConversion
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
@@ -39,7 +39,7 @@ theorem nativeSignedIntegerL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → P
     NativeFloatCode (L := L) (reserved := reserved) ρ W
       (fun d => nativeSignedFloatL d child) (gleitAusInt z) := by
   change NativeFloatCode _ _ _ (Float.ofInt z) _
-  rw [NativeFloat.ofInt_signed64_bits z lower upper]
+  rw [RootNativeFloat.ofInt_signed64_bits z lower upper]
   exact nativeSignedFloatL_ok z source
 
 /-- Scaling uses the same physical multiplier and native value relation as

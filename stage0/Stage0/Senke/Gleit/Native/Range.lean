@@ -1,5 +1,6 @@
 /- The actual native-result range guard, with the original complete frame ABI. -/
 module
+public import NativeFloat.Transport
 public import Stage0.Senke.Gleit.Native.Values
 public import Stage0.Senke.Ausdruck.Gleit.Bereich
 @[expose] public section
@@ -11,7 +12,7 @@ variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 private theorem finite_mask (word : Runner.W) :
     (Runner.readFloat word).isFinite = !((word &&& (0x7ff0000000000000 : Runner.W)) ==
       (0x7ff0000000000000 : Runner.W)) := by
-  have h := NativeFloat.finite_word_mask (UInt64.ofBitVec word)
+  have h := RootNativeFloat.finite_word_mask (UInt64.ofBitVec word)
   have same : (((UInt64.ofBitVec word) &&& 0x7ff0000000000000) == 0x7ff0000000000000) =
       ((word &&& (0x7ff0000000000000 : Runner.W)) ==
         (0x7ff0000000000000 : Runner.W)) := by

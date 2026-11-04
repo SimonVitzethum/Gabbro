@@ -4,6 +4,7 @@ module
 public import Stage0.Senke.Anweisung.Faelle.Gleit.Proben
 public import Stage0.Senke.Ausdruck.Gleit.Slots.SlotContext
 public import Stage0.Senke.Ausdruck.Gleit.Bereich
+public import Stage0.Senke.Anweisung.Faelle.Gleit.AddCode
 @[expose] public section
 
 
@@ -148,18 +149,18 @@ def expressionImage : Except String (List Runner.B) :=
     (Expr.add (Γ := []) (Λ := []) (.lit 19) (.lit 18)) 8 4)
     4630404104378646528
 
-/-- Execute range rejection and the actual Stop107 exit sequence. The conversion
-    producer is emitted by the ordinary expression candidate at every requested slot. -/
+/-- Execute the production single-evaluation binder with the ordinary expression
+    candidate, the actual retained-result guard and both existing stop outcomes. -/
 def rangeImage (z : Int) (lo hi : Int × Int) : Except String (List Runner.B) := do
-  let cc ← match floatRangeL 8 lo hi
+  let emitted ← match nativeFloatBindL 8 lo hi
       (fun d => computedFloatOfE (layU u (fun _ => some gateBinding) 0)
         (Expr.add (Γ := []) (Λ := [])
           (.mul (.lit (z / 1073741824)) (.lit 1073741824))
-          (.lit (z % 1073741824))) d 4) with
+          (.lit (z % 1073741824))) d 4)
+      (fun _ => some (stopC 7 0, 8)) with
     | some c => Except.ok c
     | none => Except.error "computed range fragment refused"
-  let code := wennC 8 cc.1 (stopC 107 0) (stopC 7 0)
-  pure (Runner.Prog.irImage ((code.map fun i => .op i.o i.a i.b i.c) ++
+  pure (Runner.Prog.irImage ((emitted.1.map fun i => .op i.o i.a i.b i.c) ++
     [.lab 99, .zeros 1024]) 99)
 
 def rangeImages : List (String × Except String (List Runner.B) × Nat) :=

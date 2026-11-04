@@ -1,7 +1,7 @@
 /- Literal rounding is performed in Lean; the IR only materialises the resulting bits. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Gleit.EndSupport
-public import Grammatik.Kern.Syntax.Typen.NativeIntConversion
+public import NativeFloat.Literal
 public import Stage0.Senke.Anweisung.Faelle.Gleit.Bind
 public import Stage0.Senke.Ausdruck.Gleit.Wort
 public import Stage0.Senke.Ausdruck.Gleit.Slots.Test
@@ -72,7 +72,7 @@ theorem endFloatOfLit_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     EndFloatCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .floatOf (.lit n) low high rest) := by
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   have hx : gleitAusInt n = bruch (n, 1) := by
-    simpa only [gleitAusInt, bruch] using (NativeFloat.integerbruch_single n).symm
+    simpa only [gleitAusInt] using (Gabbro.Grammatik.bruch_integer n).symm
   have result := endFloatLit_case hS hA hlo0 hens ihRest c top
     (by simpa only [lowEnd] using h) hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   simpa only [execEnd, EndAusgang.zuAusgang, eval, Expr.orte, World.lese, World.merke,

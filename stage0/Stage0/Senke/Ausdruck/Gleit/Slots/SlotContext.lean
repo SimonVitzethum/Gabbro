@@ -1,7 +1,7 @@
 /- Complete source integers are converted by native CPU instructions. -/
 module
 public import Stage0.Senke.Gleit.Native.SourceCode
-public import Grammatik.Kern.Syntax.Typen.NativeIntScaling
+public import NativeFloat.IntScaling
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
@@ -69,7 +69,7 @@ private theorem wideComputedFloatOfE_value_ok {Γ : Ctx} {Λ : List (Res D)}
         rfl)
     have multiplied := nativeFloatMulL_ok converted power
     change NativeFloatCode _ _ _ (Float.ofInt z) _
-    rw [NativeFloat.ofInt_jam56 z big]
+    rw [RootNativeFloat.ofInt_jam56 z big]
     exact multiplied
   have chosen := nativeFloatChooseL_ok condition small large
   simpa only [ite_self] using chosen
@@ -85,7 +85,7 @@ theorem wideComputedFloatOfE_ok {Γ : Ctx} {Λ : List (Res D)}
       (gleitAusInt (eval σ₀ e σ ρ).n).toBits.toBitVec := by
   intro fp K d c top hc ht m pc pre
   exact (wideComputedFloatOfE_value_ok e same lay world reserved hc ht m pc pre).mono
-    (fun word decoded => nativeFloat_word_eq_nonNaN (NativeFloat.ofInt_not_nan _) decoded)
+    (fun word decoded => nativeFloat_word_eq_nonNaN (RootNativeFloat.ofInt_not_nan _) decoded)
 
 /-- Both emitting branches consume the original expression theorem. The world,
     old/current-world identity, reservation and full memory footprint stay exact. -/
@@ -108,7 +108,7 @@ theorem computedFloatOfE_ok {Γ : Ctx} {Λ : List (Res D)}
     have upper := (eval σ₀ e σ ρ).le_hi
     exact (nativeSignedIntegerL_ok (eval σ₀ e σ ρ).n (by omega) (by omega)
       child hc ht m pc hp).mono
-        (fun word decoded => nativeFloat_word_eq_nonNaN (NativeFloat.ofInt_not_nan _) decoded)
+        (fun word decoded => nativeFloat_word_eq_nonNaN (RootNativeFloat.ofInt_not_nan _) decoded)
   · exact wideComputedFloatOfE_ok e same lay world reserved hc ht m pc hp
 
 end Gabbro.Stage0.Senke
