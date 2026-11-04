@@ -325,6 +325,7 @@ theorem libraryExpansion_ohneBibliothek {source : LibrarySource} {u : UProg}
     {payload : LibraryPayload certificate} (expansion : LibraryExpansion payload) :
     ohneBibliothekAnw expansion.aufruf = true := by
   obtain ⟨nutzlastArg, aufruf, erweitert, stelligkeit⟩ := expansion
+  change ohneBibliothekAnw aufruf = true
   rcases erweitert with h | ⟨m, x, ty, h⟩
   · rw [h]; exact ohneBibliothekAnw_expand _ _ _
   · rw [h]; exact ohneBibliothekAnw_expandBind _ _ _ _ _ _
