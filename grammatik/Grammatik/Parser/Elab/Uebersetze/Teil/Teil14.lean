@@ -365,6 +365,9 @@ structure USeiteE where
 def lowerSeiteEnsLies (tabs : List UTab) (names : List String)
     (types : List Ty) (res : Option (Int × Int)) :
     USide → Except String USeiteE
+  | .truth _ | .predicate _ => .error "truth value as a number"
+  | .taggedEmpty .. | .taggedValue .. | .option .. | .absent _ | .present .. |
+    .reason .. | .function .. => .error "aggregate without G form in the 104 lowering"
   | .product .. | .field .. | .replace .. => .error "product without G form in the 104 lowering"
   | .glob _ => .error "static without G form in the 104 lowering"
   | .refSlot .. => .error "reference without G form in the 104 lowering"
