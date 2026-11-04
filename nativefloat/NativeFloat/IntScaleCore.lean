@@ -27,7 +27,6 @@ private theorem retained_bounds (g : Nat) (lower : 2 ^ 55 ≤ g) (upper : g < 2 
   have mantissa : ((⟨g, false, false⟩ : ExtendedMantissa) >>> 3).mantissa = g / 8 := by
     change (Nat.repeat ExtendedMantissa.shiftRightOne 3 ⟨g, false, false⟩).mantissa = _
     rw [exact_shift_bits g 2]
-    rfl
   rw [mantissa] at bounds
   omega
 
@@ -80,8 +79,19 @@ private theorem retained_round (s : Sign) (g : Nat) (lower : 2 ^ 55 ≤ g) (uppe
     rfl
   rw [same]
   unfold roundWithAccuracy
-  rw [first, final_shift _ 3 (by decide) bounds.1 bounds.2]
-  split <;> simp_all
+  rw [first]
+  dsimp only
+  have last := final_shift _ 3 (by decide) bounds.1 bounds.2
+  by_cases carry : ((⟨g, false, false⟩ : ExtendedMantissa) >>> 3).roundedMantissa = 2 ^ 53
+  · rw [if_pos carry] at last
+    rw [last]
+    dsimp only
+    simp only [carry, Nat.ne_of_gt (Nat.two_pow_pos 52), ↓reduceDIte]
+  · have nonzero : ((⟨g, false, false⟩ : ExtendedMantissa) >>> 3).roundedMantissa ≠ 0 := by omega
+    rw [if_neg carry] at last
+    rw [last]
+    dsimp only
+    simp only [carry, nonzero, ↓reduceDIte]
 
 private theorem magnitude_bounds (n : Nat) (large : 2 ^ 55 ≤ n) :
     let k := n.log2 - 55
@@ -108,7 +118,7 @@ private theorem magnitude_bounds (n : Nat) (large : 2 ^ 55 ≤ n) :
     exact bounds.2
   rw [Nat.shiftRight_eq_div_pow]
   refine ⟨?_, Nat.or_lt_two_pow quotientUpper ?_, exponent⟩
-  · exact quotientLower.trans Nat.left_le_or
+  · exact Nat.le_trans quotientLower Nat.left_le_or
   · split <;> decide
 
 private theorem magnitude_round (s : Sign) (n : Nat) (large : 2 ^ 55 ≤ n) :
@@ -137,20 +147,36 @@ private theorem magnitude_round (s : Sign) (n : Nat) (large : 2 ^ 55 ≤ n) :
     dsimp only
     have amount : ((k : Int) + 3 - 0).toNat = k + 3 := by omega
     rw [amount]
-    rw [← jam56_shift n k]
-    congr 1
-    omega
+    apply Prod.ext
+    · change (⟨n, false, false⟩ : ExtendedMantissa) >>> (k + 3) =
+        (⟨g, false, false⟩ : ExtendedMantissa) >>> 3
+      exact (jam56_shift n k).symm
+    · change (0 : Int) + (k + 3 : Nat) = (k : Int) + 3
+      omega
   have same : round Format.binary64 s n 0 = roundWithAccuracy Format.binary64 s n 0 .exact := by
     unfold round decreaseExponent
     rw [target]
+    dsimp only
     have noDecrease : (0 - ((k : Int) + 3)).toNat = 0 := by omega
     rw [noDecrease]
     rfl
   have rounded := retained_bounds g bounds.1 bounds.2.1
   rw [same]
   unfold roundWithAccuracy
-  rw [first, final_shift _ ((k : Int) + 3) (by omega) rounded.1 rounded.2]
-  split <;> simp_all [Int.add_assoc]
+  rw [first]
+  dsimp only
+  have last := final_shift _ ((k : Int) + 3) (by omega) rounded.1 rounded.2
+  by_cases carry : ((⟨g, false, false⟩ : ExtendedMantissa) >>> 3).roundedMantissa = 2 ^ 53
+  · rw [if_pos carry] at last
+    rw [last]
+    dsimp only
+    have exponent : (k : Int) + 3 + 1 = (k : Int) + 4 := by omega
+    simp only [carry, exponent, Nat.ne_of_gt (Nat.two_pow_pos 52), ↓reduceDIte]
+  · have nonzero : ((⟨g, false, false⟩ : ExtendedMantissa) >>> 3).roundedMantissa ≠ 0 := by omega
+    rw [if_neg carry] at last
+    rw [last]
+    dsimp only
+    simp only [carry, nonzero, ↓reduceDIte]
 
 private theorem canonical_unpack (s : Sign) (m : Nat) (e : Int) (positive : 0 < m)
     (lower : 2 ^ 52 ≤ m) (upper : m < 2 ^ 53) (emin : -1074 ≤ e) (emax : e ≤ 971) :
@@ -219,11 +245,13 @@ private theorem mul_canonical_power (s : Sign) (m : Nat) (e : Int) (j : Nat)
     omega
   have exponent : e + ((j : Int) - 1075) = (e + ((j : Int) - 1023)) - 52 := by omega
   have result := exact_scaled Format.binary64 s m 52 (e + ((j : Int) - 1023)) positive target
-  simpa only [UnpackedFloat.mul, sign_positive_mul, Nat.shiftLeft_eq, exponent] using result
+  simpa only [UnpackedFloat.mul, sign_positive_mul, Nat.shiftLeft_eq,
+    Int.cast_ofNat_Int, exponent] using result
 
 private theorem packed_overflow (s : Sign) (m : Nat) (e : Int) (positive : 0 < m) (overflow : 972 ≤ e) :
     UnpackedFloat.pack Format.binary64 (.finite s m e positive) = packedInfinity Format.binary64 s := by
   unfold UnpackedFloat.pack
+  dsimp only
   rw [if_pos (by change 2048 ≤ (e + 1075).toNat + 1; omega)]
 
 private theorem retained_unpacked (g : Nat) (lower : 2 ^ 55 ≤ g) (upper : g < 2 ^ 56) :
