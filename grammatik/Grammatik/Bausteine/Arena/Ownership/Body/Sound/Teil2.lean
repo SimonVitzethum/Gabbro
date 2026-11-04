@@ -89,7 +89,7 @@ theorem os_sound (hR : Respects A I.contracts R) (hO : GutO O) :
     · trivial
     · trivial
   | _, _, _, _, _, _, _, _, .locks L hr body hb, σ, ρ, hk, h => by
-    simp only [execStmt]; exact BPost.mapMeta _ _ (fun σ => MetaSame.gives A σ L)
+    simp only [execStmt]; exact BPost.mapContinuing _ _ (fun σ => MetaSame.gives A σ L)
       (ob_sound hR hO hb _ ρ hk (h.meta (MetaSame.takes A σ L)))
   | _, _, _, _, _, _, _, _, .breaking i body hb, σ, ρ, hk, h => by
     simp only [execStmt]; exact ob_sound hR hO hb σ ρ hk h
@@ -457,17 +457,14 @@ theorem oe_sound (hR : Respects A I.contracts R) (hO : GutO O) :
           (grundSig hf r)))
     · trivial
     · trivial
-  | _, _, _, _, _, _, .float op a b lo hi rest _ _ hrest, σ, ρ, hk, h => by simp only [execEnd]; split
-    · rename_i v _; exact EPost.schrumpf hk _ (oe_sound hR hO hrest _ _ (by simp only [List.length_cons]; omega) ((h.reads _ _).bindNone (τ := .fl lo hi) v))
-    · trivial
-  | _, _, _, _, _, _, .floatLit q lo hi rest hrest, σ, ρ, hk, h => by simp only [execEnd]; split
-    · rename_i v _; exact EPost.schrumpf hk _ (oe_sound hR hO hrest _ _ (by simp only [List.length_cons]; omega) (h.bindNone (τ := .fl lo hi) v)) · trivial
-  | _, _, _, _, _, _, .floatOf e lo hi rest _ hrest, σ, ρ, hk, h => by simp only [execEnd]; split
-    · rename_i v _; exact EPost.schrumpf hk _ (oe_sound hR hO hrest _ _ (by simp only [List.length_cons]; omega) ((h.reads _ _).bindNone (τ := .fl lo hi) v))
-    · trivial
-  | _, _, _, _, _, _, .floatNarrow e lo hi sonst rest _ hs hrest, σ, ρ, hk, h => by simp only [execEnd]; split
-    · rename_i v _; exact EPost.schrumpf hk _ (oe_sound hR hO hrest _ _ (by simp only [List.length_cons]; omega) ((h.reads _ _).bindNone (τ := .fl lo hi) v))
-    · exact (oe_sound hR hO hs _ _ hk (h.reads _ _))
+  | _, _, _, _, _, _, .float op a b lo hi rest _ _ hrest, σ, ρ, hk, h => by simp only [execEnd]
+    exact EPost.bindNoneOption hk _ _ (oe_sound hR hO hrest) (h.reads _ _) (.logik .bereich) (by trivial)
+  | _, _, _, _, _, _, .floatLit q lo hi rest hrest, σ, ρ, hk, h => by simp only [execEnd]
+    exact EPost.bindNoneOption hk _ _ (oe_sound hR hO hrest) h (.logik .bereich) (by trivial)
+  | _, _, _, _, _, _, .floatOf e lo hi rest _ hrest, σ, ρ, hk, h => by simp only [execEnd]
+    exact EPost.bindNoneOption hk _ _ (oe_sound hR hO hrest) (h.reads _ _) (.logik .bereich) (by trivial)
+  | _, _, _, _, _, _, .floatNarrow e lo hi sonst rest _ hs hrest, σ, ρ, hk, h => by simp only [execEnd]
+    exact EPost.bindNoneOption hk _ _ (oe_sound hR hO hrest) (h.reads _ _) _ (oe_sound hR hO hs _ _ hk (h.reads _ _))
 theorem oarms_sound (hR : Respects A I.contracts R) (hO : GutO O) :
     ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} {k c c' : Context}
       {arms : Arms D V l Γ Λ Λ' cs}, OArms A I out k c arms c' →

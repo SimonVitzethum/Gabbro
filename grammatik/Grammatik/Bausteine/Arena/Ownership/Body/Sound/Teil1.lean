@@ -55,5 +55,35 @@ variable {A : FreiForm D} {I : Interfaces A} {V : Vertrag D} {out : Flow.Output 
   {O : Orakel D} {passes : Nat} {R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f}
   {fr : Frame} {s0 : State}
 
+/-- Completed returns retain their certificate; only continuing outcomes map metadata. -/
+theorem BPost.mapContinuing {k c' : Context} {l : Bool} {Γ : Ctx}
+    (o : Ausgang V l Γ) (F : World D → World D) (hF : ∀ σ, MetaSame A σ (F σ))
+    (h : BPost A fr s0 out k c' o) :
+    BPost A fr s0 out k c' (match o with
+      | .zurueck σ value => .zurueck σ value
+      | .why σ reason => .why σ reason
+      | outcome => outcome.mapWelt F) := by
+  have mapped := BPost.mapMeta o F hF h
+  cases o with
+  | zurueck _ _ => exact h
+  | why _ _ => exact h
+  | _ => exact mapped
+
+/-- An optional non-owning value extends the typed environment only on success. -/
+theorem EPost.bindNoneOption {k c : Context} {l : Bool} {Γ : Ctx} {τ : Ty}
+    (hk : k.references.length ≤ Γ.length) (value : Option (Wert D τ))
+    (run : World D → Env D (τ :: Γ) → EndAusgang V l (τ :: Γ))
+    (hRun : ∀ σ ρ, k.references.length ≤ (τ :: Γ).length →
+      Holds A fr s0 (c.bind none) σ ρ → EPost A fr s0 out k (run σ ρ))
+    {σ : World D} {ρ : Env D Γ} (h : Holds A fr s0 c σ ρ)
+    (fallback : EndAusgang V l Γ) (hFallback : EPost A fr s0 out k fallback) :
+    EPost A fr s0 out k (match value with
+      | some v => (run σ (.cons v ρ)).schrumpf
+      | none => fallback) := by
+  cases value with
+  | some v => exact EPost.schrumpf hk _
+      (hRun σ (.cons v ρ) (Nat.le_trans hk (Nat.le_succ _)) (h.bindNone v))
+  | none => exact hFallback
+
 end Sound
 end Gabbro.Grammatik.ArenaOwnership.Body
