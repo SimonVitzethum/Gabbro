@@ -144,8 +144,9 @@ theorem bindWert_regRead {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)}
   simp only [Option.some.injEq] at hart
   refine ⟨g.ty, ?_, ?_⟩
   · rw [← hart]
-    cases hb : g.bool <;> simp only [UReg.art, UReg.ty, hb, ScalarMeta]
-  · simp only [uBindWert, hg, Bool.or_false, Option.isSome_none, Bool.false_eq_true, ite_false, hp, hd, hn, hart,
+    cases hb : g.bool <;> simp only [UReg.art, UReg.ty, hb, Bool.cond_false, Bool.cond_true, ScalarMeta]
+  · dsimp only [regOrt] at hg ⊢
+    simp only [uBindWert, hg, Bool.or_false, Option.isSome_none, Bool.false_eq_true, ite_false, hp, hd, hn, hart,
       mitLokal_eq ctx H.muts]
 
 /-- `g = e publishes { .. };` at an atomic, with its declared payload. -/
