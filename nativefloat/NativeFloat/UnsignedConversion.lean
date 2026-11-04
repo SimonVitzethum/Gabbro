@@ -35,9 +35,10 @@ private theorem high_half (word : BitVec 64) (high : word.msb = true) :
   let half := (word >>> 1) ||| (word &&& 1)
   have lower : 2 ^ 63 ≤ word.toNat := BitVec.le_toNat_of_msb_true high
   have upper : word.toNat < 2 ^ 64 := word.isLt
+  have oneNat : (1 : BitVec 64).toNat = 1 := rfl
   have value : half.toNat = (word.toNat >>> 1) ||| (word.toNat % 2) := by
     simp only [half, BitVec.toNat_or, BitVec.toNat_ushiftRight, BitVec.toNat_and,
-      BitVec.toNat_one (by decide : 0 < 64), Nat.and_one_is_mod]
+      oneNat, Nat.and_one_is_mod]
   have quotientLower : 2 ^ 62 ≤ word.toNat >>> 1 := by
     rw [Nat.shiftRight_eq_div_pow]
     omega
