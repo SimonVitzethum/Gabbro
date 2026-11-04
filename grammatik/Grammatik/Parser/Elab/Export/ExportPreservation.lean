@@ -103,7 +103,8 @@ theorem implication_export_zeuge :
     uBool ctx (.ext .imp [] [.variable "ready", .bin "==" .res (.lit 42)]) =
       .error "result without result" := by
   constructor
-  · rfl
+  · simp [uSichert, uSeite, uRechne, uSeiteBlatt, uZSeite,
+      uParamNr, uParamNrAux, uArtBei, uIstVgl, strEq]
   · simp [uBool, uSichert, uSeite, uRechne, uSeiteBlatt, uZSeite,
       uParamNr, uParamNrAux, uArtBei, uIstVgl, strEq]
 
