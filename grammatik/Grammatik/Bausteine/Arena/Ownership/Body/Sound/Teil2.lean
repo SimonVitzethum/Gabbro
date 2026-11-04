@@ -1,5 +1,4 @@
 module
-public import Grammatik.Bausteine.Arena.Ownership.Body.Forms
 public import Grammatik.Bausteine.Arena.Ownership.Body.Sound.Teil1
 public import Grammatik.Kern.Syntax.Typen.Fall
 @[expose] public section
@@ -457,14 +456,18 @@ theorem oe_sound (hR : Respects A I.contracts R) (hO : GutO O) :
           (grundSig hf r)))
     · trivial
     · trivial
-  | _, _, _, _, _, _, .float op a b lo hi rest _ _ hrest, σ, ρ, hk, h => by simp only [execEnd]
-    exact EPost.bindNoneOption hk _ _ (oe_sound hR hO hrest) (h.reads _ _) (.logik .bereich) (by trivial)
-  | _, _, _, _, _, _, .floatLit q lo hi rest hrest, σ, ρ, hk, h => by simp only [execEnd]
-    exact EPost.bindNoneOption hk _ _ (oe_sound hR hO hrest) h (.logik .bereich) (by trivial)
-  | _, _, _, _, _, _, .floatOf e lo hi rest _ hrest, σ, ρ, hk, h => by simp only [execEnd]
-    exact EPost.bindNoneOption hk _ _ (oe_sound hR hO hrest) (h.reads _ _) (.logik .bereich) (by trivial)
-  | _, _, _, _, _, _, .floatNarrow e lo hi sonst rest _ hs hrest, σ, ρ, hk, h => by simp only [execEnd]
-    exact EPost.bindNoneOption hk _ _ (oe_sound hR hO hrest) (h.reads _ _) _ (oe_sound hR hO hs _ _ hk (h.reads _ _))
+  | _, _, Λ, _, _, _, .float op a b lo hi rest _ _ hrest, σ, ρ, hk, h => by
+    simp only [execEnd]; split <;> try trivial
+    · rename_i v _; exact EPost.schrumpf hk _ (oe_sound hR hO hrest _ _ (Nat.le_trans hk (Nat.le_succ _)) ((h.reads Λ (a.orte ++ b.orte)).bindNone (τ := .fl lo hi) v))
+  | _, _, _, _, _, _, .floatLit q lo hi rest hrest, σ, ρ, hk, h => by
+    simp only [execEnd]; split <;> (first | trivial | (rename_i v _; exact EPost.schrumpf hk _ (oe_sound hR hO hrest _ _ (Nat.le_trans hk (Nat.le_succ _)) (h.bindNone (τ := .fl lo hi) v))))
+  | _, _, Λ, _, _, _, .floatOf e lo hi rest _ hrest, σ, ρ, hk, h => by
+    simp only [execEnd]; split <;> try trivial
+    · rename_i v _; exact EPost.schrumpf hk _ (oe_sound hR hO hrest _ _ (Nat.le_trans hk (Nat.le_succ _)) ((h.reads Λ e.orte).bindNone (τ := .fl lo hi) v))
+  | _, _, Λ, _, _, _, .floatNarrow e lo hi sonst rest _ hs hrest, σ, ρ, hk, h => by
+    simp only [execEnd]; split
+    · rename_i v _; exact EPost.schrumpf hk _ (oe_sound hR hO hrest _ _ (Nat.le_trans hk (Nat.le_succ _)) ((h.reads Λ e.orte).bindNone (τ := .fl lo hi) v))
+    · exact oe_sound hR hO hs _ ρ hk (h.reads Λ e.orte)
 theorem oarms_sound (hR : Respects A I.contracts R) (hO : GutO O) :
     ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} {k c c' : Context}
       {arms : Arms D V l Γ Λ Λ' cs}, OArms A I out k c arms c' →
