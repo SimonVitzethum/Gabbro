@@ -88,9 +88,11 @@ theorem bild_initialized_frames_u {u : UProg} {P : Programm (declOf u)} {passes 
     omega
   obtain ⟨frame, frameMade, frameMemory⟩ :=
     startStackBytes_frame made b.fp0 stackMemory j index
-  have band := Nat.mul_le_mul_left b.Ks (Nat.succ_le_succ bound)
+  have band : b.Ks * (j + 1) ≤ b.Ks * (b.roots.length + 1) :=
+    Nat.mul_le_mul_left b.Ks (Nat.succ_le_succ bound)
   have room : b.fp0 + 8 * b.Ks * j + 8 * b.Ks < 2 ^ 64 := by
-    have bytesBound := Nat.mul_le_mul_left 8 (Nat.le_trans band capacity)
+    have bytesBound : 8 * (b.Ks * (j + 1)) ≤ 8 * b.K :=
+      Nat.mul_le_mul_left 8 (Nat.le_trans band capacity)
     have := h.hfit
     have endpoint : b.fp0 + 8 * b.Ks * j + 8 * b.Ks =
         b.fp0 + 8 * (b.Ks * (j + 1)) := by
@@ -147,7 +149,8 @@ theorem bild_initialized_ok_u [CloneOK] {u : UProg} {P : Programm (declOf u)}
     (loaded : BytesAt m Runner.Prog.IMG (b.initializedBytes u valid)) (σ : World (declOf u))
     (hval : ∀ τ (x : Var ((declOf u).params main) τ), ValueValid b.Y τ (ρ.get x))
     (world : WeltAt m b.Y σ) (hT : TorOK b.Y O) (hV : SichtOK O) :
-    match rufAt P O b.passes b.depth main σ ρ with
+    match (rufAt (D := declOf u) P O b.passes b.depth main σ ρ :
+        RufAusgang (D := declOf u) main) with
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m t' m' ∧
         StopAt t' m' q ∧ q.nr = 231 ∧ ExitErg b.Y ((declOf u).erg main) v q.a1
     | .logik e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (logikCode e)
@@ -161,8 +164,10 @@ theorem bild_initialized_ok_u [CloneOK] {u : UProg} {P : Programm (declOf u)}
       ((startStackBytes b.Ks (FB + FB) (b.args :: b.rootArgs)).getD [] ++ [])) := by
     simpa only [made, Option.getD_some, List.append_nil] using startup
   rw [code, args, rootArgs] at startup'
-  exact bild_kern (hT := hT) (hV := hV) h startup' hval σ world
+  have result := bild_kern (hT := hT) (hV := hV) h startup' hval σ world
     (by simpa only [Nat.mul_zero, Nat.add_zero] using sync 0 (Nat.zero_le _))
+  generalize rufAt (D := declOf u) P O b.passes b.depth main σ ρ = outcome at result ⊢
+  cases outcome <;> simpa only [BitVec.ofNat_eq_ofNat] using result
 
 /-- Each root receives its own complete environment and the same derived free-lock
     invariant. No extra SyncOK or initialized-world assumption is introduced. -/
@@ -179,7 +184,8 @@ theorem bild_initialized_wurzel_ok_u {u : UProg} {P : Programm (declOf u)}
     (σ : World (declOf u))
     (hval : ∀ τ (x : Var ((declOf u).params starts[j].1) τ), ValueValid b.Y τ (starts[j].2.get x))
     (world : WeltAt m b.Y σ) (hT : TorOK b.Y O) (hV : SichtOK O) :
-    match rufAt P O b.passes b.depth starts[j].1 σ starts[j].2 with
+    match (rufAt (D := declOf u) P O b.passes b.depth (starts[j]'hj).1 σ (starts[j]'hj).2 :
+        RufAusgang (D := declOf u) (starts[j]'hj).1) with
     | .ok _ _ => ∃ t' m' q,
         Star ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
           BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = 60
@@ -196,12 +202,41 @@ theorem bild_initialized_wurzel_ok_u {u : UProg} {P : Programm (declOf u)}
       ((startStackBytes b.Ks (FB + FB) (b.args :: b.rootArgs)).getD [] ++ [])) := by
     simpa only [made, Option.getD_some, List.append_nil] using startup
   rw [code, args, rootArgs] at startup'
-  have result := bild_wurzel (hT := hT) (hV := hV) h startup' j
-    (by simpa only [List.length_map] using hj) σ
-    (by simpa only [List.getElem_map] using starts[j].2)
-    (by simp only [List.getElem_map])
-    (by simpa only [List.getElem_map] using hval) world
-    (sync (j + 1) (by simp only [roots, List.length_map]; omega))
-  simpa only [List.length_map, List.getElem_map] using result
+  have rootBound : j < (starts.map (·.1)).length := by
+    simpa only [List.length_map] using hj
+  let rootValid : (Σ f : (declOf u).Fn, Env (declOf u) ((declOf u).params f)) → Prop := fun root =>
+    ∀ τ (x : Var ((declOf u).params root.1) τ), ValueValid b.Y τ (root.2.get x)
+  let rootOutcome : (Σ f : (declOf u).Fn, Env (declOf u) ((declOf u).params f)) → Prop := fun root =>
+    match (rufAt (D := declOf u) P O b.passes b.depth root.1 σ root.2 :
+        RufAusgang (D := declOf u) root.1) with
+    | .ok _ _ => ∃ t' m' q,
+        Star ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
+          BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = 60
+    | .logik e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
+        BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m (logikCode e)
+    | .hardware e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
+        BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m (hwCode e)
+    | _ => False
+  have completed : rootOutcome (starts[j]'hj) := by
+    change rootValid (starts[j]'hj) at hval
+    generalize rootEq : (starts[j]'hj) = root at hval ⊢
+    rcases root with ⟨rootFn, rootEnv⟩
+    have functionEq : (starts.map (·.1))[j]'rootBound = rootFn := by
+      rw [List.getElem_map, rootEq]
+    have argumentsEq : (starts.map (fun start => encodeEnv b.Y start.2))[j]'
+        (by simpa only [List.length_map] using hj) = encodeEnv b.Y rootEnv := by
+      rw [List.getElem_map, rootEq]
+    subst rootFn
+    have result := bild_wurzel (hT := hT) (hV := hV) (passes := b.passes) h startup' j
+      rootBound σ rootEnv argumentsEq hval world
+      (sync (j + 1) (by simp only [roots, List.length_map]; omega))
+    dsimp only [rootOutcome]
+    generalize rufAt (D := declOf u) P O b.passes b.depth
+      ((starts.map (·.1))[j]'rootBound) σ rootEnv = outcome at result ⊢
+    cases outcome <;> simpa only [List.length_map, BitVec.ofNat_eq_ofNat] using result
+  dsimp only [rootOutcome] at completed
+  generalize rufAt (D := declOf u) P O b.passes b.depth
+    (starts[j]'hj).1 σ (starts[j]'hj).2 = outcome at completed ⊢
+  cases outcome <;> exact completed
 
 end Gabbro.Stage0.Senke
