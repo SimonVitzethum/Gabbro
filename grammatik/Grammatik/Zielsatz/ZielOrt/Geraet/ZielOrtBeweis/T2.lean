@@ -181,9 +181,6 @@ theorem akteur (hK : ∀ f, KoerperGut P O passes f) (hFrag : ∀ f, (P.rumpf f)
         (by simp only [GRest.okZ, Endblock.kOk, Bool.false_eq_true, false_and, not_false_eq_true, Block.kOk, Stmt.kOk, Bool.false_and, and_false, and_self])
   | g6 hs =>
     cases hs with
-    | _ =>
-      exact absurd (kopf_okZ hF.1 ‹(M.faeden u).kopf.rest = _›)
-        (by simp only [GRest.okZ, Endblock.kOk, Bool.false_eq_true, false_and, not_false_eq_true, Block.kOk, Stmt.kOk, Bool.false_and, and_false, and_self])
     | endeGleit l Γ Λ l₁ h₁ l₂ h₂ op a b lo hi rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
       exact akteur_endeGleit (D := D) (P := P) (O := O) (passes := passes) (hK := hK) (hFrag := hFrag) (e0 := e0) (M := M) (u := u) (hF := hF) (hL := hL) (l := l) (Γ := Γ) (Λ := Λ) (l₁ := l₁) (h₁ := h₁) (l₂ := l₂) (h₂ := h₂) (op := op) (a := a) (b := b) (lo := lo) (hi := hi) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ)
     | endeGleitLit l Γ Λ q lo hi rest ρ hhead v hv =>
@@ -195,6 +192,9 @@ theorem akteur (hK : ∀ f, KoerperGut P O passes f) (hFrag : ∀ f, (P.rumpf f)
     | endeGleitNarrowElse l Γ Λ l₁ h₁ e lo hi sonst rest ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
       exact akteur_endeGleitNarrowElse (D := D) (P := P) (O := O) (passes := passes) (hK := hK) (hFrag := hFrag) (e0 := e0) (M := M) (u := u) (hF := hF) (hL := hL) (l := l) (Γ := Γ) (Λ := Λ) (l₁ := l₁) (h₁ := h₁) (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (hn := hn) (neu := neu) (hneu := hneu) (hΛ := hΛ)
     -- pushes
+    | _ =>
+      exact absurd (kopf_okZ hF.1 ‹(M.faeden u).kopf.rest = _›)
+        (by simp only [GRest.okZ, Endblock.kOk, Bool.false_eq_true, false_and, not_false_eq_true, Block.kOk, Stmt.kOk, Bool.false_and, and_false, and_self])
   | g7 hs => exact akteur_gruppe7 hK e0 hs hF hL
 
 end Akteur
