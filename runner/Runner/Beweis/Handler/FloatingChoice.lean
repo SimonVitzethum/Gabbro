@@ -26,25 +26,26 @@ theorem fpChoose_no_code {C : W → B} {address : W} {condition : Cond}
     Code C (address + BitVec.ofNat 64
         (enc (.jcc condition (BitVec.ofNat 32 (lenOf no + lenOf [.jmp 0])))).length)
       (no ++ [.jmp (BitVec.ofNat 32 (lenOf yes))] ++ yes ++ tail) := by
-  simpa only [fpChoose, List.cons_append, List.nil_append, List.append_assoc] using hc.2.2
+  simpa only [fpChoose, List.append_eq, List.cons_append, List.nil_append,
+    List.append_assoc] using hc.2.2
 
 theorem fpChoose_true {L : Lay} {r : Res IR.T} {x : X} {condition : Cond}
     {yes no tail : List Ins} (hc : Code L.C x.rip (fpChoose condition yes no ++ tail))
     (ht : Cond.eval x condition = some true)
-    (hn : Match L r { x with rip := x.rip + BitVec.ofNat 64
+    (hn : Match L r { x with rip := (x.rip + BitVec.ofNat 64
         (enc (.jcc condition (BitVec.ofNat 32 (lenOf no + lenOf [.jmp 0])))).length +
-      sx32 (BitVec.ofNat 32 (lenOf no + lenOf [.jmp 0])) }) : Match L r x := by
+      sx32 (BitVec.ofNat 32 (lenOf no + lenOf [.jmp 0]))) }) : Match L r x := by
   refine .priv ((step_code hc).trans ?_) hn
-  simp only [exec, ht]
+  simp only [exec, ht, ↓reduceIte]
 
 theorem fpChoose_false {L : Lay} {r : Res IR.T} {x : X} {condition : Cond}
     {yes no tail : List Ins} (hc : Code L.C x.rip (fpChoose condition yes no ++ tail))
     (ht : Cond.eval x condition = some false)
-    (hn : Match L r { x with rip := x.rip + BitVec.ofNat 64
-        (enc (.jcc condition (BitVec.ofNat 32 (lenOf no + lenOf [.jmp 0])))).length }) :
+    (hn : Match L r { x with rip := (x.rip + BitVec.ofNat 64
+        (enc (.jcc condition (BitVec.ofNat 32 (lenOf no + lenOf [.jmp 0])))).length) }) :
     Match L r x := by
   refine .priv ((step_code hc).trans ?_) hn
-  simp only [exec, ht]
+  simp only [exec, ht, Bool.false_eq_true, ↓reduceIte]
 
 theorem fpChoose_join_code {C : W → B} {address : W} {yes tail : List Ins}
     (hc : Code C address (.jmp (BitVec.ofNat 32 (lenOf yes)) :: yes ++ tail))
