@@ -10,8 +10,7 @@ namespace Gabbro.Grammatik.Parser
 structure ConstSourceCallee (items : List SItemTief) (c : ConstProgram)
     (scope : ConstScope c.D) (name : String) (f : c.D.Fn) : Prop where
   resolved : (name, c.sourceId f) ∈ scope.declarations
-  item : SItemTief
-  derivation : ConstElaborates items scope item f
+  derivation : ∃ item, ConstElaborates items scope item f
 
 /-- Calls followed by an already derived end block, including result binding. -/
 inductive ConstSourceCallEnd (items : List SItemTief) (c : ConstProgram)
@@ -28,7 +27,8 @@ inductive ConstSourceCallEnd (items : List SItemTief) (c : ConstProgram)
       (tail : ConstSourceEnd c locals (.block rest ending) body) :
       ConstSourceCallEnd items c scope locals
         (.block (.call name sources :: rest) ending)
-        (.cons (resourceEq ▸ Stmt.call c.D V f args hp hr) body)
+        (.cons (Eq.rec (motive := fun output _ => Stmt c.D V l Γ [] output)
+          (Stmt.call (D := c.D) (V := V) (l := l) f args hp hr) resourceEq) body)
   | binding {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {locals : ConstLocals Γ}
       {name binder : String} {mutable : Bool} {τ : Ty} {f : c.D.Fn}
       {sources : List SExpr} {args : Args c.D Γ [] (c.D.params f)}

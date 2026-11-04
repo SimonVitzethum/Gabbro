@@ -129,7 +129,8 @@ inductive ConstSourceEnd (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} �
       (resourceEq : nach c.D f [] = [])
       (tail : ConstSourceEnd c locals (.block rest ending) body) :
       ConstSourceEnd c locals (.block (.call name sources :: rest) ending)
-        (.cons (resourceEq ▸ Stmt.call (D := c.D) (V := V) (l := l) f args hp hr) body)
+        (.cons (Eq.rec (motive := fun output _ => Stmt c.D V l Γ [] output)
+          (Stmt.call (D := c.D) (V := V) (l := l) f args hp hr) resourceEq) body)
 
  theorem ConstSourceEnd.rein (h : ConstSourceEnd c locals source body) :
     ConstEnd c body := by
@@ -196,7 +197,7 @@ inductive ConstElaborates (items : List SItemTief) :
       (reasons : sig.fehler = none) (clauses : sig.klauseln = [])
       (resolved : (sig.name, c.sourceId f) ∈ scope.declarations)
       («requires» : c.emptyEntry f ▸ c.P.requires f = .tru)
-      (ensures : c.emptyExit f ▸ c.P.ensures f = .tru)
+      («ensures» : c.emptyExit f ▸ c.P.ensures f = .tru)
       (body : ConstSourceEnd c [] source (c.emptyEntry f ▸ c.P.rumpf f)) :
       ConstElaborates items scope (.fnT sig source) f
   | general {c : ConstProgram} {scope : ConstScope c.D} {sig : FnSig}
