@@ -26,9 +26,9 @@ def routineFiniteDirectionalL (d : Nat) (large small : Nat → Option (List II �
     Option (List II × Nat) :=
   withWordInputsL d [fun j => routineDirectionalL j large small,
     fun j => routineIndexL j large, fun j => unpackSignL j large] fun retained d =>
-    let m := retained ⟨0, by decide⟩
-    let e := retained ⟨1, by decide⟩
-    let s := retained ⟨2, by decide⟩
+    let m := retained ⟨0, by simp⟩
+    let e := retained ⟨1, by simp⟩
+    let s := retained ⟨2, by simp⟩
     let c := fun j => routineLeftCountL j m e
     let left := fun j => routineRoundPackL j s
       (fun k => wordL 4 k (e k) (c (k + 1)))
@@ -56,18 +56,18 @@ theorem routineFiniteDirectionalL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Me
     | _ => unpackSignWord lv)
   · intro ⟨i, hi⟩
     cases i with
-    | zero => exact m
+    | zero => exact @m
     | succ i =>
       cases i with
-      | zero => exact e
+      | zero => exact @e
       | succ i =>
         have eq : i = 0 := by simp only [List.length_cons, List.length_nil] at hi; omega
         subst i
-        exact s
+        exact @s
   · intro Δ ρw retained readable
-    have m : WordCode (L := L) ρw (fun _ => True) _ (routineDirectionalWord lv sv) := readable ⟨0, by decide⟩
-    have e : WordCode (L := L) ρw (fun _ => True) _ (routineIndexWord lv) := readable ⟨1, by decide⟩
-    have s : WordCode (L := L) ρw (fun _ => True) _ (unpackSignWord lv) := readable ⟨2, by decide⟩
+    have m : WordCode (L := L) ρw (fun _ => True) _ (routineDirectionalWord lv sv) := readable ⟨0, by simp⟩
+    have e : WordCode (L := L) ρw (fun _ => True) _ (routineIndexWord lv) := readable ⟨1, by simp⟩
+    have s : WordCode (L := L) ρw (fun _ => True) _ (unpackSignWord lv) := readable ⟨2, by simp⟩
     have count : WordCode (L := L) ρw (fun _ => True) _ _ := routineLeftCountL_word m e
     have leftE : WordCode (L := L) ρw (fun _ => True) _ _ := WordCode.bin e count
       (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
