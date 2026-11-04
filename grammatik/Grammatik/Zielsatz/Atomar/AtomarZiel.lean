@@ -25,6 +25,7 @@ public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
 public import Grammatik.Zielsatz.Atomar.AtomarRuheNutzer
 public import Grammatik.Zielsatz.Kern.Beweis
 public import Grammatik.Zielsatz.Faeden.Ruhe.Teil3
+import Grammatik.Bausteine.Kernzelle.ZulassungMitRuhe
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -166,56 +167,30 @@ theorem akzeptiertSpecX_mitRuhe {B : List (ArenaOwnership.Body.ArenaIface D)}
         obtain ⟨f, rfl, hf⟩ := reach_mitRuhe_cases P hvoll hA.abg hf'
         rw [rumpf_mitRuhe_mE]
         exact hA.masken w hw f hf
+  schnittstellen := SchnittstellenOk.mitRuhe P hA.schnittstellen
   besitz a' ha' := by
     obtain ⟨a, ha, rfl⟩ := List.mem_map.mp ha'
     exact ArenaOwnership.Ruhe.checked_mitRuhe (hA.besitz a ha)
   worte a' ha' := by
     obtain ⟨a, ha, rfl⟩ := List.mem_map.mp ha'
     exact hA.worte a ha
+  bibliothek := by trivial
   akku := Kernzelle.accumulatorAdmission_mitRuhe P hvoll hA.abg hA.akku
   reset := fun g elem len harr => by
     have hT : tyR (D.gtyp g) = .arr elem len := harr
+    revert hT
     cases hτ : D.gtyp g with
-    | int lo hi =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | bool =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | opt n =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | sum cs =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | why n =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | never =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | fl _ =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | fnptr n =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | ptr cap =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | ref t =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
     | arr elem' len' =>
-      simp only [tyR] at hT
+      intro hT
+      simp only [tyR, Ty.mapNumbers] at hT
       cases hT
-      exact zeroAdmitting_tyR (hA.reset g elem' len' hτ)
-    | str n =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | prod name fields =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
+      exact zeroAdmitting_tyR (hA.reset g _ _ hτ)
+    | ptr cap =>
+      rcases cap with ⟨space, rights, target⟩
+      cases target
+      intro hT
+      simp only [tyR, Ty.mapNumbers, reduceCtorEq] at hT
+    | _ => intro hT; simp only [tyR, Ty.mapNumbers, reduceCtorEq] at hT
 
   pruef := by
     obtain ⟨checks, hChecks⟩ := hA.pruef
@@ -257,15 +232,20 @@ end Besitz
 
 /-- **The concrete checker with the rely**: its Bool is `AkzeptiertX`. The Bool runs
     on the unit's declared checks (`E.pruefungen`). -/
-def akzeptiertX_pruefer : PrueferX where
-  akzeptiert := fun E fs ls cs => AkzeptiertX E.P E.S fs ls cs E.ws E.akku E.pruefungen && besitzB E fs &&
-    Kernzelle.akkuStartB E E.akku
-  korrekt := fun E fs ls cs h => by
+noncomputable def akzeptiertX_pruefer : PrueferX where
+  akzeptiert := fun {D} _ E fs ls cs =>
+    haveI : DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)
+    AkzeptiertX E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [] && besitzB E fs &&
+      Kernzelle.akkuStartB E E.akku
+  korrekt := fun {D} _ E fs ls cs h => by
+    letI : DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)
     have h := (Bool.and_eq_true _ _).mp h
     obtain ⟨hX, hStart⟩ := h
     have hX' := (Bool.and_eq_true _ _).mp hX
     obtain ⟨hb, hw, hs⟩ := besitzB_sound fs.2 hX'.2
-    exact ⟨(akzeptiertSpecX_of fs.2 ls.2 cs.2 E.akku hX'.1).mitBesitz hb hw,
+    have hSpec : AkzeptiertSpecX E.P E.S fs.1 E.ws [] E.akku :=
+      akzeptiertSpecX_of fs.2 ls.2 cs.2 E.akku hX'.1
+    exact ⟨hSpec.mitBesitz hb hw,
       hs, Kernzelle.akkuStartB_sound hStart⟩
 
 /-- **Every checker of the goal, with the ownership acceptance, is a checker for the rely**
@@ -279,7 +259,9 @@ def Pruefer.alsX (C : Pruefer) : PrueferX where
     obtain ⟨hC, hStart⟩ := h
     have hC' := (Bool.and_eq_true _ _).mp hC
     obtain ⟨hb, hw, hs⟩ := besitzB_sound fs.2 hC'.2
-    exact ⟨(akzeptiertSpecX_of_spec (C.korrekt E fs ls cs hC'.1)).mitBesitz hb hw, hs,
+    have hSpec : AkzeptiertSpecX E.P E.S fs.1 E.ws [] E.akku :=
+      akzeptiertSpecX_of_spec (A := E.akku) (C.korrekt E fs ls cs hC'.1)
+    exact ⟨hSpec.mitBesitz hb hw, hs,
       Kernzelle.akkuStartB_sound hStart⟩
 
 /-- On a unit without an arena and without an accumulator -- every unit of before --
@@ -291,6 +273,32 @@ theorem Pruefer.alsX_akzeptiert (C : Pruefer) {D : Deklaration} [DecidableEq D.F
   show (C.akzeptiert E fs ls cs && besitzB E fs && Kernzelle.akkuStartB E E.akku) = true
   rw [h, besitzB_leer hB, hA]
   exact Kernzelle.akkuStartB_leer E
+
+/-- Compose the complete checker facts, user logic and runtime through the idle root. -/
+private theorem ziel_atomar_aus_einheit (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
+    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock)
+    (hA : AkzeptiertSpecX E.P E.S fs.1 E.ws E.arenen E.akku) (hN : NutzerPflichtA E)
+    (O : Orakel D) (hH : HardwareAnnahmen O E.Q) (passes : Nat)
+    (ord : D.mitRuhe.Glob → Ordnung) (sp : Speicher D.mitRuhe)
+    (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f))
+    (hL : Laufzeit E sp init) :
+    ∀ W : RufMaschineW D.mitRuhe,
+      RufErreichbarW E.P.mitRuhe O.mitRuhe passes ord (RufStartW (RufStartG E.P.mitRuhe sp init)) W →
+      ZielAtomar E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes ord (GeteiltV E.P.mitRuhe (wsRuhe E.ws))
+        (RufStartG E.P.mitRuhe sp init) W := by
+  have hN' : LogikPflichtA E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q)
+      (GeteiltA E.P.mitRuhe (wsRuhe E.ws)) := by
+    have h := logikPflichtA_mitRuhe hN.logik
+    exact ⟨fun passes f => ⟨koerperGutSA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA.abg hc)
+        (h.1 passes f).1,
+      invGutSA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA.abg hc) (h.1 passes f).2.1,
+      invGutGrundA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA.abg hc) (h.1 passes f).2.2⟩,
+      h.2⟩
+  exact ziel_atomar_spec (B := E.arenen.map (·.mitRuhe))
+    (A := E.akku.map Kernzelle.AccumulatorDecl.mitRuhe)
+    E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q) (fsRuhe_voll fs.2) ls.2
+    (wsRuhe E.ws) (akzeptiertSpecX_mitRuhe E.P fs.2 hA) hN' O.mitRuhe (hardware_mitRuhe hH) passes
+    ord sp init (startZulaessig_aus E fs.1 hN.start hL)
 
 /-- **THE GOAL WITH SHARED ATOMICS.** For every checker `C` for the rely, every declaration and
     unit `E` it accepts, the user's logic with the rely (bodies against every answer a shared
@@ -308,19 +316,8 @@ theorem gabbro_ziel_atomar (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (
     ∀ W : RufMaschineW D.mitRuhe,
       RufErreichbarW E.P.mitRuhe O.mitRuhe passes ord (RufStartW (RufStartG E.P.mitRuhe sp init)) W →
       ZielAtomar E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes ord (GeteiltV E.P.mitRuhe (wsRuhe E.ws))
-        (RufStartG E.P.mitRuhe sp init) W := by
-  have hA := (C.korrekt E fs ls cs hC).1
-  have hN' : LogikPflichtA E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q)
-      (GeteiltA E.P.mitRuhe (wsRuhe E.ws)) := by
-    have h := logikPflichtA_mitRuhe hN.logik
-    exact ⟨fun passes f => ⟨koerperGutSA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA.abg hc)
-        (h.1 passes f).1,
-      invGutSA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA.abg hc) (h.1 passes f).2.1,
-      invGutGrundA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA.abg hc) (h.1 passes f).2.2⟩,
-      h.2⟩
-  exact ziel_atomar_spec E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q) (fsRuhe_voll fs.2) ls.2
-    (wsRuhe E.ws) (akzeptiertSpecX_mitRuhe E.P fs.2 hA) hN' O.mitRuhe (hardware_mitRuhe hH) passes
-    ord sp init (startZulaessig_aus E fs.1 hN.start hL)
+        (RufStartG E.P.mitRuhe sp init) W :=
+  ziel_atomar_aus_einheit D E fs ls (C.korrekt E fs ls cs hC).1 hN O hH passes ord sp init hL
 
 /-- **THE EMBEDDING: every unit `gabbro_ziel` covers is covered here** (a unit of before declares no
     arena, `hB`), with the premises of
@@ -336,9 +333,13 @@ theorem gabbro_ziel_atomar_vor (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn
     ∀ W : RufMaschineW D.mitRuhe,
       RufErreichbarW E.P.mitRuhe O.mitRuhe passes ord (RufStartW (RufStartG E.P.mitRuhe sp init)) W →
       ZielAtomar E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes ord (GeteiltV E.P.mitRuhe (wsRuhe E.ws))
-        (RufStartG E.P.mitRuhe sp init) W :=
-  gabbro_ziel_atomar C.alsX D E fs ls cs (C.alsX_akzeptiert hB hC)
-    (nutzerPflichtA_of_akzeptiert fs.2 (C.korrekt E fs ls cs hC) hN) O hH passes ord sp init hL
+        (RufStartG E.P.mitRuhe sp init) W := by
+  have hA := C.korrekt E fs ls cs hC
+  have hAX : AkzeptiertSpecX E.P E.S fs.1 E.ws E.arenen E.akku := by
+    rw [hB]
+    exact akzeptiertSpecX_of_spec (A := E.akku) hA
+  exact ziel_atomar_aus_einheit D E fs ls hAX
+    (nutzerPflichtA_of_akzeptiert fs.2 hA hN) O hH passes ord sp init hL
 
 #print axioms Gabbro.Grammatik.Zielsatz.akzeptiertSpecX_mitRuhe
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_atomar
