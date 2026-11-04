@@ -12,7 +12,8 @@ private theorem sign_roundtrip (b : BitVec 1) : Sign.toBitVec (Sign.ofBitVec b) 
   rcases h with rfl | rfl <;> rfl
 
 private theorem components_roundtrip (F : Format) (b : BitVec F.numBits) :
-    packComponents F (Sign.ofBitVec (unpackSign b)) (unpackExponent b) (unpackMantissa b) = b := by
+    packComponents F (Sign.ofBitVec (unpackSign (spec := F) b))
+      (unpackExponent (spec := F) b) (unpackMantissa (spec := F) b) = b := by
   unfold packComponents
   rw [sign_roundtrip]
   ext i hi
@@ -32,9 +33,9 @@ private theorem components_roundtrip (F : Format) (b : BitVec F.numBits) :
     This proves storage transport only; it defines no arithmetic or rounding. -/
 theorem pack_unpack (F : Format) (b : BitVec F.numBits) (valid : F.Valid b) :
     pack F (unpack F b) = b := by
-  let e := unpackExponent b
-  let m := unpackMantissa b
-  let s := Sign.ofBitVec (unpackSign b)
+  let e := unpackExponent (spec := F) b
+  let m := unpackMantissa (spec := F) b
+  let s := Sign.ofBitVec (unpackSign (spec := F) b)
   have reassemble := components_roundtrip F b
   change packComponents F s e m = b at reassemble
   have eb : e.toNat < 2 ^ F.exponentBits := e.isLt
