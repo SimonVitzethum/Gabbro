@@ -26,16 +26,78 @@ theorem call_equation (fn : Function params result)
     (args : Env (declaration params result) params) (σ : World (declaration params result))
     (O : Orakel (declaration params result)) (passes depth : Nat) :
     rufAt fn.program O passes (depth + 1) () σ args =
-      if fn.pre.denote args = false then .logik (.vorbedingung ()) else
-      if fn.post.denote (.cons (fn.body.denote args) args) = false then .logik (.nachbedingung ())
-      else .ok σ (fn.body.denote args) := by
-  simp only [rufAt, program, footprint, World.lese, List.map_nil, World.merke,
-    List.nil_append, Code.equation, wahr?]
-  split
-  · rfl
-  · simp only [execEnd, ErgExpr.orte, footprint, World.lese, List.map_nil, World.merke,
-      List.nil_append, evalErg, Code.equation, EndAusgang.schrumpf, ergEnv, wahr?]
-    rfl
+      (letI : Decidable (@Eq Bool (fn.pre.denote args) false) := Bool.decEq _ _
+       if @Eq Bool (fn.pre.denote args) false then .logik (.vorbedingung ()) else
+         letI : Decidable (@Eq Bool (fn.post.denote (.cons (fn.body.denote args) args)) false) :=
+           Bool.decEq _ _
+         if @Eq Bool (fn.post.denote (.cons (fn.body.denote args) args)) false then
+           .logik (.nachbedingung ())
+         else .ok σ (fn.body.denote args) : RufAusgang (D := declaration params result) ()) := by
+  have prePlaces : (fn.program.requires ()).orte = [] := by
+    change fn.pre.expr.orte = []
+    exact footprint _
+  have postPlaces : (fn.program.ensures ()).orte = [] := by
+    change fn.post.expr.orte = []
+    exact footprint _
+  have preEval (before after : World (declaration params result)) :
+      eval before (fn.program.requires ()) after args = fn.pre.denote args :=
+    fn.pre.equation before after args
+  have postEval (before after : World (declaration params result))
+      (value : Wert (declaration params result) result) :
+      eval before (fn.program.ensures ()) after
+        (ergEnv ((declaration params result).erg ()) value args) =
+          fn.post.denote (.cons value args) :=
+    fn.post.equation before after (.cons value args)
+  have preRead :
+      σ.lese (Signatur.anfang (declaration params result)
+        ((declaration params result).signatur ())) (fn.program.requires ()).orte = σ := by
+    rw [prePlaces] <;> rfl
+  have preCheck :
+      wahr? (eval
+        (σ.lese (Signatur.anfang (declaration params result)
+          ((declaration params result).signatur ())) (fn.program.requires ()).orte)
+        (fn.program.requires ())
+        (σ.lese (Signatur.anfang (declaration params result)
+          ((declaration params result).signatur ())) (fn.program.requires ()).orte) args) =
+        fn.pre.denote args := preEval _ _
+  have postRead (after : World (declaration params result)) :
+      after.lese (vertragVon (declaration params result) ()).ende
+        (fn.program.ensures ()).orte = after := by
+    rw [postPlaces] <;> rfl
+  have postCheck (before after : World (declaration params result))
+      (value : Wert (declaration params result) result) :
+      wahr? (eval before (fn.program.ensures ())
+        (after.lese (vertragVon (declaration params result) ()).ende
+          (fn.program.ensures ()).orte)
+        (ergEnv ((declaration params result).erg ()) value args)) =
+        fn.post.denote (.cons value args) := postEval _ _ _
+  have bodyPlaces : fn.body.expr.orte = [] := footprint _
+  have endEquation :
+      execEnd O passes (rufAt fn.program O passes depth) (fn.program.rumpf ()) σ args =
+        (.zurueck σ (fn.body.denote args) :
+          EndAusgang (vertragVon (declaration params result) ()) false params) := by
+    change execEnd (V := vertragVon (declaration params result) ()) (l := false)
+      O passes (rufAt fn.program O passes depth)
+      (.ret (.val fn.body.expr) (List.Perm.refl [])) σ args = _
+    simp only [execEnd, ErgExpr.orte, bodyPlaces, World.lese, List.map_nil,
+      World.merke, List.nil_append, evalErg, fn.body.equation] <;> rfl
+  have noInvariants : (declaration params result).invs = [] := rfl
+  erw [rufAt.eq_def]
+  dsimp only
+  rw [preCheck, preRead]
+  letI : Decidable (@Eq Bool (fn.pre.denote args) false) := Bool.decEq _ _
+  by_cases hp : @Eq Bool (fn.pre.denote args) false
+  · simp only [ite_eq_left hp] <;> rfl
+  · simp only [ite_eq_right hp]
+    rw [endEquation]
+    dsimp only
+    rw [postCheck σ σ (fn.body.denote args)]
+    letI : Decidable (@Eq Bool (fn.post.denote (.cons (fn.body.denote args) args)) false) :=
+      Bool.decEq _ _
+    by_cases hq : @Eq Bool (fn.post.denote (.cons (fn.body.denote args) args)) false
+    · simp only [ite_eq_left hq] <;> rfl
+    · simp only [ite_eq_right hq, noInvariants, List.filter_nil, List.foldl_nil,
+        List.find?_nil, postRead] <;> rfl
 
 structure Certificate (fn : Function params result)
     (args : Env (declaration params result) params)
@@ -49,9 +111,21 @@ theorem Certificate.sound {fn : Function params result}
     (certificate : Certificate fn args value) (σ : World (declaration params result))
     (O : Orakel (declaration params result)) (passes depth : Nat) :
     rufAt fn.program O passes (depth + 1) () σ args = .ok σ value := by
+  have hp : ¬ @Eq Bool (fn.pre.denote args) false := by
+    intro wrong
+    have impossible : (true : Bool) = false := certificate.requires.symm.trans wrong
+    cases impossible
+  have postBody : @Eq Bool (fn.post.denote (.cons (fn.body.denote args) args)) true :=
+    (congrArg (fun answer : Wert (declaration params result) result =>
+      fn.post.denote (.cons answer args)) certificate.body).trans certificate.ensures
+  have hq : ¬ @Eq Bool (fn.post.denote (.cons (fn.body.denote args) args)) false := by
+    intro wrong
+    have impossible : (true : Bool) = false := postBody.symm.trans wrong
+    cases impossible
   rw [call_equation]
-  simp only [certificate.requires, Bool.true_eq_false, ↓reduceIte,
-    certificate.body, certificate.ensures]
+  simp only [ite_eq_right hp, ite_eq_right hq]
+  exact congrArg (fun answer : Wert (declaration params result) result =>
+    (RufAusgang.ok σ answer : RufAusgang (D := declaration params result) ())) certificate.body
 
 end Function
 
@@ -115,14 +189,17 @@ def checkCall (k : UKonstFn) (fns : List UKonstFn)
   | .ok checkedArguments =>
     let values := checkedArguments.values
     have evaluated : Scalar.argumentValues fns env k.params sources = .ok values := by
-      simp only [Scalar.argumentValues, hv, Except.map]
+      simp only [Scalar.argumentValues, hv, Except.map] <;> rfl
     match ha : arguments (declaration (k.params.map Prod.snd) k.erg) k.params values with
     | .error error => throw error
-    | .ok args =>
-      if hp : fn.model.pre.denote args = true then
+    | .ok args => do
+      letI : Decidable (@Eq Bool (fn.model.pre.denote args) true) := Bool.decEq _ _
+      if hp : @Eq Bool (fn.model.pre.denote args) true then
         let value := fn.model.body.denote args
-        if hq : fn.model.post.denote (.cons value args) = true then
-          let quoted ← reify (resultSchemas k) (textLiterals fn.source) 64 k.erg value
+        letI : Decidable (@Eq Bool (fn.model.post.denote (.cons value args)) true) := Bool.decEq _ _
+        if hq : @Eq Bool (fn.model.post.denote (.cons value args)) true then
+          let quoted ← reify (D := declaration (k.params.map Prod.snd) k.erg)
+            (Γ := k.params.map Prod.snd) (resultSchemas k) (textLiterals fn.source) 64 k.erg value
           return ⟨fn, values, evaluated, checkedArguments.meaning, args, ha, value, fn.model.body.equation _ _ _,
             ⟨rfl, hp, hq⟩, quoted⟩
         else throw ("const contract violated at `" ++ k.name ++ "`: ensures failed")
