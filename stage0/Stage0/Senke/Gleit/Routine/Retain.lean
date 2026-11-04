@@ -20,10 +20,10 @@ def retainWordInputsL : Nat → List (Nat → Option (List II × Nat)) →
 def withWordInputsL (d : Nat) (inputs : List (Nat → Option (List II × Nat)))
     (body : (Fin inputs.length → Nat → Option (List II × Nat)) →
       Nat → Option (List II × Nat)) : Option (List II × Nat) := do
-  let prefix ← retainWordInputsL d inputs
+  let leadingCode ← retainWordInputsL d inputs
   let result ← body (fun i j => some ([ci 2 j (d + i.val) 0], j + 1)) (d + inputs.length)
-  pure (prefix.1 ++ (result.1 ++ [ci 2 d (d + inputs.length) 0]),
-    max prefix.2 (max result.2 (d + inputs.length + 1)))
+  pure (leadingCode.1 ++ (result.1 ++ [ci 2 d (d + inputs.length) 0]),
+    max leadingCode.2 (max result.2 (d + inputs.length + 1)))
 
 private theorem retainWordInputsL_room {d top : Nat} {code : List II}
     {inputs : List (Nat → Option (List II × Nat))}
@@ -53,7 +53,7 @@ private theorem retainWordInputsL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem 
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * code.length), fp⟩ m' ∧
       Agree fp d K m m' ∧
       ∀ i, m'.rd64 (slot fp (BitVec.ofNat 64 (d + i.val))) = some (values i) := by
-  induction inputs generalizing values d top code m pc with
+  induction inputs generalizing d top code m pc with
   | nil =>
       cases emitted
       exact ⟨m, by simpa using Star.refl ⟨pc, fp⟩ m, Agree.refl _ _ _ _, fun i => i.elim0⟩
@@ -75,7 +75,8 @@ private theorem retainWordInputsL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem 
         | zero =>
             exact slotRead_agree next.frame a2 (Nat.lt_succ_self d) (by omega) read
         | succ i =>
-            simpa only [Fin.val_succ, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using
+            have address : d + 1 + i = d + (i + 1) := by omega
+            simpa only [address, Fin.succ] using
               reads ⟨i, Nat.lt_of_succ_lt_succ hi⟩
 
 /-- A fixed load is certified only by an actual readable frame environment
@@ -117,7 +118,7 @@ theorem withWordInputsL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
   intro fp K d code top emitted fits m pc pre
   simp only [withWordInputsL, bind, Option.bind_eq_some_iff, pure,
     Option.some.injEq] at emitted
-  obtain ⟨⟨prefix, pt⟩, hp, ⟨assembly, ceiling⟩, ha, emitted⟩ := emitted
+  obtain ⟨⟨leadingCode, pt⟩, hp, ⟨assembly, ceiling⟩, ha, emitted⟩ := emitted
   cases emitted
   have room := retainWordInputsL_room hp
   obtain ⟨m1, s1, a1, reads⟩ := retainWordInputsL_ok inputs values runs hp (by omega) pre.left
