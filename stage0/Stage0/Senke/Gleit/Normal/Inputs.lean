@@ -14,9 +14,9 @@ inductive SoftFloatKernel where
   | add | mul | div
 
 def SoftFloatKernel.apply : SoftFloatKernel → GFloat → GFloat → GFloat
-  | .add => add f64
-  | .mul => mul f64
-  | .div => div f64
+  | .add => Gleitkomma.add f64
+  | .mul => Gleitkomma.mul f64
+  | .div => Gleitkomma.div f64
 
 def SoftFloatKernel.emit (kind : SoftFloatKernel) : Nat →
     (Nat → Option (List II × Nat)) → (Nat → Option (List II × Nat)) →
@@ -44,10 +44,14 @@ theorem SoftFloatKernel.emit_ok (kind : SoftFloatKernel)
     (hr : WordCode (L := L) ρ W right (BitVec.ofNat 64 (zuBits f64 b))) :
     WordCode (L := L) ρ W (fun d => kind.emit d left right)
       (BitVec.ofNat 64 (zuBits f64 (kind.apply a b))) := by
+  intro fp K d c top emitted fits m pc pre
   cases kind with
   | add => exact softAddRoutineL_ok a b ha hb hl hr
+      (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
   | mul => exact softMulRoutineL_ok a b ha hb hl hr
+      (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
   | div => exact softDivRoutineL_ok a b ha hb hl hr
+      (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
 
 /-- Two retained operands precede all routine temporaries. The final copy
     places the result in the ordinary expression destination. -/
@@ -102,18 +106,21 @@ theorem softFloatContinuationL_ok (kind : SoftFloatKernel) {Γ : Ctx} {ρ : Env 
     have position : vslot v = i := by rw [frameWordVar_slot]; omega
     rw [position, read] at rd
     have same := Option.some.inj rd
-    subst actual
+    rw [← same] at encoded
     change w = BitVec.ofInt 64 (ρw.get v).n at encoded
-    have result := frameWordLoad (L := L) n (i - FB) less ρw
-    have slotEq : FB + (i - FB) = i := by omega
-    rw [slotEq, ← encoded] at result
-    exact result
+    rw [encoded]
+    have slotInt : (FB : Int) + ((i - FB : Nat) : Int) = i := by omega
+    intro fp' K' j c t emitted fits mm pp pre
+    exact frameWordLoad (L := L) n (i - FB) less ρw
+      (by simpa only [slotInt] using emitted) fits mm pp pre
   have pre : Pre L m pc fp K (input + 2) assembly ρw (fun _ => True) :=
     ⟨by simp [frei, frameWordCtx, n]; omega, hp.small, hp.frame, hp.left.code,
       hp.left.far, env, trivial, wstab_true _ _⟩
-  have run := kind.emit_ok (L := L) a b hA hB
+  have run : WordCode (L := L) ρw (fun _ => True) _ _ := kind.emit_ok (L := L) a b hA hB
     (load input hi (by omega) _ ra) (load (input + 1) (by omega) (by omega) _ rb)
-  obtain ⟨m1, s1, a1, w, r1, hw⟩ := run ha (by omega) m pc pre
+  obtain ⟨m1, s1, a1, w, r1, hw⟩ :=
+    run (fp := fp) (K := K) (d := input + 2) (c := assembly) (top := ceiling)
+      ha (by omega) m pc pre
   have next := hp.next (a1.mono (show input ≤ input + 2 by omega)) (Nat.le_refl _) (by omega)
   obtain ⟨m2, s2, a2, r, rr, eq⟩ := mov_ok (s := input + 2) (d := input)
     next (by omega) (by omega) r1
@@ -153,7 +160,7 @@ theorem softFloatWordsL_ok (kind : SoftFloatKernel) {Γ : Ctx} {ρ : Env D Γ} {
   obtain ⟨m3, s3, a3, w, rw, ew⟩ := softFloatContinuationL_ok kind a b hA hB hs pre
     (by omega) leftRead rb
   refine ⟨m3, ?_, (a1.trans (a2.mono (Nat.le_succ d))).trans a3, w, rw, ⟨kind.preserves a b hA hB, ew⟩⟩
-  simpa only [List.length_append, pc_add] using (s1.trans s2).trans s3
+  simpa only [List.length_append, pc_add, Nat.add_assoc] using (s1.trans s2).trans s3
 
 #print axioms softFloatContinuationL_ok
 #print axioms softFloatWordsL_ok
