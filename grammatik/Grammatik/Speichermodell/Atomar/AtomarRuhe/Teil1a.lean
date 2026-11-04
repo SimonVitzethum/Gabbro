@@ -78,7 +78,7 @@ theorem execStmtHA_ru_assignSlot {V : Vertrag D}
   by
   refine Or.inl ?_
   simp only [ruS, execStmtHA]
-  rw [orte2, leseA_worldR hA, eval_ru, eval_ru, schreibSlot_worldR]
+  erw [orte2, leseA_worldR hA, eval_ru, eval_ru, schreibSlot_worldR]
   rfl
 
 set_option linter.unusedSectionVars false in
@@ -101,7 +101,7 @@ theorem execStmtHA_ru_assignThru {V : Vertrag D}
   by
   refine Or.inl ?_
   simp only [ruS, execStmtHA]
-  rw [show (ruE p).orte ++ (ruE i).orte ++ (ruE e).orte = p.orte ++ i.orte ++ e.orte from
+  erw [show (ruE p).orte ++ (ruE i).orte ++ (ruE e).orte = p.orte ++ i.orte ++ e.orte from
     kongr₂ (· ++ ·) (orte2 p i) (ruE_orte e), leseA_worldR hA, eval_ru, eval_ru, schreibSlot_worldR]
   rfl
 
@@ -122,7 +122,6 @@ theorem execStmtHA_ru_assignThruOwn {V : Vertrag D}
     (ho)
     (he)
     (hg)
-    (hm)
     (hw)
     (hL)
     (σ : World D)
@@ -131,7 +130,7 @@ theorem execStmtHA_ru_assignThruOwn {V : Vertrag D}
   by
   refine Or.inl ?_
   simp only [ruS, execStmtHA]
-  rw [show (ruE p).orte ++ (ruE i).orte ++ (ruE e).orte = p.orte ++ i.orte ++ e.orte from
+  erw [show (ruE p).orte ++ (ruE i).orte ++ (ruE e).orte = p.orte ++ i.orte ++ e.orte from
     kongr₂ (· ++ ·) (orte2 p i) (ruE_orte e), leseA_worldR hA, eval_ru, eval_ru, schreibSlot_worldR]
   rfl
 
@@ -155,7 +154,7 @@ theorem execStmtHA_ru_assignSlotRef {V : Vertrag D}
   by
   refine Or.inl ?_
   simp only [ruS, execStmtHA]
-  rw [show (ruE r).orte ++ (ruE e).orte = r.orte ++ e.orte from
+  erw [show (ruE r).orte ++ (ruE e).orte = r.orte ++ e.orte from
     kongr₂ (· ++ ·) (ruE_orte r) (ruE_orte e), leseA_worldR hA, eval_ru, eval_ru, schreibSlot_worldR]
   rfl
 
@@ -200,7 +199,7 @@ theorem execStmtHA_ru_putBytes {V : Vertrag D}
   by
   refine Or.inl ?_
   simp only [ruS, execStmtHA]
-  rw [orte2, leseA_worldR hA, eval_ru, eval_ru, schreibBytes_worldR t f hf]
+  erw [orte2, leseA_worldR hA, eval_ru, eval_ru, schreibBytes_worldR t f hf]
   rfl
 
 set_option linter.unusedSectionVars false in
