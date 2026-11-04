@@ -17,6 +17,19 @@ variable (hZ : E.Rueck) (hS : E.SigTreu) (pad : List (Ereignis D)) (S : SperrInv
   (T : D.Tab ⊕ D.Glob → Prop) (S' : SperrInv D') (T' : D'.Tab ⊕ D'.Glob → Prop) (O' : Orakel D')
   (U' : Umwelt D') (A' : AUmwelt D') (passes : Nat)
   (R' : ∀ f : D'.Fn, World D' → Env D' (D'.params f) → RufAusgang f)
+
+private theorem arms_cons_tail (S : SperrInv D) (O : Orakel D) (U : Umwelt D)
+    (A : AUmwelt D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {c : Option Ty} {cs : List (Option Ty)}
+    (b : Block D V l (ArmCtx Γ c) Λ Λ') (rest : Arms D V l Γ Λ Λ' cs)
+    (w : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ) :
+    execArmsHA S O U A passes R (.cons b rest) ⟨w.1.succ, w.2⟩ σ ρ =
+      execArmsHA S O U A passes R rest w σ ρ := by
+  rcases w with ⟨⟨i, hi⟩, payload⟩
+  cases i <;> rfl
+
 section Sim
 variable (hB : E.Bed hZ pad S T S' T' U' A')
 include hB
@@ -50,27 +63,38 @@ theorem sim_stmt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       sim_stmt_ite (c := c) (t := t) (e := e) (ih_sim_block_e := sim_block e) (ih_sim_block_t := sim_block t) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .onOption (n := n) o p a =>
       sim_stmt_onOption (n := n) (o := o) (p := p) (a := a) (ih_sim_block_a := sim_block a) (ih_sim_block_p := sim_block p) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
-  | .onTag v arms => by
+  | .onTag (cs := cs) v arms => by
       intro M σ σ' ρ ρ' hM hρ
-      obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval hZ hM T hB.havocA hB.atom Λ (Λ.map E.resE) v.orte
-      let w' := eval (leseA A' σ' (Λ.map E.resE) (v.orte.map E.ortE)) (exE E v)
-        (leseA A' σ' (Λ.map E.resE) (v.orte.map E.ortE)) ρ'
+      let mapped : Expr D' (Γ.map E.tyE) (Λ.map E.resE)
+          (.sum (Ty.mapCases E.num E.tnum cs)) := exE E v
+      obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval' hZ T hM hB.havocA hB.atom
+        Λ (Λ.map E.resE) v.orte mapped.orte (E.orte_exE v).symm
+      let W : World D' := leseA A' σ' (Λ.map E.resE) mapped.orte
+      let w' := eval W mapped W ρ'
       have hv : E.valZ hZ _ w' = eval σ₁ v σ₁ ρ := E.valZ_vrel hZ _ (hev v ρ ρ' hρ)
       obtain ⟨M₂, o, hs2, hΦ2, hR⟩ := sim_arms arms w' M₁ σ₁ _ ρ ρ' hI hρ
       refine ⟨M₂, o, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
       · simp only [execStmtHA, hΦ Φ (passt_teil hP hs2)]
         simpa only [hv] using hΦ2 Φ hP
-      · simpa only [exS, execStmtHA, Einbettung.orte_exE] using hR
-  | .onWhy r arms => by
+      · change E.AusRel hZ M₂ o (execArmsHA S' O' U' A' passes R' (exArms hS arms) w' W ρ')
+        exact hR
+  | .onWhy (n := n) r arms => by
       intro M σ σ' ρ ρ' hM hρ
-      obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval hZ hM T hB.havocA hB.atom Λ (Λ.map E.resE)
-        (r.orte)
-      have hev0 := E.frei_alle hZ (@hev) hρ
+      let mapped : Expr D' (Γ.map E.tyE) (Λ.map E.resE) (.why n) := exE E r
+      obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval' hZ T hM hB.havocA hB.atom
+        Λ (Λ.map E.resE) r.orte mapped.orte (E.orte_exE r).symm
+      let W : World D' := leseA A' σ' (Λ.map E.resE) mapped.orte
+      have value : eval W mapped W ρ' = eval σ₁ r σ₁ ρ := by
+        have hr := hev r ρ ρ' hρ
+        change (eval W mapped W ρ' : Fin n) = eval σ₁ r σ₁ ρ at hr
+        exact hr
       obtain ⟨M₂, o, hs2, hΦ2, hR⟩ := sim_grund arms (eval σ₁ r σ₁ ρ) M₁ σ₁ _ ρ ρ' hI hρ
       refine ⟨M₂, o, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
       · simp only [execStmtHA, hΦ Φ (passt_teil hP hs2)]
         exact hΦ2 Φ hP
-      · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_why]
+      · change E.AusRel hZ M₂ o
+          (execGrundHA S' O' U' A' passes R' (exGArms hS arms) (eval W mapped W ρ') W ρ')
+        rw [value]
         exact hR
   | .call f args hp hr =>
       sim_stmt_call (f := f) (args := args) (hp := hp) (hr := hr) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
@@ -257,14 +281,18 @@ theorem sim_arms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       intro M σ σ' ρ ρ' hM hρ
       obtain ⟨M₁, o, hs, hΦ, hR⟩ := ih M σ σ' ρ ρ' hM hρ
       exact ⟨M₁, o, hs, fun Φ hP => by
-          simpa only [valZ, Val.restrict, Val.restrictSum, execArmsHA] using hΦ Φ hP,
+          simp only [valZ, Val.restrict, Val.restrictSum]
+          rw [arms_cons_tail]
+          exact hΦ Φ hP,
         by simpa only [exArms, execArmsHA] using hR⟩
   | .cons (c := some τ) _ rest, ⟨⟨i + 1, h⟩, nutz⟩ => by
       have ih := sim_arms rest ⟨⟨i, Nat.lt_of_succ_lt_succ h⟩, nutz⟩
       intro M σ σ' ρ ρ' hM hρ
       obtain ⟨M₁, o, hs, hΦ, hR⟩ := ih M σ σ' ρ ρ' hM hρ
       exact ⟨M₁, o, hs, fun Φ hP => by
-          simpa only [valZ, Val.restrict, Val.restrictSum, execArmsHA] using hΦ Φ hP,
+          simp only [valZ, Val.restrict, Val.restrictSum]
+          rw [arms_cons_tail]
+          exact hΦ Φ hP,
         by simpa only [exArms, execArmsHA] using hR⟩
 
 /-- **Reason arms beside their images.** -/
