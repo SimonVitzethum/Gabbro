@@ -116,7 +116,7 @@ theorem decrease_ok {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
     rw [slt_in newBound (by decide), slt_in boundWord newBound]
     simp only [show ¬ new < 0 by omega, show ¬ bound < new by omega,
       decide_false, Bool.false_or, Runner.IR.bool, Bool.false_eq_true, ↓reduceIte]
-  subst outside
+  rw [outsideZero] at outsideRead
   have testFrameD := testFrame.mono (Nat.le_succ d)
   have preSkip := preTest.next testFrameD (Nat.le_refl _) (by omega)
   have skipPre : PreS L m2
@@ -143,7 +143,8 @@ theorem decrease_ok {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
     change Star ⟨pc, fp⟩ m
       ⟨pc + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofNat 64 (16 * test.length) + 80, fp⟩ m2
     exact measureRun.trans (testRun.trans jump)
-  dsimp only
+  change if new < old then Ok m pc fp K d (decrease d saved failure bound ce) (· = 1)
+    else Stops ⟨pc, fp⟩ m failure
   by_cases falls : new < old
   · simp only [falls, ↓reduceIte] at checked ⊢
     obtain ⟨m3, strictRun, strictFrame, result, resultRead, resultOne⟩ := checked
