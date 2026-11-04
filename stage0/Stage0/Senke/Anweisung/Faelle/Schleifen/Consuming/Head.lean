@@ -119,9 +119,8 @@ private theorem head_stop_position : position .stop x.fragment 0 = some (x.offse
     rw [position, ite_eq_left rfl, Nat.zero_add]
   calc
     position .stop x.fragment 0 = some (width (x.fragment.take 48)) := located.trans atLabel
-    _ = some (x.offset 49) := by
-      congr 1
-      simpa only [Image.offset, Piece.width, Nat.add_zero] using (head_offset_step found).symm
+    _ = some (x.offset 49) := congrArg some
+      (by simpa only [Image.offset, Piece.width, Nat.add_zero] using (head_offset_step found).symm)
 
 /-- Zero fuel jumps to the actual stop block before reading the invariant. -/
 theorem zero (entry : q.Entry 0 m σ ρ) :
@@ -152,6 +151,7 @@ theorem fuel (entry : q.Entry (n + 1) m σ ρ) :
   have code := (ready.slice 3 (.code [ci 1 (x.s + 4) 1 0, ci 4 x.counter x.counter (x.s + 4)])
     _ rfl rfl).1
   obtain ⟨oneRun, oneFrame, oneReady, oneRead⟩ := ready.literal
+    (cell := x.s + 4) (value := 1)
     (codeAt_left (a := [ci 1 (x.s + 4) 1 0]) code)
     (by rw [← q.selector.origin]; omega) (by omega) room (by decide)
   have wholeFar := (ready.slice 3 (.code [ci 1 (x.s + 4) 1 0,
@@ -159,7 +159,7 @@ theorem fuel (entry : q.Entry (n + 1) m σ ρ) :
   have tail := (codeAt_right (a := [ci 1 (x.s + 4) 1 0]) code).agree oneFrame
     (codeFar_right (n := 1) (k := 1) wholeFar)
   have counterRead := Image.read_agree oneFrame ready.frame counterBelow (Nat.le_of_lt room) read
-  let m1 := write m (slot x.fp (BitVec.ofNat 64 (x.s + 4))) 8 1
+  let m1 := write m (slot x.fp (BitVec.ofNat 64 (x.s + 4))) 8 (BitVec.ofInt 64 1).toNat
   let value := BitVec.ofNat 64 (n + 1) - 1
   let m2 := write m1 (slot x.fp (BitVec.ofNat 64 x.counter)) 8 value.toNat
   have run := Image.binary_to (cell := x.counter) (a := x.counter) (b := x.s + 4) (o := 4)
@@ -179,14 +179,53 @@ theorem fuel (entry : q.Entry (n + 1) m σ ρ) :
     change Star ⟨x.addr 2, x.fp⟩ m ⟨x.addr 3 + 16 + 16, x.fp⟩ m2 at total
     rw [BitVec.add_assoc, show (16 : W) + 16 = 32 from rfl, blockEnd] at total
     exact total
-  · have k1 := keeps_of_agree oneFrame ready.frame.room
-      (fun j hj => by have := x.kept j hj; omega) (by omega)
-    have k2 := keeps_write oneReady.frame.room controlRoom
+  · have k1 : Keeps x.fp x.pr m m1 := keeps_of_agree (d := x.s + 4) oneFrame ready.frame.room
+      (fun j hj => by have := x.kept j hj; omega) (Nat.le_of_lt room)
+    have k2 : Keeps x.fp x.pr m1 m2 := keeps_write oneReady.frame.room controlRoom
       (fun j hj => by have := x.kept j hj; have := x.scratch; omega)
       (fun hj => (x.kept _ hj).2.1 rfl) value.toNat
     exact k1.trans k2
-  · have result := rd_same oneReady.frame controlRoom value
-    simpa only [Image.read, m2, value, fuelEq.2] using result
+  · have result : x.read m2 x.counter (BitVec.ofNat 64 (n + 1) - 1) :=
+      rd_same oneReady.frame controlRoom value
+    rw [fuelEq.2] at result
+    exact result
+
+private theorem invariant_read {τ : World D} (h : x.Ready m τ ρ) :
+    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.addr 4) (x.addr 5) m
+      (fun mem => x.Ready mem τ ρ ∧
+        x.read mem (x.s + 4) (Runner.IR.bool (wahr? (Gabbro.Grammatik.eval τ q.inv τ ρ)))) := by
+  apply (h.eval 4 (by rw [← q.selector.origin]; omega) q.invCode q.invTop rfl trivial).map
+  intro mem result
+  obtain ⟨ready, frame, value, read, encoding⟩ := result
+  have word : value = Runner.IR.bool (wahr? (Gabbro.Grammatik.eval τ q.inv τ ρ)) := by
+    simpa only [Enc, bool_word] using encoding
+  refine ⟨ready, ?_⟩
+  rw [← word]
+  exact read
+
+private theorem header_finish {τ : World D} {b : Bool} {mem : Mem}
+    (prefixRun : Star ⟨x.addr 2, x.fp⟩ m ⟨x.addr 5, x.fp⟩ mem)
+    (frame : AgreeW L x.fp x.lo x.K m mem) (kept : Keeps x.fp x.pr m mem)
+    (ready : x.Ready mem τ ρ) (counterRead : x.read mem x.counter (BitVec.ofNat 64 n))
+    (bound : n ≤ x.fuel) (read : x.read mem (x.s + 4) (Runner.IR.bool b)) :
+    if b = false then Stops ⟨x.addr 2, x.fp⟩ m (logikCode (D := D) .schleife)
+    else ScanRun L x.fp x.lo x.K x.pr (x.addr 2) (x.addr 6) m
+      (fun mem' => q.Entry n mem' τ ρ) := by
+  have branch := ready.branch 5 49 (x.s + 4) .stop _ rfl head_stop_position
+    (head_offset_bound 5) (head_offset_bound 49)
+    (by have := x.scratch; have := x.layout.ks; omega) read
+    (head_zero_next (i := 5) (cell := x.s + 4) (target := .stop) rfl)
+  cases b with
+  | false =>
+    simp only [↓reduceIte]
+    have stopRun : Star ⟨x.addr 5, x.fp⟩ mem ⟨x.addr 49, x.fp⟩ mem := by
+      simpa only [Runner.IR.bool, Bool.false_eq_true, ↓reduceIte] using branch
+    exact Stops.prefix (prefixRun.trans stopRun) ready.stop
+  | true =>
+    simp only [Bool.true_eq_false, ↓reduceIte]
+    have passRun : Star ⟨x.addr 5, x.fp⟩ mem ⟨x.addr 6, x.fp⟩ mem := by
+      simpa only [Runner.IR.bool, show (1 : W) ≠ 0 by decide, ↓reduceIte] using branch
+    exact ⟨mem, prefixRun.trans passRun, frame, kept, ready, counterRead, bound⟩
 
 /-- The head executes the invariant in exactly its canonical read world. -/
 theorem head (entry : q.Entry (n + 1) m σ ρ) :
@@ -195,29 +234,15 @@ theorem head (entry : q.Entry (n + 1) m σ ρ) :
     else ScanRun L x.fp x.lo x.K x.pr (x.addr 2) (x.addr 6) m
       (fun m' => q.Entry n m' (q.invW σ ρ).1 ρ) := by
   obtain ⟨m1, fuelRun, fuelFrame, fuelKept, ready1, counterRead, bound⟩ := fuel entry
-  let σi := (q.invW σ ρ).1
+  let σi := σ.lese Λ q.inv.orte
   have invReady : x.Ready m1 σi ρ := ready1.lese
-  obtain ⟨m2, invRun, invFrame, invKept, ready2, localFrame, value, read, encoding⟩ :=
-    invReady.eval 4 (by rw [← q.selector.origin]; omega) q.invCode q.invTop rfl trivial
+  obtain ⟨m2, invRun, invFrame, invKept, ready2, read⟩ := invariant_read (q := q) invReady
   have counterRead2 := (invKept x.counter (by simp)).trans counterRead
-  have valueEq : value = Runner.IR.bool (q.invW σ ρ).2 := by simpa only [Enc, invW, bool_word] using encoding
-  subst value
-  have branch := ready2.branch 5 49 (x.s + 4) .stop _ rfl head_stop_position
-    (head_offset_bound 5) (head_offset_bound 49)
-    (by have := x.scratch; have := x.layout.ks; omega) read
-    (head_zero_next (i := 5) (cell := x.s + 4) (target := .stop) rfl)
-  cases truth : (q.invW σ ρ).2 with
-  | false =>
-    simp only [truth, ↓reduceIte]
-    have stopRun : Star ⟨x.addr 5, x.fp⟩ m2 ⟨x.addr 49, x.fp⟩ m2 := by
-      simpa only [truth, Runner.IR.bool, Bool.false_eq_true, ↓reduceIte] using branch
-    exact Stops.prefix (fuelRun.trans (invRun.trans stopRun)) ready2.stop
-  | true =>
-    simp only [truth, Bool.true_eq_false, ↓reduceIte]
-    have passRun : Star ⟨x.addr 5, x.fp⟩ m2 ⟨x.addr 6, x.fp⟩ m2 := by
-      simpa only [truth, Runner.IR.bool, show (1 : W) ≠ 0 by decide, ↓reduceIte] using branch
-    exact ⟨m2, fuelRun.trans (invRun.trans passRun), fuelFrame.trans invFrame,
-      fuelKept.trans (fun j hj => invKept j (by simp [hj])), ready2, counterRead2, bound⟩
+  have completed := header_finish (q := q) (τ := σi)
+    (b := wahr? (Gabbro.Grammatik.eval σi q.inv σi ρ))
+    (fuelRun.trans invRun) (fuelFrame.trans invFrame)
+    (fuelKept.trans (fun j hj => invKept j (by simp [hj]))) ready2 counterRead2 bound read
+  simpa only [invW, σi] using completed
 
 /-- Compose the invariant header and the complete current-world selector. -/
 theorem round (entry : q.Entry (n + 1) m σ ρ) (valid : (q.invW σ ρ).2 ≠ false) :
