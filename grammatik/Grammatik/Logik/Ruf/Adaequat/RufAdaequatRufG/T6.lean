@@ -95,7 +95,9 @@ theorem stmtKeinR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       intro σ ρ
       obtain ⟨_, hb, _⟩ := hs.locks_inv
       simp only [execStmt]
-      exact ende_mapWelt_none _ (blockKeinR body hb _ _)
+      have noReturn := blockKeinR body hb (σ.nimmt L) ρ
+      generalize execBlock O passes R body (σ.nimmt L) ρ = outcome at noReturn ⊢
+      cases outcome <;> first | rfl | cases noReturn
   | _, _, _, _, .breaking i body, hs => by
       intro σ ρ
       simp only [execStmt]
