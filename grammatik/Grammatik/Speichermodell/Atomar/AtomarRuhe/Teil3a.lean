@@ -94,7 +94,27 @@ theorem execBlockHA_ru_narrow {V : Vertrag D}
     : AusRelRu (execBlockHA S.mitRuhe O' U' A' passes R' (ruB (.narrow (lo := zi_lo) (hi := zi_hi) e lo' hi' sonst rest : Block D V l Γ Λ Λ')) (worldR σ) (envR ρ)) (execBlockHA S O U A passes R (.narrow (lo := zi_lo) (hi := zi_hi) e lo' hi' sonst rest : Block D V l Γ Λ Λ') σ ρ) :=
   by
   simp only [ruB, execBlockHA]
-  simp only [ruE_orte, leseA_worldR hA, eval_ru, valR_int]
+  have hread : leseA A' (worldR σ) (Λ.map resR) (ruE e).orte =
+      worldR (leseA A σ Λ e.orte) :=
+    (leseA_worldR hA σ Λ _).trans
+      (congrArg (fun os => worldR (leseA A σ Λ os)) (ruE_orte e))
+  have hv : @Eq (Zahl zi_lo zi_hi)
+      (eval (leseA A' (worldR σ) (Λ.map resR) (ruE e).orte) (ruE e)
+        (leseA A' (worldR σ) (Λ.map resR) (ruE e).orte) (envR ρ))
+      (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ) :=
+    (congrArg (fun W => eval W (ruE e) W (envR ρ)) hread).trans
+      (eval_ru (leseA A σ Λ e.orte) (leseA A σ Λ e.orte) e ρ)
+  let branch (W : World D.mitRuhe) (z : Zahl zi_lo zi_hi) :
+      Ausgang (vertragR V) l (Γ.map tyR) :=
+    if h : lo' ≤ z.n ∧ z.n ≤ hi' then
+      (execBlockHA S.mitRuhe O' U' A' passes R' (ruB rest) W
+        (Env.cons (τ := .int lo' hi') ⟨z.n, h.1, h.2⟩ (envR ρ))).schrumpf
+    else (execEndHA S.mitRuhe O' U' A' passes R' (ruEnd sonst) W (envR ρ)).zuAusgang
+  change AusRelRu (branch (leseA A' (worldR σ) (Λ.map resR) (ruE e).orte)
+    (eval (leseA A' (worldR σ) (Λ.map resR) (ruE e).orte) (ruE e)
+      (leseA A' (worldR σ) (Λ.map resR) (ruE e).orte) (envR ρ))) _
+  erw [hv, hread]
+  dsimp only [branch]
   by_cases hc : lo' ≤ (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ).n ∧
       (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ).n ≤ hi'
   · erw [dif_pos hc, dif_pos hc]
@@ -121,7 +141,27 @@ theorem execBlockHA_ru_narrowRequired {V : Vertrag D}
     : AusRelRu (execBlockHA S.mitRuhe O' U' A' passes R' (ruB (.narrowRequired (lo := zi_lo) (hi := zi_hi) e lo' hi' rest : Block D V l Γ Λ Λ')) (worldR σ) (envR ρ)) (execBlockHA S O U A passes R (.narrowRequired (lo := zi_lo) (hi := zi_hi) e lo' hi' rest : Block D V l Γ Λ Λ') σ ρ) :=
   by
   simp only [ruB, execBlockHA]
-  simp only [ruE_orte, leseA_worldR hA, eval_ru, valR_int]
+  have hread : leseA A' (worldR σ) (Λ.map resR) (ruE e).orte =
+      worldR (leseA A σ Λ e.orte) :=
+    (leseA_worldR hA σ Λ _).trans
+      (congrArg (fun os => worldR (leseA A σ Λ os)) (ruE_orte e))
+  have hv : @Eq (Zahl zi_lo zi_hi)
+      (eval (leseA A' (worldR σ) (Λ.map resR) (ruE e).orte) (ruE e)
+        (leseA A' (worldR σ) (Λ.map resR) (ruE e).orte) (envR ρ))
+      (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ) :=
+    (congrArg (fun W => eval W (ruE e) W (envR ρ)) hread).trans
+      (eval_ru (leseA A σ Λ e.orte) (leseA A σ Λ e.orte) e ρ)
+  let branch (W : World D.mitRuhe) (z : Zahl zi_lo zi_hi) :
+      Ausgang (vertragR V) l (Γ.map tyR) :=
+    if h : lo' ≤ z.n ∧ z.n ≤ hi' then
+      (execBlockHA S.mitRuhe O' U' A' passes R' (ruB rest) W
+        (Env.cons (τ := .int lo' hi') ⟨z.n, h.1, h.2⟩ (envR ρ))).schrumpf
+    else .logik .kapazitaet
+  change AusRelRu (branch (leseA A' (worldR σ) (Λ.map resR) (ruE e).orte)
+    (eval (leseA A' (worldR σ) (Λ.map resR) (ruE e).orte) (ruE e)
+      (leseA A' (worldR σ) (Λ.map resR) (ruE e).orte) (envR ρ))) _
+  erw [hv, hread]
+  dsimp only [branch]
   by_cases hc : lo' ≤ (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ).n ∧
       (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ).n ≤ hi'
   · erw [dif_pos hc, dif_pos hc]
@@ -146,7 +186,7 @@ theorem execBlockHA_ru_check {V : Vertrag D}
     : AusRelRu (execBlockHA S.mitRuhe O' U' A' passes R' (ruB (.check c sonst rest : Block D V l Γ Λ Λ')) (worldR σ) (envR ρ)) (execBlockHA S O U A passes R (.check c sonst rest : Block D V l Γ Λ Λ') σ ρ) :=
   by
   simp only [ruB, execBlockHA]
-  rw [ruE_orte, leseA_worldR hA, eval_ru]
+  erw [ruE_orte, leseA_worldR hA, eval_ru]
   cases h : (eval (leseA A σ Λ c.orte) c (leseA A σ Λ c.orte) ρ : Bool) with
   | false =>
       simp only [wahr?, valR_bool, h, Bool.false_eq_true, if_false]
@@ -177,8 +217,14 @@ theorem execBlockHA_ru_float {V : Vertrag D}
     : AusRelRu (execBlockHA S.mitRuhe O' U' A' passes R' (ruB (.float (l1 := zi_l1) (h1 := zi_h1) (l2 := zi_l2) (h2 := zi_h2) op a b lo hi rest : Block D V l Γ Λ Λ')) (worldR σ) (envR ρ)) (execBlockHA S O U A passes R (.float (l1 := zi_l1) (h1 := zi_h1) (l2 := zi_l2) (h2 := zi_h2) op a b lo hi rest : Block D V l Γ Λ Λ') σ ρ) :=
   by
   simp only [ruB, execBlockHA]
-  rw [orte2, leseA_worldR hA, eval_ru, eval_ru]
-  try simp only [valR_int, valR_opt, valR_fl, valR_fnptr]
+  erw [orte2, leseA_worldR hA, eval_ru, eval_ru]
+  have ha := congrArg (fun v : Gleit zi_l1 zi_h1 => v.x)
+    (valR_fl (D := D)
+      (eval (leseA A σ Λ (a.orte ++ b.orte)) a (leseA A σ Λ (a.orte ++ b.orte)) ρ))
+  have hb := congrArg (fun v : Gleit zi_l2 zi_h2 => v.x)
+    (valR_fl (D := D)
+      (eval (leseA A σ Λ (a.orte ++ b.orte)) b (leseA A σ Λ (a.orte ++ b.orte)) ρ))
+  erw [ha, hb]
   cases gleitPasst lo hi (gleitRechne op
       (eval (leseA A σ Λ (a.orte ++ b.orte)) a (leseA A σ Λ (a.orte ++ b.orte)) ρ).x
       (eval (leseA A σ Λ (a.orte ++ b.orte)) b (leseA A σ Λ (a.orte ++ b.orte)) ρ).x) with
@@ -223,8 +269,10 @@ theorem execBlockHA_ru_floatOf {V : Vertrag D}
     : AusRelRu (execBlockHA S.mitRuhe O' U' A' passes R' (ruB (.floatOf (l1 := zi_l1) (h1 := zi_h1) e lo hi rest : Block D V l Γ Λ Λ')) (worldR σ) (envR ρ)) (execBlockHA S O U A passes R (.floatOf (l1 := zi_l1) (h1 := zi_h1) e lo hi rest : Block D V l Γ Λ Λ') σ ρ) :=
   by
   simp only [ruB, execBlockHA]
-  rw [ruE_orte, leseA_worldR hA, eval_ru]
-  try simp only [valR_int, valR_opt, valR_fl, valR_fnptr]
+  erw [ruE_orte, leseA_worldR hA, eval_ru]
+  have he := congrArg (fun v : Zahl zi_l1 zi_h1 => v.n)
+    (valR_int (D := D) (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ))
+  erw [he]
   cases gleitPasst lo hi (gleitAusInt (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ).n) with
   | none => exact Or.inl rfl
   | some v => exact AusRelRu.schrumpf (ih_execBlockHA_ru_rest _ (Env.cons v ρ))
@@ -249,8 +297,10 @@ theorem execBlockHA_ru_floatNarrow {V : Vertrag D}
     : AusRelRu (execBlockHA S.mitRuhe O' U' A' passes R' (ruB (.floatNarrow (l1 := zi_l1) (h1 := zi_h1) e lo hi sonst rest : Block D V l Γ Λ Λ')) (worldR σ) (envR ρ)) (execBlockHA S O U A passes R (.floatNarrow (l1 := zi_l1) (h1 := zi_h1) e lo hi sonst rest : Block D V l Γ Λ Λ') σ ρ) :=
   by
   simp only [ruB, execBlockHA]
-  rw [ruE_orte, leseA_worldR hA, eval_ru]
-  try simp only [valR_int, valR_opt, valR_fl, valR_fnptr]
+  erw [ruE_orte, leseA_worldR hA, eval_ru]
+  have he := congrArg (fun v : Gleit zi_l1 zi_h1 => v.x)
+    (valR_fl (D := D) (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ))
+  erw [he]
   cases gleitPasst lo hi (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ).x with
   | none => exact EndRel.zuAusgang (ih_execEndHA_ru_sonst _ ρ)
   | some v => exact AusRelRu.schrumpf (ih_execBlockHA_ru_rest _ (Env.cons v ρ))
