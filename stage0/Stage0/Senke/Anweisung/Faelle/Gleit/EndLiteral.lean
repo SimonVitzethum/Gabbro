@@ -127,8 +127,13 @@ theorem endFloatOfComputed_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes :
       (Nat.le_refl _) (by have := hW.ks; omega) (by simpa only [List.length_append] using hs)
       hW hlo hlo0 hlo2 hpr (σ := σr) ?_ ?_ ?_
       (by simpa only [floatNarrowC, List.length_append, Int.natCast_add] using hp) hu hk hWa
-    · cases hv : gleitPasst low high x <;>
-        simpa only [ite_self, hv, floatEnd_schrumpf, floatNarrowC, List.length_append, Int.natCast_add] using hchoice
+    · cases hv : gleitPasst low high x with
+      | none =>
+        simpa only [ite_self, hv, EndAusgang.zuAusgang, floatNarrowC,
+          List.length_append, Int.natCast_add] using hchoice
+      | some v =>
+        simpa only [ite_self, hv, floatEnd_schrumpf, floatNarrowC,
+          List.length_append, Int.natCast_add] using hchoice
     · intro hpc
       have hpw := PreS.welt hpc hW.ks hWa hW.lay (by have := hW.lo; omega)
       obtain ⟨m1, st, a1, w, hw, hen⟩ := computedFloatRangeL_ok x hwf low high

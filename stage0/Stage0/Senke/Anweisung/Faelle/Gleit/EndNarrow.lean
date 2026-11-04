@@ -36,7 +36,7 @@ theorem endFloatNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat
     have hroom := floatRangeL_room hcc
     have het := lowE_top e _ _ _ he
     simp only [floatNarrowC, List.length_append, List.length_singleton] at hs
-    simp only [execEnd, EndAusgang.zuAusgang]
+    simp only [execEnd]
     let σr := σ.lese Λ e.orte
     have hchoice := choice_ok (P := P) (σ0 := σ0) (ex := ex) (d := frei Γ reserved) (cc := cc) (ct := cx) (ce := ce ++ cr)
       (b := floatOutside low' high' (eval σr e σr ρ).x)
@@ -49,8 +49,13 @@ theorem endFloatNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat
       (Nat.le_refl _) (by have := hW.ks; omega) (by simpa only [List.length_append] using hs)
       hW hlo hlo0 hlo2 hpr (σ := σr) ?_ ?_ ?_
       (by simpa only [floatNarrowC, List.length_append, Int.natCast_add] using hp) hu hk hWa
-    · cases hv : gleitPasst low' high' (eval σr e σr ρ).x <;>
-        simpa only [ite_self, hv, EndAusgang.zuAusgang, floatEnd_schrumpf, floatNarrowC, List.length_append, Int.natCast_add] using hchoice
+    · cases hv : gleitPasst low' high' (eval σr e σr ρ).x with
+      | none =>
+        simpa only [ite_self, hv, EndAusgang.zuAusgang, floatNarrowC,
+          List.length_append, Int.natCast_add] using hchoice
+      | some v =>
+        simpa only [ite_self, hv, floatEnd_schrumpf, floatNarrowC,
+          List.length_append, Int.natCast_add] using hchoice
     · intro hpc
       have hks := hW.ks
       have hpw := PreS.welt hpc hks hWa hW.lay (by have := hW.lo; omega)

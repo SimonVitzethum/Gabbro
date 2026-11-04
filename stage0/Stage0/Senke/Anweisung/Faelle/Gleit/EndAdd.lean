@@ -58,7 +58,7 @@ theorem endFloatArithmetic_case (op : GleitOp) {O : Orakel D} [TorOK L O] [Sicht
       hc ht pre
   simp only [floatNarrowC, List.length_append, List.length_singleton] at hs
   have rangeStop : logikCode (D := D) .bereich = 107 := by simp only [logikCode]
-  simp only [execEnd, EndAusgang.zuAusgang, gleitRechneArithmetic op]
+  simp only [execEnd, gleitRechneArithmetic op]
   have hchoice := choice_ok (P := P) (σ0 := σ0) (ex := ex) (d := frei Γ reserved)
     (cc := cc) (ct := stopC 107 (frei Γ reserved)) (ce := ce ++ cr)
     (b := softFloatReject low high x)
@@ -71,11 +71,18 @@ theorem endFloatArithmetic_case (op : GleitOp) {O : Orakel D} [TorOK L O] [Sicht
     (Nat.le_refl _) (by have := hW.ks; omega) (by simpa only [List.length_append] using hs)
     hW hlo hlo0 hlo2 hpr (σ := σr) ?_ ?_ ?_
     (by simpa only [floatNarrowC, List.length_append, Int.natCast_add] using hp) hu hk hWa
-  · cases hv : gleitPasst low high x <;>
-      simpa only [ite_self, hv, EndAusgang.zuAusgang, floatEnd_schrumpf, floatNarrowC, List.length_append, Int.natCast_add] using hchoice
+  · cases hv : gleitPasst low high x with
+    | none =>
+      simpa only [ite_self, hv, EndAusgang.zuAusgang, floatNarrowC,
+        List.length_append, Int.natCast_add] using hchoice
+    | some v =>
+      simpa only [ite_self, hv, floatEnd_schrumpf, floatNarrowC,
+        List.length_append, Int.natCast_add] using hchoice
   · intro hpc
     have hpw := PreS.welt hpc hW.ks hWa hW.lay (by have := hW.lo; omega)
-    have guard := softFloatRangeL_ok (L := L) (ρ := ρ) (W := fun m => WeltAt m L σr)
+    have guard : WordCode (L := L) (reserved := reserved) ρ (fun m => WeltAt m L σr)
+        (fun d => softFloatRangeL d low high producer) (Runner.IR.bool (softFloatReject low high x)) :=
+      softFloatRangeL_ok (L := L) (ρ := ρ) (W := fun m => WeltAt m L σr)
       (reserved := reserved) low high x hwf
       (fun {fp K j code t} hc ht m pc pre => (conv fp K j code t hc ht m pc pre).mono (fun _ h => h.2))
     obtain ⟨m1, st, a1, w, hw, hen⟩ := guard hcc (by omega) m pc hpw
