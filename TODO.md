@@ -193,13 +193,14 @@ Thus a parser/exporter or an expanded-unit certificate can exist while the origi
   [`lowEnsAt`](stage0/Stage0/Senke/Ausdruck/Old/Code.lean) supports snapshots only in its explicit subtree fragment;
   unsupported snapshots (including old under nonempty folds) fail its `currentOld := false` fallback.
   Open: source production of byte-span operations and unsupported snapshot subtrees.
-- **Float binders: distinguish Block from Endblock.** Block `floatLit`/`float`/`floatOf`/`floatNarrow` have
-  lowering and connected generic arms (`Anweisung`, `Anweisung/Satz/Teil{3,5}`). Computed wide binary64 `floatOf`
-  reaches `computedFloatOfE_ok` → `blockFloatOfComputed_case` → `lowB_ok_floatOf`; overflow/range failure is stop 107.
-  Source binders exist (`Uebersetze/Teil/Teil8`, `UebersetzeAllg3/Seq`). Endblock float binders still fall through
-  `lowEnd` to `none`; literal/arithmetic producers exist (`UebersetzeAllg3/{Ende,Body}`), while those readers
-  lack `floatOf`/`floatNarrow` export arms.
-  Open: Endblock float lowering/proof arms and missing Endblock conversion/narrowing source export.
+- **Float binders: Block and Endblock generic lowering checked (2026-11-04).** Both support
+  `floatLit`/`float`/`floatOf`/`floatNarrow` in the actual dispatcher and connected correctness proofs.
+  Computed wide binary64 conversion retains `computedFloatOfE_ok`; overflow/range failure is stop 107,
+  and explicit narrowing keeps its original fallback. The Endblock proofs in
+  `Faelle/Gleit/{EndLiteral,EndAdd,EndNarrow}` and their integration through `Anweisung.Satz.Teil5`,
+  `Anweisung.Satz`, `Rekursion` and `Images.BildSatz` have passed fresh module checks. Source producers include
+  conversion/narrowing in `UebersetzeAllg3/{Ende,Body}`; the parser export pipeline has also checked.
+  Open: final package acceptance, the ending-image witnesses and emitted-image runner measurements.
 - **Other named item duties.** C01 product and C03 tag paths use the connected aggregate arms above; C02 library/translator
   expansion uses `Modules.prepare` plus `ExportMetadata.clausesMetadataWithoutLoad` (unsupported translators refuse).
   C04 table `shift` exports through `Transition` and uses connected checked load/store (stop 106, signed range gates).
@@ -270,8 +271,8 @@ it does not override metadata or target refusal. Items use their checked expansi
 | Unsupported entry-snapshot subtrees / old under nonempty folds | refuse (`currentOld := false` fallback) | no | yes (canonical expressions) |
 | Oversized tags/byte spans/folds/code/addresses; nonscalar string indices | refuse (representability) | no (refused size) | yes except byte-span operations |
 | Block `floatLit`, `float`, `floatNarrow`, computed wide `floatOf` | admit (operand/range/frame/code checks) | yes | yes |
-| Endblock `floatLit`, `float` | refuse (`lowEnd` default) | no | yes |
-| Endblock `floatOf`, `floatNarrow` | refuse (`lowEnd` default; export absent) | no | no |
+| Endblock `floatLit`, `float` | admit (IEEE/range/frame/code guards) | yes; fresh generic module checks | yes; final image measurements pending |
+| Endblock `floatOf`, `floatNarrow` | admit (conversion/range/fallback guards) | yes; fresh generic module checks | yes; final image measurements pending |
 | C02 library/translator expansion | admit (certified supported translator) | yes (expanded arms) | yes |
 | C04 table-state `shift` | admit (transition/signed range checks) | yes | yes |
 | C05 table/group invariants; declared costs/scheduling/provider/proof metadata | refuse (unbound source duties) | no (these source duties) | no (complete duty-preserving export) |
