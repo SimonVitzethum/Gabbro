@@ -120,10 +120,61 @@ theorem elabKopf_pointer_coherent {sig : FnSig} {kopf : UFnKopf} {writes : List 
             simp only [measure, clauses, parameters] at accepted
             have coherent := producedRows_coherent alias tabs whys sums zeiger zb spaces
               named eigner parameters
-            -- Normalization may already be complete; still split the next dispatcher.
-            repeat' (try dsimp only at accepted; split at accepted)
-            all_goals cases accepted
-            all_goals exact coherent
+            cases heldResult : uGehalten locks klauseln with
+            | error message => simp [heldResult] at accepted
+            | ok held =>
+              simp only [heldResult] at accepted
+              -- Treat the checked reason channel as one opaque result. Its internal
+              -- lookups and guards cannot change the parameter metadata.
+              generalize channelResult :
+                (match fehler with
+                | none => .ok none
+                | some r =>
+                  match whys.findIdx? (fun w => strEq w.name r) with
+                  | none => .error ("reason unknown: " ++ r)
+                  | some k =>
+                    match whys[k]? with
+                    | some w => if w.cases.isEmpty then .error "reason without cases"
+                        else .ok (some (k, w.cases.length))
+                    | none => .error ("reason unknown: " ++ r) :
+                  Except String (Option (Nat × Nat))) = channel at accepted
+              cases channel with
+              | error message => cases accepted
+              | ok reason =>
+                try dsimp only at accepted
+                split at accepted
+                · cases accepted
+                · -- The complete effect result is opaque as well. Only the result
+                  -- form below selects record updates, all preserving the rows.
+                  try dsimp only at accepted
+                  split at accepted
+                  · cases accepted; exact coherent
+                  · cases accepted; exact coherent
+                  · cases accepted; exact coherent
+                  · -- An optional index result checks the actual table lookup.
+                    split at accepted
+                    all_goals cases accepted
+                    all_goals exact coherent
+                  · -- A named result checks sums, then reasons, then its value type.
+                    split at accepted
+                    · split at accepted
+                      all_goals cases accepted
+                      all_goals exact coherent
+                    · split at accepted
+                      · split at accepted
+                        all_goals cases accepted
+                        all_goals exact coherent
+                      · -- Split only the error/int/other result of uTypIn;
+                        -- never descend into its type checker or a returned type.
+                        split at accepted
+                        all_goals cases accepted
+                        all_goals exact coherent
+                  · -- Arrays, strings and other surface forms each have exactly
+                    -- one opaque value-type or range check at this point.
+                    split at accepted
+                    all_goals split at accepted
+                    all_goals cases accepted
+                    all_goals exact coherent
 
 /-- A successful source function satisfies the actual pointer gate; no well-typedness premise
     is added at its consumers. The canonical producer supplies both metadata equalities. -/
