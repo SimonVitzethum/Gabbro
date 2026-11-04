@@ -27,15 +27,15 @@ theorem bild_initialized_loaded_u {u : UProg} {P : Programm (declOf u)} {passes 
     BytesAt m b.Y.hi (List.replicate (b.Y.sye - b.Y.hi) 0) ∧
     (∀ j, j ≤ b.roots.length →
       SyncOK m b.Y (BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * j))) b.Ks) ∧
-    ∃ stacks, startStackBytes b.Ks (FB + FB) (b.args :: b.rootArgs) = some stacks ∧
-      stacks.length = 8 * (b.Ks * (b.roots.length + 1)) ∧
+    ∃ stackPayload, startStackBytes b.Ks (FB + FB) (b.args :: b.rootArgs) = some stackPayload ∧
+      stackPayload.length = 8 * (b.Ks * (b.roots.length + 1)) ∧
       BytesAt m Runner.Prog.IMG (Runner.Prog.leN 8 b.fp0 ++ Runner.Prog.leN 8 b.baseReq) ∧
-      BytesAt m codeBase (b.code.flatMap encII ++ stacks) ∧ BytesAt m b.fp0 stacks := by
+      BytesAt m codeBase (b.code.flatMap encII ++ stackPayload) ∧ BytesAt m b.fp0 stackPayload := by
   obtain ⟨cs, body, sp, h, code, roots, args, rootArgs⟩ := bild_lage hb hfs
     (fun base bound => layU_in u tor base bound) (fun base => layU_dis u tor base)
     (fun base => by simp only [layU]; omega) (fun base => layU_sync u tor base)
-  obtain ⟨stacks, made, length⟩ := h.stacks
-  have actualStacks : startStackBytes b.Ks (FB + FB) (b.args :: b.rootArgs) = some stacks := by
+  obtain ⟨stackPayload, made, length⟩ := h.stacks
+  have actualStacks : startStackBytes b.Ks (FB + FB) (b.args :: b.rootArgs) = some stackPayload := by
     simpa only [args, rootArgs] using made
   have rootCount : b.rootArgs.length = b.roots.length := by
     simp only [rootArgs, roots, List.length_map]
@@ -50,7 +50,7 @@ theorem bild_initialized_loaded_u {u : UProg} {P : Programm (declOf u)} {passes 
     actualStacks rootCount codeEnd separate h.hyhi h.hysye loaded
   have stackMemory := startup.right
   rw [flatMap_enc_len, ← codeEnd] at stackMemory
-  refine ⟨world, locks, ?_, stacks, actualStacks, ?_, header, startup, stackMemory⟩
+  refine ⟨world, locks, ?_, stackPayload, actualStacks, ?_, header, startup, stackMemory⟩
   · intro j hj
     exact h.sync locks (by simpa only [roots] using hj)
   · simpa only [roots] using length
@@ -69,7 +69,7 @@ theorem bild_initialized_frames_u {u : UProg} {P : Programm (declOf u)} {passes 
     (loaded : BytesAt m Runner.Prog.IMG (b.initializedBytes u valid)) :
     ∀ j, j ≤ b.roots.length →
       FrameOK m (BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * j))) b.Ks := by
-  obtain ⟨_, _, _, stacks, made, _, _, _, stackMemory⟩ :=
+  obtain ⟨_, _, _, stackPayload, made, _, _, _, stackMemory⟩ :=
     bild_initialized_loaded_u valid hb hfs loaded
   obtain ⟨cs, body, sp, h, _, roots, _, rootArgs⟩ := bild_lage hb hfs
     (fun base bound => layU_in u tor base bound) (fun base => layU_dis u tor base)
@@ -153,7 +153,7 @@ theorem bild_initialized_ok_u [CloneOK] {u : UProg} {P : Programm (declOf u)}
     | .logik e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (logikCode e)
     | .hardware e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (hwCode e)
     | _ => False := by
-  obtain ⟨_, _, sync, stacks, made, _, _, startup, _⟩ := bild_initialized_loaded_u valid hb hfs loaded
+  obtain ⟨_, _, sync, stackPayload, made, _, _, startup, _⟩ := bild_initialized_loaded_u valid hb hfs loaded
   obtain ⟨cs, body, sp, h, code, roots, args, rootArgs⟩ := bild_lage hb hfs
     (fun base bound => layU_in u tor base bound) (fun base => layU_dis u tor base)
     (fun base => by simp only [layU]; omega) (fun base => layU_sync u tor base)
@@ -188,7 +188,7 @@ theorem bild_initialized_wurzel_ok_u {u : UProg} {P : Programm (declOf u)}
     | .hardware e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
         BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m (hwCode e)
     | _ => False := by
-  obtain ⟨_, _, sync, stacks, made, _, _, startup, _⟩ := bild_initialized_loaded_u valid hb hfs loaded
+  obtain ⟨_, _, sync, stackPayload, made, _, _, startup, _⟩ := bild_initialized_loaded_u valid hb hfs loaded
   obtain ⟨cs, body, sp, h, code, roots, args, rootArgs⟩ := bild_lage hb hfs
     (fun base bound => layU_in u tor base bound) (fun base => layU_dis u tor base)
     (fun base => by simp only [layU]; omega) (fun base => layU_sync u tor base)
