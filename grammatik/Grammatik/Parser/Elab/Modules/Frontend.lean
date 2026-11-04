@@ -68,24 +68,26 @@ private theorem prepare_valid (source target : List SItemTief) (requirements : L
     ∃ result, prepareDetailedRaw source = .ok result ∧ result.items = target ∧
       validOutput source result = true := by
   cases hr : prepareDetailedRaw source with
-  | error error => simp [prepare, hr] at h
+  | error error => simp [prepare, hr, bind, Except.bind] at h
   | ok result =>
     cases hv : validOutput source result with
-    | false => simp [prepare, hr, hv] at h
+    | false => simp [prepare, hr, bind, Except.bind, hv] at h
     | true =>
-      simp [prepare, hr, hv] at h
-      rcases h with ⟨rfl, rfl⟩
-      exact ⟨result, hr, rfl, hv⟩
+      have returned : result.items = target ∧ result.requirements = requirements := by
+        simpa only [prepare, hr, bind, Except.bind, hv, ite_true, pure, Except.pure,
+          Except.ok.injEq, Prod.mk.injEq] using h
+      exact ⟨result, rfl, returned.1, hv⟩
 
 private theorem instantiate_valid (source target : List SItemTief)
     (h : instantiate source = .ok target) :
     ∃ result, prepareDetailedRaw source = .ok result ∧ result.items = target ∧
       validOutput source result = true := by
   cases hp : prepare source with
-  | error error => simp [instantiate, hp] at h
+  | error error => simp [instantiate, hp, Except.map] at h
   | ok result =>
     rcases result with ⟨actual, requirements⟩
-    simp [instantiate, hp] at h
+    have same : actual = target := by
+      simpa only [instantiate, hp, Except.map, Except.ok.injEq] using h
     subst target
     exact prepare_valid source actual requirements hp
 
