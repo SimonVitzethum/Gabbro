@@ -23,15 +23,26 @@ structure FPClassified (format : FPFormat) (before after : X) : Prop where
 
 theorem fpClassify_run (format : FPFormat) (before : X) :
     ∃ after, FPClassified format before after := by
-  cases format
-  all_goals
-    refine ⟨_, ⟨rfl, ?_, ?_, ?_, ?_, ?_, rfl, rfl, rfl, rfl⟩⟩
-  all_goals
-    simp (disch := decide) [fpClassify, fpNormalizeInput, fpSignMask, fpUpper, fpInfinity,
-      FPFormat.scalarBits, FPFormat.infinityBits, FPFormat.signBit, fpMagnitude, fpNaN, fpLow32,
-      runL, exec, X.get, X.set, X.setXmm, X.xmmWord, X.cmpf, X.nof, aluStep, aluOp,
-      lenOfL, enc, regEnc, le32, BitVec.ofNat_add, BitVec.add_assoc,
-      BitVec.setWidth_setWidth_of_le, sx32_ofNat]
+  let registers : X := { before with
+    rip := before.rip + BitVec.ofNat 64 (lenOfL (fpClassify format))
+    rax := format.scalarBits before.rax
+    rcx := match format with | .f32 => 31 | .f64 => 48
+    rdx := format.infinityBits
+    rsi := fpMagnitude format before.rax
+    xmm := match format with
+      | .f32 => fun slot => if slot = .xmm0 then (before.rax.setWidth 32).setWidth 128 else before.xmm slot
+      | .f64 => before.xmm }
+  let after : X := registers.cmpf format.infinityBits (fpMagnitude format before.rax)
+  have run : runL (fpClassify format) before = .next after := by
+    cases format <;>
+      simp (disch := decide) [after, registers, fpClassify, fpNormalizeInput, fpSignMask, fpUpper,
+        fpInfinity, FPFormat.scalarBits, FPFormat.infinityBits, FPFormat.signBit, fpMagnitude, fpLow32,
+        runL, exec, X.get, X.set, X.setXmm, X.xmmWord, X.cmpf, X.nof, aluStep, aluOp,
+        lenOfL, enc, regEnc, le32, BitVec.ofNat_add, BitVec.add_assoc,
+        BitVec.setWidth_setWidth_of_le, sx32_ofNat]
+  exact ⟨after, {
+    run := run, position := rfl, input := rfl, magnitude := rfl, infinity := rfl,
+    nan := rfl, pc := rfl, frame := rfl, table := rfl, mode := rfl }⟩
 
 theorem FPClassified.code {format : FPFormat} {before after : X}
     (h : FPClassified format before after) {C : W → B} {tail : List Ins}
@@ -42,9 +53,11 @@ theorem FPClassified.code {format : FPFormat} {before after : X}
 theorem FPClassified.match_next {format : FPFormat} {before after : X}
     (h : FPClassified format before after) {L : Lay} {r : Res IR.T}
     (hc : Code L.C before.rip (fpClassify format)) (hn : Match L r after) : Match L r before := by
-  apply go (fpClassify format) before r ?_ hc
-  · cases format <;> decide
-  · simpa only [h.run, CorrM] using hn
+  have falling : ∀ i ∈ (fpClassify format).dropLast, Fall i = true := by
+    cases format <;> decide
+  have continued : CorrM L r (runL (fpClassify format) before) := by
+    simpa only [h.run, CorrM] using hn
+  exact go (fpClassify format) before r falling hc continued
 
 theorem fpNegative_bit (format : FPFormat) (word : W) :
     fpNegative format word = word.getLsbD (match format with | .f32 => 31 | .f64 => 63) := by
@@ -58,8 +71,9 @@ theorem fpNegative_bit (format : FPFormat) (word : W) :
     cases word.getLsbD 63 <;> decide
 
 private theorem shifted_sign_zero (word : W) (bit : Nat) :
-    (((word >>> bit) &&& 1) == 0) = !(word.getLsbD bit) := by
-  rw [BitVec.and_one_eq_setWidth_ofBool_getLsbD, BitVec.getLsbD_ushiftRight, Nat.add_zero]
+    (((word >>> bit) &&& (1#64)) == (0#64)) = !(word.getLsbD bit) := by
+  rw [BitVec.and_one_eq_setWidth_ofBool_getLsbD (x := word >>> bit),
+    BitVec.getLsbD_ushiftRight, Nat.add_zero]
   cases word.getLsbD bit <;> rfl
 
 theorem fpInputSign_run (format : FPFormat) (before : X) :
