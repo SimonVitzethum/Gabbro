@@ -53,11 +53,16 @@ theorem putBytesChunk_ok {Γ : Ctx} {Λ : List (Res D)} {a b H : Int}
     simp only [s, ByteCapture, frei_cons]
   have captureFits : frei Γ reserved + valueWords (.int 0 H) ≤ s := by
     omega
-  have stored := (pre.env (.int 0 H) (.there .here)).2 q
-    (by rw [encodeWords_length]; exact limb)
-  simp only [vslot_there, vslot_here, Env.get] at stored
-  erw [encodeWords_int] at stored
-  simp only [integerEncoding_byteLimb] at stored
+  -- Resolve the typed capture before specializing its dependent word reads.
+  have captured : ValueAt L m fp (frei Γ reserved) (.int 0 H) z :=
+    pre.env (.int 0 H) (.there .here)
+  have words : WordsAt m fp (frei Γ reserved) (integerEncoding (integerWords 0 H) z.n) :=
+    Eq.mp (congrArg (WordsAt m fp (frei Γ reserved)) (encodeWords_int L 0 H z)) captured.2
+  have limbWidth : q < integerWords 0 H := limb
+  have stored : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved + q))) =
+      some (BitVec.ofInt 64 (byteLimb z.n q).n) :=
+    (words q (by simpa only [integerEncoding_length] using limbWidth)).trans
+      (congrArg some (integerEncoding_byteLimb (integerWords 0 H) q z.n limbWidth))
   have p : PreS L m pc fp K s
       ([ci 2 s (frei Γ reserved + q) 0] ++ (idx ++ kernel)) env reserved := by
     simpa only [s, env, List.append_assoc] using pre
