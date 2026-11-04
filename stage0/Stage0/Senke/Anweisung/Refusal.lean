@@ -2,7 +2,7 @@
    This traversal never decides admission: lowFun remains the only producer.
    Exhaustive matches make additions to the source syntax visible here too. -/
 module
-import Grammatik.Kern.Syntax.Syntax.Teil2
+public import Grammatik.Kern.Syntax.Syntax.Teil2
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik

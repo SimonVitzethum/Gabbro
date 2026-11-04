@@ -38,7 +38,7 @@
 -/
 module
 public import Stage0.Senke.Rekursion
-import Stage0.Senke.Anweisung.Refusal
+public import Stage0.Senke.Anweisung.Refusal
 public import Stage0.Senke.Welt.AlignUp
 public import Stage0.Senke.Welt.StartLayout
 public import Runner.Prog.IRAsm
