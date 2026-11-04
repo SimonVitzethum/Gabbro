@@ -174,7 +174,7 @@ theorem verbrauch_sim {l : Bool} (t : D.Tab) (bound : Int)
                           hΦm0 Φ (passt_teil hP (teil_trans hs3 (teil_trans hs4 hs5))),
                           hΦ3 Φ (passt_teil hP (teil_trans hs4 hs5)),
                           hΦm1 Φ (passt_teil hP hs5),
-                          hΦ5 Φ hP, hfall, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
+                          hΦ5 Φ hP, hfall, and_self, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
                       · simp only [verbrauchLauf, hb, hsel₂, Option.map_some,
                           hsch, hm₀, hm₁, hfall, hb₅,
                           Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
@@ -188,7 +188,7 @@ theorem verbrauch_sim {l : Bool} (t : D.Tab) (bound : Int)
                           hΦm0 Φ (passt_teil hP (teil_trans hs3 (teil_trans hs4 hs5))),
                           hΦ3 Φ (passt_teil hP (teil_trans hs4 hs5)),
                           hΦm1 Φ (passt_teil hP hs5),
-                          hΦ5 Φ hP, hfall, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
+                          hΦ5 Φ hP, hfall, and_self, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
                       · simp only [verbrauchLauf, hb, hsel₂, Option.map_some,
                           hsch, hm₀, hm₁, hfall, hb₅,
                           Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
