@@ -234,9 +234,9 @@ theorem fB_alsBlock (e : Bool) {l : Bool} :
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
   | _, _, .floatLit q lo hi rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
-  | _, _, .floatOf e lo hi rest, w => by
+  | _, _, .floatOf _ lo hi rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
-  | _, _, .floatNarrow e lo hi sonst rest, w => by
+  | _, _, .floatNarrow _ lo hi sonst rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
 theorem fB_armWahlG (e : Bool) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),

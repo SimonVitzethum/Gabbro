@@ -320,24 +320,26 @@ theorem folgeInvG_schritt (hΦ : FolgeOk P Φ) {M M' : RufMaschineG D} {f : Fade
     | endeBindAxiomOptElseGrund =>
       kopfF
       exact fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1
-    | _ =>
-      kopfF
-      all_goals (simp_all [fB_von_false, fR_von_false]; done)
     | endeGleitNarrowElse l Γ Λ l₁ h₁ e lo hi sonst rest ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
       kopfF
       exact fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1
+    | _ =>
+      kopfF
+      all_goals (simp_all [fB_von_false, fR_von_false]; done)
   | g7 hs =>
     cases hs with
     | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu =>
       dsimp only
       rw [rufUpdateG_self]
       refine ⟨?_, hst, hlog⟩
+      dsimp only; rw [hw]
       rw [hhead] at hk
       exact fR_scopedWert Φ hret hk
     | rueckScopedGrund ρ r grund R hhead hret hscope hΛ =>
       dsimp only
       rw [rufUpdateG_self]
       refine ⟨?_, hst, hlog⟩
+      dsimp only; rw [hw]
       rw [hhead] at hk
       exact fR_scopedGrund Φ hret hk
     | rueckFreigabeLetzte ρ a L hhead z ha =>
