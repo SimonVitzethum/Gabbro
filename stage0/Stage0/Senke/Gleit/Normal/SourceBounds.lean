@@ -30,30 +30,30 @@ theorem softAlignedMagnitude_bounds (sa sb : Bool) (l r e f : Nat)
   let gap := e - f
   let j := softShiftJamNat (r * 8) gap
   let n := softAlignedMagnitude sa sb l r gap
+  have aligned : n = if sa == sb then l * 8 + j else l * 8 - j := rfl
   have dp : 0 < (2 : Nat) ^ gap := Nat.two_pow_pos _
   have cover : r ≤ l * 2 ^ gap := by
     by_cases zero : gap = 0
     · have same : f = e := by omega
       simpa only [zero, Nat.pow_zero, Nat.mul_one] using equal same
     · have leading := different (by omega)
-      have power : 2 ≤ (2 : Nat) ^ gap := Nat.pow_le_pow_right (by decide) (by omega : 1 ≤ gap)
+      have power : 2 ≤ (2 : Nat) ^ gap :=
+        Nat.pow_le_pow_right (by decide : (0 : Nat) < 2) (by omega : 1 ≤ gap)
       nlinarith
   have certificate := softShiftJamNat_interval (r * 8) gap
   by_cases narrow : gap ≤ 1
   · have casesGap : gap = 0 ∨ gap = 1 := by omega
     rcases casesGap with zero | one
-    · have jam : j = r * 8 := by simp [j, softShiftJamNat, zero]
+    · have jam : j = r * 8 := by simp [j, softShiftJamNat, zero, Nat.mod_one]
       have ordered : j ≤ l * 8 := by
         have := equal (by omega)
         omega
       refine ⟨cover, ordered, ?_, ?_, ?_⟩
       · change n < 2 ^ 57
-        unfold n softAlignedMagnitude
-        rw [jam]
+        rw [aligned, jam]
         split <;> omega
       · change n = 0 ∨ 4 ≤ n
-        unfold n softAlignedMagnitude
-        rw [jam]
+        rw [aligned, jam]
         split
         · omega
         · have difference := Nat.sub_add_cancel ordered
@@ -70,12 +70,10 @@ theorem softAlignedMagnitude_bounds (sa sb : Bool) (l r e f : Nat)
       have ordered : j ≤ l * 8 := by rw [jam]; omega
       refine ⟨cover, ordered, ?_, ?_, ?_⟩
       · change n < 2 ^ 57
-        unfold n softAlignedMagnitude
-        rw [jam]
+        rw [aligned, jam]
         split <;> omega
       · change n = 0 ∨ 4 ≤ n
-        unfold n softAlignedMagnitude
-        rw [jam]
+        rw [aligned, jam]
         split
         · omega
         · have difference := Nat.sub_add_cancel ordered
@@ -84,7 +82,8 @@ theorem softAlignedMagnitude_bounds (sa sb : Bool) (l r e f : Nat)
       · intro tail
         exact (tail (by rw [show e - f = 1 from one]; omega)).elim
   · have gap2 : 2 ≤ gap := by omega
-    have power : 4 ≤ (2 : Nat) ^ gap := Nat.pow_le_pow_right (by decide) gap2
+    have power : 4 ≤ (2 : Nat) ^ gap :=
+      Nat.pow_le_pow_right (by decide : (0 : Nat) < 2) gap2
     have leading := different (by omega)
     have jb : j ≤ 2 ^ 54 := by
       rcases certificate with exactValue | ⟨odd, lo, hi⟩
@@ -97,10 +96,10 @@ theorem softAlignedMagnitude_bounds (sa sb : Bool) (l r e f : Nat)
         · omega
     have ordered : j ≤ l * 8 := by omega
     have wide : 2 ^ 54 ≤ n := by
-      unfold n softAlignedMagnitude
+      rw [aligned]
       split <;> omega
     have nb : n < 2 ^ 57 := by
-      unfold n softAlignedMagnitude
+      rw [aligned]
       split <;> omega
     have bits : 55 ≤ bitlen n := by
       have upper := bitlen_obere n
@@ -142,8 +141,10 @@ theorem routineDirectionalWord_canonical (a b : GFloat)
   obtain ⟨bsig, bindex⟩ := routineSigIndex_canonical b hb
   obtain ⟨asign, _, _⟩ := routineUnpack_canonical a ha
   obtain ⟨bsign, _, _⟩ := routineUnpack_canonical b hb
-  have lb : softSig a.bexp a.frac < 2 ^ 53 := by unfold softSig; split <;> have := ha.2 <;> omega
-  have rb : softSig b.bexp b.frac < 2 ^ 53 := by unfold softSig; split <;> have := hb.2 <;> omega
+  have af : a.frac < 2 ^ 52 := ha.2
+  have bf : b.frac < 2 ^ 52 := hb.2
+  have lb : softSig a.bexp a.frac < 2 ^ 53 := by unfold softSig; split <;> omega
+  have rb : softSig b.bexp b.frac < 2 ^ 53 := by unfold softSig; split <;> omega
   have indices := routineOrder_indices a b ha hb order
   obtain ⟨equal, different⟩ := routineSource_order a b ha hb order
   have data := softAlignedMagnitude_bounds a.sign b.sign _ _ _ _ lb rb
@@ -156,7 +157,6 @@ theorem routineDirectionalWord_canonical (a b : GFloat)
     apply BitVec.eq_of_toNat_eq
     simp only [BitVec.toNat_shiftLeft, BitVec.toNat_ofNat,
       Nat.mod_eq_of_lt (show n < 2 ^ 64 by omega), Nat.shiftLeft_eq]
-    rfl
   have jam : floatShiftJamWord (BitVec.ofNat 64 (softSig b.bexp b.frac * 8))
       (BitVec.ofNat 64 (max a.bexp 1 - max b.bexp 1)) =
       BitVec.ofNat 64 (softShiftJamNat (softSig b.bexp b.frac * 8)
