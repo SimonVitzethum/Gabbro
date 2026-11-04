@@ -34,14 +34,21 @@ def axVertragOf (u : UProg) (a : Fin u.axs.length) (checked : axContractsB u = t
   | .error _ => by
     exfalso
     have ha := List.all_eq_true.mp checked a (List.mem_finRange a)
-    simp [hl] at ha
+    simp only [hl, Except.isOk, Except.toBool, Bool.false_eq_true] at ha
 
 theorem axVertragOf_exact (u : UProg) (a : Fin u.axs.length)
     (h : axContractsB u = true) :
     lowerAxContract u a = .ok (axVertragOf u a h) := by
   have ha := List.all_eq_true.mp h a (List.mem_finRange a)
   cases hl : lowerAxContract u a with
-  | error error => simp [hl] at ha
-  | ok contract => simp [axVertragOf, hl]
+  | error error => simp only [hl, Except.isOk, Except.toBool, Bool.false_eq_true] at ha
+  | ok contract =>
+      unfold axVertragOf
+      split
+      · rename_i result produced
+        exact hl.symm.trans produced
+      · rename_i error produced
+        have impossible := hl.symm.trans produced
+        cases impossible
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg2
