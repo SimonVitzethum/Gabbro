@@ -18,7 +18,7 @@ theorem softMulRound_interval (s : Bool) (m n gap : Nat) (e : Int)
     rundeExakt f64 ⟨if s then -(n : Int) else n, e - (gap : Int)⟩ =
       rundeExakt f64 ⟨if s then -(m : Int) else m, e⟩ := by
   have mp : 0 < m := by omega
-  have bits : bitlen m = 56 := bitlen_unique m 56 ml mb (by decide)
+  have bits : bitlen m = 56 := bitlen_unique m 56 ml mb mp
   by_cases normal : f64.emin ≤ e + (bitlen m : Int) - 1
   · exact softRound_signed_interval s m n gap e (by omega) normal certificate
   · have lowScale : e < -1077 := by
@@ -38,8 +38,11 @@ theorem softMulRound_interval (s : Bool) (m n gap : Nat) (e : Int)
       · have result := softRoundDyadic_odd_interval m n gap 3 (by decide) odd lo hi
         rw [bits] at nbits
         have left : -((gap + 3 : Nat) : Int) = 53 - (bitlen n : Int) := by omega
-        have right : -(3 : Int) = 53 - (bitlen m : Int) := by rw [bits]
-        rwa [left, right] at result
+        have right : -((3 : Nat) : Int) = 53 - (bitlen m : Int) := by
+          rw [bits]
+          omega
+        exact (congrArg (softRoundDyadic n) left.symm).trans
+          (result.trans (congrArg (softRoundDyadic m) right))
       · intro _
         let k := (-e - 1074).toNat
         have guard : 2 ≤ k := by dsimp only [k]; omega
@@ -48,7 +51,8 @@ theorem softMulRound_interval (s : Bool) (m n gap : Nat) (e : Int)
           dsimp only [k]
           omega
         have right : -(k : Int) = e + 1074 := by dsimp only [k]; omega
-        rwa [left, right] at result
+        exact (congrArg (softRoundDyadic n) left.symm).trans
+          (result.trans (congrArg (softRoundDyadic m) right))
 
 /-- Compressing the actual two-limb product retains the canonical rounded
     result even when the eventual exponent is below the subnormal floor. -/
