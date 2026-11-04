@@ -1,6 +1,8 @@
 module
 
 public import Grammatik.Speichermodell.Atomar.Invariants.AtomarInv
+import all Grammatik.Speichermodell.Atomar.AtomarAkteur.AkteurSAFaelle.Scoped
+import all Grammatik.Zielsatz.ZielOrt.Grundlage.Core.ZielOrtStartSaved
 
 @[expose] public section
 
@@ -56,9 +58,78 @@ macro "ohneGrundA" : tactic => `(tactic| (
      · exact Or.inr (fun _ _ _ _ _ h => by cases h)
      · exact Or.inl hev)))
 
+/-- Root delivery retains the log; caller delivery records exactly its answer channel. -/
+private theorem antwort_invGrundLogA {z z' : RufFadenG D} {vor W : World D}
+    {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
+    (ha : rufAntwortG z vor W a = some z')
+    (hinv : ∀ r, a = .inr r → InvAmRueck P z.kopf.f W) :
+    ∀ ev ∈ z'.log, ev ∈ z.log ∨
+      ∀ (g : D.Fn) (rho : Env D (D.params g)) (r : Fin (D.gruende g)) (s0 s1 : World D),
+        ev = RufEreignisF.why g rho r s0 s1 → InvAmRueck P g s1 := by
+  cases hs : z.stapel with
+  | nil =>
+      simp only [rufAntwortG, hs, Option.some.injEq] at ha
+      subst z'
+      exact fun _ hev => Or.inl hev
+  | cons caller rest =>
+      cases hr : antwortRestG z.kopf.f a caller.rest with
+      | none => simp [rufAntwortG, hs, hr] at ha
+      | some response =>
+          simp [rufAntwortG, hs, hr] at ha
+          subst z'
+          intro ev hev
+          rcases List.mem_cons.mp hev with rfl | hev
+          · refine Or.inr fun g rho r s0 s1 h => ?_
+            cases a with
+            | inl value => cases h
+            | inr reason =>
+                simp only [RufEreignisF.why.injEq] at h
+                obtain ⟨rfl, -, -, -, rfl⟩ := h
+                exact hinv reason rfl
+          · exact Or.inl hev
+
+/-- The last release preserves the saved reason and its owed invariants. -/
+private theorem popSA_last_grund (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+    (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
+    (hK : ∀ f, KoerperGutSA P passes Q S Tg f)
+    (hIG : ∀ f, InvGutGrundA P passes Q S Tg f) (hFS : ∀ f, FussSX P S lok Tg f)
+    (hTV : ∀ c, Tg c → VertragsFrei P c)
+    {F : RufRahmenG D} {W : World D} (hF : KopfSA P O passes Q S lok Tg m zyk F W)
+    {l : Bool} {Γ : Ctx} (ρ : Env D Γ) (r : Fin (vertragVon D F.f).gruende)
+    (vor : World D) (L : D.Lock)
+    (hr : F.rest = ⟨l, Γ, _, ρ, .aufraeumen ⟨.inr r, vor⟩ [L]⟩) :
+    InvAmRueck P F.f (W.gibt L) := by
+  have hW := kopfSA_frei_inv hO hRL hQ hS hsp hK hF L List.mem_cons_self hr
+    (fun O' U A calls σ hi => by rw [semHA_aufraeumen_freigabe, hi]; rfl)
+  obtain ⟨H, HA, HU, HX, σ, hreq, hf, hv, _, _, hfa, hra, hqa, _, hfu, hiu, _,
+    ⟨hfx, _⟩, hg, _, heq⟩ := hF
+  have h1 := heq (rufAusV H) (orakelAus O HA) (umweltAus S sp HU) (umweltAusA Tg HX)
+    (rufAusV_passt hf) (orakelAus_passt O hfa) (umweltAus_passt S sp hfu)
+    (umweltAusA_passt Tg hfx) (umweltAusA_ok Tg HX) (gleichRS_orakelAus O HA)
+  rw [hr] at h1 hg
+  have hiσ : S.inv L σ.speicher = true := (inv_gleich hS List.mem_cons_self hg).trans hW
+  rw [semHA_aufraeumen_freigabe, hiσ] at h1
+  simp only [ite_true, semHA, weiterHA, scopesInvH, List.all_nil, List.foldl_nil] at h1
+  obtain ⟨σ', hex, hsg⟩ := zErgG_gleich_grund (ZErgG.folgt_grund h1)
+  have hInv := (hIG F.f) (orakelAus O HA) (orakelAus_rahmen hO hra)
+    (regLokal_orakelAus hRL HA) (orakelAus_vertrag hQ hqa)
+    (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (umweltAusA Tg HX) (umweltAusA_ok Tg HX)
+    (rufAusV H) (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) F.s0 F.rho hreq σ' r hex
+  have hgl : GleichAuf (stabilS P S lok F.f (vertragVon D F.f).ende)
+      (σ.gibt L) (W.gibt L) :=
+    GleichAuf.mono (stabilS_mono (fun _ h => List.mem_cons_of_mem _ h)) hg
+  intro i hi hs
+  have h3 := hInv i hi hs
+  unfold InvHaelt at h3 ⊢
+  rw [← eval_gleichAuf (P.invariante i)
+    (fun _ h => inv_stabilX (hFS _) hTV (List.Perm.refl _) hi hs h)
+    ((gleichAuf_SG hsg).trans hgl) .nil]
+  exact h3
+
 /-- **One step and the logged reason returns** (as `invGrundLog_schritt`). -/
 theorem invGrundLogA_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
+    (hK : ∀ f, KoerperGutSA P passes Q S Tg f)
     (hIG : ∀ f, InvGutGrundA P passes Q S Tg f) (hFS : ∀ f, FussSX P S lok Tg f)
     (hTV : ∀ c, Tg c → VertragsFrei P c)
     {M M' : RufMaschineG D} {u : Faden}
@@ -127,6 +198,38 @@ theorem invGrundLogA_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q
     | _ => ohneGrundA
   | g7 hs =>
     cases hs with
+    | rueckFreigabeLetzte ρ a L hhead z ha =>
+      simp only [rufUpdateG_self]
+      apply antwort_invGrundLogA ha
+      intro r hr
+      rcases a with ⟨answer, vor⟩
+      dsimp only at hr hhead
+      cases hr
+      exact popSA_last_grund hO hRL hQ hS hsp hK hIG hFS hTV hF ρ r vor L hhead
+    | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
+      simp only [rufUpdateG_self]
+      exact antwort_invGrundLogA ha (fun _ h => by cases h)
+    | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
+      rename_i l Γ Λ
+      simp only [rufUpdateG_self]
+      apply antwort_invGrundLogA ha
+      intro rg hrg
+      cases hrg
+      have hperm : Λ.Perm (vertragVon D (M.faeden u).kopf.f).ende := by
+        simpa only [hempty, List.map_nil, List.append_nil] using R.genau
+      refine popSA_grund hO hRL hQ hS hsp hIG hF hhead grund
+        (fun i hi hs => inv_stabilX (hFS _) hTV hperm hi hs) ?_
+      intro O' calls U A σ
+      obtain h | ⟨rest, h⟩ | ⟨Λ', rest, k, h⟩ := GRest.scopedGrund_faelle hret <;> subst r
+      · simp only [semHA, weiterHA, execEndHA, hempty, scopesInvH, List.all_nil,
+          ite_true, List.foldl_nil, laufA, zErgG]
+        exact ZErgG.gleich_refl _
+      · rw [semHA_ende_cons]
+        simp only [execStmtHA, hempty, scopesInvH, List.all_nil, ite_true, List.foldl_nil]
+        exact ZErgG.gleich_refl _
+      · rw [semHA_dann_cons]
+        simp only [execStmtHA, hempty, scopesInvH, List.all_nil, ite_true, List.foldl_nil]
+        exact weiterHA_grund S O' U A passes calls (.dann rest k) _ _
     | _ => ohneGrundA
 
 /-- **A replayed head at a `return` meets `ensures` and its owed invariants** (as `kopfS_ret`). -/
@@ -162,6 +265,68 @@ theorem kopfSA_ret (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : 
       popSA_inv hO hRL hQ hS hsp hI hG hr e (erg_stabilX (hFS _) e hok.2.1)
         (fun i hi hs => inv_stabilX (hFS _) hTV hperm hi hs)
         (fun O' R U A σ => semHA_dannRet S O' U A passes R e hperm rest k σ ρ)⟩
+
+/-- Atomic replay establishes the scoped answer at its saved read world before release. -/
+private theorem kopfSA_scopedRet (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+    (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
+    (hK : ∀ f, KoerperGutSA P passes Q S Tg f) (hI : ∀ f, InvGutSA P passes Q S Tg f)
+    (hFS : ∀ f, FussSX P S lok Tg f) (hTV : ∀ c, Tg c → VertragsFrei P c)
+    {F : RufRahmenG D} {W : World D} (hF : KopfSA P O passes Q S lok Tg m zyk F W)
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
+    {r : GRest D (vertragVon D F.f) l Γ Λ} (hr : F.rest = ⟨l, Γ, Λ, ρ, r⟩)
+    (e : ErgExpr D Γ Λ (vertragVon D F.f).erg)
+    (R : RueckRessourcen D (vertragVon D F.f) Λ) (hret : r.scopedWert = some (e, R)) :
+    EnsAmRueck P F.f F.s0 (W.lese Λ e.orte) F.rho
+        (evalErg (W.lese Λ e.orte) e (W.lese Λ e.orte) ρ) ∧ InvAmRueck P F.f (W.lese Λ e.orte) := by
+  have he := erg_stabilX (hFS _) e (scopedWert_orte (kopfSA_okS hF hr) hret)
+  have hmono : stabilS P S lok F.f (vertragVon D F.f).ende ⊆ stabilS P S lok F.f Λ :=
+    stabilS_mono fun _ h => R.genau.symm.mem_iff.mp (List.mem_append_left _ h)
+  obtain ⟨H, HA, HU, HX, σ, hreq, hf, hv, _, _, hfa, hra, hqa, _, hfu, hiu, _,
+    ⟨hfx, hkx⟩, hg, _, heq⟩ := hF
+  rw [hr] at hg
+  obtain ⟨HX', hfx', _, hsub, hrec⟩ := lese_schritt Tg hfx hkx Λ e.orte W.speicher
+  have hPX := umweltAusA_passt Tg hfx'
+  have hHA := umweltAusA_ok Tg HX'
+  have hpred := fun calls hcalls => heq calls (orakelAus O HA) (umweltAus S sp HU)
+    (umweltAusA Tg HX') hcalls (orakelAus_passt O hfa) (umweltAus_passt S sp hfu)
+    (passtX_teil hsub hPX) hHA (gleichRS_orakelAus O HA)
+  have hcheck : scopesInvH S R.scopes (leseA (umweltAusA Tg HX') σ Λ e.orte) = true := by
+    cases hc : scopesInvH S R.scopes (leseA (umweltAusA Tg HX') σ Λ e.orte) with
+    | true => rfl
+    | false =>
+      have hL := hpred (rufAusL H) (rufAusL_passt hf)
+      rw [hr] at hL
+      rw [semHA_scopedWert_falsch S _ _ _ passes _ r e R hret σ ρ hc] at hL
+      exact False.elim ((hK F.f).2 _ (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
+        (orakelAus_vertrag hQ hqa) _ (umweltAus_ok hS hsp hiu) _ hHA _ (rufAusL_rahmen hv)
+        (rufAusL_ohneLogik hv.1) F.s0 F.rho hreq .schleife (zErgG_gleich_logik (ZErgG.folgt_logik hL)))
+  have h1 := hpred (rufAusV H) (rufAusV_passt hf)
+  rw [hr] at h1
+  have hsem := scopedWert_semSA (orakelAus O HA) S (umweltAus S sp HU) (umweltAusA Tg HX')
+    passes (rufAusV H) r e R hret σ (W.lese Λ e.orte) ρ
+  simp only [semHA, weiterHA, hcheck, ite_true] at hsem
+  obtain ⟨σ', hex, hsg⟩ := zErgG_gleich_zurueck
+    (ZErgG.folgt_zurueck (ZErgG.folgt_trans h1 (ZErgG.folgt_of_gleich hsem)))
+  have hE := ((hK F.f).1 _ (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
+    (orakelAus_vertrag hQ hqa) _ (umweltAus_ok hS hsp hiu) _ hHA _
+    (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) F.s0 F.rho hreq).1 σ' _ hex
+  have hInv := (hI F.f) _ (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
+    (orakelAus_vertrag hQ hqa) _ (umweltAus_ok hS hsp hiu) _ hHA _
+    (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) F.s0 F.rho hreq σ' _ hex
+  rw [hrec _ hPX hHA] at hsg hE
+  have hgl := mischT_gleichAuf hg he Λ Λ
+  have hfinal : GleichAuf (stabilS P S lok F.f Λ) σ' (W.lese Λ e.orte) :=
+    (gleichAuf_SG hsg).trans ((gleichAuf_SG (World.gibt_foldl_speicher _ R.scopes)).trans
+      (GleichAuf.mono (fun _ h => List.mem_append_left _ h) hgl))
+  rw [evalErg_gleichAuf e (fun _ h => List.mem_append_right _ h) hgl ρ] at hE
+  refine ⟨ens_transfer hE (GleichAuf.refl _ _) (GleichAuf.mono
+    (fun _ h => hmono (ens_stabilX (hFS _) hTV (List.Perm.refl _) h)) hfinal), ?_⟩
+  intro i hi hs
+  have h3 := hInv i hi hs
+  unfold InvHaelt at h3 ⊢
+  rw [← eval_gleichAuf (P.invariante i)
+    (fun _ h => hmono (inv_stabilX (hFS _) hTV (List.Perm.refl _) hi hs h)) hfinal .nil]
+  exact h3
 
 end Schritte
 
@@ -278,14 +443,41 @@ theorem ziel_ort_atomar_voll (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
         rw [hfa] at hev
         by_cases ht : t = u
         · subst ht
-          rcases invGrundLogA_schritt hO hRL hQ hS hsp hIG hFS hTV hFu1.1 hs1 ev hev with h | h
+          rcases invGrundLogA_schritt hO hRL hQ hS hsp hK hIG hFS hTV hFu1.1 hs1 ev hev with h | h
           · exact ih' t ev h
           · exact h
         · rw [rufSchrittG_fremd hs1 t ht] at hev
           exact ih' t ev hev
   · -- the start function's completion
-    intro t _ l Γ Λ ρ r e hr' hk
-    exact kopfSA_ret hO hRL hQ hS hsp hK hI hFS hTV ((hZ M hr).1.1 t).1 hr' e hk
+    constructor
+    · intro t _ l Γ Λ ρ r e hr' hk
+      exact kopfSA_ret hO hRL hQ hS hsp hK hI hFS hTV ((hZ M hr).1.1 t).1 hr' e hk
+    · have hgood : ∀ t, fadenAntwortGut P (M.faeden t) := by
+        clear hA
+        induction hr with
+        | start =>
+          intro t
+          rw [start_faden]
+          simp [fadenAntwortGut, rahmenAntwortGut, GRest.antwortGut]
+        | schritt N N' u hn hs ih =>
+          obtain ⟨σ, N'', hs1, hσ, _, _, hfa, _, _⟩ := hs
+          have hsc : ScopedRueckGutG P (mitSpeicher N σ) := by
+            intro t l Γ Λ ρ r e R hhead hret
+            have hFt := fadenSA_speicher (W' := (mitSpeicher N σ).weltVon t) ((hZ N hn).1.1 t)
+              (fun c hc => hσ c (fun ht => hTS c ht _ _ hc))
+            exact kopfSA_scopedRet hO hRL hQ hS hsp hK hI hFS hTV hFt.1 hhead e R hret
+          intro t
+          rw [hfa]
+          by_cases htu : t = u
+          · subst t
+            exact antwortGut_schritt hs1 (ih u) hsc
+          · rw [rufSchrittG_fremd hs1 t htu]
+            exact ih t
+      intro t _ l Γ ρ v vor hhead
+      have h := (hgood t).1
+      change (M.faeden t).kopf.rest.2.2.2.2.antwortGut _ at h
+      rw [hhead] at h
+      simpa only [GRest.antwortGut, antwortGut] using h
 
 #print axioms Gabbro.Grammatik.ziel_ort_atomar_voll
 
