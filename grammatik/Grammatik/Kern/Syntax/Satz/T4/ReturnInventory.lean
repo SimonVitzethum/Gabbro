@@ -425,6 +425,22 @@ theorem endBlock : ∀ (b : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ)
     simp only [execEnd]; split
     · exact (endBlock yes _ ρ (entry.same (lese_haelt ..))).vor (lese_haelt ..)
     · exact (endBlock no _ ρ (entry.same (lese_haelt ..))).vor (lese_haelt ..)
+  | .float _ _ _ _ _ rest, σ, ρ, entry => by
+    simp only [execEnd]; split
+    · exact ((endBlock rest _ _ (entry.same (lese_haelt ..))).schrumpf).vor (lese_haelt ..)
+    · exact Outcome.logik _
+  | .floatLit _ _ _ rest, σ, ρ, entry => by
+    simp only [execEnd]; split
+    · exact (endBlock rest σ _ entry).schrumpf
+    · exact Outcome.logik _
+  | .floatOf _ _ _ rest, σ, ρ, entry => by
+    simp only [execEnd]; split
+    · exact ((endBlock rest _ _ (entry.same (lese_haelt ..))).schrumpf).vor (lese_haelt ..)
+    · exact Outcome.logik _
+  | .floatNarrow _ _ _ sonst rest, σ, ρ, entry => by
+    simp only [execEnd]; split
+    · exact ((endBlock rest _ _ (entry.same (lese_haelt ..))).schrumpf).vor (lese_haelt ..)
+    · exact (endBlock sonst _ _ (entry.same (lese_haelt ..))).vor (lese_haelt ..)
 
 theorem sumArms : ∀ (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))
     (σ : World D) (ρ : Env D Γ), Entry L bo Λ σ → Outcome L σ (execArms O passes R arms v σ ρ)
