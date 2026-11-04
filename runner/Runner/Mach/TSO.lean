@@ -45,6 +45,7 @@ def TSO (L : Lay) : MemSys where
       ((s.1.m.cas x e n = none ∧ a = none ∧ s' = s) ∨
        (∃ old m, s.1.m.cas x e n = some (old, m) ∧ a = some (old, 0) ∧ s'.1 = { s.1 with m := m }))
     | .sys _ => True
+    | .fp kind x y => s' = s ∧ ∃ result, a = some (result, 0) ∧ NativeFPEval kind x y result
   tau s s' := ∃ i x v rest, s.1.buf i = (x, v) :: rest ∧
     s'.1 = { (s.1.setBuf i rest) with m := Mem.write s.1.m x 8 v.toNat }
 

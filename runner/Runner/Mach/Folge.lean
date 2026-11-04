@@ -130,6 +130,7 @@ def SC (L : Lay) : MemSys where
     | .cas x e n => (s.1.cas x e n = none ∧ a = none ∧ s' = s) ∨
         (∃ old m, s.1.cas x e n = some (old, m) ∧ a = some (old, 0) ∧ s'.1 = m)
     | .sys _ => True
+    | .fp kind x y => s' = s ∧ ∃ result, a = some (result, 0) ∧ NativeFPEval kind x y result
   tau _ _ := False
 
 theorem sc_fixed (L : Lay) : Fixed (SC L) L := by

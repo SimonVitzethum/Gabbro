@@ -23,6 +23,7 @@ def memAns (m : Mem) : Op → Option (Ans × Mem)
   | .wr a v => some (match m.wr64 a v with | some m' => (some (0, 0), m') | none => (none, m))
   | .cas a e n => some (match m.cas a e n with | some (o, m') => (some (o, 0), m') | none => (none, m))
   | .sys _ => none
+  | .fp _ _ _ => none
 
 /-- **The kernel**: which answer and which memory a system call may leave. Any relation; what a program may rely
     on is the named assumption at its gates (`Stage0/Senke/Tor`). -/
@@ -37,6 +38,9 @@ inductive Run : Res T → Mem → T → Mem → Prop
       memAns m o = some (a, m') → Run (k a) m' t m'' → Run (.ask o k) m t m''
   | sys {q : Req} {k : Ans → Res T} {m m' m'' : Mem} {a : Ans} {t : T} :
       Kern.ans q m a m' → Run (k a) m' t m'' → Run (.ask (.sys q) k) m t m''
+  | fp {kind : NativeFPOp} {a b result : W} {k : Ans → Res T} {m m' : Mem} {t : T} :
+      NativeFPEval kind a b result → Run (k (some (result, 0))) m t m' →
+      Run (.ask (.fp kind a b) k) m t m'
 
 inductive Star : T → Mem → T → Mem → Prop
   | refl (t : T) (m : Mem) : Star t m t m
@@ -102,6 +106,21 @@ theorem run_bin {t : T} {m m1 : Mem} {o : Nat} {d a b : BitVec 32} (hi : InsAt m
     (hw : m.wr64 (slot t.fp (sx d)) r = some m1) : Run (bin g t) m (nxt t) m1 := by
   refine f2_run hi (run_rd64 ha (f3_run hi (run_rd64 hb ?_)))
   simp only [hg, opt_some, ret1]
+  exact f1_run hi (run_wr64 hw)
+
+/-- The builtin CPU relation supplies the result; its request changes no memory. -/
+theorem run_fp {t : T} {m m1 : Mem} {o : Nat} {d a b : BitVec 32}
+    (hi : InsAt m t.pc o d a b) {kind : NativeFPOp} {va vb result : W}
+    (ha : m.rd64 (slot t.fp (sx a)) = some va)
+    (hb : m.rd64 (slot t.fp (sx b)) = some vb)
+    (heval : NativeFPEval kind va vb result)
+    (hw : m.wr64 (slot t.fp (sx d)) result = some m1) :
+    Run (fp kind t) m (nxt t) m1 := by
+  unfold fp
+  refine f2_run hi (run_rd64 ha (f3_run hi (run_rd64 hb ?_)))
+  unfold Runner.fp
+  refine .fp heval ?_
+  simp only [opt_some, ret1]
   exact f1_run hi (run_wr64 hw)
 
 /-- `brz a L` with slot `a` zero: the jump is taken. -/
@@ -170,6 +189,9 @@ inductive RunTo : Res T → Mem → Req → Prop
   | sys {q : Req} {k : Ans → Res T} {m : Mem} : RunTo (.ask (.sys q) k) m q
   | ask {o : Op} {k : Ans → Res T} {m m' : Mem} {a : Ans} {q : Req} :
       memAns m o = some (a, m') → RunTo (k a) m' q → RunTo (.ask o k) m q
+  | fp {kind : NativeFPOp} {a b result : W} {k : Ans → Res T} {m : Mem} {q : Req} :
+      NativeFPEval kind a b result → RunTo (k (some (result, 0))) m q →
+      RunTo (.ask (.fp kind a b) k) m q
 
 theorem runTo_rd8 {a : W} {v : B} {m : Mem} {f : W → Res T} {q : Req} (h : m.rd8 a = some v)
     (hr : RunTo (f (v.setWidth 64)) m q) : RunTo (rd8 a f) m q :=

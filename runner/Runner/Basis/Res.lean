@@ -1,5 +1,5 @@
 module
-public import Runner.Basis.Mem
+public import Runner.Basis.Floating
 @[expose] public section
 
 
@@ -37,6 +37,8 @@ inductive Op where
   /-- if the word at `a` is `e`, write `n`; answer the old word (a locked read-modify-write) -/
   | cas (a e n : W)
   | sys (q : Req)
+  /-- A native CPU floating operation, independent of memory and system calls. -/
+  | fp (kind : NativeFPOp) (a b : W)
   deriving DecidableEq
 
 abbrev Ans := Option (W × W)
@@ -68,6 +70,9 @@ inductive Res (σ : Type) where
   .ask (.wr a v) fun r => opt r fun _ => .next s
 @[inline] def cas {σ : Type} (a e n : W) (f : W → Res σ) : Res σ :=
   .ask (.cas a e n) fun r => opt r fun p => f p.1
+
+@[inline] def fp {σ : Type} (kind : NativeFPOp) (a b : W) (f : W → Res σ) : Res σ :=
+  .ask (.fp kind a b) fun r => opt r fun p => f p.1
 
 /-- The thread numbers of the system calls the machines interpret themselves (fixed Linux numbers). -/
 def NR_CLONE : Nat := 56

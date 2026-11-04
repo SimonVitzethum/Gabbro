@@ -147,6 +147,7 @@ def memAns (m : Mem) : Op → Option (Ans × Mem)
   | .wr a v => some (match m.wr64 a v with | some m' => (some (0, 0), m') | none => (none, m))
   | .cas a e n => some (match m.cas a e n with | some (o, m') => (some (o, 0), m') | none => (none, m))
   | .sys _ => none
+  | .fp kind a b => some (some (nativeFPBits kind a b, 0), m)
 
 /-- One instruction against the memory `m`: the new state and memory, or `none` for a fault or `unk`. -/
 def execM (i : Ins) (x : X) (m : Mem) : Option (X × Mem) :=

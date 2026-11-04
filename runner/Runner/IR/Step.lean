@@ -43,6 +43,12 @@ def ret1 (t : T) (r : W) : Res T := f1 t fun d => wr64 (slot t.fp d) r (nxt t)
 def bin (g : W → W → Option W) (t : T) : Res T :=
   f2 t fun a => ld t a fun va => f3 t fun b => ld t b fun vb => opt (g va vb) fun r => ret1 t r
 
+/-- Native arithmetic keeps the same full operand-read and destination-write order.
+    Unary operations also read field 3 and its slot; the primitive ignores that value. -/
+def fp (kind : NativeFPOp) (t : T) : Res T :=
+  f2 t fun a => ld t a fun va => f3 t fun b => ld t b fun vb =>
+    Runner.fp kind va vb fun result => ret1 t result
+
 /-- Signed division truncating towards zero; no result for a zero divisor or a quotient outside 64 bits. -/
 def sdiv (a b : W) : Option W :=
   if b.toInt = 0 then none else
