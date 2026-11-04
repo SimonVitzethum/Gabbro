@@ -86,9 +86,13 @@ theorem putBytesChunk_ok {Γ : Ctx} {Λ : List (Res D)} {a b H : Int}
   have p2 := p1.next a2 (Nat.le_refl _) (by omega)
   have env2 := envAt_agree env1 a2 p1.frame
     (by simpa only [frei_cons, vw, s] using Nat.le_refl (s + 1)) (by omega)
+  have indexEq : eval σ (chunkIndex (Γ := Γ) (Λ := Λ) a b H q) σ
+      (Env.cons (τ := .int 0 (2 ^ 64 - 1)) part env) = ki := by
+    apply Zahl.ext_n
+    rfl
   have kiAt : ValueAt L m2 fp (frei (.int 0 (2 ^ 64 - 1) :: ByteCapture Γ a b H) reserved)
       (.int (a + 8 * q) (b + 8 * q)) ki := by
-    simpa only [chunkIndex, eval, Env.get, env, ki, frei_cons, vw, s] using indexAt
+    simpa only [indexEq, frei_cons, vw, s] using indexAt
   have env3 := envAt_cons env2 kiAt
   have kp : PreS L m2 _ fp K (s + 2) kernel
       (Env.cons (τ := .int (a + 8 * q) (b + 8 * q)) ki
@@ -101,7 +105,7 @@ theorem putBytesChunk_ok {Γ : Ctx} {Λ : List (Res D)} {a b H : Int}
     m2 _ σ (by simpa only [s] using kp) world2
   refine ⟨m3, ?_, (agreeW_of (a1.trans (a2.mono (Nat.le_succ s)))).trans (ch3.mono (by omega)),
     envAt_tail (envAt_tail env4), ?_⟩
-  · simpa only [List.length_append, List.length_singleton, pc_add, BitVec.add_assoc] using
+  · simpa only [List.length_append, List.length_singleton, pc_add, Nat.add_assoc] using
       s1.trans (s2.trans s3)
   · simpa only [ki, dropBytes, Int.natCast_zero, Int.add_zero] using world3
 
