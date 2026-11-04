@@ -30,29 +30,57 @@ theorem call_equation (fn : Function params lo hi)
     (σ : World (declaration params (.int lo hi)))
     (O : Orakel (declaration params (.int lo hi))) (passes depth : Nat) :
     rufAt fn.program O passes (depth + 1) () σ args =
-      if fn.pre.denote args = false then .logik (.vorbedingung ()) else
+      (if @Eq Bool (fn.pre.denote args) false then .logik (.vorbedingung ()) else
       if h : lo ≤ (fn.body.2.2.denote args).n ∧ (fn.body.2.2.denote args).n ≤ hi then
         let value : Zahl lo hi := ⟨(fn.body.2.2.denote args).n, h.1, h.2⟩
-        if fn.post.denote (.cons value args) = false then .logik (.nachbedingung ())
+        if @Eq Bool (fn.post.denote (.cons value args)) false then .logik (.nachbedingung ())
         else .ok σ value
-      else .logik .kapazitaet := by
-  simp only [rufAt, program, footprint, World.lese, List.map_nil, World.merke,
-    List.nil_append, Code.equation, wahr?]
-  split
-  · rfl
-  · simp only [execEnd, footprint, World.lese, List.map_nil, World.merke,
-      List.nil_append, Code.equation]
-    split
-    · simp only [execEnd, Expr.orte, World.lese, List.map_nil, World.merke,
-        List.nil_append, evalErg, eval, Env.get, EndAusgang.schrumpf,
-        footprint, Code.equation, ergEnv, wahr?]
-      rfl
-    · rfl
+      else .logik .kapazitaet : RufAusgang (D := declaration params (.int lo hi)) ()) := by
+  have prePlaces : (fn.program.requires ()).orte = [] := by
+    change fn.pre.expr.orte = []
+    exact footprint _
+  have postPlaces : (fn.program.ensures ()).orte = [] := by
+    change fn.post.expr.orte = []
+    exact footprint _
+  have preEval (before after : World (declaration params (.int lo hi))) :
+      eval before (fn.program.requires ()) after args = fn.pre.denote args :=
+    fn.pre.equation before after args
+  have postEval (before after : World (declaration params (.int lo hi))) (value : Zahl lo hi) :
+      eval before (fn.program.ensures ()) after
+        (ergEnv ((declaration params (.int lo hi)).erg ()) value args) =
+          fn.post.denote (.cons value args) :=
+    fn.post.equation before after (.cons value args)
+  have bodyPlaces : fn.body.2.2.expr.orte = [] := footprint _
+  have endEquation :
+      execEnd O passes (rufAt fn.program O passes depth) (fn.program.rumpf ()) σ args =
+        (if h : lo ≤ (fn.body.2.2.denote args).n ∧ (fn.body.2.2.denote args).n ≤ hi then
+          .zurueck σ (⟨(fn.body.2.2.denote args).n, h.1, h.2⟩ : Zahl lo hi)
+        else .logik .kapazitaet :
+          EndAusgang (vertragVon (declaration params (.int lo hi)) ()) false params) := by
+    change execEnd (V := vertragVon (declaration params (.int lo hi)) ()) (l := false)
+      O passes (rufAt fn.program O passes depth)
+      (.narrowRequired fn.body.2.2.expr lo hi
+        (.ret (.val (.var .here)) (List.Perm.refl []))) σ args = _
+    simp only [execEnd, bodyPlaces, World.lese, List.map_nil, World.merke,
+      List.nil_append, fn.body.2.2.equation, ErgExpr.orte, Expr.orte,
+      evalErg, eval, Env.get, EndAusgang.schrumpf] <;> rfl
+  have noInvariants : (declaration params (.int lo hi)).invs = [] := rfl
+  simp only [rufAt, prePlaces, World.lese, List.map_nil, World.merke,
+    List.nil_append, preEval, wahr?]
+  by_cases hp : @Eq Bool (fn.pre.denote args) false
+  · simp only [hp, ↓reduceIte] <;> rfl
+  · simp only [hp, ↓reduceIte]
+    rw [endEquation]
+    by_cases hr : lo ≤ (fn.body.2.2.denote args).n ∧ (fn.body.2.2.denote args).n ≤ hi
+    · simp only [hr, ↓reduceDIte, postPlaces, World.lese, List.map_nil,
+        World.merke, List.nil_append, postEval, wahr?, noInvariants,
+        List.filter_nil, List.foldl_nil, List.find?_nil] <;> rfl
+    · simp only [hr, ↓reduceDIte] <;> rfl
 
 /-- A successful call is certified at its original argument and result types.
     The generic equation includes all worlds, oracles, budgets and positive depths. -/
 structure Certificate (fn : Function params lo hi)
-    (args : Env (declaration params (.int lo hi)) params) (value : Int) where
+    (args : Env (declaration params (.int lo hi)) params) (value : Int) : Type where
   range : lo ≤ value ∧ value ≤ hi
   body : (fn.body.2.2.denote args).n = value
   requires : fn.pre.denote args = true
@@ -67,7 +95,7 @@ theorem Certificate.sound {fn : Function params lo hi}
       .ok σ (⟨value, cert.range.1, cert.range.2⟩ : Zahl lo hi) := by
   rw [call_equation]
   simp only [cert.requires, Bool.true_eq_false, ↓reduceIte, cert.body]
-  simp only [cert.range, ↓reduceDIte, cert.ensures, Bool.true_eq_false, ↓reduceIte]
+  simp only [cert.range, ↓reduceDIte, cert.ensures, Bool.true_eq_false, ↓reduceIte] <;> rfl
 
 /-- Checking is deterministic and proof-producing; failures retain a named reason. -/
 def certify (name : String) (fn : Function params lo hi)
@@ -75,8 +103,8 @@ def certify (name : String) (fn : Function params lo hi)
     Except String (Certificate fn args value) :=
   if hr : lo ≤ value ∧ value ≤ hi then
     if hb : (fn.body.2.2.denote args).n = value then
-      if hp : fn.pre.denote args = true then
-        if hq : fn.post.denote (.cons ⟨value, hr.1, hr.2⟩ args) = true then
+      if hp : @Eq Bool (fn.pre.denote args) true then
+        if hq : @Eq Bool (fn.post.denote (.cons ⟨value, hr.1, hr.2⟩ args)) true then
           .ok ⟨hr, hb, hp, hq⟩
         else .error ("const contract violated at `" ++ name ++ "`: ensures failed")
       else .error ("const contract violated at `" ++ name ++ "`: requires failed")
@@ -161,11 +189,11 @@ def checkCall (k : UKonstFn) (fns : List UKonstFn)
   | .ok checkedArguments =>
     let values := checkedArguments.values
     have evaluated : argumentValues fns env k.params sources = .ok values := by
-      simp only [argumentValues, hv, Except.map]
+      simp only [argumentValues, hv, Except.map] <;> rfl
     match ha : arguments (declaration (k.params.map Prod.snd) (.int lo hi)) k.params values with
     | .error error => throw error
     | .ok args =>
-      if fn.model.pre.denote args = false then
+      if @Eq Bool (fn.model.pre.denote args) false then
         throw ("const contract violated at `" ++ k.name ++ "`: requires failed")
       else
       match hn : uKonstBinde k.params values with
@@ -178,7 +206,7 @@ def checkCall (k : UKonstFn) (fns : List UKonstFn)
           let cert ← Function.certify k.name fn.model args value
           let quoted ← quote fn.model.body.2.2.expr args
           have syntaxValue : quoted.syntax.evalInt = some value := by
-            rw [quoted.equation (world _ _) (world _ _), fn.model.body.2.2.equation, cert.body]
+            rw [quoted.equation (world _ _) (world _ _), fn.model.body.2.2.equation, cert.body] <;> rfl
           return ⟨lo, hi, fn, values, evaluated, checkedArguments.meaning, args, ha, bindings, hn, value, hc, cert, quoted, syntaxValue⟩
 
 /-- Every value the actual replacement entry point can obtain denotes the ordinary
