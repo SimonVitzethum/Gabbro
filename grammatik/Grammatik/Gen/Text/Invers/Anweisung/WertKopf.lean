@@ -121,6 +121,7 @@ theorem wert_bool_fehler {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)}
           refine ⟨"bool field as a number", ?_⟩
           change uRechne ctx (uWertBlatt ctx)
             (slotS (nTab (tN z t)) (nFeld (show Fin _ from f).val) i') = _
+          dsimp only [slotS] at leaf ⊢
           rw [uRechne, leaf, base]
       · simp only [reduceCtorEq] at hu
   | lt a b =>
