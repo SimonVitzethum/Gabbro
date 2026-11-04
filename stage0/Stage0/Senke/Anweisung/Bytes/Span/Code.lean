@@ -26,11 +26,12 @@ def putBytesWordsL (L : Lay D) {Γ : Ctx} {Λ : List (Res D)}
       let idx ← lowE (reserved := reserved) L (chunkIndex (Γ := Γ) (Λ := Λ) a b H q) (s + 1)
       let kernel ← putBytesL L (Γ := ByteCapture Γ a b H) (Λ := Λ)
         t f (a + 8 * q) (b + 8 * q) (2 ^ 64 - 1) (by omega) reserved (min 8 n) 0 (by omega)
-      let rest ← if 8 < n then
+      let rest ← if more : 8 < n then
         putBytesWordsL L (Γ := Γ) (Λ := Λ) t f a b H lower reserved words (n - 8) (q + 1) (by omega)
         else some ([], s + 2)
       pure ([ci 2 s (frei Γ reserved + q) 0] ++ idx.1 ++ kernel.1 ++ rest.1,
         max (s + 2) (max idx.2 (max kernel.2 rest.2)))
+termination_by structural words _ _ _ => words
 
 /-- Evaluate the complete value before the index; neither is recomputed after
     the first store. Both become ordinary typed bindings in ByteCapture. -/
