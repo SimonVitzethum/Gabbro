@@ -84,7 +84,9 @@ theorem softDivQuotientL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     (an * 2 ^ k) bn bp bb nb low3 high3 rb
   refine ⟨m4, ?_, ((a1.trans (a2.mono (show d ≤ d + 1 by omega))).trans
     (a3.mono (show d ≤ d + 2 by omega))).trans a4, w, rw, ew⟩
-  simpa only [List.length_append, pc_add] using ((s1.trans s2).trans s3).trans s4
+  rw [List.length_append, List.length_append, List.length_append,
+    ← pc_add, ← pc_add, ← pc_add]
+  exact ((s1.trans s2).trans s3).trans s4
 
 /-- The actual quotient generator accepts both normalization directions. -/
 theorem softDivQuotientL_ok_zeuge {Γ : Ctx} (ρ : Env D Γ) (W : Runner.Mem → Prop) :
