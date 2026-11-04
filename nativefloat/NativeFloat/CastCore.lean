@@ -123,6 +123,7 @@ private theorem unsigned_of_nonpositive (v : Int) (negative : v ≤ 0) :
     UInt64.ofNatClamp v.toNat = 0 := by
   have zero : v.toNat = 0 := by omega
   rw [zero, UInt64.ofNatClamp_eq_ofNat 0 (by decide)]
+  rfl
 
 private theorem positive_low (m : Nat) (e : Int) (positive : 0 < m)
     (small : (if 0 ≤ e then m <<< e.toNat else m / 2 ^ (-e).toNat) < 2 ^ 63) :
