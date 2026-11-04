@@ -115,10 +115,8 @@ theorem ptrErg_eq (u : UProg) (n : Nat) :
     (sigFnAt u n).ergTy = (sigAt u n).erg := by
   unfold sigFnAt sigAt
   by_cases h : n < (sigFns u).length
-  · rw [dif_pos h]
-    rfl
-  · rw [dif_neg h]
-    rfl
+  · simp only [dite_eq_left h, mkSig]
+  · simp only [dite_eq_right h, dummySig, UFn.ergTy]
 
 /-- One pointer interface, lowered: its `needs` as the pre, its `gives` as
     the post, mirroring `lowerFnPlain`'s contract part. -/
@@ -279,7 +277,7 @@ def lowerAllg (u : UProg) :
   | .error e => .error e
   | .ok _ =>
     if hC : contractGate u then
-    have hAx : axContractsB u = true := (Bool.and_eq_true.mp hC).2
+    have hAx : axContractsB u = true := (Bool.and_eq_true_iff.mp hC).2
     have w : ∀ f : Fin u.fns.length,
         ∃ v, lowerFnAt u f = .ok v := fun f =>
       lowerEach_all_ok u (List.finRange u.fns.length) f
