@@ -151,7 +151,7 @@ theorem compileTimeSafe_constants {items : List SItemTief} (h : compileTimeSafe 
 
 /-- Two nested rows and an actual declared pure const function satisfy the same leaf guard. -/
 theorem safeConstantValue_leaf_zeuge :
-    let fn := SItemTief.fnT ⟨"const", "identity", [("x", .atom "u8")], some (.atom "u8"), none, []⟩
+    let fn := SItemTief.fnT ⟨"const", "identity", [("x", .atom "u8")], some (.atom "u8"), none, [], []⟩
       (.block [] (some (.ret (some (.variable "x")))))
     let expr := SExpr.call "identity" [.lit 42]
     let payload := SKonstWert.rows [.rows [.one expr]]

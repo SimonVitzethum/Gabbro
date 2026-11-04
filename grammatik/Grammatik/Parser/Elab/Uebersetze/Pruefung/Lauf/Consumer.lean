@@ -29,7 +29,8 @@ def consumerFehler (duty : String) (count : Nat) : List UStmt :=
     `retireMark` lowers to the existing zero-effect `Stmt.retires` rule. -/
 def uCheckConsumer (c : UCheck) (gate : String) (wrapper : UFn) : UFn :=
   let (invoke, answer) := torErgebnis wrapper.name wrapper
-  { wrapper with name := consumerFnName c.name gate, nimmt := [c.duty], gibt := [],
+  { wrapper with
+    name := consumerFnName c.name gate, nimmt := [c.duty], gibt := [],
     body := (if wrapper.gruende == 0 then invoke else
       [.bindOptElseBeg "ans" wrapper.name [] "e"] ++
         consumerFehler c.duty wrapper.gruende ++ [.blkEnd]) ++ [.retireMark c.duty],
@@ -41,7 +42,8 @@ def uCheckConsumer (c : UCheck) (gate : String) (wrapper : UFn) : UFn :=
     producer; only its completed return gives the consumer a completed Duty.
     A second invocation requires a new permit. -/
 def uCheckDriver (c : UCheck) (gate : String) (consumer : UFn) : UFn :=
-  { name := driverFnName c.name gate, params := [], kinds := [], res := none,
+  {
+    name := driverFnName c.name gate, params := [], kinds := [], res := none,
     gruende := consumer.gruende, held := [], puts := consumer.puts,
     gputs := consumer.gputs, gives := [], nimmt := [c.duty], gibt := [],
     body := [.bindCall "verdict" c.probe []] ++
