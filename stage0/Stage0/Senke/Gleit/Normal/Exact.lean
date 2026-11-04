@@ -130,6 +130,7 @@ theorem routineLeftCountL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pr
     BitVec.ofInt_ofNat, BitVec.ofNat_eq_ofNat] using
     result (fp := fp) (K := K) (d := d) (c := c) (top := top) h hK m pc hp
 
+omit [Kern] in
 theorem routineLeftCountWord_model (n e : Nat)
     (low : 4 ≤ n) (high : n < 2 ^ 56) (ep : 1 ≤ e) (eb : e < 2 ^ 64) :
     routineLeftCountWord (BitVec.ofNat 64 n) (BitVec.ofNat 64 e) =

@@ -23,7 +23,8 @@ theorem routineFiniteDirectionalWord_exact (large small : Runner.W) (s : Bool) (
   have nonzero : ¬ (BitVec.ofNat 64 n == 0) = true := by
     intro zero
     have same := congrArg BitVec.toNat (beq_iff_eq.mp zero)
-    simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt n64, BitVec.toNat_zero] at same
+    simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt n64,
+      show (0 : Runner.W).toNat = 0 from rfl] at same
     omega
   have compare : (BitVec.ofNat 64 n).ult (BitVec.ofNat 64 (2 ^ 56)) =
       decide (n < 2 ^ 56) := by
@@ -37,12 +38,13 @@ theorem routineFiniteDirectionalWord_exact (large small : Runner.W) (s : Bool) (
     have normalized := routineLeftCount_normalizes n e np left ep
     let c := routineLeftCount n e
     have cp : c < e := bounds.2.2.2.2
+    have clt : c < 64 := bounds.2.2.2.1
     have c64 : c < 2 ^ 64 := by have := bounds.2.2.1; omega
     have shift : (BitVec.ofNat 64 n) <<< ((BitVec.ofNat 64 c).toNat % 64) =
         BitVec.ofNat 64 (n * 2 ^ c) := by
       apply BitVec.eq_of_toNat_eq
       simp only [BitVec.toNat_shiftLeft, BitVec.toNat_ofNat,
-        Nat.mod_eq_of_lt c64, Nat.mod_eq_of_lt bounds.2.2.2.1,
+        Nat.mod_eq_of_lt c64, Nat.mod_eq_of_lt clt,
         Nat.mod_eq_of_lt n64, Nat.shiftLeft_eq]
     have sub : BitVec.ofNat 64 e - BitVec.ofNat 64 c = BitVec.ofNat 64 (e - c) :=
       BitVec.ofNat_sub_ofNat_of_le _ _ c64 (by omega)
