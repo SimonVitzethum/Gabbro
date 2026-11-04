@@ -60,13 +60,17 @@ def lowerExpression (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UF
   | .bin "*" a b => do
     let x ← lowerExpression u Γ Λ fn a
     let y ← lowerExpression u Γ Λ fn b
-    pure { side := x.side.times y.side, footprint := by change x.side.term.orte ++ y.side.term.orte = []; rw [x.footprint, y.footprint]; rfl,
-           denotes := fun entry state env => SourceValue.mul (x.denotes entry state env) (y.denotes entry state env) }
+    pure {
+      side := x.side.times y.side
+      footprint := by change x.side.term.orte ++ y.side.term.orte = []; rw [x.footprint, y.footprint]; rfl
+      denotes := fun entry state env => SourceValue.mul (x.denotes entry state env) (y.denotes entry state env) }
   | .bin "/" a b => do
     let x ← lowerExpression u Γ Λ fn a
     let y ← lowerExpression u Γ Λ fn b
     match h : LowSide.durch x.side y.side with
-    | .ok s => pure { side := s, footprint := durch_orte x.footprint y.footprint h,
+    | .ok s => pure {
+        side := s
+        footprint := durch_orte x.footprint y.footprint h
         denotes := fun entry state env => durch_denotes h a b entry state env
           (x.denotes entry state env) (y.denotes entry state env) }
     | .error e => .error e
@@ -74,7 +78,9 @@ def lowerExpression (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UF
     let x ← lowerExpression u Γ Λ fn a
     let y ← lowerExpression u Γ Λ fn b
     match h : LowSide.rest x.side y.side with
-    | .ok s => pure { side := s, footprint := rest_orte x.footprint y.footprint h,
+    | .ok s => pure {
+        side := s
+        footprint := rest_orte x.footprint y.footprint h
         denotes := fun entry state env => rest_denotes h a b entry state env
           (x.denotes entry state env) (y.denotes entry state env) }
     | .error e => .error e
@@ -82,7 +88,9 @@ def lowerExpression (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UF
     let x ← lowerExpression u Γ Λ fn a
     let y ← lowerExpression u Γ Λ fn b
     match h : LowSide.and x.side y.side with
-    | .ok s => pure { side := s, footprint := band_orte x.footprint y.footprint h,
+    | .ok s => pure {
+        side := s
+        footprint := band_orte x.footprint y.footprint h
         denotes := fun entry state env => band_denotes h a b entry state env
           (x.denotes entry state env) (y.denotes entry state env) }
     | .error e => .error e
@@ -90,7 +98,9 @@ def lowerExpression (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UF
     let x ← lowerExpression u Γ Λ fn a
     let y ← lowerExpression u Γ Λ fn b
     match h : LowSide.or x.side y.side with
-    | .ok s => pure { side := s, footprint := bor_orte x.footprint y.footprint h,
+    | .ok s => pure {
+        side := s
+        footprint := bor_orte x.footprint y.footprint h
         denotes := fun entry state env => bor_denotes h a b entry state env
           (x.denotes entry state env) (y.denotes entry state env) }
     | .error e => .error e
@@ -98,7 +108,9 @@ def lowerExpression (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UF
     let x ← lowerExpression u Γ Λ fn a
     let y ← lowerExpression u Γ Λ fn b
     match h : LowSide.xoder x.side y.side with
-    | .ok s => pure { side := s, footprint := bxor_orte x.footprint y.footprint h,
+    | .ok s => pure {
+        side := s
+        footprint := bxor_orte x.footprint y.footprint h
         denotes := fun entry state env => bxor_denotes h a b entry state env
           (x.denotes entry state env) (y.denotes entry state env) }
     | .error e => .error e
@@ -106,7 +118,9 @@ def lowerExpression (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UF
     let x ← lowerExpression u Γ Λ fn a
     let y ← lowerExpression u Γ Λ fn b
     match h : LowSide.links x.side y.side with
-    | .ok s => pure { side := s, footprint := links_orte x.footprint y.footprint h,
+    | .ok s => pure {
+        side := s
+        footprint := links_orte x.footprint y.footprint h
         denotes := fun entry state env => links_denotes h a b entry state env
           (x.denotes entry state env) (y.denotes entry state env) }
     | .error e => .error e
@@ -114,7 +128,9 @@ def lowerExpression (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UF
     let x ← lowerExpression u Γ Λ fn a
     let y ← lowerExpression u Γ Λ fn b
     match h : LowSide.rechts x.side y.side with
-    | .ok s => pure { side := s, footprint := rechts_orte x.footprint y.footprint h,
+    | .ok s => pure {
+        side := s
+        footprint := rechts_orte x.footprint y.footprint h
         denotes := fun entry state env => rechts_denotes h a b entry state env
           (x.denotes entry state env) (y.denotes entry state env) }
     | .error e => .error e
@@ -135,7 +151,9 @@ def lowerConvCall (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
     match uTypName fn.measureTypes f with
     | .ok (lo, hi) =>
       match h : LowSide.conv lo hi x.side with
-      | .ok s => pure { side := s, footprint := conv_orte x.footprint h,
+      | .ok s => pure {
+          side := s
+          footprint := conv_orte x.footprint h
           denotes := fun entry state env => conv_denotes h a f entry state env
             (x.denotes entry state env) }
       | .error e => .error e
