@@ -101,6 +101,11 @@ theorem leaves_bind {σ : Type} {P Q : σ → Prop} {f : σ → Res σ} :
 
 theorem set_rip (x : X) (r : Reg) (v : W) : (x.set r v).rip = x.rip := by cases r <;> rfl
 
+theorem setXmm_rip (x : X) (r : Xmm) (v : BitVec 128) : (x.setXmm r v).rip = x.rip := rfl
+
+theorem setScalar_rip (x : X) (format : FPFormat) (r : Xmm) (v : W) :
+    (x.setScalar format r v).rip = x.rip := by cases format <;> rfl
+
 theorem aluStep_rip (x : X) (o : Alu) (d : Reg) (b : W) : (aluStep x o d b).rip = x.rip := by
   cases o <;> simp [aluStep, X.cmpf, X.nof, set_rip]
 
@@ -149,9 +154,31 @@ theorem exec_rip {i : Ins} (hf : Fall i = true) (n : Nat) (x : X) :
     split
     · trivial
     · simp only [Leaves, set_rip]
+  | cmov c d s =>
+    simp only [exec]
+    split
+    · trivial
+    · split <;> simp only [Leaves, set_rip]
   | jmp | jcc | jmpm | ud2 => exact absurd hf Bool.false_ne_true
   | alu | alui => simp only [exec, Leaves, aluStep_rip]
-  | mov | movi | zx8 | lea | imul | cqo | shl | shr => simp only [exec, Leaves, set_rip, X.nof]
+  | mov | movi | zx8 | lea | imul | cqo | shl | shr | movFromXmm =>
+    simp only [exec, Leaves, set_rip, X.nof]
+  | movToXmm | pxor => simp only [exec, Leaves, setXmm_rip]
+  | scalar | compareScalar | fromIntScalar | widenScalar | narrowScalar | ucomis | truncateScalar =>
+    simp only [exec]
+    split
+    · simp only [Runner.fp, Leaves]
+      intro _
+      apply leaves_opt
+      intro _
+      simp only [Leaves, setScalar_rip, set_rip]
+    · trivial
+  | ldmxcsr =>
+    simp only [exec, rd32, Leaves]
+    intro _
+    apply leaves_opt
+    intro _
+    split <;> simp only [Leaves]
 
 theorem runL_rip : ∀ (is : List Ins) (x : X), (∀ i ∈ is, Fall i = true) →
     Leaves (fun y => y.rip = x.rip + BitVec.ofNat 64 (lenOfL is)) (runL is x)

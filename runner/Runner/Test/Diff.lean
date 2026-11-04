@@ -45,6 +45,21 @@ def Rng.word (g : Rng) : W × Rng :=
       2 ^ 63 - 1, 2 ^ 63, 2 ^ 63 + 1, 2 ^ 64 - 1, 2 ^ 64 - 2, 2 ^ 64 - 255]
     (BitVec.ofNat 64 (edges.getD (x.toNat % edges.length) 0), g)
 
+/-- Include subnormals, infinities, signed zeroes and distinct quiet/signaling NaNs. -/
+def Rng.fpWord (g : Rng) (format : FPFormat) : W × Rng :=
+  let (ordinary, g) := g.below 3
+  if ordinary = 0 then g.word else
+  let edges : List Nat := match format with
+    | .f32 => [0, 0x80000000, 1, 0x007FFFFF, 0x00800000, 0x3F800000, 0x3FC00000,
+        0x7F7FFFFF, 0x7F800000, 0xFF800000, 0x7FC01234, 0x7F800001, 0xFFC00123,
+        0x5F000000, 0x5F800000, 0xDF000000]
+    | .f64 => [0, 0x8000000000000000, 1, 0x000FFFFFFFFFFFFF, 0x0010000000000000,
+        0x3FF0000000000000, 0x3FF8000000000000, 0x7FEFFFFFFFFFFFFF, 0x7FF0000000000000,
+        0xFFF0000000000000, 0x7FF8000000001234, 0x7FF0000000000001, 0xFFF8000000000123,
+        0x43E0000000000000, 0x43F0000000000000, 0xC3E0000000000000]
+  let (i, g) := g.below edges.length
+  (BitVec.ofNat 64 (edges.getD i 0), g)
+
 def regs : List Reg := [.rax, .rcx, .rdx, .rbx, .rsp, .rbp, .rsi, .rdi, .r8, .r9, .r10, .r11, .r12, .r13, .r14, .r15]
 
 /-- A register other than `rsp` and the ones in `avoid`. -/
@@ -87,7 +102,15 @@ def Rng.addr (g : Rng) (i : Nat) (avoid : List Reg) :
 
 def aluAll : List Alu := [.add, .or, .and, .sub, .xor, .cmp, .test]
 def aluImm : List Alu := [.add, .or, .and, .sub, .xor, .cmp]
-def conds : List Cond := [.z, .nz, .s, .l, .b]
+def conds : List Cond := [.z, .nz, .s, .l, .b, .p, .np]
+
+/-- Normalize only NaN payloads before the test snapshot. Real arithmetic executes
+    first; the model and CPU then expose the same chosen NaN representation. -/
+def fpSnapshot (format : FPFormat) : List Ins :=
+  (match format with
+    | .f32 => [.movi .r10 0x7FC00000]
+    | .f64 => [.movi .r10 0x7FF80000, .movi .rcx 32, .shl .r10]) ++
+  [.ucomis format .xmm0 .xmm0, .movFromXmm format .rax .xmm0, .cmov .p .rax .r10]
 
 /-- The instruction of a case of kind `k`, with the registers its memory operand fixes. `base` is excluded. -/
 def Rng.ins (g : Rng) (k : Nat) (i : Nat) (base : Reg) : List Ins × List (Reg × W) × Rng :=
@@ -116,13 +139,54 @@ def Rng.ins (g : Rng) (k : Nat) (i : Nat) (base : Reg) : List Ins × List (Reg �
   | 15 => let (c, g) := g.below conds.length; ([.set (conds.getD c .z) d], [], g)
   | 16 => let (c, g) := g.below conds.length; ([.jcc (conds.getD c .z) 7, .movi .rcx 0x1234], [], g)
   | 17 => ([.jmp 7, .movi .rcx 0x1234], [], g)
+  | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 =>
+    let format := if k % 2 = 0 then FPFormat.f32 else .f64
+    let kind := match (k - 20) / 2 with | 0 => FPArith.add | 1 => .sub | 2 => .mul | _ => .div
+    let (a, g) := g.fpWord format
+    let (b, g) := g.fpWord format
+    ([.movToXmm format .xmm0 d, .movToXmm format .xmm1 s, .scalar kind format .xmm0 .xmm1] ++
+      fpSnapshot format, [(d, a), (s, b)], g)
+  | 28 =>
+    let (wide, g) := g.below 2
+    let format := if wide = 0 then FPFormat.f32 else .f64
+    let (p, g) := g.below 3
+    let pred := match p with | 0 => FPCompare.eq | 1 => .lt | _ => .le
+    let (a, g) := g.fpWord format
+    let (b, g) := g.fpWord format
+    ([.movToXmm format .xmm0 d, .movToXmm format .xmm1 s,
+      .compareScalar pred format .xmm0 .xmm1, .movFromXmm format .rax .xmm0], [(d, a), (s, b)], g)
+  | 29 =>
+    let (wide, g) := g.below 2
+    let format := if wide = 0 then FPFormat.f32 else .f64
+    ([.fromIntScalar format .xmm0 d] ++ fpSnapshot format, [], g)
+  | 30 =>
+    let (a, g) := g.fpWord .f32
+    ([.movToXmm .f32 .xmm1 d, .widenScalar .xmm0 .xmm1] ++ fpSnapshot .f64, [(d, a)], g)
+  | 31 =>
+    let (a, g) := g.fpWord .f64
+    ([.movToXmm .f64 .xmm1 d, .narrowScalar .xmm0 .xmm1] ++ fpSnapshot .f32, [(d, a)], g)
+  | 32 =>
+    let (wide, g) := g.below 2
+    let format := if wide = 0 then FPFormat.f32 else .f64
+    let (a, g) := g.fpWord format
+    let (b, g) := g.fpWord format
+    ([.movToXmm format .xmm0 d, .movToXmm format .xmm1 s, .ucomis format .xmm0 .xmm1], [(d, a), (s, b)], g)
+  | 33 =>
+    let (wide, g) := g.below 2
+    let format := if wide = 0 then FPFormat.f32 else .f64
+    let (a, g) := g.fpWord format
+    ([.movToXmm format .xmm0 d, .truncateScalar format .rax .xmm0], [(d, a)], g)
+  | 34 =>
+    ([.movToXmm .f64 .xmm0 d, .movToXmm .f64 .xmm1 s, .pxor .xmm0 .xmm1,
+      .movFromXmm .f64 .rax .xmm0], [], g)
+  | 35 => ([.movToXmm .f64 .xmm0 d, .movFromXmm .f64 .rax .xmm0], [], g)
   | _ => let (m, fix, g) := g.addr i (s :: .rax :: av); ([.cmpxchg m s], fix, g)
 
-def KINDS : Nat := 20
+def KINDS : Nat := 36
 
 /-! ## The model's answer -/
 
-def flagBits : List Nat := [0, 6, 7, 11]
+def flagBits : List Nat := [0, 2, 6, 7, 11]
 
 def bitOf (n b : Nat) : Bool := n / 2 ^ b % 2 = 1
 
@@ -137,7 +201,7 @@ def initX (i : Nat) (c : Case) : X :=
     r10 := c.regs .r10, r11 := c.regs .r11, r12 := c.regs .r12, r13 := c.regs .r13, r14 := c.regs .r14,
     r15 := c.regs .r15, rip := 0x1000,
     cf := some (bitOf c.flags 0), zf := some (bitOf c.flags 6), sf := some (bitOf c.flags 7),
-    of := some (bitOf c.flags 11) }
+    of := some (bitOf c.flags 11), pf := some (bitOf c.flags 2), mxcsr := 0x1F80 }
 
 /-- The answer of the one memory `m` to a data request. -/
 def memAns (m : Mem) : Op → Option (Ans × Mem)
@@ -175,7 +239,7 @@ def runCase : List Ins → X → Mem → Option (X × Mem)
     | none => none
 
 def flagsOut (x : X) : Nat × Nat :=
-  let fs := [(0, x.cf), (6, x.zf), (7, x.sf), (11, x.of)]
+  let fs := [(0, x.cf), (2, x.pf), (6, x.zf), (7, x.sf), (11, x.of)]
   fs.foldl (fun (v, m) (b, f) => match f with
     | some t => (v + (if t then 2 ^ b else 0), m + 2 ^ b)
     | none => (v, m)) (0, 0)
@@ -189,12 +253,15 @@ def popRax : List B := raw [0x58]
 def pushfq : List B := raw [0x9C]
 def popfq : List B := raw [0x9D]
 
+def withFPControl (block : List B) : List B := pad block 400 ++ leN 4 0x1F80
+
 def caseCode (i : Nat) (base : Reg) (c : Case) : List B :=
   let b := caseBase i
   let ld := fun (r : Reg) => enc (.ld r { base := base, disp := BitVec.ofNat 32 (8 * r.num) })
   let st := fun (r : Reg) => enc (.st { base := base, disp := BitVec.ofNat 32 (OUT + 8 * r.num) } r)
   let live := regs.filter fun r => r != .rsp && r != base
   enc (.movi base (BitVec.ofNat 32 b)) ++ enc (.ld .rax { base := base, disp := 128 }) ++ pushRax ++ popfq ++
+  enc (.ldmxcsr { base := base, disp := 400 }) ++
   live.flatMap ld ++ c.ins.flatMap enc ++ live.flatMap st ++
   pushfq ++ popRax ++ enc (.st { base := base, disp := BitVec.ofNat 32 (OUT + 128) } .rax)
 
@@ -275,13 +342,13 @@ partial def gen (n : Nat) : List B × List B × List (Nat × Nat) := Id.run do
     match runCase c.ins (initX i c) (dataMem i c.data) with
     | none => pure ()   -- the model faults (idiv): no case
     | some (y, ym) =>
-      let blockIn : List B := (regs.map fun r => if r == .rsp then 0 else c.regs r).flatMap leW ++
-        leN 8 c.flags ++ c.data.toList
+      let blockIn : List B := withFPControl ((regs.map fun r => if r == .rsp then 0 else c.regs r).flatMap leW ++
+        leN 8 c.flags ++ c.data.toList)
       let live := regs.filter fun r => r != .rsp && r != base
       let (fv, fm) := flagsOut y
       let dataOut := (List.range 256).map fun j => ym.b (BitVec.ofNat 64 (caseDat i + j))
       let outRegs := regs.flatMap fun r => if live.contains r then leW (y.get r) else leN 8 0
-      let blk := pad (blockIn.take 136 ++ dataOut) OUT ++ outRegs ++ leN 8 fv
+      let blk := pad (withFPControl (blockIn.take 136 ++ dataOut)) OUT ++ outRegs ++ leN 8 fv
       code := caseCode i base c :: code
       input := pad blockIn BLOCK :: input
       expect := pad blk BLOCK :: expect

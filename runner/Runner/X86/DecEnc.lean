@@ -15,6 +15,13 @@ theorem byte_toNat (n : Nat) : (byte n).toNat = n % 256 := by simp [byte]
 
 theorem Reg.ofNum_num (r : Reg) : Reg.ofNum r.num = r := by cases r <;> rfl
 
+theorem Xmm.ofNum_num (r : Xmm) : Xmm.ofNum r.num = r := by cases r <;> rfl
+
+theorem Xmm.num_lt (r : Xmm) : r.num < 16 := by cases r <;> decide
+
+theorem Xmm.ofNum_eq {n : Nat} {r : Xmm} (h : n = r.num) : Xmm.ofNum n = r := by
+  rw [h, Xmm.ofNum_num]
+
 theorem Reg.num_lt (r : Reg) : r.num < 16 := by cases r <;> decide
 
 theorem Reg.ofNum_eq {n : Nat} {r : Reg} (h : n = r.num) : Reg.ofNum n = r := by
@@ -33,14 +40,18 @@ theorem le32_val (v : BitVec 32) :
 
 /-- Unfold encoder and decoder, decide every branch condition by `omega`, match the fields. -/
 macro "dec_enc" : tactic => `(tactic| (
-  simp [enc, memEnc, regEnc, le32, rex, modrm, decode, decRex, decW, decW0F, opd, bt, imm32, byte_toNat,
-    Alu.opc, Alu.ext, Cond.cc, Alu.ofOpc, Alu.ofExt, Cond.ofCc, List.getElem?_cons] <;>
+  simp [enc, memEnc, regEnc, le32, rex, modrm, decode, decRex, decW, decW0F, decSSE, opd, bt, imm32, byte_toNat,
+    Alu.opc, Alu.ext, Cond.cc, Alu.ofOpc, Alu.ofExt, Cond.ofCc, FPFormat.prefix, FPFormat.rexWidth,
+    FPArith.opc, FPArith.ofOpc, FPCompare.imm, FPCompare.ofImm, List.getElem?_cons] <;>
   simp (disch := omega) only [ite_eq_left, ite_eq_right, ↓reduceIte, Option.getD_some, Option.map_some,
     byte_toNat, le32_val, Option.some.injEq, Prod.mk.injEq,
     Ins.ld.injEq, Ins.st.injEq, Ins.mov.injEq, Ins.movi.injEq, Ins.ldsx.injEq, Ins.ldzx.injEq, Ins.zx8.injEq,
     Ins.lea.injEq, Ins.alu.injEq, Ins.alui.injEq, Ins.imul.injEq, Ins.idiv.injEq, Ins.udiv.injEq, Ins.shl.injEq, Ins.shr.injEq,
-    Ins.set.injEq, Ins.jmp.injEq, Ins.jcc.injEq, Ins.jmpm.injEq, Ins.cmpxchg.injEq, Addr.mk.injEq] <;>
-  and_intros <;> first | exact Reg.ofNum_eq (by omega) | omega | trivial | rfl))
+    Ins.set.injEq, Ins.jmp.injEq, Ins.jcc.injEq, Ins.jmpm.injEq, Ins.cmpxchg.injEq,
+    Ins.movToXmm.injEq, Ins.movFromXmm.injEq, Ins.scalar.injEq, Ins.compareScalar.injEq,
+    Ins.fromIntScalar.injEq, Ins.widenScalar.injEq, Ins.narrowScalar.injEq, Ins.pxor.injEq,
+    Ins.ldmxcsr.injEq, Ins.ucomis.injEq, Ins.truncateScalar.injEq, Ins.cmov.injEq, Addr.mk.injEq] <;>
+  and_intros <;> first | exact Reg.ofNum_eq (by omega) | exact Xmm.ofNum_eq (by omega) | omega | trivial | rfl))
 
 set_option maxHeartbeats 2000000 in
 theorem decode_enc (i : Ins) (h : i.ok = true) (rest : List B) :
@@ -54,7 +65,7 @@ theorem decode_enc (i : Ins) (h : i.ok = true) (rest : List B) :
     · have := Reg.num_lt x
       have := Reg.num_ne_four h.2
       dec_enc
-  | jmpm m =>
+  | jmpm m | ldmxcsr m =>
     rcases m with ⟨b, _ | x, sc, disp⟩ <;> have := Reg.num_lt b <;>
       simp [Ins.ok, Addr.ok] at h
     · dec_enc
@@ -80,5 +91,33 @@ theorem decode_enc (i : Ins) (h : i.ok = true) (rest : List B) :
     cases c <;> dec_enc
   | jcc c v => cases c <;> dec_enc
   | jmp v | cqo | syscall | ud2 => dec_enc
+  | movToXmm format d s | fromIntScalar format d s =>
+    have := Xmm.num_lt d
+    have := Reg.num_lt s
+    cases format <;> dec_enc
+  | movFromXmm format d s | truncateScalar format d s =>
+    have := Reg.num_lt d
+    have := Xmm.num_lt s
+    cases format <;> dec_enc
+  | scalar kind format d s =>
+    have := Xmm.num_lt d
+    have := Xmm.num_lt s
+    cases kind <;> cases format <;> dec_enc
+  | compareScalar pred format d s =>
+    have := Xmm.num_lt d
+    have := Xmm.num_lt s
+    cases pred <;> cases format <;> dec_enc
+  | widenScalar d s | narrowScalar d s | pxor d s =>
+    have := Xmm.num_lt d
+    have := Xmm.num_lt s
+    dec_enc
+  | ucomis format d s =>
+    have := Xmm.num_lt d
+    have := Xmm.num_lt s
+    cases format <;> dec_enc
+  | cmov c d s =>
+    have := Reg.num_lt d
+    have := Reg.num_lt s
+    cases c <;> dec_enc
 
 end Runner.X86

@@ -73,9 +73,15 @@ def Corr (y0 : X) : Res IR.T → Res X → Prop
 /-- After an answer, an instruction is done: it never asks twice. -/
 theorem exec_once (i : Ins) (n : Nat) (x : X) {o : Op} {k : Ans → Res X} (h : exec i n x = .ask o k) (a : Ans) :
     k a = .fault ∨ ∃ y, k a = .next y := by
-  cases i <;> simp only [exec, rd64, rd32, rd8, wr64, cas] at h
+  cases i <;> simp only [exec, rd64, rd32, rd8, wr64, cas, Runner.fp] at h
   all_goals first
-    | (cases h; cases a <;> simp)
+    | (cases h; cases a <;> simp only [opt] <;> first
+        | exact Or.inl rfl
+        | exact Or.inr ⟨_, rfl⟩
+        | (split <;> first | exact Or.inl rfl | exact Or.inr ⟨_, rfl⟩))
+    | (split at h <;> cases h <;> cases a <;> simp only [opt] <;> first
+        | exact Or.inl rfl
+        | exact Or.inr ⟨_, rfl⟩)
     | (split at h <;> cases h)
     | (split at h; cases h; split at h <;> cases h)
     | (simp only [opt] at h; split at h <;> cases h)

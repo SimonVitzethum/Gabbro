@@ -1,5 +1,5 @@
 module
-public import Runner.Basis.Res
+public import Runner.X86.Floating
 @[expose] public section
 
 
@@ -40,6 +40,7 @@ inductive Alu
 /-- Conditions: `z`/`nz` read ZF, `s` reads SF, `l` reads SF and OF, `b` reads CF. -/
 inductive Cond
   | z | nz | s | l | b
+  | p | np
   deriving DecidableEq, Repr
 
 inductive Ins
@@ -66,6 +67,18 @@ inductive Ins
   | cmpxchg (m : Addr) (s : Reg)         -- lock cmpxchg [m], r64
   | syscall
   | ud2
+  | movToXmm (format : FPFormat) (d : Xmm) (s : Reg) -- MOVD/MOVQ xmm, r32/r64
+  | movFromXmm (format : FPFormat) (d : Reg) (s : Xmm) -- MOVD/MOVQ r32/r64, xmm
+  | scalar (kind : FPArith) (format : FPFormat) (d s : Xmm) -- ADD/SUB/MUL/DIV SS/SD
+  | compareScalar (pred : FPCompare) (format : FPFormat) (d s : Xmm) -- CMPSS/CMPSD
+  | fromIntScalar (format : FPFormat) (d : Xmm) (s : Reg) -- CVTSI2SS/CVTSI2SD r64
+  | widenScalar (d s : Xmm)              -- CVTSS2SD
+  | narrowScalar (d s : Xmm)             -- CVTSD2SS
+  | pxor (d s : Xmm)                    -- PXOR xmm, xmm
+  | ldmxcsr (m : Addr)                  -- LDMXCSR m32
+  | ucomis (format : FPFormat) (d s : Xmm) -- UCOMISS/UCOMISD
+  | truncateScalar (format : FPFormat) (d : Reg) (s : Xmm) -- CVTTSS2SI/CVTTSD2SI r64
+  | cmov (c : Cond) (d s : Reg)          -- CMOVcc r64, r64
   deriving DecidableEq, Repr
 
 end Runner.X86

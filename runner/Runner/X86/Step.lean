@@ -43,8 +43,30 @@ structure X where
   zf : Option Bool
   sf : Option Bool
   of : Option Bool
+  xmm : Xmm → BitVec 128 := fun _ => 0
+  mxcsr : BitVec 32 := 0
+  pf : Option Bool := none
 
 namespace X
+
+/-- Only control bits are observed: status flags 0--5 may differ on real CPUs. -/
+def fpReady (x : X) : Bool := (x.mxcsr &&& 0xFFC0) == 0x1F80
+
+def xmmWord (x : X) (format : FPFormat) (r : Xmm) : W :=
+  match format with
+  | .f32 => ((x.xmm r).setWidth 32).setWidth 64
+  | .f64 => (x.xmm r).setWidth 64
+
+def setXmm (x : X) (r : Xmm) (value : BitVec 128) : X :=
+  { x with xmm := fun s => if s = r then value else x.xmm s }
+
+/-- Legacy scalar SSE preserves the destination's upper lanes. -/
+def setScalar (x : X) (format : FPFormat) (r : Xmm) (value : W) : X :=
+  match format with
+  | .f32 => x.setXmm r ((x.xmm r &&& ~~~(BitVec.ofNat 128 0xFFFFFFFF)) |||
+      (value.setWidth 32).setWidth 128)
+  | .f64 => x.setXmm r ((x.xmm r &&& ~~~(BitVec.ofNat 128 0xFFFFFFFFFFFFFFFF)) |||
+      value.setWidth 128)
 
 def get (x : X) : Reg → W
   | .rax => x.rax | .rcx => x.rcx | .rdx => x.rdx | .rbx => x.rbx
@@ -63,12 +85,17 @@ def set (x : X) : Reg → W → X
   | .r14, v => { x with r14 := v } | .r15, v => { x with r15 := v }
 
 /-- All four flags unknown. -/
-def nof (x : X) : X := { x with cf := none, zf := none, sf := none, of := none }
+def nof (x : X) : X := { x with cf := none, zf := none, sf := none, of := none, pf := none }
+
+/-- Even parity of the low byte, as observed by PF. -/
+def parity8 (value : W) : Bool :=
+  (List.range 8).foldl (fun even bit => even != value.getLsbD bit) true
 
 /-- The flags of `cmp a, b` (`a - b`). -/
 def cmpf (x : X) (a b : W) : X :=
   { x with cf := some (a.ult b), zf := some (a - b == 0), sf := some (a - b).msb,
-           of := some ((a.msb != b.msb) && ((a - b).msb != a.msb)) }
+           of := some ((a.msb != b.msb) && ((a - b).msb != a.msb)),
+           pf := some (parity8 (a - b)) }
 
 end X
 
@@ -85,6 +112,8 @@ def Cond.eval (x : X) : Cond → Option Bool
   | .z => x.zf
   | .nz => x.zf.map (!·)
   | .s => x.sf
+  | .p => x.pf
+  | .np => x.pf.map (!·)
   | .l => match x.sf, x.of with
     | some sg, some ov => some (sg != ov)
     | _, _ => none
@@ -98,7 +127,8 @@ def aluStep (x : X) (o : Alu) (d : Reg) (b : W) : X :=
   let a := x.get d
   match o with
   | .cmp => x.cmpf a b
-  | .test => { x with cf := some false, of := some false, zf := some (a &&& b == 0), sf := some (a &&& b).msb }
+  | .test => { x with cf := some false, of := some false, zf := some (a &&& b == 0), sf := some (a &&& b).msb,
+      pf := some (X.parity8 (a &&& b)) }
   | o => (x.set d (aluOp o a b)).nof
 
 /-- Unsigned 128-bit dividend division, including architectural #DE conditions. -/
@@ -154,6 +184,52 @@ def exec (i : Ins) (n : Nat) (x : X) : Res X :=
     .ask (.sys ⟨x.rax, x.rdi, x.rsi, x.rdx, x.r10, x.r8, x.r9⟩) fun r => opt r fun p =>
       .next { y.nof with rax := p.1, rcx := nx, r11 := p.2 }
   | .ud2 => .fault
+  | .movToXmm format d s =>
+    let value := match format with
+      | .f32 => ((x.get s).setWidth 32).setWidth 128
+      | .f64 => (x.get s).setWidth 128
+    .next (y.setXmm d value)
+  | .movFromXmm format d s => .next (y.set d (x.xmmWord format s))
+  | .scalar kind format d s =>
+    if x.fpReady then
+      Runner.fp (kind.native format) (x.xmmWord format d) (x.xmmWord format s) fun value =>
+        .next (y.setScalar format d value)
+    else .unk
+  | .compareScalar pred format d s =>
+    if x.fpReady then
+      Runner.fp (pred.native format) (x.xmmWord format d) (x.xmmWord format s) fun value =>
+        .next (y.setScalar format d (if value = 0 then 0 else BitVec.allOnes 64))
+    else .unk
+  | .fromIntScalar format d s =>
+    if x.fpReady then
+      Runner.fp (.fromInt64 format) (x.get s) 0 fun value => .next (y.setScalar format d value)
+    else .unk
+  | .widenScalar d s =>
+    if x.fpReady then
+      Runner.fp .widen32 (x.xmmWord .f32 s) 0 fun value => .next (y.setScalar .f64 d value)
+    else .unk
+  | .narrowScalar d s =>
+    if x.fpReady then
+      Runner.fp .narrow32 (x.xmmWord .f64 s) 0 fun value => .next (y.setScalar .f32 d value)
+    else .unk
+  | .pxor d s => .next (y.setXmm d (x.xmm d ^^^ x.xmm s))
+  | .ldmxcsr m =>
+    rd32 (ea x m) fun value =>
+      if value.toNat < 65536 then .next { y with mxcsr := value } else .fault
+  | .ucomis format d s =>
+    if x.fpReady then
+      Runner.fp (.compare format) (x.xmmWord format d) (x.xmmWord format s) fun flags =>
+        .next { y with cf := some (flags.getLsbD 0), pf := some (flags.getLsbD 2),
+          zf := some (flags.getLsbD 6), sf := some false, of := some false }
+    else .unk
+  | .truncateScalar format d s =>
+    if x.fpReady then
+      Runner.fp (.truncateInt64 format) (x.xmmWord format s) 0 fun value => .next (y.set d value)
+    else .unk
+  | .cmov c d s =>
+    match Cond.eval x c with
+    | none => .unk
+    | some enabled => .next (if enabled then y.set d (x.get s) else y)
 
 /-- The 15 bytes at `a` of the code `C` (the longest x86 instruction). -/
 def fetch (C : W → B) (a : W) : List B :=

@@ -41,6 +41,13 @@ def Alu.ext : Alu → Nat
 
 def Cond.cc : Cond → Nat
   | .z => 4 | .nz => 5 | .s => 8 | .l => 12 | .b => 2
+  | .p => 10 | .np => 11
+
+def _root_.Runner.FPFormat.prefix : FPFormat → B
+  | .f32 => byte 0xF3 | .f64 => byte 0xF2
+
+def _root_.Runner.FPFormat.rexWidth : FPFormat → Nat
+  | .f32 => 0 | .f64 => 1
 
 def enc : Ins → List B
   | .ld d m => memEnc 1 [byte 0x8B] d.num m
@@ -66,6 +73,20 @@ def enc : Ins → List B
   | .cmpxchg m s => [byte 0xF0] ++ memEnc 1 [byte 0x0F, byte 0xB1] s.num m
   | .syscall => [byte 0x0F, byte 0x05]
   | .ud2 => [byte 0x0F, byte 0x0B]
+  | .movToXmm format d s => [byte 0x66] ++ regEnc format.rexWidth [byte 0x0F, byte 0x6E] d.num s.num
+  | .movFromXmm format d s => [byte 0x66] ++ regEnc format.rexWidth [byte 0x0F, byte 0x7E] s.num d.num
+  | .scalar kind format d s => [format.prefix] ++ regEnc 0 [byte 0x0F, byte kind.opc] d.num s.num
+  | .compareScalar pred format d s =>
+    [format.prefix] ++ regEnc 0 [byte 0x0F, byte 0xC2] d.num s.num ++ [byte pred.imm]
+  | .fromIntScalar format d s => [format.prefix] ++ regEnc 1 [byte 0x0F, byte 0x2A] d.num s.num
+  | .widenScalar d s => [byte 0xF3] ++ regEnc 0 [byte 0x0F, byte 0x5A] d.num s.num
+  | .narrowScalar d s => [byte 0xF2] ++ regEnc 0 [byte 0x0F, byte 0x5A] d.num s.num
+  | .pxor d s => [byte 0x66] ++ regEnc 0 [byte 0x0F, byte 0xEF] d.num s.num
+  | .ldmxcsr m => memEnc 0 [byte 0x0F, byte 0xAE] 2 m
+  | .ucomis .f32 d s => regEnc 0 [byte 0x0F, byte 0x2E] d.num s.num
+  | .ucomis .f64 d s => [byte 0x66] ++ regEnc 0 [byte 0x0F, byte 0x2E] d.num s.num
+  | .truncateScalar format d s => [format.prefix] ++ regEnc 1 [byte 0x0F, byte 0x2C] d.num s.num
+  | .cmov c d s => regEnc 1 [byte 0x0F, byte (0x40 + c.cc)] d.num s.num
 
 end Runner.X86
 
@@ -75,7 +96,7 @@ namespace Runner.X86
 def Addr.ok (m : Addr) : Bool := m.sc < 4 && m.idx != some .rsp
 
 def Ins.ok : Ins → Bool
-  | .ld _ m | .st m _ | .ldsx _ m | .ldzx _ m | .lea _ m | .jmpm m | .cmpxchg m _ => m.ok
+  | .ld _ m | .st m _ | .ldsx _ m | .ldzx _ m | .lea _ m | .jmpm m | .cmpxchg m _ | .ldmxcsr m => m.ok
   | .alui o _ _ => o != .test
   | _ => true
 

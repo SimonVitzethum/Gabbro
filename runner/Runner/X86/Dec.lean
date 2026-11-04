@@ -27,7 +27,8 @@ def Alu.ofExt (n : Nat) : Option Alu :=
   else if n = 5 then some .sub else if n = 6 then some .xor else if n = 7 then some .cmp else none
 
 def Cond.ofCc : Nat → Option Cond
-  | 4 => some .z | 5 => some .nz | 8 => some .s | 12 => some .l | 2 => some .b | _ => none
+  | 4 => some .z | 5 => some .nz | 8 => some .s | 12 => some .l | 2 => some .b
+  | 10 => some .p | 11 => some .np | _ => none
 
 /-- The operand of the ModRM byte at `p` under REX bits `r x b`: a register (`mod=11`, length 1) or a SIB memory
     operand (`mod=10 rm=100`, length 6); `g` is the reg field with REX.R. -/
@@ -75,7 +76,9 @@ def decW0F (l : List B) (o r x b : Nat) : Option (Ins × Nat) :=
   | some (.mem g m, n) => if o = 0xB6 then some (.ldzx (Reg.ofNum g) m, n) else none
   | some (.reg g rm, n) =>
     if o = 0xB6 then some (.zx8 (Reg.ofNum g) (Reg.ofNum rm), n)
-    else if o = 0xAF then some (.imul (Reg.ofNum g) (Reg.ofNum rm), n) else none
+    else if o = 0xAF then some (.imul (Reg.ofNum g) (Reg.ofNum rm), n)
+    else if o / 16 = 4 then (Cond.ofCc (o % 16)).map fun c => (.cmov c (Reg.ofNum g) (Reg.ofNum rm), n)
+    else none
   | none => none
 
 /-- An instruction that starts with a REX prefix. -/
@@ -98,11 +101,53 @@ def decRex (l : List B) : Option (Ins × Nat) :=
     match opd l 3 r x b, Cond.ofCc (bt l 2 % 16) with
     | some (.reg g rm, n), some c => if g % 8 = 0 then some (.set c (Reg.ofNum rm), n) else none
     | _, _ => none
+  else if o = 0x0F ∧ bt l 2 = 0xAE then
+    match opd l 3 r x b with
+    | some (.mem g m, n) => if g = 2 then some (.ldmxcsr m, n) else none
+    | _ => none
+  else if o = 0x0F ∧ bt l 2 = 0x2E then
+    match opd l 3 r x b with
+    | some (.reg g rm, n) => some (.ucomis .f32 (Xmm.ofNum g) (Xmm.ofNum rm), n)
+    | _ => none
   else none
+
+/-- Legacy mandatory prefix, REX, 0F, opcode and register ModRM. Each result
+    denotes exactly one hardware instruction, including its immediate if any. -/
+def decSSE (l : List B) : Option (Ins × Nat) :=
+  let p := bt l 0
+  let rx := bt l 1
+  if rx / 16 != 4 ∨ bt l 2 != 0x0F then none else
+  let w := rx / 8 % 2
+  let r := rx / 4 % 2
+  let x := rx / 2 % 2
+  let b := rx % 2
+  let o := bt l 3
+  match opd l 4 r x b with
+  | some (.reg g rm, n) =>
+    if p = 0x66 then
+      if o = 0x6E then some (.movToXmm (if w = 1 then .f64 else .f32) (Xmm.ofNum g) (Reg.ofNum rm), n)
+      else if o = 0x7E then some (.movFromXmm (if w = 1 then .f64 else .f32) (Reg.ofNum rm) (Xmm.ofNum g), n)
+      else if o = 0xEF ∧ w = 0 then some (.pxor (Xmm.ofNum g) (Xmm.ofNum rm), n)
+      else if o = 0x2E ∧ w = 0 then some (.ucomis .f64 (Xmm.ofNum g) (Xmm.ofNum rm), n)
+      else none
+    else if p = 0xF3 ∨ p = 0xF2 then
+      let format := if p = 0xF3 then FPFormat.f32 else .f64
+      if o = 0x2A ∧ w = 1 then some (.fromIntScalar format (Xmm.ofNum g) (Reg.ofNum rm), n)
+      else if o = 0x2C ∧ w = 1 then some (.truncateScalar format (Reg.ofNum g) (Xmm.ofNum rm), n)
+      else if w != 0 then none
+      else if o = 0x5A then
+        some ((if p = 0xF3 then .widenScalar else .narrowScalar) (Xmm.ofNum g) (Xmm.ofNum rm), n)
+      else if o = 0xC2 then
+        (FPCompare.ofImm (bt l n)).map fun pred =>
+          (.compareScalar pred format (Xmm.ofNum g) (Xmm.ofNum rm), n + 1)
+      else (FPArith.ofOpc o).map fun kind => (.scalar kind format (Xmm.ofNum g) (Xmm.ofNum rm), n)
+    else none
+  | _ => none
 
 def decode (l : List B) : Option (Ins × Nat) :=
   let b0 := bt l 0
-  if b0 = 0x0F then
+  if b0 = 0x66 ∨ b0 = 0xF2 ∨ b0 = 0xF3 then decSSE l
+  else if b0 = 0x0F then
     let b1 := bt l 1
     if b1 = 0x05 then some (.syscall, 2)
     else if b1 = 0x0B then some (.ud2, 2)

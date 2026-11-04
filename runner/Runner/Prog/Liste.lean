@@ -20,6 +20,19 @@ def _root_.Runner.X86.Reg.low : Reg → String
   | .rax => "al" | .rcx => "cl" | .rdx => "dl" | .rbx => "bl" | .rsp => "spl" | .rbp => "bpl"
   | .rsi => "sil" | .rdi => "dil" | r => r.name ++ "b"
 
+def _root_.Runner.X86.Reg.dword : Reg → String
+  | .rax => "eax" | .rcx => "ecx" | .rdx => "edx" | .rbx => "ebx"
+  | .rsp => "esp" | .rbp => "ebp" | .rsi => "esi" | .rdi => "edi"
+  | r => r.name ++ "d"
+
+def _root_.Runner.X86.Xmm.name (r : Xmm) : String := "xmm" ++ toString r.num
+
+def _root_.Runner.FPFormat.suffix : FPFormat → String
+  | .f32 => "ss" | .f64 => "sd"
+
+def _root_.Runner.X86.FPArith.name : FPArith → String
+  | .add => "add" | .sub => "sub" | .mul => "mul" | .div => "div"
+
 def hex (n : Nat) : String := "0x" ++ String.ofList (Nat.toDigits 16 n)
 
 def simm (v : BitVec 32) : String :=
@@ -37,6 +50,7 @@ def _root_.Runner.X86.Alu.name : Alu → String
 
 def _root_.Runner.X86.Cond.name : Cond → String
   | .z => "e" | .nz => "ne" | .s => "s" | .l => "l" | .b => "b"
+  | .p => "p" | .np => "np"
 
 /-- One instruction at address `a` (jump targets as absolute addresses). -/
 def _root_.Runner.X86.Ins.show (a : Nat) : Ins → String
@@ -63,6 +77,20 @@ def _root_.Runner.X86.Ins.show (a : Nat) : Ins → String
   | .cmpxchg m s => s!"lock cmpxchg qword ptr {m.show}, {s.name}"
   | .syscall => "syscall"
   | .ud2 => "ud2"
+  | .movToXmm .f32 d s => s!"movd {d.name}, {s.dword}"
+  | .movToXmm .f64 d s => s!"movq {d.name}, {s.name}"
+  | .movFromXmm .f32 d s => s!"movd {d.dword}, {s.name}"
+  | .movFromXmm .f64 d s => s!"movq {d.name}, {s.name}"
+  | .scalar kind format d s => s!"{kind.name}{format.suffix} {d.name}, {s.name}"
+  | .compareScalar pred format d s => s!"cmp{format.suffix} {d.name}, {s.name}, {pred.imm}"
+  | .fromIntScalar format d s => s!"cvtsi2{format.suffix} {d.name}, {s.name}"
+  | .widenScalar d s => s!"cvtss2sd {d.name}, {s.name}"
+  | .narrowScalar d s => s!"cvtsd2ss {d.name}, {s.name}"
+  | .pxor d s => s!"pxor {d.name}, {s.name}"
+  | .ldmxcsr m => s!"ldmxcsr dword ptr {m.show}"
+  | .ucomis format d s => s!"ucomi{format.suffix} {d.name}, {s.name}"
+  | .truncateScalar format d s => s!"cvtt{format.suffix}2si {d.name}, {s.name}"
+  | .cmov c d s => s!"cmov{c.name} {d.name}, {s.name}"
 
 def opName : Nat → String
   | 1 => "const d k" | 2 => "mov d a" | 3 => "add d a b" | 4 => "sub d a b" | 5 => "mul d a b"
