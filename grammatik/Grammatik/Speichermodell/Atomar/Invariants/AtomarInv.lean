@@ -304,7 +304,7 @@ theorem invLogA_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (
         (fun i hi hs => inv_stabilX (hFS _) hTV hperm hi hs) ?_
       intro O' calls U A σ
       obtain h | ⟨rest, h⟩ | ⟨Λ', rest, k, h⟩ := GRest.scopedWert_faelle hret <;> subst r
-      · simp only [semHA, execEndHA, hempty, scopesInvH, List.all_nil,
+      · simp only [semHA, weiterHA, execEndHA, hempty, scopesInvH, List.all_nil,
           ite_true, List.foldl_nil, laufA, zErgG]
         exact ZErgG.gleich_refl _
       · rw [semHA_ende_cons]
