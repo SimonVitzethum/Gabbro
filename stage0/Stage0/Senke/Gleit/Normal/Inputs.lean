@@ -46,11 +46,14 @@ theorem SoftFloatKernel.emit_ok (kind : SoftFloatKernel)
       (BitVec.ofNat 64 (zuBits f64 (kind.apply a b))) := by
   intro fp K d c top emitted fits m pc pre
   cases kind with
-  | add => exact softAddRoutineL_ok a b ha hb hl hr
+  | add =>
+    exact softAddRoutineL_ok a b ha hb hl hr
       (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
-  | mul => exact softMulRoutineL_ok a b ha hb hl hr
+  | mul =>
+    exact softMulRoutineL_ok a b ha hb hl hr
       (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
-  | div => exact softDivRoutineL_ok a b ha hb hl hr
+  | div =>
+    exact softDivRoutineL_ok a b ha hb hl hr
       (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
 
 /-- Two retained operands precede all routine temporaries. The final copy
