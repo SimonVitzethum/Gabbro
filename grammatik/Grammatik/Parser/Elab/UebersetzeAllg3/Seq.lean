@@ -25,9 +25,9 @@ set_option maxRecDepth 100000
 def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe u caller) :
     (Γ : Ctx) → UFn → (Λ : List (Res (declOf u))) → AtTop u caller Λ → List UStmt →
     Except String ((Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u caller) l Γ Λ Λ') × List UStmt)
-  | _, _, _, _, [] => .ok (⟨_, Block.nil, []⟩)
-  | _, _, _, _, .blkEnd :: rest => .ok (⟨_, Block.nil, .blkEnd :: rest⟩)
-  | _, _, _, _, .ifElse :: rest => .ok (⟨_, Block.nil, .ifElse :: rest⟩)
+  | _, _, _, _, [] => .ok (⟨_, Block.nil⟩, [])
+  | _, _, _, _, .blkEnd :: rest => .ok (⟨_, Block.nil⟩, .blkEnd :: rest)
+  | _, _, _, _, .ifElse :: rest => .ok (⟨_, Block.nil⟩, .ifElse :: rest)
   | Γ, fn, Λ, pe, .breakingBeg name :: rest =>
     (R.struct Γ fn Λ pe (.breakingBeg name) rest).bind fun (⟨Λ₁, st⟩, rest') =>
       (R.seq Γ fn Λ₁ pe rest').bind fun (⟨Λ₂, b⟩, r) => .ok (⟨Λ₂, Block.cons st b⟩, r)
@@ -222,7 +222,7 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
                 .ok (⟨Λ', Block.floatNarrow (Expr.var v) (lo, 1) (hi, 1) sonst b⟩, r)
           | .ok (_, _) => .error "lower: a narrow is not closed"
       | _ => .error "lower: narrow of a non-number"
-  /-- Required narrowing (C15): no `else`, no `blkEnd`; out of range is
+  /- Required narrowing (C15): no `else`, no `blkEnd`; out of range is
       `Logik.kapazitaet` (`Block.narrowRequired`). -/
   | Γ, fn, Λ, pe, .narrowReqBeg x lo hi :: rest =>
     (paramPos fn.params x).bind fun j => match fn.params[j]? with
