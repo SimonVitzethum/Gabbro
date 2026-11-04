@@ -92,8 +92,10 @@ theorem softMulNormalizeIndexL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem �
       (softMulNormalizeIndexWord av) := by
   have index : WordCode (L := L) ρ W _ _ := WordCode.bin (routineIndexL_ok ha) (WordCode.const 64 (by decide))
     (g := fun x y => some (x + y)) rfl rfl (by decide : 3 < 256)
+  intro fp K d c top emitted fits m pc pre
   exact WordCode.bin index (softMulNormalizeCountL_word ha)
     (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
+    (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
 
 /-- The actual shift equals multiplication by the exact power of two;
     its count cannot wrap or shift past the machine-word boundary. -/
@@ -123,7 +125,15 @@ theorem softMulNormalizeWord_model (a : GFloat) (ha : wf f64 a)
     dsimp only [c, softMulNormalizeCount]
     omega
   obtain ⟨sig, index⟩ := routineSigIndex_canonical a ha
-  simp only [softMulNormalizeWord, softMulNormalizeIndexWord, sig, index, count]
+  simp only [softMulNormalizeWord, softMulNormalizeIndexWord, sig, index]
+  change
+    BitVec.ofNat 64 n <<<
+        ((routineLeadingZerosWord (BitVec.ofNat 64 n) - 11).toNat % 64) =
+      BitVec.ofNat 64 (n * 2 ^ c) ∧
+    BitVec.ofNat 64 (max a.bexp 1) + 64 -
+        (routineLeadingZerosWord (BitVec.ofNat 64 n) - 11) =
+      BitVec.ofNat 64 (max a.bexp 1 + 64 - c)
+  rw [count]
   constructor
   · apply BitVec.eq_of_toNat_eq
     simp only [BitVec.toNat_shiftLeft, BitVec.toNat_ofNat, Nat.mod_eq_of_lt c64,
