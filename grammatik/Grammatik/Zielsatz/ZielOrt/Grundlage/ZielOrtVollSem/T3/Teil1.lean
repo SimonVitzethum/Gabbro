@@ -131,8 +131,9 @@ theorem semV_locks {Λ Λ'' : List (Res D)} (L : D.Lock)
     (rest : Block D V l Γ Λ Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ) :
     semV O passes R (.dann (.cons (.locks L hr body) rest) k) σ ρ =
       semV O passes R (.dann body (.frei L (.dann rest k))) (σ.nimmt L) ρ := by
-  rw [semV_dann_cons]
-  rfl
+  rw [semV_dann_cons, semV_dann]
+  simp only [execStmt, weiterZ]
+  cases execBlock O passes R body (σ.nimmt L) ρ <;> rfl
 
 theorem semV_frei {Λ : List (Res D)} (L : D.Lock) (k : GRest D V l Γ Λ) (σ : World D)
     (ρ : Env D Γ) : semV O passes R (.frei L k) σ ρ = semV O passes R k (σ.gibt L) ρ := by rfl

@@ -35,7 +35,11 @@ def weiterZ : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l 
       | _ => .sonst
   | _, _, _, .dann b k, o => weiterZ k (laufA (fun σ ρ => execBlock O passes R b σ ρ) o)
   | _, _, _, .schrumpf k, o => weiterZ k o.schrumpf
-  | _, _, _, .frei L k, o => weiterZ k (o.mapWelt (·.gibt L))
+  | _, _, _, .frei L k, o =>
+      match o with
+      | .zurueck σ v => weiterZ k (.zurueck σ v)
+      | .why σ r => weiterZ k (.why σ r)
+      | outcome => weiterZ k (outcome.mapWelt (·.gibt L))
   | _, _, _, .trav _ inv body ks k, o =>
       weiterZ k (laufA (traverseLauf (fun σ ρ => execBlock O passes R body σ ρ) (leseB inv) ks) o)
   | _, _, _, .travRest _ inv body ks k, o =>
@@ -207,7 +211,7 @@ theorem weiterZ_grund : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest
   | _, _, _, .ende _, _, _ => rfl
   | _, _, _, .dann _ k, σ, r => weiterZ_grund k σ r
   | _, _, _, .schrumpf k, σ, r => weiterZ_grund k σ r
-  | _, _, _, .frei L k, σ, r => weiterZ_grund k (σ.gibt L) r
+  | _, _, _, .frei _ k, σ, r => weiterZ_grund k σ r
   | _, _, _, .trav _ _ _ _ k, σ, r => weiterZ_grund k σ r
   | _, _, _, .travRest _ _ _ _ k, σ, r => weiterZ_grund k σ r
   | _, _, _, .verbrauch _ _ _ _ _ _ _ _ k, σ, r => weiterZ_grund k σ r
@@ -254,8 +258,7 @@ theorem weiterZ_zurueck : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRe
   | _, _, _, .ende _, _, _ => ZErg.gleich_refl _
   | _, _, _, .dann _ k, σ, v => weiterZ_zurueck k σ v
   | _, _, _, .schrumpf k, σ, v => weiterZ_zurueck k σ v
-  | _, _, _, .frei L k, σ, v =>
-      ZErg.gleich_trans (weiterZ_zurueck k (σ.gibt L) v) ⟨sg_gibt σ L, rfl⟩
+  | _, _, _, .frei _ k, σ, v => weiterZ_zurueck k σ v
   | _, _, _, .trav _ _ _ _ k, σ, v => weiterZ_zurueck k σ v
   | _, _, _, .travRest _ _ _ _ k, σ, v => weiterZ_zurueck k σ v
   | _, _, _, .verbrauch _ _ _ _ _ _ _ _ k, σ, v => weiterZ_zurueck k σ v
