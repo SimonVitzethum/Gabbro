@@ -90,12 +90,15 @@ theorem m_5_0 (hh gg : Bool) (e : Einsatz) (h : e.Hat ⟨5, 0, true, [hh, gg]⟩
     ∃ m : Bool, e.Hat ⟨6, 0, true, [m, hh, gg]⟩ := by
   letI := e.aufz
   letI := e.zahlen
-  have h0 := mem_alleZellen_k (5 : Fin 10) rfl h
-  simp only [zellen, List.mem_map, Zelle.mk.injEq, List.cons.injEq] at h0
-  obtain ⟨w, hw, -, -, -, h1, h2, -⟩ := h0
+  have h0 : (⟨5, 0, true, [hh, gg]⟩ : Zelle) ∈ zellen e.P e.S e.fs e.ls e.cs e.ws 5 :=
+    mem_alleZellen_k (5 : Fin 10) rfl h
+  rw [zellen] at h0
+  obtain ⟨w, hw, equal⟩ := List.mem_map.mp h0
+  simp only [Zelle.mk.injEq, List.cons.injEq, true_and, and_true] at equal
+  obtain ⟨h1, h2⟩ := equal
   refine ⟨mehrfachB e.ws w, mem_alleZellen.2 ⟨6, ?_⟩⟩
-  simp only [zellen, List.mem_append, List.mem_map]
-  exact Or.inl ⟨w, hw, by rw [h1, h2]⟩
+  rw [zellen]
+  exact List.mem_append_left _ (List.mem_map.mpr ⟨w, hw, by rw [h1, h2]⟩)
 
 /-- The least of a list of ranks, folded as `Rumpf.bodenAbgeleitet` folds it, is at most each of them. -/
 theorem min_fold_le (rs : List Int) : ∀ (a : Option Int), (∀ c, a = some c → ∀ r ∈ rs, True) →
@@ -165,9 +168,13 @@ theorem u_3_0_10 (e : Einsatz) : ¬ e.Hat ⟨3, 0, true, [true, false]⟩ := by
   letI := e.aufz
   letI := e.zahlen
   intro h
-  have h0 := mem_alleZellen_k (3 : Fin 10) rfl h
-  simp only [zellen, List.mem_flatMap, List.mem_map, Zelle.mk.injEq, List.cons.injEq] at h0
-  obtain ⟨f, _, L, _, -, -, -, hn, hb, -⟩ := h0
+  have h0 : (⟨3, 0, true, [true, false]⟩ : Zelle) ∈ zellen e.P e.S e.fs e.ls e.cs e.ws 3 :=
+    mem_alleZellen_k (3 : Fin 10) rfl h
+  rw [zellen] at h0
+  obtain ⟨f, _, hf⟩ := List.mem_flatMap.mp h0
+  obtain ⟨L, _, equal⟩ := List.mem_map.mp hf
+  simp only [Zelle.mk.injEq, List.cons.injEq, true_and, and_true] at equal
+  obtain ⟨hn, hb⟩ := equal
   have hfl := e.hBoden f
   have hL : L ∈ (Aufz.lock (D := e.D)).filter fun L' =>
       !(mE ⟨fun _ => true, fun _ => true, fun L'' => !(decide (L'' = L'))⟩ (e.P.rumpf f)) :=
@@ -186,24 +193,56 @@ theorem u_3_0_10 (e : Einsatz) : ¬ e.Hat ⟨3, 0, true, [true, false]⟩ := by
   rw [this] at hb
   cases hb
 
+/- A verdict cell of kind 2.0 comes from the body-footprint row. Derived cells and register rows have different
+   verdict/kind fields; discard those cases before using the actual carrier's atom equations. -/
+private theorem footprint_cell_atoms {D : Deklaration} [Aufz D] {P : Programm D} {S : SperrInv D}
+    {fs : List D.Fn} {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn} {a b c d : Bool}
+    (h : (⟨2, 0, true, [a, b, c, d]⟩ : Zelle) ∈ zellen P S fs ls cs ws 2) :
+    ∃ (f : D.Fn) (carrier : D.Tab ⊕ D.Glob), sigB f carrier = a ∧ getrenntW P fs ws carrier = b ∧
+      ((waechterVon carrier).any fun L => istIn (S.orte L) carrier) = c ∧ geteiltVB P fs carrier = d := by
+  have derived {carrier : D.Tab ⊕ D.Glob} {z : Zelle}
+      (hz : z ∈ getrenntZellen P fs ws carrier) : z.urteil = false := by
+    unfold getrenntZellen at hz
+    obtain ⟨w1, _, hw1⟩ := List.mem_flatMap.mp hz
+    obtain ⟨w2, _, equal⟩ := List.mem_map.mp hw1
+    exact (congrArg Zelle.urteil equal).symm
+  rw [zellen] at h
+  rcases List.mem_append.mp h with bodies | registers
+  · obtain ⟨f, _, hf⟩ := List.mem_flatMap.mp bodies
+    obtain ⟨carrier, _, hc⟩ := List.mem_flatMap.mp hf
+    simp only [List.mem_append, or_assoc] at hc
+    rcases hc with row | fromDerived | shared
+    · have equal := List.mem_singleton.mp row
+      refine ⟨f, carrier, ?_⟩
+      simpa only [Zelle.mk.injEq, List.cons.injEq, true_and, and_true] using equal.symm
+    · have impossible : true = false := derived fromDerived
+      cases impossible
+    · have equal := List.mem_singleton.mp shared
+      have impossible : true = false := congrArg Zelle.urteil equal
+      cases impossible
+  · obtain ⟨f, _, hf⟩ := List.mem_flatMap.mp registers
+    obtain ⟨carrier, _, hc⟩ := List.mem_flatMap.mp hf
+    rcases List.mem_append.mp hc with row | fromDerived
+    · have equal := List.mem_singleton.mp row
+      have impossible : (0 : Nat) = 1 := congrArg Zelle.art equal
+      cases impossible
+    · have impossible : true = false := derived fromDerived
+      cases impossible
+
 /-- `2.0 a b 1 1`: a carrier a lock guards is not an unguarded shared atomic. -/
 theorem u_2_0_11 (a b : Bool) (e : Einsatz) : ¬ e.Hat ⟨2, 0, true, [a, b, true, true]⟩ := by
   letI := e.aufz
   letI := e.zahlen
   intro h
-  have h0 := mem_alleZellen_k (2 : Fin 10) rfl h
-  simp only [zellen, getrenntZellen, geteiltZelle, List.mem_append, List.mem_flatMap, List.mem_map,
-    List.mem_cons, List.not_mem_nil, or_false, Zelle.mk.injEq, List.cons.injEq] at h0
-  rcases h0 with ⟨_, _, c, _, (⟨-, -, -, -, -, h3, h4, -⟩ | h') | h'⟩ | ⟨_, _, _, _, h' | h'⟩
-  · have h4' : geteiltVB e.P e.fs c = true := h4.symm
-    have h3' : ((waechterVon c).any fun L => istIn (e.S.orte L) c) = true := h3.symm
-    unfold geteiltVB at h4'
-    have hl : (waechterVon c).isEmpty = true := by
-      revert h4'; cases atomarB c <;> cases (waechterVon c).isEmpty <;> simp only [Bool.and_self, Bool.false_and, Bool.false_eq_true, imp_self, Bool.and_true, implies_true, Bool.and_false, Bool.true_and]
-    rw [List.isEmpty_iff] at hl
-    rw [hl] at h3'
-    cases h3'
-  all_goals (obtain ⟨_, _, _, _, h''⟩ := h'; simp only [OfNat.ofNat_ne_zero, Bool.false_eq_true, List.any_eq_true, Bool.and_eq_true, List.ne_cons_self, and_false, and_self, Bool.true_eq, List.cons_ne_self, reduceCtorEq] at h'')
+  have h0 : (⟨2, 0, true, [a, b, true, true]⟩ : Zelle) ∈ zellen e.P e.S e.fs e.ls e.cs e.ws 2 :=
+    mem_alleZellen_k (2 : Fin 10) rfl h
+  obtain ⟨_, c, _, _, h3, h4⟩ := footprint_cell_atoms h0
+  unfold geteiltVB at h4
+  have hl : (waechterVon c).isEmpty = true := by
+    revert h4; cases atomarB c <;> cases (waechterVon c).isEmpty <;> simp only [Bool.and_self, Bool.false_and, Bool.false_eq_true, imp_self, Bool.and_true, implies_true, Bool.and_false, Bool.true_and]
+  rw [List.isEmpty_iff] at hl
+  rw [hl] at h3
+  cases h3
 
 /-- `2.0 1 b 0 d`: a carrier one of whose guards the signature holds is guarded, and in a program of the source the
     lock family protects exactly the guarded carriers. -/
@@ -211,15 +250,13 @@ theorem u_2_0_sig (b d : Bool) (e : Einsatz) : ¬ e.Hat ⟨2, 0, true, [true, b,
   letI := e.aufz
   letI := e.zahlen
   intro h
-  have h0 := mem_alleZellen_k (2 : Fin 10) rfl h
-  simp only [zellen, getrenntZellen, geteiltZelle, List.mem_append, List.mem_flatMap, List.mem_map,
-    List.mem_cons, List.not_mem_nil, or_false, Zelle.mk.injEq, List.cons.injEq] at h0
-  rcases h0 with ⟨_, _, c, _, (⟨-, -, -, h1, -, h3, -, -⟩ | h') | h'⟩ | ⟨_, _, _, _, h' | h'⟩
-  · obtain ⟨L, hL, -⟩ := List.any_eq_true.1 (show sigB _ c = true from h1.symm)
-    have : ((waechterVon c).any fun L => istIn (e.S.orte L) c) = true :=
-      List.any_eq_true.2 ⟨L, hL, istIn_iff.2 ((e.hS L c).2 hL)⟩
-    rw [← h3] at this
-    cases this
-  all_goals (obtain ⟨_, _, _, _, h''⟩ := h'; simp only [OfNat.ofNat_ne_zero, Bool.false_eq_true, Bool.and_eq_true, decide_eq_true_eq, Bool.not_eq_eq_eq_not, Bool.not_true, List.any_eq_false, not_and, Bool.not_eq_true, List.ne_cons_self, and_false, and_self, Bool.false_eq, List.cons_ne_self, reduceCtorEq] at h'')
+  have h0 : (⟨2, 0, true, [true, b, false, d]⟩ : Zelle) ∈ zellen e.P e.S e.fs e.ls e.cs e.ws 2 :=
+    mem_alleZellen_k (2 : Fin 10) rfl h
+  obtain ⟨f, c, h1, _, h3, _⟩ := footprint_cell_atoms h0
+  obtain ⟨L, hL, -⟩ := List.any_eq_true.1 h1
+  have : ((waechterVon c).any fun L => istIn (e.S.orte L) c) = true :=
+    List.any_eq_true.2 ⟨L, hL, istIn_iff.2 ((e.hS L c).2 hL)⟩
+  rw [h3] at this
+  cases this
 
 end Gabbro.Grammatik.Gen
