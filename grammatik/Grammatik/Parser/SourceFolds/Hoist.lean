@@ -9,7 +9,7 @@ namespace Gabbro.Grammatik.Parser.SourceFolds
     cost clauses, constant initializers, type bounds and lengths, traverse and
     lock headers) refuse instead of reaching another fold path. Value positions
     of statements are hoisted by `hoistAnw` before this visitor runs. -/
-private def expression (expr : SExpr) : Except String SExpr :=
+def expression (expr : SExpr) : Except String SExpr :=
   match expr with
   | .ext .foldAdd (_ :: "range" :: _) _ | .ext .foldMin (_ :: "range" :: _) _ |
     .ext .foldMax (_ :: "range" :: _) _ | .ext .foldAnd (_ :: "range" :: _) _ |
@@ -44,27 +44,27 @@ def hoistList (source : List SItemTief) (locals : Spec.Locals)
 /-- Hoist the single expression, for statement positions with one operand. -/
 def hoistOne (source : List SItemTief) (locals : Spec.Locals)
     (e : SExpr) : Except String (SExpr × List SAnw) := do
-  let (es, prefix) ← hoistList source locals [e]
+  let (es, foldPrelude) ← hoistList source locals [e]
   match es with
-  | [e'] => pure (e', prefix)
+  | [e'] => pure (e', foldPrelude)
   | _ => throw "fold range: hoist shape"
 
 /-- Hoist the two operands in order, for places assigned from values. -/
 def hoistPair (source : List SItemTief) (locals : Spec.Locals)
     (a b : SExpr) : Except String (SExpr × SExpr × List SAnw) := do
-  let (es, prefix) ← hoistList source locals [a, b]
+  let (es, foldPrelude) ← hoistList source locals [a, b]
   match es with
-  | [a', b'] => pure (a', b', prefix)
+  | [a', b'] => pure (a', b', foldPrelude)
   | _ => throw "fold range: hoist shape"
 
 /-- Wrap the rewritten statement after its prefix. With an empty prefix the
     statement is returned unchanged, so fold-free sources keep their exact
     shape; otherwise the prefix runs first, in order, and the rewritten
     statement reads only the fresh result variables. -/
-def afterPrefix (s : SAnw) (prefix : List SAnw) : SAnw :=
-  match prefix with
+def afterPrefix (s : SAnw) (foldPrelude : List SAnw) : SAnw :=
+  match foldPrelude with
   | [] => s
-  | _ => .block (prefix ++ [s]) none
+  | _ => .block (foldPrelude ++ [s]) none
 
 /-- Expand a range fold outside a direct return to a fresh local accumulator
     loop before the statement. The prefix evaluates the folds' loops in
@@ -80,91 +80,91 @@ def hoistAnw (source : List SItemTief) (locals : Spec.Locals)
     match matchFoldNode e with
     | some _ => returnFold source locals result (.ret (some e))
     | none => do
-      let (e', prefix) ← hoistOne source locals e
-      pure (afterPrefix (.ret (some e')) prefix)
+      let (e', foldPrelude) ← hoistOne source locals e
+      pure (afterPrefix (.ret (some e')) foldPrelude)
   | .bind b n t e => do
-    let (e', prefix) ← hoistOne source locals e
-    pure (afterPrefix (.bind b n t e') prefix)
+    let (e', foldPrelude) ← hoistOne source locals e
+    pure (afterPrefix (.bind b n t e') foldPrelude)
   | .bindQ b n t e => do
-    let (e', prefix) ← hoistOne source locals e
-    pure (afterPrefix (.bindQ b n t e') prefix)
+    let (e', foldPrelude) ← hoistOne source locals e
+    pure (afterPrefix (.bindQ b n t e') foldPrelude)
   | .bindElse n t e why body => do
-    let (e', prefix) ← hoistOne source locals e
-    pure (afterPrefix (.bindElse n t e' why body) prefix)
+    let (e', foldPrelude) ← hoistOne source locals e
+    pure (afterPrefix (.bindElse n t e' why body) foldPrelude)
   | .bindAxiomOpt n t e => do
-    let (e', prefix) ← hoistOne source locals e
-    pure (afterPrefix (.bindAxiomOpt n t e') prefix)
+    let (e', foldPrelude) ← hoistOne source locals e
+    pure (afterPrefix (.bindAxiomOpt n t e') foldPrelude)
   | .bindAxiomOptElse n t e why body => do
-    let (e', prefix) ← hoistOne source locals e
-    pure (afterPrefix (.bindAxiomOptElse n t e' why body) prefix)
+    let (e', foldPrelude) ← hoistOne source locals e
+    pure (afterPrefix (.bindAxiomOptElse n t e' why body) foldPrelude)
   | .await n t e p => do
-    let (e', prefix) ← hoistOne source locals e
-    pure (afterPrefix (.await n t e' p) prefix)
+    let (e', foldPrelude) ← hoistOne source locals e
+    pure (afterPrefix (.await n t e' p) foldPrelude)
   | .swap n t e p => do
-    let (e', prefix) ← hoistOne source locals e
-    pure (afterPrefix (.swap n t e' p) prefix)
+    let (e', foldPrelude) ← hoistOne source locals e
+    pure (afterPrefix (.swap n t e' p) foldPrelude)
   | .set a op b => do
-    let (a', b', prefix) ← hoistPair source locals a b
-    pure (afterPrefix (.set a' op b') prefix)
+    let (a', b', foldPrelude) ← hoistPair source locals a b
+    pure (afterPrefix (.set a' op b') foldPrelude)
   | .shift e a b => do
-    let (e', prefix) ← hoistOne source locals e
-    pure (afterPrefix (.shift e' a b) prefix)
+    let (e', foldPrelude) ← hoistOne source locals e
+    pure (afterPrefix (.shift e' a b) foldPrelude)
   | .trim e n body => do
-    let (e', prefix) ← hoistOne source locals e
-    pure (afterPrefix (.trim e' n body) prefix)
+    let (e', foldPrelude) ← hoistOne source locals e
+    pure (afterPrefix (.trim e' n body) foldPrelude)
   | .trimReq e n => do
-    let (e', prefix) ← hoistOne source locals e
-    pure (afterPrefix (.trimReq e' n) prefix)
+    let (e', foldPrelude) ← hoistOne source locals e
+    pure (afterPrefix (.trimReq e' n) foldPrelude)
   | .free e => do
-    let (e', prefix) ← hoistOne source locals e
-    pure (afterPrefix (.free e') prefix)
+    let (e', foldPrelude) ← hoistOne source locals e
+    pure (afterPrefix (.free e') foldPrelude)
   | .call name args => do
-    let (args', prefix) ← hoistList source locals args
-    pure (afterPrefix (.call name args') prefix)
+    let (args', foldPrelude) ← hoistList source locals args
+    pure (afterPrefix (.call name args') foldPrelude)
   | .callQ name args => do
-    let (args', prefix) ← hoistList source locals args
-    pure (afterPrefix (.callQ name args') prefix)
+    let (args', foldPrelude) ← hoistList source locals args
+    pure (afterPrefix (.callQ name args') foldPrelude)
   | .callIndElse pointer args reason body => do
-    let (operands, prefix) ← hoistList source locals (pointer :: args)
+    let (operands, foldPrelude) ← hoistList source locals (pointer :: args)
     match operands with
-    | pointer' :: args' => pure (afterPrefix (.callIndElse pointer' args' reason body) prefix)
+    | pointer' :: args' => pure (afterPrefix (.callIndElse pointer' args' reason body) foldPrelude)
     | [] => throw "fold range: hoist shape"
   | .callElse name args reason body => do
-    let (args', prefix) ← hoistList source locals args
-    pure (afterPrefix (.callElse name args' reason body) prefix)
+    let (args', foldPrelude) ← hoistList source locals args
+    pure (afterPrefix (.callElse name args' reason body) foldPrelude)
   | .genericCall name words args => do
-    let (args', prefix) ← hoistList source locals args
-    pure (afterPrefix (.genericCall name words args') prefix)
+    let (args', foldPrelude) ← hoistList source locals args
+    pure (afterPrefix (.genericCall name words args') foldPrelude)
   | .cond c body arms other => do
-    let (c', prefix) ← hoistOne source locals c
-    pure (afterPrefix (.cond c' body arms other) prefix)
+    let (c', foldPrelude) ← hoistOne source locals c
+    pure (afterPrefix (.cond c' body arms other) foldPrelude)
   | .elsif c body => do
-    let (c', prefix) ← hoistOne source locals c
-    pure (afterPrefix (.elsif c' body) prefix)
+    let (c', foldPrelude) ← hoistOne source locals c
+    pure (afterPrefix (.elsif c' body) foldPrelude)
   | .cases g arms => do
-    let (g', prefix) ← hoistOne source locals g
-    pure (afterPrefix (.cases g' arms) prefix)
+    let (g', foldPrelude) ← hoistOne source locals g
+    pure (afterPrefix (.cases g' arms) foldPrelude)
   | .alloc b n t a e body => do
-    let (e', prefix) ← hoistOne source locals e
-    pure (afterPrefix (.alloc b n t a e' body) prefix)
+    let (e', foldPrelude) ← hoistOne source locals e
+    pure (afterPrefix (.alloc b n t a e' body) foldPrelude)
   | .reset n r => do
-    let (es, prefix) ← hoistList source locals (r.toList.flatMap fun p => [p.1, p.2])
+    let (es, foldPrelude) ← hoistList source locals (r.toList.flatMap fun p => [p.1, p.2])
     match es with
-    | [] => pure (afterPrefix (.reset n r) prefix)
-    | [a', b'] => pure (afterPrefix (.reset n (some (a', b'))) prefix)
+    | [] => pure (afterPrefix (.reset n r) foldPrelude)
+    | [a', b'] => pure (afterPrefix (.reset n (some (a', b'))) foldPrelude)
     | _ => throw "fold range: hoist shape"
   | .grow n e body => do
-    let (e', prefix) ← hoistOne source locals e
-    pure (afterPrefix (.grow n e' body) prefix)
+    let (e', foldPrelude) ← hoistOne source locals e
+    pure (afterPrefix (.grow n e' body) foldPrelude)
   | .emit a b p => do
-    let (a', b', prefix) ← hoistPair source locals a b
-    pure (afterPrefix (.emit a' b' p) prefix)
+    let (a', b', foldPrelude) ← hoistPair source locals a b
+    pure (afterPrefix (.emit a' b' p) foldPrelude)
   | .bindLib b n t c => do
-    let (args', prefix) ← hoistList source locals c.args
-    pure (afterPrefix (.bindLib b n t { c with args := args' }) prefix)
+    let (args', foldPrelude) ← hoistList source locals c.args
+    pure (afterPrefix (.bindLib b n t { c with args := args' }) foldPrelude)
   | .lcall c => do
-    let (args', prefix) ← hoistList source locals c.args
-    pure (afterPrefix (.lcall { c with args := args' }) prefix)
+    let (args', foldPrelude) ← hoistList source locals c.args
+    pure (afterPrefix (.lcall { c with args := args' }) foldPrelude)
   | s => pure s
 
 /-- Reuse the shared lexical visitor before generic checks and before spec resolution.
@@ -172,8 +172,11 @@ def hoistAnw (source : List SItemTief) (locals : Spec.Locals)
     both through the existing constant-parameter machinery. Range folds in value
     positions expand where they stand; every other position still refuses. -/
 def prepare (source : List SItemTief) : Except String (List SItemTief) :=
-  let walk : Spec.Walk := { source, instantiate := false, resolveSpecs := false,
-    statementRewrite := hoistAnw source,
+  let walk : Spec.Walk := {
+    source
+    instantiate := false
+    resolveSpecs := false
+    statementRewrite := hoistAnw source
     exprRewrite := fun _ _ e => expression e }
   source.mapM (walk.item 100000)
 
