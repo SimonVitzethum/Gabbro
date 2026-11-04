@@ -3,7 +3,7 @@ public import Runner.Prog.Asm
 @[expose] public section
 
 
-/-! # The runner: loader, dispatch, the 27 handlers (`PLAN-SELF-HOSTING.md` §2.1.5)
+/-! # The runner: loader, dispatch and handlers (`PLAN-SELF-HOSTING.md` §2.1.5)
 
 Registers while the IR runs: `r12` = the IR `pc`, `r13` = the IR `fp`, `r14` = the dispatch table. Nothing else
 lives across instructions, and the runner never uses the stack.
@@ -53,6 +53,36 @@ def divH (res : Reg) : List Ins :=
 def shiftH (sh : Ins) : List Ins :=
   [fld .rax 2, sld .rax .rax, fld .rcx 3, sld .rcx .rcx, sh, fld .rdx 1, sst .rdx .rax] ++ nextI
 
+def fpOperands (format : FPFormat) : List Ins :=
+  [.movToXmm format .xmm0 .rax, .movToXmm format .xmm1 .rdx]
+
+def fpArithH (kind : FPArith) (format : FPFormat) : List Ins :=
+  binH (fpOperands format ++ [.scalar kind format .xmm0 .xmm1, .movFromXmm format .rax .xmm0])
+
+def fpCompareH (pred : FPCompare) (format : FPFormat) : List Ins :=
+  binH (fpOperands format ++ [.compareScalar pred format .xmm0 .xmm1,
+    .movFromXmm format .rax .xmm0, .alui .and .rax 1])
+
+def fpFromIntH (format : FPFormat) : List Ins :=
+  binH [.fromIntScalar format .xmm0 .rax, .movFromXmm format .rax .xmm0]
+
+def fpTruncateH (format : FPFormat) : List Ins :=
+  binH [.movToXmm format .xmm0 .rax, .truncateScalar format .rax .xmm0]
+
+/-- Save all three UCOMIS flags before shifts/ALU operations can overwrite them. -/
+def fpFlagsH (format : FPFormat) : List Ins :=
+  binH (fpOperands format ++ [.ucomis format .xmm0 .xmm1,
+    .set .b .rax, .set .p .rdx, .set .z .rsi,
+    .zx8 .rax .rax, .zx8 .rdx .rdx, .zx8 .rsi .rsi,
+    .movi .rcx 2, .shl .rdx, .movi .rcx 6, .shl .rsi,
+    .alu .or .rax .rdx, .alu .or .rax .rsi])
+
+def fpWidenH : List Ins :=
+  binH [.movToXmm .f32 .xmm1 .rax, .widenScalar .xmm0 .xmm1, .movFromXmm .f64 .rax .xmm0]
+
+def fpNarrowH : List Ins :=
+  binH [.movToXmm .f64 .xmm1 .rax, .narrowScalar .xmm0 .xmm1, .movFromXmm .f32 .rax .xmm0]
+
 /-- `brz`: the taken branch, which the `jnz` skips. -/
 def brzTaken : List Ins := [fld .rax 2, .alu .add .r12 .rax] ++ dispatch
 
@@ -62,6 +92,17 @@ def spawnParent : List Ins := [fld .rcx 1, sst .rcx .rax] ++ nextI
 /-- The code of each opcode; position independent (the jumps inside, `brz`'s `jnz` and `spawn`'s `jz`, are
     relative). Opcodes without a handler run `ud2`. -/
 def handler : Nat → List Ins
+  | 28 => fpArithH .add .f32 | 29 => fpArithH .add .f64
+  | 30 => fpArithH .sub .f32 | 31 => fpArithH .sub .f64
+  | 32 => fpArithH .mul .f32 | 33 => fpArithH .mul .f64
+  | 34 => fpArithH .div .f32 | 35 => fpArithH .div .f64
+  | 38 => fpCompareH .eq .f32 | 39 => fpCompareH .eq .f64
+  | 40 => fpCompareH .lt .f32 | 41 => fpCompareH .lt .f64
+  | 42 => fpCompareH .le .f32 | 43 => fpCompareH .le .f64
+  | 46 => fpFromIntH .f32 | 47 => fpFromIntH .f64
+  | 54 => fpWidenH | 55 => fpNarrowH
+  | 56 => fpFlagsH .f32 | 57 => fpFlagsH .f64
+  | 58 => fpTruncateH .f32 | 59 => fpTruncateH .f64
   | 1 => [fld .rax 2, fld .rcx 1, sst .rcx .rax] ++ nextI
   | 2 => [fld .rax 2, sld .rax .rax, fld .rcx 1, sst .rcx .rax] ++ nextI
   | 3 => binH [.alu .add .rax .rdx]
@@ -136,7 +177,7 @@ def loaderI (tb : Nat) : List Ins :=
 /-- The program with the table at `tb`; the layout does not depend on `tb`. -/
 def itemsWith (tb : Nat) : List Item :=
   [.lab LOADER] ++ (loaderI tb).map .i ++
-  ((List.range 27).map (· + 1)).flatMap (fun k => .lab k :: (handler k).map .i) ++
+  ((List.range 59).map (· + 1)).flatMap (fun k => .lab k :: (handler k).map .i) ++
   [.lab BAD, .i .ud2]
 
 def codeLen : Nat := ((itemsWith 0).map Item.len).sum
@@ -154,6 +195,6 @@ def tab : List (Nat × Nat) := (TABLE, tblOff) :: labels (itemsWith 0) CODE
 def prog : List (Nat × Ins) := place tab BASE items CODE
 
 /-- The table entry of opcode `k`: the address of its handler. -/
-def target (k : Nat) : Nat := BASE + find tab (if 1 ≤ k ∧ k ≤ 27 then k else BAD)
+def target (k : Nat) : Nat := BASE + find tab (if 1 ≤ k ∧ k ≤ 59 then k else BAD)
 
 end Runner.Prog

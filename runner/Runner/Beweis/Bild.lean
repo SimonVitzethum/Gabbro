@@ -73,18 +73,18 @@ theorem code_of_image : ∀ {o : Nat} {is : List Ins},
     rwa [← Nat.add_assoc, BitVec.ofNat_add] at this
 
 /-- The label of opcode `k`'s handler. -/
-def lbl (k : Nat) : Nat := if 1 ≤ k ∧ k ≤ 27 then k else BAD
+def lbl (k : Nat) : Nat := if 1 ≤ k ∧ k ≤ 59 then k else BAD
 
 theorem handler_lbl (k : Nat) : handler k = handler (lbl k) := by
-  by_cases h : 1 ≤ k ∧ k ≤ 27
+  by_cases h : 1 ≤ k ∧ k ≤ 59
   · simp only [lbl, h, ite_true]
   · simp only [lbl, h, ite_false]
-    rcases (show k = 0 ∨ 28 ≤ k by omega) with rfl | hk
+    rcases (show k = 0 ∨ 60 ≤ k by omega) with rfl | hk
     · rfl
-    · obtain ⟨j, rfl⟩ : ∃ j, k = j + 28 := ⟨k - 28, by omega⟩
+    · obtain ⟨j, rfl⟩ : ∃ j, k = j + 60 := ⟨k - 60, by omega⟩
       rfl
 
-def labelsAll : List Nat := (List.range 27).map (· + 1) ++ [BAD]
+def labelsAll : List Nat := (List.range 59).map (· + 1) ++ [BAD]
 
 set_option maxRecDepth 100000 in
 theorem placed : (labelsAll.all fun j =>

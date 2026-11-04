@@ -1,5 +1,6 @@
 module
 public import Runner.Beweis.Handler.Sprung
+public import Runner.Beweis.Handler.Floating
 @[expose] public section
 
 
@@ -47,7 +48,39 @@ theorem handler_ok {L : Lay} (k : Nat) {y : X} (h : HPre L k y) : Match L (IR.op
   | 25 => exact h25_ok h
   | 26 => exact h26_ok h
   | 27 => exact h27_ok h
-  | k + 28 => exact bad_ok h rfl
+  | 28 => exact fp_arith_ok .add .f32 h
+  | 29 => exact fp_arith_ok .add .f64 h
+  | 30 => exact fp_arith_ok .sub .f32 h
+  | 31 => exact fp_arith_ok .sub .f64 h
+  | 32 => exact fp_arith_ok .mul .f32 h
+  | 33 => exact fp_arith_ok .mul .f64 h
+  | 34 => exact fp_arith_ok .div .f32 h
+  | 35 => exact fp_arith_ok .div .f64 h
+  | 36 => exact bad_ok h rfl
+  | 37 => exact bad_ok h rfl
+  | 38 => exact fp_compare_ok .eq .f32 h
+  | 39 => exact fp_compare_ok .eq .f64 h
+  | 40 => exact fp_compare_ok .lt .f32 h
+  | 41 => exact fp_compare_ok .lt .f64 h
+  | 42 => exact fp_compare_ok .le .f32 h
+  | 43 => exact fp_compare_ok .le .f64 h
+  | 44 => exact bad_ok h rfl
+  | 45 => exact bad_ok h rfl
+  | 46 => exact fp_fromInt_ok .f32 h
+  | 47 => exact fp_fromInt_ok .f64 h
+  | 48 => exact bad_ok h rfl
+  | 49 => exact bad_ok h rfl
+  | 50 => exact bad_ok h rfl
+  | 51 => exact bad_ok h rfl
+  | 52 => exact bad_ok h rfl
+  | 53 => exact bad_ok h rfl
+  | 54 => exact fp_widen_ok h
+  | 55 => exact fp_narrow_ok h
+  | 56 => exact fp_flags_ok .f32 h
+  | 57 => exact fp_flags_ok .f64 h
+  | 58 => exact fp_truncate_ok .f32 h
+  | 59 => exact fp_truncate_ok .f64 h
+  | k + 60 => exact bad_ok h rfl
 
 theorem step_ok {L : Lay} (hI : CInv L) {t : IR.T} {x : X} (hD : Disp L t x) : Match L (IR.step t) x := by
   have h1 := step_code hD.code
