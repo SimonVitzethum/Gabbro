@@ -173,17 +173,44 @@ private theorem double_pack (F : Format) (standard : F = .binary32 ∨ F = .bina
   have bounds : 2 ^ p ≤ r ∧ r ≤ 2 ^ (p + 1) :=
     shifted_round_bounds F t 62 tpositive tlog (by omega)
   have rpositive : 0 < r := Nat.lt_of_lt_of_le (Nat.two_pow_pos p) bounds.1
-  have full := integer_form F n 63 npositive nlog (by omega) minimum
-  have half := integer_form F t 62 tpositive tlog (by omega) minimum
-  dsimp only at full half
-  rw [fullShift, ← states] at full
-  simp only [Int.natCast_add, Int.cast_ofNat_Int] at full
-  change round F .positive n 0 = if r = 2 ^ (p + 1) then
-    .finite .positive (2 ^ p) ((j : Int) + 1 + 1) (Nat.two_pow_pos _)
-    else .finite .positive r ((j : Int) + 1) rpositive at full
-  change round F .positive t 0 = if r = 2 ^ (p + 1) then
+  let rn := ((⟨n, false, false⟩ : ExtendedMantissa) >>> (63 - p)).roundedMantissa
+  have fullState : (⟨n, false, false⟩ : ExtendedMantissa) >>> (63 - p) =
+      (⟨t, false, false⟩ : ExtendedMantissa) >>> j :=
+    (congrArg (fun amount : Nat => (⟨n, false, false⟩ : ExtendedMantissa) >>> amount) fullShift).trans
+      (show (⟨t, false, false⟩ : ExtendedMantissa) >>> j =
+        (⟨n, false, false⟩ : ExtendedMantissa) >>> (j + 1) from states).symm
+  have rounding : rn = r := congrArg ExtendedMantissa.roundedMantissa fullState
+  have rnPositive : 0 < rn := by rw [rounding]; exact rpositive
+  have exponent : ((63 - p : Nat) : Int) = (j : Int) + 1 := by
+    simpa only [Int.natCast_add, Int.cast_ofNat_Int] using
+      congrArg (fun amount : Nat => (amount : Int)) fullShift
+  have finiteEq {a b : Nat} {u v : Int} (ha : 0 < a) (hb : 0 < b)
+      (magnitude : a = b) (exponent : u = v) :
+      UnpackedFloat.finite .positive a u ha = .finite .positive b v hb := by
+    cases magnitude
+    cases exponent
+    rfl
+  have rawFull : round F .positive n 0 = if rn = 2 ^ (p + 1) then
+      .finite .positive (2 ^ p) (((63 - p : Nat) : Int) + 1) (Nat.two_pow_pos _)
+      else .finite .positive rn ((63 - p : Nat) : Int) rnPositive :=
+    integer_form F n 63 npositive nlog (by omega) minimum
+  have full : round F .positive n 0 = if r = 2 ^ (p + 1) then
+      .finite .positive (2 ^ p) ((j : Int) + 1 + 1) (Nat.two_pow_pos _)
+      else .finite .positive r ((j : Int) + 1) rpositive := by
+    by_cases carry : r = 2 ^ (p + 1)
+    · have rawCarry : rn = 2 ^ (p + 1) := rounding.trans carry
+      rw [if_pos rawCarry] at rawFull
+      rw [if_pos carry]
+      exact rawFull.trans (finiteEq (Nat.two_pow_pos p) (Nat.two_pow_pos p) rfl
+        (congrArg (fun e : Int => e + 1) exponent))
+    · have rawCarry : rn ≠ 2 ^ (p + 1) := fun eq => carry (rounding.symm.trans eq)
+      rw [if_neg rawCarry] at rawFull
+      rw [if_neg carry]
+      exact rawFull.trans (finiteEq rnPositive rpositive rounding exponent)
+  have half : round F .positive t 0 = if r = 2 ^ (p + 1) then
     .finite .positive (2 ^ p) ((j : Int) + 1) (Nat.two_pow_pos _)
-    else .finite .positive r (j : Int) rpositive at half
+    else .finite .positive r (j : Int) rpositive :=
+    integer_form F t 62 tpositive tlog (by omega) minimum
   rw [full, half]
   have span : 2 ^ p < 2 ^ (p + 1) := by
     rw [Nat.pow_succ]
