@@ -15,13 +15,13 @@ theorem storeGlob_held (σ : World D) (g : D.Glob) (Λ : List (Res D)) (v : Wert
     (σ.schreibGlob g Λ v).haelt = σ.haelt := rfl
 
 theorem storeBytes_held (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255)
-    (Λ : List (Res D)) (bs : List Byte) : ∀ σ k,
+    (Λ : List (Res D)) (bs : List Byte) : ∀ (σ : World D) (k : Int),
       (σ.schreibBytes t f hf Λ k bs).haelt = σ.haelt := by
   induction bs with
   | nil => intro σ k; rfl
   | cons b bs ih =>
     intro σ k
-    rw [World.schreibBytes, ih, storeSlot_held]
+    rw [World.schreibBytes.eq_def, ih, storeSlot_held]
 
 theorem oracle_held (O : Orakel D) (hO : GutO O) (a : D.Ax) (σ : World D)
     (ρ : Env D (D.aparams a)) : (axiomAntwort O a σ ρ).1.haelt = σ.haelt :=
