@@ -16,6 +16,8 @@ theorem tabNr_some (u : UProg) (num : Nat) (h : num < u.tabs.length) :
     against the same capTab used by G; neither a missing space nor a mismatched one is invented. -/
 def checkedTableCap (u : UProg) (space num : Nat) (h : num < u.tabs.length) :
     Except String (PLift ((declOf u).capTab space num = some (⟨num, h⟩ : Fin u.tabs.length))) :=
+  letI : Decidable ((declOf u).capTab space num = some (⟨num, h⟩ : Fin u.tabs.length)) :=
+    (inferInstance : DecidableEq (Option (Fin u.tabs.length))) _ _
   if resolved : (declOf u).capTab space num = some (⟨num, h⟩ : Fin u.tabs.length) then .ok ⟨resolved⟩
   else .error "pointer table space is not registered"
 
@@ -32,7 +34,9 @@ theorem checkedTableCap_complete (u : UProg) (space num : Nat) (h : num < u.tabs
     ∃ certificate, checkedTableCap u space num h = .ok certificate := by
   have resolved : (declOf u).capTab space num = some (⟨num, h⟩ : Fin u.tabs.length) :=
     Deklaration.capTab_of (tabNr_some u num h) same registered
-  exact ⟨⟨resolved⟩, by simp only [checkedTableCap, resolved, ↓reduceDIte]⟩
+  refine ⟨⟨resolved⟩, ?_⟩
+  unfold checkedTableCap
+  erw [dite_eq_left resolved]
 
 /-- A resolved pointer parameter retains one exact capability in both canonical metadata
     lists. This rejects fabricated inconsistent UFn values before their slots are lowered. -/
@@ -50,7 +54,8 @@ theorem checkedPointerParam_complete (fn : UFn) (j : Nat) (cap : DataCapTy)
     ∃ certificate, checkedPointerParam fn j cap = .ok certificate := by
   exact ⟨⟨kind, type⟩, by simp only [checkedPointerParam, kind, type, and_self, ↓reduceDIte]⟩
 
-private def customSpaceFixture : UProg :=
+/-- The nonzero-space fixture used by the exported acceptance and refusal witnesses. -/
+def customSpaceFixture : UProg :=
   { tabs := [{name := "T", count := 1, cols := [("value", (0, 255))], space := 1}],
     locks := [], fns := [], spaces := ["normal", "custom"] }
 
