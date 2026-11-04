@@ -181,7 +181,7 @@ theorem pool_ziel_zeuge : ∃ M1 M2 M3 : RufMaschineG zD.mitRuhe,
     exact List.mem_cons_self
   · exact gabbro_ziel_g akzeptiert_pruefer zD zPool ⟨zFs, zFs_voll⟩ ⟨[()], zLs_voll⟩
       ⟨[.inl ()], zCs_voll⟩
-      (by show Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt, zHaupt] = true
+      (by rw [akzeptiert_pruefer_eq]
           exact zPool_akzeptiert)
       zPool_nutzerPflicht zO ⟨zO_gut, zO_lokal, axVertragO_wahr zO⟩ 0 _ _
       (laufzeit_initRuhe zPool) M3 hr

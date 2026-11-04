@@ -283,7 +283,7 @@ theorem schwach_pool_zeuge (ord : zD.mitRuhe.Glob → Ordnung) :
     .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ .start t1) t2) t3
   have hZ := gabbro_ziel_schwach akzeptiert_pruefer zD zPool ⟨zFs, zFs_voll⟩ ⟨[()], zLs_voll⟩
     ⟨[.inl ()], zCs_voll⟩
-    (by show Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt, zHaupt] = true
+    (by rw [akzeptiert_pruefer_eq]
         exact zPool_akzeptiert)
     zPool_nutzerPflicht zO ⟨zO_gut, zO_lokal, axVertragO_wahr zO⟩ 0 _ _ hL ord W3 hW3
   exact ⟨W1, W2, W3, t1, t2, t3, by rw [g3]; exact hlock, hZ.1, hZ.2⟩

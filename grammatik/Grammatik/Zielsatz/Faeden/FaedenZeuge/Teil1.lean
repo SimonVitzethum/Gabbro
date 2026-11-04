@@ -214,7 +214,7 @@ theorem zStart_ws : zStart.ws = [zHaupt, zHaupt] := by rfl
 /-- The concrete checker accepts it (the doubled root is pool-safe). -/
 theorem zStart_akzeptiert :
     akzeptiert_pruefer.akzeptiert zStart zFs [()] [.inl ()] = true :=
-  (by show Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt, zHaupt] = true; exact zPool_akzeptiert)
+  (by rw [akzeptiert_pruefer_eq]; exact zPool_akzeptiert)
 
 /-- (b): probe B's bodies, and the root's `requires true` at the declared memory. -/
 theorem zStart_nutzerPflicht : NutzerPflicht zStart :=
