@@ -238,10 +238,10 @@ theorem lowDurch_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {sh : Na
               split at h
               · rename_i hG
                 cases hcap : checkedTableCap u space num hlt with
-                | error error => simp [hcap] at h
+                | error error => simp [hcap, bind, Except.bind, Except.map, pure, Except.pure] at h
                 | ok cap =>
                   cases hparam : checkedPointerParam fn j ⟨space, ⟨true, wr, none⟩, .table num⟩ with
-                  | error error => simp [hcap, hparam] at h
+                  | error error => simp [hcap, hparam, bind, Except.bind, Except.map, pure, Except.pure] at h
                   | ok parameter =>
                     simp only [hcap, hparam, bind, Except.bind] at h
                     cases h
@@ -275,11 +275,11 @@ theorem lowDurch_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {sh : Na
                   split at h
                   · rename_i he
                     cases hcap : checkedTableCap u space num hlt with
-                    | error error => simp [hcap] at h
+                    | error error => simp [hcap, bind, Except.bind, Except.map, pure, Except.pure] at h
                     | ok cap =>
                       cases hparam : checkedPointerParam fn j
                           ⟨space, ⟨true, wr, some owner⟩, .table num⟩ with
-                      | error error => simp [hcap, hparam] at h
+                      | error error => simp [hcap, hparam, bind, Except.bind, Except.map, pure, Except.pure] at h
                       | ok parameter =>
                         simp only [hcap, hparam, bind, Except.bind] at h
                         cases h
@@ -358,11 +358,11 @@ theorem lowAltRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {sh : 
                 split at ht
                 · rename_i hlt
                   cases hcap : checkedTableCap u space num hlt with
-                  | error error => simp [hcap] at ht
+                  | error error => simp [hcap, bind, Except.bind, Except.map, pure, Except.pure] at ht
                   | ok cap =>
                     cases hparam : checkedPointerParam fn j
                         ⟨space, ⟨true, wr, owner⟩, .table num⟩ with
-                    | error error => simp [hcap, hparam] at ht
+                    | error error => simp [hcap, hparam, bind, Except.bind, Except.map, pure, Except.pure] at ht
                     | ok parameter =>
                       simp only [hcap, hparam, bind, Except.bind] at ht
                       cases ht
