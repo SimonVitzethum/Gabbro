@@ -46,19 +46,24 @@ theorem wideComputedFloatOfE_ok {Γ : Ctx} {Λ : List (Res D)}
   let z := (eval σ₀ e σ ρ).n
   have bound : (z.natAbs : Int) ≤ WideFloat.upper w := WideFloat.magnitude_bound _
   have mag := WideFloat.magnitude_value (σ₀ := σ₀) (σ := σ) (ρ := ρ) (e := e) bound
-  have condition := WideFloat.boolean
+  have condition : WordCode (L := L) ρ W _ _ reserved := WideFloat.boolean
     (.lt (WideFloat.magnitude w e) (.lit (2 ^ 55))) lay same world reserved
-  change WordCode (L := L) ρ W _ (Runner.IR.bool (decide (_ < _))) reserved at condition
+  change WordCode (L := L) ρ W _
+    (Runner.IR.bool (decide ((eval σ₀ (WideFloat.magnitude w e) σ ρ).n < (2 : Int) ^ 55))) reserved at condition
   rw [mag] at condition
-  have sign := WideFloat.boolean (.lt e (.lit 0)) lay same world reserved
+  have sign : WordCode (L := L) ρ W _ _ reserved :=
+    WideFloat.boolean (.lt e (.lit 0)) lay same world reserved
   change WordCode (L := L) ρ W _ (Runner.IR.bool (decide (z < 0))) reserved at sign
   have small : decide ((z.natAbs : Int) < 2 ^ 55) = true →
       WordCode (L := L) ρ W
         (fun j => computedFloatOfL f64 j (fun d => lowE L (WideFloat.small e) d reserved))
         (BitVec.ofNat 64 (zuBits f64 (ofInt f64 z))) reserved := by
     intro flag fp K d c top emitted fits m pc pre
-    have narrow := WideFloat.small_value (σ₀ := σ₀) (σ := σ) (ρ := ρ) (e := e)
-      (by simpa only [decide_eq_true_eq] using flag)
+    have smallBound : z.natAbs < 2 ^ 55 := by
+      have comparison : (z.natAbs : Int) < 2 ^ 55 := of_decide_eq_true flag
+      exact_mod_cast comparison
+    have narrow : (eval σ₀ (WideFloat.small e) σ ρ).n = z :=
+      WideFloat.small_value (σ₀ := σ₀) (σ := σ) (ρ := ρ) (e := e) smallBound
     rw [← narrow]
     apply computedFloatOfL_ok f64 (by simp) (eval σ₀ (WideFloat.small e) σ ρ)
       (by decide) (by decide) emitted pre fits
@@ -87,19 +92,24 @@ theorem wideComputedFloatOfE_ok {Γ : Ctx} {Λ : List (Res D)}
           (fun d => lowE L (WideFloat.index w e) d reserved)
           (fun d => lowE L (WideFloat.guard w e) d reserved))
         (BitVec.ofNat 64 (zuBits f64 (ofInt f64 z))) reserved := by
-    intro flag
+    intro flag fp K d code top emitted fits m pc pre
     have big : 2 ^ 55 ≤ z.natAbs := by
       have : ¬ (z.natAbs : Int) < 2 ^ 55 := by simpa using flag
       omega
     have iv := WideFloat.index_value (σ₀ := σ₀) (σ := σ) (ρ := ρ) (e := e) bound big
     have gv := WideFloat.guard_value (σ₀ := σ₀) (σ := σ) (ρ := ρ) (e := e) bound (by omega)
-    have index := WideFloat.word (WideFloat.index w e) (by decide) lay same world reserved
-    have guard := WideFloat.word (WideFloat.guard w e) (by decide) lay same world reserved
+    have index : WordCode (L := L) ρ W _ _ reserved :=
+      WideFloat.word (WideFloat.index w e) (by decide) lay same world reserved
+    have guard : WordCode (L := L) ρ W _ _ reserved :=
+      WideFloat.word (WideFloat.guard w e) (by decide) lay same world reserved
     rw [iv, BitVec.ofInt_natCast] at index
     rw [gv, BitVec.ofInt_natCast] at guard
     rw [← integerFloat_round z big]
     exact routineRoundPackL_ok sign index guard
+      (fp := fp) (K := K) (d := d) (c := code) (top := top) emitted fits m pc pre
+  intro fp K d code top emitted fits m pc pre
   have result := routineChooseL_ok condition small large
+    (fp := fp) (K := K) (d := d) (c := code) (top := top) emitted fits m pc pre
   simpa only [wideComputedFloatOfE, ite_self] using result
 
 /-- Signed-word intervals retain the established short path. Every other
