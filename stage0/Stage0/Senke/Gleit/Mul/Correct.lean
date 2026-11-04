@@ -72,12 +72,14 @@ theorem softMulRoutineL_ok_zeuge {Γ : Ctx} (ρ : Env D Γ) (W : Runner.Mem → 
       (fun j => some (konstWL 4 4609434218613702656 j))
       (fun j => some (konstWL 4 4611686018427387904 j)))
       (BitVec.ofNat 64 4613937818241073152) := by
-  have run := softMulRoutineL_word (L := L) (ρ := ρ) (W := W)
+  have run : WordCode (L := L) ρ W _ _ := softMulRoutineL_word (L := L) (ρ := ρ) (W := W)
     (WordCode.konst 4609434218613702656 (by decide))
     (WordCode.konst 4611686018427387904 (by decide))
+  intro fp K d c top emitted fits m pc pre
   simpa only [show softMulRoutineWord (BitVec.ofNat 64 4609434218613702656)
     (BitVec.ofNat 64 4611686018427387904) = BitVec.ofNat 64 4613937818241073152
-    from by decide +kernel] using run
+    from by decide +kernel] using
+    run (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
 
 /-- Invalid multiplication still emits the common routine; source Block
     lowering will reject its NaN result through the ordinary result guard. -/
@@ -86,10 +88,13 @@ theorem softMulRoutineL_invalid_zeuge {Γ : Ctx} (ρ : Env D Γ) (W : Runner.Mem
       (fun j => some ([ci 1 j 0 0], j + 1))
       (fun j => some (konstWL 4 9218868437227405312 j)))
       (BitVec.ofNat 64 9218868437227405313) := by
-  have run := softMulRoutineL_word (L := L) (ρ := ρ) (W := W)
+  have run : WordCode (L := L) ρ W _ _ := softMulRoutineL_word (L := L) (ρ := ρ) (W := W)
     (WordCode.const 0 (by decide)) (WordCode.konst 9218868437227405312 (by decide))
-  simpa only [show softMulRoutineWord 0 (BitVec.ofNat 64 9218868437227405312) =
-    BitVec.ofNat 64 9218868437227405313 from by decide +kernel] using run
+  intro fp K d c top emitted fits m pc pre
+  simpa only [show BitVec.ofInt 64 0 = (0 : Runner.W) from rfl,
+    show softMulRoutineWord 0 (BitVec.ofNat 64 9218868437227405312) =
+    BitVec.ofNat 64 9218868437227405313 from by decide +kernel] using
+    run (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
 
 #print axioms softMulRoutineWord_model
 #print axioms softMulRoutine_ok
