@@ -23,12 +23,20 @@ def prepare (items : List SItemTief) : Except String (List Closed × List SItemT
       (Spec.functionHeads (Spec.materialize items)).any (fun s => generatedCases.any (strEq s.name)) ||
       items.any (fun | .typeT _ n _ _ _ => closed.any (fun c => strEq c.name n) | _ => false) then
     throw "dyn.generated-name-collision"
-  let types : Spec.Walk := { source := items, instantiate := false, resolveSpecs := false,
+  let types : Spec.Walk := {
+    source := items
+    instantiate := false
+    resolveSpecs := false
     typeRewrite := lowerType closed }
   let typed ← items.mapM (types.item 100000)
-  let rewrite : Spec.Walk := { source := typed ++ declarations, instantiate := false,
-    resolveSpecs := false, typeRewrite := lowerType closed,
-    exprRewrite := rewriteExpr typed closed, statementCheck := checkStatement typed closed, rawCheck := checkRaw typed closed }
+  let rewrite : Spec.Walk := {
+    source := typed ++ declarations
+    instantiate := false
+    resolveSpecs := false
+    typeRewrite := lowerType closed
+    exprRewrite := rewriteExpr typed closed
+    statementCheck := checkStatement typed closed
+    rawCheck := checkRaw typed closed }
   let output ← typed.mapM (rewrite.item 100000)
   return (closed, output ++ declarations)
 
