@@ -10,7 +10,7 @@
    a written function). -/
 module
 
-public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil5
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil5Rest
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Data
 
 public section
@@ -58,7 +58,17 @@ def uCheck (tabs : List UTab) (globs : List UGlob) (fns : List String)
   -- missing locals, wrong types and early returns are refused there.
   let locals := c.misst.filterMap fun | .variable name => some name | _ => none
   let ctx : UCtx :=
-    { names := locals, kinds := locals.map fun _ => .int, types := [], tabs := tabs, locks := [], held := [], res := none, fname := c.cname, globs := globs }
+    { names := locals
+      kinds := locals.map fun _ => .int
+      types := []
+      tabs := tabs
+      locks := []
+      held := []
+      res := none
+      fname := c.cname
+      alias := []
+      lits := []
+      globs := globs }
   let boeden ← uSeq (c.boden.map (uSichert ctx))
   -- The parser stores (text, expects-name); the kernel stores (name, text).
   .ok { name := c.cname, claim := c.claim, misst := misst, tore := tore, boeden := boeden, sonde := c.sonde.map fun pair => (pair.2, pair.1), probe := probeFnName c.cname, duty := dutyName c.cname }
