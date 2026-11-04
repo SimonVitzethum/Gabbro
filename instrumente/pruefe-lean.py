@@ -4,7 +4,7 @@
     ./instrumente/pruefe-lean.py [--ohne-bau]
 
 Stages (each prints what it measured; a stage that cannot run is NOT a pass):
-  1. `lake build` of `grammatik/` -- every module builds.
+  1. `lake build` of `nativefloat/` and `grammatik/` -- shared adapters and every model module build.
   2. `NachpruefungZiel.lean` -- `gabbro_ziel` (and its siblings) depend on exactly
      `propext`, `Classical.choice`, `Quot.sound`.
   3. No `sorry`, `admit`, `native_decide`, `bv_decide`, `ofReduceBool`, `sorryAx`, `unsafe` in Lean code (comments
@@ -70,11 +70,15 @@ def ohne_kommentare(t):
 
 
 def stufe_bau():
-    rc, out = lauf(["lake", "build"], G, 3600)
-    jobs = re.findall(r"Build completed successfully \((\d+) jobs\)", out)
-    ok = rc == 0 and bool(jobs)
-    print(f"  1 bau:     {'ok' if ok else 'ROT'} ({jobs[-1] + ' Jobs' if jobs else out.strip().splitlines()[-1:]})")
-    return ok
+    results = []
+    for project in (NF, G):
+        rc, out = lauf(["lake", "build"], project, 3600)
+        jobs = re.findall(r"Build completed successfully \((\d+) jobs\)", out)
+        ok = rc == 0 and bool(jobs)
+        print(f"  1 bau:     {'ok' if ok else 'ROT'} ({project.name}: "
+              f"{jobs[-1] + ' Jobs' if jobs else out.strip().splitlines()[-1:]})")
+        results.append(ok)
+    return all(results)
 
 
 def stufe_axiome():
@@ -123,7 +127,7 @@ def stufe_layout():
 
 
 def stufe_zertifikate():
-    p = subprocess.run(["cargo", "test", "-q", "--test", "zertifikate"], cwd=W, env=ENV,
+    p = subprocess.run(["cargo", "test", "-q", "--test", "zertifikate", "--no-fail-fast"], cwd=W, env=ENV,
                        capture_output=True, text=True, timeout=1800)
     if p.returncode != 0:
         print("  5 zertif.: ROT (the generator test failed)\n", (p.stdout + p.stderr)[-800:])
