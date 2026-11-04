@@ -134,7 +134,11 @@ theorem stmtOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       obtain ⟨hAL, hb⟩ := hs.locks_inv
       have hW := hZ.welt
       simp only [execStmt] at hex
-      obtain ⟨σ1, hb1, rfl⟩ := mapWelt_ok hex
+      have mapped : Ausgang.mapWelt (fun w => w.gibt L)
+          (execBlock O passes keinRuf body (σ.nimmt L) ρ) = .ok σ' ρ' := by
+        generalize hbody : execBlock O passes keinRuf body (σ.nimmt L) ρ = outcome at hex ⊢
+        cases outcome <;> first | exact hex | cases hex
+      obtain ⟨σ1, hb1, rfl⟩ := mapWelt_ok mapped
       obtain ⟨M1, hs1, hZ1⟩ := w_locks (P := P) (O := O) (passes := passes) hZ.1
         L hr body rest k ρ rfl hΛ (hA L hAL)
       rw [hW] at hZ1
