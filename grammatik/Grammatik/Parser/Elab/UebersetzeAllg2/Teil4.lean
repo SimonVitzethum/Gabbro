@@ -192,7 +192,7 @@ theorem resetRangeExpr_eval (u : UProg) {Γ : Ctx} {Λ : List (Res (declOf u))} 
     funext j
     simp only [resetFinW]
     have hn : ¬ (i ≤ j.val ∧ j.val < i + 0) := by omega
-    simp [hn]
+    rw [ite_eq_right hn]
   | succ k ih =>
     intro h
     have hk : i + k ≤ len := by omega
