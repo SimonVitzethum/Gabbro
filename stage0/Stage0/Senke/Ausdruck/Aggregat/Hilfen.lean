@@ -5,7 +5,7 @@
              unchanged.
 -/
 module
-public import Stage0.Senke.Ausdruck.Aggregat.Hilfena
+public import Stage0.Senke.Gleit.Native.Code
 public import Lean.Meta.Tactic.Simp.RegisterCommand
 public import Grammatik.Kern.Syntax.Typen.Produkt
 public import Grammatik.Kern.Semantik.Semantik
@@ -84,40 +84,6 @@ def engL (d : Nat) (lo hi lo' hi' : Int) (ce cb : Option (List II × Nat)) : Opt
   if 16 * (cb.1.length + 1) < 2 ^ 31 then
     some (engC d ce.1 ct.1 cb.1, max ce.2 (max ct.2 cb.2))
   else none
-
-/-- Signed magnitude key: strip the sign, multiply by `1 - 2 * sign`.
-    The two supplied operand codes evaluate the same pure expression at `d` and `d+3`. -/
-def floatKeyL (d : Nat) (a b : Option (List II × Nat)) : Option (List II × Nat) := do
-  let a ← a
-  let b ← b
-  pure (bin2 5 d
-    (bin2 12 d (bin2 11 d a ([ci 1 (d+1) 1 0], d+2)) ([ci 1 (d+1) 1 0], d+2))
-    (bin2 4 (d+1) ([ci 1 (d+1) 1 0], d+2)
-      (bin2 5 (d+2) ([ci 1 (d+2) 2 0], d+3)
-        (bin2 13 (d+3) b ([ci 1 (d+4) 0 0], d+5)))))
-
-/-- Compare two signed keys; non-strict order negates the reverse strict order. -/
-def floatCmpL (le : Bool) (d : Nat) (a b : Option (List II × Nat)) : Option (List II × Nat) := do
-  let a ← a
-  let b ← b
-  let c := bin2 13 d a b
-  pure (if le then bin2 10 d c ([ci 1 (d+1) 1 0], d+2) else c)
-
-/-- Apply the same key transformation to both pure operands. -/
-def floatExprL (le : Bool) (d : Nat) (a b : Nat → Option (List II × Nat)) : Option (List II × Nat) :=
-  floatCmpL le d (floatKeyL d (a d) (a (d+3)))
-    (floatKeyL (d+1) (b (d+1)) (b (d+4)))
-
-/-- A constant ordering key, including its sign in two's complement. -/
-def floatConstL (x : GFloat) (d : Nat) : List II × Nat :=
-  konstWL 4 (BitVec.ofInt 64 (floatKey x)).toNat d
-
-/-- Outside the inclusive interval: `x < lo || hi < x`. -/
-def floatRangeL (d : Nat) (lo hi : Int × Int) (e : Nat → Option (List II × Nat)) : Option (List II × Nat) := do
-  let a ← floatKeyL d (e d) (e (d+3))
-  let b ← floatKeyL (d+2) (e (d+2)) (e (d+5))
-  pure (bin2 9 d (bin2 13 d a (floatConstL (bruch lo) (d+1)))
-    (bin2 13 (d+1) (floatConstL (bruch hi) (d+1)) b))
 
 /-- The range of an integer expression lies in 64 bits. -/
 def inWE {Λ : List (Res D)} {Γ : Ctx} {lo hi : Int} (_ : Expr D Γ Λ (.int lo hi)) : Bool := inW lo hi

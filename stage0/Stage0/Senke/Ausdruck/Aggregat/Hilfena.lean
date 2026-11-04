@@ -85,12 +85,6 @@ def wordK (o d : Nat) (a : Option (List II × Nat)) (k : Int) : Option (List II 
 def strGetL (d : Nat) (s i : Option (List II × Nat)) : Option (List II × Nat) :=
   wennL d (wordK 14 d i 0) (wordK 8 d s 255) (some ([ci 1 d 0 0], d + 1))
 
-/-- The raw magnitude field, without the sign bit. -/
-def floatMag (a : GFloat) : Nat := a.bexp * 4503599627370496 + a.frac
-
-/-- The mathematical ordering key; both signed zeros have key zero. -/
-def floatKey (a : GFloat) : Int := if a.sign then -(floatMag a : Int) else floatMag a
-
 /-- Build an arbitrary word from base-65536 digits, using only signed immediate fields. -/
 def konstWL : Nat → Nat → Nat → List II × Nat
   | 0, _, d => ([ci 1 d 0 0], d + 1)

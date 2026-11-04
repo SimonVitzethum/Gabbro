@@ -1,4 +1,4 @@
-/- Compositional semantics for pure word-code generators used by software floats. -/
+/- Compositional semantics for pure word-code generators used by native float lowering. -/
 module
 public import Stage0.Senke.Ausdruck.Gleit.Wort
 public import Stage0.Senke.Ausdruck.Aggregat.Wort

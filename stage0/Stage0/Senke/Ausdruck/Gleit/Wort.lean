@@ -46,21 +46,6 @@ theorem konstWL_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat}
         ← BitVec.ofNat_mul, ← BitVec.ofNat_add]
       exact congrArg (BitVec.ofNat 64) (by omega)
 
-/-- Packing does not identify distinct well-formed binary64 values. -/
-theorem float_word_injective {a b : GFloat}
-    (ha : Gleitkomma.wf Gleitkomma.f64 a) (hb : Gleitkomma.wf Gleitkomma.f64 b)
-    (h : BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 a) =
-      BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 b)) : a = b := by
-  have al := Gleitkomma.zuBits_lt _ Gleitkomma.f64_dicht a ha
-  have bl := Gleitkomma.zuBits_lt _ Gleitkomma.f64_dicht b hb
-  have e : Gleitkomma.f64.ebits + Gleitkomma.f64.fracBits + 1 = 64 := by decide
-  rw [e] at al bl
-  have h := congrArg BitVec.toNat h
-  simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt al, Nat.mod_eq_of_lt bl] at h
-  have := congrArg (Gleitkomma.ausBits Gleitkomma.f64) h
-  simpa only [Gleitkomma.ausBits_zuBits _ Gleitkomma.f64_dicht _ ha,
-    Gleitkomma.ausBits_zuBits _ Gleitkomma.f64_dicht _ hb] using this
-
 theorem wordConstant_length (d : Nat) (n : Int) :
     (wordConstant d n).1.length = if lit32 n then 1 else 17 := by
   unfold wordConstant
