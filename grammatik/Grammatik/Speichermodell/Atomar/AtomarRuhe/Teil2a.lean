@@ -10,7 +10,7 @@ namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
 /-- Transport the complete optional answer before extending its continuation environment. -/
-private theorem ergTransportHA_ru {e : Option Ty} {τ : Ty} (he : e = some τ)
+theorem ergTransportHA_ru {e : Option Ty} {τ : Ty} (he : e = some τ)
     (he' : e.map tyR = some (tyR τ)) (v : ErgVal D e) :
     (he' ▸ ergR e v : ErgVal D.mitRuhe (some (tyR τ))) =
       valR τ (he ▸ v : ErgVal D (some τ)) := by
