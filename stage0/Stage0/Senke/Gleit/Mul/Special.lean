@@ -2,6 +2,7 @@
 module
 public import Stage0.Senke.Gleit.Mul.Model
 public import Stage0.Senke.Gleit.Normal.PackModel
+public import Stage0.Senke.Gleit.AddMag
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
@@ -38,8 +39,8 @@ def softMulSpecialL (d : Nat) (a b finite : Nat → Option (List II × Nat)) :
   let invalid := fun j => wordL 9 j (invalidA j) (invalidB (j + 1))
   let infinity := fun j => wordL 9 j (ia j) (ib (j + 1))
   let isZero := fun j => wordL 9 j (za j) (zb (j + 1))
-  let zero := fun j => some ([ci 1 j 0 0], j + 1)
-  let inf := fun j => some ([ci 1 j 2047 0], j + 1)
+  let zero := fun (j : Nat) => some ([ci 1 j 0 0], j + 1)
+  let inf := fun (j : Nat) => some ([ci 1 j 2047 0], j + 1)
   let nan := fun j => some (konstWL 4 9218868437227405313 j)
   let finiteOrZero := fun j => routineChooseL j isZero (fun k => packL k sign zero zero) finite
   let infOrFinite := fun j => routineChooseL j infinity (fun k => packL k sign inf zero) finiteOrZero
@@ -63,13 +64,13 @@ theorem softMulSpecialL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop
     (hf : WordCode (L := L) ρ W finite fv) :
     WordCode (L := L) ρ W (fun d => softMulSpecialL d a b finite)
       (softMulSpecialWord av bv fv) := by
-  have ia := routineInfL_ok ha
-  have ib := routineInfL_ok hb
-  have za := routineZeroL_ok ha
-  have zb := routineZeroL_ok hb
-  have sa := unpackSignL_ok ha
-  have sb := unpackSignL_ok hb
-  have sign := xorSignL_ok sa sb
+  have ia : WordCode (L := L) ρ W _ _ := routineInfL_ok ha
+  have ib : WordCode (L := L) ρ W _ _ := routineInfL_ok hb
+  have za : WordCode (L := L) ρ W _ _ := routineZeroL_ok ha
+  have zb : WordCode (L := L) ρ W _ _ := routineZeroL_ok hb
+  have sa : WordCode (L := L) ρ W _ _ := unpackSignL_ok ha
+  have sb : WordCode (L := L) ρ W _ _ := unpackSignL_ok hb
+  have sign : WordCode (L := L) ρ W _ _ := xorSignL_ok sa sb
   have invalidA : WordCode (L := L) ρ W _ _ := WordCode.bin ia zb (g := fun x y => some (x &&& y))
     rfl rfl (by decide : 8 < 256)
   have invalidB : WordCode (L := L) ρ W _ _ := WordCode.bin za ib (g := fun x y => some (x &&& y))
@@ -84,14 +85,18 @@ theorem softMulSpecialL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop
   rw [flagOr] at invalid infinity isZero
   have zero : WordCode (L := L) ρ W _ _ := WordCode.const (L := L) (ρ := ρ) (W := W) 0 (by decide)
   have inf : WordCode (L := L) ρ W _ _ := WordCode.const (L := L) (ρ := ρ) (W := W) 2047 (by decide)
-  have finiteOrZero := routineChooseL_ok isZero
+  have finiteOrZero : WordCode (L := L) ρ W _ _ := routineChooseL_ok isZero
     (fun _ => packL_ok sign zero zero) (fun _ => hf)
-  have infOrFinite := routineChooseL_ok infinity
+  have infOrFinite : WordCode (L := L) ρ W _ _ := routineChooseL_ok infinity
     (fun _ => packL_ok sign inf zero) (fun _ => finiteOrZero)
-  have valid := routineChooseL_ok invalid
+  have valid : WordCode (L := L) ρ W _ _ := routineChooseL_ok invalid
     (fun _ => WordCode.konst 9218868437227405313 (by decide)) (fun _ => infOrFinite)
-  have rightNan := routineChooseL_ok (routineNanL_ok hb) (fun _ => hb) (fun _ => valid)
-  exact routineChooseL_ok (routineNanL_ok ha) (fun _ => ha) (fun _ => rightNan)
+  have rightNan : WordCode (L := L) ρ W _ _ :=
+    routineChooseL_ok (routineNanL_ok hb) (fun _ => hb) (fun _ => valid)
+  have result : WordCode (L := L) ρ W _ _ :=
+    routineChooseL_ok (routineNanL_ok ha) (fun _ => ha) (fun _ => rightNan)
+  intro fp K d c top emitted fits m pc pre
+  exact result (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
 
 private theorem signXor (a b : Bool) :
     Runner.IR.bool a ^^^ Runner.IR.bool b = Runner.IR.bool (a != b) := by
@@ -116,10 +121,13 @@ theorem softMulSpecialWord_model (a b : GFloat) (ha : wf f64 a) (hb : wf f64 b)
   have inf : packWord (Runner.IR.bool (a.sign != b.sign)) 2047 0 =
       BitVec.ofNat 64 (zuBits f64 ⟨a.sign != b.sign, 2047, 0⟩) :=
     packWord_canonical _ ⟨by decide, by decide⟩
+  -- Reduce the fixed NaN encoding once, independently of the operand classes.
+  have nan : BitVec.ofNat 64 (zuBits f64 (nanQ f64)) =
+      BitVec.ofNat 64 9218868437227405313 := by
+    decide +kernel
   simp only [softMulSpecialWord, an, ai, az, bn, bi, bz, sa, sb, signXor, zero, inf]
   cases ca : klasse f64 a <;> cases cb : klasse f64 b <;>
-    simp [softMulSpecial, ca, cb, nanQ, zuBits, f64, Format.bexpMax,
-      Format.ebits, Format.fracBits, bitlen, bitlenAux]
+    simp [softMulSpecial, ca, cb, nan]
 
 /-- Invalid operations, NaN priority and the sign of both zero and infinity
     instantiate the same dispatcher, independently of the finite result. -/
