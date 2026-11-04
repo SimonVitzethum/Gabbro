@@ -437,6 +437,30 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) 
     pure (cg.1 ++ cr.1 ++ ce.1, max cg.2 (max cr.2 ce.2))
   | _, Γ, _, .retScoped e _, reserved => lowRetScoped L layout ens (frei Γ reserved) e reserved
   | _, Γ, _, .retWhyScoped r _, reserved => lowRetWhyScoped layout r (frei Γ reserved)
+  | _, Γ, _, .floatNarrow e low high err rest, reserved =>
+    if decide (Gleitkomma.klasse Gleitkomma.f64 (bruch low) ≠ .nan) &&
+        decide (Gleitkomma.klasse Gleitkomma.f64 (bruch high) ≠ .nan) then do
+      let cc ← floatRangeL (frei Γ reserved) low high (lowE (reserved := reserved) L e)
+      let ce ← lowE (reserved := reserved) L e (frei Γ reserved)
+      let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest
+      let cx ← lowEnd (reserved := reserved) passes A L layout ens pr (exPlus ex (ce.1.length + cr.1.length + 1)) err
+      pure (floatNarrowC (frei Γ reserved) cc.1 cx.1 ce.1 cr.1, max cc.2 (max ce.2 (max cr.2 cx.2)))
+    else lowEnd (reserved := reserved) passes A L layout ens pr ex err
+  | _, Γ, _, .floatLit q low high rest, reserved =>
+    floatLiteralL (frei Γ reserved) q low high (fun _ => lowEnd (reserved := reserved) passes A L layout ens pr ex rest)
+  | _, Γ, _, .floatOf e low high rest, reserved =>
+    match e with
+    | .lit n => floatLiteralL (frei Γ reserved) (n, 1) low high (fun _ => lowEnd (reserved := reserved) passes A L layout ens pr ex rest)
+    | _ => do
+      let cc ← computedFloatRangeL (frei Γ reserved) low high
+        (fun d => computedFloatOfE (reserved := reserved) L Gleitkomma.f64 e d)
+      let ce ← computedFloatOfE (reserved := reserved) L Gleitkomma.f64 e (frei Γ reserved)
+      let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest
+      pure (floatNarrowC (frei Γ reserved) cc.1 (stopC 107 (frei Γ reserved)) ce.1 cr.1,
+        max cc.2 (max (frei Γ reserved + 8) (max ce.2 cr.2)))
+  | _, Γ, _, .float op a b low high rest, reserved =>
+    floatArithmeticBlockL op (frei Γ reserved) low high (lowE (reserved := reserved) L a)
+      (lowE (reserved := reserved) L b) (fun _ => lowEnd (reserved := reserved) passes A L layout ens pr ex rest)
   | _, _, _, .regRead .., _ => none
   | _, _, _, .regReadElse .., _ => none
 
