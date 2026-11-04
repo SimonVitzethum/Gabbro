@@ -76,12 +76,10 @@ theorem fadenS_bereich (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
           (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ).x) = none := by
         rw [ea, eb]; exact hv
       refine hno .bereich ?_
-      simp only [semH, execEndH, hv']
-      rfl
+      simp only [semH, weiterH, execEndH, hv'] <;> rfl
     · obtain ⟨H, HA, HU, σ, hg, hok, hno⟩ := kopfS_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
       refine hno .bereich ?_
-      simp only [semH, execEndH, hv]
-      rfl
+      simp only [semH, weiterH, execEndH, hv] <;> rfl
     · obtain ⟨H, HA, HU, σ, hg, hok, hno⟩ := kopfS_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
       have he : e.orte ⊆ fussOrteG P (M.faeden t).kopf.f :=
         fun _ h => hok.2 (List.mem_append_left _ h)
@@ -91,8 +89,7 @@ theorem fadenS_bereich (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
           (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n) = none := by
         rw [ee]; exact hv
       refine hno .bereich ?_
-      simp only [semH, execEndH, hv']
-      rfl
+      simp only [semH, weiterH, execEndH, hv'] <;> rfl
 
 /-- **On every reachable machine every thread passes its float range checks**, for any set
     of local carriers with the rely `LokOk` (the premises of `zielInvS_erreichbarL`). -/

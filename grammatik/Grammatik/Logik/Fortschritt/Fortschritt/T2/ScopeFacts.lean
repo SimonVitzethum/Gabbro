@@ -25,7 +25,9 @@ theorem scopesOk_alsBlock (haelt : List D.Lock) (boden : Option Int) {l : Bool} 
       _, _, .awaits _ _ _ _ _ rest | _, _, .bindCallInd _ _ _ _ _ rest |
       _, _, .bindCallIndElse _ _ _ _ _ _ rest |
       _, _, .narrow _ _ _ _ rest | _, _, .narrowRequired _ _ _ rest |
-      _, _, .exchange _ _ _ _ rest => by
+      _, _, .exchange _ _ _ _ rest | _, _, .float _ _ _ _ _ rest |
+      _, _, .floatLit _ _ _ rest | _, _, .floatOf _ _ _ rest |
+      _, _, .floatNarrow _ _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.scopesOk, Endblock.scopesOk,
         scopesOk_alsBlock haelt boden rest]
   | _, _, .ite _ t _ => by
