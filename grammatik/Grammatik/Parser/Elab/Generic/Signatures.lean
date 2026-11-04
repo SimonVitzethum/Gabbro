@@ -112,7 +112,8 @@ def UEnsEinschluss (sup sub : List UEns) : Prop :=
     carries no contract, like `dummySig`. -/
 def sigFnAt (u : UProg) (n : Nat) : UFn :=
   if h : n < (sigFns u).length then (sigFns u).get ⟨n, h⟩
-  else { name := "", params := [], kinds := [], res := none, held := [], puts := [],
+  else {
+    name := "", params := [], kinds := [], res := none, held := [], puts := []
     gives := [], body := [], ret := .empty }
 
 /-- **Contract conformance, decided** (C06, O43): every target-pre conjunct
