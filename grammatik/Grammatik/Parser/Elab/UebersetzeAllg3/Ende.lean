@@ -47,6 +47,11 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
   | Γ, fn, Λ, pe, .floatLit x q lo hi :: rest => do
     let (body, remaining) ← R.ende (l := l) (.fl lo hi :: Γ) (fn.mitWert x (.fl lo hi)) Λ pe rest
     pure (Endblock.floatLit q lo hi body, remaining)
+  | Γ, fn, Λ, pe, .floatOf x operand lo hi :: rest => do
+    let ⟨.int _ _, value⟩ ← lowWertE u Γ Λ fn none operand
+      | .error "floatOf: operand is not an integer"
+    let (body, remaining) ← R.ende (l := l) (.fl lo hi :: Γ) (fn.mitWert x (.fl lo hi)) Λ pe rest
+    pure (Endblock.floatOf value lo hi body, remaining)
   | Γ, fn, Λ, pe, .float x op a b lo hi :: rest => do
     let ⟨.fl _ _, left⟩ ← lowWertE u Γ Λ fn none a | .error "float: left operand is not a float"
     let ⟨.fl _ _, right⟩ ← lowWertE u Γ Λ fn none b | .error "float: right operand is not a float"
@@ -89,8 +94,16 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
           | .ok (sonst, .blkEnd :: rest') =>
             (R.ende (l := l) (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) Λ pe rest').bind fun (b, r) => .ok (Endblock.narrow (D := declOf u) (Expr.var v) lo hi sonst b, r)
           | .ok (_, _) => .error "lower: a narrow is not closed"
+      | some (_, .fl l1 h1) =>
+        (lowVar Γ j (.fl l1 h1)).bind fun v => match R.ende (l := l) Γ fn Λ pe rest with
+          | .error e => .error e
+          | .ok (sonst, .blkEnd :: tail) =>
+            (R.ende (l := l) (.fl (lo, 1) (hi, 1) :: Γ)
+              (fn.mitWert x (.fl (lo, 1) (hi, 1))) Λ pe tail).bind fun (body, remaining) =>
+                .ok (Endblock.floatNarrow (Expr.var v) (lo, 1) (hi, 1) sonst body, remaining)
+          | .ok (_, _) => .error "lower: a narrow is not closed"
       | _ => .error "lower: narrow of a non-number"
-  /-- Required narrowing at the top level of a body (C15): no `else`, no
+  /- Required narrowing at the top level of a body (C15): no `else`, no
       `blkEnd`; out of range is `Logik.kapazitaet`
       (`Endblock.narrowRequired`). -/
   | Γ, fn, Λ, pe, .narrowReqBeg x lo hi :: rest =>

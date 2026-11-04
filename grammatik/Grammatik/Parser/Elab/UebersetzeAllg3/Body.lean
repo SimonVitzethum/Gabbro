@@ -54,6 +54,11 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
   | Γ, fn, n + 1, Λ, .floatLit x q lo hi :: rest, r => do
     let body ← lowBodyF u caller (.fl lo hi :: Γ) (fn.mitWert x (.fl lo hi)) n Λ rest r
     pure (Endblock.floatLit q lo hi body)
+  | Γ, fn, n + 1, Λ, .floatOf x operand lo hi :: rest, r => do
+    let ⟨.int _ _, value⟩ ← lowWertE u Γ Λ fn none operand
+      | .error "floatOf: operand is not an integer"
+    let body ← lowBodyF u caller (.fl lo hi :: Γ) (fn.mitWert x (.fl lo hi)) n Λ rest r
+    pure (Endblock.floatOf value lo hi body)
   | Γ, fn, n + 1, Λ, .float x op a b lo hi :: rest, r => do
     let ⟨.fl _ _, left⟩ ← lowWertE u Γ Λ fn none a | .error "float: left operand is not a float"
     let ⟨.fl _ _, right⟩ ← lowWertE u Γ Λ fn none b | .error "float: right operand is not a float"
@@ -118,8 +123,20 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
             | .error e => .error e
             | .ok b => .ok (Endblock.narrow (D := declOf u) (Expr.var v) lo hi sonst b)
           | .ok (_, _) => .error "lower: a narrow is not closed"
+      | some (_, .fl l1 h1) =>
+        match lowVar Γ j (.fl l1 h1) with
+        | .error e => .error e
+        | .ok v =>
+          match lowEndL (l := false) u caller Γ fn blockFuel Λ [] rest with
+          | .error e => .error e
+          | .ok (sonst, .blkEnd :: tail) =>
+            match lowBodyF u caller (.fl (lo, 1) (hi, 1) :: Γ)
+                (fn.mitWert x (.fl (lo, 1) (hi, 1))) n Λ tail r with
+            | .error e => .error e
+            | .ok body => .ok (Endblock.floatNarrow (Expr.var v) (lo, 1) (hi, 1) sonst body)
+          | .ok (_, _) => .error "lower: a narrow is not closed"
       | _ => .error "lower: narrow of a non-number"
-  /-- Required narrowing (C15): no `else`, no `blkEnd`; out of range is
+  /- Required narrowing (C15): no `else`, no `blkEnd`; out of range is
       `Logik.kapazitaet` (`Endblock.narrowRequired`). -/
   | Γ, fn, n + 1, Λ, .narrowReqBeg x lo hi :: rest, r =>
     match paramPos fn.params x with
