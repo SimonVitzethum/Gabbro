@@ -69,6 +69,7 @@ import all Init.Data.String.ToSlice
 
 namespace Gabbro.Grammatik.Zielsatz
 open Gabbro.Grammatik
+local instance : DecidableEq zD.Ax := inferInstanceAs (DecidableEq Empty)
 
 /-! ## 1. POSITIVE: a library exports a lock-guarded table writer, an app calls it from two
     threads -/
@@ -105,10 +106,30 @@ def vzBib : Programm zD := mitRumpf zPB fun
   | .wrap => zRumpfWrap
 
 /-- The app: `concurrent { haupt, haupt }`. -/
-def vzE1 : Einheit zD := ⟨vzApp, zS, axWahr zD, [⟨zHaupt, .nil⟩, ⟨zHaupt, .nil⟩], zSp, [], []⟩
+def vzE1 : Einheit zD where
+  P := vzApp
+  S := zS
+  Q := axWahr zD
+  starts := [⟨zHaupt, .nil⟩, ⟨zHaupt, .nil⟩]
+  sp0 := zSp
+  gestartet := []
+  arenen := []
+  akku := []
+  pruefungen := []
+  grants0 := []
 
 /-- The library: no thread of its own. -/
-def vzE2 : Einheit zD := ⟨vzBib, zS, axWahr zD, [], zSp, [], []⟩
+def vzE2 : Einheit zD where
+  P := vzBib
+  S := zS
+  Q := axWahr zD
+  starts := []
+  sp0 := zSp
+  gestartet := []
+  arenen := []
+  akku := []
+  pruefungen := []
+  grants0 := []
 
 /-- Each unit is accepted ALONE by the concrete checker. -/
 theorem vz_app_akzeptiert :
@@ -116,7 +137,7 @@ theorem vz_app_akzeptiert :
 
 theorem vz_bib_akzeptiert : Akzeptiert vzBib zS zFs [()] [.inl ()] [] = true := by decide
 
-theorem vz_verbindbar : Verbindbar vzE1 vzE2 := ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩
+theorem vz_verbindbar : Verbindbar vzE1 vzE2 := ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- **The link check accepts.** -/
 theorem vz_schnittstelle : schnittstelleB zFs [.inl ()] vzE vzE1 vzE2 = true := by decide
@@ -131,7 +152,8 @@ theorem vz_huelle_schreibt :
   ⟨(huelleB_iff zFs_voll).mp (by decide), rfl, by decide⟩
 
 theorem vz_nutzer1 : NutzerTeil vzE vzE1 := by
-  refine ⟨⟨fun passes f hf => ?_, zS_lokal, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩, ⟨fun _ => rfl, fun a ha => ?_⟩⟩
+  refine ⟨⟨fun passes f hf => ?_, zS_lokal, axEnsLokal_wahr,
+    fun f _ => zPool_nutzerPflicht.logik.2.2.2 f⟩, ⟨fun _ => rfl, fun a ha => ?_⟩⟩
   · cases f <;> simp only [vzE, Bool.false_eq_true] at hf
     obtain ⟨k, i, g⟩ := zPool_nutzerPflicht.logik.1 passes zHaupt
     exact ⟨(koerper_mitRumpf2 zPB _ zPB.rumpf passes _ _ zHaupt rfl).mpr k,
@@ -141,7 +163,8 @@ theorem vz_nutzer1 : NutzerTeil vzE vzE1 := by
     rcases ha with rfl | rfl <;> rfl
 
 theorem vz_nutzer2 : NutzerTeil (fun f => !vzE f) vzE2 := by
-  refine ⟨⟨fun passes f _ => ?_, zS_lokal, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩, ⟨fun _ => rfl, fun a ha => ?_⟩⟩
+  refine ⟨⟨fun passes f _ => ?_, zS_lokal, axEnsLokal_wahr,
+    fun f _ => zPool_nutzerPflicht.logik.2.2.2 f⟩, ⟨fun _ => rfl, fun a ha => ?_⟩⟩
   · obtain ⟨k, i, g⟩ := zPool_nutzerPflicht.logik.1 passes f
     cases f
     · exact ⟨(koerper_mitRumpf2 zPB _ zPB.rumpf passes _ _ zEin rfl).mpr k,
@@ -168,10 +191,8 @@ theorem vz_ziel (passes : Nat) (lebt0 : Faden → Bool) (K : FadenMaschine zD.mi
         (initRuhe (verbinde vzE vzE1 vzE2).starts)) K :=
   gabbro_ziel_verbund_sc akzeptiert_pruefer zD vzE1 vzE2 vzE ⟨zFs, zFs_voll⟩ ⟨[()], zLs_voll⟩
     ⟨[.inl ()], zCs_voll⟩
-    (by show Akzeptiert vzApp zS zFs [()] [.inl ()] [zHaupt, zHaupt] = true
-        exact vz_app_akzeptiert)
-    (by show Akzeptiert vzBib zS zFs [()] [.inl ()] [] = true
-        exact vz_bib_akzeptiert) vz_verbindbar
+    (by rw [akzeptiert_pruefer_eq]; exact vz_app_akzeptiert)
+    (by rw [akzeptiert_pruefer_eq]; exact vz_bib_akzeptiert) vz_verbindbar
     (((schnittstelleB_iff zFs_voll zCs_voll []).mp vz_schnittstelle).1) vz_nutzer1 vz_nutzer2 rfl zO
     ⟨zO_gut, zO_lokal, axVertragO_wahr zO⟩ passes _ _ (laufzeit_initRuhe _) lebt0 K hK
 
@@ -231,7 +252,17 @@ def vmBib : Programm mD := mitRumpf mP fun
   | .ruhe => .ret .empty List.Perm.nil
 
 /-- The library as a unit: no thread of its own. -/
-def vmE2 : Einheit mD := ⟨vmBib, mSI, axWahr mD, [], mSp, [], []⟩
+def vmE2 : Einheit mD where
+  P := vmBib
+  S := mSI
+  Q := axWahr mD
+  starts := []
+  sp0 := mSp
+  gestartet := []
+  arenen := []
+  akku := []
+  pruefungen := []
+  grants0 := []
 
 /-- **Refused at the link, although each unit alone is accepted.** The app is the two-thread
     fixture `mE` (`hauptA` calls the imported `pruefeA`, `hauptB` writes `privB`); its
@@ -248,7 +279,7 @@ theorem vm_abgelehnt :
     lokBedarfB mFs vmE mE vmE2 (.inl MTab.privB) = true ∧
     getrenntVB mFs vmE mE vmE2 (verbinde vmE mE vmE2).ws (.inl MTab.privB) = false ∧
     Akzeptiert (verbinde vmE mE vmE2).P mSI mFs [()] mCs (verbinde vmE mE vmE2).ws = false :=
-  ⟨mP_akzeptiert, by decide, ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩, by decide, by decide, by decide,
+  ⟨mP_akzeptiert, by decide, ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, by decide, by decide, by decide,
     by decide⟩
 
 /-- The refusal at the specification: no `SchnittstelleSpec` for this pair. -/
@@ -268,7 +299,17 @@ def vzBibSchwach : Programm zD := mitRumpf zP fun
   | .lies => zRumpfLies
   | .wrap => zRumpfWrap
 
-def vzE2Schwach : Einheit zD := ⟨vzBibSchwach, zS, axWahr zD, [], zSp, [], []⟩
+def vzE2Schwach : Einheit zD where
+  P := vzBibSchwach
+  S := zS
+  Q := axWahr zD
+  starts := []
+  sp0 := zSp
+  gestartet := []
+  arenen := []
+  akku := []
+  pruefungen := []
+  grants0 := []
 
 /-- **The contract is too weak: the link is refused.** The app relies on the imported
     `wrap`'s `ensures konto[0] == 100`; the library promises `ensures true`. The library alone

@@ -89,6 +89,8 @@ structure Passend (B : Einheit D) (p : Projekt D) : Prop where
   invariante : B.P.invariante = p.E.P.invariante
   requires : B.P.requires = p.E.P.requires
   ensures : B.P.ensures = p.E.P.ensures
+  ptrVertrag : B.P.ptrVertrag = p.E.P.ptrVertrag
+  axVertrag : B.P.axVertrag = p.E.P.axVertrag
   sperrInv : B.S = p.E.S
   unterbricht : B.P.unterbricht = p.E.P.unterbricht
   speicherSperre : ∀ L, p.sperren L = true → GleichAuf (B.S.orte L) (p.E.sp0.welt []) (B.sp0.welt [])
@@ -98,7 +100,7 @@ structure Passend (B : Einheit D) (p : Projekt D) : Prop where
 theorem passend_P {B : Einheit D} {p : Projekt D} (h : Passend B p) :
     p.E.P = mitRumpf B.P p.E.P.rumpf := by
   unfold mitRumpf
-  rw [h.invariante, h.requires, h.ensures, h.unterbricht]
+  rw [h.invariante, h.requires, h.ensures, h.ptrVertrag, h.axVertrag, h.unterbricht]
 
 /-- **The start a project owes** (L4): the invariants of the locks it owns at its own initial
     memory, and the `requires` of its own starts there. -/
@@ -128,13 +130,15 @@ theorem geteiltA_offen [DecidableEq D.Fn] {P : Programm D} {ws : List D.Fn} {c :
   ⟨h.1, h.2.1⟩
 
 /-- **One project's user obligation** (the part of (b) a project owes, reusable in every
-    program that links it): its own bodies against the open-world rely. -/
+    program that links it): its own bodies against the open-world rely and the canonical
+    pointer-interface refinement of its own targets, including targets absent from a run. -/
 structure NutzerTeilO (p : Projekt D) : Prop where
   logik : (∀ (passes : Nat) (f : D.Fn), p.eigen f = true →
       KoerperGutSA p.E.P passes p.E.Q p.E.S OffenA f ∧
         InvGutSA p.E.P passes p.E.Q p.E.S OffenA f ∧
         InvGutGrundA p.E.P passes p.E.Q p.E.S OffenA f) ∧
-    SperrInvLokal p.E.S ∧ AxEnsLokal p.E.Q
+    SperrInvLokal p.E.S ∧ AxEnsLokal p.E.Q ∧
+      ∀ f, p.eigen f = true → ∀ n (hf : D.passt f n = true), PtrZielVerfeinert p.E.P f n hf
   start : StartTeil p
 
 /-! ## 3. Monotonicity: stronger ensures, one body -/
@@ -224,7 +228,7 @@ theorem nutzerPflichtA_komponiere (hV : ∀ p ∈ ps, Passend B p) (hne : ps ≠
     (hD : Deckend ps) (hDS : DeckendS ps) (hN : ∀ p ∈ ps, NutzerTeilO p) :
     NutzerPflichtA (komponiere B ps) := by
   obtain ⟨p0, hp0⟩ := List.exists_mem_of_ne_nil ps hne
-  refine ⟨⟨fun passes f => ?_, ?_, ?_⟩, ⟨?_, ?_⟩⟩
+  refine ⟨⟨fun passes f => ?_, ?_, ?_, ?_⟩, ⟨?_, ?_⟩⟩
   · obtain ⟨p, hp, he, hk⟩ := koerperVon_besitzer (B := B.P) hD f
     obtain ⟨k, i, g⟩ := (hN p hp).logik.1 passes f he
     have hP : p.E.P = mitRumpf B.P p.E.P.rumpf := passend_P (hV p hp)
@@ -241,7 +245,12 @@ theorem nutzerPflichtA_komponiere (hV : ∀ p ∈ ps, Passend B p) (hne : ps ≠
   · show SperrInvLokal B.S
     rw [(hV p0 hp0).sperrInv]
     exact (hN p0 hp0).logik.2.1
-  · exact axEnsLokal_qAlle fun p hp => (hN p hp).logik.2.2
+  · exact axEnsLokal_qAlle fun p hp => (hN p hp).logik.2.2.1
+  · intro f n hf
+    obtain ⟨p, hp, he⟩ := hD f
+    have refined := (hN p hp).logik.2.2.2 f he n hf
+    rw [passend_P (hV p hp)] at refined
+    exact refined
   · intro L
     show B.S.inv L B.sp0 = true
     obtain ⟨p, hp, hL⟩ := hDS L

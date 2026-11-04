@@ -182,13 +182,16 @@ def teilP (e : D.Fn → Bool) (E₁ E₂ : Einheit D) (f : D.Fn) : Programm D :=
     axioms; `gabbro abi` / `--with` hand the importer only the EXPORTED part of it, and each
     Rust unit is checked over its own view, not over the union -- review E, F2), and they agree on everything that is not a
     body: every function's `requires`/`ensures` (so the importer relies on EXACTLY the
-    exporter's contract; the Rust `N501`-`N503` refuse a head that differs), every table
+    exporter's contract; the Rust `N501`-`N503` refuse a head that differs), the existing
+    pointer and axiom interface contract tables (C06), every table
     invariant, the lock invariants and the declared initial memory. The hardware assumptions
     are NOT here: `GabbroZielVerbund` names their equality as a premise of its own. -/
 structure Verbindbar (E₁ E₂ : Einheit D) : Prop where
   invariante : E₁.P.invariante = E₂.P.invariante
   requires : E₁.P.requires = E₂.P.requires
   ensures : E₁.P.ensures = E₂.P.ensures
+  ptrVertrag : E₁.P.ptrVertrag = E₂.P.ptrVertrag
+  axVertrag : E₁.P.axVertrag = E₂.P.axVertrag
   sperren : E₁.S = E₂.S
   speicher : E₁.sp0 = E₂.sp0
   -- the dispatch facts agree, like the contracts (Opus agent H, 2026-09-26)
@@ -278,22 +281,25 @@ structure SchnittstelleSpec (fs : List D.Fn) (e : D.Fn → Bool) (E₁ E₂ : Ei
 
 /-- **The user's logic of ONE unit** (the part of (b) a separately compiled unit owes): the
     bodies it OWNS at every budget, its lock and axiom families read only their carriers, and
-    its start obligation. A placeholder owes nothing -- its owner proves the body. -/
+    its start obligation. Each conforming target it owns also refines its pointer
+    interface (C06). A placeholder owes nothing -- its owner supplies both proofs. -/
 structure NutzerTeil (eigen : D.Fn → Bool) (E : Einheit D) : Prop where
   logik : (∀ (passes : Nat) (f : D.Fn), eigen f = true →
       KoerperGutS E.P passes E.Q E.S f ∧ InvGutS E.P passes E.Q E.S f ∧
         InvGutGrund E.P passes E.Q E.S f) ∧
-    SperrInvLokal E.S ∧ AxEnsLokal E.Q
+    SperrInvLokal E.S ∧ AxEnsLokal E.Q ∧
+      ∀ f, eigen f = true → ∀ n (hf : D.passt f n = true), PtrZielVerfeinert E.P f n hf
   start : StartPflicht E
 
 /-- **The user's logic of ONE unit, with the atomic rely** (the rely over the unit's own shared
-    atomics). -/
+    atomics), including C06 target refinement only for its own functions. -/
 structure NutzerTeilA [DecidableEq D.Fn] (eigen : D.Fn → Bool) (E : Einheit D) : Prop where
   logik : (∀ (passes : Nat) (f : D.Fn), eigen f = true →
       KoerperGutSA E.P passes E.Q E.S (GeteiltA E.P E.ws) f ∧
         InvGutSA E.P passes E.Q E.S (GeteiltA E.P E.ws) f ∧
         InvGutGrundA E.P passes E.Q E.S (GeteiltA E.P E.ws) f) ∧
-    SperrInvLokal E.S ∧ AxEnsLokal E.Q
+    SperrInvLokal E.S ∧ AxEnsLokal E.Q ∧
+      ∀ f, eigen f = true → ∀ n (hf : D.passt f n = true), PtrZielVerfeinert E.P f n hf
   start : StartPflicht E
 
 end Verbund

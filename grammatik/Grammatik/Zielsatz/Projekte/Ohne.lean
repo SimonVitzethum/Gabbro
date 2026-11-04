@@ -41,8 +41,8 @@ import all Init.Data.String.ToSlice
   A project whose functions carry no `requires`, no `ensures` and no table invariant, whose bodies
   pass the Bool `logikFrei` and whose declaration has no atomic global, owes nothing beyond what
   the checker decides: `nutzerTeilO_ohne` gives its `NutzerTeilO`, at every budget and for every
-  project of the program. It is how a library of plain helpers is linked without a single
-  hand-written proof.
+  project of the program. C06 pointer-interface refinement remains an explicit owner duty;
+  trivial function bodies alone do not establish arbitrary interface posts.
 -/
 
 namespace Gabbro.Grammatik.Zielsatz
@@ -66,12 +66,14 @@ theorem koerperGutR_ohne {P : Programm D} {passes : Nat} {f : D.Fn}
     exact hOV g' σ' ρ' e he
   exact Endblock.logikFrei_ok O' passes (torRuf P R) hT (P.rumpf f) hfrei σ ρ _ h g rfl
 
-/-- **The user's sequential logic of such a program.** -/
-theorem logikPflicht_ohne {P : Programm D} {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
+/-- Body logic is independent of the separately owed pointer-interface refinement. -/
+private theorem bodyLogic_ohne {P : Programm D} {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hreq : ∀ g, P.requires g = .tru) (hens : ∀ g, P.ensures g = .tru) (hinv : D.invs = [])
-    (hfrei : programmLogikFrei P fs = true) :
-    LogikPflicht P (SperrInv.leer D) (axWahr D) :=
-  ⟨fun passes f => ⟨koerperGutS_leer ⟨koerperGutRQ_of_R _ (koerperGutR_ohne hreq (hens f)
+    (hfrei : programmLogikFrei P fs = true) (passes : Nat) (f : D.Fn) :
+    KoerperGutS P passes (axWahr D) (SperrInv.leer D) f ∧
+      InvGutS P passes (axWahr D) (SperrInv.leer D) f ∧
+      InvGutGrund P passes (axWahr D) (SperrInv.leer D) f :=
+  ⟨koerperGutS_leer ⟨koerperGutRQ_of_R _ (koerperGutR_ohne hreq (hens f)
         ((List.all_eq_true.mp hfrei) f (hvoll f))), programmLogikFrei_ok hvoll hfrei passes _ f⟩,
       invGutS_leer hinv f, by
         unfold InvGutGrund
@@ -79,26 +81,39 @@ theorem logikPflicht_ohne {P : Programm D} {fs : List D.Fn} (hvoll : ∀ g : D.F
         unfold InvAmRueck
         intro i hi
         rw [hinv] at hi
-        cases hi⟩,
-    fun _ _ _ _ => rfl, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩
+        cases hi⟩
 
-/-- **Such a project owes nothing a human writes**: without an atomic global the open-world rely
-    is empty, and the sequential logic is the logic with the rely. -/
+/-- The full collection consumes the canonical C06 refinement rather than deriving it from bodies. -/
+theorem logikPflicht_ohne {P : Programm D} {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hreq : ∀ g, P.requires g = .tru) (hens : ∀ g, P.ensures g = .tru) (hinv : D.invs = [])
+    (hfrei : programmLogikFrei P fs = true) (hPtr : PtrVerfeinert P) :
+    LogikPflicht P (SperrInv.leer D) (axWahr D) :=
+  ⟨bodyLogic_ohne hvoll hreq hens hinv hfrei, fun _ _ _ _ => rfl, axEnsLokal_wahr, hPtr⟩
+
+/-- Without an atomic global the body logic carries to the open-world rely;
+    the project supplies refinement only for the targets it owns. -/
 theorem nutzerTeilO_ohne [DecidableEq D.Fn] {p : Projekt D} {fs : List D.Fn}
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hat : ∀ g : D.Glob, D.atomar g = false)
     (hP : p.E.S = SperrInv.leer D) (hQ : p.E.Q = axWahr D)
     (hreq : ∀ g, p.E.P.requires g = .tru) (hens : ∀ g, p.E.P.ensures g = .tru) (hinv : D.invs = [])
     (hfrei : programmLogikFrei p.E.P fs = true)
+    (hPtr : ∀ f, p.eigen f = true → ∀ n (hf : D.passt f n = true),
+      PtrZielVerfeinert p.E.P f n hf)
     (hstart : ∀ a ∈ p.E.starts ++ p.E.gestartet, ReqAmEintritt p.E.P a.1 (p.E.sp0.welt []) a.2) :
     NutzerTeilO p := by
-  have hL := logikPflichtA_of_frei (T := OffenA) (fun f c _ hc => by
-      obtain ⟨g, _, hg⟩ := hc.1
-      rw [hat g] at hg
-      cases hg) (logikPflicht_ohne hvoll hreq hens hinv hfrei)
-  rw [← hP, ← hQ] at hL
-  refine ⟨⟨fun passes f _ => hL.1 passes f, hL.2⟩, ⟨fun L _ => ?_, hstart⟩⟩
-  rw [hP]
-  rfl
+  have free : ∀ f, LiestNicht p.E.P OffenA f := by
+    intro f c _ hc
+    obtain ⟨g, _, hg⟩ := hc.1
+    rw [hat g] at hg
+    cases hg
+  refine ⟨⟨fun passes f _ => ?_, ?_, ?_, hPtr⟩, ⟨fun L _ => ?_, hstart⟩⟩
+  · obtain ⟨k, i, g⟩ := bodyLogic_ohne hvoll hreq hens hinv hfrei passes f
+    rw [← hP, ← hQ] at k i g
+    exact ⟨koerperGutSA_of_frei (free f) k, invGutSA_of_frei (free f) i,
+      invGutGrundA_of_frei (free f) g⟩
+  · rw [hP]; exact fun _ _ _ _ => rfl
+  · rw [hQ]; exact axEnsLokal_wahr
+  · rw [hP]; rfl
 
 #print axioms koerperGutR_ohne
 #print axioms nutzerTeilO_ohne

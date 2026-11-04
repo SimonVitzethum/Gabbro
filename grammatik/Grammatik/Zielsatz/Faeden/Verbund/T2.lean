@@ -20,7 +20,7 @@ omit [DecidableEq D.Fn] in
     with the second one's bodies. -/
 theorem p2_eq (hV : Verbindbar E₁ E₂) : E₂.P = mitRumpf E₁.P E₂.P.rumpf := by
   unfold mitRumpf
-  rw [hV.invariante, hV.requires, hV.ensures, hV.unterbricht]
+  rw [hV.invariante, hV.requires, hV.ensures, hV.ptrVertrag, hV.axVertrag, hV.unterbricht]
 
 omit [DecidableEq D.Fn] in
 theorem verbindeP_rumpf (f : D.Fn) :
@@ -39,6 +39,13 @@ theorem teilP_teil (hV : Verbindbar E₁ E₂) (f : D.Fn) :
   cases e f
   · exact p2_eq hV
   · rfl
+
+/-- Target refinement reads the shared contracts; replacing bodies preserves it. -/
+theorem ptrZielVerfeinert_teil (hV : Verbindbar E₁ E₂) (f : D.Fn) (n : Nat)
+    (hf : D.passt f n = true) (h : PtrZielVerfeinert (teilP e E₁ E₂ f) f n hf) :
+    PtrZielVerfeinert (verbindeP e E₁ E₂) f n hf := by
+  rw [teilP_teil hV f] at h
+  exact h
 
 theorem fussOrteG_teil (hV : Verbindbar E₁ E₂) (f : D.Fn) :
     fussOrteG (verbindeP e E₁ E₂) f = fussOrteG (teilP e E₁ E₂ f) f := by
@@ -241,7 +248,8 @@ theorem nutzerPflicht_verbinde (hV : Verbindbar E₁ E₂) (hQ : E₂.Q = E₁.Q
     (hN₁ : NutzerTeil e E₁) (hN₂ : NutzerTeil (fun f => !e f) E₂) :
     NutzerPflicht (verbinde e E₁ E₂) := by
   have hS : E₂.S = E₁.S := hV.sperren.symm
-  refine ⟨⟨fun passes f => ?_, hN₁.logik.2.1, hN₁.logik.2.2⟩, ⟨hN₁.start.sperren, ?_⟩⟩
+  refine ⟨⟨fun passes f => ?_, hN₁.logik.2.1, hN₁.logik.2.2.1, ?_⟩,
+    ⟨hN₁.start.sperren, ?_⟩⟩
   · show KoerperGutS (verbindeP e E₁ E₂) passes E₁.Q E₁.S f ∧
       InvGutS (verbindeP e E₁ E₂) passes E₁.Q E₁.S f ∧
       InvGutGrund (verbindeP e E₁ E₂) passes E₁.Q E₁.S f
@@ -259,6 +267,12 @@ theorem nutzerPflicht_verbinde (hV : Verbindbar E₁ E₂) (hQ : E₂.Q = E₁.Q
       exact ⟨(koerper_mitRumpf2 E₁.P _ E₁.P.rumpf passes _ _ f hr).mpr k,
         (invGutS_mitRumpf2 E₁.P _ E₁.P.rumpf passes _ _ f hr).mpr i,
         (invGutGrund_mitRumpf2 E₁.P _ E₁.P.rumpf passes _ _ f hr).mpr g⟩
+  · intro f n hf
+    apply ptrZielVerfeinert_teil hV f n hf
+    unfold teilP
+    cases he : e f
+    · exact hN₂.logik.2.2.2 f (by simp only [he, Bool.not_false]) n hf
+    · exact hN₁.logik.2.2.2 f he n hf
   · intro a ha
     show ReqAmEintritt E₁.P a.1 (E₁.sp0.welt []) a.2
     simp only [verbinde, List.mem_append] at ha
@@ -280,10 +294,15 @@ theorem gabbro_ziel_verbund_sc : GabbroZielVerbundSC := by
   intro C D _ E₁ E₂ e fs ls cs h₁ h₂ hV hS hN₁ hN₂ hQ O hH passes sp init hL lebt0 K hK
   have hA := akzeptiertSpec_verbinde fs.2 (C.korrekt E₁ fs ls cs h₁) (C.korrekt E₂ fs ls cs h₂)
     hV hS
-  have hB : akzeptiert_pruefer.akzeptiert (verbinde e E₁ E₂) fs.1 ls.1 cs.1 = true :=
-    spec_akzeptiert fs.2 ls.2 cs.2 (h := hA) (hChecks := hS.pruef)
-  exact gabbro_ziel_sc akzeptiert_pruefer D (verbinde e E₁ E₂) fs ls cs hB
-    (nutzerPflicht_verbinde hV hQ hN₁ hN₂) O hH passes sp init hL lebt0 K hK
+  have hN := nutzerPflicht_verbinde hV hQ hN₁ hN₂
+  -- Use the complete composed specification, without inventing an empty query list
+  -- or requiring a public axiom-equality instance to reconstruct a checker Bool.
+  exact zielF_aus (verbinde e E₁ E₂).P.mitRuhe (verbinde e E₁ E₂).S.mitRuhe
+    (axEnsRuhe (verbinde e E₁ E₂).Q) ⟨fsRuhe fs.1, fsRuhe_voll fs.2⟩ ls
+    (wsRuhe (verbinde e E₁ E₂).ws)
+    (akzeptiertSpec_mitRuhe (verbinde e E₁ E₂).P fs.2 hA)
+    (logikPflicht_mitRuhe hN.logik) O.mitRuhe (hardware_mitRuhe hH) passes sp init
+    (startZulaessig_aus (verbinde e E₁ E₂) fs.1 hN.start hL) lebt0 K hK
 
 
 end Gabbro.Grammatik.Zielsatz

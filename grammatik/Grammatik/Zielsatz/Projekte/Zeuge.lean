@@ -38,7 +38,8 @@ theorem schnitt_passend (E : Einheit D) (eigen : D.Fn → Bool) :
   intro p hp
   simp only [schnitt, List.mem_cons, List.not_mem_nil, or_false] at hp
   rcases hp with rfl | rfl <;>
-    exact ⟨rfl, rfl, rfl, rfl, rfl, fun _ _ => gleichAuf_refl _ _, fun _ _ => gleichAuf_refl _ _⟩
+    exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl,
+      fun _ _ => gleichAuf_refl _ _, fun _ _ => gleichAuf_refl _ _⟩
 
 theorem schnitt_deckendS (E : Einheit D) (eigen : D.Fn → Bool) : DeckendS (schnitt E eigen) :=
   fun _ => ⟨_, List.mem_cons_self, rfl⟩
@@ -71,8 +72,10 @@ theorem schnitt_nutzer {E : Einheit D} {eigen : D.Fn → Bool}
   intro p hp
   simp only [schnitt, List.mem_cons, List.not_mem_nil, or_false] at hp
   rcases hp with rfl | rfl
-  · exact ⟨⟨fun passes f _ => hN.logik.1 passes f rfl, hN.logik.2⟩, ⟨hN.start.sperren, hN.start.req⟩⟩
-  · refine ⟨⟨fun passes f _ => hN.logik.1 passes f rfl, hN.logik.2⟩, ⟨(fun _ h => by cases h), ?_⟩⟩
+  · exact ⟨⟨fun passes f _ => hN.logik.1 passes f rfl, hN.logik.2.1, hN.logik.2.2.1,
+      fun f _ => hN.logik.2.2.2 f rfl⟩, ⟨hN.start.sperren, hN.start.req⟩⟩
+  · refine ⟨⟨fun passes f _ => hN.logik.1 passes f rfl, hN.logik.2.1, hN.logik.2.2.1,
+      fun f _ => hN.logik.2.2.2 f rfl⟩, ⟨(fun _ h => by cases h), ?_⟩⟩
     intro a ha
     simp only [List.append_nil, List.not_mem_nil] at ha
 

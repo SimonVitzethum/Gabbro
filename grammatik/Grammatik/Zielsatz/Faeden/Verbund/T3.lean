@@ -219,7 +219,8 @@ theorem nutzerTeil_verbinde {E₁ E₂ : Einheit D} {e a₁ a₂ : D.Fn → Bool
     (hN₁ : NutzerTeil a₁ E₁) (hN₂ : NutzerTeil a₂ E₂) :
     NutzerTeil (fun f => a₁ f || a₂ f) (verbinde e E₁ E₂) := by
   have hS : E₂.S = E₁.S := hV.sperren.symm
-  refine ⟨⟨fun passes f hf => ?_, hN₁.logik.2.1, hN₁.logik.2.2⟩, ⟨hN₁.start.sperren, ?_⟩⟩
+  refine ⟨⟨fun passes f hf => ?_, hN₁.logik.2.1, hN₁.logik.2.2.1, ?_⟩,
+    ⟨hN₁.start.sperren, ?_⟩⟩
   · show KoerperGutS (verbindeP e E₁ E₂) passes E₁.Q E₁.S f ∧
       InvGutS (verbindeP e E₁ E₂) passes E₁.Q E₁.S f ∧
       InvGutGrund (verbindeP e E₁ E₂) passes E₁.Q E₁.S f
@@ -240,6 +241,15 @@ theorem nutzerTeil_verbinde {E₁ E₂ : Einheit D} {e a₁ a₂ : D.Fn → Bool
       exact ⟨(koerper_mitRumpf2 E₁.P _ E₁.P.rumpf passes _ _ f hr).mpr k,
         (invGutS_mitRumpf2 E₁.P _ E₁.P.rumpf passes _ _ f hr).mpr i,
         (invGutGrund_mitRumpf2 E₁.P _ E₁.P.rumpf passes _ _ f hr).mpr g⟩
+  · intro f hf n hmatch
+    apply ptrZielVerfeinert_teil hV f n hmatch
+    cases ha : a₁ f
+    · have ha2 : a₂ f = true := by simpa only [ha, Bool.false_or] using hf
+      have hef := h₂ f ha2
+      simpa only [teilP, hef, Bool.false_eq_true, ↓reduceIte] using
+        hN₂.logik.2.2.2 f ha2 n hmatch
+    · have hef := h₁ f ha
+      simpa only [teilP, hef, ↓reduceIte] using hN₁.logik.2.2.2 f ha n hmatch
   · intro a ha
     show ReqAmEintritt E₁.P a.1 (E₁.sp0.welt []) a.2
     simp only [verbinde, List.mem_append] at ha

@@ -285,12 +285,14 @@ theorem nutzerTeilO_wachs {p : Projekt D} {T₁ : D.Tab ⊕ D.Glob → Prop}
       (∀ c ∈ endblockOrteP p.E.P (p.E.P.rumpf f), ¬ (OffenA c ∧ ¬ T₁ c)) ∨
         (KoerperGutSA p.E.P passes p.E.Q p.E.S OffenA f ∧ InvGutSA p.E.P passes p.E.Q p.E.S OffenA f ∧
           InvGutGrundA p.E.P passes p.E.Q p.E.S OffenA f))
-    (hSL : SperrInvLokal p.E.S) (hQL : AxEnsLokal p.E.Q) (hstart : StartTeil p) : NutzerTeilO p :=
+    (hSL : SperrInvLokal p.E.S) (hQL : AxEnsLokal p.E.Q)
+    (hPtr : ∀ f, p.eigen f = true → ∀ n (hf : D.passt f n = true),
+      PtrZielVerfeinert p.E.P f n hf) (hstart : StartTeil p) : NutzerTeilO p :=
   ⟨⟨fun passes f hf => by
       rcases hNeu passes f hf with hl | hneu
       · obtain ⟨k, i, g⟩ := hL passes f hf
         exact ⟨koerperGutSA_wachs k hl, invGutSA_wachs i hl, invGutGrundA_wachs g hl⟩
-      · exact hneu, hSL, hQL⟩, hstart⟩
+      · exact hneu, hSL, hQL, hPtr⟩, hstart⟩
 
 /-! ## The witness, for every accepted unit and every boundary -/
 

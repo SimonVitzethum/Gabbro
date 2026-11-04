@@ -72,6 +72,8 @@ theorem nutzerTeilO_E [DecidableEq D'.Fn] (hZ : E.Rueck) (hS : E.SigTreu) {P : P
     (hU : E.Uebernahme hZ hS P S Q OffenA p.E.P p.E.S p.E.Q OffenA) {pad : List (Ereignis D)}
     (hp : PadOk pad) (heigen : ∀ f', p.eigen f' = true → ∃ f, E.fn f = f')
     (hSL : SperrInvLokal p.E.S) (hQL : AxEnsLokal p.E.Q)
+    (hPtr : ∀ f', p.eigen f' = true → ∀ n (hf : D'.passt f' n = true),
+      PtrZielVerfeinert p.E.P f' n hf)
     (sp0 : Speicher D) (starts : List (Σ w : D.Fn, Env D (D.params w)))
     (hLS : ∀ L, S.inv L sp0 = true) (hLR : ∀ a ∈ starts, ReqAmEintritt P a.1 (sp0.welt []) a.2)
     (hsp : E.speicherZ hZ p.E.sp0 = sp0)
@@ -81,7 +83,7 @@ theorem nutzerTeilO_E [DecidableEq D'.Fn] (hZ : E.Rueck) (hS : E.SigTreu) {P : P
     NutzerTeilO p :=
   ⟨⟨fun passes f' hf' => by
       obtain ⟨f, rfl⟩ := heigen f' hf'
-      exact E.logikPflicht_E hZ hS hU hp hL passes f, hSL, hQL⟩,
+      exact E.logikPflicht_E hZ hS hU hp hL passes f, hSL, hQL, hPtr⟩,
     E.startTeil_E hZ hS p hU sp0 starts hLS hLR hsp hst hsperr⟩
 
 end Einbettung
@@ -110,14 +112,17 @@ def projektE (P : Programm D) (S : SperrInv D) (Q : AxEns D) (starts : List (Σ 
 
 /-- **The witness**: every library proved against the open-world rely, with lock invariants and axiom
     ensures that read only their carriers, its lock invariants at its own initial memory and its starts'
-    `requires` there, has its part of (b) in the program that adds a callback -- started in any memory
-    that restricts to the library's. -/
+    `requires` there, has its part of (b) in the program that adds a callback when its owned targets
+    meet that program's pointer interfaces -- started in any memory that restricts to the library's. -/
 theorem nutzerTeil_zeuge {P : Programm D} {S : SperrInv D} {Q : AxEns D}
     (hL : LogikPflichtA P S Q OffenA) (hSL : SperrInvLokal S) (hQL : AxEnsLokal Q)
     {pad : List (Ereignis D)} (hp : Einbettung.PadOk pad)
     (sp0 : Speicher D) (starts : List (Σ w : D.Fn, Env D (D.params w)))
     (hLS : ∀ L, S.inv L sp0 = true) (hLR : ∀ a ∈ starts, ReqAmEintritt P a.1 (sp0.welt []) a.2)
-    (sp0' : Speicher (erweitert D g₀)) (hsp : (einE D g₀).speicherZ (rueckE D g₀ hA) sp0' = sp0) :
+    (sp0' : Speicher (erweitert D g₀)) (hsp : (einE D g₀).speicherZ (rueckE D g₀ hA) sp0' = sp0)
+    (hPtr : ∀ f', (projektE D g₀ hA P S Q starts sp0').eigen f' = true →
+      ∀ n (hf : (erweitert D g₀).passt f' n = true),
+        PtrZielVerfeinert (programmE D g₀ P) f' n hf) :
     NutzerTeilO (projektE D g₀ hA P S Q starts sp0') :=
   (einE D g₀).nutzerTeilO_E (rueckE D g₀ hA) (sigTreu_einE D g₀) hL (projektE D g₀ hA P S Q starts sp0')
     (uebernahmeE D g₀ hA P S Q OffenA OffenA (fun _ h => (einE D g₀).offenA_E h)) hp
@@ -125,7 +130,7 @@ theorem nutzerTeil_zeuge {P : Programm D} {S : SperrInv D} {Q : AxEns D}
       cases f' with
       | inl f => exact ⟨f, rfl⟩
       | inr _ => cases hf')
-    (sperrE_lokal D g₀ hA hSL) (axE_lokal D g₀ hA hQL) sp0 starts hLS hLR hsp
+    (sperrE_lokal D g₀ hA hSL) (axE_lokal D g₀ hA hQL) hPtr sp0 starts hLS hLR hsp
     (List.append_nil _) (fun L' _ => ⟨L', rfl⟩)
 
 #print axioms nutzerTeil_zeuge
