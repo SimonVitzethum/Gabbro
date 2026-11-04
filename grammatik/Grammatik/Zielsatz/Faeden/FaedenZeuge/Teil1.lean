@@ -42,6 +42,9 @@ import all Init.Data.String.ToSlice
 namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik
+
+local instance : DecidableEq zD.Ax := inferInstanceAs (DecidableEq Empty)
+
 /-- **THE START-AND-JOIN RUN.** Thread 0 starts the dormant roots 1 and 2 (holding nothing) and
     waits; root 1 writes and finishes, root 2 writes and finishes; only then the join fires;
     thread 0 goes on with a call and a write of its own. Memory slot 0 moves from 0 to 2 by
@@ -207,7 +210,17 @@ theorem start_offen_leer {D : Deklaration} (P : Programm D) (sp : Speicher D)
 
 /-- **Probe B's pool routine `haupt` as a RUN-TIME root**: no declared start, `haupt` in
     `gestartet` (a `start { haupt, … }` of the idle root). `ws = [haupt, haupt]`. -/
-def zStart : Einheit zD := ⟨zPB, zS, axWahr zD, [], zSp, [⟨zHaupt, .nil⟩], []⟩
+def zStart : Einheit zD where
+  P := zPB
+  S := zS
+  Q := axWahr zD
+  starts := []
+  sp0 := zSp
+  gestartet := [⟨zHaupt, .nil⟩]
+  arenen := []
+  akku := []
+  pruefungen := []
+  grants0 := []
 
 theorem zStart_ws : zStart.ws = [zHaupt, zHaupt] := by rfl
 
