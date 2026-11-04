@@ -54,24 +54,33 @@ theorem softMulFiniteDirectionalL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Me
     (k : Nat) (count : k = 49 ∨ k = 50) :
     WordCode (L := L) ρ W (fun d => softMulFiniteDirectionalL d a b k)
       (softMulFiniteDirectionalWord av bv k) := by
-  have sign := xorSignL_ok (unpackSignL_ok ha) (unpackSignL_ok hb)
+  have sign : WordCode (L := L) ρ W _ _ := xorSignL_ok (unpackSignL_ok ha) (unpackSignL_ok hb)
   have index : WordCode (L := L) ρ W _ _ := WordCode.bin (softMulNormalizeIndexL_word ha) (softMulNormalizeIndexL_word hb)
     (g := fun x y => some (x + y)) rfl rfl (by decide : 3 < 256)
   have literal : lit32 (Int.ofNat k) = true := by rcases count with rfl | rfl <;> decide
   have total : WordCode (L := L) ρ W _ _ := WordCode.bin index (WordCode.const _ literal)
     (g := fun x y => some (x + y)) rfl rfl (by decide : 3 < 256)
-  have magnitude := softMulCompressL_word (softMulNormalizeL_word ha) (softMulNormalizeL_word hb) k count
-  exact softMulRoundL_word sign total magnitude
+  have magnitude : WordCode (L := L) ρ W _ _ :=
+    softMulCompressL_word (softMulNormalizeL_word ha) (softMulNormalizeL_word hb) k count
+  have result : WordCode (L := L) ρ W _ _ := softMulRoundL_word sign total magnitude
+  intro fp K d c top emitted fits m pc pre
+  simpa only [softMulFiniteDirectionalL, softMulFiniteDirectionalWord, Int.ofNat_eq_coe,
+    BitVec.ofInt_natCast] using
+    result (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
 
 theorem softMulFiniteL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {a b : Nat → Option (List II × Nat)} {av bv : Runner.W}
     (ha : WordCode (L := L) ρ W a av) (hb : WordCode (L := L) ρ W b bv) :
     WordCode (L := L) ρ W (fun d => softMulFiniteL d a b) (softMulFiniteWord av bv) := by
-  have high := softMulHighL_word (softMulNormalizeL_word ha) (softMulNormalizeL_word hb)
-  have condition := routineLessL_ok high (WordCode.konst (2 ^ 41) (by decide))
-  exact routineChooseL_ok condition
+  have high : WordCode (L := L) ρ W _ _ :=
+    softMulHighL_word (softMulNormalizeL_word ha) (softMulNormalizeL_word hb)
+  have condition : WordCode (L := L) ρ W _ _ :=
+    routineLessL_ok high (WordCode.konst (2 ^ 41) (by decide))
+  have result : WordCode (L := L) ρ W _ _ := routineChooseL_ok condition
     (fun _ => softMulFiniteDirectionalL_word ha hb 49 (Or.inl rfl))
     (fun _ => softMulFiniteDirectionalL_word ha hb 50 (Or.inr rfl))
+  intro fp K d c top emitted fits m pc pre
+  exact result (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
 
 /-- Execution correctness for the emitted integer instruction stream. -/
 theorem softMulRoutineL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
