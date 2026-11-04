@@ -63,6 +63,11 @@ lines. Cover the whole language rather than repeatedly expanding infrastructure 
   optimize or retain it as a fallback/reference execution path. Stage 0 compiles; the assembly runner executes.
   The canonical language model, IR semantics and lowering correctness proofs remain required; they are not
   the retired executable source interpreter.
+- **Native CPU floating point (owner, 2026-11-04):** all Stage-0 runtime operations execute in the assembly
+  runner; Lean only compiles and proves the IR. Replace Gabbro's software IEEE arithmetic with the toolchain's
+  native `Float`/`Float32` primitives in the model and physical CPU operations in the runner. Full-range UInt64
+  conversion uses a portable native instruction sequence. Retain finite/range duties and all other guarantees.
+  This decision supersedes the older references to Gabbro's kernel IEEE framework below.
 - First inventory every existing language form across the Lean model, source front end, IR emitter and
   connected correctness theorem; distinguish missing model support from missing translation or proof.
 - **Every Gabbro-to-IR lowering must be formally verified.** Implement it in the actual compiler path,
