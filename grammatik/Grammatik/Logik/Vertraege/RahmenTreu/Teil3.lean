@@ -37,6 +37,7 @@ theorem rufAt_treu (P : Programm D) (O : Orakel D) (passes : Nat) (hO : TreuO O)
       · revert h; split <;> intro h
         · rename_i σ2 v hs
           have hbb := hb σ2 (by rw [hs]; rfl); rw [hs] at hbb
+          specialize hbb (residHeld_anfang (D.signatur f))
           have g2 : Treu (D.schreibt f) (D.gschreibt f) _ σ2 :=
             hbb.toTreu_entry (g0.heldB hh)
           have g3 : Treu (D.schreibt f) (D.gschreibt f) σ2
@@ -56,6 +57,7 @@ theorem rufAt_treu (P : Programm D) (O : Orakel D) (passes : Nat) (hO : TreuO O)
         · rename_i σ2 r hs
           simp only [RufAusgang.welt, Option.some.injEq] at h; subst h
           have hbb := hb _ (by rw [hs]; rfl); rw [hs] at hbb
+          specialize hbb (residHeld_anfang (D.signatur f))
           exact g0.transRet hbb
         · rename_i hl _ _ _; exact absurd hl (by decide)
         · rename_i hl _ _ _; exact absurd hl (by decide)

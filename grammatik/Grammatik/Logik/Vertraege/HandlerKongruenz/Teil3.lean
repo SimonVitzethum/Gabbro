@@ -24,6 +24,7 @@ public import Grammatik.Logik.Ruf.Eintritt.RufGleichSchleife
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration} {V : Vertrag D}
+variable {returnGuard : Prop}
 
 section SchleifenUnter
 
@@ -40,7 +41,7 @@ theorem traverseLauf_unter (bo : Option Int)
       HeldB bo Λ σ.haelt →
       AusgangUnter Er (execBlock O passes R₁ body₁ σ ρ) (execBlock O passes R₂ body₂ σ ρ))
     (hT : ∀ (σ : World D) (ρ : Env D (τ :: Γ)), body₁.ScopesOk → HeldB bo Λ σ.haelt →
-      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R₁ body₁ σ ρ))
+      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R₁ body₁ σ ρ) returnGuard)
     (hi : ∀ (σ : World D) (ρ : Env D Γ), HeldB bo Λ σ.haelt →
       Treu V.schreibt V.gschreibt σ (inv σ ρ).1)
     (hscope₁ : body₁.ScopesOk) (hscope₂ : body₂.ScopesOk) :
@@ -90,7 +91,7 @@ theorem verbrauchLauf_unter (bo : Option Int)
       AusgangUnter Er (execBlock O passes R₁ body₁ σ ρ) (execBlock O passes R₂ body₂ σ ρ))
     (hT : ∀ (σ : World D) (ρ : Env D (.index (D.count t) :: Γ)), body₁.ScopesOk →
       HeldB bo Λ σ.haelt →
-      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R₁ body₁ σ ρ))
+      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R₁ body₁ σ ρ) returnGuard)
     (hi : ∀ (σ : World D) (ρ : Env D Γ), HeldB bo Λ σ.haelt →
       Treu V.schreibt V.gschreibt σ (inv σ ρ).1)
     (hsel : ∀ (σ : World D) (ρ : Env D Γ), HeldB bo Λ σ.haelt →
@@ -182,7 +183,7 @@ theorem retryLauf_unter (bo : Option Int)
       HeldB bo Λ σ.haelt →
       AusgangUnter Er (execBlock O passes R₁ body₁ σ ρ) (execBlock O passes R₂ body₂ σ ρ))
     (hT : ∀ (σ : World D) (ρ : Env D Γ), body₁.ScopesOk → HeldB bo Λ σ.haelt →
-      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R₁ body₁ σ ρ))
+      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R₁ body₁ σ ρ) returnGuard)
     (ihu : ∀ (σ : World D) (ρ : Env D Γ), ueber₁.ScopesOk → ueber₂.ScopesOk →
       HeldB bo Λ σ.haelt →
       AusgangUnter Er (execBlock O passes R₁ ueber₁ σ ρ) (execBlock O passes R₂ ueber₂ σ ρ))
@@ -241,7 +242,7 @@ theorem foreverLauf_unter (bo : Option Int)
       HeldB bo Λ σ.haelt →
       AusgangUnter Er (execBlock O passes R₁ body₁ σ ρ) (execBlock O passes R₂ body₂ σ ρ))
     (hT : ∀ (σ : World D) (ρ : Env D Γ), body₁.ScopesOk → HeldB bo Λ σ.haelt →
-      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R₁ body₁ σ ρ))
+      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R₁ body₁ σ ρ) returnGuard)
     (hi : ∀ (σ : World D) (ρ : Env D Γ), HeldB bo Λ σ.haelt →
       Treu V.schreibt V.gschreibt σ (inv σ ρ).1)
     (hscope₁ : body₁.ScopesOk) (hscope₂ : body₂.ScopesOk) :

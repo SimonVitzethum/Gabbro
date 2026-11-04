@@ -9,9 +9,9 @@ public import Grammatik.Logik.Vertraege.RahmenTreu
 
 What a block does not write stays as it was. `RahmenTreu.lean` proves it for every statement, block and end block
 over machine G (`block_treu`, `end_treu`): every outcome world differs from the start world at most at the carriers
-the contract's write rights name, and holds the same locks -- under the entry discipline (`ScopesOk`, `HeldB`,
-`BodenUnter`), which calls need to restore the frame. Here it becomes a rule of the calculus: it can be added
-to ANY postcondition for free (`wpB_rahmen`, `wpE_rahmen`). The call meaning of a program keeps its frame
+the contract's write rights name, with a release-aware terminal frame under `ResidHeld` and an exact ordinary
+held list under the entry discipline (`ScopesOk`, `HeldB`, `BodenUnter`). Here the complete frame can be added
+to any postcondition when that residual is represented (`wpB_rahmen`, `wpE_rahmen`). A program call keeps its frame
 (`rufAt_treu`), so the rule applies to the program's real runs.
 -/
 
@@ -28,28 +28,28 @@ variable (hR : TreuR R) (hO : TreuO O)
 include hR hO
 variable {l : Bool} {Γ : Ctx}
 
-/-- **The frame of a block**: every outcome world is within the contract's write rights, with the same locks. -/
+/-- The complete block frame, including terminal releases, with a represented residual. -/
 theorem wpB_rahmen_allein {Λ Λ' : List (Res D)} (bo : Option Int) (hbV : BodenUnter bo V.boden)
     (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) (hscope : b.ScopesOk)
-    (hh : HeldB bo Λ σ.haelt) :
+    (hh : HeldB bo Λ σ.haelt) (hresid : ResidHeld V Λ) :
     wpB O passes R b (TreuAusgang V.schreibt V.gschreibt σ) σ ρ :=
-  block_treu O passes R hR hO bo hbV b σ ρ hscope hh
+  (block_treu O passes R hR hO bo hbV b σ ρ hscope hh).guard (fun _ => hresid)
 
 /-- **The frame rule**: the frame may be added to any postcondition. -/
 theorem wpB_rahmen {Λ Λ' : List (Res D)} (bo : Option Int) (hbV : BodenUnter bo V.boden)
     (b : Block D V l Γ Λ Λ') (Q : Ausgang V l Γ → Prop) (σ : World D)
-    (ρ : Env D Γ) (hscope : b.ScopesOk) (hh : HeldB bo Λ σ.haelt)
+    (ρ : Env D Γ) (hscope : b.ScopesOk) (hh : HeldB bo Λ σ.haelt) (hresid : ResidHeld V Λ)
     (h : wpB O passes R b Q σ ρ) :
     wpB O passes R b (fun o => Q o ∧ TreuAusgang V.schreibt V.gschreibt σ o) σ ρ :=
-  ⟨h, wpB_rahmen_allein O passes R hR hO bo hbV b σ ρ hscope hh⟩
+  ⟨h, wpB_rahmen_allein O passes R hR hO bo hbV b σ ρ hscope hh hresid⟩
 
 /-- **The frame rule for a body.** -/
 theorem wpE_rahmen {Λ : List (Res D)} (bo : Option Int) (hbV : BodenUnter bo V.boden)
     (e : Endblock D V l Γ Λ) (Q : EndAusgang V l Γ → Prop) (σ : World D)
-    (ρ : Env D Γ) (hscope : e.ScopesOk) (hh : HeldB bo Λ σ.haelt)
+    (ρ : Env D Γ) (hscope : e.ScopesOk) (hh : HeldB bo Λ σ.haelt) (hresid : ResidHeld V Λ)
     (h : wpE O passes R e Q σ ρ) :
     wpE O passes R e (fun o => Q o ∧ TreuEnd V.schreibt V.gschreibt σ o) σ ρ :=
-  ⟨h, end_treu O passes R hR hO bo hbV e σ ρ hscope hh⟩
+  ⟨h, (end_treu O passes R hR hO bo hbV e σ ρ hscope hh).guard (fun _ => hresid)⟩
 
 /-- A slot of a table the contract may not write is the same after a normal end. -/
 theorem rahmen_slot {Λ Λ' : List (Res D)} (bo : Option Int) (hbV : BodenUnter bo V.boden)
@@ -57,8 +57,7 @@ theorem rahmen_slot {Λ Λ' : List (Res D)} (bo : Option Int) (hbV : BodenUnter 
     (hh : HeldB bo Λ σ.haelt)
     (hrun : execBlock O passes R b σ ρ = .ok σ' ρ') (t : D.Tab) (ht : V.schreibt t = false) (k : Int)
     (f : D.Feld t) : σ'.slots t k f = σ.slots t k f := by
-  have h : TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R b σ ρ) :=
-    wpB_rahmen_allein O passes R hR hO bo hbV b σ ρ hscope hh
+  have h := block_treu O passes R hR hO bo hbV b σ ρ hscope hh
   rw [hrun] at h
   exact (h σ' rfl).1.1 t ht k f
 

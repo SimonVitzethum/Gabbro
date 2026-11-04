@@ -26,18 +26,19 @@ public import Grammatik.Logik.Vertraege.HandlerKongruenz.Teil1
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration} {V : Vertrag D}
+variable {returnGuard : Prop}
 
 /-- Extract `Treu` from a `TreuAusgang` at a normal outcome. -/
 theorem treuAus_ok {W : D.Tab → Bool} {G : D.Glob → Bool} {l : Bool} {Γ : Ctx}
     {σ σ1 : World D} {ρ1 : Env D Γ} {o : Ausgang V l Γ}
-    (h : TreuAusgang W G σ o) (heq : o = Ausgang.ok σ1 ρ1) : Treu W G σ σ1 := by
+    (h : TreuAusgang W G σ o returnGuard) (heq : o = Ausgang.ok σ1 ρ1) : Treu W G σ σ1 := by
   have h2 := h σ1 (by rw [heq]; rfl)
   simpa [heq] using h2
 
 /-- Extract `Treu` from a `TreuAusgang` at a `next` outcome. -/
 theorem treuAus_next {W : D.Tab → Bool} {G : D.Glob → Bool} {Γ : Ctx}
     {σ σ1 : World D} {ρ1 : Env D Γ} {o : Ausgang V true Γ} {hl : true = true}
-    (h : TreuAusgang W G σ o) (heq : o = Ausgang.next hl σ1 ρ1) : Treu W G σ σ1 := by
+    (h : TreuAusgang W G σ o returnGuard) (heq : o = Ausgang.next hl σ1 ρ1) : Treu W G σ σ1 := by
   have h2 := h σ1 (by rw [heq]; rfl)
   simpa [heq] using h2
 
@@ -55,7 +56,7 @@ theorem traverseLauf_gleich (bo : Option Int)
     (ih : ∀ (σ : World D) (ρ : Env D (τ :: Γ)), body.ScopesOk → HeldB bo Λ σ.haelt →
       execBlock O passes R₁ body σ ρ = execBlock O passes R₂ body σ ρ)
     (hT : ∀ (σ : World D) (ρ : Env D (τ :: Γ)), body.ScopesOk → HeldB bo Λ σ.haelt →
-      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R₁ body σ ρ))
+      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R₁ body σ ρ) returnGuard)
     (hi : ∀ (σ : World D) (ρ : Env D Γ), HeldB bo Λ σ.haelt →
       Treu V.schreibt V.gschreibt σ (inv σ ρ).1)
     (hscope_body : body.ScopesOk) :
@@ -107,7 +108,7 @@ theorem verbrauchLauf_gleich (bo : Option Int)
       execBlock O passes R₁ body σ ρ = execBlock O passes R₂ body σ ρ)
     (hT : ∀ (σ : World D) (ρ : Env D (.index (D.count t) :: Γ)), body.ScopesOk →
       HeldB bo Λ σ.haelt →
-      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R₁ body σ ρ))
+      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R₁ body σ ρ) returnGuard)
     (hi : ∀ (σ : World D) (ρ : Env D Γ), HeldB bo Λ σ.haelt →
       Treu V.schreibt V.gschreibt σ (inv σ ρ).1)
     (hsel : ∀ (σ : World D) (ρ : Env D Γ), HeldB bo Λ σ.haelt →
@@ -196,7 +197,7 @@ theorem retryLauf_gleich (bo : Option Int)
     (ih : ∀ (σ : World D) (ρ : Env D Γ), body.ScopesOk → HeldB bo Λ σ.haelt →
       execBlock O passes R₁ body σ ρ = execBlock O passes R₂ body σ ρ)
     (hT : ∀ (σ : World D) (ρ : Env D Γ), body.ScopesOk → HeldB bo Λ σ.haelt →
-      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R₁ body σ ρ))
+      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R₁ body σ ρ) returnGuard)
     (ihu : ∀ (σ : World D) (ρ : Env D Γ), ueber.ScopesOk → HeldB bo Λ σ.haelt →
       execBlock O passes R₁ ueber σ ρ = execBlock O passes R₂ ueber σ ρ)
     (hb : ∀ (σ : World D) (ρ : Env D Γ), HeldB bo Λ σ.haelt →
@@ -249,7 +250,7 @@ theorem foreverLauf_gleich (bo : Option Int)
     (ih : ∀ (σ : World D) (ρ : Env D Γ), body.ScopesOk → HeldB bo Λ σ.haelt →
       execBlock O passes R₁ body σ ρ = execBlock O passes R₂ body σ ρ)
     (hT : ∀ (σ : World D) (ρ : Env D Γ), body.ScopesOk → HeldB bo Λ σ.haelt →
-      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R₁ body σ ρ))
+      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R₁ body σ ρ) returnGuard)
     (hi : ∀ (σ : World D) (ρ : Env D Γ), HeldB bo Λ σ.haelt →
       Treu V.schreibt V.gschreibt σ (inv σ ρ).1)
     (hscope_body : body.ScopesOk) :

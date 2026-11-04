@@ -5,6 +5,7 @@ public import Grammatik.Logik.Vertraege.RahmenTreu.Teil1
 public import Grammatik.Logik.Vertraege.RahmenTreu.Teil2BindBlock
 public import Grammatik.Logik.Vertraege.RahmenTreu.Teil2BindEnd
 public import Grammatik.Logik.Vertraege.RahmenTreu.Teil4
+public import Grammatik.Logik.Vertraege.RahmenTreu.Locks
 
 @[expose] public section
 
@@ -20,14 +21,13 @@ set_option linter.unusedSectionVars false
 
 mutual
 
-/-- **The frame and the held locks of one statement**, under the entry
-    discipline. Reads, writes and `locks` need none of it; call arms restore
-    the frame (`TreuR` under the transported entry discipline, propagated
-    reasons via `TreuRet.toTreu_entry`), scoped returns check it. -/
+/-- Ordinary frames are unconditional on the residual. Terminal frames require
+    the residual to be represented in the input resources; calls restore the
+    inherited holdings and lexical wrappers rebase the actual release witness. -/
 theorem stmt_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
     ∀ (s : Stmt D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ), s.ScopesOk →
     HeldB bo Λ σ.haelt →
-    TreuAusgang V.schreibt V.gschreibt σ (execStmt O passes R s σ ρ)
+    TreuAusgang V.schreibt V.gschreibt σ (execStmt O passes R s σ ρ) (ResidHeld V Λ)
   | .assignSlot t f i e hw hL, σ, ρ, _hscope, _hh, σ', h => by
       frame_value execStmt Ausgang.welt; exact (treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _).trans
         (treu_schreibSlot _ t Λ _ f _ hw)
@@ -114,10 +114,12 @@ theorem stmt_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       exact indSonst_treu R hR p args he hp hr σ _ ρ (treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ (p.orte ++ args.orte))
         bo hbV hh
         _ _
-        (fun s1 _ _ s2 h2 => by simp only [Ausgang.welt, Option.some.injEq] at h2; subst h2; exact Treu.refl _ _ _) (fun s1 r hh1 => (end_treu bo hbV err s1 _ hscope_err hh1).schrumpf.zuAusgang) σ' h
+        (fun s1 _ _ s2 h2 => by simp only [Ausgang.welt, Option.some.injEq] at h2; subst h2; exact Treu.refl _ _ _) (fun s1 r hh1 => ((end_treu bo hbV err s1 _ hscope_err hh1).guard (guard := ResidHeld V Λ)
+          (ResidHeld.of_iff (fun L => held_nachSig_iff _ _ L))).schrumpf.zuAusgang) σ' h
   | .locks L hr body, σ, ρ, hscope, hh, σ', h => by
       have hscope_body : body.ScopesOk := by scopes_treu
-      exact (TreuAusgang.gibt L (block_treu bo hbV body (σ.nimmt L) ρ hscope_body (heldB_locks L hh))) σ' h
+      exact treu_locks O passes R hR hO bo hbV L hr body σ ρ hh
+        (block_treu bo hbV body (σ.nimmt L) ρ hscope_body (heldB_locks L hh)) σ' h
   | .breaking _ body, σ, ρ, hscope, hh, σ', h => by
       have hscope_body : body.ScopesOk := by scopes_treu
       exact block_treu bo hbV body σ ρ hscope_body hh σ' h
@@ -166,8 +168,9 @@ theorem stmt_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         exact hl.trans (Treu.weiter hp.hw hp.hg h1)
       · rw [ha] at h1
         have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-        exact (TreuAusgang.vorCall g1 ((end_treu bo hbV err σ1 _ hscope_err
-          (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf.zuAusgang)) σ' h
+        exact (TreuAusgang.vorCall g1 (((end_treu bo hbV err σ1 _ hscope_err
+          (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).guard (guard := ResidHeld V Λ)
+          (ResidHeld.of_iff (fun L => held_nachSig_iff _ _ L))).schrumpf.zuAusgang)) σ' h
   | .regWrite r _ e, σ, ρ, _hscope, _hh, σ', h => by
       frame_value execStmt Ausgang.welt; exact treu_lese σ Λ _
   | .transition .., σ, ρ, _hscope, _hh, σ', h => by
@@ -180,16 +183,20 @@ theorem stmt_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .retires .., σ, ρ, _hscope, _hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Treu.refl _ _ _
   | .ret e _, σ, ρ, _hscope, _hh, σ', h => by
+      intro _
       frame_value execStmt Ausgang.welt; exact (treu_lese σ Λ _).toRet
   | .retWhy .., σ, ρ, _hscope, _hh, σ', h => by
+      intro _
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact (Treu.refl _ _ _).toRet
   | .retScoped e R, σ, ρ, hscope, _hh, σ', h => by
+      intro _
       frame_value execStmt Ausgang.welt
       have hsc : scopesOkScopes V.haelt V.boden R.scopes = true := by scopes_treu
       exact treuRet_retScoped R.scopes (treu_lese σ Λ _)
         (fun L hL => (scopesOkScopes_mem hsc hL).1)
         (fun L hL c hc => (scopesOkScopes_mem hsc hL).2 c hc)
   | .retWhyScoped _ R, σ, ρ, hscope, _hh, σ', h => by
+      intro _
       frame_value execStmt Ausgang.welt
       have hsc : scopesOkScopes V.haelt V.boden R.scopes = true := by scopes_treu
       exact treuRet_retWhyScoped σ R.scopes
@@ -203,7 +210,7 @@ theorem stmt_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
 theorem block_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
     ∀ (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ), b.ScopesOk →
     HeldB bo Λ σ.haelt →
-    TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R b σ ρ)
+    TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R b σ ρ) (ResidHeld V Λ)
   | .nil, σ, ρ, _hscope, _hh, σ', h => by
       simp only [execBlock, Ausgang.welt, Option.some.injEq] at h; subst h; exact Treu.refl _ _ _
   | .cons s rest, σ, ρ, hscope, hh, σ', h => by
@@ -214,17 +221,17 @@ theorem block_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       cases sv
       · rename_i σ1 ρ1
         have g1 := stmt_treu bo hbV s σ ρ hscope_s hh σ1 (by rw [hs]; rfl); rw [hs] at g1
-        exact (TreuAusgang.vorCall g1 (block_treu bo hbV rest σ1 ρ1 hscope_rest
-          (HeldB.of_iff s.held_iff (g1.heldB hh)))) σ' h
+        exact (TreuAusgang.vorCall g1 ((block_treu bo hbV rest σ1 ρ1 hscope_rest
+          (HeldB.of_iff s.held_iff (g1.heldB hh))).guard (guard := ResidHeld V Λ) (ResidHeld.of_iff s.held_iff))) σ' h
       all_goals simpa only [hs] using stmt_treu bo hbV s σ ρ hscope_s hh σ' (by simpa only [hs] using h)
   | .bind e rest, σ, ρ, hscope, hh, σ', h => by
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
       have hscope_rest : rest.ScopesOk := by scopes_treu
       exact (TreuAusgang.vor hl (block_treu bo hbV rest _ _ hscope_rest (hl.heldB hh))).schrumpf σ' h
   | .bindCall f args he hp hr rest, σ, ρ, hscope, hh, σ', h => by
-      exact block_bindCall_treu O passes R hR hO bo hbV f args he hp hr rest (fun σ ρ hs hh => block_treu bo hbV rest σ ρ hs hh) σ ρ hscope hh σ' h
+      exact block_bindCall_treu O passes R hR hO bo hbV f args he hp hr rest (fun σ ρ hs hh => (block_treu bo hbV rest σ ρ hs hh).guard (guard := ResidHeld V Λ) (ResidHeld.of_iff (fun L => held_nachSig_iff _ _ L))) σ ρ hscope hh σ' h
   | .bindCallInd p args he hp hr rest, σ, ρ, hscope, hh, σ', h => by
-      exact block_bindCallInd_treu O passes R hR hO bo hbV p args he hp hr rest (fun σ ρ hs hh => block_treu bo hbV rest σ ρ hs hh) σ ρ hscope hh σ' h
+      exact block_bindCallInd_treu O passes R hR hO bo hbV p args he hp hr rest (fun σ ρ hs hh => (block_treu bo hbV rest σ ρ hs hh).guard (guard := ResidHeld V Λ) (ResidHeld.of_iff (fun L => held_nachSig_iff _ _ L))) σ ρ hscope hh σ' h
   | .bindCallIndElse p args he hp hr err rest, σ, ρ, hscope, hh, σ', h => by
       simp only [execBlock] at h
       have hscope_rest : rest.ScopesOk := by scopes_treu
@@ -232,17 +239,20 @@ theorem block_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       exact indSonst_treu R hR p args he hp hr σ _ ρ (treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ (p.orte ++ args.orte))
         bo hbV hh
         _ _
-        (fun s1 v hh1 => (block_treu bo hbV rest s1 _ hscope_rest hh1).schrumpf) (fun s1 r hh1 => (end_treu bo hbV err s1 _ hscope_err hh1).schrumpf.zuAusgang) σ' h
+        (fun s1 v hh1 => ((block_treu bo hbV rest s1 _ hscope_rest hh1).guard (guard := ResidHeld V Λ)
+          (ResidHeld.of_iff (fun L => held_nachSig_iff _ _ L))).schrumpf)
+        (fun s1 r hh1 => ((end_treu bo hbV err s1 _ hscope_err hh1).guard (guard := ResidHeld V Λ)
+          (ResidHeld.of_iff (fun L => held_nachSig_iff _ _ L))).schrumpf.zuAusgang) σ' h
   | .bindCallElse f args he hp hr err rest, σ, ρ, hscope, hh, σ', h => by
-      exact block_bindCallElse_treu O passes R hR hO bo hbV f args he hp hr err rest (fun σ ρ hs hh => block_treu bo hbV rest σ ρ hs hh) (fun σ ρ hs hh => end_treu bo hbV err σ ρ hs hh) σ ρ hscope hh σ' h
+      exact block_bindCallElse_treu O passes R hR hO bo hbV f args he hp hr err rest (fun σ ρ hs hh => (block_treu bo hbV rest σ ρ hs hh).guard (guard := ResidHeld V Λ) (ResidHeld.of_iff (fun L => held_nachSig_iff _ _ L))) (fun σ ρ hs hh => (end_treu bo hbV err σ ρ hs hh).guard (guard := ResidHeld V Λ) (ResidHeld.of_iff (fun L => held_nachSig_iff _ _ L))) σ ρ hscope hh σ' h
   | .bindAxiom a args he hw hg hd hgd rest, σ, ρ, hscope, hh, σ', h => by
       exact block_bindAxiom_treu O passes R hR hO bo hbV a args he hw hg hd hgd rest (fun σ ρ hs hh => block_treu bo hbV rest σ ρ hs hh) σ ρ hscope hh σ' h
   | .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ, hscope, hh, σ', h => by
       exact block_bindAxiomElse_treu O passes R hR hO bo hbV a args he hr hw hg hd hgd err rest (fun σ ρ hs hh => block_treu bo hbV rest σ ρ hs hh) (fun σ ρ hs hh => end_treu bo hbV err σ ρ hs hh) σ ρ hscope hh σ' h
   | .bindAxiomOpt e a args he hp hd hgd rest, σ, ρ, hscope, hh, σ', h => by
-      exact block_bindAxiomOpt_treu O passes R hR hO bo hbV e a args he hp hd hgd rest (fun σ ρ hs hh => block_treu bo hbV rest σ ρ hs hh) σ ρ hscope hh σ' h
+      exact block_bindAxiomOpt_treu O passes R hR hO bo hbV e a args he hp hd hgd rest (fun σ ρ hs hh => (block_treu bo hbV rest σ ρ hs hh).guard (guard := ResidHeld V Λ) (ResidHeld.of_iff (fun L => held_nachSig_iff _ _ L))) σ ρ hscope hh σ' h
   | .bindAxiomOptElse e a args he hp hd hgd hr err rest, σ, ρ, hscope, hh, σ', h => by
-      exact block_bindAxiomOptElse_treu O passes R hR hO bo hbV e a args he hp hd hgd hr err rest (fun σ ρ hs hh => block_treu bo hbV rest σ ρ hs hh) (fun σ ρ hs hh => end_treu bo hbV err σ ρ hs hh) σ ρ hscope hh σ' h
+      exact block_bindAxiomOptElse_treu O passes R hR hO bo hbV e a args he hp hd hgd hr err rest (fun σ ρ hs hh => (block_treu bo hbV rest σ ρ hs hh).guard (guard := ResidHeld V Λ) (ResidHeld.of_iff (fun L => held_nachSig_iff _ _ L))) (fun σ ρ hs hh => (end_treu bo hbV err σ ρ hs hh).guard (guard := ResidHeld V Λ) (ResidHeld.of_iff (fun L => held_nachSig_iff _ _ L))) σ ρ hscope hh σ' h
   | .regRead r _ rest, σ, ρ, hscope, hh, σ', h => by
       have hscope_rest : rest.ScopesOk := by scopes_treu
       simp only [execBlock] at h ⊢
@@ -300,54 +310,38 @@ theorem block_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       by_cases hc : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = true <;> simp only [hc, ite_true, ite_false, Bool.true_eq_false, Bool.false_eq_true] at h ⊢
       · exact (TreuAusgang.vor hl (block_treu bo hbV rest _ ρ hscope_rest (hl.heldB hh))) σ' h
       · exact (TreuEnd.vor hl (end_treu bo hbV sonst _ ρ hscope_sonst (hl.heldB hh))).zuAusgang σ' h
-  | .float op a b lo hi rest, σ, ρ, hscope, hh, σ', h => by
-      have hscope_rest : rest.ScopesOk := by scopes_treu
-      simp only [execBlock] at h ⊢
-      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ (a.orte ++ b.orte)
-      generalize hv : gleitPasst lo hi (gleitRechne op (eval (σ.lese Λ (a.orte ++ b.orte)) a (σ.lese Λ (a.orte ++ b.orte)) ρ).x (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ).x) = ov at h ⊢
-      cases ov with
-      | some v => exact (TreuAusgang.vor hl (block_treu bo hbV rest _ _ hscope_rest (hl.heldB hh))).schrumpf σ' h
-      | none => simp only [Ausgang.welt, reduceCtorEq] at h
-  | .floatLit q lo hi rest, σ, ρ, hscope, hh, σ', h => by
-      have hscope_rest : rest.ScopesOk := by scopes_treu
-      simp only [execBlock] at h ⊢
-      generalize hv : gleitPasst lo hi (bruch q) = ov at h ⊢
-      cases ov with
-      | some v => exact (block_treu bo hbV rest σ _ hscope_rest hh).schrumpf σ' h
-      | none => simp only [Ausgang.welt, reduceCtorEq] at h
-  | .floatOf e lo hi rest, σ, ρ, hscope, hh, σ', h => by
-      have hscope_rest : rest.ScopesOk := by scopes_treu
-      simp only [execBlock] at h ⊢
-      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
-      generalize hv : gleitPasst lo hi (gleitAusInt (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n) = ov at h ⊢
-      cases ov with
-      | some v => exact (TreuAusgang.vor hl (block_treu bo hbV rest _ _ hscope_rest (hl.heldB hh))).schrumpf σ' h
-      | none => simp only [Ausgang.welt, reduceCtorEq] at h
-  | .floatNarrow e lo hi sonst rest, σ, ρ, hscope, hh, σ', h => by
-      have hscope_rest : rest.ScopesOk := by scopes_treu
-      have hscope_sonst : sonst.ScopesOk := by scopes_treu
-      simp only [execBlock] at h ⊢
-      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
-      generalize hv : gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = ov at h ⊢
-      cases ov with
-      | some v => exact (TreuAusgang.vor hl (block_treu bo hbV rest _ _ hscope_rest (hl.heldB hh))).schrumpf σ' h
-      | none => exact (TreuEnd.vor hl (end_treu bo hbV sonst _ ρ hscope_sonst (hl.heldB hh))).zuAusgang σ' h
+  | .float op a b lo hi rest, σ, ρ, hscope, hh, σ', h =>
+      block_treu_float O passes R hR hO bo hbV op a b lo hi rest
+        (block_treu bo hbV rest) σ ρ hscope hh σ' h
+  | .floatLit q lo hi rest, σ, ρ, hscope, hh, σ', h =>
+      block_treu_floatLit O passes R hR hO bo hbV q lo hi rest
+        (block_treu bo hbV rest) σ ρ hscope hh σ' h
+  | .floatOf e lo hi rest, σ, ρ, hscope, hh, σ', h =>
+      block_treu_floatOf O passes R hR hO bo hbV e lo hi rest
+        (block_treu bo hbV rest) σ ρ hscope hh σ' h
+  | .floatNarrow e lo hi sonst rest, σ, ρ, hscope, hh, σ', h =>
+      block_treu_floatNarrow O passes R hR hO bo hbV e lo hi sonst rest
+        (block_treu bo hbV rest) (end_treu bo hbV sonst) σ ρ hscope hh σ' h
 
 theorem end_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
     ∀ (b : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ), b.ScopesOk →
     HeldB bo Λ σ.haelt →
-    TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R b σ ρ)
+    TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R b σ ρ) (ResidHeld V Λ)
   | .ret e _, σ, ρ, _hscope, _hh, σ', h => by
+      intro _
       frame_value execEnd EndAusgang.welt; exact (treu_lese σ Λ _).toRet
   | .retWhy .., σ, ρ, _hscope, _hh, σ', h => by
+      intro _
       simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h; exact (Treu.refl _ _ _).toRet
   | .retScoped e R, σ, ρ, hscope, _hh, σ', h => by
+      intro _
       frame_value execEnd EndAusgang.welt
       have hsc : scopesOkScopes V.haelt V.boden R.scopes = true := by scopes_treu
       exact treuRet_retScoped R.scopes (treu_lese σ Λ _)
         (fun L hL => (scopesOkScopes_mem hsc hL).1)
         (fun L hL c hc => (scopesOkScopes_mem hsc hL).2 c hc)
   | .retWhyScoped _ R, σ, ρ, hscope, _hh, σ', h => by
+      intro _
       frame_value execEnd EndAusgang.welt
       have hsc : scopesOkScopes V.haelt V.boden R.scopes = true := by scopes_treu
       exact treuRet_retWhyScoped σ R.scopes
@@ -366,8 +360,8 @@ theorem end_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       cases sv
       · rename_i σ1 ρ1
         have g1 := hs σ1 (by rw [hs1]; rfl); rw [hs1] at g1
-        exact (TreuEnd.vorCall g1 (end_treu bo hbV rest σ1 ρ1 hscope_rest
-          (HeldB.of_iff s.held_iff (g1.heldB hh)))) σ' h
+        exact (TreuEnd.vorCall g1 ((end_treu bo hbV rest σ1 ρ1 hscope_rest
+          (HeldB.of_iff s.held_iff (g1.heldB hh))).guard (guard := ResidHeld V Λ) (ResidHeld.of_iff s.held_iff))) σ' h
       all_goals first
         | (simp only [EndAusgang.welt, Option.some.injEq] at h; subst h
            simpa only [hs1] using hs _ (by rw [hs1]; rfl))
@@ -377,17 +371,17 @@ theorem end_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       have hscope_rest : rest.ScopesOk := by scopes_treu
       exact (TreuEnd.vor hl (end_treu bo hbV rest _ _ hscope_rest (hl.heldB hh))).schrumpf σ' h
   | .bindCall f args he hp hr rest, σ, ρ, hscope, hh, σ', h => by
-      exact end_bindCall_treu O passes R hR hO bo hbV f args he hp hr rest (fun σ ρ hs hh => end_treu bo hbV rest σ ρ hs hh) σ ρ hscope hh σ' h
+      exact end_bindCall_treu O passes R hR hO bo hbV f args he hp hr rest (fun σ ρ hs hh => (end_treu bo hbV rest σ ρ hs hh).guard (guard := ResidHeld V Λ) (ResidHeld.of_iff (fun L => held_nachSig_iff _ _ L))) σ ρ hscope hh σ' h
   | .bindCallElse f args he hp hr err rest, σ, ρ, hscope, hh, σ', h => by
-      exact end_bindCallElse_treu O passes R hR hO bo hbV f args he hp hr err rest (fun σ ρ hs hh => end_treu bo hbV rest σ ρ hs hh) (fun σ ρ hs hh => end_treu bo hbV err σ ρ hs hh) σ ρ hscope hh σ' h
+      exact end_bindCallElse_treu O passes R hR hO bo hbV f args he hp hr err rest (fun σ ρ hs hh => (end_treu bo hbV rest σ ρ hs hh).guard (guard := ResidHeld V Λ) (ResidHeld.of_iff (fun L => held_nachSig_iff _ _ L))) (fun σ ρ hs hh => (end_treu bo hbV err σ ρ hs hh).guard (guard := ResidHeld V Λ) (ResidHeld.of_iff (fun L => held_nachSig_iff _ _ L))) σ ρ hscope hh σ' h
   | .bindAxiom a args he hw hg hd hgd rest, σ, ρ, hscope, hh, σ', h => by
       exact end_bindAxiom_treu O passes R hR hO bo hbV a args he hw hg hd hgd rest (fun σ ρ hs hh => end_treu bo hbV rest σ ρ hs hh) σ ρ hscope hh σ' h
   | .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ, hscope, hh, σ', h => by
       exact end_bindAxiomElse_treu O passes R hR hO bo hbV a args he hr hw hg hd hgd err rest (fun σ ρ hs hh => end_treu bo hbV rest σ ρ hs hh) (fun σ ρ hs hh => end_treu bo hbV err σ ρ hs hh) σ ρ hscope hh σ' h
   | .bindAxiomOpt e a args he hp hd hgd rest, σ, ρ, hscope, hh, σ', h => by
-      exact end_bindAxiomOpt_treu O passes R hR hO bo hbV e a args he hp hd hgd rest (fun σ ρ hs hh => end_treu bo hbV rest σ ρ hs hh) σ ρ hscope hh σ' h
+      exact end_bindAxiomOpt_treu O passes R hR hO bo hbV e a args he hp hd hgd rest (fun σ ρ hs hh => (end_treu bo hbV rest σ ρ hs hh).guard (guard := ResidHeld V Λ) (ResidHeld.of_iff (fun L => held_nachSig_iff _ _ L))) σ ρ hscope hh σ' h
   | .bindAxiomOptElse e a args he hp hd hgd hr err rest, σ, ρ, hscope, hh, σ', h => by
-      exact end_bindAxiomOptElse_treu O passes R hR hO bo hbV e a args he hp hd hgd hr err rest (fun σ ρ hs hh => end_treu bo hbV rest σ ρ hs hh) (fun σ ρ hs hh => end_treu bo hbV err σ ρ hs hh) σ ρ hscope hh σ' h
+      exact end_bindAxiomOptElse_treu O passes R hR hO bo hbV e a args he hp hd hgd hr err rest (fun σ ρ hs hh => (end_treu bo hbV rest σ ρ hs hh).guard (guard := ResidHeld V Λ) (ResidHeld.of_iff (fun L => held_nachSig_iff _ _ L))) (fun σ ρ hs hh => (end_treu bo hbV err σ ρ hs hh).guard (guard := ResidHeld V Λ) (ResidHeld.of_iff (fun L => held_nachSig_iff _ _ L))) σ ρ hscope hh σ' h
   | .regRead r _ rest, σ, ρ, hscope, hh, σ', h => by
       have hscope_rest : rest.ScopesOk := by scopes_treu
       simp only [execEnd] at h ⊢
@@ -414,7 +408,7 @@ theorem end_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         exact (TreuEnd.vor hl (end_treu bo hbV rest _ _ hscope_rest (hl.heldB hh))).schrumpf σ' h
       · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .bindCallInd p args he hp hr rest, σ, ρ, hscope, hh, σ', h => by
-      exact end_bindCallInd_treu O passes R hR hO bo hbV p args he hp hr rest (fun σ ρ hs hh => end_treu bo hbV rest σ ρ hs hh) σ ρ hscope hh σ' h
+      exact end_bindCallInd_treu O passes R hR hO bo hbV p args he hp hr rest (fun σ ρ hs hh => (end_treu bo hbV rest σ ρ hs hh).guard (guard := ResidHeld V Λ) (ResidHeld.of_iff (fun L => held_nachSig_iff _ _ L))) σ ρ hscope hh σ' h
   | .bindCallIndElse p args he hp hr err rest, σ, ρ, hscope, hh, σ', h => by
       simp only [execEnd] at h
       have hscope_rest : rest.ScopesOk := by scopes_treu
@@ -422,8 +416,10 @@ theorem end_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       exact indSonstE_treu R hR p args he hp hr σ _ ρ (treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ (p.orte ++ args.orte))
         bo hbV hh
         _ _
-        (fun s1 v hh1 => (end_treu bo hbV rest s1 _ hscope_rest hh1).schrumpf)
-        (fun s1 r hh1 => (end_treu bo hbV err s1 _ hscope_err hh1).schrumpf) σ' h
+        (fun s1 v hh1 => ((end_treu bo hbV rest s1 _ hscope_rest hh1).guard (guard := ResidHeld V Λ)
+          (ResidHeld.of_iff (fun L => held_nachSig_iff _ _ L))).schrumpf)
+        (fun s1 r hh1 => ((end_treu bo hbV err s1 _ hscope_err hh1).guard (guard := ResidHeld V Λ)
+          (ResidHeld.of_iff (fun L => held_nachSig_iff _ _ L))).schrumpf) σ' h
   | .narrow e lo' hi' sonst rest, σ, ρ, hscope, hh, σ', h => by
       have hscope_rest : rest.ScopesOk := by scopes_treu
       have hscope_sonst : sonst.ScopesOk := by scopes_treu
@@ -472,7 +468,7 @@ theorem end_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
 theorem arms_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
     ∀ (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),
     arms.ScopesOk → HeldB bo Λ σ.haelt →
-    TreuAusgang V.schreibt V.gschreibt σ (execArms O passes R arms v σ ρ)
+    TreuAusgang V.schreibt V.gschreibt σ (execArms O passes R arms v σ ρ) (ResidHeld V Λ)
   | .cons b _, ⟨⟨0, _⟩, _⟩, σ, _, hscope, hh, σ', h => by
       have hscope_b : b.ScopesOk := by scopes_treu
       exact (block_treu bo hbV b σ _ hscope_b hh).schrumpfArm _ σ' h
@@ -483,7 +479,7 @@ theorem arms_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
 theorem grund_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
     ∀ (arms : GrundArms D V l Γ Λ Λ' n) (r : Fin n) (σ : World D) (ρ : Env D Γ),
     arms.ScopesOk → HeldB bo Λ σ.haelt →
-    TreuAusgang V.schreibt V.gschreibt σ (execGrund O passes R arms r σ ρ)
+    TreuAusgang V.schreibt V.gschreibt σ (execGrund O passes R arms r σ ρ) (ResidHeld V Λ)
   | .cons b _, ⟨0, _⟩, σ, ρ, hscope, hh, σ', h => by
       have hscope_b : b.ScopesOk := by scopes_treu
       exact block_treu bo hbV b σ ρ hscope_b hh σ' h
