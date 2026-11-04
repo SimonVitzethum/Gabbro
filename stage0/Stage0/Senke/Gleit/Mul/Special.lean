@@ -105,12 +105,16 @@ private theorem signXor (a b : Bool) :
 private theorem specialZeroPack (sign : Bool) :
     packWord (Runner.IR.bool sign) 0 0 =
       BitVec.ofNat 64 (zuBits f64 ⟨sign, 0, 0⟩) :=
-  packWord_canonical _ ⟨by decide, by decide⟩
+  packWord_canonical ⟨sign, 0, 0⟩ (by
+    change 0 ≤ 2047 ∧ 0 < 2 ^ 52
+    constructor <;> decide)
 
 private theorem specialInfPack (sign : Bool) :
     packWord (Runner.IR.bool sign) 2047 0 =
       BitVec.ofNat 64 (zuBits f64 ⟨sign, 2047, 0⟩) :=
-  packWord_canonical _ ⟨by decide, by decide⟩
+  packWord_canonical ⟨sign, 2047, 0⟩ (by
+    change 2047 ≤ 2047 ∧ 0 < 2 ^ 52
+    constructor <;> decide)
 
 private theorem specialNanPack :
     BitVec.ofNat 64 9218868437227405313 =
@@ -158,8 +162,9 @@ theorem softMulSpecialWord_model (a b : GFloat) (ha : wf f64 a) (hb : wf f64 b)
   obtain ⟨bn, bi, bz⟩ := routineClass_canonical b hb
   refine Eq.trans ?_ (specialClass_model (fun r => BitVec.ofNat 64 (zuBits f64 r)) a b finite)
   unfold softMulSpecialWord
-  rw [sa, sb, signXor, an, bn, ai, az, bi, bz,
-    specialZeroPack, specialInfPack, specialNanPack]
+  rw [sa, sb, signXor, an, bn, ai, az, bi, bz]
+  dsimp only
+  rw [specialZeroPack, specialInfPack, specialNanPack]
 
 /-- Invalid operations, NaN priority and the sign of both zero and infinity
     instantiate the same dispatcher, independently of the finite result. -/
