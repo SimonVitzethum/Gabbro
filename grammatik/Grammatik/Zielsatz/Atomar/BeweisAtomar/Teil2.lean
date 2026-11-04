@@ -291,30 +291,30 @@ theorem gabbro_ziel_verbund : GabbroZielVerbund := by
     hV hS
   -- the linked unit without its arenas: the linked statement claims no ownership
   let E : Einheit D := { verbinde e E₁ E₂ with arenen := [] }
-  have hAS₁ : Kernzelle.AkkuStart E₁ E₁.akku := (C.korrekt E₁ fs ls cs h₁).2.2
-  have hAS₂ : Kernzelle.AkkuStart E₂ E₂.akku := (C.korrekt E₂ fs ls cs h₂).2.2
-  have hAS : Kernzelle.AkkuStart E E.akku := by
-    intro a ha hok i
-    have hakku : E.akku = E₁.akku ++ E₂.akku := rfl
-    have hsp : E.sp0 = E₁.sp0 := rfl
-    rw [hakku] at ha
-    rcases List.mem_append.mp ha with h1 | h2
-    · rw [hsp]
-      exact hAS₁ a h1 hok i
-    · rw [hsp, hV.speicher]
-      exact hAS₂ a h2 hok i
-  have hBStart : Kernzelle.akkuStartB E E.akku = true :=
-    Kernzelle.akkuStartB_vollst hA.akku hAS
-  have hB : akzeptiertX_pruefer.akzeptiert E fs.1 ls.1 cs.1 = true :=
-    (Bool.and_eq_true _ _).mpr
-      ⟨(Bool.and_eq_true _ _).mpr
-        ⟨akzeptiertX_of_akzeptiert
-          (spec_akzeptiert fs.2 ls.2 cs.2 (h := hA) (hChecks := hS.pruef)), besitzB_leer rfl⟩,
-      hBStart⟩
+  -- Compose the full admitted specification directly; reconstructing the checker
+  -- would also require an explicit query list, which the linked goal does not enumerate.
+  have hAX : AkzeptiertSpecX E.P E.S fs.1 E.ws E.arenen E.akku :=
+    akzeptiertSpecX_of_spec (A := E.akku) hA
+  have hAR := akzeptiertSpecX_mitRuhe E.P fs.2 hAX
+  have heq := geteiltV_mitRuhe_eq E.P (ws := E.ws) fs.2 hAX.abg
   have hN : NutzerPflichtA (verbinde e E₁ E₂) := nutzerPflichtA_of_akzeptiert fs.2 hA
     (nutzerPflicht_verbinde hV hQ (nutzerTeil_of_A hN₁) (nutzerTeil_of_A hN₂))
-  exact gabbro_ziel akzeptiertX_pruefer D E fs ls cs hB ⟨hN.logik, ⟨hN.start.sperren, hN.start.req⟩⟩
-    O hH passes sp init ⟨hL.lader, hL.start, hL.einmal⟩ lebt0 K hK
+  have hNR : LogikPflichtA E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q)
+      (GeteiltA E.P.mitRuhe (wsRuhe E.ws)) := by
+    have h := logikPflichtA_mitRuhe hN.logik
+    exact ⟨fun passes f => ⟨koerperGutSA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hAX.abg hc)
+        (h.1 passes f).1,
+      invGutSA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hAX.abg hc) (h.1 passes f).2.1,
+      invGutGrundA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hAX.abg hc) (h.1 passes f).2.2⟩,
+      h.2⟩
+  have hStart : Laufzeit E sp init := ⟨hL.lader, hL.start, hL.einmal⟩
+  have hZ := zielFX_aus E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q) (fsRuhe_voll fs.2) ls.2
+    (wsRuhe E.ws) hAR hNR O.mitRuhe (hardware_mitRuhe hH) passes sp init
+    (startZulaessig_aus E fs.1 ⟨hN.start.sperren, hN.start.req⟩ hStart)
+    (ArenaOwnership.Ruhe.startOwn_arenen hStart
+      ⟨(fun _ ha => nomatch ha), (fun _ ha => nomatch ha)⟩)
+    lebt0 K (heq ▸ hK)
+  exact heq ▸ hZ
 
 /-- **THE LINKED STATEMENT OF BEFORE, DERIVED**, for two units of before (no arena, `hB₁`, `hB₂`). -/
 theorem gabbro_ziel_verbund_sc_aus (h : GabbroZielVerbund) (C : Pruefer) (D : Deklaration)
@@ -331,12 +331,17 @@ theorem gabbro_ziel_verbund_sc_aus (h : GabbroZielVerbund) (C : Pruefer) (D : De
       (FadenStart (verbinde e E₁ E₂).P.mitRuhe sp init lebt0) K) :
     ZielF (verbinde e E₁ E₂).P.mitRuhe (verbinde e E₁ E₂).S.mitRuhe O.mitRuhe passes
       (RufStartG (verbinde e E₁ E₂).P.mitRuhe sp init) K := by
-  have hA₁ := C.korrekt E₁ fs ls cs h₁
-  have hA₂ := C.korrekt E₂ fs ls cs h₂
-  have hZ := h C.alsX D E₁ E₂ e fs ls cs (C.alsX_akzeptiert hB₁ hA₁ h₁) (C.alsX_akzeptiert hB₂ hA₂ h₂) hV hS (nutzerTeilA_of fs.2 hA₁ hN₁)
-    (nutzerTeilA_of fs.2 hA₂ hN₂) hQ O hH passes sp init hL lebt0 K (fadenErreichbarX_of hK)
+  have hSpec₁ := C.korrekt E₁ fs ls cs h₁
+  have hSpec₂ := C.korrekt E₂ fs ls cs h₂
+  have hZ := h C.alsX D E₁ E₂ e fs ls cs
+    (C.alsX_akzeptiert hB₁ hA₁ h₁) (C.alsX_akzeptiert hB₂ hA₂ h₂) hV hS
+    (nutzerTeilA_of fs.2 hSpec₁ hN₁) (nutzerTeilA_of fs.2 hSpec₂ hN₂)
+    hQ O hH passes sp init hL lebt0 K (fadenErreichbarX_of hK)
   refine zielF_of_X ?_ hZ
-  exact fun c => geteiltV_leer fs.2 (akzeptiertSpec_verbinde fs.2 hA₁ hA₂ hV hS) c
+  exact fun c => geteiltV_leer fs.2
+    (akzeptiertSpec_verbindeX (E₁ := E₁) (E₂ := E₂) (e := e) fs.2
+      (akzeptiertSpecX_of_spec (A := E₁.akku) hSpec₁)
+      (akzeptiertSpecX_of_spec (A := E₂.akku) hSpec₂) hV hS) c
 
 #print axioms Gabbro.Grammatik.Zielsatz.zielX_aus
 #print axioms Gabbro.Grammatik.Zielsatz.zielFX_aus
