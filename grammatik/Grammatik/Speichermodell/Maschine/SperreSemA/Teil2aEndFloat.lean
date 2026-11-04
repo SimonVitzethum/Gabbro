@@ -22,14 +22,14 @@ theorem semHA_endeGleit {Λ : List (Res D)} {l₁ h₁ l₂ h₂ : Int × Int} (
       (eval (leseA A σ Λ (a.orte ++ b.orte)) b (leseA A σ Λ (a.orte ++ b.orte)) ρ).x) = some v) :
     semHA S O U A passes R (.ende (.float op a b lo hi rest)) σ ρ =
       semHA S O U A passes R (.ende rest) (leseA A σ Λ (a.orte ++ b.orte)) (.cons v ρ) := by
-  simp only [semHA, execEndHA, hv, zErgG_schrumpf]
+  simp only [semHA, weiterHA, execEndHA, hv, zErgG_schrumpf]
 
 theorem semHA_endeGleitLit {Λ : List (Res D)} (q lo hi : Int × Int)
     (rest : Endblock D V l (.fl lo hi :: Γ) Λ)  (σ : World D)
     (ρ : Env D Γ) (v : Wert D (.fl lo hi)) (hv : gleitPasst lo hi (bruch q) = some v) :
     semHA S O U A passes R (.ende (.floatLit q lo hi rest)) σ ρ =
       semHA S O U A passes R (.ende rest) σ (.cons v ρ) := by
-  simp only [semHA, execEndHA, hv, zErgG_schrumpf]
+  simp only [semHA, weiterHA, execEndHA, hv, zErgG_schrumpf]
 
 theorem semHA_endeGleitVon {Λ : List (Res D)} {l₁ h₁ : Int} (e : Expr D Γ Λ (.int l₁ h₁))
     (lo hi : Int × Int) (rest : Endblock D V l (.fl lo hi :: Γ) Λ)
@@ -38,7 +38,7 @@ theorem semHA_endeGleitVon {Λ : List (Res D)} {l₁ h₁ : Int} (e : Expr D Γ 
       (leseA A σ Λ e.orte) ρ).n) = some v) :
     semHA S O U A passes R (.ende (.floatOf e lo hi rest)) σ ρ =
       semHA S O U A passes R (.ende rest) (leseA A σ Λ e.orte) (.cons v ρ) := by
-  simp only [semHA, execEndHA, hv, zErgG_schrumpf]
+  simp only [semHA, weiterHA, execEndHA, hv, zErgG_schrumpf]
 
 theorem semHA_endeGleitNarrowOk {Λ : List (Res D)} {l₁ h₁ : Int × Int}
     (e : Expr D Γ Λ (.fl l₁ h₁)) (lo hi : Int × Int) (sonst : Endblock D V l Γ Λ)
@@ -47,7 +47,7 @@ theorem semHA_endeGleitNarrowOk {Λ : List (Res D)} {l₁ h₁ : Int × Int}
     (hv : gleitPasst lo hi (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ).x = some v) :
     semHA S O U A passes R (.ende (.floatNarrow e lo hi sonst rest)) σ ρ =
       semHA S O U A passes R (.ende rest) (leseA A σ Λ e.orte) (.cons v ρ) := by
-  simp only [semHA, execEndHA, hv, zErgG_schrumpf]
+  simp only [semHA, weiterHA, execEndHA, hv, zErgG_schrumpf]
 
 theorem semHA_endeGleitNarrowElse {Λ : List (Res D)} {l₁ h₁ : Int × Int}
     (e : Expr D Γ Λ (.fl l₁ h₁)) (lo hi : Int × Int) (sonst : Endblock D V l Γ Λ)
@@ -56,7 +56,7 @@ theorem semHA_endeGleitNarrowElse {Λ : List (Res D)} {l₁ h₁ : Int × Int}
     (hn : gleitPasst lo hi (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ).x = none) :
     (semHA S O U A passes R (.ende (.floatNarrow e lo hi sonst rest)) σ ρ).folgt
       (semHA S O U A passes R (.ende sonst) (leseA A σ Λ e.orte) ρ) := by
-  simp only [semHA, execEndHA, hn, zErgG_schrumpf]
+  simp only [semHA, weiterHA, execEndHA, hn, zErgG_schrumpf]
   exact ZErgG.folgt_refl _
 
 end StufenA
