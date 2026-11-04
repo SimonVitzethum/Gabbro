@@ -3,6 +3,7 @@ module
 public import Init.Data.Float
 public import Init.Data.OfScientific
 public import Init.Data.SInt.Float
+public import NativeFloat.Literal
 public import Grammatik.Kern.Syntax.Typen.Reason
 public import Grammatik.Kern.Syntax.Typen.Shape
 
@@ -60,10 +61,13 @@ theorem zahl_ext {lo hi : Int} {a b : Zahl lo hi} (h : a.n = b.n) : a = b := by
     native `Float32` and `Float`. No Gabbro software arithmetic model is involved. -/
 abbrev GFloat : Type := Float
 
-/-- Literal and range-bound conversion uses the native conversions of both
-    integers followed by native division, including its zero-denominator result. -/
+/-- Literal and range-bound conversion divides exact integer mantissas in the
+    toolchain model before rounding, preserving subnormals and signed overflow. -/
 def bruch (q : Int × Int) : GFloat :=
-  Float.div (Float.ofInt q.1) (Float.ofInt q.2)
+  RootNativeFloat.canonLiteral q
+
+theorem bruch_integer (z : Int) : bruch (z, 1) = Float.ofInt z :=
+  RootNativeFloat.canonLiteral_integer z
 
 /-- An integer as a float: the exact integer, rounded once (C's `(double)n`). -/
 def gleitAusInt (z : Int) : GFloat := Float.ofInt z

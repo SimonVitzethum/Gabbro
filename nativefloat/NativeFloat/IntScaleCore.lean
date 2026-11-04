@@ -268,21 +268,6 @@ private theorem retained_unpacked (g : Nat) (lower : 2 ^ 55 ≤ g) (upper : g < 
   · exact canonical_unpack .positive _ 4 (by decide) (by decide) (by decide) (by decide) (by decide)
   · exact canonical_unpack .positive _ 3 (by omega) bounds.1 (by omega) (by decide) (by decide)
 
-private theorem integer_round (z : Int) (nonzero : z ≠ 0) :
-    UnpackedFloat.ofInt Format.binary64 z =
-      round Format.binary64 (if z < 0 then .negative else .positive) z.natAbs 0 := by
-  by_cases negative : z < 0
-  · have cp : compare z 0 = .lt := Int.compare_eq_lt.mpr negative
-    have magnitude : (-z).toNat = z.natAbs := by
-      have h := Int.eq_neg_natAbs_of_nonpos (Int.le_of_lt negative)
-      omega
-    simp only [UnpackedFloat.ofInt, normalize, cp, magnitude, negative, ↓reduceIte]
-  · have cp : compare z 0 = .gt := Int.compare_eq_gt.mpr (by omega)
-    have magnitude : z.toNat = z.natAbs := by
-      have h := Int.eq_natAbs_of_nonneg (by omega : 0 ≤ z)
-      omega
-    simp only [UnpackedFloat.ofInt, normalize, cp, magnitude, negative, ↓reduceIte]
-
 private theorem packed_product (s : Sign) (n : Nat) (large : 2 ^ 55 ≤ n) :
     let k := n.log2 - 55
     let g := (n >>> k) ||| (if n % 2 ^ k = 0 then 0 else 1)

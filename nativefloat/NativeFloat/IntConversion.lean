@@ -392,6 +392,21 @@ theorem ofInt_unsigned64 (z : Int) (lower : 0 ≤ z) (upper : z < 2 ^ 64) :
     Float.ofModel (Float.Model.ofInt (z.toNat % 2 ^ 64 : Nat))
   rw [Nat.mod_eq_of_lt (by omega), Int.toNat_of_nonneg lower]
 
+private theorem integer_round (z : Int) (nonzero : z ≠ 0) :
+    UnpackedFloat.ofInt Format.binary64 z =
+      round Format.binary64 (if z < 0 then .negative else .positive) z.natAbs 0 := by
+  by_cases negative : z < 0
+  · have cp : compare z 0 = .lt := Int.compare_eq_lt.mpr negative
+    have magnitude : (-z).toNat = z.natAbs := by
+      have h := Int.eq_neg_natAbs_of_nonpos (Int.le_of_lt negative)
+      omega
+    simp only [UnpackedFloat.ofInt, normalize, cp, magnitude, negative, ↓reduceIte]
+  · have cp : compare z 0 = .gt := Int.compare_eq_gt.mpr (by omega)
+    have magnitude : z.toNat = z.natAbs := by
+      have h := Int.eq_natAbs_of_nonneg (by omega : 0 ≤ z)
+      omega
+    simp only [UnpackedFloat.ofInt, normalize, cp, magnitude, negative, ↓reduceIte]
+
 private theorem components_not_nan (F : Format) (s : Sign)
     (e : BitVec F.exponentBits) (m : BitVec F.mantissaBitsWithoutImplicit)
     (normal : e ≠ -1#F.exponentBits ∨ m = 0#F.mantissaBitsWithoutImplicit) :

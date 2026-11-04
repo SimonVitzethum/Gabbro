@@ -6,3 +6,4 @@ public import NativeFloat.IntConversion
 public import NativeFloat.IntSticky
 public import NativeFloat.IntScaleCore
 public import NativeFloat.IntScaling
+public import NativeFloat.Literal
