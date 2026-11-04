@@ -109,15 +109,29 @@ theorem pruef_sim {T' : D'.Tab ⊕ D'.Glob → Prop} {A' : AUmwelt D'} (hA' : Ha
     (hT : ∀ c, T' (E.ortE c) → T c) {Γ : Ctx} {Λ : List (Res D)} (c : Expr D Γ Λ .bool) :
     E.PruefSim hZ (fun Φ σ ρ => let σ := leseA (E.aumweltΦ hZ Φ T A') σ Λ c.orte; (σ, wahr? (eval σ c σ ρ)))
       (fun σ ρ => let σ := leseA A' σ (Λ.map E.resE) (exE E c).orte; (σ, wahr? (eval σ (exE E c) σ ρ))) := by
+  let mapped : Expr D' (Γ.map E.tyE) (Λ.map E.resE) .bool := exE E c
+  have hmapped : mapped.orte = c.orte.map E.ortE := E.orte_exE c
+  change E.PruefSim hZ
+    (fun Φ σ ρ =>
+      let σ := leseA (E.aumweltΦ hZ Φ T A') σ Λ c.orte
+      (σ, wahr? (D := D) (eval (τ := .bool) σ c σ ρ)))
+    (fun σ ρ =>
+      let σ := leseA A' σ (Λ.map E.resE) mapped.orte
+      (σ, wahr? (D := D') (eval (τ := .bool) σ mapped σ ρ)))
   intro M σ σ' ρ ρ' h hρ
   obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval' hZ T h hA' hT Λ (Λ.map E.resE) c.orte
-    (exE E c).orte (E.orte_exE c).symm
-  refine ⟨M₁, σ₁, wahr? (eval σ₁ c σ₁ ρ), hs, fun Φ hP => ?_, hI, ?_⟩
+    mapped.orte hmapped.symm
+  refine ⟨M₁, σ₁, wahr? (D := D) (eval (τ := .bool) σ₁ c σ₁ ρ), hs,
+    fun Φ hP => ?_, hI, ?_⟩
   · simp only [hΦ Φ hP]
   · have hc := hev c ρ ρ' hρ
-    simp only [VRel] at hc
-    show wahr? (eval _ (exE E c) _ ρ') = _
-    rw [hc]; rfl
+    change (eval (τ := .bool) (leseA A' σ' (Λ.map E.resE) mapped.orte) mapped
+      (leseA A' σ' (Λ.map E.resE) mapped.orte) ρ' : Bool) =
+      eval (τ := .bool) σ₁ c σ₁ ρ at hc
+    change (eval (τ := .bool) (leseA A' σ' (Λ.map E.resE) mapped.orte) mapped
+      (leseA A' σ' (Λ.map E.resE) mapped.orte) ρ' : Bool) =
+      eval (τ := .bool) σ₁ c σ₁ ρ
+    exact hc
 
 end Einbettung
 
