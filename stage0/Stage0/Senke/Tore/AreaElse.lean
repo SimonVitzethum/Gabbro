@@ -50,7 +50,7 @@ theorem areaElse_ok {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D)}
           (areaReceive τ (frei Γ reserved) ++ (success ++ error)))) ρ reserved := by
     simpa only [List.append_assoc] using pre
   obtain ⟨binding', bound', m1, tag, run1, change1, input, world1, reply⟩ :=
-    areaC_ok he emitted capacity layout pre0.left world
+    areaC_ok (L := L) (O := O) he emitted capacity layout pre0.left world
   have same : binding' = binding := Option.some.inj (bound'.symm.trans bound)
   subst binding'
   have next1 := pre0.nextW layout change1 (by have := pre.ctx; omega) (Nat.le_refl _) (by omega)

@@ -40,7 +40,7 @@ theorem plainForeignC_ok {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D
           (request ++ (copyWords (valueWords τ) (frei Γ reserved) (foreignResultBase (frei Γ reserved)) ++ rest)) ρ reserved := by
         simpa only [List.append_assoc] using pre
       obtain ⟨binding, bound, m1, tag, run1, change1, input, world1, reply⟩ :=
-        areaC_ok he requestMade capacity layout pre0.left world
+        areaC_ok (L := L) (O := O) he requestMade capacity layout pre0.left world
       have next := pre0.nextW layout change1 (by have := pre.ctx; omega) (Nat.le_refl _) (by omega)
       have span := Nat.le_trans (areaC_top requestMade) capacity
       have destination : frei Γ reserved + valueWords τ ≤ Ks := by
