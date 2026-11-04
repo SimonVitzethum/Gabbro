@@ -287,6 +287,7 @@ theorem reihe_unexpanded (tabs : List UTab) (koepfe : List UFnKopf) (f : Nat) (c
     uAnwReihe tabs koepfe (f + 1) ctx (statement :: rest) =
       uAnwReiheCore tabs koepfe (f + 1) ctx (statement :: rest) := by
   rw [uAnwReihe, hexpand]
+  simp only [bind, Except.bind, pure, Except.pure]
   cases uAnwReiheCore tabs koepfe (f + 1) ctx (statement :: rest) <;> rfl
 
 /-- A fold-free plain statement (`uAnw1`) at the head of a run. -/
@@ -303,6 +304,8 @@ theorem anw_set (tabs : List UTab) (koepfe : List UFnKopf) (f : Nat) (ctx : UCtx
     simp only [expandFoldStmt, expandFoldValue_no_work ctx ctx.names.length w hfold,
       bind, Except.bind, pure, Except.pure])]
   simp only [uAnwReiheCore]
+  cases uAnw1 ctx tabs koepfe (.set ziel op w) <;>
+    cases uAnwReihe tabs koepfe f ctx rest <;> rfl
 
 /-- A slot write `T.slots[i].f = e;`. -/
 theorem anw1_slot {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
