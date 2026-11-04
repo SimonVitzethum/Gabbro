@@ -70,6 +70,7 @@ def w1D : Deklaration :=
   { g1D with aerg := fun _ => some (.fnptr 5), anbieter := fun _ => none, anbieter_passt := fun _ _ h => (nomatch h) }
 
 instance w1D_fn_deq : DecidableEq w1D.Fn := inferInstanceAs (DecidableEq Unit)
+local instance : DecidableEq w1D.Ax := inferInstanceAs (DecidableEq Unit)
 
 /-- The answer class of `hol` is empty. -/
 theorem w1_leer : AntwortLeer w1D (w1D.aerg ()) := by
@@ -119,7 +120,7 @@ theorem w1_abgelehnt (E : Einheit w1D) (hP : E.P = w1P) (fs : Aufzaehlung w1D.Fn
     exact absurd hA (w1_spec_nicht _ _ _)
 
 /-- Computed: the checker's Bool on the probe (with `haupt` declared) is `false`. -/
-theorem w1_bool : Akzeptiert w1P w1S [()] [] [] [()] = false := by decide
+theorem w1_bool : Akzeptiert w1P w1S [()] [] [] [()] = false := by decide +kernel
 
 /-- Computed: every OTHER component accepts the probe -- the refusal is `antwortenB`'s. -/
 theorem w1_sonst_alles :
@@ -127,7 +128,7 @@ theorem w1_sonst_alles :
       stufenB w1P [()] && sperrOrteB w1S [] && wurzelnB (D := w1D) [()] &&
       einzelnPoolB w1P [()] [] [()] && rennB w1P [()] [] [()]) = true ∧
     antwortenB w1P [()] = false := by
-  constructor <;> decide
+  constructor <;> decide +kernel
 
 /-! ## 2. The register variant: a register whose type is an empty range -/
 
@@ -135,6 +136,7 @@ theorem w1_sonst_alles :
 def w1rD : Deklaration := { g1D with rtyp := fun _ => .int 1 0, rzusage := fun _ _ => true }
 
 instance w1rD_fn_deq : DecidableEq w1rD.Fn := inferInstanceAs (DecidableEq Unit)
+local instance : DecidableEq w1rD.Ax := inferInstanceAs (DecidableEq Unit)
 
 /-- `if true { let t = temp; }` over the empty register. -/
 def w1rP : Programm w1rD where
@@ -146,15 +148,16 @@ def w1rP : Programm w1rD where
 def w1rS : SperrInv w1rD := ⟨fun L => (L : Empty).elim, fun L _ => (L : Empty).elim⟩
 
 /-- A register never "does not return" in C: an empty register type is refused outright. -/
-theorem w1r_spec_nicht (S : SperrInv w1rD) (fs ws : List w1rD.Fn) :
-    ¬ AkzeptiertSpec w1rP S fs ws := fun h =>
+theorem w1r_spec_nicht (S : SperrInv w1rD) (fs ws : List w1rD.Fn)
+    {A : List (Kernzelle.AccumulatorDecl w1rD)} :
+    ¬ AkzeptiertSpec w1rP S fs ws A := fun h =>
   h.antworten () (.inr ()) (by
     show Sum.inr () ∈ (([Sum.inr ()] ++ []) ++ []) ++ []
     exact List.mem_append_left _ (List.mem_append_left _ (List.mem_append_left _
       (List.mem_singleton_self _))))
     (antwortLeer_int_leer (by decide))
 
-theorem w1r_bool : Akzeptiert w1rP w1rS [()] [] [] [()] = false := by decide
+theorem w1r_bool : Akzeptiert w1rP w1rS [()] [] [] [()] = false := by decide +kernel
 
 /-! ## 3. `reason` with no reasons -/
 
@@ -163,6 +166,7 @@ def w1gD : Deklaration :=
   { g1D with aerg := fun _ => some (.why 0), anbieter := fun _ => none, anbieter_passt := fun _ _ h => (nomatch h) }
 
 instance w1gD_fn_deq : DecidableEq w1gD.Fn := inferInstanceAs (DecidableEq Unit)
+local instance : DecidableEq w1gD.Ax := inferInstanceAs (DecidableEq Unit)
 
 def w1gP : Programm w1gD where
   invariante := fun i => (nomatch i)
@@ -174,7 +178,7 @@ def w1gP : Programm w1gD where
 
 def w1gS : SperrInv w1gD := ⟨fun L => (L : Empty).elim, fun L _ => (L : Empty).elim⟩
 
-theorem w1g_bool : Akzeptiert w1gP w1gS [()] [] [] [()] = false := by decide
+theorem w1g_bool : Akzeptiert w1gP w1gS [()] [] [] [()] = false := by decide +kernel
 
 /-! ## 4. The contrast: `never` -/
 
@@ -183,6 +187,7 @@ def w1vD : Deklaration :=
   { g1D with aerg := fun _ => some .never, anbieter := fun _ => none, anbieter_passt := fun _ _ h => (nomatch h) }
 
 instance w1vD_fn_deq : DecidableEq w1vD.Fn := inferInstanceAs (DecidableEq Unit)
+local instance : DecidableEq w1vD.Ax := inferInstanceAs (DecidableEq Unit)
 
 def w1vKopf : Block w1vD (vertragVon w1vD ()) false [] [] [] :=
   .bindAxiom (τ := .never) () .nil rfl (fun e => nomatch e) (fun e => nomatch e)
@@ -198,7 +203,7 @@ def w1vS : SperrInv w1vD := ⟨fun L => (L : Empty).elim, fun L _ => (L : Empty)
 
 /-- **The contrast**: the same code behind an axiom `-> never` is accepted -- there the call
     really does not return (the prototype is `_Noreturn`). -/
-theorem w1v_bool : Akzeptiert w1vP w1vS [()] [] [] [()] = true := by decide
+theorem w1v_bool : Akzeptiert w1vP w1vS [()] [] [] [()] = true := by decide +kernel
 
 /-- And its head is the named stop `nieZurueck` at every oracle, budget and world. -/
 theorem w1v_kopf (O : Orakel w1vD) (passes : Nat) (σ : World w1vD) :
