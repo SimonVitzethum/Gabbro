@@ -14,7 +14,7 @@
 
   The decision (`ZielOrtStart.lean` §2a): start functions declare no
   reasons (`StartOhneGrund`, a decidable premise of the flagship). Then
-  every finished thread stands at a VALUE return (`fertig_wert`), so
+  every finished thread has an ordinary or saved VALUE completion, so
   `StartEndeG` checks EVERY completion of a start function; the probe fails
   the premise (`grP_nicht`) and the conclusion conjunct `KeinStartGrundG`
   is false on its start machine (`grP_verletzt`) -- no premises whatever
@@ -29,44 +29,6 @@ public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
-
-/-! ## 1. Every finished thread stands at a value return -/
-
-/-- **Without a start frame at a reason return, every finished thread
-    (`FertigG`: empty stack, head at a return) stands at a VALUE return**
-    -- exactly where `StartEndeG` checks the start function's `ensures` and
-    owed invariants. -/
-theorem fertig_wert {M : RufMaschineG D} (hK : KeinStartGrundG M) {t : Faden} (hF : FertigG M t) :
-    ∃ (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (ρ : Env D Γ)
-      (r : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ)
-      (e : ErgExpr D Γ Λ (vertragVon D (M.faeden t).kopf.f).erg),
-      (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, r⟩ ∧ RetKopf e r := by
-  obtain ⟨hst, hret⟩ := hF
-  have hKt := hK t hst
-  generalize hx : (M.faeden t).kopf.rest = x at hret
-  obtain ⟨l, Γ, Λ, ρ, r⟩ := x
-  refine ⟨l, Γ, Λ, ρ, r, ?_⟩
-  cases r with
-  | ende eb =>
-      cases eb with
-      | ret e hp => exact ⟨e, rfl, hp, Or.inl rfl⟩
-      | retWhy g hp => exact absurd ⟨g, hp, Or.inl rfl⟩ (hKt _ _ _ _ _ hx)
-      | cons s rest =>
-          cases s with
-          | ret e hp => exact ⟨e, rfl, hp, Or.inr (Or.inl ⟨rest, rfl⟩)⟩
-          | retWhy g hp => exact absurd ⟨g, hp, Or.inr (Or.inl ⟨rest, rfl⟩)⟩ (hKt _ _ _ _ _ hx)
-          | _ => simp only [GRest.anRueck, Endblock.istRueck, Stmt.istRueck, Bool.false_eq_true] at hret
-      | _ => simp only [GRest.anRueck, Endblock.istRueck, Bool.false_eq_true] at hret
-  | dann b k =>
-      cases b with
-      | cons s rest =>
-          cases s with
-          | ret e hp => exact ⟨e, rfl, hp, Or.inr (Or.inr ⟨_, rest, k, rfl⟩)⟩
-          | retWhy g hp =>
-              exact absurd ⟨g, hp, Or.inr (Or.inr ⟨_, rest, k, rfl⟩)⟩ (hKt _ _ _ _ _ hx)
-          | _ => simp only [GRest.anRueck, Block.istRueck, Stmt.istRueck, Bool.false_eq_true] at hret
-      | _ => simp only [GRest.anRueck, Block.istRueck, Bool.false_eq_true] at hret
-  | _ => simp only [GRest.anRueck, Bool.false_eq_true] at hret
 
 /-! ## 2. The probe: a start function that ends in a reason -/
 
@@ -132,7 +94,7 @@ theorem grP_fertig (t : Faden) :
     FertigG (RufStartG grP vSp grInit) t ∧
       GrundKopf ((RufStartG grP vSp grInit).faeden t).kopf.rest.2.2.2.2 ∧
       grP.ensures vErr = .fls :=
-  ⟨⟨rfl, rfl⟩, ⟨vR0, List.Perm.nil, Or.inl rfl⟩, rfl⟩
+  ⟨⟨rfl, rfl⟩, ⟨vR0, Or.inl ⟨List.Perm.nil, Or.inl rfl⟩⟩, rfl⟩
 
 /-- **The probe fails the new premise**: its start function declares a
     reason. -/
@@ -141,9 +103,8 @@ theorem grP_nicht : ¬ StartOhneGrund (D := vD) grInit := fun h => absurd (h 0) 
 /-- **And the new conclusion conjunct is false on the probe's start
     machine**: no premises whatever let the flagship certify it. -/
 theorem grP_verletzt : ¬ KeinStartGrundG (RufStartG grP vSp grInit) :=
-  fun h => h 0 rfl _ _ _ _ _ rfl ⟨vR0, List.Perm.nil, Or.inl rfl⟩
+  fun h => h 0 rfl _ _ _ _ _ rfl ⟨vR0, Or.inl ⟨List.Perm.nil, Or.inl rfl⟩⟩
 
-#print axioms Gabbro.Grammatik.fertig_wert
 #print axioms Gabbro.Grammatik.grP_koerper
 #print axioms Gabbro.Grammatik.grP_alt_zertifiziert
 #print axioms Gabbro.Grammatik.grP_fertig

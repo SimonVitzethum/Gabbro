@@ -3748,6 +3748,18 @@ The G6 fallback continues directly as `.ende fallback`; its block-position price
 including occurrences in callees. Block-position prices, execution, admission
 rules and fixed resource limits retain their existing meanings.
 
+Scoped root completion retains `ensures` and owed invariants at its saved
+return world and additionally guarantees owed invariants in the current world.
+These are separate guarantees: released shared memory is never identified with
+the saved snapshot. The current invariant follows from the actual G/GX head
+replay; guards of owed invariant carriers are residual signature locks by
+`Deklaration.invarianten_gehalten`. Finished-head classification covers both
+ordinary return syntax and completed saved values. The existing no-start-reason
+guarantee also covers scoped and saved reasons, derived from the unchanged
+`StartOhneGrund` admission and the actual root function. This strengthens the
+completion predicates carried by the goal without adding a user or hardware
+obligation, changing execution, or relaxing any language check.
+
 | Endblock constructor | Classification | `lowEnd` arm/check and connected correctness lemma |
 |---|---|---|
 | `ret` | LOWERED | Result and epilogue; `endRet_case`. |
