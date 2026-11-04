@@ -337,12 +337,16 @@ def ersetzeSAnwIn (shadowed : List String) (fns : List UKonstFn) : SAnw → Exce
       | some (.leave l) => .ok (.block ss' (some (.leave l)))
       | some (.next l) => .ok (.block ss' (some (.next l)))
   | .allocVon m n ty t => .ok (.allocVon m n ty t)
+termination_by value => sizeOf value
+decreasing_by all_goals (simp_wf <;> omega)
 def ersetzeSAnwListIn (shadowed : List String) (fns : List UKonstFn) : List SAnw → Except String (List SAnw)
   | [] => .ok []
   | a :: rest =>
     match ersetzeSAnwIn shadowed fns a, ersetzeSAnwListIn (boundNames a ++ shadowed) fns rest with
     | .ok a', .ok rest' => .ok (a' :: rest')
     | .error e, _ | _, .error e => .error e
+termination_by values => sizeOf values
+decreasing_by all_goals (simp_wf <;> omega)
 
 end
 
