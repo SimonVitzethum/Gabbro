@@ -56,18 +56,18 @@ inductive NativeFPValue where
   | f64 (value : Float)
   | word (value : W)
 
-private def flagWord (value : Bool) : W := if value then 1 else 0
+def flagWord (value : Bool) : W := if value then 1 else 0
 
 /-- The observable UCOMIS flags; the other arithmetic flags are cleared. -/
 def fpCompareFlags (unordered less equal : Bool) : W :=
   if unordered then 0x45 else if less then 1 else if equal then 0x40 else 0
 
-private def truncateFloat64 (value : Float) : W :=
+def truncateFloat64 (value : Float) : W :=
   if value.isNaN || Float.lt value Int64.minValue.toFloat ||
       !(Float.lt value (UInt64.ofNat (2 ^ 63)).toFloat) then BitVec.ofNat 64 (2 ^ 63)
   else value.toInt64.toBitVec
 
-private def truncateFloat32 (value : Float32) : W :=
+def truncateFloat32 (value : Float32) : W :=
   if value.isNaN || Float32.lt value Int64.minValue.toFloat32 ||
       !(Float32.lt value (UInt64.ofNat (2 ^ 63)).toFloat32) then BitVec.ofNat 64 (2 ^ 63)
   else value.toInt64.toBitVec
