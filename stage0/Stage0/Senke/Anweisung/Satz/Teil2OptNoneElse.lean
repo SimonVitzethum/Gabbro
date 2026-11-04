@@ -99,13 +99,13 @@ theorem lowB_ok_bindAxiomOptElse_none {O : Orakel D} [TorOK L O] [SichtOK O] {pa
           (by omega) hW hp hWa with ⟨v, m2, hAA, s12, a12, hW2⟩ | ⟨r, m2, hAA, s12, a12, hw2, hW2⟩
         · rw [hAA]
           simp only [Ausgang.weiterOpt, ergEnv]
-          have hp2 : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) ((ct ++ fehlC (frei Γ reserved) b.fehler ((16 * ((cr ++ [ci 18 (16 * (ce.length + 1)) 0 0]).length) : Nat) : Int)) ++ ((cr ++ [ci 18 (16 * (ce.length + 1)) 0 0]) ++ ce)) ρ reserved := by simpa only [List.append_assoc] using hp
+          have hp2 : PreS L m pc fp K (frei Γ reserved) ((ct ++ fehlC (frei Γ reserved) b.fehler ((16 * ((cr ++ [ci 18 (16 * (ce.length + 1)) 0 0]).length) : Nat) : Int)) ++ ((cr ++ [ci 18 (16 * (ce.length + 1)) 0 0]) ++ ce)) ρ reserved := by simpa only [List.append_assoc] using hp
           have hq := hp2.nextW hW a12 (d' := frei Γ reserved) (by have := hp.ctx; omega) (by omega) (by omega)
           simp only [List.length_append, fehlC_len] at hq
-          have hp3 : PreS (reserved := reserved) L m2 _ fp K (frei Γ reserved) cr ρ reserved :=
+          have hp3 : PreS L m2 _ fp K (frei Γ reserved) cr ρ reserved :=
             ⟨by omega, hq.small, hq.frame, hq.left.left.code, hq.left.left.far,
              hq.env, trivial, wstab_true _ _⟩
-          have ih := ih_lowB_ok_rest hS hA hlo0 hens (cap := cap) (pr := pr) (ex := exPlus ex (ce.length + 1)) cr tr hr (by omega) (by omega) hW m2 _ _ _ hp3 hlo hlo2
+          have ih := ih_lowB_ok_rest (O := O) (passes := passes) hS hA hlo0 hens (cap := cap) (pr := pr) (ex := exPlus ex (ce.length + 1)) cr tr hr (by omega) (by omega) hW m2 _ _ _ hp3 hlo hlo2
             (hu.agreeW hW (a12.mono hlo2) hlo) (hk.agreeW hW (a12.mono hlo2) (by omega)) hW2 hpr
           refine Sim.prefix hlo s12 (a12.mono hlo2) (keeps_of_agreeW hW a12 hpr (by omega))
             (Sim.cont ih ?_ ?_ ?_)
@@ -126,19 +126,20 @@ theorem lowB_ok_bindAxiomOptElse_none {O : Orakel D} [TorOK L O] [SichtOK O] {pa
           · simp only [exPlus, List.length_append, List.length_singleton, fehlC_len, addr_norm]
             exact tgt_eq (by omega)
         · rw [hAA]
-          have hp2 : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) ((ct ++ fehlC (frei Γ reserved) b.fehler ((16 * ((cr ++ [ci 18 (16 * (ce.length + 1)) 0 0]).length) : Nat) : Int)
+          have hp2 : PreS L m pc fp K (frei Γ reserved) ((ct ++ fehlC (frei Γ reserved) b.fehler ((16 * ((cr ++ [ci 18 (16 * (ce.length + 1)) 0 0]).length) : Nat) : Int)
               ++ (cr ++ [ci 18 (16 * (ce.length + 1)) 0 0])) ++ ce) ρ reserved := by simpa only [List.append_assoc] using hp
           have hq := hp2.nextW hW a12 (d' := frei Γ reserved + 1) (by have := hp.ctx; omega) (by omega) (by omega)
           simp only [List.length_append, fehlC_len] at hq
-          have hp3 : PreS (reserved := reserved) L m2 _ fp K (frei (.why (D.agruende a) :: Γ) reserved) ce (Env.cons (τ := .why (D.agruende a)) r ρ) reserved :=
+          have hp3 : PreS L m2 _ fp K (frei (.why (D.agruende a) :: Γ) reserved) ce (Env.cons (τ := .why (D.agruende a)) r ρ) reserved :=
             ⟨by simp only [frei, contextWords_cons, hwhy]; omega, hq.small, hq.frame, hq.code, hq.far,
              envAt_cons hq.env (ValueAt.of_enc hwhy hw2 rfl), trivial, wstab_true _ _⟩
-          have ih := ih_lowEnd_ok_err hS hA hlo0 hens (cap := cap) (pr := pr) (ex := ex) ce te hce (by omega) (by omega) hW m2 _ _ _ hp3
-            (by simp only [frei, contextWords_cons, hwhy] at hlo ⊢; omega)
+          have ih := ih_lowEnd_ok_err (O := O) (passes := passes) hS hA hlo0 hens (cap := cap) (pr := pr) (ex := ex) ce te hce (by omega) (by omega) hW m2 _ _ _ hp3
+            (by simp only [frei, contextWords_cons, hwhy] at hlo2 ⊢; omega)
             (hu.agreeW hW a12 (by omega)) (hk.agreeW hW a12 (by omega)) hW2
             (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons, hwhy] at this ⊢; omega)
           refine Sim.prefix hlo s12 (a12.mono hlo2) (keeps_of_agreeW hW a12 hpr (by omega))
-            (Ret.toSim (Ret.cast (Ret.schrumpf ih) rfl ?_ ?_))
+            (Ret.toSim (Ret.cast (Ret.schrumpf ih) ?_ ?_ ?_))
+          · simp only [T.mk.injEq, and_true, List.length_append, List.length_singleton, fehlC_len, addr_norm]
           · simp only [List.length_append, List.length_singleton, fehlC_len, addr_norm]
             exact tgt_eq0 (by omega)
           · simp only [List.length_append, List.length_singleton, fehlC_len, addr_norm]
@@ -208,14 +209,14 @@ theorem lowEnd_ok_bindAxiomOptElse_none {O : Orakel D} [TorOK L O] [SichtOK O] {
           simp only [List.length_append, fehlC_len] at hq
           have hp3 : PreS L m2 _ fp K (frei Γ reserved) cr ρ reserved :=
             ⟨by omega, hq.small, hq.frame, hq.left.code, hq.left.far, hq.env, trivial, wstab_true _ _⟩
-          have ih := ih_lowEnd_ok_rest hS hA hlo0 hens (cap := cap) (pr := pr) (ex := exPlus ex ce.length) cr tr hr (by omega) (by omega) hW m2 _ _ _ hp3 hlo
+          have ih := ih_lowEnd_ok_rest (O := O) (passes := passes) hS hA hlo0 hens (cap := cap) (pr := pr) (ex := exPlus ex ce.length) cr tr hr (by omega) (by omega) hW m2 _ _ _ hp3 hlo
             (hu.agreeW hW a12 (by omega)) (hk.agreeW hW a12 (by omega)) hW2 hpr
           refine Ret.prefix (by omega) s12 (a12.mono (by omega)) (keeps_of_agreeW hW a12 hpr (by omega))
             (Ret.cast ih rfl ?_ ?_)
-          · simp only [List.length_append, fehlC_len, addr_norm]
-            exact tgt_eq0 (by omega)
-          · simp only [List.length_append, fehlC_len, addr_norm]
-            exact tgt_eq0 (by omega)
+          · simp only [exPlus, List.length_append, fehlC_len, addr_norm]
+            exact tgt_eq (by omega)
+          · simp only [exPlus, List.length_append, fehlC_len, addr_norm]
+            exact tgt_eq (by omega)
         · rw [hAA]
           have hp2 : PreS L m pc fp K (frei Γ reserved) ((ct ++ fehlC (frei Γ reserved) b.fehler ((16 * cr.length : Nat) : Int) ++ cr) ++ ce) ρ reserved := by simpa only [List.append_assoc] using hp
           have hq := hp2.nextW hW a12 (d' := frei Γ reserved + 1) (by have := hp.ctx; omega) (by omega) (by omega)
@@ -223,7 +224,7 @@ theorem lowEnd_ok_bindAxiomOptElse_none {O : Orakel D} [TorOK L O] [SichtOK O] {
           have hp3 : PreS L m2 _ fp K (frei (.why (D.agruende a) :: Γ) reserved) ce (Env.cons (τ := .why (D.agruende a)) r ρ) reserved :=
             ⟨by simp only [frei, contextWords_cons, hwhy]; omega, hq.small, hq.frame, hq.code, hq.far,
              envAt_cons hq.env (ValueAt.of_enc hwhy hw2 rfl), trivial, wstab_true _ _⟩
-          have ih := ih_lowEnd_ok_err hS hA hlo0 hens (cap := cap) (pr := pr) (ex := ex) ce te hce (by omega) (by omega) hW m2 _ _ _ hp3
+          have ih := ih_lowEnd_ok_err (O := O) (passes := passes) hS hA hlo0 hens (cap := cap) (pr := pr) (ex := ex) ce te hce (by omega) (by omega) hW m2 _ _ _ hp3
             (by simp only [frei, contextWords_cons, hwhy] at hlo ⊢; omega)
             (hu.agreeW hW a12 (by omega)) (hk.agreeW hW a12 (by omega)) hW2
             (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons, hwhy] at this ⊢; omega)
