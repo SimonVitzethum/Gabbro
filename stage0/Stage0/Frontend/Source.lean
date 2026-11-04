@@ -75,10 +75,13 @@ theorem source_sound (text : String) {options : Profil.Options} (result : Source
     ScopeStable result.derived.scope :=
   ⟨result.lexed, result.parsed, result.visibility, result.compileTime, result.normalized, result.derived.stable⟩
 
-/-- A successful frontend uses exactly canonical name resolution and width normalization;
-    visibility failures cannot be hidden by flattening the item list. -/
+/-- Preprocessing preserves generative modules for the canonical expansion phase;
+    ordinary declarations undergo name resolution and width normalization. The
+    visibility certificate prevents either path from hiding an open export hull. -/
 theorem source_names (text : String) {options : Profil.Options} (result : Source text options) :
-    pre108 result.prepared.elaborierbar = normTopU32 (Aufloesung.loese result.prepared.elaborierbar) := by
+    pre108 result.prepared.elaborierbar =
+      if Modules.syntaxList result.prepared.elaborierbar then result.prepared.elaborierbar
+      else normTopU32 (Aufloesung.loese result.prepared.elaborierbar) := by
   simp only [pre108, result.visibility, ↓reduceIte]
 
 /-- A scalar compile-time call from the original source has a complete safe call-hull derivation
