@@ -33,11 +33,26 @@ theorem Expr.orte_umΓ {Γ Γ' : Ctx} {Λ : List (Res D)} {τ : Ty} (h : Γ = Γ
 theorem Args.orte_umτs {Γ : Ctx} {Λ : List (Res D)} {τs τs' : List Ty} (h : τs = τs')
     (a : Args D Γ Λ τs) : (Args.umτs h a).orte = a.orte := by subst h; rfl
 
+private theorem payload_orte_cast {Γ : Ctx} {Λ : List (Res D)} {c c' : Option Ty}
+    (h : c = c') (e : NutzlastExpr D Γ Λ c) :
+    (h ▸ e : NutzlastExpr D Γ Λ c').orte = e.orte := by
+  subst h; rfl
+
 namespace Einbettung
 
 variable (E : Einbettung D D')
 
 /-! ## Reads of a translated expression -/
+
+private theorem reads_cons (c : D.Tab ⊕ D.Glob)
+    {xs : List (D.Tab ⊕ D.Glob)} {xs' : List (D'.Tab ⊕ D'.Glob)}
+    (h : xs' = xs.map E.ortE) : E.ortE c :: xs' = (c :: xs).map E.ortE :=
+  congrArg (E.ortE c :: ·) h
+
+private theorem reads_append {xs ys : List (D.Tab ⊕ D.Glob)}
+    {xs' ys' : List (D'.Tab ⊕ D'.Glob)} (hx : xs' = xs.map E.ortE) (hy : ys' = ys.map E.ortE) :
+    xs' ++ ys' = (xs ++ ys).map E.ortE :=
+  (congr (congrArg List.append hx) hy).trans List.map_append.symm
 
 mutual
 
@@ -49,92 +64,109 @@ theorem orte_exE : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ �
   | _, _, _, .var _ => rfl
   | _, _, _, .glob _ _ => by simp only [exE, Expr.orte_umTy]; rfl
   | _, _, _, .slot t f i _ => by
-      simp only [exE, Expr.orte_umTy, Expr.orte, orte_exE i, List.map_cons]; rfl
+      simpa only [exE, Expr.orte, Expr.orte_umTy] using
+        reads_cons E (.inl t) ((Expr.orte_umTy (E.countE t) (exE E i)).trans (orte_exE i))
   | _, _, _, .thru p t _ f i _ => by
-      simp only [exE, Expr.orte_umTy, Expr.orte, orte_exE i, orte_exE p, List.map_cons,
-        List.map_append]; rfl
-  | _, _, _, .thruOwn p t _ _ i _ _ _ _ _ _ => by
-      simp only [exE, Expr.orte_umTy, Expr.orte, orte_exE i, orte_exE p, List.map_cons,
-        List.map_append]; rfl
+      simpa only [exE, Expr.orte, Expr.orte_umTy] using
+        reads_append E (orte_exE p)
+          (reads_cons E (.inl t) ((Expr.orte_umTy (E.countE t) (exE E i)).trans (orte_exE i)))
+  | _, _, _, .thruOwn p t _ f i _ _ _ _ _ _ => by
+      simpa only [exE, Expr.orte, Expr.orte_umTy] using
+        reads_append E (orte_exE p)
+          (reads_cons E (.inl t) ((Expr.orte_umTy (E.countE t) (exE E i)).trans (orte_exE i)))
   | _, _, _, .ptrOf _ _ _ _ => rfl
   | _, _, _, .fnref _ _ _ => rfl
-  | _, _, _, .refEq a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
+  | _, _, _, .refEq a b => by simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
   | _, _, _, .slotRef r t _ _ f _ => by
-      simp only [exE, Expr.orte_umTy, Expr.orte, orte_exE r, List.map_cons]; rfl
+      simpa only [exE, Expr.orte, Expr.orte_umTy] using reads_cons E (.inl t) (orte_exE r)
   | _, _, _, .oldG _ _ => by simp only [exE, Expr.orte_umTy]; rfl
   | _, _, _, .oldS t f i _ => by
-      simp only [exE, Expr.orte_umTy, Expr.orte, orte_exE i, List.map_cons]; rfl
-  | _, _, _, .widen _ _ a => by simp only [exE, Expr.orte, orte_exE a]
-  | _, _, _, .add a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
-  | _, _, _, .sub a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
-  | _, _, _, .neg a => by simp only [exE, Expr.orte, orte_exE a]
-  | _, _, _, .mul a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
-  | _, _, _, .div _ _ a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
-  | _, _, _, .rem _ _ a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
-  | _, _, _, .sdiv _ a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
-  | _, _, _, .srem _ a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
+      simpa only [exE, Expr.orte, Expr.orte_umTy] using
+        reads_cons E (.inl t) ((Expr.orte_umTy (E.countE t) (exE E i)).trans (orte_exE i))
+  | _, _, _, .widen _ _ a => by simpa only [exE, Expr.orte] using orte_exE a
+  | _, _, _, .add a b => by simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
+  | _, _, _, .sub a b => by simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
+  | _, _, _, .neg a => by simpa only [exE, Expr.orte] using orte_exE a
+  | _, _, _, .mul a b => by simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
+  | _, _, _, .div _ _ a b => by simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
+  | _, _, _, .rem _ _ a b => by simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
+  | _, _, _, .sdiv _ a b => by simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
+  | _, _, _, .srem _ a b => by simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
   | _, _, _, .getBytes t f hf n i _ _ _ => by
-      simp only [exE, Expr.orte, orte_exE i, List.map_cons]; rfl
-  | _, _, _, .band _ _ a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
+      simpa only [exE, Expr.orte] using reads_cons E (.inl t) (orte_exE i)
+  | _, _, _, .band _ _ a b => by simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
   | _, _, _, .bor _ _ _ _ _ a b => by
-      simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
+      simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
   | _, _, _, .bxor _ _ _ _ _ a b => by
-      simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
+      simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
   | _, _, _, .shl _ _ _ _ _ a b => by
-      simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
+      simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
   | _, _, _, .shr _ _ _ _ _ a b => by
-      simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
-  | _, _, _, .lt a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
-  | _, _, _, .le a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
-  | _, _, _, .eq a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
-  | _, _, _, .fllt a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
-  | _, _, _, .flle a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
-  | _, _, _, .and a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
-  | _, _, _, .or a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
-  | _, _, _, .not a => by simp only [exE, Expr.orte, orte_exE a]
+      simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
+  | _, _, _, .lt a b => by simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
+  | _, _, _, .le a b => by simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
+  | _, _, _, .eq a b => by simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
+  | _, _, _, .fllt a b => by simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
+  | _, _, _, .flle a b => by simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
+  | _, _, _, .and a b => by simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
+  | _, _, _, .or a b => by simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
+  | _, _, _, .not a => by simpa only [exE, Expr.orte] using orte_exE a
   | _, _, _, .none _ => rfl
-  | _, _, _, .some a => by simp only [exE, Expr.orte, orte_exE a]
-  | _, _, _, .istSome a => by simp only [exE, Expr.orte, orte_exE a]
-  | _, _, _, .case _ _ nutz => by simp only [exE, Expr.orte, orteN_exN nutz]
+  | _, _, _, .some a => by simpa only [exE, Expr.orte] using orte_exE a
+  | _, _, _, .istSome a => by simpa only [exE, Expr.orte] using orte_exE a
+  | _, _, _, .case cs i nutz => by
+      simpa only [exE, Expr.orte] using
+        (payload_orte_cast (Ty.mapCases_get E.num E.tnum cs i).symm (exN E nutz)).trans (orteN_exN nutz)
   | _, _, _, .why _ _ => rfl
-  | _, _, _, .forallSlots t body _ => by
-      simp only [exE, Expr.orte, Expr.orte_umΓ, orte_exE body, List.map_cons]; rfl
-  | _, _, _, .existsSlots t body _ => by
-      simp only [exE, Expr.orte, Expr.orte_umΓ, orte_exE body, List.map_cons]; rfl
+  | Γ, _, _, .forallSlots t body _ => by
+      have hb := (Expr.orte_umΓ (Γ' := .index (D'.count (E.tab t)) :: Γ.map E.tyE)
+        (by rw [List.map_cons, E.count] <;> rfl) (exE E body)).trans (orte_exE body)
+      simpa only [exE, Expr.orte] using reads_cons E (.inl t) hb
+  | Γ, _, _, .existsSlots t body _ => by
+      have hb := (Expr.orte_umΓ (Γ' := .index (D'.count (E.tab t)) :: Γ.map E.tyE)
+        (by rw [List.map_cons, E.count] <;> rfl) (exE E body)).trans (orte_exE body)
+      simpa only [exE, Expr.orte] using reads_cons E (.inl t) hb
   | _, _, _, .reaches t f hf a b _ => by
-      simp only [exE, Expr.orte, Expr.orte_umTy, orte_exE a, orte_exE b, List.map_cons,
-        List.map_append]; rfl
+      simpa only [exE, Expr.orte] using reads_cons E (.inl t) (reads_append E
+        ((Expr.orte_umTy (E.countE t) (exE E a)).trans (orte_exE a))
+        ((Expr.orte_umTy (E.countE t) (exE E b)).trans (orte_exE b)))
   | _, _, _, .arrNil => rfl
   | _, _, _, .strLit _ _ => rfl
-  | _, _, _, .arrCons a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
-  | _, _, _, .arrGet a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
-  | _, _, _, .strCat a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
+  | _, _, _, .arrCons a b => by simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
+  | _, _, _, .arrGet a b => by simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
+  | _, _, _, .strCat a b => by simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
   | _, _, _, .arrSet a i v => by
-      simp only [exE, Expr.orte, orte_exE a, orte_exE i, orte_exE v, List.map_append]
-  | _, _, _, .strLen e => by simp only [exE, Expr.orte, orte_exE e]
-  | _, _, _, .strGet a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
-  | _, _, _, .strEq a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
-  | _, _, _, .strLt a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
-  | _, _, _, .strWeit _ e => by simp only [exE, Expr.orte, orte_exE e]
-  | _, _, _, .wenn c a b => by simp only [exE, Expr.orte, orte_exE c, orte_exE a, orte_exE b, List.map_append]
-  | _, _, _, .eng e _ _ s => by simp only [exE, Expr.orte, orte_exE e, orte_exE s, List.map_append]
-  | _, _, _, .intBuiltin1 _ a => by simp only [exE, Expr.orte, orte_exE a]
+      simpa only [exE, Expr.orte] using reads_append E (reads_append E (orte_exE a) (orte_exE i)) (orte_exE v)
+  | _, _, _, .strLen e => by simpa only [exE, Expr.orte] using orte_exE e
+  | _, _, _, .strGet a b => by simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
+  | _, _, _, .strEq a b => by simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
+  | _, _, _, .strLt a b => by simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
+  | _, _, _, .strWeit _ e => by simpa only [exE, Expr.orte] using orte_exE e
+  | _, _, _, .wenn c a b => by
+      simpa only [exE, Expr.orte] using reads_append E (reads_append E (orte_exE c) (orte_exE a)) (orte_exE b)
+  | _, _, _, .eng e _ _ s => by simpa only [exE, Expr.orte] using reads_append E (orte_exE e) (orte_exE s)
+  | _, _, _, .intBuiltin1 _ a => by simpa only [exE, Expr.orte] using orte_exE a
   | _, _, _, .intBuiltin2 _ a b => by
-      simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
-  | _, _, _, .count _ body => by simp only [exE, Expr.orte, orte_exE body]
+      simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
+  | _, _, _, .count _ body => by simpa only [exE, Expr.orte] using orte_exE body
+  | _, _, _, .prod _ args => by
+      simpa only [exE, Expr.orte] using
+        (Args.orte_umτs (E.mapFieldsE _) (exA E args)).trans (orte_exA args)
+  | _, _, _, .prodGet v _ => by simpa only [exE, Expr.orte] using orte_exE v
+  | _, _, _, .prodSet v _ e => by simpa only [exE, Expr.orte] using reads_append E (orte_exE v) (orte_exE e)
 
 theorem orteN_exN : ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty} (n : NutzlastExpr D Γ Λ c),
     (exN E n).orte = n.orte.map E.ortE
   | _, _, _, .empty => rfl
   | _, _, _, .val e => orte_exE e
 
-end
-
 theorem orte_exA : ∀ {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty} (a : Args D Γ Λ τs),
     (exA E a).orte = a.orte.map E.ortE
   | _, _, _, .nil => rfl
   | _, _, _, .cons e rest => by
-      simp only [exA, Args.orte, E.orte_exE e, orte_exA rest, List.map_append]
+      simpa only [exA, Args.orte] using reads_append E (orte_exE e) (orte_exA rest)
+
+end
 
 theorem orte_exErg : ∀ {Γ : Ctx} {Λ : List (Res D)} {e : Option Ty} (x : ErgExpr D Γ Λ e),
     (exErg E x).orte = x.orte.map E.ortE
@@ -233,7 +265,7 @@ def aparamsUm (a : D.Ax) (ρ : Env D (D.aparams a)) : Env D' (D'.aparams (E.ax a
 /-- **`f'` may stand where `D` calls `g`**: the image of `g`, or a function outside the image
     that conforms to the image of a signature whose head is `g`. -/
 def Konform (g : D.Fn) (f' : D'.Fn) : Prop :=
-  f' = E.fn g ∨ ∃ n, E.fnZ f' = none ∧ hZ.rep n = some g ∧ D'.passt f' (E.val n) = true
+  f' = E.fn g ∨ ∃ n, E.fnZ f' = none ∧ hZ.rep n = some g ∧ D'.passt f' (E.num n) = true
 
 section Konform
 
