@@ -29,7 +29,8 @@ theorem akteur_endeGleitLit {D : Deklaration} {P : Programm D} {O : Orakel D} {p
         (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ))
   (v : Wert D (Ty.fl lo hi)) (hv : gleitPasst lo hi (bruch q) = some v) :
 
-  let N : RufMaschineG D := { speicher := M.speicher,
+  let N : RufMaschineG D := {
+            speicher := M.speicher,
             faeden :=
               rufUpdateG M.faeden u
                 { stapel := (M.faeden u).stapel,
@@ -84,7 +85,8 @@ theorem akteur_endeGleitVon {D : Deklaration} {P : Programm D} {O : Orakel D} {p
   (hv : gleitPasst lo hi (gleitAusInt (eval σ₁ e σ₁ ρ).n) = some v) (neu : List (Ereignis D))
   (hneu : σ₁.spur = neu ++ (M.faeden u).spur) (hΛ : HeldIn Λ (offen (M.faeden u).spur)) :
 
-  let N : RufMaschineG D := { speicher := M.speicher,
+  let N : RufMaschineG D := {
+            speicher := M.speicher,
             faeden :=
               rufUpdateG M.faeden u
                 { stapel := (M.faeden u).stapel,

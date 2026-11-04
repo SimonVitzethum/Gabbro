@@ -30,7 +30,8 @@ theorem akteur_endeGleitNarrowOk {D : Deklaration} {P : Programm D} {O : Orakel 
   (hv : gleitPasst lo hi (eval σ₁ e σ₁ ρ).x = some v) (neu : List (Ereignis D))
   (hneu : σ₁.spur = neu ++ (M.faeden u).spur) (hΛ : HeldIn Λ (offen (M.faeden u).spur)) :
 
-  let N : RufMaschineG D := { speicher := M.speicher,
+  let N : RufMaschineG D := {
+            speicher := M.speicher,
             faeden :=
               rufUpdateG M.faeden u
                 { stapel := (M.faeden u).stapel,
@@ -89,7 +90,8 @@ theorem akteur_endeGleitNarrowElse {D : Deklaration} {P : Programm D} {O : Orake
   (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon u).lese Λ e.orte) (hn : gleitPasst lo hi (eval σ₁ e σ₁ ρ).x = none)
   (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden u).spur) (hΛ : HeldIn Λ (offen (M.faeden u).spur)) :
 
-  let N : RufMaschineG D := { speicher := M.speicher,
+  let N : RufMaschineG D := {
+            speicher := M.speicher,
             faeden :=
               rufUpdateG M.faeden u
                 { stapel := (M.faeden u).stapel,
