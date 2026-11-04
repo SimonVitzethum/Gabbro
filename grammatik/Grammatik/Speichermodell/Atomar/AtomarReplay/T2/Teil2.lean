@@ -131,7 +131,8 @@ theorem fadenSA_blatt (hO : GutO O) (hQ : AxVertragO Q O)
         gleichAuf_stabil_iff hΛ' (GleichAuf.mono (fun _ h => List.mem_append_left _ h)
           ⟨fun t ht => hgs.1 t ht, fun g hg' => hgs.2 g hg'⟩),
         hK, fun R O' U A hPX hHA _ => ?_⟩
-      rw [hsem, execStmtHA_blatt P S O' U hHA passes R s hleaf, vorA_eq (hrec A hPX hHA), hes]
+      rw [hsem, execStmtHA_blatt P S O' U hHA passes R s hleaf
+        (Stmt.sRet_of_ok _ _ _ s _ _ _ _ hstep), vorA_eq (hrec A hPX hHA), hes]
       exact ZErgG.folgt_refl _
   | true =>
       cases s with

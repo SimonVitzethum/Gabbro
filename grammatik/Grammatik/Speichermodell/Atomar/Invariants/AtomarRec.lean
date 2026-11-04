@@ -284,20 +284,33 @@ theorem vorA_nil {T : D.Tab ⊕ D.Glob → Prop} {A : AUmwelt D} (hA : HavocA T 
   rw [e]
   exact world_ext (fun c => (hA [] σ).2 c fun ⟨h, _⟩ => absurd h List.not_mem_nil) rfl
 
-/-- **A leaf of `execStmtHA` is a leaf of `execStmt` from the answered world.** -/
+/-- **An ordinary leaf of `execStmtHA` is a leaf of `execStmt` from the answered world.**
+    Scoped returns are excluded because only the invariant semantics checks their cleanup. -/
 theorem execStmtHA_blatt (P : Programm D) (S : SperrInv D) (O : Orakel D) (U : Umwelt D)
     {T : D.Tab ⊕ D.Glob → Prop} {A : AUmwelt D} (hA : HavocA T A) (passes : Nat)
     (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) {V : Vertrag D} {l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') (hb : s.istBlatt = true)
+    (hsr : s.sRet = false)
     (σ : World D) (ρ : Env D Γ) :
     execStmtHA S O U A passes R s σ ρ = execStmt O passes R s (vorA A σ Λ (stmtOrteP P s)) ρ := by
-  cases s <;> first
+  cases s with
+  | axiomCall a args h hw hg hd hgd =>
+      change
+        (show Ausgang V l Γ from match axiomAntwort O a (leseA A σ Λ args.orte)
+            (evalArgs (leseA A σ Λ args.orte) args (leseA A σ Λ args.orte) ρ) with
+          | (σ', some _) => Ausgang.ok σ' ρ
+          | (_, none) => Ausgang.hardware (.annahme a)) =
+        (match axiomAntwort O a ((vorA A σ Λ args.orte).lese Λ args.orte)
+            (evalArgs ((vorA A σ Λ args.orte).lese Λ args.orte) args
+              ((vorA A σ Λ args.orte).lese Λ args.orte) ρ) with
+          | (σ', some _) => Ausgang.ok σ' ρ
+          | (_, none) => Ausgang.hardware (.annahme a))
+      rw [vorA_lese hA]
+  | _ => first
     | (simp only [Stmt.istBlatt, Bool.false_eq_true] at hb; done)
+    | (simp only [Stmt.sRet, Bool.true_eq_false] at hsr; done)
     | (simp only [execStmtHA, execStmt, stmtOrteP, ← vorA_lese hA]; done)
     | (simp only [execStmtHA, execStmt, stmtOrteP, vorA_nil hA]; done)
     | (simp only [execStmtHA, execStmt, stmtOrteP, vorA_lese hA]; done)
-    | (simp only [stmtOrteP]; unfold execStmtHA execStmt; rw [vorA_lese hA]; done)
-    | (simp only [stmtOrteP]; unfold execStmtHA execStmt; rw [vorA_lese hA]; simp only [];
-        generalize axiomAntwort _ _ _ _ = z; rcases z with ⟨_, _ | _⟩ <;> rfl)
 
 end Gabbro.Grammatik

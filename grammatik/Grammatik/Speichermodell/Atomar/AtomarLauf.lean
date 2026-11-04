@@ -310,7 +310,7 @@ theorem fadenSA_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     show zErgG (execEndHA S (orakelAus O HA) (umweltAus S sp HU) (umweltAusA Tg HX') passes
       (rufAusL H) (.cons s Kr) σ ρ) = _
     simp only [execEndHA, execStmtHA_blatt P S (orakelAus O HA) (umweltAus S sp HU) hHA passes
-      (rufAusL H) s hb, h', zErgG]
+      (rufAusL H) s hb (Stmt.sRet_of_logik O passes keinRuf s _ ρ e he), h', zErgG]
   · obtain ⟨H, HA, HU, HX, σ, hfx, hkx, hg, hok, hno⟩ :=
       kopfSA_keineLogik' hO hRL hQ hS hsp hK hK' hr
     obtain ⟨_, hss, _⟩ := okS_dann_cons hok
@@ -326,7 +326,7 @@ theorem fadenSA_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
       passes keinRuf (rufAusL H) ρ e he
     refine hno _ (passtX_teil hsub hPX) hHA e ?_
     rw [semHA_dann_cons, execStmtHA_blatt P S (orakelAus O HA) (umweltAus S sp HU) hHA passes
-      (rufAusL H) s hb, h']
+      (rufAusL H) s hb (Stmt.sRet_of_logik O passes keinRuf s _ ρ e he), h']
     exact weiterHA_logik _ _ _ _ _ _ _ e
 
   · obtain ⟨H, HA, HU, HX, σ, hfx, hkx, hg, hok, hno⟩ :=
