@@ -217,8 +217,7 @@ theorem weiterH_zurueck : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRe
   | _, _, _, .ende _, _, _ => ZErgG.gleich_refl _
   | _, _, _, .dann _ k, σ, v => weiterH_zurueck k σ v
   | _, _, _, .schrumpf k, σ, v => weiterH_zurueck k σ v
-  | _, _, _, .frei L k, σ, v =>
-      ZErgG.gleich_trans (weiterH_zurueck k (σ.gibt L) v) ⟨sg_gibt σ L, rfl⟩
+  | _, _, _, .frei _ k, σ, v => weiterH_zurueck k σ v
   | _, _, _, .trav _ _ _ _ k, σ, v => weiterH_zurueck k σ v
   | _, _, _, .travRest _ _ _ _ k, σ, v => weiterH_zurueck k σ v
   | _, _, _, .verbrauch _ _ _ _ _ _ _ _ k, σ, v => weiterH_zurueck k σ v
@@ -243,8 +242,7 @@ theorem weiterH_grund : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest
   | _, _, _, .ende _, _, _ => ZErgG.gleich_refl _
   | _, _, _, .dann _ k, σ, r => weiterH_grund k σ r
   | _, _, _, .schrumpf k, σ, r => weiterH_grund k σ r
-  | _, _, _, .frei L k, σ, r =>
-      ZErgG.gleich_trans (weiterH_grund k (σ.gibt L) r) ⟨sg_gibt σ L, rfl⟩
+  | _, _, _, .frei _ k, σ, r => weiterH_grund k σ r
   | _, _, _, .trav _ _ _ _ k, σ, r => weiterH_grund k σ r
   | _, _, _, .travRest _ _ _ _ k, σ, r => weiterH_grund k σ r
   | _, _, _, .verbrauch _ _ _ _ _ _ _ _ k, σ, r => weiterH_grund k σ r

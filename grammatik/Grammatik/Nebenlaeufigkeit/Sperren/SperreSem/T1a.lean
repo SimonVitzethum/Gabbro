@@ -157,20 +157,24 @@ variable {V : Vertrag D}
 
 /-- **The release of `L`**: a normal end, a `leave` or a `next` of the body
     checks the invariant of `L` and releases the lock; a failed check is
-    `logik schleife`. (A `return` or a reason cannot leave a `locks` body --
-    `ret` is untypable there --; they only release.) -/
+    `logik schleife`. Terminal returns pass through unchanged: scoped returns
+    already checked their release invariants before their exact cleanup. -/
 def freiH (S : SperrInv D) (L : D.Lock) {l : Bool} {Γ : Ctx} : Ausgang V l Γ → Ausgang V l Γ
   | .ok σ ρ => if S.inv L σ.speicher = true then .ok (σ.gibt L) ρ else .logik .schleife
   | .leave h σ ρ => if S.inv L σ.speicher = true then .leave h (σ.gibt L) ρ else .logik .schleife
   | .next h σ ρ => if S.inv L σ.speicher = true then .next h (σ.gibt L) ρ else .logik .schleife
-  | .zurueck σ v => .zurueck (σ.gibt L) v
-  | .why σ r => .why (σ.gibt L) r
+  | .zurueck σ v => .zurueck σ v
+  | .why σ r => .why σ r
   | .logik e => .logik e
   | .hardware e => .hardware e
 
-/-- Under the invariant `true` the release is the plain release. -/
+/-- With no invariants, cleanup is exactly the canonical terminal-selective wrapper. -/
 theorem freiH_leer (L : D.Lock) {l : Bool} {Γ : Ctx} (o : Ausgang V l Γ) :
-    freiH (SperrInv.leer D) L o = o.mapWelt (·.gibt L) := by
+    freiH (SperrInv.leer D) L o =
+      match o with
+      | .zurueck σ v => .zurueck σ v
+      | .why σ r => .why σ r
+      | outcome => outcome.mapWelt (·.gibt L) := by
   cases o <;> rfl
 
 /-- Each crossed scope must re-establish its invariant before cleanup.

@@ -297,8 +297,8 @@ theorem freiH_rel {M : Keys D D'} {V : Vertrag D} {l : Bool} {Γ Γ' : Ctx}
     split
     · exact ⟨h.1.gibt E L (E.lock L), h.2⟩
     · exact (show LogikRel _ _ ∧ E.KeyOk hZ M from ⟨fun _ he => (by cases he), h.1.keyOk E⟩)
-  · simp only [freiH]; exact ⟨h.1.gibt E L (E.lock L), h.2⟩
-  · simp only [freiH]; exact ⟨h.1.gibt E L (E.lock L), h.2⟩
+  · simp only [freiH]; exact h
+  · simp only [freiH]; exact h
   · simp only [freiH, hb h.1]
     split
     · exact ⟨h.1.gibt E L (E.lock L), h.2⟩
