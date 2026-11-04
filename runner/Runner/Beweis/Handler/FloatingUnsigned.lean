@@ -53,10 +53,10 @@ theorem fp_fromUInt64_body {L : Lay} {y : X} (format : FPFormat)
     · cases format <;>
         simp only [high, fpFromUIntHigh, finish]
       all_goals fp_corr hmode
-  · simp only [signed]
+  · simp only [signed, ↓reduceIte]
     apply go (low ++ [.jmp (BitVec.ofNat 32 (lenOf high))]) _ _ (by cases format <;> decide)
       (code_prefix (by
-        simpa [first, low, fld, sld, sst, mb, ms, lenOfL, lenOf, enc, regEnc, memEnc, le32,
+        simpa [first, low, fpFromIntBody, fld, sld, sst, mb, ms, lenOfL, lenOf, enc, regEnc, memEnc, le32,
           BitVec.ofNat_add, BitVec.add_assoc, X.set, aluStep] using lowCode))
     cases format
     all_goals
