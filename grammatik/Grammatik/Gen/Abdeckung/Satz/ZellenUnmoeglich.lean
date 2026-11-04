@@ -87,8 +87,8 @@ theorem mem_alleZellen_k {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {ls 
     {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn} {z : Zelle} (k : Fin 10) (hk : z.komp = k.val)
     (h : z ∈ alleZellen P S fs ls cs ws) : z ∈ zellen P S fs ls cs ws k.castSucc := by
   obtain ⟨c, hc⟩ := mem_alleZellen.1 h
-  have := zellen_komp hc
-  have hck : c = k.castSucc := Fin.ext (by omega)
+  have index : c.val = k.val := (zellen_komp hc).symm.trans hk
+  have hck : c = k.castSucc := Fin.ext (by simpa only [Fin.val_castSucc] using index)
   exact hck ▸ hc
 
 /-- The appended reset cell retains the actual carrier verdict, without consulting any body summary. -/
@@ -114,9 +114,13 @@ theorem zelle_0_ohne_gOk (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls 
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) (b c : Bool) :
     (⟨0, 0, true, [false, b, c]⟩ : Zelle) ∉ alleZellen P S fs ls cs ws := by
   intro h
-  have h0 := mem_alleZellen_k (0 : Fin 10) rfl h
-  simp only [zellen, List.mem_flatMap, List.mem_map, Zelle.mk.injEq, List.cons.injEq] at h0
-  obtain ⟨f, _, g, _, -, -, -, hf, -⟩ := h0
+  have h0 : (⟨0, 0, true, [false, b, c]⟩ : Zelle) ∈ zellen P S fs ls cs ws 0 :=
+    mem_alleZellen_k (0 : Fin 10) rfl h
+  rw [zellen] at h0
+  obtain ⟨f, _, hf⟩ := List.mem_flatMap.mp h0
+  obtain ⟨g, _, equal⟩ := List.mem_map.mp hf
+  simp only [Zelle.mk.injEq, List.cons.injEq, true_and, and_true] at equal
+  obtain ⟨hf, _, _⟩ := equal
   rw [gOk_ohne_test] at hf
   cases hf
 
@@ -151,9 +155,13 @@ theorem zelle_8_never (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : L
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) (a : Bool) :
     (⟨8, 0, true, [a, true, true]⟩ : Zelle) ∉ alleZellen P S fs ls cs ws := by
   intro h
-  have h0 := mem_alleZellen_k (8 : Fin 10) rfl h
-  simp only [zellen, List.mem_flatMap, List.mem_map, Zelle.mk.injEq, List.cons.injEq] at h0
-  obtain ⟨f, _, x, _, -, -, -, -, hb, hc, -⟩ := h0
+  have h0 : (⟨8, 0, true, [a, true, true]⟩ : Zelle) ∈ zellen P S fs ls cs ws 8 :=
+    mem_alleZellen_k (8 : Fin 10) rfl h
+  rw [zellen] at h0
+  obtain ⟨f, _, hf⟩ := List.mem_flatMap.mp h0
+  obtain ⟨x, _, equal⟩ := List.mem_map.mp hf
+  simp only [Zelle.mk.injEq, List.cons.injEq, true_and, and_true] at equal
+  obtain ⟨_, hb, hc⟩ := equal
   cases x with
   | inr r => simp only [Bool.false_eq_true] at hb
   | inl a =>
@@ -170,14 +178,22 @@ theorem zelle_6_0_braucht_5 (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) (m hh gg : Bool) (hbad : (hh || gg) = true)
     (h : (⟨6, 0, true, [m, hh, gg]⟩ : Zelle) ∈ alleZellen P S fs ls cs ws) :
     (⟨5, 0, true, [hh, gg]⟩ : Zelle) ∈ alleZellen P S fs ls cs ws ∧ (⟨5, 0, true, [hh, gg]⟩ : Zelle).schlecht = true := by
-  have h0 := mem_alleZellen_k (6 : Fin 10) rfl h
-  simp only [zellen, List.mem_append, List.mem_flatMap, List.mem_map, Zelle.mk.injEq, List.cons.injEq] at h0
-  rcases h0 with ⟨w, hw, -, -, -, -, h1, h2, -⟩ | ⟨_, _, _, _, _, _, -, h3, -⟩
-  · refine ⟨mem_alleZellen.2 ⟨5, ?_⟩, ?_⟩
-    · simp only [zellen, List.mem_map]
-      exact ⟨w, hw, by rw [h1, h2]⟩
+  have h0 : (⟨6, 0, true, [m, hh, gg]⟩ : Zelle) ∈ zellen P S fs ls cs ws 6 :=
+    mem_alleZellen_k (6 : Fin 10) rfl h
+  rw [zellen] at h0
+  rcases List.mem_append.mp h0 with roots | writes
+  · obtain ⟨w, hw, equal⟩ := List.mem_map.mp roots
+    simp only [Zelle.mk.injEq, List.cons.injEq, true_and, and_true] at equal
+    obtain ⟨_, h1, h2⟩ := equal
+    refine ⟨mem_alleZellen.2 ⟨5, ?_⟩, ?_⟩
+    · rw [zellen]
+      exact List.mem_map.mpr ⟨w, hw, by rw [h1, h2]⟩
     · cases hh <;> cases gg <;> simp_all [Zelle.schlecht, Zelle.kern, Zelle.kern?]
-  · cases h3
+  · obtain ⟨w, _, hw⟩ := List.mem_flatMap.mp writes
+    obtain ⟨f, _, hf⟩ := List.mem_flatMap.mp hw
+    obtain ⟨c, _, equal⟩ := List.mem_map.mp hf
+    have different : (1 : Nat) = 0 := congrArg Zelle.art equal
+    cases different
 
 /-- Hence a valid program has none of these good cells (`6.0 010`, `6.0 001`, `6.0 011`). -/
 theorem zelle_6_0_nicht_gueltig (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
@@ -295,9 +311,14 @@ theorem zelle_1_0_110 (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : L
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) (hvoll : ∀ g : D.Fn, g ∈ fs) :
     (⟨1, 0, true, [true, true, false]⟩ : Zelle) ∉ alleZellen P S fs ls cs ws := by
   intro h
-  have h0 := mem_alleZellen_k (1 : Fin 10) rfl h
-  simp only [zellen, List.mem_flatMap, List.mem_map, Zelle.mk.injEq, List.cons.injEq, true_and, and_true] at h0
-  obtain ⟨w, _, f, _, g, _, h1, h2, h3⟩ := h0
+  have h0 : (⟨1, 0, true, [true, true, false]⟩ : Zelle) ∈ zellen P S fs ls cs ws 1 :=
+    mem_alleZellen_k (1 : Fin 10) rfl h
+  rw [zellen] at h0
+  obtain ⟨w, _, hw⟩ := List.mem_flatMap.mp h0
+  obtain ⟨f, _, hf⟩ := List.mem_flatMap.mp hw
+  obtain ⟨g, _, equal⟩ := List.mem_map.mp hf
+  simp only [Zelle.mk.injEq, List.cons.injEq, true_and, and_true] at equal
+  obtain ⟨h1, h2, h3⟩ := equal
   rw [reach_abg P fs w hvoll f g h1 h2] at h3
   cases h3
 
