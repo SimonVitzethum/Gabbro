@@ -89,7 +89,7 @@ theorem call_equation (fn : Function params lo hi)
       List.nil_append, fn.body.2.2.equation, ErgExpr.orte, Expr.orte,
       evalErg, eval, Env.get, EndAusgang.schrumpf] <;> rfl
   have noInvariants : (declaration params (.int lo hi)).invs = [] := rfl
-  rw [rufAt.eq_def]
+  erw [rufAt.eq_def]
   dsimp only
   rw [preCheck, preRead]
   letI : Decidable (@Eq Bool (fn.pre.denote args) false) := Bool.decEq _ _
