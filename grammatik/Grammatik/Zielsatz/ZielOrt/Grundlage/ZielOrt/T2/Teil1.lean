@@ -197,9 +197,11 @@ theorem offen_schrittG (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
     | _ =>
         subst_vars
         simp only [rufUpdateG_self]
-        refine Or.inl ?_
-        rw [axiomSonst_offen' hO _ _ _ _ _ ‹axiomAntwortSonst _ _ _ _ = _›]
-        exact lese_offen _ _ _
+        first
+          | exact Or.inl trivial
+          | exact Or.inl rfl
+          | exact Or.inl (lese_offen _ _ _)
+          | (refine Or.inl ?_; rw [axiomSonst_offen' hO _ _ _ _ _ ‹axiomAntwortSonst _ _ _ _ = _›]; exact lese_offen _ _ _)
 
   | g7 hs =>
     cases hs with

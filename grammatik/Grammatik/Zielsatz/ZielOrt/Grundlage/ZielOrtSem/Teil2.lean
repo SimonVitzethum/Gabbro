@@ -49,7 +49,8 @@ theorem semZ_locks {Λ Λ'' : List (Res D)} (L : D.Lock)
       (semZ O passes R (.dann (.cons (.locks L hr body) rest) k) σ ρ) := by
   rw [semZ_dann O passes R (.cons _ rest), nachZ_cons, semZ_dann]
   simp only [execStmt]
-  exact nachZ_frei O passes R _ L _
+  generalize execBlock O passes R body (σ.nimmt L) ρ = outcome
+  cases outcome <;> exact ZErg.gleich_refl _
 
 theorem semZ_frei {Λ : List (Res D)} (L : D.Lock) (k : GRest D V l Γ Λ) (σ : World D)
     (ρ : Env D Γ) :
