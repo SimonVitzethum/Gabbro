@@ -37,6 +37,11 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Stufe
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Rest2
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
+import all Grammatik.Parser.Elab.Generic.StaticConformance
 
 @[expose] public section
 
@@ -313,21 +318,21 @@ theorem parse108 : beqTopTief (parseTopTief toks108) (.ok items108) = true := by
 def uExp108 : UProg := { tabs := [{ name := "T", count := 4, cols := [("v", 0, 4294967295)], breiten := [("v", 32)] }], locks := [], fns := [{ name := "read_a", params := [], kinds := [], res := some (0, 4294967295), held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 0)) }, { name := "read_c", params := [], kinds := [], res := some (0, 4294967295), held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 1)) }], roots := ["read_a", "read_c"], exportGate := ExportMetadata.check (uMembers (pre108 items108)) }
 
 theorem elab108 : beqElabU (elabU (pre108 items108)) (.ok uExp108) = true := by
-  decide
+  cbv
 
 /-- The fragment check on the generically lowered 108 program. -/
 theorem lowerAllg108fragment :
     (match lowerAllg uExp108 with
       | .ok (P, fs) => programmImFragmentG P fs
       | .error _ => false) = true := by
-  decide
+  decide +kernel
 
 /-- The footprint check on the generically lowered 108 program. -/
 theorem lowerAllg108fuss :
     (match lowerAllg uExp108 with
       | .ok (P, fs) => fussOrtGB P fs
       | .error _ => false) = true := by
-  decide
+  decide +kernel
 
 /-- Declaration data agreement for 108: the generic
     declaration built from `uExp108` agrees with the exporter
@@ -345,7 +350,7 @@ theorem lowerAllg108data :
     (G108_disjoint_start_locks.gD.signatur G108_disjoint_start_locks.g_read_a).schreibt G108_disjoint_start_locks.GTab.T = false ∧
     ((declOf uExp108).signatur ⟨1, by decide⟩).schreibt ⟨0, by decide⟩ = false ∧
     (G108_disjoint_start_locks.gD.signatur G108_disjoint_start_locks.g_read_c).schreibt G108_disjoint_start_locks.GTab.T = false := by
-  decide
+  decide +kernel
 
 /-- One theorem chaining every stage for 108. -/
 theorem kette108 : lex src108 = .ok toks108 ∧
@@ -355,7 +360,7 @@ theorem kette108 : lex src108 = .ok toks108 ∧
       | .ok (P, fs) => programmImFragmentG P fs && fussOrtGB P fs
       | .error _ => false) = true := by
   refine ⟨lex108, parse108, elab108, ?_⟩
-  decide
+  decide +kernel
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg2
 
