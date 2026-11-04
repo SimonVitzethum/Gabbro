@@ -27,7 +27,7 @@ theorem globStarts_wordAlign_dvd {G : Type} (gs : List G) (o : Nat)
     rcases hm with hm | hm
     · simp only [Prod.mk.injEq] at hm
       obtain ⟨rfl, rfl⟩ := hm
-      exact alignUp_dvd o (wordAlign (alignment a)) (Nat.lcm_pos (by decide) hpos)
+      exact alignUp_dvd o (wordAlign (alignment g)) (Nat.lcm_pos (by decide) hpos)
     · exact ih _ hm
 
 /-- **The placement lemma**: with a base on the combined grid, the absolute
