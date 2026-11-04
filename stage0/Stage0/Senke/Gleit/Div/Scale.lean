@@ -74,18 +74,20 @@ theorem softDiv_exponent (a b ca cb t j : Nat) (ap : 0 < a) (bp : 0 < b)
     have test : b * 2 ^ j * 2 ^ e.toNat ≤ a * 2 ^ t ↔ b * 2 ^ cb ≤ a * 2 ^ ca := by
       rw [Nat.mul_assoc, ← Nat.pow_add]
       exact softDiv_power_compare b a (j + e.toNat) t ca cb (by dsimp only [e] at ep ⊢; omega)
-    rw [test]
+    simp only [test]
     by_cases small : a * 2 ^ ca < b * 2 ^ cb
     · rw [if_neg (by omega), if_pos small]
     · rw [if_pos (by omega), if_neg small]
+      simp only [e, sub_zero]
   · rw [if_neg ep]
     have test : b * 2 ^ j ≤ a * 2 ^ t * 2 ^ (-e).toNat ↔ b * 2 ^ cb ≤ a * 2 ^ ca := by
       rw [Nat.mul_assoc, ← Nat.pow_add]
       exact softDiv_power_compare b a j (t + (-e).toNat) ca cb (by dsimp only [e] at ep ⊢; omega)
-    rw [test]
+    simp only [test]
     by_cases small : a * 2 ^ ca < b * 2 ^ cb
     · rw [if_neg (by omega), if_pos small]
     · rw [if_pos (by omega), if_neg small]
+      simp only [e, sub_zero]
 
 /-- Both directions of exponent subtraction instantiate the same search,
     including the one-place correction for a significand ratio below one. -/
