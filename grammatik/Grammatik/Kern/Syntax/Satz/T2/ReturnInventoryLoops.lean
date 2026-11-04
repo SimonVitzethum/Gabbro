@@ -32,6 +32,7 @@ theorem traverse (step : World D → Env D (τ :: Γ) → Ausgang V true (τ :: 
         exact (ih σ1 ρ1.tail (entry.same same)).vor same
       | leave _ σ1 ρ1 =>
         have same := (result σ1 rfl).trans (hi σ ρ)
+        dsimp only
         split
         · exact Outcome.ok _ ((hi σ1 ρ1.tail).trans same)
         · exact Outcome.logik _
