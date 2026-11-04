@@ -38,6 +38,76 @@ import all Init.Data.String.ToSlice
 
 namespace Gabbro.Grammatik.Gen.Text
 open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
+
+/-- Finish the actual head reader over plain data, before instantiating specification indices. -/
+private theorem elabKopf_scalar
+    (consts : List (String × Int)) (als : List (String × (Int × Int)))
+    (tabs : List UTab) (locks : List ULock) (globs : List UGlob) (whys : List UWhy)
+    (sums : List USum) (devs zeiger : List String) (zb : Nat) (otab : Int → Option Nat)
+    (name : String) (params0 params : List (String × STyp))
+    (parsed : List (String × Ty × UParamArt)) (names : List String) (types : List Ty)
+    (kinds : List UParamArt) (erg : Option Ty) (res : Option STyp) (fehler : Option String)
+    (klauseln : List SKlausel) (held : List String) (kn : Option (Nat × Nat))
+    (eff : UEffekte) (out : UFnKopf)
+    (hfilter : uOhneGriffe devs params0 = params)
+    (hseq : uSeq (params.map (uParam als tabs sums whys zeiger zb [] [] [])) = .ok parsed)
+    (hnames : parsed.map (·.1) = names) (htypes : parsed.map (·.2.1) = types)
+    (hkinds : parsed.map (·.2.2) = kinds)
+    (hmc : uMeasureClause als klauseln = .ok none)
+    (hok : uOhneKlauselForm klauseln = .ok ())
+    (hheld : uGehalten locks klauseln = .ok held)
+    (hkn : (match fehler with
+      | none => .ok none
+      | some r =>
+        match whys.findIdx? (fun w => strEq w.name r) with
+        | none => .error ("reason unknown: " ++ r)
+        | some k =>
+          match whys[k]? with
+          | some w => if w.cases.isEmpty then .error "reason without cases"
+              else .ok (some (k, w.cases.length))
+          | none => .error ("reason unknown: " ++ r) : Except String (Option (Nat × Nat))) = .ok kn)
+    (heff : uEffekte
+      { name, names, kinds, types, res := none, bits := params.map (fun p => uParamBreite p.2),
+        held := uEindeutig held, kanal := kn, griffe := uGriffe devs 0 params0 }
+      tabs locks globs klauseln = .ok eff)
+    (herg : ∀ t, erg = some t → (artErg t).isSome)
+    (hres : (match erg with
+      | none => pure none
+      | some t => do pure (some (← typS otab t)) : Except String (Option STyp)) = .ok res)
+    (hout :
+      { name, names, kinds, types, res := ergBereich erg, resBool := decide (erg = some .bool),
+        bits := params.map (fun p => uParamBreite p.2), held := uEindeutig held, kanal := kn,
+        griffe := uGriffe devs 0 params0, gputs := uEindeutig eff.gputs,
+        nimmt := uEindeutig eff.nimmt, gibt := uEindeutig eff.gibt, leiht := uEindeutig eff.leiht,
+        bewegt := uEindeutig eff.bewegt, praegt := uEindeutig eff.praegt } = out) :
+    elabKopf consts als tabs locks globs whys sums
+      { art := "impl", name, params := params0, res, fehler, klauseln }
+      devs zeiger zb [] [] [] = .ok (out, uEindeutig eff.puts) := by
+  rw [← hout]
+  have himpl : strEq "impl" "impl" = true := by decide
+  unfold elabKopf
+  simp only [List.isEmpty_nil, himpl, Bool.true_or, Bool.not_true, Bool.false_eq_true,
+    ite_false, hmc, hok, hfilter, hseq, hnames, htypes, hkinds, hheld, hkn, heff]
+  cases erg with
+  | none =>
+    simp only [pure, Except.pure, Except.ok.injEq] at hres
+    subst res
+    simp only [ergBereich, reduceCtorEq, decide_false]
+  | some t =>
+    cases t with
+    | bool =>
+      simp only [typS, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hres
+      subst res
+      simp only [ergBereich, decide_true]
+    | int lo hi =>
+      simp only [typS, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hres
+      subst res
+      simp only [ergBereich, uErgBereich, schranke_zahlE, Bool.false_eq_true, ↓reduceIte,
+        Option.some.injEq, reduceCtorEq, decide_false]
+    | _ =>
+      have impossible := herg _ rfl
+      simp only [artErg, Option.isSome_none, Bool.false_eq_true] at impossible
+
 section Kopf
 variable (z : Spez)
 
@@ -172,32 +242,22 @@ theorem kopf_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklarat
     unfold uEffekte
     simp only [hwirk, effListe]
     exact eff_alle hE _ _ _ hV.tab hV.glob hV.sperren
-  have himpl : strEq "impl" "impl" = true := by decide
   have hmc := klauselnVon_measure z P f req ens (fun k hk => (hV.klauseln k hk).1) als
-  unfold elabKopf
-  simp only [List.isEmpty_nil, hog, himpl, Bool.true_or, Bool.not_true, Bool.false_eq_true,
-    ite_false, hmc, hok, hseq, hgeh]
-  rw [hkn]
-  rw [heff _ (heffOk _ (by simpa [hnp] using p1) rfl)]
-  simp only
-  unfold delabRes at hres
-  simp only [← hS] at hres
-  split at hres
-  · rename_i hn
-    simp only [pure, Except.pure, Except.ok.injEq] at hres; subst hres
-    simp only [kopfVon, ← hS, hn, ergBereich, p1, p2, p3]
-    simp only [hnp, reduceCtorEq, decide_false]
-  · rename_i t ht
-    cases t with
-    | bool =>
-      simp only [typS, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hres; subst hres
-      simp only [kopfVon, ← hS, ht, ergBereich, p1, p2, p3]
-      simp only [hnp, decide_true]
-    | int lo hi =>
-      simp only [typS, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hres; subst hres
-      simp only [kopfVon, ← hS, ht, ergBereich, p1, p2, p3, uErgBereich, schranke_zahlE]
-      simp only [hnp, Bool.false_eq_true, ↓reduceIte, Option.some.injEq, reduceCtorEq, decide_false]
-    | _ => have := hV.erg _ (by rw [← hS]; exact ht); simp only [artErg, Option.isSome_none, Bool.false_eq_true] at this
+  let base : UFnKopf :=
+    { name := nFn (fN z f),
+      names := (List.range' 0 S.params.length).map (fun i => nVar (np - 1 - i)),
+      kinds := ks, types := S.params, res := none, bits := ps.map (fun p => uParamBreite p.2),
+      held := uEindeutig (heldNamen z f), kanal := kanalVon gNr S.gruende,
+      griffe := uGriffe devs 0 (mitGriffPs ps mitGriff) }
+  have hbase : EffOk base tabs globs := heffOk base rfl rfl
+  have hrun := heff base hbase
+  exact elabKopf_scalar
+    (otab := optTab z) (erg := S.erg)
+    (names := (List.range' 0 S.params.length).map (fun i => nVar (np - 1 - i)))
+    (types := S.params) (kinds := ks)
+    (hfilter := hog) (hseq := hseq) (hnames := p1) (htypes := p2) (hkinds := p3)
+    (hmc := hmc) (hok := hok) (hheld := hgeh) (hkn := hkn)
+    (heff := hrun) (herg := hV.erg) (hres := hres) (hout := rfl)
 
 end Kopf
 
