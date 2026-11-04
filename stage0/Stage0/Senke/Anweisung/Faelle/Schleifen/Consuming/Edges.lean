@@ -9,9 +9,9 @@ variable [Kern] {D : Deklaration} {L : Lay D} {P : Programm D} {f : D.Fn}
 
 /-- Normalize assembler-derived offsets, retaining symbolic operand lengths. -/
 macro "consume_arith " x:ident : tactic => `(tactic| (
-  have imageLength := assemble_length $x.assembled
-  have imageSize := assemble_size $x.assembled
-  have initialLiteral := lit32_nat $x.bounds.1
+  have imageLength := assemble_length ($x).assembled
+  have imageSize := assemble_size ($x).assembled
+  have initialLiteral := lit32_nat ($x).bounds.1
   simp [Image.addr, Image.offset, Image.fragment, pieces, position, width, Piece.width,
     travCountC_length, travCountSize, initialLiteral, decrease, narrowC,
     stopC, sysC, List.length_append] at imageLength imageSize ⊢
@@ -79,7 +79,7 @@ theorem Ready.save (h : x.Ready m σ ρ) {i cell source : Nat} {value : W}
       · have := x.controls; omega
       · have := x.kept cell member; omega
   · intro j insideJ different
-    exact rd_other h.frame.room inside insideJ (Ne.symm different)
+    exact rd_other h.frame.room inside insideJ (Ne.symm different) value.toNat
 
 /-- Evaluate a scan bound using the existing instruction-level lemma. -/
 theorem Ready.bound (h : x.Ready m σ ρ) {i index j : Nat}
@@ -174,7 +174,7 @@ theorem Ready.increment (h : x.Ready m σ ρ) {i j cell n : Nat}
     rw [rd_other tail.frame.room (by omega) (by omega) (Ne.symm different)]
     exact agree_rd_low a1 h.frame.room below (by omega)
   · have result := rd_same tail.frame (by omega : cell < x.K) value
-    simpa only [Image.read, value, BitVec.ofNat_add] using result
+    simpa only [Image.read, m2, value, BitVec.ofNat_add, BitVec.ofNat_eq_ofNat] using result
 
 /-- Stop code is reached through an ordinary extracted block. -/
 theorem Ready.stop (h : x.Ready m σ ρ) :
@@ -217,7 +217,7 @@ theorem Ready.same (h : x.Ready m σ ρ) {a b : Zahl 0 (D.count x.table - 1)}
       (by have := x.scratch; have := x.layout.ks; omega)
       (by have := x.scratch; have := x.layout.ks; omega) ra rb
       (g := fun a b => some (Runner.IR.bool (a == b))) rfl (by decide) rfl)
-    (by consume_arith x) ctx (by omega) (by have := x.scratch; have := x.layout.ks; omega)
+    (x.addr_next_code (i := 16) rfl) ctx (by omega) (by have := x.scratch; have := x.layout.ks; omega)
   refine ⟨m', run, frame, kept, ready, localFrame, ?_⟩
   simpa only [Image.read, beq_in ae be] using read
 
