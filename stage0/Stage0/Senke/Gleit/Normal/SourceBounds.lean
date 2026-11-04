@@ -107,7 +107,7 @@ theorem softAlignedMagnitude_bounds (sa sb : Bool) (l r e f : Nat)
       have power := Nat.pow_le_pow_right (by decide : 0 < 2)
         (show bitlen n ≤ 54 by omega)
       omega
-    refine ⟨cover, ordered, nb, Or.inr (by omega), fun _ => ⟨wide, ?_⟩⟩
+    refine ⟨cover, ordered, nb, Or.inr (by change 4 ≤ n; omega), fun _ => ⟨wide, ?_⟩⟩
     change (-1022 : Int) ≤ (e : Int) - 1078 + (bitlen n : Int) - 1
     omega
 
