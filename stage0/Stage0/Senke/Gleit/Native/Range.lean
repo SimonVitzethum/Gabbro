@@ -54,7 +54,8 @@ theorem nativeFloatRangeL_at_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → P
       (by simp only [floatConstL, konstWL, bin2] at ht; omega) hp).mono
         (fun w hw => by
           rw [hw]
-          simpa only [BitVec.ofNat_toNat, BitVec.setWidth_eq] using nativeFloat_read_word v)
+          rw [← UInt64.toNat_toBitVec, BitVec.ofNat_toNat, BitVec.setWidth_eq]
+          exact nativeFloat_read_word v)
   have le {a b : Nat → Option (List II × Nat)} {av bv : GFloat}
       (ha : proves a (fun w => Runner.readFloat w = av))
       (hb : proves b (fun w => Runner.readFloat w = bv)) :
@@ -95,7 +96,8 @@ theorem nativeFloatRangeL_at_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → P
   have inverted := binary equal one (g := fun a b => some (a ^^^ b))
     (P := fun w => w = Runner.IR.bool (gleitEndlich x))
     (fun a b ha hb => ⟨_, rfl, by
-      rw [ha, hb, bool_word, not_word, ← bool_word, Bool.not_not]⟩)
+      rw [ha, hb]
+      cases gleitEndlich x <;> rfl⟩)
     rfl (by decide : 10 < 256)
   have finite : proves (fun j => nativeFloatFiniteL j producer)
       (fun w => w = Runner.IR.bool (gleitEndlich x)) := inverted
@@ -112,7 +114,10 @@ theorem nativeFloatRangeL_at_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → P
     rfl (by decide : 8 < 256)
   have rejected := binary valid one (g := fun a b => some (a ^^^ b))
     (P := fun w => w = Runner.IR.bool (floatRangeReject lo hi x))
-    (fun a b ha hb => ⟨_, rfl, by rw [ha, hb, bool_word, not_word, ← bool_word]; rfl⟩)
+    (fun a b ha hb => ⟨_, rfl, by
+      rw [ha, hb]
+      unfold floatRangeReject
+      cases gleitEndlich x && (gleitLe (bruch lo) x && gleitLe x (bruch hi)) <;> rfl⟩)
     rfl (by decide : 10 < 256)
   simp only [floatRangeL, Option.map_eq_some_iff] at emitted
   obtain ⟨⟨body, ceiling⟩, hb, he⟩ := emitted
