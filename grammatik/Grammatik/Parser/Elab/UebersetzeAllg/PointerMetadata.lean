@@ -53,9 +53,13 @@ private theorem parameterRows_origin {α β : Type} (produce : α → Except Str
 
 /-- The function-head projection keeps every row in order, including its exact pointer type. -/
 private theorem parameterRows_coherent (rows : List (String × Ty × UParamArt))
-    (coherent : ∀ row ∈ rows, ∀ cap, row.2.2 = .ptr cap → row.2.1 = .ptr cap) :
-    ∀ j cap, (rows.map (·.2.2))[j]? = some (.ptr cap) →
-      (((rows.map (·.1)).zip (rows.map (·.2.1)))[j]?).map (·.2) = some (.ptr cap) := by
+    (coherent : ∀ row ∈ rows, ∀ cap : DataCapTy,
+      row.2.2 = .ptr cap → row.2.1 = .ptr cap) :
+    ∀ (j : Nat) (cap : DataCapTy),
+      (rows.map (fun row : String × Ty × UParamArt => row.2.2))[j]? = some (.ptr cap) →
+      (((rows.map (fun row : String × Ty × UParamArt => row.1)).zip
+        (rows.map (fun row : String × Ty × UParamArt => row.2.1)))[j]?).map
+          (fun row : String × Ty => row.2) = some (Ty.ptr cap) := by
   revert coherent
   induction rows with
   | nil => intro coherent j cap kind; simp at kind
@@ -79,8 +83,11 @@ private theorem producedRows_coherent {sources : List (String × STyp)}
     {rows : List (String × Ty × UParamArt)}
     (accepted : uSeq (sources.map (uParam alias tabs sums whys zeiger zb spaces named eigner)) =
       .ok rows) :
-    ∀ j cap, (rows.map (·.2.2))[j]? = some (.ptr cap) →
-      (((rows.map (·.1)).zip (rows.map (·.2.1)))[j]?).map (·.2) = some (.ptr cap) := by
+    ∀ (j : Nat) (cap : DataCapTy),
+      (rows.map (fun row : String × Ty × UParamArt => row.2.2))[j]? = some (.ptr cap) →
+      (((rows.map (fun row : String × Ty × UParamArt => row.1)).zip
+        (rows.map (fun row : String × Ty × UParamArt => row.2.1)))[j]?).map
+          (fun row : String × Ty => row.2) = some (Ty.ptr cap) := by
   apply parameterRows_coherent rows
   intro row member cap kind
   obtain ⟨source, _, produced⟩ := parameterRows_origin _ accepted row member
@@ -90,12 +97,33 @@ private theorem producedRows_coherent {sources : List (String × STyp)}
 theorem elabKopf_pointer_coherent {sig : FnSig} {kopf : UFnKopf} {writes : List String}
     (accepted : elabKopf consts alias tabs locks globs whys sums sig devs zeiger zb spaces named eigner =
       .ok (kopf, writes)) :
-    ∀ j cap, kopf.kinds[j]? = some (.ptr cap) →
-      ((kopf.names.zip kopf.types)[j]?).map (·.2) = some (.ptr cap) := by
+    ∀ (j : Nat) (cap : DataCapTy), kopf.kinds[j]? = some (.ptr cap) →
+      ((kopf.names.zip kopf.types)[j]?).map
+        (fun row : String × Ty => row.2) = some (Ty.ptr cap) := by
+  rcases sig with ⟨art, name, params, res, fehler, klauseln, generics⟩
   unfold elabKopf at accepted
-  repeat' split at accepted
-  all_goals cases accepted
-  all_goals exact producedRows_coherent alias tabs whys sums zeiger zb spaces named eigner (by assumption)
+  split at accepted
+  · cases accepted
+  · dsimp only at accepted
+    split at accepted
+    · cases accepted
+    · cases measure : uMeasureClause alias klauseln with
+      | error error => simp [measure] at accepted
+      | ok decreases =>
+        cases clauses : uOhneKlauselForm klauseln with
+        | error error => simp [measure, clauses] at accepted
+        | ok unit =>
+          cases parameters : uSeq ((uOhneGriffe devs params).map
+              (uParam alias tabs sums whys zeiger zb spaces named eigner)) with
+          | error error => simp [measure, clauses, parameters] at accepted
+          | ok rows =>
+            simp only [measure, clauses, parameters] at accepted
+            have coherent := producedRows_coherent alias tabs whys sums zeiger zb spaces
+              named eigner parameters
+            -- Reduce each preceding dispatcher before splitting its continuation.
+            repeat' (dsimp only at accepted; split at accepted)
+            all_goals cases accepted
+            all_goals exact coherent
 
 /-- A successful source function satisfies the actual pointer gate; no well-typedness premise
     is added at its consumers. The canonical producer supplies both metadata equalities. -/
@@ -114,7 +142,7 @@ theorem elabUFunktion_checkedPointerParam
   · rename_i kopf writes head
     have coherent := elabKopf_pointer_coherent consts alias tabs locks globs whys sums devs zeiger
       zb spaces valueScope.types eigner head
-    repeat' split at accepted
+    repeat' (dsimp only at accepted; split at accepted)
     all_goals cases accepted
     all_goals exact checkedPointerParam_complete _ j cap kind (coherent j cap kind)
 
