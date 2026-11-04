@@ -340,7 +340,10 @@ theorem akzeptiertSpecX_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Loc
   simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true, and_assoc] at h
   obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14, h15, _h16⟩ := h
   have hAbg := (abgAlleB_iff hvoll).mp h2
-  exact { frag := h1, abg := hAbg, fuss := fussWXB_ok hvoll hAbg h3
+  exact {
+    frag := h1
+    abg := hAbg
+    fuss := fussWXB_ok hvoll hAbg h3
     stufen := (stufenB_iff hvoll).mp h4
     sperrOrte := (sperrOrteB_iff hls).mp h5
     wurzeln := wurzelnB_iff.mp h6
