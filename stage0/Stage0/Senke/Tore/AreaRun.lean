@@ -28,6 +28,7 @@ theorem areaRequest_run {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D)
       AreaReply L O a b τ he (σ.fragt (.inl a)) (evalArgs σ args σ ρ)
         m' fp (foreignResultBase s) tag := by
   have ks := layout.ks
+  have small : Ks < 2 ^ 31 := Nat.lt_of_le_of_lt ks pre.small
   have positive := valueWords_pos τ
   have enough : s + 10 ≤ Ks := by unfold foreignResultBase at capacity; omega
   have accepted' := accepted
@@ -37,20 +38,20 @@ theorem areaRequest_run {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D)
       (ca ++ (zeroC (s + 1 + (D.aparams a).length) (6 - (D.aparams a).length) ++
         ([ci 17 (s + 1 + j) (foreignResultBase s) 0] ++
           ([ci 1 s b.nr 0] ++ [ci 23 s s 0])))) ρ reserved := by
-    simpa only [areaRequest, List.append_assoc] using pre
+    simpa only [areaRequest, List.append_assoc, List.cons_append, List.nil_append] using pre
   have frame := frameOK_sub pre.frame ks
   have room := frame.room
   obtain ⟨m1, run1, change1, values⟩ := lowR_ok (same := rfl) σ σ (fun _ h => h) layout.lay
     args (s + 1) ca ta arguments (by omega) (by omega) m pc ρ
     (PreS.welt (pre0.left.up (by omega)) ks world layout.lay (by have := layout.lo; omega))
   have next1 := pre0.next (Agree.widen (change1.mono (Nat.le_succ s)) ks) (Nat.le_refl _) (by omega)
-  obtain ⟨m2, run2, change2, zeros⟩ := zero_ok (K := Ks) (by have := pre.small; omega)
+  obtain ⟨m2, run2, change2, zeros⟩ := zero_ok (K := Ks) small
     (6 - (D.aparams a).length) (s + 1 + (D.aparams a).length) m1 _ next1.left.code
     (by simpa only [zeroC_len] using codeFar_sub2 next1.left.far ks)
     (frame.agree change1) (by omega)
   have next2 := next1.next (Agree.widen (change2.mono (by omega)) ks) (Nat.le_refl _) (by omega)
   have run3 := lea_step (d := s + 1 + j) (a := foreignResultBase s) next2.left.code
-    ((frame.agree change1).agree change2) (by omega) (by omega) (by have := pre.small; omega)
+    ((frame.agree change1).agree change2) (by omega) (by omega) small
   let m3 := write m2 (slot fp (BitVec.ofNat 64 (s + 1 + j))) 8
     (slot fp (BitVec.ofNat 64 (foreignResultBase s))).toNat
   have change3 : Agree fp (s + 1 + j) Ks m2 m3 := agree_write room (Nat.le_refl _) (by omega) _
@@ -80,12 +81,14 @@ theorem areaRequest_run {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D)
     simp only [rdW, m3]
     rw [rd64_write_far (slot_far room (by omega) (by omega) (by omega))]
   have sourceValues : ArgsW L (reqArg request) (evalArgs σ args σ ρ) := by
-    apply argsW_congr _ (f := fun i => rdW m1 fp (s + 1 + i)) _ values
+    refine argsW_congr (f := fun i => rdW m1 fp (s + 1 + i)) (g := reqArg request)
+      (evalArgs σ args σ ρ) ?_ values
     intro i hi
     rw [reqArg_mk _ values4 i (by omega)]
     dsimp only [values4]
     rw [kept4 i (by omega), kept3 i (by omega) (by omega)]
-    simp only [rdW, agree_rd_low change2 room (by omega) (by omega)]
+    simp only [rdW]
+    rw [agree_rd_low (i := s + 1 + i) change2 room (by omega) (by omega)]
   have hidden : reqArg request j = slot fp (BitVec.ofNat 64 (foreignResultBase s)) := by
     rw [reqArg_mk _ values4 j j6]
     dsimp only [values4]
