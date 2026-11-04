@@ -5,6 +5,11 @@ public import Grammatik.Parser.Elab.Konst.Values.Expression
 namespace Gabbro.Grammatik.Parser.Konst.Values
 open Uebersetze Scalar UebersetzeAllg
 
+/-- A tagged constructor's source spelling depends only on its payload syntax. -/
+def tagSyntax (name : String) : Option SExpr → SExpr
+  | none => .variable name
+  | some source => .call name [source]
+
 section MeaningParameters
 -- Share the declaration and retain schemas explicitly in both local families.
 variable (D : Deklaration)
@@ -35,7 +40,7 @@ inductive LiteralMeaning (schemas : List (USum Ty)) :
       («syntax» : Option SExpr) (value : Nutzlast D.Fn D.passt (cases.get i))
       (payload : PayloadMeaning schemas (cases.get i) «syntax» value) :
       LiteralMeaning schemas (.sum cases)
-        (match «syntax» with | none => .variable name | some source => .call name [source])
+        (tagSyntax name «syntax»)
         ⟨i, Fall.ofNutzlast D.Fn D.passt cases i value⟩
 inductive PayloadMeaning (schemas : List (USum Ty)) :
     (c : Option Ty) → Option SExpr → Nutzlast D.Fn D.passt c → Prop where
@@ -122,9 +127,7 @@ def reify {D : Deklaration} {Γ : Ctx} (schemas : List USum) (texts : List Strin
         | some actualName =>
           let payload ← reifyPayload (D := D) (Γ := Γ) schemas texts fuel (cases.get i)
             (Fall.toNutzlast D.Fn D.passt cases i value)
-          let source := match payload.syntax with
-            | none => SExpr.variable actualName
-            | some literal => .call actualName [literal]
+          let source := tagSyntax actualName payload.syntax
           return ⟨source, .case cases i payload.expr,
             by simpa only [Fall.of_to] using
               (LiteralMeaning.tag schema (List.mem_of_find?_eq_some hf) hs i actualName hn
