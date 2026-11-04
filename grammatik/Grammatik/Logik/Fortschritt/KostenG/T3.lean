@@ -240,7 +240,7 @@ def zusatzE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .float _ _ _ _ _ rest => zusatzE rest
   | .floatLit _ _ _ rest => 1 + zusatzE rest
   | .floatOf _ _ _ rest => zusatzE rest
-  | .floatNarrow e _ _ sonst rest => 3 + kostenExpr e + zusatzSonst sonst + zusatzE rest
+  | .floatNarrow e _ _ sonst rest => 3 + kostenExpr e + zusatzE sonst + zusatzE rest
 /-- The remainder of an `else` branch run as a block (`kostenSonst`). -/
 def zusatzSonst {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → Nat

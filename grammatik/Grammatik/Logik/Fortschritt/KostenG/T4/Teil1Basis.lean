@@ -223,7 +223,7 @@ theorem spiegel_end (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ
       simp only [kostenEnd, kostenKE, zusatzE]; omega
   | .floatNarrow _ _ _ sonst rest, h => by
       simp only [spiegelE, Bool.and_eq_true] at h
-      have h1 := spiegel_sonst c pa sonst h.1
+      have h1 := spiegel_end c pa sonst h.1
       have h2 := spiegel_end c pa rest h.2
       simp only [kostenEnd, kostenKE, zusatzE]; omega
 theorem spiegel_sonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}

@@ -259,8 +259,9 @@ def kostenEnd (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx
   | .float _ a b _ _ rest => 2 + kostenExpr a + kostenExpr b + kostenEnd c pa rest
   | .floatLit _ _ _ rest => 2 + kostenEnd c pa rest
   | .floatOf e _ _ rest => 2 + kostenExpr e + kostenEnd c pa rest
+  -- Both branches stay in end position, including the narrowing fallback.
   | .floatNarrow e _ _ sonst rest =>
-      2 + kostenExpr e + max (kostenSonst c pa sonst + 1) (kostenEnd c pa rest + 1)
+      2 + kostenExpr e + max (kostenEnd c pa sonst + 1) (kostenEnd c pa rest + 1)
 /-- The steps of an `else` branch: the end block run in BLOCK position
     (`Endblock.alsBlock`, since 2026-09-13), where a `leave`/`next` in it
     reaches the enclosing loop. Priced as that block: a compound needs no
