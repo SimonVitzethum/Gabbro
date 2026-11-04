@@ -18,25 +18,33 @@ theorem bindWert_allg (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (x
   | why _ _ => simp only [kopfOk, Bool.false_eq_true] at h
   | float _ => simp only [kopfOk, Bool.false_eq_true] at h
   | bin op a b =>
+    have rejectedOperators : (match op with
+        | "+" => (none : Option (Except String (UStmt × UCtx)))
+        | "-" => none
+        | "*" => none
+        | "/" => none
+        | _ => none) = none := by
+      split <;> rfl
     cases ha : uWertBody ctx a with
     | error err =>
       simp only [uBindWert, hr, ha, Except.toOption, Option.bind_eq_bind, Option.bind_none,
-        Option.bind_fun_none]
+        Option.bind_fun_none, rejectedOperators]
     | ok left =>
       have ht := hleft op a b rfl left ha
       cases hty : uValueType ctx left with
       | none =>
         simp only [uBindWert, hr, ha, hty, Except.toOption, Option.bind_eq_bind, Option.bind_none,
-          Option.bind_some, Option.bind_fun_none]
+          Option.bind_some, Option.bind_fun_none, rejectedOperators]
       | some ty =>
         cases ty <;> simp only [hty, ScalarType] at ht
         all_goals simp only [uBindWert, hr, ha, hty, Except.toOption, Option.bind_eq_bind,
-          Option.bind_none, Option.bind_some, Option.bind_fun_none]
+          Option.bind_none, Option.bind_some, Option.bind_fun_none, rejectedOperators]
   | un op body =>
     cases body <;> simp only [kopfOk] at h
-    all_goals first
-      | (simp only [uBindWert, hr]; rfl)
-      | (repeat' (split at h); all_goals simp_all only [Bool.false_eq_true, uBindWert, hr])
+    all_goals
+      simp only [uBindWert, hr]
+      all_goals
+        split <;> simp_all only [kopfOk, Bool.false_eq_true]
   | _ => simp only [uBindWert, hr]
 
 /-- `let v = e;` of a number. -/
