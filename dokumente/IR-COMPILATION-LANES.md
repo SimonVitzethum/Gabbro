@@ -11,9 +11,10 @@ bit operations; full-range UInt64 conversion uses a portable native instruction 
 The runner establishes the required floating-point control mode itself.
 
 The canonical model uses the toolchain's `Float`/`Float32` primitives instead of Gabbro's
-own IEEE value representation and arithmetic. Rational literals and bounds now convert
-their numerator and denominator with native conversion and divide natively; this replaces
-the former exact-rational, single-rounding meaning. `Ty.fl` retains its existing formatless
+own IEEE value representation and arithmetic. Compile-time rational literals and bounds
+use the toolchain division on exact integer mantissas before the first rounding, preserving
+subnormal literals without intermediate numerator/denominator overflow. Runtime operations
+still execute on the CPU. `Ty.fl` retains its existing formatless
 binary64 model value; the separate Code model retains distinct binary32/binary64 types.
 Finite/range obligations, failure channels, resources, memory, contracts and user duties
 remain required. Native NaN payload bits are not fixed by the semantic result relation.
