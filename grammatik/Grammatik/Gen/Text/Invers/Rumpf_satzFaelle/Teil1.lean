@@ -299,8 +299,8 @@ Option.bind_fun_none, reduceCtorEq] at hu
         obtain ⟨i, hi, hk⟩ := kinv_idx (gNr := gNr) hf
         have hiE : i = z.deklaration.sig f := by rw [hI f] at hi; exact (Option.some.inj hi).symm
         subst hiE
-        let ctxP : UCtx := {ctx with unknownRanges := ctx.unknownRanges.filter
-          (fun previous => previous != nZeiger Γ.length)}
+        let ctxP : UCtx :=
+          {ctx with unknownRanges := ctx.unknownRanges.filter (fun previous => previous != nZeiger Γ.length)}
         have HP : SInv z V ctxP Γ Λ art := H.unknownRanges _
         have H' := HP.pushZ Γ.length (.fnptr (z.deklaration.sig f)) (.fnptr (z.deklaration.sig f)) 0 ctx.loops
         refine ⟨nach_ohne_marken hM _ Λ, by simp only [List.length_cons, List.length_nil, zero_add, Nat.reduceAdd, Std.le_refl], _, H', fun g tail ys cE hg ht => ?_⟩

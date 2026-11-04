@@ -204,8 +204,8 @@ sizeOf_default, add_zero] at hn hf
         obtain ⟨i, hi, hk⟩ := kinv_idx (gNr := gNr) hfk
         have hiE : i = z.deklaration.sig fk := by rw [hI fk] at hi; exact (Option.some.inj hi).symm
         subst hiE
-        let ctxP : UCtx := {ctx with unknownRanges := ctx.unknownRanges.filter
-          (fun previous => previous != nZeiger Γ.length)}
+        let ctxP : UCtx :=
+          {ctx with unknownRanges := ctx.unknownRanges.filter (fun previous => previous != nZeiger Γ.length)}
         have HP : SInv z V ctxP Γ Λ art := H.unknownRanges _
         obtain ⟨ty, hmeta, hb⟩ := bindWert_callInd HP tabs fk k _ hfk hk hKP hp.hh hr τ he a hτ args as xs ha hx (HP.zb fk) Γ.length
           ctx.loops (nVar Γ.length)
