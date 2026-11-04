@@ -131,6 +131,71 @@ theorem popS_inv (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : Sp
   rw [← eval_gleichAuf (P.invariante i) (fun _ h => hinv i hi hs h) hG2 .nil]
   exact h3
 
+/-- A root retains its log; a caller receives exactly the saved answer's event. -/
+private theorem antwort_invLogS {z z' : RufFadenG D} {vor W : World D}
+    {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
+    (ha : rufAntwortG z vor W a = some z')
+    (hinv : ∀ v, a = .inl v → InvAmRueck P z.kopf.f W) :
+    ∀ ev ∈ z'.log, ev ∈ z.log ∨
+      ∀ (g : D.Fn) (rho : Env D (D.params g)) (v : ErgVal D (D.erg g)) (s0 s1 : World D),
+        ev = RufEreignisF.rueck g rho v s0 s1 → InvAmRueck P g s1 := by
+  cases hs : z.stapel with
+  | nil =>
+      simp only [rufAntwortG, hs, Option.some.injEq] at ha
+      subst z'
+      exact fun _ hev => Or.inl hev
+  | cons caller rest =>
+      cases hr : antwortRestG z.kopf.f a caller.rest with
+      | none => simp [rufAntwortG, hs, hr] at ha
+      | some response =>
+          simp [rufAntwortG, hs, hr] at ha
+          subst z'
+          intro ev hev
+          rcases List.mem_cons.mp hev with rfl | hev
+          · refine Or.inr fun g rho v s0 s1 h => ?_
+            cases a with
+            | inl value =>
+                simp only [RufEreignisF.rueck.injEq] at h
+                obtain ⟨rfl, -, -, -, rfl⟩ := h
+                exact hinv value rfl
+            | inr reason => cases h
+          · exact Or.inl hev
+
+/-- The final release checks its actual replay guard and delivers the saved value. -/
+private theorem popS_last_inv (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+    (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
+    (hK : ∀ f, KoerperGutS P passes Q S f)
+    (hI : ∀ f, InvGutS P passes Q S f) (hFS : ∀ f, FussS P S lok f)
+    {F : RufRahmenG D} {W : World D} (hF : KopfS P O passes Q S lok F W)
+    {l : Bool} {Γ : Ctx} (ρ : Env D Γ) (v : ErgVal D (vertragVon D F.f).erg)
+    (vor : World D) (L : D.Lock)
+    (hr : F.rest = ⟨l, Γ, _, ρ, .aufraeumen ⟨.inl v, vor⟩ [L]⟩) :
+    InvAmRueck P F.f (W.gibt L) := by
+  have hW := kopfS_frei_inv hO hRL hQ hS hsp hK hF L List.mem_cons_self hr
+    (fun O' U calls σ hi => by rw [semH_aufraeumen_freigabe, hi]; rfl)
+  obtain ⟨H, HA, HU, σ, hreq, hf, hv, _, hfa, hra, hqa, _, hfu, hiu, _, hg, _, heq⟩ := hF
+  have h1 := heq (rufAusV H) (orakelAus O HA) (umweltAus S sp HU) (rufAusV_passt hf)
+    (orakelAus_passt O hfa) (umweltAus_passt S sp hfu) (gleichRS_orakelAus O HA)
+  rw [hr] at h1 hg
+  have hiσ : S.inv L σ.speicher = true := (inv_gleich hS List.mem_cons_self hg).trans hW
+  rw [semH_aufraeumen_freigabe, hiσ] at h1
+  simp only [ite_true, semH, weiterH, scopesInvH, List.all_nil, List.foldl_nil] at h1
+  obtain ⟨σ', hex, hsg⟩ := zErgG_gleich_zurueck (ZErgG.folgt_zurueck h1)
+  have hInv := (hI F.f) (orakelAus O HA) (orakelAus_rahmen hO hra)
+    (regLokal_orakelAus hRL HA) (orakelAus_vertrag hQ hqa)
+    (umweltAus S sp HU) (umweltAus_ok hS hsp hiu)
+    (rufAusV H) (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) F.s0 F.rho hreq σ' v hex
+  have hgl : GleichAuf (stabilS P S lok F.f (vertragVon D F.f).ende)
+      (σ.gibt L) (W.gibt L) :=
+    GleichAuf.mono (stabilS_mono (fun _ h => List.mem_cons_of_mem _ h)) hg
+  intro i hi hs
+  have h3 := hInv i hi hs
+  unfold InvHaelt at h3 ⊢
+  rw [← eval_gleichAuf (P.invariante i)
+    (fun _ h => inv_stabil (hFS _) (List.Perm.refl _) hi hs h)
+    ((gleichAuf_SG hsg).trans hgl) .nil]
+  exact h3
+
 set_option hygiene false in
 /-- A step that logs no `rueck` event keeps the claim. -/
 macro "ohneRueck" : tactic => `(tactic| (
@@ -147,6 +212,7 @@ macro "ohneRueck" : tactic => `(tactic| (
     invariants at the logged world. -/
 theorem invLog_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : SperrInvOk S)
     {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
+    (hK : ∀ f, KoerperGutS P passes Q S f)
     (hI : ∀ f, InvGutS P passes Q S f) (hFS : ∀ f, FussS P S lok f)
     {M M' : RufMaschineG D} {u : Faden}
     (hF : KopfS P O passes Q S lok (M.faeden u).kopf (M.weltVon u))
@@ -246,6 +312,31 @@ theorem invLog_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (h
     | _ => ohneRueck
   | g7 hs =>
     cases hs with
+    | rueckFreigabeLetzte ρ a L hhead z ha =>
+      simp only [rufUpdateG_self]
+      apply antwort_invLogS ha
+      intro v hv
+      rcases a with ⟨answer, vor⟩
+      dsimp only at hv hhead
+      cases hv
+      exact popS_last_inv hO hRL hQ hS hsp hK hI hFS hF ρ v vor L hhead
+    | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
+      rename_i l Γ Λ
+      simp only [rufUpdateG_self]
+      apply antwort_invLogS ha
+      intro v hv
+      cases hv
+      subst σ₁
+      have hperm : Λ.Perm (vertragVon D (M.faeden u).kopf.f).ende := by
+        simpa only [hempty, List.map_nil, List.append_nil] using R.genau
+      refine popS_inv hO hRL hQ hS hsp hI hF hhead e
+        (fun i hi hs => inv_stabil (hFS _) hperm hi hs) ?_
+      intro O' calls U σ
+      exact semH_scopedWert S O' U passes calls r e R hret σ ρ
+        (by simp only [hempty, scopesInvH, List.all_nil])
+    | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
+      simp only [rufUpdateG_self]
+      exact antwort_invLogS ha (fun _ h => by cases h)
     | _ => ohneRueck
 
 end Schritte
@@ -286,7 +377,7 @@ theorem ziel_ort_sperre_inv (P : Programm D) (O : Orakel D) (passes : Nat) (Q : 
       intro t ev hev
       by_cases ht : t = u
       · subst ht
-        rcases invLog_schritt hO hRL hQ hS hSstart hI hFS (hZ.1 t).1 hs ev hev with h | h
+        rcases invLog_schritt hO hRL hQ hS hSstart hK hI hFS (hZ.1 t).1 hs ev hev with h | h
         · exact ih t ev h
         · exact h
       · rw [rufSchrittG_fremd hs t ht] at hev

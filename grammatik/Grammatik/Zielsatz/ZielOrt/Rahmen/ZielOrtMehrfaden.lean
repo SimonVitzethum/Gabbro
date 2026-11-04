@@ -84,7 +84,7 @@ theorem ziel_ort_sperre_invL (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
         intro t ev hev
         by_cases ht : t = u
         · subst ht
-          rcases invLog_schritt hO hRL hQ hS hSstart hI hFS (hZ'.1 t).1 hs ev hev with h | h
+          rcases invLog_schritt hO hRL hQ hS hSstart hK hI hFS (hZ'.1 t).1 hs ev hev with h | h
           · exact ih t ev h
           · exact h
         · rw [rufSchrittG_fremd hs t ht] at hev
