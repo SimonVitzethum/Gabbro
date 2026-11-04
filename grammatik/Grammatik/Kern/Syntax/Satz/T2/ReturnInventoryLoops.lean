@@ -5,12 +5,13 @@ public import Grammatik.Kern.Syntax.Satz.T2.ReturnInventory
 
 namespace Gabbro.Grammatik.ReturnInventory
 variable {D : Deklaration} {V : Vertrag D} {L : D.Lock} {bo : Option Int} {Λ : List (Res D)}
+variable {slack : Nat := 0}
 
 theorem traverse (step : World D → Env D (τ :: Γ) → Ausgang V true (τ :: Γ))
     (inv : World D → Env D Γ → World D × Bool)
-    (hs : ∀ σ ρ, Entry L bo Λ σ → Outcome L σ (step σ ρ))
+    (hs : ∀ σ ρ, Entry (slack := slack) L bo Λ σ → Outcome (slack := slack) L σ (step σ ρ))
     (hi : ∀ σ ρ, (inv σ ρ).1.haelt = σ.haelt) :
-    ∀ ks σ ρ, Entry L bo Λ σ → Outcome L σ (traverseLauf (l := l) step inv ks σ ρ) := by
+    ∀ ks σ ρ, Entry (slack := slack) L bo Λ σ → Outcome (slack := slack) L σ (traverseLauf (l := l) step inv ks σ ρ) := by
   intro ks
   induction ks with
   | nil =>
@@ -46,10 +47,10 @@ theorem traverse (step : World D → Env D (τ :: Γ) → Ausgang V true (τ :: 
 theorem retry (step : World D → Env D Γ → Ausgang V true Γ)
     (test : World D → Env D Γ → World D × Bool)
     (overflow : World D → Env D Γ → Ausgang V l Γ)
-    (hs : ∀ σ ρ, Entry L bo Λ σ → Outcome L σ (step σ ρ))
+    (hs : ∀ σ ρ, Entry (slack := slack) L bo Λ σ → Outcome (slack := slack) L σ (step σ ρ))
     (hi : ∀ σ ρ, (test σ ρ).1.haelt = σ.haelt)
-    (ho : ∀ σ ρ, Entry L bo Λ σ → Outcome L σ (overflow σ ρ)) :
-    ∀ n σ ρ, Entry L bo Λ σ → Outcome L σ (retryLauf step test overflow n σ ρ) := by
+    (ho : ∀ σ ρ, Entry (slack := slack) L bo Λ σ → Outcome (slack := slack) L σ (overflow σ ρ)) :
+    ∀ n σ ρ, Entry (slack := slack) L bo Λ σ → Outcome (slack := slack) L σ (retryLauf step test overflow n σ ρ) := by
   intro n
   induction n with
   | zero =>
@@ -80,9 +81,9 @@ theorem retry (step : World D → Env D Γ → Ausgang V true Γ)
 
 theorem forever (a : D.Annahme) (step : World D → Env D Γ → Ausgang V true Γ)
     (inv : World D → Env D Γ → World D × Bool)
-    (hs : ∀ σ ρ, Entry L bo Λ σ → Outcome L σ (step σ ρ))
+    (hs : ∀ σ ρ, Entry (slack := slack) L bo Λ σ → Outcome (slack := slack) L σ (step σ ρ))
     (hi : ∀ σ ρ, (inv σ ρ).1.haelt = σ.haelt) :
-    ∀ n σ ρ, Entry L bo Λ σ → Outcome L σ (foreverLauf (l := l) a step inv n σ ρ) := by
+    ∀ n σ ρ, Entry (slack := slack) L bo Λ σ → Outcome (slack := slack) L σ (foreverLauf (l := l) a step inv n σ ρ) := by
   intro n
   induction n with
   | zero => intro σ ρ _; exact Outcome.hardware _
@@ -111,12 +112,12 @@ theorem consume (t : D.Tab)
     (inv : World D → Env D Γ → World D × Bool)
     (sel : World D → Env D Γ → World D × Option (Wert D (.index (D.count t))) × Bool)
     (mass : World D → Env D Γ → World D × Int) (bound : Int)
-    (hs : ∀ σ ρ, Entry L bo Λ σ → Outcome L σ (step σ ρ))
+    (hs : ∀ σ ρ, Entry (slack := slack) L bo Λ σ → Outcome (slack := slack) L σ (step σ ρ))
     (hi : ∀ σ ρ, (inv σ ρ).1.haelt = σ.haelt)
     (hc : ∀ σ ρ, (sel σ ρ).1.haelt = σ.haelt)
     (hm : ∀ σ ρ, (mass σ ρ).1.haelt = σ.haelt) :
-    ∀ n σ ρ, Entry L bo Λ σ →
-      Outcome L σ (verbrauchLauf (l := l) t step inv sel mass bound n σ ρ) := by
+    ∀ n σ ρ, Entry (slack := slack) L bo Λ σ →
+      Outcome (slack := slack) L σ (verbrauchLauf (l := l) t step inv sel mass bound n σ ρ) := by
   intro n
   induction n with
   | zero => intro σ ρ _; exact Outcome.logik _

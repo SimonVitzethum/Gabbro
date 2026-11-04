@@ -8,11 +8,12 @@ variable {D : Deklaration} {V : Vertrag D} {bo : Option Int}
 variable (O : Orakel D) (passes : Nat)
 variable (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
 variable (hR : GutR R) (hO : GutO O) (hbV : BodenUnter bo V.boden)
+variable (hCall : CallHeld R) (hOracle : OracleHeld O) {slack : Nat := 0}
 variable (L : D.Lock) (residual : L ∉ V.haelt)
-include hR hO hbV residual
+include hCall hOracle hbV residual
 mutual
 theorem stmt : ∀ (s : Stmt D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ),
-    Entry L bo Λ σ → Outcome L σ (execStmt O passes R s σ ρ)
+    Entry (slack := slack) L bo Λ σ → Outcome (slack := slack) L σ (execStmt O passes R s σ ρ)
   | .assignSlot .., σ, ρ, entry => by
     apply Outcome.ok
     exact (storeSlot_held ..).trans (lese_haelt ..)
@@ -51,7 +52,7 @@ theorem stmt : ∀ (s : Stmt D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ),
   | .call f args hp hr, σ, ρ, entry => by
     simp only [execStmt]
     apply Outcome.vor (lese_haelt ..)
-    refine Outcome.call hR hbV f hp (entry.same (lese_haelt ..)) _ _ _ ?_ ?_
+    refine Outcome.call hCall hbV f hp (entry.same (lese_haelt ..)) _ _ _ ?_ ?_
     · intro σ' v en; exact Outcome.ok _ rfl
     · intro σ' r en; exact (keinGrund hr r : False).elim
   | .callInd p args hp hr, σ, ρ, entry => by
@@ -59,7 +60,7 @@ theorem stmt : ∀ (s : Stmt D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ),
     generalize he : eval (σ.lese Λ (p.orte ++ args.orte)) p _ ρ = pointer
     obtain ⟨f, hf⟩ := pointer
     apply Outcome.vor (lese_haelt ..)
-    refine Outcome.call hR hbV f (RufPasst.vonPasst (D.passt_sig hf) hp)
+    refine Outcome.call hCall hbV f (RufPasst.vonPasst (D.passt_sig hf) hp)
       (entry.same (lese_haelt ..)) _ _ _ ?_ ?_
     · intro σ' v en; exact Outcome.ok _ rfl
     · intro σ' r en; exact (keinGrundSig hf hr r : False).elim
@@ -68,7 +69,7 @@ theorem stmt : ∀ (s : Stmt D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ),
     generalize hv : eval (σ.lese Λ (p.orte ++ args.orte)) p _ ρ = pointer
     obtain ⟨f, hf⟩ := pointer
     apply Outcome.vor (lese_haelt ..)
-    refine Outcome.call hR hbV f (RufPasst.vonPasst (D.passt_sig hf) hp)
+    refine Outcome.call hCall hbV f (RufPasst.vonPasst (D.passt_sig hf) hp)
       (entry.same (lese_haelt ..)) _ _ _ ?_ ?_
     · intro σ' v en; exact Outcome.ok _ rfl
     · intro σ' r en
@@ -100,7 +101,7 @@ theorem stmt : ∀ (s : Stmt D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ),
     forever a _ _ (fun σ ρ en => block body σ ρ en) (fun _ _ => lese_haelt ..) passes σ ρ entry
   | .axiomCall a args _ _ _ _ _, σ, ρ, entry => by
     have readHeld := lese_haelt σ Λ args.orte
-    have same := oracle_held O hO a (σ.lese Λ args.orte)
+    have same := oracle_held O hOracle a (σ.lese Λ args.orte)
       (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
     simp only [execStmt]
     apply Outcome.vor readHeld
@@ -111,7 +112,7 @@ theorem stmt : ∀ (s : Stmt D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ),
     · exact Outcome.ok ρ same
   | .axiomCallElse _ a args _ _ _ _ _ err, σ, ρ, entry => by
     have readHeld := lese_haelt σ Λ args.orte
-    have same := oracleElse_held O hO a (σ.lese Λ args.orte)
+    have same := oracleElse_held O hOracle a (σ.lese Λ args.orte)
       (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
     simp only [execStmt]
     apply Outcome.vor readHeld
@@ -141,7 +142,7 @@ theorem stmt : ∀ (s : Stmt D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ),
   | .next _, σ, ρ, entry => by intro σ' equal; cases equal; rfl
 
 theorem block : ∀ (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ),
-    Entry L bo Λ σ → Outcome L σ (execBlock O passes R b σ ρ)
+    Entry (slack := slack) L bo Λ σ → Outcome (slack := slack) L σ (execBlock O passes R b σ ρ)
   | .nil, σ, ρ, entry => Outcome.ok _ rfl
   | .cons s rest, σ, ρ, entry => by
     have result := stmt s σ ρ entry
@@ -159,7 +160,7 @@ theorem block : ∀ (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ),
     ((block rest _ _ (entry.same (lese_haelt ..))).schrumpf).vor (lese_haelt ..)
   | .bindCall f args he hp hr rest, σ, ρ, entry => by
     simp only [execBlock]; apply Outcome.vor (lese_haelt ..)
-    refine Outcome.call hR hbV f hp (entry.same (lese_haelt ..)) _ _ _ ?_ ?_
+    refine Outcome.call hCall hbV f hp (entry.same (lese_haelt ..)) _ _ _ ?_ ?_
     · intro σ' v en; exact (block rest σ' _ (en.nach (D.signatur f))).schrumpf
     · intro σ' r en; exact (keinGrund hr r : False).elim
   | .bindCallInd p args he hp hr rest, σ, ρ, entry => by
@@ -167,13 +168,13 @@ theorem block : ∀ (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ),
     generalize hv : eval (σ.lese Λ (p.orte ++ args.orte)) p _ ρ = pointer
     obtain ⟨f, hf⟩ := pointer
     apply Outcome.vor (lese_haelt ..)
-    refine Outcome.call hR hbV f (RufPasst.vonPasst (D.passt_sig hf) hp)
+    refine Outcome.call hCall hbV f (RufPasst.vonPasst (D.passt_sig hf) hp)
       (entry.same (lese_haelt ..)) _ _ _ ?_ ?_
     · intro σ' v en; exact (block rest σ' _ (en.nach (D.sigNr _))).schrumpf
     · intro σ' r en; exact (keinGrundSig hf hr r : False).elim
   | .bindCallElse f args he hp hr err rest, σ, ρ, entry => by
     simp only [execBlock]; apply Outcome.vor (lese_haelt ..)
-    refine Outcome.call hR hbV f hp (entry.same (lese_haelt ..)) _ _ _ ?_ ?_
+    refine Outcome.call hCall hbV f hp (entry.same (lese_haelt ..)) _ _ _ ?_ ?_
     · intro σ' v en; exact (block rest σ' _ (en.nach (D.signatur f))).schrumpf
     · intro σ' r en; exact ((endBlock err σ' _ (en.nach (D.signatur f))).schrumpf).zuAusgang
   | .bindCallIndElse p args he hp hr err rest, σ, ρ, entry => by
@@ -181,13 +182,13 @@ theorem block : ∀ (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ),
     generalize hv : eval (σ.lese Λ (p.orte ++ args.orte)) p _ ρ = pointer
     obtain ⟨f, hf⟩ := pointer
     apply Outcome.vor (lese_haelt ..)
-    refine Outcome.call hR hbV f (RufPasst.vonPasst (D.passt_sig hf) hp)
+    refine Outcome.call hCall hbV f (RufPasst.vonPasst (D.passt_sig hf) hp)
       (entry.same (lese_haelt ..)) _ _ _ ?_ ?_
     · intro σ' v en; exact (block rest σ' _ (en.nach (D.sigNr _))).schrumpf
     · intro σ' r en; exact ((endBlock err σ' _ (en.nach (D.sigNr _))).schrumpf).zuAusgang
   | .bindAxiom a args he _ _ _ _ rest, σ, ρ, entry => by
     have readHeld := lese_haelt σ Λ args.orte
-    have same := oracle_held O hO a (σ.lese Λ args.orte)
+    have same := oracle_held O hOracle a (σ.lese Λ args.orte)
       (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
     simp only [execBlock]; apply Outcome.vor readHeld
     generalize answerEq : axiomAntwort O a (σ.lese Λ args.orte)
@@ -198,7 +199,7 @@ theorem block : ∀ (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ),
         ((entry.same readHeld).same same)).schrumpf).vor same
   | .bindAxiomElse a args he _ _ _ _ _ err rest, σ, ρ, entry => by
     have readHeld := lese_haelt σ Λ args.orte
-    have same := oracleElse_held O hO a (σ.lese Λ args.orte)
+    have same := oracleElse_held O hOracle a (σ.lese Λ args.orte)
       (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
     simp only [execBlock]; apply Outcome.vor readHeld
     generalize answerEq : axiomAntwortSonst O a (σ.lese Λ args.orte)
@@ -211,7 +212,7 @@ theorem block : ∀ (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ),
         ((entry.same readHeld).same same)).schrumpf).zuAusgang.vor same
   | .bindAxiomOpt e a args he _ _ _ rest, σ, ρ, entry => by
     have readHeld := lese_haelt σ Λ args.orte
-    have same := oracle_held O hO a (σ.lese Λ args.orte)
+    have same := oracle_held O hOracle a (σ.lese Λ args.orte)
       (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
     simp only [execBlock]; apply Outcome.vor readHeld
     generalize answerEq : axiomAntwort O a (σ.lese Λ args.orte)
@@ -222,7 +223,7 @@ theorem block : ∀ (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ),
         (((entry.same readHeld).same same).nach (D.asignatur a))).weiterOpt e).vor same
   | .bindAxiomOptElse e a args he _ _ _ _ err rest, σ, ρ, entry => by
     have readHeld := lese_haelt σ Λ args.orte
-    have same := oracleElse_held O hO a (σ.lese Λ args.orte)
+    have same := oracleElse_held O hOracle a (σ.lese Λ args.orte)
       (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
     simp only [execBlock]; apply Outcome.vor readHeld
     generalize answerEq : axiomAntwortSonst O a (σ.lese Λ args.orte)
@@ -285,7 +286,7 @@ theorem block : ∀ (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ),
     · exact (endBlock sonst _ _ (entry.same (lese_haelt ..))).zuAusgang.vor (lese_haelt ..)
 
 theorem endBlock : ∀ (b : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ),
-    Entry L bo Λ σ → EndOutcome L σ (execEnd O passes R b σ ρ)
+    Entry (slack := slack) L bo Λ σ → EndOutcome (slack := slack) L σ (execEnd O passes R b σ ρ)
   | .ret e balance, σ, ρ, entry => by
     intro σ' equal; cases equal
     exact (entry.same (lese_haelt ..)).exactReturn balance residual
@@ -317,7 +318,7 @@ theorem endBlock : ∀ (b : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ)
     ((endBlock rest _ _ (entry.same (lese_haelt ..))).schrumpf).vor (lese_haelt ..)
   | .bindCall f args he hp hr rest, σ, ρ, entry => by
     simp only [execEnd]; apply EndOutcome.vor (lese_haelt ..)
-    refine EndOutcome.call hR hbV f hp (entry.same (lese_haelt ..)) _ _ _ ?_ ?_
+    refine EndOutcome.call hCall hbV f hp (entry.same (lese_haelt ..)) _ _ _ ?_ ?_
     · intro σ' v en; exact (endBlock rest σ' _ (en.nach (D.signatur f))).schrumpf
     · intro σ' r en; exact (keinGrund hr r : False).elim
   | .bindCallInd p args he hp hr rest, σ, ρ, entry => by
@@ -325,13 +326,13 @@ theorem endBlock : ∀ (b : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ)
     generalize hv : eval (σ.lese Λ (p.orte ++ args.orte)) p _ ρ = pointer
     obtain ⟨f, hf⟩ := pointer
     apply EndOutcome.vor (lese_haelt ..)
-    refine EndOutcome.call hR hbV f (RufPasst.vonPasst (D.passt_sig hf) hp)
+    refine EndOutcome.call hCall hbV f (RufPasst.vonPasst (D.passt_sig hf) hp)
       (entry.same (lese_haelt ..)) _ _ _ ?_ ?_
     · intro σ' v en; exact (endBlock rest σ' _ (en.nach (D.sigNr _))).schrumpf
     · intro σ' r en; exact (keinGrundSig hf hr r : False).elim
   | .bindCallElse f args he hp hr err rest, σ, ρ, entry => by
     simp only [execEnd]; apply EndOutcome.vor (lese_haelt ..)
-    refine EndOutcome.call hR hbV f hp (entry.same (lese_haelt ..)) _ _ _ ?_ ?_
+    refine EndOutcome.call hCall hbV f hp (entry.same (lese_haelt ..)) _ _ _ ?_ ?_
     · intro σ' v en; exact (endBlock rest σ' _ (en.nach (D.signatur f))).schrumpf
     · intro σ' r en; exact (endBlock err σ' _ (en.nach (D.signatur f))).schrumpf
   | .bindCallIndElse p args he hp hr err rest, σ, ρ, entry => by
@@ -339,13 +340,13 @@ theorem endBlock : ∀ (b : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ)
     generalize hv : eval (σ.lese Λ (p.orte ++ args.orte)) p _ ρ = pointer
     obtain ⟨f, hf⟩ := pointer
     apply EndOutcome.vor (lese_haelt ..)
-    refine EndOutcome.call hR hbV f (RufPasst.vonPasst (D.passt_sig hf) hp)
+    refine EndOutcome.call hCall hbV f (RufPasst.vonPasst (D.passt_sig hf) hp)
       (entry.same (lese_haelt ..)) _ _ _ ?_ ?_
     · intro σ' v en; exact (endBlock rest σ' _ (en.nach (D.sigNr _))).schrumpf
     · intro σ' r en; exact (endBlock err σ' _ (en.nach (D.sigNr _))).schrumpf
   | .bindAxiom a args he _ _ _ _ rest, σ, ρ, entry => by
     have readHeld := lese_haelt σ Λ args.orte
-    have same := oracle_held O hO a (σ.lese Λ args.orte)
+    have same := oracle_held O hOracle a (σ.lese Λ args.orte)
       (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
     simp only [execEnd]; apply EndOutcome.vor readHeld
     generalize answerEq : axiomAntwort O a (σ.lese Λ args.orte)
@@ -356,7 +357,7 @@ theorem endBlock : ∀ (b : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ)
         ((entry.same readHeld).same same)).schrumpf).vor same
   | .bindAxiomElse a args he _ _ _ _ _ err rest, σ, ρ, entry => by
     have readHeld := lese_haelt σ Λ args.orte
-    have same := oracleElse_held O hO a (σ.lese Λ args.orte)
+    have same := oracleElse_held O hOracle a (σ.lese Λ args.orte)
       (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
     simp only [execEnd]; apply EndOutcome.vor readHeld
     generalize answerEq : axiomAntwortSonst O a (σ.lese Λ args.orte)
@@ -369,7 +370,7 @@ theorem endBlock : ∀ (b : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ)
         ((entry.same readHeld).same same)).schrumpf).vor same
   | .bindAxiomOpt e a args he _ _ _ rest, σ, ρ, entry => by
     have readHeld := lese_haelt σ Λ args.orte
-    have same := oracle_held O hO a (σ.lese Λ args.orte)
+    have same := oracle_held O hOracle a (σ.lese Λ args.orte)
       (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
     simp only [execEnd]; apply EndOutcome.vor readHeld
     generalize answerEq : axiomAntwort O a (σ.lese Λ args.orte)
@@ -380,7 +381,7 @@ theorem endBlock : ∀ (b : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ)
         (((entry.same readHeld).same same).nach (D.asignatur a))).weiterOpt e).vor same
   | .bindAxiomOptElse e a args he _ _ _ _ err rest, σ, ρ, entry => by
     have readHeld := lese_haelt σ Λ args.orte
-    have same := oracleElse_held O hO a (σ.lese Λ args.orte)
+    have same := oracleElse_held O hOracle a (σ.lese Λ args.orte)
       (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
     simp only [execEnd]; apply EndOutcome.vor readHeld
     generalize answerEq : axiomAntwortSonst O a (σ.lese Λ args.orte)
@@ -443,17 +444,18 @@ theorem endBlock : ∀ (b : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ)
     · exact (endBlock sonst _ _ (entry.same (lese_haelt ..))).vor (lese_haelt ..)
 
 theorem sumArms : ∀ (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))
-    (σ : World D) (ρ : Env D Γ), Entry L bo Λ σ → Outcome L σ (execArms O passes R arms v σ ρ)
+    (σ : World D) (ρ : Env D Γ), Entry (slack := slack) L bo Λ σ → Outcome (slack := slack) L σ (execArms O passes R arms v σ ρ)
   | .cons b _, ⟨⟨0, _⟩, _⟩, σ, _, entry => (block b σ _ entry).schrumpfArm _
   | .cons _ rest, ⟨⟨_ + 1, _⟩, _⟩, σ, ρ, entry => sumArms rest _ σ ρ entry
 
 theorem reasonArms : ∀ (arms : GrundArms D V l Γ Λ Λ' n) (r : Fin n)
-    (σ : World D) (ρ : Env D Γ), Entry L bo Λ σ → Outcome L σ (execGrund O passes R arms r σ ρ)
+    (σ : World D) (ρ : Env D Γ), Entry (slack := slack) L bo Λ σ → Outcome (slack := slack) L σ (execGrund O passes R arms r σ ρ)
   | .cons b _, ⟨0, _⟩, σ, ρ, entry => block b σ ρ entry
   | .cons _ rest, ⟨_ + 1, _⟩, σ, ρ, entry => reasonArms rest _ σ ρ entry
 end
 
-omit residual in
+omit residual hCall hOracle in
+include hR hO in
 /-- The wrapper reuses the body's frame/trace proof, while its actual typed
     return inventory justifies propagating either completed channel unchanged. -/
 theorem locks_gut (rank : ∀ M, Res.held M ∈ Λ → D.rang M < D.rang L)
@@ -466,11 +468,12 @@ theorem locks_gut (rank : ∀ M, Res.held M ∈ Λ → D.rang M < D.rang L)
     intro member
     have impossible := rank L (resid L member)
     exact (Int.lt_irrefl _ impossible)
-  have entry : Entry L bo Λ σ := by
+  have entry : Entry (slack := 0) L bo Λ σ := by
     refine ⟨held, ?_⟩
     rw [List.count_eq_zero.mpr fresh.2]
     exact Nat.zero_le _
-  have inventory := block (O := O) (passes := passes) (R := R) (hR := hR) (hO := hO)
+  have inventory := block (O := O) (passes := passes) (R := R) (slack := 0)
+    (hCall := callHeld_of_gutR hR) (hOracle := oracleHeld_of_gutO hO)
     (hbV := hbV) (L := L) (residual := outside) body (σ.nimmt L) ρ (entry.nimmt (K := L))
   have mapped := GutAusgang.gibt L fresh good
   simp only [execStmt]
@@ -483,6 +486,7 @@ theorem locks_gut (rank : ∀ M, Res.held M ∈ Λ → D.rang M < D.rang L)
     intro σ' equal
     simp only [Ausgang.welt, Option.some.injEq] at equal ⊢
     subst σ'
-    exact gut_nimmt_retV σ σ1 L fresh (inventory σ1 rfl) (good σ1 rfl)
+    have absent : L ∉ σ1.haelt := List.count_eq_zero.mp (Nat.eq_zero_of_le_zero (inventory σ1 rfl))
+    exact gut_nimmt_retV σ σ1 L fresh absent (good σ1 rfl)
 
 end Gabbro.Grammatik.ReturnInventory
