@@ -138,6 +138,8 @@ theorem elabKopf_pointer_coherent {sig : FnSig} {kopf : UFnKopf} {writes : List 
                         else .ok (some (k, w.cases.length))
                     | none => .error ("reason unknown: " ++ r) :
                   Except String (Option (Nat × Nat))) = channel at accepted
+              -- Rewrite the original dispatcher across its elaborated guard instances.
+              erw [channelResult] at accepted
               cases channel with
               | error message => cases accepted
               | ok reason =>
