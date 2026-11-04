@@ -43,6 +43,7 @@ def softAddComposed (a b : UInt64) : UInt64 :=
     | some u, some v => gToU64 (rundeExakt f64 (exaktAdd u v))
     | _, _ => softAdd a b
 
+omit [Runner.IR.Kern] in
 /-- Every well-formed triple re-encodes exactly: the decode/encode roundtrip
     the special path needs. Mirrors the `softAdd_model` argument. -/
 theorem u64ToG_gToU64 (r : GBits f64) (hw : wf f64 r)
@@ -106,6 +107,7 @@ theorem softAddComposed_model (a b : UInt64) :
                   = rundeExakt f64 (exaktAdd u v) := u64ToG_gToU64 _ hwf hlt
               simpa using hd.trans hrw
 
+omit [Runner.IR.Kern] in
 /-- Encoding roundtrip for the finite path: the rounded triple fits back
     into 64 bits. -/
 theorem gToU64_toNat (r : GBits f64) (hw : wf f64 r)

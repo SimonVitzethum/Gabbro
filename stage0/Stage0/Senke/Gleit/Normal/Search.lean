@@ -140,6 +140,7 @@ theorem routineTopAuxL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
 def routineLeadingZerosWord (a : Runner.W) : Runner.W :=
   if a == 0 then 64 else 63 - routineTopWordAux 6 a
 
+omit [Kern] in
 theorem routineLeadingZerosWord_model (av : Runner.W) :
     routineLeadingZerosWord av = BitVec.ofNat 64 (64 - bitlen av.toNat) := by
   by_cases hz : av = 0

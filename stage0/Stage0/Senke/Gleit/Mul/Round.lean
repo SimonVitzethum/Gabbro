@@ -51,6 +51,7 @@ theorem softMulRoundL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
   intro fp K d c top emitted fits m pc pre
   exact result (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
 
+omit [Kern] in
 /-- The shared rounding and packing continuation handles all three exponent
     ranges. Its exponent input is bounded independently of the word modulus. -/
 theorem softMulRoundWord_model (s : Bool) (total n : Nat)

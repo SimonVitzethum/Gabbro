@@ -31,6 +31,7 @@ def softMulProduct (a b : GFloat) : Nat :=
 def softMulExponent (a b : GFloat) : Int :=
   ((max a.bexp 1 : Nat) : Int) + ((max b.bexp 1 : Nat) : Int) - 2150
 
+omit [Runner.IR.Kern] in
 /-- Silence of the dispatcher means both inputs are nonzero and finite. -/
 theorem softMulSpecial_none (a b : GFloat) (h : softMulSpecial a b = none) :
     (klasse f64 a = .normal ∨ klasse f64 a = .subnormal) ∧
@@ -38,6 +39,7 @@ theorem softMulSpecial_none (a b : GFloat) (h : softMulSpecial a b = none) :
   cases ca : klasse f64 a <;> cases cb : klasse f64 b <;>
     simp_all [softMulSpecial]
 
+omit [Runner.IR.Kern] in
 /-- Nonzero finite decoding has a uniform significand and scale. -/
 theorem softMul_operand (a : GFloat)
     (finite : klasse f64 a = .normal ∨ klasse f64 a = .subnormal) :
@@ -69,6 +71,7 @@ def softMulCore (a b : GFloat) : GFloat :=
       ⟨if a.sign != b.sign then -(softMulProduct a b : Int) else softMulProduct a b,
         softMulExponent a b⟩
 
+omit [Runner.IR.Kern] in
 /-- The kernel decomposes into the same special dispatcher and exact product. -/
 theorem softMul_dispatch (a b : GFloat) :
     mul f64 a b = match softMulSpecial a b with
@@ -79,6 +82,7 @@ theorem softMul_dispatch (a b : GFloat) :
   cases ca : klasse f64 a <;> cases cb : klasse f64 b <;>
     simp only [softMulSpecial, mul, ca, cb, show f64.bexpMax = 2047 from rfl] <;> rfl
 
+omit [Runner.IR.Kern] in
 /-- The explicit Nat computation equals kernel multiplication on all triples. -/
 theorem softMulCore_model (a b : GFloat) : softMulCore a b = mul f64 a b := by
   rw [softMul_dispatch]
@@ -101,6 +105,7 @@ theorem softMulCore_model (a b : GFloat) : softMulCore a b = mul f64 a b := by
 def softMul (a b : UInt64) : UInt64 :=
   gToU64 (softMulCore (u64ToG a) (u64ToG b))
 
+omit [Runner.IR.Kern] in
 /-- No word input is excluded, including NaN payloads and signed zeros. -/
 theorem softMul_model (a b : UInt64) :
     u64ToG (softMul a b) = mul f64 (u64ToG a) (u64ToG b) := by
@@ -110,6 +115,7 @@ theorem softMul_model (a b : UInt64) :
   rw [softMulCore_model]
   exact u64ToG_gToU64 _ hw (zuBits_f64_lt _ hw)
 
+omit [Runner.IR.Kern] in
 /-- Canonical output bits, as required by the emitted routine simulation. -/
 theorem softMul_bits (a b : UInt64) :
     (softMul a b).toNat = zuBits f64 (mul f64 (u64ToG a) (u64ToG b)) := by
@@ -119,6 +125,7 @@ theorem softMul_bits (a b : UInt64) :
   rw [softMulCore_model]
   exact gToU64_toNat _ hw (zuBits_f64_lt _ hw)
 
+omit [Runner.IR.Kern] in
 /-- The finite routine computes precisely the untruncated Nat product. -/
 theorem softMul_product (a b : GFloat) (h : softMulSpecial a b = none) :
     softMulCore a b = rundeExakt f64

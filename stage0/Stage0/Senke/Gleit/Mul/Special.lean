@@ -98,10 +98,12 @@ theorem softMulSpecialL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop
   intro fp K d c top emitted fits m pc pre
   exact result (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
 
+omit [Kern] in
 private theorem signXor (a b : Bool) :
     Runner.IR.bool a ^^^ Runner.IR.bool b = Runner.IR.bool (a != b) := by
   cases a <;> cases b <;> rfl
 
+omit [Kern] in
 private theorem specialZeroPack (sign : Bool) :
     packWord (Runner.IR.bool sign) 0 0 =
       BitVec.ofNat 64 (zuBits f64 ⟨sign, 0, 0⟩) :=
@@ -109,6 +111,7 @@ private theorem specialZeroPack (sign : Bool) :
     change 0 ≤ 2047 ∧ 0 < 2 ^ 52
     constructor <;> decide)
 
+omit [Kern] in
 private theorem specialInfPack (sign : Bool) :
     packWord (Runner.IR.bool sign) 2047 0 =
       BitVec.ofNat 64 (zuBits f64 ⟨sign, 2047, 0⟩) :=
@@ -116,6 +119,7 @@ private theorem specialInfPack (sign : Bool) :
     change 2047 ≤ 2047 ∧ 0 < 2 ^ 52
     constructor <;> decide)
 
+omit [Kern] in
 private theorem specialNanPack :
     BitVec.ofNat 64 9218868437227405313 =
       BitVec.ofNat 64 (zuBits f64 (nanQ f64)) := by
@@ -128,6 +132,7 @@ private theorem specialNanPack :
     BitVec.ofNat 64 9218868437227405313 = packWord 0 2047 1 := by decide +kernel
     _ = BitVec.ofNat 64 (zuBits f64 (nanQ f64)) := packed
 
+omit [Kern] in
 /-- Compare only the class decisions; operand encodings remain opaque here. -/
 private theorem specialClass_model (encode : GFloat → Runner.W) (a b : GFloat)
     (finite : Runner.W) :
@@ -147,6 +152,7 @@ private theorem specialClass_model (encode : GFloat → Runner.W) (a b : GFloat)
   unfold softMulSpecial
   cases ca : klasse f64 a <;> cases cb : klasse f64 b <;> rfl
 
+omit [Kern] in
 /-- The dispatcher agrees with the source decomposition for every pair of
     well-formed inputs and every finite continuation supplied by the caller. -/
 theorem softMulSpecialWord_model (a b : GFloat) (ha : wf f64 a) (hb : wf f64 b)

@@ -69,6 +69,7 @@ theorem softKlasse_null (s : Bool) :
     else Klasse.normal) = Klasse.null
   decide
 
+omit [Kern] in
 /-- Zero exponent with nonzero fraction decodes to subnormal. -/
 theorem softKlasse_subnormal (s : Bool) (f : Nat) (hf : f ≠ 0) :
     klasse f64 ⟨s, 0, f⟩ = Klasse.subnormal := by
@@ -81,6 +82,7 @@ theorem softKlasse_subnormal (s : Bool) (f : Nat) (hf : f ≠ 0) :
   rw [hbmax]
   simp [hf]
 
+omit [Kern] in
 /-- Nonzero, non-maximal exponent decodes to normal. -/
 theorem softKlasse_normal (s : Bool) (e f : Nat) (he0 : e ≠ 0) (heM : e ≠ 2047) :
     klasse f64 ⟨s, e, f⟩ = Klasse.normal := by
@@ -99,6 +101,7 @@ theorem softWertExakt_null (s : Bool) :
   unfold wertExakt
   rw [softKlasse_null s]
 
+omit [Kern] in
 /-- The kernel exact value of a subnormal (verbatim kernel form). -/
 theorem softWertExakt_subnormal (s : Bool) (f : Nat) (hf : f ≠ 0) :
     wertExakt f64 ⟨s, 0, f⟩ =
@@ -109,6 +112,7 @@ theorem softWertExakt_subnormal (s : Bool) (f : Nat) (hf : f ≠ 0) :
   unfold wertExakt
   rw [hsg, hfr, softKlasse_subnormal s f hf]
 
+omit [Kern] in
 /-- The kernel exact value of a normal (verbatim kernel form). -/
 theorem softWertExakt_normal (s : Bool) (e f : Nat) (he0 : e ≠ 0) (heM : e ≠ 2047) :
     wertExakt f64 ⟨s, e, f⟩ =

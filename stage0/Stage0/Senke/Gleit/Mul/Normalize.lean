@@ -97,6 +97,7 @@ theorem softMulNormalizeIndexL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem �
     (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
     (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
 
+omit [Kern] in
 /-- The actual shift equals multiplication by the exact power of two;
     its count cannot wrap or shift past the machine-word boundary. -/
 theorem softMulNormalizeWord_model (a : GFloat) (ha : wf f64 a)
