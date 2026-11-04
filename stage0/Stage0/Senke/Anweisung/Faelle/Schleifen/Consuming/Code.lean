@@ -46,7 +46,7 @@ def resolve (whole : List Piece) (pc : Nat) : Piece → Option (List II)
       let destination ← position target whole 0
       pure [ci 19 slot (16 * ((destination : Int) - pc)) 0]
 
-private def encode (whole : List Piece) : List Piece → Nat → Option (List II)
+def encode (whole : List Piece) : List Piece → Nat → Option (List II)
   | [], _ => some []
   | piece :: rest, pc => do
       let instructions ← resolve whole pc piece
@@ -104,8 +104,8 @@ private theorem encode_piece (whole before : List Piece) (piece : Piece)
     (after : List Piece) (start : Nat) (code block : List II)
     (encoded : encode whole (before ++ piece :: after) start = some code)
     (resolved : resolve whole (start + width before) piece = some block) :
-    ∃ prefix suffix : List II,
-      code = prefix ++ block ++ suffix ∧ prefix.length = width before := by
+    ∃ leading suffix : List II,
+      code = leading ++ block ++ suffix ∧ leading.length = width before := by
   induction before generalizing start code with
   | nil =>
     simp only [width, Nat.add_zero] at resolved
@@ -119,8 +119,8 @@ private theorem encode_piece (whole before : List Piece) (piece : Piece)
     obtain ⟨headCode, headResolved, tail, tailCode, rfl⟩ := encoded
     have resolvedTail : resolve whole (start + head.width + width rest) piece = some block := by
       simpa only [width, Nat.add_assoc] using resolved
-    obtain ⟨prefix, suffix, eq, len⟩ := ih _ tail tailCode resolvedTail
-    exact ⟨headCode ++ prefix, suffix,
+    obtain ⟨leading, suffix, eq, len⟩ := ih _ tail tailCode resolvedTail
+    exact ⟨headCode ++ leading, suffix,
       by simp only [eq, List.append_assoc],
       by simp only [List.length_append, resolve_width headResolved, len, width]⟩
 
@@ -130,8 +130,8 @@ theorem assemble_piece (before : List Piece) (piece : Piece) (after : List Piece
     {code block : List II}
     (assembled : assemble (before ++ piece :: after) = some code)
     (resolved : resolve (before ++ piece :: after) (width before) piece = some block) :
-    ∃ prefix suffix : List II,
-      code = prefix ++ block ++ suffix ∧ prefix.length = width before := by
+    ∃ leading suffix : List II,
+      code = leading ++ block ++ suffix ∧ leading.length = width before := by
   unfold assemble at assembled
   simp only [bind, Option.bind_eq_some_iff] at assembled
   obtain ⟨instructions, encoded, accepted⟩ := assembled
@@ -146,8 +146,8 @@ theorem assemble_piece (before : List Piece) (piece : Piece) (after : List Piece
     same extraction used for local branches. -/
 theorem assemble_block (before : List Piece) (block : List II) (after : List Piece)
     {code : List II} (assembled : assemble (before ++ .code block :: after) = some code) :
-    ∃ prefix suffix : List II,
-      code = prefix ++ block ++ suffix ∧ prefix.length = width before :=
+    ∃ leading suffix : List II,
+      code = leading ++ block ++ suffix ∧ leading.length = width before :=
   assemble_piece before (.code block) after assembled rfl
 
 /-- Compare the new measure, preserving it until all three obligations have
