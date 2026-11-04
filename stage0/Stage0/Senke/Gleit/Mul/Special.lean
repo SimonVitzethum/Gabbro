@@ -102,6 +102,47 @@ private theorem signXor (a b : Bool) :
     Runner.IR.bool a ^^^ Runner.IR.bool b = Runner.IR.bool (a != b) := by
   cases a <;> cases b <;> rfl
 
+private theorem specialZeroPack (sign : Bool) :
+    packWord (Runner.IR.bool sign) 0 0 =
+      BitVec.ofNat 64 (zuBits f64 ⟨sign, 0, 0⟩) :=
+  packWord_canonical _ ⟨by decide, by decide⟩
+
+private theorem specialInfPack (sign : Bool) :
+    packWord (Runner.IR.bool sign) 2047 0 =
+      BitVec.ofNat 64 (zuBits f64 ⟨sign, 2047, 0⟩) :=
+  packWord_canonical _ ⟨by decide, by decide⟩
+
+private theorem specialNanPack :
+    BitVec.ofNat 64 9218868437227405313 =
+      BitVec.ofNat 64 (zuBits f64 (nanQ f64)) := by
+  have valid : wf f64 (nanQ f64) := by
+    change 2047 ≤ 2047 ∧ 1 < 2 ^ 52
+    constructor <;> decide
+  have packed := packWord_canonical (nanQ f64) valid
+  change packWord 0 2047 1 = BitVec.ofNat 64 (zuBits f64 (nanQ f64)) at packed
+  calc
+    BitVec.ofNat 64 9218868437227405313 = packWord 0 2047 1 := by decide +kernel
+    _ = BitVec.ofNat 64 (zuBits f64 (nanQ f64)) := packed
+
+/-- Compare only the class decisions; operand encodings remain opaque here. -/
+private theorem specialClass_model (encode : GFloat → Runner.W) (a b : GFloat)
+    (finite : Runner.W) :
+    (if decide (klasse f64 a = .nan) then encode a
+    else if decide (klasse f64 b = .nan) then encode b
+    else if (decide (klasse f64 a = .unendlich) && decide (klasse f64 b = .null)) ||
+        (decide (klasse f64 a = .null) && decide (klasse f64 b = .unendlich)) then
+      encode (nanQ f64)
+    else if decide (klasse f64 a = .unendlich) || decide (klasse f64 b = .unendlich) then
+      encode ⟨a.sign != b.sign, 2047, 0⟩
+    else if decide (klasse f64 a = .null) || decide (klasse f64 b = .null) then
+      encode ⟨a.sign != b.sign, 0, 0⟩
+    else finite) =
+      match softMulSpecial a b with
+      | some r => encode r
+      | none => finite := by
+  unfold softMulSpecial
+  cases ca : klasse f64 a <;> cases cb : klasse f64 b <;> rfl
+
 /-- The dispatcher agrees with the source decomposition for every pair of
     well-formed inputs and every finite continuation supplied by the caller. -/
 theorem softMulSpecialWord_model (a b : GFloat) (ha : wf f64 a) (hb : wf f64 b)
@@ -115,19 +156,10 @@ theorem softMulSpecialWord_model (a b : GFloat) (ha : wf f64 a) (hb : wf f64 b)
   obtain ⟨sb, _, _⟩ := routineUnpack_canonical b hb
   obtain ⟨an, ai, az⟩ := routineClass_canonical a ha
   obtain ⟨bn, bi, bz⟩ := routineClass_canonical b hb
-  have zero : packWord (Runner.IR.bool (a.sign != b.sign)) 0 0 =
-      BitVec.ofNat 64 (zuBits f64 ⟨a.sign != b.sign, 0, 0⟩) :=
-    packWord_canonical _ ⟨by decide, by decide⟩
-  have inf : packWord (Runner.IR.bool (a.sign != b.sign)) 2047 0 =
-      BitVec.ofNat 64 (zuBits f64 ⟨a.sign != b.sign, 2047, 0⟩) :=
-    packWord_canonical _ ⟨by decide, by decide⟩
-  -- Reduce the fixed NaN encoding once, independently of the operand classes.
-  have nan : BitVec.ofNat 64 (zuBits f64 (nanQ f64)) =
-      BitVec.ofNat 64 9218868437227405313 := by
-    decide +kernel
-  simp only [softMulSpecialWord, an, ai, az, bn, bi, bz, sa, sb, signXor, zero, inf]
-  cases ca : klasse f64 a <;> cases cb : klasse f64 b <;>
-    simp [softMulSpecial, ca, cb, nan]
+  refine Eq.trans ?_ (specialClass_model (fun r => BitVec.ofNat 64 (zuBits f64 r)) a b finite)
+  unfold softMulSpecialWord
+  rw [sa, sb, signXor, an, bn, ai, az, bi, bz,
+    specialZeroPack, specialInfPack, specialNanPack]
 
 /-- Invalid operations, NaN priority and the sign of both zero and infinity
     instantiate the same dispatcher, independently of the finite result. -/
