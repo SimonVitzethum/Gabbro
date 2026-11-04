@@ -14,40 +14,36 @@ theorem floatSub_eq_add_neg (a b : GFloat) :
 /-- Flip exactly the sign bit; exponent and payload bits are untouched. -/
 def softNegWord (b : Runner.W) : Runner.W := b ^^^ BitVec.ofNat 64 (2 ^ 63)
 
-private theorem xorHighBit (b : Runner.W) :
-    b ^^^ BitVec.ofNat 64 (2 ^ 63) = b + BitVec.ofNat 64 (2 ^ 63) := by
-  apply BitVec.eq_of_toNat_eq
-  simp only [BitVec.toNat_xor, BitVec.toNat_add, BitVec.toNat_ofNat,
-    Nat.mod_eq_of_lt (by omega : 2 ^ 63 < 2 ^ 64)]
+private theorem xorSignMagnitude (bit magnitude : Nat) (bound : magnitude < 2 ^ bit) :
+    magnitude ^^^ 2 ^ bit = 2 ^ bit + magnitude := by
+  have packed := Nat.two_pow_add_eq_or_of_lt bound 1
+  simp only [Nat.mul_one] at packed
+  rw [packed]
   apply Nat.eq_of_testBit_eq
   intro i
-  rw [Nat.testBit_xor, Nat.testBit_two_pow, Nat.testBit_mod_two_pow]
-  by_cases low : i < 63
-  · rw [Nat.add_comm b.toNat (2 ^ 63), Nat.testBit_two_pow_add_gt low]
-    simp [show 63 ≠ i by omega, show i < 64 by omega]
-  · by_cases top : i = 63
-    · subst i
-      rw [Nat.add_comm b.toNat (2 ^ 63), Nat.testBit_two_pow_add_eq]
-      simp
-    · have high : 64 ≤ i := by omega
-      have outside : b.toNat.testBit i = false :=
-        Nat.testBit_lt_two_pow (lt_of_lt_of_le b.isLt
-          (Nat.pow_le_pow_right Nat.zero_lt_two high))
-      simp [show 63 ≠ i by omega, show ¬i < 64 by omega, outside]
+  rw [Nat.testBit_xor, Nat.testBit_or, Nat.testBit_two_pow]
+  by_cases same : bit = i
+  · subst i
+    simp [Nat.testBit_lt_two_pow bound]
+  · simp [same]
 
 /-- The single xor implements model negation on every well-formed triple. -/
 theorem softNegWord_model (b : GFloat) (hb : wf f64 b) :
     softNegWord (BitVec.ofNat 64 (zuBits f64 b)) =
       BitVec.ofNat 64 (zuBits f64 (neg f64 b)) := by
   have mag := floatMag_lt hb
-  unfold softNegWord
-  rw [xorHighBit]
-  apply BitVec.eq_of_toNat_eq
-  simp only [BitVec.toNat_add, BitVec.toNat_ofNat, float_bits]
-  change (((if b.sign then 2 ^ 63 else 0) + floatMag b) % 2 ^ 64 +
-    2 ^ 63 % 2 ^ 64) % 2 ^ 64 =
-    ((if !b.sign then 2 ^ 63 else 0) + floatMag b) % 2 ^ 64
-  cases b.sign <;> simp only [Bool.not_false, Bool.not_true, Bool.false_eq_true, ↓reduceIte, Nat.zero_add] <;> omega
+  have packed : BitVec.ofNat 64 (2 ^ 63 + floatMag b) =
+      BitVec.ofNat 64 (floatMag b) ^^^ BitVec.ofNat 64 (2 ^ 63) := by
+    rw [← BitVec.ofNat_xor, xorSignMagnitude 63 (floatMag b) mag]
+  simp only [softNegWord, float_bits]
+  change BitVec.ofNat 64 ((if b.sign then 2 ^ 63 else 0) + floatMag b) ^^^
+      BitVec.ofNat 64 (2 ^ 63) =
+    BitVec.ofNat 64 ((if !b.sign then 2 ^ 63 else 0) + floatMag b)
+  cases b.sign
+  · simp only [Bool.not_false, Bool.false_eq_true, ↓reduceIte, Nat.zero_add]
+    exact packed.symm
+  · simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte, Nat.zero_add]
+    rw [packed, BitVec.xor_assoc, BitVec.xor_self, BitVec.xor_zero]
 
 /-- Decoding the flipped input agrees with negation, with no finite premise. -/
 theorem softNeg_model (b : UInt64) :
@@ -58,9 +54,11 @@ theorem softNeg_model (b : UInt64) :
   change BitVec.ofNat 64 (zuBits f64 (u64ToG b)) = b.toBitVec at decoded
   rw [decoded] at model
   have bits := congrArg (fun w : Runner.W => ausBits f64 w.toNat) model
+  have valid : wf f64 (neg f64 (u64ToG b)) :=
+    neg_wf f64 _ (ausBits_f64_wf _)
+  have bound : zuBits f64 (neg f64 (u64ToG b)) < 2 ^ 64 := zuBits_f64_lt _ valid
   rw [BitVec.toNat_ofNat,
-    Nat.mod_eq_of_lt (zuBits_f64_lt _ (neg_wf f64 _ (ausBits_f64_wf _))),
-    ausBits_zuBits f64 f64_dicht _ (neg_wf f64 _ (ausBits_f64_wf _))] at bits
+    Nat.mod_eq_of_lt bound, ausBits_zuBits f64 f64_dicht _ valid] at bits
   change ausBits f64 (UInt64.ofNat (softNegWord b.toBitVec).toNat).toNat = _
   rw [UInt64.toNat_ofNat_of_lt' (show (softNegWord b.toBitVec).toNat < UInt64.size from
     (softNegWord b.toBitVec).isLt)]
