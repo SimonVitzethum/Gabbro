@@ -78,23 +78,39 @@ variable (E : Einbettung D D')
 theorem einpassen_E (z : Int → Option D.Fn) (z' : Int → Option D'.Fn) :
     ∀ (τ : Ty), τ.zeigerfrei = true → ∀ n : Int,
       einpassen z' (E.tyE τ) n = (einpassen z τ n).map (E.valE τ)
-  | .int lo hi, _, n => by by_cases h : lo ≤ n ∧ n ≤ hi <;> (simp only [einpassen, h, dite_true, dite_false, not_false_eq_true]) <;> rfl
+  | .int lo hi, _, n => by
+      dsimp only [tyE, tyN, Ty.mapNumbers]
+      by_cases h : lo ≤ n ∧ n ≤ hi <;>
+        simp only [einpassen, valE, Val.relocate, h, and_self, ↓reduceDIte,
+          Option.map_some, Option.map_none]
   | .bool, _, n => by rfl
   | .opt m, _, n => by
+      dsimp only [tyE, tyN, Ty.mapNumbers]
       by_cases h1 : 0 ≤ n ∧ n ≤ m - 1
-      · simp only [einpassen, h1, dite_true, and_self]; rfl
-      · by_cases h2 : n < 0 <;> (simp only [einpassen, h1, h2, dite_false, ite_true, ite_false, not_false_eq_true]) <;> rfl
+      · simp only [einpassen, valE, Val.relocate, h1, and_self, ↓reduceDIte,
+          Option.map_some]
+      · by_cases h2 : n < 0 <;>
+          simp only [einpassen, valE, Val.relocate, h1, h2, ↓reduceDIte,
+            ↓reduceIte, Option.map_some, Option.map_none]
   | .sum cs, _, n => by
       exact summePasst_relocate E.num E.tnum
         (fun _ v => ⟨E.fn v.1, (E.passt v.1 _).trans v.2⟩) cs n
-  | .why m, _, n => by by_cases h : 0 ≤ n ∧ n < m <;> (simp only [einpassen, h, dite_true, dite_false, not_false_eq_true]) <;> rfl
+  | .why m, _, n => by
+      dsimp only [tyE, tyN, Ty.mapNumbers]
+      by_cases h : 0 ≤ n ∧ n < m <;>
+        simp only [einpassen, valE, Val.relocate, h, and_self, ↓reduceDIte,
+          Option.map_some, Option.map_none]
   | .never, _, n => rfl
   | .fl lo hi, _, n => by
       show gleitWortPasst lo hi n = Option.map _ (gleitWortPasst lo hi n)
       cases gleitWortPasst lo hi n <;> rfl
   | .fnptr _, h, _ => absurd h (by simp only [Ty.zeigerfrei, Bool.false_eq_true, not_false_eq_true])
   | .ptr ⟨space, rights, .table t⟩, _, n => rfl
-  | .ref t, _, n => by by_cases h : 0 ≤ n <;> (simp only [einpassen, h, dite_true, dite_false, not_false_eq_true]) <;> rfl
+  | .ref t, _, n => by
+      dsimp only [tyE, tyN, Ty.mapNumbers]
+      by_cases h : 0 ≤ n <;>
+        simp only [einpassen, valE, Val.relocate, h, ↓reduceIte,
+          Option.map_some, Option.map_none]
   | .arr _ _, _, _ => rfl
   | .str _, _, _ => rfl
   | .prod _ _, _, _ => rfl
