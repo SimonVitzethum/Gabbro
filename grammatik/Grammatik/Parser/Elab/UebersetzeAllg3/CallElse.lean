@@ -22,10 +22,13 @@ def lowAxCallElse {l : Bool} (u : UProg) (caller : Fin u.fns.length)
       | .error error => .error error
       | .ok (handler, .blkEnd :: tail) =>
         .ok (by
-          simpa [nachSig, Deklaration.asignatur] using
-            (Stmt.axiomCallElse (D := declOf u) ((declOf u).aerg k.ax) k.ax k.args rfl
+          simpa [nachSig, Deklaration.asignatur, Signatur.inputMarks, Signatur.outputMarks,
+            OwnerFlow.inputs, OwnerFlow.outputs] using
+            (Stmt.axiomCallElse (D := declOf u) (V := verOf u caller) (l := l) (Γ := Γ) (Λ := Λ)
+              ((declOf u).aerg k.ax) k.ax k.args rfl
               (rufPasstB_ok hp) k.hd k.hgd hr
-              (by simpa [nachSig, Deklaration.asignatur] using handler)), tail)
+              (by simpa [nachSig, Deklaration.asignatur, Signatur.inputMarks,
+                Signatur.outputMarks, OwnerFlow.inputs, OwnerFlow.outputs] using handler)), tail)
       | .ok (_, _) => .error "lower: a call else is not closed"
     else .error "lower: call else needs a fallible axiom callee"
   else .error "foreign call does not conform to caller contract"
@@ -37,8 +40,9 @@ def lowCallElse {l : Bool} (u : UProg) (caller : Fin u.fns.length)
     (pe : AtTop u caller Λ) (name : String) (args : List UArg) (reason : String)
     (rest : List UStmt) :
     Except String ((Σ Λ', Stmt (declOf u) (verOf u caller) l Γ Λ Λ') × List UStmt) :=
-  match (fn.params.find? (fun binding => strEq binding.1 name)).map (·.2) with
-  | some (.fnptr _) => lowCallIndElse u caller R Γ fn Λ pe name args reason rest
+  match (fn.params.find? (fun binding : String × Ty => strEq binding.1 name)).map
+      (fun binding : String × Ty => binding.2) with
+  | some (Ty.fnptr _) => lowCallIndElse u caller R Γ fn Λ pe name args reason rest
   | _ => (lowAxCallElse u caller R Γ fn Λ pe name args reason rest).map fun (st, tail) => (⟨Λ, st⟩, tail)
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg2
