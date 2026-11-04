@@ -194,7 +194,8 @@ def lowDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
                     do
                       let cap ← checkedTableCap u space num h
                       let _ ← checkedPointerParam fn j ⟨space, ⟨true, w, some owner⟩, .table num⟩
-                      pure { range := fh.range,
+                      pure {
+                        range := fh.range
                         term := durchOwnTerm u Γ Λ num w h fh owner m v cap.down i heig he hL }
                   else .error "owned read without owner guard"
                 else .error "access without held guard"
