@@ -24,20 +24,22 @@ def routineFiniteDirectionalWord (large small : Runner.W) : Runner.W :=
 
 def routineFiniteDirectionalL (d : Nat) (large small : Nat → Option (List II × Nat)) :
     Option (List II × Nat) :=
-  let m := fun j => routineDirectionalL j large small
-  let e := fun j => routineIndexL j large
-  let s := fun j => unpackSignL j large
-  let c := fun j => routineLeftCountL j m e
-  let left := fun j => routineRoundPackL j s
-    (fun k => wordL 4 k (e k) (c (k + 1)))
-    (fun k => wordL 11 k (m k) (c (k + 1)))
-  let right := fun j => routineRoundPackL j s
-    (fun k => wordK 3 k (e k) 1)
-    (fun k => floatShiftJamL k m (fun v => some ([ci 1 v 1 0], v + 1)))
-  let normalized := fun j => routineChooseL j
-    (fun k => routineLessL k m (fun v => some (konstWL 4 (2 ^ 56) v))) left right
-  routineChooseL d (fun j => wordK 14 j (m j) 0)
-    (fun j => some ([ci 1 j 0 0], j + 1)) normalized
+  withWordInputsL d [fun j => routineDirectionalL j large small,
+    fun j => routineIndexL j large, fun j => unpackSignL j large] fun retained d =>
+    let m := retained ⟨0, by decide⟩
+    let e := retained ⟨1, by decide⟩
+    let s := retained ⟨2, by decide⟩
+    let c := fun j => routineLeftCountL j m e
+    let left := fun j => routineRoundPackL j s
+      (fun k => wordL 4 k (e k) (c (k + 1)))
+      (fun k => wordL 11 k (m k) (c (k + 1)))
+    let right := fun j => routineRoundPackL j s
+      (fun k => wordK 3 k (e k) 1)
+      (fun k => floatShiftJamL k m (fun v => some ([ci 1 v 1 0], v + 1)))
+    let normalized := fun j => routineChooseL j
+      (fun k => routineLessL k m (fun v => some (konstWL 4 (2 ^ 56) v))) left right
+    routineChooseL d (fun j => wordK 14 j (m j) 0)
+      (fun j => some ([ci 1 j 0 0], j + 1)) normalized
 
 theorem routineFiniteDirectionalL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {large small : Nat → Option (List II × Nat)} {lv sv : Runner.W}
@@ -47,25 +49,44 @@ theorem routineFiniteDirectionalL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Me
   have m : WordCode (L := L) ρ W _ _ := routineDirectionalL_ok hl hs
   have e : WordCode (L := L) ρ W _ _ := routineIndexL_ok hl
   have s : WordCode (L := L) ρ W _ _ := unpackSignL_ok hl
-  have count : WordCode (L := L) ρ W _ _ := routineLeftCountL_word m e
-  have leftE : WordCode (L := L) ρ W _ _ := WordCode.bin e count
-    (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
-  have leftM : WordCode (L := L) ρ W _ _ := WordCode.bin m count
-    (g := fun x y => some (x <<< (y.toNat % 64))) rfl rfl (by decide : 11 < 256)
-  have left : WordCode (L := L) ρ W _ _ := routineRoundPackL_ok s leftE leftM
-  have rightE : WordCode (L := L) ρ W _ _ := WordCode.bin e (WordCode.const 1 (by decide))
-    (g := fun x y => some (x + y)) rfl rfl (by decide : 3 < 256)
-  have rightM : WordCode (L := L) ρ W _ _ := floatShiftJamL_ok m (WordCode.const 1 (by decide))
-  have right : WordCode (L := L) ρ W _ _ := routineRoundPackL_ok s rightE rightM
-  have normalized : WordCode (L := L) ρ W _ _ := routineChooseL_ok
-    (routineLessL_ok m (WordCode.konst (2 ^ 56) (by decide)))
-    (fun _ => left) (fun _ => right)
-  have zero : WordCode (L := L) ρ W _ _ := WordCode.bin m (WordCode.const 0 (by decide))
-    (g := fun x y => some (Runner.IR.bool (x == y))) rfl rfl (by decide : 14 < 256)
-  have result : WordCode (L := L) ρ W _ _ :=
-    routineChooseL_ok zero (fun _ => WordCode.const 0 (by decide)) (fun _ => normalized)
-  intro fp K d c top emitted fits m pc pre
-  exact result (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
+  unfold routineFiniteDirectionalL
+  apply withWordInputsL_ok (values := fun i => match i.val with
+    | 0 => routineDirectionalWord lv sv
+    | 1 => routineIndexWord lv
+    | _ => unpackSignWord lv)
+  · intro ⟨i, hi⟩
+    cases i with
+    | zero => exact m
+    | succ i =>
+      cases i with
+      | zero => exact e
+      | succ i =>
+        have eq : i = 0 := by simp only [List.length_cons, List.length_nil] at hi; omega
+        subst i
+        exact s
+  · intro Δ ρw retained readable
+    have m : WordCode (L := L) ρw (fun _ => True) _ (routineDirectionalWord lv sv) := readable ⟨0, by decide⟩
+    have e : WordCode (L := L) ρw (fun _ => True) _ (routineIndexWord lv) := readable ⟨1, by decide⟩
+    have s : WordCode (L := L) ρw (fun _ => True) _ (unpackSignWord lv) := readable ⟨2, by decide⟩
+    have count : WordCode (L := L) ρw (fun _ => True) _ _ := routineLeftCountL_word m e
+    have leftE : WordCode (L := L) ρw (fun _ => True) _ _ := WordCode.bin e count
+      (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
+    have leftM : WordCode (L := L) ρw (fun _ => True) _ _ := WordCode.bin m count
+      (g := fun x y => some (x <<< (y.toNat % 64))) rfl rfl (by decide : 11 < 256)
+    have left : WordCode (L := L) ρw (fun _ => True) _ _ := routineRoundPackL_ok s leftE leftM
+    have rightE : WordCode (L := L) ρw (fun _ => True) _ _ := WordCode.bin e (WordCode.const 1 (by decide))
+      (g := fun x y => some (x + y)) rfl rfl (by decide : 3 < 256)
+    have rightM : WordCode (L := L) ρw (fun _ => True) _ _ := floatShiftJamL_ok m (WordCode.const 1 (by decide))
+    have right : WordCode (L := L) ρw (fun _ => True) _ _ := routineRoundPackL_ok s rightE rightM
+    have normalized : WordCode (L := L) ρw (fun _ => True) _ _ := routineChooseL_ok
+      (routineLessL_ok m (WordCode.konst (2 ^ 56) (by decide)))
+      (fun _ => left) (fun _ => right)
+    have zero : WordCode (L := L) ρw (fun _ => True) _ _ := WordCode.bin m (WordCode.const 0 (by decide))
+      (g := fun x y => some (Runner.IR.bool (x == y))) rfl rfl (by decide : 14 < 256)
+    have result : WordCode (L := L) ρw (fun _ => True) _ _ :=
+      routineChooseL_ok zero (fun _ => WordCode.const 0 (by decide)) (fun _ => normalized)
+    intro fp K d c top emitted fits mem pc pre
+    exact result (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits mem pc pre
 
 def routineFiniteWord (a b : Runner.W) : Runner.W :=
   if (routineMagnitudeWord a).ult (routineMagnitudeWord b) then
