@@ -24,11 +24,10 @@ private theorem components_roundtrip (F : Format) (b : BitVec F.numBits) :
   · rename_i hm
     split
     · have e : F.mantissaBitsWithoutImplicit + (i - F.mantissaBitsWithoutImplicit) = i := by omega
-      simpa only [e] using (BitVec.getLsbD_eq_getElem (x := b) (i := i) hi).symm
-    · have e : F.mantissaBitsWithoutImplicit + F.exponentBits +
-          (i - F.mantissaBitsWithoutImplicit - F.exponentBits) = i := by omega
-      simpa only [e, Nat.add_assoc, Nat.sub_sub] using
-        (BitVec.getLsbD_eq_getElem (x := b) (i := i) hi).symm
+      simpa only [e] using (BitVec.getLsbD_eq_getElem (x := b) (i := i) hi)
+    · have e : F.mantissaBitsWithoutImplicit + (F.exponentBits +
+          (i - (F.mantissaBitsWithoutImplicit + F.exponentBits))) = i := by omega
+      simpa only [e] using (BitVec.getLsbD_eq_getElem (x := b) (i := i) hi)
 
 /-- The toolchain pack/unpack boundary is an inverse on its own valid words.
     This proves storage transport only; it defines no arithmetic or rounding. -/
@@ -43,10 +42,14 @@ theorem pack_unpack (F : Format) (b : BitVec F.numBits) (valid : F.Valid b) :
   have mb : m.toNat < 2 ^ F.mantissaBitsWithoutImplicit := m.isLt
   have expRoom : 4 ≤ 2 ^ F.exponentBits :=
     Nat.pow_le_pow_right (by decide : 0 < 2) F.he
+  have zeroNotMax : (0#F.exponentBits) ≠ -1#F.exponentBits := by
+    intro h
+    have := BitVec.zero_eq_neg_one_iff.mp h
+    omega
   by_cases heMax : e = -1#_
   · by_cases hm : m = 0#_
     · simpa only [UnpackedFloat.unpack, e, m, s, heMax, hm, ↓reduceIte,
-        UnpackedFloat.pack, packedInfinity] using reassemble
+        UnpackedFloat.pack, packedInfinity, BitVec.ofNat_eq_ofNat] using reassemble
     · have canonical : b = packedNaN F := valid.eq_packedNaN heMax hm
       simpa only [UnpackedFloat.unpack, e, m, s, heMax, hm, ↓reduceIte,
         UnpackedFloat.pack] using canonical.symm
@@ -58,7 +61,7 @@ theorem pack_unpack (F : Format) (b : BitVec F.numBits) (valid : F.Valid b) :
     by_cases heZero : e = 0#_
     · by_cases hm : m = 0#_
       · simpa only [UnpackedFloat.unpack, e, m, s, heMax, heZero, hm, ↓reduceIte,
-          UnpackedFloat.pack, packedZero] using reassemble
+          zeroNotMax, UnpackedFloat.pack, packedZero, BitVec.ofNat_eq_ofNat] using reassemble
       · have positive : m.toNat ≠ 0 := by
           intro h
           apply hm
@@ -67,7 +70,8 @@ theorem pack_unpack (F : Format) (b : BitVec F.numBits) (valid : F.Valid b) :
         have smallLog : m.toNat.log2 < F.mantissaBitsWithoutImplicit := (Nat.log2_lt positive).mpr mb
         have exponent : ((0 : Int) - (F.exponentBias + F.mantissaBitsWithoutImplicit) + 1 +
             F.exponentBias + F.mantissaBitsWithoutImplicit).toNat = 1 := by omega
-        simpa only [UnpackedFloat.unpack, e, m, s, heMax, heZero, hm, ↓reduceIte, UnpackedFloat.pack,
+        simpa only [UnpackedFloat.unpack, e, m, s, heMax, heZero, hm, zeroNotMax,
+          ↓reduceIte, UnpackedFloat.pack,
           BitVec.toNat_zero, exponent, show ¬ 2 ^ F.exponentBits ≤ 1 + 1 by omega,
           show m.toNat.log2 + 1 ≠ F.mantissaBits by unfold Format.mantissaBits; omega,
           BitVec.ofNat_toNat, BitVec.setWidth_eq] using reassemble
@@ -93,7 +97,7 @@ theorem pack_unpack (F : Format) (b : BitVec F.numBits) (valid : F.Valid b) :
           Nat.zero_add, Nat.mod_eq_of_lt mb]
       simpa only [UnpackedFloat.unpack, e, m, s, heMax, heZero, ↓reduceIte, UnpackedFloat.pack, exponent,
         show ¬ 2 ^ F.exponentBits ≤ e.toNat + 1 by omega,
-        log, Format.mantissaBits, ↓reduceIte, mantissa,
+        log, Format.mantissaBits, Nat.add_comm, ↓reduceIte, mantissa,
         BitVec.ofNat_toNat, BitVec.setWidth_eq] using reassemble
 
 /-- Complete native binary64 values survive their canonical word encoding. -/

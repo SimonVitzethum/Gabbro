@@ -16,72 +16,30 @@ private theorem lexLE (a b : Int) (m n : Nat) :
 
 private theorem unpacked_le_trans (a b c : UnpackedFloat)
     (ab : a.le b = true) (bc : b.le c = true) : a.le c = true := by
-  cases a with
-  | infinity s => cases s
-  | notANumber => skip
-  | zero s => cases s
-  | finite s _ _ _ => cases s
-  all_goals cases b with
-    | infinity s => cases s
-    | notANumber => skip
-    | zero s => cases s
-    | finite s _ _ _ => cases s
-  all_goals cases c with
-    | infinity s => cases s
-    | notANumber => skip
-    | zero s => cases s
-    | finite s _ _ _ => cases s
+  cases a <;> cases b <;> cases c <;>
+    repeat' cases (show Sign from by assumption)
   all_goals simp_all [UnpackedFloat.le, UnpackedFloat.compare, Option.any,
     Ordering.swap_then, Int.compare_swap, Nat.compare_swap, lexLE]
   all_goals omega
 
 private theorem unpacked_le_refl (a : UnpackedFloat) (ha : a.isFinite = true) : a.le a = true := by
-  cases a with
-  | infinity s => cases s
-  | notANumber => skip
-  | zero s => cases s
-  | finite s _ _ _ => cases s
+  cases a <;>
+    repeat' cases (show Sign from by assumption)
   all_goals simp_all [UnpackedFloat.isFinite, UnpackedFloat.le,
     UnpackedFloat.compare, Ordering.swap_then, Int.compare_swap, Nat.compare_swap, lexLE]
 
 private theorem unpacked_lower (a x y : UnpackedFloat)
     (ha : a.isFinite = false) (hx : x.isFinite = true) (hy : y.isFinite = true)
     (ax : a.le x = true) : a.le y = true := by
-  cases a with
-  | infinity s => cases s
-  | notANumber => skip
-  | zero s => cases s
-  | finite s _ _ _ => cases s
-  all_goals cases x with
-    | infinity s => cases s
-    | notANumber => skip
-    | zero s => cases s
-    | finite s _ _ _ => cases s
-  all_goals cases y with
-    | infinity s => cases s
-    | notANumber => skip
-    | zero s => cases s
-    | finite s _ _ _ => cases s
+  cases a <;> cases x <;> cases y <;>
+    repeat' cases (show Sign from by assumption)
   all_goals simp_all [UnpackedFloat.isFinite, UnpackedFloat.le, UnpackedFloat.compare]
 
 private theorem unpacked_upper (a x y : UnpackedFloat)
     (ha : a.isFinite = false) (hx : x.isFinite = true) (hy : y.isFinite = true)
     (xa : x.le a = true) : y.le a = true := by
-  cases a with
-  | infinity s => cases s
-  | notANumber => skip
-  | zero s => cases s
-  | finite s _ _ _ => cases s
-  all_goals cases x with
-    | infinity s => cases s
-    | notANumber => skip
-    | zero s => cases s
-    | finite s _ _ _ => cases s
-  all_goals cases y with
-    | infinity s => cases s
-    | notANumber => skip
-    | zero s => cases s
-    | finite s _ _ _ => cases s
+  cases a <;> cases x <;> cases y <;>
+    repeat' cases (show Sign from by assumption)
   all_goals simp_all [UnpackedFloat.isFinite, UnpackedFloat.le, UnpackedFloat.compare]
 
 /-- The native ordered comparison is transitive, including infinite endpoints. -/
