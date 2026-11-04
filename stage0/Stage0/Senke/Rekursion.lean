@@ -212,8 +212,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O]
             (σ'.lese (vertragVon D f).ende (P.ensures f).orte)
             (ergEnv (D.erg f) v ρ)) = false
         · simp only [failed, if_true] at result ⊢
-          have stopped : Stops _ _ 102 := by simpa using result
-          exact Stops.prefix entryPrefix stopped
+          exact Stops.prefix entryPrefix (by simpa [logikCode] using result)
         · simp only [failed, if_false] at result ⊢
           unfold owedFailure owedWorld at result
           cases inv : D.invs.find? (fun i => schuldet f i &&
@@ -227,8 +226,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O]
                   (σ'.lese (vertragVon D f).ende (P.ensures f).orte)) .nil)) with
           | some i =>
             simp only [inv] at result ⊢
-            have stopped : Stops _ _ 103 := by simpa using result
-            exact Stops.prefix entryPrefix stopped
+            exact Stops.prefix entryPrefix (by simpa [logikCode] using result)
           | none =>
             simp only [inv] at result ⊢
             simp at result
