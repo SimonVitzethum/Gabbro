@@ -73,28 +73,24 @@ def Corr (y0 : X) : Res IR.T → Res X → Prop
 /-- After an answer, an instruction is done: it never asks twice. -/
 theorem exec_once (i : Ins) (n : Nat) (x : X) {o : Op} {k : Ans → Res X} (h : exec i n x = .ask o k) (a : Ans) :
     k a = .fault ∨ ∃ y, k a = .next y := by
-  cases i <;> simp only [exec, rd64, rd32, rd8, wr64, cas, Runner.fp] at h
+  cases a <;> cases i <;> simp only [exec, rd64, rd32, rd8, wr64, cas, Runner.fp] at h
   all_goals first
-    | (cases h; cases a <;> simp only [opt] <;> first
-        | exact Or.inl rfl
-        | exact Or.inr ⟨_, rfl⟩
-        | (split <;> first | exact Or.inl rfl | exact Or.inr ⟨_, rfl⟩))
-    | (split at h <;> cases h <;> cases a <;> simp only [opt] <;> first
-        | exact Or.inl rfl
-        | exact Or.inr ⟨_, rfl⟩)
+    | (cases h; simp [opt])
+    | (cases h; simp only [opt]; split <;> simp)
+    | (split at h <;> cases h <;> simp [opt])
     | (split at h <;> cases h)
     | (split at h; cases h; split at h <;> cases h)
     | (simp only [opt] at h; split at h <;> cases h)
     | cases h
 
-theorem straight_go {L : Lay} {y0 : X} (htb : y0.r14 = L.T) :
+theorem straight_go {L : Lay} {y0 : X} (htb : y0.r14 = L.T) (hmode : y0.fpReady = true) :
     ∀ (is : List Ins) (x : X) (r : Res IR.T), (∀ i ∈ is, Fall i = true) →
     Code L.C x.rip (is ++ dispatch) → Corr y0 r (runL is x) → Match L r x
   | [], x, r, _, hc, hco => by
     cases r with
     | next t =>
-      obtain ⟨h1, h2, h3⟩ := hco
-      exact .disp ⟨hc, h1, h2, h3.trans htb⟩
+      obtain ⟨h1, h2, h3, hm⟩ := hco
+      exact .disp ⟨hc, h1, h2, h3.trans htb, hm.trans hmode⟩
     | _ => simp [runL, Corr] at hco
   | i :: is, x, r, hf, hc, hco => by
     have hs := step_code hc

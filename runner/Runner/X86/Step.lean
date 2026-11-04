@@ -46,6 +46,9 @@ structure X where
   xmm : Xmm → BitVec 128 := fun _ => 0
   mxcsr : BitVec 32 := 0
   pf : Option Bool := none
+  /-- The implementation-defined writable MXCSR_MASK bit 6. Both CPU variants
+      are modeled; the runner always loads DAZ=0 and needs no capability premise. -/
+  dazSupported : Bool := false
 
 namespace X
 
@@ -220,7 +223,9 @@ def exec (i : Ins) (n : Nat) (x : X) : Res X :=
   | .pxor d s => .next (y.setXmm d (x.xmm d ^^^ x.xmm s))
   | .ldmxcsr m =>
     rd32 (ea x m) fun value =>
-      if value.toNat < 65536 then .next { y with mxcsr := value } else .fault
+      if value.toNat < 65536 ∧ (value.getLsbD 6 = false ∨ x.dazSupported = true) then
+        .next { y with mxcsr := value }
+      else .fault
   | .ucomis format d s =>
     if x.fpReady then
       Runner.fp (.compare format) (x.xmmWord format d) (x.xmmWord format s) fun flags =>
