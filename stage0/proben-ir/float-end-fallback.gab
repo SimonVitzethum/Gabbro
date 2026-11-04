@@ -1,0 +1,13 @@
+// Source-to-IR regression: expected exit 41 from the actual float range fallback.
+// Computed conversion gives 9, exact IEEE addition gives 10; finite passes, 0..5 fails.
+module float_end_fallback {
+impl fn main() -> u8 in 0 .. 100 effects { pure } {
+    let n : u8 in 0 .. 100 = 8 + 1;
+    let converted : f64 in -10 .. 10 = f64(n);
+    let unitValue : f64 in -10 .. 10 = 1.0;
+    let total : f64 in -20 .. 20 = converted + unitValue;
+    narrow total to finite else { return 41; }
+    narrow total to 0 .. 5 else { return 41; }
+    return 7;
+}
+}

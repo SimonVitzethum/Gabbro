@@ -1,0 +1,13 @@
+// Source-to-IR regression: all four ending float binders, expected exit 7.
+// Computed conversion gives 2, the exact IEEE addition gives 3; both narrows pass.
+module float_end_inside {
+impl fn main() -> u8 in 0 .. 100 effects { pure } {
+    let n : u8 in 0 .. 100 = 1 + 1;
+    let converted : f64 in -10 .. 10 = f64(n);
+    let unitValue : f64 in -10 .. 10 = 1.0;
+    let total : f64 in -20 .. 20 = converted + unitValue;
+    narrow total to finite else { return 41; }
+    narrow total to 0 .. 5 else { return 41; }
+    return 7;
+}
+}

@@ -29,7 +29,7 @@ def generatedName (name : String) : Bool :=
     Nominal constructors are supplied from the unit's type declarations. The ordinary checker
     still checks their arity, operand types, contracts and legality. -/
 def builtinName (name : String) : Bool :=
-  ["Held", "Some", "None"].contains name || istIntWort name || istZuckerBreite name ||
+  ["Held", "Some", "None", "f32", "f64"].contains name || istIntWort name || istZuckerBreite name ||
     (Uebersetze.uBitEin name).isSome || (Uebersetze.uRotEin name).isSome
 
 structure Scope where

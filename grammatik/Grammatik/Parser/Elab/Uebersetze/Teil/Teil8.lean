@@ -6,48 +6,13 @@ public import Grammatik.Parser.Elab.Export.ExportMetadata
 import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
-public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil7
+public import Grammatik.Parser.Elab.Uebersetze.LoopHeaders
 public import Grammatik.Parser.Elab.Uebersetze.Records.Records
 
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
-
-/-- The header of a `retry`: the label, the pass bound, the predicate, the handler. `progress` must name an
-    `assume` item. -/
-def uRetryKopf (ctx : UCtx) (h : String) : Except String (String × Nat × UEns × String) :=
-  match uSchleifenKopf2 h with
-  | .error e => .error e
-  | .ok secs =>
-    match uAbschnitt secs "until", uOpsZahl ctx (uAbschnitt secs "bounded"), uEinName (uAbschnitt secs "progress"),
-        uEinName (uAbschnitt secs "on_exceeded") with
-    | some pt, some n, some a, some y =>
-      if !(ctx.annahmen.any (strEq · a)) then .error ("assumption unknown: " ++ a)
-      else
-        match parseTop (pt ++ [Token.ende]) with
-        | .error _ => .error "retry condition without G form"
-        | .ok p =>
-          match uBool ctx p with
-          | .error e => .error e
-          | .ok pv => .ok ((match uAbschnitt secs "" with | some [.ident l] => l | some [.wort l] => l | _ => ""), n, pv, y)
-    | none, _, _, _ => .error "retry without until without G form"
-    | _, _, _, _ => .error "retry header without G form"
-
-/-- The header of a `forever`: the label and the position of the assumption `progress` names. -/
-def uForeverKopf (ctx : UCtx) (h : String) : Except String (String × Nat) :=
-  match uSchleifenKopf2 h with
-  | .error e => .error e
-  | .ok secs =>
-    match uAbschnitt secs "leaves" with
-    | some _ => .error "forever leaves without G form"
-    | none =>
-      match uEinName (uAbschnitt secs "progress") with
-      | none => .error "forever without progress without G form"
-      | some a =>
-        match ctx.annahmen.findIdx? (fun x => strEq x a) with
-        | none => .error ("assumption unknown: " ++ a)
-        | some k => .ok ((match uAbschnitt secs "" with | some [.ident l] => l | some [.wort l] => l | _ => ""), k)
 
 /-- The value of a bound of a narrowed range: a numeral, a negated numeral or a named constant. -/
 def uNarrowWert (ctx : UCtx) : List Token → Option Int
@@ -83,8 +48,8 @@ def uNarrowBereich (ctx : UCtx) (t : String) : Except String (Int × Int) :=
       | _ => .error "narrow range without G form"
 
 /-- The binding the rest of the block reads after a narrowing: `x` at the narrowed range.
-    The existing `narrowBeg` carries integral bounds; `finite` on a float uses the
-    exact integral endpoints of binary64. Fractional float ranges remain refused. -/
+    The existing `narrowBeg` carries integral bounds, embedded exactly as float rationals;
+    `finite` uses binary64's extreme endpoints. Fractional float ranges remain refused. -/
 def uNarrowKopf (ctx : UCtx) (x : String) (t : String) : Except String (Int × Int × UCtx) :=
   match uParamNr ctx x with
   | .error e => .error e
@@ -94,7 +59,10 @@ def uNarrowKopf (ctx : UCtx) (x : String) (t : String) : Except String (Int × I
       if strEq t "finite" then
         .ok (-uFloatLimit, uFloatLimit,
           uMitLokal ctx x .wert uFloatTy (ctx.muts.filter (fun m => !strEq m x)))
-      else .error "float narrow: only finite has a source export"
+      else do
+        let (lo, hi) ← uNarrowBereich ctx t
+        pure (lo, hi, uMitLokal ctx x .wert (.fl (lo, 1) (hi, 1))
+          (ctx.muts.filter (fun m => !strEq m x)))
     | .ok .int, _ =>
       match uNarrowBereich ctx t with
       | .error e => .error e
@@ -188,10 +156,41 @@ def uBindWertAllg (ctx : UCtx) (mu : Bool) (x : String) (t : Option STyp) (e : S
           else .ok (.bind x d sd, { ctx' with muts := muts })
 
 /-- `let [mut] x [: T] = v;` where `v` may be a call of a function of the unit: its value is bound at the
-    callee's result type (`Block.bindCall`; a range annotation must contain the result range). -/
+    callee's result type (`Block.bindCall`; a range annotation must contain the result range).
+    Float introductions retain the canonical finite/range checks at their declared target. -/
 def uBindWert (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (mu : Bool) (x : String)
     (t : Option STyp) (e : SExpr) : Except String (UStmt × UCtx) :=
+  let floatTarget : Except String ((Int × Int) × (Int × Int) × UCtx) := do
+    let target ← match t with
+      | some annotation => uTypIn ctx.alias ctx.tabs ctx.namedTypes ctx.spaces ctx.eigner annotation
+      | none => pure uFloatTy
+    let .fl lo hi := target | throw "float: target is not a declared float type"
+    let muts := if mu then x :: ctx.muts else ctx.muts.filter (fun name => !strEq name x)
+    pure (lo, hi, uMitLokal ctx x .wert (.fl lo hi) muts)
+  -- Only atomic, canonically typed float operands select IEEE arithmetic here.
+  -- This binder does not recursively hoist nested float arithmetic.
+  let floatBinary : Option (Except String (UStmt × UCtx)) := do
+    let .bin operator a b := e | none
+    let op ← match operator with
+      | "+" => some GleitOp.add | "-" => some GleitOp.sub
+      | "*" => some GleitOp.mul | "/" => some GleitOp.div
+      | _ => none
+    let left ← (uWertBody ctx a).toOption
+    let right ← (uWertBody ctx b).toOption
+    match uValueType ctx left, uValueType ctx right with
+    | some (.fl ..), some (.fl ..) =>
+      some (do
+        let (lo, hi, next) ← floatTarget
+        pure (.float x op left right lo hi, next))
+    | _, _ => none
+  match floatBinary with
+  | some result => result
+  | none =>
   match e with
+  | source@(.float _) | source@(.un "-" (.float _)) | source@(.un "-()" (.float _)) => do
+    let rational ← uFloatBound ctx.alias source
+    let (lo, hi, next) ← floatTarget
+    pure (.floatLit x rational lo hi, next)
   | .call "f32" args | .call "f64" args => do
     let [operand] := args | throw "floatOf: expected one integer operand"
     let target ← match t with
@@ -429,41 +428,5 @@ def uEndeStmt (ctx : UCtx) : Option SEnde → Except String (List UStmt)
     else if ctx.loops.head? == some m then .ok [UStmt.next m]
     else .error "next outside the innermost loop"
 
-/-- The header of `traverse b over slots of S by unvisited [touches …] [invariant p]`: the table (named
-    directly or through a pointer parameter), the invariant over the OUTER context (the binder is not in
-    scope there), and the context of the body, where the binder is an index into the table and the
-    innermost loop label. Other domains, `of e` and `by consuming` have no G form. -/
-def uSchleifenKopf (ctx : UCtx) (b : String) (o : Option SExpr) (k : String) (s : SExpr) (m : String)
-    (inv : Option SExpr) : Except String (String × UEns × UCtx) :=
-  if o.isSome then .error "traverse of without G form"
-  else if !strEq k "slots" then .error "traverse domain without G form"
-  else if !strEq m "unvisited" then .error "traverse by consuming without G form"
-  else
-    match (match s with
-        | .variable tn =>
-          match ctx.tabs.findIdx? (fun x => strEq x.name tn) with
-          | .some num => .ok (tn, num)
-          | .none =>
-            match uParamNr ctx tn with
-            | .error e => .error e
-            | .ok j =>
-              match uArtBei ctx.kinds j with
-              | .ok (.ptr ⟨_, _, .table num⟩) =>
-                match ctx.tabs[num]? with
-                | .some tb => .ok (tb.name, num)
-                | .none => .error "pointer table unknown"
-              | _ => .error "traverse domain without G form"
-        | _ => .error "traverse domain without G form" : Except String (String × Nat)) with
-    | .error e => .error e
-    | .ok (tab, num) =>
-      match (match inv with
-          | .none => .ok UEns.tru
-          | .some p => uBool ctx p : Except String UEns) with
-      | .error e => .error e
-      | .ok iv =>
-        let cnt : Int := match ctx.tabs[num]? with | .some tb => tb.count | .none => 0
-        .ok (tab, iv, { ctx with names := b :: ctx.names, kinds := .index num :: ctx.kinds,
-                                 types := .index cnt :: ctx.types, bits := 0 :: ctx.bits,
-                                 loops := b :: ctx.loops })
 
 end Gabbro.Grammatik.Parser.Uebersetze

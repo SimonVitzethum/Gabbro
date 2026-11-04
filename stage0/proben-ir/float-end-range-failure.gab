@@ -1,0 +1,13 @@
+// Source-to-IR regression: expected exit 107 at the canonical conversion range guard.
+// The computed integer 21 is outside -10..10; no float narrowing fallback is entered.
+module float_end_range_failure {
+impl fn main() -> u8 in 0 .. 100 effects { pure } {
+    let n : u8 in 0 .. 100 = 20 + 1;
+    let converted : f64 in -10 .. 10 = f64(n);
+    let unitValue : f64 in -10 .. 10 = 1.0;
+    let total : f64 in -20 .. 20 = converted + unitValue;
+    narrow total to finite else { return 41; }
+    narrow total to 0 .. 5 else { return 41; }
+    return 7;
+}
+}
