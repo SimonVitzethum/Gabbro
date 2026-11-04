@@ -62,7 +62,7 @@ theorem areaElse_ok {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D)}
       codeFar_sub2 next1.left.far (by omega), next1.env, trivial, wstab_true _ _⟩
   have dispatch := fehlC_ok binding.fehler
     (16 * ((areaReceive τ (frei Γ reserved)).length + success.length)) m1 _ short errors
-      (by omega) (by simp only [Int.natCast_add, Int.natCast_mul]; omega) (by omega) input
+      (by omega) (by exact_mod_cast jump) (by omega) input
   have decode : ∀ result, foreignDecode O a
       (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).2 = result →
       axiomAntwortSonst O a σ (evalArgs σ args σ ρ) =
@@ -82,8 +82,7 @@ theorem areaElse_ok {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D)}
       intro entry member
       simp only [fehlGut, List.all_eq_true, Bool.and_eq_true, decide_eq_true_eq] at errors
       have valid := errors entry member
-      change (entry.1 == (0 : Int)) = false
-      simp only [beq_eq_false_iff_ne]
+      simp only [show (0 : Runner.W).toInt = (0 : Int) from rfl, beq_iff_eq]
       omega
     rw [missing] at dispatch
     obtain ⟨m2, run2, change2⟩ := dispatch
@@ -116,7 +115,7 @@ theorem areaElse_ok {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D)}
         ((Agree.widen change2 enough).mono (Nat.zero_le _))⟩)
     rw [adr_int, show ((16 * request.length : Nat) : Int) +
       (16 * (6 * (binding.fehler.length : Int)) +
-        ((16 * ((areaReceive τ (frei Γ reserved)).length + success.length) : Nat) : Int)) =
+        16 * (((areaReceive τ (frei Γ reserved)).length : Int) + (success.length : Int))) =
       ((16 * (request.length + 6 * binding.fehler.length +
         (areaReceive τ (frei Γ reserved)).length + success.length) : Nat) : Int) by
         simp only [Int.natCast_add, Int.natCast_mul]; omega, BitVec.ofInt_natCast]
