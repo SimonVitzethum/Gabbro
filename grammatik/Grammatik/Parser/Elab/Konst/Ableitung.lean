@@ -72,7 +72,7 @@ inductive ConstSourceEnd (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} �
       {rest : List SAnw} {ending : Option SEnde} {body : Endblock c.D V l Γ []}
       (value : ConstSourceExpr c locals source e)
       (arms : ConstSourceTagArms c (V := V) (l := l) locals sources branches)
-      (sumInfo : USum)
+      (sumInfo : Uebersetze.USum Ty)
       (shape : sumInfo.spec = cs)
       (indices : ∀ i arm, sources[i]? = some arm →
         ∃ label binder armBody, arm = .arm label binder armBody ∧
@@ -129,7 +129,7 @@ inductive ConstSourceEnd (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} �
       (resourceEq : nach c.D f [] = [])
       (tail : ConstSourceEnd c locals (.block rest ending) body) :
       ConstSourceEnd c locals (.block (.call name sources :: rest) ending)
-        (.cons (resourceEq ▸ Stmt.call c.D V f args hp hr) body)
+        (.cons (resourceEq ▸ Stmt.call (D := c.D) (V := V) (l := l) f args hp hr) body)
 
  theorem ConstSourceEnd.rein (h : ConstSourceEnd c locals source body) :
     ConstEnd c body := by
@@ -178,8 +178,8 @@ inductive ConstSourceClauses (c : ConstProgram) (entry : ConstLocals Γ)
     (exitLocals : ConstLocals Δ) :
     List SKlausel → Expr c.D Γ [] .bool → Expr c.D Δ [] .bool → Prop where
   | empty : ConstSourceClauses c entry exitLocals [] .tru .tru
-  | predicates (pre : ConstSourceExpr c entry sourcePre pre)
-      (post : ConstSourceExpr c exitLocals sourcePost post) :
+  | predicates (preProof : ConstSourceExpr c entry sourcePre pre)
+      (postProof : ConstSourceExpr c exitLocals sourcePost post) :
       ConstSourceClauses c entry exitLocals
         [.needs sourcePre, .gives sourcePost] pre post
 
@@ -195,7 +195,7 @@ inductive ConstElaborates (items : List SItemTief) :
       (result : sig.res = some (.atom "bool")) (typedResult : c.D.erg f = some .bool)
       (reasons : sig.fehler = none) (clauses : sig.klauseln = [])
       (resolved : (sig.name, c.sourceId f) ∈ scope.declarations)
-      (requires : c.emptyEntry f ▸ c.P.requires f = .tru)
+      («requires» : c.emptyEntry f ▸ c.P.requires f = .tru)
       (ensures : c.emptyExit f ▸ c.P.ensures f = .tru)
       (body : ConstSourceEnd c [] source (c.emptyEntry f ▸ c.P.rumpf f)) :
       ConstElaborates items scope (.fnT sig source) f
