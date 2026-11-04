@@ -5,27 +5,27 @@ public import Grammatik.Parser.Elab.Konst.Values.Expression
 namespace Gabbro.Grammatik.Parser.Konst.Values
 open Uebersetze Scalar UebersetzeAllg
 
+mutual
 /-- Literal source meaning is typed and retains tag names through their resolved
     schema. This is a source judgment, not a second evaluator. -/
-mutual
-inductive LiteralMeaning (D : Deklaration) (schemas : List USum) :
+inductive LiteralMeaning (D : Deklaration) (schemas : List (USum Ty)) :
     (τ : Ty) → SExpr → Wert D τ → Prop where
-  | integer (value : Zahl lo hi) :
+  | integer {lo hi : Int} (value : Zahl lo hi) :
       LiteralMeaning D schemas (.int lo hi) (literalVonInt value.n) value
   | truth (value : Bool) :
       LiteralMeaning D schemas .bool (if value then .tru else .fls) value
   | none (n : Int) : LiteralMeaning D schemas (.opt n) (.call "None" []) none
-  | some (value : Zahl 0 (n - 1)) :
+  | some {n : Int} (value : Zahl 0 (n - 1)) :
       LiteralMeaning D schemas (.opt n) (.call "Some" [literalVonInt value.n]) (some value)
-  | text (text : String) (bytes : List (Zahl 0 255))
+  | text {n : Nat} (text : String) (bytes : List (Zahl 0 255))
       (decoded : bytesZahl (text.toUTF8.toList.map (fun byte => Int.ofNat byte.toNat)) = some bytes)
       (bound : bytes.length ≤ n) :
       LiteralMeaning D schemas (.str n) (.ext .text [text] []) ⟨bytes, bound⟩
-  | reason (schema : USum) (member : schema ∈ schemas) (value : Fin n) (name : String)
+  | reason {n : Nat} (schema : USum Ty) (member : schema ∈ schemas) (value : Fin n) (name : String)
       (shape : schema.cases.length = n)
       (named : (schema.cases[value.val]?).map Prod.fst = some name) :
       LiteralMeaning D schemas (.why n) (.why schema.name name) value
-  | tag (schema : USum) (member : schema ∈ schemas) (shape : schema.spec = cases)
+  | tag {cases : List (Option Ty)} (schema : USum Ty) (member : schema ∈ schemas) (shape : schema.spec = cases)
       (i : Fin cases.length) (name : String)
       (named : (schema.cases[i.val]?).map Prod.fst = some name)
       («syntax» : Option SExpr) (value : Nutzlast D.Fn D.passt (cases.get i))
@@ -33,10 +33,10 @@ inductive LiteralMeaning (D : Deklaration) (schemas : List USum) :
       LiteralMeaning D schemas (.sum cases)
         (match «syntax» with | none => .variable name | some source => .call name [source])
         ⟨i, Fall.ofNutzlast D.Fn D.passt cases i value⟩
-inductive PayloadMeaning (D : Deklaration) (schemas : List USum) :
+inductive PayloadMeaning (D : Deklaration) (schemas : List (USum Ty)) :
     (c : Option Ty) → Option SExpr → Nutzlast D.Fn D.passt c → Prop where
   | empty : PayloadMeaning D schemas none none ()
-  | val (source : SExpr) (value : Wert D τ) (meaning : LiteralMeaning D schemas τ source value) :
+  | val {τ : Ty} (source : SExpr) (value : Wert D τ) (meaning : LiteralMeaning D schemas τ source value) :
       PayloadMeaning D schemas (some τ) (some source) value
 end
 
@@ -54,10 +54,6 @@ structure ReifiedPayload (D : Deklaration) (Γ : Ctx) (schemas : List USum)
   source : PayloadMeaning D schemas c «syntax» value
   equation : ∀ before after args, evalNutz before expr after args = value
 
-private def numberEq (a b : Zahl lo hi) : Decidable (a = b) :=
-  if h : a.n = b.n then .isTrue (by cases a; cases b; cases h; rfl)
-  else .isFalse (fun equal => h (congrArg Zahl.n equal))
-
 /-- UTF-8 spelling is retained from source; bytes are compared exactly. A missing
     spelling is a refusal, never lossy Unicode conversion or replacement by zero. -/
 structure TextFor (bytes : List (Zahl 0 255)) where
@@ -70,27 +66,25 @@ def findText (bytes : List (Zahl 0 255)) : List String → Except String (TextFo
     match hd : bytesZahl (text.toUTF8.toList.map (fun byte => Int.ofNat byte.toNat)) with
     | none => findText bytes rest
     | some decoded =>
-      letI : DecidableEq (Zahl 0 255) := numberEq
+      letI : DecidableEq (Zahl 0 255) := fun a b =>
+        if h : a.n = b.n then .isTrue (by cases a; cases b; cases h; rfl)
+        else .isFalse (fun equal => h (congrArg Zahl.n equal))
       if h : decoded = bytes then .ok ⟨text, by simpa only [h] using hd⟩
       else findText bytes rest
 
+mutual
 /-- Generic typed quotation of canonical G values. It checks every constructor
     and carries its complete payload; there is no integer encoding of other types. -/
-mutual
 def reify {D : Deklaration} {Γ : Ctx} (schemas : List USum) (texts : List String) :
     Nat → (τ : Ty) → (value : Wert D τ) → Except String (Reified D Γ schemas τ value)
   | 0, _, _ => .error "const value quotation exhausted its structural limit"
   | _ + 1, .int lo hi, value =>
     .ok ⟨literalVonInt value.n, .widen value.lo_le value.le_hi (.lit value.n), .integer value,
       by intros; cases value; rfl⟩
-  | _ + 1, .bool, value =>
-    if h : value = true then
-      .ok ⟨.tru, .tru, by simpa only [h] using LiteralMeaning.truth (D := D) (schemas := schemas) true,
-        by intros; simpa only [h] using (rfl : eval _ (.tru : Expr D Γ [] .bool) _ _ = true)⟩
-    else
-      have hf : value = false := by cases value <;> simp_all
-      .ok ⟨.fls, .fls, by simpa only [hf] using LiteralMeaning.truth (D := D) (schemas := schemas) false,
-        by intros; simpa only [hf] using (rfl : eval _ (.fls : Expr D Γ [] .bool) _ _ = false)⟩
+  | _ + 1, .bool, true =>
+    .ok ⟨.tru, .tru, LiteralMeaning.truth true, by intros; rfl⟩
+  | _ + 1, .bool, false =>
+    .ok ⟨.fls, .fls, LiteralMeaning.truth false, by intros; rfl⟩
   | _ + 1, .opt n, none => .ok ⟨.call "None" [], .none n, .none n, by intros; rfl⟩
   | _ + 1, .opt n, some value =>
     .ok ⟨.call "Some" [literalVonInt value.n],
@@ -121,7 +115,7 @@ def reify {D : Deklaration} {Γ : Ctx} (schemas : List USum) (texts : List Strin
         match hn : (schema.cases[i.val]?).map Prod.fst with
         | none => throw "const tagged quotation has no constructor name"
         | some actualName =>
-          let payload ← reifyPayload schemas texts fuel (cases.get i)
+          let payload ← reifyPayload (D := D) (Γ := Γ) schemas texts fuel (cases.get i)
             (Fall.toNutzlast D.Fn D.passt cases i value)
           let source := match payload.syntax with
             | none => SExpr.variable actualName
@@ -130,7 +124,7 @@ def reify {D : Deklaration} {Γ : Ctx} (schemas : List USum) (texts : List Strin
             by simpa only [Fall.of_to] using
               (LiteralMeaning.tag schema (List.mem_of_find?_eq_some hf) hs i actualName hn
                 payload.syntax _ payload.source),
-            by intros; simp only [eval, payload.equation, Fall.of_to]⟩
+            by intros; simp only [eval, payload.equation, Fall.of_to] <;> rfl⟩
       else throw "const tagged quotation schema mismatch"
   | _ + 1, _, _ => .error "const result type is outside the portable A28 fragment"
 
@@ -140,9 +134,9 @@ def reifyPayload {D : Deklaration} {Γ : Ctx} (schemas : List USum) (texts : Lis
   | 0, _, _ => .error "const payload quotation exhausted its structural limit"
   | _ + 1, none, () => .ok ⟨none, .empty, .empty, by intros; rfl⟩
   | fuel + 1, some τ, value => do
-    let quoted ← reify schemas texts fuel τ value
+    let quoted ← reify (D := D) (Γ := Γ) schemas texts fuel τ value
     return ⟨some quoted.syntax, .val quoted.expr, .val quoted.syntax value quoted.source,
-      by intros; simp only [evalNutz, quoted.equation]⟩
+      by intros; simp only [evalNutz, quoted.equation] <;> rfl⟩
 end
 
 /-- Quotation preserves every component of the canonical value at every world. -/
