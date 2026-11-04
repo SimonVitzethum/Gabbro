@@ -61,7 +61,7 @@ theorem aliasBody_correct (env : List (String × (Int × Int))) (tabs : List UTa
     aliasBody env name = .ok (.range (.atom name) (bound lo) (bound hi) false) ∧
     uTyp env tabs [] [] (.range (.atom name) (bound lo) (bound hi) false) = .ok (.int lo hi) := by
   constructor
-  · simp [aliasBody, h]
+  · simp [aliasBody, h] <;> rfl
   · have base := uTypName_sound env tabs name lo hi h
     change uTypIn env tabs [] [] [] (.atom name) = .ok (.int lo hi) at base
     change uTypIn env tabs [] [] [] (.range (.atom name) (bound lo) (bound hi) false) = _
