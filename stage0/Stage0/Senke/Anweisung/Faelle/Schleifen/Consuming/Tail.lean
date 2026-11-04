@@ -92,7 +92,7 @@ private theorem tail_position_at_label {i : Nat} {target : Label}
   exact located.trans atLabel
 
 private theorem tail_stop_position : position .stop x.fragment 0 = some (x.offset 49) := by
-  have step := tail_offset_step (i := 48) (piece := .label .stop) rfl
+  have step := tail_offset_step (x := x) (i := 48) (piece := .label .stop) rfl
   simp only [Piece.width, Nat.add_zero] at step
   exact (tail_position_at_label (i := 48) rfl rfl).trans (congrArg some step.symm)
 
@@ -167,6 +167,7 @@ theorem measure_bounds (σ : World D) (ρ : Env D Γ) :
 private theorem after_body_dispatch {τ : World D} (i : Nat) (old new : Int)
     (found : x.fragment[i]? = some (.code (decrease (x.s + 4) x.saved
       (logikCode (D := D) .schleife) x.bound x.measure)))
+    (context : frei Γ reserved ≤ x.s + 4)
     (h : x.Ready m τ ρ) (fuelRead : x.read m x.counter (BitVec.ofNat 64 n))
     (bounds : 0 ≤ new ∧ new ≤ x.bound)
     (checked : if new < old then
@@ -180,7 +181,7 @@ private theorem after_body_dispatch {τ : World D} (i : Nat) (old new : Int)
   by_cases falls : new < old
   · simp only [bounds.1, bounds.2, falls, and_self, ↓reduceIte] at checked ⊢
     obtain ⟨mem, run, frame, kept, ready, localFrame, value, read, encoding⟩ :=
-      h.ok checked (x.addr_next_code found) (by rw [← q.selector.origin]; omega) (by omega)
+      h.ok checked (x.addr_next_code found) context (by omega)
         (by have := x.scratch; have := x.layout.ks; omega)
     exact ⟨mem, run, frame, (fun j hj => kept j (by simp [hj])), ready,
       (kept x.counter (by simp)).trans fuelRead⟩
@@ -209,7 +210,8 @@ theorem after_body (i : Nat) (which : i = 41 ∨ i = 44) (old : Int)
   have current : x.Ready m τ ρ := h.lese
   have bounds : 0 ≤ new ∧ new ≤ x.bound :=
     ⟨(Gabbro.Grammatik.eval τ q.mass τ ρ).lo_le, (Gabbro.Grammatik.eval τ q.mass τ ρ).le_hi⟩
-  have completed := after_body_dispatch (q := q) i old new found current fuelRead bounds checked
+  have completed := after_body_dispatch i old new found
+    (by rw [← q.selector.origin]; omega) current fuelRead bounds checked
   dsimp only [massW]
   exact completed
 
@@ -258,7 +260,7 @@ theorem leave_invariant (h : x.Ready m σ ρ) :
   let τ := σ.lese Λ q.inv.orte
   have current : x.Ready m τ ρ := h.lese
   obtain ⟨mem, run, frame, kept, ready, read⟩ := leave_read (q := q) current
-  have completed := leave_dispatch (q := q) (τ := τ)
+  have completed := leave_dispatch (τ := τ)
     (b := wahr? (Gabbro.Grammatik.eval τ q.inv τ ρ)) run frame
     (fun j hj => kept j (by simp [hj])) ready read
   dsimp only [invW]
