@@ -75,7 +75,7 @@ theorem treu_locks (O : Orakel D) (passes : Nat)
   have inventory (resid : ResidHeld V Λ) :
       ReturnInventory.Outcome (slack := σ.haelt.count L) L (σ.nimmt L)
         (execBlock O passes R body (σ.nimmt L) ρ) := by
-    have outside : L ∉ V.haelt := fun hL => (lt_irrefl _) (hr L (resid L hL))
+    have outside : L ∉ V.haelt := fun hL => (Int.lt_irrefl _) (hr L (resid L hL))
     have entry : ReturnInventory.Entry (slack := σ.haelt.count L) L bo Λ σ :=
       ⟨hh, by omega⟩
     exact ReturnInventory.block (O := O) (passes := passes) (R := R)
