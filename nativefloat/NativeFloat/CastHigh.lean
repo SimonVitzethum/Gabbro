@@ -31,7 +31,7 @@ private theorem bias_unpacked (F : Format) (standard : F = .binary32 ∨ F = .bi
     simp only [field, BitVec.neg_one_eq_allOnes, BitVec.toNat_allOnes] at this
     omega
   have exponent : ((F.exponentBias + 63 : Nat) : Int) -
-      (F.exponentBias + F.mantissaBitsWithoutImplicit : Nat) =
+      ((F.exponentBias : Int) + (F.mantissaBitsWithoutImplicit : Int)) =
         63 - (F.mantissaBitsWithoutImplicit : Int) := by omega
   simp only [limitBits, UnpackedFloat.unpack, unpackMantissa_packComponents,
     unpackExponent_packComponents, unpack_sign_components, sign_unbits,
@@ -69,7 +69,7 @@ private theorem high_cases (F : Format) (standard : F = .binary32 ∨ F = .binar
       have := congrArg BitVec.toNat eq
       simp only [field, BitVec.neg_one_eq_allOnes, BitVec.toNat_allOnes] at this
       rcases standard with rfl | rfl <;> dsimp [Format.exponentBias] at * <;> omega
-    have exponent : (e.toNat : Int) - (F.exponentBias + F.mantissaBitsWithoutImplicit : Nat) =
+    have exponent : (e.toNat : Int) - ((F.exponentBias : Int) + (F.mantissaBitsWithoutImplicit : Int)) =
         63 - (F.mantissaBitsWithoutImplicit : Int) := by rw [field]; omega
     simpa only [UnpackedFloat.unpack, unpackMantissa_packComponents, unpackExponent_packComponents,
       unpack_sign_components, sign_unbits, notMax, nonzero, ↓reduceIte, leading_mantissa, exponent]
@@ -173,23 +173,52 @@ private theorem residual_post (F : Format) (standard : F = .binary32 ∨ F = .bi
     have positive : 0 < m := by omega
     have room : p < 63 := by rcases standard with rfl | rfl <;> decide
     have exponent : (k : Int) = 63 - (p : Int) := by dsimp [k]; omega
-    rw [← exponent, reduced_round F standard m positive upper]
     have log : m.log2 < p := (Nat.log2_lt (Nat.ne_of_gt positive)).mpr upper
     have normPositive : 0 < m <<< padding := by
       rw [Nat.shiftLeft_eq]
       exact Nat.mul_pos positive (Nat.two_pow_pos padding)
-    refine ⟨cvtt_small F .positive _ _ normPositive (by dsimp [padding]; omega), ?_⟩
+    have formed : UnpackedFloat.unpack F (UnpackedFloat.pack F
+        (round F .positive m (63 - (F.mantissaBitsWithoutImplicit : Int)))) =
+        .finite .positive (m <<< padding) ((k : Int) - padding) normPositive := by
+      have aligned : round F .positive m (63 - (F.mantissaBitsWithoutImplicit : Int)) =
+          round F .positive m (k : Int) := congrArg (round F .positive m) exponent.symm
+      exact (congrArg (fun value : UnpackedFloat => UnpackedFloat.unpack F (UnpackedFloat.pack F value))
+        aligned).trans (reduced_round F standard m positive upper)
+    rw [formed]
+    change Domain F (.finite .positive (m <<< padding) ((k : Int) - padding) normPositive) ∧
+      (UnpackedFloat.finite .positive (m <<< padding) ((k : Int) - padding) normPositive).toInt64.toBitVec =
+        BitVec.ofNat 64 (m <<< k)
+    have normExponent : (k : Int) - padding < 63 - (F.mantissaBitsWithoutImplicit : Int) := by
+      change (k : Int) - padding < 63 - (p : Int)
+      rw [← exponent]
+      have padPositive : 0 < padding := by dsimp [padding]; omega
+      omega
+    refine ⟨cvtt_small F .positive (m <<< padding) ((k : Int) - padding) normPositive normExponent, ?_⟩
     have small : m <<< k < 2 ^ 63 := by
-      have bound := Nat.mul_lt_mul_of_pos_right upper (Nat.two_pow_pos k)
+      have bound : m * 2 ^ k < 2 ^ p * 2 ^ k :=
+        Nat.mul_lt_mul_of_pos_right (show m < 2 ^ p from upper) (Nat.two_pow_pos k)
       have power : 2 ^ p * 2 ^ k = 2 ^ 63 := by
         rw [← Nat.pow_add]
         congr 1
         dsimp [k]
         omega
-      simpa only [Nat.shiftLeft_eq, power] using bound
-    simp only [UnpackedFloat.toInt64, UnpackedFloat.toInt, truncation_scaled, Sign.apply]
-    rw [clamp_signed _ (by omega) (by omega)]
-    rfl
+      rw [power] at bound
+      simpa only [Nat.shiftLeft_eq] using bound
+    let n := m <<< k
+    have smallN : n < 2 ^ 63 := small
+    have value : roundToInt .positive (m <<< padding) ((k : Int) - padding) = (n : Int) := by
+      simpa only [Sign.apply] using truncation_scaled .positive m padding k
+    change (Int64.ofIntClamp (roundToInt .positive (m <<< padding) ((k : Int) - padding))).toBitVec =
+      BitVec.ofNat 64 n
+    rw [value]
+    have intSmall : (n : Int) < 2 ^ 63 := by
+      simpa only [Int.natCast_pow, Int.cast_ofNat_Int] using (Int.ofNat_lt.mpr smallN)
+    have minNonpositive : -(2 ^ 63 : Int) ≤ 0 :=
+      Int.neg_nonpos_of_nonneg (Int.pow_nonneg (by decide : (0 : Int) ≤ 2))
+    have intLower : -(2 ^ 63 : Int) ≤ n := Int.le_trans minNonpositive (Int.natCast_nonneg n)
+    rw [clamp_signed (n : Int) intLower intSmall]
+    change BitVec.ofInt 64 (n : Int) = BitVec.ofNat 64 n
+    exact BitVec.ofInt_natCast 64 n
 
 private theorem high_result (F : Format) (standard : F = .binary32 ∨ F = .binary64)
     (m : Nat) (upper : m < 2 ^ F.mantissaBitsWithoutImplicit) :
@@ -214,17 +243,27 @@ private theorem high_result (F : Format) (standard : F = .binary32 ∨ F = .bina
     dsimp [k]
     omega
   have small : m <<< k < 2 ^ 63 := by
-    have bound := Nat.mul_lt_mul_of_pos_right upper (Nat.two_pow_pos k)
-    simpa only [Nat.shiftLeft_eq, power] using bound
+    have bound : m * 2 ^ k < 2 ^ p * 2 ^ k :=
+      Nat.mul_lt_mul_of_pos_right (show m < 2 ^ p from upper) (Nat.two_pow_pos k)
+    rw [power] at bound
+    simpa only [Nat.shiftLeft_eq] using bound
   have value : (2 ^ p + m) <<< k = 2 ^ 63 + (m <<< k) := by
     simp only [Nat.shiftLeft_eq, Nat.add_mul, power]
-  simp only [UnpackedFloat.toUInt64, UnpackedFloat.toInt, truncation, Sign.apply,
-    exponent, show (0 : Int) ≤ k from Int.natCast_nonneg k, ↓reduceIte, Int.toNat_natCast]
-  rw [value, UInt64.ofNatClamp_eq_ofNat _ (by change _ < 2 ^ 64; omega)]
-  change BitVec.ofNat 64 (2 ^ 63 + (m <<< k)) = BitVec.ofNat 64 (m <<< k) ||| BitVec.ofNat 64 (2 ^ 63)
-  rw [← BitVec.ofNat_or, Nat.or_two_pow_eq_add_of_lt small]
-  apply congrArg (BitVec.ofNat 64)
-  omega
+  let n := m <<< k
+  have smallN : n < 2 ^ 63 := small
+  have wholeValue : roundToInt .positive (2 ^ p + m) (63 - (p : Int)) = ((2 ^ 63 + n : Nat) : Int) := by
+    rw [exponent]
+    simp only [truncation_nat, Sign.apply, Int.natCast_nonneg k, ↓reduceIte,
+      Int.toNat_natCast, value]
+  change (UInt64.ofNatClamp (roundToInt .positive (2 ^ p + m) (63 - (p : Int))).toNat).toBitVec =
+    BitVec.ofNat 64 n ||| 0x8000000000000000
+  rw [wholeValue]
+  simp only [Int.toNat_natCast]
+  have wholeBound : 2 ^ 63 + n < UInt64.size := by change 2 ^ 63 + n < 2 ^ 64; omega
+  rw [UInt64.ofNatClamp_eq_ofNat (2 ^ 63 + n) wholeBound]
+  change BitVec.ofNat 64 (2 ^ 63 + n) = BitVec.ofNat 64 n ||| BitVec.ofNat 64 (2 ^ 63)
+  rw [← BitVec.ofNat_or, Nat.or_two_pow_eq_add_of_lt smallN]
+  exact congrArg (BitVec.ofNat 64) (Nat.add_comm (2 ^ 63) n)
 
 private theorem decoded_high (F : Format) (standard : F = .binary32 ∨ F = .binary64)
     (word : BitVec F.numBits) (nonnegative : word.msb = false)
@@ -237,6 +276,11 @@ private theorem decoded_high (F : Format) (standard : F = .binary32 ∨ F = .bin
   dsimp only
   rw [bias_unpacked F standard]
   apply high_cases F standard word
+    (P := fun value : UnpackedFloat =>
+      let reduced := UnpackedFloat.unpack F (UnpackedFloat.pack F (UnpackedFloat.sub F value
+        (.finite .positive (2 ^ F.mantissaBitsWithoutImplicit)
+          (63 - (F.mantissaBitsWithoutImplicit : Int)) (Nat.two_pow_pos _))))
+      value.toUInt64.toBitVec = reduced.toInt64.toBitVec ||| 0x8000000000000000 ∧ Domain F reduced)
   · intro m bound
     exact high_result F standard m bound
   · exact nonnegative
