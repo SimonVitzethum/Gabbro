@@ -9,7 +9,8 @@ open Runner.X86 Runner.Prog
 
 @[simp] theorem fpLow32_idem (value : W) : fpLow32 (fpLow32 value) = fpLow32 value := by
   unfold fpLow32
-  rw [BitVec.setWidth_setWidth_of_le _ (by decide), BitVec.setWidth_eq]
+  rw [BitVec.setWidth_setWidth_of_le (value.setWidth 32) (k := 32) (l := 64) (by decide),
+    BitVec.setWidth_eq]
 
 @[simp] theorem scalar32_clear :
     (~~~(BitVec.ofNat 128 0xFFFFFFFF)).setWidth 32 = 0 := by decide
@@ -70,7 +71,9 @@ private theorem extend32_bne (a b : BitVec 32) :
   · intro h same
     apply h
     have low := congrArg (fun value : W => value.setWidth 32) same
-    simpa only [BitVec.setWidth_setWidth_of_le _ (by decide), BitVec.setWidth_eq] using low
+    simpa only [BitVec.setWidth_setWidth_of_le a (k := 32) (l := 64) (by decide),
+      BitVec.setWidth_setWidth_of_le b (k := 32) (l := 64) (by decide),
+      BitVec.setWidth_eq] using low
 
 theorem fpFiniteWord_word32 (value : W) :
     fpFiniteWord .f32 value = flagWord ((fpLow32 value &&& 0x7F800000) != 0x7F800000) := by
