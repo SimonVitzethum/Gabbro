@@ -252,7 +252,9 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
             | .error err => .error err
             | .ok (errb, .blkEnd :: tail) => match R.seq (l := l) (τ :: Γ) (fn.mitTy y τ) (nachSig (declOf u) ((declOf u).sigNr m) Λ) pe tail with
               | .error err => .error err
-              | .ok ((⟨Λ', body⟩, remaining)) => .ok (⟨Λ', nestedElseN u caller Γ Λ m v k τ hE hr errb body⟩, remaining)
+              | .ok ((⟨Λ', body⟩, remaining)) =>
+                .ok (⟨Λ', Block.bindCallIndElse (D := declOf u) (n := m)
+                  (Expr.var v) k.args hE k.hp hr errb body⟩, remaining)
             | .ok (_, _) => .error "lower: a let else is not closed"
         else .error "lower: let else of a call without a reason channel"
   | Γ, fn, Λ, pe, .tausch x a v zweige neu :: rest =>
