@@ -187,13 +187,11 @@ theorem fadenSA_bereich (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
       have eb := eval_gleichAuf b (fun _ h => List.mem_append_right _ (List.mem_append_right _ h))
         hgl ρ
       refine hno _ (passtX_teil hsub hPX) hHA .bereich ?_
-      simp only [semHA, execEndHA, hrec _ hPX hHA, ea, eb, hv]
-      rfl
+      simp only [semHA, weiterHA, execEndHA, hrec _ hPX hHA, ea, eb, hv] <;> rfl
     · obtain ⟨H, HA, HU, HX, σ, hfx, hkx, hg, hok, hno⟩ :=
         kopfSA_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
       refine hno _ (umweltAusA_passt Tg hfx) (umweltAusA_ok Tg HX) .bereich ?_
-      simp only [semHA, execEndHA, hv]
-      rfl
+      simp only [semHA, weiterHA, execEndHA, hv] <;> rfl
     · obtain ⟨H, HA, HU, HX, σ, hfx, hkx, hg, hok, hno⟩ :=
         kopfSA_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
       have he : e.orte ⊆ fussOrteG P (M.faeden t).kopf.f :=
@@ -204,8 +202,7 @@ theorem fadenSA_bereich (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
       have ee := eval_gleichAuf e (fun _ h => List.mem_append_right _ h)
         (mischT_gleichAuf hg (expr_stabilX (hFS _) e he) Λ Λ) ρ
       refine hno _ (passtX_teil hsub hPX) hHA .bereich ?_
-      simp only [semHA, execEndHA, hrec _ hPX hHA, ee, hv]
-      rfl
+      simp only [semHA, weiterHA, execEndHA, hrec _ hPX hHA, ee, hv] <;> rfl
 
 end Bereich
 
