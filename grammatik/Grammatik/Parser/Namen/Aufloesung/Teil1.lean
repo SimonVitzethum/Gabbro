@@ -173,9 +173,13 @@ def aus (k : Kontext) : SExpr → SExpr
   | .ext kind (binder :: domain :: names) args =>
     if kind == .foldAdd || kind == .foldMin || kind == .foldMax || kind == .foldAnd || kind == .foldOr then
       let count := if domain == "range" then 2 else 1
-      have domainSize := take_size_le count args
-      have bodySize := (take_size_le 2 (args.drop count)).trans (drop_size_le count args)
-      have tailSize := (drop_size_le 2 (args.drop count)).trans (drop_size_le count args)
+      have domainSize : sizeOf (args.take count) ≤ sizeOf args := by
+        exact take_size_le count args
+      have bodySize : sizeOf ((args.drop count).take 2) ≤ sizeOf args := by
+        exact Nat.le_trans (take_size_le 2 (args.drop count)) (drop_size_le count args)
+      have tailSize : sizeOf (args.drop ((if domain = "range" then 2 else 1) + 2)) ≤ sizeOf args := by
+        simpa only [count, List.drop_drop, beq_iff_eq] using
+          Nat.le_trans (drop_size_le 2 (args.drop count)) (drop_size_le count args)
       .ext kind (binder :: domain :: names.map k.ref)
         (ausL k (args.take count) ++ ausL (k.mit [binder]) ((args.drop count).take 2) ++
           ausL k ((args.drop count).drop 2))
@@ -185,7 +189,10 @@ def aus (k : Kontext) : SExpr → SExpr
 termination_by expression => sizeOf expression
 decreasing_by
   all_goals simp_wf
-  all_goals omega
+  all_goals try simp only [List.drop_drop] at *
+  all_goals first
+    | omega
+    | (by_cases hDomain : domain = "range" <;> simp_all [count, hDomain] <;> omega)
 def ausL (k : Kontext) : List SExpr → List SExpr
   | [] => []
   | x :: xs => aus k x :: ausL k xs
