@@ -71,7 +71,7 @@ theorem sigPasstB_ok {a b c : Nat} {Marke : Type} [DecidableEq Marke] {rang : Fi
   simp only [Bool.and_eq_true, decide_eq_true_eq, List.all_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at h
   obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨hp, he⟩, hg⟩, hw⟩, hgw⟩, hk⟩, hpr⟩, hh⟩, hx⟩, hb⟩, ho⟩ := h
   refine ⟨hp, he, hg, fun t ht => ?_, fun g' hg' => ?_, hk, hpr, fun L hL => hh L hL, fun L hL hn => ?_,
-    fun c hc => ?_, of_decide_eq_true ho⟩
+    fun c hc => ?_, ho⟩
   · rcases hw t (List.mem_finRange t) with h1 | h1
     · rw [ht] at h1; cases h1
     · exact h1

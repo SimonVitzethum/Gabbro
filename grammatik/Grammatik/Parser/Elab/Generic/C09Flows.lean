@@ -37,85 +37,49 @@ def praegtAt (u : UProg) (f : UFn) : List (Fin u.marken.length × Nat) :=
     | none => none
     | some i => if u.tabs.any (fun t => decide (t.owner = some m)) then some (i, 0) else none
 
+/-- Moves retain the same owner entries as the canonical owner-name resolver. -/
+private theorem bewegtAt_loanEntries (u : UProg) (f : UFn) :
+    bewegtAt u f = leihtAt u { f with leiht := f.bewegt } := by
+  unfold bewegtAt leihtAt
+  apply congrArg (fun resolve : String → Option (Fin u.marken.length × Nat) =>
+    f.bewegt.filterMap resolve)
+  funext m
+  cases resolved : markFin u.marken m <;> rfl
+
+/-- Mints retain the same owner entries as the canonical owner-name resolver. -/
+private theorem praegtAt_loanEntries (u : UProg) (f : UFn) :
+    praegtAt u f = leihtAt u { f with leiht := f.praegt } := by
+  unfold praegtAt leihtAt
+  apply congrArg (fun resolve : String → Option (Fin u.marken.length × Nat) =>
+    f.praegt.filterMap resolve)
+  funext m
+  cases resolved : markFin u.marken m <;> rfl
+
 /-- A resolved handoff names a table owner: the named table's `owner` is the same name. -/
 theorem bewegtAt_eigner (u : UProg) (f : UFn) (i : Fin u.marken.length) (s : Nat)
     (h : (i, s) ∈ bewegtAt u f) :
     ∃ t : Fin u.tabs.length, (tabAt u t).owner = some (u.marken.get i) := by
-  unfold bewegtAt at h
-  obtain ⟨m, _, hmi⟩ := List.mem_filterMap.mp h
-  cases hm : markFin u.marken m with
-  | none =>
-    simp only [hm, reduceCtorEq] at hmi
-  | some j =>
-    cases hall : (u.tabs.any (fun t => decide (t.owner = some m))) with
-    | false =>
-      simp only [hm, hall, reduceCtorEq] at hmi
-    | true =>
-      simp only [hm, hall, Option.some_injEq] at hmi
-      obtain ⟨rfl, rfl⟩ := hmi
-      obtain ⟨x, hxu, hx⟩ := List.any_eq_true.mp hall
-      have hxown : x.owner = some m := of_decide_eq_true hx
-      obtain ⟨n, hn, hxn⟩ := List.mem_iff_get.mp hxu
-      refine ⟨⟨n, hn⟩, ?_⟩
-      have htab : tabAt u ⟨n, hn⟩ = x := by unfold tabAt; rw [hxn]
-      rw [htab, hxown, markFin_get u.marken m i hm]
+  rw [bewegtAt_loanEntries] at h
+  exact leihtAt_eigner u { f with leiht := f.bewegt } i s h
 
 /-- Every resolved handoff is a stage-0 mark. -/
 theorem bewegtAt_stufe (u : UProg) (f : UFn) (i : Fin u.marken.length) (s : Nat)
     (h : (i, s) ∈ bewegtAt u f) : s = 0 := by
-  unfold bewegtAt at h
-  obtain ⟨m, _, hmi⟩ := List.mem_filterMap.mp h
-  cases hm : markFin u.marken m with
-  | none =>
-    simp only [hm, reduceCtorEq] at hmi
-  | some j =>
-    cases hall : (u.tabs.any (fun t => decide (t.owner = some m))) with
-    | false =>
-      simp only [hm, hall, reduceCtorEq] at hmi
-    | true =>
-      simp only [hm, hall, Option.some_injEq] at hmi
-      obtain ⟨_, hs⟩ := hmi
-      exact hs.symm
+  rw [bewegtAt_loanEntries] at h
+  exact leihtAt_stufe u { f with leiht := f.bewegt } i s h
 
 /-- A resolved mint names a table owner: the named table's `owner` is the same name. -/
 theorem praegtAt_eigner (u : UProg) (f : UFn) (i : Fin u.marken.length) (s : Nat)
     (h : (i, s) ∈ praegtAt u f) :
     ∃ t : Fin u.tabs.length, (tabAt u t).owner = some (u.marken.get i) := by
-  unfold praegtAt at h
-  obtain ⟨m, _, hmi⟩ := List.mem_filterMap.mp h
-  cases hm : markFin u.marken m with
-  | none =>
-    simp only [hm, reduceCtorEq] at hmi
-  | some j =>
-    cases hall : (u.tabs.any (fun t => decide (t.owner = some m))) with
-    | false =>
-      simp only [hm, hall, reduceCtorEq] at hmi
-    | true =>
-      simp only [hm, hall, Option.some_injEq] at hmi
-      obtain ⟨rfl, rfl⟩ := hmi
-      obtain ⟨x, hxu, hx⟩ := List.any_eq_true.mp hall
-      have hxown : x.owner = some m := of_decide_eq_true hx
-      obtain ⟨n, hn, hxn⟩ := List.mem_iff_get.mp hxu
-      refine ⟨⟨n, hn⟩, ?_⟩
-      have htab : tabAt u ⟨n, hn⟩ = x := by unfold tabAt; rw [hxn]
-      rw [htab, hxown, markFin_get u.marken m i hm]
+  rw [praegtAt_loanEntries] at h
+  exact leihtAt_eigner u { f with leiht := f.praegt } i s h
 
 /-- Every resolved mint is a stage-0 mark. -/
 theorem praegtAt_stufe (u : UProg) (f : UFn) (i : Fin u.marken.length) (s : Nat)
     (h : (i, s) ∈ praegtAt u f) : s = 0 := by
-  unfold praegtAt at h
-  obtain ⟨m, _, hmi⟩ := List.mem_filterMap.mp h
-  cases hm : markFin u.marken m with
-  | none =>
-    simp only [hm, reduceCtorEq] at hmi
-  | some j =>
-    cases hall : (u.tabs.any (fun t => decide (t.owner = some m))) with
-    | false =>
-      simp only [hm, hall, reduceCtorEq] at hmi
-    | true =>
-      simp only [hm, hall, Option.some_injEq] at hmi
-      obtain ⟨_, hs⟩ := hmi
-      exact hs.symm
+  rw [praegtAt_loanEntries] at h
+  exact leihtAt_stufe u { f with leiht := f.praegt } i s h
 
 /-- The handback moves contribute exactly the resolved handoff inventory as
     outputs: the same nominal identity at the same stage. -/
