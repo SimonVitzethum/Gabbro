@@ -11,8 +11,8 @@ namespace Gabbro.Grammatik.Parser.Konst
 open Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.ExportMetadata
 
-/-- Source constant payloads recurse element-wise, including nested rows. -/
 mutual
+/-- Source constant payloads recurse element-wise, including nested rows. -/
 def ersetzeKonstWert (fns : List UKonstFn) : SKonstWert → Except String SKonstWert
   | .one source => (ersetzeSExpr fns source).map SKonstWert.one
   | .rows rows => (ersetzeKonstWerte fns rows).map SKonstWert.rows
@@ -195,10 +195,17 @@ theorem literalVonBool_ohne (namen : List String) (b : Bool) :
 
 /-- An expression-bodied const function with parameters. -/
 def zeugeFnAdd : UKonstFn :=
-  { name := "add", params := [("x", .int 0 10), ("y", .int 0 10)], erg := .int 0 20,
-    rumpf := .block [] (some (.ret (some (.bin "+" (.variable "x") (.variable "y"))))),
-    signature := { art := "const", name := "add", params := [("x", .atom "u8"), ("y", .atom "u8")],
-      res := some (.atom "u8"), fehler := none, klauseln := [] } }
+  { name := "add"
+    params := [("x", .int 0 10), ("y", .int 0 10)]
+    erg := .int 0 20
+    rumpf := .block [] (some (.ret (some (.bin "+" (.variable "x") (.variable "y")))))
+    signature :=
+      { art := "const"
+        name := "add"
+        params := [("x", .atom "u8"), ("y", .atom "u8")]
+        res := some (.atom "u8")
+        fehler := none
+        klauseln := [] } }
 
 /-- Nested const calls substitute inside out. -/
 theorem zeugeVerschachtelt :
@@ -238,10 +245,12 @@ theorem checkSourceMetadata_runtime_sound (items : List SItemTief)
     (accepted : checkSourceMetadata items = .ok ()) :
     (ohneKonst items).any ExportMetadata.itemMetadata = false := by
   cases hr : konstErsetzePipeline items with
-  | error error => simp [checkSourceMetadata, hr] at accepted
+  | error error =>
+    simp [checkSourceMetadata, hr, bind, Except.bind, pure, Except.pure] at accepted
   | ok rewritten =>
     cases hm : ExportMetadata.check (ohneKonst items) with
-    | error error => simp [checkSourceMetadata, hr, hm] at accepted
+    | error error =>
+      simp [checkSourceMetadata, hr, hm, bind, Except.bind, pure, Except.pure] at accepted
     | ok value => cases value; exact ExportMetadata.check_sound _ hm
 
 /-- The compiler gate retains an actual successful substitution and the metadata
@@ -252,14 +261,17 @@ theorem checkSourceMetadata_sound (items : List SItemTief)
       checkErsetzt items rewritten = .ok () ∧
       (ohneKonst rewritten).any ExportMetadata.itemMetadata = false := by
   cases hr : konstErsetzePipeline items with
-  | error error => simp [checkSourceMetadata, hr] at accepted
+  | error error =>
+    simp [checkSourceMetadata, hr, bind, Except.bind, pure, Except.pure] at accepted
   | ok rewritten =>
     have original := ExportMetadata.check_clear (ohneKonst items)
       (checkSourceMetadata_runtime_sound items accepted)
     have gate : checkErsetzt items rewritten = .ok () := by
-      simpa [checkSourceMetadata, hr, original] using accepted
-    refine ⟨rewritten, hr, gate, ?_⟩
+      simpa only [checkSourceMetadata, hr, original, bind, Except.bind,
+        pure, Except.pure] using accepted
+    refine ⟨rewritten, rfl, gate, ?_⟩
     unfold checkErsetzt at gate
+    dsimp only at gate
     split at gate
     · contradiction
     · exact ExportMetadata.check_sound _ gate
