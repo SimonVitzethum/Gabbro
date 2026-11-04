@@ -53,6 +53,7 @@ theorem chkAnswer_ok {e : Option Ty} {τ : Ty} (he : e = some τ) {s reserved : 
       · rw [agree_rd_low changed hp.frame.room (by omega) (by omega)]
         exact input
       · refine ⟨?_, valid n rfl nonnegative⟩
+        change w = BitVec.ofNat 64 w.toInt.toNat
         rw [← BitVec.ofInt_natCast, Int.toNat_of_nonneg nonnegative]
         exact BitVec.ofInt_toInt.symm
     · simp only [einpassenErg, einpassen, if_neg nonnegative]
@@ -103,8 +104,8 @@ theorem fallible_decode {z : Int → Option D.Fn} {e : Option Ty} {τ : Ty} {n :
   have divisor : ((n : Int) + 1) ≠ 0 := by omega
   let negative := -4095 ≤ w.toInt ∧ w.toInt ≤ -1
   have raw : rohW b n w = (if negative then -1 else w.toInt) * ((n : Int) + 1) := by
-    simp only [rohW, nz, ↓reduceIte]
-    by_cases error : negative
+    simp only [rohW, nz, ↓reduceIte, negative]
+    by_cases error : -4095 ≤ w.toInt ∧ w.toInt ≤ -1
     · simp only [if_pos error, miss]
       omega
     · simp only [if_neg error]
@@ -117,11 +118,9 @@ theorem fallible_decode {z : Int → Option D.Fn} {e : Option Ty} {τ : Ty} {n :
       have lower : 0 ≤ lo := of_decide_eq_true accepted
       simp only [einpassenErg, einpassen]
       rw [dif_neg (by omega), dif_neg (by dsimp only [negative] at error; omega)]
-      rfl
     | ref n =>
       simp only [einpassenErg, einpassen]
       rw [if_neg (by omega), if_neg (by dsimp only [negative] at error; omega)]
-      rfl
     | ptr cap => rfl
     | bool =>
       have nonzero : w.toInt ≠ 0 := by dsimp only [negative] at error; omega
