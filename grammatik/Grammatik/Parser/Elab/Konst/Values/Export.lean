@@ -197,7 +197,7 @@ def checkCall (k : UKonstFn) (fns : List UKonstFn)
       if hp : @Eq Bool (fn.model.pre.denote args) true then
         let value := fn.model.body.denote args
         letI : Decidable (@Eq Bool (fn.model.post.denote (.cons value args)) true) := Bool.decEq _ _
-        if hq : @Eq Bool (fn.model.post.denote (.cons value args)) true then
+        if hq : @Eq Bool (fn.model.post.denote (.cons value args)) true then do
           let quoted ← reify (D := declaration (k.params.map Prod.snd) k.erg)
             (Γ := k.params.map Prod.snd) (resultSchemas k) (textLiterals fn.source) 64 k.erg value
           return ⟨fn, values, evaluated, checkedArguments.meaning, args, ha, value, fn.model.body.equation _ _ _,
