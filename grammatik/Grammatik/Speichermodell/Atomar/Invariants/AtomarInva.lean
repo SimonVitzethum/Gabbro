@@ -254,7 +254,7 @@ theorem ziel_ort_atomar_voll (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
         rw [hfa] at hev
         by_cases ht : t = u
         · subst ht
-          rcases invLogA_schritt hO hRL hQ hS hsp hI hFS hTV hFu1.1 hs1 ev hev with h | h
+          rcases invLogA_schritt hO hRL hQ hS hsp hK hI hFS hTV hFu1.1 hs1 ev hev with h | h
           · exact ih' t ev h
           · exact h
         · rw [rufSchrittG_fremd hs1 t ht] at hev
