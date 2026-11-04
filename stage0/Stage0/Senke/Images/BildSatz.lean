@@ -36,12 +36,12 @@ theorem bild_lage {P : Programm D} {fs : List D.Fn} {pos : D.Fn → Nat} {name :
           hfit, hroomK, fun f hf => by simpa using List.all_eq_true.mp hexK f hf, hYlo, hYhi, hYord _, hYin _ (Nat.lt_of_le_of_lt hYhi hfit),
           ⟨(hYdis _).spans, (hYdis _).inj, (hYdis _).grid⟩, rfl, rfl, hYsync _, hYsye, hops⟩, rfl, rfl, rfl, rfl⟩
         intro words member
-        obtain ⟨start, member, rfl⟩ := List.mem_map.mp member
+        obtain ⟨start, startMem, encoded⟩ := List.mem_map.mp member
         have fits : startScratch start.1 + 8 ≤ Ks := by
           simpa using List.all_eq_true.mp hexK start.1
-            (List.mem_cons_of_mem _ (List.mem_map.mpr ⟨start, member, rfl⟩))
+            (List.mem_cons_of_mem _ (List.mem_map.mpr ⟨start, startMem, rfl⟩))
         have above := startScratch_ge start.1
-        rw [encodeEnv_length]
+        rw [← encoded, encodeEnv_length]
         dsimp only at fits above ⊢
         omega
       · exfalso
@@ -69,7 +69,7 @@ theorem bild_length {P : Programm D} {fs : List D.Fn} {pos : D.Fn → Nat} {name
     (hYord : ∀ x, (Y x).lo ≤ (Y x).hi) (hYsync : ∀ x, LaySync (Y x)) :
     b.bytes.length = 16 + 16 * b.code.length + 8 * b.K := by
   obtain ⟨cs, body, sp, hl, hc, hr, ha, hra⟩ := bild_lage hb hfs hYin hYdis hYord hYsync
-  obtain ⟨stacks, made, length⟩ := hl.stacks
+  obtain ⟨stackBytes, made, length⟩ := hl.stacks
   have fits : b.Ks * ((starts.map (·.1)).length + 1) ≤ b.K := by
     have := hl.hylo; have := hl.hyord; have := hl.hyhi
     omega
@@ -111,7 +111,8 @@ theorem bild_wurzel_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List
     (hYsync : ∀ x, LaySync (Y x)) {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG b.bytes) (j : Nat) (hj : j < starts.length) (σ : World D)
     (hval : ∀ τ (x : Var (D.params starts[j].1) τ), ValueValid b.Y τ (starts[j].2.get x))
     (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) (hV : SichtOK O) :
-    match rufAt P O b.passes b.depth starts[j].1 σ starts[j].2 with
+    match (rufAt (D := D) P O b.passes b.depth (starts[j]'hj).1 σ (starts[j]'hj).2 :
+        RufAusgang (D := D) (starts[j]'hj).1) with
     | .ok _ _ => ∃ t' m' q, Star ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
         BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = 60
     | .logik e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
@@ -126,11 +127,20 @@ theorem bild_wurzel_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List
   have locks : BytesAt m b.Y.hi (List.replicate (b.Y.sye - b.Y.hi) 0) :=
     zeroBytes_slice hz (by have := hl.hylo; have := hl.hyord; omega)
       (by have := hl.hysye; have := hl.hyhi; have := hl.hylo; have := hl.hyord; omega)
+  have rootBound : j < (starts.map (·.1)).length := by
+    simpa only [List.length_map] using hj
+  -- Transport the complete typed start before selecting its function and environment.
+  generalize rootEq : (starts[j]'hj) = root at hval ⊢
+  rcases root with ⟨rootFn, rootEnv⟩
+  have functionEq : (starts.map (·.1))[j]'rootBound = rootFn := by
+    rw [List.getElem_map, rootEq]
+  have argumentsEq : (starts.map (fun start => encodeEnv b.Y start.2))[j]'
+      (by simpa only [List.length_map] using hj) = encodeEnv b.Y rootEnv := by
+    rw [List.getElem_map, rootEq]
+  subst rootFn
   have result := bild_wurzel (hT := hT) (hV := hV) (passes := b.passes) hl hm2 j
-    (by simpa only [List.length_map] using hj) σ
-    (by simpa only [List.getElem_map] using starts[j].2)
-    (by simp only [List.getElem_map])
-    (by simpa only [List.getElem_map] using hval) hWa (hl.sync locks (by simp only [List.length_map]; omega))
-  simpa only [List.length_map, List.getElem_map] using result
+    rootBound σ rootEnv argumentsEq hval hWa
+    (hl.sync locks (by simp only [List.length_map]; omega))
+  simpa only [List.length_map] using result
 
 end Gabbro.Stage0.Senke
