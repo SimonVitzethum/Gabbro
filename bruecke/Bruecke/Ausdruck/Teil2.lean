@@ -25,7 +25,7 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
     (β : Gabbro.Body.Binding) (hW : WRel u σ w) (hL : LRel fn (if er.isSome then 1 else 0) ρ β) :
     ∃ ls : LowSide u Γ Λ, wv = ls.wert ∧
       Gabbro.Body.eval ⟨w, β⟩ eB = some (valOf (.int ls.range.1 ls.range.2) (eval σ₀ ls.term σ ρ)) := by
-  have rec (sd' : USide) (hlt : sizeOf sd' < sizeOf sd)
+  have recurse (sd' : USide) (hlt : sizeOf sd' < sizeOf sd)
       {wv' : LowWert u Γ Λ} {eB' : Gabbro.Body.Expr}
       (h' : lowWertE u Γ Λ fn er sd' = .ok wv')
       (hb' : sideExpr u fn sd' = some eB') :=
@@ -76,8 +76,6 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
       subst hb
       exact ⟨ls, rfl, lowTabRead_sim hd σ₀ σ ρ w β hW hL⟩
   | add x y =>
-    have ihx := rec x (by simp_wf; omega)
-    have ihy := rec y (by simp_wf; omega)
     cases hsx : sideExpr u fn x with
     | none => simp [sideExpr, hsx, binE] at hb
     | some ex =>
@@ -89,12 +87,12 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
         cases hx : lowWertE u Γ Λ fn er x with
         | error e => simp [lowWertE, zahlVon, lowZwei, hx, Except.map] at h
         | ok wa =>
-          obtain ⟨lx, rfl, h1⟩ := ihx hx hsx
+          obtain ⟨lx, rfl, h1⟩ := recurse x (by simp_wf; omega) hx hsx
           simp only [LowSide.wert] at hx
           cases hy : lowWertE u Γ Λ fn er y with
           | error e => simp [lowWertE, zahlVon, lowZwei, LowWert.zahl, hx, hy, Except.map] at h
           | ok wb =>
-            obtain ⟨ly, rfl, h2⟩ := ihy hy hsy
+            obtain ⟨ly, rfl, h2⟩ := recurse y (by simp_wf; omega) hy hsy
             simp only [LowSide.wert] at hy
             simp only [lowWertE, hx, hy, Except.ok.injEq] at h
             subst h
@@ -107,8 +105,6 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
             rw [h1, h2]
             rfl
   | sub x y =>
-    have ihx := rec x (by simp_wf; omega)
-    have ihy := rec y (by simp_wf; omega)
     cases hsx : sideExpr u fn x with
     | none => simp [sideExpr, hsx, binE] at hb
     | some ex =>
@@ -120,12 +116,12 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
         cases hx : lowWertE u Γ Λ fn er x with
         | error e => simp [lowWertE, zahlVon, lowZwei, hx, Except.map] at h
         | ok wa =>
-          obtain ⟨lx, rfl, h1⟩ := ihx hx hsx
+          obtain ⟨lx, rfl, h1⟩ := recurse x (by simp_wf; omega) hx hsx
           simp only [LowSide.wert] at hx
           cases hy : lowWertE u Γ Λ fn er y with
           | error e => simp [lowWertE, zahlVon, lowZwei, LowWert.zahl, hx, hy, Except.map] at h
           | ok wb =>
-            obtain ⟨ly, rfl, h2⟩ := ihy hy hsy
+            obtain ⟨ly, rfl, h2⟩ := recurse y (by simp_wf; omega) hy hsy
             simp only [LowSide.wert] at hy
             simp only [lowWertE, zahlVon, hx, hy, LowWert.zahl, Except.ok.injEq] at h
             subst h
@@ -138,8 +134,6 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
             rw [h1, h2]
             rfl
   | mul x y =>
-    have ihx := rec x (by simp_wf; omega)
-    have ihy := rec y (by simp_wf; omega)
     cases hsx : sideExpr u fn x with
     | none => simp [sideExpr, hsx, binE] at hb
     | some ex =>
@@ -151,12 +145,12 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
         cases hx : lowWertE u Γ Λ fn er x with
         | error e => simp [lowWertE, zahlVon, lowZwei, hx, Except.map] at h
         | ok wa =>
-          obtain ⟨lx, rfl, h1⟩ := ihx hx hsx
+          obtain ⟨lx, rfl, h1⟩ := recurse x (by simp_wf; omega) hx hsx
           simp only [LowSide.wert] at hx
           cases hy : lowWertE u Γ Λ fn er y with
           | error e => simp [lowWertE, zahlVon, lowZwei, LowWert.zahl, hx, hy, Except.map] at h
           | ok wb =>
-            obtain ⟨ly, rfl, h2⟩ := ihy hy hsy
+            obtain ⟨ly, rfl, h2⟩ := recurse y (by simp_wf; omega) hy hsy
             simp only [LowSide.wert] at hy
             simp only [lowWertE, zahlVon, hx, hy, LowWert.zahl, Except.ok.injEq] at h
             subst h
@@ -169,12 +163,11 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
             rw [h1, h2]
             rfl
   | conv lo hi x =>
-    have ihx := rec x (by simp_wf; omega)
     have hb' : sideExpr u fn x = some eB := hb
     cases hx : lowWertE u Γ Λ fn er x with
     | error e => simp [lowWertE, zahlVon, hx, Except.map] at h
     | ok wa =>
-      obtain ⟨lx, rfl, h1⟩ := ihx hx hb'
+      obtain ⟨lx, rfl, h1⟩ := recurse x (by simp_wf; omega) hx hb'
       simp only [LowSide.wert] at hx
       simp only [lowWertE, zahlVon, hx, LowWert.zahl] at h
       unfold LowSide.conv at h
@@ -188,8 +181,6 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
         · simp [Except.map] at h
       · simp [Except.map] at h
   | band x y =>
-    have ihx := rec x (by simp_wf; omega)
-    have ihy := rec y (by simp_wf; omega)
     cases hsx : sideExpr u fn x with
     | none => simp [sideExpr, hsx, binE] at hb
     | some ex =>
@@ -201,12 +192,12 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
         cases hx : lowWertE u Γ Λ fn er x with
         | error e => simp [lowWertE, zahlVon, lowZwei, hx, Except.map] at h
         | ok wa =>
-          obtain ⟨lx, rfl, h1⟩ := ihx hx hsx
+          obtain ⟨lx, rfl, h1⟩ := recurse x (by simp_wf; omega) hx hsx
           simp only [LowSide.wert] at hx
           cases hy : lowWertE u Γ Λ fn er y with
           | error e => simp [lowWertE, zahlVon, lowZwei, LowWert.zahl, hx, hy, Except.map] at h
           | ok wb =>
-            obtain ⟨ly, rfl, h2⟩ := ihy hy hsy
+            obtain ⟨ly, rfl, h2⟩ := recurse y (by simp_wf; omega) hy hsy
             simp only [LowSide.wert] at hy
             simp only [lowWertE, zahlVon, lowZwei, hx, hy, LowWert.zahl] at h
             unfold LowSide.and at h
@@ -232,8 +223,6 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
               · simp [Except.map] at h
             · simp [Except.map] at h
   | bor x y =>
-    have ihx := rec x (by simp_wf; omega)
-    have ihy := rec y (by simp_wf; omega)
     cases hsx : sideExpr u fn x with
     | none => simp [sideExpr, hsx, binE] at hb
     | some ex =>
@@ -245,12 +234,12 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
         cases hx : lowWertE u Γ Λ fn er x with
         | error e => simp [lowWertE, zahlVon, lowZwei, hx, Except.map] at h
         | ok wa =>
-          obtain ⟨lx, rfl, h1⟩ := ihx hx hsx
+          obtain ⟨lx, rfl, h1⟩ := recurse x (by simp_wf; omega) hx hsx
           simp only [LowSide.wert] at hx
           cases hy : lowWertE u Γ Λ fn er y with
           | error e => simp [lowWertE, zahlVon, lowZwei, LowWert.zahl, hx, hy, Except.map] at h
           | ok wb =>
-            obtain ⟨ly, rfl, h2⟩ := ihy hy hsy
+            obtain ⟨ly, rfl, h2⟩ := recurse y (by simp_wf; omega) hy hsy
             simp only [LowSide.wert] at hy
             simp only [lowWertE, zahlVon, lowZwei, hx, hy, LowWert.zahl] at h
             unfold LowSide.or at h
@@ -282,8 +271,6 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
               · simp [Except.map] at h
             · simp [Except.map] at h
   | bxor x y =>
-    have ihx := rec x (by simp_wf; omega)
-    have ihy := rec y (by simp_wf; omega)
     cases hsx : sideExpr u fn x with
     | none => simp [sideExpr, hsx, binE] at hb
     | some ex =>
@@ -295,12 +282,12 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
         cases hx : lowWertE u Γ Λ fn er x with
         | error e => simp [lowWertE, zahlVon, lowZwei, hx, Except.map] at h
         | ok wa =>
-          obtain ⟨lx, rfl, h1⟩ := ihx hx hsx
+          obtain ⟨lx, rfl, h1⟩ := recurse x (by simp_wf; omega) hx hsx
           simp only [LowSide.wert] at hx
           cases hy : lowWertE u Γ Λ fn er y with
           | error e => simp [lowWertE, zahlVon, lowZwei, LowWert.zahl, hx, hy, Except.map] at h
           | ok wb =>
-            obtain ⟨ly, rfl, h2⟩ := ihy hy hsy
+            obtain ⟨ly, rfl, h2⟩ := recurse y (by simp_wf; omega) hy hsy
             simp only [LowSide.wert] at hy
             simp only [lowWertE, zahlVon, lowZwei, hx, hy, LowWert.zahl] at h
             unfold LowSide.xoder at h
