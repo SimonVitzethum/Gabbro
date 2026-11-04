@@ -68,16 +68,16 @@ def rewriteExpr (items : List SItemTief) (closed : List Closed) (locals : Locals
       | throw ("dyn.payload-type-required: " ++ spec)
     if expected.isSome && (expected.bind (lookup items closed 128)).isNone then
       throw "dyn.producer-target"
-    let candidates := closed.filter fun c => strEq c.spec spec &&
+    let candidates : List Closed := closed.filter fun c => strEq c.spec spec &&
       c.cases.any (fun k => beqSTyp (canonicalType items 128 k.payload) (canonicalType items 128 ty))
-    let candidates := match expected.bind (lookup items closed 128) with
+    let candidates : List Closed := match expected.bind (lookup items closed 128) with
       | some target => candidates.filter (fun c => strEq c.name target.name)
       | none => candidates
-    let target ← match candidates with
+    let target : Closed ← match candidates with
       | [target] => pure target
       | [] => throw ("dyn.producer-implementation: " ++ spec)
       | _ => throw ("dyn.producer-bound-required: " ++ spec)
-    let some variant := target.cases.find? fun c =>
+    let some variant := target.cases.find? fun (c : Case) =>
         beqSTyp (canonicalType items 128 c.payload) (canonicalType items 128 ty)
       | throw ("dyn.producer-implementation: " ++ spec)
     return .call variant.name [payload]
@@ -116,7 +116,9 @@ def checkStatement (items : List SItemTief) (closed : List Closed)
     of letting an equality or implementation test bypass the structured visitor. -/
 def checkRaw (items : List SItemTief) (closed : List Closed)
     (locals : Locals) (raw : String) : Except String Unit := do
-  let tokens ← lex raw
+  let tokens : List Token ← match lex raw with
+    | .ok tokens => pure tokens
+    | .error _ => throw "dyn.raw-header"
   if tokens.any (fun token => match nameText token with
       | some n => strEq n "dyn" ||
           (dynamicType items closed locals (.variable n)).isSome ||
