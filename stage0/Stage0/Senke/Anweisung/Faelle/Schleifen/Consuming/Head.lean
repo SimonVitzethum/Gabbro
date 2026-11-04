@@ -242,7 +242,8 @@ theorem head (entry : q.Entry (n + 1) m σ ρ) :
     (b := wahr? (Gabbro.Grammatik.eval σi q.inv σi ρ))
     (fuelRun.trans invRun) (fuelFrame.trans invFrame)
     (fuelKept.trans (fun j hj => invKept j (by simp [hj]))) ready2 counterRead2 bound read
-  simpa only [invW, σi] using completed
+  dsimp only [invW]
+  exact completed
 
 /-- Compose the invariant header and the complete current-world selector. -/
 theorem round (entry : q.Entry (n + 1) m σ ρ) (valid : (q.invW σ ρ).2 ≠ false) :
