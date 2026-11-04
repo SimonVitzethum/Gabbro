@@ -41,7 +41,8 @@ set_option maxHeartbeats 2000000
 variable [Kern]
 variable {D : Deklaration} {L : Lay D} {V : Vertrag D}
 
-private theorem someAnswer_env {e : Option Ty} {τ : Ty} {Γ : Ctx}
+/-- The canonical Some-result cast binds exactly its projected value. -/
+theorem someAnswer_env {e : Option Ty} {τ : Ty} {Γ : Ctx}
     (he : e = some τ) (v : ErgVal D e) (ρ : Env D Γ) :
     ergEnv (some τ) (he ▸ v) ρ = Env.cons (ergWert he v) ρ := by
   cases he
