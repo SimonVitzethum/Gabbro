@@ -25,7 +25,7 @@ def checkCanonicalConstants (msE : List SItemTief) : Except String Unit := do
     (match (uKonstFns msE).find? (fun k => match k.rumpf with
       | .block [] (some (.ret (some _))) => false
       | _ => true) with
-    | some k => (Gabbro.Grammatik.Parser.Konst.Export.constBlockVerweigerung k).map (fun _ => ())
+    | some k => (Gabbro.Grammatik.Parser.constBlockVerweigerung k).map (fun _ => ())
     | _ => .error "const function with a block body: certified evaluation unavailable") else
   pure ()
 
@@ -101,6 +101,9 @@ structure USeiteT where
 
 def lowerSeiteEin (tabs : List UTab) (names : List String)
     (types : List Ty) : USide → Except String USeiteT
+  | .truth _ | .predicate _ => .error "truth value as a number"
+  | .taggedEmpty .. | .taggedValue .. | .option .. | .absent _ | .present .. |
+    .reason .. | .function .. => .error "aggregate without G form in the 104 lowering"
   | .product .. | .field .. | .replace .. => .error "product without G form in the 104 lowering"
   | .glob _ => .error "static without G form in the 104 lowering"
   | .refSlot .. => .error "reference without G form in the 104 lowering"
