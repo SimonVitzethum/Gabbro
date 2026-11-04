@@ -120,8 +120,8 @@ theorem elabKopf_pointer_coherent {sig : FnSig} {kopf : UFnKopf} {writes : List 
             simp only [measure, clauses, parameters] at accepted
             have coherent := producedRows_coherent alias tabs whys sums zeiger zb spaces
               named eigner parameters
-            -- Reduce each preceding dispatcher before splitting its continuation.
-            repeat' (dsimp only at accepted; split at accepted)
+            -- Normalization may already be complete; still split the next dispatcher.
+            repeat' (try dsimp only at accepted; split at accepted)
             all_goals cases accepted
             all_goals exact coherent
 
@@ -142,8 +142,17 @@ theorem elabUFunktion_checkedPointerParam
   · rename_i kopf writes head
     have coherent := elabKopf_pointer_coherent consts alias tabs locks globs whys sums devs zeiger
       zb spaces valueScope.types eigner head
-    repeat' (dsimp only at accepted; split at accepted)
-    all_goals cases accepted
-    all_goals exact checkedPointerParam_complete _ j cap kind (coherent j cap kind)
+    cases measure : uMeasureClause alias sig.klauseln with
+    | error message =>
+      simp only [measure] at accepted
+      try dsimp only at accepted
+      split at accepted <;> cases accepted
+    | ok decreases =>
+      simp only [measure] at accepted
+      try dsimp only at accepted
+      split at accepted
+      · cases accepted
+      · cases accepted
+        exact checkedPointerParam_complete _ j cap kind (coherent j cap kind)
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg
