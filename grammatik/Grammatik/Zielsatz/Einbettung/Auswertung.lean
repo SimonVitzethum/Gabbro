@@ -97,7 +97,7 @@ theorem byte_treu {T' T : Ty} (x' : Wert D' T') (x : Wert D T) (eT : T' = E.tyE 
     (cast (congrArg (Wert D') hT') x' : Wert D' (.int 0 255)) = (cast (congrArg (Wert D) hT) x : Wert D (.int 0 255)) := by
   subst hT
   subst eT
-  rw [cast_eq, cast_eq]
+  change x' = x
   exact h
 
 /-- An `option index` of an image field is the field's. -/
@@ -155,6 +155,37 @@ theorem vrel_ib2 {τ1 τ2 τ : Ty} (op : IntBuiltin [τ1, τ2] τ) (x : Wert D �
 
 variable {σ₀ σ : World D} {σ₀' σ' : World D'}
 
+private theorem related_if {α β ι : Type} (rel : α → β → Prop) (p : ι → Prop)
+    [DecidablePred p] {i j : ι} (h : j = i) {a b : α} {a' b' : β}
+    (ha : rel a a') (hb : rel b b') :
+    rel (if p i then a else b) (if p j then a' else b') := by
+  have hp : p j ↔ p i := by rw [h]
+  by_cases hi : p i
+  · rw [if_pos hi, if_pos (hp.mpr hi)]; exact ha
+  · rw [if_neg hi, if_neg (fun hj => hi (hp.mp hj))]; exact hb
+
+private theorem restrict_prod_get : ∀ {fs : List Ty} {τ : Ty} (i : FieldAt fs τ)
+    (v : ProdVal D'.Fn D'.passt (Ty.mapFields E.num E.tnum fs)),
+    E.valZ K τ (prodGetW (FieldAt.mapNumbers E.num E.tnum i) v) =
+      prodGetW i (ProdVal.restrict E.num E.tnum (fun n v => K.zeiger n v.1 v.2) fs v)
+  | _, _, .head, _ => rfl
+  | _, _, .tail i, v => restrict_prod_get i v.2
+
+private theorem restrict_prod_set : ∀ {fs : List Ty} {τ : Ty} (i : FieldAt fs τ)
+    (v : ProdVal D'.Fn D'.passt (Ty.mapFields E.num E.tnum fs)) (x : Wert D' (E.tyE τ)),
+    ProdVal.restrict E.num E.tnum (fun n v => K.zeiger n v.1 v.2) fs
+      (prodSetW (FieldAt.mapNumbers E.num E.tnum i) v x) =
+      prodSetW i (ProdVal.restrict E.num E.tnum (fun n v => K.zeiger n v.1 v.2) fs v) (E.valZ K τ x)
+  | _, _, .head, _, _ => rfl
+  | _, _, .tail i, v, x => ProdVal.pcons_congr rfl (restrict_prod_set i v.2 x)
+
+private theorem evalProd_cast_cons {Γ : Ctx} {Λ : List (Res D')} {τ : Ty} {fs fs' : List Ty}
+    (h : fs = fs') (e : Expr D' Γ Λ τ) (args : Args D' Γ Λ fs)
+    (σ₀ σ : World D') (ρ : Env D' Γ) :
+    evalProd σ₀ (Args.umτs (congrArg (τ :: ·) h) (.cons e args)) σ ρ =
+      (eval σ₀ e σ ρ, evalProd σ₀ (Args.umτs h args) σ ρ) := by
+  subst h; rfl
+
 mutual
 
 /-- **Evaluation commutes with the embedding**: beside related worlds and environments, an
@@ -173,30 +204,30 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
       have hi := eval_exE h₀ h i ρ ρ' hρ
       simp only [VRel] at hi
       simp only [exE, eval_umTy, eval]
-      rw [castW_n, hi]
+      erw [castW_n, hi]
       exact h.1 t _ f
   | _, _, _, .thru _ t _ f i _, ρ, ρ', hρ => by
       have hi := eval_exE h₀ h i ρ ρ' hρ
       simp only [VRel] at hi
       simp only [exE, eval_umTy, eval]
-      rw [castW_n, hi]
+      erw [castW_n, hi]
       exact h.1 t _ f
   | _, _, _, .thruOwn _ t _ f i _ _ _ _ _ _, ρ, ρ', hρ => by
       have hi := eval_exE h₀ h i ρ ρ' hρ
       simp only [VRel] at hi
       simp only [exE, eval_umTy, eval]
-      rw [castW_n, hi]
+      erw [castW_n, hi]
       exact h.1 t _ f
   | _, _, _, .ptrOf _ _ _ _, _, _, _ => rfl
   | _, _, _, .fnref _ _ _, _, _, _ => Or.inl rfl
   | _, _, _, .refEq a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      simp only [VRel] at ha hb ⊢; simp only [exE, eval]; rw [ha, hb]; rfl
+      exact congrArg₂ (fun (a b : Nat) => decide (a = b)) ha hb
   | _, _, _, .slotRef r t _ _ f _, ρ, ρ', hρ => by
       have hr := eval_exE h₀ h r ρ ρ' hρ
       simp only [VRel] at hr
       simp only [exE, eval_umTy, eval]
-      rw [hr]
+      erw [hr]
       exact h.1 t _ f
   | _, _, _, .oldG g _, _, _, _ => by
       simp only [exE, eval_umTy, eval]; exact h₀.2 g
@@ -204,89 +235,89 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
       have hi := eval_exE h₀ h i ρ ρ' hρ
       simp only [VRel] at hi
       simp only [exE, eval_umTy, eval]
-      rw [castW_n, hi]
+      erw [castW_n, hi]
       exact h₀.1 t _ f
-  | _, _, _, .widen _ _ a, ρ, ρ', hρ => by
+  | _, _, _, .widen h1 h2 a, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ
-      simp only [VRel] at ha ⊢; simp only [exE, eval]; rw [ha]; rfl
+      exact congrArg (Zahl.weiter h1 h2) ha
   | _, _, _, .add a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      simp only [VRel] at ha hb ⊢; simp only [exE, eval]; rw [ha, hb]; rfl
+      exact congrArg₂ Zahl.add ha hb
   | _, _, _, .sub a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      simp only [VRel] at ha hb ⊢; simp only [exE, eval]; rw [ha, hb]; rfl
+      exact congrArg₂ Zahl.sub ha hb
   | _, _, _, .neg a, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ
-      simp only [VRel] at ha ⊢; simp only [exE, eval]; rw [ha]; rfl
+      exact congrArg Zahl.neg ha
   | _, _, _, .mul a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      simp only [VRel] at ha hb ⊢; simp only [exE, eval]; rw [ha, hb]; rfl
-  | _, _, _, .div _ _ a b, ρ, ρ', hρ => by
+      exact congrArg₂ Zahl.mul ha hb
+  | _, _, _, .div h0 h1 a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      simp only [VRel] at ha hb ⊢; simp only [exE, eval]; rw [ha, hb]; rfl
-  | _, _, _, .rem _ _ a b, ρ, ρ', hρ => by
+      exact congrArg₂ (Zahl.div h0 h1) ha hb
+  | _, _, _, .rem h0 h1 a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      simp only [VRel] at ha hb ⊢; simp only [exE, eval]; rw [ha, hb]; rfl
-  | _, _, _, .sdiv _ a b, ρ, ρ', hρ => by
+      exact congrArg₂ (Zahl.rem h0 h1) ha hb
+  | _, _, _, .sdiv h0 a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      simp only [VRel] at ha hb ⊢; simp only [exE, eval]; rw [ha, hb]; rfl
-  | _, _, _, .srem _ a b, ρ, ρ', hρ => by
+      exact congrArg₂ (Zahl.sdiv h0) ha hb
+  | _, _, _, .srem h0 a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      simp only [VRel] at ha hb ⊢; simp only [exE, eval]; rw [ha, hb]; rfl
+      exact congrArg₂ (Zahl.srem h0) ha hb
   | _, _, _, .getBytes t f hf n i _ _ _, ρ, ρ', hρ => by
       have hi := eval_exE h₀ h i ρ ρ' hρ
       simp only [VRel] at hi ⊢
       simp only [exE, eval]
       show (⟨_, _, _⟩ : Zahl _ _) = ⟨_, _, _⟩
       congr 1
-      rw [hi]
+      erw [hi]
       exact congrArg bytesZuZahl (E.bytesAb_treu K h σ rfl t f hf _ n _)
-  | _, _, _, .band _ _ a b, ρ, ρ', hρ => by
+  | _, _, _, .band h0 h1 a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      simp only [VRel] at ha hb ⊢; simp only [exE, eval]; rw [ha, hb]; rfl
-  | _, _, _, .bor _ _ _ _ _ a b, ρ, ρ', hρ => by
+      exact congrArg₂ (Zahl.band h0 h1) ha hb
+  | _, _, _, .bor w h0 h1 hw0 hw1 a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      simp only [VRel] at ha hb ⊢; simp only [exE, eval]; rw [ha, hb]; rfl
-  | _, _, _, .bxor _ _ _ _ _ a b, ρ, ρ', hρ => by
+      exact congrArg₂ (Zahl.bor w h0 h1 hw0 hw1) ha hb
+  | _, _, _, .bxor w h0 h1 hw0 hw1 a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      simp only [VRel] at ha hb ⊢; simp only [exE, eval]; rw [ha, hb]; rfl
-  | _, _, _, .shl _ _ _ _ _ a b, ρ, ρ', hρ => by
+      exact congrArg₂ (Zahl.bxor w h0 h1 hw0 hw1) ha hb
+  | _, _, _, .shl w hw0 hw1 h0 h1 a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      simp only [VRel] at ha hb ⊢; simp only [exE, eval]; rw [ha, hb]; rfl
-  | _, _, _, .shr _ _ _ _ _ a b, ρ, ρ', hρ => by
+      exact congrArg₂ (Zahl.shl w hw0 hw1 h0 h1) ha hb
+  | _, _, _, .shr w hw0 hw1 h0 h1 a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      simp only [VRel] at ha hb ⊢; simp only [exE, eval]; rw [ha, hb]; rfl
+      exact congrArg₂ (Zahl.shr w hw0 hw1 h0 h1) ha hb
   | _, _, _, .lt a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      simp only [VRel] at ha hb ⊢; simp only [exE, eval]; rw [ha, hb]; rfl
+      exact congrArg₂ (fun (a : Zahl _ _) (b : Zahl _ _) => decide (a.n < b.n)) ha hb
   | _, _, _, .le a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      simp only [VRel] at ha hb ⊢; simp only [exE, eval]; rw [ha, hb]; rfl
+      exact congrArg₂ (fun (a : Zahl _ _) (b : Zahl _ _) => decide (a.n ≤ b.n)) ha hb
   | _, _, _, .eq a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      simp only [VRel] at ha hb ⊢; simp only [exE, eval]; rw [ha, hb]; rfl
+      exact congrArg₂ (fun (a : Zahl _ _) (b : Zahl _ _) => decide (a.n = b.n)) ha hb
   | _, _, _, .fllt a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      simp only [VRel] at ha hb ⊢; simp only [exE, eval]; rw [ha, hb]; rfl
+      exact congrArg₂ (fun (a : Gleit _ _) (b : Gleit _ _) => gleitLt a.x b.x) ha hb
   | _, _, _, .flle a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      simp only [VRel] at ha hb ⊢; simp only [exE, eval]; rw [ha, hb]; rfl
+      exact congrArg₂ (fun (a : Gleit _ _) (b : Gleit _ _) => gleitLe a.x b.x) ha hb
   | _, _, _, .and a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      simp only [VRel] at ha hb ⊢; simp only [exE, eval]; rw [ha, hb]; rfl
+      exact congrArg₂ (fun (a b : Bool) => wahr? a && wahr? b) ha hb
   | _, _, _, .or a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      simp only [VRel] at ha hb ⊢; simp only [exE, eval]; rw [ha, hb]; rfl
+      exact congrArg₂ (fun (a b : Bool) => wahr? a || wahr? b) ha hb
   | _, _, _, .not a, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ
-      simp only [VRel] at ha ⊢; simp only [exE, eval]; rw [ha]; rfl
+      exact congrArg (fun a : Bool => !wahr? a) ha
   | _, _, _, .none _, _, _, _ => rfl
   | _, _, _, .some a, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ
-      simp only [VRel] at ha ⊢; simp only [exE, eval]; rw [ha]; rfl
+      exact congrArg some ha
   | _, _, _, .istSome a, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ
-      simp only [VRel] at ha ⊢; simp only [exE, eval]; rw [ha]; rfl
+      exact congrArg Option.isSome ha
   | _, _, _, .case cs i nutz, ρ, ρ', hρ => by
       have hn := E.nrel_valZ K (cs.get i) _ _ (evalNutz_exN h₀ h nutz ρ ρ' hρ)
       simp only [VRel, exE, eval, evalNutz_cast]
@@ -299,28 +330,26 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
   | _, _, _, .forallSlots t body _, ρ, ρ', hρ => by
       simp only [VRel]
       simp only [exE, eval]
-      rw [alle_count _ (E.count t)]
+      erw [alle_count _ (E.count t)]
       show _ = (alleIndizes (D.count t)).all (fun k => wahr? (eval σ₀ body σ (.cons k ρ)))
       congr 1
       funext k
       have hk := eval_exE h₀ h body (.cons k ρ) (.cons k ρ') (E.envR_cons K (τ := Ty.index (D.count t)) (τ' := Ty.index (D.count t)) hρ k k rfl rfl)
-      simp only [VRel] at hk
-      rw [hk]; rfl
+      exact congrArg wahr? hk
   | _, _, _, .existsSlots t body _, ρ, ρ', hρ => by
       simp only [VRel]
       simp only [exE, eval]
-      rw [any_count _ (E.count t)]
+      erw [any_count _ (E.count t)]
       show _ = (alleIndizes (D.count t)).any (fun k => wahr? (eval σ₀ body σ (.cons k ρ)))
       congr 1
       funext k
       have hk := eval_exE h₀ h body (.cons k ρ) (.cons k ρ') (E.envR_cons K (τ := Ty.index (D.count t)) (τ' := Ty.index (D.count t)) hρ k k rfl rfl)
-      simp only [VRel] at hk
-      rw [hk]; rfl
+      exact congrArg wahr? hk
   | _, _, _, .reaches t f hf a b _, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
       simp only [VRel] at ha hb ⊢
       simp only [exE, eval, eval_umTy]
-      rw [castW_n, castW_n, ha, hb]
+      erw [castW_n, castW_n, ha, hb]
       exact kette_gleich (E.count t) _ _
         (fun k => E.opt_treu K _ _ (E.typ t f) (h.1 t k f) hf _) _ _
   | _, _, _, .arrNil, _, _, _ => fun j => j.elim0
@@ -342,67 +371,37 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
   | _, _, _, .arrSet a i v, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hi := eval_exE h₀ h i ρ ρ' hρ
       have hv := eval_exE h₀ h v ρ ρ' hρ
-      simp only [VRel, valE] at hi
       intro j
       show E.VRel K _ (arrSetW _ _ _ j) (arrSetW _ _ _ j)
       unfold arrSetW
-      rw [hi]
-      by_cases hj : j = Zahl.fin (eval σ₀ i σ ρ)
-      · simp only [hj, if_true]
-        exact hv
-      · simp only [hj, if_false]
-        exact ha j
+      exact related_if (E.VRel K _) (fun k => j = k) (congrArg Zahl.fin hi) hv (ha j)
   | _, _, _, .strLit _ _, _, _, _ => rfl
   | _, _, _, .strLen e, ρ, ρ', hρ => by
       have he := eval_exE h₀ h e ρ ρ' hρ
-      simp only [VRel] at he ⊢
-      show strLenW _ = strLenW _
-      rw [he]
-      rfl
+      exact congrArg strLenW he
   | _, _, _, .strCat e e', ρ, ρ', hρ => by
       have he := eval_exE h₀ h e ρ ρ' hρ; have he' := eval_exE h₀ h e' ρ ρ' hρ
-      simp only [VRel] at he he' ⊢
-      show strCatW _ _ = strCatW _ _
-      rw [he, he']
-      rfl
+      exact congrArg₂ strCatW he he'
   | _, _, _, .strGet e e', ρ, ρ', hρ => by
       have he := eval_exE h₀ h e ρ ρ' hρ; have he' := eval_exE h₀ h e' ρ ρ' hρ
-      simp only [VRel, valE] at he he' ⊢
-      show strGetW _ _ = strGetW _ _
-      rw [he, he']
+      exact congrArg₂ (fun s (i : Zahl _ _) => strGetW s i.n) he he'
   | _, _, _, .strEq e e', ρ, ρ', hρ => by
       have he := eval_exE h₀ h e ρ ρ' hρ; have he' := eval_exE h₀ h e' ρ ρ' hρ
-      simp only [VRel, valE] at he he' ⊢
-      show strEqW _ _ = strEqW _ _
-      rw [he, he']
+      exact congrArg₂ strEqW he he'
   | _, _, _, .strLt e e', ρ, ρ', hρ => by
       have he := eval_exE h₀ h e ρ ρ' hρ; have he' := eval_exE h₀ h e' ρ ρ' hρ
-      simp only [VRel, valE] at he he' ⊢
-      show strLtW _ _ = strLtW _ _
-      rw [he, he']
-  | _, _, _, .strWeit _ e, ρ, ρ', hρ => by
+      exact congrArg₂ strLtW he he'
+  | _, _, _, .strWeit m e, ρ, ρ', hρ => by
       have he := eval_exE h₀ h e ρ ρ' hρ
-      simp only [VRel] at he ⊢
-      show strWeitW _ _ = strWeitW _ _
-      rw [he]
-      rfl
+      exact congrArg (strWeitW m) he
   | _, _, _, .wenn c a b, ρ, ρ', hρ => by
       have hc := eval_exE h₀ h c ρ ρ' hρ; have ha := eval_exE h₀ h a ρ ρ' hρ
       have hb := eval_exE h₀ h b ρ ρ' hρ
-      simp only [VRel] at hc
-      show E.VRel K _ (if wahr? _ then _ else _) (if wahr? _ then _ else _)
-      rw [hc]
-      by_cases hw : wahr? (eval σ₀ c σ ρ) = true
-      · rw [if_pos hw, if_pos (by simpa [valE, wahr?] using hw)]
-        exact ha
-      · rw [if_neg hw, if_neg (by simpa [valE, wahr?] using hw)]
-        exact hb
+      exact related_if (E.VRel K _) (fun b : Bool => b = true) (congrArg wahr? hc) ha hb
   | _, _, _, .eng e lo' hi' s, ρ, ρ', hρ => by
       have he := eval_exE h₀ h e ρ ρ' hρ; have hs := eval_exE h₀ h s ρ ρ' hρ
-      simp only [VRel, valE] at he hs ⊢
-      show (if h : _ then _ else _) = (if h : _ then _ else _)
-      first | rw [← hs] | rw [hs]
-      first | exact eng_kongr he _ | exact eng_kongr he.symm _
+      exact congrArg₂ (fun (v : Zahl _ _) (s : Zahl lo' hi') =>
+        if h : lo' ≤ v.n ∧ v.n ≤ hi' then (⟨v.n, h.1, h.2⟩ : Zahl lo' hi') else s) he hs
   | _, _, _, .intBuiltin1 op a, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ
       simp only [exE, eval]
@@ -420,6 +419,15 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
         (E.envR_cons K (τ := Ty.index (n : Int)) (τ' := Ty.index (n : Int)) hρ k k rfl rfl)
       simp only [VRel] at hk
       exact congrArg wahr? hk
+  | _, _, _, .prod r args, ρ, ρ', hρ => evalProd_exA h₀ h args ρ ρ' hρ
+  | _, _, _, .prodGet v i, ρ, ρ', hρ => by
+      have hv := eval_exE h₀ h v ρ ρ' hρ
+      apply (E.vrel_iff_valZ K _ _ _).mpr
+      exact (restrict_prod_get E K i _).trans (congrArg (prodGetW i) hv)
+  | _, _, _, .prodSet v i e, ρ, ρ', hρ => by
+      have hv := eval_exE h₀ h v ρ ρ' hρ
+      have he := E.valZ_vrel K _ (eval_exE h₀ h e ρ ρ' hρ)
+      exact (restrict_prod_set E K i _ _).trans (congrArg₂ (prodSetW i) hv he)
 
 /-- Payloads. -/
 theorem evalNutz_exN (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speicher σ') :
@@ -430,6 +438,21 @@ theorem evalNutz_exN (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.sp
   | _, _, _, .val e, ρ, ρ', hρ => by
       have he := eval_exE h₀ h e ρ ρ' hρ
       exact he
+
+/-- Restriction of the complete translated field-argument tuple. -/
+theorem evalProd_exA (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speicher σ') :
+    ∀ {Γ : Ctx} {Λ : List (Res D)} {fs : List Ty} (args : Args D Γ Λ fs) (ρ : Env D Γ)
+      (ρ' : Env D' (Γ.map E.tyE)), E.EnvR K ρ ρ' →
+      ProdVal.restrict E.num E.tnum (fun n v => K.zeiger n v.1 v.2) fs
+        (evalProd σ₀' (Args.umτs (E.mapFieldsE fs) (exA E args)) σ' ρ') = evalProd σ₀ args σ ρ
+  | _, _, _, .nil, _, _, _ => rfl
+  | _, _, τ :: fs, .cons e rest, ρ, ρ', hρ => by
+      change ProdVal.restrict E.num E.tnum (fun n v => K.zeiger n v.1 v.2) (τ :: fs)
+        (evalProd σ₀' (Args.umτs (congrArg (E.tyE τ :: ·) (E.mapFieldsE fs))
+          (.cons (exE E e) (exA E rest))) σ' ρ') = _
+      rw [evalProd_cast_cons]
+      exact ProdVal.pcons_congr (E.valZ_vrel K _ (eval_exE h₀ h e ρ ρ' hρ))
+        (evalProd_exA h₀ h rest ρ ρ' hρ)
 
 end
 
