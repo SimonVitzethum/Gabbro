@@ -27,19 +27,31 @@ theorem initialLayout_bild {u : UProg} {P : Programm (declOf u)} {passes : Nat}
     {slots req : Nat} {b : Bild (declOf u)}
     (emitted : bild passes P (layU u tor) fs pos name main args starts slots req = .ok b) :
     InitialLayout u b.Y := by
-  unfold bild at emitted
+  simp only [bild] at emitted
   split at emitted
   · cases emitted
-  · split at emitted
+  · next preliminary firstPass =>
+    split at emitted
     · cases emitted
-    · split at emitted
+    · next relocated secondPass =>
+      split at emitted
       · simp only [Except.ok.injEq] at emitted
         subst b
         refine ⟨fun _ => rfl, fun _ _ => rfl, rfl, fun t => ?_⟩
         simp only [Lay.count, layU, ite_self, Int.natCast_zero, Int.add_zero]
-      · revert emitted
-        repeat' split
-        all_goals intro emitted; cases emitted
+      · split at emitted
+        · cases emitted
+        · split at emitted
+          · cases emitted
+          · split at emitted
+            · cases emitted
+            · split at emitted
+              · cases emitted
+              · split at emitted
+                · cases emitted
+                · split at emitted
+                  · cases emitted
+                  · cases emitted
 
 /-- Bounds are inherited from the actual image layout check; initialization changes
     neither image size nor its permitted address range. -/
