@@ -26,14 +26,14 @@ theorem semV_endeGleit {Λ : List (Res D)} {l₁ h₁ l₂ h₂ : Int × Int} (o
       (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ).x) = some v) :
     semV O passes R (.ende (.float op a b lo hi rest)) σ ρ =
       semV O passes R (.ende rest) (σ.lese Λ (a.orte ++ b.orte)) (.cons v ρ) := by
-  simp only [semV, execEnd, hv, zErg_schrumpf]
+  simp only [semV, weiterZ, execEnd, hv, zErg_schrumpf]
 
 theorem semV_endeGleitLit {Λ : List (Res D)} (q lo hi : Int × Int)
     (rest : Endblock D V l (.fl lo hi :: Γ) Λ)  (σ : World D)
     (ρ : Env D Γ) (v : Wert D (.fl lo hi)) (hv : gleitPasst lo hi (bruch q) = some v) :
     semV O passes R (.ende (.floatLit q lo hi rest)) σ ρ =
       semV O passes R (.ende rest) σ (.cons v ρ) := by
-  simp only [semV, execEnd, hv, zErg_schrumpf]
+  simp only [semV, weiterZ, execEnd, hv, zErg_schrumpf]
 
 theorem semV_endeGleitVon {Λ : List (Res D)} {l₁ h₁ : Int} (e : Expr D Γ Λ (.int l₁ h₁))
     (lo hi : Int × Int) (rest : Endblock D V l (.fl lo hi :: Γ) Λ)
@@ -42,7 +42,7 @@ theorem semV_endeGleitVon {Λ : List (Res D)} {l₁ h₁ : Int} (e : Expr D Γ �
       (σ.lese Λ e.orte) ρ).n) = some v) :
     semV O passes R (.ende (.floatOf e lo hi rest)) σ ρ =
       semV O passes R (.ende rest) (σ.lese Λ e.orte) (.cons v ρ) := by
-  simp only [semV, execEnd, hv, zErg_schrumpf]
+  simp only [semV, weiterZ, execEnd, hv, zErg_schrumpf]
 
 theorem semV_endeGleitNarrowOk {Λ : List (Res D)} {l₁ h₁ : Int × Int}
     (e : Expr D Γ Λ (.fl l₁ h₁)) (lo hi : Int × Int) (sonst : Endblock D V l Γ Λ)
@@ -51,7 +51,7 @@ theorem semV_endeGleitNarrowOk {Λ : List (Res D)} {l₁ h₁ : Int × Int}
     (hv : gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = some v) :
     semV O passes R (.ende (.floatNarrow e lo hi sonst rest)) σ ρ =
       semV O passes R (.ende rest) (σ.lese Λ e.orte) (.cons v ρ) := by
-  simp only [semV, execEnd, hv, zErg_schrumpf]
+  simp only [semV, weiterZ, execEnd, hv, zErg_schrumpf]
 
 theorem semV_endeGleitNarrowElse {Λ : List (Res D)} {l₁ h₁ : Int × Int}
     (e : Expr D Γ Λ (.fl l₁ h₁)) (lo hi : Int × Int) (sonst : Endblock D V l Γ Λ)
@@ -60,7 +60,7 @@ theorem semV_endeGleitNarrowElse {Λ : List (Res D)} {l₁ h₁ : Int × Int}
     (hn : gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = none) :
     (semV O passes R (.ende (.floatNarrow e lo hi sonst rest)) σ ρ).folgt
       (semV O passes R (.ende sonst) (σ.lese Λ e.orte) ρ) := by
-  simp only [semV, execEnd, hn, zErg_schrumpf]
+  simp only [semV, weiterZ, execEnd, hn, zErg_schrumpf]
   exact ZErg.folgt_refl _
 
 end Stufen
