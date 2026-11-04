@@ -8,21 +8,11 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Gleitkomma Runner.IR
 
 private theorem exactAddComm (u v : Exakt) : exaktAdd u v = exaktAdd v u := by
-  rw [floatAdd_align, floatAdd_align]
-  by_cases uv : u.zweierExp ≤ v.zweierExp
-  · by_cases vu : v.zweierExp ≤ u.zweierExp
-    · have same : u.zweierExp = v.zweierExp := by omega
-      simp only [if_pos uv, if_pos vu, same, sub_self, Int.toNat_zero,
-        Nat.pow_zero, Nat.cast_one, mul_one]
-      congr 1
-      omega
-    · simp only [if_pos uv, if_neg vu]
-      congr 1
-      omega
-  · have vu : v.zweierExp ≤ u.zweierExp := by omega
-    simp only [if_neg uv, if_pos vu]
-    congr 1
-    omega
+  have common :
+      (if u.zweierExp ≤ v.zweierExp then u.zweierExp else v.zweierExp) =
+        (if v.zweierExp ≤ u.zweierExp then v.zweierExp else u.zweierExp) := by
+    split <;> split <;> omega
+  simp only [exaktAdd, ← common, add_comm]
 
 /-- Compose source alignment, the actual normalization branch and packing.
     Cancellation is selected before sign packing and rounds to positive zero. -/
@@ -35,8 +25,10 @@ theorem routineFiniteDirectionalWord_model (a b : GFloat)
       BitVec.ofNat 64 (zuBits f64 (rundeExakt f64 (exaktAdd u v))) := by
   let n := softAlignedMagnitude a.sign b.sign (softSig a.bexp a.frac)
     (softSig b.bexp b.frac) (max a.bexp 1 - max b.bexp 1)
-  have lb : softSig a.bexp a.frac < 2 ^ 53 := by unfold softSig; split <;> have := ha.2 <;> omega
-  have rb : softSig b.bexp b.frac < 2 ^ 53 := by unfold softSig; split <;> have := hb.2 <;> omega
+  have af : a.frac < 2 ^ 52 := ha.2
+  have bf : b.frac < 2 ^ 52 := hb.2
+  have lb : softSig a.bexp a.frac < 2 ^ 53 := by unfold softSig; split <;> omega
+  have rb : softSig b.bexp b.frac < 2 ^ 53 := by unfold softSig; split <;> omega
   have indices := routineOrder_indices a b ha hb order
   obtain ⟨equal, different⟩ := routineSource_order a b ha hb order
   have data := softAlignedMagnitude_bounds a.sign b.sign _ _ _ _ lb rb
@@ -51,10 +43,11 @@ theorem routineFiniteDirectionalWord_model (a b : GFloat)
   rw [magnitude, BitVec.toNat_ofNat, Nat.mod_eq_of_lt n64] at source
   rw [source]
   rcases data.2.2.2.1 with zero | positive
-  · have zeroWord : routineDirectionalWord (BitVec.ofNat 64 (zuBits f64 a))
+  · have nzero : n = 0 := zero
+    have zeroWord : routineDirectionalWord (BitVec.ofNat 64 (zuBits f64 a))
         (BitVec.ofNat 64 (zuBits f64 b)) = 0 := by rw [magnitude, zero]; rfl
     rw [routineFiniteDirectionalWord_zero _ _ zeroWord,
-      rundeExakt_null f64 _ (by cases a.sign <;> simp only [zero, Int.natCast_zero, neg_zero, ite_self])]
+      rundeExakt_null f64 _ (by simp only [nzero, Int.natCast_zero, neg_zero, ite_self])]
     rfl
   · exact routineFiniteDirectionalWord_exact _ _ a.sign n (max a.bexp 1)
       magnitude index sign positive data.2.2.1 (by omega) expBound
