@@ -99,15 +99,30 @@ def recordCheckReturn (ctx : UCtx) (c : SCheck) (point : Nat) (value : SExpr) :
     | none => (state.1, state.2 ++ [(sample.1, none)])
     | some _ => (state.1 + 1, state.2 ++ [(sample.1, some state.1)])) (0, [])
   let reporter : UFn :=
-    { name := reportFnName c.cname point, params, kinds := params.map (fun p =>
-        match p.2 with | .bool => .bool | _ => .int),
-      res := none, resBool := true, held := [], puts := [], gives := [],
-      body := [], ret := .bool answer,
-      checkReturn := some { check := c.cname, point, samples := slots,
-        floorStart := present.length, floorCount := c.boden.length } }
+    { name := reportFnName c.cname point
+      params := params
+      kinds := params.map (fun p => match p.2 with | .bool => .bool | _ => .int)
+      res := none
+      resBool := true
+      held := []
+      puts := []
+      gives := []
+      body := []
+      ret := .bool answer
+      checkReturn := some
+        { check := c.cname
+          point := point
+          samples := slots
+          floorStart := present.length
+          floorCount := c.boden.length } }
   let head : UFnKopf :=
-    { name := reporter.name, names := params.map (·.1), types := params.map (·.2),
-      kinds := reporter.kinds, res := none, resBool := true, held := [] }
+    { name := reporter.name
+      names := params.map (·.1)
+      types := params.map (·.2)
+      kinds := reporter.kinds
+      res := none
+      resBool := true
+      held := [] }
   let captures := present.zipIdx.map fun ((expr, _), i) =>
     (expr, SExpr.variable ("#checkSample#" ++ toString i))
   let sampleBindings := captures.map fun (expr, captured) => match captured with
@@ -121,11 +136,11 @@ def recordCheckReturn (ctx : UCtx) (c : SCheck) (point : Nat) (value : SExpr) :
     (some (.ret (some (.variable "#checkReport"))))
   pure (body, reporter, head)
 
+mutual
+
 /-- Instrument source blocks with their real lexical contexts. An individual
     statement is elaborated by the existing context transition, so shadowing
     and locals introduced inside each branch are resolved at that return. -/
-mutual
-
 def recordCheckCode (heads : List UFnKopf) (c : SCheck) :
     Nat → UCtx → Nat → SAnw → Except String (SAnw × List UFn × List UFnKopf × Nat)
   | 0, _, _, _ => .error "check recording expansion exhausted"
@@ -151,8 +166,8 @@ def recordCheckCode (heads : List UFnKopf) (c : SCheck) :
       | some (.ret (some value)) =>
         let (body, reporter, head) ← recordCheckReturn ctx c point value
         match body with
-        | .block prefix ending =>
-          pure (.block (statements ++ prefix) ending, reporters ++ [reporter],
+        | .block recordedPrelude ending =>
+          pure (.block (statements ++ recordedPrelude) ending, reporters ++ [reporter],
             extraHeads ++ [head], point + 1)
         | _ => .error "check reporter expansion is not a block"
       | _ => pure (.block statements ending, reporters, extraHeads, point)
@@ -161,7 +176,7 @@ def recordCheckCode (heads : List UFnKopf) (c : SCheck) :
       let mut reports := rs
       let mut extraHeads := hs
       let mut point := point
-      let mut transformed := []
+      let mut transformed : List SAnw := []
       for branch in branches do
         let (branch, rs, hs, next) ← recordCheckCode heads c fuel ctx point branch
         transformed := transformed ++ [branch]
@@ -210,10 +225,10 @@ def recordCheckCode (heads : List UFnKopf) (c : SCheck) :
       | none => pure (statement, [], [], point)
       | some branch => one ctx (fun branch => .alloc mutable name ty arena count (some branch)) branch
     | .cases value arms =>
-      let mut reports := []
-      let mut extraHeads := []
+      let mut reports : List UFn := []
+      let mut extraHeads : List UFnKopf := []
       let mut point := point
-      let mut transformed := []
+      let mut transformed : List SAnw := []
       for arm in arms do
         let inner := match arm, (uSumPlatz ctx value).toOption with
           | .arm tag (some name) _, some (_, index) =>
@@ -243,10 +258,10 @@ def recordCheckStatements (heads : List UFnKopf) (c : SCheck) :
     let (_, nextCtx) ← uAnwReihe ctx.tabs heads 1000000 ctx [statement]
     let (rest, endCtx, more, moreHeads, point) ←
       recordCheckStatements heads c fuel nextCtx point rest
-    let prefix := match statement, transformed with
-      | .ret _, .block prefix (some (.ret result)) => prefix ++ [.ret result]
+    let recordedPrelude := match statement, transformed with
+      | .ret _, .block returnPrelude (some (.ret result)) => returnPrelude ++ [.ret result]
       | _, _ => [transformed]
-    pure (prefix ++ rest, endCtx, reporters ++ more, extraHeads ++ moreHeads, point)
+    pure (recordedPrelude ++ rest, endCtx, reporters ++ more, extraHeads ++ moreHeads, point)
 
 end
 
