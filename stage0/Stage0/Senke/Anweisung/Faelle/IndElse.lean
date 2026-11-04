@@ -110,6 +110,14 @@ theorem lowIndElse_ok {A : D.Fn → Nat} {C : D.Fn → List II}
   | logik e => exact Stops.prefix s1 (Stops.prefix s2 hc2)
   | hardware e => exact Stops.prefix s1 (Stops.prefix s2 hc2)
 
+/-- Reindex a complete reason value at an equal channel size, preserving its encoding. -/
+private theorem valueAt_why_cast {a b : Nat} (h : a = b) {r : Fin a}
+    {m : Runner.Mem} {fp : Runner.W} {base : Nat}
+    (value : ValueAt L m fp base (.why a) r) :
+    ValueAt L m fp base (.why b) (Fin.cast h r) := by
+  cases h
+  exact value
+
 /-- A fallible indirect call followed by the common binder reaches precisely the
     continuation selected by G. Mirrors `callElse_ok` with the indirect dispatch. -/
 theorem callIndElse_ok {A : D.Fn → Nat} {C : D.Fn → List II}
@@ -151,54 +159,39 @@ theorem callIndElse_ok {A : D.Fn → Nat} {C : D.Fn → List II}
     have hsig : D.params f = (D.sigNr n).params := (D.passt_sig hf).params
     have herg : D.erg f = (D.sigNr n).erg := (D.passt_sig hf).erg
     have hgru : D.gruende f = (D.sigNr n).gruende := (D.passt_sig hf).gruende
-    have result' : ResultAt L m1 (slot fp (BitVec.ofNat 64 (frei Γ reserved)))
-        (FB + contextWords (D.sigNr n).params) (D.sigNr n).erg (herg ▸ v) := by
-      cases herg
-      cases hsig
-      exact result
     have mirror' : ReturnMirror m1 (slot fp (BitVec.ofNat 64 (frei Γ reserved)))
         (FB + contextWords (D.sigNr n).params) := by
-      cases hsig; exact mirror
+      simpa only [hsig] using mirror
     have flag' : ReturnFlag m1 (slot fp (BitVec.ofNat 64 (frei Γ reserved)))
         (contextWords (D.sigNr n).params) true
         (returnWords (D.sigNr n).erg (D.sigNr n).gruende) := by
-      cases hsig; cases herg; cases hgru; exact flag
+      simpa only [hsig, herg, hgru] using flag
     have hval' : ValueAt L m1 (slot fp (BitVec.ofNat 64 (frei Γ reserved)))
-        (FB + contextWords (D.sigNr n).params) τ (ergWert he (herg ▸ v)) :=
-      resultAt_wert he result'
+        (FB + contextWords (D.sigNr n).params) τ (ergWert (ergSig hf he) v) := by
+      simpa only [hsig] using resultAt_wert (ergSig hf he) result
     obtain ⟨m2, sx2, ax2, hp2, hw2⟩ := callBranch_ok hp hs hW (by omega) sx ax
       hval' (by have width := resultWords_le_returnWords (D.sigNr n).erg (D.sigNr n).gruende; simpa only [he, resultWords] using width) flag' hw1
-    have henv : ergWert he (herg ▸ v) = ergWert (ergSig hf he) v := by
-      cases herg; rfl
-    rw [henv] at hp2
     exact .inl ⟨σ', v, m2, rfl, sx2, ax2, hp2, hw2⟩
   | why σ' r =>
     obtain ⟨m1, sx, ax, ⟨value, mirror, flag⟩, hw1⟩ := hc
     have hsig : D.params f = (D.sigNr n).params := (D.passt_sig hf).params
     have herg : D.erg f = (D.sigNr n).erg := (D.passt_sig hf).erg
     have hgru : D.gruende f = (D.sigNr n).gruende := (D.passt_sig hf).gruende
-    have heq : (grundSig hf r).val = r.val := by
-      simp [grundSig]
-    have enc : encodeWords L (.why (D.sigNr n).gruende) (grundSig hf r) =
-        encodeWords L (.why (D.gruende f)) r := by
-      simp only [encodeWords, heq, hgru]
     have value' : ValueAt L m1 (slot fp (BitVec.ofNat 64 (frei Γ reserved)))
-        (FB + contextWords (D.sigNr n).params) (.why (D.sigNr n).gruende) (grundSig hf r) := by
-      refine ⟨True.intro, ?_⟩
-      have hbase : FB + contextWords (D.sigNr n).params = FB + contextWords (D.params f) := by
-        rw [hsig]
-      rw [hbase, enc]
-      exact value.2
+        (FB + contextWords (D.sigNr n).params) (.why (D.sigNr n).gruende) (grundSig (n := n) hf r) := by
+      have transported := valueAt_why_cast hgru value
+      rw [hsig] at transported
+      exact (grundSig_eq_cast (n := n) hf hgru r).symm ▸ transported
     have mirror' : ReturnMirror m1 (slot fp (BitVec.ofNat 64 (frei Γ reserved)))
         (FB + contextWords (D.sigNr n).params) := by
-      cases hsig; exact mirror
+      simpa only [hsig] using mirror
     have flag' : ReturnFlag m1 (slot fp (BitVec.ofNat 64 (frei Γ reserved)))
         (contextWords (D.sigNr n).params) false
         (returnWords (D.sigNr n).erg (D.sigNr n).gruende) := by
-      cases hsig; cases herg; cases hgru; exact flag
-    obtain ⟨m2, sx2, ax2, hp2, hw2⟩ := callBranch_ok (τ := .why (D.sigNr n).gruende) (v := grundSig hf r)
+      simpa only [hsig, herg, hgru] using flag
+    obtain ⟨m2, sx2, ax2, hp2, hw2⟩ := callBranch_ok (τ := .why (D.sigNr n).gruende) (v := grundSig (n := n) hf r)
       hp hs hW (by omega) sx ax value' (reasonWords_le_returnWords (D.sigNr n).erg (D.sigNr n).gruende) flag' hw1
-    exact .inr (.inl ⟨σ', grundSig hf r, m2, rfl, sx2, ax2, hp2, hw2⟩)
+    exact .inr (.inl ⟨σ', r, m2, rfl, sx2, ax2, hp2, hw2⟩)
   | logik e => exact .inr (.inr (.inl ⟨e, rfl, hc⟩))
   | hardware e => exact .inr (.inr (.inr ⟨e, rfl, hc⟩))
 
