@@ -129,7 +129,11 @@ theorem GlN.trans {a b c : Endblock D V l Γ Λ} (h1 : GlN a b) (h2 : GlN b c) :
 
 /-- **An end block that stands for a body has the body's summary.** -/
 theorem schluessel_of_glN {f : D.Fn} {b' b : Rumpf D f} (h : GlN b' b) : Rumpf.schluessel b' = Rumpf.schluessel b := by
-  simp only [Rumpf.schluessel, h.m, h.g]
+  have signatures : sigUsesE b' = sigUsesE b := by
+    apply Finset.ext
+    intro n
+    simp only [sigUsesE_iff, h.m]
+  simp only [Rumpf.schluessel, h.m, h.g, signatures]
   congr 1
   · congr 1; funext a; exact decide_eq_decide.2 (h.ant _)
   congr 1

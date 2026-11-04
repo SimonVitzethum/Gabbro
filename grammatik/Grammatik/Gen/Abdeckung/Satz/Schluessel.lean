@@ -75,6 +75,14 @@ theorem gs_ind (g : D.Fn) :
   have := map_gleich (congrArg (·.ind) h) Aufz.fn_mem g
   simpa using this
 
+/-- Structural compatibility alone does not identify an interface contract. -/
+theorem gs_signatures : sigUsesE b' = sigUsesE b :=
+  congrArg (·.signatures) h
+
+theorem gs_interfaceOrte (P : Programm D) (x : D.Tab ⊕ D.Glob) :
+    InterfaceOrte P (sigUsesE b') x ↔ InterfaceOrte P (sigUsesE b) x := by
+  rw [gs_signatures h]
+
 theorem gs_sperre (L : D.Lock) :
     mE ⟨fun _ => true, fun _ => true, fun L' => !(decide (L' = L))⟩ b' =
       mE ⟨fun _ => true, fun _ => true, fun L' => !(decide (L' = L))⟩ b := by
@@ -142,7 +150,8 @@ theorem gs_reachB (fs : List D.Fn) (w f : D.Fn) : reachB (P.mitRumpf r) fs w f =
 theorem gs_endblockOrteP (f : D.Fn) (x : D.Tab ⊕ D.Glob) :
     x ∈ endblockOrteP (P.mitRumpf r) ((P.mitRumpf r).rumpf f) ↔ x ∈ endblockOrteP P (P.rumpf f) := by
   rw [endblockOrteP_iff, endblockOrteP_iff]
-  simp only [Programm.mitRumpf, Gerufen, vOrte, gs_koerper (h f), gs_ruf (h f)]
+  simp only [Programm.mitRumpf, Gerufen, vOrte, InterfaceOrte, gs_koerper (h f),
+    gs_ruf (h f), gs_signatures (h f)]
 
 theorem gs_fussOrte (f : D.Fn) (x : D.Tab ⊕ D.Glob) : x ∈ fussOrte (P.mitRumpf r) f ↔ x ∈ fussOrte P f := by
   simp only [fussOrte, List.mem_append]
