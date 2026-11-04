@@ -95,8 +95,8 @@ theorem exec_once (i : Ins) (n : Nat) (x : X) {o : Op} {k : Ans → Res X} (h : 
     · rename_i denied
       left
       intro widthOK
-      have unavailable := fun enabled => denied ⟨widthOK, enabled⟩
-      simpa only [not_or, Bool.not_eq_false, Bool.not_eq_true] using unavailable
+      have unavailable := not_or.mp (fun enabled => denied ⟨widthOK, enabled⟩)
+      simpa only [Bool.not_eq_false, Bool.not_eq_true] using unavailable
 
 theorem straight_go {L : Lay} {y0 : X} (htb : y0.r14 = L.T) (hmode : y0.fpReady = true) :
     ∀ (is : List Ins) (x : X) (r : Res IR.T), (∀ i ∈ is, Fall i = true) →
