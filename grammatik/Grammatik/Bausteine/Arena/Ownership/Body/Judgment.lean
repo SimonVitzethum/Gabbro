@@ -412,9 +412,6 @@ inductive OE (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Out
       (he : checkExpression A c e = true) (hs : OE A I out k c sonst)
       (hrest : OE A I out k (c.bind none) rest) :
       OE A I out k c (.floatNarrow e lo hi sonst rest)
-  /-- `let x = alloc A (…) else voll;` from the free list, as the executed form: narrow the free-list head into the
-      index range (else `voll`), the head takes the link of the binder, then any store that is no link. The binder is
-      a new owning origin. Recognised on the actual statements, whatever the payload. -/
 
 /-- **The arms of a `match` over a tagged value.** All arms end in one context. -/
 inductive OArms (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Output A V.erg) :
