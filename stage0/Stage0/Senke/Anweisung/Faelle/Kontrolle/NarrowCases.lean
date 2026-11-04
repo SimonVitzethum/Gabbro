@@ -103,7 +103,8 @@ theorem blockNarrowRequired_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes 
   refine narrow_ok (reserved := reserved) (σ := σ.lese Λ e.orte) he (by omega) (by omega) hs hW hlo hlo0 hlo2 hpr ?_ ?_ hp hu hk hWa
   · intro hout m' pc' hp' hu' hk' hw'
     rw [dif_neg hout]
-    exact stop_ok hp'.code hp'.far hp'.frame (by have := hW.ks; omega) hp'.small (by simp [logikCode])
+    exact stop_ok hp'.code hp'.far hp'.frame
+      (by have := hW.ks; unfold narrowTop at hK; omega) hp'.small (by simp [logikCode])
   · intro hin m' pc' hp' hu' hk' hw'
     rw [dif_pos hin]
     exact Sim.schrumpf (ihRest (ex := ex) cr tr hr (by omega) (by
@@ -134,7 +135,8 @@ theorem endNarrowRequired_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : 
   refine narrow_ok (reserved := reserved) (σ := σ.lese Λ e.orte) he (by omega) (by omega) hs hW (by omega) hlo0 hlo2 hpr ?_ ?_ hp hu hk hWa
   · intro hout m' pc' hp' hu' hk' hw'
     rw [dif_neg hout]
-    exact stop_ok hp'.code hp'.far hp'.frame (by have := hW.ks; omega) hp'.small (by simp [logikCode])
+    exact stop_ok hp'.code hp'.far hp'.frame
+      (by have := hW.ks; unfold narrowTop at hK; omega) hp'.small (by simp [logikCode])
   · intro hin m' pc' hp' hu' hk' hw'
     rw [dif_pos hin]
     exact Ret.toSim (Ret.schrumpf (ihRest (ex := ex) cr tr hr (by omega) (by
