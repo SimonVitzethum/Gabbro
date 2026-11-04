@@ -51,7 +51,7 @@ def constantArgument (lo hi : Int) (fns : List Uebersetze.UKonstFn)
 example : beqSTyp
     (surfaceType [("T", .atom "u32")] [("N", .lit 8)]
       (.array (.atom "T") (.variable "N")))
-    (.array (.atom "u32") (.lit 8)) = true := by decide +kernel
+    (.array (.atom "u32") (.lit 8)) = true := by cbv
 
 example : constantArgument 0 100 [] [] (.bin "+" (.lit 3) (.lit 5)) = .ok 8 := rfl
 
