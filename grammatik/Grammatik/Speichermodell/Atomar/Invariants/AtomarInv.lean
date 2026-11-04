@@ -95,6 +95,36 @@ macro "ohneRueckA" : tactic => `(tactic| (
      · exact Or.inr (fun _ _ _ _ _ h => by cases h)
      · exact Or.inl hev)))
 
+/-- A root retains its log; a caller receives exactly the saved answer's event. -/
+private theorem antwort_invLogA {z z' : RufFadenG D} {vor W : World D}
+    {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
+    (ha : rufAntwortG z vor W a = some z')
+    (hinv : ∀ v, a = .inl v → InvAmRueck P z.kopf.f W) :
+    ∀ ev ∈ z'.log, ev ∈ z.log ∨
+      ∀ (g : D.Fn) (rho : Env D (D.params g)) (v : ErgVal D (D.erg g)) (s0 s1 : World D),
+        ev = RufEreignisF.rueck g rho v s0 s1 → InvAmRueck P g s1 := by
+  cases hs : z.stapel with
+  | nil =>
+      simp only [rufAntwortG, hs, Option.some.injEq] at ha
+      subst z'
+      exact fun _ hev => Or.inl hev
+  | cons caller rest =>
+      cases hr : antwortRestG z.kopf.f a caller.rest with
+      | none => simp [rufAntwortG, hs, hr] at ha
+      | some response =>
+          simp [rufAntwortG, hs, hr] at ha
+          subst z'
+          intro ev hev
+          rcases List.mem_cons.mp hev with rfl | hev
+          · refine Or.inr fun g rho v s0 s1 h => ?_
+            cases a with
+            | inl value =>
+                simp only [RufEreignisF.rueck.injEq] at h
+                obtain ⟨rfl, -, -, -, rfl⟩ := h
+                exact hinv value rfl
+            | inr reason => cases h
+          · exact Or.inl hev
+
 /-- **One step and the logged returns** (as `invLog_schritt`). -/
 theorem invLogA_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : SperrInvOk S)
     {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
@@ -210,6 +240,32 @@ theorem invLogA_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (
     | _ => ohneRueckA
   | g7 hs =>
     cases hs with
+    | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
+      rename_i l Γ Λ
+      simp only [rufUpdateG_self]
+      apply antwort_invLogA ha
+      intro v hv
+      cases hv
+      subst σ₁
+      have hperm : Λ.Perm (vertragVon D (M.faeden u).kopf.f).ende := by
+        simpa only [hempty, List.map_nil, List.append_nil] using R.genau
+      refine popSA_inv hO hRL hQ hS hsp hI hF hhead e
+        (erg_stabilX (hFS _) e (scopedWert_orte (kopfSA_okS hF hhead) hret))
+        (fun i hi hs => inv_stabilX (hFS _) hTV hperm hi hs) ?_
+      intro O' calls U A σ
+      obtain h | ⟨rest, h⟩ | ⟨Λ', rest, k, h⟩ := GRest.scopedWert_faelle hret <;> subst r
+      · simp only [semHA, execEndHA, hempty, scopesInvH, List.all_nil,
+          ite_true, List.foldl_nil, laufA, zErgG]
+        exact ZErgG.gleich_refl _
+      · rw [semHA_ende_cons]
+        simp only [execStmtHA, hempty, scopesInvH, List.all_nil, ite_true, List.foldl_nil]
+        exact ZErgG.gleich_refl _
+      · rw [semHA_dann_cons]
+        simp only [execStmtHA, hempty, scopesInvH, List.all_nil, ite_true, List.foldl_nil]
+        exact weiterHA_zurueck S O' U A passes calls (.dann rest k) _ _
+    | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
+      simp only [rufUpdateG_self]
+      exact antwort_invLogA ha (fun _ h => by cases h)
     | _ => ohneRueckA
 
 end Schritte
