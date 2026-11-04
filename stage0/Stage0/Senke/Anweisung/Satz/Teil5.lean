@@ -143,7 +143,7 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
       (fun {pr ex} => lowEnd_ok hS hA hlo0 hens err)
       c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   | _, Γ, Λ, _, .callIndElse p args he proof0 proof1 err, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr =>
-      stmtIndElse_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens
+      stmtIndElse_case (O := O) (passes := passes) (σ0 := σ0) (Λ' := Λ) hS hA hlo0 hens
         (p := p) (args := args) (he := he) (proof0 := proof0) (proof1 := proof1) (err := err)
         (fun {pr ex} => lowEnd_ok (O := O) (passes := passes) (R := R)
           (fp := fp) (K := K) (Ks := Ks) (σ0 := σ0)
