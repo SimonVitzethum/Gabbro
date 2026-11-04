@@ -36,11 +36,11 @@ theorem stmtIndElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
   have hFramePrefix := functionFrame_prefix P f
   have hprE : ∀ j ∈ pr, j < frei (.why (D.sigNr n).gruende :: Γ) reserved := by
     intro j hj; have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega
-  simp only [execStmt]
+  simp only [execStmt, indSonst]
   rcases callIndElse_ok (cr := []) hS hA p args he (σ.lese Λ (p.orte ++ args.orte)) hcc (by omega) hp hs hu hW hWa with
     ⟨σ', v, m2, hR, st, a, hp2, hw2⟩ | ⟨σ', r, m2, hR, st, a, hp2, hw2⟩ |
     ⟨e, hR, st⟩ | ⟨e, hR, st⟩
-  · rw [hR]
+  · erw [hR]
     have hj := callElse_jump (cr := []) hp hs hW (a.mono hlo2)
     have hj2 : Star ⟨callBranchPC pc cc [] (returnWords (D.sigNr n).erg (D.sigNr n).gruende) true, fp⟩ m2
         ⟨pc + BitVec.ofNat 64 (16 * (elseC (D.sigNr n) (frei Γ reserved) cc [] ce).length), fp⟩ m2 := by
@@ -48,7 +48,7 @@ theorem stmtIndElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
     refine ⟨m2, st.trans hj2, (a.mono hlo2),
       envAt_agreeW hp.env a (Nat.le_refl _) (by omega), hw2,
       keeps_of_agreeW hW a hpr (by omega)⟩
-  · rw [hR]
+  · erw [hR]
     have ih := ihErr (ex := ex) ce te hce (by omega)
       (by simp only [elseC, List.length_append, List.length_singleton] at hs; omega) hW m2 _ σ' _ hp2
       (by simp only [frei, contextWords_cons] at hlo2 ⊢; omega)
@@ -59,8 +59,8 @@ theorem stmtIndElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
       exact tgt_eq0 (by omega)
     · simp only [Deklaration.erg, Deklaration.gruende, receiveC, copyWords_length, callBranchPC, elseC, Bool.false_eq_true, ↓reduceIte, List.length_append, List.length_singleton, addr_norm]
       exact tgt_eq0 (by omega)
-  · rw [hR]; exact st
-  · rw [hR]; exact st
+  · erw [hR]; exact st
+  · erw [hR]; exact st
 
 theorem blockIndElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
@@ -88,11 +88,11 @@ theorem blockIndElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} 
     intro j hj; have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega
   have hprE : ∀ j ∈ pr, j < frei (.why (D.sigNr n).gruende :: Γ) reserved := by
     intro j hj; have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega
-  simp only [execBlock]
+  simp only [execBlock, indSonst]
   rcases callIndElse_ok hS hA p args he (σ.lese Λ (p.orte ++ args.orte)) hcc (by omega) hp hs hu hW hWa with
     ⟨σ', v, m2, hR, st, a, hp2, hw2⟩ | ⟨σ', r, m2, hR, st, a, hp2, hw2⟩ |
     ⟨e, hR, st⟩ | ⟨e, hR, st⟩
-  · rw [hR]
+  · erw [hR]
     have ih := ihRest (ex := exPlus ex (ce.length + 1)) cr tr hcr (by omega)
       (by simp only [elseC, List.length_append, List.length_singleton] at hs; omega) hW m2 _ σ' _ hp2 hlo
       (by simp only [frei, contextWords_cons] at hlo2 ⊢; omega)
@@ -103,7 +103,7 @@ theorem blockIndElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} 
       exact tgt_eq (by omega)
     · simp only [Deklaration.erg, Deklaration.gruende, receiveC, copyWords_length, callBranchPC, exPlus, elseC, ↓reduceIte, List.length_append, List.length_singleton, addr_norm]
       exact tgt_eq (by omega)
-  · rw [hR]
+  · erw [hR]
     have ih := ihErr (ex := ex) ce te hce (by omega)
       (by simp only [elseC, List.length_append, List.length_singleton] at hs; omega) hW m2 _ σ' _ hp2
       (by simp only [frei, contextWords_cons] at hlo2 ⊢; omega)
@@ -114,8 +114,8 @@ theorem blockIndElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} 
       exact tgt_eq0 (by omega)
     · simp only [Deklaration.erg, Deklaration.gruende, receiveC, copyWords_length, callBranchPC, elseC, Bool.false_eq_true, ↓reduceIte, List.length_append, List.length_singleton, addr_norm]
       exact tgt_eq0 (by omega)
-  · rw [hR]; exact st
-  · rw [hR]; exact st
+  · erw [hR]; exact st
+  · erw [hR]; exact st
 
 theorem endIndElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
@@ -143,11 +143,11 @@ theorem endIndElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R
     intro j hj; have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega
   have hprE : ∀ j ∈ pr, j < frei (.why (D.sigNr n).gruende :: Γ) reserved := by
     intro j hj; have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega
-  simp only [execEnd]
+  simp only [execEnd, indSonstE]
   rcases callIndElse_ok hS hA p args he (σ.lese Λ (p.orte ++ args.orte)) hcc (by omega) hp hs hu hW hWa with
     ⟨σ', v, m2, hR, st, a, hp2, hw2⟩ | ⟨σ', r, m2, hR, st, a, hp2, hw2⟩ |
     ⟨e, hR, st⟩ | ⟨e, hR, st⟩
-  · rw [hR]
+  · erw [hR]
     have ih := ihRest (ex := exPlus ex (ce.length + 1)) cr tr hcr (by omega)
       (by simp only [elseC, List.length_append, List.length_singleton] at hs; omega) hW m2 _ σ' _ hp2
       (by simp only [frei, contextWords_cons] at hlo ⊢; omega)
@@ -158,7 +158,7 @@ theorem endIndElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R
       exact tgt_eq (by omega)
     · simp only [Deklaration.erg, Deklaration.gruende, receiveC, copyWords_length, callBranchPC, exPlus, elseC, ↓reduceIte, List.length_append, List.length_singleton, addr_norm]
       exact tgt_eq (by omega)
-  · rw [hR]
+  · erw [hR]
     have ih := ihErr (ex := ex) ce te hce (by omega)
       (by simp only [elseC, List.length_append, List.length_singleton] at hs; omega) hW m2 _ σ' _ hp2
       (by simp only [frei, contextWords_cons] at hlo ⊢; omega)
@@ -169,7 +169,7 @@ theorem endIndElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R
       exact tgt_eq0 (by omega)
     · simp only [Deklaration.erg, Deklaration.gruende, receiveC, copyWords_length, callBranchPC, elseC, Bool.false_eq_true, ↓reduceIte, List.length_append, List.length_singleton, addr_norm]
       exact tgt_eq0 (by omega)
-  · rw [hR]; exact st
-  · rw [hR]; exact st
+  · erw [hR]; exact st
+  · erw [hR]; exact st
 
 end Gabbro.Stage0.Senke
