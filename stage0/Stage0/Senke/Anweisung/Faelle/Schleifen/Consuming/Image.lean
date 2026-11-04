@@ -95,14 +95,14 @@ theorem Ready.slice (h : x.Ready m σ ρ) (i : Nat) (piece : Piece) (block : Lis
     have element : x.fragment[i] = piece := by simpa only [List.getElem?_eq_getElem inside,
       Option.some.injEq] using found
     simpa only [element] using eq.symm
-  obtain ⟨prefix, suffix, eq, len⟩ := assemble_piece (x.fragment.take i) piece
+  obtain ⟨leading, suffix, eq, len⟩ := assemble_piece (x.fragment.take i) piece
     (x.fragment.drop (i + 1)) (by rw [← splitImage]; exact x.assembled)
     (by rw [← splitImage]; exact resolved)
   constructor
-  · apply codeAt_at (xs := prefix) (zs := suffix)
+  · apply codeAt_at (xs := leading) (zs := suffix)
     · simpa only [eq, List.append_assoc] using h.code
     · simp only [addr, offset, len]
-  · have bound : prefix.length + block.length ≤ x.code.length := by
+  · have bound : leading.length + block.length ≤ x.code.length := by
       rw [eq]; simp only [List.length_append]; omega
     simpa only [addr, offset, len] using codeFar_at x.far bound
 

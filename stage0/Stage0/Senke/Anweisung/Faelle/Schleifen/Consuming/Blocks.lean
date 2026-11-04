@@ -16,9 +16,9 @@ theorem assembled_codeAt {m : Mem} {pc : W} {code : List II}
     (assembled : assemble (before ++ .code block :: after) = some code)
     (image : CodeAt m pc code) :
     CodeAt m (pc + BitVec.ofNat 64 (16 * width before)) block := by
-  obtain ⟨prefix, suffix, eq, len⟩ := assemble_block before block after assembled
+  obtain ⟨leading, suffix, eq, len⟩ := assemble_block before block after assembled
   subst code
-  apply codeAt_at (xs := prefix) (zs := suffix)
+  apply codeAt_at (xs := leading) (zs := suffix)
   · simpa only [List.append_assoc] using image
   · rw [len]
 
@@ -49,12 +49,12 @@ theorem initialize {P : Programm D} {f : D.Fn} {Γ : Ctx}
   have literal : lit32 (fuel : Int) = true := lit32_nat fuelBound
   have initial : travCountC counter (fuel : Int) = [ci 1 counter fuel 0] := by
     simp only [travCountC, literal, ↓reduceIte]
-  obtain ⟨prefix, suffix, eq, len⟩ := assemble_block []
+  obtain ⟨leading, suffix, eq, len⟩ := assemble_block []
     (travCountC counter (fuel : Int))
     (pieces (frei Γ reserved) counter saved fuel failure count bound
       invariant member edge measure body).tail assembled
-  have empty : prefix = [] := List.eq_nil_of_length_eq_zero len
-  subst prefix
+  have empty : leading = [] := List.eq_nil_of_length_eq_zero len
+  subst leading
   simp only [List.nil_append, initial] at eq
   have pre' : PreS L m pc fp K (frei Γ reserved)
       ([ci 1 counter fuel 0] ++ suffix) ρ reserved := by rw [← eq]; exact pre
