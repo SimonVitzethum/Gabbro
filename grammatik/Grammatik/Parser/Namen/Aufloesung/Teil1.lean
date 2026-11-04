@@ -120,6 +120,30 @@ def genericArgument (k : Kontext) (word : String) : String :=
     let tokens := tokens.filter (fun | .ende => false | _ => true)
     String.intercalate " " ((genericArgumentTokens k (tokens.length + 1) tokens).map zeigeTok)
 
+private theorem take_size_le {α : Type} [SizeOf α] (count : Nat) (values : List α) :
+    sizeOf (values.take count) ≤ sizeOf values := by
+  induction values generalizing count with
+  | nil => simpa only [List.take_nil] using Nat.le_refl (sizeOf ([] : List α))
+  | cons value values ih =>
+    cases count with
+    | zero => simp only [List.take_zero, List.nil.sizeOf_spec, List.cons.sizeOf_spec]; omega
+    | succ count =>
+      have rest := ih count
+      simp only [List.take_succ_cons, List.cons.sizeOf_spec]
+      omega
+
+private theorem drop_size_le {α : Type} [SizeOf α] (count : Nat) (values : List α) :
+    sizeOf (values.drop count) ≤ sizeOf values := by
+  induction values generalizing count with
+  | nil => simpa only [List.drop_nil] using Nat.le_refl (sizeOf ([] : List α))
+  | cons value values ih =>
+    cases count with
+    | zero => simpa only [List.drop_zero] using Nat.le_refl (sizeOf (value :: values))
+    | succ count =>
+      have rest := ih count
+      simp only [List.drop_succ_cons, List.cons.sizeOf_spec]
+      omega
+
 mutual
 /-- **An expression, resolved.** -/
 def aus (k : Kontext) : SExpr → SExpr
@@ -149,15 +173,26 @@ def aus (k : Kontext) : SExpr → SExpr
   | .ext kind (binder :: domain :: names) args =>
     if kind == .foldAdd || kind == .foldMin || kind == .foldMax || kind == .foldAnd || kind == .foldOr then
       let count := if domain == "range" then 2 else 1
+      have domainSize := take_size_le count args
+      have bodySize := (take_size_le 2 (args.drop count)).trans (drop_size_le count args)
+      have tailSize := (drop_size_le 2 (args.drop count)).trans (drop_size_le count args)
       .ext kind (binder :: domain :: names.map k.ref)
         (ausL k (args.take count) ++ ausL (k.mit [binder]) ((args.drop count).take 2) ++
           ausL k ((args.drop count).drop 2))
     else .ext kind (binder :: domain :: names) (ausL k args)
   | .ext w ns xs => .ext w ns (ausL k xs)
   | e => e
+termination_by expression => sizeOf expression
+decreasing_by
+  all_goals simp_wf
+  all_goals omega
 def ausL (k : Kontext) : List SExpr → List SExpr
   | [] => []
   | x :: xs => aus k x :: ausL k xs
+termination_by expressions => sizeOf expressions
+decreasing_by
+  all_goals simp_wf
+  all_goals omega
 end
 
 /-- An optional expression, resolved. -/
