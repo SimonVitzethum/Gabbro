@@ -1,13 +1,16 @@
 /- C16: probes for check elaboration -- every refusal and the retained record.
 
-   The decider runs by kernel evaluation (`rfl`): a resolved measure, an unknown
+   The proofs use kernel reduction (`rfl`/`cbv`): a resolved measure, an unknown
    gate, a duplicate name, the exact elaborated record of a well-formed check with
    its generated producer name and Duty, the elaborated unit carrying the probe,
    its gate wrapper and its mark table. -/
 module
 
-public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
-public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
+import all Grammatik.Parser.Elab.Generic.StaticConformance
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil13
 
 @[expose] public section
@@ -50,7 +53,7 @@ example : uChecks [] [] [probenFn, .checkT probenCheck, .checkT probenCheck] =
 
 /-- The probe elaborates to one function under the generated name. -/
 example : (uProbeFns [] [] [] [] [] [] [] [] [] [] [] [] [] [] 0 ["g"] [probenCheck]).map (List.map (·.name)) =
-    .ok ["p#probe", "p#report#0"] := rfl
+    .ok ["p#probe", "p#report#0"] := by cbv
 
 /-- A generated name that meets a written function is refused, never merged. -/
 example : uProbeFns [] [] [] [] [] [] [] [] [] [] [] [] [] [] 0 ["p#probe"] [probenCheck] =
@@ -61,19 +64,19 @@ example : uProbeFn [] [] [] [] [] [] [] [] [] [] [] [] [] [] 0 { probenCheck wit
     .error "check body without G form" := rfl
 
 /-- A unit with a check elaborates, carrying its generated probe. -/
-example : (elabU [probenFn, .checkT probenCheck]).isOk = true := rfl
+example : (elabU [probenFn, .checkT probenCheck]).isOk = true := by cbv
 
-example : (elabU [probenFn, .checkT probenCheck]).map (fun u => u.fns.length) = .ok 4 := rfl
+example : (elabU [probenFn, .checkT probenCheck]).map (fun u => u.fns.length) = .ok 4 := by cbv
 
 example : (elabU [probenFn, .checkT probenCheck]).map (fun u => u.checks.map (·.probe)) =
-    .ok ["p#probe"] := rfl
+    .ok ["p#probe"] := by cbv
 
 /-- The wrapper travels with the probe. -/
 example : (elabU [probenFn, .checkT probenCheck]).map (fun u => u.fns.map (·.name)) =
-    .ok ["g", "p#probe", "p#report#0", "p#tor#g"] := rfl
+    .ok ["g", "p#probe", "p#report#0", "p#tor#g"] := by cbv
 
 /-- The mark table carries the check's Duty. -/
-example : (elabU [probenFn, .checkT probenCheck]).map (fun u => u.marken) = .ok ["p#duty"] := rfl
+example : (elabU [probenFn, .checkT probenCheck]).map (fun u => u.marken) = .ok ["p#duty"] := by cbv
 
 /-! ## The mark table and the gate wrappers, decided -/
 
