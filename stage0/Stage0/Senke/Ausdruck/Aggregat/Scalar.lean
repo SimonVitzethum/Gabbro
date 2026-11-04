@@ -71,7 +71,7 @@ theorem ValueAt.word {m : Runner.Mem} {fp : Runner.W} {base : Nat} :
   | .fl lo hi => by
     intro v compatible value
     have value2 := value.2; simp only [encodeWords] at value2
-    exact ⟨_, value2 0 (by simp [encodeWords]), value.1, rfl⟩
+    exact ⟨_, value2 0 (by simp [encodeWords]), rfl⟩
   | .ptr cap => by
     intro v compatible value
     have value2 := value.2; simp only [encodeWords] at value2
@@ -177,7 +177,7 @@ theorem Enc.single : (τ : Ty) → (v : Wert D τ) → (w : Runner.W) →
     exact ⟨encoded.2, by simp only [encodeWords, encoded.1]⟩
   | .fl low high => by
     intro v w width encoded
-    exact ⟨encoded.1, by simp only [encodeWords, encoded.2]⟩
+    exact ⟨trivial, by simpa only [encodeWords, List.singleton_inj] using encoded.symm⟩
   | .bool => by
     intro v w width encoded
     exact ⟨trivial, by simpa only [encodeWords, List.singleton_inj] using encoded.symm⟩

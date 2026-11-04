@@ -298,8 +298,7 @@ def Enc (L : Lay D) : (τ : Ty) → Wert D τ → Runner.W → Prop
     | 1 => Enc L τ (v ⟨0, by decide⟩) w
     | _ => False
   | .str n, v, w => n ≤ 1 ∧ w = BitVec.ofNat 64 (strN v.1)
-  | .fl _ _, v, w => Gleitkomma.wf Gleitkomma.f64 v.x ∧
-      w = BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 v.x)
+  | .fl _ _, v, w => w = v.x.toBits.toBitVec
   | .ptr _, _, w => w = 0
   | _, _, _ => False
 
