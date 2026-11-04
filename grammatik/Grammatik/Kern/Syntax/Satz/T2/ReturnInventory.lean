@@ -8,6 +8,30 @@ variable {D : Deklaration} {V : Vertrag D}
 
 namespace ReturnInventory
 
+theorem storeSlot_held (σ : World D) (t : D.Tab) (Λ : List (Res D)) (k : Int)
+    (f : D.Feld t) (v : Wert D (D.typ t f)) : (σ.schreibSlot t Λ k f v).haelt = σ.haelt := rfl
+
+theorem storeGlob_held (σ : World D) (g : D.Glob) (Λ : List (Res D)) (v : Wert D (D.gtyp g)) :
+    (σ.schreibGlob g Λ v).haelt = σ.haelt := rfl
+
+theorem storeBytes_held (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255)
+    (Λ : List (Res D)) (bs : List Byte) : ∀ σ k,
+      (σ.schreibBytes t f hf Λ k bs).haelt = σ.haelt := by
+  induction bs with
+  | nil => intro σ k; rfl
+  | cons b bs ih =>
+    intro σ k
+    rw [World.schreibBytes, ih, storeSlot_held]
+
+theorem oracle_held (O : Orakel D) (hO : GutO O) (a : D.Ax) (σ : World D)
+    (ρ : Env D (D.aparams a)) : (axiomAntwort O a σ ρ).1.haelt = σ.haelt :=
+  ((hO a (σ.fragt (.inl a)) ρ).2.1).trans (fragt_haelt σ (.inl a))
+
+theorem oracleElse_held (O : Orakel D) (hO : GutO O) (a : D.Ax) (σ : World D)
+    (ρ : Env D (D.aparams a)) : (axiomAntwortSonst O a σ ρ).1.haelt = σ.haelt := by
+  rw [axiomAntwortSonst_fst]
+  exact oracle_held O hO a σ ρ
+
 /-- The tracked lock has no unrepresented runtime occurrence. Other caller
     locks retain the ordinary floor-based holding contract. -/
 def Entry (L : D.Lock) (bo : Option Int) (Λ : List (Res D)) (σ : World D) : Prop :=
@@ -114,6 +138,20 @@ theorem EndOutcome.schrumpf {L : D.Lock} {σ : World D} {o : EndAusgang V l (τ 
 theorem EndOutcome.zuAusgang {L : D.Lock} {σ : World D} {o : EndAusgang V l Γ}
     (h : EndOutcome L σ o) : Outcome L σ o.zuAusgang := h
 
+theorem Outcome.weiterOpt {L : D.Lock} {σ : World D} (e : Option Ty)
+    {o : Ausgang V l (ErgCtx Γ e)} (h : Outcome L σ o) :
+    Outcome L σ (Ausgang.weiterOpt e o) := by
+  cases e with
+  | none => exact h
+  | some _ => exact h.schrumpf
+
+theorem EndOutcome.weiterOpt {L : D.Lock} {σ : World D} (e : Option Ty)
+    {o : EndAusgang V l (ErgCtx Γ e)} (h : EndOutcome L σ o) :
+    EndOutcome L σ (EndAusgang.weiterOpt e o) := by
+  cases e with
+  | none => exact h
+  | some _ => exact h.schrumpf
+
 theorem Outcome.call {L : D.Lock} {bo : Option Int} {Λ : List (Res D)}
     {R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f}
     (hR : GutR R) (hbV : BodenUnter bo V.boden) (f : D.Fn)
@@ -143,6 +181,40 @@ theorem Outcome.option {L : D.Lock} {bo : Option Int} {Λ : List (Res D)} {α : 
     (next : World D → α → Ausgang V l Γ)
     (hn : ∀ σ' v, Entry L bo Λ σ' → Outcome L σ' (next σ' v)) :
     Outcome L σ (match answer with
+      | (σ', some v) => next σ' v | (_, none) => .hardware failure) := by
+  rcases answer with ⟨σ', _ | v⟩
+  · exact Outcome.hardware _
+  · exact (hn σ' v (entry.same same)).vor same
+
+theorem EndOutcome.call {L : D.Lock} {bo : Option Int} {Λ : List (Res D)}
+    {R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f}
+    (hR : GutR R) (hbV : BodenUnter bo V.boden) (f : D.Fn)
+    (hp : RufPasst D V (D.signatur f) Λ) {σ : World D} (entry : Entry L bo Λ σ)
+    (args : Env D (D.params f))
+    (ok : World D → ErgVal D (D.erg f) → EndAusgang V l Γ)
+    (why : World D → Fin (D.gruende f) → EndAusgang V l Γ)
+    (hok : ∀ σ' v, Entry L bo Λ σ' → EndOutcome L σ' (ok σ' v))
+    (hwhy : ∀ σ' r, Entry L bo Λ σ' → EndOutcome L σ' (why σ' r)) :
+    EndOutcome L σ (match R f σ args with
+      | .ok σ' v => ok σ' v | .why σ' r => why σ' r
+      | .logik e => .logik e | .hardware e => .hardware e) := by
+  have held := heldB_ruf hp hbV entry.1
+  cases he : R f σ args with
+  | ok σ' v =>
+    have same := call_haelt hR f σ args held (show (R f σ args).welt = some σ' by rw [he]; rfl)
+    exact (hok σ' v (entry.same same)).vor same
+  | why σ' r =>
+    have same := call_haelt hR f σ args held (show (R f σ args).welt = some σ' by rw [he]; rfl)
+    exact (hwhy σ' r (entry.same same)).vor same
+  | logik e => exact Outcome.logik _
+  | hardware e => exact Outcome.hardware _
+
+theorem EndOutcome.option {L : D.Lock} {bo : Option Int} {Λ : List (Res D)} {α : Type}
+    {σ : World D} (entry : Entry L bo Λ σ) (answer : World D × Option α)
+    (same : answer.1.haelt = σ.haelt) (failure : Hardware D)
+    (next : World D → α → EndAusgang V l Γ)
+    (hn : ∀ σ' v, Entry L bo Λ σ' → EndOutcome L σ' (next σ' v)) :
+    EndOutcome L σ (match answer with
       | (σ', some v) => next σ' v | (_, none) => .hardware failure) := by
   rcases answer with ⟨σ', _ | v⟩
   · exact Outcome.hardware _
