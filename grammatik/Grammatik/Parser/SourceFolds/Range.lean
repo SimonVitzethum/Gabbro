@@ -386,8 +386,7 @@ def expandNested : Nat → List SItemTief → Spec.Locals → List String →
   | 0, _, _, _, _, e =>
     if hasRangeFold e then .error "fold range: nested fold depth exceeded"
     else .ok (e, [])
-  | fuel + 1, source, locals, chain, tags =>
-    fun e =>
+  | fuel + 1, source, locals, chain, tags, e =>
     match matchFoldNode e with
     | some _ => do
       let (d, idx, tests) ← parseAndCheck source locals chain tags none e
