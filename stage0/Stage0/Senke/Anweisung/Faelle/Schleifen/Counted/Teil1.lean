@@ -182,10 +182,19 @@ theorem lowE_literal_counted {Γ : Ctx} {Λ : List (Res D)} {n : Int} {d top K :
     dsimp only at codeEq topEq
     subst code
     subst top
+    have literalEncoding : encodeWords L (.int n n)
+        (⟨n, Int.le_refl n, Int.le_refl n⟩ : Zahl n n) =
+          integerEncoding (integerWords n n) n :=
+      encodeWords_int L n n _
+    have canonicalPre : Pre L m pc fp K d
+        (constWords (integerEncoding (integerWords n n) n) d).1 ρ W reserved := by
+      simpa only [literalEncoding] using pre
+    have canonicalFits : (constWords (integerEncoding (integerWords n n) n) d).2 ≤ K := by
+      simpa only [literalEncoding] using fits
     obtain ⟨m', run, changed, output⟩ := constWords_counted
-      (integerEncoding (integerWords n n) n) fits pre
+      (integerEncoding (integerWords n n) n) canonicalFits canonicalPre
     have read := integerEncoding_read_first (n := integerWords n n) (by unfold integerWords; omega) output
-    exact ⟨m', by simpa only [literalCount, large, Bool.false_eq_true, ↓reduceIte, encodeWords] using run,
+    exact ⟨m', by simpa only [literalCount, large, Bool.false_eq_true, ↓reduceIte, literalEncoding] using run,
       changed, _, read, rfl⟩
 
 /-- Constructor-level cost composition for actual `bin2` lowering. Child
