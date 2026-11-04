@@ -42,7 +42,8 @@ theorem initialConstant_valid {D : Deklaration} (L : Lay D) (τ : Ty) :
     by_cases zero : k = .null
     · subst k
       have equation : GabbroV.konstWert (F := D.Fn) (P := D.passt) (.arr τ n) .null =
-          (GabbroV.konstWert τ .null).map (fun z => fun _ : Fin n => z) := by rfl
+          (GabbroV.konstWert τ .null).map (fun z => fun _ : Fin n => z) := by
+        rw [GabbroV.konstWert]
       rw [equation] at made
       obtain ⟨z, hz, eq⟩ := Option.map_eq_some_iff.mp made
       rw [← eq]
@@ -55,7 +56,7 @@ theorem initialConstant_valid {D : Deklaration} (L : Lay D) (τ : Ty) :
               else none
             | none => none
           | none => none) := by
-          cases k <;> first | contradiction | rfl
+          cases k <;> first | contradiction | rw [GabbroV.konstWert]
       rw [equation] at made
       cases items : GabbroV.konstListe k with
       | none => simp [items] at made
@@ -83,10 +84,17 @@ theorem initialConstant_valid {D : Deklaration} (L : Lay D) (τ : Ty) :
       · cases made
   | prod name fs =>
     intro k v made
-    cases k <;> simp only [GabbroV.konstWert, reduceCtorEq] at made
-    split at made
-    · exact prodKonst_valid L fs _ v made
-    · contradiction
+    cases k with
+    | product other fields =>
+      rw [GabbroV.konstWert_product] at made
+      by_cases same : (name == other) = true
+      · have collected : GabbroV.prodKonst (F := D.Fn) (P := D.passt)
+            GabbroV.konstWert fs fields = some v := by
+          simpa only [same, ite_true] using made
+        exact prodKonst_valid L fs fields v collected
+      · simp only [same, ite_false, reduceCtorEq] at made
+    | null | zahl _ | wahr _ | text _ | nil | cons _ _ | fall _ _ =>
+      simp only [GabbroV.konstWert, reduceCtorEq] at made
   | _ => intro _ _ _; trivial
 termination_by sizeOf τ
 decreasing_by
@@ -102,7 +110,11 @@ theorem nutzKonst_valid {D : Deklaration} (L : Lay D) (c : Option Ty) :
       GabbroV.nutzKonst c k = some v → PayloadValid L c v := by
   cases c with
   | none => intro _ _ _; trivial
-  | some τ => intro k v made; exact initialConstant_valid L τ k v made
+  | some τ =>
+    intro k v made
+    have valueMade : GabbroV.konstWert (F := D.Fn) (P := D.passt) τ k = some v := by
+      simpa only [GabbroV.nutzKonst] using made
+    exact initialConstant_valid L τ k v valueMade
 termination_by sizeOf c
 
 /-- Successful product initialization
@@ -115,15 +127,18 @@ theorem prodKonst_valid {D : Deklaration} (L : Lay D) (fs : List Ty) :
   | cons τ fs =>
     intro ks v made
     cases ks with
-    | nil => simp [GabbroV.prodKonst] at made
+    | nil => simp only [GabbroV.prodKonst_cons_nil, reduceCtorEq] at made
     | cons k ks =>
+      rw [GabbroV.prodKonst_cons_cons] at made
       cases first : GabbroV.konstWert (F := D.Fn) (P := D.passt) τ k with
-      | none => simp [GabbroV.prodKonst, first] at made
+      | none => simp only [first, bind, Option.bind, reduceCtorEq] at made
       | some x =>
-        cases rest : GabbroV.prodKonst GabbroV.konstWert fs ks with
-        | none => simp [GabbroV.prodKonst, first, rest] at made
+        cases rest : GabbroV.prodKonst (F := D.Fn) (P := D.passt) GabbroV.konstWert fs ks with
+        | none => simp only [first, rest, bind, Option.bind, reduceCtorEq] at made
         | some xs =>
-          simp only [GabbroV.prodKonst, first, rest, Option.bind_some, Option.some.injEq] at made
+          have returned : ProdVal.pcons x xs = v := by
+            simpa only [first, rest, bind, Option.bind, pure, Option.pure_def,
+              Option.some.injEq] using made
           subst v
           exact ⟨initialConstant_valid L τ k x first, prodKonst_valid L fs ks xs rest⟩
 termination_by sizeOf fs
