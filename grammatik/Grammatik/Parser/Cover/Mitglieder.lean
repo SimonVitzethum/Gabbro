@@ -229,7 +229,7 @@ def tyName : Ty → String
   | .ref _ => "Ty.ref"
   | .arr .. => "Ty.arr"
   | .str _ => "Ty.str"
-  | .prod _ fs => "Ty.prod" :: fs.foldl (fun acc ty => acc ++ tyName ty) []
+  | .prod .. => "Ty.prod"
 
 /-- The members a lowered program reaches: every function's body, and the types its parameters, results, table
     fields and statics have. -/

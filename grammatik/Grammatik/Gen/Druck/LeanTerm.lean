@@ -64,12 +64,18 @@ def typ : Ty → String
   | .ref n => s!"(.ref {n})"
   | .arr τ n => s!"(.arr {typ τ} {n})"
   | .str n => s!"(.str {n})"
+  | .prod name fs => s!"(.prod {name} {felder fs})"
 
 /-- Case order and complete payload types are printed verbatim. -/
 def faelle : List (Option Ty) → String
   | [] => "[]"
   | none :: cs => s!"(none :: {faelle cs})"
   | some τ :: cs => s!"(some {typ τ} :: {faelle cs})"
+
+/-- Product field types retain their full schema and declaration order. -/
+def felder : List Ty → String
+  | [] => "[]"
+  | τ :: fs => s!"({typ τ} :: {felder fs})"
 end
 
 /-- A result option as a closed Lean type expression. -/
