@@ -38,9 +38,9 @@ theorem end_float_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
       (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ).x) = ov at ⊢
   cases ov with
   | some v =>
-      simp only [hv] at ⊢
-      have heq := ih_rest _ _ hscope_rest (hl.heldB hh)
-      rw [heq]
+      have heq := ih_rest _ (.cons v ρ) hscope_rest (hl.heldB hh)
+      exact congrArg EndAusgang.schrumpf heq
+  | none => rfl
 
 
 theorem end_floatLit_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
@@ -59,9 +59,9 @@ theorem end_floatLit_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
   generalize hv : gleitPasst lo hi (bruch q) = ov at ⊢
   cases ov with
   | some v =>
-      simp only [hv] at ⊢
-      have heq := ih_rest σ _ hscope_rest hh
-      rw [heq]
+      have heq := ih_rest σ (.cons v ρ) hscope_rest hh
+      exact congrArg EndAusgang.schrumpf heq
+  | none => rfl
 
 
 theorem end_floatOf_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
@@ -83,9 +83,9 @@ theorem end_floatOf_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
       (gleitAusInt (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n) = ov at ⊢
   cases ov with
   | some v =>
-      simp only [hv] at ⊢
-      have heq := ih_rest _ _ hscope_rest (hl.heldB hh)
-      rw [heq]
+      have heq := ih_rest _ (.cons v ρ) hscope_rest (hl.heldB hh)
+      exact congrArg EndAusgang.schrumpf heq
+  | none => rfl
 
 
 theorem end_floatNarrow_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
@@ -111,13 +111,11 @@ theorem end_floatNarrow_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
       (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = ov at ⊢
   cases ov with
   | some v =>
-      simp only [hv] at ⊢
-      have heq := ih_rest _ _ hscope_rest (hl.heldB hh)
-      rw [heq]
+      have heq := ih_rest _ (.cons v ρ) hscope_rest (hl.heldB hh)
+      exact congrArg EndAusgang.schrumpf heq
   | none =>
-      simp only [hv] at ⊢
       have heq := ih_sonst _ ρ hscope_sonst (hl.heldB hh)
-      rw [heq]
+      exact heq
 
 
 end GleichTests
