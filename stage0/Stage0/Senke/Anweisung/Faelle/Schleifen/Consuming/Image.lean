@@ -216,7 +216,7 @@ theorem Ready.eval {Λ : List (Res D)} {τ : Ty} (h : x.Ready m σ ρ)
     simp only [addr, offset, List.take_succ_eq_append_getElem inside, element]
     have widths : ∀ a b : List Piece, width (a ++ b) = width a + width b := by
       intro a b; induction a with
-      | nil => rfl
+      | nil => simp only [List.nil_append, width, Nat.zero_add]
       | cons a as ih => simp only [List.cons_append, width, ih, Nat.add_assoc]
     rw [widths]
     simp only [width, Piece.width, Nat.add_zero, pc_add]
