@@ -60,6 +60,8 @@ theorem sim_stmt_callInd {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D
     : E.KoerperSim hZ (fun Φ => execStmtHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.callInd (n := n) p args hp hr : Stmt D V l Γ Λ _)) (execStmtHA S' O' U' A' passes R' (exS hS (.callInd (n := n) p args hp hr : Stmt D V l Γ Λ _))) :=
   by
   intro M σ σ' ρ ρ' hM hρ
+  let pointer : Expr D' (Γ.map E.tyE) (Λ.map E.resE) (.fnptr (E.num n)) := exE E p
+  have pointerReads : pointer.orte = p.orte.map E.ortE := E.orte_exE p
   obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval hZ hM T hB.havocA hB.atom Λ (Λ.map E.resE)
     (p.orte ++ args.orte)
   have hev0 := E.frei_alle hZ (@hev) hρ
@@ -68,6 +70,9 @@ theorem sim_stmt_callInd {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D
   rw [hvd] at hp'
   rcases hvd' : eval (leseA A' σ' (Λ.map E.resE) ((p.orte ++ args.orte).map E.ortE)) (exE E p) (leseA A' σ' (Λ.map E.resE) ((p.orte ++ args.orte).map E.ortE)) ρ' with ⟨f', hf'⟩
   rw [hvd'] at hp'
+  have pointerValue : eval (D := D') (τ := .fnptr (E.num n))
+      (leseA A' σ' (Λ.map E.resE) ((p.orte ++ args.orte).map E.ortE)) pointer
+      (leseA A' σ' (Λ.map E.resE) ((p.orte ++ args.orte).map E.ortE)) ρ' = ⟨f', hf'⟩ := hvd'
   have hk : E.Konform hZ f f' := by
     rcases hp' with h | ⟨hz, hr⟩
     · exact Or.inl h
@@ -81,17 +86,17 @@ theorem sim_stmt_callInd {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D
   rcases a' with ⟨W, v'⟩ | ⟨W, r'⟩ | e' | e'
   · refine ⟨M₂, .ok (E.antwortWelt hZ pad σ₁ W) ρ, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
     · simp only [execStmtHA, hΦ Φ (passt_teil hP hs2), hvd, hRΦ Φ hP, antwortR]
-    · simp only [exS, exec_nachΛ, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hvd', evalArgs_umτs, ha]
+    · simp only [exS, exec_nachΛ, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, pointerReads, pointerValue, evalArgs_umτs, ha]
       exact ⟨hI2 W, hρ⟩
   · have h0 : D'.gruende f' = 0 := (konform_sig hS hk).2.2.trans ((D.passt_sig hf).gruende.trans hr)
     exact (Fin.cast h0 r').elim0
   · refine ⟨M₂, .logik (logikZ f e'), teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
     · simp only [execStmtHA, hΦ Φ (passt_teil hP hs2), hvd, hRΦ Φ hP, antwortR]
-    · simp only [exS, exec_nachΛ, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hvd', evalArgs_umτs, ha]
+    · simp only [exS, exec_nachΛ, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, pointerReads, pointerValue, evalArgs_umτs, ha]
       exact ⟨logikRel_logikZ f e', (hI2 σ').keyOk E⟩
   · refine ⟨M₂, .hardware .ieee, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
     · simp only [execStmtHA, hΦ Φ (passt_teil hP hs2), hvd, hRΦ Φ hP, antwortR]
-    · simp only [exS, exec_nachΛ, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hvd', evalArgs_umτs, ha]
+    · simp only [exS, exec_nachΛ, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, pointerReads, pointerValue, evalArgs_umτs, ha]
       trivial
 
 set_option linter.unusedSectionVars false in
@@ -134,7 +139,7 @@ theorem sim_stmt_traverse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
   intro M σ σ' ρ ρ' hM hρ
   have hsb := E.koerperSim_block_um hZ S' O' U' A' passes R'
     (show (Ty.index (D.count t) :: Γ).map E.tyE = Ty.index (D'.count (E.tab t)) :: Γ.map E.tyE by
-      rw [List.map_cons, E.count]) _ _ (ih_sim_block_body)
+      rw [List.map_cons, E.count] <;> rfl) _ _ (ih_sim_block_body)
   have hi := E.pruef_sim hZ T hB.havocA hB.atom inv
   exact E.traverse_sim (l := l) _ _ _ _ hsb hi
     (fun k => castW (D := D') (show Ty.index (D.count t) = Ty.index (D'.count (E.tab t)) by
@@ -161,80 +166,111 @@ theorem sim_stmt_consumeTraverse {V : Vertrag D}
     : E.KoerperSim hZ (fun Φ => execStmtHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.consumeTraverse t member edge inv bound mass body : Stmt D V l Γ Λ _)) (execStmtHA S' O' U' A' passes R' (exS hS (.consumeTraverse t member edge inv bound mass body : Stmt D V l Γ Λ _))) :=
   by
   intro M σ σ' ρ ρ' hM hρ
+  have countTy : Ty.index (D.count t) = Ty.index (D'.count (E.tab t)) :=
+    congrArg Ty.index (E.count t).symm
+  have scope : (Ty.index (D.count t) :: Γ).map E.tyE =
+      Ty.index (D'.count (E.tab t)) :: Γ.map E.tyE := by
+    rw [List.map_cons, E.count] <;> rfl
+  have scope2 : (Ty.index (D.count t) :: Ty.index (D.count t) :: Γ).map E.tyE =
+      Ty.index (D'.count (E.tab t)) :: Ty.index (D'.count (E.tab t)) :: Γ.map E.tyE := by
+    rw [List.map_cons, List.map_cons, E.count] <;> rfl
+  let castIndex (k : Wert D (.index (D.count t))) : Wert D' (.index (D'.count (E.tab t))) :=
+    castW (D := D') countTy k
+  let member' : Expr D' (.index (D'.count (E.tab t)) :: Γ.map E.tyE) (Λ.map E.resE) .bool :=
+    Expr.umΓ scope (exE E member)
+  let edge' : Expr D' (.index (D'.count (E.tab t)) :: .index (D'.count (E.tab t)) :: Γ.map E.tyE)
+      (Λ.map E.resE) .bool := Expr.umΓ scope2 (exE E edge)
   have hsb := E.koerperSim_block_um hZ S' O' U' A' passes R'
-    (show (Ty.index (D.count t) :: Γ).map E.tyE = Ty.index (D'.count (E.tab t)) :: Γ.map E.tyE by
-      rw [List.map_cons, E.count]) _ _ (ih_sim_block_body)
+    scope _ _ ih_sim_block_body
   have hi := E.pruef_sim hZ T hB.havocA hB.atom inv
   have hf : ∀ k : Wert D (.index (D.count t)),
-      ∃ h : (Ty.index (D'.count (E.tab t))) = E.tyE (Ty.index (D.count t)),
-        E.VRel hZ _ k (castW h ((fun k => castW (D := D')
-          (show Ty.index (D.count t) = Ty.index (D'.count (E.tab t)) by rw [E.count]) k))) :=
-    fun k => ⟨(show Ty.index (D.count t) = Ty.index (D'.count (E.tab t)) by rw [E.count]).symm,
-      castW_symm (D := D') (τ := Ty.index (D'.count (E.tab t))) (σ := Ty.index (D.count t)) _ k⟩
+      ∃ h : Ty.index (D'.count (E.tab t)) = E.tyE (Ty.index (D.count t)),
+        E.VRel hZ _ k (castW h (castIndex k)) := by
+    intro k
+    refine ⟨countTy.symm, ?_⟩
+    change castW (D := D') countTy.symm (castW (D := D') countTy k) = k
+    exact castW_symm (D := D') countTy.symm k
   simp only [execStmtHA, exS]
   rw [show (D'.count (E.tab t)).toNat + bound.toNat + 1 =
     (D.count t).toNat + bound.toNat + 1 from by rw [E.count t]]
   refine E.verbrauch_sim (l := l) t bound _ _ _ _ _ _ _ _ hsb hi
-    (fun k => castW (D := D') (show Ty.index (D.count t) = Ty.index (D'.count (E.tab t)) by
-      rw [E.count]) k)
-    hf ?hsel ?hmass ((D.count t).toNat + bound.toNat + 1) M σ σ' ρ ρ' hM hρ
+    castIndex hf ?hsel ?hmass ((D.count t).toNat + bound.toNat + 1) M σ σ' ρ ρ' hM hρ
   · intro M₀ σ₀ σ₀' ρ₀ ρ₀' hM₀ hρ₀
+    have reads : (exE E member).orte ++ (exE E edge).orte =
+        (member.orte ++ edge.orte).map E.ortE :=
+      (congr (congrArg List.append (E.orte_exE member)) (E.orte_exE edge)).trans List.map_append.symm
     obtain ⟨M₁, σ₁, hs1, hΦ1, hI1, hev⟩ := E.lese_eval' hZ T hM₀ hB.havocA hB.atom
       Λ (Λ.map E.resE) (member.orte ++ edge.orte)
-      ((exE E member).orte ++ (exE E edge).orte)
-      (by simp only [List.map_append, E.orte_exE])
-    simp only [verbrauchSelA, Expr.orte_umΓ] at ⊢
-    refine ⟨M₁, σ₁, _, _, _, hs1, ?_, ?_, ?_⟩
+      ((exE E member).orte ++ (exE E edge).orte) reads.symm
+    let W := leseA A' σ₀' (Λ.map E.resE) ((exE E member).orte ++ (exE E edge).orte)
+    let p (w : World D) (k : Wert D (.index (D.count t))) : Bool :=
+      wahr? (D := D) (eval w member w (Env.cons (τ := .index (D.count t)) k ρ₀))
+    let e (w : World D) (j k : Wert D (.index (D.count t))) : Bool :=
+      wahr? (D := D) (eval w edge w (.cons j (.cons k ρ₀)))
+    let same (j k : Zahl 0 (D.count t - 1)) : Bool := decide (j.n = k.n)
+    let p' (k : Wert D' (.index (D'.count (E.tab t)))) : Bool :=
+      wahr? (D := D') (eval W member' W (.cons k ρ₀'))
+    let e' (j k : Wert D' (.index (D'.count (E.tab t)))) : Bool :=
+      wahr? (D := D') (eval W edge' W (.cons j (.cons k ρ₀')))
+    let same' (j k : Zahl 0 (D'.count (E.tab t) - 1)) : Bool := decide (j.n = k.n)
+    have hp : ∀ k, p' (castIndex k) = p σ₁ k := by
+      intro k
+      have henv := (E.envR_um hZ scope.symm _ _).mpr
+        (show E.EnvR hZ (Env.cons k ρ₀) (Env.cons (castIndex k) ρ₀') from ⟨hf k, hρ₀⟩)
+      have h := hev member (.cons k ρ₀) _ henv
+      change (eval W (exE E member) W (castE scope.symm (.cons (castIndex k) ρ₀')) : Bool) =
+        eval σ₁ member σ₁ (.cons k ρ₀) at h
+      exact (congrArg (wahr? (D := D')) (eval_umΓ (τ := .bool) scope (exE E member) W W
+        (.cons (castIndex k) ρ₀'))).trans h
+    have he : ∀ j k, e' (castIndex j) (castIndex k) = e σ₁ j k := by
+      intro j k
+      have henv := (E.envR_um hZ scope2.symm _ _).mpr
+        (show E.EnvR hZ (.cons j (.cons k ρ₀)) (.cons (castIndex j) (.cons (castIndex k) ρ₀'))
+          from ⟨hf j, hf k, hρ₀⟩)
+      have h := hev edge (.cons j (.cons k ρ₀)) _ henv
+      change (eval W (exE E edge) W (castE scope2.symm (.cons (castIndex j) (.cons (castIndex k) ρ₀'))) : Bool) =
+        eval σ₁ edge σ₁ (.cons j (.cons k ρ₀)) at h
+      exact (congrArg (wahr? (D := D')) (eval_umΓ (τ := .bool) scope2 (exE E edge) W W
+        (.cons (castIndex j) (.cons (castIndex k) ρ₀')))).trans h
+    have hs : ∀ j k, same' (castIndex j) (castIndex k) = same j k := by
+      intro j k
+      have hj : (castIndex j).n = j.n := castW_index_n (D₀ := D') countTy j
+      have hk : (castIndex k).n = k.n := castW_index_n (D₀ := D') countTy k
+      exact congr (congrArg (fun a b : Int => decide (a = b)) hj) hk
+    have domain : alleIndizes (D'.count (E.tab t)) = (alleIndizes (D.count t)).map castIndex :=
+      alleIndizes_bild (D' := D') (E.count t)
+    have choice := (congrArg (fun ks : List (Wert D' (.index (D'.count (E.tab t)))) =>
+      verbrauchWahl ks p' e' same') domain).trans
+      (verbrauchWahl_map castIndex (alleIndizes (D.count t)) (p σ₁) p' (e σ₁) e' same same'
+        (fun k _ => hp k) (fun j _ k _ => he j k) (fun j _ k _ => hs j k))
+    have remaining := congrArg Bool.not ((congrArg
+      (fun ks : List (Wert D' (.index (D'.count (E.tab t)))) => ks.all (fun k => !(p' k))) domain).trans
+      (map_all_beibehalt castIndex (alleIndizes (D.count t)) (fun k => !(p σ₁ k)) (fun k => !(p' k))
+        (fun k _ => congrArg Bool.not (hp k))))
+    refine ⟨M₁, σ₁, W, verbrauchWahl (alleIndizes (D.count t)) (p σ₁) (e σ₁) same,
+      !((alleIndizes (D.count t)).all (fun k => !(p σ₁ k))), hs1, ?_, ?_, hI1⟩
     · intro Φ hP
-      simp only [verbrauchSelA, hΦ1 Φ hP]
-    · simp only [verbrauchSelA, Expr.orte_umΓ, eval_umΓ]
-      rw [Prod.mk.injEq, Prod.mk.injEq]
-      refine ⟨?_, ?_, ?_⟩
-      · rfl
-      · rw [alleIndizes_bild ((E.count t).symm)]
-        refine verbrauchWahl_map _ _ _ _ _ _ _ _ ?_ ?_ ?_
-        · intro k _
-          have henv : E.EnvR hZ (Env.cons k ρ₀)
-              (Env.cons ((fun k => castW (D := D') (show Ty.index (D.count t) =
-                Ty.index (D'.count (E.tab t)) by rw [E.count]) k) (castE _ ρ₀')) :=
-            ⟨hf k, (E.envR_um hZ _ _ _).mpr hρ₀⟩
-          have h := hev member (Env.cons k ρ₀) _ henv
-          simp only [VRel] at h
-          show wahr? _ = wahr? _
-          simp only [h]
-        · intro j _ k _
-          have henv : E.EnvR hZ (Env.cons j (Env.cons k ρ₀))
-              (Env.cons ((fun k => castW (D := D') (show Ty.index (D.count t) =
-                Ty.index (D'.count (E.tab t)) by rw [E.count]) j)
-                (Env.cons ((fun k => castW (D := D') (show Ty.index (D.count t) =
-                  Ty.index (D'.count (E.tab t)) by rw [E.count]) k) (castE _ ρ₀'))) :=
-            ⟨hf j, hf k, (E.envR_um hZ _ _ _).mpr hρ₀⟩
-          have h := hev edge (Env.cons j (Env.cons k ρ₀)) _ henv
-          simp only [VRel] at h
-          show wahr? _ = wahr? _
-          simp only [h]
-        · intro j _ k _
-          show decide (_ = _) = decide (_ = _)
-          rw [castW_index_n, castW_index_n]
-      · exact map_all_beibehalt _ _ _ _ (fun k _ => by
-          have henv : E.EnvR hZ (Env.cons k ρ₀)
-              (Env.cons ((fun k => castW (D := D') (show Ty.index (D.count t) =
-                Ty.index (D'.count (E.tab t)) by rw [E.count]) k) (castE _ ρ₀')) :=
-            ⟨hf k, (E.envR_um hZ _ _ _).mpr hρ₀⟩
-          have h := hev member (Env.cons k ρ₀) _ henv
-          simp only [VRel] at h
-          show (!(wahr? _)) = (!(wahr? _))
-          simp only [h])
-    · exact hI1
+      change (fun w : World D => (w, verbrauchWahl (alleIndizes (D.count t)) (p w) (e w) same,
+        !((alleIndizes (D.count t)).all (fun k => !(p w k)))))
+          (leseA (E.aumweltΦ hZ Φ T A') σ₀ Λ (member.orte ++ edge.orte)) = _
+      exact congrArg (fun w : World D => (w, verbrauchWahl (alleIndizes (D.count t)) (p w) (e w) same,
+        !((alleIndizes (D.count t)).all (fun k => !(p w k))))) (hΦ1 Φ hP)
+    · simp only [verbrauchSelA, Expr.orte_umΓ]
+      change (W, verbrauchWahl (alleIndizes (D'.count (E.tab t))) p' e' same',
+        !((alleIndizes (D'.count (E.tab t))).all (fun k => !(p' k)))) = _
+      exact congrArg (fun data : Option (Wert D' (.index (D'.count (E.tab t)))) × Bool => (W, data))
+        (congr (congrArg Prod.mk choice) remaining)
   · intro M₀ σ₀ σ₀' ρ₀ ρ₀' hM₀ hρ₀
     obtain ⟨M₁, σ₁, hs1, hΦ1, hI1, hev⟩ := E.lese_eval' hZ T hM₀ hB.havocA hB.atom
       Λ (Λ.map E.resE) mass.orte (exE E mass).orte (E.orte_exE mass).symm
     refine ⟨M₁, σ₁, _, (eval σ₁ mass σ₁ ρ₀).n, hs1, ?_, ?_, ?_⟩
     · intro Φ hP
-      simp only [hΦ1 Φ hP]
+      exact congrArg (fun w : World D => (w, (eval (D := D) (τ := .int 0 bound) w mass w ρ₀ : Zahl 0 bound).n)) (hΦ1 Φ hP)
     · have hm' := hev mass ρ₀ ρ₀' hρ₀
-      simp only [VRel] at hm'
-      simp only [hm']
+      change (eval (leseA A' σ₀' (Λ.map E.resE) (exE E mass).orte) (exE E mass)
+        (leseA A' σ₀' (Λ.map E.resE) (exE E mass).orte) ρ₀' : Zahl 0 bound) = eval σ₁ mass σ₁ ρ₀ at hm'
+      exact congrArg (fun value : Zahl 0 bound =>
+        (leseA A' σ₀' (Λ.map E.resE) (exE E mass).orte, value.n)) hm'
     · exact hI1
 
 set_option linter.unusedSectionVars false in
@@ -304,18 +340,20 @@ theorem sim_stmt_axiomCall {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res
         exact ⟨E.inv_antwort hZ hB.pad hI2 _, hρ⟩
 
 set_option linter.unusedSectionVars false in
-theorem sim_stmt_callIndElse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+theorem sim_stmt_callIndElse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     (n)
     (p)
     (args)
-    (he)
+    (he : (D.sigNr n).erg = some τ)
     (hp)
     (hr)
     (err)
     (ih_sim_end_err : E.EndSim hZ (fun Φ => execEndHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') err) (execEndHA S' O' U' A' passes R' (exEnd hS err)))
-    : E.KoerperSim hZ (fun Φ => execStmtHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.callIndElse (n := n) p args he hp hr err : Stmt D V l Γ Λ _)) (execStmtHA S' O' U' A' passes R' (exS hS (.callIndElse (n := n) p args he hp hr err : Stmt D V l Γ Λ _))) :=
+    : E.KoerperSim hZ (fun Φ => execStmtHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.callIndElse (n := n) (τ := τ) p args he hp hr err : Stmt D V l Γ Λ _)) (execStmtHA S' O' U' A' passes R' (exS hS (.callIndElse (n := n) (τ := τ) p args he hp hr err : Stmt D V l Γ Λ _))) :=
   by
   intro M σ σ' ρ ρ' hM hρ
+  let pointer : Expr D' (Γ.map E.tyE) (Λ.map E.resE) (.fnptr (E.num n)) := exE E p
+  have pointerReads : pointer.orte = p.orte.map E.ortE := E.orte_exE p
   obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval hZ hM T hB.havocA hB.atom Λ (Λ.map E.resE)
     (p.orte ++ args.orte)
   have hev0 := E.frei_alle hZ (@hev) hρ
@@ -324,6 +362,9 @@ theorem sim_stmt_callIndElse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (R
   rw [hvd] at hp'
   rcases hvd' : eval (leseA A' σ' (Λ.map E.resE) ((p.orte ++ args.orte).map E.ortE)) (exE E p) (leseA A' σ' (Λ.map E.resE) ((p.orte ++ args.orte).map E.ortE)) ρ' with ⟨f', hf'⟩
   rw [hvd'] at hp'
+  have pointerValue : eval (D := D') (τ := .fnptr (E.num n))
+      (leseA A' σ' (Λ.map E.resE) ((p.orte ++ args.orte).map E.ortE)) pointer
+      (leseA A' σ' (Λ.map E.resE) ((p.orte ++ args.orte).map E.ortE)) ρ' = ⟨f', hf'⟩ := hvd'
   have hk : E.Konform hZ f f' := by
     rcases hp' with h | ⟨hz, hr⟩
     · exact Or.inl h
@@ -337,31 +378,44 @@ theorem sim_stmt_callIndElse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (R
   generalize ha : R' f' (leseA A' σ' (Λ.map E.resE) ((p.orte ++ args.orte).map E.ortE)) (umsig hf' (castE hsig (evalArgs (leseA A' σ' (Λ.map E.resE) ((p.orte ++ args.orte).map E.ortE)) (exA E args) (leseA A' σ' (Λ.map E.resE) ((p.orte ++ args.orte).map E.ortE)) ρ'))) = a' at hRΦ
   rcases a' with ⟨W, v'⟩ | ⟨W, r'⟩ | e' | e'
   · refine ⟨M₂, .ok (E.antwortWelt hZ pad σ₁ W) ρ, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
-    · simp only [execStmtHA, hΦ Φ (passt_teil hP hs2), hvd, hRΦ Φ hP, antwortR]
-    · simp only [exS, exec_nachΛ, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hvd', evalArgs_umτs, ha]
+    · simp only [execStmtHA, indSonst, hΦ Φ (passt_teil hP hs2), hvd, hRΦ Φ hP, antwortR]
+    · simp only [exS, exec_nachΛ, execStmtHA, indSonst, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, pointerReads, pointerValue, evalArgs_umτs, ha]
       exact ⟨hI2 W, hρ⟩
   · have hc : (Ty.why (D.sigNr n).gruende :: Γ).map E.tyE
         = Ty.why (D'.sigNr (E.num n)).gruende :: Γ.map E.tyE := by rw [hS.sigNr]; rfl
-    have hrw : D'.gruende f' = (D'.sigNr (E.num n)).gruende :=
-      (konform_sig hS hk).2.2.trans ((D.passt_sig hf).gruende.trans hchan.symm)
+    let sourceReason : Fin (D.sigNr n).gruende :=
+      grundSig hf (Fin.cast (konform_sig hS hk).2.2 r')
+    let targetReason : Fin (D'.sigNr (E.num n)).gruende := grundSig hf' r'
+    have sourceNumber : sourceReason.val = r'.val :=
+      congrArg Fin.val (grundSig_eq_cast hf (D.passt_sig hf).gruende
+        (Fin.cast (konform_sig hS hk).2.2 r'))
+    have targetNumber : targetReason.val = r'.val :=
+      congrArg Fin.val (grundSig_eq_cast hf' (D'.passt_sig hf').gruende r')
+    have reasonTy : Ty.why (D'.sigNr (E.num n)).gruende = E.tyE (.why (D.sigNr n).gruende) := by
+      rw [hchan] <;> rfl
+    have reasons : E.VRel hZ (.why (D.sigNr n).gruende) sourceReason (castW reasonTy targetReason) := by
+      change (castW (D := D') reasonTy targetReason : Fin (D.sigNr n).gruende) = sourceReason
+      apply Fin.ext
+      exact (congrArg Fin.val (castW_why (D' := D') reasonTy targetReason)).trans
+        (targetNumber.trans sourceNumber.symm)
     obtain ⟨M₃, o, hs3, hΦ3, hR3⟩ := ih_sim_end_err M₂ (E.antwortWelt hZ pad σ₁ W) W
-      (.cons (Fin.cast ((konform_sig hS hk).2.2.trans (D.passt_sig hf).gruende) r') ρ)
-      (castE hc.symm (.cons (Fin.cast hrw r') ρ'))
+      (.cons sourceReason ρ) (castE hc.symm (.cons targetReason ρ'))
       (hI2 W)
-      ((E.envR_um hZ hc.symm _ _).mpr (E.envR_cons hZ hρ _ _ rfl (by rw [castW_why]; rfl)))
+      ((E.envR_um hZ hc.symm _ _).mpr (E.envR_cons hZ hρ sourceReason targetReason reasonTy reasons))
     refine ⟨M₃, o.schrumpf.zuAusgang, teil_trans (teil_trans hs hs2) hs3, fun Φ hP => ?_, ?_⟩
-    · simp only [execStmtHA, hΦ Φ (passt_teil hP (teil_trans hs2 hs3)), hvd, hRΦ Φ (passt_teil hP hs3),
+    · simp only [execStmtHA, indSonst, hΦ Φ (passt_teil hP (teil_trans hs2 hs3)), hvd, hRΦ Φ (passt_teil hP hs3),
         antwortR]
-      exact congrArg (fun x => x.schrumpf.zuAusgang) (hΦ3 Φ hP)
-    · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hvd', evalArgs_umτs, ha]
+      exact congrArg (fun x : EndAusgang V l (.why (D.sigNr n).gruende :: Γ) => x.schrumpf.zuAusgang) (hΦ3 Φ hP)
+    · simp only [exS, exec_nachΛ, execStmtHA, indSonst, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, pointerReads, pointerValue, evalArgs_umτs, ha]
+      simp only [execEnd_umΓ, execEnd_umΛ]
       exact E.endRel_zuAusgang (E.endRel_schrumpf ((E.endRel_um hc o _).mpr hR3))
   · refine ⟨M₂, .logik (logikZ f e'), teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
-    · simp only [execStmtHA, hΦ Φ (passt_teil hP hs2), hvd, hRΦ Φ hP, antwortR]
-    · simp only [exS, exec_nachΛ, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hvd', evalArgs_umτs, ha]
+    · simp only [execStmtHA, indSonst, hΦ Φ (passt_teil hP hs2), hvd, hRΦ Φ hP, antwortR]
+    · simp only [exS, exec_nachΛ, execStmtHA, indSonst, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, pointerReads, pointerValue, evalArgs_umτs, ha]
       exact ⟨logikRel_logikZ f e', (hI2 σ').keyOk E⟩
   · refine ⟨M₂, .hardware .ieee, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
-    · simp only [execStmtHA, hΦ Φ (passt_teil hP hs2), hvd, hRΦ Φ hP, antwortR]
-    · simp only [exS, exec_nachΛ, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hvd', evalArgs_umτs, ha]
+    · simp only [execStmtHA, indSonst, hΦ Φ (passt_teil hP hs2), hvd, hRΦ Φ hP, antwortR]
+    · simp only [exS, exec_nachΛ, execStmtHA, indSonst, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, pointerReads, pointerValue, evalArgs_umτs, ha]
       trivial
 
 end Sim
