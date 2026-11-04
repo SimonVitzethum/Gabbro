@@ -36,27 +36,38 @@ theorem softDivFraction_round (a b : GFloat)
       rundeBruchBei f64 (a.sign != b.sign)
         (softSig a.bexp a.frac * 2 ^ t) (softSig b.bexp b.frac * 2 ^ j) := by
   dsimp only
+  let ea : Int := ((max a.bexp 1 : Nat) : Int) - 1075
+  let eb : Int := ((max b.bexp 1 : Nat) : Int) - 1075
+  let n := softSig a.bexp a.frac * 2 ^ (ea - min ea eb).toNat
+  let d := softSig b.bexp b.frac * 2 ^ (eb - min ea eb).toNat
   have signA : decide ((if a.sign then -(softSig a.bexp a.frac : Int)
       else softSig a.bexp a.frac) < 0) = a.sign := by
-    cases a.sign <;> simp [show (0 : Int) < softSig a.bexp a.frac by omega]
+    cases a.sign <;> simp [ap]
   have signB : decide ((if b.sign then -(softSig b.bexp b.frac : Int)
       else softSig b.bexp b.frac) < 0) = b.sign := by
-    cases b.sign <;> simp [show (0 : Int) < softSig b.bexp b.frac by omega]
+    cases b.sign <;> simp [bp]
   have magA : (if a.sign then -(softSig a.bexp a.frac : Int)
       else softSig a.bexp a.frac).natAbs = softSig a.bexp a.frac := by cases a.sign <;> simp
   have magB : (if b.sign then -(softSig b.bexp b.frac : Int)
       else softSig b.bexp b.frac).natAbs = softSig b.bexp b.frac := by cases b.sign <;> simp
-  unfold softDivFraction divBruch rundeBruch
-  dsimp only
-  rw [signA, signB, magA, magB]
-  have positive : 0 < softSig a.bexp a.frac *
-      2 ^ ((((max a.bexp 1 : Nat) : Int) - 1075) -
-        min (((max a.bexp 1 : Nat) : Int) - 1075) (((max b.bexp 1 : Nat) : Int) - 1075)).toNat :=
+  have fraction : softDivFraction a b =
+      ⟨if a.sign != b.sign then -(n : Int) else n, d⟩ := by
+    unfold softDivFraction divBruch
+    dsimp only
+    rw [signA, signB, magA, magB] <;> rfl
+  have positive : 0 < n :=
     Nat.mul_pos ap (Nat.two_pow_pos _)
-  cases a.sign <;> cases b.sign <;>
-    simp [show (0 : Int) < (softSig a.bexp a.frac *
-      2 ^ ((((max a.bexp 1 : Nat) : Int) - 1075) -
-        min (((max a.bexp 1 : Nat) : Int) - 1075) (((max b.bexp 1 : Nat) : Int) - 1075)).toNat : Nat) by omega]
+  have sign : decide ((if a.sign != b.sign then -(n : Int) else n) < 0) =
+      (a.sign != b.sign) := by
+    cases (a.sign != b.sign) <;> simp [positive]
+  have magnitude : (if a.sign != b.sign then -(n : Int) else n).natAbs = n := by
+    cases (a.sign != b.sign) <;> simp
+  rw [fraction]
+  change rundeBruch f64 ⟨if a.sign != b.sign then -(n : Int) else n, d⟩ =
+    rundeBruchBei f64 (a.sign != b.sign) n d
+  unfold rundeBruch
+  dsimp only
+  rw [sign, magnitude]
 
 /-- Source quotient rounding equals rounding its 56-bit guard/sticky word.
     No source significand, remainder or subnormal operand is discarded early. -/
