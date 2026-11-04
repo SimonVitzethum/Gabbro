@@ -10,6 +10,130 @@ variable [Kern] {D : Deklaration} {L : Lay D} {P : Programm D} {f : D.Fn}
 variable {reserved : Nat} {x : Image L P f reserved} {Γ : Ctx} {Λ : List (Res D)}
 variable (q : Loop x Γ Λ)
 
+private theorem execution_width_append (a b : List Piece) : width (a ++ b) = width a + width b := by
+  induction a with
+  | nil => simp only [List.nil_append, width, Nat.zero_add]
+  | cons a rest ih => simp only [List.cons_append, width, ih, Nat.add_assoc]
+
+private theorem execution_offset_step {i : Nat} {piece : Piece}
+    (found : x.fragment[i]? = some piece) : x.offset (i + 1) = x.offset i + piece.width := by
+  have inside : i < x.fragment.length := by
+    by_cases hi : i < x.fragment.length
+    · exact hi
+    · have missing := List.getElem?_eq_none (l := x.fragment) (i := i) (by omega)
+      cases (missing.symm.trans found)
+  have element : x.fragment[i] = piece := by
+    simpa only [List.getElem?_eq_getElem inside, Option.some.injEq] using found
+  simp only [Image.offset, List.take_succ_eq_append_getElem inside, element,
+    execution_width_append, width, Nat.add_zero]
+
+private theorem execution_offset_bound (i : Nat) : x.offset i ≤ x.code.length := by
+  have splitWidth := congrArg width (List.take_append_drop i x.fragment)
+  rw [execution_width_append] at splitWidth
+  calc
+    x.offset i ≤ x.offset i + width (x.fragment.drop i) := Nat.le_add_right _ _
+    _ = width x.fragment := splitWidth
+    _ = x.code.length := (assemble_length x.assembled).symm
+
+private theorem execution_zero_next {i cell : Nat} {target : Label}
+    (found : x.fragment[i]? = some (.zero cell target)) : x.addr i + 16 = x.addr (i + 1) := by
+  have step := execution_offset_step found
+  change x.pc + BitVec.ofNat 64 (16 * x.offset i) + BitVec.ofNat 64 (16 * 1) =
+    x.pc + BitVec.ofNat 64 (16 * x.offset (i + 1))
+  rw [pc_add, step, Piece.width]
+
+private theorem execution_position_prefix (target : Label) (before after : List Piece) (pc : Nat) :
+    before.all (fun piece => match piece with
+      | .label name => decide (name ≠ target)
+      | _ => true) = true →
+    position target (before ++ after) pc = position target after (pc + width before) := by
+  induction before generalizing pc with
+  | nil => intro _; simp only [List.nil_append, width, Nat.add_zero]
+  | cons piece rest ih =>
+    intro absent
+    simp only [List.all_cons, Bool.and_eq_true] at absent
+    cases piece with
+    | code instructions =>
+      simpa only [List.cons_append, position, width, Piece.width, Nat.add_assoc] using
+        ih (pc + instructions.length) absent.2
+    | label name =>
+      have different : name ≠ target := of_decide_eq_true absent.1
+      simpa only [List.cons_append, position, different, ↓reduceIte, width,
+        Piece.width, Nat.add_zero, Nat.zero_add] using ih pc absent.2
+    | jump destination =>
+      simpa only [List.cons_append, position, width, Piece.width, Nat.add_assoc] using
+        ih (pc + 1) absent.2
+    | zero cell destination =>
+      simpa only [List.cons_append, position, width, Piece.width, Nat.add_assoc] using
+        ih (pc + 1) absent.2
+
+private theorem execution_position_at_label {i : Nat} {target : Label}
+    (found : x.fragment[i]? = some (.label target))
+    (absent : (x.fragment.take i).all (fun piece => match piece with
+      | .label name => decide (name ≠ target)
+      | _ => true) = true) : position target x.fragment 0 = some (x.offset i) := by
+  have inside : i < x.fragment.length := by
+    by_cases hi : i < x.fragment.length
+    · exact hi
+    · have missing := List.getElem?_eq_none (l := x.fragment) (i := i) (by omega)
+      cases (missing.symm.trans found)
+  have element : x.fragment[i] = .label target := by
+    simpa only [List.getElem?_eq_getElem inside, Option.some.injEq] using found
+  have splitImage : x.fragment =
+      x.fragment.take i ++ .label target :: x.fragment.drop (i + 1) := by
+    have split := List.take_append_drop i x.fragment
+    rw [List.drop_eq_getElem_cons inside, element] at split
+    exact split.symm
+  have located := execution_position_prefix target (x.fragment.take i)
+    (.label target :: x.fragment.drop (i + 1)) 0 absent
+  rw [← splitImage] at located
+  have atLabel : position target (.label target :: x.fragment.drop (i + 1))
+      (0 + width (x.fragment.take i)) = some (width (x.fragment.take i)) := by
+    rw [position, ite_eq_left rfl, Nat.zero_add]
+  exact located.trans atLabel
+
+private theorem execution_header_position : position .header x.fragment 0 = some (x.offset 2) := by
+  have step := execution_offset_step (i := 1) (piece := .label .header) rfl
+  simp only [Piece.width, Nat.add_zero] at step
+  exact (execution_position_at_label (i := 1) rfl rfl).trans (congrArg some step.symm)
+
+private theorem execution_stop_position : position .stop x.fragment 0 = some (x.offset 49) := by
+  have step := execution_offset_step (i := 48) (piece := .label .stop) rfl
+  simp only [Piece.width, Nat.add_zero] at step
+  exact (execution_position_at_label (i := 48) rfl rfl).trans (congrArg some step.symm)
+
+private theorem execution_done_position : position .done x.fragment 0 = some (x.offset 50) := by
+  exact execution_position_at_label (i := 50) rfl rfl
+
+private theorem resume_continue {m mem : Mem} {τ : World D} {ρ : Env D Γ} {n : Nat}
+    (prefixRun : Star ⟨x.addr 39, x.fp⟩ m ⟨x.addr 42, x.fp⟩ mem)
+    (frame : AgreeW L x.fp x.lo x.K m mem) (kept : Keeps x.fp x.pr m mem)
+    (ready : x.Ready mem τ ρ) (fuelRead : x.read mem x.counter (BitVec.ofNat 64 n))
+    (fuelBound : n ≤ x.fuel) :
+    ∃ result, Star ⟨x.addr 39, x.fp⟩ m ⟨x.addr 2, x.fp⟩ result ∧
+      AgreeW L x.fp x.lo x.K m result ∧ Keeps x.fp x.pr m result ∧ q.Entry n result τ ρ := by
+  have jump := ready.jump 42 2 .header rfl execution_header_position
+    (execution_offset_bound 42) (execution_offset_bound 2)
+  exact ⟨mem, prefixRun.trans jump, frame, kept, ready, fuelRead, fuelBound⟩
+
+private theorem resume_leave {m mem : Mem} {τ : World D} {ρ : Env D Γ}
+    (prefixRun : Star ⟨x.addr 39, x.fp⟩ m ⟨x.addr 45, x.fp⟩ mem)
+    (frame : AgreeW L x.fp x.lo x.K m mem) (kept : Keeps x.fp x.pr m mem)
+    (ready : x.Ready mem τ ρ) :
+    if (q.invW τ ρ).2 = true then
+      Reach L x.fp x.lo x.K x.pr ⟨x.addr 39, x.fp⟩ m (x.addr 50) (q.invW τ ρ).1 ρ reserved
+    else Stops ⟨x.addr 39, x.fp⟩ m (logikCode (D := D) .schleife) := by
+  have exit := q.leave_invariant ready
+  by_cases valid : (q.invW τ ρ).2 = true
+  · have left : Reach L x.fp x.lo x.K x.pr ⟨x.addr 45, x.fp⟩ mem (x.addr 50)
+        (q.invW τ ρ).1 ρ reserved := by simpa only [valid, ↓reduceIte] using exit
+    have completed := Reach.prefix prefixRun frame kept left
+    simpa only [valid, ↓reduceIte] using completed
+  · have stopped : Stops ⟨x.addr 45, x.fp⟩ mem (logikCode (D := D) .schleife) := by
+      simpa only [valid, Bool.false_eq_true, ↓reduceIte] using exit
+    have completed := Stops.prefix prefixRun stopped
+    simpa only [valid, Bool.false_eq_true, ↓reduceIte] using completed
+
 /-- Compose a completed body with its post-measure check and actual backedge
     or checked leave. The source body supplies both protected control words. -/
 theorem resume {m : Mem} {σ : World D} {ρ : Env D (.index (D.count x.table) :: Γ)}
@@ -40,6 +164,9 @@ theorem resume {m : Mem} {σ : World D} {ρ : Env D (.index (D.count x.table) ::
   have ready1 := ready.body bodyFrame (envAt_tail bodyEnv) bodyWorld
   let i := if leaving then 44 else 41
   have which : i = 41 ∨ i = 44 := by cases leaving <;> simp [i]
+  have bodyEnd : (if leaving then x.addr 44 else x.addr 41) = x.addr i := by
+    cases leaving <;> rfl
+  rw [bodyEnd] at bodyRun
   have checked := q.after_body i which old oldBound ready1 fuelRead1 savedRead1
   dsimp only
   by_cases good : 0 ≤ (q.massW σ' ρ'.tail).2 ∧ (q.massW σ' ρ'.tail).2 ≤ x.bound ∧
@@ -50,20 +177,42 @@ theorem resume {m : Mem} {σ : World D} {ρ : Env D (.index (D.count x.table) ::
     have kept := bodyKept.trans checkKept
     cases leaving with
     | false =>
-      simp only [Bool.false_eq_true, ↓reduceIte]
-      have jump := ready2.jump 42 2 .header rfl (by consume_arith x)
-        (by consume_arith x) (by consume_arith x)
-      exact ⟨m2, bodyRun.trans (checkRun.trans jump), frame, kept, ready2, fuelRead2, fuelBound⟩
+      change Star ⟨x.addr 39, x.fp⟩ m ⟨x.addr 41, x.fp⟩ m1 at bodyRun
+      change Star ⟨x.addr 41, x.fp⟩ m1 ⟨x.addr 42, x.fp⟩ m2 at checkRun
+      have completed := resume_continue (q := q) (bodyRun.trans checkRun) frame kept
+        ready2 fuelRead2 fuelBound
+      simpa only [Bool.false_eq_true, ↓reduceIte] using completed
     | true =>
-      simp only [↓reduceIte]
-      have exit := q.leave_invariant ready2
-      by_cases valid : (q.invW (q.massW σ' ρ'.tail).1 ρ'.tail).2 = true
-      · simp only [valid, ↓reduceIte] at exit ⊢
-        exact Reach.prefix (bodyRun.trans checkRun) frame kept exit
-      · simp only [valid, ↓reduceIte] at exit ⊢
-        exact Stops.prefix (bodyRun.trans checkRun) exit
+      change Star ⟨x.addr 39, x.fp⟩ m ⟨x.addr 44, x.fp⟩ m1 at bodyRun
+      change Star ⟨x.addr 44, x.fp⟩ m1 ⟨x.addr 45, x.fp⟩ m2 at checkRun
+      have completed := resume_leave (q := q) (bodyRun.trans checkRun) frame kept ready2
+      simpa only [↓reduceIte] using completed
   · simp only [good, ↓reduceIte] at checked ⊢
     exact Stops.prefix bodyRun checked
+
+private theorem selection_empty {m : Mem} {τ : World D} {ρ : Env D Γ}
+    (ready : x.Ready m τ ρ) (read : x.read m (x.s + 2) (Runner.IR.bool false)) :
+    Reach L x.fp x.lo x.K x.pr ⟨x.addr 34, x.fp⟩ m (x.addr 50) τ ρ reserved := by
+  have branch := ready.branch 34 50 (x.s + 2) .done _ rfl execution_done_position
+    (execution_offset_bound 34) (execution_offset_bound 50)
+    (by have := x.scratch; have := x.layout.ks; omega) read
+    (execution_zero_next (i := 34) (cell := x.s + 2) (target := .done) rfl)
+  have finish : Star ⟨x.addr 34, x.fp⟩ m ⟨x.addr 50, x.fp⟩ m := by
+    simpa only [Runner.IR.bool, Bool.false_eq_true, ↓reduceIte] using branch
+  exact ⟨m, finish, AgreeW.refl _ _ _ _ _, ready.env, ready.world, Keeps.refl _ _ _⟩
+
+private theorem selection_cycle {m : Mem} {τ : World D} {ρ : Env D Γ}
+    (ready : x.Ready m τ ρ) (read : x.read m (x.s + 2) (Runner.IR.bool true)) :
+    Stops ⟨x.addr 34, x.fp⟩ m (logikCode (D := D) .schleife) := by
+  have branch := ready.branch 34 50 (x.s + 2) .done _ rfl execution_done_position
+    (execution_offset_bound 34) (execution_offset_bound 50)
+    (by have := x.scratch; have := x.layout.ks; omega) read
+    (execution_zero_next (i := 34) (cell := x.s + 2) (target := .done) rfl)
+  have advance : Star ⟨x.addr 34, x.fp⟩ m ⟨x.addr 35, x.fp⟩ m := by
+    simpa only [Runner.IR.bool, show (1 : W) ≠ 0 by decide, ↓reduceIte] using branch
+  have jump := ready.jump 35 49 .stop rfl execution_stop_position
+    (execution_offset_bound 35) (execution_offset_bound 49)
+  exact Stops.prefix (advance.trans jump) ready.stop
 
 /-- Fuel induction is supplied by runtime, with every premise instantiated by
     concrete assembled-image paths. No source interpreter or per-program premise. -/
@@ -91,21 +240,12 @@ theorem correct {O : Orakel D} {passes : Nat}
     obtain ⟨m1, scan, frame, kept, result, fuelRead⟩ := q.round entry valid
     rw [selection] at scan result
     simp only [Option.isSome_none, ↓reduceIte] at scan
-    have branch := result.ready.branch 34 50 (x.s + 2) .done 0 rfl (by consume_arith x)
-      (by consume_arith x) (by consume_arith x)
-      (by have := x.scratch; have := x.layout.ks; omega) result.liveRead (by consume_arith x)
-    exact ⟨m1, scan.trans (by simpa using branch), frame, result.ready.env,
-      result.ready.world, kept⟩
+    exact Reach.prefix scan frame kept (selection_empty result.ready result.liveRead)
   · intro n mem σ ρ σr entry valid selection
     obtain ⟨m1, scan, frame, kept, result, fuelRead⟩ := q.round entry valid
     rw [selection] at scan result
     simp only [Option.isSome_none, ↓reduceIte] at scan
-    have branch := result.ready.branch 34 50 (x.s + 2) .done 1 rfl (by consume_arith x)
-      (by consume_arith x) (by consume_arith x)
-      (by have := x.scratch; have := x.layout.ks; omega) result.liveRead (by consume_arith x)
-    have jump := result.ready.jump 35 49 .stop rfl (by consume_arith x)
-      (by consume_arith x) (by consume_arith x)
-    exact Stops.prefix (scan.trans ((by simpa using branch).trans jump)) result.ready.stop
+    exact Stops.prefix scan (selection_cycle result.ready result.liveRead)
   · intro n mem σ ρ σr k live entry valid selection
     obtain ⟨m1, scan, scanFrame, scanKept, selected, fuelRead⟩ := q.round entry valid
     rw [selection] at scan selected
@@ -139,6 +279,7 @@ theorem correct {O : Orakel D} {passes : Nat}
         exact ⟨m3, completeRun.trans run, prefixFrame.trans frame, prefixKept.trans kept, next⟩
       · simp only [good, ↓reduceIte] at resumed ⊢
         exact Stops.prefix completeRun resumed
+    dsimp only [Sim] at pass
     generalize bodyOutcome : execBlock O passes R body (q.massW σr ρ).1 (.cons k ρ) = outcome at pass ⊢
     cases outcome with
     | ok σ' ρ' => exact again σ' ρ' pass
@@ -153,7 +294,7 @@ theorem correct {O : Orakel D} {passes : Nat}
         by_cases valid : (q.invW (q.massW σ' ρ'.tail).1 ρ'.tail).2 = true
         · simp only [valid, ↓reduceIte] at resumed ⊢
           exact Reach.prefix completeRun prefixFrame prefixKept resumed
-        · simp only [valid, ↓reduceIte] at resumed ⊢
+        · simp only [valid, Bool.false_eq_true, ↓reduceIte] at resumed ⊢
           exact Stops.prefix completeRun resumed
       · simp only [good, ↓reduceIte] at resumed ⊢
         exact Stops.prefix completeRun resumed
