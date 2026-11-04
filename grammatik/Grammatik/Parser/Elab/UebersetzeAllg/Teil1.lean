@@ -99,13 +99,13 @@ def declOf (u : UProg) : Deklaration where
   maskiert := fun l => (lockAt u l).masks
   Marke := Fin u.marken.length
   decMarke := inferInstance
-  /-- Preserve declared linear orders; unstaged marks have one stage. -/
+  -- Preserve declared linear orders; unstaged marks have one stage.
   stufen := markStageCount u
   braucht := fun t => needsAt u t ++ (eignerAt u t).map (fun m => Sum.inr (m, 0))
   gbraucht := gneedsAt u
   eigner := eignerAt u
-  /-- The capability owner registry (C12): `DataRights.owner` numbers resolve
-      through the unit's owner namespace (`eignerMarke`) to declaration marks. -/
+  -- The capability owner registry (C12): `DataRights.owner` numbers resolve
+  -- through the unit's owner namespace (`eignerMarke`) to declaration marks.
   ownerNr := eignerMarke u
   Fn := Fin u.fns.length
   sig := fun f => f.val
