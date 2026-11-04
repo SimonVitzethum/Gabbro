@@ -5,8 +5,10 @@ namespace Gabbro.Grammatik.Parser.Generic
 
 /-- Substitute a symbolic call's type arguments without making a concrete instance. -/
 def symbolicHead (types : List (String × STyp)) (sig : FnSig) : FnSig :=
-  { sig with params := sig.params.map (fun (n, ty) => (n, Spec.substituteType types ty)),
-    res := sig.res.map (Spec.substituteType types) }
+  { sig with
+    params := sig.params.map (fun (n, ty) => (n, Spec.substituteType types ty))
+    res := sig.res.map (Spec.substituteType types)
+  }
 
 mutual
 /-- Inference during the parametricity check keeps T abstract, including inferred lets,
@@ -22,8 +24,8 @@ def symbolicType (source : List SItemTief) (template : FnSig) (locals : Spec.Loc
       | some (_, ty) => some ty
       | none => (Spec.inferType source [] fuel expr).map (Spec.canonicalType source 128)
     | .call name args =>
-      ((symbolicCall source template locals fuel name none args).toOption.bind (·.res))
-        .orElse (fun _ => Spec.inferType source locals fuel expr)
+      ((symbolicCall source template locals fuel name none args).toOption.bind (·.res)).orElse
+        (fun _ => Spec.inferType source locals fuel expr)
     | .ext .instantiate (name :: words) args =>
       (symbolicCall source template locals fuel name (some words) args).toOption.bind (·.res)
     | .index array _ => do
@@ -72,9 +74,10 @@ def symbolicCall (source : List SItemTief) (template : FnSig) (locals : Spec.Loc
           -- These names belong to the callee's scope. A global alias called T is
           -- not the caller's abstract T, even when their surface spellings coincide.
           if sig.generics.isEmpty then
-            pure { sig with params := sig.params.map (fun (n, ty) =>
-                (n, Spec.canonicalType source 128 ty)),
-              res := sig.res.map (Spec.canonicalType source 128) }
+            pure { sig with
+              params := sig.params.map (fun (n, ty) => (n, Spec.canonicalType source 128 ty))
+              res := sig.res.map (Spec.canonicalType source 128)
+            }
           else pure sig
         | some words =>
           if sig.generics.length != words.length then throw "generic argument count does not match declaration"
@@ -187,11 +190,16 @@ def checkParametricBody (source : List SItemTief) (template : FnSig) (body : SAn
   -- Type inference and call checking use the captured source through the hooks below.
   -- Keep the visitor's concrete-call expectation lookup empty: callee type names live
   -- in its own scope and must not be interpreted as this template's binders.
-  let walk : Spec.Walk := { source := [], instantiate := false, resolveSpecs := false,
-    infer := fun locals value => symbolicType source template locals 128 value,
-    exprRewrite := checkParametricExpression source template,
-    statementCheck := checkParametricStatement source template,
-    rawCheck := checkParametricRaw source template, result := template.res }
+  let walk : Spec.Walk := {
+    source := []
+    instantiate := false
+    resolveSpecs := false
+    infer := fun locals value => symbolicType source template locals 128 value
+    exprRewrite := checkParametricExpression source template
+    statementCheck := checkParametricStatement source template
+    rawCheck := checkParametricRaw source template
+    result := template.res
+  }
   let _ ← walk.signature template
   let _ ← walk.statement template.params 100000 body
   pure ()
