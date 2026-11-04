@@ -73,9 +73,9 @@ theorem sumSpanArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option 
   cases c with
   | none =>
     simpa only [sumSpanPayloadC, payloadWords, copyWords, List.nil_append,
-      armEnv, Ausgang.schrumpfArm] using
+      armEnv, Ausgang.schrumpfArm, ArmCtx] using
       hb ex cb tb made fits (by simpa [sumSpanPayloadC, payloadWords] using size)
-        m pc σ ρ (by simpa [sumSpanPayloadC, payloadWords, copyWords] using pre)
+        m pc σ ρ (by simpa [sumSpanPayloadC, payloadWords, copyWords, ArmCtx] using pre)
         hlo2 hu hk world hpr
   | some τ =>
     have hks := hW.ks
@@ -95,7 +95,7 @@ theorem sumSpanArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option 
     have ctx : frei (ArmCtx Γ (some τ)) reserved = frei Γ reserved + valueWords τ := by
       simp [frei, ArmCtx, Nat.add_assoc]
     have pb : PreS L m1 _ fp K (frei (ArmCtx Γ (some τ)) reserved) cb (armEnv v ρ) reserved :=
-      ⟨by rw [ctx]; have := p1.ctx; omega, p1.small, p1.frame, p1.code, p1.far,
+      ⟨by rw [ctx], p1.small, p1.frame, p1.code, p1.far,
         envAt_cons p1.env output, trivial, wstab_true _ _⟩
     have result := hb ex cb tb made fits (by omega) m1 _ σ _ pb (by rw [ctx]; omega)
       (hu.agreeW hW (agreeW_of (ch.mono hlo2)) hlo)
