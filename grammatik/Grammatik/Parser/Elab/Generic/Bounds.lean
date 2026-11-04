@@ -16,9 +16,9 @@ def checkTypeBounds (source : List SItemTief) (ty : STyp) (bounds : List String)
     Except String Unit := do
   checkBounds source bounds
   for name in bounds do
-    let implementations := (Spec.instances source).filter fun instance =>
-      strEq instance.group name && beqSTypList
-        (instance.types.map (Spec.canonicalType source 128)) [Spec.canonicalType source 128 ty]
+    let implementations := (Spec.instances source).filter fun implementation =>
+      strEq implementation.group name && beqSTypList
+        (implementation.types.map (Spec.canonicalType source 128)) [Spec.canonicalType source 128 ty]
     match implementations with
     | [_] => pure ()
     | [] => throw ("generic.bound.implementation.missing: " ++ name)
