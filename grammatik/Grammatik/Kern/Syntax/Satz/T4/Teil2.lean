@@ -1,5 +1,6 @@
 module
 public import Grammatik.Kern.Syntax.Satz.T4.Teil2Context
+public import Grammatik.Kern.Syntax.Satz.T4.ReturnInventory
 @[expose] public section
 namespace Gabbro.Grammatik
 variable {D : Deklaration} {V : Vertrag D}
@@ -80,9 +81,10 @@ theorem stmt_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       simp only [execStmt] at h ⊢; exact indSonst_gutB R hR bo hbV p args he hp hr σ _ ρ hh hresid (gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append p.orte_darf args.orte_darf) hh.heldIn)
         _ _ (fun s1 _ _ s2 h2 => by simp only [Ausgang.welt, Option.some.injEq] at h2; subst h2; exact Gut.refl _ _ _) (fun s1 r hh1 => (end_gutB bo hbV err s1 _ (by boden_tac) (by scopes_gut) (ResidHeld.of_iff (fun L => held_nachSig_iff _ _ L) hresid) hh1).schrumpf.zuAusgang) σ' h
   | .locks L hr body, σ, ρ, hbo, hscope, hresid, hh, σ', h =>
-      (GutAusgang.gibt L (nicht_gehaltenB L hr hh (fun c hc => by
+      (ReturnInventory.locks_gut (O := O) (passes := passes) (R := R) (hR := hR) (hO := hO)
+        (hbV := hbV) (L := L) hr body σ ρ (nicht_gehaltenB L hr hh (fun c hc => by
           have hsc := hbo c hc; simp only [Stmt.ueberBoden, Bool.and_eq_true, decide_eq_true_eq] at hsc; exact hsc.1))
-        (block_gutB bo hbV body (σ.nimmt L) ρ (by boden_tac) (by scopes_gut)
+        hresid hh (block_gutB bo hbV body (σ.nimmt L) ρ (by boden_tac) (by scopes_gut)
           (fun M hV => List.mem_cons_of_mem _ (hresid M hV)) (heldB_locks L hh))) σ' h
   | .breaking _ body, σ, ρ, hbo, hscope, hresid, hh, σ', h => block_gutB bo hbV body σ ρ (by boden_tac) (by scopes_gut) hresid hh σ' h
   | .traverse t inv body, σ, ρ, hbo, hscope, hresid, hh, σ', h =>
