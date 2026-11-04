@@ -7,6 +7,7 @@ module
 public import Stage0.Senke.Anweisung.Faelle.Kontext
 public import Stage0.Senke.Anweisung.SchleifeTeile
 public import Stage0.Senke.Anweisung.Bindung.Fnptr
+public import Stage0.Senke.Anweisung.Faelle.CallElse
 @[expose] public section
 
 
@@ -104,7 +105,7 @@ theorem lowIndElse_ok {A : D.Fn → Nat} {C : D.Fn → List II}
     simpa only [indC, List.length_append, callTail, callTailN, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.add_assoc, pc_add] using s3
   | why σ' r =>
     obtain ⟨m3, s3, a3, value, mirror, flag, hw3⟩ := hc2
-    refine ⟨m3, s1.trans (s2.trans ?_), (agreeW_of a1).trans ((agreeW_of (a2.mono (by omega))).trans a3), value, mirror, flag, hw3⟩
+    refine ⟨m3, s1.trans (s2.trans ?_), (agreeW_of a1).trans ((agreeW_of (a2.mono (by omega))).trans a3), ⟨value, mirror, flag⟩, hw3⟩
     simpa only [indC, List.length_append, callTail, callTailN, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.add_assoc, pc_add] using s3
   | logik e => exact Stops.prefix s1 (Stops.prefix s2 hc2)
   | hardware e => exact Stops.prefix s1 (Stops.prefix s2 hc2)
@@ -140,7 +141,8 @@ theorem callIndElse_ok {A : D.Fn → Nat} {C : D.Fn → List II}
       cr ++ [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce)) ρ reserved := by
     simpa only [Deklaration.params, Deklaration.erg, Deklaration.gruende, elseC, List.append_assoc, Int.natCast_add, Int.ofNat_one] using hp
   have hc := lowIndElse_ok (same := rfl) hS hA p args σ σ hcc (by omega) hpc.left hu hW hWa
-  obtain ⟨f, hf⟩ := eval σ p σ ρ
+  generalize pointerEq : eval σ p σ ρ = pointer at hc ⊢
+  obtain ⟨f, hf⟩ := pointer
   dsimp only at hc ⊢
   generalize R f σ (umsig hf (evalArgs σ args σ ρ)) = o at hc ⊢
   cases o with
@@ -171,7 +173,7 @@ theorem callIndElse_ok {A : D.Fn → Nat} {C : D.Fn → List II}
     rw [henv] at hp2
     exact .inl ⟨σ', v, m2, rfl, sx2, ax2, hp2, hw2⟩
   | why σ' r =>
-    obtain ⟨m1, sx, ax, value, mirror, flag, hw1⟩ := hc
+    obtain ⟨m1, sx, ax, ⟨value, mirror, flag⟩, hw1⟩ := hc
     have hsig : D.params f = (D.sigNr n).params := (D.passt_sig hf).params
     have herg : D.erg f = (D.sigNr n).erg := (D.passt_sig hf).erg
     have hgru : D.gruende f = (D.sigNr n).gruende := (D.passt_sig hf).gruende
