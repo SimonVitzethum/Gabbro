@@ -87,7 +87,7 @@ theorem expansion_reads_zeuge :
           cases member) code
         (Expr.widen (by decide) (by rw [node_count]; decide) (.lit 0))) state Env.nil with
     | .ok final _ => final.spur.length = 4
-    | _ => False := by decide +kernel
+    | _ => False := by cbv
 
 /-- All entry fields survive the generated product, with the root index at the highest level. -/
 theorem mapping_value_zeuge :
@@ -100,7 +100,7 @@ theorem mapping_value_zeuge :
       (prodGetW (fs := shape.mappingFields) (.tail (.tail (.tail (.tail (.tail .head))))) value
         ⟨0, by decide⟩).n = 0 ∧
       (prodGetW (fs := shape.mappingFields) (.tail (.tail (.tail (.tail (.tail .head))))) value
-        ⟨1, by decide⟩).n = 1 := by decide +kernel
+        ⟨1, by decide⟩).n = 1 := by cbv <;> simp <;> rfl
 
 /-- The mapping retains all three original entry fields, including the leaf's live child. -/
 theorem mapping_entry_fields_zeuge :
@@ -109,7 +109,7 @@ theorem mapping_entry_fields_zeuge :
     prodGetW (fs := shape.mappingFields) .head value =
         (some ⟨1, by decide, by decide⟩ : Option (Zahl 0 1)) ∧
       prodGetW (fs := shape.mappingFields) (.tail .head) value = true ∧
-      prodGetW (fs := shape.mappingFields) (.tail (.tail .head)) value = true := by decide +kernel
+      prodGetW (fs := shape.mappingFields) (.tail (.tail .head)) value = true := by cbv <;> simp <;> rfl
 
 end Gabbro.Grammatik.WalkBindingWitness
 
