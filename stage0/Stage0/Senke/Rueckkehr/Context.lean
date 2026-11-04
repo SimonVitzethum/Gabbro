@@ -1,6 +1,7 @@
 /- Shared contracts for complete return publication and preserved entry-frame data. -/
 module
 public import Stage0.Senke.Rueckkehr.Call
+public import Stage0.Senke.Rueckkehr.EpilogueCode
 public import Stage0.Senke.Ausdruck.Old.Sound
 @[expose] public section
 

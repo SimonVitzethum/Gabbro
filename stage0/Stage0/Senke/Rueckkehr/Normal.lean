@@ -80,7 +80,7 @@ theorem ret_ok0 {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo reserved : Nat
       codeFar_left (by rw [← List.length_append]; exact far2), ensEnv, trivial, wstab_true _ _⟩
   have postRun := lowPost_ok P f σ0 (σ.lese Λ e.orte) ρ0
     (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ)
-    hens (by omega) (by omega) hl hwl m2 _ ensPre world2 kept2.entry
+    hens (by omega) (by simp only [FB]; omega) hl hwl m2 _ ensPre world2 kept2.entry
   simp only [RetZ0]
   split
   · next failed =>

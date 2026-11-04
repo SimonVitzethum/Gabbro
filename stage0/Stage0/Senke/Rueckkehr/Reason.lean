@@ -37,10 +37,19 @@ theorem retWhy_ok {P : Programm D} {σ0 : World D} {reserved : Nat} {f : D.Fn} {
   let material := constWords words q
   have width : words.length = valueWords (.why (D.gruende f)) := encodeWords_length L _ _
   have bound := constWords_bound words q
+  have emitted : retWhyC (functionFrame P f) r.val =
+      material.1 ++ [ci 2 2 q 0,
+        ci 1 (q + returnWords (D.erg f) (D.gruende f)) 0 0, ci 21 0 0 0] := by
+    simp only [retWhyC, status, Int.natCast_add]
+    simp only [material, words]
+    rw [encodeWords.eq_def L (.why (D.gruende f)) r]
+    rfl
   have pre : PreS L m pc fp Ks q
       (material.1 ++ [ci 2 2 q 0, ci 1 (q + returnWords (D.erg f) (D.gruende f)) 0 0, ci 21 0 0 0]) (Env.nil : Env D []) :=
-    ⟨by simp only [frei, contextWords_nil, Nat.add_zero]; omega, by omega, frame, hp.code,
-      codeFar_sub2 hp.far hks, (fun _ x => nomatch x), trivial, wstab_true _ _⟩
+    ⟨by simp only [frei, contextWords_nil, Nat.add_zero]; omega, by omega, frame,
+      by simpa only [emitted] using hp.code,
+      by simpa only [emitted] using codeFar_sub2 hp.far hks,
+      (fun _ x => nomatch x), trivial, wstab_true _ _⟩
   obtain ⟨m1, s1, a1, value1⟩ := constValue_ok (L := L) (τ := .why (D.gruende f)) (c := material.1) (top := material.2) r trivial rfl
     (by change (constWords words q).2 ≤ Ks; omega) pre.left
   have frame1 := frame.agree a1
