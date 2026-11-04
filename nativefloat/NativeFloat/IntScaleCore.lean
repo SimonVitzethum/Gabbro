@@ -188,17 +188,27 @@ private theorem power_word (s : Sign) (j : Nat) (lower : 1023 ≤ j) (upper : j 
     cases s <;> simp [Sign.toBitVec, Nat.add_mul]
   have inWord : (if s = .negative then 2 ^ 63 else 0) + j * 2 ^ 52 < 2 ^ 64 := by
     split <;> omega
-  calc
-    _ = Float.ofBits (Float.ofModel (Float.Model.pack
-        (.finite s (2 ^ 52) ((j : Int) - 1075) (by decide)))).toBits := by
-      apply congrArg Float.ofBits
-      apply UInt64.eq_of_toBitVec_eq
-      apply BitVec.eq_of_toNat_eq
-      change ((if s = .negative then 2 ^ 63 else 0) + j * 2 ^ 52) % 2 ^ 64 =
-        (UnpackedFloat.pack Format.binary64
-          (.finite s (2 ^ 52) ((j : Int) - 1075) (by decide))).toNat
-      rw [Nat.mod_eq_of_lt inWord, encoded]
-    _ = _ := bits_roundtrip _
+  have numeric : ((if s = .negative then 2 ^ 63 else 0) + j * 2 ^ 52) % 2 ^ 64 =
+      (UnpackedFloat.pack Format.binary64
+        (.finite s (2 ^ 52) ((j : Int) - 1075) (by decide))).toNat :=
+    (Nat.mod_eq_of_lt inWord).trans encoded.symm
+  have rawBits : (UInt64.ofNat
+      ((if s = .negative then 2 ^ 63 else 0) + j * 2 ^ 52)).toBitVec =
+      UnpackedFloat.pack Format.binary64
+        (.finite s (2 ^ 52) ((j : Int) - 1075) (by decide)) :=
+    BitVec.eq_of_toNat_eq numeric
+  have raw : UInt64.ofNat ((if s = .negative then 2 ^ 63 else 0) + j * 2 ^ 52) =
+      UInt64.ofBitVec (UnpackedFloat.pack Format.binary64
+        (.finite s (2 ^ 52) ((j : Int) - 1075) (by decide))) :=
+    UInt64.eq_of_toBitVec_eq rawBits
+  let target : Float := Float.ofModel (Float.Model.pack
+    (.finite s (2 ^ 52) ((j : Int) - 1075) (by decide)))
+  have targetBits : target.toBits = UInt64.ofBitVec (UnpackedFloat.pack Format.binary64
+      (.finite s (2 ^ 52) ((j : Int) - 1075) (by decide))) := rfl
+  have delivered : Float.ofBits (UInt64.ofNat
+      ((if s = .negative then 2 ^ 63 else 0) + j * 2 ^ 52)) = Float.ofBits target.toBits :=
+    congrArg Float.ofBits (raw.trans targetBits.symm)
+  exact delivered.trans (bits_roundtrip target)
 
 private theorem power_unpacked (s : Sign) (j : Nat) (lower : 1023 ≤ j) (upper : j ≤ 1992) :
     (Float.ofBits (UInt64.ofNat ((if s = .negative then 2 ^ 63 else 0) + j * 2 ^ 52))).toModel.unpack =
