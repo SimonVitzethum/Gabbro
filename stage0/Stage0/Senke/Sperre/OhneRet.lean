@@ -171,7 +171,7 @@ theorem retFreiB_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
     simp only [retFreiB] at h
     simp only [execBlock, Ausgang.weiterOpt]
     split
-    · rw [istZ_schrumpf]; exact retFreiB_istZ r h _ _
+    · erw [istZ_schrumpf]; exact retFreiB_istZ r h _ _
     · rfl
   | _, _, _, _, .awaits _ _ _ _ _ r, h, σ, ρ => by
     simp only [retFreiB] at h
