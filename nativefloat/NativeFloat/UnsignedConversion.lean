@@ -74,8 +74,8 @@ private theorem high_pack (F : Format) (standard : F = .binary32 ∨ F = .binary
   dsimp only
   let half := (word >>> 1) ||| (word &&& 1)
   have facts := high_half word high
-  have npositive : 0 < word.toNat := by omega
-  have tpositive : 0 < half.toNat := by omega
+  have npositive : 0 < word.toNat := Nat.lt_of_lt_of_le (Nat.two_pow_pos 63) facts.1
+  have tpositive : 0 < half.toNat := Nat.lt_of_lt_of_le (Nat.two_pow_pos 62) facts.2.1
   have nlog : word.toNat.log2 = 63 :=
     (Nat.log2_eq_iff (Nat.ne_of_gt npositive)).mpr ⟨facts.1, word.isLt⟩
   have tlog : half.toNat.log2 = 62 :=

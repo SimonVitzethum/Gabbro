@@ -19,6 +19,8 @@ private theorem shifted_round_bounds (F : Format) (m h : Nat) (positive : 0 < m)
       ((⟨m, false, false⟩ : ExtendedMantissa) >>> j).roundedMantissa ≤ 2 ^ (F.mantissaBitsWithoutImplicit + 1) := by
   dsimp only
   let j := h - F.mantissaBitsWithoutImplicit
+  change 2 ^ F.mantissaBitsWithoutImplicit ≤ ((⟨m, false, false⟩ : ExtendedMantissa) >>> j).roundedMantissa ∧
+    ((⟨m, false, false⟩ : ExtendedMantissa) >>> j).roundedMantissa ≤ 2 ^ (F.mantissaBitsWithoutImplicit + 1)
   have jpos : 0 < j := by dsimp [j]; omega
   have magnitude := (Nat.log2_eq_iff (Nat.ne_of_gt positive)).mp log
   have bottom : 2 ^ h = 2 ^ F.mantissaBitsWithoutImplicit * 2 ^ j := by
@@ -42,8 +44,13 @@ private theorem shifted_round_bounds (F : Format) (m h : Nat) (positive : 0 < m)
     rw [amount] at shifted
     exact congrArg ExtendedMantissa.mantissa shifted
   have rounded := rounded_bounds ((⟨m, false, false⟩ : ExtendedMantissa) >>> j)
-  rw [mantissa] at rounded
-  omega
+  have below : m / 2 ^ j ≤ ((⟨m, false, false⟩ : ExtendedMantissa) >>> j).roundedMantissa := by
+    rw [← mantissa]
+    exact rounded.1
+  have above : ((⟨m, false, false⟩ : ExtendedMantissa) >>> j).roundedMantissa ≤ m / 2 ^ j + 1 := by
+    rw [← mantissa]
+    exact rounded.2
+  exact ⟨Nat.le_trans qlower below, Nat.le_trans above (Nat.succ_le_of_lt qupper)⟩
 
 private theorem integer_form (F : Format) (m h : Nat) (positive : 0 < m) (log : m.log2 = h)
     (room : F.mantissaBitsWithoutImplicit + 3 ≤ h) (minimum : F.minExponent ≤ 0) :
@@ -52,9 +59,8 @@ private theorem integer_form (F : Format) (m h : Nat) (positive : 0 < m) (log : 
     round F .positive m 0 = if r = 2 ^ (F.mantissaBitsWithoutImplicit + 1) then
       .finite .positive (2 ^ F.mantissaBitsWithoutImplicit) ((j : Int) + 1) (Nat.two_pow_pos _)
       else .finite .positive r j (by
-        have := (shifted_round_bounds F m h positive log room).1
-        have := Nat.two_pow_pos F.mantissaBitsWithoutImplicit
-        omega) := by
+        exact Nat.lt_of_lt_of_le (Nat.two_pow_pos F.mantissaBitsWithoutImplicit)
+          (shifted_round_bounds F m h positive log room).1) := by
   dsimp only
   let j := h - F.mantissaBitsWithoutImplicit
   let r := ((⟨m, false, false⟩ : ExtendedMantissa) >>> j).roundedMantissa
@@ -140,8 +146,10 @@ private theorem add_normal_twice (F : Format) (m : Nat) (e : Int) (positive : 0 
   rw [noDecrease]
   simp only [Nat.shiftLeft_zero, Int.natCast_zero, Int.sub_zero]
   have scaled := exact_scaled F .positive m 1 (e + 1) positive unchanged
-  simpa only [Nat.shiftLeft_eq, Nat.pow_one, Int.cast_ofNat_Int, show m * 2 = m + m by omega,
-    show e + 1 - (1 : Nat) = e by omega] using scaled
+  simp only [Nat.shiftLeft_eq, Nat.pow_one, Int.cast_ofNat_Int] at scaled
+  have exponent : e + (1 : Int) - 1 = e := by omega
+  rw [exponent] at scaled
+  simpa only [show m * 2 = m + m by omega] using scaled
 
 private theorem double_pack (F : Format) (standard : F = .binary32 ∨ F = .binary64)
     (n t : Nat) (npositive : 0 < n) (tpositive : 0 < t) (nlog : n.log2 = 63) (tlog : t.log2 = 62)
