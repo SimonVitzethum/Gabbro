@@ -1,5 +1,6 @@
 module
-public import Grammatik.Kern.Syntax.Typen.Fall Grammatik.Kern.Semantik.Semantik
+public import Grammatik.Kern.Syntax.Typen.Fall
+public import Grammatik.Kern.Semantik.Semantik
 public import Grammatik.Logik.Vertraege.HandlerKongruenz.Teil1
 @[expose] public section
 namespace Gabbro.Grammatik
@@ -289,8 +290,7 @@ theorem Block.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
       | some v => exact (Block.kongruent hR rest _ _).schrumpf
 /-- **A terminal block under two handlers** -- the form the two consumers
     use, since a function body is an `Endblock`. -/
-theorem Endblock.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
-    {Λ : List (Res D)} :
+theorem Endblock.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     (b : Endblock D V l Γ Λ) → ∀ (σ : World D) (ρ : Env D Γ),
       EndUnter Er (execEnd O passes R₁ b σ ρ) (execEnd O passes R₂ b σ ρ)
   | .ret .., _, _ => Or.inl rfl

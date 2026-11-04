@@ -1,12 +1,12 @@
 module
-public import Grammatik.Code.Refine.Struct.Mono Grammatik.Code.Refine.Struct.Shape.Teil2
+public import Grammatik.Code.Refine.Struct.Mono
+public import Grammatik.Code.Refine.Struct.Shape.Teil2
 public import Grammatik.Code.Refine.Struct.Shape.Teil4
 @[expose] public section
 namespace Gabbro.Code.Lower
 variable [Conf]
 open Gabbro.Grammatik (Deklaration Expr Ctx Var Res Vertrag ErgExpr Args)
-variable {D : Deklaration}
-variable {V : Vertrag D}
+variable {D : Deklaration} {V : Vertrag D}
 mutual
 theorem lowerS_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Gabbro.Grammatik.Stmt D V l Γ Λ Λ')

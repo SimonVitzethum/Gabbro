@@ -1,5 +1,6 @@
 module
-public import Grammatik.Kern.Syntax.Satz.T4.Teil2EndFloat Grammatik.Kern.Syntax.Satz.T4.Teil2Context
+public import Grammatik.Kern.Syntax.Satz.T4.Teil2EndFloat
+public import Grammatik.Kern.Syntax.Satz.T4.Teil2Context
 public import Grammatik.Kern.Syntax.Satz.T4.ReturnInventory
 @[expose] public section
 namespace Gabbro.Grammatik
@@ -17,8 +18,7 @@ local macro "scopes_gut" : tactic => `(tactic| first
 mutual
 /-- Statement frame and trace: only writable carriers may change, ordinary outcomes keep the held locks, returns release only checked scopes, and every new event carries its guards. -/ theorem stmt_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
     ∀ (s : Stmt D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ), s.BodenOk bo → s.ScopesOk →
-    ResidHeld V Λ → HeldB bo Λ σ.haelt →
-    GutAusgang V.schreibt V.gschreibt σ (execStmt O passes R s σ ρ)
+    ResidHeld V Λ → HeldB bo Λ σ.haelt → GutAusgang V.schreibt V.gschreibt σ (execStmt O passes R s σ ρ)
   | .assignSlot t f i e hw hL, σ, ρ, hbo, hscope, hresid, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append i.orte_darf e.orte_darf) hh.heldIn
       exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldB hh).heldIn)
