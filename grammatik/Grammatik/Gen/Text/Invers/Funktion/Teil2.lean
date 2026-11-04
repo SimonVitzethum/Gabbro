@@ -41,9 +41,10 @@ open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Parser Gabbro.Gramma
 section Kopf
 variable (z : Spez)
 
-/-- The clauses the generator writes carry no `decreases` measure. -/
+/-- The clauses the generator writes carry no `decreases` measure in any alias scope. -/
 theorem klauselnVon_measure (P : Programm z.deklaration) (f : Fin z.fns.length) (req ens : List SKlausel)
-    (h : ∀ k ∈ req ++ ens, KlauselOk k) : uMeasureClause (klauselnVon z P f req ens) = .ok none := by
+    (h : ∀ k ∈ req ++ ens, KlauselOk k) (als : List (String × (Int × Int))) :
+    uMeasureClause als (klauselnVon z P f req ens) = .ok none := by
   have hall : ∀ k ∈ klauselnVon z P f req ens, dropsOf k = none := by
     intro k hk
     unfold klauselnVon at hk
@@ -69,7 +70,7 @@ theorem kopf_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklarat
       { art := "impl", name := nFn (fN z f), params := mitGriffPs ps mitGriff, res,
         fehler := if (z.deklaration.signatur f).gruende = 0 then none
           else some (nGrund (z.deklaration.signatur f).gruende),
-        klauseln := klauselnVon z P f req ens } devs zeiger zb [] =
+        klauseln := klauselnVon z P f req ens } devs zeiger zb [] [] [] =
       .ok (kopfVon z gNr devs f ps ks mitGriff, uEindeutig ((tNamen z f).map nTab)) := by
   set S := z.deklaration.signatur f with hS
   set np := S.params.length with hnp
@@ -172,46 +173,31 @@ theorem kopf_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklarat
     simp only [hwirk, effListe]
     exact eff_alle hE _ _ _ hV.tab hV.glob hV.sperren
   have himpl : strEq "impl" "impl" = true := by decide
-  have hmc := klauselnVon_measure z P f req ens (fun k hk => (hV.klauseln k hk).1)
+  have hmc := klauselnVon_measure z P f req ens (fun k hk => (hV.klauseln k hk).1) als
   unfold elabKopf
-  simp only [hog, himpl, Bool.true_or, Bool.not_true, Bool.false_eq_true, ite_false, hmc, hok, hseq, hgeh]
-  have hkn' : ∀ x, (match (if S.gruende = 0 then none else some (nGrund S.gruende)) with
-      | none => Except.ok none
-      | some r =>
-        match whys.findIdx? (fun w => strEq w.name r) with
-        | none => Except.error ("reason unknown: " ++ r)
-        | some k =>
-          match whys[k]? with
-          | some w => if w.cases.isEmpty = true then Except.error "reason without cases" else Except.ok (some (k, w.cases.length))
-          | none => Except.error ("reason unknown: " ++ r) : Except String (Option (Nat × Nat))) = x →
-      x = .ok (kanalVon gNr S.gruende) := by
-    intro x hx; rw [← hx]; exact hkn
-  split
-  · rename_i e he; have := hkn' _ he; cases this
-  · rename_i kn hk
-    have hk2 := hkn' _ hk
-    simp only [Except.ok.injEq] at hk2
-    subst hk2
-    rw [heff _ (heffOk _ (by simpa [hnp] using p1) rfl)]
-    simp only
-    unfold delabRes at hres
-    simp only [← hS] at hres
-    split at hres
-    · rename_i hn
-      simp only [pure, Except.pure, Except.ok.injEq] at hres; subst hres
-      simp only [kopfVon, ← hS, hn, ergBereich, p1, p2, p3]
-      simp only [hnp, reduceCtorEq, decide_false]
-    · rename_i t ht
-      cases t with
-      | bool =>
-        simp only [typS, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hres; subst hres
-        simp only [kopfVon, ← hS, ht, ergBereich, p1, p2, p3]
-        simp only [hnp, decide_true]
-      | int lo hi =>
-        simp only [typS, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hres; subst hres
-        simp only [kopfVon, ← hS, ht, ergBereich, p1, p2, p3, uErgBereich, schranke_zahlE]
-        simp only [hnp, Bool.false_eq_true, ↓reduceIte, Option.some.injEq, reduceCtorEq, decide_false]
-      | _ => have := hV.erg _ (by rw [← hS]; exact ht); simp only [artErg, Option.isSome_none, Bool.false_eq_true] at this
+  simp only [List.isEmpty_nil, hog, himpl, Bool.true_or, Bool.not_true, Bool.false_eq_true,
+    ite_false, hmc, hok, hseq, hgeh]
+  rw [hkn]
+  rw [heff _ (heffOk _ (by simpa [hnp] using p1) rfl)]
+  simp only
+  unfold delabRes at hres
+  simp only [← hS] at hres
+  split at hres
+  · rename_i hn
+    simp only [pure, Except.pure, Except.ok.injEq] at hres; subst hres
+    simp only [kopfVon, ← hS, hn, ergBereich, p1, p2, p3]
+    simp only [hnp, reduceCtorEq, decide_false]
+  · rename_i t ht
+    cases t with
+    | bool =>
+      simp only [typS, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hres; subst hres
+      simp only [kopfVon, ← hS, ht, ergBereich, p1, p2, p3]
+      simp only [hnp, decide_true]
+    | int lo hi =>
+      simp only [typS, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hres; subst hres
+      simp only [kopfVon, ← hS, ht, ergBereich, p1, p2, p3, uErgBereich, schranke_zahlE]
+      simp only [hnp, Bool.false_eq_true, ↓reduceIte, Option.some.injEq, reduceCtorEq, decide_false]
+    | _ => have := hV.erg _ (by rw [← hS]; exact ht); simp only [artErg, Option.isSome_none, Bool.false_eq_true] at this
 
 end Kopf
 
