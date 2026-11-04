@@ -12,15 +12,18 @@ public import Grammatik.Parser.Elab.Uebersetze.Folds.Substitution
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
 mutual
-/-- Expand expression folds before processing the ordinary statement forms. -/
+/-- Expand expression folds before processing the ordinary statement forms.
+    The wrapper shares the core's fuel; dispatch itself consumes no extra unit. -/
 def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
     Nat → UCtx → List SAnw → Except String (List UStmt × UCtx)
   | 0, _, _ => .error "nesting without G form"
   | _ + 1, ctx, [] => .ok ([], ctx)
   | fuel + 1, ctx, statement :: rest => do
     let (beforeStmt, ctx, statement) ← expandFoldStmt ctx statement
-    let (code, ctx) ← uAnwReiheCore tabs koepfe fuel ctx (statement :: rest)
+    let (code, ctx) ← uAnwReiheCore tabs koepfe (fuel + 1) ctx (statement :: rest)
     pure (beforeStmt ++ code, ctx)
+termination_by fuel _ _ => (fuel, (1 : Nat))
+decreasing_by all_goals exact Prod.Lex.right _ (by omega)
 /-- A run of body statements as a flat list. A `let` extends the context for the rest of the run;
     `locks L { ... }` elaborates its body with `L` HELD (guards, calls) and the bindings made inside it
     end with it; returns retain lexical cleanup scopes, while unsupported lock expressions are refused.
@@ -285,20 +288,24 @@ def uAnwReiheCore (tabs : List UTab) (koepfe : List UFnKopf) :
       match uAnwReihe tabs koepfe f ctx rest with
       | .error e => .error e
       | .ok (xs, cE) => .ok (st :: xs, cE)
+termination_by fuel _ _ => (fuel, (0 : Nat))
+decreasing_by all_goals exact Prod.Lex.left _ _ (by omega)
 end
 
 /-- Match dispatch supplies the same recursive reader and predecessor fuel to every arm. -/
 theorem uAnwReiheCore_cases (tabs : List UTab) (koepfe : List UFnKopf) (fuel : Nat)
     (ctx : UCtx) (scrut : SExpr) (arms rest : List SAnw) :
     uAnwReiheCore tabs koepfe (fuel + 1) ctx (.cases scrut arms :: rest) =
-      uCases (uAnwReihe tabs koepfe fuel) ctx scrut arms rest := rfl
+      uCases (uAnwReihe tabs koepfe fuel) ctx scrut arms rest := by
+  simp only [uAnwReiheCore]
 
 /-- Fallible binding dispatch preserves all source shapes, including the refusal fallback. -/
 theorem uAnwReiheCore_bindElse (tabs : List UTab) (koepfe : List UFnKopf) (fuel : Nat)
     (ctx : UCtx) (name : String) (ty : Option STyp) (value : SExpr) (reason : String)
     (body : SAnw) (rest : List SAnw) :
     uAnwReiheCore tabs koepfe (fuel + 1) ctx (.bindElse name ty value reason body :: rest) =
-      uBindElse tabs koepfe (uAnwReihe tabs koepfe fuel) ctx name ty value reason body rest := rfl
+      uBindElse tabs koepfe (uAnwReihe tabs koepfe fuel) ctx name ty value reason body rest := by
+  simp only [uAnwReiheCore]
 
 /-- Conditional dispatch keeps its original body shape and recursive fuel budget. -/
 theorem uAnwReiheCore_cond (tabs : List UTab) (koepfe : List UFnKopf) (fuel : Nat)
@@ -306,6 +313,7 @@ theorem uAnwReiheCore_cond (tabs : List UTab) (koepfe : List UFnKopf) (fuel : Na
     (alternatives : List SAnw) (fallback : Option SAnw) (rest : List SAnw) :
     uAnwReiheCore tabs koepfe (fuel + 1) ctx
       (.cond condition (.block statements ending) alternatives fallback :: rest) =
-      uCond (uAnwReihe tabs koepfe fuel) ctx condition statements ending alternatives fallback rest := rfl
+      uCond (uAnwReihe tabs koepfe fuel) ctx condition statements ending alternatives fallback rest := by
+  simp only [uAnwReiheCore]
 
 end Gabbro.Grammatik.Parser.Uebersetze

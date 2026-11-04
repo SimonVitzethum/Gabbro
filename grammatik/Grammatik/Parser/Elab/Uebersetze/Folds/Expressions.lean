@@ -5,6 +5,22 @@ public import Grammatik.Parser.Elab.Uebersetze.Folds.Expansion
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
 
+mutual
+/-- Detect folds only along the operand paths visited by `expandFoldExpr`.
+    Non-fold extensions and all other leaves stay opaque to that traversal. -/
+def needsFoldExpansion : SExpr → Bool
+  | .ext kind _ _ => isFold kind
+  | .bin _ a b | .index a b => needsFoldExpansion a || needsFoldExpansion b
+  | .un _ value | .field value _ => needsFoldExpansion value
+  | .call _ args => needsFoldExpansionList args
+  | _ => false
+
+/-- Call arguments are visited in their original order. -/
+def needsFoldExpansionList : List SExpr → Bool
+  | [] => false
+  | value :: rest => needsFoldExpansion value || needsFoldExpansionList rest
+end
+
 /-- Hoist folds at their point of evaluation, in operand order. The counter makes
     generated bindings distinct even when several folds share one expression. -/
 def expandFoldExpr : Nat → UCtx → Nat → SExpr →
@@ -36,6 +52,18 @@ def expandFoldExpr : Nat → UCtx → Nat → SExpr →
     pure (left ++ right, ctx, serial, .index a b)
   | _ + 1, ctx, serial, e => pure ([], ctx, serial, e)
 
+/-- Fold-free syntax needs no expansion budget. Actual folds retain the existing
+    bounded traversal, including its evaluation order, range checks and refusals. -/
+def expandFoldValue (ctx : UCtx) (serial : Nat) (value : SExpr) :
+    Except String (List UStmt × UCtx × Nat × SExpr) :=
+  if needsFoldExpansion value then expandFoldExpr 1000 ctx serial value
+  else .ok ([], ctx, serial, value)
+
+theorem expandFoldValue_no_work (ctx : UCtx) (serial : Nat) (value : SExpr)
+    (h : needsFoldExpansion value = false) :
+    expandFoldValue ctx serial value = .ok ([], ctx, serial, value) := by
+  simp only [expandFoldValue, h, Bool.false_eq_true, ite_false]
+
 /-- Report a fold's overflowing result at the source type boundary. Ordinary expressions
     retain the existing range diagnostics. -/
 def foldCheckResult (ctx : UCtx) (code : List UStmt) (value : SExpr)
@@ -54,7 +82,7 @@ def expandFoldStmt (ctx : UCtx) (statement : SAnw) :
   let serial := ctx.names.length
   match statement with
   | .bind mu name ty value =>
-    let (code, ctx, _, value) ← expandFoldExpr 1000 ctx serial value
+    let (code, ctx, _, value) ← expandFoldValue ctx serial value
     let target ← if code.isEmpty then pure none else
       match ty with
       | none => pure none
@@ -65,29 +93,29 @@ def expandFoldStmt (ctx : UCtx) (statement : SAnw) :
     foldCheckResult ctx code value target
     pure (code, ctx, .bind mu name ty value)
   | .set target op value =>
-    let (code, ctx, _, value) ← expandFoldExpr 1000 ctx serial value
+    let (code, ctx, _, value) ← expandFoldValue ctx serial value
     pure (code, ctx, .set target op value)
   | .cond test body branches fallback =>
-    let (code, ctx, _, test) ← expandFoldExpr 1000 ctx serial test
+    let (code, ctx, _, test) ← expandFoldValue ctx serial test
     pure (code, ctx, .cond test body branches fallback)
   | .cases value arms =>
-    let (code, ctx, _, value) ← expandFoldExpr 1000 ctx serial value
+    let (code, ctx, _, value) ← expandFoldValue ctx serial value
     pure (code, ctx, .cases value arms)
   | .callIndElse pointer args reason body =>
-    let (left, ctx, serial, pointer) ← expandFoldExpr 1000 ctx serial pointer
-    let (right, ctx, _, value) ← expandFoldExpr 1000 ctx serial (.call "" args)
+    let (left, ctx, serial, pointer) ← expandFoldValue ctx serial pointer
+    let (right, ctx, _, value) ← expandFoldValue ctx serial (.call "" args)
     let .call _ args := value | throw "fold: malformed indirect call expansion"
     pure (left ++ right, ctx, .callIndElse pointer args reason body)
   | .callElse name args reason body =>
-    let (code, ctx, _, value) ← expandFoldExpr 1000 ctx serial (.call name args)
+    let (code, ctx, _, value) ← expandFoldValue ctx serial (.call name args)
     let .call name args := value | throw "fold: malformed call expansion"
     pure (code, ctx, .callElse name args reason body)
   | .call name args =>
-    let (code, ctx, _, value) ← expandFoldExpr 1000 ctx serial (.call name args)
+    let (code, ctx, _, value) ← expandFoldValue ctx serial (.call name args)
     let .call name args := value | throw "fold: malformed call expansion"
     pure (code, ctx, .call name args)
   | .ret (some value) =>
-    let (code, ctx, _, value) ← expandFoldExpr 1000 ctx serial value
+    let (code, ctx, _, value) ← expandFoldValue ctx serial value
     foldCheckResult ctx code value ctx.res
     pure (code, ctx, .ret (some value))
   | statement => pure ([], ctx, statement)
@@ -96,7 +124,7 @@ def expandFoldEnd (ctx : UCtx) (ending : Option SEnde) :
     Except String (List UStmt × UCtx × Option SEnde) := do
   match ending with
   | some (.ret (some value)) =>
-    let (code, ctx, _, value) ← expandFoldExpr 1000 ctx ctx.names.length value
+    let (code, ctx, _, value) ← expandFoldValue ctx ctx.names.length value
     foldCheckResult ctx code value ctx.res
     pure (code, ctx, some (.ret (some value)))
   | _ => pure ([], ctx, ending)
