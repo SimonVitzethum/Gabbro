@@ -9,8 +9,8 @@ abbrev RewriteM := StateT (List Instance) (Except String)
 def liftResult {α : Type} (result : Except String α) : RewriteM α :=
   fun state => do pure (← result, state)
 
-/-- The shared expression traversal substitutes constants and eliminates explicit applications. -/
 mutual
+/-- The shared expression traversal substitutes constants and eliminates explicit applications. -/
 def rewriteExpression (env : Environment) (bindings : Bindings) : SExpr → RewriteM SExpr
   | .variable n => match bindings.functions.find? (fun p => strEq p.1 n) with
     | some (_, target) => pure (.fnref target)
@@ -62,14 +62,17 @@ end
 def rewriteType (env : Environment) (bindings : Bindings) : STyp → RewriteM STyp
   | .atom n => pure (surfaceType bindings.types bindings.values (.atom n))
   | .ptr space rights ty => return .ptr space rights (← rewriteType env bindings ty)
-  | .range ty lo hi ex => return .range (← rewriteType env bindings ty)
+  | .range ty lo hi ex => do
+    return .range (← rewriteType env bindings ty)
       (← rewriteExpression env bindings lo) (← rewriteExpression env bindings hi) ex
   | .array ty count => return .array (← rewriteType env bindings ty) (← rewriteExpression env bindings count)
   | .wrap ty => return .wrap (← rewriteType env bindings ty)
-  | .embed ty bits scale => return .embed (← rewriteType env bindings ty) bits
+  | .embed ty bits scale => do
+    return .embed (← rewriteType env bindings ty) bits
       (← scale.mapM (rewriteExpression env bindings))
   | .str count => return .str (← rewriteExpression env bindings count)
-  | .entry args result => return .entry args (← result.mapM (rewriteType env bindings))
+  | .entry args none => pure (.entry args none)
+  | .entry args (some result) => return .entry args (some (← rewriteType env bindings result))
   | .raw text => return .raw (← liftResult (substituteRaw bindings text))
   | ty => pure ty
 
