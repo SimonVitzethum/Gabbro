@@ -10,7 +10,8 @@ variable [Kern] {D : Deklaration} {L : Lay D} {P : Programm D} {f : D.Fn}
 structure Selector {reserved : Nat} (x : Image L P f reserved) (Γ : Ctx) (Λ : List (Res D)) where
   member : Expr D (.index (D.count x.table) :: Γ) Λ .bool
   edge : Expr D (.index (D.count x.table) :: .index (D.count x.table) :: Γ) Λ .bool
-  mt et : Nat
+  mt : Nat
+  et : Nat
   memberCode : lowE (reserved := reserved) L member (x.s + 4) = some (x.member, mt)
   edgeCode : lowE (reserved := reserved) L edge (x.s + 4) = some (x.edge, et)
   memberTop : mt ≤ x.Ks
@@ -23,9 +24,57 @@ variable {reserved : Nat} {x : Image L P f reserved} {Γ : Ctx} {Λ : List (Res 
 variable (q : Selector x Γ Λ) (σ : World D) (ρ : Env D Γ)
 
 def memberAt (k : Wert D (.index (D.count x.table))) : Bool :=
-  wahr? (eval σ q.member σ (.cons k ρ))
+  wahr? (Gabbro.Grammatik.eval σ q.member σ (.cons k ρ))
 def edgeAt (a b : Wert D (.index (D.count x.table))) : Bool :=
-  wahr? (eval σ q.edge σ (.cons a (.cons b ρ)))
+  wahr? (Gabbro.Grammatik.eval σ q.edge σ (.cons a (.cons b ρ)))
+
+private theorem width_append (a b : List Piece) : width (a ++ b) = width a + width b := by
+  induction a with
+  | nil => simp only [List.nil_append, width, Nat.zero_add]
+  | cons a rest ih => simp only [List.cons_append, width, ih, Nat.add_assoc]
+
+private theorem offset_step {i : Nat} {piece : Piece}
+    (found : x.fragment[i]? = some piece) : x.offset (i + 1) = x.offset i + piece.width := by
+  have inside : i < x.fragment.length := by
+    by_cases hi : i < x.fragment.length
+    · exact hi
+    · have missing := List.getElem?_eq_none (l := x.fragment) (i := i) (by omega)
+      cases (missing.symm.trans found)
+  have element : x.fragment[i] = piece := by
+    simpa only [List.getElem?_eq_getElem inside, Option.some.injEq] using found
+  simp only [Image.offset, List.take_succ_eq_append_getElem inside, element,
+    width_append, width, Nat.add_zero]
+
+private theorem offset_bound (i : Nat) : x.offset i ≤ x.code.length := by
+  have splitWidth := congrArg width (List.take_append_drop i x.fragment)
+  rw [width_append] at splitWidth
+  calc
+    x.offset i ≤ x.offset i + width (x.fragment.drop i) := Nat.le_add_right _ _
+    _ = width x.fragment := splitWidth
+    _ = x.code.length := (assemble_length x.assembled).symm
+
+private theorem zero_next {i cell : Nat} {target : Label}
+    (found : x.fragment[i]? = some (.zero cell target)) : x.addr i + 16 = x.addr (i + 1) := by
+  have step := offset_step found
+  change x.pc + BitVec.ofNat 64 (16 * x.offset i) + BitVec.ofNat 64 (16 * 1) =
+    x.pc + BitVec.ofNat 64 (16 * x.offset (i + 1))
+  rw [pc_add, step]
+
+private theorem predecessor_position : position .predecessor x.fragment 0 = some (x.offset 14) := by
+  simp [Image.fragment, pieces, position, Image.offset, List.take, width, Piece.width, Nat.add_assoc]
+
+private theorem different_position : position .different x.fragment 0 = some (x.offset 20) := by
+  simp [Image.fragment, pieces, position, Image.offset, List.take, width, Piece.width, Nat.add_assoc]
+
+private theorem predecessorNext_position :
+    position .predecessorNext x.fragment 0 = some (x.offset 28) := by
+  simp [Image.fragment, pieces, position, Image.offset, List.take, width, Piece.width, Nat.add_assoc]
+
+private theorem candidateNext_position : position .candidateNext x.fragment 0 = some (x.offset 31) := by
+  simp [Image.fragment, pieces, position, Image.offset, List.take, width, Piece.width, Nat.add_assoc]
+
+private theorem selected_position : position .selected x.fragment 0 = some (x.offset 37) := by
+  simp [Image.fragment, pieces, position, Image.offset, List.take, width, Piece.width, Nat.add_assoc]
 
 structure PredDone (q : Selector x Γ Λ) (σ : World D) (ρ : Env D Γ) (candidate : Wert D (.index (D.count x.table))) (live : Bool) (m : Mem) : Prop where
   ready : x.Ready m σ ρ
@@ -33,7 +82,7 @@ structure PredDone (q : Selector x Γ Λ) (σ : World D) (ρ : Env D Γ) (candid
   liveRead : x.read m (x.s + 2) (Runner.IR.bool live)
 
 structure PredState (q : Selector x Γ Λ) (σ : World D) (ρ : Env D Γ) (candidate : Wert D (.index (D.count x.table))) (live : Bool)
-    (j : Nat) (m : Mem) extends q.PredDone σ ρ candidate live m : Prop where
+    (j : Nat) (m : Mem) : Prop extends q.PredDone σ ρ candidate live m where
   predecessorRead : x.read m (x.s + 1) (BitVec.ofNat 64 j)
 
 variable {q σ ρ} {candidate : Wert D (.index (D.count x.table))} {live : Bool}
@@ -57,13 +106,16 @@ theorem PredState.agree (h : q.PredState σ ρ candidate live j m)
 theorem predecessor_next (h : q.PredState σ ρ candidate live j m) :
     ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.addr 28) (x.addr 14) m
       (q.PredState σ ρ candidate live (j + 1)) := by
-  apply (h.ready.increment (i := 28) (j := 29)
+  have incrementEnd := x.addr_next_code (i := 28)
+    (block := [ci 1 (x.s + 4) 1 0, ci 3 (x.s + 1) (x.s + 1) (x.s + 4)]) rfl
+  change x.addr 28 + 32 = x.addr 29 at incrementEnd
+  apply (h.ready.increment (i := 28) (j := 29) (cell := x.s + 1) (n := j)
     (by rw [← q.origin]; omega) (by omega) (by omega) h.predecessorRead rfl
-    (by consume_arith x)).bind
+    incrementEnd).bind
   intro m' state
   obtain ⟨ready, frame, others, read⟩ := state
-  have back := ready.jump 29 14 .predecessor rfl (by consume_arith x)
-    (by consume_arith x) (by consume_arith x)
+  have back := ready.jump 29 14 .predecessor rfl predecessor_position
+    (offset_bound 29) (offset_bound 14)
   exact ⟨m', back, AgreeW.refl _ _ _ _ _, Keeps.refl _ _ _,
     ⟨⟨ready, (others x.s (by omega) (by omega)).trans h.candidateRead,
       (others (x.s + 2) (by omega) (by omega)).trans h.liveRead⟩, read⟩⟩
@@ -86,43 +138,53 @@ theorem predecessor_test (a : Wert D (.index (D.count x.table))) (ha : a.n = j)
   obtain ⟨ready1, frame1, sameRead⟩ := result
   have state1 := h.agree frame1 (by omega) room
   have branch1 := ready1.branch 17 20 (x.s + 4) .different _ rfl
-    (by consume_arith x) (by consume_arith x) (by consume_arith x)
-    (by omega) sameRead (by consume_arith x)
+    different_position (offset_bound 17) (offset_bound 20)
+    (by have := x.scratch; have := x.layout.ks; omega) sameRead
+    (zero_next (i := 17) (cell := x.s + 4) (target := .different) rfl)
   by_cases self : a.n = candidate.n
-  · simp only [self, decide_true, Bool.not_true, Bool.and_false, ↓reduceIte]
+  · simp only [self, decide_true, Bool.not_true, Bool.and_false, Bool.false_eq_true, ↓reduceIte]
     simp only [self, decide_true, Runner.IR.bool, show (1 : W) ≠ 0 by decide, ↓reduceIte] at branch1
-    have skip := ready1.jump 18 28 .predecessorNext rfl (by consume_arith x)
-      (by consume_arith x) (by consume_arith x)
+    have skip := ready1.jump 18 28 .predecessorNext rfl predecessorNext_position
+      (offset_bound 18) (offset_bound 28)
     exact ScanRun.prefix (branch1.trans skip) (predecessor_next state1)
   · simp only [self, decide_false, Bool.not_false, Bool.and_true]
-    simp only [self, decide_false, Runner.IR.bool, ↓reduceIte] at branch1
+    simp only [self, decide_false, Runner.IR.bool, Bool.false_eq_true, ↓reduceIte] at branch1
     apply ScanRun.prefix branch1
-    apply (ready1.borrow q.origin q.indexWidth q.memberCode q.memberTop
+    apply (ready1.borrow (candidate := candidate) (predecessor := a) (member := q.member)
+      q.origin q.indexWidth q.memberCode q.memberTop
       state1.candidateRead (by rw [ha, BitVec.ofInt_natCast]; exact state1.predecessorRead)).bind
     intro m2 result
     obtain ⟨ready2, frame2, memberRead⟩ := result
     have state2 := state1.agree frame2 (by omega) (by omega)
     have branch2 := ready2.branch 23 28 (x.s + 4) .predecessorNext _ rfl
-      (by consume_arith x) (by consume_arith x) (by consume_arith x)
-      (by omega) memberRead (by consume_arith x)
+      predecessorNext_position (offset_bound 23) (offset_bound 28)
+      (by have := x.scratch; have := x.layout.ks; omega) memberRead
+      (zero_next (i := 23) (cell := x.s + 4) (target := .predecessorNext) rfl)
     cases membership : q.memberAt σ ρ a with
     | false =>
       simp only [memberAt] at membership
-      simp only [membership, Runner.IR.bool, ↓reduceIte] at branch2
-      simp only [memberAt, membership, Bool.false_and, ↓reduceIte]
+      simp only [membership, Runner.IR.bool, Bool.false_eq_true, ↓reduceIte] at branch2
+      simp only [memberAt, membership, Bool.false_and, Bool.false_eq_true, ↓reduceIte]
       exact ScanRun.prefix branch2 (predecessor_next state2)
     | true =>
-      have memberTrue : wahr? (eval σ q.member σ (.cons a ρ)) = true := membership
+      have memberTrue : wahr? (Gabbro.Grammatik.eval σ q.member σ (.cons a ρ)) = true := membership
       simp only [memberTrue, Runner.IR.bool, show (1 : W) ≠ 0 by decide, ↓reduceIte] at branch2
       have predRead : x.read m2 (x.s + 1) (BitVec.ofInt 64 a.n) := by
         rw [ha, BitVec.ofInt_natCast]; exact state2.predecessorRead
+      have candidateValue : ValueAt L m2 x.fp x.s (.index (D.count x.table)) candidate :=
+        ValueAt.of_enc q.indexWidth state2.candidateRead rfl
+      have predecessorValue : ValueAt L m2 x.fp (x.s + 1) (.index (D.count x.table)) a :=
+        ValueAt.of_enc q.indexWidth predRead rfl
+      have candidateEnv : EnvAt L m2 x.fp (.cons candidate ρ) reserved :=
+        envAt_cons ready2.env (by simpa only [← q.origin] using candidateValue)
+      have edgeEnv : EnvAt L m2 x.fp (.cons a (.cons candidate ρ)) reserved :=
+        envAt_cons candidateEnv
+          (by simpa only [frei_cons, q.indexWidth, ← q.origin] using predecessorValue)
       have edgeReady : x.Ready m2 σ (.cons a (.cons candidate ρ)) :=
-        { ready2 with env := envAt_cons
-            (envAt_cons ready2.env (ValueAt.of_enc q.indexWidth state2.candidateRead rfl))
-            (ValueAt.of_enc q.indexWidth predRead rfl) }
+        { ready2 with env := edgeEnv }
       apply ScanRun.prefix branch2
-      apply (edgeReady.eval 24 (by simp only [frei, contextWords_cons, q.indexWidth];
-        rw [← q.origin]; omega) q.edgeCode q.edgeTop rfl trivial).bind
+      apply (edgeReady.eval 24 (by simp only [frei_cons, q.indexWidth, ← q.origin];
+        omega) q.edgeCode q.edgeTop rfl trivial).bind
       intro m3 result
       obtain ⟨ready3, frame3, value, edgeRead, encoding⟩ := result
       have state3 := state2.agree frame3 (by omega) room
@@ -130,18 +192,19 @@ theorem predecessor_test (a : Wert D (.index (D.count x.table))) (ha : a.n = j)
         simpa only [Enc, edgeAt, bool_word] using encoding
       subst value
       have branch3 := state3.ready.branch 25 28 (x.s + 4) .predecessorNext _ rfl
-        (by consume_arith x) (by consume_arith x) (by consume_arith x)
-        (by omega) edgeRead (by consume_arith x)
+        predecessorNext_position (offset_bound 25) (offset_bound 28)
+        (by have := x.scratch; have := x.layout.ks; omega) edgeRead
+        (zero_next (i := 25) (cell := x.s + 4) (target := .predecessorNext) rfl)
       cases edgeValue : q.edgeAt σ ρ a candidate with
       | false =>
-        simp only [edgeValue, Runner.IR.bool, ↓reduceIte] at branch3
-        simp only [membership, edgeValue, Bool.true_and, ↓reduceIte]
+        simp only [edgeValue, Runner.IR.bool, Bool.false_eq_true, ↓reduceIte] at branch3
+        simp only [membership, edgeValue, Bool.true_and, Bool.false_eq_true, ↓reduceIte]
         exact ScanRun.prefix branch3 (predecessor_next state3)
       | true =>
         simp only [edgeValue, Runner.IR.bool, show (1 : W) ≠ 0 by decide, ↓reduceIte] at branch3
         simp only [membership, edgeValue, Bool.true_and, ↓reduceIte]
-        have reject := state3.ready.jump 26 31 .candidateNext rfl (by consume_arith x)
-          (by consume_arith x) (by consume_arith x)
+        have reject := state3.ready.jump 26 31 .candidateNext rfl candidateNext_position
+          (offset_bound 26) (offset_bound 31)
         exact ⟨m3, branch3.trans reject, AgreeW.refl _ _ _ _ _, Keeps.refl _ _ _, state3.toPredDone⟩
 
 /-- Instantiate the existing suffix induction with actual bound and scan edges. -/
@@ -152,53 +215,70 @@ theorem predecessor_path (candidate : Wert D (.index (D.count x.table))) (live :
         (q.memberAt σ ρ) (q.edgeAt σ ρ) (fun a b => decide (a.n = b.n)) candidate
       ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.addr 14)
         (if answer then x.addr 37 else x.addr 31) m (q.PredDone σ ρ candidate live) := by
+  have boundEnd : x.addr 14 +
+      BitVec.ofNat 64 (16 * (travCountSize (D.count x.table) + 1)) = x.addr 15 := by
+    simpa only [List.length_append, travCountC_length, List.length_singleton] using
+      x.addr_next_code (i := 14)
+        (block := travCountC (x.s + 5) (D.count x.table) ++
+          [ci 13 (x.s + 4) (x.s + 1) (x.s + 5)]) rfl
   apply predecessor_scan (D.count x.table) candidate (q.memberAt σ ρ) (q.edgeAt σ ρ)
     (x.addr 14) (x.addr 37) (x.addr 31) (q.PredState σ ρ candidate live)
     (fun _ => q.PredDone σ ρ candidate live)
   · intro mem h
-    apply (h.ready.bound (i := 14) (by rw [← q.origin]; omega) (by omega)
+    apply (h.ready.bound (i := 14) (index := x.s + 1) (j := (D.count x.table).toNat)
+      (by rw [← q.origin]; omega) (by omega)
       (by have := x.bounds.2.2.1; simp only [inW, Bool.and_eq_true, decide_eq_true_eq] at this; omega)
-      h.predecessorRead rfl (by consume_arith x)).bind
+      h.predecessorRead rfl boundEnd).bind
     intro mem' result
     obtain ⟨ready, frame, read⟩ := result
     have state := h.agree frame (by omega) (by have := x.scratch; have := x.layout.ks; omega)
-    have notLess : decide (((D.count x.table).toNat : Int) < D.count x.table) = false := by simp; omega
+    have notLess : decide (((D.count x.table).toNat : Int) < D.count x.table) = false := by
+      simp only [decide_eq_false_iff_not]
+      omega
     rw [notLess] at read
-    have exit := ready.branch 15 37 (x.s + 4) .selected _ rfl (by consume_arith x)
-      (by consume_arith x) (by consume_arith x) (by have := x.scratch; have := x.layout.ks; omega)
-      read (by consume_arith x)
+    have exit := ready.branch 15 37 (x.s + 4) .selected _ rfl selected_position
+      (offset_bound 15) (offset_bound 37) (by have := x.scratch; have := x.layout.ks; omega)
+      read (zero_next (i := 15) (cell := x.s + 4) (target := .selected) rfl)
     exact ⟨mem', by simpa [Runner.IR.bool] using exit,
       AgreeW.refl _ _ _ _ _, Keeps.refl _ _ _, state.toPredDone⟩
   · intro j a ha hit mem h
-    apply (h.ready.bound (i := 14) (by rw [← q.origin]; omega) (by omega)
+    apply (h.ready.bound (i := 14) (index := x.s + 1) (j := j)
+      (by rw [← q.origin]; omega) (by omega)
       (by have := a.le_hi; have := a.lo_le; have := x.bounds.2.2.1;
           simp only [inW, Bool.and_eq_true, decide_eq_true_eq] at this; omega)
-      h.predecessorRead rfl (by consume_arith x)).bind
+      h.predecessorRead rfl boundEnd).bind
     intro mem' result
     obtain ⟨ready, frame, read⟩ := result
     have state := h.agree frame (by omega) (by have := x.scratch; have := x.layout.ks; omega)
-    have less : decide ((j : Int) < D.count x.table) = true := by have := a.le_hi; simp; omega
+    have less : decide ((j : Int) < D.count x.table) = true := by
+      have := a.le_hi
+      simp only [decide_eq_true_eq]
+      omega
     rw [less] at read
-    have pass := ready.branch 15 37 (x.s + 4) .selected _ rfl (by consume_arith x)
-      (by consume_arith x) (by consume_arith x) (by have := x.scratch; have := x.layout.ks; omega)
-      read (by consume_arith x)
+    have pass := ready.branch 15 37 (x.s + 4) .selected _ rfl selected_position
+      (offset_bound 15) (offset_bound 37) (by have := x.scratch; have := x.layout.ks; omega)
+      read (zero_next (i := 15) (cell := x.s + 4) (target := .selected) rfl)
     apply ScanRun.prefix (by simpa [Runner.IR.bool] using pass)
     simpa only [hit, ↓reduceIte] using predecessor_test a ha state
   · intro j a ha miss mem h
-    apply (h.ready.bound (i := 14) (by rw [← q.origin]; omega) (by omega)
+    apply (h.ready.bound (i := 14) (index := x.s + 1) (j := j)
+      (by rw [← q.origin]; omega) (by omega)
       (by have := a.le_hi; have := a.lo_le; have := x.bounds.2.2.1;
           simp only [inW, Bool.and_eq_true, decide_eq_true_eq] at this; omega)
-      h.predecessorRead rfl (by consume_arith x)).bind
+      h.predecessorRead rfl boundEnd).bind
     intro mem' result
     obtain ⟨ready, frame, read⟩ := result
     have state := h.agree frame (by omega) (by have := x.scratch; have := x.layout.ks; omega)
-    have less : decide ((j : Int) < D.count x.table) = true := by have := a.le_hi; simp; omega
+    have less : decide ((j : Int) < D.count x.table) = true := by
+      have := a.le_hi
+      simp only [decide_eq_true_eq]
+      omega
     rw [less] at read
-    have pass := ready.branch 15 37 (x.s + 4) .selected _ rfl (by consume_arith x)
-      (by consume_arith x) (by consume_arith x) (by have := x.scratch; have := x.layout.ks; omega)
-      read (by consume_arith x)
+    have pass := ready.branch 15 37 (x.s + 4) .selected _ rfl selected_position
+      (offset_bound 15) (offset_bound 37) (by have := x.scratch; have := x.layout.ks; omega)
+      read (zero_next (i := 15) (cell := x.s + 4) (target := .selected) rfl)
     apply ScanRun.prefix (by simpa [Runner.IR.bool] using pass)
-    simpa only [miss, ↓reduceIte] using predecessor_test a ha state
+    simpa only [miss, Bool.false_eq_true, ↓reduceIte] using predecessor_test a ha state
 
 end Selector
 end Gabbro.Stage0.Senke.Consuming
