@@ -19,7 +19,9 @@ theorem nativeSignedFloatL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pro
     NativeFloatCode (L := L) (reserved := reserved) ρ W
       (fun d => nativeSignedFloatL d child) (Int64.ofBitVec (BitVec.ofInt 64 z)).toFloat := by
   intro fp K d c top emitted fits m pc pre
-  refine nativeFPWordL_ok (.fromInt64 .f64) rfl emitted fits
+  refine nativeFPWordL_ok (L := L) (reserved := reserved)
+    (Pa := fun w => w = BitVec.ofInt 64 z) (Pb := fun w => w = (0 : Runner.W))
+    (.fromInt64 .f64) rfl emitted fits
     (fun _ _ hc ht => source hc ht) ?_ ?_ pre
   · intro cb tb hc ht m pc hp
     cases hc
@@ -38,7 +40,8 @@ theorem nativeSignedIntegerL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → P
     (source : WordCode (L := L) (reserved := reserved) ρ W child (BitVec.ofInt 64 z)) :
     NativeFloatCode (L := L) (reserved := reserved) ρ W
       (fun d => nativeSignedFloatL d child) (gleitAusInt z) := by
-  change NativeFloatCode _ _ _ (Float.ofInt z) _
+  change NativeFloatCode (L := L) (reserved := reserved) ρ W
+    (fun d => nativeSignedFloatL d child) (Float.ofInt z)
   rw [RootNativeFloat.ofInt_signed64_bits z lower upper]
   exact nativeSignedFloatL_ok z source
 
@@ -74,14 +77,25 @@ theorem nativeFloatScaleL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop
     (hi : WordCode (L := L) (reserved := reserved) ρ W index (BitVec.ofNat 64 i)) :
     WordCode (L := L) (reserved := reserved) ρ W
       (fun d => nativeFloatScaleL d sign index) (nativeFloatScaleWord s i) := by
-  have offset := WordCode.bin hi (WordCode.const 55 (by decide))
-    (g := fun a b => some (a - b)) rfl rfl (by decide : 4 < 256)
-  have exponent := WordCode.bin offset (WordCode.const 52 (by decide))
-    (g := fun a b => some (a <<< (b.toNat % 64))) rfl rfl (by decide : 11 < 256)
-  have polarity := WordCode.bin hs (WordCode.const 63 (by decide))
-    (g := fun a b => some (a <<< (b.toNat % 64))) rfl rfl (by decide : 11 < 256)
-  exact WordCode.bin exponent polarity (g := fun a b => some (a ||| b))
-    rfl rfl (by decide : 9 < 256)
+  have offset : WordCode (L := L) (reserved := reserved) ρ W
+      (fun d => wordK 4 d (index d) 55)
+      (BitVec.ofNat 64 i - BitVec.ofInt 64 55) :=
+    WordCode.bin (L := L) (reserved := reserved) hi
+      (WordCode.const (L := L) (reserved := reserved) (ρ := ρ) (W := W) 55 (by decide))
+      (g := fun a b => some (a - b)) rfl rfl (by decide : 4 < 256)
+  have exponent : WordCode (L := L) (reserved := reserved) ρ W
+      (fun d => wordK 11 d (wordK 4 d (index d) 55) 52)
+      ((BitVec.ofNat 64 i - BitVec.ofInt 64 55) <<< (52 : Nat)) :=
+    WordCode.bin (L := L) (reserved := reserved) offset
+      (WordCode.const (L := L) (reserved := reserved) (ρ := ρ) (W := W) 52 (by decide))
+      (g := fun a b => some (a <<< (b.toNat % 64))) rfl rfl (by decide : 11 < 256)
+  have polarity : WordCode (L := L) (reserved := reserved) ρ W
+      (fun d => wordK 11 d (sign d) 63) (Runner.IR.bool s <<< (63 : Nat)) :=
+    WordCode.bin (L := L) (reserved := reserved) hs
+      (WordCode.const (L := L) (reserved := reserved) (ρ := ρ) (W := W) 63 (by decide))
+      (g := fun a b => some (a <<< (b.toNat % 64))) rfl rfl (by decide : 11 < 256)
+  exact WordCode.bin (L := L) (reserved := reserved) exponent polarity
+    (g := fun a b => some (a ||| b)) rfl rfl (by decide : 9 < 256)
 
 /-- The bounded scale fields are exactly the canonical native power operand. -/
 theorem nativeFloatScaleWord_eq (sign : Bool) (index : Nat)
@@ -90,7 +104,8 @@ theorem nativeFloatScaleWord_eq (sign : Bool) (index : Nat)
       ((if sign then 2 ^ 63 else 0) + (index - 55) * 2 ^ 52) := by
   have exponent : ((BitVec.ofNat 64 index - 55) <<< 52) =
       BitVec.ofNat 64 ((index - 55) * 2 ^ 52) := by
-    rw [BitVec.ofNat_sub_ofNat_of_le index 55 (by decide) lower,
+    change ((BitVec.ofNat 64 index - BitVec.ofNat 64 55) <<< (52 : Nat)) = _
+    rw [BitVec.ofNat_sub_ofNat_of_le (w := 64) index 55 (by decide) lower,
       BitVec.shiftLeft_eq_mul_twoPow]
     exact (BitVec.ofNat_mul _ _).symm
   have room : (index - 55) * 2 ^ 52 < 2 ^ 63 := by omega
@@ -99,9 +114,11 @@ theorem nativeFloatScaleWord_eq (sign : Bool) (index : Nat)
   unfold nativeFloatScaleWord
   rw [exponent]
   cases sign
-  · simp only [Runner.IR.bool, Bool.false_eq_true, ↓reduceIte,
-      BitVec.zero_shiftLeft, BitVec.or_zero, Nat.zero_add]
-  · change BitVec.ofNat 64 ((index - 55) * 2 ^ 52) ||| BitVec.ofNat 64 (2 ^ 63) = _
+  · change BitVec.ofNat 64 ((index - 55) * 2 ^ 52) ||| ((0 : Runner.W) <<< (63 : Nat)) =
+      BitVec.ofNat 64 ((index - 55) * 2 ^ 52)
+    rw [BitVec.zero_shiftLeft, BitVec.or_zero]
+  · change BitVec.ofNat 64 ((index - 55) * 2 ^ 52) ||| BitVec.ofNat 64 (2 ^ 63) =
+      BitVec.ofNat 64 (2 ^ 63 + (index - 55) * 2 ^ 52)
     rw [← BitVec.ofNat_or, Nat.or_comm, ← combined]
 
 end Gabbro.Stage0.Senke
