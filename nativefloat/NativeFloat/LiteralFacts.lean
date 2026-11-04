@@ -181,37 +181,34 @@ private theorem literal_subnormal (s t : Sign) (m : Nat) (small : m = 1 ∨ m = 
 
 /-- The smallest subnormal must survive exact compile-time fraction conversion. -/
 theorem canonLiteral_subnormal_one : (canonLiteral (1, 2 ^ 1074)).toBits = 1 := by
-  rw [← Int.natCast_pow]
-  change (canonLiteral (Sign.positive.apply (1 : Int),
-    Sign.positive.apply ((2 ^ 1074 : Nat) : Int))).toBits = 1
-  rw [literal_subnormal .positive .positive 1 (Or.inl rfl)]
+  have value := literal_subnormal .positive .positive 1 (Or.inl rfl)
+  simp only [Sign.apply, Int.natCast_pow, Int.cast_ofNat_Int] at value
+  rw [value]
   cbv
 
 theorem canonLiteral_subnormal_two : (canonLiteral (2, 2 ^ 1074)).toBits = 2 := by
-  rw [← Int.natCast_pow]
-  change (canonLiteral (Sign.positive.apply (2 : Int),
-    Sign.positive.apply ((2 ^ 1074 : Nat) : Int))).toBits = 2
-  rw [literal_subnormal .positive .positive 2 (Or.inr rfl)]
+  have value := literal_subnormal .positive .positive 2 (Or.inr rfl)
+  simp only [Sign.apply, Int.natCast_pow, Int.cast_ofNat_Int] at value
+  rw [value]
   cbv
 
 theorem canonLiteral_subnormal_negative :
     (canonLiteral (-1, 2 ^ 1074)).toBits = 0x8000000000000001 ∧
       (canonLiteral (1, -(2 ^ 1074))).toBits = 0x8000000000000001 ∧
       (canonLiteral (-1, -(2 ^ 1074))).toBits = 1 := by
-  rw [← Int.natCast_pow]
   constructor
-  · change (canonLiteral (Sign.negative.apply (1 : Int),
-      Sign.positive.apply ((2 ^ 1074 : Nat) : Int))).toBits = _
-    rw [literal_subnormal .negative .positive 1 (Or.inl rfl)]
+  · have value := literal_subnormal .negative .positive 1 (Or.inl rfl)
+    simp only [Sign.apply, Int.natCast_pow, Int.cast_ofNat_Int] at value
+    rw [value]
     cbv
   · constructor
-    · change (canonLiteral (Sign.positive.apply (1 : Int),
-        Sign.negative.apply ((2 ^ 1074 : Nat) : Int))).toBits = _
-      rw [literal_subnormal .positive .negative 1 (Or.inl rfl)]
+    · have value := literal_subnormal .positive .negative 1 (Or.inl rfl)
+      simp only [Sign.apply, Int.natCast_pow, Int.cast_ofNat_Int] at value
+      rw [value]
       cbv
-    · change (canonLiteral (Sign.negative.apply (1 : Int),
-        Sign.negative.apply ((2 ^ 1074 : Nat) : Int))).toBits = _
-      rw [literal_subnormal .negative .negative 1 (Or.inl rfl)]
+    · have value := literal_subnormal .negative .negative 1 (Or.inl rfl)
+      simp only [Sign.apply, Int.natCast_pow, Int.cast_ofNat_Int] at value
+      rw [value]
       cbv
 
 end RootNativeFloat
