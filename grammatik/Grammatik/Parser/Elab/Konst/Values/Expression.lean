@@ -14,7 +14,7 @@ def adapt {D : Deklaration} {Γ : Ctx} (target : Ty) (source : SomeCode D Γ) :
   | .int lo hi, ⟨.int lower upper, code⟩ =>
     if h : lo ≤ lower ∧ upper ≤ hi then
       .ok ⟨.widen h.1 h.2 code.expr, fun args => Zahl.weiter h.1 h.2 (code.denote args), by
-        intros; simp only [eval, code.equation]⟩
+        intros; simp only [eval, code.equation] <;> rfl⟩
     else .error "const value interval is outside its declared type"
   | target, ⟨actual, code⟩ =>
     if h : actual = target then .ok (h ▸ code)
@@ -40,7 +40,7 @@ def expression {D : Deklaration} {Γ : Ctx} (names : Locals Γ)
     | .opt n, .call "Some" [value] => do
       let payload ← expression names globals schemas fuel (.index n) value
       return ⟨.some payload.expr, fun args => some (payload.denote args), by
-        intros; simp only [eval, payload.equation]⟩
+        intros; simp only [eval, payload.equation] <;> rfl⟩
     | .str n, .ext .text [text] [] =>
       if n > 1 then .error "const string result exceeds the A28 one-byte maximum"
       else match bytesZahl (text.toUTF8.toList.map (fun byte => Int.ofNat byte.toNat)) with
@@ -74,11 +74,11 @@ def expression {D : Deklaration} {Γ : Ctx} (names : Locals Γ)
         let value ← payloadExpression names globals schemas fuel (cases.get i) payload
         return ⟨.case cases i value.expr,
           fun args => ⟨i, Fall.ofNutzlast D.Fn D.passt cases i (value.denote args)⟩,
-          by intros; simp only [eval, value.equation]⟩
+          by intros; simp only [eval, value.equation] <;> rfl⟩
       else throw "const tagged constructor lies outside its declared schema"
-    | _, _ => do
-      let normalized ← Scalar.normalize names globals source
-      adapt target normalized.code
+    | target, source => do
+      let normalized ← Scalar.normalize (D := D) names globals source
+      adapt (D := D) target normalized.code
 
 /-- Payload presence and its declared type are checked together. -/
 def payloadExpression {D : Deklaration} {Γ : Ctx} (names : Locals Γ)
@@ -88,7 +88,7 @@ def payloadExpression {D : Deklaration} {Γ : Ctx} (names : Locals Γ)
   | _ + 1, none, none => .ok ⟨.empty, fun _ => (), by intros; rfl⟩
   | fuel + 1, some τ, some source => do
     let code ← expression names globals schemas fuel τ source
-    return ⟨.val code.expr, code.denote, by intros; simp only [evalNutz, code.equation]⟩
+    return ⟨.val code.expr, code.denote, by intros; simp only [evalNutz, code.equation] <;> rfl⟩
   | _ + 1, _, _ => .error "const tagged constructor payload does not match its declared type"
 end
 
