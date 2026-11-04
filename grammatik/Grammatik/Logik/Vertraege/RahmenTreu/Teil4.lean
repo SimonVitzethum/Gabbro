@@ -9,6 +9,7 @@ public import Grammatik.Logik.Vertraege.RahmenTreu.Teil1
 
 namespace Gabbro.Grammatik
 variable {D : Deklaration} {V : Vertrag D}
+variable {returnGuard : Prop}
 
 /-- Release then release is the same combined release (scopes concatenate;
     spare and rank persist over the union). -/
@@ -63,13 +64,13 @@ theorem indSonst_treu (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufA
     (ok : World D → Wert D τ → Ausgang V l Γ)
     (why : World D → Fin (D.sigNr n).gruende → Ausgang V l Γ)
     (runOk : ∀ σ1 v, HeldB bo (nachSig D (D.sigNr n) Λ) σ1.haelt →
-      TreuAusgang V.schreibt V.gschreibt σ1 (ok σ1 v))
+      TreuAusgang V.schreibt V.gschreibt σ1 (ok σ1 v) returnGuard)
     (runWhy : ∀ σ1 r, HeldB bo (nachSig D (D.sigNr n) Λ) σ1.haelt →
-      TreuAusgang V.schreibt V.gschreibt σ1 (why σ1 r))
+      TreuAusgang V.schreibt V.gschreibt σ1 (why σ1 r) returnGuard)
     (σ' : World D) (h : (indSonst R p args he hr s0 ρ ok why).welt = some σ') :
     match (indSonst R p args he hr s0 ρ ok why) with
-    | .zurueck _ _ => TreuRet V.schreibt V.gschreibt V.haelt V.boden σ σ'
-    | .why _ _ => TreuRet V.schreibt V.gschreibt V.haelt V.boden σ σ'
+    | .zurueck _ _ => returnGuard → TreuRet V.schreibt V.gschreibt V.haelt V.boden σ σ'
+    | .why _ _ => returnGuard → TreuRet V.schreibt V.gschreibt V.haelt V.boden σ σ'
     | _ => Treu V.schreibt V.gschreibt σ σ' := by
   simp only [indSonst] at h ⊢
   generalize hpv : eval s0 p s0 ρ = pv at h ⊢
@@ -110,13 +111,13 @@ theorem indSonstE_treu (R : ∀ f : D.Fn, World D → Env D (D.params f) → Ruf
     (ok : World D → Wert D τ → EndAusgang V l Γ)
     (why : World D → Fin (D.sigNr n).gruende → EndAusgang V l Γ)
     (runOk : ∀ σ1 v, HeldB bo (nachSig D (D.sigNr n) Λ) σ1.haelt →
-      TreuEnd V.schreibt V.gschreibt σ1 (ok σ1 v))
+      TreuEnd V.schreibt V.gschreibt σ1 (ok σ1 v) returnGuard)
     (runWhy : ∀ σ1 r, HeldB bo (nachSig D (D.sigNr n) Λ) σ1.haelt →
-      TreuEnd V.schreibt V.gschreibt σ1 (why σ1 r))
+      TreuEnd V.schreibt V.gschreibt σ1 (why σ1 r) returnGuard)
     (σ' : World D) (h : (indSonstE R p args he hr s0 ρ ok why).welt = some σ') :
     match (indSonstE R p args he hr s0 ρ ok why) with
-    | .zurueck _ _ => TreuRet V.schreibt V.gschreibt V.haelt V.boden σ σ'
-    | .why _ _ => TreuRet V.schreibt V.gschreibt V.haelt V.boden σ σ'
+    | .zurueck _ _ => returnGuard → TreuRet V.schreibt V.gschreibt V.haelt V.boden σ σ'
+    | .why _ _ => returnGuard → TreuRet V.schreibt V.gschreibt V.haelt V.boden σ σ'
     | _ => Treu V.schreibt V.gschreibt σ σ' := by
   simp only [indSonstE] at h ⊢
   generalize hpv : eval s0 p s0 ρ = pv at h ⊢

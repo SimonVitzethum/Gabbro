@@ -246,58 +246,76 @@ theorem treuRet_retWhyScoped {W G} {haelt : List D.Lock} {boden : Option Int}
 
 /-! ## 3. Outcomes -/
 
-def TreuAusgang (W : D.Tab → Bool) (G : D.Glob → Bool) (σ : World D) (o : Ausgang V l Γ) : Prop :=
+/-- Terminal frames are conditional on the caller residual; ordinary frames are unconditional. -/
+def TreuAusgang (W : D.Tab → Bool) (G : D.Glob → Bool) (σ : World D) (o : Ausgang V l Γ)
+    (returnGuard : Prop := True) : Prop :=
   ∀ σ', o.welt = some σ' →
     match o with
-    | .zurueck _ _ | .why _ _ => TreuRet W G V.haelt V.boden σ σ'
+    | .zurueck _ _ | .why _ _ => returnGuard → TreuRet W G V.haelt V.boden σ σ'
     | _ => Treu W G σ σ'
 
-def TreuEnd (W : D.Tab → Bool) (G : D.Glob → Bool) (σ : World D) (o : EndAusgang V l Γ) : Prop :=
+def TreuEnd (W : D.Tab → Bool) (G : D.Glob → Bool) (σ : World D) (o : EndAusgang V l Γ)
+    (returnGuard : Prop := True) : Prop :=
   ∀ σ', o.welt = some σ' →
     match o with
-    | .zurueck _ _ | .why _ _ => TreuRet W G V.haelt V.boden σ σ'
+    | .zurueck _ _ | .why _ _ => returnGuard → TreuRet W G V.haelt V.boden σ σ'
     | _ => Treu W G σ σ'
+
+variable {returnGuard : Prop}
+
+/-- Strengthening the terminal guard leaves every ordinary frame unchanged. -/
+theorem TreuAusgang.guard {W G} {σ : World D} {o : Ausgang V l Γ} {guard : Prop}
+    (h : TreuAusgang W G σ o returnGuard) (implies : guard → returnGuard) :
+    TreuAusgang W G σ o guard := by
+  intro σ' hs
+  cases o <;> first | exact fun hg => h σ' hs (implies hg) | exact h σ' hs
+
+theorem TreuEnd.guard {W G} {σ : World D} {o : EndAusgang V l Γ} {guard : Prop}
+    (h : TreuEnd W G σ o returnGuard) (implies : guard → returnGuard) :
+    TreuEnd W G σ o guard := by
+  intro σ' hs
+  cases o <;> first | exact fun hg => h σ' hs (implies hg) | exact h σ' hs
 
 theorem TreuAusgang.schrumpf {W G} {σ : World D} {o : Ausgang V l (τ :: Γ)}
-    (h : TreuAusgang W G σ o) : TreuAusgang W G σ o.schrumpf := by
+    (h : TreuAusgang W G σ o returnGuard) : TreuAusgang W G σ o.schrumpf returnGuard := by
   intro σ' hs; cases o <;> simp only [Ausgang.welt, Ausgang.schrumpf, Option.some.injEq, reduceCtorEq] at hs ⊢ <;>
     (subst hs; exact h _ rfl)
 
 theorem TreuAusgang.schrumpfArm {W G} {σ : World D} (c : Option Ty)
-    {o : Ausgang V l (ArmCtx Γ c)} (h : TreuAusgang W G σ o) :
-    TreuAusgang W G σ (o.schrumpfArm c) := by
+    {o : Ausgang V l (ArmCtx Γ c)} (h : TreuAusgang W G σ o returnGuard) :
+    TreuAusgang W G σ (o.schrumpfArm c) returnGuard := by
   cases c with
   | none => exact h
   | some _ => exact h.schrumpf
 
 theorem TreuEnd.schrumpf {W G} {σ : World D} {o : EndAusgang V l (τ :: Γ)}
-    (h : TreuEnd W G σ o) : TreuEnd W G σ o.schrumpf := by
+    (h : TreuEnd W G σ o returnGuard) : TreuEnd W G σ o.schrumpf returnGuard := by
   intro σ' hs; cases o <;> simp only [EndAusgang.welt, EndAusgang.schrumpf, Option.some.injEq, reduceCtorEq] at hs ⊢ <;>
     (subst hs; exact h _ rfl)
 
-theorem TreuEnd.zuAusgang {W G} {σ : World D} {o : EndAusgang V l Γ} (h : TreuEnd W G σ o) :
-    TreuAusgang W G σ o.zuAusgang := by
+theorem TreuEnd.zuAusgang {W G} {σ : World D} {o : EndAusgang V l Γ} (h : TreuEnd W G σ o returnGuard) :
+    TreuAusgang W G σ o.zuAusgang returnGuard := by
   intro σ' hs; cases o <;> simp only [Ausgang.welt, EndAusgang.zuAusgang, Option.some.injEq, reduceCtorEq] at hs ⊢ <;>
     (subst hs; exact h _ rfl)
 
 theorem TreuAusgang.vor {W G} {σ σ1 : World D} {o : Ausgang V l Γ}
-    (h1 : Treu W G σ σ1) (h : TreuAusgang W G σ1 o) : TreuAusgang W G σ o := by
+    (h1 : Treu W G σ σ1) (h : TreuAusgang W G σ1 o returnGuard) : TreuAusgang W G σ o returnGuard := by
   intro σ' hs
   cases o with
   | ok _ _ => exact h1.trans (h _ hs)
-  | zurueck _ _ => exact h1.transRet (h _ hs)
-  | why _ _ => exact h1.transRet (h _ hs)
+  | zurueck _ _ => exact fun hg => h1.transRet (h _ hs hg)
+  | why _ _ => exact fun hg => h1.transRet (h _ hs hg)
   | leave _ _ _ => exact h1.trans (h _ hs)
   | next _ _ _ => exact h1.trans (h _ hs)
   | logik _ => cases hs
   | hardware _ => cases hs
 
 theorem TreuEnd.vor {W G} {σ σ1 : World D} {o : EndAusgang V l Γ}
-    (h1 : Treu W G σ σ1) (h : TreuEnd W G σ1 o) : TreuEnd W G σ o := by
+    (h1 : Treu W G σ σ1) (h : TreuEnd W G σ1 o returnGuard) : TreuEnd W G σ o returnGuard := by
   intro σ' hs
   cases o with
-  | zurueck _ _ => exact h1.transRet (h _ hs)
-  | why _ _ => exact h1.transRet (h _ hs)
+  | zurueck _ _ => exact fun hg => h1.transRet (h _ hs hg)
+  | why _ _ => exact fun hg => h1.transRet (h _ hs hg)
   | leave _ _ _ => exact h1.trans (h _ hs)
   | next _ _ _ => exact h1.trans (h _ hs)
   | logik _ => cases hs
@@ -310,17 +328,17 @@ theorem TreuEnd.vor {W G} {σ σ1 : World D} {o : EndAusgang V l Γ}
     false `TreuAusgang.vorRet`: a `TreuRet` prefix only transports returning
     outcomes, never `ok`/`leave`/`next` ones. -/
 theorem TreuAusgang.vorCall {W G} {σ σ1 : World D} {o : Ausgang V l Γ}
-    (hrestore : Treu W G σ σ1) (h : TreuAusgang W G σ1 o) : TreuAusgang W G σ o :=
+    (hrestore : Treu W G σ σ1) (h : TreuAusgang W G σ1 o returnGuard) : TreuAusgang W G σ o returnGuard :=
   TreuAusgang.vor hrestore h
 
 /-- The `TreuEnd` variant of `TreuAusgang.vorCall`, for continuations at the
     end of a body. -/
 theorem TreuEnd.vorCall {W G} {σ σ1 : World D} {o : EndAusgang V l Γ}
-    (hrestore : Treu W G σ σ1) (h : TreuEnd W G σ1 o) : TreuEnd W G σ o :=
+    (hrestore : Treu W G σ σ1) (h : TreuEnd W G σ1 o returnGuard) : TreuEnd W G σ o returnGuard :=
   TreuEnd.vor hrestore h
 
 theorem TreuAusgang.gibt {W G} {σ : World D} (L : D.Lock) {o : Ausgang V l Γ}
-    (h : TreuAusgang W G (σ.nimmt L) o) : TreuAusgang W G σ (o.mapWelt (·.gibt L)) := by
+    (h : TreuAusgang W G (σ.nimmt L) o returnGuard) : TreuAusgang W G σ (o.mapWelt (·.gibt L)) returnGuard := by
   intro σ' hs
   cases o with
   | ok _ _ =>
@@ -328,10 +346,10 @@ theorem TreuAusgang.gibt {W G} {σ : World D} (L : D.Lock) {o : Ausgang V l Γ}
       subst hs; exact treu_nimmt_gibt _ _ L (h _ rfl)
   | zurueck _ _ =>
       simp only [Ausgang.welt, Ausgang.mapWelt, Option.some.injEq] at hs ⊢
-      subst hs; exact treu_nimmt_gibtRet _ _ L (h _ rfl)
+      subst hs; exact fun hg => treu_nimmt_gibtRet _ _ L (h _ rfl hg)
   | why _ _ =>
       simp only [Ausgang.welt, Ausgang.mapWelt, Option.some.injEq] at hs ⊢
-      subst hs; exact treu_nimmt_gibtRet _ _ L (h _ rfl)
+      subst hs; exact fun hg => treu_nimmt_gibtRet _ _ L (h _ rfl hg)
   | leave _ _ _ =>
       simp only [Ausgang.welt, Ausgang.mapWelt, Option.some.injEq] at hs ⊢
       subst hs; exact treu_nimmt_gibt _ _ L (h _ rfl)

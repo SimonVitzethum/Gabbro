@@ -10,6 +10,7 @@ public import Grammatik.Logik.Vertraege.RahmenTreu.Teil4
 
 namespace Gabbro.Grammatik
 variable {D : Deklaration} {V : Vertrag D}
+variable {returnGuard : Prop}
 section Rumpf
 variable (O : Orakel D)
 variable (passes : Nat)
@@ -23,10 +24,10 @@ theorem end_treu_float (bo : Option Int) (hbV : BodenUnter bo V.boden)
     {l1 h1 l2 h2 : Int × Int} (op : GleitOp) (a : Expr D Γ Λ (.fl l1 h1)) (b : Expr D Γ Λ (.fl l2 h2)) (lo hi : Int × Int)
     (rest : Endblock D V l (.fl lo hi :: Γ) Λ)
     (ihrest : ∀ (σ : World D) (ρ : Env D (.fl lo hi :: Γ)), rest.ScopesOk → HeldB bo Λ σ.haelt →
-      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R rest σ ρ))
+      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R rest σ ρ) returnGuard)
     (σ : World D) (ρ : Env D Γ) (hscope : (Endblock.float op a b lo hi rest).ScopesOk)
     (hh : HeldB bo Λ σ.haelt) :
-    TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R (Endblock.float op a b lo hi rest) σ ρ) := by
+    TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R (Endblock.float op a b lo hi rest) σ ρ) returnGuard := by
   intro σ' h
   have hscope_rest : rest.ScopesOk := by scopes_treu
   simp only [execEnd] at h ⊢
@@ -41,10 +42,10 @@ theorem end_treu_floatLit (bo : Option Int) (hbV : BodenUnter bo V.boden)
     (q : Int × Int) (lo hi : Int × Int)
     (rest : Endblock D V l (.fl lo hi :: Γ) Λ)
     (ihrest : ∀ (σ : World D) (ρ : Env D (.fl lo hi :: Γ)), rest.ScopesOk → HeldB bo Λ σ.haelt →
-      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R rest σ ρ))
+      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R rest σ ρ) returnGuard)
     (σ : World D) (ρ : Env D Γ) (hscope : (Endblock.floatLit q lo hi rest).ScopesOk)
     (hh : HeldB bo Λ σ.haelt) :
-    TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R (Endblock.floatLit q lo hi rest) σ ρ) := by
+    TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R (Endblock.floatLit q lo hi rest) σ ρ) returnGuard := by
   intro σ' h
   have hscope_rest : rest.ScopesOk := by scopes_treu
   simp only [execEnd] at h ⊢
@@ -58,10 +59,10 @@ theorem end_treu_floatOf (bo : Option Int) (hbV : BodenUnter bo V.boden)
     {l1 h1 : Int} (e : Expr D Γ Λ (.int l1 h1)) (lo hi : Int × Int)
     (rest : Endblock D V l (.fl lo hi :: Γ) Λ)
     (ihrest : ∀ (σ : World D) (ρ : Env D (.fl lo hi :: Γ)), rest.ScopesOk → HeldB bo Λ σ.haelt →
-      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R rest σ ρ))
+      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R rest σ ρ) returnGuard)
     (σ : World D) (ρ : Env D Γ) (hscope : (Endblock.floatOf e lo hi rest).ScopesOk)
     (hh : HeldB bo Λ σ.haelt) :
-    TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R (Endblock.floatOf e lo hi rest) σ ρ) := by
+    TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R (Endblock.floatOf e lo hi rest) σ ρ) returnGuard := by
   intro σ' h
   have hscope_rest : rest.ScopesOk := by scopes_treu
   simp only [execEnd] at h ⊢
@@ -77,12 +78,12 @@ theorem end_treu_floatNarrow (bo : Option Int) (hbV : BodenUnter bo V.boden)
     (sonst : Endblock D V l Γ Λ)
     (rest : Endblock D V l (.fl lo hi :: Γ) Λ)
     (ihrest : ∀ (σ : World D) (ρ : Env D (.fl lo hi :: Γ)), rest.ScopesOk → HeldB bo Λ σ.haelt →
-      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R rest σ ρ))
+      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R rest σ ρ) returnGuard)
     (ihsonst : ∀ (σ : World D) (ρ : Env D Γ), sonst.ScopesOk → HeldB bo Λ σ.haelt →
-      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R sonst σ ρ))
+      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R sonst σ ρ) returnGuard)
     (σ : World D) (ρ : Env D Γ) (hscope : (Endblock.floatNarrow e lo hi sonst rest).ScopesOk)
     (hh : HeldB bo Λ σ.haelt) :
-    TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R (Endblock.floatNarrow e lo hi sonst rest) σ ρ) := by
+    TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R (Endblock.floatNarrow e lo hi sonst rest) σ ρ) returnGuard := by
   intro σ' h
   have hscope_rest : rest.ScopesOk := by scopes_treu
   have hscope_sonst : sonst.ScopesOk := by scopes_treu

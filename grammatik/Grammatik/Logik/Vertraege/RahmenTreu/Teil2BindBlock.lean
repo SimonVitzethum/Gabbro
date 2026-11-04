@@ -12,6 +12,7 @@ public import Grammatik.Logik.Vertraege.RahmenTreu.Teil4
 
 namespace Gabbro.Grammatik
 variable {D : Deklaration} {V : Vertrag D}
+variable {returnGuard : Prop}
 section Rumpf
 variable (O : Orakel D)
 variable (passes : Nat)
@@ -29,12 +30,12 @@ theorem block_bindCall_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
     (rest : Block D V l (τ :: Γ) (nach D f Λ) Λ')
     (ih_rest : ∀ (σ : World D) (ρ : Env D (τ :: Γ)), rest.ScopesOk →
       HeldB bo (nach D f Λ) σ.haelt →
-      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R rest σ ρ))
+      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R rest σ ρ) returnGuard)
     (σ : World D) (ρ : Env D Γ)
     (hscope : (Block.bindCall f args he hp hr rest).ScopesOk)
     (hh : HeldB bo Λ σ.haelt) :
     TreuAusgang V.schreibt V.gschreibt σ
-      (execBlock O passes R (Block.bindCall f args he hp hr rest) σ ρ) := by
+      (execBlock O passes R (Block.bindCall f args he hp hr rest) σ ρ) returnGuard := by
       intro σ' h
       simp only [execBlock] at h ⊢
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
@@ -56,12 +57,12 @@ theorem block_bindCallInd_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
     (rest : Block D V l (τ :: Γ) (nachSig D (D.sigNr n) Λ) Λ')
     (ih_rest : ∀ (σ : World D) (ρ : Env D (τ :: Γ)), rest.ScopesOk →
       HeldB bo (nachSig D (D.sigNr n) Λ) σ.haelt →
-      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R rest σ ρ))
+      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R rest σ ρ) returnGuard)
     (σ : World D) (ρ : Env D Γ)
     (hscope : (Block.bindCallInd p args he hp hr rest).ScopesOk)
     (hh : HeldB bo Λ σ.haelt) :
     TreuAusgang V.schreibt V.gschreibt σ
-      (execBlock O passes R (Block.bindCallInd p args he hp hr rest) σ ρ) := by
+      (execBlock O passes R (Block.bindCallInd p args he hp hr rest) σ ρ) returnGuard := by
       intro σ' h
       simp only [execBlock] at h ⊢
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ (p.orte ++ args.orte)
@@ -89,15 +90,15 @@ theorem block_bindCallElse_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
     (rest : Block D V l (τ :: Γ) (nach D f Λ) Λ')
     (ih_rest : ∀ (σ : World D) (ρ : Env D (τ :: Γ)), rest.ScopesOk →
       HeldB bo (nach D f Λ) σ.haelt →
-      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R rest σ ρ))
+      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R rest σ ρ) returnGuard)
     (ih_err : ∀ (σ : World D) (ρ : Env D (.why (D.gruende f) :: Γ)), err.ScopesOk →
       HeldB bo (nach D f Λ) σ.haelt →
-      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R err σ ρ))
+      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R err σ ρ) returnGuard)
     (σ : World D) (ρ : Env D Γ)
     (hscope : (Block.bindCallElse f args he hp hr err rest).ScopesOk)
     (hh : HeldB bo Λ σ.haelt) :
     TreuAusgang V.schreibt V.gschreibt σ
-      (execBlock O passes R (Block.bindCallElse f args he hp hr err rest) σ ρ) := by
+      (execBlock O passes R (Block.bindCallElse f args he hp hr err rest) σ ρ) returnGuard := by
       intro σ' h
       simp only [execBlock] at h ⊢
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
@@ -126,12 +127,12 @@ theorem block_bindAxiom_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
     (rest : Block D V l (τ :: Γ) Λ Λ')
     (ih_rest : ∀ (σ : World D) (ρ : Env D (τ :: Γ)), rest.ScopesOk →
       HeldB bo Λ σ.haelt →
-      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R rest σ ρ))
+      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R rest σ ρ) returnGuard)
     (σ : World D) (ρ : Env D Γ)
     (hscope : (Block.bindAxiom a args he hw hg hd hgd rest).ScopesOk)
     (hh : HeldB bo Λ σ.haelt) :
     TreuAusgang V.schreibt V.gschreibt σ
-      (execBlock O passes R (Block.bindAxiom a args he hw hg hd hgd rest) σ ρ) := by
+      (execBlock O passes R (Block.bindAxiom a args he hw hg hd hgd rest) σ ρ) returnGuard := by
       intro σ' h
       simp only [execBlock] at h ⊢
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
@@ -158,15 +159,15 @@ theorem block_bindAxiomElse_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
     (rest : Block D V l (τ :: Γ) Λ Λ')
     (ih_rest : ∀ (σ : World D) (ρ : Env D (τ :: Γ)), rest.ScopesOk →
       HeldB bo Λ σ.haelt →
-      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R rest σ ρ))
+      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R rest σ ρ) returnGuard)
     (ih_err : ∀ (σ : World D) (ρ : Env D (.why (D.agruende a) :: Γ)), err.ScopesOk →
       HeldB bo Λ σ.haelt →
-      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R err σ ρ))
+      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R err σ ρ) returnGuard)
     (σ : World D) (ρ : Env D Γ)
     (hscope : (Block.bindAxiomElse a args he hr hw hg hd hgd err rest).ScopesOk)
     (hh : HeldB bo Λ σ.haelt) :
     TreuAusgang V.schreibt V.gschreibt σ
-      (execBlock O passes R (Block.bindAxiomElse a args he hr hw hg hd hgd err rest) σ ρ) := by
+      (execBlock O passes R (Block.bindAxiomElse a args he hr hw hg hd hgd err rest) σ ρ) returnGuard := by
       intro σ' h
       simp only [execBlock] at h ⊢
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
@@ -192,12 +193,12 @@ theorem block_bindAxiomOpt_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
     (rest : Block D V l (ErgCtx Γ e) (nachSig D (D.asignatur a) Λ) Λ')
     (ih_rest : ∀ (σ : World D) (ρ : Env D (ErgCtx Γ e)), rest.ScopesOk →
       HeldB bo (nachSig D (D.asignatur a) Λ) σ.haelt →
-      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R rest σ ρ))
+      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R rest σ ρ) returnGuard)
     (σ : World D) (ρ : Env D Γ)
     (hscope : (Block.bindAxiomOpt e a args he hp hd hgd rest).ScopesOk)
     (hh : HeldB bo Λ σ.haelt) :
     TreuAusgang V.schreibt V.gschreibt σ
-      (execBlock O passes R (Block.bindAxiomOpt e a args he hp hd hgd rest) σ ρ) := by
+      (execBlock O passes R (Block.bindAxiomOpt e a args he hp hd hgd rest) σ ρ) returnGuard := by
       intro σ' h
       simp only [execBlock] at h ⊢
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
@@ -227,15 +228,15 @@ theorem block_bindAxiomOptElse_treu (bo : Option Int) (hbV : BodenUnter bo V.bod
     (rest : Block D V l (ErgCtx Γ e) (nachSig D (D.asignatur a) Λ) Λ')
     (ih_rest : ∀ (σ : World D) (ρ : Env D (ErgCtx Γ e)), rest.ScopesOk →
       HeldB bo (nachSig D (D.asignatur a) Λ) σ.haelt →
-      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R rest σ ρ))
+      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R rest σ ρ) returnGuard)
     (ih_err : ∀ (σ : World D) (ρ : Env D (reasonTy (D.agruende a) :: Γ)), err.ScopesOk →
       HeldB bo (nachSig D (D.asignatur a) Λ) σ.haelt →
-      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R err σ ρ))
+      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R err σ ρ) returnGuard)
     (σ : World D) (ρ : Env D Γ)
     (hscope : (Block.bindAxiomOptElse e a args he hp hd hgd hr err rest).ScopesOk)
     (hh : HeldB bo Λ σ.haelt) :
     TreuAusgang V.schreibt V.gschreibt σ
-      (execBlock O passes R (Block.bindAxiomOptElse e a args he hp hd hgd hr err rest) σ ρ) := by
+      (execBlock O passes R (Block.bindAxiomOptElse e a args he hp hd hgd hr err rest) σ ρ) returnGuard := by
       intro σ' h
       simp only [execBlock] at h ⊢
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
@@ -266,15 +267,15 @@ theorem block_regReadElse_treu (bo : Option Int) (hbV : BodenUnter bo V.boden)
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ')
     (ih_rest : ∀ (σ : World D) (ρ : Env D (D.rtyp r :: Γ)), rest.ScopesOk →
       HeldB bo Λ σ.haelt →
-      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R rest σ ρ))
+      TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R rest σ ρ) returnGuard)
     (ih_sonst : ∀ (σ : World D) (ρ : Env D Γ), sonst.ScopesOk →
       HeldB bo Λ σ.haelt →
-      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R sonst σ ρ))
+      TreuEnd V.schreibt V.gschreibt σ (execEnd O passes R sonst σ ρ) returnGuard)
     (σ : World D) (ρ : Env D Γ)
     (hscope : (Block.regReadElse r hk zusage sonst rest).ScopesOk)
     (hh : HeldB bo Λ σ.haelt) :
     TreuAusgang V.schreibt V.gschreibt σ
-      (execBlock O passes R (Block.regReadElse r hk zusage sonst rest) σ ρ) := by
+      (execBlock O passes R (Block.regReadElse r hk zusage sonst rest) σ ρ) returnGuard := by
       intro σ' h
       have hscope_rest : rest.ScopesOk := by scopes_treu
       have hscope_sonst : sonst.ScopesOk := by scopes_treu

@@ -6,6 +6,7 @@ public import Grammatik.Logik.Vertraege.RahmenTreu.Teil1a
 
 namespace Gabbro.Grammatik
 variable {D : Deklaration} {V : Vertrag D}
+variable {returnGuard : Prop}
 
 
 /-! ## 4. The three loop combinators -/
@@ -16,11 +17,11 @@ variable {W : D.Tab → Bool} {G : D.Glob → Bool}
 theorem traverseLauf_treu (bo : Option Int) (Λ : List (Res D))
     (schritt : World D → Env D (τ :: Γ) → Ausgang V true (τ :: Γ))
     (inv : World D → Env D Γ → World D × Bool)
-    (hs : ∀ σ ρ, HeldB bo Λ σ.haelt → TreuAusgang W G σ (schritt σ ρ))
+    (hs : ∀ σ ρ, HeldB bo Λ σ.haelt → TreuAusgang W G σ (schritt σ ρ) returnGuard)
     (hi : ∀ σ ρ, HeldB bo Λ σ.haelt → Treu W G σ (inv σ ρ).1) :
     ∀ (ks : List (Wert D τ)) (σ : World D) (ρ : Env D Γ),
       HeldB bo Λ σ.haelt →
-      TreuAusgang W G σ (traverseLauf (l := l) schritt inv ks σ ρ) := by
+      TreuAusgang W G σ (traverseLauf (l := l) schritt inv ks σ ρ) returnGuard := by
   intro ks
   induction ks with
   | nil =>
@@ -56,10 +57,10 @@ theorem traverseLauf_treu (bo : Option Int) (Λ : List (Res D))
         · rw [if_neg hc1]; intro σ' h; simp only [Ausgang.welt, reduceCtorEq] at h
       | zurueck σ1 v =>
         intro σ' h; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-        exact hinv.transRet (hstep _ rfl)
+        exact fun hg => hinv.transRet (hstep _ rfl hg)
       | why σ1 r =>
         intro σ' h; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-        exact hinv.transRet (hstep _ rfl)
+        exact fun hg => hinv.transRet (hstep _ rfl hg)
       | logik e => intro σ' h; simp only [Ausgang.welt, reduceCtorEq] at h
       | hardware e => intro σ' h; simp only [Ausgang.welt, reduceCtorEq] at h
 
@@ -73,14 +74,14 @@ theorem verbrauchLauf_treu (bo : Option Int) (Λ : List (Res D)) (t : D.Tab)
     (sel : World D → Env D Γ →
       World D × Option (Wert D (.index (D.count t))) × Bool)
     (massW : World D → Env D Γ → World D × Int) (bound : Int)
-    (hs : ∀ σ ρ, HeldB bo Λ σ.haelt → TreuAusgang W G σ (schritt σ ρ))
+    (hs : ∀ σ ρ, HeldB bo Λ σ.haelt → TreuAusgang W G σ (schritt σ ρ) returnGuard)
     (hi : ∀ σ ρ, HeldB bo Λ σ.haelt → Treu W G σ (inv σ ρ).1)
     (hsel : ∀ σ ρ, HeldB bo Λ σ.haelt → Treu W G σ (sel σ ρ).1)
     (hmass : ∀ σ ρ, HeldB bo Λ σ.haelt → Treu W G σ (massW σ ρ).1) :
     ∀ (fuel : Nat) (σ : World D) (ρ : Env D Γ),
       HeldB bo Λ σ.haelt →
       TreuAusgang W G σ
-        (verbrauchLauf (l := l) t schritt inv sel massW bound fuel σ ρ) := by
+        (verbrauchLauf (l := l) t schritt inv sel massW bound fuel σ ρ) returnGuard := by
   intro fuel
   induction fuel with
   | zero =>
@@ -89,13 +90,13 @@ theorem verbrauchLauf_treu (bo : Option Int) (Λ : List (Res D)) (t : D.Tab)
   | succ n ih =>
       intro σ ρ hh
       have hl : ∀ {σ0 : World D} (e : Logik D),
-          TreuAusgang (V := V) (l := l) (Γ := Γ) W G σ0 (.logik e) := by
+          TreuAusgang (V := V) (l := l) (Γ := Γ) W G σ0 (.logik e) returnGuard := by
         intro σ0 e σ' h; simp only [Ausgang.welt, reduceCtorEq] at h
       have hw : ∀ {σ0 : World D} (e : Hardware D),
-          TreuAusgang (V := V) (l := l) (Γ := Γ) W G σ0 (.hardware e) := by
+          TreuAusgang (V := V) (l := l) (Γ := Γ) W G σ0 (.hardware e) returnGuard := by
         intro σ0 e σ' h; simp only [Ausgang.welt, reduceCtorEq] at h
       have hok : ∀ {σ0 σ1 : World D} (ρ0 : Env D Γ), Treu W G σ0 σ1 →
-          TreuAusgang (V := V) (l := l) W G σ0 (.ok σ1 ρ0) := by
+          TreuAusgang (V := V) (l := l) W G σ0 (.ok σ1 ρ0) returnGuard := by
         intro σ0 σ1 ρ0 hg σ' h
         simp only [Ausgang.welt, Option.some.injEq] at h; subst h; exact hg
       rw [verbrauchLauf]
@@ -162,11 +163,11 @@ theorem verbrauchLauf_treu (bo : Option Int) (Λ : List (Res D)) (t : D.Tab)
       | zurueck σ1 v =>
         intro σ' h
         simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-        exact gm.transRet (hstep _ rfl)
+        exact fun hg => gm.transRet (hstep _ rfl hg)
       | why σ1 r =>
         intro σ' h
         simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-        exact gm.transRet (hstep _ rfl)
+        exact fun hg => gm.transRet (hstep _ rfl hg)
       | logik e => exact hl e
       | hardware e => exact hw e
 
@@ -175,12 +176,12 @@ theorem verbrauchLauf_treu (bo : Option Int) (Λ : List (Res D)) (t : D.Tab)
 theorem retryLauf_treu (bo : Option Int) (Λ : List (Res D))
     (schritt : World D → Env D Γ → Ausgang V true Γ)
     (bis : World D → Env D Γ → World D × Bool) (ueberlauf : World D → Env D Γ → Ausgang V l Γ)
-    (hs : ∀ σ ρ, HeldB bo Λ σ.haelt → TreuAusgang W G σ (schritt σ ρ))
+    (hs : ∀ σ ρ, HeldB bo Λ σ.haelt → TreuAusgang W G σ (schritt σ ρ) returnGuard)
     (hb : ∀ σ ρ, HeldB bo Λ σ.haelt → Treu W G σ (bis σ ρ).1)
-    (hu : ∀ σ ρ, HeldB bo Λ σ.haelt → TreuAusgang W G σ (ueberlauf σ ρ)) :
+    (hu : ∀ σ ρ, HeldB bo Λ σ.haelt → TreuAusgang W G σ (ueberlauf σ ρ) returnGuard) :
     ∀ (n : Nat) (σ : World D) (ρ : Env D Γ),
       HeldB bo Λ σ.haelt →
-      TreuAusgang W G σ (retryLauf schritt bis ueberlauf n σ ρ) := by
+      TreuAusgang W G σ (retryLauf schritt bis ueberlauf n σ ρ) returnGuard := by
   intro n
   induction n with
   | zero =>
@@ -216,12 +217,12 @@ theorem retryLauf_treu (bo : Option Int) (Λ : List (Res D))
           simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, Option.some.injEq] at h
           subst h
           simp only [hs1] at hstep ⊢
-          exact hinv.transRet (hstep _ rfl)
+          exact fun hg => hinv.transRet (hstep _ rfl hg)
         | why σ1 r =>
           simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, Option.some.injEq] at h
           subst h
           simp only [hs1] at hstep ⊢
-          exact hinv.transRet (hstep _ rfl)
+          exact fun hg => hinv.transRet (hstep _ rfl hg)
         | logik e => simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, reduceCtorEq] at h
         | hardware e => simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, reduceCtorEq] at h
 
@@ -229,11 +230,11 @@ theorem retryLauf_treu (bo : Option Int) (Λ : List (Res D))
 theorem foreverLauf_treu (bo : Option Int) (Λ : List (Res D))
     (a : D.Annahme) (schritt : World D → Env D Γ → Ausgang V true Γ)
     (inv : World D → Env D Γ → World D × Bool)
-    (hs : ∀ σ ρ, HeldB bo Λ σ.haelt → TreuAusgang W G σ (schritt σ ρ))
+    (hs : ∀ σ ρ, HeldB bo Λ σ.haelt → TreuAusgang W G σ (schritt σ ρ) returnGuard)
     (hi : ∀ σ ρ, HeldB bo Λ σ.haelt → Treu W G σ (inv σ ρ).1) :
     ∀ (n : Nat) (σ : World D) (ρ : Env D Γ),
       HeldB bo Λ σ.haelt →
-      TreuAusgang W G σ (foreverLauf (l := l) a schritt inv n σ ρ) := by
+      TreuAusgang W G σ (foreverLauf (l := l) a schritt inv n σ ρ) returnGuard := by
   intro n
   induction n with
   | zero => intro σ ρ _ σ' h; simp only [Ausgang.welt, foreverLauf, reduceCtorEq] at h
@@ -263,12 +264,12 @@ theorem foreverLauf_treu (bo : Option Int) (Λ : List (Res D))
           simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, Option.some.injEq] at h
           subst h
           simp only [hs1] at hstep ⊢
-          exact hinv.transRet (hstep _ rfl)
+          exact fun hg => hinv.transRet (hstep _ rfl hg)
         | why σ1 r =>
           simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, Option.some.injEq] at h
           subst h
           simp only [hs1] at hstep ⊢
-          exact hinv.transRet (hstep _ rfl)
+          exact fun hg => hinv.transRet (hstep _ rfl hg)
         | logik e => simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, reduceCtorEq] at h
         | hardware e => simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, reduceCtorEq] at h
 
