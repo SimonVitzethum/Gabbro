@@ -52,14 +52,14 @@ theorem lowerAllg104fragment :
     (match lowerAllg uExp104 with
       | .ok (P, fs) => programmImFragmentG P fs
       | .error _ => false) = true := by
-  decide
+  decide +kernel
 
 /-- The footprint check on the generically lowered 104 program. -/
 theorem lowerAllg104fuss :
     (match lowerAllg uExp104 with
       | .ok (P, fs) => fussOrtGB P fs
       | .error _ => false) = true := by
-  decide
+  decide +kernel
 
 /-- Declaration data agreement, construct by construct: the
     generic declaration built from `uExp104` agrees with the
@@ -100,7 +100,7 @@ theorem lowerAllg104data :
     (G104_referenz.gD.signatur
       G104_referenz.g_lies).schreibt
       G104_referenz.GTab.Konto = false := by
-  decide
+  decide +kernel
 
 /-! ## The real-text lexer pin for 104 -/
 
@@ -230,7 +230,7 @@ theorem kette104 : lex src104real = .ok tt104 ∧
       | .ok (P, fs) => programmImFragmentG P fs && fussOrtGB P fs
       | .error _ => false) = true := by
   refine ⟨lex104real, u104parse, u104elab, ?_⟩
-  decide
+  decide +kernel
 
 /-! ## 108 preprocessing: `concurrent` stripping, bare-`u32` norms -/
 
@@ -256,6 +256,6 @@ def uReset : UProg :=
 
 /-- The generic lowering accepts the reset unit: the range elaborates, checks, and expands
     into the typed array store. -/
-theorem uReset_lower : (lowerAllg uReset).toOption.isSome = true := by decide
+theorem uReset_lower : (lowerAllg uReset).toOption.isSome = true := by decide +kernel
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg2

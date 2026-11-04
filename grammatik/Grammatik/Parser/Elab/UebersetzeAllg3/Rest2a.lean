@@ -116,7 +116,7 @@ theorem ptrErg_eq (u : UProg) (n : Nat) :
   unfold sigFnAt sigAt
   by_cases h : n < (sigFns u).length
   · simp only [dite_eq_left h, mkSig]
-  · simp only [dite_eq_right h, dummySig, UFn.ergTy]
+  · simp only [dite_eq_right h, dummySig, UFn.ergTy] <;> rfl
 
 /-- One pointer interface, lowered: its `needs` as the pre, its `gives` as
     the post, mirroring `lowerFnPlain`'s contract part. -/
