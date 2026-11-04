@@ -40,11 +40,17 @@ def hasRangeFold : SExpr → Bool
   | .field x _ | .arrow x _ | .un _ x | .old x => hasRangeFold x
   | .index a b | .bin _ a b => hasRangeFold a || hasRangeFold b
   | .call _ args | .built _ args => hasRangeFoldList args
-  | .ext _ _ args => hasRangeFoldList args
+  | .ext kind names args => isRangeFold (.ext kind names args) || hasRangeFoldList args
 def hasRangeFoldList : List SExpr → Bool
   | [] => false
   | e :: es => hasRangeFold e || hasRangeFoldList es
 end
+
+/-- A source extension retains both its own canonical range-fold test and its children's tests. -/
+theorem hasRangeFold_ext (kind : XKind) (names : List String) (args : List SExpr) :
+    hasRangeFold (.ext kind names args) =
+      (isRangeFold (.ext kind names args) || hasRangeFoldList args) := by
+  rfl
 
 def hasRangeFoldEnde : Option SEnde → Bool
   | none => false
