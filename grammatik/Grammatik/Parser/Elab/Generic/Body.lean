@@ -3,14 +3,17 @@ public import Grammatik.Parser.Elab.Generic.Rewrite
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Generic
 
-/-- Every statement retains its shape; only types, expressions and pending direct calls change. -/
 mutual
+/-- Every statement retains its shape; only types, expressions and pending direct calls change. -/
 def rewriteBody (env : Environment) (bindings : Bindings) : SAnw → RewriteM SAnw
-  | .bind mu n ty value => return .bind mu n (← ty.mapM (rewriteType env bindings))
+  | .bind mu n ty value => do
+    return .bind mu n (← ty.mapM (rewriteType env bindings))
       (← rewriteExpression env bindings value)
-  | .bindQ mu n ty value => return .bindQ mu n (← ty.mapM (rewriteType env bindings))
+  | .bindQ mu n ty value => do
+    return .bindQ mu n (← ty.mapM (rewriteType env bindings))
       (← rewriteExpression env bindings value)
-  | .callIndElse pointer args reason body => return .callIndElse
+  | .callIndElse pointer args reason body => do
+    return .callIndElse
       (← rewriteExpression env bindings pointer) (← args.mapM (rewriteExpression env bindings)) reason
       (← rewriteBody env (bindings.without [reason]) body)
   | .callElse name args reason body => do
@@ -21,16 +24,21 @@ def rewriteBody (env : Environment) (bindings : Bindings) : SAnw → RewriteM SA
     match ← rewriteExpression env bindings (.call name args) with
     | .call target values => pure (.callQ target values)
     | _ => liftResult (.error "reason statement did not produce a direct call")
-  | .bindElse n ty value reason body => return .bindElse n (← ty.mapM (rewriteType env bindings))
+  | .bindElse n ty value reason body => do
+    return .bindElse n (← ty.mapM (rewriteType env bindings))
       (← rewriteExpression env bindings value) reason (← rewriteBody env (bindings.without [reason]) body)
-  | .bindAxiomOpt n ty value => return .bindAxiomOpt n (← ty.mapM (rewriteType env bindings))
+  | .bindAxiomOpt n ty value => do
+    return .bindAxiomOpt n (← ty.mapM (rewriteType env bindings))
       (← rewriteExpression env bindings value)
-  | .bindAxiomOptElse n ty value reason body => return .bindAxiomOptElse n
+  | .bindAxiomOptElse n ty value reason body => do
+    return .bindAxiomOptElse n
       (← ty.mapM (rewriteType env bindings)) (← rewriteExpression env bindings value) reason
       (← rewriteBody env (bindings.without [reason]) body)
-  | .bindLib mu n ty call => return .bindLib mu n (← ty.mapM (rewriteType env bindings))
+  | .bindLib mu n ty call => do
+    return .bindLib mu n (← ty.mapM (rewriteType env bindings))
       { call with args := ← call.args.mapM (rewriteExpression env bindings) }
-  | .set place op value => return .set (← rewriteExpression env bindings place) op
+  | .set place op value => do
+    return .set (← rewriteExpression env bindings place) op
       (← rewriteExpression env bindings value)
   | .shift place before after => return .shift (← rewriteExpression env bindings place) before after
   | .genericCall name words args => do
@@ -46,15 +54,22 @@ def rewriteBody (env : Environment) (bindings : Bindings) : SAnw → RewriteM SA
     | .call n values => pure (.call n values)
     | _ => liftResult (.error "ordinary statement did not produce a direct call")
   | .lcall call => return .lcall { call with args := ← call.args.mapM (rewriteExpression env bindings) }
-  | .cond c yes branches no => return .cond (← rewriteExpression env bindings c)
+  | .cond c yes branches none => do
+    return .cond (← rewriteExpression env bindings c)
       (← rewriteBody env bindings yes) (← branches.mapM (rewriteBody env bindings))
-      (← no.mapM (rewriteBody env bindings))
+      none
+  | .cond c yes branches (some no) => do
+    return .cond (← rewriteExpression env bindings c)
+      (← rewriteBody env bindings yes) (← branches.mapM (rewriteBody env bindings))
+      (some (← rewriteBody env bindings no))
   | .elsif c body => return .elsif (← rewriteExpression env bindings c) (← rewriteBody env bindings body)
-  | .cases value arms => return .cases (← rewriteExpression env bindings value)
+  | .cases value arms => do
+    return .cases (← rewriteExpression env bindings value)
       (← arms.mapM (rewriteBody env bindings))
-  | .arm tag binder body => return .arm tag binder
+  | .arm tag binder body => do
+    return .arm tag binder
       (← rewriteBody env (bindings.without binder.toList) body)
-  | .each binder start domain subject mode raw invariant body =>
+  | .each binder start domain subject mode raw invariant body => do
     return .each binder (← start.mapM (rewriteExpression env bindings)) domain
       (← rewriteExpression env bindings subject) mode
       (← liftResult (substituteRaw (bindings.without [binder]) raw))
@@ -65,23 +80,32 @@ def rewriteBody (env : Environment) (bindings : Bindings) : SAnw → RewriteM SA
   | .waive reasons body => return .waive reasons (← rewriteBody env bindings body)
   | .trimReq e tag => return .trimReq (← rewriteExpression env bindings e) tag
   | .trim e tag body => return .trim (← rewriteExpression env bindings e) tag (← rewriteBody env bindings body)
-  | .locks shared lock body => return .locks shared (← rewriteExpression env bindings lock)
+  | .locks shared lock body => do
+    return .locks shared (← rewriteExpression env bindings lock)
       (← rewriteBody env bindings body)
   | .watch duty body => return .watch duty (← rewriteBody env bindings body)
-  | .emit place value payload => return .emit (← rewriteExpression env bindings place)
+  | .emit place value payload => do
+    return .emit (← rewriteExpression env bindings place)
       (← rewriteExpression env bindings value) payload
-  | .await n ty e payload => return .await n (← ty.mapM (rewriteType env bindings))
+  | .await n ty e payload => do
+    return .await n (← ty.mapM (rewriteType env bindings))
       (← rewriteExpression env bindings e) payload
-  | .swap n ty e mode => return .swap n (← ty.mapM (rewriteType env bindings))
+  | .swap n ty e mode => do
+    return .swap n (← ty.mapM (rewriteType env bindings))
       (← rewriteExpression env bindings e) mode
   | .ret value => return .ret (← value.mapM (rewriteExpression env bindings))
-  | .alloc mu n ty arena count no => return .alloc mu n (← ty.mapM (rewriteType env bindings)) arena
-      (← rewriteExpression env bindings count) (← no.mapM (rewriteBody env bindings))
+  | .alloc mu n ty arena count none => do
+    return .alloc mu n (← ty.mapM (rewriteType env bindings)) arena
+      (← rewriteExpression env bindings count) none
+  | .alloc mu n ty arena count (some no) => do
+    return .alloc mu n (← ty.mapM (rewriteType env bindings)) arena
+      (← rewriteExpression env bindings count) (some (← rewriteBody env bindings no))
   | .reset arena span => do
     let span ← span.mapM fun (start, count) => do
       pure (← rewriteExpression env bindings start, ← rewriteExpression env bindings count)
     pure (.reset arena span)
-  | .grow arena count body => return .grow arena (← rewriteExpression env bindings count)
+  | .grow arena count body => do
+    return .grow arena (← rewriteExpression env bindings count)
       (← rewriteBody env bindings body)
   | .free place => return .free (← rewriteExpression env bindings place)
   | .child body => return .child (← rewriteBody env bindings body)
