@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Gen.Text.Invers.Ausdruck
+public import Grammatik.Gen.Text.Invers.Ausdruck.FoldFree
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -279,9 +280,18 @@ theorem SInv.einv {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
       · simp only [reduceCtorEq] at hb
     simp only [uHaeltWaechter, hall, ite_true]
 
-/-- A plain statement (`uAnw1`) at the head of a run. -/
+/-- A certified unchanged statement enters the core with the same fuel. -/
+theorem reihe_unexpanded (tabs : List UTab) (koepfe : List UFnKopf) (f : Nat) (ctx : UCtx)
+    (statement : SAnw) (rest : List SAnw)
+    (hexpand : expandFoldStmt ctx statement = .ok ([], ctx, statement)) :
+    uAnwReihe tabs koepfe (f + 1) ctx (statement :: rest) =
+      uAnwReiheCore tabs koepfe (f + 1) ctx (statement :: rest) := by
+  rw [uAnwReihe, hexpand]
+  cases uAnwReiheCore tabs koepfe (f + 1) ctx (statement :: rest) <;> rfl
+
+/-- A fold-free plain statement (`uAnw1`) at the head of a run. -/
 theorem anw_set (tabs : List UTab) (koepfe : List UFnKopf) (f : Nat) (ctx : UCtx) (ziel : SExpr) (op : String)
-    (w : SExpr) (rest : List SAnw) :
+    (w : SExpr) (rest : List SAnw) (hfold : needsFoldExpansion w = false) :
     uAnwReihe tabs koepfe (f + 1) ctx (.set ziel op w :: rest) =
       match uAnw1 ctx tabs koepfe (.set ziel op w) with
       | .error e => .error e
@@ -289,7 +299,10 @@ theorem anw_set (tabs : List UTab) (koepfe : List UFnKopf) (f : Nat) (ctx : UCtx
         match uAnwReihe tabs koepfe f ctx rest with
         | .error e => .error e
         | .ok (xs, cE) => .ok (st :: xs, cE) := by
-  rw [uAnwReihe] <;> first | rfl | (intros; simp_all)
+  rw [reihe_unexpanded tabs koepfe f ctx (.set ziel op w) rest (by
+    simp only [expandFoldStmt, expandFoldValue_no_work ctx ctx.names.length w hfold,
+      bind, Except.bind, pure, Except.pure])]
+  simp only [uAnwReiheCore]
 
 /-- A slot write `T.slots[i].f = e;`. -/
 theorem anw1_slot {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
@@ -343,22 +356,33 @@ theorem reihe_nil (f : Nat) (ctx : UCtx) : uAnwReihe tabs koepfe (f + 1) ctx [] 
 
 theorem reihe_anw1 (f : Nat) (ctx : UCtx) (ziel w : SExpr) (rest : List SAnw) (st : UStmt) (xs : List UStmt)
     (cE : UCtx) (h1 : uAnw1 ctx tabs koepfe (.set ziel "=" w) = .ok st)
-    (h2 : uAnwReihe tabs koepfe f ctx rest = .ok (xs, cE)) :
+    (h2 : uAnwReihe tabs koepfe f ctx rest = .ok (xs, cE)) (hfold : needsFoldExpansion w = false) :
     uAnwReihe tabs koepfe (f + 1) ctx (.set ziel "=" w :: rest) = .ok (st :: xs, cE) := by
-  rw [anw_set, h1]
+  rw [anw_set tabs koepfe f ctx ziel "=" w rest hfold, h1]
   simp only [h2]
 
 theorem reihe_bind (f : Nat) (ctx ctx' : UCtx) (x : String) (w : SExpr) (rest : List SAnw) (st : UStmt)
     (xs : List UStmt) (cE : UCtx) (h1 : uBindWert ctx tabs koepfe false x none w = .ok (st, ctx'))
-    (h2 : uAnwReihe tabs koepfe f ctx' rest = .ok (xs, cE)) :
+    (h2 : uAnwReihe tabs koepfe f (foldBindingContext ctx ctx' st) rest = .ok (xs, cE))
+    (hfold : needsFoldExpansion w = false) :
     uAnwReihe tabs koepfe (f + 1) ctx (.bind false x none w :: rest) = .ok (st :: xs, cE) := by
-  rw [uAnwReihe]
+  rw [reihe_unexpanded tabs koepfe f ctx (.bind false x none w) rest (by
+    simp only [expandFoldStmt, expandFoldValue_no_work ctx ctx.names.length w hfold,
+      foldCheckResult, List.isEmpty_nil, ↓reduceIte, bind, Except.bind, pure, Except.pure])]
+  rw [uAnwReiheCore]
   simp only [h1, h2]
 
 theorem reihe_ret (f : Nat) (ctx : UCtx) (v : Option SExpr) (rest : List SAnw) (r : URet) (xs : List UStmt)
-    (cE : UCtx) (h1 : uEnde ctx (some (.ret v)) = .ok r) (h2 : uAnwReihe tabs koepfe f ctx rest = .ok (xs, cE)) :
+    (cE : UCtx) (h1 : uEnde ctx (some (.ret v)) = .ok r) (h2 : uAnwReihe tabs koepfe f ctx rest = .ok (xs, cE))
+    (hfold : ∀ value, v = some value → needsFoldExpansion value = false) :
     uAnwReihe tabs koepfe (f + 1) ctx (.ret v :: rest) = .ok (.ret r :: xs, cE) := by
-  rw [uAnwReihe] <;> first | (simp only [h1, h2]) | (intros; simp_all)
+  rw [reihe_unexpanded tabs koepfe f ctx (.ret v) rest (by
+    cases v with
+    | none => simp only [expandFoldStmt, pure, Except.pure]
+    | some value =>
+      simp only [expandFoldStmt, expandFoldValue_no_work ctx ctx.names.length value (hfold value rfl),
+        foldCheckResult, List.isEmpty_nil, ↓reduceIte, bind, Except.bind, pure, Except.pure])]
+  simp only [uAnwReiheCore, h1, h2]
 
 theorem reihe_locks (f : Nat) (ctx : UCtx) (L : String) (ss rest : List SAnw) (lk : ULock) (body xs : List UStmt)
     (cB cE : UCtx) (hl : ctx.locks.find? (fun x => strEq x.name L) = some lk)
@@ -366,18 +390,26 @@ theorem reihe_locks (f : Nat) (ctx : UCtx) (L : String) (ss rest : List SAnw) (l
     (h2 : uAnwReihe tabs koepfe f ctx rest = .ok (xs, cE)) :
     uAnwReihe tabs koepfe (f + 1) ctx (.locks false (.variable L) (.block ss none) :: rest) =
       .ok ([.lockBeg L] ++ body ++ [.blkEnd] ++ xs, cE) := by
-  rw [uAnwReihe] <;> first | (simp only [hl, h1, h2, Bool.false_eq_true, ite_false]) | (intros; simp_all)
+  rw [reihe_unexpanded tabs koepfe f ctx _ rest (by rfl)]
+  simp only [uAnwReiheCore, hl, h1, h2, Bool.false_eq_true, ite_false]
 
 theorem reihe_cond (f : Nat) (ctx : UCtx) (c : SExpr) (ss : List SAnw) (els : Option SAnw) (rest : List SAnw)
     (cv : UEns) (body elseS xs : List UStmt) (cB cE : UCtx) (hc : uBool ctx c = .ok cv)
     (h1 : uAnwReihe tabs koepfe f ctx ss = .ok (body, cB))
     (hE : (els = none ∧ elseS = []) ∨ ∃ ss2 c2, els = some (.block ss2 none) ∧ uAnwReihe tabs koepfe f ctx ss2 = .ok (elseS, c2))
-    (h2 : uAnwReihe tabs koepfe f ctx rest = .ok (xs, cE)) :
+    (h2 : uAnwReihe tabs koepfe f ctx rest = .ok (xs, cE)) (hfold : needsFoldExpansion c = false) :
     uAnwReihe tabs koepfe (f + 1) ctx (.cond c (.block ss none) [] els :: rest) =
       .ok ([.ifBeg cv] ++ body ++ [.ifElse] ++ elseS ++ [.blkEnd] ++ xs, cE) := by
+  rw [reihe_unexpanded tabs koepfe f ctx _ rest (by
+    simp only [expandFoldStmt, expandFoldValue_no_work ctx ctx.names.length c hfold,
+      bind, Except.bind, pure, Except.pure]), uAnwReiheCore]
   rcases hE with ⟨rfl, rfl⟩ | ⟨ss2, c2, rfl, he⟩
-  · rw [uAnwReihe] <;> first | (simp only [hc, h1, uEndeStmt, h2, uEndetS, Option.isSome_none, Bool.and_self, Bool.and_false, Bool.false_eq_true, ↓reduceIte, List.cons_append, List.nil_append, List.append_nil, List.append_assoc, List.nil_eq, reduceCtorEq, imp_self, implies_true]) | (intros; simp_all)
-  · rw [uAnwReihe] <;> first | (simp only [hc, h1, uEndeStmt, he, List.append_nil, h2, uEndetS, Option.isSome_none, Bool.and_self, Bool.and_false, Bool.false_eq_true, ↓reduceIte, List.cons_append, List.nil_append, List.append_assoc, List.nil_eq, reduceCtorEq, imp_self, implies_true]) | (intros; simp_all)
+  · simp only [uCond, hc, h1, uFoldEndeStmt, expandFoldEnd, uEndeStmt, h2, uEndetS,
+      Option.isSome_none, Bool.and_self, Bool.and_false, Bool.false_eq_true, ↓reduceIte,
+      bind, Except.bind, pure, Except.pure, List.cons_append, List.nil_append, List.append_nil, List.append_assoc]
+  · simp only [uCond, hc, h1, uFoldEndeStmt, expandFoldEnd, uEndeStmt, he, h2, uEndetS,
+      Option.isSome_none, Bool.and_self, Bool.and_false, Bool.false_eq_true, ↓reduceIte,
+      bind, Except.bind, pure, Except.pure, List.cons_append, List.nil_append, List.append_nil, List.append_nil, List.append_assoc]
 
 theorem reihe_each (f : Nat) (ctx ctxS : UCtx) (bnd : String) (s : SExpr) (inv : Option SExpr) (ss rest : List SAnw)
     (tab : String) (iv : UEns) (body xs : List UStmt) (cB cE : UCtx)
@@ -390,7 +422,9 @@ theorem reihe_each (f : Nat) (ctx ctxS : UCtx) (bnd : String) (s : SExpr) (inv :
       .ok (.loopBeg bnd tab iv, ctxS, none) := by
     simp only [uLoopExport, uUnvisitedLoopExport, BEq.rfl, ↓reduceIte, hk]
     rfl
-  rw [uAnwReihe] <;> first | (simp only [header, h1, uEndeStmt, h2, uFilteredBody, List.cons_append, List.nil_append, List.append_nil, List.append_assoc]) | (intros; simp_all)
+  rw [reihe_unexpanded tabs koepfe f ctx _ rest (by rfl)]
+  simp only [uAnwReiheCore, header, h1, uFoldEndeStmt, expandFoldEnd, uEndeStmt, h2, uFilteredBody,
+    bind, Except.bind, pure, Except.pure, List.cons_append, List.nil_append, List.append_nil, List.append_assoc]
 
 
 end Reihe
