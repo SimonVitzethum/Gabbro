@@ -80,7 +80,7 @@ theorem softDiv_replay (s : Bool) (a b ca cb t j : Nat)
     cases s <;> simp only [Bool.false_eq_true, ↓reduceIte] <;> omega
   have magnitude : (if s then -(m : Int) else (m : Int)).natAbs = m := by cases s <;> simp
   have sign : decide ((if s then -(m : Int) else (m : Int)) < 0) = s := by
-    cases s <;> simp [show (0 : Int) < m by omega]
+    cases s <;> simp [show (0 : Nat) < m by omega]
   have replay := softRound_replay_all (if s then -(m : Int) else (m : Int)) e nonzero
   dsimp only at replay
   rw [magnitude, sign, bits] at replay
