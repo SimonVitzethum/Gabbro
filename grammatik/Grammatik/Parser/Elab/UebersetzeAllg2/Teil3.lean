@@ -372,10 +372,11 @@ def lowRegWriteBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) 
     transformer of that signature (resolved, C16). -/
 theorem nachSigAt_eq (u : UProg) (n : Nat) (L : List (Res (declOf u))) :
     nachSig (declOf u) ((declOf u).sigNr n) L =
-      ((((declOf u).sigNr n).inputMarks.foldl
+      (((declOf u).sigNr n).inputMarks.foldl
         (fun acc p => acc.erase (Res.vonMarke (declOf u) p)) L) ++
       (((declOf u).sigNr n).outputMarks.map (Res.vonMarke (declOf u))) := by
   unfold nachSig
+  rfl
 
 /-- `RufPasst` against any signature of the unit, decided over the finite carriers. The
     admitted boundary holds the callee's input marks (C16) and an escrow-ready
