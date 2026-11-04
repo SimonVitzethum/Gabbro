@@ -119,7 +119,8 @@ theorem decrease_ok {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
   subst outside
   have testFrameD := testFrame.mono (Nat.le_succ d)
   have preSkip := preTest.next testFrameD (Nat.le_refl _) (by omega)
-  have skipPre : PreS L m2 _ fp K d
+  have skipPre : PreS L m2
+      (pc + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofNat 64 (16 * test.length)) fp K d
       ([ci 19 (d + 1) 80 0] ++ (stopC failure d ++
         ([ci 18 (16 * (post.length + 1)) 0 0] ++ post))) ρ reserved := by
     simpa only [skip, List.append_assoc] using preSkip
