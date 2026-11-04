@@ -156,6 +156,8 @@ def entfalteFrage (k : FrageKontext) : SAnw → Except String SAnw
     | .error e => .error e
     | .ok ss' => .ok (.block ss' e)
   | s => .ok s
+termination_by value => sizeOf value
+decreasing_by all_goals (simp_wf <;> omega)
 /-- Expand `?` in a statement list. -/
 def entfalteFrageL (k : FrageKontext) : List SAnw → Except String (List SAnw)
   | [] => .ok []
@@ -164,6 +166,8 @@ def entfalteFrageL (k : FrageKontext) : List SAnw → Except String (List SAnw)
     | .ok s' => match entfalteFrageL k ss with
       | .error e => .error e
       | .ok ss' => .ok (s' :: ss')
+termination_by values => sizeOf values
+decreasing_by all_goals (simp_wf <;> omega)
 end
 
 /-- `?` over a shared channel unfolds to the explicit `else` form (definitional: the
