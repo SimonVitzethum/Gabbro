@@ -71,9 +71,10 @@ def rewriteItem (env : Environment) : SItemTief → RewriteM (List SItemTief)
       (← rewriteBody env {} body)]
     else liftResult (.error "generic library translator has no instantiation rule")
   | .constT name ty value => return [.constT name (← rewriteType env {} ty) (← rewriteConstant env value)]
-  | .globT mu name ty value aligned section shared => return [.globT mu name
+  | .globT mu name ty value aligned sectionName shared => do
+    return [.globT mu name
       (← rewriteType env {} ty) (← rewriteConstant env value)
-      (← aligned.mapM (rewriteExpression env {})) section shared]
+      (← aligned.mapM (rewriteExpression env {})) sectionName shared]
   | .concT roots => do
     let roots ← roots.mapM fun (path, args) => do
       if env.declarations.any (fun p => strEq p.1.name (String.intercalate "::" path) &&
@@ -170,8 +171,11 @@ def expandTemplates (source : List SItemTief)
   let literals ← literals.mapM fun (sig, body) => do
     pure (← expandSpecificationContracts specs sig, body)
   let target ← expandDeclarationsBeforeLiterals (names ++ instances.map instanceName) ordinary literals
-  pure { items := target, requirements,
-    generatedNames := instances.map instanceName ++ (literals.map (fun p => p.1.name)).eraseDups }
+  pure {
+    items := target
+    requirements
+    generatedNames := instances.map instanceName ++ (literals.map (fun p => p.1.name)).eraseDups
+  }
 
 /-- Generic syntax belongs to ordinary function bodies in this implementation. -/
 def genericHeader : SItemTief → Bool
@@ -200,13 +204,18 @@ def expand (source : List SItemTief) : Except String (List SItemTief) :=
 theorem expand_ordinary (source target : List SItemTief) (h : expand source = .ok target) :
     target.any genericHeader = false := by
   cases he : expandRaw source [] with
-  | error error => simp [expand, expandDetailed, he] at h
+  | error error => simp [expand, expandDetailed, he, bind, Except.bind, Except.map] at h
   | ok result =>
     cases hg : result.items.any genericHeader with
     | false =>
-      simp [expand, expandDetailed, he, hg] at h
-      cases h
+      have itemsEq : result.items = target := by
+        simpa only [expand, expandDetailed, he, bind, Except.bind, hg,
+          Bool.false_eq_true, ite_false, pure, Except.pure, Except.map,
+          Except.ok.injEq] using h
+      rw [← itemsEq]
       exact hg
-    | true => simp [expand, expandDetailed, he, hg] at h
+    | true =>
+      simp [expand, expandDetailed, he, bind, Except.bind, hg,
+        Functor.map, Except.map, pure, Except.pure] at h
 
 end Gabbro.Grammatik.Parser.Generic
