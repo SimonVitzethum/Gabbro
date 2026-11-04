@@ -89,10 +89,16 @@ theorem owedFailure_gibt (wa wb : World D)
       by_cases h : (schuldet f i && !wahr? (eval wa (P.invariante i) wa .nil)) = true
       · have h2 : (schuldet f i && !wahr? (eval wb (P.invariante i) wb .nil)) = true := by
           rw [← hi]; exact h
-        rw [List.find?_cons_of_pos h, List.find?_cons_of_pos h2]
+        rw [List.find?_cons_of_pos (p := fun j : D.Inv =>
+              schuldet f j && !wahr? (eval wa (P.invariante j) wa .nil)) (a := i) (l := is) h,
+            List.find?_cons_of_pos (p := fun j : D.Inv =>
+              schuldet f j && !wahr? (eval wb (P.invariante j) wb .nil)) (a := i) (l := is) h2]
       · have h2 : ¬(schuldet f i && !wahr? (eval wb (P.invariante i) wb .nil)) = true := by
           intro hcon; apply h; rw [hi]; exact hcon
-        rw [List.find?_cons_of_neg h, List.find?_cons_of_neg h2, ih]
+        rw [List.find?_cons_of_neg (p := fun j : D.Inv =>
+              schuldet f j && !wahr? (eval wa (P.invariante j) wa .nil)) (a := i) (l := is) h,
+            List.find?_cons_of_neg (p := fun j : D.Inv =>
+              schuldet f j && !wahr? (eval wb (P.invariante j) wb .nil)) (a := i) (l := is) h2, ih]
   exact hfind D.invs
 
 /-- The normal-return fault code is unchanged by a release fold. -/
