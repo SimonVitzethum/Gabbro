@@ -197,9 +197,9 @@ structure Scopes (original : List SItemTief) where
 /-- A binding found after any original scheduled prefix remains the first binding in the
     final certified scope. The suffix is evaluated by the same fold used by scalarValues. -/
 theorem Scopes.prefix_lookup {original : List SItemTief} (scope : Scopes original)
-    (prefix suffix : List SItemTief) (values : List (String × Int)) (name : String) (binding : String × Int)
-    (schedule : scope.scalarOrder = prefix ++ suffix)
-    (evaluated : typedConstants scope.declared scope.functions prefix [] = some values)
+    (leading suffix : List SItemTief) (values : List (String × Int)) (name : String) (binding : String × Int)
+    (schedule : scope.scalarOrder = leading ++ suffix)
+    (evaluated : typedConstants scope.declared scope.functions leading [] = some values)
     (found : values.find? (fun entry => strEq entry.1 name) = some binding) :
     scope.values.find? (fun entry => strEq entry.1 name) = some binding := by
   have final := scope.scalarValues
@@ -307,10 +307,10 @@ theorem deriveScopes_custom_negative_zeuge :
 /-- The generic prefix/lookup chain on actual original declarations, with a negative binding
     read by a later checked expression. No fabricated candidate values enter the certificate. -/
 theorem Scopes.prefix_lookup_zeuge :
-    let prefix : List SItemTief := [.constT "BASE" (.atom "i8") (.one (.un "-" (.lit 1)))]
+    let leading : List SItemTief := [.constT "BASE" (.atom "i8") (.one (.un "-" (.lit 1)))]
     let suffix : List SItemTief := [.constT "ANSWER" (.atom "i8")
       (.one (.bin "+" (.variable "BASE") (.lit 43)))]
-    ∃ scope : Scopes (prefix ++ suffix),
+    ∃ scope : Scopes (leading ++ suffix),
       scope.values.find? (fun entry => strEq entry.1 "BASE") = some ("BASE", -1) := by
   dsimp only
   let scope := evaluatedScopes
