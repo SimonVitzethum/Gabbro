@@ -144,17 +144,17 @@ theorem oe_alsBlock : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {k c : Conte
       herr (oe_alsBlock hrest c'.pad)
     rwa [Context.pad_drop] at this
 
-  | _, _, _, _, _, _, .float op a b lo hi rest he hr, c' => by
-    have := OB.bind (out := out) e rest.alsBlock.2 he (oe_alsBlock hr c'.pad)
+  | _, _, _, _, _, _, .float op a b lo hi rest ha hb hr, c' => by
+    have := OB.float (out := out) op a b lo hi rest.alsBlock.2 ha hb (oe_alsBlock hr c'.pad)
     rwa [Context.pad_drop] at this
-  | _, _, _, _, _, _, .floatLit q lo hi rest he hr, c' => by
-    have := OB.bind (out := out) e rest.alsBlock.2 he (oe_alsBlock hr c'.pad)
+  | _, _, _, _, _, _, .floatLit q lo hi rest hr, c' => by
+    have := OB.floatLit (out := out) q lo hi rest.alsBlock.2 (oe_alsBlock hr c'.pad)
     rwa [Context.pad_drop] at this
   | _, _, _, _, _, _, .floatOf e lo hi rest he hr, c' => by
-    have := OB.bind (out := out) e rest.alsBlock.2 he (oe_alsBlock hr c'.pad)
+    have := OB.floatOf (out := out) e lo hi rest.alsBlock.2 he (oe_alsBlock hr c'.pad)
     rwa [Context.pad_drop] at this
-  | _, _, _, _, _, _, .floatNarrow e lo hi sonst rest he hr, c' => by
-    have := OB.bind (out := out) e rest.alsBlock.2 he (oe_alsBlock hr c'.pad)
+  | _, _, _, _, _, _, .floatNarrow e lo hi sonst rest he hs hr, c' => by
+    have := OB.floatNarrow (out := out) e lo hi sonst rest.alsBlock.2 he hs (oe_alsBlock hr c'.pad)
     rwa [Context.pad_drop] at this
 /-- **An `else` branch in front of its continuation.** -/
 theorem OR.sonst {l : Bool} {Γ : Ctx} {Λ Λk : List (Res D)} {k c : Context} {e : Endblock D V l Γ Λ}
