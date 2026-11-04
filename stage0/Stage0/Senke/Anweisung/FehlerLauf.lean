@@ -125,6 +125,7 @@ theorem torElse_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {�
           (((a2.mono (Nat.le_succ _)).trans a3).mono (Nat.zero_le _))
     | none =>
       rw [result] at checked
-      exact .inr (.inr ⟨rfl, Stops.prefix s12 checked⟩)
+      exact .inr (.inr ⟨rfl, Stops.prefix s12
+        (by simpa only [fehlC_len, pc_add] using checked)⟩)
 
 end Gabbro.Stage0.Senke
