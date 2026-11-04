@@ -66,15 +66,17 @@ def resolveTaggedDeclaration (items : List SItemTief) (decl : SItemTief) (spec :
     | [ty] =>
       if strEq i.group spec then some (TaggedImplementation.mk (Spec.canonicalType items 128 ty)
         (i.functions.filterMap fun
-          | .fnT sig _ => some (sig.name, { sig with name := Spec.implementationName index sig.name,
-              params := sig.params.map (fun (n, t) => (n, Spec.canonicalType items 128 t)),
+          | .fnT sig _ => some (sig.name, { sig with
+              name := Spec.implementationName index sig.name
+              params := sig.params.map (fun (n, t) => (n, Spec.canonicalType items 128 t))
               res := sig.res.map (Spec.canonicalType items 128) })
           | _ => none)) else none
     | _ => none
   let variants := variants.map fun (n, t) => (n, t.map (Spec.canonicalType items 128))
   let functions := functions.map fun original =>
     let sig := taggedCanonicalSignature parameter original
-    { sig with params := sig.params.map (fun (n, t) => (n, Spec.canonicalType items 128 t)),
+    { sig with
+      params := sig.params.map (fun (n, t) => (n, Spec.canonicalType items 128 t))
       res := sig.res.map (Spec.canonicalType items 128) }
   let checked ← checkTaggedGroup functions variants impls
   let mut output := [decl]
@@ -86,10 +88,12 @@ def resolveTaggedDeclaration (items : List SItemTief) (decl : SItemTief) (spec :
       (impls.flatMap (·.functions)).flatMap fun (_, actual) =>
         if c.implementation == some actual.name then
           actual.klauseln.flatMap (fun | .effs es => es | _ => []) else []
-    let generated := { sig with art := "impl", name := taggedDispatchName sumName spec sig.name,
-      params := sig.params.map fun (n, t) => (n, taggedSubstituteSelf (.atom sumName) t),
+    let generated := { sig with
+      art := "impl"
+      name := taggedDispatchName sumName spec sig.name
+      params := sig.params.map fun (n, t) => (n, taggedSubstituteSelf (.atom sumName) t)
       klauseln := sig.klauseln.filter (fun | .effs _ => false | _ => true) ++ [.effs effects] }
-    let body ← expandTaggedDispatch (.variable ((sig.params[receiver]?).getD ("", .atom "")).1)
+    let body ← expandTaggedDispatch (.variable (((sig.params[receiver]?).getD ("", .atom "")).1))
       (args.take receiver) (args.drop (receiver + 1)) cases (taggedCallBody items generated)
     output := output ++ [.fnT generated (.block [body] none)]
     bindings := bindings ++ [⟨spec ++ "::" ++ sig.name, receiver, sumName, generated⟩]
