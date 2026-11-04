@@ -143,7 +143,7 @@ theorem unknown_instance_zeuge :
       .error "spec.call.implementation.missing" := by rfl
 
 theorem explicit_statement_resolution_zeuge :
-    (Walk.mk shape true).statement [] 1000
+    ({ source := shape, instantiate := true } : Walk).statement [] 1000
       (.genericCall "Shape::area" ["index into Circles"] [.variable "c"]) =
       .ok (.call "$spec$0$area" [.variable "c"]) := by rfl
 

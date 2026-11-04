@@ -11,7 +11,10 @@ namespace Gabbro.Grammatik.Parser.Spec
     resolver. This pass never admits a program: every remaining call must resolve there. -/
 def resolveKnownBodies (source : List SItemTief) : SItemTief → Except String SItemTief
   | .fnT sig body => do
-    let rewrite : Walk := { source, instantiate := false, resolveSpecs := false,
+    let rewrite : Walk := {
+      source
+      instantiate := false
+      resolveSpecs := false
       exprRewrite := fun locals _ e => do
         let resolve := fun name types args =>
           match resolveCall source locals name types args with
@@ -39,7 +42,7 @@ def expand (items : List SItemTief) : Except String (List SItemTief) := do
   check items
   let concrete := materialize items
   if !uniqueNames ((functionHeads concrete).map (·.name)) then throw "spec.function.collision"
-  let output ← concrete.mapM ((Walk.mk items true).item 100000)
+  let output ← concrete.mapM (({ source := items, instantiate := true } : Walk).item 100000)
   if ordinary items output then return output else throw "spec.output"
 
 /-- Every successful instantiation passes the ordinary-form gate, for arbitrary input programs.
@@ -53,7 +56,7 @@ theorem expand_ordinary {items output : List SItemTief} (h : expand items = .ok 
     simp only [hc, bind, Except.bind] at h
     split at h
     · simp at h
-    · cases hw : (materialize items).mapM ((Walk.mk items true).item 100000) with
+    · cases hw : (materialize items).mapM (({ source := items, instantiate := true } : Walk).item 100000) with
       | error e => simp [hw] at h
       | ok result =>
         simp only [hw, bind, Except.bind] at h
