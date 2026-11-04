@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Logik.Vertraege.EinpassenVoll.Teil1Basis
-public import Grammatik.Kern.Syntax.Typen.FloatOrder
+public import NativeFloat.Order
 import all Grammatik.Logik.Vertraege.EinpassenVoll.Teil1Basis
 
 public import Grammatik.Kern.Semantik.Semantik
@@ -55,17 +55,17 @@ theorem gleitBarB_iff (lo hi : Int × Int) :
     simp only [gleitBarB, gleitZeugeB, Bool.or_eq_true_iff, Bool.and_eq_true_iff]
     cases ha : gleitEndlich (bruch lo) with
     | true =>
-        exact Or.inl (Or.inl ⟨⟨rfl, NativeFloat.le_refl ha⟩,
-          NativeFloat.le_trans v.lo_le v.le_hi⟩)
+        exact Or.inl (Or.inl ⟨⟨rfl, RootNativeFloat.le_refl ha⟩,
+          RootNativeFloat.le_trans v.lo_le v.le_hi⟩)
     | false =>
         cases hb : gleitEndlich (bruch hi) with
         | true =>
-            exact Or.inl (Or.inr ⟨⟨rfl, NativeFloat.le_trans v.lo_le v.le_hi⟩,
-              NativeFloat.le_refl hb⟩)
+            exact Or.inl (Or.inr ⟨⟨rfl, RootNativeFloat.le_trans v.lo_le v.le_hi⟩,
+              RootNativeFloat.le_refl hb⟩)
         | false =>
             exact Or.inr ⟨⟨gleitNull_endlich,
-              NativeFloat.lower_le ha v.endlich gleitNull_endlich v.lo_le⟩,
-              NativeFloat.le_upper hb v.endlich gleitNull_endlich v.le_hi⟩
+              RootNativeFloat.lower_le ha v.endlich gleitNull_endlich v.lo_le⟩,
+              RootNativeFloat.le_upper hb v.endlich gleitNull_endlich v.le_hi⟩
 
 end Gleit
 

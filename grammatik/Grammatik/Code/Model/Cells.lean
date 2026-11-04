@@ -1,6 +1,6 @@
 module
 public import Grammatik.Code.Model.Types
-public import Grammatik.Kern.Syntax.Typen.FloatTransport
+public import NativeFloat.Transport
 @[expose] public section
 
 
@@ -171,14 +171,14 @@ theorem decLE_encLE_flt (g : F32) :
     Ty.decLE .flt (Val.encLE (.flt g)) = some (.flt g) := by
   have hlt : g.toBits.toNat < 256 ^ 4 := by simpa using g.toBits.toNat_lt_size
   simp only [Ty.decLE, Val.encLE, natBytes_length, bytesNat_natBytes, if_true, Option.map_some]
-  rw [Nat.mod_eq_of_lt hlt, UInt32.ofNat_toNat, Gabbro.Grammatik.NativeFloat.bits32_roundtrip]
+  rw [Nat.mod_eq_of_lt hlt, UInt32.ofNat_toNat, RootNativeFloat.bits32_roundtrip]
 
 /-- Native binary64 storage has the same complete-value transport. -/
 theorem decLE_encLE_dbl (g : F64) :
     Ty.decLE .dbl (Val.encLE (.dbl g)) = some (.dbl g) := by
   have hlt : g.toBits.toNat < 256 ^ 8 := by simpa using g.toBits.toNat_lt_size
   simp only [Ty.decLE, Val.encLE, natBytes_length, bytesNat_natBytes, if_true, Option.map_some]
-  rw [Nat.mod_eq_of_lt hlt, UInt64.ofNat_toNat, Gabbro.Grammatik.NativeFloat.bits_roundtrip]
+  rw [Nat.mod_eq_of_lt hlt, UInt64.ofNat_toNat, RootNativeFloat.bits_roundtrip]
 /-! ## Byte order -/
 
 /-- Cells in memory order: the target's byte order is a parameter. -/

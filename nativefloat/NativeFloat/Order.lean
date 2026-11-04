@@ -3,7 +3,7 @@ module
 public import Init.Data.Float
 @[expose] public section
 
-namespace Gabbro.Grammatik.NativeFloat
+namespace RootNativeFloat
 open Float.Model
 open Float.Model.UnpackedFloat
 
@@ -85,4 +85,4 @@ theorem le_upper {a x y : Float} (ha : a.isFinite = false)
     Float.le y a = true :=
   unpacked_upper a.toModel.unpack x.toModel.unpack y.toModel.unpack ha hx hy xa
 
-end Gabbro.Grammatik.NativeFloat
+end RootNativeFloat

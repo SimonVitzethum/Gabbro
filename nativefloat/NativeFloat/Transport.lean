@@ -4,7 +4,7 @@ public import Init.Data.Float
 import Init.Data.UInt.Bitwise
 @[expose] public section
 
-namespace Gabbro.Grammatik.NativeFloat
+namespace RootNativeFloat
 open Float.Model Float.Model.UnpackedFloat
 
 private theorem sign_roundtrip (b : BitVec 1) : Sign.toBitVec (Sign.ofBitVec b) = b := by
@@ -239,4 +239,4 @@ theorem finite_word32_mask (word : UInt32) :
   simp only [decide_eq_true_eq, bne_iff_ne]
   exact not_congr fields.symm
 
-end Gabbro.Grammatik.NativeFloat
+end RootNativeFloat

@@ -1,12 +1,12 @@
 /- Correspondence of native integer conversions and the toolchain model. -/
 module
-public import Grammatik.Kern.Syntax.Typen.FloatTransport
+public import NativeFloat.Transport
 public import Init.Data.OfScientific
 public import Init.Data.SInt.Float
 import Init.Data.SInt.Lemmas
 @[expose] public section
 
-namespace Gabbro.Grammatik.NativeFloat
+namespace RootNativeFloat
 open Float.Model
 open Float.Model.UnpackedFloat
 
@@ -457,4 +457,4 @@ theorem ofInt_not_nan (z : Int) : (Float.ofInt z).isNaN = false := by
   · rfl
   · exact round_not_nan _ _ _ _
 
-end Gabbro.Grammatik.NativeFloat
+end RootNativeFloat

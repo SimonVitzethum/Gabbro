@@ -1,11 +1,11 @@
 /- Native CPU conversion and scaling of the existing wide integer form. -/
 module
-public import Grammatik.Kern.Syntax.Typen.NativeIntScaleCore
-import all Grammatik.Kern.Syntax.Typen.NativeIntScaleCore
-import all Grammatik.Kern.Syntax.Typen.NativeIntConversion
+public import NativeFloat.IntScaleCore
+import all NativeFloat.IntScaleCore
+import all NativeFloat.IntConversion
 @[expose] public section
 
-namespace Gabbro.Grammatik.NativeFloat
+namespace RootNativeFloat
 open Float.Model
 open Float.Model.UnpackedFloat
 open NativeScale
@@ -64,4 +64,4 @@ theorem ofInt_jam56 (z : Int) (large : 2 ^ 55 ≤ z.natAbs) :
   rw [integer_round z nonzero]
   exact congrArg UInt64.ofBitVec (packed_product s n large)
 
-end Gabbro.Grammatik.NativeFloat
+end RootNativeFloat

@@ -1,12 +1,12 @@
 /- Canonical native rounding states used by wide integer conversion. -/
 module
-public import Grammatik.Kern.Syntax.Typen.NativeIntConversion
-public import Grammatik.Kern.Syntax.Typen.NativeIntSticky
-import all Grammatik.Kern.Syntax.Typen.NativeIntConversion
-import all Grammatik.Kern.Syntax.Typen.NativeIntSticky
+public import NativeFloat.IntConversion
+public import NativeFloat.IntSticky
+import all NativeFloat.IntConversion
+import all NativeFloat.IntSticky
 @[expose] public section
 
-namespace Gabbro.Grammatik.NativeFloat.NativeScale
+namespace RootNativeFloat.NativeScale
 open Float.Model
 open Float.Model.UnpackedFloat
 
@@ -325,4 +325,4 @@ private theorem packed_product (s : Sign) (n : Nat) (large : 2 ^ 55 ≤ n) :
       rw [packed_overflow s _ ((k : Int) + 3) (by omega) (by omega),
         packed_overflow s _ (3 + 969) (by omega) (by decide)]
 
-end Gabbro.Grammatik.NativeFloat.NativeScale
+end RootNativeFloat.NativeScale

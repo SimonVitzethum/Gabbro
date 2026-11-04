@@ -1,6 +1,6 @@
 module
 public import Grammatik.Kern.Syntax.Typen.Fall
-public import Grammatik.Kern.Syntax.Typen.FloatTransport
+public import NativeFloat.Transport
 
 public import Grammatik.Kern.Semantik.Semantik
 public import Grammatik.Kern.Semantik.Semantik.T1.SummeTransport
@@ -75,7 +75,7 @@ theorem gleitWortPasst_voll (lo hi : Int × Int) (v : Gleit lo hi) :
   have hlt : v.x.toBits.toNat < 18446744073709551616 := v.x.toBits.toNat_lt_size
   unfold gleitWortPasst
   rw [if_pos ⟨Int.natCast_nonneg _, by unfold gleitWortGrenze; omega⟩,
-    Int.toNat_natCast, UInt64.ofNat_toNat, NativeFloat.bits_roundtrip]
+    Int.toNat_natCast, UInt64.ofNat_toNat, RootNativeFloat.bits_roundtrip]
   unfold gleitPasst
   rw [dif_pos ⟨v.endlich, v.lo_le, v.le_hi⟩]
 

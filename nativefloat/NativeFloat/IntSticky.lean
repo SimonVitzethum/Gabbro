@@ -5,7 +5,7 @@ import Init.Data.Nat.Mod
 import Init.Data.Nat.Bitwise.Lemmas
 @[expose] public section
 
-namespace Gabbro.Grammatik.NativeFloat
+namespace RootNativeFloat
 open Float.Model.UnpackedFloat
 
 private theorem mod_mul_zero (n a b : Nat) (positive : 0 < a) :
@@ -79,4 +79,4 @@ theorem jam56_shift (n k : Nat) :
     simp only [bne_iff_ne]
     exact not_congr (jam_low_zero n k)
 
-end Gabbro.Grammatik.NativeFloat
+end RootNativeFloat
