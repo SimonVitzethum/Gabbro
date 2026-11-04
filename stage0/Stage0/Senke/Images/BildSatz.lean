@@ -129,7 +129,23 @@ theorem bild_wurzel_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List
       (by have := hl.hysye; have := hl.hyhi; have := hl.hylo; have := hl.hyord; omega)
   have rootBound : j < (starts.map (·.1)).length := by
     simpa only [List.length_map] using hj
-  -- Transport the complete typed start before selecting its function and environment.
+  -- Bind the outcome's dependent motive to the whole typed start before transport.
+  let rootValid : (Σ f : D.Fn, Env D (D.params f)) → Prop := fun root =>
+    ∀ τ (x : Var (D.params root.1) τ), ValueValid b.Y τ (root.2.get x)
+  let rootOutcome : (Σ f : D.Fn, Env D (D.params f)) → Prop := fun root =>
+    match (rufAt P O b.passes b.depth root.1 σ root.2 : RufAusgang root.1) with
+    | .ok _ _ => ∃ t' m' q, Star
+        ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
+          BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = 60
+    | .logik e => Stops
+        ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
+          BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m (logikCode e)
+    | .hardware e => Stops
+        ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
+          BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m (hwCode e)
+    | _ => False
+  change rootValid (starts[j]'hj) at hval
+  change rootOutcome (starts[j]'hj)
   generalize rootEq : (starts[j]'hj) = root at hval ⊢
   rcases root with ⟨rootFn, rootEnv⟩
   have functionEq : (starts.map (·.1))[j]'rootBound = rootFn := by
@@ -141,6 +157,6 @@ theorem bild_wurzel_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List
   have result := bild_wurzel (hT := hT) (hV := hV) (passes := b.passes) hl hm2 j
     rootBound σ rootEnv argumentsEq hval hWa
     (hl.sync locks (by simp only [List.length_map]; omega))
-  simpa only [List.length_map] using result
+  simpa only [rootOutcome, List.length_map] using result
 
 end Gabbro.Stage0.Senke
