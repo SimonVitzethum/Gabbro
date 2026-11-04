@@ -66,18 +66,42 @@ def images : List (String × Except String (List Runner.B) × Nat) :=
 theorem float_lowering_zeuge : images.all (fun x => x.2.1.isOk) = true := by
   decide +kernel
 
+/-- Direct ending continuations retain computed conversion, arithmetic and both
+    narrowing branches through the ordinary complete image pipeline. -/
+def ending (n : Int) : Endblock D (vertragVon D entry) false [] [] :=
+  .bind (.add (.lit n) (.lit 1))
+    (.floatOf (.var .here) (-10, 1) (10, 1)
+      (.floatLit (1, 1) (-10, 1) (10, 1)
+        (.float .add (.var .here) (.var (.there .here)) (-20, 1) (20, 1)
+          (.floatNarrow (.var .here) (0, 1) (5, 1)
+            (retN 41 (by decide) (by decide)) (retN 7 (by decide) (by decide))))))
+
+def endingImages : List (String × Except String (List Runner.B) × Nat) :=
+  [("float-end-inside", imageOf (ending 1), 7),
+   ("float-end-fallback", imageOf (ending 8), 41),
+   ("float-end-range-failure", imageOf (ending 20), 107)]
+
+theorem float_end_image_zeuge : endingImages.all (fun x => x.2.1.isOk) = true := by
+  decide +kernel
+
+/-- The complete canonical outcomes retain the world and exact return payload;
+    out-of-range conversion remains the existing IEEE range failure. -/
+theorem float_end_semantics_zeuge (O : Orakel D) (passes : Nat)
+    (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f) (σ : World D) :
+    execEnd O passes R (ending 1) σ .nil =
+        .zurueck σ (⟨7, by decide, by decide⟩ : Zahl 0 100) ∧
+    execEnd O passes R (ending 8) σ .nil =
+        .zurueck σ (⟨41, by decide, by decide⟩ : Zahl 0 100) ∧
+    execEnd O passes R (ending 20) σ .nil = .logik .bereich := by
+  constructor
+  · cbv
+  · constructor <;> cbv
+
 /-- Signed zeros share a key and neither is strictly less than the other in G. -/
 theorem float_signed_zero_zeuge :
     floatKey ⟨true, 0, 0⟩ = 0 ∧ floatKey ⟨false, 0, 0⟩ = 0 ∧
     gleitLt ⟨true, 0, 0⟩ ⟨false, 0, 0⟩ = false ∧
     gleitLt ⟨false, 0, 0⟩ ⟨true, 0, 0⟩ = false ∧
     gleitLe ⟨true, 0, 0⟩ ⟨false, 0, 0⟩ = true := by decide +kernel
-
-/-- IEEE arithmetic still requires its complete software proof. -/
-theorem float_refused_zeuge :
-    lowB 1 (fun _ => 0) (layU u (fun _ => none) 0) (⟨[], none, 0, 0, 0⟩ : FrameLayout) ([], 0) [] (0, 0)
-      (show Body from .floatLit (1, 1) (0, 1) (10, 1)
-        (.float .add (.var .here) (.var .here) (0, 1) (10, 1) .nil)) = none := by
-  decide +kernel
 
 end Gabbro.Stage0.Senke.FloatProbe
