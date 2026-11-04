@@ -109,8 +109,19 @@ theorem wert_bool_fehler {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)}
         | some ix =>
           have hz := zugriff_slot H t f i' ix (idx_ok H t (sizeOf i + 1) i (by omega) i' ix hi hx) hL
           simp only [slotS] at hz
-          simp only [uWertBody, uRechne, uWertBlatt, uGrenzwort, hz, H.boolFeld t f, hb, decide_true, ↓reduceIte,
-  Except.error.injEq, exists_eq']
+          have leaf : uWertBlatt ctx (slotS (nTab (tN z t)) (nFeld (show Fin _ from f).val) i') =
+              .error "bool field as a number" := by
+            simp only [slotS, uWertBlatt, uGrenzwort, hz, H.boolFeld t f, hb, decide_true, ↓reduceIte]
+          have base : uRechne ctx (uWertBlatt ctx)
+              (.index (.field (.variable (nTab (tN z t))) "slots") i') =
+              .error "value without G form" := by
+            simp only [uRechne, uTraegerIndex, strEq_eq, String.reduceEq, decide_true, ↓reduceIte,
+              uWertBlatt, uGrenzwort, uZugriff, uPraemisse, decide_false, Bool.or_self,
+              Bool.false_eq_true]
+          refine ⟨"bool field as a number", ?_⟩
+          change uRechne ctx (uWertBlatt ctx)
+            (slotS (nTab (tN z t)) (nFeld (show Fin _ from f).val) i') = _
+          rw [uRechne, leaf, base]
       · simp only [reduceCtorEq] at hu
   | lt a b =>
     simp only [delabE] at hd
@@ -292,8 +303,8 @@ private theorem paramNr_find : ∀ (names : List String) (k : Nat) (name : Strin
   | first :: rest, k, name, j, h => by
       by_cases he : strEq first name = true
       · simpa only [uParamNrAux, List.findIdx?.go, he, ↓reduceIte, Except.ok.injEq, Option.some.injEq] using h
-      · simp only [uParamNrAux, he, ↓reduceIte] at h
-        simpa only [List.findIdx?.go, he, ↓reduceIte] using paramNr_find rest (k + 1) name j h
+      · simp only [uParamNrAux, he, Bool.false_eq_true, ↓reduceIte] at h
+        simpa only [List.findIdx?.go, he, Bool.false_eq_true, ↓reduceIte] using paramNr_find rest (k + 1) name j h
 
 /-- The existing side classifier and the actual context rows certify the complete type probe. -/
 theorem scalar_type {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
@@ -357,8 +368,10 @@ theorem printed_left_scalar {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaratio
     intro τ e hn s hd hf op a b hbin u hu
     cases e with
     | widen _ _ value =>
+      have accepted : (uOfS z art none value).isSome = true := by
+        simpa only [uOfS, uOfB, Option.isSome_none, Bool.false_eq_true, or_false] using hf
       exact ih value (by simp only [Expr.widen.sizeOf_spec, sizeOf_default, add_zero] at hn; omega)
-        s hd (by simpa only [uOfS, uOfB, Option.isSome_none, Bool.false_eq_true, or_false] using hf) op a b hbin u hu
+        s hd (Or.inl accepted) op a b hbin u hu
     | add left right | sub left right | mul left right | lt left right | le left right | eq left right =>
       simp only [delabE] at hd
       cases hl : delabE z none left <;> cases hr : delabE z none right <;>
