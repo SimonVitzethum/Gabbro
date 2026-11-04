@@ -40,30 +40,36 @@ theorem putBytesWords_ok {Γ : Ctx} {Λ : List (Res D)} {a b H : Int}
       simp only [putBytesWordsL, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at made
       obtain ⟨rfl, rfl⟩ := made
       exact ⟨m, by simpa using Star.refl ⟨pc, fp⟩ m, AgreeW.refl _ _ _ _ _, pre.env, world⟩
-    · simp only [putBytesWordsL, if_neg zero, bind, Option.bind_eq_some_iff,
-        pure, Option.some.injEq] at made
+    · simp only [putBytesWordsL, ite_eq_right zero, bind, Option.bind_eq_some_iff, pure] at made
       obtain ⟨⟨idx, ti⟩, indexMade, ⟨kernel, tk⟩, kernelMade, continuation⟩ := made
       let s := frei (ByteCapture Γ a b H) reserved
       let leading := [ci 2 s (frei Γ reserved + q) 0] ++ idx ++ kernel
+      have guarded :
+          (if more : 8 < n then
+            (putBytesWordsL L (Γ := Γ) (Λ := Λ) t f a b H lower reserved words
+              (n - 8) (q + 1) (by omega)).bind fun result =>
+                some (leading ++ result.1, max (s + 2) (max ti (max tk result.2)))
+          else some (leading ++ [], max (s + 2) (max ti (max tk (s + 2))))) = some (c, top) := by
+        simpa only [s, leading, List.append_assoc] using continuation
       have remainder : ∃ (rest : List II) (tr : Nat),
           (if more : 8 < n then
             putBytesWordsL L (Γ := Γ) (Λ := Λ) t f a b H lower reserved words
               (n - 8) (q + 1) (by omega)
           else some ([], s + 2)) = some (rest, tr) ∧
           (leading ++ rest, max (s + 2) (max ti (max tk tr))) = (c, top) := by
-        -- The do elaborator keeps the result bind inside the reflected guard.
+        -- Recover the whole canonical conditional before eliminating its result bind.
         by_cases more : 8 < n
-        · have branch := continuation
-          simp only [decide_eq_true more, bind, Option.bind_eq_some_iff,
-            pure, Option.some.injEq] at branch
+        · have branch := guarded
+          rw [dite_eq_left more] at branch
+          simp only [Option.bind_eq_some_iff, Option.some.injEq] at branch
           obtain ⟨⟨rest, tr⟩, restMade, output⟩ := branch
           refine ⟨rest, tr, ?_, ?_⟩
-          · simpa only [dif_pos more] using restMade
-          · simpa only [s, leading] using output
-        · refine ⟨[], s + 2, ?_, ?_⟩
-          · simp only [dif_neg more]
-          · simpa only [decide_eq_false more, bind, Option.bind, pure,
-              Option.some.injEq, s, leading] using continuation
+          · simpa only [dite_eq_left more] using restMade
+          · exact output
+        · have branch := guarded
+          rw [dite_eq_right more] at branch
+          refine ⟨[], s + 2, ?_, Option.some.inj branch⟩
+          simp only [dite_eq_right more]
       obtain ⟨rest, tr, restMade, output⟩ := remainder
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj output
       change max (s + 2) (max ti (max tk tr)) ≤ Ks at fits
@@ -77,7 +83,7 @@ theorem putBytesWords_ok {Γ : Ctx} {Λ : List (Res D)} {a b H : Int}
       have run1 : Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * leading.length), fp⟩ m1 := by
         simpa only [leading, List.length_append, List.length_singleton] using s1
       by_cases more : 8 < n
-      · simp only [dif_pos more] at restMade
+      · simp only [dite_eq_left more] at restMade
         have chunkSize : min 8 n = 8 := Nat.min_eq_left (by omega)
         have far := codeFar_right (n := leading.length) (k := rest.length)
           (by simpa only [List.length_append] using p.far)
@@ -97,7 +103,6 @@ theorem putBytesWords_ok {Γ : Ctx} {Λ : List (Res D)} {a b H : Int}
               dropBytes (8 * (q + 1)) z.n := by
             rw [← dropBytes_add]
             congr 1
-            omega
           have chunks : zahlZuBytes n (dropBytes (8 * q) z.n) =
               zahlZuBytes 8 (byteLimb z.n q).n ++ zahlZuBytes (n - 8) (dropBytes (8 * (q + 1)) z.n) := by
             have splitBytes := zahlZuBytes_append 8 (n - 8) (dropBytes (8 * q) z.n)
@@ -105,9 +110,11 @@ theorem putBytesWords_ok {Γ : Ctx} {Λ : List (Res D)} {a b H : Int}
             simpa only [zahlZuBytes_limb 8 (by decide)] using splitBytes
           have advance : k.n + 8 * (q : Int) + 8 = k.n + 8 * ((q + 1 : Nat) : Int) := by
             simp only [Int.natCast_add, Int.natCast_one, Int.mul_add, Int.mul_one, Int.add_assoc]
-          rw [chunks, World.schreibBytes_append, zahlZuBytes_length, advance]
+          rw [chunks, World.schreibBytes_append, zahlZuBytes_length]
+          simp only [show ((8 : Nat) : Int) = (8 : Int) from rfl]
+          rw [advance]
           exact world2
-      · simp only [dif_neg more, Option.some.injEq, Prod.mk.injEq] at restMade
+      · simp only [dite_eq_right more, Option.some.injEq, Prod.mk.injEq] at restMade
         obtain ⟨rfl, rfl⟩ := restMade
         refine ⟨m1, ?_, ch1, env1, ?_⟩
         · simpa only [leading, List.length_append, List.length_singleton, List.length_nil, Nat.add_zero]
