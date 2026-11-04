@@ -66,7 +66,9 @@ theorem stmtOrteP_mitRumpf {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' :
   | _, _, _, _, .onWhy r' arms => by simp only [stmtOrteP, grundArmsOrteP_mitRumpf arms]
   | _, _, _, _, .call _ _ _ _ => rfl
   | _, _, _, _, .callInd _ _ _ _ => rfl
-  | _, _, _, _, .callIndElse _ _ _ _ _ err => by simp only [stmtOrteP, endblockOrteP_mitRumpf err]
+  | _, _, _, _, .callIndElse _ _ _ _ _ err => by
+      simp only [stmtOrteP, endblockOrteP_mitRumpf err]
+      rfl
   | _, _, _, _, .locks _ _ body => by simp only [stmtOrteP, blockOrteP_mitRumpf body]
   | _, _, _, _, .breaking _ body => by simp only [stmtOrteP, blockOrteP_mitRumpf body]
   | _, _, _, _, .traverse _ _ body => by simp only [stmtOrteP, blockOrteP_mitRumpf body]
