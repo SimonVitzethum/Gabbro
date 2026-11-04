@@ -1,4 +1,7 @@
 module
+public import Stage0.Senke.Anweisung.Faelle.Gleit.EndLiteral
+public import Stage0.Senke.Anweisung.Faelle.Gleit.EndAdd
+public import Stage0.Senke.Anweisung.Faelle.Gleit.EndNarrow
 public import Stage0.Senke.Anweisung.Satz.Teil2Opt
 public import Stage0.Senke.Anweisung.Satz.Teil2OptElse
 public import Stage0.Senke.Anweisung.Satz.Teil2OptNone
@@ -327,6 +330,45 @@ theorem lowEnd_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f 
   | _, Γ, Λ, .retWhyScoped r R, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr => by
     exact endRetWhyScoped_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens (r := r) (Rr := R)
       c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
+
+  | _, Γ, Λ, .float op a b low high rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr => by
+      have hprefix := functionFrame_prefix P f
+      apply Ret.ofSim
+      exact endFloatArithmetic_case op hS hA hlo0 hens
+        (fun {pr ex} c top h hK hs hW m pc σ ρ hp _ hlo hu hk hWa hpr =>
+          Ret.toSim (lowEnd_ok (O := O) (passes := passes) (R := R) (fp := fp) (K := K) (Ks := Ks)
+            (σ0 := σ0) (reserved := reserved) (pr := pr) (ex := ex) hS hA hlo0 hens rest
+            c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr))
+        c top h hK hs hW m pc σ ρ hp (by omega) hlo hu hk hWa hpr
+  | _, Γ, Λ, .floatLit q low high rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr => by
+      have hprefix := functionFrame_prefix P f
+      apply Ret.ofSim
+      exact endFloatLit_case hS hA hlo0 hens
+        (fun {pr ex} c top h hK hs hW m pc σ ρ hp _ hlo hu hk hWa hpr =>
+          Ret.toSim (lowEnd_ok (O := O) (passes := passes) (R := R) (fp := fp) (K := K) (Ks := Ks)
+            (σ0 := σ0) (reserved := reserved) (pr := pr) (ex := ex) hS hA hlo0 hens rest
+            c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr))
+        c top h hK hs hW m pc σ ρ hp (by omega) hlo hu hk hWa hpr
+  | _, Γ, Λ, .floatOf e low high rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr => by
+      have hprefix := functionFrame_prefix P f
+      apply Ret.ofSim
+      exact endFloatOfComputed_case hS hA hlo0 hens
+        (fun {pr ex} c top h hK hs hW m pc σ ρ hp _ hlo hu hk hWa hpr =>
+          Ret.toSim (lowEnd_ok (O := O) (passes := passes) (R := R) (fp := fp) (K := K) (Ks := Ks)
+            (σ0 := σ0) (reserved := reserved) (pr := pr) (ex := ex) hS hA hlo0 hens rest
+            c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr))
+        c top h hK hs hW m pc σ ρ hp (by omega) hlo hu hk hWa hpr
+  | _, Γ, Λ, .floatNarrow e low high err rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr => by
+      have hprefix := functionFrame_prefix P f
+      apply Ret.ofSim
+      exact endFloatNarrow_case hS hA hlo0 hens
+        (fun {pr ex} => lowEnd_ok (O := O) (passes := passes) (R := R) (fp := fp) (K := K) (Ks := Ks)
+          (σ0 := σ0) (reserved := reserved) (pr := pr) (ex := ex) hS hA hlo0 hens err)
+        (fun {pr ex} c top h hK hs hW m pc σ ρ hp _ hlo hu hk hWa hpr =>
+          Ret.toSim (lowEnd_ok (O := O) (passes := passes) (R := R) (fp := fp) (K := K) (Ks := Ks)
+            (σ0 := σ0) (reserved := reserved) (pr := pr) (ex := ex) hS hA hlo0 hens rest
+            c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr))
+        c top h hK hs hW m pc σ ρ hp (by omega) hlo hu hk hWa hpr
 
 theorem lowArms_all {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
