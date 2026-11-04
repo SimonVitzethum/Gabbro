@@ -303,4 +303,21 @@ theorem constEndB_absage_exchange {l : Bool} {Λ : List (Res c.D)} (g : c.D.Glob
     (neu : Expr c.D (c.D.gtyp g :: Γ) Λ (c.D.gtyp g)) (hw : V.gschreibt g = true) (hL : gdarf c.D g Λ)
     (rest : Endblock c.D V l (c.D.gtyp g :: Γ) Λ) : constEndB c (V := V) (l := l) (Γ := Γ) (Λ := Λ) (.exchange g neu hw hL rest) = false := by simp only [constEndB]
 
+theorem constEndB_absage_float {l : Bool} {Λ : List (Res c.D)} (op : GleitOp)
+    (a : Expr c.D Γ Λ (.fl l1 h1)) (b : Expr c.D Γ Λ (.fl l2 h2)) (lo hi : Int × Int)
+    (rest : Endblock c.D V l (.fl lo hi :: Γ) Λ) :
+    constEndB c (V := V) (l := l) (Γ := Γ) (Λ := Λ) (.float op a b lo hi rest) = false := rfl
+
+theorem constEndB_absage_floatLit {l : Bool} {Λ : List (Res c.D)} (q : Int × Int) (lo hi : Int × Int)
+    (rest : Endblock c.D V l (.fl lo hi :: Γ) Λ) :
+    constEndB c (V := V) (l := l) (Γ := Γ) (Λ := Λ) (.floatLit q lo hi rest) = false := rfl
+
+theorem constEndB_absage_floatOf {l : Bool} {Λ : List (Res c.D)} (e : Expr c.D Γ Λ (.int l1 h1))
+    (lo hi : Int × Int) (rest : Endblock c.D V l (.fl lo hi :: Γ) Λ) :
+    constEndB c (V := V) (l := l) (Γ := Γ) (Λ := Λ) (.floatOf e lo hi rest) = false := rfl
+
+theorem constEndB_absage_floatNarrow {l : Bool} {Λ : List (Res c.D)} (e : Expr c.D Γ Λ (.fl l1 h1))
+    (lo hi : Int × Int) (sonst : Endblock c.D V l Γ Λ) (rest : Endblock c.D V l (.fl lo hi :: Γ) Λ) :
+    constEndB c (V := V) (l := l) (Γ := Γ) (Λ := Λ) (.floatNarrow e lo hi sonst rest) = false := rfl
+
 end Gabbro.Grammatik
