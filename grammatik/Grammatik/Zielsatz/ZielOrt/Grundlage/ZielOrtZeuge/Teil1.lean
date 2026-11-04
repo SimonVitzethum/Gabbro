@@ -362,7 +362,10 @@ theorem zP_koerper_haupt : KoerperGut zP zO 0 zHaupt := by
   rw [hr] at hrun
   rcases execEnd_cons_logik _ _ _ _ _ _ _ _ hrun with h1 | ⟨σ1, ρ1, _, h1⟩
   · simp only [execStmt] at h1
-    exact call_tor_ok _ _ R hOV _ _ _ _ _ _ _ (execBlock_eins_logik _ _ _ _ _ _ (mapWelt_logik h1))
+    generalize hb : execBlock zO 0 (torRuf zP R) zLocksBody (σ.nimmt ()) ρ = outcome
+    erw [hb] at h1
+    cases outcome <;> simp only [Ausgang.mapWelt] at h1 <;> try cases h1
+    exact call_tor_ok _ _ R hOV _ _ _ _ _ _ _ (execBlock_eins_logik _ _ _ _ _ _ hb)
   · simp only [execEnd] at h1
     cases h1
 
