@@ -243,12 +243,15 @@ def sammleSperren (consts : List (String × Int)) (alias : List (String × (Int 
 /-- Collect per-head outcomes (against clean tables and locks). -/
 def sammleKoepfe (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tabs : List UTab)
-    (locks : List ULock) (globs : List UGlob) (whys : List UWhy) (sums : List USum) :
-    List (FnSig × SAnw) → List (String × Except String (UFnKopf × List String))
+    (locks : List ULock) (globs : List UGlob) (whys : List UWhy) (sums : List USum)
+    (fns : List (FnSig × SAnw)) (spaces : List String := []) (eigner : List String := []) :
+    List (String × Except String (UFnKopf × List String)) :=
+  match fns with
   | [] => []
   | (sig, _) :: rest =>
-    (sig.name, elabKopf consts alias tabs locks globs whys sums sig) ::
-      sammleKoepfe consts alias tabs locks globs whys sums rest
+    (sig.name, elabKopf consts alias tabs locks globs whys sums sig
+      (spaces := spaces) (eigner := eigner)) ::
+      sammleKoepfe consts alias tabs locks globs whys sums rest spaces eigner
 
 /-- Indexed collection (positions ride along for reporting). -/
 def sammleIdx {α β : Type} (f : Nat → α → Except String β) :
@@ -319,23 +322,32 @@ def befundeRumpf (ctx : UCtx) (tabs : List UTab)
 def befundeFn (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (whys : List UWhy) (sums : List USum) (koepfe : List UFnKopf) (sig : FnSig)
-    (koerper : SAnw) : List Befund :=
-  match elabKopf consts alias tabs locks globs whys sums sig with
+    (koerper : SAnw) (spaces : List String := []) (eigner : List String := []) : List Befund :=
+  match elabKopf consts alias tabs locks globs whys sums sig (spaces := spaces) (eigner := eigner) with
   | .error e => [({ stufe := "kopf", art := "fn-head", name := sig.name, meldung := e } : Befund)]
   | .ok (kopf, _) =>
     let ctx := uCtxVon alias consts tabs locks globs kopf sig.name [] whys sums
+    let ctx := { ctx with spaces := spaces, eigner := eigner }
     befundeRumpf ctx tabs koepfe sig.name sig.klauseln koerper
 
 /-- Findings of a whole elaborated item list (collect mode over the
     `elabU` stages; cascades documented in CUTS). -/
 def befundeElab (ms : List SItemTief) : List Befund :=
+  let spaces := ["normal"] ++ uOhneDoppelte ((ms.filterMap
+    (fun | .tableT _ _ _ _ space _ _ => space | _ => none)).filter (fun n => !strEq n "normal"))
+  let eigner := uOhneDoppelte (uEignerMs ms)
   let consts := uConstsRech (uKonstFns ms) ms []
   let alias := uAliase consts ms ++ consts.map (fun c => (c.1, (c.2, c.2)))
-  let sumOk := match uSums alias ms with | .ok w => w | .error _ => []
+  let sumOk := match uSums alias ms (spaces := spaces) (eigner := eigner) with | .ok w => w | .error _ => []
   -- a field of an unknown type is read as a tagged type and refused there, as `elabU` does (`uSumTabs`)
   let tabs := (sammleTabellen consts alias (ms.filterMap (fun | .tableT n _ _ _ _ _ _ => some n | _ => none)) ms).map
     fun (n, r) => (n, match r with
-      | .ok t => (match uSumTabs sumOk [t] with
+      | .ok t =>
+        let tableSpace := ((ms.find? (fun | .tableT name .. => strEq name t.name | _ => false)).bind
+          (fun | .tableT _ _ _ _ space _ _ => space | _ => none)).map
+          (fun name => (spaces.zipIdx.find? (fun entry => strEq entry.1 name)).map (·.2) |>.getD 0) |>.getD 0
+        let t := { t with space := tableSpace }
+        (match uSumTabs sumOk [t] with
         | .ok [t'] => .ok t'
         | .ok _ => .ok t
         | .error e => .error e)
@@ -347,7 +359,7 @@ def befundeElab (ms : List SItemTief) : List Befund :=
   let lockOk := werte locks
   let fns := ms.filterMap alsFunktion
   let whyOk := match uWhys ms with | .ok w => w | .error _ => []
-  let koepfe := sammleKoepfe consts alias tabOk lockOk globOk whyOk sumOk fns
+  let koepfe := sammleKoepfe consts alias tabOk lockOk globOk whyOk sumOk fns spaces eigner
   let kopfOk := (werte koepfe).map fun p => p.1
   let tabF := tabs.filterMap fun (n, r) => match r with
     | .error e => some ({ stufe := "tabelle", art := "tabelle", name := n, meldung := e } : Befund)
@@ -369,18 +381,17 @@ def befundeElab (ms : List SItemTief) : List Befund :=
     | .error e => [({ stufe := "static", art := "static", name := "", meldung := e } : Befund)]
     | .ok _ => []
   let fnF := fns.map fun (sig, koerper) =>
-    befundeFn consts alias tabOk lockOk globOk whyOk sumOk kopfOk sig koerper
+    befundeFn consts alias tabOk lockOk globOk whyOk sumOk kopfOk sig koerper spaces eigner
   let fnsOk := (fns.map fun (sig, koerper) =>
-    (sig.name, elabUFunktion consts alias tabOk lockOk globOk kopfOk sig koerper [] whyOk sumOk)).filterMap
+    (sig.name, elabUFunktion (spaces := spaces) (eigner := eigner)
+      consts alias tabOk lockOk globOk kopfOk sig koerper [] whyOk sumOk)).filterMap
     fun (_, r) => match r with
       | .ok v => some v
       | .error _ => none
   let wurzF := (ms.filter fun it => match it with
     | .entryT _ => true
     | _ => false).filterMap fun it =>
-    -- Only entryT reaches this call; its parameterless dispatch check does not inspect spaces.
-    match uWurzeln (["normal"] ++ uOhneDoppelte ((ms.filterMap
-        (fun | .tableT _ _ _ _ space _ _ => space | _ => none)).filter (fun n => !strEq n "normal"))) tabOk fnsOk [it] with
+    match uWurzeln spaces tabOk fnsOk [it] with
     | .error e => some ({ stufe := "eintritt", art := "entry", name := "", meldung := e } : Befund)
     | .ok _ => none
   globF ++ tabF ++ eigF ++ lockF ++ fnF.flatten ++ wurzF
