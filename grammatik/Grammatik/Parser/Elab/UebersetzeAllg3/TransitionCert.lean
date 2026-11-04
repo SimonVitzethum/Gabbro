@@ -83,18 +83,22 @@ theorem lowerStoresAt_spec (u : UProg) (c : Fin u.fns.length) (tr : UTransition)
     split at h
     · cases h
     · rename_i clause _
-      split at h
-      · rename_i hn
-        split at h
-        · cases h
-        · rename_i hE
-          split at h
-          · cases h
-          · rename_i hPerm
+      by_cases hn : (declOf u).erg c = none
+      · rw [dite_eq_left hn] at h
+        by_cases hE : decide ((vertragVon (declOf u) c).ende = resOf u c) = true
+        · rw [dite_eq_left hE] at h
+          by_cases hPerm : decide ((resOf u c).Perm (vertragVon (declOf u) c).ende) = true
+          · rw [dite_eq_left hPerm] at h
+            -- Eliminate the whole successful result after resolving its proof-dependent guards.
             cases h
             exact ⟨ws.1, clause, ws.2.1, ws.2.2, hn, (of_decide_eq_true hE).symm,
               of_decide_eq_true hPerm, transCast_heq _ _, transCast_heq _ _, transCast_heq _ _⟩
-      · cases h
+          · rw [dite_eq_right hPerm] at h
+            cases h
+        · rw [dite_eq_right hE] at h
+          cases h
+      · rw [dite_eq_right hn] at h
+        cases h
 
 /-- The pieces of a lowered constant-edge transition. -/
 theorem lowerShiftAt_spec (u : UProg) (c : Fin u.fns.length) (tr : UTransition)
@@ -117,18 +121,21 @@ theorem lowerShiftAt_spec (u : UProg) (c : Fin u.fns.length) (tr : UTransition)
       split at h
       · cases h
       · rename_i clause _
-        split at h
-        · rename_i hn
-          split at h
-          · cases h
-          · rename_i hE
-            split at h
-            · cases h
-            · rename_i hPerm
+        by_cases hn : (declOf u).erg c = none
+        · rw [dite_eq_left hn] at h
+          by_cases hE : decide ((vertragVon (declOf u) c).ende = resOf u c) = true
+          · rw [dite_eq_left hE] at h
+            by_cases hPerm : decide ((resOf u c).Perm (vertragVon (declOf u) c).ende) = true
+            · rw [dite_eq_left hPerm] at h
               cases h
               exact ⟨edge, clause, hn, (of_decide_eq_true hE).symm,
                 of_decide_eq_true hPerm, transCast_heq _ _, transCast_heq _ _, transCast_heq _ _⟩
-        · cases h
+            · rw [dite_eq_right hPerm] at h
+              cases h
+          · rw [dite_eq_right hE] at h
+            cases h
+        · rw [dite_eq_right hn] at h
+          cases h
   · cases h
 
 /-- A generated function is admitted only as its declaration's expansion, with a requires. -/
@@ -217,7 +224,7 @@ theorem lowerAllg_transition_shift (u : UProg) (P : Programm (declOf u))
   obtain ⟨hne, edge, clause, hn, hE, _, hR, hE', hB⟩ := lowerTransitionAt_shift_spec u c state tr hs hv
   exact ⟨TransitionShiftExpansion.ofHEq (ctxParams_eq u c) (anfangRes_eq u c) edge clause hn
     hE
-    (HEq.trans (heq_of_eq (hreq hne)) hR) (HEq.trans (heq_of_eq hens) hE)
+    (HEq.trans (heq_of_eq (hreq hne)) hR) (HEq.trans (heq_of_eq hens) hE')
     (HEq.trans (heq_of_eq hrump) hB)⟩
 
 /-- **Every generated function is certified.** A function of the generated name
