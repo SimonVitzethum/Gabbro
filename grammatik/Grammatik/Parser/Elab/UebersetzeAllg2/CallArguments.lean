@@ -164,9 +164,17 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
           | .error e => .error e
           | .ok x => .ok (Expr.var x)
       | _ => .error "argument without G form"
-    | .wert, ty@(.prod ..) | .wert, ty@(.arr ..) | .wert, ty@(.str ..) =>
+    | .wert, .prod name fields =>
       match a with
-      | .val source => lowWertAtE u Γ Λ fn none ty source
+      | .val source => lowWertAtE u Γ Λ fn none (.prod name fields) source
+      | _ => .error "aggregate argument without G form"
+    | .wert, .arr item count =>
+      match a with
+      | .val source => lowWertAtE u Γ Λ fn none (.arr item count) source
+      | _ => .error "aggregate argument without G form"
+    | .wert, .str count =>
+      match a with
+      | .val source => lowWertAtE u Γ Λ fn none (.str count) source
       | _ => .error "aggregate argument without G form"
     | _, _ => .error "argument type without G form"
 

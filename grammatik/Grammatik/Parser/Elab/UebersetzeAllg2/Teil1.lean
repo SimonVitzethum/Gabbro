@@ -135,8 +135,8 @@ theorem ende_eq_resolved (u : UProg) (c : Fin u.fns.length) :
       ((declOf u).haelt c).map (Res.held (D := declOf u)) ++
         ((((declOf u).signatur c).produziert ++
           ((declOf u).signatur c).owner.outputs).map (Res.vonMarke (declOf u))) := by
-  show Vertrag.ende (vertragVon (declOf u) c) = _
-  unfold Vertrag.ende Vertrag.vonSig
+  show Vertrag.ende (declOf u) (vertragVon (declOf u) c) = _
+  unfold Vertrag.ende vertragVon Vertrag.vonSig
   rfl
 
 /-- The ensures context through the declaration. -/
