@@ -92,9 +92,18 @@ private theorem execution_position_at_label {i : Nat} {target : Label}
     rw [position, ite_eq_left rfl, Nat.zero_add]
   exact located.trans atLabel
 
-private theorem execution_header_position : position .header x.fragment 0 = some (x.offset 2) := by
-  simp only [Image.fragment, Image.offset, pieces, position, List.take_succ_cons,
+omit [Kern] in
+/-- Locate the header while keeping the initializer and its width abstract. -/
+private theorem execution_header_of_shape (fragment : List Piece) (first : List II)
+    (rest : List Piece) (shape : fragment = .code first :: .label .header :: rest) :
+    position .header fragment 0 = some (width (fragment.take 2)) := by
+  subst fragment
+  simp only [position, List.take_succ_cons,
     List.take_zero, width, Piece.width, ↓reduceIte, Nat.add_zero, Nat.zero_add]
+
+private theorem execution_header_position : position .header x.fragment 0 = some (x.offset 2) :=
+  execution_header_of_shape x.fragment (travCountC x.counter (x.fuel : Int))
+    (x.fragment.drop 2) rfl
 
 private theorem execution_stop_position : position .stop x.fragment 0 = some (x.offset 49) := by
   have step := execution_offset_step (x := x) (i := 48) (piece := .label .stop) rfl
