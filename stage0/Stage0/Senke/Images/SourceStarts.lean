@@ -47,6 +47,7 @@ def plan (u : UProg) (items : List SItemTief) (main : (declOf u).Fn) :
 def Plan.starts {u : UProg} {items : List SItemTief} {main : (declOf u).Fn}
     (p : Plan u items main) (world : World (declOf u)) :
     List (Σ f : (declOf u).Fn, Env (declOf u) ((declOf u).params f)) :=
+  letI : BEq (declOf u).Fn := inferInstanceAs (BEq (Fin u.fns.length))
   p.concurrent.map (fun source => source.resolved.start world) ++
     ((p.named.map (fun source => source.resolved.start world)).filter (fun start => start.1 != main))
 
