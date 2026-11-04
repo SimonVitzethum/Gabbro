@@ -11,6 +11,19 @@ open Gabbro.Grammatik
 variable {D D' : Deklaration}
 namespace Einbettung
 variable (E : Einbettung D D')
+
+private theorem scopesInv_eq (hZ : E.Rueck) (S : SperrInv D) (S' : SperrInv D')
+    (hSi : ∀ L s', S'.inv (E.lock L) s' = S.inv L (E.speicherZ hZ s'))
+    {M : Keys D D'} {σ : World D} {σ' : World D'} (h : E.Inv hZ M σ σ') (Ls : List D.Lock) :
+    scopesInvH S' (Ls.map E.lock) σ' = scopesInvH S Ls σ := by
+  induction Ls with
+  | nil => rfl
+  | cons L Ls ih =>
+      change (S'.inv (E.lock L) σ'.speicher && scopesInvH S' (Ls.map E.lock) σ') =
+        (S.inv L σ.speicher && scopesInvH S Ls σ)
+      exact congr (congrArg Bool.and ((hSi L σ'.speicher).trans
+        (congrArg (S.inv L) (E.speicherZ_treu h.treu)))) ih
+
 variable (hZ : E.Rueck) (hS : E.SigTreu) (pad : List (Ereignis D)) (S : SperrInv D)
   (T : D.Tab ⊕ D.Glob → Prop) (S' : SperrInv D') (T' : D'.Tab ⊕ D'.Glob → Prop) (O' : Orakel D')
   (U' : Umwelt D') (A' : AUmwelt D') (passes : Nat)
@@ -121,9 +134,31 @@ theorem sim_stmt_retScoped {V : Vertrag D}
     e.orte (E.exErg e).orte (E.orte_exErg e).symm
   have hev0 := E.frei_alle hZ (@hev) hρ
   have he := E.evalErg_exErg hZ hI.treu hI.treu e ρ ρ' hρ
-  refine ⟨M₁, .zurueck (R.scopes.foldl World.gibt σ₁) (evalErg σ₁ e σ₁ ρ), hs, fun Φ hP => ?_, ?_⟩
-  · simp only [execStmtHA, hΦ Φ hP]
-  · exact ⟨hI.gibt_foldl E R.scopes, he⟩
+  let W : World D' := leseA A' σ' (Λ.map E.resE) (E.exErg e).orte
+  have checks : scopesInvH S' (R.scopes.map E.lock) W = scopesInvH S R.scopes σ₁ :=
+    scopesInv_eq E hZ S S' hB.inv hI R.scopes
+  have target : execStmtHA S' O' U' A' passes R' (exS hS (.retScoped e R : Stmt D V l Γ Λ Λ)) σ' ρ' =
+      (if scopesInvH S R.scopes σ₁ = true then
+        .zurueck ((R.scopes.map E.lock).foldl World.gibt W) (evalErg W (E.exErg e) W ρ')
+      else .logik .schleife : Ausgang (E.vertragE V) l (Γ.map E.tyE)) := by
+    change (if scopesInvH S' (R.scopes.map E.lock) W = true then
+      .zurueck ((R.scopes.map E.lock).foldl World.gibt W) (evalErg W (E.exErg e) W ρ')
+      else .logik .schleife : Ausgang (E.vertragE V) l (Γ.map E.tyE)) = _
+    rw [checks]
+  cases hc : scopesInvH S R.scopes σ₁ with
+  | false =>
+      refine ⟨M₁, .logik .schleife, hs, fun Φ hP => ?_, ?_⟩
+      · simp only [execStmtHA, hΦ Φ hP, hc, Bool.false_eq_true, ↓reduceIte]
+      · rw [target]
+        simp only [hc, Bool.false_eq_true, ↓reduceIte]
+        exact ⟨logikRel_schleife, hI.keyOk E⟩
+  | true =>
+      refine ⟨M₁, .zurueck (R.scopes.foldl World.gibt σ₁) (evalErg σ₁ e σ₁ ρ), hs,
+        fun Φ hP => ?_, ?_⟩
+      · simp only [execStmtHA, hΦ Φ hP, hc, ↓reduceIte]
+      · rw [target]
+        simp only [hc, ↓reduceIte]
+        exact ⟨hI.gibt_foldl E R.scopes, he⟩
 
 set_option linter.unusedSectionVars false in
 theorem sim_stmt_retWhy {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
@@ -142,8 +177,28 @@ theorem sim_stmt_retWhyScoped {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (
     : E.KoerperSim hZ (fun Φ => execStmtHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.retWhyScoped r R : Stmt D V l Γ Λ _)) (execStmtHA S' O' U' A' passes R' (exS hS (.retWhyScoped r R : Stmt D V l Γ Λ _))) :=
   by
   intro M σ σ' ρ ρ' hM hρ
-  exact ⟨M, .why (R.scopes.foldl World.gibt σ) r, teil_refl M, fun Φ hP => by simp only [execStmtHA],
-    by simp only [exS, execStmtHA]; exact ⟨hM.gibt_foldl E R.scopes, rfl⟩⟩
+  have checks : scopesInvH S' (R.scopes.map E.lock) σ' = scopesInvH S R.scopes σ :=
+    scopesInv_eq E hZ S S' hB.inv hM R.scopes
+  have target : execStmtHA S' O' U' A' passes R' (exS hS (.retWhyScoped r R : Stmt D V l Γ Λ Λ)) σ' ρ' =
+      (if scopesInvH S R.scopes σ = true then .why ((R.scopes.map E.lock).foldl World.gibt σ') r
+      else .logik .schleife : Ausgang (E.vertragE V) l (Γ.map E.tyE)) := by
+    change (if scopesInvH S' (R.scopes.map E.lock) σ' = true then
+      .why ((R.scopes.map E.lock).foldl World.gibt σ') r
+      else .logik .schleife : Ausgang (E.vertragE V) l (Γ.map E.tyE)) = _
+    rw [checks]
+  cases hc : scopesInvH S R.scopes σ with
+  | false =>
+      refine ⟨M, .logik .schleife, teil_refl M, fun Φ hP => ?_, ?_⟩
+      · simp only [execStmtHA, hc, Bool.false_eq_true, ↓reduceIte]
+      · rw [target]
+        simp only [hc, Bool.false_eq_true, ↓reduceIte]
+        exact ⟨logikRel_schleife, hM.keyOk E⟩
+  | true =>
+      refine ⟨M, .why (R.scopes.foldl World.gibt σ) r, teil_refl M, fun Φ hP => ?_, ?_⟩
+      · simp only [execStmtHA, hc, ↓reduceIte]
+      · rw [target]
+        simp only [hc, ↓reduceIte]
+        exact ⟨hM.gibt_foldl E R.scopes, rfl⟩
 
 set_option linter.unusedSectionVars false in
 theorem sim_stmt_leave {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
