@@ -187,12 +187,12 @@ variable [DecidableEq D.Fn] [DecidableEq D.Ax]
     nothing IS the unit. The statement `GabbroZiel` is unchanged by this diff; this lemma says
     the new operation does not move a single unit either. -/
 theorem verbinde_leer (E E' : Einheit D) (h1 : E'.starts = []) (h2 : E'.gestartet = [])
-    (h3 : E'.arenen = []) (h4 : E'.akku = []) (h5 : E'.pruefungen = []) :
+    (h3 : E'.arenen = []) (h4 : E'.akku = []) (h5 : E'.pruefungen = [])
+    (h6 : E'.grants0 = []) :
     verbinde (fun _ => true) E E' = E := by
   cases E
   unfold verbinde verbindeP mitRumpf
-  rw [h1, h2, h3, h4, h5, List.append_nil, List.append_nil, List.append_nil, List.append_nil, List.append_nil]
-  rfl
+  rw [h1, h2, h3, h4, h5, h6, List.append_nil, List.append_nil, List.append_nil, List.append_nil, List.append_nil, List.append_nil] <;> rfl
 
 /-- **The linked unit is accepted by the concrete checker** -- at both units' declared
     checks, so it can be linked again: a chain of units, by iteration. -/
@@ -208,7 +208,7 @@ theorem verbinde_akzeptiert {E₁ E₂ : Einheit D} {e : D.Fn → Bool} {fs : Li
     Akzeptiert (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs ls cs (verbinde e E₁ E₂).ws (verbinde e E₁ E₂).akku (E₁.pruefungen ++ E₂.pruefungen) qs = true :=
   spec_akzeptiert hvoll hls hcs qs hq (((schnittstelleB_iff hvoll hcs qs).mp hS).1.pruef)
     (h := akzeptiertSpec_verbinde hvoll
-      (akzeptiertSpec_of hvoll hls hcs [] h₁) (akzeptiertSpec_of hvoll hls hcs [] h₂) hV
+      (akzeptiertSpec_of hvoll hls hcs E₁.akku h₁) (akzeptiertSpec_of hvoll hls hcs E₂.akku h₂) hV
       (((schnittstelleB_iff hvoll hcs qs).mp hS).1))
 
 /-- **The user duty of the linked unit, restricted to what the two users own** (`a₁` inside

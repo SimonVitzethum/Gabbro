@@ -172,6 +172,7 @@ def verbinde (e : D.Fn → Bool) (E₁ E₂ : Einheit D) : Einheit D where
   akku := E₁.akku ++ E₂.akku
   -- both units' declared checks; their joint admission is the link check's `pruef` field
   pruefungen := E₁.pruefungen ++ E₂.pruefungen
+  grants0 := E₁.grants0 ++ E₂.grants0
 
 /-- The OWNER's program of `f` (unit 1 iff `e f`). -/
 def teilP (e : D.Fn → Bool) (E₁ E₂ : Einheit D) (f : D.Fn) : Programm D :=

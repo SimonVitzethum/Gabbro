@@ -1857,6 +1857,19 @@ changes no measured proof/acceptance status; no builds were run.
 
 ### Model extension design: C06, C07, C08 (2026-11-01)
 
+Separate compilation carries the same C06 refinement duty as the full user
+logic, restricted to each target's actual owner. `NutzerTeil`, `NutzerTeilA`
+and `NutzerTeilO` therefore include owner-restricted `PtrZielVerfeinert` facts;
+placeholders do not inherit another unit's obligation. `Verbindbar` and project
+`Passend` share the existing pointer and axiom contract tables as well as
+requires/ensures. Body replacement and linking transport those contracts,
+rather than deriving arbitrary interface posts from trivial bodies. Pure duty
+collectors consume the actual refinement certificate. Links also retain both
+source-declared initial grant-record lists in order; retaining records does not
+discharge their provider obligations. The linked SC proof uses the complete
+composed admission, including accumulators and checks, without reconstructing
+an empty-query checker or adding an axiom-equality premise to the goal.
+
 Design baseline: `a1dad6c92`; static source inspection only, no Lean edits or
 builds. **New** marks proposed definitions, not existing declarations. Kernel
 paths below are relative to `grammatik/Grammatik/`. This is an implementation
