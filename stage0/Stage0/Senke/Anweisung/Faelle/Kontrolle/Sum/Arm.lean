@@ -18,9 +18,10 @@ theorem sumSpanTest_ok {m : Runner.Mem} {pc fp : Runner.W} {K s scratch k i : Na
     Ok m pc fp K scratch (sumSpanTestC s scratch k) (fun w => w = if i == k then 1 else 0) := by
   have p : PreS L m pc fp K scratch
       ([ci 2 scratch s 0] ++ [ci 1 (scratch + 1) k 0] ++ [ci 14 scratch scratch (scratch + 1)]) ρ reserved := hp
-  refine bin_ok2 (mov_ok p.left.left (by omega) hs hw)
+  refine bin_ok2 (mov_ok p.left.left hs (by omega) hw)
     (fun m pc pre => const_ok pre (lit32_nat hk) (by omega))
-    (g := fun a b => some (Runner.IR.bool (a == b))) ?_ rfl (by decide) (by omega) p
+    (g := fun a b => some (Runner.IR.bool (a == b))) ?_ rfl (by decide) (by omega)
+    (by simpa only [Int.natCast_add, Int.ofNat_one] using p)
   intro a b ha hb
   refine ⟨_, rfl, ?_⟩
   rw [ha, hb, BitVec.ofInt_natCast, bool_word]
@@ -70,16 +71,26 @@ theorem sumSpanArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option 
       (pc + BitVec.ofNat 64 (16 * (sumSpanPayloadC (frei Γ reserved) c ++ cb).length) + BitVec.ofInt 64 ex.2)
       ((execBlock O passes R b σ (armEnv v ρ)).schrumpfArm c) reserved := by
   cases c with
-  | none => exact hb ex cb tb made fits (by simpa [sumSpanPayloadC, payloadWords] using size)
-      m pc σ ρ (by simpa [sumSpanPayloadC, payloadWords, copyWords] using pre) hlo2 hu hk world hpr
+  | none =>
+    simpa only [sumSpanPayloadC, payloadWords, copyWords, List.nil_append,
+      armEnv, Ausgang.schrumpfArm] using
+      hb ex cb tb made fits (by simpa [sumSpanPayloadC, payloadWords] using size)
+        m pc σ ρ (by simpa [sumSpanPayloadC, payloadWords, copyWords] using pre)
+        hlo2 hu hk world hpr
   | some τ =>
     have hks := hW.ks
+    have span : frei Γ reserved + 1 + valueWords τ ≤ Ks := by
+      simpa only [payloadWords] using bound
+    have destination : frei Γ reserved + valueWords τ ≤ K := by omega
+    have payload : ValueAt L m fp (frei Γ reserved + 1) τ v := value
     obtain ⟨m1, steps, changed, output⟩ := copyValue_run pre.frame pre.small
-      (by simpa only [payloadWords] using Nat.le_trans (by omega : frei Γ reserved + valueWords τ ≤ Ks) hks)
-      (by simpa only [payloadWords] using Nat.le_trans bound hks)
+      destination (Nat.le_trans span hks)
       (Or.inl (by omega)) pre.left.code
-      (by simpa only [sumSpanPayloadC, payloadWords, copyWords_length] using pre.left.far) value
-    have ch : Agree fp (frei Γ reserved) K m m1 := Agree.widen changed (by omega)
+      (by simpa only [sumSpanPayloadC, payloadWords, copyWords_length] using pre.left.far) payload
+    have steps' : Star ⟨pc, fp⟩ m
+        ⟨pc + BitVec.ofNat 64 (16 * (sumSpanPayloadC (frei Γ reserved) (some τ)).length), fp⟩ m1 := by
+      simpa only [sumSpanPayloadC, payloadWords, copyWords_length] using steps
+    have ch : Agree fp (frei Γ reserved) K m m1 := Agree.widen changed destination
     have p1 := pre.next ch (by omega : frei Γ reserved ≤ frei Γ reserved + valueWords τ) (by omega)
     have ctx : frei (ArmCtx Γ (some τ)) reserved = frei Γ reserved + valueWords τ := by
       simp [frei, ArmCtx, Nat.add_assoc]
@@ -89,11 +100,10 @@ theorem sumSpanArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option 
     have result := hb ex cb tb made fits (by omega) m1 _ σ _ pb (by rw [ctx]; omega)
       (hu.agreeW hW (agreeW_of (ch.mono hlo2)) hlo)
       (hk.agreeW hW (agreeW_of (ch.mono hlo2)) (by omega))
-      ((PreS.welt pre.left hks world hW.lay (by have := hW.lo; omega)).wstab m m1 world
-        (ch.mono (Nat.zero_le _)))
+      (weltAt_stab hW.lay hW.top m m1 world (ch.mono (Nat.zero_le _)))
       (fun j hj => by have := hpr j hj; rw [ctx]; omega)
     rw [pc_add1]
-    apply Sim.prefix hlo steps (agreeW_of (ch.mono hlo2))
+    apply Sim.prefix hlo steps' (agreeW_of (ch.mono hlo2))
       (keeps_of_agreeW hW ch hpr (by omega)) (Sim.schrumpf result)
 end
 end Gabbro.Stage0.Senke
