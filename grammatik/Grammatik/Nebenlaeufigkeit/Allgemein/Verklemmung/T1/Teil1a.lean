@@ -15,7 +15,7 @@ set_option maxHeartbeats 4000000 in
     grow, or takes a lock `L` (not held, free, admitted by the residue's
     features, now named), or releases a lock `L` (the other held holdings
     stay); (B) a push, with the call site's typing `RufPasst`; (C) a pop of
-    a frame whose holdings are its end holdings. -/
+    a frame at its end holdings, possibly releasing its last captured scope. -/
 theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschineG D} {f : Faden}
     (hs : RufSchrittG P O pa M f M') (A : Merkmal D)
     (hR : (M.faeden f).kopf.rest.2.2.2.2.mR A) :
@@ -34,11 +34,16 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
       (∀ K, Res.held K ∈ (M.faeden f).kopf.rest.2.2.1 → Res.held K ∈ caller'.rest.2.2.1) ∧
       offen (M'.faeden f).spur = offen (M.faeden f).spur ∧
       RufPasst D (vertragVon D (M.faeden f).kopf.f) (D.signatur g) (M.faeden f).kopf.rest.2.2.1) ∨
-    (∃ (caller : RufRahmenG D) (rst : List (RufRahmenG D)),
+    (∃ (caller : RufRahmenG D) (rst : List (RufRahmenG D)) (released : Option D.Lock),
       (M.faeden f).stapel = caller :: rst ∧ (M'.faeden f).stapel = rst ∧
       (M'.faeden f).kopf.f = caller.f ∧ (M'.faeden f).kopf.rest.2.2.1 = caller.rest.2.2.1 ∧
-      offen (M'.faeden f).spur = offen (M.faeden f).spur ∧
-      (M.faeden f).kopf.rest.2.2.1.Perm (vertragVon D (M.faeden f).kopf.f).ende) := by
+      offen (M'.faeden f).spur = (match released with
+        | none => offen (M.faeden f).spur
+        | some L => (offen (M.faeden f).spur).erase L) ∧
+      (match released with
+        | none => (M.faeden f).kopf.rest.2.2.1
+        | some L => (M.faeden f).kopf.rest.2.2.1.erase (Res.held L)).Perm
+          (vertragVon D (M.faeden f).kopf.f).ende) := by
   cases hs with
   | g1 hs =>
     cases hs with
@@ -72,7 +77,7 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
     | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
       rangB g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0, ⟨l, Γ, nach D g Λ, ρ, .ende rest⟩⟩
     | rueck caller rst hpop Γ Λ e hperm ρ hhead g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu hneu hnw =>
-      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
+      refine Or.inr (Or.inr ⟨caller, rst, none, hpop, by dsimp only; rw [rufUpdateG_self],
         by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self], ?_, ?_⟩)
       · simp only [rufUpdateG_self]; rw [hs1]; exact lese_offen _ _ _
       · rw [hhead]; exact hperm
@@ -171,7 +176,7 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
       rangB g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0, ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .wartetSonst (τ := τ) (D.sigNr n).gruende err .nil (.dann rest k)⟩⟩
     | rueckBind caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller Γc Λc e hperm ρ hhead g hfg rho hrho
         s0 hs0 hΛ s1 hs1 v hv he neu hneu =>
-      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
+      refine Or.inr (Or.inr ⟨caller, rst, none, hpop, by dsimp only; rw [rufUpdateG_self],
         by dsimp only; rw [rufUpdateG_self], ?_, ?_, ?_⟩)
       · dsimp only; rw [rufUpdateG_self]; dsimp only
         rcases hcaller with hc | ⟨_, _, hc⟩ <;> rw [hc]
@@ -228,19 +233,19 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
         exact (Block.held_iff rest K).mpr hK
     | rueckCons caller rst hpop Γ Λ e hperm rest ρ hhead g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu
         hneu hnw =>
-      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
+      refine Or.inr (Or.inr ⟨caller, rst, none, hpop, by dsimp only; rw [rufUpdateG_self],
         by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self], ?_, ?_⟩)
       · simp only [rufUpdateG_self]; rw [hs1]; exact lese_offen _ _ _
       · rw [hhead]; exact hperm
     | dannRet l Γ Λ Λ'' e hperm rest k ρ hhead caller rst hpop hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv
         neu hneu hnw =>
-      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
+      refine Or.inr (Or.inr ⟨caller, rst, none, hpop, by dsimp only; rw [rufUpdateG_self],
         by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self], ?_, ?_⟩)
       · simp only [rufUpdateG_self]; rw [hs1]; exact lese_offen _ _ _
       · rw [hhead]; exact hperm
     | dannRetBind lk Γk Λk Λk'' e hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc
         hcaller hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv he neu hneu =>
-      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
+      refine Or.inr (Or.inr ⟨caller, rst, none, hpop, by dsimp only; rw [rufUpdateG_self],
         by dsimp only; rw [rufUpdateG_self], ?_, ?_, ?_⟩)
       · dsimp only; rw [rufUpdateG_self]; dsimp only
         rcases hcaller with hc | ⟨_, _, hc⟩ <;> rw [hc]
@@ -248,14 +253,14 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
       · rw [hhead]; exact hperm
     | rueckConsBind lk Γk Λk e hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller
         hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv he neu hneu =>
-      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
+      refine Or.inr (Or.inr ⟨caller, rst, none, hpop, by dsimp only; rw [rufUpdateG_self],
         by dsimp only; rw [rufUpdateG_self], ?_, ?_, ?_⟩)
       · dsimp only; rw [rufUpdateG_self]; dsimp only
         rcases hcaller with hc | ⟨_, _, hc⟩ <;> rw [hc]
       · simp only [rufUpdateG_self]; rw [hs1]; exact lese_offen _ _ _
       · rw [hhead]; exact hperm
     | rueckGrund r hperm ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
-      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
+      refine Or.inr (Or.inr ⟨caller, rst, none, hpop, by dsimp only; rw [rufUpdateG_self],
         by dsimp only; rw [rufUpdateG_self], ?_, by dsimp only; rw [rufUpdateG_self], ?_⟩)
       · dsimp only; rw [rufUpdateG_self]; dsimp only; rw [hcaller]
       · rw [hhead]; exact hperm
@@ -298,12 +303,12 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
         rw [hhead] at hK
         exact hK
     | rueckConsGrund _ _ r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
-      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
+      refine Or.inr (Or.inr ⟨caller, rst, none, hpop, by dsimp only; rw [rufUpdateG_self],
         by dsimp only; rw [rufUpdateG_self], ?_, by dsimp only; rw [rufUpdateG_self], ?_⟩)
       · dsimp only; rw [rufUpdateG_self]; dsimp only; rw [hcaller]
       · rw [hhead]; exact hperm
     | dannRetGrund _ _ r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
-      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
+      refine Or.inr (Or.inr ⟨caller, rst, none, hpop, by dsimp only; rw [rufUpdateG_self],
         by dsimp only; rw [rufUpdateG_self], ?_, by dsimp only; rw [rufUpdateG_self], ?_⟩)
       · dsimp only; rw [rufUpdateG_self]; dsimp only; rw [hcaller]
       · rw [hhead]; exact hperm
@@ -375,21 +380,21 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
         subst σ₁
         exact lese_offen _ _ _
       · intro K hK
-        simp only [rufUpdateG_self]
+        dsimp only; rw [rufUpdateG_self]
         rw [hhead] at hK
         exact (R.genau.trans List.perm_append_comm).mem_iff.mp hK
     | rueckScopedGrund ρ r grund R hhead hret hscope hΛ =>
       refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
       · simp only [rufUpdateG_self]
       · intro K hK
-        simp only [rufUpdateG_self]
+        dsimp only; rw [rufUpdateG_self]
         rw [hhead] at hK
         exact (R.genau.trans List.perm_append_comm).mem_iff.mp hK
     | rueckFreigabe ρ a L remaining hhead =>
       refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self],
         Or.inr (Or.inr ⟨L, by simp only [rufUpdateG_self]; rfl, ?_⟩)⟩
       intro K hKL hK
-      simp only [rufUpdateG_self]
+      dsimp only; rw [rufUpdateG_self]
       rw [hhead] at hK
       exact (List.mem_cons.mp hK).resolve_left (fun he => hKL (Res.held.inj he))
     | rueckFreigabeLetzte ρ a L hhead z ha =>
@@ -397,12 +402,12 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
       | nil =>
           simp only [rufAntwortG, hst, Option.some.injEq] at ha
           subst z
-          refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
-          · simp only [rufUpdateG_self]; rfl
-          · intro K hK
-            simp only [rufUpdateG_self]
+          refine Or.inl ⟨by simp only [rufUpdateG_self, hst], by simp only [rufUpdateG_self],
+            Or.inr (Or.inr ⟨L, by simp only [rufUpdateG_self]; rfl, ?_⟩)⟩
+          · intro K hKL hK
+            dsimp only; rw [rufUpdateG_self]
             rw [hhead] at hK
-            exact hK
+            exact (List.mem_cons.mp hK).resolve_left (fun he => hKL (Res.held.inj he))
       | cons caller rst =>
           obtain ⟨r, hr⟩ : ∃ r, antwortRestG (M.faeden f).kopf.f a.1 caller.rest = some r := by
             cases hr : antwortRestG (M.faeden f).kopf.f a.1 caller.rest with
@@ -410,12 +415,38 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
             | some r => exact ⟨r, rfl⟩
           simp [rufAntwortG, hst, hr] at ha
           subst z
-          refine Or.inr (Or.inr ⟨caller, rst, hst, by simp only [rufUpdateG_self],
-            by simp only [rufUpdateG_self], ?_, by simp only [rufUpdateG_self]; rfl, ?_⟩)
-          · simp only [rufUpdateG_self]
+          refine Or.inr (Or.inr ⟨caller, rst, some L, by simp only [hst],
+            by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self],
+            ?_, by dsimp only; rw [rufUpdateG_self]; rfl, ?_⟩)
+          · dsimp only; rw [rufUpdateG_self]
             exact antwortRestG_ressourcen _ _ _ _ hr
           · rw [hhead]
-            exact List.Perm.refl _
+            simpa only [List.map_cons, List.map_nil, List.cons_append, List.nil_append,
+              List.erase_cons_head] using (List.Perm.refl (vertragVon D (M.faeden f).kopf.f).ende)
+    | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
+      have hperm := R.genau
+      simp only [hempty, List.map_nil, List.append_nil] at hperm
+      have hopen : offen z.spur = offen (M.faeden f).spur := by
+        rw [rufAntwortG_spur ha, hs₁]
+        exact lese_offen _ _ _
+      dsimp only; simp only [rufUpdateG_self]
+      rcases rufAntwortG_rangRahmen ha with ⟨hst, hf, hres⟩ | ⟨caller, rst, hpop, hst, hf, hres⟩
+      · exact Or.inl ⟨hst, hf, Or.inl ⟨hopen, fun K hK => by
+          rw [hres]; rw [hhead] at hK; exact hperm.mem_iff.mp hK⟩⟩
+      · exact Or.inr (Or.inr ⟨caller, rst, none, hpop, hst, hf, hres, hopen, by
+          rw [hhead]; exact hperm⟩)
+    | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
+      have hperm := R.genau
+      simp only [hempty, List.map_nil, List.append_nil] at hperm
+      have hopen : offen z.spur = offen (M.faeden f).spur := by
+        rw [rufAntwortG_spur ha]
+        rfl
+      dsimp only; simp only [rufUpdateG_self]
+      rcases rufAntwortG_rangRahmen ha with ⟨hst, hf, hres⟩ | ⟨caller, rst, hpop, hst, hf, hres⟩
+      · exact Or.inl ⟨hst, hf, Or.inl ⟨hopen, fun K hK => by
+          rw [hres]; rw [hhead] at hK; exact hperm.mem_iff.mp hK⟩⟩
+      · exact Or.inr (Or.inr ⟨caller, rst, none, hpop, hst, hf, hres, hopen, by
+          rw [hhead]; exact hperm⟩)
     | _ => rangA1
 
 #print axioms Gabbro.Grammatik.schrittRang

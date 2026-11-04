@@ -11,6 +11,29 @@ namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
 
+/-- Canonical answer delivery either completes the root or restores exactly
+    the caller's resource context. No equality of runtime holdings is assumed. -/
+theorem rufAntwortG_rangRahmen {z z' : RufFadenG D} {vor σ : World D}
+    {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
+    (ha : rufAntwortG z vor σ a = some z') :
+    (z'.stapel = z.stapel ∧ z'.kopf.f = z.kopf.f ∧
+      z'.kopf.rest.2.2.1 = (vertragVon D z.kopf.f).ende) ∨
+    ∃ caller rst, z.stapel = caller :: rst ∧ z'.stapel = rst ∧
+      z'.kopf.f = caller.f ∧ z'.kopf.rest.2.2.1 = caller.rest.2.2.1 := by
+  cases hs : z.stapel with
+  | nil =>
+    simp only [rufAntwortG, hs, Option.some.injEq] at ha
+    subst z'
+    exact Or.inl ⟨by simp only [hs], rfl, rfl⟩
+  | cons caller rst =>
+    cases hr : antwortRestG z.kopf.f a caller.rest with
+    | none => simp [rufAntwortG, hs, hr] at ha
+    | some rest =>
+      simp [rufAntwortG, hs, hr] at ha
+      subst z'
+      exact Or.inr ⟨caller, rst, by simp only [hs], rfl, rfl,
+        antwortRestG_ressourcen _ _ _ _ hr⟩
+
 /-! ## 1. Every rule, classified by what it does to holdings and held locks -/
 
 set_option hygiene false in

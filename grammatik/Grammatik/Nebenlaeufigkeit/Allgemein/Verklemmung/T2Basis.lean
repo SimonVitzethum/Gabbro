@@ -49,36 +49,34 @@ theorem rangKette_push {o : List D.Lock} {F C G : RufRahmenG D} {S : List (RufRa
         · exact Or.inr (Or.inl (by rw [ebC]; exact h5))
         · exact h5.elim
 
-/-- **A pop**: a frame at its end holdings names only its signature locks,
-    which its caller names; a lock below its floor was held before the call
-    (it is not at least the floor), so the caller names it or it is below
-    the caller's floor. -/
-theorem rangKette_pop {o : List D.Lock} {H caller N : RufRahmenG D} {rst : List (RufRahmenG D)}
+/-- A pop transports every remaining holding through the caller. A released
+    occurrence need not survive, and all lower frames restrict to the same subset. -/
+theorem rangKette_pop {o o' : List D.Lock} {H caller N : RufRahmenG D} {rst : List (RufRahmenG D)}
     (h : RangKette o (fun _ => False) H (caller :: rst))
-    (hperm : H.rest.2.2.1.Perm (vertragVon D H.f).ende)
+    (subset : o' ⊆ o)
+    (hnamed : ∀ K ∈ o', Res.held K ∈ H.rest.2.2.1 → Res.held K ∈ caller.rest.2.2.1)
     (hNf : N.f = caller.f) (hNΛ : N.rest.2.2.1 = caller.rest.2.2.1) :
-    RangKette o (fun _ => False) N rst := by
-  obtain ⟨h1, h2, _, h4⟩ := h
+    RangKette o' (fun _ => False) N rst := by
+  obtain ⟨h1, _, _, h4⟩ := h
+  have tail := rangKette_tail h4 (fun K hK => Or.inl (subset hK))
   have ebN : bodenF N.f = bodenF caller.f := congrArg bodenF hNf
   have ehN : D.haelt N.f = D.haelt caller.f := congrArg D.haelt hNf
-  have hnamed : ∀ K, Res.held K ∈ H.rest.2.2.1 → Res.held K ∈ caller.rest.2.2.1 := fun K hK =>
-    h2 K ((held_ende _ K).mp (hperm.mem_iff.mp hK))
   cases rst with
   | nil =>
       intro K hK
       rw [hNΛ]
-      rcases h1 K hK with h5 | h5 | h5
-      · exact Or.inl (hnamed K h5)
-      · rcases h4 K hK with h6 | h6
+      rcases h1 K (subset hK) with h5 | h5 | h5
+      · exact Or.inl (hnamed K hK h5)
+      · rcases tail K hK with h6 | h6
         · exact Or.inl h6
         · exact (unter_ueber h5 h6).elim
       · exact h5.elim
   | cons c rest =>
-      obtain ⟨g1, g2, g3, g4⟩ := h4
+      obtain ⟨g1, g2, g3, g4⟩ := tail
       refine ⟨fun K hK => ?_, by rw [ehN]; exact g2, by rw [ebN]; exact g3, by rw [ebN]; exact g4⟩
       rw [hNΛ, ebN]
-      rcases h1 K hK with h5 | h5 | h5
-      · exact Or.inl (hnamed K h5)
+      rcases h1 K (subset hK) with h5 | h5 | h5
+      · exact Or.inl (hnamed K hK h5)
       · rcases g1 K hK with h6 | h6 | h6
         · exact Or.inl h6
         · exact Or.inr (Or.inl h6)
@@ -122,7 +120,7 @@ theorem rangInvG_schritt (hO : GutO O) (hSt : StufenM P) {w : D.Fn} {M M' : RufM
   have hR := (hm _ List.mem_cons_self).2
   rcases schrittRang hO hs _ hR with
     ⟨hst, hf, ⟨ho, hΛ⟩ | ⟨L, hL, _, hsp, ho, hΛ⟩ | ⟨L, ho, hΛ⟩⟩ |
-    ⟨g, c', hst, hcf, hgf, hgΛ, hcΛ, ho, hp⟩ | ⟨caller, rst, hpop, hst, hf, hΛ, ho, hperm⟩
+    ⟨g, c', hst, hcf, hgf, hgΛ, hcΛ, ho, hp⟩ | ⟨caller, rst, released, hpop, hst, hf, hΛ, ho, hperm⟩
   · refine ⟨by rw [ho]; exact hnd, ?_, hm', ?_⟩
     · rw [hst, ho]
       exact rangKette_kopf hf hk (fun K hK => Or.inr ⟨hK, hΛ K⟩) (fun K hK => Or.inl hK)
@@ -162,10 +160,28 @@ theorem rangInvG_schritt (hO : GutO O) (hSt : StufenM P) {w : D.Fn} {M M' : RufM
       cases (M.faeden u).stapel.getLast? with
       | none => exact hcf
       | some F => rfl
-  · refine ⟨by rw [ho]; exact hnd, ?_, hm', ?_⟩
-    · rw [hst, ho]
+  · have hnd' : (offen (M'.faeden u).spur).Nodup := by
+      cases released with
+      | none => rw [ho]; exact hnd
+      | some L => rw [ho]; exact hnd.erase L
+    have subset : offen (M'.faeden u).spur ⊆ offen (M.faeden u).spur := by
+      intro K hK
+      cases released with
+      | none => rw [ho] at hK; exact hK
+      | some L => rw [ho] at hK; exact List.mem_of_mem_erase hK
+    refine ⟨hnd', ?_, hm', ?_⟩
+    · rw [hst]
       rw [hpop] at hk
-      exact rangKette_pop hk hperm hf hΛ
+      refine rangKette_pop hk subset (fun K hK hNamed => ?_) hf hΛ
+      apply hk.2.1 K
+      apply (held_ende _ K).mp
+      apply hperm.mem_iff.mp
+      cases released with
+      | none => exact hNamed
+      | some L =>
+        rw [ho] at hK
+        have different : K ≠ L := ((List.Nodup.mem_erase_iff hnd).mp hK).1
+        exact (List.mem_erase_of_ne (fun he => different (Res.held.inj he))).mpr hNamed
     · rw [← hu]; unfold unten; rw [hst, hpop, List.getLast?_cons]
       cases rst.getLast? with
       | none => exact hf
