@@ -8,7 +8,7 @@ BIN is the `runner` executable of the Lean package `runner/`; DIR a scratch dire
 1. The runner binary written by Lean runs every probe image with the output and exit code fixed in
    `runner/proben/NAME.aus` and `NAME.code` (no Lean program runs the IR); `objdump` decodes the runner's code to the
    instructions of the listing `runner.s`.
-2. Differential tests of the x86-64 model: CASES random cases of the 22 instruction forms run on this processor;
+2. Differential tests of the x86-64 model: CASES random cases of all 36 instruction families run on this processor;
    registers, data area and every flag the model defines must equal the model's `exec`.
 3. Fault programs: every instruction the model says faults ends the program with the named signal, and the model
    does say fault for it.
@@ -22,7 +22,7 @@ import os
 import subprocess
 import sys
 
-KINDS = 20  # Runner.Test.KINDS
+KINDS = 36  # Runner.Test.KINDS, including the native floating-point families
 
 
 def listing_matches(binary, listing):

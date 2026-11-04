@@ -6,6 +6,8 @@ open Lake DSL
 package runner where
   weakLeanArgs := #["-j4", "-M8192"]
 
+require nativefloat from "../nativefloat"
+
 @[default_target]
 lean_lib Runner
 

@@ -41,6 +41,7 @@ W = pathlib.Path(__file__).resolve().parent.parent
 G = W / "grammatik"
 S0 = W / "stage0"
 RN = W / "runner"
+NF = W / "nativefloat"
 ENV = {**os.environ, "LC_ALL": "C"}
 ENV.pop("ELAN_TOOLCHAIN", None)
 STANDARD = {"propext", "Classical.choice", "Quot.sound"}
@@ -91,7 +92,8 @@ def stufe_sorry():
     erlaubt = {l.split()[1] for l in (W / "instrumente/teile/kein-sorry-allowlist.txt").read_text().splitlines()
                if l.strip() and not l.startswith("#")}
     n, befunde = 0, []
-    for f in sorted(list(G.rglob("*.lean")) + list(S0.rglob("*.lean")) + list(RN.rglob("*.lean"))):
+    for f in sorted(list(G.rglob("*.lean")) + list(S0.rglob("*.lean")) +
+                    list(RN.rglob("*.lean")) + list(NF.rglob("*.lean"))):
         if ".lake" in f.parts: continue
         code = ohne_kommentare(f.read_text(encoding="utf-8"))
         n += 1

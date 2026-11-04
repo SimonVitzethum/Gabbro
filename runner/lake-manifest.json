@@ -1,6 +1,14 @@
 {"version": "1.3.0",
  "packagesDir": ".lake/packages",
- "packages": [],
+ "packages":
+ [{"type": "path",
+   "scope": "",
+   "name": "nativefloat",
+   "manifestFile": "lake-manifest.json",
+   "inherited": false,
+   "dir": "../nativefloat",
+   "copy": false,
+   "configFile": "lakefile.toml"}],
  "name": "runner",
  "lakeDir": ".lake",
  "fixedToolchain": false}

@@ -1,4 +1,5 @@
 name = "bruecke"
+packagesDir = "../grammatik/.lake/packages"
 weakLeanArgs = ["-DmaxHeartbeats=400000"]
 version = "0.1.0"
 defaultTargets = ["Bruecke"]

@@ -1,0 +1,8 @@
+name = "nativefloat"
+version = "0.1.0"
+defaultTargets = ["NativeFloat"]
+
+# Shared proofs about the pinned toolchain primitives, without a language model
+# or execution backend dependency. This package defines no float representation.
+[[lean_lib]]
+name = "NativeFloat"
