@@ -51,13 +51,17 @@ def constants (env : Environment) (bindings : Bindings) : List SKonstWert → Re
 end
 
 def field (env : Environment) (bindings : Bindings) (f : SFeld) : RewriteM SFeld := do
-  pure { f with ftyp := ← rewriteType env bindings f.ftyp,
-    wo := ← f.wo.mapM (rewriteExpression env (bindings.without [f.fname])),
-    pos := ← f.pos.mapM (fun text => liftResult (substituteRaw bindings text)) }
+  pure { f with
+    ftyp := ← rewriteType env bindings f.ftyp
+    wo := ← f.wo.mapM (rewriteExpression env (bindings.without [f.fname]))
+    pos := ← f.pos.mapM (fun text => liftResult (substituteRaw bindings text))
+  }
 
 def invariant (env : Environment) (bindings : Bindings) (iv : SGruppenInv) : RewriteM SGruppenInv := do
-  pure { iv with kosten := ← rewriteExpression env bindings iv.kosten,
-    pred := ← rewriteExpression env bindings iv.pred }
+  pure { iv with
+    kosten := ← rewriteExpression env bindings iv.kosten
+    pred := ← rewriteExpression env bindings iv.pred
+  }
 
 def tablePart (env : Environment) (bindings : Bindings) : STabTeil → RewriteM STabTeil
   | .tConst n ty value => return .tConst n (← rewriteType env bindings ty) (← constant env bindings value)
@@ -69,24 +73,31 @@ def tablePart (env : Environment) (bindings : Bindings) : STabTeil → RewriteM 
     storage declaration is copied; names and place references have already been hygienically bound.
     Unsupported item forms refuse explicitly rather than retaining unsubstituted parameters. -/
 def substituteItem (env : Environment) (bindings : Bindings) : SItemTief → RewriteM SItemTief
-  | .fnT sig body => return .fnT (← signature env bindings sig)
+  | .fnT sig body => do
+    return .fnT (← signature env bindings sig)
       (← rewriteBody env ((underGenerics bindings sig.generics).without (sig.params.map Prod.fst)) body)
   | .protoT sig => return .protoT (← signature env bindings sig)
-  | .specT sig pred => return .specT (← signature env bindings sig)
+  | .specT sig pred => do
+    return .specT (← signature env bindings sig)
       (← rewriteExpression env ((underGenerics bindings sig.generics).without (sig.params.map Prod.fst)) pred)
   | .asmT _ _ => liftResult (.error "parametric-module-assembly: raw bodies have no substitution rule")
-  | .transT target sig body => return .transT target (← signature env bindings sig)
+  | .transT target sig body => do
+    return .transT target (← signature env bindings sig)
       (← rewriteBody env ((underGenerics bindings sig.generics).without (sig.params.map Prod.fst)) body)
-  | .typeT flags n args order ty => return .typeT flags n
+  | .typeT flags n args order ty => do
+    return .typeT flags n
       (← args.mapM (rewriteType env bindings)) order (← ty.mapM (rewriteType env bindings))
   | .constT n ty value => return .constT n (← rewriteType env bindings ty) (← constant env bindings value)
-  | .globT mu n ty value aligned section shared => return .globT mu n
+  | .globT mu n ty value aligned sectionName shared => do
+    return .globT mu n
       (← rewriteType env bindings ty) (← constant env bindings value)
-      (← aligned.mapM (rewriteExpression env bindings)) section shared
-  | .tableT n from count backed owner shared parts => return .tableT n from
+      (← aligned.mapM (rewriteExpression env bindings)) sectionName shared
+  | .tableT n sourceName count backed owner shared parts => do
+    return .tableT n sourceName
       (← count.mapM (rewriteExpression env bindings)) backed owner shared
       (← parts.mapM (tablePart env bindings))
-  | .formatT n version endian fields => return .formatT n
+  | .formatT n version endian fields => do
+    return .formatT n
       (← version.mapM (rewriteExpression env bindings)) endian (← fields.mapM (field env bindings))
   | .arenaT n lo hi max ty provider => do
     let provider ← provider.mapM fun (path, amount) => do
@@ -97,16 +108,20 @@ def substituteItem (env : Environment) (bindings : Bindings) : SItemTief → Rew
     let cases ← cases.mapM fun (tag, code, text) => do
       pure (tag, ← rewriteExpression env bindings code, text)
     pure (.whyT n cases exhaustive)
-  | .atomT n ty publishes order observer => return .atomT n (← rewriteType env bindings ty)
+  | .atomT n ty publishes order observer => do
+    return .atomT n (← rewriteType env bindings ty)
       (← publishes.mapM (fun es => es.mapM (rewriteExpression env bindings))) order observer
-  | .lockT n places rank held shared masks iv => return .lockT n
+  | .lockT n places rank held shared masks iv => do
+    return .lockT n
       (← places.mapM (rewriteExpression env bindings)) (← rewriteExpression env bindings rank)
       (← held.mapM (rewriteExpression env bindings)) (← shared.mapM (rewriteExpression env bindings))
       masks (← iv.mapM (rewriteExpression env bindings))
-  | .rcuT n places reclaim => return .rcuT n (← places.mapM (rewriteExpression env bindings))
+  | .rcuT n places reclaim => do
+    return .rcuT n (← places.mapM (rewriteExpression env bindings))
       (← reclaim.mapM (rewriteExpression env bindings))
   | .groupT n members ivs => return .groupT n members (← ivs.mapM (invariant env bindings))
-  | .accT n ty mode cpu q => return .accT n (← rewriteType env bindings ty) mode
+  | .accT n ty mode cpu q => do
+    return .accT n (← rewriteType env bindings ty) mode
       (← cpu.mapM (rewriteExpression env bindings)) q
   | .concT starts => do
     let starts ← starts.mapM fun (path, args) => do
