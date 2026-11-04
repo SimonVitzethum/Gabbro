@@ -1,6 +1,7 @@
 /- Proof adapters for the toolchain's native float word representation. -/
 module
 public import Init.Data.Float
+import Init.Data.UInt.Bitwise
 @[expose] public section
 
 namespace Gabbro.Grammatik.NativeFloat
@@ -164,5 +165,74 @@ theorem finite_bits32_inverse {word : UInt32} (finite : (Float32.ofBits word).is
     cases finite
   apply UInt32.eq_of_toBitVec_eq
   exact pack_unpack Format.binary32 word.toBitVec (valid_of_not_nan _ _ notNan)
+
+private theorem unpack_finite (F : Format) (bits : BitVec F.numBits) :
+    (UnpackedFloat.unpack F bits).isFinite =
+      decide (unpackExponent (spec := F) bits ≠ -1#F.exponentBits) := by
+  by_cases he : unpackExponent (spec := F) bits = -1#F.exponentBits
+  · simp only [UnpackedFloat.unpack, he, ↓reduceIte]
+    split <;> simp [UnpackedFloat.isFinite]
+  · simp only [UnpackedFloat.unpack, he, ↓reduceIte]
+    split
+    · split <;> simp [UnpackedFloat.isFinite]
+    · simp [UnpackedFloat.isFinite]
+
+private theorem repack_finite (F : Format) (bits : BitVec F.numBits) :
+    (UnpackedFloat.unpack F (UnpackedFloat.pack F (UnpackedFloat.unpack F bits))).isFinite =
+      (UnpackedFloat.unpack F bits).isFinite := by
+  by_cases nan : UnpackedFloat.unpack F bits = .notANumber
+  · rw [nan, unpack_finite]
+    simp [UnpackedFloat.pack, packedNaN, UnpackedFloat.isFinite]
+  · rw [pack_unpack F bits (valid_of_not_nan F bits nan)]
+
+private theorem exponent_mask_eq (F : Format) (bits : BitVec F.numBits) :
+    bits &&& ((0#1 ++ (-1#F.exponentBits)) ++ 0#F.mantissaBitsWithoutImplicit) =
+      ((0#1 ++ (-1#F.exponentBits)) ++ 0#F.mantissaBitsWithoutImplicit) ↔
+      unpackExponent (spec := F) bits = -1#F.exponentBits := by
+  have masked : bits &&& ((0#1 ++ (-1#F.exponentBits)) ++ 0#F.mantissaBitsWithoutImplicit) =
+      (0#1 ++ unpackExponent (spec := F) bits) ++ 0#F.mantissaBitsWithoutImplicit := by
+    calc
+      _ = packComponents F (Sign.ofBitVec (unpackSign (spec := F) bits))
+          (unpackExponent (spec := F) bits) (unpackMantissa (spec := F) bits) &&&
+          ((0#1 ++ (-1#F.exponentBits)) ++ 0#F.mantissaBitsWithoutImplicit) :=
+        congrArg (fun word => word &&&
+          ((0#1 ++ (-1#F.exponentBits)) ++ 0#F.mantissaBitsWithoutImplicit))
+          (components_roundtrip F bits).symm
+      _ = _ := by simp only [packComponents, BitVec.and_append, BitVec.and_zero,
+        BitVec.and_neg_one, BitVec.ofNat_eq_ofNat]
+  rw [masked, BitVec.append_left_inj, BitVec.append_right_inj]
+
+/-- Native binary64 finiteness is exactly the integer exponent-mask guard,
+    including all raw NaN payloads and both signed infinities. -/
+theorem finite_word_mask (word : UInt64) :
+    (Float.ofBits word).isFinite = ((word &&& 0x7ff0000000000000) != 0x7ff0000000000000) := by
+  have fields : (word &&& 0x7ff0000000000000) = 0x7ff0000000000000 ↔
+      unpackExponent (spec := Format.binary64) word.toBitVec = -1#11 := by
+    rw [← UInt64.toBitVec_inj, UInt64.toBitVec_and]
+    have mask : (0x7ff0000000000000 : UInt64).toBitVec = (0#1 ++ (-1#11)) ++ 0#52 := by decide
+    rw [mask]
+    exact exponent_mask_eq Format.binary64 word.toBitVec
+  change (UnpackedFloat.unpack Format.binary64
+    (UnpackedFloat.pack Format.binary64 (UnpackedFloat.unpack Format.binary64 word.toBitVec))).isFinite = _
+  rw [repack_finite, unpack_finite]
+  apply Bool.eq_iff_iff.mpr
+  simp only [decide_eq_true_eq, bne_iff_ne]
+  exact not_congr fields.symm
+
+/-- The corresponding integer exponent mask for native binary32 storage. -/
+theorem finite_word32_mask (word : UInt32) :
+    (Float32.ofBits word).isFinite = ((word &&& 0x7f800000) != 0x7f800000) := by
+  have fields : (word &&& 0x7f800000) = 0x7f800000 ↔
+      unpackExponent (spec := Format.binary32) word.toBitVec = -1#8 := by
+    rw [← UInt32.toBitVec_inj, UInt32.toBitVec_and]
+    have mask : (0x7f800000 : UInt32).toBitVec = (0#1 ++ (-1#8)) ++ 0#23 := by decide
+    rw [mask]
+    exact exponent_mask_eq Format.binary32 word.toBitVec
+  change (UnpackedFloat.unpack Format.binary32
+    (UnpackedFloat.pack Format.binary32 (UnpackedFloat.unpack Format.binary32 word.toBitVec))).isFinite = _
+  rw [repack_finite, unpack_finite]
+  apply Bool.eq_iff_iff.mpr
+  simp only [decide_eq_true_eq, bne_iff_ne]
+  exact not_congr fields.symm
 
 end Gabbro.Grammatik.NativeFloat
