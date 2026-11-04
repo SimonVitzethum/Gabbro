@@ -247,29 +247,13 @@ theorem arr_cast {F : Type} {P : F → Nat → Bool} {a b : Ty} {n : Nat}
 
 theorem zurueck_cast (τ : Ty) (h : (einE D g₀).tyE τ = τ) (v : Wert D τ) :
     zurueck D g₀ τ (h ▸ (einE D g₀).valE τ v) = v := by
-  let backward : ∀ n, {f : D.Fn ⊕ Unit // passtE D g₀ f n = true} →
-      {f : D.Fn // D.passt f n = true} := by
-    intro n value
-    rcases value with ⟨f, hf⟩
-    cases f with
-    | inl f =>
-        change D.passt f n = true at hf
-        exact ⟨f, hf⟩
-    | inr _ =>
-        change D.passt g₀ n = true at hf
-        exact ⟨g₀, hf⟩
   change Val.restrict (F := D.Fn) (F' := D.Fn ⊕ Unit) (p := D.passt) (p' := passtE D g₀)
-    id id backward τ
+    id id (fun n (value : {f : D.Fn ⊕ Unit // passtE D g₀ f n = true}) => match value with
+    | ⟨.inl f, h⟩ => ⟨f, h⟩
+    | ⟨.inr _, h⟩ => ⟨g₀, h⟩) τ
       (castW (D := erweitert D g₀) h.symm (castW (D := erweitert D g₀) h ((einE D g₀).valE τ v))) = v
-  rw [castW_symm]
-  let forward : ∀ n, {f : D.Fn // D.passt f n = true} →
-      {f : D.Fn ⊕ Unit // passtE D g₀ f n = true} := by
-    intro n value
-    exact ⟨.inl value.1, value.2⟩
-  change Val.restrict id id backward τ (Val.relocate id id forward τ v) = v
-  exact Val.restrict_relocate id id forward backward (fun n value => by
-    rcases value with ⟨f, hf⟩
-    rfl) τ v
+  erw [castW_symm]
+  exact Val.restrict_relocate id id _ _ (fun _ _ => rfl) τ v
 
 theorem sigTreu_einE : (einE D g₀).SigTreu where
   sigNr := fun n => (sigE_einE D g₀ (D.sigNr n)).symm
