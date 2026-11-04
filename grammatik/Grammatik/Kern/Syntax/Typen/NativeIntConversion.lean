@@ -392,4 +392,69 @@ theorem ofInt_unsigned64 (z : Int) (lower : 0 ≤ z) (upper : z < 2 ^ 64) :
     Float.ofModel (Float.Model.ofInt (z.toNat % 2 ^ 64 : Nat))
   rw [Nat.mod_eq_of_lt (by omega), Int.toNat_of_nonneg lower]
 
+private theorem components_not_nan (F : Format) (s : Sign)
+    (e : BitVec F.exponentBits) (m : BitVec F.mantissaBitsWithoutImplicit)
+    (normal : e ≠ -1#F.exponentBits ∨ m = 0#F.mantissaBitsWithoutImplicit) :
+    (UnpackedFloat.unpack F (packComponents F s e m)).isNaN = false := by
+  simp only [UnpackedFloat.unpack, unpackMantissa_packComponents, unpackExponent_packComponents]
+  split
+  · next maximum =>
+      have zero : m = 0#F.mantissaBitsWithoutImplicit :=
+        normal.resolve_left (fun notMax => notMax maximum)
+      simp only [zero, ↓reduceIte, UnpackedFloat.isNaN]
+  · split
+    · split <;> rfl
+    · rfl
+
+private theorem packed_not_nan (F : Format) (u : UnpackedFloat) (notNan : u.isNaN = false) :
+    (UnpackedFloat.unpack F (UnpackedFloat.pack F u)).isNaN = false := by
+  cases u with
+  | notANumber => cases notNan
+  | infinity s => exact components_not_nan F s (-1#F.exponentBits) 0
+      (Or.inr (by rw [BitVec.ofNat_eq_ofNat]))
+  | zero s => exact components_not_nan F s 0 0 (Or.inr (by rw [BitVec.ofNat_eq_ofNat]))
+  | finite s m e positive =>
+      unfold UnpackedFloat.pack
+      dsimp only
+      split
+      · exact components_not_nan F s (-1#F.exponentBits) 0
+          (Or.inr (by rw [BitVec.ofNat_eq_ofNat]))
+      · next noOverflow =>
+          split
+          · refine components_not_nan F s
+              (BitVec.ofNat F.exponentBits (e + F.exponentBias + F.mantissaBitsWithoutImplicit).toNat)
+              (BitVec.ofNat F.mantissaBitsWithoutImplicit m) (Or.inl ?_)
+            intro maximum
+            have field := congrArg BitVec.toNat maximum
+            have bound : (e + F.exponentBias + F.mantissaBitsWithoutImplicit).toNat < 2 ^ F.exponentBits := by
+              omega
+            simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt bound,
+              BitVec.neg_one_eq_allOnes, BitVec.toNat_allOnes] at field
+            omega
+          · refine components_not_nan F s (0#F.exponentBits)
+              (BitVec.ofNat F.mantissaBitsWithoutImplicit m) (Or.inl ?_)
+            intro maximum
+            have := BitVec.zero_eq_neg_one_iff.mp maximum
+            have := F.he
+            omega
+
+private theorem round_not_nan (F : Format) (s : Sign) (m : Nat) (e : Int) :
+    (round F s m e).isNaN = false := by
+  unfold round roundWithAccuracy
+  dsimp only
+  split <;> rfl
+
+/-- Native conversion never produces NaN, including either signed overflow
+    to infinity. No finite-range premise is imposed on the source integer. -/
+theorem ofInt_not_nan (z : Int) : (Float.ofInt z).isNaN = false := by
+  rw [ofInt_model]
+  change (UnpackedFloat.unpack Format.binary64
+    (UnpackedFloat.pack Format.binary64 (UnpackedFloat.ofInt Format.binary64 z))).isNaN = false
+  apply packed_not_nan
+  unfold UnpackedFloat.ofInt normalize
+  split
+  · exact round_not_nan _ _ _ _
+  · rfl
+  · exact round_not_nan _ _ _ _
+
 end Gabbro.Grammatik.NativeFloat
