@@ -168,7 +168,10 @@ theorem stmtSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       obtain ⟨_, hb, _⟩ := hs.locks_inv
       simp only [Stmt.kOk] at ho
       simp only [execStmt]
-      exact AusSG.gibt (blockSGK body hb ho _ _ _ (h.nimmt L)) L
+      have same := blockSGK body hb ho _ _ ρ (h.nimmt L)
+      generalize execBlock O passes R body (σ.nimmt L) ρ = left at same ⊢
+      generalize execBlock O passes R body (σ'.nimmt L) ρ = right at same ⊢
+      cases left <;> cases right <;> simpa only [AusSG, Ausgang.mapWelt, SG, World.gibt] using same
   | _, _, _, _, _, .breaking i body, hs, ho => by
       intro σ σ' ρ h
       have hb := hs.breaking_inv
@@ -372,7 +375,7 @@ theorem endSGK : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       exact EndSG.schrumpf (endSGK rest hr ho _ _ _ h1)
   | _, _, _, .narrowRequired _ _ _ _, he, _ => by cases he
 
-  | _, _, _, .float op a b lo hi rest, hb, ho => by
+  | _, _, Λ₀, .float op a b lo hi rest, hb, ho => by
       intro σ σ' ρ h
       have hr := hb.gleit_inv
       simp only [Endblock.kOk] at ho
@@ -390,7 +393,7 @@ theorem endSGK : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       split
       · exact EndSG.schrumpf (endSGK rest hr ho _ _ _ h)
       · trivial
-  | _, _, _, .floatOf e lo hi rest, hb, ho => by
+  | _, _, Λ₀, .floatOf e lo hi rest, hb, ho => by
       intro σ σ' ρ h
       have hr := hb.gleitVon_inv
       simp only [Endblock.kOk] at ho
@@ -400,7 +403,7 @@ theorem endSGK : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       split
       · exact EndSG.schrumpf (endSGK rest hr ho _ _ _ h1)
       · trivial
-  | _, _, _, .floatNarrow e lo hi sonst rest, hb, ho => by
+  | _, _, Λ₀, .floatNarrow e lo hi sonst rest, hb, ho => by
       intro σ σ' ρ h
       obtain ⟨hr, hs⟩ := hb.gleitNarrow_inv
       simp only [Endblock.kOk, Bool.and_eq_true] at ho

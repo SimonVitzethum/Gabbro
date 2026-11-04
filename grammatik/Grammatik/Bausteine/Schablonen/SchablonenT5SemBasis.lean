@@ -30,6 +30,7 @@
 
 module
 public import Grammatik.Korpus.Referenz.ReferenzB
+public import Grammatik.Kern.Semantik.Semantik.T2.ScopedLocks
 @[expose] public section
 
 
@@ -161,7 +162,9 @@ theorem sperrabdruck_form (L : D.Lock)
       | .zurueck σ' value => .zurueck σ' value
       | .why σ' reason => .why σ' reason
       | outcome => outcome.mapWelt (·.gibt L) :=
-  by rfl
+  by
+    rw [execStmt_locks_outcome]
+    cases execBlock O passes R body (σ.nimmt L) ρ <;> rfl
 
 /-! ### The footprint on a real fragment.
 
