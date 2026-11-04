@@ -120,23 +120,23 @@ theorem callIndElse_ok {A : D.Fn → Nat} {C : D.Fn → List II}
     {cc cr ce : List II} {ta : Nat} {fp pc : Runner.W} {K Ks : Nat} {m : Runner.Mem}
     {ρ : Env D Γ} (σ : World D)
     (hcc : lowIndElse L p args reserved = some (cc, ta))
-    (ht : max ta (frei Γ reserved + FB + (contextWords (D.sigNr n).params) + returnWords (D.erg (D.sigNr n)) (D.gruende (D.sigNr n)) + 1) + cap ≤ Ks)
+    (ht : max ta (frei Γ reserved + FB + (contextWords (D.sigNr n).params) + returnWords (D.sigNr n).erg (D.sigNr n).gruende + 1) + cap ≤ Ks)
     (hp : PreS L m pc fp K (frei Γ reserved)
       (elseC (D.sigNr n) (frei Γ reserved) cc cr ce) ρ reserved)
     (hs : 16 * (elseC (D.sigNr n) (frei Γ reserved) cc cr ce).length < 2 ^ 31)
     (hu : Umf L A C dv m fp Ks K) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) :
     (∃ σ' v m2, R (eval σ p σ ρ).1 σ (umsig (eval σ p σ ρ).2 (evalArgs σ args σ ρ)) = .ok σ' v ∧
-      Star ⟨pc, fp⟩ m ⟨callBranchPC pc cc cr (returnWords (D.erg (D.sigNr n)) (D.gruende (D.sigNr n))) true), fp⟩ m2 ∧
+      Star ⟨pc, fp⟩ m ⟨callBranchPC pc cc cr (returnWords (D.sigNr n).erg (D.sigNr n).gruende) true, fp⟩ m2 ∧
       AgreeW L fp (frei Γ reserved) K m m2 ∧
-      PreS L m2 (callBranchPC pc cc cr (returnWords (D.erg (D.sigNr n)) (D.gruende (D.sigNr n))) true) fp K (frei (τ :: Γ) reserved) cr (.cons (ergWert (ergSig (eval σ p σ ρ).2 he) v) ρ) reserved ∧ WeltAt m2 L σ') ∨
+      PreS L m2 (callBranchPC pc cc cr (returnWords (D.sigNr n).erg (D.sigNr n).gruende) true) fp K (frei (τ :: Γ) reserved) cr (.cons (ergWert (ergSig (eval σ p σ ρ).2 he) v) ρ) reserved ∧ WeltAt m2 L σ') ∨
     (∃ σ' r m2, R (eval σ p σ ρ).1 σ (umsig (eval σ p σ ρ).2 (evalArgs σ args σ ρ)) = .why σ' r ∧
-      Star ⟨pc, fp⟩ m ⟨callBranchPC pc cc cr (returnWords (D.erg (D.sigNr n)) (D.gruende (D.sigNr n))) false), fp⟩ m2 ∧
+      Star ⟨pc, fp⟩ m ⟨callBranchPC pc cc cr (returnWords (D.sigNr n).erg (D.sigNr n).gruende) false, fp⟩ m2 ∧
       AgreeW L fp (frei Γ reserved) K m m2 ∧
-      PreS L m2 (callBranchPC pc cc cr (returnWords (D.erg (D.sigNr n)) (D.gruende (D.sigNr n))) false) fp K (frei (.why (D.sigNr n).gruende :: Γ) reserved) ce (Env.cons (τ := .why (D.sigNr n).gruende) (grundSig (eval σ p σ ρ).2 r) ρ) reserved ∧ WeltAt m2 L σ') ∨
+      PreS L m2 (callBranchPC pc cc cr (returnWords (D.sigNr n).erg (D.sigNr n).gruende) false) fp K (frei (.why (D.sigNr n).gruende :: Γ) reserved) ce (Env.cons (τ := .why (D.sigNr n).gruende) (grundSig (eval σ p σ ρ).2 r) ρ) reserved ∧ WeltAt m2 L σ') ∨
     (∃ e, R (eval σ p σ ρ).1 σ (umsig (eval σ p σ ρ).2 (evalArgs σ args σ ρ)) = .logik e ∧ Stops ⟨pc, fp⟩ m (logikCode e)) ∨
     (∃ e, R (eval σ p σ ρ).1 σ (umsig (eval σ p σ ρ).2 (evalArgs σ args σ ρ)) = .hardware e ∧ Stops ⟨pc, fp⟩ m (hwCode e)) := by
   have hpc : PreS L m pc fp K (frei Γ reserved) (cc ++
-      (receiveC (D.sigNr n) (frei Γ reserved) ++ [ci 19 (frei Γ reserved + FB + (contextWords (D.sigNr n).params) + returnWords (D.erg (D.sigNr n)) (D.gruende (D.sigNr n))) (16 * (cr.length + 2)) 0] ++
+      (receiveC (D.sigNr n) (frei Γ reserved) ++ [ci 19 (frei Γ reserved + FB + (contextWords (D.sigNr n).params) + returnWords (D.sigNr n).erg (D.sigNr n).gruende) (16 * (cr.length + 2)) 0] ++
       cr ++ [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce)) ρ reserved := by
     simpa only [Deklaration.params, Deklaration.erg, Deklaration.gruende, elseC, List.append_assoc, Int.natCast_add, Int.ofNat_one] using hp
   have hc := lowIndElse_ok (same := rfl) hS hA p args σ σ hcc (by omega) hpc.left hu hW hWa
@@ -150,7 +150,7 @@ theorem callIndElse_ok {A : D.Fn → Nat} {C : D.Fn → List II}
     have herg : D.erg f = (D.sigNr n).erg := (D.passt_sig hf).erg
     have hgru : D.gruende f = (D.sigNr n).gruende := (D.passt_sig hf).gruende
     have result' : ResultAt L m1 (slot fp (BitVec.ofNat 64 (frei Γ reserved)))
-        (FB + contextWords (D.sigNr n).params) (D.erg (D.sigNr n)) (herg ▸ v) := by
+        (FB + contextWords (D.sigNr n).params) (D.sigNr n).erg (herg ▸ v) := by
       cases herg
       cases hsig
       exact result
@@ -159,13 +159,13 @@ theorem callIndElse_ok {A : D.Fn → Nat} {C : D.Fn → List II}
       cases hsig; exact mirror
     have flag' : ReturnFlag m1 (slot fp (BitVec.ofNat 64 (frei Γ reserved)))
         (contextWords (D.sigNr n).params) true
-        (returnWords (D.erg (D.sigNr n)) (D.gruende (D.sigNr n))) := by
+        (returnWords (D.sigNr n).erg (D.sigNr n).gruende) := by
       cases hsig; cases herg; cases hgru; exact flag
     have hval' : ValueAt L m1 (slot fp (BitVec.ofNat 64 (frei Γ reserved)))
         (FB + contextWords (D.sigNr n).params) τ (ergWert he (herg ▸ v)) :=
       resultAt_wert he result'
     obtain ⟨m2, sx2, ax2, hp2, hw2⟩ := callBranch_ok hp hs hW (by omega) sx ax
-      hval' (by have width := resultWords_le_returnWords (D.erg (D.sigNr n)) (D.gruende (D.sigNr n)); simpa only [he, resultWords] using width) flag' hw1
+      hval' (by have width := resultWords_le_returnWords (D.sigNr n).erg (D.sigNr n).gruende; simpa only [he, resultWords] using width) flag' hw1
     have henv : ergWert he (herg ▸ v) = ergWert (ergSig hf he) v := by
       cases herg; rfl
     rw [henv] at hp2
@@ -192,10 +192,10 @@ theorem callIndElse_ok {A : D.Fn → Nat} {C : D.Fn → List II}
       cases hsig; exact mirror
     have flag' : ReturnFlag m1 (slot fp (BitVec.ofNat 64 (frei Γ reserved)))
         (contextWords (D.sigNr n).params) false
-        (returnWords (D.erg (D.sigNr n)) (D.gruende (D.sigNr n))) := by
+        (returnWords (D.sigNr n).erg (D.sigNr n).gruende) := by
       cases hsig; cases herg; cases hgru; exact flag
     obtain ⟨m2, sx2, ax2, hp2, hw2⟩ := callBranch_ok (τ := .why (D.sigNr n).gruende) (v := grundSig hf r)
-      hp hs hW (by omega) sx ax value' (reasonWords_le_returnWords (D.erg (D.sigNr n)) (D.gruende (D.sigNr n))) flag' hw1
+      hp hs hW (by omega) sx ax value' (reasonWords_le_returnWords (D.sigNr n).erg (D.sigNr n).gruende) flag' hw1
     exact .inr (.inl ⟨σ', grundSig hf r, m2, rfl, sx2, ax2, hp2, hw2⟩)
   | logik e => exact .inr (.inr (.inl ⟨e, rfl, hc⟩))
   | hardware e => exact .inr (.inr (.inr ⟨e, rfl, hc⟩))

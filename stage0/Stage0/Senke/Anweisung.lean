@@ -154,7 +154,7 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
     let cc ← lowIndElse (reserved := reserved) L p args
     let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
     pure (elseC (D.sigNr n) (frei Γ reserved) cc.1 [] ce.1,
-      max cc.2 (max ((frei Γ reserved) + FB + (contextWords (D.sigNr n).params) + returnWords (D.erg (D.sigNr n)) (D.gruende (D.sigNr n)) + 1) ce.2))
+      max cc.2 (max ((frei Γ reserved) + FB + (contextWords (D.sigNr n).params) + returnWords (D.sigNr n).erg (D.sigNr n).gruende + 1) ce.2))
   | _, Γ, _, _, .locks Lk _ body, reserved =>
     if retFreiB body = true ∧ lit32 (16 + ex.1 + 16 * 30) = true ∧ lit32 (16 + ex.2) = true then do
       let cb ← lowB (reserved := reserved) passes A L layout ens pr (16 * 30, 16 * 60) body

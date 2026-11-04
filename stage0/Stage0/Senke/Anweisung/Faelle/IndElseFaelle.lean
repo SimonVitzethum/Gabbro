@@ -42,7 +42,7 @@ theorem stmtIndElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
     ⟨e, hR, st⟩ | ⟨e, hR, st⟩
   · rw [hR]
     have hj := callElse_jump (cr := []) hp hs hW (a.mono hlo2)
-    have hj2 : Star ⟨callBranchPC pc cc [] (returnWords (D.erg (D.sigNr n)) (D.gruende (D.sigNr n))) true, fp⟩ m2
+    have hj2 : Star ⟨callBranchPC pc cc [] (returnWords (D.sigNr n).erg (D.sigNr n).gruende) true, fp⟩ m2
         ⟨pc + BitVec.ofNat 64 (16 * (elseC (D.sigNr n) (frei Γ reserved) cc [] ce).length), fp⟩ m2 := by
       simpa using hj
     refine ⟨m2, st.trans hj2, (a.mono hlo2),
