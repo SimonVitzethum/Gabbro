@@ -1,5 +1,11 @@
 module
 public import Grammatik.Parser.Elab.UebersetzeAllg3
+-- Kernel probes need the bodies of the phase's floor, check, wrapper and static gates.
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
+import all Grammatik.Parser.Elab.Generic.StaticConformance
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -94,8 +100,8 @@ def zwei : List SItemTief :=
    .modT "b" [c],
    .modT "p" [.useT ["a", "setze"],
      schreib "haupt" [.why "a" "C", .why "b" "C"] [.why "b" "C"] [.call "setze" []]]]
-theorem zwei_ok : stufe zwei = "OK" := by decide +kernel
-theorem zwei_traeger : traeger zwei = ["a::C", "b::C"] := by decide +kernel
+theorem zwei_ok : stufe zwei = "OK" := by cbv
+theorem zwei_traeger : traeger zwei = ["a::C", "b::C"] := by cbv
 theorem zwei_wirkung :
     wirkungUndRumpf (pre108 zwei) = [(["a::C"], ["a::C"]), (["a::C", "b::C"], ["b::C"])] := by
   decide +kernel
@@ -116,14 +122,14 @@ theorem tief_geparst :
 def tief : List SItemTief :=
   [.modT "x" [.modT "y" [c]],
    .modT "b" [c, schreib "f" [.variable "x::y::C"] [.variable "x::y::C"]]]
-theorem tief_ok : stufe tief = "OK" := by decide +kernel
-theorem tief_traeger : traeger tief = ["x::y::C", "b::C"] := by decide +kernel
+theorem tief_ok : stufe tief = "OK" := by cbv
+theorem tief_traeger : traeger tief = ["x::y::C", "b::C"] := by cbv
 
 /-- PLANTED DEFECT: a module that neither declares nor `use`s `C` names it bare. Two items carry the
     short name and neither is visible from `p`: the name is refused, not bound to either. -/
 def unsichtbar : List SItemTief :=
   [.modT "a" [c], .modT "b" [c], .modT "p" [schreib "f" [.variable "C"] [.variable "C"]]]
-theorem unsichtbar_refused : stufe unsichtbar = "elab: writes clause without G form" := by decide +kernel
+theorem unsichtbar_refused : stufe unsichtbar = "elab: writes clause without G form" := by cbv
 
 /-- PLANTED DEFECT: the effect names `a::C`, the body writes its own module's `C`. The two names stay two
     carriers, so the footprint rule sees a body writing a carrier its effects do not name. -/
