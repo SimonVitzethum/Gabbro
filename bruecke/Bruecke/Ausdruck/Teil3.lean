@@ -19,6 +19,29 @@ theorem ergFind_none {fn : UFn} (hA : ArtStimmt fn) : fn.params.find? (·.1 == "
     simp only [ParamSchlicht, Bool.and_eq_true, bne_iff_ne, ne_eq] at this
     simpa using this.2
 
+private theorem lowWertE_erg_inv {Γ : Ctx} {Λ : List (Res (declOf u))}
+    {fn : UFn} {er : Option Ty} {wv : LowWert u Γ Λ}
+    (h : lowWertE u Γ Λ fn er .erg = .ok wv) (hA : ArtStimmt fn) :
+    ∃ (lo hi : Int) (v : Var Γ (.int lo hi)),
+      er = some (.int lo hi) ∧ lowVar Γ 0 (.int lo hi) = .ok v ∧
+        wv = ({ range := (lo, hi), term := Expr.var v } : LowSide u Γ Λ).wert := by
+  cases er with
+  | none =>
+    cases position : paramPos fn.params "#erg" with
+    | error error => simp only [lowWertE, position, ergFind_none hA, reduceCtorEq] at h
+    | ok j => simp only [lowWertE, position, ergFind_none hA, reduceCtorEq] at h
+  | some ty =>
+    cases ty with
+    | int lo hi =>
+      cases hv : lowVar Γ 0 (.int lo hi) with
+      | error error => simp only [lowWertE, hv, reduceCtorEq] at h
+      | ok v =>
+        simp only [lowWertE, hv, Except.ok.injEq] at h
+        exact ⟨lo, hi, v, rfl, hv, h.symm⟩
+    | bool | opt _ | sum _ | why _ | never | fl _ _ | fnptr _ | ptr _ | ref _
+    | arr _ _ | str _ | prod _ _ =>
+      simp only [lowWertE, reduceCtorEq] at h
+
 /-- An `ensures` side with a Body form lowers to a number (`old(..)`, `result` and every side of
     `lowWertE_sim`). -/
 theorem lowWertEns_int {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Option Ty}
@@ -38,21 +61,8 @@ theorem lowWertEns_int {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : 
       exact ⟨ls, h.symm⟩
   · by_cases herg : sd = .erg
     · subst herg
-      simp only [lowWertE] at h
-      split at h
-      · split at h
-        · cases h
-        · rename_i v _
-          cases h
-          exact ⟨{ range := (_, _), term := Expr.var v }, rfl⟩
-      · split at h
-        · split at h
-          · cases h
-          · rename_i v _
-            cases h
-            exact ⟨{ range := (_, _), term := Expr.var v }, rfl⟩
-        · cases h
-      · cases h
+      obtain ⟨lo, hi, v, _, _, same⟩ := lowWertE_erg_inv h hA
+      exact ⟨{ range := (lo, hi), term := Expr.var v }, same⟩
     · obtain ⟨hs, _⟩ := ensSide_sonst hb (fun b f ix e => hold ⟨b, f, ix, e⟩) herg
       obtain ⟨ls, hls, _⟩ := lowWertE_sim h hs hA hT σ₀ σ₀ ρ s₀.world s₀.local' hW₀ hL₀
       exact ⟨ls, hls⟩
@@ -101,26 +111,14 @@ theorem lowSideEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
       | error e => simp [lowSideEns, zahlVon, hw] at h
       | ok wv =>
         simp only [lowSideEns, zahlVon, hw] at h
-        simp only [lowWertE] at hw
-        split at hw
-        · split at hw
-          · cases hw
-          · rename_i v hv
-            cases hw
-            simp only [LowWert.zahl, Except.ok.injEq] at h
-            subst h
-            simp only [ensSide, Option.some.injEq, Prod.mk.injEq] at hb
-            obtain ⟨rfl, rfl⟩ := hb
-            simp only [Gabbro.Body.eval]
-            rw [hB.res (hpre.2 rfl), nthVal_lowVar Γ 0 _ v ρ hv]
-            rfl
-        all_goals first
-          | (cases hw; done)
-          | (split at hw
-             · rename_i hfind
-               rw [ergFind_none hA] at hfind
-               cases hfind
-             · cases hw)
+        obtain ⟨lo, hi, v, rfl, hv, rfl⟩ := lowWertE_erg_inv hw hA
+        simp only [LowSide.wert, LowWert.zahl, Except.ok.injEq] at h
+        subst h
+        simp only [ensSide, Option.some.injEq, Prod.mk.injEq] at hb
+        obtain ⟨rfl, rfl⟩ := hb
+        simp only [Gabbro.Body.eval]
+        rw [hB.res (hpre.2 rfl), nthVal_lowVar Γ 0 _ v ρ hv]
+        rfl
     · obtain ⟨hs, rfl⟩ := ensSide_sonst hb (fun b f ix e => hold ⟨b, f, ix, e⟩) herg
       cases hw : lowWertE u Γ Λ fn er sd with
       | error e => simp [lowSideEns, zahlVon, hw] at h
@@ -257,7 +255,13 @@ theorem lowEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
           rfl
       · cases hb
   -- Unrepresented predicates contradict the existing `ensExpr` premise.
-  | _, _, _, _, _, hb, _, _ => by simp [ensExpr] at hb
+  | .slotB .., _, _, _, _, hb, _, _ | .tabB .., _, _, _, _, hb, _, _
+  | .globB .., _, _, _, _, hb, _, _ | .var .., _, _, _, _, hb, _, _
+  | .alle .., _, _, _, _, hb, _, _ | .einige .., _, _, _, _, hb, _, _
+  | .ergB, _, _, _, _, hb, _, _ | .istSome .., _, _, _, _, hb, _, _
+  | .held .., _, _, _, _, hb, _, _ | .imp .., _, _, _, _, hb, _, _
+  | .reach .., _, _, _, _, hb, _, _ | .member .., _, _, _, _, hb, _, _
+  | .filtered .., _, _, _, _, hb, _, _ | .arrayElements .., _, _, _, _, hb, _, _ => by cases hb
 
 /-- What a lowered side adds to the accumulator: `old` reads that evaluate in the entry state,
     and `result` only where the function has one. -/
@@ -312,16 +316,8 @@ theorem ensSide_zuwachs {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
       cases hw : lowWertE u Γ Λ fn er .erg with
       | error e => simp [lowSideEns, zahlVon, hw] at h
       | ok wv =>
-        simp only [lowWertE] at hw
-        split at hw
-        · first | rfl | simp_all
-        all_goals first
-          | (cases hw; done)
-          | (split at hw
-             · rename_i hfind
-               rw [ergFind_none hA] at hfind
-               cases hfind
-             · cases hw)
+        obtain ⟨lo, hi, v, rfl, _, _⟩ := lowWertE_erg_inv hw hA
+        rfl
     · obtain ⟨_, rfl⟩ := ensSide_sonst hb (fun b f ix e => hold ⟨b, f, ix, e⟩) herg
       exact Zuwachs.refl _ _ _
 
@@ -421,6 +417,12 @@ theorem ensExpr_zuwachs {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
           exact ensExpr_zuwachs hA hT σ₀ σ ρ s₀ hW₀ hL₀ x hx hgx
       · cases hb
   -- Unrepresented predicates contradict the existing `ensExpr` premise.
-  | _, _, _, _, _, hb, _ => by simp [ensExpr] at hb
+  | .slotB .., _, _, _, _, hb, _ | .tabB .., _, _, _, _, hb, _
+  | .globB .., _, _, _, _, hb, _ | .var .., _, _, _, _, hb, _
+  | .alle .., _, _, _, _, hb, _ | .einige .., _, _, _, _, hb, _
+  | .ergB, _, _, _, _, hb, _ | .istSome .., _, _, _, _, hb, _
+  | .held .., _, _, _, _, hb, _ | .imp .., _, _, _, _, hb, _
+  | .reach .., _, _, _, _, hb, _ | .member .., _, _, _, _, hb, _
+  | .filtered .., _, _, _, _, hb, _ | .arrayElements .., _, _, _, _, hb, _ => by cases hb
 
 end Gabbro.Bruecke
