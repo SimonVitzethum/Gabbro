@@ -112,7 +112,7 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
     else none
   | _, _, _, _, .consumeTraverse t member edge inv bound mass body, reserved =>
     Consuming.lower L layout t member edge inv bound mass reserved (counterDepthB body) pr
-      (fun protected targets => lowB (reserved := reserved) passes A L layout ens protected targets body)
+      (fun kept targets => lowB (reserved := reserved) passes A L layout ens kept targets body)
   | _, Γ, _, _, .retry n bis body overflow, reserved => do
     let cc ← lowE (reserved := reserved) L bis ((frei Γ reserved))
     let cu ← lowB (reserved := reserved) passes A L layout ens pr ex overflow

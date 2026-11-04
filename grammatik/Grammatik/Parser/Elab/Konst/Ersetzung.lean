@@ -365,9 +365,11 @@ theorem ersetzeSExpr_call_certified (shadowed : List String) (fns : List UKonstF
   · contradiction
   · cases hc : checkReplacement fn fns (fn.constants.filter (fun entry => !shadowed.contains entry.1)) args' with
     | error error =>
+      simp only [hc, bind, Except.bind, pure, Except.pure] at success
       change (Except.error error : Except String SExpr) = Except.ok replacement at success
       cases success
     | ok checked =>
+      simp only [hc, bind, Except.bind, pure, Except.pure] at success
       change (Except.ok checked.syntax : Except String SExpr) = Except.ok replacement at success
       exact ⟨checked, rfl, (Except.ok.inj success).symm, checked.sound⟩
 
