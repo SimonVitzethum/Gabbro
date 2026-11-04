@@ -99,17 +99,29 @@ theorem stmt : ∀ (s : Stmt D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ),
   | .forever a inv body, σ, ρ, entry =>
     forever a _ _ (fun σ ρ en => block body σ ρ en) (fun _ _ => lese_haelt ..) passes σ ρ entry
   | .axiomCall a args _ _ _ _ _, σ, ρ, entry => by
+    have readHeld := lese_haelt σ Λ args.orte
+    have same := oracle_held O hO a (σ.lese Λ args.orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
     simp only [execStmt]
-    apply Outcome.vor (lese_haelt ..)
-    exact Outcome.option (entry.same (lese_haelt ..)) _ (oracle_held O hO ..) _ _
-      (fun _ _ _ => Outcome.ok _ rfl)
+    apply Outcome.vor readHeld
+    generalize answerEq : axiomAntwort O a (σ.lese Λ args.orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = answer at same ⊢
+    rcases answer with ⟨σ', _ | v⟩
+    · exact Outcome.hardware _
+    · exact Outcome.ok ρ same
   | .axiomCallElse _ a args _ _ _ _ _ err, σ, ρ, entry => by
+    have readHeld := lese_haelt σ Λ args.orte
+    have same := oracleElse_held O hO a (σ.lese Λ args.orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
     simp only [execStmt]
-    apply Outcome.vor (lese_haelt ..)
-    refine Outcome.option (entry.same (lese_haelt ..)) _ (oracleElse_held O hO ..) _ _ ?_
-    intro σ' answer en; cases answer with
-    | inl v => exact Outcome.ok _ rfl
-    | inr r => exact ((endBlock err σ' _ (en.nach (D.asignatur a))).schrumpf).zuAusgang
+    apply Outcome.vor readHeld
+    generalize answerEq : axiomAntwortSonst O a (σ.lese Λ args.orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = answer at same ⊢
+    rcases answer with ⟨σ', _ | (v | r)⟩
+    · exact Outcome.hardware _
+    · exact Outcome.ok ρ same
+    · exact ((endBlock err σ' (.cons r ρ)
+        (((entry.same readHeld).same same).nach (D.asignatur a))).schrumpf).zuAusgang.vor same
   | .regWrite .., σ, ρ, entry => Outcome.ok _ (lese_haelt ..)
   | .transition .., σ, ρ, entry => Outcome.ok _ (fragt_haelt ..)
   | .publish .., σ, ρ, entry => Outcome.ok _ ((storeGlob_held ..).trans (lese_haelt ..))
@@ -137,9 +149,12 @@ theorem block : ∀ (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ),
     generalize he : execStmt O passes R s σ ρ = outcome at result ⊢
     cases outcome with
     | ok σ1 ρ1 =>
+      dsimp only at result ⊢
       have same := result σ1 rfl
       exact (block rest σ1 ρ1 ((entry.same same).resources s.held_iff (stmt_heldCount L s))).vor same
-    all_goals exact result
+    | zurueck σ1 v | why σ1 v | leave _ σ1 v | next _ σ1 v =>
+      dsimp only; exact result
+    | logik e | hardware e => dsimp only; exact result
   | .bind e rest, σ, ρ, entry =>
     ((block rest _ _ (entry.same (lese_haelt ..))).schrumpf).vor (lese_haelt ..)
   | .bindCall f args he hp hr rest, σ, ρ, entry => by
@@ -171,25 +186,53 @@ theorem block : ∀ (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ),
     · intro σ' v en; exact (block rest σ' _ (en.nach (D.sigNr _))).schrumpf
     · intro σ' r en; exact ((endBlock err σ' _ (en.nach (D.sigNr _))).schrumpf).zuAusgang
   | .bindAxiom a args he _ _ _ _ rest, σ, ρ, entry => by
-    simp only [execBlock]; apply Outcome.vor (lese_haelt ..)
-    refine Outcome.option (entry.same (lese_haelt ..)) _ (oracle_held O hO ..) _ _ ?_
-    intro σ' v en; exact (block rest σ' _ en).schrumpf
+    have readHeld := lese_haelt σ Λ args.orte
+    have same := oracle_held O hO a (σ.lese Λ args.orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+    simp only [execBlock]; apply Outcome.vor readHeld
+    generalize answerEq : axiomAntwort O a (σ.lese Λ args.orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = answer at same ⊢
+    rcases answer with ⟨σ', _ | v⟩
+    · exact Outcome.hardware _
+    · exact ((block rest σ' (.cons (ergWert he v) ρ)
+        ((entry.same readHeld).same same)).schrumpf).vor same
   | .bindAxiomElse a args he _ _ _ _ _ err rest, σ, ρ, entry => by
-    simp only [execBlock]; apply Outcome.vor (lese_haelt ..)
-    refine Outcome.option (entry.same (lese_haelt ..)) _ (oracleElse_held O hO ..) _ _ ?_
-    intro σ' answer en; cases answer with
-    | inl v => exact (block rest σ' _ en).schrumpf
-    | inr r => exact ((endBlock err σ' _ en).schrumpf).zuAusgang
+    have readHeld := lese_haelt σ Λ args.orte
+    have same := oracleElse_held O hO a (σ.lese Λ args.orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+    simp only [execBlock]; apply Outcome.vor readHeld
+    generalize answerEq : axiomAntwortSonst O a (σ.lese Λ args.orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = answer at same ⊢
+    rcases answer with ⟨σ', _ | (v | r)⟩
+    · exact Outcome.hardware _
+    · exact ((block rest σ' (.cons (ergWert he v) ρ)
+        ((entry.same readHeld).same same)).schrumpf).vor same
+    · exact ((endBlock err σ' (.cons r ρ)
+        ((entry.same readHeld).same same)).schrumpf).zuAusgang.vor same
   | .bindAxiomOpt e a args he _ _ _ rest, σ, ρ, entry => by
-    simp only [execBlock]; apply Outcome.vor (lese_haelt ..)
-    refine Outcome.option (entry.same (lese_haelt ..)) _ (oracle_held O hO ..) _ _ ?_
-    intro σ' v en; exact (block rest σ' _ (en.nach (D.asignatur a))).weiterOpt e
+    have readHeld := lese_haelt σ Λ args.orte
+    have same := oracle_held O hO a (σ.lese Λ args.orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+    simp only [execBlock]; apply Outcome.vor readHeld
+    generalize answerEq : axiomAntwort O a (σ.lese Λ args.orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = answer at same ⊢
+    rcases answer with ⟨σ', _ | v⟩
+    · exact Outcome.hardware _
+    · exact ((block rest σ' (ergEnv e (he ▸ v) ρ)
+        (((entry.same readHeld).same same).nach (D.asignatur a))).weiterOpt e).vor same
   | .bindAxiomOptElse e a args he _ _ _ _ err rest, σ, ρ, entry => by
-    simp only [execBlock]; apply Outcome.vor (lese_haelt ..)
-    refine Outcome.option (entry.same (lese_haelt ..)) _ (oracleElse_held O hO ..) _ _ ?_
-    intro σ' answer en; cases answer with
-    | inl v => exact (block rest σ' _ (en.nach (D.asignatur a))).weiterOpt e
-    | inr r => exact ((endBlock err σ' _ (en.nach (D.asignatur a))).schrumpf).zuAusgang
+    have readHeld := lese_haelt σ Λ args.orte
+    have same := oracleElse_held O hO a (σ.lese Λ args.orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+    simp only [execBlock]; apply Outcome.vor readHeld
+    generalize answerEq : axiomAntwortSonst O a (σ.lese Λ args.orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = answer at same ⊢
+    rcases answer with ⟨σ', _ | (v | r)⟩
+    · exact Outcome.hardware _
+    · exact ((block rest σ' (ergEnv e (he ▸ v) ρ)
+        (((entry.same readHeld).same same).nach (D.asignatur a))).weiterOpt e).vor same
+    · exact ((endBlock err σ' (.cons r ρ)
+        (((entry.same readHeld).same same).nach (D.asignatur a))).schrumpf).zuAusgang.vor same
   | .regRead r _ rest, σ, ρ, entry => by
     simp only [execBlock]; split
     · split
@@ -261,9 +304,15 @@ theorem endBlock : ∀ (b : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ)
     generalize he : execStmt O passes R s σ ρ = outcome at result ⊢
     cases outcome with
     | ok σ1 ρ1 =>
+      dsimp only at result ⊢
       have same := result σ1 rfl
       exact (endBlock rest σ1 ρ1 ((entry.same same).resources s.held_iff (stmt_heldCount L s))).vor same
-    all_goals simpa only [EndOutcome, Outcome, Ausgang.welt, EndAusgang.zuAusgang] using result
+    | zurueck σ1 v | why σ1 v | leave _ σ1 v | next _ σ1 v =>
+      dsimp only
+      simpa only [EndOutcome, Outcome, Ausgang.welt, EndAusgang.zuAusgang] using result
+    | logik e | hardware e =>
+      dsimp only
+      simpa only [EndOutcome, Outcome, Ausgang.welt, EndAusgang.zuAusgang] using result
   | .bind e rest, σ, ρ, entry =>
     ((endBlock rest _ _ (entry.same (lese_haelt ..))).schrumpf).vor (lese_haelt ..)
   | .bindCall f args he hp hr rest, σ, ρ, entry => by
@@ -295,25 +344,53 @@ theorem endBlock : ∀ (b : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ)
     · intro σ' v en; exact (endBlock rest σ' _ (en.nach (D.sigNr _))).schrumpf
     · intro σ' r en; exact (endBlock err σ' _ (en.nach (D.sigNr _))).schrumpf
   | .bindAxiom a args he _ _ _ _ rest, σ, ρ, entry => by
-    simp only [execEnd]; apply EndOutcome.vor (lese_haelt ..)
-    refine EndOutcome.option (entry.same (lese_haelt ..)) _ (oracle_held O hO ..) _ _ ?_
-    intro σ' v en; exact (endBlock rest σ' _ en).schrumpf
+    have readHeld := lese_haelt σ Λ args.orte
+    have same := oracle_held O hO a (σ.lese Λ args.orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+    simp only [execEnd]; apply EndOutcome.vor readHeld
+    generalize answerEq : axiomAntwort O a (σ.lese Λ args.orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = answer at same ⊢
+    rcases answer with ⟨σ', _ | v⟩
+    · exact Outcome.hardware _
+    · exact ((endBlock rest σ' (.cons (ergWert he v) ρ)
+        ((entry.same readHeld).same same)).schrumpf).vor same
   | .bindAxiomElse a args he _ _ _ _ _ err rest, σ, ρ, entry => by
-    simp only [execEnd]; apply EndOutcome.vor (lese_haelt ..)
-    refine EndOutcome.option (entry.same (lese_haelt ..)) _ (oracleElse_held O hO ..) _ _ ?_
-    intro σ' answer en; cases answer with
-    | inl v => exact (endBlock rest σ' _ en).schrumpf
-    | inr r => exact (endBlock err σ' _ en).schrumpf
+    have readHeld := lese_haelt σ Λ args.orte
+    have same := oracleElse_held O hO a (σ.lese Λ args.orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+    simp only [execEnd]; apply EndOutcome.vor readHeld
+    generalize answerEq : axiomAntwortSonst O a (σ.lese Λ args.orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = answer at same ⊢
+    rcases answer with ⟨σ', _ | (v | r)⟩
+    · exact Outcome.hardware _
+    · exact ((endBlock rest σ' (.cons (ergWert he v) ρ)
+        ((entry.same readHeld).same same)).schrumpf).vor same
+    · exact ((endBlock err σ' (.cons r ρ)
+        ((entry.same readHeld).same same)).schrumpf).vor same
   | .bindAxiomOpt e a args he _ _ _ rest, σ, ρ, entry => by
-    simp only [execEnd]; apply EndOutcome.vor (lese_haelt ..)
-    refine EndOutcome.option (entry.same (lese_haelt ..)) _ (oracle_held O hO ..) _ _ ?_
-    intro σ' v en; exact (endBlock rest σ' _ (en.nach (D.asignatur a))).weiterOpt e
+    have readHeld := lese_haelt σ Λ args.orte
+    have same := oracle_held O hO a (σ.lese Λ args.orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+    simp only [execEnd]; apply EndOutcome.vor readHeld
+    generalize answerEq : axiomAntwort O a (σ.lese Λ args.orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = answer at same ⊢
+    rcases answer with ⟨σ', _ | v⟩
+    · exact Outcome.hardware _
+    · exact ((endBlock rest σ' (ergEnv e (he ▸ v) ρ)
+        (((entry.same readHeld).same same).nach (D.asignatur a))).weiterOpt e).vor same
   | .bindAxiomOptElse e a args he _ _ _ _ err rest, σ, ρ, entry => by
-    simp only [execEnd]; apply EndOutcome.vor (lese_haelt ..)
-    refine EndOutcome.option (entry.same (lese_haelt ..)) _ (oracleElse_held O hO ..) _ _ ?_
-    intro σ' answer en; cases answer with
-    | inl v => exact (endBlock rest σ' _ (en.nach (D.asignatur a))).weiterOpt e
-    | inr r => exact (endBlock err σ' _ (en.nach (D.asignatur a))).schrumpf
+    have readHeld := lese_haelt σ Λ args.orte
+    have same := oracleElse_held O hO a (σ.lese Λ args.orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+    simp only [execEnd]; apply EndOutcome.vor readHeld
+    generalize answerEq : axiomAntwortSonst O a (σ.lese Λ args.orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = answer at same ⊢
+    rcases answer with ⟨σ', _ | (v | r)⟩
+    · exact Outcome.hardware _
+    · exact ((endBlock rest σ' (ergEnv e (he ▸ v) ρ)
+        (((entry.same readHeld).same same).nach (D.asignatur a))).weiterOpt e).vor same
+    · exact ((endBlock err σ' (.cons r ρ)
+        (((entry.same readHeld).same same).nach (D.asignatur a))).schrumpf).vor same
   | .regRead r _ rest, σ, ρ, entry => by
     simp only [execEnd]; split
     · split
