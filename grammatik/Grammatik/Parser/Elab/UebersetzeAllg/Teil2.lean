@@ -56,7 +56,7 @@ theorem ownerReadyB_ok (u : UProg) (S : Signatur (Fin u.tabs.length) (Fin u.glob
       (declOf u).stufen (fun m => ∃ t, m ∈ (declOf u).eigner t) S.konsumiert := by
   unfold ownerReadyB at h
   simp only [Bool.and_eq_true] at h
-  obtain ⟨hV, hD, hR⟩ := h
+  obtain ⟨⟨hV, hD⟩, hR⟩ := h
   have hV' := (OwnerFlow.validB_iff _ _ _).mp hV
   refine ⟨hV', ?_, ?_⟩
   · intro p hp
@@ -68,11 +68,13 @@ theorem ownerReadyB_ok (u : UProg) (S : Signatur (Fin u.tabs.length) (Fin u.glob
       rw [List.any_eq_true]
       exact ⟨p.1, hcon, by simp⟩
     simp only [hbeq, Bool.not_true] at ha
+    cases ha
   · intro m hm
     have ha := List.all_eq_true.mp hR m hm
     rw [List.any_eq_true] at ha
     obtain ⟨t, _, ht⟩ := ha
-    exact ⟨t, of_decide_eq_true ht⟩
+    have member : m ∈ eignerAt u t := of_decide_eq_true ht
+    exact ⟨t, member⟩
 
 /-- Every field index has its recorded range. -/
 theorem rangeO_some (u : UProg) (t : Fin u.tabs.length)
