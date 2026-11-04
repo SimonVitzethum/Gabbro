@@ -64,10 +64,35 @@ private theorem consume_position_label (target : Label) (before after : List Pie
       simpa only [List.cons_append, position, width, Piece.width, Nat.add_assoc] using
         ih (pc + 1) absent.2
 
+private theorem consume_width_append (a b : List Piece) : width (a ++ b) = width a + width b := by
+  induction a with
+  | nil => simp only [List.nil_append, width, Nat.zero_add]
+  | cons piece rest ih => simp only [List.cons_append, width, ih, Nat.add_assoc]
+
+/-- Keep the initializer abstract while identifying the two-piece header prefix. -/
+private theorem consume_header_width (fragment : List Piece) (first : List II)
+    (rest : List Piece) (shape : fragment = .code first :: .label .header :: rest) :
+    width (fragment.take 2) = first.length := by
+  subst fragment
+  simp only [List.take_succ_cons, List.take_zero, width, Piece.width, Nat.add_zero,
+    Nat.zero_add]
+
 variable [Kern] {L : Lay D}
 
 section
 variable {P : Programm D} {f : D.Fn} {reserved : Nat} (x : Consuming.Image L P f reserved)
+
+private theorem consume_offset_step {i : Nat} {piece : Piece}
+    (found : x.fragment[i]? = some piece) : x.offset (i + 1) = x.offset i + piece.width := by
+  have inside : i < x.fragment.length := by
+    by_cases hi : i < x.fragment.length
+    · exact hi
+    · have missing := List.getElem?_eq_none (l := x.fragment) (i := i) (by omega)
+      cases (missing.symm.trans found)
+  have element : x.fragment[i] = piece := by
+    simpa only [List.getElem?_eq_getElem inside, Option.some.injEq] using found
+  simp only [Consuming.Image.offset, List.take_succ_eq_append_getElem inside, element,
+    consume_width_append, width, Nat.add_zero]
 
 /-- The body is an actual slice of the accepted image, so it inherits its size gate. -/
 private theorem consume_body_small : 16 * x.body.length < 2 ^ 31 := by
@@ -97,18 +122,28 @@ private theorem consume_targets : targets x.fragment =
     (x.fragment.drop 41) 0 (by rfl)
   rw [← afterSplit] at afterPosition
   have afterLocated : position .afterBody x.fragment 0 = some (x.offset 41) := by
-    simpa only [Nat.zero_add] using afterPosition
+    have atLabel : position .afterBody x.fragment 0 = some (x.offset 40) := by
+      simpa only [Nat.zero_add] using afterPosition
+    have step := consume_offset_step x (i := 40) (piece := .label .afterBody) rfl
+    simp only [Piece.width, Nat.add_zero] at step
+    exact atLabel.trans (congrArg some step.symm)
   have leaveSplit : x.fragment =
       x.fragment.take 43 ++ .label .leaveBody :: x.fragment.drop 44 := rfl
   have leavePosition := consume_position_label .leaveBody (x.fragment.take 43)
     (x.fragment.drop 44) 0 (by rfl)
   rw [← leaveSplit] at leavePosition
   have leaveLocated : position .leaveBody x.fragment 0 = some (x.offset 44) := by
-    simpa only [Nat.zero_add] using leavePosition
+    have atLabel : position .leaveBody x.fragment 0 = some (x.offset 43) := by
+      simpa only [Nat.zero_add] using leavePosition
+    have step := consume_offset_step x (i := 43) (piece := .label .leaveBody) rfl
+    simp only [Piece.width, Nat.add_zero] at step
+    exact atLabel.trans (congrArg some step.symm)
   simp only [targets, afterLocated, leaveLocated, bind, Option.bind_some, pure]
 
 private theorem consume_header_address : x.pc + 16 = x.addr 2 := by
-  have initialWidth : x.offset 2 = (travCountC x.counter (x.fuel : Int)).length := rfl
+  have initialWidth : x.offset 2 = (travCountC x.counter (x.fuel : Int)).length :=
+    consume_header_width x.fragment (travCountC x.counter (x.fuel : Int))
+      (x.fragment.drop 2) rfl
   have literal : lit32 (x.fuel : Int) = true := lit32_nat x.bounds.1
   have initial : (travCountC x.counter (x.fuel : Int)).length = 1 := by
     rw [travCountC_length]
@@ -207,8 +242,8 @@ theorem consumeTraverse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Na
       et := ce.2
       memberCode := hcm
       edgeCode := hce
-      memberTop := by omega
-      edgeTop := by omega
+      memberTop := by change cm.2 ≤ Ks; omega
+      edgeTop := by change ce.2 ≤ Ks; omega
       origin := rfl
       indexWidth := indexWidth }
     inv := inv
@@ -217,8 +252,8 @@ theorem consumeTraverse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Na
     mt := cw.2
     invCode := hci
     massCode := hcw
-    invTop := by omega
-    massTop := by omega }
+    invTop := by change ci.2 ≤ Ks; omega
+    massTop := by change cw.2 ≤ Ks; omega }
   have bodyCorrect : ∀ (mem : Runner.Mem) (world : World D)
       (env : Env D (.index (D.count t) :: Γ)),
       x.Ready mem world env →
@@ -281,8 +316,14 @@ theorem consumeTraverse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Na
   have combined := Sim.prefix hlo initialRun initialFrame initialKept loopRun
   have exitAddress : x.addr 50 = pc + BitVec.ofNat 64 (16 * c.length) := consume_exit_address x
   rw [exitAddress] at combined
-  simpa only [consumeTraverse_exec, Consuming.Loop.invW, Consuming.Loop.sel,
-    Consuming.Loop.massW] using combined
+  rw [consumeTraverse_exec]
+  change Sim L P f x.σ0 x.ρ0 x.rp x.cfp fp lo K pr ⟨pc, fp⟩ m
+    (pc + BitVec.ofNat 64 (16 * c.length))
+    (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
+    (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2)
+    (verbrauchLauf (l := l) x.table (fun world env => execBlock O passes R body world env)
+      loop.invW loop.sel loop.massW x.bound x.fuel σ ρ) reserved
+  exact combined
 
 
 end Gabbro.Stage0.Senke
