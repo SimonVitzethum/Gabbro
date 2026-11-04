@@ -82,16 +82,16 @@ theorem einpassen_E (z : Int → Option D.Fn) (z' : Int → Option D'.Fn) :
       dsimp only [tyE, tyN, Ty.mapNumbers]
       by_cases h : lo ≤ n ∧ n ≤ hi <;>
         simp only [einpassen, valE, Val.relocate, h, and_self, ↓reduceDIte,
-          Option.map_some, Option.map_none]
+          Option.map_some, Option.map_none] <;> rfl
   | .bool, _, n => by rfl
   | .opt m, _, n => by
       dsimp only [tyE, tyN, Ty.mapNumbers]
       by_cases h1 : 0 ≤ n ∧ n ≤ m - 1
       · simp only [einpassen, valE, Val.relocate, h1, and_self, ↓reduceDIte,
-          Option.map_some]
+          Option.map_some] <;> rfl
       · by_cases h2 : n < 0 <;>
           simp only [einpassen, valE, Val.relocate, h1, h2, ↓reduceDIte,
-            ↓reduceIte, Option.map_some, Option.map_none]
+            ↓reduceIte, Option.map_some, Option.map_none] <;> rfl
   | .sum cs, _, n => by
       exact summePasst_relocate E.num E.tnum
         (fun _ v => ⟨E.fn v.1, (E.passt v.1 _).trans v.2⟩) cs n
@@ -99,7 +99,7 @@ theorem einpassen_E (z : Int → Option D.Fn) (z' : Int → Option D'.Fn) :
       dsimp only [tyE, tyN, Ty.mapNumbers]
       by_cases h : 0 ≤ n ∧ n < m <;>
         simp only [einpassen, valE, Val.relocate, h, and_self, ↓reduceDIte,
-          Option.map_some, Option.map_none]
+          Option.map_some, Option.map_none] <;> rfl
   | .never, _, n => rfl
   | .fl lo hi, _, n => by
       show gleitWortPasst lo hi n = Option.map _ (gleitWortPasst lo hi n)
@@ -110,7 +110,7 @@ theorem einpassen_E (z : Int → Option D.Fn) (z' : Int → Option D'.Fn) :
       dsimp only [tyE, tyN, Ty.mapNumbers]
       by_cases h : 0 ≤ n <;>
         simp only [einpassen, valE, Val.relocate, h, ↓reduceIte,
-          Option.map_some, Option.map_none]
+          Option.map_some, Option.map_none] <;> rfl
   | .arr _ _, _, _ => rfl
   | .str _, _, _ => rfl
   | .prod _ _, _, _ => rfl
