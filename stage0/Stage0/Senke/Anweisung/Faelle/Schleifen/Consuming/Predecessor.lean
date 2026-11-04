@@ -255,11 +255,9 @@ theorem predecessor_test (a : Wert D (.index (D.count x.table))) (ha : a.n = j)
         (zero_next (i := 25) (cell := x.s + 4) (target := .predecessorNext) rfl)
       cases edgeValue : q.edgeAt σ ρ a candidate with
       | false =>
-        simp only [edgeValue, Runner.IR.bool, Bool.false_eq_true, ↓reduceIte] at branch3
         simp only [membership, edgeValue, Bool.true_and, Bool.false_eq_true, ↓reduceIte]
         exact ScanRun.prefix branch3 (predecessor_next state3)
       | true =>
-        simp only [edgeValue, Runner.IR.bool, show (1 : W) ≠ 0 by decide, ↓reduceIte] at branch3
         simp only [membership, edgeValue, Bool.true_and, ↓reduceIte]
         have reject := state3.ready.jump 26 31 .candidateNext rfl candidateNext_position
           (offset_bound 26) (offset_bound 31)
