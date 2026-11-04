@@ -57,7 +57,7 @@ theorem breaking_export (tabs : List UTab) (heads : List UFnKopf) (fuel : Nat)
     (exported : uBreaking (uAnwReihe tabs heads fuel) ctx names body rest = .ok (code, finalCtx)) :
     uAnwReiheCore tabs heads (fuel + 1) ctx (.waive names body :: rest) =
       .ok (code, finalCtx) := by
-  exact exported
+  simpa only [uAnwReiheCore] using exported
 
 /-- Both operands retain their original predicate context; neither old/result nor a binder is
     invented by implication expansion. Failed operand exports stay failures. -/
