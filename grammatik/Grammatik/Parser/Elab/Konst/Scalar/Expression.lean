@@ -51,11 +51,11 @@ def binary {D : Deklaration} {Γ : Ctx} (op : String)
         if op == "/" then
           return ⟨_, ⟨.div h0 h1 a.expr b.expr,
             fun env => Zahl.div h0 h1 (a.denote env) (b.denote env), by
-              intros; simp only [eval, a.equation, b.equation]⟩⟩
+              intros; simp only [eval, a.equation, b.equation] <;> rfl⟩⟩
         else
           return ⟨_, ⟨.rem h0 h1 a.expr b.expr,
             fun env => Zahl.rem h0 h1 (a.denote env) (b.denote env), by
-              intros; simp only [eval, a.equation, b.equation]⟩⟩
+              intros; simp only [eval, a.equation, b.equation] <;> rfl⟩⟩
       else throw "const divisor range includes zero"
     else throw "const unsigned division requires a nonnegative numerator"
   | "&" =>
@@ -63,7 +63,7 @@ def binary {D : Deklaration} {Γ : Ctx} (op : String)
       if h1 : 0 ≤ l' then
         return ⟨_, ⟨.band h0 h1 a.expr b.expr,
           fun env => Zahl.band h0 h1 (a.denote env) (b.denote env), by
-            intros; simp only [eval, a.equation, b.equation]⟩⟩
+            intros; simp only [eval, a.equation, b.equation] <;> rfl⟩⟩
       else throw "const bit operand has a negative range"
     else throw "const bit operand has a negative range"
   | "|" | "^" =>
@@ -74,11 +74,11 @@ def binary {D : Deklaration} {Γ : Ctx} (op : String)
           if op == "|" then
             return ⟨_, ⟨.bor width h0 h1 hw.1 hw.2 a.expr b.expr,
               fun env => Zahl.bor width h0 h1 hw.1 hw.2 (a.denote env) (b.denote env), by
-                intros; simp only [eval, a.equation, b.equation]⟩⟩
+                intros; simp only [eval, a.equation, b.equation] <;> rfl⟩⟩
           else
             return ⟨_, ⟨.bxor width h0 h1 hw.1 hw.2 a.expr b.expr,
               fun env => Zahl.bxor width h0 h1 hw.1 hw.2 (a.denote env) (b.denote env), by
-                intros; simp only [eval, a.equation, b.equation]⟩⟩
+                intros; simp only [eval, a.equation, b.equation] <;> rfl⟩⟩
         else throw "const bit width could not be certified"
       else throw "const bit operand has a negative range"
     else throw "const bit operand has a negative range"
