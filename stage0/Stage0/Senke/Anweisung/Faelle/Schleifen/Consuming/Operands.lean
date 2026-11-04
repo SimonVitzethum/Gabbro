@@ -119,17 +119,33 @@ theorem Ready.borrow (h : x.Ready m σ ρ) {Λ : List (Res D)}
   have pre := mkPreS (L := L) (ρ := ρ) (reserved := reserved) (d := x.s + 4) (by omega)
     x.small h.frame code (by simpa only [borrowLength] using far) h.env
   have pw := PreS.welt pre x.layout.ks h.world x.layout.lay x.layout.lo
-  obtain ⟨m', path, frameS, candidateRead, value, read, encoding⟩ := member_borrow_ok
-    (reserved := reserved) (Γ := Γ) (K := x.Ks) (count := D.count x.table)
-    (predecessor := predecessor) (candidate := BitVec.ofInt 64 candidate.n) (cb := x.member)
-    indexWidth (by have := x.scratch; omega)
-    (by simpa only [← origin] using pw)
-    (by simpa only [Image.read, ← origin] using rc)
-    (by simpa only [Image.read, ← origin] using rp) (by
-      intro mem pc hp
-      exact lowE_ok (same := by intro _; rfl) σ σ (fun _ h => h) x.layout.lay
+  have borrowed : ∃ m',
+      Star ⟨x.addr 20, x.fp⟩ m
+        ⟨x.addr 20 + BitVec.ofNat 64 (16 * (x.member.length + 3)), x.fp⟩ m' ∧
+      Agree x.fp (frei Γ reserved + 3) x.Ks m m' ∧
+      m'.rd64 (slot x.fp (BitVec.ofNat 64 (frei Γ reserved))) =
+        some (BitVec.ofInt 64 candidate.n) ∧
+      ∃ value : W,
+        m'.rd64 (slot x.fp (BitVec.ofNat 64 (frei Γ reserved + 4))) = some value ∧
+        Enc L .bool (Gabbro.Grammatik.eval σ member σ (.cons predecessor ρ)) value := by
+    apply member_borrow_ok
+      (reserved := reserved) (Γ := Γ) (K := x.Ks) (count := D.count x.table)
+      (predecessor := predecessor) (candidate := BitVec.ofInt 64 candidate.n) (cb := x.member)
+      (P := Enc L .bool (Gabbro.Grammatik.eval σ member σ (.cons predecessor ρ)))
+      (W := fun mem => WeltAt mem L σ)
+      indexWidth (by have := x.scratch; omega)
+      (by simpa only [← origin] using pw)
+      (by simpa only [Image.read, ← origin] using rc)
+      (by simpa only [Image.read, ← origin] using rp)
+    intro mem pc hp
+    have checked : Ok mem pc x.fp x.Ks (x.s + 4) x.member
+        (Enc L .bool (Gabbro.Grammatik.eval σ member σ (.cons predecessor ρ))) :=
+      (lowE_ok (same := by intro _; rfl) σ σ (fun _ h => h) x.layout.lay
         member (x.s + 4) x.member top lowered topBound mem pc (.cons predecessor ρ)
-        (by simpa only [← origin] using hp) |>.word trivial)
+        (by simpa only [← origin] using hp)).word trivial
+    simpa only [← origin] using checked
+  obtain ⟨m', path, frameS, candidateRead, result⟩ := borrowed
+  obtain ⟨value, read, encoding⟩ := result
   have frame : Agree x.fp (x.s + 3) x.K m m' := by
     simpa only [← origin] using Agree.widen frameS x.layout.ks
   have scratchRoom : x.s + 3 ≤ x.K := by have := x.scratch; have := x.layout.ks; omega
