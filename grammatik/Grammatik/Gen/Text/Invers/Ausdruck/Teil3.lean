@@ -286,20 +286,23 @@ theorem seite_ohne_erg (art : Nat → UParamArt) (n : Nat) :
   cases e with
   | lit m =>
     simp only [uOfS, Option.some.injEq] at hu; subst hu
-    rfl
+    simp only [seiteAltErg]
   | var x =>
     simp only [uOfS] at hu
     split at hu
     · rename_i h; simp only [reduceCtorEq] at h
-    · split at hu <;> simp only [reduceCtorEq, Option.some.injEq] at hu; subst hu; rfl
+    · split at hu <;> simp only [reduceCtorEq, Option.some.injEq] at hu; subst hu
+      simp only [seiteAltErg]
   | glob g hL =>
     simp only [uOfS] at hu
-    split at hu <;> simp only [reduceCtorEq, Option.some.injEq] at hu; subst hu; rfl
+    split at hu <;> simp only [reduceCtorEq, Option.some.injEq] at hu; subst hu
+    simp only [seiteAltErg]
   | slot t f i hL =>
     simp only [uOfS] at hu
     split at hu
     · simp only [reduceCtorEq] at hu
-    · cases hx : uOfIdx z art none (tN z t) (z.deklaration.count t) i <;> simp only [hx, Option.map_none, reduceCtorEq, Option.map_some, Option.some.injEq] at hu; subst hu; rfl
+    · cases hx : uOfIdx z art none (tN z t) (z.deklaration.count t) i <;> simp only [hx, Option.map_none, reduceCtorEq, Option.map_some, Option.some.injEq] at hu; subst hu
+      simp only [seiteAltErg]
   | widen h1 h2 e =>
     simp only [uOfS] at hu
     exact ih e (by simp only [Expr.widen.sizeOf_spec, sizeOf_default, add_zero] at hn; omega) u hu
@@ -325,19 +328,24 @@ theorem ens_ohne_erg (n : Nat) :
   | succ n ih =>
   intro Γ Λ art τ e hn u hu
   cases e with
-  | tru | fls => simp only [uOfB, Option.some.injEq] at hu; subst hu; rfl
+  | tru | fls =>
+    simp only [uOfB, Option.some.injEq] at hu; subst hu
+    simp only [ensAltErg]
   | var x =>
     simp only [uOfB] at hu
     split at hu
     · rename_i h; simp only [reduceCtorEq] at h
-    · split at hu <;> simp only [Option.some.injEq, reduceCtorEq] at hu; subst hu; rfl
+    · split at hu <;> simp only [Option.some.injEq, reduceCtorEq] at hu; subst hu
+      simp only [ensAltErg]
   | glob g hL =>
     simp only [uOfB] at hu
-    split at hu <;> simp only [Option.some.injEq, reduceCtorEq] at hu; subst hu; rfl
+    split at hu <;> simp only [Option.some.injEq, reduceCtorEq] at hu; subst hu
+    simp only [ensAltErg]
   | slot t f i hL =>
     simp only [uOfB] at hu
     split at hu
-    · cases hx : uOfIdx z art none (tN z t) (z.deklaration.count t) i <;> simp only [hx, Option.map_none, reduceCtorEq, Option.map_some, Option.some.injEq] at hu; subst hu; rfl
+    · cases hx : uOfIdx z art none (tN z t) (z.deklaration.count t) i <;> simp only [hx, Option.map_none, reduceCtorEq, Option.map_some, Option.some.injEq] at hu; subst hu
+      simp only [ensAltErg]
     · simp only [reduceCtorEq] at hu
   | lt a b | le a b | eq a b =>
     simp only [uOfB] at hu
