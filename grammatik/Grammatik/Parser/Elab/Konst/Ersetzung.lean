@@ -364,9 +364,11 @@ theorem ersetzeSExpr_call_certified (shadowed : List String) (fns : List UKonstF
   split at success
   · contradiction
   · cases hc : checkReplacement fn fns (fn.constants.filter (fun entry => !shadowed.contains entry.1)) args' with
-    | error error => simp [hc] at success
+    | error error =>
+      change (Except.error error : Except String SExpr) = Except.ok replacement at success
+      cases success
     | ok checked =>
-      refine ⟨checked, hc, ?_, checked.sound⟩
-      simpa [hc] using success.symm
+      change (Except.ok checked.syntax : Except String SExpr) = Except.ok replacement at success
+      exact ⟨checked, rfl, (Except.ok.inj success).symm, checked.sound⟩
 
 end Gabbro.Grammatik.Parser.Konst
