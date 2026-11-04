@@ -17,7 +17,8 @@ theorem codeAt_join {m : Mem} {pc : W} {a b : List II}
   · have inside : k - a.length < b.length := by simp only [List.length_append] at hk; omega
     have h := right (k - a.length) inside
     have index : a.length + (k - a.length) = k := by omega
-    simpa only [List.getElem_append_right (by omega), addr_norm, ← Nat.mul_add, index] using h
+    simpa only [List.getElem_append_right (as := a) (bs := b) (i := k) (by omega),
+      addr_norm, ← Nat.mul_add, index] using h
 
 namespace Image
 variable {reserved : Nat} {x : Image L P f reserved}
@@ -49,8 +50,12 @@ theorem Ready.literals (h : x.Ready m σ ρ) {i a b : Nat} {va vb : Int}
       simp only [List.mem_cons] at hj
       rcases hj with rfl | rfl | hj <;> try omega
       have := x.kept j hj; omega) (by omega), ready2, aa, ?_, rb⟩
-  · simpa only [addr_norm, show (16 : Nat) + 16 = 32 by decide, endAt] using run1.trans run2
-  · rw [Image.read, rd_other ready1.frame.room insideB insideA (Ne.symm distinct)]
+  · have run := run1.trans run2
+    change Star ⟨x.addr i, x.fp⟩ m ⟨x.addr i + 16 + 16, x.fp⟩ _ at run
+    rw [BitVec.add_assoc, show (16 : W) + 16 = 32 from rfl, endAt] at run
+    exact run
+  · rw [Image.read, rd_other ready1.frame.room insideB insideA (Ne.symm distinct)
+      (BitVec.ofInt 64 vb).toNat]
     exact ra
 
 /-- Run the existing membership borrowing proof on slices 20,21,22. -/
@@ -66,34 +71,67 @@ theorem Ready.borrow (h : x.Ready m σ ρ) {Λ : List (Res D)}
     ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.addr 20) (x.addr 23) m
       (fun m' => x.Ready m' σ ρ ∧ Agree x.fp (x.s + 3) x.K m m' ∧
         x.read m' (x.s + 4)
-          (Runner.IR.bool (wahr? (eval σ member σ (.cons predecessor ρ))))) := by
+          (Runner.IR.bool (wahr? (Gabbro.Grammatik.eval σ member σ (.cons predecessor ρ))))) := by
   have save := (h.slice 20 (.code [ci 2 (x.s + 3) x.s 0, ci 2 x.s (x.s + 1) 0]) _ rfl rfl).1
   have memberCode := (h.slice 21 (.code x.member) _ rfl rfl).1
   have restore := (h.slice 22 (.code [ci 2 x.s (x.s + 3) 0]) _ rfl rfl).1
+  have saveEnd := x.addr_next_code (i := 20)
+    (block := [ci 2 (x.s + 3) x.s 0, ci 2 x.s (x.s + 1) 0]) rfl
+  have memberEnd := x.addr_next_code (i := 21) (block := x.member) rfl
+  have restoreEnd := x.addr_next_code (i := 22) (block := [ci 2 x.s (x.s + 3) 0]) rfl
+  have saveMemberEnd : x.addr 20 + BitVec.ofNat 64 (16 *
+      ([ci 2 (x.s + 3) x.s 0, ci 2 x.s (x.s + 1) 0] ++ x.member).length) =
+      x.addr 22 := by
+    rw [List.length_append, ← pc_add, saveEnd, memberEnd]
+  have borrowLength :
+      ([ci 2 (x.s + 3) x.s 0, ci 2 x.s (x.s + 1) 0] ++ x.member ++
+        [ci 2 x.s (x.s + 3) 0]).length = x.member.length + 3 := by
+    simp only [List.length_append, List.length_cons, List.length_nil]
+    omega
+  have borrowEnd : x.addr 20 + BitVec.ofNat 64 (16 * (x.member.length + 3)) =
+      x.addr 23 := by
+    rw [← borrowLength, List.length_append, ← pc_add, saveMemberEnd, restoreEnd]
   have code : CodeAt m (x.addr 20)
       ([ci 2 (x.s + 3) x.s 0, ci 2 x.s (x.s + 1) 0] ++ x.member ++
         [ci 2 x.s (x.s + 3) 0]) := by
     apply codeAt_join
     · apply codeAt_join save
-      simpa only [show x.addr 20 + BitVec.ofNat 64 (16 *
-        [ci 2 (x.s + 3) x.s 0, ci 2 x.s (x.s + 1) 0].length) = x.addr 21 by consume_arith x]
-        using memberCode
-    · simpa only [show x.addr 20 + BitVec.ofNat 64 (16 *
-        ([ci 2 (x.s + 3) x.s 0, ci 2 x.s (x.s + 1) 0] ++ x.member).length) =
-          x.addr 22 by consume_arith x] using restore
+      simpa only [saveEnd] using memberCode
+    · simpa only [saveMemberEnd] using restore
   have far : CodeFar (x.addr 20) (x.member.length + 3) x.fp x.K := by
-    have := codeFar_at (i := x.offset 20) (k := x.member.length + 3) x.far (by consume_arith x)
-    exact this
-  have pre := mkPreS (L := L) (ρ := ρ) (d := x.s + 4) (by omega)
-    x.small h.frame code (by simpa using far) h.env
-  have pw := PreS.welt pre x.layout.ks h.world x.layout.lay x.layout.top
+    have widths : ∀ a b : List Piece, width (a ++ b) = width a + width b := by
+      intro a b; induction a with
+      | nil => simp only [List.nil_append, width, Nat.zero_add]
+      | cons a rest ih => simp only [List.cons_append, width, ih, Nat.add_assoc]
+    have splitWidth := congrArg width (List.take_append_drop 20 x.fragment)
+    rw [widths] at splitWidth
+    have tailBound : x.member.length + 3 ≤ width (x.fragment.drop 20) := by
+      change x.member.length + 3 ≤ 2 + (x.member.length + (1 + width (x.fragment.drop 23)))
+      generalize width (x.fragment.drop 23) = remainingWidth
+      omega
+    have bound : x.offset 20 + (x.member.length + 3) ≤ x.code.length := by
+      calc
+        x.offset 20 + (x.member.length + 3) ≤
+            x.offset 20 + width (x.fragment.drop 20) := Nat.add_le_add_left tailBound _
+        _ = width x.fragment := splitWidth
+        _ = x.code.length := (assemble_length x.assembled).symm
+    exact codeFar_at x.far bound
+  have pre := mkPreS (L := L) (ρ := ρ) (reserved := reserved) (d := x.s + 4) (by omega)
+    x.small h.frame code (by simpa only [borrowLength] using far) h.env
+  have pw := PreS.welt pre x.layout.ks h.world x.layout.lay x.layout.lo
   obtain ⟨m', path, frameS, candidateRead, value, read, encoding⟩ := member_borrow_ok
+    (reserved := reserved) (Γ := Γ) (K := x.Ks) (count := D.count x.table)
+    (predecessor := predecessor) (candidate := BitVec.ofInt 64 candidate.n) (cb := x.member)
     indexWidth (by have := x.scratch; omega)
-    (by simpa only [← origin] using pw) rc rp (by
+    (by simpa only [← origin] using pw)
+    (by simpa only [Image.read, ← origin] using rc)
+    (by simpa only [Image.read, ← origin] using rp) (by
       intro mem pc hp
       exact lowE_ok (same := by intro _; rfl) σ σ (fun _ h => h) x.layout.lay
-        member (x.s + 4) x.member top lowered topBound mem pc (.cons predecessor ρ) hp |>.word trivial)
-  have frame := Agree.widen frameS x.layout.ks
+        member (x.s + 4) x.member top lowered topBound mem pc (.cons predecessor ρ)
+        (by simpa only [← origin] using hp) |>.word trivial)
+  have frame : Agree x.fp (x.s + 3) x.K m m' := by
+    simpa only [← origin] using Agree.widen frameS x.layout.ks
   have scratchRoom : x.s + 3 ≤ x.K := by have := x.scratch; have := x.layout.ks; omega
   refine ⟨m', ?_, agreeW_of (frame.mono (by have := x.controls; have := x.scratch; omega)),
     keeps_of_agree frame h.frame.room (by
@@ -104,11 +142,11 @@ theorem Ready.borrow (h : x.Ready m σ ρ) {Λ : List (Res D)}
       have := x.kept j hj; omega) scratchRoom,
     h.agree frame (by omega) (by rw [← x.abi]; have := x.controls; have := x.scratch; omega)
       scratchRoom, frame, ?_⟩
-  · simpa only [← origin, show x.addr 20 + BitVec.ofNat 64 (16 * (x.member.length + 3)) =
-      x.addr 23 by consume_arith x] using path
-  · have word : value = Runner.IR.bool (wahr? (eval σ member σ (.cons predecessor ρ))) := by
+  · simpa only [borrowEnd] using path
+  · have word : value = Runner.IR.bool
+        (wahr? (Gabbro.Grammatik.eval σ member σ (.cons predecessor ρ))) := by
       simpa only [Enc, bool_word] using encoding
-    simpa only [word] using read
+    simpa only [Image.read, ← origin, word] using read
 
 end Image
 end Gabbro.Stage0.Senke.Consuming
