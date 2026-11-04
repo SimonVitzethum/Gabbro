@@ -44,8 +44,8 @@ private theorem scalarParameters (env : List (String × (Int × Int)))
     rcases param with ⟨name, ty⟩
     rw [List.mapM_cons] at accepted
     change ((uFeldTyp env ty).toOption.map (fun range => (name, range))).bind
-      (fun head => (rest.mapM (fun (name, ty) =>
-        ((uFeldTyp env ty).toOption).map fun range => (name, range))).bind
+      (fun head => (rest.mapM (fun (entry : String × STyp) =>
+        ((uFeldTyp env entry.2).toOption).map fun range => (entry.1, range))).bind
           (fun tail => some (head :: tail))) = some args at accepted
     generalize ht : uFeldTyp env ty = parsed at accepted
     cases parsed with
@@ -53,11 +53,11 @@ private theorem scalarParameters (env : List (String × (Int × Int)))
       change none = some args at accepted
       cases accepted
     | ok range =>
-      change (rest.mapM (fun (name, ty) =>
-        ((uFeldTyp env ty).toOption).map fun range => (name, range))).bind
+      change (rest.mapM (fun (entry : String × STyp) =>
+        ((uFeldTyp env entry.2).toOption).map fun range => (entry.1, range))).bind
           (fun tail => some ((name, range) :: tail)) = some args at accepted
-      generalize hr : rest.mapM (fun (name, ty) =>
-        ((uFeldTyp env ty).toOption).map fun range => (name, range)) = parsedTail at accepted
+      generalize hr : rest.mapM (fun (entry : String × STyp) =>
+        ((uFeldTyp env entry.2).toOption).map fun range => (entry.1, range)) = parsedTail at accepted
       cases parsedTail with
       | none =>
         change none = some args at accepted
