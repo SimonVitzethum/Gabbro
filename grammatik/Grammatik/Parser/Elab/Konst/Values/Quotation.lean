@@ -6,42 +6,42 @@ namespace Gabbro.Grammatik.Parser.Konst.Values
 open Uebersetze Scalar UebersetzeAllg
 
 section MeaningParameters
--- Capture one shared parameter telescope for both source judgments.
-variable (D : Deklaration) (schemas : List (USum Ty))
+-- Share the declaration and retain schemas explicitly in both local families.
+variable (D : Deklaration)
 
 mutual
 /-- Literal source meaning is typed and retains tag names through their resolved
     schema. This is a source judgment, not a second evaluator. -/
-inductive LiteralMeaning :
+inductive LiteralMeaning (schemas : List (USum Ty)) :
     (τ : Ty) → SExpr → Wert D τ → Prop where
   | integer {lo hi : Int} (value : Zahl lo hi) :
-      LiteralMeaning (.int lo hi) (literalVonInt value.n) value
+      LiteralMeaning schemas (.int lo hi) (literalVonInt value.n) value
   | truth (value : Bool) :
-      LiteralMeaning .bool (if value then .tru else .fls) value
-  | none (n : Int) : LiteralMeaning (.opt n) (.call "None" []) none
+      LiteralMeaning schemas .bool (if value then .tru else .fls) value
+  | none (n : Int) : LiteralMeaning schemas (.opt n) (.call "None" []) none
   | some {n : Int} (value : Zahl 0 (n - 1)) :
-      LiteralMeaning (.opt n) (.call "Some" [literalVonInt value.n]) (some value)
+      LiteralMeaning schemas (.opt n) (.call "Some" [literalVonInt value.n]) (some value)
   | text {n : Nat} (text : String) (bytes : List (Zahl 0 255))
       (decoded : bytesZahl (text.toUTF8.toList.map (fun byte => Int.ofNat byte.toNat)) = some bytes)
       (bound : bytes.length ≤ n) :
-      LiteralMeaning (.str n) (.ext .text [text] []) ⟨bytes, bound⟩
+      LiteralMeaning schemas (.str n) (.ext .text [text] []) ⟨bytes, bound⟩
   | reason {n : Nat} (schema : USum Ty) (member : schema ∈ schemas) (value : Fin n) (name : String)
       (shape : schema.cases.length = n)
       (named : (schema.cases[value.val]?).map Prod.fst = some name) :
-      LiteralMeaning (.why n) (.why schema.name name) value
+      LiteralMeaning schemas (.why n) (.why schema.name name) value
   | tag {cases : List (Option Ty)} (schema : USum Ty) (member : schema ∈ schemas) (shape : schema.spec = cases)
       (i : Fin cases.length) (name : String)
       (named : (schema.cases[i.val]?).map Prod.fst = some name)
       («syntax» : Option SExpr) (value : Nutzlast D.Fn D.passt (cases.get i))
-      (payload : PayloadMeaning (cases.get i) «syntax» value) :
-      LiteralMeaning (.sum cases)
+      (payload : PayloadMeaning schemas (cases.get i) «syntax» value) :
+      LiteralMeaning schemas (.sum cases)
         (match «syntax» with | none => .variable name | some source => .call name [source])
         ⟨i, Fall.ofNutzlast D.Fn D.passt cases i value⟩
-inductive PayloadMeaning :
+inductive PayloadMeaning (schemas : List (USum Ty)) :
     (c : Option Ty) → Option SExpr → Nutzlast D.Fn D.passt c → Prop where
-  | empty : PayloadMeaning none none ()
-  | val {τ : Ty} (source : SExpr) (value : Wert D τ) (meaning : LiteralMeaning τ source value) :
-      PayloadMeaning (some τ) (some source) value
+  | empty : PayloadMeaning schemas none none ()
+  | val {τ : Ty} (source : SExpr) (value : Wert D τ) (meaning : LiteralMeaning schemas τ source value) :
+      PayloadMeaning schemas (some τ) (some source) value
 end
 end MeaningParameters
 
