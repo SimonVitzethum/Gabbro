@@ -2,23 +2,17 @@
 module
 public import NativeFloat.IntConversion
 public import NativeFloat.IntSticky
+public import NativeFloat.RoundState
 import all NativeFloat.IntConversion
 import all NativeFloat.IntSticky
 import all NativeFloat.NormalForm
 import all NativeFloat.Transport
+import all NativeFloat.RoundState
 @[expose] public section
 
 namespace RootNativeFloat.NativeScale
 open Float.Model
 open Float.Model.UnpackedFloat
-
-private theorem rounded_bounds (x : ExtendedMantissa) :
-    x.mantissa ≤ x.roundedMantissa ∧ x.roundedMantissa ≤ x.mantissa + 1 := by
-  rcases x with ⟨m, roundBit, stickyBit⟩
-  cases roundBit <;> cases stickyBit <;>
-    simp [ExtendedMantissa.roundedMantissa, ExtendedMantissa.accuracy,
-      Accuracy.roundToNearestEven]
-  omega
 
 private theorem retained_bounds (g : Nat) (lower : 2 ^ 55 ≤ g) (upper : g < 2 ^ 56) :
     2 ^ 52 ≤ ((⟨g, false, false⟩ : ExtendedMantissa) >>> 3).roundedMantissa ∧
@@ -35,27 +29,7 @@ private theorem final_shift (r : Nat) (e : Int) (nonnegative : 0 ≤ e)
     shiftToTargetExponent Format.binary64 r e .exact =
       if r = 2 ^ 53 then (⟨2 ^ 52, false, false⟩, e + 1)
       else (⟨r, false, false⟩, e) := by
-  by_cases carry : r = 2 ^ 53
-  · rw [if_pos carry, carry]
-    have target : Format.binary64.targetExponent (totalExponent (2 ^ 53) e) = e + 1 := by
-      simp only [Format.targetExponent, totalExponent, Nat.log2_two_pow]
-      change max (53 + 1 + e - 53) (-1074) = e + 1
-      omega
-    unfold shiftToTargetExponent
-    rw [target]
-    unfold shiftToExponent
-    dsimp only
-    have amount : (e + 1 - e).toNat = 1 := by omega
-    rw [amount]
-    change (ExtendedMantissa.shiftRightOne ⟨2 ^ 53, false, false⟩, e + 1) = _
-    rfl
-  · rw [if_neg carry]
-    have log : r.log2 = 52 := (Nat.log2_eq_iff (by omega)).mpr ⟨lower, by omega⟩
-    have target : Format.binary64.targetExponent (totalExponent r e) = e := by
-      simp only [Format.targetExponent, totalExponent, log]
-      change max (52 + 1 + e - 53) (-1074) = e
-      omega
-    simpa using scaled_to_target Format.binary64 r 0 e (by omega) target
+  exact after_round_shift Format.binary64 r e (by change -1074 ≤ e; omega) lower upper
 
 private theorem retained_round (s : Sign) (g : Nat) (lower : 2 ^ 55 ≤ g) (upper : g < 2 ^ 56) :
     let r := ((⟨g, false, false⟩ : ExtendedMantissa) >>> 3).roundedMantissa
@@ -86,7 +60,7 @@ private theorem retained_round (s : Sign) (g : Nat) (lower : 2 ^ 55 ≤ g) (uppe
   · rw [if_pos carry] at last
     rw [last]
     dsimp only
-    simp only [carry, Nat.ne_of_gt (Nat.two_pow_pos 52), ↓reduceDIte]
+    simp only [carry, Nat.ne_of_gt (Nat.two_pow_pos 52), ↓reduceDIte] <;> rfl
   · have nonzero : ((⟨g, false, false⟩ : ExtendedMantissa) >>> 3).roundedMantissa ≠ 0 := by omega
     rw [if_neg carry] at last
     rw [last]
@@ -135,6 +109,12 @@ private theorem magnitude_round (s : Sign) (n : Nat) (large : 2 ^ 55 ≤ n) :
   let k := n.log2 - 55
   let g := (n >>> k) ||| (if n % 2 ^ k = 0 then 0 else 1)
   have bounds : 2 ^ 55 ≤ g ∧ g < 2 ^ 56 ∧ n.log2 = k + 55 := magnitude_bounds n large
+  let r := ((⟨g, false, false⟩ : ExtendedMantissa) >>> 3).roundedMantissa
+  have rounded : 2 ^ 52 ≤ r ∧ r ≤ 2 ^ 53 := retained_bounds g bounds.1 bounds.2.1
+  have rpositive : 0 < r := by omega
+  change round Format.binary64 s n 0 =
+    if h : r = 2 ^ 53 then .finite s (2 ^ 52) ((k : Int) + 4) (by decide)
+    else .finite s r ((k : Int) + 3) rpositive
   have target : Format.binary64.targetExponent (totalExponent n 0) = (k : Int) + 3 := by
     simp only [Format.targetExponent, totalExponent, bounds.2.2, Int.natCast_add]
     change max ((k : Int) + 55 + 1 + 0 - 53) (-1074) = (k : Int) + 3
@@ -160,23 +140,22 @@ private theorem magnitude_round (s : Sign) (n : Nat) (large : 2 ^ 55 ≤ n) :
     have noDecrease : (0 - ((k : Int) + 3)).toNat = 0 := by omega
     rw [noDecrease]
     rfl
-  have rounded := retained_bounds g bounds.1 bounds.2.1
   rw [same]
   unfold roundWithAccuracy
   rw [first]
   dsimp only
   have last := final_shift _ ((k : Int) + 3) (by omega) rounded.1 rounded.2
-  by_cases carry : ((⟨g, false, false⟩ : ExtendedMantissa) >>> 3).roundedMantissa = 2 ^ 53
+  by_cases carry : r = 2 ^ 53
   · rw [if_pos carry] at last
     rw [last]
     dsimp only
     have exponent : (k : Int) + 3 + 1 = (k : Int) + 4 := by omega
-    simp only [carry, exponent, Nat.ne_of_gt (Nat.two_pow_pos 52), ↓reduceDIte]
-  · have nonzero : ((⟨g, false, false⟩ : ExtendedMantissa) >>> 3).roundedMantissa ≠ 0 := by omega
+    simp only [carry, exponent, Nat.ne_of_gt (Nat.two_pow_pos 52), ↓reduceDIte] <;> rfl
+  · have nonzero : r ≠ 0 := Nat.ne_of_gt rpositive
     rw [if_neg carry] at last
     rw [last]
     dsimp only
-    simp only [carry, nonzero, ↓reduceDIte]
+    simp only [carry, nonzero, ↓reduceDIte] <;> rfl
 
 private theorem canonical_unpack (s : Sign) (m : Nat) (e : Int) (positive : 0 < m)
     (lower : 2 ^ 52 ≤ m) (upper : m < 2 ^ 53) (emin : -1074 ≤ e) (emax : e ≤ 971) :
@@ -260,11 +239,18 @@ private theorem retained_unpacked (g : Nat) (lower : 2 ^ 55 ≤ g) (upper : g < 
     (UnpackedFloat.pack Format.binary64 (UnpackedFloat.ofInt Format.binary64 (g : Int))) = _
   have cp : compare (g : Int) 0 = .gt := Int.compare_eq_gt.mpr (by omega)
   simp only [UnpackedFloat.ofInt, normalize, cp, Int.toNat_natCast]
-  rw [retained_round .positive g lower upper]
-  have bounds := retained_bounds g lower upper
-  split
-  · exact canonical_unpack .positive _ 4 (by decide) (by decide) (by decide) (by decide) (by decide)
-  · exact canonical_unpack .positive _ 3 (by omega) bounds.1 (by omega) (by decide) (by decide)
+  let r := ((⟨g, false, false⟩ : ExtendedMantissa) >>> 3).roundedMantissa
+  have bounds : 2 ^ 52 ≤ r ∧ r ≤ 2 ^ 53 := retained_bounds g lower upper
+  have positive : 0 < r := by omega
+  have formed : round Format.binary64 .positive g 0 =
+      if h : r = 2 ^ 53 then .finite .positive (2 ^ 52) 4 (by decide)
+      else .finite .positive r 3 positive := retained_round .positive g lower upper
+  rw [formed]
+  by_cases carry : r = 2 ^ 53
+  · simp only [carry, ↓reduceDIte]
+    exact canonical_unpack .positive _ 4 (by decide) (by decide) (by decide) (by decide) (by decide)
+  · simp only [carry, ↓reduceDIte]
+    exact canonical_unpack .positive r 3 positive bounds.1 (by omega) (by decide) (by decide)
 
 private theorem packed_product (s : Sign) (n : Nat) (large : 2 ^ 55 ≤ n) :
     let k := n.log2 - 55
@@ -278,6 +264,10 @@ private theorem packed_product (s : Sign) (n : Nat) (large : 2 ^ 55 ≤ n) :
   let k := n.log2 - 55
   let g := (n >>> k) ||| (if n % 2 ^ k = 0 then 0 else 1)
   let j := min 2047 (k + 1078) - 55
+  change UnpackedFloat.pack Format.binary64 (round Format.binary64 s n 0) =
+    UnpackedFloat.pack Format.binary64 (UnpackedFloat.mul Format.binary64
+      (round Format.binary64 .positive g 0)
+      (.finite s (2 ^ 52) ((j : Int) - 1075) (by decide)))
   have bounds : 2 ^ 55 ≤ g ∧ g < 2 ^ 56 ∧ n.log2 = k + 55 := magnitude_bounds n large
   have jl : 1023 ≤ j := by dsimp [j]; omega
   have scale : (j : Int) - 1023 = (min 969 k : Nat) := by
@@ -288,10 +278,19 @@ private theorem packed_product (s : Sign) (n : Nat) (large : 2 ^ 55 ≤ n) :
     · have cap : min 2047 (k + 1078) = 2047 := Nat.min_eq_left (by omega)
       simp only [j, cap, Nat.min_eq_left (by omega : 969 ≤ k)]
       decide
-  have rBounds := retained_bounds g bounds.1 bounds.2.1
-  rw [magnitude_round s n large, retained_round .positive g bounds.1 bounds.2.1]
-  split
-  · rw [mul_canonical_power s (2 ^ 52) 4 j (by decide) (by decide) (by decide) (by decide) jl, scale]
+  let r := ((⟨g, false, false⟩ : ExtendedMantissa) >>> 3).roundedMantissa
+  have rBounds : 2 ^ 52 ≤ r ∧ r ≤ 2 ^ 53 := retained_bounds g bounds.1 bounds.2.1
+  have positive : 0 < r := by omega
+  have full : round Format.binary64 s n 0 =
+      if h : r = 2 ^ 53 then .finite s (2 ^ 52) ((k : Int) + 4) (by decide)
+      else .finite s r ((k : Int) + 3) positive := magnitude_round s n large
+  have half : round Format.binary64 .positive g 0 =
+      if h : r = 2 ^ 53 then .finite .positive (2 ^ 52) 4 (by decide)
+      else .finite .positive r 3 positive := retained_round .positive g bounds.1 bounds.2.1
+  rw [full, half]
+  by_cases carry : r = 2 ^ 53
+  · simp only [carry, ↓reduceDIte]
+    rw [mul_canonical_power s (2 ^ 52) 4 j (by decide) (by decide) (by decide) (by decide) jl, scale]
     by_cases fits : k ≤ 969
     · rw [Nat.min_eq_right fits]
       have exponent : (k : Int) + 4 = 4 + (k : Int) := by omega
@@ -299,7 +298,8 @@ private theorem packed_product (s : Sign) (n : Nat) (large : 2 ^ 55 ≤ n) :
     · rw [Nat.min_eq_left (by omega : 969 ≤ k)]
       rw [packed_overflow s _ ((k : Int) + 4) (by decide) (by omega),
         packed_overflow s _ (4 + 969) (by decide) (by decide)]
-  · rw [mul_canonical_power s _ 3 j (by omega) rBounds.1 (by omega) (by decide) jl, scale]
+  · simp only [carry, ↓reduceDIte]
+    rw [mul_canonical_power s r 3 j positive rBounds.1 (by omega) (by decide) jl, scale]
     by_cases fits : k ≤ 969
     · rw [Nat.min_eq_right fits]
       have exponent : (k : Int) + 3 = 3 + (k : Int) := by omega
