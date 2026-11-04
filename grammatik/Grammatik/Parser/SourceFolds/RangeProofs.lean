@@ -256,14 +256,14 @@ theorem returnFold_noFold (source : List SItemTief) (locals : Spec.Locals)
           obtain ⟨d, idx, tests⟩ := p
           have hT := parseAndCheck_tests_free _ _ _ _ _ _ _ _ _ hPC
           simp [hPC, bind, Except.bind, pure, Except.pure, Functor.map, Except.map] at h
-          cases hCol : (reservedNames ((tagFoldNodes f 0).1.length)).any
-              ((d.binder :: locals.map Prod.fst ++
+          by_cases hCol : ((reservedNames ((tagFoldNodes f 0).1.length)).any fun name =>
+              (d.binder :: ((locals.map Prod.fst ++
                 Oeffentlich.namenA [] d.value ++ Oeffentlich.namenA [] d.filter ++
-                (match d.empty with | none => [] | some emp => Oeffentlich.namenA [] emp) ++
-                (Spec.functionHeads source).map (·.name)).contains ·) with
-          | true => simp [hCol, bind, Except.bind, pure, Except.pure, Functor.map, Except.map] at h
-          | false =>
-            simp [hCol, bind, Except.bind, pure, Except.pure, Functor.map, Except.map] at h
+                (match d.empty with | none => [] | some emp => Oeffentlich.namenA [] emp)) ++
+                (Spec.functionHeads source).map (·.name))).contains name) = true
+          · erw [if_pos hCol] at h
+            cases h
+          · erw [if_neg hCol] at h
             cases hF : expandNested 32 source locals [d.binder]
                 (tagFoldNodes f 0).1 d.filter with
             | error e => simp [hF, bind, Except.bind, pure, Except.pure, Functor.map, Except.map] at h

@@ -29,7 +29,10 @@ def exportTaggedUnitDetailed (items : List SItemTief) :
   let sources := items.flatMap fun
     | .specGroupT spec _ _ fs => fs.map (fun sig => spec ++ "::" ++ sig.name)
     | _ => []
-  let rewrite : Spec.Walk := { source := ordinary, instantiate := false, resolveSpecs := false,
+  let rewrite : Spec.Walk := {
+    source := ordinary
+    instantiate := false
+    resolveSpecs := false
     exprRewrite := fun locals _ e => do
       match e with
       | .call name args =>
