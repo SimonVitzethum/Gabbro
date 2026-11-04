@@ -36,24 +36,25 @@ theorem fallibleForeignC_ok {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Re
   split at emitted
   · next accepted =>
     obtain ⟨errors, reasons, reasonWidth⟩ := accepted
-    simp only [bind, Option.bind_eq_some_iff] at emitted
-    obtain ⟨⟨⟨request, requestTop⟩, check⟩, selected, emitted⟩ := emitted
     split at emitted
-    · next jump =>
-      simp only [pure, Option.some.injEq, Prod.mk.injEq] at emitted
-      obtain ⟨rfl, rfl⟩ := emitted
-      split at selected
-      · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at selected
-        obtain ⟨⟨request', requestTop'⟩, requestMade, same, rfl⟩ := selected
-        cases same
-        have run := areaElse_ok (O := O) he bound errors reasons requestMade jump
+    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at emitted
+      obtain ⟨⟨request, requestTop⟩, requestMade, emitted⟩ := emitted
+      split at emitted
+      · next jump =>
+        simp only [pure, Option.some.injEq, Prod.mk.injEq] at emitted
+        obtain ⟨rfl, rfl⟩ := emitted
+        have run := areaElse_ok (L := L) (O := O) he bound errors reasons requestMade jump
           (by omega) layout (by simpa only [List.append_assoc] using pre) world
         simpa only [List.length_append, fehlC_len] using run
-      · split at selected
-        · next scalar =>
-          simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at selected
-          obtain ⟨⟨request', requestTop'⟩, requestMade, check', checkMade, same, rfl⟩ := selected
-          cases same
+      · cases emitted
+    · split at emitted
+      · next scalar =>
+        simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at emitted
+        obtain ⟨⟨request, requestTop⟩, requestMade, check, checkMade, emitted⟩ := emitted
+        split at emitted
+        · next jump =>
+          simp only [pure, Option.some.injEq, Prod.mk.injEq] at emitted
+          obtain ⟨rfl, rfl⟩ := emitted
           have run := torElse_ok (O := O) he he bound errors scalar reasons requestMade checkMade jump
             (by omega) (by omega) layout (by simpa only [List.append_assoc] using pre) world
           rcases run with ⟨value, m', word, decoded, steps, changed, read, encoded, world'⟩ |
@@ -63,8 +64,8 @@ theorem fallibleForeignC_ok {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Re
           · exact .inr (.inl ⟨reason, m', decoded, by simpa only [List.length_append, fehlC_len] using steps,
               changed, read, world'⟩)
           · exact .inr (.inr invalid)
-        · cases selected
-    · cases emitted
+        · cases emitted
+      · cases emitted
   · cases emitted
 
 /-- All consumers reserve the full normal value, plus one word for the exact
@@ -78,26 +79,28 @@ theorem fallibleForeignC_top {Γ : Ctx} {Λ : List (Res D)} {a : D.Ax}
   split at emitted
   · next accepted =>
     obtain ⟨errors, reasons, reasonWidth⟩ := accepted
-    simp only [bind, Option.bind_eq_some_iff] at emitted
-    obtain ⟨⟨⟨request, requestTop⟩, check⟩, selected, emitted⟩ := emitted
     split at emitted
-    · simp only [pure, Option.some.injEq, Prod.mk.injEq] at emitted
-      obtain ⟨rfl, rfl⟩ := emitted
-      refine ⟨?_, by omega, reasonWidth⟩
-      split at selected
-      · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at selected
-        obtain ⟨⟨request', requestTop'⟩, requestMade, same, rfl⟩ := selected
-        cases same
+    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at emitted
+      obtain ⟨⟨request, requestTop⟩, requestMade, emitted⟩ := emitted
+      split at emitted
+      · simp only [pure, Option.some.injEq, Prod.mk.injEq] at emitted
+        obtain ⟨rfl, rfl⟩ := emitted
+        refine ⟨?_, Nat.le_max_right _ _, reasonWidth⟩
         have span := areaC_top requestMade
         unfold foreignResultBase at span
         omega
-      · split at selected
-        · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at selected
-          obtain ⟨⟨request', requestTop'⟩, requestMade, check', checkMade, same, rfl⟩ := selected
+      · cases emitted
+    · split at emitted
+      · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at emitted
+        obtain ⟨⟨request, requestTop⟩, requestMade, check, checkMade, emitted⟩ := emitted
+        split at emitted
+        · simp only [pure, Option.some.injEq, Prod.mk.injEq] at emitted
+          obtain ⟨rfl, rfl⟩ := emitted
+          refine ⟨?_, Nat.le_max_right _ _, reasonWidth⟩
           have width := chkC_width checkMade
           omega
-        · cases selected
-    · cases emitted
+        · cases emitted
+      · cases emitted
   · cases emitted
 
 end Gabbro.Stage0.Senke
