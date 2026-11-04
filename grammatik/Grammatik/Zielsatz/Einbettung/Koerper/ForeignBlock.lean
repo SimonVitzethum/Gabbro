@@ -50,7 +50,8 @@ theorem sim_block_bindAxiomOpt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : L
           (execBlockHA S' O' U' A' passes R' continuation reply.1 (ergEnv (e.map E.tyE) (he' ▸ v) ρ'))
       | none => .hardware (.annahme (E.ax a)) : Ausgang (E.vertragE V) l (Γ.map E.tyE)) := by
     simp only [exB, execBlockHA, Args.orte_umτs, orte_exA, evalArgs_umτs]
-    rw [targetAnswer] <;> rfl
+    rw [targetAnswer]
+    cases einpassenErg O'.zeiger (D'.aerg (E.ax a)) reply.2 <;> rfl
   cases hx : einpassenErg (fun _ => Option.none) (D.aerg a) reply.2 with
   | none =>
     refine ⟨M₁, .hardware (.annahme a), hs, fun Φ hP => ?_, ?_⟩
@@ -117,7 +118,8 @@ theorem sim_block_bindAxiomOptElse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ'
       | some (.inr r) => (execEndHA S' O' U' A' passes R' failure reply.1 (.cons r ρ')).schrumpf.zuAusgang
       | none => .hardware (.annahme (E.ax a)) : Ausgang (E.vertragE V) l (Γ.map E.tyE)) := by
     simp only [exB, execBlockHA, Args.orte_umτs, orte_exA, evalArgs_umτs]
-    rw [targetAnswer] <;> rfl
+    rw [targetAnswer]
+    rcases sonstPasst O'.zeiger (D'.aerg (E.ax a)) (D'.agruende (E.ax a)) reply.2 with _ | (v | r) <;> rfl
   rcases hx : sonstPasst (fun _ => Option.none) (D.aerg a) (D.agruende a) reply.2 with _ | (v | r)
   · refine ⟨M₁, .hardware (.annahme a), hs, fun Φ hP => ?_, ?_⟩
     · simp only [execBlockHA, hread Φ hP]
