@@ -16,12 +16,15 @@ def byteLimb (z : Int) (q : Nat) : Zahl 0 (2 ^ 64 - 1) :=
 
 theorem byteLimb_word (z : Int) (q : Nat) :
     BitVec.ofInt 64 (byteLimb z q).n = BitVec.ofInt 64 (dropBytes (8 * q) z) := by
-  simp only [byteLimb, BitVec.ofInt_natCast, BitVec.ofNat_toNat]
+  simp only [byteLimb, BitVec.ofInt_natCast, BitVec.ofNat_toNat, BitVec.setWidth_eq]
 
 theorem integerEncoding_byteLimb : ∀ (w q : Nat) (z : Int) (hq : q < w),
-    (integerEncoding w z)[q] = BitVec.ofInt 64 (byteLimb z q).n
+    (integerEncoding w z)[q]'(by simpa only [integerEncoding_length] using hq) =
+      BitVec.ofInt 64 (byteLimb z q).n
   | 0, _, _, hq => by omega
-  | w + 1, 0, z, _ => by simp [integerEncoding, byteLimb_word, dropBytes]
+  | w + 1, 0, z, _ => by
+    rw [byteLimb_word]
+    simp only [integerEncoding, List.getElem_cons_zero, Nat.mul_zero, dropBytes]
   | w + 1, q + 1, z, hq => by
     simp only [integerEncoding, List.getElem_cons_succ]
     rw [integerEncoding_byteLimb w q (z / 2 ^ 64) (by omega), byteLimb_word, byteLimb_word,
@@ -68,16 +71,23 @@ theorem World.schreibBytes_append (σ : World D) (t : D.Tab) (f : D.Feld t)
 
 /-- The canonical integer span contains every byte chunk of its declared range. -/
 theorem byteSpan_capacity (n : Nat) : n ≤ 8 * integerWords 0 (256 ^ n - 1) := by
+  let words := integerWords 0 ((256 : Int) ^ n - 1)
+  change n ≤ 8 * words
   have high := integerWords_high 0 (256 ^ n - 1)
   rw [if_neg (by decide : ¬(0 : Int) < 0), Nat.sub_zero] at high
+  change ((256 : Int) ^ n - 1).toNat < 2 ^ (64 * words) at high
   have power : (256 : Int) ^ n = 2 ^ (8 * n) := by
     rw [show (256 : Int) = 2 ^ 8 by decide, ← Int.pow_mul]
   have positive : (0 : Int) < 256 ^ n := Int.pow_pos (by decide)
   have cast : (((256 : Int) ^ n - 1).toNat : Int) = 256 ^ n - 1 := Int.toNat_of_nonneg (by omega)
-  have bound : (((256 : Int) ^ n - 1).toNat : Int) < 2 ^ (64 * integerWords 0 (256 ^ n - 1)) := by
-    exact_mod_cast high
+  have bound : (((256 : Int) ^ n - 1).toNat : Int) < 2 ^ (64 * words) := by
+    have lifted := Int.ofNat_lt.mpr high
+    simpa only [Int.natCast_pow, show ((2 : Nat) : Int) = 2 from rfl] using lifted
   rw [cast, power] at bound
-  have natural : 2 ^ (8 * n) ≤ 2 ^ (64 * integerWords 0 (256 ^ n - 1)) := by exact_mod_cast (show (2 : Int) ^ (8 * n) ≤ _ by omega)
+  have natural : 2 ^ (8 * n) ≤ 2 ^ (64 * words) := by
+    apply Int.ofNat_le.mp
+    simp only [Int.natCast_pow, show ((2 : Nat) : Int) = 2 from rfl]
+    omega
   have exponents := (Nat.pow_le_pow_iff_right (by decide : 1 < 2)).mp natural
   omega
 
