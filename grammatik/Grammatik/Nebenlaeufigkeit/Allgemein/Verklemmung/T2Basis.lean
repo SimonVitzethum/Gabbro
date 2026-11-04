@@ -174,7 +174,7 @@ theorem rangInvG_schritt (hO : GutO O) (hSt : StufenM P) {w : D.Fn} {M M' : RufM
       rw [hpop] at hk
       refine rangKette_pop hk subset (fun K hK hNamed => ?_) hf hΛ
       apply hk.2.1 K
-      apply (held_ende _ K).mp
+      apply (held_ende (vertragVon D (M.faeden u).kopf.f) K).mp
       apply hperm.mem_iff.mp
       cases released with
       | none => exact hNamed
