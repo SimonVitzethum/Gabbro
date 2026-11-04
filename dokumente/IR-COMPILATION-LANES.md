@@ -1,5 +1,27 @@
 # Gabbro-to-IR compilation lanes
 
+## Native CPU floating point (owner decision, 2026-11-04)
+
+This decision supersedes the software-floating-point implementation described in the
+historical checkpoints below. Stage 0 compiles and proves the IR; the assembly runner
+executes every runtime operation. No executable Lean source runtime or software IEEE
+fallback is retained. Float arithmetic uses native CPU instructions. Comparisons,
+conversions and finite/range checks use the corresponding CPU instructions and integer
+bit operations; full-range UInt64 conversion uses a portable native instruction sequence.
+The runner establishes the required floating-point control mode itself.
+
+The canonical model uses the toolchain's `Float`/`Float32` primitives instead of Gabbro's
+own IEEE value representation and arithmetic. Rational literals and bounds now convert
+their numerator and denominator with native conversion and divide natively; this replaces
+the former exact-rational, single-rounding meaning. `Ty.fl` retains its existing formatless
+binary64 model value; the separate Code model retains distinct binary32/binary64 types.
+Finite/range obligations, failure channels, resources, memory, contracts and user duties
+remain required. Native NaN payload bits are not fixed by the semantic result relation.
+
+Integration is in progress. Neither these implementation changes nor an isolated adapter
+check establish an end-to-end result: the connected lowering, physical instruction proofs,
+CPU regressions and four guardians must all pass before a green push.
+
 **RESUMED with two agents (2026-10-31).** The owner ended the pause and authorized exactly TWO Claude
 Sonnet 5.5 implementation agents, no others: IR-06 (memory, Lean slot 1) in its preserved worktree
 `t3-e67bc9a3` and IR-03 (full multiword ABI, Lean slot 2) in `t3-c7fc551c`. All other lanes stay paused

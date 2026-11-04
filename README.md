@@ -28,7 +28,8 @@ the LLVM backend are **not** verified, and no bridge to any binary exists yet ([
   and its Sail-Arm plan were retired on 2026-11-01 (git history).
 - **Stage 0: the verified path that exists today.** `stage0/` compiles Gabbro in Lean to the IR `S0IR`, with a generic lowering
   theorem (`irBild_correct`), and the x86-64 assembly runner in `runner/` executes it. It covers part of the userspace language; state
-  and limits per form are in [IR-COMPILATION-LANES](dokumente/IR-COMPILATION-LANES.md).
+  and limits per form are in [IR-COMPILATION-LANES](dokumente/IR-COMPILATION-LANES.md). Lean performs compilation and proof checking;
+  all runtime operations execute in the assembly runner. Native CPU floating-point integration is in progress.
 
 ## 1. Quick start
 
