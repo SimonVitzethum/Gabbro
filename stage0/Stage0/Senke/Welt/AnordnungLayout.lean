@@ -48,10 +48,10 @@ set_option linter.unusedSectionVars false
 
 theorem take_sum_lt (xs : List Nat) (i j : Nat) (hij : i < j) (hi : i < xs.length) :
     (xs.take i).sum + xs[i] ≤ (xs.take j).sum := by
-  have e : (xs.take (i + 1)).sum = (xs.take i).sum + xs[i] := by
-    rw [List.take_succ, List.sum_append, List.getElem?_eq_getElem hi]; simp
-  have := take_sum_mono xs (i + 1) j hij
-  omega
+  have inside := take_sum_add (xs.take j) i (by
+    rw [List.length_take]
+    omega)
+  simpa only [List.take_take, Nat.min_eq_left (Nat.le_of_lt hij), List.getElem_take] using inside
 
 /-- A number in the stretch of summand `i` and in the stretch of summand `j`: `i = j`. -/
 theorem stretch_eq (xs : List Nat) (i j x : Nat) (hi : i < xs.length) (hj : j < xs.length)
@@ -202,25 +202,37 @@ theorem layU_dis (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) :
     have := positive c'
     omega
   · intro c hc
-    have globals : ∀ x ∈ ((List.finRange u.globs.length).map (globSz u)), x % 8 = 0 := by
-      intro x hx
-      obtain ⟨g, _, rfl⟩ := List.mem_map.mp hx
-      simp [globSz]
+    have sizes (g : Fin u.globs.length) : 8 ∣ globSz u g :=
+      ⟨valueWords ((declOf u).gtyp g), rfl⟩
+    have grid := glob_grid (G := Fin u.globs.length) (List.finRange u.globs.length)
+      0 (globSz u) (globAlign u) (Nat.dvd_zero 8) sizes
     cases c with
     | glob g =>
-      have hg := Nat.dvd_iff_mod_eq_zero.mp ((glob_grid
-        (List.finRange u.globs.length) 0 (globSz u) (globAlign u) (by simp)
-        (by intro g; simp [globSz])).1 g _
-        (globStartOf_mem _ _ _ _ g (by simp)))
-      simp [Zelle.adr, layU, alignUp_one, Nat.add_mod, hg]
+      let actual : Fin u.globs.length := g
+      have member := globStartOf_mem (G := Fin u.globs.length) (List.finRange u.globs.length)
+        0 (globSz u) (fun g => wordAlign (globAlign u g)) actual (List.mem_finRange actual)
+      have hg : globStartOf (G := Fin u.globs.length) (List.finRange u.globs.length)
+          0 (globSz u) (fun g => wordAlign (globAlign u g)) actual % 8 = 0 :=
+        Nat.dvd_iff_mod_eq_zero.mp (grid.1 actual _ member)
+      change (b + globStartOf (G := Fin u.globs.length) (List.finRange u.globs.length)
+        0 (globSz u) (fun g => wordAlign (globAlign u g)) actual) % 8 = b % 8
+      simp only [Nat.add_mod, hg, Nat.add_zero, Nat.mod_mod]
     | elem t f k =>
-      have hg := Nat.dvd_iff_mod_eq_zero.mp ((glob_grid
-        (List.finRange u.globs.length) 0 (globSz u) (globAlign u) (by simp)
-        (by intro g; simp [globSz])).2)
+      change Fin u.tabs.length at t
+      change Fin (fieldCount u t) at f
+      have hg : globEnd (G := Fin u.globs.length) (List.finRange u.globs.length)
+          0 (globSz u) (fun g => wordAlign (globAlign u g)) % 8 = 0 :=
+        Nat.dvd_iff_mod_eq_zero.mp grid.2
       have ht := take_mul8 ((List.finRange u.tabs.length).map (tabSz u))
         (by intro x hx; obtain ⟨t, _, rfl⟩ := List.mem_map.mp hx; exact tabSz_mul8 u t) t.val
       have hf := take_mul8 ((List.finRange (fieldCount u t)).map (colSz u t))
         (by intro x hx; obtain ⟨f, _, rfl⟩ := List.mem_map.mp hx; simp [colSz, Nat.mul_assoc]) f.val
-      simp [Zelle.adr, Lay.elem, layU, alignUp_one, globsSz, Nat.add_mod, Nat.mul_assoc, hg, ht, hf]
+      change (b + globEnd (G := Fin u.globs.length) (List.finRange u.globs.length)
+        0 (globSz u) (fun g => wordAlign (globAlign u g)) +
+        (((List.finRange u.tabs.length).map (tabSz u)).take t.val).sum +
+        (((List.finRange (fieldCount u t)).map (colSz u t)).take f.val).sum +
+        8 * valueWords ((declOf u).typ t f) * k) % 8 = b % 8
+      simp only [Nat.add_mod, hg, ht, hf, Nat.mul_assoc, Nat.mul_mod_right,
+        Nat.add_zero, Nat.mod_mod]
 
 end Gabbro.Stage0.Senke
