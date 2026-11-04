@@ -58,7 +58,7 @@ theorem tagPayload_ok {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {Γ : Ctx}
       ([ci 1 (s + 1) 8 0, ci 12 s s (s + 1)] ++ (wordConstant (s + 1) lo).1 ++
         [ci 3 s s (s + 1)]) ρ W)
     (hw : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some w)
-    (hoff : w >>> 8 = BitVec.ofNat 64 (sumOff (some (.int lo hi)) v)) :
+    (hoff : w >>> 8 = BitVec.ofNat 64 (sumOff (D := D) (some (.int lo hi)) v)) :
     Ok m pc fp K s
       ([ci 1 (s + 1) 8 0, ci 12 s s (s + 1)] ++ (wordConstant (s + 1) lo).1 ++
         [ci 3 s s (s + 1)])
@@ -168,9 +168,8 @@ theorem tagArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option Ty}
         exact Sim.prefix hlo st (agreeW_of (a1.mono hlo2))
           (keeps_of_agreeW hW a1 hpr (by omega)) (Sim.schrumpf ih)
       · cases hcp
-    | bool | opt _ | sum _ | why _ | never | fl _ _ | fnptr _ | ptr _ | ref _ | arr _ _ | prod _ _ | str _ => by
+    | bool | opt _ | sum _ | why _ | never | fl _ _ | fnptr _ | ptr _ | ref _ | arr _ _ | prod _ _ | str _ =>
       simp only [tagPayloadC, reduceCtorEq] at hcp
-      cases hcp
 theorem lowTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} (arms : Arms D (vertragVon D f) l Γ Λ Λ' cs)
     (hblocks : ArmsAll (fun b => BR b) arms) {k : Nat} {cd : List II} {top : Nat}
