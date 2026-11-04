@@ -248,4 +248,27 @@ theorem gut_nimmt_gibtRetV {W G} {haelt : List D.Lock} {boden : Option Int}
   rw [e1]
   exact erase_nimmt_gibt L Ls _ hn.2
 
+/-- Rebase an already completed scoped return across its lexical acquisition.
+    The terminal execution supplies absence; no second release is appended. -/
+theorem gut_nimmt_retV {W G} {haelt : List D.Lock} {boden : Option Int}
+    (σ σ1 : World D) (L : D.Lock)
+    (hn : (∀ M ∈ σ.haelt, D.rang M < D.rang L) ∧ L ∉ σ.haelt)
+    (closed : L ∉ σ1.haelt) (h : GutRetV W G haelt boden (σ.nimmt L) σ1) :
+    GutRetV W G haelt boden σ σ1 := by
+  obtain ⟨hr, Ls, heq, spare, rank, good, consistent⟩ := h
+  refine ⟨(rahmen_gleich (σ := σ) (σ' := σ.nimmt L) rfl rfl).trans hr,
+    Ls, ?_, spare, rank, ?_, ?_⟩
+  · have held : σ1.haelt = Ls.foldl (fun h M => h.erase M) (L :: σ.haelt) := heq
+    have erased := erase_nimmt_gibt L Ls σ.haelt hn.2
+    rwa [← held, List.erase_of_not_mem closed] at erased
+  · intro e he
+    rcases good e he with inherited | fresh
+    · simp only [World.nimmt, List.mem_cons] at inherited
+      rcases inherited with rfl | inherited
+      · exact .inr hn
+      · exact .inl inherited
+    · exact .inr fresh
+  · intro k
+    exact consistent (konsistent_cons rfl k)
+
 end Gabbro.Grammatik
