@@ -71,11 +71,11 @@ theorem softMulUnderflow_model (s : Bool) (n k : Nat)
     cases s <;> simp only [Bool.false_eq_true, ↓reduceIte] <;> omega
   have mag : (if s then -(n : Int) else (n : Int)).natAbs = n := by cases s <;> simp
   have sign : decide ((if s then -(n : Int) else (n : Int)) < 0) = s := by
-    cases s <;> simp [show (0 : Int) < n by omega]
+    cases s <;> simp [show (0 : Nat) < n by omega]
   have replay := softRound_replay_all (if s then -(n : Int) else n)
     (-1077 - (k : Int)) nonzero
   dsimp only at replay
-  have bits : bitlen n = 56 := bitlen_unique n 56 nl nb (by decide)
+  have bits : bitlen n = 56 := bitlen_unique n 56 nl nb (by omega)
   rw [mag, sign, bits] at replay
   have position : (-1077 - (k : Int)) + (56 : Nat) - 1 = -1022 - (k : Int) := by omega
   have scale : (-1077 - (k : Int)) + 1074 = -((k + 3 : Nat) : Int) := by omega
@@ -86,7 +86,7 @@ theorem softMulUnderflow_model (s : Bool) (n k : Nat)
   have underflow : (-1022 - (k : Int) < f64.emin - (f64.p : Int)) ↔ 53 < k := by
     change (-1022 - (k : Int) < -1075) ↔ _
     omega
-  rw [underflow] at replay
+  simp only [underflow] at replay
   have rounded : rundeExakt f64
       ⟨if s then -(n : Int) else n, -1077 - (k : Int)⟩ =
       if q < 2 ^ 52 then ⟨s, 0, q⟩ else ⟨s, 1, 0⟩ := by
@@ -114,7 +114,7 @@ theorem softMulUnderflow_model (s : Bool) (n k : Nat)
     · have boundary : q = 2 ^ 52 := by omega
       simpa only [if_neg sub, boundary, Nat.sub_self] using rounded
   change routineRoundPackWord (Runner.IR.bool s) 1 (BitVec.ofNat 64 j) = _
-  rw [routineRoundPackWord_model s 1 j (by decide) jb]
+  erw [routineRoundPackWord_model s 1 j (by decide) jb]
   exact congrArg (fun a : GFloat => BitVec.ofNat 64 (zuBits f64 a)) kernel.symm
 
 /-- Below-half, tie, above-half and gradual underflow exercise the same
