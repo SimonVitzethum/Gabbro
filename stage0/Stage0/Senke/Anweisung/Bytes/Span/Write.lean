@@ -50,7 +50,7 @@ theorem putBytesWords_ok {Γ : Ctx} {Λ : List (Res D)} {a b H : Int}
               (n - 8) (q + 1) (by omega)).bind fun result =>
                 some (leading ++ result.1, max (s + 2) (max ti (max tk result.2)))
           else some (leading ++ [], max (s + 2) (max ti (max tk (s + 2))))) = some (c, top) := by
-        simpa only [s, leading, List.append_assoc] using continuation
+        simpa only [s, leading, List.append_assoc, Option.bind] using continuation
       have remainder : ∃ (rest : List II) (tr : Nat),
           (if more : 8 < n then
             putBytesWordsL L (Γ := Γ) (Λ := Λ) t f a b H lower reserved words
