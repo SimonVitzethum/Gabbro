@@ -67,13 +67,14 @@ private theorem discardGate_result {O : Orakel D} {passes : Nat}
   · have hp2 : PreS L m pc fp K (frei Γ reserved) ((cg ++ [ci 18 (16 * (ce.length + 1)) 0 0]) ++ ce) ρ reserved := hp
     have hq := hp2.nextW hW a12 (d' := frei Γ reserved + 1) (by have := hp.ctx; omega) (by omega) (by omega)
     simp only [List.length_append, List.length_singleton] at hq
-    have hp3 : PreS L m2 _ fp K (frei (.why (D.agruende a) :: Γ) reserved) ce (.cons r ρ) reserved :=
+    have hp3 : PreS L m2 _ fp K (frei (.why (D.agruende a) :: Γ) reserved) ce
+        (Env.cons (τ := .why (D.agruende a)) r ρ) reserved :=
       ⟨by simp only [frei, contextWords_cons, hwhy]; omega, hq.small, hq.frame, hq.code, hq.far,
        envAt_cons hq.env (ValueAt.of_enc hwhy hw2 rfl), trivial, wstab_true _ _⟩
     have ih := ihErr ce te hce hK (by simp only [List.length_append, List.length_singleton] at hs; omega) hW m2 _ _ _ hp3
-      (by simp only [frei, contextWords_cons, hwhy]; omega)
+      (by simp only [frei, contextWords_cons, hwhy] at hlo2 ⊢; omega)
       (hu.agreeW hW a12 (by omega)) (hk.agreeW hW a12 (by omega)) hw
-      (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons, hwhy]; omega)
+      (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons, hwhy] at this ⊢; omega)
     refine Sim.prefix hlo s12 (a12.mono hlo2) (keeps_of_agreeW hW a12 hpr (by omega))
       (Ret.zuAusgang (Ret.cast (Ret.schrumpf ih) ?_ ?_ ?_))
     · simp only [T.mk.injEq, and_true, List.length_append, List.length_singleton]
