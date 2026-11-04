@@ -51,7 +51,7 @@ theorem expand_ordinary {items output : List SItemTief} (h : expand items = .ok 
     ordinary items output = true := by
   unfold expand at h
   cases hc : check items with
-  | error e => simp [hc] at h
+  | error e => simp [hc, bind, Except.bind] at h
   | ok u =>
     simp only [hc, bind, Except.bind] at h
     split at h
@@ -61,7 +61,7 @@ theorem expand_ordinary {items output : List SItemTief} (h : expand items = .ok 
       | ok result =>
         simp only [hw, bind, Except.bind] at h
         split at h
-        · have he : result = output := by simpa using h
+        · have he : result = output := by simpa only [pure, Except.pure, Except.ok.injEq] using h
           subst output
           assumption
         · simp at h
