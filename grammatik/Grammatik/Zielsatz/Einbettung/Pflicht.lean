@@ -125,9 +125,13 @@ theorem wahr_rel {σ₀ σ : World D} {σ₀' σ' : World D'} (h₀ : E.Treu hZ 
     (h : E.Treu hZ σ.speicher σ') {Γ : Ctx} {Λ : List (Res D)} (c : Expr D Γ Λ .bool) (ρ : Env D Γ)
     (ρ' : Env D' (Γ.map E.tyE)) (hρ : E.EnvR hZ ρ ρ') :
     wahr? (eval σ₀' (exE E c) σ' ρ') = wahr? (eval σ₀ c σ ρ) := by
+  let mapped : Expr D' (Γ.map E.tyE) (Λ.map E.resE) .bool := exE E c
   have hv := E.eval_exE hZ h₀ h c ρ ρ' hρ
-  simp only [VRel] at hv
-  rw [hv]; rfl
+  change (eval (τ := .bool) σ₀' mapped σ' ρ' : Bool) =
+    eval (τ := .bool) σ₀ c σ ρ at hv
+  change (eval (τ := .bool) σ₀' mapped σ' ρ' : Bool) =
+    eval (τ := .bool) σ₀ c σ ρ
+  exact hv
 
 theorem ergEnv_R {e e' : Option Ty} (he : e' = e.map E.tyE) {Γ Γ' : Ctx} (v : ErgVal D e)
     (v' : ErgVal D' e') (ρ : Env D Γ) (ρ' : Env D' Γ') (hv : E.ErgRel hZ e v (castV he v'))
@@ -145,10 +149,14 @@ include hF
 theorem req_E {σ : World D} {σ' : World D'} (h : E.Treu hZ σ.speicher σ') (g : D.Fn)
     (ρ : Env D (D.params g)) (ρ' : Env D' (D'.params (E.fn g))) (hρ : E.EnvR hZ ρ ρ') :
     wahr? (eval σ' (P'.requires (E.fn g)) σ' ρ') = wahr? (eval σ (P.requires g) σ ρ) := by
+  let mapped : Expr D' ((D.params g).map E.tyE)
+      ((Signatur.anfang D (D.signatur g)).map E.resE) .bool := exE E (P.requires g)
   rw [hF.requires]
-  unfold requiresE
+  change (eval (τ := .bool) σ'
+    (Expr.umΓ (paramsE hS g) (Expr.umΛ (anfangE_fn hS g) mapped)) σ' ρ' : Bool) =
+      eval (τ := .bool) σ (P.requires g) σ ρ
   rw [eval_umΓ, eval_umΛ]
-  exact E.wahr_rel hZ h h _ _ _ ((E.envR_um hZ _ _ _).mpr hρ)
+  exact E.wahr_rel hZ h h _ _ _ ((E.envR_um hZ (paramsE hS g).symm _ _).mpr hρ)
 
 theorem ens_E {σ₀ σ : World D} {σ₀' σ' : World D'} (h₀ : E.Treu hZ σ₀.speicher σ₀')
     (h : E.Treu hZ σ.speicher σ') (g : D.Fn) (ρ : Env D (D.params g)) (ρ' : Env D' (D'.params (E.fn g)))
@@ -156,10 +164,19 @@ theorem ens_E {σ₀ σ : World D} {σ₀' σ' : World D'} (h₀ : E.Treu hZ σ�
     (hv : E.ErgRel hZ (D.erg g) v (castV (ergE_fn hS g).symm v')) :
     wahr? (eval σ₀' (P'.ensures (E.fn g)) σ' (ergEnv (D'.erg (E.fn g)) v' ρ')) =
       wahr? (eval σ₀ (P.ensures g) σ (ergEnv (D.erg g) v ρ)) := by
+  let mapped : Expr D' ((ErgCtx (D.params g) (D.erg g)).map E.tyE)
+      ((vertragVon D g).ende.map E.resE) .bool := exE E (P.ensures g)
+  have hContext : (ErgCtx (D.params g) (D.erg g)).map E.tyE =
+      ErgCtx (D'.params (E.fn g)) (D'.erg (E.fn g)) := by
+    rw [E.ergCtxE, paramsE hS g, ergE_fn hS g]
+  have hResources : (vertragVon D g).ende.map E.resE = (vertragVon D' (E.fn g)).ende := by
+    rw [E.endeE, vertragVonE hS g]
   rw [hF.ensures]
-  unfold ensuresE
+  change (eval (τ := .bool) σ₀'
+    (Expr.umΓ hContext (Expr.umΛ hResources mapped)) σ' (ergEnv (D'.erg (E.fn g)) v' ρ') : Bool) =
+      eval (τ := .bool) σ₀ (P.ensures g) σ (ergEnv (D.erg g) v ρ)
   rw [eval_umΓ, eval_umΛ]
-  exact E.wahr_rel hZ h₀ h _ _ _ ((E.envR_um hZ _ _ _).mpr
+  exact E.wahr_rel hZ h₀ h _ _ _ ((E.envR_um hZ hContext.symm _ _).mpr
     (E.ergEnv_R hZ (ergE_fn hS g).symm v v' ρ ρ' hv hρ))
 
 end Vertraege
