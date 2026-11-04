@@ -44,7 +44,7 @@ theorem execStmtHA_ru_ite {V : Vertrag D}
     : AusRelRu (execStmtHA S.mitRuhe O' U' A' passes R' (ruS (.ite c t e : Stmt D V l Γ Λ Λ')) (worldR σ) (envR ρ)) (execStmtHA S O U A passes R (.ite c t e : Stmt D V l Γ Λ Λ') σ ρ) :=
   by
   simp only [ruS, execStmtHA]
-  rw [ruE_orte, leseA_worldR hA, eval_ru]
+  erw [ruE_orte, leseA_worldR hA, eval_ru]
   cases h : (eval (leseA A σ Λ c.orte) c (leseA A σ Λ c.orte) ρ : Bool)
   · simp only [wahr?, valR_bool, h, Bool.false_eq_true, if_false]
     exact ih_execBlockHA_ru_e _ ρ
@@ -68,7 +68,7 @@ theorem execStmtHA_ru_onOption {V : Vertrag D}
     : AusRelRu (execStmtHA S.mitRuhe O' U' A' passes R' (ruS (.onOption (n := zi_n) o p a : Stmt D V l Γ Λ Λ')) (worldR σ) (envR ρ)) (execStmtHA S O U A passes R (.onOption (n := zi_n) o p a : Stmt D V l Γ Λ Λ') σ ρ) :=
   by
   simp only [ruS, execStmtHA]
-  rw [ruE_orte, leseA_worldR hA, eval_ru]
+  erw [ruE_orte, leseA_worldR hA, eval_ru]
   try simp only [valR_int, valR_opt, valR_fl, valR_fnptr]
   cases h : eval (leseA A σ Λ o.orte) o (leseA A σ Λ o.orte) ρ with
   | none => exact ih_execBlockHA_ru_a _ ρ
@@ -91,7 +91,7 @@ theorem execStmtHA_ru_onTag {V : Vertrag D}
     : AusRelRu (execStmtHA S.mitRuhe O' U' A' passes R' (ruS (.onTag (cs := zi_cs) v arms : Stmt D V l Γ Λ Λ')) (worldR σ) (envR ρ)) (execStmtHA S O U A passes R (.onTag (cs := zi_cs) v arms : Stmt D V l Γ Λ Λ') σ ρ) :=
   by
   simp only [ruS, execStmtHA]
-  rw [ruE_orte, leseA_worldR hA, eval_ru]
+  erw [ruE_orte, leseA_worldR hA, eval_ru]
   exact ih_execArmsHA_ru_arms _ _ ρ
 
 set_option linter.unusedSectionVars false in
@@ -109,7 +109,7 @@ theorem execStmtHA_ru_onWhy {V : Vertrag D}
     : AusRelRu (execStmtHA S.mitRuhe O' U' A' passes R' (ruS (.onWhy (n := zi_n) r arms : Stmt D V l Γ Λ Λ')) (worldR σ) (envR ρ)) (execStmtHA S O U A passes R (.onWhy (n := zi_n) r arms : Stmt D V l Γ Λ Λ') σ ρ) :=
   by
   simp only [ruS, execStmtHA]
-  rw [ruE_orte, leseA_worldR hA, eval_ru]
+  erw [ruE_orte, leseA_worldR hA, eval_ru]
   exact ih_execGrundHA_ru_arms _ _ ρ
 
 set_option linter.unusedSectionVars false in
@@ -184,17 +184,18 @@ theorem execStmtHA_ru_callIndElse {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}
     {Λ : List (Res D)}
-    (n)
-    (p)
-    (args)
-    (he)
+    {τ : Ty}
+    (n : Nat)
+    (p : Expr D Γ Λ (.fnptr n))
+    (args : Args D Γ Λ (D.sigNr n).params)
+    (he : (D.sigNr n).erg = some τ)
     (hp)
     (hr)
     (err)
     (σ : World D)
     (ρ : Env D Γ)
     (ih_execEndHA_ru_err : ∀ (σ : World D), ∀ (ρ : Env D _), EndRel (execEndHA S.mitRuhe O' U' A' passes R' (ruEnd err) (worldR σ) (envR ρ)) (execEndHA S O U A passes R err σ ρ))
-    : AusRelRu (execStmtHA S.mitRuhe O' U' A' passes R' (ruS (.callIndElse (n := n) p args he hp hr err : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtHA S O U A passes R (.callIndElse (n := n) p args he hp hr err : Stmt D V l Γ Λ _) σ ρ) :=
+    : AusRelRu (execStmtHA S.mitRuhe O' U' A' passes R' (ruS (.callIndElse (τ := τ) (n := n) p args he hp hr err : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtHA S O U A passes R (.callIndElse (τ := τ) (n := n) p args he hp hr err : Stmt D V l Γ Λ _) σ ρ) :=
   by
   simp only [ruS]
   erw [execStmtHA_nachΛ]
@@ -216,6 +217,8 @@ theorem execStmtHA_ru_callIndElse {V : Vertrag D}
         | ok σ' v => (try erw [hx]); exact Or.inl rfl
         | why σ' r =>
             try erw [hx]
+            simp only [rufR]
+            erw [execEndHA_umΛ]
             exact EndRel.zuAusgang (EndRel.schrumpf (ih_execEndHA_ru_err σ' (Env.cons (grundSig hg r) ρ)))
         | logik e => (try erw [hx]); exact Or.inl rfl
         | hardware e => (try erw [hx]); exact Or.inl rfl
@@ -259,9 +262,11 @@ theorem execStmtHA_ru_traverse {V : Vertrag D}
       wahr? (eval (leseA A' σ (Λ.map resR) (ruE inv).orte) (ruE inv)
         (leseA A' σ (Λ.map resR) (ruE inv).orte) ρ)))
     (fun σ ρ => ih_execBlockHA_ru_body σ ρ)
-    (fun σ ρ => by simp only [ruE_orte, leseA_worldR hA, eval_ru, valR_bool, wahr?])
+    (fun σ ρ => by
+      erw [ruE_orte, leseA_worldR hA, eval_ru]
+      rfl)
     (alleIndizes (D.count t)) σ ρ
-  rw [map_valR_int] at hL
+  erw [map_valR_int (D := D) 0 (D.count t - 1) (alleIndizes (D.count t))] at hL
   exact hL
 
 set_option linter.unusedSectionVars false in
@@ -282,7 +287,7 @@ theorem execStmtHA_ru_consumeTraverse {V : Vertrag D}
     : AusRelRu (execStmtHA S.mitRuhe O' U' A' passes R' (ruS (.consumeTraverse t member edge inv bound mass body : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtHA S O U A passes R (.consumeTraverse t member edge inv bound mass body : Stmt D V l Γ Λ _) σ ρ) :=
   by
   simp only [ruS, execStmtHA]
-  rw [show (D.mitRuhe.count t).toNat + bound.toNat + 1 =
+  erw [show (D.mitRuhe.count t).toNat + bound.toNat + 1 =
     (D.count t).toNat + bound.toNat + 1 from by rfl]
   refine verbrauchLauf_rel (D := D) t
     (fun σ ρ => execBlockHA S O U A passes R body σ ρ)
@@ -295,34 +300,40 @@ theorem execStmtHA_ru_consumeTraverse {V : Vertrag D}
     (fun σ ρ => let σ := leseA A σ Λ mass.orte; (σ, (eval σ mass σ ρ).n))
     (fun σ ρ => let σ := leseA A' σ (Λ.map resR) (ruE mass).orte; (σ, (eval σ (ruE mass) σ ρ).n))
     bound (fun σ ρ => ih_execBlockHA_ru_body σ ρ)
-    (fun σ ρ => by simp only [ruE_orte, leseA_worldR hA, eval_ru, valR_bool, wahr?])
+    (fun σ ρ => by
+      erw [ruE_orte, leseA_worldR hA, eval_ru]
+      rfl)
     ?_ ?_ ((D.count t).toNat + bound.toNat + 1) σ ρ
   · intro σ' ρ'
-    simp only [verbrauchSelA, ruE_orte, leseA_worldR hA, Prod.mk.injEq]
-    refine ⟨rfl, ?_, ?_⟩
+    dsimp only [verbrauchSelA]
+    erw [show (ruE member).orte ++ (ruE edge).orte = member.orte ++ edge.orte from
+      kongr₂ (· ++ ·) (ruE_orte member) (ruE_orte edge), leseA_worldR hA]
+    refine kongr₂ Prod.mk rfl (kongr₂ Prod.mk ?_ ?_)
     · change verbrauchWahl (alleIndizes (D.count t)) _ _ _ = _
       conv => lhs; rw [← map_valR_int (D := D) 0 (D.count t - 1) (alleIndizes (D.count t))]
       refine verbrauchWahl_map _ _ _ _ _ _ _ _ ?_ ?_ ?_
       · intro k _
         have henv : Env.cons (valR _ k) (envR ρ') = envR (Env.cons k ρ') := rfl
-        simp only [henv, eval_ru, valR_bool]
+        erw [henv, eval_ru]
+        rfl
       · intro j _ k _
         have henv : Env.cons (valR _ j) (Env.cons (valR _ k) (envR ρ')) =
             envR (Env.cons j (Env.cons k ρ')) := rfl
-        simp only [henv, eval_ru, valR_bool]
+        erw [henv, eval_ru]
+        rfl
       · intro j _ k _
-        simp only [show (valR _ j).n = j.n from congrArg Zahl.n (valR_int j),
-          show (valR _ k).n = k.n from congrArg Zahl.n (valR_int k)]
-    · conv => lhs; rw [show D.mitRuhe.count t = D.count t from rfl]
+        rfl
+    · apply congrArg (fun b : Bool => !b)
+      change (alleIndizes (D.count t)).all _ = _
       conv => lhs; rw [← map_valR_int (D := D) 0 (D.count t - 1) (alleIndizes (D.count t))]
       exact map_all_beibehalt _ _ _ _ (fun k _ => by
         have henv : Env.cons (valR _ k) (envR ρ') = envR (Env.cons k ρ') := rfl
-        simp only [henv, eval_ru, valR_bool])
+        erw [henv, eval_ru]
+        rfl)
   · intro σ' ρ'
-    simp only [ruE_orte, leseA_worldR hA, Prod.mk.injEq]
-    refine ⟨rfl, ?_⟩
-    simp only [eval_ru]
-    exact congrArg Zahl.n (valR_int _)
+    dsimp only
+    erw [ruE_orte, leseA_worldR hA, eval_ru]
+    rfl
 
 end HauptA
 end Gabbro.Grammatik
