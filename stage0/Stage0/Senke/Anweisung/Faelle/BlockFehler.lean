@@ -43,7 +43,6 @@ theorem blockAxiomElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat
   · rw [hAA]
     have hp2 : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) ((cg) ++ ((cr ++ [ci 18 (16 * (ce.length + 1)) 0 0]) ++ ce)) ρ := by simpa only [List.append_assoc] using hp
     have hq := hp2.nextW hW a12 (d' := frei Γ reserved + valueWords τ) (by have := hp.ctx; omega) (by omega) (by omega)
-    simp only [List.length_append, fehlC_len] at hq
     have hp3 : PreS (reserved := reserved) L m2 _ fp K (frei (τ :: Γ) reserved) cr (Env.cons (ergWert he v) ρ) :=
       ⟨by simp only [frei, contextWords_cons, hwhy]; omega, hq.small, hq.frame, hq.left.left.code, hq.left.left.far,
        envAt_cons hq.env value, trivial, wstab_true _ _⟩

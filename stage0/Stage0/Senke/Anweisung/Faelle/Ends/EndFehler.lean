@@ -34,6 +34,8 @@ theorem endAxiomElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} 
   have metadata := fallibleForeignC_top hg
   have hwhy := metadata.2.2
   have hks := hW.ks
+  have framePrefix := functionFrame_prefix P f
+  have frameBase : FB = 4 := rfl
   simp only [List.length_append, List.length_singleton] at hs
   simp only [execEnd]
   rcases fallibleForeignC_ok (O := O) (σ := σ.lese Λ args.orte) (ρ := ρ) he hg
@@ -42,7 +44,6 @@ theorem endAxiomElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} 
   · rw [hAA]
     have hp2 : PreS L m pc fp K (frei Γ reserved) ((cg) ++ (cr ++ ce)) ρ reserved := by simpa only [List.append_assoc] using hp
     have hq := hp2.nextW hW a12 (d' := frei Γ reserved + valueWords τ) (by have := hp.ctx; omega) (by omega) (by omega)
-    simp only [List.length_append, fehlC_len] at hq
     have hp3 : PreS L m2 _ fp K (frei (τ :: Γ) reserved) cr (Env.cons (ergWert he v) ρ) reserved :=
       ⟨by simp only [frei, contextWords_cons, hwhy]; omega, hq.small, hq.frame, hq.left.code, hq.left.far,
        envAt_cons hq.env value, trivial, wstab_true _ _⟩
