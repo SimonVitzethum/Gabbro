@@ -253,7 +253,7 @@ theorem fwP_ende_verletzt : ∃ M : RufMaschineG zD,
     (.ende (.ret .empty List.Perm.nil)) .nil rfl
   refine ⟨M5, .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _
     (.schritt _ _ _ .start s1) s2) s3) s4) s5, fun h => ?_⟩
-  have h0 := h 0
+  have h0 := h.1 0
   rw [hZ5.1] at h0
   have := (h0 rfl false [] [] .nil (.ende (.ret .empty List.Perm.nil)) .empty rfl
     ⟨List.Perm.nil, Or.inl rfl⟩).1
