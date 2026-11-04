@@ -38,7 +38,8 @@ def Walk.expr (w : Walk) (locals : Locals) : Nat → SExpr → Except String SEx
   | 0, _ => .error "spec.expansion.fuel"
   | f + 1, e => do
     let recur := { w with expected := none }.expr locals f
-    let e ← match e with
+    let e ← (do
+      match e with
       | .call name args => do
         let signature := (functionHeads (materialize w.source)).find? (fun s => strEq s.name name)
         let args ← args.zipIdx.mapM fun (arg, index) => do
@@ -76,14 +77,19 @@ def Walk.expr (w : Walk) (locals : Locals) : Nat → SExpr → Except String SEx
           | _ => locals
         return .ext k (x :: "slots" :: ns) (← args.mapM (w.expr locals f))
       | .ext k ns args => do return .ext k ns (← args.mapM recur)
-      | e => do return e
+      | e => do return e)
     w.exprRewrite locals w.expected e
 end
+
+/-- Even a leaf reaches the configured expression rewrite or refusal. -/
+theorem Walk.expr_literal (w : Walk) (locals : Locals) (fuel n : Nat) :
+    w.expr locals (fuel + 1) (.lit n) = w.exprRewrite locals w.expected (.lit n) := rfl
 
 def Walk.type (w : Walk) (locals : Locals) : Nat → STyp → Except String STyp
   | 0, _ => .error "spec.expansion.fuel"
   | f + 1, t => do
-    let t ← match t with
+    let t ← (do
+      match t with
       | .dyn n raw => do
         if w.resolveSpecs then throw "dyn.unexpanded-type"
         return .dyn n raw
@@ -94,8 +100,12 @@ def Walk.type (w : Walk) (locals : Locals) : Nat → STyp → Except String STyp
       | .embed t p s => do return .embed (← w.type locals f t) p (← s.mapM (w.expr locals f))
       | .str n => do return .str (← w.expr locals f n)
       | .entry ps r => do return .entry ps (← r.mapM (w.type locals f))
-      | t => do return t
+      | t => do return t)
     w.typeRewrite t
+
+/-- Even a named type reaches the configured type rewrite or refusal. -/
+theorem Walk.type_atom (w : Walk) (locals : Locals) (fuel : Nat) (name : String) :
+    w.type locals (fuel + 1) (.atom name) = w.typeRewrite (.atom name) := rfl
 
 def Walk.effects (w : Walk) (locals : Locals) (es : List SEffekt) : Except String (List SEffekt) := do
   let es ← if !w.resolveSpecs then pure es

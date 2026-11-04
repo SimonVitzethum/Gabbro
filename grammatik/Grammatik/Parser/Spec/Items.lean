@@ -58,19 +58,19 @@ def Walk.item (w : Walk) : Nat → SItemTief → Except String SItemTief
     let ex := w.expr [] f
     let ty := w.type [] f
     match it with
-    | .specGroupT n ts es fs =>
+    | .specGroupT n ts es fs => do
       if w.resolveSpecs then throw "spec.output.group"
       return .specGroupT n ts es (← fs.mapM w.signature)
-    | .implGroupT n ts es fs =>
+    | .implGroupT n ts es fs => do
       if w.resolveSpecs then throw "spec.output.group"
       return .implGroupT n (← ts.mapM ty) es (← fs.mapM (w.item f))
-    | .taggedByT decl spec =>
+    | .taggedByT decl spec => do
       if w.resolveSpecs then throw "tagged-dispatch-unexpanded-declaration"
       return .taggedByT (← w.item f decl) spec
     | .modT n its => return .modT n (← its.mapM (w.item f))
     | .pubT it => return .pubT (← w.item f it)
     | .gateT it => return .gateT (← w.item f it)
-    | .fnT s body =>
+    | .fnT s body => do
       let s ← w.signature s
       return .fnT s (← { w with result := s.res }.statement s.params f body)
     | .protoT s => return .protoT (← w.signature s)
@@ -81,17 +81,17 @@ def Walk.item (w : Walk) : Nat → SItemTief → Except String SItemTief
     | .globT b n t v a s sh => return .globT b n (← ty t) (← { w with expected := some (← ty t) }.constant f v) (← a.mapM ex) s sh
     | .formatT n a b fs => return .formatT n (← a.mapM ex) b (← fs.mapM w.field)
     | .tableT n v c b o sh ps => return .tableT n v (← c.mapM ex) b o sh (← ps.mapM w.tablePart)
-    | .arenaT n lo hi mx t pb =>
+    | .arenaT n lo hi mx t pb => do
       let pb ← pb.mapM fun (ps, e) => return (ps, ← ex e)
       return .arenaT n (← ex lo) (← ex hi) (← mx.mapM ex) (← ty t) pb
-    | .whyT n cs b =>
+    | .whyT n cs b => do
       let cs ← cs.mapM fun (n, e, text) => return (n, ← ex e, text)
       return .whyT n cs b
     | .stateT n ts => return .stateT n (← ts.mapM w.transition)
-    | .devT n ps space parts =>
+    | .devT n ps space parts => do
       let ps ← ps.mapM fun (n, t) => return (n, ← ty t)
       return .devT n ps space (← parts.mapM (w.devicePart ps))
-    | .axiomT n ps res pred es h =>
+    | .axiomT n ps res pred es h => do
       let ps ← ps.mapM fun (n, t) => return (n, ← ty t)
       return .axiomT n ps (← res.mapM ty) (← pred.mapM (w.expr ps f)) (← w.effects ps es) h
     | .checkT c =>
@@ -100,11 +100,12 @@ def Walk.item (w : Walk) : Nat → SItemTief → Except String SItemTief
         boden := ← c.boden.mapM ex
         canFail := ← w.statement [] f c.canFail }
     | .atomT n t ps a b => return .atomT n (← ty t) (← ps.mapM (fun es => es.mapM ex)) a b
-    | .lockT n ps rk h sh m i => return .lockT n (← ps.mapM ex) (← ex rk)
+    | .lockT n ps rk h sh m i => do
+      return .lockT n (← ps.mapM ex) (← ex rk)
         (← h.mapM ex) (← sh.mapM ex) m (← i.mapM ex)
     | .rcuT n ps e => return .rcuT n (← ps.mapM ex) (← e.mapM ex)
     | .groupT n ns is => return .groupT n ns (← is.mapM w.invariant)
-    | .concT ps =>
+    | .concT ps => do
       let ps ← ps.mapM fun (p, args) => do
         let args ← args.mapM ex
         let n ← w.call [] ("::".intercalate p) none args
@@ -119,7 +120,7 @@ def Walk.item (w : Walk) : Nat → SItemTief → Except String SItemTief
         blatt := ← ex v.blatt
         invarianten := ← v.invarianten.mapM w.invariant }
     | .entryT e => return .entryT { e with vektor := ← e.vektor.mapM ex, ist := ← e.ist.mapM ex }
-    | .bootT n arch ss keeps =>
+    | .bootT n arch ss keeps => do
       let ss ← ss.mapM fun
         | .set n e => return .set n (← ex e)
         | .call p args => do
@@ -127,7 +128,7 @@ def Walk.item (w : Walk) : Nat → SItemTief → Except String SItemTief
           let n ← w.call [] ("::".intercalate p) none args
           return .call [n] args
       return .bootT n arch ss keeps
-    | .callT c =>
+    | .callT c => do
       let params ← c.params.mapM fun (n, t) => return (n, ← ty t)
       return .callT { c with
         params
@@ -138,7 +139,7 @@ def Walk.item (w : Walk) : Nat → SItemTief → Except String SItemTief
           post := ← c.gate.post.mapM (w.expr c.params f)
           uses := ← w.effects c.params c.gate.uses
           cost := ← c.gate.cost.mapM ex } }
-    | .goalT n bs =>
+    | .goalT n bs => do
       let bs ← bs.mapM fun (a, b, binds) => do
         let binds ← binds.mapM fun (v, binding, h) => return (v, ← w.binding binding, h)
         return (a, b, binds)
