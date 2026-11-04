@@ -52,6 +52,28 @@ theorem call_equation (fn : Function params lo hi)
         (ergEnv ((declaration params (.int lo hi)).erg ()) value args) =
           fn.post.denote (.cons value args) :=
     fn.post.equation before after (.cons value args)
+  have preRead :
+      σ.lese (Signatur.anfang (declaration params (.int lo hi))
+        ((declaration params (.int lo hi)).signatur ())) (fn.program.requires ()).orte = σ := by
+    rw [prePlaces] <;> rfl
+  have preCheck :
+      wahr? (eval
+        (σ.lese (Signatur.anfang (declaration params (.int lo hi))
+          ((declaration params (.int lo hi)).signatur ())) (fn.program.requires ()).orte)
+        (fn.program.requires ())
+        (σ.lese (Signatur.anfang (declaration params (.int lo hi))
+          ((declaration params (.int lo hi)).signatur ())) (fn.program.requires ()).orte) args) =
+        fn.pre.denote args := preEval _ _
+  have postRead (after : World (declaration params (.int lo hi))) :
+      after.lese (vertragVon (declaration params (.int lo hi)) ()).ende
+        (fn.program.ensures ()).orte = after := by
+    rw [postPlaces] <;> rfl
+  have postCheck (before after : World (declaration params (.int lo hi))) (value : Zahl lo hi) :
+      wahr? (eval before (fn.program.ensures ())
+        (after.lese (vertragVon (declaration params (.int lo hi)) ()).ende
+          (fn.program.ensures ()).orte)
+        (ergEnv ((declaration params (.int lo hi)).erg ()) value args)) =
+        fn.post.denote (.cons value args) := postEval _ _ _
   have bodyPlaces : fn.body.2.2.expr.orte = [] := footprint _
   have endEquation :
       execEnd O passes (rufAt fn.program O passes depth) (fn.program.rumpf ()) σ args =
@@ -67,18 +89,26 @@ theorem call_equation (fn : Function params lo hi)
       List.nil_append, fn.body.2.2.equation, ErgExpr.orte, Expr.orte,
       evalErg, eval, Env.get, EndAusgang.schrumpf] <;> rfl
   have noInvariants : (declaration params (.int lo hi)).invs = [] := rfl
-  simp only [rufAt, prePlaces, World.lese, List.map_nil, World.merke,
-    List.nil_append, preEval, wahr?]
+  rw [rufAt]
+  dsimp only
+  rw [preCheck, preRead]
   letI : Decidable (@Eq Bool (fn.pre.denote args) false) := Bool.decEq _ _
   by_cases hp : @Eq Bool (fn.pre.denote args) false
-  · simp only [hp, ↓reduceIte] <;> rfl
-  · simp only [hp, ↓reduceIte]
+  · simp only [ite_eq_left hp] <;> rfl
+  · simp only [ite_eq_right hp]
     rw [endEquation]
     by_cases hr : lo ≤ (fn.body.2.2.denote args).n ∧ (fn.body.2.2.denote args).n ≤ hi
-    · simp only [hr, ↓reduceDIte, postPlaces, World.lese, List.map_nil,
-        World.merke, List.nil_append, postEval, wahr?, noInvariants,
-        List.filter_nil, List.foldl_nil, List.find?_nil] <;> rfl
-    · simp only [hr, ↓reduceDIte] <;> rfl
+    · simp only [dite_eq_left hr]
+      rw [postCheck σ σ (⟨(fn.body.2.2.denote args).n, hr.1, hr.2⟩ : Zahl lo hi)]
+      letI : Decidable (@Eq Bool (fn.post.denote
+        (.cons (⟨(fn.body.2.2.denote args).n, hr.1, hr.2⟩ : Zahl lo hi) args)) false) :=
+          Bool.decEq _ _
+      by_cases hq : @Eq Bool (fn.post.denote
+          (.cons (⟨(fn.body.2.2.denote args).n, hr.1, hr.2⟩ : Zahl lo hi) args)) false
+      · simp only [ite_eq_left hq] <;> rfl
+      · simp only [ite_eq_right hq, noInvariants, List.filter_nil, List.foldl_nil,
+          List.find?_nil, postRead] <;> rfl
+    · simp only [dite_eq_right hr] <;> rfl
 
 /-- A successful call is certified at its original argument and result types.
     The generic equation includes all worlds, oracles, budgets and positive depths. -/
@@ -96,9 +126,21 @@ theorem Certificate.sound {fn : Function params lo hi}
     (O : Orakel (declaration params (.int lo hi))) (passes depth : Nat) :
     rufAt fn.program O passes (depth + 1) () σ args =
       .ok σ (⟨value, cert.range.1, cert.range.2⟩ : Zahl lo hi) := by
+  have hp : ¬ @Eq Bool (fn.pre.denote args) false := by
+    intro wrong
+    have impossible : (true : Bool) = false := cert.requires.symm.trans wrong
+    cases impossible
+  have hr : lo ≤ (fn.body.2.2.denote args).n ∧ (fn.body.2.2.denote args).n ≤ hi := by
+    simpa only [cert.body] using cert.range
+  have narrowedEq : (⟨(fn.body.2.2.denote args).n, hr.1, hr.2⟩ : Zahl lo hi) =
+      ⟨value, cert.range.1, cert.range.2⟩ := Zahl.ext_n cert.body
+  have hq : ¬ @Eq Bool (fn.post.denote
+      (.cons (⟨value, cert.range.1, cert.range.2⟩ : Zahl lo hi) args)) false := by
+    intro wrong
+    have impossible : (true : Bool) = false := cert.ensures.symm.trans wrong
+    cases impossible
   rw [call_equation]
-  simp only [cert.requires, Bool.true_eq_false, ↓reduceIte, cert.body]
-  simp only [cert.range, ↓reduceDIte, cert.ensures, Bool.true_eq_false, ↓reduceIte] <;> rfl
+  simp only [ite_eq_right hp, dite_eq_left hr, narrowedEq, ite_eq_right hq] <;> rfl
 
 /-- Checking is deterministic and proof-producing; failures retain a named reason. -/
 def certify (name : String) (fn : Function params lo hi)
@@ -209,7 +251,7 @@ def checkCall (k : UKonstFn) (fns : List UKonstFn)
         match hc : uKonstWert lo hi fns bindings 64
             (normalizeNames (locals k.params) k.constants fn.source) with
         | none => throw ("const range failure at `" ++ k.name ++ "`: arithmetic overflow or no value")
-        | some value =>
+        | some value => do
           let cert ← Function.certify k.name fn.model args value
           let quoted ← quote fn.model.body.2.2.expr args
           have syntaxValue : quoted.syntax.evalInt = some value := by
