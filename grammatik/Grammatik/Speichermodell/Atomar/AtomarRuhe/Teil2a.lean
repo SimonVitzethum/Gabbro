@@ -8,6 +8,16 @@ public import Grammatik.Speichermodell.Atomar.AtomarRuhe.Teil1
 
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
+
+/-- Transport the complete optional answer before extending its continuation environment. -/
+private theorem ergTransportHA_ru {e : Option Ty} {τ : Ty} (he : e = some τ)
+    (he' : e.map tyR = some (tyR τ)) (v : ErgVal D e) :
+    (he' ▸ ergR e v : ErgVal D.mitRuhe (some (tyR τ))) =
+      valR τ (he ▸ v : ErgVal D (some τ)) := by
+  cases he
+  cases he'
+  rfl
+
 section HauptA
 variable (S : SperrInv D) (O : Orakel D) (O' : Orakel D.mitRuhe) (hO : OrakelRu O O')
   (U : Umwelt D) (U' : Umwelt D.mitRuhe) (A : AUmwelt D) (A' : AUmwelt D.mitRuhe) (passes : Nat)
@@ -43,7 +53,9 @@ theorem execStmtHA_ru_retry {V : Vertrag D}
     (fun σ ρ => execBlockHA S O U A passes R ueber σ ρ)
     (fun σ ρ => execBlockHA S.mitRuhe O' U' A' passes R' (ruB ueber) σ ρ)
     (fun σ ρ => ih_execBlockHA_ru_body σ ρ)
-    (fun σ ρ => by simp only [ruE_orte, leseA_worldR hA, eval_ru, valR_bool, wahr?])
+    (fun σ ρ => by
+      erw [ruE_orte, leseA_worldR hA, eval_ru]
+      rfl)
     (fun σ ρ => ih_execBlockHA_ru_ueber σ ρ) n σ ρ
 
 set_option linter.unusedSectionVars false in
@@ -67,7 +79,9 @@ theorem execStmtHA_ru_forever {V : Vertrag D}
       wahr? (eval (leseA A' σ (Λ.map resR) (ruE inv).orte) (ruE inv)
         (leseA A' σ (Λ.map resR) (ruE inv).orte) ρ)))
     (fun σ ρ => ih_execBlockHA_ru_body σ ρ)
-    (fun σ ρ => by simp only [ruE_orte, leseA_worldR hA, eval_ru, valR_bool, wahr?]) passes σ ρ
+    (fun σ ρ => by
+      erw [ruE_orte, leseA_worldR hA, eval_ru]
+      rfl) passes σ ρ
 
 set_option linter.unusedSectionVars false in
 theorem execStmtHA_ru_axiomCall {V : Vertrag D}
@@ -124,7 +138,8 @@ theorem execStmtHA_ru_axiomCallElse {V : Vertrag D}
       rcases w with _ | v | r
       · exact Or.inl rfl
       · exact Or.inl rfl
-      · erw [execEndHA_umΛ]
+      · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply, id]
+        erw [execEndHA_umΛ]
         exact EndRel.zuAusgang (EndRel.schrumpf
           (ih_execEndHA_ru_err σ' (Env.cons (τ := reasonTy (D.agruende a)) r ρ)))
 
@@ -187,16 +202,16 @@ theorem execStmtHA_ru_retScoped {V : Vertrag D}
     {Γ : Ctx}
     {Λ : List (Res D)}
     (e)
-    (R)
+    (cleanup)
     (σ : World D)
     (ρ : Env D Γ)
-    : AusRelRu (execStmtHA S.mitRuhe O' U' A' passes R' (ruS (.retScoped e R : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtHA S O U A passes R (.retScoped e R : Stmt D V l Γ Λ _) σ ρ) :=
+    : AusRelRu (execStmtHA S.mitRuhe O' U' A' passes R' (ruS (.retScoped e cleanup : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtHA S O U A passes R (.retScoped e cleanup : Stmt D V l Γ Λ _) σ ρ) :=
   by
   refine Or.inl ?_
   simp only [ruS, execStmtHA]
   erw [ruErg_orte, leseA_worldR hA, evalErg_ru]
-  rw [gibt_foldl_worldR]
-  rfl
+  erw [scopesInvH_worldR, gibt_foldl_worldR]
+  cases scopesInvH S cleanup.scopes (leseA A σ Λ e.orte) <;> rfl
 
 set_option linter.unusedSectionVars false in
 theorem execStmtHA_ru_retWhyScoped {V : Vertrag D}
@@ -204,14 +219,15 @@ theorem execStmtHA_ru_retWhyScoped {V : Vertrag D}
     {Γ : Ctx}
     {Λ : List (Res D)}
     (r)
-    (R)
+    (cleanup)
     (σ : World D)
     (ρ : Env D Γ)
-    : AusRelRu (execStmtHA S.mitRuhe O' U' A' passes R' (ruS (.retWhyScoped r R : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtHA S O U A passes R (.retWhyScoped r R : Stmt D V l Γ Λ _) σ ρ) :=
+    : AusRelRu (execStmtHA S.mitRuhe O' U' A' passes R' (ruS (.retWhyScoped r cleanup : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtHA S O U A passes R (.retWhyScoped r cleanup : Stmt D V l Γ Λ _) σ ρ) :=
   by
   refine Or.inl ?_
   simp only [ruS, execStmtHA]
-  rw [gibt_foldl_worldR]
+  erw [scopesInvH_worldR, gibt_foldl_worldR]
+  cases scopesInvH S cleanup.scopes σ <;> rfl
 
 set_option linter.unusedSectionVars false in
 theorem execBlockHA_ru_cons {V : Vertrag D}
@@ -292,8 +308,6 @@ theorem execBlockHA_ru_bindCall {V : Vertrag D}
   · erw [h1, h2]
     exact Or.inr ⟨e', e, rfl, rfl, ht⟩
 
-end HauptA
-
 set_option linter.unusedSectionVars false in
 theorem execBlockHA_ru_bindAxiomOpt {V : Vertrag D}
     {l : Bool}
@@ -316,18 +330,7 @@ theorem execBlockHA_ru_bindAxiomOpt {V : Vertrag D}
   cases zi_e with
   | none =>
       simp only [ruB, execBlockHA]
-      erw [execBlockHA_vorΛ, ruA_orte, leseA_worldR hA, evalArgs_ru, axiomAntwort_ruG hO]
-      cases axiomAntwort O a (leseA A σ Λ args.orte)
-        (evalArgs (leseA A σ Λ args.orte) args (leseA A σ Λ args.orte) ρ) with
-      | mk σ' w =>
-          cases w with
-          | none => exact Or.inl rfl
-          | some v =>
-              simp only [Ausgang.weiterOpt, ergEnv]
-              exact ih_execBlockHA_ru_rest σ' _
-  | some τ =>
-      simp only [ruB, execBlockHA]
-      erw [execBlockHA_vorΛ, ruA_orte, leseA_worldR hA, evalArgs_ru, axiomAntwort_ruG hO]
+      erw [ruA_orte, leseA_worldR hA, evalArgs_ru, axiomAntwort_ruG hO]
       cases axiomAntwort O a (leseA A σ Λ args.orte)
         (evalArgs (leseA A σ Λ args.orte) args (leseA A σ Λ args.orte) ρ) with
       | mk σ' w =>
@@ -335,8 +338,25 @@ theorem execBlockHA_ru_bindAxiomOpt {V : Vertrag D}
           | none => exact Or.inl rfl
           | some v =>
               simp only [Option.map, Ausgang.weiterOpt, ergEnv]
-              rw [ergWert_ru he]
-              exact AusRelRu.schrumpf (ih_execBlockHA_ru_rest σ' (Env.cons _ ρ))
+              erw [execBlockHA_vorΛ]
+              exact ih_execBlockHA_ru_rest σ' ρ
+  | some τ =>
+      simp only [ruB, execBlockHA]
+      erw [ruA_orte, leseA_worldR hA, evalArgs_ru, axiomAntwort_ruG hO]
+      cases axiomAntwort O a (leseA A σ Λ args.orte)
+        (evalArgs (leseA A σ Λ args.orte) args (leseA A σ Λ args.orte) ρ) with
+      | mk σ' w =>
+          cases w with
+          | none => exact Or.inl rfl
+          | some v =>
+              simp only [Option.map, Ausgang.weiterOpt, ergEnv]
+              erw [execBlockHA_vorΛ]
+              have hv := ergTransportHA_ru he (congrArg (Option.map tyR) he) v
+              have henv := congrArg
+                (fun w : Wert D.mitRuhe (tyR τ) => Env.cons w (envR ρ)) hv
+              erw [henv]
+              exact AusRelRu.schrumpf (ih_execBlockHA_ru_rest σ'
+                (Env.cons (show ErgVal D (some τ) from he ▸ v) ρ))
 
 set_option linter.unusedSectionVars false in
 theorem execBlockHA_ru_bindAxiomOptElse {V : Vertrag D}
@@ -363,29 +383,41 @@ theorem execBlockHA_ru_bindAxiomOptElse {V : Vertrag D}
   cases zi_e with
   | none =>
       simp only [ruB, execBlockHA]
-      erw [execBlockHA_vorΛ, ruA_orte, leseA_worldR hA, evalArgs_ru, axiomAntwortSonst_ruG hO]
+      erw [ruA_orte, leseA_worldR hA, evalArgs_ru, axiomAntwortSonst_ruG hO]
       cases axiomAntwortSonst O a (leseA A σ Λ args.orte)
         (evalArgs (leseA A σ Λ args.orte) args (leseA A σ Λ args.orte) ρ) with
       | mk σ' w =>
           rcases w with _ | v | r
           · exact Or.inl rfl
-          · simp only [Ausgang.weiterOpt, ergEnv]
-            exact ih_execBlockHA_ru_rest σ' _
-          · erw [execEndHA_umΛ]
-            exact EndRel.zuAusgang (EndRel.schrumpf (ih_execEndHA_ru_err σ' _))
+          · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply, id]
+            simp only [Ausgang.weiterOpt, ergEnv]
+            erw [execBlockHA_vorΛ]
+            exact ih_execBlockHA_ru_rest σ' ρ
+          · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply, id]
+            erw [execEndHA_umΛ]
+            exact EndRel.zuAusgang (EndRel.schrumpf
+              (ih_execEndHA_ru_err σ' (Env.cons (τ := reasonTy (D.agruende a)) r ρ)))
   | some τ =>
       simp only [ruB, execBlockHA]
-      erw [execBlockHA_vorΛ, ruA_orte, leseA_worldR hA, evalArgs_ru, axiomAntwortSonst_ruG hO]
+      erw [ruA_orte, leseA_worldR hA, evalArgs_ru, axiomAntwortSonst_ruG hO]
       cases axiomAntwortSonst O a (leseA A σ Λ args.orte)
         (evalArgs (leseA A σ Λ args.orte) args (leseA A σ Λ args.orte) ρ) with
       | mk σ' w =>
           rcases w with _ | v | r
           · exact Or.inl rfl
-          · simp only [Option.map, Ausgang.weiterOpt, ergEnv]
-            rw [ergWert_ru he]
-            exact AusRelRu.schrumpf (ih_execBlockHA_ru_rest σ' (Env.cons _ ρ))
-          · erw [execEndHA_umΛ]
-            exact EndRel.zuAusgang (EndRel.schrumpf (ih_execEndHA_ru_err σ' _))
+          · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply, id]
+            simp only [Ausgang.weiterOpt, ergEnv]
+            erw [execBlockHA_vorΛ]
+            have hv := ergTransportHA_ru he (congrArg (Option.map tyR) he) v
+            have henv := congrArg
+              (fun w : Wert D.mitRuhe (tyR τ) => Env.cons w (envR ρ)) hv
+            erw [henv]
+            exact AusRelRu.schrumpf (ih_execBlockHA_ru_rest σ'
+              (Env.cons (show ErgVal D (some τ) from he ▸ v) ρ))
+          · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply, id]
+            erw [execEndHA_umΛ]
+            exact EndRel.zuAusgang (EndRel.schrumpf
+              (ih_execEndHA_ru_err σ' (Env.cons (τ := reasonTy (D.agruende a)) r ρ)))
 
 end HauptA
 end Gabbro.Grammatik
