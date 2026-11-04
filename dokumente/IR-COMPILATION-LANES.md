@@ -3739,6 +3739,15 @@ called by the generic theorem; where the proof is inline that is stated.
 
 ### End blocks: exhaustive constructor inventory
 
+End-position floating-point narrowing prices both continuations in end position:
+`kostenEnd (.floatNarrow e lo hi fallback rest)` is
+`2 + kostenExpr e + max (kostenEnd fallback + 1) (kostenEnd rest + 1)`.
+The G6 fallback continues directly as `.ende fallback`; its block-position price
+`kostenSonst` can undercount recursive end unfolding. Since `kostenTief` feeds
+`ZeitAb`, this is the numeric time-bound interpretation of the new end form,
+including occurrences in callees. Block-position prices, execution, admission
+rules and fixed resource limits retain their existing meanings.
+
 | Endblock constructor | Classification | `lowEnd` arm/check and connected correctness lemma |
 |---|---|---|
 | `ret` | LOWERED | Result and epilogue; `endRet_case`. |
