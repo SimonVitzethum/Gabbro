@@ -64,10 +64,12 @@ theorem narrow_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
   have hpw := PreS.welt hq.left hks hWa hW.lay (by have := hW.lo; omega)
   obtain ⟨m1, s1, a1, v1⟩ := lowE_ok (same := by intro _; rfl) (reserved := reserved)
     σ σ (fun _ h => h) hW.lay e d ce te he hte m pc ρ hpw
-  have h1 := hq.next (a1.widen hks) (Nat.le_refl _) (by omega)
+  have h1 := hq.next (Agree.widen a1 hks) (Nat.le_refl _) (by omega)
+  have sourceWords := v1.2
+  rw [encodeWords_int L low high (eval σ e σ ρ)] at sourceWords
   obtain ⟨m2, s2, a2, v2⟩ := wideExtend_run (extSigned low) (eval σ e σ ρ).n
     (integerWords_pos' low high) wordsX (wideFits_zahl (eval σ e σ ρ))
-    h1.frame h1.small (by omega) h1.left.code h1.left.far v1.2
+    h1.frame h1.small (by omega) h1.left.code h1.left.far sourceWords
   have h2 := h1.next a2 (Nat.le_refl _) (by omega)
   have fx := signedFits_zahl (eval σ e σ ρ) signedX
   have fl := signedFits_zahl (⟨low', Int.le_refl _, Int.le_refl _⟩ : Zahl low' low')
@@ -78,14 +80,14 @@ theorem narrow_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
     h2.frame h2.small (by omega) positive h2.left.code h2.left.far
     fx.1 fx.2 fl.1 fl.2 fh.1 fh.2 v2
   have h3 := h2.next a3 (Nat.le_refl _) (by omega)
-  have changed := (a1.widen hks).trans (a2.trans a3)
+  have changed := (Agree.widen a1 hks).trans (a2.trans a3)
   have hw3 : WeltAt m3 L σ :=
     weltAt_stab hW.lay (by have := hW.top; omega) m m3 hWa (changed.mono (Nat.zero_le _))
   have branch := choice_ok (reserved := reserved) (P := P) (σ0 := σ0) (ex := ex)
     (cc := []) (ct := cx) (ce := cr) (d := d + k + 3)
     (b := decide (¬ (low' ≤ (eval σ e σ ρ).n ∧ (eval σ e σ ρ).n ≤ high')))
     (ot := out) (oe := out) (by omega) (by omega)
-    (by rw [narrowC_length] at hs; omega) hW hlo hlo0 hlo2 hpr
+    (by rw [narrowC_length] at hs; simp only [List.length_nil]; omega) hW hlo hlo0 hlo2 hpr
     (m := m3) (σ := σ) (ρ := ρ) ?_ ?_ ?_ h3
     (hu.agreeW hW (agreeW_of changed) (by omega))
     (hk.agreeW hW (agreeW_of changed) (by omega)) hw3
