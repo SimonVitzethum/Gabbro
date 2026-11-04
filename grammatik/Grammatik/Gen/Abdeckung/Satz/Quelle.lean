@@ -68,10 +68,14 @@ theorem nie_gueltig {x : Zelle} (h : ∀ e : Einsatz, e.gueltig = true → ¬ e.
 theorem einsatz_4 (e : Einsatz) {a b : Bool} (h : e.Hat ⟨4, 0, true, [a, b]⟩) : a = b := by
   letI := e.aufz
   letI := e.zahlen
-  have h0 := mem_alleZellen_k (4 : Fin 10) rfl h
-  simp only [zellen, List.mem_flatMap, List.mem_map, Zelle.mk.injEq, List.cons.injEq] at h0
-  obtain ⟨L, _, c, _, -, -, -, ha, hb, -⟩ := h0
-  subst ha hb
+  have h0 : (⟨4, 0, true, [a, b]⟩ : Zelle) ∈ zellen e.P e.S e.fs e.ls e.cs e.ws 4 :=
+    mem_alleZellen_k (4 : Fin 10) rfl h
+  rw [zellen] at h0
+  obtain ⟨L, _, hc⟩ := List.mem_flatMap.mp h0
+  obtain ⟨c, _, equal⟩ := List.mem_map.mp hc
+  simp only [Zelle.mk.injEq, List.cons.injEq, true_and, and_true] at equal
+  obtain ⟨ha, hb⟩ := equal
+  rw [← ha, ← hb]
   have hs := e.hS L c
   cases h1 : istIn (e.S.orte L) c
   · have : c ∉ e.S.orte L := fun hc => by rw [← istIn_iff, h1] at hc; cases hc
@@ -84,9 +88,13 @@ theorem einsatz_4 (e : Einsatz) {a b : Bool} (h : e.Hat ⟨4, 0, true, [a, b]⟩
 theorem einsatz_8_ax (e : Einsatz) {a c : Bool} (h : e.Hat ⟨8, 0, true, [a, true, c]⟩) : False := by
   letI := e.aufz
   letI := e.zahlen
-  have h0 := mem_alleZellen_k (8 : Fin 10) rfl h
-  simp only [zellen, List.mem_flatMap, List.mem_map, Zelle.mk.injEq, List.cons.injEq] at h0
-  obtain ⟨_, _, x, _, -, -, -, -, hb, -⟩ := h0
+  have h0 : (⟨8, 0, true, [a, true, c]⟩ : Zelle) ∈ zellen e.P e.S e.fs e.ls e.cs e.ws 8 :=
+    mem_alleZellen_k (8 : Fin 10) rfl h
+  rw [zellen] at h0
+  obtain ⟨_, _, hf⟩ := List.mem_flatMap.mp h0
+  obtain ⟨x, _, equal⟩ := List.mem_map.mp hf
+  simp only [Zelle.mk.injEq, List.cons.injEq, true_and, and_true] at equal
+  obtain ⟨_, hb, _⟩ := equal
   cases x with
   | inl ax => exact e.keinAx ax
   | inr _ => simp only [Bool.false_eq_true] at hb
