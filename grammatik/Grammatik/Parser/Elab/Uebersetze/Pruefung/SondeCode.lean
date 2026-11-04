@@ -28,9 +28,19 @@ def uSondeFn (fns : List UFn) (foreignHeads : List UFnKopf)
         if !k.names.isEmpty || !k.griffe.isEmpty || !k.resBool || k.kanal.isSome then
           .error ("counterprobe requires a parameterless reason-free bool binding: " ++ externalName)
         else .ok [UStmt.bindAx "ans" externalName []]
-  .ok { name := sondeFnName c.name externalName, params := [], kinds := [],
-    res := none, resBool := true, held := [], puts := [], gives := [], needs := [],
-    body := body, ret := .bool (.var "ans") }
+  .ok {
+    name := sondeFnName c.name externalName
+    params := []
+    kinds := []
+    res := none
+    resBool := true
+    held := []
+    puts := []
+    gives := []
+    needs := []
+    body := body
+    ret := .bool (.var "ans")
+  }
 
 /-- Generate the actual counterprobe calls and enforce one-to-one ownership
     before an elaborated unit can reach lowering or `checkB`. -/
