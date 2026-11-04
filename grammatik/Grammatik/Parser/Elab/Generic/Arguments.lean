@@ -111,7 +111,7 @@ def normalizeArguments (env : Environment) (outer : Bindings) :
     pure (typeSpelling ty :: tail, result)
   | .constant name ty :: ps, word :: ws, bindings => do
     let ty := surfaceType bindings.types bindings.values ty
-    let numeric ← Uebersetze.uTyp env.aliases [] ty
+    let numeric ← Uebersetze.uTyp env.aliases [] (spaces := []) (eigner := []) ty
     let (lo, hi) ← match numeric with
       | .int lo hi => pure (lo, hi)
       | _ => throw "generic constant parameter requires an integer type"
