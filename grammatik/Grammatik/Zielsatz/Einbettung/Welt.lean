@@ -262,16 +262,16 @@ theorem valE_valZSum_frei : ∀ (cs : List (Option Ty)),
   | none :: _, _, ⟨⟨0, _⟩, _⟩ => rfl
   | some τ :: cs, h, ⟨⟨0, hi⟩, v⟩ =>
     congrArg (fun w => (⟨⟨0, hi⟩, w⟩ : Wert D' (.sum (Ty.mapCases E.num E.tnum (some τ :: cs)))))
-      (valE_valZ_frei τ (Bool.and_eq_true.mp h).1 v)
+      (valE_valZ_frei τ (Bool.and_eq_true_iff.mp h).1 v)
   | none :: cs, h, ⟨⟨i + 1, hi⟩, v⟩ =>
     congrArg (fun z : Wert D' (.sum (Ty.mapCases E.num E.tnum cs)) =>
       (⟨z.1.succ, z.2⟩ : Wert D' (.sum (none :: Ty.mapCases E.num E.tnum cs))))
-      (valE_valZSum_frei cs (Bool.and_eq_true.mp h).2
+      (valE_valZSum_frei cs (Bool.and_eq_true_iff.mp h).2
         ⟨⟨i, Nat.lt_of_succ_lt_succ hi⟩, v⟩)
   | some τ :: cs, h, ⟨⟨i + 1, hi⟩, v⟩ =>
     congrArg (fun z : Wert D' (.sum (Ty.mapCases E.num E.tnum cs)) =>
       (⟨z.1.succ, z.2⟩ : Wert D' (.sum (some (E.tyE τ) :: Ty.mapCases E.num E.tnum cs))))
-      (valE_valZSum_frei cs (Bool.and_eq_true.mp h).2
+      (valE_valZSum_frei cs (Bool.and_eq_true_iff.mp h).2
         ⟨⟨i, Nat.lt_of_succ_lt_succ hi⟩, v⟩)
 termination_by cs _ _ => sizeOf cs
 decreasing_by all_goals (simp_wf <;> omega)
@@ -284,8 +284,8 @@ theorem valE_valZProd_frei : ∀ (fs : List Ty), Ty.fieldsZeigerfrei fs = true �
         (ProdVal.restrict E.num E.tnum (fun n value => K.zeiger n value.1 value.2) fs v) = v
   | [], _, _ => rfl
   | τ :: fs, h, v =>
-    ProdVal.pcons_congr (valE_valZ_frei τ (Bool.and_eq_true.mp h).1 v.1)
-      (valE_valZProd_frei fs (Bool.and_eq_true.mp h).2 v.2)
+    ProdVal.pcons_congr (valE_valZ_frei τ (Bool.and_eq_true_iff.mp h).1 v.1)
+      (valE_valZProd_frei fs (Bool.and_eq_true_iff.mp h).2 v.2)
 termination_by fs _ _ => sizeOf fs
 decreasing_by all_goals (simp_wf <;> omega)
 end

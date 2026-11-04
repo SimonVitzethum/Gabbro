@@ -82,7 +82,7 @@ theorem bereich_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D
   have hK := fun f => koerperGutSA_mono hT ((hN.1 passes f).1)
   have hex := startExklusiv_ohne_haelt init hLeer
   have hZI := zielInvSA_erreichbarGX P O passes Q S (kVon P fs init) (GeteiltV P ws) (lokW P fs ws)
-    sp init hH.1 hH.2.1 hH.2.2 hN.2.2 hS hvoll (fun t => hA.abg _)
+    sp init hH.1 hH.2.1 hH.2.2 hN.2.2.1 hS hvoll (fun t => hA.abg _)
     (fun t => reachB_wurzel P fs _) hTA hTV hTS hTO (fragX_ok hvoll hA.frag hA.fuss) hA.fuss
     hlokK hK (fun f => massPflicht_aus P passes Q S (GeteiltV P ws) Mass.leer f) hZ.req hZ.sperren hex M hX
   exact fun t => fadenSA_bereich hH.1 hH.2.1 hH.2.2 hS hZ.sperren hK hA.fuss t (hZI.1.1 t)

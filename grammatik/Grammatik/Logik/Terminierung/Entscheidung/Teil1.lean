@@ -202,7 +202,7 @@ theorem rufeS_ohneEwig : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : 
   | _, _, _, _, .assignVar .., _, _, _, _ => rfl
   | _, _, _, _, .shift .., _, _, _, _ => rfl
   | _, _, _, _, .axiomCall .., _, _, _, _ => rfl
-  | _, _, _, _, .axiomCallElse _ _ _ _ _ _ _ _ err, eb, ie, h => by
+  | _, _, _, _, .axiomCallElse _ _ _ _ _ _ _ _ err, eb, ie, _, h => by
       simp only [befS] at h
       simp only [rufeS, rufeE_ohneEwig err eb ie h]
   | _, _, _, _, .regWrite .., _, _, _, _ => rfl

@@ -100,8 +100,8 @@ private theorem interface_components (P : Programm D) (fs : List D.Fn) :
   | inl a =>
     obtain ⟨hp, he, hg, ho⟩ := schnittstellen_standard P fs f hf a hs
     rw [schnittstelleB_inl]
-    exact Bool.and_eq_true.mpr ⟨Bool.and_eq_true.mpr
-      ⟨Bool.and_eq_true.mpr ⟨decide_eq_true hp, decide_eq_true he⟩,
+    exact Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr
+      ⟨Bool.and_eq_true_iff.mpr ⟨decide_eq_true hp, decide_eq_true he⟩,
         decide_eq_true hg⟩, decide_eq_true ho⟩
   | inr _ => rfl
 
