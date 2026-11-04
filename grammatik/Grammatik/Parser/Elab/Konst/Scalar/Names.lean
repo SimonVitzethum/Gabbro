@@ -62,16 +62,16 @@ theorem SourceMeaning.normalized {D : Deklaration} {Γ : Ctx}
   induction meaning with
   | literal n => rfl
   | truth b => cases b <;> rfl
-  | local name τ x found => simp [normalizeNames, found, expression]
+  | «local» name τ x found => simp [normalizeNames, found, expression]
   | global name key value code notLocal found typed =>
     simpa only [normalizeNames, notLocal, Option.isSome_none, Bool.false_eq_true,
       ↓reduceIte, found] using typed
   | result code typed => exact typed
   | limit ty member code typed => exact typed
   | unary op source input output child typed ih =>
-    simpa only [normalizeNames, expression, ih] using typed
+    simpa only [normalizeNames, expression, ih, bind, Except.bind] using typed
   | binary op left right a b output lm rm typed ihl ihr =>
-    simpa only [normalizeNames, expression, ihl, ihr] using typed
+    simpa only [normalizeNames, expression, ihl, ihr, bind, Except.bind] using typed
 
 /-- A successful normalization returns its original source derivation, rather
     than making denotation an unchecked premise of the replacement theorem. -/
