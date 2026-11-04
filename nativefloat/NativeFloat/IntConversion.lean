@@ -187,6 +187,8 @@ private theorem round_integer_prescale (s : Sign) (m : Nat) (positive : 0 < m) :
         (repeat_sum ExtendedMantissa.shiftRightOne 53 t.toNat ⟨m <<< 53, false, false⟩).trans
           (congrArg (Nat.repeat ExtendedMantissa.shiftRightOne t.toNat) kept)
       rw [azero]
+      simp only [Int.natCast_zero, Int.add_zero, Int.neg_zero, Int.zero_add,
+        Nat.shiftLeft_zero]
       apply Prod.ext
       · change Nat.repeat ExtendedMantissa.shiftRightOne t.toNat ⟨m, false, false⟩ =
           Nat.repeat ExtendedMantissa.shiftRightOne (t + 53).toNat ⟨m <<< 53, false, false⟩
@@ -230,7 +232,8 @@ private theorem round_integer_prescale (s : Sign) (m : Nat) (positive : 0 < m) :
     have amount : (0 - t).toNat = a := by
       change (0 - t).toNat = (-t).toNat
       rw [Int.zero_sub]
-    simp only [amount, Int.zero_sub]
+    simp only [Int.zero_sub]
+    rfl
   exact representation.trans same
 
 private theorem scientific_zero (n : Nat) :
