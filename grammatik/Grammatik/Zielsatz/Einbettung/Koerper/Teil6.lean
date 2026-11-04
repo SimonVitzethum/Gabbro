@@ -2,6 +2,9 @@ module
 
 public import Grammatik.Zielsatz.Einbettung.Simulation
 public import Grammatik.Zielsatz.Einbettung.Koerper.Teil7
+public import Grammatik.Zielsatz.Einbettung.Koerper.ForeignBlock
+public import Grammatik.Zielsatz.Einbettung.Koerper.ForeignEnd
+public import Grammatik.Zielsatz.Einbettung.Koerper.ForeignStatement
 
 @[expose] public section
 
@@ -89,6 +92,8 @@ theorem sim_stmt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       sim_stmt_forever (a := a) (inv := inv) (body := body) (ih_sim_block_body := sim_block body) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .axiomCall a args h hw hg hd hgd =>
       sim_stmt_axiomCall (a := a) (args := args) (h := h) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
+  | .axiomCallElse e a args he hp hd hgd hr err =>
+      sim_stmt_axiomCallElse (e := e) (a := a) (args := args) (he := he) (hp := hp) (hd := hd) (hgd := hgd) (hr := hr) (err := err) (ih_sim_end_err := sim_end err) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .regWrite r hk e =>
       sim_stmt_regWrite (r := r) (hk := hk) (e := e) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .transition r hk m hm hl maske bits =>
@@ -136,6 +141,10 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
       sim_block_bindAxiom (τ := τ) (a := a) (args := args) (he := he) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (rest := rest) (ih_sim_block_rest := sim_block rest) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .bindAxiomElse (τ := τ) a args he hr hw hg hd hgd err rest =>
       sim_block_bindAxiomElse (τ := τ) (a := a) (args := args) (he := he) (hr := hr) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (err := err) (rest := rest) (ih_sim_block_rest := sim_block rest) (ih_sim_end_err := sim_end err) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
+  | .bindAxiomOpt e a args he hp hd hgd rest =>
+      sim_block_bindAxiomOpt (e := e) (a := a) (args := args) (he := he) (hp := hp) (hd := hd) (hgd := hgd) (rest := rest) (ih_sim_block_rest := sim_block rest) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
+  | .bindAxiomOptElse e a args he hp hd hgd hr err rest =>
+      sim_block_bindAxiomOptElse (e := e) (a := a) (args := args) (he := he) (hp := hp) (hd := hd) (hgd := hgd) (hr := hr) (err := err) (rest := rest) (ih_sim_block_rest := sim_block rest) (ih_sim_end_err := sim_end err) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .regRead r hk rest =>
       sim_block_regRead (r := r) (hk := hk) (rest := rest) (ih_sim_block_rest := sim_block rest) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .regReadElse r hk zusage sonst rest =>
@@ -192,6 +201,10 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       sim_end_bindAxiom (τ := τ) (a := a) (args := args) (he := he) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (rest := rest) (ih_sim_end_rest := sim_end rest) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .bindAxiomElse (τ := τ) a args he hr hw hg hd hgd err rest =>
       sim_end_bindAxiomElse (τ := τ) (a := a) (args := args) (he := he) (hr := hr) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (err := err) (rest := rest) (ih_sim_end_rest := sim_end rest) (ih_sim_end_err := sim_end err) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
+  | .bindAxiomOpt e a args he hp hd hgd rest =>
+      sim_end_bindAxiomOpt (e := e) (a := a) (args := args) (he := he) (hp := hp) (hd := hd) (hgd := hgd) (rest := rest) (ih_sim_end_rest := sim_end rest) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
+  | .bindAxiomOptElse e a args he hp hd hgd hr err rest =>
+      sim_end_bindAxiomOptElse (e := e) (a := a) (args := args) (he := he) (hp := hp) (hd := hd) (hgd := hgd) (hr := hr) (err := err) (rest := rest) (ih_sim_end_rest := sim_end rest) (ih_sim_end_err := sim_end err) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .regRead r hk rest =>
       sim_end_regRead (r := r) (hk := hk) (rest := rest) (ih_sim_end_rest := sim_end rest) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .regReadElse r hk zusage sonst rest =>
