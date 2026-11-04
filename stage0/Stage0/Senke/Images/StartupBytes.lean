@@ -20,7 +20,7 @@ theorem startStackBytes_some {slots base : Nat} (frames : List (List Runner.W))
     obtain ⟨frame, hf⟩ := made
     obtain ⟨tail, ht⟩ := ih (fun ws hws => room ws (by simp [hws]))
     refine ⟨frame ++ tail, ?_⟩
-    simp only [startStackBytes, hf, ht, Option.bind_some, pure]
+    simp only [startStackBytes, hf, ht, bind, Option.bind_some, pure]
 
 /-- The suffix after all initialized stacks starts at their full byte length. -/
 theorem startStackBytes_tail {slots base : Nat} {frames : List (List Runner.W)}
