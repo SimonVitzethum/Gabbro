@@ -1,6 +1,8 @@
 name = "nativefloat"
 version = "0.1.0"
 defaultTargets = ["NativeFloat"]
+# Preserve the grammar's existing proof budget after moving the shared adapters.
+weakLeanArgs = ["-j2", "-M4608", "-DElab.async=true", "-DmaxHeartbeats=400000"]
 
 # Shared proofs about the pinned toolchain primitives, without a language model
 # or execution backend dependency. This package defines no float representation.
