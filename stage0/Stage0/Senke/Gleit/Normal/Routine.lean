@@ -44,25 +44,28 @@ theorem routineFiniteDirectionalL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Me
     (hl : WordCode (L := L) ρ W large lv) (hs : WordCode (L := L) ρ W small sv) :
     WordCode (L := L) ρ W (fun d => routineFiniteDirectionalL d large small)
       (routineFiniteDirectionalWord lv sv) := by
-  have m := routineDirectionalL_ok hl hs
-  have e := routineIndexL_ok hl
-  have s := unpackSignL_ok hl
-  have count := routineLeftCountL_word m e
+  have m : WordCode (L := L) ρ W _ _ := routineDirectionalL_ok hl hs
+  have e : WordCode (L := L) ρ W _ _ := routineIndexL_ok hl
+  have s : WordCode (L := L) ρ W _ _ := unpackSignL_ok hl
+  have count : WordCode (L := L) ρ W _ _ := routineLeftCountL_word m e
   have leftE : WordCode (L := L) ρ W _ _ := WordCode.bin e count
     (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
   have leftM : WordCode (L := L) ρ W _ _ := WordCode.bin m count
     (g := fun x y => some (x <<< (y.toNat % 64))) rfl rfl (by decide : 11 < 256)
-  have left := routineRoundPackL_ok s leftE leftM
+  have left : WordCode (L := L) ρ W _ _ := routineRoundPackL_ok s leftE leftM
   have rightE : WordCode (L := L) ρ W _ _ := WordCode.bin e (WordCode.const 1 (by decide))
     (g := fun x y => some (x + y)) rfl rfl (by decide : 3 < 256)
-  have rightM := floatShiftJamL_ok m (WordCode.const 1 (by decide))
-  have right := routineRoundPackL_ok s rightE rightM
-  have normalized := routineChooseL_ok
+  have rightM : WordCode (L := L) ρ W _ _ := floatShiftJamL_ok m (WordCode.const 1 (by decide))
+  have right : WordCode (L := L) ρ W _ _ := routineRoundPackL_ok s rightE rightM
+  have normalized : WordCode (L := L) ρ W _ _ := routineChooseL_ok
     (routineLessL_ok m (WordCode.konst (2 ^ 56) (by decide)))
     (fun _ => left) (fun _ => right)
   have zero : WordCode (L := L) ρ W _ _ := WordCode.bin m (WordCode.const 0 (by decide))
     (g := fun x y => some (Runner.IR.bool (x == y))) rfl rfl (by decide : 14 < 256)
-  exact routineChooseL_ok zero (fun _ => WordCode.const 0 (by decide)) (fun _ => normalized)
+  have result : WordCode (L := L) ρ W _ _ :=
+    routineChooseL_ok zero (fun _ => WordCode.const 0 (by decide)) (fun _ => normalized)
+  intro fp K d c top emitted fits m pc pre
+  exact result (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
 
 def routineFiniteWord (a b : Runner.W) : Runner.W :=
   if (routineMagnitudeWord a).ult (routineMagnitudeWord b) then
@@ -152,12 +155,14 @@ theorem softAddRoutineL_word_zeuge {Γ : Ctx} (ρ : Env D Γ) (W : Runner.Mem �
       (fun j => some (konstWL 4 4607182418800017408 j))
       (fun j => some (konstWL 4 4611686018427387904 j)))
       (BitVec.ofNat 64 4613937818241073152) := by
-  have routine := softAddRoutineL_word (L := L) (ρ := ρ) (W := W)
+  have routine : WordCode (L := L) ρ W _ _ := softAddRoutineL_word (L := L) (ρ := ρ) (W := W)
     (WordCode.konst 4607182418800017408 (by decide))
     (WordCode.konst 4611686018427387904 (by decide))
+  intro fp K d c top emitted fits m pc pre
   simpa only [show softAddRoutineWord (BitVec.ofNat 64 4607182418800017408)
     (BitVec.ofNat 64 4611686018427387904) = BitVec.ofNat 64 4613937818241073152
-    from by decide +kernel] using routine
+    from by decide +kernel] using
+    routine (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
 
 #print axioms routineFiniteDirectionalL_word
 #print axioms softAddRoutineL_word
