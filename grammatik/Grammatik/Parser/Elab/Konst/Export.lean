@@ -26,7 +26,7 @@ namespace Gabbro.Grammatik.Parser
   source-derived call to the generic meaning theorem. -/
 
 /-- The four failure kinds of a checked const call, with source identity. -/
-@[expose] inductive ConstBlockFehlerArt where
+inductive ConstBlockFehlerArt where
   | vertrag : ConstBlockFehlerArt
   | bereich : ConstBlockFehlerArt
   | abhaengigkeit : ConstBlockFehlerArt
@@ -84,7 +84,8 @@ theorem const_source_call_sound (c : ConstProgram) (f : c.D.Fn) (args : Env c.D 
       max cert.bound (n + 1) ≤ depth →
       ∃ σ', rufAt c.P O passes depth f σ args = RufAusgang.ok σ' cert.value ∧ σ'.slots = σ.slots ∧ σ'.globs = σ.globs := by
   have _ := helab.rein
-  exact const_call_sound c f args cert hadm n hterm _ _ _ _
+  intro σ O passes depth hdepth
+  exact const_call_sound c f args cert hadm n hterm σ O passes depth hdepth
 
 /-- Control witness: an expression-bodied const function evaluates through
     the existing exporter path. -/
