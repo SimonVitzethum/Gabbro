@@ -58,11 +58,17 @@ theorem sim_end_bindCallElse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (R
       exact E.endRel_schrumpf hR3
   · have hc : (Ty.why (D.gruende f) :: Γ).map E.tyE = Ty.why (D'.gruende (E.fn f)) :: Γ.map E.tyE := by
       rw [gruendeE hS]; rfl
+    have reasonTy : Ty.why (D'.gruende (E.fn f)) = E.tyE (.why (D.gruende f)) := by
+      rw [gruendeE hS] <;> rfl
     obtain ⟨M₃, o, hs3, hΦ3, hR3⟩ := ih_sim_end_err M₂ (E.antwortWelt hZ pad σ₁ W) W
       (.cons (Fin.cast (gruendeE hS f) r') ρ) (castE hc.symm (.cons r' ρ'))
       (hI2 W)
-      ((E.envR_um hZ hc.symm _ _).mpr (E.envR_cons hZ hρ _ _ (by rw [gruendeE hS])
-        (by rw [castW_why]; rfl)))
+      ((E.envR_um hZ hc.symm _ _).mpr (E.envR_cons (τ := .why (D.gruende f))
+        (τ' := .why (D'.gruende (E.fn f))) hZ hρ _ _ reasonTy
+        (by
+          change (castW (D := D') reasonTy r' : Fin (D.gruende f)) = Fin.cast (gruendeE hS f) r'
+          apply Fin.ext
+          exact congrArg Fin.val (castW_why (D' := D') reasonTy r'))))
     refine ⟨M₃, o.schrumpf, teil_trans (teil_trans hs hs2) hs3, fun Φ hP => ?_, ?_⟩
     · simp only [execEndHA, hΦ Φ (passt_teil hP (teil_trans hs2 hs3)), hRΦ Φ (passt_teil hP hs3),
         antwortR]
@@ -171,11 +177,17 @@ theorem sim_end_bindAxiomElse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (
       exact E.endRel_schrumpf hR3
   · have hc : (Ty.why (D.agruende a) :: Γ).map E.tyE = Ty.why (D'.agruende (E.ax a)) :: Γ.map E.tyE := by
       rw [E.agruende]; rfl
+    have reasonTy : Ty.why (D'.agruende (E.ax a)) = E.tyE (.why (D.agruende a)) := by
+      rw [E.agruende] <;> rfl
     obtain ⟨M₃, o, hs3, hΦ3, hR3⟩ := ih_sim_end_err M₂ (E.antwortWelt hZ pad (σ₁.fragt (.inl a)) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1
       (.cons r ρ) (castE hc.symm (.cons (Fin.cast (E.agruende a).symm r) ρ'))
       (E.inv_antwort hZ hB.pad hI2 _)
-      ((E.envR_um hZ hc.symm _ _).mpr (E.envR_cons hZ hρ _ _ (by rw [E.agruende])
-        (by rw [castW_why]; exact Fin.ext rfl)))
+      ((E.envR_um hZ hc.symm _ _).mpr (E.envR_cons (τ := .why (D.agruende a))
+        (τ' := .why (D'.agruende (E.ax a))) hZ hρ _ _ reasonTy
+        (by
+          change (castW (D := D') reasonTy (Fin.cast (E.agruende a).symm r) : Fin (D.agruende a)) = r
+          apply Fin.ext
+          exact congrArg Fin.val (castW_why (D' := D') reasonTy (Fin.cast (E.agruende a).symm r)))))
     refine ⟨M₃, o.schrumpf, teil_trans (teil_trans hs hs2) hs3, fun Φ hP => ?_, ?_⟩
     · simp only [execEndHA, axiomAntwortSonst, hΦ Φ (passt_teil hP (teil_trans hs2 hs3)),
         hOΦ Φ (passt_teil hP hs3), orakelΦ_zeiger]
