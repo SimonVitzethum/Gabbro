@@ -160,7 +160,7 @@ theorem bild_wurzel_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List
     dsimp only [rootOutcome]
     generalize rufAt (D := D) P O b.passes b.depth
       ((starts.map (·.1))[j]'rootBound) σ rootEnv = outcome at result ⊢
-    cases outcome <;> simpa only [List.length_map] using result
+    cases outcome <;> simpa only [List.length_map, BitVec.ofNat_eq_ofNat] using result
   -- Relate the generated matchers at constructors of the same complete call outcome.
   dsimp only [rootOutcome] at completed
   generalize rufAt (D := D) P O b.passes b.depth
