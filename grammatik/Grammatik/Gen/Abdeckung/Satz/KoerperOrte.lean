@@ -12,6 +12,8 @@
 -/
 module
 
+import Mathlib.Data.Finset.Lattice.Lemmas
+
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Decode
