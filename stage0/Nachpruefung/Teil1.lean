@@ -289,7 +289,6 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.blockFloatNarrow_case
 #print axioms Gabbro.Stage0.Senke.FloatProbe.float_lowering_zeuge
 #print axioms Gabbro.Stage0.Senke.FloatProbe.float_signed_zero_zeuge
-#print axioms Gabbro.Stage0.Senke.FloatProbe.float_refused_zeuge
 #print axioms Gabbro.Stage0.Senke.floatRoundUp_model
 #print axioms Gabbro.Stage0.Senke.floatRoundWord_model
 #print axioms Gabbro.Stage0.Senke.floatRoundWord_model_zeuge

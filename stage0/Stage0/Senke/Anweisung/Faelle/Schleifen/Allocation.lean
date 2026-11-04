@@ -104,6 +104,11 @@ def counterDepthE {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .retScoped .. => 0
   | .retWhyScoped .. => 0
 
+  | .float _ _ _ _ _ rest => counterDepthE rest
+  | .floatLit _ _ _ rest => counterDepthE rest
+  | .floatOf _ _ _ rest => counterDepthE rest
+  | .floatNarrow _ _ _ err rest => max (counterDepthE err) (counterDepthE rest)
+
 def counterDepthA {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Nat
   | .nil => 0

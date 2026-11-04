@@ -3741,7 +3741,7 @@ called by the generic theorem; where the proof is inline that is stated.
 | `exchange` | CONDITIONAL | P; `lowB_ok_exchange`. |
 | `narrow` | LOWERED | N; full-span `narrow_ok` through `blockNarrow_case` and `lowB_ok_narrow`; wide boundary and empty-target image witness declarations in `NarrowRequiredWitness`. Lead check pending. |
 | `check` | LOWERED | Predicate/else/tail; `lowB_ok_check`. |
-| `float` | CONDITIONAL | Binary64 add/sub/mul through integer kernels and rounded range check (C at internal `routineChooseL` branches); `.div` returns `none`; `blockFloatArithmetic_case` in `lowB_ok`; `FloatArithmeticProbe.float_operations_refused_zeuge`. |
+| `float` | CONDITIONAL | Binary64 add/sub/mul/div through integer kernels and the rounded range check (C at internal routine branches); `blockFloatArithmetic_case` in `lowB_ok`. The former division-refusal witness is replaced by `FloatArithmeticProbe.float_div_cases_accepted_zeuge`; current integration checks must cover its generic proof and runner images. |
 | `floatLit` | LOWERED | Kernel-rounded constant; out-of-range/nonfinite emits stop 107, not compiler refusal; `lowB_ok_floatLit`. |
 | `floatOf` | CONDITIONAL | Any integer literal via `floatLiteralL`; the actual computed binary64 hook now uses complete-magnitude normalization and the existing IEEE guard-rounding packer outside signed-word intervals. The interval-width refusal is removed; ordinary recursive operand, frame/address and generated-code limits (C in conversion branches) remain. `integerFloat_round` → `wideComputedFloatOfE_ok` → `computedFloatOfE_ok` → `blockFloatOfComputed_case` → `lowB_ok_floatOf`; `computedFloatRangeL_ok` covers overflow/range Stop 107. Accepted witness declarations: `WideFloatProbe.wide_float_images_zeuge`, `computedFloatOfE_wide_ok_zeuge`; lead Lean/runner checks pending. |
 | `floatNarrow` | LOWERED | Range/else/tail; NaN endpoint selects else directly; `lowB_ok_floatNarrow`. |
@@ -3865,8 +3865,6 @@ to its current emitter (see the float-add row).
 | `Senke.AxiomElseProbe.stmtAxiomElse_refused_zeuge` | Value/void accepted with valid binding; missing binding, bad reason mapping, negative lower bound and Bool fallible answer refused. |
 | `Senke.ConsumeProbe.consumeTraverse_refused_zeuge` | Fixed-sweep consuming traversal refuses a body containing `retScoped`; does not assert all consuming G terms fail. |
 | `Senke.ReferenceProbe.refused_zeuge` | Reference foreign-result decoder and region-provider end body refused. |
-| `Senke.FloatProbe.float_refused_zeuge` | Historical assertion that a specific float-add body returns `none`; current `floatArithmeticBlockL` has an add arm, so this is not evidence of a present blanket add refusal; requires lead recheck. |
-| `Senke.FloatArithmeticProbe.float_operations_refused_zeuge` | Float division block image refused. |
 | `Senke.RuntimeOldProbe.oversized_oldS_refused_zeuge` | Oversized runtime-index snapshot column gives no captured cells and `lowEns=none`. |
 | `Senke.QuantProbe.quant_refused_zeuge` | Empty/negative-toNat domains succeed; count/code-size limits refuse nonempty folds. |
 | `Senke.QuantProbe.reaches_refused_zeuge` | Column address `2^31` refused by chain lowering. |
