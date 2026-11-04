@@ -432,8 +432,8 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
       dsimp only; simp only [rufUpdateG_self]
       rcases rufAntwortG_rangRahmen ha with ⟨hst, hf, hres⟩ | ⟨caller, rst, hpop, hst, hf, hres⟩
       · exact Or.inl ⟨hst, hf, Or.inl ⟨hopen, fun K hK => by
-          rw [hres]; rw [hhead] at hK; exact hperm.mem_iff.mp hK⟩⟩
-      · exact Or.inr (Or.inr ⟨caller, rst, none, hpop, hst, hf, hres, hopen, by
+          erw [rufUpdateG_self M.faeden f z, hres]; rw [hhead] at hK; exact hperm.mem_iff.mp hK⟩⟩
+      · exact Or.inr (Or.inr ⟨caller, rst, none, hpop, hst, hf, (by erw [rufUpdateG_self M.faeden f z]; exact hres), hopen, by
           rw [hhead]; exact hperm⟩)
     | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
       have hperm := R.genau
@@ -444,8 +444,8 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
       dsimp only; simp only [rufUpdateG_self]
       rcases rufAntwortG_rangRahmen ha with ⟨hst, hf, hres⟩ | ⟨caller, rst, hpop, hst, hf, hres⟩
       · exact Or.inl ⟨hst, hf, Or.inl ⟨hopen, fun K hK => by
-          rw [hres]; rw [hhead] at hK; exact hperm.mem_iff.mp hK⟩⟩
-      · exact Or.inr (Or.inr ⟨caller, rst, none, hpop, hst, hf, hres, hopen, by
+          erw [rufUpdateG_self M.faeden f z, hres]; rw [hhead] at hK; exact hperm.mem_iff.mp hK⟩⟩
+      · exact Or.inr (Or.inr ⟨caller, rst, none, hpop, hst, hf, (by erw [rufUpdateG_self M.faeden f z]; exact hres), hopen, by
           rw [hhead]; exact hperm⟩)
     | _ => rangA1
 
