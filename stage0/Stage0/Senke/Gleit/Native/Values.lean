@@ -17,7 +17,7 @@ theorem nativeArithmetic_eval (op : GleitOp) (a b : GFloat) :
   cases op <;>
     simp only [nativeArithmeticOp, Runner.NativeFPEval, Runner.nativeFP,
       Runner.NativeFPValue.Matches, nativeFloat_read_word, gleitRechne]
-  all_goals exact nativeFloat_read_word _
+  all_goals rfl
 
 /-- Native results are observed as decoded values, including NaNs. Their raw
     representation becomes the frame encoding only after source finiteness. -/
