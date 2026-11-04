@@ -56,7 +56,7 @@ theorem lowInvs_ok (P : Programm D) (f : D.Fn) (σ : World D)
       simp only [Enc] at encoded
       simp only [List.find?_cons, owed, Bool.true_and]
       by_cases failure : wahr? (eval σ (P.invariante i) σ .nil) = false
-      · simp only [failure, Bool.not_false, ite_true, Option.isSome_some, Bool.true_eq_true]
+      · simp only [failure, Bool.not_false, ite_true, Option.isSome_some]
         have zero : b = 0 := by simpa only [failure, Bool.false_eq_true, ↓reduceIte] using encoded
         exact Stops.prefix run (guard_stop (codeAt_left next.code) guardFar frame1
           (by omega) (by omega) pre.small (by decide) (by simpa only [zero] using read))
@@ -64,7 +64,8 @@ theorem lowInvs_ok (P : Programm D) (f : D.Fn) (σ : World D)
           cases h : wahr? (eval σ (P.invariante i) σ .nil) <;> simp_all
         simp only [success, Bool.not_true, Bool.false_eq_true, ite_false]
         have one : b = 1 := by simpa only [success, ite_true] using encoded
-        have guardRun := guard_pass (codeAt_left next.code) (by omega) read (by rw [one]; decide)
+        have guardRun := guard_pass (codeAt_left next.code) (by have := pre.small; omega)
+          read (by rw [one]; decide)
         have restPre : PreS L m1 _ fp K d cr (Env.nil : Env D []) :=
           ⟨next.ctx, next.small, next.frame, codeAt_right next.code,
             codeFar_tail (a := guardC d 103 d) next.far, next.env, trivial, wstab_true _ _⟩

@@ -44,7 +44,8 @@ theorem lowPost_ok (P : Programm D) (f : D.Fn) (σ0 σ : World D)
   · have success : wahr? (eval σ0 (P.ensures f) post (ergEnv (D.erg f) v ρ)) = true := by
       cases h : wahr? (eval σ0 (P.ensures f) post (ergEnv (D.erg f) v ρ)) <;> simp_all
     have one : b = 1 := by simpa only [success, ite_true] using encoded
-    have guardRun := guard_pass (codeAt_left next.code) (by omega) read (by rw [one]; decide)
+    have guardRun := guard_pass (codeAt_left next.code) (by have := pre.small; omega)
+      read (by rw [one]; decide)
     have restPre : PreS L m1 _ fp K d ci (Env.nil : Env D []) :=
       ⟨by simpa only [frei, contextWords_nil, Nat.add_zero] using above, next.small, next.frame,
         codeAt_right next.code, codeFar_tail (a := guardC d 102 d) next.far,
