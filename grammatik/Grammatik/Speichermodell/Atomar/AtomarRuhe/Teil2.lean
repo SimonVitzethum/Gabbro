@@ -277,10 +277,10 @@ theorem execBlockHA_ru_regReadElse {V : Vertrag D}
   | none => exact Or.inl rfl
   | some v =>
       simp only [Option.map]
-      rw [ruE_orte, leseA_worldR hA]
+      erw [ruE_orte, leseA_worldR hA]
       have ez := eval_ru (leseA A (σ.fragt (.inr (.inl r))) Λ zusage.orte) (leseA A (σ.fragt (.inr (.inl r))) Λ zusage.orte) zusage (Env.cons v ρ)
       change eval _ (ruE zusage) _ (Env.cons (valR _ v) (envR ρ)) = _ at ez
-      rw [ez]
+      erw [ez]
       cases h : (eval (leseA A (σ.fragt (.inr (.inl r))) Λ zusage.orte) zusage (leseA A (σ.fragt (.inr (.inl r))) Λ zusage.orte) (Env.cons v ρ) : Bool) with
       | false =>
           simp only [wahr?, valR_bool, h, Bool.false_eq_true, if_false]
