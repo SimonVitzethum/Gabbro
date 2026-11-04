@@ -8,9 +8,9 @@ variable {D : Deklaration} {V : Vertrag D}
 section Rumpf
 variable (O : Orakel D) (passes : Nat) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (hR : GutR R) (hO : GutO O)
 include hR hO
-set_option linter.unusedSectionVars false
 set_option hygiene false in
-local macro "scopes_gut" : tactic => `(tactic| first | exact hscope
+local macro "scopes_gut" : tactic => `(tactic| first
+  | exact hscope
   | (have hsc := hscope
      dsimp only [Stmt.ScopesOk, Block.ScopesOk, Endblock.ScopesOk, Arms.ScopesOk, GrundArms.ScopesOk] at hsc
      simp only [Stmt.scopesOk, Block.scopesOk, Endblock.scopesOk, Arms.scopesOk, GrundArms.scopesOk, Bool.and_eq_true] at hsc
