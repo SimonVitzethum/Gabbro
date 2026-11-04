@@ -4,6 +4,8 @@ public import Grammatik.Parser.Elab.Generic.Parametricity
 public import Grammatik.Parser.SourceFolds.Range
 public import Grammatik.Parser.SourceFolds.Hoist
 public import Grammatik.Parser.TaggedDispatch.Frontend
+meta import Lean.Elab.Tactic.BuiltinTactic
+meta import Lean.Meta.Reduce
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Generic
 
@@ -126,6 +128,19 @@ def expandDeclarationsBeforeLiterals (sourceNames : List String) (ordinary : Lis
     | _ => true
   appendLiterals (sourceNames ++ ordinary.filterMap sourceName) ordinary literals
 
+/-- Elaborate the canonical size into its recursors before code generation, avoiding
+    runtime calls to the kernel-generated `SizeOf` dictionaries. -/
+def sourceSize : List SItemTief → Nat := by
+  run_tac
+    let term ← Lean.Elab.Term.elabTerm (← `(fun source : List SItemTief => sizeOf source)) none
+    Lean.Elab.Term.synthesizeSyntheticMVarsNoPostponing
+    let term ← Lean.instantiateMVars term
+    let term ← Lean.Meta.withTransparency .all (Lean.Meta.reduce term (explicitOnly := false))
+    Lean.Elab.Tactic.closeMainGoal `sourceSize term
+
+/-- The executable producer uses exactly the existing budget, not a new measure. -/
+theorem sourceSize_eq (source : List SItemTief) : sourceSize source = sizeOf source := rfl
+
 /-- The output retains every ordinary item and appends exactly the closed, deterministically named
     body instances. The structural source size bounds work, and exhaustion always refuses. -/
 def expandTemplates (source : List SItemTief)
@@ -153,7 +168,7 @@ def expandTemplates (source : List SItemTief)
     pure (groups.flatten, literals)).run []
   for root in roots do
     checkRecursion env (env.declarations.length + 1) [] root
-  let instances ← boundedInstanceClosure (sizeOf source)
+  let instances ← boundedInstanceClosure (sourceSize source)
     (fun key => do pure (← instantiate env key).2) roots
   checkInstanceNames names instances
   let results ← instances.mapM (instantiate env)
