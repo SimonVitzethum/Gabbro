@@ -98,12 +98,15 @@ def opName : Nat → String
   | 11 => "shl d a b" | 12 => "shr d a b" | 13 => "lt d a b" | 14 => "eq d a b" | 15 => "ld d a (d := M[a])"
   | 16 => "st a b (M[a] := b)" | 17 => "lea d a" | 18 => "jmp L" | 19 => "brz a L" | 20 => "call a k"
   | 21 => "ret" | 22 => "cas d a e" | 23 => "sys d a" | 24 => "spawn d a (clone, a new OS thread)"
-  | 25 => "udiv d a b" | 26 => "urem d a b" | 27 => "ult d a b" | _ => ""
+  | 25 => "udiv d a b" | 26 => "urem d a b" | 27 => "ult d a b"
+  | opcode => match NativeFPOp.ofCode opcode with
+    | some kind => if kind.direct then s!"{reprStr kind} d a b" else s!"reserved ({reprStr kind})"
+    | none => ""
 
 /-- The labels of the listing: loader, handlers by opcode, `ud2`, table. -/
 def labelName (l : Nat) : Option String :=
   if l = LOADER then some "loader" else if l = BAD then some "bad" else if l = TABLE then some "table"
-  else if 1 ≤ l ∧ l ≤ 27 then some s!"op{l}:  ; {opName l}" else none
+  else if 1 ≤ l ∧ l ≤ 59 then some s!"op{l}:  ; {opName l}" else none
 
 def listing : String := Id.run do
   let mut s := "; the S0IR runner, x86-64, Intel syntax; written by `lake exe runner` from Runner/Prog/Code.lean\n"
@@ -119,6 +122,7 @@ def listing : String := Id.run do
   s := s ++ s!"\ntable:  ; 256 handler addresses at {hex (BASE + tblOff)}\n"
   for k in List.range 256 do
     s := s ++ s!"  dq {hex (target k)}  ; opcode {k}\n"
+  s := s ++ s!"\nmxcsr:  ; readonly control at {hex (BASE + tblOff + 256 * 8)}\n  dd 0x1f80\n"
   return s
 
 end Runner.Prog
