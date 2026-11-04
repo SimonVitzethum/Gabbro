@@ -95,9 +95,13 @@ theorem ohneAus_execStmt : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s 
       · exact endOhneAus_zuAusgang (endOhneAus_schrumpf (ohneAus_execEnd err eb h.2 _ _))
       · trivial
       · trivial
-  | _, _, _, _, .locks _ _ body, eb, _, h, σ, ρ => by
+  | _, _, _, _, .locks L _ body, eb, _, h, σ, ρ => by
       teile
-      exact ohneAus_mapWelt _ (ohneAus_execBlock body eb h _ _)
+      have hbody : OhneAus eb (execBlock O passes R body (σ.nimmt L) ρ) :=
+        ohneAus_execBlock body eb h _ _
+      simp only [execStmt]
+      generalize execBlock O passes R body (σ.nimmt L) ρ = outcome at hbody ⊢
+      cases outcome <;> exact hbody
   | _, _, _, _, .breaking _ body, eb, _, h, σ, ρ => by
       teile
       exact ohneAus_execBlock body eb h _ _
