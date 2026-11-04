@@ -157,7 +157,7 @@ def artEnde : SEnde → String
   | .leave _ => "leave-end"
   | .next _ => "next-end"
 
-/-- Constructor tag of a surface item (all 33 arms of `SItemTief`). -/
+/-- Constructor tag of a surface item. -/
 def artItem : SItemTief → String
   | .modT .. => "modT"
   | .useT .. => "useT"
@@ -198,6 +198,8 @@ def artItem : SItemTief → String
   | .specGroupT .. => "specGroupT"
   | .implGroupT .. => "implGroupT"
   | .adaptT .. => "adaptT"
+  | .moduleTemplateT .. => "moduleTemplateT"
+  | .moduleUseT .. => "moduleUseT"
 
 /-- Parse each chunk; collect per-chunk outcomes (no short-circuit). -/
 def parseStuecke (toks : List Token) :
@@ -354,7 +356,10 @@ def befundeElab (ms : List SItemTief) : List Befund :=
   let eigF := ms.filterMap fun
     | .tableT n _ _ _ (some m) _ _ =>
       if linear.any (fun l => strEq l m) then none
-      else some ({ stufe := "tabelle", art := "tabelle", name := n,
+      else some ({
+        stufe := "tabelle"
+        art := "tabelle"
+        name := n
         meldung := "owner without declared linear mark: " ++ m } : Befund)
     | _ => none
   let lockF := locks.filterMap fun (n, r) => match r with
