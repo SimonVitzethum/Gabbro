@@ -42,18 +42,33 @@ private theorem scalarParameters (env : List (String × (Int × Int)))
     rfl
   | cons param rest ih =>
     rcases param with ⟨name, ty⟩
-    cases ht : uFeldTyp env ty with
-    | error error => simp [List.mapM_cons, ht, Except.toOption] at accepted
+    rw [List.mapM_cons] at accepted
+    change ((uFeldTyp env ty).toOption.map (fun range => (name, range))).bind
+      (fun head => (rest.mapM (fun (name, ty) =>
+        ((uFeldTyp env ty).toOption).map fun range => (name, range))).bind
+          (fun tail => some (head :: tail))) = some args at accepted
+    generalize ht : uFeldTyp env ty = parsed at accepted
+    cases parsed with
+    | error error =>
+      change none = some args at accepted
+      cases accepted
     | ok range =>
-      cases hr : rest.mapM (fun (name, ty) =>
-          ((uFeldTyp env ty).toOption).map fun range => (name, range)) with
-      | none => simp [List.mapM_cons, ht, Except.toOption, hr] at accepted
+      change (rest.mapM (fun (name, ty) =>
+        ((uFeldTyp env ty).toOption).map fun range => (name, range))).bind
+          (fun tail => some ((name, range) :: tail)) = some args at accepted
+      generalize hr : rest.mapM (fun (name, ty) =>
+        ((uFeldTyp env ty).toOption).map fun range => (name, range)) = parsedTail at accepted
+      cases parsedTail with
+      | none =>
+        change none = some args at accepted
+        cases accepted
       | some tail =>
         have same : (name, range) :: tail = args := by
-          simpa [List.mapM_cons, ht, Except.toOption, hr] using accepted
+          exact Option.some.inj accepted
         subst args
-        simp only [List.mapM_cons, fieldType_sound env ty range.1 range.2 ht,
-          Except.map, bind, Except.bind, ih tail hr, pure, Except.pure, List.map_cons]
+        rw [List.mapM_cons, ih tail hr]
+        simp only [fieldType_sound env ty range.1 range.2 ht, Except.map,
+          bind, Except.bind, pure, Except.pure, List.map_cons]
 
 /-- The old base-ignoring reader admitted this nonnumeric range. The canonical reader refuses. -/
 theorem fieldType_noninteger_range_refused_zeuge :
@@ -82,8 +97,14 @@ def evaluationClauses (clauses : List SKlausel) : Bool :=
 /-- The scalar candidate gate retains its clause and range checks, then delegates construction
     to the canonical collector. Full source signatures and statement bodies remain unchanged. -/
 def constantFunction (env : List (String × (Int × Int))) : SItemTief → Option UKonstFn
-  | .fnT { art := "const", name, params, res := some result, fehler := none,
-      klauseln := clauses, generics := generics }
+  | .fnT {
+      art := "const"
+      name := name
+      params := params
+      res := some result
+      fehler := none
+      klauseln := clauses
+      generics := generics }
       (.block [] (some (.ret (some body)))) => do
     if !evaluationClauses clauses then none else do
     let _ ← (uFeldTyp env result).toOption
