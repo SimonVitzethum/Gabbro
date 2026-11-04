@@ -62,7 +62,8 @@ theorem sim_block_bindCallElse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : L
     obtain ⟨M₃, o, hs3, hΦ3, hR3⟩ := ih_sim_end_err M₂ (E.antwortWelt hZ pad σ₁ W) W
       (.cons (Fin.cast (gruendeE hS f) r') ρ) (castE hc.symm (.cons r' ρ'))
       (hI2 W)
-      ((E.envR_um hZ hc.symm _ _).mpr (E.envR_cons hZ hρ _ _ (by rw [gruendeE hS])
+      ((E.envR_um hZ hc.symm _ _).mpr (E.envR_cons (τ := .why (D.gruende f))
+        (τ' := .why (D'.gruende (E.fn f))) hZ hρ _ _ (by rw [gruendeE hS] <;> rfl)
         (by rw [castW_why]; rfl)))
     refine ⟨M₃, o.schrumpf.zuAusgang, teil_trans (teil_trans hs hs2) hs3, fun Φ hP => ?_, ?_⟩
     · simp only [execBlockHA, hΦ Φ (passt_teil hP (teil_trans hs2 hs3)), hRΦ Φ (passt_teil hP hs3),
@@ -175,7 +176,8 @@ theorem sim_block_bindAxiomElse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : 
     obtain ⟨M₃, o, hs3, hΦ3, hR3⟩ := ih_sim_end_err M₂ (E.antwortWelt hZ pad (σ₁.fragt (.inl a)) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1
       (.cons r ρ) (castE hc.symm (.cons (Fin.cast (E.agruende a).symm r) ρ'))
       (E.inv_antwort hZ hB.pad hI2 _)
-      ((E.envR_um hZ hc.symm _ _).mpr (E.envR_cons hZ hρ _ _ (by rw [E.agruende])
+      ((E.envR_um hZ hc.symm _ _).mpr (E.envR_cons (τ := .why (D.agruende a))
+        (τ' := .why (D'.agruende (E.ax a))) hZ hρ _ _ (by rw [E.agruende] <;> rfl)
         (by rw [castW_why]; exact Fin.ext rfl)))
     refine ⟨M₃, o.schrumpf.zuAusgang, teil_trans (teil_trans hs hs2) hs3, fun Φ hP => ?_, ?_⟩
     · simp only [execBlockHA, axiomAntwortSonst, hΦ Φ (passt_teil hP (teil_trans hs2 hs3)),
@@ -261,35 +263,65 @@ theorem sim_block_regReadElse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : Li
       obtain ⟨M₂, σ₁, hs2, hΦ2, hI, hev⟩ := E.lese_eval hZ hk1 T hB.havocA hB.atom Λ (Λ.map E.resE)
         zusage.orte
       have hev0 := E.frei_alle hZ (@hev) hρ
-      have hrel := (E.envR_um hZ hc.symm (.cons v ρ)
-          (.cons ((E.rtyp r).symm ▸ E.valE _ v) ρ' : Env D' (D'.rtyp (E.reg r) :: Γ.map E.tyE))).mpr
-          (E.envR_cons hZ hρ _ _ (E.rtyp r) (E.vrel_um hZ (E.rtyp r) (E.vrel_valE hZ _ v)))
-      have hz' := E.frei_eq hZ (hev zusage _ _ hrel) rfl
+      let value : Wert D' (D'.rtyp (E.reg r)) := castW (D := D') (E.rtyp r).symm (E.valE _ v)
+      let condition : Expr D' (D'.rtyp (E.reg r) :: Γ.map E.tyE) (Λ.map E.resE) .bool :=
+        Expr.umΓ hc (exE E zusage)
+      let read : World D' := leseA A' (σ'.fragt (.inr (.inl (E.reg r)))) (Λ.map E.resE) (zusage.orte.map E.ortE)
+      have envRel : E.EnvR hZ (Env.cons (τ := D.rtyp r) v ρ)
+          (Env.cons (τ := D'.rtyp (E.reg r)) value ρ') :=
+        E.envR_cons (τ := D.rtyp r) (τ' := D'.rtyp (E.reg r)) hZ hρ v value (E.rtyp r)
+          (E.vrel_um hZ (E.rtyp r) (E.vrel_valE hZ _ v))
+      have hrel := (E.envR_um hZ hc.symm _ _).mpr envRel
+      have reads : Expr.orte (D := D') (τ := .bool) (Expr.umΓ hc (exE E zusage)) =
+          zusage.orte.map E.ortE :=
+        (Expr.orte_umΓ (D := D') (τ := .bool) hc (exE E zusage)).trans (E.orte_exE zusage)
+      have readWorld : leseA A' (σ'.fragt (.inr (.inl (E.reg r)))) (Λ.map E.resE)
+          (Expr.orte (D := D') (τ := .bool) (Expr.umΓ hc (exE E zusage))) = read :=
+        congrArg (fun xs : List (D'.Tab ⊕ D'.Glob) =>
+          leseA A' (σ'.fragt (.inr (.inl (E.reg r)))) (Λ.map E.resE) xs) reads
+      have hz' : wahr? (D := D') (eval read condition read (Env.cons value ρ')) =
+          wahr? (D := D) (eval σ₁ zusage σ₁ (Env.cons v ρ)) := by
+        have same := hev zusage (.cons v ρ) _ hrel
+        change (eval read (exE E zusage) read (castE hc.symm (Env.cons value ρ')) : Bool) =
+          eval σ₁ zusage σ₁ (Env.cons v ρ) at same
+        exact (congrArg (wahr? (D := D')) (eval_umΓ (τ := .bool) hc (exE E zusage) read read
+          (Env.cons value ρ'))).trans same
+      have target : execBlockHA S' O' U' A' passes R'
+          (exB hS (.regReadElse r hk zusage sonst rest : Block D V l Γ Λ Λ')) σ' ρ' =
+          (if wahr? (D := D) (eval σ₁ zusage σ₁ (Env.cons v ρ)) = true then
+            (execBlockHA S' O' U' A' passes R' (Block.umΓ hc (exB hS rest)) read
+              (Env.cons value ρ')).schrumpf
+          else (execEndHA S' O' U' A' passes R' (exEnd hS sonst) read ρ').zuAusgang :
+            Ausgang (E.vertragE V) l (Γ.map E.tyE)) := by
+        simp only [exB, execBlockHA]
+        rw [hw'.2 v hx]
+        erw [readWorld]
+        change (if wahr? (D := D') (eval read condition read (Env.cons value ρ')) = true then
+          (execBlockHA S' O' U' A' passes R' (Block.umΓ hc (exB hS rest)) read (Env.cons value ρ')).schrumpf
+          else (execEndHA S' O' U' A' passes R' (exEnd hS sonst) read ρ').zuAusgang :
+            Ausgang (E.vertragE V) l (Γ.map E.tyE)) = _
+        rw [hz']
       cases hb : wahr? (eval σ₁ zusage σ₁ (.cons v ρ))
-      · obtain ⟨M₃, o, hs3, hΦ3, hR⟩ := ih_sim_end_sonst M₂ σ₁ _ ρ ρ' hI hρ
+      · obtain ⟨M₃, o, hs3, hΦ3, hR⟩ := ih_sim_end_sonst M₂ σ₁ read ρ ρ' hI hρ
         refine ⟨M₃, o.zuAusgang, teil_trans (teil_trans hs1 hs2) hs3, fun Φ hP => ?_, ?_⟩
         · simp only [execBlockHA, orakelΦ_regLies, orakelΦ_zeiger,
             hΦ1 Φ (passt_teil hP (teil_trans hs2 hs3))]
           rw [hx]
           simp only [hΦ2 Φ (passt_teil hP hs3), hb, Bool.false_eq_true, ↓reduceIte]
           exact congrArg EndAusgang.zuAusgang (hΦ3 Φ hP)
-        · simp only [exB, execBlockHA]
-          rw [hw'.2 v hx]
-          simp only [Expr.orte_umΓ, Einbettung.orte_exE, eval_umΓ, hz', wahr_valE, hb,
-            Bool.false_eq_true, ↓reduceIte]
+        · rw [target]
+          simp only [hb, Bool.false_eq_true, ↓reduceIte]
           exact E.endRel_zuAusgang hR
       · obtain ⟨M₃, o, hs3, hΦ3, hR⟩ := E.koerperSim_block_um hZ S' O' U' A' passes R' hc _ _ (ih_sim_block_rest)
-          M₂ σ₁ _ (.cons v ρ) (.cons ((E.rtyp r).symm ▸ E.valE _ v) ρ') hI
-          (E.envR_cons hZ hρ _ _ (E.rtyp r) (E.vrel_um hZ (E.rtyp r) (E.vrel_valE hZ _ v)))
+          M₂ σ₁ read (.cons v ρ) (.cons value ρ') hI envRel
         refine ⟨M₃, o.schrumpf, teil_trans (teil_trans hs1 hs2) hs3, fun Φ hP => ?_, ?_⟩
         · simp only [execBlockHA, orakelΦ_regLies, orakelΦ_zeiger,
             hΦ1 Φ (passt_teil hP (teil_trans hs2 hs3))]
           rw [hx]
           simp only [hΦ2 Φ (passt_teil hP hs3), hb, ↓reduceIte]
           exact congrArg Ausgang.schrumpf (hΦ3 Φ hP)
-        · simp only [exB, execBlockHA]
-          rw [hw'.2 v hx]
-          simp only [Expr.orte_umΓ, Einbettung.orte_exE, eval_umΓ, hz', wahr_valE, hb, ↓reduceIte]
+        · rw [target]
+          simp only [hb, ↓reduceIte]
           exact E.ausRel_schrumpf hR
 
 set_option linter.unusedSectionVars false in
