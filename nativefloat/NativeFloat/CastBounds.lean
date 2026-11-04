@@ -83,7 +83,8 @@ private theorem decoded_unsigned_low (F : Format) (standard : F = .binary32 ∨ 
   · intro s _
     change (UInt64.ofNatClamp 0).toBitVec = (Int64.ofIntClamp 0).toBitVec
     have signedZero : (Int64.ofIntClamp 0).toBitVec = (0 : BitVec 64) := by
-      simpa only [Int64.toInt_zero] using
+      have wordZero : (0 : Int64).toBitVec = (0 : BitVec 64) := rfl
+      simpa only [Int64.toInt_zero, wordZero] using
         congrArg Int64.toBitVec (Int64.ofIntClamp_toInt (0 : Int64))
     exact unsigned_zero.trans signedZero.symm
   · intro s m e h sign upper exponent
