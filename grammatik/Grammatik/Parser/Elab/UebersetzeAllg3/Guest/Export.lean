@@ -21,7 +21,7 @@ def sourceGuest (u : UProg) (source : UGuest) : Except String (GuestBoundary (de
     throw "entrust: transferred regions differ from the service arguments"
   let guest : GuestBoundary (declOf u) :=
     { caller, code, service := some service, transfers := [],
-      available := resOf u caller, behavior := .returns,
+      available := Signatur.anfang (declOf u) ((declOf u).signatur caller), behavior := .returns,
       abi := if (ProfilBindung.wertVon .arch source.arch).isSome then some .userspace else none }
   guest.check
   pure guest
@@ -46,10 +46,10 @@ theorem sourceGuestList_length (u : UProg) (sources : List UGuest)
   | nil => cases h; rfl
   | cons source rest ih =>
     cases hs : sourceGuest u source with
-    | error error => simp [sourceGuestList, hs] at h
+    | error error => simp [sourceGuestList, hs, bind, Except.bind] at h
     | ok guest =>
       cases ht : sourceGuestList u rest with
-      | error error => simp [sourceGuestList, hs, ht] at h
+      | error error => simp [sourceGuestList, hs, ht, bind, Except.bind, Except.map] at h
       | ok tail =>
         simp only [sourceGuestList, hs, ht, bind, Except.bind, pure, Except.pure,
           Except.ok.injEq] at h

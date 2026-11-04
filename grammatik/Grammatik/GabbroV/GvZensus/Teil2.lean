@@ -24,7 +24,7 @@ def zeigeZeilen : List String → String
 /-- **104 yields no findings** (the census is empty on elaborated
     code; non-degenerate two-function program). -/
 theorem zensus104_leer : befundeElab (uMembers items104) = [] := by
-  decide
+  cbv
 
 /-- **Synthetic two-blocker fixture**: a table with an unknown field
     type plus a function with a `match` body (real table, real body). -/
