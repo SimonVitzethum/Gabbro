@@ -56,7 +56,7 @@ theorem rechne_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
       · rename_i hp hb hr
         simp only [Option.some.injEq] at hu
         subst hu
-        exact hB.var (tiefe x) (tiefe_lt x) hk (fun n w h => hp n w h) hb (fun n h => hr n h)
+        exact hB.var (tiefe x) (tiefe_lt x) hk hp hb (fun n h => hr n h)
   | glob g hL =>
     simp only [delabE, Except.ok.injEq] at hd
     subst hd
@@ -86,8 +86,7 @@ theorem rechne_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
           subst hu
           have := hB.slot t f i' ix (idx_ok H t (sizeOf i + 1) i (by omega) i' ix hi hx) hL hb
           simp only [slotS] at this
-          simp only [uRechne]
-          exact this
+          simp only [uRechne, this]
   | widen h1 h2 e =>
     simp only [delabE] at hd
     simp only [uOfS] at hu
