@@ -107,7 +107,7 @@ theorem areaRequest_run {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D)
   have world4 := weltAt_stab layout.lay (by have := layout.lo; omega) m m4 world
     (change14.mono (Nat.zero_le _))
   obtain ⟨tag, extra, m5, service, changed5, world5, reply5⟩ :=
-    TorOK.area a b τ he j bound accepted (σ.fragt (.inl a)) (evalArgs σ args σ ρ)
+    TorOK.area (L := L) (O := O) a b τ he j bound accepted (σ.fragt (.inl a)) (evalArgs σ args σ ρ)
       request m4 fp (foreignResultBase s) Ks frame4 (by omega) layout.lay layout.lo rfl sourceValues hidden unused world4
   have numberRead : m4.rd64 (slot fp (BitVec.ofNat 64 s)) = some request.nr :=
     rd64_write_same (frame3.rd s (by omega))
