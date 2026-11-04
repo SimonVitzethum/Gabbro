@@ -84,7 +84,7 @@ theorem terminierung_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : L
       exact @of_decide_eq_true _ (Classical.propDecidable _) hc)
   have hK := fun f => koerperGutSA_mono hT ((hN.1 passes f).1)
   have hex := startExklusiv_ohne_haelt init hLeer
-  refine ⟨terminierung m Q S (kVon P fs init) (lokW P fs ws) sp init hH.1 hH.2.1 hH.2.2 hN.2.2 hS hvoll
+  refine ⟨terminierung m Q S (kVon P fs init) (lokW P fs ws) sp init hH.1 hH.2.1 hH.2.2 hN.2.2.1 hS hvoll
       (fun t => hA.abg _) (fun t => reachB_wurzel P fs _) hTA hTV hTS hTO (fragX_ok hvoll hA.frag hA.fuss) hA.fuss
       hlokK hK hM hZ.req hZ.sperren hex hLm R h0 t, fun hk j ⟨l, Γ, Λ, ρ, r, hrest, hh⟩ => ?_⟩
   have h1 := ewigFrei_ohne_budget hvoll sp init R h0 t hk j
