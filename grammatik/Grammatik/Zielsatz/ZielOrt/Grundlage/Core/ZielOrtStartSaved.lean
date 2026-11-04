@@ -192,6 +192,7 @@ theorem startScopedEndeG_erreichbar {P : Programm D} {O : Orakel D} {pa : Nat}
         InvAmRueck P (M.faeden t).kopf.f (M.weltVon t)) :
     StartScopedEndeG P M := by
   have hgood : ∀ t, fadenAntwortGut P (M.faeden t) := by
+    clear hcurrent
     induction hr with
     | start =>
         intro t
