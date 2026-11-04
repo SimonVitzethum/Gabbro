@@ -18,7 +18,8 @@ theorem retires_lower {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : C
     (resolved : markFin u.marken name = some mark) (held : heldMarkStage mark Λ = some stage) :
     lowStmtL (l := l) u caller Γ fn Λ (.retires name) =
       .ok ⟨Λ.erase (.marke mark stage),
-        Stmt.retires mark stage (heldMarkStage_mem mark Λ stage held) none⟩ := by
+        Stmt.retires (D := declOf u) (V := verOf u caller) (l := l) (Γ := Γ) (Λ := Λ)
+          mark stage (heldMarkStage_mem mark Λ stage held) none⟩ := by
   exact lowRetiresL_exact u caller Γ Λ name mark stage notBorrowed resolved held
 
 /-- The surface advance preserves both labels for checked order resolution. -/
@@ -35,7 +36,8 @@ theorem advances_lower {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : 
     (held : Res.marke hit.mark hit.stage ∈ Λ) :
     lowStmtL (l := l) u caller Γ fn Λ (.advances before after) =
       .ok ⟨Λ.erase (.marke hit.mark hit.stage) ++ [.marke hit.mark (hit.stage + 1)],
-        Stmt.advances hit.mark hit.stage held hit.bounded⟩ := by
+        Stmt.advances (D := declOf u) (V := verOf u caller) (l := l) (Γ := Γ) (Λ := Λ)
+          hit.mark hit.stage held hit.bounded⟩ := by
   exact lowAdvancesL_exact u caller Γ Λ before after hit resolved notBorrowed held
 
 /-- Unknown, ambiguous, nonadjacent and terminal edges retain their named
@@ -89,7 +91,8 @@ theorem implication_meaning {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
 
 /-- Implication retains the old/result prohibition in executable bodies. -/
 theorem implication_scope (a b : UEns) :
-    ensAltErg (.imp a b) = (ensAltErg a || ensAltErg b) := by rfl
+    ensAltErg (.imp a b) = (ensAltErg a || ensAltErg b) := by
+  rw [ensAltErg]
 
 theorem implication_export_zeuge :
     let ctx : UCtx := {
@@ -98,7 +101,11 @@ theorem implication_export_zeuge :
     uSichert ctx (.ext .imp [] [.variable "ready", .bin "==" .res (.lit 42)]) =
       .ok (.imp (.var "ready") (.cmp "==" .erg (.lit 42))) ∧
     uBool ctx (.ext .imp [] [.variable "ready", .bin "==" .res (.lit 42)]) =
-      .error "result without result" := by exact ⟨rfl, rfl⟩
+      .error "result without result" := by
+  constructor
+  · rfl
+  · simp [uBool, uSichert, uSeite, uRechne, uSeiteBlatt, uZSeite,
+      uParamNr, uParamNrAux, uArtBei, uIstVgl, strEq]
 
 /-- A successfully reified Held fact is backed by a real resource, never just its spelling. -/
 theorem held_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (name : String)
@@ -176,7 +183,8 @@ theorem nested_else_lower {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ
     (hbody : lowEndL (l := l) u caller (τ :: Γ) (fn.mitTy y τ) fuel (nach (declOf u) k.callee Λ) top tail = .ok (body, remaining)) :
     lowEndL (l := l) u caller Γ fn (fuel + 1) Λ top (.bindElse y callee args reason :: source) =
       .ok (nestedElse u caller Γ Λ k τ he hr err body, remaining) := by
-  simp only [lowEndL_succ, lowEndStep, lowStufe_ende, hg, bind, Except.bind, hk, hr, ↓reduceIte, withErg, herr]
+  simp only [lowEndL_succ, lowEndStep, lowStufe_ende, hg, bind, Except.bind, hk,
+    dite_eq_left hr, withErg, herr]
   split
   · rename_i hn
     rw [he] at hn
@@ -268,7 +276,7 @@ theorem call_ind_else_lower {l : Bool} (u : UProg) (caller : Fin u.fns.length)
       (nachSig (declOf u) ((declOf u).sigNr n) Λ) top source = .ok (handler, .blkEnd :: tail)) :
     lowCallIndElse (l := l) u caller R Γ fn Λ top name args reason source =
       .ok (⟨_, .callIndElse (.var pointer) k.args he k.hp hr handler⟩, tail) := by
-  simp only [lowCallIndElse, hp, hk, bind, Except.bind, hr, ↓reduceIte, withErgN]
+  simp only [lowCallIndElse, hp, hk, bind, Except.bind, dite_eq_left hr, withErgN]
   split
   · rename_i hn
     rw [he] at hn
@@ -303,7 +311,7 @@ theorem foreign_else_seq_lower {l : Bool} (u : UProg) (caller : Fin u.fns.length
     (hbody : R.seq (l := l) (τ :: Γ) (fn.mitTy y τ) Λ top tail = .ok (⟨Λ', body⟩, remaining)) :
     lowSeqStep (l := l) u caller R Γ fn Λ top (.bindAxElse y name args reason :: source) =
       .ok (⟨Λ', .bindAxiomElse k.ax k.args he hr k.hw k.hg k.hd k.hgd handler body⟩, remaining) := by
-  simp only [lowSeqStep, hk, bind, Except.bind, hr, ↓reduceIte, withAxErg]
+  simp only [lowSeqStep, hk, bind, Except.bind, dite_eq_left hr, withAxErg]
   split
   · rename_i hn
     rw [he] at hn
@@ -348,7 +356,7 @@ theorem foreign_else_end_lower {l : Bool} (u : UProg) (caller : Fin u.fns.length
     (hbody : R.ende (l := l) (τ :: Γ) (fn.mitTy y τ) Λ top tail = .ok (body, remaining)) :
     lowEndStep (l := l) u caller R Γ fn Λ top (.bindAxElse y name args reason :: source) =
       .ok (.bindAxiomElse k.ax k.args he hr k.hw k.hg k.hd k.hgd handler body, remaining) := by
-  simp only [lowEndStep, hk, hr, ↓reduceIte, withAxErg]
+  simp only [lowEndStep, hk, dite_eq_left hr, withAxErg]
   split
   · rename_i hn
     rw [he] at hn
@@ -389,6 +397,11 @@ theorem foreign_void_end_lower {l : Bool} (u : UProg) (caller : Fin u.fns.length
     (hbody : R.ende (l := l) Γ fn Λ top source = .ok (body, remaining)) :
     lowEndStep (l := l) u caller R Γ fn Λ top (.axCall name args :: source) =
       .ok (.cons (axiomStmt u caller Γ Λ k he) body, remaining) := by
-  simp only [lowEndStep, hk, bind, Except.bind, withAxErg, he, hbody]
+  simp only [lowEndStep, hk, bind, Except.bind, withAxErg]
+  split
+  · simp only [hbody, bind, Except.bind]
+  · rename_i τ ht
+    rw [he] at ht
+    contradiction
 
 end Gabbro.Grammatik.Parser.ExportPreservation
