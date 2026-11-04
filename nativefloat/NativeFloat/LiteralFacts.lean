@@ -137,27 +137,81 @@ theorem canonLiteral_zero_num (d : Int) :
   · have sign (s : Sign) : Sign.positive / s = s := by cases s <;> rfl
     simp only [canonLiteral, zero, ↓reduceDIte, UnpackedFloat.div, sign, ↓reduceIte]
 
-private theorem subnormal_denominator : (2 : Int) ^ 1074 = ((2 : Int) ^ 200) ^ 5 * (2 : Int) ^ 74 :=
-  (Int.pow_add (2 : Int) 1000 74).trans
-    (congrArg (fun value : Int => value * (2 : Int) ^ 74)
-      (Int.pow_mul (a := (2 : Int)) (n := 200) (m := 5)))
+private theorem literal_mantissas (s t : Sign) (m d : Nat) (hm : 0 < m) (hd : 0 < d) :
+    canonLiteral (s.apply m, t.apply d) = Float.ofModel (Float.Model.pack
+      (UnpackedFloat.div Format.binary64 (.finite s m 0 hm) (.finite t d 0 hd))) := by
+  have input (s : Sign) (n : Nat) (hn : 0 < n) :
+      (if h : s.apply n = 0 then UnpackedFloat.zero .positive else
+        .finite (if s.apply n < 0 then .negative else .positive)
+          (s.apply n).natAbs 0 (Int.natAbs_pos.mpr h)) = .finite s n 0 hn := by
+    have positive : (0 : Int) < n := by omega
+    have nonzero : (n : Int) ≠ 0 := by omega
+    have negNonzero : -(n : Int) ≠ 0 := by omega
+    have negative : -(n : Int) < 0 := by omega
+    have nonnegative : ¬ (n : Int) < 0 := by omega
+    cases s <;> simp only [Sign.apply, nonzero, negNonzero, negative, nonnegative,
+      ↓reduceDIte, ↓reduceIte, Int.natAbs_neg, Int.natAbs_natCast]
+  unfold canonLiteral
+  dsimp only
+  rw [input s m hm, input t d hd]
+
+private theorem subnormal_core (m : Nat) (small : m = 1 ∨ m = 2) :
+    divCore Format.binary64 m 0 (2 ^ 1074) 0 = (m, -1074, .exact) := by
+  have target : min (0 - 0 : Int) (Format.binary64.targetExponent
+      (totalExponent m 0 - totalExponent (2 ^ 1074) 0)) = -1074 := by
+    rcases small with rfl | rfl <;>
+      simp only [totalExponent, Nat.log2_two_pow, Format.targetExponent] <;> rfl
+  unfold divCore
+  dsimp only
+  rw [target]
+  change ((m <<< 1074) / 2 ^ 1074, (-1074 : Int),
+    accuracyOfFraction ((m <<< 1074) % 2 ^ 1074) (2 ^ 1074)) = _
+  rw [Nat.shiftLeft_eq, Nat.mul_div_cancel m (Nat.two_pow_pos 1074), Nat.mul_mod_left]
+  rfl
+
+private theorem literal_subnormal (s t : Sign) (m : Nat) (small : m = 1 ∨ m = 2) :
+    canonLiteral (s.apply m, t.apply ((2 ^ 1074 : Nat) : Int)) =
+      Float.ofModel (Float.Model.pack (.finite (s / t) m (-1074) (by omega))) := by
+  rw [literal_mantissas s t m (2 ^ 1074) (by omega) (Nat.two_pow_pos 1074)]
+  simp only [UnpackedFloat.div, subnormal_core m small]
+  apply congrArg Float.ofModel
+  apply congrArg Float.Model.pack
+  apply exact_at_target
+  rcases small with rfl | rfl <;> rfl
 
 /-- The smallest subnormal must survive exact compile-time fraction conversion. -/
 theorem canonLiteral_subnormal_one : (canonLiteral (1, 2 ^ 1074)).toBits = 1 := by
-  rw [subnormal_denominator]
+  rw [← Int.natCast_pow]
+  change (canonLiteral (Sign.positive.apply (1 : Int),
+    Sign.positive.apply ((2 ^ 1074 : Nat) : Int))).toBits = 1
+  rw [literal_subnormal .positive .positive 1 (Or.inl rfl)]
   cbv
 
 theorem canonLiteral_subnormal_two : (canonLiteral (2, 2 ^ 1074)).toBits = 2 := by
-  rw [subnormal_denominator]
+  rw [← Int.natCast_pow]
+  change (canonLiteral (Sign.positive.apply (2 : Int),
+    Sign.positive.apply ((2 ^ 1074 : Nat) : Int))).toBits = 2
+  rw [literal_subnormal .positive .positive 2 (Or.inr rfl)]
   cbv
 
 theorem canonLiteral_subnormal_negative :
     (canonLiteral (-1, 2 ^ 1074)).toBits = 0x8000000000000001 ∧
       (canonLiteral (1, -(2 ^ 1074))).toBits = 0x8000000000000001 ∧
       (canonLiteral (-1, -(2 ^ 1074))).toBits = 1 := by
-  rw [subnormal_denominator]
+  rw [← Int.natCast_pow]
   constructor
-  · cbv
-  · constructor <;> cbv
+  · change (canonLiteral (Sign.negative.apply (1 : Int),
+      Sign.positive.apply ((2 ^ 1074 : Nat) : Int))).toBits = _
+    rw [literal_subnormal .negative .positive 1 (Or.inl rfl)]
+    cbv
+  · constructor
+    · change (canonLiteral (Sign.positive.apply (1 : Int),
+        Sign.negative.apply ((2 ^ 1074 : Nat) : Int))).toBits = _
+      rw [literal_subnormal .positive .negative 1 (Or.inl rfl)]
+      cbv
+    · change (canonLiteral (Sign.negative.apply (1 : Int),
+        Sign.negative.apply ((2 ^ 1074 : Nat) : Int))).toBits = _
+      rw [literal_subnormal .negative .negative 1 (Or.inl rfl)]
+      cbv
 
 end RootNativeFloat
