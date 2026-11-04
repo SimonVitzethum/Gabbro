@@ -76,7 +76,7 @@ theorem runtime {D : Deklaration} {L : Lay D} {P : Programm D} {f : D.Fn}
     by_cases hi : (inv σ ρ).2 = false
     · simp only [hi, ↓reduceIte]
       exact invalid n m σ ρ he hi
-    · simp only [hi, ↓reduceIte]
+    · simp only [hi, Bool.true_eq_false, ↓reduceIte]
       generalize hs : sel (inv σ ρ).1 ρ = selection
       rcases selection with ⟨σr, choice, live⟩
       cases choice with
@@ -104,32 +104,44 @@ theorem runtime {D : Deklaration} {L : Lay D} {P : Programm D} {f : D.Fn}
           rcases measured' with ⟨σm', new⟩
           dsimp only at pass ⊢
           by_cases good : 0 ≤ new ∧ new ≤ bound ∧ new < old
-          · simp only [good, ↓reduceIte] at pass ⊢
-            exact again σm' ρ'.tail pass
-          · simp only [good, ↓reduceIte] at pass ⊢
-            exact pass
+          · have next := again σm' ρ'.tail (by simpa only [good, ↓reduceIte] using pass)
+            simpa only [hm, hb, hnew, good, ↓reduceIte] using next
+          · have stopped : Stops ⟨pc, fp⟩ m (logikCode (D := D) .schleife) := by
+              simpa only [good, ↓reduceIte] using pass
+            simpa only [hm, hb, hnew, good, ↓reduceIte, Sim] using stopped
         | next h σ' ρ' =>
           generalize hnew : massW σ' ρ'.tail = measured' at pass ⊢
           rcases measured' with ⟨σm', new⟩
           dsimp only at pass ⊢
           by_cases good : 0 ≤ new ∧ new ≤ bound ∧ new < old
-          · simp only [good, ↓reduceIte] at pass ⊢
-            exact again σm' ρ'.tail pass
-          · simp only [good, ↓reduceIte] at pass ⊢
-            exact pass
+          · have next := again σm' ρ'.tail (by simpa only [good, ↓reduceIte] using pass)
+            simpa only [hm, hb, hnew, good, ↓reduceIte] using next
+          · have stopped : Stops ⟨pc, fp⟩ m (logikCode (D := D) .schleife) := by
+              simpa only [good, ↓reduceIte] using pass
+            simpa only [hm, hb, hnew, good, ↓reduceIte, Sim] using stopped
         | leave h σ' ρ' =>
           generalize hnew : massW σ' ρ'.tail = measured' at pass ⊢
           rcases measured' with ⟨σm', new⟩
           dsimp only at pass ⊢
           by_cases good : 0 ≤ new ∧ new ≤ bound ∧ new < old
-          · simp only [good, ↓reduceIte] at pass ⊢
-            by_cases valid : (inv σm' ρ'.tail).2 = true
-            · simp only [valid, ↓reduceIte] at pass ⊢
-              exact pass
-            · simp only [valid, ↓reduceIte] at pass ⊢
-              exact pass
-          · simp only [good, ↓reduceIte] at pass ⊢
-            exact pass
-        | zurueck | why | logik | hardware => exact pass
+          · by_cases valid : (inv σm' ρ'.tail).2 = true
+            · have left : Reach L fp lo K pr ⟨pc, fp⟩ m exit
+                  (inv σm' ρ'.tail).1 ρ'.tail reserved := by
+                simpa only [good, valid, ↓reduceIte] using pass
+              simpa only [hm, hb, hnew, good, valid, ↓reduceIte, Sim] using left
+            · have stopped : Stops ⟨pc, fp⟩ m (logikCode (D := D) .schleife) := by
+                simpa only [good, valid, ↓reduceIte] using pass
+              simpa only [hm, hb, hnew, good, valid, ↓reduceIte, Sim] using stopped
+          · have stopped : Stops ⟨pc, fp⟩ m (logikCode (D := D) .schleife) := by
+              simpa only [good, ↓reduceIte] using pass
+            simpa only [hm, hb, hnew, good, ↓reduceIte, Sim] using stopped
+        | zurueck σ' value =>
+          simpa only [hm, hb, Bool.true_eq_false, ↓reduceIte, Sim] using pass
+        | why σ' reason =>
+          simpa only [hm, hb, Bool.true_eq_false, ↓reduceIte, Sim] using pass
+        | logik error =>
+          simpa only [hm, hb, Bool.true_eq_false, ↓reduceIte, Sim] using pass
+        | hardware error =>
+          simpa only [hm, hb, Bool.true_eq_false, ↓reduceIte, Sim] using pass
 
 end Gabbro.Stage0.Senke.Consuming
