@@ -59,6 +59,7 @@ def softJamQuot (s gap : Nat) : Nat := s / 2 ^ gap
 /-- Sticky shadow: whether the gap division discarded anything nonzero. -/
 def softJamSticky (s gap : Nat) : Bool := decide (s % 2 ^ gap ≠ 0)
 
+omit [Kern] in
 /-- Zero decodes to the zero class. -/
 theorem softKlasse_null (s : Bool) :
     klasse f64 ⟨s, 0, 0⟩ = Klasse.null := by
@@ -95,6 +96,7 @@ theorem softKlasse_normal (s : Bool) (e f : Nat) (he0 : e ≠ 0) (heM : e ≠ 20
   rw [hbmax]
   simp [he0, heM]
 
+omit [Kern] in
 /-- The kernel exact value of zero (verbatim kernel form). -/
 theorem softWertExakt_null (s : Bool) :
     wertExakt f64 ⟨s, 0, 0⟩ = some ⟨0, 0⟩ := by
