@@ -1,5 +1,5 @@
 module
-public import Runner.Basis.Res
+public import Runner.Basis.FloatingSequence
 @[expose] public section
 
 
@@ -47,7 +47,7 @@ def bin (g : W → W → Option W) (t : T) : Res T :=
     Unary operations also read field 3 and its slot; the primitive ignores that value. -/
 def fp (kind : NativeFPOp) (t : T) : Res T :=
   f2 t fun a => ld t a fun va => f3 t fun b => ld t b fun vb =>
-    Runner.fp kind va vb fun result => ret1 t result
+    fpSequence kind va vb fun result => ret1 t result
 
 /-- Signed division truncating towards zero; no result for a zero divisor or a quotient outside 64 bits. -/
 def sdiv (a b : W) : Option W :=
@@ -83,9 +83,11 @@ def op (o : Nat) (t : T) : Res T :=
   | 30 => fp (.sub .f32) t | 31 => fp (.sub .f64) t
   | 32 => fp (.mul .f32) t | 33 => fp (.mul .f64) t
   | 34 => fp (.div .f32) t | 35 => fp (.div .f64) t
+  | 36 => fp (.neg .f32) t | 37 => fp (.neg .f64) t
   | 38 => fp (.eq .f32) t | 39 => fp (.eq .f64) t
   | 40 => fp (.lt .f32) t | 41 => fp (.lt .f64) t
   | 42 => fp (.le .f32) t | 43 => fp (.le .f64) t
+  | 44 => fp (.isFinite .f32) t | 45 => fp (.isFinite .f64) t
   | 46 => fp (.fromInt64 .f32) t | 47 => fp (.fromInt64 .f64) t
   | 54 => fp .widen32 t | 55 => fp .narrow32 t
   | 56 => fp (.compare .f32) t | 57 => fp (.compare .f64) t
@@ -146,6 +148,12 @@ theorem op_fp {kind : NativeFPOp} (h : kind.direct = true) : op kind.code = fp k
     | (rename_i format; cases format <;> first | rfl | cases h)
     | rfl
     | cases h
+
+theorem op_fp_neg (format : FPFormat) : op (NativeFPOp.neg format).code = fp (.neg format) := by
+  cases format <;> rfl
+
+theorem op_fp_finite (format : FPFormat) : op (NativeFPOp.isFinite format).code = fp (.isFinite format) := by
+  cases format <;> rfl
 
 def step (t : T) : Res T := rd8 t.pc fun o => op o.toNat t
 

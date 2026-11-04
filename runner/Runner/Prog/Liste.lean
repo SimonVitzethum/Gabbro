@@ -100,7 +100,9 @@ def opName : Nat → String
   | 21 => "ret" | 22 => "cas d a e" | 23 => "sys d a" | 24 => "spawn d a (clone, a new OS thread)"
   | 25 => "udiv d a b" | 26 => "urem d a b" | 27 => "ult d a b"
   | opcode => match NativeFPOp.ofCode opcode with
-    | some kind => if kind.direct then s!"{reprStr kind} d a b" else s!"reserved ({reprStr kind})"
+    | some kind => match kind with
+      | .neg _ | .isFinite _ => s!"{reprStr kind} d a b"
+      | _ => if kind.direct then s!"{reprStr kind} d a b" else s!"reserved ({reprStr kind})"
     | none => ""
 
 /-- The labels of the listing: loader, handlers by opcode, `ud2`, table. -/

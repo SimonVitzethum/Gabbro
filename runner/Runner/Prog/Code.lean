@@ -124,7 +124,8 @@ def fpNegH (format : FPFormat) : List Ins :=
   binH (fpNormalizeInput format ++ fpSignMask .rdx format ++ [.alu .xor .rax .rdx])
 
 def fpFiniteH (format : FPFormat) : List Ins :=
-  binH (fpClassify format ++ [.alu .cmp .rsi .rdx, .set .b .rax, .zx8 .rax .rax])
+  binH (fpNormalizeInput format ++ fpInfinity .rdx format ++
+    [.alu .and .rax .rdx, .alu .cmp .rax .rdx, .set .nz .rax, .zx8 .rax .rax])
 
 def fpFromUIntH (format : FPFormat) : List Ins :=
   let low := [.fromIntScalar format .xmm0 .rax, .movFromXmm format .rax .xmm0]
@@ -167,9 +168,11 @@ def handler : Nat → List Ins
   | 30 => fpArithH .sub .f32 | 31 => fpArithH .sub .f64
   | 32 => fpArithH .mul .f32 | 33 => fpArithH .mul .f64
   | 34 => fpArithH .div .f32 | 35 => fpArithH .div .f64
+  | 36 => fpNegH .f32 | 37 => fpNegH .f64
   | 38 => fpCompareH .eq .f32 | 39 => fpCompareH .eq .f64
   | 40 => fpCompareH .lt .f32 | 41 => fpCompareH .lt .f64
   | 42 => fpCompareH .le .f32 | 43 => fpCompareH .le .f64
+  | 44 => fpFiniteH .f32 | 45 => fpFiniteH .f64
   | 46 => fpFromIntH .f32 | 47 => fpFromIntH .f64
   | 54 => fpWidenH | 55 => fpNarrowH
   | 56 => fpFlagsH .f32 | 57 => fpFlagsH .f64

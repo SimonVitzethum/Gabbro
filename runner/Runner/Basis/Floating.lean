@@ -33,6 +33,16 @@ def readFloat32 (word : W) : Float32 := Float32.ofBits (UInt32.ofBitVec (word.se
 
 def fpLow32 (word : W) : W := (word.setWidth 32).setWidth 64
 
+/-- NEG is the deterministic sign-bit codec used by the physical integer XOR,
+    including raw NaN payloads. Binary32 explicitly clears the upper word. -/
+def fpNegWord : FPFormat → W → W
+  | .f32, value => ((value.setWidth 32) ^^^ 0x80000000).setWidth 64
+  | .f64, value => value ^^^ 0x8000000000000000
+
+theorem fpNegWord_low32 (word : W) : fpNegWord .f32 (fpLow32 word) = fpNegWord .f32 word := by
+  unfold fpNegWord fpLow32
+  rw [BitVec.setWidth_setWidth_of_le _ (by decide), BitVec.setWidth_eq]
+
 /-- Only actual scalar operands enter a CPU request. Unary instructions have no
     second hardware operand; their IR field-3 read still occurs before this point. -/
 def NativeFPOp.inputs : NativeFPOp → W → W → W × W
@@ -86,6 +96,13 @@ def NativeFPOp.resultWord : NativeFPOp → W → W
   | .narrow32, value => fpLow32 value
   | _, value => value
 
+private theorem neg_resultWord (format : FPFormat) (word : W) :
+    (NativeFPOp.neg format).resultWord (fpNegWord format word) = fpNegWord format word := by
+  cases format
+  · change ((((word.setWidth 32) ^^^ 0x80000000).setWidth 64).setWidth 32).setWidth 64 = _
+    rw [BitVec.setWidth_setWidth_of_le _ (by decide), BitVec.setWidth_eq]
+  · rfl
+
 private theorem fpCompareFlags_mask (unordered less equal : Bool) :
     (fpCompareFlags unordered less equal &&& (0x45 : W)) = fpCompareFlags unordered less equal := by
   cases unordered <;> cases less <;> cases equal <;> rfl
@@ -101,8 +118,7 @@ def nativeFP (op : NativeFPOp) (a b : W) : NativeFPValue :=
   | .mul .f64 => .f64 (readFloat a * readFloat b)
   | .div .f32 => .f32 (readFloat32 a / readFloat32 b)
   | .div .f64 => .f64 (readFloat a / readFloat b)
-  | .neg .f32 => .f32 (-readFloat32 a)
-  | .neg .f64 => .f64 (-readFloat a)
+  | .neg format => .word (fpNegWord format a)
   | .eq .f32 => .word (flagWord (readFloat32 a == readFloat32 b))
   | .eq .f64 => .word (flagWord (readFloat a == readFloat b))
   | .lt .f32 => .word (flagWord (Float32.lt (readFloat32 a) (readFloat32 b)))
@@ -141,8 +157,9 @@ def NativeFPEval (op : NativeFPOp) (a b result : W) : Prop :=
 theorem nativeFP_inputs (op : NativeFPOp) (a b : W) :
     nativeFP op (op.inputs a b).1 (op.inputs a b).2 = nativeFP op a b := by
   cases op <;> first
-    | (rename_i format; cases format <;> simp only [nativeFP, NativeFPOp.inputs, readFloat32_low32])
-    | simp only [nativeFP, NativeFPOp.inputs, readFloat32_low32]
+    | (rename_i format; cases format <;> simp only [nativeFP, NativeFPOp.inputs, readFloat32_low32,
+        fpNegWord_low32])
+    | simp only [nativeFP, NativeFPOp.inputs, readFloat32_low32, fpNegWord_low32]
 
 theorem NativeFPEval.resultWord {op : NativeFPOp} {a b result : W}
     (h : NativeFPEval op a b result) : op.resultWord result = result := by
@@ -153,6 +170,7 @@ theorem NativeFPEval.resultWord {op : NativeFPOp} {a b result : W}
   all_goals first
     | exact h.1.symm
     | rfl
+    | (subst result; exact neg_resultWord _ _)
     | (subst result; exact flagWord_normalize _)
     | (subst result; exact fpCompareFlags_mask _ _ _)
 

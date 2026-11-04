@@ -1,6 +1,7 @@
 module
 public import Runner.Beweis.Handler.Sprung
 public import Runner.Beweis.Handler.Floating
+public import Runner.Beweis.Handler.FloatingCodec
 @[expose] public section
 
 
@@ -56,16 +57,16 @@ theorem handler_ok {L : Lay} (k : Nat) {y : X} (h : HPre L k y) : Match L (IR.op
   | 33 => exact fp_arith_ok .mul .f64 h
   | 34 => exact fp_arith_ok .div .f32 h
   | 35 => exact fp_arith_ok .div .f64 h
-  | 36 => exact bad_ok h rfl
-  | 37 => exact bad_ok h rfl
+  | 36 => exact fp_neg_ok .f32 h
+  | 37 => exact fp_neg_ok .f64 h
   | 38 => exact fp_compare_ok .eq .f32 h
   | 39 => exact fp_compare_ok .eq .f64 h
   | 40 => exact fp_compare_ok .lt .f32 h
   | 41 => exact fp_compare_ok .lt .f64 h
   | 42 => exact fp_compare_ok .le .f32 h
   | 43 => exact fp_compare_ok .le .f64 h
-  | 44 => exact bad_ok h rfl
-  | 45 => exact bad_ok h rfl
+  | 44 => exact fp_finite_ok .f32 h
+  | 45 => exact fp_finite_ok .f64 h
   | 46 => exact fp_fromInt_ok .f32 h
   | 47 => exact fp_fromInt_ok .f64 h
   | 48 => exact bad_ok h rfl

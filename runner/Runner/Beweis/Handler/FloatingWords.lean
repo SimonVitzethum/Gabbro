@@ -35,4 +35,58 @@ theorem pack_compare_flags (value : W) :
     BitVec.and_twoPow, BitVec.and_twoPow, BitVec.and_twoPow]
   cases value.getLsbD 0 <;> cases value.getLsbD 2 <;> cases value.getLsbD 6 <;> rfl
 
+theorem fpNegWord_word32 (value : W) :
+    fpNegWord .f32 value = fpLow32 value ^^^ 0x80000000 := by
+  rw [fpNegWord, BitVec.setWidth_xor]
+  rfl
+
+private theorem uint32_bne (a b : BitVec 32) :
+    (UInt32.ofBitVec a != UInt32.ofBitVec b) = (a != b) := by
+  apply Bool.eq_iff_iff.mpr
+  simp only [bne_iff_ne]
+  constructor
+  · intro h same
+    exact h (congrArg UInt32.ofBitVec same)
+  · intro h same
+    exact h (congrArg UInt32.toBitVec same)
+
+private theorem uint64_bne (a b : W) :
+    (UInt64.ofBitVec a != UInt64.ofBitVec b) = (a != b) := by
+  apply Bool.eq_iff_iff.mpr
+  simp only [bne_iff_ne]
+  constructor
+  · intro h same
+    exact h (congrArg UInt64.ofBitVec same)
+  · intro h same
+    exact h (congrArg UInt64.toBitVec same)
+
+private theorem extend32_bne (a b : BitVec 32) :
+    (a.setWidth 64 != b.setWidth 64) = (a != b) := by
+  apply Bool.eq_iff_iff.mpr
+  simp only [bne_iff_ne]
+  constructor
+  · intro h same
+    exact h (congrArg (fun value : BitVec 32 => value.setWidth 64) same)
+  · intro h same
+    apply h
+    have low := congrArg (fun value : W => value.setWidth 32) same
+    simpa only [BitVec.setWidth_setWidth_of_le _ (by decide), BitVec.setWidth_eq] using low
+
+theorem fpFiniteWord_word32 (value : W) :
+    fpFiniteWord .f32 value = flagWord ((fpLow32 value &&& 0x7F800000) != 0x7F800000) := by
+  have guard : ((fpLow32 value &&& 0x7F800000) != (0x7F800000 : W)) =
+      (((value.setWidth 32) &&& 0x7F800000) != (0x7F800000 : BitVec 32)) := by
+    change (((value.setWidth 32).setWidth 64 &&& (0x7F800000 : BitVec 32).setWidth 64) !=
+      (0x7F800000 : BitVec 32).setWidth 64) = _
+    rw [← BitVec.setWidth_and, extend32_bne]
+  change flagWord (UInt32.ofBitVec ((value.setWidth 32) &&& 0x7F800000) !=
+    UInt32.ofBitVec 0x7F800000) = _
+  rw [uint32_bne, guard]
+
+theorem fpFiniteWord_word64 (value : W) :
+    fpFiniteWord .f64 value = flagWord ((value &&& 0x7FF0000000000000) != 0x7FF0000000000000) := by
+  change flagWord (UInt64.ofBitVec (value &&& 0x7FF0000000000000) !=
+    UInt64.ofBitVec 0x7FF0000000000000) = _
+  rw [uint64_bne]
+
 end Runner.Beweis

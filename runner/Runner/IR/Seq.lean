@@ -1,6 +1,7 @@
 module
 public import Runner.IR.Step
 public import Runner.Basis.MemLemma
+public import Runner.Basis.FloatingCodec
 @[expose] public section
 
 
@@ -41,6 +42,30 @@ inductive Run : Res T → Mem → T → Mem → Prop
   | fp {kind : NativeFPOp} {a b result : W} {k : Ans → Res T} {m m' : Mem} {t : T} :
       NativeFPEval kind a b result → Run (k (some (result, 0))) m t m' →
       Run (.ask (.fp kind a b) k) m t m'
+
+/-- Derive a normalized primitive request from its native CPU result. -/
+theorem Run.native_fp {kind : NativeFPOp} {a b result : W} {continuation : W → Res T}
+    {m m' : Mem} {t : T} (heval : NativeFPEval kind a b result)
+    (hk : Run (continuation result) m t m') : Run (Runner.fp kind a b continuation) m t m' := by
+  unfold Runner.fp
+  have normalized : NativeFPEval kind (kind.inputs a b).1 (kind.inputs a b).2 result := by
+    simpa only [NativeFPEval, nativeFP_inputs] using heval
+  refine .fp normalized ?_
+  simpa only [opt_some, NativeFPEval.resultWord heval] using hk
+
+/-- A theorem over the existing Run constructors, not a new execution rule.
+    Codec words are exact; other operations use their existing native request. -/
+theorem Run.fp_sequence {kind : NativeFPOp} {a b result : W} {continuation : W → Res T}
+    {m m' : Mem} {t : T} (heval : NativeFPEval kind a b result)
+    (hk : Run (continuation result) m t m') : Run (fpSequence kind a b continuation) m t m' := by
+  cases kind with
+  | neg format =>
+    have same := nativeNeg_result heval
+    simpa only [fpSequence, same] using hk
+  | isFinite format =>
+    have same := nativeFinite_result heval
+    simpa only [fpSequence, same] using hk
+  | _ => exact Run.native_fp heval hk
 
 inductive Star : T → Mem → T → Mem → Prop
   | refl (t : T) (m : Mem) : Star t m t m
@@ -118,11 +143,8 @@ theorem run_fp {t : T} {m m1 : Mem} {o : Nat} {d a b : BitVec 32}
     Run (fp kind t) m (nxt t) m1 := by
   unfold fp
   refine f2_run hi (run_rd64 ha (f3_run hi (run_rd64 hb ?_)))
-  unfold Runner.fp
-  have normalized : NativeFPEval kind (kind.inputs va vb).1 (kind.inputs va vb).2 result := by
-    simpa only [NativeFPEval, nativeFP_inputs] using heval
-  refine .fp normalized ?_
-  simp only [opt_some, NativeFPEval.resultWord heval, ret1]
+  apply Run.fp_sequence heval
+  simp only [ret1]
   exact f1_run hi (run_wr64 hw)
 
 /-- `brz a L` with slot `a` zero: the jump is taken. -/

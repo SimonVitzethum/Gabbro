@@ -39,11 +39,9 @@ def fpNegative (format : FPFormat) (value : W) : Bool :=
 def fpNaN (format : FPFormat) (value : W) : Bool :=
   format.infinityBits.ult (fpMagnitude format value)
 
-def fpNegWord (format : FPFormat) (value : W) : W :=
-  format.scalarBits value ^^^ format.signBit
-
-def fpFiniteWord (format : FPFormat) (value : W) : W :=
-  if (fpMagnitude format value).ult format.infinityBits then 1 else 0
+def fpFiniteWord : FPFormat → W → W
+  | .f32, value => flagWord ((UInt32.ofBitVec (value.setWidth 32) &&& 0x7F800000) != 0x7F800000)
+  | .f64, value => flagWord ((UInt64.ofBitVec value &&& 0x7FF0000000000000) != 0x7FF0000000000000)
 
 /-- Retain the discarded low bit before the signed native conversion. -/
 def uint64StickyHalf (value : W) : W := (value >>> 1) ||| (value &&& 1)
@@ -71,15 +69,13 @@ def fpToUInt64 {σ : Type} (format : FPFormat) (value : W) (continuation : W →
       fp (.truncateInt64 format) reduced 0 fun integer => continuation (integer ||| 0x8000000000000000)
   else continuation 0xFFFFFFFFFFFFFFFF
 
-/-- One composition interface: direct operations retain their existing request;
-    portable casts expose every actual native arithmetic/conversion request. -/
+/-- The installed codec operations compute words directly; other operations
+    retain the existing primitive request. Portable casts above are installed
+    here only with their complete numerical and physical composition proofs. -/
 def fpSequence {σ : Type} (kind : NativeFPOp) (a b : W) (continuation : W → Res σ) : Res σ :=
   match kind with
   | .neg format => continuation (fpNegWord format a)
   | .isFinite format => continuation (fpFiniteWord format a)
-  | .fromUInt64 format => fpFromUInt64 format a continuation
-  | .toInt64 format => fpToInt64 format a continuation
-  | .toUInt64 format => fpToUInt64 format a continuation
   | _ => fp kind a b continuation
 
 theorem fpSequence_direct {σ : Type} (kind : NativeFPOp) (a b : W) (continuation : W → Res σ)

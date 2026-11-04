@@ -15,7 +15,7 @@ macro "fp_corr" hm:term : tactic => `(tactic| (
   simp (disch := decide) [IR.op, IR.fp, IR.ret1, IR.f1, IR.f2, IR.f3, IR.ld, IR.slot, IR.nxt,
     binBody, fpOperands, runL, exec, fld, sld, sst, mb, ms, ea,
     X.get, X.set, X.setXmm, X.xmmWord, X.fpReady, rd64, rd32,
-    Runner.fp, NativeFPOp.inputs, NativeFPOp.resultWord, FPArith.native, FPCompare.native,
+    fpSequence, Runner.fp, NativeFPOp.inputs, NativeFPOp.resultWord, FPArith.native, FPCompare.native,
     fpLow32, BitVec.setWidth_setWidth_of_le, ready]
   repeat (first | (apply corr_ask; intro _) | (apply corr_opt; intro _))
   simp (disch := decide) [runL, exec, X.get, X.set, X.setScalar, X.setXmm, X.xmmWord,
@@ -47,7 +47,7 @@ theorem fp_compare_ok {L : Lay} {y : X} (pred : FPCompare) (format : FPFormat)
       simp (disch := decide) [IR.op, IR.fp, IR.ret1, IR.f1, IR.f2, IR.f3, IR.ld, IR.slot, IR.nxt,
         binBody, fpOperands, runL, exec, fld, sld, sst, mb, ms, ea,
         X.get, X.set, X.setXmm, X.xmmWord, X.fpReady, rd64, rd32,
-        Runner.fp, NativeFPOp.inputs, NativeFPOp.resultWord, FPCompare.native,
+        fpSequence, Runner.fp, NativeFPOp.inputs, NativeFPOp.resultWord, FPCompare.native,
         fpLow32, BitVec.setWidth_setWidth_of_le, ready]
       repeat (first | (apply corr_ask; intro _) | (apply corr_opt; intro _))
       split <;> simp (disch := decide) [runL, exec, X.get, X.set, X.setScalar, X.setXmm,
@@ -104,7 +104,7 @@ theorem fp_flags_ok {L : Lay} {y : X} (format : FPFormat)
       simp (disch := decide) [IR.op, IR.fp, IR.ret1, IR.f1, IR.f2, IR.f3, IR.ld, IR.slot, IR.nxt,
         binBody, fpOperands, runL, exec, fld, sld, sst, mb, ms, ea,
         X.get, X.set, X.setXmm, X.xmmWord, X.fpReady, rd64, rd32,
-        Runner.fp, NativeFPOp.inputs, NativeFPOp.resultWord,
+        fpSequence, Runner.fp, NativeFPOp.inputs, NativeFPOp.resultWord,
         fpLow32, BitVec.setWidth_setWidth_of_le, ready]
       repeat (first | (apply corr_ask; intro _) | (apply corr_opt; intro _))
       simp (disch := decide) [Cond.eval, runL, exec, X.get, X.set, X.nof, X.fpReady, aluStep, aluOp,
