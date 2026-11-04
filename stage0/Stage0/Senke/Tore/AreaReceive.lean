@@ -23,6 +23,7 @@ theorem areaCheck_ok {s reserved : Nat} {m : Runner.Mem} {pc fp : Runner.W}
       (([ci 1 (s + 1) 0 0] ++ [ci 14 (s + 1) s (s + 1)]) ++
         guardC (s + 1) 110 (s + 2)) ρ reserved := pre
   obtain ⟨m1, run1, change1, w1, read1, encoded1⟩ := const_ok pre0.left.left (by decide) (by omega)
+  have zeroWord : BitVec.ofInt 64 0 = (0 : Runner.W) := rfl
   have next := pre0.left.next change1 (Nat.le_refl _) (by omega)
   have tagRead : m1.rd64 (slot fp (BitVec.ofNat 64 s)) = some tag := by
     rw [agree_rd_low change1 pre.frame.room (by omega) (by omega)]
@@ -35,12 +36,12 @@ theorem areaCheck_ok {s reserved : Nat} {m : Runner.Mem} {pc fp : Runner.W}
       (· = Runner.IR.bool (tag == 0)) := by
     refine ⟨m2, ?_, change1.trans change2, w2, read2, ?_⟩
     · simpa only [List.length_append, List.length_singleton, pc_add] using run1.trans run2
-    · simpa only [encoded1] using encoded2
+    · simpa only [encoded1, zeroWord] using encoded2
   have checked := test_ok pre0 tested (by omega) (by omega)
   refine ⟨fun success => checked.1 ?_, fun failure => checked.2 ?_⟩
   · subst tag
     decide
-  · have different : (tag == 0) = false := by simp [failure]
+  · have different : (tag == 0) = false := beq_eq_false_iff_ne.mpr failure
     rw [different]
     rfl
 
@@ -83,7 +84,7 @@ theorem areaReceive_ok {τ : Ty} {v : Wert D τ} {s reserved : Nat}
     (frameOK_sub next.frame ks) (by have := pre.small; omega)
     (by unfold foreignResultBase at capacity; omega) capacity
     (Or.inl (by unfold foreignResultBase; omega)) next.code
-    (codeFar_sub2 next.far ks) value1
+    (by simpa only [copyWords_length] using codeFar_sub2 next.far ks) value1
   refine ⟨m2, ?_, change1s.trans (Agree.widen change2 (by omega)), output⟩
   rw [areaReceive, List.length_append, ← pc_add]
   simpa only [copyWords_length] using run1.trans run2
@@ -98,6 +99,7 @@ theorem areaReceive_nonzero {τ : Ty} {s reserved : Nat}
     Stops ⟨pc, fp⟩ m 110 := by
   have positive := valueWords_pos τ
   have ks := layout.ks
+  have enough : s + 10 ≤ Ks := by unfold foreignResultBase at capacity; omega
   have short : PreS L m pc fp (s + 10) (s + 1) (areaCheck s) ρ reserved :=
     ⟨by have := pre.ctx; omega, by have := pre.small; omega,
       frameOK_sub pre.frame (by unfold foreignResultBase at capacity; omega),
