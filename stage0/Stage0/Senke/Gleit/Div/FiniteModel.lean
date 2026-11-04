@@ -27,6 +27,12 @@ theorem softDivFiniteWord_model (a b : GFloat) (ha : wf f64 a) (hb : wf f64 b)
   let total := ia + 2278 - ib - k
   let n := na * 2 ^ k
   let m := softDivJam n nb
+  change ca ≤ 52 at ac
+  change cb ≤ 52 at bc
+  change 2 ^ 52 ≤ na at al
+  change na < 2 ^ 53 at ah
+  change 2 ^ 52 ≤ nb at bl
+  change nb < 2 ^ 53 at bh
   have count : k = 55 ∨ k = 56 := by unfold k softDivGuardCount; split <;> simp
   have na64 : na < 2 ^ 64 := by omega
   have nb64 : nb < 2 ^ 64 := by omega
@@ -51,11 +57,11 @@ theorem softDivFiniteWord_model (a b : GFloat) (ha : wf f64 a) (hb : wf f64 b)
   have bip : 1 ≤ max b.bexp 1 := Nat.le_max_right _ _
   have indexA : 13 ≤ ia ∧ ia ≤ 2111 := by dsimp only [ia]; omega
   have indexB : 13 ≤ ib ∧ ib ≤ 2111 := by dsimp only [ib]; omega
-  have kp : k ≤ 56 := by rcases count with rfl | rfl <;> decide
+  have kp : k ≤ 56 := by rcases count with hk | hk <;> omega
   have firstSub : ib ≤ ia + 2278 := by omega
   have secondSub : k ≤ ia + 2278 - ib := by omega
   have tb : total < 4400 := by
-    have kl : 55 ≤ k := by rcases count with rfl | rfl <;> decide
+    have kl : 55 ≤ k := by rcases count with hk | hk <;> omega
     dsimp only [total]
     omega
   have totalWord : BitVec.ofNat 64 ia + 2278 - BitVec.ofNat 64 ib - BitVec.ofNat 64 k =
