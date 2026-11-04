@@ -103,12 +103,13 @@ theorem blockFloatOfComputed_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes
     let x := gleitAusInt (eval σr e σr ρ).n
     have hwf : Gleitkomma.wf Gleitkomma.f64 x :=
       Gleitkomma.ofInt_wf _ Gleitkomma.f64_p _
-    have conv : ∀ j code t, computedFloatOfE (reserved := reserved) L Gleitkomma.f64 e j = some (code, t) → t ≤ Ks →
-        ∀ m pc, Pre L m pc fp Ks j code ρ (fun m => WeltAt m L σr) reserved →
-        Ok m pc fp Ks j code (fun w => Gleitkomma.wf Gleitkomma.f64 x ∧
+    have conv : ∀ {fp' : Runner.W} {K' j : Nat} {code : List II} {t : Nat},
+        computedFloatOfE (reserved := reserved) L Gleitkomma.f64 e j = some (code, t) → t ≤ K' →
+        ∀ m pc, Pre L m pc fp' K' j code ρ (fun m => WeltAt m L σr) reserved →
+        Ok m pc fp' K' j code (fun w => Gleitkomma.wf Gleitkomma.f64 x ∧
           w = BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 x)) := by
-      intro j code t hc ht m pc hp
-      exact (computedFloatOfE_ok (σ₀ := σr) (σ := σr) hc hp ht hW.lay rfl
+      intro fp' K' j code t hc ht m pc hp
+      exact (computedFloatOfE_ok (fp := fp') (K := K') (σ₀ := σr) (σ := σr) hc hp ht hW.lay rfl
         (fun _ h => h)).mono
           (fun w hw => ⟨hwf, hw⟩)
     simp only [floatNarrowC, List.length_append, List.length_singleton] at hs
@@ -131,7 +132,7 @@ theorem blockFloatOfComputed_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes
       have hpw := PreS.welt hpc hW.ks hWa hW.lay (by have := hW.lo; omega)
       obtain ⟨m1, st, a1, w, hw, hen⟩ := computedFloatRangeL_ok x hwf low high
         (fun j => computedFloatOfE (reserved := reserved) L Gleitkomma.f64 e j)
-        (fun hc ht m pc hp => conv _ _ _ hc ht m pc hp) hcc (by omega) m pc hpw
+        conv hcc (by omega) m pc hpw
       exact ⟨m1, st, Agree.widen a1 hW.ks, w, hw, by simpa only [bool_word] using hen⟩
     · intro hb m' pc' hp' _ hu' hk' hw'
       rw [(computedFloatRangeReject_none hwf).mpr hb]
@@ -148,7 +149,8 @@ theorem blockFloatOfComputed_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes
         refine bindValue_ok (L := L) (τ := .fl low high) (v := v) hW hlo hlo0 hlo2 hpr (by omega) ?_ ?_ hp' hu' hk' hw'
         · intro m pc hp
           refine Ok.value (width := rfl) ?_
-          exact (conv _ _ _ he (by omega) m pc hp).mono
+          exact (conv (fp' := fp) (K' := Ks) (j := frei Γ reserved) (code := ce) (t := te)
+            he (by omega) m pc hp).mono
             fun w hen => ⟨by simpa only [hvx] using hen.1, by simpa only [hvx] using hen.2⟩
         · intro m pc hp hu hk hw
           exact ihRest (ex := ex) cr tr hr (by omega) (by omega) hW m pc σr _ hp hlo
