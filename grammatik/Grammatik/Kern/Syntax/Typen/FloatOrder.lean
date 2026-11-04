@@ -10,34 +10,78 @@ open Float.Model.UnpackedFloat
 private theorem lexLE (a b : Int) (m n : Nat) :
     ((compare a b).then (compare m n)).isLE = true ↔ a < b ∨ a = b ∧ m ≤ n := by
   rw [Ordering.isLE_then_iff_or, Int.compare_eq_lt, Int.compare_eq_eq,
-    Ordering.isLE_iff_ne_gt, Nat.compare_ne_gt]
+    Ordering.isLE_iff_ne_gt]
+  change (a < b ∨ a = b ∧ compare m n ≠ Ordering.gt) ↔ a < b ∨ a = b ∧ m ≤ n
+  rw [Nat.compare_ne_gt]
 
 private theorem unpacked_le_trans (a b c : UnpackedFloat)
     (ab : a.le b = true) (bc : b.le c = true) : a.le c = true := by
-  cases a <;> cases b <;> cases c
-  all_goals repeat first | match goal with | s : Sign |- _ => cases s
+  cases a with
+  | infinity s => cases s
+  | notANumber => skip
+  | zero s => cases s
+  | finite s _ _ _ => cases s
+  all_goals cases b with
+    | infinity s => cases s
+    | notANumber => skip
+    | zero s => cases s
+    | finite s _ _ _ => cases s
+  all_goals cases c with
+    | infinity s => cases s
+    | notANumber => skip
+    | zero s => cases s
+    | finite s _ _ _ => cases s
   all_goals simp_all [UnpackedFloat.le, UnpackedFloat.compare, Option.any,
     Ordering.swap_then, Int.compare_swap, Nat.compare_swap, lexLE]
   all_goals omega
 
 private theorem unpacked_le_refl (a : UnpackedFloat) (ha : a.isFinite = true) : a.le a = true := by
-  cases a
-  all_goals repeat first | match goal with | s : Sign |- _ => cases s
+  cases a with
+  | infinity s => cases s
+  | notANumber => skip
+  | zero s => cases s
+  | finite s _ _ _ => cases s
   all_goals simp_all [UnpackedFloat.isFinite, UnpackedFloat.le,
     UnpackedFloat.compare, Ordering.swap_then, Int.compare_swap, Nat.compare_swap, lexLE]
 
 private theorem unpacked_lower (a x y : UnpackedFloat)
     (ha : a.isFinite = false) (hx : x.isFinite = true) (hy : y.isFinite = true)
     (ax : a.le x = true) : a.le y = true := by
-  cases a <;> cases x <;> cases y
-  all_goals repeat first | match goal with | s : Sign |- _ => cases s
+  cases a with
+  | infinity s => cases s
+  | notANumber => skip
+  | zero s => cases s
+  | finite s _ _ _ => cases s
+  all_goals cases x with
+    | infinity s => cases s
+    | notANumber => skip
+    | zero s => cases s
+    | finite s _ _ _ => cases s
+  all_goals cases y with
+    | infinity s => cases s
+    | notANumber => skip
+    | zero s => cases s
+    | finite s _ _ _ => cases s
   all_goals simp_all [UnpackedFloat.isFinite, UnpackedFloat.le, UnpackedFloat.compare]
 
 private theorem unpacked_upper (a x y : UnpackedFloat)
     (ha : a.isFinite = false) (hx : x.isFinite = true) (hy : y.isFinite = true)
     (xa : x.le a = true) : y.le a = true := by
-  cases a <;> cases x <;> cases y
-  all_goals repeat first | match goal with | s : Sign |- _ => cases s
+  cases a with
+  | infinity s => cases s
+  | notANumber => skip
+  | zero s => cases s
+  | finite s _ _ _ => cases s
+  all_goals cases x with
+    | infinity s => cases s
+    | notANumber => skip
+    | zero s => cases s
+    | finite s _ _ _ => cases s
+  all_goals cases y with
+    | infinity s => cases s
+    | notANumber => skip
+    | zero s => cases s
+    | finite s _ _ _ => cases s
   all_goals simp_all [UnpackedFloat.isFinite, UnpackedFloat.le, UnpackedFloat.compare]
 
 /-- The native ordered comparison is transitive, including infinite endpoints. -/
