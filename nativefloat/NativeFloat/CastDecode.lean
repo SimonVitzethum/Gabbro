@@ -58,7 +58,7 @@ private theorem threshold_nat (F : Format) (standard : F = .binary32 ∨ F = .bi
 private theorem infinity_nat (F : Format) :
     (packedInfinity F .positive).toNat = (2 ^ F.exponentBits - 1) * 2 ^ F.mantissaBitsWithoutImplicit := by
   have mantissaZero : (0 : BitVec F.mantissaBitsWithoutImplicit).toNat = 0 := by
-    simp only [BitVec.toNat_ofNat, Nat.zero_mod]
+    rfl
   rw [packedInfinity, fields_nat]
   simp only [Sign.toBitVec, BitVec.toNat_zero, mantissaZero, BitVec.neg_one_eq_allOnes,
     BitVec.toNat_allOnes, Nat.zero_mul, Nat.zero_add, Nat.add_zero]
