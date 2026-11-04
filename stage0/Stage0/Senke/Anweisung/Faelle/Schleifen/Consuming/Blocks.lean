@@ -2,6 +2,7 @@
 module
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Consuming.Emission
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Runtime.Teil1a
+public import Stage0.Senke.Anweisung.SchleifeTeile
 public section
 
 namespace Gabbro.Stage0.Senke.Consuming
@@ -26,7 +27,7 @@ theorem assembled_codeAt {m : Mem} {pc : W} {code : List II}
     fragment. Its write lies in the source-derived reserved pair, keeps the
     relocated lexical environment and the caller's protected words, and
     enters the header with the semantic fuel encoded without wraparound. -/
-theorem initialize {P : Programm D} {f : D.Fn} {Γ : Ctx}
+theorem «initialize» {P : Programm D} {f : D.Fn} {Γ : Ctx}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W}
     {fp pc rp cfp : W} {K Ks lo reserved counter saved fuel failure : Nat}
     {pr : List Nat} {count bound : Int} {invariant member edge measure body code : List II}
