@@ -163,60 +163,75 @@ private theorem canonical_unpack (s : Sign) (m : Nat) (e : Int) (positive : 0 < 
       (UnpackedFloat.pack Format.binary64 (.finite s m e positive)) = .finite s m e positive := by
   exact normal_unpack Format.binary64 s m e positive lower upper emin emax
 
-private theorem power_word (s : Sign) (j : Nat) (lower : 1023 ≤ j) (upper : j ≤ 1992) :
-    Float.ofBits (UInt64.ofNat ((if s = .negative then 2 ^ 63 else 0) + j * 2 ^ 52)) =
-      Float.ofModel (Float.Model.pack (.finite s (2 ^ 52) ((j : Int) - 1075) (by decide))) := by
+private theorem native_pack_word (x : UnpackedFloat) :
+    Float.ofBits (UInt64.ofBitVec (UnpackedFloat.pack Format.binary64 x)) =
+      Float.ofModel (Float.Model.pack x) := by
+  exact bits_roundtrip (Float.ofModel (Float.Model.pack x))
+
+private theorem pack_normal_fields (F : Format) (s : Sign) (m : Nat) (e : Int)
+    (positive : 0 < m) (j : Nat)
+    (biased : (e + F.exponentBias + F.mantissaBitsWithoutImplicit).toNat = j)
+    (normal : m.log2 = F.mantissaBitsWithoutImplicit)
+    (noOverflow : ¬ 2 ^ F.exponentBits ≤ j + 1) :
+    UnpackedFloat.pack F (.finite s m e positive) =
+      packComponents F s (BitVec.ofNat F.exponentBits j)
+        (BitVec.ofNat F.mantissaBitsWithoutImplicit m) := by
+  have width : F.mantissaBitsWithoutImplicit + 1 = F.mantissaBits := by
+    unfold Format.mantissaBits
+    omega
+  simp only [UnpackedFloat.pack, biased, normal, noOverflow, width, ↓reduceIte]
+
+private theorem power_packed (s : Sign) (j : Nat) (lower : 1023 ≤ j) (upper : j ≤ 1992) :
+    UnpackedFloat.pack Format.binary64
+      (.finite s (2 ^ 52) ((j : Int) - 1075) (Nat.two_pow_pos _)) =
+      packComponents Format.binary64 s (BitVec.ofNat 11 j) 0#52 := by
   have biased : (((j : Int) - 1075) + Format.binary64.exponentBias +
       Format.binary64.mantissaBitsWithoutImplicit).toNat = j := by
     change (((j : Int) - 1075) + 1023 + 52).toNat = j
     omega
-  have packed : UnpackedFloat.pack Format.binary64
-      (.finite s (2 ^ 52) ((j : Int) - 1075) (by decide)) =
-      packComponents Format.binary64 s (BitVec.ofNat 11 j) 0#52 := by
-    have implicitBit : BitVec.ofNat 52 (2 ^ 52) = 0#52 := by
-      apply BitVec.eq_of_toNat_eq
-      simp only [BitVec.toNat_ofNat, Nat.mod_self, Nat.zero_mod]
-    have noOverflow : ¬ 2 ^ Format.binary64.exponentBits ≤ j + 1 := by
-      change ¬ 2048 ≤ j + 1
-      omega
-    have normal : (52 : Nat) + 1 = Format.binary64.mantissaBits := rfl
-    simp only [UnpackedFloat.pack, Nat.log2_two_pow, biased, noOverflow, normal,
-      ↓reduceIte, implicitBit]
+  have implicitBit : BitVec.ofNat 52 (2 ^ 52) = 0#52 := by
+    apply BitVec.eq_of_toNat_eq
+    simp only [BitVec.toNat_ofNat, Nat.mod_self, Nat.zero_mod]
+  have noOverflow : ¬ 2 ^ Format.binary64.exponentBits ≤ j + 1 := by
+    change ¬ 2048 ≤ j + 1
+    omega
+  have fields := pack_normal_fields Format.binary64 s (2 ^ 52) ((j : Int) - 1075)
+    (Nat.two_pow_pos _) j biased (Nat.log2_two_pow (n := 52)) noOverflow
+  exact fields.trans (congrArg (packComponents Format.binary64 s (BitVec.ofNat 11 j)) implicitBit)
+
+private theorem word_ofNat_toNat (word : BitVec 64) :
+    UInt64.ofNat word.toNat = UInt64.ofBitVec word := by
+  apply UInt64.eq_of_toBitVec_eq
+  change BitVec.ofNat 64 word.toNat = word
+  simp only [BitVec.ofNat_toNat, BitVec.setWidth_eq]
+
+private theorem power_word_encoded (s : Sign) (j : Nat) (lower : 1023 ≤ j) (upper : j ≤ 1992) :
+    (UnpackedFloat.pack Format.binary64
+      (.finite s (2 ^ 52) ((j : Int) - 1075) (Nat.two_pow_pos _))).toNat =
+      (if s = .negative then 2 ^ 63 else 0) + j * 2 ^ 52 := by
   have field : (BitVec.ofNat 11 j).toNat = j := by
     rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
-  have encoded : (UnpackedFloat.pack Format.binary64
-      (.finite s (2 ^ 52) ((j : Int) - 1075) (by decide))).toNat =
-      (if s = .negative then 2 ^ 63 else 0) + j * 2 ^ 52 := by
-    rw [packed]
-    unfold packComponents
-    rw [BitVec.toNat_append, BitVec.toNat_append]
-    simp only [field, BitVec.toNat_ofNat, Nat.zero_mod, Nat.or_zero]
-    rw [← Nat.shiftLeft_add_eq_or_of_lt (show j < 2 ^ 11 by omega)]
-    simp only [Nat.shiftLeft_eq]
-    cases s <;> simp [Sign.toBitVec, Nat.add_mul]
-  have inWord : (if s = .negative then 2 ^ 63 else 0) + j * 2 ^ 52 < 2 ^ 64 := by
-    split <;> omega
-  have numeric : ((if s = .negative then 2 ^ 63 else 0) + j * 2 ^ 52) % 2 ^ 64 =
-      (UnpackedFloat.pack Format.binary64
-        (.finite s (2 ^ 52) ((j : Int) - 1075) (by decide))).toNat :=
-    (Nat.mod_eq_of_lt inWord).trans encoded.symm
-  have rawBits : (UInt64.ofNat
-      ((if s = .negative then 2 ^ 63 else 0) + j * 2 ^ 52)).toBitVec =
-      UnpackedFloat.pack Format.binary64
-        (.finite s (2 ^ 52) ((j : Int) - 1075) (by decide)) :=
-    BitVec.eq_of_toNat_eq numeric
-  have raw : UInt64.ofNat ((if s = .negative then 2 ^ 63 else 0) + j * 2 ^ 52) =
+  rw [power_packed s j lower upper]
+  unfold packComponents
+  rw [BitVec.toNat_append, BitVec.toNat_append]
+  simp only [field, BitVec.toNat_ofNat, Nat.zero_mod, Nat.or_zero]
+  rw [← Nat.shiftLeft_add_eq_or_of_lt (show j < 2 ^ 11 by omega)]
+  simp only [Nat.shiftLeft_eq]
+  cases s <;> simp [Sign.toBitVec, Nat.add_mul]
+
+private theorem power_word_bits (s : Sign) (j : Nat) (lower : 1023 ≤ j) (upper : j ≤ 1992) :
+    UInt64.ofNat ((if s = .negative then 2 ^ 63 else 0) + j * 2 ^ 52) =
       UInt64.ofBitVec (UnpackedFloat.pack Format.binary64
-        (.finite s (2 ^ 52) ((j : Int) - 1075) (by decide))) :=
-    UInt64.eq_of_toBitVec_eq rawBits
-  let target : Float := Float.ofModel (Float.Model.pack
-    (.finite s (2 ^ 52) ((j : Int) - 1075) (by decide)))
-  have targetBits : target.toBits = UInt64.ofBitVec (UnpackedFloat.pack Format.binary64
-      (.finite s (2 ^ 52) ((j : Int) - 1075) (by decide))) := rfl
-  have delivered : Float.ofBits (UInt64.ofNat
-      ((if s = .negative then 2 ^ 63 else 0) + j * 2 ^ 52)) = Float.ofBits target.toBits :=
-    congrArg Float.ofBits (raw.trans targetBits.symm)
-  exact delivered.trans (bits_roundtrip target)
+        (.finite s (2 ^ 52) ((j : Int) - 1075) (Nat.two_pow_pos _))) := by
+  exact (congrArg UInt64.ofNat (power_word_encoded s j lower upper).symm).trans
+    (word_ofNat_toNat (UnpackedFloat.pack Format.binary64
+      (.finite s (2 ^ 52) ((j : Int) - 1075) (Nat.two_pow_pos _))))
+
+private theorem power_word (s : Sign) (j : Nat) (lower : 1023 ≤ j) (upper : j ≤ 1992) :
+    Float.ofBits (UInt64.ofNat ((if s = .negative then 2 ^ 63 else 0) + j * 2 ^ 52)) =
+      Float.ofModel (Float.Model.pack (.finite s (2 ^ 52) ((j : Int) - 1075) (by decide))) := by
+  exact (congrArg Float.ofBits (power_word_bits s j lower upper)).trans
+    (native_pack_word (.finite s (2 ^ 52) ((j : Int) - 1075) (Nat.two_pow_pos _)))
 
 private theorem power_unpacked (s : Sign) (j : Nat) (lower : 1023 ≤ j) (upper : j ≤ 1992) :
     (Float.ofBits (UInt64.ofNat ((if s = .negative then 2 ^ 63 else 0) + j * 2 ^ 52))).toModel.unpack =
