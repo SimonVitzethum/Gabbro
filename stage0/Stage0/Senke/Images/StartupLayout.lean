@@ -53,17 +53,17 @@ theorem BildLage.head (h : BildLage passes P fs pos main roots K Ks Yb A cs body
 /-- Every admitted start serializes successfully; the complete stack band has exactly
     the byte length reserved by the source-independent image geometry. -/
 theorem BildLage.stacks (h : BildLage passes P fs pos main roots K Ks Yb A cs body n fp0 sp ρ rootArgs) :
-    ∃ stacks, startStackBytes Ks (FB + FB) (encodeEnv Yb ρ :: rootArgs) = some stacks ∧
-      stacks.length = 8 * (Ks * (roots.length + 1)) := by
+    ∃ stackBytes, startStackBytes Ks (FB + FB) (encodeEnv Yb ρ :: rootArgs) = some stackBytes ∧
+      stackBytes.length = 8 * (Ks * (roots.length + 1)) := by
   have hexm := h.hex main (by simp)
   have hge := startScratch_ge main
-  obtain ⟨stacks, made⟩ := startStackBytes_some (slots := Ks) (base := FB + FB) (encodeEnv Yb ρ :: rootArgs)
+  obtain ⟨stackBytes, made⟩ := startStackBytes_some (slots := Ks) (base := FB + FB) (encodeEnv Yb ρ :: rootArgs)
     (by
       intro words member
       rcases List.mem_cons.mp member with rfl | member
       · rw [encodeEnv_length]; omega
       · exact h.hargsFit words member)
-  refine ⟨stacks, made, ?_⟩
+  refine ⟨stackBytes, made, ?_⟩
   simpa only [List.length_cons, h.hargsLength, Nat.mul_assoc] using startStackBytes_length made
 
 /-- The functions of an image and their code below the stacks. -/
@@ -75,8 +75,8 @@ theorem BildLage.code (h : BildLage passes P fs pos main roots K Ks Yb A cs body
     (∀ g, ∃ top, lowFun passes P A Yb g = some (C g, top) ∧ top ≤ maxTop cs) ∧
     (∀ g, CodeAt m (BitVec.ofNat 64 (A g)) (C g) ∧ A g + 16 * (C g).length ≤ fp0) ∧
     CodeAt m (BitVec.ofNat 64 codeBase) (spawnC (startScratch main) sp ++ startC A main n 231 true ++ rootsC A n roots) ∧
-    (∃ stacks, startStackBytes Ks (FB + FB) (encodeEnv Yb ρ :: rootArgs) = some stacks ∧
-      BytesAt m fp0 stacks) ∧
+    (∃ stackBytes, startStackBytes Ks (FB + FB) (encodeEnv Yb ρ :: rootArgs) = some stackBytes ∧
+      BytesAt m fp0 stackBytes) ∧
     BytesAt m (fp0 + 8 * (Ks * (roots.length + 1))) tail := by
   intro C
   have hl := h.head
@@ -85,9 +85,9 @@ theorem BildLage.code (h : BildLage passes P fs pos main roots K Ks Yb A cs body
   have hz := hm.right
   rw [flatMap_enc_len, List.length_append, hl] at hz
   rw [show codeBase + 16 * (headLen roots.length + body.length) = fp0 from h.hfp.symm] at hz
-  obtain ⟨stacks, made, _⟩ := h.stacks
+  obtain ⟨stackBytes, made, _⟩ := h.stacks
   rw [made, Option.getD_some] at hz
-  refine ⟨c1, c2, c3, ⟨stacks, made, hz.left⟩, ?_⟩
+  refine ⟨c1, c2, c3, ⟨stackBytes, made, hz.left⟩, ?_⟩
   have tail := startStackBytes_tail made hz
   simpa only [List.length_cons, h.hargsLength, Nat.mul_assoc] using tail
 
