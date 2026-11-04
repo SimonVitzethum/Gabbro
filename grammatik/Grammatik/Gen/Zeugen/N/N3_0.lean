@@ -70,8 +70,8 @@ def bnoetig : List Zelle := alle.filter fun w => w.schlecht || !erreicht.contain
 
 theorem zellen : RaumSchlecht ncZiel erreicht bnoetig :=
   ⟨3, by rw [mitglieder_laenge]; decide, raumSchlechtIn_aus z (grenzenVon 3).1 (grenzenVon 3).2 ncZiel h0
-    (fun f => (by decide : ∀ f : Fin z.fns.length, @groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f) ≤ (grenzenVon 3).1) f) (by decide)
-    (by decide) List.mem_cons_self (ws := ws) (by decide) (by decide) (by decide) (by decide) (by decide)⟩
+    (fun f => (by decide +kernel : ∀ f : Fin z.fns.length, @groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f) ≤ (grenzenVon 3).1) f) (by decide)
+    (by decide +kernel) List.mem_cons_self (ws := ws) (by decide) (by decide) (by decide) (by decide) (by decide)⟩
 
 /-- The test as a program of the source. -/
 def e : Einsatz := z.einsatz P ws (by decide) (by decide)

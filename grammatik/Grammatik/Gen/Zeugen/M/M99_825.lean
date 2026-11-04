@@ -73,8 +73,8 @@ def P : Programm z.deklaration := h0.programm
 theorem zellen : ∀ x ∈ ([⟨2, 0, true, [false, false, true, false]⟩, ⟨2, 2, false, [false, true, true]⟩, ⟨2, 3, false, [false, false, true]⟩] : List Zelle), RaumGut ncZiel x := by
   intro x hx
   refine ⟨99, by rw [mitglieder_laenge]; decide, raumGutIn_aus z (grenzenVon 99).1 (grenzenVon 99).2 ncZiel h0
-    (fun f => (by decide : ∀ f : Fin z.fns.length, @groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f) ≤ (grenzenVon 99).1) f) (by decide)
-    (by decide) List.mem_cons_self (ws := ws) (by decide) (by decide) (by decide) (by decide) ?_⟩
+    (fun f => (by decide +kernel : ∀ f : Fin z.fns.length, @groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f) ≤ (grenzenVon 99).1) f) (by decide)
+    (by decide +kernel) List.mem_cons_self (ws := ws) (by decide) (by decide) (by decide) (by decide) ?_⟩
   revert x; decide
 
 /-- The test as a program of the source. -/
