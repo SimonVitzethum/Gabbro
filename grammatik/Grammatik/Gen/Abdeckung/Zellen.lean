@@ -288,7 +288,7 @@ def zellAlle : List Zelle :=
 theorem zellAlle_definiert : zellAlle.all Zelle.definiert = true := by decide
 
 /-- The universe has 126 cells ... -/
-theorem zellAlle_laenge : zellAlle.length = 126 := by decide
+theorem zellAlle_laenge : zellAlle.length = 126 := by cbv
 
 /-- ... of which 21 are bad (a verdict test fails): the number of single-fault programs of the global patterns. -/
 theorem zellAlle_schlecht : (zellAlle.filter Zelle.schlecht).length = 21 := by decide
