@@ -24,10 +24,31 @@ inductive NativeFPOp where
   | fromInt64 (format : FPFormat) | fromUInt64 (format : FPFormat)
   | toInt64 (format : FPFormat) | toUInt64 (format : FPFormat)
   | widen32 | narrow32
+  | compare (format : FPFormat)
+  | truncateInt64 (format : FPFormat)
   deriving DecidableEq, Repr
 
 def readFloat (word : W) : Float := Float.ofBits (UInt64.ofBitVec word)
 def readFloat32 (word : W) : Float32 := Float32.ofBits (UInt32.ofBitVec (word.setWidth 32))
+
+def fpLow32 (word : W) : W := (word.setWidth 32).setWidth 64
+
+/-- Only actual scalar operands enter a CPU request. Unary instructions have no
+    second hardware operand; their IR field-3 read still occurs before this point. -/
+def NativeFPOp.inputs : NativeFPOp → W → W → W × W
+  | .add .f32, a, b | .sub .f32, a, b | .mul .f32, a, b | .div .f32, a, b
+  | .eq .f32, a, b | .lt .f32, a, b | .le .f32, a, b
+  | .compare .f32, a, b => (fpLow32 a, fpLow32 b)
+  | .add .f64, a, b | .sub .f64, a, b | .mul .f64, a, b | .div .f64, a, b
+  | .eq .f64, a, b | .lt .f64, a, b | .le .f64, a, b
+  | .compare .f64, a, b => (a, b)
+  | .neg .f32, a, _ | .isFinite .f32, a, _ | .toInt64 .f32, a, _
+  | .toUInt64 .f32, a, _ | .truncateInt64 .f32, a, _ | .widen32, a, _ => (fpLow32 a, 0)
+  | _, a, _ => (a, 0)
+
+theorem readFloat32_low32 (word : W) : readFloat32 (fpLow32 word) = readFloat32 word := by
+  unfold readFloat32 fpLow32
+  rw [BitVec.setWidth_setWidth_of_le _ (by decide), BitVec.setWidth_eq]
 
 /-- A native result before its storage representation is chosen. -/
 inductive NativeFPValue where
@@ -36,6 +57,38 @@ inductive NativeFPValue where
   | word (value : W)
 
 private def flagWord (value : Bool) : W := if value then 1 else 0
+
+/-- The observable UCOMIS flags; the other arithmetic flags are cleared. -/
+def fpCompareFlags (unordered less equal : Bool) : W :=
+  if unordered then 0x45 else if less then 1 else if equal then 0x40 else 0
+
+private def truncateFloat64 (value : Float) : W :=
+  if value.isNaN || Float.lt value Int64.minValue.toFloat ||
+      !(Float.lt value (UInt64.ofNat (2 ^ 63)).toFloat) then BitVec.ofNat 64 (2 ^ 63)
+  else value.toInt64.toBitVec
+
+private def truncateFloat32 (value : Float32) : W :=
+  if value.isNaN || Float32.lt value Int64.minValue.toFloat32 ||
+      !(Float32.lt value (UInt64.ofNat (2 ^ 63)).toFloat32) then BitVec.ofNat 64 (2 ^ 63)
+  else value.toInt64.toBitVec
+
+private theorem flagWord_normalize (value : Bool) :
+    (if flagWord value = 0 then (0 : W) else 1) = flagWord value := by
+  cases value <;> rfl
+
+/-- Normalize a CPU answer at its scalar result width. This also keeps the two
+    request trees symmetric for answers outside the machine's Eval relation. -/
+def NativeFPOp.resultWord : NativeFPOp → W → W
+  | .compare _, value => value &&& 0x45
+  | .eq _, value | .lt _, value | .le _, value | .isFinite _, value => if value = 0 then 0 else 1
+  | .add .f32, value | .sub .f32, value | .mul .f32, value | .div .f32, value
+  | .neg .f32, value | .fromInt64 .f32, value | .fromUInt64 .f32, value
+  | .narrow32, value => fpLow32 value
+  | _, value => value
+
+private theorem fpCompareFlags_mask (unordered less equal : Bool) :
+    (fpCompareFlags unordered less equal &&& (0x45 : W)) = fpCompareFlags unordered less equal := by
+  cases unordered <;> cases less <;> cases equal <;> rfl
 
 /-- One common evaluator; no runner-owned floating-point arithmetic or interpreter. -/
 def nativeFP (op : NativeFPOp) (a b : W) : NativeFPValue :=
@@ -68,6 +121,12 @@ def nativeFP (op : NativeFPOp) (a b : W) : NativeFPValue :=
   | .toUInt64 .f64 => .word (readFloat a).toUInt64.toBitVec
   | .widen32 => .f64 (readFloat32 a).toFloat
   | .narrow32 => .f32 (readFloat a).toFloat32
+  | .compare .f32 => .word (fpCompareFlags ((readFloat32 a).isNaN || (readFloat32 b).isNaN)
+      (Float32.lt (readFloat32 a) (readFloat32 b)) (readFloat32 a == readFloat32 b))
+  | .compare .f64 => .word (fpCompareFlags ((readFloat a).isNaN || (readFloat b).isNaN)
+      (Float.lt (readFloat a) (readFloat b)) (readFloat a == readFloat b))
+  | .truncateInt64 .f32 => .word (truncateFloat32 (readFloat32 a))
+  | .truncateInt64 .f64 => .word (truncateFloat64 (readFloat a))
 
 /-- Floating outputs are related as native values. In particular, NaN payload bits
     are not fixed by the model. A binary32 result occupies one zero-extended word. -/
@@ -78,6 +137,24 @@ def NativeFPValue.Matches : NativeFPValue → W → Prop
 
 def NativeFPEval (op : NativeFPOp) (a b result : W) : Prop :=
   (nativeFP op a b).Matches result
+
+theorem nativeFP_inputs (op : NativeFPOp) (a b : W) :
+    nativeFP op (op.inputs a b).1 (op.inputs a b).2 = nativeFP op a b := by
+  cases op <;> first
+    | (rename_i format; cases format <;> simp only [nativeFP, NativeFPOp.inputs, readFloat32_low32])
+    | simp only [nativeFP, NativeFPOp.inputs, readFloat32_low32]
+
+theorem NativeFPEval.resultWord {op : NativeFPOp} {a b result : W}
+    (h : NativeFPEval op a b result) : op.resultWord result = result := by
+  cases op <;> first
+    | (rename_i format; cases format)
+    | skip
+  all_goals simp only [NativeFPEval, nativeFP, NativeFPValue.Matches] at h
+  all_goals first
+    | exact h.1.symm
+    | rfl
+    | (subst result; exact flagWord_normalize _)
+    | (subst result; exact fpCompareFlags_mask _ _ _)
 
 /-- The native executable's representative; the semantic relation also permits
     other representations of the same native NaN value. -/
@@ -103,6 +180,8 @@ def NativeFPOp.code : NativeFPOp → Nat
   | .toInt64 .f32 => 50 | .toInt64 .f64 => 51
   | .toUInt64 .f32 => 52 | .toUInt64 .f64 => 53
   | .widen32 => 54 | .narrow32 => 55
+  | .compare .f32 => 56 | .compare .f64 => 57
+  | .truncateInt64 .f32 => 58 | .truncateInt64 .f64 => 59
 
 def NativeFPOp.ofCode : Nat → Option NativeFPOp
   | 28 => some (.add .f32) | 29 => some (.add .f64)
@@ -119,12 +198,14 @@ def NativeFPOp.ofCode : Nat → Option NativeFPOp
   | 50 => some (.toInt64 .f32) | 51 => some (.toInt64 .f64)
   | 52 => some (.toUInt64 .f32) | 53 => some (.toUInt64 .f64)
   | 54 => some .widen32 | 55 => some .narrow32
+  | 56 => some (.compare .f32) | 57 => some (.compare .f64)
+  | 58 => some (.truncateInt64 .f32) | 59 => some (.truncateInt64 .f64)
   | _ => none
 
 theorem NativeFPOp.ofCode_code (op : NativeFPOp) : ofCode op.code = some op := by
   cases op <;> first | (rename_i format; cases format <;> rfl) | rfl
 
-theorem NativeFPOp.code_bounds (op : NativeFPOp) : 28 ≤ op.code ∧ op.code < 56 := by
+theorem NativeFPOp.code_bounds (op : NativeFPOp) : 28 ≤ op.code ∧ op.code < 60 := by
   cases op <;> first | (rename_i format; cases format <;> decide) | decide
 
 end Runner

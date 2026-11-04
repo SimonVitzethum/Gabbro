@@ -72,7 +72,7 @@ inductive Res (σ : Type) where
   .ask (.cas a e n) fun r => opt r fun p => f p.1
 
 @[inline] def fp {σ : Type} (kind : NativeFPOp) (a b : W) (f : W → Res σ) : Res σ :=
-  .ask (.fp kind a b) fun r => opt r fun p => f p.1
+  .ask (.fp kind (kind.inputs a b).1 (kind.inputs a b).2) fun r => opt r fun p => f (kind.resultWord p.1)
 
 /-- The thread numbers of the system calls the machines interpret themselves (fixed Linux numbers). -/
 def NR_CLONE : Nat := 56

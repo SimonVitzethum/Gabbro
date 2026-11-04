@@ -119,8 +119,10 @@ theorem run_fp {t : T} {m m1 : Mem} {o : Nat} {d a b : BitVec 32}
   unfold fp
   refine f2_run hi (run_rd64 ha (f3_run hi (run_rd64 hb ?_)))
   unfold Runner.fp
-  refine .fp heval ?_
-  simp only [opt_some, ret1]
+  have normalized : NativeFPEval kind (kind.inputs va vb).1 (kind.inputs va vb).2 result := by
+    simpa only [NativeFPEval, nativeFP_inputs] using heval
+  refine .fp normalized ?_
+  simp only [opt_some, NativeFPEval.resultWord heval, ret1]
   exact f1_run hi (run_wr64 hw)
 
 /-- `brz a L` with slot `a` zero: the jump is taken. -/
