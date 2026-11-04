@@ -302,6 +302,15 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
         delta_axiom axiomAntwortSonst
     | endeBindAxiomOptElseGrund l Γ Λ e a args he hr hp hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
         delta_axiom axiomAntwortSonst
+    | endeGleit | endeGleitLit | endeGleitVon | endeGleitNarrowOk | endeGleitNarrowElse =>
+        simp only [rufUpdateG_self]
+        subst_vars
+        left
+        first
+          | exact zugriffsDelta_refl _
+          | exact zugriffsDelta_lese _ _ _ (Expr.orte_darf _) (heldIn_weltVon (by assumption))
+          | exact zugriffsDelta_lese _ _ _ (orte_append (Expr.orte_darf _) (Expr.orte_darf _))
+              (heldIn_weltVon (by assumption))
   | g7 hs =>
     cases hs with
     | dannVerbrauch l Γ Λ Λ'' t member edge inv bound mass body rest k ρ hhead =>
