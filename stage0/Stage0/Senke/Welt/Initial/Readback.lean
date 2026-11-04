@@ -69,8 +69,8 @@ theorem initialWorldBytes_global {u : UProg} {valid : GabbroV.sp0OkB u = true}
     (loaded : BytesAt m L.lo (initialWorldBytes u valid L)) (g : Fin u.globs.length) :
     ValueAt L m (BitVec.ofNat 64 (L.ga g)) 0 ((declOf u).gtyp g) ((initialWorld u valid).globs g) := by
   apply initialValueBytes_at (valid := initialWorld_global_valid u valid L g)
-  rw [layout.globals]
-  exact initialGlobalBlocks_read u valid L _ 0 L.lo (by simpa only [Nat.add_zero] using loaded.left)
+  rw [layout.globals g]
+  exact initialGlobalBlocks_read u valid L _ 0 L.lo (by simpa only [Nat.add_zero, initialGlobals] using loaded.left)
     g (List.mem_finRange g)
 
 /-- Column stride is the complete element span, even for nested arrays and products. -/
@@ -94,10 +94,10 @@ theorem initialWorldBytes_slot {u : UProg} {valid : GabbroV.sp0OkB u = true}
   simp only [List.getElem_finRange, Fin.cast_mk, Fin.eta, columnOffset] at column
   have cell := BytesAt.replicate_piece
     (initialValueBytes L ((declOf u).typ t f) ((initialWorld u valid).slots t 0 f))
-    ((declOf u).count t).toNat _ k (by rw [layout.count] at hk; omega) column
+    ((declOf u).count t).toNat _ k (by rw [layout.count t] at hk; omega) column
   rw [initialValueBytes_length] at cell
   apply initialValueBytes_at (valid := initialWorld_slot_valid u valid L t f k)
-  simpa only [Lay.elem, layout.columns, initialWorld_column, Nat.mul_comm k,
+  simpa only [Lay.elem, layout.columns t f, initialWorld_column, Nat.mul_comm k,
     Nat.mul_assoc] using cell
 
 /-- The actual loaded bytes establish the complete source memory relation. No additional
