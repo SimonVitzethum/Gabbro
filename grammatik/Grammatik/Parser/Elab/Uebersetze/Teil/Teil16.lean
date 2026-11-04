@@ -43,13 +43,13 @@ set_option maxRecDepth 100000
 
 def beqUEnsList : List UEns → List UEns → Bool
   | [], [] => true
-  | x :: xs, y :: ys => beqUEns x y && beqUEnsList xs ys
+  | x :: xs, y :: ys => decide (x = y) && beqUEnsList xs ys
   | _, _ => false
 
 def beqUArg : UArg → UArg → Bool
   | .var a, .var b => strEq a b
   | .freshPtr a w, .freshPtr b v => strEq a b && decide (w = v)
-  | .val a, .val b => beqUSide a b
+  | .val a, .val b => decide (a = b)
   | .fnref a, .fnref b => strEq a b
   | _, _ => false
 
@@ -60,8 +60,8 @@ def beqUArgList : List UArg → List UArg → Bool
 
 def beqURet : URet → URet → Bool
   | .empty, .empty => true
-  | .val a, .val b => beqUSide a b
-  | .bool a, .bool b => beqUEns a b
+  | .val a, .val b => decide (a = b)
+  | .bool a, .bool b => decide (a = b)
   | _, _ => false
 
 def beqUStmt : UStmt → UStmt → Bool
@@ -74,52 +74,52 @@ def beqUStmt : UStmt → UStmt → Bool
   | .breakingBeg a, .breakingBeg b => strEq a b
   | .advances a b, .advances c d => strEq a c && strEq b d
   | .assign a f x s, .assign b g y t =>
-    strEq a b && strEq f g && beqUIdx x y && beqUSide s t
+    strEq a b && strEq f g && decide (x = y) && decide (s = t)
   | .assignTab a f x s, .assignTab b g y t =>
-    strEq a b && strEq f g && beqUIdx x y && beqUSide s t
+    strEq a b && strEq f g && decide (x = y) && decide (s = t)
   | .assignB a f x s, .assignB b g y t | .assignTabB a f x s, .assignTabB b g y t =>
-    strEq a b && strEq f g && beqUIdx x y && beqUEns s t
-  | .assignGlob a s, .assignGlob b t => strEq a b && beqUSide s t
-  | .assignGlobB a s, .assignGlobB b t => strEq a b && beqUEns s t
-  | .storeAtom a s, .storeAtom b t => strEq a b && beqUSide s t
-  | .storeAtomB a s, .storeAtomB b t => strEq a b && beqUEns s t
+    strEq a b && strEq f g && decide (x = y) && decide (s = t)
+  | .assignGlob a s, .assignGlob b t => strEq a b && decide (s = t)
+  | .assignGlobB a s, .assignGlobB b t => strEq a b && decide (s = t)
+  | .storeAtom a s, .storeAtom b t => strEq a b && decide (s = t)
+  | .storeAtomB a s, .storeAtomB b t => strEq a b && decide (s = t)
   | .call a xs, .call b ys => strEq a b && beqUArgList xs ys
   | .retireMark a, .retireMark b => strEq a b
   | .lockBeg a, .lockBeg b => strEq a b
   | .blkEnd, .blkEnd => true
-  | .bind a d s, .bind b e t => strEq a b && beqOptIntPair d e && beqUSide s t
-  | .ifBeg a, .ifBeg b => beqUEns a b
+  | .bind a d s, .bind b e t => strEq a b && beqOptIntPair d e && decide (s = t)
+  | .ifBeg a, .ifBeg b => decide (a = b)
   | .ifElse, .ifElse => true
-  | .loopBeg a t i, .loopBeg b u j => strEq a b && strEq t u && beqUEns i j
+  | .loopBeg a t i, .loopBeg b u j => strEq a b && strEq t u && decide (i = j)
   | .consumeLoopBeg a t p m e i mass effects, .consumeLoopBeg b u q n f j measure other =>
-    strEq a b && strEq t u && strEq p q && beqUEns m n && beqUEns e f &&
-      beqUEns i j && beqUSide mass measure && strEq effects other
+    strEq a b && strEq t u && strEq p q && decide (m = n) && decide (e = f) &&
+      decide (i = j) && decide (mass = measure) && strEq effects other
   | .arrayLoopBeg a source inv, .arrayLoopBeg b target other =>
-      strEq a b && beqUSide source target && beqUEns inv other
+      strEq a b && decide (source = target) && decide (inv = other)
   | .resetRange a x n, .resetRange b y m =>
-    strEq a b && beqUSide x y && beqUSide n m
+    strEq a b && decide (x = y) && decide (n = m)
   | .floatLit a q lo hi, .floatLit b r low high =>
     strEq a b && decide (q = r) && decide (lo = low) && decide (hi = high)
   | .floatOf a x lo hi, .floatOf b y low high =>
-    strEq a b && beqUSide x y && decide (lo = low) && decide (hi = high)
+    strEq a b && decide (x = y) && decide (lo = low) && decide (hi = high)
   | .float a op x y lo hi, .float b other z w low high =>
-    strEq a b && decide (op = other) && beqUSide x z && beqUSide y w &&
+    strEq a b && decide (op = other) && decide (x = z) && decide (y = w) &&
       decide (lo = low) && decide (hi = high)
   | .ret a, .ret b => beqURet a b
   | .leave a, .leave b | .next a, .next b => strEq a b
   | .regRead a d r, .regRead b e s | .regReadElse a d r, .regReadElse b e s =>
     strEq a b && strEq d e && strEq r s
-  | .regWrite d r v, .regWrite e s w => strEq d e && strEq r s && beqUSide v w
-  | .regWriteB d r v, .regWriteB e s w => strEq d e && strEq r s && beqUEns v w
+  | .regWrite d r v, .regWrite e s w => strEq d e && strEq r s && decide (v = w)
+  | .regWriteB d r v, .regWriteB e s w => strEq d e && strEq r s && decide (v = w)
   | .shiftTab a f x s v w, .shiftTab b g y z v' w' =>
-    strEq a b && strEq f g && beqUIdx x y && strEq s z && v == v' && w == w'
+    strEq a b && strEq f g && decide (x = y) && strEq s z && v == v' && w == w'
   | .awaitBind a g, .awaitBind b h => strEq a b && strEq g h
   | .bindFnref a g n, .bindFnref b h m => strEq a b && strEq g h && n == m
   | .callInd p f xs, .callInd q g ys => strEq p q && strEq f g && beqUArgList xs ys
   | .bindCallInd a p f xs, .bindCallInd b q g ys => strEq a b && strEq p q && strEq f g && beqUArgList xs ys
   | .bindCallIndElse a p f xs e, .bindCallIndElse b q g ys h =>
     strEq a b && strEq p q && strEq f g && beqUArgList xs ys && strEq e h
-  | .allocReqBeg a t s, .allocReqBeg b u v => strEq a b && strEq t u && beqUSide s v
+  | .allocReqBeg a t s, .allocReqBeg b u v => strEq a b && strEq t u && decide (s = v)
   | _, _ => false
 
 def beqUStmtList : List UStmt → List UStmt → Bool
@@ -221,7 +221,7 @@ def beqElabU : Except String UProg → Except String UProg → Bool
   | _, _ => false
 
 theorem u104elab : beqElabU (elabU items104) (.ok uExp104) = true := by
-  decide
+  cbv
 
 /-! ## The 104 instance: lowering pin, data, checks -/
 
@@ -229,7 +229,7 @@ theorem u104elab : beqElabU (elabU items104) (.ok uExp104) = true := by
     (definitional: proof irrelevance covers the proof terms). -/
 theorem u104lower :
     lowerProg uExp104 =
-      .ok (G104_referenz.gP, G104_referenz.gFs) := by rfl
+      .ok (G104_referenz.gP, G104_referenz.gFs) := by cbv
 
 /-- Projections of the elaborated program (the left column of
     the data agreement below). -/
@@ -240,7 +240,7 @@ def uAnzahl104 (u : UProg) : Int :=
 
 def uWeite104 (u : UProg) : Int × Int :=
   match u.tabs with
-  | [{ name := _, count := _, cols := [(_, w)], bools := _, arena := _, opts := _, shared := _, von := _, werte := _, wraps := _, sumNamen := _, sumFelder := _, kanten := _, idxNamen := _, breiten := _ }] => w
+  | [{ name := _, count := _, cols := [(_, w)], bools := _, arena := _, opts := _, shared := _, von := _, werte := _, wraps := _, sumNamen := _, sumFelder := _, kanten := _, idxNamen := _, breiten := _, owner := _, space := _ }] => w
   | _ => (-1, -1)
 
 def uRang104 (u : UProg) : Int :=
@@ -295,14 +295,16 @@ theorem u104fragment :
     (match lowerProg uExp104 with
      | .ok (P, fs) => programmImFragmentG P fs
      | .error _ => false) = true := by
-  decide
+  rw [u104lower]
+  exact export104_fragment
 
 /-- The footprint check on the Lean-parsed program. -/
 theorem u104fuss :
     (match lowerProg uExp104 with
      | .ok (P, fs) => fussOrtGB P fs
      | .error _ => false) = true := by
-  decide
+  rw [u104lower]
+  exact export104_fuss
 
 end Gabbro.Grammatik.Parser.Uebersetze
 
@@ -318,11 +320,12 @@ end Gabbro.Grammatik.Parser.Uebersetze
      each with its own kernel check: `u104lex` (source to
      tokens), `u104parse` (tokens to `items104`, a `beqTopTief`
      pin like `tEnd`), `u104elab` (surface to `uExp104`, a
-     `beqElabU` pin), `u104lower` (U to `(gP, gFs)` by `rfl`,
+     `beqElabU` pin), `u104lower` (U to `(gP, gFs)` by `cbv`,
      proof irrelevance covering the proof terms). Chaining
      them is prose, as in `Export104.lean` (whose equality
      across declaration types is not even statable).
-  2. `beqTy`/`beqUIdx`/`beqUSide`/`beqUEns`/`beqUArg`/
+  2. Indices, sides and predicates use their canonical decidable equality.
+     The remaining `beqTy`/`beqUArg`/
      `beqUStmt`/`beqURet`/`beqUTab`/`beqULock`/`beqUFn`/
      `beqUProg`/`beqElabU` are not proved sound or complete
      (the same cut as `beqSItemTief` in `ElementTief.lean`).
@@ -357,8 +360,8 @@ end Gabbro.Grammatik.Parser.Uebersetze
      `false` error branch; `u104lower` shows it dead for 104.
   7. Corpus text is quoted comment-free (comments lex away,
      the probe precedent); `u104lex` runs at 3200000
-     heartbeats, `u104parse`/`u104elab`/`u104fragment`/
-     `u104fuss` at default.
+     heartbeats, `u104parse`/`u104elab` at default. The fragment and
+     footprint checks follow the exact lowering pin and the export's theorems.
 -/
 
 #print axioms Gabbro.Grammatik.Parser.Uebersetze.u104lex
