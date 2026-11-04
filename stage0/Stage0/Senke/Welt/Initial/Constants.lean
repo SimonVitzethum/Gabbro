@@ -44,6 +44,7 @@ theorem initialConstant_valid {D : Deklaration} (L : Lay D) (τ : Ty) :
       have equation : GabbroV.konstWert (F := D.Fn) (P := D.passt) (.arr τ n) .null =
           (GabbroV.konstWert τ .null).map (fun z => fun _ : Fin n => z) := by
         rw [GabbroV.konstWert]
+        rfl
       rw [equation] at made
       obtain ⟨z, hz, eq⟩ := Option.map_eq_some_iff.mp made
       rw [← eq]
@@ -56,7 +57,9 @@ theorem initialConstant_valid {D : Deklaration} (L : Lay D) (τ : Ty) :
               else none
             | none => none
           | none => none) := by
-          cases k <;> first | contradiction | rw [GabbroV.konstWert]
+          rw [GabbroV.konstWert]
+          · rfl
+          · exact zero
       rw [equation] at made
       cases items : GabbroV.konstListe k with
       | none => simp [items] at made
@@ -90,6 +93,7 @@ theorem initialConstant_valid {D : Deklaration} (L : Lay D) (τ : Ty) :
       by_cases same : (name == other) = true
       · have collected : GabbroV.prodKonst (F := D.Fn) (P := D.passt)
             GabbroV.konstWert fs fields = some v := by
+          dsimp only [Val] at made
           simpa only [same, ite_true] using made
         exact prodKonst_valid L fs fields v collected
       · simp only [same, ite_false, reduceCtorEq] at made
@@ -112,6 +116,7 @@ theorem nutzKonst_valid {D : Deklaration} (L : Lay D) (c : Option Ty) :
   | none => intro _ _ _; trivial
   | some τ =>
     intro k v made
+    dsimp only [Nutzlast] at made
     have valueMade : GabbroV.konstWert (F := D.Fn) (P := D.passt) τ k = some v := by
       simpa only [GabbroV.nutzKonst] using made
     exact initialConstant_valid L τ k v valueMade
