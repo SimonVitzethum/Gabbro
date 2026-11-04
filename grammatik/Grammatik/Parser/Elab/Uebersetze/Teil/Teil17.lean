@@ -103,10 +103,19 @@ def uAkkuDecl {D : Deklaration}
     else if strEq merge "or" then pure Kernzelle.AccOperator.or
     else if strEq merge "and" then pure Kernzelle.AccOperator.and
     else throw "accumulator operator without G form"
-  return { name := name, kernZahl := k, breite := (uAkkuFormat lo hi).1,
-    vorzeichen := (uAkkuFormat lo hi).2, lo := lo, hi := hi, op := op,
-    zellen := cells k, sperren := locks k, kernAbfrage := query,
-    aktualisiere := update, falte := fold }
+  return {
+    name := name
+    kernZahl := k
+    breite := (uAkkuFormat lo hi).1
+    vorzeichen := (uAkkuFormat lo hi).2
+    lo := lo
+    hi := hi
+    op := op
+    zellen := cells k
+    sperren := locks k
+    kernAbfrage := query
+    aktualisiere := update
+    falte := fold }
 
 /-- The storage of every admitted `accumulates` item of the unit. -/
 def uAkkuErweiterung (consts : List (String × Int)) (alias : List (String × (Int × Int)))
@@ -148,12 +157,8 @@ def uAkkuInExpr : Nat → List String → SExpr → Bool
   | f + 1, ns, .arrow x _ => uAkkuInExpr f ns x
   | f + 1, ns, .un _ x => uAkkuInExpr f ns x
   | f + 1, ns, .bin _ x y => uAkkuInExpr f ns x || uAkkuInExpr f ns y
-  | f + 1, ns, .genericCall g _ args =>
+  | f + 1, ns, .ext .instantiate (g :: _) args =>
     (ns.any fun m => strEq m g) || (args.any fun a => uAkkuInExpr f ns a)
-  | f + 1, ns, .callIndElse pointer args _ body =>
-    uAkkuInExpr f ns pointer || args.any (uAkkuInExpr f ns) || uAkkuInAnw f ns body
-  | f + 1, ns, .callElse name args _ body =>
-    ns.any (strEq · name) || args.any (uAkkuInExpr f ns) || uAkkuInAnw f ns body
   | f + 1, ns, .call g args =>
     (ns.any fun m => strEq m g) || (args.any fun a => uAkkuInExpr f ns a)
   | f + 1, ns, .fnref g => ns.any fun m => strEq m g
@@ -211,6 +216,12 @@ def uAkkuInAnw : Nat → List String → SAnw → Bool
   | f + 1, ns, .set x _ y => uAkkuInExpr f ns x || uAkkuInExpr f ns y
   | f + 1, ns, .call g args =>
     (ns.any fun m => strEq m g) || (args.any fun a => uAkkuInExpr f ns a)
+  | f + 1, ns, .genericCall g _ args =>
+    (ns.any fun m => strEq m g) || (args.any fun a => uAkkuInExpr f ns a)
+  | f + 1, ns, .callIndElse pointer args _ body =>
+    uAkkuInExpr f ns pointer || args.any (uAkkuInExpr f ns) || uAkkuInAnw f ns body
+  | f + 1, ns, .callElse name args _ body =>
+    ns.any (strEq · name) || args.any (uAkkuInExpr f ns) || uAkkuInAnw f ns body
   | f + 1, ns, .cond c t ei els =>
     uAkkuInExpr f ns c || uAkkuInAnw f ns t || (ei.any fun b => uAkkuInAnw f ns b) ||
     (match els with | none => false | some b => uAkkuInAnw f ns b)
