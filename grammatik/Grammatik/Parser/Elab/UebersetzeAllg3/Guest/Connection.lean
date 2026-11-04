@@ -20,7 +20,7 @@ theorem lowerAllg_axVertrag (u : UProg) (P : Programm (declOf u))
       · rename_i gate
         have hg : (ptrPaarGate u && ptrLowerOk u && axContractsB u) = true := gate
         obtain ⟨rfl, _⟩ := Measures.checkedProgram_eq h
-        exact axVertragOf_exact u a (Bool.and_eq_true.mp hg).2
+        exact axVertragOf_exact u a ((Bool.and_eq_true _ _).mp hg).2
       · cases h
 
 /-- A source software origin is disjoint from a named hardware witness.
@@ -31,6 +31,8 @@ theorem source_software_origin (u : UProg) (a : Fin u.axs.length)
     (declOf u).axHerkunft a = some AxOrigin.software ∧
       (declOf u).axBeleg a = none := by
   change herkunftAt u a = some AxOrigin.software ∧ belegAt u a = none
+  change u.axs[a.val].software = true at software
+  change u.axs[a.val].beleg = none at witness
   simp [herkunftAt, belegAt, software, witness]
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg2
