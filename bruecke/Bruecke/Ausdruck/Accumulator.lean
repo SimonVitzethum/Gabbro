@@ -117,7 +117,13 @@ theorem ensExpr_vor {fn : UFn} : ∀ (e : UEns) {a a' : Acc} {x : Gabbro.Body.Ex
         exact ensExpr_vor x hx
       · cases h
   -- All other predicates are outside the Body fragment (`ensExpr` returns `none`).
-  | _, _, _, _, h => by simp [ensExpr] at h
+  | .slotB .., _, _, _, h | .tabB .., _, _, _, h
+  | .globB .., _, _, _, h | .var .., _, _, _, h
+  | .alle .., _, _, _, h | .einige .., _, _, _, h
+  | .ergB, _, _, _, h | .istSome .., _, _, _, h
+  | .held .., _, _, _, h | .imp .., _, _, _, h
+  | .reach .., _, _, _, h | .member .., _, _, _, h
+  | .filtered .., _, _, _, h | .arrayElements .., _, _, _, h => by cases h
 
 /-- **The binding an `ensures` clause is evaluated under** (`clauseAux` builds it): the
     parameters as in the entry state, `result` as the answer (the G context's first entry when
