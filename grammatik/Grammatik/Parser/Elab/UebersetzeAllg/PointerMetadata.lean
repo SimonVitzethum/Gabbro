@@ -124,25 +124,10 @@ theorem elabKopf_pointer_coherent {sig : FnSig} {kopf : UFnKopf} {writes : List 
             | error message => simp [heldResult] at accepted
             | ok held =>
               simp only [heldResult] at accepted
-              -- Treat the checked reason channel as one opaque result. Its internal
-              -- lookups and guards cannot change the parameter metadata.
-              generalize channelResult :
-                (match fehler with
-                | none => .ok none
-                | some r =>
-                  match whys.findIdx? (fun w => strEq w.name r) with
-                  | none => .error ("reason unknown: " ++ r)
-                  | some k =>
-                    match whys[k]? with
-                    | some w => if w.cases.isEmpty then .error "reason without cases"
-                        else .ok (some (k, w.cases.length))
-                    | none => .error ("reason unknown: " ++ r) :
-                  Except String (Option (Nat × Nat))) = channel at accepted
-              -- Rewrite the original dispatcher across its elaborated guard instances.
-              erw [channelResult] at accepted
-              cases channel with
-              | error message => cases accepted
-              | ok reason =>
+              -- Split the original reason-result dispatcher as a whole.
+              split at accepted
+              · cases accepted
+              ·
                 try dsimp only at accepted
                 split at accepted
                 · cases accepted
