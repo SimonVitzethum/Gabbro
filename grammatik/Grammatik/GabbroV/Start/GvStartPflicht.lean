@@ -38,6 +38,8 @@ import all Init.Data.Repr
 namespace Gabbro.Grammatik.GabbroV
 
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
+  Gabbro.Grammatik.Parser.UebersetzeAllg2
+  Gabbro.Grammatik.Zielsatz
 /-- **The per-field test is sound** (`sp0FeldOkB_klingt`): from
     `sp0FeldOkB u t f = true` the field is a `bool` field or carries a range
     holding `0`. The goal is a `Prop`, so the `Bool` tests split without any
