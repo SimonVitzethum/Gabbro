@@ -8,18 +8,18 @@ variable {D D' : Deklaration}
 namespace Einbettung
 variable (E : Einbettung D D')
 
-private theorem mapFieldsE (fs : List Ty) : fs.map E.tyE = Ty.mapFields E.num E.tnum fs := by
+theorem mapFieldsE (fs : List Ty) : fs.map E.tyE = Ty.mapFields E.num E.tnum fs := by
   induction fs with
   | nil => rfl
   | cons τ fs ih => exact congrArg (E.tyE τ :: ·) ih
 
-private theorem asignaturE (a : D.Ax) : D'.asignatur (E.ax a) = E.sigE (D.asignatur a) := by
+theorem asignaturE (a : D.Ax) : D'.asignatur (E.ax a) = E.sigE (D.asignatur a) := by
   have hw := funext (E.aschreibt a)
   have hg := funext (E.agschreibt a)
   unfold Deklaration.asignatur sigE
   rw [E.aparams, E.aerg, E.agruende, hw, hg] <;> rfl
 
-private theorem nachAxE (a : D.Ax) (Λ : List (Res D)) :
+theorem nachAxE (a : D.Ax) (Λ : List (Res D)) :
     (nachSig D (D.asignatur a) Λ).map E.resE =
       nachSig D' (D'.asignatur (E.ax a)) (Λ.map E.resE) := by
   rw [asignaturE E]
@@ -179,9 +179,9 @@ def exS (hS : E.SigTreu) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ'
         (.callInd (n := E.num n) (exE E p)
           (Args.umτs (by rw [hS.sigNr]; rfl) (exA E args)) (rufPasstE_nr hS hp)
           (by rw [hS.sigNr]; exact hr))
-  | _, _, Λ, _, .callIndElse (n := n) p args he hp hr err =>
+  | _, _, Λ, _, .callIndElse (n := n) (τ := τ) p args he hp hr err =>
       Stmt.nachΛ (nachSigE_nr hS n Λ).symm
-        (.callIndElse (n := E.num n) (exE E p)
+        (.callIndElse (n := E.num n) (τ := E.tyE τ) (exE E p)
           (Args.umτs (by rw [hS.sigNr]; rfl) (exA E args))
           (by rw [hS.sigNr]; show Option.map E.tyE (D.sigNr n).erg = _; rw [he]; rfl)
           (rufPasstE_nr hS hp) (by rw [hS.sigNr]; exact hr)
