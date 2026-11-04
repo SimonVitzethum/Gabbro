@@ -75,7 +75,7 @@ theorem softDivFiniteDirectionalL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Me
   have result : WordCode (L := L) ρ W _ _ := softMulRoundL_word sign total quotient
   intro fp K d c top emitted fits m pc pre
   simpa only [softDivFiniteDirectionalL, softDivFiniteDirectionalWord, Int.ofNat_eq_coe,
-    BitVec.ofInt_natCast] using
+    BitVec.ofInt_natCast, show BitVec.ofInt 64 2278 = (2278 : Runner.W) from rfl] using
     result (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
 
 /-- Both normalization directions fit the restoring loop's two-limb input.
