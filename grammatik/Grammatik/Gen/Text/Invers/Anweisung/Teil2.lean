@@ -18,27 +18,26 @@ theorem bindWert_allg (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (x
   | why _ _ => simp only [kopfOk, Bool.false_eq_true] at h
   | float _ => simp only [kopfOk, Bool.false_eq_true] at h
   | bin op a b =>
-    have rejectedOperators : (match op with
-        | "+" => (none : Option (Except String (UStmt × UCtx)))
-        | "-" => none
-        | "*" => none
-        | "/" => none
-        | _ => none) = none := by
-      split <;> rfl
     cases ha : uWertBody ctx a with
     | error err =>
       simp only [uBindWert, hr, ha, Except.toOption, Option.bind_eq_bind, Option.bind_none,
-        Option.bind_fun_none, rejectedOperators]
+        Option.bind_fun_none]
+      split <;> rename_i heq
+      all_goals split at heq <;> first | contradiction | rfl
     | ok left =>
       have ht := hleft op a b rfl left ha
       cases hty : uValueType ctx left with
       | none =>
         simp only [uBindWert, hr, ha, hty, Except.toOption, Option.bind_eq_bind, Option.bind_none,
-          Option.bind_some, Option.bind_fun_none, rejectedOperators]
+          Option.bind_some, Option.bind_fun_none]
+        split <;> rename_i heq
+        all_goals split at heq <;> first | contradiction | rfl
       | some ty =>
         cases ty <;> simp only [hty, ScalarType] at ht
         all_goals simp only [uBindWert, hr, ha, hty, Except.toOption, Option.bind_eq_bind,
-          Option.bind_none, Option.bind_some, Option.bind_fun_none, rejectedOperators]
+          Option.bind_none, Option.bind_some, Option.bind_fun_none]
+        all_goals split <;> rename_i heq
+        all_goals split at heq <;> first | contradiction | rfl
   | un op body =>
     cases body <;> simp only [kopfOk] at h
     all_goals
