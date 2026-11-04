@@ -58,23 +58,78 @@ private theorem zero_next {i cell : Nat} {target : Label}
   have step := offset_step found
   change x.pc + BitVec.ofNat 64 (16 * x.offset i) + BitVec.ofNat 64 (16 * 1) =
     x.pc + BitVec.ofNat 64 (16 * x.offset (i + 1))
-  rw [pc_add, step]
+  rw [pc_add, step, Piece.width]
+
+private theorem position_prefix (target : Label) (before after : List Piece) (pc : Nat) :
+    before.all (fun piece => match piece with
+      | .label name => decide (name ≠ target)
+      | _ => true) = true →
+    position target (before ++ after) pc = position target after (pc + width before) := by
+  induction before generalizing pc with
+  | nil => intro _; simp only [List.nil_append, width, Nat.add_zero]
+  | cons piece rest ih =>
+    intro absent
+    simp only [List.all_cons, Bool.and_eq_true] at absent
+    cases piece with
+    | code instructions =>
+      simpa only [List.cons_append, position, width, Piece.width, Nat.add_assoc] using
+        ih (pc + instructions.length) absent.2
+    | label name =>
+      have different : name ≠ target := of_decide_eq_true absent.1
+      simpa only [List.cons_append, position, different, ↓reduceIte, width,
+        Piece.width, Nat.add_zero, Nat.zero_add] using ih pc absent.2
+    | jump destination =>
+      simpa only [List.cons_append, position, width, Piece.width, Nat.add_assoc] using
+        ih (pc + 1) absent.2
+    | zero cell destination =>
+      simpa only [List.cons_append, position, width, Piece.width, Nat.add_assoc] using
+        ih (pc + 1) absent.2
+
+private theorem position_at_label {i : Nat} {target : Label}
+    (found : x.fragment[i]? = some (.label target))
+    (absent : (x.fragment.take i).all (fun piece => match piece with
+      | .label name => decide (name ≠ target)
+      | _ => true) = true) :
+    position target x.fragment 0 = some (x.offset (i + 1)) := by
+  have inside : i < x.fragment.length := by
+    by_cases hi : i < x.fragment.length
+    · exact hi
+    · have missing := List.getElem?_eq_none (l := x.fragment) (i := i) (by omega)
+      cases (missing.symm.trans found)
+  have element : x.fragment[i] = .label target := by
+    simpa only [List.getElem?_eq_getElem inside, Option.some.injEq] using found
+  have splitImage : x.fragment =
+      x.fragment.take i ++ .label target :: x.fragment.drop (i + 1) := by
+    have split := List.take_append_drop i x.fragment
+    rw [List.drop_eq_getElem_cons inside, element] at split
+    exact split.symm
+  have located := position_prefix target (x.fragment.take i)
+    (.label target :: x.fragment.drop (i + 1)) 0 absent
+  rw [← splitImage] at located
+  have atLabel : position target (.label target :: x.fragment.drop (i + 1))
+      (0 + width (x.fragment.take i)) = some (width (x.fragment.take i)) := by
+    rw [position, if_pos rfl, Nat.zero_add]
+  calc
+    position target x.fragment 0 = some (width (x.fragment.take i)) := located.trans atLabel
+    _ = some (x.offset (i + 1)) := by
+      congr 1
+      simpa only [Image.offset, Piece.width, Nat.add_zero] using (offset_step found).symm
 
 private theorem predecessor_position : position .predecessor x.fragment 0 = some (x.offset 14) := by
-  simp [Image.fragment, pieces, position, Image.offset, List.take, width, Piece.width, Nat.add_assoc]
+  exact position_at_label (i := 13) rfl rfl
 
 private theorem different_position : position .different x.fragment 0 = some (x.offset 20) := by
-  simp [Image.fragment, pieces, position, Image.offset, List.take, width, Piece.width, Nat.add_assoc]
+  exact position_at_label (i := 19) rfl rfl
 
 private theorem predecessorNext_position :
     position .predecessorNext x.fragment 0 = some (x.offset 28) := by
-  simp [Image.fragment, pieces, position, Image.offset, List.take, width, Piece.width, Nat.add_assoc]
+  exact position_at_label (i := 27) rfl rfl
 
 private theorem candidateNext_position : position .candidateNext x.fragment 0 = some (x.offset 31) := by
-  simp [Image.fragment, pieces, position, Image.offset, List.take, width, Piece.width, Nat.add_assoc]
+  exact position_at_label (i := 30) rfl rfl
 
 private theorem selected_position : position .selected x.fragment 0 = some (x.offset 37) := by
-  simp [Image.fragment, pieces, position, Image.offset, List.take, width, Piece.width, Nat.add_assoc]
+  exact position_at_label (i := 36) rfl rfl
 
 structure PredDone (q : Selector x Γ Λ) (σ : World D) (ρ : Env D Γ) (candidate : Wert D (.index (D.count x.table))) (live : Bool) (m : Mem) : Prop where
   ready : x.Ready m σ ρ
@@ -182,9 +237,12 @@ theorem predecessor_test (a : Wert D (.index (D.count x.table))) (ha : a.n = j)
           (by simpa only [frei_cons, q.indexWidth, ← q.origin] using predecessorValue)
       have edgeReady : x.Ready m2 σ (.cons a (.cons candidate ρ)) :=
         { ready2 with env := edgeEnv }
+      have edgeCtx : frei (.index (D.count x.table) :: .index (D.count x.table) :: Γ) reserved ≤
+          x.s + 4 := by
+        simp only [frei_cons, q.indexWidth, ← q.origin]
+        omega
       apply ScanRun.prefix branch2
-      apply (edgeReady.eval 24 (by simp only [frei_cons, q.indexWidth, ← q.origin];
-        omega) q.edgeCode q.edgeTop rfl trivial).bind
+      apply (edgeReady.eval 24 edgeCtx q.edgeCode q.edgeTop rfl trivial).bind
       intro m3 result
       obtain ⟨ready3, frame3, value, edgeRead, encoding⟩ := result
       have state3 := state2.agree frame3 (by omega) room
