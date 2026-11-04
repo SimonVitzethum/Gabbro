@@ -143,7 +143,12 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
       (fun {pr ex} => lowEnd_ok hS hA hlo0 hens err)
       c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   | _, Γ, Λ, _, .callIndElse p args he proof0 proof1 err, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr =>
-      stmtIndElse_case hS hA hlo0 hens (fun {pr ex} => lowEnd_ok hS hA hlo0 hens) c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
+      stmtIndElse_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens
+        (p := p) (args := args) (he := he) (proof0 := proof0) (proof1 := proof1) (err := err)
+        (fun {pr ex} => lowEnd_ok (O := O) (passes := passes) (R := R)
+          (fp := fp) (K := K) (Ks := Ks) (σ0 := σ0)
+          (reserved := reserved) (pr := pr) (ex := ex) hS hA hlo0 hens err)
+        c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   | _, _, _, _, .regWrite .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS, resultWords_vertragVon] at h
   | _, _, _, _, .transition .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS, resultWords_vertragVon] at h
   | _, Γ, Λ, _, .retWhy r hp0, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
@@ -202,7 +207,15 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
   | _, Γ, Λ, _, .bindAxiomOpt (e := none) a args he hcall hd hgd rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr =>
       lowB_ok_bindAxiomOpt_none (hS := hS) (hA := hA) (hlo0 := hlo0) (hens := hens) (a := a) (args := args) (he := he) (hcall := hcall) (hd := hd) (hgd := hgd) (rest := rest) (c := c) (top := top) (h := h) (hK := hK) (hs := hs) (hW := hW) (m := m) (pc := pc) (σ := σ) (ρ := ρ) (hp := hp) (hlo := hlo) (hlo2 := hlo2) (hu := hu) (hk := hk) (hWa := hWa) (hpr := hpr) (ih_lowB_ok_rest := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowB_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ _ rest)
   | _, Γ, Λ, _, .bindCallIndElse p args he proof0 proof1 err rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr =>
-      blockIndElse_case hS hA hlo0 hens (fun {pr ex} => lowEnd_ok hS hA hlo0 hens) (fun {pr ex} => lowB_ok hS hA hlo0 hens) c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
+      blockIndElse_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens
+        (p := p) (args := args) (he := he) (proof0 := proof0) (proof1 := proof1) (err := err) (rest := rest)
+        (fun {pr ex} => lowEnd_ok (O := O) (passes := passes) (R := R)
+          (fp := fp) (K := K) (Ks := Ks) (σ0 := σ0)
+          (reserved := reserved) (pr := pr) (ex := ex) hS hA hlo0 hens err)
+        (fun {pr ex} => lowB_ok (O := O) (passes := passes) (R := R)
+          (fp := fp) (K := K) (Ks := Ks) (σ0 := σ0)
+          (reserved := reserved) (pr := pr) (ex := ex) hS hA hlo0 hens rest)
+        c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   | _, Γ, Λ, _, .bindAxiomOptElse (e := some τ) a args he hcall hd hgd hr err rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr =>
       lowB_ok_bindAxiomOptElse_some (hS := hS) (hA := hA) (hlo0 := hlo0) (hens := hens) (a := a) (args := args) (he := he) (hr := hr) (hcall := hcall) (hd := hd) (hgd := hgd) (err := err) (rest := rest) (c := c) (top := top) (h := h) (hK := hK) (hs := hs) (hW := hW) (m := m) (pc := pc) (σ := σ) (ρ := ρ) (hp := hp) (hlo := hlo) (hlo2 := hlo2) (hu := hu) (hk := hk) (hWa := hWa) (hpr := hpr) (ih_lowB_ok_rest := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowB_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ _ rest) (ih_lowEnd_ok_err := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowEnd_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ err)
   | _, Γ, Λ, _, .bindAxiomOptElse (e := none) a args he hcall hd hgd hr err rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr =>
@@ -216,7 +229,12 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
   | _, Γ, Λ, _, .narrow e low high err rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr =>
       lowB_ok_narrow (hS := hS) (hA := hA) (hlo0 := hlo0) (hens := hens) (e := e) (low := low) (high := high) (err := err) (rest := rest) (c := c) (top := top) (h := h) (hK := hK) (hs := hs) (hW := hW) (m := m) (pc := pc) (σ := σ) (ρ := ρ) (hp := hp) (hlo := hlo) (hlo2 := hlo2) (hu := hu) (hk := hk) (hWa := hWa) (hpr := hpr) (ih_lowB_ok_rest := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowB_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ _ rest) (ih_lowEnd_ok_err := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowEnd_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ err)
   | _, Γ, Λ, _, .narrowRequired e low high rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr =>
-      blockNarrowRequired_case hS hA hlo0 hens (fun {pr ex} => lowB_ok hS hA hlo0 hens) c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
+      blockNarrowRequired_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens
+        (e := e) (low' := low) (high' := high) (rest := rest)
+        (fun {pr ex} => lowB_ok (O := O) (passes := passes) (R := R)
+          (fp := fp) (K := K) (Ks := Ks) (σ0 := σ0)
+          (reserved := reserved) (pr := pr) (ex := ex) hS hA hlo0 hens rest)
+        c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   | _, Γ, Λ, _, .check cnd err rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr =>
       lowB_ok_check (hS := hS) (hA := hA) (hlo0 := hlo0) (hens := hens) (cnd := cnd) (err := err) (rest := rest) (c := c) (top := top) (h := h) (hK := hK) (hs := hs) (hW := hW) (m := m) (pc := pc) (σ := σ) (ρ := ρ) (hp := hp) (hlo := hlo) (hlo2 := hlo2) (hu := hu) (hk := hk) (hWa := hWa) (hpr := hpr) (ih_lowB_ok_rest := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowB_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ _ rest) (ih_lowEnd_ok_err := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowEnd_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ err)
   | _, Γ, Λ, _, .float op a b low high rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr =>
@@ -273,7 +291,15 @@ theorem lowEnd_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f 
   | _, Γ, Λ, .bindAxiomOpt (e := none) a args he hcall hd hgd rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr =>
       lowEnd_ok_bindAxiomOpt_none (hS := hS) (hA := hA) (hlo0 := hlo0) (hens := hens) (a := a) (args := args) (he := he) (hcall := hcall) (hd := hd) (hgd := hgd) (rest := rest) (c := c) (top := top) (h := h) (hK := hK) (hs := hs) (hW := hW) (m := m) (pc := pc) (σ := σ) (ρ := ρ) (hp := hp) (hlo := hlo) (hu := hu) (hk := hk) (hWa := hWa) (hpr := hpr) (ih_lowEnd_ok_rest := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowEnd_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ rest)
   | _, Γ, Λ, .bindCallIndElse p args he proof0 proof1 err rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr =>
-      endIndElse_case hS hA hlo0 hens (fun {pr ex} => lowEnd_ok hS hA hlo0 hens) (fun {pr ex} => lowEnd_ok hS hA hlo0 hens) c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
+      endIndElse_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens
+        (p := p) (args := args) (he := he) (proof0 := proof0) (proof1 := proof1) (err := err) (rest := rest)
+        (fun {pr ex} => lowEnd_ok (O := O) (passes := passes) (R := R)
+          (fp := fp) (K := K) (Ks := Ks) (σ0 := σ0)
+          (reserved := reserved) (pr := pr) (ex := ex) hS hA hlo0 hens err)
+        (fun {pr ex} => lowEnd_ok (O := O) (passes := passes) (R := R)
+          (fp := fp) (K := K) (Ks := Ks) (σ0 := σ0)
+          (reserved := reserved) (pr := pr) (ex := ex) hS hA hlo0 hens rest)
+        c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
   | _, Γ, Λ, .bindAxiomOptElse (e := some τ) a args he hcall hd hgd hr err rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr =>
       lowEnd_ok_bindAxiomOptElse_some (hS := hS) (hA := hA) (hlo0 := hlo0) (hens := hens) (a := a) (args := args) (he := he) (hr := hr) (hcall := hcall) (hd := hd) (hgd := hgd) (err := err) (rest := rest) (c := c) (top := top) (h := h) (hK := hK) (hs := hs) (hW := hW) (m := m) (pc := pc) (σ := σ) (ρ := ρ) (hp := hp) (hlo := hlo) (hu := hu) (hk := hk) (hWa := hWa) (hpr := hpr) (ih_lowEnd_ok_err := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowEnd_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ err) (ih_lowEnd_ok_rest := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowEnd_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ rest)
   | _, Γ, Λ, .bindAxiomOptElse (e := none) a args he hcall hd hgd hr err rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr =>
@@ -287,7 +313,12 @@ theorem lowEnd_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f 
   | _, Γ, Λ, .narrow e low high err rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr =>
       lowEnd_ok_narrow (hS := hS) (hA := hA) (hlo0 := hlo0) (hens := hens) (e := e) (low := low) (high := high) (err := err) (rest := rest) (c := c) (top := top) (h := h) (hK := hK) (hs := hs) (hW := hW) (m := m) (pc := pc) (σ := σ) (ρ := ρ) (hp := hp) (hlo := hlo) (hu := hu) (hk := hk) (hWa := hWa) (hpr := hpr) (ih_lowEnd_ok_err := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowEnd_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ err) (ih_lowEnd_ok_rest := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowEnd_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ rest)
   | _, Γ, Λ, .narrowRequired e low high rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr =>
-      endNarrowRequired_case hS hA hlo0 hens (fun {pr ex} => lowEnd_ok hS hA hlo0 hens) c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
+      endNarrowRequired_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens
+        (e := e) (low' := low) (high' := high) (rest := rest)
+        (fun {pr ex} => lowEnd_ok (O := O) (passes := passes) (R := R)
+          (fp := fp) (K := K) (Ks := Ks) (σ0 := σ0)
+          (reserved := reserved) (pr := pr) (ex := ex) hS hA hlo0 hens rest)
+        c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
   | _, Γ, Λ, .exchange g neu proof0 proof1 rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr =>
       lowEnd_ok_exchange (hS := hS) (hA := hA) (hlo0 := hlo0) (hens := hens) (g := g) (neu := neu) (proof0 := proof0) (proof1 := proof1) (rest := rest) (c := c) (top := top) (h := h) (hK := hK) (hs := hs) (hW := hW) (m := m) (pc := pc) (σ := σ) (ρ := ρ) (hp := hp) (hlo := hlo) (hu := hu) (hk := hk) (hWa := hWa) (hpr := hpr) (ih_lowEnd_ok_rest := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowEnd_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ rest)
   | _, Γ, Λ, .retScoped e R, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr => by
