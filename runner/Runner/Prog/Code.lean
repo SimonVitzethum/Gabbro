@@ -64,8 +64,10 @@ def fpCompareH (pred : FPCompare) (format : FPFormat) : List Ins :=
   binH (fpOperands format ++ [.compareScalar pred format .xmm0 .xmm1,
     .movFromXmm format .rax .xmm0, .alui .and .rax 1])
 
-def fpFromIntH (format : FPFormat) : List Ins :=
-  binH [.fromIntScalar format .xmm0 .rax, .movFromXmm format .rax .xmm0]
+def fpFromIntBody (format : FPFormat) : List Ins :=
+  [.fromIntScalar format .xmm0 .rax, .movFromXmm format .rax .xmm0]
+
+def fpFromIntH (format : FPFormat) : List Ins := binH (fpFromIntBody format)
 
 def fpTruncateH (format : FPFormat) : List Ins :=
   binH [.movToXmm format .xmm0 .rax, .truncateScalar format .rax .xmm0]
@@ -127,12 +129,13 @@ def fpFiniteH (format : FPFormat) : List Ins :=
   binH (fpNormalizeInput format ++ fpInfinity .rdx format ++
     [.alu .and .rax .rdx, .alu .cmp .rax .rdx, .set .nz .rax, .zx8 .rax .rax])
 
-def fpFromUIntH (format : FPFormat) : List Ins :=
-  let low := [.fromIntScalar format .xmm0 .rax, .movFromXmm format .rax .xmm0]
-  let high := [.mov .rsi .rax, .alui .and .rsi 1, .movi .rcx 1, .shr .rax, .alu .or .rax .rsi,
+def fpFromUIntHigh (format : FPFormat) : List Ins :=
+  [.mov .rsi .rax, .alui .and .rsi 1, .movi .rcx 1, .shr .rax, .alu .or .rax .rsi,
     .fromIntScalar format .xmm0 .rax, .scalar .add format .xmm0 .xmm0,
     .movFromXmm format .rax .xmm0]
-  binH ([.alu .test .rax .rax] ++ fpChoose .s high low)
+
+def fpFromUIntH (format : FPFormat) : List Ins :=
+  binH ([.alu .test .rax .rax] ++ fpChoose .s (fpFromUIntHigh format) (fpFromIntBody format))
 
 def fpTruncateBody (format : FPFormat) : List Ins :=
   [.movToXmm format .xmm0 .rax, .truncateScalar format .rax .xmm0]

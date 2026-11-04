@@ -16,7 +16,7 @@ macro "fp_corr" hm:term : tactic => `(tactic| (
     binBody, fpOperands, runL, exec, fld, sld, sst, mb, ms, ea,
     X.get, X.set, X.setXmm, X.xmmWord, X.fpReady, rd64, rd32,
     fpSequence, Runner.fp, NativeFPOp.inputs, NativeFPOp.resultWord, FPArith.native, FPCompare.native,
-    fpLow32, BitVec.setWidth_setWidth_of_le, ready]
+    fpLow32, uint64StickyHalf, BitVec.setWidth_setWidth_of_le, ready]
   repeat (first | (apply corr_ask; intro _) | (apply corr_opt; intro _))
   simp (disch := decide) [runL, exec, X.get, X.set, X.setScalar, X.setXmm, X.xmmWord,
     X.fpReady, X.nof, aluStep, aluOp, fpLow32, BitVec.setWidth_setWidth_of_le,
