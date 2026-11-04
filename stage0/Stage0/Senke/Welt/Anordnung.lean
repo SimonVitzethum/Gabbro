@@ -39,7 +39,8 @@ theorem bild_wurzel_ok_u {u : UProg} {P : Programm (declOf u)} {O : Orakel (decl
     (hj : j < starts.length) (σ : World (declOf u))
     (hval : ∀ τ (x : Var ((declOf u).params starts[j].1) τ), ValueValid b.Y τ (starts[j].2.get x))
     (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) (hV : SichtOK O) :
-    match rufAt P O b.passes b.depth starts[j].1 σ starts[j].2 with
+    match (rufAt (D := declOf u) P O b.passes b.depth (starts[j]'hj).1 σ (starts[j]'hj).2 :
+        RufAusgang (D := declOf u) (starts[j]'hj).1) with
     | .ok _ _ => ∃ t' m' q, Star ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
         BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = 60
     | .logik e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
@@ -49,7 +50,8 @@ theorem bild_wurzel_ok_u {u : UProg} {P : Programm (declOf u)} {O : Orakel (decl
     | _ => False := by
   have h := bild_wurzel_ok (O := O) (passes := passes) hb hfs (fun x h => layU_in u tor x h)
     (fun x => layU_dis u tor x) (fun x => by simp only [layU]; omega) (fun x => layU_sync u tor x) hm j hj σ hval hWa hT hV
-  generalize rufAt P O b.passes b.depth starts[j].1 σ starts[j].2 = o at h ⊢
+  generalize (rufAt (D := declOf u) P O b.passes b.depth (starts[j]'hj).1 σ (starts[j]'hj).2 :
+    RufAusgang (D := declOf u) (starts[j]'hj).1) = o at h ⊢
   cases o <;> exact h
 
 end Gabbro.Stage0.Senke
