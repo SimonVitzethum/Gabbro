@@ -33,40 +33,46 @@ theorem fp_fromUInt64_body {L : Lay} {y : X} (format : FPFormat)
   have skipSmall : lenOf low + lenOf [.jmp 0] < 2 ^ 31 := by cases format <;> decide
   have highSmall : lenOf high < 2 ^ 31 := by cases format <;> decide
   have ready := hmode
-  simp only [X.fpReady] at ready
-  apply go first y _ (by decide) (code_prefix code)
-  simp [IR.f2, IR.f3, IR.ld, IR.slot, fpFromUInt64, first, runL, exec, fld, sld,
-    mb, ms, ea, X.get, X.set, aluStep, Cond.eval, rd64, rd32]
-  repeat (first | (apply corrM_ask; intro _) | (apply corrM_opt; intro _))
+  simp only [X.fpReady, beq_iff_eq] at ready
+  apply go first y _ (by cases format <;> decide) (code_prefix code)
+  simp only [IR.f2, IR.f3, IR.ld, IR.slot, fpFromUInt64, first]
+  fp_reduce ready
+  repeat (first
+    | (apply corrM_ask; intro _; fp_reduce ready)
+    | (apply corrM_opt; intro _; fp_reduce ready)
+    | (rw [runL]; fp_reduce ready))
   rename_i _ _ _ va _ _ _ vb
-  simp only [CorrM]
+  try simp only [CorrM]
   by_cases signed : va.1.msb = true
   · simp only [signed, ↓reduceIte]
-    refine straight_go htb hmode (high ++ finish) _ _ (by decide) ?_ ?_
+    refine straight_go htb hmode (high ++ finish) _ _ (by cases format <;> decide) ?_ ?_
     · simpa (disch := omega) [first, low, high, finish, fpFromIntBody, fpFromUIntHigh,
+        fld, sld, sst, mb, ms,
         lenOfL, lenOf, enc, regEnc, memEnc, le32, BitVec.ofNat_add, BitVec.add_assoc,
         sx32_ofNat, X.set, aluStep] using highCode
     · cases format <;>
         simp only [high, fpFromUIntHigh, finish]
       all_goals fp_corr hmode
-  · simp only [signed, ↓reduceIte]
-    apply go (low ++ [.jmp (BitVec.ofNat 32 (lenOf high))]) _ _ (by decide)
+  · simp only [signed]
+    apply go (low ++ [.jmp (BitVec.ofNat 32 (lenOf high))]) _ _ (by cases format <;> decide)
       (code_prefix (by
-        simpa [first, low, lenOfL, lenOf, enc, regEnc, memEnc, le32,
+        simpa [first, low, fld, sld, sst, mb, ms, lenOfL, lenOf, enc, regEnc, memEnc, le32,
           BitVec.ofNat_add, BitVec.add_assoc, X.set, aluStep] using lowCode))
     cases format
     all_goals
-      simp (disch := omega) [low, fpFromIntBody, high, fpFromUIntHigh, runL, exec,
-        fpFromUInt64, Runner.fp, NativeFPOp.inputs, NativeFPOp.resultWord,
-        X.fpReady, ready, X.get, X.set, X.xmmWord, X.setXmm, X.setScalar,
-        fpLow32, BitVec.setWidth_setWidth_of_le]
-      repeat (first | (apply corrM_ask; intro _) | (apply corrM_opt; intro _))
-      simp only [CorrM]
+      simp only [low, fpFromIntBody, List.cons_append, List.nil_append]
+      fp_reduce ready
+      repeat (first
+        | (apply corrM_ask; intro _; fp_reduce ready)
+        | (apply corrM_opt; intro _; fp_reduce ready)
+        | (rw [runL]; fp_reduce ready))
+      try simp only [CorrM]
       refine straight_go htb hmode finish _ _ (by decide) ?_ ?_
       · simpa (disch := omega) [first, low, high, finish, fpFromIntBody, fpFromUIntHigh,
+          fld, sld, sst, mb, ms,
           lenOfL, lenOf, enc, regEnc, memEnc, le32, BitVec.ofNat_add, BitVec.add_assoc,
           sx32_ofNat, X.get, X.set, X.setScalar, X.setXmm, X.nof, aluStep] using finishCode
-      · simp only [finish]
+      · try dsimp only [finish]
         corr
 
 end Runner.Beweis
