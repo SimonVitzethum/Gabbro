@@ -6,6 +6,7 @@ public import NativeFloat.NormalForm
 import all NativeFloat.NormalForm
 public import Init.Data.OfScientific
 public import Init.Data.SInt.Float
+import all Init.Data.SInt.Float
 import Init.Data.SInt.Lemmas
 @[expose] public section
 
@@ -81,7 +82,8 @@ private theorem mul_one_unpacked (x : Float.Model) :
   | finite s m e positive =>
       have target := unpack_target (bits := x.toBits.toBitVec) decoded
       have result := exact_scaled Format.binary64 s m 52 e positive target
-      simpa only [UnpackedFloat.mul, sign_mul_one, Nat.shiftLeft_eq, Int.sub_eq_add_neg] using result
+      simpa only [UnpackedFloat.mul, sign_mul_one, Nat.shiftLeft_eq,
+        Int.sub_eq_add_neg, Int.cast_ofNat_Int] using result
 
 /-- Multiplication by the actual native conversion of integer one preserves
     the complete native value, including infinities and canonical NaN. -/
@@ -137,7 +139,9 @@ private theorem repeat_sum {α : Type} (f : α → α) (a b : Nat) (x : α) :
     Nat.repeat f (a + b) x = Nat.repeat f b (Nat.repeat f a x) := by
   induction b with
   | zero => rfl
-  | succ b ih => simp only [Nat.add_succ, Nat.repeat, ih]
+  | succ b ih =>
+      change f (Nat.repeat f (a + b) x) = f (Nat.repeat f b (Nat.repeat f a x))
+      exact congrArg f ih
 
 private theorem integer_initial (m k : Nat) (positive : 0 < m) :
     shiftToTargetExponent Format.binary64 (m <<< k) (-(k : Int)) .exact =
@@ -166,7 +170,9 @@ private theorem round_integer_prescale (s : Sign) (m : Nat) (positive : 0 < m) :
     omega
   have initial : shiftToTargetExponent Format.binary64 (m <<< a) (-(a : Int)) .exact =
       shiftToTargetExponent Format.binary64 (m <<< 53) (-53) .exact := by
-    rw [integer_initial m a positive, integer_initial m 53 positive]
+    have fixed := integer_initial m 53 positive
+    simp only [Int.cast_ofNat_Int] at fixed
+    rw [integer_initial m a positive, fixed]
     change (Nat.repeat ExtendedMantissa.shiftRightOne (t + a).toNat ⟨m <<< a, false, false⟩,
         -(a : Int) + (t + a).toNat) =
       (Nat.repeat ExtendedMantissa.shiftRightOne (t + 53).toNat ⟨m <<< 53, false, false⟩,
@@ -292,6 +298,7 @@ theorem ofInt_model (z : Int) : Float.ofInt z = Float.ofModel (Float.Model.ofInt
 theorem ofInt_signed64 (z : Int) (lower : -(2 ^ 63) ≤ z) (upper : z < 2 ^ 63) :
     Float.ofInt z = (Int64.ofInt z).toFloat := by
   rw [ofInt_model]
+  unfold Int64.toFloat Float.Model.ofInt64 UnpackedFloat.ofInt64
   change Float.ofModel (Float.Model.ofInt z) =
     Float.ofModel (Float.Model.ofInt (Int64.ofInt z).toInt)
   rw [Int64.toInt_ofInt_of_le lower upper]
@@ -344,15 +351,14 @@ private theorem packed_not_nan (F : Format) (u : UnpackedFloat) (notNan : u.isNa
     (UnpackedFloat.unpack F (UnpackedFloat.pack F u)).isNaN = false := by
   cases u with
   | notANumber => cases notNan
-  | infinity s => exact components_not_nan F s (-1#F.exponentBits) 0
-      (Or.inr (by rw [BitVec.ofNat_eq_ofNat]))
-  | zero s => exact components_not_nan F s 0 0 (Or.inr (by rw [BitVec.ofNat_eq_ofNat]))
+  | infinity s =>
+      exact components_not_nan F s (-1#F.exponentBits) 0 (Or.inr rfl)
+  | zero s => exact components_not_nan F s 0 0 (Or.inr rfl)
   | finite s m e positive =>
       unfold UnpackedFloat.pack
       dsimp only
       split
-      · exact components_not_nan F s (-1#F.exponentBits) 0
-          (Or.inr (by rw [BitVec.ofNat_eq_ofNat]))
+      · exact components_not_nan F s (-1#F.exponentBits) 0 (Or.inr rfl)
       · next noOverflow =>
           split
           · refine components_not_nan F s
