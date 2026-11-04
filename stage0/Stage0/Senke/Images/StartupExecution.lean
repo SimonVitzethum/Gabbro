@@ -24,7 +24,7 @@ theorem bild_kern [CloneOK] {O : Orakel D} [hT : TorOK Yb O] [hV : SichtOK O] {p
     | .logik e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m (logikCode e)
     | .hardware e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m (hwCode e)
     | _ => False := by
-  obtain ⟨c1, c2, c3, ⟨stacks, madeStacks, loadedStacks⟩, _⟩ := h.code hm
+  obtain ⟨c1, c2, c3, ⟨stackBytes, madeStacks, loadedStacks⟩, _⟩ := h.code hm
   obtain ⟨frame, made, hframe⟩ := startStackBytes_frame madeStacks fp0 loadedStacks 0 (by simp)
   simp only [List.getElem_cons_zero, Nat.mul_zero, Nat.add_zero] at made hframe
   have hfit := h.hfit
@@ -106,7 +106,7 @@ theorem bild_wurzel {O : Orakel D} [hT : TorOK Yb O] [hV : SichtOK O] {passes : 
     | .hardware e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length + startLen + startLen * j)),
         BitVec.ofNat 64 (fp0 + 8 * (Ks * (j + 1)))⟩ m (hwCode e)
     | _ => False := by
-  obtain ⟨c1, c2, c3, ⟨stacks, madeStacks, loadedStacks⟩, _⟩ := h.code hm
+  obtain ⟨c1, c2, c3, ⟨stackBytes, madeStacks, loadedStacks⟩, _⟩ := h.code hm
   obtain ⟨frame, made, hframe⟩ := startStackBytes_frame madeStacks fp0 loadedStacks (j + 1)
     (by simp only [List.length_cons, h.hargsLength]; omega)
   simp only [List.getElem_cons_succ, hargs] at made
