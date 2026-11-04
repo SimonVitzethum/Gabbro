@@ -44,9 +44,9 @@ def routineRoundPackWord (sign index magnitude : Runner.W) : Runner.W :=
 def routineRoundPackL (d : Nat) (sign index magnitude : Nat → Option (List II × Nat)) :
     Option (List II × Nat) :=
   withWordInputsL d [sign, index, magnitude] fun retained d =>
-    let sign := retained ⟨0, by decide⟩
-    let index := retained ⟨1, by decide⟩
-    let magnitude := retained ⟨2, by decide⟩
+    let sign := retained ⟨0, by simp⟩
+    let index := retained ⟨1, by simp⟩
+    let magnitude := retained ⟨2, by simp⟩
     let q := fun j => routineRoundMagnitudeL j magnitude
     let hidden := fun j => some (konstWL 4 (2 ^ 52) j)
     let carry := fun j => wordL 14 j (q j) (some (konstWL 4 (2 ^ 53) (j + 1)))
@@ -74,18 +74,18 @@ theorem routineRoundPackL_ok {reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Ru
   apply withWordInputsL_ok (values := fun i => match i.val with | 0 => sv | 1 => ev | _ => mv)
   · intro ⟨i, hi⟩
     cases i with
-    | zero => exact hs
+    | zero => exact @hs
     | succ i =>
       cases i with
-      | zero => exact he
+      | zero => exact @he
       | succ i =>
         have eq : i = 0 := by simp only [List.length_cons, List.length_nil] at hi; omega
         subst i
-        exact hm
+        exact @hm
   · intro Δ ρw retained readable
-    have hs : WordCode (L := L) ρw (fun _ => True) _ sv := readable ⟨0, by decide⟩
-    have he : WordCode (L := L) ρw (fun _ => True) _ ev := readable ⟨1, by decide⟩
-    have hm : WordCode (L := L) ρw (fun _ => True) _ mv := readable ⟨2, by decide⟩
+    have hs : WordCode (L := L) ρw (fun _ => True) _ sv := readable ⟨0, by simp⟩
+    have he : WordCode (L := L) ρw (fun _ => True) _ ev := readable ⟨1, by simp⟩
+    have hm : WordCode (L := L) ρw (fun _ => True) _ mv := readable ⟨2, by simp⟩
     have q : WordCode (L := L) ρw (fun _ => True) _ _ := routineRoundMagnitudeL_ok hm
     have hidden : WordCode (L := L) ρw (fun _ => True) _ _ := WordCode.konst (L := L) (ρ := ρw) (W := fun _ => True) (2 ^ 52) (by decide)
     have carry : WordCode (L := L) ρw (fun _ => True) _ _ := WordCode.bin q (WordCode.konst (2 ^ 53) (by decide))
