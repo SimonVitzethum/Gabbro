@@ -75,7 +75,10 @@ theorem stmt_unter (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .locks L hr body, σ, ρ, hscope, hh => by
       have hscope_body : body.ScopesOk := by scopes_treu
       simp only [execStmt]
-      exact (block_unter bo hbV body (σ.nimmt L) ρ hscope_body (heldB_locks L hh)).mapWelt
+      rcases block_unter bo hbV body (σ.nimmt L) ρ hscope_body (heldB_locks L hh) with
+        h | ⟨m, h1, hE⟩
+      · rw [h]; exact Or.inl rfl
+      · exact Or.inr ⟨m, by rw [h1]; cases m <;> rfl, hE⟩
   | .breaking i body, σ, ρ, hscope, hh => by
       have hscope_body : body.ScopesOk := by scopes_treu
       simp only [execStmt]

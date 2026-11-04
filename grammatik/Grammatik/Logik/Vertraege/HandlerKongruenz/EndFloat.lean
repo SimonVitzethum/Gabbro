@@ -36,10 +36,9 @@ theorem end_float_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
       (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ).x) = ov at ⊢
   cases ov with
   | some v =>
-      simp only [hv] at ⊢
-      have heq := ih_rest _ _ hscope_rest (hl.heldB hh)
-      simp only [hv] at ⊢
+      have heq := ih_rest _ (.cons v ρ) hscope_rest (hl.heldB hh)
       exact heq.schrumpf
+  | none => exact EndUnter.refl _
 
 
 theorem end_floatLit_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
@@ -58,10 +57,9 @@ theorem end_floatLit_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
   generalize hv : gleitPasst lo hi (bruch q) = ov at ⊢
   cases ov with
   | some v =>
-      simp only [hv] at ⊢
-      have heq := ih_rest σ _ hscope_rest hh
-      simp only [hv] at ⊢
+      have heq := ih_rest σ (.cons v ρ) hscope_rest hh
       exact heq.schrumpf
+  | none => exact EndUnter.refl _
 
 
 theorem end_floatOf_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
@@ -83,10 +81,9 @@ theorem end_floatOf_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
       (gleitAusInt (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n) = ov at ⊢
   cases ov with
   | some v =>
-      simp only [hv] at ⊢
-      have heq := ih_rest _ _ hscope_rest (hl.heldB hh)
-      simp only [hv] at ⊢
+      have heq := ih_rest _ (.cons v ρ) hscope_rest (hl.heldB hh)
       exact heq.schrumpf
+  | none => exact EndUnter.refl _
 
 
 theorem end_floatNarrow_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
@@ -112,14 +109,10 @@ theorem end_floatNarrow_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
       (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = ov at ⊢
   cases ov with
   | some v =>
-      simp only [hv] at ⊢
-      have heq := ih_rest _ _ hscope_rest (hl.heldB hh)
-      simp only [hv] at ⊢
+      have heq := ih_rest _ (.cons v ρ) hscope_rest (hl.heldB hh)
       exact heq.schrumpf
   | none =>
-      simp only [hv] at ⊢
       have heq := ih_sonst _ ρ hscope_sonst (hl.heldB hh)
-      simp only [hv] at ⊢
       exact heq
 
 
