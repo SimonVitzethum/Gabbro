@@ -12,7 +12,10 @@ namespace Gabbro.Grammatik.Parser.SourceFolds
 structure FoldDesc where
   kind : XKind
   binder : String
-  lo hi filter value : SExpr
+  lo : SExpr
+  hi : SExpr
+  filter : SExpr
+  value : SExpr
   empty : Option SExpr
   accTy : STyp
   array : String
@@ -43,14 +46,20 @@ def hasRangeFoldList : List SExpr → Bool
   | e :: es => hasRangeFold e || hasRangeFoldList es
 end
 
+def hasRangeFoldEnde : Option SEnde → Bool
+  | none => false
+  | some (.ret e) => (e.map hasRangeFold).getD false
+  | some _ => false
+
 mutual
 def hasRangeFoldAnw : SAnw → Bool
   | .bind _ _ _ e | .bindQ _ _ _ e | .bindAxiomOpt _ _ e => hasRangeFold e
   | .set a _ b | .emit a b _ => hasRangeFold a || hasRangeFold b
   | .shift e _ _ | .trimReq e _ => hasRangeFold e
   | .call _ args | .callQ _ args => hasRangeFoldList args
-  | .cond c a bs o => hasRangeFold c || hasRangeFoldAnw a ||
-      hasRangeFoldAnwList bs || (o.map hasRangeFoldAnw).getD false
+  | .cond c a bs none => hasRangeFold c || hasRangeFoldAnw a || hasRangeFoldAnwList bs
+  | .cond c a bs (some other) => hasRangeFold c || hasRangeFoldAnw a ||
+      hasRangeFoldAnwList bs || hasRangeFoldAnw other
   | .elsif c a => hasRangeFold c || hasRangeFoldAnw a
   | .watch _ a | .child a | .waive _ a => hasRangeFoldAnw a
   | .cases g arms => hasRangeFold g || hasRangeFoldAnwList arms
@@ -60,10 +69,11 @@ def hasRangeFoldAnw : SAnw → Bool
       (inv.map hasRangeFold).getD false || hasRangeFoldAnw body
   | .retry _ a | .loop _ a | .trim _ _ a => hasRangeFoldAnw a
   | .locks _ e a => hasRangeFold e || hasRangeFoldAnw a
-  | .leave _ | .next _ | .start _ | .other _ => false
+  | .leave _ | .next _ | .start _ | .other _ | .retires _ => false
   | .await _ _ e _ | .swap _ _ e _ | .free e => hasRangeFold e
   | .ret e => (e.map hasRangeFold).getD false
-  | .alloc _ _ _ _ e o => hasRangeFold e || (o.map hasRangeFoldAnw).getD false
+  | .alloc _ _ _ _ e none => hasRangeFold e
+  | .alloc _ _ _ _ e (some other) => hasRangeFold e || hasRangeFoldAnw other
   | .allocVon _ _ _ _ => false
   | .reset _ r => ((r.map fun p => hasRangeFold p.1 || hasRangeFold p.2).getD false)
   | .grow _ e a => hasRangeFold e || hasRangeFoldAnw a
@@ -75,13 +85,17 @@ def hasRangeFoldAnw : SAnw → Bool
   | .genericCall _ _ args => hasRangeFoldList args
   | .callIndElse pointer args _ body => hasRangeFold pointer || hasRangeFoldList args || hasRangeFoldAnw body
   | .callElse _ args _ body => hasRangeFoldList args || hasRangeFoldAnw body
+termination_by statement => sizeOf statement
+decreasing_by
+  all_goals simp_wf
+  all_goals omega
 def hasRangeFoldAnwList : List SAnw → Bool
   | [] => false
   | a :: as => hasRangeFoldAnw a || hasRangeFoldAnwList as
-def hasRangeFoldEnde : Option SEnde → Bool
-  | none => false
-  | some (.ret e) => (e.map hasRangeFold).getD false
-  | some _ => false
+termination_by statements => sizeOf statements
+decreasing_by
+  all_goals simp_wf
+  all_goals omega
 end
 
 /-- A range fold obtains its finite domain from an indexed array variable or a
@@ -89,7 +103,7 @@ end
     fold node contributes its own domain to its own loop: collection looks
     through it, so an outer fold over one collection may contain an inner fold
     over another. -/
-private def indexedArrays (binder : String) : Nat → SExpr → Except String (List String)
+def indexedArrays (binder : String) : Nat → SExpr → Except String (List String)
   | 0, _ => .error "fold range: operand nesting limit"
   | n + 1, .index (.variable array) (.variable index) =>
     pure (if strEq index binder then [array] else [])
@@ -104,9 +118,9 @@ private def indexedArrays (binder : String) : Nat → SExpr → Except String (L
     else do return (← args.mapM (indexedArrays binder n)).flatten
   | _ + 1, _ => pure []
 
+mutual
 /-- Pre-order tags for every fold node: the index names the generated bindings,
     so no name supply threads through the expansion. -/
-mutual
 def tagFoldNodes : SExpr → Nat → List (SExpr × Nat) × Nat
   | e, next =>
     match e with
@@ -115,15 +129,15 @@ def tagFoldNodes : SExpr → Nat → List (SExpr × Nat) × Nat
         let (inner, next') := tagFoldNodesList args (next + 1)
         (((e, next) :: inner), next')
       else tagFoldNodesList args next
-    | .field x _, next | .arrow x _, next | .un _ x, next | .old x, next =>
+    | .field x _ | .arrow x _ | .un _ x | .old x =>
       tagFoldNodes x next
-    | .index a b, next | .bin _ a b, next =>
+    | .index a b | .bin _ a b =>
       let (left, mid) := tagFoldNodes a next
       let (right, done) := tagFoldNodes b mid
       (left ++ right, done)
-    | .call _ args, next | .built _ args, next =>
+    | .call _ args | .built _ args =>
       tagFoldNodesList args next
-    | _, next => ([], next)
+    | _ => ([], next)
 def tagFoldNodesList : List SExpr → Nat → List (SExpr × Nat) × Nat
   | [], next => ([], next)
   | e :: es, next =>
@@ -169,7 +183,7 @@ theorem checkBoundsFree_ok {lo hi : SExpr} (h : checkBoundsFree lo hi = .ok ()) 
     | true => simp [h1, h2] at h
     | false =>
       simp [h1, h2] at h
-      exact ⟨h1, h2⟩
+      exact ⟨rfl, rfl⟩
 
 /-- The declared capacity of a table with a literal count and no provider. A
     provider-backed table has no static capacity here; its folds stay refused. -/
@@ -379,8 +393,8 @@ def expandNested : Nat → List SItemTief → Spec.Locals → List String →
           let (emp', se) ← expandNested fuel source locals (d.binder :: chain) tags emp
           pure (some emp', se)
       let tmp := resultName idx
-      let prefix := buildFoldPrefix d idx filter' value' sF sV sE empty' tests
-      pure (SExpr.variable tmp, prefix ++ [SAnw.bind false tmp none (.variable (accName idx))])
+      let foldPrelude := buildFoldPrefix d idx filter' value' sF sV sE empty' tests
+      pure (SExpr.variable tmp, foldPrelude ++ [SAnw.bind false tmp none (.variable (accName idx))])
     | none =>
       match e with
       | .field x f => do
@@ -427,7 +441,8 @@ def returnFold (source : List SItemTief) (locals : Spec.Locals)
     match matchFoldNode e with
     | none => pure (.ret (some e))
     | some _ => do
-      let some _ := result | throw "fold range: explicit result required"      let tags := (tagFoldNodes e 0).1
+      let some _ := result | throw "fold range: explicit result required"
+      let tags := (tagFoldNodes e 0).1
       if hasDuplicateTags tags then throw "fold range: duplicate nested fold"
       let (d, idx, tests) ← parseAndCheck source locals [] tags result e
       let used := d.binder :: locals.map Prod.fst ++
@@ -444,8 +459,8 @@ def returnFold (source : List SItemTief) (locals : Spec.Locals)
           let (emp', se) ← expandNested 32 source locals [d.binder] tags emp
           pure (some emp', se)
       let acc := accName idx
-      let prefix := buildFoldPrefix d idx filter' value' sF sV sE empty' tests
-      pure (.block prefix (some (.ret (some (.variable acc)))))
+      let foldPrelude := buildFoldPrefix d idx filter' value' sF sV sE empty' tests
+      pure (.block foldPrelude (some (.ret (some (.variable acc)))))
   | statement => pure statement
 
 end Gabbro.Grammatik.Parser.SourceFolds
