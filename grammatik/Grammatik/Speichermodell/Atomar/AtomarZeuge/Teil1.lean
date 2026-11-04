@@ -120,16 +120,17 @@ theorem fussWAB_of_fussWB (h : fussWB P S fs ws = true) : fussWAB P S fs ws = tr
   exact Or.inl h2
 
 /-- **EMBEDDING: every program the goal's checker accepts, `AkzeptiertA` accepts.** -/
-theorem akzeptiertA_of_akzeptiert {aks : List (Kernzelle.AccumulatorDecl D)}
-    (h : Akzeptiert P S fs ls cs ws aks = true) :
+theorem akzeptiertA_of_akzeptiert {axEq : DecidableEq D.Ax}
+    {aks : List (Kernzelle.AccumulatorDecl D)}
+    (h : @Akzeptiert D _ axEq P S fs ls cs ws aks [] [] [] = true) :
     AkzeptiertA P S fs ls cs ws = true := by
   unfold Akzeptiert at h
   simp only [GuestBoundary.admissionB_nil, Bool.and_true] at h
   unfold AkzeptiertA
   simp only [Bool.and_eq_true] at h ⊢
-  -- the handler component `maskenB` (Opus agent H), C18 `resetB`, C02 `libraryB`, C15
-  -- `accumulatorB` and C16 `checkB` are not components of `AkzeptiertA`
-  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, -⟩, -⟩, -⟩, -⟩, -⟩ := h
+  -- Project the shared components from the complete canonical checker.
+  have hcore := h.1.1.1.1.1.1.1
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩ := hcore
   exact ⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, fussWAB_of_fussWB h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩
 
 omit [DecidableEq D.Fn] in
@@ -312,6 +313,7 @@ theorem w_sprache_akzeptiertA {sp : Speicher D}
         ZugriffG (Ws i).g (Ws (i + 1)).g (ts i) c → ZugriffG (Ws j).g (Ws (j + 1)).g (ts j) c →
         (SchreibG (Ws i).g (Ws (i + 1)).g (ts i) c ∨ SchreibG (Ws j).g (Ws (j + 1)).g (ts j) c) →
         ¬ AtomarAusgenommen c → ∃ L, Bewacht c L ∧ GeordnetG (fun k => (Ws k).g) ts L i j) := by
+  classical
   obtain ⟨hAbg, hWu, hF, hex⟩ := akzeptiertA_ok hvoll hAk hZ
   have hAk' := hAk
   unfold AkzeptiertA at hAk'
@@ -351,6 +353,8 @@ end Sprache
 namespace AtomarZeuge
 
 open NIZeuge
+
+local instance : DecidableEq nD.Ax := inferInstanceAs (DecidableEq Empty)
 
 /-- **The flag is refused by the goal's checker** (configuration 1: `kern` writes the atomic
     `konfig`, `hauptA`/`hauptB` read it, no lock)... -/
