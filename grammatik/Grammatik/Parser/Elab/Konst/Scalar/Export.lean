@@ -89,7 +89,7 @@ theorem call_equation (fn : Function params lo hi)
       List.nil_append, fn.body.2.2.equation, ErgExpr.orte, Expr.orte,
       evalErg, eval, Env.get, EndAusgang.schrumpf] <;> rfl
   have noInvariants : (declaration params (.int lo hi)).invs = [] := rfl
-  rw [rufAt]
+  rw [rufAt.eq_def]
   dsimp only
   rw [preCheck, preRead]
   letI : Decidable (@Eq Bool (fn.pre.denote args) false) := Bool.decEq _ _
@@ -134,13 +134,19 @@ theorem Certificate.sound {fn : Function params lo hi}
     simpa only [cert.body] using cert.range
   have narrowedEq : (⟨(fn.body.2.2.denote args).n, hr.1, hr.2⟩ : Zahl lo hi) =
       ⟨value, cert.range.1, cert.range.2⟩ := Zahl.ext_n cert.body
+  have postNarrowed : @Eq Bool (fn.post.denote
+      (.cons (⟨(fn.body.2.2.denote args).n, hr.1, hr.2⟩ : Zahl lo hi) args)) true :=
+    (congrArg (fun result : Zahl lo hi => fn.post.denote (.cons result args))
+      narrowedEq).trans cert.ensures
   have hq : ¬ @Eq Bool (fn.post.denote
-      (.cons (⟨value, cert.range.1, cert.range.2⟩ : Zahl lo hi) args)) false := by
+      (.cons (⟨(fn.body.2.2.denote args).n, hr.1, hr.2⟩ : Zahl lo hi) args)) false := by
     intro wrong
-    have impossible : (true : Bool) = false := cert.ensures.symm.trans wrong
+    have impossible : (true : Bool) = false := postNarrowed.symm.trans wrong
     cases impossible
   rw [call_equation]
-  simp only [ite_eq_right hp, dite_eq_left hr, narrowedEq, ite_eq_right hq] <;> rfl
+  simp only [ite_eq_right hp, dite_eq_left hr, ite_eq_right hq]
+  exact congrArg (fun result : Zahl lo hi =>
+    (RufAusgang.ok σ result : RufAusgang (D := declaration params (.int lo hi)) ())) narrowedEq
 
 /-- Checking is deterministic and proof-producing; failures retain a named reason. -/
 def certify (name : String) (fn : Function params lo hi)
