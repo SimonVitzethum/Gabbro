@@ -34,7 +34,8 @@ theorem akteurS_endeGleitVon {D : Deklaration} {P : Programm D} {O : Orakel D} {
   (hv : gleitPasst lo hi (gleitAusInt (eval σ₁ e σ₁ ρ).n) = some v) (neu : List (Ereignis D))
   (hneu : σ₁.spur = neu ++ (M.faeden u).spur) (hΛ : HeldIn Λ (offen (M.faeden u).spur)) :
 
-  let N : RufMaschineG D := { speicher := M.speicher,
+  let N : RufMaschineG D := {
+            speicher := M.speicher,
             faeden :=
               rufUpdateG M.faeden u
                 { stapel := (M.faeden u).stapel,
@@ -99,7 +100,8 @@ theorem akteurS_endeGleitNarrowOk {D : Deklaration} {P : Programm D} {O : Orakel
   (hv : gleitPasst lo hi (eval σ₁ e σ₁ ρ).x = some v) (neu : List (Ereignis D))
   (hneu : σ₁.spur = neu ++ (M.faeden u).spur) (hΛ : HeldIn Λ (offen (M.faeden u).spur)) :
 
-  let N : RufMaschineG D := { speicher := M.speicher,
+  let N : RufMaschineG D := {
+            speicher := M.speicher,
             faeden :=
               rufUpdateG M.faeden u
                 { stapel := (M.faeden u).stapel,
