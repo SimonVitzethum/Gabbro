@@ -11,6 +11,10 @@ namespace Gabbro.Grammatik.Parser.UebersetzeAllg
 
 open Gabbro.Grammatik.Parser.Uebersetze
 
+/-- The table at an index. -/
+def tabAt (u : UProg) (t : Fin u.tabs.length) : UTab :=
+  u.tabs.get t
+
 /-- `strEq` is sound (local copy: `Rundlauf` is outside the import closure here). -/
 theorem strEq_klingt {a b : String} (h : strEq a b = true) : a = b := by
   unfold strEq at h
@@ -22,7 +26,8 @@ theorem strEq_klingt {a b : String} (h : strEq a b = true) : a = b := by
 theorem markFin_get (marken : List String) (m : String) (i : Fin marken.length)
     (h : markFin marken m = some i) : marken.get i = m := by
   unfold markFin at h
-  have hp : strEq (marken.get i) m = true := List.find?_some h
+  have hp : strEq (marken.get i) m = true :=
+    List.find?_some (p := fun j : Fin marken.length => strEq (marken.get j) m) h
   exact strEq_klingt hp
 
 /-- The owner index map (C12, lead decision (a)): the `DataRights.owner` number of a
@@ -82,42 +87,41 @@ def gibtAt (u : UProg) (f : UFn) : List (Fin u.marken.length × Nat) :=
     | none => none
     | some i => if u.tabs.all (fun t => decide (t.owner ≠ some m)) then some (i, 0) else none
 
+/-- A filtered mark flow retains the resolving name, its guard and stage zero. -/
+private theorem markFlow_origin (marken names : List String) (keep : String → Bool)
+    {i : Fin marken.length} {s : Nat}
+    (h : (i, s) ∈ names.filterMap (fun m =>
+      match markFin marken m with
+      | none => none
+      | some j => if keep m then some (j, 0) else none)) :
+    ∃ m ∈ names, markFin marken m = some i ∧ keep m = true ∧ s = 0 := by
+  obtain ⟨m, hmem, hmi⟩ := List.mem_filterMap.mp h
+  cases hm : markFin marken m with
+  | none => simp only [hm, reduceCtorEq] at hmi
+  | some j =>
+    by_cases hk : keep m = true
+    · have hpair : (j, 0) = (i, s) := by simpa [hm, hk] using hmi
+      have hi := congrArg Prod.fst hpair
+      have hs := congrArg Prod.snd hpair
+      cases hi
+      exact ⟨m, hmem, hm, hk, hs.symm⟩
+    · simp [hm, hk] at hmi
+
 /-- A resolved production names no table owner. -/
 theorem gibtAt_keinEigner (u : UProg) (f : UFn) (i : Fin u.marken.length) (s : Nat)
     (h : (i, s) ∈ gibtAt u f) :
     u.tabs.all (fun t => decide (t.owner ≠ some (u.marken.get i))) = true := by
-  unfold gibtAt at h
-  obtain ⟨m, _, hmi⟩ := List.mem_filterMap.mp h
-  cases hm : markFin u.marken m with
-  | none =>
-    simp only [hm, reduceCtorEq] at hmi
-  | some j =>
-    simp only [hm] at hmi
-    cases hall : (u.tabs.all (fun t => decide (t.owner ≠ some m))) with
-    | false =>
-      simp only [hall, reduceCtorEq] at hmi
-    | true =>
-      simp only [hall, Option.some_injEq] at hmi
-      obtain ⟨rfl, rfl⟩ := hmi
-      rw [markFin_get u.marken m i hm]
-      exact hall
+  obtain ⟨m, _, hm, hall, _⟩ := markFlow_origin u.marken f.gibt
+    (fun m => u.tabs.all (fun t => decide (t.owner ≠ some m))) h
+  rw [markFin_get u.marken m i hm]
+  exact hall
 
 /-- Every resolved production is a stage-0 mark. -/
 theorem gibtAt_stufe (u : UProg) (f : UFn) (i : Fin u.marken.length) (s : Nat)
     (h : (i, s) ∈ gibtAt u f) : s = 0 := by
-  unfold gibtAt at h
-  obtain ⟨m, _, hmi⟩ := List.mem_filterMap.mp h
-  cases hm : markFin u.marken m with
-  | none =>
-    simp only [hm, reduceCtorEq] at hmi
-  | some j =>
-    cases hall : (u.tabs.all (fun t => decide (t.owner ≠ some m))) with
-    | false =>
-      simp only [hm, hall, reduceCtorEq] at hmi
-    | true =>
-      simp only [hm, hall, Option.some_injEq] at hmi
-      obtain ⟨_, hs⟩ := hmi
-      exact hs.symm
+  obtain ⟨_, _, _, _, hs⟩ := markFlow_origin u.marken f.gibt
+    (fun m => u.tabs.all (fun t => decide (t.owner ≠ some m))) h
+  exact hs
 
 /-! ## C12 loan flow: `leiht` through the mark table -/
 
@@ -135,45 +139,21 @@ def leihtAt (u : UProg) (f : UFn) : List (Fin u.marken.length × Nat) :=
 theorem leihtAt_eigner (u : UProg) (f : UFn) (i : Fin u.marken.length) (s : Nat)
     (h : (i, s) ∈ leihtAt u f) :
     ∃ t : Fin u.tabs.length, (tabAt u t).owner = some (u.marken.get i) := by
-  unfold leihtAt at h
-  obtain ⟨m, _, hmi⟩ := List.mem_filterMap.mp h
-  cases hm : markFin u.marken m with
-  | none =>
-    simp only [hm, reduceCtorEq] at hmi
-  | some j =>
-    cases hall : (u.tabs.any (fun t => decide (t.owner = some m))) with
-    | false =>
-      simp only [hm, hall, reduceCtorEq] at hmi
-    | true =>
-      simp only [hm, hall, Option.some_injEq] at hmi
-      obtain ⟨rfl, rfl⟩ := hmi
-      obtain ⟨x, hxu, hx⟩ := List.any_eq_true.mp hall
-      have hxown : x.owner = some m := of_decide_eq_true hx
-      obtain ⟨n, hn, hxn⟩ := List.mem_iff_get.mp hxu
-      refine ⟨⟨n, hn⟩, ?_⟩
-      have htab : tabAt u ⟨n, hn⟩ = x := by unfold tabAt; rw [hxn]
-      rw [htab, hxown, markFin_get u.marken m i hm]
+  obtain ⟨m, _, hm, hall, _⟩ := markFlow_origin u.marken f.leiht
+    (fun m => u.tabs.any (fun t => decide (t.owner = some m))) h
+  obtain ⟨x, hxu, hx⟩ := List.any_eq_true.mp hall
+  have hxown : x.owner = some m := of_decide_eq_true hx
+  obtain ⟨t, ht⟩ := List.mem_iff_get.mp hxu
+  refine ⟨t, ?_⟩
+  change (u.tabs.get t).owner = some (u.marken.get i)
+  rw [ht, hxown, markFin_get u.marken m i hm]
 
 /-- Every resolved loan is a stage-0 mark. -/
 theorem leihtAt_stufe (u : UProg) (f : UFn) (i : Fin u.marken.length) (s : Nat)
     (h : (i, s) ∈ leihtAt u f) : s = 0 := by
-  unfold leihtAt at h
-  obtain ⟨m, _, hmi⟩ := List.mem_filterMap.mp h
-  cases hm : markFin u.marken m with
-  | none =>
-    simp only [hm, reduceCtorEq] at hmi
-  | some j =>
-    cases hall : (u.tabs.any (fun t => decide (t.owner = some m))) with
-    | false =>
-      simp only [hm, hall, reduceCtorEq] at hmi
-    | true =>
-      simp only [hm, hall, Option.some_injEq] at hmi
-      obtain ⟨_, hs⟩ := hmi
-      exact hs.symm
-
-/-- The table at an index. -/
-def tabAt (u : UProg) (t : Fin u.tabs.length) : UTab :=
-  u.tabs.get t
+  obtain ⟨_, _, _, _, hs⟩ := markFlow_origin u.marken f.leiht
+    (fun m => u.tabs.any (fun t => decide (t.owner = some m))) h
+  exact hs
 
 /-- The lock at an index. -/
 def lockAt (u : UProg) (l : Fin u.locks.length) : ULock :=
@@ -287,22 +267,15 @@ theorem mem_eignerAt (u : UProg) (t : Fin u.tabs.length) (m : Fin u.marken.lengt
     ∃ o, (tabAt u t).owner = some o ∧ markFin u.marken o = some m := by
   cases ho : (tabAt u t).owner with
   | none =>
-    have he : eignerAt u t = [] := by unfold eignerAt; rw [ho]
-    rw [he] at h
-    exact (List.not_mem_nil h).elim
+    simp only [eignerAt, ho, List.not_mem_nil] at h
   | some o =>
-    refine ⟨o, ho, ?_⟩
+    refine ⟨o, rfl, ?_⟩
     cases hm : markFin u.marken o with
     | none =>
-      have he : eignerAt u t = [] := by unfold eignerAt; rw [ho, hm]
-      rw [he] at h
-      exact (List.not_mem_nil h).elim
+      simp only [eignerAt, ho, hm, List.not_mem_nil] at h
     | some j =>
-      have he : eignerAt u t = [j] := by unfold eignerAt; rw [ho, hm]
-      rw [he] at h
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at h
-      subst h
-      exact hm
+      have hj : m = j := by simpa only [eignerAt, ho, hm, List.mem_singleton] using h
+      exact congrArg some hj.symm
 
 /-- The foreign body at an index. -/
 def uaxAt (u : UProg) (a : Fin u.axs.length) : UAx := u.axs.get a
