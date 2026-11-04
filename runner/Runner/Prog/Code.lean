@@ -1,5 +1,6 @@
 module
 public import Runner.Prog.Asm
+public import Runner.Basis.FloatingSequence
 @[expose] public section
 
 
@@ -82,6 +83,76 @@ def fpWidenH : List Ins :=
 
 def fpNarrowH : List Ins :=
   binH [.movToXmm .f64 .xmm1 .rax, .narrowScalar .xmm0 .xmm1, .movFromXmm .f32 .rax .xmm0]
+
+/-- A real conditional branch with a shared continuation after both arms. -/
+def fpChoose (condition : Cond) (yes no : List Ins) : List Ins :=
+  [.jcc condition (BitVec.ofNat 32 (lenOf no + lenOf [.jmp 0]))] ++
+    no ++ [.jmp (BitVec.ofNat 32 (lenOf yes))] ++ yes
+
+/-- The conversion constants have zero low bits; load them with scalar integer
+    instructions instead of requiring MOVABS or a newer floating ISA. -/
+def fpUpper (destination : Reg) (upper shift : Nat) : List Ins :=
+  [.movi destination (BitVec.ofNat 32 upper), .movi .rcx (BitVec.ofNat 32 shift), .shl destination]
+
+def fpSignMask (destination : Reg) (format : FPFormat) : List Ins :=
+  fpUpper destination 1 (match format with | .f32 => 31 | .f64 => 63)
+
+def fpInfinity (destination : Reg) : FPFormat → List Ins
+  | .f32 => [.movi destination 0x7F800000]
+  | .f64 => fpUpper destination 0x7FF0 48
+
+def fpLimit (destination : Reg) (format : FPFormat) (unsigned : Bool) : List Ins :=
+  match format with
+  | .f32 => [.movi destination (if unsigned then 0x5F800000 else 0x5F000000)]
+  | .f64 => fpUpper destination (if unsigned then 0x43F0 else 0x43E0) 48
+
+def fpNormalizeInput : FPFormat → List Ins
+  | .f32 => [.movToXmm .f32 .xmm0 .rax, .movFromXmm .f32 .rax .xmm0]
+  | .f64 => []
+
+/-- Keep the input in RAX and its magnitude in RSI; compare infinity with it.
+    CF then identifies NaN for either sign, including signaling encodings. -/
+def fpClassify (format : FPFormat) : List Ins :=
+  fpNormalizeInput format ++ [.mov .rsi .rax] ++ fpSignMask .rdx format ++
+    [.alui .xor .rdx (-1), .alu .and .rsi .rdx] ++ fpInfinity .rdx format ++ [.alu .cmp .rdx .rsi]
+
+def fpInputSign (format : FPFormat) : List Ins :=
+  [.mov .rdi .rax, .movi .rcx (match format with | .f32 => 31 | .f64 => 63),
+    .shr .rdi, .alui .and .rdi 1, .alu .test .rdi .rdi]
+
+def fpNegH (format : FPFormat) : List Ins :=
+  binH (fpNormalizeInput format ++ fpSignMask .rdx format ++ [.alu .xor .rax .rdx])
+
+def fpFiniteH (format : FPFormat) : List Ins :=
+  binH (fpClassify format ++ [.alu .cmp .rsi .rdx, .set .b .rax, .zx8 .rax .rax])
+
+def fpFromUIntH (format : FPFormat) : List Ins :=
+  let low := [.fromIntScalar format .xmm0 .rax, .movFromXmm format .rax .xmm0]
+  let high := [.mov .rsi .rax, .alui .and .rsi 1, .movi .rcx 1, .shr .rax, .alu .or .rax .rsi,
+    .fromIntScalar format .xmm0 .rax, .scalar .add format .xmm0 .xmm0,
+    .movFromXmm format .rax .xmm0]
+  binH ([.alu .test .rax .rax] ++ fpChoose .s high low)
+
+def fpTruncateBody (format : FPFormat) : List Ins :=
+  [.movToXmm format .xmm0 .rax, .truncateScalar format .rax .xmm0]
+
+def fpToIntH (format : FPFormat) : List Ins :=
+  let clamp := fpInputSign format ++ fpSignMask .rax .f64 ++
+    [.alu .test .rdi .rdi] ++ fpChoose .nz [] [.alui .sub .rax 1]
+  let finite := fpLimit .rdx format false ++ [.alu .cmp .rsi .rdx] ++
+    fpChoose .b (fpTruncateBody format) clamp
+  binH (fpClassify format ++ fpChoose .b [.movi .rax 0] finite)
+
+def fpToUIntH (format : FPFormat) : List Ins :=
+  let high := [.movToXmm format .xmm0 .rax] ++ fpLimit .rdx format false ++
+    [.movToXmm format .xmm1 .rdx, .scalar .sub format .xmm0 .xmm1,
+      .truncateScalar format .rax .xmm0] ++ fpSignMask .rdx .f64 ++ [.alu .or .rax .rdx]
+  let inRange := fpLimit .rdx format false ++ [.alu .cmp .rsi .rdx] ++
+    fpChoose .b (fpTruncateBody format) high
+  let positive := fpLimit .rdx format true ++ [.alu .cmp .rsi .rdx] ++
+    fpChoose .b inRange [.movi .rax (-1)]
+  let finite := fpInputSign format ++ fpChoose .nz [.movi .rax 0] positive
+  binH (fpClassify format ++ fpChoose .b [.movi .rax 0] finite)
 
 /-- `brz`: the taken branch, which the `jnz` skips. -/
 def brzTaken : List Ins := [fld .rax 2, .alu .add .r12 .rax] ++ dispatch
