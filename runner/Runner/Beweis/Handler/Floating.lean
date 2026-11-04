@@ -10,8 +10,7 @@ open Runner.X86 Runner.Prog
     restricts answers through NativeFPEval. -/
 
 theorem fp_control_immediates :
-    sx32 (1 : BitVec 32) = (1 : W) ∧ sx32 (2 : BitVec 32) = (2 : W) ∧
-      sx32 (6 : BitVec 32) = (6 : W) := by decide
+    sx32 1#32 = 1#64 ∧ sx32 2#32 = 2#64 ∧ sx32 6#32 = 6#64 := by decide
 
 theorem fp_compare_bool_zero (word : W) :
     (if word = 0 then (0 : W) else 1) = 0 ↔ word = 0 := by
@@ -102,7 +101,7 @@ theorem fp_compare_ok {L : Lay} {y : X} (pred : FPCompare) (format : FPFormat)
   · cases pred <;> cases format <;> fp_corr h.mode
     all_goals
       constructor
-      · rw [fp_control_immediates.1]
+      · try rw [fp_control_immediates.1]
         first
         | exact (fp_compare_mask32 _).symm
         | exact (fp_compare_mask64 _).symm
@@ -157,7 +156,7 @@ theorem fp_flags_ok {L : Lay} {y : X} (format : FPFormat)
   · cases format <;> fp_corr h.mode
     all_goals
       constructor
-      · rw [fp_control_immediates.2.1, fp_control_immediates.2.2]
+      · try rw [fp_control_immediates.2.1, fp_control_immediates.2.2]
         exact (pack_compare_flags _).symm
       · intro answer
         cases answer with
