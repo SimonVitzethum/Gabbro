@@ -179,8 +179,9 @@ theorem stmtRetR_locks
   intro log σ ρ E _ hex
   obtain ⟨_, hb, _⟩ := hs.locks_inv
   simp only [execStmt] at hex
-  rw [ende_mapWelt_none _ (blockKeinR O passes R A C body hb _ _)] at hex
-  cases hex
+  have hnone := blockKeinR O passes R A C body hb (σ.nimmt L) ρ
+  generalize hbody : execBlock O passes R body (σ.nimmt L) ρ = outcome at hex hnone
+  cases outcome <;> simp only [Ausgang.mapWelt, Ausgang.ende?, reduceCtorEq] at hex hnone
 
 set_option linter.unusedSectionVars false in
 theorem stmtRetR_breaking 

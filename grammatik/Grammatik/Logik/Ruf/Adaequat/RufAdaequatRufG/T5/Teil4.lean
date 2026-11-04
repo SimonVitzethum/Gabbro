@@ -210,7 +210,11 @@ theorem stmtAbbR_locks
   obtain ⟨hAL, hb, hbo⟩ := hs.locks_inv
   have hW := hZ.welt
   simp only [execStmt] at hex
-  obtain ⟨σ1, hb1, rfl⟩ := abb_mapWelt _ hex
+  have mapped : ((execBlock O passes R body (σ.nimmt L) ρ).mapWelt
+      (fun world : World D => world.gibt L)).abb? = some (w, σ', ρ') := by
+    generalize hbody : execBlock O passes R body (σ.nimmt L) ρ = outcome at hex ⊢
+    cases outcome <;> simpa only [Ausgang.mapWelt, Ausgang.abb?] using hex
+  obtain ⟨σ1, hb1, rfl⟩ := abb_mapWelt _ mapped
   obtain ⟨M1, hs1, hZ1⟩ := w_locksB (P := P) (O := O) (passes := passes) hZ.1
     L hr body rest k ρ rfl hΛ hbo (hA L hAL)
   rw [hW] at hZ1
