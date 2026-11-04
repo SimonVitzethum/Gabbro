@@ -37,8 +37,8 @@ def softDivSpecialL (d : Nat) (a b finite : Nat → Option (List II × Nat)) :
   let invalid := fun j => wordL 9 j (invalidA j) (invalidB (j + 1))
   let infinity := fun j => wordL 9 j (ia j) (zb (j + 1))
   let isZero := fun j => wordL 9 j (ib j) (za (j + 1))
-  let zero := fun j => some ([ci 1 j 0 0], j + 1)
-  let inf := fun j => some ([ci 1 j 2047 0], j + 1)
+  let zero := fun (j : Nat) => some ([ci 1 j 0 0], j + 1)
+  let inf := fun (j : Nat) => some ([ci 1 j 2047 0], j + 1)
   let nan := fun j => some (konstWL 4 9218868437227405313 j)
   let finiteOrZero := fun j => routineChooseL j isZero (fun k => packL k sign zero zero) finite
   let infOrFinite := fun j => routineChooseL j infinity (fun k => packL k sign inf zero) finiteOrZero
@@ -64,11 +64,11 @@ theorem softDivSpecialL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop
       (routineInfFlag bv || routineZeroFlag av) = false → WordCode (L := L) ρ W finite fv) :
     WordCode (L := L) ρ W (fun d => softDivSpecialL d a b finite)
       (softDivSpecialWord av bv fv) := by
-  have ia := routineInfL_ok ha
-  have ib := routineInfL_ok hb
-  have za := routineZeroL_ok ha
-  have zb := routineZeroL_ok hb
-  have sign := xorSignL_ok (unpackSignL_ok ha) (unpackSignL_ok hb)
+  have ia : WordCode (L := L) ρ W _ _ := routineInfL_ok ha
+  have ib : WordCode (L := L) ρ W _ _ := routineInfL_ok hb
+  have za : WordCode (L := L) ρ W _ _ := routineZeroL_ok ha
+  have zb : WordCode (L := L) ρ W _ _ := routineZeroL_ok hb
+  have sign : WordCode (L := L) ρ W _ _ := xorSignL_ok (unpackSignL_ok ha) (unpackSignL_ok hb)
   have invalidA : WordCode (L := L) ρ W _ _ := WordCode.bin ia ib (g := fun x y => some (x &&& y))
     rfl rfl (by decide : 8 < 256)
   have invalidB : WordCode (L := L) ρ W _ _ := WordCode.bin za zb (g := fun x y => some (x &&& y))
@@ -83,13 +83,50 @@ theorem softDivSpecialL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop
   rw [flagOr] at invalid infinity isZero
   have zero : WordCode (L := L) ρ W _ _ := WordCode.const (L := L) (ρ := ρ) (W := W) 0 (by decide)
   have inf : WordCode (L := L) ρ W _ _ := WordCode.const (L := L) (ρ := ρ) (W := W) 2047 (by decide)
-  exact routineChooseL_ok (routineNanL_ok ha) (fun _ => ha) (fun an =>
-    routineChooseL_ok (routineNanL_ok hb) (fun _ => hb) (fun bn =>
-      routineChooseL_ok invalid (fun _ => WordCode.konst 9218868437227405313 (by decide)) (fun _ =>
-        routineChooseL_ok infinity (fun _ => packL_ok sign inf zero) (fun infinityFalse =>
-          routineChooseL_ok isZero (fun _ => packL_ok sign zero zero)
-            (fun zeroFalse => hf an bn infinityFalse zeroFalse)))))
+  have result : WordCode (L := L) ρ W _ _ :=
+    routineChooseL_ok (routineNanL_ok ha) (fun _ => ha) (fun an =>
+      routineChooseL_ok (routineNanL_ok hb) (fun _ => hb) (fun bn =>
+        routineChooseL_ok invalid (fun _ => WordCode.konst 9218868437227405313 (by decide)) (fun _ =>
+          routineChooseL_ok infinity (fun _ => packL_ok sign inf zero) (fun infinityFalse =>
+            routineChooseL_ok isZero (fun _ => packL_ok sign zero zero)
+              (fun zeroFalse => hf an bn infinityFalse zeroFalse)))))
+  intro fp K d c top emitted fits m pc pre
+  exact result (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
 
+omit [Kern] in
+private theorem divisionNanPack :
+    BitVec.ofNat 64 9218868437227405313 =
+      BitVec.ofNat 64 (zuBits f64 (nanQ f64)) := by
+  have valid : wf f64 (nanQ f64) := by
+    change 2047 ≤ 2047 ∧ 1 < 2 ^ 52
+    constructor <;> decide
+  have packed := packWord_canonical (nanQ f64) valid
+  change packWord 0 2047 1 = BitVec.ofNat 64 (zuBits f64 (nanQ f64)) at packed
+  calc
+    BitVec.ofNat 64 9218868437227405313 = packWord 0 2047 1 := by decide +kernel
+    _ = BitVec.ofNat 64 (zuBits f64 (nanQ f64)) := packed
+
+omit [Kern] in
+/-- Class priority is independent of how complete operand words are encoded. -/
+private theorem divisionClass_model (encode : GFloat → Runner.W) (a b : GFloat)
+    (finite : Runner.W) :
+    (if decide (klasse f64 a = .nan) then encode a
+    else if decide (klasse f64 b = .nan) then encode b
+    else if (decide (klasse f64 a = .unendlich) && decide (klasse f64 b = .unendlich)) ||
+        (decide (klasse f64 a = .null) && decide (klasse f64 b = .null)) then
+      encode (nanQ f64)
+    else if decide (klasse f64 a = .unendlich) || decide (klasse f64 b = .null) then
+      encode ⟨a.sign != b.sign, 2047, 0⟩
+    else if decide (klasse f64 b = .unendlich) || decide (klasse f64 a = .null) then
+      encode ⟨a.sign != b.sign, 0, 0⟩
+    else finite) =
+      match softDivSpecial a b with
+      | some r => encode r
+      | none => finite := by
+  unfold softDivSpecial
+  cases ca : klasse f64 a <;> cases cb : klasse f64 b <;> rfl
+
+omit [Kern] in
 /-- Total correspondence of the dispatcher independently of its continuation. -/
 theorem softDivSpecialWord_model (a b : GFloat) (ha : wf f64 a) (hb : wf f64 b)
     (finite : Runner.W) :
@@ -103,14 +140,19 @@ theorem softDivSpecialWord_model (a b : GFloat) (ha : wf f64 a) (hb : wf f64 b)
   have sign := softMulSignWord_canonical a b ha hb
   have zero : packWord (Runner.IR.bool (a.sign != b.sign)) 0 0 =
       BitVec.ofNat 64 (zuBits f64 ⟨a.sign != b.sign, 0, 0⟩) :=
-    packWord_canonical _ ⟨by decide, by decide⟩
+    packWord_canonical ⟨a.sign != b.sign, 0, 0⟩ (by
+      change 0 ≤ 2047 ∧ 0 < 2 ^ 52
+      constructor <;> decide)
   have inf : packWord (Runner.IR.bool (a.sign != b.sign)) 2047 0 =
       BitVec.ofNat 64 (zuBits f64 ⟨a.sign != b.sign, 2047, 0⟩) :=
-    packWord_canonical _ ⟨by decide, by decide⟩
-  simp only [softDivSpecialWord, an, ai, az, bn, bi, bz, sign, zero, inf]
-  cases ca : klasse f64 a <;> cases cb : klasse f64 b <;>
-    simp [softDivSpecial, ca, cb, nanQ, zuBits, f64, Format.bexpMax,
-      Format.ebits, Format.fracBits, bitlen, bitlenAux]
+    packWord_canonical ⟨a.sign != b.sign, 2047, 0⟩ (by
+      change 2047 ≤ 2047 ∧ 0 < 2 ^ 52
+      constructor <;> decide)
+  refine Eq.trans ?_ (divisionClass_model (fun r => BitVec.ofNat 64 (zuBits f64 r)) a b finite)
+  unfold softDivSpecialWord
+  rw [an, bn, ai, az, bi, bz, sign]
+  dsimp only
+  rw [zero, inf, divisionNanPack]
 
 #print axioms softDivSpecialL_word
 #print axioms softDivSpecialWord_model
