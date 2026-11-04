@@ -70,15 +70,19 @@ theorem step_ok {L : Lay} (hI : CInv L) {t : IR.T} {x : X} (hD : Disp L t x) : M
         exec (.jmpm (ms .r14 .rax)) (enc (.jmpm (ms .r14 .rax))).length (x1 ((p.1.setWidth 8).setWidth 64)) :=
       step_code (x := x1 _) (by simpa [x1, X.set] using hc2)
     let op := ((p.1.setWidth 8).setWidth 64 : W).toNat
+    have hop : op < 256 := by simp only [op, BitVec.toNat_setWidth]; omega
+    have hnot : op ≠ 256 := by omega
+    have hwid : readOnlyWidth op = 8 := by simp only [readOnlyWidth, if_neg hnot]
+    have hval : readOnlyValue L op = L.H op := by simp only [readOnlyValue, if_neg hnot]
     refine .tbl (k := fun r => opt r fun q => .next { x1 ((p.1.setWidth 8).setWidth 64) with rip := q.1 }) op
-      (by simp only [op, BitVec.toNat_setWidth]; omega) ?_ fun w => ?_
-    · rw [h2]
+      (by omega) ?_ fun w => ?_
+    · rw [hwid, h2]
       simp only [exec, rd64, ea, ms, X.get, x1, X.set, hD.tb, taddr, op, BitVec.ofNat_toNat,
         BitVec.setWidth_eq]
-    · simp only [opt_some]
+    · simp only [hval, opt_some]
       refine .knext ?_
       have hpre : HPre L op { x1 ((p.1.setWidth 8).setWidth 64) with rip := L.H op } :=
-        ⟨rfl, by simp [x1, X.set, hD.tb], hI⟩
+        ⟨rfl, by simp [x1, X.set, hD.tb], hI, by simpa [x1, X.set, X.fpReady] using hD.mode⟩
       have := handler_ok op hpre
       have e : (⟨({ x1 ((p.1.setWidth 8).setWidth 64) with rip := L.H op }).r12,
           ({ x1 ((p.1.setWidth 8).setWidth 64) with rip := L.H op }).r13⟩ : IR.T) = t := by

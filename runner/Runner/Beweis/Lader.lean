@@ -62,22 +62,66 @@ macro "rip_simp" : tactic => `(tactic| (
 set_option maxRecDepth 100000 in
 theorem tbl_small : BASE + tblOff < 2 ^ 31 := by decide +kernel
 
+/-- The control read is supplied by the loaded readonly file, independently of
+    the process's initial MXCSR and of optional DAZ support. -/
+private theorem load_control {r : Res IR.T} {y : X} {is : List Ins}
+    (hc : Code L0.C y.rip (.ldmxcsr (mb .r14 2048) :: is))
+    (ht : y.r14 = L0.T)
+    (hn : Match L0 r { y with
+      rip := y.rip + BitVec.ofNat 64 (enc (.ldmxcsr (mb .r14 2048))).length
+      mxcsr := 0x1F80 }) : Match L0 r y := by
+  have ha : ea y (mb .r14 2048) = taddr L0 (BitVec.ofNat 64 256) := by
+    simp only [ea, mb, X.get, ht, taddr]
+    rw [sx32_ofNat (n := 2048) (by decide), sx32_zero, BitVec.add_zero]
+    exact congrArg (fun value : W => L0.T + value) (by decide)
+  have valid : (0x1F80 : BitVec 32).toNat < 65536 ∧
+      ((0x1F80 : BitVec 32).getLsbD 6 = false ∨ y.dazSupported = true) :=
+    ⟨by decide, Or.inl (by decide)⟩
+  refine .tbl (k := fun a => opt a fun p =>
+    if (p.1.setWidth 32).toNat < 65536 ∧
+        ((p.1.setWidth 32).getLsbD 6 = false ∨ y.dazSupported = true) then
+      .next { y with
+        rip := y.rip + BitVec.ofNat 64 (enc (.ldmxcsr (mb .r14 2048))).length
+        mxcsr := p.1.setWidth 32 }
+    else .fault) 256 (by decide) ?_ fun w => ?_
+  · rw [step_code hc]
+    simp only [exec, rd32, ha, readOnlyWidth, ite_true]
+  · simp only [readOnlyValue, ite_true, opt_some]
+    change MatchK L0 r (if (0x1F80 : BitVec 32).toNat < 65536 ∧
+        ((0x1F80 : BitVec 32).getLsbD 6 = false ∨ y.dazSupported = true) then _ else .fault)
+    rw [if_pos valid]
+    exact .knext hn
+
 theorem seg5 {y : X} (hc : Code L0.C y.rip (ld5 TBL ++ [.ud2])) (hx : y.rcx = BitVec.ofNat 64 IMG) :
     Match L0 t4 y := by
-  have hd : Code L0.C _ (dispatch ++ [.ud2]) :=
-    code_append (is := [.movi .r14 (BitVec.ofNat 32 TBL), .ld .r13 (mb .rcx), .lea .r12 (mb .rcx 16)]) hc
-  apply go [.movi .r14 (BitVec.ofNat 32 TBL), .ld .r13 (mb .rcx), .lea .r12 (mb .rcx 16)] y _ (by decide)
-    (code_prefix hc)
-  simp [t4, runL, exec, mb, ea, X.get, X.set, rd64, hx, sx32]
+  let first : Ins := .movi .r14 (BitVec.ofNat 32 TBL)
+  let y1 : X := ({ y with rip := y.rip + BitVec.ofNat 64 (enc first).length }).set
+    .r14 (sx32 (BitVec.ofNat 32 TBL))
+  have hc1 : Code L0.C y1.rip
+      (.ldmxcsr (mb .r14 2048) :: [ .ld .r13 (mb .rcx), .lea .r12 (mb .rcx 16)] ++ dispatch ++ [.ud2]) := by
+    simpa only [ld5, List.cons_append, List.nil_append, y1, X.set, first] using hc.2.2
+  have ht : y1.r14 = L0.T := sx32_ofNat (n := BASE + tblOff) tbl_small
+  refine .priv ((step_code hc).trans (show exec first (enc first).length y = .next y1 from rfl)) ?_
+  apply load_control hc1 ht
+  let y2 : X := { y1 with
+    rip := y1.rip + BitVec.ofNat 64 (enc (.ldmxcsr (mb .r14 2048))).length
+    mxcsr := 0x1F80 }
+  have hc2 : Code L0.C y2.rip
+      ([.ld .r13 (mb .rcx), .lea .r12 (mb .rcx 16)] ++ dispatch ++ [.ud2]) := hc1.2.2
+  have hd := code_append (is := [.ld .r13 (mb .rcx), .lea .r12 (mb .rcx 16)]) hc2
+  apply go [.ld .r13 (mb .rcx), .lea .r12 (mb .rcx 16)] y2 _ (by decide) (code_prefix hc2)
+  have hx2 : y2.rcx = BitVec.ofNat 64 IMG := hx
+  simp [t4, runL, exec, mb, ea, X.get, X.set, rd64, hx2, sx32]
   repeat (first | (apply corrM_ask; intro _) | (apply corrM_opt; intro _))
   simp only [CorrM]
-  refine .disp ⟨?_, ?_, ?_, ?_⟩
+  refine .disp ⟨?_, ?_, ?_, ?_, ?_⟩
   · have hd' := code_prefix hd
     rip_simp
     exact hd'
   · rfl
   · rfl
-  · exact sx32_ofNat (n := BASE + tblOff) tbl_small
+  · exact ht
+  · rfl
 
 theorem seg4 {y : X} (hc : Code L0.C y.rip (ld4 ++ [ldj4] ++ ld5 TBL ++ [.ud2])) :
     Match L0 (t3 y.rbx y.rax) y := by

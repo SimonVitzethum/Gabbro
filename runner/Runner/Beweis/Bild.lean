@@ -25,10 +25,14 @@ def L0 : Lay where
   T := BitVec.ofNat 64 (BASE + tblOff)
 
 set_option maxRecDepth 100000 in
-theorem image_len : image.length = 4536 := by decide +kernel
+theorem image_len : image.length = fileLen := by decide +kernel
+
+set_option maxRecDepth 100000 in
+theorem image_fits : BASE + image.length < IMG := by decide +kernel
 
 theorem cimg_at {j : Nat} (hj : j < image.length) : Cimg (BitVec.ofNat 64 (BASE + j)) = image[j] := by
-  have hl := image_len
+  have hl := image_fits
+  simp only [BASE, IMG] at hl
   have ht : (BitVec.ofNat 64 (BASE + j)).toNat = BASE + j := by
     simp only [BitVec.toNat_ofNat, BASE]; omega
   have hr : inRun (BitVec.ofNat 64 (BASE + j)) = true := by
@@ -71,18 +75,16 @@ theorem code_of_image : ∀ {o : Nat} {is : List Ins},
 /-- The label of opcode `k`'s handler. -/
 def lbl (k : Nat) : Nat := if 1 ≤ k ∧ k ≤ 27 then k else BAD
 
-theorem handler_lbl : ∀ k, handler k = handler (lbl k)
-  | 0 => rfl | 1 => rfl | 2 => rfl | 3 => rfl | 4 => rfl | 5 => rfl | 6 => rfl | 7 => rfl | 8 => rfl
-  | 9 => rfl | 10 => rfl | 11 => rfl | 12 => rfl | 13 => rfl | 14 => rfl | 15 => rfl | 16 => rfl | 17 => rfl
-  | 18 => rfl | 19 => rfl | 20 => rfl | 21 => rfl | 22 => rfl | 23 => rfl | 24 => rfl
-  | 25 => rfl | 26 => rfl
-  | 27 => rfl
-  | k + 28 => by
-    have : ¬(1 ≤ k + 28 ∧ k + 28 ≤ 27) := by omega
-    simp only [lbl, this, ↓reduceIte]
-    rfl
+theorem handler_lbl (k : Nat) : handler k = handler (lbl k) := by
+  by_cases h : 1 ≤ k ∧ k ≤ 27
+  · simp only [lbl, h, ite_true]
+  · simp only [lbl, h, ite_false]
+    rcases (show k = 0 ∨ 28 ≤ k by omega) with rfl | hk
+    · rfl
+    · obtain ⟨j, rfl⟩ : ∃ j, k = j + 28 := ⟨k - 28, by omega⟩
+      rfl
 
-def labelsAll : List Nat := [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, BAD]
+def labelsAll : List Nat := (List.range 27).map (· + 1) ++ [BAD]
 
 set_option maxRecDepth 100000 in
 theorem placed : (labelsAll.all fun j =>
@@ -92,10 +94,12 @@ theorem placed : (labelsAll.all fun j =>
 theorem cinv_L0 : CInv L0 := by
   intro k
   have hmem : lbl k ∈ labelsAll := by
-    unfold lbl labelsAll
+    unfold lbl
     split
-    · next h => obtain ⟨h1, h2⟩ := h; simp only [List.mem_cons]; omega
-    · simp
+    · next h =>
+      apply List.mem_append_left
+      exact List.mem_map.mpr ⟨k - 1, List.mem_range.mpr (by omega), by omega⟩
+    · simp [labelsAll]
   have := List.all_eq_true.mp placed (lbl k) hmem
   simp only [Bool.and_eq_true] at this
   rw [handler_lbl k]
@@ -168,18 +172,25 @@ theorem tabled : (List.range 256).all
   simp only [List.all_append, tabled_0, tabled_1, tabled_2, tabled_3, tabled_4, tabled_5, tabled_6, tabled_7, Bool.and_self]
 
 set_option maxRecDepth 100000 in
-theorem tbl_addr (op : Nat) (_hop : op < 256) :
+theorem tbl_addr (op : Nat) (_hop : op < 257) :
     taddr L0 (BitVec.ofNat 64 op) = BitVec.ofNat 64 (BASE + (tblOff + 8 * op)) := by
-  have ht : tblOff = 2488 := by decide +kernel
-  apply BitVec.eq_of_toNat_eq
-  simp only [taddr, L0, sx32, BitVec.toNat_add, BitVec.toNat_mul, BitVec.toNat_ofNat, BitVec.toNat_signExtend, ht,
-    BASE]
-  simp
+  change (BitVec.ofNat 64 (BASE + tblOff) + BitVec.ofNat 64 op * BitVec.ofNat 64 8) + 0 = _
+  rw [BitVec.add_zero, ← BitVec.ofNat_mul, ← BitVec.ofNat_add]
+  congr 1
   omega
+
+set_option maxRecDepth 100000 in
+theorem control_of_image : (le32 0x1F80).isPrefixOf (image.drop (tblOff + 256 * 8)) = true := by
+  decide +kernel
 
 theorem tab_of_file {m : Mem} (hf : FileInv m) : TabInv L0 m := by
   intro op hop
   rw [tbl_addr op hop]
-  exact mbytes_of_file hf (List.all_eq_true.mp tabled op (List.mem_range.mpr hop))
+  by_cases hc : op = 256
+  · subst op
+    simp only [readOnlyBytes, ite_true]
+    exact mbytes_of_file hf control_of_image
+  · simp only [readOnlyBytes, if_neg hc]
+    exact mbytes_of_file hf (List.all_eq_true.mp tabled op (List.mem_range.mpr (by omega)))
 
 end Runner.Beweis

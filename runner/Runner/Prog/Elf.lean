@@ -13,7 +13,7 @@ open Runner.X86
 
 def leN (n v : Nat) : List B := (List.range n).map fun i => byte (v / 256 ^ i)
 
-def fileLen : Nat := tblOff + 256 * 8
+def fileLen : Nat := tblOff + 256 * 8 + 4
 
 def ehdr : List B :=
   [byte 0x7F, byte 0x45, byte 0x4C, byte 0x46, byte 2, byte 1, byte 1, byte 0] ++ leN 8 0 ++
@@ -32,7 +32,10 @@ def code : List B := prog.flatMap fun p => enc p.2
 
 def table : List B := (List.range 256).flatMap fun k => leN 8 (target k)
 
+/-- RNE, masked exceptions, FTZ=0 and DAZ=0, loaded by the actual LDMXCSR. -/
+def fpControl : List B := leN 4 0x1F80
+
 /-- The whole file. -/
-def image : List B := pad (pad (ehdr ++ phdrLoad ++ phdrStack) CODE ++ code) tblOff ++ table
+def image : List B := pad (pad (ehdr ++ phdrLoad ++ phdrStack) CODE ++ code) tblOff ++ table ++ fpControl
 
 end Runner.Prog

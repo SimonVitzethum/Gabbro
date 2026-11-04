@@ -122,7 +122,8 @@ def ld4 : List Ins :=
    .movi .rax 9, .syscall, .movi .rcx (BitVec.ofNat 32 IMG), .alu .cmp .rax .rcx]
 /-- `r14` := the table, `fp` := the image's first word, `pc` := `IMG + 16`, dispatch. -/
 def ld5 (tb : Nat) : List Ins :=
-  [.movi .r14 (BitVec.ofNat 32 tb), .ld .r13 (mb .rcx), .lea .r12 (mb .rcx 16)] ++ dispatch
+  [.movi .r14 (BitVec.ofNat 32 tb), .ldmxcsr (mb .r14 2048),
+    .ld .r13 (mb .rcx), .lea .r12 (mb .rcx 16)] ++ dispatch
 
 def ldj4 : Ins := .jcc .nz (BitVec.ofNat 32 (lenOf (ld5 0)))
 def ldj3 : Ins := .jcc .z (BitVec.ofNat 32 (lenOf (ld4 ++ [ldj4] ++ ld5 0)))

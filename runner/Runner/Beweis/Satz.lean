@@ -45,7 +45,8 @@ def m0 : Mem where
 
 theorem m0_file : FileInv m0 := by
   intro j hj
-  have hl := image_len
+  have hl := image_fits
+  simp only [BASE, IMG] at hl
   have ht : (BitVec.ofNat 64 (BASE + j)).toNat = BASE + j := by
     simp only [BitVec.toNat_ofNat, BASE]; omega
   have hr : inRun (BitVec.ofNat 64 (BASE + j)) = true := by
@@ -73,12 +74,12 @@ def t0 : IR.T := { pc := BitVec.ofNat 64 (IMG + 16), fp := fp0 }
 def x0 : X :=
   { rax := 0, rcx := 0, rdx := 0, rbx := 0, rsp := 0, rbp := 0, rsi := 0, rdi := 0, r8 := 0, r9 := 0, r10 := 0,
     r11 := 0, r12 := BitVec.ofNat 64 (IMG + 16), r13 := fp0, r14 := L0.T, r15 := 0,
-    rip := BitVec.ofNat 64 (BASE + dsite), cf := none, zf := none, sf := none, of := none }
+    rip := BitVec.ofNat 64 (BASE + dsite), cf := none, zf := none, sf := none, of := none, mxcsr := 0x1F80 }
 
 theorem x0_disp : Disp L0 t0 x0 := by
   have hd := dsite_ok
   simp only [Bool.and_eq_true] at hd
-  exact ⟨code_of_image hd.1 hd.2, rfl, rfl, rfl⟩
+  exact ⟨code_of_image hd.1 hd.2, rfl, rfl, rfl, by decide⟩
 
 /-- The premises of `runner_tso` hold together on the real file and a real image; the fixture is not degenerate:
     the first request of both threads is the read of the first opcode byte at `IMG + 16`. -/

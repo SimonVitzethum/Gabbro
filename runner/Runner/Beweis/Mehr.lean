@@ -29,8 +29,8 @@ def actI : Res IR.T → Res (Res IR.T)
 def actX (L : Lay) (x : X) : Res X := step L.C x
 
 def Fixed (M : MemSys) (L : Lay) : Prop :=
-  ∀ ms i op a ms', op < 256 → M.ans ms i (.rd 8 (taddr L (BitVec.ofNat 64 op))) a ms' →
-    ms' = ms ∧ ∃ w, a = some (L.H op, w)
+  ∀ ms i op a ms', op < 257 → M.ans ms i (.rd (readOnlyWidth op) (taddr L (BitVec.ofNat 64 op))) a ms' →
+    ms' = ms ∧ ∃ w, a = some (readOnlyValue L op, w)
 
 def RelT (L : Lay) : Option (Option (Res IR.T)) → Option (Option X) → Prop
   | none, none => True
@@ -209,7 +209,8 @@ theorem inv_fault {L : Lay} {r : Res IR.T} {x : X} (h : Match L r x) (hs : step 
 
 theorem inv_ask {L : Lay} {r : Res IR.T} {x : X} {o : Op} {k : Ans → Res X} (h : Match L r x)
     (hs : step L.C x = .ask o k) (hr : ∀ t, r ≠ .next t) :
-    (∃ op, op < 256 ∧ o = .rd 8 (taddr L (BitVec.ofNat 64 op)) ∧ ∀ w, MatchK L r (k (some (L.H op, w)))) ∨
+    (∃ op, op < 257 ∧ o = .rd (readOnlyWidth op) (taddr L (BitVec.ofNat 64 op)) ∧
+      ∀ w, MatchK L r (k (some (readOnlyValue L op, w)))) ∨
     (∃ kI, r = .ask o kI ∧ ∀ a, MatchK L (kI a) (k a)) := by
   cases h with
   | priv hs' => rw [hs] at hs'; cases hs'
@@ -230,7 +231,7 @@ theorem invK_ende {L : Lay} {r : Res IR.T} {rx : Res X} {e : Ende} (h : MatchK L
 
 /-! ## The theorem -/
 
-theorem lbl_rd (i : Nat) (a : W) (b : Ans) : lbl i (.rd 8 a) b = [] := by rfl
+theorem lbl_rd (i n : Nat) (a : W) (b : Ans) : lbl i (.rd n a) b = [] := by rfl
 
 theorem runner_mt {L : Lay} {M : MemSys} (hF : Fixed M L) (hI : CInv L) :
     ∀ (n : Nat) {cI : Cfg M (Res IR.T)} {cX : Cfg M X} {l : List Ev} {e : Ende},

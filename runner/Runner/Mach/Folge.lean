@@ -20,6 +20,17 @@ def MBytes (m : Mem) (a : W) (l : List B) : Prop :=
 
 def wbytes (v : W) : List B := (List.range 8).map fun i => byte (v.toNat / 256 ^ i)
 
+def readOnlyBytes (L : Lay) (row : Nat) : List B :=
+  if row = 256 then le32 0x1F80 else wbytes (L.H row)
+
+theorem readOnlyBytes_length (L : Lay) (row : Nat) :
+    (readOnlyBytes L row).length = readOnlyWidth row := by
+  by_cases h : row = 256 <;> simp [readOnlyBytes, readOnlyWidth, h, wbytes, le32]
+
+theorem readOnlyWidth_le (row : Nat) : readOnlyWidth row ≤ 8 := by
+  unfold readOnlyWidth
+  split <;> decide
+
 def Keeps (m m' : Mem) : Prop :=
   ∀ y, m.wr y = false → m'.b y = m.b y ∧ m'.rd y = m.rd y ∧ m'.wr y = m.wr y
 
@@ -107,9 +118,18 @@ theorem rd64_bytes {m : Mem} {a v : W} (h : MBytes m a (wbytes v)) : m.rd64 a = 
   simp only [byte, BitVec.toNat_ofNat]
   omega
 
-/-- The runner's table is in the memory, readable and not writable. -/
+theorem rd32_control {m : Mem} {a : W} (h : MBytes m a (le32 0x1F80)) :
+    m.rd32 a = some 0x1F80 := by
+  have h0 := h 0 (by decide)
+  have h1 := h 1 (by decide)
+  have h2 := h 2 (by decide)
+  have h3 := h 3 (by decide)
+  simp only [Mem.rd32, Mem.all, Mem.le, h0.1, h1.1, h2.1, h3.1,
+    h0.2.1, h1.2.1, h2.2.1, h3.2.1] <;> rfl
+
+/-- Dispatch rows and the trailing MXCSR word are readable and not writable. -/
 def TabInv (L : Lay) (m : Mem) : Prop :=
-  ∀ op, op < 256 → MBytes m (taddr L (BitVec.ofNat 64 op)) (wbytes (L.H op))
+  ∀ op, op < 257 → MBytes m (taddr L (BitVec.ofNat 64 op)) (readOnlyBytes L op)
 
 theorem TabInv.keep {L : Lay} {m m' : Mem} (hk : Keeps m m') (h : TabInv L m) : TabInv L m' :=
   fun op hop => (h op hop).keep hk
@@ -137,6 +157,12 @@ theorem sc_fixed (L : Lay) : Fixed (SC L) L := by
   intro s i op a s' hop h
   obtain ⟨rfl, w, rfl⟩ := h
   refine ⟨rfl, w, ?_⟩
-  simp only [rdN, rd64_bytes (s'.2 op hop), Option.map_some]
+  by_cases hc : op = 256
+  · subst op
+    have hread := rd32_control (by simpa only [readOnlyBytes, ite_true] using s'.2 256 (by decide))
+    simp only [readOnlyWidth, readOnlyValue, ite_true, rdN, hread, Option.map_some]
+    rfl
+  · have hread := rd64_bytes (by simpa only [readOnlyBytes, if_neg hc] using s'.2 op hop)
+    simp only [readOnlyWidth, readOnlyValue, if_neg hc, rdN, hread, Option.map_some]
 
 end Runner.Beweis

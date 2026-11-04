@@ -56,10 +56,10 @@ theorem h19_ok {L : Lay} {y : X} (h : HPre L 19 y) : Match L (IR.op 19 ⟨y.r12,
   simp only [fld, mb, Nat.mul_one, sx32_ofNat (show lenOf brzTaken < 2 ^ 31 by decide)] at ht hn
   by_cases hz : p.1 = 0#64
   · simp only [hz, ↓reduceIte]
-    refine straight_go h.tb [fld .rax 2, .alu .add .r12 .rax] _ _ (by decide) ht ?_
+    refine straight_go h.tb h.mode [fld .rax 2, .alu .add .r12 .rax] _ _ (by decide) ht ?_
     corr
   · simp only [hz, ↓reduceIte]
-    refine straight_go h.tb [.alui .add .r12 16] _ _ (by decide) ?_ ?_
+    refine straight_go h.tb h.mode [.alui .add .r12 16] _ _ (by decide) ?_ ?_
     · rw [sx32_ofNat (show lenOf brzTaken < 2 ^ 31 by decide)]
       simpa [lenOfL, lenOf] using hn
     · corr
@@ -90,11 +90,11 @@ theorem h24_ok {L : Lay} {y : X} (h : HPre L 24 y) : Match L (IR.op 24 ⟨y.r12,
   simp only [CorrM]
   by_cases hz : p.1 = 0#64
   · simp only [hz, ↓reduceIte]
-    refine straight_go h.tb [.mov .r12 .rbx, .mov .r13 .rbp] _ _ (by decide) ?_ ?_
+    refine straight_go h.tb h.mode [.mov .r12 .rbx, .mov .r13 .rbp] _ _ (by decide) ?_ ?_
     · simpa [lenOf, spawnParent, nextI, dispatch] using hk
     · corr
   · simp only [hz, ↓reduceIte]
-    refine straight_go h.tb [fld .rcx 1, sst .rcx .rax, .alui .add .r12 16] _ _ (by decide) ?_ ?_
+    refine straight_go h.tb h.mode [fld .rcx 1, sst .rcx .rax, .alui .add .r12 16] _ _ (by decide) ?_ ?_
     · simpa [fld, sst, mb, ms] using hp
     · corr
 

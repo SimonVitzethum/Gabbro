@@ -9,7 +9,8 @@ public import Runner.Prog.Code
 
 * `Lay`: the runner's code `C`, the handler of each opcode and the dispatch table. `CInv L`: every handler lies
   at its address in `C`.
-* `Disp L t x`: `x` stands at a copy of the dispatch with `r12 = pc`, `r13 = fp` and `r14` the table.
+* `Disp L t x`: `x` stands at a copy of the dispatch with `r12 = pc`, `r13 = fp`,
+  `r14` the table and the control mode established by the loader.
 * `Match L r x`: run from `x`, the x86 thread makes exactly the requests of the IR tree `r`, in the same order,
   and after each answer goes on matching what the IR does with that answer -- up to steps of its own (`priv`)
   and reads of the dispatch table (`tbl`, answered by the table's word). It ends where the IR ends: the same
@@ -29,6 +30,11 @@ structure Lay where
 /-- The address of the table entry of opcode byte `op`, as the dispatch computes it. -/
 def taddr (L : Lay) (op : W) : W := L.T + op * BitVec.ofNat 64 (2 ^ 3) + sx32 0
 
+/-- The final readonly row is MXCSR, following the 256 eight-byte dispatch rows. -/
+def readOnlyWidth (row : Nat) : Nat := if row = 256 then 4 else 8
+
+def readOnlyValue (L : Lay) (row : Nat) : W := if row = 256 then 0x1F80 else L.H row
+
 def CInv (L : Lay) : Prop := ∀ k, Code L.C (L.H k) (handler k)
 
 structure Disp (L : Lay) (t : IR.T) (x : X) : Prop where
@@ -36,6 +42,7 @@ structure Disp (L : Lay) (t : IR.T) (x : X) : Prop where
   pc : x.r12 = t.pc
   fp : x.r13 = t.fp
   tb : x.r14 = L.T
+  mode : x.fpReady = true
 
 /-- Where the x86 side stands: at a thread state, or just after an answer (the rest of one instruction). -/
 inductive Pos
@@ -44,9 +51,9 @@ inductive Pos
 
 inductive MatchP (L : Lay) : Res IR.T → Pos → Prop
   | priv {r : Res IR.T} {x y : X} : step L.C x = .next y → MatchP L r (.th y) → MatchP L r (.th x)
-  | tbl {r : Res IR.T} {x : X} {k : Ans → Res X} (op : Nat) : op < 256 →
-      step L.C x = .ask (.rd 8 (taddr L (BitVec.ofNat 64 op))) k →
-      (∀ w, MatchP L r (.af (k (some (L.H op, w))))) → MatchP L r (.th x)
+  | tbl {r : Res IR.T} {x : X} {k : Ans → Res X} (op : Nat) : op < 257 →
+      step L.C x = .ask (.rd (readOnlyWidth op) (taddr L (BitVec.ofNat 64 op))) k →
+      (∀ w, MatchP L r (.af (k (some (readOnlyValue L op, w))))) → MatchP L r (.th x)
   | ask {o : Op} {kI : Ans → Res IR.T} {kX : Ans → Res X} {x : X} :
       step L.C x = .ask o kX → (∀ a, MatchP L (kI a) (.af (kX a))) → MatchP L (.ask o kI) (.th x)
   | fault {x : X} : step L.C x = .fault → MatchP L .fault (.th x)
@@ -63,9 +70,9 @@ abbrev MatchK (L : Lay) (r : Res IR.T) (rx : Res X) : Prop := MatchP L r (.af rx
 /-! ## Straight code: the trees side by side -/
 
 /-- The IR tree and the tree of a straight body from `y0`: the same requests, the same faults, and ends that
-    agree on `r12`, `r13` and keep `r14`. -/
+    agree on `r12`, `r13` and keep `r14` and the observable FP control mode. -/
 def Corr (y0 : X) : Res IR.T → Res X → Prop
-  | .next t, .next z => z.r12 = t.pc ∧ z.r13 = t.fp ∧ z.r14 = y0.r14
+  | .next t, .next z => z.r12 = t.pc ∧ z.r13 = t.fp ∧ z.r14 = y0.r14 ∧ z.fpReady = y0.fpReady
   | .fault, .fault => True
   | .ask o k, .ask o' k' => o = o' ∧ ∀ a, Corr y0 (k a) (k' a)
   | _, _ => False
@@ -104,7 +111,7 @@ theorem straight_go {L : Lay} {y0 : X} (htb : y0.r14 = L.T) (hmode : y0.fpReady 
     | next y =>
       rw [he, bind_next] at hco
       rw [he] at hrip
-      exact .priv (hs.trans he) (straight_go htb is y r hfs (hc' y hrip) hco)
+      exact .priv (hs.trans he) (straight_go htb hmode is y r hfs (hc' y hrip) hco)
     | fault =>
       rw [he] at hco
       cases r <;> simp [Corr] at hco
@@ -126,7 +133,7 @@ theorem straight_go {L : Lay} {y0 : X} (htb : y0.r14 = L.T) (hmode : y0.fpReady 
           rw [hka, bind_next] at this
           have hy := hrip a
           rw [hka] at hy
-          rw [hka]; exact .knext (straight_go htb is y (kI a) hfs (hc' y hy) this)
+          rw [hka]; exact .knext (straight_go htb hmode is y (kI a) hfs (hc' y hy) this)
       | _ => simp [Corr] at hco
 
 /-! ## Code ending in a jump: the trees side by side, the ends matched by `Match` itself -/

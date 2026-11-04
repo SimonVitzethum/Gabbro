@@ -18,7 +18,8 @@ namespace Runner.Beweis
 open Runner.X86 Runner.Prog Runner.Mach
 
 /-- A byte of the dispatch table. -/
-def TB (L : Lay) (y : W) : Prop := ∃ op, op < 256 ∧ ∃ j, j < 8 ∧ y = taddr L (BitVec.ofNat 64 op) + BitVec.ofNat 64 j
+def TB (L : Lay) (y : W) : Prop := ∃ op, op < 257 ∧ ∃ j, j < readOnlyWidth op ∧
+  y = taddr L (BitVec.ofNat 64 op) + BitVec.ofNat 64 j
 
 structure TSt where
   m : Mem
@@ -74,14 +75,14 @@ theorem foldl_wr : ∀ (l : List (W × W)) (m : Mem),
   | [], _ => rfl
   | e :: l, m => by simp only [List.foldl_cons]; rw [foldl_wr l]; rfl
 
-theorem view_table {L : Lay} {s : TSt} (hs : TInv L s) (i : Nat) {op : Nat} (hop : op < 256) :
-    MBytes (s.view i) (taddr L (BitVec.ofNat 64 op)) (wbytes (L.H op)) := by
+theorem view_table {L : Lay} {s : TSt} (hs : TInv L s) (i : Nat) {op : Nat} (hop : op < 257) :
+    MBytes (s.view i) (taddr L (BitVec.ofNat 64 op)) (readOnlyBytes L op) := by
   intro j hj
-  have hj8 : j < 8 := by simpa [wbytes] using hj
+  have hjw : j < readOnlyWidth op := by simpa only [readOnlyBytes_length] using hj
   obtain ⟨hb, hr, hw⟩ := hs.1 op hop j hj
   have far : ∀ e ∈ s.buf i, ∀ j', j' < 8 →
       taddr L (BitVec.ofNat 64 op) + BitVec.ofNat 64 j ≠ e.1 + BitVec.ofNat 64 j' :=
-    fun e he j' hj' heq => hs.2 i e he j' hj' ⟨op, hop, j, hj8, heq.symm⟩
+    fun e he j' hj' heq => hs.2 i e he j' hj' ⟨op, hop, j, hjw, heq.symm⟩
   obtain ⟨fb, fr⟩ := foldl_far (s.buf i) s.m far
   refine ⟨?_, ?_, ?_⟩
   · simp only [TSt.view]; rw [fb]; exact hb
@@ -92,6 +93,12 @@ theorem tso_fixed (L : Lay) : Fixed (TSO L) L := by
   intro s i op a s' hop h
   obtain ⟨rfl, w, rfl⟩ := h
   refine ⟨rfl, w, ?_⟩
-  simp only [rdN, rd64_bytes (view_table s'.2 i hop), Option.map_some]
+  by_cases hc : op = 256
+  · subst op
+    have hread := rd32_control (by simpa only [readOnlyBytes, ite_true] using view_table s'.2 i (by decide : 256 < 257))
+    simp only [readOnlyWidth, readOnlyValue, ite_true, rdN, hread, Option.map_some]
+    rfl
+  · have hread := rd64_bytes (by simpa only [readOnlyBytes, if_neg hc] using view_table s'.2 i hop)
+    simp only [readOnlyWidth, readOnlyValue, if_neg hc, rdN, hread, Option.map_some]
 
 end Runner.Beweis

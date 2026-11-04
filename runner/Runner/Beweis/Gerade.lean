@@ -38,7 +38,7 @@ macro "corr_tail" : tactic => `(tactic|
     | (apply corr_opt; intro _)
     | (simp only [opt_some, bind_next, bind_ask, bind_opt])
     | (simp only [Corr, and_self]; done)
-    | (simp [Corr, aluStep, aluOp, X.set, X.get, X.nof, exec, ea]; done)))
+    | (simp [Corr, aluStep, aluOp, X.set, X.get, X.nof, X.fpReady, exec, ea]; done)))
 
 macro "corr" : tactic => `(tactic| (
   simp [IR.op, IR.bin, IR.ret1, IR.f1, IR.f2, IR.f3, IR.ld, IR.slot, IR.nxt, runL, exec, fld, sld, sst, mb, ms,
