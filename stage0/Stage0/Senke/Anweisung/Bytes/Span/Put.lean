@@ -40,34 +40,41 @@ theorem putBytesWide_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
       omega
     have iw : valueWords (.int a b) = 1 := integerWords_unsigned lower bound
     have hks := hW.ks
-    have teTop := lowE_top e _ _ _ he
-    have tiTop := lowE_top i _ _ _ hi
     let H := (256 : Int) ^ n - 1
     let σE := σ.lese Λ (i.orte ++ e.orte)
     let z := eval σE e σE ρ
     let k := eval σE i σE ρ
     let base := frei Γ reserved
+    have captureEnd : frei (ByteCapture Γ a b H) reserved =
+        base + valueWords (.int 0 H) + 1 := by
+      simp only [frei_cons, iw, base]
+    change max (max te ti) (max tb (frei (ByteCapture Γ a b H) reserved + 2)) ≤ Ks at fits
+    rw [captureEnd] at fits
     have p : PreS L m pc fp K base (ce ++ (ci' ++ cb)) ρ reserved := by
       simpa only [base, List.append_assoc] using pre
     have pe := PreS.welt p.left hks world hW.lay (by have := hW.lo; omega)
     obtain ⟨m1, s1, ch1, value⟩ := lowE_ok (same := by intro _; rfl) σE σE (fun _ h => h)
       hW.lay e _ ce te he (by omega) m pc ρ pe
-    have a1 := Agree.widen ch1 hks
+    have a1 : Agree fp base K m m1 := Agree.widen ch1 hks
     have p1 := p.next a1 (by omega : base ≤ base + valueWords (.int 0 H)) (by omega)
     have world1 := pe.wstab m m1 world (ch1.mono (Nat.zero_le _))
     have pi := PreS.welt p1.left hks world1 hW.lay (by have := hW.lo; omega)
     obtain ⟨m2, s2, ch2, index⟩ := lowE_ok (same := by intro _; rfl) σE σE (fun _ h => h)
       hW.lay i _ ci' ti hi (by omega) m1 _ ρ pi
-    have a2 := Agree.widen ch2 hks
-    have env1 := envAt_cons (envAt_agree pre.env a1 pre.frame (Nat.le_refl _) (by omega)) value
+    have a2 : Agree fp (base + valueWords (.int 0 H)) K m1 m2 := Agree.widen ch2 hks
+    have valueZ : ValueAt L m1 fp base (.int 0 H) z := value
+    have env1 : EnvAt L m1 fp (Env.cons (τ := .int 0 H) z ρ) reserved :=
+      envAt_cons (envAt_agree pre.env a1 pre.frame (Nat.le_refl _) (by omega)) valueZ
     have env2 := envAt_agree env1 a2 p1.frame
-      (by simp only [frei, contextWords_cons]; dsimp only [base]; omega) (by omega)
+      (by simpa only [frei_cons, base] using Nat.le_refl (base + valueWords (.int 0 H))) (by omega)
+    have indexK : ValueAt L m2 fp (base + valueWords (.int 0 H)) (.int a b) k := index
     have kAt : ValueAt L m2 fp (frei (.int 0 H :: Γ) reserved) (.int a b) k := by
-      simpa only [frei, contextWords_cons, Nat.add_assoc, base, H] using index
+      simpa only [frei_cons, base] using indexK
     have env3 := envAt_cons env2 kAt
     have p2 := p1.next a2 (by omega : base + valueWords (.int 0 H) ≤ frei (ByteCapture Γ a b H) reserved)
-      (by simp only [frei, contextWords_cons, ByteCapture] at fits ⊢; dsimp only [base]; omega)
-    have pb : PreS L m2 _ fp K (frei (ByteCapture Γ a b H) reserved) cb (Env.cons k (Env.cons z ρ)) reserved :=
+      (by omega)
+    have pb : PreS L m2 _ fp K (frei (ByteCapture Γ a b H) reserved) cb
+        (Env.cons (τ := .int a b) k (Env.cons (τ := .int 0 H) z ρ)) reserved :=
       ⟨Nat.le_refl _, p2.small, p2.frame, p2.code, p2.far, env3, trivial, wstab_true _ _⟩
     have world2 := pi.wstab m1 m2 world1 (ch2.mono (Nat.zero_le _))
     obtain ⟨m3, s3, ch3, env4, world3⟩ := putBytesWords_ok hf lower hW z k ρ
@@ -75,12 +82,13 @@ theorem putBytesWide_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
       (byteSpan_capacity n) (by omega) hb (by omega) m2 _ σE pb world2
     have changed : AgreeW L fp base K m m3 :=
       (agreeW_of (a1.trans (a2.mono (by omega)))).trans (ch3.mono (by
-        simp only [frei, contextWords_cons, ByteCapture]; dsimp only [base]; omega))
+        rw [captureEnd]; omega))
     simp only [execStmt, Sim]
     refine ⟨m3, s1.trans (s2.trans ?_), changed.mono hlow,
       envAt_tail (envAt_tail env4), ?_, keeps_of_agreeW hW changed hpr (by omega)⟩
-    · simpa only [List.length_append, pc_add, BitVec.add_assoc] using s3
-    · simpa only [dropBytes, Nat.mul_zero, Int.natCast_zero, Int.add_zero] using world3
+    · simpa only [List.length_append, pc_add, Nat.add_assoc] using s3
+    · simpa only [σE, z, k, dropBytes, Nat.mul_zero, Int.natCast_zero, Int.mul_zero,
+        Int.add_zero] using world3
   · cases made
 
 end Gabbro.Stage0.Senke
