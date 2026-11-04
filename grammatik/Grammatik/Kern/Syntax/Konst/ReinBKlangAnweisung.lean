@@ -29,6 +29,40 @@ private theorem constEndB_eq_bindCall (c : ConstProgram) {V : Vertrag c.D} {l : 
     constEndB c (V := V) (l := l) (.bindCall f args he hp hr r) = (constArgsB c args && constEndB c r) := by
   simp only [constEndB]
 
+/-- Resource transports are discharged after the original child certificates are built. -/
+private theorem constEnd_cons_transport (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
+    {Λ Λmid : List (Res c.D)} (stmt : Stmt c.D V l Γ Λ Λmid) (rest : Endblock c.D V l Γ Λmid)
+    (hΛ : Λ = []) (hmid : Λmid = [])
+    (hs : ConstStmt c (hmid ▸ hΛ ▸ stmt)) (hr : ConstEnd c (hmid ▸ rest)) :
+    ConstEnd c (hΛ ▸ Endblock.cons stmt rest) := by
+  cases hΛ
+  cases hmid
+  exact .cons hs hr
+
+private theorem constEnd_bind_transport (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
+    {Λ : List (Res c.D)} (value : Expr c.D Γ Λ τ) (rest : Endblock c.D V l (τ :: Γ) Λ)
+    (hΛ : Λ = []) (accepted : constExprB c value = true) (hr : ConstEnd c (hΛ ▸ rest)) :
+    ConstEnd c (hΛ ▸ Endblock.bind value rest) := by
+  cases hΛ
+  exact .bind (constExprB_sound c value accepted) hr
+
+private theorem constEnd_ite_transport (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
+    {Λ : List (Res c.D)} (condition : Expr c.D Γ Λ .bool) (yes no : Endblock c.D V l Γ Λ)
+    (hΛ : Λ = []) (accepted : constExprB c condition = true)
+    (hy : ConstEnd c (hΛ ▸ yes)) (hn : ConstEnd c (hΛ ▸ no)) :
+    ConstEnd c (hΛ ▸ Endblock.ite condition yes no) := by
+  cases hΛ
+  exact .ite (constExprB_sound c condition accepted) hy hn
+
+private theorem constEnd_bindCall_transport (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
+    {Λ : List (Res c.D)} (f : c.D.Fn) (args : Args c.D Γ Λ (c.D.params f))
+    (he : c.D.erg f = some τ) (hp : RufPasst c.D V (c.D.signatur f) Λ) (hr : c.D.gruende f = 0)
+    (rest : Endblock c.D V l (τ :: Γ) (nach c.D f Λ)) (hΛ : Λ = []) (hcall : nach c.D f Λ = [])
+    (accepted : constArgsB c args = true) (hs : ConstEnd c (hcall ▸ rest)) :
+    ConstEnd c (hΛ ▸ Endblock.bindCall f args he hp hr rest) := by
+  cases hΛ
+  exact ConstEnd.bindCall f args he hp hr hcall rest (constArgsB_sound c args accepted) hs
+
 theorem constEndB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res c.D)} (e : Endblock c.D V l Γ Λ) (hΛ : Λ = [])
     (hacc : constEndB c e = true) : ConstEnd c (hΛ ▸ e) :=
@@ -38,32 +72,26 @@ theorem constEndB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ :
       simp only [constEndB_eq_ret] at hacc
       exact .ret (constResultB_sound c value hacc)
   | .cons (Λ' := Λm) stmt rest => by
-      try subst hΛ
       have hmid : Λm = [] := emptyResources c Λm
       simp only [constEndB_eq_cons, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
-      have hs := constStmtB_soundGen c stmt rfl hmid h0
-      have hr := constEndB_soundGen c rest hmid h1
-      cases hmid
-      exact .cons hs hr
+      exact constEnd_cons_transport c stmt rest hΛ hmid
+        (constStmtB_soundGen c stmt hΛ hmid h0) (constEndB_soundGen c rest hmid h1)
   | .bind value rest => by
-      try subst hΛ
       simp only [constEndB_eq_bind, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
-      exact .bind (constExprB_sound c value h0) (constEndB_soundGen c rest rfl h1)
+      exact constEnd_bind_transport c value rest hΛ h0 (constEndB_soundGen c rest hΛ h1)
   | .ite condition yes no => by
-      try subst hΛ
       simp only [constEndB_eq_ite, Bool.and_eq_true] at hacc
       obtain ⟨⟨h0, h1⟩, h2⟩ := hacc
-      exact .ite (constExprB_sound c condition h0)
-        (constEndB_soundGen c yes rfl h1) (constEndB_soundGen c no rfl h2)
+      exact constEnd_ite_transport c condition yes no hΛ h0
+        (constEndB_soundGen c yes hΛ h1) (constEndB_soundGen c no hΛ h2)
   | .bindCall f args he hp hr rest => by
-      try subst hΛ
-      have hcall : nach c.D f [] = [] := emptyResources c _
+      have hcall : nach c.D f Λ = [] := emptyResources c _
       simp only [constEndB_eq_bindCall, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
-      exact ConstEnd.bindCall f args he hp hr hcall rest
-        (constArgsB_sound c args h0) (constEndB_soundGen c rest hcall h1)
+      exact constEnd_bindCall_transport c f args he hp hr rest hΛ hcall h0
+        (constEndB_soundGen c rest hcall h1)
   | .retWhy .. => by
       try subst hΛ
       rw [constEndB_absage_retWhy] at hacc; exact absurd hacc Bool.false_ne_true
