@@ -106,8 +106,11 @@ theorem sim_stmt_assignThru {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
     (congr (congrArg List.append ((Expr.orte_umTy (E.countE t) (exE E i)).trans (E.orte_exE i)))
       ((Expr.orte_umTy (E.typ t f).symm (exE E e)).trans (E.orte_exE e))).trans List.map_append.symm
   have reads : (exE E p).orte ++ index.orte ++ value.orte = (p.orte ++ i.orte ++ e.orte).map E.ortE := by
-    simpa only [List.append_assoc] using
-      (congr (congrArg List.append (E.orte_exE p)) tailReads).trans List.map_append.symm
+    change List.append (List.append (exE E p).orte index.orte) value.orte =
+      List.map E.ortE (List.append (List.append p.orte i.orte) e.orte)
+    exact (List.append_assoc (exE E p).orte index.orte value.orte).trans
+      (((congr (congrArg List.append (E.orte_exE p)) tailReads).trans List.map_append.symm).trans
+        (congrArg (List.map E.ortE) (List.append_assoc p.orte i.orte e.orte).symm))
   obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval hZ hM T hB.havocA hB.atom Λ (Λ.map E.resE)
     (p.orte ++ i.orte ++ e.orte)
   let W := leseA A' σ' (Λ.map E.resE) ((p.orte ++ i.orte ++ e.orte).map E.ortE)
@@ -157,8 +160,11 @@ theorem sim_stmt_assignThruOwn {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List 
     (congr (congrArg List.append ((Expr.orte_umTy (E.countE t) (exE E i)).trans (E.orte_exE i)))
       ((Expr.orte_umTy (E.typ t f).symm (exE E e)).trans (E.orte_exE e))).trans List.map_append.symm
   have reads : (exE E p).orte ++ index.orte ++ value.orte = (p.orte ++ i.orte ++ e.orte).map E.ortE := by
-    simpa only [List.append_assoc] using
-      (congr (congrArg List.append (E.orte_exE p)) tailReads).trans List.map_append.symm
+    change List.append (List.append (exE E p).orte index.orte) value.orte =
+      List.map E.ortE (List.append (List.append p.orte i.orte) e.orte)
+    exact (List.append_assoc (exE E p).orte index.orte value.orte).trans
+      (((congr (congrArg List.append (E.orte_exE p)) tailReads).trans List.map_append.symm).trans
+        (congrArg (List.map E.ortE) (List.append_assoc p.orte i.orte e.orte).symm))
   obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval hZ hM T hB.havocA hB.atom Λ (Λ.map E.resE)
     (p.orte ++ i.orte ++ e.orte)
   let W := leseA A' σ' (Λ.map E.resE) ((p.orte ++ i.orte ++ e.orte).map E.ortE)
@@ -318,6 +324,17 @@ theorem sim_stmt_shift {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (E.typ t f).trans (by simp only [hτ, tyE, tyN, Ty.mapNumbers])
   obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval hZ hM T hB.havocA hB.atom Λ (Λ.map E.resE)
     (Sum.inl t :: i.orte)
+  let sourceStep (w : World D) : Ausgang V l Γ :=
+    let k : Zahl 0 (D.count t - 1) := eval (D := D) (τ := .index (D.count t)) w i w ρ
+    if (castW (D := D) hτ (w.slots t k.n f)).n = von then
+      .ok (w.schreibSlot t Λ k.n f (hτ ▸ (⟨nach, hn.1, hn.2⟩ : Zahl zi_lo zi_hi))) ρ
+    else .logik .vorzustand
+  have source (Φ : Phi D D') (hP : Passt Φ M₁) :
+      execStmtHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A')
+        passes (E.rufΦ hZ hS pad Φ R')
+        (.shift t f hτ i von nach hn he hw hL : Stmt D V l Γ Λ Λ) σ ρ = sourceStep σ₁ := by
+    change sourceStep (leseA (E.aumweltΦ hZ Φ T A') σ Λ (Sum.inl t :: i.orte)) = sourceStep σ₁
+    exact congrArg sourceStep (hΦ Φ hP)
   let W := leseA A' σ' (Λ.map E.resE) ((Sum.inl t :: i.orte).map E.ortE)
   have hi : (eval W index W ρ').n = (eval σ₁ i σ₁ ρ).n := eval_index_n E hZ i ρ ρ' (hev i ρ ρ' hρ)
   have hn' := E.zahl_cast_n hZ hτ hτ' (E.typ t f)
@@ -345,13 +362,11 @@ theorem sim_stmt_shift {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   by_cases hc : (castW (D := D) hτ (σ₁.slots t (eval σ₁ i σ₁ ρ).n f)).n = von
   · refine ⟨M₁, .ok (σ₁.schreibSlot t Λ (eval σ₁ i σ₁ ρ).n f (hτ ▸ (⟨nach, hn.1, hn.2⟩ : Zahl _ _))) ρ,
       hs, fun Φ hP => ?_, ?_⟩
-    · simp only [execStmtHA, hΦ Φ hP]
-      rw [if_pos hc]
+    · exact (source Φ hP).trans (if_pos hc)
     · rw [target, if_pos hc]
       exact ⟨hI.schreibSlot E t Λ (Λ.map E.resE) _ f _ _ (E.zahl_cast_wert hZ hτ hτ' (E.typ t f) _), hρ⟩
   · refine ⟨M₁, .logik .vorzustand, hs, fun Φ hP => ?_, ?_⟩
-    · simp only [execStmtHA, hΦ Φ hP]
-      rw [if_neg hc]
+    · exact (source Φ hP).trans (if_neg hc)
     · rw [target, if_neg hc]
       exact ⟨logikRel_kein (fun _ h' => by cases h'), hI.keyOk E⟩
 
@@ -374,8 +389,9 @@ theorem sim_stmt_ite {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
     have same := hev c ρ ρ' hρ
     change (eval W condition W ρ' : Bool) = eval σ₁ c σ₁ ρ at same
     exact same
+  letI : Decidable (@Eq Bool (eval (D := D') (τ := .bool) W condition W ρ') true) := Bool.decEq _ _
   have target : execStmtHA S' O' U' A' passes R' (exS hS (.ite c t e : Stmt D V l Γ Λ Λ')) σ' ρ' =
-      if (eval (D := D') (τ := .bool) W condition W ρ' : Bool) = true then execBlockHA S' O' U' A' passes R' (exB hS t) W ρ'
+      if @Eq Bool (eval (D := D') (τ := .bool) W condition W ρ') true then execBlockHA S' O' U' A' passes R' (exB hS t) W ρ'
       else execBlockHA S' O' U' A' passes R' (exB hS e) W ρ' := rfl
   cases hb : (eval σ₁ c σ₁ ρ : Bool)
   · obtain ⟨M₂, o, hs2, hΦ2, hR⟩ := ih_sim_block_e M₁ σ₁ _ ρ ρ' hI hρ
