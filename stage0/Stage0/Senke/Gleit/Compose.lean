@@ -69,6 +69,7 @@ theorem softFinite_round (a b : UInt64) (u v : Exakt)
   rw [h, ha, hb] at hmod
   exact hmod.symm
 
+omit [Runner.IR.Kern] in
 /-- The core proof: on every pair of input words, the composed routine
     decodes to exactly the kernel `Gleitkomma.add f64` of the decoded inputs.
     NaN payloads and signs, infinities, signed zeros and subnormals are all
