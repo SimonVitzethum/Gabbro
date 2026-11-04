@@ -5,7 +5,7 @@ public import Stage0.Senke.Ausdruck.Satz
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.WideFloat
-open Gabbro.Grammatik Gleitkomma
+open Gabbro.Grammatik
 variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
 
 /-- Search the closed exponent interval. Each leaf is a literal position;

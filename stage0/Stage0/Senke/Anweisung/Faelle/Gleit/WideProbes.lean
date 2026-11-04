@@ -1,11 +1,11 @@
 /- Accepted computed-wide conversion hooks and their canonical rounding outcomes. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
-public import Stage0.Senke.Ausdruck.Gleit.Wide.Range
+public import Stage0.Senke.Ausdruck.Gleit.Slots.SlotContext
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.WideFloatProbe
-open Gabbro.Grammatik Gleitkomma Runner.IR FloatProbe ControlProbe
+open Gabbro.Grammatik Runner.IR FloatProbe ControlProbe
 set_option maxRecDepth 100000
 set_option maxHeartbeats 8000000
 
@@ -49,12 +49,12 @@ theorem wide_float_images_zeuge :
 
 /-- These are the source model's results, independently of image execution. -/
 theorem wide_float_rounding_zeuge :
-    ofInt f64 (2 ^ 80 + 2 ^ 27) = ofInt f64 (2 ^ 80) ∧
-    ofInt f64 (2 ^ 80 + 2 ^ 27 + 1) = ofInt f64 (2 ^ 80 + 2 ^ 28) ∧
-    ofInt f64 (-(2 ^ 80 + 2 ^ 27 + 1)) = ofInt f64 (-(2 ^ 80 + 2 ^ 28)) ∧
-    ofInt f64 (2 ^ 81 - 2 ^ 27) = ofInt f64 (2 ^ 81) ∧
-    computedFloatRangeReject (-(2 ^ 1025), 1) (2 ^ 1025, 1)
-      (ofInt f64 (2 ^ 1024 - 2 ^ 970)) = true := by
+    Float.ofInt (2 ^ 80 + 2 ^ 27) = Float.ofInt (2 ^ 80) ∧
+    Float.ofInt (2 ^ 80 + 2 ^ 27 + 1) = Float.ofInt (2 ^ 80 + 2 ^ 28) ∧
+    Float.ofInt (-(2 ^ 80 + 2 ^ 27 + 1)) = Float.ofInt (-(2 ^ 80 + 2 ^ 28)) ∧
+    Float.ofInt (2 ^ 81 - 2 ^ 27) = Float.ofInt (2 ^ 81) ∧
+    floatRangeReject (-(2 ^ 1025), 1) (2 ^ 1025, 1)
+      (Float.ofInt (2 ^ 1024 - 2 ^ 970)) = true := by
   decide +kernel
 
 section GenericWitness
@@ -67,13 +67,13 @@ def operand : Expr Decl [.int (-(2 ^ 80)) (2 ^ 80)] [] (.int (-(2 ^ 80)) (2 ^ 80
     compiler-hook theorem, including four reserved slots. This is a witness
     of that theorem, not an extra trusted producer hypothesis. -/
 theorem computedFloatOfE_wide_ok_zeuge :
-    (computedFloatOfE L f64 operand 12 4).isSome = true ∧
+    (computedFloatOfE L operand 12 4).isSome = true ∧
     ∀ (σ : World Decl) (ρ : Env Decl [.int (-(2 ^ 80)) (2 ^ 80)])
       (m : Runner.Mem) (pc fp : Runner.W) (K top : Nat) (code : List II),
-      LayIn L → computedFloatOfE L f64 operand 12 4 = some (code, top) →
+      LayIn L → computedFloatOfE L operand 12 4 = some (code, top) →
       top ≤ K → Pre L m pc fp K 12 code ρ (fun m => WeltAt m L σ) 4 →
       Ok m pc fp K 12 code
-        (· = BitVec.ofNat 64 (zuBits f64 (ofInt f64 (ρ.get .here).n))) := by
+        (· = (Float.ofInt (ρ.get .here).n).toBits.toBitVec) := by
   constructor
   · decide +kernel
   · intro σ ρ m pc fp K top code lay emitted fits pre
@@ -85,16 +85,16 @@ end GenericWitness
     same compiled range template, even with infinite declared endpoints. -/
 theorem wide_float_overflow_zeuge :
     ∀ z ∈ [2 ^ 1024 - 2 ^ 970, 2 ^ 1024, -(2 ^ 1024)],
-      computedFloatRangeReject (-(2 ^ 1025), 1) (2 ^ 1025, 1) (ofInt f64 z) = true := by
+      floatRangeReject (-(2 ^ 1025), 1) (2 ^ 1025, 1) (Float.ofInt z) = true := by
   decide +kernel
 
 /-- The declared interval is checked after rounding: the even tie reaches
     its upper endpoint, while a nonzero discarded tail crosses it. -/
 theorem wide_float_range_boundary_zeuge :
-    computedFloatRangeReject (0, 1) (2 ^ 80, 1)
-      (ofInt f64 (2 ^ 80 + 2 ^ 27)) = false ∧
-    computedFloatRangeReject (0, 1) (2 ^ 80, 1)
-      (ofInt f64 (2 ^ 80 + 2 ^ 27 + 1)) = true := by
+    floatRangeReject (0, 1) (2 ^ 80, 1)
+      (Float.ofInt (2 ^ 80 + 2 ^ 27)) = false ∧
+    floatRangeReject (0, 1) (2 ^ 80, 1)
+      (Float.ofInt (2 ^ 80 + 2 ^ 27 + 1)) = true := by
   decide +kernel
 
 #print axioms wide_float_images_zeuge

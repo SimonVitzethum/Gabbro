@@ -39,7 +39,7 @@ theorem endFloatNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat
     simp only [execEnd]
     let σr := σ.lese Λ e.orte
     have hchoice := choice_ok (P := P) (σ0 := σ0) (ex := ex) (d := frei Γ reserved) (cc := cc) (ct := cx) (ce := ce ++ cr)
-      (b := floatOutside low' high' (eval σr e σr ρ).x)
+      (b := floatRangeReject low' high' (eval σr e σr ρ).x)
       (ot := match gleitPasst low' high' (eval σr e σr ρ).x with
         | some v => (execEnd O passes R rest σr (Env.cons v ρ)).zuAusgang.schrumpf
         | none => (execEnd O passes R err σr ρ).zuAusgang)
@@ -61,26 +61,26 @@ theorem endFloatNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat
       have hpw := PreS.welt hpc hks hWa hW.lay (by have := hW.lo; omega)
       obtain ⟨m1, st, a1, w, hw, hen⟩ := floatRangeL_ok σr σr e
         (fun d c top h hK m pc hp => lowE_ok (same := by intro _; rfl) σr σr (fun _ h => h) hW.lay e d c top h hK m pc ρ hp |>.word trivial)
-        hl hh hcc (by omega) hpw
+        hcc (by omega) hpw
       exact ⟨m1, st, Agree.widen a1 hks, w, hw, by simpa only [bool_word] using hen⟩
     · intro hb m' pc' hp' _ hu' hk' hw'
-      have hv := (floatOutside_none hl hh (eval σr e σr ρ).endlich).mpr hb
+      have hv := (floatRangeReject_none).mpr hb
       rw [hv]
       exact Ret.toSim (ihErr (ex := exPlus ex ((ce ++ cr).length + 1)) cx tx (by simpa only [List.length_append] using hx) (by omega) (by omega) hW
         m' pc' σr ρ hp' hlo2 hu' hk' hw' hpr)
     · intro hb m' pc' hp' _ hu' hk' hw'
       cases hv : gleitPasst low' high' (eval σr e σr ρ).x with
       | none =>
-        have hf := (floatOutside_none hl hh (eval σr e σr ρ).endlich).mp hv
+        have hf := (floatRangeReject_none).mp hv
         rw [hb] at hf
         cases hf
       | some v =>
         have hvx := floatPasst_x hv
         have encoded : encodeWords L (.fl low' high') v =
-            [BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 v.x)] := by
+            [v.x.toBits.toBitVec] := by
           rw [encodeWords.eq_def L (.fl low' high') v]
         have sourceEncoded : encodeWords L (.fl low high) (eval σr e σr ρ) =
-            [BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 (eval σr e σr ρ).x)] := by
+            [(eval σr e σr ρ).x.toBits.toBitVec] := by
           rw [encodeWords.eq_def L (.fl low high) (eval σr e σr ρ)]
         refine bindValue_ok (L := L) (τ := .fl low' high') (v := v) hW hlo hlo0 hlo2 hpr (by omega) ?_ ?_ hp' hu' hk' hw'
         · intro m pc hp
@@ -92,12 +92,14 @@ theorem endFloatNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat
             (by simp only [frei, contextWords_cons] at hlo2 ⊢; omega) hu hk hw
             (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega)
   · next hnan =>
-    have hn : Gleitkomma.klasse Gleitkomma.f64 (bruch low') = .nan ∨
-        Gleitkomma.klasse Gleitkomma.f64 (bruch high') = .nan := by
+    have hn : (bruch low').isNaN = true ∨ (bruch high').isNaN = true := by
       simp only [Bool.and_eq_true, decide_eq_true_eq] at hnan
-      by_cases hl : Gleitkomma.klasse Gleitkomma.f64 (bruch low') = .nan
-      · exact Or.inl hl
-      · exact Or.inr (Classical.byContradiction fun hh => hnan ⟨hl, hh⟩)
+      apply Classical.byContradiction
+      intro absent
+      apply hnan
+      constructor
+      · exact Bool.eq_false_iff.mpr (fun h => absent (Or.inl h))
+      · exact Bool.eq_false_iff.mpr (fun h => absent (Or.inr h))
     simp only [execEnd, EndAusgang.zuAusgang, floatPasst_nan_bound _ hn]
     exact Ret.toSim (ihErr (ex := ex) c top h hK hs hW m pc _ ρ hp hlo2 hu hk hWa hpr)
 

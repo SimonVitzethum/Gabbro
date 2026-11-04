@@ -183,8 +183,8 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
     pure (elseC (D.signatur f) ((frei Γ reserved)) (callC A f ((frei Γ reserved)) ca.1) cr.1 ce.1,
       elseTop f ((frei Γ reserved)) ca.2 cr.2 ce.2)
   | _, Γ, _, _, .floatNarrow e low high err rest, reserved =>
-    if decide (Gleitkomma.klasse Gleitkomma.f64 (bruch low) ≠ .nan) &&
-        decide (Gleitkomma.klasse Gleitkomma.f64 (bruch high) ≠ .nan) then do
+    if decide ((bruch low).isNaN = false) &&
+        decide ((bruch high).isNaN = false) then do
       let cc ← floatRangeL ((frei Γ reserved)) low high (lowE (reserved := reserved) L e)
       let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
       let cr ← lowB (reserved := reserved) passes A L layout ens pr ex rest
@@ -196,13 +196,9 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
   | _, Γ, _, _, .floatOf e low high rest, reserved =>
     match e with
     | .lit n => floatLiteralL ((frei Γ reserved)) (n, 1) low high (fun _ => lowB (reserved := reserved) passes A L layout ens pr ex rest)
-    | _ => do
-      let cc ← computedFloatRangeL (frei Γ reserved) low high
-        (fun d => computedFloatOfE (reserved := reserved) L Gleitkomma.f64 e d)
-      let ce ← computedFloatOfE (reserved := reserved) L Gleitkomma.f64 e (frei Γ reserved)
-      let cr ← lowB (reserved := reserved) passes A L layout ens pr ex rest
-      pure (floatNarrowC (frei Γ reserved) cc.1 (stopC 107 (frei Γ reserved)) ce.1 cr.1,
-        max cc.2 (max (frei Γ reserved + 8) (max ce.2 cr.2)))
+    | _ => nativeFloatBindL (frei Γ reserved) low high
+      (fun d => computedFloatOfE (reserved := reserved) L e d)
+      (fun _ => lowB (reserved := reserved) passes A L layout ens pr ex rest)
   | _, Γ, _, _, .bindCall f args _ _ _ rest, reserved => do
     let ca ← lowA (reserved := reserved) L args ((frei Γ reserved) + FB)
     let cr ← lowB (reserved := reserved) passes A L layout ens pr ex rest
@@ -438,8 +434,8 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) 
   | _, Γ, _, .retScoped e _, reserved => lowRetScoped L layout ens (frei Γ reserved) e reserved
   | _, Γ, _, .retWhyScoped r _, reserved => lowRetWhyScoped layout r (frei Γ reserved)
   | _, Γ, _, .floatNarrow e low high err rest, reserved =>
-    if decide (Gleitkomma.klasse Gleitkomma.f64 (bruch low) ≠ .nan) &&
-        decide (Gleitkomma.klasse Gleitkomma.f64 (bruch high) ≠ .nan) then do
+    if decide ((bruch low).isNaN = false) &&
+        decide ((bruch high).isNaN = false) then do
       let cc ← floatRangeL (frei Γ reserved) low high (lowE (reserved := reserved) L e)
       let ce ← lowE (reserved := reserved) L e (frei Γ reserved)
       let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest
@@ -451,13 +447,9 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) 
   | _, Γ, _, .floatOf e low high rest, reserved =>
     match e with
     | .lit n => floatLiteralL (frei Γ reserved) (n, 1) low high (fun _ => lowEnd (reserved := reserved) passes A L layout ens pr ex rest)
-    | _ => do
-      let cc ← computedFloatRangeL (frei Γ reserved) low high
-        (fun d => computedFloatOfE (reserved := reserved) L Gleitkomma.f64 e d)
-      let ce ← computedFloatOfE (reserved := reserved) L Gleitkomma.f64 e (frei Γ reserved)
-      let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest
-      pure (floatNarrowC (frei Γ reserved) cc.1 (stopC 107 (frei Γ reserved)) ce.1 cr.1,
-        max cc.2 (max (frei Γ reserved + 8) (max ce.2 cr.2)))
+    | _ => nativeFloatBindL (frei Γ reserved) low high
+      (fun d => computedFloatOfE (reserved := reserved) L e d)
+      (fun _ => lowEnd (reserved := reserved) passes A L layout ens pr ex rest)
   | _, Γ, _, .float op a b low high rest, reserved =>
     floatArithmeticBlockL op (frei Γ reserved) low high (lowE (reserved := reserved) L a)
       (lowE (reserved := reserved) L b) (fun _ => lowEnd (reserved := reserved) passes A L layout ens pr ex rest)

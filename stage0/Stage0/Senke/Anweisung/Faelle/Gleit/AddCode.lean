@@ -1,125 +1,38 @@
-/- Binary64 arithmetic candidates and the complete rounded-result range guard. -/
+/- Native arithmetic is evaluated once before the retained-result guard. -/
 module
-public import Stage0.Senke.Gleit.Normal.Sub
-public import Stage0.Senke.Ausdruck.Gleit.Slots.Test
+public import Stage0.Senke.Gleit.Native.Retained
 public import Stage0.Senke.Anweisung.Faelle.Hilfen
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
-open Gabbro.Grammatik Gleitkomma Runner.IR
+open Gabbro.Grammatik Runner.IR
 
-/-- A computed result must remain finite even if the declared bounds include
-    infinity. The range decision is made after canonical IEEE rounding. -/
-def softFloatReject (lo hi : Int × Int) (x : GFloat) : Bool :=
-  if x.bexp = 2047 then true else floatRangeReject lo hi x
+/-- The stable result is below every guard temporary. A successful continuation
+    already has its value in the canonical binder slot; no FP operation repeats. -/
+def nativeFloatBindL (d : Nat) (lo hi : Int × Int)
+    (producer : Nat → Option (List II × Nat))
+    (rest : Unit → Option (List II × Nat)) : Option (List II × Nat) := do
+  let ce ← producer d
+  let cc ← floatRetainedRangeL d (d + 1) lo hi
+  let cr ← rest ()
+  pure (ce.1 ++ floatNarrowC (d + 1) cc.1 (stopC 107 d) [] cr.1,
+    max ce.2 (max cc.2 (max (d + 8) cr.2)))
 
-private theorem finiteOfExponent (x : GFloat) (h : x.bexp ≠ 2047) : gleitEndlich x = true := by
-  by_cases zero : x.bexp = 0 <;> by_cases frac : x.frac = 0 <;>
-    simp [gleitEndlich, klasse, show f64.bexpMax = 2047 from rfl, h, zero, frac]
-
-/-- The complete emitted rejection predicate is exactly the source failure,
-    including overflow, unordered endpoints and reversed intervals. -/
-theorem softFloatReject_none {lo hi : Int × Int} {x : GFloat} (hw : wf f64 x) :
-    gleitPasst lo hi x = none ↔ softFloatReject lo hi x = true := by
-  by_cases maximum : x.bexp = 2047
-  · have nonfinite : gleitEndlich x = false := by
-      by_cases frac : x.frac = 0 <;>
-        simp [gleitEndlich, klasse, show f64.bexpMax = 2047 from rfl, maximum, frac]
-    have refused : gleitPasst lo hi x = none := by simp [gleitPasst, nonfinite]
-    simp only [softFloatReject, if_pos maximum, refused, true_iff]
-  · simpa only [softFloatReject, if_neg maximum] using
-      floatRangeReject_none hw (finiteOfExponent x maximum)
-
-/-- Reject nonfinite results before executing the ordinary range template. -/
-def softFloatRangeL (d : Nat) (lo hi : Int × Int)
-    (producer : Nat → Option (List II × Nat)) : Option (List II × Nat) :=
-  routineChooseL d
-    (fun j => wordK 14 j (unpackBexpL j producer) 2047)
-    (fun j => some ([ci 1 j 1 0], j + 1))
-    (fun j => canonicalFloatRangeL j lo hi producer)
-
-variable [Kern] {D : Deklaration} {L : Lay D}
-
-/-- Both guard branches consume the same generic result producer, including
-    its reserved prefix and its agreement outside the temporary frame. -/
-theorem softFloatRangeL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
-    {producer : Nat → Option (List II × Nat)} {reserved : Nat}
-    (lo hi : Int × Int) (x : GFloat) (hw : wf f64 x)
-    (hp : WordCode (L := L) (reserved := reserved) ρ W producer
-      (BitVec.ofNat 64 (zuBits f64 x))) :
-    WordCode (L := L) (reserved := reserved) ρ W
-      (fun d => softFloatRangeL d lo hi producer) (Runner.IR.bool (softFloatReject lo hi x)) := by
-  have field : WordCode (L := L) (reserved := reserved) ρ W _ _ := unpackBexpL_ok hp
-  rw [(routineUnpack_canonical x hw).2.1] at field
-  have condition : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin field (WordCode.const 2047 (by decide))
-    (g := fun x y => some (Runner.IR.bool (x == y))) rfl rfl (by decide : 14 < 256)
-  have equality : (BitVec.ofNat 64 x.bexp == BitVec.ofInt 64 2047) =
-      decide (x.bexp = 2047) := by
-    apply Bool.eq_iff_iff.mpr
-    have bound : x.bexp < 2 ^ 64 := by have := hw.1; change x.bexp ≤ 2047 at this; omega
-    simp only [beq_iff_eq, decide_eq_true_eq, ← BitVec.toNat_inj,
-      BitVec.toNat_ofNat, Nat.mod_eq_of_lt bound]
-    simp
-  rw [equality] at condition
-  have ordinary (flag : decide (x.bexp = 2047) = false) :
-      WordCode (L := L) (reserved := reserved) ρ W
-        (fun d => canonicalFloatRangeL d lo hi producer) (Runner.IR.bool (floatRangeReject lo hi x)) := by
-    have finite := finiteOfExponent x (by simpa only [decide_eq_false_iff_not] using flag)
-    intro fp K d code top hc ht m pc pre
-    exact canonicalFloatRangeL_ok (L := L) (reserved := reserved) (fp := fp) (K := K)
-      x hw finite producer
-      (fun j c t he htop mm pp childPre =>
-        (hp (fp := fp) (K := K) (d := j) (c := c) (top := t)
-          he htop mm pp childPre).mono (fun w eq => ⟨hw, eq⟩)) hc ht pre
-  have reject : WordCode (L := L) (reserved := reserved) ρ W
-      (fun j => some ([ci 1 j 1 0], j + 1)) (Runner.IR.bool true) := by
-    intro fp K d code top emitted fits m pc pre
-    exact WordCode.const 1 (by decide) (L := L) (reserved := reserved) (ρ := ρ) (W := W)
-      (fp := fp) (K := K) (d := d) (c := code) (top := top) emitted fits m pc pre
-  have chosen : WordCode (L := L) (reserved := reserved) ρ W _ _ :=
-    routineChooseL_ok condition (fun _ => reject) ordinary
-  intro fp K d code top emitted fits m pc pre
-  by_cases maximum : x.bexp = 2047 <;>
-    simpa [softFloatReject, maximum, Runner.IR.bool] using
-      chosen (fp := fp) (K := K) (d := d) (c := code) (top := top) emitted fits m pc pre
-
-/-- Add/sub share one kernel; multiply and divide select their checked
-    integer routines behind the same result and memory interface. -/
-def softFloatKernel : GleitOp → SoftFloatKernel
-  | .mul => .mul
-  | .div => .div
-  | .add | .sub => .add
-
-/-- One rounded-result guard and continuation template serves every checked
-    arithmetic kernel. Subtraction keeps its single sign-bit xor adapter. -/
+/-- All four source arithmetic operations share the same single-evaluation
+    binder as computed integer conversion. -/
 def floatArithmeticBlockL (op : GleitOp) (d : Nat) (lo hi : Int × Int)
     (left right : Nat → Option (List II × Nat))
     (rest : Unit → Option (List II × Nat)) : Option (List II × Nat) :=
-  do
-    let producer := fun j => softFloatWordsL (softFloatKernel op) j left
-      (fun k => softAddOperandL (decide (op = .sub)) k right)
-    let cc ← softFloatRangeL d lo hi producer
-    let ce ← producer d
-    let cr ← rest ()
-    pure (floatNarrowC d cc.1 (stopC 107 d) ce.1 cr.1,
-      max cc.2 (max (d + 8) (max ce.2 cr.2)))
+  nativeFloatBindL d lo hi (fun j => floatWordsL op j left right) rest
 
-/-- Every arithmetic operation uses exactly the shared code template. -/
 theorem floatArithmeticBlockL_eq (op : GleitOp)
     (d : Nat) (lo hi : Int × Int) (left right : Nat → Option (List II × Nat))
     (rest : Unit → Option (List II × Nat)) :
     floatArithmeticBlockL op d lo hi left right rest = (do
-      let cc ← softFloatRangeL d lo hi
-        (fun j => softFloatWordsL (softFloatKernel op) j left
-          (fun k => softAddOperandL (decide (op = .sub)) k right))
-      let ce ← softFloatWordsL (softFloatKernel op) d left
-        (fun k => softAddOperandL (decide (op = .sub)) k right)
+      let ce ← floatWordsL op d left right
+      let cc ← floatRetainedRangeL d (d + 1) lo hi
       let cr ← rest ()
-      pure (floatNarrowC d cc.1 (stopC 107 d) ce.1 cr.1,
-        max cc.2 (max (d + 8) (max ce.2 cr.2)))) := by
-  rfl
+      pure (ce.1 ++ floatNarrowC (d + 1) cc.1 (stopC 107 d) [] cr.1,
+        max ce.2 (max cc.2 (max (d + 8) cr.2)))) := rfl
 
-#print axioms floatArithmeticBlockL_eq
-#print axioms softFloatReject_none
-#print axioms softFloatRangeL_ok
 end Gabbro.Stage0.Senke

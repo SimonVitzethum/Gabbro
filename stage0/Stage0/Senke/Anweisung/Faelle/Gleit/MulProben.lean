@@ -1,5 +1,5 @@
 /- Accepted multiplication images through the Block hook and retained words.
-   Word checks retain NaN payloads and zero signs that float comparisons omit.
+   Word checks retain zero signs; unordered results are checked by native NaN class.
    Images are fixtures for the assembly runner; they do not execute here. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
@@ -13,7 +13,7 @@ set_option maxHeartbeats 8000000
 /-- The same retained-input pipeline is used by Block emission. This lower
     interface additionally admits nonfinite words, for the dispatcher tests. -/
 def multiplicationImage (a b expected : Nat) : Except String (List Runner.B) :=
-  wordImage (softFloatWordsL .mul 8 (fun d => some (konstWL 4 a d))
+  wordImage (floatWordsL .mul 8 (fun d => some (konstWL 4 a d))
     (fun d => some (konstWL 4 b d))) expected
 
 /-- A normal-by-normal product is accepted through the actual Block hook. -/
@@ -26,13 +26,13 @@ theorem float_mul_accepted_zeuge :
 theorem float_mul_rounding_accepted_zeuge :
     (blockImageOf (binaryArithmetic .mul (2 ^ 52 + 1, 2 ^ 52) (2 ^ 52 + 1, 2 ^ 52)
       (2 ^ 51 + 1, 2 ^ 51))).isOk = true ∧
-    softMul 4607182418800017409 4607182418800017409 = 4607182418800017410 := by
+    (Float.mul (Float.ofBits 4607182418800017409) (Float.ofBits 4607182418800017409)).toBits = 4607182418800017410 := by
   decide +kernel
 
 /-- A normal-by-normal product reaches a subnormal result without flushing. -/
 theorem float_mul_subnormal_accepted_zeuge :
     (blockImageOf (binaryArithmetic .mul (1, 2 ^ 1022) (1, 2) (1, 2 ^ 1023))).isOk = true ∧
-    softMul 4503599627370496 4602678819172646912 = 2251799813685248 := by
+    (Float.mul (Float.ofBits 4503599627370496) (Float.ofBits 4602678819172646912)).toBits = 2251799813685248 := by
   decide +kernel
 
 /-- Nonfinite inputs cannot inhabit a finite source float value. The raw
@@ -40,7 +40,7 @@ theorem float_mul_subnormal_accepted_zeuge :
     it never treats an invalid product as an ordinary numeric zero. -/
 theorem float_mul_invalid_accepted_zeuge :
     (multiplicationImage 0 9218868437227405312 9218868437227405313).isOk = true ∧
-    softMul 0 9218868437227405312 = 9218868437227405313 := by
+    (Float.mul (Float.ofBits 0) (Float.ofBits 9218868437227405312)).isNaN = true := by
   decide +kernel
 
 /-- Execution images for the assembly runner. Expected exit 7 means that

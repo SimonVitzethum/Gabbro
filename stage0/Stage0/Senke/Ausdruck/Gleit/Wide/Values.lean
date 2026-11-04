@@ -4,7 +4,7 @@ public import Stage0.Senke.Ausdruck.Gleit.Wide.Fields
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.WideFloat
-open Gabbro.Grammatik Gleitkomma Runner.IR
+open Gabbro.Grammatik Runner.IR
 variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
   {σ₀ σ : World D} {ρ : Env D Γ} {lo hi : Int} {e : Expr D Γ Λ (.int lo hi)}
   {w : Nat}
@@ -79,7 +79,7 @@ theorem sticky_value (bound : ((eval σ₀ e σ ρ).n.natAbs : Int) ≤ upper w)
 theorem guard_value (bound : ((eval σ₀ e σ ρ).n.natAbs : Int) ≤ upper w)
     (positive : 0 < (eval σ₀ e σ ρ).n.natAbs) :
     (eval σ₀ (guard w e) σ ρ).n =
-      (softShiftJamNat (eval σ₀ e σ ρ).n.natAbs
+      (integerFloatJam (eval σ₀ e σ ρ).n.natAbs
         (integerFloatShift (eval σ₀ e σ ρ).n.natAbs) : Int) := by
   let quotientResult : Zahl 0 (upper w) := eval σ₀ (quotient w e) σ ρ
   let stickyResult : Zahl 0 1 := eval σ₀ (sticky w e) σ ρ
@@ -105,7 +105,7 @@ theorem guard_value (bound : ((eval σ₀ e σ ρ).n.natAbs : Int) ≤ upper w)
   have narrowedNumber : narrowed.n = quotientResult.n := congrArg Zahl.n whole
   change ((narrowed.n.toNat ||| stickyResult.n.toNat : Nat) : Int) = _
   rw [narrowedNumber, quotientNumber, stickyNumber]
-  simp only [Int.toNat_natCast, softShiftJamNat, Nat.shiftRight_eq_div_pow]
+  simp only [Int.toNat_natCast, integerFloatJam, Nat.shiftRight_eq_div_pow]
 
 theorem index_value (bound : ((eval σ₀ e σ ρ).n.natAbs : Int) ≤ upper w)
     (large : 2 ^ 55 ≤ (eval σ₀ e σ ρ).n.natAbs) :

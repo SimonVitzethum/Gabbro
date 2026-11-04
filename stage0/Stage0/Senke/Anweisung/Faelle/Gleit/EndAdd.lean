@@ -1,11 +1,10 @@
-/- Connect shared integer-only arithmetic to the generic ending simulation theorem. -/
+/- Connect native CPU arithmetic to the generic ending simulation theorem. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Gleit.Add
-import all Stage0.Senke.Anweisung.Faelle.Gleit.Add
 public import Stage0.Senke.Anweisung.Faelle.Gleit.EndSupport
 public import Stage0.Senke.Anweisung.Faelle.Binden
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Check
-public import Stage0.Senke.Anweisung.Faelle.Gleit.AddCode
+public import Stage0.Senke.Anweisung.Faelle.Gleit.Bind
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
@@ -32,83 +31,31 @@ theorem endFloatArithmetic_case (op : GleitOp) {O : Orakel D} [TorOK L O] [Sicht
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   simp only [lowEnd, floatArithmeticBlockL_eq op, ← hlo0] at h
   simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨⟨cc, tc⟩, hcc, ⟨ce, te⟩, he, ⟨cr, tr⟩, hr, hc⟩ := h
+  obtain ⟨⟨ce, te⟩, he, ⟨cc, tc⟩, hcc, ⟨cr, tr⟩, hr, hc⟩ := h
   cases hc
   let σr := σ.lese Λ (a.orte ++ b.orte)
-  let x := (softFloatKernel op).apply (eval σr a σr ρ).x
-    (floatAddOperand (decide (op = .sub)) Gleitkomma.f64 (eval σr b σr ρ).x)
-  have finiteRight : gleitEndlich (floatAddOperand (decide (op = .sub)) Gleitkomma.f64
-      (eval σr b σr ρ).x) = true := by
-    cases op <;> simpa [floatAddOperand, gleitEndlich, Gleitkomma.klasse_neg] using
-      (eval σr b σr ρ).endlich
-  have hwf : Gleitkomma.wf Gleitkomma.f64 x :=
-    finiteArithmeticWf (softFloatKernel op) _ _ (eval σr a σr ρ).endlich finiteRight
-  let producer := fun j => softFloatWordsL (softFloatKernel op) j (lowE (reserved := reserved) L a)
-    (fun k => softAddOperandL (decide (op = .sub)) k (lowE (reserved := reserved) L b))
-  have conv : ∀ fp K j code t, producer j = some (code, t) → t ≤ K →
-      ∀ m pc, Pre L m pc fp K j code ρ (fun m => WeltAt m L σr) reserved →
-      Ok m pc fp K j code (fun w => Gleitkomma.wf Gleitkomma.f64 x ∧
-        w = BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 x)) := by
-    intro fp K j code t hc ht m pc pre
-    exact softFloatWordsL_ok (softFloatKernel op) (eval σr a σr ρ).x
-      (floatAddOperand (decide (op = .sub)) Gleitkomma.f64 (eval σr b σr ρ).x)
-      (fun j c t hc ht m pc pre => (lowE_ok σr σr (fun _ h => h) hW.lay (same := fun _ => rfl) a j c t hc ht m pc ρ pre).word trivial)
-      (softAddOperandL_ok (decide (op = .sub)) (eval σr b σr ρ).x
-        (fun j c t hc ht m pc pre => (lowE_ok σr σr (fun _ h => h) hW.lay (same := fun _ => rfl) b j c t hc ht m pc ρ pre).word trivial))
-      hc ht pre
-  simp only [floatNarrowC, List.length_append, List.length_singleton] at hs
-  have rangeStop : logikCode (D := D) .bereich = 107 := by simp only [logikCode]
-  simp only [execEnd, gleitRechneArithmetic op]
-  have hchoice := choice_ok (P := P) (σ0 := σ0) (ex := ex) (d := frei Γ reserved)
-    (cc := cc) (ct := stopC 107 (frei Γ reserved)) (ce := ce ++ cr)
-    (b := softFloatReject low high x)
-    (ot := match gleitPasst low high x with
-      | some v => (execEnd O passes R rest σr (Env.cons v ρ)).zuAusgang.schrumpf
-      | none => .logik .bereich)
-    (oe := match gleitPasst low high x with
-      | some v => (execEnd O passes R rest σr (Env.cons v ρ)).zuAusgang.schrumpf
-      | none => .logik .bereich)
-    (Nat.le_refl _) (by have := hW.ks; omega) (by simpa only [List.length_append] using hs)
-    hW hlo hlo0 hlo2 hpr (σ := σr) ?_ ?_ ?_
-    (by simpa only [floatNarrowC, List.length_append, Int.natCast_add] using hp) hu hk hWa
-  · cases hv : gleitPasst low high x with
-    | none =>
-      simpa only [ite_self, hv, EndAusgang.zuAusgang, floatNarrowC,
-        List.length_append, Int.natCast_add] using hchoice
-    | some v =>
-      simpa only [ite_self, hv, floatEnd_schrumpf, floatNarrowC,
-        List.length_append, Int.natCast_add] using hchoice
-  · intro hpc
-    have hpw := PreS.welt hpc hW.ks hWa hW.lay (by have := hW.lo; omega)
-    have guard : WordCode (L := L) (reserved := reserved) ρ (fun m => WeltAt m L σr)
-        (fun d => softFloatRangeL d low high producer) (Runner.IR.bool (softFloatReject low high x)) :=
-      softFloatRangeL_ok (L := L) (ρ := ρ) (W := fun m => WeltAt m L σr)
-      (reserved := reserved) low high x hwf
-      (fun {fp K j code t} hc ht m pc pre => (conv fp K j code t hc ht m pc pre).mono (fun _ h => h.2))
-    obtain ⟨m1, st, a1, w, hw, hen⟩ := guard hcc (by omega) m pc hpw
-    exact ⟨m1, st, Agree.widen a1 hW.ks, w, hw, by simpa only [bool_word] using hen⟩
-  · intro rejected m' pc' hp' _ hu' hk' hw'
-    rw [(softFloatReject_none hwf).mpr rejected]
-    simp only [Sim, rangeStop]
-    change Stops ⟨pc', fp⟩ m' 107
-    exact stop_ok hp'.code hp'.far hp'.frame (by have := hW.ks; omega) hp'.small (by decide)
-  · intro accepted m' pc' hp' _ hu' hk' hw'
-    cases hv : gleitPasst low high x with
-    | none =>
-      have failed := (softFloatReject_none hwf).mp hv
-      rw [accepted] at failed
-      cases failed
-    | some v =>
-      have hvx := floatPasst_x hv
-      refine bindValue_ok (L := L) (τ := .fl low high) (v := v) hW hlo hlo0 hlo2 hpr (by omega) ?_ ?_ hp' hu' hk' hw'
-      · intro m pc pre
-        refine Ok.value (width := rfl) ?_
-        exact (conv _ _ _ _ _ he (by omega) m pc pre).mono
-          (fun w hw => ⟨by simpa only [hvx] using hw.1, by simpa only [hvx] using hw.2⟩)
-      · intro m pc pre hu hk hw
-        exact ihRest (ex := ex) cr tr hr (by omega) (by omega) hW m pc σr _ pre hlo
-          (by simp only [frei, contextWords_cons] at hlo2 ⊢; omega) hu hk hw
-          (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega)
+  let x := gleitRechne op (eval σr a σr ρ).x (eval σr b σr ρ).x
+  have result := nativeFloatBind_ok (P := P) (σ := σr) (x := x)
+    (out := fun v => (execEnd O passes R rest σr (Env.cons v ρ)).zuAusgang)
+    hcc (by omega) (by simpa only [List.length_append] using hs)
+    hW hlo hlo0 hlo2 hpr
+    (fun m pc pre => floatWordsL_ok op (eval σr a σr ρ).x (eval σr b σr ρ).x
+      (fun {fp K j c t} hc ht m pc pre =>
+        (lowE_ok σr σr (fun _ h => h) hW.lay (same := fun _ => rfl)
+          a j c t hc ht m pc ρ pre).word trivial)
+      (fun {fp K j c t} hc ht m pc pre =>
+        (lowE_ok σr σr (fun _ h => h) hW.lay (same := fun _ => rfl)
+          b j c t hc ht m pc ρ pre).word trivial)
+      he (by omega) m pc pre)
+    (fun v m pc pre hu hk hw => ihRest (ex := ex) cr tr hr (by omega)
+      (by simp only [floatNarrowC, List.length_append, List.length_nil, List.nil_append] at hs; omega)
+      hW m pc σr _ pre hlo
+      (by simp only [frei, contextWords_cons] at hlo2 ⊢; omega) hu hk hw
+      (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega))
+    hp hu hk hWa
+  cases success : gleitPasst low high x <;>
+    simpa only [execEnd, success, floatEnd_schrumpf, EndAusgang.zuAusgang] using result
+
 
 #print axioms endFloatArithmetic_case
 

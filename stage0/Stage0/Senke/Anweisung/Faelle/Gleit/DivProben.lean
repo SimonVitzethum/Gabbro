@@ -12,7 +12,7 @@ set_option maxHeartbeats 16000000
 /-- The same shared operand retention used by the public Block hook. Raw
     words additionally exercise nonfinite outputs and preserve zero signs. -/
 def divisionImage (a b expected : Nat) : Except String (List Runner.B) :=
-  wordImage (softFloatWordsL .div 8 (fun d => some (konstWL 4 a d))
+  wordImage (floatWordsL .div 8 (fun d => some (konstWL 4 a d))
     (fun d => some (konstWL 4 b d))) expected
 
 /-- Ordinary normal operands go through the connected compiler path. -/
@@ -23,13 +23,13 @@ theorem float_div_accepted_zeuge :
 /-- A nonzero rest supplies sticky information for the inexact quotient 1/3. -/
 theorem float_div_rounding_accepted_zeuge :
     (blockImageOf (binaryArithmetic .div (1, 1) (3, 1) (1, 3))).isOk = true ∧
-    softDiv 4607182418800017408 4613937818241073152 = 4599676419421066581 := by
+    (Float.div (Float.ofBits 4607182418800017408) (Float.ofBits 4613937818241073152)).toBits = 4599676419421066581 := by
   decide +kernel
 
 /-- A normal divided by a normal produces a subnormal without flushing it. -/
 theorem float_div_subnormal_accepted_zeuge :
     (blockImageOf (binaryArithmetic .div (1, 2 ^ 1022) (2, 1) (1, 2 ^ 1023))).isOk = true ∧
-    softDiv 4503599627370496 4611686018427387904 = 2251799813685248 := by
+    (Float.div (Float.ofBits 4503599627370496) (Float.ofBits 4611686018427387904)).toBits = 2251799813685248 := by
   decide +kernel
 
 /-- Division by zero emits the kernel infinity word. The finite source
@@ -37,7 +37,7 @@ theorem float_div_subnormal_accepted_zeuge :
 theorem float_div_infinity_accepted_zeuge :
     (blockImageOf (binaryArithmetic .div (1, 1) (0, 1) (0, 1))).isOk = true ∧
     (divisionImage 4607182418800017408 0 9218868437227405312).isOk = true ∧
-    softDiv 4607182418800017408 0 = 9218868437227405312 := by
+    (Float.div (Float.ofBits 4607182418800017408) (Float.ofBits 0)).toBits = 9218868437227405312 := by
   decide +kernel
 
 /-- 0/0 is the canonical kernel NaN, not an ordinary numeric result. Source
@@ -45,7 +45,7 @@ theorem float_div_infinity_accepted_zeuge :
 theorem float_div_nan_accepted_zeuge :
     (blockImageOf (binaryArithmetic .div (0, 1) (0, 1) (0, 1))).isOk = true ∧
     (divisionImage 0 0 9218868437227405313).isOk = true ∧
-    softDiv 0 0 = 9218868437227405313 := by
+    (Float.div (Float.ofBits 0) (Float.ofBits 0)).isNaN = true := by
   decide +kernel
 
 /-- The five requested accepted cases are jointly inhabited, replacing the
@@ -60,7 +60,7 @@ theorem float_div_cases_accepted_zeuge :
   decide +kernel
 
 /-- Exit 7 checks the arithmetic result. Source nonfinite results use 107;
-    raw-word special-case images still return 7 after checking their bits. -/
+    raw-word special-case images still return 7 after checking their native value class or non-NaN word. -/
 def divisionImages : List (String × Except String (List Runner.B) × Nat) :=
   [("float-div-normal", blockImageOf (binaryArithmetic .div (3, 1) (2, 1) (3, 2)), 7),
    ("float-div-rounding", blockImageOf (binaryArithmetic .div (1, 1) (3, 1) (1, 3)), 7),

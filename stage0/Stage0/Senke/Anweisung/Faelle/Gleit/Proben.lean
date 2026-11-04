@@ -1,7 +1,7 @@
 /- Full G fixtures for float forms not yet constructed by the source reader. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
-public import Stage0.Senke.Ausdruck.Gleit.Schluessel
+public import Stage0.Senke.Gleit.Native.Values
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.FloatProbe
@@ -97,11 +97,12 @@ theorem float_end_semantics_zeuge (O : Orakel D) (passes : Nat)
   · cbv
   · constructor <;> cbv
 
-/-- Signed zeros share a key and neither is strictly less than the other in G. -/
+/-- Native signed zeros retain their bits and the canonical ordered semantics. -/
 theorem float_signed_zero_zeuge :
-    floatKey ⟨true, 0, 0⟩ = 0 ∧ floatKey ⟨false, 0, 0⟩ = 0 ∧
-    gleitLt ⟨true, 0, 0⟩ ⟨false, 0, 0⟩ = false ∧
-    gleitLt ⟨false, 0, 0⟩ ⟨true, 0, 0⟩ = false ∧
-    gleitLe ⟨true, 0, 0⟩ ⟨false, 0, 0⟩ = true := by decide +kernel
+    (Float.ofBits 0x8000000000000000).toBits = 0x8000000000000000 ∧
+    (Float.ofBits 0).toBits = 0 ∧
+    gleitLt (Float.ofBits 0x8000000000000000) (Float.ofBits 0) = false ∧
+    gleitLt (Float.ofBits 0) (Float.ofBits 0x8000000000000000) = false ∧
+    gleitLe (Float.ofBits 0x8000000000000000) (Float.ofBits 0) = true := by decide +kernel
 
 end Gabbro.Stage0.Senke.FloatProbe

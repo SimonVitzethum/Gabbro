@@ -1,10 +1,10 @@
-/- Typed integer expressions provide the soft-float normalization inputs. -/
+/- Typed integer expressions preserve the complete native-conversion input. -/
 module
 public import Stage0.Senke.Ausdruck.Gleit.Wide.Search
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.WideFloat
-open Gabbro.Grammatik Gleitkomma Runner.IR
+open Gabbro.Grammatik Runner.IR
 variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
 
 def width (lo hi : Int) : Nat := max 55 (max lo.natAbs hi.natAbs).log2

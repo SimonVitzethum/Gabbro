@@ -31,7 +31,7 @@ def floatLiteralL (d : Nat) (q low high : Int × Int)
   | none => some (stopC 107 d, d + 8)
   | some _ => do
     let cr ← rest ()
-    let cw := konstWL 4 (Gleitkomma.zuBits Gleitkomma.f64 (bruch q)) d
+    let cw := konstWL 4 (bruch q).toBits.toNat d
     pure (cw.1 ++ cr.1, max cw.2 cr.2)
 
 /-- The arguments of a call into the callee's parameter slots from `p` (the callee frame's first variable slot);
