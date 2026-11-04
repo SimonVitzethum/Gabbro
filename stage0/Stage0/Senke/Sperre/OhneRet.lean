@@ -105,11 +105,12 @@ theorem retFreiS_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
     simp only [retFreiS] at h
     simp only [execStmt]
     exact retFreiB_istZ b h _ _
-  | _, _, _, _, .locks _ _ b, h, σ, ρ => by
+  | _, _, _, _, .locks L _ b, h, σ, ρ => by
     simp only [retFreiS] at h
+    have body := retFreiB_istZ b h (σ.nimmt L) ρ
     simp only [execStmt]
-    rw [istZ_mapWelt]
-    exact retFreiB_istZ b h _ _
+    generalize result : execBlock O passes R b (σ.nimmt L) ρ = outcome at body ⊢
+    cases outcome <;> exact body
   | _, _, _, _, .shift .., _, _, _ => by simp only [execStmt]; split <;> rfl
   | _, _, _, _, .retry .., h, _, _ | _, _, _, _, .forever .., h, _, _ | _, _, _, _, .regWrite .., h, _, _
   | _, _, _, _, .transition .., h, _, _ | _, _, _, _, .ret .., h, _, _
@@ -168,7 +169,7 @@ theorem retFreiB_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
     · rfl
   | _, _, _, _, .bindAxiomOpt (e := some τ) _ _ _ _ _ _ r, h, σ, ρ => by
     simp only [retFreiB] at h
-    simp only [execBlock]
+    simp only [execBlock, Ausgang.weiterOpt]
     split
     · rw [istZ_schrumpf]; exact retFreiB_istZ r h _ _
     · rfl
