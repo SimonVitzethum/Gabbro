@@ -85,7 +85,8 @@ def inspectType (scope : Scope) : STyp → SurfaceFacts
   | .array ty n => merge (inspectType scope ty) (expression scope n)
   | .embed ty _ scale => merge (inspectType scope ty) (optional (expression scope) scale)
   | .str n => expression scope n
-  | .entry _ result => optional (inspectType scope) result
+  | .entry _ none => {}
+  | .entry _ (some result) => inspectType scope result
   | .dyn _ _ => ⟨false, []⟩
 
 def effect (scope : Scope) : SEffekt → SurfaceFacts
