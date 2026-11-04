@@ -167,13 +167,21 @@ private theorem power_word (s : Sign) (j : Nat) (lower : 1023 ≤ j) (upper : j 
     Float.ofBits (UInt64.ofNat ((if s = .negative then 2 ^ 63 else 0) + j * 2 ^ 52)) =
       Float.ofModel (Float.Model.pack (.finite s (2 ^ 52) ((j : Int) - 1075) (by decide))) := by
   have biased : (((j : Int) - 1075) + Format.binary64.exponentBias +
-      Format.binary64.mantissaBitsWithoutImplicit).toNat = j := by omega
+      Format.binary64.mantissaBitsWithoutImplicit).toNat = j := by
+    change (((j : Int) - 1075) + 1023 + 52).toNat = j
+    omega
   have packed : UnpackedFloat.pack Format.binary64
       (.finite s (2 ^ 52) ((j : Int) - 1075) (by decide)) =
       packComponents Format.binary64 s (BitVec.ofNat 11 j) 0#52 := by
-    simp only [UnpackedFloat.pack, Nat.log2_two_pow, biased]
-    rw [if_neg (by change ¬ 2048 ≤ j + 1; omega)]
-    rfl
+    have implicitBit : BitVec.ofNat 52 (2 ^ 52) = 0#52 := by
+      apply BitVec.eq_of_toNat_eq
+      simp only [BitVec.toNat_ofNat, Nat.mod_self, Nat.zero_mod]
+    have noOverflow : ¬ 2 ^ Format.binary64.exponentBits ≤ j + 1 := by
+      change ¬ 2048 ≤ j + 1
+      omega
+    have normal : (52 : Nat) + 1 = Format.binary64.mantissaBits := rfl
+    simp only [UnpackedFloat.pack, Nat.log2_two_pow, biased, noOverflow, normal,
+      ↓reduceIte, implicitBit]
   have field : (BitVec.ofNat 11 j).toNat = j := by
     rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
   have encoded : (UnpackedFloat.pack Format.binary64
@@ -241,12 +249,16 @@ private theorem packed_overflow (s : Sign) (m : Nat) (e : Int) (positive : 0 < m
     UnpackedFloat.pack Format.binary64 (.finite s m e positive) = packedInfinity Format.binary64 s := by
   unfold UnpackedFloat.pack
   dsimp only
-  rw [if_pos (by change 2048 ≤ (e + 1075).toNat + 1; omega)]
+  rw [if_pos (by
+    change 2048 ≤ (e + (1023 : Int) + 52).toNat + 1
+    omega)]
 
 private theorem retained_unpacked (g : Nat) (lower : 2 ^ 55 ≤ g) (upper : g < 2 ^ 56) :
     (Float.ofModel (Float.Model.ofInt (g : Int))).toModel.unpack = round Format.binary64 .positive g 0 := by
-  change UnpackedFloat.unpack Format.binary64
-    (UnpackedFloat.pack Format.binary64 (UnpackedFloat.ofInt Format.binary64 (g : Int))) = _
+  have input : (Float.ofModel (Float.Model.ofInt (g : Int))).toModel.unpack =
+      UnpackedFloat.unpack Format.binary64
+        (UnpackedFloat.pack Format.binary64 (UnpackedFloat.ofInt Format.binary64 (g : Int))) := rfl
+  rw [input]
   have cp : compare (g : Int) 0 = .gt := Int.compare_eq_gt.mpr (by omega)
   simp only [UnpackedFloat.ofInt, normalize, cp, Int.toNat_natCast]
   let r := ((⟨g, false, false⟩ : ExtendedMantissa) >>> 3).roundedMantissa
@@ -306,8 +318,8 @@ private theorem packed_product (s : Sign) (n : Nat) (large : 2 ^ 55 ≤ n) :
       have exponent : (k : Int) + 4 = 4 + (k : Int) := by omega
       rw [exponent]
     · rw [Nat.min_eq_left (by omega : 969 ≤ k)]
-      rw [packed_overflow s _ ((k : Int) + 4) (by decide) (by omega),
-        packed_overflow s _ (4 + 969) (by decide) (by decide)]
+      exact (packed_overflow s (2 ^ 52) ((k : Int) + 4) (Nat.two_pow_pos 52) (by omega)).trans
+        (packed_overflow s (2 ^ 52) (4 + ((969 : Nat) : Int)) (Nat.two_pow_pos 52) (by decide)).symm
   · simp only [carry, ↓reduceDIte]
     rw [mul_canonical_power s r 3 j positive rBounds.1 (by omega) (by decide) jl, scale]
     by_cases fits : k ≤ 969
@@ -315,7 +327,7 @@ private theorem packed_product (s : Sign) (n : Nat) (large : 2 ^ 55 ≤ n) :
       have exponent : (k : Int) + 3 = 3 + (k : Int) := by omega
       rw [exponent]
     · rw [Nat.min_eq_left (by omega : 969 ≤ k)]
-      rw [packed_overflow s _ ((k : Int) + 3) (by omega) (by omega),
-        packed_overflow s _ (3 + 969) (by omega) (by decide)]
+      exact (packed_overflow s r ((k : Int) + 3) positive (by omega)).trans
+        (packed_overflow s r (3 + ((969 : Nat) : Int)) positive (by decide)).symm
 
 end RootNativeFloat.NativeScale
