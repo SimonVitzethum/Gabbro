@@ -55,7 +55,10 @@ theorem softDivRoutineL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
   have special : softDivSpecial a b = none := by
     cases ca : klasse f64 a <;> cases cb : klasse f64 b <;>
       simp_all [softDivSpecial]
-  exact softDivFiniteL_model a b ha hb special hl hr
+  have finite : WordCode (L := L) ρ W _ _ :=
+    softDivFiniteL_model a b ha hb special hl hr
+  intro fp K d c top emitted fits m pc pre
+  exact finite (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
 
 /-- All requested result classes instantiate the unrestricted word theorem. -/
 theorem softDivRoutine_ok_zeuge :
@@ -81,12 +84,13 @@ theorem softDivRoutineL_ok_zeuge {Γ : Ctx} (ρ : Env D Γ) (W : Runner.Mem → 
       (fun j => some (konstWL 4 4613937818241073152 j))
       (fun j => some (konstWL 4 4611686018427387904 j)))
       (BitVec.ofNat 64 4609434218613702656) := by
-  have run := softDivRoutineL_ok (L := L) (ρ := ρ) (W := W)
+  have run : WordCode (L := L) ρ W _ _ := softDivRoutineL_ok (L := L) (ρ := ρ) (W := W)
     (⟨false, 1024, 2 ^ 51⟩ : GFloat) (⟨false, 1024, 0⟩ : GFloat)
     (by decide) (by decide)
     (WordCode.konst 4613937818241073152 (by decide))
     (WordCode.konst 4611686018427387904 (by decide))
-  exact run
+  intro fp K d c top emitted fits m pc pre
+  exact run (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
 
 /-- An invalid ratio still uses the same emitter theorem; its NaN result
     is subsequently rejected by the source Block's ordinary range guard. -/
