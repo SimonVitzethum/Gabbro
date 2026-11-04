@@ -111,6 +111,7 @@ def akzeptiertU (u : UProg) : Except String Bool :=
   | .ok (P, fs) =>
     if !sperrInvsOk u then .error "lock invariant without G form" else
     haveI : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length))
+    haveI : DecidableEq (declOf u).Ax := inferInstanceAs (DecidableEq (Fin u.axs.length))
     let ws : List (declOf u).Fn := (u.roots ++ u.gestartet ++ u.gestartet).filterMap fun n => wurzelIdx u n
     let ls : List (declOf u).Lock := List.finRange u.locks.length
     let cs : List ((declOf u).Tab ⊕ (declOf u).Glob) :=

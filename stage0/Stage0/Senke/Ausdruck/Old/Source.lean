@@ -145,9 +145,11 @@ theorem restore_invariante (items : List SItemTief) (u : UProg)
       rfl
 
 /-- The full goal-theorem checker, on the final restored program and all original enumerations. -/
-def accepts (u : UProg) (P : Programm (declOf u)) : Except String Bool := do
+def accepts (u : UProg) (P : Programm (declOf u)) : Except String Bool :=
+  letI : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length))
+  letI : DecidableEq (declOf u).Ax := inferInstanceAs (DecidableEq (Fin u.axs.length))
+  do
   if !sperrInvsOk u then throw "lock invariant without G form"
-  haveI : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length))
   let ws : List (declOf u).Fn := (u.roots ++ u.gestartet ++ u.gestartet).filterMap fun n => wurzelIdx u n
   let ls : List (declOf u).Lock := List.finRange u.locks.length
   let cs : List ((declOf u).Tab ⊕ (declOf u).Glob) :=
@@ -181,12 +183,12 @@ theorem accepts_guests (u : UProg) (P : Programm (declOf u))
   split at accepted
   · cases accepted
   · cases hg : sourceGuests u with
-    | error error => simp [hg] at accepted
+    | error error => simp [hg, Functor.map, Except.map] at accepted
     | ok guests =>
-      simp only [hg, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at accepted
-      refine ⟨guests, hg, sourceGuests_complete u guests hg, ?_⟩
+      simp only [hg, bind, Except.bind, Functor.map, Except.map, pure, Except.pure, Except.ok.injEq] at accepted
+      refine ⟨guests, rfl, sourceGuests_complete u guests hg, ?_⟩
       unfold AkzeptiertX at accepted
       exact fun guest member =>
-        GuestBoundary.admissionB_each (Bool.and_eq_true.mp accepted).2 guest member
+        GuestBoundary.admissionB_each ((Bool.and_eq_true _ _).mp accepted).2 guest member
 
 end Gabbro.Stage0.OldSource
