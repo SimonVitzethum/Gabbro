@@ -306,7 +306,7 @@ theorem anw1_slot {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
   have hs : strEq "=" "=" = true := by decide
   simp only [slotS] at hz
   refine ⟨fun hb v hw => ?_, fun hb v hw => ?_⟩ <;>
-  · simp only [uAnw1, uSetze, hs, ite_true, slotS, uRegOrt, uSetzePlatz, hz, H.einv.optFeld t f,
+  · simp only [uAnw1, uSetze, hs, ite_true, slotS, uRecordLocal, uRegOrt, uSetzePlatz, hz, H.einv.optFeld t f,
       H.einv.boolFeld t f, Option.isSome_none, Bool.false_eq_true, ite_false, hb, hw, decide_true, decide_false,
       uWrap_leer H.wrapsLeer]
 
