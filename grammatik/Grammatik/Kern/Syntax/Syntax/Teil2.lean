@@ -205,10 +205,9 @@ inductive Block : Bool → Ctx → List (Res D) → List (Res D) → Type where
       (Regel 3): die Bedingung gilt, oder der `else`-Zweig -- der nicht abfaellt. -/
   | check (c : Expr D Γ Λ .bool) (sonst : Endblock l Γ Λ) (rest : Block l Γ Λ Λ') :
       Block l Γ Λ Λ'
-  /-- Gleitkomma («F»): `let y = a op b;` mit erklaertem Bereich `lo .. hi` -- die Maschine
-      rechnet (IEEE), das Ergebnis wird gegen den Bereich gehalten, und ein Ergebnis
-      ausserhalb (oder NaN, Unendlich) ist `Logik.bereich` (since 2026-09-15, verdict F1:
-      the kernel IEEE model decides it from the program's values; was `Hardware.ieee`). -/
+  /-- `let y = a op b` applies the native CPU primitive and checks its result
+      against the declared finite range. Failure is `Logik.bereich`, under the
+      unchanged user-logic obligation, rather than a hardware assumption. -/
   | float (op : GleitOp) (a : Expr D Γ Λ (.fl l1 h1)) (b : Expr D Γ Λ (.fl l2 h2)) (lo hi : Int × Int)
       (rest : Block l (.fl lo hi :: Γ) Λ Λ') : Block l Γ Λ Λ'
   /-- Ein Gleitkommaliteral `1.5 rounded` in seinem Bereich. -/

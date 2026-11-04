@@ -426,8 +426,8 @@ def zeigerPasst (z : Int → Option D.Fn) (m : Nat) (n : Int) : Option {f : D.Fn
     G1: `sum`, `fl` and `fnptr` answered `none` for EVERY raw word, so every call of an axiom
     with such a result, and every read of such a register, stopped at `hardware` for every
     oracle -- a stop the MODEL decided and filed as hardware). Every value of every type is
-    the decoding of some raw word under some image (`einpassen_voll`, EinpassenVoll.lean; for
-    floats: every well-formed one). What is left without an answer is exactly the EMPTY
+    the decoding of some raw word under some image (`einpassen_voll`, EinpassenVoll.lean,
+    with native float representation validity inherent in the value type). What is left without an answer is exactly the EMPTY
     types -- `never`, `.why 0`, an empty range, a sum without a value -- and among them the
     checker admits only an axiom `-> never` (round-6 finding W1, `AkzeptiertSpec.antworten`),
     whose call does not return (`HaltArt.nieZurueck`, Zielsatz/Spec.lean).

@@ -1,30 +1,5 @@
-/-
-  File:      Grammatik/GleitZeuge.lean
-  Subject:   RUNS OF FLOAT PROGRAMS WITH PINNED VALUES -- witnesses that were
-             impossible while the model computed with Lean's opaque `Float`.
-
-  Since the switch of 2026-09-14 a `Val (.fl lo hi)` carries an IEEE-754
-  binary64 value as DATA (`GFloat = Gleitkomma.GBits f64`), and every float
-  step (`gleitRechne`, `gleitPasst`, `bruch`, `gleitAusInt`, `gleitLt/Le`)
-  reduces in the kernel. The witnesses below run concrete blocks through
-  the model's semantics (`execBlock`) and pin the stored value by `decide`:
-
-  * `lauf01_gespeichert`: `let a = 0.1 rounded; let b = 0.2 rounded;
-    let c = a + b; G := c;` with every value in `0 .. 1` stores exactly
-    `0x3FD3333333333334` (0.30000000000000004) in the global `G`;
-  * `lauf01_ueber03`: the same sum with the declared range `0 .. 3/10`
-    is OUT of range (`0.30000000000000004 > 0.3`, both as doubles), and
-    the step takes the `logik bereich` outcome -- the range check bites on
-    the last ulp;
-  * `lauf01_vergleich`: `0.1 + 0.2 < 0.3` is FALSE and `0.3 < 0.1 + 0.2`
-    TRUE (the comparisons of the model, `Expr.fllt`);
-  * `laufVon_rundet`: `(double)(2^53 + 1)` rounds to `2^53` (ties to
-    even) -- the conversion `gleitVon` computes;
-  * `roh_trunc`: a float written to a register is truncated toward zero
-    (`gleitRoh`, the meaning the `Float` model's `toInt64` had);
-  * `laufDurchNull`: `1 / 0` is infinite, not finite, and falls into the
-    range check's failure branch (`logik bereich`) -- floats stay FINITE.
--/
+/- Native CPU float program witnesses: checked ranges, comparison, conversion,
+   register words and actual block outcomes through the canonical semantics. -/
 module
 public import Grammatik.Kern.Semantik.Semantik
 @[expose] public section
@@ -32,7 +7,6 @@ public import Grammatik.Kern.Semantik.Semantik
 
 namespace Gabbro.Grammatik
 
-open Gleitkomma
 
 /-! ## 1. The declaration: one float global `G : f64 in 0 .. 1` -/
 
@@ -113,7 +87,7 @@ def gzR : ∀ f : gzD.Fn, World gzD → Env gzD (gzD.params f) → RufAusgang f 
   fun _ σ _ => .ok σ ()
 
 /-- `+0` in range: the initial value of `G`. -/
-def gzNull : Gleit gzLo gzHi := ⟨⟨false, 0, 0⟩, by decide, by decide, by decide⟩
+def gzNull : Gleit gzLo gzHi := ⟨Float.ofBits 0, by decide, by decide, by decide⟩
 
 /-- The initial world: `G = +0`, empty trace. -/
 def gzWelt : World gzD where
@@ -125,11 +99,10 @@ theorem gzDarf : gdarf gzD () [] := fun _ h => nomatch h
 
 /-- Bits of the stored `G` after an `ok` outcome; `none` for any other outcome. -/
 def gzGespeichert {Γ : Ctx} : Ausgang gzV false Γ → Option Nat
-  | .ok σ _ => some (zuBits f64 (σ.globs ()).x)
+  | .ok σ _ => some ((σ.globs ()).x.toBits.toNat)
   | _ => none
 
-/-- `true` exactly for the out-of-range outcome, `logik bereich` (it was `hardware ieee`
-    until 2026-09-15, verdict F1: the kernel IEEE model decides it, no oracle). -/
+/-- Detect the unchanged out-of-range logic outcome after native arithmetic. -/
 def gzIeee {Γ : Ctx} : Ausgang gzV false Γ → Bool
   | .logik .bereich => true
   | _ => false
@@ -190,7 +163,7 @@ theorem lauf01_vergleichExpr :
     is pinned directly: `gleitAusInt (2^53 + 1)` is `2^53` (a tie, the even
     significand wins). -/
 theorem laufVon_rundet : gleitAusInt (2 ^ 53 + 1) = gleitAusInt (2 ^ 53)
-    ∧ zuBits f64 (gleitAusInt (2 ^ 53 + 1)) = 0x4340000000000000 := by decide
+    ∧ (gleitAusInt (2 ^ 53 + 1)).toBits.toNat = 0x4340000000000000 := by decide
 
 theorem roh_trunc : gleitRoh (bruch (5, 2)) = 2 ∧ gleitRoh (bruch (-5, 2)) = -2
     ∧ gleitRoh (bruch (7, 1)) = 7 ∧ gleitRoh (bruch (1, 10)) = 0 := by decide
@@ -210,7 +183,7 @@ theorem laufDurchNull :
     (so `lauf01_gespeichert` is not vacuous at the check), and `+inf` never
     does, whatever the range. -/
 theorem gleitPasst_unendlich (lo hi : Int × Int) :
-    gleitPasst lo hi ⟨false, f64.bexpMax, 0⟩ = Option.none := by
+    gleitPasst lo hi Float.inf = Option.none := by
   unfold gleitPasst
   rw [dif_neg]
   intro h

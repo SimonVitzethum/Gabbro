@@ -301,9 +301,7 @@ public import Grammatik.Isabelle.Consuming
 public import Grammatik.Isabelle.DeviceKonstruktor
 public import Grammatik.Isabelle.VerbundKonstruktor
 public import Grammatik.Isabelle.RestrictAlleinzugriff
-public import Grammatik.Bausteine.Gleitkomma.Gleitkomma
 public import Grammatik.Bausteine.Gleitkomma.GleitZeuge
-public import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Verschachtelt
 public import Grammatik.Parser.Round.Rundlauf
 public import Grammatik.Parser.Round.Rundlauf2

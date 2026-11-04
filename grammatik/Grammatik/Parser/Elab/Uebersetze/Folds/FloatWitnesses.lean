@@ -39,12 +39,12 @@ private def expectedAdd : List UStmt :=
     .setVar "#fold:0:acc" (.param "#fold:0:next"), .ifElse, .blkEnd, .blkEnd,
     .bindW "#fold:0:acc:result" (some uFloatTy) (.param "#fold:0:acc")]
 
-/-- Both source widths retain the existing canonical binary64 model cut. -/
+/-- Both source spellings retain the existing formatless canonical float type. -/
 public theorem f32_type_zeuge : uTyp [] [] (.atom "f32") = .ok uFloatTy := rfl
 public theorem f64_type_zeuge : uTyp [] [] (.atom "f64") = .ok uFloatTy := rfl
 
 /-- Three slots and a real float table read: one loop, left accumulator first,
-    one IEEE addition and one assignment per selected slot, starting at +0.0. -/
+    one native addition and one assignment per selected slot, starting at +0.0. -/
 public theorem add_slot_order_zeuge :
     (expandFold context 0 .foldAdd ["k", "slots"] (operands .foldAdd)).toOption.map (·.1) =
       some expectedAdd := rfl
@@ -92,8 +92,7 @@ public theorem max_order_and_empty_fallback_zeuge :
     (expandFold context 0 .foldMax ["k", "slots"] (operands .foldMax)).toOption.map (·.1) =
       some (expectedExtremum .foldMax) := rfl
 
-/-- Exercise the connected generic G block lowering in a continuing branch.
-    Endblock itself still lacks canonical IEEE introduction constructors. -/
+/-- Exercise the connected generic G block lowering in a continuing branch. -/
 private def lowered (kind : XKind) : Bool :=
   match uAnwReihe [table] [] 1000 context
       [.cond .tru (.block [.bind false "total" none (.ext kind ["k", "slots"] (operands kind))] none)
@@ -114,14 +113,13 @@ public theorem top_level_endblock_lowering_zeuge :
       {name := "sample", params := [], kinds := [], res := none, held := [],
         puts := [], gives := [], body := expectedAdd, ret := .empty}]}).toOption.isSome = true := rfl
 
-/-- IEEE unordered comparisons and signed-zero copies are the kernel model's
-    computations, not a separate extrema policy. -/
+/-- Native unordered comparisons and signed-zero copies use the same primitives
+    as ordinary expressions, without a separate extrema policy. -/
 public theorem nan_unordered_zeuge :
-    Gleitkomma.flt Gleitkomma.f64 (Gleitkomma.nanQ Gleitkomma.f64)
-      (Gleitkomma.ofInt Gleitkomma.f64 1) = false := by decide
+    Float.lt Float.nan (Float.ofInt 1) = false := by decide
 
 public theorem copy_preserves_negative_zero_zeuge :
-    Gleitkomma.mul Gleitkomma.f64 (Gleitkomma.nullN Gleitkomma.f64)
-      (Gleitkomma.ofInt Gleitkomma.f64 1) = Gleitkomma.nullN Gleitkomma.f64 := by decide
+    Float.mul (Float.ofBits 0x8000000000000000) (Float.ofInt 1) =
+      Float.ofBits 0x8000000000000000 := by decide
 
 end Gabbro.Grammatik.Parser.Uebersetze.FloatFoldWitnesses

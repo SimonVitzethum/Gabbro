@@ -209,7 +209,7 @@ theorem g1O_lokal (w t : Int) : RegLokal (g1O w t) :=
 /-- The decoded `0.5`, as a value of `f64 in 0 .. 1` (the three facts evaluated by the
     kernel: `decide +kernel`, no native code). -/
 def g1HalbW : Gleit (0, 1) (1, 1) :=
-  ⟨Gleitkomma.ausBits Gleitkomma.f64 g1Halb.toNat, by decide +kernel, by decide +kernel,
+  ⟨Float.ofBits (UInt64.ofNat g1Halb.toNat), by decide +kernel, by decide +kernel,
     by decide +kernel⟩
 
 /-- The word of `0.5` decodes to `g1HalbW`. -/

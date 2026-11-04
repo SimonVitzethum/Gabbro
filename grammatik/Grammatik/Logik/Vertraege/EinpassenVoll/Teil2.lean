@@ -106,7 +106,6 @@ theorem antwortB_iff {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) (e : Opti
       · intro h
         exact Classical.byContradiction fun hn => h fun v hv => hn ⟨v, hv⟩
 
-#print axioms Gabbro.Grammatik.flt_trans_endlich
 #print axioms Gabbro.Grammatik.gleitBarB_iff
 #print axioms Gabbro.Grammatik.antwortB_iff
 #print axioms Gabbro.Grammatik.summePasst_voll

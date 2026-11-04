@@ -1,7 +1,7 @@
 /-
   File:      Grammatik/EinpassenVoll.lean
   Subject:   EVERY VALUE IS AN ANSWER -- the decoding `einpassen` (Semantik.lean) accepts, for
-             every type, exactly the values of that type (floats: the well-formed ones), so
+             every type, exactly the values admitted by the scalar answer boundary, so
              the answer class of an axiom or a register is empty only when its declared type
              is (round-5 finding G1, 2026-09-15).
 
@@ -17,11 +17,10 @@
                   `struct { marke; union last; }` mixed-radix, `roh = marke + |cs| * last`
                   (Euclidean `%`, `/`); a bare case carries `0`, a payload case a number in
                   its range. Inverse: `summeRoh`, `summePasst_voll`.
-  * `.fl lo hi`-- `gleitWortPasst`: the word is the IEEE-754 binary64 bit pattern
-                  (`0 <= roh < 2^64`, `Gleitkomma.ausBits`), held against the range like a
-                  computed float (`gleitPasst`). Inverse on well-formed values: `zuBits`,
-                  `gleitWortPasst_voll`; every decoded value is well-formed
-                  (`gleitWortPasst_wf`).
+  * `.fl lo hi`-- `gleitWortPasst`: the native 64-bit word (`0 <= roh < 2^64`)
+                  is decoded by `Float.ofBits` and held against the unchanged finite/range
+                  predicates. `gleitWortPasst_voll` uses the native bit round trip; there
+                  is no separate Gabbro representation-validity premise.
   * `.fnptr m` -- `zeigerPasst`: the word is a code address, the loaded image
                   `Orakel.zeiger` names the function there, and its signature number is held
                   against `m`. Every function of signature `m` is the answer of some image
@@ -29,7 +28,7 @@
   * `.never` and every other EMPTY type have no value, hence no answer: `AntwortLeer`.
 
   WHAT IS PROVED HERE.
-  * `einpassen_voll` -- every value of every type (floats: well-formed) is the decoding of
+  * `einpassen_voll` -- every value admitted by the scalar boundary is the decoding of
                         some raw word under some image;
   * `einpassen_wertOk` -- every decoded value is such a value;
   * `antwortLeer_iff` -- the answer class of `τ` is empty EXACTLY when `τ` has no such value:
@@ -38,7 +37,7 @@
     `antwortLeer_keinErg` -- an axiom without a result always answers;
   * `antwortB_iff` (round-6 finding W1) -- emptiness DECIDED from the declaration and the
     program's function list, exactly; the float case by three candidate witnesses, complete
-    because the kernel IEEE order is transitive on finite values (`flt_trans_endlich`). The
+    by the toolchain-native comparison's transitivity and finite endpoint facts. The
     checker uses it to refuse every answer site at an empty type except an axiom `-> never`
     (`antwortenB`, Zielsatz/Akzeptiert.lean).
 -/

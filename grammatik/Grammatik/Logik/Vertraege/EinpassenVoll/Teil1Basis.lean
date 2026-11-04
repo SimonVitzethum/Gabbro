@@ -1,5 +1,6 @@
 module
 public import Grammatik.Kern.Syntax.Typen.Fall
+public import Grammatik.Kern.Syntax.Typen.FloatTransport
 
 public import Grammatik.Kern.Semantik.Semantik
 public import Grammatik.Kern.Semantik.Semantik.T1.SummeTransport
@@ -68,43 +69,15 @@ theorem summePasst_voll (cs : List (Option Ty))
 
 /-! ## 2. Floats -/
 
-/-- Every bit pattern reads back as a well-formed triple (exponent field exactly full). -/
-theorem ausBits_wf (F : Gleitkomma.Format) (hF : F.dicht) (m : Nat) :
-    Gleitkomma.wf F (Gleitkomma.ausBits F m) := by
-  refine ⟨?_, ?_⟩
-  · show (m / 2 ^ F.fracBits) % 2 ^ F.ebits ≤ F.bexpMax
-    have := Nat.mod_lt (m / 2 ^ F.fracBits) (Nat.two_pow_pos F.ebits)
-    unfold Gleitkomma.Format.dicht at hF
-    omega
-  · exact Nat.mod_lt _ (Nat.two_pow_pos _)
-
-theorem f64_wortGrenze :
-    2 ^ (Gleitkomma.f64.ebits + Gleitkomma.f64.fracBits + 1) = 18446744073709551616 := by
-  decide
-
-/-- **Every well-formed float in range is the decoding of its bit pattern.** -/
-theorem gleitWortPasst_voll (lo hi : Int × Int) (v : Gleit lo hi)
-    (hw : Gleitkomma.wf Gleitkomma.f64 v.x) :
-    gleitWortPasst lo hi (Gleitkomma.zuBits Gleitkomma.f64 v.x : Int) = some v := by
-  have hlt := Gleitkomma.zuBits_lt Gleitkomma.f64 Gleitkomma.f64_dicht v.x hw
-  rw [f64_wortGrenze] at hlt
+/-- Every native finite in-range value is decoded from its own CPU word. -/
+theorem gleitWortPasst_voll (lo hi : Int × Int) (v : Gleit lo hi) :
+    gleitWortPasst lo hi (v.x.toBits.toNat : Int) = some v := by
+  have hlt : v.x.toBits.toNat < 18446744073709551616 := v.x.toBits.toNat_lt_size
   unfold gleitWortPasst
-  rw [if_pos ⟨Int.natCast_nonneg _, by unfold gleitWortGrenze; omega⟩, Int.toNat_natCast,
-    Gleitkomma.ausBits_zuBits Gleitkomma.f64 Gleitkomma.f64_dicht v.x hw]
+  rw [if_pos ⟨Int.natCast_nonneg _, by unfold gleitWortGrenze; omega⟩,
+    Int.toNat_natCast, UInt64.ofNat_toNat, NativeFloat.bits_roundtrip]
   unfold gleitPasst
   rw [dif_pos ⟨v.endlich, v.lo_le, v.le_hi⟩]
-
-/-- Every decoded float is well-formed. -/
-theorem gleitWortPasst_wf {lo hi : Int × Int} {n : Int} {v : Gleit lo hi}
-    (h : gleitWortPasst lo hi n = some v) : Gleitkomma.wf Gleitkomma.f64 v.x := by
-  unfold gleitWortPasst at h
-  split at h
-  · unfold gleitPasst at h
-    split at h
-    · cases h
-      exact ausBits_wf Gleitkomma.f64 Gleitkomma.f64_dicht _
-    · cases h
-  · cases h
 
 /-! ## 3. Function pointers -/
 
@@ -116,20 +89,19 @@ theorem zeigerPasst_voll (m : Nat) (v : {f : D.Fn // D.passt f m = true}) :
 
 /-! ## 4. Every type -/
 
-/-- The values an answer can have: every value, and for a float a well-formed one (every
-    value the kernel IEEE model computes is well-formed, `GleitkommaBits.lean`). -/
+/-- The values the scalar answer boundary can carry. Native float representation
+    validity is inherent in `Float`; its finite/range facts are already in `Gleit`. -/
 def WertOk : (τ : Ty) → Wert D τ → Prop
   | .sum cs, _ => sumWort cs = true
-  | .fl _ _, v => Gleitkomma.wf Gleitkomma.f64 (v : Gleit _ _).x
+  | .fl _ _, _ => True
   -- an aggregate is not one raw word: no answer has such a value
   | .arr _ _, _ => False
   | .str _, _ => False
   | .prod _ _, _ => False
   | _, _ => True
 
-/-- **Every value is an answer** (G1 repair): for every type and every value of it
-    (floats: well-formed), some image and some raw word decode to it. The model's decoding
-    refuses no value the type admits. -/
+/-- Every scalar-boundary value, including every native in-range float, is
+    decoded from some raw word under some image. -/
 theorem einpassen_voll : ∀ (τ : Ty) (v : Wert D τ), WertOk τ v →
     ∃ (z : Int → Option D.Fn) (n : Int), einpassen z τ n = some v
   | .int lo hi, v, _ => ⟨fun _ => Option.none, (v : Zahl lo hi).n, by
@@ -156,7 +128,7 @@ theorem einpassen_voll : ∀ (τ : Ty) (v : Wert D τ), WertOk τ v →
       rw [dif_pos ⟨Int.natCast_nonneg _, by have := (r : Fin m).2; omega⟩]
       exact congrArg some (Fin.ext (Int.toNat_natCast _))⟩
   | .never, v, _ => (v : Empty).elim
-  | .fl lo hi, v, hw => ⟨fun _ => Option.none, _, gleitWortPasst_voll lo hi v hw⟩
+  | .fl lo hi, v, _ => ⟨fun _ => Option.none, _, gleitWortPasst_voll lo hi v⟩
   | .fnptr m, v, _ => ⟨fun _ => some (v : {f : D.Fn // D.passt f m = true}).1, 0, zeigerPasst_voll m v⟩
   | .ptr _, _, _ => ⟨fun _ => Option.none, 0, rfl⟩
   | .ref _, r, _ => ⟨fun _ => Option.none, ((Val.zelle r : Nat) : Int), by
@@ -170,7 +142,7 @@ theorem einpassen_voll : ∀ (τ : Ty) (v : Wert D τ), WertOk τ v →
 
 theorem einpassen_wertOk : ∀ (z : Int → Option D.Fn) (τ : Ty) (n : Int) (v : Wert D τ),
     einpassen z τ n = some v → WertOk τ v
-  | _, .fl _ _, _, _, h => gleitWortPasst_wf h
+  | _, .fl _ _, _, _, _ => trivial
   | _, .int _ _, _, _, _ => trivial
   | _, .bool, _, _, _ => trivial
   | _, .opt _, _, _, _ => trivial
@@ -220,8 +192,8 @@ theorem antwortLeer_int_leer {lo hi : Int} (h : hi < lo) : AntwortLeer D (some (
 theorem antwortLeer_keinErg : ¬ AntwortLeer D Option.none := fun h =>
   nomatch h (fun _ => Option.none) 0
 
-/-- The G1 types have answers: an `ok | err` sum, a float range containing a well-formed
-    float, a function-pointer type some function has. -/
+/-- The G1 types have answers: an admitted sum, an inhabited native float range,
+    or a function-pointer type with a conforming function. -/
 theorem nicht_leer_von (τ : Ty) (v : Wert D τ) (hv : WertOk τ v) : ¬ AntwortLeer D (some τ) :=
   fun h => (antwortLeer_iff τ).mp h v hv
 
