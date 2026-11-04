@@ -123,7 +123,7 @@ private theorem consume_targets : targets x.fragment =
   rw [← afterSplit] at afterPosition
   have afterLocated : position .afterBody x.fragment 0 = some (x.offset 41) := by
     have atLabel : position .afterBody x.fragment 0 = some (x.offset 40) := by
-      simpa only [Nat.zero_add] using afterPosition
+      simpa only [Image.offset, Nat.zero_add] using afterPosition
     have step := consume_offset_step x (i := 40) (piece := .label .afterBody) rfl
     simp only [Piece.width, Nat.add_zero] at step
     exact atLabel.trans (congrArg some step.symm)
@@ -134,7 +134,7 @@ private theorem consume_targets : targets x.fragment =
   rw [← leaveSplit] at leavePosition
   have leaveLocated : position .leaveBody x.fragment 0 = some (x.offset 44) := by
     have atLabel : position .leaveBody x.fragment 0 = some (x.offset 43) := by
-      simpa only [Nat.zero_add] using leavePosition
+      simpa only [Image.offset, Nat.zero_add] using leavePosition
     have step := consume_offset_step x (i := 43) (piece := .label .leaveBody) rfl
     simp only [Piece.width, Nat.add_zero] at step
     exact atLabel.trans (congrArg some step.symm)
