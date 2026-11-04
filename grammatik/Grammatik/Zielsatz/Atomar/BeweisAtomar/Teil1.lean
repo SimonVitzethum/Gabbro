@@ -2,7 +2,6 @@ module
 
 public import Grammatik.Zielsatz.Atomar.AtomarZiel
 public import Grammatik.Speichermodell.Maschine.GXMaschine
-public import Grammatik.Zielsatz.Faeden.Verbund
 public import Grammatik.Logik.Fortschritt.Hungerfrei
 public import Grammatik.Bausteine.Arena.Ownership.Ruhe.Start
 import all Init.Data.Repr
