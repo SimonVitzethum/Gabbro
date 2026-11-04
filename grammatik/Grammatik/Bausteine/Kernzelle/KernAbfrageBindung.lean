@@ -140,9 +140,9 @@ def bindetAxE (q : D.Ax) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .exchange _ _ _ _ rest => bindetAxE q rest
   | .ite _ t e => bindetAxE q t || bindetAxE q e
 
-  | .float _ _ _ _ rest => bindetAxE q rest
-  | .floatLit _ _ rest => bindetAxE q rest
-  | .floatOf _ _ rest => bindetAxE q rest
+  | .float _ _ _ _ _ rest => bindetAxE q rest
+  | .floatLit _ _ _ rest => bindetAxE q rest
+  | .floatOf _ _ _ rest => bindetAxE q rest
   | .floatNarrow _ _ _ sonst rest => bindetAxE q sonst || bindetAxE q rest
 end
 
@@ -402,8 +402,8 @@ theorem ruEnd_bindetAxE {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, .ite _ t e, _ => kongr₂ (· || ·) (ruEnd_bindetAxE t _) (ruEnd_bindetAxE e _)
 
   | _, _, _, .float _ _ _ _ _ rest, _ => ruEnd_bindetAxE rest _
-  | _, _, _, .floatLit _ _ rest, _ => ruEnd_bindetAxE rest _
-  | _, _, _, .floatOf _ _ rest, _ => ruEnd_bindetAxE rest _
+  | _, _, _, .floatLit _ _ _ rest, _ => ruEnd_bindetAxE rest _
+  | _, _, _, .floatOf _ _ _ rest, _ => ruEnd_bindetAxE rest _
   | _, _, _, .floatNarrow _ _ _ sonst rest, _ =>
       kongr₂ (· || ·) (ruEnd_bindetAxE sonst _) (ruEnd_bindetAxE rest _)
 
