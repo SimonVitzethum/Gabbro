@@ -141,10 +141,14 @@ def uAkkuHuelleKoerper (p : AkkuPlan) : SAnw :=
 /-- The query wrapper function: no parameters, answer `0 .. k - 1`, costs
     counting the foreign bind and the return. -/
 def uAkkuHuelleFn (p : AkkuPlan) : FnSig × SAnw :=
-  ({ art := "impl", name := uAkkuHuelle p, params := [],
-    res := some (.range (.atom "u32") (.lit 0) (.lit (p.kernZahl - 1))),
-    fehler := none,
-    klauseln := [.cost (.lit 2)] },
+  ({
+    art := "impl"
+    name := uAkkuHuelle p
+    params := []
+    res := some (.range (.atom "u32") (.lit 0) (.lit (p.kernZahl - 1)))
+    fehler := none
+    klauseln := [.cost (.lit 2)]
+  },
     uAkkuHuelleKoerper p)
 
 /-- The update function: one value parameter, no answer, writes every cell,
@@ -152,11 +156,16 @@ def uAkkuHuelleFn (p : AkkuPlan) : FnSig × SAnw :=
     the overflow checks. -/
 def uAkkuAktFn (p : AkkuPlan) (t : STyp) (lo hi : Int) (op : String) :
     FnSig × SAnw :=
-  ({ art := "impl", name := p.akt, params := [("v", t)], res := none,
-    fehler := none,
-    klauseln := [.effs ((List.range p.kernZahl).map fun i =>
-        .writes (.variable (p.name ++ "#zelle" ++ toString i))),
-      .cost (.lit (4 * p.kernZahl + 4))] },
+  ({
+    art := "impl"
+    name := p.akt
+    params := [("v", t)]
+    res := none
+    fehler := none
+    klauseln := [
+      .effs ((List.range p.kernZahl).map (fun i => .writes (.variable (p.name ++ "#zelle" ++ toString i)))),
+      .cost (.lit (4 * p.kernZahl + 4))]
+  },
     uAkkuAktKoerper p lo hi op)
 
 /-- One merge step of the reduction into the accumulator `m` for cell `i`. -/
@@ -192,11 +201,16 @@ def uAkkuFaltKoerper (p : AkkuPlan) (t : STyp) (lo hi neutral : Int)
     neutral start, `k` locked samples, merges and overflow checks. -/
 def uAkkuFaltFn (p : AkkuPlan) (t : STyp) (lo hi neutral : Int)
     (op : String) : FnSig × SAnw :=
-  ({ art := "impl", name := p.falt, params := [], res := some t,
-    fehler := none,
-    klauseln := [.effs ((List.range p.kernZahl).map fun i =>
-        .reads (.variable (p.name ++ "#zelle" ++ toString i))),
-      .cost (.lit (3 * p.kernZahl + 2))] },
+  ({
+    art := "impl"
+    name := p.falt
+    params := []
+    res := some t
+    fehler := none
+    klauseln := [
+      .effs ((List.range p.kernZahl).map (fun i => .reads (.variable (p.name ++ "#zelle" ++ toString i)))),
+      .cost (.lit (3 * p.kernZahl + 2))]
+  },
     uAkkuFaltKoerper p t lo hi neutral op)
 
 /-- The generated functions of one accumulator item: the query head, the
