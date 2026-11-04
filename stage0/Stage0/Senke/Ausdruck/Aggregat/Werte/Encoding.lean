@@ -15,8 +15,8 @@ open Gabbro.Grammatik
 variable {D : Deklaration}
 
 mutual
-/-- The unique canonical word sequence of a model value. Reference validity, floating
-    well-formedness and world permissions remain separate proof obligations. -/
+/-- The unique canonical word sequence of a model value. Reference validity and
+    world permissions remain separate proof obligations. -/
 def encodeWords (L : Lay D) : (τ : Ty) → Wert D τ → List Runner.W
   | .int lo hi, v => integerEncoding (integerWords lo hi) v.n
   | .bool, v => [if wahr? (D := D) v then 1 else 0]
@@ -36,7 +36,7 @@ def encodeWords (L : Lay D) : (τ : Ty) → Wert D τ → List Runner.W
   | .str n, v => if n ≤ 1 then [BitVec.ofNat 64 (strN v.1)] else
       BitVec.ofNat 64 v.1.length :: v.1.map (fun b => BitVec.ofInt 64 b.n) ++
         List.replicate (n - v.1.length) 0
-  | .fl _ _, v => [BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 v.x)]
+  | .fl _ _, v => [v.x.toBits.toBitVec]
   | .ptr _, _ => [0]
   | .never, v => nomatch v
 
@@ -202,7 +202,7 @@ mutual
 def ValueValid (L : Lay D) : (τ : Ty) → Wert D τ → Prop
   | .ref n, v => v.zelle < 2 ^ 64 ∧
       ∃ t, D.tabNr n = some t ∧ D.offen t = true ∧ (v.zelle : Int) < L.count t
-  | .fl _ _, v => Gleitkomma.wf Gleitkomma.f64 v.x
+  | .fl _ _, _ => True
   | .arr τ _, v => ∀ i, ValueValid L τ (v i)
   | .prod _ fs, v => ProdValid L fs v
   | .sum cs, v => SumValid L cs v.1 v.2
