@@ -21,10 +21,18 @@ theorem initialWorld_global_valid (u : UProg) (valid : GabbroV.sp0OkB u = true)
     (GabbroV.sp0GlobWert u g (GabbroV.sp0OkB_glob u valid g))
   unfold GabbroV.sp0GlobWert
   split
-  · apply valid_cast_back L
-    trivial
-  · apply valid_cast_back L
-    trivial
+  · next lo hi ty =>
+    have kind : (declOf u).gtyp g = .int lo hi := by
+      change (globAt u g).ty.toTy = .int lo hi
+      rw [ty]
+      rfl
+    exact valid_cast_back L kind _ (by trivial)
+  · next ty =>
+    have kind : (declOf u).gtyp g = .bool := by
+      change (globAt u g).ty.toTy = .bool
+      rw [ty]
+      rfl
+    exact valid_cast_back L kind _ (by trivial)
   · next τ ty =>
     have accepted : (GabbroV.konstWert (F := (declOf u).Fn) (P := (declOf u).passt)
         τ (globAt u g).initK).isSome = true := by
@@ -44,25 +52,39 @@ theorem initialWorld_slot_valid (u : UProg) (valid : GabbroV.sp0OkB u = true)
   split
   · next q entry =>
     split
-    · apply valid_cast_back L
-      trivial
     · next boolean =>
+      have kind : typAt u t f = .bool :=
+        typAt_bool u t f (by unfold boolFeldAt; rw [entry]; exact boolean)
+      exact valid_cast_back L kind _ (by trivial)
+    · next boolean =>
+      have nonbool : boolFeldAt u t f = false := by
+        unfold boolFeldAt
+        rw [entry]
+        exact boolean
       split
-      · apply valid_cast_back L
-        trivial
-      · split
+      · next n optional =>
+        have kind : typAt u t f = .opt n := typAt_opt u t f n nonbool optional
+        exact valid_cast_back L kind _ (by trivial)
+      · next optional =>
+        split
         · next τ aggregate =>
           have accepted : (GabbroV.konstWert (F := (declOf u).Fn) (P := (declOf u).passt)
               τ .null).isSome = true := by
             simpa only [GabbroV.sp0WertOkB, aggregate] using hw
           exact valid_cast_back L _ _
             (initialConstant_valid L τ _ _ (Option.some_get accepted).symm)
-        · split
-          · apply valid_cast_back L
-            trivial
+        · next aggregate =>
+          split
+          · have range : fieldRangeO u t f = some q.2 := by
+              unfold fieldRangeO
+              rw [entry]
+              rfl
+            have kind : typAt u t f = .int q.2.1 q.2.2 :=
+              typAt_of u t f q.2 range nonbool optional aggregate
+            exact valid_cast_back L kind _ (by trivial)
           · next denied =>
             have impossible : GabbroV.sp0FeldOkB u t f = false := by
-              simp only [GabbroV.sp0FeldOkB, entry, boolean, denied]
+              simp only [GabbroV.sp0FeldOkB, entry, boolean, denied, Bool.false_or]
             rw [impossible] at hf
             cases hf
   · next entry =>
