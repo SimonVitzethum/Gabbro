@@ -45,7 +45,7 @@ private theorem alignedCertificate (l r gap : Nat) (same : Bool)
       have predScaled := congrArg (fun n : Nat => n * 2 ^ gap) pred
       exact ⟨by omega, by nlinarith, by nlinarith⟩
     · have pred : l + softShiftJamNat r gap - 1 = l + (softShiftJamNat r gap - 1) := by omega
-      refine ⟨by rw [Nat.add_mod, even, odd]; decide, ?_, ?_⟩
+      refine ⟨by rw [Nat.add_mod, even, odd], ?_, ?_⟩
       · rw [pred, Nat.add_mul]
         omega
       · rw [Nat.add_mul] at *
@@ -80,6 +80,7 @@ theorem softRound_exaktAdd_aligned (sa sb : Bool) (l r gap : Nat) (e : Int)
       ⟨if sa then -(n : Int) else (n : Int), e - (gap : Int)⟩ := by
     have gapNat : (e - (e - (gap : Int))).toNat = gap := by omega
     rw [floatAdd_align]
+    dsimp only
     by_cases zero : gap = 0
     · subst gap
       simp only [Int.natCast_zero, sub_zero, le_refl, ite_true, sub_self,
@@ -87,14 +88,13 @@ theorem softRound_exaktAdd_aligned (sa sb : Bool) (l r gap : Nat) (e : Int)
       have sub : ((l - r : Nat) : Int) = (l : Int) - r := Int.ofNat_sub (by simpa using cover)
       cases sa <;> cases sb <;> simp [n, same, sub] <;> ring
     · rw [if_neg (by omega), gapNat]
-      dsimp only
       have sub : ((l * 2 ^ gap - r : Nat) : Int) = (l : Int) * (2 ^ gap : Nat) - r := by
         rw [Int.ofNat_sub cover, Nat.cast_mul]
       cases sa <;> cases sb <;> simp [n, same, sub, Nat.cast_add, Nat.cast_mul] <;> ring
   rw [sum]
   have guarded : n * 2 ^ 3 =
       if same then (l * 8) * 2 ^ gap + r * 8 else (l * 8) * 2 ^ gap - r * 8 := by
-    cases same <;> simp only [n, Bool.false_eq_true, ↓reduceIte]
+    cases hs : same <;> simp only [n, hs, Bool.false_eq_true, ↓reduceIte]
     · have subtraction := Nat.sub_add_cancel cover
       have scaled := congrArg (fun n : Nat => n * 8) subtraction
       have cover8 : r * 8 ≤ (l * 8) * 2 ^ gap := by nlinarith
@@ -126,9 +126,11 @@ theorem softRound_exaktAdd_aligned (sa sb : Bool) (l r gap : Nat) (e : Int)
         omega
       have exactN : n * 2 ^ 3 = j * 2 ^ gap := by
         rw [guarded]
-        cases same <;> simp only [j, Bool.false_eq_true, ↓reduceIte] at *
+        cases hs : same <;> simp only [j, hs, Bool.false_eq_true, ↓reduceIte] at *
         · have sub := Nat.sub_add_cancel ordered
           have subScaled := congrArg (fun n : Nat => n * 2 ^ gap) sub
+          have cover8 : r * 8 ≤ l * 8 * 2 ^ gap := by nlinarith
+          have remainder := Nat.sub_add_cancel cover8
           nlinarith
         · rw [Nat.add_mul, ← exactR]
       rw [exactN]
