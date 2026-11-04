@@ -72,6 +72,7 @@ theorem lower_actual {Γ : Ctx} {Λ : List (Res D)}
         invCode memberCode edgeCode measureCode
         (body (s :: pair.1 :: pair.2 :: kept)) = some (code, top) := by
   unfold lower at h
+  dsimp only at h
   dsimp only
   split at h
   · next allocated =>
