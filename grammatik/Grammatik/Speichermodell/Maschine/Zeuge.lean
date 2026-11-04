@@ -65,6 +65,8 @@ namespace SchwachZeuge
 
 open NIZeuge
 
+local instance : DecidableEq nD.Ax := inferInstanceAs (DecidableEq Empty)
+
 /-! ## 1. W on a refused program: a stale read that G cannot make -/
 
 /-- No lock in the noninterference fixture. -/
@@ -176,13 +178,14 @@ theorem w_nicht_sc (ord : nD.Glob → Ordnung) :
 open Lean Elab Tactic Meta in
 /-- Case-analysis helper: find the hypothesis `X = rhs` whose left side is the left side of
     `hR` (after `cases` on a step, the constructor's `hhead`, whose name is inaccessible),
-    and add `hk : rhs_of_hR = rhs`. -/
+    and add `hk : rhs_of_hR = rhs`. Head predicates reduce to the same equality. -/
 elab "kopf_gleich " hR:term : tactic => withMainContext do
   let hRe ← Term.elabTerm hR none
   let some (_, lhs, _) := (← instantiateMVars (← inferType hRe)).eq? | throwError "hR no eq"
   for d in (← getLCtx) do
     if d.isImplementationDetail then continue
-    let ty ← instantiateMVars d.type
+    if d.toExpr == hRe then continue
+    let ty ← whnf (← instantiateMVars d.type)
     if let some (_, a, _) := ty.eq? then
       if a == lhs then
         let pr ← mkEqTrans (← mkEqSymm hRe) d.toExpr
@@ -211,8 +214,8 @@ theorem kopf0 : ((r1M1 sp0).faeden 0).kopf.rest =
     function of the thread's world. -/
 theorem g_schritt_0 {M' : RufMaschineG nD} (h : RufSchrittG nP nO 0 (r1M1 sp0) 0 M') :
     (M'.speicher.slots NTab.tabA 0 ()).n = 3 := by
-  cases h with
-  | g7 h =>
+  cases h
+  case g7 h =>
     cases h with
     | rueckScopedWert ρ r e R hhead hret
     | rueckScopedWertDirekt ρ r e R hhead hret =>
@@ -223,7 +226,8 @@ theorem g_schritt_0 {M' : RufMaschineG nD} (h : RufSchrittG nP nO 0 (r1M1 sp0) 0
       rcases GRest.scopedGrund_faelle hret with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;>
         subst r <;> kopf_gleich kopf0 <;> cases hk
     | _ => kopf_gleich kopf0; cases hk
-  | g1 h | g2 h | g3 h | g4 h | g5 h | g6 h => cases h
+  all_goals rename_i h
+  all_goals cases h
   all_goals (kopf_gleich kopf0)
   all_goals (try (cases hk; done))
   case ruf => exact Bool.noConfusion (congrArg kopfBlatt hk)
@@ -231,8 +235,8 @@ theorem g_schritt_0 {M' : RufMaschineG nD} (h : RufSchrittG nP nO 0 (r1M1 sp0) 0
   case endeEntf => cases hk; cases (by assumption : GEntfaltbar sA = true)
   case endeForm => cases hk; exact absurd (by assumption : EndEntfaltbar (Endblock.cons sA (.ret .empty List.Perm.nil)) = true) (by simp only [EndEntfaltbar, Bool.false_eq_true, not_false_eq_true])
   case blatt =>
+    rename_i l Γ Λ Λ' s rest ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hkein_nimmt
     cases hk
-    rename_i σ' _ _ _ ρ' _ _ hstep _
     have hx : execStmt nO 0 keinRuf sA ((r1M1 sp0).weltVon 0) Env.nil =
         Ausgang.ok (blattWelt sA ((r1M1 sp0).weltVon 0) .nil) .nil := rfl
     have he := hx.symm.trans hstep
@@ -256,6 +260,8 @@ theorem schwach_nicht_trivial :
 /-! ## 2. The goal over the weak machine on an accepted pool -/
 
 open Zielsatz
+
+local instance : DecidableEq zD.Ax := inferInstanceAs (DecidableEq Empty)
 
 /-- **The pool witness over W.** On the runtime's start of the pool unit `zPool` (accepted by
     the concrete checker), machine W runs thread 0, thread 1, thread 0 (both instances unfold,
