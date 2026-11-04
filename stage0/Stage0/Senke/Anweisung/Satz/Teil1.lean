@@ -246,10 +246,16 @@ theorem lowS_ok_locks {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R :
     have hlen := locksCode_len L (L.lk Lk) (frei Γ reserved) cb ex.1 ex.2
     have hks := hW.ks
     simp only [execStmt]
-    exact locks_ok hrf hex1 hex2 (by omega) hW hlo0 hlo2 hpr
+    have run := locks_ok hrf hex1 hex2 (by omega) hW hlo0 hlo2 hpr
       (fun m' σ' hp' hu' hk' hw' => ih_lowB_ok_body (O := O) (passes := passes) (σ0 := σ0) (pr := pr)
         (ex := (16 * 30, 16 * 60)) hS hA hlo0 hens cb tb hcb (by omega) (by rw [hlen] at hs; omega)
         ⟨hW.lay, hW.dis, hW.top, hW.ord, by omega⟩ m' _ σ' ρ hp' hlo hlo2 hu' hk' hw' hpr) hp hu hk hWa
+    have noReturn := retFreiB_istZ (O := O) (passes := passes) (R := R) body hrf (σ.nimmt Lk) ρ
+    generalize result : execBlock O passes R body (σ.nimmt Lk) ρ = outcome at run noReturn ⊢
+    cases outcome with
+    | ok σ' ρ' | leave _ σ' ρ' | next _ σ' ρ' => exact run
+    | logik e | hardware e => exact run
+    | zurueck σ' v | why σ' v => cases noReturn
   · cases h
 
 set_option linter.unusedSectionVars false in
