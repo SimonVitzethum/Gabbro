@@ -133,7 +133,7 @@ theorem bild_wurzel_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List
   let rootValid : (Σ f : D.Fn, Env D (D.params f)) → Prop := fun root =>
     ∀ τ (x : Var (D.params root.1) τ), ValueValid b.Y τ (root.2.get x)
   let rootOutcome : (Σ f : D.Fn, Env D (D.params f)) → Prop := fun root =>
-    match (rufAt P O b.passes b.depth root.1 σ root.2 : RufAusgang root.1) with
+    match (rufAt (D := D) P O b.passes b.depth root.1 σ root.2 : RufAusgang (D := D) root.1) with
     | .ok _ _ => ∃ t' m' q, Star
         ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
           BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = 60
@@ -144,19 +144,27 @@ theorem bild_wurzel_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List
         ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
           BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m (hwCode e)
     | _ => False
-  change rootValid (starts[j]'hj) at hval
-  change rootOutcome (starts[j]'hj)
-  generalize rootEq : (starts[j]'hj) = root at hval ⊢
-  rcases root with ⟨rootFn, rootEnv⟩
-  have functionEq : (starts.map (·.1))[j]'rootBound = rootFn := by
-    rw [List.getElem_map, rootEq]
-  have argumentsEq : (starts.map (fun start => encodeEnv b.Y start.2))[j]'
-      (by simpa only [List.length_map] using hj) = encodeEnv b.Y rootEnv := by
-    rw [List.getElem_map, rootEq]
-  subst rootFn
-  have result := bild_wurzel (hT := hT) (hV := hV) (passes := b.passes) hl hm2 j
-    rootBound σ rootEnv argumentsEq hval hWa
-    (hl.sync locks (by simp only [List.length_map]; omega))
-  simpa only [rootOutcome, List.length_map] using result
+  have completed : rootOutcome (starts[j]'hj) := by
+    change rootValid (starts[j]'hj) at hval
+    generalize rootEq : (starts[j]'hj) = root at hval ⊢
+    rcases root with ⟨rootFn, rootEnv⟩
+    have functionEq : (starts.map (·.1))[j]'rootBound = rootFn := by
+      rw [List.getElem_map, rootEq]
+    have argumentsEq : (starts.map (fun start => encodeEnv b.Y start.2))[j]'
+        (by simpa only [List.length_map] using hj) = encodeEnv b.Y rootEnv := by
+      rw [List.getElem_map, rootEq]
+    subst rootFn
+    have result := bild_wurzel (hT := hT) (hV := hV) (passes := b.passes) hl hm2 j
+      rootBound σ rootEnv argumentsEq hval hWa
+      (hl.sync locks (by simp only [List.length_map]; omega))
+    dsimp only [rootOutcome]
+    generalize rufAt (D := D) P O b.passes b.depth
+      ((starts.map (·.1))[j]'rootBound) σ rootEnv = outcome at result ⊢
+    cases outcome <;> simpa only [List.length_map] using result
+  -- Relate the generated matchers at constructors of the same complete call outcome.
+  dsimp only [rootOutcome] at completed
+  generalize rufAt (D := D) P O b.passes b.depth
+    (starts[j]'hj).1 σ (starts[j]'hj).2 = outcome at completed ⊢
+  cases outcome <;> exact completed
 
 end Gabbro.Stage0.Senke
