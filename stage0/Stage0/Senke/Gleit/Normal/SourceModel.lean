@@ -28,14 +28,13 @@ private theorem decodedNonzero (a : GFloat) (u : Exakt)
     rw [fields, value] at hu
     have same := Option.some.inj hu
     subst u
-    simp only [softSig, zero, ite_true, Nat.max_eq_right (by omega : a.bexp ≤ 1)]
-    cases a.sign <;> rfl
+    cases a.sign <;> simp [softSig, zero, f64, Format.emin]
   · have value := softWertExakt_normal a.sign a.bexp a.frac zero finite
     rw [value] at hu
     have same := Option.some.inj hu
     subst u
-    simp only [softSig, zero, ite_false, Nat.max_eq_left (by omega : 1 ≤ a.bexp)]
-    cases a.sign <;> simp <;> congr 1 <;> omega
+    have index : max a.bexp 1 = a.bexp := Nat.max_eq_left (by omega)
+    cases a.sign <;> simp [softSig, zero, index, f64, Format.bias] <;> omega
 
 private theorem roundAddZero (s : Bool) (n : Nat) (e : Int) (positive : 0 < n) :
     rundeExakt f64 (exaktAdd ⟨if s then -(n : Int) else (n : Int), e⟩ ⟨0, 0⟩) =
@@ -70,8 +69,10 @@ theorem routineSource_sum (a b : GFloat) (ha : wf f64 a) (hb : wf f64 b)
   let r := softSig b.bexp b.frac
   let e := max a.bexp 1
   let f := max b.bexp 1
-  have lb : l < 2 ^ 53 := by dsimp only [l]; unfold softSig; split <;> have := ha.2 <;> omega
-  have rb : r < 2 ^ 53 := by dsimp only [r]; unfold softSig; split <;> have := hb.2 <;> omega
+  have af : a.frac < 2 ^ 52 := ha.2
+  have bf : b.frac < 2 ^ 52 := hb.2
+  have lb : l < 2 ^ 53 := by dsimp only [l]; unfold softSig; split <;> omega
+  have rb : r < 2 ^ 53 := by dsimp only [r]; unfold softSig; split <;> omega
   have indices := routineOrder_indices a b ha hb order
   obtain ⟨equal, different⟩ := routineSource_order a b ha hb order
   have data := softAlignedMagnitude_bounds a.sign b.sign l r e f lb rb
@@ -92,10 +93,14 @@ theorem routineSource_sum (a b : GFloat) (ha : wf f64 a) (hb : wf f64 b)
       have fields : b = ⟨b.sign, 0, 0⟩ := by cases b; simp_all
       rw [fields, softWertExakt_null] at hv
       exact (Option.some.inj hv).symm
+    have leftZero : l = 0 := by simp [l, softSig, azero.1, azero.2]
+    have rightZero : r = 0 := by simp [r, softSig, bzero.1, bzero.2]
+    have magnitude : softAlignedMagnitude a.sign b.sign l r (e - f) = 0 := by
+      simp [softAlignedMagnitude, leftZero, rightZero, softShiftJamNat]
     rw [ua, vb, rundeExakt_null f64 _ (by decide)]
     symm
     apply rundeExakt_null
-    simp [softAlignedMagnitude, softSig, azero.1, azero.2, bzero.1, bzero.2, softShiftJamNat]
+    simp only [magnitude, Int.natCast_zero, neg_zero, ite_self]
   · have an : a.bexp ≠ 0 ∨ a.frac ≠ 0 := by omega
     have lp : 0 < l := by dsimp only [l]; unfold softSig; split <;> omega
     rw [decodedNonzero a u hu an]
@@ -123,7 +128,8 @@ theorem routineSource_sum (a b : GFloat) (ha : wf f64 a) (hb : wf f64 b)
         ((e : Int) - 1075) data.1 data.2.1 (by
           intro tail
           have h := data.2.2.2.2 tail
-          simpa only [show (e : Int) - 1075 - 3 = (e : Int) - 1078 by omega] using h)
+          simpa only [softAlignedMagnitude,
+            show (e : Int) - 1075 - 3 = (e : Int) - 1078 by omega] using h)
       simpa only [softAlignedMagnitude,
         show (e : Int) - 1075 - 3 = (e : Int) - 1078 by omega] using result
 
