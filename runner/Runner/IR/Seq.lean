@@ -2,6 +2,7 @@ module
 public import Runner.IR.Step
 public import Runner.Basis.MemLemma
 public import Runner.Basis.FloatingCodec
+public import Runner.Basis.FloatingCast
 @[expose] public section
 
 
@@ -66,6 +67,18 @@ theorem Run.fp_sequence {kind : NativeFPOp} {a b result : W} {continuation : W �
     have same := nativeFinite_result heval
     simpa only [fpSequence, same] using hk
   | _ => exact Run.native_fp heval hk
+
+/-- The actual low-half branch of the portable unsigned conversion consumes
+    the original unsigned result certificate, not a new CPU callback. -/
+theorem Run.fp_fromUInt64_low {format : FPFormat} {value result : W}
+    {continuation : W → Res T} {m m' : Mem} {t : T} (low : value.msb = false)
+    (heval : NativeFPEval (.fromUInt64 format) value 0 result)
+    (hk : Run (continuation result) m t m') : Run (fpFromUInt64 format value continuation) m t m' := by
+  have signed : NativeFPEval (.fromInt64 format) value 0 result := by
+    cases format
+    · simpa only [NativeFPEval, nativeFP, uint64_toFloat32_nonnegative value low] using heval
+    · simpa only [NativeFPEval, nativeFP, uint64_toFloat_nonnegative value low] using heval
+  simpa only [fpFromUInt64, low, ↓reduceIte] using Run.native_fp signed hk
 
 inductive Star : T → Mem → T → Mem → Prop
   | refl (t : T) (m : Mem) : Star t m t m

@@ -38,4 +38,23 @@ theorem nativeFinite_result {format : FPFormat} {a b result : W}
     (h : NativeFPEval (.isFinite format) a b result) : result = fpFiniteWord format a := by
   simpa only [NativeFPEval, nativeFinite_value, NativeFPValue.Matches] using h
 
+/-- A model witness for composing native requests. This is a proof about the
+    reference representative; it is not an executable program backend. -/
+theorem nativeFPBits_eval (kind : NativeFPOp) (a b : W) :
+    NativeFPEval kind a b (nativeFPBits kind a b) := by
+  unfold NativeFPEval nativeFPBits
+  cases value : nativeFP kind a b with
+  | word result => rfl
+  | f64 result =>
+    change Float.ofBits result.toBits = result
+    exact RootNativeFloat.bits_roundtrip result
+  | f32 result =>
+    constructor
+    · change result.toBits.toBitVec.setWidth 64 =
+        ((result.toBits.toBitVec.setWidth 64).setWidth 32).setWidth 64
+      rw [BitVec.setWidth_setWidth_of_le _ (by decide), BitVec.setWidth_eq]
+    · change Float32.ofBits (UInt32.ofBitVec ((result.toBits.toBitVec.setWidth 64).setWidth 32)) = result
+      rw [BitVec.setWidth_setWidth_of_le _ (by decide), BitVec.setWidth_eq]
+      exact RootNativeFloat.bits32_roundtrip result
+
 end Runner
