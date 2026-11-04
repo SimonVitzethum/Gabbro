@@ -1,6 +1,9 @@
 /- Correspondence of native integer conversions and the toolchain model. -/
 module
 public import NativeFloat.Transport
+import all NativeFloat.Transport
+public import NativeFloat.NormalForm
+import all NativeFloat.NormalForm
 public import Init.Data.OfScientific
 public import Init.Data.SInt.Float
 import Init.Data.SInt.Lemmas
@@ -9,70 +12,6 @@ import Init.Data.SInt.Lemmas
 namespace RootNativeFloat
 open Float.Model
 open Float.Model.UnpackedFloat
-
-private theorem shifted_log (m k : Nat) (nonzero : m ≠ 0) :
-    (m <<< k).log2 = m.log2 + k := by
-  induction k with
-  | zero => simp
-  | succ k ih =>
-      have nz : m <<< k ≠ 0 := by
-        rw [Nat.shiftLeft_eq]
-        exact Nat.mul_ne_zero nonzero (Nat.ne_of_gt (Nat.two_pow_pos k))
-      rw [Nat.shiftLeft_succ, Nat.log2_two_mul nz, ih]
-      omega
-
-private theorem shifted_exact (m k : Nat) :
-    Nat.repeat ExtendedMantissa.shiftRightOne k ⟨m <<< k, false, false⟩ =
-      ⟨m, false, false⟩ := by
-  induction k generalizing m with
-  | zero => rfl
-  | succ k ih =>
-      rw [Nat.repeat, Nat.shiftLeft_succ_inside, ih]
-      simp [ExtendedMantissa.shiftRightOne]
-
-private theorem extended_shift (x : ExtendedMantissa) (k : Nat) :
-    x >>> k = Nat.repeat ExtendedMantissa.shiftRightOne k x := rfl
-
-private theorem exact_at_target (F : Format) (s : Sign) (m : Nat) (e : Int)
-    (positive : 0 < m) (target : F.targetExponent (totalExponent m e) = e) :
-    roundWithAccuracy F s m e .exact = .finite s m e positive := by
-  simp [roundWithAccuracy, shiftToTargetExponent, target, shiftToExponent,
-    ExtendedMantissa.ofMantissaAndAccuracy, ExtendedMantissa.roundedMantissa,
-    ExtendedMantissa.accuracy, Accuracy.roundToNearestEven, extended_shift, Nat.repeat,
-    Nat.ne_of_gt positive]
-
-private theorem scaled_to_target (F : Format) (m k : Nat) (e : Int)
-    (positive : 0 < m) (target : F.targetExponent (totalExponent m e) = e) :
-    shiftToTargetExponent F (m <<< k) (e - k) .exact =
-      (⟨m, false, false⟩, e) := by
-  have total : totalExponent (m <<< k) (e - k) = totalExponent m e := by
-    unfold totalExponent
-    rw [shifted_log m k (Nat.ne_of_gt positive)]
-    simp only [Int.natCast_add]
-    omega
-  have amount : (e - (e - (k : Int))).toNat = k := by omega
-  unfold shiftToTargetExponent
-  rw [total, target]
-  unfold shiftToExponent
-  dsimp only
-  rw [amount]
-  change (Nat.repeat ExtendedMantissa.shiftRightOne k ⟨m <<< k, false, false⟩,
-    e - (k : Int) + k) = (⟨m, false, false⟩, e)
-  rw [shifted_exact]
-  congr 1
-  omega
-
-private theorem exact_scaled (F : Format) (s : Sign) (m k : Nat) (e : Int)
-    (positive : 0 < m) (target : F.targetExponent (totalExponent m e) = e) :
-    roundWithAccuracy F s (m <<< k) (e - k) .exact = .finite s m e positive := by
-  unfold roundWithAccuracy
-  rw [scaled_to_target F m k e positive target]
-  dsimp only [ExtendedMantissa.roundedMantissa, ExtendedMantissa.accuracy,
-    Accuracy.roundToNearestEven]
-  have unchanged : shiftToTargetExponent F m e .exact = (⟨m, false, false⟩, e) := by
-    simpa using scaled_to_target F m 0 e positive target
-  rw [unchanged]
-  simp [Nat.ne_of_gt positive]
 
 private theorem unpack_target {bits : BitVec 64} {s : Sign} {m : Nat} {e : Int} {positive : 0 < m}
     (decoded : UnpackedFloat.unpack Format.binary64 bits = .finite s m e positive) :
@@ -288,26 +227,6 @@ theorem ofNat_model (n : Nat) : Float.ofNat n = Float.ofModel (Float.Model.ofNat
     change Float.ofModel (Float.Model.pack (UnpackedFloat.ofScientific Format.binary64 n 0)) = _
     rw [scientific_zero]
     rfl
-
-private theorem unpack_sign_components (F : Format) (s : Sign)
-    (e : BitVec F.exponentBits) (m : BitVec F.mantissaBitsWithoutImplicit) :
-    unpackSign (packComponents F s e m) = s.toBitVec := by
-  ext i hi
-  simp [unpackSign, packComponents, BitVec.getLsbD_eq_getElem, BitVec.getLsbD_append, hi]
-
-private theorem sign_unbits (s : Sign) : Sign.ofBitVec s.toBitVec = s := by cases s <;> rfl
-
-private theorem unpack_components_neg (F : Format) (s : Sign)
-    (e : BitVec F.exponentBits) (m : BitVec F.mantissaBitsWithoutImplicit) :
-    UnpackedFloat.unpack F (packComponents F (-s) e m) =
-      UnpackedFloat.neg (UnpackedFloat.unpack F (packComponents F s e m)) := by
-  simp only [UnpackedFloat.unpack, unpackMantissa_packComponents,
-    unpackExponent_packComponents, unpack_sign_components, sign_unbits]
-  split
-  · split <;> rfl
-  · split
-    · split <;> rfl
-    · rfl
 
 private theorem neg_decode_pack (u : UnpackedFloat) :
     UnpackedFloat.unpack Format.binary64 (UnpackedFloat.pack Format.binary64 (UnpackedFloat.neg u)) =

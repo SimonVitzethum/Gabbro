@@ -239,4 +239,98 @@ theorem finite_word32_mask (word : UInt32) :
   simp only [decide_eq_true_eq, bne_iff_ne]
   exact not_congr fields.symm
 
+private theorem unpack_sign_components (F : Format) (s : Sign)
+    (e : BitVec F.exponentBits) (m : BitVec F.mantissaBitsWithoutImplicit) :
+    unpackSign (packComponents F s e m) = s.toBitVec := by
+  ext i hi
+  simp [unpackSign, packComponents, BitVec.getLsbD_eq_getElem, BitVec.getLsbD_append, hi]
+
+private theorem sign_unbits (s : Sign) : Sign.ofBitVec s.toBitVec = s := by cases s <;> rfl
+
+private theorem unpack_components_neg (F : Format) (s : Sign)
+    (e : BitVec F.exponentBits) (m : BitVec F.mantissaBitsWithoutImplicit) :
+    UnpackedFloat.unpack F (packComponents F (-s) e m) =
+      UnpackedFloat.neg (UnpackedFloat.unpack F (packComponents F s e m)) := by
+  simp only [UnpackedFloat.unpack, unpackMantissa_packComponents,
+    unpackExponent_packComponents, unpack_sign_components, sign_unbits]
+  split
+  · split <;> rfl
+  · split
+    · split <;> rfl
+    · rfl
+
+private theorem sign_xor (s : Sign) : s.toBitVec ^^^ 1#1 = (-s).toBitVec := by cases s <;> rfl
+
+private theorem unpack_sign_flip (F : Format) (bits : BitVec F.numBits) :
+    UnpackedFloat.unpack F (bits ^^^ ((1#1 ++ 0#F.exponentBits) ++ 0#F.mantissaBitsWithoutImplicit)) =
+      UnpackedFloat.neg (UnpackedFloat.unpack F bits) := by
+  have flipped : bits ^^^ ((1#1 ++ 0#F.exponentBits) ++ 0#F.mantissaBitsWithoutImplicit) =
+      packComponents F (-Sign.ofBitVec (unpackSign (spec := F) bits))
+        (unpackExponent (spec := F) bits) (unpackMantissa (spec := F) bits) := by
+    calc
+      _ = packComponents F (Sign.ofBitVec (unpackSign (spec := F) bits))
+          (unpackExponent (spec := F) bits) (unpackMantissa (spec := F) bits) ^^^
+          ((1#1 ++ 0#F.exponentBits) ++ 0#F.mantissaBitsWithoutImplicit) :=
+        congrArg (fun word => word ^^^
+          ((1#1 ++ 0#F.exponentBits) ++ 0#F.mantissaBitsWithoutImplicit))
+          (components_roundtrip F bits).symm
+      _ = _ := by simp only [packComponents, BitVec.xor_append, BitVec.xor_zero, sign_xor]
+  rw [flipped, unpack_components_neg, components_roundtrip]
+
+/-- Flipping the stored binary64 sign bit is native negation as a decoded
+    value. Arbitrary NaN payloads are allowed on both sides. -/
+theorem neg_word64 (word : UInt64) :
+    Float.ofBits (word ^^^ 0x8000000000000000) = Float.neg (Float.ofBits word) := by
+  have decoded : UnpackedFloat.unpack Format.binary64 (word ^^^ 0x8000000000000000).toBitVec =
+      UnpackedFloat.neg (UnpackedFloat.unpack Format.binary64 word.toBitVec) := by
+    rw [UInt64.toBitVec_xor]
+    have mask : (0x8000000000000000 : UInt64).toBitVec = (1#1 ++ 0#11) ++ 0#52 := by decide
+    rw [mask]
+    exact unpack_sign_flip Format.binary64 word.toBitVec
+  change Float.ofModel (Float.Model.pack
+      (UnpackedFloat.unpack Format.binary64 (word ^^^ 0x8000000000000000).toBitVec)) =
+    Float.ofModel (Float.Model.pack (UnpackedFloat.neg (UnpackedFloat.unpack Format.binary64
+      (UnpackedFloat.pack Format.binary64 (UnpackedFloat.unpack Format.binary64 word.toBitVec)))))
+  by_cases nan : UnpackedFloat.unpack Format.binary64 word.toBitVec = .notANumber
+  · rw [decoded, nan]
+    rfl
+  · rw [decoded, pack_unpack Format.binary64 word.toBitVec (valid_of_not_nan _ _ nan)]
+
+/-- The corresponding native binary32 sign-bit transport. -/
+theorem neg_word32 (word : UInt32) :
+    Float32.ofBits (word ^^^ 0x80000000) = Float32.neg (Float32.ofBits word) := by
+  have decoded : UnpackedFloat.unpack Format.binary32 (word ^^^ 0x80000000).toBitVec =
+      UnpackedFloat.neg (UnpackedFloat.unpack Format.binary32 word.toBitVec) := by
+    rw [UInt32.toBitVec_xor]
+    have mask : (0x80000000 : UInt32).toBitVec = (1#1 ++ 0#8) ++ 0#23 := by decide
+    rw [mask]
+    exact unpack_sign_flip Format.binary32 word.toBitVec
+  change Float32.ofModel (Float32.Model.pack
+      (UnpackedFloat.unpack Format.binary32 (word ^^^ 0x80000000).toBitVec)) =
+    Float32.ofModel (Float32.Model.pack (UnpackedFloat.neg (UnpackedFloat.unpack Format.binary32
+      (UnpackedFloat.pack Format.binary32 (UnpackedFloat.unpack Format.binary32 word.toBitVec)))))
+  by_cases nan : UnpackedFloat.unpack Format.binary32 word.toBitVec = .notANumber
+  · rw [decoded, nan]
+    rfl
+  · rw [decoded, pack_unpack Format.binary32 word.toBitVec (valid_of_not_nan _ _ nan)]
+
+theorem neg_bits64 (word : BitVec 64) :
+    Float.ofBits (UInt64.ofBitVec (word ^^^ 0x8000000000000000)) =
+      -(Float.ofBits (UInt64.ofBitVec word)) := by
+  have stored : UInt64.ofBitVec (word ^^^ 0x8000000000000000) =
+      UInt64.ofBitVec word ^^^ 0x8000000000000000 := by
+    apply UInt64.eq_of_toBitVec_eq
+    rfl
+  rw [stored]
+  exact neg_word64 (UInt64.ofBitVec word)
+
+theorem neg_bits32 (word : BitVec 32) :
+    Float32.ofBits (UInt32.ofBitVec (word ^^^ 0x80000000)) =
+      -(Float32.ofBits (UInt32.ofBitVec word)) := by
+  have stored : UInt32.ofBitVec (word ^^^ 0x80000000) = UInt32.ofBitVec word ^^^ 0x80000000 := by
+    apply UInt32.eq_of_toBitVec_eq
+    rfl
+  rw [stored]
+  exact neg_word32 (UInt32.ofBitVec word)
+
 end RootNativeFloat

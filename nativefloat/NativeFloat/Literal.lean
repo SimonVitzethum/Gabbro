@@ -2,6 +2,7 @@
 module
 public import NativeFloat.IntConversion
 import all NativeFloat.IntConversion
+import all NativeFloat.NormalForm
 @[expose] public section
 
 namespace RootNativeFloat

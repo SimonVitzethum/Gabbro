@@ -4,6 +4,8 @@ public import NativeFloat.IntConversion
 public import NativeFloat.IntSticky
 import all NativeFloat.IntConversion
 import all NativeFloat.IntSticky
+import all NativeFloat.NormalForm
+import all NativeFloat.Transport
 @[expose] public section
 
 namespace RootNativeFloat.NativeScale
@@ -154,39 +156,7 @@ private theorem canonical_unpack (s : Sign) (m : Nat) (e : Int) (positive : 0 < 
     (lower : 2 ^ 52 ≤ m) (upper : m < 2 ^ 53) (emin : -1074 ≤ e) (emax : e ≤ 971) :
     UnpackedFloat.unpack Format.binary64
       (UnpackedFloat.pack Format.binary64 (.finite s m e positive)) = .finite s m e positive := by
-  let j := (e + 1075).toNat
-  have jb : 1 ≤ j ∧ j ≤ 2046 := by dsimp [j]; omega
-  have log : m.log2 = 52 := (Nat.log2_eq_iff (Nat.ne_of_gt positive)).mpr ⟨lower, upper⟩
-  have field : (BitVec.ofNat 11 j).toNat = j := by
-    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
-  have nonzero : BitVec.ofNat 11 j ≠ 0#11 := by
-    intro h
-    have := congrArg BitVec.toNat h
-    simp only [field, BitVec.toNat_ofNat, Nat.zero_mod] at this
-    omega
-  have nonmax : BitVec.ofNat 11 j ≠ -1#11 := by
-    intro h
-    have := congrArg BitVec.toNat h
-    simp only [field, BitVec.neg_one_eq_allOnes, BitVec.toNat_allOnes] at this
-    omega
-  have biased : (e + Format.binary64.exponentBias + Format.binary64.mantissaBitsWithoutImplicit).toNat = j := rfl
-  have packed : UnpackedFloat.pack Format.binary64 (.finite s m e positive) =
-      packComponents Format.binary64 s (BitVec.ofNat 11 j) (BitVec.ofNat 52 m) := by
-    simp only [UnpackedFloat.pack, biased, log]
-    rw [if_neg (by change ¬ 2048 ≤ j + 1; omega)]
-    rfl
-  have magnitude : (1#1 ++ BitVec.ofNat 52 m).toNat = m := by
-    rw [BitVec.toNat_append, ← Nat.shiftLeft_add_eq_or_of_lt (BitVec.ofNat 52 m).isLt,
-      Nat.shiftLeft_eq]
-    simp only [BitVec.toNat_ofNat]
-    omega
-  rw [packed]
-  simp only [UnpackedFloat.unpack, unpackMantissa_packComponents,
-    unpackExponent_packComponents, unpack_sign_components, sign_unbits,
-    nonmax, nonzero, ↓reduceIte, field, magnitude]
-  congr 1
-  dsimp [j]
-  omega
+  exact normal_unpack Format.binary64 s m e positive lower upper emin emax
 
 private theorem power_word (s : Sign) (j : Nat) (lower : 1023 ≤ j) (upper : j ≤ 1992) :
     Float.ofBits (UInt64.ofNat ((if s = .negative then 2 ^ 63 else 0) + j * 2 ^ 52)) =
