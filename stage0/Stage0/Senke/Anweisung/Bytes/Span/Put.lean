@@ -79,7 +79,9 @@ theorem putBytesWide_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     have world2 := pi.wstab m1 m2 world1 (ch2.mono (Nat.zero_le _))
     obtain ⟨m3, s3, ch3, env4, world3⟩ := putBytesWords_ok hf lower hW z k ρ
       (valueWords (.int 0 H)) n 0 (by simpa using upper) cb tb
-      (byteSpan_capacity n) (by omega) hb (by omega) m2 _ σE pb world2
+      (byteSpan_capacity n)
+      (by simpa only [H, Nat.zero_add] using Nat.le_refl (valueWords (.int 0 H)))
+      hb (by omega) m2 _ σE pb world2
     have changed : AgreeW L fp base K m m3 :=
       (agreeW_of (a1.trans (a2.mono (by omega)))).trans (ch3.mono (by
         rw [captureEnd]; omega))
