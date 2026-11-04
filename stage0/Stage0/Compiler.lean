@@ -94,21 +94,34 @@ def compileChecked (source : Frontend.Source text options)
       let arrays ← Frontend.checkArrays unit source.scopes (uMembers declarations)
       match hm : fnIdx unit.fns (Profil.entryName options) with
       | .error e => throw e
-      | .ok main =>
+      | .ok main => do
         match hl : lowerAllg unit with
         | .error e => throw e
-        | .ok (raw, fs) =>
+        | .ok (raw, fs) => do
           match hr : OldSource.restore declarations unit raw with
           | .error e => throw e
-          | .ok program =>
+          | .ok program => do
             match ha : OldSource.accepts unit program with
             | .error e => throw e
             | .ok false => throw "refused by the checker (AkzeptiertX)"
-            | .ok true => pure { source, unit, main, program, elaborated,
-                entry := hm, lowered := ⟨raw, fs, hl, hr⟩, accepted := ha,
-                arrayConstants := arrays.down, initializerExports := hi,
-                constantExports := hc, expanded, requirements, gateMembers,
-                gateExpansion := hp, gateChecked, metadata }
+            | .ok true => pure {
+                source := source
+                unit := unit
+                main := main
+                program := program
+                elaborated := elaborated
+                entry := hm
+                lowered := ⟨raw, fs, hl, hr⟩
+                accepted := ha
+                arrayConstants := arrays.down
+                initializerExports := hi
+                constantExports := hc
+                expanded := expanded
+                requirements := requirements
+                gateMembers := gateMembers
+                gateExpansion := hp
+                gateChecked := gateChecked
+                metadata := metadata }
 
 /-- Compilation preserves original constant admission and checks both metadata sides.
     Expansion-consumed headers prefer the expanded side; ordinary units prefer the original.
@@ -122,22 +135,24 @@ def compile (text : String) (options : Profil.Options := {}) : Except String (Co
   | .ok () => do
     match hp : Gabbro.Grammatik.Parser.Modules.prepare declarations with
     | .error error => throw error
-    | .ok (expanded, requirements) =>
+    | .ok (expanded, requirements) => do
       if members.any Frontend.expansionHeader then
         match hx : Konst.checkSourceMetadata (uMembers expanded) with
-        | .ok () => compileChecked source hc expanded requirements hp (uMembers expanded)
-            (Or.inl ⟨rfl, hx⟩)
-        | .error expandedError =>
+        | .ok () => do
+          compileChecked source hc expanded requirements hp (uMembers expanded) (Or.inl ⟨rfl, hx⟩)
+        | .error expandedError => do
           match ho : Konst.checkSourceMetadata members with
-          | .ok () => compileChecked source hc expanded requirements hp members (Or.inr ⟨rfl, ho⟩)
+          | .ok () => do
+            compileChecked source hc expanded requirements hp members (Or.inr ⟨rfl, ho⟩)
           | .error _ => throw expandedError
       else
         match ho : Konst.checkSourceMetadata members with
-        | .ok () => compileChecked source hc expanded requirements hp members (Or.inr ⟨rfl, ho⟩)
-        | .error originalError =>
+        | .ok () => do
+          compileChecked source hc expanded requirements hp members (Or.inr ⟨rfl, ho⟩)
+        | .error originalError => do
           match hx : Konst.checkSourceMetadata (uMembers expanded) with
-          | .ok () => compileChecked source hc expanded requirements hp (uMembers expanded)
-              (Or.inl ⟨rfl, hx⟩)
+          | .ok () => do
+            compileChecked source hc expanded requirements hp (uMembers expanded) (Or.inl ⟨rfl, hx⟩)
           | .error _ => throw originalError
 
 /-- The actual source program keeps all declared table/global carriers and their exact read bound. -/
@@ -276,9 +291,7 @@ theorem Compiled.expansion_gate {text : String} {options : Profil.Options}
     obtain ⟨selected, accepted⟩ := checked
     rw [selected] at accepted
     exact Or.inl (by
-      unfold Frontend.checkExpansionGate
-      rw [result.gateExpansion, accepted]
-      rfl)
+      simp only [Frontend.checkExpansionGate, result.gateExpansion, bind, Except.bind, accepted])
   | inr checked =>
     obtain ⟨selected, accepted⟩ := checked
     rw [selected] at accepted
@@ -308,7 +321,8 @@ theorem Compiled.termination {text : String} {options : Profil.Options} (result 
     (init : Faden → Σ f : (declOf result.unit).mitRuhe.Fn,
       Env (declOf result.unit).mitRuhe ((declOf result.unit).mitRuhe.params f))
     (runtime : Zielsatz.Laufzeit E sp init) (alive : Faden → Bool)
-    (run : FadenLaufX E.P.mitRuhe O.mitRuhe passes (Zielsatz.GeteiltV E.P E.ws))
+    (run : FadenLaufX E.P.mitRuhe O.mitRuhe passes
+      (Zielsatz.GeteiltV (D := declOf result.unit) E.P E.ws))
     (initial : run.K 0 = FadenStart E.P.mitRuhe sp init alive) (thread : Faden) :
     (∃ N, ∀ j, N ≤ j → run.akt j ≠ some thread) ∧
       ((∀ w, (init thread).1 = some w →
