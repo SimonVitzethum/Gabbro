@@ -14,8 +14,7 @@ theorem ptrPre_mitRuhe_iff (S : Signatur D.Tab D.Glob D.Lock D.Marke)
     (ruCallContract S C).preHolds (worldR s) (envR ρ) ↔ C.preHolds s ρ := by
   unfold CallContract.preHolds
   change wahr? (eval (worldR s) (Expr.umΛ _ (ruE C.pre)) (worldR s) (envR ρ)) = true ↔ _
-  rw [eval_umΛ', eval_ru]
-  rfl
+  erw [eval_umΛ', eval_ru] <;> rfl
 
 theorem ptrPost_mitRuhe_iff (S : Signatur D.Tab D.Glob D.Lock D.Marke)
     (C : CallContract D S) (s0 s1 : World D) (ρ : Env D S.params)
