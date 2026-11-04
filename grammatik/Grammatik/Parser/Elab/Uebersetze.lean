@@ -62,4 +62,3 @@ public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil18
 public import Grammatik.Parser.Elab.Uebersetze.Akku.Erzeuge
 public import Grammatik.Parser.Elab.Uebersetze.Akku.Expand
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
-public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Bericht
