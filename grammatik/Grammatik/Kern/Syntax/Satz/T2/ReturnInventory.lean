@@ -36,7 +36,7 @@ theorem Entry.nimmt {L K : D.Lock} {bo : Option Int} {Λ : List (Res D)}
   by_cases same : K = L
   · subst K
     simp only [List.count_cons_self]
-    omega
+    exact Nat.succ_le_succ h.2
   · have different : Res.held K ≠ Res.held L := by intro e; cases e; exact same rfl
     simpa only [List.count_cons_of_ne same, List.count_cons_of_ne different] using h.2
 
