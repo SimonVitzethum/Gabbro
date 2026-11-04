@@ -57,7 +57,8 @@ theorem lowE_literal_value_counted {Γ : Ctx} {Λ : List (Res D)} {k : Int}
       (integerEncoding (integerWords k k) k) canonicalFits canonicalPre
     refine ⟨m', ?_, changed, trivial, ?_⟩
     · simpa only [literalCount, large, Bool.false_eq_true, ↓reduceIte, literalEncoding] using run
-    · simpa only [encodeWords_int, number] using output
+    · rw [encodeWords_int L k k v, number]
+      exact output
 
 theorem ExprCost.sound_value {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     {e : Expr D Γ Λ τ} {d n : Nat} {v : Wert D τ}
