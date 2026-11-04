@@ -210,9 +210,12 @@ theorem orte_exE : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ �
         orte_exE a
   | _, _, _, .intBuiltin2 _ a b => by
       simpa only [exE, Expr.orte] using reads_append E (orte_exE a) (orte_exE b)
-  | _, _, _, .count _ body => by
-      simpa only [exE, Expr.orte, tyE, tyN, Ty.index, Ty.mapNumbers, ortE, Sum.map_inl, List.cons_append] using
-        orte_exE body
+  | Γ, Λ, _, .count n body => by
+      let mapped : Expr D' (Ty.index (n : Int) :: Γ.map E.tyE) (Λ.map E.resE) .bool := exE E body
+      have ih : mapped.orte = body.orte.map E.ortE := orte_exE body
+      change (Expr.count n mapped).orte = (Expr.count n body).orte.map E.ortE
+      rw [Expr.orte.eq_def (Expr.count n mapped), Expr.orte.eq_def (Expr.count n body)]
+      exact ih
   | _, _, _, .prod _ args => by
       simpa only [exE, Expr.orte] using
         (Args.orte_umτs (E.mapFieldsE _) (exA E args)).trans (orte_exA args)
