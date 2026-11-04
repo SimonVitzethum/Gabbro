@@ -90,7 +90,7 @@ theorem lowB_ok_bindAxiomOpt_none {O : Orakel D} [TorOK L O] [SichtOK O] {passes
   have hq := hp.nextW hW a1 (d' := frei Γ reserved) (by have := hp.ctx; omega) (Nat.le_refl _) (by omega)
   have hp2 : PreS L m2 _ fp K (frei Γ reserved) cr ρ reserved :=
     ⟨hq.ctx, hq.small, hq.frame, hq.code, hq.far, hq.env, trivial, wstab_true _ _⟩
-  have ih := ih_lowB_ok_rest hS hA hlo0 hens (cap := cap) (ex := ex) cr tr hr (by omega) (by omega) hW m2 _ _ _ hp2 hlo hlo2
+  have ih := ih_lowB_ok_rest (O := O) (passes := passes) hS hA hlo0 hens (cap := cap) (ex := ex) cr tr hr (by omega) (by omega) hW m2 _ _ _ hp2 hlo hlo2
     (hu.agreeW hW (a1.mono hlo2) hlo) (hk.agreeW hW (a1.mono hlo2) (by omega)) hW1 hpr
   rw [pc_add1 pc ct cr]
   exact Sim.prefix hlo s1 (a1.mono hlo2) (keeps_of_agreeW hW a1 hpr (by omega)) ih
@@ -143,7 +143,7 @@ theorem lowEnd_ok_bindAxiomOpt_none {O : Orakel D} [TorOK L O] [SichtOK O] {pass
   have hq := hp.nextW hW a1 (d' := frei Γ reserved) (by have := hp.ctx; omega) (Nat.le_refl _) (by omega)
   have hp2 : PreS L m2 _ fp K (frei Γ reserved) cr ρ reserved :=
     ⟨hq.ctx, hq.small, hq.frame, hq.code, hq.far, hq.env, trivial, wstab_true _ _⟩
-  have ih := ih_lowEnd_ok_rest hS hA hlo0 hens (cap := cap) (ex := ex) cr tr hr (by omega)
+  have ih := ih_lowEnd_ok_rest (O := O) (passes := passes) hS hA hlo0 hens (cap := cap) (ex := ex) cr tr hr (by omega)
     (by omega) hW m2 _ _ _ hp2 hlo
     (hu.agreeW hW a1 (by omega)) (hk.agreeW hW a1 (by omega)) hW1 hpr
   rw [pc_add1 pc ct cr]

@@ -52,6 +52,7 @@ theorem sonst_none_miss {z : Int → Option D.Fn} {e : Option Ty} {n : Nat} (he 
       have h1 : (-((n : Int) + 1)) = (-1) * ((n : Int) + 1) := by omega
       rw [h1]; exact Int.mul_ediv_cancel _ hk
     simp only [sonstPasst, htag, ↓reduceIte, hdiv, einpassenErg]
+    rfl
   · have hr : rohW b n w = w.toInt * ((n : Int) + 1) := by
       simp only [rohW, hn0, ↓reduceIte]
       rw [if_neg hneg]
@@ -60,6 +61,7 @@ theorem sonst_none_miss {z : Int → Option D.Fn} {e : Option Ty} {n : Nat} (he 
     have hdiv : rohW b n w / ((n : Int) + 1) = w.toInt := by
       rw [hr]; exact Int.mul_ediv_cancel _ hk
     simp only [sonstPasst, htag, ↓reduceIte, hdiv, einpassenErg]
+    rfl
 
 /-- **G's decoding of a fallible VOID answer**, both cases together. -/
 theorem sonst_none_dec {z : Int → Option D.Fn} {e : Option Ty} {n : Nat} (he : e = none) (hn : 0 < n) {b : TorB}
