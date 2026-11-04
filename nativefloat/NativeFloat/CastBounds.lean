@@ -4,12 +4,17 @@ public import NativeFloat.CastDecode
 import all NativeFloat.CastCore
 import all NativeFloat.CastDecode
 import all NativeFloat.Transport
+import Init.Data.SInt.Lemmas
+import Init.Data.UInt.Lemmas
 @[expose] public section
 
 namespace RootNativeFloat.CastBounds
 open Float.Model
 open Float.Model.UnpackedFloat
 open CastCore CastDecode
+
+private theorem unsigned_zero : (UInt64.ofNatClamp 0).toBitVec = 0 :=
+  congrArg UInt64.toBitVec (unsigned_of_nonpositive 0 (Int.le_refl 0))
 
 private theorem decoded_cvtt (F : Format) (standard : F = .binary32 ∨ F = .binary64)
     (word : BitVec F.numBits)
@@ -29,9 +34,17 @@ private theorem decoded_signed_overflow (F : Format) (standard : F = .binary32 �
     (UnpackedFloat.unpack F word).toInt64.toBitVec =
       if word.msb then 0x8000000000000000 else 0x7fffffffffffffff := by
   apply overflow_cases F standard word 63 (by decide) (by decide)
+    (P := fun value : UnpackedFloat => value.toInt64.toBitVec =
+      if word.msb then 0x8000000000000000 else 0x7fffffffffffffff)
   · intro s sign
     rw [sign]
-    cases s <;> rfl
+    cases s
+    · change (Int64.ofIntClamp Int64.minValue.toInt).toBitVec = 0x8000000000000000
+      rw [Int64.ofIntClamp_toInt]
+      rfl
+    · change (Int64.ofIntClamp Int64.maxValue.toInt).toBitVec = 0x7fffffffffffffff
+      rw [Int64.ofIntClamp_toInt]
+      rfl
   · intro s m e h sign lower exponent
     have room : F.mantissaBitsWithoutImplicit ≤ 63 := by rcases standard with rfl | rfl <;> decide
     have magnitude := magnitude_large _ 63 m e room lower exponent
@@ -50,10 +63,10 @@ private theorem decoded_negative_unsigned (F : Format) (word : BitVec F.numBits)
   · simp only [UnpackedFloat.unpack, unpackMantissa_packComponents, unpackExponent_packComponents,
       unpack_sign_components, sign_unbits]
     split
-    · split <;> rfl
+    · split <;> exact unsigned_zero
     · split
       · split
-        · rfl
+        · exact unsigned_zero
         · rw [negative_unsigned]
           rfl
       · rw [negative_unsigned]
@@ -66,8 +79,13 @@ private theorem decoded_unsigned_low (F : Format) (standard : F = .binary32 ∨ 
     (UnpackedFloat.unpack F word).toUInt64.toBitVec =
       (UnpackedFloat.unpack F word).toInt64.toBitVec := by
   apply small_cases F standard word
+    (P := fun value : UnpackedFloat => value.toUInt64.toBitVec = value.toInt64.toBitVec)
   · intro s _
-    cases s <;> rfl
+    change (UInt64.ofNatClamp 0).toBitVec = (Int64.ofIntClamp 0).toBitVec
+    have signedZero : (Int64.ofIntClamp 0).toBitVec = (0 : BitVec 64) := by
+      simpa only [Int64.toInt_zero] using
+        congrArg Int64.toBitVec (Int64.ofIntClamp_toInt (0 : Int64))
+    exact unsigned_zero.trans signedZero.symm
   · intro s m e h sign upper exponent
     have room : F.mantissaBitsWithoutImplicit < 63 := by rcases standard with rfl | rfl <;> decide
     have bound := magnitude_small _ m e room upper exponent
@@ -84,12 +102,15 @@ private theorem decoded_unsigned_overflow (F : Format) (standard : F = .binary32
     (large : (word &&& magnitudeMask F).ult (limitBits F 64) = false) :
     (UnpackedFloat.unpack F word).toUInt64.toBitVec = -1#64 := by
   apply overflow_cases F standard word 64 (by decide) (by decide)
+    (P := fun value : UnpackedFloat => value.toUInt64.toBitVec = -1#64)
   · intro s sign
     cases s
     · rw [nonnegative] at sign
       change false = true at sign
       cases sign
-    · rfl
+    · change (UInt64.ofNatClamp (UInt64.size - 1)).toBitVec = -1#64
+      rw [UInt64.ofNatClamp_eq_ofNat (UInt64.size - 1) (by decide)]
+      rfl
   · intro s m e h sign lower exponent
     have room : F.mantissaBitsWithoutImplicit ≤ 64 := by rcases standard with rfl | rfl <;> decide
     have magnitude := magnitude_large _ 64 m e room lower exponent
