@@ -65,18 +65,28 @@ macro "glfertig" : tactic =>
 theorem argsS_rep {E : Sz (SE D Γ Λ)} {K : Nat} (hE : ERU E K) :
     ∀ (τs : List Ty) (a : Args D Γ Λ τs), groesseArgs a ≤ K →
       ∃ a' : Args D Γ Λ τs, a' ∈ argsS E τs (groesseArgs a') ∧ GlArgs a' a := by
-  intro τs a
-  induction a with
-  | nil => intro _; exact ⟨.nil, Sz.mem_blatt (by simp only [List.mem_cons, List.not_mem_nil, or_false]), ⟨fun _ => Iff.rfl, Nat.le_refl _⟩⟩
-  | cons e rest ih =>
-    intro h
-    simp only [groesseArgs] at h
-    obtain ⟨e', he, ⟨_, _⟩⟩ := hE _ e (by omega)
-    obtain ⟨r', hr, ⟨_, _⟩⟩ := ih (by omega)
-    refine ⟨.cons e' r', ?_, ?_⟩
-    · simp only [groesseArgs]
-      exact Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_tyS he) (Sz.mem_bind hr (Sz.mem_pure _)))) (by omega)
-    · glfertig
+  intro τs
+  induction τs with
+  | nil =>
+    intro a _
+    cases a
+    exact ⟨.nil, Sz.mem_blatt (by simp only [List.mem_cons, List.not_mem_nil, or_false]),
+      ⟨fun _ => Iff.rfl, Nat.le_refl _⟩⟩
+  | cons τ τs ih =>
+    intro a h
+    cases a with
+    | cons e rest =>
+      simp only [groesseArgs] at h
+      obtain ⟨e', he, ge⟩ := hE _ e (by omega)
+      obtain ⟨r', hr, gr⟩ := ih rest (by omega)
+      refine ⟨.cons e' r', ?_, ?_⟩
+      · simp only [groesseArgs]
+        exact Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_tyS he) (Sz.mem_bind hr (Sz.mem_pure _)))) (by omega)
+      · refine ⟨?_, ?_⟩
+        · intro c
+          simp only [Args.orte, List.mem_append, ge.orte c, gr.orte c]
+        · simpa only [groesseArgs] using
+            Nat.add_le_add (Nat.add_le_add_left ge.groesse 1) gr.groesse
 
 theorem ergS_rep {E : Sz (SE D Γ Λ)} {K : Nat} (hE : ERU E K) {o : Option Ty} (a : ErgExpr D Γ Λ o)
     (h : groesseErg a ≤ K) : ∃ a' : ErgExpr D Γ Λ o, a' ∈ ergS E o (groesseErg a') ∧ GlErg a' a := by
@@ -84,13 +94,16 @@ theorem ergS_rep {E : Sz (SE D Γ Λ)} {K : Nat} (hE : ERU E K) {o : Option Ty} 
   | empty => exact ⟨.empty, Sz.mem_blatt (by simp only [List.mem_cons, List.not_mem_nil, or_false]), ⟨fun _ => Iff.rfl, Nat.le_refl _⟩⟩
   | val e =>
     simp only [groesseErg] at h
-    obtain ⟨e', he, ⟨_, _⟩⟩ := hE _ e (by omega)
+    obtain ⟨e', he, ge⟩ := hE _ e (by omega)
     refine ⟨.val e', ?_, ?_⟩
     · have hm : ErgExpr.val e' ∈ ergS E (some _) (groesseExpr e' + 1) :=
         Sz.mem_knoten (Sz.mem_map (f := ErgExpr.val) (mem_tyS he))
       simp only [groesseErg]
       exact Sz.mem_cast hm (by omega)
-    · glfertig
+    · refine ⟨?_, ?_⟩
+      · intro c
+        simp only [ErgExpr.orte, ge.orte c]
+      · simpa only [groesseErg] using Nat.add_le_add_left ge.groesse 1
 
 theorem armsS_rep {O : Orakel V} {K : Nat} (hO : ORU O K) :
     ∀ {Γ : Ctx} {Λ : List (Res D)} {cs : List (Option Ty)} {Λ' : List (Res D)}
@@ -101,8 +114,8 @@ theorem armsS_rep {O : Orakel V} {K : Nat} (hO : ORU O K) :
       (fun _ => Iff.rfl) (fun _ => Iff.rfl) (fun _ => Iff.rfl) (Nat.le_refl _)⟩
   | Γ, Λ, _, _, .cons b rest, h => by
     simp only [groesseArms] at h
-    obtain ⟨b', hbm, ⟨_, _, _, _, _, _⟩⟩ := hO.bl _ _ _ _ b (by omega)
-    obtain ⟨r', hr, ⟨_, _, _, _, _, _⟩⟩ := armsS_rep hO rest (by omega)
+    obtain ⟨b', hbm, gb⟩ := hO.bl _ _ _ _ b (by omega)
+    obtain ⟨r', hr, gr⟩ := armsS_rep hO rest (by omega)
     refine ⟨.cons b' r', ?_, ?_⟩
     · have hb' := hbm (groesseBlock b' + groesseArms r') (by omega)
       have hm := Sz.mem_bindR (A := Sz.pure ()) (i := 0) (Sz.mem_pure ()) hb'
@@ -112,7 +125,19 @@ theorem armsS_rep {O : Orakel V} {K : Nat} (hO : ORU O K) :
         (Sz.mem_cast (Sz.mem_bind (mem_ofTy hr) (Sz.mem_pure _)) (by omega))
       simp only [groesseArms]
       exact Sz.mem_cast (Sz.mem_knoten hm) (by omega)
-    · glfertig
+    · refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+      · intro A
+        simp only [mArms, gb.m A, gr.m A]
+      · intro admitsSignature admitsRegister
+        simp only [Arms.gOk, gb.g admitsSignature admitsRegister, gr.g admitsSignature admitsRegister]
+      · intro x
+        simp only [Arms.ants, List.mem_append, gb.ant x, gr.ant x]
+      · intro x
+        simp only [Arms.regs, List.mem_append, gb.r x, gr.r x]
+      · intro x
+        simp only [koerperArms, List.mem_append, gb.o x, gr.o x]
+      · simpa only [groesseArms] using
+          Nat.add_le_add (Nat.add_le_add_left gb.groesse 1) gr.groesse
 
 theorem grundArmsS_rep {O : Orakel V} {K : Nat} (hO : ORU O K) :
     ∀ {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {Λ' : List (Res D)}
@@ -124,8 +149,8 @@ theorem grundArmsS_rep {O : Orakel V} {K : Nat} (hO : ORU O K) :
       (fun _ => Iff.rfl) (fun _ => Iff.rfl) (fun _ => Iff.rfl) (Nat.le_refl _)⟩
   | Γ, Λ, _, _, .cons b rest, h => by
     simp only [groesseGrundArms] at h
-    obtain ⟨b', hbm, ⟨_, _, _, _, _, _⟩⟩ := hO.bl _ _ _ _ b (by omega)
-    obtain ⟨r', hr, ⟨_, _, _, _, _, _⟩⟩ := grundArmsS_rep hO rest (by omega)
+    obtain ⟨b', hbm, gb⟩ := hO.bl _ _ _ _ b (by omega)
+    obtain ⟨r', hr, gr⟩ := grundArmsS_rep hO rest (by omega)
     refine ⟨.cons b' r', ?_, ?_⟩
     · have hb' := hbm (groesseBlock b' + groesseGrundArms r') (by omega)
       have hm := Sz.mem_bindR (A := Sz.pure ()) (i := 0) (Sz.mem_pure ()) hb'
@@ -135,6 +160,18 @@ theorem grundArmsS_rep {O : Orakel V} {K : Nat} (hO : ORU O K) :
         (Sz.mem_cast (Sz.mem_bind (mem_ofTy hr) (Sz.mem_pure _)) (by omega))
       simp only [groesseGrundArms]
       exact Sz.mem_cast (Sz.mem_knoten hm) (by omega)
-    · glfertig
+    · refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+      · intro A
+        simp only [mGArms, gb.m A, gr.m A]
+      · intro admitsSignature admitsRegister
+        simp only [GrundArms.gOk, gb.g admitsSignature admitsRegister, gr.g admitsSignature admitsRegister]
+      · intro x
+        simp only [GrundArms.ants, List.mem_append, gb.ant x, gr.ant x]
+      · intro x
+        simp only [GrundArms.regs, List.mem_append, gb.r x, gr.r x]
+      · intro x
+        simp only [koerperGArms, List.mem_append, gb.o x, gr.o x]
+      · simpa only [groesseGrundArms] using
+          Nat.add_le_add (Nat.add_le_add_left gb.groesse 1) gr.groesse
 
 end Gabbro.Grammatik.Gen
