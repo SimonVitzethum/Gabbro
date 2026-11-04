@@ -60,8 +60,18 @@ open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz
 def tyInts : Ty → List Int
   | .int lo hi => [lo, hi]
   | .opt n => [n]
-  | .sum cs => cs.flatMap fun | none => [] | some τ => tyInts τ
+  | .sum cs => cs.flatMap fun entry =>
+      match payload : entry with
+      | none => []
+      | some τ => tyInts τ
   | _ => []
+termination_by ty => sizeOf ty
+decreasing_by
+  all_goals
+    simp_wf
+    have bound := List.sizeOf_lt_of_mem (by assumption : entry ∈ cs)
+    simp only [payload, Option.some.sizeOf_spec] at bound
+    omega
 
 /-- The naturals a type names. -/
 def tyNats : Ty → List Nat
