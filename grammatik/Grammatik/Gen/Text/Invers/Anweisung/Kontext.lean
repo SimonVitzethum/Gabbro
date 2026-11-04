@@ -42,6 +42,53 @@ variable {z : Spez} {V : Vertrag z.deklaration}
 theorem ScalarMeta.of_artErg {τ : Ty} {a : UParamArt} (h : artErg τ = some a) : ScalarMeta a τ := by
   cases τ <;> simp_all only [artErg, Option.some.injEq, reduceCtorEq, ScalarMeta]
 
+/-- Computed integer bounds preserve the scalar reader's metadata class. -/
+theorem ScalarMeta.int_bounds {a : UParamArt} {lo hi : Int} (h : ScalarMeta a (.int lo hi))
+    (lo' hi' : Int) : ScalarMeta a (.int lo' hi') := by
+  cases a <;> simp_all only [ScalarMeta]
+
+theorem SInv.unknownRanges {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
+    (H : SInv z V ctx Γ Λ art) (unknown : List String) :
+    SInv z V {ctx with unknownRanges := unknown} Γ Λ art :=
+  {H with «meta» := H.meta}
+
+/-- Refining the actual numeric binder head preserves every older typed variable. -/
+theorem SInv.intHead {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
+    (H : SInv z V ctx Γ Λ art) {lo hi : Int} (head : ctx.types[0]? = some (.int lo hi))
+    (lo' hi' : Int) (unknown : List String) :
+    SInv z V {ctx with types := .int lo' hi' :: ctx.types.drop 1, unknownRanges := unknown} Γ Λ art := by
+  refine {H with «meta» := ?_}
+  intro d hd j hj
+  obtain ⟨ty, ht, hm⟩ := H.meta d hd j hj
+  cases j with
+  | zero =>
+    have eq : ty = .int lo hi := Option.some.inj (ht.symm.trans head)
+    subst ty
+    exact ⟨.int lo' hi', rfl, hm.int_bounds lo' hi'⟩
+  | succ j =>
+    exact ⟨ty, by simpa only [List.getElem?_cons_succ, List.getElem?_drop, Nat.add_comm] using ht, hm⟩
+
+/-- The fold pass may refine a numeric binder and update unknown ranges; it retains SInv. -/
+theorem SInv.foldBinding {before after : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
+    (H : SInv z V after Γ Λ art) (statement : UStmt)
+    (head : ∀ name value, statement = .bind name none value →
+      ∃ lo hi, after.types[0]? = some (.int lo hi)) :
+    SInv z V (foldBindingContext before after statement) Γ Λ art := by
+  cases statement with
+  | bind name ty value =>
+    cases ty with
+    | none =>
+      cases hr : foldRange before value with
+      | none =>
+        simpa only [foldBindingContext, hr] using H.unknownRanges
+          (after.names.headD "" :: before.unknownRanges.filter (fun previous => previous != after.names.headD ""))
+      | some bounds =>
+        obtain ⟨lo, hi, ht⟩ := head name value rfl
+        simpa only [foldBindingContext, hr] using H.intHead ht bounds.1 bounds.2
+          (before.unknownRanges.filter (fun previous => previous != after.names.headD ""))
+    | some _ => exact H.unknownRanges _
+  | _ => exact H.unknownRanges _
+
 /-- Parameter metadata comes from the existing scalar parameter classification. -/
 theorem ScalarMeta.of_params : ∀ (tys : List Ty) (ks : List UParamArt),
     tys.mapM artErg = some ks → ∀ d, d < tys.length →

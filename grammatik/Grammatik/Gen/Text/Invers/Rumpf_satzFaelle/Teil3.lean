@@ -132,9 +132,10 @@ theorem rumpf_satz_ende : ∀ {z : Spez} {V : Vertrag z.deklaration}
       obtain ⟨us2, r2⟩ := q
       simp only [hb, hur, Option.bind_eq_bind, Option.bind_some, Option.some.injEq, Prod.mk.injEq] at hu
       obtain ⟨rfl, rfl⟩ := hu
-      have H' := H.push τ .bool .bool 0 [] ctx.loops rfl trivial
+      have H' := (H.push τ .bool .bool 0 [] ctx.loops rfl trivial).foldBinding
+        (before := ctx) (.bindB (nVar Γ.length) b) (by intro _ _ h; cases h)
       obtain ⟨cE, hrest, hende, hv⟩ := ihE rest _ _ f' rs en' us2 r2 (by omega) (by omega) H' hr hur
-      exact ⟨cE, reihe_bind tabs koepfe f' ctx _ _ se rs _ us2 cE (bindWert_bool H tabs koepfe e se b he hb) hrest,
+      exact ⟨cE, reihe_bind tabs koepfe f' ctx _ _ se rs _ us2 cE (bindWert_bool H tabs koepfe e se b he hb) hrest (delabE_foldFree e he),
         hende, hv⟩
     · cases hb : uOfS z art none e with
       | none => simp only [hb, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at hu
@@ -145,9 +146,10 @@ theorem rumpf_satz_ende : ∀ {z : Spez} {V : Vertrag z.deklaration}
       obtain ⟨us2, r2⟩ := q
       simp only [hb, hur, Option.bind_eq_bind, Option.bind_some, Option.some.injEq, Prod.mk.injEq] at hu
       obtain ⟨rfl, rfl⟩ := hu
-      have H' := H.push τ .int (.int 0 0) 0 [] ctx.loops rfl trivial
+      have H' := (H.push τ .int (.int 0 0) 0 [] ctx.loops rfl trivial).foldBinding
+        (before := ctx) (.bind (nVar Γ.length) none b) (by intro _ _ _; exact ⟨0, 0, rfl⟩)
       obtain ⟨cE, hrest, hende, hv⟩ := ihE rest _ _ f' rs en' us2 r2 (by omega) (by omega) H' hr hur
-      exact ⟨cE, reihe_bind tabs koepfe f' ctx _ _ se rs _ us2 cE (bindWert_int H tabs koepfe e se b he hb) hrest,
+      exact ⟨cE, reihe_bind tabs koepfe f' ctx _ _ se rs _ us2 cE (bindWert_int H tabs koepfe e se b he hb) hrest (delabE_foldFree e he),
         hende, hv⟩
   | bindCall fk args he hp hr rest =>
     rename_i τ
@@ -178,10 +180,15 @@ theorem rumpf_satz_ende : ∀ {z : Spez} {V : Vertrag z.deklaration}
     obtain ⟨k, hfk, hKP⟩ := hK fk
     obtain ⟨ty, hmeta, hb⟩ := bindWert_call H tabs fk k hfk hKP hp.hh hr τ he a hτ args as xs ha hx (nVar Γ.length)
     have hN : nach z.deklaration fk Λ = Λ := nach_ohne_marken hM _ Λ
-    have H' : SInv z V (ctxMit ctx (nVar Γ.length) a ty 0 [] ctx.loops) (τ :: Γ) (nach z.deklaration fk Λ)
-        (artAuf a art) := by rw [hN]; exact H.push τ a ty 0 [] ctx.loops rfl hmeta
+    have H' : SInv z V
+        (foldBindingContext ctx (ctxMit ctx (nVar Γ.length) a ty 0 [] ctx.loops)
+          (.bindCall (nVar Γ.length) (nFn (fN z fk)) xs))
+        (τ :: Γ) (nach z.deklaration fk Λ) (artAuf a art) := by
+      rw [hN]
+      exact (H.push τ a ty 0 [] ctx.loops rfl hmeta).foldBinding _ (by intro _ _ h; cases h)
     obtain ⟨cE, hrest, hende, hv⟩ := ihE rest _ _ f' rs en' us2 r2 (by omega) (by omega) H' hr' hur
-    exact ⟨cE, reihe_bind tabs koepfe f' ctx _ _ _ rs _ us2 cE hb hrest, hende, hv⟩
+    exact ⟨cE, reihe_bind tabs koepfe f' ctx _ _ _ rs _ us2 cE hb hrest
+      (by simpa only [needsFoldExpansion] using delabA_foldFree args ha), hende, hv⟩
   | bindCallElse fk args he hp hr err rest =>
     rename_i τ
     simp only [delabEnd] at hd
@@ -244,6 +251,7 @@ Option.bind_some, hur, Option.bind_none, reduceCtorEq] at hu
     have := reihe_bindElse tabs koepfe f' ctx _ _ _ as es ende rs k xs _ _ a ty eu cEB _ us2 cE hR
       (hKP.kanal hgr) hKP.ext hv (by rw [mitLokal_eq ctx H.muts]; exact hEB) hes
       (by rw [mitLokal_eq ctx H.muts]; exact hrest)
+      (H.fnZeigerFremd koepfe (fN z fk)) (delabEnd_foldFree err hde cEB)
     exact ⟨cE, by simpa using this, hende, hv2⟩
   | _ => simp only [uOfEnd, reduceCtorEq] at hu
 

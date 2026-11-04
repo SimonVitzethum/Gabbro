@@ -254,6 +254,12 @@ theorem SInv.fnFremd {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {ar
     (H : SInv z V ctx Γ Λ art) (i : Nat) : ∃ e, uParamNr ctx (nFn i) = .error e :=
   uParamNrAux_fremd ctx.names H.namen 0 _ (fun n hm => strEq_rumpf_nFn (H.namen n hm) i)
 
+theorem SInv.fnZeigerFremd {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
+    (H : SInv z V ctx Γ Λ art) (koepfe : List UFnKopf) (i : Nat) :
+    uFnZeiger ctx koepfe (nFn i) = none := by
+  obtain ⟨err, he⟩ := H.fnFremd i
+  simp only [uFnZeiger, he]
+
 /-- `f(..);` -/
 theorem anw1_call {gNr : Nat → Nat} {koepfe : List UFnKopf} {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)}
     {art : Nat → UParamArt} (H : SInv z V ctx Γ Λ art) (tabs : List UTab) (f : z.deklaration.Fn) (k : UFnKopf)
@@ -379,10 +385,14 @@ theorem reihe_bindElse (tabs : List UTab) (koepfe : List UFnKopf) (f : Nat) (ctx
     (h1 : uAnwReihe tabs koepfe f (uMitLokal ctx e (.why num) (Ty.why cnt) (ctx.muts.filter (fun m => !strEq m e))) ss =
       .ok (ebody, ctxEB))
     (h2 : uEndeStmt ctxEB en = .ok endS)
-    (h3 : uAnwReihe tabs koepfe f (uMitLokal ctx y a ty (ctx.muts.filter (fun m => !strEq m y))) rest = .ok (ys, cE)) :
+    (h3 : uAnwReihe tabs koepfe f (uMitLokal ctx y a ty (ctx.muts.filter (fun m => !strEq m y))) rest = .ok (ys, cE))
+    (hpointer : uFnZeiger ctx koepfe c = none)
+    (hending : expandFoldEnd ctxEB en = .ok ([], ctxEB, en)) :
     uAnwReihe tabs koepfe (f + 1) ctx (.bindElse y none (.call c as) e (.block ss en) :: rest) =
       .ok ([.bindElse y c xs e] ++ ebody ++ endS ++ [.blkEnd] ++ ys, cE) := by
-  rw [uAnwReihe] <;> first | (simp only [Option.isSome_none, Bool.false_eq_true, ite_false, hR, hk, hx, hv, h1, h2, h3]) | (intros; simp_all)
+  rw [reihe_unexpanded tabs koepfe f ctx _ rest (by rfl), uAnwReiheCore]
+  simp only [uBindElse, Option.isSome_none, Bool.false_eq_true, ite_false, hpointer, hR, hk, hx, hv, h1,
+    uFoldEndeStmt, hending, h2, h3, bind, Except.bind, pure, Except.pure, List.nil_append]
 
 /-- Without marks, a call keeps the held resources. -/
 theorem nach_ohne_marken (hM : ∀ m : z.deklaration.Marke, False) (S : Signatur z.deklaration.Tab z.deklaration.Glob
@@ -411,9 +421,12 @@ theorem nach_ohne_marken (hM : ∀ m : z.deklaration.Marke, False) (S : Signatur
 /-- A call statement at the head of a run. -/
 theorem reihe_call (tabs : List UTab) (koepfe : List UFnKopf) (f : Nat) (ctx : UCtx) (c : String) (as : List SExpr)
     (rest : List SAnw) (st : UStmt) (xs : List UStmt) (cE : UCtx) (h1 : uAnw1 ctx tabs koepfe (.call c as) = .ok st)
-    (h2 : uAnwReihe tabs koepfe f ctx rest = .ok (xs, cE)) :
+    (h2 : uAnwReihe tabs koepfe f ctx rest = .ok (xs, cE)) (hfold : needsFoldExpansionList as = false) :
     uAnwReihe tabs koepfe (f + 1) ctx (.call c as :: rest) = .ok (st :: xs, cE) := by
-  rw [uAnwReihe] <;> first | (simp only [h1, h2]) | (intros; simp_all)
+  rw [reihe_unexpanded tabs koepfe f ctx _ rest (by
+    simp only [expandFoldStmt, expandFoldValue_no_work ctx ctx.names.length (.call c as)
+      (by simpa only [needsFoldExpansion] using hfold), bind, Except.bind, pure, Except.pure]), uAnwReiheCore]
+  simp only [h1, h2]
 
 theorem mitLokal_eq (ctx : UCtx) (h : ctx.muts = []) (x : String) (a : UParamArt) (ty : Ty) :
     uMitLokal ctx x a ty (ctx.muts.filter (fun m => !strEq m x)) = ctxMit ctx x a ty 0 [] ctx.loops := by

@@ -118,4 +118,97 @@ theorem delabR_foldFree {Γ : Ctx} {Λ : List (Res z.deklaration)} {o : Option T
       cases h
       exact delabE_foldFree e he
 
+/-- A printed ending carries no fold work, also after a recursive end-block prefix. -/
+theorem delabEnd_foldFree {V : Vertrag z.deklaration} {l : Bool} {Γ : Ctx}
+    {Λ : List (Res z.deklaration)} (e : Endblock z.deklaration V l Γ Λ)
+    {output : List SAnw × Option SEnde} (hd : delabEnd z V e = .ok output) (ctx : UCtx) :
+    expandFoldEnd ctx output.2 = .ok ([], ctx, output.2) := by
+  cases e with
+  | ret value _ =>
+    simp only [delabEnd] at hd
+    cases hv : delabR z value with
+    | error _ => simp only [hv, bind, Except.bind, reduceCtorEq] at hd
+    | ok result =>
+      simp only [hv, bind, Except.bind, Except.ok.injEq] at hd; subst hd
+      cases result with
+      | none => rfl
+      | some source =>
+        simp only [expandFoldEnd, expandFoldValue_no_work ctx ctx.names.length source
+          (delabR_foldFree value hv source rfl), foldCheckResult, List.isEmpty_nil,
+          ↓reduceIte, bind, Except.bind, pure, Except.pure]
+  | retWhy .. => simp only [delabEnd, Except.ok.injEq] at hd; subst hd; rfl
+  | cons statement rest =>
+    simp only [delabEnd] at hd
+    cases hs : delabS z V statement with
+    | error _ => simp only [hs, bind, Except.bind, reduceCtorEq] at hd
+    | ok ss =>
+      cases hr : delabEnd z V rest with
+      | error _ => simp only [hs, hr, bind, Except.bind, reduceCtorEq] at hd
+      | ok result =>
+        obtain ⟨rs, ending⟩ := result
+        simp only [hs, hr, bind, Except.bind, Except.ok.injEq] at hd; subst hd
+        exact delabEnd_foldFree rest hr ctx
+  | bind value rest =>
+    simp only [delabEnd] at hd
+    cases hv : delabE z none value with
+    | error _ => simp only [hv, bind, Except.bind, reduceCtorEq] at hd
+    | ok source =>
+      cases hr : delabEnd z V rest with
+      | error _ => simp only [hv, hr, bind, Except.bind, reduceCtorEq] at hd
+      | ok result =>
+        obtain ⟨rs, ending⟩ := result
+        simp only [hv, hr, bind, Except.bind, Except.ok.injEq] at hd; subst hd
+        exact delabEnd_foldFree rest hr ctx
+  | bindCall _ args _ _ _ rest =>
+    simp only [delabEnd] at hd
+    cases ha : delabA z args with
+    | error _ => simp only [ha, bind, Except.bind, reduceCtorEq] at hd
+    | ok sources =>
+      cases hr : delabEnd z V rest with
+      | error _ => simp only [ha, hr, bind, Except.bind, reduceCtorEq] at hd
+      | ok result =>
+        obtain ⟨rs, ending⟩ := result
+        simp only [ha, hr, bind, Except.bind, Except.ok.injEq] at hd; subst hd
+        exact delabEnd_foldFree rest hr ctx
+  | bindCallElse _ args _ _ _ err rest =>
+    simp only [delabEnd] at hd
+    cases ha : delabA z args with
+    | error _ => simp only [ha, bind, Except.bind, reduceCtorEq] at hd
+    | ok sources =>
+      cases he : delabEnd z V err with
+      | error _ => simp only [ha, he, bind, Except.bind, reduceCtorEq] at hd
+      | ok errorResult =>
+        obtain ⟨es, errorEnding⟩ := errorResult
+        cases hr : delabEnd z V rest with
+        | error _ => simp only [ha, he, hr, bind, Except.bind, reduceCtorEq] at hd
+        | ok result =>
+          obtain ⟨rs, ending⟩ := result
+          simp only [ha, he, hr, bind, Except.bind, Except.ok.injEq] at hd; subst hd
+          exact delabEnd_foldFree rest hr ctx
+  | regRead _ _ rest | awaits _ _ _ _ _ rest =>
+    simp only [delabEnd] at hd
+    cases hr : delabEnd z V rest with
+    | error _ => simp only [hr, bind, Except.bind, reduceCtorEq] at hd
+    | ok result =>
+      obtain ⟨rs, ending⟩ := result
+      simp only [hr, bind, Except.bind, Except.ok.injEq] at hd; subst hd
+      exact delabEnd_foldFree rest hr ctx
+  | bindCallInd pointer args _ _ _ rest =>
+    simp only [delabEnd] at hd
+    cases ha : delabA z args with
+    | error _ => simp only [ha, bind, Except.bind, reduceCtorEq] at hd
+    | ok sources =>
+      cases hr : delabEnd z V rest with
+      | error _ => simp only [ha, hr, bind, Except.bind, reduceCtorEq] at hd
+      | ok result =>
+        obtain ⟨rs, ending⟩ := result
+        cases pointer with
+        | fnref .. | var .. =>
+          simp only [ha, hr, bind, Except.bind, Except.ok.injEq] at hd; subst hd
+          exact delabEnd_foldFree rest hr ctx
+        | _ => simp only [ha, hr, bind, Except.bind, reduceCtorEq] at hd
+  | _ => simp only [delabEnd, reduceCtorEq] at hd
+termination_by sizeOf e
+decreasing_by all_goals (simp_wf <;> omega)
+
 end Gabbro.Grammatik.Gen.Text

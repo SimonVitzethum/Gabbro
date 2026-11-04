@@ -173,7 +173,8 @@ theorem reihe_emit (tabs : List UTab) (koepfe : List UFnKopf) (f : Nat) (ctx : U
     (rest : List SAnw) (st : UStmt) (xs : List UStmt) (cE : UCtx) (h1 : uAnw1 ctx tabs koepfe (.emit ziel w p) = .ok st)
     (h2 : uAnwReihe tabs koepfe f ctx rest = .ok (xs, cE)) :
     uAnwReihe tabs koepfe (f + 1) ctx (.emit ziel w p :: rest) = .ok (st :: xs, cE) := by
-  rw [uAnwReihe] <;> first | (simp only [h1, h2]) | (intros; simp_all)
+  rw [reihe_unexpanded tabs koepfe f ctx _ rest (by rfl)]
+  simp only [uAnwReiheCore, h1, h2]
 
 /-- `let x = g awaits { .. };` at an atomic, with its declared payload. -/
 theorem reihe_await {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
@@ -192,7 +193,7 @@ theorem reihe_await {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art
     have ht := hb.1 h
     rw [ht] at hart; simp only [artErg, Option.some.injEq] at hart; subst hart
     refine ⟨.bool, trivial, fun xs cE hr => ?_⟩
-    rw [uAnwReihe]
+    rw [reihe_unexpanded tabs koepfe f ctx _ rest (by rfl), uAnwReiheCore]
     simp only [uBinderTyp, hf, hat, ha, Bool.not_true, Bool.false_eq_true, ite_false, hgl, h, H.muts, List.filter_nil]
     simp only [uMitLokal, ctxMit] at hr ⊢
     simp only [hr]
@@ -206,7 +207,7 @@ theorem reihe_await {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art
       | _ => rw [hg] at hart; simp only [artErg, reduceCtorEq] at hart
     subst this
     refine ⟨.int lo hi, trivial, fun xs cE hr => ?_⟩
-    rw [uAnwReihe]
+    rw [reihe_unexpanded tabs koepfe f ctx _ rest (by rfl), uAnwReiheCore]
     simp only [uBinderTyp, hf, hat, ha, Bool.not_true, Bool.false_eq_true, ite_false, hgl, h, H.muts, List.filter_nil]
     simp only [uMitLokal, ctxMit] at hr ⊢
     simp only [hr]

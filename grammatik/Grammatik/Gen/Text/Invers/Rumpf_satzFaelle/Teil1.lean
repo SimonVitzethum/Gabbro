@@ -90,13 +90,13 @@ theorem rumpf_satz_stmt : ∀ {z : Spez} {V : Vertrag z.deklaration}
       | none => simp only [hv, Option.bind_none, reduceCtorEq] at hu
       | some v =>
       simp only [hv, Option.bind_some, Option.some.injEq] at hu; subst hu
-      exact reihe_anw1 tabs koepfe f ctx _ se tail _ xs cE (ha.1 hb v (bool_ok H.einv e se v he hv)) ht
+      exact reihe_anw1 tabs koepfe f ctx _ se tail _ xs cE (ha.1 hb v (bool_ok H.einv e se v he hv)) ht (delabE_foldFree e he)
     · rename_i hb
       cases hv : uOfS z art none e with
       | none => simp only [hv, Option.bind_none, reduceCtorEq] at hu
       | some v =>
       simp only [hv, Option.bind_some, Option.some.injEq] at hu; subst hu
-      exact reihe_anw1 tabs koepfe f ctx _ se tail _ xs cE (ha.2 hb v (wert_ok H.einv e se v he hv)) ht
+      exact reihe_anw1 tabs koepfe f ctx _ se tail _ xs cE (ha.2 hb v (wert_ok H.einv e se v he hv)) ht (delabE_foldFree e he)
   | assignGlob g e hw hL =>
     simp only [delabS] at hd
     cases he : delabE z none e with
@@ -117,13 +117,13 @@ theorem rumpf_satz_stmt : ∀ {z : Spez} {V : Vertrag z.deklaration}
         | none => simp only [hv, Option.map_none, reduceCtorEq] at hu
         | some v =>
         simp only [hv, Option.map_some, Option.some.injEq] at hu; subst hu
-        exact reihe_anw1 tabs koepfe f ctx _ se tail _ xs cE (ha.1 hb v (bool_ok H.einv e se v he hv)) ht
+        exact reihe_anw1 tabs koepfe f ctx _ se tail _ xs cE (ha.1 hb v (bool_ok H.einv e se v he hv)) ht (delabE_foldFree e he)
       · rename_i hb
         cases hv : uOfS z art none e with
         | none => simp only [hv, Option.map_none, reduceCtorEq] at hu
         | some v =>
         simp only [hv, Option.map_some, Option.some.injEq] at hu; subst hu
-        exact reihe_anw1 tabs koepfe f ctx _ se tail _ xs cE (ha.2 hb v (wert_ok H.einv e se v he hv)) ht
+        exact reihe_anw1 tabs koepfe f ctx _ se tail _ xs cE (ha.2 hb v (wert_ok H.einv e se v he hv)) ht (delabE_foldFree e he)
   | ret e hΛ =>
     simp only [delabS] at hd
     cases hv : delabR z e with
@@ -137,13 +137,14 @@ theorem rumpf_satz_stmt : ∀ {z : Spez} {V : Vertrag z.deklaration}
     | some r =>
     simp only [hr, Option.map_some, Option.some.injEq] at hu; subst hu
     exact ⟨rfl, by simp only [List.length_cons, List.length_nil, zero_add, Nat.reduceLeDiff], ctx, H, fun f tail xs cE hf ht => by
-      simpa using reihe_ret tabs koepfe f ctx v tail r xs cE (ende_ok H rfl e v r hv hr) ht⟩
+      simpa using reihe_ret tabs koepfe f ctx v tail r xs cE (ende_ok H rfl e v r hv hr) ht (delabR_foldFree e hv)⟩
   | retWhy r hΛ =>
     simp only [delabS, Except.ok.injEq] at hd
     subst hd
     simp only [uOfSt, Option.some.injEq] at hu; subst hu
     exact ⟨rfl, by simp only [List.length_cons, List.length_nil, zero_add, Nat.reduceLeDiff], ctx, H, fun f tail xs cE hf ht => by
-      simpa using reihe_ret tabs koepfe f ctx _ tail _ xs cE (ende_why H r) ht⟩
+      simpa using reihe_ret tabs koepfe f ctx _ tail _ xs cE (ende_why H r) ht
+        (by intro value hv; cases hv; rfl)⟩
   | ite c t e =>
     simp only [delabS] at hd
     cases hc : delabE z none c with
@@ -192,7 +193,7 @@ Option.bind_none, Option.bind_fun_none, reduceCtorEq] at hu
         simp only [List.isEmpty_nil, ↓reduceIte, hE.1, and_self]
       · right
         exact ⟨se, c2, by simp only [hs, Bool.false_eq_true, ↓reduceIte], hE⟩
-    have := reihe_cond tabs koepfe f ctx sc st _ tail cv tu eu xs cB cE (bool_ok H.einv c sc cv hc hcv) hT hE' hr
+    have := reihe_cond tabs koepfe f ctx sc st _ tail cv tu eu xs cB cE (bool_ok H.einv c sc cv hc hcv) hT hE' hr (delabE_foldFree c hc)
     simpa [List.append_assoc] using this
   | locks L hr body =>
     simp only [delabS] at hd
@@ -252,7 +253,7 @@ Option.bind_fun_none, reduceCtorEq] at hu
     subst hss
     obtain ⟨cnt, hkopf⟩ := schleifenKopf_ok H t i' iv hi
     have H' := H.push (.index (z.deklaration.count t)) (.index (tN z t)) (.index cnt) 0 ctx.muts
-      (nVar Γ.length :: ctx.loops) H.muts trivial
+      (nVar Γ.length :: ctx.loops) H.muts (by simp only [Ty.index, ScalarMeta])
     refine ⟨rfl, by simp only [List.length_cons, List.length_nil, zero_add, Nat.reduceLeDiff], ctx, H, fun f tail xs cE hf hr => ?_⟩
     simp only [Stmt.traverse.sizeOf_spec, Bool.sizeOf_eq_one, sizeOf_default, add_zero] at hf
     simp only [List.length_singleton, List.singleton_append]
@@ -275,7 +276,7 @@ Option.bind_fun_none, reduceCtorEq] at hu
     obtain ⟨k, hf, hKP⟩ := hK f
     refine ⟨nach_ohne_marken hM _ Λ, by simp only [List.length_cons, List.length_nil, zero_add, Nat.reduceLeDiff], ctx, H, fun g tail ys cE hg ht => ?_⟩
     simp only [List.length_singleton, List.singleton_append]
-    exact reihe_call tabs koepfe g ctx _ as tail _ ys cE (anw1_call H tabs f k hf hKP hp.hh hr args as xs ha hx) ht
+    exact reihe_call tabs koepfe g ctx _ as tail _ ys cE (anw1_call H tabs f k hf hKP hp.hh hr args as xs ha hx) ht (delabA_foldFree args ha)
   | callInd p args hp hr =>
     simp only [uOfSt] at hu
     split at hu
@@ -298,12 +299,16 @@ Option.bind_fun_none, reduceCtorEq] at hu
         obtain ⟨i, hi, hk⟩ := kinv_idx (gNr := gNr) hf
         have hiE : i = z.deklaration.sig f := by rw [hI f] at hi; exact (Option.some.inj hi).symm
         subst hiE
-        have H' := H.pushZ Γ.length (.fnptr (z.deklaration.sig f)) (.fnptr (z.deklaration.sig f)) 0 ctx.loops
+        let ctxP : UCtx := {ctx with unknownRanges := ctx.unknownRanges.filter
+          (fun previous => previous != nZeiger Γ.length)}
+        have HP : SInv z V ctxP Γ Λ art := H.unknownRanges _
+        have H' := HP.pushZ Γ.length (.fnptr (z.deklaration.sig f)) (.fnptr (z.deklaration.sig f)) 0 ctx.loops
         refine ⟨nach_ohne_marken hM _ Λ, by simp only [List.length_cons, List.length_nil, zero_add, Nat.reduceAdd, Std.le_refl], _, H', fun g tail ys cE hg ht => ?_⟩
         have h2 := reihe_call tabs koepfe g _ _ as tail _ ys cE
-          (anw1_callInd H tabs f k _ hf hk hKP hp.hh hr args as xs ha hx (H.zb f) Γ.length ctx.loops) ht
+          (anw1_callInd HP tabs f k _ hf hk hKP hp.hh hr args as xs ha hx (HP.zb f) Γ.length ctx.loops) ht
+          (delabA_foldFree args ha)
         have h1 := reihe_bind tabs koepfe (g + 1) ctx _ _ _ _ _ _ cE
-          (bindWert_fnref H tabs f k _ hi hk hKP (nZeiger Γ.length)) h2
+          (bindWert_fnref H tabs f k _ hi hk hKP (nZeiger Γ.length)) h2 (by rfl)
         simpa using h1
       · simp only [reduceCtorEq] at hu
     · simp only [reduceCtorEq] at hu
@@ -324,13 +329,13 @@ Option.bind_fun_none, reduceCtorEq] at hu
       | none => simp only [hv, Option.map_none, reduceCtorEq] at hu
       | some v =>
       simp only [hv, Option.map_some, Option.some.injEq] at hu; subst hu
-      exact reihe_anw1 tabs koepfe f ctx _ se tail _ xs cE (ha.1 hb v (bool_ok H.einv e se v he hv)) ht
+      exact reihe_anw1 tabs koepfe f ctx _ se tail _ xs cE (ha.1 hb v (bool_ok H.einv e se v he hv)) ht (delabE_foldFree e he)
     · rename_i hb
       cases hv : uOfS z art none e with
       | none => simp only [hv, Option.map_none, reduceCtorEq] at hu
       | some v =>
       simp only [hv, Option.map_some, Option.some.injEq] at hu; subst hu
-      exact reihe_anw1 tabs koepfe f ctx _ se tail _ xs cE (ha.2 hb v (wert_ok H.einv e se v he hv)) ht
+      exact reihe_anw1 tabs koepfe f ctx _ se tail _ xs cE (ha.2 hb v (wert_ok H.einv e se v he hv)) ht (delabE_foldFree e he)
   | publish g e payload hp hw hL =>
     subst hp
     simp only [delabS] at hd
