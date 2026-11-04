@@ -33,7 +33,10 @@ def statement (scope : Scope) : SAnw → SurfaceFacts
   | .callQ name args => gather [⟨false, []⟩, reference scope name, expressions scope args]
   | .lcall call => libraryCall scope call
   | .cond value yes branches no => gather [expression scope value, statement scope yes,
-      statementsIndependent scope branches, optional (statement scope) no]
+      statementsIndependent scope branches,
+      (match no with
+      | none => gather []
+      | some body => gather [statement scope body])]
   | .elsif value body | .trim value _ body | .locks _ value body =>
     merge (expression scope value) (statement scope body)
   | .cases value arms => merge (expression scope value) (statementsIndependent scope arms)
@@ -46,21 +49,35 @@ def statement (scope : Scope) : SAnw → SurfaceFacts
   | .leave _ | .next _ | .step _ _ | .other _ => {}
   | .ret value => optional (expression scope) value
   | .alloc _ _ ty _ count no => gather [optional (inspectType scope) ty, expression scope count,
-      optional (statement scope) no]
+      (match no with
+      | none => gather []
+      | some body => gather [statement scope body])]
   | .reset _ span => optional (fun (a, b) => merge (expression scope a) (expression scope b)) span
   | .grow _ count body => merge (expression scope count) (statement scope body)
   | .start names => gather (names.map globalReference)
   | .block body ender => statements scope body ender
   | .allocVon _ _ ty _ => optional (inspectType scope) ty
+termination_by body => sizeOf body
+decreasing_by
+  all_goals simp_wf
+  all_goals omega
 
 def statementsIndependent (scope : Scope) : List SAnw → SurfaceFacts
   | [] => {}
   | body :: rest => merge (statement scope body) (statementsIndependent scope rest)
+termination_by body => sizeOf body
+decreasing_by
+  all_goals simp_wf
+  all_goals omega
 
 def statements (scope : Scope) : List SAnw → Option SEnde → SurfaceFacts
   | [], ender => optional (ending scope) ender
   | body :: rest, ender => merge (statement scope body)
       (statements (scope.bind (Aufloesung.gebunden body)) rest ender)
+termination_by body _ => sizeOf body
+decreasing_by
+  all_goals simp_wf
+  all_goals omega
 end
 
 end Gabbro.Grammatik.Parser.Instantiation
