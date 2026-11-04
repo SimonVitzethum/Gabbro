@@ -236,10 +236,14 @@ private theorem predecessor_edge (a : Wert D (.index (D.count x.table))) (ha : a
   subst value
   cases edgeValue : q.edgeAt σ ρ a candidate with
   | false =>
+    change x.read mem (x.s + 4) (Runner.IR.bool (q.edgeAt σ ρ a candidate)) at read
+    rw [edgeValue] at read
     change ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr)
       (x.addr 25) (x.addr 14) mem (q.PredState σ ρ candidate live (j + 1))
     exact predecessor_edge_false state read
   | true =>
+    change x.read mem (x.s + 4) (Runner.IR.bool (q.edgeAt σ ρ a candidate)) at read
+    rw [edgeValue] at read
     change ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr)
       (x.addr 25) (x.addr 31) mem (q.PredDone σ ρ candidate live)
     exact predecessor_edge_true state read
