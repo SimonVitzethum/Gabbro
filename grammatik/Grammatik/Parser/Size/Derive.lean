@@ -61,7 +61,7 @@ private def producer (nodes : Array Node) (type : Expr) : MetaM Name := do
   if let some name := primitive type then return name
   return nodes[← indexOf nodes type]!.functionName
 
-private def makeNodes (types : Array Expr) (prefix : Name) : MetaM (Array Node) := do
+private def makeNodes (types : Array Expr) (baseName : Name) : MetaM (Array Node) := do
   let mut allTypes := types
   for type in types do
     for ctorName in ← constructors type do
@@ -69,7 +69,7 @@ private def makeNodes (types : Array Expr) (prefix : Name) : MetaM (Array Node) 
         allTypes := allTypes ++ containers fieldType
   allTypes := unique allTypes
   let mut nodes := allTypes.mapIdx fun index type =>
-    { type, functionName := prefix.appendAfter ("_part_" ++ toString index) : Node }
+    { type, functionName := baseName.appendAfter ("_part_" ++ toString index) : Node }
   for index in [:nodes.size] do
     let mut successors := []
     for ctorName in ← constructors nodes[index]!.type do
@@ -84,73 +84,73 @@ private def makeAlternative (nodes : Array Node) (type : Expr) (ctorName : Name)
   let info ← getConstInfoCtor ctorName
   let fields ← fieldTypes type ctorName
   let mut patterns : Array Term := #[]
-  for _ in [:info.numParams] do patterns := patterns.push (← `(_))
+  for _ in [:info.numParams] do patterns := patterns.push (← `(term| _))
   let mut certificates : Array (Ident × Term) := #[]
-  let mut sum : Term ← `((1 : Nat))
-  let mut canonical : Term ← `((1 : Nat))
-  let mut proof : Term ← `(rfl)
+  let mut sum : Term ← `(term| (1 : Nat))
+  let mut canonical : Term ← `(term| (1 : Nat))
+  let mut proof : Term ← `(term| rfl)
   for index in [:fields.size] do
     let argument := mkIdent (← mkFreshUserName `field)
     let certificate := mkIdent (← mkFreshUserName `size)
     patterns := patterns.push argument
-    let call ← `($(mkIdent (← producer nodes fields[index]!)) $argument)
+    let call ← `(term| $(mkIdent (← producer nodes fields[index]!)) $argument)
     certificates := certificates.push (certificate, call)
-    sum ← `($sum + ($certificate:ident).val)
-    canonical ← `($canonical + sizeOf $argument)
-    proof ← `(congr (congrArg Nat.add $proof) ($certificate:ident).property)
-  let spec := mkIdent (ctorName ++ `sizeOf_spec)
-  let mut rhs ← `(⟨$sum, by
+    sum ← `(term| $sum + ($certificate:ident).val)
+    canonical ← `(term| $canonical + sizeOf $argument)
+    proof ← `(term| congr (congrArg Nat.add $proof) ($certificate:ident).property)
+  let spec ← `(Parser.Tactic.simpLemma| $(mkIdent (ctorName ++ `sizeOf_spec)):term)
+  let mut rhs ← `(term| ⟨$sum, by
     simpa only [$spec] using (show $sum = $canonical from $proof)⟩)
   for (certificate, call) in certificates.reverse do
-    rhs ← `(let $certificate := $call; $rhs)
-  let pattern ← `(@$(mkIdent ctorName) $patterns:term*)
+    rhs ← `(term| let $certificate := $call; $rhs)
+  let pattern ← `(term| @$(mkIdent ctorName) $patterns:term*)
   `(matchAltExpr| | $pattern => $rhs)
 
 private def makeDefinition (nodes : Array Node) (index : Nat) (recursive : Bool) :
-    TermElabM Syntax := do
+    TermElabM (TSyntax `command) := do
   let node := nodes[index]!
   let type ← PrettyPrinter.delab node.type
   let input := mkIdent (← mkFreshUserName `input)
   let mut alternatives := #[]
   for ctorName in ← constructors node.type do
     alternatives := alternatives.push (← makeAlternative nodes node.type ctorName)
-  let body ← `(match $input with $alternatives:matchAlt*)
+  let body ← `(term| match $input with $alternatives:matchAlt*)
   if recursive then
-    `(@[no_expose] private def $(mkIdent node.functionName) ($input : $type) :
+    `(command| @[no_expose] private def $(mkIdent node.functionName):ident ($input:ident : $type:term) :
         { n : Nat // n = sizeOf $input } := $body
       termination_by sizeOf $input
       decreasing_by
         all_goals simp_wf
         all_goals omega)
   else
-    `(@[no_expose] private def $(mkIdent node.functionName) ($input : $type) :
+    `(command| @[no_expose] private def $(mkIdent node.functionName):ident ($input:ident : $type:term) :
         { n : Nat // n = sizeOf $input } := $body)
 
 /-- Emit each dependency component separately; recursive calls consume actual
     constructor children. Every result carries its canonical constructor-sum proof. -/
 private def emit (output : Ident) (types : Array Expr) (root : Expr) : CommandElabM Unit := do
-  let prefix := output.getId
-  let nodes ← liftTermElabM <| makeNodes (types.push root) prefix
+  let baseName := output.getId
+  let nodes ← liftTermElabM <| makeNodes (types.push root) baseName
   let groups := Lean.SCC.scc (List.range nodes.size) (fun index => nodes[index]!.successors)
   for group in groups do
     let recursive := group.length > 1 || group.any (fun index => nodes[index]!.successors.contains index)
-    let mut definitions : Array Syntax := #[]
+    let mut definitions : Array (TSyntax `command) := #[]
     for index in group do
       definitions := definitions.push (← liftTermElabM <| makeDefinition nodes index recursive)
     if recursive then
-      elabCommand (← `(mutual $definitions:command* end))
+      elabCommand (← `(command| mutual $definitions:command* end))
     else
       for definition in definitions do elabCommand definition
   let functionName ← liftTermElabM <| producer nodes root
   let type ← liftTermElabM <| PrettyPrinter.delab root
-  elabCommand (← `(@[no_expose] public def $output (input : $type) :
+  elabCommand (← `(command| @[no_expose] public def $output:ident (input : $type:term) :
     { n : Nat // n = sizeOf input } := $(mkIdent functionName) input))
 
 syntax (name := deriveSourceSize) "derive_source_size " ident " for " ident
   " with " "[" ident,* "]" : command
 
 @[command_elab deriveSourceSize] def elaborate : CommandElab := fun stx => do
-  let `(derive_source_size $output for $root with [$names:ident,*]) := stx
+  let `(command| derive_source_size $output for $root with [$names:ident,*]) := stx
     | throwUnsupportedSyntax
   let types ← liftTermElabM <| names.getElems.mapM (fun name => Term.elabType name)
   let type ← liftTermElabM <| Term.elabType root
