@@ -41,10 +41,31 @@ theorem putBytesWords_ok {Γ : Ctx} {Λ : List (Res D)} {a b H : Int}
       obtain ⟨rfl, rfl⟩ := made
       exact ⟨m, by simpa using Star.refl ⟨pc, fp⟩ m, AgreeW.refl _ _ _ _ _, pre.env, world⟩
     · simp only [putBytesWordsL, if_neg zero, bind, Option.bind_eq_some_iff,
-        pure, Option.some.injEq, Prod.mk.injEq] at made
-      obtain ⟨⟨idx, ti⟩, indexMade, ⟨kernel, tk⟩, kernelMade, ⟨rest, tr⟩, restMade, rfl, rfl⟩ := made
+        pure, Option.some.injEq] at made
+      obtain ⟨⟨idx, ti⟩, indexMade, ⟨kernel, tk⟩, kernelMade, continuation⟩ := made
       let s := frei (ByteCapture Γ a b H) reserved
       let leading := [ci 2 s (frei Γ reserved + q) 0] ++ idx ++ kernel
+      have remainder : ∃ (rest : List II) (tr : Nat),
+          (if more : 8 < n then
+            putBytesWordsL L (Γ := Γ) (Λ := Λ) t f a b H lower reserved words
+              (n - 8) (q + 1) (by omega)
+          else some ([], s + 2)) = some (rest, tr) ∧
+          (leading ++ rest, max (s + 2) (max ti (max tk tr))) = (c, top) := by
+        -- The do elaborator keeps the result bind inside the reflected guard.
+        by_cases more : 8 < n
+        · have branch := continuation
+          simp only [decide_eq_true more, bind, Option.bind_eq_some_iff,
+            pure, Option.some.injEq] at branch
+          obtain ⟨⟨rest, tr⟩, restMade, output⟩ := branch
+          refine ⟨rest, tr, ?_, ?_⟩
+          · simpa only [dif_pos more] using restMade
+          · simpa only [s, leading] using output
+        · refine ⟨[], s + 2, ?_, ?_⟩
+          · simp only [dif_neg more]
+          · simpa only [decide_eq_false more, bind, Option.bind, pure,
+              Option.some.injEq, s, leading] using continuation
+      obtain ⟨rest, tr, restMade, output⟩ := remainder
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj output
       change max (s + 2) (max ti (max tk tr)) ≤ Ks at fits
       have p : PreS L m pc fp K s (leading ++ rest)
           (Env.cons (τ := .int a b) k (Env.cons (τ := .int 0 H) z ρ)) reserved := by
