@@ -286,7 +286,7 @@ theorem erreicht_mw : ∀ w ∈ erreicht, ∃ m ∈ Mw, m.Hat w := by
   · exact ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
   · exact ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
   · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, or_true], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, or_true, true_or], M99_825.e_hat _ (by decide)⟩
   · exact ⟨M103_803.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M103_803.e_hat _ (by decide)⟩
   · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
   · exact ⟨M169_350.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M169_350.e_hat _ (by decide)⟩
@@ -301,13 +301,13 @@ theorem erreicht_mw : ∀ w ∈ erreicht, ∃ m ∈ Mw, m.Hat w := by
   · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
   · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
   · exact ⟨M169_350.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M169_350.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, or_true], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, or_true, true_or], M99_825.e_hat _ (by decide)⟩
   · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
   · exact ⟨M169_350.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M169_350.e_hat _ (by decide)⟩
   · exact ⟨M169_350.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M169_350.e_hat _ (by decide)⟩
   · exact ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
   · exact ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, or_true], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, or_true, true_or], M99_825.e_hat _ (by decide)⟩
   · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
   · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
   · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩

@@ -102,7 +102,7 @@ theorem zeugen_tafel : Tafel Mw Nw where
     · exact Or.inr (nie_gut (u_2_0_sig false false))
     · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
     · exact Or.inr (nie_gut (u_2_0_sig true false))
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, or_true], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, or_true, true_or], M99_825.e_hat _ (by decide)⟩
     · exact Or.inl ⟨M103_803.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M103_803.e_hat _ (by decide)⟩
     · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
     · exact Or.inl ⟨M169_350.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M169_350.e_hat _ (by decide)⟩
@@ -124,13 +124,13 @@ theorem zeugen_tafel : Tafel Mw Nw where
     · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
     · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
     · exact Or.inl ⟨M169_350.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M169_350.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, or_true], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, or_true, true_or], M99_825.e_hat _ (by decide)⟩
     · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
     · exact Or.inl ⟨M169_350.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M169_350.e_hat _ (by decide)⟩
     · exact Or.inl ⟨M169_350.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M169_350.e_hat _ (by decide)⟩
     · exact Or.inl ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
     · exact Or.inl ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, or_true], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, or_true, true_or], M99_825.e_hat _ (by decide)⟩
     · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
     · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
     · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
@@ -382,7 +382,7 @@ theorem zeugen_tafel : Tafel Mw Nw where
     · exact absurd hs (by decide)
     · exact absurd hs (by decide)
     · exact absurd hs (by decide)
-    · exact fun e h => ⟨N47_45.e, by simp only [Nw, List.mem_cons, List.not_mem_nil, or_false, or_true], n_deckt Mw erreicht erreicht_mw N47_45.e e N47_45.bnoetig N47_45.e_gedeckt
+    · exact fun e h => ⟨N47_45.e, by simp only [Nw, List.mem_cons, List.not_mem_nil, or_false, or_true, true_or], n_deckt Mw erreicht erreicht_mw N47_45.e e N47_45.bnoetig N47_45.e_gedeckt
           (fun w hw => by
           obtain rfl := (by decide : ∀ w ∈ N47_45.bnoetig, w = ⟨8, 0, true, [true, false, false]⟩) w hw
           exact h)⟩
