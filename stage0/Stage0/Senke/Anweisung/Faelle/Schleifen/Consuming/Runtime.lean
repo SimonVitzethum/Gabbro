@@ -100,26 +100,29 @@ theorem runtime {D : Deklaration} {L : Lay D} {P : Programm D} {f : D.Fn}
         generalize hb : body σm (.cons k ρ) = outcome at pass ⊢
         cases outcome with
         | ok σ' ρ' =>
+          dsimp only at pass
           generalize hnew : massW σ' ρ'.tail = measured' at pass ⊢
           rcases measured' with ⟨σm', new⟩
           dsimp only at pass ⊢
           by_cases good : 0 ≤ new ∧ new ≤ bound ∧ new < old
-          · have next := again σm' ρ'.tail (by simpa only [good, ↓reduceIte] using pass)
-            simpa only [hm, hb, hnew, good, ↓reduceIte] using next
+          · have next := again σm' ρ'.tail (by simpa only [good, and_self, Bool.false_eq_true, ↓reduceIte] using pass)
+            simpa only [hm, hb, hnew, good, and_self, ↓reduceIte] using next
           · have stopped : Stops ⟨pc, fp⟩ m (logikCode (D := D) .schleife) := by
-              simpa only [good, ↓reduceIte] using pass
-            simpa only [hm, hb, hnew, good, ↓reduceIte, Sim] using stopped
+              simpa only [good, and_self, Bool.false_eq_true, ↓reduceIte] using pass
+            simpa only [hm, hb, hnew, good, and_self, ↓reduceIte, Bool.false_eq_true, Sim] using stopped
         | next h σ' ρ' =>
+          dsimp only at pass
           generalize hnew : massW σ' ρ'.tail = measured' at pass ⊢
           rcases measured' with ⟨σm', new⟩
           dsimp only at pass ⊢
           by_cases good : 0 ≤ new ∧ new ≤ bound ∧ new < old
-          · have next := again σm' ρ'.tail (by simpa only [good, ↓reduceIte] using pass)
-            simpa only [hm, hb, hnew, good, ↓reduceIte] using next
+          · have next := again σm' ρ'.tail (by simpa only [good, and_self, Bool.false_eq_true, ↓reduceIte] using pass)
+            simpa only [hm, hb, hnew, good, and_self, ↓reduceIte] using next
           · have stopped : Stops ⟨pc, fp⟩ m (logikCode (D := D) .schleife) := by
-              simpa only [good, ↓reduceIte] using pass
-            simpa only [hm, hb, hnew, good, ↓reduceIte, Sim] using stopped
+              simpa only [good, and_self, Bool.false_eq_true, ↓reduceIte] using pass
+            simpa only [hm, hb, hnew, good, and_self, ↓reduceIte, Bool.false_eq_true, Sim] using stopped
         | leave h σ' ρ' =>
+          dsimp only at pass
           generalize hnew : massW σ' ρ'.tail = measured' at pass ⊢
           rcases measured' with ⟨σm', new⟩
           dsimp only at pass ⊢
@@ -127,21 +130,21 @@ theorem runtime {D : Deklaration} {L : Lay D} {P : Programm D} {f : D.Fn}
           · by_cases valid : (inv σm' ρ'.tail).2 = true
             · have left : Reach L fp lo K pr ⟨pc, fp⟩ m exit
                   (inv σm' ρ'.tail).1 ρ'.tail reserved := by
-                simpa only [good, valid, ↓reduceIte] using pass
-              simpa only [hm, hb, hnew, good, valid, ↓reduceIte, Sim] using left
+                simpa only [good, and_self, Bool.false_eq_true, valid, ↓reduceIte] using pass
+              simpa only [hm, hb, hnew, good, and_self, valid, ↓reduceIte, Bool.false_eq_true, Sim] using left
             · have stopped : Stops ⟨pc, fp⟩ m (logikCode (D := D) .schleife) := by
-                simpa only [good, valid, ↓reduceIte] using pass
-              simpa only [hm, hb, hnew, good, valid, ↓reduceIte, Sim] using stopped
+                simpa only [good, and_self, Bool.false_eq_true, valid, ↓reduceIte] using pass
+              simpa only [hm, hb, hnew, good, and_self, valid, ↓reduceIte, Bool.false_eq_true, Sim] using stopped
           · have stopped : Stops ⟨pc, fp⟩ m (logikCode (D := D) .schleife) := by
-              simpa only [good, ↓reduceIte] using pass
-            simpa only [hm, hb, hnew, good, ↓reduceIte, Sim] using stopped
+              simpa only [good, and_self, Bool.false_eq_true, ↓reduceIte] using pass
+            simpa only [hm, hb, hnew, good, and_self, ↓reduceIte, Bool.false_eq_true, Sim] using stopped
         | zurueck σ' value =>
-          simpa only [hm, hb, Bool.true_eq_false, ↓reduceIte, Sim] using pass
+          simpa only [hm, hb, Bool.true_eq_false, ↓reduceIte, Bool.false_eq_true, Sim] using pass
         | why σ' reason =>
-          simpa only [hm, hb, Bool.true_eq_false, ↓reduceIte, Sim] using pass
+          simpa only [hm, hb, Bool.true_eq_false, ↓reduceIte, Bool.false_eq_true, Sim] using pass
         | logik error =>
-          simpa only [hm, hb, Bool.true_eq_false, ↓reduceIte, Sim] using pass
+          simpa only [hm, hb, Bool.true_eq_false, ↓reduceIte, Bool.false_eq_true, Sim] using pass
         | hardware error =>
-          simpa only [hm, hb, Bool.true_eq_false, ↓reduceIte, Sim] using pass
+          simpa only [hm, hb, Bool.true_eq_false, ↓reduceIte, Bool.false_eq_true, Sim] using pass
 
 end Gabbro.Stage0.Senke.Consuming
