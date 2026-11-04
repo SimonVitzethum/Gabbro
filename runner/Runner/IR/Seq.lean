@@ -78,7 +78,7 @@ theorem Run.fp_fromUInt64_low {format : FPFormat} {value result : W}
     cases format
     · simpa only [NativeFPEval, nativeFP, uint64_toFloat32_nonnegative value low] using heval
     · simpa only [NativeFPEval, nativeFP, uint64_toFloat_nonnegative value low] using heval
-  simpa only [fpFromUInt64, low, ↓reduceIte] using Run.native_fp signed hk
+  simpa only [fpFromUInt64, low, Bool.false_eq_true, ↓reduceIte] using Run.native_fp signed hk
 
 inductive Star : T → Mem → T → Mem → Prop
   | refl (t : T) (m : Mem) : Star t m t m

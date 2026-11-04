@@ -13,7 +13,9 @@ theorem fpNegWord_decoded (format : FPFormat) (word : W) :
     | .f32 => readFloat32 (fpNegWord .f32 word) = -readFloat32 word
     | .f64 => readFloat (fpNegWord .f64 word) = -readFloat word := by
   cases format
-  · simpa only [readFloat32, fpNegWord, BitVec.setWidth_setWidth_of_le _ (by decide),
+  · simpa only [readFloat32, fpNegWord,
+      BitVec.setWidth_setWidth_of_le (word.setWidth 32 ^^^ (0x80000000 : BitVec 32))
+        (k := 32) (l := 64) (by decide),
       BitVec.setWidth_eq] using RootNativeFloat.neg_bits32 (word.setWidth 32)
   · exact RootNativeFloat.neg_bits64 word
 
@@ -25,8 +27,13 @@ theorem NativeFPEval.neg_decoded {format : FPFormat} {a b result : W}
     match format with
     | .f32 => readFloat32 result = -readFloat32 a
     | .f64 => readFloat result = -readFloat a := by
-  rw [nativeNeg_result h]
-  exact fpNegWord_decoded format a
+  cases format
+  · change readFloat32 result = -readFloat32 a
+    rw [nativeNeg_result h]
+    exact fpNegWord_decoded .f32 a
+  · change readFloat result = -readFloat a
+    rw [nativeNeg_result h]
+    exact fpNegWord_decoded .f64 a
 
 theorem nativeFinite_value (format : FPFormat) (a b : W) :
     nativeFP (.isFinite format) a b = .word (fpFiniteWord format a) := by
@@ -52,9 +59,11 @@ theorem nativeFPBits_eval (kind : NativeFPOp) (a b : W) :
     constructor
     · change result.toBits.toBitVec.setWidth 64 =
         ((result.toBits.toBitVec.setWidth 64).setWidth 32).setWidth 64
-      rw [BitVec.setWidth_setWidth_of_le _ (by decide), BitVec.setWidth_eq]
+      rw [BitVec.setWidth_setWidth_of_le result.toBits.toBitVec
+        (k := 32) (l := 64) (by decide), BitVec.setWidth_eq]
     · change Float32.ofBits (UInt32.ofBitVec ((result.toBits.toBitVec.setWidth 64).setWidth 32)) = result
-      rw [BitVec.setWidth_setWidth_of_le _ (by decide), BitVec.setWidth_eq]
+      rw [BitVec.setWidth_setWidth_of_le result.toBits.toBitVec
+        (k := 32) (l := 64) (by decide), BitVec.setWidth_eq]
       exact RootNativeFloat.bits32_roundtrip result
 
 end Runner

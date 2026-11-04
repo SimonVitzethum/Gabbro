@@ -1,5 +1,7 @@
 module
 public import Runner.Basis.FloatingSequence
+import all Init.Data.SInt.Float
+import all Init.Data.SInt.Float32
 @[expose] public section
 
 namespace Runner
@@ -9,6 +11,7 @@ namespace Runner
 
 theorem uint64_toFloat_nonnegative (value : W) (h : value.msb = false) :
     (UInt64.ofBitVec value).toFloat = (Int64.ofBitVec value).toFloat := by
+  unfold Int64.toFloat Float.Model.ofInt64 Float.Model.UnpackedFloat.ofInt64
   change Float.ofModel (Float.Model.pack (Float.Model.UnpackedFloat.ofInt
       Float.Model.Format.binary64 (value.toNat : Int))) =
     Float.ofModel (Float.Model.pack (Float.Model.UnpackedFloat.ofInt
@@ -17,6 +20,7 @@ theorem uint64_toFloat_nonnegative (value : W) (h : value.msb = false) :
 
 theorem uint64_toFloat32_nonnegative (value : W) (h : value.msb = false) :
     (UInt64.ofBitVec value).toFloat32 = (Int64.ofBitVec value).toFloat32 := by
+  unfold Int64.toFloat32 Float32.Model.ofInt64 Float.Model.UnpackedFloat.ofInt64
   change Float32.ofModel (Float32.Model.pack (Float.Model.UnpackedFloat.ofInt
       Float.Model.Format.binary32 (value.toNat : Int))) =
     Float32.ofModel (Float32.Model.pack (Float.Model.UnpackedFloat.ofInt
