@@ -54,13 +54,15 @@ theorem verbrauch_sim {l : Bool} (t : D.Tab) (bound : Int)
     (hsel : E.SelSim hZ t sel sel' f) (hm : E.MassSim hZ massW massW') :
     ∀ fuel : Nat, E.KoerperSim hZ (l := l)
       (fun Φ => verbrauchLauf t (schritt Φ) (pruef Φ) (sel Φ) (massW Φ) bound fuel)
-      (verbrauchLauf (E.tab t) schritt' pruef' sel' massW' bound fuel)
-  | 0 => by
+      (verbrauchLauf (E.tab t) schritt' pruef' sel' massW' bound fuel) := by
+  intro fuel
+  induction fuel with
+  | zero =>
       intro M σ σ' ρ ρ' h hρ
       refine ⟨M, .logik .schleife, teil_refl M, fun Φ _ => by simp only [verbrauchLauf], ?_⟩
       simp only [verbrauchLauf]
       exact ⟨logikRel_schleife, h.keyOk E⟩
-  | fuel + 1 => by
+  | succ fuel ih =>
       intro M σ σ' ρ ρ' h hρ
       obtain ⟨M₁, σ₁, b, hs1, hΦ1, hI1, hb⟩ := hi M σ σ' ρ ρ' h hρ
       cases b with
@@ -112,61 +114,49 @@ theorem verbrauch_sim {l : Bool} (t : D.Tab) (bound : Int)
                     (E.envR_tail hZ _ _ hR3.2)
                 by_cases hfall : 0 ≤ m₁ ∧ m₁ ≤ bound ∧ m₁ < m₀
                 · obtain ⟨M₅, o, hs5, hΦ5, hR5⟩ :=
-                    verbrauch_sim fuel M₄ σm₁ σm₁' ρ₂'.tail ρ₂''.tail hI4
+                    ih M₄ σm₁ σm₁' ρ₂'.tail ρ₂''.tail hI4
                       (E.envR_tail hZ _ _ hR3.2)
                   refine ⟨M₅, o, teil_trans h13 (teil_trans hs4 hs5),
+                    fun Φ hP => ?_, ?_⟩
+                  · simp only [verbrauchLauf,
+                      hΦ1 Φ (passt_teil hP (teil_trans hs2 (teil_trans hsm (teil_trans hs3 (teil_trans hs4 hs5))))),
+                      hΦ2 Φ (passt_teil hP (teil_trans hsm (teil_trans hs3 (teil_trans hs4 hs5)))),
+                      hΦm0 Φ (passt_teil hP (teil_trans hs3 (teil_trans hs4 hs5))),
+                      hΦ3 Φ (passt_teil hP (teil_trans hs4 hs5)),
+                      hΦm1 Φ (passt_teil hP hs5), hfall, Bool.true_eq_false, ↓reduceIte]
+                    exact hΦ5 Φ hP
+                  · simp only [verbrauchLauf, hb, hsel₂, Option.map_some,
+                      hsch, hm₀, hm₁, hfall, Bool.true_eq_false, ↓reduceIte]
+                    exact hR5
+                · refine ⟨M₄, .logik .schleife, teil_trans h13 hs4,
                     fun Φ hP => ?_, ?_⟩
                   · simp only [verbrauchLauf,
                       hΦ1 Φ (passt_teil hP (teil_trans hs2 (teil_trans hsm (teil_trans hs3 hs4)))),
                       hΦ2 Φ (passt_teil hP (teil_trans hsm (teil_trans hs3 hs4))),
                       hΦm0 Φ (passt_teil hP (teil_trans hs3 hs4)),
                       hΦ3 Φ (passt_teil hP hs4),
-                      hΦm1 Φ hP, hfall, if_true]
-                    exact hΦ5 Φ hP
+                      hΦm1 Φ hP, hfall, Bool.true_eq_false, ↓reduceIte]
                   · simp only [verbrauchLauf, hb, hsel₂, Option.map_some,
-                      hsch, hm₀, hm₁, hfall, if_true]
-                    exact hR5
-                · refine ⟨M₄, .logik .schleife, teil_trans h13 hs4,
-                    fun Φ hP => ?_, ?_⟩
-                  · simp only [verbrauchLauf,
-                      hΦ1 Φ (passt_teil hP (teil_trans hs2 (teil_trans hsm hs3))),
-                      hΦ2 Φ (passt_teil hP (teil_trans hsm hs3)),
-                      hΦm0 Φ (passt_teil hP hs3),
-                      hΦ3 Φ hP,
-                      hΦm1 Φ hP, hfall, if_false]
-                  · simp only [verbrauchLauf, hb, hsel₂, Option.map_some,
-                      hsch, hm₀, hm₁, hfall, if_false]
+                      hsch, hm₀, hm₁, hfall, Bool.true_eq_false, ↓reduceIte]
                     exact ⟨logikRel_schleife, hI4.keyOk E⟩
-              · obtain ⟨M₄, σm₁, σm₁', m₁, hs4, hΦm1, hm₁, hI4⟩ :=
-                  hm M₃ σ₂' σ₂'' ρ₂'.tail ρ₂''.tail hR3.1
-                    (E.envR_tail hZ _ _ hR3.2)
-                by_cases hfall : 0 ≤ m₁ ∧ m₁ ≤ bound ∧ m₁ < m₀
-                · obtain ⟨M₅, o, hs5, hΦ5, hR5⟩ :=
-                    verbrauch_sim fuel M₄ σm₁ σm₁' ρ₂'.tail ρ₂''.tail hI4
-                      (E.envR_tail hZ _ _ hR3.2)
-                  refine ⟨M₅, o, teil_trans h13 (teil_trans hs4 hs5),
-                    fun Φ hP => ?_, ?_⟩
-                  · simp only [verbrauchLauf,
-                      hΦ1 Φ (passt_teil hP (teil_trans hs2 (teil_trans hsm (teil_trans hs3 hs4)))),
-                      hΦ2 Φ (passt_teil hP (teil_trans hsm (teil_trans hs3 hs4))),
-                      hΦm0 Φ (passt_teil hP (teil_trans hs3 hs4)),
-                      hΦ3 Φ (passt_teil hP hs4),
-                      hΦm1 Φ hP, hfall, if_true]
-                    exact hΦ5 Φ hP
-                  · simp only [verbrauchLauf, hb, hsel₂, Option.map_some,
-                      hsch, hm₀, hm₁, hfall, if_true]
-                    exact hR5
-                · refine ⟨M₄, .logik .schleife, teil_trans h13 hs4,
-                    fun Φ hP => ?_, ?_⟩
-                  · simp only [verbrauchLauf,
-                      hΦ1 Φ (passt_teil hP (teil_trans hs2 (teil_trans hsm hs3))),
-                      hΦ2 Φ (passt_teil hP (teil_trans hsm hs3)),
-                      hΦm0 Φ (passt_teil hP hs3),
-                      hΦ3 Φ hP,
-                      hΦm1 Φ hP, hfall, if_false]
-                  · simp only [verbrauchLauf, hb, hsel₂, Option.map_some,
-                      hsch, hm₀, hm₁, hfall, if_false]
-                    exact ⟨logikRel_schleife, hI4.keyOk E⟩
+              · refine ⟨M₃, .zurueck σ₂' v', h13, fun Φ hP => ?_, ?_⟩
+                · simp only [verbrauchLauf,
+                    hΦ1 Φ (passt_teil hP (teil_trans hs2 (teil_trans hsm hs3))),
+                    hΦ2 Φ (passt_teil hP (teil_trans hsm hs3)),
+                    hΦm0 Φ (passt_teil hP hs3),
+                    hΦ3 Φ hP, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
+                · simp only [verbrauchLauf, hb, hsel₂, Option.map_some,
+                    hsch, hm₀, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
+                  exact hR3
+              · refine ⟨M₃, .why σ₂' r, h13, fun Φ hP => ?_, ?_⟩
+                · simp only [verbrauchLauf,
+                    hΦ1 Φ (passt_teil hP (teil_trans hs2 (teil_trans hsm hs3))),
+                    hΦ2 Φ (passt_teil hP (teil_trans hsm hs3)),
+                    hΦm0 Φ (passt_teil hP hs3),
+                    hΦ3 Φ hP, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
+                · simp only [verbrauchLauf, hb, hsel₂, Option.map_some,
+                    hsch, hm₀, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
+                  exact hR3
               · obtain ⟨M₄, σm₁, σm₁', m₁, hs4, hΦm1, hm₁, hI4⟩ :=
                   hm M₃ σ₂' σ₂'' ρ₂'.tail ρ₂''.tail hR3.1
                     (E.envR_tail hZ _ _ hR3.2)
@@ -184,10 +174,9 @@ theorem verbrauch_sim {l : Bool} (t : D.Tab) (bound : Int)
                           hΦm0 Φ (passt_teil hP (teil_trans hs3 (teil_trans hs4 hs5))),
                           hΦ3 Φ (passt_teil hP (teil_trans hs4 hs5)),
                           hΦm1 Φ (passt_teil hP hs5),
-                          hΦ5 Φ hP, hfall, if_true,
-                          Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
+                          hΦ5 Φ hP, hfall, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
                       · simp only [verbrauchLauf, hb, hsel₂, Option.map_some,
-                          hsch, hm₀, hm₁, hfall, if_true, hb₅,
+                          hsch, hm₀, hm₁, hfall, hb₅,
                           Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
                         exact ⟨logikRel_schleife, hI5.keyOk E⟩
                   | true =>
@@ -199,41 +188,52 @@ theorem verbrauch_sim {l : Bool} (t : D.Tab) (bound : Int)
                           hΦm0 Φ (passt_teil hP (teil_trans hs3 (teil_trans hs4 hs5))),
                           hΦ3 Φ (passt_teil hP (teil_trans hs4 hs5)),
                           hΦm1 Φ (passt_teil hP hs5),
-                          hΦ5 Φ hP, hfall, if_true,
-                          Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
+                          hΦ5 Φ hP, hfall, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
                       · simp only [verbrauchLauf, hb, hsel₂, Option.map_some,
-                          hsch, hm₀, hm₁, hfall, if_true, hb₅,
+                          hsch, hm₀, hm₁, hfall, hb₅,
                           Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
                         exact ⟨hI5, E.envR_tail hZ _ _ hR3.2⟩
                 · refine ⟨M₄, .logik .schleife, teil_trans h13 hs4,
                     fun Φ hP => ?_, ?_⟩
                   · simp only [verbrauchLauf,
-                      hΦ1 Φ (passt_teil hP (teil_trans hs2 (teil_trans hsm hs3))),
-                      hΦ2 Φ (passt_teil hP (teil_trans hsm hs3)),
-                      hΦm0 Φ (passt_teil hP hs3),
-                      hΦ3 Φ hP,
-                      hΦm1 Φ hP, hfall, if_false]
+                      hΦ1 Φ (passt_teil hP (teil_trans hs2 (teil_trans hsm (teil_trans hs3 hs4)))),
+                      hΦ2 Φ (passt_teil hP (teil_trans hsm (teil_trans hs3 hs4))),
+                      hΦm0 Φ (passt_teil hP (teil_trans hs3 hs4)),
+                      hΦ3 Φ (passt_teil hP hs4),
+                      hΦm1 Φ hP, hfall, Bool.true_eq_false, ↓reduceIte]
                   · simp only [verbrauchLauf, hb, hsel₂, Option.map_some,
-                      hsch, hm₀, hm₁, hfall, if_false]
+                      hsch, hm₀, hm₁, hfall, Bool.true_eq_false, ↓reduceIte]
                     exact ⟨logikRel_schleife, hI4.keyOk E⟩
-              · refine ⟨M₃, .zurueck σ₂' v', h13, fun Φ hP => ?_, ?_⟩
-                · simp only [verbrauchLauf,
-                    hΦ1 Φ (passt_teil hP (teil_trans hs2 (teil_trans hsm hs3))),
-                    hΦ2 Φ (passt_teil hP (teil_trans hsm hs3)),
-                    hΦm0 Φ (passt_teil hP hs3),
-                    hΦ3 Φ hP, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
-                · simp only [verbrauchLauf, hb, hsel₂, Option.map_some,
-                    hsch, hm₀, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
-                  exact hR3
-              · refine ⟨M₃, .why σ₂' r', h13, fun Φ hP => ?_, ?_⟩
-                · simp only [verbrauchLauf,
-                    hΦ1 Φ (passt_teil hP (teil_trans hs2 (teil_trans hsm hs3))),
-                    hΦ2 Φ (passt_teil hP (teil_trans hsm hs3)),
-                    hΦm0 Φ (passt_teil hP hs3),
-                    hΦ3 Φ hP, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
-                · simp only [verbrauchLauf, hb, hsel₂, Option.map_some,
-                    hsch, hm₀, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
-                  exact hR3
+              · obtain ⟨M₄, σm₁, σm₁', m₁, hs4, hΦm1, hm₁, hI4⟩ :=
+                  hm M₃ σ₂' σ₂'' ρ₂'.tail ρ₂''.tail hR3.1
+                    (E.envR_tail hZ _ _ hR3.2)
+                by_cases hfall : 0 ≤ m₁ ∧ m₁ ≤ bound ∧ m₁ < m₀
+                · obtain ⟨M₅, o, hs5, hΦ5, hR5⟩ :=
+                    ih M₄ σm₁ σm₁' ρ₂'.tail ρ₂''.tail hI4
+                      (E.envR_tail hZ _ _ hR3.2)
+                  refine ⟨M₅, o, teil_trans h13 (teil_trans hs4 hs5),
+                    fun Φ hP => ?_, ?_⟩
+                  · simp only [verbrauchLauf,
+                      hΦ1 Φ (passt_teil hP (teil_trans hs2 (teil_trans hsm (teil_trans hs3 (teil_trans hs4 hs5))))),
+                      hΦ2 Φ (passt_teil hP (teil_trans hsm (teil_trans hs3 (teil_trans hs4 hs5)))),
+                      hΦm0 Φ (passt_teil hP (teil_trans hs3 (teil_trans hs4 hs5))),
+                      hΦ3 Φ (passt_teil hP (teil_trans hs4 hs5)),
+                      hΦm1 Φ (passt_teil hP hs5), hfall, Bool.true_eq_false, ↓reduceIte]
+                    exact hΦ5 Φ hP
+                  · simp only [verbrauchLauf, hb, hsel₂, Option.map_some,
+                      hsch, hm₀, hm₁, hfall, Bool.true_eq_false, ↓reduceIte]
+                    exact hR5
+                · refine ⟨M₄, .logik .schleife, teil_trans h13 hs4,
+                    fun Φ hP => ?_, ?_⟩
+                  · simp only [verbrauchLauf,
+                      hΦ1 Φ (passt_teil hP (teil_trans hs2 (teil_trans hsm (teil_trans hs3 hs4)))),
+                      hΦ2 Φ (passt_teil hP (teil_trans hsm (teil_trans hs3 hs4))),
+                      hΦm0 Φ (passt_teil hP (teil_trans hs3 hs4)),
+                      hΦ3 Φ (passt_teil hP hs4),
+                      hΦm1 Φ hP, hfall, Bool.true_eq_false, ↓reduceIte]
+                  · simp only [verbrauchLauf, hb, hsel₂, Option.map_some,
+                      hsch, hm₀, hm₁, hfall, Bool.true_eq_false, ↓reduceIte]
+                    exact ⟨logikRel_schleife, hI4.keyOk E⟩
               · refine ⟨M₃, .logik e, h13, fun Φ hP => ?_, ?_⟩
                 · simp only [verbrauchLauf,
                     hΦ1 Φ (passt_teil hP (teil_trans hs2 (teil_trans hsm hs3))),
@@ -250,33 +250,6 @@ theorem verbrauch_sim {l : Bool} (t : D.Tab) (bound : Int)
                     hΦm0 Φ (passt_teil hP hs3),
                     hΦ3 Φ hP, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
                 · simp only [verbrauchLauf, hb, hsel₂, Option.map_some,
-                    hsch, hm₀, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
-                  exact hR3
-              · refine ⟨M₃, .why σ₂' r', h13, fun Φ hP => ?_, ?_⟩
-                · simp only [verbrauchLauf,
-                    hΦ1 Φ (passt_teil hP (teil_trans hs2 (teil_trans hsm hs3))),
-                    hΦ2 Φ (passt_teil hP (teil_trans hsm hs3)),
-                    hΦm0 Φ (passt_teil hP hs3),
-                    hΦ3 Φ hP, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
-                · simp only [verbrauchLauf, hb, hw₂, hb₂, Option.map_some,
-                    hsch, hm₀, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
-                  exact hR3
-              · refine ⟨M₃, .logik e, h13, fun Φ hP => ?_, ?_⟩
-                · simp only [verbrauchLauf,
-                    hΦ1 Φ (passt_teil hP (teil_trans hs2 (teil_trans hsm hs3))),
-                    hΦ2 Φ (passt_teil hP (teil_trans hsm hs3)),
-                    hΦm0 Φ (passt_teil hP hs3),
-                    hΦ3 Φ hP, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
-                · simp only [verbrauchLauf, hb, hw₂, hb₂, Option.map_some,
-                    hsch, hm₀, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
-                  exact hR3
-              · refine ⟨M₃, .hardware e, h13, fun Φ hP => ?_, ?_⟩
-                · simp only [verbrauchLauf,
-                    hΦ1 Φ (passt_teil hP (teil_trans hs2 (teil_trans hsm hs3))),
-                    hΦ2 Φ (passt_teil hP (teil_trans hsm hs3)),
-                    hΦm0 Φ (passt_teil hP hs3),
-                    hΦ3 Φ hP, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
-                · simp only [verbrauchLauf, hb, hw₂, hb₂, Option.map_some,
                     hsch, hm₀, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
                   exact hR3
 
