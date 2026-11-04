@@ -34,7 +34,8 @@ def surfaceType (types : List (String × STyp)) (values : List (String × SExpr)
   | .embed t bits scale => .embed (surfaceType types values t) bits
       (scale.map (expression values))
   | .str n => .str (expression values n)
-  | .entry args result => .entry args (result.map (surfaceType types values))
+  | .entry args none => .entry args none
+  | .entry args (some result) => .entry args (some (surfaceType types values result))
   | t => t
 
 /-- Generic arguments use the same certified call substitution as ordinary source
@@ -50,7 +51,7 @@ def constantArgument (lo hi : Int) (fns : List Uebersetze.UKonstFn)
 example : beqSTyp
     (surfaceType [("T", .atom "u32")] [("N", .lit 8)]
       (.array (.atom "T") (.variable "N")))
-    (.array (.atom "u32") (.lit 8)) = true := rfl
+    (.array (.atom "u32") (.lit 8)) = true := by decide +kernel
 
 example : constantArgument 0 100 [] [] (.bin "+" (.lit 3) (.lit 5)) = .ok 8 := rfl
 
