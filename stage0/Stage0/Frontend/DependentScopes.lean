@@ -103,13 +103,13 @@ theorem elaborateScopes_signature_zeuge :
     let bound := STyp.range (.atom "u8") (.lit 0) (.variable "LIMIT") false
     let items := [SItemTief.typeT [] "Base" [] [] (some (.atom "u8")),
       .constT "LIMIT" (.atom "Base") (.one (.bin "+" (.lit 40) (.lit 2))),
-      .fnT ⟨"const", "identity", [("x", bound)], some bound, none, []⟩
+      .fnT ⟨"const", "identity", [("x", bound)], some bound, none, [], []⟩
         (.block [] (some (.ret (some (.variable "x"))))),
       .constT "ANSWER" (.atom "Base") (.one (.call "identity" [.lit 42]))]
     ∃ result, elaborateScopes items = .ok result ∧
       result.scope.values = [("LIMIT", 42), ("ANSWER", 42)] ∧
       result.scope.functions.map (fun f => (f.name, f.params, f.erg)) =
-        [("identity", [("x", (0, 42))], (0, 42))] ∧ result.scope.functionsUseValues = true := by
+        [("identity", [("x", .int 0 42)], .int 0 42)] ∧ result.scope.functionsUseValues = true := by
   dsimp only
   refine ⟨(elaborateScopes _).toOption.get (by decide +kernel), ?_, ?_, ?_, ?_⟩
   · exact Gabbro.Grammatik.except_ok_get _
@@ -121,13 +121,13 @@ theorem elaborateScopes_signature_array_zeuge :
     let bound := STyp.range (.atom "u8") (.lit 0) (.variable "LIMIT") false
     let items := [SItemTief.typeT [] "Base" [] [] (some (.atom "u8")),
       .constT "LIMIT" (.atom "Base") (.one (.bin "+" (.lit 40) (.lit 2))),
-      .fnT ⟨"const", "identity", [("x", bound)], some bound, none, []⟩
+      .fnT ⟨"const", "identity", [("x", bound)], some bound, none, [], []⟩
         (.block [] (some (.ret (some (.variable "x"))))),
       .constT "VALUES" (.array (.atom "Base") (.lit 1)) (.rows [.one (.call "identity" [.lit 42])])]
     ∃ old result, deriveScopes items = .ok old ∧ old.scope.functions.length = 0 ∧
       elaborateScopes items = .ok result ∧ result.scope.values = [("LIMIT", 42)] ∧
       result.scope.functions.map (fun f => (f.name, f.params, f.erg)) =
-        [("identity", [("x", (0, 42))], (0, 42))] ∧ result.scope.functionsUseValues = true := by
+        [("identity", [("x", .int 0 42)], .int 0 42)] ∧ result.scope.functionsUseValues = true := by
   dsimp only
   refine ⟨(deriveScopes _).toOption.get (by decide +kernel),
     (elaborateScopes _).toOption.get (by decide +kernel), ?_, ?_, ?_, ?_, ?_, ?_⟩
@@ -142,7 +142,7 @@ theorem elaborateScopes_call_bound_zeuge :
     let bound := STyp.range (.atom "u8") (.lit 0) (.variable "LIMIT") false
     let items := [SItemTief.typeT [] "Base" [] [] (some (.atom "u8")),
       .constT "LIMIT" (.atom "Base") (.one (.bin "+" (.lit 40) (.lit 2))),
-      .fnT ⟨"const", "identity", [("x", bound)], some bound, none, []⟩
+      .fnT ⟨"const", "identity", [("x", bound)], some bound, none, [], []⟩
         (.block [] (some (.ret (some (.variable "x"))))),
       .constT "BOUND" (.atom "Base") (.one (.call "identity" [.lit 42])),
       .typeT [] "Result" [] [] (some (.range (.atom "u8") (.lit 0) (.variable "BOUND") false)),
@@ -152,7 +152,7 @@ theorem elaborateScopes_call_bound_zeuge :
       result.scope.values = [("LIMIT", 42), ("BOUND", 42), ("ANSWER", 42)] ∧
       result.scope.declared = [("Base", (0, 255)), ("Result", (0, 42))] ∧
       result.scope.functions.map (fun f => (f.name, f.params, f.erg)) =
-        [("identity", [("x", (0, 42))], (0, 42))] ∧
+        [("identity", [("x", .int 0 42)], .int 0 42)] ∧
       result.scope.functionsUseValues = true ∧ (deriveScopes items).toOption.isNone = true := by
   dsimp only
   refine ⟨by decide +kernel, (elaborateScopes _).toOption.get (by decide +kernel), ?_, ?_, ?_, ?_, ?_, ?_⟩
@@ -164,7 +164,7 @@ theorem elaborateScopes_call_bound_zeuge :
 theorem elaborateScopes_custom_negative_bound_zeuge :
     let items := [SItemTief.typeT [] "Small" [] []
         (some (.range (.atom "i8") (.un "-" (.lit 10)) (.lit 100) false)),
-      .fnT ⟨"const", "negative", [], some (.atom "Small"), none, []⟩
+      .fnT ⟨"const", "negative", [], some (.atom "Small"), none, [], []⟩
         (.block [] (some (.ret (some (.bin "-" (.lit 0) (.lit 1)))))),
       .constT "NEGATIVE" (.atom "Small") (.one (.call "negative" [])),
       .typeT [] "Bound" [] []
@@ -175,7 +175,7 @@ theorem elaborateScopes_custom_negative_bound_zeuge :
       result.scope.values = [("NEGATIVE", -1), ("ANSWER", 42)] ∧
       result.scope.declared = [("Small", (-10, 100)), ("Bound", (-1, 100))] ∧
       result.scope.functions.map (fun f => (f.name, f.params, f.erg)) =
-        [("negative", [], (-10, 100))] ∧
+        [("negative", [], .int (-10) 100)] ∧
       result.scope.functionsUseValues = true ∧ (deriveScopes items).toOption.isNone = true := by
   dsimp only
   refine ⟨by decide +kernel, (elaborateScopes _).toOption.get (by decide +kernel), ?_, ?_, ?_, ?_, ?_, ?_⟩
@@ -211,14 +211,14 @@ theorem elaborateScopes_forward_zeuge :
       .typeT [] "Bound" [] [] (some (.range (.atom "u8") (.lit 0) (.variable "LIMIT") false)),
       .typeT [] "Base" [] [] (some (.atom "u8")),
       .constT "LIMIT" (.atom "Base") (.one (.bin "+" (.lit 40) (.lit 2))),
-      .fnT ⟨"const", "identity", [("x", .atom "Result")], some (.atom "Result"), none, []⟩
+      .fnT ⟨"const", "identity", [("x", .atom "Result")], some (.atom "Result"), none, [], []⟩
         (.block [] (some (.ret (some (.variable "x"))))),
       .constT "ANSWER" (.atom "Result") (.one (.call "identity" [.variable "LIMIT"]))]
     ∃ result, elaborateScopes items = .ok result ∧
       result.scope.values = [("LIMIT", 42), ("ANSWER", 42)] ∧
       result.scope.declared = [("Bound", (0, 42)), ("Result", (0, 42)), ("Base", (0, 255))] ∧
       result.scope.functions.map (fun f => (f.name, f.params, f.erg)) =
-        [("identity", [("x", (0, 42))], (0, 42))] ∧
+        [("identity", [("x", .int 0 42)], .int 0 42)] ∧
       (discoverScopes items (items.length + 1) (prepare items).initial).toOption.isNone = true ∧
       AliasAcyclic items := by
   dsimp only
