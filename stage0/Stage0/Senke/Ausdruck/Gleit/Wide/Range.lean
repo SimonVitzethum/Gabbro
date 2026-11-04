@@ -87,11 +87,13 @@ theorem computedFloatRangeL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pr
       (if decide (x.bexp = 2047) then Runner.IR.bool true
         else Runner.IR.bool (floatRangeReject lo hi x)) reserved :=
     routineChooseL_ok check yes no
+  intro fp K d c top emitted fits m pc pre
+  have executed := result emitted fits m pc pre
   by_cases nonfinite : x.bexp = 2047
   · simpa only [computedFloatRangeL, computedFloatRangeReject, nonfinite,
-      decide_true, ite_true] using result
+      decide_true, ite_true] using executed
   · simpa only [computedFloatRangeL, computedFloatRangeReject, nonfinite,
-      decide_false, Bool.false_eq_true, ite_false] using result
+      decide_false, Bool.false_eq_true, ite_false] using executed
 
 /-- The finite path is exactly the established inclusive decision, including
     its NaN-endpoint rejection. The extra guard changes overflow only. -/
