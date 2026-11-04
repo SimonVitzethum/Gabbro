@@ -30,7 +30,8 @@ def passtE : D.Fn ⊕ Unit → Nat → Bool
 
 /-- A value of the extension back in `D`: the callback stands for `g₀`. -/
 def zurueck (τ : Ty) (v : Val (D.Fn ⊕ Unit) (passtE D g₀) τ) : Wert D τ :=
-  Val.restrict id id (fun _ value => match value with
+  Val.restrict (F := D.Fn) (F' := D.Fn ⊕ Unit) (p := D.passt) (p' := passtE D g₀)
+    id id (fun n (value : {f : D.Fn ⊕ Unit // passtE D g₀ f n = true}) => match value with
     | ⟨.inl f, h⟩ => ⟨f, h⟩
     | ⟨.inr _, h⟩ => ⟨g₀, h⟩) τ ((Ty.mapNumbers_id τ).symm ▸ v)
 
@@ -228,8 +229,14 @@ theorem sigE_einE (S : Signatur D.Tab D.Glob D.Lock D.Marke) : (einE D g₀).sig
     · exact List.map_id' haelt
     · exact map_prod_id konsumiert
     · exact map_prod_id produziert
-    · cases owner
-      simp only [OwnerFlow.map, map_prod_id, List.map_id']
+    · change OwnerFlow.map (fun m : D.Marke => m) owner = owner
+      cases owner with
+      | mk moves loans mints =>
+        have moveId : (fun x : OwnerMove D.Marke => (⟨x.mark, x.before, x.after⟩ : OwnerMove D.Marke)) = id := by
+          funext x
+          cases x
+          rfl
+        simp only [OwnerFlow.map, moveId, map_prod_id, List.map_id]
 
 /-- A cast between array types acts on every element. -/
 theorem arr_cast {F : Type} {P : F → Nat → Bool} {a b : Ty} {n : Nat}
@@ -240,10 +247,11 @@ theorem arr_cast {F : Type} {P : F → Nat → Bool} {a b : Ty} {n : Nat}
 
 theorem zurueck_cast (τ : Ty) (h : (einE D g₀).tyE τ = τ) (v : Wert D τ) :
     zurueck D g₀ τ (h ▸ (einE D g₀).valE τ v) = v := by
-  change Val.restrict id id (fun _ value => match value with
+  change Val.restrict (F := D.Fn) (F' := D.Fn ⊕ Unit) (p := D.passt) (p' := passtE D g₀)
+    id id (fun n (value : {f : D.Fn ⊕ Unit // passtE D g₀ f n = true}) => match value with
     | ⟨.inl f, h⟩ => ⟨f, h⟩
     | ⟨.inr _, h⟩ => ⟨g₀, h⟩) τ
-      (castW h.symm (castW h ((einE D g₀).valE τ v))) = v
+      (castW (D := erweitert D g₀) h.symm (castW (D := erweitert D g₀) h ((einE D g₀).valE τ v))) = v
   rw [castW_symm]
   exact Val.restrict_relocate id id _ _ (fun _ _ => rfl) τ v
 
@@ -407,9 +415,11 @@ theorem map_prod_id_zeuge :
 
 /-- A concrete Boolean array cast preserves its selected true entry. -/
 theorem arr_cast_zeuge :
-    ((rfl : Ty.arr .bool 3 = Ty.arr .bool 3) ▸
-      ((fun _ => true) : Val Nat (fun _ _ => true) (.arr .bool 3)))
+    (Eq.ndrec (motive := fun τ : Ty => Val Nat (fun _ _ => true) τ)
+      ((fun _ => true) : Val Nat (fun _ _ => true) (.arr .bool 3))
+      (rfl : Ty.arr .bool 3 = Ty.arr .bool 3))
       (⟨1, by decide⟩ : Fin 3) = true :=
-  arr_cast rfl (fun _ => true) ⟨1, by decide⟩
+  arr_cast (F := Nat) (P := fun _ _ => true) (a := .bool) (b := .bool) (n := 3)
+    rfl ((fun _ => true) : Fin 3 → Val Nat (fun _ _ => true) .bool) (⟨1, by decide⟩ : Fin 3)
 
 end Gabbro.Grammatik.Einbettung
