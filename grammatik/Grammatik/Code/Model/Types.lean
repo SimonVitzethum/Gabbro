@@ -1,5 +1,6 @@
 module
-public import Grammatik.Bausteine.Gleitkomma.Gleitkomma
+public import Init.Data.Float
+public import Init.Data.OfScientific
 @[expose] public section
 
 
@@ -22,8 +23,8 @@ public import Grammatik.Bausteine.Gleitkomma.Gleitkomma
     layout    -- `Ty.align`, `Ty.size` (the ALLOC size), `Ty.store` (the bytes a load or store
                  touches), `Ty.fieldOff`, `Ty.gepOff`: natural alignment (an integer is aligned
                  to its size up to twice the word, a pointer to the word, `double` to 8).
-    `Val`     -- an integer of width `w` is a `BitVec w`; floats are bit-exact values of the
-                 kernel IEEE model (`Gleitkomma`, binary32 and binary64); a pointer is a
+    `Val`     -- an integer of width `w` is a `BitVec w`; floats use the toolchain-native
+                 `Float32` and `Float` types; a pointer is a
                  BLOCK and a byte offset (block-structured memory, `Memory.lean`), so two
                  distinct allocations never alias by construction.
 
@@ -35,7 +36,6 @@ public import Grammatik.Bausteine.Gleitkomma.Gleitkomma
 
 namespace Gabbro.Code
 
-open Gabbro.Grammatik.Gleitkomma
 
 /-- **The target parameters.** Word width (32 or 64 bits) and byte order. Everything in `Code`
     that depends on them takes `[Conf]`; nothing is fixed to one ISA. -/
@@ -152,9 +152,9 @@ def gepOff (t : Ty) : List Int → Option (Int × Ty)
 
 end Ty
 
-/-- The float formats `flt` and `dbl` are the kernel IEEE model's binary32 and binary64. -/
-abbrev F32 := GBits f32
-abbrev F64 := GBits f64
+/-- The two Code formats retain their native CPU precision. -/
+abbrev F32 := Float32
+abbrev F64 := Float
 
 /-- The values of the subset. -/
 inductive Val where

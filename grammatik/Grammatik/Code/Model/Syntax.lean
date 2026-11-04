@@ -27,7 +27,6 @@ public import Grammatik.Code.Model.Types
 
 namespace Gabbro.Code
 
-open Gabbro.Grammatik.Gleitkomma
 
 abbrev Reg := Nat
 abbrev Lbl := Nat

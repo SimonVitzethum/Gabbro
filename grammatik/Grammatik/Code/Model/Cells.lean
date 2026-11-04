@@ -1,6 +1,6 @@
 module
 public import Grammatik.Code.Model.Types
-public import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
+public import Grammatik.Kern.Syntax.Typen.FloatTransport
 @[expose] public section
 
 
@@ -24,7 +24,6 @@ public import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
 
 namespace Gabbro.Code
 
-open Gabbro.Grammatik.Gleitkomma
 
 /-- A cell of memory. -/
 inductive Cell where
@@ -132,16 +131,16 @@ variable [Conf]
 /-- The cells a value is stored as, least significant byte first. -/
 def Val.encLE : Val → List Cell
   | .int w v => natBytes ((w + 7) / 8) v.toNat
-  | .flt g => natBytes 4 (zuBits f32 g)
-  | .dbl g => natBytes 8 (zuBits f64 g)
+  | .flt g => natBytes 4 g.toBits.toNat
+  | .dbl g => natBytes 8 g.toBits.toNat
   | .ptr b o => (List.range Conf.wb).map (Cell.frag b o)
 
 /-- The value a list of cells is when read as type `t`. -/
 def Ty.decLE : Ty → List Cell → Option Val
   | .int w, cs =>
       if cs.length = (w + 7) / 8 then (bytesNat cs).map fun n => Val.int w (BitVec.ofNat w n) else none
-  | .flt, cs => if cs.length = 4 then (bytesNat cs).map fun n => Val.flt (ausBits f32 n) else none
-  | .dbl, cs => if cs.length = 8 then (bytesNat cs).map fun n => Val.dbl (ausBits f64 n) else none
+  | .flt, cs => if cs.length = 4 then (bytesNat cs).map fun n => Val.flt (Float32.ofBits (UInt32.ofNat n)) else none
+  | .dbl, cs => if cs.length = 8 then (bytesNat cs).map fun n => Val.dbl (Float.ofBits (UInt64.ofNat n)) else none
   | .ptr, cs =>
       match cs with
       | .frag b o 0 :: _ => if cs = (List.range Conf.wb).map (Cell.frag b o) then some (.ptr b o) else none
@@ -167,38 +166,19 @@ theorem decLE_encLE_ptr (b : Nat) (o : Int) : Ty.decLE .ptr (Val.encLE (.ptr b o
   obtain ⟨n, hn⟩ : ∃ n, Conf.wb = n + 1 := ⟨Conf.wb - 1, by have := Conf.wb_pos; omega⟩
   simp only [Ty.decLE, Val.encLE, hn, List.range_succ_eq_map, List.map_cons, List.map_map, ↓reduceIte]
 
-/-- A well-formed float triple stays below `2^(1 + ebits + fracBits)`. -/
-theorem zuBits_lt (F : Format) (hF : F.dicht) (g : GBits F) (hw : wf F g) :
-    zuBits F g < 2 ^ (F.ebits + F.fracBits + 1) := by
-  unfold zuBits
-  obtain ⟨h1, h2⟩ := hw
-  unfold Format.dicht Format.bexpMax at hF
-  unfold Format.bexpMax at h1
-  have e1 : g.bexp < 2 ^ F.ebits := by omega
-  have hp : 0 < 2 ^ F.fracBits := Nat.pow_pos (by decide)
-  have e2 : g.bexp * 2 ^ F.fracBits + g.frac < 2 ^ F.ebits * 2 ^ F.fracBits := by
-    have : (g.bexp + 1) * 2 ^ F.fracBits ≤ 2 ^ F.ebits * 2 ^ F.fracBits :=
-      Nat.mul_le_mul_right _ e1
-    rw [Nat.add_mul] at this
-    omega
-  rw [Nat.pow_succ, Nat.pow_add]
-  split <;> omega
-
-theorem decLE_encLE_flt (g : F32) (hw : wf f32 g) :
+/-- Native binary32 storage preserves every value, including logical NaNs. -/
+theorem decLE_encLE_flt (g : F32) :
     Ty.decLE .flt (Val.encLE (.flt g)) = some (.flt g) := by
-  have hlt := zuBits_lt f32 f32_dicht g hw
-  have : (f32.ebits + f32.fracBits + 1) = 32 := by decide
-  rw [this] at hlt
+  have hlt : g.toBits.toNat < 256 ^ 4 := by simpa using g.toBits.toNat_lt_size
   simp only [Ty.decLE, Val.encLE, natBytes_length, bytesNat_natBytes, if_true, Option.map_some]
-  rw [Nat.mod_eq_of_lt (by simpa using hlt), ausBits_zuBits f32 f32_dicht g hw]
+  rw [Nat.mod_eq_of_lt hlt, UInt32.ofNat_toNat, Gabbro.Grammatik.NativeFloat.bits32_roundtrip]
 
-theorem decLE_encLE_dbl (g : F64) (hw : wf f64 g) :
+/-- Native binary64 storage has the same complete-value transport. -/
+theorem decLE_encLE_dbl (g : F64) :
     Ty.decLE .dbl (Val.encLE (.dbl g)) = some (.dbl g) := by
-  have hlt := zuBits_lt f64 f64_dicht g hw
-  have : (f64.ebits + f64.fracBits + 1) = 64 := by decide
-  rw [this] at hlt
+  have hlt : g.toBits.toNat < 256 ^ 8 := by simpa using g.toBits.toNat_lt_size
   simp only [Ty.decLE, Val.encLE, natBytes_length, bytesNat_natBytes, if_true, Option.map_some]
-  rw [Nat.mod_eq_of_lt (by simpa using hlt), ausBits_zuBits f64 f64_dicht g hw]
+  rw [Nat.mod_eq_of_lt hlt, UInt64.ofNat_toNat, Gabbro.Grammatik.NativeFloat.bits_roundtrip]
 /-! ## Byte order -/
 
 /-- Cells in memory order: the target's byte order is a parameter. -/
@@ -225,12 +205,12 @@ theorem dec_enc_int (w : Nat) (v : BitVec w) : Ty.dec (.int w) (Val.enc (.int w 
 theorem dec_enc_ptr (b : Nat) (o : Int) : Ty.dec .ptr (Val.enc (.ptr b o)) = some (.ptr b o) := by
   unfold Ty.dec Val.enc; rw [order_order]; exact decLE_encLE_ptr b o
 
-theorem dec_enc_flt (g : F32) (hw : wf f32 g) :
+theorem dec_enc_flt (g : F32) :
     Ty.dec .flt (Val.enc (.flt g)) = some (.flt g) := by
-  unfold Ty.dec Val.enc; rw [order_order]; exact decLE_encLE_flt g hw
+  unfold Ty.dec Val.enc; rw [order_order]; exact decLE_encLE_flt g
 
-theorem dec_enc_dbl (g : F64) (hw : wf f64 g) :
+theorem dec_enc_dbl (g : F64) :
     Ty.dec .dbl (Val.enc (.dbl g)) = some (.dbl g) := by
-  unfold Ty.dec Val.enc; rw [order_order]; exact decLE_encLE_dbl g hw
+  unfold Ty.dec Val.enc; rw [order_order]; exact decLE_encLE_dbl g
 
 end Gabbro.Code

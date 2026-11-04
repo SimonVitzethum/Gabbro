@@ -23,7 +23,6 @@ public import Grammatik.Code.Model.Memory
 
 namespace Gabbro.Code
 
-open Gabbro.Grammatik.Gleitkomma
 
 /-! ## 1. Registers, frames, configurations -/
 
@@ -109,28 +108,30 @@ def Val.icmp (p : IPred) (w : Nat) : Val → Val → Option Val
       else none
   | _, _ => none
 
-/-- Float arithmetic of the kernel IEEE model. -/
+/-- Float arithmetic uses the toolchain-native primitive at the operand's format. -/
 def Val.fbin (op : FOp) : Val → Val → Option Val
   | .flt a, .flt b =>
       some (.flt (match op with
-        | .add => add f32 a b | .sub => sub f32 a b | .mul => mul f32 a b | .div => div f32 a b))
+        | .add => Float32.add a b | .sub => Float32.sub a b
+        | .mul => Float32.mul a b | .div => Float32.div a b))
   | .dbl a, .dbl b =>
       some (.dbl (match op with
-        | .add => add f64 a b | .sub => sub f64 a b | .mul => mul f64 a b | .div => div f64 a b))
+        | .add => Float.add a b | .sub => Float.sub a b
+        | .mul => Float.mul a b | .div => Float.div a b))
   | _, _ => none
 
-def fcmpAp (F : Format) (p : FPred) (a b : GBits F) : Bool :=
+def fcmpAp {α : Type} (eq lt le : α → α → Bool) (p : FPred) (a b : α) : Bool :=
   match p with
-  | .oeq => fle F a b && fle F b a
-  | .one => flt F a b || flt F b a
-  | .olt => flt F a b
-  | .ole => fle F a b
-  | .ogt => flt F b a
-  | .oge => fle F b a
+  | .oeq => eq a b
+  | .one => lt a b || lt b a
+  | .olt => lt a b
+  | .ole => le a b
+  | .ogt => lt b a
+  | .oge => le b a
 
 def Val.fcmp (p : FPred) : Val → Val → Option Val
-  | .flt a, .flt b => some (Val.bool (fcmpAp f32 p a b))
-  | .dbl a, .dbl b => some (Val.bool (fcmpAp f64 p a b))
+  | .flt a, .flt b => some (Val.bool (fcmpAp Float32.beq Float32.lt Float32.le p a b))
+  | .dbl a, .dbl b => some (Val.bool (fcmpAp Float.beq Float.lt Float.le p a b))
   | _, _ => none
 
 /-- A conversion to type `t`. -/
@@ -140,20 +141,20 @@ def Val.cast (k : Cast) (t : Ty) : Val → Option Val
       | .zext, .int w' => if w ≤ w' then some (.int w' (x.setWidth w')) else none
       | .sext, .int w' => if w ≤ w' then some (.int w' (x.signExtend w')) else none
       | .trunc, .int w' => if w' ≤ w then some (.int w' (x.setWidth w')) else none
-      | .bits, .flt => if w = 32 then some (.flt (ausBits f32 x.toNat)) else none
-      | .bits, .dbl => if w = 64 then some (.dbl (ausBits f64 x.toNat)) else none
-      | .sitof, .flt => some (.flt (Gabbro.Grammatik.Gleitkomma.ofInt f32 x.toInt))
-      | .sitof, .dbl => some (.dbl (Gabbro.Grammatik.Gleitkomma.ofInt f64 x.toInt))
-      | .uitof, .flt => some (.flt (Gabbro.Grammatik.Gleitkomma.ofInt f32 (x.toNat : Int)))
-      | .uitof, .dbl => some (.dbl (Gabbro.Grammatik.Gleitkomma.ofInt f64 (x.toNat : Int)))
+      | .bits, .flt => if w = 32 then some (.flt (Float32.ofBits (UInt32.ofNat x.toNat))) else none
+      | .bits, .dbl => if w = 64 then some (.dbl (Float.ofBits (UInt64.ofNat x.toNat))) else none
+      | .sitof, .flt => some (.flt (Float32.ofInt x.toInt))
+      | .sitof, .dbl => some (.dbl (Float.ofInt x.toInt))
+      | .uitof, .flt => some (.flt (Float32.ofNat x.toNat))
+      | .uitof, .dbl => some (.dbl (Float.ofNat x.toNat))
       | _, _ => none
   | .flt g =>
       match k, t with
-      | .bits, .int 32 => some (.int 32 (BitVec.ofNat 32 (zuBits f32 g)))
+      | .bits, .int 32 => some (.int 32 g.toBits.toBitVec)
       | _, _ => none
   | .dbl g =>
       match k, t with
-      | .bits, .int 64 => some (.int 64 (BitVec.ofNat 64 (zuBits f64 g)))
+      | .bits, .int 64 => some (.int 64 g.toBits.toBitVec)
       | _, _ => none
   | .ptr b o =>
       match k, t with

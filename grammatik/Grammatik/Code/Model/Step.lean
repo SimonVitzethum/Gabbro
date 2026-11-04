@@ -18,7 +18,6 @@ namespace Gabbro.Code
 
 variable [Conf]
 
-open Gabbro.Grammatik.Gleitkomma
 
 /-! ## 1. Entering a block, calling a function -/
 
