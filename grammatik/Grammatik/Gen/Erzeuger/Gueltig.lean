@@ -4,8 +4,9 @@
              of SINGLE-FAULT REFUSED programs, over the model's own acceptance `AkzeptiertX`.
 
   Valid  = `AkzeptiertX P S fs ls cs ws = true` (the Bool of the goal theorem's checker with the atomic rely).
-  The Bool is the conjunction of TEN components (fragment, closedness, footprint, lock ranks, lock sites, roots,
-  single-pool, race freedom, answers, masks); `komp c` is component `c`.
+  TEN numbered components cover fragment, closedness, footprint, lock ranks, lock sites, roots,
+  single-pool, race freedom, answers and masks; `komp c` is component `c`. The complete checker also retains
+  accumulator and reset admission; canonical interface/library checks and scopes follow as shown below.
   Refused ONLY BY component `c` = component `c` is false and the other nine are true.
 
   Every `Programm D` is WELL TYPED by construction (the model's terms are intrinsically typed), so
@@ -92,23 +93,41 @@ def komp (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock) (
   | 8 => antwortenB P fs
   | 9 => maskenB P fs
 
-/-- The Bool of the checker is the conjunction of the ten components, with the C02 library
-    conjunct riding along by construction (`libraryB_immer`): the cells still number 0-9. -/
-/-- The Bool of the checker is the conjunction of the ten components and the
-    accumulator admission (C15, 2026-11-02): the generated programs carry no
-    accumulator, so the admission is decided empty there. -/
+private theorem interface_components (P : Programm D) (fs : List D.Fn) :
+    schnittstellenB P fs = true := by
+  refine List.all_eq_true.mpr fun f hf => List.all_eq_true.mpr fun site hs => ?_
+  cases site with
+  | inl a =>
+    obtain ⟨hp, he, hg, ho⟩ := schnittstellen_standard P fs f hf a hs
+    rw [schnittstelleB_inl]
+    exact Bool.and_eq_true.mpr ⟨Bool.and_eq_true.mpr
+      ⟨Bool.and_eq_true.mpr ⟨decide_eq_true hp, decide_eq_true he⟩,
+        decide_eq_true hg⟩, decide_eq_true ho⟩
+  | inr _ => rfl
+
+private theorem scopes_of_components {P : Programm D} {fs : List D.Fn}
+    (h : stufenB P fs = true) : scopesOkProgB P fs = true := by
+  refine List.all_eq_true.mpr fun f hf => ?_
+  exact end_scopesOkH (P.rumpf f) (residHeld_anfang (D.signatur f))
+    (fun c hc => mE_boden_inv f (P.rumpf f) (List.all_eq_true.mp h f hf) c hc)
+    (hcount_anfang (D.signatur f))
+
+/-- The ten numbered components, accumulator admission at the actual query list,
+    and reset admission characterize the checker on programs without check or guest
+    descriptors. Canonical interfaces and library binding hold by construction;
+    the scope gate follows from component 3 rather than becoming a new premise. -/
 theorem akzeptiertX_iff (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn)
     (aks : List (Gabbro.Grammatik.Kernzelle.AccumulatorDecl D))
     (aqs : List D.Ax := []) :
-    AkzeptiertX P S fs ls cs ws aks = true ↔
+    AkzeptiertX P S fs ls cs ws aks [] aqs = true ↔
       (∀ c, komp P S fs ls cs ws c = true) ∧
         Gabbro.Grammatik.Kernzelle.accumulatorB P fs (tabsOf cs) (globsOf cs) aqs aks = true ∧ resetB cs = true := by
   unfold AkzeptiertX
-  simp only [GuestBoundary.admissionB_nil, Bool.and_true]
-  simp only [Bool.and_eq_true]
+  simp only [GuestBoundary.admissionB_nil, interface_components, libraryB_immer,
+    checkB, List.all_nil, eindeutigeNamen, Bool.and_true, Bool.and_eq_true, and_assoc]
   constructor
-  · rintro ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h0, h1⟩, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, -⟩, h10⟩, hr⟩
+  · rintro ⟨h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, hr, _⟩
     refine ⟨?_, h10, hr⟩
     intro c
     rcases c with ⟨n, hn⟩
@@ -125,7 +144,8 @@ theorem akzeptiertX_iff (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls :
     | 9, _ => exact h9
     | n + 10, hn => exact absurd hn (by omega)
   · rintro ⟨h, h10, hr⟩
-    exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h 0, h 1⟩, h 2⟩, h 3⟩, h 4⟩, h 5⟩, h 6⟩, h 7⟩, h 8⟩, h 9⟩, libraryB_immer _ _⟩, h10⟩, hr⟩
+    exact ⟨h 0, h 1, h 2, h 3, h 4, h 5, h 6, h 7, h 8, h 9,
+      h10, hr, scopes_of_components (h 3)⟩
 
 /-- **Refused only by component `c`**: `c` is false, the other nine components are true. -/
 def NurAn (c : Fin 10) (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
@@ -257,35 +277,45 @@ theorem gueltig_oder_nicht (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (l
 
 /-! ## The unreduced statement: programs with every contract -/
 
-/-- Valid programs over a fixed pointer-interface family (bodies bounded by
+/-- Valid programs over fixed pointer and axiom interface families (bodies bounded by
     `nb`, concrete contracts bounded by `nc`). -/
 def genGueltigAlle (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock) (cs : List (D.Tab ⊕ D.Glob))
     (ws : List D.Fn) (nb nc k : Nat)
-    (ptrs : ∀ n, CallContract D (D.sigNr n) := fun n => CallContract.trivial D (D.sigNr n)) :
+    (ptrs : ∀ n, CallContract D (D.sigNr n) := fun n => CallContract.trivial D (D.sigNr n))
+    (axs : ∀ a : D.Ax, CallContract D (D.asignatur a) := fun _ => callVertragWahr D _) :
     List (Programm D) :=
-  (progS nb nc k ptrs).filter fun P => AkzeptiertX P S fs ls cs ws
+  (progS nb nc k ptrs axs).filter fun P => AkzeptiertX P S fs ls cs ws
 
 /-- **(C) for every program, contracts included.** -/
 theorem gueltigAlle_vollst {nb nc : Nat} (P : Programm D) (hv : AkzeptiertX P S fs ls cs ws = true)
     (hb : ∀ f, groesseEnd (P.rumpf f) ≤ nb)
     (hc : ∀ f, groesseExpr (P.requires f) ≤ nc ∧ groesseExpr (P.ensures f) ≤ nc)
     (hi : ∀ i, groesseExpr (P.invariante i) ≤ nc) (hu : groesseProg P < unendlich) :
-    P ∈ genGueltigAlle S fs ls cs ws nb nc (groesseProg P) P.ptrVertrag :=
-  List.mem_filter.2 ⟨progS_vollst nb nc P hb hc hi hu, hv⟩
+    P ∈ genGueltigAlle S fs ls cs ws nb nc (groesseProg P) P.ptrVertrag P.axVertrag := by
+  have generated : P ∈ progS nb nc (groesseProg P) P.ptrVertrag P.axVertrag :=
+    progS_vollst nb nc P hb hc hi hu
+  change P ∈ (progS nb nc (groesseProg P) P.ptrVertrag P.axVertrag).filter
+    (fun candidate => AkzeptiertX candidate S fs ls cs ws)
+  exact List.mem_filter.mpr ⟨generated, hv⟩
 
-/-- Single-fault programs of component `c` over a fixed interface family. -/
+/-- Single-fault programs of component `c` over fixed pointer and axiom interface families. -/
 def genBadAlle (c : Fin 10) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock) (cs : List (D.Tab ⊕ D.Glob))
     (ws : List D.Fn) (nb nc k : Nat)
-    (ptrs : ∀ n, CallContract D (D.sigNr n) := fun n => CallContract.trivial D (D.sigNr n)) :
+    (ptrs : ∀ n, CallContract D (D.sigNr n) := fun n => CallContract.trivial D (D.sigNr n))
+    (axs : ∀ a : D.Ax, CallContract D (D.asignatur a) := fun _ => callVertragWahr D _) :
     List (Programm D) :=
-  (progS nb nc k ptrs).filter fun P => decide (NurAn c P S fs ls cs ws)
+  (progS nb nc k ptrs axs).filter fun P => decide (NurAn c P S fs ls cs ws)
 
 /-- **(C) for every single-fault program, contracts included.** -/
 theorem badAlle_vollst {c : Fin 10} {nb nc : Nat} (P : Programm D) (hv : NurAn c P S fs ls cs ws)
     (hb : ∀ f, groesseEnd (P.rumpf f) ≤ nb)
     (hc : ∀ f, groesseExpr (P.requires f) ≤ nc ∧ groesseExpr (P.ensures f) ≤ nc)
     (hi : ∀ i, groesseExpr (P.invariante i) ≤ nc) (hu : groesseProg P < unendlich) :
-    P ∈ genBadAlle c S fs ls cs ws nb nc (groesseProg P) P.ptrVertrag :=
-  List.mem_filter.2 ⟨progS_vollst nb nc P hb hc hi hu, decide_eq_true hv⟩
+    P ∈ genBadAlle c S fs ls cs ws nb nc (groesseProg P) P.ptrVertrag P.axVertrag := by
+  have generated : P ∈ progS nb nc (groesseProg P) P.ptrVertrag P.axVertrag :=
+    progS_vollst nb nc P hb hc hi hu
+  change P ∈ (progS nb nc (groesseProg P) P.ptrVertrag P.axVertrag).filter
+    (fun candidate => decide (NurAn c candidate S fs ls cs ws))
+  exact List.mem_filter.mpr ⟨generated, decide_eq_true hv⟩
 
 end Gabbro.Grammatik.Gen
