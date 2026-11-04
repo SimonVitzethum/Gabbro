@@ -48,7 +48,7 @@ theorem zensusMulti_exakt :
          meldung := "type unknown: Unbekannt" },
        { stufe := "rumpf", art := "match", name := "f",
          meldung := "stmt without G form" }] := by
-  decide
+  cbv
 
 #print axioms Gabbro.Grammatik.GabbroV.GvZensus.zensus104_leer
 #print axioms Gabbro.Grammatik.GabbroV.GvZensus.zensusMulti_exakt
