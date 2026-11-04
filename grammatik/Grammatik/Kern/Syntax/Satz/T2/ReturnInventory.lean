@@ -7,7 +7,7 @@ namespace Gabbro.Grammatik
 variable {D : Deklaration} {V : Vertrag D}
 
 namespace ReturnInventory
-variable {slack : Nat := 0}
+variable {slack : Nat}
 
 /-- Only the callee's actual held-list preservation is needed by inventory. -/
 def CallHeld (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) : Prop :=
@@ -48,7 +48,7 @@ theorem oracleElse_held (O : Orakel D) (hO : OracleHeld O) (a : D.Ax) (σ : Worl
 /-- The tracked lock has at most `slack` unrepresented caller occurrences.
     Other caller locks retain the ordinary floor-based holding contract. -/
 def Entry (L : D.Lock) (bo : Option Int) (Λ : List (Res D)) (σ : World D)
-    {slack : Nat := 0} : Prop :=
+    (slack : Nat := 0) : Prop :=
   HeldB bo Λ σ.haelt ∧ σ.haelt.count L ≤ Λ.count (Res.held L) + slack
 
 theorem Entry.same {L : D.Lock} {bo : Option Int} {Λ : List (Res D)}
@@ -102,12 +102,12 @@ theorem callHeld_of_gutR {R : ∀ f : D.Fn, World D → Env D (D.params f) → R
 
 /-- Ordinary flow preserves the complete held list. A terminal return leaves
     at most the caller's `slack` occurrences of the tracked non-residual lock. -/
-def Outcome (L : D.Lock) (σ : World D) (o : Ausgang V l Γ) {slack : Nat := 0} : Prop :=
+def Outcome (L : D.Lock) (σ : World D) (o : Ausgang V l Γ) (slack : Nat := 0) : Prop :=
   ∀ σ', o.welt = some σ' → match o with
     | .zurueck _ _ | .why _ _ => σ'.haelt.count L ≤ slack
     | _ => σ'.haelt = σ.haelt
 
-abbrev EndOutcome (L : D.Lock) (σ : World D) (o : EndAusgang V l Γ) {slack : Nat := 0} : Prop :=
+abbrev EndOutcome (L : D.Lock) (σ : World D) (o : EndAusgang V l Γ) (slack : Nat := 0) : Prop :=
   Outcome (slack := slack) L σ o.zuAusgang
 
 theorem Outcome.ok {L : D.Lock} {σ σ' : World D} (ρ : Env D Γ)

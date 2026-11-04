@@ -8,7 +8,7 @@ variable {D : Deklaration} {V : Vertrag D} {bo : Option Int}
 variable (O : Orakel D) (passes : Nat)
 variable (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
 variable (hR : GutR R) (hO : GutO O) (hbV : BodenUnter bo V.boden)
-variable (hCall : CallHeld R) (hOracle : OracleHeld O) {slack : Nat := 0}
+variable (hCall : CallHeld R) (hOracle : OracleHeld O) {slack : Nat}
 variable (L : D.Lock) (residual : L ∉ V.haelt)
 include hCall hOracle hbV residual
 mutual

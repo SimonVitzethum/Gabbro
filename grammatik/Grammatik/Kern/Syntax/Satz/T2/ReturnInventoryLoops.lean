@@ -5,7 +5,7 @@ public import Grammatik.Kern.Syntax.Satz.T2.ReturnInventory
 
 namespace Gabbro.Grammatik.ReturnInventory
 variable {D : Deklaration} {V : Vertrag D} {L : D.Lock} {bo : Option Int} {Λ : List (Res D)}
-variable {slack : Nat := 0}
+variable {slack : Nat}
 
 theorem traverse (step : World D → Env D (τ :: Γ) → Ausgang V true (τ :: Γ))
     (inv : World D → Env D Γ → World D × Bool)
