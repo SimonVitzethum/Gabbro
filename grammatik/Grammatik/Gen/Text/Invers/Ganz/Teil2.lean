@@ -103,7 +103,7 @@ theorem fn_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklaratio
   have H := fnCtx_sinv hL hM f devs mitGriff ps ks hps hks hdevs (fun r => ⟨hreg r, hgriff (hreg r)⟩) als
     (nFn (fN z f)) annahmen sums zustaende hs zeiger zb hzb hzu
   unfold elabUFunktion
-  simp only [hkopf, klauselnVon_measure z P f req ens (fun k hk => (hkl k hk).1)]
+  simp only [hkopf, klauselnVon_measure z P f req ens (fun k hk => (hkl k hk).1) als]
   set ctx := { uCtxVon als [] tabs locks globs (kopfVon z gNr devs f ps ks mitGriff) (nFn (fN z f)) annahmen whys
     sums regs zustaende with zeiger := zeiger, zeigerBasis := zb } with hctx
   rw [elabFn_eq ctx _ _ _ _ rfl, gibt_klauseln _ P f req ens hreqF, braucht_klauseln _ P f req ens hensF]
@@ -126,7 +126,8 @@ theorem fn_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklaratio
   -- the body
   obtain ⟨cE, hB, hEnde, _⟩ := (rumpf_satz gNr ctx.tabs koepfe hM hK hI (sizeOf (P.rumpf f) + 1)).2.2 (P.rumpf f) ctx
     (artListe ks) 1000000 ss ende body r (by omega) hsize H hb hbr
-  simp only [hG, hN, hB, hEnde]
+  have hFold := delabEnd_foldFree (P.rumpf f) (output := (ss, ende)) hb cE
+  simp only [hG, hN, hB, hFold, hEnde, List.append_nil]
   congr 1
   simp only [kopfVon, kanalVon]
   congr 1

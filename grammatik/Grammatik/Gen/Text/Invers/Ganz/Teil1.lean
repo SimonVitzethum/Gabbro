@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Gen.Text.Invers.Funktion
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -365,15 +366,20 @@ theorem elabFn_eq (ctx : UCtx) (koepfe : List UFnKopf) (kl : List SKlausel) (ss 
           match uAnwReihe ctx.tabs koepfe 1000000 ctx ss with
           | .error e => .error e
           | .ok (body, ctxE) =>
-            match uEnde ctxE ende with
-            | .error e =>
-              if ende.isNone && (match ss.getLast? with | some s => uEndetTief 64 s | none => false) then
-                .ok (gives, needs, body, .keins)
-              else .error e
-            | .ok r => .ok (gives, needs, body, r) := by
-  unfold elabFn
+            match expandFoldEnd ctxE ende with
+            | .error e => .error e
+            | .ok (beforeEnd, ctxEnd, ending) =>
+              match uEnde ctxEnd ending with
+              | .error e =>
+                if ending.isNone && (match ss.getLast? with | some s => uEndetTief 64 s | none => false) then
+                  .ok (gives, needs, body, .keins)
+                else .error e
+              | .ok r => .ok (gives, needs, body ++ beforeEnd, r) := by
+  unfold elabFn elabKlauseln
   simp only [hsp, List.isEmpty_nil, ↓reduceIte]
-  rfl
+  cases hg : uSeq (kl.filterMap (gibtF ctx)) <;>
+    cases hn : uSeq (kl.filterMap (brauchtF ctx)) <;>
+    simp only [hg, hn] <;> rfl
 
 theorem brauchtF_needs (ctx : UCtx) (e : SExpr) (h : kopfOk e = true) : brauchtF ctx (.needs e) = some (uBool ctx e) := by
   cases e with
