@@ -112,8 +112,9 @@ private def makeDefinition (nodes : Array Node) (index : Nat) (recursive : Bool)
   let type ← PrettyPrinter.delab node.type
   let functionName := mkIdent node.functionName
   let major := mkIdent (← mkFreshUserName `value)
-  let binder ← `(Parser.Term.bracketedBinder| ($major : $type))
-  let discriminant ← `(Parser.Term.matchDiscr| $major:term)
+  let binder ← `(Lean.Parser.Term.bracketedBinderF| ($major : $type))
+  let binders : Array (TSyntax ``Lean.Parser.Term.bracketedBinder) := #[⟨binder.raw⟩]
+  let discriminant ← `(Lean.Parser.Term.matchDiscr| $major:term)
   let discriminants := #[discriminant]
   let resultType ← `(term| { n : Nat // n = sizeOf $major })
   let mut alternatives := #[]
@@ -121,13 +122,13 @@ private def makeDefinition (nodes : Array Node) (index : Nat) (recursive : Bool)
     alternatives := alternatives.push (← makeAlternative nodes node.type ctorName)
   let body ← `(term| match $[$discriminants],* with $alternatives:matchAlt*)
   let termSuffix ← if recursive
-    then `(Parser.Termination.suffix|
+    then `(Lean.Parser.Termination.suffix|
       termination_by sizeOf $major
       decreasing_by
         all_goals simp_wf
         all_goals omega)
-    else `(Parser.Termination.suffix|)
-  `(command| @[no_expose] private def $functionName:ident $binder:bracketedBinder :
+    else `(Lean.Parser.Termination.suffix|)
+  `(command| private def $functionName:ident $binders:bracketedBinder* :
       $resultType:term := $body:term
     $termSuffix:suffix)
 
