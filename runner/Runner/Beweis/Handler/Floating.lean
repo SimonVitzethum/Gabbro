@@ -9,18 +9,69 @@ open Runner.X86 Runner.Prog
     proofs cover arbitrary answers, including refusal, before any memory model
     restricts answers through NativeFPEval. -/
 
+theorem fp_control_immediates :
+    sx32 (1 : BitVec 32) = (1 : W) ∧ sx32 (2 : BitVec 32) = (2 : W) ∧
+      sx32 (6 : BitVec 32) = (6 : W) := by decide
+
+theorem fp_compare_bool_zero (word : W) :
+    (if word = 0 then (0 : W) else 1) = 0 ↔ word = 0 := by
+  by_cases zero : word = 0 <;> simp [zero]
+
+theorem fp_compare_mask32 (word : W) :
+    (((if word = 0 then (0 : W) else BitVec.allOnes 64).setWidth 32).setWidth 64 &&& 1) =
+      if word = 0 then 0 else 1 := by
+  by_cases zero : word = 0
+  · simpa only [if_pos zero] using
+      (show (((0 : W).setWidth 32).setWidth 64 &&& 1) = (0 : W) from by decide)
+  · simpa only [if_neg zero] using
+      (show (((BitVec.allOnes 64).setWidth 32).setWidth 64 &&& 1) = (1 : W) from by decide)
+
+theorem fp_compare_mask64 (word : W) :
+    ((if word = 0 then (0 : W) else BitVec.allOnes 64) &&& 1) =
+      if word = 0 then 0 else 1 := by
+  by_cases zero : word = 0
+  · simpa only [if_pos zero] using (show (0 : W) &&& 1 = 0 from by decide)
+  · simpa only [if_neg zero] using (show BitVec.allOnes 64 &&& 1 = (1 : W) from by decide)
+
+theorem fp_scalar_pc (x : X) (format : FPFormat) (destination : Xmm) (value : W) :
+    (x.setScalar format destination value).r12 = x.r12 := by cases format <;> rfl
+
+theorem fp_scalar_frame (x : X) (format : FPFormat) (destination : Xmm) (value : W) :
+    (x.setScalar format destination value).r13 = x.r13 := by cases format <;> rfl
+
+theorem fp_scalar_table (x : X) (format : FPFormat) (destination : Xmm) (value : W) :
+    (x.setScalar format destination value).r14 = x.r14 := by cases format <;> rfl
+
+theorem fp_scalar_mode (x : X) (format : FPFormat) (destination : Xmm) (value : W) :
+    (x.setScalar format destination value).fpReady = x.fpReady := by cases format <;> rfl
+
+/- `runL` is deliberately absent here. A residual instruction list must not be
+   expanded under a still unknown request answer or flag state. -/
+macro "fp_reduce" ready:term : tactic => `(tactic| (
+  try simp only [exec]
+  try simp only [xmmWord_setScalar, fp_scalar_pc, fp_scalar_frame, fp_scalar_table, fp_scalar_mode]
+  try simp (disch := decide) [bind_next, bind_ask, bind_opt,
+    fld, sld, sst, mb, ms, ea, ir_sx, X.get, X.set, X.setXmm, X.xmmWord,
+    X.fpReady, X.nof, X.cmpf, Cond.eval, aluStep, aluOp, rd64, rd32, wr64,
+    Runner.fp, NativeFPOp.inputs, NativeFPOp.resultWord, FPArith.native, FPCompare.native,
+    fpLow32, uint64StickyHalf, BitVec.setWidth_setWidth_of_le,
+    fp_control_immediates.1, fp_control_immediates.2.1, fp_control_immediates.2.2,
+    fp_compare_bool_zero, fp_compare_mask32, fp_compare_mask64,
+    fp_scalar_pc, fp_scalar_frame, fp_scalar_table, fp_scalar_mode,
+    setcc_zx, zx_bool, pack_compare_flags, BitVec.and_assoc, beq_iff_eq, $ready]))
+
 macro "fp_corr" hm:term : tactic => `(tactic| (
   have ready := $hm
-  simp only [X.fpReady] at ready
-  simp (disch := decide) [IR.op, IR.fp, IR.ret1, IR.f1, IR.f2, IR.f3, IR.ld, IR.slot, IR.nxt,
-    binBody, fpOperands, runL, exec, fld, sld, sst, mb, ms, ea,
-    X.get, X.set, X.setXmm, X.xmmWord, X.fpReady, rd64, rd32,
-    fpSequence, Runner.fp, NativeFPOp.inputs, NativeFPOp.resultWord, FPArith.native, FPCompare.native,
-    fpLow32, uint64StickyHalf, BitVec.setWidth_setWidth_of_le, ready]
-  repeat (first | (apply corr_ask; intro _) | (apply corr_opt; intro _))
-  simp (disch := decide) [runL, exec, X.get, X.set, X.setScalar, X.setXmm, X.xmmWord,
-    X.fpReady, X.nof, aluStep, aluOp, fpLow32, BitVec.setWidth_setWidth_of_le,
-    Corr, and_self]))
+  simp only [X.fpReady, beq_iff_eq] at ready
+  simp only [NativeFPOp.code, FPArith.native, FPCompare.native,
+    IR.op, IR.fp, fpSequence, IR.ret1, IR.f1, IR.f2, IR.f3, IR.ld, IR.slot, IR.nxt,
+    binBody, fpOperands, List.cons_append, List.nil_append, List.append_assoc]
+  fp_reduce ready
+  repeat (first
+    | (apply corr_ask; intro _; fp_reduce ready)
+    | (apply corr_opt; intro _; fp_reduce ready)
+    | (rw [runL]; fp_reduce ready))
+  all_goals simp [Corr, X.fpReady]))
 
 theorem fp_arith_ok {L : Lay} {y : X} (kind : FPArith) (format : FPFormat)
     (h : HPre L (kind.native format).code y) :
@@ -40,19 +91,7 @@ theorem fp_compare_ok {L : Lay} {y : X} (pred : FPCompare) (format : FPFormat)
       .movFromXmm format .rax .xmm0, .alui .and .rax 1])) y _ ?_ ?_ ?_
   · cases pred <;> cases format <;> decide
   · cases pred <;> cases format <;> exact h.code
-  · cases pred <;> cases format
-    all_goals
-      have ready := h.mode
-      simp only [X.fpReady] at ready
-      simp (disch := decide) [IR.op, IR.fp, IR.ret1, IR.f1, IR.f2, IR.f3, IR.ld, IR.slot, IR.nxt,
-        binBody, fpOperands, runL, exec, fld, sld, sst, mb, ms, ea,
-        X.get, X.set, X.setXmm, X.xmmWord, X.fpReady, rd64, rd32,
-        fpSequence, Runner.fp, NativeFPOp.inputs, NativeFPOp.resultWord, FPCompare.native,
-        fpLow32, BitVec.setWidth_setWidth_of_le, ready]
-      repeat (first | (apply corr_ask; intro _) | (apply corr_opt; intro _))
-      split <;> simp (disch := decide) [runL, exec, X.get, X.set, X.setScalar, X.setXmm,
-        X.xmmWord, X.fpReady, X.nof, aluStep, aluOp, fpLow32,
-        BitVec.setWidth_setWidth_of_le, Corr, and_self]
+  · cases pred <;> cases format <;> fp_corr h.mode
 
 theorem fp_fromInt_ok {L : Lay} {y : X} (format : FPFormat)
     (h : HPre L (NativeFPOp.fromInt64 format).code y) :
@@ -97,17 +136,6 @@ theorem fp_flags_ok {L : Lay} {y : X} (format : FPFormat)
         .alu .or .rax .rdx, .alu .or .rax .rsi])) y _ ?_ ?_ ?_
   · cases format <;> decide
   · cases format <;> exact h.code
-  · cases format
-    all_goals
-      have ready := h.mode
-      simp only [X.fpReady] at ready
-      simp (disch := decide) [IR.op, IR.fp, IR.ret1, IR.f1, IR.f2, IR.f3, IR.ld, IR.slot, IR.nxt,
-        binBody, fpOperands, runL, exec, fld, sld, sst, mb, ms, ea,
-        X.get, X.set, X.setXmm, X.xmmWord, X.fpReady, rd64, rd32,
-        fpSequence, Runner.fp, NativeFPOp.inputs, NativeFPOp.resultWord,
-        fpLow32, BitVec.setWidth_setWidth_of_le, ready]
-      repeat (first | (apply corr_ask; intro _) | (apply corr_opt; intro _))
-      simp (disch := decide) [Cond.eval, runL, exec, X.get, X.set, X.nof, X.fpReady, aluStep, aluOp,
-        setcc_zx, zx_bool, pack_compare_flags, BitVec.and_assoc, Corr, and_self]
+  · cases format <;> fp_corr h.mode
 
 end Runner.Beweis
