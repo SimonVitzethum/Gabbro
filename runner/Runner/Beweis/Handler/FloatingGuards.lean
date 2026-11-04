@@ -77,4 +77,21 @@ theorem fpInputSign_run (format : FPFormat) (before : X) :
       lenOfL, enc, regEnc, le32, BitVec.ofNat_add, BitVec.add_assoc, sx32_ofNat,
       fpNegative_bit, shifted_sign_zero]
 
+theorem fpLimit_run (format : FPFormat) (unsigned : Bool) (before : X) :
+    ∃ after, runL (fpLimit .rdx format unsigned ++ [.alu .cmp .rsi .rdx]) before = .next after ∧
+      after.rip = before.rip + BitVec.ofNat 64
+        (lenOfL (fpLimit .rdx format unsigned ++ [.alu .cmp .rsi .rdx])) ∧
+      after.cf = some (before.rsi.ult (if unsigned then format.uint64Limit else format.int64Limit)) ∧
+      after.rdx = (if unsigned then format.uint64Limit else format.int64Limit) ∧
+      after.rax = before.rax ∧ after.rsi = before.rsi ∧
+      after.r12 = before.r12 ∧ after.r13 = before.r13 ∧ after.r14 = before.r14 ∧
+      after.fpReady = before.fpReady := by
+  cases format <;> cases unsigned
+  all_goals
+    refine ⟨_, rfl, ?_, ?_, ?_, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  all_goals
+    simp (disch := decide) [fpLimit, fpUpper, FPFormat.int64Limit, FPFormat.uint64Limit,
+      runL, exec, X.get, X.set, X.nof, X.cmpf, aluStep, aluOp, lenOfL, enc, regEnc, le32,
+      BitVec.ofNat_add, BitVec.add_assoc, sx32_ofNat]
+
 end Runner.Beweis
