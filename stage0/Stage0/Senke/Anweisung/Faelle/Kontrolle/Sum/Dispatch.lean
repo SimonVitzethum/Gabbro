@@ -53,8 +53,7 @@ theorem lowSumTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       have restWidth : ∀ j : Fin restSchema.length,
           1 + payloadWords (restSchema.get j) ≤ span := by
         intro j
-        simpa only [List.get_cons_succ] using
-          width ⟨j.val + 1, by have := j.isLt; omega⟩
+        simpa only [List.get_cons_succ'] using width j.succ
       have hks := hW.ks
       let cp := sumSpanPayloadC (frei Γ reserved) payloadTy
       have p : PreS L m pc fp K (frei Γ reserved)
