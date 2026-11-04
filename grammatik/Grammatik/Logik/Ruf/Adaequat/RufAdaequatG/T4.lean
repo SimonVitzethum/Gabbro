@@ -89,8 +89,8 @@ theorem stmtKein : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       intro σ σ' ρ v hex
       obtain ⟨_, hb⟩ := hs.locks_inv
       simp only [execStmt] at hex
-      obtain ⟨σ1, h1, _⟩ := mapWelt_zurueck hex
-      exact blockKein body hb _ _ _ _ h1
+      generalize hbody : execBlock O passes keinRuf body (σ.nimmt L) ρ = outcome at hex
+      cases outcome <;> first | exact blockKein body hb _ _ _ _ hbody | cases hex
   | _, _, _, _, .breaking i body, hs => by
       intro σ σ' ρ v hex
       have hb := hs.breaking_inv

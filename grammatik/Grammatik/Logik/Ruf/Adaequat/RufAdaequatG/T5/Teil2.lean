@@ -131,8 +131,8 @@ theorem stmtRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       intro σ σ' ρ v hex
       obtain ⟨_, hb⟩ := hs.locks_inv
       simp only [execStmt] at hex
-      obtain ⟨σ1, h1, _⟩ := mapWelt_zurueck hex
-      exact absurd h1 (blockKein O passes A body hb _ _ _ _)
+      generalize hbody : execBlock O passes keinRuf body (σ.nimmt L) ρ = outcome at hex
+      cases outcome <;> first | exact False.elim (blockKein O passes A body hb _ _ _ _ hbody) | cases hex
   | _, _, _, _, .breaking i body, hs => by
       intro σ σ' ρ v hex M _ rest k hZ hΛ hA
       have hb := hs.breaking_inv
@@ -424,7 +424,6 @@ theorem endRet : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         (endRet rest hr _ _ _ _ (endSchrumpf_zurueck hex) M1 hZ1 (heldGenau_lese _ hΛ)
           (hA.lauf (RufLaufG.einzeln hs1)))
   | _, _, _, .narrowRequired _ _ _ _, he => by cases he
-
   | _, _, _, .float op a b lo hi rest, hb => endRet_float (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (log := log) (A := A) (hnw := hnw) op a b lo hi rest hb (endRet rest)
   | _, _, _, .floatLit q lo hi rest, hb => endRet_floatLit (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (log := log) (A := A) (hnw := hnw) q lo hi rest hb (endRet rest)
   | _, _, _, .floatOf e lo hi rest, hb => endRet_floatOf (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (log := log) (A := A) (hnw := hnw) e lo hi rest hb (endRet rest)
