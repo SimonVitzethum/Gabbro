@@ -395,5 +395,9 @@ def execGrund {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat} :
 
 end
 
+-- Realize the canonical reduction equations at their definition site. Independent
+-- proof clients must import one shared owner instead of exporting duplicate equations.
+attribute [local simp] execStmt execBlock execEnd execArms execGrund
+
 end Rumpf
 end Gabbro.Grammatik
