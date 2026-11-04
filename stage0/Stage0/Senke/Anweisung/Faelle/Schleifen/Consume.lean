@@ -39,7 +39,92 @@ theorem consumeTraverse_initial_fuel (t : D.Tab) (bound : Int) :
     0 < (D.count t).toNat + bound.toNat + 1 := by
   omega
 
+private theorem consume_position_label (target : Label) (before after : List Piece) (pc : Nat) :
+    before.all (fun piece => match piece with
+      | .label name => decide (name ≠ target)
+      | _ => true) = true →
+    position target (before ++ .label target :: after) pc = some (pc + width before) := by
+  induction before generalizing pc with
+  | nil => intro _; simp only [List.nil_append, position, ↓reduceIte, width, Nat.add_zero]
+  | cons piece rest ih =>
+    intro absent
+    simp only [List.all_cons, Bool.and_eq_true] at absent
+    cases piece with
+    | code instructions =>
+      simpa only [List.cons_append, position, width, Piece.width, Nat.add_assoc] using
+        ih (pc + instructions.length) absent.2
+    | label name =>
+      have different : name ≠ target := of_decide_eq_true absent.1
+      simpa only [List.cons_append, position, different, ↓reduceIte, width,
+        Piece.width, Nat.add_zero, Nat.zero_add] using ih pc absent.2
+    | jump destination =>
+      simpa only [List.cons_append, position, width, Piece.width, Nat.add_assoc] using
+        ih (pc + 1) absent.2
+    | zero cell destination =>
+      simpa only [List.cons_append, position, width, Piece.width, Nat.add_assoc] using
+        ih (pc + 1) absent.2
+
 variable [Kern] {L : Lay D}
+
+section
+variable {P : Programm D} {f : D.Fn} {reserved : Nat} (x : Consuming.Image L P f reserved)
+
+/-- The body is an actual slice of the accepted image, so it inherits its size gate. -/
+private theorem consume_body_small : 16 * x.body.length < 2 ^ 31 := by
+  have splitImage : x.fragment =
+      x.fragment.take 39 ++ .code x.body :: x.fragment.drop 40 := rfl
+  obtain ⟨leading, suffix, codeEq, _⟩ := assemble_block (x.fragment.take 39) x.body
+    (x.fragment.drop 40) (code := x.code) (by rw [← splitImage]; exact x.assembled)
+  have included : x.body.length ≤ x.code.length := by
+    rw [codeEq]
+    simp only [List.length_append]
+    omega
+  have small := assemble_size x.assembled
+  omega
+
+/-- Labels have zero width: body fallthrough is the actual after-body target. -/
+private theorem consume_body_end :
+    x.addr 39 + BitVec.ofNat 64 (16 * x.body.length) = x.addr 41 := by
+  have bodyEnd := x.addr_next_code (i := 39) (block := x.body) rfl
+  have afterLabel : x.addr 40 = x.addr 41 := rfl
+  exact bodyEnd.trans afterLabel
+
+private theorem consume_targets : targets x.fragment =
+    some (16 * ((x.offset 44 : Int) - x.offset 41), 0) := by
+  have afterSplit : x.fragment =
+      x.fragment.take 40 ++ .label .afterBody :: x.fragment.drop 41 := rfl
+  have afterPosition := consume_position_label .afterBody (x.fragment.take 40)
+    (x.fragment.drop 41) 0 (by rfl)
+  rw [← afterSplit] at afterPosition
+  have afterLocated : position .afterBody x.fragment 0 = some (x.offset 41) := by
+    simpa only [Nat.zero_add] using afterPosition
+  have leaveSplit : x.fragment =
+      x.fragment.take 43 ++ .label .leaveBody :: x.fragment.drop 44 := rfl
+  have leavePosition := consume_position_label .leaveBody (x.fragment.take 43)
+    (x.fragment.drop 44) 0 (by rfl)
+  rw [← leaveSplit] at leavePosition
+  have leaveLocated : position .leaveBody x.fragment 0 = some (x.offset 44) := by
+    simpa only [Nat.zero_add] using leavePosition
+  simp only [targets, afterLocated, leaveLocated, bind, Option.bind_some, pure]
+
+private theorem consume_header_address : x.pc + 16 = x.addr 2 := by
+  have initialWidth : x.offset 2 = (travCountC x.counter (x.fuel : Int)).length := rfl
+  have literal : lit32 (x.fuel : Int) = true := lit32_nat x.bounds.1
+  have initial : (travCountC x.counter (x.fuel : Int)).length = 1 := by
+    rw [travCountC_length]
+    simp only [travCountSize, literal, ↓reduceIte]
+  change x.pc + 16 = x.pc + BitVec.ofNat 64 (16 * x.offset 2)
+  rw [initialWidth, initial]
+  rfl
+
+private theorem consume_exit_address :
+    x.addr 50 = x.pc + BitVec.ofNat 64 (16 * x.code.length) := by
+  have endWidth : x.offset 50 = width x.fragment := rfl
+  have codeWidth : x.code.length = width x.fragment := assemble_length x.assembled
+  change x.pc + BitVec.ofNat 64 (16 * x.offset 50) = _
+  rw [endWidth, ← codeWidth]
+
+end
 
 /-- The actual lowS image implements current-state consuming traversal. The
     canonical fuel induction composes both scans and every body outcome. -/
@@ -76,36 +161,73 @@ theorem consumeTraverse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Na
       simp only [inW, Bool.and_eq_true, decide_eq_true_eq] at countGate
       omega)
   let x : Consuming.Image L P f reserved := {
-    A := A, C := C, dv := dv, fp := fp, pc := pc, rp := rp, cfp := cfp,
-    K := K, Ks := Ks, lo := lo, s := frei Γ reserved,
-    counter := (counterPair reserved (counterDepthB body)).1,
-    saved := (counterPair reserved (counterDepthB body)).2,
-    fuel := (D.count t).toNat + bound.toNat + 1, table := t, bound := bound,
-    invariant := ci.1, member := cm.1, edge := ce.1, measure := cw.1,
-    body := cb.1, code := c, σ0 := σ0, ρ0 := ρ0, pr := pr,
-    layout := hW, small := hp.small, abi := hlo0, low := hlo,
+    A := A
+    C := C
+    dv := dv
+    fp := fp
+    pc := pc
+    rp := rp
+    cfp := cfp
+    K := K
+    Ks := Ks
+    lo := lo
+    s := frei Γ reserved
+    counter := (counterPair reserved (counterDepthB body)).1
+    saved := (counterPair reserved (counterDepthB body)).2
+    fuel := (D.count t).toNat + bound.toNat + 1
+    table := t
+    bound := bound
+    invariant := ci.1
+    member := cm.1
+    edge := ce.1
+    measure := cw.1
+    body := cb.1
+    code := c
+    σ0 := σ0
+    ρ0 := ρ0
+    pr := pr
+    layout := hW
+    small := hp.small
+    abi := hlo0
+    low := hlo
     controls := ⟨by simpa only [hlo0] using pairLow,
-      by simp only [counterPair]; omega, pairRoom⟩,
-    scratch := ⟨by simp only [frei]; omega, by omega⟩,
+      by simp only [counterPair]; omega, pairRoom⟩
+    scratch := ⟨by simp only [frei]; omega, by omega⟩
     kept := by
       intro j hj
-      exact ⟨hpr j hj, fun eq => counterFree (eq ▸ hj), fun eq => savedFree (eq ▸ hj)⟩,
-    bounds := gates, assembled := assembled, far := hp.far }
+      exact ⟨hpr j hj, fun eq => counterFree (eq ▸ hj), fun eq => savedFree (eq ▸ hj)⟩
+    bounds := gates
+    assembled := assembled
+    far := hp.far }
   let loop : Consuming.Loop x Γ Λ := {
     selector := {
-      member := member, edge := edge, mt := cm.2, et := ce.2,
-      memberCode := hcm, edgeCode := hce, memberTop := by omega, edgeTop := by omega,
-      origin := rfl, indexWidth := indexWidth },
-    inv := inv, mass := mass, it := ci.2, mt := cw.2,
-    invCode := hci, massCode := hcw, invTop := by omega, massTop := by omega }
-  have bodyCorrect : ∀ mem world env,
+      member := member
+      edge := edge
+      mt := cm.2
+      et := ce.2
+      memberCode := hcm
+      edgeCode := hce
+      memberTop := by omega
+      edgeTop := by omega
+      origin := rfl
+      indexWidth := indexWidth }
+    inv := inv
+    mass := mass
+    it := ci.2
+    mt := cw.2
+    invCode := hci
+    massCode := hcw
+    invTop := by omega
+    massTop := by omega }
+  have bodyCorrect : ∀ (mem : Runner.Mem) (world : World D)
+      (env : Env D (.index (D.count t) :: Γ)),
       x.Ready mem world env →
       Sim L P f σ0 ρ0 rp cfp fp lo K (x.s :: x.counter :: x.saved :: pr)
         ⟨x.addr 39, fp⟩ mem (x.addr 41) (x.addr 44) (x.addr 41)
         (execBlock O passes R body world env) reserved := by
     intro mem world env ready
     have pre := ready.pre 39 (frei (.index (D.count t) :: Γ) reserved) cb.1 (Nat.le_refl _) rfl
-    have smallBody : 16 * cb.1.length < 2 ^ 31 := by consume_arith x
+    have smallBody : 16 * cb.1.length < 2 ^ 31 := consume_body_small x
     have bodySim := ihBody (pr := x.s :: x.counter :: x.saved :: pr) (ex := exits)
       cb.1 cb.2 hcb (by omega) smallBody hW mem (x.addr 39) world env pre hlo
       (by simp only [frei, contextWords_cons, indexWidth]; have := hlo2; unfold frei at this; omega)
@@ -122,13 +244,25 @@ theorem consumeTraverse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Na
     have exitsEq : exits = (16 * ((x.offset 44 : Int) - x.offset 41), 0) := by
       have eq := hexits
       change Consuming.targets x.fragment = some exits at eq
-      simp [Consuming.targets, Consuming.Image.fragment, Consuming.pieces,
-        Consuming.position, Consuming.Piece.width, Consuming.Image.offset, Consuming.width] at eq ⊢
-      exact eq.symm
-    exact bodySim.cast rfl (by consume_arith x)
-      (by rw [exitsEq]; consume_arith x) (by rw [exitsEq]; consume_arith x)
+      rw [consume_targets x] at eq
+      exact (Option.some.inj eq).symm
+    have bodyEnd : x.addr 39 + BitVec.ofNat 64 (16 * cb.1.length) = x.addr 41 :=
+      consume_body_end x
+    have leaveEnd : x.addr 39 + BitVec.ofNat 64 (16 * cb.1.length) +
+        BitVec.ofInt 64 exits.1 = x.addr 44 := by
+      rw [bodyEnd, exitsEq]
+      change x.pc + BitVec.ofNat 64 (16 * x.offset 41) +
+        BitVec.ofInt 64 (16 * ((x.offset 44 : Int) - x.offset 41)) =
+        x.pc + BitVec.ofNat 64 (16 * x.offset 44)
+      exact adr_eq x.pc (by omega)
+    have nextEnd : x.addr 39 + BitVec.ofNat 64 (16 * cb.1.length) +
+        BitVec.ofInt 64 exits.2 = x.addr 41 := by
+      rw [bodyEnd, exitsEq]
+      exact BitVec.add_zero _
+    exact bodySim.cast rfl bodyEnd leaveEnd nextEnd
   obtain ⟨m1, initialRun, initialFrame, initialPre, initialUmf, initialHead,
-    initialWorld, initialKept, initialRead⟩ := Consuming.initialize assembled hW hp hu hk hWa
+    initialWorld, initialKept, initialRead⟩ := Consuming.«initialize» (lo := lo) (pr := pr)
+      assembled hW hp hu hk hWa
       (by rw [hlo0]) (by rw [hlo0]; exact pairLow)
       (by have := pairRoom; simp only [counterPair] at *; omega)
       (by have := hW.ks; omega) gates.1 (by
@@ -138,16 +272,17 @@ theorem consumeTraverse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Na
   have entry : loop.Entry x.fuel m1 σ ρ :=
     ⟨⟨initialPre.frame, initialPre.code, initialPre.env, initialWorld, initialUmf, initialHead⟩,
       initialRead, Nat.le_refl _⟩
-  have loopRun := loop.correct (l := l) (outerLeave := pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
+  have loopRun := loop.correct (O := O) (passes := passes) (R := R) (body := body)
+    (l := l) (outerLeave := pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
     (outerNext := pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2)
     bodyCorrect x.fuel m1 σ ρ entry
-  have headerAddress : pc + 16 = x.addr 2 := by consume_arith x
+  have headerAddress : pc + 16 = x.addr 2 := consume_header_address x
   rw [headerAddress] at initialRun
   have combined := Sim.prefix hlo initialRun initialFrame initialKept loopRun
-  have exitAddress : x.addr 50 = pc + BitVec.ofNat 64 (16 * c.length) := by consume_arith x
+  have exitAddress : x.addr 50 = pc + BitVec.ofNat 64 (16 * c.length) := consume_exit_address x
   rw [exitAddress] at combined
   simpa only [consumeTraverse_exec, Consuming.Loop.invW, Consuming.Loop.sel,
-    Consuming.Loop.massW, loop, x] using combined
+    Consuming.Loop.massW] using combined
 
 
 end Gabbro.Stage0.Senke
