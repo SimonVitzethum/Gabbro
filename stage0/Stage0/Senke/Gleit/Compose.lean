@@ -56,6 +56,7 @@ theorem u64ToG_gToU64 (r : GBits f64) (hw : wf f64 r)
   rw [hround]
   exact ausBits_zuBits f64 f64_dicht _ hw
 
+omit [Runner.IR.Kern] in
 /-- On the finite path the exact sum rounds exactly like the kernel `add`:
     the dispatcher is silent and both exact values are known. -/
 theorem softFinite_round (a b : UInt64) (u v : Exakt)
@@ -116,6 +117,7 @@ theorem gToU64_toNat (r : GBits f64) (hw : wf f64 r)
   have hsize : zuBits f64 r < UInt64.size := lt_of_lt_of_le hlt (by decide)
   exact UInt64.toNat_ofNat_of_lt' hsize
 
+omit [Runner.IR.Kern] in
 /-- The word identity the routine correctness reuses: the composed result
     word is exactly the kernel sum's bits. -/
 theorem softAddComposed_bits (a b : UInt64) :

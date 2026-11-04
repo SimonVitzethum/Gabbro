@@ -34,6 +34,7 @@ variable [Kern] {D : Deklaration} {L : Lay D}
 def softSpecial (a b : UInt64) : Option (GBits f64) :=
   floatAddSpecial f64 (u64ToG a) (u64ToG b)
 
+omit [Kern] in
 /-- On special inputs the dispatched triple IS the kernel sum. Reuses
     `floatAddSpecial_model`; the finite path is not decided here. -/
 theorem softSpecial_model (a b : UInt64) (r : GBits f64)
