@@ -23,8 +23,8 @@ def expansionHeader : SItemTief → Bool
 theorem expansionHeader_template (name : String) (params : List SGenericParam)
     (body : List SItemTief) : expansionHeader (.moduleTemplateT name params body) = true := rfl
 
-theorem expansionHeader_use (alias : String) (path args : List String) :
-    expansionHeader (.moduleUseT alias path args) = true := rfl
+theorem expansionHeader_use (moduleAlias : String) (path args : List String) :
+    expansionHeader (.moduleUseT moduleAlias path args) = true := rfl
 
 /-- Spec groups, implementation groups and tagged declarations are consumed. -/
 theorem expansionHeader_specGroup (name : String) (types effects : List String)
@@ -54,15 +54,17 @@ theorem checkExpansionGate_expansion {declarations expanded : List SItemTief}
     (h : checkExpansionGate declarations = .ok (expanded, requirements)) :
     Modules.prepare declarations = .ok (expanded, requirements) := by
   cases hp : Modules.prepare declarations with
-  | error e => simp [checkExpansionGate, hp] at h
+  | error e => simp [checkExpansionGate, hp, bind, Except.bind] at h
   | ok pr =>
     obtain ⟨e, r⟩ := pr
     cases hc : Konst.checkSourceMetadata (uMembers e) with
-    | error err => simp [checkExpansionGate, hp, hc] at h
+    | error err => simp [checkExpansionGate, hp, bind, Except.bind, hc] at h
     | ok _ =>
-      simp [checkExpansionGate, hp, hc] at h
-      obtain ⟨rfl, rfl⟩ := h
-      exact hp
+      have returned : e = expanded ∧ r = requirements := by
+        simpa only [checkExpansionGate, hp, bind, Except.bind, hc,
+          Except.ok.injEq, Prod.mk.injEq] using h
+      obtain ⟨rfl, rfl⟩ := returned
+      rfl
 
 /-- Gate acceptance leaves no unbound metadata in the expanded unit. -/
 theorem checkExpansionGate_checked {declarations expanded : List SItemTief}
@@ -73,10 +75,12 @@ theorem checkExpansionGate_checked {declarations expanded : List SItemTief}
   cases hc : Konst.checkSourceMetadata (uMembers expanded) with
   | error e =>
     have contra : checkExpansionGate declarations = .error e := by
-      simp [checkExpansionGate, hp, hc]
+      simp [checkExpansionGate, hp, bind, Except.bind, hc]
     rw [contra] at h
     cases h
-  | ok _ => exact Konst.checkSourceMetadata_runtime_sound _ hc
+  | ok value =>
+    cases value
+    exact Konst.checkSourceMetadata_runtime_sound _ hc
 
 /-- The gate checks the exact expansion the elaborator consumes. -/
 theorem checkExpansionGate_expands {declarations expanded : List SItemTief}
@@ -101,14 +105,15 @@ theorem checkExpansionGate_output {declarations expanded : List SItemTief}
       result.items = expanded ∧ result.requirements = requirements ∧
       Modules.validOutput declarations result = true := by
   cases hr : Modules.prepareDetailedRaw declarations with
-  | error e => simp [Modules.prepare, hr] at h
+  | error e => simp [Modules.prepare, hr, bind, Except.bind] at h
   | ok result =>
     cases hv : Modules.validOutput declarations result with
-    | false => simp [Modules.prepare, hr, hv] at h
+    | false => simp [Modules.prepare, hr, bind, Except.bind, hv] at h
     | true =>
-      simp [Modules.prepare, hr, hv] at h
-      obtain ⟨rfl, rfl⟩ := h
-      exact ⟨result, hr, rfl, rfl, hv⟩
+      have returned : result.items = expanded ∧ result.requirements = requirements := by
+        simpa only [Modules.prepare, hr, bind, Except.bind, hv, ite_true,
+          pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] using h
+      exact ⟨result, rfl, returned.1, returned.2, hv⟩
 
 /-- No residual generic syntax and no open module reference survive the gate. -/
 theorem checkExpansionGate_ordinary {declarations expanded : List SItemTief}
@@ -116,11 +121,14 @@ theorem checkExpansionGate_ordinary {declarations expanded : List SItemTief}
     (h : checkExpansionGate declarations = .ok (expanded, requirements)) :
     Instantiation.ohneGenerik expanded = true ∧
       Instantiation.closed expanded = true := by
-  obtain ⟨result, _, rfl, _, hv⟩ :=
+  obtain ⟨result, _, same, _, hv⟩ :=
     checkExpansionGate_output (checkExpansionGate_expansion h)
-  unfold Modules.validOutput at hv
-  simp only [Bool.and_eq_true] at hv
-  obtain ⟨⟨_, hgenerik⟩, _, hclosed⟩ := hv
-  exact ⟨hgenerik, hclosed⟩
+  have parts : Modules.existingForms result.items = true ∧
+      Instantiation.ohneGenerik result.items = true ∧
+      Instantiation.freshNames (Modules.userNames declarations) result.generatedNames = true ∧
+      Instantiation.closed result.items = true := by
+    simpa only [Modules.validOutput, Bool.and_eq_true, and_assoc] using hv
+  rw [← same]
+  exact ⟨parts.2.1, parts.2.2.2⟩
 
 end Gabbro.Stage0.Frontend
