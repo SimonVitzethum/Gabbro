@@ -44,7 +44,7 @@ def lowRetiresL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
       match hs : heldMarkStage m Λ with
       | none => .error ("retire without held mark: " ++ name)
       | some a =>
-        .ok ⟨Λ.erase (.marke m a), Stmt.retires m a (heldMarkStage_mem m Λ a hs) none⟩
+        .ok ⟨Λ.erase (.marke m a), Stmt.retires (D := declOf u) (V := verOf u caller) (l := l) (Γ := Γ) (Λ := Λ) m a (heldMarkStage_mem m Λ a hs) none⟩
 
 /-- Successful retirement is the canonical rule at the actual held stage. -/
 theorem lowRetiresL_exact {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
@@ -52,15 +52,22 @@ theorem lowRetiresL_exact {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ
     (hb : (fnAt u caller).leiht.any (strEq · name) = false)
     (hm : markFin u.marken name = some m) (hs : heldMarkStage m Λ = some a) :
     lowRetiresL (l := l) u caller Γ Λ name =
-      .ok ⟨Λ.erase (.marke m a), Stmt.retires m a (heldMarkStage_mem m Λ a hs) none⟩ := by
-  simp [lowRetiresL, hb, hm, hs]
+      .ok ⟨Λ.erase (.marke m a), Stmt.retires (D := declOf u) (V := verOf u caller) (l := l) (Γ := Γ) (Λ := Λ) m a (heldMarkStage_mem m Λ a hs) none⟩ := by
+  simp only [lowRetiresL, hb, Bool.false_eq_true, ↓reduceIte, hm]
+  split
+  · rename_i absent
+    cases absent.symm.trans hs
+  · rename_i stage found
+    have same : stage = a := Option.some.inj (found.symm.trans hs)
+    cases same
+    rfl
 
 /-- A callee loan is never a disposable owner, even while held. -/
 theorem lowRetiresL_borrowed {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
     (Λ : List (Res (declOf u))) (name : String)
     (hb : (fnAt u caller).leiht.any (strEq · name) = true) :
     lowRetiresL (l := l) u caller Γ Λ name = .error ("retire of borrowed mark: " ++ name) := by
-  simp [lowRetiresL, hb]
+  simp only [lowRetiresL, hb, ↓reduceIte]
 
 /-- Retiring twice or without an input is refused at every stage. -/
 theorem lowRetiresL_unheld {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
@@ -68,7 +75,11 @@ theorem lowRetiresL_unheld {l : Bool} (u : UProg) (caller : Fin u.fns.length) (�
     (hb : (fnAt u caller).leiht.any (strEq · name) = false)
     (hm : markFin u.marken name = some m) (hs : heldMarkStage m Λ = none) :
     lowRetiresL (l := l) u caller Γ Λ name = .error ("retire without held mark: " ++ name) := by
-  simp [lowRetiresL, hb, hm, hs]
+  simp only [lowRetiresL, hb, Bool.false_eq_true, ↓reduceIte, hm]
+  split
+  · rfl
+  · rename_i stage found
+    cases found.symm.trans hs
 
 /-- A resolved source step with its checked declaration bound. -/
 structure AdvanceHit (u : UProg) where
@@ -105,7 +116,7 @@ def lowAdvancesL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
       .error ("advance of borrowed mark: " ++ u.marken.get hit.mark)
     else if held : Res.marke hit.mark hit.stage ∈ Λ then
       .ok ⟨Λ.erase (.marke hit.mark hit.stage) ++ [.marke hit.mark (hit.stage + 1)],
-        Stmt.advances hit.mark hit.stage held hit.bounded⟩
+        Stmt.advances (D := declOf u) (V := verOf u caller) (l := l) (Γ := Γ) (Λ := Λ) hit.mark hit.stage held hit.bounded⟩
     else .error ("advance without held stage: " ++ u.marken.get hit.mark ++ ": " ++ source)
 
 /-- Elaboration correctness: the actual lowering produces exactly the existing
@@ -117,7 +128,7 @@ theorem lowAdvancesL_exact {l : Bool} (u : UProg) (caller : Fin u.fns.length) (�
     (held : Res.marke hit.mark hit.stage ∈ Λ) :
     lowAdvancesL (l := l) u caller Γ Λ source target =
       .ok ⟨Λ.erase (.marke hit.mark hit.stage) ++ [.marke hit.mark (hit.stage + 1)],
-        Stmt.advances hit.mark hit.stage held hit.bounded⟩ := by
-  simp [lowAdvancesL, hr, hb, held]
+        Stmt.advances (D := declOf u) (V := verOf u caller) (l := l) (Γ := Γ) (Λ := Λ) hit.mark hit.stage held hit.bounded⟩ := by
+  simp only [lowAdvancesL, hr, hb, Bool.false_eq_true, ↓reduceIte, dite_eq_left held]
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg2
