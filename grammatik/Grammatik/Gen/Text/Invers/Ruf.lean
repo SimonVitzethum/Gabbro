@@ -95,75 +95,80 @@ theorem args_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : N
     ∀ {τs : List Ty} (args : Args z.deklaration Γ Λ τs) (as : List SExpr) (xs : List UArg) (ks : List UParamArt),
       delabA z args = .ok as → uOfArgs z art args = some xs → τs.mapM artErg = some ks →
       uArgs ctx tabs ks as = .ok xs := by
-  intro τs args
-  induction args with
+  intro τs
+  induction τs with
   | nil =>
-    intro as xs ks hd hu hk
+    intro args as xs ks hd hu hk
+    cases args
     simp only [delabA, Except.ok.injEq] at hd; subst hd
     simp only [uOfArgs, Option.some.injEq] at hu; subst hu
     simp only [List.mapM_nil, Option.pure_def, Option.some.injEq] at hk; subst hk
     rfl
-  | @cons τ τs e rest ih =>
-    intro as xs ks hd hu hk
-    simp only [delabA] at hd
-    cases he : delabE z none e with
-    | error _ => simp only [bind, Except.bind, he, reduceCtorEq] at hd
-    | ok se =>
-    cases hr : delabA z rest with
-    | error _ => simp only [bind, Except.bind, he, hr, reduceCtorEq] at hd
-    | ok sr =>
-    simp only [he, hr, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
-    subst hd
-    cases τ with
-    | bool =>
-      simp only [uOfArgs] at hu
-      cases hb : uOfB z art none e with
-      | none => simp only [hb, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at hu
-      | some b =>
-      cases hx : uOfArgs z art rest with
-      | none => simp only [hb, hx, Option.bind_eq_bind, Option.bind_none, Option.bind_fun_none, reduceCtorEq] at hu
-      | some xr =>
-      simp only [hb, hx, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
-      subst hu
-      simp only [List.mapM_cons, artErg, Option.bind_eq_bind, Option.bind_some, Option.pure_def] at hk
-      cases hks : τs.mapM artErg with
-      | none => simp only [hks, Option.bind_none, reduceCtorEq] at hk
-      | some kr =>
-      simp only [hks, Option.bind_some, Option.some.injEq] at hk
-      subst hk
-      simp only [uArgs, uArg, bool_ok H e se b he hb, ih sr xr kr hr hx hks]
-    | int lo hi =>
-      simp only [uOfArgs] at hu
-      cases hb : uOfS z art none e with
-      | none => simp only [hb, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at hu
-      | some b =>
-      cases hx : uOfArgs z art rest with
-      | none => simp only [hb, hx, Option.bind_eq_bind, Option.bind_none, Option.bind_fun_none, reduceCtorEq] at hu
-      | some xr =>
-      simp only [hb, hx, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
-      subst hu
-      simp only [List.mapM_cons, artErg, Option.bind_eq_bind, Option.bind_some, Option.pure_def] at hk
-      cases hks : τs.mapM artErg with
-      | none => simp only [hks, Option.bind_none, reduceCtorEq] at hk
-      | some kr =>
-      simp only [hks, Option.bind_some, Option.some.injEq] at hk
-      subst hk
-      simp only [uArgs, uArg, wert_ok H e se b he hb, ih sr xr kr hr hx hks]
-    | _ => simp only [uOfArgs, reduceCtorEq] at hu
+  | cons τ τs ih =>
+    intro args as xs ks hd hu hk
+    cases args with
+    | cons e rest =>
+      simp only [delabA] at hd
+      cases he : delabE z none e with
+      | error _ => simp only [bind, Except.bind, he, reduceCtorEq] at hd
+      | ok se =>
+      cases hr : delabA z rest with
+      | error _ => simp only [bind, Except.bind, he, hr, reduceCtorEq] at hd
+      | ok sr =>
+      simp only [he, hr, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
+      subst hd
+      cases τ with
+      | bool =>
+        simp only [uOfArgs] at hu
+        cases hb : uOfB z art none e with
+        | none => simp only [hb, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at hu
+        | some b =>
+        cases hx : uOfArgs z art rest with
+        | none => simp only [hb, hx, Option.bind_eq_bind, Option.bind_none, Option.bind_fun_none, reduceCtorEq] at hu
+        | some xr =>
+        simp only [hb, hx, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
+        subst hu
+        simp only [List.mapM_cons, artErg, Option.bind_eq_bind, Option.bind_some, Option.pure_def] at hk
+        cases hks : τs.mapM artErg with
+        | none => simp only [hks, Option.bind_none, reduceCtorEq] at hk
+        | some kr =>
+        simp only [hks, Option.bind_some, Option.some.injEq] at hk
+        subst hk
+        simp only [uArgs, uArg, bool_ok H e se b he hb, ih rest sr xr kr hr hx hks]
+      | int lo hi =>
+        simp only [uOfArgs] at hu
+        cases hb : uOfS z art none e with
+        | none => simp only [hb, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at hu
+        | some b =>
+        cases hx : uOfArgs z art rest with
+        | none => simp only [hb, hx, Option.bind_eq_bind, Option.bind_none, Option.bind_fun_none, reduceCtorEq] at hu
+        | some xr =>
+        simp only [hb, hx, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
+        subst hu
+        simp only [List.mapM_cons, artErg, Option.bind_eq_bind, Option.bind_some, Option.pure_def] at hk
+        cases hks : τs.mapM artErg with
+        | none => simp only [hks, Option.bind_none, reduceCtorEq] at hk
+        | some kr =>
+        simp only [hks, Option.bind_some, Option.some.injEq] at hk
+        subst hk
+        simp only [uArgs, uArg, wert_ok H e se b he hb, ih rest sr xr kr hr hx hks]
+      | _ => simp only [uOfArgs, reduceCtorEq] at hu
 
 theorem delabA_length {Γ : Ctx} {Λ : List (Res z.deklaration)} :
     ∀ {τs : List Ty} (args : Args z.deklaration Γ Λ τs) (as : List SExpr), delabA z args = .ok as →
       as.length = τs.length := by
-  intro τs args
-  induction args with
-  | nil => intro as hd; simp only [delabA, Except.ok.injEq] at hd; subst hd; rfl
-  | cons e rest ih =>
-    intro as hd
-    simp only [delabA] at hd
-    cases he : delabE z none e <;> cases hr : delabA z rest <;>
-      simp only [he, hr, bind, Except.bind, pure, Except.pure, Except.ok.injEq, reduceCtorEq] at hd
-    subst hd
-    simp only [List.length_cons, ih _ hr, Nat.add_left_cancel_iff]
+  intro τs
+  induction τs with
+  | nil => intro args as hd; cases args; simp only [delabA, Except.ok.injEq] at hd; subst hd; rfl
+  | cons τ τs ih =>
+    intro args as hd
+    cases args with
+    | cons e rest =>
+      simp only [delabA] at hd
+      cases he : delabE z none e <;> cases hr : delabA z rest <;>
+        simp only [he, hr, bind, Except.bind, pure, Except.pure, Except.ok.injEq, reduceCtorEq] at hd
+      subst hd
+      simp only [List.length_cons, ih rest _ hr, Nat.add_left_cancel_iff]
 
 /-- Device handles stand behind every printed argument: the arguments pass unchanged. -/
 theorem ohneGriffArgs_ok (ctx : UCtx) (gs : List (Nat × String × String)) :
@@ -425,8 +430,8 @@ theorem reihe_call (tabs : List UTab) (koepfe : List UFnKopf) (f : Nat) (ctx : U
     uAnwReihe tabs koepfe (f + 1) ctx (.call c as :: rest) = .ok (st :: xs, cE) := by
   rw [reihe_unexpanded tabs koepfe f ctx _ rest (by
     simp only [expandFoldStmt, expandFoldValue_no_work ctx ctx.names.length (.call c as)
-      (by simpa only [needsFoldExpansion] using hfold), bind, Except.bind, pure, Except.pure]), uAnwReiheCore]
-  simp only [h1, h2]
+      (by simpa only [needsFoldExpansion] using hfold), bind, Except.bind, pure, Except.pure])]
+  simp only [uAnwReiheCore, h1, h2]
 
 theorem mitLokal_eq (ctx : UCtx) (h : ctx.muts = []) (x : String) (a : UParamArt) (ty : Ty) :
     uMitLokal ctx x a ty (ctx.muts.filter (fun m => !strEq m x)) = ctxMit ctx x a ty 0 [] ctx.loops := by
