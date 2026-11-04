@@ -30,13 +30,20 @@ def invariantIdx (u : UProg) (name : String) : Except String (Fin u.invs.length)
     same write footprint as writes, but must name the selected domain explicitly. -/
 def lowConsumingEffects (u : UProg) (fn : UFn) (table touches : String) :
     Except String Unit := do
-  let tokens ← lex touches
+  let tokens ← match lex touches with
+    | .ok tokens => pure tokens
+    | .error _ => throw "consuming traversal has an invalid touches clause"
   let (effects, rest) ← parseEffektListe 10000 tokens
   match rest with
   | [.ende] => pure ()
   | _ => throw "consuming traversal has an invalid touches clause"
-  let head : UFnKopf := {name := fn.name, names := fn.params.map (·.1), kinds := fn.kinds,
-    types := fn.params.map (·.2), res := none, held := fn.held}
+  let head : UFnKopf := {
+    name := fn.name
+    names := fn.params.map (·.1)
+    kinds := fn.kinds
+    types := fn.params.map (·.2)
+    res := none
+    held := fn.held }
   let consumed ← (effects.filterMap fun effect => match effect with
     | .takes place => some place
     | _ => none).mapM (uSchreibtOrt head u.tabs)
@@ -83,7 +90,7 @@ def lowStructStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStu
     | .ok (_, _) => .error "lower: a breaking block is not closed"
   | Γ, fn, Λ, pe, .lockBeg g, rest =>
     (lockIdx u.locks g).bind fun L =>
-      if hr : rangOkB u Λ L = true then match R.seq Γ fn (Res.held L :: Λ) (L :: pe) rest with
+      if hr : rangOkB u Λ L = true then match R.seq (l := l) Γ fn (Res.held L :: Λ) (L :: pe) rest with
         | .error e => .error e
         | .ok ((⟨Λ', body⟩, .blkEnd :: rest')) =>
           if h : Λ' = Res.held L :: Λ then
@@ -92,9 +99,9 @@ def lowStructStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStu
         | .ok (_, _) => .error "lower: a locks block is not closed"
       else .error "lower: locks against a held lock of higher or equal rank"
   | Γ, fn, Λ, pe, .ifBeg c, rest =>
-    (lowEns u Γ Λ fn none c).bind fun cv => match R.seq Γ fn Λ pe rest with
+    (lowEns u Γ Λ fn none c).bind fun cv => match R.seq (l := l) Γ fn Λ pe rest with
       | .error e => .error e
-      | .ok ((⟨Λ₁, tb⟩, .ifElse :: rest1)) => match R.seq Γ fn Λ pe rest1 with
+      | .ok ((⟨Λ₁, tb⟩, .ifElse :: rest1)) => match R.seq (l := l) Γ fn Λ pe rest1 with
         | .error e => .error e
         | .ok ((⟨Λ₂, eb⟩, .blkEnd :: rest2)) =>
           if h : Λ₁ = Λ₂ then
