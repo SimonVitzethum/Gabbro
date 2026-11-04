@@ -81,8 +81,9 @@ theorem EPost.bindNoneOption {k c : Context} {l : Bool} {Γ : Ctx} {τ : Ty}
       | some v => (run σ (.cons v ρ)).schrumpf
       | none => fallback) := by
   cases value with
-  | some v => exact EPost.schrumpf hk _
-      (hRun σ (.cons v ρ) (Nat.le_trans hk (Nat.le_succ _)) (h.bindNone v))
+  | some v =>
+      exact EPost.schrumpf hk _
+        (hRun σ (.cons v ρ) (Nat.le_trans hk (Nat.le_succ _)) (h.bindNone v))
   | none => exact hFallback
 
 end Sound
