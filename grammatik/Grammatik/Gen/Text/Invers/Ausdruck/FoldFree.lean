@@ -187,7 +187,7 @@ theorem delabEnd_foldFree {V : Vertrag z.deklaration} {l : Bool} {Γ : Ctx}
           | ok result =>
             obtain ⟨rs, ending⟩ := result
             simp only [hs, hr, bind, Except.bind, Except.ok.injEq] at hd; subst hd
-            exact ih rest (by omega) _ ctx hr
+            exact ih rest (by omega) (rs, ending) ctx hr
       | bind value rest =>
         simp only [Endblock.bind.sizeOf_spec] at hn
         simp only [delabEnd] at hd
@@ -199,7 +199,7 @@ theorem delabEnd_foldFree {V : Vertrag z.deklaration} {l : Bool} {Γ : Ctx}
           | ok result =>
             obtain ⟨rs, ending⟩ := result
             simp only [hv, hr, bind, Except.bind, Except.ok.injEq] at hd; subst hd
-            exact ih rest (by omega) _ ctx hr
+            exact ih rest (by omega) (rs, ending) ctx hr
       | bindCall _ args _ _ _ rest =>
         simp only [Endblock.bindCall.sizeOf_spec] at hn
         simp only [delabEnd] at hd
@@ -211,7 +211,7 @@ theorem delabEnd_foldFree {V : Vertrag z.deklaration} {l : Bool} {Γ : Ctx}
           | ok result =>
             obtain ⟨rs, ending⟩ := result
             simp only [ha, hr, bind, Except.bind, Except.ok.injEq] at hd; subst hd
-            exact ih rest (by omega) _ ctx hr
+            exact ih rest (by omega) (rs, ending) ctx hr
       | bindCallElse _ args _ _ _ err rest =>
         simp only [Endblock.bindCallElse.sizeOf_spec] at hn
         simp only [delabEnd] at hd
@@ -227,7 +227,7 @@ theorem delabEnd_foldFree {V : Vertrag z.deklaration} {l : Bool} {Γ : Ctx}
             | ok result =>
               obtain ⟨rs, ending⟩ := result
               simp only [ha, he, hr, bind, Except.bind, Except.ok.injEq] at hd; subst hd
-              exact ih rest (by omega) _ ctx hr
+              exact ih rest (by omega) (rs, ending) ctx hr
       | regRead _ _ rest | awaits _ _ _ _ _ rest =>
         simp only [Endblock.regRead.sizeOf_spec, Endblock.awaits.sizeOf_spec] at hn
         simp only [delabEnd] at hd
@@ -236,7 +236,7 @@ theorem delabEnd_foldFree {V : Vertrag z.deklaration} {l : Bool} {Γ : Ctx}
         | ok result =>
           obtain ⟨rs, ending⟩ := result
           simp only [hr, bind, Except.bind, Except.ok.injEq] at hd; subst hd
-          exact ih rest (by omega) _ ctx hr
+          exact ih rest (by omega) (rs, ending) ctx hr
       | bindCallInd pointer args _ _ _ rest =>
         simp only [Endblock.bindCallInd.sizeOf_spec] at hn
         simp only [delabEnd] at hd
@@ -247,11 +247,11 @@ theorem delabEnd_foldFree {V : Vertrag z.deklaration} {l : Bool} {Γ : Ctx}
           | error _ => simp only [ha, hr, bind, Except.bind, reduceCtorEq] at hd
           | ok result =>
             obtain ⟨rs, ending⟩ := result
-            cases pointer with
-            | fnref _ _ _ | var _ =>
-              simp only [ha, hr, bind, Except.bind, Except.ok.injEq] at hd; subst hd
-              exact ih rest (by omega) _ ctx hr
-            | _ => simp only [ha, hr, bind, Except.bind, reduceCtorEq] at hd
+            simp only [ha, hr, bind, Except.bind] at hd
+            split at hd <;> simp only [Except.ok.injEq, reduceCtorEq] at hd
+            all_goals
+              subst hd
+              exact ih rest (by omega) (rs, ending) ctx hr
       | _ => simp only [delabEnd, reduceCtorEq] at hd
   exact go (sizeOf e + 1) e (by omega) output ctx hd
 
