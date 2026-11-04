@@ -145,7 +145,7 @@ def uAkkuHuelleFn (p : AkkuPlan) : FnSig × SAnw :=
     art := "impl"
     name := uAkkuHuelle p
     params := []
-    res := some (.range (.atom "u32") (.lit 0) (.lit (p.kernZahl - 1)))
+    res := some (.range (.atom "u32") (.lit 0) (.lit (p.kernZahl - 1)) false)
     fehler := none
     klauseln := [.cost (.lit 2)]
   },
