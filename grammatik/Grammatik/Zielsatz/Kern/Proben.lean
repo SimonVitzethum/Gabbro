@@ -81,6 +81,8 @@ namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik
 
+local instance : DecidableEq zD.Ax := inferInstanceAs (DecidableEq Empty)
+
 /-! ## 1. Refutations of (b) -- no side condition on the lock invariants -/
 
 theorem probeA_widerlegt_gilt : probeA_widerlegt := by
