@@ -123,7 +123,7 @@ theorem nativeFloatScaleWord_eq (sign : Bool) (index : Nat)
   rw [exponent]
   cases sign
   · simp only [Runner.IR.bool, Bool.false_eq_true, ↓reduceIte, Nat.zero_add]
-    change BitVec.ofNat 64 ((index - 55) * 2 ^ 52) ||| ((0 : Runner.W) <<< (63 : Nat)) =
+    change BitVec.ofNat 64 ((index - 55) * 2 ^ 52) ||| (0#64 <<< (63 : Nat)) =
       BitVec.ofNat 64 ((index - 55) * 2 ^ 52)
     rw [BitVec.zero_shiftLeft, BitVec.or_zero]
   · change BitVec.ofNat 64 ((index - 55) * 2 ^ 52) ||| BitVec.ofNat 64 (2 ^ 63) =
