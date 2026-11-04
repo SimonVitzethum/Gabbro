@@ -14,9 +14,9 @@ namespace Good
 
 abbrev z : Spez := ({ globs := [{ typ := .arr (.int 0 1) 1 }] } : Spez).einzeln
 
-theorem member : mitglieder.getD 371 {} = z := by decide
+theorem member : mitglieder.getD 371 {} = z := by decide +kernel
 
-def b0 : Rumpf z.deklaration ⟨0, by decide⟩ := .ret .empty rfl
+def b0 : Rumpf z.deklaration ⟨0, by decide⟩ := .ret .empty (List.Perm.refl _)
 
 def r : (f : z.deklaration.Fn) → Rumpf z.deklaration f
   | ⟨0, _⟩ => b0
@@ -52,9 +52,9 @@ namespace Bad
 
 abbrev z : Spez := ({ globs := [{ typ := .arr (.int 1 1) 1 }] } : Spez).einzeln
 
-theorem member : mitglieder.getD 372 {} = z := by decide
+theorem member : mitglieder.getD 372 {} = z := by decide +kernel
 
-def b0 : Rumpf z.deklaration ⟨0, by decide⟩ := .ret .empty rfl
+def b0 : Rumpf z.deklaration ⟨0, by decide⟩ := .ret .empty (List.Perm.refl _)
 
 def r : (f : z.deklaration.Fn) → Rumpf z.deklaration f
   | ⟨0, _⟩ => b0
