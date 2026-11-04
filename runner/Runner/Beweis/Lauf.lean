@@ -38,6 +38,7 @@ theorem code_append {C : W → B} : ∀ {a : W} {is js : List Ins},
 
 theorem enc_len_le (i : Ins) : (enc i).length ≤ 15 := by
   cases i <;> simp [enc, memEnc, regEnc, le32]
+  case ucomis format d s => cases format <;> simp [enc]
 
 theorem fetch_eq {C : W → B} {a : W} {l : List B} (h : Bytes C a l) (hl : l.length ≤ 15) :
     ∃ r, fetch C a = l ++ r := by

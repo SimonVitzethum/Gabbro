@@ -127,7 +127,12 @@ def aluStep (x : X) (o : Alu) (d : Reg) (b : W) : X :=
   let a := x.get d
   match o with
   | .cmp => x.cmpf a b
-  | .test => { x with cf := some false, of := some false, zf := some (a &&& b == 0), sf := some (a &&& b).msb,
+  | .test =>
+    { x with
+      cf := some false
+      of := some false
+      zf := some (a &&& b == 0)
+      sf := some (a &&& b).msb
       pf := some (X.parity8 (a &&& b)) }
   | o => (x.set d (aluOp o a b)).nof
 
@@ -219,8 +224,12 @@ def exec (i : Ins) (n : Nat) (x : X) : Res X :=
   | .ucomis format d s =>
     if x.fpReady then
       Runner.fp (.compare format) (x.xmmWord format d) (x.xmmWord format s) fun flags =>
-        .next { y with cf := some (flags.getLsbD 0), pf := some (flags.getLsbD 2),
-          zf := some (flags.getLsbD 6), sf := some false, of := some false }
+        .next { y with
+          cf := some (flags.getLsbD 0)
+          pf := some (flags.getLsbD 2)
+          zf := some (flags.getLsbD 6)
+          sf := some false
+          of := some false }
     else .unk
   | .truncateScalar format d s =>
     if x.fpReady then

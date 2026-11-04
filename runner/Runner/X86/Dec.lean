@@ -136,7 +136,7 @@ def decSSE (l : List B) : Option (Ins × Nat) :=
       else if o = 0x2C ∧ w = 1 then some (.truncateScalar format (Reg.ofNum g) (Xmm.ofNum rm), n)
       else if w != 0 then none
       else if o = 0x5A then
-        some ((if p = 0xF3 then .widenScalar else .narrowScalar) (Xmm.ofNum g) (Xmm.ofNum rm), n)
+        some ((if p = 0xF3 then Ins.widenScalar else Ins.narrowScalar) (Xmm.ofNum g) (Xmm.ofNum rm), n)
       else if o = 0xC2 then
         (FPCompare.ofImm (bt l n)).map fun pred =>
           (.compareScalar pred format (Xmm.ofNum g) (Xmm.ofNum rm), n + 1)
