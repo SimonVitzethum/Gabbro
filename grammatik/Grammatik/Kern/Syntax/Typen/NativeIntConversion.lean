@@ -30,12 +30,15 @@ private theorem shifted_exact (m k : Nat) :
       rw [Nat.repeat, Nat.shiftLeft_succ_inside, ih]
       simp [ExtendedMantissa.shiftRightOne]
 
+private theorem extended_shift (x : ExtendedMantissa) (k : Nat) :
+    x >>> k = Nat.repeat ExtendedMantissa.shiftRightOne k x := rfl
+
 private theorem exact_at_target (F : Format) (s : Sign) (m : Nat) (e : Int)
     (positive : 0 < m) (target : F.targetExponent (totalExponent m e) = e) :
     roundWithAccuracy F s m e .exact = .finite s m e positive := by
   simp [roundWithAccuracy, shiftToTargetExponent, target, shiftToExponent,
     ExtendedMantissa.ofMantissaAndAccuracy, ExtendedMantissa.roundedMantissa,
-    ExtendedMantissa.accuracy, Accuracy.roundToNearestEven, Nat.repeat,
+    ExtendedMantissa.accuracy, Accuracy.roundToNearestEven, extended_shift, Nat.repeat,
     Nat.ne_of_gt positive]
 
 private theorem scaled_to_target (F : Format) (m k : Nat) (e : Int)
@@ -45,12 +48,13 @@ private theorem scaled_to_target (F : Format) (m k : Nat) (e : Int)
   have total : totalExponent (m <<< k) (e - k) = totalExponent m e := by
     unfold totalExponent
     rw [shifted_log m k (Nat.ne_of_gt positive)]
-    simp only [Nat.cast_add]
+    simp only [Int.natCast_add]
     omega
   have amount : (e - (e - (k : Int))).toNat = k := by omega
   unfold shiftToTargetExponent
   rw [total, target]
   unfold shiftToExponent
+  dsimp only
   rw [amount]
   change (Nat.repeat ExtendedMantissa.shiftRightOne k ⟨m <<< k, false, false⟩,
     e - (k : Int) + k) = (⟨m, false, false⟩, e)
@@ -119,7 +123,14 @@ private theorem unpack_target {bits : BitVec 64} {s : Sign} {m : Nat} {e : Int} 
         omega
 
 private theorem one_unpacked : (Float.ofInt 1).toModel.unpack =
-    .finite .positive (2 ^ 52) (-52) (by decide) := by decide
+    .finite .positive (2 ^ 52) (-52) (by decide) := by
+  have one : Float.ofInt 1 = Float.ofBits 0x3ff0000000000000 := by decide
+  rw [one]
+  rfl
+
+private theorem sign_mul_one (s : Sign) : s * Sign.positive = s := by cases s <;> rfl
+
+private theorem sign_div_one (s : Sign) : s / Sign.positive = s := by cases s <;> rfl
 
 private theorem mul_one_unpacked (x : Float.Model) :
     UnpackedFloat.mul Format.binary64 x.unpack (Float.ofInt 1).toModel.unpack = x.unpack := by
@@ -131,7 +142,7 @@ private theorem mul_one_unpacked (x : Float.Model) :
   | finite s m e positive =>
       have target := unpack_target (bits := x.toBits.toBitVec) decoded
       have result := exact_scaled Format.binary64 s m 52 e positive target
-      cases s <;> simpa [UnpackedFloat.mul, Nat.shiftLeft_eq, Int.sub_eq_add_neg] using result
+      simpa only [UnpackedFloat.mul, sign_mul_one, Nat.shiftLeft_eq, Int.sub_eq_add_neg] using result
 
 /-- Multiplication by the actual native conversion of integer one preserves
     the complete native value, including infinities and canonical NaN. -/
@@ -169,7 +180,7 @@ private theorem div_one_unpacked (x : Float.Model) :
         rw [quotientTarget, amount, Nat.shiftLeft_add, Nat.shiftLeft_eq]
         simp [accuracyOfFraction, Nat.mul_div_cancel, Nat.two_pow_pos]
       have result := exact_scaled Format.binary64 s m k e positive target
-      cases s <;> simpa only [UnpackedFloat.div, core, back] using result
+      simpa only [UnpackedFloat.div, sign_div_one, core, back] using result
 
 /-- Division by the actual native conversion of integer one is an identity.
     No finite-only premise or raw NaN-payload equality is required. -/
