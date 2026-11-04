@@ -15,20 +15,24 @@ macro "consume_arith " x:ident : tactic => `(tactic| (
   simp [Image.addr, Image.offset, Image.fragment, pieces, position, width, Piece.width,
     travCountC_length, travCountSize, initialLiteral, decrease, narrowC,
     stopC, sysC, List.length_append] at imageLength imageSize ⊢
-  all_goals first | omega | rfl | ac_rfl | (rw [addr_norm]; congr 2 <;> omega)
+  all_goals first
+    | omega
+    | rfl
+    | ac_rfl
+    | (rw [addr_norm]; congr 2 <;> omega)
     | (apply adr_eq; omega)))
 
 namespace Image
-variable {reserved : Nat} {x : Image L P f reserved}
-variable {Γ : Ctx} {m m' : Mem} {σ : World D} {ρ : Env D Γ}
 
 /-- One reserved write preserves lexical variables even though they lie above it. -/
-theorem Ready.reserved (h : x.Ready m σ ρ) {cell : Nat} (value : W)
+theorem Ready.reserved {reserved : Nat} {x : Image L P f reserved}
+    {Γ : Ctx} {m : Mem} {σ : World D} {ρ : Env D Γ}
+    (h : x.Ready m σ ρ) {cell : Nat} (value : W)
     (low : x.lo ≤ cell) (allocated : cell < FB + reserved)
     (ctx : frei Γ reserved ≤ x.K) :
     x.Ready (write m (slot x.fp (BitVec.ofNat 64 cell)) 8 value.toNat) σ ρ := by
   have inside : cell < x.K := by unfold frei at ctx; omega
-  have a := agree_write h.frame.room (lo := cell) (Nat.le_refl _) inside value.toNat
+  have a := agree_write (m := m) h.frame.room (lo := cell) (Nat.le_refl _) inside value.toNat
   have env := (reserved_write_preserves (L := L) (j := cell - FB) value.toNat
     h.frame.room ctx (by have := x.low; omega) h.env).1
   have cellEq : FB + (cell - FB) = cell := by have := x.low; omega
@@ -37,6 +41,9 @@ theorem Ready.reserved (h : x.Ready m σ ρ) {cell : Nat} (value : W)
     weltAt_stab x.layout.lay x.layout.top m _ h.world (a.mono (Nat.zero_le _)),
     h.surround.agree a h.frame (by have := x.low; omega),
     h.head.agree a h.frame (by rw [← x.abi]; omega)⟩
+
+variable {reserved : Nat} {x : Image L P f reserved}
+variable {Γ : Ctx} {m m' : Mem} {σ : World D} {ρ : Env D Γ}
 
 /-- A move to reserved control storage is proved at the actual write. -/
 theorem Ready.save (h : x.Ready m σ ρ) {i cell source : Nat} {value : W}
@@ -54,10 +61,12 @@ theorem Ready.save (h : x.Ready m σ ρ) {i cell source : Nat} {value : W}
   have inside : cell < x.K := by unfold frei at ctx; omega
   have slice := h.slice i (.code [ci 2 cell source 0]) _ found rfl
   have run := mov_to slice.1 h.frame inside sourceBound x.small read
-  have a := agree_write h.frame.room (lo := cell) (Nat.le_refl _) inside value.toNat
+  have a := agree_write (m := m) h.frame.room (lo := cell) (Nat.le_refl _) inside value.toNat
   refine ⟨_, ?_, agreeW_of (a.mono low), h.reserved value low allocated ctx, ?_,
     rd_same h.frame inside value, ?_⟩
-  · simpa only [List.length_singleton, endAt] using run
+  · change Star ⟨x.addr i, x.fp⟩ m ⟨x.addr i + 16, x.fp⟩ _ at run
+    rw [endAt] at run
+    exact run
   · apply keeps_write h.frame.room inside
     · intro j hj
       simp only [List.mem_cons] at hj
@@ -113,10 +122,11 @@ theorem binary_to {m : Mem} {pc fp : W} {K cell a b o : Nat} {va vb value : W}
   apply star_ins code (by simpa only [ci] using opBound)
   simp only [ci, opEq]
   apply run_bin hi
-  · simpa only [sx_nat (by omega)] using ra
-  · simpa only [sx_nat (by omega)] using rb
+  · simpa only [sx_nat (d := a) (by omega)] using ra
+  · simpa only [sx_nat (d := b) (by omega)] using rb
   · exact valueEq
-  · simpa only [sx_nat (by omega)] using wr64_some (frame.wr cell cellBound)
+  · simpa only [sx_nat (d := cell) (by omega)] using
+      wr64_some (v := value) (frame.wr cell cellBound)
 
 /-- Increment one selector word; retain every other word below scratch. -/
 theorem Ready.increment (h : x.Ready m σ ρ) {i j cell n : Nat}
@@ -134,13 +144,17 @@ theorem Ready.increment (h : x.Ready m σ ρ) {i j cell n : Nat}
   have pre := h.pre i cell _ ctx found
   let m1 := write m (slot x.fp (BitVec.ofNat 64 (x.s + 4))) 8 1
   have a1 : Agree x.fp (x.s + 4) x.K m m1 := agree_write h.frame.room (by omega) inside 1
-  have run1 := const_to pre.left.code h.frame inside x.small (by decide : lit32 1 = true)
-  have tail := pre.next (a1.mono (by omega)) (Nat.le_refl _) (by omega)
+  have run1 := const_to (j := x.s + 4) (k := 1)
+    pre.left.code h.frame inside x.small (by decide : lit32 1 = true)
+  have tail := pre.next (a := [ci 1 (x.s + 4) 1 0])
+    (b := [ci 3 cell cell (x.s + 4)])
+    (a1.mono (show cell ≤ x.s + 4 by omega)) (Nat.le_refl cell) (by omega)
   have old := read_agree a1 h.frame room (by omega) read
   have one : x.read m1 (x.s + 4) 1 := rd_same h.frame inside 1
   let value := BitVec.ofNat 64 n + 1
   let m2 := write m1 (slot x.fp (BitVec.ofNat 64 cell)) 8 value.toNat
-  have run2 := binary_to tail.code tail.frame x.small (by omega) (by omega) inside old one
+  have run2 := binary_to (cell := cell) (a := cell) (b := x.s + 4) (o := 3)
+    (value := value) tail.code tail.frame x.small (by omega) (by omega) inside old one
     (g := fun a b => some (a + b)) rfl (by decide) rfl
   have a2 : Agree x.fp cell x.K m1 m2 := agree_write tail.frame.room (by omega) (by omega) _
   have aa := (a1.mono (by omega : cell ≤ x.s + 4)).trans a2
@@ -152,12 +166,15 @@ theorem Ready.increment (h : x.Ready m σ ρ) {i j cell n : Nat}
       have := x.kept q hq; omega) (by omega),
     h.agree aa ctx (by rw [← x.abi]; have := x.controls; have := x.scratch; omega) (by omega),
     aa, ?_, ?_⟩
-  · simpa only [addr_norm, show (16 : Nat) + 16 = 32 by decide, endAt] using run1.trans run2
+  · have run := run1.trans run2
+    change Star ⟨x.addr i, x.fp⟩ m ⟨x.addr i + 16 + 16, x.fp⟩ m2 at run
+    rw [BitVec.add_assoc, show (16 : W) + 16 = 32 from rfl, endAt] at run
+    exact run
   · intro q below different
     rw [rd_other tail.frame.room (by omega) (by omega) (Ne.symm different)]
     exact agree_rd_low a1 h.frame.room below (by omega)
   · have result := rd_same tail.frame (by omega : cell < x.K) value
-    simpa only [value, BitVec.ofNat_add] using result
+    simpa only [Image.read, value, BitVec.ofNat_add] using result
 
 /-- Stop code is reached through an ordinary extracted block. -/
 theorem Ready.stop (h : x.Ready m σ ρ) :
@@ -175,7 +192,7 @@ theorem Ready.literal (h : x.Ready m σ ρ) {pc : W} {cell : Nat} {value : Int}
     let m' := write m (slot x.fp (BitVec.ofNat 64 cell)) 8 (BitVec.ofInt 64 value).toNat
     Star ⟨pc, x.fp⟩ m ⟨pc + 16, x.fp⟩ m' ∧
       Agree x.fp cell x.K m m' ∧ x.Ready m' σ ρ ∧ x.read m' cell (BitVec.ofInt 64 value) := by
-  have a := agree_write h.frame.room (lo := cell) (Nat.le_refl _) inside
+  have a := agree_write (m := m) h.frame.room (lo := cell) (Nat.le_refl _) inside
     (BitVec.ofInt 64 value).toNat
   exact ⟨const_to code h.frame inside x.small literal, a,
     h.agree a ctx (by rw [← x.abi]; have := x.controls; have := x.scratch; omega)
@@ -195,13 +212,14 @@ theorem Ready.same (h : x.Ready m σ ρ) {a b : Zahl 0 (D.count x.table - 1)}
   have ae : -2 ^ 63 ≤ a.n ∧ a.n < 2 ^ 63 := by have := a.lo_le; have := a.le_hi; omega
   have be : -2 ^ 63 ≤ b.n ∧ b.n < 2 ^ 63 := by have := b.lo_le; have := b.le_hi; omega
   obtain ⟨m', run, frame, kept, ready, localFrame, v, read, rfl⟩ := h.ok
-    (eng_bin_ok pre (by have := x.scratch; have := x.layout.ks; omega)
+    (eng_bin_ok (d := x.s + 4) (a := x.s + 1) (b := x.s) (o := 14)
+      pre (by have := x.scratch; have := x.layout.ks; omega)
       (by have := x.scratch; have := x.layout.ks; omega)
       (by have := x.scratch; have := x.layout.ks; omega) ra rb
       (g := fun a b => some (Runner.IR.bool (a == b))) rfl (by decide) rfl)
     (by consume_arith x) ctx (by omega) (by have := x.scratch; have := x.layout.ks; omega)
   refine ⟨m', run, frame, kept, ready, localFrame, ?_⟩
-  simpa only [beq_in ae be] using read
+  simpa only [Image.read, beq_in ae be] using read
 
 end Image
 end Gabbro.Stage0.Senke.Consuming
