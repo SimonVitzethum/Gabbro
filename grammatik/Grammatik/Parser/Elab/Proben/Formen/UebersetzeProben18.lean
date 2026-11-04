@@ -131,6 +131,22 @@ theorem float_of_noninteger_refused_zeuge :
       "lower: floatOf: operand is not an integer" := by
   decide +kernel
 
+/-- A float introduction in the final part of a function reaches the end-block
+    constructor and its bound local is returned directly. -/
+def float_of_end : String :=
+  "module m { impl fn f(n : u8) -> f64 { let y = f64(n); return y; } }"
+
+private def reachesEndFloatOf (source : String) : Bool :=
+  (do
+    let tokens ← (lex source).toOption
+    let items ← (parseTopTief tokens).toOption
+    let unit ← (elabU (pre108 items)).toOption
+    let (program, functions) ← (lowerAllg unit).toOption
+    pure ((Cover.Mitglieder.mitglieder unit program functions).contains "Endblock.floatOf")).getD false
+
+theorem float_of_end_zeuge : reachesEndFloatOf float_of_end = true := by
+  decide +kernel
+
 /-! ## `exchange update` -/
 
 /-- The update form at the top level of a body; the binder is the old value, `bounded`/`on_exceeded` belong to

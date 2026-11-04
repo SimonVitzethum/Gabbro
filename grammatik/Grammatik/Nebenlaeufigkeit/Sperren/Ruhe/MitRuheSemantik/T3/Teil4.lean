@@ -412,6 +412,14 @@ theorem execEnd_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
       execEnd_ru_exchange (g := g) (neu := neu) (hw := hw) (hL := hL) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEnd_ru_rest := execEnd_ru rest) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
   | _, _, Λ, .ite c t e, σ, ρ =>
       execEnd_ru_ite (c := c) (t := t) (e := e) (σ := σ) (ρ := ρ) (ih_execEnd_ru_e := execEnd_ru e) (ih_execEnd_ru_t := execEnd_ru t) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
+  | _, _, Λ, .float op a b lo hi rest, σ, ρ =>
+      execEnd_ru_float (op := op) (a := a) (b := b) (lo := lo) (hi := hi) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEnd_ru_rest := execEnd_ru rest) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
+  | _, _, _, .floatLit q lo hi rest, σ, ρ =>
+      execEnd_ru_floatLit (q := q) (lo := lo) (hi := hi) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEnd_ru_rest := execEnd_ru rest) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
+  | _, _, Λ, .floatOf e lo hi rest, σ, ρ =>
+      execEnd_ru_floatOf (e := e) (lo := lo) (hi := hi) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEnd_ru_rest := execEnd_ru rest) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
+  | _, _, Λ, .floatNarrow e lo hi sonst rest, σ, ρ =>
+      execEnd_ru_floatNarrow (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEnd_ru_rest := execEnd_ru rest) (ih_execEnd_ru_sonst := execEnd_ru sonst) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
 theorem execArms_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))
     (σ : World D) (ρ : Env D Γ),

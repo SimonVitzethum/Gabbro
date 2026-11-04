@@ -272,6 +272,10 @@ def endStmts {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, En
   | _, _, _, .leave .. => []
   | _, _, _, .next .. => []
 
+  | _, _, _, .float _ _ _ _ _ rest => endStmts rest
+  | _, _, _, .floatLit _ _ _ rest => endStmts rest
+  | _, _, _, .floatOf _ _ _ rest => endStmts rest
+  | _, _, _, .floatNarrow _ _ _ _ rest => endStmts rest
 /-- The statements directly in the arms of a tag match. -/
 def armsStmts {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)},
     Arms D V l Γ Λ Λ' cs → List String
@@ -383,6 +387,10 @@ def endM : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l Γ Λ �
   | _, _, _, .bindAxiomOptElse _ _ args _ _ _ _ _ err rest =>
     "Endblock.bindAxiomOptElse" :: argsM args ++ endM err ++ endM rest ++ paare "Endblock.bindAxiomOptElse" (endStmts err)
 
+  | _, _, _, .float op a b _ _ rest => "Endblock.float" :: "Ty.fl" :: gleitM op ++ exprM a ++ exprM b ++ endM rest
+  | _, _, _, .floatLit _ _ _ rest => "Endblock.floatLit" :: "Ty.fl" :: endM rest
+  | _, _, _, .floatOf e _ _ rest => "Endblock.floatOf" :: "Ty.fl" :: exprM e ++ endM rest
+  | _, _, _, .floatNarrow e _ _ sonst rest => "Endblock.floatNarrow" :: "Ty.fl" :: exprM e ++ endM sonst ++ endM rest ++ paare "Endblock.floatNarrow" (endStmts sonst)
 def armsM : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)},
     Arms D V l Γ Λ Λ' cs → List String
   | _, _, _, _, _, .nil => ["Arms.nil"]

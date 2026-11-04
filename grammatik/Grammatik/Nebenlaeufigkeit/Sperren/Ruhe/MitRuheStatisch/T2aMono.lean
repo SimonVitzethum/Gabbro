@@ -139,6 +139,11 @@ theorem mE_mono (hle : MLe A A') {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ
   | _, _, _, .ite _ t e, h => by
       simp only [mE, Bool.and_eq_true] at h ⊢; exact ⟨mE_mono hle t h.1, mE_mono hle e h.2⟩
 
+  | _, _, _, .float _ _ _ _ _ rest, h => mE_mono hle rest h
+  | _, _, _, .floatLit _ _ _ rest, h => mE_mono hle rest h
+  | _, _, _, .floatOf _ _ _ rest, h => mE_mono hle rest h
+  | _, _, _, .floatNarrow _ _ _ sonst rest, h => by
+      simp only [mE, Bool.and_eq_true] at h ⊢; exact ⟨mE_mono hle sonst h.1, mE_mono hle rest h.2⟩
 theorem mArms_mono (hle : MLe A A') {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs),
     mArms A arms = true → mArms A' arms = true

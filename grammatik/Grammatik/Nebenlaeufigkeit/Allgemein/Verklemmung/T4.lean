@@ -323,6 +323,26 @@ theorem mE_boden_inv {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [Endblock.ueberBoden, Bool.and_eq_true]
       exact ⟨mE_boden_inv t h.1 c hc, mE_boden_inv e h.2 c hc⟩
 
+  | .float _ _ _ _ _ rest, h => by
+      simp only [mE] at h
+      intro c hc
+      simp only [Endblock.ueberBoden]
+      exact mE_boden_inv rest h c hc
+  | .floatLit _ _ _ rest, h => by
+      simp only [mE] at h
+      intro c hc
+      simp only [Endblock.ueberBoden]
+      exact mE_boden_inv rest h c hc
+  | .floatOf _ _ _ rest, h => by
+      simp only [mE] at h
+      intro c hc
+      simp only [Endblock.ueberBoden]
+      exact mE_boden_inv rest h c hc
+  | .floatNarrow _ _ _ sonst rest, h => by
+      simp only [mE, Bool.and_eq_true] at h
+      intro c hc
+      simp only [Endblock.ueberBoden, Bool.and_eq_true]
+      exact ⟨mE_boden_inv sonst h.1 c hc, mE_boden_inv rest h.2 c hc⟩
 end
 
 end StufenUmkehr

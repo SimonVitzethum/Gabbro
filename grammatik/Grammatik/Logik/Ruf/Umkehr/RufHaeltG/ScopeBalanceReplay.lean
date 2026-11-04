@@ -178,7 +178,8 @@ private theorem stepReplay {P : Programm D} {O : Orakel D} {pa : Nat}
       apply headStep
       · assumption
       · exact signatureChain (D.asignatur a)
-    | endeBindAxiomElseOk | endeBindAxiomElseGrund =>
+    | endeBindAxiomElseOk | endeBindAxiomElseGrund
+    | endeGleit | endeGleitLit | endeGleitVon | endeGleitNarrowOk | endeGleitNarrowElse =>
       simp only [rufUpdateG_self]
       apply headStep
       · assumption

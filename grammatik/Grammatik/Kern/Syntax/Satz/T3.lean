@@ -89,6 +89,10 @@ def Endblock.ueberBoden {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (c : Int) :
   | .exchange _ _ _ _ rest => rest.ueberBoden c
   | .ite _ t e => t.ueberBoden c && e.ueberBoden c
 
+  | .float _ _ _ _ _ rest => rest.ueberBoden c
+  | .floatLit _ _ _ rest => rest.ueberBoden c
+  | .floatOf _ _ _ rest => rest.ueberBoden c
+  | .floatNarrow _ _ _ sonst rest => sonst.ueberBoden c && rest.ueberBoden c
 def Arms.ueberBoden {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (c : Int) : Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true
@@ -230,6 +234,10 @@ def Endblock.scopesOk {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (haelt : List D.
   | .exchange _ _ _ _ rest => rest.scopesOk haelt boden
   | .ite _ t e => t.scopesOk haelt boden && e.scopesOk haelt boden
 
+  | .float _ _ _ _ _ rest => rest.scopesOk haelt boden
+  | .floatLit _ _ _ rest => rest.scopesOk haelt boden
+  | .floatOf _ _ _ rest => rest.scopesOk haelt boden
+  | .floatNarrow _ _ _ sonst rest => sonst.scopesOk haelt boden && rest.scopesOk haelt boden
 def Arms.scopesOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (haelt : List D.Lock) (boden : Option Int) : Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true

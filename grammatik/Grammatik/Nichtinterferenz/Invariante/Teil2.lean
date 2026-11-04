@@ -114,6 +114,32 @@ theorem kEnde_ok {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
   | leave _ => exact KErgOk.none
   | next _ => exact KErgOk.none
 
+  | float op a b lo hi rest =>
+      simp only [nE, Bool.and_eq_true] at he
+      try simp only [kEnde]
+      split
+      · exact KErgOk.lokal hst _ _ _ (by first | exact he.2 | (simp only [GRest.nR]; exact he.2)) _ _
+      · exact KErgOk.none
+  | floatLit q lo hi rest =>
+      simp only [nE] at he
+      try simp only [kEnde]
+      split
+      · exact KErgOk.lokal hst _ _ _ (by first | exact he | (simp only [GRest.nR]; exact he)) _ _
+      · exact KErgOk.none
+  | floatOf e lo hi rest =>
+      simp only [nE, Bool.and_eq_true] at he
+      try simp only [kEnde]
+      split
+      · exact KErgOk.lokal hst _ _ _ (by first | exact he.2 | (simp only [GRest.nR]; exact he.2)) _ _
+      · exact KErgOk.none
+  | floatNarrow e lo hi sonst rest =>
+      simp only [nE, Bool.and_eq_true] at he
+      try simp only [kEnde]
+      split
+      · exact KErgOk.lokal hst _ _ _ (by first | exact he.2 | (simp only [GRest.nR]; exact he.2)) _ _
+      · exact KErgOk.lokal hst _ _ _ (by first | exact he.1.2 | (simp only [GRest.nR]; exact he.1.2)) _ _
+
+
 theorem kDann_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ρ : Env D Γ)
     (b : Block D (vertragVon D f) l Γ Λ Λ') (k : GRest D (vertragVon D f) l Γ Λ')
     (hb : nB S Ax b = true) (hk : k.nR S Ax) :

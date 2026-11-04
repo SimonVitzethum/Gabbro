@@ -219,7 +219,11 @@ theorem freigabe_schrittG (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
         refine Or.inl (hgross ?_)
         rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
         exact lese_offen _ _ _
-
+    | endeGleit | endeGleitLit | endeGleitVon | endeGleitNarrowOk | endeGleitNarrowElse =>
+        subst_vars
+        simp only [rufUpdateG_self]
+        refine Or.inl (hgross ?_)
+        first | rfl | exact lese_offen _ _ _
 
   | g7 hs =>
     cases hs with

@@ -211,6 +211,15 @@ def groesseEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l �
   | _, _, _, .exchange _ neu _ _ rest => unendlich + 1 + groesseExpr neu + groesseEnd rest
   | _, _, _, .ite c t e => unendlich + 1 + groesseExpr c + groesseEnd t + groesseEnd e
 
+  | _, _, _, .float _ a b lo hi rest =>
+    1 + groesseExpr a + groesseExpr b + groessePaar lo + groessePaar hi + Zahlen.kostT (.fl lo hi) + groesseEnd rest
+  | _, _, _, .floatLit q lo hi rest =>
+    1 + groessePaar q + groessePaar lo + groessePaar hi + Zahlen.kostT (.fl lo hi) + groesseEnd rest
+  | _, _, _, .floatOf e lo hi rest =>
+    1 + groesseExpr e + groessePaar lo + groessePaar hi + Zahlen.kostT (.fl lo hi) + groesseEnd rest
+  | _, _, _, .floatNarrow e lo hi sonst rest =>
+    1 + groesseExpr e + groessePaar lo + groessePaar hi + Zahlen.kostT (.fl lo hi) + groesseEnd sonst +
+      groesseEnd rest
 def groesseArms : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)},
     Arms D V l Γ Λ Λ' cs → Nat
   | _, _, _, _, _, .nil => 1

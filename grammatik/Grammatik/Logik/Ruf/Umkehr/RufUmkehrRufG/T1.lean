@@ -115,6 +115,10 @@ def Endblock.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
 
   | .bindCallIndElse .. => false
 
+  | .float _ _ _ _ _ rest => rest.kOk
+  | .floatLit _ _ _ rest => rest.kOk
+  | .floatOf _ _ _ rest => rest.kOk
+  | .floatNarrow _ _ _ sonst rest => sonst.kOk && rest.kOk
 def Arms.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true

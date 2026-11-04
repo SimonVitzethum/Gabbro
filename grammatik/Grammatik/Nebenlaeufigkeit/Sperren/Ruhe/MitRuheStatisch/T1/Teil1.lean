@@ -220,6 +220,12 @@ theorem ruEnd_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, .ite c t e =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte c) (ruEnd_orteP P e)) (ruEnd_orteP P t)
 
+  | _, _, _, .float _ a b _ _ rest =>
+      kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)) (ruEnd_orteP P rest)
+  | _, _, _, .floatLit _ _ _ rest => ruEnd_orteP P rest
+  | _, _, _, .floatOf e _ _ rest => kongr₂ (· ++ ·) (ruE_orte e) (ruEnd_orteP P rest)
+  | _, _, _, .floatNarrow e _ _ sonst rest =>
+      kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte e) (ruEnd_orteP P sonst)) (ruEnd_orteP P rest)
 theorem ruArms_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs),
     armsOrteP P.mitRuhe (ruArms arms) = armsOrteP P arms
@@ -352,6 +358,11 @@ theorem ruEnd_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
   | _, _, _, .exchange _ _ _ _ rest => ruEnd_regs rest
   | _, _, _, .ite _ t e => kongr₂ (· ++ ·) (ruEnd_regs e) (ruEnd_regs t)
 
+  | _, _, _, .float _ _ _ _ _ rest => ruEnd_regs rest
+  | _, _, _, .floatLit _ _ _ rest => ruEnd_regs rest
+  | _, _, _, .floatOf _ _ _ rest => ruEnd_regs rest
+  | _, _, _, .floatNarrow _ _ _ sonst rest =>
+      kongr₂ (· ++ ·) (ruEnd_regs sonst) (ruEnd_regs rest)
 theorem ruArms_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs),
     (ruArms arms).regs = arms.regs

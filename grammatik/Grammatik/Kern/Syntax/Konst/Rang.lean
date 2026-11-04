@@ -90,6 +90,10 @@ def constEndCalls (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ
   | .narrowRequired .. => []
   | .retScoped .. => []
   | .retWhyScoped .. => []
+  | .float .. => []
+  | .floatLit .. => []
+  | .floatOf .. => []
+  | .floatNarrow .. => []
 def constArmsCalls (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ Λout : List (Res c.D)} {cs : List (Option Ty)} : Arms c.D V l Γ Λ Λout cs → List c.D.Fn
   | .nil => []
   | .cons body rest => constBlockCalls c body ++ constArmsCalls c rest

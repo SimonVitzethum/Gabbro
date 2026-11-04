@@ -1,4 +1,5 @@
 module
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T2.Teil2EndFloat
 
 public import Grammatik.Logik.Fortschritt.Fortschritt.T1
 public import Grammatik.Logik.Fortschritt.Fortschritt.T2.ScopedSteps
@@ -143,7 +144,7 @@ theorem fort_abb {M : RufMaschineG D} {t : Faden} (hP : PrueftG O passes M t) (w
     thread; `leave`/`next` cannot stand there (`fOk`: no `ende` node in a
     loop). -/
 theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
-    (hkt : FormKette (M.faeden t).kopf.f (M.faeden t).stapel) (hP : PrueftG O passes M t)
+    (hkt : FormKette (M.faeden t).kopf.f (M.faeden t).stapel) (hP : PrueftG O passes M t) (hB : EndBereichG M t)
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
     (e : Endblock D (vertragVon D (M.faeden t).kopf.f) l Γ Λ)
     (hx : (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .ende e⟩) (hl : l = false)
@@ -355,6 +356,29 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
             first
             | exact absurd ⟨rfl, rfl⟩ hbl
             | exact fort_schritt (w_endeEntf rfl _ rest ρ rfl hx)
+
+  | float op a b lo hi rest =>
+      cases hv : gleitPasst lo hi (gleitRechne op
+          (eval ((M.weltVon t).lese Λ (a.orte ++ b.orte)) a
+            ((M.weltVon t).lese Λ (a.orte ++ b.orte)) ρ).x
+          (eval ((M.weltVon t).lese Λ (a.orte ++ b.orte)) b
+            ((M.weltVon t).lese Λ (a.orte ++ b.orte)) ρ).x) with
+      | none => exact absurd hv (hB.1 l Γ Λ ρ op _ _ _ _ lo hi a b rest hx)
+      | some v => exact fort_schritt (w_endeGleit rfl op a b lo hi rest ρ hx v hv hΛ)
+  | floatLit q lo hi rest =>
+      cases hv : gleitPasst lo hi (bruch q) with
+      | none => exact absurd hv (hB.2.1 l Γ Λ ρ q lo hi rest hx)
+      | some v => exact fort_schritt (w_endeGleitLit rfl q lo hi rest ρ hx v hv)
+  | floatOf e lo hi rest =>
+      cases hv : gleitPasst lo hi (gleitAusInt
+          (eval ((M.weltVon t).lese Λ e.orte) e ((M.weltVon t).lese Λ e.orte) ρ).n) with
+      | none => exact absurd hv (hB.2.2 l Γ Λ ρ _ _ e lo hi rest hx)
+      | some v => exact fort_schritt (w_endeGleitVon rfl e lo hi rest ρ hx v hv hΛ)
+  | floatNarrow e lo hi sonst rest =>
+      cases hv : gleitPasst lo hi
+          (eval ((M.weltVon t).lese Λ e.orte) e ((M.weltVon t).lese Λ e.orte) ρ).x with
+      | none => exact fort_schritt (w_endeGleitNarrowElse rfl e lo hi sonst rest ρ hx hv hΛ)
+      | some v => exact fort_schritt (w_endeGleitNarrowOk rfl e lo hi sonst rest ρ hx v hv hΛ)
 
 end Fort
 end Gabbro.Grammatik

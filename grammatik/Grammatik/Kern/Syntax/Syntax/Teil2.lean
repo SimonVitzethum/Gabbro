@@ -356,6 +356,15 @@ inductive Endblock : Bool → Ctx → List (Res D) → Type where
       (err : Endblock l (.why (D.sigNr n).gruende :: Γ) (nachSig D (D.sigNr n) Λ))
       (rest : Endblock l (τ :: Γ) (nachSig D (D.sigNr n) Λ)) : Endblock l Γ Λ
 
+  /-- Float binders with a non-falling continuation; same range checks as `Block`. -/
+  | float (op : GleitOp) (a : Expr D Γ Λ (.fl l1 h1)) (b : Expr D Γ Λ (.fl l2 h2)) (lo hi : Int × Int)
+      (rest : Endblock l (.fl lo hi :: Γ) Λ) : Endblock l Γ Λ
+  | floatLit (q : Int × Int) (lo hi : Int × Int) (rest : Endblock l (.fl lo hi :: Γ) Λ) : Endblock l Γ Λ
+  | floatOf (e : Expr D Γ Λ (.int l1 h1)) (lo hi : Int × Int) (rest : Endblock l (.fl lo hi :: Γ) Λ) :
+      Endblock l Γ Λ
+  | floatNarrow (e : Expr D Γ Λ (.fl l1 h1)) (lo hi : Int × Int) (sonst : Endblock l Γ Λ)
+      (rest : Endblock l (.fl lo hi :: Γ) Λ) : Endblock l Γ Λ
+
 inductive Arms : Bool → Ctx → List (Res D) → List (Res D) → List (Option Ty) → Type where
   | nil : Arms l Γ Λ Λ []
   | cons (b : Block l (ArmCtx Γ c) Λ Λ') (rest : Arms l Γ Λ Λ' cs) : Arms l Γ Λ Λ' (c :: cs)

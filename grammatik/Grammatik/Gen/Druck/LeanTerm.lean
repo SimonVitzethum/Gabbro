@@ -280,6 +280,10 @@ def drEnd (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)
   | .exchange g neu _ _ rest => do .ok s!"(Endblock.exchange (D := z.deklaration) {fin (N.glob g) "z.globs.length"} {← drE N neu} {bew} {bew} {← drEnd N rest})"
   | .ite c t e => do .ok s!"(Endblock.ite (D := z.deklaration) {← drE N c} {← drEnd N t} {← drEnd N e})"
 
+  | .float op a b lo hi rest => do .ok s!"(Endblock.float (D := z.deklaration) {gleit op} {← drE N a} {← drE N b} {paar lo} {paar hi} {← drEnd N rest})"
+  | .floatLit q lo hi rest => do .ok s!"(Endblock.floatLit (D := z.deklaration) {paar q} {paar lo} {paar hi} {← drEnd N rest})"
+  | .floatOf e lo hi rest => do .ok s!"(Endblock.floatOf (D := z.deklaration) {← drE N e} {paar lo} {paar hi} {← drEnd N rest})"
+  | .floatNarrow e lo hi sonst rest => do .ok s!"(Endblock.floatNarrow (D := z.deklaration) {← drE N e} {paar lo} {paar hi} {← drEnd N sonst} {← drEnd N rest})"
 /-- The arms of a `match` on a tagged value. -/
 def drArms (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : {cs : List (Option Ty)} → Arms D V l Γ Λ Λ' cs → Except String String
   | _, .nil => .ok s!"(Arms.nil (D := z.deklaration))"

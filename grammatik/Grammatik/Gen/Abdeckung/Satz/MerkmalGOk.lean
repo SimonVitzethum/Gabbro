@@ -149,6 +149,10 @@ theorem eGOk (K : Nat → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List
   | .exchange _ _ _ _ rest => by simp only [Endblock.gOk, mE, eGOk K rest]
   | .ite _ t e => by simp only [Endblock.gOk, mE, eGOk K t, eGOk K e, Bool.and_comm]
 
+  | .float _ _ _ _ _ rest => by simp only [Endblock.gOk, mE, eGOk K rest]
+  | .floatLit _ _ _ rest => by simp only [Endblock.gOk, mE, eGOk K rest]
+  | .floatOf _ _ _ rest => by simp only [Endblock.gOk, mE, eGOk K rest]
+  | .floatNarrow _ _ _ sonst rest => by simp only [Endblock.gOk, mE, eGOk K sonst, eGOk K rest]
 end
 
 /-- **The atom "in the fragment without its indirect-call test" is always true**: the cells `0.0 0..` have no program. -/

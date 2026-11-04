@@ -121,6 +121,10 @@ def Endblock.ohneEwig {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l
   | .exchange _ _ _ _ rest => rest.ohneEwig
   | .ite _ t e => t.ohneEwig && e.ohneEwig
 
+  | .float _ _ _ _ _ rest => rest.ohneEwig
+  | .floatLit _ _ _ rest => rest.ohneEwig
+  | .floatOf _ _ _ rest => rest.ohneEwig
+  | .floatNarrow _ _ _ sonst rest => sonst.ohneEwig && rest.ohneEwig
 def Arms.ohneEwig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} :
     Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true
@@ -341,6 +345,18 @@ theorem Endblock.execH_passes {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [Endblock.ohneEwig, Bool.and_eq_true] at h
       simp only [execEndH, Endblock.execH_passes t h.1, Endblock.execH_passes e h.2]
 
+  | .float op a b lo hi rest, h, σ, ρ => by
+      simp only [Endblock.ohneEwig] at h
+      simp only [execEndH, Endblock.execH_passes rest h]
+  | .floatLit q lo hi rest, h, σ, ρ => by
+      simp only [Endblock.ohneEwig] at h
+      simp only [execEndH, Endblock.execH_passes rest h]
+  | .floatOf e lo hi rest, h, σ, ρ => by
+      simp only [Endblock.ohneEwig] at h
+      simp only [execEndH, Endblock.execH_passes rest h]
+  | .floatNarrow e lo hi sonst rest, h, σ, ρ => by
+      simp only [Endblock.ohneEwig, Bool.and_eq_true] at h
+      simp only [execEndH, Endblock.execH_passes rest h.2, Endblock.execH_passes sonst h.1]
 theorem Arms.execH_passes {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → a.ohneEwig = true →

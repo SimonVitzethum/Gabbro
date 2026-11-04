@@ -191,6 +191,10 @@ theorem schritt_sperre_art (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
         refine Or.inr (Or.inl ?_)
         rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
         exact lese_offen _ _ _
+    | endeGleit | endeGleitLit | endeGleitVon | endeGleitNarrowOk | endeGleitNarrowElse =>
+        subst_vars
+        simp only [rufUpdateG_self]
+        first | exact Or.inr (Or.inl rfl) | exact Or.inr (Or.inl (lese_offen _ _ _))
   | g7 hs =>
     cases hs with
     | dannLeaveVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hleave

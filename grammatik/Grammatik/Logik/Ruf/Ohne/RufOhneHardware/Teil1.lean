@@ -106,6 +106,10 @@ def Endblock.hardwareFrei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .exchange _ _ _ _ rest => rest.hardwareFrei
   | .ite _ t e => t.hardwareFrei && e.hardwareFrei
 
+  | .float _ _ _ _ _ rest => rest.hardwareFrei
+  | .floatLit _ _ _ rest => rest.hardwareFrei
+  | .floatOf _ _ _ rest => rest.hardwareFrei
+  | .floatNarrow _ _ _ sonst rest => sonst.hardwareFrei && rest.hardwareFrei
 def Arms.hardwareFrei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true

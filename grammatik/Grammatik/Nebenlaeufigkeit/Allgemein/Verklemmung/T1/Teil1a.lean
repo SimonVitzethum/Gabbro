@@ -346,6 +346,7 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
       rangAxiomOpt (axiomSonst_offen' hO _ _ _ _ _ hax), hs₁, hhead
     | endeBindAxiomOptElseGrund l Γ Λ e a args he hr hp hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax =>
       rangAxiomOpt (axiomSonst_offen' hO _ _ _ _ _ hax), hs₁, hhead
+    | endeGleit | endeGleitLit | endeGleitVon | endeGleitNarrowOk | endeGleitNarrowElse => rangA1
   | g7 hs =>
     cases hs with
     | dannLeaveVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hleave

@@ -346,6 +346,10 @@ theorem fzEnd_ok (hax : D.Ax → False) {V : Vertrag D} {l : Bool} {Γ : Ctx} {�
   | .bindAxiomOpt (a := a) .. => (hax a).elim
   | .bindAxiomOptElse (a := a) .. => (hax a).elim
 
+  | .float (a := a) (b := b) (rest := rest) .. => by simp only [fzEnd]; exact (all_app (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kEnd_kind hax rest)) all_nil)))) (fzE_ok hax a)) (fzE_ok hax b)) (fzEnd_ok hax rest))
+  | .floatLit (rest := rest) .. => by simp only [fzEnd]; exact (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kEnd_kind hax rest)) all_nil)) (fzEnd_ok hax rest))
+  | .floatOf (e := e) (rest := rest) .. => by simp only [fzEnd]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ e rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kEnd_kind hax rest)) all_nil))) (fzE_ok hax e)) (fzEnd_ok hax rest))
+  | .floatNarrow (e := e) (sonst := sonst) (rest := rest) .. => by simp only [fzEnd]; exact (all_app (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ e rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kEnd_kind hax sonst)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kEnd_kind hax rest)) all_nil)))) (fzE_ok hax e)) (fzEnd_ok hax sonst)) (fzEnd_ok hax rest))
 theorem fzArms_ok (hax : D.Ax → False) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} : (e : Arms D V l Γ Λ Λ' cs) → (fzArms e).all moeglich = true
   | .nil .. => by simp only [fzArms]; exact (all_cons (eig_ok rfl rfl rfl rfl) all_nil)
   | .cons (b := b) (rest := rest) .. => by simp only [fzArms]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kB_kind hax b)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kArms_kind hax rest)) all_nil))) (fzB_ok hax b)) (fzArms_ok hax rest))

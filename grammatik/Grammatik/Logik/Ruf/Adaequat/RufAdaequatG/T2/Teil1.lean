@@ -443,4 +443,36 @@ theorem w_endeBind {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
   exact ⟨_, RufSchrittG.endeBind M f l Γ Λ τ e rest ρ hhead _ rfl _ rfl hΛ, zustandG_neu rfl rfl⟩
 
 end Schritte
+theorem EndG.gleitLit_inv {Λ : List (Res D)} {q lo hi : Int × Int}
+    {rest : Endblock D V l (.fl lo hi :: Γ) Λ}
+    (h : EndG A (.floatLit q lo hi rest)) : EndG A rest := by
+  cases h with
+  | floatLit _ _ _ _ hr => exact hr
+
+
+theorem EndG.gleitVon_inv {Λ : List (Res D)} {l1 h1 : Int}
+    {e : Expr D Γ Λ (.int l1 h1)} {lo hi : Int × Int}
+    {rest : Endblock D V l (.fl lo hi :: Γ) Λ}
+    (h : EndG A (.floatOf e lo hi rest)) : EndG A rest := by
+  cases h with
+  | floatOf _ _ _ _ hr => exact hr
+
+
+theorem EndG.gleitNarrow_inv {Λ : List (Res D)} {l1 h1 : Int × Int}
+    {e : Expr D Γ Λ (.fl l1 h1)} {lo hi : Int × Int} {sonst : Endblock D V l Γ Λ}
+    {rest : Endblock D V l (.fl lo hi :: Γ) Λ}
+    (h : EndG A (.floatNarrow e lo hi sonst rest)) :
+    EndG A rest ∧ EndG A sonst := by
+  cases h with
+  | floatNarrow _ _ _ _ _ hs hr => exact ⟨hr, hs⟩
+
+
+theorem EndG.gleit_inv {Λ : List (Res D)} {l1 h1 l2 h2 : Int × Int} {op : GleitOp}
+    {a : Expr D Γ Λ (.fl l1 h1)} {b : Expr D Γ Λ (.fl l2 h2)} {lo hi : Int × Int}
+    {rest : Endblock D V l (.fl lo hi :: Γ) Λ}
+    (h : EndG A (.float op a b lo hi rest)) : EndG A rest := by
+  cases h with
+  | float _ _ _ _ _ _ hr => exact hr
+
+
 end Gabbro.Grammatik

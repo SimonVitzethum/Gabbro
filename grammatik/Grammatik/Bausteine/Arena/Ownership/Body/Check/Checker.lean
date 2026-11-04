@@ -287,6 +287,13 @@ def chkE : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → Endblock D V l 
   | _, _, _, .exchange .., _, _ => false
   | _, _, _, .ite .., _, _ => false
 
+  | _, _, _, .float _ a b _ _ rest, k, c =>
+  checkExpression A c a && checkExpression A c b && chkE rest k (c.bind none)
+  | _, _, _, .floatLit _ _ _ rest, k, c => chkE rest k (c.bind none)
+  | _, _, _, .floatOf e _ _ rest, k, c => checkExpression A c e && chkE rest k (c.bind none)
+  | _, _, _, .floatNarrow e _ _ sonst rest, k, c =>
+  checkExpression A c e && chkE sonst k c && chkE rest k (c.bind none)
+
 def chkArms : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
     {cs : List (Option Ty)} → Arms D V l Γ Λ Λ' cs → (k c : Context) → Out
   | _, _, _, _, _, .nil, _, _ => some none

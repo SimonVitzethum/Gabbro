@@ -279,6 +279,11 @@ def EndEntfaltbar {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .retScoped .. => false
   | .retWhyScoped .. => false
 
+  | .float .. => false
+  | .floatLit .. => false
+  | .floatOf .. => false
+  | .floatNarrow .. => false
+
 /-- Arm selection for `onTag`: the VALUE's index chooses the arm and the
     VALUE's payload feeds it (like `execArms`, but returning the chosen arm
     instead of running it). The `nil` case cannot fire (`Fin 0` is empty). -/

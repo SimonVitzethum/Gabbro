@@ -129,6 +129,10 @@ def oE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V 
   | .exchange _ _ _ _ rest => oE rest
   | .ite _ t e => oE t ∧ oE e
 
+  | .float _ _ _ _ _ rest => oE rest
+  | .floatLit _ _ _ rest => oE rest
+  | .floatOf _ _ _ rest => oE rest
+  | .floatNarrow _ _ _ sonst rest => oE sonst ∧ oE rest
 def oA {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} :
     Arms D V l Γ Λ Λ' cs → Prop
   | .nil => True

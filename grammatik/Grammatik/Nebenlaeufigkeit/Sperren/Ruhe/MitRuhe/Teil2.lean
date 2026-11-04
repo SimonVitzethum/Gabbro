@@ -338,6 +338,11 @@ def ruEnd {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} �
   | _, _, _, .exchange g neu hw hL rest => .exchange g (ruE neu) hw (gdarfR hL) (ruEnd rest)
   | _, _, _, .ite c t e => .ite (ruE c) (ruEnd t) (ruEnd e)
 
+  | _, _, _, .float op a b lo hi rest => .float op (ruE a) (ruE b) lo hi (ruEnd rest)
+  | _, _, _, .floatLit q lo hi rest => .floatLit q lo hi (ruEnd rest)
+  | _, _, _, .floatOf e lo hi rest => .floatOf (ruE e) lo hi (ruEnd rest)
+  | _, _, _, .floatNarrow e lo hi sonst rest =>
+      .floatNarrow (ruE e) lo hi (ruEnd sonst) (ruEnd rest)
 /-- Arms, translated (the arm scope `ArmCtx` is split on the case). -/
 def ruArms {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
     {cs : List (Option Ty)} → Arms D V l Γ Λ Λ' cs →

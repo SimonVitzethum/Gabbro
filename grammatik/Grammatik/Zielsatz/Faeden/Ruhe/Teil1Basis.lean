@@ -143,6 +143,11 @@ theorem ruEnd_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
   | _, _, _, .exchange _ _ _ _ rest => ruEnd_ants rest
   | _, _, _, .ite _ t e => kongr₂ (· ++ ·) (ruEnd_ants e) (ruEnd_ants t)
 
+  | _, _, _, .float _ _ _ _ _ rest => ruEnd_ants rest
+  | _, _, _, .floatLit _ _ _ rest => ruEnd_ants rest
+  | _, _, _, .floatOf _ _ _ rest => ruEnd_ants rest
+  | _, _, _, .floatNarrow _ _ _ sonst rest =>
+      kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruEnd_ants rest)
 theorem ruArms_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs),
     (ruArms arms).ants = arms.ants

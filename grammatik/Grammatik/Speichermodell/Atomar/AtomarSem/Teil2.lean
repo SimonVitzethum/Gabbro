@@ -360,6 +360,23 @@ theorem Endblock.execHA_frei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [execEndHA, execEndH, leseA_frei hA h1, Endblock.execHA_frei t h2,
         Endblock.execHA_frei e h3] <;> (try rfl)
 
+  | .float op a b lo hi rest, hT, σ, ρ => by
+      have h1 : ∀ x ∈ a.orte ++ b.orte, ¬ T x := fun x h => hT x (by
+        simp only [List.mem_append] at h; rcases h with h | h <;> simp only [endblockOrteP, List.append_assoc, List.mem_append, h, true_or, or_true])
+      have h2 : ∀ x ∈ endblockOrteP P rest, ¬ T x := fun x h => hT x (by simp only [endblockOrteP, List.append_assoc, List.mem_append, h, or_true])
+      simp only [execEndHA, execEndH, leseA_frei hA h1, Endblock.execHA_frei rest h2] <;> (try rfl)
+  | .floatLit q lo hi rest, hT, σ, ρ => by
+      simp only [execEndHA, execEndH, Endblock.execHA_frei rest hT] <;> (try rfl)
+  | .floatOf e lo hi rest, hT, σ, ρ => by
+      have h1 : ∀ x ∈ e.orte, ¬ T x := fun x h => hT x (by simp only [endblockOrteP, List.mem_append, h, true_or])
+      have h2 : ∀ x ∈ endblockOrteP P rest, ¬ T x := fun x h => hT x (by simp only [endblockOrteP, List.mem_append, h, or_true])
+      simp only [execEndHA, execEndH, leseA_frei hA h1, Endblock.execHA_frei rest h2] <;> (try rfl)
+  | .floatNarrow e lo hi sonst rest, hT, σ, ρ => by
+      have h1 : ∀ x ∈ e.orte, ¬ T x := fun x h => hT x (by simp only [endblockOrteP, List.append_assoc, List.mem_append, h, true_or])
+      have h2 : ∀ x ∈ endblockOrteP P rest, ¬ T x := fun x h => hT x (by simp only [endblockOrteP, List.append_assoc, List.mem_append, h, or_true])
+      have h3 : ∀ x ∈ endblockOrteP P sonst, ¬ T x := fun x h => hT x (by simp only [endblockOrteP, List.append_assoc, List.mem_append, h, true_or, or_true])
+      simp only [execEndHA, execEndH, leseA_frei hA h1, Endblock.execHA_frei rest h2,
+        Endblock.execHA_frei sonst h3] <;> (try rfl)
 theorem Arms.execHA_frei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → (∀ c ∈ armsOrteP P a, ¬ T c) →

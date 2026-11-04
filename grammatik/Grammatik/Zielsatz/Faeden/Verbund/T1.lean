@@ -165,6 +165,11 @@ theorem endblockOrteP_mitRumpf {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ :
   | _, _, _, .ite _ t e => by
       simp only [endblockOrteP, endblockOrteP_mitRumpf t, endblockOrteP_mitRumpf e]
 
+  | _, _, _, .float _ _ _ _ _ rest => by simp only [endblockOrteP, endblockOrteP_mitRumpf rest]
+  | _, _, _, .floatLit _ _ _ rest => by simp only [endblockOrteP, endblockOrteP_mitRumpf rest]
+  | _, _, _, .floatOf _ _ _ rest => by simp only [endblockOrteP, endblockOrteP_mitRumpf rest]
+  | _, _, _, .floatNarrow _ _ _ sonst rest => by
+      simp only [endblockOrteP, endblockOrteP_mitRumpf sonst, endblockOrteP_mitRumpf rest]
 theorem armsOrteP_mitRumpf {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} (a : Arms D V l Γ Λ Λ' cs),
     armsOrteP (mitRumpf P r) a = armsOrteP P a

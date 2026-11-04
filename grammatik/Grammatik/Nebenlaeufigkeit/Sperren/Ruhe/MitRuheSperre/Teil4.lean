@@ -335,5 +335,75 @@ theorem execEndH_ru_bindAxiomOptElse {V : Vertrag D}
               (ih_execEndH_ru_err σ' (Env.cons (τ := reasonTy (D.agruende a)) r ρ))
 
 
+theorem execEndH_ru_floatLit {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    (q)
+    (lo)
+    (hi)
+    (rest)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execEndH_ru_rest : ∀ (σ : World D), ∀ (ρ : Env D _), EndRel (execEndH S.mitRuhe O' U' passes R' (ruEnd rest) (worldR σ) (envR ρ)) (execEndH S O U passes R rest σ ρ))
+    : EndRel (execEndH S.mitRuhe O' U' passes R' (ruEnd (.floatLit q lo hi rest : Endblock D V l Γ Λ)) (worldR σ) (envR ρ)) (execEndH S O U passes R (.floatLit q lo hi rest : Endblock D V l Γ Λ) σ ρ) :=
+  by
+  simp only [ruEnd, execEndH]
+  cases gleitPasst lo hi (bruch q) with
+  | none => exact Or.inl rfl
+  | some v => exact EndRel.schrumpf (ih_execEndH_ru_rest _ (Env.cons v ρ))
+
+theorem execEndH_ru_floatOf {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {zi_l1}
+    {zi_h1}
+    (e)
+    (lo)
+    (hi)
+    (rest)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execEndH_ru_rest : ∀ (σ : World D), ∀ (ρ : Env D _), EndRel (execEndH S.mitRuhe O' U' passes R' (ruEnd rest) (worldR σ) (envR ρ)) (execEndH S O U passes R rest σ ρ))
+    : EndRel (execEndH S.mitRuhe O' U' passes R' (ruEnd (.floatOf (l1 := zi_l1) (h1 := zi_h1) e lo hi rest : Endblock D V l Γ Λ)) (worldR σ) (envR ρ)) (execEndH S O U passes R (.floatOf (l1 := zi_l1) (h1 := zi_h1) e lo hi rest : Endblock D V l Γ Λ) σ ρ) :=
+  by
+  simp only [ruEnd, execEndH]
+  erw [ruE_orte, lese_worldR, eval_ru]
+  have he := congrArg (fun v : Zahl zi_l1 zi_h1 => v.n)
+    (valR_int (D := D) (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ))
+  erw [he]
+  cases gleitPasst lo hi (gleitAusInt (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n) with
+  | none => exact Or.inl rfl
+  | some v => exact EndRel.schrumpf (ih_execEndH_ru_rest _ (Env.cons v ρ))
+
+theorem execEndH_ru_floatNarrow {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {zi_l1}
+    {zi_h1}
+    (e)
+    (lo)
+    (hi)
+    (sonst)
+    (rest)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execEndH_ru_rest : ∀ (σ : World D), ∀ (ρ : Env D _), EndRel (execEndH S.mitRuhe O' U' passes R' (ruEnd rest) (worldR σ) (envR ρ)) (execEndH S O U passes R rest σ ρ))
+    (ih_execEndH_ru_sonst : ∀ (σ : World D), ∀ (ρ : Env D _), EndRel (execEndH S.mitRuhe O' U' passes R' (ruEnd sonst) (worldR σ) (envR ρ)) (execEndH S O U passes R sonst σ ρ))
+    : EndRel (execEndH S.mitRuhe O' U' passes R' (ruEnd (.floatNarrow (l1 := zi_l1) (h1 := zi_h1) e lo hi sonst rest : Endblock D V l Γ Λ)) (worldR σ) (envR ρ)) (execEndH S O U passes R (.floatNarrow (l1 := zi_l1) (h1 := zi_h1) e lo hi sonst rest : Endblock D V l Γ Λ) σ ρ) :=
+  by
+  simp only [ruEnd, execEndH]
+  erw [ruE_orte, lese_worldR, eval_ru]
+  have he := congrArg (fun v : Gleit zi_l1 zi_h1 => v.x)
+    (valR_fl (D := D) (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ))
+  erw [he]
+  cases gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x with
+  | none => exact (ih_execEndH_ru_sonst _ ρ)
+  | some v => exact EndRel.schrumpf (ih_execEndH_ru_rest _ (Env.cons v ρ))
+
+
 end Haupt
+
 end Gabbro.Grammatik

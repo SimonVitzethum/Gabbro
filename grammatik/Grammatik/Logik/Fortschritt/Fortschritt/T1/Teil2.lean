@@ -89,7 +89,7 @@ theorem anSperre_kopf {M : RufMaschineG D} {t : Faden} {L : D.Lock} (h : AnSperr
     head `gleit`, float literal or `gleitVon`, the result lies in its declared range at the
     thread's world. Where it does not, G has no rule, and the sequential semantics answers
     `logik bereich` -- which the user's obligation excludes (`fadenS_bereich`). -/
-def BereichG (M : RufMaschineG D) (t : Faden) : Prop :=
+def BlockBereichG (M : RufMaschineG D) (t : Faden) : Prop :=
   (∀ (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (ρ : Env D Γ) (op : GleitOp)
       (l1 h1 l2 h2 lo hi : Int × Int) (a : Expr D Γ Λ (.fl l1 h1)) (b : Expr D Γ Λ (.fl l2 h2))
       (rest : Block D (vertragVon D (M.faeden t).kopf.f) l (.fl lo hi :: Γ) Λ Λ')
@@ -113,5 +113,35 @@ def BereichG (M : RufMaschineG D) (t : Faden) : Prop :=
     gleitPasst lo hi (gleitAusInt
       (eval ((M.weltVon t).lese Λ e.orte) e ((M.weltVon t).lese Λ e.orte) ρ).n) ≠ none)
 
+
+def EndBereichG (M : RufMaschineG D) (t : Faden) : Prop :=
+  (∀ (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (ρ : Env D Γ) (op : GleitOp)
+      (l1 h1 l2 h2 lo hi : Int × Int) (a : Expr D Γ Λ (.fl l1 h1)) (b : Expr D Γ Λ (.fl l2 h2))
+      (rest : Endblock D (vertragVon D (M.faeden t).kopf.f) l (.fl lo hi :: Γ) Λ)
+      ,
+    (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .ende (.float op a b lo hi rest)⟩ →
+    gleitPasst lo hi (gleitRechne op
+      (eval ((M.weltVon t).lese Λ (a.orte ++ b.orte)) a
+        ((M.weltVon t).lese Λ (a.orte ++ b.orte)) ρ).x
+      (eval ((M.weltVon t).lese Λ (a.orte ++ b.orte)) b
+        ((M.weltVon t).lese Λ (a.orte ++ b.orte)) ρ).x) ≠ none) ∧
+  (∀ (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (ρ : Env D Γ) (q lo hi : Int × Int)
+      (rest : Endblock D (vertragVon D (M.faeden t).kopf.f) l (.fl lo hi :: Γ) Λ)
+      ,
+    (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .ende (.floatLit q lo hi rest)⟩ →
+    gleitPasst lo hi (bruch q) ≠ none) ∧
+  (∀ (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (ρ : Env D Γ) (l1 h1 : Int)
+      (e : Expr D Γ Λ (.int l1 h1)) (lo hi : Int × Int)
+      (rest : Endblock D (vertragVon D (M.faeden t).kopf.f) l (.fl lo hi :: Γ) Λ)
+      ,
+    (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .ende (.floatOf e lo hi rest)⟩ →
+    gleitPasst lo hi (gleitAusInt
+      (eval ((M.weltVon t).lese Λ e.orte) e ((M.weltVon t).lese Λ e.orte) ρ).n) ≠ none)
+
+
+
+/-- Every float introduction at either kind of residue passes its range check. -/
+def BereichG (M : RufMaschineG D) (t : Faden) : Prop :=
+  BlockBereichG M t ∧ EndBereichG M t
 
 end Gabbro.Grammatik

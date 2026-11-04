@@ -128,6 +128,10 @@ def kostenKE (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .narrowRequired .. => 0
   | .exchange .. => 0
   | .ite .. => 0
+  | .float _ a b _ _ rest => 2 + kostenExpr a + kostenExpr b + kostenKE c rest
+  | .floatLit _ _ _ rest => 1 + kostenKE c rest
+  | .floatOf e _ _ rest => 2 + kostenExpr e + kostenKE c rest
+  | .floatNarrow _ _ _ sonst rest => 1 + kostenKE c sonst + kostenKE c rest
 end
 mutual
 /-- **The remainder**: G's dispatch steps plus what the checker does not
@@ -233,6 +237,10 @@ def zusatzE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .exchange .. => 0
   | .ite .. => 0
 
+  | .float _ _ _ _ _ rest => zusatzE rest
+  | .floatLit _ _ _ rest => 1 + zusatzE rest
+  | .floatOf _ _ _ rest => zusatzE rest
+  | .floatNarrow e _ _ sonst rest => 3 + kostenExpr e + zusatzSonst sonst + zusatzE rest
 /-- The remainder of an `else` branch run as a block (`kostenSonst`). -/
 def zusatzSonst {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → Nat
@@ -259,5 +267,10 @@ def zusatzSonst {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .narrowRequired .. => 0
   | .exchange .. => 0
   | .ite .. => 0
+  | .float _ _ _ _ _ rest => zusatzSonst rest
+  | .floatLit _ _ _ rest => 1 + zusatzSonst rest
+  | .floatOf _ _ _ rest => zusatzSonst rest
+  | .floatNarrow e _ _ sonst rest => 3 + kostenExpr e + zusatzSonst sonst + zusatzSonst rest
+
 end
 

@@ -1,4 +1,5 @@
 module
+public import Grammatik.Logik.Vertraege.RahmenTreu.Teil2EndFloat
 
 public import Grammatik.Logik.Vertraege.RahmenTreu.Tactics
 public import Grammatik.Logik.Vertraege.RahmenTreu.Teil1
@@ -457,6 +458,18 @@ theorem end_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       · exact (TreuEnd.vor hl (end_treu bo hbV rest _ _ hscope_rest (hl.heldB hh))).schrumpf σ' h
       · simp only [dite_false, EndAusgang.welt, reduceCtorEq] at h
 
+  | .float op a b lo hi rest, σ, ρ, hscope, hh, σ', h =>
+      end_treu_float O passes R hR hO bo hbV op a b lo hi rest
+        (end_treu bo hbV rest) σ ρ hscope hh σ' h
+  | .floatLit q lo hi rest, σ, ρ, hscope, hh, σ', h =>
+      end_treu_floatLit O passes R hR hO bo hbV q lo hi rest
+        (end_treu bo hbV rest) σ ρ hscope hh σ' h
+  | .floatOf e lo hi rest, σ, ρ, hscope, hh, σ', h =>
+      end_treu_floatOf O passes R hR hO bo hbV e lo hi rest
+        (end_treu bo hbV rest) σ ρ hscope hh σ' h
+  | .floatNarrow e lo hi sonst rest, σ, ρ, hscope, hh, σ', h =>
+      end_treu_floatNarrow O passes R hR hO bo hbV e lo hi sonst rest
+        (end_treu bo hbV rest) (end_treu bo hbV sonst) σ ρ hscope hh σ' h
 theorem arms_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
     ∀ (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),
     arms.ScopesOk → HeldB bo Λ σ.haelt →

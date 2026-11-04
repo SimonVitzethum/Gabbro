@@ -1,6 +1,9 @@
 /- Part 10 of 12 of `RufAdaequatG` (split by instrumente/teile/lean-teilen.py; the umbrella `RufAdaequatG.lean` imports all parts). -/
 module
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T10.Teil1G7
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T10.Teil1BasisEndFloat
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.Steps.T9EndFloat
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.Steps.T9
 @[expose] public section
 
 
@@ -460,16 +463,7 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
       have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
     | dannRetGrund =>
       have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
-  | g6 hs =>
-    cases hs with
-    | endeBindAxiomElseOk =>
-      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
-    | endeBindAxiomElseGrund =>
-      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
-    | endeBindAxiomOptElseOk =>
-      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
-    | endeBindAxiomOptElseGrund =>
-      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+  | g6 hs => exact schrittErhalt_g6 hs (M.faeden f) rfl ρ r hR hcov
   | g7 hs => exact schrittErhalt_g7 hs (M.faeden f) rfl ρ r hR hcov
 
 

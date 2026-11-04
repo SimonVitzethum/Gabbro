@@ -176,6 +176,14 @@ theorem Endblock.execH_leer {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .ite c t e, σ, ρ => by
       simp only [execEndH, execEnd, Endblock.execH_leer t, Endblock.execH_leer e] <;> rfl
 
+  | .float op a b lo hi rest, σ, ρ => by
+      simp only [execEndH, execEnd, Endblock.execH_leer rest] <;> rfl
+  | .floatLit q lo hi rest, σ, ρ => by
+      simp only [execEndH, execEnd, Endblock.execH_leer rest] <;> rfl
+  | .floatOf e lo hi rest, σ, ρ => by
+      simp only [execEndH, execEnd, Endblock.execH_leer rest] <;> rfl
+  | .floatNarrow e lo hi sonst rest, σ, ρ => by
+      simp only [execEndH, execEnd, Endblock.execH_leer rest, Endblock.execH_leer sonst] <;> rfl
 theorem Arms.execH_leer {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → ∀ (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),
@@ -275,6 +283,10 @@ def Endblock.ohneLocks {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V 
   | .exchange _ _ _ _ rest => rest.ohneLocks
   | .ite _ t e => t.ohneLocks && e.ohneLocks
 
+  | .float _ _ _ _ _ rest => rest.ohneLocks
+  | .floatLit _ _ _ rest => rest.ohneLocks
+  | .floatOf _ _ _ rest => rest.ohneLocks
+  | .floatNarrow _ _ _ sonst rest => sonst.ohneLocks && rest.ohneLocks
 def Arms.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} :
     Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true

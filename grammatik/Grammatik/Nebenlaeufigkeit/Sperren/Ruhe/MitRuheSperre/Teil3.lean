@@ -423,5 +423,41 @@ theorem execBlockH_ru_bindAxiomOptElse {V : Vertrag D}
               (ih_execEndH_ru_err σ' (Env.cons (τ := reasonTy (D.agruende a)) r ρ)))
 
 
+theorem execEndH_ru_float {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {zi_l1}
+    {zi_h1}
+    {zi_l2}
+    {zi_h2}
+    (op)
+    (a)
+    (b)
+    (lo)
+    (hi)
+    (rest)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execEndH_ru_rest : ∀ (σ : World D), ∀ (ρ : Env D _), EndRel (execEndH S.mitRuhe O' U' passes R' (ruEnd rest) (worldR σ) (envR ρ)) (execEndH S O U passes R rest σ ρ))
+    : EndRel (execEndH S.mitRuhe O' U' passes R' (ruEnd (.float (l1 := zi_l1) (h1 := zi_h1) (l2 := zi_l2) (h2 := zi_h2) op a b lo hi rest : Endblock D V l Γ Λ)) (worldR σ) (envR ρ)) (execEndH S O U passes R (.float (l1 := zi_l1) (h1 := zi_h1) (l2 := zi_l2) (h2 := zi_h2) op a b lo hi rest : Endblock D V l Γ Λ) σ ρ) :=
+  by
+  simp only [ruEnd, execEndH]
+  erw [orte2, lese_worldR, eval_ru, eval_ru]
+  have ha := congrArg (fun v : Gleit zi_l1 zi_h1 => v.x)
+    (valR_fl (D := D)
+      (eval (σ.lese Λ (a.orte ++ b.orte)) a (σ.lese Λ (a.orte ++ b.orte)) ρ))
+  have hb := congrArg (fun v : Gleit zi_l2 zi_h2 => v.x)
+    (valR_fl (D := D)
+      (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ))
+  erw [ha, hb]
+  cases gleitPasst lo hi (gleitRechne op
+      (eval (σ.lese Λ (a.orte ++ b.orte)) a (σ.lese Λ (a.orte ++ b.orte)) ρ).x
+      (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ).x) with
+  | none => exact Or.inl rfl
+  | some v => exact EndRel.schrumpf (ih_execEndH_ru_rest _ (Env.cons v ρ))
+
+
 end Haupt
+
 end Gabbro.Grammatik

@@ -147,6 +147,10 @@ def Endblock.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (K : 
   | .exchange _ _ _ _ rest => rest.gOk K Rg
   | .ite _ t e => e.gOk K Rg && t.gOk K Rg
 
+  | .float _ _ _ _ _ rest => rest.gOk K Rg
+  | .floatLit _ _ _ rest => rest.gOk K Rg
+  | .floatOf _ _ _ rest => rest.gOk K Rg
+  | .floatNarrow _ _ _ sonst rest => sonst.gOk K Rg && rest.gOk K Rg
 def Arms.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} (K : Nat → Bool) (Rg : D.Reg → Bool) :
     Arms D V l Γ Λ Λ' cs → Bool
@@ -203,6 +207,14 @@ theorem Endblock.gOk_alsBlock {V : Vertrag D} {l : Bool} (K : Nat → Bool) (Rg 
   | _, _, .ite _ t _ => by
       simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg t]
 
+  | _, _, .float op a b lo hi rest => by
+      simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
+  | _, _, .floatLit q lo hi rest => by
+      simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
+  | _, _, .floatOf e lo hi rest => by
+      simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
+  | _, _, .floatNarrow e lo hi sonst rest => by
+      simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
 /-! ### The registers a body reads -/
 
 mutual
@@ -275,6 +287,10 @@ def Endblock.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .exchange _ _ _ _ rest => rest.regs
   | .ite _ t e => e.regs ++ t.regs
 
+  | .float _ _ _ _ _ rest => rest.regs
+  | .floatLit _ _ _ rest => rest.regs
+  | .floatOf _ _ _ rest => rest.regs
+  | .floatNarrow _ _ _ sonst rest => sonst.regs ++ rest.regs
 def Arms.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → List D.Reg
   | .nil => []

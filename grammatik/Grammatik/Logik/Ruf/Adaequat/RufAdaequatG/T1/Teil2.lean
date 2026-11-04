@@ -111,6 +111,24 @@ inductive EndG {V : Vertrag D} (A : D.Lock → Prop) :
       (rest : Endblock D V false (τ :: Γ) Λ) (hr : EndG A rest) :
       EndG A (.bind e rest)
 
+  | float {Γ : Ctx} {Λ : List (Res D)} {l1 h1 l2 h2 : Int × Int}
+      (op : GleitOp) (a : Expr D Γ Λ (.fl l1 h1)) (b : Expr D Γ Λ (.fl l2 h2))
+      (lo hi : Int × Int) (rest : Endblock D V false (.fl lo hi :: Γ) Λ)
+      (hr : EndG A rest) : EndG A (.float op a b lo hi rest)
+  | floatLit {Γ : Ctx} {Λ : List (Res D)}
+      (q lo hi : Int × Int) (rest : Endblock D V false (.fl lo hi :: Γ) Λ)
+      (hr : EndG A rest) : EndG A (.floatLit q lo hi rest)
+  | floatOf {Γ : Ctx} {Λ : List (Res D)} {l1 h1 : Int}
+      (e : Expr D Γ Λ (.int l1 h1)) (lo hi : Int × Int)
+      (rest : Endblock D V false (.fl lo hi :: Γ) Λ) (hr : EndG A rest) :
+      EndG A (.floatOf e lo hi rest)
+  | floatNarrow {Γ : Ctx} {Λ : List (Res D)} {l1 h1 : Int × Int}
+      (e : Expr D Γ Λ (.fl l1 h1)) (lo hi : Int × Int) (sonst : Endblock D V false Γ Λ)
+      (rest : Endblock D V false (.fl lo hi :: Γ) Λ)
+      (hs : EndG A sonst) (hr : EndG A rest) :
+      EndG A (.floatNarrow e lo hi sonst rest)
+
+
 inductive ArmsG {V : Vertrag D} (A : D.Lock → Prop) :
     Bool → {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
     {cs : List (Option Ty)} → Arms D V l Γ Λ Λ' cs → Prop where

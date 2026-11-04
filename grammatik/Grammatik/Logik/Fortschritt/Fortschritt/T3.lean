@@ -22,42 +22,77 @@ theorem fadenS_bereich (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     (hK : ∀ f, KoerperGutS P passes Q S f) (hFS : ∀ f, FussS P S lok f) {M : RufMaschineG D}
     (t : Faden) (hF : FadenS P O passes Q S lok (M.faeden t) (M.weltVon t)) :
     BereichG M t := by
-  refine ⟨fun l Γ Λ Λ' ρ op l1 h1 l2 h2 lo hi a b rest k hr hv => ?_,
-    fun l Γ Λ Λ' ρ q lo hi rest k hr hv => ?_,
-    fun l Γ Λ Λ' ρ l1 h1 e lo hi rest k hr hv => ?_⟩
-  · obtain ⟨H, HA, HU, σ, hg, hok, hno⟩ := kopfS_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
-    have hab : a.orte ++ b.orte ⊆ fussOrteG P (M.faeden t).kopf.f :=
-      fun _ h => hok.2.1 (List.mem_append_left _ h)
-    have hgl := hg.lese Λ Λ (a.orte ++ b.orte) (a.orte ++ b.orte)
-    have ea := eval_gleichAuf a (fun _ h => expr_stabil (hFS _) a
-      (fun _ h' => hab (List.mem_append_left _ h')) h) hgl ρ
-    have eb := eval_gleichAuf b (fun _ h => expr_stabil (hFS _) b
-      (fun _ h' => hab (List.mem_append_right _ h')) h) hgl ρ
-    have hv' : gleitPasst lo hi (gleitRechne op
-        (eval (σ.lese Λ (a.orte ++ b.orte)) a (σ.lese Λ (a.orte ++ b.orte)) ρ).x
-        (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ).x) = none := by
-      rw [ea, eb]; exact hv
-    refine hno .bereich ?_
-    rw [semH_dann]
-    simp only [execBlockH, hv']
-    exact weiterH_logik _ _ _ _ _ _ _
-  · obtain ⟨H, HA, HU, σ, hg, hok, hno⟩ := kopfS_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
-    refine hno .bereich ?_
-    rw [semH_dann]
-    simp only [execBlockH, hv]
-    exact weiterH_logik _ _ _ _ _ _ _
-  · obtain ⟨H, HA, HU, σ, hg, hok, hno⟩ := kopfS_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
-    have he : e.orte ⊆ fussOrteG P (M.faeden t).kopf.f :=
-      fun _ h => hok.2.1 (List.mem_append_left _ h)
-    have ee := eval_gleichAuf e (fun _ h => expr_stabil (hFS _) e (fun _ h' => he h') h)
-      (hg.lese Λ Λ e.orte e.orte) ρ
-    have hv' : gleitPasst lo hi (gleitAusInt
-        (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n) = none := by
-      rw [ee]; exact hv
-    refine hno .bereich ?_
-    rw [semH_dann]
-    simp only [execBlockH, hv']
-    exact weiterH_logik _ _ _ _ _ _ _
+  constructor
+  · refine ⟨fun l Γ Λ Λ' ρ op l1 h1 l2 h2 lo hi a b rest k hr hv => ?_,
+      fun l Γ Λ Λ' ρ q lo hi rest k hr hv => ?_,
+      fun l Γ Λ Λ' ρ l1 h1 e lo hi rest k hr hv => ?_⟩
+    · obtain ⟨H, HA, HU, σ, hg, hok, hno⟩ := kopfS_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
+      have hab : a.orte ++ b.orte ⊆ fussOrteG P (M.faeden t).kopf.f :=
+        fun _ h => hok.2.1 (List.mem_append_left _ h)
+      have hgl := hg.lese Λ Λ (a.orte ++ b.orte) (a.orte ++ b.orte)
+      have ea := eval_gleichAuf a (fun _ h => expr_stabil (hFS _) a
+        (fun _ h' => hab (List.mem_append_left _ h')) h) hgl ρ
+      have eb := eval_gleichAuf b (fun _ h => expr_stabil (hFS _) b
+        (fun _ h' => hab (List.mem_append_right _ h')) h) hgl ρ
+      have hv' : gleitPasst lo hi (gleitRechne op
+          (eval (σ.lese Λ (a.orte ++ b.orte)) a (σ.lese Λ (a.orte ++ b.orte)) ρ).x
+          (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ).x) = none := by
+        rw [ea, eb]; exact hv
+      refine hno .bereich ?_
+      rw [semH_dann]
+      simp only [execBlockH, hv']
+      exact weiterH_logik _ _ _ _ _ _ _
+    · obtain ⟨H, HA, HU, σ, hg, hok, hno⟩ := kopfS_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
+      refine hno .bereich ?_
+      rw [semH_dann]
+      simp only [execBlockH, hv]
+      exact weiterH_logik _ _ _ _ _ _ _
+    · obtain ⟨H, HA, HU, σ, hg, hok, hno⟩ := kopfS_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
+      have he : e.orte ⊆ fussOrteG P (M.faeden t).kopf.f :=
+        fun _ h => hok.2.1 (List.mem_append_left _ h)
+      have ee := eval_gleichAuf e (fun _ h => expr_stabil (hFS _) e (fun _ h' => he h') h)
+        (hg.lese Λ Λ e.orte e.orte) ρ
+      have hv' : gleitPasst lo hi (gleitAusInt
+          (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n) = none := by
+        rw [ee]; exact hv
+      refine hno .bereich ?_
+      rw [semH_dann]
+      simp only [execBlockH, hv']
+      exact weiterH_logik _ _ _ _ _ _ _
+
+  · refine ⟨fun l Γ Λ ρ op l1 h1 l2 h2 lo hi a b rest hr hv => ?_,
+      fun l Γ Λ ρ q lo hi rest hr hv => ?_,
+      fun l Γ Λ ρ l1 h1 e lo hi rest hr hv => ?_⟩
+    · obtain ⟨H, HA, HU, σ, hg, hok, hno⟩ := kopfS_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
+      have hab : a.orte ++ b.orte ⊆ fussOrteG P (M.faeden t).kopf.f :=
+        fun _ h => hok.2 (List.mem_append_left _ h)
+      have hgl := hg.lese Λ Λ (a.orte ++ b.orte) (a.orte ++ b.orte)
+      have ea := eval_gleichAuf a (fun _ h => expr_stabil (hFS _) a
+        (fun _ h' => hab (List.mem_append_left _ h')) h) hgl ρ
+      have eb := eval_gleichAuf b (fun _ h => expr_stabil (hFS _) b
+        (fun _ h' => hab (List.mem_append_right _ h')) h) hgl ρ
+      have hv' : gleitPasst lo hi (gleitRechne op
+          (eval (σ.lese Λ (a.orte ++ b.orte)) a (σ.lese Λ (a.orte ++ b.orte)) ρ).x
+          (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ).x) = none := by
+        rw [ea, eb]; exact hv
+      refine hno .bereich ?_
+      simp only [semH, execEndH, hv']
+      rfl
+    · obtain ⟨H, HA, HU, σ, hg, hok, hno⟩ := kopfS_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
+      refine hno .bereich ?_
+      simp only [semH, execEndH, hv]
+      rfl
+    · obtain ⟨H, HA, HU, σ, hg, hok, hno⟩ := kopfS_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
+      have he : e.orte ⊆ fussOrteG P (M.faeden t).kopf.f :=
+        fun _ h => hok.2 (List.mem_append_left _ h)
+      have ee := eval_gleichAuf e (fun _ h => expr_stabil (hFS _) e (fun _ h' => he h') h)
+        (hg.lese Λ Λ e.orte e.orte) ρ
+      have hv' : gleitPasst lo hi (gleitAusInt
+          (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n) = none := by
+        rw [ee]; exact hv
+      refine hno .bereich ?_
+      simp only [semH, execEndH, hv']
+      rfl
 
 /-- **On every reachable machine every thread passes its float range checks**, for any set
     of local carriers with the rely `LokOk` (the premises of `zielInvS_erreichbarL`). -/

@@ -74,6 +74,11 @@ def Endblock.alsBlock {V : Vertrag D} {l : Bool} : {Γ : Ctx} → {Λ : List (Re
   -- an `if` of two end blocks is a check: true runs `t`, false the end block `e` (`Block.check`)
   | _, _, .ite c t e => ⟨t.alsBlock.1, .check c e t.alsBlock.2⟩
 
+  | _, _, .float op a b lo hi rest => ⟨rest.alsBlock.1, .float op a b lo hi rest.alsBlock.2⟩
+  | _, _, .floatLit q lo hi rest => ⟨rest.alsBlock.1, .floatLit q lo hi rest.alsBlock.2⟩
+  | _, _, .floatOf e lo hi rest => ⟨rest.alsBlock.1, .floatOf e lo hi rest.alsBlock.2⟩
+  | _, _, .floatNarrow e lo hi sonst rest => ⟨rest.alsBlock.1, .floatNarrow e lo hi sonst rest.alsBlock.2⟩
+
 /-- The residue of a running frame: what is left to do. `ende` is a plain
     end block; `dann b k` runs the block `b` first, then `k`; `schrumpf`
     drops one bound value from the environment; `frei L` releases the lock
@@ -398,5 +403,30 @@ theorem Endblock.execBlock_alsBlock (O : Orakel D) (passes : Nat)
       · rfl
   | _, _, .retScoped _ _, _, _ => rfl
   | _, _, .retWhyScoped _ _, _, _ => rfl
+
+  | _, _, .float op a b lo hi rest, σ, ρ => by
+    simp only [Endblock.alsBlock, execBlock, execEnd]
+    split
+    · rw [Endblock.execBlock_alsBlock O passes R rest]
+      cases execEnd O passes R rest _ _ <;> rfl
+    · rfl
+  | _, _, .floatLit q lo hi rest, σ, ρ => by
+    simp only [Endblock.alsBlock, execBlock, execEnd]
+    split
+    · rw [Endblock.execBlock_alsBlock O passes R rest]
+      cases execEnd O passes R rest _ _ <;> rfl
+    · rfl
+  | _, _, .floatOf e lo hi rest, σ, ρ => by
+    simp only [Endblock.alsBlock, execBlock, execEnd]
+    split
+    · rw [Endblock.execBlock_alsBlock O passes R rest]
+      cases execEnd O passes R rest _ _ <;> rfl
+    · rfl
+  | _, _, .floatNarrow e lo hi sonst rest, σ, ρ => by
+    simp only [Endblock.alsBlock, execBlock, execEnd]
+    split
+    · rw [Endblock.execBlock_alsBlock O passes R rest]
+      cases execEnd O passes R rest _ _ <;> rfl
+    · rfl
 
 end Gabbro.Grammatik

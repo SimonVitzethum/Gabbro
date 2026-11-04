@@ -213,5 +213,9 @@ def spiegelE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .retWhyScoped .. => false
   | .exchange .. => false
   | .ite .. => false
+  | .float _ _ _ _ _ rest => spiegelE rest
+  | .floatLit _ _ _ rest => spiegelE rest
+  | .floatOf _ _ _ rest => spiegelE rest
+  | .floatNarrow _ _ _ sonst rest => spiegelE sonst && spiegelE rest
 end
 end Gabbro.Grammatik

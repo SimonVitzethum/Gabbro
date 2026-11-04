@@ -198,6 +198,18 @@ theorem Endblock.ohneOrakel_alsBlock {V : Vertrag D} {l : Bool} :
       simp only [Endblock.alsBlock, Block.ohneOrakel, Endblock.ohneOrakel,
         Endblock.ohneOrakel_alsBlock t, Bool.and_comm]
 
+  | _, _, .float op a b lo hi rest => by
+      simp only [Endblock.alsBlock, Block.ohneOrakel, Endblock.ohneOrakel,
+        Endblock.ohneOrakel_alsBlock rest]
+  | _, _, .floatLit q lo hi rest => by
+      simp only [Endblock.alsBlock, Block.ohneOrakel, Endblock.ohneOrakel,
+        Endblock.ohneOrakel_alsBlock rest]
+  | _, _, .floatOf e lo hi rest => by
+      simp only [Endblock.alsBlock, Block.ohneOrakel, Endblock.ohneOrakel,
+        Endblock.ohneOrakel_alsBlock rest]
+  | _, _, .floatNarrow e lo hi sonst rest => by
+      simp only [Endblock.alsBlock, Block.ohneOrakel, Endblock.ohneOrakel,
+        Endblock.ohneOrakel_alsBlock rest]
 /-- A covered end block run as a block is a covered block. -/
 theorem EndG.alsBlock {V : Vertrag D} {A : D.Lock → Prop} :
     ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {e : Endblock D V l Γ Λ},
@@ -205,6 +217,15 @@ theorem EndG.alsBlock {V : Vertrag D} {A : D.Lock → Prop} :
   | _, _, _, _, .ret e hΛ => .cons _ _ (.ret e hΛ) .nil
   | _, _, _, _, .cons s _ hs hr => .cons s _ hs (EndG.alsBlock hr)
   | _, _, _, _, .bind e _ hr => .bind e _ (EndG.alsBlock hr)
+
+  | _, _, _, _, .float op a b lo hi _ hr => .float op a b lo hi _ (EndG.alsBlock hr)
+
+  | _, _, _, _, .floatLit q lo hi _ hr => .floatLit q lo hi _ (EndG.alsBlock hr)
+
+  | _, _, _, _, .floatOf e lo hi _ hr => .floatOf e lo hi _ (EndG.alsBlock hr)
+
+  | _, _, _, _, .floatNarrow e lo hi sonst _ hs hr => .floatNarrow e lo hi sonst _ hs (EndG.alsBlock hr)
+
 
 /-- An end block run as a block in front of any continuation means the end
     block (it never ends normally). -/

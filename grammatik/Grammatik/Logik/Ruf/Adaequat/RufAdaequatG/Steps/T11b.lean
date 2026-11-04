@@ -250,6 +250,16 @@ theorem trav_ende_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
       (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); (try have hleaf := ‹Stmt.istBlatt _ = true›); (try have hstep := ‹execStmt _ _ _ _ _ _ = _›); kopfweg
     | endeBindAxiomElseGrund =>
       (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); (try have hleaf := ‹Stmt.istBlatt _ = true›); (try have hstep := ‹execStmt _ _ _ _ _ _ = _›); kopfweg
+    | endeGleit l Γ Λ l₁ h₁ l₂ h₂ op a b lo hi rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); (try have hleaf := ‹Stmt.istBlatt _ = true›); (try have hstep := ‹execStmt _ _ _ _ _ _ = _›); kopfweg
+    | endeGleitLit l Γ Λ q lo hi rest ρ hhead v hv =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); (try have hleaf := ‹Stmt.istBlatt _ = true›); (try have hstep := ‹execStmt _ _ _ _ _ _ = _›); kopfweg
+    | endeGleitVon l Γ Λ l₁ h₁ e lo hi rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); (try have hleaf := ‹Stmt.istBlatt _ = true›); (try have hstep := ‹execStmt _ _ _ _ _ _ = _›); kopfweg
+    | endeGleitNarrowOk l Γ Λ l₁ h₁ e lo hi sonst rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); (try have hleaf := ‹Stmt.istBlatt _ = true›); (try have hstep := ‹execStmt _ _ _ _ _ _ = _›); kopfweg
+    | endeGleitNarrowElse l Γ Λ l₁ h₁ e lo hi sonst rest ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); (try have hleaf := ‹Stmt.istBlatt _ = true›); (try have hstep := ‹execStmt _ _ _ _ _ _ = _›); kopfweg
   | g7 hs =>
     cases hs with
     | dannVerbrauch =>

@@ -1,24 +1,22 @@
 module
+public import Grammatik.Kern.Syntax.Satz.T4.Teil2EndFloat
 public import Grammatik.Kern.Syntax.Satz.T4.Teil2Context
 public import Grammatik.Kern.Syntax.Satz.T4.ReturnInventory
 @[expose] public section
 namespace Gabbro.Grammatik
 variable {D : Deklaration} {V : Vertrag D}
 section Rumpf
-variable (O : Orakel D) (passes : Nat)
-variable (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (hR : GutR R) (hO : GutO O)
+variable (O : Orakel D) (passes : Nat) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (hR : GutR R) (hO : GutO O)
 include hR hO
 set_option linter.unusedSectionVars false
 set_option hygiene false in
-local macro "scopes_gut" : tactic => `(tactic| first
-  | exact hscope
+local macro "scopes_gut" : tactic => `(tactic| first | exact hscope
   | (have hsc := hscope
      dsimp only [Stmt.ScopesOk, Block.ScopesOk, Endblock.ScopesOk, Arms.ScopesOk, GrundArms.ScopesOk] at hsc
      simp only [Stmt.scopesOk, Block.scopesOk, Endblock.scopesOk, Arms.scopesOk, GrundArms.scopesOk, Bool.and_eq_true] at hsc
      first | exact hsc | exact hsc.1 | exact hsc.2 | exact hsc.2.1 | exact hsc.2.2 | exact hsc.1.1 | exact hsc.1.2))
 mutual
-/-- Statement frame and trace: only writable carriers may change, ordinary outcomes keep the held locks, returns release only checked scopes, and every new event carries its guards. -/
-theorem stmt_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
+/-- Statement frame and trace: only writable carriers may change, ordinary outcomes keep the held locks, returns release only checked scopes, and every new event carries its guards. -/ theorem stmt_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
     ∀ (s : Stmt D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ), s.BodenOk bo → s.ScopesOk →
     ResidHeld V Λ → HeldB bo Λ σ.haelt →
     GutAusgang V.schreibt V.gschreibt σ (execStmt O passes R s σ ρ)
@@ -480,6 +478,10 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       simp only [execEnd] at h ⊢; have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ c.orte_darf hh.heldIn; by_cases hc : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = true <;> simp only [hc, ite_true, ite_false, Bool.true_eq_false, Bool.false_eq_true] at h ⊢
       · exact (GutEnd.vor hl (end_gutB bo hbV t _ ρ (by boden_tac) (by scopes_gut) hresid (hl.heldB hh))) σ' h
       · exact (GutEnd.vor hl (end_gutB bo hbV e _ ρ (by boden_tac) (by scopes_gut) hresid (hl.heldB hh))) σ' h
+  | .float op a b lo hi rest, σ, ρ, hbo, hscope, hresid, hh, σ', h => end_gutB_float O passes R hR hO bo hbV op a b lo hi rest (end_gutB bo hbV rest) σ ρ hbo hscope hresid hh σ' h
+  | .floatLit q lo hi rest, σ, ρ, hbo, hscope, hresid, hh, σ', h => end_gutB_floatLit O passes R hR hO bo hbV q lo hi rest (end_gutB bo hbV rest) σ ρ hbo hscope hresid hh σ' h
+  | .floatOf e lo hi rest, σ, ρ, hbo, hscope, hresid, hh, σ', h => end_gutB_floatOf O passes R hR hO bo hbV e lo hi rest (end_gutB bo hbV rest) σ ρ hbo hscope hresid hh σ' h
+  | .floatNarrow e lo hi sonst rest, σ, ρ, hbo, hscope, hresid, hh, σ', h => end_gutB_floatNarrow O passes R hR hO bo hbV e lo hi sonst rest (end_gutB bo hbV rest) (end_gutB bo hbV sonst) σ ρ hbo hscope hresid hh σ' h
 theorem arms_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
     ∀ (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),
     arms.BodenOk bo → arms.ScopesOk →

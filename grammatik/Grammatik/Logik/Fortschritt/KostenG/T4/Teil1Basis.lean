@@ -212,6 +212,20 @@ theorem spiegel_end (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ
   | .exchange .., h => by simp only [spiegelE, Bool.false_eq_true] at h
   | .ite .., h => by simp only [spiegelE, Bool.false_eq_true] at h
 
+  | .float _ _ _ _ _ rest, h => by
+      have h1 := spiegel_end c pa rest h
+      simp only [kostenEnd, kostenKE, zusatzE]; omega
+  | .floatLit _ _ _ rest, h => by
+      have h1 := spiegel_end c pa rest h
+      simp only [kostenEnd, kostenKE, zusatzE]; omega
+  | .floatOf _ _ _ rest, h => by
+      have h1 := spiegel_end c pa rest h
+      simp only [kostenEnd, kostenKE, zusatzE]; omega
+  | .floatNarrow _ _ _ sonst rest, h => by
+      simp only [spiegelE, Bool.and_eq_true] at h
+      have h1 := spiegel_sonst c pa sonst h.1
+      have h2 := spiegel_end c pa rest h.2
+      simp only [kostenEnd, kostenKE, zusatzE]; omega
 theorem spiegel_sonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} :
     (e : Endblock D V l Γ Λ) → spiegelE e = true →
@@ -259,6 +273,21 @@ theorem spiegel_sonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {
   | .retWhyScoped .., h => by simp only [spiegelE, Bool.false_eq_true] at h
   | .exchange .., h => by simp only [spiegelE, Bool.false_eq_true] at h
   | .ite .., h => by simp only [spiegelE, Bool.false_eq_true] at h
+  | .float _ _ _ _ _ rest, h => by
+      have h1 := spiegel_sonst c pa rest h
+      simp only [kostenSonst, kostenKE, zusatzSonst]; omega
+  | .floatLit _ _ _ rest, h => by
+      have h1 := spiegel_sonst c pa rest h
+      simp only [kostenSonst, kostenKE, zusatzSonst]; omega
+  | .floatOf _ _ _ rest, h => by
+      have h1 := spiegel_sonst c pa rest h
+      simp only [kostenSonst, kostenKE, zusatzSonst]; omega
+  | .floatNarrow _ _ _ sonst rest, h => by
+      simp only [spiegelE, Bool.and_eq_true] at h
+      have h1 := spiegel_sonst c pa sonst h.1
+      have h2 := spiegel_sonst c pa rest h.2
+      simp only [kostenSonst, kostenKE, zusatzSonst]; omega
+
 end
 
 end Gabbro.Grammatik

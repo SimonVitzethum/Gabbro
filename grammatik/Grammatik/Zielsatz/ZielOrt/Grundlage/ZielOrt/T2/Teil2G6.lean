@@ -199,6 +199,9 @@ theorem schritt_traeger_g6 (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
           rw [hfr.2 x ha, hs₁]
           rfl
 
+  | endeGleit | endeGleitLit | endeGleitVon | endeGleitNarrowOk | endeGleitNarrowElse =>
+      exact traegerGleich_refl _ c
+
 end Sperren
 
 end Gabbro.Grammatik

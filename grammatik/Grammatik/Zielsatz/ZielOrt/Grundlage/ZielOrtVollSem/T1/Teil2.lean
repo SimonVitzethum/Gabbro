@@ -145,6 +145,18 @@ theorem Endblock.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
       simp only [Endblock.kOk, Endblock.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨Endblock.vOk_of_kOk e h.2, Endblock.vOk_of_kOk t h.1⟩
 
+  | .float _ _ _ _ _ rest, h => by
+      simp only [Endblock.kOk, Endblock.vOk] at h ⊢
+      exact Endblock.vOk_of_kOk rest h
+  | .floatLit _ _ _ rest, h => by
+      simp only [Endblock.kOk, Endblock.vOk] at h ⊢
+      exact Endblock.vOk_of_kOk rest h
+  | .floatOf _ _ _ rest, h => by
+      simp only [Endblock.kOk, Endblock.vOk] at h ⊢
+      exact Endblock.vOk_of_kOk rest h
+  | .floatNarrow _ _ _ sonst rest, h => by
+      simp only [Endblock.kOk, Endblock.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨Endblock.vOk_of_kOk sonst h.1, Endblock.vOk_of_kOk rest h.2⟩
 theorem Arms.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → a.kOk = true → a.vOk K = true

@@ -1,5 +1,8 @@
 /- Part 2 of 3 of `ZielOrtBeweis` (split by instrumente/teile/lean-teilen.py; the umbrella `ZielOrtBeweis.lean` imports all parts). -/
 module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.AkteurFaelle.EndFloat.Teil7
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.AkteurFaelle.EndFloat.Teil6Basis
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.AkteurFaelle.EndFloat.Teil6
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.T1
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.T1a
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.AkteurFaelle.Teil9
@@ -181,6 +184,17 @@ theorem akteur (hK : ∀ f, KoerperGut P O passes f) (hFrag : ∀ f, (P.rumpf f)
     | _ =>
       exact absurd (kopf_okZ hF.1 ‹(M.faeden u).kopf.rest = _›)
         (by simp only [GRest.okZ, Endblock.kOk, Bool.false_eq_true, false_and, not_false_eq_true, Block.kOk, Stmt.kOk, Bool.false_and, and_false, and_self])
+    | endeGleit l Γ Λ l₁ h₁ l₂ h₂ op a b lo hi rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+      exact akteur_endeGleit (D := D) (P := P) (O := O) (passes := passes) (hK := hK) (hFrag := hFrag) (e0 := e0) (M := M) (u := u) (hF := hF) (hL := hL) (l := l) (Γ := Γ) (Λ := Λ) (l₁ := l₁) (h₁ := h₁) (l₂ := l₂) (h₂ := h₂) (op := op) (a := a) (b := b) (lo := lo) (hi := hi) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ)
+    | endeGleitLit l Γ Λ q lo hi rest ρ hhead v hv =>
+      exact akteur_endeGleitLit (D := D) (P := P) (O := O) (passes := passes) (hK := hK) (hFrag := hFrag) (e0 := e0) (M := M) (u := u) (hF := hF) (hL := hL) (l := l) (Γ := Γ) (Λ := Λ) (q := q) (lo := lo) (hi := hi) (rest := rest) (ρ := ρ) (hhead := hhead) (v := v) (hv := hv)
+    | endeGleitVon l Γ Λ l₁ h₁ e lo hi rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+      exact akteur_endeGleitVon (D := D) (P := P) (O := O) (passes := passes) (hK := hK) (hFrag := hFrag) (e0 := e0) (M := M) (u := u) (hF := hF) (hL := hL) (l := l) (Γ := Γ) (Λ := Λ) (l₁ := l₁) (h₁ := h₁) (e := e) (lo := lo) (hi := hi) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ)
+    | endeGleitNarrowOk l Γ Λ l₁ h₁ e lo hi sonst rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+      exact akteur_endeGleitNarrowOk (D := D) (P := P) (O := O) (passes := passes) (hK := hK) (hFrag := hFrag) (e0 := e0) (M := M) (u := u) (hF := hF) (hL := hL) (l := l) (Γ := Γ) (Λ := Λ) (l₁ := l₁) (h₁ := h₁) (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ)
+    | endeGleitNarrowElse l Γ Λ l₁ h₁ e lo hi sonst rest ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
+      exact akteur_endeGleitNarrowElse (D := D) (P := P) (O := O) (passes := passes) (hK := hK) (hFrag := hFrag) (e0 := e0) (M := M) (u := u) (hF := hF) (hL := hL) (l := l) (Γ := Γ) (Λ := Λ) (l₁ := l₁) (h₁ := h₁) (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (hn := hn) (neu := neu) (hneu := hneu) (hΛ := hΛ)
+    -- pushes
   | g7 hs => exact akteur_gruppe7 hK e0 hs hF hL
 
 end Akteur

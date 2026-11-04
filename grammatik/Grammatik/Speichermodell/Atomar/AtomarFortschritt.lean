@@ -125,47 +125,87 @@ theorem fadenSA_bereich (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     {M : RufMaschineG D} (t : Faden)
     (hF : FadenSA P O passes Q S lok Tg m zyk (M.faeden t) (M.weltVon t)) :
     BereichG M t := by
-  refine ⟨fun l Γ Λ Λ' ρ op l1 h1 l2 h2 lo hi a b rest k hr hv => ?_,
-    fun l Γ Λ Λ' ρ q lo hi rest k hr hv => ?_,
-    fun l Γ Λ Λ' ρ l1 h1 e lo hi rest k hr hv => ?_⟩
-  · obtain ⟨H, HA, HU, HX, σ, hfx, hkx, hg, hok, hno⟩ :=
-      kopfSA_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
-    have hab : a.orte ++ b.orte ⊆ fussOrteG P (M.faeden t).kopf.f :=
-      fun _ h => hok.2.1 (List.mem_append_left _ h)
-    have hd : ∀ o ∈ a.orte ++ b.orte, OrtDarf Λ o := fun o ho =>
-      (List.mem_append.mp ho).elim (a.orte_darf o) (b.orte_darf o)
-    obtain ⟨HX', hfx', _, hsub, hrec⟩ :=
-      lese_schritt Tg hfx hkx Λ (a.orte ++ b.orte) (M.weltVon t).speicher
-    have hPX := umweltAusA_passt Tg hfx'
-    have hHA := umweltAusA_ok Tg HX'
-    have hgl := mischT_gleichAuf hg (orte_stabilX (hFS _) hd hab) Λ Λ
-    have ea := eval_gleichAuf a (fun _ h => List.mem_append_right _ (List.mem_append_left _ h))
-      hgl ρ
-    have eb := eval_gleichAuf b (fun _ h => List.mem_append_right _ (List.mem_append_right _ h))
-      hgl ρ
-    refine hno _ (passtX_teil hsub hPX) hHA .bereich ?_
-    rw [semHA_dann]
-    simp only [execBlockHA, hrec _ hPX hHA, ea, eb, hv]
-    exact weiterHA_logik _ _ _ _ _ _ _ _
-  · obtain ⟨H, HA, HU, HX, σ, hfx, hkx, hg, hok, hno⟩ :=
-      kopfSA_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
-    refine hno _ (umweltAusA_passt Tg hfx) (umweltAusA_ok Tg HX) .bereich ?_
-    rw [semHA_dann]
-    simp only [execBlockHA, hv]
-    exact weiterHA_logik _ _ _ _ _ _ _ _
-  · obtain ⟨H, HA, HU, HX, σ, hfx, hkx, hg, hok, hno⟩ :=
-      kopfSA_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
-    have he : e.orte ⊆ fussOrteG P (M.faeden t).kopf.f :=
-      fun _ h => hok.2.1 (List.mem_append_left _ h)
-    obtain ⟨HX', hfx', _, hsub, hrec⟩ := lese_schritt Tg hfx hkx Λ e.orte (M.weltVon t).speicher
-    have hPX := umweltAusA_passt Tg hfx'
-    have hHA := umweltAusA_ok Tg HX'
-    have ee := eval_gleichAuf e (fun _ h => List.mem_append_right _ h)
-      (mischT_gleichAuf hg (expr_stabilX (hFS _) e he) Λ Λ) ρ
-    refine hno _ (passtX_teil hsub hPX) hHA .bereich ?_
-    rw [semHA_dann]
-    simp only [execBlockHA, hrec _ hPX hHA, ee, hv]
-    exact weiterHA_logik _ _ _ _ _ _ _ _
+  constructor
+  · refine ⟨fun l Γ Λ Λ' ρ op l1 h1 l2 h2 lo hi a b rest k hr hv => ?_,
+      fun l Γ Λ Λ' ρ q lo hi rest k hr hv => ?_,
+      fun l Γ Λ Λ' ρ l1 h1 e lo hi rest k hr hv => ?_⟩
+    · obtain ⟨H, HA, HU, HX, σ, hfx, hkx, hg, hok, hno⟩ :=
+        kopfSA_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
+      have hab : a.orte ++ b.orte ⊆ fussOrteG P (M.faeden t).kopf.f :=
+        fun _ h => hok.2.1 (List.mem_append_left _ h)
+      have hd : ∀ o ∈ a.orte ++ b.orte, OrtDarf Λ o := fun o ho =>
+        (List.mem_append.mp ho).elim (a.orte_darf o) (b.orte_darf o)
+      obtain ⟨HX', hfx', _, hsub, hrec⟩ :=
+        lese_schritt Tg hfx hkx Λ (a.orte ++ b.orte) (M.weltVon t).speicher
+      have hPX := umweltAusA_passt Tg hfx'
+      have hHA := umweltAusA_ok Tg HX'
+      have hgl := mischT_gleichAuf hg (orte_stabilX (hFS _) hd hab) Λ Λ
+      have ea := eval_gleichAuf a (fun _ h => List.mem_append_right _ (List.mem_append_left _ h))
+        hgl ρ
+      have eb := eval_gleichAuf b (fun _ h => List.mem_append_right _ (List.mem_append_right _ h))
+        hgl ρ
+      refine hno _ (passtX_teil hsub hPX) hHA .bereich ?_
+      rw [semHA_dann]
+      simp only [execBlockHA, hrec _ hPX hHA, ea, eb, hv]
+      exact weiterHA_logik _ _ _ _ _ _ _ _
+    · obtain ⟨H, HA, HU, HX, σ, hfx, hkx, hg, hok, hno⟩ :=
+        kopfSA_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
+      refine hno _ (umweltAusA_passt Tg hfx) (umweltAusA_ok Tg HX) .bereich ?_
+      rw [semHA_dann]
+      simp only [execBlockHA, hv]
+      exact weiterHA_logik _ _ _ _ _ _ _ _
+    · obtain ⟨H, HA, HU, HX, σ, hfx, hkx, hg, hok, hno⟩ :=
+        kopfSA_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
+      have he : e.orte ⊆ fussOrteG P (M.faeden t).kopf.f :=
+        fun _ h => hok.2.1 (List.mem_append_left _ h)
+      obtain ⟨HX', hfx', _, hsub, hrec⟩ := lese_schritt Tg hfx hkx Λ e.orte (M.weltVon t).speicher
+      have hPX := umweltAusA_passt Tg hfx'
+      have hHA := umweltAusA_ok Tg HX'
+      have ee := eval_gleichAuf e (fun _ h => List.mem_append_right _ h)
+        (mischT_gleichAuf hg (expr_stabilX (hFS _) e he) Λ Λ) ρ
+      refine hno _ (passtX_teil hsub hPX) hHA .bereich ?_
+      rw [semHA_dann]
+      simp only [execBlockHA, hrec _ hPX hHA, ee, hv]
+      exact weiterHA_logik _ _ _ _ _ _ _ _
+
+  · refine ⟨fun l Γ Λ ρ op l1 h1 l2 h2 lo hi a b rest hr hv => ?_,
+      fun l Γ Λ ρ q lo hi rest hr hv => ?_,
+      fun l Γ Λ ρ l1 h1 e lo hi rest hr hv => ?_⟩
+    · obtain ⟨H, HA, HU, HX, σ, hfx, hkx, hg, hok, hno⟩ :=
+        kopfSA_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
+      have hab : a.orte ++ b.orte ⊆ fussOrteG P (M.faeden t).kopf.f :=
+        fun _ h => hok.2 (List.mem_append_left _ h)
+      have hd : ∀ o ∈ a.orte ++ b.orte, OrtDarf Λ o := fun o ho =>
+        (List.mem_append.mp ho).elim (a.orte_darf o) (b.orte_darf o)
+      obtain ⟨HX', hfx', _, hsub, hrec⟩ :=
+        lese_schritt Tg hfx hkx Λ (a.orte ++ b.orte) (M.weltVon t).speicher
+      have hPX := umweltAusA_passt Tg hfx'
+      have hHA := umweltAusA_ok Tg HX'
+      have hgl := mischT_gleichAuf hg (orte_stabilX (hFS _) hd hab) Λ Λ
+      have ea := eval_gleichAuf a (fun _ h => List.mem_append_right _ (List.mem_append_left _ h))
+        hgl ρ
+      have eb := eval_gleichAuf b (fun _ h => List.mem_append_right _ (List.mem_append_right _ h))
+        hgl ρ
+      refine hno _ (passtX_teil hsub hPX) hHA .bereich ?_
+      simp only [semHA, execEndHA, hrec _ hPX hHA, ea, eb, hv]
+      rfl
+    · obtain ⟨H, HA, HU, HX, σ, hfx, hkx, hg, hok, hno⟩ :=
+        kopfSA_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
+      refine hno _ (umweltAusA_passt Tg hfx) (umweltAusA_ok Tg HX) .bereich ?_
+      simp only [semHA, execEndHA, hv]
+      rfl
+    · obtain ⟨H, HA, HU, HX, σ, hfx, hkx, hg, hok, hno⟩ :=
+        kopfSA_keineLogik' hO hRL hQ hS hsp hK hF.1 hr
+      have he : e.orte ⊆ fussOrteG P (M.faeden t).kopf.f :=
+        fun _ h => hok.2 (List.mem_append_left _ h)
+      obtain ⟨HX', hfx', _, hsub, hrec⟩ := lese_schritt Tg hfx hkx Λ e.orte (M.weltVon t).speicher
+      have hPX := umweltAusA_passt Tg hfx'
+      have hHA := umweltAusA_ok Tg HX'
+      have ee := eval_gleichAuf e (fun _ h => List.mem_append_right _ h)
+        (mischT_gleichAuf hg (expr_stabilX (hFS _) e he) Λ Λ) ρ
+      refine hno _ (passtX_teil hsub hPX) hHA .bereich ?_
+      simp only [semHA, execEndHA, hrec _ hPX hHA, ee, hv]
+      rfl
 
 end Bereich
 

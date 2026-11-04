@@ -87,6 +87,10 @@ def fremdEnd (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx
   | .exchange _ _ _ _ rest => fremdEnd fa pa rest
   -- as `Block.check` (`Endblock.alsBlock`)
   | .ite _ t e => fremdEnd fa pa e + fremdEnd fa pa t
+  | .float _ _ _ _ _ rest => fremdEnd fa pa rest
+  | .floatLit _ _ _ rest => fremdEnd fa pa rest
+  | .floatOf _ _ _ rest => fremdEnd fa pa rest
+  | .floatNarrow _ _ _ sonst rest => fremdEnd fa pa sonst + fremdEnd fa pa rest
 end
 /-- The §1 cost plus the declared foreign cost, per statement form. -/
 def kostenStmtF (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool}

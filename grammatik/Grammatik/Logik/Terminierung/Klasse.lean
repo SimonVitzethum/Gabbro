@@ -235,6 +235,10 @@ def befE {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ebene imEwig : Bool) : Endbl
   | .exchange _ _ _ _ rest => befE ebene imEwig rest
   | .ite _ t e => befE ebene imEwig e ++ befE ebene imEwig t
 
+  | .float _ _ _ _ _ rest => befE ebene imEwig rest
+  | .floatLit _ _ _ rest => befE ebene imEwig rest
+  | .floatOf _ _ _ rest => befE ebene imEwig rest
+  | .floatNarrow _ _ _ sonst rest => befE ebene imEwig sonst ++ befE ebene imEwig rest
 end
 
 end Falten

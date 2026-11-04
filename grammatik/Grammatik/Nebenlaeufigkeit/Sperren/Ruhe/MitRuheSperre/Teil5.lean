@@ -242,6 +242,14 @@ theorem execEndH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res 
       execEndH_ru_exchange (g := g) (neu := neu) (hw := hw) (hL := hL) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndH_ru_rest := execEndH_ru rest) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
   | _, _, Λ, .ite c t e, σ, ρ =>
       execEndH_ru_ite (c := c) (t := t) (e := e) (σ := σ) (ρ := ρ) (ih_execEndH_ru_e := execEndH_ru e) (ih_execEndH_ru_t := execEndH_ru t) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
+  | _, _, Λ, .float op a b lo hi rest, σ, ρ =>
+      execEndH_ru_float (op := op) (a := a) (b := b) (lo := lo) (hi := hi) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndH_ru_rest := execEndH_ru rest) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
+  | _, _, _, .floatLit q lo hi rest, σ, ρ =>
+      execEndH_ru_floatLit (q := q) (lo := lo) (hi := hi) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndH_ru_rest := execEndH_ru rest) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
+  | _, _, Λ, .floatOf e lo hi rest, σ, ρ =>
+      execEndH_ru_floatOf (e := e) (lo := lo) (hi := hi) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndH_ru_rest := execEndH_ru rest) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
+  | _, _, Λ, .floatNarrow e lo hi sonst rest, σ, ρ =>
+      execEndH_ru_floatNarrow (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndH_ru_rest := execEndH_ru rest) (ih_execEndH_ru_sonst := execEndH_ru sonst) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
 theorem execArmsH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))
     (σ : World D) (ρ : Env D Γ),

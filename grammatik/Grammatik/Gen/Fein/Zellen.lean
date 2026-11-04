@@ -218,6 +218,10 @@ def kEnd {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D 
   | .bindAxiomOpt .. => 21
   | .bindAxiomOptElse .. => 22
 
+  | .float .. => 23
+  | .floatLit .. => 24
+  | .floatOf .. => 25
+  | .floatNarrow .. => 26
 def kArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Nat
   | .nil .. => 0
   | .cons .. => 1
@@ -390,6 +394,10 @@ def fzEnd {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D
   | .bindAxiomOpt (args := args) (rest := rest) .. => [⟨0, 6, 21, l, []⟩, ⟨1, 6, 21, l, [0, 2, kA args]⟩, ⟨1, 6, 21, l, [1, 6, kEnd rest]⟩] ++ fzA args ++ fzEnd rest
   | .bindAxiomOptElse (args := args) (err := err) (rest := rest) .. => [⟨0, 6, 22, l, []⟩, ⟨1, 6, 22, l, [0, 2, kA args]⟩, ⟨1, 6, 22, l, [1, 6, kEnd err]⟩, ⟨1, 6, 22, l, [2, 6, kEnd rest]⟩] ++ fzA args ++ fzEnd err ++ fzEnd rest
 
+  | .float (a := a) (b := b) (rest := rest) .. => [⟨0, 6, 23, l, [tk a, tk b]⟩, ⟨1, 6, 23, l, [0, 0, kE a]⟩, ⟨1, 6, 23, l, [1, 0, kE b]⟩, ⟨1, 6, 23, l, [2, 6, kEnd rest]⟩] ++ fzE a ++ fzE b ++ fzEnd rest
+  | .floatLit (rest := rest) .. => [⟨0, 6, 24, l, []⟩, ⟨1, 6, 24, l, [0, 6, kEnd rest]⟩] ++ fzEnd rest
+  | .floatOf (e := e) (rest := rest) .. => [⟨0, 6, 25, l, [tk e]⟩, ⟨1, 6, 25, l, [0, 0, kE e]⟩, ⟨1, 6, 25, l, [1, 6, kEnd rest]⟩] ++ fzE e ++ fzEnd rest
+  | .floatNarrow (e := e) (sonst := sonst) (rest := rest) .. => [⟨0, 6, 26, l, [tk e]⟩, ⟨1, 6, 26, l, [0, 0, kE e]⟩, ⟨1, 6, 26, l, [1, 6, kEnd sonst]⟩, ⟨1, 6, 26, l, [2, 6, kEnd rest]⟩] ++ fzE e ++ fzEnd sonst ++ fzEnd rest
 def fzArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → List FZelle
   | .nil .. => [⟨0, 7, 0, l, []⟩]
   | .cons (b := b) (rest := rest) .. => [⟨0, 7, 1, l, []⟩, ⟨1, 7, 1, l, [0, 5, kB b]⟩, ⟨1, 7, 1, l, [1, 7, kArms rest]⟩] ++ fzB b ++ fzArms rest

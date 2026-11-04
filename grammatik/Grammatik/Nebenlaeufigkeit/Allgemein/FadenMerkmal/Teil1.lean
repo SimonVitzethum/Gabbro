@@ -147,6 +147,10 @@ def mE (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .narrowRequired _ _ _ rest => mE A rest
   | .exchange _ _ _ _ rest => mE A rest
   | .ite _ t e => mE A t && mE A e
+  | .float _ _ _ _ _ rest => mE A rest
+  | .floatLit _ _ _ rest => mE A rest
+  | .floatOf _ _ _ rest => mE A rest
+  | .floatNarrow _ _ _ sonst rest => mE A sonst && mE A rest
 end
 
 /-- **The residue predicate**: every block, end block and loop body still to
@@ -228,6 +232,14 @@ theorem mB_alsBlock (A : Merkmal D) :
   | _, _, .ite _ t _ => by
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A t, Bool.and_comm]
 
+  | _, _, .float op a b lo hi rest => by
+      simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
+  | _, _, .floatLit q lo hi rest => by
+      simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
+  | _, _, .floatOf e lo hi rest => by
+      simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
+  | _, _, .floatNarrow e lo hi sonst rest => by
+      simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
 theorem mB_armWahlG (A : Merkmal D) {Γ : Ctx} {Λ Λ' : List (Res D)} :
     ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
     mArms A arms = true → mB A (armWahlG arms v).2.1 = true

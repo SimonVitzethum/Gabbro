@@ -375,6 +375,14 @@ theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, .narrowRequired (lo := lo) (hi := hi) e lo' hi' rest, lb, st, st', blks, hlt, h =>
       lowerEnd_lbl_narrowRequired (lay := lay) (cenv := cenv) (lv := lv) (lo := lo) (hi := hi) (e := e) (lo' := lo') (hi' := hi') (rest := rest) (lb := lb) (st := st) (st' := st') (blks := blks) (hlt := hlt) (h := h)
         (ih_lowerEnd_lbl_rest := fun cenv' lb st st' blks hlt hk => lowerEnd_lbl lay cenv' lv rest lb st st' blks hlt hk)
+  | _, _, _, .float .., lb, st, st', blks, hlt, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .floatLit .., lb, st, st', blks, hlt, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .floatOf .., lb, st, st', blks, hlt, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .floatNarrow .., lb, st, st', blks, hlt, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
 /-- The arms of a `match` on a tagged value: arm `i` has entry label `lb + i` (below `st.l`), the counter
     hands out labels from `st.l`; all labels are distinct. -/
 theorem lowerAr_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : Int) (W L : Nat)

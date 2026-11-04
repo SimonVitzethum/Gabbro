@@ -342,6 +342,21 @@ theorem kein_schritt_ruhig {M M' : RufMaschineG D} {u : Faden}
     | endeBindAxiomElseGrund l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
       rw [hhead] at hRet
       simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
+    | endeGleit l Γ Λ l₁ h₁ l₂ h₂ op a b lo hi rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
+    | endeGleitLit l Γ Λ q lo hi rest ρ hhead v hv =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
+    | endeGleitVon l Γ Λ l₁ h₁ e lo hi rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
+    | endeGleitNarrowOk l Γ Λ l₁ h₁ e lo hi sonst rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
+    | endeGleitNarrowElse l Γ Λ l₁ h₁ e lo hi sonst rest ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
   | g7 hs =>
     cases hs with
     | dannVerbrauch =>

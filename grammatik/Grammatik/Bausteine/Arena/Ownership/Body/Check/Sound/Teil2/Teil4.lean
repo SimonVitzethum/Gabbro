@@ -310,6 +310,19 @@ theorem chkE_sound : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (eb : Endbloc
   | _, _, _, .exchange .., _, _, _, _, h => by simp only [chkE, Bool.false_eq_true] at h
   | _, _, _, .ite .., _, _, _, _, h => by simp only [chkE, Bool.false_eq_true] at h
 
+  | _, _, _, .float op a b lo hi rest, k, c, hk, hc, h => by
+    simp only [chkE, Bool.and_eq_true] at h
+    exact OE.float op a b lo hi rest h.1.1 h.1.2 (chkE_sound rest k _ hk (Context.bindNone_bounded hc) h.2)
+  | _, _, _, .floatLit q lo hi rest, k, c, hk, hc, h => by
+    simp only [chkE, Bool.and_eq_true] at h
+    exact OE.floatLit q lo hi rest (chkE_sound rest k _ hk (Context.bindNone_bounded hc) h)
+  | _, _, _, .floatOf e lo hi rest, k, c, hk, hc, h => by
+    simp only [chkE, Bool.and_eq_true] at h
+    exact OE.floatOf e lo hi rest h.1 (chkE_sound rest k _ hk (Context.bindNone_bounded hc) h.2)
+  | _, _, _, .floatNarrow e lo hi sonst rest, k, c, hk, hc, h => by
+    simp only [chkE, Bool.and_eq_true] at h
+    exact OE.floatNarrow e lo hi sonst rest h.1.1 (chkE_sound sonst k c hk hc h.1.2) (chkE_sound rest k _ hk (Context.bindNone_bounded hc) h.2)
+
 theorem chkArms_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (arms : Arms D V l Γ Λ Λ' cs) (k c : Context),
     k.bounded → c.bounded → Supports (OArms A I out k c arms) (chkArms A I fs out arms k c)

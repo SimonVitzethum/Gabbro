@@ -1,8 +1,6 @@
-/-
-  Mutual run agreement-or-error induction over statements, blocks, terminal
-  blocks and arms. It threads entry discipline for RufLogika's gated calls.
--/
+/- Mutual run agreement or named error, retaining disciplined gated calls. -/
 module
+public import Grammatik.Logik.Vertraege.HandlerKongruenz.EndFloat
 
 public import Grammatik.Kern.Syntax.Satz
 public import Grammatik.Kern.Semantik.Semantik
@@ -464,6 +462,10 @@ theorem end_unter (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ c.orte
       exact EndUnter.ite (end_unter bo hbV t _ ρ hscope_t (hl.heldB hh))
         (end_unter bo hbV e _ ρ hscope_e (hl.heldB hh))
+  | .float op a b lo hi rest, σ, ρ, hs, hh => end_float_unter O passes R₁ R₂ hR hT₁ hO bo hbV op a b lo hi rest (fun σ ρ hs hh => end_unter bo hbV rest σ ρ hs hh) σ ρ hs hh
+  | .floatLit q lo hi rest, σ, ρ, hs, hh => end_floatLit_unter O passes R₁ R₂ hR hT₁ hO bo hbV q lo hi rest (fun σ ρ hs hh => end_unter bo hbV rest σ ρ hs hh) σ ρ hs hh
+  | .floatOf e lo hi rest, σ, ρ, hs, hh => end_floatOf_unter O passes R₁ R₂ hR hT₁ hO bo hbV e lo hi rest (fun σ ρ hs hh => end_unter bo hbV rest σ ρ hs hh) σ ρ hs hh
+  | .floatNarrow e lo hi sonst rest, σ, ρ, hs, hh => end_floatNarrow_unter O passes R₁ R₂ hR hT₁ hO bo hbV e lo hi sonst rest (fun σ ρ hs hh => end_unter bo hbV rest σ ρ hs hh) (fun σ ρ hs hh => end_unter bo hbV sonst σ ρ hs hh) σ ρ hs hh
 private theorem arms_unter_disz (bo : Option Int) (hbV : BodenUnter bo V.boden) :
     ∀ (a : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),
     a.ScopesOk → HeldB bo Λ σ.haelt →

@@ -260,4 +260,36 @@ theorem EndR.l_false {Λ : List (Res D)} {e : Endblock D V l Γ Λ} (h : EndR A 
   cases h <;> rfl
 
 end Inv
+theorem EndR.gleitLit_inv {Λ : List (Res D)} {q lo hi : Int × Int}
+    {rest : Endblock D V l (.fl lo hi :: Γ) Λ}
+    (h : EndR A C (.floatLit q lo hi rest)) : EndR A C rest := by
+  cases h with
+  | floatLit _ _ _ _ hr => exact hr
+
+
+theorem EndR.gleitVon_inv {Λ : List (Res D)} {l1 h1 : Int}
+    {e : Expr D Γ Λ (.int l1 h1)} {lo hi : Int × Int}
+    {rest : Endblock D V l (.fl lo hi :: Γ) Λ}
+    (h : EndR A C (.floatOf e lo hi rest)) : EndR A C rest := by
+  cases h with
+  | floatOf _ _ _ _ hr => exact hr
+
+
+theorem EndR.gleitNarrow_inv {Λ : List (Res D)} {l1 h1 : Int × Int}
+    {e : Expr D Γ Λ (.fl l1 h1)} {lo hi : Int × Int} {sonst : Endblock D V l Γ Λ}
+    {rest : Endblock D V l (.fl lo hi :: Γ) Λ}
+    (h : EndR A C (.floatNarrow e lo hi sonst rest)) :
+    EndR A C rest ∧ EndR A C sonst := by
+  cases h with
+  | floatNarrow _ _ _ _ _ hs hr => exact ⟨hr, hs⟩
+
+
+theorem EndR.gleit_inv {Λ : List (Res D)} {l1 h1 l2 h2 : Int × Int} {op : GleitOp}
+    {a : Expr D Γ Λ (.fl l1 h1)} {b : Expr D Γ Λ (.fl l2 h2)} {lo hi : Int × Int}
+    {rest : Endblock D V l (.fl lo hi :: Γ) Λ}
+    (h : EndR A C (.float op a b lo hi rest)) : EndR A C rest := by
+  cases h with
+  | float _ _ _ _ _ _ hr => exact hr
+
+
 end Gabbro.Grammatik

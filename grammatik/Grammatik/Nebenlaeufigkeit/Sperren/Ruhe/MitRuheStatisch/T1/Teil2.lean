@@ -169,6 +169,11 @@ theorem ruEnd_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀
   | _, _, _, .exchange _ _ _ _ rest => ruEnd_gOk K Rg rest
   | _, _, _, .ite _ t e => kongr₂ (· && ·) (ruEnd_gOk K Rg e) (ruEnd_gOk K Rg t)
 
+  | _, _, _, .float _ _ _ _ _ rest => ruEnd_gOk K Rg rest
+  | _, _, _, .floatLit _ _ _ rest => ruEnd_gOk K Rg rest
+  | _, _, _, .floatOf _ _ _ rest => ruEnd_gOk K Rg rest
+  | _, _, _, .floatNarrow _ _ _ sonst rest =>
+      kongr₂ (· && ·) (ruEnd_gOk K Rg sonst) (ruEnd_gOk K Rg rest)
 theorem ruArms_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀ {l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (arms : Arms D V l Γ Λ Λ' cs), Arms.gOk (D := D.mitRuhe) K Rg (ruArms arms) = arms.gOk (kZ K) Rg

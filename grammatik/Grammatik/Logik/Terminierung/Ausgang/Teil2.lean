@@ -426,6 +426,30 @@ theorem ohneAus_execEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : End
       · exact ohneAus_execEnd t eb h.2 _ _
       · exact ohneAus_execEnd e eb h.1 _ _
 
+  | _, _, _, .float _ _ _ _ _ rest, eb, h, σ, ρ => by
+      teile
+      simp only [execEnd]
+      split
+      · exact endOhneAus_schrumpf (ohneAus_execEnd rest eb h _ _)
+      · trivial
+  | _, _, _, .floatLit _ _ _ rest, eb, h, σ, ρ => by
+      teile
+      simp only [execEnd]
+      split
+      · exact endOhneAus_schrumpf (ohneAus_execEnd rest eb h _ _)
+      · trivial
+  | _, _, _, .floatOf _ _ _ rest, eb, h, σ, ρ => by
+      teile
+      simp only [execEnd]
+      split
+      · exact endOhneAus_schrumpf (ohneAus_execEnd rest eb h _ _)
+      · trivial
+  | _, _, _, .floatNarrow _ _ _ sonst rest, eb, h, σ, ρ => by
+      teile
+      simp only [execEnd]
+      split
+      · exact endOhneAus_schrumpf (ohneAus_execEnd rest eb h.2 _ _)
+      · exact (ohneAus_execEnd sonst eb h.1 _ _)
 theorem ohneAus_execArms : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (arms : Arms D V l Γ Λ Λ' cs) (eb : Bool), (befArms eb true arms).austritt = false →
       ∀ v σ ρ, OhneAus eb (execArms O passes R arms v σ ρ)

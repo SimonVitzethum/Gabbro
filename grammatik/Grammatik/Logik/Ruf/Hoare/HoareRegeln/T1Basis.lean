@@ -209,6 +209,23 @@ inductive EndOhneRuf : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} →
       (hr : EndOhneRuf rest) :
       EndOhneRuf (.bind e rest)
 
+  | float (op : GleitOp) (a : Expr D Γ Λ (.fl l1 h1)) (b : Expr D Γ Λ (.fl l2 h2))
+      (lo hi : Int × Int)
+      (rest : Endblock D V l (.fl lo hi :: Γ) Λ) (hr : EndOhneRuf rest) :
+      EndOhneRuf (.float op a b lo hi rest)
+  | floatLit (q : Int × Int) (lo hi : Int × Int)
+      (rest : Endblock D V l (.fl lo hi :: Γ) Λ) (hr : EndOhneRuf rest) :
+      EndOhneRuf (.floatLit q lo hi rest)
+  | floatOf (e : Expr D Γ Λ (.int l1 h1)) (lo hi : Int × Int)
+      (rest : Endblock D V l (.fl lo hi :: Γ) Λ) (hr : EndOhneRuf rest) :
+      EndOhneRuf (.floatOf e lo hi rest)
+  | floatNarrow (e : Expr D Γ Λ (.fl l1 h1)) (lo hi : Int × Int)
+      (sonst : Endblock D V l Γ Λ)
+      (rest : Endblock D V l (.fl lo hi :: Γ) Λ)
+      (he : EndOhneRuf sonst) (hr : EndOhneRuf rest) :
+      EndOhneRuf (.floatNarrow e lo hi sonst rest)
+
+
 inductive ArmsOhneRuf : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
     {cs : List (Option Ty)} → Arms D V l Γ Λ Λ' cs → Prop where
   | nil : ArmsOhneRuf .nil

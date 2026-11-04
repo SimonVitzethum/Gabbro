@@ -143,6 +143,11 @@ def endblockAtome (tabs : List D.Tab) (globs : List D.Glob)
   | .exchange _ _ _ _ rest => endblockAtome tabs globs rest
   | .ite _ t e => endblockAtome tabs globs e ++ endblockAtome tabs globs t
 
+  | .float _ _ _ _ _ rest => endblockAtome tabs globs rest
+  | .floatLit _ _ _ rest => endblockAtome tabs globs rest
+  | .floatOf _ _ _ rest => endblockAtome tabs globs rest
+  | .floatNarrow _ _ _ sonst rest =>
+      endblockAtome tabs globs sonst ++ endblockAtome tabs globs rest
 /-- The atoms of a case split: every arm may run. -/
 def armsAtome (tabs : List D.Tab) (globs : List D.Glob)
     {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}

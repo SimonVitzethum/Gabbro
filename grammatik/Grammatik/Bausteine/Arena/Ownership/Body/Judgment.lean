@@ -395,6 +395,27 @@ inductive OE (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Out
       (hrest : OE A I out k (resultContextB (c.afterCall (modeList J) (originList c args)) owner) rest) :
       OE A I out k c (.bindCallIndElse p args he hp hr err rest)
 
+  | float {l Γ Λ k c l1 h1 l2 h2} (op : GleitOp) (a : Expr D Γ Λ (.fl l1 h1))
+      (b : Expr D Γ Λ (.fl l2 h2)) (lo hi : Int × Int) (rest : Endblock D V l (.fl lo hi :: Γ) Λ)
+      (ha : checkExpression A c a = true) (hb : checkExpression A c b = true)
+      (hrest : OE A I out k (c.bind none) rest) :
+      OE A I out k c (.float op a b lo hi rest)
+  | floatLit {l Γ Λ k c} (q : Int × Int) (lo hi : Int × Int) (rest : Endblock D V l (.fl lo hi :: Γ) Λ)
+      (hrest : OE A I out k (c.bind none) rest) :
+      OE A I out k c (.floatLit q lo hi rest)
+  | floatOf {l Γ Λ k c l1 h1} (e : Expr D Γ Λ (.int l1 h1)) (lo hi : Int × Int)
+      (rest : Endblock D V l (.fl lo hi :: Γ) Λ) (he : checkExpression A c e = true)
+      (hrest : OE A I out k (c.bind none) rest) :
+      OE A I out k c (.floatOf e lo hi rest)
+  | floatNarrow {l Γ Λ k c l1 h1} (e : Expr D Γ Λ (.fl l1 h1)) (lo hi : Int × Int)
+      (sonst : Endblock D V l Γ Λ) (rest : Endblock D V l (.fl lo hi :: Γ) Λ)
+      (he : checkExpression A c e = true) (hs : OE A I out k c sonst)
+      (hrest : OE A I out k (c.bind none) rest) :
+      OE A I out k c (.floatNarrow e lo hi sonst rest)
+  /-- `let x = alloc A (…) else voll;` from the free list, as the executed form: narrow the free-list head into the
+      index range (else `voll`), the head takes the link of the binder, then any store that is no link. The binder is
+      a new owning origin. Recognised on the actual statements, whatever the payload. -/
+
 /-- **The arms of a `match` over a tagged value.** All arms end in one context. -/
 inductive OArms (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Output A V.erg) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option Ty)} →

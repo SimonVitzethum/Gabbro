@@ -224,6 +224,19 @@ theorem Endblock.execH_ohne {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [Endblock.ohneLocks, Bool.and_eq_true] at h
       simp only [execEndH, execEnd, Endblock.execH_ohne t h.1, Endblock.execH_ohne e h.2] <;> rfl
 
+  | .float op a b lo hi rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks] at h
+      simp only [execEndH, execEnd, Endblock.execH_ohne rest h] <;> rfl
+  | .floatLit q lo hi rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks] at h
+      simp only [execEndH, execEnd, Endblock.execH_ohne rest h] <;> rfl
+  | .floatOf e lo hi rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks] at h
+      simp only [execEndH, execEnd, Endblock.execH_ohne rest h] <;> rfl
+  | .floatNarrow e lo hi sonst rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks, Bool.and_eq_true] at h
+      simp only [execEndH, execEnd, Endblock.execH_ohne rest h.2, Endblock.execH_ohne sonst h.1] <;>
+        rfl
 theorem Arms.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → a.ohneLocks = true →

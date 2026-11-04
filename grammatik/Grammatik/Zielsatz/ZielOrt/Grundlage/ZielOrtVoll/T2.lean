@@ -266,6 +266,18 @@ theorem Endblock.orakel_kOk {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [Endblock.kOk, Bool.and_eq_true] at h
       simp only [execEnd, Endblock.orakel_kOk t h.1, Endblock.orakel_kOk e h.2]
 
+  | .float _ _ _ _ _ rest, h, σ, ρ => by
+      simp only [Endblock.kOk] at h
+      simp only [execEnd, Endblock.orakel_kOk rest h]
+  | .floatLit _ _ _ rest, h, σ, ρ => by
+      simp only [Endblock.kOk] at h
+      simp only [execEnd, Endblock.orakel_kOk rest h]
+  | .floatOf _ _ _ rest, h, σ, ρ => by
+      simp only [Endblock.kOk] at h
+      simp only [execEnd, Endblock.orakel_kOk rest h]
+  | .floatNarrow _ _ _ sonst rest, h, σ, ρ => by
+      simp only [Endblock.kOk, Bool.and_eq_true] at h
+      simp only [execEnd, Endblock.orakel_kOk sonst h.1, Endblock.orakel_kOk rest h.2]
 theorem Arms.orakel_kOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     {cs : List (Option Ty)} → (arms : Arms D V l Γ Λ Λ' cs) → arms.kOk = true →
       ∀ (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),

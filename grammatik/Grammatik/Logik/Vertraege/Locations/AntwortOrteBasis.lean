@@ -110,6 +110,10 @@ def Endblock.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .exchange _ _ _ _ rest => rest.ants
   | .ite _ t e => e.ants ++ t.ants
 
+  | .float _ _ _ _ _ rest => rest.ants
+  | .floatLit _ _ _ rest => rest.ants
+  | .floatOf _ _ _ rest => rest.ants
+  | .floatNarrow _ _ _ sonst rest => sonst.ants ++ rest.ants
 def Arms.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → List (D.Ax ⊕ D.Reg)
   | .nil => []
@@ -183,6 +187,14 @@ theorem ants_alsBlock {V : Vertrag D} {l : Bool} :
   | _, _, .ite _ t _ => by
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock t]
 
+  | _, _, .float op a b lo hi rest => by
+      simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
+  | _, _, .floatLit q lo hi rest => by
+      simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
+  | _, _, .floatOf e lo hi rest => by
+      simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
+  | _, _, .floatNarrow e lo hi sonst rest => by
+      simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
 /-! ## 2. What a residue still reaches -/
 
 /-- **Every block still to run in the residue has its answer sites in `C`.** -/

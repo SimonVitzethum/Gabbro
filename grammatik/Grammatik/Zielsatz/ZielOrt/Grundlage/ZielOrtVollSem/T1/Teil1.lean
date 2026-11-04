@@ -90,6 +90,10 @@ def Endblock.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (K : 
   | .exchange _ _ _ _ rest => rest.vOk K
   | .ite _ t e => e.vOk K && t.vOk K
 
+  | .float _ _ _ _ _ rest => rest.vOk K
+  | .floatLit _ _ _ rest => rest.vOk K
+  | .floatOf _ _ _ rest => rest.vOk K
+  | .floatNarrow _ _ _ sonst rest => sonst.vOk K && rest.vOk K
 def Arms.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} (K : Nat → Bool) : Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true
@@ -144,6 +148,14 @@ theorem Endblock.vOk_alsBlock {V : Vertrag D} {l : Bool} (K : Nat → Bool) :
   | _, _, .ite _ t _ => by
       simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K t]
 
+  | _, _, .float op a b lo hi rest => by
+      simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
+  | _, _, .floatLit q lo hi rest => by
+      simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
+  | _, _, .floatOf e lo hi rest => by
+      simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
+  | _, _, .floatNarrow e lo hi sonst rest => by
+      simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
 /-- The candidates of an indirect call through a pointer of signature `n`
     -- every function that conforms to it -- have their contract carriers in
     the footprint `S`. -/
@@ -403,6 +415,18 @@ theorem Endblock.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
       simp only [Endblock.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨Endblock.vOk_mono e h.1, Endblock.vOk_mono t h.2⟩
 
+  | .float _ _ _ _ _ rest, h => by
+      simp only [Endblock.vOk] at h ⊢
+      exact Endblock.vOk_mono rest h
+  | .floatLit _ _ _ rest, h => by
+      simp only [Endblock.vOk] at h ⊢
+      exact Endblock.vOk_mono rest h
+  | .floatOf _ _ _ rest, h => by
+      simp only [Endblock.vOk] at h ⊢
+      exact Endblock.vOk_mono rest h
+  | .floatNarrow _ _ _ sonst rest, h => by
+      simp only [Endblock.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨Endblock.vOk_mono sonst h.1, Endblock.vOk_mono rest h.2⟩
 theorem Arms.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → a.vOk K = true → a.vOk K' = true

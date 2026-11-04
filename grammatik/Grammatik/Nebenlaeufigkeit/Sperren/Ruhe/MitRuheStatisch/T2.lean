@@ -161,6 +161,12 @@ theorem mE_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       simp only [mE, Bool.and_eq_true] at h h' ⊢
       exact ⟨mE_und t h.1 h'.1, mE_und e h.2 h'.2⟩
 
+  | _, _, _, .float _ _ _ _ _ rest, h, h' => mE_und rest h h'
+  | _, _, _, .floatLit _ _ _ rest, h, h' => mE_und rest h h'
+  | _, _, _, .floatOf _ _ _ rest, h, h' => mE_und rest h h'
+  | _, _, _, .floatNarrow _ _ _ sonst rest, h, h' => by
+      simp only [mE, Bool.and_eq_true] at h h' ⊢
+      exact ⟨mE_und sonst h.1 h'.1, mE_und rest h.2 h'.2⟩
 theorem mArms_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs),
     mArms A arms = true → mArms B arms = true → mArms (mUnd A B) arms = true

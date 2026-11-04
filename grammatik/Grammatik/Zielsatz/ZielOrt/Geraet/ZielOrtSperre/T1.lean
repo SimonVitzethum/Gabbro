@@ -15,6 +15,9 @@
   machine lock invariant back (`kopfS_frei_inv`).
 -/
 module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre.AkteurSFaelle.EndFloat.Teil11
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre.AkteurSFaelle.EndFloat.Teil10Basis
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre.AkteurSFaelle.EndFloat.Teil10
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreMaschine
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre.AkteurSFaelle.Teil19
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre.AkteurSFaelle.Foreign.CallElse
@@ -449,6 +452,17 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
     | endeBindAxiomElseOk l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
       exact akteurS_endeBindAxiomElseOk (D := D) (P := P) (O := O) (passes := passes) (Q := Q) (S := S) (lok := lok) (hO := hO) (hRL := hRL) (hQ := hQ) (hlok := hlok) (hS := hS) (sp := sp) (hsp := hsp) (hK := hK) (hFragS := hFragS) (hFS := hFS) (M := M) (u := u) (hF := hF) (hL := hL) (hRS := hRS) (hSG := hSG) (l := l) (Γ := Γ) (Λ := Λ) (τ := τ) (a := a) (args := args) (he := he) (hr := hr) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (err := err) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (v := v) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ)
     -- pushes
+    | endeGleit l Γ Λ l₁ h₁ l₂ h₂ op a b lo hi rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+      exact akteurS_endeGleit (D := D) (P := P) (O := O) (passes := passes) (Q := Q) (S := S) (lok := lok) (hO := hO) (hRL := hRL) (hQ := hQ) (hlok := hlok) (hS := hS) (sp := sp) (hsp := hsp) (hK := hK) (hFragS := hFragS) (hFS := hFS) (M := M) (u := u) (hF := hF) (hL := hL) (hRS := hRS) (hSG := hSG) (l := l) (Γ := Γ) (Λ := Λ) (l₁ := l₁) (h₁ := h₁) (l₂ := l₂) (h₂ := h₂) (op := op) (a := a) (b := b) (lo := lo) (hi := hi) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ)
+    | endeGleitLit l Γ Λ q lo hi rest ρ hhead v hv =>
+      exact akteurS_endeGleitLit (D := D) (P := P) (O := O) (passes := passes) (Q := Q) (S := S) (lok := lok) (hO := hO) (hRL := hRL) (hQ := hQ) (hlok := hlok) (hS := hS) (sp := sp) (hsp := hsp) (hK := hK) (hFragS := hFragS) (hFS := hFS) (M := M) (u := u) (hF := hF) (hL := hL) (hRS := hRS) (hSG := hSG) (l := l) (Γ := Γ) (Λ := Λ) (q := q) (lo := lo) (hi := hi) (rest := rest) (ρ := ρ) (hhead := hhead) (v := v) (hv := hv)
+    | endeGleitVon l Γ Λ l₁ h₁ e lo hi rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+      exact akteurS_endeGleitVon (D := D) (P := P) (O := O) (passes := passes) (Q := Q) (S := S) (lok := lok) (hO := hO) (hRL := hRL) (hQ := hQ) (hlok := hlok) (hS := hS) (sp := sp) (hsp := hsp) (hK := hK) (hFragS := hFragS) (hFS := hFS) (M := M) (u := u) (hF := hF) (hL := hL) (hRS := hRS) (hSG := hSG) (l := l) (Γ := Γ) (Λ := Λ) (l₁ := l₁) (h₁ := h₁) (e := e) (lo := lo) (hi := hi) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ)
+    | endeGleitNarrowOk l Γ Λ l₁ h₁ e lo hi sonst rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+      exact akteurS_endeGleitNarrowOk (D := D) (P := P) (O := O) (passes := passes) (Q := Q) (S := S) (lok := lok) (hO := hO) (hRL := hRL) (hQ := hQ) (hlok := hlok) (hS := hS) (sp := sp) (hsp := hsp) (hK := hK) (hFragS := hFragS) (hFS := hFS) (M := M) (u := u) (hF := hF) (hL := hL) (hRS := hRS) (hSG := hSG) (l := l) (Γ := Γ) (Λ := Λ) (l₁ := l₁) (h₁ := h₁) (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ)
+    | endeGleitNarrowElse l Γ Λ l₁ h₁ e lo hi sonst rest ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
+      exact akteurS_endeGleitNarrowElse (D := D) (P := P) (O := O) (passes := passes) (Q := Q) (S := S) (lok := lok) (hO := hO) (hRL := hRL) (hQ := hQ) (hlok := hlok) (hS := hS) (sp := sp) (hsp := hsp) (hK := hK) (hFragS := hFragS) (hFS := hFS) (M := M) (u := u) (hF := hF) (hL := hL) (hRS := hRS) (hSG := hSG) (l := l) (Γ := Γ) (Λ := Λ) (l₁ := l₁) (h₁ := h₁) (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (hn := hn) (neu := neu) (hneu := hneu) (hΛ := hΛ)
+    -- the axiom bind
   | g7 hs =>
     exact akteurS_g7 hO hRL hQ hlok hS hsp hK hFragS hFS hs hF hL hRS hSG
 

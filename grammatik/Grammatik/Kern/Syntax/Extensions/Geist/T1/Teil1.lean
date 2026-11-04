@@ -198,6 +198,12 @@ def g001End : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} →
   | _, _, _, .exchange g neu _ _ rest => orteOk (D := D) ([.inr g] ++ neu.orte) && g001End rest
   | _, _, _, .ite c t e => orteOk (D := D) c.orte && g001End t && g001End e
 
+  | _, _, _, .float _ a b _ _ rest =>
+      orteOk (D := D) (a.orte ++ b.orte) && g001End rest
+  | _, _, _, .floatLit _ _ _ rest => g001End rest
+  | _, _, _, .floatOf e _ _ rest => orteOk (D := D) e.orte && g001End rest
+  | _, _, _, .floatNarrow e _ _ sonst rest =>
+      orteOk (D := D) e.orte && g001End sonst && g001End rest
 /-- The G001 check over case arms. -/
 def g001Arms {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} :

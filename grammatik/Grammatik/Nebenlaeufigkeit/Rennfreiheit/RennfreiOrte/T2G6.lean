@@ -99,4 +99,6 @@ theorem schritt_ev_g6 {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO 
       rw [e2, hX, List.append_assoc]
       rfl
 
+  | endeGleit | endeGleitLit | endeGleitVon | endeGleitNarrowOk | endeGleitNarrowElse => leseO
+
 end Gabbro.Grammatik

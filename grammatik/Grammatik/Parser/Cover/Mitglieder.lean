@@ -209,6 +209,10 @@ def cE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V 
   | .exchange (neu := neu) (rest := rest) .. => "Endblock.exchange" :: (eE neu ++ cE rest)
   | .ite c t e => "Endblock.ite" :: (eE c ++ cE t ++ cE e)
 
+  | .float _ a b _ _ rest => "Endblock.float" :: (eE a ++ eE b ++ cE rest)
+  | .floatLit _ _ _ rest => "Endblock.floatLit" :: cE rest
+  | .floatOf e _ _ rest => "Endblock.floatOf" :: (eE e ++ cE rest)
+  | .floatNarrow e _ _ sonst rest => "Endblock.floatNarrow" :: (eE e ++ cE sonst ++ cE rest)
 end
 
 /-- The `Ty` constructor a type is. -/

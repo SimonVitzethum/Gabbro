@@ -331,6 +331,21 @@ theorem rufSchrittG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) {M 
     | endeBindAxiomOptElseGrund l Γ Λ e a args he hr hp hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.endeBindAxiomOptElseGrund (passes := p + j) (M.plus j) f l Γ Λ e a args he hr hp hd hgd err rest ρ (RufRahmenG.plus_rest (j := j) hhead) σ₁ hs₁ σ₂ r hax neu hneu hΛ
+    | endeGleit l Γ Λ l₁ h₁ l₂ h₂ op a b lo hi rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+        rw [RufMaschineG.plus_update]
+        exact RufSchrittG.endeGleit (passes := p + j) (M.plus j) f l Γ Λ l₁ h₁ l₂ h₂ op a b lo hi rest ρ (RufRahmenG.plus_rest (j := j) hhead) σ₁ hs₁ v hv neu hneu hΛ
+    | endeGleitLit l Γ Λ q lo hi rest ρ hhead v hv =>
+        rw [RufMaschineG.plus_update]
+        exact RufSchrittG.endeGleitLit (passes := p + j) (M.plus j) f l Γ Λ q lo hi rest ρ (RufRahmenG.plus_rest (j := j) hhead) v hv
+    | endeGleitVon l Γ Λ l₁ h₁ e lo hi rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+        rw [RufMaschineG.plus_update]
+        exact RufSchrittG.endeGleitVon (passes := p + j) (M.plus j) f l Γ Λ l₁ h₁ e lo hi rest ρ (RufRahmenG.plus_rest (j := j) hhead) σ₁ hs₁ v hv neu hneu hΛ
+    | endeGleitNarrowOk l Γ Λ l₁ h₁ e lo hi sonst rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+        rw [RufMaschineG.plus_update]
+        exact RufSchrittG.endeGleitNarrowOk (passes := p + j) (M.plus j) f l Γ Λ l₁ h₁ e lo hi sonst rest ρ (RufRahmenG.plus_rest (j := j) hhead) σ₁ hs₁ v hv neu hneu hΛ
+    | endeGleitNarrowElse l Γ Λ l₁ h₁ e lo hi sonst rest ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
+        rw [RufMaschineG.plus_update]
+        exact RufSchrittG.endeGleitNarrowElse (passes := p + j) (M.plus j) f l Γ Λ l₁ h₁ e lo hi sonst rest ρ (RufRahmenG.plus_rest (j := j) hhead) σ₁ hs₁ hn neu hneu hΛ
   | g7 h =>
     cases h with
     | dannVerbrauch l Γ Λ Λ'' t member edge inv bound mass body rest k ρ hhead =>

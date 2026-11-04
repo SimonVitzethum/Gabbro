@@ -316,6 +316,9 @@ theorem schrittMerk {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschi
       kopfM
       all_goals simp_all [GRest.mR_weiterOpt]
 
+    | endeGleitNarrowElse l Γ Λ l₁ h₁ e lo hi sonst rest ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
+      kopfM
+      exact ⟨hok.1.1, abbruch_iff ‹Endblock _ _ _ _ _› ‹Endblock _ _ _ _ _ _›, hok.2⟩
   | g7 hs =>
     cases hs with
     | rueckFreigabeLetzte _ _ _ _ z hantwort

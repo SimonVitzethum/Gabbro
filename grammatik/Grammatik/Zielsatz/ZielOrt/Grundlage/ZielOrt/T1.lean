@@ -254,6 +254,11 @@ def endblockOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : L
   | .exchange g neu _ _ rest => .inr g :: neu.orte ++ endblockOrteP P rest
   | .ite c t e => c.orte ++ endblockOrteP P e ++ endblockOrteP P t
 
+  | .float _ a b _ _ rest => a.orte ++ b.orte ++ endblockOrteP P rest
+  | .floatLit _ _ _ rest => endblockOrteP P rest
+  | .floatOf e _ _ rest => e.orte ++ endblockOrteP P rest
+  | .floatNarrow e _ _ sonst rest =>
+      e.orte ++ endblockOrteP P sonst ++ endblockOrteP P rest
 def armsOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} :
     Arms D V l Γ Λ Λ' cs → List (D.Tab ⊕ D.Glob)
@@ -312,6 +317,14 @@ theorem blockOrteP_alsBlock (P : Programm D) {V : Vertrag D} {l : Bool} :
   | _, _, .ite _ t _ => by
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P t]
 
+  | _, _, .float op a b lo hi rest => by
+      simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
+  | _, _, .floatLit q lo hi rest => by
+      simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
+  | _, _, .floatOf e lo hi rest => by
+      simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
+  | _, _, .floatNarrow e lo hi sonst rest => by
+      simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
 /-- The carriers of the table and group invariants `f` owes at its return
     (`schuldet`: `f` writes one of their carriers; `rufAt` checks exactly
     these, THEOREM-MAP §15.4). -/

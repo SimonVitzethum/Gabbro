@@ -411,6 +411,31 @@ theorem Endblock.execBlockH_alsBlock :
       · exact Endblock.execBlockH_alsBlock t _ _
       · rfl
 
+  | _, _, .float op a b lo hi rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockH, execEndH]
+      split
+      · rw [Endblock.execBlockH_alsBlock rest]
+        cases execEndH S O U passes R rest _ _ <;> rfl
+      · rfl
+  | _, _, .floatLit q lo hi rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockH, execEndH]
+      split
+      · rw [Endblock.execBlockH_alsBlock rest]
+        cases execEndH S O U passes R rest _ _ <;> rfl
+      · rfl
+  | _, _, .floatOf e lo hi rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockH, execEndH]
+      split
+      · rw [Endblock.execBlockH_alsBlock rest]
+        cases execEndH S O U passes R rest _ _ <;> rfl
+      · rfl
+  | _, _, .floatNarrow e lo hi sonst rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockH, execEndH]
+      split
+      · rw [Endblock.execBlockH_alsBlock rest]
+        cases execEndH S O U passes R rest _ _ <;> rfl
+      · rfl
+
 /-- Past `abbruch`, an end outcome continues as without it. -/
 theorem weiterH_abbruch_zu {Λ Λk : List (Res D)} (k : GRest D V l Γ Λk) (eo : EndAusgang V l Γ) :
     weiterH S O U passes R (.abbruch (Λ := Λ) k) eo.zuAusgang =

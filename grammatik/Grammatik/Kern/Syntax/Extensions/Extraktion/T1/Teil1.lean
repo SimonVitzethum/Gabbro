@@ -126,6 +126,11 @@ def endblockKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .exchange _ _ _ _ rest => endblockKanten rest
   | .ite _ t e => endblockKanten e ++ endblockKanten t
 
+  | .float _ _ _ _ _ rest => endblockKanten rest
+  | .floatLit _ _ _ rest => endblockKanten rest
+  | .floatOf _ _ _ rest => endblockKanten rest
+  | .floatNarrow _ _ _ sonst rest =>
+      endblockKanten sonst ++ endblockKanten rest
 /-- Die direkten Rufe der Fallunterscheidung. -/
 def armsKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} :

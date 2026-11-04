@@ -272,6 +272,13 @@ theorem oe_lift : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {k c : Context} 
       ((checkArguments_ruA A _ args).trans ha) ((planFits_lift _ J args).trans hplan)
       (oe_um _ (oe_pre (congrArg (fun x => resultContextB x owner) (afterCall_lift _ J args)) (oe_lift hrest)))
 
+  | _, _, _, _, _, _, _, .float op a b lo hi rest ha hb hrest =>
+    .float _ _ _ _ _ _ (by rw [checkExpression_ruE]; exact ha) (by rw [checkExpression_ruE]; exact hb) (oe_lift hrest)
+  | _, _, _, _, _, _, _, .floatLit q lo hi rest hrest => .floatLit _ _ _ _ (oe_lift hrest)
+  | _, _, _, _, _, _, _, .floatOf e lo hi rest he hrest =>
+    .floatOf _ _ _ _ (by rw [checkExpression_ruE]; exact he) (oe_lift hrest)
+  | _, _, _, _, _, _, _, .floatNarrow e lo hi sonst rest he hs hrest =>
+    .floatNarrow _ _ _ _ _ (by rw [checkExpression_ruE]; exact he) (oe_lift hs) (oe_lift hrest)
 theorem oarms_lift : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} {k c c' : Context}
     {arms : Arms D V l Γ Λ Λ' cs}, OArms A I out k c arms c' →
       OArms (liftA A) (liftI I) (outR A out) k c (ruArms arms) c'

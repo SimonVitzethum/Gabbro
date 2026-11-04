@@ -301,4 +301,49 @@ theorem endS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ �
       Sz.mem_bindR (mem_argsS hE _ args (by omega)) herr <|
       Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
 
+  | float op a b' lo hi rest =>
+    simp only [groesseEnd, groessePaar] at hu hE hS hO ⊢
+    have ha := hE _ a (by omega)
+    have hb := hE _ b' (by omega)
+    have hlo : lo ∈ paarS (Zahlen.kostP lo) := mem_paarS rfl (by omega)
+    have hhi : hi ∈ paarS (Zahlen.kostP hi) := mem_paarS rfl (by omega)
+    have hr' := hO.en (groesseEnd rest + 0) _ _ _ rest (by omega) (by omega)
+    have hok := bindOk_of (τ := Ty.fl lo hi) (by omega)
+    have h0 := kostT_null hok
+    blk (eFloat O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (mem_gleitOps op)) <|
+      Sz.mem_bind (mem_flS ha) <| Sz.mem_bind (mem_flS hb) <| Sz.mem_bind hlo <| Sz.mem_bind hhi <|
+      Sz.mem_wenn hok <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
+  | floatLit q lo hi rest =>
+    simp only [groesseEnd, groessePaar] at hu hE hS hO ⊢
+    have hq : q ∈ paarS (Zahlen.kostP q) := mem_paarS rfl (by omega)
+    have hlo : lo ∈ paarS (Zahlen.kostP lo) := mem_paarS rfl (by omega)
+    have hhi : hi ∈ paarS (Zahlen.kostP hi) := mem_paarS rfl (by omega)
+    have hr' := hO.en (groesseEnd rest + 0) _ _ _ rest (by omega) (by omega)
+    have hok := bindOk_of (τ := Ty.fl lo hi) (by omega)
+    have h0 := kostT_null hok
+    blk (eFloatLit O), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind hq <| Sz.mem_bind hlo <|
+      Sz.mem_bind hhi <| Sz.mem_wenn hok <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
+  | floatOf e lo hi rest =>
+    simp only [groesseEnd, groessePaar] at hu hE hS hO ⊢
+    have he := hE _ e (by omega)
+    have hlo : lo ∈ paarS (Zahlen.kostP lo) := mem_paarS rfl (by omega)
+    have hhi : hi ∈ paarS (Zahlen.kostP hi) := mem_paarS rfl (by omega)
+    have hr' := hO.en (groesseEnd rest + 0) _ _ _ rest (by omega) (by omega)
+    have hok := bindOk_of (τ := Ty.fl lo hi) (by omega)
+    have h0 := kostT_null hok
+    blk (eFloatOf O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_intS he) <| Sz.mem_bind hlo <|
+      Sz.mem_bind hhi <| Sz.mem_wenn hok <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
+  | floatNarrow e lo hi sonst rest =>
+    simp only [groesseEnd, groessePaar] at hu hE hS hO ⊢
+    have he := hE _ e (by omega)
+    have hso := hO.en (groesseEnd sonst + (0 + (groesseEnd rest + 0))) _ _ _ sonst (by omega) (by omega)
+    have hlo : lo ∈ paarS (Zahlen.kostP lo) := mem_paarS rfl (by omega)
+    have hhi : hi ∈ paarS (Zahlen.kostP hi) := mem_paarS rfl (by omega)
+    have hr' := hO.en (groesseEnd rest + 0) _ _ _ rest (by omega) (by omega)
+    have hok := bindOk_of (τ := Ty.fl lo hi) (by omega)
+    have h0 := kostT_null hok
+    blk (eFloatNarrow O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_flS he) <| Sz.mem_bind hlo <|
+      Sz.mem_bind hhi <| Sz.mem_wenn hok <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hso <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <|
+      Sz.mem_pure _) (by omega)
+
 end Gabbro.Grammatik.Gen

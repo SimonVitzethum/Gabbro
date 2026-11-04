@@ -72,6 +72,10 @@ def assignsE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endbloc
   | .bindCallInd _ _ _ _ _ rest => assignsE rest
   | .narrowRequired _ _ _ rest => assignsE rest
   | .bindCallIndElse _ _ _ _ _ err rest => assignsE err ++ assignsE rest
+  | .float _ _ _ _ _ rest => assignsE rest
+  | .floatLit _ _ _ rest => assignsE rest
+  | .floatOf _ _ _ rest => assignsE rest
+  | .floatNarrow _ _ _ sonst rest => assignsE sonst ++ assignsE rest
   | _ => []
 
 def assignsArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} :

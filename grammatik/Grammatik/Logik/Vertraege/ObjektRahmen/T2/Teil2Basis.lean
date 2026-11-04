@@ -1,12 +1,9 @@
 module
 public import Grammatik.Kern.Syntax.Typen.Fall
-
 public import Grammatik.Logik.Vertraege.ObjektRahmen.T1
 public import Grammatik.Logik.Vertraege.ObjektRahmen.T1a
 public import Grammatik.Logik.Vertraege.ObjektRahmen.T2.Teil1
-
 @[expose] public section
-
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
 section Rumpf
@@ -18,7 +15,6 @@ include hR hO
 set_option linter.unusedSectionVars false
 
 mutual
-
 /-- **The frame over objects of one statement**, at EVERY world. -/
 theorem stmt_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     ∀ (s : Stmt D V l Γ Λ Λ'), oS objs ps s → ∀ (σ : World D) (ρ : Env D Γ),
@@ -470,6 +466,18 @@ theorem end_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       · exact ObjE.vor (slotRahmen_gleich rfl) (end_obj t hok.1 _ ρ hlen hinv)
       · exact ObjE.vor (slotRahmen_gleich rfl) (end_obj e hok.2 _ ρ hlen hinv)
 
+  | .float op a b lo hi rest, hok, σ, ρ, hlen, hinv => by simp only [execEnd]; split
+      · exact ObjE.vor (slotRahmen_gleich rfl) (end_obj rest hok _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+      · trivial
+  | .floatLit q lo hi rest, hok, σ, ρ, hlen, hinv => by simp only [execEnd]; split
+      · exact (end_obj rest hok _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+      · trivial
+  | .floatOf e lo hi rest, hok, σ, ρ, hlen, hinv => by simp only [execEnd]; split
+      · exact ObjE.vor (slotRahmen_gleich rfl) (end_obj rest hok _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+      · trivial
+  | .floatNarrow e lo hi sonst rest, hok, σ, ρ, hlen, hinv => by simp only [execEnd]; split
+      · exact ObjE.vor (slotRahmen_gleich rfl) (end_obj rest hok.2 _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+      · exact ObjE.vor (slotRahmen_gleich rfl) (end_obj sonst hok.1 _ ρ hlen hinv)
 theorem arms_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} :
     ∀ (arms : Arms D V l Γ Λ Λ' cs), oA objs ps arms → ∀ (v : Wert D (.sum cs)) (σ : World D)

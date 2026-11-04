@@ -381,6 +381,10 @@ theorem grundArms_heldCount {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : N
     frame: there is no post-frame). -/
 theorem end_heldCount {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (L : D.Lock) :
     ∀ (_b : Endblock D V l Γ Λ), (Λ.count (Res.held L)) = (Λ.count (Res.held L))
+  | .float _ _ _ _ _ rest => end_heldCount L rest
+  | .floatLit _ _ _ rest => end_heldCount L rest
+  | .floatOf _ _ _ rest => end_heldCount L rest
+  | .floatNarrow _ _ _ _ rest => end_heldCount L rest
   | _ => rfl
 
 end

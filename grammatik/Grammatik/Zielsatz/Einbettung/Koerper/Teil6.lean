@@ -206,6 +206,14 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       sim_end_narrowRequired (e := e) (lo' := lo') (hi' := hi') (rest := rest) (ih_sim_end_rest := sim_end rest) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .ite c t e =>
       sim_end_ite (c := c) (t := t) (e := e) (ih_sim_end_e := sim_end e) (ih_sim_end_t := sim_end t) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
+  | .float op a b lo hi rest =>
+      sim_end_float (op := op) (a := a) (b := b) (lo := lo) (hi := hi) (rest := rest) (ih_sim_end_rest := sim_end rest) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
+  | .floatLit q lo hi rest =>
+      sim_end_floatLit (q := q) (lo := lo) (hi := hi) (rest := rest) (ih_sim_end_rest := sim_end rest) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
+  | .floatOf e lo hi rest =>
+      sim_end_floatOf (e := e) (lo := lo) (hi := hi) (rest := rest) (ih_sim_end_rest := sim_end rest) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
+  | .floatNarrow e lo hi sonst rest =>
+      sim_end_floatNarrow (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (ih_sim_end_rest := sim_end rest) (ih_sim_end_sonst := sim_end sonst) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
 /-- **Arms beside their images.** -/
 theorem sim_arms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} :

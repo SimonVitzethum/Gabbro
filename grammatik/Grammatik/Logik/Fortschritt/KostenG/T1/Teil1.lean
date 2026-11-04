@@ -118,6 +118,10 @@ def rufeE (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l
   | .narrowRequired _ _ _ rest => rufeE Z ZS EW rest
   | .exchange _ _ _ _ rest => rufeE Z ZS EW rest
   | .ite _ t e => rufeE Z ZS EW e && rufeE Z ZS EW t
+  | .float _ _ _ _ _ rest => rufeE Z ZS EW rest
+  | .floatLit _ _ _ rest => rufeE Z ZS EW rest
+  | .floatOf _ _ _ rest => rufeE Z ZS EW rest
+  | .floatNarrow _ _ _ sonst rest => rufeE Z ZS EW sonst && rufeE Z ZS EW rest
 end
 /-- The callees of a residue: those of every block, end block and loop body
     still to run. -/

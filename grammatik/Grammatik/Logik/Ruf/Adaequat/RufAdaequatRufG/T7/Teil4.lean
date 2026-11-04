@@ -1,4 +1,5 @@
 module
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T7.EndFloat
 
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T6
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T7.Teil3
@@ -17,7 +18,7 @@ variable (hRuf : RufOk P O passes f A R C)
 include hRuf
 
 set_option linter.unusedSectionVars false in
-theorem endRetR_retWhy 
+theorem endRetR_retWhy
     {l : Bool}
     {Γ : Ctx}
     {Λ : List (Res D)}
@@ -36,7 +37,7 @@ theorem endRetR_retWhy
   exact ⟨M1, [], RufLaufG.einzeln hs1, hG, rfl⟩
 
 set_option linter.unusedSectionVars false in
-theorem endRetR_cons 
+theorem endRetR_cons
     {l : Bool}
     {Γ : Ctx}
     {Λ : List (Res D)}
@@ -62,7 +63,7 @@ theorem endRetR_cons
       (ih_endRetR_rest hr _ _ _ _ hpe h2 M1 hZ1 hΛ1 (hA.lauf hl1))
 
 set_option linter.unusedSectionVars false in
-theorem endRetR_bind 
+theorem endRetR_bind
     {l : Bool}
     {Γ : Ctx}
     {Λ : List (Res D)}
@@ -86,7 +87,7 @@ theorem endRetR_bind
       (hA.lauf (RufLaufG.einzeln hs1)))
 
 set_option linter.unusedSectionVars false in
-theorem alsRetR_ret 
+theorem alsRetR_ret
     {l : Bool}
     {Γ : Ctx}
     {Λ : List (Res D)}
@@ -106,7 +107,7 @@ theorem alsRetR_ret
   exact ⟨M1, [], RufLaufG.einzeln hs1, hG, (Erw.lese _ _ _).offen⟩
 
 set_option linter.unusedSectionVars false in
-theorem alsRetR_retWhy 
+theorem alsRetR_retWhy
     {l : Bool}
     {Γ : Ctx}
     {Λ : List (Res D)}
@@ -126,7 +127,7 @@ theorem alsRetR_retWhy
   exact ⟨M1, [], RufLaufG.einzeln hs1, hG, rfl⟩
 
 set_option linter.unusedSectionVars false in
-theorem alsRetR_cons 
+theorem alsRetR_cons
     {l : Bool}
     {Γ : Ctx}
     {Λ : List (Res D)}
@@ -150,7 +151,7 @@ theorem alsRetR_cons
       (ih_alsRetR_rest hr _ _ _ _ hpe h2 M1 k hZ1 hΛ1 (hA.lauf hl1))
 
 set_option linter.unusedSectionVars false in
-theorem alsRetR_bind 
+theorem alsRetR_bind
     {l : Bool}
     {Γ : Ctx}
     {Λ : List (Res D)}
@@ -307,6 +308,15 @@ theorem endRetR : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   | _, _, _, .bind e rest, he =>
       endRetR_bind (e := e) (rest := rest) (he := he) (ih_endRetR_rest := endRetR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
   | _, _, _, .narrowRequired _ _ _ _, he => by cases he
+  | _, _, _, .float op a b lo hi rest, hb =>
+      endRetR_float (op := op) (a := a) (b := b) (lo := lo) (hi := hi) (rest := rest) (hb := hb) (ih_endRetR_rest := endRetR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
+  | _, _, _, .floatLit q lo hi rest, hb =>
+      endRetR_floatLit (q := q) (lo := lo) (hi := hi) (rest := rest) (hb := hb) (ih_endRetR_rest := endRetR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
+  | _, _, _, .floatOf e lo hi rest, hb =>
+      endRetR_floatOf (e := e) (lo := lo) (hi := hi) (rest := rest) (hb := hb) (ih_endRetR_rest := endRetR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
+  | _, _, _, .floatNarrow e lo hi sonst rest, hb =>
+      endRetR_floatNarrow (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (hb := hb) (ih_endRetR_rest := endRetR rest) (ih_endRetR_sonst := endRetR sonst) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
+
 /-- A covered end block run as a BLOCK (the residue of an `else` branch
     or of the reason block of `let … else`, `Endblock.alsBlock`) ends the
     frame on the machine as the end block does. -/
@@ -326,6 +336,15 @@ theorem alsRetR : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   | _, _, _, .bind e rest, he =>
       alsRetR_bind (e := e) (rest := rest) (he := he) (ih_alsRetR_rest := alsRetR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
   | _, _, _, .narrowRequired _ _ _ _, he => by cases he
+  | _, _, _, .float op a b lo hi rest, hb =>
+      alsRetR_float (op := op) (a := a) (b := b) (lo := lo) (hi := hi) (rest := rest) (hb := hb) (ih_alsRetR_rest := alsRetR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
+  | _, _, _, .floatLit q lo hi rest, hb =>
+      alsRetR_floatLit (q := q) (lo := lo) (hi := hi) (rest := rest) (hb := hb) (ih_alsRetR_rest := alsRetR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
+  | _, _, _, .floatOf e lo hi rest, hb =>
+      alsRetR_floatOf (e := e) (lo := lo) (hi := hi) (rest := rest) (hb := hb) (ih_alsRetR_rest := alsRetR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
+  | _, _, _, .floatNarrow e lo hi sonst rest, hb =>
+      alsRetR_floatNarrow (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (hb := hb) (ih_alsRetR_rest := alsRetR rest) (ih_alsRetR_sonst := alsRetR sonst) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
+
 theorem armsRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} (arms : Arms D (vertragVon D fn) l Γ Λ Λ' cs),
     ArmsR A C true arms → ∀ (v : Wert D (.sum cs)),

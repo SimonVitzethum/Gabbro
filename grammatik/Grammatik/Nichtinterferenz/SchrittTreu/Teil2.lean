@@ -180,6 +180,40 @@ theorem schrittK_von_g6 (P : Programm D) (O : Orakel D) (passes : Nat)
       rw [hax]
       rfl
 
+  | endeGleit l Γ Λ l₁ h₁ l₂ h₂ op a b lo hi rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+      kstart
+      subst hs₁
+      simp only [kr, kEnde]
+      simp only [RufMaschineG.weltVon] at hv
+      rw [hv]
+      rfl
+  | endeGleitLit l Γ Λ q lo hi rest ρ hhead v hv =>
+      kstart
+      simp only [kr, kEnde]
+      rw [hv]
+      rfl
+  | endeGleitVon l Γ Λ l₁ h₁ e lo hi rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+      kstart
+      subst hs₁
+      simp only [kr, kEnde]
+      simp only [RufMaschineG.weltVon] at hv
+      rw [hv]
+      rfl
+  | endeGleitNarrowOk l Γ Λ l₁ h₁ e lo hi sonst rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+      kstart
+      subst hs₁
+      simp only [kr, kEnde]
+      simp only [RufMaschineG.weltVon] at hv
+      rw [hv]
+      rfl
+  | endeGleitNarrowElse l Γ Λ l₁ h₁ e lo hi sonst rest ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
+      kstart
+      subst hs₁
+      simp only [kr, kEnde]
+      simp only [RufMaschineG.weltVon] at hn
+      rw [hn]
+      rfl
+
 theorem schrittK_von_g7 (P : Programm D) (O : Orakel D) (passes : Nat)
     {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG7 P O passes M f M') :
     kSchrittK P O passes (M.faeden f).kern M.speicher = some ((M'.faeden f).kern, M'.speicher) := by

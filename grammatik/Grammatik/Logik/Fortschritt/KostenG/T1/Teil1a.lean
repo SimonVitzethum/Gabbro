@@ -256,6 +256,11 @@ def kostenEnd (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx
   | .exchange _ neu _ _ rest => 5 + kostenExpr neu + kostenSonst c pa rest
   | .ite b t e => 4 + kostenExpr b + max (kostenSonst c pa e + 1) (kostenSonst c pa t)
 
+  | .float _ a b _ _ rest => 2 + kostenExpr a + kostenExpr b + kostenEnd c pa rest
+  | .floatLit _ _ _ rest => 2 + kostenEnd c pa rest
+  | .floatOf e _ _ rest => 2 + kostenExpr e + kostenEnd c pa rest
+  | .floatNarrow e _ _ sonst rest =>
+      2 + kostenExpr e + max (kostenSonst c pa sonst + 1) (kostenEnd c pa rest + 1)
 /-- The steps of an `else` branch: the end block run in BLOCK position
     (`Endblock.alsBlock`, since 2026-09-13), where a `leave`/`next` in it
     reaches the enclosing loop. Priced as that block: a compound needs no
@@ -292,6 +297,12 @@ def kostenSonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
   | .exchange _ neu _ _ rest => 2 + kostenExpr neu + kostenSonst c pa rest
   -- run as `Block.check b e t` (`Endblock.alsBlock`)
   | .ite b t e => 1 + kostenExpr b + max (kostenSonst c pa e + 1) (kostenSonst c pa t)
+  | .float _ a b _ _ rest => 2 + kostenExpr a + kostenExpr b + kostenSonst c pa rest
+  | .floatLit _ _ _ rest => 2 + kostenSonst c pa rest
+  | .floatOf e _ _ rest => 2 + kostenExpr e + kostenSonst c pa rest
+  | .floatNarrow e _ _ sonst rest =>
+      2 + kostenExpr e + max (kostenSonst c pa sonst + 1) (kostenSonst c pa rest + 1)
+
 end
 
 end Gabbro.Grammatik

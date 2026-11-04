@@ -1,10 +1,7 @@
 module
-
 public import Grammatik.Kern.Syntax.Satz.T3
 public import Grammatik.Kern.Syntax.Satz.T4.Teil2
-
 @[expose] public section
-
 namespace Gabbro.Grammatik
 variable {D : Deklaration} {V : Vertrag D}
 section Rumpf
@@ -475,6 +472,21 @@ theorem end_scopesOkH :
         end_scopesOkH e hresid
           (by boden_tac) hcount⟩
 
+  | .float _ _ _ _ _ rest, hresid, hbo, hcount => by
+      simp only [Endblock.scopesOk]
+      exact end_scopesOkH rest hresid (by boden_tac) hcount
+  | .floatLit _ _ _ rest, hresid, hbo, hcount => by
+      simp only [Endblock.scopesOk]
+      exact end_scopesOkH rest hresid (by boden_tac) hcount
+  | .floatOf _ _ _ rest, hresid, hbo, hcount => by
+      simp only [Endblock.scopesOk]
+      exact end_scopesOkH rest hresid (by boden_tac) hcount
+  | .floatNarrow _ _ _ sonst rest, hresid, hbo, hcount => by
+      simp only [Endblock.scopesOk, Bool.and_eq_true]
+      exact ⟨end_scopesOkH sonst hresid
+          (by boden_tac) hcount,
+        end_scopesOkH rest hresid
+          (by boden_tac) hcount⟩
 end
 
 /-- Every scoped return in a program spares the residual and respects the floor. -/

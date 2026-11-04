@@ -19,7 +19,7 @@ variable {P : Programm D} {O : Orakel D} {passes : Nat}
     checker's `antworten` through `kopf_ants`; round-6 finding W1). -/
 theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
     (hkt : FormKette (M.faeden t).kopf.f (M.faeden t).stapel) (hP : PrueftG O passes M t)
-    (hB : BereichG M t)
+    (hB : BlockBereichG M t)
     (hR : RangInvG w0 (M.faeden t))
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ρ : Env D Γ)
     (b : Block D (vertragVon D (M.faeden t).kopf.f) l Γ Λ Λ')
@@ -362,14 +362,14 @@ theorem fortschritt_faden (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Fa
   cases r with
   | ende e =>
       have hl : l = false := by simpa [GRest.fOk] using hk
-      exact fort_ende hO hkt hP ρ e hx hl hΛ hA hScope
+      exact fort_ende hO hkt hP hB.2 ρ e hx hl hΛ hA hScope
   | dann b k =>
       have hn : k.nimmtAb = true := by
         revert hk
         simp only [GRest.fOk, Bool.and_eq_true]
         intro hk
         exact hk.1.2
-      exact fort_dann hO hkt hP hB hR ρ b k hx hn hΛ hA.1 hScope.1
+      exact fort_dann hO hkt hP hB.1 hR ρ b k hx hn hΛ hA.1 hScope.1
   | schrumpf k =>
       cases ρ with
       | cons v ρ₀ => exact fort_schritt (w_schrumpf rfl k v ρ₀ hx)

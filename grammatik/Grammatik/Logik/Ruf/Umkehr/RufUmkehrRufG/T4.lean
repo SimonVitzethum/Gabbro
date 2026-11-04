@@ -1,6 +1,9 @@
 /- Part 4 of 6 of `RufUmkehrRufG` (split by instrumente/teile/lean-teilen.py; the umbrella `RufUmkehrRufG.lean` imports all parts). -/
 module
 public import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG.Scoped
+public import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG.T4EndFloat
+public import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG.T3EndFloat
+public import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG.T3
 @[expose] public section
 
 
@@ -436,12 +439,7 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
     | dannBindAxiomOptElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
     | rueckConsGrund _ _ _ _ _ _ hhead => widerlegeK hhead
     | dannRetGrund _ _ _ _ _ _ _ hhead => widerlegeK hhead
-  | g6 hs =>
-    cases hs with
-    | endeBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
-    | endeBindAxiomOptElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
-    | endeBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
-    | endeBindAxiomOptElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+  | g6 hs => exact schrittErhaltK_g6 hRSG hs (M.faeden f) rfl ρ r hR hcov
   | g7 hs =>
     exact schrittErhaltK_g7 hs (M.faeden f) rfl ρ r hR hcov
 

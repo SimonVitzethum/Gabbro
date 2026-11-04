@@ -57,6 +57,14 @@ theorem kostenBlock_alsBlock :
   | _, _, .ite _ t _ => by
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock t]
 
+  | _, _, .float op a b lo hi rest => by
+      simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
+  | _, _, .floatLit q lo hi rest => by
+      simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
+  | _, _, .floatOf e lo hi rest => by
+      simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
+  | _, _, .floatNarrow e lo hi sonst rest => by
+      simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
 /-- An end block run as a block names the callees the end block names. -/
 theorem rufeB_alsBlock (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ),
@@ -102,6 +110,14 @@ theorem rufeB_alsBlock (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
   | _, _, .ite _ t _ => by
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW t]
 
+  | _, _, .float op a b lo hi rest => by
+      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
+  | _, _, .floatLit q lo hi rest => by
+      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
+  | _, _, .floatOf e lo hi rest => by
+      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
+  | _, _, .floatNarrow e lo hi sonst rest => by
+      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
 end Positiv
 /-! ## 4. Arm selection keeps cost and callees -/
 

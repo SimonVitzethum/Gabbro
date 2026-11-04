@@ -169,6 +169,16 @@ theorem endG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
   | _, _, _, .bind _ rest, he => .bind _ _ (endG_ohneRuf rest he.bind_inv)
   | _, _, _, .narrowRequired _ _ _ _, he => by cases he
 
+  | _, _, _, .float _ _ _ _ _ rest, hb =>
+      .float _ _ _ _ _ _ (endG_ohneRuf rest hb.gleit_inv)
+  | _, _, _, .floatLit _ _ _ rest, hb =>
+      .floatLit _ _ _ _ (endG_ohneRuf rest hb.gleitLit_inv)
+  | _, _, _, .floatOf _ _ _ rest, hb =>
+      .floatOf _ _ _ _ (endG_ohneRuf rest hb.gleitVon_inv)
+  | _, _, _, .floatNarrow _ _ _ sonst rest, hb =>
+      .floatNarrow _ _ _ _ _ (endG_ohneRuf sonst hb.gleitNarrow_inv.2.2.1)
+        (endG_ohneRuf rest hb.gleitNarrow_inv.2.1)
+
 theorem armsG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
     ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (arms : Arms D V l Γ Λ Λ' cs), ArmsG A mr arms → ArmsOhneRuf arms

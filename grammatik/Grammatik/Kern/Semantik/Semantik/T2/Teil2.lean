@@ -382,6 +382,27 @@ def execEnd {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ →
       if h : lo' ≤ v.n ∧ v.n ≤ hi' then (execEnd rest σ (.cons ⟨v.n, h.1, h.2⟩ ρ)).schrumpf
       else .logik .kapazitaet
 
+  | .float op a b lo hi rest, σ, ρ =>
+      let σ := σ.lese Λ (a.orte ++ b.orte)
+      match gleitPasst lo hi (gleitRechne op (eval σ a σ ρ).x (eval σ b σ ρ).x) with
+      | Option.some v => (execEnd rest σ (.cons v ρ)).schrumpf
+      | Option.none => .logik .bereich
+  | .floatLit q lo hi rest, σ, ρ =>
+      match gleitPasst lo hi (bruch q) with
+      | Option.some v => (execEnd rest σ (.cons v ρ)).schrumpf
+      | Option.none => .logik .bereich
+  | .floatOf e lo hi rest, σ, ρ =>
+      let σ := σ.lese Λ e.orte
+      match gleitPasst lo hi (gleitAusInt (eval σ e σ ρ).n) with
+      | Option.some v => (execEnd rest σ (.cons v ρ)).schrumpf
+      | Option.none => .logik .bereich
+  | .floatNarrow e lo hi sonst rest, σ, ρ =>
+      let σ := σ.lese Λ e.orte
+      match gleitPasst lo hi (eval σ e σ ρ).x with
+      | Option.some v => (execEnd rest σ (.cons v ρ)).schrumpf
+      | Option.none => (execEnd sonst σ ρ)
+  /- C11 required narrowing: in range runs the rest; out of range is the
+      appended capacity case of `Logik`, excluded by the caller's duty. -/
 def execArms {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} :
     Arms D V l Γ Λ Λ' cs → Wert D (.sum cs) → World D → Env D Γ → Ausgang V l Γ
   | .cons b _, ⟨⟨0, _⟩, nutz⟩, σ, ρ => (execBlock b σ (armEnv (Fall.toNutzlast _ _ _ _ nutz) ρ)).schrumpfArm _

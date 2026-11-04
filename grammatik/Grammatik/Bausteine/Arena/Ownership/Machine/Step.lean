@@ -1,4 +1,7 @@
 module
+public import Grammatik.Bausteine.Arena.Ownership.Machine.OwnInv_stepFaelle.EndFloat.Teil15Basis
+public import Grammatik.Bausteine.Arena.Ownership.Machine.OwnInv_stepFaelle.EndFloat.Teil15
+public import Grammatik.Bausteine.Arena.Ownership.Machine.OwnInv_stepFaelle.EndFloat.Teil14
 public import Grammatik.Bausteine.Arena.Ownership.Machine.Stack.Return
 public import Grammatik.Bausteine.Arena.Ownership.Machine.StepG7
 @[expose] public section
@@ -441,6 +444,16 @@ theorem ownInv_step {P : Programm D} {A : FreiForm D} {I : Interfaces A} {O : Or
       exact ownInv_step_endeBindAxiomElseOk (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (τ := τ) (a := a) (args := args) (he := he) (hr0 := hr0) (hw := hw) (hg := hg) (hd' := hd') (hgd := hgd) (err := err) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (v := v) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
     | endeBindAxiomElseGrund l Γ Λ τ a args he hr0 hw hg hd' hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
       exact ownInv_step_endeBindAxiomElseGrund (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (τ := τ) (a := a) (args := args) (he := he) (hr0 := hr0) (hw := hw) (hg := hg) (hd' := hd') (hgd := hgd) (err := err) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (r := r) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
+    | endeGleit l Γ Λ l₁ h₁ l₂ h₂ op a b lo hi rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+      exact ownInv_step_endeGleit (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (l₁ := l₁) (h₁ := h₁) (l₂ := l₂) (h₂ := h₂) (op := op) (a := a) (b := b) (lo := lo) (hi := hi) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
+    | endeGleitLit l Γ Λ q lo hi rest ρ hhead v hv =>
+      exact ownInv_step_endeGleitLit (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (q := q) (lo := lo) (hi := hi) (rest := rest) (ρ := ρ) (hhead := hhead) (v := v) (hv := hv) (hrely := hrely)
+    | endeGleitVon l Γ Λ l₁ h₁ e lo hi rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+      exact ownInv_step_endeGleitVon (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (l₁ := l₁) (h₁ := h₁) (e := e) (lo := lo) (hi := hi) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
+    | endeGleitNarrowOk l Γ Λ l₁ h₁ e lo hi sonst rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+      exact ownInv_step_endeGleitNarrowOk (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (l₁ := l₁) (h₁ := h₁) (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
+    | endeGleitNarrowElse l Γ Λ l₁ h₁ e lo hi sonst rest ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
+      exact ownInv_step_endeGleitNarrowElse (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (l₁ := l₁) (h₁ := h₁) (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (hn := hn) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | g7 hstep => exact ownInv_step_g7 hH hstep
 
 #print axioms ownInv_step

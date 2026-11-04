@@ -343,6 +343,10 @@ theorem ewig_ruEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock
   | _, _, _, .exchange _ _ _ _ rest, eb, ie => ewig_ruEnd rest eb ie
   | _, _, _, .ite _ t e, eb, ie => kongr₂ (· || ·) (ewig_ruEnd e eb ie) (ewig_ruEnd t eb ie)
 
+  | _, _, _, .float _ _ _ _ _ rest, eb, ie => ewig_ruEnd rest eb ie
+  | _, _, _, .floatLit _ _ _ rest, eb, ie => ewig_ruEnd rest eb ie
+  | _, _, _, .floatOf _ _ _ rest, eb, ie => ewig_ruEnd rest eb ie
+  | _, _, _, .floatNarrow _ _ _ sonst rest, eb, ie => kongr₂ (· || ·) (ewig_ruEnd sonst eb ie) (ewig_ruEnd rest eb ie)
 theorem ewig_ruArms : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (arms : Arms D V l Γ Λ Λ' cs) (eb ie : Bool), (befArms eb ie (ruArms arms)).ewig = (befArms eb ie arms).ewig
   | _, _, _, _, _, .nil, _, _ => rfl

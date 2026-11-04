@@ -1,5 +1,7 @@
 /- Part 2 of 3 of `RufHaeltG` (split by instrumente/teile/lean-teilen.py; the umbrella `RufHaeltG.lean` imports all parts). -/
 module
+public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.RufSchrittG_haeltInvFaelle.EndFloat.Teil7
+public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.RufSchrittG_haeltInvFaelle.EndFloat.Teil6
 public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.T1
 public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.AntwortHaelt
 public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.ScopeBalanceReplay
@@ -352,6 +354,16 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
     | endeBindAxiomOptElseGrund =>
       rename_i l Γ Λ e a args he hr hp hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ
       exact rufSchrittG_haeltInv_endeBindAxiomOptElseGrund (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (e := e) (a := a) (args := args) (he := he) (hr := hr) (hp := hp) (hd := hd) (hgd := hgd) (err := err) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (r := r) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ)
+    | endeGleit l Γ Λ l₁ h₁ l₂ h₂ op a b lo hi rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+      exact rufSchrittG_haeltInv_endeGleit (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (l₁ := l₁) (h₁ := h₁) (l₂ := l₂) (h₂ := h₂) (op := op) (a := a) (b := b) (lo := lo) (hi := hi) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ)
+    | endeGleitLit l Γ Λ q lo hi rest ρ hhead v hv =>
+      exact rufSchrittG_haeltInv_endeGleitLit (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (q := q) (lo := lo) (hi := hi) (rest := rest) (ρ := ρ) (hhead := hhead) (v := v) (hv := hv)
+    | endeGleitVon l Γ Λ l₁ h₁ e lo hi rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+      exact rufSchrittG_haeltInv_endeGleitVon (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (l₁ := l₁) (h₁ := h₁) (e := e) (lo := lo) (hi := hi) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ)
+    | endeGleitNarrowOk l Γ Λ l₁ h₁ e lo hi sonst rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+      exact rufSchrittG_haeltInv_endeGleitNarrowOk (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (l₁ := l₁) (h₁ := h₁) (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ)
+    | endeGleitNarrowElse l Γ Λ l₁ h₁ e lo hi sonst rest ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
+      exact rufSchrittG_haeltInv_endeGleitNarrowElse (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (l₁ := l₁) (h₁ := h₁) (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (hn := hn) (neu := neu) (hneu := hneu) (hΛ := hΛ)
   | g7 hs =>
     cases hs with
     | dannVerbrauch l Γ Λ Λ'' t member edge inv bound mass body rest k ρ hhead =>

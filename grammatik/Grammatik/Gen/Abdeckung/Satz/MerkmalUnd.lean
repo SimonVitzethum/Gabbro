@@ -186,6 +186,11 @@ theorem mE_und (A B : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : Lis
   | .ite _ t e => by
       simp only [mE, mE_und A B t, mE_und A B e, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
 
+  | .float _ _ _ _ _ rest => by simp only [mE, mE_und A B rest]
+  | .floatLit _ _ _ rest => by simp only [mE, mE_und A B rest]
+  | .floatOf _ _ _ rest => by simp only [mE, mE_und A B rest]
+  | .floatNarrow _ _ _ sonst rest => by
+      simp only [mE, mE_und A B sonst, mE_und A B rest, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
 end
 
 /-! ## The trivial feature set, finite conjunctions -/
@@ -291,6 +296,10 @@ theorem mE_top {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .exchange _ _ _ _ rest => by simp only [mE, mE_top rest]
   | .ite _ t e => by simp only [mE, mE_top t, mE_top e, Bool.and_self]
 
+  | .float _ _ _ _ _ rest => by simp only [mE, mE_top rest]
+  | .floatLit _ _ _ rest => by simp only [mE, mE_top rest]
+  | .floatOf _ _ _ rest => by simp only [mE, mE_top rest]
+  | .floatNarrow _ _ _ sonst rest => by simp only [mE, mE_top sonst, mE_top rest, Bool.and_self]
 end
 
 /-- The conjunction of a list of feature sets. -/

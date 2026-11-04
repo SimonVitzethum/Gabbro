@@ -467,6 +467,11 @@ def exEnd (hS : E.SigTreu) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ :
         (E.gschreibtE hw) (E.gdarfE hL) (Endblock.umΓ (by rw [List.map_cons, E.gtyp]; try rfl) (exEnd hS rest))
   | _, _, _, .ite c t e => .ite (exE E c) (exEnd hS t) (exEnd hS e)
 
+  | _, _, _, .float op a b lo hi rest => .float op (exE E a) (exE E b) lo hi (exEnd hS rest)
+  | _, _, _, .floatLit q lo hi rest => .floatLit q lo hi (exEnd hS rest)
+  | _, _, _, .floatOf e lo hi rest => .floatOf (exE E e) lo hi (exEnd hS rest)
+  | _, _, _, .floatNarrow e lo hi sonst rest =>
+      .floatNarrow (exE E e) lo hi (exEnd hS sonst) (exEnd hS rest)
 /-- Arms (the arm scope `ArmCtx` is split on the case). -/
 def exArms (hS : E.SigTreu) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
     {cs : List (Option Ty)} → Arms D V l Γ Λ Λ' cs →

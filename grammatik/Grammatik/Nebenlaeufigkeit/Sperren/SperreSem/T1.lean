@@ -370,6 +370,25 @@ def execEndH {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       let σ := σ.lese Λ c.orte
       if wahr? (eval σ c σ ρ) then execEndH t σ ρ else execEndH e σ ρ
 
+  | .float op a b lo hi rest, σ, ρ =>
+      let σ := σ.lese Λ (a.orte ++ b.orte)
+      match gleitPasst lo hi (gleitRechne op (eval σ a σ ρ).x (eval σ b σ ρ).x) with
+      | Option.some v => (execEndH rest σ (.cons v ρ)).schrumpf
+      | Option.none => .logik .bereich
+  | .floatLit q lo hi rest, σ, ρ =>
+      match gleitPasst lo hi (bruch q) with
+      | Option.some v => (execEndH rest σ (.cons v ρ)).schrumpf
+      | Option.none => .logik .bereich
+  | .floatOf e lo hi rest, σ, ρ =>
+      let σ := σ.lese Λ e.orte
+      match gleitPasst lo hi (gleitAusInt (eval σ e σ ρ).n) with
+      | Option.some v => (execEndH rest σ (.cons v ρ)).schrumpf
+      | Option.none => .logik .bereich
+  | .floatNarrow e lo hi sonst rest, σ, ρ =>
+      let σ := σ.lese Λ e.orte
+      match gleitPasst lo hi (eval σ e σ ρ).x with
+      | Option.some v => (execEndH rest σ (.cons v ρ)).schrumpf
+      | Option.none => (execEndH sonst σ ρ)
 def execArmsH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} :
     Arms D V l Γ Λ Λ' cs → Wert D (.sum cs) → World D → Env D Γ → Ausgang V l Γ
   | .cons b _, ⟨⟨0, _⟩, nutz⟩, σ, ρ => (execBlockH b σ (armEnv (Fall.toNutzlast _ _ _ _ nutz) ρ)).schrumpfArm _

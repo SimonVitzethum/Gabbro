@@ -115,6 +115,13 @@ theorem rufeE_of_EndR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {l : 
   | .bind _ _ hr => by simp only [rufeE]; exact rufeE_of_EndR Z hZ hr
   | .retWhy _ _ => rfl
 
+  | .float _ _ _ _ _ _ hr => by simp only [rufeE]; exact rufeE_of_EndR Z hZ hr
+  | .floatLit _ _ _ _ hr => by simp only [rufeE]; exact rufeE_of_EndR Z hZ hr
+  | .floatOf _ _ _ _ hr => by simp only [rufeE]; exact rufeE_of_EndR Z hZ hr
+  | .floatNarrow _ _ _ _ _ hs hr => by
+      simp only [rufeE, Bool.and_eq_true]
+      exact ⟨rufeE_of_EndR Z hZ hs, rufeE_of_EndR Z hZ hr⟩
+
 theorem rufeArms_of_ArmsR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {mr l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     {arms : Arms D V l Γ Λ Λ' cs} : ArmsR A C mr arms → rufeArms Z (fun _ => false) true arms = true

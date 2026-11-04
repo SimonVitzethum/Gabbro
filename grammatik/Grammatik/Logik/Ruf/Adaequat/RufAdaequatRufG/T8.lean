@@ -128,6 +128,12 @@ theorem endG_R {V : Vertrag D} {A : D.Lock → Prop} {C : D.Fn → Prop}
   | _, _, _, _, .cons s rest hs hr => .cons s rest (stmtG_R hV hs) (endG_R hV hr)
   | _, _, _, _, .bind e rest hr => .bind e rest (endG_R hV hr)
 
+  | _, _, _, _, .float op a b lo hi rest hr => .float op a b lo hi rest (endG_R hV hr)
+  | _, _, _, _, .floatLit q lo hi rest hr => .floatLit q lo hi rest (endG_R hV hr)
+  | _, _, _, _, .floatOf e lo hi rest hr => .floatOf e lo hi rest (endG_R hV hr)
+  | _, _, _, _, .floatNarrow e lo hi sonst rest hs hr =>
+      .floatNarrow e lo hi sonst rest (endG_R hV hs) (endG_R hV hr)
+
 theorem armsG_R {V : Vertrag D} {A : D.Lock → Prop} {C : D.Fn → Prop}
     (hV : ∀ c, V.boden = some c → ∀ L, A L → c ≤ D.rang L) :
     ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}

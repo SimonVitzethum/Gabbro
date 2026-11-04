@@ -165,6 +165,10 @@ def constEndB (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ : L
   | .bindCallInd .. => false
   | .narrow .. => false
   | .exchange .. => false
+  | .float .. => false
+  | .floatLit .. => false
+  | .floatOf .. => false
+  | .floatNarrow .. => false
 def constArmsB (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ Λout : List (Res c.D)} {cs : List (Option Ty)} : Arms c.D V l Γ Λ Λout cs → Bool
   | .nil => true
   | .cons body rest => constBlockB c body && constArmsB c rest

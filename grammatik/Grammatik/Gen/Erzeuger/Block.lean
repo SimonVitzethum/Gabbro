@@ -224,6 +224,34 @@ def eBindCallIndElse : Sz (Endblock D V l Γ Λ) :=
         Sz.bindR (Sz.pure ()) (fun m => O.en l (τ :: Γ) (nachSig D (D.sigNr n) Λ) m) fun _ r =>
           Sz.pure (.bindCallIndElse p args he hp hr err r))
 
+def eFloat : Sz (Endblock D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl gleitOps) fun op => Sz.bind (flS E) fun ⟨_, _, a⟩ =>
+    Sz.bind (flS E) fun ⟨_, _, b⟩ => Sz.bind paarS fun lo => Sz.bind paarS fun hi =>
+      Sz.wenn (Zahlen.bindOk (.fl lo hi) = true) fun _ =>
+      Sz.bindR (Sz.pure ()) (fun m => O.en l (.fl lo hi :: Γ) Λ m) fun _ x =>
+        Sz.pure (.float op a b lo hi x))
+
+
+def eFloatLit : Sz (Endblock D V l Γ Λ) :=
+  Sz.knoten (Sz.bind paarS fun q => Sz.bind paarS fun lo => Sz.bind paarS fun hi =>
+    Sz.wenn (Zahlen.bindOk (.fl lo hi) = true) fun _ =>
+    Sz.bindR (Sz.pure ()) (fun m => O.en l (.fl lo hi :: Γ) Λ m) fun _ x =>
+      Sz.pure (.floatLit q lo hi x))
+
+
+def eFloatOf : Sz (Endblock D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (intS E) fun ⟨_, _, e⟩ => Sz.bind paarS fun lo => Sz.bind paarS fun hi =>
+    Sz.wenn (Zahlen.bindOk (.fl lo hi) = true) fun _ =>
+    Sz.bindR (Sz.pure ()) (fun m => O.en l (.fl lo hi :: Γ) Λ m) fun _ x =>
+      Sz.pure (.floatOf e lo hi x))
+
+
+def eFloatNarrow : Sz (Endblock D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (flS E) fun ⟨_, _, e⟩ => Sz.bind paarS fun lo => Sz.bind paarS fun hi =>
+    Sz.wenn (Zahlen.bindOk (.fl lo hi) = true) fun _ => Sz.bindR (Sz.pure ()) (fun m => O.en l Γ Λ m) fun _ sonst =>
+      Sz.bindR (Sz.pure ()) (fun m => O.en l (.fl lo hi :: Γ) Λ m) fun _ x =>
+        Sz.pure (.floatNarrow e lo hi sonst x))
+
 end Klauseln
 
 /-- **The blocks of exact size `k`**. -/
@@ -237,6 +265,7 @@ def blockS {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (O : Orakel V) (E : Sz (SE 
 def endS {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ Λ)) :
     Sz (Endblock D V l Γ Λ) :=
   Sz.alle [eRet E, eRetWhy, eLeave, eNext, eCons O Ss, eBind O E, eBindCall O E, eBindCallElse O E, eBindAxiom O E,
-    eBindAxiomElse O E, eRegRead O, eRegReadElse O, eAwaits O, eBindCallInd O E, eBindCallIndElse O E]
+    eBindAxiomElse O E, eRegRead O, eRegReadElse O, eAwaits O, eBindCallInd O E, eBindCallIndElse O E,
+    eFloat O E, eFloatLit O, eFloatOf O E, eFloatNarrow O E]
 
 end Gabbro.Grammatik.Gen

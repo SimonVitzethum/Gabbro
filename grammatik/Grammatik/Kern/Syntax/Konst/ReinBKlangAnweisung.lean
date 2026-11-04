@@ -405,6 +405,21 @@ theorem constEndB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ :
       rw [constEndB_absage_narrow] at hacc; exact absurd hacc Bool.false_ne_true
   | _, .exchange .., rfl, hacc => by
       rw [constEndB_absage_exchange] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, .float .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
+      rw [constBlockB_absage_float] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, .floatLit .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
+      rw [constBlockB_absage_floatLit] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, .floatOf .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
+      rw [constBlockB_absage_floatOf] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, .floatNarrow .., rfl, rfl, hacc => by
+      rw [constBlockB_absage_floatNarrow] at hacc; exact absurd hacc Bool.false_ne_true
+
 theorem constArmsB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λout : List (Res c.D)} {cs : List (Option Ty)} (e : Arms c.D V l Γ Λ Λout cs)
     (hΛ : Λ = []) (hΛout : Λout = []) (hacc : constArmsB c e = true) :

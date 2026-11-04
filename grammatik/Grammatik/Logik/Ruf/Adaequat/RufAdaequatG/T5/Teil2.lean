@@ -1,10 +1,9 @@
 module
-
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T5.EndFloat
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T2.Teil2EndFloat
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T4
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T5.Teil1
-
 @[expose] public section
-
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
 section SimRet
@@ -17,9 +16,7 @@ include hnw
 -- only through `stmtRet`/`endRet`, which the linter does not count as a use.
 set_option maxHeartbeats 3200000 in
 set_option linter.unusedSectionVars false in
-
 mutual
-
 theorem stmtRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (s : Stmt D (vertragVon D fn) l Γ Λ Λ'), StmtG A true s →
     SimRetS P O passes f fn caller rst rho s0 log A s
@@ -166,7 +163,6 @@ theorem stmtRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .retWhyScoped .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .leave .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .next .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
-
 theorem blockRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (b : Block D (vertragVon D fn) l Γ Λ Λ'), BlockG A true b →
     SimRetB P O passes f fn caller rst rho s0 log A b
@@ -384,7 +380,6 @@ theorem blockRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
               (by rw [Endblock.execBlock_alsBlock, zuAusgang_zurueck hex]; rfl) M1 _ hZ1
               (heldGenau_lese _ hΛ)
             (hA.lauf (RufLaufG.einzeln hs1)))
-
 theorem endRet : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (e : Endblock D (vertragVon D fn) l Γ Λ), EndG A e →
     SimRetE P O passes f fn caller rst rho s0 log A e
@@ -430,6 +425,10 @@ theorem endRet : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           (hA.lauf (RufLaufG.einzeln hs1)))
   | _, _, _, .narrowRequired _ _ _ _, he => by cases he
 
+  | _, _, _, .float op a b lo hi rest, hb => endRet_float (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (log := log) (A := A) (hnw := hnw) op a b lo hi rest hb (endRet rest)
+  | _, _, _, .floatLit q lo hi rest, hb => endRet_floatLit (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (log := log) (A := A) (hnw := hnw) q lo hi rest hb (endRet rest)
+  | _, _, _, .floatOf e lo hi rest, hb => endRet_floatOf (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (log := log) (A := A) (hnw := hnw) e lo hi rest hb (endRet rest)
+  | _, _, _, .floatNarrow e lo hi sonst rest, hb => endRet_floatNarrow (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (log := log) (A := A) (hnw := hnw) e lo hi sonst rest hb (endRet rest) (endRet sonst)
 /-- A covered end block run as a BLOCK (the residue of an `else` branch,
     `Endblock.alsBlock`) returns on the machine as the end block does. -/
 theorem alsRet : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
@@ -475,6 +474,10 @@ theorem alsRet : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           (hA.lauf (RufLaufG.einzeln hs1)))
   | _, _, _, .narrowRequired _ _ _ _, he => by cases he
 
+  | _, _, _, .float op a b lo hi rest, hb => alsRet_float (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (log := log) (A := A) (hnw := hnw) op a b lo hi rest hb (alsRet rest)
+  | _, _, _, .floatLit q lo hi rest, hb => alsRet_floatLit (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (log := log) (A := A) (hnw := hnw) q lo hi rest hb (alsRet rest)
+  | _, _, _, .floatOf e lo hi rest, hb => alsRet_floatOf (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (log := log) (A := A) (hnw := hnw) e lo hi rest hb (alsRet rest)
+  | _, _, _, .floatNarrow e lo hi sonst rest, hb => alsRet_floatNarrow (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (log := log) (A := A) (hnw := hnw) e lo hi sonst rest hb (alsRet rest) (alsRet sonst)
 theorem armsRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} (arms : Arms D (vertragVon D fn) l Γ Λ Λ' cs),
     ArmsG A true arms → ∀ (v : Wert D (.sum cs)),

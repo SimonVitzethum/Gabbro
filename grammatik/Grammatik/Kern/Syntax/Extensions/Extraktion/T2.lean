@@ -344,6 +344,11 @@ def endblockOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .exchange g neu _ _ rest => .inr g :: neu.orte ++ endblockOrte rest
   | .ite c t e => c.orte ++ endblockOrte e ++ endblockOrte t
 
+  | .float _ a b _ _ rest => a.orte ++ b.orte ++ endblockOrte rest
+  | .floatLit _ _ _ rest => endblockOrte rest
+  | .floatOf e _ _ rest => e.orte ++ endblockOrte rest
+  | .floatNarrow e _ _ sonst rest =>
+      e.orte ++ endblockOrte sonst ++ endblockOrte rest
 /-- Die gelesenen Orte der Fallunterscheidung. -/
 def armsOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} :

@@ -472,6 +472,22 @@ theorem Endblock.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik 
       · exact Endblock.logikFrei_ok hR t h.1 _ _ _ he
       · exact Endblock.logikFrei_ok hR e' h.2 _ _ _ he
 
+  | .float .., h, _, _, _, _ => by simp only [Endblock.logikFrei, Bool.false_eq_true] at h
+  | .floatLit q lo hi rest, h, σ, ρ, e, he => by
+      simp only [Endblock.logikFrei, Bool.and_eq_true] at h
+      simp only [execEnd] at he
+      split at he
+      · exact Endblock.logikFrei_ok hR rest h.2 _ _ _ (EndAusgang.schrumpf_logik he)
+      · rename_i hn
+        rw [hn] at h
+        simp only [Option.isSome_none, Bool.false_eq_true, false_and] at h
+  | .floatOf .., h, _, _, _, _ => by simp only [Endblock.logikFrei, Bool.false_eq_true] at h
+  | .floatNarrow x lo hi sonst rest, h, σ, ρ, e, he => by
+      simp only [Endblock.logikFrei, Bool.and_eq_true] at h
+      simp only [execEnd] at he
+      split at he
+      · exact Endblock.logikFrei_ok hR rest h.2 _ _ _ (EndAusgang.schrumpf_logik he)
+      · exact Endblock.logikFrei_ok hR sonst h.1 _ _ _ (he)
 end
 
 end LogikFrei

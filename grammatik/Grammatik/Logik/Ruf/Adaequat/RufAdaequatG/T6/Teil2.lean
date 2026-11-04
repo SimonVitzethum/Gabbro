@@ -78,6 +78,10 @@ def Endblock.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)
   | .exchange _ _ _ _ rest => rest.ohneOrakel
   | .ite _ t e => t.ohneOrakel && e.ohneOrakel
 
+  | .float _ _ _ _ _ rest => rest.ohneOrakel
+  | .floatLit _ _ _ rest => rest.ohneOrakel
+  | .floatOf _ _ _ rest => rest.ohneOrakel
+  | .floatNarrow _ _ _ sonst rest => sonst.ohneOrakel && rest.ohneOrakel
 def Arms.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true

@@ -243,6 +243,19 @@ theorem mE_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       exact ⟨mE_boden t fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden],
         mE_boden e fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]⟩
 
+  | .float _ _ _ _ _ rest, h => by
+      simp only [mE]
+      exact mE_boden rest fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]
+  | .floatLit _ _ _ rest, h => by
+      simp only [mE]
+      exact mE_boden rest fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]
+  | .floatOf _ _ _ rest, h => by
+      simp only [mE]
+      exact mE_boden rest fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]
+  | .floatNarrow _ _ _ sonst rest, h => by
+      simp only [mE, Bool.and_eq_true]
+      exact ⟨mE_boden sonst fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden],
+        mE_boden rest fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]⟩
 end
 
 end Stufen

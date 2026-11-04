@@ -303,6 +303,45 @@ theorem endSG : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       exact EndSG.schrumpf (endSG rest hr ho _ _ _ h1)
   | _, _, _, .narrowRequired _ _ _ _, he, _ => by cases he
 
+  | _, _, _, .float op a b lo hi rest, hb, ho => by
+      intro σ σ' ρ h
+      have hr := hb.gleit_inv
+      simp only [Endblock.ohneOrakel] at ho
+      have h1 := h.lese Λ₀ (a.orte ++ b.orte)
+      simp only [execEnd]
+      rw [h1.eval a, h1.eval b]
+      split
+      · exact EndSG.schrumpf (endSG rest hr ho _ _ _ h1)
+      · trivial
+  | _, _, _, .floatLit q lo hi rest, hb, ho => by
+      intro σ σ' ρ h
+      have hr := hb.gleitLit_inv
+      simp only [Endblock.ohneOrakel] at ho
+      simp only [execEnd]
+      split
+      · exact EndSG.schrumpf (endSG rest hr ho _ _ _ h)
+      · trivial
+  | _, _, _, .floatOf e lo hi rest, hb, ho => by
+      intro σ σ' ρ h
+      have hr := hb.gleitVon_inv
+      simp only [Endblock.ohneOrakel] at ho
+      have h1 := h.lese Λ₀ e.orte
+      simp only [execEnd]
+      rw [h1.eval e]
+      split
+      · exact EndSG.schrumpf (endSG rest hr ho _ _ _ h1)
+      · trivial
+  | _, _, _, .floatNarrow e lo hi sonst rest, hb, ho => by
+      intro σ σ' ρ h
+      obtain ⟨hr, hs⟩ := hb.gleitNarrow_inv
+      simp only [Endblock.ohneOrakel, Bool.and_eq_true] at ho
+      have h1 := h.lese Λ₀ e.orte
+      simp only [execEnd]
+      rw [h1.eval e]
+      split
+      · exact EndSG.schrumpf (endSG rest hr ho.2 _ _ _ h1)
+      · exact (endSG sonst hs ho.1 _ _ _ h1)
+
 theorem armsSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs),
     ArmsG A mr arms → arms.ohneOrakel = true → ∀ (v : Wert D (.sum cs)),

@@ -215,7 +215,11 @@ def kTab : List (List Zeile) := [
     ⟨none, false, false, [(3, none, none)]⟩ /- retScoped -/,
     ⟨none, false, false, []⟩ /- retWhyScoped -/,
     ⟨none, false, true, [(2, none, none), (6, none, none)]⟩ /- bindAxiomOpt -/,
-    ⟨none, false, true, [(2, none, none), (6, none, none), (6, none, none)]⟩ /- bindAxiomOptElse -/],
+    ⟨none, false, true, [(2, none, none), (6, none, none), (6, none, none)]⟩ /- bindAxiomOptElse -/,
+    ⟨none, false, false, [(0, some 6, none), (0, some 6, none), (6, none, none)]⟩ /- float -/,
+    ⟨none, false, false, [(6, none, none)]⟩ /- floatLit -/,
+    ⟨none, false, false, [(0, some 0, none), (6, none, none)]⟩ /- floatOf -/,
+    ⟨none, false, false, [(0, some 6, none), (6, none, none), (6, none, none)]⟩ /- floatNarrow -/],
   -- Arms
   [⟨none, false, false, []⟩ /- nil -/,
     ⟨none, false, false, [(5, none, none), (7, none, none)]⟩ /- cons -/],

@@ -340,6 +340,30 @@ theorem Endblock.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ
       · exact Endblock.hardwareFrei_ok hR t h.1 _ _ _ he
       · exact Endblock.hardwareFrei_ok hR e' h.2 _ _ _ he
 
+  | .float op a b lo hi rest, h, σ, ρ, e, he => by
+      simp only [Endblock.hardwareFrei] at h
+      simp only [execEnd] at he
+      split at he
+      · exact Endblock.hardwareFrei_ok hR rest h _ _ _ (EndAusgang.schrumpf_hardware he)
+      · cases he
+  | .floatLit q lo hi rest, h, σ, ρ, e, he => by
+      simp only [Endblock.hardwareFrei] at h
+      simp only [execEnd] at he
+      split at he
+      · exact Endblock.hardwareFrei_ok hR rest h _ _ _ (EndAusgang.schrumpf_hardware he)
+      · cases he
+  | .floatOf x lo hi rest, h, σ, ρ, e, he => by
+      simp only [Endblock.hardwareFrei] at h
+      simp only [execEnd] at he
+      split at he
+      · exact Endblock.hardwareFrei_ok hR rest h _ _ _ (EndAusgang.schrumpf_hardware he)
+      · cases he
+  | .floatNarrow x lo hi sonst rest, h, σ, ρ, e, he => by
+      simp only [Endblock.hardwareFrei, Bool.and_eq_true] at h
+      simp only [execEnd] at he
+      split at he
+      · exact Endblock.hardwareFrei_ok hR rest h.2 _ _ _ (EndAusgang.schrumpf_hardware he)
+      · exact Endblock.hardwareFrei_ok hR sonst h.1 _ _ _ (he)
 theorem Arms.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → a.hardwareFrei = true →

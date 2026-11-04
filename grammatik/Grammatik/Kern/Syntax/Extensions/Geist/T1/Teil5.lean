@@ -1,4 +1,5 @@
 module
+public import Grammatik.Kern.Syntax.Extensions.Geist.T1.EndFloat
 
 public import Grammatik.Kern.Syntax.Extraktion
 public import Grammatik.Kern.Syntax.Satz
@@ -235,6 +236,14 @@ theorem g001End_korrekt {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       g001End_korrekt_exchange (g := g) (neu := neu) (hw := hw) (hL := hL) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001End_korrekt_rest := g001End_korrekt rest)
   | .ite c t e, zr_h, o, zr_ho =>
       g001End_korrekt_ite (c := c) (t := t) (e := e) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001End_korrekt_e := g001End_korrekt e) (ih_g001End_korrekt_t := g001End_korrekt t)
+  | .float op a b lo hi rest, zr_h, o, zr_ho =>
+      g001End_korrekt_float (op := op) (a := a) (b := b) (lo := lo) (hi := hi) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001End_korrekt_rest := g001End_korrekt rest)
+  | .floatLit q lo hi rest, zr_h, o, zr_ho =>
+      g001End_korrekt_floatLit (q := q) (lo := lo) (hi := hi) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001End_korrekt_rest := g001End_korrekt rest)
+  | .floatOf e lo hi rest, zr_h, o, zr_ho =>
+      g001End_korrekt_floatOf (e := e) (lo := lo) (hi := hi) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001End_korrekt_rest := g001End_korrekt rest)
+  | .floatNarrow e lo hi sonst rest, zr_h, o, zr_ho =>
+      g001End_korrekt_floatNarrow (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001End_korrekt_rest := g001End_korrekt rest) (ih_g001End_korrekt_sonst := g001End_korrekt sonst)
 end
 
 end Gabbro.Grammatik.Geist

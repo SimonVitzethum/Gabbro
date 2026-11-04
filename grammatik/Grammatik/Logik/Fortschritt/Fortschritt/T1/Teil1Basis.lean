@@ -97,6 +97,14 @@ theorem Endblock.alsBlock_terminal {l : Bool} :
   | _, _, .ite _ t _ => by
       simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal t]
 
+  | _, _, .float op a b lo hi rest => by
+      simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
+  | _, _, .floatLit q lo hi rest => by
+      simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
+  | _, _, .floatOf e lo hi rest => by
+      simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
+  | _, _, .floatNarrow e lo hi sonst rest => by
+      simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
 /-- The residue takes an abrupt exit (`leave`/`next`): a loop shim behind
     `dann`/`schrumpf`/`frei`/`abbruch` layers. -/
 def GRest.absorb {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : GRest D V l Γ Λ → Bool

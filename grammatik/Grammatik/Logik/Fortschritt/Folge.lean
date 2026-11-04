@@ -193,6 +193,10 @@ def fE {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e w : Bool) : Endblock D V l �
   -- as its block form `check c el t`: the false branch is checked unarmed
   | .ite _ t el => fE e false el && fE e w t
 
+  | .float _ _ _ _ _ rest => fE e w rest
+  | .floatLit _ _ _ rest => fE e w rest
+  | .floatOf _ _ _ rest => fE e w rest
+  | .floatNarrow _ _ _ sonst rest => fE e false sonst && fE e w rest
 end
 
 /-- **The residue predicate**: the check, carried over every continuation layer of a frame.

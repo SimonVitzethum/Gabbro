@@ -164,6 +164,11 @@ theorem ruEnd_mE (A : Merkmal D.mitRuhe) {V : Vertrag D} : ∀ {l : Bool} {Γ : 
   | _, _, _, .exchange _ _ _ _ rest => ruEnd_mE A rest
   | _, _, _, .ite _ t e => kongr₂ (· && ·) (ruEnd_mE A t) (ruEnd_mE A e)
 
+  | _, _, _, .float _ _ _ _ _ rest => ruEnd_mE A rest
+  | _, _, _, .floatLit _ _ _ rest => ruEnd_mE A rest
+  | _, _, _, .floatOf _ _ _ rest => ruEnd_mE A rest
+  | _, _, _, .floatNarrow _ _ _ sonst rest =>
+      kongr₂ (· && ·) (ruEnd_mE A sonst) (ruEnd_mE A rest)
 theorem ruArms_mArms (A : Merkmal D.mitRuhe) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs),
     mArms A (ruArms arms) = mArms (mZ A) arms

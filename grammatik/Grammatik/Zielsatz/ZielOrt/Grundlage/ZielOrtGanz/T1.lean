@@ -339,6 +339,10 @@ def Endblock.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   | .exchange _ _ _ _ rest => rest.logikFrei
   | .ite _ t e => t.logikFrei && e.logikFrei
 
+  | .float .. => false
+  | .floatLit q lo hi rest => (gleitPasst lo hi (bruch q)).isSome && rest.logikFrei
+  | .floatOf .. => false
+  | .floatNarrow _ _ _ sonst rest => sonst.logikFrei && rest.logikFrei
 end
 
 end Gabbro.Grammatik

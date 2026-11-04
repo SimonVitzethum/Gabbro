@@ -228,6 +228,19 @@ theorem Endblock.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
       exact ⟨Endblock.gOk_mono e h.1 (fun r h' => hr r (Or.inl h')),
         Endblock.gOk_mono t h.2 (fun r h' => hr r (Or.inr h'))⟩
 
+  | .float _ _ _ _ _ rest, h, hr => by
+      simp only [Endblock.gOk, Endblock.regs] at h hr ⊢
+      exact Endblock.gOk_mono rest h hr
+  | .floatLit _ _ _ rest, h, hr => by
+      simp only [Endblock.gOk, Endblock.regs] at h hr ⊢
+      exact Endblock.gOk_mono rest h hr
+  | .floatOf _ _ _ rest, h, hr => by
+      simp only [Endblock.gOk, Endblock.regs] at h hr ⊢
+      exact Endblock.gOk_mono rest h hr
+  | .floatNarrow _ _ _ sonst rest, h, hr => by
+      simp only [Endblock.gOk, Endblock.regs, Bool.and_eq_true, List.mem_append] at h hr ⊢
+      exact ⟨Endblock.gOk_mono sonst h.1 (fun r h' => hr r (Or.inl h')),
+        Endblock.gOk_mono rest h.2 (fun r h' => hr r (Or.inr h'))⟩
 theorem Arms.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → a.gOk K Rg = true → (∀ r ∈ a.regs, Rg' r = true) →

@@ -306,5 +306,99 @@ theorem execBlockHA_ru_floatNarrow {V : Vertrag D}
   | some v => exact AusRelRu.schrumpf (ih_execBlockHA_ru_rest _ (Env.cons v ρ))
 
 
+theorem execEndHA_ru_float {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {zi_l1}
+    {zi_h1}
+    {zi_l2}
+    {zi_h2}
+    (op)
+    (a)
+    (b)
+    (lo)
+    (hi)
+    (rest)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execEndHA_ru_rest : ∀ (σ : World D), ∀ (ρ : Env D _), EndRel (execEndHA S.mitRuhe O' U' A' passes R' (ruEnd rest) (worldR σ) (envR ρ)) (execEndHA S O U A passes R rest σ ρ))
+    : EndRel (execEndHA S.mitRuhe O' U' A' passes R' (ruEnd (.float (l1 := zi_l1) (h1 := zi_h1) (l2 := zi_l2) (h2 := zi_h2) op a b lo hi rest : Endblock D V l Γ Λ)) (worldR σ) (envR ρ)) (execEndHA S O U A passes R (.float (l1 := zi_l1) (h1 := zi_h1) (l2 := zi_l2) (h2 := zi_h2) op a b lo hi rest : Endblock D V l Γ Λ) σ ρ) :=
+  by
+  simp only [ruEnd, execEndHA]
+  rw [orte2, leseA_worldR hA, eval_ru, eval_ru]
+  try simp only [valR_int, valR_opt, valR_fl, valR_fnptr]
+  cases gleitPasst lo hi (gleitRechne op
+      (eval (leseA A σ Λ (a.orte ++ b.orte)) a (leseA A σ Λ (a.orte ++ b.orte)) ρ).x
+      (eval (leseA A σ Λ (a.orte ++ b.orte)) b (leseA A σ Λ (a.orte ++ b.orte)) ρ).x) with
+  | none => exact Or.inl rfl
+  | some v => exact EndRel.schrumpf (ih_execEndHA_ru_rest _ (Env.cons v ρ))
+
+theorem execEndHA_ru_floatLit {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    (q)
+    (lo)
+    (hi)
+    (rest)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execEndHA_ru_rest : ∀ (σ : World D), ∀ (ρ : Env D _), EndRel (execEndHA S.mitRuhe O' U' A' passes R' (ruEnd rest) (worldR σ) (envR ρ)) (execEndHA S O U A passes R rest σ ρ))
+    : EndRel (execEndHA S.mitRuhe O' U' A' passes R' (ruEnd (.floatLit q lo hi rest : Endblock D V l Γ Λ)) (worldR σ) (envR ρ)) (execEndHA S O U A passes R (.floatLit q lo hi rest : Endblock D V l Γ Λ) σ ρ) :=
+  by
+  simp only [ruEnd, execEndHA]
+  cases gleitPasst lo hi (bruch q) with
+  | none => exact Or.inl rfl
+  | some v => exact EndRel.schrumpf (ih_execEndHA_ru_rest _ (Env.cons v ρ))
+
+theorem execEndHA_ru_floatOf {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {zi_l1}
+    {zi_h1}
+    (e)
+    (lo)
+    (hi)
+    (rest)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execEndHA_ru_rest : ∀ (σ : World D), ∀ (ρ : Env D _), EndRel (execEndHA S.mitRuhe O' U' A' passes R' (ruEnd rest) (worldR σ) (envR ρ)) (execEndHA S O U A passes R rest σ ρ))
+    : EndRel (execEndHA S.mitRuhe O' U' A' passes R' (ruEnd (.floatOf (l1 := zi_l1) (h1 := zi_h1) e lo hi rest : Endblock D V l Γ Λ)) (worldR σ) (envR ρ)) (execEndHA S O U A passes R (.floatOf (l1 := zi_l1) (h1 := zi_h1) e lo hi rest : Endblock D V l Γ Λ) σ ρ) :=
+  by
+  simp only [ruEnd, execEndHA]
+  rw [ruE_orte, leseA_worldR hA, eval_ru]
+  try simp only [valR_int, valR_opt, valR_fl, valR_fnptr]
+  cases gleitPasst lo hi (gleitAusInt (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ).n) with
+  | none => exact Or.inl rfl
+  | some v => exact EndRel.schrumpf (ih_execEndHA_ru_rest _ (Env.cons v ρ))
+
+theorem execEndHA_ru_floatNarrow {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {zi_l1}
+    {zi_h1}
+    (e)
+    (lo)
+    (hi)
+    (sonst)
+    (rest)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execEndHA_ru_rest : ∀ (σ : World D), ∀ (ρ : Env D _), EndRel (execEndHA S.mitRuhe O' U' A' passes R' (ruEnd rest) (worldR σ) (envR ρ)) (execEndHA S O U A passes R rest σ ρ))
+    (ih_execEndHA_ru_sonst : ∀ (σ : World D), ∀ (ρ : Env D _), EndRel (execEndHA S.mitRuhe O' U' A' passes R' (ruEnd sonst) (worldR σ) (envR ρ)) (execEndHA S O U A passes R sonst σ ρ))
+    : EndRel (execEndHA S.mitRuhe O' U' A' passes R' (ruEnd (.floatNarrow (l1 := zi_l1) (h1 := zi_h1) e lo hi sonst rest : Endblock D V l Γ Λ)) (worldR σ) (envR ρ)) (execEndHA S O U A passes R (.floatNarrow (l1 := zi_l1) (h1 := zi_h1) e lo hi sonst rest : Endblock D V l Γ Λ) σ ρ) :=
+  by
+  simp only [ruEnd, execEndHA]
+  rw [ruE_orte, leseA_worldR hA, eval_ru]
+  try simp only [valR_int, valR_opt, valR_fl, valR_fnptr]
+  cases gleitPasst lo hi (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ).x with
+  | none => exact (ih_execEndHA_ru_sonst _ ρ)
+  | some v => exact EndRel.schrumpf (ih_execEndHA_ru_rest _ (Env.cons v ρ))
+
+
 end HauptA
+
 end Gabbro.Grammatik

@@ -108,11 +108,11 @@ public theorem add_continuing_lowering_zeuge : lowered .foldAdd = true := rfl
 public theorem min_continuing_lowering_zeuge : lowered .foldMin = true := rfl
 public theorem max_continuing_lowering_zeuge : lowered .foldMax = true := rfl
 
-/-- Keep the remaining canonical Endblock boundary explicit in the witnesses. -/
-public theorem top_level_endblock_refusal_zeuge :
+/-- Float folds also lower in the final part of a function body. -/
+public theorem top_level_endblock_lowering_zeuge :
     (lowerAllg {tabs := [table], locks := [], fns := [
       {name := "sample", params := [], kinds := [], res := none, held := [],
-        puts := [], gives := [], body := expectedAdd, ret := .empty}]}).toOption.isNone = true := rfl
+        puts := [], gives := [], body := expectedAdd, ret := .empty}]}).toOption.isSome = true := rfl
 
 /-- IEEE unordered comparisons and signed-zero copies are the kernel model's
     computations, not a separate extrema policy. -/

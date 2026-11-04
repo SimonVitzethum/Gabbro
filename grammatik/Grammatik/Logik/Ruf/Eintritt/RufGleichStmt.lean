@@ -1,10 +1,6 @@
-/-
-  Run equality for the whole grammar under handlers agreeing at disciplined
-  entries. The mutual induction threads entry discipline through statements,
-  blocks, terminal blocks and arms. Long arms live in RufGleichBind* and
-  RufGleichTests; RufLogika uses this to relate gated and free calls.
--/
+/- Whole-grammar run equality under handlers agreeing at disciplined entries. -/
 module
+public import Grammatik.Logik.Ruf.Eintritt.RufGleichEndFloat
 
 public import Grammatik.Kern.Syntax.Satz
 public import Grammatik.Kern.Semantik.Semantik
@@ -461,6 +457,10 @@ theorem end_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         simp only [hc, ite_true, ite_false] at ⊢
       · exact end_gleich bo hbV t _ ρ hscope_t (hl.heldB hh)
       · exact end_gleich bo hbV e _ ρ hscope_e (hl.heldB hh)
+  | .float op a b lo hi rest, σ, ρ, hs, hh => end_float_gleich O passes R₁ R₂ hAgr hT₁ hO bo hbV op a b lo hi rest (fun σ ρ hs hh => end_gleich bo hbV rest σ ρ hs hh) σ ρ hs hh
+  | .floatLit q lo hi rest, σ, ρ, hs, hh => end_floatLit_gleich O passes R₁ R₂ hAgr hT₁ hO bo hbV q lo hi rest (fun σ ρ hs hh => end_gleich bo hbV rest σ ρ hs hh) σ ρ hs hh
+  | .floatOf e lo hi rest, σ, ρ, hs, hh => end_floatOf_gleich O passes R₁ R₂ hAgr hT₁ hO bo hbV e lo hi rest (fun σ ρ hs hh => end_gleich bo hbV rest σ ρ hs hh) σ ρ hs hh
+  | .floatNarrow e lo hi sonst rest, σ, ρ, hs, hh => end_floatNarrow_gleich O passes R₁ R₂ hAgr hT₁ hO bo hbV e lo hi sonst rest (fun σ ρ hs hh => end_gleich bo hbV rest σ ρ hs hh) (fun σ ρ hs hh => end_gleich bo hbV sonst σ ρ hs hh) σ ρ hs hh
 /-- **Option arms under two agreeing handlers.** -/
 theorem arms_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden) :
     ∀ (a : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),

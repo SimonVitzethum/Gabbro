@@ -459,5 +459,38 @@ theorem kEnde_rel (hO : OrakelTreu T AxT O) (hsp : SpeicherGleich T sp₁ sp₂)
   | leave _ => exact KRel.none_l _
   | next _ => exact KRel.none_l _
 
+  | float op a b lo hi rest =>
+      simp only [nE, Bool.and_eq_true] at he
+      simp only [kEnde]
+      have h1 := hW.lese Λ (a.orte ++ b.orte)
+      rw [h1.eval a (alle_von hST he.1.1) ρ, h1.eval b (alle_von hST he.1.2) ρ]
+      generalize gleitPasst lo hi _ = x
+      cases x with
+      | none => exact KRel.none_l _
+      | some v => exact KRel.lokal _ _ _ _ _ rfl hsp
+  | floatLit q lo hi rest =>
+      simp only [kEnde]
+      generalize gleitPasst lo hi _ = x
+      cases x with
+      | none => exact KRel.none_l _
+      | some v => exact KRel.lokal _ _ _ _ _ rfl hsp
+  | floatOf e lo hi rest =>
+      simp only [nE, Bool.and_eq_true] at he
+      simp only [kEnde]
+      rw [(hW.lese Λ e.orte).eval e (alle_von hST he.1) ρ]
+      generalize gleitPasst lo hi _ = x
+      cases x with
+      | none => exact KRel.none_l _
+      | some v => exact KRel.lokal _ _ _ _ _ rfl hsp
+  | floatNarrow e lo hi sonst rest =>
+      simp only [nE, Bool.and_eq_true] at he
+      simp only [kEnde]
+      rw [(hW.lese Λ e.orte).eval e (alle_von hST he.1.1) ρ]
+      generalize gleitPasst lo hi _ = x
+      cases x with
+      | none => exact KRel.lokal _ _ _ _ _ rfl hsp
+      | some v => exact KRel.lokal _ _ _ _ _ rfl hsp
+
+
 end Schritt
 end Gabbro.Grammatik

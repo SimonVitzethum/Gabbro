@@ -239,6 +239,14 @@ theorem lowerEnd_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
   | _, _, _, .bindCallIndElse .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerEnd, reduceCtorEq] at h
 
+  | _, _, _, .float .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .floatLit .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .floatOf .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .floatNarrow .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      simp only [lowerEnd, reduceCtorEq] at h
 /-- Every arm body of a `match` on a tagged value refines (the structural companion of `lowerB_ok`). -/
 theorem lowerAr_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel D)
     (passes : Nat) (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f) :

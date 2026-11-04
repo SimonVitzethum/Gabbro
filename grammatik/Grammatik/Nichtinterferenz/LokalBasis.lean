@@ -118,6 +118,10 @@ def nE (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l :
   | .exchange g neu _ _ rest => S (.inr g) && neu.orte.all S && nE S Ax rest
   | .ite c t e => c.orte.all S && nE S Ax e && nE S Ax t
 
+  | .float _ a b _ _ rest => a.orte.all S && b.orte.all S && nE S Ax rest
+  | .floatLit _ _ _ rest => nE S Ax rest
+  | .floatOf e _ _ rest => e.orte.all S && nE S Ax rest
+  | .floatNarrow e _ _ sonst rest => e.orte.all S && nE S Ax sonst && nE S Ax rest
 def nA (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true

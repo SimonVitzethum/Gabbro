@@ -190,6 +190,11 @@ theorem wartet_steht {P : Programm D} {O : Orakel D} {passes : Nat}
     | endeBindAxiomOptElseGrund => kopfwegH
     | endeBindAxiomElseOk => kopfwegH
     | endeBindAxiomElseGrund => kopfwegH
+    | endeGleit l Γ Λ l₁ h₁ l₂ h₂ op a b lo hi rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+    | endeGleitLit l Γ Λ q lo hi rest ρ hhead v hv =>
+    | endeGleitVon l Γ Λ l₁ h₁ e lo hi rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+    | endeGleitNarrowOk l Γ Λ l₁ h₁ e lo hi sonst rest ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+    | endeGleitNarrowElse l Γ Λ l₁ h₁ e lo hi sonst rest ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
   | g7 hs =>
     cases hs with
     | dannVerbrauch => kopfwegH

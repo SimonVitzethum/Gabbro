@@ -207,6 +207,31 @@ theorem stmtOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         simp only [execEnd, hr']
 
 )
+    (fun op a b lo hi rest hr ihr σ ρ => by
+        have hr' : ∀ (σ : World D) (ρ : Env D _), _ := fun σ ρ => ihr σ ρ
+        simp only [execEnd]
+        cases hg : gleitPasst lo hi (gleitRechne op _ _) with
+        | none => simp only [hg]
+        | some v => simp only [hg, hr'])
+    (fun q lo hi rest hr ihr σ ρ => by
+        have hr' : ∀ (σ : World D) (ρ : Env D _), _ := fun σ ρ => ihr σ ρ
+        simp only [execEnd]
+        cases hg : gleitPasst lo hi (bruch q) with
+        | none => simp only [hg]
+        | some v => simp only [hg, hr'])
+    (fun e lo hi rest hr ihr σ ρ => by
+        have hr' : ∀ (σ : World D) (ρ : Env D _), _ := fun σ ρ => ihr σ ρ
+        simp only [execEnd]
+        cases hg : gleitPasst lo hi (gleitAusInt _) with
+        | none => simp only [hg]
+        | some v => simp only [hg, hr'])
+    (fun e lo hi sonst rest he hr ihe ihr σ ρ => by
+        have hr' : ∀ (σ : World D) (ρ : Env D _), _ := fun σ ρ => ihr σ ρ
+        have he' : ∀ (σ : World D) (ρ : Env D _), _ := fun σ ρ => ihe σ ρ
+        simp only [execEnd]
+        cases hg : gleitPasst lo hi _ with
+        | none => simp only [hg, he']
+        | some v => simp only [hg, hr'])
     (fun v σ ρ => by
         subst_vars
         cases v with

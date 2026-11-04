@@ -252,6 +252,23 @@ inductive EndR {V : Vertrag D} (A : D.Lock → Prop) (C : D.Fn → Prop) :
   | retWhy {Γ : Ctx} {Λ : List (Res D)} (r : Fin V.gruende) (hΛ : Λ.Perm V.ende) :
       EndR A C (.retWhy (l := false) r hΛ)
 
+  | float {Γ : Ctx} {Λ : List (Res D)} {l1 h1 l2 h2 : Int × Int}
+      (op : GleitOp) (a : Expr D Γ Λ (.fl l1 h1)) (b : Expr D Γ Λ (.fl l2 h2))
+      (lo hi : Int × Int) (rest : Endblock D V false (.fl lo hi :: Γ) Λ)
+      (hr : EndR A C rest) : EndR A C (.float op a b lo hi rest)
+  | floatLit {Γ : Ctx} {Λ : List (Res D)}
+      (q lo hi : Int × Int) (rest : Endblock D V false (.fl lo hi :: Γ) Λ)
+      (hr : EndR A C rest) : EndR A C (.floatLit q lo hi rest)
+  | floatOf {Γ : Ctx} {Λ : List (Res D)} {l1 h1 : Int}
+      (e : Expr D Γ Λ (.int l1 h1)) (lo hi : Int × Int)
+      (rest : Endblock D V false (.fl lo hi :: Γ) Λ) (hr : EndR A C rest) :
+      EndR A C (.floatOf e lo hi rest)
+  | floatNarrow {Γ : Ctx} {Λ : List (Res D)} {l1 h1 : Int × Int}
+      (e : Expr D Γ Λ (.fl l1 h1)) (lo hi : Int × Int) (sonst : Endblock D V false Γ Λ)
+      (rest : Endblock D V false (.fl lo hi :: Γ) Λ)
+      (hs : EndR A C sonst) (hr : EndR A C rest) :
+      EndR A C (.floatNarrow e lo hi sonst rest)
+
 inductive ArmsR {V : Vertrag D} (A : D.Lock → Prop) (C : D.Fn → Prop) :
     Bool → {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
     {cs : List (Option Ty)} → Arms D V l Γ Λ Λ' cs → Prop where

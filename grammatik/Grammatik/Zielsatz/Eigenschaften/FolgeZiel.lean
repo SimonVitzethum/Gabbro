@@ -224,6 +224,11 @@ theorem ruEnd_fE (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ 
   | _, _, _, e, w, .ite _ t f =>
       kongr₂ (· && ·) (ruEnd_fE Φ e false f) (ruEnd_fE Φ e w t)
 
+  | _, _, _, _, e, .float _ _ _ _ _ rest => ruEnd_fE Φ e w rest
+  | _, _, _, _, e, .floatLit _ _ _ rest => ruEnd_fE Φ e w rest
+  | _, _, _, _, e, .floatOf _ _ _ rest => ruEnd_fE Φ e w rest
+  | _, _, _, _, e, .floatNarrow _ _ _ sonst rest =>
+      kongr₂ (· && ·) (ruEnd_fE Φ e false sonst) (ruEnd_fE Φ e w rest)
 theorem ruArms_fArms (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option Ty)} (e : Bool)
     (arms : Arms D V l Γ Λ Λ' cs), fArms Φ.mitRuhe e (ruArms arms) = fArms Φ e arms

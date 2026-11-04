@@ -11,9 +11,7 @@ variable {V : Vertrag D} (O : Orakel D) (passes : Nat)
   {Er : Fehlermarke D → Prop}
 mutual
 /-- **A statement under two handlers.** -/
-theorem Stmt.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} :
-    (s : Stmt D V l Γ Λ Λ') → ∀ (σ : World D) (ρ : Env D Γ),
+theorem Stmt.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : (s : Stmt D V l Γ Λ Λ') → ∀ (σ : World D) (ρ : Env D Γ),
       AusgangUnter Er (execStmt O passes R₁ s σ ρ) (execStmt O passes R₂ s σ ρ)
   | .ite c t e, σ, ρ => by
       simp only [execStmt]; exact AusgangUnter.ite (Block.kongruent hR t _ ρ)
@@ -459,6 +457,25 @@ theorem Endblock.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx
       simp only [execEnd]; exact (Endblock.kongruent hR rest _ _).schrumpf
   | .ite c t e, σ, ρ => by
       simp only [execEnd]; exact EndUnter.ite (Endblock.kongruent hR t _ ρ) (Endblock.kongruent hR e _ ρ)
+  | .float op a b lo hi rest, σ, ρ => by
+      simp only [execEnd]; cases hx : gleitPasst lo hi (gleitRechne op
+          (eval (σ.lese Λ (a.orte ++ b.orte)) a (σ.lese Λ (a.orte ++ b.orte)) ρ).x
+          (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ).x) with
+      | none => exact Or.inl rfl
+      | some v => exact (Endblock.kongruent hR rest _ _).schrumpf
+  | .floatLit q lo hi rest, σ, ρ => by
+      simp only [execEnd]; cases hx : gleitPasst lo hi (bruch q) with
+      | none => exact Or.inl rfl
+      | some v => exact (Endblock.kongruent hR rest _ _).schrumpf
+  | .floatOf e lo hi rest, σ, ρ => by
+      simp only [execEnd]; cases hx : gleitPasst lo hi (gleitAusInt
+          (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n) with
+      | none => exact Or.inl rfl
+      | some v => exact (Endblock.kongruent hR rest _ _).schrumpf
+  | .floatNarrow e lo hi sonst rest, σ, ρ => by
+      simp only [execEnd]; cases hx : gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x with
+      | none => exact (Endblock.kongruent hR sonst _ ρ)
+      | some v => exact (Endblock.kongruent hR rest _ _).schrumpf
 theorem Arms.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → ∀ (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),

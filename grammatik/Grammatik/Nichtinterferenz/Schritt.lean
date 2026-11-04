@@ -145,7 +145,27 @@ def kEnde (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
   | _, _, _, _, .retWhy r _ => kPopGrund st f rho spur sp r
   | l, _, _, ρ, .retWhyScoped r R =>
       kScoped (l := l) st f rho ρ (.inr r) (sp.welt spur) R.scopes
+  | _, _, Λ, ρ, .float op a b lo hi rest =>
+      let σ₁ := (sp.welt spur).lese Λ (a.orte ++ b.orte)
+      match gleitPasst lo hi (gleitRechne op (eval σ₁ a σ₁ ρ).x (eval σ₁ b σ₁ ρ).x) with
+      | some v => kLokal st f rho (.cons (show Wert D (.fl lo hi) from v) ρ) (.ende rest) σ₁.spur sp
+      | none => none
+  | _, _, _, ρ, .floatLit q lo hi rest =>
+      match gleitPasst lo hi (bruch q) with
+      | some v => kLokal st f rho (.cons (show Wert D (.fl lo hi) from v) ρ) (.ende rest) spur sp
+      | none => none
+  | _, _, Λ, ρ, .floatOf e lo hi rest =>
+      let σ₁ := (sp.welt spur).lese Λ e.orte
+      match gleitPasst lo hi (gleitAusInt (eval σ₁ e σ₁ ρ).n) with
+      | some v => kLokal st f rho (.cons (show Wert D (.fl lo hi) from v) ρ) (.ende rest) σ₁.spur sp
+      | none => none
+  | _, _, Λ, ρ, .floatNarrow e lo hi sonst rest =>
+      let σ₁ := (sp.welt spur).lese Λ e.orte
+      match gleitPasst lo hi (eval σ₁ e σ₁ ρ).x with
+      | some v => kLokal st f rho (.cons (show Wert D (.fl lo hi) from v) ρ) (.ende rest) σ₁.spur sp
+      | none => kLokal st f rho ρ (.ende sonst) σ₁.spur sp
   | _, _, _, _, _ => none
+
 
 /-- A `dann` residue. -/
 def kDann (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) (spur : List (Ereignis D)) (sp : Speicher D) : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Env D Γ →
