@@ -202,6 +202,13 @@ def NativeFPOp.ofCode : Nat → Option NativeFPOp
   | 58 => some (.truncateInt64 .f32) | 59 => some (.truncateInt64 .f64)
   | _ => none
 
+/-- Operations realized by one physical scalar floating instruction. The remaining
+    operations require the runner's portable integer/primitive compositions. -/
+def NativeFPOp.direct : NativeFPOp → Bool
+  | .add _ | .sub _ | .mul _ | .div _ | .eq _ | .lt _ | .le _
+  | .fromInt64 _ | .widen32 | .narrow32 | .compare _ | .truncateInt64 _ => true
+  | _ => false
+
 theorem NativeFPOp.ofCode_code (op : NativeFPOp) : ofCode op.code = some op := by
   cases op <;> first | (rename_i format; cases format <;> rfl) | rfl
 

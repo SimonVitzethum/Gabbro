@@ -76,9 +76,20 @@ theorem unsigned_division_zeuge :
 
 def bool (c : Bool) : W := if c then 1 else 0
 
-/-- One instruction, by opcode. Opcode 0 and 28-255 fault. -/
+/-- One instruction, by opcode. Unassigned opcode bytes fault. -/
 def op (o : Nat) (t : T) : Res T :=
   match o with
+  | 28 => fp (.add .f32) t | 29 => fp (.add .f64) t
+  | 30 => fp (.sub .f32) t | 31 => fp (.sub .f64) t
+  | 32 => fp (.mul .f32) t | 33 => fp (.mul .f64) t
+  | 34 => fp (.div .f32) t | 35 => fp (.div .f64) t
+  | 38 => fp (.eq .f32) t | 39 => fp (.eq .f64) t
+  | 40 => fp (.lt .f32) t | 41 => fp (.lt .f64) t
+  | 42 => fp (.le .f32) t | 43 => fp (.le .f64) t
+  | 46 => fp (.fromInt64 .f32) t | 47 => fp (.fromInt64 .f64) t
+  | 54 => fp .widen32 t | 55 => fp .narrow32 t
+  | 56 => fp (.compare .f32) t | 57 => fp (.compare .f64) t
+  | 58 => fp (.truncateInt64 .f32) t | 59 => fp (.truncateInt64 .f64) t
   | 27 => bin (fun a b => some (bool (a.ult b))) t
   | 25 => bin udiv t
   | 26 => bin urem t
@@ -129,6 +140,12 @@ def op (o : Nat) (t : T) : Res T :=
     .ask (.sys cloneReq) fun r => opt r fun p =>
     if p.1 = 0 then .next { pc := c, fp := f } else ret1 t p.1
   | _ => .fault
+
+theorem op_fp {kind : NativeFPOp} (h : kind.direct = true) : op kind.code = fp kind := by
+  cases kind <;> first
+    | (rename_i format; cases format <;> first | rfl | cases h)
+    | rfl
+    | cases h
 
 def step (t : T) : Res T := rd8 t.pc fun o => op o.toNat t
 
