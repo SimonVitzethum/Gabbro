@@ -205,9 +205,13 @@ theorem invAmRueck_E {σ : World D} {σ' : World D'} (h : E.Treu hZ σ.speicher 
   unfold InvHaelt at hh ⊢
   rw [hU.fort.invariante i]
   unfold invarianteE
+  let mapped : Expr D' [] ((invSicht D i).map E.resE) .bool := E.exE (P.invariante i)
+  change (eval (τ := .bool) σ' (Expr.umΛ (E.invSichtE i) mapped) σ' Env.nil : Bool) = true
   rw [eval_umΛ]
-  rw [E.wahr_rel hZ h h (P.invariante i) Env.nil Env.nil trivial]
-  exact hh
+  have truth := E.wahr_rel hZ h h (P.invariante i) Env.nil Env.nil trivial
+  change (eval (τ := .bool) σ' mapped σ' Env.nil : Bool) = eval σ (P.invariante i) σ Env.nil at truth
+  change (eval (τ := .bool) σ (P.invariante i) σ Env.nil : Bool) = true at hh
+  exact truth.trans hh
 
 variable (passes : Nat) (f : D.Fn)
 
@@ -344,9 +348,9 @@ theorem logikPflicht_E {P : Programm D} {S : SperrInv D} {Q : AxEns D} {T : D.Ta
       InvGutSA P' passes Q' S' T' (E.fn f) ∧ InvGutGrundA P' passes Q' S' T' (E.fn f) := by
   intro passes f
   obtain ⟨h1, h2, h3⟩ := hL.1 passes f
-  exact ⟨E.koerperGutSA_E hZ hS hU hp hL.2.1 hL.2.2 passes f h1,
-    E.invGutSA_E hZ hS hU hp hL.2.1 hL.2.2 passes f h2,
-    E.invGutGrundA_E hZ hS hU hp hL.2.1 hL.2.2 passes f h3⟩
+  exact ⟨E.koerperGutSA_E hZ hS hU hp hL.2.1 hL.2.2.1 passes f h1,
+    E.invGutSA_E hZ hS hU hp hL.2.1 hL.2.2.1 passes f h2,
+    E.invGutGrundA_E hZ hS hU hp hL.2.1 hL.2.2.1 passes f h3⟩
 
 end Einbettung
 
