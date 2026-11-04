@@ -18,16 +18,13 @@ private theorem finiteArithmeticWf (kind : SoftFloatKernel) (a b : GFloat)
     cases kb : Gleitkomma.klasse Gleitkomma.f64 b
   all_goals simp only [gleitEndlich, ka, kb, Bool.false_eq_true] at af bf
   all_goals simp only [SoftFloatKernel.apply, Gleitkomma.add, Gleitkomma.mul,
-    Gleitkomma.div, Gleitkomma.wertExakt, ka, kb]
-  all_goals first
-    | exact Gleitkomma.wf_null _ _
-    | exact Gleitkomma.wf_unendlich _ _
-    | exact Gleitkomma.nanQ_wf _ Gleitkomma.f64_p
-    | exact Gleitkomma.rundeExakt_wf _ Gleitkomma.f64_p _
-    | exact Gleitkomma.rundeBruch_wf _ Gleitkomma.f64_p _
-    | (split <;> first
-        | exact Gleitkomma.nanQ_wf _ Gleitkomma.f64_p
-        | exact Gleitkomma.wf_unendlich _ _)
+    Gleitkomma.div, ka, kb]
+  all_goals repeat' first
+    | (solve | simp only [Gleitkomma.wf_null, Gleitkomma.wf_unendlich,
+        Gleitkomma.nanQ_wf _ Gleitkomma.f64_p,
+        Gleitkomma.rundeExakt_wf _ Gleitkomma.f64_p,
+        Gleitkomma.rundeBruch_wf _ Gleitkomma.f64_p])
+    | split
 
 private theorem gleitRechneArithmetic (op : GleitOp) (a b : GFloat) :
     gleitRechne op a b = (softFloatKernel op).apply a
@@ -77,11 +74,12 @@ theorem blockFloatArithmetic_case (op : GleitOp) {O : Orakel D} [TorOK L O] [Sic
     intro fp K j code t hc ht m pc pre
     exact softFloatWordsL_ok (softFloatKernel op) (eval σr a σr ρ).x
       (floatAddOperand (decide (op = .sub)) Gleitkomma.f64 (eval σr b σr ρ).x)
-      (fun j c t hc ht m pc pre => (lowE_ok σr σr (fun _ h => h) hW.lay a j c t hc ht m pc ρ pre).word trivial)
+      (fun j c t hc ht m pc pre => (lowE_ok σr σr (fun _ h => h) hW.lay (same := fun _ => rfl) a j c t hc ht m pc ρ pre).word trivial)
       (softAddOperandL_ok (decide (op = .sub)) (eval σr b σr ρ).x
-        (fun j c t hc ht m pc pre => (lowE_ok σr σr (fun _ h => h) hW.lay b j c t hc ht m pc ρ pre).word trivial))
+        (fun j c t hc ht m pc pre => (lowE_ok σr σr (fun _ h => h) hW.lay (same := fun _ => rfl) b j c t hc ht m pc ρ pre).word trivial))
       hc ht pre
   simp only [floatNarrowC, List.length_append, List.length_singleton] at hs
+  have rangeStop : logikCode (D := D) .bereich = 107 := by simp only [logikCode]
   simp only [execBlock, gleitRechneArithmetic op]
   have hchoice := choice_ok (P := P) (σ0 := σ0) (ex := ex) (d := frei Γ reserved)
     (cc := cc) (ct := stopC 107 (frei Γ reserved)) (ce := ce ++ cr)
@@ -99,13 +97,14 @@ theorem blockFloatArithmetic_case (op : GleitOp) {O : Orakel D} [TorOK L O] [Sic
       simpa only [ite_self, hv, floatNarrowC, List.length_append, Int.natCast_add] using hchoice
   · intro hpc
     have hpw := PreS.welt hpc hW.ks hWa hW.lay (by have := hW.lo; omega)
-    have guard := softFloatRangeL_ok (L := L) (ρ := ρ) (W := fun m => WeltAt m L σr)
+    obtain ⟨m1, st, a1, w, hw, hen⟩ := softFloatRangeL_ok (L := L) (ρ := ρ) (W := fun m => WeltAt m L σr)
       (reserved := reserved) low high x hwf
       (fun {fp K j code t} hc ht m pc pre => (conv fp K j code t hc ht m pc pre).mono (fun _ h => h.2))
-    obtain ⟨m1, st, a1, w, hw, hen⟩ := guard hcc (by omega) m pc hpw
+      hcc (by omega) m pc hpw
     exact ⟨m1, st, Agree.widen a1 hW.ks, w, hw, by simpa only [bool_word] using hen⟩
   · intro rejected m' pc' hp' _ hu' hk' hw'
     rw [(softFloatReject_none hwf).mpr rejected]
+    simp only [Sim, rangeStop]
     change Stops ⟨pc', fp⟩ m' 107
     exact stop_ok hp'.code hp'.far hp'.frame (by have := hW.ks; omega) hp'.small (by decide)
   · intro accepted m' pc' hp' _ hu' hk' hw'
