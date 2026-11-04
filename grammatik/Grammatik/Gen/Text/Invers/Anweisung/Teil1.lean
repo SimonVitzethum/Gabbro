@@ -205,7 +205,7 @@ structure SInv (ctx : UCtx) (Γ : Ctx) (Λ : List (Res z.deklaration)) (art : Na
   var : ∀ d, d < Γ.length → ∃ j, uParamNr ctx (nVar (Γ.length - 1 - d)) = .ok j ∧ uArtBei ctx.kinds j = .ok (art d)
   /-- The actual type row of each printed variable has its scalar reader's class.
       Other names and metadata in the source context are unrestricted. -/
-  meta : ∀ d, d < Γ.length → ∀ j, uParamNr ctx (nVar (Γ.length - 1 - d)) = .ok j →
+  «meta» : ∀ d, d < Γ.length → ∀ j, uParamNr ctx (nVar (Γ.length - 1 - d)) = .ok j →
     ∃ ty, ctx.types[j]? = some ty ∧ ScalarMeta (art d) ty
   namen : ∀ n ∈ ctx.names, RumpfName n
   lits : ctx.lits = []

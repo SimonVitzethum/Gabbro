@@ -87,7 +87,7 @@ theorem SInv.push {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
       have : Γ.length + 1 - 1 - (d + 1) = Γ.length - 1 - d := by omega
       rw [this]
       exact uParamNrAux_succ _ 0 _ j hj
-  meta d hd j hj := by
+  «meta» d hd j hj := by
     cases d with
     | zero =>
       have here : uParamNr (ctxMit ctx (nVar Γ.length) a ty b ms ls) (nVar Γ.length) = .ok 0 := by
@@ -148,7 +148,7 @@ theorem SInv.lock {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
     (H : SInv z V ctx Γ Λ art) (L : z.deklaration.Lock) :
     SInv z V { ctx with held := nLock (lN z L) :: ctx.held } Γ (.held L :: Λ) art where
   var := H.var
-  meta := H.meta
+  «meta» := H.meta
   namen := H.namen
   lits := H.lits
   arrKonst := H.arrKonst

@@ -107,7 +107,7 @@ theorem fnCtx_sinv {gNr : Nat → Nat} {tabs : List UTab} {locks : List ULock} {
       exact parNr_ok _ _ 0 (by omega) d (by omega) (by omega)
     · simp only [uCtxVon, kopfVon]
       exact artBei_ok ks d (by omega)
-  meta d hd j hj := by
+  «meta» d hd j hj := by
     have hlen := mapM_length artErg _ ks hks
     have here : uParamNr
         { uCtxVon als [] tabs locks globs (kopfVon z gNr devs f ps ks mitGriff) name annahmen whys sums regs zustaende with

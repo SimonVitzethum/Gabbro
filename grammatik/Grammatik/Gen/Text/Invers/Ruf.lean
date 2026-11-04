@@ -208,7 +208,7 @@ theorem SInv.pushZ {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art 
     refine ⟨j + 1, ?_, ha⟩
     simp only [uParamNr, ctxMit, uParamNrAux, strEq_nZeiger_nVar, Bool.false_eq_true, ite_false]
     exact uParamNrAux_succ _ 0 _ j hj
-  meta d hd j hj := by
+  «meta» d hd j hj := by
     obtain ⟨i, hi, _⟩ := H.var d hd
     obtain ⟨oldTy, hty, hm⟩ := H.meta d hd i hi
     have here : uParamNr (ctxMit ctx (nZeiger k) a ty b [] ls)
