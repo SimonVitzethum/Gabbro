@@ -101,8 +101,8 @@ theorem Ready.slice (h : x.Ready m σ ρ) (i : Nat) (piece : Piece) (block : Lis
   have inside : i < x.fragment.length := by
     by_cases hi : i < x.fragment.length
     · exact hi
-    · simp only [List.getElem?_eq_none (by omega)] at found
-      cases found
+    · have missing := List.getElem?_eq_none (l := x.fragment) (i := i) (by omega)
+      cases (missing.symm.trans found)
   have splitImage : x.fragment = x.fragment.take i ++ piece :: x.fragment.drop (i + 1) := by
     have eq := List.take_append_drop i x.fragment
     rw [List.drop_eq_getElem_cons inside] at eq
@@ -173,6 +173,7 @@ theorem Ready.branch (h : x.Ready m σ ρ) (i j cell : Nat) (target : Label) (v 
   have code := (h.slice i (.zero cell target)
     [ci 19 cell (16 * ((x.offset j : Int) - x.offset i)) 0] found
     (by simp only [resolve, destination, bind, Option.bind_some, pure])).1
+  change m.rd64 (slot x.fp (BitVec.ofNat 64 cell)) = some v at read
   by_cases zero : v = 0
   · simp only [zero, ↓reduceIte]
     have size := assemble_size x.assembled
@@ -182,7 +183,10 @@ theorem Ready.branch (h : x.Ready m σ ρ) (i j cell : Nat) (target : Label) (v 
       (J := 16 * ((x.offset j : Int) - x.offset i)) (by omega)
     simpa only [addr, address] using run
   · simp only [zero, ↓reduceIte]
-    simpa only [next] using brz_stay code cellBound x.small read zero
+    have run := brz_stay code cellBound x.small read zero
+    change Star ⟨x.addr i, x.fp⟩ m ⟨x.addr i + 16, x.fp⟩ m at run
+    rw [next] at run
+    exact run
 
 /-- An invariant or operand is evaluated in the specified read world. -/
 theorem Ready.eval {Λ : List (Res D)} {τ : Ty} (h : x.Ready m σ ρ)
@@ -194,18 +198,19 @@ theorem Ready.eval {Λ : List (Res D)} {τ : Ty} (h : x.Ready m σ ρ)
     ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.addr i) (x.addr (i + 1)) m
       (fun m' => x.Ready m' σ ρ ∧ Agree x.fp (x.s + 4) x.K m m' ∧ ∃ v, x.read m' (x.s + 4) v ∧ Enc L τ (eval σ e σ ρ) v) := by
   have pre := h.pre i (x.s + 4) block ctx found
-  have preWorld := PreS.welt pre x.layout.ks h.world x.layout.lay x.layout.top
+  have preWorld := PreS.welt pre x.layout.ks h.world x.layout.lay x.layout.lo
   obtain ⟨mem, path, frame, value, read, encoded⟩ :=
     lowE_ok (same := by intro _; rfl) σ σ (fun _ h => h) x.layout.lay
     e (x.s + 4) block top lowered topBound m (x.addr i) ρ preWorld |>.word compatible
-  have ok : Ok m (x.addr i) x.fp x.K (x.s + 4) block (Enc L τ (eval σ e σ ρ)) :=
+  have ok : Ok m (x.addr i) x.fp x.K (x.s + 4) block
+      (Enc L τ (Gabbro.Grammatik.eval σ e σ ρ)) :=
     ⟨mem, path, Agree.widen frame x.layout.ks, value, read, encoded⟩
   apply h.ok ok
   · have inside : i < x.fragment.length := by
       apply Classical.byContradiction
       intro hn
-      simp only [List.getElem?_eq_none (by omega)] at found
-      cases found
+      have missing := List.getElem?_eq_none (l := x.fragment) (i := i) (by omega)
+      cases (missing.symm.trans found)
     have element : x.fragment[i] = .code block := by
       simpa only [List.getElem?_eq_getElem inside, Option.some.injEq] using found
     simp only [addr, offset, List.take_succ_eq_append_getElem inside, element]
