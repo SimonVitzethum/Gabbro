@@ -79,10 +79,21 @@ def repZeroArr (u : UProg) {Γ : Ctx} {Λ : List (Res (declOf u))} {elem : Ty}
     read `false`, arrays recurse element by element, strings are empty. -/
 def zeroResetExpr (u : UProg) {Γ : Ctx} {Λ : List (Res (declOf u))} :
     (τ : Ty) → ZeroAdmitting τ → Expr (declOf u) Γ Λ τ
-  | .int lo hi, .intZero h1 h2 => Expr.widen h1 h2 (Expr.lit 0)
-  | .bool, .boolZero => Expr.fls
-  | .arr elem m, .arrZero h' => repZeroArr u (zeroResetExpr u elem h') m
-  | .str n, .strZero => Expr.strLit [] (Nat.zero_le n)
+  | .int _ _, h => Expr.widen
+      (by cases h with | intZero h1 _ => exact h1)
+      (by cases h with | intZero _ h2 => exact h2) (Expr.lit 0)
+  | .bool, _ => Expr.fls
+  | .arr elem m, h => repZeroArr u
+      (zeroResetExpr u elem (by cases h with | arrZero h' => exact h')) m
+  | .str n, _ => Expr.strLit [] (Nat.zero_le n)
+  | .opt _, h => absurd h (by intro h; cases h)
+  | .sum _, h => absurd h (by intro h; cases h)
+  | .why _, h => absurd h (by intro h; cases h)
+  | .never, h => absurd h (by intro h; cases h)
+  | .fl _ _, h => absurd h (by intro h; cases h)
+  | .fnptr _, h => absurd h (by intro h; cases h)
+  | .ptr _, h => absurd h (by intro h; cases h)
+  | .ref _, h => absurd h (by intro h; cases h)
   | .prod _ _, h => absurd h (by intro h; cases h)
 
 /-- A static-array index as an expression (C18): the literal `j` inside `0 ..< len`. -/
@@ -109,7 +120,7 @@ theorem arrSetW_resetFinW {α : Type} {n : Nat} (a : Fin n → α) (i k : Nat)
     arrSetW (resetFinW a i k zero) idx zero j = resetFinW a i (k + 1) zero j := by
   simp only [arrSetW, resetFinW]
   by_cases hj : j = idx
-  · subst hj
+  · subst j
     have h1 : i ≤ idx.val := by omega
     have h2 : idx.val < i + (k + 1) := by omega
     simp [h1, h2, hidx]
@@ -148,7 +159,7 @@ theorem repZeroArr_eval (u : UProg) {Γ : Ctx} {Λ : List (Res (declOf u))} {ele
 /-- The expression zero evaluates to the value zero (C18). -/
 theorem zeroResetExpr_eval (u : UProg) {Γ : Ctx} {Λ : List (Res (declOf u))}
     (τ : Ty) (h : ZeroAdmitting τ) (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) Γ) :
-    eval σ₀ (zeroResetExpr u τ h) σ ρ = zeroValue τ h := by
+    eval (Λ := Λ) σ₀ (zeroResetExpr (Γ := Γ) (Λ := Λ) u τ h) σ ρ = zeroValue τ h := by
   induction h with
   | intZero h1 h2 => rfl
   | boolZero => rfl
@@ -161,7 +172,7 @@ theorem zeroResetExpr_eval (u : UProg) {Γ : Ctx} {Λ : List (Res (declOf u))}
 /-- A static-array index literal evaluates to its number (C18). -/
 theorem resetIdxExpr_val (u : UProg) {Γ : Ctx} {Λ : List (Res (declOf u))} {len : Nat}
     (j : Nat) (h : j < len) (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) Γ) :
-    (eval σ₀ (resetIdxExpr u j h) σ ρ).fin.val = j := by
+    (eval (Λ := Λ) σ₀ (resetIdxExpr (Γ := Γ) (Λ := Λ) u j h) σ ρ).fin.val = j := by
   simp only [resetIdxExpr, eval, Zahl.weiter, Zahl.fin]
   omega
 
@@ -174,7 +185,6 @@ theorem resetRangeExpr_eval (u : UProg) {Γ : Ctx} {Λ : List (Res (declOf u))} 
     ∀ h : i + k ≤ len,
       eval σ₀ (resetRangeExpr u base zero i k h) σ ρ =
         resetFinW (eval σ₀ base σ ρ) i k (eval σ₀ zero σ ρ) := by
-  revert h
   induction k with
   | zero =>
     intro h
@@ -189,9 +199,10 @@ theorem resetRangeExpr_eval (u : UProg) {Γ : Ctx} {Λ : List (Res (declOf u))} 
     have e := ih hk
     simp only [resetRangeExpr, eval, e]
     funext j
-    have hidx : (eval σ₀ (resetIdxExpr (len := len) u (i + k) (by omega)) σ ρ).fin.val
+    have hidx : (eval (Λ := Λ) σ₀
+        (resetIdxExpr (Γ := Γ) (Λ := Λ) (len := len) u (i + k) (by omega)) σ ρ).fin.val
         = i + k := by
-      exact resetIdxExpr_val (len := len) u (i + k) (by omega) σ₀ σ ρ
+      exact resetIdxExpr_val (Γ := Γ) (Λ := Λ) (len := len) u (i + k) (by omega) σ₀ σ ρ
     exact arrSetW_resetFinW _ _ _ h _ _ hidx j
 
 /-- A selected index reads zero after the lowered reset (C18). -/
@@ -254,8 +265,11 @@ def lowResetRangeL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
                             show (globAt u g).ty.toTy = _
                             rw [hty]
                             rfl
+                          have base : Expr (declOf u) Γ Λ (.arr elem len) := by
+                            rw [← hg]
+                            exact Expr.glob (D := declOf u) (Γ := Γ) (Λ := Λ) g hd
                           have eArr : Expr (declOf u) Γ Λ (.arr elem len) :=
-                            resetRangeExpr u (Expr.glob (D := declOf u) g hd)
+                            resetRangeExpr u base
                               (zeroResetExpr u elem hElem) si.range.1.toNat sn.range.1.toNat
                               (by omega)
                           have e2 : Expr (declOf u) Γ Λ ((declOf u).gtyp g) := by
@@ -311,7 +325,7 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .lockBeg _ => .error "lower: a locks block opens here"
   | .consumeLoopBeg .. => .error "lower: a consuming traverse is read by the block reader"
   | .blkEnd => .error "lower: a block closes here without opening"
-  | .resetRange a iu nu => lowResetRangeL u caller Γ fn Λ a iu nu
+  | .resetRange a iu nu => (lowResetRangeL (l := l) u caller Γ fn Λ a iu nu).map fun st => ⟨Λ, st⟩
   | .floatOf .. =>
     .error "floatOf: canonical Endblock has no integer-to-float introduction"
   | .floatLit .. | .float .. =>
