@@ -92,11 +92,11 @@ theorem execStmtHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List
       rfl
   | _, _, Λ, _, .ret e hΛ, σ, ρ =>
       execStmtHA_ru_ret (e := e) (hΛ := hΛ) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
-  | _, _, Λ, _, .retScoped e R, σ, ρ =>
-      execStmtHA_ru_retScoped (e := e) (R := R) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
+  | _, _, Λ, _, .retScoped e cleanup, σ, ρ =>
+      execStmtHA_ru_retScoped (e := e) (cleanup := cleanup) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, _, _, .retWhy .., σ, ρ => Or.inl rfl
-  | _, _, _, _, .retWhyScoped r Rr, σ, ρ =>
-      execStmtHA_ru_retWhyScoped (r := r) (R := Rr) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
+  | _, _, _, _, .retWhyScoped r cleanup, σ, ρ =>
+      execStmtHA_ru_retWhyScoped (r := r) (cleanup := cleanup) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, _, _, .leave _, σ, ρ => Or.inl rfl
   | _, _, _, _, .next _, σ, ρ => Or.inl rfl
 
@@ -122,9 +122,9 @@ theorem execBlockHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : Lis
   | _, _, Λ, _, .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ =>
       execBlockHA_ru_bindAxiomElse (a := a) (args := args) (he := he) (hr := hr) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (err := err) (rest := rest) (σ := σ) (ρ := ρ) (ih_execBlockHA_ru_rest := execBlockHA_ru rest) (ih_execEndHA_ru_err := execEndHA_ru err) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, Λ, _, .bindAxiomOpt e a args he hp hd hgd rest, σ, ρ =>
-      execBlockHA_ru_bindAxiomOpt (e := e) (a := a) (args := args) (he := he) (hp := hp) (hd := hd) (hgd := hgd) (rest := rest) (σ := σ) (ρ := ρ) (ih_execBlockHA_ru_rest := execBlockHA_ru rest) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
+      execBlockHA_ru_bindAxiomOpt (zi_e := e) (a := a) (args := args) (he := he) (hp := hp) (hd := hd) (hgd := hgd) (rest := rest) (σ := σ) (ρ := ρ) (ih_execBlockHA_ru_rest := execBlockHA_ru rest) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, Λ, _, .bindAxiomOptElse e a args he hp hd hgd hr err rest, σ, ρ =>
-      execBlockHA_ru_bindAxiomOptElse (e := e) (a := a) (args := args) (he := he) (hp := hp) (hd := hd) (hgd := hgd) (hr := hr) (err := err) (rest := rest) (σ := σ) (ρ := ρ) (ih_execBlockHA_ru_rest := execBlockHA_ru rest) (ih_execEndHA_ru_err := execEndHA_ru err) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
+      execBlockHA_ru_bindAxiomOptElse (zi_e := e) (a := a) (args := args) (he := he) (hp := hp) (hd := hd) (hgd := hgd) (hr := hr) (err := err) (rest := rest) (σ := σ) (ρ := ρ) (ih_execBlockHA_ru_rest := execBlockHA_ru rest) (ih_execEndHA_ru_err := execEndHA_ru err) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, _, _, .regRead r hk rest, σ, ρ =>
       execBlockHA_ru_regRead (r := r) (hk := hk) (rest := rest) (σ := σ) (ρ := ρ) (ih_execBlockHA_ru_rest := execBlockHA_ru rest) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, Λ, _, .regReadElse r hk zusage sonst rest, σ, ρ =>
@@ -153,11 +153,11 @@ theorem execEndHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res
       (execEndHA S O U A passes R e σ ρ)
   | _, _, Λ, .ret e hΛ, σ, ρ =>
       execEndHA_ru_ret (e := e) (hΛ := hΛ) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
-  | _, _, Λ, .retScoped e R, σ, ρ =>
-      execEndHA_ru_retScoped (e := e) (R := R) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
+  | _, _, Λ, .retScoped e cleanup, σ, ρ =>
+      execEndHA_ru_retScoped (e := e) (cleanup := cleanup) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, _, .retWhy .., σ, ρ => Or.inl rfl
-  | _, _, _, .retWhyScoped r Rr, σ, ρ =>
-      execEndHA_ru_retWhyScoped (r := r) (R := Rr) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
+  | _, _, _, .retWhyScoped r cleanup, σ, ρ =>
+      execEndHA_ru_retWhyScoped (r := r) (cleanup := cleanup) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, _, .leave _, σ, ρ => Or.inl rfl
   | _, _, _, .next _, σ, ρ => Or.inl rfl
   | _, _, _, .cons s rest, σ, ρ =>
@@ -173,9 +173,9 @@ theorem execEndHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res
   | _, _, Λ, .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ =>
       execEndHA_ru_bindAxiomElse (a := a) (args := args) (he := he) (hr := hr) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (err := err) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndHA_ru_rest := execEndHA_ru rest) (ih_execEndHA_ru_err := execEndHA_ru err) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, Λ, .bindAxiomOpt e a args he hp hd hgd rest, σ, ρ =>
-      execEndHA_ru_bindAxiomOpt (e := e) (a := a) (args := args) (he := he) (hp := hp) (hd := hd) (hgd := hgd) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndHA_ru_rest := execEndHA_ru rest) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
+      execEndHA_ru_bindAxiomOpt (zi_e := e) (a := a) (args := args) (he := he) (hp := hp) (hd := hd) (hgd := hgd) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndHA_ru_rest := execEndHA_ru rest) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, Λ, .bindAxiomOptElse e a args he hp hd hgd hr err rest, σ, ρ =>
-      execEndHA_ru_bindAxiomOptElse (e := e) (a := a) (args := args) (he := he) (hp := hp) (hd := hd) (hgd := hgd) (hr := hr) (err := err) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndHA_ru_rest := execEndHA_ru rest) (ih_execEndHA_ru_err := execEndHA_ru err) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
+      execEndHA_ru_bindAxiomOptElse (zi_e := e) (a := a) (args := args) (he := he) (hp := hp) (hd := hd) (hgd := hgd) (hr := hr) (err := err) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndHA_ru_rest := execEndHA_ru rest) (ih_execEndHA_ru_err := execEndHA_ru err) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, _, .regRead r hk rest, σ, ρ =>
       execEndHA_ru_regRead (r := r) (hk := hk) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndHA_ru_rest := execEndHA_ru rest) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, Λ, .regReadElse r hk zusage sonst rest, σ, ρ =>
