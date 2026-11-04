@@ -49,7 +49,7 @@ theorem softFloatRangeL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
       (BitVec.ofNat 64 (zuBits f64 x))) :
     WordCode (L := L) (reserved := reserved) ρ W
       (fun d => softFloatRangeL d lo hi producer) (Runner.IR.bool (softFloatReject lo hi x)) := by
-  have field := unpackBexpL_ok hp
+  have field : WordCode (L := L) (reserved := reserved) ρ W _ _ := unpackBexpL_ok hp
   rw [(routineUnpack_canonical x hw).2.1] at field
   have condition : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin field (WordCode.const 2047 (by decide))
     (g := fun x y => some (Runner.IR.bool (x == y))) rfl rfl (by decide : 14 < 256)
@@ -66,12 +66,22 @@ theorem softFloatRangeL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
         (fun d => canonicalFloatRangeL d lo hi producer) (Runner.IR.bool (floatRangeReject lo hi x)) := by
     have finite := finiteOfExponent x (by simpa only [decide_eq_false_iff_not] using flag)
     intro fp K d code top hc ht m pc pre
-    exact canonicalFloatRangeL_ok x hw finite producer
-      (fun j c t he htop m pc pre => (hp he htop m pc pre).mono (fun w eq => ⟨hw, eq⟩)) hc ht pre
-  have chosen := routineChooseL_ok condition
-    (fun _ => WordCode.const 1 (by decide)) ordinary
+    exact canonicalFloatRangeL_ok (L := L) (reserved := reserved) (fp := fp) (K := K)
+      x hw finite producer
+      (fun j c t he htop mm pp childPre =>
+        (hp (fp := fp) (K := K) (d := j) (c := c) (top := t)
+          he htop mm pp childPre).mono (fun w eq => ⟨hw, eq⟩)) hc ht pre
+  have reject : WordCode (L := L) (reserved := reserved) ρ W
+      (fun j => some ([ci 1 j 1 0], j + 1)) (Runner.IR.bool true) := by
+    intro fp K d code top emitted fits m pc pre
+    exact WordCode.const 1 (by decide) (L := L) (reserved := reserved) (ρ := ρ) (W := W)
+      (fp := fp) (K := K) (d := d) (c := code) (top := top) emitted fits m pc pre
+  have chosen : WordCode (L := L) (reserved := reserved) ρ W _ _ :=
+    routineChooseL_ok condition (fun _ => reject) ordinary
+  intro fp K d code top emitted fits m pc pre
   by_cases maximum : x.bexp = 2047 <;>
-    simpa [softFloatRangeL, softFloatReject, maximum, Runner.IR.bool] using chosen
+    simpa [softFloatReject, maximum, Runner.IR.bool] using
+      chosen (fp := fp) (K := K) (d := d) (c := code) (top := top) emitted fits m pc pre
 
 /-- Add/sub share one kernel; multiply and divide select their checked
     integer routines behind the same result and memory interface. -/
