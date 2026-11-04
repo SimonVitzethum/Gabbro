@@ -55,12 +55,12 @@ theorem gleitBarB_iff (lo hi : Int × Int) :
     simp only [gleitBarB, gleitZeugeB, Bool.or_eq_true_iff, Bool.and_eq_true_iff]
     cases ha : gleitEndlich (bruch lo) with
     | true =>
-        exact Or.inl (Or.inl ⟨⟨ha, NativeFloat.le_refl ha⟩,
+        exact Or.inl (Or.inl ⟨⟨rfl, NativeFloat.le_refl ha⟩,
           NativeFloat.le_trans v.lo_le v.le_hi⟩)
     | false =>
         cases hb : gleitEndlich (bruch hi) with
         | true =>
-            exact Or.inl (Or.inr ⟨⟨hb, NativeFloat.le_trans v.lo_le v.le_hi⟩,
+            exact Or.inl (Or.inr ⟨⟨rfl, NativeFloat.le_trans v.lo_le v.le_hi⟩,
               NativeFloat.le_refl hb⟩)
         | false =>
             exact Or.inr ⟨⟨gleitNull_endlich,
