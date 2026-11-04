@@ -121,7 +121,8 @@ theorem semK_locks {Λ Λ'' : List (Res D)} (L : D.Lock)
       (semK O passes R (.dann (.cons (.locks L hr body) rest) k) σ ρ) := by
   rw [semK_dann O passes R (.cons _ rest), nachK_cons, semK_dann]
   simp only [execStmt]
-  exact nachK_frei O passes R _ L _
+  generalize execBlock O passes R body (σ.nimmt L) ρ = outcome
+  cases outcome <;> exact REnde.gleich_refl _
 
 theorem semK_endeBind {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ)
     (rest : Endblock D V l (τ :: Γ) Λ) (σ : World D) (ρ : Env D Γ) :
