@@ -68,8 +68,8 @@ def RetKopf {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (∃ (Λ'' : List (Res D)) (rest : Block D V l Γ Λ Λ'') (k : GRest D V l Γ Λ''),
       r = .dann (.cons (.ret e hperm) rest) k)
 
-/-- A completed scoped root owes its contract at the saved read world,
-    before cleanup. The frame retains its entry environment and world. -/
+/-- A completed scoped root retains its saved-world contract and invariants.
+    Its owed invariants also hold in the current world, by the head replay. -/
 def StartScopedEndeG (P : Programm D) (M : RufMaschineG D) : Prop :=
   ∀ (t : Faden), (M.faeden t).stapel = [] →
     ∀ (l : Bool) (Γ : Ctx) (ρ : Env D Γ)
@@ -77,7 +77,8 @@ def StartScopedEndeG (P : Programm D) (M : RufMaschineG D) : Prop :=
       (M.faeden t).kopf.rest =
         ⟨l, Γ, (vertragVon D (M.faeden t).kopf.f).ende, ρ, .zurueckgekehrt ⟨.inl v, vor⟩⟩ →
       EnsAmRueck P (M.faeden t).kopf.f (M.faeden t).kopf.s0 vor (M.faeden t).kopf.rho v ∧
-        InvAmRueck P (M.faeden t).kopf.f vor
+        InvAmRueck P (M.faeden t).kopf.f vor ∧
+        InvAmRueck P (M.faeden t).kopf.f (M.weltVon t)
 
 /-- **The start function's completion**: at every thread whose stack is
     empty and whose head stands at `return e`, the start function's
@@ -130,6 +131,34 @@ theorem kopfS_ret (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : S
         (ens_stabil (hFS _) hperm) (fun O' R U σ => semH_dannRet S O' U passes R e hperm rest k σ ρ),
       popS_inv hO hRL hQ hS hsp hI hG hr e (fun i hi hs => inv_stabil (hFS _) hperm hi hs)
         (fun O' R U σ => semH_dannRet S O' U passes R e hperm rest k σ ρ)⟩
+
+/-- A completed saved value replays at the current world. Owed invariant
+    guards are residual signature locks; no saved/current memory equality is used. -/
+theorem kopfS_saved_inv (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+    (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
+    (hI : ∀ f, InvGutS P passes Q S f) (hFS : ∀ f, FussS P S lok f)
+    {G : RufRahmenG D} {W : World D} (hG : KopfS P O passes Q S lok G W)
+    {l : Bool} {Γ : Ctx} {ρ : Env D Γ} (v : ErgVal D (vertragVon D G.f).erg)
+    (vor : World D)
+    (hr : G.rest = ⟨l, Γ, (vertragVon D G.f).ende, ρ, .zurueckgekehrt ⟨.inl v, vor⟩⟩) :
+    InvAmRueck P G.f W := by
+  obtain ⟨H, HA, HU, σ, hreq, hf, hv, _, hfa, hra, hqa, _, hfu, hiu, _, hg, _, heq⟩ := hG
+  have h1 := heq (rufAusV H) (orakelAus O HA) (umweltAus S sp HU) (rufAusV_passt hf)
+    (orakelAus_passt O hfa) (umweltAus_passt S sp hfu) (gleichRS_orakelAus O HA)
+  rw [hr] at h1 hg
+  simp only [semH, weiterH] at h1
+  obtain ⟨σ', hex, hsg⟩ := zErgG_gleich_zurueck (ZErgG.folgt_zurueck h1)
+  have hInv := (hI G.f) (orakelAus O HA) (orakelAus_rahmen hO hra)
+    (regLokal_orakelAus hRL HA) (orakelAus_vertrag hQ hqa)
+    (umweltAus S sp HU) (umweltAus_ok hS hsp hiu)
+    (rufAusV H) (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) G.s0 G.rho hreq σ' v hex
+  intro i hi hs
+  have h3 := hInv i hi hs
+  unfold InvHaelt at h3 ⊢
+  rw [← eval_gleichAuf (P.invariante i)
+    (fun _ h => inv_stabil (hFS _) (List.Perm.refl _) hi hs h)
+    ((gleichAuf_SG hsg).trans hg) .nil]
+  exact h3
 
 end Ende
 
@@ -196,14 +225,18 @@ theorem wurzelFn_erreichbar {P : Programm D} {O : Orakel D} {pa : Nat} {sp : Spe
       · rw [rufSchrittG_fremd hs t htu]
         exact ih t
 
-/-- The residue stands at a reason return (`retGrund`) a pop would fire on:
-    as the end block, before the rest of an end block, or before the rest
-    of a block. -/
+/-- Every reason-return channel: ordinary source heads, scoped source heads,
+    and saved reasons during or after canonical cleanup. -/
 def GrundKopf {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (r : GRest D V l Γ Λ) : Prop :=
-  ∃ (g : Fin V.gruende) (hperm : Λ.Perm V.ende),
-    r = .ende (.retWhy g hperm) ∨ (∃ rest, r = .ende (.cons (.retWhy g hperm) rest)) ∨
-    (∃ (Λ'' : List (Res D)) (rest : Block D V l Γ Λ Λ'') (k : GRest D V l Γ Λ''),
-      r = .dann (.cons (.retWhy g hperm) rest) k)
+  ∃ g : Fin V.gruende,
+    (∃ hperm : Λ.Perm V.ende,
+      r = .ende (.retWhy g hperm) ∨ (∃ rest, r = .ende (.cons (.retWhy g hperm) rest)) ∨
+      (∃ (Λ'' : List (Res D)) (rest : Block D V l Γ Λ Λ'') (k : GRest D V l Γ Λ''),
+        r = .dann (.cons (.retWhy g hperm) rest) k)) ∨
+    (∃ R, r.scopedGrund = some (g, R)) ∨
+    (match r with
+      | .zurueckgekehrt ⟨.inr reason, _⟩ | .aufraeumen ⟨.inr reason, _⟩ _ => reason = g
+      | _ => False)
 
 /-- **No start frame stands at a reason return.** -/
 def KeinStartGrundG (M : RufMaschineG D) : Prop :=
@@ -217,7 +250,7 @@ def KeinStartGrundG (M : RufMaschineG D) : Prop :=
 theorem keinStartGrundG {P : Programm D} {O : Orakel D} {pa : Nat} {sp : Speicher D}
     {init : Faden → Σ f : D.Fn, Env D (D.params f)} (hG : StartOhneGrund init) {M : RufMaschineG D}
     (hr : RufErreichbarG P O pa (RufStartG P sp init) M) : KeinStartGrundG M := by
-  intro t hst l Γ Λ ρ r _ ⟨g, _, _⟩
+  intro t hst l Γ Λ ρ r _ ⟨g, _⟩
   have hw := wurzelFn_erreichbar hr t
   unfold wurzelFn at hw
   rw [hst] at hw

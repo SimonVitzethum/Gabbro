@@ -36,7 +36,7 @@
   (`rufLogPasstG_eind`), so the popped frame is the one whose `rueck`/`grund` event was just
   logged (`schritt_schluessel`), and `invRueck`/`invGrund` give the invariant at that event's
   world, which carries the memory the step leaves -- or the thread FINISHES at the writer's
-  own return, and `StartEndeG` gives it there (`fertig_retKopf`).
+  own return, and `StartEndeG` gives it there (`fertig_inv`).
 -/
 module
 public import Grammatik.Zielsatz.Kern.Spec
@@ -218,14 +218,18 @@ section Ruhe
 
 variable {P : Programm D} {O : Orakel D} {passes : Nat}
 
-/-- A finished thread (empty stack, head at a return) stands at a VALUE return: a start frame
-    never stands at a reason return (`KeinStartGrundG`). -/
-theorem fertig_retKopf {M : RufMaschineG D} {t : Faden} (hF : FertigG M t)
+/-- A finished root is at an ordinary value return or a completed saved value.
+    The complete start-reason guarantee excludes both reason representations. -/
+theorem fertig_abschluss {M : RufMaschineG D} {t : Faden} (hF : FertigG M t)
     (hK : KeinStartGrundG M) :
-    ∃ (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (ρ : Env D Γ)
+    (∃ (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (ρ : Env D Γ)
       (r : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ)
       (e : ErgExpr D Γ Λ (vertragVon D (M.faeden t).kopf.f).erg),
-      (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, r⟩ ∧ RetKopf e r := by
+      (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, r⟩ ∧ RetKopf e r) ∨
+    (∃ (l : Bool) (Γ : Ctx) (ρ : Env D Γ)
+      (v : ErgVal D (vertragVon D (M.faeden t).kopf.f).erg) (vor : World D),
+      (M.faeden t).kopf.rest =
+        ⟨l, Γ, (vertragVon D (M.faeden t).kopf.f).ende, ρ, .zurueckgekehrt ⟨.inl v, vor⟩⟩) := by
   obtain ⟨hst, han⟩ := hF
   have hK' := hK t hst
   generalize (M.faeden t).kopf.rest = R at han hK' ⊢
@@ -235,23 +239,41 @@ theorem fertig_retKopf {M : RufMaschineG D} {t : Faden} (hF : FertigG M t)
   cases r with
   | ende e' =>
       cases e' with
-      | ret e hp => exact ⟨_, _, _, _, _, e, rfl, hp, Or.inl rfl⟩
-      | retWhy g hp => exact absurd ⟨g, hp, Or.inl rfl⟩ hKt
+      | ret e hp => exact Or.inl ⟨_, _, _, _, _, e, rfl, hp, Or.inl rfl⟩
+      | retWhy g hp => exact absurd ⟨g, Or.inl ⟨hp, Or.inl rfl⟩⟩ hKt
       | cons s rest =>
           cases s with
-          | ret e hp => exact ⟨_, _, _, _, _, e, rfl, hp, Or.inr (Or.inl ⟨rest, rfl⟩)⟩
-          | retWhy g hp => exact absurd ⟨g, hp, Or.inr (Or.inl ⟨rest, rfl⟩)⟩ hKt
+          | ret e hp => exact Or.inl ⟨_, _, _, _, _, e, rfl, hp, Or.inr (Or.inl ⟨rest, rfl⟩)⟩
+          | retWhy g hp => exact absurd ⟨g, Or.inl ⟨hp, Or.inr (Or.inl ⟨rest, rfl⟩)⟩⟩ hKt
           | _ => simp only [GRest.anRueck, Endblock.istRueck, Stmt.istRueck, Bool.false_eq_true] at han
       | _ => simp only [GRest.anRueck, Endblock.istRueck, Bool.false_eq_true] at han
   | dann b k =>
       cases b with
       | cons s rest =>
           cases s with
-          | ret e hp => exact ⟨_, _, _, _, _, e, rfl, hp, Or.inr (Or.inr ⟨_, rest, k, rfl⟩)⟩
-          | retWhy g hp => exact absurd ⟨g, hp, Or.inr (Or.inr ⟨_, rest, k, rfl⟩)⟩ hKt
+          | ret e hp => exact Or.inl ⟨_, _, _, _, _, e, rfl, hp, Or.inr (Or.inr ⟨_, rest, k, rfl⟩)⟩
+          | retWhy g hp => exact absurd ⟨g, Or.inl ⟨hp, Or.inr (Or.inr ⟨_, rest, k, rfl⟩)⟩⟩ hKt
           | _ => simp only [GRest.anRueck, Block.istRueck, Stmt.istRueck, Bool.false_eq_true] at han
       | _ => simp only [GRest.anRueck, Block.istRueck, Bool.false_eq_true] at han
+  | zurueckgekehrt a =>
+      rcases a with ⟨answer, vor⟩
+      cases answer with
+      | inl v => exact Or.inr ⟨_, _, _, v, vor, rfl⟩
+      | inr reason => exact absurd ⟨reason, Or.inr (Or.inr rfl)⟩ hKt
   | _ => simp only [GRest.anRueck, Bool.false_eq_true] at han
+
+/-- Both completion representations yield the owed invariant at the current
+    head world. Saved snapshots are never equated with current shared memory. -/
+theorem fertig_inv {M : RufMaschineG D} {t : Faden} (hF : FertigG M t)
+    (hSE : StartEndeG P M) (hKS : KeinStartGrundG M) :
+    InvAmRueck P (M.faeden t).kopf.f (M.weltVon t) := by
+  rcases fertig_abschluss hF hKS with
+    ⟨l, Γ, Λ, ρ, r, e, hhead, hret⟩ | ⟨l, Γ, ρ, v, vor, hhead⟩
+  · have hInv := (hSE.1 t hF.1 l Γ Λ ρ r e hhead hret).2
+    intro i hi hs
+    exact (invHaelt_speicher P i (σ := (M.weltVon t).lese Λ e.orte)
+      (σ' := M.weltVon t) rfl).mp (hInv i hi hs)
+  · exact (hSE.2 t hF.1 l Γ ρ v vor hhead).2.2
 
 /-- **A TABLE INVARIANT HOLDS WHEREVER NO UNFINISHED THREAD IS INSIDE A WRITER.** -/
 theorem invRuhe_erreichbar (hO : GutO O) (sp : Speicher D)
@@ -307,8 +329,7 @@ theorem invRuhe_erreichbar (hO : GutO O) (sp : Speicher D)
               rw [hst] at hk
               exact List.mem_singleton.mp hk
             obtain ⟨-, -, hSE, hKS⟩ := hIR M' hr'
-            obtain ⟨l, Γ, Λ, ρ, r, e, hrest, hret⟩ := fertig_retKopf hFu hKS
-            have hI := (hSE.1 u hst l Γ Λ ρ r e hrest hret).2
+            have hI := fertig_inv hFu hSE hKS
             refine hwelt _ ?_ (hI i hi ?_)
             · show (M'.weltVon u).speicher = M'.speicher
               exact speicher_welt_speicher _ _

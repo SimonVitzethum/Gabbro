@@ -83,7 +83,8 @@ theorem ziel_ort_ende_bei (P : Programm D) (O : Orakel D) (passes : Nat) (Q : Ax
     exact kopfS_ret hO hRL hQ hS hSstart hK hI hFS (hZ.1 t).1 hr' e hk
   · exact startScopedEndeG_erreichbar
       (ziel_ort_scoped_rueck_bei P O passes Q S lok sp init hO hRL hQ hlok hS hFragS hFS
-        hLok hK hStart hSstart hex hI) hr
+        hLok hK hStart hSstart hex hI) hr (fun t _ l Γ ρ v vor hhead =>
+          kopfS_saved_inv hO hRL hQ hS hSstart hI hFS (hZ.1 t).1 v vor hhead)
 
 /-- `ziel_ort_mehrfaden_ende` at ONE budget (a lemma; §4 has the goal
     statement). -/

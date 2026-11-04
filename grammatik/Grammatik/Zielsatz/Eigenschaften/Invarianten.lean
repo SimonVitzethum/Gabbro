@@ -36,7 +36,7 @@
   (`rufLogPasstG_eind`), so the popped frame is the one whose `rueck`/`grund` event was just
   logged (`schritt_schluessel`), and `invRueck`/`invGrund` give the invariant at that event's
   world, which carries the memory the step leaves -- or the thread FINISHES at the writer's
-  own return, and `StartEndeG` gives it there (`fertig_retKopf`).
+  own return, and `StartEndeG` gives it there (`fertig_inv`).
 -/
 module
 public import Grammatik.Zielsatz.Eigenschaften.InvariantenBasis
@@ -165,7 +165,8 @@ end Beine
 #print axioms Gabbro.Grammatik.Zielsatz.schritt_logArt
 #print axioms Gabbro.Grammatik.Zielsatz.rufLogPasstG_eind
 #print axioms Gabbro.Grammatik.Zielsatz.schritt_schluessel
-#print axioms Gabbro.Grammatik.Zielsatz.fertig_retKopf
+#print axioms Gabbro.Grammatik.Zielsatz.fertig_abschluss
+#print axioms Gabbro.Grammatik.Zielsatz.fertig_inv
 #print axioms Gabbro.Grammatik.Zielsatz.invRuhe_erreichbar
 #print axioms Gabbro.Grammatik.Zielsatz.invSicht_aus
 #print axioms Gabbro.Grammatik.Zielsatz.sperrWechsel_aus

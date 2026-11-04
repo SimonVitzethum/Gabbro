@@ -178,13 +178,18 @@ private theorem antwortGut_schritt {P : Programm D} {O : Orakel D} {pa : Nat}
         rw [hcaller] at h
         exact h.2.1
 
-/-- Replay supplies the guarantee at the cleanup source; a structural
-    invariant carries it with the saved snapshot through all later steps.
-    It never compares a released carrier with current shared memory. -/
+/-- The structural invariant preserves the saved-world guarantee. The current
+    invariant is supplied by the actual head replay at this completed root. -/
 theorem startScopedEndeG_erreichbar {P : Programm D} {O : Orakel D} {pa : Nat}
     {sp : Speicher D} {init : Faden → Σ f : D.Fn, Env D (D.params f)}
     (hsc : ∀ N, RufErreichbarG P O pa (RufStartG P sp init) N → ScopedRueckGutG P N)
-    {M : RufMaschineG D} (hr : RufErreichbarG P O pa (RufStartG P sp init) M) :
+    {M : RufMaschineG D} (hr : RufErreichbarG P O pa (RufStartG P sp init) M)
+    (hcurrent : ∀ t, (M.faeden t).stapel = [] →
+      ∀ (l : Bool) (Γ : Ctx) (ρ : Env D Γ)
+        (v : ErgVal D (vertragVon D (M.faeden t).kopf.f).erg) (vor : World D),
+        (M.faeden t).kopf.rest =
+          ⟨l, Γ, (vertragVon D (M.faeden t).kopf.f).ende, ρ, .zurueckgekehrt ⟨.inl v, vor⟩⟩ →
+        InvAmRueck P (M.faeden t).kopf.f (M.weltVon t)) :
     StartScopedEndeG P M := by
   have hgood : ∀ t, fadenAntwortGut P (M.faeden t) := by
     induction hr with
@@ -199,10 +204,13 @@ theorem startScopedEndeG_erreichbar {P : Programm D} {O : Orakel D} {pa : Nat}
           exact antwortGut_schritt hs (ih u) (hsc N hn)
         · rw [rufSchrittG_fremd hs t htu]
           exact ih t
-  intro t _ l Γ ρ v vor hhead
+  intro t hst l Γ ρ v vor hhead
   have h := (hgood t).1
   change (M.faeden t).kopf.rest.2.2.2.2.antwortGut _ at h
   rw [hhead] at h
-  simpa only [GRest.antwortGut, antwortGut] using h
+  have saved : EnsAmRueck P (M.faeden t).kopf.f (M.faeden t).kopf.s0 vor
+      (M.faeden t).kopf.rho v ∧ InvAmRueck P (M.faeden t).kopf.f vor := by
+    simpa only [GRest.antwortGut, antwortGut] using h
+  exact ⟨saved.1, saved.2, hcurrent t hst l Γ ρ v vor hhead⟩
 
 end Gabbro.Grammatik
