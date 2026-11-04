@@ -89,7 +89,7 @@ def konstListe : UKonst → Option (List UKonst)
   | _ => none
 
 /-- The single field traversal passes evidence of the actual type child to its callback. -/
-private def prodKonstFields {F : Type} {P : F → Nat → Bool} :
+def prodKonstFields {F : Type} {P : F → Nat → Bool} :
     (fs : List Ty) → List UKonst →
     ((τ : Ty) → τ ∈ fs → UKonst → Option (Val F P τ)) → Option (ProdVal F P fs)
   | [], [], _ => some ()
