@@ -32,9 +32,9 @@ def statementProducers : SAnw → List STyp
   | .callIndElse p es _ body => expressionUses p ++ expressionsUses es ++ statementProducers body
   | .callElse _ es _ body => expressionsUses es ++ statementProducers body
   | .call _ es => expressionsUses es
-  | .cond e s arms other =>
-    expressionUses e ++ statementProducers s ++ statementsProducers arms ++
-      other.toList.flatMap statementProducers
+  | .cond e s arms none => expressionUses e ++ statementProducers s ++ statementsProducers arms
+  | .cond e s arms (some other) =>
+    expressionUses e ++ statementProducers s ++ statementsProducers arms ++ statementProducers other
   | .elsif e s | .trim e _ s | .locks _ e s | .grow _ e s =>
     expressionUses e ++ statementProducers s
   | .cases e arms => expressionUses e ++ statementsProducers arms
@@ -42,16 +42,25 @@ def statementProducers : SAnw → List STyp
     statementProducers s
   | .each _ start _ subject _ _ inv s =>
     expressionsUses (start.toList ++ [subject] ++ inv.toList) ++ statementProducers s
-  | .alloc _ _ _ _ e s => expressionUses e ++ s.toList.flatMap statementProducers
+  | .alloc _ _ _ _ e none => expressionUses e
+  | .alloc _ _ _ _ e (some s) => expressionUses e ++ statementProducers s
   | .reset _ range => range.toList.flatMap fun (a, b) => expressionUses a ++ expressionUses b
   | .ret e => e.toList.flatMap expressionUses
   | .block ss ending =>
     statementsProducers ss ++ ending.toList.flatMap (fun
       | .ret e => e.toList.flatMap expressionUses | _ => [])
   | _ => []
+termination_by statement => sizeOf statement
+decreasing_by
+  all_goals simp_wf
+  all_goals omega
 def statementsProducers : List SAnw → List STyp
   | [] => []
   | s :: ss => statementProducers s ++ statementsProducers ss
+termination_by statements => sizeOf statements
+decreasing_by
+  all_goals simp_wf
+  all_goals omega
 end
 
 def constantUses : SKonstWert → List STyp
@@ -62,7 +71,8 @@ def constantUses : SKonstWert → List STyp
 def typeUses : STyp → List STyp
   | t@(.dyn ..) => [t]
   | .ptr _ _ t | .range t _ _ _ | .array t _ | .wrap t | .embed t _ _ => typeUses t
-  | .entry _ t => t.toList.flatMap typeUses
+  | .entry _ none => []
+  | .entry _ (some t) => typeUses t
   | _ => []
 
 def signatureUses (s : FnSig) : List STyp :=
@@ -74,8 +84,10 @@ def statementUses : SAnw → List STyp
   | .allocVon _ _ t _ | .bindAxiomOpt _ t _ => t.toList.flatMap typeUses
   | .bindElse _ t _ _ s | .bindAxiomOptElse _ t _ _ s =>
     t.toList.flatMap typeUses ++ statementUses s
-  | .alloc _ _ t _ _ s => t.toList.flatMap typeUses ++ s.toList.flatMap statementUses
-  | .cond _ s arms other => statementUses s ++ statementsUses arms ++ other.toList.flatMap statementUses
+  | .alloc _ _ t _ _ none => t.toList.flatMap typeUses
+  | .alloc _ _ t _ _ (some s) => t.toList.flatMap typeUses ++ statementUses s
+  | .cond _ s arms none => statementUses s ++ statementsUses arms
+  | .cond _ s arms (some other) => statementUses s ++ statementsUses arms ++ statementUses other
   | .cases _ arms => statementsUses arms
   | .elsif _ s | .arm _ _ s | .each _ _ _ _ _ _ _ s | .retry _ s | .loop _ s
   | .waive _ s | .trim _ _ s | .locks _ _ s | .watch _ s | .grow _ _ s | .child s =>
@@ -83,9 +95,17 @@ def statementUses : SAnw → List STyp
   | .callIndElse _ _ _ body | .callElse _ _ _ body => statementUses body
   | .block ss _ => statementsUses ss
   | _ => []
+termination_by statement => sizeOf statement
+decreasing_by
+  all_goals simp_wf
+  all_goals omega
 def statementsUses : List SAnw → List STyp
   | [] => []
   | s :: ss => statementUses s ++ statementsUses ss
+termination_by statements => sizeOf statements
+decreasing_by
+  all_goals simp_wf
+  all_goals omega
 end
 
 def tableUses : STabTeil → List STyp
