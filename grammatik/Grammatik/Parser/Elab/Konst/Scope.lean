@@ -32,7 +32,7 @@ def collectFunctions (items : List SItemTief) : Except String (List UKonstFn) :=
   let named := schemas.map (fun schema => (schema.name, Ty.sum schema.spec)) ++
     reasons.map (fun reason => (reason.name, Ty.why reason.cases.length))
   let schemas := schemas ++ reasonSchemas
-  items.reverse.foldlM (fun rest item =>
+  items.reverse.foldlM (fun (rest : List UKonstFn) item =>
     match item with
     | .fnT signature body => do
       if !strEq signature.art "const" then return rest
@@ -44,18 +44,18 @@ def collectFunctions (items : List SItemTief) : Except String (List UKonstFn) :=
       let params ← signature.params.mapM fun (name, type) => do
         return (name, ← uTypIn types domains named (spaces := []) (eigner := []) type)
       -- Prefer the nominal result schema when several schemas have equal shapes.
-      let resultSchemas := match result with
+      let resultSchemas : List (USum Ty) := match result with
         | .atom name => schemas.filter (fun schema => strEq schema.name name) ++
             schemas.filter (fun schema => !strEq schema.name name)
         | _ => schemas
-      return
-        { name := signature.name
+      return ({
+          name := signature.name
           params := params
           erg := resultType
           rumpf := body
           signature := signature
           constants := values
-          sums := resultSchemas } :: rest
+          sums := resultSchemas } : UKonstFn) :: rest
     | _ => pure rest) []
 
 end Gabbro.Grammatik.Parser.Konst
