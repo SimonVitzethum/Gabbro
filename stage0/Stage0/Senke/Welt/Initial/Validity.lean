@@ -38,7 +38,11 @@ theorem initialWorld_global_valid (u : UProg) (valid : GabbroV.sp0OkB u = true)
         τ (globAt u g).initK).isSome = true := by
       simpa only [GabbroV.sp0GlobOkB, ty] using GabbroV.sp0OkB_glob u valid g
     have hv := initialConstant_valid L τ _ _ (Option.some_get accepted).symm
-    exact valid_cast_back L _ _ hv
+    have kind : (declOf u).gtyp g = τ := by
+      change (globAt u g).ty.toTy = τ
+      rw [ty]
+      rfl
+    exact valid_cast_back L kind _ hv
 
 /-- Table initialization uses the canonical zero constructor only where its source check
     succeeds. In particular this does not invent default fields for products. -/
@@ -71,7 +75,7 @@ theorem initialWorld_slot_valid (u : UProg) (valid : GabbroV.sp0OkB u = true)
           have accepted : (GabbroV.konstWert (F := (declOf u).Fn) (P := (declOf u).passt)
               τ .null).isSome = true := by
             simpa only [GabbroV.sp0WertOkB, aggregate] using hw
-          exact valid_cast_back L _ _
+          exact valid_cast_back L (typAt_wert u t f τ nonbool optional aggregate) _
             (initialConstant_valid L τ _ _ (Option.some_get accepted).symm)
         · next aggregate =>
           split
