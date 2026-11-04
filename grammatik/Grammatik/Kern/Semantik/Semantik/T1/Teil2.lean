@@ -3,7 +3,6 @@ module
 public import Grammatik.Kern.Syntax.Syntax.Teil2
 public import Grammatik.Kern.Syntax.Syntax.Teil3
 public import Grammatik.Kern.Syntax.Syntax.Teil2Programm
-public import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
 public import Grammatik.Kern.Semantik.Semantik.T1.Teil1
 
 @[expose] public section

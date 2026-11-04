@@ -2,7 +2,6 @@ module
 public import Grammatik.Kern.Syntax.Syntax.Teil2
 public import Grammatik.Kern.Syntax.Syntax.Teil2Programm
 public import Grammatik.Kern.Syntax.Typen.Fall
-public import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
 public import Grammatik.Kern.Semantik.Semantik.Eingebaut
 @[expose] public section
 namespace Gabbro.Grammatik
@@ -287,11 +286,9 @@ inductive Logik (D : Deklaration) where
       Ausgang heisst nach dem, was nicht stimmte (PFLICHTEN.md «B26»). -/
   | vorzustand
   /-- A float result (`gleit`, a float literal, `gleitVon`) outside its declared range, or NaN
-      or infinite, where the form has no `else`. The kernel IEEE model (`gleitRechne`, Annex F)
-      decides it from the program's own values, for EVERY oracle: it is the program's logic,
-      as a `state` pre-state is (verdict F1, URTEIL-OPUS-2026-09-15b; until 2026-09-15 it was
-      `Hardware.ieee`). That the FPU computes the kernel model is `gleitkomma_ieee`, on the C
-      side. -/
+      or infinite, where the form has no `else`. Native toolchain CPU primitives
+      determine the result from the program's values for every oracle. The
+      unchanged finite/range guard is a user-logic duty, not a hardware stop. -/
   | bereich
   /-- A required capacity check failed: a `Block/Endblock.narrowRequired`
       (C11) found its value outside the required range, where the form has
@@ -308,10 +305,9 @@ inductive Logik (D : Deklaration) where
 inductive Hardware (D : Deklaration) where
   | annahme (a : D.Ax)
   | fortschritt (a : D.Annahme)
-  /-- Eine Gleitkommarechnung verliess ihren erklaerten Bereich, oder wurde NaN/unendlich:
-      IEEE 754 ist die Maschine, und ihr Rundungsverhalten ist die Annahme («F»).
-      NO LONGER PRODUCED by the semantics since 2026-09-15 (verdict F1): an out-of-range float
-      result is `Logik.bereich`. The constructor stays for the C-side vocabulary. -/
+  /-- The existing named float hardware marker. Native arithmetic does not
+      produce it for nonfinite or out-of-range results: those remain
+      `Logik.bereich` under the unchanged user obligation. -/
   | ieee
   /-- Ein Register antwortete ausserhalb seines erklaerten Typs. -/
   | register (r : D.Reg)
@@ -410,18 +406,13 @@ def summePasst (cs : List (Option Ty)) (n : Int) :
     (nutzPasst (cs.get i) (n / fallZahl cs)).map fun x => ⟨i, Fall.ofNutzlast _ _ _ _ x⟩
    else Option.none
   else Option.none
-/-- The width of the raw float word: the IEEE-754 binary64 bit pattern is an unsigned
-    64-bit integer. -/
+/-- Native `Float` words occupy exactly the unsigned 64-bit range. -/
 abbrev gleitWortGrenze : Int := 18446744073709551616
-/-- **A raw word as a float** (G1 repair): the word is the IEEE-754 binary64 bit pattern
-    (sign, exponent, significand; `Gleitkomma.ausBits`, the inverse of `zuBits` on
-    well-formed triples), held against the declared range like a computed float
-    (`gleitPasst`: finite and inside). `Ty.fl` carries no width and the model computes in
-    binary64 (FLOATING-POINT.md section 7), so an `f32` register's answer is read as its binary64
-    value -- the same named cut. -/
+/-- Decode the actual 64-bit CPU word through the toolchain primitive, then
+    retain the existing finite/range guard. `Ty.fl` has no format index. -/
 def gleitWortPasst (lo hi : Int × Int) (n : Int) : Option (Gleit lo hi) :=
   if 0 ≤ n ∧ n < gleitWortGrenze then
-    gleitPasst lo hi (Gleitkomma.ausBits Gleitkomma.f64 n.toNat)
+    gleitPasst lo hi (Float.ofBits (UInt64.ofNat n.toNat))
   else Option.none
 /-- **A raw word as a function pointer** (G1 repair): the word is a code address; the loaded
     image `z` (`Orakel.zeiger`) names the function at it, and its conformance to the declared

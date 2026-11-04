@@ -133,18 +133,8 @@ def indSonstE {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {τ : Ty}
   | .logik e => .logik e
   | .hardware e => .hardware e
 
-/-- A float as a raw integer for the machine (a register write): truncation toward zero,
-    saturated to the `Int64` range -- the meaning of the `Float` model's
-    `x.toInt64.toInt`, now computed on the exact value (NaN/infinity give `0`; they do not
-    occur, a `Val (.fl ..)` is finite). -/
-def gleitRoh (x : GFloat) : Int :=
-  match Gleitkomma.wertExakt Gleitkomma.f64 x with
-  | Option.none => 0
-  | Option.some v =>
-    let t : Int := if 0 ≤ v.zweierExp then v.zaehler * ((2 ^ v.zweierExp.toNat : Nat) : Int)
-      else v.zaehler.tdiv ((2 ^ (-v.zweierExp).toNat : Nat) : Int)
-    if t < -(2 ^ 63 : Int) then -(2 ^ 63 : Int)
-    else if (2 ^ 63 - 1 : Int) < t then 2 ^ 63 - 1 else t
+/-- Register-write conversion is the toolchain's native signed conversion. -/
+def gleitRoh (x : GFloat) : Int := x.toInt64.toInt
 
 /-- Ein Wert als rohe Zahl, fuer die Maschine. -/
 def roh : {τ : Ty} → Wert D τ → Int
@@ -164,13 +154,12 @@ def roh : {τ : Ty} → Wert D τ → Int
   | .str _, _ => 0
   | .prod _ _, _ => 0
 
-/-- Die Gleitkommarechnung der Maschine: IEEE-754 binary64, exact result rounded once to
-    nearest-even (`Gleitkomma.add/sub/mul/div`) -- kernel-computable since 2026-09-14. -/
+/-- Every modeled arithmetic operation is the corresponding native CPU primitive. -/
 def gleitRechne : GleitOp → GFloat → GFloat → GFloat
-  | .add, a, b => Gleitkomma.add Gleitkomma.f64 a b
-  | .sub, a, b => Gleitkomma.sub Gleitkomma.f64 a b
-  | .mul, a, b => Gleitkomma.mul Gleitkomma.f64 a b
-  | .div, a, b => Gleitkomma.div Gleitkomma.f64 a b
+  | .add, a, b => Float.add a b
+  | .sub, a, b => Float.sub a b
+  | .mul, a, b => Float.mul a b
+  | .div, a, b => Float.div a b
 
 section Rumpf
 -- Die Bedeutung eines Rufs auf dieser Rekursionstiefe -- von aussen gegeben, und in
