@@ -225,13 +225,13 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
   | _, _, _, .glob g _, _, _, _ => by
       simp only [exE, eval_umTy, eval]; exact h.2 g
   | _, _, _, .slot t f i _, ρ, ρ', hρ => by
-      simpa only [exE, eval_umTy, eval] using
+      simpa only [exE, eval_umTy, eval, World.speicher] using
         (treu_slot_index E K h t f (index_exE_n E K i ρ ρ' (eval_exE h₀ h i ρ ρ' hρ)))
   | _, _, _, .thru _ t _ f i _, ρ, ρ', hρ => by
-      simpa only [exE, eval_umTy, eval] using
+      simpa only [exE, eval_umTy, eval, World.speicher] using
         (treu_slot_index E K h t f (index_exE_n E K i ρ ρ' (eval_exE h₀ h i ρ ρ' hρ)))
   | _, _, _, .thruOwn _ t _ f i _ _ _ _ _ _, ρ, ρ', hρ => by
-      simpa only [exE, eval_umTy, eval] using
+      simpa only [exE, eval_umTy, eval, World.speicher] using
         (treu_slot_index E K h t f (index_exE_n E K i ρ ρ' (eval_exE h₀ h i ρ ρ' hρ)))
   | _, _, _, .ptrOf _ _ _ _, _, _, _ => rfl
   | _, _, _, .fnref _ _ _, _, _, _ => Or.inl rfl
@@ -247,7 +247,7 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
   | _, _, _, .oldG g _, _, _, _ => by
       simp only [exE, eval_umTy, eval]; exact h₀.2 g
   | _, _, _, .oldS t f i _, ρ, ρ', hρ => by
-      simpa only [exE, eval_umTy, eval] using
+      simpa only [exE, eval_umTy, eval, World.speicher] using
         (treu_slot_index E K h₀ t f (index_exE_n E K i ρ ρ' (eval_exE h₀ h i ρ ρ' hρ)))
   | _, _, _, .widen h1 h2 a, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ
