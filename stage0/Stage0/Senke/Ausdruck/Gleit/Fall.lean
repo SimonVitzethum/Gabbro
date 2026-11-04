@@ -35,7 +35,9 @@ theorem floatExprE_ok {fp : Runner.W} {K d top : Nat} {Γ : Ctx} {Λ : List (Res
     · simp only [Runner.NativeFPEval, Runner.nativeFP, Runner.NativeFPValue.Matches,
         nativeFloat_read_word]
       rfl
-    · cases gleitLt (eval σ₀ a σ ρ).x (eval σ₀ b σ ρ).x <;> rfl
+    · change Enc L .bool (gleitLt (eval σ₀ a σ ρ).x (eval σ₀ b σ ρ).x)
+        (Runner.IR.bool (gleitLt (eval σ₀ a σ ρ).x (eval σ₀ b σ ρ).x))
+      cases gleitLt (eval σ₀ a σ ρ).x (eval σ₀ b σ ρ).x <;> rfl
   · refine nativeFPWordL_ok (.le .f64) rfl h hK
       (fun cb tb he ht => ihb _ cb tb he ht)
       (fun ca ta he ht => iha _ ca ta he ht) ?_ hp
@@ -47,6 +49,8 @@ theorem floatExprE_ok {fp : Runner.W} {K d top : Nat} {Γ : Ctx} {Λ : List (Res
     · simp only [Runner.NativeFPEval, Runner.nativeFP, Runner.NativeFPValue.Matches,
         nativeFloat_read_word]
       rfl
-    · cases gleitLe (eval σ₀ b σ ρ).x (eval σ₀ a σ ρ).x <;> rfl
+    · change Enc L .bool (gleitLe (eval σ₀ b σ ρ).x (eval σ₀ a σ ρ).x)
+        (Runner.IR.bool (gleitLe (eval σ₀ b σ ρ).x (eval σ₀ a σ ρ).x))
+      cases gleitLe (eval σ₀ b σ ρ).x (eval σ₀ a σ ρ).x <;> rfl
 
 end Gabbro.Stage0.Senke
