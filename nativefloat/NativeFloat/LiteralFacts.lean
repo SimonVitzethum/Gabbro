@@ -21,28 +21,58 @@ private theorem padded_integer_round (s : Sign) (m k : Nat) (positive : 0 < m)
     omega
   have initial : shiftToTargetExponent Format.binary64 (m <<< k) (-(k : Int)) .exact =
       shiftToTargetExponent Format.binary64 (m <<< 53) (-53) .exact := by
-    rw [integer_initial m k positive, integer_initial m 53 positive]
+    have fixed := integer_initial m 53 positive
+    simp only [Int.cast_ofNat_Int] at fixed
+    rw [integer_initial m k positive, fixed]
     change (Nat.repeat ExtendedMantissa.shiftRightOne (t + k).toNat ⟨m <<< k, false, false⟩,
         -(k : Int) + (t + k).toNat) =
       (Nat.repeat ExtendedMantissa.shiftRightOne (t + 53).toNat ⟨m <<< 53, false, false⟩,
-        -53 + (t + 53).toNat)
+        (-53 : Int) + (t + 53).toNat)
     by_cases small : k ≤ 53
     · have amount : (t + 53).toNat = (53 - k) + (t + k).toNat := by dsimp [t] at *; omega
       have shifted : m <<< 53 = (m <<< k) <<< (53 - k) := by
         rw [← Nat.shiftLeft_add]
         congr 1
         omega
-      rw [amount, shifted, repeat_sum, shifted_exact]
-      congr 1
-      omega
+      have kept : Nat.repeat ExtendedMantissa.shiftRightOne (53 - k) ⟨m <<< 53, false, false⟩ =
+          ⟨m <<< k, false, false⟩ := by
+        rw [shifted]
+        exact shifted_exact (m <<< k) (53 - k)
+      have composed : Nat.repeat ExtendedMantissa.shiftRightOne ((53 - k) + (t + k).toNat)
+          ⟨m <<< 53, false, false⟩ =
+          Nat.repeat ExtendedMantissa.shiftRightOne (t + k).toNat ⟨m <<< k, false, false⟩ :=
+        (repeat_sum ExtendedMantissa.shiftRightOne (53 - k) (t + k).toNat ⟨m <<< 53, false, false⟩).trans
+          (congrArg (Nat.repeat ExtendedMantissa.shiftRightOne (t + k).toNat) kept)
+      apply Prod.ext
+      · change Nat.repeat ExtendedMantissa.shiftRightOne (t + k).toNat ⟨m <<< k, false, false⟩ =
+          Nat.repeat ExtendedMantissa.shiftRightOne (t + 53).toNat ⟨m <<< 53, false, false⟩
+        rw [amount]
+        exact composed.symm
+      · change -(k : Int) + (t + k).toNat = (-53 : Int) + (t + 53).toNat
+        rw [amount]
+        omega
     · have amount : (t + k).toNat = (k - 53) + (t + 53).toNat := by omega
       have shifted : m <<< k = (m <<< 53) <<< (k - 53) := by
         rw [← Nat.shiftLeft_add]
         congr 1
         omega
-      rw [amount, shifted, repeat_sum, shifted_exact]
-      congr 1
-      omega
+      have kept : Nat.repeat ExtendedMantissa.shiftRightOne (k - 53) ⟨m <<< k, false, false⟩ =
+          ⟨m <<< 53, false, false⟩ := by
+        rw [shifted]
+        exact shifted_exact (m <<< 53) (k - 53)
+      have composed : Nat.repeat ExtendedMantissa.shiftRightOne ((k - 53) + (t + 53).toNat)
+          ⟨m <<< k, false, false⟩ =
+          Nat.repeat ExtendedMantissa.shiftRightOne (t + 53).toNat ⟨m <<< 53, false, false⟩ :=
+        (repeat_sum ExtendedMantissa.shiftRightOne (k - 53) (t + 53).toNat ⟨m <<< k, false, false⟩).trans
+          (congrArg (Nat.repeat ExtendedMantissa.shiftRightOne (t + 53).toNat) kept)
+      apply Prod.ext
+      · change Nat.repeat ExtendedMantissa.shiftRightOne (t + k).toNat ⟨m <<< k, false, false⟩ =
+          Nat.repeat ExtendedMantissa.shiftRightOne (t + 53).toNat ⟨m <<< 53, false, false⟩
+        rw [amount]
+        exact composed
+      · change -(k : Int) + (t + k).toNat = (-53 : Int) + (t + 53).toNat
+        rw [amount]
+        omega
   have same : roundWithAccuracy Format.binary64 s (m <<< k) (-(k : Int)) .exact =
       roundWithAccuracy Format.binary64 s (m <<< 53) (-53) .exact := by
     unfold roundWithAccuracy
@@ -66,7 +96,7 @@ private theorem exact_div_one (s : Sign) (m : Nat) (positive : 0 < m) :
       accuracyOfFraction ((m <<< (0 - t).toNat) % 1) 1) = _
     have amount : (0 - t).toNat = k := by dsimp [k]; omega
     rw [amount]
-    simp [accuracyOfFraction]
+    simp only [Nat.div_one, Nat.mod_one, accuracyOfFraction, ↓reduceIte]
   simp only [UnpackedFloat.div, core, back, sign_div_one]
   exact (padded_integer_round s m k positive enough).symm
 
@@ -95,7 +125,7 @@ theorem canonLiteral_den_zero (z : Int) :
   by_cases zero : z = 0
   · subst z
     rfl
-  · simp only [canonLiteral, zero, ↓reduceDIte, UnpackedFloat.div, sign_div_one]
+  · simp only [canonLiteral, zero, ↓reduceDIte, UnpackedFloat.div, sign_div_one, ↓reduceIte]
 
 /-- A zero numerator retains the denominator's sign unless both are zero. -/
 theorem canonLiteral_zero_num (d : Int) :
@@ -105,16 +135,29 @@ theorem canonLiteral_zero_num (d : Int) :
   · subst d
     rfl
   · have sign (s : Sign) : Sign.positive / s = s := by cases s <;> rfl
-    simp only [canonLiteral, zero, ↓reduceDIte, UnpackedFloat.div, sign]
+    simp only [canonLiteral, zero, ↓reduceDIte, UnpackedFloat.div, sign, ↓reduceIte]
+
+private theorem subnormal_denominator : (2 : Int) ^ 1074 = ((2 : Int) ^ 200) ^ 5 * (2 : Int) ^ 74 :=
+  (Int.pow_add (2 : Int) 1000 74).trans
+    (congrArg (fun value : Int => value * (2 : Int) ^ 74)
+      (Int.pow_mul (a := (2 : Int)) (n := 200) (m := 5)))
 
 /-- The smallest subnormal must survive exact compile-time fraction conversion. -/
-theorem canonLiteral_subnormal_one : (canonLiteral (1, 2 ^ 1074)).toBits = 1 := by decide
+theorem canonLiteral_subnormal_one : (canonLiteral (1, 2 ^ 1074)).toBits = 1 := by
+  rw [subnormal_denominator]
+  cbv
 
-theorem canonLiteral_subnormal_two : (canonLiteral (2, 2 ^ 1074)).toBits = 2 := by decide
+theorem canonLiteral_subnormal_two : (canonLiteral (2, 2 ^ 1074)).toBits = 2 := by
+  rw [subnormal_denominator]
+  cbv
 
 theorem canonLiteral_subnormal_negative :
     (canonLiteral (-1, 2 ^ 1074)).toBits = 0x8000000000000001 ∧
       (canonLiteral (1, -(2 ^ 1074))).toBits = 0x8000000000000001 ∧
-      (canonLiteral (-1, -(2 ^ 1074))).toBits = 1 := by decide
+      (canonLiteral (-1, -(2 ^ 1074))).toBits = 1 := by
+  rw [subnormal_denominator]
+  constructor
+  · cbv
+  · constructor <;> cbv
 
 end RootNativeFloat
