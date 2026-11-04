@@ -14,32 +14,49 @@ private theorem lexLE (a b : Int) (m n : Nat) :
   change (a < b ∨ a = b ∧ compare m n ≠ Ordering.gt) ↔ a < b ∨ a = b ∧ m ≤ n
   rw [Nat.compare_ne_gt]
 
+private theorem unpacked_cases {P : UnpackedFloat → Prop}
+    (negativeInfinity : P (.infinity .negative))
+    (positiveInfinity : P (.infinity .positive))
+    (notANumber : P .notANumber)
+    (negativeZero : P (.zero .negative))
+    (positiveZero : P (.zero .positive))
+    (negativeFinite : ∀ m e h, P (.finite .negative m e h))
+    (positiveFinite : ∀ m e h, P (.finite .positive m e h))
+    (a : UnpackedFloat) : P a := by
+  cases a with
+  | infinity s => cases s <;> assumption
+  | notANumber => exact notANumber
+  | zero s => cases s <;> assumption
+  | finite s m e h =>
+      cases s
+      · exact negativeFinite m e h
+      · exact positiveFinite m e h
+
 private theorem unpacked_le_trans (a b c : UnpackedFloat)
     (ab : a.le b = true) (bc : b.le c = true) : a.le c = true := by
-  cases a <;> cases b <;> cases c <;>
-    repeat' cases (show Sign from by assumption)
+  induction a using unpacked_cases <;> induction b using unpacked_cases <;>
+    induction c using unpacked_cases
   all_goals simp_all [UnpackedFloat.le, UnpackedFloat.compare, Option.any,
     Ordering.swap_then, Int.compare_swap, Nat.compare_swap, lexLE]
   all_goals omega
 
 private theorem unpacked_le_refl (a : UnpackedFloat) (ha : a.isFinite = true) : a.le a = true := by
-  cases a <;>
-    repeat' cases (show Sign from by assumption)
+  induction a using unpacked_cases
   all_goals simp_all [UnpackedFloat.isFinite, UnpackedFloat.le,
     UnpackedFloat.compare, Ordering.swap_then, Int.compare_swap, Nat.compare_swap, lexLE]
 
 private theorem unpacked_lower (a x y : UnpackedFloat)
     (ha : a.isFinite = false) (hx : x.isFinite = true) (hy : y.isFinite = true)
     (ax : a.le x = true) : a.le y = true := by
-  cases a <;> cases x <;> cases y <;>
-    repeat' cases (show Sign from by assumption)
+  induction a using unpacked_cases <;> induction x using unpacked_cases <;>
+    induction y using unpacked_cases
   all_goals simp_all [UnpackedFloat.isFinite, UnpackedFloat.le, UnpackedFloat.compare]
 
 private theorem unpacked_upper (a x y : UnpackedFloat)
     (ha : a.isFinite = false) (hx : x.isFinite = true) (hy : y.isFinite = true)
     (xa : x.le a = true) : y.le a = true := by
-  cases a <;> cases x <;> cases y <;>
-    repeat' cases (show Sign from by assumption)
+  induction a using unpacked_cases <;> induction x using unpacked_cases <;>
+    induction y using unpacked_cases
   all_goals simp_all [UnpackedFloat.isFinite, UnpackedFloat.le, UnpackedFloat.compare]
 
 /-- The native ordered comparison is transitive, including infinite endpoints. -/
