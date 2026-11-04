@@ -1,6 +1,8 @@
 module
 
 public import Grammatik.Gen.Text.Invers.Rumpf
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil2
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil3
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -53,12 +55,32 @@ theorem schranke_zahlE (als : List (String × (Int × Int))) (n : Int) : uSchran
 theorem typS_art {otab : Int → Option Nat} {t : Ty} {st : STyp} {a : UParamArt} (ht : typS otab t = .ok st) (ha : artErg t = some a)
     (als : List (String × (Int × Int))) (tabs : List UTab) (sums : List USum) (whys : List UWhy)
     (zeiger : List String) (zb : Nat) (n : String) :
-    uParam als tabs sums whys zeiger zb [] (n, st) = .ok (n, t, a) := by
+    uParam als tabs sums whys zeiger zb [] [] [] (n, st) = .ok (n, t, a) := by
   cases t with
   | int lo hi =>
     simp only [artErg, Option.some.injEq] at ha; subst ha
     simp only [typS, Except.ok.injEq] at ht; subst ht
-    simp only [uParam, uTypIn, schranke_zahlE, Bool.false_eq_true, ↓reduceIte, uArtVon]
+    by_cases h0 : 0 ≤ lo
+    · simp only [uParam, h0, ↓reduceIte, uTypIn, schranke_zahlE,
+        Bool.false_eq_true, uArtVon]
+      rw [uTypIn.eq_4 als tabs [] [] [] "u64" (by decide +kernel) (by decide +kernel) (by decide +kernel)]
+      simp only [List.find?_nil]
+      rw [uTypName.eq_4 als "u64" (by decide +kernel) (by decide +kernel) (by decide +kernel)]
+      cases hword : uSuch "type" als "u64" with
+      | error _ =>
+        simp only [eingebauteInt, List.find?, strEq_eq, String.reduceEq, decide_true, decide_false,
+          Bool.cond_true, Bool.cond_false, ↓reduceIte]
+      | ok bounds => rcases bounds with ⟨_, _⟩; rfl
+    · simp only [uParam, h0, ↓reduceIte, uTypIn, schranke_zahlE,
+        Bool.false_eq_true, uArtVon]
+      rw [uTypIn.eq_4 als tabs [] [] [] "i64" (by decide +kernel) (by decide +kernel) (by decide +kernel)]
+      simp only [List.find?_nil]
+      rw [uTypName.eq_4 als "i64" (by decide +kernel) (by decide +kernel) (by decide +kernel)]
+      cases hword : uSuch "type" als "i64" with
+      | error _ =>
+        simp only [eingebauteInt, List.find?, strEq_eq, String.reduceEq, decide_true, decide_false,
+          Bool.cond_true, Bool.cond_false, ↓reduceIte]
+      | ok bounds => rcases bounds with ⟨_, _⟩; rfl
   | bool =>
     simp only [artErg, Option.some.injEq] at ha; subst ha
     simp only [typS, Except.ok.injEq] at ht; subst ht
@@ -82,7 +104,7 @@ theorem parListe_ok (otab : Int → Option Nat) (np : Nat) (als : List (String �
     ∀ (ts : List Ty) (j : Nat) (ps : List (String × STyp)) (ks : List UParamArt),
       parListe otab np j ts = .ok ps → ts.mapM artErg = some ks →
       uOhneGriffe devs ps = ps ∧
-      uSeq (ps.map (uParam als tabs sums whys zeiger zb [])) =
+      uSeq (ps.map (uParam als tabs sums whys zeiger zb [] [] [])) =
         .ok (((List.range' j ts.length).map fun i => nVar (np - 1 - i)).zip (ts.zip ks) |>.map
           fun (n, t, k) => (n, t, k)) := by
   intro ts
