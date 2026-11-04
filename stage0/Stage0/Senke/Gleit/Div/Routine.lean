@@ -54,7 +54,8 @@ theorem softDivFiniteDirectionalL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Me
     (width : (softMulNormalizeWord av).toNat * 2 ^ k < 2 ^ 128) :
     WordCode (L := L) ρ W (fun d => softDivFiniteDirectionalL d a b k)
       (softDivFiniteDirectionalWord av bv k) := by
-  have sign := xorSignL_ok (unpackSignL_ok ha) (unpackSignL_ok hb)
+  have sign : WordCode (L := L) ρ W _ _ :=
+    xorSignL_ok (unpackSignL_ok ha) (unpackSignL_ok hb)
   have leftIndex : WordCode (L := L) ρ W _ _ := WordCode.bin (softMulNormalizeIndexL_word ha) (WordCode.const 2278 (by decide))
     (g := fun x y => some (x + y)) rfl rfl (by decide : 3 < 256)
   have difference : WordCode (L := L) ρ W _ _ := WordCode.bin leftIndex (softMulNormalizeIndexL_word hb)
@@ -62,15 +63,20 @@ theorem softDivFiniteDirectionalL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Me
   have literal : lit32 (Int.ofNat k) = true := by rcases count with rfl | rfl <;> decide
   have total : WordCode (L := L) ρ W _ _ := WordCode.bin difference (WordCode.const _ literal)
     (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
-  have left := softMulNormalizeL_word ha
-  have right := softMulNormalizeL_word hb
+  have left : WordCode (L := L) ρ W _ _ := softMulNormalizeL_word ha
+  have right : WordCode (L := L) ρ W _ _ := softMulNormalizeL_word hb
   have encodeA : softMulNormalizeWord av = BitVec.ofNat 64 (softMulNormalizeWord av).toNat := by simp
   have encodeB : softMulNormalizeWord bv = BitVec.ofNat 64 (softMulNormalizeWord bv).toNat := by simp
   rw [encodeA] at left
   rw [encodeB] at right
-  have quotient := softDivQuotientL_ok left right (softMulNormalizeWord av).isLt positive
-    (softMulNormalizeWord bv).isLt count width
-  exact softMulRoundL_word sign total quotient
+  have quotient : WordCode (L := L) ρ W _ _ :=
+    softDivQuotientL_ok left right (softMulNormalizeWord av).isLt positive
+      (softMulNormalizeWord bv).isLt count width
+  have result : WordCode (L := L) ρ W _ _ := softMulRoundL_word sign total quotient
+  intro fp K d c top emitted fits m pc pre
+  simpa only [softDivFiniteDirectionalL, softDivFiniteDirectionalWord, Int.ofNat_eq_coe,
+    BitVec.ofInt_natCast] using
+    result (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
 
 /-- Both normalization directions fit the restoring loop's two-limb input.
     The comparison selects the shift, not a separate arithmetic operation. -/
@@ -87,10 +93,13 @@ theorem softDivFiniteL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
       omega
     · have := Nat.mul_lt_mul_of_pos_right bound (by decide : 0 < 2 ^ 56)
       omega
-  exact routineChooseL_ok
-    (routineLessL_ok (softMulNormalizeL_word ha) (softMulNormalizeL_word hb))
+  have condition : WordCode (L := L) ρ W _ _ :=
+    routineLessL_ok (softMulNormalizeL_word ha) (softMulNormalizeL_word hb)
+  have result : WordCode (L := L) ρ W _ _ := routineChooseL_ok condition
     (fun _ => softDivFiniteDirectionalL_word ha hb 56 (Or.inr rfl) positive (width 56 (Or.inr rfl)))
     (fun _ => softDivFiniteDirectionalL_word ha hb 55 (Or.inl rfl) positive (width 55 (Or.inl rfl)))
+  intro fp K d c top emitted fits m pc pre
+  exact result (fp := fp) (K := K) (d := d) (c := c) (top := top) emitted fits m pc pre
 
 /-- Word fixtures cover normal rounding, gradual underflow and both invalid
     and infinite results. The raw routine admits all binary64 bit patterns. -/
