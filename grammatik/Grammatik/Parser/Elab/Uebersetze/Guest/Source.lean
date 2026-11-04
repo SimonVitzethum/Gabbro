@@ -20,9 +20,15 @@ def guestService (items : List SItemTief) (name : String) : Except String FnSig 
   let candidates := items.filterMap fun
     | .protoT sig => if strEq sig.name name then some sig else none
     | .callT sc => if strEq sc.name name then
-        some { art := "extern", name := sc.name, params := sc.params, res := sc.res,
-          fehler := sc.fail, klauseln := sc.gate.pre.map SKlausel.needs ++
-            sc.gate.post.map SKlausel.gives ++ [.effs sc.gate.uses] }
+        some {
+          art := "extern"
+          name := sc.name
+          params := sc.params
+          res := sc.res
+          fehler := sc.fail
+          klauseln := sc.gate.pre.map SKlausel.needs ++
+            sc.gate.post.map SKlausel.gives ++ [.effs sc.gate.uses]
+        }
       else none
     | _ => none
   match candidates with
@@ -106,9 +112,19 @@ def guestForeign (alias : List (String × (Int × Int))) (consts : List (String 
   let software := guests.any fun g => strEq g.service k.name
   if software && k.annahme.isSome then
     throw "entrust: isolation service must be a software binding"
-  pure { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg,
-    gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs,
-    beleg := k.annahme.bind (fun n => assumptions.findIdx? fun x => strEq x n),
-    software, names := k.names, needs, gives }
+  pure {
+    name := k.name
+    params := k.types
+    kinds := k.kinds
+    res := k.axErg
+    gruende := (k.kanal.map (·.2)).getD 0
+    puts := k.puts
+    gputs := k.gputs
+    beleg := k.annahme.bind (fun n => assumptions.findIdx? fun x => strEq x n)
+    software
+    names := k.names
+    needs
+    gives
+  }
 
 end Gabbro.Grammatik.Parser.Uebersetze
