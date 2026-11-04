@@ -34,11 +34,16 @@ private theorem unpacked_cases {P : UnpackedFloat → Prop}
 
 private theorem unpacked_le_trans (a b c : UnpackedFloat)
     (ab : a.le b = true) (bc : b.le c = true) : a.le c = true := by
+  have nn : compare Sign.negative Sign.negative = Ordering.eq := rfl
+  have np : compare Sign.negative Sign.positive = Ordering.lt := rfl
+  have pn : compare Sign.positive Sign.negative = Ordering.gt := rfl
+  have pp : compare Sign.positive Sign.positive = Ordering.eq := rfl
   induction a using unpacked_cases <;> induction b using unpacked_cases <;>
     induction c using unpacked_cases
   all_goals simp_all [UnpackedFloat.le, UnpackedFloat.compare, Option.any,
-    Ordering.swap_then, Int.compare_swap, Nat.compare_swap, lexLE]
-  all_goals omega
+    Ordering.swap_then, Int.compare_swap, Nat.compare_swap, lexLE, nn, np, pn, pp]
+  all_goals rcases ab with h1 | ⟨h1, h2⟩ <;>
+    rcases bc with h3 | ⟨h3, h4⟩ <;> omega
 
 private theorem unpacked_le_refl (a : UnpackedFloat) (ha : a.isFinite = true) : a.le a = true := by
   induction a using unpacked_cases
