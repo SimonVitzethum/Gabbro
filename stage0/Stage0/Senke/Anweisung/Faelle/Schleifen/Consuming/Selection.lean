@@ -28,7 +28,8 @@ theorem scan_bound_ok {Γ : Ctx} {ρ : Env D Γ} {m : Mem} {pc fp : W}
   have indexRead : m1.rd64 (slot fp (BitVec.ofNat 64 index)) = some (BitVec.ofNat 64 j) := by
     rw [agree_rd_low a1 hp.frame.room (by omega) (by omega)]
     exact read
-  obtain ⟨m2, comparison, a2, w2, read2, rfl⟩ := eng_bin_ok tail
+  obtain ⟨m2, comparison, a2, w2, read2, rfl⟩ :=
+    eng_bin_ok (d := d) (a := index) (b := d + 1) (o := 13) tail
     (by omega) (by omega) (by omega) indexRead read1
     (g := fun a b => some (Runner.IR.bool (a.slt b))) rfl (by decide) rfl
   refine ⟨m2, ?_, (a1.mono (Nat.le_succ _)).trans a2, _, read2, ?_⟩
@@ -69,7 +70,8 @@ theorem member_borrow_ok {Γ : Ctx} {ρ : Env D Γ} {m : Mem} {pc fp : W}
   have a1 : Agree fp (s + 3) K m m1 := agree_write hp.frame.room (by omega) (by omega) _
   have backup : m1.rd64 (slot fp (BitVec.ofNat 64 (s + 3))) = some candidate :=
     rd_same hp.frame (by omega) candidate
-  have save := quant_mov hp.frame hp.small (by omega) (by omega) pre.left.code candidateRead
+  have save := quant_mov (dst := s + 3) (src := s)
+    hp.frame hp.small (by omega) (by omega) pre.left.code candidateRead
   have h1 := pre.next a1 (Nat.le_refl _) (by omega)
   have predecessorRead1 : m1.rd64 (slot fp (BitVec.ofNat 64 (s + 1))) =
       some (BitVec.ofInt 64 predecessor.n) := by
@@ -77,7 +79,8 @@ theorem member_borrow_ok {Γ : Ctx} {ρ : Env D Γ} {m : Mem} {pc fp : W}
     exact predecessorRead
   let m2 := write m1 (slot fp (BitVec.ofNat 64 s)) 8 (BitVec.ofInt 64 predecessor.n).toNat
   have a2 : Agree fp s K m1 m2 := agree_write h1.frame.room (by omega) (by omega) _
-  have install := quant_mov h1.frame hp.small (by omega) (by omega) h1.left.code predecessorRead1
+  have install := quant_mov (dst := s) (src := s + 1)
+    h1.frame hp.small (by omega) (by omega) h1.left.code predecessorRead1
   have h1s : Pre L m1 _ fp K s
       ([ci 2 s (s + 1) 0] ++ (cb ++ [ci 2 s (s + 3) 0])) ρ W reserved :=
     { h1 with ctx := Nat.le_refl _ }
@@ -96,7 +99,8 @@ theorem member_borrow_ok {Γ : Ctx} {ρ : Env D Γ} {m : Mem} {pc fp : W}
     rw [rd_other h1.frame.room (by omega) (by omega) (by omega)]
     exact backup
   let m4 := write m3 (slot fp (BitVec.ofNat 64 s)) 8 candidate.toNat
-  have restore := quant_mov h3.frame hp.small (by omega) (by omega) h3.code backup3
+  have restore := quant_mov (dst := s) (src := s + 3)
+    h3.frame hp.small (by omega) (by omega) h3.code backup3
   have restored : Agree fp (s + 3) K m m4 := quant_restore hp.frame
     (by omega) (by omega) candidateRead (by
       intro x outsideScratch outsideBinder
@@ -109,8 +113,8 @@ theorem member_borrow_ok {Γ : Ctx} {ρ : Env D Γ} {m : Mem} {pc fp : W}
   refine ⟨m4, ?_, restored, rd_same h3.frame (by omega) candidate,
     result, ?_, resultProperty⟩
   · have run := save.trans (install.trans (memberRun.trans restore))
-    simpa only [List.length_singleton, pc_add, Nat.add_assoc, Nat.add_comm,
-      Nat.add_left_comm] using run
+    simpa only [m4, List.length_singleton, pc_add, pc_add16, Nat.add_assoc, Nat.add_comm,
+      Nat.add_left_comm, Nat.reduceAdd] using run
   · rw [rd_other h3.frame.room (by omega) (by omega) (by omega)]
     exact resultRead
 
