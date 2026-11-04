@@ -25,7 +25,9 @@ structure Closed where
 
 /-- Bounds are concrete ordinary effects; the parser retained the balancing closing brace. -/
 def readBound (items : List SItemTief) (raw : String) : Except String (List SEffekt) := do
-  let tokens ← lex raw
+  let tokens ← match lex raw with
+    | .ok tokens => pure tokens
+    | .error _ => throw "dyn.effects.syntax"
   let (effects, tail) ← if istZeichenZ "}" tokens then pure ([], tokens)
     else parseEffektListe (tokens.length * 8 + 32) tokens
   let [.zeichen "}", .ende] := tail | throw "dyn.effects.syntax"
@@ -103,7 +105,9 @@ def lowerType (closed : List Closed) : STyp → Except String STyp
     | some c => .ok (.atom c.name)
     | none => .error "dyn.unresolved-type"
   | .raw raw => do
-    let tokens ← lex raw
+    let tokens ← match lex raw with
+      | .ok tokens => pure tokens
+      | .error _ => throw "dyn.raw-type"
     if tokens.any (fun | .wort "dyn" => true | _ => false) then throw "dyn.raw-type"
     return .raw raw
   | t => .ok t
