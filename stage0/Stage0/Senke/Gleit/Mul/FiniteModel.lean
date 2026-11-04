@@ -58,8 +58,10 @@ theorem softMulFiniteDirectionalWord_model (a b : GFloat)
     split <;> omega
   have ab := softMulNormalize_bounds sa ap (sigBound a ha)
   have bb := softMulNormalize_bounds sb bp (sigBound b hb)
-  have na64 : na < 2 ^ 64 := by have := ab.2.2.2.2; omega
-  have nb64 : nb < 2 ^ 64 := by have := bb.2.2.2.2; omega
+  have na53 : na < 2 ^ 53 := ab.2.2.2.2
+  have nb53 : nb < 2 ^ 53 := bb.2.2.2.2
+  have na64 : na < 2 ^ 64 := by omega
+  have nb64 : nb < 2 ^ 64 := by omega
   have canonA := softMulNormalizeWord_model a ha ap
   have canonB := softMulNormalizeWord_model b hb bp
   change _ = BitVec.ofNat 64 na ∧ _ = BitVec.ofNat 64 ia at canonA
@@ -131,6 +133,8 @@ theorem softMulFiniteWord_model (a b : GFloat)
   have upper := Nat.mul_lt_mul'' ab.2 bb.2
   let aw := softMulNormalizeWord (BitVec.ofNat 64 (zuBits f64 a))
   let bw := softMulNormalizeWord (BitVec.ofNat 64 (zuBits f64 b))
+  change 2 ^ 104 ≤ aw.toNat * bw.toNat at lower
+  change aw.toNat * bw.toNat < 2 ^ 106 at upper
   have high := mulHiW_toNat aw bw
   have compare : (mulHiW aw bw).ult (BitVec.ofNat 64 (2 ^ 41)) =
       decide (aw.toNat * bw.toNat < 2 ^ 105) := by
@@ -145,7 +149,8 @@ theorem softMulFiniteWord_model (a b : GFloat)
   · simp only [small, decide_true, ite_true]
     exact softMulFiniteDirectionalWord_model a b ha hb special 49 (Or.inl rfl) lower small
   · simp only [small, decide_false, Bool.false_eq_true, ite_false]
-    exact softMulFiniteDirectionalWord_model a b ha hb special 50 (Or.inr rfl) (by omega) upper
+    have leading : 2 ^ 105 ≤ aw.toNat * bw.toNat := by omega
+    exact softMulFiniteDirectionalWord_model a b ha hb special 50 (Or.inr rfl) leading upper
 
 #print axioms softMulFiniteDirectionalWord_model
 #print axioms softMulFiniteWord_model
