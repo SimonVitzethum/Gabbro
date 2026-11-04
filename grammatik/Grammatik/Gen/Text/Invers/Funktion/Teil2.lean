@@ -70,10 +70,11 @@ private theorem elabKopf_scalar
       { name, names, kinds, types, res := none, bits := params.map (fun p => uParamBreite p.2),
         held := uEindeutig held, kanal := kn, griffe := uGriffe devs 0 params0 }
       tabs locks globs klauseln = .ok eff)
-    (herg : ∀ t, erg = some t → (artErg t).isSome)
+    -- Keep the result match independent of the result-kind certificate below.
     (hres : (match erg with
       | none => pure none
       | some t => do pure (some (← typS otab t)) : Except String (Option STyp)) = .ok res)
+    (herg : ∀ t, erg = some t → (artErg t).isSome)
     (hout :
       { name, names, kinds, types, res := ergBereich erg, resBool := decide (erg = some .bool),
         bits := params.map (fun p => uParamBreite p.2), held := uEindeutig held, kanal := kn,
@@ -87,7 +88,9 @@ private theorem elabKopf_scalar
   have himpl : strEq "impl" "impl" = true := by decide
   unfold elabKopf
   simp only [List.isEmpty_nil, himpl, Bool.true_or, Bool.not_true, Bool.false_eq_true,
-    ite_false, hmc, hok, hfilter, hseq, hnames, htypes, hkinds, hheld, hkn, heff]
+    ite_false, hmc, hok, hfilter, hseq, hnames, htypes, hkinds, hheld]
+  -- Transport the whole reason result across the reader's generated matcher first.
+  erw [hkn, heff]
   cases erg with
   | none =>
     simp only [pure, Except.pure, Except.ok.injEq] at hres
@@ -257,7 +260,8 @@ theorem kopf_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklarat
     (types := S.params) (kinds := ks)
     (hfilter := hog) (hseq := hseq) (hnames := p1) (htypes := p2) (hkinds := p3)
     (hmc := hmc) (hok := hok) (hheld := hgeh) (hkn := hkn)
-    (heff := hrun) (herg := hV.erg) (hres := hres) (hout := rfl)
+    (heff := hrun) (hres := by simpa only [delabRes, ← hS] using hres)
+    (herg := hV.erg) (hout := rfl)
 
 end Kopf
 
