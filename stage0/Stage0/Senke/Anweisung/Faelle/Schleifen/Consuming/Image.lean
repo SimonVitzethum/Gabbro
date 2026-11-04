@@ -57,6 +57,26 @@ def fragment : List Piece := pieces x.s x.counter x.saved x.fuel
 
 def offset (i : Nat) : Nat := width (x.fragment.take i)
 def addr (i : Nat) : W := x.pc + BitVec.ofNat 64 (16 * x.offset i)
+
+/-- A code piece ends at the next symbolic piece's address. -/
+theorem addr_next_code {i : Nat} {block : List II}
+    (found : x.fragment[i]? = some (.code block)) :
+    x.addr i + BitVec.ofNat 64 (16 * block.length) = x.addr (i + 1) := by
+  have inside : i < x.fragment.length := by
+    apply Classical.byContradiction
+    intro hn
+    have missing := List.getElem?_eq_none (l := x.fragment) (i := i) (by omega)
+    cases (missing.symm.trans found)
+  have element : x.fragment[i] = .code block := by
+    simpa only [List.getElem?_eq_getElem inside, Option.some.injEq] using found
+  simp only [addr, offset, List.take_succ_eq_append_getElem inside, element]
+  have widths : ∀ a b : List Piece, width (a ++ b) = width a + width b := by
+    intro a b; induction a with
+    | nil => simp only [List.nil_append, width, Nat.zero_add]
+    | cons a as ih => simp only [List.cons_append, width, ih, Nat.add_assoc]
+  rw [widths]
+  simp only [width, Piece.width, Nat.add_zero, pc_add]
+
 def read (m : Mem) (j : Nat) (v : W) : Prop :=
   m.rd64 (slot x.fp (BitVec.ofNat 64 j)) = some v
 
@@ -205,24 +225,8 @@ theorem Ready.eval {Λ : List (Res D)} {τ : Ty} (h : x.Ready m σ ρ)
   have ok : Ok m (x.addr i) x.fp x.K (x.s + 4) block
       (Enc L τ (Gabbro.Grammatik.eval σ e σ ρ)) :=
     ⟨mem, path, Agree.widen frame x.layout.ks, value, read, encoded⟩
-  apply h.ok ok
-  · have inside : i < x.fragment.length := by
-      apply Classical.byContradiction
-      intro hn
-      have missing := List.getElem?_eq_none (l := x.fragment) (i := i) (by omega)
-      cases (missing.symm.trans found)
-    have element : x.fragment[i] = .code block := by
-      simpa only [List.getElem?_eq_getElem inside, Option.some.injEq] using found
-    simp only [addr, offset, List.take_succ_eq_append_getElem inside, element]
-    have widths : ∀ a b : List Piece, width (a ++ b) = width a + width b := by
-      intro a b; induction a with
-      | nil => simp only [List.nil_append, width, Nat.zero_add]
-      | cons a as ih => simp only [List.cons_append, width, ih, Nat.add_assoc]
-    rw [widths]
-    simp only [width, Piece.width, Nat.add_zero, pc_add]
-  · exact ctx
-  · omega
-  · have := x.scratch; have := x.layout.ks; omega
+  exact h.ok ok (x.addr_next_code found) ctx (by omega)
+    (by have := x.scratch; have := x.layout.ks; omega)
 
 end Image
 end Gabbro.Stage0.Senke.Consuming
