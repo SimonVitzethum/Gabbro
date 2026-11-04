@@ -66,9 +66,6 @@ abbrev GFloat : Type := Float
 def bruch (q : Int × Int) : GFloat :=
   RootNativeFloat.canonLiteral q
 
-theorem bruch_integer (z : Int) : bruch (z, 1) = Float.ofInt z :=
-  RootNativeFloat.canonLiteral_integer z
-
 /-- An integer as a float: the exact integer, rounded once (C's `(double)n`). -/
 def gleitAusInt (z : Int) : GFloat := Float.ofInt z
 
