@@ -93,12 +93,11 @@ private theorem execution_position_at_label {i : Nat} {target : Label}
   exact located.trans atLabel
 
 private theorem execution_header_position : position .header x.fragment 0 = some (x.offset 2) := by
-  have step := execution_offset_step (i := 1) (piece := .label .header) rfl
-  simp only [Piece.width, Nat.add_zero] at step
-  exact (execution_position_at_label (i := 1) rfl rfl).trans (congrArg some step.symm)
+  simp only [Image.fragment, Image.offset, pieces, position, List.take_succ_cons,
+    List.take_zero, width, Piece.width, ↓reduceIte, Nat.add_zero, Nat.zero_add]
 
 private theorem execution_stop_position : position .stop x.fragment 0 = some (x.offset 49) := by
-  have step := execution_offset_step (i := 48) (piece := .label .stop) rfl
+  have step := execution_offset_step (x := x) (i := 48) (piece := .label .stop) rfl
   simp only [Piece.width, Nat.add_zero] at step
   exact (execution_position_at_label (i := 48) rfl rfl).trans (congrArg some step.symm)
 
@@ -171,7 +170,7 @@ theorem resume {m : Mem} {σ : World D} {ρ : Env D (.index (D.count x.table) ::
   dsimp only
   by_cases good : 0 ≤ (q.massW σ' ρ'.tail).2 ∧ (q.massW σ' ρ'.tail).2 ≤ x.bound ∧
       (q.massW σ' ρ'.tail).2 < old
-  · simp only [good, ↓reduceIte] at checked ⊢
+  · simp only [good, and_self, ↓reduceIte] at checked ⊢
     obtain ⟨m2, checkRun, checkFrame, checkKept, ready2, fuelRead2⟩ := checked
     have frame := bodyFrame.trans checkFrame
     have kept := bodyKept.trans checkKept
@@ -187,7 +186,7 @@ theorem resume {m : Mem} {σ : World D} {ρ : Env D (.index (D.count x.table) ::
       change Star ⟨x.addr 44, x.fp⟩ m1 ⟨x.addr 45, x.fp⟩ m2 at checkRun
       have completed := resume_leave (q := q) (bodyRun.trans checkRun) frame kept ready2
       simpa only [↓reduceIte] using completed
-  · simp only [good, ↓reduceIte] at checked ⊢
+  · simp only [good, and_self, ↓reduceIte] at checked ⊢
     exact Stops.prefix bodyRun checked
 
 private theorem selection_empty {m : Mem} {τ : World D} {ρ : Env D Γ}
@@ -259,7 +258,7 @@ theorem correct {O : Orakel D} {passes : Nat}
     have oldBound := inW_spec x.bounds.2.2.2 oldBounds.1 oldBounds.2
     have pass := bodyRun m2 (q.massW σr ρ).1 (.cons k ρ) ready2
     dsimp only
-    have again : ∀ σ' ρ',
+    have again : ∀ (σ' : World D) (ρ' : Env D (.index (D.count x.table) :: Γ)),
         Reach L x.fp x.lo x.K (x.s :: x.counter :: x.saved :: x.pr)
           ⟨x.addr 39, x.fp⟩ m2 (x.addr 41) σ' ρ' reserved →
         let measured := q.massW σ' ρ'.tail
@@ -274,10 +273,10 @@ theorem correct {O : Orakel D} {passes : Nat}
       dsimp only at resumed ⊢
       by_cases good : 0 ≤ (q.massW σ' ρ'.tail).2 ∧
           (q.massW σ' ρ'.tail).2 ≤ x.bound ∧ (q.massW σ' ρ'.tail).2 < (q.massW σr ρ).2
-      · simp only [good, Bool.false_eq_true, ↓reduceIte] at resumed ⊢
+      · simp only [good, and_self, Bool.false_eq_true, ↓reduceIte] at resumed ⊢
         obtain ⟨m3, run, frame, kept, next⟩ := resumed
         exact ⟨m3, completeRun.trans run, prefixFrame.trans frame, prefixKept.trans kept, next⟩
-      · simp only [good, ↓reduceIte] at resumed ⊢
+      · simp only [good, and_self, ↓reduceIte] at resumed ⊢
         exact Stops.prefix completeRun resumed
     dsimp only [Sim] at pass
     generalize bodyOutcome : execBlock O passes R body (q.massW σr ρ).1 (.cons k ρ) = outcome at pass ⊢
@@ -290,16 +289,20 @@ theorem correct {O : Orakel D} {passes : Nat}
       dsimp only at resumed ⊢
       by_cases good : 0 ≤ (q.massW σ' ρ'.tail).2 ∧
           (q.massW σ' ρ'.tail).2 ≤ x.bound ∧ (q.massW σ' ρ'.tail).2 < (q.massW σr ρ).2
-      · simp only [good, ↓reduceIte] at resumed ⊢
+      · simp only [good, and_self, ↓reduceIte] at resumed ⊢
         by_cases valid : (q.invW (q.massW σ' ρ'.tail).1 ρ'.tail).2 = true
         · simp only [valid, ↓reduceIte] at resumed ⊢
           exact Reach.prefix completeRun prefixFrame prefixKept resumed
         · simp only [valid, Bool.false_eq_true, ↓reduceIte] at resumed ⊢
           exact Stops.prefix completeRun resumed
-      · simp only [good, ↓reduceIte] at resumed ⊢
+      · simp only [good, and_self, ↓reduceIte] at resumed ⊢
         exact Stops.prefix completeRun resumed
-    | zurueck σ' value => exact RetZ.prefix completeRun (prefixFrame.mono x.low) pass
-    | why σ' reason => exact RetWhy.prefix completeRun (prefixFrame.mono x.low) pass
+    | zurueck σ' value =>
+      exact RetZ.prefix completeRun
+        (prefixFrame.mono (Nat.le_trans (by decide : 2 ≤ FB) x.low)) pass
+    | why σ' reason =>
+      exact RetWhy.prefix completeRun
+        (prefixFrame.mono (Nat.le_trans (by decide : 2 ≤ FB) x.low)) pass
     | logik code => exact Stops.prefix completeRun pass
     | hardware code => exact Stops.prefix completeRun pass
 
