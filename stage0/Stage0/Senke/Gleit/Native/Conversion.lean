@@ -94,8 +94,16 @@ theorem nativeFloatScaleL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop
     WordCode.bin (L := L) (reserved := reserved) hs
       (WordCode.const (L := L) (reserved := reserved) (ρ := ρ) (W := W) 63 (by decide))
       (g := fun a b => some (a <<< (b.toNat % 64))) rfl rfl (by decide : 11 < 256)
-  exact WordCode.bin (L := L) (reserved := reserved) exponent polarity
-    (g := fun a b => some (a ||| b)) rfl rfl (by decide : 9 < 256)
+  have combined : WordCode (L := L) (reserved := reserved) ρ W
+      (fun d => nativeFloatScaleL d sign index)
+      (((BitVec.ofNat 64 i - BitVec.ofInt 64 55) <<< (52 : Nat)) |||
+        (Runner.IR.bool s <<< (63 : Nat))) :=
+    WordCode.bin (L := L) (reserved := reserved) exponent polarity
+      (g := fun a b => some (a ||| b)) rfl rfl (by decide : 9 < 256)
+  intro fp K d c top emitted fits m pc pre
+  have run := combined (fp := fp) (K := K) (d := d) (c := c) (top := top)
+    emitted fits m pc pre
+  simpa only [nativeFloatScaleWord, BitVec.ofInt_ofNat, BitVec.ofNat_eq_ofNat] using run
 
 /-- The bounded scale fields are exactly the canonical native power operand. -/
 theorem nativeFloatScaleWord_eq (sign : Bool) (index : Nat)
@@ -114,7 +122,8 @@ theorem nativeFloatScaleWord_eq (sign : Bool) (index : Nat)
   unfold nativeFloatScaleWord
   rw [exponent]
   cases sign
-  · change BitVec.ofNat 64 ((index - 55) * 2 ^ 52) ||| ((0 : Runner.W) <<< (63 : Nat)) =
+  · simp only [Runner.IR.bool, Bool.false_eq_true, ↓reduceIte, Nat.zero_add]
+    change BitVec.ofNat 64 ((index - 55) * 2 ^ 52) ||| ((0 : Runner.W) <<< (63 : Nat)) =
       BitVec.ofNat 64 ((index - 55) * 2 ^ 52)
     rw [BitVec.zero_shiftLeft, BitVec.or_zero]
   · change BitVec.ofNat 64 ((index - 55) * 2 ^ 52) ||| BitVec.ofNat 64 (2 ^ 63) =
