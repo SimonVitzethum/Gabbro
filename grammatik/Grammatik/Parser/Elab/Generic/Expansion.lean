@@ -4,8 +4,7 @@ public import Grammatik.Parser.Elab.Generic.Parametricity
 public import Grammatik.Parser.SourceFolds.Range
 public import Grammatik.Parser.SourceFolds.Hoist
 public import Grammatik.Parser.TaggedDispatch.Frontend
-meta import Lean.Elab.Tactic.BuiltinTactic
-meta import Lean.Meta.Reduce
+public import Grammatik.Parser.Size.Source
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Generic
 
@@ -128,18 +127,12 @@ def expandDeclarationsBeforeLiterals (sourceNames : List String) (ordinary : Lis
     | _ => true
   appendLiterals (sourceNames ++ ordinary.filterMap sourceName) ordinary literals
 
-/-- Elaborate the canonical size into its recursors before code generation, avoiding
-    runtime calls to the kernel-generated `SizeOf` dictionaries. -/
-def sourceSize : List SItemTief → Nat := by
-  run_tac
-    let term ← Lean.Elab.Term.elabTerm (← `(fun source : List SItemTief => sizeOf source)) none
-    Lean.Elab.Term.synthesizeSyntheticMVarsNoPostponing
-    let term ← Lean.instantiateMVars term
-    let term ← Lean.Meta.withTransparency .all (Lean.Meta.reduce term (explicitOnly := false))
-    Lean.Elab.Tactic.closeMainGoal `sourceSize term
+/-- The executable constructor producer retains the original kernel budget. -/
+def sourceSize : List SItemTief → Nat := fun source => (Size.source source).val
 
 /-- The executable producer uses exactly the existing budget, not a new measure. -/
-theorem sourceSize_eq (source : List SItemTief) : sourceSize source = sizeOf source := rfl
+theorem sourceSize_eq (source : List SItemTief) : sourceSize source = sizeOf source :=
+  (Size.source source).property
 
 /-- The output retains every ordinary item and appends exactly the closed, deterministically named
     body instances. The structural source size bounds work, and exhaustion always refuses. -/
