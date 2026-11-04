@@ -110,21 +110,26 @@ private def makeDefinition (nodes : Array Node) (index : Nat) (recursive : Bool)
     TermElabM (TSyntax `command) := do
   let node := nodes[index]!
   let type ← PrettyPrinter.delab node.type
-  let input := mkIdent (← mkFreshUserName `input)
+  let functionName := mkIdent node.functionName
+  let major := mkIdent (← mkFreshUserName `value)
+  let binder ← `(Parser.Term.bracketedBinder| ($major : $type))
+  let discriminant ← `(Parser.Term.matchDiscr| $major:term)
+  let discriminants := #[discriminant]
+  let resultType ← `(term| { n : Nat // n = sizeOf $major })
   let mut alternatives := #[]
   for ctorName in ← constructors node.type do
     alternatives := alternatives.push (← makeAlternative nodes node.type ctorName)
-  let body ← `(term| match $input with $alternatives:matchAlt*)
-  if recursive then
-    `(command| @[no_expose] private def $(mkIdent node.functionName):ident ($input:ident : $type:term) :
-        { n : Nat // n = sizeOf $input } := $body
-      termination_by sizeOf $input
+  let body ← `(term| match $[$discriminants],* with $alternatives:matchAlt*)
+  let termSuffix ← if recursive
+    then `(Parser.Termination.suffix|
+      termination_by sizeOf $major
       decreasing_by
         all_goals simp_wf
         all_goals omega)
-  else
-    `(command| @[no_expose] private def $(mkIdent node.functionName):ident ($input:ident : $type:term) :
-        { n : Nat // n = sizeOf $input } := $body)
+    else `(Parser.Termination.suffix|)
+  `(command| @[no_expose] private def $functionName:ident $binder:bracketedBinder :
+      $resultType:term := $body:term
+    $termSuffix:suffix)
 
 /-- Emit each dependency component separately; recursive calls consume actual
     constructor children. Every result carries its canonical constructor-sum proof. -/
