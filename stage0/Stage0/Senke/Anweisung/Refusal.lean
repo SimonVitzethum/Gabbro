@@ -77,6 +77,10 @@ private def refusedEnd {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .narrow _ _ _ err rest => refusedEnd err ++ refusedEnd rest
   | .narrowRequired _ _ _ rest => refusedEnd rest
   | .ite _ t e => refusedEnd t ++ refusedEnd e
+  | .float _ _ _ _ _ rest => refusedEnd rest
+  | .floatLit _ _ _ rest => refusedEnd rest
+  | .floatOf _ _ _ rest => refusedEnd rest
+  | .floatNarrow _ _ _ err rest => refusedEnd err ++ refusedEnd rest
 
 private def refusedTags {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → List String
