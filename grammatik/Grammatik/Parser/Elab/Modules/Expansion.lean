@@ -26,8 +26,8 @@ def fail {α : Type} (message : String) : ExpandM α := fun _ => .error message
 def lift {α : Type} (result : Except String α) : ExpandM α :=
   fun work => do pure (← result, work)
 
-/-- Predeclare every ordinary sibling before evaluating uses, including forward function arguments. -/
 mutual
+/-- Predeclare every ordinary sibling before evaluating uses, including forward function arguments. -/
 def locateItem (position : Located) : SItemTief → List Located
   | .modT name body => locateList { position with
       origin := position.origin ++ segmente name,
@@ -89,20 +89,30 @@ def visitItem (all : List Template) (base : Quelle) (ancestors : List Pfad)
       | none => ({} : Bindings)
     let parameterContext := { k with von := entry.path }
     let params := (Aufloesung.sig parameterContext
-      { art := "", name := "", params := [], res := none, fehler := none,
-        klauseln := [], generics := entry.params }).generics
+      {
+        art := ""
+        name := ""
+        params := []
+        res := none
+        fehler := none
+        klauseln := []
+        generics := entry.params }).generics
     let (_, bindings) ← lift (normalizeArguments env {} params arguments
       (underGenerics captured entry.params))
-    let location : Located := { origin := entry.path, destination,
-      copy := some (entry.path, destination), bindings,
-      exportMembers := position.exported,
-      imports := position.imports ++ (sammleL entry.path (ordinaryList entry.body)).2,
+    let location : Located := {
+      origin := entry.path
+      destination
+      copy := some (entry.path, destination)
+      bindings
+      exportMembers := position.exported
+      imports := position.imports ++ (sammleL entry.path (ordinaryList entry.body)).2
       item := .useT [] }
     let declarations := locateList location entry.body
-    modify fun state => { state with locations := state.locations ++ declarations,
-      occupied := destination :: (occupiedList destination entry.body ++ state.occupied),
-      remaining := state.remaining - 1,
-      literals := state.literals ++ bindings.literals,
+    modify fun state => { state with
+      locations := state.locations ++ declarations
+      occupied := destination :: (occupiedList destination entry.body ++ state.occupied)
+      remaining := state.remaining - 1
+      literals := state.literals ++ bindings.literals
       requirements := state.requirements ++ bindings.requirements }
     visitList all base (entry.path :: ancestors) location fuel entry.body
   | _, .gateT _ => fail "parametric-module-selection: select build gates before instantiation"
@@ -133,8 +143,8 @@ def expandRaw (items : List SItemTief) : Except String Expansion := do
     let base := quelle plain
     let root : Located := { origin := [], destination := [], item := .useT [] }
     let locations := locateList root items
-    let (_, work) ← (visitList all base [] root (sizeOf items + 1) items).run
-      { locations, occupied := occupiedList [] items, remaining := sizeOf items + 1 }
+    let (_, work) ← (visitList all base [] root (Generic.sourceSize items + 1) items).run
+      { locations, occupied := occupiedList [] items, remaining := Generic.sourceSize items + 1 }
     let env ← argumentEnvironment base work
     let target ← work.locations.mapM (resolve env base work.locations)
     let sourceNames := base.namen.map (schluessel base.namen)
@@ -143,7 +153,10 @@ def expandRaw (items : List SItemTief) : Except String Expansion := do
       if names.contains name then throw "parametric-module-name-collision: generated name is already declared"
       names := name :: names
     if !Oeffentlich.huelleZu target then throw "parametric-module-export: public signature names a private item"
-    pure { items := target, literals := work.literals, requirements := work.requirements,
+    pure {
+      items := target
+      literals := work.literals
+      requirements := work.requirements
       generatedNames := (instanceKeys work.locations).map Prod.snd }
 
 /-- Refuse any residual surface form at the actual frontend boundary. -/
@@ -160,13 +173,18 @@ def expand (items : List SItemTief) : Except String (List SItemTief) :=
 theorem expand_ordinary (items target : List SItemTief) (h : expand items = .ok target) :
     ordinary target = true := by
   cases hr : expandRaw items with
-  | error error => simp [expand, expandWithRequirements, hr] at h
+  | error error =>
+    simp [expand, expandWithRequirements, hr, bind, Except.bind, Except.map] at h
   | ok result =>
     cases ho : ordinary result.items with
-    | false => simp [expand, expandWithRequirements, hr, ho] at h
+    | false =>
+      simp [expand, expandWithRequirements, hr, bind, Except.bind, ho,
+        Except.map, pure, Except.pure] at h
     | true =>
-      simp [expand, expandWithRequirements, hr, ho] at h
-      cases h
+      have itemsEq : result.items = target := by
+        simpa only [expand, expandWithRequirements, hr, bind, Except.bind, ho,
+          ite_true, pure, Except.pure, Except.map, Except.ok.injEq] using h
+      rw [← itemsEq]
       exact ho
 
 end Gabbro.Grammatik.Parser.Modules
