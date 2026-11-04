@@ -217,7 +217,7 @@ private theorem candidate_live (k : Wert D (.index (D.count x.table))) (hk : k.n
       (by rw [hk, BitVec.ofInt_natCast]; exact h.candidateRead)
   have initial : q.PredState σ ρ k true 0 mem :=
     ⟨⟨ready, candidateRead, flag⟩, predecessorRead⟩
-  have scan := q.predecessor_path σ ρ k true (D.count x.table).toNat 0 (by omega) mem initial
+  have scan := q.predecessor_path (σ := σ) (ρ := ρ) k true (D.count x.table).toNat 0 (by omega) mem initial
   rw [← alleIndizes_ab] at scan
   rw [candidate_label_next (i := 13) (target := .predecessor) rfl]
   generalize answerEq : keinVorgaenger (alleIndizes (D.count x.table))
@@ -293,9 +293,14 @@ theorem candidate_path : ∀ remaining j, j + remaining = (D.count x.table).toNa
       exhausted_position (candidate_offset_bound 9) (candidate_offset_bound 34)
       (by have := x.scratch; have := x.layout.ks; omega) read
       (candidate_zero_next (i := 9) (cell := x.s + 4) (target := .exhausted) rfl)
-    exact ⟨mem', by simpa [Runner.IR.bool] using exit,
-      AgreeW.refl _ _ _ _ _, Keeps.refl _ _ _, ready, by intro _ impossible; cases impossible,
-      state.liveRead⟩
+    refine ⟨mem', by simpa [Runner.IR.bool] using exit,
+      AgreeW.refl _ _ _ _ _, Keeps.refl _ _ _, ?_⟩
+    exact
+      { ready := ready
+        candidateRead := by
+          intro _ impossible
+          cases impossible
+        liveRead := state.liveRead }
   · intro j k hk live mem h
     have iteration :
         let minimal := istMinimalVerbrauch (alleIndizes (D.count x.table))
@@ -323,10 +328,11 @@ theorem candidate_path : ∀ remaining j, j + remaining = (D.count x.table).toNa
         (candidate_zero_next (i := 9) (cell := x.s + 4) (target := .exhausted) rfl)
       have test := candidate_test k hk state
       exact ScanRun.prefix (by simpa [Runner.IR.bool] using pass) test
-    by_cases minimal : istMinimalVerbrauch (alleIndizes (D.count x.table))
-        (q.memberAt σ ρ) (q.edgeAt σ ρ) (fun a b => decide (a.n = b.n)) k = true
-    · simpa only [minimal, ↓reduceIte] using iteration
-    · simpa only [minimal, ↓reduceIte] using iteration
+    cases minimal : istMinimalVerbrauch (alleIndizes (D.count x.table))
+        (q.memberAt σ ρ) (q.edgeAt σ ρ) (fun a b => decide (a.n = b.n)) k <;>
+      simp only [minimal, Bool.false_eq_true, ↓reduceIte] at iteration ⊢ <;>
+      obtain ⟨result, steps, frame, kept, state⟩ := iteration <;>
+      exact ⟨result, steps, frame, kept, state⟩
 
 /-- Initialize both selector words, scan the entire index domain and retain
     the canonical empty/cyclic distinction in the live flag. -/
@@ -346,9 +352,10 @@ theorem selection (h : x.Ready m σ ρ) :
     (by omega) (by decide) (by decide) literalsEnd).bind
   intro mem result
   obtain ⟨ready, frame, zero, flag⟩ := result
-  have scan := q.candidate_path σ ρ (D.count x.table).toNat 0 (by omega) false mem ⟨ready, zero, flag⟩
+  have scan := q.candidate_path (σ := σ) (ρ := ρ) (D.count x.table).toNat 0 (by omega) false mem ⟨ready, zero, flag⟩
   rw [← alleIndizes_ab] at scan
-  simpa only [verbrauchWahl, Bool.false_or, List.any_eq_not_all_not,
-    candidate_label_next (i := 7) (target := .candidate) rfl] using scan
+  erw [Bool.false_or, List.any_eq_not_all_not] at scan
+  simp only [verbrauchWahl, candidate_label_next (i := 7) (target := .candidate) rfl]
+  exact scan
 
 end Gabbro.Stage0.Senke.Consuming.Selector
