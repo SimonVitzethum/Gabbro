@@ -88,10 +88,10 @@ def checkItems : Nat → List SItemTief → Except String Unit
     | _ => pure ()
     checkItems fuel rest
 
+mutual
 /-- A named section has no Stage-0 image relocation policy: the runner image is flat,
     so every static with a `section` is refused by name. Alignment without a section
     is laid out on the common grid (`Senke.globStarts`) and needs no policy. -/
-mutual
 def abschnittFehlerI (modul : List String) : SItemTief → Option String
   | .modT n b => abschnittFehlerL (modul ++ [n]) b
   | .pubT it => abschnittFehlerI modul it
