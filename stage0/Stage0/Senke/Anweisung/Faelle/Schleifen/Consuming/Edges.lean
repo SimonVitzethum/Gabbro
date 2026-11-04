@@ -63,12 +63,12 @@ theorem Ready.save (h : x.Ready m σ ρ) {i cell source : Nat} {value : W}
       simp only [List.mem_cons] at hj
       rcases hj with rfl | hj
       · have := x.controls; have := x.scratch; have := x.layout.ks; omega
-      · have := x.protected j hj; have := x.scratch; have := x.layout.ks; omega
+      · have := x.kept j hj; have := x.scratch; have := x.layout.ks; omega
     · intro member
       simp only [List.mem_cons] at member
       rcases member with eq | member
       · have := x.controls; omega
-      · have := x.protected cell member; omega
+      · have := x.kept cell member; omega
   · intro j insideJ different
     exact rd_other h.frame.room inside insideJ (Ne.symm different)
 
@@ -149,7 +149,7 @@ theorem Ready.increment (h : x.Ready m σ ρ) {i j cell n : Nat}
       intro q hq; have := x.controls; have := x.scratch
       simp only [List.mem_cons] at hq
       rcases hq with rfl | rfl | hq <;> try omega
-      have := x.protected q hq; omega) (by omega),
+      have := x.kept q hq; omega) (by omega),
     h.agree aa ctx (by rw [← x.abi]; have := x.controls; have := x.scratch; omega) (by omega),
     aa, ?_, ?_⟩
   · simpa only [addr_norm, show (16 : Nat) + 16 = 32 by decide, endAt] using run1.trans run2

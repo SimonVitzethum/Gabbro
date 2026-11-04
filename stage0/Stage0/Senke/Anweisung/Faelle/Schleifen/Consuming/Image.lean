@@ -27,7 +27,7 @@ structure Image (L : Lay D) (P : Programm D) (f : D.Fn) (reserved : Nat) where
   low : FB ≤ lo
   controls : lo ≤ counter ∧ counter < saved ∧ saved < FB + reserved
   scratch : FB + reserved ≤ s ∧ s + 12 ≤ Ks
-  protected : ∀ j ∈ pr, j < s ∧ j ≠ counter ∧ j ≠ saved
+  kept : ∀ j ∈ pr, j < s ∧ j ≠ counter ∧ j ≠ saved
   bounds : fuel < 2 ^ 31 ∧ logikCode (D := D) .schleife < 2 ^ 31 ∧
     inW (D.count table) (D.count table) = true ∧ inW 0 bound = true
   assembled : assemble (pieces s counter saved fuel (logikCode (D := D) .schleife)
@@ -130,7 +130,7 @@ theorem Ready.ok (h : x.Ready m σ ρ) {i j d : Nat} {block : List II} {Q : W �
       rcases hj with rfl | rfl | hj
       · omega
       · omega
-      · have := x.protected j hj; omega) room,
+      · have := x.kept j hj; omega) room,
     h.agree a ctx (by rw [← x.abi]; omega) room, a, v, read, value⟩
 
 /-- A local jump resolves against the same image and preserves all memory. -/

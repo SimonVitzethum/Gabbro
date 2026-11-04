@@ -87,7 +87,7 @@ theorem consumeTraverse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Na
     controls := ⟨by simpa only [hlo0] using pairLow,
       by simp only [counterPair]; omega, pairRoom⟩,
     scratch := ⟨by simp only [frei]; omega, by omega⟩,
-    protected := by
+    kept := by
       intro j hj
       exact ⟨hpr j hj, fun eq => counterFree (eq ▸ hj), fun eq => savedFree (eq ▸ hj)⟩,
     bounds := gates, assembled := assembled, far := hp.far }

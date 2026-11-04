@@ -81,10 +81,10 @@ theorem fuel (entry : q.Entry (n + 1) m σ ρ) :
   · have total := branch.trans (oneRun.trans run)
     simpa only [show x.addr 3 + 16 + 16 = x.addr 4 by consume_arith x] using total
   · have k1 := keeps_of_agree oneFrame ready.frame.room
-      (fun j hj => by have := x.protected j hj; omega) (by omega)
+      (fun j hj => by have := x.kept j hj; omega) (by omega)
     have k2 := keeps_write oneReady.frame.room controlRoom
-      (fun j hj => by have := x.protected j hj; have := x.scratch; omega)
-      (fun hj => (x.protected _ hj).2.1 rfl) value.toNat
+      (fun j hj => by have := x.kept j hj; have := x.scratch; omega)
+      (fun hj => (x.kept _ hj).2.1 rfl) value.toNat
     exact k1.trans k2
   · have result := rd_same oneReady.frame controlRoom value
     simpa only [value, fuelEq.2] using result

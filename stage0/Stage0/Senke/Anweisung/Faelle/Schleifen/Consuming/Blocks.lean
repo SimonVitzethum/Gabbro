@@ -40,7 +40,7 @@ theorem initialize {P : Programm D} {f : D.Fn} {Γ : Ctx}
     (abi : (functionFrame P f).internalResult ≤ lo) (low : lo ≤ counter)
     (allocated : counter < FB + reserved) (room : frei Γ reserved ≤ K)
     (fuelBound : fuel < 2 ^ 31)
-    (protected : ∀ j ∈ pr, j < K ∧ j ≠ counter) :
+    (kept : ∀ j ∈ pr, j < K ∧ j ≠ counter) :
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + 16, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧
       PreS L m' pc fp K (frei Γ reserved) code ρ reserved ∧
       Umf L A C dv m' fp Ks K ∧ Kopf L f m' fp K rp cfp ρ0 P σ0 ∧
@@ -59,7 +59,7 @@ theorem initialize {P : Programm D} {f : D.Fn} {Γ : Ctx}
   have pre' : PreS L m pc fp K (frei Γ reserved)
       ([ci 1 counter fuel 0] ++ suffix) ρ reserved := by rw [← eq]; exact pre
   obtain ⟨m', run, frame, tailPre, surround', head', world', keeps, read⟩ :=
-    reserved_literal_entry layout pre' surround head world abi low allocated room literal protected
+    reserved_literal_entry layout pre' surround head world abi low allocated room literal kept
   refine ⟨m', run.forget, frame, ?_, surround', head', world', keeps, ?_⟩
   · exact ⟨pre.ctx, pre.small, frameOK_agreeW pre.frame frame,
       codeAt_agreeWIn layout frame pre.code pre.far, pre.far,

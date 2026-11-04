@@ -28,13 +28,13 @@ def lower {Γ : Ctx} {Λ : List (Res D)} (L : Lay D) (layout : FrameLayout)
     (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
     (invariant : Expr D Γ Λ .bool) (bound : Int)
     (measure : Expr D Γ Λ (.int 0 bound))
-    (reserved remaining : Nat) (protected : List Nat)
+    (reserved remaining : Nat) (kept : List Nat)
     (body : List Nat → Int × Int → Option (List II × Nat)) :
     Option (List II × Nat) := do
   let pair := counterPair reserved remaining
   let s := frei Γ reserved
   if layout.internalResult ≤ pair.1 ∧ pair.2 < FB + reserved ∧
-      pair.1 ∉ protected ∧ pair.2 ∉ protected then
+      pair.1 ∉ kept ∧ pair.2 ∉ kept then
     let invCode ← lowE (reserved := reserved) L invariant (s + 4)
     let memberCode ← lowE (reserved := reserved) L member (s + 4)
     let edgeCode ← lowE (reserved := reserved) L edge (s + 4)
@@ -42,7 +42,7 @@ def lower {Γ : Ctx} {Λ : List (Res D)} (L : Lay D) (layout : FrameLayout)
     emit s pair.1 pair.2 ((D.count t).toNat + bound.toNat + 1)
       (logikCode (D := D) .schleife) (D.count t) bound
       invCode memberCode edgeCode measureCode
-      (body (s :: pair.1 :: pair.2 :: protected))
+      (body (s :: pair.1 :: pair.2 :: kept))
   else none
 
 /-- Successful operand lowering exposes the actual four lowE results. The
@@ -53,15 +53,15 @@ theorem lower_actual {Γ : Ctx} {Λ : List (Res D)}
     {edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool}
     {invariant : Expr D Γ Λ .bool} {bound : Int}
     {measure : Expr D Γ Λ (.int 0 bound)} {reserved remaining : Nat}
-    {protected : List Nat}
+    {kept : List Nat}
     {body : List Nat → Int × Int → Option (List II × Nat)}
     {code : List II} {top : Nat}
     (h : lower L layout t member edge invariant bound measure
-      reserved remaining protected body = some (code, top)) :
+      reserved remaining kept body = some (code, top)) :
     let pair := counterPair reserved remaining
     let s := frei Γ reserved
     layout.internalResult ≤ pair.1 ∧ pair.2 < FB + reserved ∧
-      pair.1 ∉ protected ∧ pair.2 ∉ protected ∧
+      pair.1 ∉ kept ∧ pair.2 ∉ kept ∧
     ∃ invCode memberCode edgeCode measureCode : List II × Nat,
       lowE (reserved := reserved) L invariant (s + 4) = some invCode ∧
       lowE (reserved := reserved) L member (s + 4) = some memberCode ∧
@@ -70,7 +70,7 @@ theorem lower_actual {Γ : Ctx} {Λ : List (Res D)}
       emit s pair.1 pair.2 ((D.count t).toNat + bound.toNat + 1)
         (logikCode (D := D) .schleife) (D.count t) bound
         invCode memberCode edgeCode measureCode
-        (body (s :: pair.1 :: pair.2 :: protected)) = some (code, top) := by
+        (body (s :: pair.1 :: pair.2 :: kept)) = some (code, top) := by
   unfold lower at h
   dsimp only
   split at h
@@ -89,13 +89,13 @@ theorem lower_refuses_pair {Γ : Ctx} {Λ : List (Res D)}
     (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
     (invariant : Expr D Γ Λ .bool) (bound : Int)
     (measure : Expr D Γ Λ (.int 0 bound)) (reserved remaining : Nat)
-    (protected : List Nat)
+    (kept : List Nat)
     (body : List Nat → Int × Int → Option (List II × Nat))
     (h : ¬ (layout.internalResult ≤ (counterPair reserved remaining).1 ∧
       (counterPair reserved remaining).2 < FB + reserved ∧
-      (counterPair reserved remaining).1 ∉ protected ∧
-      (counterPair reserved remaining).2 ∉ protected)) :
-    lower L layout t member edge invariant bound measure reserved remaining protected body = none := by
+      (counterPair reserved remaining).1 ∉ kept ∧
+      (counterPair reserved remaining).2 ∉ kept)) :
+    lower L layout t member edge invariant bound measure reserved remaining kept body = none := by
   simp only [lower, h, ↓reduceIte]
 
 /-- The selected and predecessor binders are distinct frame words whenever

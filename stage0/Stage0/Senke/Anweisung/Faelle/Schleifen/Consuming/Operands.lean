@@ -48,7 +48,7 @@ theorem Ready.literals (h : x.Ready m σ ρ) {i a b : Nat} {va vb : Int}
       have := x.controls; have := x.scratch
       simp only [List.mem_cons] at hj
       rcases hj with rfl | rfl | hj <;> try omega
-      have := x.protected j hj; omega) (by omega), ready2, aa, ?_, rb⟩
+      have := x.kept j hj; omega) (by omega), ready2, aa, ?_, rb⟩
   · simpa only [addr_norm, show (16 : Nat) + 16 = 32 by decide, endAt] using run1.trans run2
   · rw [Image.read, rd_other ready1.frame.room insideB insideA (Ne.symm distinct)]
     exact ra
@@ -101,7 +101,7 @@ theorem Ready.borrow (h : x.Ready m σ ρ) {Λ : List (Res D)}
       have := x.controls; have := x.scratch
       simp only [List.mem_cons] at hj
       rcases hj with rfl | rfl | hj <;> try omega
-      have := x.protected j hj; omega) scratchRoom,
+      have := x.kept j hj; omega) scratchRoom,
     h.agree frame (by omega) (by rw [← x.abi]; have := x.controls; have := x.scratch; omega)
       scratchRoom, frame, ?_⟩
   · simpa only [← origin, show x.addr 20 + BitVec.ofNat 64 (16 * (x.member.length + 3)) =
