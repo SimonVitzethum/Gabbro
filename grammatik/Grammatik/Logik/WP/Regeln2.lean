@@ -24,12 +24,16 @@ section Regeln2
 variable (O : Orakel D) (passes : Nat) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
 variable {l : Bool} {Γ : Ctx}
 
-/-- `locks L { body }`: the body runs with `L` taken; every outcome gives `L` back. -/
+/-- `locks L { body }`: the body runs with `L` taken; completed value and reason
+    returns retain their cleanup, while the other outcomes give `L` back. -/
 theorem wpS_locks {Λ : List (Res D)} (L : D.Lock) (h : ∀ M, Res.held M ∈ Λ → D.rang M < D.rang L)
     (body : Block D V l Γ (Res.held L :: Λ) (Res.held L :: Λ)) (Q : Ausgang V l Γ → Prop) (σ : World D)
     (ρ : Env D Γ) :
     wpS O passes R (.locks L h body) Q σ ρ ↔
-      wpB O passes R body (fun o => Q (o.mapWelt (·.gibt L))) (σ.nimmt L) ρ := Iff.rfl
+      wpB O passes R body (fun o => Q (match o with
+        | .zurueck σ' value => .zurueck σ' value
+        | .why σ' reason => .why σ' reason
+        | outcome => outcome.mapWelt (·.gibt L))) (σ.nimmt L) ρ := Iff.rfl
 
 /-- `match o { Some(k) => p, None => a }`. -/
 theorem wpS_onOption {Λ Λ' : List (Res D)} {n : Int} (o : Expr D Γ Λ (.opt n))

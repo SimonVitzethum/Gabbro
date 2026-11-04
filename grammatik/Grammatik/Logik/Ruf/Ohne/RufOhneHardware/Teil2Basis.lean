@@ -40,7 +40,17 @@ theorem Stmt.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ'
   | .locks L hr body, h, σ, ρ, e', he => by
       simp only [Stmt.hardwareFrei] at h
       simp only [execStmt] at he
-      exact Block.hardwareFrei_ok hR body h _ _ _ (Ausgang.mapWelt_hardware he)
+      generalize hbody : execBlock O passes R body (σ.nimmt L) ρ = outcome at he
+      cases outcome with
+      | ok _ _ => cases he
+      | zurueck _ _ => cases he
+      | why _ _ => cases he
+      | leave _ _ _ => cases he
+      | next _ _ _ => cases he
+      | logik _ => cases he
+      | hardware error =>
+          cases he
+          exact Block.hardwareFrei_ok hR body h _ _ _ hbody
   | .breaking i body, h, σ, ρ, e', he => by
       simp only [Stmt.hardwareFrei] at h
       simp only [execStmt] at he

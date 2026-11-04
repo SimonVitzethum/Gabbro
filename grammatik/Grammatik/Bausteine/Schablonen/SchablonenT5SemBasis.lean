@@ -91,7 +91,8 @@ happens above everything held (`wohlgeordnet` -- establishing it per
 program is the `U003`/`U005` checker duty) has all its wait edges in
 `less_than`, hence no cycle (`rangordnung_azyklisch`, `Gruppe_Erhaltung`
 part (a)). Executing `locks` takes `L`, holds it across the whole
-body, and gives it back (`sperrabdruck_form` -- the semantic clause).
+body, and gives it back on nonterminal outcomes; completed returns retain
+their cleanup (`sperrabdruck_form` -- the semantic clause).
 Parts (b)/(c) of the Isabelle locale (invariant at begin/end, no
 intermediate exit) have no counterpart in `execStmt` -- see the skip
 note in the header/CUTS. -/
@@ -149,13 +150,17 @@ theorem kein_wartezyklus (e : List (D.Lock × D.Lock))
   omega
 
 /-- The footprint shape, over the real statement semantics: `locks`
-    takes `L`, runs the whole body under it, and gives it back. -/
+    takes `L`, runs the whole body under it, and gives it back except when
+    a completed value or reason return already carries its cleanup. -/
 theorem sperrabdruck_form (L : D.Lock)
     (hr : ∀ M, Res.held M ∈ Λ → D.rang M < D.rang L)
     (body : Block D V l Γ (Res.held L :: Λ) (Res.held L :: Λ))
     (σ : World D) (ρ : Env D Γ) :
     execStmt O passes R (.locks L hr body) σ ρ =
-      (execBlock O passes R body (σ.nimmt L) ρ).mapWelt (·.gibt L) :=
+      match execBlock O passes R body (σ.nimmt L) ρ with
+      | .zurueck σ' value => .zurueck σ' value
+      | .why σ' reason => .why σ' reason
+      | outcome => outcome.mapWelt (·.gibt L) :=
   by rfl
 
 /-! ### The footprint on a real fragment.
