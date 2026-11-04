@@ -37,6 +37,7 @@ theorem herkunftAt_ohne {u : UProg} {a : Fin u.axs.length}
     (h : (u.axs.get a).beleg = none)
     (hs : (u.axs.get a).software = false) : herkunftAt u a = none := by
   unfold herkunftAt
+  simp only [List.get_eq_getElem] at h hs
   simp [h, hs]
 
 /-- A foreign body without an origin has no witness. -/
