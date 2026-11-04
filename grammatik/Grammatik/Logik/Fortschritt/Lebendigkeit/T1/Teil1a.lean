@@ -35,6 +35,11 @@ theorem schritt_sperre_art (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
         refine Or.inr (Or.inl ?_)
         rw [axiom_offen' hO _ _ _ _ _ hax, hs₁]
         exact lese_offen _ _ _
+    | endeBindAxiomOpt l Γ Λ e a args he hp hd hgd rest ρ _ σ₁ hs₁ σ₂ v hax =>
+        simp only [rufUpdateG_self]
+        refine Or.inr (Or.inl ?_)
+        rw [axiom_offen' hO _ _ _ _ _ hax, hs₁]
+        exact lese_offen _ _ _
     | _ =>
         subst_vars
         simp only [rufUpdateG_self]
@@ -83,6 +88,16 @@ theorem schritt_sperre_art (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
         refine Or.inr (Or.inl ?_)
         rw [leave_welt' _ _ _ _ _ _ _ _ hstep]
         rfl
+    | dannAxiomCallElseOk l Γ Λ Λ' e a args he hp hd hgd hr err rest k ρ _ σ₁ hs₁ σ₂ v hax =>
+        simp only [rufUpdateG_self]
+        refine Or.inr (Or.inl ?_)
+        rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
+        exact lese_offen _ _ _
+    | dannAxiomCallElseGrund l Γ Λ Λ' e a args he hp hd hgd hr err rest k ρ _ σ₁ hs₁ σ₂ r hax =>
+        simp only [rufUpdateG_self]
+        refine Or.inr (Or.inl ?_)
+        rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
+        exact lese_offen _ _ _
     | _ =>
         subst_vars
         simp only [rufUpdateG_self]
@@ -132,6 +147,21 @@ theorem schritt_sperre_art (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
         refine Or.inr (Or.inl ?_)
         rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
         exact lese_offen _ _ _
+    | dannBindAxiomOpt _ _ l Γ Λ Λ' e a args he hp hd hgd rest k ρ _ σ₁ hs₁ σ₂ v hax =>
+        simp only [rufUpdateG_self]
+        refine Or.inr (Or.inl ?_)
+        rw [axiom_offen' hO _ _ _ _ _ hax, hs₁]
+        exact lese_offen _ _ _
+    | dannBindAxiomOptElseOk _ _ l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ _ σ₁ hs₁ σ₂ v hax =>
+        simp only [rufUpdateG_self]
+        refine Or.inr (Or.inl ?_)
+        rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
+        exact lese_offen _ _ _
+    | dannBindAxiomOptElseGrund _ _ l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ _ σ₁ hs₁ σ₂ r hax =>
+        simp only [rufUpdateG_self]
+        refine Or.inr (Or.inl ?_)
+        rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
+        exact lese_offen _ _ _
     | _ =>
         subst_vars
         simp only [rufUpdateG_self]
@@ -151,8 +181,30 @@ theorem schritt_sperre_art (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
         refine Or.inr (Or.inl ?_)
         rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
         exact lese_offen _ _ _
+    | endeBindAxiomOptElseOk l Γ Λ e a args he hr hp hd hgd err rest ρ _ σ₁ hs₁ σ₂ v hax =>
+        simp only [rufUpdateG_self]
+        refine Or.inr (Or.inl ?_)
+        rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
+        exact lese_offen _ _ _
+    | endeBindAxiomOptElseGrund l Γ Λ e a args he hr hp hd hgd err rest ρ _ σ₁ hs₁ σ₂ r hax =>
+        simp only [rufUpdateG_self]
+        refine Or.inr (Or.inl ?_)
+        rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
+        exact lese_offen _ _ _
   | g7 hs =>
     cases hs with
+    | dannLeaveVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hleave
+        _ σ' ρ' neu hstep _ _ σm hsm m' hm' hfall σ₁ hs₁ =>
+        simp only [rufUpdateG_self]
+        refine Or.inr (Or.inl ?_)
+        rw [hs₁, lese_offen, hsm, lese_offen, leave_welt' _ _ _ _ _ _ _ _ hstep]
+        rfl
+    | dannNextVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hnext
+        _ σ' ρ' neu hstep _ _ σm hsm =>
+        simp only [rufUpdateG_self]
+        refine Or.inr (Or.inl ?_)
+        rw [hsm, lese_offen, next_welt' _ _ _ _ _ _ _ _ hstep]
+        rfl
     | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu =>
       simp only [rufUpdateG_self]
       subst σ₁
@@ -174,10 +226,8 @@ theorem schritt_sperre_art (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
     | _ =>
         subst_vars
         simp only [rufUpdateG_self]
-        first
-          | exact Or.inr (Or.inl trivial)
-          | exact Or.inr (Or.inl rfl)
-          | exact Or.inr (Or.inl (lese_offen _ _ _))
+        refine Or.inr (Or.inl ?_)
+        simp only [lese_offen] <;> rfl
 
 /-- **A lock enters a held set only at a `locks` head of that lock.** -/
 theorem nimmt_an_sperre (hO : GutO O) {M M' : RufMaschineG D} {f : Faden} {L : D.Lock}
