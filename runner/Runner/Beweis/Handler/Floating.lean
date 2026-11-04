@@ -100,6 +100,16 @@ theorem fp_compare_ok {L : Lay} {y : X} (pred : FPCompare) (format : FPFormat)
   · cases pred <;> cases format <;> decide
   · cases pred <;> cases format <;> exact h.code
   · cases pred <;> cases format <;> fp_corr h.mode
+    all_goals
+      constructor
+      · rw [fp_control_immediates.1]
+        first
+        | exact (fp_compare_mask32 _).symm
+        | exact (fp_compare_mask64 _).symm
+      · intro answer
+        cases answer with
+        | none => trivial
+        | some result => exact ⟨rfl, rfl, rfl, rfl⟩
 
 theorem fp_fromInt_ok {L : Lay} {y : X} (format : FPFormat)
     (h : HPre L (NativeFPOp.fromInt64 format).code y) :
@@ -145,5 +155,13 @@ theorem fp_flags_ok {L : Lay} {y : X} (format : FPFormat)
   · cases format <;> decide
   · cases format <;> exact h.code
   · cases format <;> fp_corr h.mode
+    all_goals
+      constructor
+      · rw [fp_control_immediates.2.1, fp_control_immediates.2.2]
+        exact (pack_compare_flags _).symm
+      · intro answer
+        cases answer with
+        | none => trivial
+        | some result => exact ⟨rfl, rfl, rfl, rfl⟩
 
 end Runner.Beweis
