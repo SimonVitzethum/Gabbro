@@ -47,6 +47,18 @@ open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Parser Gabbro.Gramma
 
 variable {z : Spez} {V : Vertrag z.deklaration}
 
+private theorem nFn_not_float (i : Nat) : nFn i ≠ "f32" ∧ nFn i ≠ "f64" := by
+  constructor <;> intro h
+  all_goals
+    have names := congrArg String.toList h
+    simp only [nFn_toList, String.reduceToList, List.cons.injEq, Char.reduceEq, false_and, and_false] at names
+
+private theorem nZeiger_not_float (i : Nat) : nZeiger i ≠ "f32" ∧ nZeiger i ≠ "f64" := by
+  constructor <;> intro h
+  all_goals
+    have names := congrArg String.toList h
+    simp only [nZeiger_toList, String.reduceToList, List.cons.injEq, Char.reduceEq, false_and, and_false] at names
+
 /-- The head the elaborator read for the function `f`. -/
 structure KopfPasst (gNr : Nat → Nat) (f : z.deklaration.Fn) (k : UFnKopf) : Prop where
   name : k.name = nFn (fN z f)
@@ -196,6 +208,16 @@ theorem SInv.pushZ {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art 
     refine ⟨j + 1, ?_, ha⟩
     simp only [uParamNr, ctxMit, uParamNrAux, strEq_nZeiger_nVar, Bool.false_eq_true, ite_false]
     exact uParamNrAux_succ _ 0 _ j hj
+  meta d hd j hj := by
+    obtain ⟨i, hi, _⟩ := H.var d hd
+    obtain ⟨oldTy, hty, hm⟩ := H.meta d hd i hi
+    have here : uParamNr (ctxMit ctx (nZeiger k) a ty b [] ls)
+        (nVar (Γ.length - 1 - d)) = .ok (i + 1) := by
+      simp only [uParamNr, ctxMit, uParamNrAux, strEq_nZeiger_nVar, Bool.false_eq_true, ↓reduceIte]
+      exact uParamNrAux_succ _ 0 _ i hi
+    have : j = i + 1 := Except.ok.inj (hj.symm.trans here)
+    subst j
+    exact ⟨oldTy, hty, hm⟩
   namen n hn := by
     simp only [ctxMit, List.mem_cons] at hn
     rcases hn with rfl | hn
@@ -290,23 +312,23 @@ theorem bindWert_call {gNr : Nat → Nat} {koepfe : List UFnKopf} {ctx : UCtx} {
     (ha : artErg τ = some a)
     (args : Args z.deklaration Γ Λ (z.deklaration.params f)) (as : List SExpr) (xs : List UArg)
     (hd : delabA z args = .ok as) (hu : uOfArgs z art args = some xs) (x : String) :
-    ∃ ty, uBindWert ctx tabs koepfe false x none (.call (nFn (fN z f)) as) =
+    ∃ ty, ScalarMeta a ty ∧ uBindWert ctx tabs koepfe false x none (.call (nFn (fN z f)) as) =
       .ok (.bindCall x (nFn (fN z f)) xs, ctxMit ctx x a ty 0 [] ctx.loops) := by
   obtain ⟨e, he'⟩ := H.fnFremd (fN z f)
   have hR := ruf_ok H tabs f k hf hK hh args as xs hd hu
   cases τ with
   | bool =>
     simp only [artErg, Option.some.injEq] at ha; subst ha
-    refine ⟨.bool, ?_⟩
-    simp only [uBindWert, uRegOrt, uFnZeiger, he', hf, hR, hK.kanal0 hr, Option.isSome_none, Bool.false_eq_true,
-      ite_false, hK.ext, hK.ergBool he, H.muts, List.filter_nil]
+    refine ⟨.bool, trivial, ?_⟩
+    simp only [uBindWert, (nFn_not_float (fN z f)).1, (nFn_not_float (fN z f)).2, uRegOrt, uFnZeiger, he', hf, hR, hK.kanal0 hr, Option.isSome_none, Bool.false_eq_true,
+      ite_false, hK.ext, hK.resTy, hK.ergBool he, H.muts, List.filter_nil]
     rfl
   | int lo hi =>
     simp only [artErg, Option.some.injEq] at ha; subst ha
     obtain ⟨h1, h2⟩ := hK.ergInt lo hi he
-    refine ⟨.int lo hi, ?_⟩
-    simp only [uBindWert, uRegOrt, uFnZeiger, he', hf, hR, hK.kanal0 hr, Option.isSome_none, Bool.false_eq_true,
-      ite_false, hK.ext, h1, h2, H.muts, List.filter_nil]
+    refine ⟨.int lo hi, trivial, ?_⟩
+    simp only [uBindWert, (nFn_not_float (fN z f)).1, (nFn_not_float (fN z f)).2, uRegOrt, uFnZeiger, he', hf, hR, hK.kanal0 hr, Option.isSome_none, Bool.false_eq_true,
+      ite_false, hK.ext, hK.resTy, h1, h2, H.muts, List.filter_nil]
     rfl
   | _ => simp only [artErg, reduceCtorEq] at ha
 
@@ -321,7 +343,7 @@ theorem bindWert_callInd {gNr : Nat → Nat} {koepfe : List UFnKopf} {ctx : UCtx
     (args : Args z.deklaration Γ Λ (z.deklaration.params f)) (as : List SExpr) (xs : List UArg)
     (hd : delabA z args = .ok as) (hu : uOfArgs z art args = some xs) (hb : i < ctx.zeigerBasis) (p : Nat)
     (ls : List String) (x : String) :
-    ∃ ty, uBindWert (ctxMit ctx (nZeiger p) (.fnptr i) (.fnptr i) 0 [] ls) tabs koepfe false x none
+    ∃ ty, ScalarMeta a ty ∧ uBindWert (ctxMit ctx (nZeiger p) (.fnptr i) (.fnptr i) 0 [] ls) tabs koepfe false x none
         (.call (nZeiger p) as) =
       .ok (.bindCallInd x (nZeiger p) (nFn (fN z f)) xs,
         ctxMit (ctxMit ctx (nZeiger p) (.fnptr i) (.fnptr i) 0 [] ls) x a ty 0 [] ls) := by
@@ -334,15 +356,15 @@ theorem bindWert_callInd {gNr : Nat → Nat} {koepfe : List UFnKopf} {ctx : UCtx
   cases τ with
   | bool =>
     simp only [artErg, Option.some.injEq] at ha; subst ha
-    refine ⟨.bool, ?_⟩
-    simp only [uBindWert, uRegOrt, hz, hR, hK.kanal0 hr, Option.isSome_none, Bool.false_eq_true, ite_false,
+    refine ⟨.bool, trivial, ?_⟩
+    simp only [uBindWert, (nZeiger_not_float p).1, (nZeiger_not_float p).2, uRegOrt, hz, hR, hK.kanal0 hr, Option.isSome_none, Bool.false_eq_true, ite_false,
       hK.ergBool he, hK.name, Bool.or_self]
     rfl
   | int lo hi =>
     simp only [artErg, Option.some.injEq] at ha; subst ha
     obtain ⟨h1, h2⟩ := hK.ergInt lo hi he
-    refine ⟨.int lo hi, ?_⟩
-    simp only [uBindWert, uRegOrt, hz, hR, hK.kanal0 hr, Option.isSome_none, Bool.false_eq_true, ite_false, h1, h2,
+    refine ⟨.int lo hi, trivial, ?_⟩
+    simp only [uBindWert, (nZeiger_not_float p).1, (nZeiger_not_float p).2, uRegOrt, hz, hR, hK.kanal0 hr, Option.isSome_none, Bool.false_eq_true, ite_false, h1, h2,
       hK.name, Bool.or_self]
     rfl
   | _ => simp only [artErg, reduceCtorEq] at ha

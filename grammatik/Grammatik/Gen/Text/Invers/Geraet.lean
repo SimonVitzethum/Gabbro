@@ -137,14 +137,16 @@ theorem anw1_regWrite {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {a
 theorem bindWert_regRead {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
     (H : SInv z V ctx Γ Λ art) (tabs : List UTab) (koepfe : List UFnKopf) (r : z.deklaration.Reg) (x : String)
     (a : UParamArt) (ha : artErg (z.deklaration.rtyp r) = some a) :
-    ∃ ty, uBindWert ctx tabs koepfe false x none (regOrt z r) =
+    ∃ ty, ScalarMeta a ty ∧ uBindWert ctx tabs koepfe false x none (regOrt z r) =
       .ok (.regRead x "Dev" (nReg (rN z r)), ctxMit ctx x a ty 0 [] ctx.loops) := by
   obtain ⟨g, hg, hd, hn, hp, hart, _⟩ := regOrt_ok H r
   rw [ha] at hart
   simp only [Option.some.injEq] at hart
-  refine ⟨g.ty, ?_⟩
-  simp only [uBindWert, hg, Bool.or_false, Option.isSome_none, Bool.false_eq_true, ite_false, hp, hd, hn, hart,
-    mitLokal_eq ctx H.muts]
+  refine ⟨g.ty, ?_, ?_⟩
+  · rw [← hart]
+    cases hb : g.bool <;> simp only [UReg.art, UReg.ty, hb, ScalarMeta]
+  · simp only [uBindWert, hg, Bool.or_false, Option.isSome_none, Bool.false_eq_true, ite_false, hp, hd, hn, hart,
+      mitLokal_eq ctx H.muts]
 
 /-- `g = e publishes { .. };` at an atomic, with its declared payload. -/
 theorem anw1_publish {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
@@ -178,7 +180,7 @@ theorem reihe_await {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art
     (H : SInv z V ctx Γ Λ art) (tabs : List UTab) (koepfe : List UFnKopf) (f : Nat) (g : z.deklaration.Glob)
     (ha : z.deklaration.atomar g = true) (x : String) (a : UParamArt) (hart : artErg (z.deklaration.gtyp g) = some a)
     (rest : List SAnw) :
-    ∃ ty, ∀ xs cE, uAnwReihe tabs koepfe f (ctxMit ctx x a ty 0 [] ctx.loops) rest = .ok (xs, cE) →
+    ∃ ty, ScalarMeta a ty ∧ ∀ xs cE, uAnwReihe tabs koepfe f (ctxMit ctx x a ty 0 [] ctx.loops) rest = .ok (xs, cE) →
       uAnwReihe tabs koepfe (f + 1) ctx
         (.await x none (.variable (nGlob (gN z g))) (nutzTextA z (z.deklaration.nutzlast g)) :: rest) =
         .ok (.awaitBind x (nGlob (gN z g)) :: xs, cE) := by
@@ -189,7 +191,7 @@ theorem reihe_await {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art
   | bool =>
     have ht := hb.1 h
     rw [ht] at hart; simp only [artErg, Option.some.injEq] at hart; subst hart
-    refine ⟨.bool, fun xs cE hr => ?_⟩
+    refine ⟨.bool, trivial, fun xs cE hr => ?_⟩
     rw [uAnwReihe]
     simp only [uBinderTyp, hf, hat, ha, Bool.not_true, Bool.false_eq_true, ite_false, hgl, h, H.muts, List.filter_nil]
     simp only [uMitLokal, ctxMit] at hr ⊢
@@ -197,13 +199,13 @@ theorem reihe_await {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art
   | wert τ => exact absurd h (hwt τ)
   | int lo hi =>
     have ht : z.deklaration.gtyp g ≠ .bool := fun e => by rw [← hb] at e; rw [h] at e; cases e
-    refine ⟨.int lo hi, fun xs cE hr => ?_⟩
     have : a = .int := by
       cases hg : z.deklaration.gtyp g with
       | bool => exact absurd hg ht
       | int _ _ => rw [hg] at hart; simp only [artErg, Option.some.injEq] at hart; exact hart.symm
       | _ => rw [hg] at hart; simp only [artErg, reduceCtorEq] at hart
     subst this
+    refine ⟨.int lo hi, trivial, fun xs cE hr => ?_⟩
     rw [uAnwReihe]
     simp only [uBinderTyp, hf, hat, ha, Bool.not_true, Bool.false_eq_true, ite_false, hgl, h, H.muts, List.filter_nil]
     simp only [uMitLokal, ctxMit] at hr ⊢

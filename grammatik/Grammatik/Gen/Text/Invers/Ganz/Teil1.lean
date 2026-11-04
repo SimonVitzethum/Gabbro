@@ -107,6 +107,18 @@ theorem fnCtx_sinv {gNr : Nat → Nat} {tabs : List UTab} {locks : List ULock} {
       exact parNr_ok _ _ 0 (by omega) d (by omega) (by omega)
     · simp only [uCtxVon, kopfVon]
       exact artBei_ok ks d (by omega)
+  meta d hd j hj := by
+    have hlen := mapM_length artErg _ ks hks
+    have here : uParamNr
+        { uCtxVon als [] tabs locks globs (kopfVon z gNr devs f ps ks mitGriff) name annahmen whys sums regs zustaende with
+          zeiger := zeiger, zeigerBasis := zb }
+        (nVar ((z.deklaration.signatur f).params.length - 1 - d)) = .ok d := by
+      simp only [uParamNr, uCtxVon, kopfVon]
+      exact parNr_ok _ _ 0 (by omega) d (by omega) (by omega)
+    have : j = d := Except.ok.inj (hj.symm.trans here)
+    subst j
+    obtain ⟨ty, hty, hm⟩ := ScalarMeta.of_params _ ks hks d hd
+    exact ⟨ty, hty, hm⟩
   namen n hn := by
     simp only [uCtxVon, kopfVon, List.mem_map] at hn
     obtain ⟨i, _, rfl⟩ := hn

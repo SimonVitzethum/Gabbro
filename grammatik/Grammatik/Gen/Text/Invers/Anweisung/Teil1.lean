@@ -62,6 +62,14 @@ def artErg : Ty → Option UParamArt
   | .int _ _ => some .int
   | _ => none
 
+/-- Metadata classes used by the scalar printer. Integer ranges may be placeholders;
+    only the kind of the stored type must agree with the reader's kind. -/
+def ScalarMeta : UParamArt → Ty → Prop
+  | .int, .int _ _ | .index _, .int _ _ | .bool, .bool
+  | .why _, .why _ | .fnptr _, .fnptr _ | .ref _, .ref _
+  | .opt _, .opt _ | .sum _, .sum _ | .ptr _, .ptr _ => True
+  | _, _ => False
+
 /-- The arguments the elaborator reads (`uArgs` against the callee's kinds). -/
 def uOfArgs (art : Nat → UParamArt) {Γ : Ctx} {Λ : List (Res z.deklaration)} :
     {τs : List Ty} → Args z.deklaration Γ Λ τs → Option (List UArg)
@@ -195,6 +203,10 @@ theorem uWrap_leer {ctx : UCtx} (h : ∀ tb ∈ ctx.tabs, tb.wraps = []) (tb f :
 /-- **The statement context**, against the accessors of the declaration and the contract `V`. -/
 structure SInv (ctx : UCtx) (Γ : Ctx) (Λ : List (Res z.deklaration)) (art : Nat → UParamArt) : Prop where
   var : ∀ d, d < Γ.length → ∃ j, uParamNr ctx (nVar (Γ.length - 1 - d)) = .ok j ∧ uArtBei ctx.kinds j = .ok (art d)
+  /-- The actual type row of each printed variable has its scalar reader's class.
+      Other names and metadata in the source context are unrestricted. -/
+  meta : ∀ d, d < Γ.length → ∀ j, uParamNr ctx (nVar (Γ.length - 1 - d)) = .ok j →
+    ∃ ty, ctx.types[j]? = some ty ∧ ScalarMeta (art d) ty
   namen : ∀ n ∈ ctx.names, RumpfName n
   lits : ctx.lits = []
   arrKonst : ctx.arrKonst = []
@@ -382,101 +394,5 @@ theorem reihe_each (f : Nat) (ctx ctxS : UCtx) (bnd : String) (s : SExpr) (inv :
 
 
 end Reihe
-
-/-! ### The context under a binder and under a lock -/
-
-/-- The scope after a binder `x` of kind `a` (the shape every binding of the elaborator has). -/
-def ctxMit (ctx : UCtx) (x : String) (a : UParamArt) (ty : Ty) (b : Nat) (ms ls : List String) : UCtx :=
-  { ctx with names := x :: ctx.names, kinds := a :: ctx.kinds, types := ty :: ctx.types, bits := b :: ctx.bits,
-             muts := ms, loops := ls }
-
-theorem SInv.push {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
-    (H : SInv z V ctx Γ Λ art) (τ : Ty) (a : UParamArt) (ty : Ty) (b : Nat) (ms ls : List String) (hms : ms = []) :
-    SInv z V (ctxMit ctx (nVar Γ.length) a ty b ms ls) (τ :: Γ) Λ (artAuf a art) where
-  var d hd := by
-    cases d with
-    | zero =>
-      refine ⟨0, ?_, rfl⟩
-      simp only [uParamNr, ctxMit, List.length_cons, Nat.add_one_sub_one, Nat.sub_zero, uParamNrAux, strEq_nVar,
-  BEq.rfl, ↓reduceIte]
-    | succ d =>
-      simp only [List.length_cons] at hd
-      obtain ⟨j, hj, ha⟩ := H.var d (by omega)
-      refine ⟨j + 1, ?_, ha⟩
-      have hne : strEq (nVar Γ.length) (nVar (Γ.length + 1 - 1 - (d + 1))) = false := by
-        simp only [strEq_nVar, beq_eq_false_iff_ne]; omega
-      simp only [uParamNr, ctxMit, List.length_cons, uParamNrAux, hne, Bool.false_eq_true, ite_false]
-      have : Γ.length + 1 - 1 - (d + 1) = Γ.length - 1 - d := by omega
-      rw [this]
-      exact uParamNrAux_succ _ 0 _ j hj
-  namen n hn := by
-    simp only [ctxMit, List.mem_cons] at hn
-    rcases hn with rfl | hn
-    · exact Or.inl ⟨_, rfl⟩
-    · exact H.namen n hn
-  lits := H.lits
-  arrKonst := H.arrKonst
-  glob := H.glob
-  tab := H.tab
-  wrapsLeer := H.wrapsLeer
-  tabNr := H.tabNr
-  tabIdx := H.tabIdx
-  tabNamen := H.tabNamen
-  lockFind := H.lockFind
-  lockGuard := H.lockGuard
-  held := H.held
-  muts := hms
-  sums := H.sums
-  resOpt := H.resOpt
-  resSum := H.resSum
-  resWhy := H.resWhy
-  resTy := H.resTy
-  ergNone := H.ergNone
-  ergBool := H.ergBool
-  ergInt := H.ergInt
-  kanal0 := H.kanal0
-  griff := H.griff
-  reg := H.reg
-  kanal := H.kanal
-  zb := H.zb
-  transFrei := H.transFrei
-
-theorem SInv.lock {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
-    (H : SInv z V ctx Γ Λ art) (L : z.deklaration.Lock) :
-    SInv z V { ctx with held := nLock (lN z L) :: ctx.held } Γ (.held L :: Λ) art where
-  var := H.var
-  namen := H.namen
-  lits := H.lits
-  arrKonst := H.arrKonst
-  glob := H.glob
-  tab := H.tab
-  wrapsLeer := H.wrapsLeer
-  tabNr := H.tabNr
-  tabIdx := H.tabIdx
-  tabNamen := H.tabNamen
-  lockFind := H.lockFind
-  lockGuard := H.lockGuard
-  held M hM := by
-    simp only [List.mem_cons] at hM
-    rcases hM with hM | hM
-    · cases hM; simp only [List.any_cons, strEq_nLock, BEq.rfl, Bool.true_or]
-    · simp only [List.any_cons, H.held M hM, Bool.or_true]
-  muts := H.muts
-  sums := H.sums
-  resOpt := H.resOpt
-  resSum := H.resSum
-  resWhy := H.resWhy
-  resTy := H.resTy
-  ergNone := H.ergNone
-  ergBool := H.ergBool
-  ergInt := H.ergInt
-  kanal0 := H.kanal0
-  griff := H.griff
-  reg := H.reg
-  kanal := H.kanal
-  zb := H.zb
-  transFrei := H.transFrei
-
-/-! ### Values of a `let`: a truth value is never read as a number -/
 
 end Gabbro.Grammatik.Gen.Text

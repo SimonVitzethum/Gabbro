@@ -111,7 +111,7 @@ theorem rumpf_satz_block : ∀ {z : Spez} {V : Vertrag z.deklaration}
       | some us2 =>
       simp only [hb, hur, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
       subst hu
-      have H' := H.push τ .bool .bool 0 [] ctx.loops rfl
+      have H' := H.push τ .bool .bool 0 [] ctx.loops rfl trivial
       obtain ⟨hΛ2, cE, hrest⟩ := ihB rest _ _ f' ss2 us2 (by omega) (by omega) H' hr hur
       exact ⟨hΛ2, cE, reihe_bind tabs koepfe f' ctx _ _ se ss2 _ us2 cE
         (bindWert_bool H tabs koepfe e se b he hb) hrest⟩
@@ -123,7 +123,7 @@ theorem rumpf_satz_block : ∀ {z : Spez} {V : Vertrag z.deklaration}
       | some us2 =>
       simp only [hb, hur, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
       subst hu
-      have H' := H.push τ .int (.int 0 0) 0 [] ctx.loops rfl
+      have H' := H.push τ .int (.int 0 0) 0 [] ctx.loops rfl trivial
       obtain ⟨hΛ2, cE, hrest⟩ := ihB rest _ _ f' ss2 us2 (by omega) (by omega) H' hr hur
       exact ⟨hΛ2, cE, reihe_bind tabs koepfe f' ctx _ _ se ss2 _ us2 cE
         (bindWert_int H tabs koepfe e se b he hb) hrest⟩
@@ -153,10 +153,10 @@ theorem rumpf_satz_block : ∀ {z : Spez} {V : Vertrag z.deklaration}
     obtain ⟨f', rfl⟩ : ∃ f', f = f' + 1 := ⟨f - 1, by omega⟩
     simp only [Block.bindCall.sizeOf_spec, Bool.sizeOf_eq_one, sizeOf_default, add_zero] at hn hf
     obtain ⟨k, hfk, hKP⟩ := hK fk
-    obtain ⟨ty, hb⟩ := bindWert_call H tabs fk k hfk hKP hp.hh hr τ he a hτ args as xs ha hx (nVar Γ.length)
+    obtain ⟨ty, hmeta, hb⟩ := bindWert_call H tabs fk k hfk hKP hp.hh hr τ he a hτ args as xs ha hx (nVar Γ.length)
     have hN : nach z.deklaration fk Λ = Λ := nach_ohne_marken hM _ Λ
     have H' : SInv z V (ctxMit ctx (nVar Γ.length) a ty 0 [] ctx.loops) (τ :: Γ) (nach z.deklaration fk Λ)
-        (artAuf a art) := by rw [hN]; exact H.push τ a ty 0 [] ctx.loops rfl
+        (artAuf a art) := by rw [hN]; exact H.push τ a ty 0 [] ctx.loops rfl hmeta
     obtain ⟨hΛ, cE, hrest⟩ := ihB rest _ _ f' ss2 us2 (by omega) (by omega) H' hr' hur
     exact ⟨hΛ.trans hN, cE, reihe_bind tabs koepfe f' ctx _ _ _ ss2 _ us2 cE hb hrest⟩
   | bindCallInd p args he hp hr rest =>
@@ -197,13 +197,13 @@ sizeOf_default, add_zero] at hn hf
         obtain ⟨i, hi, hk⟩ := kinv_idx (gNr := gNr) hfk
         have hiE : i = z.deklaration.sig fk := by rw [hI fk] at hi; exact (Option.some.inj hi).symm
         subst hiE
-        obtain ⟨ty, hb⟩ := bindWert_callInd H tabs fk k _ hfk hk hKP hp.hh hr τ he a hτ args as xs ha hx (H.zb fk) Γ.length
+        obtain ⟨ty, hmeta, hb⟩ := bindWert_callInd H tabs fk k _ hfk hk hKP hp.hh hr τ he a hτ args as xs ha hx (H.zb fk) Γ.length
           ctx.loops (nVar Γ.length)
         have hN : nachSig z.deklaration (z.deklaration.sigNr (z.deklaration.sig fk)) Λ = Λ := nach_ohne_marken hM _ Λ
         have H' : SInv z V (ctxMit (ctxMit ctx (nZeiger Γ.length) (.fnptr (z.deklaration.sig fk)) (.fnptr (z.deklaration.sig fk)) 0 [] ctx.loops)
             (nVar Γ.length) a ty 0 [] ctx.loops) (τ :: Γ)
             (nachSig z.deklaration (z.deklaration.sigNr (z.deklaration.sig fk)) Λ) (artAuf a art) := by
-          rw [hN]; exact (H.pushZ Γ.length (.fnptr (z.deklaration.sig fk)) (.fnptr (z.deklaration.sig fk)) 0 ctx.loops).push τ a ty 0 [] ctx.loops rfl
+          rw [hN]; exact (H.pushZ Γ.length (.fnptr (z.deklaration.sig fk)) (.fnptr (z.deklaration.sig fk)) 0 ctx.loops).push τ a ty 0 [] ctx.loops rfl hmeta
         obtain ⟨hΛ, cE, hrest⟩ := ihB rest _ _ f' ss2 us2 (by omega) (by omega) H' hr' hur
         refine ⟨hΛ.trans hN, cE, ?_⟩
         have h2 := reihe_bind tabs koepfe f' _ _ _ _ ss2 _ us2 cE hb hrest
@@ -253,21 +253,21 @@ Option.bind_some, hur, Option.bind_none, reduceCtorEq] at hu
     have hR := ruf_ok H tabs fk k hfk hKP hp.hh args as xs ha hx
     have hN : nach z.deklaration fk Λ = Λ := nach_ohne_marken hM _ Λ
     have hgr : z.deklaration.gruende fk ≠ 0 := by omega
-    obtain ⟨ty, hv⟩ : ∃ ty, uWertArt k = some (a, ty) := by
+    obtain ⟨ty, hmeta, hv⟩ : ∃ ty, ScalarMeta a ty ∧ uWertArt k = some (a, ty) := by
       cases τ with
-      | bool => simp only [artErg, Option.some.injEq] at hτ; subst hτ; exact ⟨.bool, by simp only [uWertArt, hKP.resTy, hKP.ergBool he, ↓reduceIte]⟩
+      | bool => simp only [artErg, Option.some.injEq] at hτ; subst hτ; exact ⟨.bool, trivial, by simp only [uWertArt, hKP.resTy, hKP.ergBool he, ↓reduceIte]⟩
       | int lo hi =>
         simp only [artErg, Option.some.injEq] at hτ; subst hτ
         obtain ⟨h1, h2⟩ := hKP.ergInt lo hi he
-        exact ⟨.int lo hi, by simp only [uWertArt, hKP.resTy, h1, Bool.false_eq_true, ↓reduceIte, h2]⟩
+        exact ⟨.int lo hi, trivial, by simp only [uWertArt, hKP.resTy, h1, Bool.false_eq_true, ↓reduceIte, h2]⟩
       | _ => simp only [artErg, reduceCtorEq] at hτ
     have HE : SInv z V (ctxMit ctx (nVar Γ.length) (.why (gNr (z.deklaration.gruende fk)))
         (.why (z.deklaration.gruende fk)) 0 [] ctx.loops) (.why (z.deklaration.gruende fk) :: Γ)
         (nach z.deklaration fk Λ) (artAuf (.why (gNr (z.deklaration.gruende fk))) art) := by
-      rw [hN]; exact H.push _ _ _ 0 [] ctx.loops rfl
+      rw [hN]; exact H.push _ _ _ 0 [] ctx.loops rfl trivial
     obtain ⟨cEB, hEB, hende, v, hen⟩ := ihE err _ _ f' es ende eu er (by omega) (by omega) HE hde hue
     have H' : SInv z V (ctxMit ctx (nVar Γ.length) a ty 0 [] ctx.loops) (τ :: Γ) (nach z.deklaration fk Λ)
-        (artAuf a art) := by rw [hN]; exact H.push τ a ty 0 [] ctx.loops rfl
+        (artAuf a art) := by rw [hN]; exact H.push τ a ty 0 [] ctx.loops rfl hmeta
     obtain ⟨hΛ, cE, hrest⟩ := ihB rest _ _ f' ss2 us2 (by omega) (by omega) H' hr' hur
     refine ⟨hΛ.trans hN, cE, ?_⟩
     have hes : uEndeStmt cEB ende = .ok [.ret er] := by subst hen; simp only [uEndeStmt, hende]
@@ -293,8 +293,8 @@ Option.bind_some, hur, Option.bind_none, reduceCtorEq] at hu
     subst hu
     obtain ⟨f', rfl⟩ : ∃ f', f = f' + 1 := ⟨f - 1, by omega⟩
     simp only [Block.regRead.sizeOf_spec, Bool.sizeOf_eq_one, Nat.reduceAdd, sizeOf_default, add_zero] at hn hf
-    obtain ⟨ty, hb⟩ := bindWert_regRead H tabs koepfe r (nVar Γ.length) a hτ
-    have H' := H.push (z.deklaration.rtyp r) a ty 0 [] ctx.loops rfl
+    obtain ⟨ty, hmeta, hb⟩ := bindWert_regRead H tabs koepfe r (nVar Γ.length) a hτ
+    have H' := H.push (z.deklaration.rtyp r) a ty 0 [] ctx.loops rfl hmeta
     obtain ⟨hΛ, cE, hrest⟩ := ihB rest _ _ f' ss2 us2 (by omega) (by omega) H' hr' hur
     exact ⟨hΛ, cE, reihe_bind tabs koepfe f' ctx _ _ _ ss2 _ us2 cE hb hrest⟩
   | awaits g payload hp hL hat rest =>
@@ -316,8 +316,8 @@ Option.bind_some, hur, Option.bind_none, reduceCtorEq] at hu
     subst hu
     obtain ⟨f', rfl⟩ : ∃ f', f = f' + 1 := ⟨f - 1, by omega⟩
     simp only [Block.awaits.sizeOf_spec, Bool.sizeOf_eq_one, sizeOf_default, add_zero] at hn hf
-    obtain ⟨ty, hstep⟩ := reihe_await H tabs koepfe f' g hat (nVar Γ.length) a hτ ss2
-    have H' := H.push (z.deklaration.gtyp g) a ty 0 [] ctx.loops rfl
+    obtain ⟨ty, hmeta, hstep⟩ := reihe_await H tabs koepfe f' g hat (nVar Γ.length) a hτ ss2
+    have H' := H.push (z.deklaration.gtyp g) a ty 0 [] ctx.loops rfl hmeta
     obtain ⟨hΛ, cE, hrest⟩ := ihB rest _ _ f' ss2 us2 (by omega) (by omega) H' hr' hur
     exact ⟨hΛ, cE, hstep us2 cE hrest⟩
   | _ => simp only [uOfBl, reduceCtorEq] at hu

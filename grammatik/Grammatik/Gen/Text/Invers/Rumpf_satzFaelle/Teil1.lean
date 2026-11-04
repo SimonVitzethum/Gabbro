@@ -252,7 +252,7 @@ Option.bind_fun_none, reduceCtorEq] at hu
     subst hss
     obtain ⟨cnt, hkopf⟩ := schleifenKopf_ok H t i' iv hi
     have H' := H.push (.index (z.deklaration.count t)) (.index (tN z t)) (.index cnt) 0 ctx.muts
-      (nVar Γ.length :: ctx.loops) H.muts
+      (nVar Γ.length :: ctx.loops) H.muts trivial
     refine ⟨rfl, by simp only [List.length_cons, List.length_nil, zero_add, Nat.reduceLeDiff], ctx, H, fun f tail xs cE hf hr => ?_⟩
     simp only [Stmt.traverse.sizeOf_spec, Bool.sizeOf_eq_one, sizeOf_default, add_zero] at hf
     simp only [List.length_singleton, List.singleton_append]
