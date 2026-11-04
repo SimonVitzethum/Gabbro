@@ -88,17 +88,44 @@ def konstListe : UKonst → Option (List UKonst)
   | .cons a r => (konstListe r).map (a :: ·)
   | _ => none
 
-/-- The tuple of constant field values, in declaration order: every field evaluates at its
-    declared type, and arities must agree exactly (C01 products). -/
+/-- The single field traversal passes evidence of the actual type child to its callback. -/
+private def prodKonstFields {F : Type} {P : F → Nat → Bool} :
+    (fs : List Ty) → List UKonst →
+    ((τ : Ty) → τ ∈ fs → UKonst → Option (Val F P τ)) → Option (ProdVal F P fs)
+  | [], [], _ => some ()
+  | τ :: τs, k :: ks, elaborate => do
+    let v ← elaborate τ (List.mem_cons_self) k
+    let vs ← prodKonstFields τs ks
+      (fun child member value => elaborate child (List.mem_cons_of_mem τ member) value)
+    pure (ProdVal.pcons v vs)
+  | _, _, _ => none
+termination_by structural fs _ _ => fs
+
+/-- Constant fields retain declaration order and exact arity, with arbitrary typed callbacks. -/
 def prodKonst {F : Type} {P : F → Nat → Bool}
-    (elab : (τ : Ty) → UKonst → Option (Val F P τ)) :
-    (fs : List Ty) → List UKonst → Option (ProdVal F P fs)
-  | [], [] => some ()
-  | τ :: τs, k :: ks => do
-    let v ← elab τ k
-    let vs ← prodKonst elab τs ks
-    pure (v, vs)
-  | _, _ => none
+    (elaborate : (τ : Ty) → UKonst → Option (Val F P τ))
+    (fs : List Ty) (ks : List UKonst) : Option (ProdVal F P fs) :=
+  prodKonstFields fs ks (fun τ _ value => elaborate τ value)
+
+@[simp] theorem prodKonst_nil_nil {F : Type} {P : F → Nat → Bool}
+    (elaborate : (τ : Ty) → UKonst → Option (Val F P τ)) :
+    prodKonst elaborate [] [] = some () := rfl
+
+@[simp] theorem prodKonst_nil_cons {F : Type} {P : F → Nat → Bool}
+    (elaborate : (τ : Ty) → UKonst → Option (Val F P τ)) (k : UKonst) (ks : List UKonst) :
+    prodKonst elaborate [] (k :: ks) = none := rfl
+
+@[simp] theorem prodKonst_cons_nil {F : Type} {P : F → Nat → Bool}
+    (elaborate : (τ : Ty) → UKonst → Option (Val F P τ)) (τ : Ty) (fs : List Ty) :
+    prodKonst elaborate (τ :: fs) [] = none := rfl
+
+@[simp] theorem prodKonst_cons_cons {F : Type} {P : F → Nat → Bool}
+    (elaborate : (τ : Ty) → UKonst → Option (Val F P τ))
+    (τ : Ty) (fs : List Ty) (k : UKonst) (ks : List UKonst) :
+    prodKonst elaborate (τ :: fs) (k :: ks) = (do
+      let value ← elaborate τ k
+      let rest ← prodKonst elaborate fs ks
+      pure (ProdVal.pcons value rest)) := rfl
 
 mutual
 
@@ -125,7 +152,9 @@ def konstWert {F : Type} {P : F → Nat → Bool} : (τ : Ty) → UKonst → Opt
     else none
   | .arr τ _, .null => (konstWert τ .null).map (fun z => fun _ => z)
   | .prod name fs, .product name2 ks =>
-    if name == name2 then prodKonst konstWert fs ks else none
+    if name == name2 then
+      prodKonstFields fs ks (fun field member value => konstWert field value)
+    else none
   | .arr τ n, k =>
     match konstListe k with
     | some ks =>
@@ -145,6 +174,9 @@ decreasing_by
     | have hs := List.sizeOf_get cs ⟨0, h⟩
       simp only [Ty.sum.sizeOf_spec]
       omega
+    | have hs := List.sizeOf_lt_of_mem (show _ ∈ fs from by assumption)
+      simp only [Ty.prod.sizeOf_spec]
+      omega
 
 /-- Constants use the same complete payload type as ordinary construction. -/
 def nutzKonst {F : Type} {P : F → Nat → Bool} :
@@ -155,6 +187,14 @@ def nutzKonst {F : Type} {P : F → Nat → Bool} :
 termination_by c _ => sizeOf c
 
 end
+
+/-- The actual product branch retains the public field collector and nominal-name guard exactly. -/
+theorem konstWert_product {F : Type} {P : F → Nat → Bool}
+    (name other : Nat) (fs : List Ty) (ks : List UKonst) :
+    konstWert (F := F) (P := P) (.prod name fs) (.product other ks) =
+      if name == other then prodKonst konstWert fs ks else none := by
+  rw [konstWert]
+  rfl
 
 /-- **The per-field `Sp0Ok` test** (`sp0FeldOkB`): the field entry is present and
     is a `bool` field or its recorded range holds `0` (the `none` arm is
