@@ -16,10 +16,10 @@ def checkTypeBounds (source : List SItemTief) (ty : STyp) (bounds : List String)
     Except String Unit := do
   checkBounds source bounds
   for name in bounds do
-    let matches := (Spec.instances source).filter fun instance =>
+    let implementations := (Spec.instances source).filter fun instance =>
       strEq instance.group name && beqSTypList
         (instance.types.map (Spec.canonicalType source 128)) [Spec.canonicalType source 128 ty]
-    match matches with
+    match implementations with
     | [_] => pure ()
     | [] => throw ("generic.bound.implementation.missing: " ++ name)
     | _ => throw ("generic.bound.implementation.ambiguous: " ++ name)
@@ -34,7 +34,8 @@ def mentionsParameter (parameters : List (String × List String)) : STyp → Boo
   | .path [name] => parameters.any (fun p => strEq p.1 name)
   | .ptr _ _ ty | .range ty _ _ _ | .array ty _ | .wrap ty | .embed ty _ _ =>
     mentionsParameter parameters ty
-  | .entry _ result => result.any (mentionsParameter parameters)
+  | .entry _ none => false
+  | .entry _ (some result) => mentionsParameter parameters result
   | _ => false
 
 /-- An abstract type may use only a written bound. Concrete types are checked at instantiation. -/
