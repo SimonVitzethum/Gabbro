@@ -36,8 +36,13 @@ theorem stmtIndElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
   have hFramePrefix := functionFrame_prefix P f
   have hprE : ∀ j ∈ pr, j < frei (.why (D.sigNr n).gruende :: Γ) reserved := by
     intro j hj; have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega
+  have hcall := callIndElse_ok (cr := []) hS hA p args he (σ.lese Λ (p.orte ++ args.orte)) hcc (by omega) hp hs hu hW hWa
   simp only [execStmt, indSonst]
-  rcases callIndElse_ok (cr := []) hS hA p args he (σ.lese Λ (p.orte ++ args.orte)) hcc (by omega) hp hs hu hW hWa with
+  generalize pointerEq :
+      eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pointer at hcall ⊢
+  rcases pointer with ⟨callee, hf⟩
+  dsimp only at hcall ⊢
+  rcases hcall with
     ⟨σ', v, m2, hR, st, a, hp2, hw2⟩ | ⟨σ', r, m2, hR, st, a, hp2, hw2⟩ |
     ⟨e, hR, st⟩ | ⟨e, hR, st⟩
   · erw [hR]
@@ -88,8 +93,13 @@ theorem blockIndElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} 
     intro j hj; have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega
   have hprE : ∀ j ∈ pr, j < frei (.why (D.sigNr n).gruende :: Γ) reserved := by
     intro j hj; have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega
+  have hcall := callIndElse_ok hS hA p args he (σ.lese Λ (p.orte ++ args.orte)) hcc (by omega) hp hs hu hW hWa
   simp only [execBlock, indSonst]
-  rcases callIndElse_ok hS hA p args he (σ.lese Λ (p.orte ++ args.orte)) hcc (by omega) hp hs hu hW hWa with
+  generalize pointerEq :
+      eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pointer at hcall ⊢
+  rcases pointer with ⟨callee, hf⟩
+  dsimp only at hcall ⊢
+  rcases hcall with
     ⟨σ', v, m2, hR, st, a, hp2, hw2⟩ | ⟨σ', r, m2, hR, st, a, hp2, hw2⟩ |
     ⟨e, hR, st⟩ | ⟨e, hR, st⟩
   · erw [hR]
@@ -143,8 +153,13 @@ theorem endIndElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R
     intro j hj; have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega
   have hprE : ∀ j ∈ pr, j < frei (.why (D.sigNr n).gruende :: Γ) reserved := by
     intro j hj; have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega
+  have hcall := callIndElse_ok hS hA p args he (σ.lese Λ (p.orte ++ args.orte)) hcc (by omega) hp hs hu hW hWa
   simp only [execEnd, indSonstE]
-  rcases callIndElse_ok hS hA p args he (σ.lese Λ (p.orte ++ args.orte)) hcc (by omega) hp hs hu hW hWa with
+  generalize pointerEq :
+      eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pointer at hcall ⊢
+  rcases pointer with ⟨callee, hf⟩
+  dsimp only at hcall ⊢
+  rcases hcall with
     ⟨σ', v, m2, hR, st, a, hp2, hw2⟩ | ⟨σ', r, m2, hR, st, a, hp2, hw2⟩ |
     ⟨e, hR, st⟩ | ⟨e, hR, st⟩
   · erw [hR]
