@@ -9,6 +9,7 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Gleitkomma Runner.IR Runner.Mem
 variable [Runner.IR.Kern]
 
+omit [Runner.IR.Kern] in
 /-- Arithmetic characterization of jam, useful when the exact numerator is
     wider than a word. Its quotient's upper bits and its parity are retained. -/
 theorem softMulJam_data (n k : Nat) :
@@ -25,6 +26,7 @@ theorem softMulJam_data (n k : Nat) :
       simp
     · exact Nat.or_mod_two_eq_one.mpr (Or.inr rfl)
 
+omit [Runner.IR.Kern] in
 /-- A high limb is an even multiple at either supported rounding position.
     Adding it cannot change whether a discarded low tail sets the sticky bit. -/
 theorem softMulJam_split (lo hi k : Nat) (count : k = 49 ∨ k = 50) :
@@ -41,6 +43,7 @@ theorem softMulJam_split (lo hi k : Nat) (count : k = 49 ∨ k = 50) :
   · rw [if_neg exactTail] at left right
     rcases count with rfl | rfl <;> omega
 
+omit [Runner.IR.Kern] in
 /-- Sticky compression cannot cross either even power-of-two boundary. -/
 theorem softMulJam_bounds (n k : Nat) (count : k = 49 ∨ k = 50)
     (low : 2 ^ (k + 55) ≤ n) (high : n < 2 ^ (k + 56)) :
@@ -86,6 +89,7 @@ theorem softMulCompressL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pro
   intro fp K d c top h hK m pc hp
   simpa only [softMulCompressWord, BitVec.ofInt_ofNat, Int.ofNat_eq_coe, BitVec.ofInt_natCast] using result h hK m pc hp
 
+omit [Runner.IR.Kern] in
 /-- Relate the compressed word to the full product, not to its wrapped low
     limb. Every discarded product bit is represented by the sticky bit. -/
 theorem softMulCompressWord_model (a b : Runner.W) (k : Nat)

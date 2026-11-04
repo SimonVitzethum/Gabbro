@@ -83,6 +83,7 @@ theorem softMulHighL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
   simpa only [mulHiW, m32, BitVec.ofInt_ofNat, h32] using
     result (fp := fp) (K := K) (d := d) (c := c) (top := top) h hK m pc hp
 
+omit [Kern] in
 /-- Both limbs identify one untruncated product, for arbitrary input words.
     This equation also rules out silently discarding the top 42 product bits. -/
 theorem softMulProduct_limbs (a b : Runner.W) :

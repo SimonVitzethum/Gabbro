@@ -99,6 +99,7 @@ theorem softShiftJamNat_interval (a k : Nat) :
         omega
       _ ≤ (softShiftJamNat a k + 1) * 2 ^ k := highScaled
 
+omit [Kern] in
 /-- The emitted word shift is the unbounded operation on the input word's
     natural value, including shifts wider than the word. -/
 theorem floatShiftJamWord_nat (a k : Runner.W) :
