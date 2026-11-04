@@ -176,14 +176,25 @@ private theorem round_integer_prescale (s : Sign) (m : Nat) (positive : 0 < m) :
     change (Nat.repeat ExtendedMantissa.shiftRightOne (t + a).toNat ⟨m <<< a, false, false⟩,
         -(a : Int) + (t + a).toNat) =
       (Nat.repeat ExtendedMantissa.shiftRightOne (t + 53).toNat ⟨m <<< 53, false, false⟩,
-        -53 + (t + 53).toNat)
+        (-53 : Int) + (t + 53).toNat)
     by_cases nonnegative : 0 ≤ t
     · have azero : a = 0 := by dsimp [a]; omega
       have amount : (t + 53).toNat = 53 + t.toNat := by omega
-      rw [azero, amount, repeat_sum, shifted_exact]
-      simp only [Nat.shiftLeft_zero, Int.natCast_zero, Int.add_zero, Int.neg_zero]
-      congr 1
-      omega
+      have kept : Nat.repeat ExtendedMantissa.shiftRightOne 53 ⟨m <<< 53, false, false⟩ =
+          ⟨m, false, false⟩ := shifted_exact m 53
+      have composed : Nat.repeat ExtendedMantissa.shiftRightOne (53 + t.toNat) ⟨m <<< 53, false, false⟩ =
+          Nat.repeat ExtendedMantissa.shiftRightOne t.toNat ⟨m, false, false⟩ :=
+        (repeat_sum ExtendedMantissa.shiftRightOne 53 t.toNat ⟨m <<< 53, false, false⟩).trans
+          (congrArg (Nat.repeat ExtendedMantissa.shiftRightOne t.toNat) kept)
+      rw [azero]
+      apply Prod.ext
+      · change Nat.repeat ExtendedMantissa.shiftRightOne t.toNat ⟨m, false, false⟩ =
+          Nat.repeat ExtendedMantissa.shiftRightOne (t + 53).toNat ⟨m <<< 53, false, false⟩
+        rw [amount]
+        exact composed.symm
+      · change (t.toNat : Int) = (-53 : Int) + (t + 53).toNat
+        rw [amount]
+        omega
     · have small : a ≤ 53 := by dsimp [a]; omega
       have sourceAmount : (t + a).toNat = 0 := by dsimp [a]; omega
       have targetAmount : (t + 53).toNat = 53 - a := by dsimp [a]; omega
@@ -191,16 +202,36 @@ private theorem round_integer_prescale (s : Sign) (m : Nat) (positive : 0 < m) :
         rw [← Nat.shiftLeft_add]
         congr 1
         omega
-      rw [sourceAmount, targetAmount, shifted, shifted_exact]
-      simp only [Nat.repeat]
-      congr 1
-      dsimp [a]
-      omega
+      have kept : Nat.repeat ExtendedMantissa.shiftRightOne (53 - a) ⟨m <<< 53, false, false⟩ =
+          ⟨m <<< a, false, false⟩ := by
+        rw [shifted]
+        exact shifted_exact (m <<< a) (53 - a)
+      apply Prod.ext
+      · change Nat.repeat ExtendedMantissa.shiftRightOne (t + a).toNat ⟨m <<< a, false, false⟩ =
+          Nat.repeat ExtendedMantissa.shiftRightOne (t + 53).toNat ⟨m <<< 53, false, false⟩
+        rw [sourceAmount, targetAmount]
+        change ⟨m <<< a, false, false⟩ =
+          Nat.repeat ExtendedMantissa.shiftRightOne (53 - a) ⟨m <<< 53, false, false⟩
+        exact kept.symm
+      · change -(a : Int) + (t + a).toNat = (-53 : Int) + (t + 53).toNat
+        rw [sourceAmount, targetAmount]
+        omega
   have same : roundWithAccuracy Format.binary64 s (m <<< a) (-(a : Int)) .exact =
       roundWithAccuracy Format.binary64 s (m <<< 53) (-53) .exact := by
     unfold roundWithAccuracy
     rw [initial]
-  simpa only [round, decreaseExponent, t, a, Int.zero_sub] using same
+  have representation : round Format.binary64 s m 0 =
+      roundWithAccuracy Format.binary64 s (m <<< a) (-(a : Int)) .exact := by
+    unfold round decreaseExponent
+    dsimp only
+    change roundWithAccuracy Format.binary64 s (m <<< (0 - t).toNat)
+      (0 - ((0 - t).toNat : Int)) .exact =
+        roundWithAccuracy Format.binary64 s (m <<< a) (-(a : Int)) .exact
+    have amount : (0 - t).toNat = a := by
+      change (0 - t).toNat = (-t).toNat
+      rw [Int.zero_sub]
+    simp only [amount, Int.zero_sub]
+  exact representation.trans same
 
 private theorem scientific_zero (n : Nat) :
     UnpackedFloat.ofScientific Format.binary64 n 0 = UnpackedFloat.ofNat Format.binary64 n := by
