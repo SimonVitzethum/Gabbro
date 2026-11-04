@@ -40,7 +40,8 @@ open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Parser Gabbro.Gramma
 variable {z : Spez} {V : Vertrag z.deklaration}
 
 theorem ScalarMeta.of_artErg {τ : Ty} {a : UParamArt} (h : artErg τ = some a) : ScalarMeta a τ := by
-  cases τ <;> simp_all only [artErg, Option.some.injEq, reduceCtorEq, ScalarMeta]
+  cases τ <;> simp only [artErg, Option.some.injEq, reduceCtorEq] at h
+  all_goals subst a; trivial
 
 /-- Computed integer bounds preserve the scalar reader's metadata class. -/
 theorem ScalarMeta.int_bounds {a : UParamArt} {lo hi : Int} (h : ScalarMeta a (.int lo hi))
