@@ -50,19 +50,7 @@ theorem initialConstant_valid {D : Deklaration} (L : Lay D) (τ : Ty) :
       obtain ⟨z, hz, eq⟩ := Option.map_eq_some_iff.mp made
       rw [← eq]
       intro i; exact ih _ _ hz
-    · have equation : @Eq (Option (Val D.Fn D.passt (.arr τ n)))
-          (@GabbroV.konstWert D.Fn D.passt (.arr τ n) k)
-          (match GabbroV.konstListe k with
-          | some ks => match ks.mapM (@GabbroV.konstWert D.Fn D.passt τ) with
-            | some vs => if h : vs.length = n then
-                some (fun i : Fin n => vs.get ⟨i.val, by rw [h]; exact i.isLt⟩)
-              else none
-            | none => none
-          | none => none) := by
-          rw [GabbroV.konstWert]
-          · rfl
-          · exact zero
-      rw [equation] at made
+    · rw [GabbroV.konstWert] at made <;> try exact zero
       cases items : GabbroV.konstListe k with
       | none => simp [items] at made
       | some ks =>
