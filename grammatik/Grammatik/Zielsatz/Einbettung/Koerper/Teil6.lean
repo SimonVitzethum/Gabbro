@@ -71,7 +71,8 @@ theorem sim_stmt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
         Λ (Λ.map E.resE) v.orte mapped.orte (E.orte_exE v).symm
       let W : World D' := leseA A' σ' (Λ.map E.resE) mapped.orte
       let w' := eval W mapped W ρ'
-      have hv : E.valZ hZ _ w' = eval σ₁ v σ₁ ρ := E.valZ_vrel hZ _ (hev v ρ ρ' hρ)
+      have hv : E.valZ hZ (.sum cs) w' = eval σ₁ v σ₁ ρ :=
+        E.valZ_vrel hZ (.sum cs) (hev v ρ ρ' hρ)
       obtain ⟨M₂, o, hs2, hΦ2, hR⟩ := sim_arms arms w' M₁ σ₁ _ ρ ρ' hI hρ
       refine ⟨M₂, o, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
       · simp only [execStmtHA, hΦ Φ (passt_teil hP hs2)]
