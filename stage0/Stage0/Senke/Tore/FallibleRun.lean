@@ -39,6 +39,7 @@ theorem fallibleForeignC_ok {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Re
     split at emitted
     · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at emitted
       obtain ⟨⟨request, requestTop⟩, requestMade, emitted⟩ := emitted
+      obtain ⟨_, rfl, emitted⟩ := emitted
       split at emitted
       · next jump =>
         simp only [pure, Option.some.injEq, Prod.mk.injEq] at emitted
@@ -51,12 +52,15 @@ theorem fallibleForeignC_ok {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Re
       · next scalar =>
         simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at emitted
         obtain ⟨⟨request, requestTop⟩, requestMade, check, checkMade, emitted⟩ := emitted
+        obtain ⟨_, rfl, emitted⟩ := emitted
         split at emitted
         · next jump =>
           simp only [pure, Option.some.injEq, Prod.mk.injEq] at emitted
           obtain ⟨rfl, rfl⟩ := emitted
           have run := torElse_ok (O := O) he he bound errors scalar reasons requestMade checkMade jump
-            (by omega) (by omega) layout (by simpa only [List.append_assoc] using pre) world
+            (by omega) (by omega) layout
+            (by simpa only [List.append_assoc, Int.natCast_add, Int.natCast_mul,
+              show ((16 : Nat) : Int) = 16 from rfl] using pre) world
           rcases run with ⟨value, m', word, decoded, steps, changed, read, encoded, world'⟩ |
               ⟨reason, m', decoded, steps, changed, read, world'⟩ | invalid
           · exact .inl ⟨value, m', decoded, by simpa only [List.length_append, fehlC_len] using steps,
@@ -82,6 +86,7 @@ theorem fallibleForeignC_top {Γ : Ctx} {Λ : List (Res D)} {a : D.Ax}
     split at emitted
     · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at emitted
       obtain ⟨⟨request, requestTop⟩, requestMade, emitted⟩ := emitted
+      obtain ⟨_, rfl, emitted⟩ := emitted
       split at emitted
       · simp only [pure, Option.some.injEq, Prod.mk.injEq] at emitted
         obtain ⟨rfl, rfl⟩ := emitted
@@ -93,6 +98,7 @@ theorem fallibleForeignC_top {Γ : Ctx} {Λ : List (Res D)} {a : D.Ax}
     · split at emitted
       · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at emitted
         obtain ⟨⟨request, requestTop⟩, requestMade, check, checkMade, emitted⟩ := emitted
+        obtain ⟨_, rfl, emitted⟩ := emitted
         split at emitted
         · simp only [pure, Option.some.injEq, Prod.mk.injEq] at emitted
           obtain ⟨rfl, rfl⟩ := emitted
