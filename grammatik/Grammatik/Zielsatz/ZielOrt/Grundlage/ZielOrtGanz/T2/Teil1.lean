@@ -103,7 +103,9 @@ theorem Stmt.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik e �
   | .locks L hr body, h, σ, ρ, e', he => by
       simp only [Stmt.logikFrei] at h
       simp only [execStmt] at he
-      exact Block.logikFrei_ok hR body h _ _ _ (Ausgang.mapWelt_logik he)
+      generalize hbody : execBlock O passes R body (σ.nimmt L) ρ = outcome at he
+      cases outcome <;> try cases he
+      exact Block.logikFrei_ok hR body h _ _ _ hbody
   | .breaking i body, h, σ, ρ, e', he => by
       simp only [Stmt.logikFrei] at h
       simp only [execStmt] at he
