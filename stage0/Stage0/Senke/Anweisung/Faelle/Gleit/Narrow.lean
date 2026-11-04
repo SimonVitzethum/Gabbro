@@ -70,10 +70,17 @@ theorem blockFloatNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : N
         cases hf
       | some v =>
         have hvx := floatPasst_x hv
+        have encoded : encodeWords L (.fl low' high') v =
+            [BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 v.x)] := by
+          rw [encodeWords.eq_def L (.fl low' high') v]
+        have sourceEncoded : encodeWords L (.fl low high) (eval σr e σr ρ) =
+            [BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 (eval σr e σr ρ).x)] := by
+          rw [encodeWords.eq_def L (.fl low high) (eval σr e σr ρ)]
         refine bindValue_ok (L := L) (τ := .fl low' high') (v := v) hW hlo hlo0 hlo2 hpr (by omega) ?_ ?_ hp' hu' hk' hw'
         · intro m pc hp
           exact (lowE_ok (same := by intro _; rfl) σr σr (fun _ h => h) hW.lay e _ ce te he (by omega) m pc ρ hp).mono
-            fun m hen => ⟨by simpa only [ValueValid, hvx] using hen.1, by simpa only [encodeWords, hvx] using hen.2⟩
+            fun m hen => ⟨by simpa only [ValueValid, hvx] using hen.1,
+              by rw [encoded, hvx]; simpa only [sourceEncoded] using hen.2⟩
         · intro m pc hp hu hk hw
           exact ihRest (ex := ex) cr tr hr (by omega) (by omega) hW m pc σr _ hp hlo
             (by simp only [frei, contextWords_cons] at hlo2 ⊢; omega) hu hk hw
