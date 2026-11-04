@@ -40,8 +40,10 @@ def fpNegWord : FPFormat → W → W
   | .f64, value => value ^^^ 0x8000000000000000
 
 theorem fpNegWord_low32 (word : W) : fpNegWord .f32 (fpLow32 word) = fpNegWord .f32 word := by
-  unfold fpNegWord fpLow32
-  rw [BitVec.setWidth_setWidth_of_le _ (by decide), BitVec.setWidth_eq]
+  change (((word.setWidth 32).setWidth 64).setWidth 32 ^^^ (0x80000000 : BitVec 32)).setWidth 64 =
+    (word.setWidth 32 ^^^ (0x80000000 : BitVec 32)).setWidth 64
+  rw [BitVec.setWidth_setWidth_of_le (word.setWidth 32) (k := 32) (l := 64) (by decide),
+    BitVec.setWidth_eq]
 
 /-- Only actual scalar operands enter a CPU request. Unary instructions have no
     second hardware operand; their IR field-3 read still occurs before this point. -/
@@ -99,8 +101,10 @@ def NativeFPOp.resultWord : NativeFPOp → W → W
 private theorem neg_resultWord (format : FPFormat) (word : W) :
     (NativeFPOp.neg format).resultWord (fpNegWord format word) = fpNegWord format word := by
   cases format
-  · change ((((word.setWidth 32) ^^^ 0x80000000).setWidth 64).setWidth 32).setWidth 64 = _
-    rw [BitVec.setWidth_setWidth_of_le _ (by decide), BitVec.setWidth_eq]
+  · change ((((word.setWidth 32) ^^^ 0x80000000).setWidth 64).setWidth 32).setWidth 64 =
+      ((word.setWidth 32) ^^^ (0x80000000 : BitVec 32)).setWidth 64
+    rw [BitVec.setWidth_setWidth_of_le ((word.setWidth 32) ^^^ (0x80000000 : BitVec 32))
+      (k := 32) (l := 64) (by decide), BitVec.setWidth_eq]
   · rfl
 
 private theorem fpCompareFlags_mask (unordered less equal : Bool) :

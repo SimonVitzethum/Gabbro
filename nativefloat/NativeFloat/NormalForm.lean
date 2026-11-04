@@ -118,7 +118,6 @@ private theorem normal_unpack (F : Format) (s : Sign) (m : Nat) (e : Int) (posit
     unpack_sign_components, sign_unbits, nonmax, nonzero, ↓reduceIte, field, magnitude]
   congr 1
   dsimp [j]
-  simp only [Int.natCast_add]
   omega
 
 end RootNativeFloat

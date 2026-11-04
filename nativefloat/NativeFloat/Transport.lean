@@ -243,7 +243,12 @@ private theorem unpack_sign_components (F : Format) (s : Sign)
     (e : BitVec F.exponentBits) (m : BitVec F.mantissaBitsWithoutImplicit) :
     unpackSign (packComponents F s e m) = s.toBitVec := by
   ext i hi
-  simp [unpackSign, packComponents, BitVec.getLsbD_eq_getElem, BitVec.getLsbD_append, hi]
+  have index : i = 0 := by omega
+  subst i
+  have top : ¬ F.mantissaBitsWithoutImplicit + F.exponentBits <
+      F.mantissaBitsWithoutImplicit := by omega
+  simp (disch := omega) [unpackSign, packComponents, BitVec.getLsbD_append,
+    BitVec.getElem_append, Nat.add_sub_cancel_left, BitVec.getLsbD_eq_getElem, top]
 
 private theorem sign_unbits (s : Sign) : Sign.ofBitVec s.toBitVec = s := by cases s <;> rfl
 
@@ -332,5 +337,31 @@ theorem neg_bits32 (word : BitVec 32) :
     rfl
   rw [stored]
   exact neg_word32 (UInt32.ofBitVec word)
+
+/-- Every non-NaN CPU word, including both infinities, is recovered exactly. -/
+theorem bits_ofBits_notNaN {word : UInt64} (notNaN : (Float.ofBits word).isNaN = false) :
+    (Float.ofBits word).toBits = word := by
+  have decoded : UnpackedFloat.unpack Format.binary64 word.toBitVec ≠ .notANumber := by
+    intro bad
+    change (Float.ofModel (Float.Model.pack
+      (UnpackedFloat.unpack Format.binary64 word.toBitVec))).isNaN = false at notNaN
+    rw [bad] at notNaN
+    change true = false at notNaN
+    cases notNaN
+  apply UInt64.eq_of_toBitVec_eq
+  exact pack_unpack Format.binary64 word.toBitVec (valid_of_not_nan _ _ decoded)
+
+/-- The same complete-word transport for native binary32 values. -/
+theorem bits32_ofBits_notNaN {word : UInt32} (notNaN : (Float32.ofBits word).isNaN = false) :
+    (Float32.ofBits word).toBits = word := by
+  have decoded : UnpackedFloat.unpack Format.binary32 word.toBitVec ≠ .notANumber := by
+    intro bad
+    change (Float32.ofModel (Float32.Model.pack
+      (UnpackedFloat.unpack Format.binary32 word.toBitVec))).isNaN = false at notNaN
+    rw [bad] at notNaN
+    change true = false at notNaN
+    cases notNaN
+  apply UInt32.eq_of_toBitVec_eq
+  exact pack_unpack Format.binary32 word.toBitVec (valid_of_not_nan _ _ decoded)
 
 end RootNativeFloat

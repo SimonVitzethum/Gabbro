@@ -34,11 +34,11 @@ private theorem exact_shift_bits (m n : Nat) :
     Nat.repeat ExtendedMantissa.shiftRightOne (n + 1) ⟨m, false, false⟩ =
       ⟨m / 2 ^ (n + 1), m / 2 ^ n % 2 != 0, m % 2 ^ n != 0⟩ := by
   induction n with
-  | zero => simp [Nat.repeat, ExtendedMantissa.shiftRightOne]
+  | zero => simp [Nat.repeat, ExtendedMantissa.shiftRightOne, Nat.mod_one]
   | succ n ih =>
       rw [Nat.repeat, ih]
-      change ⟨m / 2 ^ (n + 1) / 2, m / 2 ^ (n + 1) % 2 != 0,
-        (m / 2 ^ n % 2 != 0) || (m % 2 ^ n != 0)⟩ = _
+      change (⟨m / 2 ^ (n + 1) / 2, m / 2 ^ (n + 1) % 2 != 0,
+        (m / 2 ^ n % 2 != 0) || (m % 2 ^ n != 0)⟩ : ExtendedMantissa) = _
       rw [Nat.div_div_eq_div_mul, ← Nat.pow_succ, sticky_step]
 
 private theorem jam_div (n k j : Nat) (room : 1 < 2 ^ j) :
