@@ -153,9 +153,11 @@ theorem assemble_block (before : List Piece) (block : List II) (after : List Pie
 /-- Compare the new measure, preserving it until all three obligations have
     been checked. Typed measure bounds are checked at run time as well. -/
 def decrease (scratch saved failure : Nat) (bound : Int) (measure : List II) : List II :=
-  narrowC scratch 0 bound measure (stopC failure scratch)
-    ([ci 2 (scratch + 1) saved 0, ci 13 scratch scratch (scratch + 1)] ++
-      guardC scratch failure scratch)
+  let post := [ci 2 (scratch + 1) saved 0] ++ [ci 13 scratch scratch (scratch + 1)] ++
+    guardC scratch failure scratch
+  let skip := [ci 19 (scratch + 1) 80 0] ++ stopC failure scratch ++
+    [ci 18 (16 * (post.length + 1)) 0 0]
+  measure ++ ((engTest 13 scratch 0 bound).1 ++ (skip ++ post))
 
 /-- `s` is the selected-index binder. `s+1` is the predecessor binder,
     `s+2` records that at least one live member was seen and `s+3` saves
