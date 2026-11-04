@@ -1,5 +1,4 @@
 module
-
 public import Grammatik.Logik.Terminierung.Klasse
 public import Grammatik.Logik.Terminierung.Ausgang.Teil1
 

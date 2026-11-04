@@ -1,6 +1,5 @@
 module
-public import Grammatik.Code.Refine.Struct.Mono
-public import Grammatik.Code.Refine.Struct.Shape.Teil2
+public import Grammatik.Code.Refine.Struct.Mono Grammatik.Code.Refine.Struct.Shape.Teil2
 public import Grammatik.Code.Refine.Struct.Shape.Teil4
 @[expose] public section
 namespace Gabbro.Code.Lower

@@ -1,6 +1,5 @@
 module
-public import Grammatik.Kern.Syntax.Satz.T4.Teil2EndFloat
-public import Grammatik.Kern.Syntax.Satz.T4.Teil2Context
+public import Grammatik.Kern.Syntax.Satz.T4.Teil2EndFloat Grammatik.Kern.Syntax.Satz.T4.Teil2Context
 public import Grammatik.Kern.Syntax.Satz.T4.ReturnInventory
 @[expose] public section
 namespace Gabbro.Grammatik

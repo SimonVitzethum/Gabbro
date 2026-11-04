@@ -1,5 +1,4 @@
 module
-
 public import Grammatik.Kern.Syntax.Extraktion
 public import Grammatik.Kern.Syntax.Satz
 public import Grammatik.Kern.Semantik.Maschine

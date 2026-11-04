@@ -1,6 +1,5 @@
 module
-public import Grammatik.Kern.Syntax.Typen.Fall
-public import Grammatik.Kern.Semantik.Semantik
+public import Grammatik.Kern.Syntax.Typen.Fall Grammatik.Kern.Semantik.Semantik
 public import Grammatik.Logik.Vertraege.HandlerKongruenz.Teil1
 @[expose] public section
 namespace Gabbro.Grammatik

@@ -1,6 +1,5 @@
 module
 public import Grammatik.Logik.Vertraege.RahmenTreu.Teil2EndFloat
-
 public import Grammatik.Logik.Vertraege.RahmenTreu.Tactics
 public import Grammatik.Logik.Vertraege.RahmenTreu.Teil1
 public import Grammatik.Logik.Vertraege.RahmenTreu.Teil2BindBlock

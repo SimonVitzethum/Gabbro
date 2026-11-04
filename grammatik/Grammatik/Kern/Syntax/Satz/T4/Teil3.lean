@@ -11,7 +11,6 @@ variable (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
 variable (hR : GutR R) (hO : GutO O)
 include hR hO
 set_option linter.unusedSectionVars false
-
 /-! The exact-held-set forms (no extra lock, `HeldGenau`), with their old names. -/
 
 theorem stmt_gut (s : Stmt D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) (hh : HeldGenau Λ σ.haelt)
