@@ -1,7 +1,6 @@
 /- Mutual run agreement or named error, retaining disciplined gated calls. -/
 module
 public import Grammatik.Logik.Vertraege.HandlerKongruenz.EndFloat
-
 public import Grammatik.Kern.Syntax.Satz
 public import Grammatik.Kern.Semantik.Semantik
 public import Grammatik.Logik.Vertraege.RahmenTreu.Tactics
@@ -14,9 +13,7 @@ public import Grammatik.Logik.Vertraege.HandlerKongruenz.Teil5
 public import Grammatik.Logik.Vertraege.HandlerKongruenz.Teil7
 public import Grammatik.Logik.Vertraege.HandlerKongruenz.Teil8
 @[expose] public section
-
 namespace Gabbro.Grammatik
-
 variable {D : Deklaration} {V : Vertrag D}
 
 /-- **The gated handler premise**: at entries meeting the callee-entry
