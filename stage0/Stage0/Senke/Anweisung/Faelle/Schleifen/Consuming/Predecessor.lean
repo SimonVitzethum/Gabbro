@@ -175,6 +175,75 @@ theorem predecessor_next (h : q.PredState σ ρ candidate live j m) :
     ⟨⟨ready, (others x.s (by omega) (by omega)).trans h.candidateRead,
       (others (x.s + 2) (by omega) (by omega)).trans h.liveRead⟩, read⟩⟩
 
+private theorem predecessor_edge_false (h : q.PredState σ ρ candidate live j m)
+    (read : x.read m (x.s + 4) (Runner.IR.bool false)) :
+    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.addr 25) (x.addr 14) m
+      (q.PredState σ ρ candidate live (j + 1)) := by
+  have branch := h.ready.branch 25 28 (x.s + 4) .predecessorNext _ rfl
+    predecessorNext_position (offset_bound 25) (offset_bound 28)
+    (by have := x.scratch; have := x.layout.ks; omega) read
+    (zero_next (i := 25) (cell := x.s + 4) (target := .predecessorNext) rfl)
+  have advance : Star ⟨x.addr 25, x.fp⟩ m ⟨x.addr 28, x.fp⟩ m := by
+    simpa only [Runner.IR.bool, Bool.false_eq_true, ↓reduceIte] using branch
+  exact ScanRun.prefix (start := x.addr 25) (middle := x.addr 28) (finish := x.addr 14)
+    advance (predecessor_next h)
+
+private theorem predecessor_edge_true (h : q.PredState σ ρ candidate live j m)
+    (read : x.read m (x.s + 4) (Runner.IR.bool true)) :
+    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.addr 25) (x.addr 31) m
+      (q.PredDone σ ρ candidate live) := by
+  have branch := h.ready.branch 25 28 (x.s + 4) .predecessorNext _ rfl
+    predecessorNext_position (offset_bound 25) (offset_bound 28)
+    (by have := x.scratch; have := x.layout.ks; omega) read
+    (zero_next (i := 25) (cell := x.s + 4) (target := .predecessorNext) rfl)
+  have advance : Star ⟨x.addr 25, x.fp⟩ m ⟨x.addr 26, x.fp⟩ m := by
+    simpa only [Runner.IR.bool, show (1 : W) ≠ 0 by decide, ↓reduceIte] using branch
+  have reject := h.ready.jump 26 31 .candidateNext rfl candidateNext_position
+    (offset_bound 26) (offset_bound 31)
+  exact ⟨m, advance.trans reject, AgreeW.refl _ _ _ _ _, Keeps.refl _ _ _, h.toPredDone⟩
+
+private theorem predecessor_edge (a : Wert D (.index (D.count x.table))) (ha : a.n = j)
+    (h : q.PredState σ ρ candidate live j m) :
+    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.addr 24)
+      (if q.edgeAt σ ρ a candidate then x.addr 31 else x.addr 14) m
+      (fun m' => if q.edgeAt σ ρ a candidate then q.PredDone σ ρ candidate live m'
+        else q.PredState σ ρ candidate live (j + 1) m') := by
+  have room : x.s + 4 ≤ x.K := by have := x.scratch; have := x.layout.ks; omega
+  have predRead : x.read m (x.s + 1) (BitVec.ofInt 64 a.n) := by
+    rw [ha, BitVec.ofInt_natCast]
+    exact h.predecessorRead
+  have candidateValue : ValueAt L m x.fp x.s (.index (D.count x.table)) candidate :=
+    ValueAt.of_enc q.indexWidth h.candidateRead rfl
+  have predecessorValue : ValueAt L m x.fp (x.s + 1) (.index (D.count x.table)) a :=
+    ValueAt.of_enc q.indexWidth predRead rfl
+  have candidateEnv : EnvAt L m x.fp (.cons candidate ρ) reserved :=
+    envAt_cons h.ready.env (by simpa only [← q.origin] using candidateValue)
+  have edgeEnv : EnvAt L m x.fp (.cons a (.cons candidate ρ)) reserved :=
+    envAt_cons candidateEnv
+      (by simpa only [frei_cons, q.indexWidth, ← q.origin] using predecessorValue)
+  have edgeReady : x.Ready m σ (.cons a (.cons candidate ρ)) :=
+    { h.ready with env := edgeEnv }
+  have edgeCtx : frei (.index (D.count x.table) :: .index (D.count x.table) :: Γ) reserved ≤
+      x.s + 4 := by
+    simp only [frei_cons, q.indexWidth, ← q.origin]
+    omega
+  apply (edgeReady.eval 24 edgeCtx q.edgeCode q.edgeTop rfl trivial).bind
+  intro mem result
+  obtain ⟨ready, frame, value, read, encoding⟩ := result
+  have state : q.PredState σ ρ candidate live j mem := h.agree frame (by omega) room
+  have word : value = Runner.IR.bool (q.edgeAt σ ρ a candidate) := by
+    simpa only [Enc, edgeAt, bool_word] using encoding
+  subst value
+  cases edgeValue : q.edgeAt σ ρ a candidate with
+  | false =>
+    change ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr)
+      (x.addr 25) (x.addr 14) mem (q.PredState σ ρ candidate live (j + 1))
+    exact predecessor_edge_false state read
+  | true =>
+    change ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr)
+      (x.addr 25) (x.addr 31) mem (q.PredDone σ ρ candidate live)
+    exact predecessor_edge_true state read
+
 /-- Execute one nonexhausted predecessor. Its Boolean is the canonical
     member && edge && !same expression, with predecessor as the first binder. -/
 theorem predecessor_test (a : Wert D (.index (D.count x.table))) (ha : a.n = j)
@@ -224,44 +293,8 @@ theorem predecessor_test (a : Wert D (.index (D.count x.table))) (ha : a.n = j)
     | true =>
       have memberTrue : wahr? (Gabbro.Grammatik.eval σ q.member σ (.cons a ρ)) = true := membership
       simp only [memberTrue, Runner.IR.bool, show (1 : W) ≠ 0 by decide, ↓reduceIte] at branch2
-      have predRead : x.read m2 (x.s + 1) (BitVec.ofInt 64 a.n) := by
-        rw [ha, BitVec.ofInt_natCast]; exact state2.predecessorRead
-      have candidateValue : ValueAt L m2 x.fp x.s (.index (D.count x.table)) candidate :=
-        ValueAt.of_enc q.indexWidth state2.candidateRead rfl
-      have predecessorValue : ValueAt L m2 x.fp (x.s + 1) (.index (D.count x.table)) a :=
-        ValueAt.of_enc q.indexWidth predRead rfl
-      have candidateEnv : EnvAt L m2 x.fp (.cons candidate ρ) reserved :=
-        envAt_cons ready2.env (by simpa only [← q.origin] using candidateValue)
-      have edgeEnv : EnvAt L m2 x.fp (.cons a (.cons candidate ρ)) reserved :=
-        envAt_cons candidateEnv
-          (by simpa only [frei_cons, q.indexWidth, ← q.origin] using predecessorValue)
-      have edgeReady : x.Ready m2 σ (.cons a (.cons candidate ρ)) :=
-        { ready2 with env := edgeEnv }
-      have edgeCtx : frei (.index (D.count x.table) :: .index (D.count x.table) :: Γ) reserved ≤
-          x.s + 4 := by
-        simp only [frei_cons, q.indexWidth, ← q.origin]
-        omega
       apply ScanRun.prefix branch2
-      apply (edgeReady.eval 24 edgeCtx q.edgeCode q.edgeTop rfl trivial).bind
-      intro m3 result
-      obtain ⟨ready3, frame3, value, edgeRead, encoding⟩ := result
-      have state3 := state2.agree frame3 (by omega) room
-      have edgeWord : value = Runner.IR.bool (q.edgeAt σ ρ a candidate) := by
-        simpa only [Enc, edgeAt, bool_word] using encoding
-      subst value
-      have branch3 := state3.ready.branch 25 28 (x.s + 4) .predecessorNext _ rfl
-        predecessorNext_position (offset_bound 25) (offset_bound 28)
-        (by have := x.scratch; have := x.layout.ks; omega) edgeRead
-        (zero_next (i := 25) (cell := x.s + 4) (target := .predecessorNext) rfl)
-      cases edgeValue : q.edgeAt σ ρ a candidate with
-      | false =>
-        simp only [membership, edgeValue, Bool.true_and, Bool.false_eq_true, ↓reduceIte]
-        exact ScanRun.prefix branch3 (predecessor_next state3)
-      | true =>
-        simp only [membership, edgeValue, Bool.true_and, ↓reduceIte]
-        have reject := state3.ready.jump 26 31 .candidateNext rfl candidateNext_position
-          (offset_bound 26) (offset_bound 31)
-        exact ⟨m3, branch3.trans reject, AgreeW.refl _ _ _ _ _, Keeps.refl _ _ _, state3.toPredDone⟩
+      exact predecessor_edge a ha state2
 
 /-- Instantiate the existing suffix induction with actual bound and scan edges. -/
 theorem predecessor_path (candidate : Wert D (.index (D.count x.table))) (live : Bool) :
