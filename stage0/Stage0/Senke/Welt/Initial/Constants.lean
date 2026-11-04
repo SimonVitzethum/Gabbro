@@ -32,7 +32,8 @@ private theorem mapM_valid {α β : Type} (f : α → Option β) (valid : β →
 mutual
 /-- Every existing canonical constant initializer retains recursive representation validity. -/
 theorem initialConstant_valid {D : Deklaration} (L : Lay D) (τ : Ty) :
-    ∀ (k : UKonst) (v : Wert D τ), GabbroV.konstWert τ k = some v → ValueValid L τ v := by
+    ∀ (k : UKonst) (v : Wert D τ),
+      @GabbroV.konstWert D.Fn D.passt τ k = some v → ValueValid L τ v := by
   cases τ with
   | ref n => intro k v made; cases k <;> simp [GabbroV.konstWert] at made
   | fl a b => intro k v made; cases k <;> simp [GabbroV.konstWert] at made
@@ -49,9 +50,10 @@ theorem initialConstant_valid {D : Deklaration} (L : Lay D) (τ : Ty) :
       obtain ⟨z, hz, eq⟩ := Option.map_eq_some_iff.mp made
       rw [← eq]
       intro i; exact ih _ _ hz
-    · have equation : GabbroV.konstWert (F := D.Fn) (P := D.passt) (.arr τ n) k =
+    · have equation : @Eq (Option (Val D.Fn D.passt (.arr τ n)))
+          (@GabbroV.konstWert D.Fn D.passt (.arr τ n) k)
           (match GabbroV.konstListe k with
-          | some ks => match ks.mapM (GabbroV.konstWert τ) with
+          | some ks => match ks.mapM (@GabbroV.konstWert D.Fn D.passt τ) with
             | some vs => if h : vs.length = n then
                 some (fun i : Fin n => vs.get ⟨i.val, by rw [h]; exact i.isLt⟩)
               else none
@@ -111,13 +113,14 @@ decreasing_by
 /-- The selected constant payload keeps the obligations of its declared type. -/
 theorem nutzKonst_valid {D : Deklaration} (L : Lay D) (c : Option Ty) :
     ∀ (k : UKonst) (v : Nutzlast D.Fn D.passt c),
-      GabbroV.nutzKonst c k = some v → PayloadValid L c v := by
+      @GabbroV.nutzKonst D.Fn D.passt c k = some v → PayloadValid L c v := by
   cases c with
   | none => intro _ _ _; trivial
   | some τ =>
     intro k v made
     dsimp only [Nutzlast] at made
-    have valueMade : GabbroV.konstWert (F := D.Fn) (P := D.passt) τ k = some v := by
+    have valueMade : @Eq (Option (Val D.Fn D.passt τ))
+        (@GabbroV.konstWert D.Fn D.passt τ k) (some v) := by
       simpa only [GabbroV.nutzKonst] using made
     exact initialConstant_valid L τ k v valueMade
 termination_by sizeOf c
