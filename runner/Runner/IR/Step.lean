@@ -89,6 +89,7 @@ def op (o : Nat) (t : T) : Res T :=
   | 42 => fp (.le .f32) t | 43 => fp (.le .f64) t
   | 44 => fp (.isFinite .f32) t | 45 => fp (.isFinite .f64) t
   | 46 => fp (.fromInt64 .f32) t | 47 => fp (.fromInt64 .f64) t
+  | 48 => fp (.fromUInt64 .f32) t | 49 => fp (.fromUInt64 .f64) t
   | 54 => fp .widen32 t | 55 => fp .narrow32 t
   | 56 => fp (.compare .f32) t | 57 => fp (.compare .f64) t
   | 58 => fp (.truncateInt64 .f32) t | 59 => fp (.truncateInt64 .f64) t
@@ -153,6 +154,10 @@ theorem op_fp_neg (format : FPFormat) : op (NativeFPOp.neg format).code = fp (.n
   cases format <;> rfl
 
 theorem op_fp_finite (format : FPFormat) : op (NativeFPOp.isFinite format).code = fp (.isFinite format) := by
+  cases format <;> rfl
+
+theorem op_fp_fromUInt64 (format : FPFormat) :
+    op (NativeFPOp.fromUInt64 format).code = fp (.fromUInt64 format) := by
   cases format <;> rfl
 
 def step (t : T) : Res T := rd8 t.pc fun o => op o.toNat t

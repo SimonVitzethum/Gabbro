@@ -2,6 +2,7 @@ module
 public import Runner.Beweis.Handler.Sprung
 public import Runner.Beweis.Handler.Floating
 public import Runner.Beweis.Handler.FloatingCodec
+public import Runner.Beweis.Handler.FloatingUnsigned
 @[expose] public section
 
 
@@ -69,8 +70,12 @@ theorem handler_ok {L : Lay} (k : Nat) {y : X} (h : HPre L k y) : Match L (IR.op
   | 45 => exact fp_finite_ok .f64 h
   | 46 => exact fp_fromInt_ok .f32 h
   | 47 => exact fp_fromInt_ok .f64 h
-  | 48 => exact bad_ok h rfl
-  | 49 => exact bad_ok h rfl
+  | 48 => by
+    simpa only [IR.op, IR.fp, fpSequence] using
+      fp_fromUInt64_body (L := L) (y := y) .f32 h.tb h.mode h.code
+  | 49 => by
+    simpa only [IR.op, IR.fp, fpSequence] using
+      fp_fromUInt64_body (L := L) (y := y) .f64 h.tb h.mode h.code
   | 50 => exact bad_ok h rfl
   | 51 => exact bad_ok h rfl
   | 52 => exact bad_ok h rfl

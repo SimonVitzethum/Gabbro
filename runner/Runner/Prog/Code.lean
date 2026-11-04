@@ -177,6 +177,7 @@ def handler : Nat → List Ins
   | 42 => fpCompareH .le .f32 | 43 => fpCompareH .le .f64
   | 44 => fpFiniteH .f32 | 45 => fpFiniteH .f64
   | 46 => fpFromIntH .f32 | 47 => fpFromIntH .f64
+  | 48 => fpFromUIntH .f32 | 49 => fpFromUIntH .f64
   | 54 => fpWidenH | 55 => fpNarrowH
   | 56 => fpFlagsH .f32 | 57 => fpFlagsH .f64
   | 58 => fpTruncateH .f32 | 59 => fpTruncateH .f64
