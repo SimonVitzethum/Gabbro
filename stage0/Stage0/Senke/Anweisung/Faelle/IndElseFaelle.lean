@@ -34,6 +34,7 @@ theorem stmtIndElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
   obtain ⟨rfl, rfl⟩ := hc
   have hFB3 : FB = 4 := rfl
   have hFramePrefix := functionFrame_prefix P f
+  have hks := hW.ks
   have hprE : ∀ j ∈ pr, j < frei (.why (D.sigNr n).gruende :: Γ) reserved := by
     intro j hj; have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega
   have hcall := callIndElse_ok (cr := []) hS hA p args he (σ.lese Λ (p.orte ++ args.orte)) hcc (by omega) hp hs hu hW hWa
@@ -51,7 +52,7 @@ theorem stmtIndElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
         ⟨pc + BitVec.ofNat 64 (16 * (elseC (D.sigNr n) (frei Γ reserved) cc [] ce).length), fp⟩ m2 := by
       simpa using hj
     refine ⟨m2, st.trans hj2, (a.mono hlo2),
-      envAt_agreeW hp.env a (Nat.le_refl _) (by omega), hw2,
+      envAt_agreeWIn hW hp.env a (Nat.le_refl _) (by have := hp.ctx; omega), hw2,
       keeps_of_agreeW hW a hpr (by omega)⟩
   · erw [hR]
     have ih := ihErr (ex := ex) ce te hce (by omega)
