@@ -25,9 +25,9 @@ def collectFunctions (items : List SItemTief) : Except String (List UKonstFn) :=
   let values := uConstsRech (uKonstFnsWith aliases items) items []
   let types := uAliase values items ++ values.map (fun (name, value) => (name, (value, value)))
   let domains ← constDomains values items
-  let schemas ← uSums types items domains
+  let schemas ← uSums types items domains (spaces := []) (eigner := [])
   let reasons ← uWhys items types
-  let reasonSchemas : List USum := reasons.map (fun reason =>
+  let reasonSchemas : List (USum Ty) := reasons.map (fun reason =>
     { name := reason.name, cases := reason.cases.map (fun name => (name, none)) })
   let named := schemas.map (fun schema => (schema.name, Ty.sum schema.spec)) ++
     reasons.map (fun reason => (reason.name, Ty.why reason.cases.length))
@@ -40,16 +40,22 @@ def collectFunctions (items : List SItemTief) : Except String (List UKonstFn) :=
         throw ("const reason channel is outside the admitted fragment: " ++ signature.name)
       let some result := signature.res
         | throw ("const function has no result type: " ++ signature.name)
-      let resultType ← uTypIn types domains named result
+      let resultType ← uTypIn types domains named (spaces := []) (eigner := []) result
       let params ← signature.params.mapM fun (name, type) => do
-        return (name, ← uTypIn types domains named type)
+        return (name, ← uTypIn types domains named (spaces := []) (eigner := []) type)
       -- Prefer the nominal result schema when several schemas have equal shapes.
       let resultSchemas := match result with
         | .atom name => schemas.filter (fun schema => strEq schema.name name) ++
             schemas.filter (fun schema => !strEq schema.name name)
         | _ => schemas
-      return { name := signature.name, params, erg := resultType, rumpf := body,
-        signature, constants := values, sums := resultSchemas } :: rest
+      return
+        { name := signature.name
+          params := params
+          erg := resultType
+          rumpf := body
+          signature := signature
+          constants := values
+          sums := resultSchemas } :: rest
     | _ => pure rest) []
 
 end Gabbro.Grammatik.Parser.Konst
