@@ -50,18 +50,25 @@ theorem lowSumTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       obtain ⟨rfl, rfl⟩ := out
       have spanPositive : 0 < span := by have := width v.1; omega
       have selectedWidth := width v.1
+      have restWidth : ∀ j : Fin restSchema.length,
+          1 + payloadWords (restSchema.get j) ≤ span := by
+        intro j
+        simpa only [List.get_cons_succ] using
+          width ⟨j.val + 1, by have := j.isLt; omega⟩
       have hks := hW.ks
       let cp := sumSpanPayloadC (frei Γ reserved) payloadTy
       have p : PreS L m pc fp K (frei Γ reserved)
           (sumSpanTestC (frei Γ reserved) (frei Γ reserved + span) k ++
             [ci 19 (frei Γ reserved + span) (16 * ((cp ++ cb).length + 2)) 0] ++
             (cp ++ cb) ++ [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr) ρ reserved := by
-        simpa only [cp, List.length_append, List.append_assoc] using pre
+        simpa only [cp, List.length_append, List.append_assoc, Int.natCast_add] using pre
       have result := choice_ok (P := P) (σ0 := σ0) (ex := ex) (d := frei Γ reserved + span)
         (b := k + v.1.val == k) (ot := execArms O passes R (.cons b rest) v σ ρ)
         (oe := execArms O passes R (.cons b rest) v σ ρ)
         (by omega) (by omega)
-        (by simpa only [sumSpanTestC, List.length_append, List.length_cons, List.length_nil, cp] using size)
+        (by
+          simp only [sumSpanTestC, List.length_append, List.length_cons, List.length_nil, cp] at size ⊢
+          omega)
         hW hlo hlo0 hlo2 hpr
         (fun pcnd => sumSpanTest_ok (by omega) hkSmall (by omega) (by omega)
           ⟨by have := pcnd.ctx; omega, pcnd.small, pcnd.frame, pcnd.code, pcnd.far,
@@ -73,12 +80,14 @@ theorem lowSumTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         rcases v with ⟨⟨i, hiv⟩, val⟩
         change i = 0 at zero
         subst i
+        change 1 + payloadWords payloadTy ≤ span at selectedWidth
+        change PayloadAt L m fp (frei Γ reserved + 1) payloadTy val at payload
         simp only [execArms]
         have kept := payload.agree_low changed pre.frame.room (by omega) (by omega)
         exact sumSpanArm_ok blocks.1 blockMade (by omega) (by
           simp only [List.length_append, sumSpanTestC, List.length_cons, List.length_nil] at size
-          omega) (by have := width ⟨0, hiv⟩; omega) hW hlo hlo0 hlo2 hpr
-          (Fall.toNutzlast _ _ _ _ val) kept p1 hu1 hk1 world1
+          omega) (by omega) hW hlo hlo0 hlo2 hpr
+          val kept p1 hu1 hk1 world1
       · have nonzero : v.1.val ≠ 0 := by
           intro zero
           simp only [zero, Nat.add_zero, beq_self_eq_true] at skipped
@@ -87,18 +96,23 @@ theorem lowSumTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         cases i with
         | zero => exact (nonzero rfl).elim
         | succ i =>
+          change k + (i + 1) < 2 ^ 31 at hi
+          change 1 + payloadWords (restSchema.get ⟨i, Nat.lt_of_succ_lt_succ hiv⟩) ≤ span at selectedWidth
+          change PayloadAt L m fp (frei Γ reserved + 1)
+            (restSchema.get ⟨i, Nat.lt_of_succ_lt_succ hiv⟩)
+            (Fall.toNutzlast D.Fn D.passt restSchema ⟨i, Nat.lt_of_succ_lt_succ hiv⟩ val) at payload
           simp only [execArms]
           have keptTag : m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) =
               some (BitVec.ofNat 64 (k + (i + 1))) := by
             rw [agree_rd_low changed pre.frame.room (by omega) (by omega)]
             exact tag
           have kept := payload.agree_low changed pre.frame.room (by omega) (by omega)
-          exact lowSumTags_ok rest blocks.2
-            (fun j => width ⟨j.val + 1, by have := j.isLt; omega⟩)
+          exact lowSumTags_ok rest blocks.2 restWidth
             restMade (by omega) (by
               simp only [List.length_append, sumSpanTestC, List.length_cons, List.length_nil] at size
               omega) hW hlo hlo0 hlo2 hpr
-            ⟨⟨i, Nat.lt_of_succ_lt_succ hiv⟩, val⟩ (by omega)
+            ⟨⟨i, Nat.lt_of_succ_lt_succ hiv⟩, val⟩
+            (by simpa only [Fin.val_mk, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hi)
             (by simpa only [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using keptTag)
             kept p1 hu1 hk1 world1
     · cases made
