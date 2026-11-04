@@ -211,12 +211,12 @@ def zeugeFnAdd : UKonstFn :=
 theorem zeugeVerschachtelt :
     ersetzeSExpr [zeugeFnAdd] (.call "add" [.call "add" [.lit 1, .lit 2], .lit 3]) =
       .ok (literalVonInt 6) := by
-  rfl
+  cbv
 
 /-- Parameters bind positionally: `add(4, 5)` is `9`. -/
 theorem zeugeParameter :
     ersetzeSExpr [zeugeFnAdd] (.call "add" [.lit 4, .lit 5]) = .ok (.lit 9) := by
-  rfl
+  cbv
 
 /-- A negative certified value travels via the negative form. -/
 theorem zeugeNegativ : literalVonInt (-5) = .un "-" (.lit 5) := by
