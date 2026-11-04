@@ -272,7 +272,7 @@ theorem kopf_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklarat
       griffe := uGriffe devs 0 (mitGriffPs ps mitGriff) }
   have hbase : EffOk base tabs globs := heffOk base rfl rfl
   have hrun := heff base hbase
-  exact elabKopf_scalar
+  exact elabKopf_scalar (consts := consts)
     (otab := optTab z) (erg := S.erg)
     (names := (List.range' 0 S.params.length).map (fun i => nVar (np - 1 - i)))
     (types := S.params) (kinds := ks)
