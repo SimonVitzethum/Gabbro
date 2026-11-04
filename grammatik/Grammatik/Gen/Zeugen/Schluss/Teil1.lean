@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Gen.Zeugen.Erreicht
+public import Grammatik.Gen.Zeugen.Reset
 public import Grammatik.Gen.Zeugen.M.M99_824
 public import Grammatik.Gen.Zeugen.M.M99_825
 public import Grammatik.Gen.Zeugen.M.M47_549
@@ -191,12 +192,14 @@ theorem zellAlle_liste : zellAlle = [
     ⟨9, 0, true, [false, false, true, true]⟩,
     ⟨9, 0, true, [true, false, true, true]⟩,
     ⟨9, 0, true, [false, true, true, true]⟩,
-    ⟨9, 0, true, [true, true, true, true]⟩] := by decide
+    ⟨9, 0, true, [true, true, true, true]⟩,
+    ⟨10, 0, true, [false]⟩,
+    ⟨10, 0, true, [true]⟩] := by decide
 
 theorem erreicht_raum : ∀ w ∈ erreicht, RaumGut ncZiel w := by
   intro w hw
   simp only [erreicht, List.mem_cons, List.not_mem_nil, or_false] at hw
-  rcases hw with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  rcases hw with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · first | exact M99_824.zellen _ (by decide) | exact M99_825.zellen _ (by decide)
   · exact M47_549.zellen _ (by decide)
   · exact M47_549.zellen _ (by decide)
@@ -284,12 +287,13 @@ theorem erreicht_raum : ∀ w ∈ erreicht, RaumGut ncZiel w := by
   · exact M16_13.zellen _ (by decide)
   · first | exact M99_824.zellen _ (by decide) | exact M99_825.zellen _ (by decide)
   · exact M16_13.zellen _ (by decide)
+  · exact Reset.Good.zellen
 
 theorem schluss_gut : GutGedeckt ncZiel := by
   intro x hx hs
   rw [zellAlle_liste] at hx
   simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-  rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · exact absurd hs (by decide)
   · first | exact Or.inl (M99_824.zellen _ (by decide)) | exact Or.inl (M99_825.zellen _ (by decide))
   · exact absurd hs (by decide)
@@ -414,5 +418,7 @@ theorem schluss_gut : GutGedeckt ncZiel := by
   · exact Or.inl (M16_13.zellen _ (by decide))
   · first | exact Or.inl (M99_824.zellen _ (by decide)) | exact Or.inl (M99_825.zellen _ (by decide))
   · exact Or.inl (M16_13.zellen _ (by decide))
+  · exact absurd hs (by decide)
+  · exact Or.inl Reset.Good.zellen
 
 end Gabbro.Grammatik.Gen.Zeugen

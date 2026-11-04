@@ -52,12 +52,12 @@ set_option linter.unusedSectionVars false
 /-- A cell of `alleZellen` is a cell of one component. -/
 theorem mem_alleZellen {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {ls : List D.Lock}
     {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn} {z : Zelle} :
-    z ∈ alleZellen P S fs ls cs ws ↔ ∃ c : Fin 10, z ∈ zellen P S fs ls cs ws c := by
+    z ∈ alleZellen P S fs ls cs ws ↔ ∃ c : Fin 11, z ∈ zellen P S fs ls cs ws c := by
   simp only [alleZellen, List.mem_flatMap, List.mem_finRange, true_and]
 
 /-- Every cell of component `c` carries `c`. -/
 theorem zellen_komp {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {ls : List D.Lock}
-    {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn} {c : Fin 10} {z : Zelle} (h : z ∈ zellen P S fs ls cs ws c) :
+    {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn} {c : Fin 11} {z : Zelle} (h : z ∈ zellen P S fs ls cs ws c) :
     z.komp = c.val := by
   rcases c with ⟨n, hn⟩
   match n, hn with
@@ -79,16 +79,33 @@ theorem zellen_komp {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {ls : Lis
     rcases h with ⟨_, _, rfl | ⟨_, _, _, _, rfl⟩⟩ <;> rfl
   | 8, _ => simp only [zellen, List.mem_flatMap, List.mem_map] at h; obtain ⟨_, _, _, _, rfl⟩ := h; rfl
   | 9, _ => simp only [zellen, List.mem_flatMap, List.mem_map] at h; obtain ⟨_, _, _, _, _, _, rfl⟩ := h; rfl
-  | n + 10, hn => exact absurd hn (by omega)
+  | 10, _ => simp only [zellen, List.mem_map] at h; obtain ⟨_, _, rfl⟩ := h; rfl
+  | n + 11, hn => exact absurd hn (by omega)
 
 /-- A cell of component `k` lies in the cells of `k`. -/
 theorem mem_alleZellen_k {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {ls : List D.Lock}
     {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn} {z : Zelle} (k : Fin 10) (hk : z.komp = k.val)
-    (h : z ∈ alleZellen P S fs ls cs ws) : z ∈ zellen P S fs ls cs ws k := by
+    (h : z ∈ alleZellen P S fs ls cs ws) : z ∈ zellen P S fs ls cs ws k.castSucc := by
   obtain ⟨c, hc⟩ := mem_alleZellen.1 h
   have := zellen_komp hc
-  have hck : c = k := Fin.ext (by omega)
+  have hck : c = k.castSucc := Fin.ext (by omega)
   exact hck ▸ hc
+
+/-- The appended reset cell retains the actual carrier verdict, without consulting any body summary. -/
+theorem mem_alleZellen_reset {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {ls : List D.Lock}
+    {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn} {b : Bool} :
+    (⟨10, 0, true, [b]⟩ : Zelle) ∈ alleZellen P S fs ls cs ws ↔
+      ∃ c ∈ cs, resetCarrierB c = b := by
+  constructor
+  · intro h
+    obtain ⟨k, hk⟩ := mem_alleZellen.mp h
+    have same : k = (10 : Fin 11) := Fin.ext (zellen_komp hk).symm
+    rw [same] at hk
+    simpa only [zellen, List.mem_map, Zelle.mk.injEq, List.cons.injEq, true_and, and_true] using hk
+  · intro h
+    apply mem_alleZellen.mpr
+    refine ⟨10, ?_⟩
+    simpa only [zellen, List.mem_map, Zelle.mk.injEq, List.cons.injEq, true_and, and_true] using h
 
 /-! ## Cells that no program has -/
 

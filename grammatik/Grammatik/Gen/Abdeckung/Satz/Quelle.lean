@@ -91,4 +91,20 @@ theorem einsatz_8_ax (e : Einsatz) {a c : Bool} (h : e.Hat ⟨8, 0, true, [a, tr
   | inl ax => exact e.keinAx ax
   | inr _ => simp only [Bool.false_eq_true] at hb
 
+/-- Reset cells keep the original declaration, including unused array globals. -/
+theorem einsatz_reset (e : Einsatz) (b : Bool) :
+    e.Hat ⟨10, 0, true, [b]⟩ ↔ ∃ c ∈ e.cs, @resetCarrierB e.D c = b := by
+  letI := e.aufz
+  letI := e.zahlen
+  exact mem_alleZellen_reset
+
+/-- A genuine reset refusal is a bad cell of the unchanged conjunctive checker. -/
+theorem einsatz_reset_abgelehnt (e : Einsatz) (h : e.Hat ⟨10, 0, true, [false]⟩) :
+    e.gueltig = false := by
+  cases hv : e.gueltig
+  · rfl
+  · have rejected := (einsatz_akzeptiert e).mpr hv _ h
+    change false = true at rejected
+    cases rejected
+
 end Gabbro.Grammatik.Gen

@@ -99,6 +99,7 @@ def erreicht : List Zelle := [
   ⟨9, 0, true, [false, false, true, true]⟩,
   ⟨9, 0, true, [true, false, true, true]⟩,
   ⟨9, 0, true, [false, true, true, true]⟩,
-  ⟨9, 0, true, [true, true, true, true]⟩]
+  ⟨9, 0, true, [true, true, true, true]⟩,
+  ⟨10, 0, true, [true]⟩]
 
 end Gabbro.Grammatik.Gen.Zeugen

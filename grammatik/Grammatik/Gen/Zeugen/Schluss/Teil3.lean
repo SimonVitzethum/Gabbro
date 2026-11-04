@@ -68,7 +68,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Adaequanz
 theorem zeugen_tafel : Tafel Mw Nw where
   gut_m m hm := by
     simp only [Mw, List.mem_cons, List.not_mem_nil, or_false] at hm
-    rcases hm with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+    rcases hm with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
     · exact M99_824.e_gueltig
     · exact M47_549.e_gueltig
     · exact M169_350.e_gueltig
@@ -77,10 +77,11 @@ theorem zeugen_tafel : Tafel Mw Nw where
     · exact M103_803.e_gueltig
     · exact M103_131.e_gueltig
     · exact M99_825.e_gueltig
+    · exact Reset.Good.e_gueltig
   gut x hx hs := by
     rw [zellAlle_liste] at hx
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+    rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
     · exact absurd hs (by decide)
     · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
     · exact absurd hs (by decide)
@@ -205,9 +206,12 @@ theorem zeugen_tafel : Tafel Mw Nw where
     · exact Or.inl ⟨M16_13.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M16_13.e_hat _ (by decide)⟩
     · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
     · exact Or.inl ⟨M16_13.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M16_13.e_hat _ (by decide)⟩
+    · exact absurd hs (by decide)
+    · exact Or.inl ⟨Reset.Good.e, by simp [Mw], Reset.Good.e_hat⟩
+
   n_schlecht n hn := by
     simp only [Nw, List.mem_cons, List.not_mem_nil, or_false] at hn
-    rcases hn with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+    rcases hn with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
     · exact N16_5.e_gueltig
     · exact N18_0.e_gueltig
     · exact N18_4.e_gueltig
@@ -221,10 +225,11 @@ theorem zeugen_tafel : Tafel Mw Nw where
     · exact N3_0.e_gueltig
     · exact N47_20.e_gueltig
     · exact N47_45.e_gueltig
+    · exact Reset.Bad.e_gueltig
   schlecht x hx hs := by
     rw [zellAlle_liste] at hx
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+    rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
     · exact fun e h => absurd h (u_0_ohne false false e)
     · exact absurd hs (by decide)
     · exact fun e h => absurd h (u_0_ohne true false e)
@@ -405,6 +410,12 @@ theorem zeugen_tafel : Tafel Mw Nw where
     · exact absurd hs (by decide)
     · exact absurd hs (by decide)
     · exact absurd hs (by decide)
+    · exact absurd hs (by decide)
+    · exact fun e h => ⟨Reset.Bad.e, by simp [Nw],
+        n_deckt Mw erreicht erreicht_mw Reset.Bad.e e Reset.Bad.bnoetig Reset.Bad.e_gedeckt (fun w hw => by
+          have same : w = ⟨10, 0, true, [false]⟩ := by
+            simpa only [Reset.Bad.bnoetig, List.mem_singleton] using hw
+          exact same.symm ▸ h)⟩
     · exact absurd hs (by decide)
 
 /-- **A neutral checker that answers like the model on the witness lists M and N answers like the model on every

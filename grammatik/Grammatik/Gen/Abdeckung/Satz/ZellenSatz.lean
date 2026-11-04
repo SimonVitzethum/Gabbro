@@ -6,7 +6,7 @@
              (`zellenStimmen`); here it is proved for all of them, one component at a time.
 
   Hypotheses: the member lists are complete (`hvoll`: every function, `hls`: every lock, `hcs`: every carrier), as in
-  `akzeptiertSpec_of`/`spec_akzeptiert`. All ten components are proved here (`urteil_0` .. `urteil_9`), and `akzeptiertX_zellen` puts them together; the
+  `akzeptiertSpec_of`/`spec_akzeptiert`. All eleven covered components are proved here (`urteil_0` .. `urteil_10`), and `akzeptiertX_zellen` puts them together; the
   feature-set tools are in `MerkmalUnd`, `MerkmalZerlegt` and `MerkmalGOk`.
 -/
 module
@@ -240,7 +240,7 @@ theorem urteil_0 (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D
 theorem urteil_komp (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) (c : Fin 10) :
-    urteilAusZellen P S fs ls cs ws c = komp P S fs ls cs ws c := by
+    urteilAusZellen P S fs ls cs ws c.castSucc = komp P S fs ls cs ws c := by
   rcases c with ⟨n, hn⟩
   match n, hn with
   | 0, _ => exact urteil_0 P S fs ls cs ws
@@ -255,10 +255,17 @@ theorem urteil_komp (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : Lis
   | 9, _ => exact urteil_9 P S fs ls cs ws hls
   | n + 10, hn => exact absurd hn (by omega)
 
+/-- **Component 10 (reset admission)** reads every original carrier, including unused static arrays. -/
+theorem urteil_10 (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
+    (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) :
+    urteilAusZellen P S fs ls cs ws 10 = resetB cs := by
+  simp only [urteilAusZellen, zellen, resetB, List.all_map, Function.comp_def, Zelle.schlecht,
+    Zelle.kern, Zelle.kern?, Option.getD_some, Bool.true_and, Bool.not_not]
+
 /-- All cells of a program. -/
 def alleZellen (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) : List Zelle :=
-  (List.finRange 10).flatMap (zellen P S fs ls cs ws)
+  (List.finRange 11).flatMap (zellen P S fs ls cs ws)
 
 /-- **Step 1.** The Lean model's Bool accepts a program exactly when the program has no bad cell. This is what makes
     the checker of the goal theorem a CONJUNCTIVE checker over the cells (the class of Theorems 4 and 5). The
@@ -270,24 +277,38 @@ theorem akzeptiertX_zellen (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (l
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) :
     AkzeptiertX P S fs ls cs ws aks = true ↔
       (∀ z ∈ alleZellen P S fs ls cs ws, z.schlecht = false) ∧
-        Gabbro.Grammatik.Kernzelle.accumulatorB P fs (tabsOf cs) (globsOf cs) [] aks = true ∧ resetB cs = true := by
+        Gabbro.Grammatik.Kernzelle.accumulatorB P fs (tabsOf cs) (globsOf cs) [] aks = true := by
   rw [akzeptiertX_iff]
   constructor
   · intro h
-    refine ⟨?_, h.2⟩
+    refine ⟨?_, h.2.1⟩
+    have verdict : ∀ c : Fin 11, urteilAusZellen P S fs ls cs ws c = true := by
+      intro c
+      by_cases hc : c.val < 10
+      · let old : Fin 10 := ⟨c.val, hc⟩
+        have same : old.castSucc = c := Fin.ext rfl
+        rw [← same, urteil_komp P S fs ls cs ws hvoll hls hcs old]
+        exact h.1 old
+      · have upper := c.isLt
+        have same : c = (10 : Fin 11) := Fin.ext (by omega)
+        rw [same, urteil_10]
+        exact h.2.2
     intro z hz
     obtain ⟨c, _, hzc⟩ := List.mem_flatMap.1 hz
-    have := urteil_komp P S fs ls cs ws hvoll hls hcs c
-    rw [h.1 c] at this
-    have h2 := (List.all_eq_true.1 this) z hzc
+    have h2 := (List.all_eq_true.1 (verdict c)) z hzc
     simpa using h2
   · intro h
-    refine ⟨?_, h.2⟩
-    intro c
-    rw [← urteil_komp P S fs ls cs ws hvoll hls hcs c]
-    apply List.all_eq_true.2
-    intro z hz
-    have := h.1 z (List.mem_flatMap.2 ⟨c, List.mem_finRange c, hz⟩)
-    simp only [this, Bool.not_false]
+    have verdict : ∀ c : Fin 11, urteilAusZellen P S fs ls cs ws c = true := by
+      intro c
+      apply List.all_eq_true.2
+      intro z hz
+      have := h.1 z (List.mem_flatMap.2 ⟨c, List.mem_finRange c, hz⟩)
+      simp only [this, Bool.not_false]
+    refine ⟨?_, h.2, ?_⟩
+    · intro c
+      rw [← urteil_komp P S fs ls cs ws hvoll hls hcs c]
+      exact verdict c.castSucc
+    · rw [← urteil_10 P S fs ls cs ws]
+      exact verdict 10
 
 end Gabbro.Grammatik.Gen

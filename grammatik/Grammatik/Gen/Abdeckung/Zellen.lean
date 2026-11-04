@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Gen/Abdeckung/Zellen.lean
-  Subject:   THE CELLS of the ten components of `AkzeptiertX`, as computable data read off the program.
+  Subject:   THE CELLS of the eleven covered components of `AkzeptiertX`, as computable data read off the program.
 
   A component is a conjunction, over tuples of functions, carriers, locks and starts, of a test on a few Bool ATOMS.
   A CELL is such a tuple's atom vector (`Zelle`); `Zelle.kern` is the test as a function of the vector ONLY. A
@@ -42,6 +42,7 @@
     8,0  (f, x)      answers     [x is an answer site of f, x a foreign body that never returns, the answer type has a value]
                                                                                        ¬a ∨ b ∨ c
     9,0  (w, f, L)   masks       (w over ALL functions) [w a handler, reach w f, f takes L, L masks interrupts]   ¬a ∨ ¬b ∨ ¬c ∨ d
+   10,0  (c)         reset       [the original declaration carrier admits reset]       a
 -/
 module
 public import Grammatik.Gen.Erzeuger.Gueltig
@@ -112,6 +113,7 @@ def Zelle.kern? (z : Zelle) : Option Bool :=
   | 7, 1, [a, b, c] => some (a || !b || !c)
   | 8, 0, [a, b, c] => some (!a || b || c)
   | 9, 0, [a, b, c, d] => some (!a || !b || !c || d)
+  | 10, 0, [a] => some a
   | _, _, _ => none
 
 /-- The test as a Bool, where a clause knows the shape; an unknown shape reads as `false`, so it can never hide a bad
@@ -161,7 +163,7 @@ def schreibGetrenntZellen (P : Programm D) (fs ws : List D.Fn) (c : D.Tab ⊕ D.
 /-- **The cells of component `c`** of `AkzeptiertX` in the program `P`, under the lock family `S`, the member lists
     `fs ls cs` and the declared starts `ws`. -/
 def zellen (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
-    (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) : Fin 10 → List Zelle
+    (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) : Fin 11 → List Zelle
   | 0 => fs.flatMap fun f => fs.map fun g =>
       ⟨0, 0, true, [(P.rumpf f).gOk (fun _ => true) (fun _ => true), indB P f g,
         (vertragsOrte P g).any fun o => !(istIn (fussOrteG P f) o)]⟩
@@ -191,18 +193,20 @@ def zellen (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
         match x with | .inl a => antwortB fs (D.aerg a) | .inr r => antwortB fs (some (D.rtyp r))]⟩
   | 9 => fs.flatMap fun w => fs.flatMap fun f => ls.map fun L =>
       ⟨9, 0, true, [P.unterbricht w, reachB P fs w f, nimmtB P f L, D.maskiert L]⟩
+  | 10 => cs.map fun c => ⟨10, 0, true, [resetCarrierB c]⟩
 
 /-- The verdict of component `c` recomputed from its cells: no verdict cell is bad. -/
 def urteilAusZellen (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
-    (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) (c : Fin 10) : Bool :=
+    (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) (c : Fin 11) : Bool :=
   (zellen P S fs ls cs ws c).all fun z => !z.schlecht
 
 /-- **The self-check of the transcription**, for one program: every component's verdict equals the verdict of its
     cells, and the derived atoms equal their own cells. -/
 def zellenStimmen (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) : Bool :=
-  (List.finRange 10).all (fun c => (zellen P S fs ls cs ws c).all Zelle.definiert) &&
-  (List.finRange 10).all (fun c => urteilAusZellen P S fs ls cs ws c == komp P S fs ls cs ws c) &&
+  (List.finRange 11).all (fun c => (zellen P S fs ls cs ws c).all Zelle.definiert) &&
+  (List.finRange 10).all (fun c => urteilAusZellen P S fs ls cs ws c.castSucc == komp P S fs ls cs ws c) &&
+  (urteilAusZellen P S fs ls cs ws 10 == resetB cs) &&
   cs.all (fun c =>
     (getrenntW P fs ws c == (getrenntZellen P fs ws c).all Zelle.kern) &&
     (schreibGetrenntW P fs ws c == (schreibGetrenntZellen P fs ws c).all Zelle.kern) &&
@@ -215,8 +219,9 @@ def zellenAbweichung (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : Li
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) : List Nat :=
   ((List.range 10).filter fun i =>
     match (List.finRange 10).find? (fun c => c.val == i) with
-    | some c => urteilAusZellen P S fs ls cs ws c != komp P S fs ls cs ws c
+    | some c => urteilAusZellen P S fs ls cs ws c.castSucc != komp P S fs ls cs ws c
     | none => false) ++
+  (if urteilAusZellen P S fs ls cs ws 10 == resetB cs then [] else [10]) ++
   ((List.range cs.length).flatMap fun i =>
     match cs[i]? with
     | none => []
@@ -268,7 +273,7 @@ end Atome
 def zellTafel : List (Nat × Nat × Bool × Nat) :=
   [(0, 0, true, 3), (1, 0, true, 3), (2, 0, true, 4), (2, 1, true, 2), (2, 2, false, 3), (2, 3, false, 3),
    (3, 0, true, 2), (4, 0, true, 2), (5, 0, true, 2), (6, 0, true, 3), (6, 1, true, 4), (7, 0, true, 2),
-   (7, 1, false, 3), (8, 0, true, 3), (9, 0, true, 4)]
+   (7, 1, false, 3), (8, 0, true, 3), (9, 0, true, 4), (10, 0, true, 1)]
 
 /-- All assignments of `n` atoms. -/
 def belegungen : Nat → List (List Bool)
@@ -282,13 +287,13 @@ def zellAlle : List Zelle :=
 /-- Every cell of the universe has a clause: no shape of the table is unknown to `Zelle.kern?`. -/
 theorem zellAlle_definiert : zellAlle.all Zelle.definiert = true := by decide
 
-/-- The universe has 124 cells ... -/
-theorem zellAlle_laenge : zellAlle.length = 124 := by decide
+/-- The universe has 126 cells ... -/
+theorem zellAlle_laenge : zellAlle.length = 126 := by decide
 
-/-- ... of which 20 are bad (a verdict test fails): the number of single-fault programs of the global patterns. -/
-theorem zellAlle_schlecht : (zellAlle.filter Zelle.schlecht).length = 20 := by decide
+/-- ... of which 21 are bad (a verdict test fails): the number of single-fault programs of the global patterns. -/
+theorem zellAlle_schlecht : (zellAlle.filter Zelle.schlecht).length = 21 := by decide
 
-/-- The components of the table are exactly the ten of `AkzeptiertX`. -/
-theorem zellTafel_komponenten : (zellTafel.map (·.1)).eraseDups = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] := by decide
+/-- The table keeps the ten original components and appends reset admission. -/
+theorem zellTafel_komponenten : (zellTafel.map (·.1)).eraseDups = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] := by decide
 
 end Gabbro.Grammatik.Gen

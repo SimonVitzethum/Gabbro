@@ -68,7 +68,7 @@ theorem schluss_schlecht : SchlechtGedeckt ncZiel erreicht := by
   intro x hx hs
   rw [zellAlle_liste] at hx
   simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-  rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · exact fun e h => absurd h (u_0_ohne false false e)
   · exact absurd hs (by decide)
   · exact fun e h => absurd h (u_0_ohne true false e)
@@ -243,6 +243,10 @@ theorem schluss_schlecht : SchlechtGedeckt ncZiel erreicht := by
   · exact absurd hs (by decide)
   · exact absurd hs (by decide)
   · exact absurd hs (by decide)
+  · exact fun e h => ⟨Reset.Bad.bnoetig, (fun w hw => by
+      have same : w = ⟨10, 0, true, [false]⟩ := by simpa only [Reset.Bad.bnoetig, List.mem_singleton] using hw
+      exact same.symm ▸ h), Reset.Bad.zellen⟩
+  · exact absurd hs (by decide)
 
 /-- **M and N are complete.** -/
 theorem mn_vollstaendig : Tafel (mGen ncZiel) (nGen ncZiel) :=
@@ -262,15 +266,15 @@ theorem compiler_korrekt (K : Einsatz → Prop) (hK : NeutralKorrekt K) (hM : �
 /-! ## The witnesses alone: M and N as explicit lists of programs of the source -/
 
 /-- **M**: the valid witnesses. -/
-def Mw : List Einsatz := [M99_824.e, M47_549.e, M169_350.e, M16_13.e, M49_50.e, M103_803.e, M103_131.e, M99_825.e]
+def Mw : List Einsatz := [M99_824.e, M47_549.e, M169_350.e, M16_13.e, M49_50.e, M103_803.e, M103_131.e, M99_825.e, Reset.Good.e]
 
 /-- **N**: the refused tests. -/
-def Nw : List Einsatz := [N16_5.e, N18_0.e, N18_4.e, N19_0.e, N19_2.e, N19_5.e, N19_7.e, N20_1.e, N23_4.e, N24_0.e, N3_0.e, N47_20.e, N47_45.e]
+def Nw : List Einsatz := [N16_5.e, N18_0.e, N18_4.e, N19_0.e, N19_2.e, N19_5.e, N19_7.e, N20_1.e, N23_4.e, N24_0.e, N3_0.e, N47_20.e, N47_45.e, Reset.Bad.e]
 
 theorem erreicht_mw : ∀ w ∈ erreicht, ∃ m ∈ Mw, m.Hat w := by
   intro w hw
   simp only [erreicht, List.mem_cons, List.not_mem_nil, or_false] at hw
-  rcases hw with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  rcases hw with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
   · exact ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
   · exact ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
@@ -358,5 +362,6 @@ theorem erreicht_mw : ∀ w ∈ erreicht, ∃ m ∈ Mw, m.Hat w := by
   · exact ⟨M16_13.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M16_13.e_hat _ (by decide)⟩
   · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
   · exact ⟨M16_13.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M16_13.e_hat _ (by decide)⟩
+  · exact ⟨Reset.Good.e, by simp [Mw], Reset.Good.e_hat⟩
 
 end Gabbro.Grammatik.Gen.Zeugen

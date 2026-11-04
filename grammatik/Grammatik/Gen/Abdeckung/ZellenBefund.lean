@@ -64,7 +64,7 @@ structure Befund where
 def Spez.zellenVon (z : Spez) (h : Programm z.deklaration) (S : SperrInv z.deklaration) (ws : List z.deklaration.Fn) :
     List Zelle :=
   letI : Zahlen := z.zahlen
-  (List.finRange 10).flatMap (zellen h S z.fnListe z.lockListe z.traegerListe (z.wurzelnVon h ws))
+  (List.finRange 11).flatMap (zellen h S z.fnListe z.lockListe z.traegerListe (z.wurzelnVon h ws))
 
 /-- The self-check of the transcription on one program. -/
 def Spez.stimmt (z : Spez) (h : Programm z.deklaration) (S : SperrInv z.deklaration) (ws : List z.deklaration.Fn) : Bool :=

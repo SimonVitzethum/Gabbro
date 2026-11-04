@@ -2,7 +2,7 @@
   File:      Grammatik/Gen/Abdeckung/Satz/ZellenVoll.lean
   Subject:   THEOREM 5 FOR THE WHOLE MODEL, reduced to a finite table. A program of the model is an `Einsatz`: any
              declaration, any program, lock family, member lists that are complete, and starts. Its cells are
-             `alleZellen`, and every cell lies in the universe `zellAlle` (124 cells, `zellen_im_universum`), so the
+             `alleZellen`, and every cell lies in the universe `zellAlle` (126 cells, `zellen_im_universum`), so the
              four conditions of `Vollstaendig` (`Adaequanz/Vollstaendig.lean`) become one obligation PER CELL of the
              universe: a good cell has a valid test in M or no valid program has it; a bad cell has an isolated test in
              N or every program that has it also has a bad cell with an isolated test in N (`vollstaendig_aus_tafel`).
@@ -108,7 +108,11 @@ theorem zellen_im_universum {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {
   | 9, _ => simp only [zellen, List.mem_flatMap, List.mem_map] at h; obtain ⟨_, _, _, _, _, _, rfl⟩ := h; simp only [zellTafel, List.length_cons, List.length_nil, zero_add, Nat.reduceAdd, List.mem_cons,
   Prod.mk.injEq, OfNat.ofNat_ne_zero, Nat.succ_ne_self, and_false, and_self, OfNat.ofNat_ne_one, Nat.reduceEqDiff,
   and_true, zero_ne_one, OfNat.zero_ne_ofNat, Bool.true_eq_false, List.not_mem_nil, or_false, or_true]
-  | n + 10, hn => exact absurd hn (by omega)
+  | 10, _ =>
+    simp only [zellen, List.mem_map] at h
+    obtain ⟨_, _, rfl⟩ := h
+    simp [zellTafel]
+  | n + 11, hn => exact absurd hn (by omega)
 
 end
 
@@ -149,7 +153,7 @@ instance (e : Einsatz) (z : Zelle) : Decidable (e.Hat z) := inferInstanceAs (Dec
 
 /-- The Lean model's Bool on a program. -/
 def Einsatz.gueltig (e : Einsatz) : Bool :=
-  @AkzeptiertX e.D e.aufz.decFn e.P e.S e.fs e.ls e.cs e.ws
+  @AkzeptiertX e.D e.aufz.decFn e.aufz.decAx e.P e.S e.fs e.ls e.cs e.ws [] [] [] []
 
 /-- The model's table: a cell is admitted when it is not bad. -/
 def gutTafel (z : Zelle) : Bool := !z.schlecht

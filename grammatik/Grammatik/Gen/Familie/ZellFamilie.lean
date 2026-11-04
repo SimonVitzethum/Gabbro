@@ -131,9 +131,15 @@ def multimengen : Nat → Nat → List (List Nat)
   | k + 1, n => (List.range n).flatMap fun a => (multimengen k n).filterMap fun r =>
       if r.all (a ≤ ·) then some (a :: r) else none
 
-/-- **The rule members**: every list of one or two functions over the menu (two of one signature make a pool). -/
+/-- Reset representatives use the existing static-array declaration and the ordinary return-body generator. -/
+def resetMitglieder : List Spez :=
+  [{ globs := [{ typ := .arr (.int 0 1) 1 }] },
+   { globs := [{ typ := .arr (.int 1 1) 1 }] }]
+
+/-- **The rule members**: every list of one or two functions over the menu (two of one signature make a pool),
+    followed by the two reset declarations. Appending preserves every earlier member index. -/
 def regelMitglieder : List Spez :=
-  ((List.range 2).flatMap fun k => multimengen (k + 1) regelSigs.length).map fun fns =>
-    { regelBasis with sigs := regelSigs, fns := fns }
+  (((List.range 2).flatMap fun k => multimengen (k + 1) regelSigs.length).map fun fns =>
+    { regelBasis with sigs := regelSigs, fns := fns }) ++ resetMitglieder
 
 end Gabbro.Grammatik.Gen

@@ -78,7 +78,7 @@ def main (args : List String) : IO UInt32 := do
       return 1
     IO.println s!"records: {dateien}"
     IO.println "kind\tcells\tbad-cells\tgood-witnessed\tbad-witnessed"
-    for c in List.range 10 do
+    for c in List.range 11 do
       let alle := zellAlle.filter fun x => x.komp == c
       for a in (alle.map (·.art)).eraseDups do
         let m := alle.filter fun x => x.art == a

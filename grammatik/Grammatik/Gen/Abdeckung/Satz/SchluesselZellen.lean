@@ -104,7 +104,7 @@ theorem gs_vertragsOrte (g : D.Fn) : vertragsOrte (P.mitRumpf r) g = vertragsOrt
 
 /-- **The cells of each component are the same** (as sets: component 2 walks the footprint and the register list,
     whose order may differ). -/
-theorem gs_zellen (c : Fin 10) (x : Zelle) :
+theorem gs_zellen (c : Fin 11) (x : Zelle) :
     x ∈ zellen (P.mitRumpf r) S fs ls cs ws c ↔ x ∈ zellen P S fs ls cs ws c := by
   rcases c with ⟨n, hn⟩
   match n, hn with
@@ -120,7 +120,8 @@ theorem gs_zellen (c : Fin 10) (x : Zelle) :
   | 7, _ => simp only [zellen, gs_schreibGetrenntW P r h, gs_schreibGetrenntZellen P r h]
   | 8, _ => simp only [zellen, gs_antsP P r h]
   | 9, _ => simp only [zellen, mitRumpf_unterbricht, gs_reachB P r h, gs_nimmtB P r h]
-  | n + 10, hn => exact absurd hn (by omega)
+  | 10, _ => rfl
+  | n + 11, hn => exact absurd hn (by omega)
 
 /-- **T1: the same cells.** -/
 theorem gs_alleZellen (x : Zelle) : x ∈ alleZellen (P.mitRumpf r) S fs ls cs ws ↔ x ∈ alleZellen P S fs ls cs ws := by
@@ -133,7 +134,7 @@ theorem gs_alleZellen (x : Zelle) : x ∈ alleZellen (P.mitRumpf r) S fs ls cs w
 theorem gs_komp (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
     (c : Fin 10) : komp (P.mitRumpf r) S fs ls cs ws c = komp P S fs ls cs ws c := by
   rw [← urteil_komp (P.mitRumpf r) S fs ls cs ws hvoll hls hcs c, ← urteil_komp P S fs ls cs ws hvoll hls hcs c]
-  exact all_mem_gleich _ (gs_zellen P r h S fs ls cs ws c)
+  exact all_mem_gleich _ (gs_zellen P r h S fs ls cs ws c.castSucc)
 
 /-- **The same verdict** of the model's Bool. -/
 theorem gs_akzeptiertX (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) :
