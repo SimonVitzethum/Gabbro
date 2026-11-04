@@ -161,6 +161,10 @@ theorem vrel_ib2 {τ1 τ2 τ : Ty} (op : IntBuiltin [τ1, τ2] τ) (x : Wert D �
 
 variable {σ₀ σ : World D} {σ₀' σ' : World D'}
 
+private theorem binary_congr {α β γ : Type} (f : α → β → γ) {a a' : α} {b b' : β}
+    (ha : a = a') (hb : b = b') : f a b = f a' b' :=
+  congr (congrArg f ha) hb
+
 private theorem index_exE_n {Γ : Ctx} {Λ : List (Res D)} {t : D.Tab}
     (i : Expr D Γ Λ (.index (D.count t))) (ρ : Env D Γ) (ρ' : Env D' (Γ.map E.tyE))
     (hi : E.VRel K (.index (D.count t)) (eval σ₀ i σ ρ) (eval σ₀' (exE E i) σ' ρ')) :
@@ -221,16 +225,19 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
   | _, _, _, .glob g _, _, _, _ => by
       simp only [exE, eval_umTy, eval]; exact h.2 g
   | _, _, _, .slot t f i _, ρ, ρ', hρ => by
-      exact treu_slot_index E K h t f (index_exE_n E K i ρ ρ' (eval_exE h₀ h i ρ ρ' hρ))
+      simpa only [exE, eval_umTy, eval] using
+        (treu_slot_index E K h t f (index_exE_n E K i ρ ρ' (eval_exE h₀ h i ρ ρ' hρ)))
   | _, _, _, .thru _ t _ f i _, ρ, ρ', hρ => by
-      exact treu_slot_index E K h t f (index_exE_n E K i ρ ρ' (eval_exE h₀ h i ρ ρ' hρ))
+      simpa only [exE, eval_umTy, eval] using
+        (treu_slot_index E K h t f (index_exE_n E K i ρ ρ' (eval_exE h₀ h i ρ ρ' hρ)))
   | _, _, _, .thruOwn _ t _ f i _ _ _ _ _ _, ρ, ρ', hρ => by
-      exact treu_slot_index E K h t f (index_exE_n E K i ρ ρ' (eval_exE h₀ h i ρ ρ' hρ))
+      simpa only [exE, eval_umTy, eval] using
+        (treu_slot_index E K h t f (index_exE_n E K i ρ ρ' (eval_exE h₀ h i ρ ρ' hρ)))
   | _, _, _, .ptrOf _ _ _ _, _, _, _ => rfl
   | _, _, _, .fnref _ _ _, _, _, _ => Or.inl rfl
   | _, _, _, .refEq a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      exact congrArg2 (fun (a b : Nat) => decide (a = b)) ha hb
+      exact binary_congr (fun (a b : Nat) => decide (a = b)) ha hb
   | _, _, _, .slotRef r t _ _ f _, ρ, ρ', hρ => by
       have hr := eval_exE h₀ h r ρ ρ' hρ
       simp only [VRel] at hr
@@ -240,34 +247,35 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
   | _, _, _, .oldG g _, _, _, _ => by
       simp only [exE, eval_umTy, eval]; exact h₀.2 g
   | _, _, _, .oldS t f i _, ρ, ρ', hρ => by
-      exact treu_slot_index E K h₀ t f (index_exE_n E K i ρ ρ' (eval_exE h₀ h i ρ ρ' hρ))
+      simpa only [exE, eval_umTy, eval] using
+        (treu_slot_index E K h₀ t f (index_exE_n E K i ρ ρ' (eval_exE h₀ h i ρ ρ' hρ)))
   | _, _, _, .widen h1 h2 a, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ
       exact congrArg (Zahl.weiter h1 h2) ha
   | _, _, _, .add a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      exact congrArg2 Zahl.add ha hb
+      exact binary_congr Zahl.add ha hb
   | _, _, _, .sub a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      exact congrArg2 Zahl.sub ha hb
+      exact binary_congr Zahl.sub ha hb
   | _, _, _, .neg a, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ
       exact congrArg Zahl.neg ha
   | _, _, _, .mul a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      exact congrArg2 Zahl.mul ha hb
+      exact binary_congr Zahl.mul ha hb
   | _, _, _, .div h0 h1 a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      exact congrArg2 (Zahl.div h0 h1) ha hb
+      exact binary_congr (Zahl.div h0 h1) ha hb
   | _, _, _, .rem h0 h1 a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      exact congrArg2 (Zahl.rem h0 h1) ha hb
+      exact binary_congr (Zahl.rem h0 h1) ha hb
   | _, _, _, .sdiv h0 a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      exact congrArg2 (Zahl.sdiv h0) ha hb
+      exact binary_congr (Zahl.sdiv h0) ha hb
   | _, _, _, .srem h0 a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      exact congrArg2 (Zahl.srem h0) ha hb
+      exact binary_congr (Zahl.srem h0) ha hb
   | _, _, _, .getBytes t f hf n i _ _ _, ρ, ρ', hρ => by
       have hi := eval_exE h₀ h i ρ ρ' hρ
       simp only [VRel] at hi ⊢
@@ -278,40 +286,40 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
       exact congrArg bytesZuZahl (E.bytesAb_treu K h σ rfl t f hf _ n _)
   | _, _, _, .band h0 h1 a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      exact congrArg2 (Zahl.band h0 h1) ha hb
+      exact binary_congr (Zahl.band h0 h1) ha hb
   | _, _, _, .bor w h0 h1 hw0 hw1 a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      exact congrArg2 (Zahl.bor w h0 h1 hw0 hw1) ha hb
+      exact binary_congr (Zahl.bor w h0 h1 hw0 hw1) ha hb
   | _, _, _, .bxor w h0 h1 hw0 hw1 a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      exact congrArg2 (Zahl.bxor w h0 h1 hw0 hw1) ha hb
+      exact binary_congr (Zahl.bxor w h0 h1 hw0 hw1) ha hb
   | _, _, _, .shl w hw0 hw1 h0 h1 a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      exact congrArg2 (Zahl.shl w hw0 hw1 h0 h1) ha hb
+      exact binary_congr (Zahl.shl w hw0 hw1 h0 h1) ha hb
   | _, _, _, .shr w hw0 hw1 h0 h1 a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      exact congrArg2 (Zahl.shr w hw0 hw1 h0 h1) ha hb
+      exact binary_congr (Zahl.shr w hw0 hw1 h0 h1) ha hb
   | _, _, _, .lt a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      exact congrArg2 (fun (a : Zahl _ _) (b : Zahl _ _) => decide (a.n < b.n)) ha hb
+      exact binary_congr (fun (a : Zahl _ _) (b : Zahl _ _) => decide (a.n < b.n)) ha hb
   | _, _, _, .le a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      exact congrArg2 (fun (a : Zahl _ _) (b : Zahl _ _) => decide (a.n ≤ b.n)) ha hb
+      exact binary_congr (fun (a : Zahl _ _) (b : Zahl _ _) => decide (a.n ≤ b.n)) ha hb
   | _, _, _, .eq a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      exact congrArg2 (fun (a : Zahl _ _) (b : Zahl _ _) => decide (a.n = b.n)) ha hb
+      exact binary_congr (fun (a : Zahl _ _) (b : Zahl _ _) => decide (a.n = b.n)) ha hb
   | _, _, _, .fllt a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      exact congrArg2 (fun (a : Gleit _ _) (b : Gleit _ _) => gleitLt a.x b.x) ha hb
+      exact binary_congr (fun (a : Gleit _ _) (b : Gleit _ _) => gleitLt a.x b.x) ha hb
   | _, _, _, .flle a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      exact congrArg2 (fun (a : Gleit _ _) (b : Gleit _ _) => gleitLe a.x b.x) ha hb
+      exact binary_congr (fun (a : Gleit _ _) (b : Gleit _ _) => gleitLe a.x b.x) ha hb
   | _, _, _, .and a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      exact congrArg2 (fun (a b : Bool) => wahr? a && wahr? b) ha hb
+      exact binary_congr (fun (a b : Bool) => wahr? a && wahr? b) ha hb
   | _, _, _, .or a b, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
-      exact congrArg2 (fun (a b : Bool) => wahr? a || wahr? b) ha hb
+      exact binary_congr (fun (a b : Bool) => wahr? a || wahr? b) ha hb
   | _, _, _, .not a, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ
       exact congrArg (fun a : Bool => !wahr? a) ha
@@ -351,12 +359,13 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
       exact congrArg wahr? hk
   | _, _, _, .reaches t f hf a b _, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
+      simp only [VRel, exE, eval]
       have hf' : D'.typ (E.tab t) (E.feld t f) = .opt (D'.count (E.tab t)) := by
         rw [E.typ, hf, E.count]; rfl
       let w' : Int → Option (Zahl 0 (D'.count (E.tab t) - 1)) :=
-        fun k => hf' ▸ σ'.slots (E.tab t) k (E.feld t f)
-      let w : Int → Option (Zahl 0 (D.count t - 1)) := fun k => hf ▸ σ.slots t k f
-      exact (congrArg2 (kette w' (D'.count (E.tab t)).toNat)
+        fun k => castW (D := D') hf' (σ'.slots (E.tab t) k (E.feld t f))
+      let w : Int → Option (Zahl 0 (D.count t - 1)) := fun k => castW (D := D) hf (σ.slots t k f)
+      exact (binary_congr (kette w' (D'.count (E.tab t)).toNat)
         (index_exE_n E K a ρ ρ' ha) (index_exE_n E K b ρ ρ' hb)).trans
         (kette_gleich (E.count t) w' w
           (fun k => E.opt_treu K _ _ (E.typ t f) (h.1 t k f) hf hf') _ _)
@@ -389,16 +398,16 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
       exact congrArg strLenW he
   | _, _, _, .strCat e e', ρ, ρ', hρ => by
       have he := eval_exE h₀ h e ρ ρ' hρ; have he' := eval_exE h₀ h e' ρ ρ' hρ
-      exact congrArg2 strCatW he he'
+      exact binary_congr strCatW he he'
   | _, _, _, .strGet e e', ρ, ρ', hρ => by
       have he := eval_exE h₀ h e ρ ρ' hρ; have he' := eval_exE h₀ h e' ρ ρ' hρ
-      exact congrArg2 (fun s (i : Zahl _ _) => strGetW s i.n) he he'
+      exact binary_congr (fun s (i : Zahl _ _) => strGetW s i.n) he he'
   | _, _, _, .strEq e e', ρ, ρ', hρ => by
       have he := eval_exE h₀ h e ρ ρ' hρ; have he' := eval_exE h₀ h e' ρ ρ' hρ
-      exact congrArg2 strEqW he he'
+      exact binary_congr strEqW he he'
   | _, _, _, .strLt e e', ρ, ρ', hρ => by
       have he := eval_exE h₀ h e ρ ρ' hρ; have he' := eval_exE h₀ h e' ρ ρ' hρ
-      exact congrArg2 strLtW he he'
+      exact binary_congr strLtW he he'
   | _, _, _, .strWeit m e, ρ, ρ', hρ => by
       have he := eval_exE h₀ h e ρ ρ' hρ
       exact congrArg (strWeitW m) he
@@ -408,7 +417,7 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
       exact related_if (E.VRel K _) (fun b : Bool => b = true) (congrArg wahr? hc) ha hb
   | _, _, _, .eng e lo' hi' s, ρ, ρ', hρ => by
       have he := eval_exE h₀ h e ρ ρ' hρ; have hs := eval_exE h₀ h s ρ ρ' hρ
-      exact congrArg2 (fun (v : Zahl _ _) (s : Zahl lo' hi') =>
+      exact binary_congr (fun (v : Zahl _ _) (s : Zahl lo' hi') =>
         if h : lo' ≤ v.n ∧ v.n ≤ hi' then (⟨v.n, h.1, h.2⟩ : Zahl lo' hi') else s) he hs
   | _, _, _, .intBuiltin1 op a, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ
@@ -435,7 +444,7 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
   | _, _, _, .prodSet v i e, ρ, ρ', hρ => by
       have hv := eval_exE h₀ h v ρ ρ' hρ
       have he := E.valZ_vrel K _ (eval_exE h₀ h e ρ ρ' hρ)
-      exact (restrict_prod_set E K i _ _).trans (congrArg2 (prodSetW i) hv he)
+      exact (restrict_prod_set E K i _ _).trans (binary_congr (prodSetW i) hv he)
 
 /-- Payloads. -/
 theorem evalNutz_exN (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speicher σ') :
