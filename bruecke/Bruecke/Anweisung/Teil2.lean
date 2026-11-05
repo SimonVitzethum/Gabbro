@@ -15,8 +15,10 @@ variable {u : UProg}
 /-- No aggregate field: the value writers answer nothing, and the statement reader takes the number
     writers. -/
 theorem lowStmt_assign (hT : TabEindeutig u) (c : Fin u.fns.length) (b f : String) (ix : UIdx)
-    (v : USide) : lowStmt u c (.assign b f ix v) = lowAssignDurch u c b f ix v := by
-  have hn : lowAssignDurchW (l := false) u c (ctxOf u c) (fnAt u c) (resOf u c) b f ix v = none := by
+    (v : USide) (Λ : List (Res (declOf u)) := resOf u c) :
+    lowStmt u c (.assign b f ix v) (Λ := Λ) =
+      (lowAssignDurch u c b f ix v (Λ := Λ)).map (fun st => ⟨Λ, st⟩) := by
+  have hn : lowAssignDurchW (l := false) u c (ctxOf u c) (fnAt u c) Λ b f ix v = none := by
     unfold lowAssignDurchW
     split
     · rfl
@@ -32,8 +34,10 @@ theorem lowStmt_assign (hT : TabEindeutig u) (c : Fin u.fns.length) (b f : Strin
   rfl
 
 theorem lowStmt_assignTab (hT : TabEindeutig u) (c : Fin u.fns.length) (b f : String) (ix : UIdx)
-    (v : USide) : lowStmt u c (.assignTab b f ix v) = lowAssignTab u c b f ix v := by
-  have hn : lowAssignTabW (l := false) u c (ctxOf u c) (fnAt u c) (resOf u c) b f ix v = none := by
+    (v : USide) (Λ : List (Res (declOf u)) := resOf u c) :
+    lowStmt u c (.assignTab b f ix v) (Λ := Λ) =
+      (lowAssignTab u c b f ix v (Λ := Λ)).map (fun st => ⟨Λ, st⟩) := by
+  have hn : lowAssignTabW (l := false) u c (ctxOf u c) (fnAt u c) Λ b f ix v = none := by
     unfold lowAssignTabW
     split
     · rfl
@@ -43,8 +47,9 @@ theorem lowStmt_assignTab (hT : TabEindeutig u) (c : Fin u.fns.length) (b f : St
   simp only [lowStmt, lowStmtL, hn, Option.getD_none]
   rfl
 
-theorem lowStmt_call (c : Fin u.fns.length) (g : String) (as : List UArg) :
-    lowStmt u c (.call g as) = lowCall u c g as := rfl
+theorem lowStmt_call (c : Fin u.fns.length) (g : String) (as : List UArg)
+    (Λ : List (Res (declOf u)) := resOf u c) :
+    lowStmt u c (.call g as) (Λ := Λ) = lowCall u c g as (Λ := Λ) := rfl
 
 /-- The callee's LRel in its Body entry state. -/
 theorem lrel_bindAll {D : Deklaration} {Γ : Ctx} (fn : UFn) (ρ : Env D Γ)
@@ -126,26 +131,20 @@ theorem lowRufKopf_ok {c : Fin u.fns.length} {Γ : Ctx} {fn : UFn} {Λ : List (R
     · rename_i a ha
       split at h
       · rename_i hW
-        split at h
-        · split at h
-          · split at h
-            · split at h
-              · cases h
-                exact ⟨hc, ha, hW⟩
-              · cases h
-            · cases h
-          · cases h
-        · cases h
+        repeat' split at h
+        all_goals cases h
+        exact ⟨hc, ha, hW⟩
       · cases h
 
 /-- **A direct call.** On the G side the call asks the handler `R` for the callee at the read
     world `σr` with the evaluated arguments `envA`, and takes its answer; on the Body side the step
     asks the environment for the callee at the entry state `⟨s.world, bindAll … (envVals envA) …⟩`
     (the callee's precondition holds there) and takes its world. -/
-theorem lowCall_sim (c : Fin u.fns.length) {cname : String} {args : List UArg}
-    {g : Stmt (declOf u) (verOf u c) false (ctxOf u c) (resOf u c) (resOf u c)}
+theorem lowCall_sim (c : Fin u.fns.length) {Λ Λ' : List (Res (declOf u))}
+    {cname : String} {args : List UArg}
+    {g : Stmt (declOf u) (verOf u c) false (ctxOf u c) Λ Λ'}
     {bst : Gabbro.Body.Stmt}
-    (h : lowCall u c cname args = .ok g)
+    (h : lowCall u c cname args (Λ := Λ) = .ok ⟨Λ', g⟩)
     (hb : stmtBody u (fnAt u c) (.call cname args) = some bst)
     (hA : ArtStimmt (fnAt u c)) (hT : TabEindeutig u) (hN : ∀ c', NamenEindeutig (fnAt u c'))
     (hKinds : ∀ c', ∀ k ∈ (fnAt u c').kinds, ArtSchlicht k = true)
@@ -185,7 +184,7 @@ theorem lowCall_sim (c : Fin u.fns.length) {cname : String} {args : List UArg}
         rw [hes] at hb
         simp only [Option.some.injEq] at hb
         subst hb
-        let σr := σ.lese (resOf u c) a.orte
+        let σr := σ.lese Λ a.orte
         have hWr' : WRel u σr s.world := wrel_slots u rfl hW
         have hev := lowCallArgsAux_sim c hA hT (hN c) σr σr ρ s hWr' hL _ _ _ a es
           (hKinds callee) ha hes
@@ -197,9 +196,7 @@ theorem lowCall_sim (c : Fin u.fns.length) {cname : String} {args : List UArg}
         refine ⟨callee, σr, evalArgs σr a σr ρ, (fnIdx_name _ _ _ hcallee).symm, hfs, rfl,
           fun ρB => ?_, hLc, hpre, ?_, hWr⟩
         · simp only [Gabbro.Body.step, hev, hpre]
-        · rw [execStmt_heq O passes R (nach_eq u callee (resOf u c)).symm _ _
-            (castNachStmt_heq c callee _) σ ρ]
-          simp only [execStmt]
+        · simp only [execStmt]
           cases hR : R callee σr (evalArgs σr a σr ρ) with
           | ok σ' v => exact .inl ⟨σ', v, rfl, rfl⟩
           | why σ' r => exact absurd r.isLt (by simp only at hr; omega)
@@ -217,26 +214,42 @@ theorem stmtBody_nomark (f : UFn) (st : UStmt) (h : (stmtBody u f st).isSome = t
 /-- The cons step of the body reader for a statement the bridge accepts (a write or a direct
     call: the reader's last case, one statement and the rest). -/
 theorem lowBody_cons_ok (c : Fin u.fns.length) (r : URet) (s : UStmt) (ss : List UStmt)
-    (h : (stmtBody u (fnAt u c) s).isSome = true) {b0 : Endblock (declOf u) (verOf u c) false
-      (ctxOf u c) (resOf u c)} (hb : lowBody u c (s :: ss) r = .ok b0) :
-    ∃ st e, lowStmt u c s = .ok st ∧ lowBody u c ss r = .ok e ∧ b0 = Endblock.cons st e := by
-  have key : ∀ n, lowBodyF u c (ctxOf u c) (fnAt u c) (n + 1) (s :: ss) r = .ok b0 →
-      ∃ st e, lowStmt u c s = .ok st ∧ lowBodyF u c (ctxOf u c) (fnAt u c) n ss r = .ok e ∧
-        b0 = Endblock.cons st e := by
-    intro n hn
+    (h : (stmtBody u (fnAt u c) s).isSome = true) {Λ : List (Res (declOf u))}
+    {b0 : Endblock (declOf u) (verOf u c) false (ctxOf u c) Λ}
+    (hb : lowBodyAt u c Λ (s :: ss) r = .ok b0) :
+    ∃ (Λ' : List (Res (declOf u))) (st : Stmt (declOf u) (verOf u c) false (ctxOf u c) Λ Λ')
+      (e : Endblock (declOf u) (verOf u c) false (ctxOf u c) Λ'),
+      lowStmt u c s (Λ := Λ) = .ok ⟨Λ', st⟩ ∧
+        lowBodyAt u c Λ' ss r = .ok e ∧ b0 = Endblock.cons st e := by
+  have dispatch (n : Nat) : lowBodyF u c (ctxOf u c) (fnAt u c) (n + 1) Λ (s :: ss) r =
+      (match lowStmt u c s (Λ := Λ) with
+      | .error error => .error error
+      | .ok ⟨Λ', st⟩ =>
+        match lowBodyF u c (ctxOf u c) (fnAt u c) n Λ' ss r with
+        | .error error => .error error
+        | .ok ending => .ok (Endblock.cons st ending)) := by
     cases s
-    case assign | assignTab | call =>
-      rw [lowBodyF] at hn
-      all_goals first | (intros; contradiction) | skip
-      split at hn
-      · cases hn
-      · rename_i st hst
-        split at hn
-        · cases hn
-        · rename_i e he
-          cases hn
-          exact ⟨st, e, hst, he, rfl⟩
+    case assign | assignTab | call => rfl
     all_goals simp [stmtBody] at h
+  have key : ∀ n, lowBodyF u c (ctxOf u c) (fnAt u c) (n + 1) Λ (s :: ss) r = .ok b0 →
+      ∃ (Λ' : List (Res (declOf u))) (st : Stmt (declOf u) (verOf u c) false (ctxOf u c) Λ Λ')
+        (e : Endblock (declOf u) (verOf u c) false (ctxOf u c) Λ'),
+        lowStmt u c s (Λ := Λ) = .ok ⟨Λ', st⟩ ∧
+          lowBodyF u c (ctxOf u c) (fnAt u c) n Λ' ss r = .ok e ∧ b0 = Endblock.cons st e := by
+    intro n hn
+    rw [dispatch] at hn
+    cases hst : lowStmt u c s (Λ := Λ) with
+    | error error => rw [hst] at hn; cases hn
+    | ok result =>
+      obtain ⟨Λ', st⟩ := result
+      rw [hst] at hn
+      dsimp only at hn
+      cases he : lowBodyF u c (ctxOf u c) (fnAt u c) n Λ' ss r with
+      | error error => rw [he] at hn; cases hn
+      | ok e =>
+        rw [he] at hn
+        cases hn
+        exact ⟨Λ', st, e, hst, he, rfl⟩
   exact key _ hb
 
 theorem stmtsBody_isSome {f : UFn} {ss : List UStmt} {bs : List Gabbro.Body.Stmt}

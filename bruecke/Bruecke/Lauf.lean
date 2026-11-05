@@ -206,9 +206,10 @@ theorem lauf {P : Programm (declOf u)} (G : Gesenkt u P) (S : Stimmig u) (c : Fi
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
     (hRR : RespektiertRahmen P R) (r : URet) (eB : List Gabbro.Body.Stmt)
     (hr : endBody u (fnAt u c) r = some eB) :
-    ∀ (ss : List UStmt) (b0 : Endblock (declOf u) (verOf u c) false (ctxOf u c) (resOf u c))
+    ∀ (ss : List UStmt) {Λ : List (Res (declOf u))}
+      (b0 : Endblock (declOf u) (verOf u c) false (ctxOf u c) Λ)
       (bs : List Gabbro.Body.Stmt),
-      lowBody u c ss r = .ok b0 → stmtsBody u (fnAt u c) ss = some bs →
+      lowBodyAt u c Λ ss r = .ok b0 → stmtsBody u (fnAt u c) ss = some bs →
       ∀ (σ : World (declOf u)) (ρ : Env (declOf u) (ctxOf u c)) (s : Gabbro.Body.State),
         WRel u σ s.world → LRel (fnAt u c) 0 ρ s.local' →
         (∀ e, execEnd O passes R b0 σ ρ = .logik e →
@@ -220,18 +221,18 @@ theorem lauf {P : Programm (declOf u)} (G : Gesenkt u P) (S : Stimmig u) (c : Fi
                 Gabbro.Body.finalValue (Gabbro.Body.exec ρB (bs ++ eB) s) =
                   ergValOf (verOf u c).erg v ∧
                 WRel u σ' s'.world)
-  | [], b0, bs, hlow, hbs, σ, ρ, s, hW, hL => by
+  | [], Λ, b0, bs, hlow, hbs, σ, ρ, s, hW, hL => by
       simp only [stmtsBody, Option.some.injEq] at hbs
       subst hbs
-      simp only [lowBody, List.length_nil, lowBodyF] at hlow
+      simp only [lowBodyAt, List.length_nil, lowBodyF] at hlow
       obtain ⟨σ', v, hex, hsl, hB⟩ := lowEnd_sim c hlow hr (S.art c) S.tab O passes R σ ρ s hW hL
       refine ⟨fun e h => (by rw [hex] at h; cases h), fun σ'' v' h => ?_⟩
       rw [hex] at h
       cases h
       refine ⟨[], by simp, by simp [Oben], List.Pairwise.nil, fun ρB _ _ =>
         ⟨s, (hB ρB).1, (hB ρB).2, wrel_slots u hsl hW⟩⟩
-  | st :: ss, b0, bs, hlow, hbs, σ, ρ, s, hW, hL => by
-      obtain ⟨gst, rest, hgst, hrest, rfl⟩ :=
+  | st :: ss, Λ, b0, bs, hlow, hbs, σ, ρ, s, hW, hL => by
+      obtain ⟨Λ', gst, rest, hgst, hrest, rfl⟩ :=
         lowBody_cons_ok c r st ss (stmtsBody_isSome hbs st List.mem_cons_self) hlow
       simp only [stmtsBody] at hbs
       split at hbs
@@ -271,15 +272,26 @@ theorem lauf {P : Programm (declOf u)} (G : Gesenkt u P) (S : Stimmig u) (c : Fi
         cases st
         case assign b fname ix val =>
           rw [lowStmt_assign S.tab] at hgst
-          obtain ⟨σ₁, cn, k, fld, v', hex, hstep, hW₁, _⟩ :=
-            lowAssignDurch_sim c hgst hx (S.art c) S.tab O passes R σ ρ s hW hL
-          exact schreib σ₁ cn k fld v' hex hstep hW₁
+          cases stored : lowAssignDurch u c b fname ix val (Λ := Λ) with
+          | error error => simp only [stored, Except.map] at hgst; cases hgst
+          | ok statement =>
+            simp only [stored, Except.map] at hgst
+            cases hgst
+            obtain ⟨σ₁, cn, k, fld, v', hex, hstep, hW₁, _⟩ :=
+              lowAssignDurch_sim c stored hx (S.art c) S.tab O passes R σ ρ s hW hL
+            exact schreib σ₁ cn k fld v' hex hstep hW₁
         case assignTab b fname ix val =>
           rw [lowStmt_assignTab S.tab] at hgst
-          obtain ⟨σ₁, cn, k, fld, v', hex, hstep, hW₁, _⟩ :=
-            lowAssignTab_sim c hgst hx (S.art c) S.tab O passes R σ ρ s hW hL
-          exact schreib σ₁ cn k fld v' hex hstep hW₁
+          cases stored : lowAssignTab u c b fname ix val (Λ := Λ) with
+          | error error => simp only [stored, Except.map] at hgst; cases hgst
+          | ok statement =>
+            simp only [stored, Except.map] at hgst
+            cases hgst
+            obtain ⟨σ₁, cn, k, fld, v', hex, hstep, hW₁, _⟩ :=
+              lowAssignTab_sim c stored hx (S.art c) S.tab O passes R σ ρ s hW hL
+            exact schreib σ₁ cn k fld v' hex hstep hW₁
         case call cname args =>
+          rw [lowStmt_call] at hgst
           obtain ⟨callee, σr, envA, hname, hfs, hsl, hstep, hLt, _, hcases, _⟩ :=
             lowCall_sim c hgst hx (S.art c) S.tab S.namen (fun c' => (S.art c').2.1) O passes R σ ρ s hW hL
           have hWr : WRel u σr s.world := wrel_slots u hsl hW

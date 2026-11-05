@@ -35,8 +35,9 @@ theorem any_mem {l : List String} {x : String} (h : l.any (· == x) = true) : x 
 /-- A lowered body statement writes a carrier the function declares, or calls a function it
     finds by name whose declared writes are its own. -/
 theorem stmt_statisch (S : Stimmig u) (c : Fin u.fns.length) (st : UStmt)
-    {g : Stmt (declOf u) (verOf u c) false (ctxOf u c) (resOf u c) (resOf u c)}
-    (h : lowStmt u c st = .ok g) {bst : Gabbro.Body.Stmt}
+    {Λ Λ' : List (Res (declOf u))}
+    {g : Stmt (declOf u) (verOf u c) false (ctxOf u c) Λ Λ'}
+    (h : lowStmt u c st (Λ := Λ) = .ok ⟨Λ', g⟩) {bst : Gabbro.Body.Stmt}
     (hb : stmtBody u (fnAt u c) st = some bst) :
     (∃ cn idx fld ve, bst = .assign cn idx fld ve ∧ cn ∈ (fnAt u c).puts) ∨
     (∃ cname ps es pre gf, bst = .call cname ps es pre ∧ fnSuch u cname = some gf ∧
@@ -44,49 +45,61 @@ theorem stmt_statisch (S : Stimmig u) (c : Fin u.fns.length) (st : UStmt)
   cases st
   case assign b fname ix v =>
     rw [lowStmt_assign S.tab] at h
-    simp only [lowAssignDurch, lowAssignDurchL, bind, Except.bind] at h
-    repeat' split at h
-    all_goals try cases h
-    all_goals
-      match goal with
-      | hv : lowVar (ctxOf u c) ?j
-          (.ptr ⟨?space, ⟨?read, true, ?owner⟩, .table ?num⟩) = .ok ?pv,
-        hj : paramPos (fnAt u c).params b = .ok ?j,
-        hw : writesAt u (fnAt u c) ⟨?num, ?hlt⟩ = true |- _ =>
+    cases stored : lowAssignDurch u c b fname ix v (Λ := Λ) with
+    | error error => simp only [stored, Except.map] at h; cases h
+    | ok statement =>
+      simp only [stored, Except.map] at h
+      cases h
+      have h := stored
+      simp only [lowAssignDurch, lowAssignDurchL, bind, Except.bind, Except.map] at h
+      repeat' split at h
+      all_goals try cases h
+      all_goals
+        match goal with
+        | hv : lowVar (ctxOf u c) ?j
+            (.ptr ⟨?space, ⟨?read, true, ?owner⟩, .table ?num⟩) = .ok ?pv,
+          hj : paramPos (fnAt u c).params b = .ok ?j,
+          hw : writesAt u (fnAt u c) ⟨?num, ?hlt⟩ = true |- _ =>
+          left
+          have hparam : ((fnAt u c).params[j]?).map (·.2) =
+              some (.ptr ⟨space, ⟨read, true, owner⟩, .table num⟩) := by
+            simpa only [ctxOf, List.getElem?_map] using
+              (lowVar_typ (ctxOf u c) j _ pv hv)
+          have hpt := ptrTab_of_type (fnAt u c) b j num read true hj hparam hlt
+          simp only [stmtBody, hpt] at hb
+          cases hsv : sideExpr u (fnAt u c) v with
+          | none => rw [hsv] at hb; cases hb
+          | some ve =>
+            rw [hsv] at hb
+            cases hb
+            exact ⟨_, _, _, _, rfl, any_mem hw⟩
+  case assignTab b fname ix v =>
+    rw [lowStmt_assignTab S.tab] at h
+    cases stored : lowAssignTab u c b fname ix v (Λ := Λ) with
+    | error error => simp only [stored, Except.map] at h; cases h
+    | ok statement =>
+      simp only [stored, Except.map] at h
+      cases h
+      have h := stored
+      simp only [lowAssignTab, lowAssignTabL] at h
+      split at h
+      · cases h
+      · rename_i t ht
+        repeat' split at h
+        all_goals try cases h
+        rename_i hw
         left
-        have hparam : ((fnAt u c).params[j]?).map (·.2) =
-            some (.ptr ⟨space, ⟨read, true, owner⟩, .table num⟩) := by
-          simpa only [ctxOf, List.getElem?_map] using
-            (lowVar_typ (ctxOf u c) j _ pv hv)
-        have hpt := ptrTab_of_type (fnAt u c) b j num read true hj hparam hlt
-        simp only [stmtBody, hpt] at hb
+        simp only [stmtBody] at hb
         cases hsv : sideExpr u (fnAt u c) v with
         | none => rw [hsv] at hb; cases hb
         | some ve =>
           rw [hsv] at hb
           cases hb
-          exact ⟨_, _, _, _, rfl, any_mem hw⟩
-  case assignTab b fname ix v =>
-    rw [lowStmt_assignTab S.tab] at h
-    simp only [lowAssignTab, lowAssignTabL] at h
-    split at h
-    · cases h
-    · rename_i t ht
-      repeat' split at h
-      all_goals try cases h
-      rename_i hw
-      left
-      simp only [stmtBody] at hb
-      cases hsv : sideExpr u (fnAt u c) v with
-      | none => rw [hsv] at hb; cases hb
-      | some ve =>
-        rw [hsv] at hb
-        cases hb
-        have hn := tabIdx_name _ _ _ ht
-        have hw' : writesAt u (fnAt u c) t = true := hw
-        unfold writesAt at hw'
-        rw [show (tabAt u t).name = b from hn] at hw'
-        exact ⟨_, _, _, _, rfl, any_mem hw'⟩
+          have hn := tabIdx_name _ _ _ ht
+          have hw' : writesAt u (fnAt u c) t = true := hw
+          unfold writesAt at hw'
+          rw [show (tabAt u t).name = b from hn] at hw'
+          exact ⟨_, _, _, _, rfl, any_mem hw'⟩
   case call cname args =>
     rw [lowStmt_call] at h
     unfold lowCall lowCallL at h
@@ -114,15 +127,18 @@ theorem stmt_statisch (S : Stimmig u) (c : Fin u.fns.length) (st : UStmt)
 /-! ## 2. The Body frame of a body -/
 
 theorem lowBody_stmts (c : Fin u.fns.length) (r : URet) : ∀ (ss : List UStmt)
-    (b0 : Endblock (declOf u) (verOf u c) false (ctxOf u c) (resOf u c)),
+    (Λ : List (Res (declOf u))) (b0 : Endblock (declOf u) (verOf u c) false (ctxOf u c) Λ),
     (∀ st ∈ ss, (stmtBody u (fnAt u c) st).isSome = true) →
-    lowBody u c ss r = .ok b0 → ∀ st ∈ ss, ∃ g, lowStmt u c st = .ok g
-  | [], _, _, _, st, hm => absurd hm List.not_mem_nil
-  | s :: ss, b0, hsome, h, st, hm => by
-      obtain ⟨g, rest, hg, hrest, rfl⟩ := lowBody_cons_ok c r s ss (hsome s List.mem_cons_self) h
+    lowBodyAt u c Λ ss r = .ok b0 → ∀ st ∈ ss,
+      ∃ (H : List (Res (declOf u)))
+        (g : Σ H', Stmt (declOf u) (verOf u c) false (ctxOf u c) H H'),
+        lowStmt u c st (Λ := H) = .ok g
+  | [], _, _, _, _, st, hm => absurd hm List.not_mem_nil
+  | s :: ss, Λ, b0, hsome, h, st, hm => by
+      obtain ⟨Λ', g, rest, hg, hrest, rfl⟩ := lowBody_cons_ok c r s ss (hsome s List.mem_cons_self) h
       rcases List.mem_cons.mp hm with rfl | hm
-      · exact ⟨g, hg⟩
-      · exact lowBody_stmts c r ss rest (fun x hx => hsome x (List.mem_cons_of_mem _ hx)) hrest st hm
+      · exact ⟨Λ, ⟨Λ', g⟩, hg⟩
+      · exact lowBody_stmts c r ss Λ' rest (fun x hx => hsome x (List.mem_cons_of_mem _ hx)) hrest st hm
 
 theorem step_assign (ρ : Gabbro.Body.Env) (cn : String) (idx : Gabbro.Body.Expr) (fld : String)
     (ve : Gabbro.Body.Expr) (t : Gabbro.Body.State) :
@@ -168,7 +184,9 @@ theorem exec_rets (ρ : Gabbro.Body.Env) : ∀ (eB : List Gabbro.Body.Stmt),
 theorem exec_rahmen (S : Stimmig u) (c : Fin u.fns.length) (ρ : Gabbro.Body.Env)
     (eB : List Gabbro.Body.Stmt) (heB : ∀ x ∈ eB, ∃ e, x = .ret (some e)) :
     ∀ (ss : List UStmt) (bs : List Gabbro.Body.Stmt),
-      (∀ st ∈ ss, ∃ g, lowStmt u c st = .ok g) → stmtsBody u (fnAt u c) ss = some bs →
+      (∀ st ∈ ss, ∃ (Λ : List (Res (declOf u)))
+        (g : Σ Λ', Stmt (declOf u) (verOf u c) false (ctxOf u c) Λ Λ'),
+        lowStmt u c st (Λ := Λ) = .ok g) → stmtsBody u (fnAt u c) ss = some bs →
       (∀ cname gf, fnSuch u cname = some gf → (∃ args, UStmt.call cname args ∈ ss) →
         Gabbro.Body.Frame ρ cname gf.puts) →
       ∀ t s', Gabbro.Body.finalState (Gabbro.Body.exec ρ (bs ++ eB) t) = some s' →
@@ -183,7 +201,7 @@ theorem exec_rahmen (S : Stimmig u) (c : Fin u.fns.length) (ρ : Gabbro.Body.Env
       · rename_i x xs hx hxs
         simp only [Option.some.injEq] at hbs
         subst hbs
-        obtain ⟨g, hg⟩ := hlow st (List.mem_cons_self ..)
+        obtain ⟨Λ, ⟨Λ', g⟩, hg⟩ := hlow st (List.mem_cons_self ..)
         have IH := exec_rahmen S c ρ eB heB ss xs (fun st' hm => hlow st' (List.mem_cons_of_mem _ hm))
           hxs (fun cn gf hgf ⟨args, hm⟩ => hF cn gf hgf ⟨args, List.mem_cons_of_mem _ hm⟩)
         rcases stmt_statisch S c st hg hx with ⟨cn, idx, fld, ve, rfl, hcn⟩ |
@@ -397,7 +415,8 @@ theorem realisiert (S : Stimmig u)
               · rw [hz, Option.getD_some]
                 split
                 · rename_i s' hs'
-                  exact exec_rahmen S c ρk eB heBr _ bs (lowBody_stmts c _ _ b0 (stmtsBody_isSome hbs) hb0) hbs
+                  exact exec_rahmen S c ρk eB heBr _ bs
+                    (lowBody_stmts c _ _ (resOf u c) b0 (stmtsBody_isSome hbs) hb0) hbs
                     (fun cn gf' hgf' hm => (hcallee cn gf' hgf' hm).2) t s' hs' p hp
                 · rfl
               · rfl
