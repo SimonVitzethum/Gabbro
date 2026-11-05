@@ -43,7 +43,8 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   The generic constant source packet and all-guard call-head certificates also pass direct checks;
   the complete call-check admission and floor witness modules now build through the shared assembly
   certificate. Both integer source packets, including computed initialization, build; the final
-  initializer compiler packet has named array/literal certificates under kernel revalidation. Other concrete constant
+  initializer compiler packet and its `IntegerPrograms` consumer now build through named
+  array/literal, restore and acceptance certificates. Other concrete constant
   program packets remain under repair. Their downstream
   `ConstWitness`/`ConstValuesWitness` resource closure remains unmeasured after the new phase port.
   The shared complete compilation packet, hardware-free image phase/geometry theorem and the
@@ -78,8 +79,9 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   memory-high throttling in both single-module and larger integration scopes, without OOM.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
   The authorised acceptance scope is Lean and the Lean parts of GabbroV; Rust, Cargo and LLVM checks are
-  deliberately unmeasured. The owner authorises pushing once the named Lean builds and GabbroV's Lean
-  checks are green. No four-guardian green is claimed.
+  deliberately unmeasured. Work-in-progress snapshots on `dev` are owner-authorised while
+  revalidation is open; a checked release still requires the named Lean builds and GabbroV's
+  Lean checks. No four-guardian green is claimed.
   A partial successful build does not establish package-wide acceptance or admission of every source form listed below.
 - **Scoped-return model and consumers compile (2026-11-05).** Completion follows cleanup. `fertig_abschluss`
   classifies an ordinary value return or the whole completed saved value, with start reasons excluded explicitly.
