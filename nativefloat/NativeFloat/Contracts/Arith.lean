@@ -38,7 +38,7 @@ structure Format (α : Type) where
   sign : α → Nat
   /-- `value * 2^scale` is an integer for every finite value. -/
   scale : Nat
-  /-- Largest finite value, times `2^scale`. -/
+  /-- Round-to-nearest-even overflow threshold, times `2^scale`. -/
   maxScaled : Nat
 
 def Format.binary64 : Format Float where
@@ -57,7 +57,7 @@ def Format.binary32 : Format Float32 where
   parity := fun x => (x.hwToBits &&& 1).toNat
   sign := fun x => (x.hwToBits >>> 31).toNat
   scale := 149
-  maxScaled := (2 ^ 128 - 2 ^ 104) * 2 ^ 149
+  maxScaled := (2 ^ 128 - 2 ^ 103) * 2 ^ 149
 
 variable {α : Type}
 
