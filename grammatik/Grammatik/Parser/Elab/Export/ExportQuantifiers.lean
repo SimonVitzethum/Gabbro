@@ -345,6 +345,16 @@ theorem consuming_exits_refused_zeuge :
     uEndeStmt context (some (.next "node")) = .error "consuming traversal forbids next" := by
   exact ⟨rfl, rfl⟩
 
+/-- Preserve the checked position, kind and canonical variable before constructing an index. -/
+private theorem index_parameter_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) (shift position : Nat) (name : String) (table : Fin u.tabs.length) (origin : Nat)
+    (variable : Var Γ (.index ((declOf u).count table)))
+    (found : paramPos fn.params name = .ok position)
+    (kind : fn.kinds[position]? = some (.index origin))
+    (lookup : lowVar Γ (shift + position) (.index ((declOf u).count table)) = .ok variable) :
+    lowIdx u Γ Λ fn shift table (.param name) = .ok (.var variable) := by
+  simp only [lowIdx, found, kind, lookup]
+
 /-- Nonempty represented domain, two ordered index binders and a current-world count
     jointly reach the production consuming branch of the structured lowerer. -/
 theorem consuming_traversal_lower_zeuge :
@@ -356,7 +366,85 @@ theorem consuming_traversal_lower_zeuge :
       (.reach "T" "next" (.param "#consume:predecessor") (.param "node")) .tru
       (.zaehleBaum "T" "j" "next" false (.param "root") .tru) "consumes T.slots"
     (lowStructL (l := false) u caller [.index 3, .index 3] fn 2 [] []
-      header [.blkEnd]).toOption.isSome = true := by rfl
+      header [.blkEnd]).toOption.isSome = true := by
+  let fn : UFn := {relationFunction with puts := ["T"]}
+  let u : UProg := {relationUnit with fns := [fn]}
+  let caller : Fin u.fns.length := ⟨0, by decide⟩
+  let t : Fin u.tabs.length := ⟨0, by decide⟩
+  let Γ : Ctx := [.index 3, .index 3]
+  let node := fn.mitIndex "node" 0 3
+  let predecessor := node.mitIndex "#consume:predecessor" 0 3
+  let mass := USide.zaehleBaum "T" "j" "next" false (.param "root") .tru
+  change (lowStructL (l := false) u caller Γ fn 2 [] []
+    (.consumeLoopBeg "node" "T" "#consume:predecessor"
+      (.reach "T" "next" (.param "root") (.param "node"))
+      (.reach "T" "next" (.param "#consume:predecessor") (.param "node")) .tru
+      mass "consumes T.slots") [.blkEnd]).toOption.isSome = true
+  have gate : u.exportGate = .ok () := rfl
+  have found : tabIdx u.tabs "T" = .ok t := rfl
+  have guard : darf (declOf u) t [] := by
+    intro resource member
+    have empty : (declOf u).braucht t = [] := rfl
+    rw [empty] at member
+    cases member
+  have seed : lowIdx u Γ [] fn 0 t (.param "root") = .ok (.var .here) := by
+    exact index_parameter_lower u Γ [] fn 0 0 "root" t 0 .here
+      (by simp [paramPos, fn, relationFunction]) rfl (lowVar_same_head _ _)
+  have ready : (selfEdge u t "next").toOption.isSome = true := rfl
+  cases typed : selfEdge u t "next" with
+  | error error =>
+    rw [typed] at ready
+    change false = true at ready
+    cases ready
+  | ok edge =>
+    let selected : Expr (declOf u) (.index 3 :: Γ) [] .bool :=
+      .reaches t edge.field edge.self (.var (.there .here)) (.var .here) guard
+    let relation : Expr (declOf u) (.index 3 :: .index 3 :: Γ) [] .bool :=
+      .reaches t edge.field edge.self (.var .here) (.var (.there .here)) guard
+    have different : ("node" == "root") = false := by decide +kernel
+    have privateName : ("#consume:predecessor" == "node") = false := by decide +kernel
+    have members := reach_lower u (.index 3 :: Γ) [] node 0 "T" "next"
+      (.param "root") (.param "node") t edge (.var (.there .here)) (.var .here) gate found typed
+      (index_parameter_lower u (.index 3 :: Γ) [] node 0 1 "root" t 0 (.there .here)
+        (by simp [paramPos, node, UFn.mitIndex, fn, relationFunction, different])
+        rfl (lowVar_next_head _ _ _))
+      (index_parameter_lower u (.index 3 :: Γ) [] node 0 0 "node" t 0 .here
+        (by simp [paramPos, node, UFn.mitIndex]) rfl (lowVar_same_head _ _)) guard
+    have edges := reach_lower u (.index 3 :: .index 3 :: Γ) [] predecessor 0 "T" "next"
+      (.param "#consume:predecessor") (.param "node") t edge (.var .here) (.var (.there .here))
+      gate found typed
+      (index_parameter_lower u (.index 3 :: .index 3 :: Γ) [] predecessor 0 0
+        "#consume:predecessor" t 0 .here
+        (by simp [paramPos, predecessor, UFn.mitIndex]) rfl (lowVar_same_head _ _))
+      (index_parameter_lower u (.index 3 :: .index 3 :: Γ) [] predecessor 0 1 "node" t 0 (.there .here)
+        (by simp [paramPos, predecessor, node, UFn.mitIndex, privateName])
+        rfl (lowVar_next_head _ _ _)) guard
+    let count : Expr (declOf u) Γ [] (.int 0 3) := .count 3 (.and selected .tru)
+    have finite : (declOf u).offen t = false := rfl
+    have nonnegative : 0 ≤ (declOf u).count t := by decide
+    have counted : lowSeiteZ u Γ [] fn none mass =
+        .ok ({range := (0, 3), term := count} : LowSide u Γ []) := by
+      simp only [mass, lowSeiteZ, gate, found, typed, seed, ergAlsParam, bind, Except.bind,
+        finite, Bool.false_eq_true, ite_false]
+      rw [dite_eq_left nonnegative, dite_eq_left guard]
+      rfl
+    have measured : lowConsumingMass u Γ [] fn mass =
+        .ok ⟨3, Expr.widen (Int.le_refl 0) (Int.le_refl 3) count⟩ := by
+      simp [lowConsumingMass, mass, seiteAltErg, ensAltErg, counted,
+        bind, Except.bind, Except.mapError, pure, Except.pure]
+    have inside : lowSeqL (l := true) u caller (.index 3 :: Γ) node 1 [] [] [.blkEnd] =
+        .ok (⟨[], (Block.nil : Block (declOf u) (verOf u caller) true (.index 3 :: Γ) [] [])⟩,
+          [.blkEnd]) := rfl
+    have emitted := consuming_traversal_lower (loop := false) u caller Γ fn 1 [] []
+      "node" "T" "#consume:predecessor"
+      (.reach "T" "next" (.param "root") (.param "node"))
+      (.reach "T" "next" (.param "#consume:predecessor") (.param "node")) .tru mass
+      "consumes T.slots" [.blkEnd] [] t selected relation .tru 3
+      (Expr.widen (Int.le_refl 0) (Int.le_refl 3) count) Block.nil found
+      (by rfl) (by rfl) measured
+      (by simpa only [lowEns] using members) (by simpa only [lowEns] using edges) inside
+    rw [emitted]
+    rfl
 
 theorem index_scope_zeuge (entry state : World (declOf relationUnit))
     (root other binder : Zahl 0 2) :
