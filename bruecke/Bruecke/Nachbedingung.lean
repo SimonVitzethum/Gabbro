@@ -39,26 +39,29 @@ theorem lowerFnAt_ok (c : Fin u.fns.length) {v : EnsTy u c × RumpTy u c × ReqT
     ∃ e0 b0, lowEnsList u (ErgCtx (ctxOf u c) (verOf u c).erg) (verOf u c).ende (fnAt u c)
       (fnAt u c).ergTy (fnAt u c).gives = .ok e0 ∧
       lowBody u c (fnAt u c).body (fnAt u c).ret = .ok b0 ∧ HEq v.1 e0 ∧ HEq v.2.1 b0 := by
-  unfold lowerFnAt at h
-  rw [hPlain] at h
+  have h : lowerFnPlain u c = .ok v := by
+    have accepted : (if (fnAt u c).name.startsWith "#transition#" then
+        Except.error "generated transition function without declaration"
+        else lowerFnPlain u c) = .ok v := by
+      simpa only [lowerFnAt, hPlain] using h
+    by_cases generated : (fnAt u c).name.startsWith "#transition#" = true
+    · rw [if_pos generated] at accepted
+      cases accepted
+    · rw [if_neg generated] at accepted
+      exact accepted
+  unfold lowerFnPlain at h
   split at h
   · cases h
-  · rename_i hName
-    have h : lowerFnPlain u c = .ok v := h
-    clear hName
-    unfold lowerFnPlain at h
-    split at h
+  · split at h
     · cases h
-    · split at h
+    · rename_i e0 he0
+      split at h
       · cases h
-      · rename_i e0 he0
-        split at h
-        · cases h
-        · rename_i b0 hb0
-          cases h
-          refine ⟨e0, b0, he0, hb0, ?_, ?_⟩
-          · dsimp only; exact mpr2_heq _ _ _
-          · dsimp only; exact mpr2_heq _ _ _
+      · rename_i b0 hb0
+        cases h
+        refine ⟨e0, b0, he0, hb0, ?_, ?_⟩
+        · dsimp only; exact mpr_heq _ _
+        · dsimp only; exact mpr2_heq _ _ _
 
 theorem lowerAtPair_eq (f : Fin u.fns.length) (h : ∃ v, lowerFnAt u f = .ok v)
     {v : EnsTy u f × RumpTy u f × ReqTy u f} (hv : lowerFnAt u f = .ok v) : lowerAtPair u f h = v := by
