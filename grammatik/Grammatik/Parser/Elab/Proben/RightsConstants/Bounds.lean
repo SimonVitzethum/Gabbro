@@ -39,6 +39,48 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser
 open Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning
 set_option maxRecDepth 100000
 
+theorem steps_bound (pieces : List Chunk) :
+    pieces.all (fun piece => decide (piece.steps ≤ piece.characters.length)) = true →
+      steps pieces ≤ (Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces).length := by
+  induction pieces with
+  | nil => intro _; exact Nat.le_refl _
+  | cons piece pieces ih =>
+    intro bounded
+    simp only [List.all_cons, Bool.and_eq_true] at bounded
+    simp only [steps, Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters,
+      List.flatMap_cons, List.length_append]
+    exact Nat.add_le_add (of_decide_eq_true bounded.1) (ih bounded.2)
+
+/-- Proof-only composition over the original chunks, before normalizing any
+    concrete concatenation. No token or scanner data is reconstructed. -/
+structure ChunkCertificate (pieces : List Chunk) (spelling : String) : Prop where
+  text : String.ofList
+    (Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces) = spelling
+  bounded : pieces.all (fun piece => decide (piece.steps ≤ piece.characters.length)) = true
+
+theorem ChunkCertificate.empty : ChunkCertificate [] "" := ⟨rfl, rfl⟩
+
+theorem ChunkCertificate.cons {piece : Chunk} {pieces : List Chunk} {front back : String}
+    (text : String.ofList piece.characters = front)
+    (bound : decide (piece.steps ≤ piece.characters.length) = true)
+    (tail : ChunkCertificate pieces back) :
+    ChunkCertificate (piece :: pieces) (front ++ back) := by
+  constructor
+  · change String.ofList (piece.characters ++
+      Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces) = front ++ back
+    rw [String.ofList_append, text, tail.text]
+  · change (decide (piece.steps ≤ piece.characters.length) &&
+      pieces.all (fun entry => decide (entry.steps ≤ entry.characters.length))) = true
+    exact Bool.and_eq_true_iff.mpr ⟨bound, tail.bounded⟩
+
+/-- The original character-count fuel, derived while the whole chunk list is
+    still abstract rather than by normalization of a concrete concatenation. -/
+theorem ChunkCertificate.room {pieces : List Chunk} {spelling : String}
+    (certificate : ChunkCertificate pieces spelling) :
+    steps pieces ≤
+      (Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces).length + 1 :=
+  Nat.le_trans (steps_bound pieces certificate.bounded) (Nat.le_succ _)
+
 -- Separate each small numeric certificate from later multi-fragment inputs.
 scoped macro "bound_fragment " fragment:ident " as " text:str : command => do
   let bound := Lean.mkIdentFrom fragment (fragment.getId.appendAfter "_bounded")

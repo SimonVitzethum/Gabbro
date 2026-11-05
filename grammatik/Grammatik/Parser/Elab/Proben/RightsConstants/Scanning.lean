@@ -55,45 +55,34 @@ def Input.of_chunks {source : String} (pieces : List Chunk)
   ⟨Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces, Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.tokens pieces,
     text, lex_chunks pieces room⟩
 
-theorem steps_bound (pieces : List Chunk) :
-    pieces.all (fun piece => decide (piece.steps ≤ piece.characters.length)) = true →
-      steps pieces ≤ (Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces).length := by
-  induction pieces with
-  | nil => intro _; exact Nat.le_refl _
-  | cons piece pieces ih =>
-    intro bounded
-    simp only [List.all_cons, Bool.and_eq_true] at bounded
-    simp only [steps, Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters,
-      List.flatMap_cons, List.length_append]
-    exact Nat.add_le_add (of_decide_eq_true bounded.1) (ih bounded.2)
-
--- Infer the token data from the real short lexer result. The final certificate
--- checks this exact fragment again with an arbitrary scanner continuation.
+-- Compose the existing fragment evidence before constructing Input. The only
+-- closed reduction below compares Strings, never the full character-list fold.
 
 scoped macro "rights_input " source:term " with_cuts " "[" cuts:ident,* "]"
     " with_text " "[" fragments:str,* "]" : term => do
-  let text := fragments.getElems.foldl (fun text fragment => text ++ fragment.getString) ""
-  let _ := text
-  let textFacts ← cuts.getElems.mapM fun piece => do
-    let fact := Lean.mkIdentFrom piece (piece.getId.appendAfter "_text")
-    `(Lean.Parser.Tactic.simpLemma| $fact:term)
-  let mut bounded : Lean.TSyntax `term ← `(Eq.refl true)
-  for piece in cuts.getElems.reverse do
-    let proof : Lean.TSyntax `term :=
-      ⟨(Lean.mkIdentFrom piece (piece.getId.appendAfter "_bounded")).raw⟩
-    bounded ← `(Bool.and_eq_true_iff.mpr ⟨$proof, $bounded⟩)
+  unless cuts.getElems.size == fragments.getElems.size do
+    Lean.Macro.throwError "each scanner cut needs its exact original spelling"
+  let mut pieces : Lean.TSyntax `term ← `(([] : List Chunk))
+  let mut spelling : Lean.TSyntax `term ← `(("" : String))
+  let mut certificate : Lean.TSyntax `term ← `(ChunkCertificate.empty)
+  for (name, fragment) in (cuts.getElems.zip fragments.getElems).toList.reverse do
+    let piece : Lean.TSyntax `term := ⟨name.raw⟩
+    let literal : Lean.TSyntax `term := ⟨fragment.raw⟩
+    let decoded : Lean.TSyntax `term :=
+      ⟨(Lean.mkIdentFrom name (name.getId.appendAfter "_text")).raw⟩
+    let bounded : Lean.TSyntax `term :=
+      ⟨(Lean.mkIdentFrom name (name.getId.appendAfter "_bounded")).raw⟩
+    certificate ← `(ChunkCertificate.cons (piece := $piece) (pieces := $pieces)
+      (front := $literal) (back := $spelling) $decoded $bounded $certificate)
+    pieces ← `($piece :: $pieces)
+    spelling ← `($literal ++ $spelling)
   `(show Input $source from by
     let pieces : List Chunk := [$cuts,*]
-    refine Input.of_chunks (source := $source) pieces ?text ?room
-    case text =>
-      as_aux_lemma =>
-        simp only [pieces, Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters,
-          List.flatMap_cons, List.flatMap_nil, String.ofList_append, String.ofList_nil,
-          $[$textFacts],*]
-        cbv
-    case room =>
-      as_aux_lemma =>
-        exact Nat.le_trans (steps_bound pieces $bounded) (Nat.le_succ _))
+    let spelling : String := $spelling
+    have certificate : ChunkCertificate pieces spelling := by as_aux_lemma => exact $certificate
+    have original : $source = spelling := by as_aux_lemma => cbv
+    exact Input.of_chunks (source := $source) pieces
+      (original.trans certificate.text.symm) certificate.room)
 
 open scoped Gabbro.Grammatik.Parser.UebersetzeProben11.Phases
 namespace Inputs
