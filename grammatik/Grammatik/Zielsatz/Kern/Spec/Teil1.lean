@@ -217,12 +217,14 @@ theorem AkzeptiertSpec.mitAkku {P : Programm D} {S : SperrInv D} {fs ws : List D
 end Pruefer
 /-- **The checker interface.** `akzeptiert E fs ls cs` is the Bool the Rust checker computes
     on the program `E` (member lists of functions, locks, carriers); `korrekt` is its
-    soundness, the one link between the Bool and what the statement uses. -/
+    soundness under the supplied ISA-neutral CPU contract; the Bool itself
+    takes no hardware certificate. -/
 structure Pruefer where
   akzeptiert : ∀ {D : Deklaration} [DecidableEq D.Fn],
     Einheit D → List D.Fn → List D.Lock → List (D.Tab ⊕ D.Glob) → Bool
   korrekt : ∀ {D : Deklaration} [DecidableEq D.Fn] (E : Einheit D)
-    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
+    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob))
+    (hardware : RootNativeFloat.Hardware),
     akzeptiert E fs.1 ls.1 cs.1 = true → AkzeptiertSpec E.P E.S fs.1 E.ws E.akku
 /-! ## (b) What the user proves -/
 /-- Owed invariants at a REASON exit (the twin of `InvGutS`; SYNTAX.md: "owes `I` at every

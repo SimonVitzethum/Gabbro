@@ -167,7 +167,7 @@ theorem gabbro_ziel_sc_aus (h : GabbroZiel) (C : Pruefer) (D : Deklaration) [Dec
     (lebt0 : Faden → Bool) (K : FadenMaschine D.mitRuhe)
     (hK : FadenErreichbar E.P.mitRuhe O.mitRuhe passes (FadenStart E.P.mitRuhe sp init lebt0) K) :
     ZielF E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) K := by
-  have hA0 := C.korrekt E fs ls cs hC
+  have hA0 := C.korrekt E fs ls cs hH.2.2.2 hC
   have hZ := h C.alsX D E fs ls cs (C.alsX_akzeptiert hB hA hC) (nutzerPflichtA_of_akzeptiert fs.2 hA0 hN) O hH passes sp
     init hL lebt0 K (fadenErreichbarX_of hK)
   refine zielF_of_X ?_ hZ
@@ -287,7 +287,7 @@ end Verbund
 /-- **LINKING WITH THE ATOMIC RELY, PROVED.** -/
 theorem gabbro_ziel_verbund : GabbroZielVerbund := by
   intro C D _ E₁ E₂ e fs ls cs h₁ h₂ hV hS hN₁ hN₂ hQ O hH passes sp init hL lebt0 K hK
-  have hA := akzeptiertSpec_verbindeX fs.2 (C.korrekt E₁ fs ls cs h₁).1 (C.korrekt E₂ fs ls cs h₂).1
+  have hA := akzeptiertSpec_verbindeX fs.2 (C.korrekt E₁ fs ls cs hH.2.2.2 h₁).1 (C.korrekt E₂ fs ls cs hH.2.2.2 h₂).1
     hV hS
   -- the linked unit without its arenas: the linked statement claims no ownership
   let E : Einheit D := { verbinde e E₁ E₂ with arenen := [] }
@@ -331,8 +331,8 @@ theorem gabbro_ziel_verbund_sc_aus (h : GabbroZielVerbund) (C : Pruefer) (D : De
       (FadenStart (verbinde e E₁ E₂).P.mitRuhe sp init lebt0) K) :
     ZielF (verbinde e E₁ E₂).P.mitRuhe (verbinde e E₁ E₂).S.mitRuhe O.mitRuhe passes
       (RufStartG (verbinde e E₁ E₂).P.mitRuhe sp init) K := by
-  have hSpec₁ := C.korrekt E₁ fs ls cs h₁
-  have hSpec₂ := C.korrekt E₂ fs ls cs h₂
+  have hSpec₁ := C.korrekt E₁ fs ls cs hH.2.2.2 h₁
+  have hSpec₂ := C.korrekt E₂ fs ls cs hH.2.2.2 h₂
   have hZ := h C.alsX D E₁ E₂ e fs ls cs
     (C.alsX_akzeptiert hB₁ hA₁ h₁) (C.alsX_akzeptiert hB₂ hA₂ h₂) hV hS
     (nutzerTeilA_of fs.2 hSpec₁ hN₁) (nutzerTeilA_of fs.2 hSpec₂ hN₂)

@@ -293,7 +293,8 @@ structure PrueferX where
   akzeptiert : ∀ {D : Deklaration} [DecidableEq D.Fn],
     Einheit D → List D.Fn → List D.Lock → List (D.Tab ⊕ D.Glob) → Bool
   korrekt : ∀ {D : Deklaration} [DecidableEq D.Fn] (E : Einheit D)
-    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
+    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob))
+    (hardware : RootNativeFloat.Hardware),
     akzeptiert E fs.1 ls.1 cs.1 = true →
       AkzeptiertSpecX E.P E.S fs.1 E.ws E.arenen E.akku ∧ BesitzStart E ∧ Kernzelle.AkkuStart E E.akku
 

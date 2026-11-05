@@ -151,7 +151,8 @@ theorem globsOf_voll {cs : List (D.Tab ⊕ D.Glob)} (hcs : ∀ c : D.Tab ⊕ D.G
 
 /-- **`Akzeptiert` gives `AkzeptiertSpec`** (given complete member
     lists): the forward direction. The Bool's checks witness the existential field. -/
-theorem akzeptiertSpec_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
+theorem akzeptiertSpec_of [RootNativeFloat.Hardware]
+    (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) (aks : List (Kernzelle.AccumulatorDecl D)) {checks : List (CheckDecl D)}
     (h : Akzeptiert P S fs ls cs ws aks checks = true) :
     AkzeptiertSpec P S fs ws aks := by
@@ -191,7 +192,8 @@ theorem scopesOkProg_of_spec {P : Programm D} {S : SperrInv D} {fs ws : List D.F
 /-- **An `AkzeptiertSpec` value is accepted at an explicitly admitted check list**:
     the reverse direction. At the listed query axioms, the scope conjunct is derived from the floor field
     (`scopesOkProg_of_spec`), not taken as a premise. -/
-theorem spec_akzeptiert (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
+theorem spec_akzeptiert [RootNativeFloat.Hardware]
+    (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {aks : List (Kernzelle.AccumulatorDecl D)} {h : AkzeptiertSpec P S fs ws aks}
     (qs : List D.Ax) (hq : ∀ a ∈ aks, ∃ q ∈ qs, Kernzelle.KernAbfrageVerbunden P a q)
     {checks : List (CheckDecl D)} (hChecks : CheckAdmission P fs checks) :
@@ -220,7 +222,8 @@ noncomputable def akzeptiert_pruefer : Pruefer where
   akzeptiert := fun {D} _ E fs ls cs =>
     haveI : DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)
     Akzeptiert E.P E.S fs ls cs E.ws E.akku E.pruefungen
-  korrekt := fun {D} _ E fs ls cs h =>
+  korrekt := fun {D} _ E fs ls cs hardware h =>
+    letI : RootNativeFloat.Hardware := hardware
     haveI : DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)
     akzeptiertSpec_of fs.2 ls.2 cs.2 _ h
 

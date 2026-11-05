@@ -434,7 +434,7 @@ end Ruhe
 /-- **GABBRO_ZIEL WITH THE ATOMIC RELY, PROVED.** -/
 theorem gabbro_ziel : GabbroZiel := by
   intro C D _ E fs ls cs hC hN O hH passes sp init hL lebt0 K hK
-  obtain ⟨hA0, hBS, _⟩ := C.korrekt E fs ls cs hC
+  obtain ⟨hA0, hBS, _⟩ := C.korrekt E fs ls cs hH.2.2.2 hC
   have hA := akzeptiertSpecX_mitRuhe E.P fs.2 hA0
   have heq := geteiltV_mitRuhe_eq E.P (ws := E.ws) fs.2 hA0.abg
   have hN' : LogikPflichtA E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q)
@@ -455,7 +455,7 @@ theorem gabbro_ziel : GabbroZiel := by
     `hungerfrei` applies. -/
 theorem gabbro_ziel_leben : GabbroZielLeben := by
   intro C D _ E fs ls cs hC hN O hH passes sp init hL R hR0 hFair n t L hSp
-  have hA0 := (C.korrekt E fs ls cs hC).1
+  have hA0 := (C.korrekt E fs ls cs hH.2.2.2 hC).1
   have hA := akzeptiertSpecX_mitRuhe E.P fs.2 hA0
   have hN' : LogikPflichtA E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q)
       (GeteiltA E.P.mitRuhe (wsRuhe E.ws)) := by

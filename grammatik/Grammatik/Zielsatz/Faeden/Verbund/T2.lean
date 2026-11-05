@@ -292,7 +292,7 @@ end Verbund
 /-- **LINKING, PROVED.** -/
 theorem gabbro_ziel_verbund_sc : GabbroZielVerbundSC := by
   intro C D _ E₁ E₂ e fs ls cs h₁ h₂ hV hS hN₁ hN₂ hQ O hH passes sp init hL lebt0 K hK
-  have hA := akzeptiertSpec_verbinde fs.2 (C.korrekt E₁ fs ls cs h₁) (C.korrekt E₂ fs ls cs h₂)
+  have hA := akzeptiertSpec_verbinde fs.2 (C.korrekt E₁ fs ls cs hH.2.2.2 h₁) (C.korrekt E₂ fs ls cs hH.2.2.2 h₂)
     hV hS
   have hN := nutzerPflicht_verbinde hV hQ hN₁ hN₂
   -- Use the complete composed specification, without inventing an empty query list

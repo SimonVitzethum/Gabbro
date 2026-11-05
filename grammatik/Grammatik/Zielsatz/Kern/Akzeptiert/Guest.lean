@@ -56,7 +56,7 @@ end Bool
 def Zielsatz.Pruefer.withGuests (C : Pruefer)
     (guests : ∀ {D : Deklaration}, Einheit D → List (GuestBoundary D)) : Pruefer where
   akzeptiert := fun E fs ls cs => C.akzeptiert E fs ls cs && GuestBoundary.admissionB (guests E)
-  korrekt := fun E fs ls cs h => C.korrekt E fs ls cs (Bool.and_eq_true_iff.mp h).1
+  korrekt := fun E fs ls cs hardware h => C.korrekt E fs ls cs hardware (Bool.and_eq_true_iff.mp h).1
 
 /-- Every descriptor is retained by the checker adapter, even though the
     unchanged goal theorem consumes just its existing program-safety facts. -/
@@ -74,7 +74,7 @@ theorem Zielsatz.Pruefer.withGuests_admitted (C : Pruefer)
 def Zielsatz.PrueferX.withGuests (C : PrueferX)
     (guests : ∀ {D : Deklaration}, Einheit D → List (GuestBoundary D)) : PrueferX where
   akzeptiert := fun E fs ls cs => C.akzeptiert E fs ls cs && GuestBoundary.admissionB (guests E)
-  korrekt := fun E fs ls cs h => C.korrekt E fs ls cs (Bool.and_eq_true_iff.mp h).1
+  korrekt := fun E fs ls cs hardware h => C.korrekt E fs ls cs hardware (Bool.and_eq_true_iff.mp h).1
 
 theorem Zielsatz.PrueferX.withGuests_admitted (C : PrueferX)
     (guests : ∀ {D : Deklaration}, Einheit D → List (GuestBoundary D))

@@ -238,7 +238,7 @@ noncomputable def specPruefer : PrueferX where
   akzeptiert := fun E fs _ _ =>
     @decide (AkzeptiertSpecX E.P E.S fs E.ws E.arenen E.akku ∧ BesitzStart E ∧
       Kernzelle.AkkuStart E E.akku) (Classical.propDecidable _)
-  korrekt := fun _ _ _ _ h => @of_decide_eq_true _ (Classical.propDecidable _) h
+  korrekt := fun _ _ _ _ _ h => @of_decide_eq_true _ (Classical.propDecidable _) h
 
 /-- **GABBRO_ZIEL FOR SEPARATELY CHECKED UNITS, ANY NUMBER, EVERY LEG.** -/
 def GabbroZielVerbundN : Prop :=
@@ -265,7 +265,7 @@ def GabbroZielVerbundN : Prop :=
 theorem gabbro_ziel_verbund_n : GabbroZielVerbundN := by
   intro C D _ B ps fs ls cs hC hV hne hD hDS hL hN O hH passes sp init hLz lebt0 K hK
   have hA : ∀ p ∈ ps, AkzeptiertSpecX p.E.P p.E.S fs.1 p.E.ws p.E.arenen p.E.akku :=
-    fun p hp => (C.korrekt p.E fs ls cs (hC p hp)).1
+    fun p hp => (C.korrekt p.E fs ls cs hH.2.2.2 (hC p hp)).1
   have hK' : specPruefer.akzeptiert (komponiere B ps) fs.1 ls.1 cs.1 = true :=
     @decide_eq_true _ (Classical.propDecidable _)
       ⟨akzeptiertSpecX_komponiere fs.2 hne hD hV hA hL, hL.besitzStart, hL.akkuStart⟩

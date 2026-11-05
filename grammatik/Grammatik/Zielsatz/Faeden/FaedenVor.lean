@@ -94,20 +94,21 @@ structure PrueferVor where
   akzeptiert : ∀ {D : Deklaration} [DecidableEq D.Fn],
     Einheit D → List D.Fn → List D.Lock → List (D.Tab ⊕ D.Glob) → Bool
   korrekt : ∀ {D : Deklaration} [DecidableEq D.Fn] (E : Einheit D)
-    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
+    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob))
+    (hardware : RootNativeFloat.Hardware),
     akzeptiert E fs.1 ls.1 cs.1 = true → AkzeptiertSpec E.P E.S fs.1 (E.starts.map (·.1)) E.akku
 
 /-- An old checker as a new one: it refuses what it never judged (a unit with run-time
     roots or with declared checks) and says what it said on every other unit. -/
 def pruefer_aus_vor (C : PrueferVor) : Pruefer where
   akzeptiert := fun E fs ls cs => C.akzeptiert E fs ls cs && E.gestartet.isEmpty && E.pruefungen.isEmpty
-  korrekt := fun E fs ls cs h => by
+  korrekt := fun E fs ls cs hardware h => by
     rw [Bool.and_eq_true] at h
     obtain ⟨hC, hg, hP⟩ := h
     have hg' : E.gestartet = [] := List.isEmpty_iff.mp hg
     -- The lifted Bool refuses declared checks (`hP`); retain the old checker's
     -- existential admission while transporting only the root list.
-    have hA := C.korrekt E fs ls cs hC
+    have hA := C.korrekt E fs ls cs hardware hC
     rw [ws_ohne_gestartet E hg'] at hA ⊢
     exact hA
 

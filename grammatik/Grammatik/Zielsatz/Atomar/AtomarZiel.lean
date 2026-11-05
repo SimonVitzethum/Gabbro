@@ -237,7 +237,8 @@ noncomputable def akzeptiertX_pruefer : PrueferX where
     haveI : DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)
     AkzeptiertX E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [] && besitzB E fs &&
       Kernzelle.akkuStartB E E.akku
-  korrekt := fun {D} _ E fs ls cs h => by
+  korrekt := fun {D} _ E fs ls cs hardware h => by
+    letI : RootNativeFloat.Hardware := hardware
     letI : DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)
     have h := (Bool.and_eq_true _ _).mp h
     obtain ⟨hX, hStart⟩ := h
@@ -254,13 +255,13 @@ noncomputable def akzeptiertX_pruefer : PrueferX where
 def Pruefer.alsX (C : Pruefer) : PrueferX where
   akzeptiert := fun E fs ls cs => C.akzeptiert E fs ls cs && besitzB E fs &&
     Kernzelle.akkuStartB E E.akku
-  korrekt := fun E fs ls cs h => by
+  korrekt := fun E fs ls cs hardware h => by
     have h := (Bool.and_eq_true _ _).mp h
     obtain ⟨hC, hStart⟩ := h
     have hC' := (Bool.and_eq_true _ _).mp hC
     obtain ⟨hb, hw, hs⟩ := besitzB_sound fs.2 hC'.2
     have hSpec : AkzeptiertSpecX E.P E.S fs.1 E.ws [] E.akku :=
-      akzeptiertSpecX_of_spec (A := E.akku) (C.korrekt E fs ls cs hC'.1)
+      akzeptiertSpecX_of_spec (A := E.akku) (C.korrekt E fs ls cs hardware hC'.1)
     exact ⟨hSpec.mitBesitz hb hw, hs,
       Kernzelle.akkuStartB_sound hStart⟩
 
@@ -317,7 +318,7 @@ theorem gabbro_ziel_atomar (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (
       RufErreichbarW E.P.mitRuhe O.mitRuhe passes ord (RufStartW (RufStartG E.P.mitRuhe sp init)) W →
       ZielAtomar E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes ord (GeteiltV E.P.mitRuhe (wsRuhe E.ws))
         (RufStartG E.P.mitRuhe sp init) W :=
-  ziel_atomar_aus_einheit D E fs ls (C.korrekt E fs ls cs hC).1 hN O hH passes ord sp init hL
+  ziel_atomar_aus_einheit D E fs ls (C.korrekt E fs ls cs hH.2.2.2 hC).1 hN O hH passes ord sp init hL
 
 /-- **THE EMBEDDING: every unit `gabbro_ziel` covers is covered here** (a unit of before declares no
     arena, `hB`), with the premises of
@@ -334,7 +335,7 @@ theorem gabbro_ziel_atomar_vor (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn
       RufErreichbarW E.P.mitRuhe O.mitRuhe passes ord (RufStartW (RufStartG E.P.mitRuhe sp init)) W →
       ZielAtomar E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes ord (GeteiltV E.P.mitRuhe (wsRuhe E.ws))
         (RufStartG E.P.mitRuhe sp init) W := by
-  have hA := C.korrekt E fs ls cs hC
+  have hA := C.korrekt E fs ls cs hH.2.2.2 hC
   have hAX : AkzeptiertSpecX E.P E.S fs.1 E.ws E.arenen E.akku := by
     rw [hB]
     exact akzeptiertSpecX_of_spec (A := E.akku) hA

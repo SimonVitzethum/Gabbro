@@ -101,7 +101,7 @@ theorem gabbro_ziel_terminierung : GabbroZielTerminierung := by
     ((∀ w, (init t).1 = some w → klasse E.P fs.1 m.hat w = .endet) →
       ∀ j, ¬ HaltBenannt O.mitRuhe passes (R0.alsGX.M j) .budget t)
   generalize R0.alsGX = R at hR0 ⊢
-  have hA0 := (C.korrekt E fs ls cs hC).1
+  have hA0 := (C.korrekt E fs ls cs hH.2.2.2 hC).1
   have hA := akzeptiertSpecX_mitRuhe E.P fs.2 hA0
   have hN' : LogikPflichtA E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q)
       (GeteiltA E.P.mitRuhe (wsRuhe E.ws)) := by

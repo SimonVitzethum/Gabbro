@@ -272,7 +272,7 @@ end Start
     2026-09-26: threads spawned at run time by `start`/`child` included). -/
 theorem gabbro_ziel_sc : GabbroZielSC := by
   intro C D _ E fs ls cs hC hN O hH passes sp init hL lebt0 K hK
-  have hA := akzeptiertSpec_mitRuhe E.P fs.2 (C.korrekt E fs ls cs hC)
+  have hA := akzeptiertSpec_mitRuhe E.P fs.2 (C.korrekt E fs ls cs hH.2.2.2 hC)
   exact zielF_aus E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q) ⟨fsRuhe fs.1, fsRuhe_voll fs.2⟩ ls
     (wsRuhe E.ws) hA (logikPflicht_mitRuhe hN.logik) O.mitRuhe (hardware_mitRuhe hH) passes sp
     init (startZulaessig_aus E fs.1 hN.start hL) lebt0 K hK

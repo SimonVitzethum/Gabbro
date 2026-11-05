@@ -332,7 +332,8 @@ theorem fussWXB_ok (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (re
     carries the Bool's checks. The reverse (`akzeptiertX_of_spec` below) needs only
     `FussSX`-completeness of `fussWXB` (`fussWXB_vollstaendig`), proved here from the
     decided thread-locality, the guard table and the admitted shared atomics. -/
-theorem akzeptiertSpecX_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
+theorem akzeptiertSpecX_of [RootNativeFloat.Hardware]
+    (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) (aks : List (Kernzelle.AccumulatorDecl D))
     {checks : List (CheckDecl D)} (h : AkzeptiertX P S fs ls cs ws aks checks = true) :
     AkzeptiertSpecX P S fs ws [] aks := by
@@ -454,7 +455,8 @@ theorem fussWXB_vollstaendig (hvoll : ∀ g : D.Fn, g ∈ fs)
     already decides both ways. The arena fields are dropped: the Bool has none. The
     scope conjunct is derived from the floor field (`scopesOkProg_of_stufenM`),
     not taken as a premise. -/
-theorem akzeptiertX_of_spec (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
+theorem akzeptiertX_of_spec [RootNativeFloat.Hardware]
+    (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {B : List (ArenaOwnership.Body.ArenaIface D)}
     {aks : List (Kernzelle.AccumulatorDecl D)} (h : AkzeptiertSpecX P S fs ws B aks)
     (qs : List D.Ax) (hq : ∀ a ∈ aks, ∃ q ∈ qs, Kernzelle.KernAbfrageVerbunden P a q)
