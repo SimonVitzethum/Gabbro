@@ -56,9 +56,10 @@ private theorem neg_prefix (format : FPFormat) (before : X) :
       dsimp only [after, shifted, counted, amount, loaded, normalized, advance,
         aluStep, aluOp, X.get, X.set, X.setXmm, X.xmmWord, X.nof, X.fpReady]
   all_goals
-    simp only [mask32, mask64, fpNegWord_word32, fpNegWord, fpLow32,
+    simp only [↓reduceIte, mask32, mask64, fpNegWord_word32, fpLow32,
       BitVec.setWidth_setWidth_of_le _ (k := 32) (l := 128) (by decide),
       BitVec.setWidth_eq]
+  all_goals rfl
 
 theorem fp_neg_ok {L : Lay} {y : X} (format : FPFormat)
     (h : HPre L (NativeFPOp.neg format).code y) :

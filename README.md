@@ -1,5 +1,12 @@
 # Gabbro
 
+> **Development snapshot — 2026-11-05: WIP, not fully buildable or validated.**
+> The Stage-0 integration and abstract floating-point hardware-contract migration are unfinished.
+> Targeted goal-theorem and axiom audits passed, but the complete Grammar and Runner builds still have
+> known proof failures and resource-limited probe checks; the complete Stage-0/GabbroV Lean closure remains open.
+> Rust, Cargo and LLVM validation are deliberately excluded from this checkpoint. This is not a release
+> or a claim of complete userspace-language coverage.
+
 Gabbro is a systems programming language with a Rust compiler and a Lean 4 model of its core language and safety properties.
 
 > **Gabbro's goal: the user proves only their own logic and named hardware assumptions; the language carries the rest, on a multicore
