@@ -23,6 +23,9 @@ import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
 import all Grammatik.Parser.Elab.Generic.StaticConformance
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest1
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Body
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest2a
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -153,15 +156,68 @@ def ensLies4 : Expr D4 (ErgCtx (D4.params lies4) (D4.erg lies4)) (vertragVon D4 
   .eq (.var .here) (Expr.thru (space := 0) (.var (.there .here)) t4 hcap4 f4 (.var (.there (.there .here))) darf4)
 
 /-- The lowered bodies and contracts ARE these terms (kernel-checked). -/
-theorem rumpf_ein4 : P4.rumpf ein4 = bodyEin4 := by cbv
-theorem rumpf_lies4 : P4.rumpf lies4 = bodyLies4 := by cbv
-theorem ens_ein4 : P4.ensures ein4 = ensEin4 := by cbv
-theorem ens_lies4 : P4.ensures lies4 = ensLies4 := by cbv
-theorem req4 (f : D4.Fn) : P4.requires f = .tru := by rcases fn_zwei f with e | e <;> subst e <;> cbv
+private theorem lowerEin4 : lowerFnAt uExp104 ein4 = .ok (ensEin4, bodyEin4, .tru) := by
+  cbv <;> rfl
+
+private theorem lowerLies4 : lowerFnAt uExp104 lies4 = .ok (ensLies4, bodyLies4, .tru) := by
+  cbv <;> rfl
+
+theorem rumpf_ein4 : P4.rumpf ein4 = bodyEin4 := by
+  obtain ⟨value, origin, _, body, _⟩ := lowerAllg_fields uExp104 P4 fs4 low4 ein4
+  rw [lowerEin4] at origin
+  cases origin
+  exact body
+
+theorem rumpf_lies4 : P4.rumpf lies4 = bodyLies4 := by
+  obtain ⟨value, origin, _, body, _⟩ := lowerAllg_fields uExp104 P4 fs4 low4 lies4
+  rw [lowerLies4] at origin
+  cases origin
+  exact body
+
+theorem ens_ein4 : P4.ensures ein4 = ensEin4 := by
+  obtain ⟨value, origin, post, _, _⟩ := lowerAllg_fields uExp104 P4 fs4 low4 ein4
+  rw [lowerEin4] at origin
+  cases origin
+  exact post
+
+theorem ens_lies4 : P4.ensures lies4 = ensLies4 := by
+  obtain ⟨value, origin, post, _, _⟩ := lowerAllg_fields uExp104 P4 fs4 low4 lies4
+  rw [lowerLies4] at origin
+  cases origin
+  exact post
+
+/-- Read the empty requires and the actual pointer table from successful assembly. -/
+private theorem assembly4 : (∀ f : D4.Fn, P4.requires f = .tru) ∧
+    (∀ n, P4.ptrVertrag n = ptrVertragOf uExp104 n) := by
+  have assembled := low4
+  unfold lowerAllg at assembled
+  split at assembled
+  · cases assembled
+  · split at assembled
+    · cases assembled
+    · split at assembled
+      · obtain ⟨same, _⟩ := Measures.checkedProgram_eq assembled
+        rw [same]
+        constructor
+        · intro f
+          apply reqOf_leer
+          rcases fn_zwei f with e | e <;> subst e <;> rfl
+        · intro n
+          rfl
+      · cases assembled
+
+theorem req4 (f : D4.Fn) : P4.requires f = .tru := assembly4.1 f
 
 /-- Each function's own interface keeps the actual exported postcondition. -/
 private theorem ptrPost4 (f : D4.Fn) : (P4.ptrVertrag f.val).post = P4.ensures f := by
-  rcases fn_zwei f with e | e <;> subst e <;> cbv
+  rw [assembly4.2]
+  rcases fn_zwei f with e | e
+  · subst e
+    rw [ens_ein4]
+    cbv <;> rfl
+  · subst e
+    rw [ens_lies4]
+    cbv <;> rfl
 
 /-- Parameter arities distinguish the two admitted interfaces; their posts are not trivial. -/
 theorem ptrVerfeinert4 : PtrVerfeinert P4 := by
