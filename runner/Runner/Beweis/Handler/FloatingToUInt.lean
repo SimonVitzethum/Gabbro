@@ -31,8 +31,62 @@ private theorem high_match {L : Lay} {t : IR.T} {x : X} {tail : List Ins}
     Match L (Runner.fp (.sub format) x.rax format.int64Limit fun reduced =>
       Runner.fp (.truncateInt64 format) reduced 0 fun integer =>
         k (integer ||| 0x8000000000000000)) x := by
+  let advance (instruction : Ins) (before : X) : X :=
+    { before with rip := before.rip + BitVec.ofNat 64 (enc instruction).length }
+  let loaded : X := (advance (.movToXmm format .xmm0 .rax) x).setXmm .xmm0
+    (match format with
+      | .f32 => (x.rax.setWidth 32).setWidth 128
+      | .f64 => x.rax.setWidth 128)
+  let limited : X := match format with
+    | .f32 => (advance (.movi .rdx 0x5F000000) loaded).set .rdx (sx32 0x5F000000)
+    | .f64 =>
+      let upper := (advance (.movi .rdx 0x43E0) loaded).set .rdx (sx32 0x43E0)
+      let amount := (advance (.movi .rcx 48) upper).set .rcx (sx32 48)
+      ((advance (.shl .rdx) amount).set .rdx (amount.rdx <<< (amount.rcx.toNat % 64))).nof
+  let operands : X := (advance (.movToXmm format .xmm1 .rdx) limited).setXmm .xmm1
+    (match format with
+      | .f32 => (limited.rdx.setWidth 32).setWidth 128
+      | .f64 => limited.rdx.setWidth 128)
+  let subtracted (reduced : W) : X :=
+    (advance (.scalar .sub format .xmm0 .xmm1) operands).setScalar format .xmm0 reduced
+  let converted (reduced integer : W) : X :=
+    (advance (.truncateScalar format .rax .xmm0) (subtracted reduced)).set .rax integer
+  let maskLoaded (reduced integer : W) : X :=
+    (advance (.movi .rdx 1) (converted reduced integer)).set .rdx (sx32 1)
+  let shiftLoaded (reduced integer : W) : X :=
+    (advance (.movi .rcx 63) (maskLoaded reduced integer)).set .rcx (sx32 63)
+  let shifted (reduced integer : W) : X :=
+    let before := shiftLoaded reduced integer
+    ((advance (.shl .rdx) before).set .rdx (before.rdx <<< (before.rcx.toNat % 64))).nof
+  let after (reduced integer : W) : X :=
+    let before := shifted reduced integer
+    aluStep (advance (.alu .or .rax .rdx) before) .or .rax before.rdx
+  let reducedWord (value : W) : W := (NativeFPOp.sub format).resultWord value
+  have mask : sx32 (1 : BitVec 32) <<< ((sx32 (63 : BitVec 32)).toNat % 64) =
+      (0x8000000000000000 : W) := by decide
+  have resultWord (reduced integer : W) :
+      (after reduced integer).rax = integer ||| 0x8000000000000000 := by
+    cases format
+    all_goals
+      change integer ||| (sx32 (1 : BitVec 32) <<< ((sx32 (63 : BitVec 32)).toNat % 64)) = _
+      rw [mask]
+  have position (reduced integer : W) :
+      (after reduced integer).rip = x.rip + BitVec.ofNat 64 (lenOfL (uintHigh format)) := by
+    cases format
+    all_goals
+      simp only [after, aluStep_rip, shifted, X.nof, set_rip, shiftLoaded,
+        maskLoaded, converted, subtracted, setScalar_rip, operands, setXmm_rip,
+        limited, loaded, advance]
+      simp [uintHigh, fpLimit, fpSignMask, fpUpper, lenOfL,
+        BitVec.ofNat_add, BitVec.add_assoc]
+  have controlsAfter (reduced integer : W) : Controls L t (after reduced integer) := by
+    cases format <;> exact ⟨controls.pc, controls.frame, controls.table, controls.mode⟩
   have placed := code_append code
-  apply go (uintHigh format) x _ (by cases format <;> decide) (code_prefix code)
+  apply go (uintHigh format) x
+    (Runner.fp (.sub format) x.rax format.int64Limit fun reduced =>
+      Runner.fp (.truncateInt64 format) reduced 0 fun integer =>
+        k (integer ||| 0x8000000000000000))
+    (by cases format <;> decide) (code_prefix code)
   have ready := controls.mode
   simp only [X.fpReady, beq_iff_eq] at ready
   cases format
@@ -44,12 +98,18 @@ private theorem high_match {L : Lay} {t : IR.T} {x : X} {tail : List Ins}
       | (apply corrM_ask; intro _; fp_reduce ready)
       | (apply corrM_opt; intro _; fp_reduce ready)
       | (rw [runL]; fp_reduce ready))
+    rename_i _ subtraction _ integer
     simp only [CorrM]
-    apply exit.finish
-    · simpa (disch := decide) [uintHigh, fpLimit, fpSignMask, fpUpper, lenOfL,
-        enc, regEnc, le32, BitVec.ofNat_add, BitVec.add_assoc,
-        X.get, X.set, X.setXmm, X.setScalar, X.nof, aluStep, aluOp] using placed
-    · exact ⟨controls.pc, controls.frame, controls.table, controls.mode⟩
+    change Match L (k (integer.1 ||| 0x8000000000000000))
+      (after (reducedWord subtraction.1) integer.1)
+    have continuationCode : Code L.C
+        (after (reducedWord subtraction.1) integer.1).rip tail := by
+      rw [position]
+      exact placed
+    have finished := exit.finish
+      (after (reducedWord subtraction.1) integer.1)
+      continuationCode (controlsAfter (reducedWord subtraction.1) integer.1)
+    simpa only [resultWord] using finished
 
 private theorem inRange_match {L : Lay} {t : IR.T} {x : X} {tail : List Ins}
     {k : W → Res IR.T} (format : FPFormat) (value : W) (exit : Exit L t tail k)
@@ -81,16 +141,43 @@ private theorem inRange_match {L : Lay} {t : IR.T} {x : X} {tail : List Ins}
     have leaf := truncate (x := choiceTaken z .b (uintHigh format)) format exit
       (fpChoose_yes_code placed (by cases format <;> decide))
       ⟨kept.pc, kept.frame, kept.table, kept.mode⟩
-    cases format <;> simpa only [rax, input, FPFormat.scalarBits, Runner.fp,
-      NativeFPOp.inputs, fpLow32_idem] using leaf
+    change Match L (Runner.fp (.truncateInt64 format) value 0 k)
+      (choiceTaken z .b (uintHigh format))
+    have atInput : (choiceTaken z .b (uintHigh format)).rax = format.scalarBits value :=
+      rax.trans input
+    have request : Runner.fp (.truncateInt64 format)
+        (choiceTaken z .b (uintHigh format)).rax 0 k =
+        Runner.fp (.truncateInt64 format) value 0 k := by
+      rw [atInput]
+      cases format <;> simp only [Runner.fp, NativeFPOp.inputs, FPFormat.scalarBits, fpLow32_idem]
+    rw [request] at leaf
+    exact leaf
   | false =>
     simp only [within, Bool.false_eq_true, ↓reduceIte]
     apply fpChoose_false placed (by simp only [Cond.eval, actualFlag, within])
+    have branchCode : Code L.C (choiceFallthrough z .b (uintHigh format)).rip
+        (uintHigh format ++ (.jmp (BitVec.ofNat 32 (lenOf (fpTruncateBody format))) ::
+          fpTruncateBody format ++ tail)) := by
+      simpa only [choiceFallthrough, List.append_assoc, List.cons_append, List.nil_append]
+        using fpChoose_no_code placed
     have leaf := high_match (x := choiceFallthrough z .b (uintHigh format)) format
       (exit.jump (yes := fpTruncateBody format) (by cases format <;> decide))
-      (fpChoose_no_code placed) ⟨kept.pc, kept.frame, kept.table, kept.mode⟩
-    cases format <;> simpa only [rax, input, FPFormat.scalarBits, Runner.fp,
-      NativeFPOp.inputs, fpLow32_idem] using leaf
+      branchCode ⟨kept.pc, kept.frame, kept.table, kept.mode⟩
+    change Match L (Runner.fp (.sub format) value format.int64Limit fun reduced =>
+      Runner.fp (.truncateInt64 format) reduced 0 fun integer =>
+        k (integer ||| 0x8000000000000000)) (choiceFallthrough z .b (uintHigh format))
+    have atInput : (choiceFallthrough z .b (uintHigh format)).rax = format.scalarBits value :=
+      rax.trans input
+    have request : (Runner.fp (.sub format) (choiceFallthrough z .b (uintHigh format)).rax
+        format.int64Limit fun reduced => Runner.fp (.truncateInt64 format) reduced 0 fun integer =>
+          k (integer ||| 0x8000000000000000)) =
+        (Runner.fp (.sub format) value format.int64Limit fun reduced =>
+          Runner.fp (.truncateInt64 format) reduced 0 fun integer =>
+            k (integer ||| 0x8000000000000000)) := by
+      rw [atInput]
+      cases format <;> simp only [Runner.fp, NativeFPOp.inputs, FPFormat.scalarBits, fpLow32_idem]
+    rw [request] at leaf
+    exact leaf
 
 private theorem positive_match {L : Lay} {t : IR.T} {x : X} {tail : List Ins}
     {k : W → Res IR.T} (format : FPFormat) (value : W) (exit : Exit L t tail k)
@@ -160,15 +247,22 @@ private theorem finite_match {L : Lay} {t : IR.T} {x : X} {tail : List Ins}
   | true =>
     simp only [negative, ↓reduceIte]
     apply fpChoose_true placed (by simpa only [negative] using actualFlag)
-    simpa only [sx32_zero] using word_constant
+    change Match L (k 0) (choiceTaken z .nz (uintPositive format))
+    have leaf := word_constant
       (x := choiceTaken z .nz (uintPositive format)) exit (0 : BitVec 32)
       (fpChoose_yes_code placed (by cases format <;> decide))
       ⟨kept.pc, kept.frame, kept.table, kept.mode⟩
+    simpa only [show sx32 (0 : BitVec 32) = (0 : W) from by decide] using leaf
   | false =>
     simp only [negative, Bool.false_eq_true, ↓reduceIte]
     apply fpChoose_false placed (by simpa only [negative] using actualFlag)
+    have branchCode : Code L.C (choiceFallthrough z .nz (uintPositive format)).rip
+        (uintPositive format ++ (.jmp (BitVec.ofNat 32 (lenOf [.movi .rax 0])) ::
+          [.movi .rax 0] ++ tail)) := by
+      simpa only [choiceFallthrough, List.append_assoc, List.cons_append, List.nil_append]
+        using fpChoose_no_code placed
     exact positive_match (x := choiceFallthrough z .nz (uintPositive format)) format value
-      (exit.jump (yes := [.movi .rax 0]) (by decide)) (fpChoose_no_code placed)
+      (exit.jump (yes := [.movi .rax 0]) (by decide)) branchCode
       ⟨kept.pc, kept.frame, kept.table, kept.mode⟩ (rax.trans input)
       (rsi.trans magnitude)
 
@@ -190,15 +284,22 @@ private theorem body_match {L : Lay} {t : IR.T} {x : X} {tail : List Ins}
   | true =>
     simp only [fpToUInt64, nan, Bool.true_or, ↓reduceIte]
     apply fpChoose_true placed (by simp only [Cond.eval, classified.nan, nan])
-    simpa only [sx32_zero] using word_constant
+    change Match L (k 0) (choiceTaken z .b (uintFinite format))
+    have leaf := word_constant
       (x := choiceTaken z .b (uintFinite format)) exit (0 : BitVec 32)
       (fpChoose_yes_code placed (by cases format <;> decide))
       ⟨kept.pc, kept.frame, kept.table, kept.mode⟩
+    simpa only [show sx32 (0 : BitVec 32) = (0 : W) from by decide] using leaf
   | false =>
     simp only [fpToUInt64, nan, Bool.false_or]
     apply fpChoose_false placed (by simp only [Cond.eval, classified.nan, nan])
+    have branchCode : Code L.C (choiceFallthrough z .b (uintFinite format)).rip
+        (uintFinite format ++ (.jmp (BitVec.ofNat 32 (lenOf [.movi .rax 0])) ::
+          [.movi .rax 0] ++ tail)) := by
+      simpa only [choiceFallthrough, List.append_assoc, List.cons_append, List.nil_append]
+        using fpChoose_no_code placed
     exact finite_match (x := choiceFallthrough z .b (uintFinite format)) format x.rax
-      (exit.jump (yes := [.movi .rax 0]) (by decide)) (fpChoose_no_code placed)
+      (exit.jump (yes := [.movi .rax 0]) (by decide)) branchCode
       ⟨kept.pc, kept.frame, kept.table, kept.mode⟩
       classified.input classified.magnitude
 
