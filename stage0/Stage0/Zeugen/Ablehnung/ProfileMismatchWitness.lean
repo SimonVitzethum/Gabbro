@@ -1,5 +1,6 @@
 module
 public import Stage0.IRBild
+import Stage0.SourceWitness.ImagePhases
 import Stage0.Frontend.Witnesses.Constants.SourcePackets
 import Stage0.Frontend.Witnesses.Constants.ProgramPackets
 import all Grammatik.Parser.Lex.Lexer.Teil1
@@ -149,8 +150,7 @@ private theorem source_refused : Frontend.source text =
 private theorem compilation_refused : compile text =
     .error "ir: profile binding refused: modes, assumptions or library requirements are not consistent" := by
   unfold compile
-  rw [source_refused]
-  rfl
+  rw [source_refused] <;> rfl
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
@@ -159,8 +159,9 @@ def candidate : Except String (Emitted text 64) := emit text 64
 theorem candidate_refused :
     (match candidate with | .error message => some message | .ok _ => none) =
       some "ir: profile binding refused: modes, assumptions or library requirements are not consistent" := by
-  unfold candidate emit
-  rw [compilation_refused]
-  rfl
+  have refused : candidate =
+      .error "ir: profile binding refused: modes, assumptions or library requirements are not consistent" :=
+    ImagePhases.emit_compile_error (K := 64) compilation_refused
+  rw [refused] <;> rfl
 
 end Gabbro.Stage0.ProfileMismatchWitness

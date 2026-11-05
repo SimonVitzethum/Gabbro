@@ -1,5 +1,11 @@
 module
 public import Stage0.IRBild
+import Stage0.SourceWitness.ImagePhases
+import all Stage0.Bindung
+import all Stage0.Senke.Images.Bild
+import all Stage0.Senke.Images.SourceStarts
+import all Stage0.Senke.Welt.MainEnv
+import all Stage0.Senke.Welt.AnordnungLayouta
 import Stage0.Frontend.Witnesses.Constants.SourcePackets
 import Stage0.Frontend.Witnesses.Constants.ProgramPackets
 import all Grammatik.Parser.Lex.Lexer.Teil1
@@ -204,22 +210,8 @@ private def compiledBody : Body compiledHeader := by
   case restored => cbv <;> exact Eq.refl _
   case accepted => cbv
 
--- The image assembler consumes this actual IR producer result for arbitrary
--- layout/address values; it never recomputes a source execution.
-private theorem ir_function_present (layout : Senke.Lay (declOf compiledHeader.unit))
-    (addresses : (declOf compiledHeader.unit).Fn → Nat)
-    (f : (declOf compiledHeader.unit).Fn) :
-    (Senke.lowFun irDurchlaeufe compiledBody.program addresses layout f).isSome = true := by
-  rcases f with ⟨index, bound⟩
-  change index < compiledHeader.unit.fns.length at bound
-  have small : index < 1 := by simpa only [function_count] using bound
-  have zero : index = 0 := by omega
-  subst index
-  cbv
-
-private theorem compilation :
-    ∃ result : Compiled text, compile text = .ok result ∧ result.unit = compiledHeader.unit :=
-  compiled compiledHeader compiledBody
+private def checkedCompilation : {result : Compiled text // compile text = .ok result} :=
+  compiledResult compiledHeader compiledBody
 
 private theorem global_count : compiledHeader.unit.globs.length = 1 := by cbv
 
@@ -256,20 +248,105 @@ private theorem emitted_base_grid {src : String} {K : Nat}
         repeat' split
         all_goals intro builder; cases builder
 
+private theorem compilation_source : checkedCompilation.val.source = compiledHeader.source :=
+  compiledResult_source compiledHeader compiledBody
+
+private theorem compilation_unit : checkedCompilation.val.unit = compiledHeader.unit :=
+  compiledResult_unit compiledHeader compiledBody
+
+-- Fix every complete phase value before projecting a finite carrier or
+-- layout field. These are results of the existing producers, not snapshots.
+private theorem image_target : validateTargetFor ({} : Profil.Options).arch
+    ({} : Profil.Options).target (uMembers (pre108 checkedCompilation.val.source.items)) = .ok () := by
+  rw [compilation_source]
+  cbv
+
+private theorem image_bindings : toreVonFor ({} : Profil.Options).arch
+    ({} : Profil.Options).target (uMembers (pre108 checkedCompilation.val.source.items)) = .ok [] := by
+  rw [compilation_source]
+  cbv
+
+private theorem image_foreigns : checkedCompilation.val.unit.axs = [] := by
+  rw [compilation_unit]
+  cbv
+
+private def imageTor : (declOf checkedCompilation.val.unit).Ax → Option Senke.TorB :=
+  fun _ => none
+
+private def imagePlan : {plan : StartArgument.Plan checkedCompilation.val.unit
+      (uMembers (pre108 checkedCompilation.val.source.prepared.elaborierbar)) checkedCompilation.val.main //
+    StartArgument.plan checkedCompilation.val.unit
+      (uMembers (pre108 checkedCompilation.val.source.prepared.elaborierbar)) checkedCompilation.val.main =
+      .ok plan} := by
+  refine ⟨?plan, ?made⟩
+  case made => cbv <;> exact Eq.refl _
+
+private theorem image_initial : GabbroV.sp0OkB checkedCompilation.val.unit = true := by
+  rw [compilation_unit]
+  cbv
+
+private def imageArgs : {args : Env (declOf checkedCompilation.val.unit)
+      ((declOf checkedCompilation.val.unit).params checkedCompilation.val.main) //
+    Senke.mainEnv ((declOf checkedCompilation.val.unit).params checkedCompilation.val.main) = some args} := by
+  refine ⟨?args, ?made⟩
+  case made => cbv <;> exact Eq.refl _
+
+private def imageEmission : {image : Senke.Bild (declOf checkedCompilation.val.unit) //
+    Senke.bild irDurchlaeufe checkedCompilation.val.program (Senke.layU checkedCompilation.val.unit imageTor)
+      (List.finRange checkedCompilation.val.unit.fns.length) Fin.val
+      (fun g => (checkedCompilation.val.unit.fns[g.val]?.map (·.name)).getD "?")
+      checkedCompilation.val.main imageArgs.val
+      (imagePlan.val.starts (Senke.initialWorld checkedCompilation.val.unit image_initial))
+      64 (Senke.bodenAusrichtung checkedCompilation.val.unit) = .ok image} := by
+  refine ⟨?image, ?made⟩
+  case made => cbv <;> exact Eq.refl _
+
+-- The shared theorem replays the original emitter with exactly these
+-- constructors, retaining its profile, initial world and complete frames.
+private def checkedImage : {image : Emitted text 64 // emit text 64 = .ok image} := by
+  refine ⟨{
+    compiled := checkedCompilation.val
+    tor := imageTor
+    startPlan := imagePlan.val
+    initialValid := image_initial
+    args := imageArgs.val
+    pointers := imageArgs.property
+    image := imageEmission.val
+    emission := imageEmission.property }, ?_⟩
+  exact ImagePhases.emit_from_phases checkedCompilation.val checkedCompilation.property
+    image_target [] image_bindings image_foreigns imageTor rfl imagePlan.val imagePlan.property
+    image_initial imageArgs.val imageArgs.property imageEmission.val imageEmission.property
+
 def candidate : Except String (Emitted text 64) := emit text 64
 
 /-- An aligned static elaborates to an image: alignment without a section is
     laid out on the common grid, not refused. -/
-theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
+theorem candidate_present : candidate.toOption.isSome = true := by
+  change (emit text 64).toOption.isSome = true
+  rw [checkedImage.property] <;> rfl
 
 def output : Emitted text 64 := candidate.toOption.get candidate_present
 
-theorem globs_one : output.compiled.unit.globs.length = 1 := by decide +kernel
+private theorem output_selected : output = checkedImage.val := by
+  have selected : candidate = .ok output := except_ok_get candidate_present
+  have certified : candidate = .ok checkedImage.val := checkedImage.property
+  exact Except.ok.inj (selected.symm.trans certified)
+
+theorem globs_one : output.compiled.unit.globs.length = 1 := by
+  rw [output_selected]
+  change compiledHeader.unit.globs.length = 1
+  exact global_count
 
 def g0 : Fin output.compiled.unit.globs.length := ⟨0, by rw [globs_one]; decide⟩
 
 /-- The elaborated static keeps its declared alignment of sixteen. -/
-theorem align_sixteen : Senke.globAlign output.compiled.unit g0 = 16 := by decide +kernel
+theorem align_sixteen : Senke.globAlign output.compiled.unit g0 = 16 := by
+  have aligned : ∀ g : Fin output.compiled.unit.globs.length,
+      Senke.globAlign output.compiled.unit g = 16 := by
+    rw [output_selected]
+    change ∀ g : Fin compiledHeader.unit.globs.length, Senke.globAlign compiledHeader.unit g = 16
+    exact global_alignment
+  exact aligned g0
 
 /-- The built image base lies on the combined sixteen-grid: the builder aligned it
     up to the required base alignment, which the sixteen-grid divides. -/
