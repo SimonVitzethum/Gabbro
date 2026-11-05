@@ -10,6 +10,8 @@ namespace RootNativeFloat.Contracts
 /-- Source integer conversion on both bounded fast paths and the unbounded word sequence.
     These are explicit hardware assumptions; this module supplies no implementation or instance. -/
 structure SourceInt : Prop where
+  zero_finite : (Float.hwOfInt 0).hwIsFinite = true
+
   ofInt_not_nan : ∀ (z : Int),
       (Float.hwOfInt z).hwIsNaN = false
 

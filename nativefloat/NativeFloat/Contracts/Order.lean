@@ -9,6 +9,12 @@ namespace RootNativeFloat.Contracts
 /-- Native comparison contracts used by interval inclusion.
     These are explicit hardware assumptions; this module supplies no implementation or instance. -/
 structure Order : Prop where
+  nan_le : ∀ (a b : Float) (h : a.hwIsNaN = true),
+      Float.hwLe a b = false
+
+  le_nan : ∀ (a b : Float) (h : b.hwIsNaN = true),
+      Float.hwLe a b = false
+
   le_refl : ∀ {a : Float} (ha : a.hwIsFinite = true),
       Float.hwLe a a = true
 

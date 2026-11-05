@@ -55,6 +55,14 @@ theorem neg_bits64 [hardware : Hardware] (word : BitVec 64) :
       Float.hwNeg (Float.hwOfBits (UInt64.ofBitVec word)) :=
   hardware.codec.neg_bits64 word
 
+theorem nan_le [hardware : Hardware] (a b : Float) (h : a.hwIsNaN = true) :
+    Float.hwLe a b = false :=
+  hardware.order.nan_le a b h
+
+theorem le_nan [hardware : Hardware] (a b : Float) (h : b.hwIsNaN = true) :
+    Float.hwLe a b = false :=
+  hardware.order.le_nan a b h
+
 theorem le_refl [hardware : Hardware] {a : Float} (ha : a.hwIsFinite = true) : Float.hwLe a a = true :=
   hardware.order.le_refl ha
 
@@ -71,6 +79,9 @@ theorem lower_le [hardware : Hardware] {a x y : Float} (ha : a.hwIsFinite = fals
     (hx : x.hwIsFinite = true) (hy : y.hwIsFinite = true) (ax : Float.hwLe a x = true) :
     Float.hwLe a y = true :=
   hardware.order.lower_le ha hx hy ax
+
+theorem zero_finite [hardware : Hardware] : (Float.hwOfInt 0).hwIsFinite = true :=
+  hardware.sourceInt.zero_finite
 
 theorem ofInt_not_nan [hardware : Hardware] (z : Int) : (Float.hwOfInt z).hwIsNaN = false :=
   hardware.sourceInt.ofInt_not_nan z
