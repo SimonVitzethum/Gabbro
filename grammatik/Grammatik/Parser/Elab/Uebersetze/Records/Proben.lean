@@ -78,7 +78,8 @@ private theorem record_reordered_value :
     recordLiteralUmgestellt =
       .product 7 true [(.int 0 255, .lit 42), (.bool, .truth true)] := by
   unfold recordLiteralUmgestellt
-  rw [record_named_fields_arranged] <;> rfl
+  simp only [record_named_fields_arranged]
+  rfl
 
 /-- Named source order is checked and rearranged before the typed lowerer receives the fields. -/
 theorem record_named_fields_zeuge :
@@ -102,7 +103,8 @@ private theorem record_product_lowered (reordered : Bool) :
     lowWertE recordUnit [] [] recordFunction none
       (.product 7 reordered [(.int 0 255, .lit 42), (.bool, .truth true)]) =
       .ok ⟨recordFixture.ty, Expr.prod 7 recordArgs⟩ := by
-  exact record_lower recordUnit [] [] recordFunction none 7 reordered _ recordArgs
+  exact record_lower recordUnit [] [] recordFunction none 7 reordered
+    [(.int 0 255, .lit 42), (.bool, .truth true)] recordArgs
     (by cbv) record_fields_lowered ⟨recordFixture, rfl⟩ record_schema_selected
 
 /-- Swapping already typed fields cannot masquerade as rearranging named source arguments. -/
