@@ -100,7 +100,7 @@ def zwei : List SItemTief :=
    .modT "b" [c],
    .modT "p" [.useT ["a", "setze"],
      schreib "haupt" [.why "a" "C", .why "b" "C"] [.why "b" "C"] [.call "setze" []]]]
-theorem zwei_ok : stufe zwei = "OK" := by cbv
+theorem zwei_ok : stufe zwei = "OK" := by decide +kernel
 theorem zwei_traeger : traeger zwei = ["a::C", "b::C"] := by cbv
 theorem zwei_wirkung :
     wirkungUndRumpf (pre108 zwei) = [(["a::C"], ["a::C"]), (["a::C", "b::C"], ["b::C"])] := by
@@ -122,7 +122,7 @@ theorem tief_geparst :
 def tief : List SItemTief :=
   [.modT "x" [.modT "y" [c]],
    .modT "b" [c, schreib "f" [.variable "x::y::C"] [.variable "x::y::C"]]]
-theorem tief_ok : stufe tief = "OK" := by cbv
+theorem tief_ok : stufe tief = "OK" := by decide +kernel
 theorem tief_traeger : traeger tief = ["x::y::C", "b::C"] := by cbv
 
 /-- PLANTED DEFECT: a module that neither declares nor `use`s `C` names it bare. Two items carry the
