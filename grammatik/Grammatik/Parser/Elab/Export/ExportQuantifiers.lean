@@ -128,7 +128,8 @@ theorem traversal_filter_export (predicate : UEns) (body : List UStmt) :
     uFilteredBody (some predicate) body = [.ifBeg predicate] ++ body ++ [.ifElse, .blkEnd] := by rfl
 
 /-- The production statement exporter keeps the invariant in the outer scope and keeps
-    leave/next/return inside the filtered body, under the same loop resource discipline. -/
+    leave/next/return inside the filtered body, under the same loop resource discipline.
+    The ending certificate includes the production fold expansion and its checks. -/
 theorem traversal_export (tabs : List UTab) (heads : List UFnKopf) (fuel : Nat) (ctx : UCtx)
     (binder : String) (origin : Option SExpr) (kind : String) (subject : SExpr) (mode raw : String)
     (invariant : Option SExpr) (statements : List SAnw) (ending : Option SEnde) (rest : List SAnw)
@@ -136,12 +137,17 @@ theorem traversal_export (tabs : List UTab) (heads : List UFnKopf) (fuel : Nat) 
     (body exits tail : List UStmt)
     (header : uLoopExport ctx binder origin kind subject mode raw invariant = .ok (loopHeader, loopCtx, filter))
     (inside : uAnwReihe tabs heads fuel loopCtx statements = .ok (body, bodyCtx))
-    (exit : uEndeStmt bodyCtx ending = .ok exits)
+    (exit : uFoldEndeStmt bodyCtx ending = .ok exits)
     (outside : uAnwReihe tabs heads fuel ctx rest = .ok (tail, endCtx)) :
     uAnwReihe tabs heads (fuel + 1) ctx
       (.each binder origin kind subject mode raw invariant (.block statements ending) :: rest) =
       .ok ([loopHeader] ++ uFilteredBody filter (body ++ exits) ++ [.blkEnd] ++ tail, endCtx) := by
-  simp only [uAnwReihe, header, inside, exit, outside] <;> try rfl
+  have unchanged : expandFoldStmt ctx
+      (.each binder origin kind subject mode raw invariant (.block statements ending)) =
+      .ok ([], ctx, .each binder origin kind subject mode raw invariant (.block statements ending)) := rfl
+  rw [uAnwReihe, unchanged]
+  simp only [bind, Except.bind]
+  simp only [uAnwReiheCore, header, inside, exit, outside, pure, Except.pure, List.nil_append]
 
 /-- The consuming header retains the domain filter, canonical declared relation and
     state-reading measure. There is no source predicate invention or initial snapshot. -/
@@ -159,7 +165,8 @@ theorem consuming_header_export (ctx context : UCtx) (binder table predecessor f
         (.reach table field (.param predecessor) (.param binder)) inv mass effects,
         {context with loops := ("#consume:" ++ binder) :: ctx.loops}, none) := by
   subst predecessor
-  simp only [uLoopExport, BEq.rfl, Bool.not_true, Bool.false_eq_true, ↓reduceIte,
+  have consuming : ("consuming" != "consuming") = false := bne_self_eq_false _
+  simp only [uLoopExport, consuming, Bool.false_eq_true, ↓reduceIte,
     clauses, domain, declared, bind, Except.bind, pure, Except.pure]
 
 /-- The production structured lowerer constructs exactly the canonical current-state
