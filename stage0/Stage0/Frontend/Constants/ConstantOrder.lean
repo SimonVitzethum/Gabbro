@@ -1,6 +1,7 @@
 module
 public import Stage0.Frontend.AliasOrder
 public import Stage0.Frontend.Guard
+public import Grammatik.Parser.Elab.Uebersetze.Tagged.Schema
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -54,47 +55,105 @@ def DependencyName.label : DependencyName → String
   | .type name => "type " ++ name
   | .function name => "const function " ++ name
 
+/-- Typed constructor heads depend on the owning schema. Every unresolved head
+    and every wrong arity remains a function dependency; const functions win. -/
+def dependencyCallReferences (declared : String → Bool)
+    (owner : String → Bool → Option String) (name : String) (args : List SExpr) : List DependencyName :=
+  (dependencyCallHead declared name args).flatMap fun callee =>
+    if declared callee then [.function callee] else
+    match args with
+    | [_] => match owner callee true with
+      | some schema => [.type schema]
+      | none => [.function callee]
+    | _ => [.function callee]
+
 mutual
 /-- Canonical scalar operands. Limit words are builtin type queries, not constant references.
     Function bodies use parameter bindings only; call nodes below track their signature scopes. -/
-def valueReferences (source : SExpr) (declared : String → Bool := fun _ => false) : List DependencyName :=
+def valueReferences (source : SExpr) (declared : String → Bool := fun _ => false)
+    (owner : String → Bool → Option String := fun _ _ => none) : List DependencyName :=
   match source with
-  | .variable name => [.value name]
+  | .variable name => match owner name false with
+    | some schema => [.type schema]
+    | none => [.value name]
   | .field (.variable _) _ => []
-  | .field a _ | .arrow a _ | .un _ a | .old a => valueReferences a declared
-  | .index a b | .bin _ a b => valueReferences a declared ++ valueReferences b declared
-  | .call name args => (dependencyCallHead declared name args).map DependencyName.function ++
-      valueReferenceList args declared
-  | .built _ args | .ext _ _ args => valueReferenceList args declared
+  | .field a _ | .arrow a _ | .un _ a | .old a => valueReferences a declared owner
+  | .index a b | .bin _ a b => valueReferences a declared owner ++ valueReferences b declared owner
+  | .call name args => dependencyCallReferences declared owner name args ++
+      valueReferenceList args declared owner
+  | .built _ args | .ext _ _ args => valueReferenceList args declared owner
   | _ => []
-def valueReferenceList (sources : List SExpr) (declared : String → Bool := fun _ => false) : List DependencyName :=
+def valueReferenceList (sources : List SExpr) (declared : String → Bool := fun _ => false)
+    (owner : String → Bool → Option String := fun _ _ => none) : List DependencyName :=
   match sources with
   | [] => []
-  | a :: rest => valueReferences a declared ++ valueReferenceList rest declared
+  | a :: rest => valueReferences a declared owner ++ valueReferenceList rest declared owner
 end
+
+theorem valueReferences_call (name : String) (args : List SExpr) (declared : String → Bool)
+    (owner : String → Bool → Option String) :
+    valueReferences (.call name args) declared owner = dependencyCallReferences declared owner name args ++
+      valueReferenceList args declared owner := rfl
 
 /-- Bounds and counts use the same original operands as canonical type elaboration. Range
     bases contribute too: uTypIn resolves the base before admitting its numeric bounds. -/
-def typeReferences (source : STyp) (declared : String → Bool := fun _ => false) : List DependencyName :=
+def typeReferences (source : STyp) (declared : String → Bool := fun _ => false)
+    (owner : String → Bool → Option String := fun _ _ => none) : List DependencyName :=
   match source with
   | .atom name => [.type name]
-  | .range base lo hi _ => typeReferences base declared ++ valueReferences lo declared ++ valueReferences hi declared
-  | .array element count => typeReferences element declared ++ valueReferences count declared
-  | .wrap ty | .embed ty _ _ => typeReferences ty declared
-  | .str count => valueReferences count declared
+  | .range base lo hi _ => typeReferences base declared owner ++
+      valueReferences lo declared owner ++ valueReferences hi declared owner
+  | .array element count => typeReferences element declared owner ++ valueReferences count declared owner
+  | .wrap ty | .embed ty _ _ => typeReferences ty declared owner
+  | .str count => valueReferences count declared owner
   | _ => []
 
 mutual
 /-- Every row leaf remains in the graph, including unused constant arrays. -/
-def payloadReferences (source : SKonstWert) (declared : String → Bool := fun _ => false) : List DependencyName :=
+def payloadReferences (source : SKonstWert) (declared : String → Bool := fun _ => false)
+    (owner : String → Bool → Option String := fun _ _ => none) : List DependencyName :=
   match source with
-  | .one expr => valueReferences expr declared
-  | .rows rows => payloadReferenceList rows declared
-def payloadReferenceList (sources : List SKonstWert) (declared : String → Bool := fun _ => false) : List DependencyName :=
+  | .one expr => valueReferences expr declared owner
+  | .rows rows => payloadReferenceList rows declared owner
+def payloadReferenceList (sources : List SKonstWert) (declared : String → Bool := fun _ => false)
+    (owner : String → Bool → Option String := fun _ _ => none) : List DependencyName :=
   match sources with
   | [] => []
-  | row :: rest => payloadReferences row declared ++ payloadReferenceList rest declared
+  | row :: rest => payloadReferences row declared owner ++ payloadReferenceList rest declared owner
 end
+
+/-- Use only the canonical complete schemas. Ambiguous names have no guessed
+    owner; the ordinary unresolved-name edge and final typed checks remain. -/
+def taggedConstructorOwner (schemas : List (USum STyp)) (name : String) (payload : Bool) : Option String :=
+  match schemas.filter (fun schema => schema.cases.any (fun entry =>
+      strEq entry.1 name && entry.2.isSome == payload)) with
+  | [schema] => some schema.name
+  | _ => none
+
+/-- Every resolved owner is an actual original case with the requested payload
+    presence. No type-name default or guessed case can produce an edge. -/
+theorem taggedConstructorOwner_sound {schemas : List (USum STyp)} {name owner : String} {payload : Bool}
+    (resolved : taggedConstructorOwner schemas name payload = some owner) :
+    ∃ schema ∈ schemas, schema.name = owner ∧ ∃ entry ∈ schema.cases,
+      strEq entry.1 name = true ∧ (entry.2.isSome == payload) = true := by
+  unfold taggedConstructorOwner at resolved
+  cases selected : schemas.filter (fun schema => schema.cases.any (fun entry =>
+      strEq entry.1 name && entry.2.isSome == payload)) with
+  | nil => rw [selected] at resolved; cases resolved
+  | cons schema rest =>
+    cases rest with
+    | nil =>
+      rw [selected] at resolved
+      have same : schema.name = owner := Option.some.inj resolved
+      have member : schema ∈ schemas.filter (fun candidate => candidate.cases.any (fun entry =>
+          strEq entry.1 name && entry.2.isSome == payload)) := by
+        rw [selected]
+        exact List.mem_cons_self
+      have kept := List.mem_filter.mp member
+      obtain ⟨entry, inside, matched⟩ := List.any_eq_true.mp kept.2
+      exact ⟨schema, kept.1, same, entry, inside,
+        (Bool.and_eq_true_iff.mp matched).1, (Bool.and_eq_true_iff.mp matched).2⟩
+    | cons other tail => rw [selected] at resolved; cases resolved
 
 /-- Source declarations and their compile-time dependencies. Function bodies cannot capture
     global constants in uKonstWert; only calls and signature types contribute global edges. -/
@@ -102,7 +161,13 @@ def dependencyDeclarations (items : List SItemTief) : List (DependencyName × Li
   let declared := fun name => items.any fun
     | .fnT sig _ => sig.art == "const" && strEq sig.name name
     | _ => false
-  let head := dependencyCallHead declared
+  let schemas := uSumSchemas items
+  let owner := fun name payload =>
+    if !payload && items.any (fun | .constT declared _ _ => strEq declared name | _ => false) then none
+    else match schemas with
+      | .ok values => taggedConstructorOwner values name payload
+      | .error _ => none
+  let head := dependencyCallReferences declared owner
   let constructor := fun name => items.any fun
     | .typeT flags declared [] [] (some (.raw _)) => strEq declared name &&
         !flags.any (fun flag => strEq flag "tagged" || strEq flag "linear")
@@ -112,18 +177,27 @@ def dependencyDeclarations (items : List SItemTief) : List (DependencyName × Li
     | _ => reference
   (items.filterMap fun
     | .typeT _ name [] _ (some ty@(.atom _))
-    | .typeT _ name [] _ (some ty@(.range _ _ _ _)) => some (.type name, typeReferences ty declared)
+    | .typeT _ name [] _ (some ty@(.range _ _ _ _)) => some (.type name, typeReferences ty declared owner)
     | .typeT flags name [] [] (some (.raw _)) =>
-      if flags.any (fun flag => strEq flag "tagged" || strEq flag "linear") then none
+      if flags.any (strEq "tagged") then
+        match schemas with
+        | .ok values => match values.find? (fun schema => strEq schema.name name) with
+          | some schema => some (.type name, schema.cases.flatMap (fun entry =>
+              entry.2.toList.flatMap (fun ty => typeReferences ty declared owner)))
+          | none => none
+        -- A schema error is never converted into a schema or constructor edge.
+        -- The canonical uSums phase still reports that original failure.
+        | .error _ => none
+      else if flags.any (strEq "linear") then none
       else match expandRecord (items.length + 1) items [] name with
-        | .ok fields => some (.type name, fields.flatMap (fun field => typeReferences field.ftyp declared))
+        | .ok fields => some (.type name, fields.flatMap (fun field => typeReferences field.ftyp declared owner))
         | .error _ => some (.type name, [.type name])
-    | .constT name ty payload => some (.value name, typeReferences ty declared ++ payloadReferences payload declared)
+    | .constT name ty payload => some (.value name,
+        typeReferences ty declared owner ++ payloadReferences payload declared owner)
     | .fnT sig (.block [] (some (.ret (some body)))) =>
       if sig.art == "const" then some (.function sig.name,
-        sig.params.flatMap (fun p => typeReferences p.2 declared) ++
-        (sig.res.toList.flatMap (fun ty => typeReferences ty declared)) ++
-        (callsWith head body).map DependencyName.function)
+        sig.params.flatMap (fun p => typeReferences p.2 declared owner) ++
+        (sig.res.toList.flatMap (fun ty => typeReferences ty declared owner)) ++ callsWith head body)
       else none
     | _ => none).map fun (name, deps) => (name, deps.map resolve)
 
@@ -238,5 +312,27 @@ theorem option_nested_cycle_zeuge :
     let fn := SItemTief.fnT ⟨"const", "loop", [], some (.atom "u8"), none, [], []⟩
       (.block [] (some (.ret (some (.call "Some" [.call "loop" []])))))
     orderConstants [fn] = .error "compile-time dependency cycle at const function loop" := by rfl
+
+theorem option_declared_cycle_zeuge :
+    let fn := SItemTief.fnT ⟨"const", "Some", [("x", .atom "u8")], some (.atom "u8"), none, [], []⟩
+      (.block [] (some (.ret (some (.call "Some" [.variable "x"])))))
+    orderConstants [fn] = .error "compile-time dependency cycle at const function Some" := by rfl
+
+/-- The schema controls arity; nested calls and variable operands remain intact. -/
+theorem tagged_dependencies_zeuge :
+    let schema : USum STyp := ⟨"Choice", [("Empty", none), ("Data", some (.atom "u8"))]⟩
+    let owner := taggedConstructorOwner [schema]
+    valueReferences (.call "Data" [.call "work" [.variable "LIMIT"]]) (fun _ => false) owner =
+      [.type "Choice", .function "work", .value "LIMIT"] ∧
+    valueReferences (.variable "Empty") (fun _ => false) owner = [.type "Choice"] ∧
+    valueReferences (.call "Data" []) (fun _ => false) owner = [.function "Data"] ∧
+    valueReferences (.call "Empty" [.lit 1]) (fun _ => false) owner = [.function "Empty"] ∧
+    valueReferences (.call "Data" [.lit 1]) (fun name => strEq name "Data") owner =
+      [.function "Data"] := ⟨rfl, rfl, rfl, rfl, rfl⟩
+
+theorem tagged_ambiguous_owner_zeuge :
+    taggedConstructorOwner
+      [⟨"First", [("Data", some (.atom "u8"))]⟩,
+       ⟨"Second", [("Data", some (.atom "u8"))]⟩] "Data" true = none := rfl
 
 end Gabbro.Stage0.Frontend

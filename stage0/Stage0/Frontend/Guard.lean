@@ -48,13 +48,13 @@ def dependencyCallHead (declared : String → Bool) (name : String) (args : List
 
 mutual
 /-- One traversal retains every operand while the caller classifies call heads. -/
-def callsWith (head : String → List SExpr → List String) : SExpr → List String
+def callsWith {α : Type} (head : String → List SExpr → List α) : SExpr → List α
   | .call name args => head name args ++ callsListWith head args
   | .field a _ | .arrow a _ | .un _ a | .old a => callsWith head a
   | .index a b | .bin _ a b => callsWith head a ++ callsWith head b
   | .built _ args | .ext _ _ args => callsListWith head args
   | _ => []
-def callsListWith (head : String → List SExpr → List String) : List SExpr → List String
+def callsListWith {α : Type} (head : String → List SExpr → List α) : List SExpr → List α
   | [] => []
   | a :: rest => callsWith head a ++ callsListWith head rest
 end
