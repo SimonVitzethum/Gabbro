@@ -45,7 +45,7 @@ theorem emit_eq {src : String} {K : Nat} {options : Profil.Options}
   dsimp only [bind, Except.bind, pure, Except.pure]
   erw [gateMap, starts]
   dsimp only [bind, Except.bind]
-  rw [dif_pos result.initialValid, result.pointers, result.emission]
+  erw [dif_pos result.initialValid, result.pointers, result.emission]
   rfl
 
 /-- Whole canonical constructor equality from actual phase results. The AX-free
@@ -106,6 +106,7 @@ theorem geometry {src : String} {K : Nat} {options : Profil.Options}
   have codeLength : image.image.code.length =
       Senke.headLen (image.starts.map (·.1)).length + body.length := by
     rw [code, List.length_append, layout.head]
+    rfl
   have length := Senke.bild_initialized_length_u image.initialValid image.emission positions
   change image.bytes.length = 16 + 16 * image.image.code.length + 8 * image.image.K at length
   have frame := layout.hfp
