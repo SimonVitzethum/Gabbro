@@ -284,8 +284,8 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
   intro hK
   obtain ⟨b0, hb0, hPb⟩ := gesenktZ.rumpf fI
   change lowBody uZ fI [.call "g" []] .empty = .ok b0 at hb0
-  obtain ⟨gst, rest, hgst, hrest, rfl⟩ := lowBody_cons_ok fI .empty (.call "g" []) [] rfl hb0
-  simp only [lowBody, List.length_nil, lowBodyF] at hrest
+  obtain ⟨Λ', gst, rest, hgst, hrest, rfl⟩ := lowBody_cons_ok fI .empty (.call "g" []) [] rfl hb0
+  simp only [lowBodyAt, List.length_nil, lowBodyF] at hrest
   have hx : stmtBody uZ (fnAt uZ fI) (.call "g" []) =
       some (.call "g" [] [] (.lit (.bool true))) := rfl
   let ρ₀ : Env (declOf uZ) (ctxOf uZ fI) := .nil
@@ -293,7 +293,7 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
   have hL0 : LRel (fnAt uZ fI) 0 ρ₀ (eintritt uZ fI σ7 .nil).local' := fun p j hj => by
     simp [fnAt, fI, uZ, paramPos] at hj
   obtain ⟨callee, σr, envA, hname, _, hsl, _, _, _, hcases, _⟩ :=
-    lowCall_sim fI (show lowCall uZ fI "g" [] = .ok gst from hgst) hx (stimmigZ.art fI) stimmigZ.tab stimmigZ.namen (fun c => (stimmigZ.art c).2.1) O0 0 RZ σ7 ρ₀ _ hW0 hL0
+    lowCall_sim fI (show lowCall uZ fI "g" [] = .ok ⟨Λ', gst⟩ from hgst) hx (stimmigZ.art fI) stimmigZ.tab stimmigZ.namen (fun c => (stimmigZ.art c).2.1) O0 0 RZ σ7 ρ₀ _ hW0 hL0
   have hcallee : callee = gI := by
     rcases callee with ⟨_ | _ | _ | n, hc⟩
     · simp [fnAt, uZ] at hname
@@ -309,7 +309,7 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
     cases hR'
     have hrun : execEnd O0 0 RZ (Endblock.cons gst rest) σ7 ρ₀ = execEnd O0 0 RZ rest σr ρ₀ := by
       simp only [execEnd, hex]
-    obtain ⟨σ'', v'', hend, hsl'', _⟩ := lowEnd_sim fI (show lowEndF uZ fI .empty = .ok rest from hrest) (rfl : endBody uZ (fnAt uZ fI) .empty = some [])
+    obtain ⟨σ'', v'', hend, hsl'', _⟩ := lowEnd_sim fI (show lowEndF uZ fI .empty (Λ := Λ') = .ok rest from hrest) (rfl : endBody uZ (fnAt uZ fI) .empty = some [])
       (stimmigZ.art fI) stimmigZ.tab O0 0 RZ σr ρ₀ _ (wrel_slots uZ hsl hW0) hL0
     have hX := execEnd_heq (V := verOf uZ fI) O0 0 RZ (ctxParams_eq uZ fI).symm
       (anfangRes_eq uZ fI).symm (PZ.rumpf fI) (Endblock.cons gst rest) hPb σ7 .nil ρ₀ HEq.rfl
