@@ -8,7 +8,8 @@ public import Runner.Basis.MemLemma
 /-! # One `S0IR` thread on one memory, and the steps of single instructions
 
 `Run r m t m'`: the request tree `r`, answered by the memory `m` (sequentially consistent) and by the kernel
-(`Kern`, a system call), ends in the thread state `t` with the memory `m'`. `Star t m t' m'`: instruction after instruction. This is the
+(`Kern`, with named CPU floating contracts and system-call answers), ends in the thread state `t` with the memory `m'`.
+`Star t m t' m'`: instruction after instruction. This is the
 IR side of `ir_sim` (the lowering of stage 0 against machine G); with `runner_sc` it reaches the runner.
 
 `InsAt m pc o a b c`: the memory holds the instruction with opcode `o` and fields `a b c` at `pc`. The lemmas
@@ -110,7 +111,8 @@ theorem run_bin {t : T} {m m1 : Mem} {o : Nat} {d a b : BitVec 32} (hi : InsAt m
   simp only [hg, opt_some, ret1]
   exact f1_run hi (run_wr64 hw)
 
-/-- The builtin CPU relation supplies the result; its request changes no memory. -/
+/-- The opaque CPU relation supplies the result under `Kern`'s named hardware
+    contract; the request changes no memory. -/
 theorem run_fp {t : T} {m m1 : Mem} {o : Nat} {d a b : BitVec 32}
     (hi : InsAt m t.pc o d a b) {kind : NativeFPOp} {va vb result : W}
     (ha : m.rd64 (slot t.fp (sx a)) = some va)

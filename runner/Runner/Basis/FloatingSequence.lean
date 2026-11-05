@@ -53,7 +53,8 @@ def fpFromUInt64 {σ : Type} (format : FPFormat) (value : W) (continuation : W �
   else fp (.fromInt64 format) value 0 continuation
 
 /-- CVTT's integer-indefinite result is used only on its actual finite domain.
-    Outside that domain, the guards produce Std's saturated/NaN-to-zero result. -/
+    Outside it, the guards produce the named hardware contract's saturated or
+    NaN-to-zero result. -/
 def fpToInt64 {σ : Type} (format : FPFormat) (value : W) (continuation : W → Res σ) : Res σ :=
   if fpNaN format value then continuation 0
   else if (fpMagnitude format value).ult format.int64Limit then
@@ -69,8 +70,8 @@ def fpToUInt64 {σ : Type} (format : FPFormat) (value : W) (continuation : W →
       fp (.truncateInt64 format) reduced 0 fun integer => continuation (integer ||| 0x8000000000000000)
   else continuation 0xFFFFFFFFFFFFFFFF
 
-/-- Installed codecs compute words directly. Unsigned conversion and saturating
-    casts use their proven portable sequences of native primitive requests. -/
+/-- Installed codecs compute words directly. The portable conversion sequences
+    refine opaque primitive requests under the explicit hardware contract. -/
 def fpSequence {σ : Type} (kind : NativeFPOp) (a b : W) (continuation : W → Res σ) : Res σ :=
   match kind with
   | .neg format => continuation (fpNegWord format a)

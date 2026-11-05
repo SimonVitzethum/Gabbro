@@ -19,9 +19,10 @@ def memAns (m : Mem) : Op → Option (Ans × Mem)
   | .sys _ => none
   | .fp _ _ _ => none
 
-/-- **The kernel**: which answer and which memory a system call may leave. Any relation; what a program may rely
-    on is the named assumption at its gates (`Stage0/Senke/Tor`). -/
-class Kern where
+/-- The supplied execution boundary: named native CPU floating contracts and
+    the relation describing system-call answers and memory effects. Programs
+    retain their explicit binding duties at `Stage0/Senke/Tor`. -/
+class Kern extends RootNativeFloat.Hardware where
   ans : Req → Mem → Ans → Mem → Prop
 
 variable [Kern]
@@ -54,8 +55,8 @@ theorem Run.fp_fromUInt64_low {format : FPFormat} {value result : W}
     (hk : Run (continuation result) m t m') : Run (fpFromUInt64 format value continuation) m t m' := by
   have signed : NativeFPEval (.fromInt64 format) value 0 result := by
     cases format
-    · simpa only [NativeFPEval, nativeFP, uint64_toFloat32_nonnegative value low] using heval
-    · simpa only [NativeFPEval, nativeFP, uint64_toFloat_nonnegative value low] using heval
+    · simpa only [NativeFPEval, nativeFP, RootNativeFloat.uint64_toFloat32_nonnegative value low] using heval
+    · simpa only [NativeFPEval, nativeFP, RootNativeFloat.uint64_toFloat_nonnegative value low] using heval
   simpa only [fpFromUInt64, low, Bool.false_eq_true, ↓reduceIte] using Run.native_fp signed hk
 
 end Runner.IR

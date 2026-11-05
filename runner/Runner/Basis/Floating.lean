@@ -1,9 +1,7 @@
 module
 
 public import Runner.Basis.Mem
-public import Init.Data.Float
-public import Init.Data.SInt.Float
-public import Init.Data.SInt.Float32
+public import NativeFloat.Primitives
 
 @[expose] public section
 
@@ -13,8 +11,8 @@ inductive FPFormat where
   | f32 | f64
   deriving DecidableEq, Repr
 
-/-- Operations of the existing runner, evaluated by Lean's native CPU primitives.
-    Float-to-integer conversions use the primitives' saturating, NaN-to-zero semantics. -/
+/-- Operations of the existing runner, expressed through opaque CPU primitives.
+    Their numerical guarantees require the named native hardware contract. -/
 inductive NativeFPOp where
   | add (format : FPFormat) | sub (format : FPFormat)
   | mul (format : FPFormat) | div (format : FPFormat)
@@ -28,8 +26,8 @@ inductive NativeFPOp where
   | truncateInt64 (format : FPFormat)
   deriving DecidableEq, Repr
 
-def readFloat (word : W) : Float := Float.ofBits (UInt64.ofBitVec word)
-def readFloat32 (word : W) : Float32 := Float32.ofBits (UInt32.ofBitVec (word.setWidth 32))
+def readFloat (word : W) : Float := Float.hwOfBits (UInt64.ofBitVec word)
+def readFloat32 (word : W) : Float32 := Float32.hwOfBits (UInt32.ofBitVec (word.setWidth 32))
 
 def fpLow32 (word : W) : W := (word.setWidth 32).setWidth 64
 
@@ -75,14 +73,14 @@ def fpCompareFlags (unordered less equal : Bool) : W :=
   if unordered then 0x45 else if less then 1 else if equal then 0x40 else 0
 
 def truncateFloat64 (value : Float) : W :=
-  if value.isNaN || Float.lt value Int64.minValue.toFloat ||
-      !(Float.lt value (UInt64.ofNat (2 ^ 63)).toFloat) then BitVec.ofNat 64 (2 ^ 63)
-  else value.toInt64.toBitVec
+  if value.hwIsNaN || Float.hwLt value Int64.minValue.hwToFloat ||
+      !(Float.hwLt value (UInt64.ofNat (2 ^ 63)).hwToFloat) then BitVec.ofNat 64 (2 ^ 63)
+  else value.hwToInt64.toBitVec
 
 def truncateFloat32 (value : Float32) : W :=
-  if value.isNaN || Float32.lt value Int64.minValue.toFloat32 ||
-      !(Float32.lt value (UInt64.ofNat (2 ^ 63)).toFloat32) then BitVec.ofNat 64 (2 ^ 63)
-  else value.toInt64.toBitVec
+  if value.hwIsNaN || Float32.hwLt value Int64.minValue.hwToFloat32 ||
+      !(Float32.hwLt value (UInt64.ofNat (2 ^ 63)).hwToFloat32) then BitVec.ofNat 64 (2 ^ 63)
+  else value.hwToInt64.toBitVec
 
 private theorem flagWord_normalize (value : Bool) :
     (if flagWord value = 0 then (0 : W) else 1) = flagWord value := by
@@ -111,40 +109,41 @@ private theorem fpCompareFlags_mask (unordered less equal : Bool) :
     (fpCompareFlags unordered less equal &&& (0x45 : W)) = fpCompareFlags unordered less equal := by
   cases unordered <;> cases less <;> cases equal <;> rfl
 
-/-- One common evaluator; no runner-owned floating-point arithmetic or interpreter. -/
+/-- One common opaque primitive specification; no floating arithmetic is unfolded
+    or implemented by the runner's proof kernel. -/
 def nativeFP (op : NativeFPOp) (a b : W) : NativeFPValue :=
   match op with
-  | .add .f32 => .f32 (readFloat32 a + readFloat32 b)
-  | .add .f64 => .f64 (readFloat a + readFloat b)
-  | .sub .f32 => .f32 (readFloat32 a - readFloat32 b)
-  | .sub .f64 => .f64 (readFloat a - readFloat b)
-  | .mul .f32 => .f32 (readFloat32 a * readFloat32 b)
-  | .mul .f64 => .f64 (readFloat a * readFloat b)
-  | .div .f32 => .f32 (readFloat32 a / readFloat32 b)
-  | .div .f64 => .f64 (readFloat a / readFloat b)
+  | .add .f32 => .f32 (Float32.hwAdd (readFloat32 a) (readFloat32 b))
+  | .add .f64 => .f64 (Float.hwAdd (readFloat a) (readFloat b))
+  | .sub .f32 => .f32 (Float32.hwSub (readFloat32 a) (readFloat32 b))
+  | .sub .f64 => .f64 (Float.hwSub (readFloat a) (readFloat b))
+  | .mul .f32 => .f32 (Float32.hwMul (readFloat32 a) (readFloat32 b))
+  | .mul .f64 => .f64 (Float.hwMul (readFloat a) (readFloat b))
+  | .div .f32 => .f32 (Float32.hwDiv (readFloat32 a) (readFloat32 b))
+  | .div .f64 => .f64 (Float.hwDiv (readFloat a) (readFloat b))
   | .neg format => .word (fpNegWord format a)
-  | .eq .f32 => .word (flagWord (readFloat32 a == readFloat32 b))
-  | .eq .f64 => .word (flagWord (readFloat a == readFloat b))
-  | .lt .f32 => .word (flagWord (Float32.lt (readFloat32 a) (readFloat32 b)))
-  | .lt .f64 => .word (flagWord (Float.lt (readFloat a) (readFloat b)))
-  | .le .f32 => .word (flagWord (Float32.le (readFloat32 a) (readFloat32 b)))
-  | .le .f64 => .word (flagWord (Float.le (readFloat a) (readFloat b)))
-  | .isFinite .f32 => .word (flagWord (readFloat32 a).isFinite)
-  | .isFinite .f64 => .word (flagWord (readFloat a).isFinite)
-  | .fromInt64 .f32 => .f32 (Int64.ofBitVec a).toFloat32
-  | .fromInt64 .f64 => .f64 (Int64.ofBitVec a).toFloat
-  | .fromUInt64 .f32 => .f32 (UInt64.ofBitVec a).toFloat32
-  | .fromUInt64 .f64 => .f64 (UInt64.ofBitVec a).toFloat
-  | .toInt64 .f32 => .word (readFloat32 a).toInt64.toBitVec
-  | .toInt64 .f64 => .word (readFloat a).toInt64.toBitVec
-  | .toUInt64 .f32 => .word (readFloat32 a).toUInt64.toBitVec
-  | .toUInt64 .f64 => .word (readFloat a).toUInt64.toBitVec
-  | .widen32 => .f64 (readFloat32 a).toFloat
-  | .narrow32 => .f32 (readFloat a).toFloat32
-  | .compare .f32 => .word (fpCompareFlags ((readFloat32 a).isNaN || (readFloat32 b).isNaN)
-      (Float32.lt (readFloat32 a) (readFloat32 b)) (readFloat32 a == readFloat32 b))
-  | .compare .f64 => .word (fpCompareFlags ((readFloat a).isNaN || (readFloat b).isNaN)
-      (Float.lt (readFloat a) (readFloat b)) (readFloat a == readFloat b))
+  | .eq .f32 => .word (flagWord (Float32.hwBEq (readFloat32 a) (readFloat32 b)))
+  | .eq .f64 => .word (flagWord (Float.hwBEq (readFloat a) (readFloat b)))
+  | .lt .f32 => .word (flagWord (Float32.hwLt (readFloat32 a) (readFloat32 b)))
+  | .lt .f64 => .word (flagWord (Float.hwLt (readFloat a) (readFloat b)))
+  | .le .f32 => .word (flagWord (Float32.hwLe (readFloat32 a) (readFloat32 b)))
+  | .le .f64 => .word (flagWord (Float.hwLe (readFloat a) (readFloat b)))
+  | .isFinite .f32 => .word (flagWord (readFloat32 a).hwIsFinite)
+  | .isFinite .f64 => .word (flagWord (readFloat a).hwIsFinite)
+  | .fromInt64 .f32 => .f32 (Int64.ofBitVec a).hwToFloat32
+  | .fromInt64 .f64 => .f64 (Int64.ofBitVec a).hwToFloat
+  | .fromUInt64 .f32 => .f32 (UInt64.ofBitVec a).hwToFloat32
+  | .fromUInt64 .f64 => .f64 (UInt64.ofBitVec a).hwToFloat
+  | .toInt64 .f32 => .word (readFloat32 a).hwToInt64.toBitVec
+  | .toInt64 .f64 => .word (readFloat a).hwToInt64.toBitVec
+  | .toUInt64 .f32 => .word (readFloat32 a).hwToUInt64.toBitVec
+  | .toUInt64 .f64 => .word (readFloat a).hwToUInt64.toBitVec
+  | .widen32 => .f64 (readFloat32 a).hwToFloat
+  | .narrow32 => .f32 (readFloat a).hwToFloat32
+  | .compare .f32 => .word (fpCompareFlags ((readFloat32 a).hwIsNaN || (readFloat32 b).hwIsNaN)
+      (Float32.hwLt (readFloat32 a) (readFloat32 b)) (Float32.hwBEq (readFloat32 a) (readFloat32 b)))
+  | .compare .f64 => .word (fpCompareFlags ((readFloat a).hwIsNaN || (readFloat b).hwIsNaN)
+      (Float.hwLt (readFloat a) (readFloat b)) (Float.hwBEq (readFloat a) (readFloat b)))
   | .truncateInt64 .f32 => .word (truncateFloat32 (readFloat32 a))
   | .truncateInt64 .f64 => .word (truncateFloat64 (readFloat a))
 
@@ -182,8 +181,8 @@ theorem NativeFPEval.resultWord {op : NativeFPOp} {a b result : W}
     other representations of the same native NaN value. -/
 def nativeFPBits (op : NativeFPOp) (a b : W) : W :=
   match nativeFP op a b with
-  | .f32 value => value.toBits.toBitVec.setWidth 64
-  | .f64 value => value.toBits.toBitVec
+  | .f32 value => value.hwToBits.toBitVec.setWidth 64
+  | .f64 value => value.hwToBits.toBitVec
   | .word value => value
 
 /-- Appended opcodes: the existing integer and memory instructions keep 1 through 27. -/

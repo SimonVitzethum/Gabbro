@@ -27,12 +27,14 @@ class FutexOK (spurious : W → W → Mem → Mem → Prop) [Kern] : Prop where
   wake_return : ∀ a n m r x m',
     Kern.ans (futexReq a 129 n) m (some (r, x)) m' → 0 ≤ r.toInt → r.toNat ≤ n.toNat
 
-/-- The class is inhabited without adding assumptions about progress or writes.
-    This test kernel admits spurious WAIT and zero-waiter WAKE, preserving memory. -/
-abbrev futexKernel : Kern where
+/-- Given the named CPU contract, this test kernel admits spurious WAIT and
+    zero-waiter WAKE without assumptions about progress or memory writes. -/
+abbrev futexKernel [hardware : RootNativeFloat.Hardware] : Kern where
+  toHardware := hardware
   ans q m ans m' := m' = m ∧ ∃ a v, (q = futexReq a 128 v ∨ q = futexReq a 129 v) ∧ ans = some (0, 0)
 
-theorem futexOK_zeuge : @FutexOK (fun _ _ _ _ => True) futexKernel := by
+theorem futexOK_zeuge [RootNativeFloat.Hardware] :
+    @FutexOK (fun _ _ _ _ => True) futexKernel := by
   letI : Kern := futexKernel
   refine ⟨?_, ?_⟩
   · intro a v m r x m' _; exact Or.inr trivial

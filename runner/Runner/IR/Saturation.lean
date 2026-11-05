@@ -1,12 +1,12 @@
 module
 public import Runner.IR.NativeRun
-import NativeFloat.Saturation
+public import NativeFloat.Hardware
 @[expose] public section
 
 namespace Runner
 
 /-! Only representation transports live here. Numerical cast identities and
-    domains come from NativeFloat.Saturation; Run still uses its original
+    domains come from the named NativeFloat.Hardware contract; Run still uses its original
     constructors and the original portable request trees. -/
 
 private theorem and_extend32 (value : BitVec 32) (mask : W) :
@@ -52,16 +52,16 @@ private theorem negative64 (value : W) : fpNegative .f64 value = value.msb := by
   cases value.getLsbD 63 <;> decide
 
 private theorem truncate32_domain (value : Float32)
-    (domain : value.isNaN = false ∧ Float32.lt value Int64.minValue.toFloat32 = false ∧
-      Float32.lt value (UInt64.ofNat (2 ^ 63)).toFloat32 = true) :
-    truncateFloat32 value = value.toInt64.toBitVec := by
+    (domain : value.hwIsNaN = false ∧ Float32.hwLt value Int64.minValue.hwToFloat32 = false ∧
+      Float32.hwLt value (UInt64.ofNat (2 ^ 63)).hwToFloat32 = true) :
+    truncateFloat32 value = value.hwToInt64.toBitVec := by
   simp only [truncateFloat32, domain.1, domain.2.1, domain.2.2,
     Bool.not_true, Bool.false_or, Bool.false_eq_true, ↓reduceIte]
 
 private theorem truncate64_domain (value : Float)
-    (domain : value.isNaN = false ∧ Float.lt value Int64.minValue.toFloat = false ∧
-      Float.lt value (UInt64.ofNat (2 ^ 63)).toFloat = true) :
-    truncateFloat64 value = value.toInt64.toBitVec := by
+    (domain : value.hwIsNaN = false ∧ Float.hwLt value Int64.minValue.hwToFloat = false ∧
+      Float.hwLt value (UInt64.ofNat (2 ^ 63)).hwToFloat = true) :
+    truncateFloat64 value = value.hwToInt64.toBitVec := by
   simp only [truncateFloat64, domain.1, domain.2.1, domain.2.2,
     Bool.not_true, Bool.false_or, Bool.false_eq_true, ↓reduceIte]
 
@@ -75,7 +75,7 @@ private theorem unsigned_result {format : FPFormat} {value result : W}
     result = nativeFPBits (.toUInt64 format) value 0 := by
   cases format <;> exact expected
 
-private theorem nan_results (format : FPFormat) (value : W) (nan : fpNaN format value = true) :
+private theorem nan_results [RootNativeFloat.Hardware] (format : FPFormat) (value : W) (nan : fpNaN format value = true) :
     nativeFPBits (.toInt64 format) value 0 = 0 ∧ nativeFPBits (.toUInt64 format) value 0 = 0 := by
   cases format with
   | f32 =>
@@ -87,7 +87,7 @@ private theorem nan_results (format : FPFormat) (value : W) (nan : fpNaN format 
     exact ⟨RootNativeFloat.float64_toInt64_nan value nan,
       RootNativeFloat.float64_toUInt64_nan value nan⟩
 
-private theorem small_truncate (format : FPFormat) (value : W)
+private theorem small_truncate [RootNativeFloat.Hardware] (format : FPFormat) (value : W)
     (small : (fpMagnitude format value).ult format.int64Limit = true) :
     NativeFPEval (.truncateInt64 format) value 0 (nativeFPBits (.toInt64 format) value 0) := by
   cases format with
@@ -99,7 +99,7 @@ private theorem small_truncate (format : FPFormat) (value : W)
     change (value &&& 0x7FFFFFFFFFFFFFFF).ult 0x43E0000000000000 = true at small
     exact (truncate64_domain _ (RootNativeFloat.float64_cvtt_domain value small)).symm
 
-private theorem signed_overflow (format : FPFormat) (value : W)
+private theorem signed_overflow [RootNativeFloat.Hardware] (format : FPFormat) (value : W)
     (nan : fpNaN format value = false)
     (large : (fpMagnitude format value).ult format.int64Limit = false) :
     nativeFPBits (.toInt64 format) value 0 =
@@ -109,23 +109,23 @@ private theorem signed_overflow (format : FPFormat) (value : W)
     rw [nan32] at nan
     change (fpMagnitude .f32 value).ult ((0x5F000000 : BitVec 32).setWidth 64) = false at large
     rw [magnitude32_ult] at large
-    have post : (readFloat32 value).toInt64.toBitVec =
+    have post : (readFloat32 value).hwToInt64.toBitVec =
         if (value.setWidth 32).msb then (0x8000000000000000 : W) else 0x7FFFFFFFFFFFFFFF :=
       RootNativeFloat.float32_toInt64_overflow (value.setWidth 32) nan large
-    change (readFloat32 value).toInt64.toBitVec = _
+    change (readFloat32 value).hwToInt64.toBitVec = _
     rw [negative32]
     exact post
   | f64 =>
     change (0x7FF0000000000000 : W).ult (value &&& 0x7FFFFFFFFFFFFFFF) = false at nan
     change (value &&& 0x7FFFFFFFFFFFFFFF).ult 0x43E0000000000000 = false at large
-    have post : (readFloat value).toInt64.toBitVec =
+    have post : (readFloat value).hwToInt64.toBitVec =
         if value.msb then (0x8000000000000000 : W) else 0x7FFFFFFFFFFFFFFF :=
       RootNativeFloat.float64_toInt64_overflow value nan large
-    change (readFloat value).toInt64.toBitVec = _
+    change (readFloat value).hwToInt64.toBitVec = _
     rw [negative64]
     exact post
 
-private theorem unsigned_negative (format : FPFormat) (value : W)
+private theorem unsigned_negative [RootNativeFloat.Hardware] (format : FPFormat) (value : W)
     (negative : fpNegative format value = true) : nativeFPBits (.toUInt64 format) value 0 = 0 := by
   cases format with
   | f32 =>
@@ -135,7 +135,7 @@ private theorem unsigned_negative (format : FPFormat) (value : W)
     rw [negative64] at negative
     exact RootNativeFloat.float64_toUInt64_negative value negative
 
-private theorem unsigned_low (format : FPFormat) (value : W)
+private theorem unsigned_low [RootNativeFloat.Hardware] (format : FPFormat) (value : W)
     (nonnegative : fpNegative format value = false)
     (small : (fpMagnitude format value).ult format.int64Limit = true) :
     nativeFPBits (.toUInt64 format) value 0 = nativeFPBits (.toInt64 format) value 0 := by
@@ -150,7 +150,7 @@ private theorem unsigned_low (format : FPFormat) (value : W)
     change (value &&& 0x7FFFFFFFFFFFFFFF).ult 0x43E0000000000000 = true at small
     exact RootNativeFloat.float64_toUInt64_low value nonnegative small
 
-private theorem unsigned_overflow (format : FPFormat) (value : W)
+private theorem unsigned_overflow [RootNativeFloat.Hardware] (format : FPFormat) (value : W)
     (nonnegative : fpNegative format value = false) (nan : fpNaN format value = false)
     (large : (fpMagnitude format value).ult format.uint64Limit = false) :
     nativeFPBits (.toUInt64 format) value 0 = 0xFFFFFFFFFFFFFFFF := by
@@ -167,7 +167,7 @@ private theorem unsigned_overflow (format : FPFormat) (value : W)
     change (value &&& 0x7FFFFFFFFFFFFFFF).ult 0x43F0000000000000 = false at large
     exact RootNativeFloat.float64_toUInt64_overflow value nonnegative nan large
 
-private theorem unsigned_high (format : FPFormat) (value reduced : W)
+private theorem unsigned_high [RootNativeFloat.Hardware] (format : FPFormat) (value reduced : W)
     (nonnegative : fpNegative format value = false)
     (lower : (fpMagnitude format value).ult format.int64Limit = false)
     (upper : (fpMagnitude format value).ult format.uint64Limit = true)
@@ -180,20 +180,20 @@ private theorem unsigned_high (format : FPFormat) (value reduced : W)
     change (fpMagnitude .f32 value).ult ((0x5F000000 : BitVec 32).setWidth 64) = false at lower
     change (fpMagnitude .f32 value).ult ((0x5F800000 : BitVec 32).setWidth 64) = true at upper
     rw [magnitude32_ult] at lower upper
-    let difference := Float32.sub (readFloat32 value) (Float32.ofBits 0x5F000000)
-    have post : (readFloat32 value).toUInt64.toBitVec =
-        difference.toInt64.toBitVec ||| (0x8000000000000000 : W) ∧
-        difference.isNaN = false ∧ Float32.lt difference Int64.minValue.toFloat32 = false ∧
-        Float32.lt difference (UInt64.ofNat (2 ^ 63)).toFloat32 = true :=
+    let difference := Float32.hwSub (readFloat32 value) (Float32.hwOfBits 0x5F000000)
+    have post : (readFloat32 value).hwToUInt64.toBitVec =
+        difference.hwToInt64.toBitVec ||| (0x8000000000000000 : W) ∧
+        difference.hwIsNaN = false ∧ Float32.hwLt difference Int64.minValue.hwToFloat32 = false ∧
+        Float32.hwLt difference (UInt64.ofNat (2 ^ 63)).hwToFloat32 = true :=
       RootNativeFloat.float32_toUInt64_high (value.setWidth 32) nonnegative lower upper
     change reduced = (reduced.setWidth 32).setWidth 64 ∧
       readFloat32 reduced = difference at subtracted
-    have domain : (readFloat32 reduced).isNaN = false ∧
-        Float32.lt (readFloat32 reduced) Int64.minValue.toFloat32 = false ∧
-        Float32.lt (readFloat32 reduced) (UInt64.ofNat (2 ^ 63)).toFloat32 = true := by
+    have domain : (readFloat32 reduced).hwIsNaN = false ∧
+        Float32.hwLt (readFloat32 reduced) Int64.minValue.hwToFloat32 = false ∧
+        Float32.hwLt (readFloat32 reduced) (UInt64.ofNat (2 ^ 63)).hwToFloat32 = true := by
       rw [subtracted.2]
       exact post.2
-    change (readFloat32 value).toUInt64.toBitVec =
+    change (readFloat32 value).hwToUInt64.toBitVec =
       truncateFloat32 (readFloat32 reduced) ||| 0x8000000000000000
     rw [truncate32_domain (readFloat32 reduced) domain, subtracted.2]
     exact post.1
@@ -201,19 +201,19 @@ private theorem unsigned_high (format : FPFormat) (value reduced : W)
     rw [negative64] at nonnegative
     change (value &&& 0x7FFFFFFFFFFFFFFF).ult 0x43E0000000000000 = false at lower
     change (value &&& 0x7FFFFFFFFFFFFFFF).ult 0x43F0000000000000 = true at upper
-    let difference := Float.sub (readFloat value) (Float.ofBits 0x43E0000000000000)
-    have post : (readFloat value).toUInt64.toBitVec =
-        difference.toInt64.toBitVec ||| (0x8000000000000000 : W) ∧
-        difference.isNaN = false ∧ Float.lt difference Int64.minValue.toFloat = false ∧
-        Float.lt difference (UInt64.ofNat (2 ^ 63)).toFloat = true :=
+    let difference := Float.hwSub (readFloat value) (Float.hwOfBits 0x43E0000000000000)
+    have post : (readFloat value).hwToUInt64.toBitVec =
+        difference.hwToInt64.toBitVec ||| (0x8000000000000000 : W) ∧
+        difference.hwIsNaN = false ∧ Float.hwLt difference Int64.minValue.hwToFloat = false ∧
+        Float.hwLt difference (UInt64.ofNat (2 ^ 63)).hwToFloat = true :=
       RootNativeFloat.float64_toUInt64_high value nonnegative lower upper
     change readFloat reduced = difference at subtracted
-    have domain : (readFloat reduced).isNaN = false ∧
-        Float.lt (readFloat reduced) Int64.minValue.toFloat = false ∧
-        Float.lt (readFloat reduced) (UInt64.ofNat (2 ^ 63)).toFloat = true := by
+    have domain : (readFloat reduced).hwIsNaN = false ∧
+        Float.hwLt (readFloat reduced) Int64.minValue.hwToFloat = false ∧
+        Float.hwLt (readFloat reduced) (UInt64.ofNat (2 ^ 63)).hwToFloat = true := by
       rw [subtracted]
       exact post.2
-    change (readFloat value).toUInt64.toBitVec =
+    change (readFloat value).hwToUInt64.toBitVec =
       truncateFloat64 (readFloat reduced) ||| 0x8000000000000000
     rw [truncate64_domain (readFloat reduced) domain, subtracted]
     exact post.1

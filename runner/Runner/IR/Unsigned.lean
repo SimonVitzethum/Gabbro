@@ -1,15 +1,15 @@
 module
 public import Runner.IR.NativeRun
-import NativeFloat.UnsignedConversion
+public import NativeFloat.Hardware
 @[expose] public section
 
 namespace Runner
 
-/-! The shared Std theorem supplies the numerical identity. These adapters
+/-! The named hardware contract supplies the numerical identity. These adapters
     compose the existing native request relation, including every permitted
     result representation; they introduce no execution rule or evaluator. -/
 
-theorem nativeFromUInt64_high {format : FPFormat} {value half result : W}
+theorem nativeFromUInt64_high [RootNativeFloat.Hardware] {format : FPFormat} {value half result : W}
     (high : value.msb = true)
     (converted : NativeFPEval (.fromInt64 format) (uint64StickyHalf value) 0 half)
     (expected : NativeFPEval (.fromUInt64 format) value 0 result) :
@@ -17,18 +17,18 @@ theorem nativeFromUInt64_high {format : FPFormat} {value half result : W}
   cases format with
   | f32 =>
     change half = (half.setWidth 32).setWidth 64 ∧
-      readFloat32 half = (Int64.ofBitVec (uint64StickyHalf value)).toFloat32 at converted
+      readFloat32 half = (Int64.ofBitVec (uint64StickyHalf value)).hwToFloat32 at converted
     change result = (result.setWidth 32).setWidth 64 ∧
-      readFloat32 result = (UInt64.ofBitVec value).toFloat32 at expected
+      readFloat32 result = (UInt64.ofBitVec value).hwToFloat32 at expected
     change result = (result.setWidth 32).setWidth 64 ∧
-      readFloat32 result = readFloat32 half + readFloat32 half
+      readFloat32 result = Float32.hwAdd (readFloat32 half) (readFloat32 half)
     refine ⟨expected.1, ?_⟩
     rw [expected.2, converted.2]
     exact RootNativeFloat.uint64_toFloat32_high value high
   | f64 =>
-    change readFloat half = (Int64.ofBitVec (uint64StickyHalf value)).toFloat at converted
-    change readFloat result = (UInt64.ofBitVec value).toFloat at expected
-    change readFloat result = readFloat half + readFloat half
+    change readFloat half = (Int64.ofBitVec (uint64StickyHalf value)).hwToFloat at converted
+    change readFloat result = (UInt64.ofBitVec value).hwToFloat at expected
+    change readFloat result = Float.hwAdd (readFloat half) (readFloat half)
     rw [expected, converted]
     exact RootNativeFloat.uint64_toFloat_high value high
 

@@ -109,8 +109,8 @@ def decodedFormat : NativeFPOp → Option FPFormat
 
 def Case.nanFormat (test : Case) : Option FPFormat :=
   match decodedFormat test.kind with
-  | some .f32 => if (readFloat32 test.expected).isNaN then some .f32 else none
-  | some .f64 => if (readFloat test.expected).isNaN then some .f64 else none
+  | some .f32 => if (readFloat32 test.expected).hwIsNaN then some .f32 else none
+  | some .f64 => if (readFloat test.expected).hwIsNaN then some .f64 else none
   | none => none
 
 def Case.comparison (test : Case) : String :=
