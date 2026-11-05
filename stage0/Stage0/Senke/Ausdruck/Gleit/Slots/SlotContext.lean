@@ -2,6 +2,8 @@
 module
 public import Stage0.Senke.Gleit.Native.SourceCode
 public import NativeFloat.IntScaling
+import all Init.Data.Nat.Bitwise.Basic
+import all Init.Data.SInt.Float
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
@@ -12,8 +14,25 @@ private theorem wideFloat_numeric (z : Int) (big : 2 ^ 55 ≤ z.natAbs) :
       (Int64.ofInt (integerFloatJam z.natAbs (integerFloatShift z.natAbs) : Int)).toFloat
       (Float.ofBits (UInt64.ofNat ((if z < 0 then 2 ^ 63 else 0) +
         (integerFloatIndex z.natAbs - 55) * 2 ^ 52))) = gleitAusInt z := by
-  simpa only [gleitAusInt, integerFloatJam, integerFloatShift, integerFloatIndex] using
-    (RootNativeFloat.ofInt_jam56 z big).symm
+  dsimp only [gleitAusInt, integerFloatJam, integerFloatShift, integerFloatIndex]
+  exact (RootNativeFloat.ofInt_jam56 z big).symm
+
+private theorem wideFloat_power_decode (z : Int) (index : Nat) (word : Runner.W)
+    (encoded : word = BitVec.ofNat 64 ((if decide (z < 0) then 2 ^ 63 else 0) +
+      (index - 55) * 2 ^ 52)) :
+    Runner.readFloat word = Float.ofBits (UInt64.ofNat ((if z < 0 then 2 ^ 63 else 0) +
+      (index - 55) * 2 ^ 52)) := by
+  have sign : (if decide (z < 0) then 2 ^ 63 else 0 : Nat) =
+      (if z < 0 then 2 ^ 63 else 0) := by
+    by_cases negative : z < 0 <;>
+      simp only [negative, decide_true, decide_false, Bool.false_eq_true, ↓reduceIte]
+  have bits : UInt64.ofBitVec word = UInt64.ofNat ((if z < 0 then 2 ^ 63 else 0) +
+      (index - 55) * 2 ^ 52) := by
+    rw [encoded, sign]
+    apply UInt64.eq_of_toBitVec_eq
+    rw [UInt64.toBitVec_ofBitVec, UInt64.toBitVec_ofNat']
+  unfold Runner.readFloat
+  exact congrArg Float.ofBits bits
 
 variable [Kern] {D : Deklaration} {L : Lay D}
 
@@ -111,9 +130,8 @@ private theorem wideComputedFloatOfE_value_ok {Γ : Ctx} {Λ : List (Res D)}
         (fun j => nativeFloatScaleL j (fun d => lowE L (.lt e (.lit 0)) d reserved)
           (fun d => lowE L (WideFloat.index w e) d reserved)) powerValue := by
       intro fp K d c top hc ht m pc pre
-      exact (scale hc ht m pc pre).mono (fun word hw => by
-        rw [hw]
-        rfl)
+      exact (scale hc ht m pc pre).mono
+        (fun word hw => wideFloat_power_decode z (integerFloatIndex z.natAbs) word hw)
     have multiplied : NativeFloatCode (L := L) (reserved := reserved) ρ W
         (fun j => nativeFPWordL (.mul .f64) j
           (nativeIntegerFloatL true j (fun d => lowE L (WideFloat.guard w e) d reserved))
