@@ -65,20 +65,27 @@ def huelleHash (env : Environment) (start : Name) : UInt64 :=
     | some (.defnInfo d) => mixHash h (mixHash (hash n) d.value.hash)
     | _ => h) 7
 
-/-- The pinned hashes (label, hash). Update them as described in the header after reading the component again. -/
+/-- The numbered component formulas and their cell atoms were re-read after the C-package
+    integration. Their quantifiers and Boolean tests still match `Zellen.zellen`;
+    scoped-return traversals and native-float type classification changed their closures.
+    `AkzeptiertX` also retains interface/library, accumulator, check, reset, scope and
+    guest admission. These are not additional numbered cells: reset has its own cell,
+    while `Gueltig.akzeptiertX_iff` states the descriptor-free generator boundary.
+    Pinning the whole checker detects future drift; it does not claim coverage of
+    every source form or of the extra descriptor gates. -/
 def erwartet : List (String × UInt64) :=
-  [("0 fragment", 1082037274068457859),
-   ("1 closedness", 3601390303670231260),
-   ("2 footprint", 15746939513115763143),
-   ("3 lock ranks", 14126071299982961538),
+  [("0 fragment", 12310482679876591554),
+   ("1 closedness", 13800082909054645524),
+   ("2 footprint", 8645075724653866665),
+   ("3 lock ranks", 2306745462484401830),
    ("4 lock sites", 10233556393123137737),
    ("5 roots", 17739234837013753632),
-   ("6 single pool", 14541363968094309171),
-   ("7 race freedom", 6749890418508741793),
-   ("8 answers", 13274742717096103935),
-   ("9 masks", 15820580103830642383),
-   ("komp", 16710231511900387339),
-   ("AkzeptiertX", 8476086308428240521)]
+   ("6 single pool", 498286097438491847),
+   ("7 race freedom", 16948703990380454043),
+   ("8 answers", 8026916965665620149),
+   ("9 masks", 11679533481577547307),
+   ("komp", 8376091305020244546),
+   ("AkzeptiertX", 5966813553801955746)]
 
 /-- The check: every pinned definition closure has its expected hash. -/
 def pruefe : MetaM Unit := do
