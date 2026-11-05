@@ -121,14 +121,14 @@ open WitnessData
 -- Compose equations of the existing exporter at abstract phase values. Each
 -- concrete proof evaluates one selected pass, never the entire nested bind tree.
 private theorem export_from_phases
-    {source folded rewritten tagged ordinary output : List SItemTief}
+    {source folded rewritten tagged ordinary validated output : List SItemTief}
     {closed : List Closed} {names : List String}
     (foldStage : SourceFolds.prepare source = .ok folded)
     (closeStage : prepare folded = .ok (closed, rewritten))
     (tagStage : exportTaggedUnitDetailed rewritten = .ok (tagged, names))
     (specStage : Spec.prepare (finish closed tagged) = .ok ordinary)
-    (checked : checkedOutput tagged ordinary = .ok ordinary)
-    (libraryStage : exportLibraryUnit ordinary = .ok output) :
+    (checked : checkedOutput tagged ordinary = .ok validated)
+    (libraryStage : exportLibraryUnit validated = .ok output) :
     exportDeclarationUnit source = .ok output := by
   simp only [exportDeclarationUnit, exportDeclarationUnitDetailed, foldStage,
     closeStage, tagStage, specStage, checked, libraryStage, bind, Except.bind,
@@ -141,6 +141,84 @@ private theorem export_refused_at_close
     exportDeclarationUnit source = .error error := by
   simp only [exportDeclarationUnit, exportDeclarationUnitDetailed, foldStage,
     refused, bind, Except.bind, Except.map]
+
+-- These are only the three unchanged accepted witness inputs. Each actual pass
+-- is checked in its own declaration, before any output metadata is inspected.
+private inductive ExportFixture where
+  | scene | wide | inferred
+
+private def phase_input : ExportFixture → List SItemTief
+  | .scene => fixture
+  | .wide => fixture ++ [implementation (.array (.atom "u64") (.lit 2)) []]
+  | .inferred => fixture ++
+      [.fnT { sample with name := "inferred" }
+        (.block [.bind false "s" none (.ext .dyn ["Shape"] [.variable "c"]),
+          .bind false "a" none (.call "Shape::area" [.variable "s"])]
+          (some (.ret (some (.variable "a")))))]
+
+private theorem phase_eq {α : Type} {result : Except String α}
+    (success : result.toOption.isSome = true) : result = .ok (result.toOption.get success) := by
+  cases result with
+  | error error => simp only [Except.toOption, Option.isSome_none, Bool.false_eq_true] at success
+  | ok value => rfl
+
+private theorem fold_success (fixture : ExportFixture) :
+    (SourceFolds.prepare (phase_input fixture)).toOption.isSome = true := by
+  cases fixture <;> cbv
+private def fold_value (fixture : ExportFixture) : List SItemTief :=
+  (SourceFolds.prepare (phase_input fixture)).toOption.get (fold_success fixture)
+
+private theorem close_success (fixture : ExportFixture) :
+    (prepare (fold_value fixture)).toOption.isSome = true := by
+  cases fixture <;> cbv
+private def close_value (fixture : ExportFixture) : List Closed × List SItemTief :=
+  (prepare (fold_value fixture)).toOption.get (close_success fixture)
+
+private theorem tagged_success (fixture : ExportFixture) :
+    (exportTaggedUnitDetailed (close_value fixture).2).toOption.isSome = true := by
+  cases fixture <;> cbv
+private def tagged_value (fixture : ExportFixture) : List SItemTief × List String :=
+  (exportTaggedUnitDetailed (close_value fixture).2).toOption.get (tagged_success fixture)
+
+private theorem spec_success (fixture : ExportFixture) :
+    (Spec.prepare (finish (close_value fixture).1 (tagged_value fixture).1)).toOption.isSome = true := by
+  cases fixture <;> cbv
+private def spec_value (fixture : ExportFixture) : List SItemTief :=
+  (Spec.prepare (finish (close_value fixture).1 (tagged_value fixture).1)).toOption.get (spec_success fixture)
+
+private theorem checked_success (fixture : ExportFixture) :
+    (checkedOutput (tagged_value fixture).1 (spec_value fixture)).toOption.isSome = true := by
+  cases fixture <;> cbv
+private def checked_value (fixture : ExportFixture) : List SItemTief :=
+  (checkedOutput (tagged_value fixture).1 (spec_value fixture)).toOption.get (checked_success fixture)
+
+private theorem library_success (fixture : ExportFixture) :
+    (exportLibraryUnit (checked_value fixture)).toOption.isSome = true := by
+  cases fixture <;> cbv
+private def library_value (fixture : ExportFixture) : List SItemTief :=
+  (exportLibraryUnit (checked_value fixture)).toOption.get (library_success fixture)
+
+private theorem fixture_exported (fixture : ExportFixture) :
+    exportDeclarationUnit (phase_input fixture) = .ok (library_value fixture) := by
+  exact export_from_phases (source := phase_input fixture) (folded := fold_value fixture)
+    (closed := (close_value fixture).1) (rewritten := (close_value fixture).2)
+    (tagged := (tagged_value fixture).1) (names := (tagged_value fixture).2)
+    (ordinary := spec_value fixture) (validated := checked_value fixture) (output := library_value fixture)
+    (phase_eq (result := SourceFolds.prepare (phase_input fixture)) (fold_success fixture))
+    (phase_eq (result := prepare (fold_value fixture)) (close_success fixture))
+    (phase_eq (result := exportTaggedUnitDetailed (close_value fixture).2) (tagged_success fixture))
+    (phase_eq (result := Spec.prepare (finish (close_value fixture).1 (tagged_value fixture).1))
+      (spec_success fixture))
+    (phase_eq (result := checkedOutput (tagged_value fixture).1 (spec_value fixture)) (checked_success fixture))
+    (phase_eq (result := exportLibraryUnit (checked_value fixture)) (library_success fixture))
+
+-- Refusals retain the same actual first two passes. Their folded value is fixed
+-- before running the refusing close pass, rather than an output metavariable.
+private theorem export_refused_from_fold {source : List SItemTief} {error : String}
+    (success : (SourceFolds.prepare source).toOption.isSome = true)
+    (refused : prepare ((SourceFolds.prepare source).toOption.get success) = .error error) :
+    exportDeclarationUnit source = .error error :=
+  export_refused_at_close (phase_eq success) refused
 
 -- Compute the whole canonical exporter result once. Every projection below is
 -- certified only after its actual output list has been bound.
@@ -169,23 +247,12 @@ private theorem scene_phases : ∃ items, expanded = .ok items ∧
       | .fnT sig _ => if strEq sig.name "#tagged-#dyn0::Shape::area" then
           some (functionEffects sig, cost items sig) else none
       | _ => none) = [([.reads (.variable "Circles"), .reads (.variable "Rects")], some 51)] := by
-  refine ⟨?items, ?checked, ?sum, ?dispatch, ?producer, ?cost⟩
-  case checked =>
-    unfold expanded
-    apply export_from_phases
-    all_goals cbv <;> exact Eq.refl _
+  refine ⟨library_value .scene, ?checked, ?sum, ?dispatch, ?producer, ?cost⟩
+  case checked => exact fixture_exported .scene
   case sum => cbv
   case dispatch => cbv
   case producer => cbv
   case cost => cbv
-
-private theorem map_from_phase {α β : Type} {source : Except String α}
-    {read : α → β} {expected : β}
-    (certificate : ∃ output, source = .ok output ∧ read output = expected) :
-    source.map read = .ok expected := by
-  rcases certificate with ⟨output, checked, observed⟩
-  rw [checked]
-  exact congrArg Except.ok observed
 
 private theorem map_from_refusal {α β : Type} {source : Except String α}
     {read : α → β} {error : String} (checked : source = .error error) :
@@ -258,12 +325,9 @@ public theorem scene_wide_payload_accepted_zeuge :
     (exportDeclarationUnit
       (fixture ++ [implementation (.array (.atom "u64") (.lit 2)) []])).map (fun _ => ()) =
     .ok () := by
-  apply map_from_phase
-  refine ⟨?items, ?checked, ?value⟩
-  case checked =>
-    apply export_from_phases
-    all_goals cbv <;> exact Eq.refl _
-  case value => rfl
+  change (exportDeclarationUnit (phase_input .wide)).map (fun _ => ()) = .ok ()
+  rw [fixture_exported .wide]
+  rfl
 
 public theorem scene_equality_refused_zeuge :
     (exportDeclarationUnit (fixture ++
@@ -271,8 +335,9 @@ public theorem scene_equality_refused_zeuge :
         (.block [] (some (.ret (some (.bin "==" (fieldAt "i") (fieldAt "j"))))))])).map (fun _ => ()) =
     .error "dyn.equality" := by
   apply map_from_refusal
-  apply export_refused_at_close
-  all_goals cbv <;> exact Eq.refl _
+  apply export_refused_from_fold
+  · cbv
+  · cbv
 
 public theorem scene_implementation_test_refused_zeuge :
     (exportDeclarationUnit (fixture ++
@@ -280,8 +345,9 @@ public theorem scene_implementation_test_refused_zeuge :
         (.block [.cases (fieldAt "i") []] none)])).map (fun _ => ()) =
     .error "dyn.implementation-test" := by
   apply map_from_refusal
-  apply export_refused_at_close
-  all_goals cbv <;> exact Eq.refl _
+  apply export_refused_from_fold
+  · cbv
+  · cbv
 
 public theorem scene_bound_required_zeuge :
     (close [shape, circle] 0 (.dyn "Shape" none)).map (fun _ => ()) =
@@ -313,8 +379,17 @@ public theorem scene_downcast_refused_zeuge :
         (.block [.trim (fieldAt "i") "u64" (.block [] none)] none)])).map (fun _ => ()) =
     .error "dyn.downcast" := by
   apply map_from_refusal
-  apply export_refused_at_close
-  all_goals cbv <;> exact Eq.refl _
+  apply export_refused_from_fold
+  · cbv
+  · cbv
+
+-- Inspect the final checked value only after the six named success boundaries.
+private theorem inferred_metadata :
+    ((library_value .inferred).filterMap fun
+      | .fnT sig body => if strEq sig.name "inferred" then some body else none
+      | _ => none) = [.block [.bind false "s" none (.call "GabbroDyn0Case0" [.variable "c"]),
+      .bind false "a" none (.call "#tagged-#dyn0::Shape::area" [.variable "s"])]
+      (some (.ret (some (.variable "a"))))] := by cbv
 
 /-- A producer in an unannotated let retains enough type information for a later abstract call. -/
 public theorem scene_inferred_let_zeuge :
@@ -329,12 +404,11 @@ public theorem scene_inferred_let_zeuge :
     .ok [.block [.bind false "s" none (.call "GabbroDyn0Case0" [.variable "c"]),
       .bind false "a" none (.call "#tagged-#dyn0::Shape::area" [.variable "s"])]
       (some (.ret (some (.variable "a"))))] := by
-  apply map_from_phase
-  refine ⟨?items, ?checked, ?body⟩
-  case checked =>
-    apply export_from_phases
-    all_goals cbv <;> exact Eq.refl _
-  case body => cbv
+  change ((exportDeclarationUnit (phase_input .inferred)).map fun items => items.filterMap fun
+    | .fnT sig body => if strEq sig.name "inferred" then some body else none
+    | _ => none) = _
+  rw [fixture_exported .inferred]
+  exact congrArg Except.ok inferred_metadata
 
 /-- Reordered bounds denote one generated type, not two incompatible representations. -/
 public theorem scene_bound_order_zeuge :

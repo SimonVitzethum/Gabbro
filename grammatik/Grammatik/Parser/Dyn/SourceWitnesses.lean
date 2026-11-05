@@ -320,19 +320,63 @@ private theorem parsed_from_phases {ts : List Token} {items : List SItemTief}
   rw [scanned]
   exact read
 
+-- Fix the actual parsed value before opening the six exporter stages.
+private theorem source_items_success :
+    (parseTopTief (tokens chunks)).toOption.isSome = true := by cbv
+private def source_items : List SItemTief :=
+  (parseTopTief (tokens chunks)).toOption.get source_items_success
+private theorem source_items_read : parsed = .ok source_items :=
+  parsed_from_phases source_lexed (phase_eq source_items_success)
+
+private theorem source_fold_success :
+    (SourceFolds.prepare source_items).toOption.isSome = true := by cbv
+private def source_fold_value : List SItemTief :=
+  (SourceFolds.prepare source_items).toOption.get source_fold_success
+
+private theorem source_close_success :
+    (prepare source_fold_value).toOption.isSome = true := by cbv
+private def source_close_value : List Closed × List SItemTief :=
+  (prepare source_fold_value).toOption.get source_close_success
+
+private theorem source_tagged_success :
+    (exportTaggedUnitDetailed source_close_value.2).toOption.isSome = true := by cbv
+private def source_tagged_value : List SItemTief × List String :=
+  (exportTaggedUnitDetailed source_close_value.2).toOption.get source_tagged_success
+
+private theorem source_spec_success :
+    (Spec.prepare (finish source_close_value.1 source_tagged_value.1)).toOption.isSome = true := by cbv
+private def source_spec_value : List SItemTief :=
+  (Spec.prepare (finish source_close_value.1 source_tagged_value.1)).toOption.get source_spec_success
+
+private theorem source_checked_success :
+    (checkedOutput source_tagged_value.1 source_spec_value).toOption.isSome = true := by cbv
+private def source_checked_value : List SItemTief :=
+  (checkedOutput source_tagged_value.1 source_spec_value).toOption.get source_checked_success
+
+private theorem source_library_success :
+    (exportLibraryUnit source_checked_value).toOption.isSome = true := by cbv
+private def source_library_value : List SItemTief :=
+  (exportLibraryUnit source_checked_value).toOption.get source_library_success
+
+private theorem source_exported : exportDeclarationUnit source_items = .ok source_library_value := by
+  exact export_from_phases (source := source_items) (folded := source_fold_value)
+    (closed := source_close_value.1) (rewritten := source_close_value.2)
+    (tagged := source_tagged_value.1) (names := source_tagged_value.2)
+    (ordinary := source_spec_value) (validated := source_checked_value) (output := source_library_value)
+    (phase_eq (result := SourceFolds.prepare source_items) source_fold_success)
+    (phase_eq (result := prepare source_fold_value) source_close_success)
+    (phase_eq (result := exportTaggedUnitDetailed source_close_value.2) source_tagged_success)
+    (phase_eq (result := Spec.prepare (finish source_close_value.1 source_tagged_value.1)) source_spec_success)
+    (phase_eq (result := checkedOutput source_tagged_value.1 source_spec_value) source_checked_success)
+    (phase_eq (result := exportLibraryUnit source_checked_value) source_library_success)
+
 private theorem source_phases : ∃ items output,
     parsed = .ok items ∧ exportDeclarationUnit items = .ok output ∧
     (output.filterMap fun
       | .typeT ["tagged"] n [] [] (some (.raw raw)) => some (n, raw)
       | _ => none) =
       [("#dyn0", "{ GabbroDyn0Case0(index into Circles), GabbroDyn0Case1(index into Rects) }")] := by
-  refine ⟨?items, ?output, ?parsed, ?expanded, ?sum⟩
-  case parsed =>
-    apply parsed_from_phases source_lexed
-    cbv <;> exact Eq.refl _
-  case expanded =>
-    apply export_from_phases
-    all_goals cbv <;> exact Eq.refl _
+  refine ⟨source_items, source_library_value, source_items_read, source_exported, ?sum⟩
   case sum => cbv
 
 /-- Source text, lexer, parser and the actual front-end expansion agree on the closed cases. -/
