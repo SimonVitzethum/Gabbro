@@ -95,7 +95,28 @@ theorem elaborate_certified {k : UKonstFn} (certificate : Values.SourceFunction 
   rcases certificate with ⟨source, body, ⟨preCode, bodyCode, postCode⟩, typed, pre, post⟩
   dsimp only at body
   cases body
-  simp only [Values.elaborate, typed, pre, post, pure, Except.pure]
+  dsimp only at typed pre post
+  unfold Values.elaborate
+  dsimp only
+  split
+  · rename_i error found
+    cases found.symm.trans typed
+  · rename_i actualBody found
+    have same : actualBody = bodyCode := Except.ok.inj (found.symm.trans typed)
+    subst actualBody
+    split
+    · rename_i error found
+      cases found.symm.trans pre
+    · rename_i actualPre found
+      have same : actualPre = preCode := Except.ok.inj (found.symm.trans pre)
+      subst actualPre
+      split
+      · rename_i error found
+        cases found.symm.trans post
+      · rename_i actualPost found
+        have same : actualPost = postCode := Except.ok.inj (found.symm.trans post)
+        subst actualPost
+        rfl
 
 /-- Substitute the whole elaboration result into the actual checker continuation.
     In particular, do not rewrite inside an abstract Code's Boolean projection. -/
@@ -171,7 +192,7 @@ theorem substitute_portable (fns : List UKonstFn) (name : String)
       simpa only [Values.resultType, Bool.false_eq_true] using portable
     exact impossible.elim }
   all_goals
-    simp only [checkReplacement, portable, Bool.true_eq_true, ↓reduceIte]
+    simp only [checkReplacement, portable, ↓reduceIte]
     exact portable_projection _
 
 

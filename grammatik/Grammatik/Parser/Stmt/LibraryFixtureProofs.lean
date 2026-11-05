@@ -79,7 +79,6 @@ theorem certifyResults (members : List SItemTief) (call : SLibraryCall)
   intro present
   dsimp only
   intro ready
-  dsimp only
   intro lowered
   have selected : library = (libraryDecl members call).toOption.get present :=
     Except.ok.inj (found.symm.trans (except_ok_get present))
