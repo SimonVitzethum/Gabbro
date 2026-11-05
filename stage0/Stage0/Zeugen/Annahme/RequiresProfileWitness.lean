@@ -137,13 +137,14 @@ attribute [local cbv_eval]
 private def sourceInput : SourceInput text := by
   refine {
     tokens := scanned.tokens ++ [.ende]
-    items := items
+    items := ?items
     lexed := lexed
-    parsed := by exact except_ok_get parsed
+    parsed := ?parsed
     prepared := ?prepared
     preparation := ?preparation
     visibility := ?visibility
     compileTime := ?compileTime }
+  case parsed => cbv <;> exact Eq.refl _
   case preparation => cbv <;> exact Eq.refl _
   case visibility => cbv
   case compileTime => cbv
