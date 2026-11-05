@@ -29,8 +29,9 @@ theorem nativeFloatBind_ok {P : Programm D} {f : D.Fn} {fp : Runner.W}
     (compute : ∀ m pc, Pre L m pc fp Ks (frei Γ reserved) ce ρ
       (fun m => WeltAt m L σ) reserved →
       Ok m pc fp Ks (frei Γ reserved) ce (fun w => Runner.readFloat w = x))
-    (continuation : ∀ v m' pc',
-      PreS L m' pc' fp K (frei (.fl low high :: Γ) reserved) cr (Env.cons v ρ) reserved →
+    (continuation : ∀ (v : Gleit low high) m' pc',
+      PreS L m' pc' fp K (frei (.fl low high :: Γ) reserved) cr
+        (Env.cons (τ := .fl low high) v ρ) reserved →
       Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m'
         (pc' + BitVec.ofNat 64 (16 * cr.length))
@@ -60,6 +61,7 @@ theorem nativeFloatBind_ok {P : Programm D} {f : D.Fn} {fp : Runner.W}
   have k1 := kopf.agreeW hW (agreeW_of (agree.mono hlo2)) (by omega)
   have w1 := pw.wstab m m1 world (agreeS.mono (Nat.zero_le _))
   have branches := choice_ok (P := P) (σ0 := σ0) (ex := ex)
+    (m := m1) (pc := pc + BitVec.ofNat 64 (16 * ce.length)) (ρ := ρ)
     (d := frei Γ reserved + 1) (cc := cc) (ct := stopC 107 (frei Γ reserved)) (ce := cr)
     (b := floatRangeReject low high x)
     (ot := match gleitPasst low high x with | none => .logik .bereich | some v => (out v).schrumpf)
@@ -68,17 +70,20 @@ theorem nativeFloatBind_ok {P : Programm D} {f : D.Fn} {fp : Runner.W}
     (by simp only [floatNarrowC, List.length_append, List.length_singleton,
       List.length_nil, Nat.zero_add, List.nil_append] at size ⊢; omega)
     hW hlo hlo0 hlo2 hpr (σ := σ) ?_ ?_ ?_
-    (by simpa only [floatNarrowC, List.nil_append] using next) u1 k1 w1
+    (by simpa only [floatNarrowC, List.nil_append, List.length_nil,
+      Int.natCast_zero, Int.zero_add] using next) u1 k1 w1
   · have result := branches
     simp only [ite_self] at result
-    rw [pc_add1]
-    exact Sim.prefix hlo run (agreeW_of (agree.mono hlo2))
-      (keeps_of_agreeW hW agree hpr (by omega)) result
+    simpa only [floatNarrowC, List.nil_append, List.length_nil,
+      Int.natCast_zero, Int.zero_add, pc_add1] using
+      Sim.prefix hlo run (agreeW_of (agree.mono hlo2))
+        (keeps_of_agreeW hW agree hpr (by omega)) result
   · intro condition
     have p := PreS.welt condition hks w1 hW.lay (by have := hW.lo; omega)
     obtain ⟨m2, steps, unchanged, flag, flagRead, value⟩ :=
       floatRetainedRangeL_ok guard guardRoom p read decoded
-    exact ⟨m2, steps, Agree.widen unchanged hks, flag, flagRead, value⟩
+    exact ⟨m2, steps, Agree.widen unchanged hks, flag, flagRead,
+      by simpa only [bool_word] using value⟩
   · intro rejected m2 pc2 branch _ hu hk hw
     rw [floatRangeReject_none.mpr rejected]
     change Stops ⟨pc2, fp⟩ m2 107
