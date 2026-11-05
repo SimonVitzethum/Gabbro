@@ -64,19 +64,33 @@ def recordUnit : UProg := { tabs := [], locks := [], fns := [recordFunction], re
 def recordLiteral : USide :=
   .product 7 false [(.int 0 255, .lit 42), (.bool, .truth true)]
 
+private theorem record_named_fields_arranged :
+    uRecordValues recordFixture [("flag", .truth true), ("small", .lit 42)] =
+      .ok (.product 7 true [(.int 0 255, .lit 42), (.bool, .truth true)]) := by
+  cbv <;> rfl
+
+/-- The real named-field arranger supplies the complete value; no default can replace a failure. -/
 def recordLiteralUmgestellt : USide :=
-  .product 7 true [(.bool, .truth true), (.int 0 255, .lit 42)]
+  (uRecordValues recordFixture [("flag", .truth true), ("small", .lit 42)]).toOption.get (by
+    rw [record_named_fields_arranged] <;> rfl)
+
+private theorem record_reordered_value :
+    recordLiteralUmgestellt =
+      .product 7 true [(.int 0 255, .lit 42), (.bool, .truth true)] := by
+  unfold recordLiteralUmgestellt
+  rw [record_named_fields_arranged] <;> rfl
+
+/-- Named source order is checked and rearranged before the typed lowerer receives the fields. -/
+theorem record_named_fields_zeuge :
+    uRecordValues recordFixture [("flag", .truth true), ("small", .lit 42)] =
+      .ok recordLiteralUmgestellt := by
+  simpa only [record_reordered_value] using record_named_fields_arranged
 
 private def recordArgs : Args (declOf recordUnit) [] [] [.int 0 255, .bool] :=
   .cons (Expr.widen (by decide) (by decide) (Expr.lit 42)) (.cons Expr.tru .nil)
 
 private theorem record_schema_selected :
     uRecordOf recordUnit.records recordFixture.ty = .ok ⟨recordFixture, rfl⟩ := by
-  cbv <;> rfl
-
-private theorem record_named_fields_arranged :
-    uRecordValues recordFixture [("flag", .truth true), ("small", .lit 42)] =
-      .ok (.product 7 true [(.int 0 255, .lit 42), (.bool, .truth true)]) := by
   cbv <;> rfl
 
 private theorem record_fields_lowered :
@@ -91,7 +105,8 @@ private theorem record_product_lowered (reordered : Bool) :
   exact record_lower recordUnit [] [] recordFunction none 7 reordered _ recordArgs
     (by cbv) record_fields_lowered ⟨recordFixture, rfl⟩ record_schema_selected
 
-private theorem record_swapped_types_refused :
+/-- Swapping already typed fields cannot masquerade as rearranging named source arguments. -/
+theorem record_swapped_types_refused_zeuge :
     lowWertE recordUnit [] [] recordFunction none
       (.product 7 true [(.bool, .truth true), (.int 0 255, .lit 42)]) =
       .error "source export: unknown nominal record schema" := by
@@ -102,6 +117,11 @@ private theorem record_constant_quoted (number : Int) :
       .ok (.product 7 [.zahl number, .wahr true]) := by
   cbv <;> rfl
 
+/-- Raw quotation retains 256; range admission belongs to the subsequent typed consumer. -/
+theorem record_raw_out_of_range_quoted_zeuge :
+    uConstantValue (.product 7 false [(.int 0 255, .lit 256), (.bool, .truth true)]) =
+      .ok (.product 7 [.zahl 256, .wahr true]) := record_constant_quoted 256
+
 /-- Nondegenerate nominal schema, construction (in and out of declaration order), projection,
     replacement and nested replacement, all through the real lowering. -/
 theorem record_lower_zeuge :
@@ -110,7 +130,13 @@ theorem record_lower_zeuge :
     (lowWertE recordUnit [] [] recordFunction none recordLiteralUmgestellt).toBool = true ∧
     (lowWertE recordUnit [] [] recordFunction none (.field recordLiteral "flag")).toBool = true ∧
     (lowWertE recordUnit [] [] recordFunction none (.replace recordLiteral "small" (.lit 9))).toBool = true := by
-  cbv
+  refine ⟨record_schema_selected, ?_, ?_, ?_, ?_⟩
+  · change (lowWertE recordUnit [] [] recordFunction none
+      (.product 7 false [(.int 0 255, .lit 42), (.bool, .truth true)])).toBool = true
+    rw [record_product_lowered] <;> rfl
+  · rw [record_reordered_value, record_product_lowered] <;> rfl
+  · cbv <;> rfl
+  · cbv <;> rfl
 
 /-- Empty and foreign nominal types are distinct even when their field shapes agree; unknown fields,
     duplicate constructors and missing fields are refused. -/
@@ -142,10 +168,14 @@ theorem record_nested_replace_zeuge :
       (.replace recordLiteral "small" (.field (.replace recordLiteral "small" (.lit 17)) "small"))).toBool = true := by
   decide +kernel
 
-/-- Initializers validate every component at its declared nominal product type. -/
+/-- The actual typed initializer validates every component after raw quotation. -/
 theorem record_initial_zeuge :
-    (uConstantValue (.product 7 false [(.int 0 255, .lit 42), (.bool, .truth true)])).toBool = true ∧
-    (uConstantValue (.product 7 false [(.int 0 255, .lit 256), (.bool, .truth true)])).toBool = false := by
-  cbv
+    ((uConstantValue (.product 7 false [(.int 0 255, .lit 42), (.bool, .truth true)])).toOption.bind
+      (GabbroV.konstWert (F := Unit) (P := fun _ _ => false) recordFixture.ty)).isSome = true ∧
+    ((uConstantValue (.product 7 false [(.int 0 255, .lit 256), (.bool, .truth true)])).toOption.bind
+      (GabbroV.konstWert (F := Unit) (P := fun _ _ => false) recordFixture.ty)).isSome = false := by
+  constructor
+  · simpa only [record_constant_quoted, Except.toOption, Option.bind] using record_konst_zeuge.1
+  · simpa only [record_constant_quoted, Except.toOption, Option.bind] using record_konst_zeuge.2.2.1
 
 end Gabbro.Grammatik.Parser.Uebersetze
