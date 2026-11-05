@@ -39,9 +39,13 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   `Stage0.Frontend.ExportCorrectness` checks pass.
   The Stage0 constant input/scanner/scalar certificates and generic compiler-phase composition pass.
   The generic constant source packet and all-guard call-head certificates also pass direct checks;
-  concrete constant program packets and check/floor witnesses remain under repair. Their downstream
+  the complete call-check admission and floor witness modules now build through the shared assembly
+  certificate. Concrete constant program packets remain under repair. Their downstream
   `ConstWitness`/`ConstValuesWitness` resource closure remains unmeasured after the new phase port.
   Full-package closure and the remaining concrete witness consumers are being revalidated.
+  The additional arithmetic hardware contract is built in `NativeFloat` (13 jobs), including the
+  corrected binary32 nearest-even overflow threshold. It strengthens the named hardware assumption;
+  downstream package closure and targeted arithmetic CPU edge cases still require measurement.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
   The authorised acceptance scope is Lean and the Lean parts of GabbroV; Rust, Cargo and LLVM checks are
   deliberately unmeasured. The owner authorises pushing once the named Lean builds and GabbroV's Lean
