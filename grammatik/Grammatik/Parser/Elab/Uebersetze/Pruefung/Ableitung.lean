@@ -28,12 +28,17 @@ public import Grammatik.Parser.Elab.Generic.SignatureData
 public import Grammatik.Kern.Syntax.Satz.Pruefung
 public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide
 public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckProof
+import all Grammatik.Parser.Elab.UebersetzeAllg.Teil1
+import all Grammatik.Parser.Elab.Generic.Signatures
 
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
 
 open Gabbro.Grammatik.Parser.UebersetzeAllg
+
+local instance (u : UProg) : DecidableEq (declOf u).Fn :=
+  inferInstanceAs (DecidableEq (Fin u.fns.length))
 
 /-- The Duty of a check as a declared mark: its index in the unit's mark table
     (C12), refused by name when undeclared. -/
@@ -46,7 +51,9 @@ def uDutyIdx (u : UProg) (c : UCheck) : Except String (Fin u.marken.length) :=
 theorem uDutyIdx_trifft (u : UProg) (c : UCheck) (i : Fin u.marken.length)
     (h : uDutyIdx u c = .ok i) : markFin u.marken c.duty = some i := by
   have h2 : (uDutyIdx u c).toOption = some i := by rw [h]; rfl
-  have h3 : (uDutyIdx u c).toOption = markFin u.marken c.duty := rfl
+  have h3 : (uDutyIdx u c).toOption = markFin u.marken c.duty := by
+    unfold uDutyIdx
+    split <;> rename_i he <;> rw [he] <;> rfl
   rw [h3] at h2
   exact h2
 
@@ -66,9 +73,10 @@ def uCheckDecl (u : UProg) (c : UCheck) : Except String (CheckDecl (declOf u)) :
   let duty ← uDutyIdx u c
   let p ← fnIdx u.fns c.probe
   let gs ← uSeq (c.tore.map fun g => fnIdx u.fns (torHuellenName c.name g))
-  .ok { name := c.name, claim := c.claim, misst := c.misst.map messOrtName,
-    gates := gs, probe := p, duty := (duty, 0),
-    boden := c.boeden.map fun _ => ("", true),
+  .ok {
+    name := c.name, claim := c.claim, misst := c.misst.map messOrtName
+    gates := gs, probe := p, duty := (duty, 0)
+    boden := (c.boeden.map fun _ => ("", true))
     sonde := c.sonde, testbau := c.testbau }
 
 /-- Every elaborated check of the unit as a kernel descriptor. -/
@@ -81,34 +89,39 @@ theorem uCheckDecl_ok (u : UProg) (c : UCheck)
     (i : Fin u.marken.length) (p : Fin u.fns.length) (gs : List (Fin u.fns.length))
     (hi : uDutyIdx u c = .ok i) (hp : fnIdx u.fns c.probe = .ok p)
     (hg : uSeq (c.tore.map fun g => fnIdx u.fns (torHuellenName c.name g)) = .ok gs) :
-    uCheckDecl u c = .ok { name := c.name, claim := c.claim,
+    uCheckDecl u c = .ok {
+      name := c.name, claim := c.claim,
       misst := c.misst.map messOrtName, gates := gs, probe := p, duty := (i, 0),
-      boden := c.boeden.map fun _ => ("", true),
+      boden := (c.boeden.map fun _ => ("", true)),
       sonde := c.sonde, testbau := c.testbau } := by
   unfold uCheckDecl
   rw [hi, hp, hg]
+  rfl
 
 /-- The derived Duty is the resolved mark at stage 0. -/
 theorem uCheckDecl_duty (u : UProg) (c : UCheck) (d : CheckDecl (declOf u))
     (i : Fin u.marken.length) (p : Fin u.fns.length) (gs : List (Fin u.fns.length))
     (hi : uDutyIdx u c = .ok i) (_hp : fnIdx u.fns c.probe = .ok p)
     (_hg : uSeq (c.tore.map fun g => fnIdx u.fns (torHuellenName c.name g)) = .ok gs)
-    (hd : d = { name := c.name, claim := c.claim,
+    (hd : d = {
+      name := c.name, claim := c.claim,
       misst := c.misst.map messOrtName, gates := gs, probe := p, duty := (i, 0),
-      boden := c.boeden.map fun _ => ("", true),
+      boden := (c.boeden.map fun _ => ("", true)),
       sonde := c.sonde, testbau := c.testbau }) :
     d.duty = (i, 0) ∧ markFin u.marken c.duty = some d.duty.1 := by
   subst hd
-  exact ⟨rfl, by simpa using uDutyIdx_trifft u c i hi⟩
+  exact ⟨rfl, uDutyIdx_trifft u c i hi⟩
 
 /-! ## The Duty through the signatures -/
 
 /-- A singleton `nimmt` resolves to exactly that mark at stage 0. -/
 theorem nimmtAt_singleton (u : UProg) (f : UFn) (m : String)
     (i : Fin u.marken.length)
-    (h1 : f.nimmt = [m]) (h2 : markFin u.marken m = some i) :
+    (h1 : f.nimmt = [m]) (h2 : markFin u.marken m = some i)
+    (h3 : u.tabs.all (fun t => decide (t.owner ≠ some m)) = true) :
     nimmtAt u f = [(i, 0)] := by
-  simp [nimmtAt, h1, h2]
+  simp only [nimmtAt, h1, List.filterMap_cons, List.filterMap_nil, h2, h3,
+    ↓reduceIte]
 
 /-- A singleton `gibt` resolves to exactly that mark at stage 0, where no table
     claims it as its owner (the `uGibtPruef` side, kept by `eigner_nie_erzeugt`). -/
@@ -117,7 +130,8 @@ theorem gibtAt_singleton (u : UProg) (f : UFn) (m : String)
     (h1 : f.gibt = [m]) (h2 : markFin u.marken m = some i)
     (h3 : u.tabs.all (fun t => decide (t.owner ≠ some m)) = true) :
     gibtAt u f = [(i, 0)] := by
-  simp [gibtAt, h1, h2, h3]
+  simp only [gibtAt, h1, List.filterMap_cons, List.filterMap_nil, h2, h3,
+    ↓reduceIte]
 
 /-! ## The derived check in `checkB` -/
 
@@ -130,9 +144,10 @@ theorem checkOkB_abgeleitet (u : UProg) (P : Programm (declOf u))
     (c : UCheck) (duty : Fin u.marken.length)
     (probe : Fin u.fns.length) (gates : List (Fin u.fns.length))
     (d : CheckDecl (declOf u))
-    (hd : d = { name := c.name, claim := c.claim,
+    (hd : d = {
+      name := c.name, claim := c.claim,
       misst := c.misst.map messOrtName, gates := gates, probe := probe,
-      duty := (duty, 0), boden := c.boeden.map fun _ => ("", true),
+      duty := (duty, 0), boden := (c.boeden.map fun _ => ("", true)),
       sonde := c.sonde, testbau := c.testbau })
     (herg : (fnAt u probe).ergTy = some .bool)
     (hgru : (fnAt u probe).gruende = 0)
@@ -149,10 +164,11 @@ theorem checkOkB_abgeleitet (u : UProg) (P : Programm (declOf u))
     (hnodup : gates.Nodup)
     (hrahmen : rahmenOkB P tabs globs fns d = true) :
     checkOkB P tabs globs fns d = true := by
+  classical
   subst hd
   have hkons : ((declOf u).signatur probe).konsumiert = [(duty, 0)] := by
     show (sigAt u probe.val).konsumiert = _
-    rw [sigAt_konsumiert, nimmtAt_singleton u _ _ _ hnimmt hmark]
+    rw [sigAt_konsumiert, nimmtAt_singleton u _ _ _ hnimmt hmark heigner]
   have hprod : ((declOf u).signatur probe).produziert = [(duty, 0)] := by
     show (sigAt u probe.val).produziert = _
     rw [sigAt_produziert, gibtAt_singleton u _ _ _ hgibt hmark heigner]
@@ -161,6 +177,7 @@ theorem checkOkB_abgeleitet (u : UProg) (P : Programm (declOf u))
   have hgruS : ((declOf u).signatur probe).gruende = 0 := by
     have e : (sigAt u probe.val).gruende = (fnAt u probe).gruende := by
       rw [sigAt_get]
+      rfl
     rw [show (declOf u).signatur probe = sigAt u probe.val from rfl, e, hgru]
   have hgates_all : gates.all
       (fun g => decide ((duty, 0) ∈ ((declOf u).signatur g).konsumiert) &&
@@ -168,17 +185,24 @@ theorem checkOkB_abgeleitet (u : UProg) (P : Programm (declOf u))
     refine List.all_eq_true.mpr fun g hg => ?_
     have hk : ((declOf u).signatur g).konsumiert = [(duty, 0)] := by
       show (sigAt u g.val).konsumiert = _
-      rw [sigAt_konsumiert, nimmtAt_singleton u _ _ _ (hgates_nimmt g hg) hmark]
-    simp only [hk, decide_eq_true_eq, List.mem_singleton, Bool.and_eq_true]
-    exact ⟨rfl, hgates_mem g hg⟩
+      rw [sigAt_konsumiert, nimmtAt_singleton u _ _ _ (hgates_nimmt g hg) hmark heigner]
+    apply (Bool.and_eq_true _ _).mpr
+    constructor
+    · apply decide_eq_true
+      rw [hk]
+      exact List.mem_singleton_self _
+    · exact decide_eq_true (hgates_mem g hg)
   have htor : toreEindeutig (D := declOf u) gates = true :=
     (toreEindeutig_iff (D := declOf u)).mpr hnodup
-  unfold checkOkB
-  rw [decide_eq_true hergS, decide_eq_true hgruS,
-    decide_eq_true (show ((declOf u).signatur probe).konsumiert = [(duty, 0)] from hkons),
-    decide_eq_true (show ((declOf u).signatur probe).produziert = [(duty, 0)] from hprod),
-    hro_t, hro_g, hgates_all, htor,
-    decide_eq_true hfrisch, decide_eq_true hprobe_mem, hrahmen]
+  simp only [checkOkB, Bool.and_eq_true, decide_eq_true_eq]
+  refine ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨hergS, hgruS⟩, hkons⟩, hprod⟩, hro_t⟩, hro_g⟩,
+    ?_⟩, htor⟩, hfrisch⟩, hprobe_mem⟩, hrahmen⟩
+  apply List.all_eq_true.mpr
+  intro g hg
+  have facts := List.all_eq_true.mp hgates_all g hg
+  simp only [Bool.and_eq_true, decide_eq_true_eq] at facts
+  exact (Bool.and_eq_true _ _).mpr
+    ⟨decide_eq_true facts.1, decide_eq_true facts.2⟩
 
 /-- One admitted check is the unit admission over its singleton. -/
 theorem checkB_einzeln (u : UProg) (P : Programm (declOf u))
@@ -186,8 +210,10 @@ theorem checkB_einzeln (u : UProg) (P : Programm (declOf u))
     (fns : List (declOf u).Fn) (d : CheckDecl (declOf u))
     (h : checkOkB P tabs globs fns d = true) :
     checkB P tabs globs fns [d] = true := by
+  classical
+  letI : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length))
   unfold checkB
   simp only [List.all_cons, List.all_nil, h, Bool.true_and]
-  decide
+  simp [eindeutigeNamen]
 
 end Gabbro.Grammatik.Parser.Uebersetze
