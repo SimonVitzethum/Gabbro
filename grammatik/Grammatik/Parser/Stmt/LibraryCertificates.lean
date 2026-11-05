@@ -274,6 +274,24 @@ def translationDeclaration (reverse : Bool) : TranslationDecl (translationSource
     (except_ok_get (translation_library_exists reverse)) (translation_export_data reverse).1
     (except_ok_get (translation_lower_exists reverse))
 
+-- Keep the exact factory domains behind checked proofs before selecting a Bool.
+private theorem translationDeclaration_resolved (reverse : Bool) :
+    libraryDecl (Aufloesung.loeseL (Aufloesung.quelle (translationSource reverse).items)
+      [] (translationSource reverse).items) (translationSource reverse).call =
+      .ok (translationLibrary reverse) := by
+  exact (translationDeclaration reverse).resolved
+
+private theorem translationDeclaration_elaborated (reverse : Bool) :
+    elabU (pre108 (translatorItems
+      (Aufloesung.loeseL (Aufloesung.quelle (translationSource reverse).items)
+        [] (translationSource reverse).items) (translationLibrary reverse))) =
+      .ok (translationUnit reverse) := by
+  exact (translationDeclaration reverse).elaborated
+
+private theorem translationDeclaration_lowered (reverse : Bool) :
+    lowerAllg (translationUnit reverse) = .ok (translationLowered reverse) := by
+  exact except_ok_get (x := lowerAllg (translationUnit reverse)) (translation_lower_exists reverse)
+
 def translationInput (reverse : Bool) : Wert (declOf (translationUnit reverse)) translationSchema.ty :=
   sampleRows (declOf (translationUnit reverse)) false
 
@@ -322,12 +340,16 @@ theorem translation_wrong_execution_zeuge
     (oracle : Orakel (declOf (translationUnit true))) (passes : Nat)
     (world : World (declOf (translationUnit true))) :
     LibraryFixtureProofs.DeclarationData.RejectsIdentity (source := translationSource true)
-      (translation_export_data true).2 (except_ok_get (translation_library_exists true))
-      (translation_export_data true).1 (except_ok_get (translation_lower_exists true))
+      (translation_export_data true).2
+      (by exact translationDeclaration_resolved true)
+      (by exact translationDeclaration_elaborated true)
+      (by exact translationDeclaration_lowered true)
       (translationInput true) oracle passes world := by
   exact declarationFromData_rejects_identity (source := translationSource true)
-    (translation_export_data true).2 (except_ok_get (translation_library_exists true))
-    (translation_export_data true).1 (except_ok_get (translation_lower_exists true))
+    (translation_export_data true).2
+    (by exact translationDeclaration_resolved true)
+    (by exact translationDeclaration_elaborated true)
+    (by exact translationDeclaration_lowered true)
     (translationInput true) (sampleRows_reverse_distinct (declOf (translationUnit true)))
     oracle passes world
 
