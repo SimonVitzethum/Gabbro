@@ -132,7 +132,9 @@ theorem feld_lesen_zeuge :
     uSeite ct (.call "popcount" [.field (.index (.field (.variable "p") "slots") (.lit 0)) "v"]) =
       .ok (.ib1 .popcount 8 (.slot "p" "v" (.lit 0))) ∧
     uSeite ct (.call "popcount" [.field (.index (.field (.variable "T") "slots") (.lit 2)) "v"]) =
-      .ok (.ib1 .popcount 8 (.tab "T" "v" (.lit 2))) := by cbv
+      .ok (.ib1 .popcount 8 (.tab "T" "v" (.lit 2))) := by
+  cbv
+  exact ⟨rfl, rfl⟩
 
 /-- An arena element carries the width of its declared element type. -/
 theorem arena_lesen_zeuge :
@@ -177,7 +179,9 @@ theorem zaehle_slots_lesen_zeuge :
     uSichert { lb with tabs := [tt] } (.bin "<=" (.bin "+" zaehleSlots (.lit 1)) (.lit 3)) =
       .ok (.cmp "<=" (.add zaehleSlotsU (.lit 1)) (.lit 3)) ∧
     uSichert { lb with tabs := [tt] } (.bin "<" (.bin "-" (.lit 3) zaehleSlots) (.bin "*" zaehleSlots (.lit 2))) =
-      .ok (.cmp "<" (.sub (.lit 3) zaehleSlotsU) (.mul zaehleSlotsU (.lit 2))) := by cbv
+      .ok (.cmp "<" (.sub (.lit 3) zaehleSlotsU) (.mul zaehleSlotsU (.lit 2))) := by
+  cbv
+  exact ⟨rfl, rfl, rfl, rfl⟩
 
 /-- A count in a count body: the inner binder shadows the outer one. -/
 theorem zaehle_verschachtelt_lesen_zeuge :
@@ -209,7 +213,9 @@ theorem zaehle_baum_lesen_zeuge :
     uSichert baumCtx (.bin "==" (.ext .count ["x", "descendants"] [.variable "root", .tru]) (.lit 3)) =
       .ok (.cmp "==" (.zaehleBaum "T" "x" "next" false (.param "root") .tru) (.lit 3)) ∧
     uSichert baumCtx (.bin "==" (.ext .count ["x", "ancestors"] [.variable "root", .tru]) (.lit 1)) =
-      .ok (.cmp "==" (.zaehleBaum "T" "x" "next" true (.param "root") .tru) (.lit 1)) := by cbv
+      .ok (.cmp "==" (.zaehleBaum "T" "x" "next" true (.param "root") .tru) (.lit 1)) := by
+  cbv
+  exact ⟨rfl, rfl⟩
 
 /-- The array domain: the binder is an INDEX into `0 ..< n` (LANGUAGE section 6); the body reads the element. -/
 def feldCtx : UCtx :=

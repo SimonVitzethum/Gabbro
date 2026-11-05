@@ -139,7 +139,7 @@ theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief) :
   | axiomT name params result requirement effects cost => cases requirement <;> rfl
   | accT name ty operator cores aggregate =>
     cases ha : akkuFormZulaessig (.accT name ty operator cores aggregate) <;>
-      cases ho : akkuOperatorOk operator <;> simp [uRestFehler, ha, ho]
+      cases ho : akkuOperatorOk operator <;> simp [uRestFehler, ha, ho] <;> rfl
   | _ => rfl
 
 /-- A refused head retains precisely its actual singleton diagnostic. -/
