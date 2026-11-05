@@ -106,9 +106,19 @@ private def floorMetadataFn : Nat → UFn → UFn
 private def floorMetadataCheck (check : UCheck) : UCheck :=
   {check with name := "p", tore := ["g"], probe := "p#probe", duty := "p#duty"}
 private def floorMetadataUnit (unit : UProg) : UProg :=
-  {unit with marken := ["p#duty"], fns := unit.fns.mapIdx floorMetadataFn,
-    checks := unit.checks.map floorMetadataCheck, tabs := [], locks := [], globs := [],
-    axs := [], invs := [], regs := [], ptrs := [], eigner := [], markOrders := []}
+  {unit with
+    marken := ["p#duty"]
+    fns := unit.fns.mapIdx floorMetadataFn
+    checks := unit.checks.map floorMetadataCheck
+    tabs := []
+    locks := []
+    globs := []
+    axs := []
+    invs := []
+    regs := []
+    ptrs := []
+    eigner := []
+    markOrders := []}
 
 private theorem floor_name_self (name : String) : strEq name name = true := by
   simp [strEq]
@@ -116,11 +126,7 @@ private theorem floor_name_self (name : String) : strEq name name = true := by
 -- Resolve the canonical singleton without decoding the same UTF-8 name at every use.
 private theorem floor_mark_self (name : String) :
     markFin [name] name = some (⟨0, by decide⟩ : Fin 1) := by
-  have same : strEq name name = true := floor_name_self name
-  unfold markFin
-  change (if strEq name name then some (⟨0, by decide⟩ : Fin 1) else none) = _
-  rw [same]
-  rfl
+  simp [markFin, List.finRange_succ, floor_name_self]
 attribute [local cbv_eval] floor_name_self floor_mark_self
 
 -- Infer this exact unit from canonical elaboration, once, before dependent indices.

@@ -104,9 +104,19 @@ private def admissionMetadataFn : Nat → UFn → UFn
 private def admissionMetadataCheck (check : UCheck) : UCheck :=
   {check with name := "p", tore := ["g"], probe := "p#probe", duty := "p#duty"}
 private def admissionMetadataUnit (unit : UProg) : UProg :=
-  {unit with marken := ["p#duty"], fns := unit.fns.mapIdx admissionMetadataFn,
-    checks := unit.checks.map admissionMetadataCheck, tabs := [], locks := [], globs := [],
-    axs := [], invs := [], regs := [], ptrs := [], eigner := [], markOrders := []}
+  {unit with
+    marken := ["p#duty"]
+    fns := unit.fns.mapIdx admissionMetadataFn
+    checks := unit.checks.map admissionMetadataCheck
+    tabs := []
+    locks := []
+    globs := []
+    axs := []
+    invs := []
+    regs := []
+    ptrs := []
+    eigner := []
+    markOrders := []}
 
 private theorem admission_name_self (name : String) : strEq name name = true := by
   simp [strEq]
@@ -114,11 +124,7 @@ private theorem admission_name_self (name : String) : strEq name name = true := 
 -- Resolve the canonical singleton without decoding the same UTF-8 name at every use.
 private theorem admission_mark_self (name : String) :
     markFin [name] name = some (⟨0, by decide⟩ : Fin 1) := by
-  have same : strEq name name = true := admission_name_self name
-  unfold markFin
-  change (if strEq name name then some (⟨0, by decide⟩ : Fin 1) else none) = _
-  rw [same]
-  rfl
+  simp [markFin, List.finRange_succ, admission_name_self]
 attribute [local cbv_eval] admission_name_self admission_mark_self
 
 -- Infer this exact unit from canonical elaboration, once, before dependent indices.
