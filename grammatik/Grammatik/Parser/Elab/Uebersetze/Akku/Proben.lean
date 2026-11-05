@@ -235,96 +235,146 @@ attribute [local cbv_eval] generated_range_text generated_range
 attribute [local cbv_opaque] floorOf
 
 -- Unfold one equation of the actual mutual reader at a time. In particular,
--- the million-step entry fuel remains a numeral argument, not a recursively
--- normalized mutual closure. Every callback below is the production reader.
+-- each equation first matches the actual fuel instead of forcing a large
+-- numeral to unify with a successor pattern. All callbacks remain canonical.
 private theorem row_nil (tabs : List UTab) (heads : List UFnKopf)
     (fuel : Nat) (ctx : UCtx) :
-    uAnwReihe tabs heads (fuel + 1) ctx [] = .ok ([], ctx) := by
-  simp only [uAnwReihe]
+    uAnwReihe tabs heads fuel ctx [] = match fuel with
+      | 0 => .error "nesting without G form"
+      | fuel + 1 => .ok ([], ctx) := by
+  cases fuel with
+  | zero => simp only [uAnwReihe]
+  | succ fuel =>
+    simp only [uAnwReihe]
 
 private theorem row_cons (tabs : List UTab) (heads : List UFnKopf)
     (fuel : Nat) (ctx : UCtx) (statement : SAnw) (rest : List SAnw) :
-    uAnwReihe tabs heads (fuel + 1) ctx (statement :: rest) = (do
-      let (before, ctx, statement) ← expandFoldStmt ctx statement
-      let (code, ctx) ← uAnwReiheCore tabs heads (fuel + 1) ctx (statement :: rest)
-      pure (before ++ code, ctx)) := by
-  simp only [uAnwReihe]
+    uAnwReihe tabs heads fuel ctx (statement :: rest) = match fuel with
+      | 0 => .error "nesting without G form"
+      | fuel + 1 => (do
+        let (before, ctx, statement) ← expandFoldStmt ctx statement
+        let (code, ctx) ← uAnwReiheCore tabs heads (fuel + 1) ctx (statement :: rest)
+        pure (before ++ code, ctx)) := by
+  cases fuel with
+  | zero => simp only [uAnwReihe]
+  | succ fuel =>
+    simp only [uAnwReihe]
 
 private theorem core_bind (tabs : List UTab) (heads : List UFnKopf)
     (fuel : Nat) (ctx : UCtx) (mutable : Bool) (name : String)
     (ty : Option STyp) (value : SExpr) (rest : List SAnw) :
-    uAnwReiheCore tabs heads (fuel + 1) ctx (.bind mutable name ty value :: rest) = (do
-      let (statement, next) ← uBindWert ctx tabs heads mutable name ty value
-      let (code, ending) ← uAnwReihe tabs heads fuel
-        (foldBindingContext ctx next statement) rest
-      pure (statement :: code, ending)) := by
-  simp only [uAnwReiheCore]
-  cases uBindWert ctx tabs heads mutable name ty value with
-  | error _ => rfl
-  | ok pair =>
-    rcases pair with ⟨statement, next⟩
-    dsimp only [bind, Except.bind]
-    cases uAnwReihe tabs heads fuel (foldBindingContext ctx next statement) rest <;> rfl
+    uAnwReiheCore tabs heads fuel ctx (.bind mutable name ty value :: rest) = match fuel with
+      | 0 => .error "nesting without G form"
+      | fuel + 1 => (do
+        let (statement, next) ← uBindWert ctx tabs heads mutable name ty value
+        let (code, ending) ← uAnwReihe tabs heads fuel
+          (foldBindingContext ctx next statement) rest
+        pure (statement :: code, ending)) := by
+  cases fuel with
+  | zero => simp only [uAnwReiheCore]
+  | succ fuel =>
+    simp only [uAnwReiheCore]
+    cases uBindWert ctx tabs heads mutable name ty value with
+    | error _ => rfl
+    | ok pair =>
+      rcases pair with ⟨statement, next⟩
+      dsimp only [bind, Except.bind]
+      cases uAnwReihe tabs heads fuel (foldBindingContext ctx next statement) rest <;> rfl
 
 private theorem core_trim (tabs : List UTab) (heads : List UFnKopf)
     (fuel : Nat) (ctx : UCtx) (name range : String) (rest : List SAnw) :
-    uAnwReiheCore tabs heads (fuel + 1) ctx (.trimReq (.variable name) range :: rest) = (do
-      let (lo, hi, next) ← uNarrowKopf ctx name range
-      let (code, ending) ← uAnwReihe tabs heads fuel next rest
-      pure ([UStmt.narrowReqBeg name lo hi] ++ code, ending)) := by
-  simp only [uAnwReiheCore]
-  cases uNarrowKopf ctx name range with
-  | error _ => rfl
-  | ok triple =>
-    rcases triple with ⟨lo, hi, next⟩
-    dsimp only [bind, Except.bind]
-    cases uAnwReihe tabs heads fuel next rest <;> rfl
+    uAnwReiheCore tabs heads fuel ctx (.trimReq (.variable name) range :: rest) = match fuel with
+      | 0 => .error "nesting without G form"
+      | fuel + 1 => (do
+        let (lo, hi, next) ← uNarrowKopf ctx name range
+        let (code, ending) ← uAnwReihe tabs heads fuel next rest
+        pure ([UStmt.narrowReqBeg name lo hi] ++ code, ending)) := by
+  cases fuel with
+  | zero => simp only [uAnwReiheCore]
+  | succ fuel =>
+    simp only [uAnwReiheCore]
+    cases uNarrowKopf ctx name range with
+    | error _ => rfl
+    | ok triple =>
+      rcases triple with ⟨lo, hi, next⟩
+      dsimp only [bind, Except.bind]
+      cases uAnwReihe tabs heads fuel next rest <;> rfl
 
 private theorem core_locks (tabs : List UTab) (heads : List UFnKopf)
     (fuel : Nat) (ctx : UCtx) (name : String) (body rest : List SAnw) :
-    uAnwReiheCore tabs heads (fuel + 1) ctx
-      (.locks false (.variable name) (.block body none) :: rest) =
-      (match ctx.locks.find? (fun lock => strEq lock.name name) with
-      | none => .error ("lock unknown: " ++ name)
-      | some _ => do
-        let (code, _) ← uAnwReihe tabs heads fuel { ctx with held := name :: ctx.held } body
-        let (tail, ending) ← uAnwReihe tabs heads fuel ctx rest
-        pure ([UStmt.lockBeg name] ++ code ++ [UStmt.blkEnd] ++ tail, ending)) := by
-  simp only [uAnwReiheCore, Bool.false_eq_true, ite_false]
-  cases ctx.locks.find? (fun lock => strEq lock.name name) with
-  | none => rfl
-  | some _ =>
-    cases uAnwReihe tabs heads fuel { ctx with held := name :: ctx.held } body with
-    | error _ => rfl
-    | ok pair =>
-      rcases pair with ⟨code, next⟩
-      cases uAnwReihe tabs heads fuel ctx rest <;> rfl
+    uAnwReiheCore tabs heads fuel ctx
+      (.locks false (.variable name) (.block body none) :: rest) = match fuel with
+      | 0 => .error "nesting without G form"
+      | fuel + 1 => (match ctx.locks.find? (fun lock => strEq lock.name name) with
+        | none => .error ("lock unknown: " ++ name)
+        | some _ => do
+          let (code, _) ← uAnwReihe tabs heads fuel { ctx with held := name :: ctx.held } body
+          let (tail, ending) ← uAnwReihe tabs heads fuel ctx rest
+          pure ([UStmt.lockBeg name] ++ code ++ [UStmt.blkEnd] ++ tail, ending)) := by
+  cases fuel with
+  | zero => simp only [uAnwReiheCore]
+  | succ fuel =>
+    simp only [uAnwReiheCore, Bool.false_eq_true, ite_false]
+    cases ctx.locks.find? (fun lock => strEq lock.name name) with
+    | none => rfl
+    | some _ =>
+      cases uAnwReihe tabs heads fuel { ctx with held := name :: ctx.held } body with
+      | error _ => rfl
+      | ok pair =>
+        rcases pair with ⟨code, next⟩
+        cases uAnwReihe tabs heads fuel ctx rest <;> rfl
 
 private theorem core_call (tabs : List UTab) (heads : List UFnKopf)
     (fuel : Nat) (ctx : UCtx) (name : String) (args : List SExpr) (rest : List SAnw) :
-    uAnwReiheCore tabs heads (fuel + 1) ctx (.call name args :: rest) = (do
-      let statement ← uAnw1 ctx tabs heads (.call name args)
-      let (code, ending) ← uAnwReihe tabs heads fuel ctx rest
-      pure (statement :: code, ending)) := by
-  simp only [uAnwReiheCore]
-  cases uAnw1 ctx tabs heads (.call name args) with
-  | error _ => rfl
-  | ok statement => cases uAnwReihe tabs heads fuel ctx rest <;> rfl
+    uAnwReiheCore tabs heads fuel ctx (.call name args :: rest) = match fuel with
+      | 0 => .error "nesting without G form"
+      | fuel + 1 => (do
+        let statement ← uAnw1 ctx tabs heads (.call name args)
+        let (code, ending) ← uAnwReihe tabs heads fuel ctx rest
+        pure (statement :: code, ending)) := by
+  cases fuel with
+  | zero => simp only [uAnwReiheCore]
+  | succ fuel =>
+    simp only [uAnwReiheCore]
+    cases uAnw1 ctx tabs heads (.call name args) with
+    | error _ => rfl
+    | ok statement => cases uAnwReihe tabs heads fuel ctx rest <;> rfl
 
 private theorem core_set (tabs : List UTab) (heads : List UFnKopf)
     (fuel : Nat) (ctx : UCtx) (target value : SExpr) (op : String) (rest : List SAnw) :
-    uAnwReiheCore tabs heads (fuel + 1) ctx (.set target op value :: rest) = (do
-      let statement ← uAnw1 ctx tabs heads (.set target op value)
-      let (code, ending) ← uAnwReihe tabs heads fuel ctx rest
-      pure (statement :: code, ending)) := by
-  simp only [uAnwReiheCore]
-  cases uAnw1 ctx tabs heads (.set target op value) with
-  | error _ => rfl
-  | ok statement => cases uAnwReihe tabs heads fuel ctx rest <;> rfl
+    uAnwReiheCore tabs heads fuel ctx (.set target op value :: rest) = match fuel with
+      | 0 => .error "nesting without G form"
+      | fuel + 1 => (do
+        let statement ← uAnw1 ctx tabs heads (.set target op value)
+        let (code, ending) ← uAnwReihe tabs heads fuel ctx rest
+        pure (statement :: code, ending)) := by
+  cases fuel with
+  | zero => simp only [uAnwReiheCore]
+  | succ fuel =>
+    simp only [uAnwReiheCore]
+    cases uAnw1 ctx tabs heads (.set target op value) with
+    | error _ => rfl
+    | ok statement => cases uAnwReihe tabs heads fuel ctx rest <;> rfl
+
+-- Select the actual conditional's predecessor only after inspecting its fuel;
+-- its recursive callback remains the same production reader.
+private theorem core_cond (tabs : List UTab) (heads : List UFnKopf)
+    (fuel : Nat) (ctx : UCtx) (condition : SExpr) (body : List SAnw)
+    (ending : Option SEnde) (alternatives : List SAnw)
+    (fallback : Option SAnw) (rest : List SAnw) :
+    uAnwReiheCore tabs heads fuel ctx
+      (.cond condition (.block body ending) alternatives fallback :: rest) = match fuel with
+      | 0 => .error "nesting without G form"
+      | fuel + 1 => uCond (uAnwReihe tabs heads fuel)
+          ctx condition body ending alternatives fallback rest := by
+  cases fuel with
+  | zero => simp only [uAnwReiheCore]
+  | succ fuel =>
+    exact uAnwReiheCore_cond tabs heads fuel ctx condition body ending alternatives fallback rest
 
 attribute [local cbv_opaque] uAnwReihe uAnwReiheCore
 attribute [local cbv_eval] row_nil row_cons core_bind core_trim core_locks
-  core_call core_set uAnwReiheCore_cond
+  core_call core_set core_cond
 
 -- Infer the complete unit from the actual successful producer, then inspect
 -- only its two name projections. No hand-built UProg replaces elaboration.
