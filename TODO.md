@@ -29,6 +29,9 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   these tests are not a measurement of complete language coverage. Refusal expectations have not been relaxed.
   All four existing source I/O probes currently refuse at the unbound `SItemTief.assumT` source gate;
   the assembly Runner's independently measured I/O/instruction regression remains separate.
+  The Lean generator coverage guardian passes with unchanged bounds: 66,448 valid programs and 766
+  single-fault refusals; 179/282 register members are exercised and the remaining gaps are explicitly
+  accounted for. This measures the model generator, not complete source-to-IR syntax admission.
   Full-package closure and the remaining concrete witness consumers are being revalidated.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
   The authorised acceptance scope is Lean and the Lean parts of GabbroV; Rust, Cargo and LLVM checks are

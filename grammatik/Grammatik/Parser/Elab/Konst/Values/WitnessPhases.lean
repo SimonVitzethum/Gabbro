@@ -248,7 +248,8 @@ private theorem quotation_text {D : Deklaration} {Γ : Ctx} {schemas : List USum
     expr := .strLit bytes bound
     source := .text text bytes decoded bound
     equation := by intros; rfl }, ?_, rfl⟩
-  rw [Values.reify]
+  erw [Values.reify.eq_def]
+  dsimp only
   have narrow : ¬ n > 1 := by omega
   simp only [narrow, ↓reduceIte, found, bind, Except.bind, pure, Except.pure]
 
@@ -289,7 +290,7 @@ private theorem quotation_tag {D : Deklaration} {Γ : Ctx} {schemas : List USum}
         (Values.LiteralMeaning.tag schema (List.mem_of_find?_eq_some selected) shape i name named
           actual.syntax _ actual.source)
       equation := by intros; simp only [eval, actual.equation, Fall.of_to] <;> rfl }, ?_, ?_⟩
-    · unfold Values.reify
+    · erw [Values.reify.eq_def]
       dsimp only
       split
       · rename_i missing
@@ -419,7 +420,7 @@ public theorem tag_results :
     rw [substitute_portable [tagged] "tagged" [.lit 4] [.lit 4] tagged (by cbv) (by cbv) (by rfl) (by cbv) (by cbv),
       checkCall_elaborated [tagged] [] [.lit 4] taggedSource (elaborate_certified taggedSource)]
     cbv
-    rw [produced]
+    erw [produced]
     simpa only [spelling, bind, Except.bind, pure, Except.pure, Except.map]
   case empty =>
     obtain ⟨literal, produced, spelling⟩ := emptyTagQuotation
