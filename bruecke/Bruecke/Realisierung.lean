@@ -44,37 +44,85 @@ theorem stmt_statisch (S : Stimmig u) (c : Fin u.fns.length) (st : UStmt)
       ∀ w ∈ gf.puts, w ∈ (fnAt u c).puts) := by
   cases st
   case assign b fname ix v =>
-    rw [lowStmt_assign S.tab] at h
+    rw [lowStmt_assign S.tab c b fname ix v (Λ := Λ)] at h
+    have pointerWrite {space num j : Nat} {read : Bool} {owner : Option Nat}
+        (pv : Var (ctxOf u c) (.ptr ⟨space, ⟨read, true, owner⟩, .table num⟩))
+        (hj : paramPos (fnAt u c).params b = .ok j)
+        (hpv : lowVar (ctxOf u c) j
+          (.ptr ⟨space, ⟨read, true, owner⟩, .table num⟩) = .ok pv)
+        (hlt : num < u.tabs.length) (hw : writesAt u (fnAt u c) ⟨num, hlt⟩ = true) :
+        ∃ cn idx fld ve, bst = .assign cn idx fld ve ∧ cn ∈ (fnAt u c).puts := by
+      have hparam : ((fnAt u c).params[j]?).map (·.2) =
+          some (.ptr ⟨space, ⟨read, true, owner⟩, .table num⟩) := by
+        simpa only [ctxOf, List.getElem?_map] using
+          (lowVar_typ (ctxOf u c) j _ pv hpv)
+      have hpt := ptrTab_of_type (fnAt u c) b j num read true hj hparam hlt
+      simp only [stmtBody, hpt] at hb
+      cases hsv : sideExpr u (fnAt u c) v with
+      | none => rw [hsv] at hb; cases hb
+      | some ve =>
+        rw [hsv] at hb
+        cases hb
+        exact ⟨_, _, _, _, rfl, any_mem hw⟩
     cases stored : lowAssignDurch u c b fname ix v (Λ := Λ) with
     | error error => simp only [stored, Except.map] at h; cases h
     | ok statement =>
       simp only [stored, Except.map] at h
       cases h
       have h := stored
-      simp only [lowAssignDurch, lowAssignDurchL, bind, Except.bind, Except.map] at h
-      repeat' split at h
-      all_goals try cases h
-      all_goals
-        match goal with
-        | hv : lowVar (ctxOf u c) ?j
-            (.ptr ⟨?space, ⟨?read, true, ?owner⟩, .table ?num⟩) = .ok ?pv,
-          hj : paramPos (fnAt u c).params b = .ok ?j,
-          hw : writesAt u (fnAt u c) ⟨?num, ?hlt⟩ = true |- _ =>
-          left
-          have hparam : ((fnAt u c).params[j]?).map (·.2) =
-              some (.ptr ⟨space, ⟨read, true, owner⟩, .table num⟩) := by
-            simpa only [ctxOf, List.getElem?_map] using
-              (lowVar_typ (ctxOf u c) j _ pv hv)
-          have hpt := ptrTab_of_type (fnAt u c) b j num read true hj hparam hlt
-          simp only [stmtBody, hpt] at hb
-          cases hsv : sideExpr u (fnAt u c) v with
-          | none => rw [hsv] at hb; cases hb
-          | some ve =>
-            rw [hsv] at hb
-            cases hb
-            exact ⟨_, _, _, _, rfl, any_mem hw⟩
+      unfold lowAssignDurch lowAssignDurchL at h
+      split at h
+      · cases h
+      · rename_i j hj
+        split at h
+        · rename_i space read num _
+          split at h
+          · rename_i hlt
+            split at h
+            · cases h
+            · rename_i fh _
+              split at h
+              · cases h
+              · rename_i pv hpv
+                split at h
+                · cases h
+                · split at h
+                  · cases h
+                  · split at h
+                    · split at h
+                      · rename_i hw
+                        exact .inl (pointerWrite pv hj hpv hlt hw)
+                      · cases h
+                    · cases h
+          · cases h
+        · rename_i space read owner num _
+          split at h
+          · rename_i hlt
+            split at h
+            · cases h
+            · rename_i fh _
+              split at h
+              · cases h
+              · rename_i m _
+                split at h
+                · cases h
+                · rename_i pv hpv
+                  split at h
+                  · cases h
+                  · split at h
+                    · cases h
+                    · split at h
+                      · split at h
+                        · split at h
+                          · rename_i hw
+                            exact .inl (pointerWrite pv hj hpv hlt hw)
+                          · cases h
+                        · cases h
+                      · cases h
+          · cases h
+        · cases h
   case assignTab b fname ix v =>
-    rw [lowStmt_assignTab S.tab] at h
+    rw [lowStmt_assignTab S.tab c b fname ix v (Λ := Λ)] at h
     cases stored : lowAssignTab u c b fname ix v (Λ := Λ) with
     | error error => simp only [stored, Except.map] at h; cases h
     | ok statement =>
@@ -101,7 +149,7 @@ theorem stmt_statisch (S : Stimmig u) (c : Fin u.fns.length) (st : UStmt)
           rw [show (tabAt u t).name = b from hn] at hw'
           exact ⟨_, _, _, _, rfl, any_mem hw'⟩
   case call cname args =>
-    rw [lowStmt_call] at h
+    rw [lowStmt_call (u := u) c cname args (Λ := Λ)] at h
     unfold lowCall lowCallL at h
     split at h
     · cases h
