@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil6
-import Grammatik.Parser.Elab.UebersetzeAllg.Teil3Values
+public import Grammatik.Parser.Elab.UebersetzeAllg.Teil3Values
 
 @[expose] public section
 
