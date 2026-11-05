@@ -102,18 +102,25 @@ private theorem collect_certified : ∀ (n : Nat) (T : Fin n → Type)
     rw [Measures.collect, head]
     dsimp only [bind, Except.bind]
     rw [tailValue]
+    rfl
 
 private theorem absent_measures (u : Uebersetze.UProg)
     (absent : ∀ f : Fin u.fns.length, (fnAt u f).decreases = none) :
     (Measures.lowerMeasures u).toOption.isSome = true := by
   have entries := collect_certified u.fns.length (fun f => Measures.At u f)
     (fun f => Measures.lowerAt u f) (fun f => by
-      simp only [Measures.lowerAt, absent f, Except.toOption, Option.isSome])
+      unfold Measures.lowerAt
+      split
+      · rfl
+      · rename_i source selected
+        rw [absent f] at selected
+        cases selected)
   have collected := Gabbro.Grammatik.except_ok_get (ε := String)
     (α := (f : Fin u.fns.length) → Measures.At u f)
     (x := Measures.collect u.fns.length (Measures.At u) (Measures.lowerAt u)) entries
   unfold Measures.lowerMeasures
   rw [collected]
+  rfl
 
 /-- Close the canonical assembler from its real phase certificates. Empty source measures
     have equal tuple lengths on every call edge, independently of the assembled program. -/
@@ -215,22 +222,41 @@ private theorem zwei_count : zweiU.fns.length = 2 := by cbv
 private def zwei_first : Fin zweiU.fns.length := ⟨0, by rw [zwei_count]; decide⟩
 private def zwei_second : Fin zweiU.fns.length := ⟨1, by rw [zwei_count]; decide⟩
 
+-- Compute the actual canonical unit once. The complete indexed certificate is
+-- transported to the extracted unit before a function index is introduced.
+private theorem zwei_metadata : zweiU.invs = [] ∧ contractGate zweiU = true ∧
+    ∀ f : Fin zweiU.fns.length,
+      (lowerFnAt zweiU f).toOption.isSome = true ∧ (fnAt zweiU f).decreases = none := by
+  have certificate : ∃ unit : Uebersetze.UProg,
+      elabU (pre108 zwei) = .ok unit ∧ unit.invs = [] ∧ contractGate unit = true ∧
+      ∀ f : Fin unit.fns.length,
+        (lowerFnAt unit f).toOption.isSome = true ∧ (fnAt unit f).decreases = none := by
+    refine ⟨?unit, ?elaborated, ?invariants, ?contracts, ?functions⟩
+    case elaborated => cbv <;> exact Eq.refl _
+    case invariants => cbv
+    case contracts => cbv
+    case functions =>
+      intro f
+      rcases f with ⟨index, bound⟩
+      have small : index < 2 := bound
+      rcases (by omega : index = 0 ∨ index = 1) with rfl | rfl <;>
+        constructor <;> cbv
+  obtain ⟨unit, elaborated, facts⟩ := certificate
+  have same : unit = zweiU := Except.ok.inj (elaborated.symm.trans
+    (Gabbro.Grammatik.except_ok_get (ε := String) (α := Uebersetze.UProg)
+      (x := elabU (pre108 zwei)) zwei_elaborated))
+  cases same
+  exact facts
+
 private theorem zwei_functions (f : Fin zweiU.fns.length) :
-    (lowerFnAt zweiU f).toOption.isSome = true ∧ (fnAt zweiU f).decreases = none := by
-  have bound : f.val < 2 := by rw [← zwei_count]; exact f.isLt
-  rcases (by omega : f.val = 0 ∨ f.val = 1) with zero | one
-  · have same : f = zwei_first := Fin.ext zero
-    subst f
-    constructor <;> cbv <;> rfl
-  · have same : f = zwei_second := Fin.ext one
-    subst f
-    constructor <;> cbv <;> rfl
+    (lowerFnAt zweiU f).toOption.isSome = true ∧ (fnAt zweiU f).decreases = none :=
+  zwei_metadata.2.2 f
 
 theorem zwei_ok : stufe zwei = "OK" :=
   stufe_certified (items := zwei) (u := zweiU)
     (Gabbro.Grammatik.except_ok_get (ε := String) (α := Uebersetze.UProg)
-      (x := elabU (pre108 zwei)) zwei_elaborated) (by cbv)
-    (fun f => (zwei_functions f).1) (by cbv) (fun f => (zwei_functions f).2)
+      (x := elabU (pre108 zwei)) zwei_elaborated) zwei_metadata.1
+    (fun f => (zwei_functions f).1) zwei_metadata.2.1 (fun f => (zwei_functions f).2)
     (absent_measures zweiU (fun f => (zwei_functions f).2))
 theorem zwei_traeger : traeger zwei = ["a::C", "b::C"] := by cbv
 theorem zwei_wirkung :
@@ -259,18 +285,40 @@ private def tiefU : Uebersetze.UProg := (elabU (pre108 tief)).toOption.get tief_
 private theorem tief_count : tiefU.fns.length = 1 := by cbv
 private def tief_first : Fin tiefU.fns.length := ⟨0, by rw [tief_count]; decide⟩
 
+private theorem tief_metadata : tiefU.invs = [] ∧ contractGate tiefU = true ∧
+    ∀ f : Fin tiefU.fns.length,
+      (lowerFnAt tiefU f).toOption.isSome = true ∧ (fnAt tiefU f).decreases = none := by
+  have certificate : ∃ unit : Uebersetze.UProg,
+      elabU (pre108 tief) = .ok unit ∧ unit.invs = [] ∧ contractGate unit = true ∧
+      ∀ f : Fin unit.fns.length,
+        (lowerFnAt unit f).toOption.isSome = true ∧ (fnAt unit f).decreases = none := by
+    refine ⟨?unit, ?elaborated, ?invariants, ?contracts, ?functions⟩
+    case elaborated => cbv <;> exact Eq.refl _
+    case invariants => cbv
+    case contracts => cbv
+    case functions =>
+      intro f
+      rcases f with ⟨index, bound⟩
+      have small : index < 1 := bound
+      have zero : index = 0 := by omega
+      subst index
+      constructor <;> cbv
+  obtain ⟨unit, elaborated, facts⟩ := certificate
+  have same : unit = tiefU := Except.ok.inj (elaborated.symm.trans
+    (Gabbro.Grammatik.except_ok_get (ε := String) (α := Uebersetze.UProg)
+      (x := elabU (pre108 tief)) tief_elaborated))
+  cases same
+  exact facts
+
 private theorem tief_functions (f : Fin tiefU.fns.length) :
-    (lowerFnAt tiefU f).toOption.isSome = true ∧ (fnAt tiefU f).decreases = none := by
-  have bound : f.val < 1 := by rw [← tief_count]; exact f.isLt
-  have same : f = tief_first := Fin.ext (by omega)
-  subst f
-  constructor <;> cbv <;> rfl
+    (lowerFnAt tiefU f).toOption.isSome = true ∧ (fnAt tiefU f).decreases = none :=
+  tief_metadata.2.2 f
 
 theorem tief_ok : stufe tief = "OK" :=
   stufe_certified (items := tief) (u := tiefU)
     (Gabbro.Grammatik.except_ok_get (ε := String) (α := Uebersetze.UProg)
-      (x := elabU (pre108 tief)) tief_elaborated) (by cbv)
-    (fun f => (tief_functions f).1) (by cbv) (fun f => (tief_functions f).2)
+      (x := elabU (pre108 tief)) tief_elaborated) tief_metadata.1
+    (fun f => (tief_functions f).1) tief_metadata.2.1 (fun f => (tief_functions f).2)
     (absent_measures tiefU (fun f => (tief_functions f).2))
 theorem tief_traeger : traeger tief = ["x::y::C", "b::C"] := by cbv
 
