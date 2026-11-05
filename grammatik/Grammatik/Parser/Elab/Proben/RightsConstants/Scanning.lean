@@ -55,7 +55,7 @@ def Input.of_chunks {source : String} (pieces : List Chunk)
   ⟨Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces, Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.tokens pieces,
     text, lex_chunks pieces room⟩
 
-private theorem steps_bound (pieces : List Chunk) :
+theorem steps_bound (pieces : List Chunk) :
     pieces.all (fun piece => decide (piece.steps ≤ piece.characters.length)) = true →
       steps pieces ≤ (Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces).length := by
   induction pieces with
