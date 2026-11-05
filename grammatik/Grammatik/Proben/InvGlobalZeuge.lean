@@ -130,7 +130,7 @@ theorem cg_missing_guard_refused_zeuge :
       (cgD.traeger ()).all (fun c =>
         (Sum.elim cgD.braucht cgD.gbraucht c).all (fun w =>
           match w with
-          | .inl L => decide (L ∈ ([] : List Bool))
+          | .inl L => @decide (L ∈ ([] : List Bool)) (isFalse (List.not_mem_nil (a := L)))
           | .inr _ => true))) = false := by decide
 
 theorem cg_mitRuhe_traeger : cgD.mitRuhe.traeger () = [Sum.inl (), Sum.inr ()] := rfl

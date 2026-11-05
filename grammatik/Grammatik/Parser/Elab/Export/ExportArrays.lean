@@ -118,7 +118,7 @@ theorem array_traversal_meaning {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {Λ
 theorem array_membership_export_zeuge :
     let ctx : UCtx := {names := ["data"], kinds := [.wert], types := [.arr (.int 0 255) 2], tabs := [], locks := [], held := [], res := none, fname := "sample", alias := [], lits := []}
     uSichert ctx (.ext .mem ["elems"] [.lit 1, .variable "data"]) =
-      .ok (.arrayElements false (.param "data") "#array-member" (.cmp "==" (.lit 1) (.param "#array-member"))) := by rfl
+      .ok (.arrayElements false (.param "data") "#array-member" (.cmp "==" (.lit 1) (.param "#array-member"))) := by cbv
 
 /-- A literal spelling a domain keyword is ordinary data, even beside an array type. -/
 theorem array_carrier_marker_zeuge :

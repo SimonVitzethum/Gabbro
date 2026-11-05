@@ -63,12 +63,14 @@ def referenceFunction : UFn := {name := "same", params := [("a", .ref 0), ("b", 
 /-- Two genuine reference variables in one region; this does not supply a provider binding. -/
 theorem references_lower_zeuge :
     (lowCmp relationUnit [.ref 0, .ref 0] [] referenceFunction none "==" (.param "a") (.param "b")).toOption.isSome = true ∧
-    (lowCmp relationUnit [.ref 0, .ref 0] [] referenceFunction none "!=" (.param "a") (.param "b")).toOption.isSome = true := ⟨rfl, rfl⟩
+    (lowCmp relationUnit [.ref 0, .ref 0] [] referenceFunction none "!=" (.param "a") (.param "b")).toOption.isSome = true := by
+  constructor <;> cbv
 
 /-- Unequal lengths and distinct bytes exercise both string relations. -/
 theorem strings_lower_zeuge :
     (lowCmp relationUnit [] [] relationFunction none "<" (.text []) (.text [65])).toOption.isSome = true ∧
-    (lowCmp relationUnit [] [] relationFunction none ">=" (.text [66]) (.text [65])).toOption.isSome = true := ⟨rfl, rfl⟩
+    (lowCmp relationUnit [] [] relationFunction none ">=" (.text [66]) (.text [65])).toOption.isSome = true := by
+  constructor <;> cbv
 
 /-- Concrete distinct and equal cell identities make reference comparison nonvacuous.
     These are mathematical comparison inputs, not a source provider realization. -/

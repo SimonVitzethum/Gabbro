@@ -44,7 +44,7 @@ theorem fremdruf_gate_gilt_pre_zeuge :
     one the full premise refuses), so the re-dressed oracle meets premise
     (c) of `gabbro_ziel` in full, and on the well-formed witness read it
     answers exactly as the machine's oracle does. -/
-theorem hardware_aus_vertragP_zeuge :
+theorem hardware_aus_vertragP_zeuge [RootNativeFloat.Hardware] :
     GutO fdObad ∧ RegLokal fdObad ∧ AxVertragOP fdPre fdQ fdObad ∧
       (∀ a, einpassenErg fdObad.zeiger (fdD.aerg a) (fdRaus a) = none) ∧
       ¬ AxVertragO fdQ fdObad ∧
