@@ -271,6 +271,21 @@ private theorem starts_refused_text : starts_refused = String.ofList starts_refu
 private theorem starts_refused_parsed : (parseTopTief starts_refused_tokens).toOption.isSome = true := by cbv
 private def starts_refused_items : List SItemTief := (parseTopTief starts_refused_tokens).toOption.get starts_refused_parsed
 
+/-- Match the canonical entry/root readers: a resolved dispatch path selects one
+    function, while its namespace components are not separate function references. -/
+private theorem starts_ok_dispatch_closure :
+    (pre108 starts_ok_items).filterMap (fun
+      | .entryT entry => entry.dispatch.getLast?
+      | _ => none) = ["w"] ∧
+    Instantiation.directReferences (pre108 starts_ok_items) = ["r", "w", "w"] ∧
+    Instantiation.closed (pre108 starts_ok_items) = true := by cbv
+
+/-- A missing selected function still fails the unchanged closedness gate. -/
+private theorem starts_ok_missing_dispatch_closed :
+    Instantiation.closed ((pre108 starts_ok_items).map (fun
+      | .entryT entry => .entryT { entry with dispatch := ["m", "missing"] }
+      | item => item)) = false := by cbv
+
 private theorem starts_ok_elaborated :
     (elabU (pre108 starts_ok_items)).toOption.isSome = true := by cbv
 private def starts_ok_unit : Uebersetze.UProg :=

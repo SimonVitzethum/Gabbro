@@ -94,8 +94,9 @@ def item (scope : Scope) : SItemTief → SurfaceFacts
   | .walkT walk => gather [expression scope walk.stufen, inspectType scope walk.node,
       expression scope walk.dwhen, expression scope walk.blatt,
       gather (walk.invarianten.map (invariant scope))]
+  -- Entry root and handler collection select this one resolved dispatch target.
   | .entryT entry => gather [optional (expression scope) entry.vektor,
-      optional (expression scope) entry.ist, gather (entry.dispatch.map globalReference)]
+      optional (expression scope) entry.ist, optional globalReference entry.dispatch.getLast?]
   | .bootT _ _ steps _ => gather (steps.map (bootStep scope))
   | .callT call => syscall scope call
   | .goalT _ binds => optional (fun (_, _, entries) => gather (entries.map fun (_, b, _) =>
