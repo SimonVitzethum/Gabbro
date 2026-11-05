@@ -1,6 +1,8 @@
 module
 public import Grammatik.Parser.Elab.Export.ExportRelations
 import all Grammatik.Parser.Elab.Export.ExportRelations
+import all Grammatik.Parser.Item.ElementTief.Defs1a
+import all Grammatik.Parser.Expr.Ausdruck.Teil2a
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.ExportPreservation
@@ -326,6 +328,34 @@ theorem consuming_edge_zeuge :
       .error "consuming traversal requires exactly one declared child edge" := by
   exact ⟨rfl, rfl, rfl⟩
 
+private def consumingEffectTokens (take : Bool) : List Token :=
+  [.wort (if take then "consumes" else "reads"), .ident "T", .zeichen ".", .wort "slots", .ende]
+
+private theorem consuming_effect_lex (take : Bool) :
+    lex (if take then "consumes T.slots" else "reads T.slots") = .ok (consumingEffectTokens take) := by
+  cases take <;> rfl
+
+-- The suffix remains symbolic here; the actual producer still uses exactly 10000.
+private theorem consuming_effect_parse (take : Bool) (suffix : Nat) :
+    parseEffektListe (suffix + 14) (consumingEffectTokens take) =
+      .ok ([if take then .takes (.field (.variable "T") "slots")
+        else .reads (.field (.variable "T") "slots")], [.ende]) := by
+  cases take <;> rfl
+
+private theorem consuming_effect_checked (functions : List UFn) (writes : List String) (take : Bool) :
+    lowConsumingEffects {relationUnit with fns := functions} {relationFunction with puts := writes}
+      "T" (if take then "consumes T.slots" else "reads T.slots") =
+      if take then (if writes.any (strEq · "T") then .ok ()
+        else .error "consuming traversal touches exceeds function writes")
+      else .error "consuming traversal touches must consume its domain" := by
+  rw [lowConsumingEffects, consuming_effect_lex]
+  simp only [bind, Except.bind, pure, Except.pure]
+  rw [consuming_effect_parse take 9986]
+  simp only [bind, Except.bind, pure, Except.pure]
+  cases take <;> cases allowed : writes.any (strEq · "T") <;>
+    simp [relationUnit, relationFunction, uSchreibtOrt, uStelle, uArtBei, uEffekteAux,
+      uIstGriffOrt, uIstGlobName, strEq, allowed, bind, Except.bind, pure, Except.pure]
+
 theorem consuming_effects_zeuge :
     lowConsumingEffects relationUnit {relationFunction with puts := ["T"]} "T" "consumes T.slots" =
       .ok () ∧
@@ -333,7 +363,9 @@ theorem consuming_effects_zeuge :
       .error "consuming traversal touches exceeds function writes" ∧
     lowConsumingEffects relationUnit relationFunction "T" "reads T.slots" =
       .error "consuming traversal touches must consume its domain" := by
-  exact ⟨rfl, rfl, rfl⟩
+  simpa [relationUnit, strEq] using
+    And.intro (consuming_effect_checked [] ["T"] true)
+      (And.intro (consuming_effect_checked [] [] true) (consuming_effect_checked [] [] false))
 
 theorem consuming_negative_measure_zeuge :
     lowConsumingMass relationUnit [] [] relationFunction (.lit (-1)) =
@@ -441,7 +473,7 @@ theorem consuming_traversal_lower_zeuge :
       (.reach "T" "next" (.param "#consume:predecessor") (.param "node")) .tru mass
       "consumes T.slots" [.blkEnd] [] t selected relation .tru 3
       (Expr.widen (Int.le_refl 0) (Int.le_refl 3) count) Block.nil found
-      (by rfl) (by rfl) measured
+      (by simpa [fn, strEq] using consuming_effect_checked [fn] ["T"] true) (by rfl) measured
       (by simpa only [lowEns] using members) (by simpa only [lowEns] using edges) inside
     rw [emitted]
     rfl
