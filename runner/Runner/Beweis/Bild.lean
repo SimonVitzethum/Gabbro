@@ -77,7 +77,7 @@ def lbl (k : Nat) : Nat := if 1 ≤ k ∧ k ≤ 59 then k else BAD
 
 theorem handler_lbl (k : Nat) : handler k = handler (lbl k) := by
   by_cases h : 1 ≤ k ∧ k ≤ 59
-  · simp only [lbl, h, ite_true]
+  · simp only [lbl, if_pos h]
   · simp only [lbl, h, ite_false]
     rcases (show k = 0 ∨ 60 ≤ k by omega) with rfl | hk
     · rfl
@@ -175,7 +175,7 @@ set_option maxRecDepth 100000 in
 theorem tbl_addr (op : Nat) (_hop : op < 257) :
     taddr L0 (BitVec.ofNat 64 op) = BitVec.ofNat 64 (BASE + (tblOff + 8 * op)) := by
   change (BitVec.ofNat 64 (BASE + tblOff) + BitVec.ofNat 64 op * BitVec.ofNat 64 8) + 0 = _
-  rw [BitVec.add_zero, ← BitVec.ofNat_mul, ← BitVec.ofNat_add]
+  erw [BitVec.add_zero, ← BitVec.ofNat_mul, ← BitVec.ofNat_add]
   congr 1
   omega
 
