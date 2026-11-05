@@ -140,8 +140,18 @@ private theorem stmt_word_dispatch {rest : List Token} (h : istOrtsFort rest = f
   rw [parseStmt.eq_def]
   dsimp only
   split
-  · exact (noArray _ rfl).elim
-  · rw [h] <;> rfl
+  · rename_i same
+    cases same
+    exact (noArray _ rfl).elim
+  · rename_i same
+    cases same
+    rw [h] <;> rfl
+  · rename_i same
+    cases same
+  · rename_i same
+    cases same
+  · rename_i absentArray absentWord absentStart absentLibrary
+    exact (absentWord word rest rfl).elim
 
 theorem parseStmt_let (f : Nat) (rest : List Token) (h : istOrtsFort rest = false) :
     parseStmt (f + 1) (.wort "let" :: rest) = parseLet f rest := by

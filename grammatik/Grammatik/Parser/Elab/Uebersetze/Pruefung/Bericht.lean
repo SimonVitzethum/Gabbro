@@ -52,7 +52,7 @@ private theorem record_block_return (heads : List UFnKopf) (check : SCheck)
           pure (.block (statements ++ prelude) ending, reporters ++ [reporter],
             extraHeads ++ [head], point + 1)
         | _ => .error "check reporter expansion is not a block") := by
-  cases fuel <;> simp only [recordCheckCode]
+  cases fuel <;> simp only [recordCheckCode] <;> rfl
 
 private theorem record_statements_nil (heads : List UFnKopf) (check : SCheck)
     (fuel : Nat) (ctx : UCtx) (point : Nat) :
