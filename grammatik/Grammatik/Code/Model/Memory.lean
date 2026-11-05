@@ -164,11 +164,11 @@ theorem load_store_ptr {m m' : Mem} {b : Nat} {o : Int} {b2 : Nat} {o2 : Int}
     (h : m.store b o .ptr (.ptr b2 o2) = some m') : m'.load b o .ptr = some (.ptr b2 o2) :=
   load_store_of h (dec_enc_ptr b2 o2)
 
-theorem load_store_flt {m m' : Mem} {b : Nat} {o : Int} {g : F32}
+theorem load_store_flt [RootNativeFloat.Hardware] {m m' : Mem} {b : Nat} {o : Int} {g : F32}
     (h : m.store b o .flt (.flt g) = some m') : m'.load b o .flt = some (.flt g) :=
   load_store_of h (dec_enc_flt g)
 
-theorem load_store_dbl {m m' : Mem} {b : Nat} {o : Int} {g : F64}
+theorem load_store_dbl [RootNativeFloat.Hardware] {m m' : Mem} {b : Nat} {o : Int} {g : F64}
     (h : m.store b o .dbl (.dbl g) = some m') : m'.load b o .dbl = some (.dbl g) :=
   load_store_of h (dec_enc_dbl g)
 

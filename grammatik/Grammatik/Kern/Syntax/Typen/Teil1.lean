@@ -61,22 +61,22 @@ theorem zahl_ext {lo hi : Int} {a b : Zahl lo hi} (h : a.n = b.n) : a = b := by
     native `Float32` and `Float`. No Gabbro software arithmetic model is involved. -/
 abbrev GFloat : Type := Float
 
-/-- Literal and range-bound conversion divides exact integer mantissas in the
-    toolchain model before rounding, preserving subnormals and signed overflow. -/
+/-- Literal and range-bound conversion is the opaque native literal primitive.
+    Its numerical properties belong to the named floating hardware contract. -/
 def bruch (q : Int × Int) : GFloat :=
   RootNativeFloat.canonLiteral q
 
 /-- An integer as a float: the exact integer, rounded once (C's `(double)n`). -/
-def gleitAusInt (z : Int) : GFloat := Float.ofInt z
+def gleitAusInt (z : Int) : GFloat := Float.hwOfInt z
 
 /-- Finite: zero, subnormal or normal -- not infinity, not NaN (`finite`, C's `isfinite`). -/
-def gleitEndlich (x : GFloat) : Bool := Float.isFinite x
+def gleitEndlich (x : GFloat) : Bool := Float.hwIsFinite x
 
-/-- The model's `<=` on floats (IEEE: NaN unordered, signed zeros equal). -/
-def gleitLe (a b : GFloat) : Bool := Float.le a b
+/-- Native CPU comparison; its laws are named hardware assumptions. -/
+def gleitLe (a b : GFloat) : Bool := Float.hwLe a b
 
 /-- The model's `<` on floats. -/
-def gleitLt (a b : GFloat) : Bool := Float.lt a b
+def gleitLt (a b : GFloat) : Bool := Float.hwLt a b
 
 /-- Eine endliche Gleitkommazahl im Bereich -- kein NaN, keine Unendlichkeit (`finite`).
     The bounds are compared as floats (`bruch lo <= x <= bruch hi`), like the emitted

@@ -9,13 +9,13 @@ namespace RootNativeFloat.Contracts
 /-- Exact native saturation and reduced signed-truncation domains, including NaN and overflow.
     These are explicit hardware assumptions; this module supplies no implementation or instance. -/
 structure SaturatingCast : Prop where
-  float32_cvtt_domain : ∀ (word : BitVec 32)
+  float32_signed_conversion_domain : ∀ (word : BitVec 32)
       (small : (word &&& 0x7fffffff).ult 0x5f000000 = true),
       let x := Float32.hwOfBits (UInt32.ofBitVec word)
       x.hwIsNaN = false ∧ Float32.hwLt x Int64.minValue.hwToFloat32 = false ∧
         Float32.hwLt x (UInt64.ofNat (2 ^ 63)).hwToFloat32 = true
 
-  float64_cvtt_domain : ∀ (word : BitVec 64)
+  float64_signed_conversion_domain : ∀ (word : BitVec 64)
       (small : (word &&& 0x7fffffffffffffff).ult 0x43e0000000000000 = true),
       let x := Float.hwOfBits (UInt64.ofBitVec word)
       x.hwIsNaN = false ∧ Float.hwLt x Int64.minValue.hwToFloat = false ∧

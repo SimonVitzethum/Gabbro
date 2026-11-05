@@ -6,10 +6,13 @@ public import Init.Data.SInt.Float32
 
 public section
 
-/-! Native floating operations are opaque to the proof kernel. Their executable
-    bodies delegate to the toolchain primitives; numerical correspondence belongs
-    to the explicitly supplied `RootNativeFloat.Hardware` contract. No theorem may
-    unfold a toolchain floating model to establish that correspondence. -/
+/-! Logical floating operations are opaque to the proof kernel and independent of
+    the target ISA. Their executable bodies delegate to toolchain operations for
+    compiler input preparation and probes; they are not the execution backend of
+    a compiled Gabbro program. Each target implements the logical operations with
+    its own instructions and profile. Numerical correspondence belongs to the
+    explicitly supplied `RootNativeFloat.Hardware` contract. No theorem may unfold
+    a toolchain floating model to establish that correspondence. -/
 
 namespace Float
 
@@ -26,6 +29,7 @@ opaque hwIsNaN (a : Float) : Bool := Float.isNaN a
 opaque hwOfBits (a : UInt64) : Float := Float.ofBits a
 opaque hwToBits (a : Float) : UInt64 := Float.toBits a
 opaque hwOfInt (a : Int) : Float := Float.ofInt a
+opaque hwOfNat (a : Nat) : Float := Float.ofNat a
 opaque hwToInt64 (a : Float) : Int64 := Float.toInt64 a
 opaque hwToUInt64 (a : Float) : UInt64 := Float.toUInt64 a
 opaque hwToFloat32 (a : Float) : Float32 := Float.toFloat32 a
@@ -48,6 +52,8 @@ opaque hwIsFinite (a : Float32) : Bool := Float32.isFinite a
 opaque hwIsNaN (a : Float32) : Bool := Float32.isNaN a
 opaque hwOfBits (a : UInt32) : Float32 := Float32.ofBits a
 opaque hwToBits (a : Float32) : UInt32 := Float32.toBits a
+opaque hwOfInt (a : Int) : Float32 := Float32.ofInt a
+opaque hwOfNat (a : Nat) : Float32 := Float32.ofNat a
 opaque hwToInt64 (a : Float32) : Int64 := Float32.toInt64 a
 opaque hwToUInt64 (a : Float32) : UInt64 := Float32.toUInt64 a
 opaque hwToFloat (a : Float32) : Float := Float32.toFloat a

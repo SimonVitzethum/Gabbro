@@ -412,7 +412,7 @@ abbrev gleitWortGrenze : Int := 18446744073709551616
     retain the existing finite/range guard. `Ty.fl` has no format index. -/
 def gleitWortPasst (lo hi : Int × Int) (n : Int) : Option (Gleit lo hi) :=
   if 0 ≤ n ∧ n < gleitWortGrenze then
-    gleitPasst lo hi (Float.ofBits (UInt64.ofNat n.toNat))
+    gleitPasst lo hi (Float.hwOfBits (UInt64.ofNat n.toNat))
   else Option.none
 /-- **A raw word as a function pointer** (G1 repair): the word is a code address; the loaded
     image `z` (`Orakel.zeiger`) names the function at it, and its conformance to the declared

@@ -94,10 +94,10 @@ private theorem small_truncate [RootNativeFloat.Hardware] (format : FPFormat) (v
   | f32 =>
     change (fpMagnitude .f32 value).ult ((0x5F000000 : BitVec 32).setWidth 64) = true at small
     rw [magnitude32_ult] at small
-    exact (truncate32_domain _ (RootNativeFloat.float32_cvtt_domain (value.setWidth 32) small)).symm
+    exact (truncate32_domain _ (RootNativeFloat.float32_signed_conversion_domain (value.setWidth 32) small)).symm
   | f64 =>
     change (value &&& 0x7FFFFFFFFFFFFFFF).ult 0x43E0000000000000 = true at small
-    exact (truncate64_domain _ (RootNativeFloat.float64_cvtt_domain value small)).symm
+    exact (truncate64_domain _ (RootNativeFloat.float64_signed_conversion_domain value small)).symm
 
 private theorem signed_overflow [RootNativeFloat.Hardware] (format : FPFormat) (value : W)
     (nan : fpNaN format value = false)

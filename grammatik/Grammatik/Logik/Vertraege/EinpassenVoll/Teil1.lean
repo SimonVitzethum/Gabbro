@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Logik.Vertraege.EinpassenVoll.Teil1Basis
-public import NativeFloat.Order
+public import NativeFloat.Hardware
 import all Grammatik.Logik.Vertraege.EinpassenVoll.Teil1Basis
 
 public import Grammatik.Kern.Semantik.Semantik
@@ -31,15 +31,16 @@ def gleitZeugeB (lo hi : Int × Int) (x : GFloat) : Bool :=
   gleitEndlich x && gleitLe (bruch lo) x && gleitLe x (bruch hi)
 
 /-- Native positive zero. -/
-def gleitNull : GFloat := Float.ofBits 0
+def gleitNull : GFloat := Float.hwOfInt 0
 
 /-- The same three candidates decide the native float range. -/
 def gleitBarB (lo hi : Int × Int) : Bool :=
   gleitZeugeB lo hi (bruch lo) || gleitZeugeB lo hi (bruch hi) || gleitZeugeB lo hi gleitNull
 
-theorem gleitNull_endlich : gleitEndlich gleitNull = true := by decide
+theorem gleitNull_endlich [RootNativeFloat.Hardware] : gleitEndlich gleitNull = true :=
+  RootNativeFloat.zero_finite
 
-theorem gleitBarB_iff (lo hi : Int × Int) :
+theorem gleitBarB_iff [RootNativeFloat.Hardware] (lo hi : Int × Int) :
     gleitBarB lo hi = true ↔ ∃ v : Gleit lo hi, True := by
   constructor
   · intro h

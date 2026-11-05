@@ -1,6 +1,6 @@
 module
 public import Grammatik.Kern.Syntax.Typen.Fall
-public import NativeFloat.Transport
+public import NativeFloat.Hardware
 
 public import Grammatik.Kern.Semantik.Semantik
 public import Grammatik.Kern.Semantik.Semantik.T1.SummeTransport
@@ -70,9 +70,9 @@ theorem summePasst_voll (cs : List (Option Ty))
 /-! ## 2. Floats -/
 
 /-- Every native finite in-range value is decoded from its own CPU word. -/
-theorem gleitWortPasst_voll (lo hi : Int × Int) (v : Gleit lo hi) :
-    gleitWortPasst lo hi (v.x.toBits.toNat : Int) = some v := by
-  have hlt : v.x.toBits.toNat < 18446744073709551616 := v.x.toBits.toNat_lt_size
+theorem gleitWortPasst_voll [RootNativeFloat.Hardware] (lo hi : Int × Int) (v : Gleit lo hi) :
+    gleitWortPasst lo hi (v.x.hwToBits.toNat : Int) = some v := by
+  have hlt : v.x.hwToBits.toNat < 18446744073709551616 := v.x.hwToBits.toNat_lt_size
   unfold gleitWortPasst
   rw [if_pos ⟨Int.natCast_nonneg _, by unfold gleitWortGrenze; omega⟩,
     Int.toNat_natCast, UInt64.ofNat_toNat, RootNativeFloat.bits_roundtrip]
@@ -102,7 +102,7 @@ def WertOk : (τ : Ty) → Wert D τ → Prop
 
 /-- Every scalar-boundary value, including every native in-range float, is
     decoded from some raw word under some image. -/
-theorem einpassen_voll : ∀ (τ : Ty) (v : Wert D τ), WertOk τ v →
+theorem einpassen_voll [RootNativeFloat.Hardware] : ∀ (τ : Ty) (v : Wert D τ), WertOk τ v →
     ∃ (z : Int → Option D.Fn) (n : Int), einpassen z τ n = some v
   | .int lo hi, v, _ => ⟨fun _ => Option.none, (v : Zahl lo hi).n, by
       simp only [einpassen]
@@ -161,7 +161,7 @@ theorem einpassen_wertOk : ∀ (z : Int → Option D.Fn) (τ : Ty) (n : Int) (v 
 /-- **The answer class is empty EXACTLY when the type is** (G1 repair): no raw word decodes
     under any image iff the declared type has no value an answer can have. The model decides
     no stop the declared type does not. -/
-theorem antwortLeer_iff (τ : Ty) : AntwortLeer D (some τ) ↔ ∀ v : Wert D τ, ¬ WertOk τ v := by
+theorem antwortLeer_iff [RootNativeFloat.Hardware] (τ : Ty) : AntwortLeer D (some τ) ↔ ∀ v : Wert D τ, ¬ WertOk τ v := by
   constructor
   · intro hL v hv
     obtain ⟨z, n, h⟩ := einpassen_voll τ v hv
@@ -178,15 +178,16 @@ theorem antwortLeer_iff (τ : Ty) : AntwortLeer D (some τ) ↔ ∀ v : Wert D �
 theorem antwortLeer_never : AntwortLeer D (some .never) := fun _ _ => rfl
 
 /-- A reason channel without reasons has no value. -/
-theorem antwortLeer_grund0 : AntwortLeer D (some (.why 0)) :=
-  (antwortLeer_iff _).mpr fun v _ => (v : Fin 0).elim0
+theorem antwortLeer_grund0 : AntwortLeer D (some (.why 0)) := by
+  intro _ n
+  change (if h : 0 ≤ n ∧ n < (0 : Int) then some _ else none) = none
+  exact dif_neg (by omega)
 
 /-- An empty range has no value. -/
-theorem antwortLeer_int_leer {lo hi : Int} (h : hi < lo) : AntwortLeer D (some (.int lo hi)) :=
-  (antwortLeer_iff _).mpr fun v _ => by
-    have h1 := (v : Zahl lo hi).lo_le
-    have h2 := (v : Zahl lo hi).le_hi
-    omega
+theorem antwortLeer_int_leer {lo hi : Int} (h : hi < lo) : AntwortLeer D (some (.int lo hi)) := by
+  intro _ n
+  change (if h : lo ≤ n ∧ n ≤ hi then some _ else none) = none
+  exact dif_neg (by omega)
 
 /-- An axiom without a result always answers (its answer class is `{()}`). -/
 theorem antwortLeer_keinErg : ¬ AntwortLeer D Option.none := fun h =>
@@ -194,7 +195,7 @@ theorem antwortLeer_keinErg : ¬ AntwortLeer D Option.none := fun h =>
 
 /-- The G1 types have answers: an admitted sum, an inhabited native float range,
     or a function-pointer type with a conforming function. -/
-theorem nicht_leer_von (τ : Ty) (v : Wert D τ) (hv : WertOk τ v) : ¬ AntwortLeer D (some τ) :=
+theorem nicht_leer_von [RootNativeFloat.Hardware] (τ : Ty) (v : Wert D τ) (hv : WertOk τ v) : ¬ AntwortLeer D (some τ) :=
   fun h => (antwortLeer_iff τ).mp h v hv
 
 

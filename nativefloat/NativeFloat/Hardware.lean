@@ -11,8 +11,13 @@ public section
 
 namespace RootNativeFloat
 
-/-- The named native floating-point hardware boundary. A caller must supply all
-    contracts explicitly; this package defines no default or global instance. -/
+/-- The architecture-independent scalar floating hardware boundary. It specifies
+    logical operations at binary32/binary64 value widths, not physical registers,
+    instruction encodings, flags, ABI or a particular ISA's invalid-result word.
+    Each checked target implementation (ARM, x86, RISC-V or another architecture)
+    must realize these operations under its declared profile, directly or through
+    a proved instruction sequence. A caller supplies the contracts explicitly;
+    this package defines no default or global instance. -/
 class Hardware : Prop where
   codec : Contracts.Codec
   order : Contracts.Order
@@ -123,19 +128,19 @@ theorem uint64_toFloat_high [hardware : Hardware] (word : BitVec 64) (high : wor
       Float.hwAdd (Int64.ofBitVec half).hwToFloat (Int64.ofBitVec half).hwToFloat :=
   hardware.unsigned.uint64_toFloat_high word high
 
-theorem float32_cvtt_domain [hardware : Hardware] (word : BitVec 32)
+theorem float32_signed_conversion_domain [hardware : Hardware] (word : BitVec 32)
     (small : (word &&& 0x7fffffff).ult 0x5f000000 = true) :
     let x := Float32.hwOfBits (UInt32.ofBitVec word)
     x.hwIsNaN = false ∧ Float32.hwLt x Int64.minValue.hwToFloat32 = false ∧
       Float32.hwLt x (UInt64.ofNat (2 ^ 63)).hwToFloat32 = true :=
-  hardware.saturatingCast.float32_cvtt_domain word small
+  hardware.saturatingCast.float32_signed_conversion_domain word small
 
-theorem float64_cvtt_domain [hardware : Hardware] (word : BitVec 64)
+theorem float64_signed_conversion_domain [hardware : Hardware] (word : BitVec 64)
     (small : (word &&& 0x7fffffffffffffff).ult 0x43e0000000000000 = true) :
     let x := Float.hwOfBits (UInt64.ofBitVec word)
     x.hwIsNaN = false ∧ Float.hwLt x Int64.minValue.hwToFloat = false ∧
       Float.hwLt x (UInt64.ofNat (2 ^ 63)).hwToFloat = true :=
-  hardware.saturatingCast.float64_cvtt_domain word small
+  hardware.saturatingCast.float64_signed_conversion_domain word small
 
 theorem float32_toInt64_nan [hardware : Hardware] (word : BitVec 32)
     (nan : (0x7f800000 : BitVec 32).ult (word &&& 0x7fffffff) = true) :

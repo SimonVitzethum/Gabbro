@@ -112,12 +112,12 @@ def Val.icmp (p : IPred) (w : Nat) : Val → Val → Option Val
 def Val.fbin (op : FOp) : Val → Val → Option Val
   | .flt a, .flt b =>
       some (.flt (match op with
-        | .add => Float32.add a b | .sub => Float32.sub a b
-        | .mul => Float32.mul a b | .div => Float32.div a b))
+        | .add => Float32.hwAdd a b | .sub => Float32.hwSub a b
+        | .mul => Float32.hwMul a b | .div => Float32.hwDiv a b))
   | .dbl a, .dbl b =>
       some (.dbl (match op with
-        | .add => Float.add a b | .sub => Float.sub a b
-        | .mul => Float.mul a b | .div => Float.div a b))
+        | .add => Float.hwAdd a b | .sub => Float.hwSub a b
+        | .mul => Float.hwMul a b | .div => Float.hwDiv a b))
   | _, _ => none
 
 def fcmpAp {α : Type} (eq lt le : α → α → Bool) (p : FPred) (a b : α) : Bool :=
@@ -130,8 +130,8 @@ def fcmpAp {α : Type} (eq lt le : α → α → Bool) (p : FPred) (a b : α) : 
   | .oge => le b a
 
 def Val.fcmp (p : FPred) : Val → Val → Option Val
-  | .flt a, .flt b => some (Val.bool (fcmpAp Float32.beq Float32.lt Float32.le p a b))
-  | .dbl a, .dbl b => some (Val.bool (fcmpAp Float.beq Float.lt Float.le p a b))
+  | .flt a, .flt b => some (Val.bool (fcmpAp Float32.hwBEq Float32.hwLt Float32.hwLe p a b))
+  | .dbl a, .dbl b => some (Val.bool (fcmpAp Float.hwBEq Float.hwLt Float.hwLe p a b))
   | _, _ => none
 
 /-- A conversion to type `t`. -/
@@ -141,20 +141,20 @@ def Val.cast (k : Cast) (t : Ty) : Val → Option Val
       | .zext, .int w' => if w ≤ w' then some (.int w' (x.setWidth w')) else none
       | .sext, .int w' => if w ≤ w' then some (.int w' (x.signExtend w')) else none
       | .trunc, .int w' => if w' ≤ w then some (.int w' (x.setWidth w')) else none
-      | .bits, .flt => if w = 32 then some (.flt (Float32.ofBits (UInt32.ofNat x.toNat))) else none
-      | .bits, .dbl => if w = 64 then some (.dbl (Float.ofBits (UInt64.ofNat x.toNat))) else none
-      | .sitof, .flt => some (.flt (Float32.ofInt x.toInt))
-      | .sitof, .dbl => some (.dbl (Float.ofInt x.toInt))
-      | .uitof, .flt => some (.flt (Float32.ofNat x.toNat))
-      | .uitof, .dbl => some (.dbl (Float.ofNat x.toNat))
+      | .bits, .flt => if w = 32 then some (.flt (Float32.hwOfBits (UInt32.ofNat x.toNat))) else none
+      | .bits, .dbl => if w = 64 then some (.dbl (Float.hwOfBits (UInt64.ofNat x.toNat))) else none
+      | .sitof, .flt => some (.flt (Float32.hwOfInt x.toInt))
+      | .sitof, .dbl => some (.dbl (Float.hwOfInt x.toInt))
+      | .uitof, .flt => some (.flt (Float32.hwOfNat x.toNat))
+      | .uitof, .dbl => some (.dbl (Float.hwOfNat x.toNat))
       | _, _ => none
   | .flt g =>
       match k, t with
-      | .bits, .int 32 => some (.int 32 g.toBits.toBitVec)
+      | .bits, .int 32 => some (.int 32 g.hwToBits.toBitVec)
       | _, _ => none
   | .dbl g =>
       match k, t with
-      | .bits, .int 64 => some (.int 64 g.toBits.toBitVec)
+      | .bits, .int 64 => some (.int 64 g.hwToBits.toBitVec)
       | _, _ => none
   | .ptr b o =>
       match k, t with

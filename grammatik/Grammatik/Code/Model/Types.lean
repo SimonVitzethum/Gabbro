@@ -1,5 +1,5 @@
 module
-public import Init.Data.Float
+public import NativeFloat.Primitives
 public import Init.Data.OfScientific
 @[expose] public section
 

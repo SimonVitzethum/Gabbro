@@ -48,7 +48,7 @@ def antwortB (fs : List D.Fn) : Option Ty → Bool
   | Option.none => true
   | Option.some τ => antwortTyB fs τ
 
-theorem antwortTyB_iff {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) :
+theorem antwortTyB_iff [RootNativeFloat.Hardware] {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) :
     ∀ τ : Ty, antwortTyB fs τ = true ↔ ∃ v : Wert D τ, WertOk τ v
   | .int lo hi => by
       simp only [antwortTyB, decide_eq_true_eq]
@@ -93,7 +93,7 @@ theorem antwortTyB_iff {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) :
 
 /-- **The answer class, decided exactly** (W1): given the complete function list, the Bool
     says "answerable" exactly when the class is not empty (`antwortLeer_iff`). -/
-theorem antwortB_iff {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) (e : Option Ty) :
+theorem antwortB_iff [RootNativeFloat.Hardware] {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) (e : Option Ty) :
     antwortB fs e = true ↔ ¬ AntwortLeer D e := by
   cases e with
   | none => exact ⟨fun _ => antwortLeer_keinErg, fun _ => rfl⟩

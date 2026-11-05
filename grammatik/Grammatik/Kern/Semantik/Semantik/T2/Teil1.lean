@@ -134,7 +134,7 @@ def indSonstE {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {τ : Ty}
   | .hardware e => .hardware e
 
 /-- Register-write conversion is the toolchain's native signed conversion. -/
-def gleitRoh (x : GFloat) : Int := x.toInt64.toInt
+def gleitRoh (x : GFloat) : Int := x.hwToInt64.toInt
 
 /-- Ein Wert als rohe Zahl, fuer die Maschine. -/
 def roh : {τ : Ty} → Wert D τ → Int
@@ -156,10 +156,10 @@ def roh : {τ : Ty} → Wert D τ → Int
 
 /-- Every modeled arithmetic operation is the corresponding native CPU primitive. -/
 def gleitRechne : GleitOp → GFloat → GFloat → GFloat
-  | .add, a, b => Float.add a b
-  | .sub, a, b => Float.sub a b
-  | .mul, a, b => Float.mul a b
-  | .div, a, b => Float.div a b
+  | .add, a, b => Float.hwAdd a b
+  | .sub, a, b => Float.hwSub a b
+  | .mul, a, b => Float.hwMul a b
+  | .div, a, b => Float.hwDiv a b
 
 section Rumpf
 -- Die Bedeutung eines Rufs auf dieser Rekursionstiefe -- von aussen gegeben, und in

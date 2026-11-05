@@ -14,6 +14,10 @@
   proof kernel does not execute an IEEE arithmetic, rounding or packing model.
   There is no global instance discharging this hardware assumption. Memory,
   ownership, concurrency, user contracts and cost conclusions remain unchanged.
+  The shared logical CPU operations and these proofs are ISA-independent. ARM,
+  x86, RISC-V and other targets supply their own checked instruction, register,
+  memory-order, ABI and encoding correspondences; x86 flags and SSE control do
+  not form part of the shared scalar contract.
 
   C03 DESCRIPTOR STAGE (2026-11-02). `ReasonSpec`/`ReasonVal` describe nominal u128 codes, including unknown
   open codes, and source collection retains their identity, code order and closed flag. The current G/GX goals
