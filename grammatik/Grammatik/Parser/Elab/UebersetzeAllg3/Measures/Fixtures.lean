@@ -3,6 +3,17 @@ public import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Pipeline
 public import Grammatik.Parser.Elab.UebersetzeAllg3.TransitionCert
 public import Grammatik.Parser.Cover.Differenz
 public import Grammatik.Parser.Elab.UebersetzePipeline
+import all Grammatik.Parser.Elab.Uebersetze.Einheit.Elaboration
+import all Grammatik.Parser.Elab.Uebersetze.Einheit.Signatures
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil13
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil17
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.SondeCode
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
+import all Grammatik.Parser.Elab.Generic.StaticConformance
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -64,15 +75,17 @@ def countdownItems : List SItemTief :=
       (.block [.call "countdown" [.lit 0]] none) [] (some (.block [] none))]
       (some (.ret none)))]
 
-/-- The source clause reaches the elaborated function as exactly the written measure. -/
-theorem countdown_origin_zeuge :
-    (elabU countdownItems).toOption.map (fun u => u.fns.map (·.decreases)) =
-      some [some (.variable "n")] := by decide +kernel
-
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 /-- The complete elaborated fixture, not only its measure projection, comes from these items. -/
-theorem countdown_elaborated_zeuge : elabU countdownItems = .ok countdown := by decide +kernel
+theorem countdown_elaborated_zeuge : elabU countdownItems = .ok countdown := by cbv
+
+/-- The source clause reaches the elaborated function as exactly the written measure. -/
+theorem countdown_origin_zeuge :
+    (elabU countdownItems).toOption.map (fun u => u.fns.map (·.decreases)) =
+      some [some (.variable "n")] := by
+  rw [countdown_elaborated_zeuge]
+  rfl
 
 theorem countdown_lowered : (lowerAllg countdown).toOption.isSome = true := by decide +kernel
 theorem mutual_lowered : (lowerAllg mutualU).toOption.isSome = true := by decide +kernel
