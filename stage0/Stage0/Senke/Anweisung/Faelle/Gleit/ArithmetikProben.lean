@@ -58,14 +58,16 @@ def binaryArithmetic (op : GleitOp) (a b expected : Int × Int) : Body :=
 
 /-- The generic add candidate is accepted through the public Block hook. -/
 theorem float_add_accepted_zeuge : (blockImageOf (arithmetic .add (2, 1))).isOk = true := by
-  decide +kernel
+  float_probe_emission
 
 /-- The public subtraction hook accepts 1.0 - 1.0. The exact word witness
     distinguishes positive zero from negative zero, unlike float comparisons. -/
-theorem float_sub_accepted_zeuge :
+theorem float_sub_accepted_zeuge
+    (reply : (Float.hwSub (Float.hwOfBits 4607182418800017408)
+      (Float.hwOfBits 4607182418800017408)).hwToBits = 0) :
     (blockImageOf (arithmetic .sub (0, 1))).isOk = true ∧
-    (Float.sub (Float.ofBits 4607182418800017408) (Float.ofBits 4607182418800017408)).toBits = 0 := by
-  decide +kernel
+    (Float.hwSub (Float.hwOfBits 4607182418800017408) (Float.hwOfBits 4607182418800017408)).hwToBits = 0 := by
+  exact ⟨by float_probe_emission, reply⟩
 
 def hookImages : List (String × Except String (List Runner.B) × Nat) :=
   [("hook-float-positive", blockImageOf (hookConversion 37 (37, 1) (0, 1) (100, 1)), 7),
@@ -83,7 +85,7 @@ def wordImage (fragment : Option (List II × Nat)) (expected : Nat) :
   let cr ← match fragment with
     | some c => Except.ok c
     | none => Except.error "word fragment refused"
-  let comparison := if (Float.ofBits (UInt64.ofNat expected)).isNaN then
+  let comparison := if (Float.hwOfBits (UInt64.ofNat expected)).hwIsNaN then
       [ci (Runner.NativeFPOp.eq .f64).code 8 8 8, ci 1 9 1 0, ci 10 8 8 9]
     else (konstWL 4 expected 9).1 ++ [ci 14 8 8 9]
   let code := cr.1 ++ comparison ++
@@ -98,9 +100,8 @@ def subtractionImage (a b expected : Nat) : Except String (List Runner.B) :=
   wordImage (floatWordsL .sub 8 (fun d => some (konstWL 4 a d))
     (fun d => some (konstWL 4 b d))) expected
 
-/-- Expected words are explicit IEEE encodings, independently obtained by rounding
-    the integer significand to 24/53 bits with ties to even, then packing sign,
-    biased exponent and fraction. The kernel also checks the native conversion result. -/
+/-- Fixed CPU-regression words for both formats. Their primitive conversion replies
+    are supplied explicitly below; the proof kernel performs no floating arithmetic. -/
 def computedSamples : List (Runner.FPFormat × Int × Nat) :=
   [
     (Runner.FPFormat.f32, 0, 0),
@@ -126,11 +127,19 @@ def computedSamples : List (Runner.FPFormat × Int × Nat) :=
     (Runner.FPFormat.f64, 18014398509481983, 4850376798678024192),
     (Runner.FPFormat.f64, 4503599627370496, 4841369599423283200)]
 
-theorem computedSamples_bits : computedSamples.all (fun (f, z, bits) =>
-    decide ((match f with
-      | .f32 => (Int64.ofInt z).toFloat32.toBits.toNat
-      | .f64 => (Int64.ofInt z).toFloat.toBits.toNat) = bits)) = true := by
-  decide +kernel
+theorem computedSamples_bits
+    (answers : ∀ format z bits, (format, z, bits) ∈ computedSamples →
+      (match format with
+      | .f32 => (Int64.ofInt z).hwToFloat32.hwToBits.toNat
+      | .f64 => (Int64.ofInt z).hwToFloat.hwToBits.toNat) = bits) :
+    computedSamples.all (fun (f, z, bits) =>
+      decide ((match f with
+        | .f32 => (Int64.ofInt z).hwToFloat32.hwToBits.toNat
+        | .f64 => (Int64.ofInt z).hwToFloat.hwToBits.toNat) = bits)) = true := by
+  apply List.all_eq_true.mpr
+  rintro ⟨format, z, bits⟩ member
+  simp only [decide_eq_true_eq]
+  exact answers format z bits member
 
 /-- Execute the emitted conversion, including a real integer-producing child.
     These format-specific fragment probes complement the binary64 block-hook probes. -/
@@ -179,9 +188,21 @@ def rangeImages : List (String × Except String (List Runner.B) × Nat) :=
    ("computed-range-round-in", rangeImage (2^53 + 1) (0, 1) (2^53, 1), 7),
    ("computed-range-round-out", rangeImage (2^53 + 3) (0, 1) (2^53 + 2, 1), 107)]
 
+/-- Primitive replies for the fixed conversion/range operands, excluding the
+    final source rejection decision and every compiler/outcome statement. -/
+structure ComputedRangeAnswers : Prop where
+  inside : RangeAnswers (0, 1) (100, 1) (Float.hwOfInt 37) true true true
+  zero : RangeAnswers (0, 1) (100, 1) (Float.hwOfInt 0) true true true
+  upper : RangeAnswers (0, 1) (100, 1) (Float.hwOfInt 100) true true true
+  below : RangeAnswers (0, 1) (100, 1) (Float.hwOfInt (-1)) true false true
+  above : RangeAnswers (0, 1) (100, 1) (Float.hwOfInt 101) true true false
+  nanLower : RangeAnswers (0, 0) (100, 1) (Float.hwOfInt 0) true false true
+  positiveInfinity : RangeAnswers (2^1024, 1) (2^1024, 1) (Float.hwOfInt 37) true false true
+  negativeInfinity : RangeAnswers (-(2^1024), 1) (-(2^1024), 1) (Float.hwOfInt (-37)) true true false
+
 /-- The expected range exits agree with the source decision after rounding.
     Emission and processor execution are measured separately. -/
-theorem computed_range_decisions_zeuge :
+theorem computed_range_decisions_zeuge (answers : ComputedRangeAnswers) :
     floatRangeReject (0, 1) (100, 1) (gleitAusInt 37) = false ∧
     floatRangeReject (0, 1) (100, 1) (gleitAusInt 0) = false ∧
     floatRangeReject (0, 1) (100, 1) (gleitAusInt 100) = false ∧
@@ -190,7 +211,9 @@ theorem computed_range_decisions_zeuge :
     floatRangeReject (0, 1) (0, 0) (gleitAusInt 0) = true ∧
     floatRangeReject (2^1024, 1) (2^1024, 1) (gleitAusInt 37) = true ∧
     floatRangeReject (-(2^1024), 1) (-(2^1024), 1) (gleitAusInt (-37)) = true := by
-  decide +kernel
+  exact ⟨answers.inside.reject, answers.zero.reject, answers.upper.reject,
+    answers.below.reject, answers.above.reject, answers.nanLower.reject,
+    answers.positiveInfinity.reject, answers.negativeInfinity.reject⟩
 
 def images : List (String × Except String (List Runner.B) × Nat) :=
   [("float-add", blockImageOf (arithmetic .add (2, 1)), 7),
@@ -219,24 +242,43 @@ def images : List (String × Except String (List Runner.B) × Nat) :=
 
 /-- All fixtures lower into complete images; real-runner execution is a separate check. -/
 theorem float_arithmetic_images_zeuge : images.all (fun x => x.2.1.isOk) = true := by
-  decide +kernel
+  float_probe_emission
 
-/-- Canonical add/sub edge semantics complement the emitted image fixtures. -/
-theorem float_add_sub_model_zeuge :
-    Float.add (Float.ofBits (UInt64.ofNat (2^63 + (0) * 2^52 + (0)))) (Float.ofBits (UInt64.ofNat (2^63 + (0) * 2^52 + (0)))) = (Float.ofBits (UInt64.ofNat (2^63 + (0) * 2^52 + (0)))) ∧
-    Float.add (Float.ofBits (UInt64.ofNat (0 + (0) * 2^52 + (0)))) (Float.ofBits (UInt64.ofNat (2^63 + (0) * 2^52 + (0)))) = (Float.ofBits (UInt64.ofNat (0 + (0) * 2^52 + (0)))) ∧
-    Float.add (Float.ofBits (UInt64.ofNat (0 + (0) * 2^52 + (1)))) (Float.ofBits (UInt64.ofNat (0 + (0) * 2^52 + (1)))) = (Float.ofBits (UInt64.ofNat (0 + (0) * 2^52 + (2)))) ∧
-    Float.sub (Float.ofBits (UInt64.ofNat (0 + (0) * 2^52 + (1)))) (Float.ofBits (UInt64.ofNat (0 + (0) * 2^52 + (1)))) = (Float.ofBits (UInt64.ofNat (0 + (0) * 2^52 + (0)))) ∧
-    Float.sub (Float.ofBits (UInt64.ofNat (2^63 + (0) * 2^52 + (0)))) (Float.ofBits (UInt64.ofNat (0 + (0) * 2^52 + (0)))) = (Float.ofBits (UInt64.ofNat (2^63 + (0) * 2^52 + (0)))) ∧
-    Float.sub (Float.ofBits (UInt64.ofNat (0 + (1) * 2^52 + (0)))) (Float.ofBits (UInt64.ofNat (0 + (0) * 2^52 + (2^52 - 1)))) = (Float.ofBits (UInt64.ofNat (0 + (0) * 2^52 + (1)))) ∧
-    Float.add (Float.ofBits (UInt64.ofNat (0 + (1023) * 2^52 + (0)))) (Float.ofBits (UInt64.ofNat (0 + (970) * 2^52 + (0)))) = (Float.ofBits (UInt64.ofNat (0 + (1023) * 2^52 + (0)))) ∧
-    Float.add (Float.ofBits (UInt64.ofNat (0 + (1023) * 2^52 + (1)))) (Float.ofBits (UInt64.ofNat (0 + (970) * 2^52 + (0)))) = (Float.ofBits (UInt64.ofNat (0 + (1023) * 2^52 + (2)))) ∧
-    Float.sub (Float.ofBits (UInt64.ofNat (0 + (1023) * 2^52 + (0)))) (Float.ofBits (UInt64.ofNat (0 + (969) * 2^52 + (0)))) = (Float.ofBits (UInt64.ofNat (0 + (1023) * 2^52 + (0)))) ∧
-    Float.add (Float.ofBits (UInt64.ofNat (0 + (2047) * 2^52 + (0)))) (Float.ofBits (UInt64.ofNat (2^63 + (2047) * 2^52 + (0)))) = (Float.ofBits (UInt64.ofNat (0 + (2047) * 2^52 + (1)))) ∧
-    Float.sub (Float.ofBits (UInt64.ofNat (0 + (2047) * 2^52 + (0)))) (Float.ofBits (UInt64.ofNat (0 + (2047) * 2^52 + (0)))) = (Float.ofBits (UInt64.ofNat (0 + (2047) * 2^52 + (1)))) ∧
-    Float.add (Float.ofBits (UInt64.ofNat (2^63 + (2047) * 2^52 + (7)))) (Float.ofBits (UInt64.ofNat (0 + (2047) * 2^52 + (9)))) = (Float.ofBits (UInt64.ofNat (2^63 + (2047) * 2^52 + (7)))) ∧
-    Float.sub (Float.ofBits (UInt64.ofNat (0 + (0) * 2^52 + (0)))) (Float.ofBits (UInt64.ofNat (2^63 + (2047) * 2^52 + (9)))) = (Float.ofBits (UInt64.ofNat (0 + (2047) * 2^52 + (9)))) ∧
-    Float.add (Float.ofBits (UInt64.ofNat (0 + (2046) * 2^52 + (2^52 - 1)))) (Float.ofBits (UInt64.ofNat (0 + (2046) * 2^52 + (2^52 - 1)))) =
-      (Float.ofBits (UInt64.ofNat (0 + (2047) * 2^52 + (0)))) := by decide +kernel
+/-- Fixed native add/sub replies only; no source, IR or acceptance conclusion. -/
+structure AddSubAnswers : Prop where
+  negativeZero : Float.hwAdd (Float.hwOfBits (UInt64.ofNat (2^63 + (0) * 2^52 + (0)))) (Float.hwOfBits (UInt64.ofNat (2^63 + (0) * 2^52 + (0)))) = (Float.hwOfBits (UInt64.ofNat (2^63 + (0) * 2^52 + (0))))
+  oppositeZeros : Float.hwAdd (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (0)))) (Float.hwOfBits (UInt64.ofNat (2^63 + (0) * 2^52 + (0)))) = (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (0))))
+  subnormalAdd : Float.hwAdd (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (1)))) (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (1)))) = (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (2))))
+  subnormalCancel : Float.hwSub (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (1)))) (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (1)))) = (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (0))))
+  zeroSubtract : Float.hwSub (Float.hwOfBits (UInt64.ofNat (2^63 + (0) * 2^52 + (0)))) (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (0)))) = (Float.hwOfBits (UInt64.ofNat (2^63 + (0) * 2^52 + (0))))
+  normalSubtract : Float.hwSub (Float.hwOfBits (UInt64.ofNat (0 + (1) * 2^52 + (0)))) (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (2^52 - 1)))) = (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (1))))
+  evenTie : Float.hwAdd (Float.hwOfBits (UInt64.ofNat (0 + (1023) * 2^52 + (0)))) (Float.hwOfBits (UInt64.ofNat (0 + (970) * 2^52 + (0)))) = (Float.hwOfBits (UInt64.ofNat (0 + (1023) * 2^52 + (0))))
+  oddTie : Float.hwAdd (Float.hwOfBits (UInt64.ofNat (0 + (1023) * 2^52 + (1)))) (Float.hwOfBits (UInt64.ofNat (0 + (970) * 2^52 + (0)))) = (Float.hwOfBits (UInt64.ofNat (0 + (1023) * 2^52 + (2))))
+  smallSubtract : Float.hwSub (Float.hwOfBits (UInt64.ofNat (0 + (1023) * 2^52 + (0)))) (Float.hwOfBits (UInt64.ofNat (0 + (969) * 2^52 + (0)))) = (Float.hwOfBits (UInt64.ofNat (0 + (1023) * 2^52 + (0))))
+  infinityAdd : Float.hwAdd (Float.hwOfBits (UInt64.ofNat (0 + (2047) * 2^52 + (0)))) (Float.hwOfBits (UInt64.ofNat (2^63 + (2047) * 2^52 + (0)))) = (Float.hwOfBits (UInt64.ofNat (0 + (2047) * 2^52 + (1))))
+  infinitySubtract : Float.hwSub (Float.hwOfBits (UInt64.ofNat (0 + (2047) * 2^52 + (0)))) (Float.hwOfBits (UInt64.ofNat (0 + (2047) * 2^52 + (0)))) = (Float.hwOfBits (UInt64.ofNat (0 + (2047) * 2^52 + (1))))
+  leftNaN : Float.hwAdd (Float.hwOfBits (UInt64.ofNat (2^63 + (2047) * 2^52 + (7)))) (Float.hwOfBits (UInt64.ofNat (0 + (2047) * 2^52 + (9)))) = (Float.hwOfBits (UInt64.ofNat (2^63 + (2047) * 2^52 + (7))))
+  rightNaN : Float.hwSub (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (0)))) (Float.hwOfBits (UInt64.ofNat (2^63 + (2047) * 2^52 + (9)))) = (Float.hwOfBits (UInt64.ofNat (0 + (2047) * 2^52 + (9))))
+  overflow : Float.hwAdd (Float.hwOfBits (UInt64.ofNat (0 + (2046) * 2^52 + (2^52 - 1)))) (Float.hwOfBits (UInt64.ofNat (0 + (2046) * 2^52 + (2^52 - 1)))) =
+      (Float.hwOfBits (UInt64.ofNat (0 + (2047) * 2^52 + (0))))
+
+/-- The unchanged edge claims follow from the explicit primitive hardware replies. -/
+theorem float_add_sub_model_zeuge (answers : AddSubAnswers) :
+    Float.hwAdd (Float.hwOfBits (UInt64.ofNat (2^63 + (0) * 2^52 + (0)))) (Float.hwOfBits (UInt64.ofNat (2^63 + (0) * 2^52 + (0)))) = (Float.hwOfBits (UInt64.ofNat (2^63 + (0) * 2^52 + (0)))) ∧
+    Float.hwAdd (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (0)))) (Float.hwOfBits (UInt64.ofNat (2^63 + (0) * 2^52 + (0)))) = (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (0)))) ∧
+    Float.hwAdd (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (1)))) (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (1)))) = (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (2)))) ∧
+    Float.hwSub (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (1)))) (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (1)))) = (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (0)))) ∧
+    Float.hwSub (Float.hwOfBits (UInt64.ofNat (2^63 + (0) * 2^52 + (0)))) (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (0)))) = (Float.hwOfBits (UInt64.ofNat (2^63 + (0) * 2^52 + (0)))) ∧
+    Float.hwSub (Float.hwOfBits (UInt64.ofNat (0 + (1) * 2^52 + (0)))) (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (2^52 - 1)))) = (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (1)))) ∧
+    Float.hwAdd (Float.hwOfBits (UInt64.ofNat (0 + (1023) * 2^52 + (0)))) (Float.hwOfBits (UInt64.ofNat (0 + (970) * 2^52 + (0)))) = (Float.hwOfBits (UInt64.ofNat (0 + (1023) * 2^52 + (0)))) ∧
+    Float.hwAdd (Float.hwOfBits (UInt64.ofNat (0 + (1023) * 2^52 + (1)))) (Float.hwOfBits (UInt64.ofNat (0 + (970) * 2^52 + (0)))) = (Float.hwOfBits (UInt64.ofNat (0 + (1023) * 2^52 + (2)))) ∧
+    Float.hwSub (Float.hwOfBits (UInt64.ofNat (0 + (1023) * 2^52 + (0)))) (Float.hwOfBits (UInt64.ofNat (0 + (969) * 2^52 + (0)))) = (Float.hwOfBits (UInt64.ofNat (0 + (1023) * 2^52 + (0)))) ∧
+    Float.hwAdd (Float.hwOfBits (UInt64.ofNat (0 + (2047) * 2^52 + (0)))) (Float.hwOfBits (UInt64.ofNat (2^63 + (2047) * 2^52 + (0)))) = (Float.hwOfBits (UInt64.ofNat (0 + (2047) * 2^52 + (1)))) ∧
+    Float.hwSub (Float.hwOfBits (UInt64.ofNat (0 + (2047) * 2^52 + (0)))) (Float.hwOfBits (UInt64.ofNat (0 + (2047) * 2^52 + (0)))) = (Float.hwOfBits (UInt64.ofNat (0 + (2047) * 2^52 + (1)))) ∧
+    Float.hwAdd (Float.hwOfBits (UInt64.ofNat (2^63 + (2047) * 2^52 + (7)))) (Float.hwOfBits (UInt64.ofNat (0 + (2047) * 2^52 + (9)))) = (Float.hwOfBits (UInt64.ofNat (2^63 + (2047) * 2^52 + (7)))) ∧
+    Float.hwSub (Float.hwOfBits (UInt64.ofNat (0 + (0) * 2^52 + (0)))) (Float.hwOfBits (UInt64.ofNat (2^63 + (2047) * 2^52 + (9)))) = (Float.hwOfBits (UInt64.ofNat (0 + (2047) * 2^52 + (9)))) ∧
+    Float.hwAdd (Float.hwOfBits (UInt64.ofNat (0 + (2046) * 2^52 + (2^52 - 1)))) (Float.hwOfBits (UInt64.ofNat (0 + (2046) * 2^52 + (2^52 - 1)))) =
+      (Float.hwOfBits (UInt64.ofNat (0 + (2047) * 2^52 + (0)))) := by
+  exact ⟨answers.negativeZero, answers.oppositeZeros, answers.subnormalAdd, answers.subnormalCancel, answers.zeroSubtract, answers.normalSubtract, answers.evenTie, answers.oddTie, answers.smallSubtract, answers.infinityAdd, answers.infinitySubtract, answers.leftNaN, answers.rightNaN, answers.overflow⟩
 
 end Gabbro.Stage0.Senke.FloatArithmeticProbe

@@ -55,7 +55,7 @@ def images : List (Except String (List Runner.B)) :=
     blockImageOf (dispatch wide), blockImageOf (dispatch bare), blockImageOf floating]
 
 /-- All payload kinds, including the zero-padding bare case, reach whole images. -/
-theorem sumSpan_images_zeuge : images.all (·.isOk) = true := by decide +kernel
+theorem sumSpan_images_zeuge : images.all (·.isOk) = true := by float_probe_emission
 
 /-- The new layout retains the complete high limbs and the trailing product flag. -/
 theorem sumSpan_encoding_zeuge :

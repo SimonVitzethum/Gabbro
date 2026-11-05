@@ -45,17 +45,23 @@ def smallImages : List (String × Except String (List Runner.B) × Nat) :=
 theorem wide_float_images_zeuge :
     images.length = 7 ∧ images.all (fun x => x.2.1.isOk) = true ∧
     smallImages.length = 3 ∧ smallImages.all (fun x => x.2.1.isOk) = true := by
-  decide +kernel
+  float_probe_emission
 
 /-- These are the source model's results, independently of image execution. -/
-theorem wide_float_rounding_zeuge :
-    Float.ofInt (2 ^ 80 + 2 ^ 27) = Float.ofInt (2 ^ 80) ∧
-    Float.ofInt (2 ^ 80 + 2 ^ 27 + 1) = Float.ofInt (2 ^ 80 + 2 ^ 28) ∧
-    Float.ofInt (-(2 ^ 80 + 2 ^ 27 + 1)) = Float.ofInt (-(2 ^ 80 + 2 ^ 28)) ∧
-    Float.ofInt (2 ^ 81 - 2 ^ 27) = Float.ofInt (2 ^ 81) ∧
+theorem wide_float_rounding_zeuge
+    (even : Float.hwOfInt (2 ^ 80 + 2 ^ 27) = Float.hwOfInt (2 ^ 80))
+    (sticky : Float.hwOfInt (2 ^ 80 + 2 ^ 27 + 1) = Float.hwOfInt (2 ^ 80 + 2 ^ 28))
+    (negative : Float.hwOfInt (-(2 ^ 80 + 2 ^ 27 + 1)) = Float.hwOfInt (-(2 ^ 80 + 2 ^ 28)))
+    (carry : Float.hwOfInt (2 ^ 81 - 2 ^ 27) = Float.hwOfInt (2 ^ 81))
+    (overflow : (Float.hwOfInt (2 ^ 1024 - 2 ^ 970)).hwIsFinite = false) :
+    Float.hwOfInt (2 ^ 80 + 2 ^ 27) = Float.hwOfInt (2 ^ 80) ∧
+    Float.hwOfInt (2 ^ 80 + 2 ^ 27 + 1) = Float.hwOfInt (2 ^ 80 + 2 ^ 28) ∧
+    Float.hwOfInt (-(2 ^ 80 + 2 ^ 27 + 1)) = Float.hwOfInt (-(2 ^ 80 + 2 ^ 28)) ∧
+    Float.hwOfInt (2 ^ 81 - 2 ^ 27) = Float.hwOfInt (2 ^ 81) ∧
     floatRangeReject (-(2 ^ 1025), 1) (2 ^ 1025, 1)
-      (Float.ofInt (2 ^ 1024 - 2 ^ 970)) = true := by
-  decide +kernel
+      (Float.hwOfInt (2 ^ 1024 - 2 ^ 970)) = true := by
+  refine ⟨even, sticky, negative, carry, ?_⟩
+  simp only [floatRangeReject, gleitEndlich, overflow, Bool.false_and, Bool.not_false]
 
 section GenericWitness
 variable [Kern] {Decl : Deklaration} (L : Lay Decl)
@@ -73,7 +79,7 @@ theorem computedFloatOfE_wide_ok_zeuge :
       LayIn L → computedFloatOfE L operand 12 4 = some (code, top) →
       top ≤ K → Pre L m pc fp K 12 code ρ (fun m => WeltAt m L σ) 4 →
       Ok m pc fp K 12 code
-        (· = (Float.ofInt (ρ.get .here).n).toBits.toBitVec) := by
+        (· = (Float.hwOfInt (ρ.get .here).n).hwToBits.toBitVec) := by
   constructor
   · decide +kernel
   · intro σ ρ m pc fp K top code lay emitted fits pre
@@ -83,19 +89,24 @@ end GenericWitness
 
 /-- Every value above the representable normal range is rejected by the
     same compiled range template, even with infinite declared endpoints. -/
-theorem wide_float_overflow_zeuge :
+theorem wide_float_overflow_zeuge
+    (answers : ∀ z ∈ [2 ^ 1024 - 2 ^ 970, 2 ^ 1024, -(2 ^ 1024)],
+      (Float.hwOfInt z).hwIsFinite = false) :
     ∀ z ∈ [2 ^ 1024 - 2 ^ 970, 2 ^ 1024, -(2 ^ 1024)],
-      floatRangeReject (-(2 ^ 1025), 1) (2 ^ 1025, 1) (Float.ofInt z) = true := by
-  decide +kernel
+      floatRangeReject (-(2 ^ 1025), 1) (2 ^ 1025, 1) (Float.hwOfInt z) = true := by
+  intro z member
+  simp only [floatRangeReject, gleitEndlich, answers z member, Bool.false_and, Bool.not_false]
 
 /-- The declared interval is checked after rounding: the even tie reaches
     its upper endpoint, while a nonzero discarded tail crosses it. -/
-theorem wide_float_range_boundary_zeuge :
+theorem wide_float_range_boundary_zeuge
+    (even : RangeAnswers (0, 1) (2 ^ 80, 1) (Float.hwOfInt (2 ^ 80 + 2 ^ 27)) true true true)
+    (sticky : RangeAnswers (0, 1) (2 ^ 80, 1) (Float.hwOfInt (2 ^ 80 + 2 ^ 27 + 1)) true true false) :
     floatRangeReject (0, 1) (2 ^ 80, 1)
-      (Float.ofInt (2 ^ 80 + 2 ^ 27)) = false ∧
+      (Float.hwOfInt (2 ^ 80 + 2 ^ 27)) = false ∧
     floatRangeReject (0, 1) (2 ^ 80, 1)
-      (Float.ofInt (2 ^ 80 + 2 ^ 27 + 1)) = true := by
-  decide +kernel
+      (Float.hwOfInt (2 ^ 80 + 2 ^ 27 + 1)) = true := by
+  exact ⟨even.reject, sticky.reject⟩
 
 #print axioms wide_float_images_zeuge
 #print axioms computedFloatOfE_wide_ok_zeuge
