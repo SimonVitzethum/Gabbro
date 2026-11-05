@@ -2,6 +2,8 @@ module
 
 public import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 public import Grammatik.GabbroV.Start.GvStartPflichta
+import all Grammatik.Parser.Elab.Uebersetze.Records.Records
+import all Grammatik.Parser.Elab.UebersetzeAllg.Teil5
 
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -40,13 +42,14 @@ import all Init.Data.String.ToSlice
 namespace Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 
+attribute [local cbv_eval] lowWertE.eq_def lowWertAtE.eq_def lowProductArgs.eq_def
+
 /-
   File:       Grammatik/Parser/Elab/Uebersetze/Records/Proben.lean
   Subject:    WITNESSES of the C01 record export: schema lookup, construction in and out of
               declaration order, projection, replacement and nested replacement through the real
-              `lowWertE`, plus refusal twins. The end-to-end source route (`uTypes` population from
-              `type` items and parser-provided labelled constructors) is not wired on this branch:
-              construction here starts from elaborated sides.
+              `lowWertE`, plus refusal twins. These witnesses start from elaborated sides;
+              source parsing and declaration population are checked by their frontend witnesses.
 -/
 
 def recordFixture : URecord :=
@@ -72,7 +75,7 @@ theorem record_lower_zeuge :
     (lowWertE recordUnit [] [] recordFunction none recordLiteralUmgestellt).toBool = true ∧
     (lowWertE recordUnit [] [] recordFunction none (.field recordLiteral "flag")).toBool = true ∧
     (lowWertE recordUnit [] [] recordFunction none (.replace recordLiteral "small" (.lit 9))).toBool = true := by
-  decide +kernel
+  cbv
 
 /-- Empty and foreign nominal types are distinct even when their field shapes agree; unknown fields,
     duplicate constructors and missing fields are refused. -/
@@ -104,11 +107,10 @@ theorem record_nested_replace_zeuge :
       (.replace recordLiteral "small" (.field (.replace recordLiteral "small" (.lit 17)) "small"))).toBool = true := by
   decide +kernel
 
-/-- Initializers validate every component; `konstWert` over products is still open (static record
-    initializers stay refused until the `ProdVal` recursion lands). -/
+/-- Initializers validate every component at its declared nominal product type. -/
 theorem record_initial_zeuge :
     (uConstantValue (.product 7 false [(.int 0 255, .lit 42), (.bool, .truth true)])).toBool = true ∧
     (uConstantValue (.product 7 false [(.int 0 255, .lit 256), (.bool, .truth true)])).toBool = false := by
-  decide +kernel
+  cbv
 
 end Gabbro.Grammatik.Parser.Uebersetze
