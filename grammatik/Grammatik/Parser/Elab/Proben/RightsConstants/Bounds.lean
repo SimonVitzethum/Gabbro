@@ -48,7 +48,7 @@ scoped macro "bound_fragment " fragment:ident " as " text:str : command => do
         cbv)
   let decoded ← `(command| theorem $named :
       String.ofList ($fragment : Chunk).characters = $text := by cbv)
-  return Lean.mkNullNode #[bounded, decoded]
+  return ⟨Lean.mkNullNode #[bounded, decoded]⟩
 
 open scoped Gabbro.Grammatik.Parser.UebersetzeProben11.Phases
 namespace Inputs
