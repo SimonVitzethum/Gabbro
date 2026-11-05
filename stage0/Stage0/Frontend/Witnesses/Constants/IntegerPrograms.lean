@@ -82,7 +82,7 @@ attribute [local cbv_eval]
   lowStufe_seq lowStufe_struct
 
 /-- Parse this already certified token stream once. -/
-private theorem increment_parsed :
+theorem increment_parsed :
     (parseTopTief (incrementScan.tokens ++ [.ende])).toOption.isSome = true := by cbv
 
 /-- Construct the complete source and elaborator packet before projecting its dependent unit. -/
@@ -113,8 +113,6 @@ def incrementHeader : Header Gabbro.Stage0.Frontend.ConstWitness.text := by
       have same : tokens = incrementScan.tokens ++ [.ende] :=
         Except.ok.inj (selected.symm.trans increment_lexed)
       subst tokens
-      have proofEq : selected = increment_lexed := Subsingleton.elim _ _
-      subst selected
       split
       · rename_i error rejected
         cases rejected.symm.trans parsed
@@ -123,8 +121,6 @@ def incrementHeader : Header Gabbro.Stage0.Frontend.ConstWitness.text := by
             (parseTopTief (incrementScan.tokens ++ [.ende])).toOption.get parsing :=
           Except.ok.inj (selected.symm.trans parsed)
         subst items
-        have proofEq : selected = parsed := Subsingleton.elim _ _
-        subst selected
         cbv <;> exact Eq.refl _
   case expansion => cbv <;> exact Eq.refl _
   case constants => cbv <;> exact Eq.refl _
@@ -181,7 +177,7 @@ theorem increment_compiled :
   cbv
 
 /-- Parse this already certified token stream once. -/
-private theorem initializer_parsed :
+theorem initializer_parsed :
     (parseTopTief (initializerScan.tokens ++ [.ende])).toOption.isSome = true := by cbv
 
 /-- Construct the complete source and elaborator packet before projecting its dependent unit. -/
@@ -212,8 +208,6 @@ def initializerHeader : Header Gabbro.Stage0.Frontend.ConstWitness.initializerTe
       have same : tokens = initializerScan.tokens ++ [.ende] :=
         Except.ok.inj (selected.symm.trans initializer_lexed)
       subst tokens
-      have proofEq : selected = initializer_lexed := Subsingleton.elim _ _
-      subst selected
       split
       · rename_i error rejected
         cases rejected.symm.trans parsed
@@ -222,8 +216,6 @@ def initializerHeader : Header Gabbro.Stage0.Frontend.ConstWitness.initializerTe
             (parseTopTief (initializerScan.tokens ++ [.ende])).toOption.get parsing :=
           Except.ok.inj (selected.symm.trans parsed)
         subst items
-        have proofEq : selected = parsed := Subsingleton.elim _ _
-        subst selected
         cbv <;> exact Eq.refl _
   case expansion => cbv <;> exact Eq.refl _
   case constants => cbv <;> exact Eq.refl _

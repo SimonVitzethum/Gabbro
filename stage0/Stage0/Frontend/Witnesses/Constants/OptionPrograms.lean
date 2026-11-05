@@ -82,7 +82,7 @@ attribute [local cbv_eval]
   lowStufe_seq lowStufe_struct
 
 /-- Parse this already certified token stream once. -/
-private theorem boolText_parsed :
+theorem boolText_parsed :
     (parseTopTief (boolTextScan.tokens ++ [.ende])).toOption.isSome = true := by cbv
 
 /-- Construct the complete source and elaborator packet before projecting its dependent unit. -/
@@ -113,8 +113,6 @@ def boolTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.boolText :
       have same : tokens = boolTextScan.tokens ++ [.ende] :=
         Except.ok.inj (selected.symm.trans boolText_lexed)
       subst tokens
-      have proofEq : selected = boolText_lexed := Subsingleton.elim _ _
-      subst selected
       split
       · rename_i error rejected
         cases rejected.symm.trans parsed
@@ -123,8 +121,6 @@ def boolTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.boolText :
             (parseTopTief (boolTextScan.tokens ++ [.ende])).toOption.get parsing :=
           Except.ok.inj (selected.symm.trans parsed)
         subst items
-        have proofEq : selected = parsed := Subsingleton.elim _ _
-        subst selected
         cbv <;> exact Eq.refl _
   case expansion => cbv <;> exact Eq.refl _
   case constants => cbv <;> exact Eq.refl _
@@ -181,7 +177,7 @@ theorem boolText_compiled :
   cbv
 
 /-- Parse this already certified token stream once. -/
-private theorem optionText_parsed :
+theorem optionText_parsed :
     (parseTopTief (optionTextScan.tokens ++ [.ende])).toOption.isSome = true := by cbv
 
 /-- Construct the complete source and elaborator packet before projecting its dependent unit. -/
@@ -212,8 +208,6 @@ def optionTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.optionTe
       have same : tokens = optionTextScan.tokens ++ [.ende] :=
         Except.ok.inj (selected.symm.trans optionText_lexed)
       subst tokens
-      have proofEq : selected = optionText_lexed := Subsingleton.elim _ _
-      subst selected
       split
       · rename_i error rejected
         cases rejected.symm.trans parsed
@@ -222,8 +216,6 @@ def optionTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.optionTe
             (parseTopTief (optionTextScan.tokens ++ [.ende])).toOption.get parsing :=
           Except.ok.inj (selected.symm.trans parsed)
         subst items
-        have proofEq : selected = parsed := Subsingleton.elim _ _
-        subst selected
         cbv <;> exact Eq.refl _
   case expansion => cbv <;> exact Eq.refl _
   case constants => cbv <;> exact Eq.refl _
@@ -280,7 +272,7 @@ theorem optionText_compiled :
   cbv
 
 /-- Parse this already certified token stream once. -/
-private theorem noneText_parsed :
+theorem noneText_parsed :
     (parseTopTief (noneTextScan.tokens ++ [.ende])).toOption.isSome = true := by cbv
 
 /-- Construct the complete source and elaborator packet before projecting its dependent unit. -/
@@ -311,8 +303,6 @@ def noneTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.noneText :
       have same : tokens = noneTextScan.tokens ++ [.ende] :=
         Except.ok.inj (selected.symm.trans noneText_lexed)
       subst tokens
-      have proofEq : selected = noneText_lexed := Subsingleton.elim _ _
-      subst selected
       split
       · rename_i error rejected
         cases rejected.symm.trans parsed
@@ -321,8 +311,6 @@ def noneTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.noneText :
             (parseTopTief (noneTextScan.tokens ++ [.ende])).toOption.get parsing :=
           Except.ok.inj (selected.symm.trans parsed)
         subst items
-        have proofEq : selected = parsed := Subsingleton.elim _ _
-        subst selected
         cbv <;> exact Eq.refl _
   case expansion => cbv <;> exact Eq.refl _
   case constants => cbv <;> exact Eq.refl _

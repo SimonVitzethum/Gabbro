@@ -71,11 +71,22 @@ theorem blockText_refused :
   refine ⟨?error, ?equation⟩
   case equation =>
     unfold Frontend.source
-    rw [blockText_lexed]
-    dsimp only
-    rw [parsedEq]
-    dsimp only
-    cbv <;> exact Eq.refl _
+    split
+    · rename_i error rejected
+      cases rejected.symm.trans blockText_lexed
+    · rename_i tokens selected
+      have same : tokens = blockTextScan.tokens ++ [.ende] :=
+        Except.ok.inj (selected.symm.trans blockText_lexed)
+      subst tokens
+      split
+      · rename_i error rejected
+        cases rejected.symm.trans parsedEq
+      · rename_i items selected
+        have same : items =
+            (parseTopTief (blockTextScan.tokens ++ [.ende])).toOption.get parsed :=
+          Except.ok.inj (selected.symm.trans parsedEq)
+        subst items
+        cbv <;> exact Eq.refl _
 
 theorem blockText_compile_refused :
     (compile Gabbro.Stage0.Frontend.ConstValuesWitness.blockText).toOption.isSome = false := by

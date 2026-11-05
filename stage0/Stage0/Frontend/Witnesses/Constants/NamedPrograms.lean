@@ -82,7 +82,7 @@ attribute [local cbv_eval]
   lowStufe_seq lowStufe_struct
 
 /-- Parse this already certified token stream once. -/
-private theorem tagText_parsed :
+theorem tagText_parsed :
     (parseTopTief (tagTextScan.tokens ++ [.ende])).toOption.isSome = true := by cbv
 
 /-- Construct the complete source and elaborator packet before projecting its dependent unit. -/
@@ -113,8 +113,6 @@ def tagTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.tagText := 
       have same : tokens = tagTextScan.tokens ++ [.ende] :=
         Except.ok.inj (selected.symm.trans tagText_lexed)
       subst tokens
-      have proofEq : selected = tagText_lexed := Subsingleton.elim _ _
-      subst selected
       split
       · rename_i error rejected
         cases rejected.symm.trans parsed
@@ -123,8 +121,6 @@ def tagTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.tagText := 
             (parseTopTief (tagTextScan.tokens ++ [.ende])).toOption.get parsing :=
           Except.ok.inj (selected.symm.trans parsed)
         subst items
-        have proofEq : selected = parsed := Subsingleton.elim _ _
-        subst selected
         cbv <;> exact Eq.refl _
   case expansion => cbv <;> exact Eq.refl _
   case constants => cbv <;> exact Eq.refl _
@@ -181,7 +177,7 @@ theorem tagText_compiled :
   cbv
 
 /-- Parse this already certified token stream once. -/
-private theorem stringText_parsed :
+theorem stringText_parsed :
     (parseTopTief (stringTextScan.tokens ++ [.ende])).toOption.isSome = true := by cbv
 
 /-- Construct the complete source and elaborator packet before projecting its dependent unit. -/
@@ -212,8 +208,6 @@ def stringTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.stringTe
       have same : tokens = stringTextScan.tokens ++ [.ende] :=
         Except.ok.inj (selected.symm.trans stringText_lexed)
       subst tokens
-      have proofEq : selected = stringText_lexed := Subsingleton.elim _ _
-      subst selected
       split
       · rename_i error rejected
         cases rejected.symm.trans parsed
@@ -222,8 +216,6 @@ def stringTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.stringTe
             (parseTopTief (stringTextScan.tokens ++ [.ende])).toOption.get parsing :=
           Except.ok.inj (selected.symm.trans parsed)
         subst items
-        have proofEq : selected = parsed := Subsingleton.elim _ _
-        subst selected
         cbv <;> exact Eq.refl _
   case expansion => cbv <;> exact Eq.refl _
   case constants => cbv <;> exact Eq.refl _
