@@ -285,7 +285,7 @@ theorem gCs_voll : ∀ c : gD.Tab ⊕ gD.Glob, c ∈ gCs := by
 -- goal theorem (`akzeptiertX_pruefer`, the Bool `AkzeptiertX`) accepts
 -- this program on these lists. Where it does not, this `decide` fails --
 -- loudly, not wrongly.
-theorem gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE gFs gLs gCs = true := by decide
+theorem gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE gFs gLs gCs = true := by decide +kernel
 
 -- THE CLOSING THEOREM: the conclusion of `GabbroZiel` for this program on
 -- every run of machine GX with every thread live (`gabbro_ziel_gx`). The
