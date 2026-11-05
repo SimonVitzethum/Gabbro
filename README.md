@@ -23,8 +23,8 @@ over its model.
 
 ## What does not exist
 
-- A working Gabbro compiler, and a working Gabbro checker for the full language.
-- A final-binary validator, or any bridge from the model to a binary. Never call the compiler or a binary verified.
+- A working Gabbro compiler, and a working Gabbro checker for the full language (the verified ones are the goal).
+- A verified compiler, or any proved bridge from the model to a binary. Never call the compiler or a binary verified.
 - A standard library; programs bring their own `syscall` items and bindings.
 - Full source-to-IR coverage. Open forms and all measurements are in [TODO.md](TODO.md) and
   [IR-COMPILATION-LANES](dokumente/IR-COMPILATION-LANES.md).
@@ -45,11 +45,15 @@ Lean 4.35.0 pins itself from `grammatik/lean-toolchain`; the only dependency is 
 CLAIMED, and wins wherever other text disagrees. The user still owes the logic of their program and the hardware
 assumptions. Loader, runtime thread creation and foreign behaviour are named assumptions whose correspondence is unproved.
 
-## Intended design
+## Goal: a formally verified Gabbro compiler
 
-The compiler is untrusted and shows its work: every accepted program gets a certificate that Lean checks (source parses to
-the model, the model's rules hold, the final image refines the model). Only the Lean parser and model certificates exist in
-part; the AArch64 semantics, the final-byte validator and the per-access memory-order bridge are planned.
+The aim is a **formally verified Gabbro checker and compiler**, not an untrusted compiler with after-the-fact
+certificates. Both are specified in Lean (the model, `AkzeptiertX`, the lowering) and proved correct against that
+specification, and the compiled code is verified against the CPU. The proof runs through the complete test sets **M**
+(accepted programs) and **N** (refused programs): a tool that agrees with the model on M and N agrees on every program
+(`vollstaendig_hinreichend`), together with logic proofs (GabbroV). Stage 0 is the first verified slice of this path.
+Open: M and N as concrete values for the whole model, the lowering cells, the CPU model for the final machine code
+(the x86-64 runner's instruction subset is tested against the CPU), and the checker and compiler themselves.
 
 ## Legacy tools (testing only)
 
