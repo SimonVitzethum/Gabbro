@@ -138,6 +138,7 @@ private theorem stmt_word_dispatch {rest : List Token} (h : istOrtsFort rest = f
     rintro tail rfl
     cases h
   rw [parseStmt.eq_def]
+  dsimp only
   split
   · exact (noArray _ rfl).elim
   · rw [h] <;> rfl

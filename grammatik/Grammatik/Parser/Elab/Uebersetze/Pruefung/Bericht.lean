@@ -41,7 +41,7 @@ def probenCheckFalsch : SCheck :=
 private theorem record_block_return (heads : List UFnKopf) (check : SCheck)
     (fuel : Nat) (ctx : UCtx) (point : Nat) (value : SExpr) :
     recordCheckCode heads check fuel ctx point (.block [] (some (.ret (some value)))) =
-      match fuel with
+      (match fuel with
       | 0 => .error "check recording expansion exhausted"
       | fuel + 1 => do
         let (statements, ctx, reporters, extraHeads, point) ←
@@ -51,7 +51,7 @@ private theorem record_block_return (heads : List UFnKopf) (check : SCheck)
         | .block prelude ending =>
           pure (.block (statements ++ prelude) ending, reporters ++ [reporter],
             extraHeads ++ [head], point + 1)
-        | _ => .error "check reporter expansion is not a block" := by
+        | _ => .error "check reporter expansion is not a block") := by
   cases fuel <;> simp only [recordCheckCode]
 
 private theorem record_statements_nil (heads : List UFnKopf) (check : SCheck)
@@ -74,25 +74,25 @@ private theorem row_nil (tabs : List UTab) (heads : List UFnKopf)
 
 private theorem row_cons (tabs : List UTab) (heads : List UFnKopf)
     (fuel : Nat) (ctx : UCtx) (statement : SAnw) (rest : List SAnw) :
-    uAnwReihe tabs heads fuel ctx (statement :: rest) = match fuel with
+    uAnwReihe tabs heads fuel ctx (statement :: rest) = (match fuel with
       | 0 => .error "nesting without G form"
       | fuel + 1 => do
         let (before, ctx, statement) ← expandFoldStmt ctx statement
         let (code, ctx) ← uAnwReiheCore tabs heads (fuel + 1) ctx (statement :: rest)
-        pure (before ++ code, ctx) := by
+        pure (before ++ code, ctx)) := by
   cases fuel <;> simp only [uAnwReihe]
 
 private theorem core_bind (tabs : List UTab) (heads : List UFnKopf)
     (fuel : Nat) (ctx : UCtx) (mutable : Bool) (name : String)
     (ty : Option STyp) (value : SExpr) (rest : List SAnw) :
     uAnwReiheCore tabs heads fuel ctx (.bind mutable name ty value :: rest) =
-      match fuel with
+      (match fuel with
       | 0 => .error "nesting without G form"
       | fuel + 1 => do
         let (statement, next) ← uBindWert ctx tabs heads mutable name ty value
         let (code, ending) ← uAnwReihe tabs heads fuel
           (foldBindingContext ctx next statement) rest
-        pure (statement :: code, ending) := by
+        pure (statement :: code, ending)) := by
   cases fuel with
   | zero => simp only [uAnwReiheCore]
   | succ fuel =>

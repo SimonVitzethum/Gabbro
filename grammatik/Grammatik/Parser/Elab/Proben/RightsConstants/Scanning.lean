@@ -56,7 +56,7 @@ def Input.of_chunks {source : String} (pieces : List Chunk)
 -- Infer the token data from the real short lexer result. The final certificate
 -- checks this exact fragment again with an arbitrary scanner continuation.
 scoped macro "rights_cut " text:str : term =>
-  `((by
+  `(show Chunk from by
     let chars : List Char := ($text : String).toList
     let emitted : List Token := ?emitted
     have decoded : lexL chars = .ok emitted := by cbv <;> exact Eq.refl _
@@ -66,10 +66,10 @@ scoped macro "rights_cut " text:str : term =>
       steps := (chars.filter istLeer).length + emitted.length - 1
       scanned := ?_ }
     intro rest remaining
-    cbv) : Chunk)
+    cbv)
 
 scoped macro "rights_input " source:term " with_cuts " cuts:term " with_text " fragments:term : term =>
-  `((by
+  `(show Input $source from by
     let pieces : List Chunk := $cuts
     let fragments : List String := $fragments
     have charsEq : Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces =
@@ -80,7 +80,7 @@ scoped macro "rights_input " source:term " with_cuts " cuts:term " with_text " f
       simp only [fragments, List.flatMap_cons, List.flatMap_nil, List.append_nil,
         String.ofList_append, String.ofList_toList]
       cbv
-    case room => cbv <;> omega) : Input $source)
+    case room => cbv <;> omega)
 
 open scoped Gabbro.Grammatik.Parser.UebersetzeProben11.Phases
 namespace Inputs
