@@ -3,6 +3,9 @@ public import Grammatik.Parser.Elab.Export.ExportQuantifiers
 import all Grammatik.Parser.Elab.Export.ExportRelations
 import all Grammatik.Parser.Item.ElementTief.Defs1a
 import all Grammatik.Parser.Expr.Ausdruck.Teil2a
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Struct
+import all Grammatik.Parser.Elab.UebersetzeAllg.Teil5
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil5
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.ExportPreservation
@@ -98,10 +101,13 @@ private theorem consuming_effect_checked (functions : List UFn) (writes : List S
   rw [consuming_effect_parse take 9986]
   simp only [bind, Except.bind, pure, Except.pure]
   have sameTable : strEq "T" "T" = true := by decide +kernel
+  have sameSlots : strEq "slots" "slots" = true := by decide +kernel
+  have firstOther : strEq "root" "T" = false := by decide +kernel
+  have lastOther : strEq "last" "T" = false := by decide +kernel
   cases take <;> cases allowed : writes.any (strEq · "T") <;>
     simp [relationUnit, relationFunction, uSchreibtOrt, uStelle, uArtBei, uEffekteAux,
-      uIstGriffOrt, uIstGlobName, sameTable, allowed, bind, Except.bind, pure, Except.pure,
-      MonadExceptOf.throw]
+      uIstGriffOrt, uIstGlobName, sameTable, sameSlots, firstOther, lastOther, allowed,
+      bind, Except.bind, pure, Except.pure, MonadExcept.throw, MonadExceptOf.throw]
 
 theorem consuming_effects_zeuge :
     lowConsumingEffects relationUnit {relationFunction with puts := ["T"]} "T" "consumes T.slots" =
@@ -116,7 +122,10 @@ theorem consuming_effects_zeuge :
 
 theorem consuming_negative_measure_zeuge :
     lowConsumingMass relationUnit [] [] relationFunction (.lit (-1)) =
-      .error "consuming traversal decreases must have a nonnegative range" := by rfl
+      .error "consuming traversal decreases must have a nonnegative range" := by
+  simp [lowConsumingMass, seiteAltErg, lowSeiteZ, lowWertE, zahlVon,
+    LowWert.zahl, LowSide.wert, bind, Except.bind, pure, Except.pure,
+    MonadExcept.throw, MonadExceptOf.throw]
 
 theorem consuming_exits_refused_zeuge :
     let context := {relationContext with loops := ["#consume:node"]}
