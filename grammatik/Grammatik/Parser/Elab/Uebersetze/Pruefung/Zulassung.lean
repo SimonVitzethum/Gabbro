@@ -22,6 +22,10 @@ public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
 public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide
 public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckProof
 
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Admission
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Export
+
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
@@ -31,29 +35,39 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
 open Gabbro.Grammatik.Zielsatz
 
+private theorem admission_source : elabText checkText = .ok admissionUnitMade.val :=
+  (elabText_phases text_source text_lexed text_parsed).trans admission_unit
+
 /-- The source-text unit elaborates. -/
 theorem checkText_ok : (elabText checkText).toOption.isSome = true := by
-  decide +kernel
+  rw [admission_source]
+  rfl
 
 /-- The elaborated unit behind the end-to-end witness. -/
 def checkU : UProg := (elabText checkText).toOption.get checkText_ok
 
+private theorem admission_facts_actual : CheckWitness checkU 0 := by
+  simpa only [checkU, admission_source, Except.toOption, Option.get_some] using admission_facts
+
+private theorem admission_unit_actual : checkU = admissionUnitMade.val := by
+  unfold checkU
+  rw [admission_source]
+  rfl
+
 /-- The unit carries its Duty in the mark table. -/
-theorem checkU_marken : checkU.marken = ["p#duty"] := rfl
+theorem checkU_marken : checkU.marken = ["p#duty"] := admission_facts_actual.marks
 
 /-- The unit lowers. -/
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
-theorem checkU_lowered : (lowerAllg checkU).toOption.isSome = true := by
-  decide +kernel
+theorem checkU_lowered : (lowerAllg checkU).toOption.isSome = true := admission_facts_actual.lowered
 
 /-- The lowered program behind the end-to-end witness. -/
 def checkP : Programm (declOf checkU) :=
   ((lowerAllg checkU).toOption.get checkU_lowered).1
 
 /-- The checks derive. -/
-theorem checkU_checks_ok : (uCheckDecls checkU).toOption.isSome = true := by
-  decide +kernel
+theorem checkU_checks_ok : (uCheckDecls checkU).toOption.isSome = true := admission_facts_actual.derived
 
 /-- The derived checks behind the end-to-end witness. -/
 def checkChecks : List (CheckDecl (declOf checkU)) :=
@@ -64,20 +78,19 @@ def checkChecks : List (CheckDecl (declOf checkU)) :=
 /-- The derived check travels under its elaborated name: the acceptance below
     is non-vacuous. -/
 theorem checkU_checks_namen :
-    (uCheckDecls checkU).map (List.map CheckDecl.name) = .ok ["p"] := rfl
+    (uCheckDecls checkU).map (List.map CheckDecl.name) = .ok ["p"] := admission_facts_actual.names
 
 /-- The Duty is the declared mark `p#duty` at stage 0. -/
 theorem checkU_duty_marke :
     (uCheckDecls checkU).map
       (List.map fun d => (checkU.marken.get d.duty.1, d.duty.2)) =
-    .ok [("p#duty", 0)] := rfl
+    .ok [("p#duty", 0)] := admission_facts_actual.duty
 
 /-- Every derived Duty resolves to a name in the mark table: declared, never
     invented. -/
 theorem checkU_duty_deklariert :
     (uCheckDecls checkU).map (fun cs => cs.all fun d =>
-      decide (checkU.marken.get d.duty.1 ∈ checkU.marken)) = .ok true := by
-  decide +kernel
+      decide (checkU.marken.get d.duty.1 ∈ checkU.marken)) = .ok true := admission_facts_actual.declared
 
 /-- The probe consumes and produces exactly the Duty in its lowered
     signature: nothing is dropped at lowering. -/
@@ -85,16 +98,14 @@ theorem checkU_probe_threadet :
     (uCheckDecls checkU).map (fun cs => cs.all fun d =>
       decide (((declOf checkU).signatur d.probe).konsumiert = [d.duty]) &&
       decide (((declOf checkU).signatur d.probe).produziert = [d.duty])) =
-    .ok true := by
-  decide +kernel
+    .ok true := admission_facts_actual.probe
 
 /-- Every gate wrapper discharges that same Duty. -/
 theorem checkU_tor_threadet :
     (uCheckDecls checkU).map (fun cs => cs.all fun d =>
       d.gates.all fun g =>
         decide (d.duty ∈ ((declOf checkU).signatur g).konsumiert)) =
-    .ok true := by
-  decide +kernel
+    .ok true := admission_facts_actual.gates
 
 /-! ## Acceptance with the real Duty -/
 
@@ -103,8 +114,7 @@ theorem checkU_tor_threadet :
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 theorem checkU_checkB :
-    checkB checkP [] [] (List.finRange checkU.fns.length) checkChecks = true := by
-  decide +kernel
+    checkB checkP [] [] (List.finRange checkU.fns.length) checkChecks = true := admission_facts_actual.admitted
 
 /-- End-to-end acceptance from source text with a real, non-vacuous Duty:
     `AkzeptiertX` holds with the derived checks, not the empty leg. -/
@@ -112,14 +122,13 @@ set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 theorem checkU_akzeptiert :
     AkzeptiertX checkP (Cover.Differenz.sperrFamilie checkU)
-      (List.finRange checkU.fns.length) [] [] [] [] checkChecks = true := by
-  decide +kernel
+      (List.finRange checkU.fns.length) [] [] [] [] checkChecks = true := admission_facts_actual.accepted
 
 /-- The unit has no tables and no statics: the admission below quantifies over
     empty carrier lists. -/
-theorem checkU_tabs_leer : checkU.tabs = [] := rfl
+theorem checkU_tabs_leer : checkU.tabs = [] := admission_facts_actual.tabs
 
-theorem checkU_globs_leer : checkU.globs = [] := rfl
+theorem checkU_globs_leer : checkU.globs = [] := admission_facts_actual.globs
 
 /-- The admission Prop follows from the Bool: the derived check expands
     exactly over the lowered program. -/
@@ -144,7 +153,10 @@ def checkUOhneHuellen : UProg :=
 
 /-- The wrapper-less unit derives nothing. -/
 theorem checkU_ohne_huelle :
-    uCheckDecls checkUOhneHuellen = .error "function unknown: p#tor#g" := rfl
+    uCheckDecls checkUOhneHuellen = .error "function unknown: p#tor#g" := by
+  unfold checkUOhneHuellen
+  rw [admission_unit_actual]
+  exact admission_wrapper_refused
 
 /-- The probe with its `gibt` emptied: the Duty would be dropped. -/
 def checkUOhneGibt : UProg :=
@@ -157,6 +169,8 @@ set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 theorem checkU_gibt_abgelehnt :
     (lowerAllg checkUOhneGibt).toOption.isNone = true := by
-  decide +kernel
+  unfold checkUOhneGibt
+  rw [admission_unit_actual]
+  exact admission_gives_refused
 
 end Gabbro.Grammatik.Parser.Uebersetze
