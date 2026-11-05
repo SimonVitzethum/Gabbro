@@ -86,20 +86,47 @@ def gzO : Orakel gzD where
 def gzR : ∀ f : gzD.Fn, World gzD → Env gzD (gzD.params f) → RufAusgang f :=
   fun _ σ _ => .ok σ ()
 
-/-- `+0` in range: the initial value of `G`. -/
-def gzNull : Gleit gzLo gzHi := ⟨Float.ofBits 0, by decide, by decide, by decide⟩
+/-- Only primitive classifier and bound-comparison replies for one actual value. -/
+structure GzRangeAnswers (lo hi : Int × Int) (x : Float) (finite lower upper : Bool) : Prop where
+  finite_reply : x.hwIsFinite = finite
+  lower_reply : Float.hwLe (bruch lo) x = lower
+  upper_reply : Float.hwLe x (bruch hi) = upper
+
+/-- Retain precisely the value and range evidence returned by the hardware. -/
+def GzRangeAnswers.value {lo hi : Int × Int} {x : Float}
+    (answers : GzRangeAnswers lo hi x true true true) : Gleit lo hi :=
+  ⟨x, answers.finite_reply, answers.lower_reply, answers.upper_reply⟩
+
+theorem GzRangeAnswers.fits {lo hi : Int × Int} {x : Float}
+    (answers : GzRangeAnswers lo hi x true true true) :
+    gleitPasst lo hi x = some answers.value := by
+  unfold gleitPasst
+  rw [dif_pos ⟨answers.finite_reply, answers.lower_reply, answers.upper_reply⟩]
+
+theorem GzRangeAnswers.above {lo hi : Int × Int} {x : Float}
+    (answers : GzRangeAnswers lo hi x true true false) : gleitPasst lo hi x = none := by
+  simp [gleitPasst, gleitEndlich, gleitLe, answers.finite_reply,
+    answers.lower_reply, answers.upper_reply]
+
+private theorem gz_nonfinite (lo hi : Int × Int) (x : Float)
+    (finite : x.hwIsFinite = false) : gleitPasst lo hi x = none := by
+  simp [gleitPasst, gleitEndlich, finite]
+
+/-- `+0` in range: the initial value of `G`, with explicit native replies. -/
+def gzNull (initial : GzRangeAnswers gzLo gzHi (Float.hwOfBits 0) true true true) :
+    Gleit gzLo gzHi := initial.value
 
 /-- The initial world: `G = +0`, empty trace. -/
-def gzWelt : World gzD where
+def gzWelt (initial : GzRangeAnswers gzLo gzHi (Float.hwOfBits 0) true true true) : World gzD where
   slots := fun t => t.elim
-  globs := fun _ => gzNull
+  globs := fun _ => gzNull initial
   spur := []
 
 theorem gzDarf : gdarf gzD () [] := fun _ h => nomatch h
 
 /-- Bits of the stored `G` after an `ok` outcome; `none` for any other outcome. -/
 def gzGespeichert {Γ : Ctx} : Ausgang gzV false Γ → Option Nat
-  | .ok σ _ => some ((σ.globs ()).x.toBits.toNat)
+  | .ok σ _ => some ((σ.globs ()).x.hwToBits.toNat)
   | _ => none
 
 /-- Detect the unchanged out-of-range logic outcome after native arithmetic. -/
@@ -118,12 +145,21 @@ def gzSumme (lo hi : Int × Int) (hG : gzD.gtyp () = .fl lo hi) :
       (.float .add (.var (.there .here)) (.var .here) lo hi
         (.cons (.assignGlob () (hG ▸ .var .here) rfl gzDarf) .nil)))
 
-/-- **`0.1 + 0.2` runs, passes its range `0 .. 1`, and stores exactly
-    `0x3FD3333333333334`** -- the IEEE double 0.30000000000000004, pinned by
-    `decide` on the model's own semantics. -/
-theorem lauf01_gespeichert :
-    gzGespeichert (execBlock gzO 0 gzR (gzSumme gzLo gzHi rfl) gzWelt .nil)
-      = some 0x3FD3333333333334 := by decide
+/-- The unchanged source run stores the supplied native addition word after all three range gates. -/
+theorem lauf01_gespeichert
+    (initial : GzRangeAnswers gzLo gzHi (Float.hwOfBits 0) true true true)
+    (first : GzRangeAnswers gzLo gzHi (bruch (1, 10)) true true true)
+    (second : GzRangeAnswers gzLo gzHi (bruch (2, 10)) true true true)
+    (sum : GzRangeAnswers gzLo gzHi (Float.hwAdd (bruch (1, 10)) (bruch (2, 10))) true true true)
+    (word : (Float.hwAdd (bruch (1, 10)) (bruch (2, 10))).hwToBits = 0x3FD3333333333334) :
+    gzGespeichert (execBlock gzO 0 gzR (gzSumme gzLo gzHi rfl) (gzWelt initial) .nil)
+      = some 0x3FD3333333333334 := by
+  have a := first.fits
+  have b := second.fits
+  have c := sum.fits
+  simp [gzSumme, execBlock, execStmt, eval, Expr.orte, World.lese, World.merke,
+    a, b, c, gleitRechne, Ausgang.schrumpf, gzGespeichert,
+    World.schreibGlob, World.storeGlob, GzRangeAnswers.value, word]
 
 /-- The block of `lauf01_ueber03`: the sum declared in `0 .. 3/10`, bound and
     dropped (the global keeps `0 .. 1`; the step's range is the one checked). -/
@@ -132,41 +168,61 @@ def gzSummeEng : Block gzD gzV false [] [] [] :=
     (.floatLit (2, 10) gzLo gzHi
       (.float .add (.var (.there .here)) (.var .here) (0, 1) (3, 10) .nil))
 
-/-- **The range check bites on the last ulp**: `0.1 + 0.2` declared in
-    `0 .. 3/10` leaves its range (`0x3FD3333333333334 > 0x3FD3333333333333 =
-    (double)0.3`), and the step's outcome is `logik bereich`. -/
-theorem lauf01_ueber03 :
-    gzIeee (execBlock gzO 0 gzR gzSummeEng gzWelt .nil) = true := by decide
+/-- The last-ulp upper comparison rejects the same `0 .. 3/10` source range. -/
+theorem lauf01_ueber03
+    (initial : GzRangeAnswers gzLo gzHi (Float.hwOfBits 0) true true true)
+    (first : GzRangeAnswers gzLo gzHi (bruch (1, 10)) true true true)
+    (second : GzRangeAnswers gzLo gzHi (bruch (2, 10)) true true true)
+    (sum : GzRangeAnswers (0, 1) (3, 10)
+      (Float.hwAdd (bruch (1, 10)) (bruch (2, 10))) true true false) :
+    gzIeee (execBlock gzO 0 gzR gzSummeEng (gzWelt initial) .nil) = true := by
+  have a := first.fits
+  have b := second.fits
+  have c := sum.above
+  simp [gzSummeEng, execBlock, eval, Expr.orte, World.lese, World.merke,
+    a, b, c, gleitRechne, Ausgang.schrumpf, gzIeee, GzRangeAnswers.value]
 
-/-- The model's comparisons on the sum: `0.1 + 0.2 < 0.3` is false and
-    `0.3 < 0.1 + 0.2` true; `0.1 + 0.2 <= 1` holds. -/
-theorem lauf01_vergleich :
+/-- Native comparison replies retain both strict directions and the upper-bound comparison. -/
+theorem lauf01_vergleich
+    (forward : Float.hwLt (Float.hwAdd (bruch (1, 10)) (bruch (2, 10))) (bruch (3, 10)) = false)
+    (reverse : Float.hwLt (bruch (3, 10)) (Float.hwAdd (bruch (1, 10)) (bruch (2, 10))) = true)
+    (upper : Float.hwLe (Float.hwAdd (bruch (1, 10)) (bruch (2, 10))) (bruch (1, 1)) = true) :
     gleitLt (gleitRechne .add (bruch (1, 10)) (bruch (2, 10))) (bruch (3, 10)) = false
     ∧ gleitLt (bruch (3, 10)) (gleitRechne .add (bruch (1, 10)) (bruch (2, 10))) = true
-    ∧ gleitLe (gleitRechne .add (bruch (1, 10)) (bruch (2, 10))) (bruch (1, 1)) = true := by
-  decide
+    ∧ gleitLe (gleitRechne .add (bruch (1, 10)) (bruch (2, 10))) (bruch (1, 1)) = true :=
+  ⟨forward, reverse, upper⟩
 
-/-- The same comparison as an expression of the language, evaluated: the
-    condition `a + b < 0.3` over the bound values reads `false`. -/
-theorem lauf01_vergleichExpr :
-    wahr? (eval gzWelt
+/-- The same native reply is consumed by the actual language expression and ordered environment. -/
+theorem lauf01_vergleichExpr
+    (initial : GzRangeAnswers gzLo gzHi (Float.hwOfBits 0) true true true)
+    (limit : GzRangeAnswers gzLo gzHi (bruch (3, 10)) true true true)
+    (sum : GzRangeAnswers gzLo gzHi (Float.hwAdd (bruch (1, 10)) (bruch (2, 10))) true true true)
+    (less : Float.hwLt (Float.hwAdd (bruch (1, 10)) (bruch (2, 10))) (bruch (3, 10)) = false) :
+    wahr? (eval (gzWelt initial)
       (Expr.fllt (Γ := [.fl gzLo gzHi, .fl gzLo gzHi]) (Λ := []) (D := gzD)
         (.var (.there .here)) (.var .here))
-      gzWelt
-      (.cons ⟨bruch (3, 10), by decide, by decide, by decide⟩
-        (.cons ⟨gleitRechne .add (bruch (1, 10)) (bruch (2, 10)), by decide, by decide,
-          by decide⟩ .nil))) = false := by decide
+      (gzWelt initial) (.cons limit.value (.cons sum.value .nil))) = false :=
+  less
 
 /-! ## 3. Integer conversion and a non-finite result -/
 
-/-- `let x = (2^53 + 1) as f64; G := x` needs a wide range; here the value
-    is pinned directly: `gleitAusInt (2^53 + 1)` is `2^53` (a tie, the even
-    significand wins). -/
-theorem laufVon_rundet : gleitAusInt (2 ^ 53 + 1) = gleitAusInt (2 ^ 53)
-    ∧ (gleitAusInt (2 ^ 53 + 1)).toBits.toNat = 0x4340000000000000 := by decide
+/-- The two actual native conversion replies retain the tie result and its exact word. -/
+theorem laufVon_rundet
+    (rounded : Float.hwOfInt (2 ^ 53 + 1) = Float.hwOfInt (2 ^ 53))
+    (word : (Float.hwOfInt (2 ^ 53 + 1)).hwToBits = 0x4340000000000000) :
+    gleitAusInt (2 ^ 53 + 1) = gleitAusInt (2 ^ 53)
+      ∧ (gleitAusInt (2 ^ 53 + 1)).hwToBits.toNat = 0x4340000000000000 :=
+  ⟨rounded, congrArg UInt64.toNat word⟩
 
-theorem roh_trunc : gleitRoh (bruch (5, 2)) = 2 ∧ gleitRoh (bruch (-5, 2)) = -2
-    ∧ gleitRoh (bruch (7, 1)) = 7 ∧ gleitRoh (bruch (1, 10)) = 0 := by decide
+theorem roh_trunc
+    (positive : (bruch (5, 2)).hwToInt64 = Int64.ofInt 2)
+    (negative : (bruch (-5, 2)).hwToInt64 = Int64.ofInt (-2))
+    (integer : (bruch (7, 1)).hwToInt64 = Int64.ofInt 7)
+    (fraction : (bruch (1, 10)).hwToInt64 = Int64.ofInt 0) :
+    gleitRoh (bruch (5, 2)) = 2 ∧ gleitRoh (bruch (-5, 2)) = -2
+      ∧ gleitRoh (bruch (7, 1)) = 7 ∧ gleitRoh (bruch (1, 10)) = 0 := by
+  exact ⟨congrArg Int64.toInt positive, congrArg Int64.toInt negative,
+    congrArg Int64.toInt integer, congrArg Int64.toInt fraction⟩
 
 /-- `let e = 1 as f64; let z = 0 as f64; let q = e / z in 0 .. 1` -- the
     integer conversions are range-checked, the quotient is `+inf`, not finite,
@@ -176,18 +232,22 @@ def gzDurchNull : Block gzD gzV false [] [] [] :=
     (.floatOf (.lit 0) gzLo gzHi
       (.float .div (.var (.there .here)) (.var .here) gzLo gzHi .nil))
 
-theorem laufDurchNull :
-    gzIeee (execBlock gzO 0 gzR gzDurchNull gzWelt .nil) = true := by decide
+theorem laufDurchNull
+    (initial : GzRangeAnswers gzLo gzHi (Float.hwOfBits 0) true true true)
+    (one : GzRangeAnswers gzLo gzHi (Float.hwOfInt 1) true true true)
+    (zero : GzRangeAnswers gzLo gzHi (Float.hwOfInt 0) true true true)
+    (quotient : (Float.hwDiv (Float.hwOfInt 1) (Float.hwOfInt 0)).hwIsFinite = false) :
+    gzIeee (execBlock gzO 0 gzR gzDurchNull (gzWelt initial) .nil) = true := by
+  have a := one.fits
+  have b := zero.fits
+  have c := gz_nonfinite gzLo gzHi _ quotient
+  simp [gzDurchNull, execBlock, eval, Expr.orte, World.lese, World.merke,
+    a, b, c, gleitAusInt, gleitRechne, Ausgang.schrumpf, gzIeee, GzRangeAnswers.value]
 
-/-- The inhabitation side of `gleitPasst`: a finite in-range value passes
-    (so `lauf01_gespeichert` is not vacuous at the check), and `+inf` never
-    does, whatever the range. -/
-theorem gleitPasst_unendlich (lo hi : Int × Int) :
-    gleitPasst lo hi Float.inf = Option.none := by
-  unfold gleitPasst
-  rw [dif_neg]
-  intro h
-  exact absurd h.1 (by decide)
+/-- A native nonfinite reply rejects infinity at every range, through the canonical guard. -/
+theorem gleitPasst_unendlich (lo hi : Int × Int) (infinite : Float.inf.hwIsFinite = false) :
+    gleitPasst lo hi Float.inf = Option.none :=
+  gz_nonfinite lo hi Float.inf infinite
 
 end Gabbro.Grammatik
 

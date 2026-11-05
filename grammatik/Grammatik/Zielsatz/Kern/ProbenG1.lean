@@ -206,27 +206,35 @@ theorem g1O_lokal (w t : Int) : RegLokal (g1O w t) :=
   ⟨fun _ _ _ _ => rfl, fun e => nomatch e⟩
 
 
-/-- The decoded `0.5`, as a value of `f64 in 0 .. 1` (the three facts evaluated by the
-    kernel: `decide +kernel`, no native code). -/
-def g1HalbW : Gleit (0, 1) (1, 1) :=
-  ⟨Float.ofBits (UInt64.ofNat g1Halb.toNat), by decide +kernel, by decide +kernel,
-    by decide +kernel⟩
+/-- The three primitive CPU replies for the fixture's unchanged raw half word.
+    No decoding, source execution or user obligation is assumed. -/
+structure G1FloatAnswers : Prop where
+  finite_reply : (Float.hwOfBits (UInt64.ofNat g1Halb.toNat)).hwIsFinite = true
+  lower_reply : Float.hwLe (bruch (0, 1)) (Float.hwOfBits (UInt64.ofNat g1Halb.toNat)) = true
+  upper_reply : Float.hwLe (Float.hwOfBits (UInt64.ofNat g1Halb.toNat)) (bruch (1, 1)) = true
 
-/-- The word of `0.5` decodes to `g1HalbW`. -/
-theorem g1_temp_wort : gleitWortPasst (0, 1) (1, 1) g1Halb = some g1HalbW := by
+/-- The decoded `0.5`, retaining precisely the supplied native range evidence. -/
+def g1HalbW (answers : G1FloatAnswers) : Gleit (0, 1) (1, 1) :=
+  ⟨Float.hwOfBits (UInt64.ofNat g1Halb.toNat), answers.finite_reply,
+    answers.lower_reply, answers.upper_reply⟩
+
+/-- The word of `0.5` decodes through the actual word and range guards. -/
+theorem g1_temp_wort (answers : G1FloatAnswers) :
+    gleitWortPasst (0, 1) (1, 1) g1Halb = some (g1HalbW answers) := by
   unfold gleitWortPasst
-  rw [ite_eq_left (by decide +kernel : 0 ≤ g1Halb ∧ g1Halb < gleitWortGrenze)]
+  rw [ite_eq_left (by decide : 0 ≤ g1Halb ∧ g1Halb < gleitWortGrenze)]
   unfold gleitPasst
-  rw [dite_eq_left ⟨g1HalbW.endlich, g1HalbW.lo_le, g1HalbW.le_hi⟩]
+  rw [dite_eq_left ⟨answers.finite_reply, answers.lower_reply, answers.upper_reply⟩]
   rfl
 
-theorem g1_temp_dekodiert (σ : World g1D) :
+theorem g1_temp_dekodiert (answers : G1FloatAnswers) (σ : World g1D) :
     einpassen (g1O 3 g1Halb).zeiger (g1D.rtyp g1Reg) ((g1O 3 g1Halb).regLies g1Reg σ) =
-      some g1HalbW := g1_temp_wort
+      some (g1HalbW answers) := g1_temp_wort answers
 
-/-- `temp` answering `0.5`: the word decodes, in range. -/
-theorem g1_temp_passt : ∃ v, einpassen (D := g1D) (fun _ => none) g1Temp g1Halb = some v :=
-  ⟨g1HalbW, g1_temp_wort⟩
+/-- `temp` answering `0.5`: the original raw word decodes in range. -/
+theorem g1_temp_passt (answers : G1FloatAnswers) :
+    ∃ v, einpassen (D := g1D) (fun _ => none) g1Temp g1Halb = some v :=
+  ⟨g1HalbW answers, g1_temp_wort answers⟩
 
 theorem g1_rzusage (v : Wert g1D (g1D.rtyp g1Reg)) : g1D.rzusage g1Reg v = true := by rfl
 
@@ -270,10 +278,11 @@ theorem g1_holen_antwortet (Q : AxEns g1D) (hlok : AxEnsLokal Q)
 
 /-- **The oracle can answer `temp`**: an oracle meets every hardware assumption, whatever the
     declared ensures, and its register answer `0.5` FITS `f64 in 0 .. 1`. -/
-theorem g1_temp_antwortet (Q : AxEns g1D) :
+theorem g1_temp_antwortet [RootNativeFloat.Hardware] (answers : G1FloatAnswers) (Q : AxEns g1D) :
     ∃ O : Orakel g1D, HardwareAnnahmen O Q ∧
       ∀ σ : World g1D, ∃ v, einpassen O.zeiger (g1D.rtyp g1Reg) (O.regLies g1Reg σ) = some v :=
-  ⟨g1O 3 g1Halb, ⟨g1O_gut _ _, g1O_lokal _ _, g1O_schief_vertrag Q _⟩, fun _ => g1_temp_passt⟩
+  ⟨g1O 3 g1Halb, ⟨g1O_gut _ _, g1O_lokal _ _, g1O_schief_vertrag Q _, inferInstance⟩,
+    fun _ => g1_temp_passt answers⟩
 
 /-- The handler that answers every call with a hardware stop (the probes call nothing). -/
 def g1Ruf : ∀ f : g1D.Fn, World g1D → Env g1D (g1D.params f) → RufAusgang f :=
@@ -301,19 +310,18 @@ theorem g1PA_lauf (v : Wert g1D g1Erg) (S : SperrInv g1D) (σ : World g1D) :
   obtain ⟨σ', h⟩ := g1PA_lauf0 v σ
   exact ⟨σ', (Endblock.execH_ohne S _ _ 0 g1Ruf _ rfl σ .nil).trans h⟩
 
-/-- Probe G1-R's body returns once `temp` answered `0.5` -- by computation, the float decoded
-    by the kernel. -/
-theorem g1PR_lauf0 (σ : World g1D) :
+/-- Probe G1-R returns after the native replies pass the actual register decoder. -/
+theorem g1PR_lauf0 (answers : G1FloatAnswers) (σ : World g1D) :
     ∃ σ', execEnd (V := vertragVon g1D g1Haupt) (g1O 3 g1Halb) 0 g1Ruf
       (g1PR.rumpf g1Haupt) σ .nil = .zurueck σ' () := by
   simp only [g1PR, g1RegStmt, execEnd, execStmt, execBlock, eval, wahr?, if_true,
-    g1_temp_dekodiert, Ausgang.schrumpf, evalErg]
+    g1_temp_dekodiert answers, Ausgang.schrumpf, evalErg]
   exact ⟨_, rfl⟩
 
-theorem g1PR_lauf (S : SperrInv g1D) (σ : World g1D) :
+theorem g1PR_lauf (answers : G1FloatAnswers) (S : SperrInv g1D) (σ : World g1D) :
     ∃ σ', execEndH (V := vertragVon g1D g1Haupt) S (g1O 3 g1Halb) (fun L => nomatch L) 0
       g1Ruf (g1PR.rumpf g1Haupt) σ .nil = .zurueck σ' () := by
-  obtain ⟨σ', h⟩ := g1PR_lauf0 σ
+  obtain ⟨σ', h⟩ := g1PR_lauf0 answers σ
   exact ⟨σ', (Endblock.execH_ohne S _ _ 0 g1Ruf _ rfl σ .nil).trans h⟩
 
 /-- **Probe G1-A is refuted** (G1, direction 2): no program with its code meets (b) --
@@ -344,13 +352,13 @@ theorem g1PA_widerlegt (E : Einheit g1D) (hP : E.P = g1PA)
 
 /-- **Probe G1-R is refuted**: no program with its code meets (b) -- whatever its lock
     family, declared axiom ensures, starts and initial memory. -/
-theorem g1PR_widerlegt : NutzerWiderlegt g1PR := by
-  rintro ⟨P, S, Q, st, s⟩ hP h
+theorem g1PR_widerlegt (answers : G1FloatAnswers) : NutzerWiderlegt g1PR := by
+  rintro ⟨P, S, Q, st, s, _, _, _, _, _⟩ hP h
   obtain rfl : P = g1PR := hP
   have hK := (h.logik.1 0 g1Haupt).1.1 (g1O 3 g1Halb) (g1O_rahmen _ _) (g1O_lokal _ _)
     (g1O_schief_vertrag Q _) (fun L => nomatch L) (g1_havoc S) g1Ruf (g1Ruf_rahmen g1PR)
     g1Ruf_ohne (s.welt []) .nil rfl
-  obtain ⟨σ', hrun⟩ := g1PR_lauf S (s.welt [])
+  obtain ⟨σ', hrun⟩ := g1PR_lauf answers S (s.welt [])
   exact Bool.false_ne_true (hK.1 σ' () hrun)
 
 /-! ## 5. The contrast: `never` -/
@@ -361,10 +369,11 @@ theorem g1PR_widerlegt : NutzerWiderlegt g1PR := by
 theorem g1_never_leer : AntwortLeer g1D (some .never) := antwortLeer_never
 
 /-- The G1 types are not empty: `ok | err` and `f64 in 0 .. 1` have answers. -/
-theorem g1_nicht_leer : ¬ AntwortLeer g1D (some g1Erg) ∧ ¬ AntwortLeer g1D (some g1Temp) := by
+theorem g1_nicht_leer [RootNativeFloat.Hardware] (answers : G1FloatAnswers) :
+    ¬ AntwortLeer g1D (some g1Erg) ∧ ¬ AntwortLeer g1D (some g1Temp) := by
   refine ⟨nicht_leer_von g1Erg (⟨⟨1, by decide⟩, ()⟩ : Wert g1D g1Erg)
     (show sumWort g1Fall = true from rfl), ?_⟩
-  obtain ⟨v, hv⟩ := g1_temp_passt
+  obtain ⟨v, hv⟩ := g1_temp_passt answers
   exact nicht_leer_von g1Temp v (einpassen_wertOk _ _ _ v hv)
 
 #print axioms Gabbro.Grammatik.Zielsatz.g1PA_akzeptiert

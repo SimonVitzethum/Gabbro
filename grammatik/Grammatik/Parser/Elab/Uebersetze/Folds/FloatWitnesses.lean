@@ -40,8 +40,10 @@ private def expectedAdd : List UStmt :=
     .bindW "#fold:0:acc:result" (some uFloatTy) (.param "#fold:0:acc")]
 
 /-- Both source spellings retain the existing formatless canonical float type. -/
-public theorem f32_type_zeuge : uTyp [] [] (.atom "f32") = .ok uFloatTy := rfl
-public theorem f64_type_zeuge : uTyp [] [] (.atom "f64") = .ok uFloatTy := rfl
+public theorem f32_type_zeuge :
+    uTyp [] [] (spaces := []) (eigner := []) (.atom "f32") = .ok uFloatTy := rfl
+public theorem f64_type_zeuge :
+    uTyp [] [] (spaces := []) (eigner := []) (.atom "f64") = .ok uFloatTy := rfl
 
 /-- Three slots and a real float table read: one loop, left accumulator first,
     one native addition and one assignment per selected slot, starting at +0.0. -/
@@ -115,11 +117,14 @@ public theorem top_level_endblock_lowering_zeuge :
 
 /-- Native unordered comparisons and signed-zero copies use the same primitives
     as ordinary expressions, without a separate extrema policy. -/
-public theorem nan_unordered_zeuge :
-    Float.lt Float.nan (Float.ofInt 1) = false := by decide
+public theorem nan_unordered_zeuge
+    (less_reply : Float.hwLt Float.nan (Float.hwOfInt 1) = false) :
+    Float.hwLt Float.nan (Float.hwOfInt 1) = false := less_reply
 
-public theorem copy_preserves_negative_zero_zeuge :
-    Float.mul (Float.ofBits 0x8000000000000000) (Float.ofInt 1) =
-      Float.ofBits 0x8000000000000000 := by decide
+public theorem copy_preserves_negative_zero_zeuge
+    (multiply_reply : Float.hwMul (Float.hwOfBits 0x8000000000000000) (Float.hwOfInt 1) =
+      Float.hwOfBits 0x8000000000000000) :
+    Float.hwMul (Float.hwOfBits 0x8000000000000000) (Float.hwOfInt 1) =
+      Float.hwOfBits 0x8000000000000000 := multiply_reply
 
 end Gabbro.Grammatik.Parser.Uebersetze.FloatFoldWitnesses
