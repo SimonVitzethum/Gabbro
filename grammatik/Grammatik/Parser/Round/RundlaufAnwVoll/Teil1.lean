@@ -192,9 +192,11 @@ theorem parseStmt_ident (f : Nat) (a : String) (r : List Token)
       rcases hw with hw | hw
       · rw [if_pos hw] <;> exact placed
       · have e := fun w (hw' : istAnwWort w = true) => anwWort_strEq hw w hw'
-        split
-        · exact placed
-        · simpa only [e "let" rfl, e "if" rfl, e "match" rfl, e "traverse" rfl,
+        by_cases continued : istOrtsFort r = true
+        · rw [if_pos continued]
+          exact placed
+        · rw [if_neg continued]
+          simpa only [e "let" rfl, e "if" rfl, e "match" rfl, e "traverse" rfl,
             e "retry" rfl, e "forever" rfl, e "breaking" rfl, e "narrow" rfl,
             e "locks" rfl, e "observes" rfl, e "leave" rfl, e "next" rfl,
             e "return" rfl, e "reset" rfl, e "grow" rfl, e "free" rfl,
