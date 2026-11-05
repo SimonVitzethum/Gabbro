@@ -1,7 +1,7 @@
 /- Native conversion primitives and their actual word-code composition. -/
 module
 public import Stage0.Senke.Gleit.Native.Values
-public import NativeFloat.IntConversion
+public import NativeFloat.Hardware
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
@@ -20,7 +20,7 @@ theorem nativeIntegerFloatL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pr
     (source : WordCode (L := L) (reserved := reserved) ρ W child word) :
     NativeFloatCode (L := L) (reserved := reserved) ρ W
       (fun d => nativeIntegerFloatL signed d child)
-      (if signed then (Int64.ofBitVec word).toFloat else (UInt64.ofBitVec word).toFloat) := by
+      (if signed then (Int64.ofBitVec word).hwToFloat else (UInt64.ofBitVec word).hwToFloat) := by
   intro fp K d c top emitted fits m pc pre
   refine nativeFPWordL_ok (L := L) (reserved := reserved)
     (Pa := fun w => w = word) (Pb := fun w => w = (0 : Runner.W))
@@ -44,15 +44,15 @@ theorem nativeIntegerFloatL_source_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem
     (source : WordCode (L := L) (reserved := reserved) ρ W child (BitVec.ofInt 64 z)) :
     NativeFloatCode (L := L) (reserved := reserved) ρ W
       (fun d => nativeIntegerFloatL signed d child) (gleitAusInt z) := by
-  have value : (if signed then (Int64.ofBitVec (BitVec.ofInt 64 z)).toFloat
-      else (UInt64.ofBitVec (BitVec.ofInt 64 z)).toFloat) = gleitAusInt z := by
+  have value : (if signed then (Int64.ofBitVec (BitVec.ofInt 64 z)).hwToFloat
+      else (UInt64.ofBitVec (BitVec.ofInt 64 z)).hwToFloat) = gleitAusInt z := by
     cases signed
     · change 0 ≤ z ∧ z < 2 ^ 64 at bounds
       have word : UInt64.ofBitVec (BitVec.ofInt 64 z) = UInt64.ofNat z.toNat := by
         apply UInt64.eq_of_toBitVec_eq
         change BitVec.ofInt 64 z = BitVec.ofNat 64 z.toNat
         rw [← BitVec.ofInt_natCast, Int.toNat_of_nonneg bounds.1]
-      change (UInt64.ofBitVec (BitVec.ofInt 64 z)).toFloat = Float.ofInt z
+      change (UInt64.ofBitVec (BitVec.ofInt 64 z)).hwToFloat = Float.hwOfInt z
       rw [word]
       exact (RootNativeFloat.ofInt_unsigned64 z bounds.1 bounds.2).symm
     · change -(2 ^ 63) ≤ z ∧ z < 2 ^ 63 at bounds
@@ -69,7 +69,7 @@ theorem nativeFloatMulL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     (left : NativeFloatCode (L := L) (reserved := reserved) ρ W a x)
     (right : NativeFloatCode (L := L) (reserved := reserved) ρ W b y) :
     NativeFloatCode (L := L) (reserved := reserved) ρ W
-      (fun d => nativeFPWordL (.mul .f64) d (a d) (b (d + 1))) (Float.mul x y) := by
+      (fun d => nativeFPWordL (.mul .f64) d (a d) (b (d + 1))) (Float.hwMul x y) := by
   intro fp K d c top emitted fits m pc pre
   refine nativeFPWordL_ok (.mul .f64) (op_fp rfl) emitted fits
     (fun _ _ hc ht => left hc ht) (fun _ _ hc ht => right hc ht) ?_ pre

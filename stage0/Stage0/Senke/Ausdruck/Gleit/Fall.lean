@@ -28,8 +28,8 @@ theorem floatExprE_ok {fp : Runner.W} {K d top : Nat} {Γ : Ctx} {Λ : List (Res
       (fun ca ta he ht => iha _ ca ta he ht)
       (fun cb tb he ht => ihb _ cb tb he ht) ?_ hp
     intro wa wb ha hb
-    change wa = (eval σ₀ a σ ρ).x.toBits.toBitVec at ha
-    change wb = (eval σ₀ b σ ρ).x.toBits.toBitVec at hb
+    change wa = (eval σ₀ a σ ρ).x.hwToBits.toBitVec at ha
+    change wb = (eval σ₀ b σ ρ).x.hwToBits.toBitVec at hb
     subst wa; subst wb
     refine ⟨Runner.IR.bool (gleitLt (eval σ₀ a σ ρ).x (eval σ₀ b σ ρ).x), ?_, ?_⟩
     · simp only [Runner.NativeFPEval, Runner.nativeFP, Runner.NativeFPValue.Matches,
@@ -42,8 +42,8 @@ theorem floatExprE_ok {fp : Runner.W} {K d top : Nat} {Γ : Ctx} {Λ : List (Res
       (fun cb tb he ht => ihb _ cb tb he ht)
       (fun ca ta he ht => iha _ ca ta he ht) ?_ hp
     intro wb wa hb ha
-    change wa = (eval σ₀ a σ ρ).x.toBits.toBitVec at ha
-    change wb = (eval σ₀ b σ ρ).x.toBits.toBitVec at hb
+    change wa = (eval σ₀ a σ ρ).x.hwToBits.toBitVec at ha
+    change wb = (eval σ₀ b σ ρ).x.hwToBits.toBitVec at hb
     subst wa; subst wb
     refine ⟨Runner.IR.bool (gleitLe (eval σ₀ b σ ρ).x (eval σ₀ a σ ρ).x), ?_, ?_⟩
     · simp only [Runner.NativeFPEval, Runner.nativeFP, Runner.NativeFPValue.Matches,

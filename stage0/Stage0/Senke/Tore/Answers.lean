@@ -6,16 +6,16 @@ public import Stage0.Senke.Ausdruck.Referenz.Proben
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
-variable {D : Deklaration}
+variable [RootNativeFloat.Hardware] {D : Deklaration}
 
 /-- **Witness** (the assumption is not empty): a kernel that may give any answer, and an oracle that leaves the
     world and answers 0, meet it for every layout. -/
 theorem torOK_zeuge (L : Lay D) (O : Orakel D) (hO : ∀ a σ ρ, O.wirkt a σ ρ = (σ, 0))
     (href : ∀ a n, D.aerg a = some (.ref n) → L.tor a ≠ none →
       ValueValid L (.ref n) (Val.vonZelle 0))
-    (harea : @AreaContract ⟨fun _ _ _ _ => True⟩ D L O) :
-    @TorOK ⟨fun _ _ _ _ => True⟩ D L O := by
-  letI : Kern := ⟨fun _ _ _ _ => True⟩
+    (harea : @AreaContract { toHardware := inferInstance, ans := fun _ _ _ _ => True } D L O) :
+    @TorOK { toHardware := inferInstance, ans := fun _ _ _ _ => True } D L O := by
+  letI : Kern := { toHardware := inferInstance, ans := fun _ _ _ _ => True }
   refine ⟨fun a b _ _ _ σ ρ q m _ _ _ hW => ⟨0, 0, m, trivial, ⟨rfl, rfl, fun _ _ => rfl⟩, ?_, ?_⟩,
     fun a b _ _ j nt rw t f _ _ _ hτ σ ρ q m _ _ _ hW hB => ⟨0, 0, m, trivial, rfl, rfl, fun _ _ => rfl, ?_, ?_, ?_⟩, ?_, harea⟩
   · rw [hO]; exact hW
@@ -54,6 +54,7 @@ theorem torOK_zeuge (L : Lay D) (O : Orakel D) (hO : ∀ a σ ρ, O.wirkt a σ �
 end Gabbro.Stage0.Senke
 
 namespace Gabbro.Stage0.Senke.ForeignAnswers
+variable [RootNativeFloat.Hardware]
 open Gabbro.Grammatik Runner.IR
 set_option maxRecDepth 100000
 set_option maxHeartbeats 2000000
@@ -170,7 +171,7 @@ theorem reference_function_zeuge :
 /-- The new provider premise is jointly satisfiable on a real represented
     region; it is not hidden in an impossible reference layout. -/
 theorem reference_contract_zeuge :
-    @TorOK ⟨fun _ _ _ _ => True⟩ GRegion.rD ReferenceProbe.layout (GRegion.oK 0) := by
+    @TorOK { toHardware := inferInstance, ans := fun _ _ _ _ => True } GRegion.rD ReferenceProbe.layout (GRegion.oK 0) := by
   refine torOK_zeuge _ _ (by intro a σ ρ; rfl) ?_ ?_
   · intro a n type bound
     have same : n = 0 := by

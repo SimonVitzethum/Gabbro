@@ -26,7 +26,7 @@ theorem floatRangeL_ok {fp : Runner.W} {K d top : Nat} {Γ : Ctx} {Λ : List (Re
     Ok m pc fp K d c (· = Runner.IR.bool (floatRangeReject lo hi (eval σ₀ e σ ρ).x)) := by
   exact nativeFloatRangeL_at_ok lo hi (eval σ₀ e σ ρ).x
     (fun j code ceiling hc ht m pc pre => (ih j code ceiling hc ht m pc pre).mono
-      (fun w hw => by rw [show w = (eval σ₀ e σ ρ).x.toBits.toBitVec from hw]; exact nativeFloat_read_word _))
+      (fun w hw => by rw [show w = (eval σ₀ e σ ρ).x.hwToBits.toBitVec from hw]; exact nativeFloat_read_word _))
     h hK hp
 
 end Gabbro.Stage0.Senke

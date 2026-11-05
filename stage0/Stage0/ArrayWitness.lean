@@ -68,7 +68,9 @@ theorem arrayMeaning_collected_zeuge :
   rw [he] at hm ht
   exact ⟨name, Frontend.arrayMeaning_collected _ _ name element count payload hm ht⟩
 
-local instance kernel : Runner.IR.Kern := ⟨fun _ _ _ _ => True⟩
+variable [RootNativeFloat.Hardware]
+
+local instance kernel : Runner.IR.Kern := { toHardware := inferInstance, ans := fun _ _ _ _ => True }
 local instance clone : Senke.CloneOK where
   ans _ := ⟨1, 0, by decide, trivial⟩
 

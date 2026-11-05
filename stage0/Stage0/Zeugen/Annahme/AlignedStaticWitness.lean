@@ -38,7 +38,9 @@ namespace Gabbro.Stage0.AlignedStaticWitness
 set_option maxRecDepth 2000
 set_option maxHeartbeats 400000
 
-local instance kernel : Runner.IR.Kern := ⟨fun _ _ _ _ => True⟩
+variable [RootNativeFloat.Hardware]
+
+local instance kernel : Runner.IR.Kern := { toHardware := inferInstance, ans := fun _ _ _ _ => True }
 
 def text : String :=
   "module aligned16_probe { static VALUE : u32 = 1 aligned 16; impl fn main() -> u64 in 0 .. 100 { return 23; } }"

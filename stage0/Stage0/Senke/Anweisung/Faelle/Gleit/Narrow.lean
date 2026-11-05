@@ -71,10 +71,10 @@ theorem blockFloatNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : N
       | some v =>
         have hvx := floatPasst_x hv
         have encoded : encodeWords L (.fl low' high') v =
-            [v.x.toBits.toBitVec] := by
+            [v.x.hwToBits.toBitVec] := by
           rw [encodeWords.eq_def L (.fl low' high') v]
         have sourceEncoded : encodeWords L (.fl low high) (eval σr e σr ρ) =
-            [(eval σr e σr ρ).x.toBits.toBitVec] := by
+            [(eval σr e σr ρ).x.hwToBits.toBitVec] := by
           rw [encodeWords.eq_def L (.fl low high) (eval σr e σr ρ)]
         refine bindValue_ok (L := L) (τ := .fl low' high') (v := v) hW hlo hlo0 hlo2 hpr (by omega) ?_ ?_ hp' hu' hk' hw'
         · intro m pc hp
@@ -86,7 +86,7 @@ theorem blockFloatNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : N
             (by simp only [frei, contextWords_cons] at hlo2 ⊢; omega) hu hk hw
             (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega)
   · next hnan =>
-    have hn : (bruch low').isNaN = true ∨ (bruch high').isNaN = true := by
+    have hn : (bruch low').hwIsNaN = true ∨ (bruch high').hwIsNaN = true := by
       simp only [Bool.and_eq_true, decide_eq_true_eq] at hnan
       apply Classical.byContradiction
       intro absent

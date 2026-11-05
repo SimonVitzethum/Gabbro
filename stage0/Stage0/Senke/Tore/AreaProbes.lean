@@ -149,6 +149,7 @@ theorem missing_area_refused_zeuge :
 end Gabbro.Stage0.Senke.ForeignAreaProbe
 
 namespace Gabbro.Stage0.Senke.ForeignAreaContractWitness
+variable [RootNativeFloat.Hardware]
 open Gabbro.Grammatik Runner.IR Runner.Mem ForeignAreaProbe
 abbrev D := ForeignAreaProbe.D 96 false
 def layout : Lay D := layU (u 96 false) (fun _ => some (binding false)) 0
@@ -158,8 +159,8 @@ def value : Wert D (answerTy 96) := ⟨2 ^ 80, by decide, by decide⟩
 /-- This is an explicit software service witness on the abstract runner
     relation, not a claim that a host system call implements this provider. -/
 theorem area_contract_zeuge :
-    @AreaContract ⟨fun _ _ _ _ => True⟩ D layout provider := by
-  letI : Kern := ⟨fun _ _ _ _ => True⟩
+    @AreaContract { toHardware := inferInstance, ans := fun _ _ _ _ => True } D layout provider := by
+  letI : Kern := { toHardware := inferInstance, ans := fun _ _ _ _ => True }
   intro a b τ he j bound accepted σ ρ request m fp base K frame capacity separated below
     number arguments hidden unused world
   obtain ⟨a, ha⟩ := a
@@ -213,8 +214,8 @@ theorem area_contract_zeuge :
 
 /-- The exact layout/oracle pair jointly satisfies all inherited gate
     premises. Register-only obligations are impossible for an area profile. -/
-theorem gate_contract_zeuge : @TorOK ⟨fun _ _ _ _ => True⟩ D layout provider := by
-  letI : Kern := ⟨fun _ _ _ _ => True⟩
+theorem gate_contract_zeuge : @TorOK { toHardware := inferInstance, ans := fun _ _ _ _ => True } D layout provider := by
+  letI : Kern := { toHardware := inferInstance, ans := fun _ _ _ _ => True }
   refine ⟨?_, ?_, ?_, area_contract_zeuge⟩
   · intro a b bound accepted
     have same : some (binding false) = some b := bound

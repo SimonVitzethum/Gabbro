@@ -11,9 +11,9 @@ variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 
 /-- This is an execution witness in the native relation. It does not assert that
     every CPU NaN answer has the representative's bits. -/
-theorem nativeArithmetic_eval (op : GleitOp) (a b : GFloat) :
-    Runner.NativeFPEval (nativeArithmeticOp op) a.toBits.toBitVec b.toBits.toBitVec
-      (gleitRechne op a b).toBits.toBitVec := by
+theorem nativeArithmetic_eval [RootNativeFloat.Hardware] (op : GleitOp) (a b : GFloat) :
+    Runner.NativeFPEval (nativeArithmeticOp op) a.hwToBits.toBitVec b.hwToBits.toBitVec
+      (gleitRechne op a b).hwToBits.toBitVec := by
   cases op <;>
     simp only [nativeArithmeticOp, Runner.NativeFPEval, Runner.nativeFP,
       Runner.NativeFPValue.Matches, nativeFloat_read_word, gleitRechne]
@@ -30,8 +30,8 @@ abbrev NativeFloatCode (ρ : Env D Γ) (W : Runner.Mem → Prop)
     decoded value until an accepted binder establishes its finite encoding. -/
 theorem floatWordsL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     (op : GleitOp) (x y : GFloat) {a b : Nat → Option (List II × Nat)}
-    (ha : WordCode (L := L) (reserved := reserved) ρ W a x.toBits.toBitVec)
-    (hb : WordCode (L := L) (reserved := reserved) ρ W b y.toBits.toBitVec) :
+    (ha : WordCode (L := L) (reserved := reserved) ρ W a x.hwToBits.toBitVec)
+    (hb : WordCode (L := L) (reserved := reserved) ρ W b y.hwToBits.toBitVec) :
     NativeFloatCode (L := L) (reserved := reserved) ρ W
       (fun d => floatWordsL op d a b) (gleitRechne op x y) := by
   intro fp K d c top h hK m pc hp

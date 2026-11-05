@@ -6,23 +6,17 @@ public import Stage0.Senke.Ausdruck.Gleit.Fall
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik
 
-private theorem native_nan_le (a b : Float) (h : a.isNaN = true) : Float.le a b = false := by
-  change a.toModel.unpack.isNaN = true at h
-  change a.toModel.unpack.le b.toModel.unpack = false
-  cases ha : a.toModel.unpack <;>
-    simp only [ha, Float.Model.UnpackedFloat.isNaN, Bool.false_eq_true] at h
-  all_goals rfl
+private theorem native_nan_le [RootNativeFloat.Hardware]
+    (a b : Float) (h : a.hwIsNaN = true) : Float.hwLe a b = false :=
+  RootNativeFloat.nan_le a b h
 
-private theorem native_le_nan (a b : Float) (h : b.isNaN = true) : Float.le a b = false := by
-  change b.toModel.unpack.isNaN = true at h
-  change a.toModel.unpack.le b.toModel.unpack = false
-  cases hb : b.toModel.unpack <;>
-    simp only [hb, Float.Model.UnpackedFloat.isNaN, Bool.false_eq_true] at h
-  all_goals cases a.toModel.unpack <;> rfl
+private theorem native_le_nan [RootNativeFloat.Hardware]
+    (a b : Float) (h : b.hwIsNaN = true) : Float.hwLe a b = false :=
+  RootNativeFloat.le_nan a b h
 
 /-- A NaN endpoint still selects the existing terminating fallback. -/
-theorem floatPasst_nan_bound {lo hi : Int × Int} (x : GFloat)
-    (hn : (bruch lo).isNaN = true ∨ (bruch hi).isNaN = true) :
+theorem floatPasst_nan_bound [RootNativeFloat.Hardware] {lo hi : Int × Int} (x : GFloat)
+    (hn : (bruch lo).hwIsNaN = true ∨ (bruch hi).hwIsNaN = true) :
     gleitPasst lo hi x = none := by
   rcases hn with hn | hn
   · simp [gleitPasst, gleitLe, native_nan_le _ _ hn]

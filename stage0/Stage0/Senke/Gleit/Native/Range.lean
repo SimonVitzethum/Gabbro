@@ -1,6 +1,6 @@
 /- The actual native-result range guard, with the original complete frame ABI. -/
 module
-public import NativeFloat.Transport
+public import NativeFloat.Hardware
 public import Stage0.Senke.Gleit.Native.Values
 public import Stage0.Senke.Ausdruck.Gleit.Bereich
 @[expose] public section
@@ -10,7 +10,7 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 
 private theorem finite_mask (word : Runner.W) :
-    (Runner.readFloat word).isFinite = !((word &&& (0x7ff0000000000000 : Runner.W)) ==
+    (Runner.readFloat word).hwIsFinite = !((word &&& (0x7ff0000000000000 : Runner.W)) ==
       (0x7ff0000000000000 : Runner.W)) := by
   have h := RootNativeFloat.finite_word_mask (UInt64.ofBitVec word)
   have same : (((UInt64.ofBitVec word) &&& 0x7ff0000000000000) == 0x7ff0000000000000) =
@@ -20,7 +20,7 @@ private theorem finite_mask (word : Runner.W) :
     simp only [beq_iff_eq, ← UInt64.toBitVec_inj, UInt64.toBitVec_and,
       UInt64.toBitVec_ofBitVec]
     rfl
-  change (Runner.readFloat word).isFinite =
+  change (Runner.readFloat word).hwIsFinite =
     !(((UInt64.ofBitVec word) &&& 0x7ff0000000000000) == 0x7ff0000000000000) at h
   rwa [same] at h
 
@@ -50,7 +50,7 @@ theorem nativeFloatRangeL_at_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → P
   have constant (v : GFloat) : proves (fun j => some (floatConstL v j)) (fun w => Runner.readFloat w = v) := by
     intro j code ceiling hc ht m pc hp
     cases hc
-    exact (konstWL_ok 4 v.toBits.toNat (by exact v.toBits.toBitVec.isLt)
+    exact (konstWL_ok 4 v.hwToBits.toNat (by exact v.hwToBits.toBitVec.isLt)
       (by simp only [floatConstL, konstWL, bin2] at ht; omega) hp).mono
         (fun w hw => by
           rw [hw]
@@ -91,7 +91,7 @@ theorem nativeFloatRangeL_at_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → P
       refine ⟨_, rfl, ?_⟩
       have finite := finite_mask original
       rw [decoded] at finite
-      rw [show gleitEndlich x = x.isFinite from rfl, finite, Bool.not_not])
+      rw [show gleitEndlich x = x.hwIsFinite from rfl, finite, Bool.not_not])
     rfl (by decide : 14 < 256)
   have inverted := binary equal one (g := fun a b => some (a ^^^ b))
     (P := fun w => w = Runner.IR.bool (gleitEndlich x))

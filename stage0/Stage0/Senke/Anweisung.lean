@@ -183,8 +183,8 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
     pure (elseC (D.signatur f) ((frei Γ reserved)) (callC A f ((frei Γ reserved)) ca.1) cr.1 ce.1,
       elseTop f ((frei Γ reserved)) ca.2 cr.2 ce.2)
   | _, Γ, _, _, .floatNarrow e low high err rest, reserved =>
-    if decide ((bruch low).isNaN = false) &&
-        decide ((bruch high).isNaN = false) then do
+    if decide ((bruch low).hwIsNaN = false) &&
+        decide ((bruch high).hwIsNaN = false) then do
       let cc ← floatRangeL ((frei Γ reserved)) low high (lowE (reserved := reserved) L e)
       let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
       let cr ← lowB (reserved := reserved) passes A L layout ens pr ex rest
@@ -434,8 +434,8 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) 
   | _, Γ, _, .retScoped e _, reserved => lowRetScoped L layout ens (frei Γ reserved) e reserved
   | _, Γ, _, .retWhyScoped r _, reserved => lowRetWhyScoped layout r (frei Γ reserved)
   | _, Γ, _, .floatNarrow e low high err rest, reserved =>
-    if decide ((bruch low).isNaN = false) &&
-        decide ((bruch high).isNaN = false) then do
+    if decide ((bruch low).hwIsNaN = false) &&
+        decide ((bruch high).hwIsNaN = false) then do
       let cc ← floatRangeL (frei Γ reserved) low high (lowE (reserved := reserved) L e)
       let ce ← lowE (reserved := reserved) L e (frei Γ reserved)
       let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest

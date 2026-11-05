@@ -36,7 +36,7 @@ def encodeWords (L : Lay D) : (τ : Ty) → Wert D τ → List Runner.W
   | .str n, v => if n ≤ 1 then [BitVec.ofNat 64 (strN v.1)] else
       BitVec.ofNat 64 v.1.length :: v.1.map (fun b => BitVec.ofInt 64 b.n) ++
         List.replicate (n - v.1.length) 0
-  | .fl _ _, v => [v.x.toBits.toBitVec]
+  | .fl _ _, v => [v.x.hwToBits.toBitVec]
   | .ptr _, _ => [0]
   | .never, v => nomatch v
 

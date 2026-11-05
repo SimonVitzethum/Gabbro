@@ -1,18 +1,17 @@
 /- Complete source integers are converted by native CPU instructions. -/
 module
 public import Stage0.Senke.Gleit.Native.SourceCode
-public import NativeFloat.IntScaling
+public import NativeFloat.Hardware
 import all Init.Data.Nat.Bitwise.Basic
-import all Init.Data.SInt.Float
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 
-private theorem wideFloat_numeric (z : Int) (big : 2 ^ 55 ≤ z.natAbs) :
-    Float.mul
-      (Int64.ofInt (integerFloatJam z.natAbs (integerFloatShift z.natAbs) : Int)).toFloat
-      (Float.ofBits (UInt64.ofNat ((if z < 0 then 2 ^ 63 else 0) +
+private theorem wideFloat_numeric [RootNativeFloat.Hardware] (z : Int) (big : 2 ^ 55 ≤ z.natAbs) :
+    Float.hwMul
+      (Int64.ofInt (integerFloatJam z.natAbs (integerFloatShift z.natAbs) : Int)).hwToFloat
+      (Float.hwOfBits (UInt64.ofNat ((if z < 0 then 2 ^ 63 else 0) +
         (integerFloatIndex z.natAbs - 55) * 2 ^ 52))) = gleitAusInt z := by
   dsimp only [gleitAusInt, integerFloatJam, integerFloatShift, integerFloatIndex]
   exact (RootNativeFloat.ofInt_jam56 z big).symm
@@ -20,7 +19,7 @@ private theorem wideFloat_numeric (z : Int) (big : 2 ^ 55 ≤ z.natAbs) :
 private theorem wideFloat_power_decode (z : Int) (index : Nat) (word : Runner.W)
     (encoded : word = BitVec.ofNat 64 ((if decide (z < 0) then 2 ^ 63 else 0) +
       (index - 55) * 2 ^ 52)) :
-    Runner.readFloat word = Float.ofBits (UInt64.ofNat ((if z < 0 then 2 ^ 63 else 0) +
+    Runner.readFloat word = Float.hwOfBits (UInt64.ofNat ((if z < 0 then 2 ^ 63 else 0) +
       (index - 55) * 2 ^ 52)) := by
   have sign : (if decide (z < 0) then 2 ^ 63 else 0 : Nat) =
       (if z < 0 then 2 ^ 63 else 0) := by
@@ -32,7 +31,7 @@ private theorem wideFloat_power_decode (z : Int) (index : Nat) (word : Runner.W)
     apply UInt64.eq_of_toBitVec_eq
     rw [UInt64.toBitVec_ofBitVec, UInt64.toBitVec_ofNat']
   unfold Runner.readFloat
-  exact congrArg Float.ofBits bits
+  exact congrArg Float.hwOfBits bits
 
 variable [Kern] {D : Deklaration} {L : Lay D}
 
@@ -103,8 +102,8 @@ private theorem wideComputedFloatOfE_value_ok {Γ : Ctx} {Λ : List (Res D)}
     rw [WideFloat.index_value (σ₀ := σ₀) (σ := σ) (ρ := ρ) (e := e) bound big,
       BitVec.ofInt_natCast] at index
     let retainedValue : Float :=
-      (Int64.ofInt (integerFloatJam z.natAbs (integerFloatShift z.natAbs) : Int)).toFloat
-    let powerValue : Float := Float.ofBits (UInt64.ofNat ((if z < 0 then 2 ^ 63 else 0) +
+      (Int64.ofInt (integerFloatJam z.natAbs (integerFloatShift z.natAbs) : Int)).hwToFloat
+    let powerValue : Float := Float.hwOfBits (UInt64.ofNat ((if z < 0 then 2 ^ 63 else 0) +
       (integerFloatIndex z.natAbs - 55) * 2 ^ 52))
     have converted : NativeFloatCode (L := L) (reserved := reserved) ρ W
         (fun j => nativeIntegerFloatL true j
@@ -137,7 +136,7 @@ private theorem wideComputedFloatOfE_value_ok {Γ : Ctx} {Λ : List (Res D)}
           (nativeIntegerFloatL true j (fun d => lowE L (WideFloat.guard w e) d reserved))
           (nativeFloatScaleL (j + 1) (fun d => lowE L (.lt e (.lit 0)) d reserved)
             (fun d => lowE L (WideFloat.index w e) d reserved)))
-        (Float.mul retainedValue powerValue) := by
+        (Float.hwMul retainedValue powerValue) := by
       intro fp K d c top hc ht m pc pre
       exact nativeFloatMulL_ok
         (a := fun (j : Nat) => nativeIntegerFloatL true j
@@ -146,7 +145,7 @@ private theorem wideComputedFloatOfE_value_ok {Γ : Ctx} {Λ : List (Res D)}
           (fun (k : Nat) => lowE L (.lt e (.lit 0)) k reserved)
           (fun (k : Nat) => lowE L (WideFloat.index w e) k reserved))
         (x := retainedValue) (y := powerValue) converted power hc ht m pc pre
-    have numeric : Float.mul retainedValue powerValue = gleitAusInt z := wideFloat_numeric z big
+    have numeric : Float.hwMul retainedValue powerValue = gleitAusInt z := wideFloat_numeric z big
     intro fp K d c top hc ht m pc pre
     exact (multiplied hc ht m pc pre).mono (fun word decoded => decoded.trans numeric)
   have chosen : NativeFloatCode (L := L) (reserved := reserved) ρ W
@@ -174,7 +173,7 @@ theorem wideComputedFloatOfE_ok {Γ : Ctx} {Λ : List (Res D)}
     {ρ : Env D Γ} {W : Runner.Mem → Prop} (world : ∀ m, W m → WeltAt m L σ)
     (reserved : Nat) :
     WordCode (L := L) (reserved := reserved) ρ W (fun d => wideComputedFloatOfE L e d reserved)
-      (gleitAusInt (eval σ₀ e σ ρ).n).toBits.toBitVec := by
+      (gleitAusInt (eval σ₀ e σ ρ).n).hwToBits.toBitVec := by
   intro fp K d c top hc ht m pc pre
   exact (wideComputedFloatOfE_value_ok e same lay world reserved hc ht m pc pre).mono
     (fun word decoded => nativeFloat_word_eq_nonNaN (RootNativeFloat.ofInt_not_nan _) decoded)
@@ -188,7 +187,7 @@ theorem computedFloatOfE_ok {Γ : Ctx} {Λ : List (Res D)}
     (hc : computedFloatOfE L e d reserved = some (code, top))
     (hp : Pre L m pc fp K d code ρ W reserved) (ht : top ≤ K)
     (lay : LayIn L) (same : σ₀ = σ) (world : ∀ m, W m → WeltAt m L σ) :
-    Ok m pc fp K d code (· = (gleitAusInt (eval σ₀ e σ ρ).n).toBits.toBitVec) := by
+    Ok m pc fp K d code (· = (gleitAusInt (eval σ₀ e σ ρ).n).hwToBits.toBitVec) := by
   have child : WordCode (L := L) (reserved := reserved) ρ W
       (fun j => lowE L e j reserved) (BitVec.ofInt 64 (eval σ₀ e σ ρ).n) := by
     intro fp K d c top he ht m pc pre

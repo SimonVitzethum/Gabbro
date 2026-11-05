@@ -11,10 +11,12 @@ namespace Gabbro.Stage0.Senke.WaitProbe
 open Gabbro.Grammatik Runner Runner.IR Runner.Mem
 open ContendedProbe (layout)
 set_option maxRecDepth 100000
+variable [RootNativeFloat.Hardware]
 
 /-- A concrete allowed schedule at WAIT: the foreign holder completes release.
     WAKE returns zero. The rest of memory is unchanged by either call. -/
 abbrev releaseKernel : Kern where
+  toHardware := inferInstance
   ans q m answer mr := answer = some (0, 0) ∧
     ((q = futexReq 8192 128 2 ∧ mr = write (write m 8192 8 0) 8200 8 0) ∨
      (q = futexReq 8192 129 1 ∧ mr = m))

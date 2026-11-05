@@ -148,7 +148,9 @@ theorem table_count : output.compiled.unit.tabs.map (·.count) = [2 ^ 32] := by 
 
 def world : World D := Senke.initialWorld output.compiled.unit output.initialValid
 
-local instance kernel : Runner.IR.Kern := ⟨fun _ _ _ _ => True⟩
+variable [RootNativeFloat.Hardware]
+
+local instance kernel : Runner.IR.Kern := { toHardware := inferInstance, ans := fun _ _ _ _ => True }
 local instance clone : Senke.CloneOK where
   ans _ := ⟨1, 0, by decide, trivial⟩
 

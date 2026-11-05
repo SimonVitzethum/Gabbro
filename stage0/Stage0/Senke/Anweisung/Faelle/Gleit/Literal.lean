@@ -1,4 +1,4 @@
-/- Literal rounding is performed in Lean; the IR only materialises the resulting bits. -/
+/- The compiler materializes the opaque canonical literal's hardware word. -/
 module
 public import Grammatik.Kern.Syntax.Typen.FloatLiteral
 public import Stage0.Senke.Anweisung.Faelle.Gleit.Bind
@@ -40,9 +40,9 @@ theorem blockFloatLit_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     simp only [Prod.mk.injEq] at hc
     obtain ⟨rfl, rfl⟩ := hc
     have hx : v.x = bruch q := by unfold gleitPasst at hv; split at hv <;> cases hv; rfl
-    have hb : v.x.toBits.toNat < 65536 ^ 4 := by exact v.x.toBits.toBitVec.isLt
-    let cw := konstWL 4 (bruch q).toBits.toNat (frei Γ reserved)
-    have ht := konstWL_top 4 (bruch q).toBits.toNat (frei Γ reserved)
+    have hb : v.x.hwToBits.toNat < 65536 ^ 4 := by exact v.x.hwToBits.toBitVec.isLt
+    let cw := konstWL 4 (bruch q).hwToBits.toNat (frei Γ reserved)
+    have ht := konstWL_top 4 (bruch q).hwToBits.toNat (frei Γ reserved)
     have hks := hW.ks
     have htop : frei Γ reserved + 2 ≤ max cw.2 tr := by simp only [cw, konstWL, bin2]; omega
     change max cw.2 tr + cap ≤ Ks at hK
@@ -52,7 +52,7 @@ theorem blockFloatLit_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
       refine Ok.value (width := rfl) ?_
       exact (konstWL_ok 4 _ (by simpa only [hx] using hb) (by omega) hp).mono
         fun w hen => by
-          change w = v.x.toBits.toBitVec
+          change w = v.x.hwToBits.toBitVec
           rw [hx, hen, ← UInt64.toNat_toBitVec, BitVec.ofNat_toNat, BitVec.setWidth_eq]
     · intro m pc hp hu hk hw
       exact ihRest (ex := ex) cr tr hr (by omega)

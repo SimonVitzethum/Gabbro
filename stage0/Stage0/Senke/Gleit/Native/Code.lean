@@ -32,7 +32,7 @@ def floatExprL (le : Bool) (d : Nat)
 
 /-- Constants are compiler inputs; executing their code only materializes bits. -/
 def floatConstL (x : GFloat) (d : Nat) : List II × Nat :=
-  konstWL 4 x.toBits.toNat d
+  konstWL 4 x.hwToBits.toNat d
 
 /-- Finiteness is an integer mask test, not an additional floating request. -/
 def nativeFloatFiniteL (d : Nat) (e : Nat → Option (List II × Nat)) :

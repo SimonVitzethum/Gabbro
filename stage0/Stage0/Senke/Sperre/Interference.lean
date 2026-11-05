@@ -74,7 +74,6 @@ theorem foreign_frame_zeuge {D : Deklaration} (L : Lay D) :
     FrameOK m' 4096 7 ∧ EnvAt L m' 4096 ValueProbe.env ∧
     encodeWords L ValueProbe.shape (ValueProbe.value (D := D)) = [1, 2, 3] := by
   intro m m'
-  letI : Kern := futexKernel
   have interference : AgreeK 6144 4 8192 m m' :=
     (agreeK_slot (fp := 6144) (s := 4) (a := 8192) (d := 0)
       (by decide) (by decide) 99).trans
