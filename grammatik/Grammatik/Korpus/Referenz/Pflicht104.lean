@@ -244,11 +244,15 @@ theorem oblig_S_lokal : Zielsatz.SperrInvLokal G104_referenz_oblig.gS :=
     carriers the axiom declares. -/
 theorem oblig_ax_lokal : AxEnsLokal (axWahr G104_referenz_oblig.gD) := axEnsLokal_wahr
 
-/-- **THE BODIES' LOGIC**, all three conjuncts together. -/
+/-- The exported targets require true; their pointer interfaces retain the actual defaults. -/
+theorem oblig_ptr_verfeinert : PtrVerfeinert G104_referenz_oblig.gP :=
+  ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)
+
+/-- **THE BODIES' LOGIC**, all conjuncts together. -/
 theorem oblig_logik : Zielsatz.LogikPflicht G104_referenz_oblig.gE.P
     G104_referenz_oblig.gE.S G104_referenz_oblig.gE.Q :=
   ⟨fun passes f => ⟨oblig_koerper passes f, oblig_inv passes f, oblig_invGrund passes f⟩,
-    oblig_S_lokal, oblig_ax_lokal⟩
+    oblig_S_lokal, oblig_ax_lokal, oblig_ptr_verfeinert⟩
 
 /-! ## 3. The start obligation, and the whole duty -/
 

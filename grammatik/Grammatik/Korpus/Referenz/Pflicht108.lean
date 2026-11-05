@@ -183,10 +183,14 @@ theorem p108_S_lokal : Zielsatz.SperrInvLokal G108_disjoint_start_locks_oblig.gS
     only the carriers the axiom declares. -/
 theorem p108_ax_lokal : AxEnsLokal (axWahr G108_disjoint_start_locks_oblig.gD) := axEnsLokal_wahr
 
+/-- The exported targets require true; their pointer interfaces retain the actual defaults. -/
+theorem p108_ptr_verfeinert : PtrVerfeinert G108_disjoint_start_locks_oblig.gP :=
+  ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)
+
 theorem p108_logik : Zielsatz.LogikPflicht G108_disjoint_start_locks_oblig.gE.P
     G108_disjoint_start_locks_oblig.gE.S G108_disjoint_start_locks_oblig.gE.Q :=
   ⟨fun passes f => ⟨p108_koerper passes f, p108_inv passes f, p108_invGrund passes f⟩,
-    p108_S_lokal, p108_ax_lokal⟩
+    p108_S_lokal, p108_ax_lokal, p108_ptr_verfeinert⟩
 
 /-! ## 3. The start obligation -- NOT vacuous here -/
 
