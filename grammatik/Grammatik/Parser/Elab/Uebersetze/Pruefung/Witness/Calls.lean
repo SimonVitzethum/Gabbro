@@ -39,17 +39,20 @@ private theorem check_arguments_nil (u : UProg) (caller : Fin u.fns.length)
 -- both error branches. The tail is the actual canonical recursive collector.
 private theorem check_arguments_cons (u : UProg) (caller : Fin u.fns.length)
     (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u)))
-    (kind : UParamArt) (kinds : List UParamArt) (ty : Ty) (types : List Ty)
+    (kind : UParamArt) (kinds : List UParamArt) (types : List Ty)
     (argument : UArg) (arguments : List UArg) :
-    lowCallArgsAuxL u caller Γ fn Λ (kind :: kinds) (ty :: types)
+    lowCallArgsAuxL u caller Γ fn Λ (kind :: kinds) types
       (argument :: arguments) =
-      match lowCallArgOneL u caller Γ fn Λ kind ty argument with
-      | .error error => .error error
-      | .ok term =>
-        match lowCallArgsAuxL u caller Γ fn Λ kinds types arguments with
+      match types with
+      | [] => .error "argument count without G form"
+      | ty :: restTypes =>
+        match lowCallArgOneL u caller Γ fn Λ kind ty argument with
         | .error error => .error error
-        | .ok rest => .ok (Args.cons term rest) := by
-  rfl
+        | .ok term =>
+          match lowCallArgsAuxL u caller Γ fn Λ kinds restTypes arguments with
+          | .error error => .error error
+          | .ok rest => .ok (Args.cons term rest) := by
+  cases types <;> rfl
 
 -- Equality transport is proved before the actual unit is substituted. The
 -- result selector reads the recorded result, with the canonical erg_eq proof
