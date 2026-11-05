@@ -214,14 +214,11 @@ private theorem lowVar_same_head (Γ : Ctx) (ty : Ty) :
     lowVar (ty :: Γ) 0 ty = .ok (.here : Var (ty :: Γ) ty) := by
   unfold lowVar
   rw [dite_eq_left (rfl : ty = ty)]
-  exact eq_of_heq (cast_heq _ _)
+  rfl
 
 private theorem lowVar_next_head (Γ : Ctx) (head ty : Ty) :
     lowVar (head :: ty :: Γ) 1 ty = .ok (.there .here : Var (head :: ty :: Γ) ty) := by
-  change (match lowVar (ty :: Γ) 0 ty with
-    | .error error => Except.error error
-    | .ok value => Except.ok (Var.there value)) =
-      Except.ok (.there .here : Var (head :: ty :: Γ) ty)
+  rw [lowVar]
   rw [lowVar_same_head]
 
 private theorem relation_table_guard :
@@ -265,6 +262,7 @@ theorem reach_lower_zeuge :
         "next").toOption.isSome = true := rfl
     cases typed : selfEdge relationUnit (⟨0, by decide⟩ : Fin relationUnit.tabs.length) "next" with
     | error error =>
+      rw [typed] at ready
       change false = true at ready
       cases ready
     | ok edge =>
