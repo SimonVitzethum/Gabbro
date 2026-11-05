@@ -127,4 +127,3 @@ theorem increment_five_value :
   rfl
 
 end Gabbro.Stage0.Frontend.ConstPhases
-

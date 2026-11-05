@@ -145,4 +145,3 @@ def fragment29 : ScanPiece ['C', 'h', 'o', 'i', 'c', 'e', ' ', '{', ' ', 'r', 'e
   cbv
 
 end Gabbro.Stage0.Frontend.ConstPhases
-

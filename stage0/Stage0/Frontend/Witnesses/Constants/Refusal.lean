@@ -83,4 +83,3 @@ theorem blockText_compile_refused :
   simp only [compile, refused, bind, Except.bind, Except.toOption, Option.isSome]
 
 end Gabbro.Stage0.Frontend.ConstPhases
-

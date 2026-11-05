@@ -111,4 +111,3 @@ theorem compiled {text : String} (header : Header text) (body : Body header) :
   exact ⟨_, rfl, rfl⟩
 
 end Gabbro.Stage0.Frontend.ConstPhases
-

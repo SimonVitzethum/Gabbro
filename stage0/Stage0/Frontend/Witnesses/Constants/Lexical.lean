@@ -90,4 +90,3 @@ theorem blockText_lexed :
   exact blockTextScan.lexed (by cbv)
 
 end Gabbro.Stage0.Frontend.ConstPhases
-

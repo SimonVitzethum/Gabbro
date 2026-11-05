@@ -55,4 +55,3 @@ theorem lowered {unit : UProg} (noInvs : unit.invs = [])
   | ok pair => exact ⟨pair.1, pair.2, actual⟩
 
 end Gabbro.Stage0.Frontend.ConstPhases
-
