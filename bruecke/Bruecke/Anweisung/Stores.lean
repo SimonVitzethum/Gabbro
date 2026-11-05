@@ -107,7 +107,10 @@ theorem lowAssignDurch_sim (c : Fin u.fns.length) {b fname : String} {ix : UIdx}
                   split at h
                   · rename_i hw
                     cases hcap : checkedTableCap u space num hlt with
-                    | error error => simp [hcap] at h
+                    | error error =>
+                      simp only [hcap] at h
+                      change (Except.error error : Except String (StmtC u c)) = .ok g at h
+                      cases h
                     | ok cap =>
                       simp only [hcap, bind, Except.bind] at h
                       cases h
@@ -167,7 +170,10 @@ theorem lowAssignDurch_sim (c : Fin u.fns.length) {b fname : String} {ix : UIdx}
                       split at h
                       · rename_i hw
                         cases hcap : checkedTableCap u space num hlt with
-                        | error error => simp [hcap] at h
+                        | error error =>
+                          simp only [hcap] at h
+                          change (Except.error error : Except String (StmtC u c)) = .ok g at h
+                          cases h
                         | ok cap =>
                           simp only [hcap, bind, Except.bind] at h
                           cases h
