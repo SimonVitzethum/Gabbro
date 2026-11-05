@@ -102,7 +102,8 @@ theorem nativeFloatBind_ok {P : Programm D} {f : D.Fn} {fp : Runner.W}
         apply ValueAt.of_enc (by rfl) retained
         exact nativeFloat_word_eq v.endlich (by simpa only [floatPasst_x success] using decoded)
       have bound := branch.ctx
-      have rest : PreS L m2 pc2 fp K (frei (.fl low high :: Γ) reserved) cr (Env.cons v ρ) reserved :=
+      have rest : PreS L m2 pc2 fp K (frei (.fl low high :: Γ) reserved) cr
+          (Env.cons (τ := .fl low high) v ρ) reserved :=
         ⟨Nat.le_refl _, branch.small, branch.frame, branch.code, branch.far,
           envAt_cons branch.env value, trivial, wstab_true _ _⟩
       exact Sim.schrumpf (continuation v m2 pc2 rest hu hk hw)
