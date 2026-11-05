@@ -68,6 +68,8 @@ namespace Gabbro.Grammatik.AtomarXZeuge
 
 open Gabbro.Grammatik Speichermodell Zielsatz NIZeuge
 
+local instance : DecidableEq nD.Ax := inferInstanceAs (DecidableEq Empty)
+
 /-! ## 1. The flag, covered -/
 
 /-- The declared starts of configuration 1. -/
@@ -360,8 +362,12 @@ theorem vertrag_atomar_echt :
 /-! ## 4. The goal with shared atomics, applied -/
 
 /-- **Configuration 1 as a unit**: `hauptA`, `hauptB`, `kern` declared, all-zero memory. -/
-def n1E : Einheit nD :=
-  ⟨nP, SchwachZeuge.nS, axWahr nD, [⟨NFn.hauptA, .nil⟩, ⟨NFn.hauptB, .nil⟩, ⟨NFn.kern, .nil⟩], sp0, [], []⟩
+def n1E : Einheit nD where
+  P := nP
+  S := SchwachZeuge.nS
+  Q := axWahr nD
+  starts := [⟨NFn.hauptA, .nil⟩, ⟨NFn.hauptB, .nil⟩, ⟨NFn.kern, .nil⟩]
+  sp0 := sp0
 
 theorem n1E_ws : n1E.ws = n1ws := by rfl
 

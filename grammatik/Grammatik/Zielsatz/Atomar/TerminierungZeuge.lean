@@ -74,7 +74,8 @@ theorem mStart_endet (t : Faden) (w : mD.Fn) (hw : (initRuhe mE.starts t).1 = so
   Nat.le_add_left, getElem?_neg, reduceCtorEq, not_false_eq_true])
 
 /-- The run: thread 0's first step (a write to `privA`), then nothing. -/
-theorem terminierung_zeuge : ∃ (R : FadenLaufX mE.P.mitRuhe mO.mitRuhe 0 (GeteiltV (D := mD) mE.P mE.ws)),
+theorem terminierung_zeuge [RootNativeFloat.Hardware] :
+    ∃ (R : FadenLaufX mE.P.mitRuhe mO.mitRuhe 0 (GeteiltV (D := mD) mE.P mE.ws)),
     R.K 0 = FadenStart mE.P.mitRuhe (speicherR mSp) (initRuhe mE.starts) (fun _ => true) ∧ R.akt 0 = some 0 ∧
     (R.K 1).m.speicher ≠ speicherR mSp ∧
     ∀ t, (∃ N, ∀ j, N ≤ j → R.akt j ≠ some t) ∧ ∀ j, ¬ HaltBenannt mO.mitRuhe 0 (R.K j).m .budget t := by
@@ -111,7 +112,7 @@ theorem terminierung_zeuge : ∃ (R : FadenLaufX mE.P.mitRuhe mO.mitRuhe 0 (Gete
     ⟨mCs, mCs_voll⟩ mX_akzeptiert mE_nutzerA 0 Mass.leer
     (fun f => massPflicht_ohne_zyklus mP mFs 0 _ _ _ _ f (mZykS f))
     (fun f g h => absurd (h.symm.trans (mZykS f g)) (by decide))
-    mO ⟨mO_gut, mO_lokal, axVertragO_wahr mO⟩ _ _ hL (fun _ => true) R rfl
+    mO ⟨mO_gut, mO_lokal, axVertragO_wahr mO, inferInstance⟩ _ _ hL (fun _ => true) R rfl
   refine ⟨R, rfl, rfl, ?_, fun t => ⟨(hT t).1, (hT t).2 fun w hw => ?_⟩⟩
   · intro h
     have e := congrArg (fun s : Speicher mD.mitRuhe => (s.slots MTab.privA 0 () : Zahl 0 100).n) h

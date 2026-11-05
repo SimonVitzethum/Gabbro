@@ -182,7 +182,8 @@ theorem vz_nutzer2 : NutzerTeil (fun f => !vzE f) vzE2 := by
 /-- **THE LINKED GOAL**: every leg of `ZielF` on every reachable thread machine of the linked
     program, from `gabbro_ziel_verbund` -- the two units' verdicts, the link check, the two
     units' user duties, the SAME hardware assumptions. -/
-theorem vz_ziel (passes : Nat) (lebt0 : Faden → Bool) (K : FadenMaschine zD.mitRuhe)
+theorem vz_ziel [RootNativeFloat.Hardware]
+    (passes : Nat) (lebt0 : Faden → Bool) (K : FadenMaschine zD.mitRuhe)
     (hK : FadenErreichbar (verbinde vzE vzE1 vzE2).P.mitRuhe zO.mitRuhe passes
       (FadenStart (verbinde vzE vzE1 vzE2).P.mitRuhe (speicherR zSp)
         (initRuhe (verbinde vzE vzE1 vzE2).starts) lebt0) K) :
@@ -194,7 +195,7 @@ theorem vz_ziel (passes : Nat) (lebt0 : Faden → Bool) (K : FadenMaschine zD.mi
     (by rw [akzeptiert_pruefer_eq]; exact vz_app_akzeptiert)
     (by rw [akzeptiert_pruefer_eq]; exact vz_bib_akzeptiert) vz_verbindbar
     (((schnittstelleB_iff zFs_voll zCs_voll []).mp vz_schnittstelle).1) vz_nutzer1 vz_nutzer2 rfl zO
-    ⟨zO_gut, zO_lokal, axVertragO_wahr zO⟩ passes _ _ (laufzeit_initRuhe _) lebt0 K hK
+    ⟨zO_gut, zO_lokal, axVertragO_wahr zO, inferInstance⟩ passes _ _ (laufzeit_initRuhe _) lebt0 K hK
 
 /-- The linked unit IS the pool of fix lane F10 (`zPool`): the link reassembles the program. -/
 theorem vz_verbinde_gleich : verbinde vzE vzE1 vzE2 = zPool := by
@@ -213,7 +214,7 @@ theorem vz_verbinde_gleich : verbinde vzE vzE1 vzE2 = zPool := by
 /-- **THE RUN**: on the linked program both app threads run `haupt`; thread 0 unfolds its body,
     thread 1 unfolds its body, thread 0 takes the lock -- and at that machine `gabbro_ziel_verbund`
     gives every leg of `Ziel` (race freedom over the library's table writer included). -/
-theorem vz_lauf_zeuge : ∃ M3 : RufMaschineG zD.mitRuhe,
+theorem vz_lauf_zeuge [RootNativeFloat.Hardware] : ∃ M3 : RufMaschineG zD.mitRuhe,
     RufErreichbarG (verbinde vzE vzE1 vzE2).P.mitRuhe zO.mitRuhe 0
       (RufStartG (verbinde vzE vzE1 vzE2).P.mitRuhe (speicherR zSp)
         (initRuhe (verbinde vzE vzE1 vzE2).starts)) M3 ∧

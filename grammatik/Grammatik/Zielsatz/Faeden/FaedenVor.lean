@@ -103,13 +103,13 @@ structure PrueferVor where
 def pruefer_aus_vor (C : PrueferVor) : Pruefer where
   akzeptiert := fun E fs ls cs => C.akzeptiert E fs ls cs && E.gestartet.isEmpty && E.pruefungen.isEmpty
   korrekt := fun E fs ls cs hardware h => by
-    rw [Bool.and_eq_true] at h
-    obtain ⟨hC, hg, hP⟩ := h
+    simp only [Bool.and_eq_true] at h
+    obtain ⟨⟨hC, hg⟩, _hP⟩ := h
     have hg' : E.gestartet = [] := List.isEmpty_iff.mp hg
     -- The lifted Bool refuses declared checks (`hP`); retain the old checker's
     -- existential admission while transporting only the root list.
     have hA := C.korrekt E fs ls cs hardware hC
-    rw [ws_ohne_gestartet E hg'] at hA ⊢
+    rw [ws_ohne_gestartet E hg']
     exact hA
 
 /-- **The same verdict on every unit of before** (no run-time root, no declared check). -/

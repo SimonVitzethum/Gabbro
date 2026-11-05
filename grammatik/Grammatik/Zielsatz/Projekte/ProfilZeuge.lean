@@ -53,6 +53,8 @@ namespace Gabbro.Grammatik.AtomarXZeuge
 open Gabbro.Grammatik Speichermodell Zielsatz NIZeuge
 open Gabbro.Grammatik.Parser.ProfilBindung (zeugeItems pzItems pzPol)
 
+local instance : DecidableEq nD.Ax := inferInstanceAs (DecidableEq Empty)
+
 set_option maxRecDepth 100000
 
 /-- The original items: the profile fixture, the placement fixture and a gated constant. -/
@@ -74,7 +76,8 @@ theorem pe_bedarfe_nicht_leer (m : Parser.Auswahl.BauModus) :
 
 /-- **`gabbro_ziel_profil` on the flag program**, in either build mode: `ZielFX` on every reachable thread
     machine over GX of the runtime's full start, every budget, every set of initially live threads. -/
-theorem gabbro_ziel_profil_zeuge (m : Parser.Auswahl.BauModus) (passes : Nat) (lebt0 : Faden → Bool)
+theorem gabbro_ziel_profil_zeuge [RootNativeFloat.Hardware]
+    (m : Parser.Auswahl.BauModus) (passes : Nat) (lebt0 : Faden → Bool)
     (K : FadenMaschine nD.mitRuhe)
     (hK : FadenErreichbarX n1E.P.mitRuhe nO.mitRuhe passes (GeteiltV (D := nD) n1E.P n1E.ws)
       (FadenStart n1E.P.mitRuhe (speicherR n1E.sp0) (initRuhe n1E.starts) lebt0) K) :
@@ -85,10 +88,11 @@ theorem gabbro_ziel_profil_zeuge (m : Parser.Auswahl.BauModus) (passes : Nat) (l
     (by
       have h1 : akzeptiertX_pruefer.akzeptiert n1E nFs [] nCs = true := by
         show (AkzeptiertX nP SchwachZeuge.nS nFs [] nCs n1ws && besitzB n1E nFs) = true
-        rw [n1_akzeptiertX]; rfl
+        exact (Bool.and_eq_true _ _).mpr ⟨n1_akzeptiertX, rfl⟩
       simp only [profilAkzeptiert, Bool.and_eq_true]
       exact ⟨h1, pe_zulaessig m⟩)
-    n1E_nutzerPflichtA nO ((profilAnnahmen_iff (peE m) nO).mpr ⟨nO_gut, nO_lokal, axVertragO_wahr nO⟩)
+    n1E_nutzerPflichtA nO ((profilAnnahmen_iff (peE m) nO).mpr
+      ⟨nO_gut, nO_lokal, axVertragO_wahr nO, inferInstance⟩)
     passes _ _ (laufzeit_voll n1E) lebt0 K hK
 
 /-- The selection of the fixture differs by mode: the test build keeps the gated constant, the shipping

@@ -26,6 +26,8 @@ namespace Gabbro.Grammatik.AtomarXZeuge
 
 open Gabbro.Grammatik Speichermodell Zielsatz NIZeuge
 
+local instance : DecidableEq nD.Ax := inferInstanceAs (DecidableEq Empty)
+
 /-- **`GabbroZiel` on configuration 1** (the flag): `ZielFX` on every reachable thread machine
     over GX of the runtime's full start -- every budget, every set of initially live threads. -/
 theorem n1E_gabbro [RootNativeFloat.Hardware] (passes : Nat) (lebt0 : Faden → Bool) (K : FadenMaschine nD.mitRuhe)
@@ -36,7 +38,7 @@ theorem n1E_gabbro [RootNativeFloat.Hardware] (passes : Nat) (lebt0 : Faden → 
   gabbro_ziel akzeptiertX_pruefer nD n1E ⟨nFs, nFs_voll⟩ ⟨[], fun L => nomatch L⟩
     ⟨nCs, nCs_voll⟩
     (by show (AkzeptiertX nP SchwachZeuge.nS nFs [] nCs n1ws && besitzB n1E nFs) = true
-        rw [n1_akzeptiertX]; rfl)
+        exact (Bool.and_eq_true _ _).mpr ⟨n1_akzeptiertX, rfl⟩)
     n1E_nutzerPflichtA nO ⟨nO_gut, nO_lokal, axVertragO_wahr nO, inferInstance⟩ passes _ _ (laufzeit_voll n1E)
     lebt0 K hK
 
