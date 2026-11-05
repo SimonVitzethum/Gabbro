@@ -133,7 +133,6 @@ theorem compiled {text : String} (header : Header text) (body : Body header) :
           have restored := body.restored
           have accepted := body.accepted
           dsimp only [Header.unit] at initializers arrays entry lowered restored accepted
-          dsimp only
           split
           · rename_i error rejected
             cases rejected.symm.trans initializers
