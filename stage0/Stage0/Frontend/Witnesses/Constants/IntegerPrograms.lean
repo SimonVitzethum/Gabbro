@@ -226,6 +226,44 @@ private theorem checked_array_items {original : List SItemTief}
     rw [Frontend.checkArrays, head, tail]
     rfl
 
+/-- The existing dependent collector retains a family whose readers already return that family. -/
+private theorem collect_values (n : Nat) :
+    ∀ (T : Fin n → Type) (values : (i : Fin n) → T i),
+      OldSource.collect n T (fun i => .ok (values i)) = .ok values := by
+  induction n with
+  | zero =>
+    intro T values
+    apply congrArg (fun result : (i : Fin 0) → T i => Except.ok (ε := String) result)
+    funext i
+    exact Fin.elim0 i
+  | succ n ih =>
+    intro T values
+    rewrite [OldSource.collect, ih]
+    apply congrArg (fun result : (i : Fin (n + 1)) → T i => Except.ok (ε := String) result)
+    funext i
+    refine Fin.cases ?_ ?_ i
+    · rfl
+    · intro j; rfl
+
+/-- Replay restoration symbolically when the actual expanded posts contain no entry reads. -/
+private theorem restore_entry_free (items expanded : List SItemTief)
+    (requirements : List (STyp × String)) (unit : UProg) (program : Programm (declOf unit))
+    (expansion : expandU items = .ok (expanded, requirements))
+    (entryFree : ∀ f : Fin unit.fns.length,
+      (OldSource.clauses expanded (fnAt unit f).name).any OldSource.hasEntry = false) :
+    OldSource.restore items unit program = .ok program := by
+  have readers : OldSource.atFunction expanded unit program =
+      (fun f => .ok (program.ensures f)) := by
+    funext f
+    unfold OldSource.atFunction
+    rewrite [entryFree f]
+    rfl
+  unfold OldSource.restore
+  rewrite [expansion]
+  dsimp only [bind, Except.bind]
+  rewrite [readers, collect_values]
+  rfl
+
 /-- Retain the actual elaborated constructor and all body facts inside one opaque theorem. -/
 private theorem initializer_program_packet :
     ∃ header : Header Gabbro.Stage0.Frontend.ConstWitness.initializerText,
@@ -251,19 +289,33 @@ private theorem initializer_program_packet :
       · rfl
     case elaborated => cbv <;> exact Eq.refl _
   have count : header.unit.fns.length = 1 := by cbv
-  have produced : ∀ f : Fin header.unit.fns.length,
-      (lowerFnAt header.unit f).toOption.isSome = true := by
-    rintro ⟨index, bound⟩
-    have small : index < 1 := by simpa only [count] using bound
-    have zero : index = 0 := by omega
-    subst index
-    cbv
-  let functions : Functions header.unit := Functions.of_success produced (by cbv) (by
-    rintro ⟨index, bound⟩
-    have small : index < 1 := by simpa only [count] using bound
-    have zero : index = 0 := by omega
-    subst index
-    cbv) (by cbv)
+  let main : Fin header.unit.fns.length := ⟨0, by omega⟩
+  -- Infer the complete canonical triple once, rather than repeatedly executing its selected getter.
+  let code : EnsTy header.unit main × RumpTy header.unit main × ReqTy header.unit main := ?code
+  have codeEq : lowerFnAt header.unit main = .ok code := by cbv <;> exact Eq.refl _
+  have onlyMain (f : Fin header.unit.fns.length) : f = main := by
+    apply Fin.ext
+    have small : f.val < 1 := by simpa only [count] using f.isLt
+    change f.val = 0
+    omega
+  let functions : Functions header.unit := {
+    values := by
+      change (f : Fin 1) → EnsTy header.unit f × RumpTy header.unit f × ReqTy header.unit f
+      exact Fin.cases (motive := fun f : Fin 1 =>
+        EnsTy header.unit f × RumpTy header.unit f × ReqTy header.unit f)
+        code (fun f : Fin 0 => Fin.elim0 f)
+    equations := by
+      intro f
+      have same := onlyMain f
+      subst f
+      exact codeEq
+    noInvariants := by cbv
+    noMeasures := by
+      intro f
+      have same := onlyMain f
+      subst f
+      cbv
+    contracts := by cbv }
   -- Resolve the active scalar collector/literal path once, before the dependent whole-list fold.
   obtain ⟨value, evaluated, lower, upper⟩ := initializer_numeric_value
   have typed : uTypIn header.source.scopes.types [] (uRecordConstantTypes header.unit.records)
@@ -320,21 +372,31 @@ private theorem initializer_program_packet :
   have arraysReady : (Frontend.checkArrays header.unit header.source.scopes
       initializerInput.original).toOption.isSome = true :=
     checked_array_items header.unit header.source.scopes initializerInput.original checked
+  have entryFree : ∀ f : Fin header.unit.fns.length,
+      (OldSource.clauses header.expanded (fnAt header.unit f).name).any
+        OldSource.hasEntry = false := by
+    intro f
+    have same := onlyMain f
+    subst f
+    cbv
+  have restored : OldSource.restore (pre108 header.source.prepared.elaborierbar)
+      header.unit functions.program = .ok functions.program :=
+    restore_entry_free _ header.expanded header.requirements header.unit functions.program
+      header.expansion entryFree
+  have accepted : OldSource.accepts header.unit functions.program = .ok true := by cbv
   refine ⟨header, count, ?body⟩
   case body =>
     refine ⟨{
       functions := functions
-      main := ⟨0, by omega⟩
+      main := main
       entry := by cbv
       initializers := by cbv
       arrays := (Frontend.checkArrays header.unit header.source.scopes
         initializerInput.original).toOption.get arraysReady
       arrayEq := by exact Gabbro.Grammatik.except_ok_get arraysReady
-      program := ?program
-      restored := ?restored
-      accepted := ?accepted }⟩
-    case restored => cbv <;> exact Eq.refl _
-    case accepted => cbv
+      program := functions.program
+      restored := restored
+      accepted := accepted }⟩
 
 theorem initializer_compiled :
     ∃ result : Compiled Gabbro.Stage0.Frontend.ConstWitness.initializerText, compile Gabbro.Stage0.Frontend.ConstWitness.initializerText = .ok result ∧
