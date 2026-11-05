@@ -45,12 +45,14 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   certificate. Concrete constant program packets remain under repair. Their downstream
   `ConstWitness`/`ConstValuesWitness` resource closure remains unmeasured after the new phase port.
   The shared complete compilation packet, hardware-free image phase/geometry theorem and the
-  conflicting-profile refusal witness build. The first complete successful profile image also builds;
-  the requires-profile and aligned-static images are being checked.
+  conflicting-profile refusal witness build. Both successful profile and requires-profile images build.
+  The aligned-static fixture exposes a real source gate mismatch: alignment metadata is refused even
+  though the existing profile/global collectors validate and retain it. That narrow connection is open.
   Full-package closure and the remaining concrete witness consumers are being revalidated.
   The additional arithmetic hardware contract is built in `NativeFloat` (13 jobs), including the
   corrected binary32 nearest-even overflow threshold. It strengthens the named hardware assumption;
-  downstream package closure and targeted arithmetic CPU edge cases still require measurement.
+  the Runner library, native generator and all 14 Runner axiom audits pass with that component.
+  Targeted arithmetic CPU edge cases pass; downstream package-wide closure remains open.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
   The authorised acceptance scope is Lean and the Lean parts of GabbroV; Rust, Cargo and LLVM checks are
   deliberately unmeasured. The owner authorises pushing once the named Lean builds and GabbroV's Lean
