@@ -135,6 +135,7 @@ def kD : Deklaration where
 
 instance : DecidableEq kD.Fn := inferInstanceAs (DecidableEq Empty)
 instance : DecidableEq kD.Lock := inferInstanceAs (DecidableEq Empty)
+instance : DecidableEq kD.Ax := inferInstanceAs (DecidableEq Empty)
 
 /-- The attempted program: no functions, so no bodies and no contracts. -/
 def kP : Programm kD where
@@ -155,7 +156,12 @@ def kSp : Speicher kD :=
   ⟨kSlotsLeer, fun e => nomatch e⟩
 
 /-- The attempted Einheit: empty program, empty starts. -/
-def kE : Zielsatz.Einheit kD := ⟨kP, kSI, axWahr kD, [], kSp, [], []⟩
+def kE : Zielsatz.Einheit kD where
+  P := kP
+  S := kSI
+  Q := axWahr kD
+  starts := []
+  sp0 := kSp
 
 /-- The VACUOUS premise group on the empty program -- honestly named, never
     `korpus07_nutzer`. -/
