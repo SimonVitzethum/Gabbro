@@ -1,6 +1,6 @@
 /- Literal rounding is performed in Lean; the IR only materialises the resulting bits. -/
 module
-public import NativeFloat.Literal
+public import Grammatik.Kern.Syntax.Typen.FloatLiteral
 public import Stage0.Senke.Anweisung.Faelle.Gleit.Bind
 public import Stage0.Senke.Ausdruck.Gleit.Wort
 public import Stage0.Senke.Ausdruck.Gleit.Slots.Test
@@ -52,7 +52,8 @@ theorem blockFloatLit_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
       refine Ok.value (width := rfl) ?_
       exact (konstWL_ok 4 _ (by simpa only [hx] using hb) (by omega) hp).mono
         fun w hen => by
-          simpa only [hx, BitVec.ofNat_toNat, BitVec.setWidth_eq] using hen
+          change w = v.x.toBits.toBitVec
+          rw [hx, hen, ← UInt64.toNat_toBitVec, BitVec.ofNat_toNat, BitVec.setWidth_eq]
     · intro m pc hp hu hk hw
       exact ihRest (ex := ex) cr tr hr (by omega)
         (by simp only [List.length_append] at hs; omega) hW m pc σ _ hp hlo
@@ -111,7 +112,16 @@ theorem blockFloatOfComputed_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes
         (by simp only [frei, contextWords_cons] at hlo2 ⊢; omega) hu hk hw
         (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega))
       hp hu hk hWa
-    simpa only [execBlock] using result
+    have outcome : execBlock O passes R (.floatOf e low high rest) σ ρ =
+        (match gleitPasst low high x with
+        | none => .logik .bereich
+        | some v => (execBlock O passes R rest σr (Env.cons v ρ)).schrumpf) := by
+      change (match gleitPasst low high x with
+        | some v => (execBlock O passes R rest σr (Env.cons v ρ)).schrumpf
+        | none => .logik .bereich) = _
+      cases gleitPasst low high x <;> rfl
+    rw [outcome]
+    exact result
 
 
 end Gabbro.Stage0.Senke

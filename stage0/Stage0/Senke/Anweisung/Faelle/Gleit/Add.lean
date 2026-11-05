@@ -51,7 +51,16 @@ theorem blockFloatArithmetic_case (op : GleitOp) {O : Orakel D} [TorOK L O] [Sic
       (by simp only [frei, contextWords_cons] at hlo2 ⊢; omega) hu hk hw
       (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega))
     hp hu hk hWa
-  simpa only [execBlock] using result
+  have outcome : execBlock O passes R (.float op a b low high rest) σ ρ =
+      (match gleitPasst low high x with
+      | none => .logik .bereich
+      | some v => (execBlock O passes R rest σr (Env.cons v ρ)).schrumpf) := by
+    change (match gleitPasst low high x with
+      | some v => (execBlock O passes R rest σr (Env.cons v ρ)).schrumpf
+      | none => .logik .bereich) = _
+    cases gleitPasst low high x <;> rfl
+  rw [outcome]
+  exact result
 
 
 #print axioms blockFloatArithmetic_case
