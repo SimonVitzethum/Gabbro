@@ -116,21 +116,32 @@ theorem code_at : CodeAt memory 0 code := by
     simp only [code, loadSpan, List.cons_append, List.nil_append,
       List.getElem_cons_zero, List.getElem_cons_succ] <;> decide +kernel +revert
 
+private theorem payload_words : encodeWords layout (Zelle.glob payload).ty
+    (Zelle.val world (Zelle.glob payload)) = [1, 2, 3] := by cbv
+
+private theorem counter_words : encodeWords layout (Zelle.glob counter).ty
+    (Zelle.val world (Zelle.glob counter)) = [19] := by cbv
+
 theorem inputs : EntrySnapshots.Inputs layout world memory cells := by
   intro cell hc
   simp only [cells, List.mem_cons, List.not_mem_nil, or_false] at hc
   rcases hc with rfl | rfl
   · constructor
     · intro i; trivial
-    · change WordsAt memory 8192 0 [1, 2, 3]
+    · rw [payload_words]
+      change WordsAt memory 8192 0 [1, 2, 3]
       intro i hi
       have cases : i = 0 ∨ i = 1 ∨ i = 2 := by change i < 3 at hi; omega
       rcases cases with rfl | rfl | rfl <;>
         simp only [List.getElem_cons_zero, List.getElem_cons_succ] <;> decide +kernel +revert
-  · exact ⟨trivial, fun i hi => by
+  · constructor
+    · trivial
+    · rw [counter_words]
+      change WordsAt memory 8224 0 [19]
+      intro i hi
       have : i = 0 := by change i < 1 at hi; omega
       subst i
-      decide +kernel +revert⟩
+      decide +kernel +revert
 
 /-- Every capture premise holds jointly. Source storage is read-only; all three
     payload limbs, the distinct counter and preserved original parameter survive. -/
