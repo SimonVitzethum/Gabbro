@@ -275,12 +275,13 @@ theorem tree_quantifier_export_zeuge :
       [.variable "root", .bin "<=" (.variable "root") (.lit 1)]) =
       .ok (.filtered true "T" "root" "next" false (.param "root")
         (.cmp "<=" (.param "root") (.lit 1))) := by
+  have sameName : strEq "root" "root" = true := by decide +kernel
   apply tree_quantifier_export relationContext true false "root"
     (.variable "root") (.bin "<=" (.variable "root") (.lit 1))
     "T" "next" 0 (.param "root") (.cmp "<=" (.param "root") (.lit 1))
   · rfl
   · simp [uSichert, uIstVgl, uSeite, uRechne, uSeiteBlatt,
-      uParamNr, uParamNrAux, uArtBei, relationContext]
+      uParamNr, uParamNrAux, uArtBei, relationContext, sameName]
 
 theorem tree_quantifier_lower_zeuge :
     (lowEns relationUnit [.index 3, .index 3] [] relationFunction none
