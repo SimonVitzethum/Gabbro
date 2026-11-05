@@ -78,6 +78,38 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAl
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
 
+-- Keep the entire typed Boolean result fixed before the metadata continuation
+-- projects its body/pre/post denotations. A variable fuel matches the actual
+-- numeric limit without asking the cbv matcher to synthesize its predecessor.
+private theorem bool_reader_fuel {D : Deklaration} {Γ : Ctx} (names : Konst.Scalar.Locals Γ)
+    (globals : List (String × Int)) (schemas : List USum) (fuel : Nat) (source : SExpr) :
+    Konst.Values.expression (D := D) names globals schemas fuel .bool source =
+      (match fuel with
+       | 0 => .error "const value elaboration exhausted its structural limit"
+       | _ + 1 => do
+           let normalized ← Konst.Scalar.normalize names globals source
+           Konst.Values.adapt .bool normalized.code) := by
+  cases fuel with
+  | zero => rfl
+  | succ remaining =>
+    exact Konst.Values.WitnessReaders.reader_bool names globals schemas remaining source
+
+private theorem bool_adapt {D : Deklaration} {Γ : Ctx} (code : Konst.Scalar.Code D Γ .bool) :
+    Konst.Values.adapt .bool ⟨.bool, code⟩ = .ok code := by
+  simp only [Konst.Values.adapt, dite_eq_left rfl]
+
+-- The same generic quotation packet retains source spelling, typed expression
+-- and denotation. Neither Boolean response is assumed for the source function.
+private theorem bool_quote_fuel {D : Deklaration} {Γ : Ctx}
+    (schemas : List USum) (texts : List String) (fuel : Nat) (value : Bool) :
+    Konst.Values.reify (D := D) (Γ := Γ) schemas texts fuel .bool value =
+      (match fuel with
+       | 0 => .error "const value quotation exhausted its structural limit"
+       | _ + 1 => match value with
+         | true => .ok ⟨.tru, .tru, Konst.Values.LiteralMeaning.truth true, by intros; rfl⟩
+         | false => .ok ⟨.fls, .fls, Konst.Values.LiteralMeaning.truth false, by intros; rfl⟩) := by
+  cases fuel <;> cases value <;> rfl
+
 -- These are the existing generic typed reader equations used by the green const witnesses.
 attribute [local cbv_eval] Konst.Values.expression.eq_def Konst.Values.payloadExpression.eq_def
 attribute [local cbv_eval] Konst.Values.reify.eq_def Konst.Values.reifyPayload.eq_def
@@ -86,6 +118,7 @@ attribute [local cbv_eval]
   Konst.Values.WitnessReaders.reader_text Konst.Values.WitnessReaders.reader_sum
   Konst.Values.WitnessReaders.reader_payload Konst.Values.WitnessReaders.reader_empty
   Konst.Values.WitnessReaders.reader_missing
+attribute [local cbv_eval] bool_reader_fuel bool_adapt bool_quote_fuel
 
 -- Keep the unused float target and the generic normalization proof symbolic.
 attribute [local cbv_opaque] uFloatLimit Frontend.normalize
