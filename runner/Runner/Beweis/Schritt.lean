@@ -72,22 +72,22 @@ theorem handler_ok {L : Lay} (k : Nat) {y : X} (h : HPre L k y) : Match L (IR.op
   | 45 => exact fp_finite_ok .f64 h
   | 46 => exact fp_fromInt_ok .f32 h
   | 47 => exact fp_fromInt_ok .f64 h
-  | 48 => by
+  | 48 =>
     simpa only [IR.op, IR.fp, fpSequence] using
       fp_fromUInt64_body (L := L) (y := y) .f32 h.tb h.mode h.code
-  | 49 => by
+  | 49 =>
     simpa only [IR.op, IR.fp, fpSequence] using
       fp_fromUInt64_body (L := L) (y := y) .f64 h.tb h.mode h.code
-  | 50 => by
+  | 50 =>
     simpa only [IR.op, IR.fp, fpSequence] using
       fp_toInt64_body (L := L) (y := y) .f32 h.tb h.mode h.code
-  | 51 => by
+  | 51 =>
     simpa only [IR.op, IR.fp, fpSequence] using
       fp_toInt64_body (L := L) (y := y) .f64 h.tb h.mode h.code
-  | 52 => by
+  | 52 =>
     simpa only [IR.op, IR.fp, fpSequence] using
       fp_toUInt64_body (L := L) (y := y) .f32 h.tb h.mode h.code
-  | 53 => by
+  | 53 =>
     simpa only [IR.op, IR.fp, fpSequence] using
       fp_toUInt64_body (L := L) (y := y) .f64 h.tb h.mode h.code
   | 54 => exact fp_widen_ok h
