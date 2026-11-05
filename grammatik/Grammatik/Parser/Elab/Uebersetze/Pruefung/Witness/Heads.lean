@@ -41,10 +41,12 @@ private theorem check_call_permission (u : UProg) (caller callee : Fin u.fns.len
     ownerReady := ownerReadyB_ok u _ ready.owner }
   · intro table allowed
     rw [sigSchreibt_eq u callee table] at allowed
+    change (vertragVon (declOf u) caller).schreibt table = true
     rw [vSchreibt_eq u caller table]
     exact ready.writes table allowed
   · intro global allowed
     rw [sigGSchreibt_eq u callee global] at allowed
+    change (vertragVon (declOf u) caller).gschreibt global = true
     rw [vGSchreibt_eq u caller global]
     exact ready.globals global allowed
   · intro lock member absent
@@ -162,7 +164,9 @@ private theorem check_empty_call_guards (u : UProg) (caller callee : Fin u.fns.l
         List.map_nil, List.nil_append]
     rw [empty, List.map_nil, decide_eq_true_eq]
     exact ⟨[], List.Perm.refl [], List.nil_sublist Λ⟩
-  · simp [ownerReadyB, owner, ordinary, OwnerFlow.inputs, OwnerFlow.validB, OwnerFlow.Valid]
+  · unfold ownerReadyB
+    rw [owner, ordinary]
+    rfl
 
 -- These are source facts, not an admitted call or a second call checker.
 -- The same source certificate supplies every caller; no dependent Fin split.
