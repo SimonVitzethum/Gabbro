@@ -70,7 +70,7 @@ def steps : List Chunk → Nat
 private theorem scan_chunks (chunks : List Chunk) (remaining : Nat) :
     scan false (characters chunks) (steps chunks + remaining) = .ok (tokens chunks) := by
   induction chunks with
-  | nil => rfl
+  | nil => cbv
   | cons chunk rest ih =>
     change scan false (chunk.characters ++ characters rest)
       ((chunk.steps + steps rest) + remaining) =
