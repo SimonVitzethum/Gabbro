@@ -80,6 +80,7 @@ attribute [local cbv_eval]
   Gabbro.Grammatik.Parser.UebersetzeProben2.seq_select
   Gabbro.Grammatik.Parser.UebersetzeProben2.struct_select
   lowStufe_seq lowStufe_struct
+  uKonstZeile.eq_def uKonstZeilen.eq_def lowLit.eq_def
 
 /-- Retain the actual elaborated constructor and all body facts inside one opaque theorem. -/
 private theorem globalText_program_packet :
