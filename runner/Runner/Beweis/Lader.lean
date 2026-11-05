@@ -107,17 +107,20 @@ private theorem initial_dispatch {L : Lay} {y : X}
       ([.ld .r13 (mb .rcx), .lea .r12 (mb .rcx 16)] ++ dispatch ++ [.ud2]))
     (hx : y.rcx = BitVec.ofNat 64 IMG) (ht : y.r14 = L.T) (hm : y.fpReady = true) :
     Match L t4 y := by
-  let body := [.ld .r13 (mb .rcx), .lea .r12 (mb .rcx 16)]
+  let body : List Ins := [.ld .r13 (mb .rcx), .lea .r12 (mb .rcx 16)]
   let loaded (fp : W) : X := ({ y with rip := (y.rip +
     BitVec.ofNat 64 (enc (.ld .r13 (mb .rcx))).length) }).set .r13 fp
   let after (fp : W) : X := ({ loaded fp with rip := ((loaded fp).rip +
     BitVec.ofNat 64 (enc (.lea .r12 (mb .rcx 16))).length) }).set .r12
       (ea (loaded fp) (mb .rcx 16))
   have address : ea y (mb .rcx) = BitVec.ofNat 64 IMG := by
-    simpa only [ea, mb, X.get, sx32_zero, BitVec.add_zero] using hx
+    change y.rcx + sx32 (0#32) = _
+    rw [sx32_zero, BitVec.add_zero]
+    exact hx
   have first : exec (.ld .r13 (mb .rcx)) (enc (.ld .r13 (mb .rcx))).length y =
       rd64 (BitVec.ofNat 64 IMG) (fun fp => .next (loaded fp)) := by
     simp only [exec, address]
+    rfl
   have rest (fp : W) : runL [.lea .r12 (mb .rcx 16)] (loaded fp) = .next (after fp) := rfl
   have run : runL body y = rd64 (BitVec.ofNat 64 IMG) (fun fp => .next (after fp)) := by
     change (exec (.ld .r13 (mb .rcx)) (enc (.ld .r13 (mb .rcx))).length y).bind
@@ -134,7 +137,7 @@ private theorem initial_dispatch {L : Lay} {y : X}
     · rw [position]
       exact placed
     · change y.rcx + sx32 (16#32) = BitVec.ofNat 64 IMG + (16#64)
-      exact congrArg₂ (fun a b : W => a + b) hx sx32_16
+      exact congr (congrArg (fun a b : W => a + b) hx) sx32_16
   have continued : CorrM L t4 (runL body y) := by
     rw [run]
     simp only [t4, rd64]
@@ -165,7 +168,10 @@ private theorem initialize_control {L : Lay} {y : X} (tableWord : BitVec 32)
     mxcsr := 0x1F80 }
   have hc2 : Code L.C y2.rip
       ([.ld .r13 (mb .rcx), .lea .r12 (mb .rcx 16)] ++ dispatch ++ [.ud2]) := hc1.2.2
-  exact initial_dispatch hc2 base table rfl
+  have mode : y2.fpReady = true := by
+    change ((0x1F80 : BitVec 32) &&& 0xFFC0 == 0x1F80) = true
+    decide
+  exact initial_dispatch hc2 base table mode
 
 theorem seg5 {y : X} (hc : Code L0.C y.rip (ld5 TBL ++ [.ud2])) (hx : y.rcx = BitVec.ofNat 64 IMG) :
     Match L0 t4 y := by
