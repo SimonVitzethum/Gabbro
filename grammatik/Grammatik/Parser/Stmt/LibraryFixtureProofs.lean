@@ -3,7 +3,7 @@ module
 public import Grammatik.Logik.Vertraege.Uebersetzung
 import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest2a
 import all Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Export
-import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Fixtures
+import Grammatik.Parser.Elab.UebersetzeAllg3.TransitionCert
 
 public section
 
@@ -129,9 +129,9 @@ theorem declarationData_of_function
   rw [functionLowered] at origin
   cases origin
   have requiresEq : image.1.requires ⟨0, positive⟩ = .tru := by
-    have required := Parser.Measures.Fixtures.program_requires_of_lowerFn
-      (lowered := lowered) functionLowered
-    simpa only [Parser.Measures.Fixtures.program, needs, reduceIte] using required
+    have required := lowerAllg_requires unit image.1 image.2
+      (except_ok_get lowered) ⟨0, positive⟩ functionLowered
+    simpa only [needs, reduceIte] using required
   have absent (callee : (declOf unit).Fn) :
       ruftB image.1 ⟨0, positive⟩ callee = false := by
     simp only [ruftB, bodyEq, callFree callee, Bool.not_true]

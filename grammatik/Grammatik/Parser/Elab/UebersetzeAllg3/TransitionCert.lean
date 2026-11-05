@@ -63,6 +63,22 @@ theorem lowerAllg_fields (u : UProg) (P : Programm (declOf u)) (fs : List (declO
           exact congrArg (fun p => p.2.2) (lowerAtPair_of_ok u c _ hv)
       · cases h
 
+/-- The assembled requires keeps the actual function result and the empty-clause rule. -/
+theorem lowerAllg_requires (u : UProg) (P : Programm (declOf u)) (fs : List (declOf u).Fn)
+    (lowered : lowerAllg u = .ok (P, fs)) (f : Fin u.fns.length)
+    {value : EnsTy u f × RumpTy u f × ReqTy u f}
+    (functionLowered : lowerFnAt u f = .ok value) :
+    P.requires f = if (fnAt u f).needs = [] then .tru else value.2.2 := by
+  unfold lowerAllg at lowered
+  split at lowered
+  · cases lowered
+  · split at lowered
+    · cases lowered
+    · split at lowered
+      · obtain ⟨rfl, _⟩ := Gabbro.Grammatik.Parser.Measures.checkedProgram_eq lowered
+        simp only [progOfFn, reqOf, lowerAtPair_of_ok u f _ functionLowered]
+      · cases lowered
+
 /-- The pieces of a lowered transition of stores. -/
 theorem lowerStoresAt_spec (u : UProg) (c : Fin u.fns.length) (tr : UTransition)
     {v : EnsTy u c × RumpTy u c × ReqTy u c} (h : lowerStoresAt u c tr = .ok v) :

@@ -98,18 +98,8 @@ theorem program_requires_of_lowerFn {u : UProg} {lowered : (lowerAllg u).toOptio
     {f : (declOf u).Fn} {ens : EnsTy u f} {body : RumpTy u f} {req : ReqTy u f}
     (functionLowered : lowerFnAt u f = .ok (ens, body, req)) :
     (program u lowered).requires f = if (fnAt u f).needs = [] then .tru else req := by
-  have success := except_ok_get lowered
-  change lowerAllg u = .ok (program u lowered, ((lowerAllg u).toOption.get lowered).2) at success
-  unfold lowerAllg at success
-  split at success
-  · cases success
-  · split at success
-    · cases success
-    · split at success
-      · obtain ⟨same, _⟩ := checkedProgram_eq success
-        rw [same]
-        simp only [progOfFn, reqOf, lowerAtPair_of_ok u f _ functionLowered]
-      · cases success
+  exact lowerAllg_requires u (program u lowered) ((lowerAllg u).toOption.get lowered).2
+    (except_ok_get lowered) f functionLowered
 
 def exported (u : UProg) (lowered : (lowerAllg u).toOption.isSome = true) :
     {measure : Export u // lowerMeasures u = .ok measure} :=
