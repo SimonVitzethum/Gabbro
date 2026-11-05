@@ -33,6 +33,9 @@ def _root_.Runner.FPFormat.suffix : FPFormat → String
 def _root_.Runner.X86.FPArith.name : FPArith → String
   | .add => "add" | .sub => "sub" | .mul => "mul" | .div => "div"
 
+def _root_.Runner.X86.FPCompare.name : FPCompare → String
+  | .eq => "eq" | .lt => "lt" | .le => "le"
+
 def hex (n : Nat) : String := "0x" ++ String.ofList (Nat.toDigits 16 n)
 
 def simm (v : BitVec 32) : String :=
@@ -82,7 +85,7 @@ def _root_.Runner.X86.Ins.show (a : Nat) : Ins → String
   | .movFromXmm .f32 d s => s!"movd {d.dword}, {s.name}"
   | .movFromXmm .f64 d s => s!"movq {d.name}, {s.name}"
   | .scalar kind format d s => s!"{kind.name}{format.suffix} {d.name}, {s.name}"
-  | .compareScalar pred format d s => s!"cmp{format.suffix} {d.name}, {s.name}, {pred.imm}"
+  | .compareScalar pred format d s => s!"cmp{pred.name}{format.suffix} {d.name}, {s.name}"
   | .fromIntScalar format d s => s!"cvtsi2{format.suffix} {d.name}, {s.name}"
   | .widenScalar d s => s!"cvtss2sd {d.name}, {s.name}"
   | .narrowScalar d s => s!"cvtsd2ss {d.name}, {s.name}"
@@ -100,9 +103,7 @@ def opName : Nat → String
   | 21 => "ret" | 22 => "cas d a e" | 23 => "sys d a" | 24 => "spawn d a (clone, a new OS thread)"
   | 25 => "udiv d a b" | 26 => "urem d a b" | 27 => "ult d a b"
   | opcode => match NativeFPOp.ofCode opcode with
-    | some kind => match kind with
-      | .neg _ | .isFinite _ => s!"{reprStr kind} d a b"
-      | _ => if kind.direct then s!"{reprStr kind} d a b" else s!"reserved ({reprStr kind})"
+    | some kind => s!"{reprStr kind} d a b"
     | none => ""
 
 /-- The labels of the listing: loader, handlers by opcode, `ud2`, table. -/
