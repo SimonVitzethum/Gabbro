@@ -188,14 +188,32 @@ private theorem libraryImage_admitted {unit : UProg}
     (image : Programm (declOf unit) × List (declOf unit).Fn) : LibraryImageAdmitted image :=
   (Gabbro.Grammatik.Zielsatz.libraryB_iff _ _).mp (libraryImage_closed image)
 
-private theorem certificate_rejects_other {source : LibrarySource} {unit : UProg}
-    {declaration : TranslationDecl source unit} (certificate : TranslationCertificate declaration)
-    (other : Wert (declOf unit) declaration.outputType) (different : certificate.output ≠ other)
+/-- Complete rejection at the phase-data boundary. Both the answer carrier and
+    the execution equality are fixed while the unit and schema are abstract. -/
+private theorem declarationFromData_rejects_identity
+    {source : LibrarySource} {unit : UProg} {library : ULibrary}
+    {image : Programm (declOf unit) × List (declOf unit).Fn} {schema : IntegerSchema}
+    {reorder : Wert (declOf unit) schema.ty → Wert (declOf unit) schema.ty}
+    (data : DeclarationData library unit image schema reorder)
+    (resolved : libraryDecl (Aufloesung.loeseL (Aufloesung.quelle source.items) [] source.items)
+      source.call = .ok library)
+    (elaborated : elabU (pre108 (translatorItems
+      (Aufloesung.loeseL (Aufloesung.quelle source.items) [] source.items) library)) = .ok unit)
+    (lowered : lowerAllg unit = .ok image)
+    (input : Wert (declOf unit) schema.ty) (different : reorder input ≠ input)
     (oracle : Orakel (declOf unit)) (passes : Nat) (world : World (declOf unit)) :
-    declaration.Rejects certificate.fuel certificate.input other oracle passes world := by
-  intro executed
-  have same := translation_result_unique certificate oracle passes world _ executed
-  exact different (answer_injective declaration same).symm
+    (declarationFromData data resolved elaborated lowered).Rejects 1 input input
+      oracle passes world := by
+  let declaration := declarationFromData data resolved elaborated lowered
+  have executed : rufAt declaration.program oracle passes 1 declaration.translator world
+      (declaration.arguments input) = .ok world (declaration.answer (reorder input)) :=
+    data.execution oracle passes world input
+  intro wrong
+  have answers : declaration.answer (reorder input) = declaration.answer input :=
+    (RufAusgang.ok.inj (executed.symm.trans wrong)).2
+  apply different
+  -- Normalize the same result carrier as at the concrete call, before substitution.
+  simpa only [declaration, declarationFromData] using answer_injective declaration answers
 
 -- Fixed row arithmetic is independent of the declaration's function carrier.
 def sampleRows (D : Deklaration) (reverse : Bool) : Wert D translationSchema.ty :=
@@ -239,6 +257,12 @@ private theorem sampleRows_distinct (D : Deklaration) :
   intro same
   exact sampleRows_wrong D
     (congrArg (fun (value : Wert D translationSchema.ty) => (value ⟨0, by decide⟩).n) same)
+
+private theorem sampleRows_reverse_distinct (D : Deklaration) :
+    (fun index => sampleRows D false index.rev) ≠ sampleRows D false := by
+  intro same
+  apply sampleRows_distinct D
+  exact (sampleRows_reorder D true).symm.trans same
 
 private theorem sampleRows_refusals (D : Deklaration) :
     (decodeIntegerRows D translationSchema [.num 3]).isNone = true ∧
@@ -301,12 +325,11 @@ theorem translation_wrong_execution_zeuge
     (world : World (declOf (translationUnit true))) :
     (translationDeclaration true).Rejects 1 (translationInput true) (translationInput true)
       oracle passes world := by
-  simpa only [translationCertificate_fuel, translationCertificate_input] using
-    certificate_rejects_other (translationCertificate true) (translationInput true)
-      (by
-        dsimp only [translationDeclaration, declarationFromData]
-        simpa only [translationCertificate_output, translationOutput, translationInput] using
-          sampleRows_distinct (declOf (translationUnit true))) oracle passes world
+  exact declarationFromData_rejects_identity (source := translationSource true)
+    (translation_export_data true).2 (except_ok_get (translation_library_exists true))
+    (translation_export_data true).1 (except_ok_get (translation_lower_exists true))
+    (translationInput true) (sampleRows_reverse_distinct (declOf (translationUnit true)))
+    oracle passes world
 
 /-- Count, range and token-schema errors all refuse before execution. -/
 theorem translation_decoder_refusals_zeuge :
