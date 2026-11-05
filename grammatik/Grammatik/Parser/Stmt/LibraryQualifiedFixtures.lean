@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Logik.Vertraege.Uebersetzung
 import Grammatik.Parser.Stmt.LibraryFixtureProofs
+import Grammatik.Parser.Stmt.LibraryFixtureScanning
 -- Concrete phase certificates need the bodies of the canonical export gates.
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
@@ -139,11 +140,19 @@ def translationQualCaller : FnSig :=
 
 def translationQualCallerBody : SAnw := .block [.lcall translationQualCall] (some (.ret none))
 
-private theorem qual_lex_success :
-    (lexL translationQualCharacters).toOption.isSome = true := by cbv
+private def qualChunks : List LibraryFixtureScanning.Chunk :=
+  let moduleA := [LibraryFixtureScanning.Chunk.moduleA, .tableTwo, .slot, .libraryHead,
+    .libraryTail, .translatorHead, .inputTwo, .outputTwo, .effects, .plainResult, .closeSpace]
+  let moduleB := [LibraryFixtureScanning.Chunk.moduleB, .tableTwo, .slot, .libraryHead,
+    .libraryTail, .translatorHead, .inputTwo, .outputTwo, .effects, .plainResult, .closeSpace]
+  moduleA ++ moduleB ++ [LibraryFixtureScanning.Chunk.callerHead, .callA, .valuesTwoFinal]
 
-private def qualPhaseTokens : List Token :=
-  (lexL translationQualCharacters).toOption.get qual_lex_success
+private def qualPhaseTokens : List Token := LibraryFixtureScanning.tokens qualChunks
+
+private theorem qual_lexed : lexL translationQualCharacters = .ok qualPhaseTokens := by
+  have source : translationQualCharacters = LibraryFixtureScanning.characters qualChunks := rfl
+  rw [source]
+  exact LibraryFixtureScanning.lex_chunks qualChunks (by decide +kernel)
 
 private theorem qual_parse_success :
     (parseTopTief qualPhaseTokens).toOption.isSome = true := by cbv
@@ -198,7 +207,7 @@ private theorem translation_qual_phases :
   refine certifyPhases translationQualCharacters translationQualCall
     (fun members => members[6]? = some (.fnT translationQualCaller translationQualCallerBody)) ?_
   exact ⟨qualPhaseTokens, qualPhaseItems, qualPhaseMembers, qualPhaseLibrary, qualPhaseUnit,
-    except_ok_get qual_lex_success, except_ok_get qual_parse_success, rfl, qual_retained,
+    qual_lexed, except_ok_get qual_parse_success, rfl, qual_retained,
     except_ok_get qual_library_success, except_ok_get qual_elab_success, qual_lower_success⟩
 
 /-- The exact caller is at member 6 (two opened modules) and its call at statement path `[0]`. -/

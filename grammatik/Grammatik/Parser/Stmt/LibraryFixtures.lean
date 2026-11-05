@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Logik.Vertraege.Uebersetzung
 import Grammatik.Parser.Stmt.LibraryFixtureProofs
+import Grammatik.Parser.Stmt.LibraryFixtureScanning
 public import Grammatik.Parser.Stmt.LibraryQualifiedFixtures
 -- Concrete phase certificates need the bodies of the canonical export gates.
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
@@ -123,12 +124,21 @@ def translationCallerBody : SAnw := .block [.lcall translationCall] (some (.ret 
 
 -- Each phase is cut at a named success theorem. Extracted values have a
 -- success witness, so no default participates in the certificate.
-private theorem translation_lex_success (reverse : Bool) :
-    (lexL (translationCharacters reverse)).toOption.isSome = true := by
-  cases reverse <;> cbv
+private def translationChunks (reverse : Bool) : List LibraryFixtureScanning.Chunk :=
+  [LibraryFixtureScanning.Chunk.moduleSample, .tableTwo, .slot, .libraryHead, .libraryTail,
+    .translatorHead, .inputTwo, .outputTwo, .effects] ++
+  [if reverse then LibraryFixtureScanning.Chunk.reverseResult else LibraryFixtureScanning.Chunk.plainResult] ++
+  [LibraryFixtureScanning.Chunk.callerHead, .callSample, .valuesTwo, .close]
 
 private def translationPhaseTokens (reverse : Bool) : List Token :=
-  (lexL (translationCharacters reverse)).toOption.get (translation_lex_success reverse)
+  LibraryFixtureScanning.tokens (translationChunks reverse)
+
+private theorem translation_lexed (reverse : Bool) :
+    lexL (translationCharacters reverse) = .ok (translationPhaseTokens reverse) := by
+  have source : translationCharacters reverse =
+      LibraryFixtureScanning.characters (translationChunks reverse) := by cases reverse <;> rfl
+  rw [source]
+  exact LibraryFixtureScanning.lex_chunks (translationChunks reverse) (by cases reverse <;> decide +kernel)
 
 private theorem translation_parse_success (reverse : Bool) :
     (parseTopTief (translationPhaseTokens reverse)).toOption.isSome = true := by
@@ -210,7 +220,7 @@ private theorem translation_phases (reverse : Bool) :
     (fun members => members[3]? = some (.fnT translationCaller translationCallerBody)) ?_
   exact ⟨translationPhaseTokens reverse, translationPhaseItems reverse, translationPhaseMembers reverse,
     translationPhaseLibrary reverse, translationPhaseUnit reverse,
-    except_ok_get (translation_lex_success reverse), except_ok_get (translation_parse_success reverse),
+    translation_lexed reverse, except_ok_get (translation_parse_success reverse),
     rfl, translation_retained reverse, except_ok_get (translation_library_success reverse),
     except_ok_get (translation_elab_success reverse), translation_lower_success reverse⟩
 
@@ -295,11 +305,17 @@ def translationRekItems : List SItemTief := (parseTopTief translationRekTokens).
 def translationRekMembers : List SItemTief :=
   Aufloesung.loeseL (Aufloesung.quelle translationRekItems) [] translationRekItems
 
-private theorem rek_lex_success :
-    (lexL translationRekCharacters).toOption.isSome = true := by cbv
+private def rekChunks : List LibraryFixtureScanning.Chunk :=
+  [LibraryFixtureScanning.Chunk.moduleSample, .tableOne, .slot, .libraryHead, .libraryTail,
+    .translatorHead, .inputOne, .outputOne, .effects, .recursiveResult, .callerHead,
+    .callSample, .valuesOne, .close]
 
-private def rekPhaseTokens : List Token :=
-  (lexL translationRekCharacters).toOption.get rek_lex_success
+private def rekPhaseTokens : List Token := LibraryFixtureScanning.tokens rekChunks
+
+private theorem rek_lexed : lexL translationRekCharacters = .ok rekPhaseTokens := by
+  have source : translationRekCharacters = LibraryFixtureScanning.characters rekChunks := rfl
+  rw [source]
+  exact LibraryFixtureScanning.lex_chunks rekChunks (by decide +kernel)
 
 private theorem rek_parse_success :
     (parseTopTief rekPhaseTokens).toOption.isSome = true := by cbv
@@ -349,7 +365,7 @@ private theorem translation_rek_phases :
   refine certifyPhases translationRekCharacters ⟨["sample"], ["consume"], [], [.num 3]⟩
     (fun (_ : List SItemTief) => True) ?_
   exact ⟨rekPhaseTokens, rekPhaseItems, rekPhaseMembers, rekPhaseLibrary, rekPhaseUnit,
-    except_ok_get rek_lex_success, except_ok_get rek_parse_success, rfl, True.intro,
+    rek_lexed, except_ok_get rek_parse_success, rfl, True.intro,
     except_ok_get rek_library_success, except_ok_get rek_elab_success, rek_lower_success⟩
 
 theorem translation_rek_library_zeuge :
