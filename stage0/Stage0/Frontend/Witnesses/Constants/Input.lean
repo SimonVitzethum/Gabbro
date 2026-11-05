@@ -67,7 +67,7 @@ def optionText : String := String.ofList
 
 def noneText : String := String.ofList
   ("table Slots count 4 { slot { value : u8, } } ".toList ++
-   "const fn selected() -> option index into Slots { return None(); } ".toList ++
+   "const fn selected() -> option index into Slots { return None; } ".toList ++
    "impl fn main() -> option index into Slots { return selected(); }".toList)
 
 def tagText : String := String.ofList

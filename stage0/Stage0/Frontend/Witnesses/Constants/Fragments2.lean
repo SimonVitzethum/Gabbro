@@ -89,8 +89,8 @@ def fragment21 : ScanPiece ['o', 'p', 't', 'i', 'o', 'n', ' ', 'i', 'n', 'd', 'e
   cbv
 
 /-- A short equation of the canonical scanner, including its exact fuel consumption. -/
-def fragment22 : ScanPiece ['N', 'o', 'n', 'e', '(', ')', ';', ' ', '}', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'm', 'a', 'i', 'n', '(', ')', ' ', '-', '>', ' ', 'o', 'p', 't', 'i', 'o', 'n', ' '] := by
-  let tokens := ((lexL ['N', 'o', 'n', 'e', '(', ')', ';', ' ', '}', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'm', 'a', 'i', 'n', '(', ')', ' ', '-', '>', ' ', 'o', 'p', 't', 'i', 'o', 'n', ' ']).toOption.get (by cbv)).dropLast
+def fragment22 : ScanPiece ['N', 'o', 'n', 'e', ';', ' ', '}', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'm', 'a', 'i', 'n', '(', ')', ' ', '-', '>', ' ', 'o', 'p', 't', 'i', 'o', 'n', ' '] := by
+  let tokens := ((lexL ['N', 'o', 'n', 'e', ';', ' ', '}', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'm', 'a', 'i', 'n', '(', ')', ' ', '-', '>', ' ', 'o', 'p', 't', 'i', 'o', 'n', ' ']).toOption.get (by cbv)).dropLast
   refine { tokens := tokens, steps := tokens.length + 7, equation := ?_ }
   intro rest fuel
   cbv
