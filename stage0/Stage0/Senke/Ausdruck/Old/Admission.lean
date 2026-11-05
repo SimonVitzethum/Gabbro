@@ -27,7 +27,7 @@ theorem uBool_no_entry (ctx : UCtx) (source : SExpr) (predicate : UEns)
     · cases accepted
     · next absent =>
       cases accepted
-      cases detected : ensAltErg value
+      cases detected : ensAltErg predicate
       · rfl
       · exact False.elim (absent detected)
 
@@ -51,9 +51,18 @@ theorem uBool_entry_unreachable (ctx : UCtx) (source : SExpr) (predicate : UEns)
 
 /-- The source gate is inhabited, and detects an old occurrence beneath an integer builtin. -/
 theorem uBool_no_entry_zeuge :
-    uBool ({names := [], kinds := [], types := [], tabs := [], locks := [], held := [],
-      res := none, fname := "", alias := [], lits := []} : UCtx) (.bin "==" (.lit 0) (.lit 0)) = .ok (.cmp "==" (.lit 0) (.lit 0)) ∧
+    uBool ({
+      names := []
+      kinds := []
+      types := []
+      tabs := []
+      locks := []
+      held := []
+      res := none
+      fname := ""
+      alias := []
+      lits := []} : UCtx) (.bin "==" (.lit 0) (.lit 0)) = .ok (.cmp "==" (.lit 0) (.lit 0)) ∧
     ensAltErg (.cmp "==" (.ib1 .clz 8 (.old "T" "value" (.lit 0))) (.lit 0)) = true := by
-  exact ⟨by decide +kernel, rfl⟩
+  exact ⟨by decide +kernel, by simp only [ensAltErg, seiteAltErg]; rfl⟩
 
 end Gabbro.Stage0.OldSource

@@ -75,6 +75,7 @@ private theorem captured_history {D : Deklaration} (check : String)
   | none => rfl
   | some sampled =>
     rcases sampled with ⟨name, report⟩
+    dsimp only
     split <;> rfl
 
 /-- Every actual event preserves producer identity and the chosen consumer.
@@ -100,6 +101,7 @@ theorem checkGhostStep_form (u : UProg) (c : CheckDecl (declOf u))
       · cases pending : state.pending with
         | none => exact form
         | some report =>
+          dsimp only
           split
           · let entry : CheckEvidenz (declOf u) := ⟨c.probe, report, true, none⟩
             have head : entry.erzeuger = c.probe ∧
