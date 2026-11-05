@@ -235,6 +235,11 @@ attribute [local cbv_eval] generated_range_text generated_range
 -- inspect names, so the transitive call-floor computation can remain symbolic.
 attribute [local cbv_opaque] floorOf
 
+-- uBindWert builds floatTarget with uFloatTy even for the unannotated integer
+-- and call binders below. Preserve its unused canonical bound symbolically;
+-- the actual operand/type dispatch and all selected checks still run.
+attribute [local cbv_opaque] uFloatLimit
+
 attribute [local cbv_opaque] uAnwReihe uAnwReiheCore
 attribute [local cbv_eval] row_nil row_cons core_bind core_trim core_locks
   core_call core_set core_cond
