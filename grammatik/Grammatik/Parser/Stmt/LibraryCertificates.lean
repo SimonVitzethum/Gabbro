@@ -109,12 +109,90 @@ private theorem certificateFromData_fuel :
     (certificateFromData data resolved elaborated lowered input output decoded produced).fuel = 1 := rfl
 end PhaseCertificates
 
+/-- The existing exact call rejection, elaborated before a concrete function
+    carrier is substituted. Unfolding this proposition gives the original claim. -/
+def TranslationDecl.Rejects {source : LibrarySource} {unit : UProg}
+    (declaration : TranslationDecl source unit) (fuel : Nat)
+    (input : Wert (declOf unit) declaration.schema.ty)
+    (other : Wert (declOf unit) declaration.outputType)
+    (oracle : Orakel (declOf unit)) (passes : Nat) (world : World (declOf unit)) : Prop :=
+  rufAt declaration.program oracle passes fuel declaration.translator world
+    (declaration.arguments input) ≠ .ok world (declaration.answer other)
+
+/-- The unchanged measure duty, retaining the complete typed declaration. -/
+def TranslationDecl.MeasureDuty {source : LibrarySource} {unit : UProg}
+    (declaration : TranslationDecl source unit) (passes : Nat) (Q : AxEns (declOf unit))
+    (S : SperrInv (declOf unit))
+    (T : (declOf unit).Tab ⊕ (declOf unit).Glob → Prop) : Prop :=
+  MassPflicht declaration.program passes Q S T Mass.leer
+    (zykS declaration.program declaration.functions) declaration.translator
+
+private theorem declaration_measure {source : LibrarySource} {unit : UProg}
+    (declaration : TranslationDecl source unit) (passes : Nat) (Q : AxEns (declOf unit))
+    (S : SperrInv (declOf unit)) (T : (declOf unit).Tab ⊕ (declOf unit).Glob → Prop) :
+    declaration.MeasureDuty passes Q S T := translation_measure declaration passes Q S T
+
+-- These are constructors of the existing certificate records, not another
+-- source or execution path. All indexed fields are checked at abstract units.
+def payloadFromCertificate {source : LibrarySource} {unit : UProg}
+    {declaration : TranslationDecl source unit} (certificate : TranslationCertificate declaration)
+    (site : List Nat) (located : site = source.path) : LibraryPayload certificate where
+  site := site
+  amStandort := located
+  inhalt := certificate.output
+  vollstaendig := rfl
+
+private theorem payloadFromCertificate_content {source : LibrarySource} {unit : UProg}
+    {declaration : TranslationDecl source unit} (certificate : TranslationCertificate declaration)
+    (site : List Nat) (located : site = source.path) :
+    (payloadFromCertificate certificate site located).inhalt = certificate.output := rfl
+
+private theorem payloadFromCertificate_site {source : LibrarySource} {unit : UProg}
+    {declaration : TranslationDecl source unit} (certificate : TranslationCertificate declaration)
+    (site : List Nat) (located : site = source.path) :
+    (payloadFromCertificate certificate site located).site = site := rfl
+
+/-- Assemble either existing call form with the selected name and actual arity. -/
+def expansionFromPayload {source : LibrarySource} {unit : UProg}
+    {declaration : TranslationDecl source unit} {certificate : TranslationCertificate declaration}
+    (payload : LibraryPayload certificate) (argument : SExpr) (name : String)
+    (selected : declaration.library.function.name = name)
+    (arity : source.call.args.length + 1 = declaration.library.function.params.length)
+    (binding : Option (Bool × String × Option STyp)) : LibraryExpansion payload :=
+  match binding with
+  | none => {
+      nutzlastArg := argument
+      aufruf := .call name (source.call.args ++ [argument])
+      erweitert := Or.inl (by simp only [expandLibraryCall, selected])
+      stelligkeit := by simpa only [List.length_append, List.length_singleton] using arity }
+  | some (isMutable, binderName, ty) => {
+      nutzlastArg := argument
+      aufruf := .bind isMutable binderName ty (.call name (source.call.args ++ [argument]))
+      erweitert := Or.inr ⟨isMutable, binderName, ty, by simp only [expandBindLibraryCall, selected]⟩
+      stelligkeit := by simpa only [List.length_append, List.length_singleton] using arity }
+
+-- Keep the image pair abstract while forming the checker's function arguments.
+def LibraryImageClosed {unit : UProg}
+    (image : Programm (declOf unit) × List (declOf unit).Fn) : Prop :=
+  Gabbro.Grammatik.Zielsatz.libraryB image.1 image.2 = true
+
+def LibraryImageAdmitted {unit : UProg}
+    (image : Programm (declOf unit) × List (declOf unit).Fn) : Prop :=
+  Gabbro.Grammatik.Zielsatz.LibraryAdmission image.1
+
+private theorem libraryImage_closed {unit : UProg}
+    (image : Programm (declOf unit) × List (declOf unit).Fn) : LibraryImageClosed image :=
+  Gabbro.Grammatik.Zielsatz.libraryB_immer _ _
+
+private theorem libraryImage_admitted {unit : UProg}
+    (image : Programm (declOf unit) × List (declOf unit).Fn) : LibraryImageAdmitted image :=
+  (Gabbro.Grammatik.Zielsatz.libraryB_iff _ _).mp (libraryImage_closed image)
+
 private theorem certificate_rejects_other {source : LibrarySource} {unit : UProg}
     {declaration : TranslationDecl source unit} (certificate : TranslationCertificate declaration)
     (other : Wert (declOf unit) declaration.outputType) (different : certificate.output ≠ other)
     (oracle : Orakel (declOf unit)) (passes : Nat) (world : World (declOf unit)) :
-    rufAt declaration.program oracle passes certificate.fuel declaration.translator world
-      (declaration.arguments certificate.input) ≠ .ok world (declaration.answer other) := by
+    declaration.Rejects certificate.fuel certificate.input other oracle passes world := by
   intro executed
   have same := translation_result_unique certificate oracle passes world _ executed
   exact different (answer_injective declaration same).symm
@@ -221,12 +299,12 @@ theorem translation_body_change_zeuge :
 theorem translation_wrong_execution_zeuge
     (oracle : Orakel (declOf (translationUnit true))) (passes : Nat)
     (world : World (declOf (translationUnit true))) :
-    rufAt (translationDeclaration true).program oracle passes 1
-      (translationDeclaration true).translator world
-      ((translationDeclaration true).arguments (translationInput true)) ≠
-      .ok world ((translationDeclaration true).answer (translationInput true)) := by
-  exact certificate_rejects_other (translationCertificate true) (translationInput true)
-    (sampleRows_distinct (declOf (translationUnit true))) oracle passes world
+    (translationDeclaration true).Rejects 1 (translationInput true) (translationInput true)
+      oracle passes world := by
+  simpa only [translationCertificate_fuel, translationCertificate_input] using
+    certificate_rejects_other (translationCertificate true) (translationInput true)
+      (by simpa only [translationCertificate_output, translationOutput, translationInput] using
+        sampleRows_distinct (declOf (translationUnit true))) oracle passes world
 
 /-- Count, range and token-schema errors all refuse before execution. -/
 theorem translation_decoder_refusals_zeuge :
@@ -238,10 +316,8 @@ theorem translation_decoder_refusals_zeuge :
 theorem translation_measure_zeuge (passes : Nat) (Q : AxEns (declOf (translationUnit true)))
     (S : SperrInv (declOf (translationUnit true)))
     (T : (declOf (translationUnit true)).Tab ⊕ (declOf (translationUnit true)).Glob → Prop) :
-    MassPflicht (translationDeclaration true).program passes Q S T Mass.leer
-      (zykS (translationDeclaration true).program (translationDeclaration true).functions)
-      (translationDeclaration true).translator :=
-  translation_measure (translationDeclaration true) passes Q S T
+    (translationDeclaration true).MeasureDuty passes Q S T :=
+  declaration_measure (translationDeclaration true) passes Q S T
 
 /-- Joint qualified declaration fixture: the qualifier selects module `a` through typed export,
     bounded call graph and immutable by-value array signature. -/
@@ -261,44 +337,32 @@ def translationQualCertificate : TranslationCertificate translationQualDeclarati
     (by exact sampleRows_decoded (declOf translationQualUnit)) rfl
 
 /-- The per-site payload of the identity translation: site `[0]`, content the certified output. -/
-def translationPayload : LibraryPayload (translationCertificate false) where
-  site := [0]
-  amStandort := by simp only [translationSource]
-  inhalt := translationOutput false
-  vollstaendig := by exact (translationCertificate_output false).symm
+def translationPayload : LibraryPayload (translationCertificate false) :=
+  payloadFromCertificate (translationCertificate false) [0] (by simp only [translationSource])
 
 /-- Every payload row is the certified row. -/
 theorem translationPayload_zeilen_zeuge :
     (translationPayload.inhalt ⟨0, by decide⟩).n = 3 ∧ (translationPayload.inhalt ⟨1, by decide⟩).n = 5 := by
-  simpa only [translationPayload, translationOutput] using
+  simpa only [translationPayload, payloadFromCertificate_content, translationCertificate_output, translationOutput] using
     And.intro (sampleRows_first (declOf (translationUnit false))).1
       (sampleRows_second (declOf (translationUnit false)))
 
 /-- Payloads are per site: this one is not at site `[1]`. -/
 theorem translationPayload_standort_zeuge : translationPayload.site ≠ [1] := by
-  simpa only [translationPayload] using (by decide : ([0] : List Nat) ≠ [1])
+  simpa only [translationPayload, payloadFromCertificate_site] using (by decide : ([0] : List Nat) ≠ [1])
 
 /-- The certified `lcall` expansion: ordinary call, payload last, caller arity met. -/
-def translationExpansion : LibraryExpansion translationPayload where
-  nutzlastArg := .variable "sample_payload_0"
-  aufruf := .call "consume" (translationCall.args ++ [.variable "sample_payload_0"])
-  erweitert := Or.inl (by
-    simp only [expandLibraryCall, translationDeclaration_library]
-    rw [(translation_library_shape false).1])
-  stelligkeit := by
-    simpa only [List.length_append, List.length_singleton, translationDeclaration_library] using
-      (translation_library_shape false).2
+def translationExpansion : LibraryExpansion translationPayload :=
+  expansionFromPayload translationPayload (.variable "sample_payload_0") "consume"
+    (by simpa only [translationDeclaration_library] using (translation_library_shape false).1)
+    (by simpa only [translationDeclaration_library] using (translation_library_shape false).2) none
 
 /-- The certified `bindLib` expansion: the ordinary call value bound as usual. -/
-def translationExpansionBind : LibraryExpansion translationPayload where
-  nutzlastArg := .variable "sample_payload_0"
-  aufruf := .bind false "value" none (.call "consume" (translationCall.args ++ [.variable "sample_payload_0"]))
-  erweitert := Or.inr ⟨false, "value", (none : Option STyp), by
-    simp only [expandBindLibraryCall, translationDeclaration_library]
-    rw [(translation_library_shape false).1]⟩
-  stelligkeit := by
-    simpa only [List.length_append, List.length_singleton, translationDeclaration_library] using
-      (translation_library_shape false).2
+def translationExpansionBind : LibraryExpansion translationPayload :=
+  expansionFromPayload translationPayload (.variable "sample_payload_0") "consume"
+    (by simpa only [translationDeclaration_library] using (translation_library_shape false).1)
+    (by simpa only [translationDeclaration_library] using (translation_library_shape false).2)
+    (some (false, "value", none))
 
 /-- Both expansions are ordinary: no library construct remains for the lowering. -/
 theorem translationExpansion_ohne_zeuge :
@@ -315,14 +379,11 @@ theorem torZurErweiterung_zeuge :
   exact ⟨rfl, rfl, rfl⟩
 
 /-- The generated translator program is library-closed. -/
-theorem translation_libraryB_zeuge :
-    Gabbro.Grammatik.Zielsatz.libraryB (translationLowered false).1
-      (translationLowered false).2 = true :=
-  Gabbro.Grammatik.Zielsatz.libraryB_immer _ _
+theorem translation_libraryB_zeuge : LibraryImageClosed (translationLowered false) :=
+  libraryImage_closed (translationLowered false)
 
 /-- The library admission holds on the generated program, through the checker binding. -/
-theorem translation_libraryAdmission_zeuge :
-    Gabbro.Grammatik.Zielsatz.LibraryAdmission (translationLowered false).1 :=
-  (Gabbro.Grammatik.Zielsatz.libraryB_iff _ _).mp translation_libraryB_zeuge
+theorem translation_libraryAdmission_zeuge : LibraryImageAdmitted (translationLowered false) :=
+  libraryImage_admitted (translationLowered false)
 
 end Gabbro.Grammatik.Uebersetzung
