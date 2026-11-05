@@ -153,7 +153,7 @@ abbrev zPoolRet :=
     `haupt`), thread 0 steps, thread 1 steps, thread 0 takes the lock; at the reached machine
     thread 0 holds the lock and `gabbro_ziel` -- applied with the concrete checker -- gives
     every leg of `Ziel`: race freedom over the two instances of one routine included. -/
-theorem pool_ziel_zeuge : ∃ M1 M2 M3 : RufMaschineG zD.mitRuhe,
+theorem pool_ziel_zeuge [RootNativeFloat.Hardware] : ∃ M1 M2 M3 : RufMaschineG zD.mitRuhe,
     Laufzeit zPool (speicherR zSp) (initRuhe zPool.starts) ∧
     (initRuhe zPool.starts 0).1 = some zHaupt ∧ (initRuhe zPool.starts 1).1 = some zHaupt ∧
     RufSchrittG zPB.mitRuhe zO.mitRuhe 0 zPoolM0 0 M1 ∧
@@ -195,7 +195,7 @@ theorem pool_ziel_zeuge : ∃ M1 M2 M3 : RufMaschineG zD.mitRuhe,
       ⟨[.inl ()], zCs_voll⟩
       (by rw [akzeptiert_pruefer_eq]
           exact zPool_akzeptiert)
-      zPool_nutzerPflicht zO ⟨zO_gut, zO_lokal, axVertragO_wahr zO⟩ 0 _ _
+      zPool_nutzerPflicht zO ⟨zO_gut, zO_lokal, axVertragO_wahr zO, inferInstance⟩ 0 _ _
       (laufzeit_initRuhe zPool) M3 hr
 
 /-! ## 3. The refusal: an unguarded writer declared twice -/

@@ -267,7 +267,7 @@ local instance : DecidableEq zD.Ax := inferInstanceAs (DecidableEq Empty)
     the concrete checker), machine W runs thread 0, thread 1, thread 0 (both instances unfold,
     thread 0 takes the lock); at the reached machine thread 0 holds the lock, its G-part is
     reached by G, and every leg of `Ziel` holds there -- by `gabbro_ziel_schwach`. -/
-theorem schwach_pool_zeuge (ord : zD.mitRuhe.Glob → Ordnung) :
+theorem schwach_pool_zeuge [RootNativeFloat.Hardware] (ord : zD.mitRuhe.Glob → Ordnung) :
     ∃ W1 W2 W3 : RufMaschineW zD.mitRuhe,
       RufSchrittW zPB.mitRuhe zO.mitRuhe 0 ord (RufStartW zPoolM0) 0 W1 ∧
       RufSchrittW zPB.mitRuhe zO.mitRuhe 0 ord W1 1 W2 ∧
@@ -285,7 +285,7 @@ theorem schwach_pool_zeuge (ord : zD.mitRuhe.Glob → Ordnung) :
     ⟨[.inl ()], zCs_voll⟩
     (by rw [akzeptiert_pruefer_eq]
         exact zPool_akzeptiert)
-    zPool_nutzerPflicht zO ⟨zO_gut, zO_lokal, axVertragO_wahr zO⟩ 0 _ _ hL ord W3 hW3
+    zPool_nutzerPflicht zO ⟨zO_gut, zO_lokal, axVertragO_wahr zO, inferInstance⟩ 0 _ _ hL ord W3 hW3
   exact ⟨W1, W2, W3, t1, t2, t3, by rw [g3]; exact hlock, hZ.1, hZ.2⟩
 
 /-! ## 3. Per-core cells (OFFEN O17): the pool rules agree, writes are covered, reads are not -/

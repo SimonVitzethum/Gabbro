@@ -129,8 +129,10 @@ theorem w1_abgelehnt (E : Einheit w1D) (hP : E.P = w1P) (fs : Aufzaehlung w1D.Fn
       List.all_eq_true.mp atFunction (.inl ())
         (by rw [w1_ants]; exact List.mem_singleton_self _)
     have absent : stelleB fs.1 (Sum.inl (() : w1D.Ax)) = false := by
-      change (false || fs.1.any (fun f => w1D.passt f 5)) = false
-      rw [Bool.false_or, List.any_eq_false]
+      have never : decide (w1D.aerg () = some Ty.never) = false := by decide +kernel
+      change (decide (w1D.aerg () = some Ty.never) ||
+        fs.1.any (fun f => w1D.passt f 5)) = false
+      rw [never, Bool.false_or, List.any_eq_false]
       intro f _
       cases f
       decide
