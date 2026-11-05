@@ -168,8 +168,8 @@ private theorem initializer_numeric_value :
         64 (.call "increment" [.lit 3]) = some value ∧ 0 ≤ value ∧ value ≤ 255 := by
     refine ⟨?value, ?evaluated, ?lower, ?upper⟩
     case evaluated => cbv <;> exact Eq.refl _
-    case lower => cbv
-    case upper => cbv
+    case lower => cbv <;> exact Int.NonNeg.mk _
+    case upper => cbv <;> exact Int.NonNeg.mk _
   obtain ⟨value, evaluated, lower, upper⟩ := packet
   exact ⟨value, initializer_scope_data (fun _ fns values =>
     uKonstWert 0 255 fns values 64 (.call "increment" [.lit 3]) = some value) evaluated,
@@ -289,11 +289,15 @@ private theorem initializer_program_packet :
       (.int 0 255) (.lit value) =
       .ok (.widen lower upper (.lit value)) := by
     simp only [lowLit, dite_eq_left lower, dite_eq_left upper]
-  have itemPacket : ∃ items : List SItemTief, initializerInput.original = items ∧
-      ∀ item ∈ items,
-        (Frontend.checkArrayItem header.unit header.source.scopes item).toOption.isSome = true := by
-    let items : List SItemTief := ?items
-    have origin : initializerInput.original = items := by cbv <;> exact Eq.refl _
+  have itemSpine : ∃ firstSig firstBody lastSig lastBody,
+      initializerInput.original = [.fnT firstSig firstBody,
+        .constT "ANSWER" (.atom "u8") (.one (.call "increment" [.lit 3])),
+        .fnT lastSig lastBody] := by
+    refine ⟨?firstSig, ?firstBody, ?lastSig, ?lastBody, ?origin⟩
+    case origin => cbv <;> exact Eq.refl _
+  obtain ⟨firstSig, firstBody, lastSig, lastBody, origin⟩ := itemSpine
+  have checked : ∀ item ∈ initializerInput.original,
+      (Frontend.checkArrayItem header.unit header.source.scopes item).toOption.isSome = true := by
     have meanings : initializerInput.original.all
         (Frontend.checkConstantMeaning header.source.scopes.types
           header.source.scopes.functions header.source.scopes.values) = true := by
@@ -301,14 +305,11 @@ private theorem initializer_program_packet :
         (Frontend.checkConstantMeaning initializerConservative.scope.types
           initializerConservative.scope.functions initializerConservative.scope.values) = true
       exact initializerTail.constants
-    refine ⟨items, origin, ?_⟩
     intro item member
-    have originalMember : item ∈ initializerInput.original := by
-      rw [origin]
-      exact member
     have meaning : Frontend.checkConstantMeaning header.source.scopes.types
         header.source.scopes.functions header.source.scopes.values item = true :=
-      List.all_eq_true.mp meanings item originalMember
+      List.all_eq_true.mp meanings item member
+    rw [origin] at member
     simp only [List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl | rfl
     · rfl
@@ -316,11 +317,9 @@ private theorem initializer_program_packet :
         (.one (.call "increment" [.lit 3])) (.int 0 255) (.lit value)
         (.widen lower upper (.lit value)) meaning typed literal lowered
     · rfl
-  obtain ⟨items, origin, checked⟩ := itemPacket
   have arraysReady : (Frontend.checkArrays header.unit header.source.scopes
       initializerInput.original).toOption.isSome = true :=
-    checked_array_items header.unit header.source.scopes initializerInput.original
-      (fun item member => checked item (by rw [← origin]; exact member))
+    checked_array_items header.unit header.source.scopes initializerInput.original checked
   refine ⟨header, count, ?body⟩
   case body =>
     refine ⟨{
