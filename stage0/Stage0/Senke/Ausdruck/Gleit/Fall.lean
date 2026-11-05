@@ -24,7 +24,7 @@ theorem floatExprE_ok {fp : Runner.W} {K d top : Nat} {Γ : Ctx} {Λ : List (Res
     Ok m pc fp K d c (Enc L .bool
       (eval σ₀ (if le then Expr.flle b a else Expr.fllt a b) σ ρ)) := by
   cases le
-  · refine nativeFPWordL_ok (.lt .f64) rfl h hK
+  · refine nativeFPWordL_ok (.lt .f64) (op_fp rfl) h hK
       (fun ca ta he ht => iha _ ca ta he ht)
       (fun cb tb he ht => ihb _ cb tb he ht) ?_ hp
     intro wa wb ha hb
@@ -38,7 +38,7 @@ theorem floatExprE_ok {fp : Runner.W} {K d top : Nat} {Γ : Ctx} {Λ : List (Res
     · change Enc L .bool (gleitLt (eval σ₀ a σ ρ).x (eval σ₀ b σ ρ).x)
         (Runner.IR.bool (gleitLt (eval σ₀ a σ ρ).x (eval σ₀ b σ ρ).x))
       cases gleitLt (eval σ₀ a σ ρ).x (eval σ₀ b σ ρ).x <;> rfl
-  · refine nativeFPWordL_ok (.le .f64) rfl h hK
+  · refine nativeFPWordL_ok (.le .f64) (op_fp rfl) h hK
       (fun cb tb he ht => ihb _ cb tb he ht)
       (fun ca ta he ht => iha _ ca ta he ht) ?_ hp
     intro wb wa hb ha

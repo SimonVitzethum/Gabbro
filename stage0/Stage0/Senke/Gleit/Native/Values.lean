@@ -35,7 +35,7 @@ theorem floatWordsL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     NativeFloatCode (L := L) (reserved := reserved) ρ W
       (fun d => floatWordsL op d a b) (gleitRechne op x y) := by
   intro fp K d c top h hK m pc hp
-  refine nativeFPWordL_ok (nativeArithmeticOp op) (by cases op <;> rfl) h hK
+  refine nativeFPWordL_ok (nativeArithmeticOp op) (op_fp (by cases op <;> rfl)) h hK
     (fun _ _ he ht => ha he ht) (fun _ _ he ht => hb he ht) ?_ hp
   intro wa wb hx hy
   subst wa; subst wb

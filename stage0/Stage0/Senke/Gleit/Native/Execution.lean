@@ -13,7 +13,7 @@ variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 theorem nativeFP_bin_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat}
     {ca cb : List II} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {Pa Pb P : Runner.W → Prop} (kind : Runner.NativeFPOp)
-    (direct : kind.direct = true)
+    (dispatch : op kind.code = Runner.IR.fp kind)
     (hA : ∀ m pc, Pre L m pc fp K d ca ρ W reserved → Ok m pc fp K d ca Pa)
     (hB : ∀ m pc, Pre L m pc fp K (d + 1) cb ρ W reserved →
       Ok m pc fp K (d + 1) cb Pb)
@@ -45,7 +45,7 @@ theorem nativeFP_bin_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat}
     (m' := write m2 (slot fp (BitVec.ofNat 64 d)) 8 r.toNat) h2.code
     (by simpa only [ci] using (show kind.code < 256 by omega)) (by
       simp only [ci]
-      rw [op_fp direct]
+      rw [dispatch]
       refine run_fp (t := ⟨_, fp⟩)
         (m1 := write m2 (slot fp (BitVec.ofNat 64 d)) 8 r.toNat) hi
         (va := wa) (vb := wb) ?_ ?_ hr ?_
@@ -66,7 +66,8 @@ theorem nativeFP_bin_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat}
 theorem nativeFPWordL_ok {fp : Runner.W} {K d top : Nat} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {m : Runner.Mem} {pc : Runner.W}
     {a b : Option (List II × Nat)} {c : List II}
-    {Pa Pb P : Runner.W → Prop} (kind : Runner.NativeFPOp) (direct : kind.direct = true)
+    {Pa Pb P : Runner.W → Prop} (kind : Runner.NativeFPOp)
+    (dispatch : op kind.code = Runner.IR.fp kind)
     (h : nativeFPWordL kind d a b = some (c, top)) (hK : top ≤ K)
     (iha : ∀ ca ta, a = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d ca ρ W reserved → Ok m pc fp K d ca Pa)
@@ -78,7 +79,7 @@ theorem nativeFPWordL_ok {fp : Runner.W} {K d top : Nat} {Γ : Ctx} {ρ : Env D 
     pure, Option.some.injEq] at h
   obtain ⟨⟨ca, ta⟩, ha, ⟨cb, tb⟩, hb, hc⟩ := h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj hc
-  exact nativeFP_bin_ok kind direct (iha ca ta ha (by omega))
+  exact nativeFP_bin_ok kind dispatch (iha ca ta ha (by omega))
     (ihb cb tb hb (by omega)) result (by omega) hp
 
 end Gabbro.Stage0.Senke

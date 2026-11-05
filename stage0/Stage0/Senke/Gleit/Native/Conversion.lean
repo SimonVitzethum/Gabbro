@@ -8,20 +8,24 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 
-/-- Unary FP instructions still perform the IR's second physical slot read. -/
-def nativeSignedFloatL (d : Nat) (child : Nat → Option (List II × Nat)) :
+/-- Both integer conversions consume the child once and retain the IR's second
+    physical slot read. Unsigned conversion uses the runner's portable sequence. -/
+def nativeIntegerFloatL (signed : Bool) (d : Nat) (child : Nat → Option (List II × Nat)) :
     Option (List II × Nat) :=
-  nativeFPWordL (.fromInt64 .f64) d (child d) (some ([ci 1 (d + 1) 0 0], d + 2))
+  nativeFPWordL (if signed then .fromInt64 .f64 else .fromUInt64 .f64)
+    d (child d) (some ([ci 1 (d + 1) 0 0], d + 2))
 
-theorem nativeSignedFloatL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
-    {child : Nat → Option (List II × Nat)} (z : Int)
-    (source : WordCode (L := L) (reserved := reserved) ρ W child (BitVec.ofInt 64 z)) :
+theorem nativeIntegerFloatL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {child : Nat → Option (List II × Nat)} (signed : Bool) (word : Runner.W)
+    (source : WordCode (L := L) (reserved := reserved) ρ W child word) :
     NativeFloatCode (L := L) (reserved := reserved) ρ W
-      (fun d => nativeSignedFloatL d child) (Int64.ofBitVec (BitVec.ofInt 64 z)).toFloat := by
+      (fun d => nativeIntegerFloatL signed d child)
+      (if signed then (Int64.ofBitVec word).toFloat else (UInt64.ofBitVec word).toFloat) := by
   intro fp K d c top emitted fits m pc pre
   refine nativeFPWordL_ok (L := L) (reserved := reserved)
-    (Pa := fun w => w = BitVec.ofInt 64 z) (Pb := fun w => w = (0 : Runner.W))
-    (.fromInt64 .f64) rfl emitted fits
+    (Pa := fun w => w = word) (Pb := fun w => w = (0 : Runner.W))
+    (if signed then .fromInt64 .f64 else .fromUInt64 .f64)
+    (by cases signed; exact op_fp_fromUInt64 .f64; exact op_fp rfl) emitted fits
     (fun _ _ hc ht => source hc ht) ?_ ?_ pre
   · intro cb tb hc ht m pc hp
     cases hc
@@ -29,21 +33,34 @@ theorem nativeSignedFloatL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pro
   · intro wa wb ha hb
     subst wa
     refine ⟨_, ?_, nativeFloat_read_word _⟩
-    change Runner.readFloat _ = _
-    exact nativeFloat_read_word _
+    cases signed <;> change Runner.readFloat _ = _
+    all_goals exact nativeFloat_read_word _
 
-/-- Signed source bounds are used only to identify the actual native cast.
+/-- Source bounds are used only to identify the actual signed or unsigned cast.
     They are derived from the existing canonical integer value and type gate. -/
-theorem nativeSignedIntegerL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
-    {child : Nat → Option (List II × Nat)} (z : Int)
-    (lower : -(2 ^ 63) ≤ z) (upper : z < 2 ^ 63)
+theorem nativeIntegerFloatL_source_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {child : Nat → Option (List II × Nat)} (signed : Bool) (z : Int)
+    (bounds : if signed then -(2 ^ 63) ≤ z ∧ z < 2 ^ 63 else 0 ≤ z ∧ z < 2 ^ 64)
     (source : WordCode (L := L) (reserved := reserved) ρ W child (BitVec.ofInt 64 z)) :
     NativeFloatCode (L := L) (reserved := reserved) ρ W
-      (fun d => nativeSignedFloatL d child) (gleitAusInt z) := by
-  change NativeFloatCode (L := L) (reserved := reserved) ρ W
-    (fun d => nativeSignedFloatL d child) (Float.ofInt z)
-  rw [RootNativeFloat.ofInt_signed64_bits z lower upper]
-  exact nativeSignedFloatL_ok z source
+      (fun d => nativeIntegerFloatL signed d child) (gleitAusInt z) := by
+  have value : (if signed then (Int64.ofBitVec (BitVec.ofInt 64 z)).toFloat
+      else (UInt64.ofBitVec (BitVec.ofInt 64 z)).toFloat) = gleitAusInt z := by
+    cases signed
+    · change 0 ≤ z ∧ z < 2 ^ 64 at bounds
+      have word : UInt64.ofBitVec (BitVec.ofInt 64 z) = UInt64.ofNat z.toNat := by
+        apply UInt64.eq_of_toBitVec_eq
+        change BitVec.ofInt 64 z = BitVec.ofNat 64 z.toNat
+        rw [← BitVec.ofInt_natCast, Int.toNat_of_nonneg bounds.1]
+      change (UInt64.ofBitVec (BitVec.ofInt 64 z)).toFloat = Float.ofInt z
+      rw [word]
+      exact (RootNativeFloat.ofInt_unsigned64 z bounds.1 bounds.2).symm
+    · change -(2 ^ 63) ≤ z ∧ z < 2 ^ 63 at bounds
+      exact (RootNativeFloat.ofInt_signed64_bits z bounds.1 bounds.2).symm
+  intro fp K d c top emitted fits m pc pre
+  have run := nativeIntegerFloatL_ok signed (BitVec.ofInt 64 z) source
+    emitted fits m pc pre
+  exact run.mono (fun word decoded => decoded.trans value)
 
 /-- Scaling uses the same physical multiplier and native value relation as
     arithmetic. Neither child has to promise a canonical NaN bit pattern. -/
@@ -54,7 +71,7 @@ theorem nativeFloatMulL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     NativeFloatCode (L := L) (reserved := reserved) ρ W
       (fun d => nativeFPWordL (.mul .f64) d (a d) (b (d + 1))) (Float.mul x y) := by
   intro fp K d c top emitted fits m pc pre
-  refine nativeFPWordL_ok (.mul .f64) rfl emitted fits
+  refine nativeFPWordL_ok (.mul .f64) (op_fp rfl) emitted fits
     (fun _ _ hc ht => left hc ht) (fun _ _ hc ht => right hc ht) ?_ pre
   intro wa wb ha hb
   refine ⟨_, ?_, nativeFloat_read_word _⟩

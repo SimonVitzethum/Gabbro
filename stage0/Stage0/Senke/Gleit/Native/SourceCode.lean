@@ -20,19 +20,21 @@ def wideComputedFloatOfE (L : Lay D) {Γ : Ctx} {Λ : List (Res D)}
   let field := fun {a b : Int} (t : Expr D Γ Λ (.int a b)) j => lowE L t j reserved
   let flag := fun j => lowE L (.lt (WideFloat.magnitude w e) (.lit (2 ^ 55))) j reserved
   let sign := fun j => lowE L (.lt e (.lit 0)) j reserved
-  let small := fun j => nativeSignedFloatL j (field (WideFloat.small e))
+  let small := fun j => nativeIntegerFloatL true j (field (WideFloat.small e))
   let large := fun j => nativeFPWordL (.mul .f64) j
-    (nativeSignedFloatL j (field (WideFloat.guard w e)))
+    (nativeIntegerFloatL true j (field (WideFloat.guard w e)))
     (nativeFloatScaleL (j + 1) sign (field (WideFloat.index w e)))
   routineChooseL d flag small large
 
-/-- The signed-word fast path and complete-magnitude path retain the original
-    interval gate. Source float values use native binary64, as `Ty.fl` requires. -/
+/-- Signed64, then unsigned64, then complete-magnitude conversion use the actual
+    source interval. All three produce native binary64, as `Ty.fl` requires. -/
 def computedFloatOfE (L : Lay D) {Γ : Ctx} {Λ : List (Res D)}
     {lo hi : Int} (e : Expr D Γ Λ (.int lo hi))
     (d : Nat) (reserved : Nat := 0) : Option (List II × Nat) :=
   if -2 ^ 63 ≤ lo ∧ hi < 2 ^ 63 then
-    nativeSignedFloatL d (fun j => lowE L e j reserved)
+    nativeIntegerFloatL true d (fun j => lowE L e j reserved)
+  else if 0 ≤ lo ∧ hi < 2 ^ 64 then
+    nativeIntegerFloatL false d (fun j => lowE L e j reserved)
   else wideComputedFloatOfE L e d reserved
 
 theorem wideComputedFloatOfE_top {L : Lay D} {Γ : Ctx} {Λ : List (Res D)}
@@ -51,6 +53,9 @@ theorem computedFloatOfE_bounds {L : Lay D} {Γ : Ctx} {Λ : List (Res D)}
   split at hc
   · have bound := nativeFPWordL_bounds hc
     omega
-  · exact wideComputedFloatOfE_top hc
+  · split at hc
+    · have bound := nativeFPWordL_bounds hc
+      omega
+    · exact wideComputedFloatOfE_top hc
 
 end Gabbro.Stage0.Senke

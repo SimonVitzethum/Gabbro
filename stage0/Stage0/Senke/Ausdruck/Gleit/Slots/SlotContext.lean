@@ -26,7 +26,7 @@ private theorem wideComputedFloatOfE_value_ok {Γ : Ctx} {Λ : List (Res D)}
   rw [magnitude] at condition
   have small : decide ((z.natAbs : Int) < 2 ^ 55) = true →
       NativeFloatCode (L := L) (reserved := reserved) ρ W
-        (fun j => nativeSignedFloatL j (fun d => lowE L (WideFloat.small e) d reserved))
+        (fun j => nativeIntegerFloatL true j (fun d => lowE L (WideFloat.small e) d reserved))
         (gleitAusInt z) := by
     intro flag
     have narrow : z.natAbs < 2 ^ 55 := by
@@ -34,14 +34,14 @@ private theorem wideComputedFloatOfE_value_ok {Γ : Ctx} {Λ : List (Res D)}
       exact_mod_cast cast
     have child := WideFloat.word (WideFloat.small e) (by decide) lay same world reserved
     rw [WideFloat.small_value (σ₀ := σ₀) (σ := σ) (ρ := ρ) (e := e) narrow] at child
-    exact nativeSignedIntegerL_ok z (by omega) (by omega) child
+    exact nativeIntegerFloatL_source_ok true z ⟨by omega, by omega⟩ child
   have sign := WideFloat.boolean (.lt e (.lit 0)) lay same world reserved
   change WordCode (L := L) (reserved := reserved) ρ W _
     (Runner.IR.bool (decide (z < 0))) at sign
   have large : decide ((z.natAbs : Int) < 2 ^ 55) = false →
       NativeFloatCode (L := L) (reserved := reserved) ρ W
         (fun j => nativeFPWordL (.mul .f64) j
-          (nativeSignedFloatL j (fun d => lowE L (WideFloat.guard w e) d reserved))
+          (nativeIntegerFloatL true j (fun d => lowE L (WideFloat.guard w e) d reserved))
           (nativeFloatScaleL (j + 1) (fun d => lowE L (.lt e (.lit 0)) d reserved)
             (fun d => lowE L (WideFloat.index w e) d reserved))) (gleitAusInt z) := by
     intro flag
@@ -53,7 +53,12 @@ private theorem wideComputedFloatOfE_value_ok {Γ : Ctx} {Λ : List (Res D)}
     rw [WideFloat.guard_value (σ₀ := σ₀) (σ := σ) (ρ := ρ) (e := e) bound (by omega)] at guard
     rw [WideFloat.index_value (σ₀ := σ₀) (σ := σ) (ρ := ρ) (e := e) bound big,
       BitVec.ofInt_natCast] at index
-    have converted := nativeSignedFloatL_ok _ guard
+    have converted : NativeFloatCode (L := L) (reserved := reserved) ρ W
+        (fun j => nativeIntegerFloatL true j
+          (fun d => lowE L (WideFloat.guard w e) d reserved))
+        (Int64.ofBitVec (BitVec.ofInt 64
+          (integerFloatJam z.natAbs (integerFloatShift z.natAbs) : Int))).toFloat :=
+      nativeIntegerFloatL_ok true _ guard
     have scale := nativeFloatScaleL_ok sign index
     have lower : 55 ≤ integerFloatIndex z.natAbs := by unfold integerFloatIndex; omega
     have upper : integerFloatIndex z.natAbs ≤ 2047 := by unfold integerFloatIndex; omega
@@ -87,7 +92,7 @@ theorem wideComputedFloatOfE_ok {Γ : Ctx} {Λ : List (Res D)}
   exact (wideComputedFloatOfE_value_ok e same lay world reserved hc ht m pc pre).mono
     (fun word decoded => nativeFloat_word_eq_nonNaN (RootNativeFloat.ofInt_not_nan _) decoded)
 
-/-- Both emitting branches consume the original expression theorem. The world,
+/-- All emitting branches consume the original expression theorem. The world,
     old/current-world identity, reservation and full memory footprint stay exact. -/
 theorem computedFloatOfE_ok {Γ : Ctx} {Λ : List (Res D)}
     {lo hi : Int} {e : Expr D Γ Λ (.int lo hi)}
@@ -97,18 +102,23 @@ theorem computedFloatOfE_ok {Γ : Ctx} {Λ : List (Res D)}
     (hp : Pre L m pc fp K d code ρ W reserved) (ht : top ≤ K)
     (lay : LayIn L) (same : σ₀ = σ) (world : ∀ m, W m → WeltAt m L σ) :
     Ok m pc fp K d code (· = (gleitAusInt (eval σ₀ e σ ρ).n).toBits.toBitVec) := by
+  have child : WordCode (L := L) (reserved := reserved) ρ W
+      (fun j => lowE L e j reserved) (BitVec.ofInt 64 (eval σ₀ e σ ρ).n) := by
+    intro fp K d c top he ht m pc pre
+    exact (lowE_ok (same := fun _ => same) σ₀ σ world lay e d c top he ht m pc ρ pre).word trivial
+  have lower := (eval σ₀ e σ ρ).lo_le
+  have upper := (eval σ₀ e σ ρ).le_hi
   unfold computedFloatOfE at hc
   split at hc
   · next range =>
-    have child : WordCode (L := L) (reserved := reserved) ρ W
-        (fun j => lowE L e j reserved) (BitVec.ofInt 64 (eval σ₀ e σ ρ).n) := by
-      intro fp K d c top he ht m pc pre
-      exact (lowE_ok (same := fun _ => same) σ₀ σ world lay e d c top he ht m pc ρ pre).word trivial
-    have lower := (eval σ₀ e σ ρ).lo_le
-    have upper := (eval σ₀ e σ ρ).le_hi
-    exact (nativeSignedIntegerL_ok (eval σ₀ e σ ρ).n (by omega) (by omega)
+    exact (nativeIntegerFloatL_source_ok true (eval σ₀ e σ ρ).n ⟨by omega, by omega⟩
       child hc ht m pc hp).mono
         (fun word decoded => nativeFloat_word_eq_nonNaN (RootNativeFloat.ofInt_not_nan _) decoded)
-  · exact wideComputedFloatOfE_ok e same lay world reserved hc ht m pc hp
+  · split at hc
+    · next range =>
+      exact (nativeIntegerFloatL_source_ok false (eval σ₀ e σ ρ).n ⟨by omega, by omega⟩
+        child hc ht m pc hp).mono
+          (fun word decoded => nativeFloat_word_eq_nonNaN (RootNativeFloat.ofInt_not_nan _) decoded)
+    · exact wideComputedFloatOfE_ok e same lay world reserved hc ht m pc hp
 
 end Gabbro.Stage0.Senke

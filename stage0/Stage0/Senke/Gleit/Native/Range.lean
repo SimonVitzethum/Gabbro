@@ -62,7 +62,7 @@ theorem nativeFloatRangeL_at_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → P
       proves (fun j => nativeFPWordL (.le .f64) j (a j) (b (j + 1)))
         (fun w => w = Runner.IR.bool (gleitLe av bv)) := by
     intro j code ceiling hc ht m pc hp
-    refine nativeFPWordL_ok (.le .f64) rfl hc ht
+    refine nativeFPWordL_ok (.le .f64) (op_fp rfl) hc ht
       (fun _ _ he ht => ha _ _ _ he ht) (fun _ _ he ht => hb _ _ _ he ht) ?_ hp
     intro wa wb hx hy
     refine ⟨_, ?_, rfl⟩
