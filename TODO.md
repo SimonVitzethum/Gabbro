@@ -13,22 +13,16 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
 
 ## Right now
 
-- **Integration-round source audit (2026-11-03, `bbcbeed51..61299ab5d` on `c-runde1`).**
-  History (`git log --stat`) and definitions were inspected; these changes **need the lead build** before being called Lean-verified.
-  `KopfHalt`/`RestHalt` cover optional axiom binders (`87a2d784e`): `bindAxiomOpt` has hardware/never-return stops,
-  `bindAxiomOptElse` the hardware stop, matching their ordinary counterparts. Consuming-loop premises now extend `PrueftG`,
-  with footprint transport and plain/lock/atomic replay updates (`5a1e5c60c`, `f326159a3`).
-  `akzeptiert_pruefer` is noncomputable with classical `D.Ax` equality inside the Spec-fixed interface;
-  `AkzeptiertSpec.pruef` is existential and vacuous alone (the empty list witnesses it), while concrete Bools check declared lists.
-  Open: full lead build and standard-axiom audit; `merge-void`, `merge-meta`, `merge-c10`, `merge-async` and `scoped-fin`
-  are not integrated into this snapshot. Details and scoped-return blockers: [theorem map §182](dokumente/THEOREM-MAP.md#182-integration-round-source-audit-and-unmerged-scoped-returns-2026-11-03).
-- **Scoped-return model completion remains open (`scoped-fin`, `575d97bcf`).** The owner decision of 2026-11-03 strengthens
-  `StartEndeG` with `StartScopedEndeG` and requires separate evaluation/cleanup with a cost-neutral protocol.
-  The partial implementation saves the answer/pre-release world, releases locks individually, then delivers the answer;
-  it is unmerged and **needs the lead build**. Open: the extra delivery step exceeds the unchanged cost bound even with no scopes;
-  lock provenance and `RufHaeltG/T2`; complete thread/actor replay and answer-pop handling; saved-answer completion/invariant
-  consumers; atomic/location/deadlock case analyses; K projection/noninterference and all new proofs; generic source-to-IR connection.
-  Preserve the approved goal conjuncts, strict race ordering and existing time bounds; see §182 for the handoff's proposed cost repair.
+- **Integration validation (2026-11-05).** The model goal, SC/GX and linking variants compile with exactly
+  `propext`, `Classical.choice`, `Quot.sound`. The generic Stage-0 statement dispatcher, compiler, image theorem,
+  bridge simulation and native runner compile; the runner's fourteen-theorem axiom audit is green.
+  Open: the remaining parser/export fixture checks, complete default package builds and all four acceptance guardians.
+  A partial successful build does not establish package-wide acceptance or admission of every source form listed below.
+- **Scoped-return model and consumers compile (2026-11-05).** Completion follows cleanup. `fertig_abschluss`
+  classifies an ordinary value return or the whole completed saved value, with start reasons excluded explicitly.
+  `fertig_inv` obtains the current-world invariant from the actual replay guarantee for both G/GX consumers;
+  the saved snapshot is retained separately. These proofs and the generic Stage-0 scoped-return arms compile
+  with the existing goal conjuncts, resources and cost guarantees. Physical lock admission remains as listed below.
 - **Later low-level work.** The order is already fixed in [AGENTS.md](AGENTS.md): after the C packages, outside the runner/Stage 0,
   no `unsafe`, and a bundled once-proved x86-64 boot-stub ASM binding. This is not current Stage-0 completion work.
 
@@ -107,19 +101,10 @@ Thus a parser/exporter or an expanded-unit certificate can exist while the origi
   [`lowRetStmt`/`lowRetEnd`](grammatik/Grammatik/Parser/Elab/UebersetzeAllg3/Returns.lean).
   Shared `locks` still fails `Uebersetze/Teil/Teil10` (“shared lock without G form”); RCU declarations fail `itemMetadata`.
   Open: return-capable physical lock cleanup/admission, mode-aware RW/RCU source-to-IR integration and reader-wait liveness.
-  **Scoped-return model boundary (2026-11-03, static):** counting a pre-release scoped return as `FertigG`
-  contradicts `Ziel.keineVerklemmung`: a finished root can still hold the lock an unfinished thread awaits.
-  The owner selected completion after cleanup. The `scoped-returns` branch adds
-  `rueckScopedWert`/`rueckScopedGrund`, the saved `zurueckgekehrt` residue at exactly `V.ende`,
-  and the K root cases, with correspondence and flow-preservation proof edits (not built).
-  The second source checkpoint adds saved-answer residue arms and `kopfS_scopedRet` /
-  `ScopedRueckGutG` / `ziel_ort_scoped_rueck_bei` for the pre-release ensures and owed-function-invariant
-  world (unbuilt; depends on completing the replay preservation). The unchanged expression-based
-  `StartEndeG` does not quantify over the saved residue.
-  Open: H/HA scoped cleanup currently releases without checking the released locks' `S.inv`;
-  strengthen those checks and transfer them, generalize the one-release held-lock classification,
-  then port the remaining group-7 invariant/progress/atomic/ownership consumers. See
-  [the scoped-return implementation checkpoint](dokumente/THEOREM-MAP.md#183-scoped-return-release-and-completion-checkpoint-2026-11-03).
+  **Scoped-return model completion checked (2026-11-05):** `StartScopedEndeG` covers saved answers,
+  pre-release ensures/invariants and the actual current-world invariant. H/HA cleanup and the G/GX
+  completion consumers compile through the goal theorem on the standard axioms. The original static
+  blockers are historical checkpoints in [the theorem map](dokumente/THEOREM-MAP.md#183-scoped-return-release-and-completion-checkpoint-2026-11-03).
 - **C11 consuming traversal: implemented, connected, with a source producer.**
   [`uLoopExport`](grammatik/Grammatik/Parser/Elab/Uebersetze/Teil/Teil9.lean), `ExportMetadata.consumingHeader`,
   [`lowStructStep`](grammatik/Grammatik/Parser/Elab/UebersetzeAllg3/Struct.lean) and
@@ -193,14 +178,21 @@ Thus a parser/exporter or an expanded-unit certificate can exist while the origi
   [`lowEnsAt`](stage0/Stage0/Senke/Ausdruck/Old/Code.lean) supports snapshots only in its explicit subtree fragment;
   unsupported snapshots (including old under nonempty folds) fail its `currentOld := false` fallback.
   Open: source production of byte-span operations and unsupported snapshot subtrees.
-- **Float binders: Block and Endblock generic lowering checked (2026-11-04).** Both support
+- **Native CPU float binders: Block and Endblock generic lowering checked (2026-11-05).** Both support
   `floatLit`/`float`/`floatOf`/`floatNarrow` in the actual dispatcher and connected correctness proofs.
   Computed wide binary64 conversion retains `computedFloatOfE_ok`; overflow/range failure is stop 107,
   and explicit narrowing keeps its original fallback. The Endblock proofs in
   `Faelle/Gleit/{EndLiteral,EndAdd,EndNarrow}` and their integration through `Anweisung.Satz.Teil5`,
   `Anweisung.Satz`, `Rekursion` and `Images.BildSatz` have passed fresh module checks. Source producers include
   conversion/narrowing in `UebersetzeAllg3/{Ende,Body}`; the parser export pipeline has also checked.
-  Open: final package acceptance, the ending-image witnesses and emitted-image runner measurements.
+  The native compiler executable built successfully (5417 jobs). Emitted source programs for the four
+  ending binder forms execute on the assembly runner with the unchanged exits 7/41/107. Each measured
+  image has 421 IR instructions, including exactly one native f64-add opcode. The runner's CPU regression
+  passed 20989 checks with zero differences, including 966 full float-operation IR images.
+  Shared native Float/Float32 adapters and all 32 float opcodes compile; replaced software IEEE emitters
+  are removed. Lean compiles and proves the IR; the assembly runner executes it.
+  Source `f32`/`f64` retain the existing formatless binary64 model. Open: final package acceptance and the
+  remaining source/export witnesses; the historical source inventories below are not a fresh coverage measurement.
 - **Other named item duties.** C01 product and C03 tag paths use the connected aggregate arms above; C02 library/translator
   expansion uses `Modules.prepare` plus `ExportMetadata.clausesMetadataWithoutLoad` (unsupported translators refuse).
   C04 table `shift` exports through `Transition` and uses connected checked load/store (stop 106, signed range gates).
