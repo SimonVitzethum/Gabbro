@@ -31,8 +31,9 @@ def wrongPost : UKonstFn :=
       .gives (.bin "==" .res (.variable "x"))] } }
 
 def overflows : UKonstFn :=
-  { function with rumpf := .block [] (some (.ret (some
-    (.bin "-" (.bin "+" (.variable "x") (.lit 11)) (.lit 11))))),
+  { function with
+    rumpf := .block [] (some (.ret (some
+      (.bin "-" (.bin "+" (.variable "x") (.lit 11)) (.lit 11)))))
     signature := { signature with klauseln := [] } }
 
 /-- Exact original source characters; phase certificates do not replace the input. -/
