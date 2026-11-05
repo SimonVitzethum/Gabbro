@@ -1,6 +1,7 @@
 module
 public import Grammatik.Zielsatz.Kern.Akzeptiert
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch
+import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSemantik.T1.Teil2
 import Grammatik.Kern.Semantik.Semantik.T1.SummeTransport
 @[expose] public section
 
@@ -190,18 +191,23 @@ theorem wertOk_valR : ∀ (τ : Ty) (v : Wert D τ),
     have the shifted values (`valR`/`valZ`), and no shifted pointer type names the root. -/
 theorem antwortLeer_mitRuhe (e : Option Ty) :
     AntwortLeer D.mitRuhe (e.map tyR) ↔ AntwortLeer D e := by
-  cases e with
-  | none => exact ⟨fun h => absurd h antwortLeer_keinErg, fun h => absurd h antwortLeer_keinErg⟩
-  | some τ =>
-      show AntwortLeer D.mitRuhe (some (tyR τ)) ↔ _
-      rw [antwortLeer_iff, antwortLeer_iff]
-      constructor
-      · intro h v hv
-        exact h (valR τ v) ((wertOk_valR τ v).mpr hv)
-      · intro h v hv
-        have e : valR τ (valZ τ v) = v := valR_valZ τ v
-        rw [← e] at hv
-        exact h (valZ τ v) ((wertOk_valR τ _).mp hv)
+  constructor
+  · intro empty image word
+    let lifted : Int → Option D.mitRuhe.Fn := fun address => (image address).map some
+    have agrees : ∀ address, (lifted address).bind id = image address := by
+      intro address
+      change ((image address).map some).bind id = image address
+      cases image address <;> rfl
+    have transported := einpassenErg_ru image lifted agrees e word
+    rw [empty lifted word] at transported
+    cases selected : einpassenErg image e word with
+    | none => rfl
+    | some value => rw [selected] at transported; cases transported
+  · intro empty image word
+    let lowered : Int → Option D.Fn := fun address => (image address).bind id
+    have transported := einpassenErg_ru lowered image (fun _ => rfl) e word
+    rw [empty lowered word] at transported
+    exact transported
 
 theorem tyR_never : ∀ τ : Ty, tyR τ = .never ↔ τ = .never
   | .int _ _ => by simp only [tyR, Ty.mapNumbers, reduceCtorEq]
