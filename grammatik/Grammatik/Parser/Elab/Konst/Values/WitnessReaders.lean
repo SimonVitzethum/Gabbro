@@ -91,8 +91,11 @@ theorem reader_missing {D : Deklaration} {Γ : Ctx} (names : Locals Γ)
     including both original contracts, before any denotation is projected. -/
 theorem elaborate_certified {k : UKonstFn} (certificate : Values.SourceFunction k) :
     Values.elaborate k = .ok certificate := by
-  rcases certificate with ⟨source, body, model, typed, pre, post⟩
-  simp only [Values.elaborate, body, typed, pre, post, pure, Except.pure]
+  rcases k with ⟨name, params, result, statement, signature, globals, schemas⟩
+  rcases certificate with ⟨source, body, ⟨preCode, bodyCode, postCode⟩, typed, pre, post⟩
+  dsimp only at body
+  cases body
+  simp only [Values.elaborate, typed, pre, post, pure, Except.pure]
 
 /-- Substitute the whole elaboration result into the actual checker continuation.
     In particular, do not rewrite inside an abstract Code's Boolean projection. -/
@@ -122,13 +125,29 @@ theorem checkCall_elaborated {k : UKonstFn} (fns : List UKonstFn)
             else throw ("const contract violated at `" ++ k.name ++ "`: ensures failed")
           else throw ("const contract violated at `" ++ k.name ++ "`: requires failed") :
         Except String (Values.CheckedCall k fns env sources)) := by
-  exact congrArg (fun result : Except String (Values.SourceFunction k) => result.bind _) accepted
+  have transport (next : Values.SourceFunction k → Except String (Values.CheckedCall k fns env sources)) :
+      (Values.elaborate k).bind next = (Except.ok fn).bind next :=
+    congrArg (fun result : Except String (Values.SourceFunction k) => result.bind next) accepted
+  exact transport _
 
 theorem checkCall_failed {k : UKonstFn} (fns : List UKonstFn)
     (env : List (String × Int)) (sources : List SExpr) (error : String)
     (refused : Values.elaborate k = .error error) :
     Values.checkCall k fns env sources = .error error := by
-  exact congrArg (fun result : Except String (Values.SourceFunction k) => result.bind _) refused
+  have transport (next : Values.SourceFunction k → Except String (Values.CheckedCall k fns env sources)) :
+      (Values.elaborate k).bind next = (Except.error error).bind next :=
+    congrArg (fun result : Except String (Values.SourceFunction k) => result.bind next) refused
+  exact transport _
+
+private theorem portable_projection {k : UKonstFn} {fns : List UKonstFn}
+    {env : List (String × Int)} {sources : List SExpr}
+    (answer : Except String (Values.CheckedCall k fns env sources)) :
+    (do
+      let replacement ← (do
+        let checked ← answer
+        pure (⟨checked.quoted.syntax, .portable checked⟩ : Replacement k fns env sources))
+      pure replacement.syntax) = answer.map (fun checked => checked.quoted.syntax) := by
+  cases answer <;> rfl
 
 /-- The existing substitution prefix exposes the complete portable call result.
     These premises are phase equations for the original source, not new gates. -/
@@ -142,17 +161,18 @@ theorem substitute_portable (fns : List UKonstFn) (name : String)
     (portable : Values.resultType k.erg = true) :
     ersetzeSExpr fns (.call name sources) =
       (Values.checkCall k fns [] args).map (fun checked => checked.quoted.syntax) := by
-  simp only [ersetzeSExpr, ersetzeSExprIn, arguments, callee, constants,
+  rcases k with ⟨fnName, params, result, statement, signature, globals, schemas⟩
+  dsimp only at constants portable
+  cases constants
+  simp only [ersetzeSExpr, ersetzeSExprIn, arguments, callee,
     List.filter_nil, closed, Bool.not_true, Bool.false_eq_true, ↓reduceIte]
-  cases shape : k.erg <;> try {
+  cases result <;> try {
     have impossible : False := by
-      simpa only [shape, Values.resultType, Bool.false_eq_true] using portable
+      simpa only [Values.resultType, Bool.false_eq_true] using portable
     exact impossible.elim }
   all_goals
-    have admitted := portable
-    simp only [shape] at admitted
-    simp only [checkReplacement, shape, admitted, Bool.true_eq_true, ↓reduceIte]
-    cases actual : Values.checkCall k fns [] args <;> rfl
+    simp only [checkReplacement, portable, Bool.true_eq_true, ↓reduceIte]
+    exact portable_projection _
 
 
 end Gabbro.Grammatik.Parser.Konst.Values.WitnessReaders
