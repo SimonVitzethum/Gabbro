@@ -1,9 +1,9 @@
 module
 public import Stage0.IRBild
 public import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
-public import Stage0.ArrayWitness
-public import Grammatik.Parser.Elab.Export.ExportWitnesses
-public import Grammatik.Parser.Elab.Export.ExportWitnesses2
+public import Grammatik.Parser.Elab.Export.ExportQuantifiers
+public import Grammatik.Parser.Elab.Export.ExportComparisons
+public import Grammatik.Parser.Elab.Export.ExportArrays
 @[expose] public section
 
 namespace Gabbro.Stage0
@@ -189,20 +189,5 @@ theorem exported_batch2_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
   · intro Γ Λ fn er op a b n m x y value first last lowered
     exact (output.compiled.exports_metadata
       (strings_gate _ Γ Λ fn er op a b n m x y first last value lowered)).elim Or.inr Or.inl
-
-/-- An actual accepted nonempty nested-array source/image instantiates the generic
-    certificate with the original initializer duty and canonical program jointly satisfied. -/
-theorem exported_batch2_ir_correct_zeuge [Runner.IR.Kern] [Senke.CloneOK] :
-    ∃ output : Emitted ArrayWitness.text 64,
-      emit ArrayWitness.text 64 = .ok output ∧ output.Correct ∧
-      CanonicalSourceProgram output.compiled ∧
-      Frontend.uninitializedExport (uMembers (pre108 output.compiled.source.prepared.elaborierbar)) output.compiled.unit = false := by
-  have image : irBild ArrayWitness.text 64 = .ok ArrayWitness.output.bytes := by
-    change (emit ArrayWitness.text 64).map (fun output => output.bytes) = _
-    rw [ArrayWitness.accepted_image]
-    rfl
-  obtain ⟨output, emitted, _, canonical, correct, _⟩ :=
-    exported_batch2_ir_correct ArrayWitness.text 64 ArrayWitness.output.bytes image
-  exact ⟨output, emitted, correct, canonical, output.compiled.initializer_exports⟩
 
 end Gabbro.Stage0

@@ -1,5 +1,6 @@
 module
 public import Stage0.SourceWitness
+public import Stage0.Frontend.ExportCorrectness
 @[expose] public section
 
 
@@ -108,3 +109,24 @@ theorem initialized_start_environments_zeuge :
   initial.start_environments
 
 end Gabbro.Stage0.ArrayWitness
+
+namespace Gabbro.Stage0
+open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
+  Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
+
+/-- An actual accepted nonempty nested-array source/image instantiates the generic
+    certificate with the original initializer duty and canonical program jointly satisfied. -/
+theorem exported_batch2_ir_correct_zeuge [Runner.IR.Kern] [Senke.CloneOK] :
+    ∃ output : Emitted ArrayWitness.text 64,
+      emit ArrayWitness.text 64 = .ok output ∧ output.Correct ∧
+      CanonicalSourceProgram output.compiled ∧
+      Frontend.uninitializedExport (uMembers (pre108 output.compiled.source.prepared.elaborierbar)) output.compiled.unit = false := by
+  have image : irBild ArrayWitness.text 64 = .ok ArrayWitness.output.bytes := by
+    change (emit ArrayWitness.text 64).map (fun output => output.bytes) = _
+    rw [ArrayWitness.accepted_image]
+    rfl
+  obtain ⟨output, emitted, _, canonical, correct, _⟩ :=
+    exported_batch2_ir_correct ArrayWitness.text 64 ArrayWitness.output.bytes image
+  exact ⟨output, emitted, correct, canonical, output.compiled.initializer_exports⟩
+
+end Gabbro.Stage0
