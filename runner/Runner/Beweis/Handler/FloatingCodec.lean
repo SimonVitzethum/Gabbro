@@ -112,6 +112,7 @@ private theorem finite_boolean (before : X) (zero : Bool) (flag : before.zf = so
     simp only [Cond.eval, flag, Option.map_some]
   have step : exec (.set .nz .rax) (enc (.set .nz .rax)).length before = .next selected := by
     simp only [exec, decision]
+    rfl
   have run : runL [.set .nz .rax, .zx8 .rax .rax] before = .next after := by
     change (exec (.set .nz .rax) (enc (.set .nz .rax)).length before).bind
       (runL [.zx8 .rax .rax]) = .next after
