@@ -210,7 +210,7 @@ macro "library_data_fields" : tactic => `(tactic| (
         have choices : position = 0 ∨ position = 1 := by
           change position < 2 at bound
           omega
-        rcases choices with rfl | rfl <;> rfl))
+        rcases choices with rfl | rfl <;> cbv))
 
 /-- Equality of answers may be cancelled without reducing a concrete unit
     beneath its dependent result type. -/

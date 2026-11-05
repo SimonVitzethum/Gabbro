@@ -389,8 +389,8 @@ theorem translation_export_data (reverse : Bool) :
       translationSchema (fun input => if reverse then fun index => input index.rev else input) := by
   have members : translationMembers reverse = translationPhaseMembers reverse := by
     simp only [translationMembers, translationItems, translationTokens, translation_text,
-      String.toList_ofList, translation_lexed, except_ok_get (translation_parse_success reverse)]
-    rfl
+      String.toList_ofList, translation_lexed, translationPhaseMembers, translationPhaseItems,
+      translation_parsed, Except.toOption, Option.getD_some] <;> rfl
   exact certifyData (translationMembers reverse) translationCall (translation_library_exists reverse)
     (fun library unit image => DeclarationData library unit image translationSchema
       (fun input => if reverse then fun index => input index.rev else input))
@@ -406,8 +406,8 @@ theorem translation_library_shape (reverse : Bool) :
     translationCall.args.length + 1 = (translationLibrary reverse).function.params.length := by
   have members : translationMembers reverse = translationPhaseMembers reverse := by
     simp only [translationMembers, translationItems, translationTokens, translation_text,
-      String.toList_ofList, translation_lexed, except_ok_get (translation_parse_success reverse)]
-    rfl
+      String.toList_ofList, translation_lexed, translationPhaseMembers, translationPhaseItems,
+      translation_parsed, Except.toOption, Option.getD_some] <;> rfl
   have selected : translationLibrary reverse = translationPhaseLibrary reverse := by
     apply Except.ok.inj
     exact (except_ok_get (translation_library_exists reverse)).symm.trans
@@ -423,8 +423,8 @@ theorem translation_library_change_data :
   have selected (reverse : Bool) : translationLibrary reverse = translationPhaseLibrary reverse := by
     have members : translationMembers reverse = translationPhaseMembers reverse := by
       simp only [translationMembers, translationItems, translationTokens, translation_text,
-        String.toList_ofList, translation_lexed, except_ok_get (translation_parse_success reverse)]
-      rfl
+        String.toList_ofList, translation_lexed, translationPhaseMembers, translationPhaseItems,
+        translation_parsed, Except.toOption, Option.getD_some] <;> rfl
     apply Except.ok.inj
     exact (except_ok_get (translation_library_exists reverse)).symm.trans
       (by rw [members]; exact except_ok_get (translation_library_success reverse))
