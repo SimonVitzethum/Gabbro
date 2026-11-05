@@ -23,26 +23,66 @@ structure FPClassified (format : FPFormat) (before after : X) : Prop where
 
 theorem fpClassify_run (format : FPFormat) (before : X) :
     ∃ after, FPClassified format before after := by
-  let registers : X := { before with
-    rip := before.rip + BitVec.ofNat 64 (lenOfL (fpClassify format))
-    rax := format.scalarBits before.rax
-    rcx := match format with | .f32 => 31 | .f64 => 48
-    rdx := format.infinityBits
-    rsi := fpMagnitude format before.rax
-    xmm := match format with
-      | .f32 => fun slot => if slot = .xmm0 then (before.rax.setWidth 32).setWidth 128 else before.xmm slot
-      | .f64 => before.xmm }
-  let after : X := registers.cmpf format.infinityBits (fpMagnitude format before.rax)
+  -- Keep the actual instruction-by-instruction RIP shape in the execution
+  -- witness. Address reassociation belongs only to its scalar position proof.
+  let advance (i : Ins) (x : X) : X :=
+    { x with rip := x.rip + BitVec.ofNat 64 (enc i).length }
+  let normalized : X := match format with
+    | .f32 =>
+      let loaded : X := (advance (.movToXmm .f32 .xmm0 .rax) before).setXmm .xmm0
+        ((before.rax.setWidth 32).setWidth 128)
+      (advance (.movFromXmm .f32 .rax .xmm0) loaded).set .rax (loaded.xmmWord .f32 .xmm0)
+    | .f64 => before
+  let copied : X := (advance (.mov .rsi .rax) normalized).set .rsi normalized.rax
+  let maskLoaded : X := (advance (.movi .rdx (BitVec.ofNat 32 1)) copied).set .rdx
+    (sx32 (BitVec.ofNat 32 1))
+  let shift := match format with | .f32 => 31 | .f64 => 63
+  let shiftLoaded : X := (advance (.movi .rcx (BitVec.ofNat 32 shift)) maskLoaded).set .rcx
+    (sx32 (BitVec.ofNat 32 shift))
+  let shifted : X := ((advance (.shl .rdx) shiftLoaded).set .rdx
+    (shiftLoaded.rdx <<< (shiftLoaded.rcx.toNat % 64))).nof
+  let complemented : X := aluStep (advance (.alui .xor .rdx (-1)) shifted)
+    .xor .rdx (sx32 (-1))
+  let masked : X := aluStep (advance (.alu .and .rsi .rdx) complemented)
+    .and .rsi complemented.rdx
+  let infinity : X := match format with
+    | .f32 => (advance (.movi .rdx 0x7F800000) masked).set .rdx (sx32 0x7F800000)
+    | .f64 =>
+      let loaded : X := (advance (.movi .rdx (BitVec.ofNat 32 0x7FF0)) masked).set .rdx
+        (sx32 (BitVec.ofNat 32 0x7FF0))
+      let amount : X := (advance (.movi .rcx (BitVec.ofNat 32 48)) loaded).set .rcx
+        (sx32 (BitVec.ofNat 32 48))
+      ((advance (.shl .rdx) amount).set .rdx (amount.rdx <<< (amount.rcx.toNat % 64))).nof
+  let after : X := aluStep (advance (.alu .cmp .rdx .rsi) infinity) .cmp .rdx infinity.rsi
+  have allOnes : sx32 4294967295#32 = 18446744073709551615#64 := by decide
+  have allSign : (18446744073709551615#64).msb = true := by decide
+  have mask32Sign : (18446744071562067967#64).msb = true := by decide
+  have mask64Sign : (9223372036854775807#64).msb = false := by decide
+  have infinity32Sign : (2139095040#64).msb = false := by decide
+  have infinity64Sign : (9218868437227405312#64).msb = false := by decide
   have run : runL (fpClassify format) before = .next after := by
-    cases format <;>
-      simp (disch := decide) [after, registers, fpClassify, fpNormalizeInput, fpSignMask, fpUpper,
-        fpInfinity, FPFormat.scalarBits, FPFormat.infinityBits, FPFormat.signBit, fpMagnitude, fpLow32,
-        runL, exec, X.get, X.set, X.setXmm, X.xmmWord, X.cmpf, X.nof, aluStep, aluOp,
-        lenOfL, enc, regEnc, le32, BitVec.ofNat_add, BitVec.add_assoc,
-        BitVec.setWidth_setWidth_of_le, sx32_ofNat]
-  exact ⟨after, {
-    run := run, position := rfl, input := rfl, magnitude := rfl, infinity := rfl,
-    nan := rfl, pc := rfl, frame := rfl, table := rfl, mode := rfl }⟩
+    cases format <;> rfl
+  have position : after.rip = before.rip + BitVec.ofNat 64 (lenOfL (fpClassify format)) := by
+    cases format
+    all_goals
+      dsimp only [after, infinity, masked, complemented, shifted, shiftLoaded, shift,
+        maskLoaded, copied, normalized, advance, aluStep, aluOp, X.get, X.set, X.setXmm,
+        X.nof, X.cmpf]
+      simp [fpClassify, fpNormalizeInput, fpSignMask, fpUpper, fpInfinity,
+        lenOfL, enc, regEnc, le32, BitVec.ofNat_add, BitVec.add_assoc]
+  refine ⟨after, {
+    run := run, position := position, input := ?_, magnitude := ?_, infinity := ?_,
+    nan := ?_, pc := ?_, frame := ?_, table := ?_, mode := ?_ }⟩
+  all_goals
+    cases format
+    all_goals
+      dsimp only [after, infinity, masked, complemented, shifted, shiftLoaded, shift,
+        maskLoaded, copied, normalized, advance, aluStep, aluOp, X.get, X.set, X.setXmm,
+        X.xmmWord, X.nof, X.cmpf, X.fpReady]
+  all_goals
+    simp (disch := decide) [FPFormat.scalarBits, FPFormat.infinityBits, FPFormat.signBit,
+      fpMagnitude, fpNaN, fpLow32, BitVec.setWidth_setWidth_of_le, sx32_ofNat,
+      allOnes, allSign, mask32Sign, mask64Sign, infinity32Sign, infinity64Sign]
 
 theorem FPClassified.code {format : FPFormat} {before after : X}
     (h : FPClassified format before after) {C : W → B} {tail : List Ins}
