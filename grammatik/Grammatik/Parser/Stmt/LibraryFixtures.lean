@@ -61,6 +61,57 @@ open LibraryFixtureProofs
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
 
+-- These translators have no statement prefix. Select that actual reader
+-- equation before normalization can construct the unused million-fuel mutual.
+private theorem empty_row (tabs : List UTab) (heads : List UFnKopf)
+    (fuel : Nat) (ctx : UCtx) :
+    uAnwReihe tabs heads (fuel + 1) ctx [] = .ok ([], ctx) := by
+  simp only [uAnwReihe]
+
+private theorem empty_function (ctx : UCtx) (heads : List UFnKopf)
+    (clauses : List SKlausel) (ending : Option SEnde) :
+    elabFn ctx heads clauses (.block [] ending) = do
+      let (gives, needs) ← elabKlauseln ctx clauses
+      let (beforeFold, ctxEnd, ending) ← expandFoldEnd ctx ending
+      let (beforeCall, ctxReturn, returning) ← expandReturnCall ctxEnd heads ending
+      let result ← uEnde ctxReturn returning
+      pure (gives, needs, beforeFold ++ beforeCall, result) := by
+  simp only [elabFn, empty_row, List.getLast?_nil, Bool.and_false,
+    Bool.false_eq_true, ite_false, List.nil_append, bind, Except.bind, pure, Except.pure]
+
+attribute [local cbv_opaque] elabFn
+attribute [local cbv_eval] empty_function
+
+/-- The actual statement dispatcher reads both ordered array elements and
+    their nested indices, retaining the untouched trailing token. -/
+theorem translation_array_return_parser (fuel : Nat) (rest : List Token) :
+    parseStmt (fuel + 128)
+      ([.wort "return", .zeichen "[", .ident "region", .zeichen "[", .num 1,
+       .zeichen "]", .zeichen ",", .ident "region", .zeichen "[", .num 0,
+       .zeichen "]", .zeichen "]", .zeichen ";"] ++ rest) =
+      .ok (.ret (some (.ext .array []
+        [.index (.variable "region") (.lit 1), .index (.variable "region") (.lit 0)])),
+        rest) := by cbv
+
+/-- A soft-keyword indexed place keeps its assignment form when it is not
+    an array-valued return. No other statement head changes classification. -/
+theorem translation_return_place_parser (fuel : Nat) :
+    parseStmt (fuel + 128)
+      [.wort "return", .zeichen "[", .num 0, .zeichen "]", .zeichen "=", .num 1,
+       .zeichen ";", .ende] =
+      .ok (.set (.index (.variable "return") (.lit 0)) "=" (.lit 1), [.ende]) := by cbv
+
+-- Preserve every previously successful indexed soft-keyword place, not only
+-- the concrete assignment above, including its exact continuation and fuel.
+private theorem return_place_preserved (fuel : Nat) (tail : List Token)
+    (result : SAnw × List Token)
+    (placed : parsePlatzStmt fuel (.wort "return" :: .zeichen "[" :: tail) = .ok result) :
+    parseStmt (fuel + 1) (.wort "return" :: .zeichen "[" :: tail) = .ok result := by
+  cases returned : parseRueck fuel (.zeichen "[" :: tail) <;>
+    simp only [parseStmt, returned, placed]
+
+attribute [local cbv_eval] translation_array_return_parser
+
 -- Reduce only the selected operation of the canonical fuel record. Evaluating
 -- its unused fields eagerly would construct all 100000 recursive levels.
 private theorem seq_succ (u : UProg) (caller : Fin u.fns.length) (n : Nat)
@@ -140,12 +191,46 @@ private theorem translation_lexed (reverse : Bool) :
   rw [source]
   exact LibraryFixtureScanning.lex_chunks (translationChunks reverse) (by cases reverse <;> decide +kernel)
 
+-- These are ordinary canonical parser data, connected by the full success
+-- equations below. Later projections consume those equations, not the parser again.
+private def parsedFixture (count : Nat) (result : SExpr) (values : List Token) : List SItemTief :=
+  let scalar := STyp.range (.atom "u8") (.lit 0) (.lit 10) false
+  let region := STyp.array scalar (.lit count)
+  [.modT "sample"
+    [.tableT "Rows" none (some (.lit count)) none none false
+      [.tSlot [⟨"v", scalar, none, none, none, false, false⟩]],
+     .fnT { art := "library", name := "consume", params := [("p", .ptr "normal" "r" (.atom "Rows"))],
+       res := none, fehler := none, klauseln := [.load ["Rows"]] } (.block [] (some (.ret none))),
+     .transT "consume" { art := "", name := "build", params := [("region", region)],
+       res := some region, fehler := none, klauseln := [.effs [.pure]] }
+       (.block [] (some (.ret (some result)))),
+     .fnT translationCaller (.block [.lcall ⟨["sample"], ["consume"], [], values⟩]
+       (some (.ret none)))]]
+
+private def translationResult (reverse : Bool) : SExpr :=
+  if reverse then .ext .array []
+    [.index (.variable "region") (.lit 1), .index (.variable "region") (.lit 0)]
+  else .variable "region"
+
+private theorem translation_parsed (reverse : Bool) :
+    parseTopTief (translationPhaseTokens reverse) =
+      .ok (parsedFixture 2 (translationResult reverse) [.num 3, .num 5]) := by
+  cases reverse <;> cbv
+
 private theorem translation_parse_success (reverse : Bool) :
     (parseTopTief (translationPhaseTokens reverse)).toOption.isSome = true := by
-  cases reverse <;> cbv
+  rw [translation_parsed]
+  rfl
 
 private def translationPhaseItems (reverse : Bool) : List SItemTief :=
   (parseTopTief (translationPhaseTokens reverse)).toOption.get (translation_parse_success reverse)
+
+private theorem translation_items (reverse : Bool) :
+    translationPhaseItems reverse = parsedFixture 2 (translationResult reverse) [.num 3, .num 5] := by
+  simp only [translationPhaseItems, translation_parsed]
+
+attribute [local cbv_opaque] translationPhaseItems
+attribute [local cbv_eval] translation_items
 
 private def translationPhaseMembers (reverse : Bool) : List SItemTief :=
   Aufloesung.loeseL (Aufloesung.quelle (translationPhaseItems reverse)) [] (translationPhaseItems reverse)
@@ -317,11 +402,23 @@ private theorem rek_lexed : lexL translationRekCharacters = .ok rekPhaseTokens :
   rw [source]
   exact LibraryFixtureScanning.lex_chunks rekChunks (by decide +kernel)
 
+private theorem rek_parsed : parseTopTief rekPhaseTokens =
+    .ok (parsedFixture 1 (.call "build" [.variable "region"]) [.num 3]) := by cbv
+
 private theorem rek_parse_success :
-    (parseTopTief rekPhaseTokens).toOption.isSome = true := by cbv
+    (parseTopTief rekPhaseTokens).toOption.isSome = true := by
+  rw [rek_parsed]
+  rfl
 
 private def rekPhaseItems : List SItemTief :=
   (parseTopTief rekPhaseTokens).toOption.get rek_parse_success
+
+private theorem rek_items : rekPhaseItems =
+    parsedFixture 1 (.call "build" [.variable "region"]) [.num 3] := by
+  simp only [rekPhaseItems, rek_parsed]
+
+attribute [local cbv_opaque] rekPhaseItems
+attribute [local cbv_eval] rek_items
 
 private def rekPhaseMembers : List SItemTief :=
   Aufloesung.loeseL (Aufloesung.quelle rekPhaseItems) [] rekPhaseItems

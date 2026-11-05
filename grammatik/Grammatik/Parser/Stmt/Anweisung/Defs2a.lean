@@ -95,6 +95,15 @@ def parseStmt (f : Nat) (toks : List Token) :
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match toks with
+    -- Array-valued returns precede the soft-keyword place heuristic. If this
+    -- is instead an indexed place assignment, retain its original reader.
+    | .wort "return" :: rest@(.zeichen "[" :: _) =>
+      match parseRueck f rest with
+      | .ok returned =>
+        match parsePlatzStmt f toks with
+        | .ok placed => .ok placed
+        | .error _ => .ok returned
+      | .error _ => parsePlatzStmt f toks
     | .wort w :: rest =>
       if istOrtsFort rest then parsePlatzStmt f toks
       else if strEq w "let" then parseLet f rest
