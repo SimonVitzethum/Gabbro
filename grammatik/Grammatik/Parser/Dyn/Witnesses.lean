@@ -7,6 +7,11 @@ import all Grammatik.Parser.Spec.Expand
 import all Grammatik.Parser.SourceFolds.Range
 import all Grammatik.Parser.SourceFolds.Hoist
 import all Grammatik.Parser.Dyn.Frontend
+import all Grammatik.Parser.Dyn.Collect
+import all Grammatik.Parser.Dyn.Rewrite
+import all Grammatik.Parser.Spec.Contract
+import all Grammatik.Parser.Spec.Resolve
+import all Grammatik.Parser.Elab.Uebersetze.Folds.ConstEvaluation
 import all Grammatik.Parser.TaggedDispatch.Frontend
 
 import all Init.Data.String.Basic
@@ -27,6 +32,30 @@ namespace Gabbro.Grammatik.Parser.Dyn
 open Spec
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
+
+-- Keep partial large-fuel callbacks as functions. Only the canonical unfolding
+-- equation of a fully applied operation may evaluate its selected AST node.
+-- This covers the same visitor, collectors, inference and constant-cost reader
+-- in every pass; no constructor, callback context or refusal is bypassed.
+attribute [local cbv_opaque]
+  Spec.Walk.expr Spec.Walk.type Spec.Walk.statement Spec.Walk.statements
+  Spec.Walk.item Spec.Walk.constant Spec.resolveKnownBodies Spec.inferType
+  Spec.canonicalType Spec.expandEffects Uebersetze.sErsetze Uebersetze.uKonstEval
+  SourceFolds.hasRangeFold SourceFolds.hasRangeFoldList SourceFolds.hasRangeFoldAnw SourceFolds.hasRangeFoldAnwList
+  SourceFolds.tagFoldNodes SourceFolds.tagFoldNodesList SourceFolds.expandNested statementProducers
+  statementsProducers statementUses statementsUses itemUses
+  itemsUses lookup containsDynamic
+attribute [local cbv_eval]
+  Spec.Walk.expr.eq_def Spec.Walk.type.eq_def Spec.Walk.statement.eq_def
+  Spec.Walk.statements.eq_def Spec.Walk.item.eq_def Spec.Walk.constant.eq_def
+  Spec.resolveKnownBodies.eq_def Spec.inferType.eq_def Spec.canonicalType.eq_def
+  Spec.expandEffects.eq_def Uebersetze.sErsetze.eq_def Uebersetze.uKonstEval.eq_def
+  SourceFolds.hasRangeFold.eq_def SourceFolds.hasRangeFoldList.eq_def SourceFolds.hasRangeFoldAnw.eq_def
+  SourceFolds.hasRangeFoldAnwList.eq_def SourceFolds.tagFoldNodes.eq_def SourceFolds.tagFoldNodesList.eq_def
+  SourceFolds.expandNested.eq_def statementProducers.eq_def statementsProducers.eq_def
+  statementUses.eq_def statementsUses.eq_def itemUses.eq_def
+  itemsUses.eq_def lookup.eq_def containsDynamic.eq_def
+attribute [local cbv_eval] Spec.Walk.expr_literal Spec.Walk.type_atom
 
 -- Fixture data exposed only to retain the public witness propositions.
 namespace WitnessData
