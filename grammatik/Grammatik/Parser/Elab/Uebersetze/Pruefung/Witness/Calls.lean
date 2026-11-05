@@ -26,8 +26,8 @@ private theorem check_argument_integer (u : UProg) (caller : Fin u.fns.length)
     lowCallArgOneL u caller Γ fn Λ .int (.int lo hi) (.val value) =
       lowWertAt u Γ Λ fn lo hi value := by
   change (match lowWertAt u Γ Λ fn lo hi value with
-    | .error error => .error error
-    | .ok term => .ok term) = _
+    | .error error => Except.error error
+    | .ok term => Except.ok term) = _
   cases lowWertAt u Γ Λ fn lo hi value <;> rfl
 
 private theorem check_arguments_nil (u : UProg) (caller : Fin u.fns.length)
@@ -54,25 +54,31 @@ private theorem check_arguments_cons (u : UProg) (caller : Fin u.fns.length)
 -- Equality transport is proved before the actual unit is substituted. The
 -- result selector reads the recorded result, with the canonical erg_eq proof
 -- supplying the same declaration-indexed equality to the original callback.
+private def check_result_value {α : Type} :
+    (result : Option Ty) →
+    ((ty : Ty) → result = some ty → Except String α) → Except String α
+  | none, _ => Except.error "call without a value"
+  | some ty, callback => callback ty rfl
+
 private theorem check_result_transport {α : Type} (actual recorded : Option Ty)
     (same : actual = recorded)
     (callback : (ty : Ty) → actual = some ty → Except String α) :
-    (match found : actual with
-      | none => .error "call without a value"
-      | some ty => callback ty found) =
-    (match found : recorded with
-      | none => .error "call without a value"
-      | some ty => callback ty (same.trans found)) := by
+    check_result_value actual callback =
+      check_result_value recorded (fun ty found => callback ty (same.trans found)) := by
   cases same
   rfl
 
 private theorem check_result_select {α : Type} (u : UProg) (callee : Fin u.fns.length)
     (callback : (ty : Ty) → (declOf u).erg callee = some ty → Except String α) :
     withErg u callee callback =
-      match found : (fnAt u callee).ergTy with
-      | none => .error "call without a value"
-      | some ty => callback ty ((erg_eq u callee).trans found) := by
-  exact check_result_transport _ _ (erg_eq u callee) callback
+      check_result_value (fnAt u callee).ergTy
+        (fun ty found => callback ty ((erg_eq u callee).trans found)) := by
+  have selected : withErg u callee callback =
+      check_result_value ((declOf u).erg callee) callback := by
+    unfold withErg
+    generalize actual : (declOf u).erg callee = result at callback ⊢
+    cases result <;> rfl
+  exact selected.trans (check_result_transport _ _ (erg_eq u callee) callback)
 
 -- Return values keep the original result-index transport. In particular, a
 -- Bool is lowered in the complete current Γ/Λ, rather than in a fixed rest.
