@@ -63,6 +63,13 @@ set_option maxRecDepth 100000
 attribute [local cbv_opaque] lowStufe lowSeqL lowStructL
 attribute [local cbv_eval] seq_select struct_select lowStufe_seq lowStufe_struct
 
+/-- Compose fully instantiated scanner equations; no source suffix is inferred by rewriting. -/
+private theorem scan_compose {source rest : List Char} {fuel remaining : Nat}
+    {emitted tokens : List Token} (tail : scan false rest remaining = .ok tokens)
+    (head : scan false source fuel = emitted.foldr (fun t result => Except.map (t :: ·) result) (scan false rest remaining)) :
+    scan false source fuel = .ok (emitted ++ tokens) := by
+  simpa only [tail, token_maps, Except.map] using head
+
 /-! WALL 6 (2026-09-30): `locks L { ... }` -- read as flat markers, lowered to `Stmt.locks` with the rank
     rule (`H006`) as a Bool the kernel decides; a nested take of the same lock and a rank that does not
     grow are refused by the lowering, a call that needs the held lock's set is refused by the elaborator. -/
@@ -87,11 +94,18 @@ private def locks1_ok_tokens : List Token :=
 
 private theorem locks1_ok_lexed : lexL locks1_ok_characters = .ok locks1_ok_tokens := by
   change scan false locks1_ok_characters 202 = .ok locks1_ok_tokens
-  dsimp only [locks1_ok_characters, locks1_ok_tokens, table_tokens, parameter_tokens,
-    effect_tokens, write_tokens]
-  rw [scan_prelude _ 186, scan_slot _ 171, scan_lock _ 154, scan_writer _ 133, scan_parameters _ 118,
-    scan_effects _ 107, scan_close _ 105, scan_open _ 103, scan_take _ 97, scan_write_one _ 83, scan_close _ 81,
-    scan_close _ 79, scan_end 78]
+  have composed := scan_compose (scan_end 78) (scan_close (locks1_ok_characters.drop 200) 79)
+  have composed := scan_compose composed (scan_close (locks1_ok_characters.drop 198) 81)
+  have composed := scan_compose composed (scan_write_one (locks1_ok_characters.drop 196) 83)
+  have composed := scan_compose composed (scan_take (locks1_ok_characters.drop 178) 97)
+  have composed := scan_compose composed (scan_open (locks1_ok_characters.drop 168) 103)
+  have composed := scan_compose composed (scan_close (locks1_ok_characters.drop 166) 105)
+  have composed := scan_compose composed (scan_effects (locks1_ok_characters.drop 164) 107)
+  have composed := scan_compose composed (scan_parameters (locks1_ok_characters.drop 140) 118)
+  have composed := scan_compose composed (scan_writer (locks1_ok_characters.drop 112) 133)
+  have composed := scan_compose composed (scan_lock (locks1_ok_characters.drop 79) 154)
+  have composed := scan_compose composed (scan_slot (locks1_ok_characters.drop 49) 171)
+  exact scan_compose composed (scan_prelude (locks1_ok_characters.drop 29) 186)
 
 private theorem locks1_ok_parsed :
     (parseTopTief locks1_ok_tokens).toOption.isSome = true := by cbv
@@ -144,12 +158,22 @@ private def locks2_ok_tokens : List Token :=
 
 private theorem locks2_ok_lexed : lexL locks2_ok_characters = .ok locks2_ok_tokens := by
   change scan false locks2_ok_characters 250 = .ok locks2_ok_tokens
-  dsimp only [locks2_ok_characters, locks2_ok_tokens, table_tokens, parameter_tokens,
-    effect_tokens, write_tokens]
-  rw [scan_prelude _ 234, scan_slot _ 219, scan_lock _ 202, scan_writer _ 181, scan_parameters _ 166,
-    scan_effects _ 155, scan_close _ 153, scan_open _ 151, scan_take _ 145, scan_write_one _ 131,
-    scan_write_two _ 117, scan_close _ 115, scan_take _ 109, scan_write_three _ 95, scan_close _ 93,
-    scan_close _ 91, scan_end 90]
+  have composed := scan_compose (scan_end 90) (scan_close (locks2_ok_characters.drop 248) 91)
+  have composed := scan_compose composed (scan_close (locks2_ok_characters.drop 246) 93)
+  have composed := scan_compose composed (scan_write_three (locks2_ok_characters.drop 244) 95)
+  have composed := scan_compose composed (scan_take (locks2_ok_characters.drop 226) 109)
+  have composed := scan_compose composed (scan_close (locks2_ok_characters.drop 216) 115)
+  have composed := scan_compose composed (scan_write_two (locks2_ok_characters.drop 214) 117)
+  have composed := scan_compose composed (scan_write_one (locks2_ok_characters.drop 196) 131)
+  have composed := scan_compose composed (scan_take (locks2_ok_characters.drop 178) 145)
+  have composed := scan_compose composed (scan_open (locks2_ok_characters.drop 168) 151)
+  have composed := scan_compose composed (scan_close (locks2_ok_characters.drop 166) 153)
+  have composed := scan_compose composed (scan_effects (locks2_ok_characters.drop 164) 155)
+  have composed := scan_compose composed (scan_parameters (locks2_ok_characters.drop 140) 166)
+  have composed := scan_compose composed (scan_writer (locks2_ok_characters.drop 112) 181)
+  have composed := scan_compose composed (scan_lock (locks2_ok_characters.drop 79) 202)
+  have composed := scan_compose composed (scan_slot (locks2_ok_characters.drop 49) 219)
+  exact scan_compose composed (scan_prelude (locks2_ok_characters.drop 29) 234)
 
 private theorem locks2_ok_parsed :
     (parseTopTief locks2_ok_tokens).toOption.isSome = true := by cbv
@@ -199,11 +223,20 @@ private def locks_nested_same_tokens : List Token :=
 
 private theorem locks_nested_same_lexed : lexL locks_nested_same_characters = .ok locks_nested_same_tokens := by
   change scan false locks_nested_same_characters 214 = .ok locks_nested_same_tokens
-  dsimp only [locks_nested_same_characters, locks_nested_same_tokens, table_tokens, parameter_tokens,
-    effect_tokens, write_tokens]
-  rw [scan_prelude _ 198, scan_slot _ 183, scan_lock _ 166, scan_writer _ 145, scan_parameters _ 130,
-    scan_effects _ 119, scan_close _ 117, scan_open _ 115, scan_take _ 109, scan_take _ 103, scan_write_one _ 89,
-    scan_close _ 87, scan_close _ 85, scan_close _ 83, scan_end 82]
+  have composed := scan_compose (scan_end 82) (scan_close (locks_nested_same_characters.drop 212) 83)
+  have composed := scan_compose composed (scan_close (locks_nested_same_characters.drop 210) 85)
+  have composed := scan_compose composed (scan_close (locks_nested_same_characters.drop 208) 87)
+  have composed := scan_compose composed (scan_write_one (locks_nested_same_characters.drop 206) 89)
+  have composed := scan_compose composed (scan_take (locks_nested_same_characters.drop 188) 103)
+  have composed := scan_compose composed (scan_take (locks_nested_same_characters.drop 178) 109)
+  have composed := scan_compose composed (scan_open (locks_nested_same_characters.drop 168) 115)
+  have composed := scan_compose composed (scan_close (locks_nested_same_characters.drop 166) 117)
+  have composed := scan_compose composed (scan_effects (locks_nested_same_characters.drop 164) 119)
+  have composed := scan_compose composed (scan_parameters (locks_nested_same_characters.drop 140) 130)
+  have composed := scan_compose composed (scan_writer (locks_nested_same_characters.drop 112) 145)
+  have composed := scan_compose composed (scan_lock (locks_nested_same_characters.drop 79) 166)
+  have composed := scan_compose composed (scan_slot (locks_nested_same_characters.drop 49) 183)
+  exact scan_compose composed (scan_prelude (locks_nested_same_characters.drop 29) 198)
 
 private theorem locks_nested_same_parsed :
     (parseTopTief locks_nested_same_tokens).toOption.isSome = true := by cbv
@@ -257,12 +290,21 @@ private def locks_rank_ok_tokens : List Token :=
 
 private theorem locks_rank_ok_lexed : lexL locks_rank_ok_characters = .ok locks_rank_ok_tokens := by
   change scan false locks_rank_ok_characters 251 = .ok locks_rank_ok_tokens
-  dsimp only [locks_rank_ok_characters, locks_rank_ok_tokens, table_tokens, parameter_tokens,
-    effect_tokens, write_tokens]
-  rw [scan_prelude _ 235, scan_slot _ 220, scan_lock _ 203, scan_second_lock _ 188, scan_writer _ 167,
-    scan_parameters _ 152, scan_two_effects _ 136, scan_close _ 134, scan_open _ 132, scan_take _ 126,
-    scan_take_second _ 120, scan_write_one _ 106, scan_close _ 104, scan_close _ 102, scan_close _ 100,
-    scan_end 99]
+  have composed := scan_compose (scan_end 99) (scan_close (locks_rank_ok_characters.drop 249) 100)
+  have composed := scan_compose composed (scan_close (locks_rank_ok_characters.drop 247) 102)
+  have composed := scan_compose composed (scan_close (locks_rank_ok_characters.drop 245) 104)
+  have composed := scan_compose composed (scan_write_one (locks_rank_ok_characters.drop 243) 106)
+  have composed := scan_compose composed (scan_take_second (locks_rank_ok_characters.drop 225) 120)
+  have composed := scan_compose composed (scan_take (locks_rank_ok_characters.drop 215) 126)
+  have composed := scan_compose composed (scan_open (locks_rank_ok_characters.drop 205) 132)
+  have composed := scan_compose composed (scan_close (locks_rank_ok_characters.drop 203) 134)
+  have composed := scan_compose composed (scan_two_effects (locks_rank_ok_characters.drop 201) 136)
+  have composed := scan_compose composed (scan_parameters (locks_rank_ok_characters.drop 168) 152)
+  have composed := scan_compose composed (scan_writer (locks_rank_ok_characters.drop 140) 167)
+  have composed := scan_compose composed (scan_second_lock (locks_rank_ok_characters.drop 107) 188)
+  have composed := scan_compose composed (scan_lock (locks_rank_ok_characters.drop 79) 203)
+  have composed := scan_compose composed (scan_slot (locks_rank_ok_characters.drop 49) 220)
+  exact scan_compose composed (scan_prelude (locks_rank_ok_characters.drop 29) 235)
 
 private theorem locks_rank_ok_parsed :
     (parseTopTief locks_rank_ok_tokens).toOption.isSome = true := by cbv
@@ -315,11 +357,21 @@ private def locks_rank_down_tokens : List Token :=
 
 private theorem locks_rank_down_lexed : lexL locks_rank_down_characters = .ok locks_rank_down_tokens := by
   change scan false locks_rank_down_characters 251 = .ok locks_rank_down_tokens
-  dsimp only [locks_rank_down_characters, locks_rank_down_tokens, table_tokens, parameter_tokens,
-    effect_tokens, write_tokens]
-  rw [scan_prelude _ 235, scan_slot _ 220, scan_lock _ 203, scan_second_lock _ 188, scan_writer _ 167,
-    scan_parameters _ 152, scan_two_effects _ 136, scan_close _ 134, scan_open _ 132, scan_take_second _ 126,
-    scan_take _ 120, scan_write_one _ 106, scan_close _ 104, scan_close _ 102, scan_close _ 100, scan_end 99]
+  have composed := scan_compose (scan_end 99) (scan_close (locks_rank_down_characters.drop 249) 100)
+  have composed := scan_compose composed (scan_close (locks_rank_down_characters.drop 247) 102)
+  have composed := scan_compose composed (scan_close (locks_rank_down_characters.drop 245) 104)
+  have composed := scan_compose composed (scan_write_one (locks_rank_down_characters.drop 243) 106)
+  have composed := scan_compose composed (scan_take (locks_rank_down_characters.drop 225) 120)
+  have composed := scan_compose composed (scan_take_second (locks_rank_down_characters.drop 215) 126)
+  have composed := scan_compose composed (scan_open (locks_rank_down_characters.drop 205) 132)
+  have composed := scan_compose composed (scan_close (locks_rank_down_characters.drop 203) 134)
+  have composed := scan_compose composed (scan_two_effects (locks_rank_down_characters.drop 201) 136)
+  have composed := scan_compose composed (scan_parameters (locks_rank_down_characters.drop 168) 152)
+  have composed := scan_compose composed (scan_writer (locks_rank_down_characters.drop 140) 167)
+  have composed := scan_compose composed (scan_second_lock (locks_rank_down_characters.drop 107) 188)
+  have composed := scan_compose composed (scan_lock (locks_rank_down_characters.drop 79) 203)
+  have composed := scan_compose composed (scan_slot (locks_rank_down_characters.drop 49) 220)
+  exact scan_compose composed (scan_prelude (locks_rank_down_characters.drop 29) 235)
 
 private theorem locks_rank_down_parsed :
     (parseTopTief locks_rank_down_tokens).toOption.isSome = true := by cbv
@@ -377,13 +429,27 @@ private def locks_call_needing_it_tokens : List Token :=
 
 private theorem locks_call_needing_it_lexed : lexL locks_call_needing_it_characters = .ok locks_call_needing_it_tokens := by
   change scan false locks_call_needing_it_characters 314 = .ok locks_call_needing_it_tokens
-  dsimp only [locks_call_needing_it_characters, locks_call_needing_it_tokens, table_tokens, parameter_tokens,
-    effect_tokens, write_tokens]
-  rw [scan_prelude _ 298, scan_slot _ 283, scan_lock _ 266, scan_callee _ 245, scan_parameters _ 230,
-    scan_effects _ 219, scan_close _ 217, scan_open _ 215, scan_take _ 209, scan_write_one _ 195,
-    scan_close _ 193, scan_close _ 191, scan_writer _ 170, scan_parameters _ 155, scan_effects _ 144,
-    scan_close _ 142, scan_open _ 140, scan_take _ 134, scan_call _ 125, scan_close _ 123, scan_close _ 121,
-    scan_end 120]
+  have composed := scan_compose (scan_end 120) (scan_close (locks_call_needing_it_characters.drop 312) 121)
+  have composed := scan_compose composed (scan_close (locks_call_needing_it_characters.drop 310) 123)
+  have composed := scan_compose composed (scan_call (locks_call_needing_it_characters.drop 308) 125)
+  have composed := scan_compose composed (scan_take (locks_call_needing_it_characters.drop 299) 134)
+  have composed := scan_compose composed (scan_open (locks_call_needing_it_characters.drop 289) 140)
+  have composed := scan_compose composed (scan_close (locks_call_needing_it_characters.drop 287) 142)
+  have composed := scan_compose composed (scan_effects (locks_call_needing_it_characters.drop 285) 144)
+  have composed := scan_compose composed (scan_parameters (locks_call_needing_it_characters.drop 261) 155)
+  have composed := scan_compose composed (scan_writer (locks_call_needing_it_characters.drop 233) 170)
+  have composed := scan_compose composed (scan_close (locks_call_needing_it_characters.drop 200) 191)
+  have composed := scan_compose composed (scan_close (locks_call_needing_it_characters.drop 198) 193)
+  have composed := scan_compose composed (scan_write_one (locks_call_needing_it_characters.drop 196) 195)
+  have composed := scan_compose composed (scan_take (locks_call_needing_it_characters.drop 178) 209)
+  have composed := scan_compose composed (scan_open (locks_call_needing_it_characters.drop 168) 215)
+  have composed := scan_compose composed (scan_close (locks_call_needing_it_characters.drop 166) 217)
+  have composed := scan_compose composed (scan_effects (locks_call_needing_it_characters.drop 164) 219)
+  have composed := scan_compose composed (scan_parameters (locks_call_needing_it_characters.drop 140) 230)
+  have composed := scan_compose composed (scan_callee (locks_call_needing_it_characters.drop 112) 245)
+  have composed := scan_compose composed (scan_lock (locks_call_needing_it_characters.drop 79) 266)
+  have composed := scan_compose composed (scan_slot (locks_call_needing_it_characters.drop 49) 283)
+  exact scan_compose composed (scan_prelude (locks_call_needing_it_characters.drop 29) 298)
 
 private theorem locks_call_needing_it_parsed :
     (parseTopTief locks_call_needing_it_tokens).toOption.isSome = true := by cbv
