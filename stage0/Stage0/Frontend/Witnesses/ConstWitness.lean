@@ -147,8 +147,12 @@ theorem initializer_compiled_zeuge :
 theorem parameter_shadow_zeuge :
     let items := [SItemTief.constT "x" (.atom "u8") (.one (.lit 3)),
       .fnT signature function.rumpf,
-      .fnT { art := "impl", name := "main", params := [("x", .atom "u8")],
-        res := some (.atom "u8"), fehler := none, klauseln := [] }
+      .fnT { art := "impl"
+        name := "main"
+        params := [("x", .atom "u8")]
+        res := some (.atom "u8")
+        fehler := none
+        klauseln := [] }
         (.block [] (some (.ret (some (.call "increment" [.variable "x"])))))]
     konstErsetzePipeline items =
       .error "const open argument at `increment`: certified substitution needs closed arguments" := by cbv
