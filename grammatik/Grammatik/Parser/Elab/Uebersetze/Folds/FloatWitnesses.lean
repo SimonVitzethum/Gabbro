@@ -121,7 +121,8 @@ private def domainContext (count : Int) : UCtx :=
   {context with tabs := [{table with count := count}]}
 
 private def iteratorContext (count : Int) : UCtx :=
-  {domainContext count with names := ["k"], kinds := [.index 0], types := [.index count],
+  {domainContext count with
+    names := ["k"], kinds := [.index 0], types := [.index count],
     bits := [0], loops := ["k"]}
 
 section DomainDispatch
@@ -131,18 +132,18 @@ attribute [local cbv_opaque] expandFloatFold
 private theorem domain_dispatch (kind : XKind) :
     expandFold context 0 kind ["k", "slots"] (operands kind) =
       expandFloatFold context (iteratorContext 3) 0 kind (.loopBeg "k" "T" .tru) .tru
-        (foldPlaces 1000 value) (if kind == .foldAdd then [] else [.lit 0]) := by cbv <;> simp only [bind_pure]
+        (foldPlaces 1000 value) (if kind == .foldAdd then [] else [.lit 0]) := by cbv <;> try simp only [bind_pure]
 
 private theorem filtered_dispatch :
     expandFold context 0 .foldAdd ["k", "slots"]
       [.variable "T", .field (.index (.variable "T") (.variable "k")) "open", value] =
       expandFloatFold context (iteratorContext 3) 0 .foldAdd (.loopBeg "k" "T" .tru)
-        (.tabB "T" "open" (.param "k")) (foldPlaces 1000 value) [] := by cbv <;> simp only [bind_pure]
+        (.tabB "T" "open" (.param "k")) (foldPlaces 1000 value) [] := by cbv <;> try simp only [bind_pure]
 
 private theorem empty_dispatch :
     expandFold (domainContext 0) 0 .foldAdd ["k", "slots"] (operands .foldAdd) =
       expandFloatFold (domainContext 0) (iteratorContext 0) 0 .foldAdd
-        (.loopBeg "k" "T" .tru) .tru (foldPlaces 1000 value) [] := by cbv <;> simp only [bind_pure]
+        (.loopBeg "k" "T" .tru) .tru (foldPlaces 1000 value) [] := by cbv <;> try simp only [bind_pure]
 end DomainDispatch
 
 private theorem float_leaf (count : Int) (stem : String) (serial : Nat) :
@@ -415,6 +416,7 @@ private theorem unit_success (body : List UStmt)
     (lowerAllg (fixtureUnit body)).toOption.isSome = true := by
   have singleton (f : Fin (fixtureUnit body).fns.length) : f = ⟨0, by change 0 < 1; decide⟩ := by
     apply Fin.ext
+    change f.val = 0
     have bound : f.val < 1 := f.isLt
     omega
   apply lowering_phases
