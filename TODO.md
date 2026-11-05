@@ -58,9 +58,13 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   Fresh goal/SC/GX/linking/termination/waiting audits pass for all 13 checked sentences with exactly
   the three standard axioms. Passlogik (16 jobs), Programmlogik (1,015 jobs) and Bruecke
   (1,592 jobs) also build. The malformed `None()` success fixture now uses the existing bare `None`
-  syntax with unchanged expected value; its lexical proof is being revalidated. The dependency
+  syntax with unchanged expected value; its lexical proof builds. The dependency
   classifier now builds with canonical optional/tagged constructor lookup; its concrete source
   packets and the remaining constant compilation packets still need validation.
+  The full grammar integration run exposed errors in 27 modules before it was stopped at
+  `UebersetzeProben11` after sustained memory-high throttling. That witness and the remaining
+  package suffix are resource-unmeasured, not a proved false statement. Repairs are being
+  checked module by module; `LibraryErweiterung` and the gate-model witness now pass.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
   The authorised acceptance scope is Lean and the Lean parts of GabbroV; Rust, Cargo and LLVM checks are
   deliberately unmeasured. The owner authorises pushing once the named Lean builds and GabbroV's Lean
