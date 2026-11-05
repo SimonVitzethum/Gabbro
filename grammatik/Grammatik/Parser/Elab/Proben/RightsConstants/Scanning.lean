@@ -49,11 +49,10 @@ structure Input (source : String) where
   text : source = String.ofList characters
   lexed : lexL characters = .ok tokens
 
-def Input.of_chunks {source : String} (pieces : List Chunk)
-    (text : source = String.ofList (Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces))
-    (room : steps pieces ≤ (Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces).length + 1) : Input source :=
+def Input.of_chunks {source spelling : String} (pieces : List Chunk)
+    (certificate : ChunkCertificate pieces spelling) (text : source = spelling) : Input source :=
   ⟨Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces, Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.tokens pieces,
-    text, lex_chunks pieces room⟩
+    text.trans certificate.text.symm, lex_chunks pieces certificate.room⟩
 
 -- Compose the existing fragment evidence before constructing Input. The only
 -- closed reduction below compares Strings, never the full character-list fold.
@@ -85,8 +84,7 @@ scoped macro "rights_input " source:term " with_cuts " "[" cuts:ident,* "]"
     have original : $source = spelling := by
       dsimp only [spelling]
       as_aux_lemma => cbv
-    exact Input.of_chunks (source := $source) pieces
-      (original.trans certificate.text.symm) certificate.room)
+    exact Input.of_chunks (source := $source) pieces certificate original)
 
 open scoped Gabbro.Grammatik.Parser.UebersetzeProben11.Phases
 namespace Inputs
