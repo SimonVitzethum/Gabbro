@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Elab.Export.ExportRelations
+import all Grammatik.Parser.Elab.Export.ExportRelations
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.ExportPreservation
@@ -273,12 +274,47 @@ theorem tree_quantifier_export_zeuge :
     uSichert relationContext (.ext .all ["root", "descendants"]
       [.variable "root", .bin "<=" (.variable "root") (.lit 1)]) =
       .ok (.filtered true "T" "root" "next" false (.param "root")
-        (.cmp "<=" (.param "root") (.lit 1))) := by rfl
+        (.cmp "<=" (.param "root") (.lit 1))) := by
+  apply tree_quantifier_export relationContext true false "root"
+    (.variable "root") (.bin "<=" (.variable "root") (.lit 1))
+    "T" "next" 0 (.param "root") (.cmp "<=" (.param "root") (.lit 1))
+  · rfl
+  · simp [uSichert, uIstVgl, uSeite, uRechne, uSeiteBlatt,
+      uParamNr, uParamNrAux, uArtBei, relationContext]
 
 theorem tree_quantifier_lower_zeuge :
     (lowEns relationUnit [.index 3, .index 3] [] relationFunction none
       (.filtered true "T" "root" "next" false (.param "root")
-        (.cmp "<=" (.param "root") (.lit 1)))).toOption.isSome = true := by rfl
+        (.cmp "<=" (.param "root") (.lit 1)))).toOption.isSome = true := by
+  have outer : lowIdx relationUnit [.int 0 2, .int 0 2] [] relationFunction 0
+      (⟨0, by decide⟩ : Fin relationUnit.tabs.length) (.param "root") = .ok (.var .here) := by
+    simp [lowIdx, relationFunction, paramPos, Ty.index, declOf, tabAt, relationUnit,
+      lowVar_same_head]
+  have parameter : lowWertE relationUnit [.int 0 2, .int 0 2, .int 0 2] []
+      (relationFunction.mitIndex "root" 0 3) none (.param "root") =
+      .ok (⟨.int 0 2, .var .here⟩ : LowWert relationUnit [.int 0 2, .int 0 2, .int 0 2] []) := by
+    simp [lowWertE, lowParamWert, lowParamSide, UFn.mitIndex, relationFunction,
+      paramPos, Ty.index, lowVar_same_head, Except.map, LowSide.wert]
+  have inner : lowEns relationUnit [.int 0 2, .int 0 2, .int 0 2] []
+      (relationFunction.mitIndex "root" 0 3) none (.cmp "<=" (.param "root") (.lit 1)) =
+      .ok (.le (.var .here) (.lit 1)) := by
+    simp [lowEns, usideHatZaehle, lowCmp, parameter, lowWertE,
+      LowSide.wert, zahlVon, LowWert.zahl]
+  have ready : (selfEdge relationUnit (⟨0, by decide⟩ : Fin relationUnit.tabs.length)
+      "next").toOption.isSome = true := rfl
+  cases typed : selfEdge relationUnit (⟨0, by decide⟩ : Fin relationUnit.tabs.length) "next" with
+  | error error =>
+    rw [typed] at ready
+    change false = true at ready
+    cases ready
+  | ok edge =>
+    have emitted := tree_quantifier_lower relationUnit [.index 3, .index 3] []
+      relationFunction relationFunction none true false "T" "root" "next"
+      (.param "root") (.cmp "<=" (.param "root") (.lit 1)) ⟨0, by decide⟩ edge
+      (.var .here) (.le (.var .here) (.lit 1)) rfl rfl typed outer rfl
+      relation_table_guard inner
+    rw [emitted]
+    rfl
 
 /-- The source adapter requires one genuine optional-self child edge. -/
 theorem consuming_edge_zeuge :
