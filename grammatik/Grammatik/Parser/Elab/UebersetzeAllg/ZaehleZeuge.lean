@@ -2,6 +2,12 @@ module
 
 public import Grammatik.Parser.Elab.UebersetzeAllg.Eingebaut
 public import Grammatik.Parser.Elab.UebersetzeAllg.Teil5
+import all Grammatik.Parser.Elab.UebersetzeAllg.Eingebaut
+import all Grammatik.Parser.Elab.UebersetzeAllg.Teil2
+import all Grammatik.Parser.Elab.UebersetzeAllg.Teil3
+import all Grammatik.Parser.Elab.UebersetzeAllg.Teil3Values
+import all Grammatik.Parser.Elab.UebersetzeAllg.Teil4
+import all Grammatik.Parser.Elab.UebersetzeAllg.Teil5
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -43,7 +49,7 @@ import all Init.Data.String.Termination
   (`zaehleVon_bereich`, the range the lowering carries). Fixtures (`_zeuge`) on concrete units: the cardinality the
   lowering carries for each domain (`slots of` a table of 4 slots, `descendants of` / `ancestors of` on a tree of 3,
   `elems of` an array of 2), a comparison with a count under `+`, and the refusals (an open table has no static
-  cardinality). Every statement is checked by evaluation (`rfl`).
+  cardinality). Fixtures use the canonical lowering equations.
 -/
 
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg
@@ -72,6 +78,11 @@ theorem domain_exakt (n : Nat) : (alleIndizes (n : Int)).length = n := alleIndiz
 
 /-! ## Fixtures -/
 
+-- Keep the complete typed mutual result intact until its success/range is
+-- projected. The ordinary lowerers retain every access and range check.
+attribute [local cbv_eval] lowWertE.eq_def lowCmp.eq_def lowEns.eq_def
+  lowArrayValue.eq_def lowSeiteZ.eq_def
+
 /-- A table of four slots with a byte field. -/
 def zU : UProg := {tabs := [{name := "T", count := 4, cols := [("v", (0, 255))]}], locks := [], fns := []}
 
@@ -80,31 +91,31 @@ def zF : UFn := {name := "sample", params := [], kinds := [], res := none, held 
 /-- The predicate `T.slots[x].v > 10` over the binder `x`. -/
 def zBody : UEns := .cmp ">" (.tab "T" "v" (.param "x")) (.lit 10)
 
-/-- The count over the slots of a table of four carries the range `0 .. 4`. -/
- /-- A count predicate cannot read a slot at the exclusive domain bound. -/
+/-- A count predicate cannot read a slot at the exclusive domain bound. -/
 theorem count_domain_bound_refused_zeuge :
     (lowSeiteZ zU [] [] zF none
-      (.zaehle "T" "x" (.cmp ">" (.tab "T" "v" (.lit 4)) (.lit 10)))).toOption.isSome = false := by rfl
+      (.zaehle "T" "x" (.cmp ">" (.tab "T" "v" (.lit 4)) (.lit 10)))).toOption.isSome = false := by cbv
 
+/-- The count over the slots of a table of four carries the range `0 .. 4`. -/
 theorem zaehle_slots_lower_zeuge :
-    (lowSeiteZ zU [] [] zF none (.zaehle "T" "x" zBody)).toOption.map (·.range) = some (0, 4) := by rfl
+    (lowSeiteZ zU [] [] zF none (.zaehle "T" "x" zBody)).toOption.map (·.range) = some (0, 4) := by cbv
 
 /-- A comparison with a count, and with a count under `+`, lowers. -/
 theorem zaehle_vergleich_lower_zeuge :
     (lowEns zU [] [] zF none (.cmp "==" (.zaehle "T" "x" zBody) (.lit 2))).toOption.isSome = true ∧
     (lowEns zU [] [] zF none (.cmp "<=" (.add (.zaehle "T" "x" zBody) (.lit 1)) (.lit 5))).toOption.isSome = true := by
-  exact ⟨rfl, rfl⟩
+  cbv
 
 /-- A table with a different count has the count's own cardinality (no shared constant). -/
 theorem zaehle_slots_andere_anzahl_zeuge :
     (lowSeiteZ { zU with tabs := [{name := "T", count := 7, cols := [("v", (0, 255))]}] } [] [] zF none
-      (.zaehle "T" "x" zBody)).toOption.map (·.range) = some (0, 7) := by rfl
+      (.zaehle "T" "x" zBody)).toOption.map (·.range) = some (0, 7) := by cbv
 
 /-- An OPEN table has no static cardinality: refused. -/
 theorem zaehle_offen_abgelehnt_zeuge :
     lowSeiteZ { zU with tabs := [{name := "T", count := 0, cols := [("v", (0, 255))], von := some "provider"}] }
       [] [] zF none (.zaehle "T" "x" zBody) =
-        .error "count over an open table has no static cardinality" := by rfl
+        .error "count over an open table has no static cardinality" := by cbv
 
 /-- The tree domains: a tree of three slots, the seed an index parameter. -/
 def bU : UProg := {tabs := [{name := "T", count := 3, cols := [("next", (0, 0))], opts := [("next", 0)], kanten := [("child", "next")]}], locks := [], fns := []}
@@ -115,7 +126,7 @@ theorem zaehle_baum_lower_zeuge :
     (lowSeiteZ bU [.index 3] [] bF none (.zaehleBaum "T" "x" "next" false (.param "root") .tru)).toOption.map
         (·.range) = some (0, 3) ∧
     (lowSeiteZ bU [.index 3] [] bF none (.zaehleBaum "T" "x" "next" true (.param "root") .tru)).toOption.map
-        (·.range) = some (0, 3) := ⟨rfl, rfl⟩
+        (·.range) = some (0, 3) := by cbv
 
 /-- The array domain: an array of two elements, the carrier of length two. -/
 def aU : UProg := {tabs := [{name := "#array-elements:2", count := 2, cols := []}], locks := [], fns := []}
@@ -125,7 +136,7 @@ def aF : UFn := {name := "sample", params := [("data", .arr (.int 0 255) 2)], ki
 theorem zaehle_feld_lower_zeuge :
     (lowSeiteZ aU [.arr (.int 0 255) 2] [] aF none
       (.zaehleFeld (.param "data") "i" (.cmp "==" (.idx (.param "data") (.param "i")) (.lit 1)))).toOption.map
-        (·.range) = some (0, 2) := by rfl
+        (·.range) = some (0, 2) := by cbv
 
 end ZaehleZeuge
 

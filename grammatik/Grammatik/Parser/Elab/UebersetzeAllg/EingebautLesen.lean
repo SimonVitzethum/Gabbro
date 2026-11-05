@@ -1,6 +1,12 @@
 module
 
 public import Grammatik.Parser.Elab.Uebersetze
+import all Grammatik.Parser.Elab.Uebersetze.Eingebaut
+import all Grammatik.Parser.Elab.Uebersetze.Teil4Index
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil4
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil5
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil5Rest
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil8
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -47,13 +53,19 @@ import all Init.Data.String.ToSlice
     `elems of`), with a guarded read and a read of a static inside the body, and the refusals (an unmodelled
     domain, an unheld guard);
   * `sizeof` of a type name, a parameter and a field, `aligned` with a positive constant and its refusals.
-  Every statement is checked by evaluation (`rfl`).
+  Every fixture is reduced with the canonical reader equations.
 -/
 
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.Uebersetze
 
 namespace EingebautLesen
+
+-- Use the actual recursive reader equations rather than asking definitional
+-- equality to unfold their well-founded and mutual implementations.
+attribute [local cbv_eval] uRechne.eq_def uSichert.eq_def uZSeite.eq_def
+  seiteAltErg.eq_def ensAltErg.eq_def
+attribute [local cbv_opaque] uFloatLimit
 
 /-- The empty context the fixtures extend. -/
 def lb : UCtx :=
@@ -84,73 +96,70 @@ theorem wrap_lesen_zeuge :
     uSeite cw (.bin "+%" (.variable "a") (.variable "b")) = .ok (.ib2 .addW 8 (.param "a") (.param "b")) ∧
     uSeite cw (.bin "-%" (.variable "a") (.variable "b")) = .ok (.ib2 .subW 8 (.param "a") (.param "b")) ∧
     uSeite cw (.bin "*%" (.variable "a") (.variable "b")) = .ok (.ib2 .mulW 8 (.param "a") (.param "b")) ∧
-    uSeite cw (.bin "<<%" (.variable "a") (.variable "n")) = .ok (.ib2 .shlW 8 (.param "a") (.param "n")) :=
-  ⟨rfl, rfl, rfl, rfl⟩
+    uSeite cw (.bin "<<%" (.variable "a") (.variable "n")) = .ok (.ib2 .shlW 8 (.param "a") (.param "n")) := by cbv
 
 /-- The saturating addition carries no width: its range is the operands'. -/
 theorem saettigung_lesen_zeuge :
-    uSeite cw (.bin "+|" (.variable "a") (.variable "b")) = .ok (.ib2 .addS 0 (.param "a") (.param "b")) := by rfl
+    uSeite cw (.bin "+|" (.variable "a") (.variable "b")) = .ok (.ib2 .addS 0 (.param "a") (.param "b")) := by cbv
 
 theorem bitzaehler_lesen_zeuge :
     uSeite cw (.call "clz" [.variable "a"]) = .ok (.ib1 .clz 8 (.param "a")) ∧
     uSeite cw (.call "ctz" [.variable "a"]) = .ok (.ib1 .ctz 8 (.param "a")) ∧
     uSeite cw (.call "log2_floor" [.variable "a"]) = .ok (.ib1 .log2Floor 8 (.param "a")) ∧
-    uSeite cw (.call "popcount" [.variable "a"]) = .ok (.ib1 .popcount 8 (.param "a")) :=
-  ⟨rfl, rfl, rfl, rfl⟩
+    uSeite cw (.call "popcount" [.variable "a"]) = .ok (.ib1 .popcount 8 (.param "a")) := by cbv
 
 theorem drehung_lesen_zeuge :
     uSeite cw (.call "rotl" [.variable "a", .variable "n"]) = .ok (.ib2 .rotl 8 (.param "a") (.param "n")) ∧
-    uSeite cw (.call "rotr" [.variable "a", .variable "n"]) = .ok (.ib2 .rotr 8 (.param "a") (.param "n")) :=
-  ⟨rfl, rfl⟩
+    uSeite cw (.call "rotr" [.variable "a", .variable "n"]) = .ok (.ib2 .rotr 8 (.param "a") (.param "n")) := by cbv
 
 /-- A conversion `u16(a)` names the declared width `16`; the byte swap keeps the conversion as its operand. -/
 theorem bswap_umwandlung_lesen_zeuge :
     uSeite cw (.call "bswap" [.call "u16" [.variable "a"]]) = .ok (.ib1 .bswap 16 (.conv 0 65535 (.param "a"))) := by
-  rfl
+  cbv
 
 /-- An alias of `u32 in 0 .. 65535` is stored in 32 bits: the width is the declaration's, not the range's. -/
 theorem alias_lesen_zeuge :
     uSeite { cw with alias := [("W", (0, 65535)), ("W#bits", (32, 32))] }
         (.call "bswap" [.call "W" [.variable "a"]]) =
-      .ok (.ib1 .bswap 32 (.conv 0 65535 (.param "a"))) := by rfl
+      .ok (.ib1 .bswap 32 (.conv 0 65535 (.param "a"))) := by cbv
 
 /-- A static of a declared word type. -/
 theorem statik_lesen_zeuge :
-    uSeite ct (.call "popcount" [.variable "G"]) = .ok (.ib1 .popcount 8 (.glob "G")) := by rfl
+    uSeite ct (.call "popcount" [.variable "G"]) = .ok (.ib1 .popcount 8 (.glob "G")) := by cbv
 
 /-- A field read through a pointer parameter, and at the table by its name. -/
 theorem feld_lesen_zeuge :
     uSeite ct (.call "popcount" [.field (.index (.field (.variable "p") "slots") (.lit 0)) "v"]) =
       .ok (.ib1 .popcount 8 (.slot "p" "v" (.lit 0))) ∧
     uSeite ct (.call "popcount" [.field (.index (.field (.variable "T") "slots") (.lit 2)) "v"]) =
-      .ok (.ib1 .popcount 8 (.tab "T" "v" (.lit 2))) := ⟨rfl, rfl⟩
+      .ok (.ib1 .popcount 8 (.tab "T" "v" (.lit 2))) := by cbv
 
 /-- An arena element carries the width of its declared element type. -/
 theorem arena_lesen_zeuge :
     uSeite ct (.call "popcount" [.index (.variable "A") (.lit 1)]) =
-      .ok (.ib1 .popcount 16 (.tab "A" "wert" (.lit 1))) := by rfl
+      .ok (.ib1 .popcount 16 (.tab "A" "wert" (.lit 1))) := by cbv
 
 /-! ## Refusals: the width is never guessed -/
 
 /-- A parameter without a declared word storage has no width. -/
 theorem breite_unbekannt_lesen_zeuge :
-    uSeite cw (.call "popcount" [.variable "z"]) = .error "builtin of unknown width" := by rfl
+    uSeite cw (.call "popcount" [.variable "z"]) = .error "builtin of unknown width" := by cbv
 
 /-- A literal has no storage width. -/
 theorem literal_lesen_zeuge :
     uSeite cw (.call "popcount" [.lit 5]) = .error "builtin of unknown width" ∧
-    uSeite cw (.bin "+%" (.lit 1) (.lit 2)) = .error "builtin of unknown width" := ⟨rfl, rfl⟩
+    uSeite cw (.bin "+%" (.lit 1) (.lit 2)) = .error "builtin of unknown width" := by cbv
 
 /-- A field without a declared storage width has none, even though its range is a byte. -/
 theorem feld_ohne_breite_lesen_zeuge :
     uSeite ct (.call "popcount" [.field (.index (.field (.variable "p") "slots") (.lit 0)) "w"]) =
-      .error "builtin of unknown width" := by rfl
+      .error "builtin of unknown width" := by cbv
 
 /-- `old` and `result` inside a builtin operand or a count body are found, so a body refuses them. -/
 theorem alt_erg_zeuge :
     seiteAltErg (.ib1 .clz 8 .erg) = true ∧
     seiteAltErg (.zaehle "T" "x" (.cmp ">" .erg (.lit 1))) = true ∧
-    seiteAltErg (.zaehle "T" "x" (.cmp ">" (.param "x") (.lit 1))) = false := ⟨rfl, rfl, rfl⟩
+    seiteAltErg (.zaehle "T" "x" (.cmp ">" (.param "x") (.lit 1))) = false := by cbv
 
 /-! ## `count` as a number -/
 
@@ -168,26 +177,26 @@ theorem zaehle_slots_lesen_zeuge :
     uSichert { lb with tabs := [tt] } (.bin "<=" (.bin "+" zaehleSlots (.lit 1)) (.lit 3)) =
       .ok (.cmp "<=" (.add zaehleSlotsU (.lit 1)) (.lit 3)) ∧
     uSichert { lb with tabs := [tt] } (.bin "<" (.bin "-" (.lit 3) zaehleSlots) (.bin "*" zaehleSlots (.lit 2))) =
-      .ok (.cmp "<" (.sub (.lit 3) zaehleSlotsU) (.mul zaehleSlotsU (.lit 2))) := ⟨rfl, rfl, rfl, rfl⟩
+      .ok (.cmp "<" (.sub (.lit 3) zaehleSlotsU) (.mul zaehleSlotsU (.lit 2))) := by cbv
 
 /-- A count in a count body: the inner binder shadows the outer one. -/
 theorem zaehle_verschachtelt_lesen_zeuge :
     uSichert { lb with tabs := [tt] }
         (.bin ">=" (.ext .count ["x", "slots"] [.variable "T", .bin "==" zaehleSlots (.lit 1)]) (.lit 0)) =
-      .ok (.cmp ">=" (.zaehle "T" "x" (.cmp "==" zaehleSlotsU (.lit 1))) (.lit 0)) := by rfl
+      .ok (.cmp ">=" (.zaehle "T" "x" (.cmp "==" zaehleSlotsU (.lit 1))) (.lit 0)) := by cbv
 
 /-- A read of a guarded table inside the body needs the lock; held, it is read as everywhere else. -/
 theorem zaehle_bewacht_lesen_zeuge :
     uSichert { lb with tabs := [tt], locks := [{ name := "L", rank := 1, guard := ["T"] }] }
         (.bin "==" zaehleSlots (.lit 2)) = .error "access without held guard" ∧
     uSichert { lb with tabs := [tt], locks := [{ name := "L", rank := 1, guard := ["T"] }], held := ["L"] }
-        (.bin "==" zaehleSlots (.lit 2)) = .ok (.cmp "==" zaehleSlotsU (.lit 2)) := ⟨rfl, rfl⟩
+        (.bin "==" zaehleSlots (.lit 2)) = .ok (.cmp "==" zaehleSlotsU (.lit 2)) := by cbv
 
 /-- A static read inside the body is the static, not a binder. -/
 theorem zaehle_global_lesen_zeuge :
     uSichert { lb with tabs := [tt], globs := [gg] }
         (.bin "==" (.ext .count ["x", "slots"] [.variable "T", .bin "<" feldLesen (.variable "G")]) (.lit 1)) =
-      .ok (.cmp "==" (.zaehle "T" "x" (.cmp "<" (.tab "T" "v" (.param "x")) (.glob "G"))) (.lit 1)) := by rfl
+      .ok (.cmp "==" (.zaehle "T" "x" (.cmp "<" (.tab "T" "v" (.param "x")) (.glob "G"))) (.lit 1)) := by cbv
 
 /-- The tree domains: the table of the edge, the binder, the declared edge field, whether the walk is reversed, the
     outer seed (an index parameter) and the body. -/
@@ -200,7 +209,7 @@ theorem zaehle_baum_lesen_zeuge :
     uSichert baumCtx (.bin "==" (.ext .count ["x", "descendants"] [.variable "root", .tru]) (.lit 3)) =
       .ok (.cmp "==" (.zaehleBaum "T" "x" "next" false (.param "root") .tru) (.lit 3)) ∧
     uSichert baumCtx (.bin "==" (.ext .count ["x", "ancestors"] [.variable "root", .tru]) (.lit 1)) =
-      .ok (.cmp "==" (.zaehleBaum "T" "x" "next" true (.param "root") .tru) (.lit 1)) := ⟨rfl, rfl⟩
+      .ok (.cmp "==" (.zaehleBaum "T" "x" "next" true (.param "root") .tru) (.lit 1)) := by cbv
 
 /-- The array domain: the binder is an INDEX into `0 ..< n` (LANGUAGE section 6); the body reads the element. -/
 def feldCtx : UCtx :=
@@ -211,14 +220,14 @@ theorem zaehle_feld_lesen_zeuge :
         (.bin "==" (.ext .count ["i", "elems"] [.variable "data", .bin "==" (.index (.variable "data") (.variable "i")) (.lit 1)])
           (.lit 1)) =
       .ok (.cmp "==" (.zaehleFeld (.param "data") "i" (.cmp "==" (.idx (.param "data") (.param "i")) (.lit 1))) (.lit 1)) := by
-  rfl
+  cbv
 
 /-- A domain without a canonical expansion, and a count in a position that is no comparison, are refused. -/
 theorem zaehle_abgelehnt_lesen_zeuge :
     uSichert { lb with tabs := [tt] }
         (.bin "==" (.ext .count ["x", "queue"] [.variable "T", .tru]) (.lit 1)) =
       .error "source export: count domain lacks a canonical G expansion" ∧
-    uSichert { lb with tabs := [tt] } zaehleSlots = .error "ensures clause without G form" := ⟨rfl, rfl⟩
+    uSichert { lb with tabs := [tt] } zaehleSlots = .error "ensures clause without G form" := by cbv
 
 /-! ## `sizeof` and `aligned` -/
 
@@ -229,24 +238,24 @@ theorem sizeof_lesen_zeuge :
     uSeite cw (.built "sizeof" [.variable "a"]) = .ok (.lit 1) ∧
     uSeite ct (.built "sizeof" [.field (.index (.field (.variable "p") "slots") (.lit 0)) "v"]) = .ok (.lit 1) ∧
     uSeite { cw with alias := [("W", (0, 65535)), ("W#bits", (32, 32))] } (.built "sizeof" [.variable "W"]) =
-      .ok (.lit 4) := ⟨rfl, rfl, rfl, rfl, rfl⟩
+      .ok (.lit 4) := by cbv
 
 /-- An unresolved operand, a literal and a parameter without a declared word have no size. -/
 theorem sizeof_abgelehnt_lesen_zeuge :
     uSeite cw (.built "sizeof" [.variable "q"]) = .error "sizeof without a resolved declared size" ∧
     uSeite cw (.built "sizeof" [.variable "z"]) = .error "sizeof without a resolved declared size" ∧
-    uSeite cw (.built "sizeof" [.lit 4]) = .error "sizeof without a resolved declared size" := ⟨rfl, rfl, rfl⟩
+    uSeite cw (.built "sizeof" [.lit 4]) = .error "sizeof without a resolved declared size" := by cbv
 
 /-- `aligned(x, N)` is `x mod N = 0`. -/
 theorem aligned_lesen_zeuge :
     uSichert cw (.built "aligned" [.variable "a", .lit 16]) =
-      .ok (.cmp "==" (.rem (.param "a") (.lit 16)) (.lit 0)) := by rfl
+      .ok (.cmp "==" (.rem (.param "a") (.lit 16)) (.lit 0)) := by cbv
 
 /-- A zero alignment is no positive constant; a capability is no number. -/
 theorem aligned_abgelehnt_lesen_zeuge :
     uSichert cw (.built "aligned" [.variable "a", .lit 0]) =
       .error "source export: alignment must be a positive constant" ∧
-    uSichert ct (.built "aligned" [.variable "p", .lit 8]) = .error "pointer in a compare without G form" := ⟨rfl, rfl⟩
+    uSichert ct (.built "aligned" [.variable "p", .lit 8]) = .error "pointer in a compare without G form" := by cbv
 
 /-- Ordinary boolean expressions reuse the contract quantifier elaborator. -/
 def existsExpression : SExpr :=
@@ -254,18 +263,18 @@ def existsExpression : SExpr :=
 
 theorem exists_expression_lesen_zeuge :
     uBool ct existsExpression =
-      .ok (.einige "T" "x" (.cmp ">" (.tab "T" "v" (.param "x")) (.lit 10))) := rfl
+      .ok (.einige "T" "x" (.cmp ">" (.tab "T" "v" (.param "x")) (.lit 10))) := by cbv
 
 /-- The unannotated `let b = exists x in slots of T : T.slots[x].v > 10;`
     selects the same boolean binding as an explicitly annotated binding. -/
 theorem exists_let_lesen_zeuge :
     (uBindWertAllg ct false "b" none existsExpression).map Prod.fst =
       .ok (.bindB "b" (.einige "T" "x"
-        (.cmp ">" (.tab "T" "v" (.param "x")) (.lit 10)))) := rfl
+        (.cmp ">" (.tab "T" "v" (.param "x")) (.lit 10)))) := by cbv
 
 theorem forall_expression_lesen_zeuge :
     uBool ct (.ext .all ["x", "slots"] [.variable "T", .tru]) =
-      .ok (.alle "T" "x" .tru) := rfl
+      .ok (.alle "T" "x" .tru) := by cbv
 
 end EingebautLesen
 
