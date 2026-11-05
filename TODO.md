@@ -20,6 +20,8 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   prefix compile. The SC/GX, linked, termination and waiting goal audit passes for all 13 checked
   sentences using only the standard axioms. The current Runner library and executable build, all 14 Runner
   axiom audits pass, and the CPU regression reports 20,989 checks with zero differences, including 966 float IR cases.
+  The expanded floating regression now separately passes all 1,178 IR images, including 212 additional
+  nearest-even tie, subnormal, underflow and signed-overflow cases; the original 966 manifest rows are unchanged.
   The generic Stage-0 statement/image correctness chain through `Stage0.IRBild` builds (2,709 jobs).
   The native compiler builds (5,403 jobs); three newly compiled float-end sources execute on the assembly
   runner with their unchanged expected exits 7/41/107 under the current hardware abstraction.
@@ -43,7 +45,8 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   certificate. Concrete constant program packets remain under repair. Their downstream
   `ConstWitness`/`ConstValuesWitness` resource closure remains unmeasured after the new phase port.
   The shared complete compilation packet, hardware-free image phase/geometry theorem and the
-  conflicting-profile refusal witness build. Concrete successful profile images are being checked.
+  conflicting-profile refusal witness build. The first complete successful profile image also builds;
+  the requires-profile and aligned-static images are being checked.
   Full-package closure and the remaining concrete witness consumers are being revalidated.
   The additional arithmetic hardware contract is built in `NativeFloat` (13 jobs), including the
   corrected binary32 nearest-even overflow threshold. It strengthens the named hardware assumption;
