@@ -303,8 +303,10 @@ theorem translation_wrong_execution_zeuge
       oracle passes world := by
   simpa only [translationCertificate_fuel, translationCertificate_input] using
     certificate_rejects_other (translationCertificate true) (translationInput true)
-      (by simpa only [translationCertificate_output, translationOutput, translationInput] using
-        sampleRows_distinct (declOf (translationUnit true))) oracle passes world
+      (by
+        dsimp only [translationDeclaration, declarationFromData]
+        simpa only [translationCertificate_output, translationOutput, translationInput] using
+          sampleRows_distinct (declOf (translationUnit true))) oracle passes world
 
 /-- Count, range and token-schema errors all refuse before execution. -/
 theorem translation_decoder_refusals_zeuge :
