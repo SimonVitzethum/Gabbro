@@ -61,7 +61,7 @@ set_option maxRecDepth 100000
 -- Keep the canonical fuel record symbolic: evaluate its selected operation, not all 100000 levels.
 -- These local proof rules are equations of the unchanged producer, not another lowering path.
 attribute [local cbv_opaque] lowStufe lowSeqL lowStructL
-attribute [local cbv_eval] seq_succ lowStructL_succ lowStufe_seq lowStufe_struct
+attribute [local cbv_eval] seq_select struct_select lowStufe_seq lowStufe_struct
 
 /-! WALL 6 (2026-09-30): `locks L { ... }` -- read as flat markers, lowered to `Stmt.locks` with the rank
     rule (`H006`) as a Bool the kernel decides; a nested take of the same lock and a rank that does not
@@ -87,10 +87,11 @@ private def locks1_ok_tokens : List Token :=
 
 private theorem locks1_ok_lexed : lexL locks1_ok_characters = .ok locks1_ok_tokens := by
   change scan false locks1_ok_characters 202 = .ok locks1_ok_tokens
-  simp only [locks1_ok_characters, locks1_ok_tokens, table_tokens, parameter_tokens,
-    effect_tokens, write_tokens, scan_prelude, scan_slot, scan_lock, scan_second_lock, scan_writer, scan_callee,
-    scan_parameters, scan_effects, scan_two_effects, scan_open, scan_take, scan_take_second,
-    scan_write_one, scan_write_two, scan_write_three, scan_close, scan_call, scan_end, token_maps, Except.map]
+  dsimp only [locks1_ok_characters, locks1_ok_tokens, table_tokens, parameter_tokens,
+    effect_tokens, write_tokens]
+  rw [scan_prelude _ 186, scan_slot _ 171, scan_lock _ 154, scan_writer _ 133, scan_parameters _ 118,
+    scan_effects _ 107, scan_close _ 105, scan_open _ 103, scan_take _ 97, scan_write_one _ 83, scan_close _ 81,
+    scan_close _ 79, scan_end 78]
 
 private theorem locks1_ok_parsed :
     (parseTopTief locks1_ok_tokens).toOption.isSome = true := by cbv
@@ -100,10 +101,17 @@ private theorem locks1_ok_elaborated :
     (elabU (pre108 locks1_ok_items)).toOption.isSome = true := by cbv
 private def locks1_ok_unit := (elabU (pre108 locks1_ok_items)).toOption.get locks1_ok_elaborated
 
-private theorem locks1_ok_lowered :
-    (match lowerAllg locks1_ok_unit with
-      | .error error => "lower: " ++ error
-      | .ok _ => "OK") = "OK" := by cbv
+private theorem locks1_ok_count : locks1_ok_unit.fns.length = 1 := by cbv
+
+private theorem locks1_ok_functions (f : Fin locks1_ok_unit.fns.length) :
+    (lowerFnAt locks1_ok_unit f).toOption.isSome = true ∧
+      (fnAt locks1_ok_unit f).decreases = none :=
+  singleFn_all locks1_ok_unit locks1_ok_count
+    (fun f => (lowerFnAt locks1_ok_unit f).toOption.isSome = true ∧
+      (fnAt locks1_ok_unit f).decreases = none) (by constructor <;> cbv <;> rfl) f
+
+private theorem locks1_ok_lowered : lowerStage locks1_ok_unit = "OK" :=
+  lowerStage_ok locks1_ok_unit (by cbv) locks1_ok_functions (by cbv)
 
 theorem locks1_ok_stufe : stufe locks1_ok = "OK" :=
   stufe_phases (source := locks1_ok) (characters := locks1_ok_characters)
@@ -136,10 +144,12 @@ private def locks2_ok_tokens : List Token :=
 
 private theorem locks2_ok_lexed : lexL locks2_ok_characters = .ok locks2_ok_tokens := by
   change scan false locks2_ok_characters 250 = .ok locks2_ok_tokens
-  simp only [locks2_ok_characters, locks2_ok_tokens, table_tokens, parameter_tokens,
-    effect_tokens, write_tokens, scan_prelude, scan_slot, scan_lock, scan_second_lock, scan_writer, scan_callee,
-    scan_parameters, scan_effects, scan_two_effects, scan_open, scan_take, scan_take_second,
-    scan_write_one, scan_write_two, scan_write_three, scan_close, scan_call, scan_end, token_maps, Except.map]
+  dsimp only [locks2_ok_characters, locks2_ok_tokens, table_tokens, parameter_tokens,
+    effect_tokens, write_tokens]
+  rw [scan_prelude _ 234, scan_slot _ 219, scan_lock _ 202, scan_writer _ 181, scan_parameters _ 166,
+    scan_effects _ 155, scan_close _ 153, scan_open _ 151, scan_take _ 145, scan_write_one _ 131,
+    scan_write_two _ 117, scan_close _ 115, scan_take _ 109, scan_write_three _ 95, scan_close _ 93,
+    scan_close _ 91, scan_end 90]
 
 private theorem locks2_ok_parsed :
     (parseTopTief locks2_ok_tokens).toOption.isSome = true := by cbv
@@ -149,10 +159,17 @@ private theorem locks2_ok_elaborated :
     (elabU (pre108 locks2_ok_items)).toOption.isSome = true := by cbv
 private def locks2_ok_unit := (elabU (pre108 locks2_ok_items)).toOption.get locks2_ok_elaborated
 
-private theorem locks2_ok_lowered :
-    (match lowerAllg locks2_ok_unit with
-      | .error error => "lower: " ++ error
-      | .ok _ => "OK") = "OK" := by cbv
+private theorem locks2_ok_count : locks2_ok_unit.fns.length = 1 := by cbv
+
+private theorem locks2_ok_functions (f : Fin locks2_ok_unit.fns.length) :
+    (lowerFnAt locks2_ok_unit f).toOption.isSome = true ∧
+      (fnAt locks2_ok_unit f).decreases = none :=
+  singleFn_all locks2_ok_unit locks2_ok_count
+    (fun f => (lowerFnAt locks2_ok_unit f).toOption.isSome = true ∧
+      (fnAt locks2_ok_unit f).decreases = none) (by constructor <;> cbv <;> rfl) f
+
+private theorem locks2_ok_lowered : lowerStage locks2_ok_unit = "OK" :=
+  lowerStage_ok locks2_ok_unit (by cbv) locks2_ok_functions (by cbv)
 
 theorem locks2_ok_stufe : stufe locks2_ok = "OK" :=
   stufe_phases (source := locks2_ok) (characters := locks2_ok_characters)
@@ -182,10 +199,11 @@ private def locks_nested_same_tokens : List Token :=
 
 private theorem locks_nested_same_lexed : lexL locks_nested_same_characters = .ok locks_nested_same_tokens := by
   change scan false locks_nested_same_characters 214 = .ok locks_nested_same_tokens
-  simp only [locks_nested_same_characters, locks_nested_same_tokens, table_tokens, parameter_tokens,
-    effect_tokens, write_tokens, scan_prelude, scan_slot, scan_lock, scan_second_lock, scan_writer, scan_callee,
-    scan_parameters, scan_effects, scan_two_effects, scan_open, scan_take, scan_take_second,
-    scan_write_one, scan_write_two, scan_write_three, scan_close, scan_call, scan_end, token_maps, Except.map]
+  dsimp only [locks_nested_same_characters, locks_nested_same_tokens, table_tokens, parameter_tokens,
+    effect_tokens, write_tokens]
+  rw [scan_prelude _ 198, scan_slot _ 183, scan_lock _ 166, scan_writer _ 145, scan_parameters _ 130,
+    scan_effects _ 119, scan_close _ 117, scan_open _ 115, scan_take _ 109, scan_take _ 103, scan_write_one _ 89,
+    scan_close _ 87, scan_close _ 85, scan_close _ 83, scan_end 82]
 
 private theorem locks_nested_same_parsed :
     (parseTopTief locks_nested_same_tokens).toOption.isSome = true := by cbv
@@ -195,10 +213,18 @@ private theorem locks_nested_same_elaborated :
     (elabU (pre108 locks_nested_same_items)).toOption.isSome = true := by cbv
 private def locks_nested_same_unit := (elabU (pre108 locks_nested_same_items)).toOption.get locks_nested_same_elaborated
 
-private theorem locks_nested_same_lowered :
-    (match lowerAllg locks_nested_same_unit with
-      | .error error => "lower: " ++ error
-      | .ok _ => "OK") = "lower: lower: locks against a held lock of higher or equal rank" := by cbv
+private theorem locks_nested_same_count : locks_nested_same_unit.fns.length = 1 := by cbv
+
+private theorem locks_nested_same_failed (f : Fin locks_nested_same_unit.fns.length) :
+    lowerFnAt locks_nested_same_unit f = .error "lower: locks against a held lock of higher or equal rank" :=
+  singleFn_all locks_nested_same_unit locks_nested_same_count
+    (fun f => lowerFnAt locks_nested_same_unit f = .error "lower: locks against a held lock of higher or equal rank")
+    (by cbv <;> rfl) f
+
+private theorem locks_nested_same_lowered : lowerStage locks_nested_same_unit = "lower: lower: locks against a held lock of higher or equal rank" :=
+  lowerStage_error locks_nested_same_unit "lower: locks against a held lock of higher or equal rank" (by cbv)
+    (fun f => Or.inl (locks_nested_same_failed f))
+    ⟨singleFn locks_nested_same_unit locks_nested_same_count, locks_nested_same_failed _⟩
 
 theorem locks_nested_same_stufe : stufe locks_nested_same = "lower: lower: locks against a held lock of higher or equal rank" :=
   stufe_phases (source := locks_nested_same) (characters := locks_nested_same_characters)
@@ -231,10 +257,12 @@ private def locks_rank_ok_tokens : List Token :=
 
 private theorem locks_rank_ok_lexed : lexL locks_rank_ok_characters = .ok locks_rank_ok_tokens := by
   change scan false locks_rank_ok_characters 251 = .ok locks_rank_ok_tokens
-  simp only [locks_rank_ok_characters, locks_rank_ok_tokens, table_tokens, parameter_tokens,
-    effect_tokens, write_tokens, scan_prelude, scan_slot, scan_lock, scan_second_lock, scan_writer, scan_callee,
-    scan_parameters, scan_effects, scan_two_effects, scan_open, scan_take, scan_take_second,
-    scan_write_one, scan_write_two, scan_write_three, scan_close, scan_call, scan_end, token_maps, Except.map]
+  dsimp only [locks_rank_ok_characters, locks_rank_ok_tokens, table_tokens, parameter_tokens,
+    effect_tokens, write_tokens]
+  rw [scan_prelude _ 235, scan_slot _ 220, scan_lock _ 203, scan_second_lock _ 188, scan_writer _ 167,
+    scan_parameters _ 152, scan_two_effects _ 136, scan_close _ 134, scan_open _ 132, scan_take _ 126,
+    scan_take_second _ 120, scan_write_one _ 106, scan_close _ 104, scan_close _ 102, scan_close _ 100,
+    scan_end 99]
 
 private theorem locks_rank_ok_parsed :
     (parseTopTief locks_rank_ok_tokens).toOption.isSome = true := by cbv
@@ -244,10 +272,17 @@ private theorem locks_rank_ok_elaborated :
     (elabU (pre108 locks_rank_ok_items)).toOption.isSome = true := by cbv
 private def locks_rank_ok_unit := (elabU (pre108 locks_rank_ok_items)).toOption.get locks_rank_ok_elaborated
 
-private theorem locks_rank_ok_lowered :
-    (match lowerAllg locks_rank_ok_unit with
-      | .error error => "lower: " ++ error
-      | .ok _ => "OK") = "OK" := by cbv
+private theorem locks_rank_ok_count : locks_rank_ok_unit.fns.length = 1 := by cbv
+
+private theorem locks_rank_ok_functions (f : Fin locks_rank_ok_unit.fns.length) :
+    (lowerFnAt locks_rank_ok_unit f).toOption.isSome = true ∧
+      (fnAt locks_rank_ok_unit f).decreases = none :=
+  singleFn_all locks_rank_ok_unit locks_rank_ok_count
+    (fun f => (lowerFnAt locks_rank_ok_unit f).toOption.isSome = true ∧
+      (fnAt locks_rank_ok_unit f).decreases = none) (by constructor <;> cbv <;> rfl) f
+
+private theorem locks_rank_ok_lowered : lowerStage locks_rank_ok_unit = "OK" :=
+  lowerStage_ok locks_rank_ok_unit (by cbv) locks_rank_ok_functions (by cbv)
 
 theorem locks_rank_ok_stufe : stufe locks_rank_ok = "OK" :=
   stufe_phases (source := locks_rank_ok) (characters := locks_rank_ok_characters)
@@ -280,10 +315,11 @@ private def locks_rank_down_tokens : List Token :=
 
 private theorem locks_rank_down_lexed : lexL locks_rank_down_characters = .ok locks_rank_down_tokens := by
   change scan false locks_rank_down_characters 251 = .ok locks_rank_down_tokens
-  simp only [locks_rank_down_characters, locks_rank_down_tokens, table_tokens, parameter_tokens,
-    effect_tokens, write_tokens, scan_prelude, scan_slot, scan_lock, scan_second_lock, scan_writer, scan_callee,
-    scan_parameters, scan_effects, scan_two_effects, scan_open, scan_take, scan_take_second,
-    scan_write_one, scan_write_two, scan_write_three, scan_close, scan_call, scan_end, token_maps, Except.map]
+  dsimp only [locks_rank_down_characters, locks_rank_down_tokens, table_tokens, parameter_tokens,
+    effect_tokens, write_tokens]
+  rw [scan_prelude _ 235, scan_slot _ 220, scan_lock _ 203, scan_second_lock _ 188, scan_writer _ 167,
+    scan_parameters _ 152, scan_two_effects _ 136, scan_close _ 134, scan_open _ 132, scan_take_second _ 126,
+    scan_take _ 120, scan_write_one _ 106, scan_close _ 104, scan_close _ 102, scan_close _ 100, scan_end 99]
 
 private theorem locks_rank_down_parsed :
     (parseTopTief locks_rank_down_tokens).toOption.isSome = true := by cbv
@@ -293,10 +329,18 @@ private theorem locks_rank_down_elaborated :
     (elabU (pre108 locks_rank_down_items)).toOption.isSome = true := by cbv
 private def locks_rank_down_unit := (elabU (pre108 locks_rank_down_items)).toOption.get locks_rank_down_elaborated
 
-private theorem locks_rank_down_lowered :
-    (match lowerAllg locks_rank_down_unit with
-      | .error error => "lower: " ++ error
-      | .ok _ => "OK") = "lower: lower: locks against a held lock of higher or equal rank" := by cbv
+private theorem locks_rank_down_count : locks_rank_down_unit.fns.length = 1 := by cbv
+
+private theorem locks_rank_down_failed (f : Fin locks_rank_down_unit.fns.length) :
+    lowerFnAt locks_rank_down_unit f = .error "lower: locks against a held lock of higher or equal rank" :=
+  singleFn_all locks_rank_down_unit locks_rank_down_count
+    (fun f => lowerFnAt locks_rank_down_unit f = .error "lower: locks against a held lock of higher or equal rank")
+    (by cbv <;> rfl) f
+
+private theorem locks_rank_down_lowered : lowerStage locks_rank_down_unit = "lower: lower: locks against a held lock of higher or equal rank" :=
+  lowerStage_error locks_rank_down_unit "lower: locks against a held lock of higher or equal rank" (by cbv)
+    (fun f => Or.inl (locks_rank_down_failed f))
+    ⟨singleFn locks_rank_down_unit locks_rank_down_count, locks_rank_down_failed _⟩
 
 theorem locks_rank_down_stufe : stufe locks_rank_down = "lower: lower: locks against a held lock of higher or equal rank" :=
   stufe_phases (source := locks_rank_down) (characters := locks_rank_down_characters)
@@ -333,10 +377,13 @@ private def locks_call_needing_it_tokens : List Token :=
 
 private theorem locks_call_needing_it_lexed : lexL locks_call_needing_it_characters = .ok locks_call_needing_it_tokens := by
   change scan false locks_call_needing_it_characters 314 = .ok locks_call_needing_it_tokens
-  simp only [locks_call_needing_it_characters, locks_call_needing_it_tokens, table_tokens, parameter_tokens,
-    effect_tokens, write_tokens, scan_prelude, scan_slot, scan_lock, scan_second_lock, scan_writer, scan_callee,
-    scan_parameters, scan_effects, scan_two_effects, scan_open, scan_take, scan_take_second,
-    scan_write_one, scan_write_two, scan_write_three, scan_close, scan_call, scan_end, token_maps, Except.map]
+  dsimp only [locks_call_needing_it_characters, locks_call_needing_it_tokens, table_tokens, parameter_tokens,
+    effect_tokens, write_tokens]
+  rw [scan_prelude _ 298, scan_slot _ 283, scan_lock _ 266, scan_callee _ 245, scan_parameters _ 230,
+    scan_effects _ 219, scan_close _ 217, scan_open _ 215, scan_take _ 209, scan_write_one _ 195,
+    scan_close _ 193, scan_close _ 191, scan_writer _ 170, scan_parameters _ 155, scan_effects _ 144,
+    scan_close _ 142, scan_open _ 140, scan_take _ 134, scan_call _ 125, scan_close _ 123, scan_close _ 121,
+    scan_end 120]
 
 private theorem locks_call_needing_it_parsed :
     (parseTopTief locks_call_needing_it_tokens).toOption.isSome = true := by cbv
@@ -346,10 +393,34 @@ private theorem locks_call_needing_it_elaborated :
     (elabU (pre108 locks_call_needing_it_items)).toOption.isSome = true := by cbv
 private def locks_call_needing_it_unit := (elabU (pre108 locks_call_needing_it_items)).toOption.get locks_call_needing_it_elaborated
 
+private theorem locks_call_needing_it_count : locks_call_needing_it_unit.fns.length = 2 := by cbv
+private def callee : Fin locks_call_needing_it_unit.fns.length :=
+  ⟨0, by rw [locks_call_needing_it_count]; decide⟩
+private def caller : Fin locks_call_needing_it_unit.fns.length :=
+  ⟨1, by rw [locks_call_needing_it_count]; decide⟩
+
+private theorem callee_ok :
+    (lowerFnAt locks_call_needing_it_unit callee).toOption.isSome = true := by cbv <;> rfl
+private theorem caller_failed :
+    lowerFnAt locks_call_needing_it_unit caller = .error "call: a held lock does not rank below the callee's floor" := by cbv <;> rfl
+
+private theorem locks_call_needing_it_outcomes (f : Fin locks_call_needing_it_unit.fns.length) :
+    lowerFnAt locks_call_needing_it_unit f = .error "call: a held lock does not rank below the callee's floor" ∨
+      (lowerFnAt locks_call_needing_it_unit f).toOption.isSome = true := by
+  have count := locks_call_needing_it_count
+  have bound := f.isLt
+  rcases (by omega : f.val = 0 ∨ f.val = 1) with zero | one
+  · have same : f = callee := Fin.ext zero
+    subst f
+    exact Or.inr callee_ok
+  · have same : f = caller := Fin.ext one
+    subst f
+    exact Or.inl caller_failed
+
 private theorem locks_call_needing_it_lowered :
-    (match lowerAllg locks_call_needing_it_unit with
-      | .error error => "lower: " ++ error
-      | .ok _ => "OK") = "lower: call: a held lock does not rank below the callee's floor" := by cbv
+    lowerStage locks_call_needing_it_unit = "lower: call: a held lock does not rank below the callee's floor" :=
+  lowerStage_error locks_call_needing_it_unit "call: a held lock does not rank below the callee's floor" (by cbv)
+    locks_call_needing_it_outcomes ⟨caller, caller_failed⟩
 
 theorem locks_call_needing_it_stufe : stufe locks_call_needing_it = "lower: call: a held lock does not rank below the callee's floor" :=
   stufe_phases (source := locks_call_needing_it) (characters := locks_call_needing_it_characters)

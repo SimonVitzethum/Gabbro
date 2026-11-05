@@ -1,8 +1,6 @@
 /-
-  File:      Grammatik/Parser/UebersetzeProben2.lean
-  Subject:   Sieve (a), parser lane: witnesses and planted defects of walls 6 (`locks` blocks) and 7
-             (`entry` roots). A second file because the kernel probes of one file share one memory
-             budget (measured 2026-09-30: the first file alone passes 7 GB with these twelve added).
+  File:      Grammatik/Parser/Elab/Proben/Fruehe/UebersetzeProben2Basis.lean
+  Subject:   Canonical scanner and phase certificates for the unchanged lock fixtures.
 -/
 module
 public import Grammatik.Parser.Elab.UebersetzePipeline
@@ -73,14 +71,19 @@ def stufe (s : String) : String :=
         | .error e => "lower: " ++ e
         | .ok _ => "OK"
 
+/-- Name the existing diagnostic projection so dependent result matchers stay typed
+    identically at every phase-certificate application. -/
+def lowerStage (unit : Uebersetze.UProg) : String :=
+  match lowerAllg unit with
+  | .error error => "lower: " ++ error
+  | .ok _ => "OK"
+
 /-- Link the actual phases without reducing the UTF-8 decoder inside later proofs. -/
 theorem stufe_phases {source : String} {characters : List Char} {tokens : List Token}
     {items : List SItemTief} {unit : Uebersetze.UProg} {answer : String}
     (text : source = String.ofList characters) (lexed : lexL characters = .ok tokens)
     (parsed : parseTopTief tokens = .ok items) (elaborated : elabU (pre108 items) = .ok unit)
-    (lowered : (match lowerAllg unit with
-      | .error error => "lower: " ++ error
-      | .ok _ => "OK") = answer) : stufe source = answer := by
+    (lowered : lowerStage unit = answer) : stufe source = answer := by
   rw [text]
   unfold stufe
   rw [lex_ofList, lexed]
@@ -88,6 +91,7 @@ theorem stufe_phases {source : String} {characters : List Char} {tokens : List T
   rw [parsed]
   dsimp only
   rw [elaborated]
+  change lowerStage unit = answer
   exact lowered
 
 /-- The existing sequence selector takes one level only when its source run needs it. -/
@@ -97,10 +101,28 @@ theorem seq_succ (u : Uebersetze.UProg) (caller : Fin u.fns.length) (n : Nat)
     lowSeqL (l := l) u caller Γ fn (n + 1) Λ pe ss =
       lowSeqStep u caller (lowStufe u caller n) Γ fn Λ pe ss := rfl
 
+-- Expose a match on the actual fuel argument before selecting its field.
+-- The canonical record stays opaque and is unfolded by one level only.
+theorem seq_select (u : Uebersetze.UProg) (caller : Fin u.fns.length) (n : Nat)
+    {l : Bool} (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u)))
+    (pe : AtTop u caller Λ) (ss : List UStmt) :
+    lowSeqL (l := l) u caller Γ fn n Λ pe ss = match n with
+      | 0 => .error "lower: blocks nested too deep"
+      | k + 1 => lowSeqStep (l := l) u caller (lowStufe u caller k) Γ fn Λ pe ss := by
+  cases n <;> rfl
+
+theorem struct_select (u : Uebersetze.UProg) (caller : Fin u.fns.length) (n : Nat)
+    {l : Bool} (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u)))
+    (pe : AtTop u caller Λ) (s : UStmt) (ss : List UStmt) :
+    lowStructL (l := l) u caller Γ fn n Λ pe s ss = match n with
+      | 0 => .error "lower: blocks nested too deep"
+      | k + 1 => lowStructStep (l := l) u caller (lowStufe u caller k) Γ fn Λ pe s ss := by
+  cases n <;> rfl
+
 -- Keep the canonical fuel record symbolic: evaluate its selected operation, not all 100000 levels.
 -- These local proof rules are equations of the unchanged producer, not another lowering path.
 attribute [local cbv_opaque] lowStufe lowSeqL lowStructL
-attribute [local cbv_eval] seq_succ lowStructL_succ lowStufe_seq lowStufe_struct
+attribute [local cbv_eval] seq_select struct_select lowStufe_seq lowStufe_struct
 
 /-- Small equations of the existing scanner, with an unevaluated continuation.
     Each whitespace-terminated fragment consumes exactly its tokens and spaces. -/
@@ -195,5 +217,154 @@ def effect_tokens : List Token := [.wort "writes", .ident "k", .zeichen ".", .wo
 
 def write_tokens (n : Nat) : List Token :=
     [.ident "k", .zeichen ".", .wort "slots", .zeichen "[", .ident "i", .zeichen "]", .zeichen ".", .ident "v", .zeichen "=", .num n, .zeichen ";"]
+
+/-- A closed function-count certificate supplies the bound independently of the
+    function subsequently classified. The witness is the existing canonical Fin. -/
+def singleFn (unit : Uebersetze.UProg) (count : unit.fns.length = 1) : Fin unit.fns.length :=
+  ⟨0, by rw [count]; decide⟩
+
+theorem singleFn_all (unit : Uebersetze.UProg) (count : unit.fns.length = 1)
+    (P : Fin unit.fns.length → Prop) (first : P (singleFn unit count)) : ∀ f, P f := by
+  intro f
+  have bound := f.isLt
+  have zero : f.val = 0 := by omega
+  have same : f = singleFn unit count := Fin.ext zero
+  subst f
+  exact first
+
+private theorem invs_empty (unit : Uebersetze.UProg) (empty : unit.invs = []) :
+    lowerInvs unit (List.finRange unit.invs.length) = .ok () := by
+  cases enumeration : List.finRange unit.invs.length with
+  | nil => rfl
+  | cons i rest =>
+    have count : unit.invs.length = 0 := congrArg List.length empty
+    have bound := i.isLt
+    omega
+
+private theorem each_success (unit : Uebersetze.UProg)
+    (success : ∀ f : Fin unit.fns.length, (lowerFnAt unit f).toOption.isSome = true) :
+    ∀ fs, lowerEach unit fs = .ok ()
+  | [] => rfl
+  | f :: fs => by
+    rw [lowerEach, except_ok_get (ε := String)
+      (α := EnsTy unit f × RumpTy unit f × ReqTy unit f) (x := lowerFnAt unit f) (success f)]
+    exact each_success unit success fs
+
+private theorem each_error (unit : Uebersetze.UProg) (error : String)
+    (outcomes : ∀ f : Fin unit.fns.length,
+      lowerFnAt unit f = .error error ∨ (lowerFnAt unit f).toOption.isSome = true) :
+    ∀ fs, (∃ f ∈ fs, lowerFnAt unit f = .error error) → lowerEach unit fs = .error error
+  | [], bad => by rcases bad with ⟨f, member, _⟩; cases member
+  | f :: fs, bad => by
+    rcases outcomes f with failure | success
+    · simp only [lowerEach, failure]
+    · have head := except_ok_get (ε := String)
+        (α := EnsTy unit f × RumpTy unit f × ReqTy unit f) (x := lowerFnAt unit f) success
+      have tail : ∃ g ∈ fs, lowerFnAt unit g = .error error := by
+        rcases bad with ⟨g, member, failure⟩
+        rcases List.mem_cons.mp member with same | member
+        · subst g
+          rw [head] at failure
+          cases failure
+        · exact ⟨g, member, failure⟩
+      rw [lowerEach, head]
+      exact each_error unit error outcomes fs tail
+
+private theorem collect_success : ∀ (n : Nat) (T : Fin n → Type)
+    (get : (i : Fin n) → Except String (T i)),
+    (∀ i, (get i).toOption.isSome = true) →
+      (Measures.collect n T get).toOption.isSome = true
+  | 0, _, _, _ => rfl
+  | n + 1, T, get, success => by
+    have head := except_ok_get (ε := String) (α := T 0) (x := get 0) (success 0)
+    have tail := collect_success n (fun i => T i.succ) (fun i => get i.succ) (fun i => success i.succ)
+    have tailValue := except_ok_get (ε := String) (α := (i : Fin n) → T i.succ)
+      (x := Measures.collect n (fun i => T i.succ) (fun i => get i.succ)) tail
+    rw [Measures.collect, head]
+    dsimp only [bind, Except.bind]
+    rw [tailValue]
+
+private theorem absent_measures (unit : Uebersetze.UProg)
+    (absent : ∀ f : Fin unit.fns.length, (fnAt unit f).decreases = none) :
+    (Measures.lowerMeasures unit).toOption.isSome = true := by
+  have entries := collect_success unit.fns.length (fun f => Measures.At unit f)
+    (fun f => Measures.lowerAt unit f) (fun f => by
+      simp only [Measures.lowerAt, absent f, Except.toOption, Option.isSome])
+  have collected := except_ok_get (ε := String) (α := (f : Fin unit.fns.length) → Measures.At unit f)
+    (x := Measures.collect unit.fns.length (Measures.At unit) (Measures.lowerAt unit)) entries
+  unfold Measures.lowerMeasures
+  rw [collected]
+
+/-- Actual function successes, contracts and absent source measures close the
+    existing assembler without normalizing its dependent program body. -/
+theorem lowerStage_ok (unit : Uebersetze.UProg) (noInvs : unit.invs = [])
+    (functions : ∀ f : Fin unit.fns.length,
+      (lowerFnAt unit f).toOption.isSome = true ∧ (fnAt unit f).decreases = none)
+    (contracts : contractGate unit = true) : lowerStage unit = "OK" := by
+  have measures := absent_measures unit (fun f => (functions f).2)
+  let exported : Measures.Export unit := (Measures.lowerMeasures unit).toOption.get measures
+  have measured : Measures.lowerMeasures unit = .ok exported := except_ok_get measures
+  have checked (P : Programm (declOf unit)) :
+      (Measures.checkedProgram unit P).toOption.isSome = true := by
+    have lengths : Measures.cycleLengths unit P exported.mass = true := by
+      unfold Measures.cycleLengths
+      apply List.all_eq_true.mpr
+      intro f _
+      apply List.all_eq_true.mpr
+      intro g _
+      have empty (i : (declOf unit).Fn) : exported.mass i = [] :=
+        Measures.lowerMeasures_absent unit exported i (functions i).2
+      rw [empty f, empty g]
+      change (!zykS P (List.finRange unit.fns.length) f g || true) = true
+      exact Bool.or_true _
+    unfold Measures.checkedProgram
+    rw [measured]
+    change (if Measures.cycleLengths unit P exported.mass then true else false) = true
+    rw [ite_eq_left lengths]
+  have invariants := invs_empty unit noInvs
+  have functions := each_success unit (fun f => (functions f).1) (List.finRange unit.fns.length)
+  have lowered : (lowerAllg unit).toOption.isSome = true := by
+    unfold lowerAllg
+    split
+    · rename_i error failed
+      rw [invariants] at failed
+      cases failed
+    · split
+      · rename_i error failed
+        rw [functions] at failed
+        cases failed
+      · split
+        · exact checked _
+        · contradiction
+  unfold lowerStage
+  rw [except_ok_get (ε := String) (α := Programm (declOf unit) × List (declOf unit).Fn)
+    (x := lowerAllg unit) lowered]
+
+/-- Preserve the exact first refusal: every failed function has this diagnostic,
+    and at least one actual member fails. The ordinary invariant gate still runs. -/
+theorem lowerStage_error (unit : Uebersetze.UProg) (error : String) (noInvs : unit.invs = [])
+    (outcomes : ∀ f : Fin unit.fns.length,
+      lowerFnAt unit f = .error error ∨ (lowerFnAt unit f).toOption.isSome = true)
+    (bad : ∃ f : Fin unit.fns.length, lowerFnAt unit f = .error error) :
+    lowerStage unit = "lower: " ++ error := by
+  have invariants := invs_empty unit noInvs
+  have functions := each_error unit error outcomes (List.finRange unit.fns.length)
+    (by rcases bad with ⟨f, failure⟩; exact ⟨f, List.mem_finRange f, failure⟩)
+  have failed : lowerAllg unit = .error error := by
+    unfold lowerAllg
+    split
+    · rename_i reason failure
+      rw [invariants] at failure
+      cases failure
+    · split
+      · rename_i reason failure
+        rw [functions] at failure
+        cases failure
+        rfl
+      · rename_i value success
+        rw [functions] at success
+        cases success
+  unfold lowerStage
+  rw [failed]
 
 end Gabbro.Grammatik.Parser.UebersetzeProben2
