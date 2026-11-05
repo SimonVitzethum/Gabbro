@@ -126,18 +126,22 @@ private theorem translation_phases (reverse : Bool) :
     ∃ library unit, libraryDecl (translationMembers reverse) translationCall = .ok library ∧
       elabU (pre108 (translatorItems (translationMembers reverse) library)) = .ok unit ∧
       (lowerAllg unit).toOption.isSome = true := by
-  apply certifyPhases (translationText reverse).toList translationCall
-    (fun members => members[3]? = some (.fnT translationCaller translationCallerBody))
+  unfold translationMembers translationItems translationTokens
+  refine certifyPhases (translationText reverse).toList translationCall
+    (fun (members : List SItemTief) =>
+      members[3]? = some (SItemTief.fnT translationCaller translationCallerBody)) ?_
   cases reverse
   all_goals
     refine ⟨?tokens, ?items, ?members, ?library, ?unit,
       ?lexed, ?parsed, ?resolved, ?kept, ?found, ?elaborated, ?lowered⟩
-    case lexed => cbv
-    case parsed => cbv
-    case resolved => cbv
+    -- Explicit equality elaboration assigns the computed phase's witness;
+    -- cbv's own closing attempt does not assign synthetic opaque holes.
+    case lexed => cbv <;> exact Eq.refl _
+    case parsed => cbv <;> exact Eq.refl _
+    case resolved => cbv <;> exact Eq.refl _
     case kept => cbv
-    case found => cbv
-    case elaborated => cbv
+    case found => cbv <;> exact Eq.refl _
+    case elaborated => cbv <;> exact Eq.refl _
     case lowered => cbv
 
 /-- The exact caller is at member 3 and its call at statement path `[0]`. -/
@@ -145,12 +149,12 @@ def translationSource (reverse : Bool) : LibrarySource where
   characters := (translationText reverse).toList
   tokens := translationTokens reverse
   items := translationItems reverse
-  lexed := (translation_phases reverse).1
-  parsed := (translation_phases reverse).2.1
+  lexed := by exact (translation_phases reverse).1
+  parsed := by exact (translation_phases reverse).2.1
   callerIndex := 3
   caller := translationCaller
   callerBody := translationCallerBody
-  atCaller := (translation_phases reverse).2.2.1
+  atCaller := by exact (translation_phases reverse).2.2.1
   path := [0]
   call := translationCall
   atCall := rfl
@@ -224,16 +228,18 @@ private theorem translation_qual_phases :
     ∃ library unit, libraryDecl translationQualMembers translationQualCall = .ok library ∧
       elabU (pre108 (translatorItems translationQualMembers library)) = .ok unit ∧
       (lowerAllg unit).toOption.isSome = true := by
-  apply certifyPhases translationQualText.toList translationQualCall
-    (fun members => members[6]? = some (.fnT translationQualCaller translationQualCallerBody))
+  unfold translationQualMembers translationQualItems translationQualTokens
+  refine certifyPhases translationQualText.toList translationQualCall
+    (fun (members : List SItemTief) =>
+      members[6]? = some (SItemTief.fnT translationQualCaller translationQualCallerBody)) ?_
   refine ⟨?tokens, ?items, ?members, ?library, ?unit,
     ?lexed, ?parsed, ?resolved, ?kept, ?found, ?elaborated, ?lowered⟩
-  case lexed => cbv
-  case parsed => cbv
-  case resolved => cbv
+  case lexed => cbv <;> exact Eq.refl _
+  case parsed => cbv <;> exact Eq.refl _
+  case resolved => cbv <;> exact Eq.refl _
   case kept => cbv
-  case found => cbv
-  case elaborated => cbv
+  case found => cbv <;> exact Eq.refl _
+  case elaborated => cbv <;> exact Eq.refl _
   case lowered => cbv
 
 /-- The exact caller is at member 6 (two opened modules) and its call at statement path `[0]`. -/
@@ -241,12 +247,12 @@ def translationQualSource : LibrarySource where
   characters := translationQualText.toList
   tokens := translationQualTokens
   items := translationQualItems
-  lexed := translation_qual_phases.1
-  parsed := translation_qual_phases.2.1
+  lexed := by exact translation_qual_phases.1
+  parsed := by exact translation_qual_phases.2.1
   callerIndex := 6
   caller := translationQualCaller
   callerBody := translationQualCallerBody
-  atCaller := translation_qual_phases.2.2.1
+  atCaller := by exact translation_qual_phases.2.2.1
   path := [0]
   call := translationQualCall
   atCall := rfl
@@ -303,16 +309,17 @@ private theorem translation_rek_phases :
       libraryDecl translationRekMembers ⟨["sample"], ["consume"], [], [.num 3]⟩ = .ok library ∧
       elabU (pre108 (translatorItems translationRekMembers library)) = .ok unit ∧
       (lowerAllg unit).toOption.isSome = true := by
-  apply certifyPhases translationRekText.toList ⟨["sample"], ["consume"], [], [.num 3]⟩
-    (fun _ => True)
+  unfold translationRekMembers translationRekItems translationRekTokens
+  refine certifyPhases translationRekText.toList ⟨["sample"], ["consume"], [], [.num 3]⟩
+    (fun (_ : List SItemTief) => True) ?_
   refine ⟨?tokens, ?items, ?members, ?library, ?unit,
     ?lexed, ?parsed, ?resolved, ?kept, ?found, ?elaborated, ?lowered⟩
-  case lexed => cbv
-  case parsed => cbv
-  case resolved => cbv
+  case lexed => cbv <;> exact Eq.refl _
+  case parsed => cbv <;> exact Eq.refl _
+  case resolved => cbv <;> exact Eq.refl _
   case kept => trivial
-  case found => cbv
-  case elaborated => cbv
+  case found => cbv <;> exact Eq.refl _
+  case elaborated => cbv <;> exact Eq.refl _
   case lowered => cbv
 
 theorem translation_rek_library_zeuge :
