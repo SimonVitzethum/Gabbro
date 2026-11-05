@@ -95,11 +95,10 @@ theorem artPtrB_ok {fn : UFn} (h : artPtrB fn = true) : ArtStimmtPtr fn := by
   have := List.all_eq_true.mp h j (List.mem_range.mpr hj)
   simp only [hp] at this
   split at this
-  · rename_i q num' w' hq
-    refine ⟨w', ?_⟩
-    rw [hq]
-    simp only [Option.map_some, Option.some.injEq, Ty.ptr.injEq, and_true]
-    simpa using this
+  · rename_i q w' num' hq
+    have sameTable : num' = num := by simpa using this
+    subst num'
+    exact ⟨w', by rw [hq]; rfl⟩
   · cases this
 
 theorem artB_ok {fn : UFn} (h : artB fn = true) : ArtStimmt fn := by
