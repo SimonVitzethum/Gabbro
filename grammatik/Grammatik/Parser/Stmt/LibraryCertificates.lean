@@ -366,12 +366,31 @@ theorem translation_measure_zeuge (passes : Nat) (Q : AxEns (declOf (translation
     (translationDeclaration true).MeasureDuty passes Q S T :=
   declaration_measure (translationDeclaration true) passes Q S T
 
+private theorem translationQual_resolved :
+    libraryDecl (Aufloesung.loeseL (Aufloesung.quelle translationQualSource.items)
+      [] translationQualSource.items) translationQualSource.call = .ok translationQualLibrary := by
+  have resolved := except_ok_get (x := libraryDecl translationQualMembers translationQualCall)
+    translation_qual_library_zeuge
+  simpa only [translationQualSource, translationQualMembers, translationQualLibrary] using resolved
+
+private theorem translationQual_elaborated :
+    elabU (pre108 (translatorItems
+      (Aufloesung.loeseL (Aufloesung.quelle translationQualSource.items)
+        [] translationQualSource.items) translationQualLibrary)) = .ok translationQualUnit := by
+  have elaborated := translation_qual_export_data.1
+  simpa only [translationQualSource, translationQualMembers] using elaborated
+
+private theorem translationQual_lowered :
+    lowerAllg translationQualUnit = .ok translationQualLowered := by
+  have lowered := except_ok_get (x := lowerAllg translationQualUnit) translation_qual_lower_zeuge
+  simpa only [translationQualLowered] using lowered
+
 /-- Joint qualified declaration fixture: the qualifier selects module `a` through typed export,
     bounded call graph and immutable by-value array signature. -/
 def translationQualDeclaration : TranslationDecl translationQualSource translationQualUnit :=
   declarationFromData (source := translationQualSource) translation_qual_export_data.2
-    (except_ok_get translation_qual_library_zeuge) translation_qual_export_data.1
-    (except_ok_get translation_qual_lower_zeuge)
+    (by exact translationQual_resolved) (by exact translationQual_elaborated)
+    (by exact translationQual_lowered)
 
 def translationQualInput : Wert (declOf translationQualUnit) translationSchema.ty :=
   sampleRows (declOf translationQualUnit) false
@@ -379,8 +398,8 @@ def translationQualInput : Wert (declOf translationQualUnit) translationSchema.t
 /-- A complete exact-execution certificate for the qualified selection. -/
 def translationQualCertificate : TranslationCertificate translationQualDeclaration :=
   certificateFromData (source := translationQualSource) translation_qual_export_data.2
-    (except_ok_get translation_qual_library_zeuge) translation_qual_export_data.1
-    (except_ok_get translation_qual_lower_zeuge) translationQualInput translationQualInput
+    (by exact translationQual_resolved) (by exact translationQual_elaborated)
+    (by exact translationQual_lowered) translationQualInput translationQualInput
     (by exact sampleRows_decoded (declOf translationQualUnit)) rfl
 
 /-- The per-site payload of the identity translation: site `[0]`, content the certified output. -/
@@ -402,13 +421,13 @@ theorem translationPayload_standort_zeuge : translationPayload.site ≠ [1] := b
 def translationExpansion : LibraryExpansion translationPayload :=
   expansionFromPayload translationPayload (.variable "sample_payload_0") "consume"
     (by simpa only [translationDeclaration_library] using (translation_library_shape false).1)
-    (by simpa only [translationDeclaration_library] using (translation_library_shape false).2) none
+    (by simpa only [translationDeclaration_library, translationSource] using (translation_library_shape false).2) none
 
 /-- The certified `bindLib` expansion: the ordinary call value bound as usual. -/
 def translationExpansionBind : LibraryExpansion translationPayload :=
   expansionFromPayload translationPayload (.variable "sample_payload_0") "consume"
     (by simpa only [translationDeclaration_library] using (translation_library_shape false).1)
-    (by simpa only [translationDeclaration_library] using (translation_library_shape false).2)
+    (by simpa only [translationDeclaration_library, translationSource] using (translation_library_shape false).2)
     (some (false, "value", none))
 
 /-- Both expansions are ordinary: no library construct remains for the lowering. -/
