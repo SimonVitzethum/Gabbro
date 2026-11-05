@@ -6,6 +6,7 @@ import all Grammatik.Parser.Expr.Ausdruck.Teil2a
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.ExportPreservation
+open Uebersetze UebersetzeAllg UebersetzeAllg2
 
 /-- The source loop-header duties remain refusals rather than disappearing into a finite loop. -/
 theorem traversal_header_refused_zeuge :
@@ -96,9 +97,11 @@ private theorem consuming_effect_checked (functions : List UFn) (writes : List S
   simp only [bind, Except.bind, pure, Except.pure]
   rw [consuming_effect_parse take 9986]
   simp only [bind, Except.bind, pure, Except.pure]
+  have sameTable : strEq "T" "T" = true := by decide +kernel
   cases take <;> cases allowed : writes.any (strEq · "T") <;>
     simp [relationUnit, relationFunction, uSchreibtOrt, uStelle, uArtBei, uEffekteAux,
-      uIstGriffOrt, uIstGlobName, strEq, allowed, bind, Except.bind, pure, Except.pure]
+      uIstGriffOrt, uIstGlobName, sameTable, allowed, bind, Except.bind, pure, Except.pure,
+      MonadExceptOf.throw]
 
 theorem consuming_effects_zeuge :
     lowConsumingEffects relationUnit {relationFunction with puts := ["T"]} "T" "consumes T.slots" =
@@ -107,7 +110,7 @@ theorem consuming_effects_zeuge :
       .error "consuming traversal touches exceeds function writes" ∧
     lowConsumingEffects relationUnit relationFunction "T" "reads T.slots" =
       .error "consuming traversal touches must consume its domain" := by
-  simpa [relationUnit, strEq] using
+  simpa [relationUnit, relationFunction, strEq] using
     And.intro (consuming_effect_checked [] ["T"] true)
       (And.intro (consuming_effect_checked [] [] true) (consuming_effect_checked [] [] false))
 
@@ -124,11 +127,11 @@ theorem consuming_exits_refused_zeuge :
 /-- Preserve the checked position, kind and canonical variable before constructing an index. -/
 private theorem index_parameter_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (fn : UFn) (shift position : Nat) (name : String) (table : Fin u.tabs.length) (origin : Nat)
-    (variable : Var Γ (.index ((declOf u).count table)))
+    (indexVar : Var Γ (.index ((declOf u).count table)))
     (found : paramPos fn.params name = .ok position)
     (kind : fn.kinds[position]? = some (.index origin))
-    (lookup : lowVar Γ (shift + position) (.index ((declOf u).count table)) = .ok variable) :
-    lowIdx u Γ Λ fn shift table (.param name) = .ok (.var variable) := by
+    (lookup : lowVar Γ (shift + position) (.index ((declOf u).count table)) = .ok indexVar) :
+    lowIdx u Γ Λ fn shift table (.param name) = .ok (.var indexVar) := by
   simp only [lowIdx, found, kind, lookup]
 
 /-- Nonempty represented domain, two ordered index binders and a current-world count
