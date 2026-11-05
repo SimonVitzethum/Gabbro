@@ -341,10 +341,11 @@ theorem bit1_vorz_refused : stufe bit1_vorz = "lower: bit operation over a negat
   have front : Frontend bit1_vorz unit := by intro after; cbv
   exact stufe_error front (lowering_error unit "bit operation over a negative range" rfl (by cbv))
 
-/-- PLANTED DEFECT: a call to something that is not a type word keeps its old refusal. -/
+/-- PLANTED DEFECT: an unresolved direct call fails the mandatory closed-reference gate. -/
 def ruf1 : String :=
   "module m { impl fn f(a : u32 in 0 .. 5) -> u8 { return foo(a); } }"
-theorem ruf1_refused : stufe ruf1 = "elab: value without G form" := by cbv
+theorem ruf1_refused : stufe ruf1 =
+    "elab: generic-output: residual syntax, name collision or unresolved direct global reference" := by cbv
 
 
 #print axioms add1_ok
