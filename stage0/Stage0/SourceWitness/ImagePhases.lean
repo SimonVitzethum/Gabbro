@@ -45,8 +45,23 @@ theorem emit_eq {src : String} {K : Nat} {options : Profil.Options}
   dsimp only [bind, Except.bind, pure, Except.pure]
   erw [gateMap, starts]
   dsimp only [bind, Except.bind]
-  erw [dif_pos result.initialValid, result.pointers, result.emission]
-  rfl
+  split
+  · split
+    · rename_i missing
+      cases missing.symm.trans result.pointers
+    · rename_i args selected
+      have same : args = result.args := Option.some.inj (selected.symm.trans result.pointers)
+      subst args
+      split
+      · rename_i error rejected
+        cases rejected.symm.trans result.emission
+      · rename_i image selected
+        have same : image = result.image := Except.ok.inj (selected.symm.trans result.emission)
+        subst image
+        cases result
+        rfl
+  · rename_i rejected
+    exact False.elim (rejected result.initialValid)
 
 /-- Whole canonical constructor equality from actual phase results. The AX-free
     certificate discharges the original foreign-result-area loop, not a bypass.
