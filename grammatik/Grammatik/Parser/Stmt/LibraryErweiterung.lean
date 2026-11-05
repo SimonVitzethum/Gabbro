@@ -13,7 +13,7 @@ import all Init.Data.String.FindPos
 import all Init.Data.String.Hashable
 import all Init.Data.String.Iter
 import all Init.Data.String.Iter.Basic
-import all Init.Data.String.Intercalate
+import all Init.Data.String.Iter.Intercalate
 import all Init.Data.String.Iterate
 import all Init.Data.String.Iterator
 import all Init.Data.String.Legacy
