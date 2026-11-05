@@ -1,6 +1,7 @@
 module
 public import Grammatik.Parser.Elab.Proben.RightsConstants.Data
 public import Grammatik.Parser.Elab.Proben.RightsConstants.Fragments
+public import Grammatik.Parser.Elab.Proben.RightsConstants.Bounds
 public import Grammatik.Parser.Stmt.LibraryFixtureScanning
 
 import all Init.Data.Repr
@@ -54,22 +55,40 @@ def Input.of_chunks {source : String} (pieces : List Chunk)
   ⟨Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces, Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.tokens pieces,
     text, lex_chunks pieces room⟩
 
+private theorem steps_bound (pieces : List Chunk) :
+    pieces.all (fun piece => decide (piece.steps ≤ piece.characters.length)) = true →
+      steps pieces ≤ (Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces).length := by
+  induction pieces with
+  | nil => intro _; exact Nat.le_refl _
+  | cons piece pieces ih =>
+    intro bounded
+    simp only [List.all_cons, Bool.and_eq_true] at bounded
+    simp only [steps, Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters,
+      List.flatMap_cons, List.length_append]
+    exact Nat.add_le_add (of_decide_eq_true bounded.1) (ih bounded.2)
+
 -- Infer the token data from the real short lexer result. The final certificate
 -- checks this exact fragment again with an arbitrary scanner continuation.
 
-scoped macro "rights_input " source:term " with_cuts " cuts:term
+scoped macro "rights_input " source:term " with_cuts " "[" cuts:ident,* "]"
     " with_text " "[" fragments:str,* "]" : term => do
   let text := fragments.getElems.foldl (fun text fragment => text ++ fragment.getString) ""
   let letters : Array (Lean.TSyntax `term) := text.toList.toArray.map fun char =>
     ⟨(Lean.Syntax.mkCharLit char).raw⟩
+  let mut bounded : Lean.TSyntax `term ← `(Eq.refl true)
+  for piece in cuts.getElems.reverse do
+    let proof : Lean.TSyntax `term :=
+      ⟨(Lean.mkIdentFrom piece (piece.getId.appendAfter "_bounded")).raw⟩
+    bounded ← `(Bool.and_eq_true_iff.mpr ⟨$proof, $bounded⟩)
   `(show Input $source from by
-    let pieces : List Chunk := $cuts
+    let pieces : List Chunk := [$cuts,*]
     have charsEq : Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces =
         ([$letters,*] : List Char) := by rfl
     refine Input.of_chunks (source := $source) pieces ?text ?room
     case text =>
       rw [charsEq] <;> cbv
-    case room => decide +kernel)
+    case room =>
+      exact Nat.le_trans (steps_bound pieces $bounded) (Nat.le_succ _))
 
 open scoped Gabbro.Grammatik.Parser.UebersetzeProben11.Phases
 namespace Inputs
