@@ -156,9 +156,9 @@ private theorem tree_count_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf 
         (umIdx (Int.toNat_of_nonneg nonnegative).symm
           (.and (.reaches table edge.field edge.self seed.weaken (.var .here) guard) .tru))) := by
   simp only [lowSeiteZ, gate, found, typed, outer, ergAlsParam, bind, Except.bind,
-    finite, Bool.false_eq_true, ite_false]
-  rw [dite_eq_left nonnegative, dite_eq_left guard]
-  rfl
+    Option.isSome, finite, Bool.false_eq_true, ite_false]
+  erw [dite_eq_left nonnegative, dite_eq_left guard] <;>
+    simp only [lowEns, pure, Except.pure]
 
 /-- The actual consuming measure checker widens its checked side without inspecting its term. -/
 private theorem consuming_measure_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -170,7 +170,6 @@ private theorem consuming_measure_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (
   simp only [lowConsumingMass, fresh, Bool.false_eq_true, ite_false, counted, Except.mapError,
     bind, Except.bind, pure, Except.pure]
   rw [dite_eq_left lower]
-  rfl
 
 /-- Select just the canonical one-fuel sequence operation; the remaining level stays abstract. -/
 private theorem closed_sequence (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
