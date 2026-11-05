@@ -109,10 +109,11 @@ private def taggedSource : Values.SourceFunction tagged := by
     postSource := ?postEq }
   case bodyEq =>
     change Values.expression (D := declaration [.int 0 10] (.sum [none, some (.int 0 255), some .bool, some (.str 1)]))
-      (locals [("x", .int 0 10)]) [] [{ name := "Choice"
+      (locals [("x", .int 0 10)]) [] [{
+         name := "Choice"
          cases := [("Empty", none), ("Data", some (.int 0 255)),
            ("Flag", some .bool), ("Text", some (.str 1))] }] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) (.call "Data" [.bin "+" (.variable "x") (.lit 1)]) = .ok _
-    rfl
+    cbv <;> exact Eq.refl _
   case preEq => cbv <;> rfl
   case postEq => cbv <;> rfl
 
@@ -126,10 +127,11 @@ private def emptyTagSource : Values.SourceFunction emptyTag := by
     postSource := ?postEq }
   case bodyEq =>
     change Values.expression (D := declaration [] (.sum [none, some (.int 0 255), some .bool, some (.str 1)]))
-      (locals []) [] [{ name := "Choice"
+      (locals []) [] [{
+         name := "Choice"
          cases := [("Empty", none), ("Data", some (.int 0 255)),
            ("Flag", some .bool), ("Text", some (.str 1))] }] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) (.variable "Empty") = .ok _
-    rfl
+    cbv <;> exact Eq.refl _
   case preEq => cbv <;> rfl
   case postEq => cbv <;> rfl
 
@@ -143,10 +145,11 @@ private def flagTagSource : Values.SourceFunction flagTag := by
     postSource := ?postEq }
   case bodyEq =>
     change Values.expression (D := declaration [] (.sum [none, some (.int 0 255), some .bool, some (.str 1)]))
-      (locals []) [] [{ name := "Choice"
+      (locals []) [] [{
+         name := "Choice"
          cases := [("Empty", none), ("Data", some (.int 0 255)),
            ("Flag", some .bool), ("Text", some (.str 1))] }] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) (.call "Flag" [.tru]) = .ok _
-    rfl
+    cbv <;> exact Eq.refl _
   case preEq => cbv <;> rfl
   case postEq => cbv <;> rfl
 
@@ -160,10 +163,11 @@ private def textTagSource : Values.SourceFunction textTag := by
     postSource := ?postEq }
   case bodyEq =>
     change Values.expression (D := declaration [] (.sum [none, some (.int 0 255), some .bool, some (.str 1)]))
-      (locals []) [] [{ name := "Choice"
+      (locals []) [] [{
+         name := "Choice"
          cases := [("Empty", none), ("Data", some (.int 0 255)),
            ("Flag", some .bool), ("Text", some (.str 1))] }] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) (.call "Text" [.ext .text ["Z"] []]) = .ok _
-    rfl
+    cbv <;> exact Eq.refl _
   case preEq => cbv <;> rfl
   case postEq => cbv <;> rfl
 
@@ -224,10 +228,11 @@ private theorem taggedQuotation :
   refine ⟨?literal, ?produced, ?spelling⟩
   case produced =>
     change Values.reify (D := declaration [.int 0 10] (.sum [none, some (.int 0 255), some .bool, some (.str 1)])) (Γ := [.int 0 10])
-      [{ name := "Choice"
+      [{
+         name := "Choice"
          cases := [("Empty", none), ("Data", some (.int 0 255)),
            ("Flag", some .bool), ("Text", some (.str 1))] }] [] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) ⟨⟨1, by decide⟩, (⟨5, by decide, by decide⟩ : Zahl 0 255)⟩ = .ok _
-    rfl
+    cbv <;> exact Eq.refl _
   case spelling => rfl
 
 private theorem emptyTagQuotation :
@@ -237,10 +242,11 @@ private theorem emptyTagQuotation :
   refine ⟨?literal, ?produced, ?spelling⟩
   case produced =>
     change Values.reify (D := declaration [] (.sum [none, some (.int 0 255), some .bool, some (.str 1)])) (Γ := [])
-      [{ name := "Choice"
+      [{
+         name := "Choice"
          cases := [("Empty", none), ("Data", some (.int 0 255)),
            ("Flag", some .bool), ("Text", some (.str 1))] }] [] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) ⟨⟨0, by decide⟩, ()⟩ = .ok _
-    rfl
+    cbv <;> exact Eq.refl _
   case spelling => rfl
 
 private theorem flagTagQuotation :
@@ -250,10 +256,11 @@ private theorem flagTagQuotation :
   refine ⟨?literal, ?produced, ?spelling⟩
   case produced =>
     change Values.reify (D := declaration [] (.sum [none, some (.int 0 255), some .bool, some (.str 1)])) (Γ := [])
-      [{ name := "Choice"
+      [{
+         name := "Choice"
          cases := [("Empty", none), ("Data", some (.int 0 255)),
            ("Flag", some .bool), ("Text", some (.str 1))] }] [] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) ⟨⟨2, by decide⟩, true⟩ = .ok _
-    rfl
+    cbv <;> exact Eq.refl _
   case spelling => rfl
 
 private theorem textTagQuotation :
@@ -263,10 +270,11 @@ private theorem textTagQuotation :
   refine ⟨?literal, ?produced, ?spelling⟩
   case produced =>
     change Values.reify (D := declaration [] (.sum [none, some (.int 0 255), some .bool, some (.str 1)])) (Γ := [])
-      [{ name := "Choice"
+      [{
+         name := "Choice"
          cases := [("Empty", none), ("Data", some (.int 0 255)),
            ("Flag", some .bool), ("Text", some (.str 1))] }] ["Z"] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) ⟨⟨3, by decide⟩, (⟨[⟨90, by decide, by decide⟩], by decide⟩ : Wert (declaration [] (.sum [none, some (.int 0 255), some .bool, some (.str 1)])) (.str 1))⟩ = .ok _
-    rfl
+    cbv <;> exact Eq.refl _
   case spelling => rfl
 
 private theorem emptyTextQuotation :
@@ -277,7 +285,7 @@ private theorem emptyTextQuotation :
   case produced =>
     change Values.reify (D := declaration [] (.str 1)) (Γ := [])
       [] [""] 64 (.str 1) ⟨[], by decide⟩ = .ok _
-    rfl
+    cbv <;> exact Eq.refl _
   case spelling => rfl
 
 private theorem oneTextQuotation :
@@ -288,7 +296,7 @@ private theorem oneTextQuotation :
   case produced =>
     change Values.reify (D := declaration [] (.str 1)) (Γ := [])
       [] ["A"] 64 (.str 1) ⟨[⟨65, by decide, by decide⟩], by decide⟩ = .ok _
-    rfl
+    cbv <;> exact Eq.refl _
   case spelling => rfl
 
 private theorem zeroTextQuotation :
@@ -299,7 +307,7 @@ private theorem zeroTextQuotation :
   case produced =>
     change Values.reify (D := declaration [] (.str 0)) (Γ := [])
       [] [""] 64 (.str 0) ⟨[], by decide⟩ = .ok _
-    rfl
+    cbv <;> exact Eq.refl _
   case spelling => rfl
 
 public theorem bool_results :

@@ -27,6 +27,8 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   compilation and 21 refusal expectations differ. No executed case has a wrong exit code. Open source
   boundaries include alias constants, cost/proof metadata, atomic declarations and scoped-return admission;
   these tests are not a measurement of complete language coverage. Refusal expectations have not been relaxed.
+  All four existing source I/O probes currently refuse at the unbound `SItemTief.assumT` source gate;
+  the assembly Runner's independently measured I/O/instruction regression remains separate.
   Full-package closure and the remaining concrete witness consumers are being revalidated.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
   The authorised acceptance scope is Lean and the Lean parts of GabbroV; Rust, Cargo and LLVM checks are
