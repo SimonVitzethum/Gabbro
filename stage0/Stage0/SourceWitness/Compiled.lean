@@ -1,9 +1,8 @@
 module
 public import Stage0.SourceWitness.Input
-public import Stage0.SourceWitness.Phases
+public import Stage0.SourceWitness.Owners
 public import Stage0.Frontend.Witnesses.Constants.ProgramPackets
 import all Stage0.SourceWitness.Input
-import all Stage0.SourceWitness.Phases
 import all Stage0.SourceWitness.Owners
 
 @[expose] public section
@@ -62,7 +61,7 @@ private def sourceBody : Body sourceHeader := by
   case accepted => cbv
 
 private def sourceCompiled : {result : Compiled text // compile text = .ok result} :=
-  ImagePhases.compiled sourceHeader sourceBody
+  Frontend.ConstPhases.compiledResult sourceHeader sourceBody
 
 -- Fix the complete compiled constructor before any unit/entry/scopes projection.
 -- All of these are properties of the canonical packet, without unfolding emit.
