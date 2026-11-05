@@ -55,12 +55,12 @@ private theorem clamp_prefix (format : FPFormat) (x : X) :
       advance, aluStep, aluOp, X.set, X.get, X.nof]
     cases format <;> simp [fpInputSign, fpSignMask, fpUpper, lenOfL,
       BitVec.ofNat_add, BitVec.add_assoc]
-  refine ⟨z, run, position, ?_, ?_, rfl, rfl, rfl, rfl⟩
+  refine ⟨z, run, position, ?_, ?_, ?_, ?_, ?_, ?_⟩
   all_goals
     cases format
     all_goals
       dsimp only [z, raised, highCount, one, tested, masked, shifted, counted, bit,
-        copied, advance, aluStep, aluOp, X.get, X.set, X.nof]
+        copied, advance, aluStep, aluOp, X.get, X.set, X.nof, X.fpReady]
   all_goals
     simp (disch := decide) [BitVec.and_self, sx32_ofNat, fpNegative_bit, signZero]
 
@@ -153,7 +153,7 @@ private theorem finite_match {L : Lay} {t : IR.T} {x : X} {tail : List Ins}
     let rest := [.jmp (BitVec.ofNat 32 (lenOf (fpTruncateBody format)))] ++
       fpTruncateBody format ++ tail
     have selectedCode : Code L.C selected.rip (intClamp format ++ rest) := by
-      simpa only [List.append_assoc] using fpChoose_no_code placed
+      simpa only [selected, choiceFallthrough, rest, List.append_assoc] using fpChoose_no_code placed
     have selectedExit : Exit L t rest k :=
       exit.jump (yes := fpTruncateBody format) (by cases format <;> decide)
     have leaf := clamp_match (x := selected) format selectedExit selectedCode
@@ -194,7 +194,7 @@ private theorem body_match {L : Lay} {t : IR.T} {x : X} {tail : List Ins}
     let selected := choiceFallthrough z .b (intFinite format)
     let rest := [.jmp (BitVec.ofNat 32 (lenOf [.movi .rax 0]))] ++ [.movi .rax 0] ++ tail
     have selectedCode : Code L.C selected.rip (intFinite format ++ rest) := by
-      simpa only [List.append_assoc] using fpChoose_no_code placed
+      simpa only [selected, choiceFallthrough, rest, List.append_assoc] using fpChoose_no_code placed
     have selectedExit : Exit L t rest k := exit.jump (yes := [.movi .rax 0]) (by decide)
     exact finite_match (x := selected) format x.rax selectedExit selectedCode
       ⟨kept.pc, kept.frame, kept.table, kept.mode⟩
