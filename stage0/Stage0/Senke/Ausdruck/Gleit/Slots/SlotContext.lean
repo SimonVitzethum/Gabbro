@@ -19,8 +19,11 @@ private theorem wideComputedFloatOfE_value_ok {Γ : Ctx} {Λ : List (Res D)}
   let z := (eval σ₀ e σ ρ).n
   have bound : (z.natAbs : Int) ≤ WideFloat.upper w := WideFloat.magnitude_bound _
   have magnitude := WideFloat.magnitude_value (σ₀ := σ₀) (σ := σ) (ρ := ρ) (e := e) bound
-  have condition := WideFloat.boolean
-    (.lt (WideFloat.magnitude w e) (.lit (2 ^ 55))) lay same world reserved
+  have condition : WordCode (L := L) (reserved := reserved) ρ W
+      (fun d => lowE L (.lt (WideFloat.magnitude w e) (.lit (2 ^ 55))) d reserved)
+      (Runner.IR.bool (wahr? (eval σ₀ (.lt (WideFloat.magnitude w e) (.lit (2 ^ 55))) σ ρ))) :=
+    WideFloat.boolean (ρ := ρ) (σ₀ := σ₀) (σ := σ)
+      (.lt (WideFloat.magnitude w e) (.lit (2 ^ 55))) lay same world reserved
   change WordCode (L := L) (reserved := reserved) ρ W _
     (Runner.IR.bool (decide ((eval σ₀ (WideFloat.magnitude w e) σ ρ).n < (2 : Int) ^ 55))) at condition
   rw [magnitude] at condition
@@ -32,10 +35,17 @@ private theorem wideComputedFloatOfE_value_ok {Γ : Ctx} {Λ : List (Res D)}
     have narrow : z.natAbs < 2 ^ 55 := by
       have cast : (z.natAbs : Int) < 2 ^ 55 := of_decide_eq_true flag
       exact_mod_cast cast
-    have child := WideFloat.word (WideFloat.small e) (by decide) lay same world reserved
+    have child : WordCode (L := L) (reserved := reserved) ρ W
+        (fun d => lowE L (WideFloat.small e) d reserved)
+        (BitVec.ofInt 64 (eval σ₀ (WideFloat.small e) σ ρ).n) :=
+      WideFloat.word (ρ := ρ) (σ₀ := σ₀) (σ := σ)
+        (WideFloat.small e) (by decide) lay same world reserved
     rw [WideFloat.small_value (σ₀ := σ₀) (σ := σ) (ρ := ρ) (e := e) narrow] at child
     exact nativeIntegerFloatL_source_ok true z ⟨by omega, by omega⟩ child
-  have sign := WideFloat.boolean (.lt e (.lit 0)) lay same world reserved
+  have sign : WordCode (L := L) (reserved := reserved) ρ W
+      (fun d => lowE L (.lt e (.lit 0)) d reserved)
+      (Runner.IR.bool (wahr? (eval σ₀ (.lt e (.lit 0)) σ ρ))) :=
+    WideFloat.boolean (ρ := ρ) (σ₀ := σ₀) (σ := σ) (.lt e (.lit 0)) lay same world reserved
   change WordCode (L := L) (reserved := reserved) ρ W _
     (Runner.IR.bool (decide (z < 0))) at sign
   have large : decide ((z.natAbs : Int) < 2 ^ 55) = false →
@@ -48,8 +58,16 @@ private theorem wideComputedFloatOfE_value_ok {Γ : Ctx} {Λ : List (Res D)}
     have big : 2 ^ 55 ≤ z.natAbs := by
       have cast : ¬ (z.natAbs : Int) < 2 ^ 55 := of_decide_eq_false flag
       omega
-    have guard := WideFloat.word (WideFloat.guard w e) (by decide) lay same world reserved
-    have index := WideFloat.word (WideFloat.index w e) (by decide) lay same world reserved
+    have guard : WordCode (L := L) (reserved := reserved) ρ W
+        (fun d => lowE L (WideFloat.guard w e) d reserved)
+        (BitVec.ofInt 64 (eval σ₀ (WideFloat.guard w e) σ ρ).n) :=
+      WideFloat.word (ρ := ρ) (σ₀ := σ₀) (σ := σ)
+        (WideFloat.guard w e) (by decide) lay same world reserved
+    have index : WordCode (L := L) (reserved := reserved) ρ W
+        (fun d => lowE L (WideFloat.index w e) d reserved)
+        (BitVec.ofInt 64 (eval σ₀ (WideFloat.index w e) σ ρ).n) :=
+      WideFloat.word (ρ := ρ) (σ₀ := σ₀) (σ := σ)
+        (WideFloat.index w e) (by decide) lay same world reserved
     rw [WideFloat.guard_value (σ₀ := σ₀) (σ := σ) (ρ := ρ) (e := e) bound (by omega)] at guard
     rw [WideFloat.index_value (σ₀ := σ₀) (σ := σ) (ρ := ρ) (e := e) bound big,
       BitVec.ofInt_natCast] at index
@@ -58,8 +76,13 @@ private theorem wideComputedFloatOfE_value_ok {Γ : Ctx} {Λ : List (Res D)}
           (fun d => lowE L (WideFloat.guard w e) d reserved))
         (Int64.ofBitVec (BitVec.ofInt 64
           (integerFloatJam z.natAbs (integerFloatShift z.natAbs) : Int))).toFloat :=
-      nativeIntegerFloatL_ok true _ guard
-    have scale := nativeFloatScaleL_ok sign index
+      nativeIntegerFloatL_ok true
+        (BitVec.ofInt 64 (integerFloatJam z.natAbs (integerFloatShift z.natAbs) : Int)) guard
+    have scale : WordCode (L := L) (reserved := reserved) ρ W
+        (fun j => nativeFloatScaleL j (fun d => lowE L (.lt e (.lit 0)) d reserved)
+          (fun d => lowE L (WideFloat.index w e) d reserved))
+        (nativeFloatScaleWord (decide (z < 0)) (integerFloatIndex z.natAbs)) :=
+      nativeFloatScaleL_ok sign index
     have lower : 55 ≤ integerFloatIndex z.natAbs := by unfold integerFloatIndex; omega
     have upper : integerFloatIndex z.natAbs ≤ 2047 := by unfold integerFloatIndex; omega
     rw [nativeFloatScaleWord_eq _ _ lower upper] at scale
@@ -72,11 +95,24 @@ private theorem wideComputedFloatOfE_value_ok {Γ : Ctx} {Λ : List (Res D)}
       exact (scale hc ht m pc pre).mono (fun word hw => by
         rw [hw]
         rfl)
-    have multiplied := nativeFloatMulL_ok converted power
+    have multiplied : NativeFloatCode (L := L) (reserved := reserved) ρ W
+        (fun j => nativeFPWordL (.mul .f64) j
+          (nativeIntegerFloatL true j (fun d => lowE L (WideFloat.guard w e) d reserved))
+          (nativeFloatScaleL (j + 1) (fun d => lowE L (.lt e (.lit 0)) d reserved)
+            (fun d => lowE L (WideFloat.index w e) d reserved)))
+        (Float.mul
+          (Int64.ofBitVec (BitVec.ofInt 64
+            (integerFloatJam z.natAbs (integerFloatShift z.natAbs) : Int))).toFloat
+          (Float.ofBits (UInt64.ofNat ((if z < 0 then 2 ^ 63 else 0) +
+            (integerFloatIndex z.natAbs - 55) * 2 ^ 52)))) :=
+      nativeFloatMulL_ok converted power
     change NativeFloatCode _ _ _ (Float.ofInt z) _
     rw [RootNativeFloat.ofInt_jam56 z big]
     exact multiplied
-  have chosen := nativeFloatChooseL_ok condition small large
+  have chosen : NativeFloatCode (L := L) (reserved := reserved) ρ W
+      (fun d => wideComputedFloatOfE L e d reserved)
+      (if decide ((z.natAbs : Int) < 2 ^ 55) then gleitAusInt z else gleitAusInt z) :=
+    nativeFloatChooseL_ok condition small large
   simpa only [ite_self] using chosen
 
 /-- The former complete-word guarantee is retained also for overflow to signed
