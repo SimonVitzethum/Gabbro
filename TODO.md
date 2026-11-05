@@ -42,12 +42,14 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   The Stage0 constant input/scanner/scalar certificates and generic compiler-phase composition pass.
   The generic constant source packet and all-guard call-head certificates also pass direct checks;
   the complete call-check admission and floor witness modules now build through the shared assembly
-  certificate. Concrete constant program packets remain under repair. Their downstream
+  certificate. Both integer source packets, including computed initialization, build; the final
+  initializer compiler packet still needs its array/literal proof connection. Other concrete constant
+  program packets remain under repair. Their downstream
   `ConstWitness`/`ConstValuesWitness` resource closure remains unmeasured after the new phase port.
   The shared complete compilation packet, hardware-free image phase/geometry theorem and the
   conflicting-profile refusal witness build. Both successful profile and requires-profile images build.
-  The aligned-static fixture exposes a real source gate mismatch: alignment metadata is refused even
-  though the existing profile/global collectors validate and retain it. That narrow connection is open.
+  The aligned-static fixture now also builds end to end with its unchanged sixteen-byte alignment.
+  Its source gate uses the existing alignment reader; profile/global value checks and section refusals remain.
   Full-package closure and the remaining concrete witness consumers are being revalidated.
   The additional arithmetic hardware contract is built in `NativeFloat` (13 jobs), including the
   corrected binary32 nearest-even overflow threshold. It strengthens the named hardware assumption;
