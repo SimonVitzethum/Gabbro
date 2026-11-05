@@ -128,6 +128,22 @@ private structure ExportFacts (u : UProg) : Prop where
       checkedImage u (progOfFn u (fun f => (pieces f).1) (fun f => (pieces f).2.1)
         (fun f => (pieces f).2.2) invariants pointers foreigns, List.finRange u.fns.length)
 
+private theorem functions_of_success (u : UProg)
+    (produced : ∀ f, (lowerFnAt u f).toOption.isSome = true)
+    (safe : ∀ invariants pointers foreigns,
+      checkedImage u (progOfFn u
+        (fun f => ((lowerFnAt u f).toOption.get (produced f)).1)
+        (fun f => ((lowerFnAt u f).toOption.get (produced f)).2.1)
+        (fun f => ((lowerFnAt u f).toOption.get (produced f)).2.2)
+        invariants pointers foreigns, List.finRange u.fns.length)) :
+    ∃ pieces : ∀ f : Fin u.fns.length, EnsTy u f × RumpTy u f × ReqTy u f,
+      (∀ f, lowerFnAt u f = .ok (pieces f)) ∧
+      ∀ invariants pointers foreigns,
+        checkedImage u (progOfFn u (fun f => (pieces f).1) (fun f => (pieces f).2.1)
+          (fun f => (pieces f).2.2) invariants pointers foreigns, List.finRange u.fns.length) :=
+  ⟨(fun f => (lowerFnAt u f).toOption.get (produced f)),
+    (fun f => except_ok_get (produced f)), safe⟩
+
 private theorem export_lowered {u : UProg} (facts : ExportFacts u) :
     (lowerAllg u).toOption.isSome = true := by
   obtain ⟨pieces, origin, _⟩ := facts.functions
@@ -191,10 +207,11 @@ private theorem full_phases :
         contracts := by cbv
         measures := by export_functions
         functions := ?_ }
-      refine ⟨Fin.cases ?first (Fin.cases ?second (Fin.cases ?third (fun i => i.elim0))),
-        ?origin, ?safe⟩
-      case origin => export_functions
-      case safe => intro invariants pointers foreigns; cbv
+      refine functions_of_success _ ?produced ?safe
+      case produced => export_functions
+      case safe =>
+        intro invariants pointers foreigns
+        cbv
 
 private theorem selected_phases :
     (∃ expanded, exportLibraryUnit (uMembers (pre108 translationQualItems)) = .ok expanded ∧
