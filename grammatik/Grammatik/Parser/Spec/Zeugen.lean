@@ -4,6 +4,11 @@ public import Grammatik.Parser.Spec.Expand
 import all Grammatik.Parser.Spec.Walk
 import all Grammatik.Parser.Spec.Items
 import all Grammatik.Parser.Spec.Expand
+-- Generic equations of the unchanged mutual reader, not accumulator fixtures.
+import all Grammatik.Parser.Elab.Uebersetze.Akku.ProbenPhases
+import all Grammatik.Parser.Elab.Uebersetze.Folds.Substitution
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
+import all Grammatik.Parser.Elab.Uebersetze.Einheit.Elaboration
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil13
 
 -- The elaboration witness executes the actual empty static/check gates.
@@ -27,6 +32,7 @@ import all Init.Data.String.ToSlice
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Spec
+open Uebersetze
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
 
@@ -73,10 +79,111 @@ theorem shape_explicit_call_zeuge :
     resolveCall shape [] "Shape::area" (some [.index false "Circles"]) [.variable "c"] =
       .ok "$spec$0$area" := by rfl
 
+-- Select the canonical substitution only after its actual expression is known.
+-- The entire specification environment and the original fuel remain arguments.
+private theorem spec_expression_select (specs : List (String × List String × SExpr))
+    (fuel : Nat) (expr : SExpr) :
+    uSpecEin specs fuel expr = match fuel with
+      | 0 => expr
+      | next + 1 => match expr with
+        | .call name args =>
+          let args' := args.map (uSpecEin specs next)
+          match specs.find? (fun p => strEq p.1 name) with
+          | some (_, params, body) =>
+            if params.length == args'.length then
+              uSpecEin specs next (sErsetze (params.zip args') 1000 body)
+            else .call name args'
+          | none => .call name args'
+        | .field a name => .field (uSpecEin specs next a) name
+        | .index a i => .index (uSpecEin specs next a) (uSpecEin specs next i)
+        | .arrow a name => .arrow (uSpecEin specs next a) name
+        | .un op a => .un op (uSpecEin specs next a)
+        | .bin op a b => .bin op (uSpecEin specs next a) (uSpecEin specs next b)
+        | .built name args => .built name (args.map (uSpecEin specs next))
+        | .old a => .old (uSpecEin specs next a)
+        | .ext kind names args => .ext kind names (args.map (uSpecEin specs next))
+        | expr => expr := by
+  cases fuel <;> rfl
+
+private theorem substitution_select (bindings : List (String × SExpr))
+    (fuel : Nat) (expr : SExpr) :
+    sErsetze bindings fuel expr = match fuel with
+      | 0 => expr
+      | next + 1 => match expr with
+        | .variable name => match bindings.find? (fun p => strEq p.1 name) with
+          | some pair => pair.2
+          | none => expr
+        | .field a name => .field (sErsetze bindings next a) name
+        | .index a i => .index (sErsetze bindings next a) (sErsetze bindings next i)
+        | .arrow a name => .arrow (sErsetze bindings next a) name
+        | .un op a => .un op (sErsetze bindings next a)
+        | .bin op a b => .bin op (sErsetze bindings next a) (sErsetze bindings next b)
+        | .call name args => .call name (args.map (sErsetze bindings next))
+        | .built name args => .built name (args.map (sErsetze bindings next))
+        | .old a => .old (sErsetze bindings next a)
+        | .ext kind names args =>
+          if isFold kind then
+            match names, args with
+            | binder :: _, subject :: filter :: value :: fallback =>
+              let inner := bindings.filter (fun pair => !strEq pair.1 binder)
+              .ext kind names (sErsetze bindings next subject :: sErsetze inner next filter ::
+                sErsetze inner next value :: fallback.map (sErsetze inner next))
+            | _, _ => .ext kind names (args.map (sErsetze bindings next))
+          else if kind == XKind.all || kind == XKind.any || kind == XKind.count then
+            let inner := bindings.filter (fun p => !(names.head?.any (strEq p.1 ·)))
+            .ext kind names ((args.dropLast.map (sErsetze bindings next)) ++
+              (args.getLast?.map (sErsetze inner next)).toList)
+          else .ext kind names (args.map (sErsetze bindings next))
+        | expr => expr := by
+  cases fuel <;> rfl
+
+-- One actual block equation retains clauses, all resulting contexts, fold/call
+-- prefixes and the original early-ending refusal rule. In particular ctx.specs
+-- is neither erased nor assumed empty when its clauses are elaborated.
+private theorem function_block (ctx : UCtx) (heads : List UFnKopf)
+    (clauses : List SKlausel) (statements : List SAnw) (ending : Option SEnde) :
+    elabFn ctx heads clauses (.block statements ending) =
+      match elabKlauseln ctx clauses with
+      | .error error => .error error
+      | .ok (gives, needs) =>
+        match uAnwReihe ctx.tabs heads 1000000 ctx statements with
+        | .error error => .error error
+        | .ok (body, afterBody) =>
+          match expandFoldEnd afterBody ending with
+          | .error error => .error error
+          | .ok (beforeEnd, afterEnd, ending) =>
+            match expandReturnCall afterEnd heads ending with
+            | .error error => .error error
+            | .ok (beforeCall, afterCall, returning) =>
+              match uEnde afterCall returning with
+              | .error error =>
+                if returning.isNone &&
+                    (match statements.getLast? with | some s => uEndetTief 64 s | none => false) then
+                  .ok (gives, needs, body, .keins)
+                else .error error
+              | .ok result => .ok (gives, needs, body ++ beforeEnd ++ beforeCall, result) := by
+  rfl
+
+-- These equations apply only to fully selected operations. They keep unused
+-- large-fuel callbacks symbolic without altering the compiler's fuel or gates.
+attribute [local cbv_opaque] uSpecEin sErsetze elabFn uAnwReihe uAnwReiheCore
+  uAkkuBinder uZeigerAnw uStartNamen uSondenFns uTorHuellen uFloatLimit
+attribute [local cbv_eval] spec_expression_select substitution_select function_block
+  row_nil row_cons core_bind bound_names_select pointer_source_select start_source_select
+  sonden_nil wrappers_nil
+
+private theorem elaboration_from_phases {source : List SItemTief}
+    {prepared : List SItemTief × List (STyp × String)} {unit : UProg}
+    (expanded : expandU source = .ok prepared)
+    (elaborated : elabUExpanded prepared = .ok unit) : elabU source = .ok unit := by
+  simp only [elabU, expanded, bind, Except.bind, elaborated]
+
 -- Retain the whole actual result before projecting success or finding a body.
 private theorem shape_elaborated : ∃ unit, Uebersetze.elabU shape = .ok unit := by
   refine ⟨?unit, ?checked⟩
-  case checked => cbv <;> exact Eq.refl _
+  case checked =>
+    apply elaboration_from_phases
+    all_goals cbv <;> exact Eq.refl _
 
 /-- The actual elaborator sees the instantiated program, including the arithmetic implementation. -/
 theorem shape_elaboration_zeuge : (Uebersetze.elabU shape).toOption.isSome = true := by
