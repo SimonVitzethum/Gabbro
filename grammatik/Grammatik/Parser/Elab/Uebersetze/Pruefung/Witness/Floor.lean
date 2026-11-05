@@ -6,6 +6,7 @@ import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Calls
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Units
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Heads
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Assembly
 import all Init.Data.List.MapIdx
 import all Grammatik.Parser.Lex.Lexer.Teil1
 import all Grammatik.Parser.Elab.Uebersetze.Folds.Expressions
@@ -243,7 +244,8 @@ private def floorPassingImage :
 private def floorPassingProgram :
     {result : Programm (declOf floorPassingUnitMade.val) × List (declOf floorPassingUnitMade.val).Fn //
       lowerAllg floorPassingUnitMade.val = .ok result} :=
-  ⟨floorPassingImage, by cbv⟩
+  ⟨floorPassingImage, check_assembly floorPassingUnitMade.val (fun f => (floorPassingFunctions f).val)
+    floorPassing_function floorPassing_invariants floorPassing_each floorPassing_contracts floorPassing_measure_gate⟩
 
 private theorem floorPassing_program :
     lowerAllg floorPassingUnitMade.val = .ok floorPassingProgram.val := floorPassingProgram.property
@@ -406,7 +408,8 @@ private def floorFailingImage :
 private def floorFailingProgram :
     {result : Programm (declOf floorFailingUnitMade.val) × List (declOf floorFailingUnitMade.val).Fn //
       lowerAllg floorFailingUnitMade.val = .ok result} :=
-  ⟨floorFailingImage, by cbv⟩
+  ⟨floorFailingImage, check_assembly floorFailingUnitMade.val (fun f => (floorFailingFunctions f).val)
+    floorFailing_function floorFailing_invariants floorFailing_each floorFailing_contracts floorFailing_measure_gate⟩
 
 private theorem floorFailing_program :
     lowerAllg floorFailingUnitMade.val = .ok floorFailingProgram.val := floorFailingProgram.property

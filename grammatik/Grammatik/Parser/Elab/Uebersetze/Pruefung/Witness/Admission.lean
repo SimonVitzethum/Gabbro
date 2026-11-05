@@ -6,6 +6,7 @@ import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Calls
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Units
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Heads
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Assembly
 import all Init.Data.List.MapIdx
 import all Grammatik.Parser.Lex.Lexer.Teil1
 import all Grammatik.Parser.Elab.Uebersetze.Folds.Expressions
@@ -241,7 +242,8 @@ private def admissionImage :
 private def admissionProgram :
     {result : Programm (declOf admissionUnitMade.val) × List (declOf admissionUnitMade.val).Fn //
       lowerAllg admissionUnitMade.val = .ok result} :=
-  ⟨admissionImage, by cbv⟩
+  ⟨admissionImage, check_assembly admissionUnitMade.val (fun f => (admissionFunctions f).val)
+    admission_function admission_invariants admission_each admission_contracts admission_measure_gate⟩
 
 private theorem admission_program :
     lowerAllg admissionUnitMade.val = .ok admissionProgram.val := admissionProgram.property
@@ -341,7 +343,11 @@ private def admissionWithoutGivesGate :
 private def admissionWithoutGivesProbe : {error : String //
     lowerFnAt admissionWithoutGivesMade.val admissionWithoutGivesProbeIndex = .error error} := by
   refine ⟨?error, ?made⟩
-  case made => cbv <;> exact Eq.refl _
+  case made =>
+    cbv
+    -- Select the actual whole reporter call before reducing its continuation.
+    all_goals rw [admissionWithoutGives_report_call]
+    all_goals cbv <;> exact Eq.refl _
 
 private theorem admissionWithoutGives_each :
     lowerEach admissionWithoutGivesMade.val (List.finRange admissionWithoutGivesMade.val.fns.length) =
