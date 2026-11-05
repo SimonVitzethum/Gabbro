@@ -33,14 +33,14 @@ theorem float64_toUInt64_nan (word : BitVec 64)
     (Float.ofBits (UInt64.ofBitVec word)).toUInt64.toBitVec = 0 := by
   change (Float.ofBits (UInt64.ofBitVec word)).toModel.unpack.toUInt64.toBitVec = 0
   rw [read64, decoded_nan Format.binary64 (Or.inr rfl) word nan]
-  rfl
+  exact unsigned_zero
 
 theorem float32_toUInt64_nan (word : BitVec 32)
     (nan : (0x7f800000 : BitVec 32).ult (word &&& 0x7fffffff) = true) :
     (Float32.ofBits (UInt32.ofBitVec word)).toUInt64.toBitVec = 0 := by
   change (Float32.ofBits (UInt32.ofBitVec word)).toModel.unpack.toUInt64.toBitVec = 0
   rw [read32, decoded_nan Format.binary32 (Or.inl rfl) word nan]
-  rfl
+  exact unsigned_zero
 
 theorem float64_cvtt_domain (word : BitVec 64)
     (small : (word &&& 0x7fffffffffffffff).ult 0x43e0000000000000 = true) :

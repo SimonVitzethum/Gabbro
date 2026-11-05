@@ -255,6 +255,7 @@ private theorem high_result (F : Format) (standard : F = .binary32 ∨ F = .bina
     rw [exponent]
     simp only [truncation_nat, Sign.apply, Int.natCast_nonneg k, ↓reduceIte,
       Int.toNat_natCast, value]
+    rfl
   change (UInt64.ofNatClamp (roundToInt .positive (2 ^ p + m) (63 - (p : Int))).toNat).toBitVec =
     BitVec.ofNat 64 n ||| 0x8000000000000000
   rw [wholeValue]
