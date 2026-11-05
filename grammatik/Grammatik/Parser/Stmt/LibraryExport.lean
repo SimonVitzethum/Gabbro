@@ -6,6 +6,7 @@ public import Grammatik.Parser.Stmt.LibraryCertificates
 public import Grammatik.Zielsatz.Kern.Akzeptiert
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
 import Grammatik.Parser.Stmt.LibraryFixtureScanning
+import all Grammatik.Parser.Stmt.LibraryQualifiedFixtures
 import Grammatik.Parser.Stmt.LibraryFixtureProofs
 import Grammatik.Parser.Elab.UebersetzeAllg3.TransitionCert
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
@@ -77,30 +78,22 @@ def alleOhneBibliothek : List SItemTief → Bool
   | .fnT _ body :: rest => ohneBibliothekAnw body && alleOhneBibliothek rest
   | _ :: rest => alleOhneBibliothek rest
 
--- Reuse the checked scanner cuts of the full two-module source. Only this
--- character bridge is computed; lexing and parsing never share a getD graph.
-private def fullChunks : List LibraryFixtureScanning.Chunk :=
-  let moduleA := [LibraryFixtureScanning.Chunk.moduleA, .tableTwo, .slot, .libraryHead,
-    .libraryTail, .translatorHead, .inputTwo, .outputTwo, .effects, .plainResult, .closeSpace]
-  let moduleB := [LibraryFixtureScanning.Chunk.moduleB, .tableTwo, .slot, .libraryHead,
-    .libraryTail, .translatorHead, .inputTwo, .outputTwo, .effects, .plainResult, .closeSpace]
-  moduleA ++ moduleB ++ [LibraryFixtureScanning.Chunk.callerHead, .callA, .valuesTwoFinal]
+-- Use the already checked tokens and text bridge of this exact two-module source.
+private def fullTokens : List Token := qualPhaseTokens
 
-private def fullTokens : List Token := LibraryFixtureScanning.tokens fullChunks
-
-private theorem full_lexed : lexL translationQualText.toList = .ok fullTokens := by
-  have text : translationQualText = String.ofList (LibraryFixtureScanning.characters fullChunks) := by cbv
-  rw [text, String.toList_ofList]
-  exact LibraryFixtureScanning.lex_chunks fullChunks (by decide +kernel)
+private theorem tokens_from_text (text : String) (characters : List Char) (tokens : List Token)
+    (textEq : text = String.ofList characters) (scanned : lexL characters = .ok tokens) :
+    (lexL text.toList).toOption.getD [] = tokens := by
+  rw [textEq, String.toList_ofList, scanned]
+  rfl
 
 private theorem full_tokens : translationQualTokens = fullTokens := by
-  have complete := translationQualSource.lexed
-  change lexL translationQualText.toList = .ok translationQualTokens at complete
-  exact Except.ok.inj (complete.symm.trans full_lexed)
+  exact tokens_from_text translationQualText translationQualCharacters qualPhaseTokens
+    translation_qual_text qual_lexed
 
 private theorem full_parse : parseTopTief fullTokens = .ok translationQualItems := by
-  have complete := translationQualSource.parsed
-  change parseTopTief translationQualTokens = .ok translationQualItems at complete
+  have complete : parseTopTief translationQualTokens = .ok translationQualItems :=
+    translation_qual_phases.2.1
   rw [full_tokens] at complete
   exact complete
 
