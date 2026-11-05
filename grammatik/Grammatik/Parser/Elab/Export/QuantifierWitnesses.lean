@@ -107,7 +107,7 @@ private theorem consuming_effect_checked (functions : List UFn) (writes : List S
   cases take <;> cases allowed : writes.any (strEq · "T") <;>
     simp [relationUnit, relationFunction, uSchreibtOrt, uStelle, uArtBei, uEffekteAux,
       uIstGriffOrt, uIstGlobName, sameTable, sameSlots, firstOther, lastOther, allowed,
-      bind, Except.bind, pure, Except.pure, MonadExcept.throw, MonadExceptOf.throw]
+      bind, Except.bind, pure, Except.pure, MonadExcept.throw, throwThe, MonadExceptOf.throw]
 
 theorem consuming_effects_zeuge :
     lowConsumingEffects relationUnit {relationFunction with puts := ["T"]} "T" "consumes T.slots" =
@@ -125,7 +125,7 @@ theorem consuming_negative_measure_zeuge :
       .error "consuming traversal decreases must have a nonnegative range" := by
   simp [lowConsumingMass, seiteAltErg, lowSeiteZ, lowWertE, zahlVon,
     LowWert.zahl, LowSide.wert, bind, Except.bind, pure, Except.pure,
-    MonadExcept.throw, MonadExceptOf.throw]
+    MonadExcept.throw, throwThe, MonadExceptOf.throw]
 
 theorem consuming_exits_refused_zeuge :
     let context := {relationContext with loops := ["#consume:node"]}
