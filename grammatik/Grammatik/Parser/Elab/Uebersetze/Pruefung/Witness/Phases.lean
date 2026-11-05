@@ -195,11 +195,12 @@ private theorem check_measure_gate (u : UProg) (exported : Measures.Export u)
   -- reducing the dependent export match. No rewrite crosses its binder.
   let accepted : Programm (declOf u) × List (declOf u).Fn :=
     (P, List.finRange u.fns.length)
-  change (match Measures.lowerMeasures u with
+  change @Eq (Except String (Programm (declOf u) × List (declOf u).Fn))
+    (match Measures.lowerMeasures u with
     | .error error => .error error
     | .ok actual =>
       if Measures.cycleLengths u P actual.mass then .ok accepted
-      else .error "differing decreases tuple lengths in a recursion cycle") = .ok accepted
+      else .error "differing decreases tuple lengths in a recursion cycle") (.ok accepted)
   rw [made]
   dsimp only
   exact if_pos cycles
@@ -234,4 +235,3 @@ private structure CheckWitness (u : UProg) (floors : Nat) : Prop where
     ((uCheckDecls u).toOption.get derived) = true
 
 end Gabbro.Grammatik.Parser.Uebersetze
-

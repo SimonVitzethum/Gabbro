@@ -7,6 +7,8 @@
 > also builds (2,709 jobs). The native compiler builds (5,403 jobs), and three freshly compiled float-end
 > programs return their unchanged expected exits 7/41/107 on the assembly runner. Grammar and Stage 0 still have known proof failures and
 > resource-limited probe checks; the complete Stage-0/GabbroV Lean closure remains open.
+> The source regression currently passes 218/315 cases: 76 expected executions are refused during compilation,
+> and 21 refusal expectations differ. No executed case returned an incorrect exit code. These test counts are not syntax coverage.
 > Rust, Cargo and LLVM validation are deliberately excluded from this checkpoint. This is not a release
 > or a claim of complete userspace-language coverage.
 

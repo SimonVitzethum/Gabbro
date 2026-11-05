@@ -23,6 +23,10 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   The generic Stage-0 statement/image correctness chain through `Stage0.IRBild` builds (2,709 jobs).
   The native compiler builds (5,403 jobs); three newly compiled float-end sources execute on the assembly
   runner with their unchanged expected exits 7/41/107 under the current hardware abstraction.
+  The complete existing `proben-ir` source regression passes 218/315 cases: 76 expected executions fail
+  compilation and 21 refusal expectations differ. No executed case has a wrong exit code. Open source
+  boundaries include alias constants, cost/proof metadata, atomic declarations and scoped-return admission;
+  these tests are not a measurement of complete language coverage. Refusal expectations have not been relaxed.
   Full-package closure and the remaining concrete witness consumers are being revalidated.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
   The authorised acceptance scope is Lean and the Lean parts of GabbroV; Rust, Cargo and LLVM checks are
