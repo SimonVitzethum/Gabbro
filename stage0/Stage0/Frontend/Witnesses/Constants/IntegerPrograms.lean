@@ -265,6 +265,20 @@ private theorem restore_entry_free (items expanded : List SItemTief)
   erw [readers, collect_values]
   rfl
 
+/-- Check the actual function results before choosing the assembler's invariant
+    and interface fields. The chosen fields remain exactly those of Functions.program. -/
+private theorem accepts_function_results {unit : UProg} (functions : Functions unit)
+    (checked : ∀ (invariants : ∀ i : Fin unit.invs.length, InvTy unit i)
+      (pointers : ∀ n, CallContract (declOf unit) ((declOf unit).sigNr n))
+      (foreigns : ∀ a, CallContract (declOf unit) ((declOf unit).asignatur a)),
+      OldSource.accepts unit
+        (progOfFn unit (fun f => (functions.values f).1)
+          (fun f => (functions.values f).2.1) (fun f => (functions.values f).2.2)
+          invariants pointers foreigns) = .ok true) :
+    OldSource.accepts unit functions.program = .ok true := by
+  unfold Functions.program
+  exact checked _ _ _
+
 /-- Retain the actual elaborated constructor and all body facts inside one opaque theorem. -/
 private theorem initializer_program_packet :
     ∃ header : Header Gabbro.Stage0.Frontend.ConstWitness.initializerText,
@@ -317,6 +331,13 @@ private theorem initializer_program_packet :
       subst f
       cbv
     contracts := by cbv }
+  -- Keep all three canonical function components together while the checker
+  -- inspects them. Its unused interface fields are variables here, so kernel
+  -- evaluation does not normalize unrelated contract-lowering closures.
+  have accepted : OldSource.accepts header.unit functions.program = .ok true := by
+    apply accepts_function_results functions
+    intro invariants pointers foreigns
+    cbv
   -- Resolve the active scalar collector/literal path once, before the dependent whole-list fold.
   obtain ⟨value, evaluated, lower, upper⟩ := initializer_numeric_value
   have typed : uTypIn header.source.scopes.types [] (uRecordConstantTypes header.unit.records)
@@ -384,7 +405,6 @@ private theorem initializer_program_packet :
       header.unit functions.program = .ok functions.program :=
     restore_entry_free _ header.expanded header.requirements header.unit functions.program
       header.expansion entryFree
-  have accepted : OldSource.accepts header.unit functions.program = .ok true := by cbv
   refine ⟨header, count, ?body⟩
   case body =>
     refine ⟨{
