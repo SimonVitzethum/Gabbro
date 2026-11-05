@@ -32,6 +32,10 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   The Lean generator coverage guardian passes with unchanged bounds: 66,448 valid programs and 766
   single-fault refusals; 179/282 register members are exercised and the remaining gaps are explicitly
   accounted for. This measures the model generator, not complete source-to-IR syntax admission.
+  The constant grammar witness chain, qualified/ordinary/recursive library producers and fresh
+  `Stage0.Frontend.ExportCorrectness` checks pass. The final `LibraryCertificates` and Stage0 `ConstWitness`
+  runs were stopped for measured memory pressure without an OOM kill: their resource closure remains
+  unmeasured. Concrete check/floor witness closure is still under repair.
   Full-package closure and the remaining concrete witness consumers are being revalidated.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
   The authorised acceptance scope is Lean and the Lean parts of GabbroV; Rust, Cargo and LLVM checks are
