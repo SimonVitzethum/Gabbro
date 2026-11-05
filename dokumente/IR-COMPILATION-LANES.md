@@ -35,7 +35,9 @@ Integration is in progress. Neither these implementation changes nor an isolated
 check establish an end-to-end result: the connected lowering, physical instruction proofs,
 CPU regressions and acceptance checks still require integration. The owner's current
 validation scope is Lean and the Lean portions of GabbroV; all Rust/Cargo and LLVM
-checks are deliberately unmeasured. This is not a green four-guardian acceptance.
+checks are deliberately unmeasured. On 2026-11-05 the owner authorised pushing once
+the grammar, Stage-0 and GabbroV Lean checks are green, without waiting for those
+deferred checks. This is not a green four-guardian acceptance.
 
 **RESUMED with two agents (2026-10-31).** The owner ended the pause and authorized exactly TWO Claude
 Sonnet 5.5 implementation agents, no others: IR-06 (memory, Lean slot 1) in its preserved worktree

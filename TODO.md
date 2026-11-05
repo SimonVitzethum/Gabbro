@@ -17,10 +17,12 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   variants, generic Stage-0 compiler/image theorem, bridge and runner compiled on the standard axioms.
   The owner now requires opaque, ISA-independent floating operations with explicit `RootNativeFloat.Hardware`,
   replacing the software IEEE proof implementation. The revised core, native value codec and answer-class
-  prefix compile; the remaining checker/goal, Stage-0 and runner consumers are being revalidated.
+  prefix compile. The SC/GX, linked, termination and waiting goal audit passes for all 13 checked
+  sentences using only the standard axioms; remaining Stage-0 and runner consumers are being revalidated.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
   The authorised acceptance scope is Lean and the Lean parts of GabbroV; Rust, Cargo and LLVM checks are
-  deliberately unmeasured. No four-guardian green is claimed.
+  deliberately unmeasured. The owner authorises pushing once the named Lean builds and GabbroV's Lean
+  checks are green. No four-guardian green is claimed.
   A partial successful build does not establish package-wide acceptance or admission of every source form listed below.
 - **Scoped-return model and consumers compile (2026-11-05).** Completion follows cleanup. `fertig_abschluss`
   classifies an ordinary value return or the whole completed saved value, with start reasons excluded explicitly.
