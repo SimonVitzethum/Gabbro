@@ -377,6 +377,18 @@ theorem elabFn_eq (ctx : UCtx) (koepfe : List UFnKopf) (kl : List SKlausel) (ss 
               | .ok r => .ok (gives, needs, body ++ beforeEnd, r) := by
   unfold elabFn elabKlauseln
   simp only [hsp, List.isEmpty_nil, ↓reduceIte]
+  have givesReader : (fun clause : SKlausel => match clause with
+      | .gives e => some (uSichert ctx e)
+      | _ => none) = gibtF ctx := by
+    funext clause
+    cases clause <;> rfl
+  have needsReader : (fun clause : SKlausel => match clause with
+      | .needs (.call "Held" _) => none
+      | .needs e => some (uBool ctx e)
+      | _ => none) = brauchtF ctx := by
+    funext clause
+    rfl
+  erw [givesReader, needsReader]
   cases hg : uSeq (kl.filterMap (gibtF ctx)) <;>
     cases hn : uSeq (kl.filterMap (brauchtF ctx)) <;>
     simp only [hg, hn] <;> rfl
