@@ -82,11 +82,7 @@ public import Stage0.Senke.Ausdruck.Old.Admission
 public import Stage0.Senke.Ausdruck.Old.CurrentProbe
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.Counter
 
-public import Stage0.Senke.Ausdruck.Gleit.Slots.SlotComposition
-public import Stage0.Senke.Ausdruck.Gleit.Slots.SlotProbes
 
-public import Stage0.Senke.Ausdruck.Arithmetik.Darstellung.Vorzeichen
-public import Stage0.Senke.Ausdruck.Arithmetik.Proben.Teil3
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.ReservedCall
 
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.CounterCall
@@ -138,19 +134,5 @@ public import Stage0.Zeugen.Annahme.RequiresProfileWitness
 public import Stage0.Zeugen.Annahme.TestBuildWitness
 public import Stage0.Zeugen.Ablehnung.SectionWitness
 public import Stage0.Zeugen.Ablehnung.EntrustWitness
-public import Stage0.Senke.Gleit.Plan
-public import Stage0.Senke.Gleit.Add
-public import Stage0.Senke.Gleit.Unpack
-public import Stage0.Senke.Gleit.Special
-public import Stage0.Senke.Gleit.Align
-public import Stage0.Senke.Gleit.AddMag
-public import Stage0.Senke.Gleit.Round
-public import Stage0.Senke.Gleit.Pack
-public import Stage0.Senke.Gleit.Compose
-public import Stage0.Senke.Gleit.BitLength
-public import Stage0.Senke.Gleit.Runde
-public import Stage0.Senke.Gleit.Normal.Replay
-public import Stage0.Senke.Gleit.Normal.Finite
-public import Stage0.Senke.Gleit.Normal.Model
 
 @[expose] public section

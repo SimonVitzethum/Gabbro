@@ -1,7 +1,6 @@
 module
 
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
-public import Stage0.Senke.Ausdruck.Gleit.Exponent
 public import Stage0
 public import Stage0.Senke.Ausdruck.Tag
 public import Stage0.Senke.Ausdruck.Quant.Proben
@@ -60,58 +59,27 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.EntryProtocolProbe.entryFrame_run_zeuge
 
 -- Total binary64 addition, from decoded source operands through the Block hook.
-#print axioms Gabbro.Stage0.Senke.softRound_exaktAdd_aligned
-#print axioms Gabbro.Stage0.Senke.softAlignedMagnitude_bounds
-#print axioms Gabbro.Stage0.Senke.routineDirectionalWord_canonical
-#print axioms Gabbro.Stage0.Senke.routineSource_sum
-#print axioms Gabbro.Stage0.Senke.routineSource_sum_zeuge
-#print axioms Gabbro.Stage0.Senke.routineFiniteDirectionalWord_model
-#print axioms Gabbro.Stage0.Senke.softAddRoutine_ok
-#print axioms Gabbro.Stage0.Senke.softAddRoutineL_ok
-#print axioms Gabbro.Stage0.Senke.softAddRoutine_ok_zeuge
-#print axioms Gabbro.Stage0.Senke.softFloatContinuationL_ok
-#print axioms Gabbro.Stage0.Senke.softFloatWordsL_ok
-#print axioms Gabbro.Stage0.Senke.softFloatReject_none
-#print axioms Gabbro.Stage0.Senke.softFloatRangeL_ok
 #print axioms Gabbro.Stage0.Senke.blockFloatArithmetic_case
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_add_accepted_zeuge
 
--- Binary64 subtraction reuses the total adder after exactly one sign-bit xor.
-#print axioms Gabbro.Stage0.Senke.floatSub_eq_add_neg
-#print axioms Gabbro.Stage0.Senke.softNegWord_model
-#print axioms Gabbro.Stage0.Senke.softNeg_model
-#print axioms Gabbro.Stage0.Senke.softSub_model
-#print axioms Gabbro.Stage0.Senke.softSubRoutine_ok
-#print axioms Gabbro.Stage0.Senke.softAddOperandL_ok
-#print axioms Gabbro.Stage0.Senke.softSub_model_zeuge
-#print axioms Gabbro.Stage0.Senke.softSubRoutine_ok_zeuge
+-- All ending float binders use the same generic lowering and exact-outcome witnesses.
+#print axioms Gabbro.Stage0.Senke.endFloatLit_case
+#print axioms Gabbro.Stage0.Senke.endFloatOfLit_case
+#print axioms Gabbro.Stage0.Senke.endFloatOfComputed_case
+#print axioms Gabbro.Stage0.Senke.endFloatArithmetic_case
+#print axioms Gabbro.Stage0.Senke.endFloatNarrow_case
+#print axioms Gabbro.Stage0.Senke.FloatProbe.float_end_image_zeuge
+#print axioms Gabbro.Stage0.Senke.FloatProbe.float_end_semantics_zeuge
+
+-- Binary64 arithmetic uses the native runner operations and the shared binder.
 #print axioms Gabbro.Stage0.Senke.floatArithmeticBlockL_eq
-#print axioms Gabbro.Stage0.Senke.softMul_model
-#print axioms Gabbro.Stage0.Senke.softMul_product
-#print axioms Gabbro.Stage0.Senke.softMulHighL_word
-#print axioms Gabbro.Stage0.Senke.softMulCompressWord_model
-#print axioms Gabbro.Stage0.Senke.softMulNormalizeWord_model
-#print axioms Gabbro.Stage0.Senke.softMulUnderflow_model
-#print axioms Gabbro.Stage0.Senke.softMulFiniteWord_model
-#print axioms Gabbro.Stage0.Senke.softMulRoutine_ok
-#print axioms Gabbro.Stage0.Senke.softMulRoutineL_ok
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_mul_accepted_zeuge
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_mul_rounding_accepted_zeuge
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_mul_subnormal_accepted_zeuge
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_mul_invalid_accepted_zeuge
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_sub_accepted_zeuge
 
--- Binary64 division: exact restoring quotient, rational replay and connected IR.
-#print axioms Gabbro.Stage0.Senke.softDivQR_model
-#print axioms Gabbro.Stage0.Senke.softDivJam_interval
-#print axioms Gabbro.Stage0.Senke.softDiv_exponent
-#print axioms Gabbro.Stage0.Senke.softDiv_replay
-#print axioms Gabbro.Stage0.Senke.softDiv_model
-#print axioms Gabbro.Stage0.Senke.softDivQuotientC_ok
-#print axioms Gabbro.Stage0.Senke.softDivQuotientL_ok
-#print axioms Gabbro.Stage0.Senke.softDivFiniteWord_model
-#print axioms Gabbro.Stage0.Senke.softDivRoutine_ok
-#print axioms Gabbro.Stage0.Senke.softDivRoutineL_ok
+-- Binary64 division: native arithmetic and connected source witnesses.
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_div_cases_accepted_zeuge
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_div_images_accepted_zeuge
 
@@ -151,3 +119,28 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.strLtExpr_ok
 #print axioms Gabbro.Stage0.Senke.StringSpanProbe.concatenation_correct
 #print axioms Gabbro.Stage0.Senke.StringSpanProbe.order_correct
+
+-- Native CPU arithmetic and complete-word storage, without a software FP fallback.
+#print axioms Gabbro.Stage0.Senke.nativeFloat_read_word
+#print axioms Gabbro.Stage0.Senke.nativeFloat_word_eq
+#print axioms Gabbro.Stage0.Senke.nativeFloat_word_eq_nonNaN
+#print axioms Gabbro.Stage0.Senke.nativeFP_bin_ok
+#print axioms Gabbro.Stage0.Senke.nativeFPWordL_ok
+#print axioms Gabbro.Stage0.Senke.nativeArithmetic_eval
+#print axioms Gabbro.Stage0.Senke.floatWordsL_ok
+#print axioms Gabbro.Stage0.Senke.nativeFloatRangeL_at_ok
+#print axioms Gabbro.Stage0.Senke.nativeFloatRangeL_ok
+#print axioms Gabbro.Stage0.Senke.floatRetainedRangeL_ok
+#print axioms Gabbro.Stage0.Senke.nativeFloatBind_ok
+#print axioms Gabbro.Stage0.Senke.nativeIntegerFloatL_ok
+#print axioms Gabbro.Stage0.Senke.nativeIntegerFloatL_source_ok
+#print axioms Gabbro.Stage0.Senke.nativeFloatMulL_ok
+#print axioms Gabbro.Stage0.Senke.nativeFloatScaleL_ok
+#print axioms Gabbro.Stage0.Senke.computedFloatOfE_ok
+#print axioms RootNativeFloat.bits_roundtrip
+#print axioms RootNativeFloat.finite_word_mask
+#print axioms RootNativeFloat.ofInt_jam56
+#print axioms RootNativeFloat.neg_bits64
+#print axioms RootNativeFloat.neg_bits32
+#print axioms RootNativeFloat.canonLiteral_integer
+#print axioms Gabbro.Grammatik.bruch_integer
