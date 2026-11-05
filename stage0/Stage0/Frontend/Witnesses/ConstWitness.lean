@@ -1,7 +1,5 @@
 module
-public import Stage0.Frontend.ExportCorrectness
-public import Grammatik.Parser.Elab.Konst.Scalar.Export
-public import Grammatik.Parser.Elab.Generic.Body
+public import Stage0.Frontend.Witnesses.Constants.Input
 
 @[expose] public section
 namespace Gabbro.Stage0.Frontend.ConstWitness
@@ -11,21 +9,6 @@ set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
 
 /-- The same original predicate clauses are used at both call sites. -/
-def signature : FnSig where
-  art := "const"
-  name := "increment"
-  params := [("x", .range (.atom "u8") (.lit 0) (.lit 10) false)]
-  res := some (.range (.atom "u8") (.lit 0) (.lit 11) false)
-  fehler := none
-  klauseln := [.needs (.bin ">" (.variable "x") (.lit 0)),
-    .gives (.bin "==" .res (.bin "+" (.variable "x") (.lit 1)))]
-
-def function : UKonstFn where
-  name := "increment"
-  params := [("x", .int 0 10)]
-  erg := .int 0 11
-  rumpf := .block [] (some (.ret (some (.bin "+" (.variable "x") (.lit 1)))))
-  signature := signature
 
 /-- This is the actual source collector, not a manually supplied different function. -/
 theorem collected_zeuge :
@@ -56,10 +39,6 @@ theorem requires_refused_zeuge :
       .error "const contract violated at `increment`: requires failed" := rfl
 
 /-- A false ensures clause is checked on the computed return value. -/
-def wrongPost : UKonstFn :=
-  { function with signature := { signature with klauseln :=
-    [.needs (.bin ">" (.variable "x") (.lit 0)),
-      .gives (.bin "==" .res (.variable "x"))] } }
 
 theorem ensures_refused_zeuge :
     ersetzeSExpr [wrongPost] (.call "increment" [.lit 3]) =
@@ -71,22 +50,12 @@ theorem open_refused_zeuge :
       .error "const open argument at `increment`: certified substitution needs closed arguments" := rfl
 
 /-- Intermediate overflow cannot be cancelled into an apparently valid result. -/
-def overflows : UKonstFn :=
-  { function with rumpf := .block [] (some (.ret (some
-    (.bin "-" (.bin "+" (.variable "x") (.lit 11)) (.lit 11))))),
-    signature := { signature with klauseln := [] } }
 
 theorem overflow_refused_zeuge :
     ersetzeSExpr [overflows] (.call "increment" [.lit 3]) =
       .error "const range failure at `increment`: arithmetic overflow or no value" := rfl
 
 /-- Parser-to-checker witness: two const calls with an actual contract in source text. -/
-def characters : List Char :=
-  ("const fn increment(x : u8 in 0 .. 10) -> u8 in 0 .. 11 ".toList ++
-   "requires x > 0 ensures result == x + 1 { return x + 1; } ".toList ++
-   "impl fn main() -> u64 { return increment(3) + increment(5); }".toList)
-
-def text : String := String.ofList characters
 
 theorem compiled_zeuge : (compile text).toOption.isSome = true := by decide +kernel
 
@@ -107,10 +76,6 @@ theorem image_pipeline_zeuge [Runner.IR.Kern] [Senke.CloneOK]
   exact ⟨output, he, hb, hc⟩
 
 /-- A contracted const call in an initializer uses the same checked source path. -/
-def initializerText : String := String.ofList
-  ("const fn increment(x : u8 in 0 .. 10) -> u8 in 0 .. 11 ".toList ++
-   "requires x > 0 ensures result == x + 1 { return x + 1; } ".toList ++
-   "const ANSWER : u8 = increment(3); impl fn main() -> u8 { return ANSWER; }".toList)
 
 theorem initializer_compiled_zeuge :
     (compile initializerText).toOption.isSome = true := by decide +kernel
