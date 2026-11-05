@@ -33,8 +33,8 @@ theorem ScanPiece.lexed {characters : List Char} (piece : ScanPiece characters)
   have equation := piece.equation [] (characters.length + 1 - piece.steps)
   have fuel : characters.length + 1 - piece.steps + piece.steps = characters.length + 1 :=
     Nat.sub_add_cancel room
-  simpa only [lexL, List.append_nil, fuel, Gabbro.Grammatik.Parser.UebersetzeProben2.token_maps,
-    scan, Except.map] using equation
+  rw [Gabbro.Grammatik.Parser.UebersetzeProben2.token_maps] at equation
+  simpa only [lexL, List.append_nil, fuel, scan, Except.map] using equation
 
 /-- The existing lowering theorem assembles all actual function certificates and measures. -/
 theorem lowered {unit : UProg} (noInvs : unit.invs = [])
@@ -52,6 +52,6 @@ theorem lowered {unit : UProg} (noInvs : unit.invs = [])
     rw [String.length_append] at impossible
     change 7 + error.length = 2 at impossible
     omega
-  | ok pair => exact ⟨pair.1, pair.2, actual⟩
+  | ok pair => exact ⟨pair.1, pair.2, rfl⟩
 
 end Gabbro.Stage0.Frontend.ConstPhases
