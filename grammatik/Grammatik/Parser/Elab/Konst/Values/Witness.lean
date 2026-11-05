@@ -86,41 +86,44 @@ private theorem wrongTypeSource :
   apply elaborate_refused (source := (.lit 1)) rfl
   change Values.expression (D := declaration [.int 0 10] .bool)
     (locals [("x", .int 0 10)]) [] [] 64 .bool (.lit 1) = .error _
-  rfl
+  cbv
 
 private theorem wrongPayloadSource :
     Values.elaborate { emptyTag with rumpf := .block [] (some (.ret (some (.call "Data" [.tru])))) } = .error "const value has a different declared type" := by
   apply elaborate_refused (source := (.call "Data" [.tru])) rfl
   change Values.expression (D := declaration [] (.sum [none, some (.int 0 255), some .bool, some (.str 1)]))
-    (locals []) [] [{ name := "Choice"
+    (locals []) [] [{
+         name := "Choice"
          cases := [("Empty", none), ("Data", some (.int 0 255)),
            ("Flag", some .bool), ("Text", some (.str 1))] }] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) (.call "Data" [.tru]) = .error _
-  rfl
+  cbv
 
 private theorem unknownTagSource :
     Values.elaborate { emptyTag with rumpf := .block [] (some (.ret (some (.variable "Foreign")))) } = .error "const tagged constructor is unknown: Foreign" := by
   apply elaborate_refused (source := (.variable "Foreign")) rfl
   change Values.expression (D := declaration [] (.sum [none, some (.int 0 255), some .bool, some (.str 1)]))
-    (locals []) [] [{ name := "Choice"
+    (locals []) [] [{
+         name := "Choice"
          cases := [("Empty", none), ("Data", some (.int 0 255)),
            ("Flag", some .bool), ("Text", some (.str 1))] }] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) (.variable "Foreign") = .error _
-  rfl
+  cbv
 
 private theorem longTextSource :
     Values.elaborate (shortText "é") = .error "const string literal exceeds its declared maximum" := by
   apply elaborate_refused (source := (.ext .text ["é"] [])) rfl
   change Values.expression (D := declaration [] (.str 1))
     (locals []) [] [] 64 (.str 1) (.ext .text ["é"] []) = .error _
-  rfl
+  cbv
 
 private theorem missingPayloadSource :
     Values.elaborate { emptyTag with rumpf := .block [] (some (.ret (some (.variable "Data")))) } = .error "const tagged constructor payload does not match its declared type" := by
   apply elaborate_refused (source := (.variable "Data")) rfl
   change Values.expression (D := declaration [] (.sum [none, some (.int 0 255), some .bool, some (.str 1)]))
-    (locals []) [] [{ name := "Choice"
+    (locals []) [] [{
+         name := "Choice"
          cases := [("Empty", none), ("Data", some (.int 0 255)),
            ("Flag", some .bool), ("Text", some (.str 1))] }] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) (.variable "Data") = .error _
-  rfl
+  cbv
 
 public theorem wrong_type_result :
     ersetzeSExpr [{ positive with rumpf := .block [] (some (.ret (some (.lit 1)))) }] (.call "positive" [.lit 3]) = .error "const value has a different declared type" := by
