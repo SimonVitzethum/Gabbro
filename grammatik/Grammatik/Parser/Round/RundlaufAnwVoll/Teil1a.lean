@@ -135,7 +135,8 @@ private theorem stmt_word_dispatch {rest : List Token} (h : istOrtsFort rest = f
       else if strEq word "retires" then parseRetires rest
       else parsePlatzStmt f (.wort word :: rest) := by
   rw [parseStmt.eq_def]
-  split <;> simp_all [istOrtsFort]
+  split <;> simp_all only [istOrtsFort, Bool.true_eq_false, Bool.false_eq_true,
+    ite_false, ite_true]
 
 theorem parseStmt_let (f : Nat) (rest : List Token) (h : istOrtsFort rest = false) :
     parseStmt (f + 1) (.wort "let" :: rest) = parseLet f rest := by
