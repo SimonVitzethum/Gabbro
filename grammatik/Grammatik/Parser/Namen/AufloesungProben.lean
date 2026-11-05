@@ -6,6 +6,10 @@ import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
 import all Grammatik.Parser.Elab.Generic.StaticConformance
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest1
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest2a
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Body
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Export
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -68,6 +72,64 @@ def stufe (items : List SItemTief) : String :=
     | .error e => "lower: " ++ e
     | .ok _ => "OK"
 
+/-- Assemble the actual per-function successes through the existing list producer. -/
+private theorem lowerEach_certified (u : Uebersetze.UProg) :
+    ∀ fs : List (Fin u.fns.length),
+      (∀ f ∈ fs, (lowerFnAt u f).toOption.isSome = true) → lowerEach u fs = .ok ()
+  | [], _ => rfl
+  | f :: fs, success => by
+    rw [lowerEach, except_ok_get (success f (List.mem_cons_self ..))]
+    exact lowerEach_certified u fs (fun g hg => success g (List.mem_cons_of_mem _ hg))
+
+/-- Close the canonical assembler from its real phase certificates. Empty source measures
+    have equal tuple lengths on every call edge, independently of the assembled program. -/
+private theorem stufe_certified {items : List SItemTief} {u : Uebersetze.UProg}
+    (elaborated : elabU (pre108 items) = .ok u) (noInvs : u.invs = [])
+    (functions : ∀ f : Fin u.fns.length, (lowerFnAt u f).toOption.isSome = true)
+    (contracts : contractGate u = true)
+    (noMeasures : ∀ f : Fin u.fns.length, (fnAt u f).decreases = none)
+    (measures : (Measures.lowerMeasures u).toOption.isSome = true) : stufe items = "OK" := by
+  let exported : Measures.Export u := (Measures.lowerMeasures u).toOption.get measures
+  have measured : Measures.lowerMeasures u = .ok exported := except_ok_get measures
+  have empty : ∀ f, exported.mass f = [] :=
+    fun f => Measures.lowerMeasures_absent u exported f (noMeasures f)
+  have checked : ∀ P : Programm (declOf u),
+      Measures.checkedProgram u P = .ok (P, List.finRange u.fns.length) := by
+    intro P
+    have lengths : Measures.cycleLengths u P exported.mass = true := by
+      unfold Measures.cycleLengths
+      apply List.all_eq_true.mpr
+      intro f _
+      apply List.all_eq_true.mpr
+      intro g _
+      rw [empty f, empty g]
+      change (!zykS P (List.finRange u.fns.length) f g || true) = true
+      exact Bool.or_true _
+    unfold Measures.checkedProgram
+    rw [measured, if_pos lengths]
+  have invs : lowerInvs u (List.finRange u.invs.length) = .ok () := by
+    cases enumeration : List.finRange u.invs.length with
+    | nil => rfl
+    | cons i rest =>
+      have length : u.invs.length = 0 := congrArg List.length noInvs
+      have bound := i.isLt
+      omega
+  have each := lowerEach_certified u (List.finRange u.fns.length) (fun f _ => functions f)
+  unfold stufe
+  rw [elaborated]
+  unfold lowerAllg
+  split
+  · rename_i error failed
+    rw [invs] at failed
+    cases failed
+  · split
+    · rename_i error failed
+      rw [each] at failed
+      cases failed
+    · split
+      · rw [checked]
+      · contradiction
+
 /-- The carriers (`static` items) a unit elaborates to, by name. -/
 def traeger (items : List SItemTief) : List String :=
   match elabU (pre108 items) with
@@ -100,7 +162,24 @@ def zwei : List SItemTief :=
    .modT "b" [c],
    .modT "p" [.useT ["a", "setze"],
      schreib "haupt" [.why "a" "C", .why "b" "C"] [.why "b" "C"] [.call "setze" []]]]
-theorem zwei_ok : stufe zwei = "OK" := by decide +kernel
+private theorem zwei_elaborated : (elabU (pre108 zwei)).toOption.isSome = true := by cbv
+private def zweiU : Uebersetze.UProg := (elabU (pre108 zwei)).toOption.get zwei_elaborated
+
+private theorem zwei_functions (f : Fin zweiU.fns.length) :
+    (lowerFnAt zweiU f).toOption.isSome = true ∧ (fnAt zweiU f).decreases = none := by
+  have count : zweiU.fns.length = 2 := by cbv
+  have bound : f.val < 2 := by rw [← count]; exact f.isLt
+  rcases (by omega : f.val = 0 ∨ f.val = 1) with zero | one
+  · have same : f = ⟨0, by omega⟩ := Fin.ext zero
+    subst f
+    constructor <;> cbv <;> rfl
+  · have same : f = ⟨1, by omega⟩ := Fin.ext one
+    subst f
+    constructor <;> cbv <;> rfl
+
+theorem zwei_ok : stufe zwei = "OK" :=
+  stufe_certified (u := zweiU) (except_ok_get zwei_elaborated) (by cbv)
+    (fun f => (zwei_functions f).1) (by cbv) (fun f => (zwei_functions f).2) (by cbv)
 theorem zwei_traeger : traeger zwei = ["a::C", "b::C"] := by cbv
 theorem zwei_wirkung :
     wirkungUndRumpf (pre108 zwei) = [(["a::C"], ["a::C"]), (["a::C", "b::C"], ["b::C"])] := by
@@ -122,7 +201,20 @@ theorem tief_geparst :
 def tief : List SItemTief :=
   [.modT "x" [.modT "y" [c]],
    .modT "b" [c, schreib "f" [.variable "x::y::C"] [.variable "x::y::C"]]]
-theorem tief_ok : stufe tief = "OK" := by decide +kernel
+private theorem tief_elaborated : (elabU (pre108 tief)).toOption.isSome = true := by cbv
+private def tiefU : Uebersetze.UProg := (elabU (pre108 tief)).toOption.get tief_elaborated
+
+private theorem tief_functions (f : Fin tiefU.fns.length) :
+    (lowerFnAt tiefU f).toOption.isSome = true ∧ (fnAt tiefU f).decreases = none := by
+  have count : tiefU.fns.length = 1 := by cbv
+  have bound : f.val < 1 := by rw [← count]; exact f.isLt
+  have same : f = ⟨0, by omega⟩ := Fin.ext (by omega)
+  subst f
+  constructor <;> cbv <;> rfl
+
+theorem tief_ok : stufe tief = "OK" :=
+  stufe_certified (u := tiefU) (except_ok_get tief_elaborated) (by cbv)
+    (fun f => (tief_functions f).1) (by cbv) (fun f => (tief_functions f).2) (by cbv)
 theorem tief_traeger : traeger tief = ["x::y::C", "b::C"] := by cbv
 
 /-- PLANTED DEFECT: a module that neither declares nor `use`s `C` names it bare. Two items carry the
