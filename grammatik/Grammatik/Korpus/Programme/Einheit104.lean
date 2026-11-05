@@ -18,6 +18,11 @@ public import Grammatik.Zielsatz.Kern.Beweis
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 public import Grammatik.Logik.Ruf.RufLogik
 public import Grammatik.Logik.Ruf.RufLogika
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
+import all Grammatik.Parser.Elab.Generic.StaticConformance
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -62,7 +67,7 @@ set_option maxRecDepth 100000
 
 abbrev D4 : Deklaration := declOf uExp104
 
-theorem low_some : (lowerAllg uExp104).toOption.isSome = true := by decide
+theorem low_some : (lowerAllg uExp104).toOption.isSome = true := by decide +kernel
 
 /-- The generically lowered program of 104. -/
 def P4 : Programm D4 := ((lowerAllg uExp104).toOption.get low_some).1
@@ -72,7 +77,7 @@ def fs4 : List D4.Fn := ((lowerAllg uExp104).toOption.get low_some).2
 theorem parse4 : parseTopTief tt104 = .ok items104 := by rfl
 
 /-- The lane-162 preprocessing leaves 104's elaboration unchanged. -/
-theorem elab4 : elabU (pre108 items104) = .ok uExp104 := by rfl
+theorem elab4 : elabU (pre108 items104) = .ok uExp104 := by cbv
 
 theorem low4 : lowerAllg uExp104 = .ok (P4, fs4) := except_ok_get low_some
 
@@ -105,6 +110,10 @@ theorem fn_zwei (f : D4.Fn) : f = ein4 ∨ f = lies4 := by
 
 theorem ht4 : D4.tabNr 0 = some t4 := by rfl
 
+/-- The table is registered in the source capability's actual space. -/
+theorem hcap4 : D4.capTab 0 0 = some t4 :=
+  Deklaration.capTab_of ht4 rfl (by decide)
+
 abbrev L4 : List (Res D4) := [Res.held (D := D4) m4]
 
 theorem darf4 : darf D4 t4 L4 := by unfold darf; decide
@@ -126,29 +135,58 @@ theorem hp4 : RufPasst D4 (vertragVon D4 ein4) (D4.signatur lies4) L4 where
 /-- `einzahlen`'s body, as the parser lowers it: the write through `k`, the
     call of `lies` on a fresh read-only pointer and `i`, the return. -/
 def bodyEin4 : Endblock D4 (vertragVon D4 ein4) false (D4.params ein4) L4 :=
-  .cons (Stmt.assignThru (.var .here) t4 ht4 f4 (.var (.there .here))
+  .cons (Stmt.assignThru (space := 0) (.var .here) t4 hcap4 f4 (.var (.there .here))
       (.widen (by decide) (by decide) (.lit 100)) rfl darf4)
-    (.cons (Stmt.call lies4 (.cons (.ptrOf t4 0 ht4 (true, false)) (.cons (.var (.there .here)) .nil))
+    (.cons (Stmt.call lies4 (.cons (.ptrOf (space := 0) t4 0 hcap4 (true, false)) (.cons (.var (.there .here)) .nil))
       hp4 rfl) (.ret .empty (List.Perm.refl _)))
 
 /-- `lies`' body: the return of the slot read through `k`. -/
 def bodyLies4 : Endblock D4 (vertragVon D4 lies4) false (D4.params lies4) L4 :=
   .ret (.val (Expr.widen (lo' := 0) (hi' := 100) (by decide) (by decide)
-    (Expr.thru (.var .here) t4 ht4 f4 (.var (.there .here)) darf4))) (List.Perm.refl _)
+    (Expr.thru (space := 0) (.var .here) t4 hcap4 f4 (.var (.there .here)) darf4))) (List.Perm.refl _)
 
 def ensEin4 : Expr D4 (ErgCtx (D4.params ein4) (D4.erg ein4)) (vertragVon D4 ein4).ende .bool :=
   .le (Expr.oldS t4 f4 (.var (.there .here)) darf4)
-    (Expr.thru (.var .here) t4 ht4 f4 (.var (.there .here)) darf4)
+    (Expr.thru (space := 0) (.var .here) t4 hcap4 f4 (.var (.there .here)) darf4)
 
 def ensLies4 : Expr D4 (ErgCtx (D4.params lies4) (D4.erg lies4)) (vertragVon D4 lies4).ende .bool :=
-  .eq (.var .here) (Expr.thru (.var (.there .here)) t4 ht4 f4 (.var (.there (.there .here))) darf4)
+  .eq (.var .here) (Expr.thru (space := 0) (.var (.there .here)) t4 hcap4 f4 (.var (.there (.there .here))) darf4)
 
 /-- The lowered bodies and contracts ARE these terms (kernel-checked). -/
-theorem rumpf_ein4 : P4.rumpf ein4 = bodyEin4 := by rfl
-theorem rumpf_lies4 : P4.rumpf lies4 = bodyLies4 := by rfl
-theorem ens_ein4 : P4.ensures ein4 = ensEin4 := by rfl
-theorem ens_lies4 : P4.ensures lies4 = ensLies4 := by rfl
-theorem req4 (f : D4.Fn) : P4.requires f = .tru := by rcases fn_zwei f with e | e <;> subst e <;> rfl
+theorem rumpf_ein4 : P4.rumpf ein4 = bodyEin4 := by cbv
+theorem rumpf_lies4 : P4.rumpf lies4 = bodyLies4 := by cbv
+theorem ens_ein4 : P4.ensures ein4 = ensEin4 := by cbv
+theorem ens_lies4 : P4.ensures lies4 = ensLies4 := by cbv
+theorem req4 (f : D4.Fn) : P4.requires f = .tru := by rcases fn_zwei f with e | e <;> subst e <;> cbv
+
+/-- Each function's own interface keeps the actual exported postcondition. -/
+private theorem ptrPost4 (f : D4.Fn) : (P4.ptrVertrag f.val).post = P4.ensures f := by
+  rcases fn_zwei f with e | e <;> subst e <;> cbv
+
+/-- Parameter arities distinguish the two admitted interfaces; their posts are not trivial. -/
+theorem ptrVerfeinert4 : PtrVerfeinert P4 := by
+  intro f n hf
+  have bound : n < 2 := passtAt_lt uExp104 f n hf
+  have arity := congrArg List.length (D4.passt_sig hf).params
+  have same : n = f.val := by
+    rcases (by omega : n = 0 ∨ n = 1) with rfl | rfl <;>
+      rcases fn_zwei f with rfl | rfl
+    · rfl
+    · change (2 : Nat) = 3 at arity
+      omega
+    · change (3 : Nat) = 2 at arity
+      omega
+    · rfl
+  subst n
+  constructor
+  · intro s0 ρ _
+    unfold ReqAmEintritt
+    rw [req4]
+    rfl
+  · intro s0 s1 ρ v _ hv
+    change wahr? (eval s0 (P4.ptrVertrag f.val).post s1 (ergEnv (D4.erg f) v ρ)) = true
+    rw [ptrPost4]
+    exact hv
 
 /-! ## 3. The enumerations of the declaration's members -/
 
@@ -187,7 +225,7 @@ def E4 : Einheit D4 where
   sp0 := sp4
 
 /-- The checker accepts the unit, by computation. -/
-theorem akzeptiert4 : akzeptiert_pruefer.akzeptiert E4 fsA.1 lsA.1 csA.1 = true := by decide
+theorem akzeptiert4 : akzeptiert_pruefer.akzeptiert E4 fsA.1 lsA.1 csA.1 = true := by decide +kernel
 
 /-! ## 5. The user's logic on the parsed program -/
 
@@ -272,9 +310,9 @@ theorem ein4_R : KoerperGutR P4 0 ein4 := by
       · simp only [execEnd] at h2
         cases h2
 
-theorem logikFrei4 : programmLogikFrei P4 fsA.1 = true := by decide
+theorem logikFrei4 : programmLogikFrei P4 fsA.1 = true := by decide +kernel
 
-theorem ohneEwig4 : ohneEwigB P4 fsA.1 = true := by decide
+theorem ohneEwig4 : ohneEwigB P4 fsA.1 = true := by decide +kernel
 
 theorem koerperS4 : ∀ f : D4.Fn, KoerperGutS P4 0 (axWahr D4) (SperrInv.leer D4) f := by
   intro f
@@ -294,7 +332,7 @@ theorem nutzer4 : NutzerPflicht E4 where
         have h := r.isLt
         have h0 : D4.gruende f = 0 := sigGruende_null uExp104 (by decide) f
         omega⟩,
-    fun _ _ _ _ => rfl, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩
+    fun _ _ _ _ => rfl, axEnsLokal_wahr, ptrVerfeinert4⟩
   start := ⟨fun _ => rfl, fun _ h => absurd h List.not_mem_nil⟩
 
 /-! ## 6. Witness data: the oracle and the arguments of `einzahlen(k, 0, 7)` -/
