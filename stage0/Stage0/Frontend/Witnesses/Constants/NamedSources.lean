@@ -133,7 +133,23 @@ def tagTextTail : SourceTail tagTextInput := by
     elaborated := ?elaborated
     aliases := ?aliases
     constants := ?constants }
-  case metadata => cbv <;> exact Eq.refl _
+  case metadata =>
+    cbv
+    -- Reader equations cross the dependent source match as whole typed values.
+    all_goals
+      repeat' first
+        | erw [Konst.Values.WitnessReaders.reader_sum]
+        | erw [Konst.Values.WitnessReaders.reader_payload]
+        | erw [Konst.Values.WitnessReaders.reader_int]
+        | erw [Konst.Values.WitnessReaders.reader_empty]
+    all_goals cbv
+    -- Schema selection exposes the actual payload's declared type and presence.
+    all_goals
+      repeat' first
+        | erw [Konst.Values.WitnessReaders.reader_payload]
+        | erw [Konst.Values.WitnessReaders.reader_int]
+        | erw [Konst.Values.WitnessReaders.reader_empty]
+    all_goals cbv <;> rfl
   case ordered => cbv <;> exact Eq.refl _
   case elaborated => cbv <;> exact Eq.refl _
   case aliases => cbv
@@ -194,7 +210,11 @@ def stringTextTail : SourceTail stringTextInput := by
     elaborated := ?elaborated
     aliases := ?aliases
     constants := ?constants }
-  case metadata => cbv <;> exact Eq.refl _
+  case metadata =>
+    cbv
+    all_goals
+      repeat' erw [Konst.Values.WitnessReaders.reader_text]
+    all_goals cbv <;> rfl
   case ordered => cbv <;> exact Eq.refl _
   case elaborated => cbv <;> exact Eq.refl _
   case aliases => cbv

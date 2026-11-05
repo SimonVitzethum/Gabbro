@@ -96,7 +96,8 @@ private theorem bool_reader_fuel {D : Deklaration} {Γ : Ctx} (names : Konst.Sca
 
 private theorem bool_adapt {D : Deklaration} {Γ : Ctx} (code : Konst.Scalar.Code D Γ .bool) :
     Konst.Values.adapt .bool ⟨.bool, code⟩ = .ok code := by
-  simp only [Konst.Values.adapt, dite_eq_left rfl]
+  simp only [Konst.Values.adapt]
+  simp only [dite_true]
 
 -- The same generic quotation packet retains source spelling, typed expression
 -- and denotation. Neither Boolean response is assumed for the source function.
@@ -166,7 +167,15 @@ def boolTextTail : SourceTail boolTextInput := by
     elaborated := ?elaborated
     aliases := ?aliases
     constants := ?constants }
-  case metadata => cbv <;> exact Eq.refl _
+  case metadata =>
+    cbv
+    -- Rewrite the whole typed reader under its dependent source equation,
+    -- then resume the unchanged original-source metadata continuation.
+    all_goals
+      repeat' first
+        | erw [Konst.Values.WitnessReaders.reader_bool]
+        | erw [Konst.Values.WitnessReaders.reader_int]
+    all_goals cbv <;> rfl
   case ordered => cbv <;> exact Eq.refl _
   case elaborated => cbv <;> exact Eq.refl _
   case aliases => cbv

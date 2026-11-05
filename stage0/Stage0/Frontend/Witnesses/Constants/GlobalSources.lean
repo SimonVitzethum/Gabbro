@@ -2,6 +2,7 @@ module
 public import Stage0.Frontend.Witnesses.Constants.SourcePackets
 public import Stage0.Frontend.Witnesses.Constants.Lexical
 import Grammatik.Parser.Elab.Konst.Values.WitnessReaders
+import Init.Data.String.Lemmas.Intercalate
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
@@ -88,6 +89,7 @@ attribute [local cbv_eval]
 
 -- Keep the unused float target and the generic normalization proof symbolic.
 attribute [local cbv_opaque] uFloatLimit Frontend.normalize
+attribute [local cbv_eval] String.intercalate_singleton
 
 /-- The canonical parser still supplies the public selected item list. -/
 theorem globalText_parsed :
