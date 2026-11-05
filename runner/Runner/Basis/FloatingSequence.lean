@@ -69,14 +69,15 @@ def fpToUInt64 {σ : Type} (format : FPFormat) (value : W) (continuation : W →
       fp (.truncateInt64 format) reduced 0 fun integer => continuation (integer ||| 0x8000000000000000)
   else continuation 0xFFFFFFFFFFFFFFFF
 
-/-- Installed codecs compute words directly and unsigned conversion uses its
-    proven portable sequence. Saturating casts retain the primitive reference
-    request until their numerical and physical composition is validated. -/
+/-- Installed codecs compute words directly. Unsigned conversion and saturating
+    casts use their proven portable sequences of native primitive requests. -/
 def fpSequence {σ : Type} (kind : NativeFPOp) (a b : W) (continuation : W → Res σ) : Res σ :=
   match kind with
   | .neg format => continuation (fpNegWord format a)
   | .isFinite format => continuation (fpFiniteWord format a)
   | .fromUInt64 format => fpFromUInt64 format a continuation
+  | .toInt64 format => fpToInt64 format a continuation
+  | .toUInt64 format => fpToUInt64 format a continuation
   | _ => fp kind a b continuation
 
 theorem fpSequence_direct {σ : Type} (kind : NativeFPOp) (a b : W) (continuation : W → Res σ)

@@ -3,6 +3,8 @@ public import Runner.Beweis.Handler.Sprung
 public import Runner.Beweis.Handler.Floating
 public import Runner.Beweis.Handler.FloatingCodec
 public import Runner.Beweis.Handler.FloatingUnsigned
+public import Runner.Beweis.Handler.FloatingToInt
+public import Runner.Beweis.Handler.FloatingToUInt
 @[expose] public section
 
 
@@ -76,10 +78,18 @@ theorem handler_ok {L : Lay} (k : Nat) {y : X} (h : HPre L k y) : Match L (IR.op
   | 49 => by
     simpa only [IR.op, IR.fp, fpSequence] using
       fp_fromUInt64_body (L := L) (y := y) .f64 h.tb h.mode h.code
-  | 50 => exact bad_ok h rfl
-  | 51 => exact bad_ok h rfl
-  | 52 => exact bad_ok h rfl
-  | 53 => exact bad_ok h rfl
+  | 50 => by
+    simpa only [IR.op, IR.fp, fpSequence] using
+      fp_toInt64_body (L := L) (y := y) .f32 h.tb h.mode h.code
+  | 51 => by
+    simpa only [IR.op, IR.fp, fpSequence] using
+      fp_toInt64_body (L := L) (y := y) .f64 h.tb h.mode h.code
+  | 52 => by
+    simpa only [IR.op, IR.fp, fpSequence] using
+      fp_toUInt64_body (L := L) (y := y) .f32 h.tb h.mode h.code
+  | 53 => by
+    simpa only [IR.op, IR.fp, fpSequence] using
+      fp_toUInt64_body (L := L) (y := y) .f64 h.tb h.mode h.code
   | 54 => exact fp_widen_ok h
   | 55 => exact fp_narrow_ok h
   | 56 => exact fp_flags_ok .f32 h

@@ -1,5 +1,5 @@
 module
-public import Runner.IR.Seq
+public import Runner.IR.NativeRun
 import NativeFloat.Saturation
 @[expose] public section
 

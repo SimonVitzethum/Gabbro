@@ -1,5 +1,6 @@
 module
 public import Runner.IR.Unsigned
+public import Runner.IR.Saturation
 public import Runner.Basis.MemLemma
 @[expose] public section
 
@@ -18,7 +19,7 @@ namespace Runner.IR
 variable [Kern]
 
 /-- A theorem over the existing Run constructors, not a new execution rule.
-    Codec words are exact and unsigned conversion uses its portable sequence. -/
+    Codec words are exact and compound conversions use their portable sequences. -/
 theorem Run.fp_sequence {kind : NativeFPOp} {a b result : W} {continuation : W → Res T}
     {m m' : Mem} {t : T} (heval : NativeFPEval kind a b result)
     (hk : Run (continuation result) m t m') : Run (fpSequence kind a b continuation) m t m' := by
@@ -33,6 +34,14 @@ theorem Run.fp_sequence {kind : NativeFPOp} {a b result : W} {continuation : W �
     have unsigned : NativeFPEval (.fromUInt64 format) a 0 result := by
       cases format <;> exact heval
     exact Run.fp_fromUInt64 unsigned hk
+  | toInt64 format =>
+    have signed : NativeFPEval (.toInt64 format) a 0 result := by
+      cases format <;> exact heval
+    exact Run.fp_toInt64 signed hk
+  | toUInt64 format =>
+    have unsigned : NativeFPEval (.toUInt64 format) a 0 result := by
+      cases format <;> exact heval
+    exact Run.fp_toUInt64 unsigned hk
   | _ => exact Run.native_fp heval hk
 
 inductive Star : T → Mem → T → Mem → Prop

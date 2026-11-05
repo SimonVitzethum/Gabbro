@@ -178,6 +178,8 @@ def handler : Nat → List Ins
   | 44 => fpFiniteH .f32 | 45 => fpFiniteH .f64
   | 46 => fpFromIntH .f32 | 47 => fpFromIntH .f64
   | 48 => fpFromUIntH .f32 | 49 => fpFromUIntH .f64
+  | 50 => fpToIntH .f32 | 51 => fpToIntH .f64
+  | 52 => fpToUIntH .f32 | 53 => fpToUIntH .f64
   | 54 => fpWidenH | 55 => fpNarrowH
   | 56 => fpFlagsH .f32 | 57 => fpFlagsH .f64
   | 58 => fpTruncateH .f32 | 59 => fpTruncateH .f64
