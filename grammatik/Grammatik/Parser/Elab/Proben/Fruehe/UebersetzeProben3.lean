@@ -56,7 +56,8 @@ theorem entry_params_refused_stufe : stufe entry_params_refused = "elab: dispatc
     (except_ok_get (ε := String) (α := List SItemTief)
       (x := parseTopTief entry_params_refused_tokens) entry_params_refused_parsed) entry_params_refused_elaborated
 
-theorem entry_unknown_refused_stufe : stufe entry_unknown_refused = "elab: dispatch names an unknown function: nix" :=
+theorem entry_unknown_refused_stufe : stufe entry_unknown_refused =
+    "elab: generic-output: residual syntax, name collision or unresolved direct global reference" :=
   stufe_elab_error (source := entry_unknown_refused) (characters := entry_unknown_refused_characters)
     (tokens := entry_unknown_refused_tokens) (items := entry_unknown_refused_items)
     entry_unknown_refused_text entry_unknown_refused_lexed
@@ -147,7 +148,8 @@ theorem conc_ptr_refused_stufe :
       (x := parseTopTief conc_ptr_refused_tokens) conc_ptr_refused_parsed) conc_ptr_refused_elaborated
 
 theorem conc_unknown_refused_stufe :
-    stufe conc_unknown_refused = "elab: concurrent member names an unknown function: nix" :=
+    stufe conc_unknown_refused =
+      "elab: generic-output: residual syntax, name collision or unresolved direct global reference" :=
   stufe_elab_error (source := conc_unknown_refused) (characters := conc_unknown_refused_characters)
     (tokens := conc_unknown_refused_tokens) (items := conc_unknown_refused_items)
     conc_unknown_refused_text conc_unknown_refused_lexed

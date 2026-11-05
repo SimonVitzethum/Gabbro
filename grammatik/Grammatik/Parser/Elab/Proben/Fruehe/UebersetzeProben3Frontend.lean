@@ -188,7 +188,8 @@ theorem entry_unknown_refused_parsed : (parseTopTief entry_unknown_refused_token
 def entry_unknown_refused_items : List SItemTief := (parseTopTief entry_unknown_refused_tokens).toOption.get entry_unknown_refused_parsed
 
 theorem entry_unknown_refused_elaborated :
-  elabU (pre108 entry_unknown_refused_items) = .error "dispatch names an unknown function: nix" := by cbv
+  elabU (pre108 entry_unknown_refused_items) =
+    .error "generic-output: residual syntax, name collision or unresolved direct global reference" := by cbv
 
 theorem locks_plain_text : locks_plain = String.ofList locks_plain_characters := by cbv
 
@@ -330,7 +331,8 @@ theorem conc_unknown_refused_parsed : (parseTopTief conc_unknown_refused_tokens)
 def conc_unknown_refused_items : List SItemTief := (parseTopTief conc_unknown_refused_tokens).toOption.get conc_unknown_refused_parsed
 
 theorem conc_unknown_refused_elaborated :
-  elabU (pre108 conc_unknown_refused_items) = .error "concurrent member names an unknown function: nix" := by cbv
+  elabU (pre108 conc_unknown_refused_items) =
+    .error "generic-output: residual syntax, name collision or unresolved direct global reference" := by cbv
 
 theorem mask_src_text : mask_src = String.ofList mask_src_characters := by cbv
 
