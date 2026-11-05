@@ -218,66 +218,85 @@ private theorem accepts_function_results {unit : UProg} (functions : Functions u
   unfold Functions.program
   exact checked _ _ _
 
-/-- Retain the actual elaborated constructor and all body facts inside one opaque theorem. -/
-private theorem initializer_program_packet :
-    ∃ header : Header Gabbro.Stage0.Frontend.ConstWitness.initializerText,
-      header.unit.fns.length = 1 ∧ Nonempty (Body header) := by
-  let header : Header Gabbro.Stage0.Frontend.ConstWitness.initializerText := by
-    refine {
-      source := sourceFrom initializerInput initializerTail
-      sourceEq := by exact sourceFrom_eq initializerInput initializerTail
-      expanded := ?expanded
-      requirements := ?requirements
-      expansion := ?expansion
-      constants := ?constants
-      ordinary := by cbv
-      metadata := by exact initializerTail.metadata
-      candidate := ?candidate
-      elaborated := ?elaborated }
-    case expansion => cbv <;> exact Eq.refl _
-    case constants =>
-      change Konst.checkSourceConstants initializerInput.original = .ok ()
-      unfold Konst.checkSourceConstants
-      split
-      · exact initializerTail.metadata
-      · rfl
-    case elaborated => cbv <;> exact Eq.refl _
-  have count : header.unit.fns.length = 1 := by cbv
-  let main : Fin header.unit.fns.length := ⟨0, by omega⟩
-  -- Infer the complete canonical triple once, rather than repeatedly executing its selected getter.
-  let code : EnsTy header.unit main × RumpTy header.unit main × ReqTy header.unit main := ?code
-  have codeEq : lowerFnAt header.unit main = .ok code := by cbv <;> exact Eq.refl _
-  have onlyMain (f : Fin header.unit.fns.length) : f = main := by
-    apply Fin.ext
-    have small : f.val < 1 := by simpa only [count] using f.isLt
-    change f.val = 0
-    omega
-  let functions : Functions header.unit := {
+/-- The same canonical Header constructor, shared by all later proof cuts. -/
+private def initializerHeader : Header Gabbro.Stage0.Frontend.ConstWitness.initializerText := by
+  refine {
+    source := sourceFrom initializerInput initializerTail
+    sourceEq := by exact sourceFrom_eq initializerInput initializerTail
+    expanded := ?expanded
+    requirements := ?requirements
+    expansion := ?expansion
+    constants := ?constants
+    ordinary := by cbv
+    metadata := by exact initializerTail.metadata
+    candidate := ?candidate
+    elaborated := ?elaborated }
+  case expansion => cbv <;> exact Eq.refl _
+  case constants =>
+    change Konst.checkSourceConstants initializerInput.original = .ok ()
+    unfold Konst.checkSourceConstants
+    split
+    · exact initializerTail.metadata
+    · rfl
+  case elaborated => cbv <;> exact Eq.refl _
+
+private theorem initializer_count : initializerHeader.unit.fns.length = 1 := by cbv
+
+private def initializerMain : Fin initializerHeader.unit.fns.length :=
+  ⟨0, by have count := initializer_count; omega⟩
+
+/-- The complete triple is inferred only from the actual lowering equation. -/
+private def initializerCode :
+    { code : EnsTy initializerHeader.unit initializerMain ×
+        RumpTy initializerHeader.unit initializerMain × ReqTy initializerHeader.unit initializerMain //
+      lowerFnAt initializerHeader.unit initializerMain = .ok code } := by
+  refine ⟨?code, ?origin⟩
+  case origin => cbv <;> exact Eq.refl _
+
+private theorem initializer_code_eq :
+    lowerFnAt initializerHeader.unit initializerMain = .ok initializerCode.val :=
+  initializerCode.property
+
+private theorem initializer_only_main (f : Fin initializerHeader.unit.fns.length) :
+    f = initializerMain := by
+  apply Fin.ext
+  have small : f.val < 1 := by simpa only [initializer_count] using f.isLt
+  change f.val = 0
+  omega
+
+private def initializerFunctions : Functions initializerHeader.unit := {
     values := by
-      change (f : Fin 1) → EnsTy header.unit f × RumpTy header.unit f × ReqTy header.unit f
+      change (f : Fin 1) → EnsTy initializerHeader.unit f ×
+        RumpTy initializerHeader.unit f × ReqTy initializerHeader.unit f
       exact Fin.cases (motive := fun f : Fin 1 =>
-        EnsTy header.unit f × RumpTy header.unit f × ReqTy header.unit f)
-        code (fun f : Fin 0 => Fin.elim0 f)
+        EnsTy initializerHeader.unit f × RumpTy initializerHeader.unit f × ReqTy initializerHeader.unit f)
+        initializerCode.val (fun f : Fin 0 => Fin.elim0 f)
     equations := by
       intro f
-      have same := onlyMain f
+      have same := initializer_only_main f
       subst f
-      exact codeEq
+      exact initializer_code_eq
     noInvariants := by cbv
     noMeasures := by
       intro f
-      have same := onlyMain f
+      have same := initializer_only_main f
       subst f
       cbv
     contracts := by cbv }
-  -- Keep all three canonical function components together while the checker
-  -- inspects them. Its unused interface fields are variables here, so kernel
-  -- evaluation does not normalize unrelated contract-lowering closures.
-  have accepted : OldSource.accepts header.unit functions.program = .ok true := by
-    apply accepts_function_results functions
-    intro invariants pointers foreigns
-    cbv
-  -- Resolve the active scalar collector/literal path once, before the dependent whole-list fold.
+
+-- The successful checker proof remains unchanged, but is an opaque proof
+-- constant instead of a large local let inside the final Body constructor.
+private theorem initializer_accepted :
+    OldSource.accepts initializerHeader.unit initializerFunctions.program = .ok true := by
+  apply accepts_function_results initializerFunctions
+  intro invariants pointers foreigns
+  cbv
+
+/-- Resolve the scalar collector and literal path before the dependent array fold. -/
+private theorem initializer_arrays_ready :
+    (Frontend.checkArrays initializerHeader.unit initializerHeader.source.scopes
+      initializerInput.original).toOption.isSome = true := by
+  let header := initializerHeader
   obtain ⟨value, evaluated, lower, upper⟩ := initializer_numeric_value
   have typed : uTypIn header.source.scopes.types [] (uRecordConstantTypes header.unit.records)
       [] [] (.atom "u8") = .ok (.int 0 255) := by
@@ -330,33 +349,45 @@ private theorem initializer_program_packet :
         (.one (.call "increment" [.lit 3])) (.int 0 255) (.lit value)
         (.widen lower upper (.lit value)) meaning typed literal lowered
     · rfl
-  have arraysReady : (Frontend.checkArrays header.unit header.source.scopes
-      initializerInput.original).toOption.isSome = true :=
-    checked_array_items header.unit header.source.scopes initializerInput.original checked
-  have entryFree : ∀ f : Fin header.unit.fns.length,
-      (OldSource.clauses header.expanded (fnAt header.unit f).name).any
-        OldSource.hasEntry = false := by
-    intro f
-    have same := onlyMain f
-    subst f
-    cbv
-  have restored : OldSource.restore (pre108 header.source.prepared.elaborierbar)
-      header.unit functions.program = .ok functions.program :=
-    restore_entry_free _ header.expanded header.requirements header.unit functions.program
-      header.expansion entryFree
-  refine ⟨header, count, ?body⟩
-  case body =>
-    refine ⟨{
-      functions := functions
-      main := main
-      entry := by cbv
-      initializers := by cbv
-      arrays := (Frontend.checkArrays header.unit header.source.scopes
-        initializerInput.original).toOption.get arraysReady
-      arrayEq := by exact Gabbro.Grammatik.except_ok_get arraysReady
-      program := functions.program
-      restored := restored
-      accepted := accepted }⟩
+  exact checked_array_items header.unit header.source.scopes initializerInput.original checked
+
+private theorem initializer_entry_free (f : Fin initializerHeader.unit.fns.length) :
+    (OldSource.clauses initializerHeader.expanded (fnAt initializerHeader.unit f).name).any
+      OldSource.hasEntry = false := by
+  have same := initializer_only_main f
+  subst f
+  cbv
+
+private theorem initializer_restored :
+    OldSource.restore (pre108 initializerHeader.source.prepared.elaborierbar)
+      initializerHeader.unit initializerFunctions.program = .ok initializerFunctions.program :=
+  restore_entry_free _ initializerHeader.expanded initializerHeader.requirements
+    initializerHeader.unit initializerFunctions.program initializerHeader.expansion initializer_entry_free
+
+private theorem initializer_entry :
+    fnIdx initializerHeader.unit.fns (Profil.entryName {}) = .ok initializerMain := by cbv
+
+private theorem initializer_initializers :
+    Frontend.checkInitializers (uMembers (pre108 initializerHeader.source.prepared.elaborierbar))
+      initializerHeader.unit = .ok () := by cbv
+
+/-- Assemble only the already certified fields; no source or checker rerun occurs here. -/
+private def initializerBody : Body initializerHeader where
+  functions := initializerFunctions
+  main := initializerMain
+  entry := initializer_entry
+  initializers := initializer_initializers
+  arrays := (Frontend.checkArrays initializerHeader.unit initializerHeader.source.scopes
+    initializerInput.original).toOption.get initializer_arrays_ready
+  arrayEq := Gabbro.Grammatik.except_ok_get initializer_arrays_ready
+  program := initializerFunctions.program
+  restored := initializer_restored
+  accepted := initializer_accepted
+
+private theorem initializer_program_packet :
+    ∃ header : Header Gabbro.Stage0.Frontend.ConstWitness.initializerText,
+      header.unit.fns.length = 1 ∧ Nonempty (Body header) :=
+  ⟨initializerHeader, initializer_count, ⟨initializerBody⟩⟩
 
 theorem initializer_compiled :
     ∃ result : Compiled Gabbro.Stage0.Frontend.ConstWitness.initializerText, compile Gabbro.Stage0.Frontend.ConstWitness.initializerText = .ok result ∧
