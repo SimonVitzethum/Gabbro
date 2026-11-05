@@ -256,12 +256,13 @@ private theorem restore_entry_free (items expanded : List SItemTief)
       (fun f => .ok (program.ensures f)) := by
     funext f
     unfold OldSource.atFunction
-    rewrite [entryFree f]
+    dsimp only
+    erw [entryFree f]
     rfl
   unfold OldSource.restore
   rewrite [expansion]
   dsimp only [bind, Except.bind]
-  rewrite [readers, collect_values]
+  erw [readers, collect_values]
   rfl
 
 /-- Retain the actual elaborated constructor and all body facts inside one opaque theorem. -/

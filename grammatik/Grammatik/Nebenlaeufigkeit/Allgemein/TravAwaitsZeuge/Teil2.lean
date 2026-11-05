@@ -19,7 +19,7 @@ theorem taP_koerper_haupt1 : KoerperGutG taP 0 taHaupt1 := by
     have hbody : execBlock O' 0 (torRuf taP R) taWarteBody (σ.nimmt TaLock.k) ρ =
         .logik (.vorbedingung g) := by
       cases hout : execBlock O' 0 (torRuf taP R) taWarteBody (σ.nimmt TaLock.k) ρ <;>
-        (have selected := h1; erw [hout] at selected; cases selected; rfl)
+        (have selected := h1; erw [hout] at selected; cases selected <;> rfl)
     have h2 := execBlock_eins_logikV _ _ _ _ _ _ hbody
     simp only [taRufWarte, execStmt, ht] at h2
     split at h2
