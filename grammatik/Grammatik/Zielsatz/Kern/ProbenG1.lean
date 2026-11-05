@@ -180,8 +180,6 @@ theorem g1PA_akzeptiert : Akzeptiert g1PA g1S [g1Haupt] [] [] [g1Haupt] = true :
   -- The answer-site check uses the well-founded `Ty.decEq` on `g1Erg` and `never`.
   decide +kernel
 
-theorem g1PR_akzeptiert : Akzeptiert g1PR g1S [g1Haupt] [] [] [g1Haupt] = true := by decide
-
 /-! ## 3. The oracles -/
 
 /-- The raw word of `0.5` as IEEE-754 binary64 (`0x3FE0000000000000`). -/
@@ -217,6 +215,20 @@ structure G1FloatAnswers : Prop where
 def g1HalbW (answers : G1FloatAnswers) : Gleit (0, 1) (1, 1) :=
   ⟨Float.hwOfBits (UInt64.ofNat g1Halb.toNat), answers.finite_reply,
     answers.lower_reply, answers.upper_reply⟩
+
+/-- The numerical answer-range gate uses the supplied primitive replies;
+    all other components are the unchanged concrete checker computation. -/
+theorem g1PR_akzeptiert [RootNativeFloat.Hardware] (answers : G1FloatAnswers) :
+    Akzeptiert g1PR g1S [g1Haupt] [] [] [g1Haupt] = true := by
+  have range : gleitBarB (0, 1) (1, 1) = true :=
+    (gleitBarB_iff _ _).mpr ⟨g1HalbW answers, trivial⟩
+  have checked : antwortenB g1PR [g1Haupt] = true := by
+    change ((gleitBarB (0, 1) (1, 1) && true) && true) = true
+    rw [range]
+    rfl
+  simp only [Akzeptiert, Bool.and_eq_true]
+  repeat' apply And.intro
+  all_goals first | exact checked | decide +kernel
 
 /-- The word of `0.5` decodes through the actual word and range guards. -/
 theorem g1_temp_wort (answers : G1FloatAnswers) :

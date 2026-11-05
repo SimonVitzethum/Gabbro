@@ -119,27 +119,36 @@ theorem start_req_widerlegt {D : Deklaration} (E : Einheit D)
     (hf : ¬ ReqAmEintritt E.P a.1 (E.sp0.welt []) a.2) : ¬ NutzerPflicht E :=
   fun h => hf (h.start.req a (List.mem_append_left _ ha))
 
-/-- The float literal of probe F1 is outside its range, by computation. -/
-theorem f1_lit_ausser : gleitPasst (0, 1) (1, 1) (bruch (2, 1)) = none := by rfl
+/-- The primitive upper-bound reply rejects the literal through the actual range guard. -/
+theorem f1_lit_ausser
+    (upper_reply : Float.hwLe (bruch (2, 1)) (bruch (1, 1)) = false) :
+    gleitPasst (0, 1) (1, 1) (bruch (2, 1)) = none := by
+  simp only [gleitPasst, gleitLe, upper_reply, Bool.false_eq_true,
+    and_false, dite_false]
 
-/-- Every body of probe F1 ends in `logik bereich`, whatever the oracle and the handler: the
-    kernel IEEE model decides it (the stop verdict F1 found labelled "hardware"). -/
-theorem f1_lauf (O' : Orakel zD) (passes : Nat)
+/-- The actual source execution rejects the range, independently of oracle and handler. -/
+theorem f1_lauf
+    (upper_reply : Float.hwLe (bruch (2, 1)) (bruch (1, 1)) = false)
+    (O' : Orakel zD) (passes : Nat)
     (R : ∀ f : zD.Fn, World zD → Env zD (zD.params f) → RufAusgang f)
     (f : zD.Fn) (σ : World zD) (ρ : Env zD (zD.params f)) :
     execEnd (V := vertragVon zD f) O' passes R (f1P.rumpf f) σ ρ = .logik .bereich := by
-  cases f <;> rfl
+  cases f <;> simp only [f1P, f1Crash, execEnd, execStmt, execBlock, eval, wahr?, Expr.orte,
+    World.lese, World.merke, f1_lit_ausser upper_reply, ↓reduceIte]
 
 /-- **Verdict F1, closed: probe F1 fails (b)**, for every program with its code -- whatever
     its lock invariants, axiom ensures, starts and initial memory. -/
-theorem probeF1_widerlegt_gilt : probeF1_widerlegt := by
+theorem probeF1_widerlegt_gilt
+    (upper_reply : Float.hwLe (bruch (2, 1)) (bruch (1, 1)) = false) :
+    probeF1_widerlegt := by
   rintro ⟨P, S, Q, st, s⟩ hP h
   obtain rfl : P = f1P := hP
   have hl : (f1P.rumpf zHaupt).ohneLocks = true := rfl
   refine (h.logik.1 0 zHaupt).1.2 zO zO_rahmen zO_lokal (zO_vertrag Q) (fun L σ => mischU S L σ s)
     (havocOk_misch_lokal h.logik.2.1 (fun _ _ => s) (fun L _ => h.start.sperren L)) hwRuf
     (hwRuf_rahmen f1P) hwRuf_ohneLogik (zSp.welt []) .nil rfl .bereich ?_
-  exact (Endblock.execH_ohne S zO _ 0 hwRuf _ hl _ _).trans (f1_lauf zO 0 hwRuf zHaupt _ _)
+  exact (Endblock.execH_ohne S zO _ 0 hwRuf _ hl _ _).trans
+    (f1_lauf upper_reply zO 0 hwRuf zHaupt _ _)
 
 /-- The F1 program passes the checker (with `haupt` declared): the refutation above is by
     (b), not by (a). -/
