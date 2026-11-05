@@ -251,30 +251,15 @@ private theorem qual_phase_data :
     DeclarationData qualPhaseLibrary qualPhaseUnit
       ((lowerAllg qualPhaseUnit).toOption.get qual_lower_success)
       (⟨0, 10, 2⟩ : IntegerSchema) (fun input => input) := by
-  have count : qualPhaseUnit.fns.length = 1 := by cbv
-  refine {
-    positive := by omega
-    name := ?_
-    parameters := ?_
-    result := ?_
-    noCalls := ?_
-    noIndirectCalls := ?_
-    bounded := ?_
-    noCycle := ?_
-    execution := ?_ }
-  · cbv
-  · cbv
-  · cbv
-  · cbv
-  · cbv
-  · cbv
-  · rintro ⟨index, bound⟩
-    have small : index < 1 := by rw [← count]; exact bound
-    have zero : index = 0 := by omega
-    subst index
-    cbv
-  · intro oracle passes world input
-    cbv
+  refine certifyResults qualPhaseMembers translationQualCall
+    (fun library unit image => DeclarationData library unit image
+      (⟨0, 10, 2⟩ : IntegerSchema) (fun input => input)) ?_
+    qual_library_success qual_elab_success qual_lower_success
+  refine ⟨?library, ?found, ?unit, ?made, ?image, ?emitted, ?data⟩
+  case found => cbv <;> exact Eq.refl _
+  case made => cbv <;> exact Eq.refl _
+  case emitted => cbv <;> exact Eq.refl _
+  case data => library_data_fields
 
 /-- Preserve the complete qualified phase result before typed projections. -/
 theorem translation_qual_export_data :

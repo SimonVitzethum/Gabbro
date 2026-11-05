@@ -360,37 +360,27 @@ private theorem translation_phase_data (reverse : Bool) :
     DeclarationData (translationPhaseLibrary reverse) (translationPhaseUnit reverse)
       ((lowerAllg (translationPhaseUnit reverse)).toOption.get (translation_lower_success reverse))
       translationSchema (fun input => if reverse then fun index => input index.rev else input) := by
-  have count : (translationPhaseUnit reverse).fns.length = 1 := by cases reverse <;> cbv
-  refine {
-    positive := by omega
-    name := ?_
-    parameters := ?_
-    result := ?_
-    noCalls := ?_
-    noIndirectCalls := ?_
-    bounded := ?_
-    noCycle := ?_
-    execution := ?_ }
-  · cases reverse <;> cbv
-  · cases reverse <;> cbv
-  · cases reverse <;> cbv
-  · cases reverse <;> cbv
-  · cases reverse <;> cbv
-  · cases reverse <;> cbv
-  · rintro ⟨index, bound⟩
-    have small : index < 1 := by rw [← count]; exact bound
-    have zero : index = 0 := by omega
-    subst index
-    cases reverse <;> cbv
-  · intro oracle passes world input
-    cases reverse <;> cbv
-    all_goals first
-      | rfl
-      | apply congrArg (RufAusgang.ok world)
-        funext index
-        rcases index with ⟨position, bound⟩
-        have choices : position = 0 ∨ position = 1 := by change position < 2 at bound; omega
-        rcases choices with rfl | rfl <;> rfl
+  cases reverse with
+  | false =>
+    refine certifyResults (translationPhaseMembers false) translationCall
+      (fun library unit image => DeclarationData library unit image translationSchema
+        (fun input => input)) ?_ (translation_library_success false)
+      (translation_elab_success false) (translation_lower_success false)
+    refine ⟨?libraryFalse, ?foundFalse, ?unitFalse, ?madeFalse, ?imageFalse, ?emittedFalse, ?dataFalse⟩
+    case foundFalse => cbv <;> exact Eq.refl _
+    case madeFalse => cbv <;> exact Eq.refl _
+    case emittedFalse => cbv <;> exact Eq.refl _
+    case dataFalse => library_data_fields
+  | true =>
+    refine certifyResults (translationPhaseMembers true) translationCall
+      (fun library unit image => DeclarationData library unit image translationSchema
+        (fun input index => input index.rev)) ?_ (translation_library_success true)
+      (translation_elab_success true) (translation_lower_success true)
+    refine ⟨?libraryTrue, ?foundTrue, ?unitTrue, ?madeTrue, ?imageTrue, ?emittedTrue, ?dataTrue⟩
+    case foundTrue => cbv <;> exact Eq.refl _
+    case madeTrue => cbv <;> exact Eq.refl _
+    case emittedTrue => cbv <;> exact Eq.refl _
+    case dataTrue => library_data_fields
 
 /-- Full phase success and typed image facts for the public selected values.
     The substitutions happen before any finite index or result projection. -/

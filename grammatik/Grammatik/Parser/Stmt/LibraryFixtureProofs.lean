@@ -60,6 +60,70 @@ theorem certifyData (members : List SItemTief) (call : SLibraryCall)
   subst unit
   exact ⟨elaborated, facts⟩
 
+/-- Retain concrete complete producer results before constructing any indexed
+    fact. Their equality proofs transport the whole typed image back to the
+    canonical success-dependent selections only after all facts are proved. -/
+theorem certifyResults (members : List SItemTief) (call : SLibraryCall)
+    (Q : (library : ULibrary) → (unit : UProg) →
+      (Programm (declOf unit) × List (declOf unit).Fn) → Prop)
+    (certificate : ∃ library, libraryDecl members call = .ok library ∧
+      ∃ unit, elabU (pre108 (translatorItems members library)) = .ok unit ∧
+      ∃ image, lowerAllg unit = .ok image ∧ Q library unit image) :
+    ∀ present : (libraryDecl members call).toOption.isSome = true,
+      let library := (libraryDecl members call).toOption.get present
+      ∀ ready : (elabU (pre108 (translatorItems members library))).toOption.isSome = true,
+        let unit := (elabU (pre108 (translatorItems members library))).toOption.get ready
+        ∀ lowered : (lowerAllg unit).toOption.isSome = true,
+          Q library unit ((lowerAllg unit).toOption.get lowered) := by
+  obtain ⟨library, found, unit, made, image, emitted, facts⟩ := certificate
+  intro present
+  dsimp only
+  intro ready
+  dsimp only
+  intro lowered
+  have selected : library = (libraryDecl members call).toOption.get present :=
+    Except.ok.inj (found.symm.trans (except_ok_get present))
+  subst library
+  have selected : unit =
+      (elabU (pre108 (translatorItems members
+        ((libraryDecl members call).toOption.get present)))).toOption.get ready :=
+    Except.ok.inj (made.symm.trans (except_ok_get ready))
+  subst unit
+  have selected : image = _ := Except.ok.inj (emitted.symm.trans (except_ok_get lowered))
+  subst image
+  exact facts
+
+-- This bounded proof template is applied only after the three producer
+-- equalities have fixed concrete library/unit/image values. It computes no
+-- source, changes no limits, and proves every field, including universal runs.
+macro "library_data_fields" : tactic => `(tactic|
+  refine {
+    positive := by decide
+    name := by cbv
+    parameters := by cbv
+    result := by cbv
+    noCalls := by cbv
+    noIndirectCalls := by cbv
+    bounded := by cbv
+    noCycle := by
+      rintro ⟨index, bound⟩
+      have small : index < 1 := bound
+      have zero : index = 0 := by omega
+      subst index
+      cbv
+    execution := by
+      intro oracle passes world input
+      cbv
+      all_goals first
+        | rfl
+        | apply congrArg (RufAusgang.ok world)
+          funext index
+          rcases index with ⟨position, bound⟩
+          have choices : position = 0 ∨ position = 1 := by
+            change position < 2 at bound
+            omega
+          rcases choices with rfl | rfl <;> rfl })
+
 /-- Equality of answers may be cancelled without reducing a concrete unit
     beneath its dependent result type. -/
 theorem answer_injective {source : LibrarySource} {unit : UProg}
