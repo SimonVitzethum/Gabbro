@@ -6,6 +6,19 @@ public import Grammatik.Parser.Stmt.LibraryCertificates
 public import Grammatik.Parser.Stmt.LibraryExport
 public import Grammatik.Zielsatz.Kern.Akzeptiert
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+import all Grammatik.Parser.Stmt.LibraryExport
+import all Grammatik.Parser.Stmt.LibraryTranslationFixtures
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
+import all Grammatik.Parser.Elab.Generic.StaticConformance
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest1
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Body
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest2a
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Stufe
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Seq
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Struct
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -61,6 +74,66 @@ set_option maxHeartbeats 4000000
     the lowering's C02 refusal (`uAnwReiheCore` refuses `lcall`/`bindLib`
     by name): an expanded statement is definitionally no library call. -/
 
+-- Reuse the checked ordinary-source tokens, parser equation and exact text
+-- bridge. Instantiate getter laws only after they have been proved symbolically.
+private theorem ident_tokens : translationTokens false = translationPhaseTokens false := by
+  unfold translationTokens
+  exact tokens_from_text (translationText false) (translationCharacters false)
+    (translationPhaseTokens false) (translation_text false) (translation_lexed false)
+
+private theorem items_from_tokens (original tokens : List Token) (items : List SItemTief)
+    (tokenEq : original = tokens) (parsed : parseTopTief tokens = .ok items) :
+    (parseTopTief original).toOption.getD [] = items := by
+  rw [tokenEq, parsed]
+  rfl
+
+private theorem ident_items : translationItems false =
+    LibraryFixtureProofs.parsedFixture 2 (translationResult false) [.num 3, .num 5] := by
+  unfold translationItems
+  exact items_from_tokens (translationTokens false) (translationPhaseTokens false)
+    (LibraryFixtureProofs.parsedFixture 2 (translationResult false) [.num 3, .num 5])
+    ident_tokens (translation_parsed false)
+
+attribute [local cbv_opaque] lowStufe lowSeqL lowStructL lowEndL uFloatLimit
+attribute [local cbv_eval] export_seq_succ lowStructL_succ lowEndL_succ
+  lowStufe_seq lowStufe_struct lowStufe_ende
+
+-- The actual whole ordinary caller unit has two implemented functions after
+-- its translator declaration is consumed. Check this against its own carrier.
+local macro "ident_functions" : tactic => `(tactic| (
+  rintro ⟨index, bound⟩
+  have size : index < 2 := bound
+  have choices : index = 0 ∨ index = 1 := by omega
+  rcases choices with first | second
+  · subst index
+    cbv <;> exact Eq.refl _
+  · subst index
+    cbv <;> exact Eq.refl _))
+
+-- Use LibraryExport's one generic assembler/checker certificate. The values
+-- here are inferred from successful canonical producers, never reconstructed.
+private theorem ident_phases :
+    (∃ expanded, exportLibraryUnit (uMembers (pre108 (translationItems false))) = .ok expanded ∧
+      alleOhneBibliothek expanded = true) ∧
+    ∃ unit, elabU (pre108 (translationItems false)) = .ok unit ∧ ExportFacts unit := by
+  rw [ident_items]
+  constructor
+  · refine ⟨?expanded, ?produced, ?ordinary⟩
+    case produced => cbv <;> exact Eq.refl _
+    case ordinary => cbv
+  · refine ⟨?unit, ?made, ?facts⟩
+    case made => cbv <;> exact Eq.refl _
+    case facts =>
+      refine {
+        gate := by cbv
+        invs := by cbv
+        contracts := by cbv
+        measures := by ident_functions
+        functions := ?_ }
+      refine ⟨Fin.cases ?first (Fin.cases ?second (fun i => i.elim0)), ?origin, ?safe⟩
+      case origin => ident_functions
+      case safe => intro invariants pointers foreigns; cbv
+
 /-- The identity caller unit through the export: the source text with an
     unqualified library call elaborates to an ordinary unit. -/
 def exportIdentEinheit : UProg :=
@@ -68,11 +141,18 @@ def exportIdentEinheit : UProg :=
 
 theorem export_ident_elab_zeuge :
     (elabU (pre108 (translationItems false))).toOption.isSome = true := by
-  decide +kernel
+  obtain ⟨unit, made, _⟩ := ident_phases.2
+  rw [made]
+  rfl
+
+private theorem ident_export_facts : ExportFacts exportIdentEinheit := by
+  obtain ⟨unit, made, facts⟩ := ident_phases.2
+  unfold exportIdentEinheit
+  rw [made]
+  exact facts
 
 /-- The export leaves no ignored source duty behind on the fixture. -/
-theorem export_ident_tor_zeuge : exportIdentEinheit.exportGate = .ok () := by
-  decide +kernel
+theorem export_ident_tor_zeuge : exportIdentEinheit.exportGate = .ok () := ident_export_facts.gate
 
 /-- The expanded source: the pre-pass output on the fixture members. -/
 def exportIdentErweitert : List SItemTief :=
@@ -81,15 +161,22 @@ def exportIdentErweitert : List SItemTief :=
 /-- The pre-pass ran: every expanded body is ordinary. -/
 theorem export_ident_ohne_zeuge :
     Gabbro.Grammatik.Uebersetzung.alleOhneBibliothek exportIdentErweitert = true := by
-  decide +kernel
+  obtain ⟨expanded, produced, ordinary⟩ := ident_phases.1
+  unfold exportIdentErweitert
+  rw [produced]
+  exact ordinary
 
 theorem export_ident_lower_ok :
-    (lowerAllg exportIdentEinheit).toOption.isSome = true := by
-  decide +kernel
+    (lowerAllg exportIdentEinheit).toOption.isSome = true := export_lowered ident_export_facts
 
 def exportIdentGesenkert :
     Programm (declOf exportIdentEinheit) × List (declOf exportIdentEinheit).Fn :=
   (lowerAllg exportIdentEinheit).toOption.get export_ident_lower_ok
+
+-- Normalize the actual selected-image alias before applying the success law.
+private theorem ident_emitted : lowerAllg exportIdentEinheit = .ok exportIdentGesenkert := by
+  unfold exportIdentGesenkert
+  exact except_ok_get (x := lowerAllg exportIdentEinheit) export_ident_lower_ok
 
 /-- The connected verdict: source text with an unqualified library call
     elaborates, lowers, and the checker Bool holds. The enumerations are
@@ -101,7 +188,7 @@ theorem export_ident_akzeptiert_zeuge :
       exportIdentGesenkert.2 (List.finRange exportIdentEinheit.locks.length)
       ((List.finRange exportIdentEinheit.tabs.length).map Sum.inl ++
         (List.finRange exportIdentEinheit.globs.length).map Sum.inr) [] = true := by
-  decide +kernel
+  exact export_checked ident_export_facts ident_emitted
 
 /-- The end-to-end chain in one witness: source text to accepted unit. -/
 theorem export_ident_kette_zeuge :
