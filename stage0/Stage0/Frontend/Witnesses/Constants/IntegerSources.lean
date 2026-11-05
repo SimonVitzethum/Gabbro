@@ -184,21 +184,119 @@ theorem initializer_prepared :
   rw [origin]
   rfl
 
-/-- Certify whole alias/scope constructor results before their dependent meaning projections. -/
-def initializerTail : SourceTail initializerInput := by
-  refine {
-    metadata := ?metadata
-    order := ?order
-    ordered := ?ordered
-    derived := ?derived
-    elaborated := ?elaborated
-    aliases := ?aliases
-    constants := ?constants }
-  case metadata => cbv <;> exact Eq.refl _
-  case ordered => cbv <;> exact Eq.refl _
-  case elaborated => cbv <;> exact Eq.refl _
-  case aliases => cbv
-  case constants => cbv
+/-- Cache the existing collector result before evaluating its canonical typed scalar fold. -/
+def initializerScopePreparation :
+    { prepared : Frontend.Prepared // Frontend.prepare initializerInput.original = prepared } := by
+  refine ⟨?prepared, ?origin⟩
+  case origin => cbv <;> exact Eq.refl _
+
+/-- The entire value list is inferred from the original typed fold, never supplied as a snapshot. -/
+def initializerScalarFold :
+    { values : List (String × Int) //
+      Frontend.typedConstants initializerScopePreparation.val.env
+        initializerScopePreparation.val.fns initializerInput.original [] = some values } := by
+  refine ⟨?values, ?origin⟩
+  case origin => cbv <;> exact Eq.refl _
+
+theorem initializer_scalar_origin :
+    Frontend.typedConstants (Frontend.prepare initializerInput.original).env
+      (Frontend.prepare initializerInput.original).fns initializerInput.original [] =
+        some initializerScalarFold.val := by
+  rw [initializerScopePreparation.property]
+  exact initializerScalarFold.property
+
+theorem initializer_alias_stability :
+    uAliase initializerScalarFold.val (Frontend.prepare initializerInput.original).expanded =
+      (Frontend.prepare initializerInput.original).env := by
+  rw [initializerScopePreparation.property]
+  cbv
+
+/-- Use the canonical conservative constructor, retaining its full original fold certificate. -/
+def initializerConservative : Frontend.DerivedScopes initializerInput.original := by
+  refine ⟨Frontend.evaluatedScopes initializerInput.original initializerScalarFold.val
+    initializer_scalar_origin, ?stable⟩
+  case stable =>
+    change uAliase initializerScalarFold.val (Frontend.prepare initializerInput.original).expanded =
+      (Frontend.prepare initializerInput.original).env
+    exact initializer_alias_stability
+
+theorem initializer_derive_origin :
+    Frontend.deriveScopes initializerInput.original = .ok initializerConservative := by
+  unfold Frontend.deriveScopes
+  split
+  · rename_i rejected
+    cases rejected.symm.trans initializer_scalar_origin
+  · rename_i values selected
+    have same : values = initializerScalarFold.val :=
+      Option.some.inj (selected.symm.trans initializer_scalar_origin)
+    subst values
+    split
+    · rfl
+    · rename_i rejected
+      exact False.elim (rejected initializer_alias_stability)
+
+/-- Dependency ordering remains the real checked producer, with its complete permutation. -/
+def initializerAliasOrder :
+    { order : Frontend.AliasOrder initializerInput.original //
+      Frontend.orderAliases initializerInput.original = .ok order } := by
+  refine ⟨?order, ?origin⟩
+  case origin => cbv <;> exact Eq.refl _
+
+def initializerConstantOrder :
+    { order : Frontend.ConstantOrder initializerInput.original //
+      Frontend.orderConstants initializerInput.original = .ok order } := by
+  refine ⟨?order, ?origin⟩
+  case origin => cbv <;> exact Eq.refl _
+
+theorem initializer_functions_complete :
+    (Frontend.constantFunctions initializerConservative.scope.types initializerInput.original).length =
+      initializerConservative.scope.functions.length := by
+  dsimp only [initializerConservative, Frontend.evaluatedScopes, Frontend.Scopes.types]
+  rw [initializerScopePreparation.property]
+  cbv
+
+theorem initializer_aliases_resolved :
+    Frontend.aliasesResolved initializerConservative.scope.declared initializerInput.original = true := by
+  dsimp only [initializerConservative, Frontend.evaluatedScopes]
+  rw [initializerScopePreparation.property]
+  cbv
+
+theorem initializer_scope_meaning : Frontend.scopeMeaning initializerConservative = true := by
+  dsimp only [Frontend.scopeMeaning, initializerConservative,
+    Frontend.evaluatedScopes, Frontend.Scopes.types]
+  rw [initializerScopePreparation.property]
+  cbv
+
+theorem initializer_conservative_kept :
+    Frontend.elaborateScopes initializerInput.original = .ok initializerConservative :=
+  Frontend.elaborateScopes_preserves initializerInput.original initializerConservative
+    initializerAliasOrder.val initializerAliasOrder.property initializer_derive_origin
+    initializer_functions_complete initializer_aliases_resolved
+    (Bool.and_eq_true_iff.mp initializer_scope_meaning).1
+
+theorem constant_scopes_preserved {items : List SItemTief}
+    (order : Frontend.ConstantOrder items) (result : Frontend.DerivedScopes items)
+    (ordered : Frontend.orderConstants items = .ok order)
+    (elaborated : Frontend.elaborateScopes items = .ok result)
+    (meaning : Frontend.scopeMeaning result = true) :
+    Frontend.elaborateConstantScopes items = .ok result := by
+  unfold Frontend.elaborateConstantScopes
+  rw [ordered]
+  dsimp only [bind, Except.bind]
+  rw [elaborated]
+  simp only [meaning, ↓reduceIte, pure, Except.pure]
+
+/-- Compose the real dependency, scalar, alias, and meaning phases without rerunning their graph. -/
+def initializerTail : SourceTail initializerInput where
+  metadata := by cbv
+  order := initializerAliasOrder.val
+  ordered := initializerAliasOrder.property
+  derived := initializerConservative
+  elaborated := by
+    exact constant_scopes_preserved initializerConstantOrder.val initializerConservative
+      initializerConstantOrder.property initializer_conservative_kept initializer_scope_meaning
+  aliases := (Bool.and_eq_true_iff.mp initializer_scope_meaning).1
+  constants := (Bool.and_eq_true_iff.mp initializer_scope_meaning).2
 
 theorem initializer_metadata :
     Konst.checkSourceMetadata initializerInput.original = .ok () := initializerTail.metadata
