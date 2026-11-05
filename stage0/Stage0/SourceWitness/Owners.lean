@@ -73,4 +73,3 @@ import all Stage0.Frontend.Functions
 import all Stage0.Frontend.Guard
 import all Stage0.Frontend.Constants.ConstantScopes
 import all Stage0.Frontend.Constants.ConstantMeaning
-
