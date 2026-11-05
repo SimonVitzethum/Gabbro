@@ -68,8 +68,7 @@ scoped macro "rights_input " source:term " with_cuts " cuts:term
         ([$letters,*] : List Char) := by rfl
     refine Input.of_chunks (source := $source) pieces ?text ?room
     case text =>
-      rw [charsEq]
-      cbv
+      rw [charsEq] <;> cbv
     case room =>
       rw [charsEq]
       cbv <;> omega)
