@@ -79,8 +79,12 @@ scoped macro "rights_input " source:term " with_cuts " "[" cuts:ident,* "]"
   `(show Input $source from by
     let pieces : List Chunk := [$cuts,*]
     let spelling : String := $spelling
-    have certificate : ChunkCertificate pieces spelling := by as_aux_lemma => exact $certificate
-    have original : $source = spelling := by as_aux_lemma => cbv
+    have certificate : ChunkCertificate pieces spelling := by
+      dsimp only [pieces, spelling]
+      as_aux_lemma => exact $certificate
+    have original : $source = spelling := by
+      dsimp only [spelling]
+      as_aux_lemma => cbv
     exact Input.of_chunks (source := $source) pieces
       (original.trans certificate.text.symm) certificate.room)
 
