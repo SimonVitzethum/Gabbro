@@ -16,7 +16,11 @@ theorem taP_koerper_haupt1 : KoerperGutG taP 0 taHaupt1 := by
   rw [hr] at hrun
   rcases execEnd_cons_logikV _ _ _ _ _ _ _ _ hrun with h1 | ⟨σ1, ρ1, _, h1⟩
   · simp only [taLocksH, execStmt] at h1
-    have h2 := execBlock_eins_logikV _ _ _ _ _ _ (mapWelt_logikV h1)
+    have hbody : execBlock O' 0 (torRuf taP R) taWarteBody (σ.nimmt TaLock.k) ρ =
+        .logik (.vorbedingung g) := by
+      cases hout : execBlock O' 0 (torRuf taP R) taWarteBody (σ.nimmt TaLock.k) ρ <;>
+        simp_all only [Ausgang.mapWelt, reduceCtorEq]
+    have h2 := execBlock_eins_logikV _ _ _ _ _ _ hbody
     simp only [taRufWarte, execStmt, ht] at h2
     split at h2
     · cases h2

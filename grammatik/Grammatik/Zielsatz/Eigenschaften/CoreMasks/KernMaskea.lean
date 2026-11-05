@@ -65,6 +65,19 @@ theorem entfaltbar_nicht_rueck {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : L
     (s : Stmt D V l Γ Λ Λ') (h : GEntfaltbar s = true) : s.istRueck = false := by
   cases s <;> simp_all [Stmt.istRueck, GEntfaltbar]
 
+private theorem anRueck_ende_cons {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') (rest : Endblock D V l Γ Λ')
+    (h : (GRest.ende (.cons s rest)).anRueck = true) : s.istRueck = true := by
+  cases s <;> simp_all only [GRest.anRueck, Endblock.istRueck, Stmt.istRueck,
+    Bool.false_eq_true]
+
+private theorem anRueck_dann_cons {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' Λ'' : List (Res D)} (s : Stmt D V l Γ Λ Λ')
+    (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'')
+    (h : (GRest.dann (.cons s rest) k).anRueck = true) : s.istRueck = true := by
+  cases s <;> simp_all only [GRest.anRueck, Block.istRueck, Stmt.istRueck,
+    Bool.false_eq_true]
+
 /-- **A finished thread has no step**: its stack is empty and its residue stands at a return;
     every step constructor needs a nonempty stack, or a residue that is not a return. -/
 theorem fertig_kein_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
@@ -74,6 +87,17 @@ theorem fertig_kein_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
   cases hs with
   | g1 hs =>
     cases hs with
+    | blatt l Γ Λ Λ' s rest ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
+      rw [hhead] at hr
+      exact stmt_rueck_nicht_ok s (anRueck_ende_cons s rest hr) _ _ _ _ hstep
+    | endeEntf l Γ Λ Λ' s rest ρ hent hhead =>
+      rw [hhead] at hr
+      have hs := anRueck_ende_cons s rest hr
+      rw [entfaltbar_nicht_rueck s hent] at hs
+      exact Bool.noConfusion hs
+    | dannBlatt l Γ Λ Λ' Λ'' s rest k ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
+      rw [hhead] at hr
+      exact stmt_rueck_nicht_ok s (anRueck_dann_cons s rest k hr) _ _ _ _ hstep
     | endeForm l Γ Λ e ρ hl hent hhead =>
       rw [hhead] at hr
       cases e <;> simp_all [GRest.anRueck, Endblock.istRueck, EndEntfaltbar]

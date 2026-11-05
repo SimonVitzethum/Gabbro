@@ -99,9 +99,9 @@ theorem ruS_fS (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ
   | _, _, _, _, _, _, .call .. => fS_nachΛ _ _ _ _ _
   | _, _, _, _, _, _, .callInd .. => fS_nachΛ _ _ _ _ _
   | _, _, _, _, e, w, .callIndElse (n := n) _ _ _ _ _ err =>
-    (fS_nachΛ _ _ _ _ _).trans (by
-      show ((!Φ.ind n || w) && fE Φ.mitRuhe e false (Endblock.umΛ _ (ruEnd err))) = _
-      rw [fE_umΛ, ruEnd_fE Φ e _ err]; rfl)
+      (fS_nachΛ _ _ _ _ _).trans
+        (congrArg (fun x => (!Φ.ind n || w) && x)
+          ((fE_umΛ Φ.mitRuhe _ e false (ruEnd err)).trans (ruEnd_fE Φ e false err)))
   | _, _, _, _, e, _, .locks _ _ body => ruB_fB Φ e false body
   | _, _, _, _, e, _, .breaking _ body => ruB_fB Φ e false body
   | _, _, _, _, e, _, .traverse _ _ body => ruB_fB Φ e false body
@@ -138,10 +138,11 @@ theorem ruB_fB (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ
   | _, _, _, _, e, w, .bindCallInd (n := n) _ _ _ _ _ rest =>
       congrArg (fun x => (!Φ.ind n || w) && x)
         ((fB_vorΛ Φ.mitRuhe _ e false (ruB rest)).trans (ruB_fB Φ e false rest))
-  | _, _, _, _, e, w, .bindCallIndElse (n := n) _ _ _ _ _ err rest => by
-      show ((!Φ.ind n || w) && fE Φ.mitRuhe e false (Endblock.umΛ _ (ruEnd err)) &&
-        fB Φ.mitRuhe e false (Block.vorΛ _ (ruB rest))) = _
-      rw [fE_umΛ, fB_vorΛ, ruEnd_fE Φ e _ err, ruB_fB Φ e _ rest]; rfl
+  | _, _, _, _, e, w, .bindCallIndElse (n := n) _ _ _ _ _ err rest =>
+      kongr₂ (· && ·)
+        (congrArg (fun x => (!Φ.ind n || w) && x)
+          ((fE_umΛ Φ.mitRuhe _ e false (ruEnd err)).trans (ruEnd_fE Φ e false err)))
+        ((fB_vorΛ Φ.mitRuhe _ e false (ruB rest)).trans (ruB_fB Φ e false rest))
   | _, _, _, _, e, w, .bindCallElse g _ _ _ _ err rest => by
       show ((!Φ.ruf g || w) && fE Φ.mitRuhe e false (Endblock.umΛ _ (ruEnd err)) &&
         fB Φ.mitRuhe e (Φ.vor g) (Block.vorΛ _ (ruB rest))) = _
@@ -213,10 +214,11 @@ theorem ruEnd_fE (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ 
   | _, _, _, e, w, .bindCallInd (n := n) _ _ _ _ _ rest =>
       congrArg (fun x => (!Φ.ind n || w) && x)
         ((fE_umΛ Φ.mitRuhe _ e false (ruEnd rest)).trans (ruEnd_fE Φ e false rest))
-  | _, _, _, e, w, .bindCallIndElse (n := n) _ _ _ _ _ err rest => by
-      show ((!Φ.ind n || w) && fE Φ.mitRuhe e false (Endblock.umΛ _ (ruEnd err)) &&
-        fE Φ.mitRuhe e false (Endblock.umΛ _ (ruEnd rest))) = _
-      rw [fE_umΛ, fE_umΛ, ruEnd_fE Φ e _ err, ruEnd_fE Φ e _ rest]; rfl
+  | _, _, _, e, w, .bindCallIndElse (n := n) _ _ _ _ _ err rest =>
+      kongr₂ (· && ·)
+        (congrArg (fun x => (!Φ.ind n || w) && x)
+          ((fE_umΛ Φ.mitRuhe _ e false (ruEnd err)).trans (ruEnd_fE Φ e false err)))
+        ((fE_umΛ Φ.mitRuhe _ e false (ruEnd rest)).trans (ruEnd_fE Φ e false rest))
   | _, _, _, e, w, .narrow _ _ _ sonst rest =>
       kongr₂ (· && ·) (ruEnd_fE Φ e false sonst) (ruEnd_fE Φ e w rest)
   | _, _, _, e, w, .narrowRequired _ _ _ rest => ruEnd_fE Φ e w rest
@@ -224,10 +226,10 @@ theorem ruEnd_fE (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ 
   | _, _, _, e, w, .ite _ t f =>
       kongr₂ (· && ·) (ruEnd_fE Φ e false f) (ruEnd_fE Φ e w t)
 
-  | _, _, _, _, e, .float _ _ _ _ _ rest => ruEnd_fE Φ e w rest
-  | _, _, _, _, e, .floatLit _ _ _ rest => ruEnd_fE Φ e w rest
-  | _, _, _, _, e, .floatOf _ _ _ rest => ruEnd_fE Φ e w rest
-  | _, _, _, _, e, .floatNarrow _ _ _ sonst rest =>
+  | _, _, _, e, w, .float _ _ _ _ _ rest => ruEnd_fE Φ e w rest
+  | _, _, _, e, w, .floatLit _ _ _ rest => ruEnd_fE Φ e w rest
+  | _, _, _, e, w, .floatOf _ _ _ rest => ruEnd_fE Φ e w rest
+  | _, _, _, e, w, .floatNarrow _ _ _ sonst rest =>
       kongr₂ (· && ·) (ruEnd_fE Φ e false sonst) (ruEnd_fE Φ e w rest)
 theorem ruArms_fArms (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option Ty)} (e : Bool)
