@@ -36,6 +36,8 @@ theorem translationCertificate_weltTreu_zeuge
       (translationCertificate true).fuel (translationDeclaration true).translator world
       ((translationDeclaration true).arguments (translationCertificate true).input) =
         .ok world output :=
-  translationCertificate_weltTreu (translationCertificate true) oracle passes world
+  translationCertificate_weltTreu (source := translationSource true)
+    (u := translationUnit true) (decl := translationDeclaration true)
+    (translationCertificate true) oracle passes world
 
 end Gabbro.Grammatik.Uebersetzung

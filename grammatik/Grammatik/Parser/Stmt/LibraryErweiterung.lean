@@ -142,12 +142,17 @@ theorem translation_nutzlast_stelligkeit_verweigert_zeuge :
 /-- An ambiguous library function refuses through the actual pre-pass:
     resolution never picks the first match. -/
 def mehrdeutigRufer : SItemTief :=
-  .fnT { art := "impl", name := "caller", params := [], res := none,
-    fehler := none, klauseln := [] }
+  .fnT
+    { art := "impl"
+      name := "caller"
+      params := []
+      res := none
+      fehler := none
+      klauseln := [] }
     (.block [.lcall ⟨["m"], ["consume"], [], []⟩] (some (.ret none)))
 
 theorem export_mehrdeutig_verweigert_zeuge :
-    (exportLibraryUnit (doppeltMembers ++ [mehrdeutigRufer])).isErr = true := by
+    (exportLibraryUnit (doppeltMembers ++ [mehrdeutigRufer])).toOption.isNone = true := by
   decide +kernel
 
 end Gabbro.Grammatik.Uebersetzung
