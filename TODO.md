@@ -43,7 +43,7 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   The generic constant source packet and all-guard call-head certificates also pass direct checks;
   the complete call-check admission and floor witness modules now build through the shared assembly
   certificate. Both integer source packets, including computed initialization, build; the final
-  initializer compiler packet still needs its array/literal proof connection. Other concrete constant
+  initializer compiler packet has named array/literal certificates under kernel revalidation. Other concrete constant
   program packets remain under repair. Their downstream
   `ConstWitness`/`ConstValuesWitness` resource closure remains unmeasured after the new phase port.
   The shared complete compilation packet, hardware-free image phase/geometry theorem and the
@@ -70,6 +70,12 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   its concrete library witness build through the same transparent proposition. The numbered
   coverage-cell predicates were re-read against the current checker and the refreshed closure
   pins pass; this does not extend the measured source or descriptor coverage.
+  The repaired record probes, scoped-await contract, recording report and all nineteen keyword
+  dispatch equations now pass. The successful-place parser theorem and its direct printed
+  assignment/call/emission consumers build. The rights/ownership scanner fragments and their
+  individual numeric/text certificates build; long input composition still reaches the kernel
+  recursion limit. The bounded Dyn witness remains resource-unmeasured after sustained
+  memory-high throttling in both single-module and larger integration scopes, without OOM.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
   The authorised acceptance scope is Lean and the Lean parts of GabbroV; Rust, Cargo and LLVM checks are
   deliberately unmeasured. The owner authorises pushing once the named Lean builds and GabbroV's Lean
