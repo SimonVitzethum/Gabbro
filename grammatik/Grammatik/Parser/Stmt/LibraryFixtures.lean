@@ -78,6 +78,8 @@ private theorem empty_function (ctx : UCtx) (heads : List UFnKopf)
       pure (gives, needs, beforeFold ++ beforeCall, result)) := by
   simp only [elabFn, empty_row, List.getLast?_nil, Bool.and_false,
     Bool.false_eq_true, ite_false, List.nil_append, bind, Except.bind, pure, Except.pure]
+  repeat' first | rfl | split
+  all_goals simp_all <;> subst_vars <;> simp_all
 
 attribute [local cbv_opaque] elabFn
 attribute [local cbv_eval] empty_function
@@ -230,6 +232,7 @@ private def translationPhaseItems (reverse : Bool) : List SItemTief :=
 private theorem translation_items (reverse : Bool) :
     translationPhaseItems reverse = parsedFixture 2 (translationResult reverse) [.num 3, .num 5] := by
   simp only [translationPhaseItems, translation_parsed]
+  rfl
 
 attribute [local cbv_opaque] translationPhaseItems
 attribute [local cbv_eval] translation_items
@@ -418,6 +421,7 @@ private def rekPhaseItems : List SItemTief :=
 private theorem rek_items : rekPhaseItems =
     parsedFixture 1 (.call "build" [.variable "region"]) [.num 3] := by
   simp only [rekPhaseItems, rek_parsed]
+  rfl
 
 attribute [local cbv_opaque] rekPhaseItems
 attribute [local cbv_eval] rek_items
