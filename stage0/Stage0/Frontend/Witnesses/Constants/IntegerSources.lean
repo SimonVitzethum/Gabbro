@@ -202,14 +202,19 @@ theorem initializer_scalar_origin :
     Frontend.typedConstants (Frontend.prepare initializerInput.original).env
       (Frontend.prepare initializerInput.original).fns initializerInput.original [] =
         some initializerScalarFold.val := by
-  rw [initializerScopePreparation.property]
-  exact initializerScalarFold.property
+  have transported := congrArg (fun prepared : Frontend.Prepared =>
+    Frontend.typedConstants prepared.env prepared.fns initializerInput.original [])
+    initializerScopePreparation.property
+  exact transported.trans initializerScalarFold.property
 
 theorem initializer_alias_stability :
     uAliase initializerScalarFold.val (Frontend.prepare initializerInput.original).expanded =
       (Frontend.prepare initializerInput.original).env := by
-  rw [initializerScopePreparation.property]
-  cbv
+  have stable : uAliase initializerScalarFold.val initializerScopePreparation.val.expanded =
+      initializerScopePreparation.val.env := by cbv
+  exact Eq.mpr (congrArg (fun prepared : Frontend.Prepared =>
+    uAliase initializerScalarFold.val prepared.expanded = prepared.env)
+    initializerScopePreparation.property) stable
 
 /-- Use the canonical conservative constructor, retaining its full original fold certificate. -/
 def initializerConservative : Frontend.DerivedScopes initializerInput.original := by
@@ -252,8 +257,12 @@ theorem initializer_functions_complete :
     (Frontend.constantFunctions initializerConservative.scope.types initializerInput.original).length =
       initializerConservative.scope.functions.length := by
   dsimp only [initializerConservative, Frontend.evaluatedScopes, Frontend.Scopes.types]
-  rw [initializerScopePreparation.property]
-  cbv
+  let holds (prepared : Frontend.Prepared) : Prop :=
+    (Frontend.constantFunctions
+      (prepared.env ++ initializerScalarFold.val.map (fun c => (c.1, c.2, c.2)))
+      initializerInput.original).length = prepared.fns.length
+  have kept : holds initializerScopePreparation.val := by cbv
+  exact Eq.mpr (congrArg holds initializerScopePreparation.property) kept
 
 theorem initializer_aliases_resolved :
     Frontend.aliasesResolved initializerConservative.scope.declared initializerInput.original = true := by
@@ -264,8 +273,16 @@ theorem initializer_aliases_resolved :
 theorem initializer_scope_meaning : Frontend.scopeMeaning initializerConservative = true := by
   dsimp only [Frontend.scopeMeaning, initializerConservative,
     Frontend.evaluatedScopes, Frontend.Scopes.types]
-  rw [initializerScopePreparation.property]
-  cbv
+  let holds (prepared : Frontend.Prepared) : Prop :=
+    (initializerInput.original.all
+        (Frontend.checkAliasMeaning
+          (prepared.env ++ initializerScalarFold.val.map (fun c => (c.1, c.2, c.2)))) &&
+      initializerInput.original.all
+        (Frontend.checkConstantMeaning
+          (prepared.env ++ initializerScalarFold.val.map (fun c => (c.1, c.2, c.2)))
+          prepared.fns initializerScalarFold.val)) = true
+  have kept : holds initializerScopePreparation.val := by cbv
+  exact Eq.mpr (congrArg holds initializerScopePreparation.property) kept
 
 theorem initializer_conservative_kept :
     Frontend.elaborateScopes initializerInput.original = .ok initializerConservative :=
