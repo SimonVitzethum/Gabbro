@@ -13,10 +13,17 @@
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Proben
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
+import all Grammatik.Parser.Elab.Uebersetze.Einheit.Elaboration
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil13
 
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
+
+attribute [local cbv_opaque] uFloatLimit
 
 /-- The false-verdict probe: the same check with a `can_fail` body returning
     `false` -- a completed measurement with a negative verdict, never a
@@ -29,41 +36,52 @@ def probenCheckFalsch : SCheck :=
     from the check name. -/
 example : (uCheck [] [] ["g"] ["p"] [] probenCheck).map
     (fun c => (c.name, c.claim, c.sonde, c.probe, c.duty)) =
-    .ok ("p", "c", none, "p#probe", "p#duty") := rfl
+    .ok ("p", "c", none, "p#probe", "p#duty") := by cbv
 
 /-- The counterprobe identity travels with the record. -/
 def probenCheckSonde : SCheck :=
   { probenCheck with sonde := some ("assert x", "ext") }
 
 example : (uCheck [] [] ["g"] ["p"] [] probenCheckSonde).map (·.sonde) =
-    .ok (some ("ext", "assert x")) := rfl
+    .ok (some ("ext", "assert x")) := by cbv
 
 /-- The floors elaborate to the retained predicates. -/
 example : (uCheck [] [] ["g"] ["p"] [] { probenCheck with boden := [.tru, .fls] }).map
-    (·.boeden) = .ok [.tru, .fls] := rfl
+    (·.boeden) = .ok [.tru, .fls] := by cbv
 
 /-- The false-verdict probe elaborates to its generated producer, exactly like
     the true one. -/
 example : (uProbeFns [] [] [] [] [] [] [] [] [] [] [] [] [] [] 0 ["g"] [probenCheckFalsch]).map
-    (List.map (·.name)) = .ok ["p#probe", "p#report#0"] := rfl
+    (List.map (·.name)) = .ok ["p#probe", "p#report#0"] := by cbv
 
 /-- The elaborated unit carries the Duty: the probe threads it (`nimmt` and
     `gibt`), the gate wrapper threads it too. -/
 example : (elabU [probenFn, .checkT probenCheck]).map
     (fun u => u.fns.map fun f => (f.name, f.nimmt, f.gibt)) =
     .ok [("g", [], []), ("p#probe", ["p#duty"], ["p#duty"]),
-      ("p#report#0", [], []), ("p#tor#g", ["p#duty"], ["p#duty"])] := rfl
+      ("p#report#0", [], []), ("p#tor#g", ["p#duty"], ["p#duty"])] := by cbv
 
 /-- The false-verdict check elaborates to the same generated shape: the Duty
     threads through `false` returns too. -/
 example : (elabU [probenFn, .checkT probenCheckFalsch]).map (fun u => u.fns.map (·.name)) =
-    .ok ["g", "p#probe", "p#report#0", "p#tor#g"] := rfl
+    .ok ["g", "p#probe", "p#report#0", "p#tor#g"] := by cbv
 
 /-- A `bool` gate derives its Duty-threading wrapper forwarding the answer:
     the wrapper binds the gate call and returns it. -/
 example : uTorHuelle "p#duty" [{ torGate with resBool := true }] [] "p" "g" =
-    .ok { name := "p#tor#g", params := [], kinds := [], res := none, resBool := true,
-      held := [], puts := [], gputs := [], nimmt := ["p#duty"], gibt := ["p#duty"], gives := [], needs := [],
-      body := [.bindCall "ans" "g" []], ret := .bool (.var "ans") } := rfl
+    .ok { name := "p#tor#g"
+          params := []
+          kinds := []
+          res := none
+          resBool := true
+          held := []
+          puts := []
+          gputs := []
+          nimmt := ["p#duty"]
+          gibt := ["p#duty"]
+          gives := []
+          needs := []
+          body := [.bindCall "ans" "g" []]
+          ret := .bool (.var "ans") } := by cbv
 
 end Gabbro.Grammatik.Parser.Uebersetze
