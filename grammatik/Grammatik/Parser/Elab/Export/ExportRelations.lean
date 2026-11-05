@@ -210,6 +210,19 @@ def relationContext : UCtx := {names := ["root", "last"], kinds := [.index 0, .i
 
 def relationFunction : UFn := {name := "sample", params := [("root", .index 3), ("last", .index 3)], kinds := [.index 0, .index 0], res := none, held := [], puts := [], gives := [], body := [], ret := .empty}
 
+private theorem lowVar_same_head (Γ : Ctx) (ty : Ty) :
+    lowVar (ty :: Γ) 0 ty = .ok (.here : Var (ty :: Γ) ty) := by
+  simp only [lowVar, dif_pos rfl]
+
+private theorem member_root_checked :
+    lowMember relationUnit [.index 3, .index 3] [] relationFunction 0 "T" (.param "root") =
+      .ok (Expr.existsSlots (⟨0, by decide⟩ : Fin relationUnit.tabs.length)
+        (Expr.eq (.var .here) (.var (.there .here))) (by decide)) := by
+  exact member_lower relationUnit [.index 3, .index 3] [] relationFunction 0 "T" (.param "root")
+    ⟨0, by decide⟩ {range := (0, 2), term := .var .here} rfl rfl
+    (by simp [lowMemberValue, lowParamSide, relationFunction, paramPos, lowVar_same_head,
+      bind, Except.bind, pure, Except.pure]) (by decide)
+
 theorem count_export_zeuge :
     uAnzahl [("N", 2)] (.bin "*" (.variable "N") (.lit 3)) = .ok 6 ∧
     uAnzahl [] (.bin "-" (.lit 0) (.lit 1)) = .error "source export: negative constant count" :=
@@ -230,7 +243,7 @@ theorem reach_lower_zeuge :
     (lowReach relationUnit [.index 3, .index 3] [] relationFunction 0 "T" "next"
       (.param "root") (.param "last")).toOption.isSome = true ∧
     (lowMember relationUnit [.index 3, .index 3] [] relationFunction 0 "T" (.param "root")).toOption.isSome = true := by
-  exact ⟨rfl, rfl⟩
+  exact ⟨rfl, by rw [member_root_checked]; rfl⟩
 
 theorem tree_membership_export_zeuge :
     uSichert relationContext (.ext .mem ["descendants"] [.variable "last", .variable "root"]) =
@@ -257,16 +270,28 @@ theorem member_numeric_meaning_zeuge (entry state : World (declOf relationUnit))
 def numericMemberContext : UCtx := {relationContext with names := ["value"], kinds := [.int], types := [.int 0 255]}
 def numericMemberFunction : UFn := {relationFunction with params := [("value", .int 0 255)], kinds := [.int]}
 
+private theorem member_numeric_param_checked :
+    lowMember relationUnit [.int 0 255] [] numericMemberFunction 0 "T" (.param "value") =
+      .ok (Expr.existsSlots (⟨0, by decide⟩ : Fin relationUnit.tabs.length)
+        (Expr.eq (.var .here) (.var (.there .here))) (by decide)) := by
+  exact member_lower relationUnit [.int 0 255] [] numericMemberFunction 0 "T" (.param "value")
+    ⟨0, by decide⟩ {range := (0, 255), term := .var .here} rfl rfl
+    (by simp [lowMemberValue, lowParamSide, numericMemberFunction, relationFunction, paramPos,
+      lowVar_same_head, bind, Except.bind, pure, Except.pure]) (by decide)
+
 theorem member_numeric_param_zeuge :
     uSichert numericMemberContext (.ext .mem ["slots"] [.variable "value", .variable "T"]) =
       .ok (.member "T" (.param "value")) ∧
-    (lowMember relationUnit [.int 0 255] [] numericMemberFunction 0 "T" (.param "value")).toOption.isSome = true := ⟨rfl, rfl⟩
+    (lowMember relationUnit [.int 0 255] [] numericMemberFunction 0 "T" (.param "value")).toOption.isSome = true :=
+  ⟨rfl, by rw [member_numeric_param_checked]; rfl⟩
 
 theorem member_numeric_param_meaning_zeuge (entry state : World (declOf relationUnit)) :
     let predicate := (lowMember relationUnit [.int 0 255] [] numericMemberFunction 0 "T" (.param "value")).toOption.get
       member_numeric_param_zeuge.2
     let good : Env (declOf relationUnit) [.int 0 255] := .cons ⟨2, by decide, by decide⟩ .nil
     let outside : Env (declOf relationUnit) [.int 0 255] := .cons ⟨255, by decide, by decide⟩ .nil
-    eval entry predicate state good = true ∧ eval entry predicate state outside = false := ⟨rfl, rfl⟩
+    eval entry predicate state good = true ∧ eval entry predicate state outside = false := by
+  constructor <;>
+    simp only [member_numeric_param_checked, Except.toOption, Option.get_some] <;> rfl
 
 end Gabbro.Grammatik.Parser.ExportPreservation
