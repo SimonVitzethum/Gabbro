@@ -1,5 +1,5 @@
 module
-public import Stage0.Frontend.Witnesses.Constants.Compilation
+public import Stage0.Frontend.Witnesses.Constants.ProgramPackets
 public import Stage0.Frontend.Witnesses.Constants.IntegerSources
 import Grammatik.Parser.Elab.Konst.Values.WitnessReaders
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
@@ -81,144 +81,126 @@ attribute [local cbv_eval]
   Gabbro.Grammatik.Parser.UebersetzeProben2.struct_select
   lowStufe_seq lowStufe_struct
 
-/-- The canonical source packet is already certified phase by phase. -/
-def incrementHeader : Header Gabbro.Stage0.Frontend.ConstWitness.text := by
-  refine {
-    source := sourceFrom incrementInput incrementTail
-    sourceEq := by exact sourceFrom_eq incrementInput incrementTail
-    expanded := ?expanded
-    requirements := ?requirements
-    expansion := ?expansion
-    constants := ?constants
-    ordinary := by cbv
-    metadata := by exact incrementTail.metadata
-    candidate := ?candidate
-    elaborated := ?elaborated }
-  case expansion => cbv <;> exact Eq.refl _
-  case constants =>
-    change Konst.checkSourceConstants incrementInput.original = .ok ()
-    unfold Konst.checkSourceConstants
-    split
-    · exact incrementTail.metadata
-    · rfl
-  case elaborated => cbv <;> exact Eq.refl _
-
-/-- Keep all three actual function results together through canonical assembly and admission. -/
-def incrementBody : Body incrementHeader := by
-  refine {
-    functions := {
-      values := fun f => Fin.cases (n := 0)
-        (motive := fun f : Fin incrementHeader.unit.fns.length =>
-          EnsTy incrementHeader.unit f × RumpTy incrementHeader.unit f × ReqTy incrementHeader.unit f)
-        ?functionValue (fun impossible => Fin.elim0 impossible) f
-      equations := ?functionEq
-      noInvariants := by cbv
-      noMeasures := ?noMeasures
-      contracts := by cbv }
-    main := ⟨0, by cbv⟩
-    entry := by cbv
-    initializers := by cbv
-    arrays := ?arrays
-    arrayEq := ?arrayEq
-    program := ?program
-    restored := ?restored
-    accepted := ?accepted }
-  case functionEq =>
-    intro f
-    rcases f with ⟨index, bound⟩
-    have count : incrementHeader.unit.fns.length = 1 := by cbv
-    have small : index < 1 := by simpa only [count] using bound
-    have zero : index = 0 := by omega
-    subst index
-    cbv <;> exact Eq.refl _
-  case noMeasures =>
-    intro f
-    rcases f with ⟨index, bound⟩
-    have count : incrementHeader.unit.fns.length = 1 := by cbv
+/-- Retain the actual elaborated constructor and all body facts inside one opaque theorem. -/
+private theorem increment_program_packet :
+    ∃ header : Header Gabbro.Stage0.Frontend.ConstWitness.text,
+      header.unit.fns.length = 1 ∧ Nonempty (Body header) := by
+  let header : Header Gabbro.Stage0.Frontend.ConstWitness.text := by
+    refine {
+      source := sourceFrom incrementInput incrementTail
+      sourceEq := by exact sourceFrom_eq incrementInput incrementTail
+      expanded := ?expanded
+      requirements := ?requirements
+      expansion := ?expansion
+      constants := ?constants
+      ordinary := by cbv
+      metadata := by exact incrementTail.metadata
+      candidate := ?candidate
+      elaborated := ?elaborated }
+    case expansion => cbv <;> exact Eq.refl _
+    case constants =>
+      change Konst.checkSourceConstants incrementInput.original = .ok ()
+      unfold Konst.checkSourceConstants
+      split
+      · exact incrementTail.metadata
+      · rfl
+    case elaborated => cbv <;> exact Eq.refl _
+  have count : header.unit.fns.length = 1 := by cbv
+  have produced : ∀ f : Fin header.unit.fns.length,
+      (lowerFnAt header.unit f).toOption.isSome = true := by
+    rintro ⟨index, bound⟩
     have small : index < 1 := by simpa only [count] using bound
     have zero : index = 0 := by omega
     subst index
     cbv
-  case arrayEq => cbv <;> exact Eq.refl _
-  case restored => cbv <;> exact Eq.refl _
-  case accepted => cbv
+  let functions : Functions header.unit := Functions.of_success produced (by cbv) (by
+    rintro ⟨index, bound⟩
+    have small : index < 1 := by simpa only [count] using bound
+    have zero : index = 0 := by omega
+    subst index
+    cbv) (by cbv)
+  refine ⟨header, count, ?body⟩
+  case body =>
+    refine ⟨{
+      functions := functions
+      main := ⟨0, by omega⟩
+      entry := by cbv
+      initializers := by cbv
+      arrays := ?arrays
+      arrayEq := ?arrayEq
+      program := ?program
+      restored := ?restored
+      accepted := ?accepted }⟩
+    case arrayEq => cbv <;> exact Eq.refl _
+    case restored => cbv <;> exact Eq.refl _
+    case accepted => cbv
 
 theorem increment_compiled :
     ∃ result : Compiled Gabbro.Stage0.Frontend.ConstWitness.text, compile Gabbro.Stage0.Frontend.ConstWitness.text = .ok result ∧
       result.unit.fns.length = 1 := by
-  obtain ⟨result, origin, unitEq⟩ := compiled incrementHeader incrementBody
-  refine ⟨result, origin, ?_⟩
-  rw [unitEq]
-  cbv
+  obtain ⟨header, count, ⟨body⟩⟩ := increment_program_packet
+  obtain ⟨result, origin, unitEq⟩ := compiled header body
+  exact ⟨result, origin, (congrArg (fun unit => unit.fns.length) unitEq).trans count⟩
 
-/-- The canonical source packet is already certified phase by phase. -/
-def initializerHeader : Header Gabbro.Stage0.Frontend.ConstWitness.initializerText := by
-  refine {
-    source := sourceFrom initializerInput initializerTail
-    sourceEq := by exact sourceFrom_eq initializerInput initializerTail
-    expanded := ?expanded
-    requirements := ?requirements
-    expansion := ?expansion
-    constants := ?constants
-    ordinary := by cbv
-    metadata := by exact initializerTail.metadata
-    candidate := ?candidate
-    elaborated := ?elaborated }
-  case expansion => cbv <;> exact Eq.refl _
-  case constants =>
-    change Konst.checkSourceConstants initializerInput.original = .ok ()
-    unfold Konst.checkSourceConstants
-    split
-    · exact initializerTail.metadata
-    · rfl
-  case elaborated => cbv <;> exact Eq.refl _
-
-/-- Keep all three actual function results together through canonical assembly and admission. -/
-def initializerBody : Body initializerHeader := by
-  refine {
-    functions := {
-      values := fun f => Fin.cases (n := 0)
-        (motive := fun f : Fin initializerHeader.unit.fns.length =>
-          EnsTy initializerHeader.unit f × RumpTy initializerHeader.unit f × ReqTy initializerHeader.unit f)
-        ?functionValue (fun impossible => Fin.elim0 impossible) f
-      equations := ?functionEq
-      noInvariants := by cbv
-      noMeasures := ?noMeasures
-      contracts := by cbv }
-    main := ⟨0, by cbv⟩
-    entry := by cbv
-    initializers := by cbv
-    arrays := ?arrays
-    arrayEq := ?arrayEq
-    program := ?program
-    restored := ?restored
-    accepted := ?accepted }
-  case functionEq =>
-    intro f
-    rcases f with ⟨index, bound⟩
-    have count : initializerHeader.unit.fns.length = 1 := by cbv
-    have small : index < 1 := by simpa only [count] using bound
-    have zero : index = 0 := by omega
-    subst index
-    cbv <;> exact Eq.refl _
-  case noMeasures =>
-    intro f
-    rcases f with ⟨index, bound⟩
-    have count : initializerHeader.unit.fns.length = 1 := by cbv
+/-- Retain the actual elaborated constructor and all body facts inside one opaque theorem. -/
+private theorem initializer_program_packet :
+    ∃ header : Header Gabbro.Stage0.Frontend.ConstWitness.initializerText,
+      header.unit.fns.length = 1 ∧ Nonempty (Body header) := by
+  let header : Header Gabbro.Stage0.Frontend.ConstWitness.initializerText := by
+    refine {
+      source := sourceFrom initializerInput initializerTail
+      sourceEq := by exact sourceFrom_eq initializerInput initializerTail
+      expanded := ?expanded
+      requirements := ?requirements
+      expansion := ?expansion
+      constants := ?constants
+      ordinary := by cbv
+      metadata := by exact initializerTail.metadata
+      candidate := ?candidate
+      elaborated := ?elaborated }
+    case expansion => cbv <;> exact Eq.refl _
+    case constants =>
+      change Konst.checkSourceConstants initializerInput.original = .ok ()
+      unfold Konst.checkSourceConstants
+      split
+      · exact initializerTail.metadata
+      · rfl
+    case elaborated => cbv <;> exact Eq.refl _
+  have count : header.unit.fns.length = 1 := by cbv
+  have produced : ∀ f : Fin header.unit.fns.length,
+      (lowerFnAt header.unit f).toOption.isSome = true := by
+    rintro ⟨index, bound⟩
     have small : index < 1 := by simpa only [count] using bound
     have zero : index = 0 := by omega
     subst index
     cbv
-  case arrayEq => cbv <;> exact Eq.refl _
-  case restored => cbv <;> exact Eq.refl _
-  case accepted => cbv
+  let functions : Functions header.unit := Functions.of_success produced (by cbv) (by
+    rintro ⟨index, bound⟩
+    have small : index < 1 := by simpa only [count] using bound
+    have zero : index = 0 := by omega
+    subst index
+    cbv) (by cbv)
+  refine ⟨header, count, ?body⟩
+  case body =>
+    refine ⟨{
+      functions := functions
+      main := ⟨0, by omega⟩
+      entry := by cbv
+      initializers := by cbv
+      arrays := ?arrays
+      arrayEq := ?arrayEq
+      program := ?program
+      restored := ?restored
+      accepted := ?accepted }⟩
+    case arrayEq => cbv <;> exact Eq.refl _
+    case restored => cbv <;> exact Eq.refl _
+    case accepted => cbv
 
 theorem initializer_compiled :
     ∃ result : Compiled Gabbro.Stage0.Frontend.ConstWitness.initializerText, compile Gabbro.Stage0.Frontend.ConstWitness.initializerText = .ok result ∧
       result.unit.fns.length = 1 := by
-  obtain ⟨result, origin, unitEq⟩ := compiled initializerHeader initializerBody
-  refine ⟨result, origin, ?_⟩
-  rw [unitEq]
-  cbv
+  obtain ⟨header, count, ⟨body⟩⟩ := initializer_program_packet
+  obtain ⟨result, origin, unitEq⟩ := compiled header body
+  exact ⟨result, origin, (congrArg (fun unit => unit.fns.length) unitEq).trans count⟩
 
 end Gabbro.Stage0.Frontend.ConstPhases

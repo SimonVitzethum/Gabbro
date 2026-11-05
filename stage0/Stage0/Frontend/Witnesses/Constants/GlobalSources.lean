@@ -89,84 +89,126 @@ attribute [local cbv_eval]
 -- Keep the unused float target and the generic normalization proof symbolic.
 attribute [local cbv_opaque] uFloatLimit Frontend.normalize
 
-/-- The exact parser output is extracted only after canonical success has been proved. -/
+/-- The canonical parser still supplies the public selected item list. -/
 theorem globalText_parsed :
     (parseTopTief (globalTextScan.tokens ++ [.ende])).toOption.isSome = true := by cbv
 
 def globalTextItems : List SItemTief :=
   (parseTopTief (globalTextScan.tokens ++ [.ende])).toOption.get globalText_parsed
 
-theorem globalText_prepared :
-    (Profil.prepareItems {} globalTextItems).toOption.isSome = true := by cbv
+/-- Infer both complete constructors from their real producer equations before checking any field. -/
+def globalTextInput : SourceInput Gabbro.Stage0.Frontend.ConstValuesWitness.globalText := by
+  refine {
+    tokens := globalTextScan.tokens ++ [.ende]
+    items := ?items
+    lexed := globalText_lexed
+    parsed := ?parsed
+    prepared := ?prepared
+    preparation := ?preparation
+    visibility := ?visibility
+    compileTime := ?compileTime }
+  case parsed => cbv <;> exact Eq.refl _
+  case preparation => cbv <;> exact Eq.refl _
+  case visibility => cbv
+  case compileTime => cbv
 
-/-- Profile preparation, visibility, and the original call-hull guard remain actual checks. -/
-def globalTextInput : SourceInput Gabbro.Stage0.Frontend.ConstValuesWitness.globalText where
-  tokens := globalTextScan.tokens ++ [.ende]
-  items := globalTextItems
-  lexed := globalText_lexed
-  parsed := by exact Gabbro.Grammatik.except_ok_get globalText_parsed
-  prepared := (Profil.prepareItems {} globalTextItems).toOption.get globalText_prepared
-  preparation := by exact Gabbro.Grammatik.except_ok_get globalText_prepared
-  visibility := by cbv
-  compileTime := by cbv
+/-- The public getter receives the already proved whole profile result by exact-domain transport. -/
+theorem globalText_prepared :
+    (Profil.prepareItems {} globalTextItems).toOption.isSome = true := by
+  obtain ⟨prepared, origin, _, _⟩ :=
+    SourceInput.prepared_selected globalTextInput globalText_lexed
+      (items := globalTextItems) (by exact Gabbro.Grammatik.except_ok_get globalText_parsed)
+  rw [origin]
+  rfl
+
+/-- Certify whole alias/scope constructor results before their dependent meaning projections. -/
+def globalTextTail : SourceTail globalTextInput := by
+  refine {
+    metadata := ?metadata
+    order := ?order
+    ordered := ?ordered
+    derived := ?derived
+    elaborated := ?elaborated
+    aliases := ?aliases
+    constants := ?constants }
+  case metadata => cbv <;> exact Eq.refl _
+  case ordered => cbv <;> exact Eq.refl _
+  case elaborated => cbv <;> exact Eq.refl _
+  case aliases => cbv
+  case constants => cbv
 
 theorem globalText_metadata :
-    Konst.checkSourceMetadata globalTextInput.original = .ok () := by cbv
+    Konst.checkSourceMetadata globalTextInput.original = .ok () := globalTextTail.metadata
 
 theorem globalText_ordered :
-    (Frontend.orderAliases globalTextInput.original).toOption.isSome = true := by cbv
+    (Frontend.orderAliases globalTextInput.original).toOption.isSome = true := by
+  rw [globalTextTail.ordered]
+  rfl
 
 theorem globalText_scopes :
-    (Frontend.elaborateConstantScopes globalTextInput.original).toOption.isSome = true := by cbv
+    (Frontend.elaborateConstantScopes globalTextInput.original).toOption.isSome = true := by
+  rw [globalTextTail.elaborated]
+  rfl
 
-/-- Bind the complete alias/scope results before asking either final meaning checker. -/
-def globalTextTail : SourceTail globalTextInput where
-  metadata := globalText_metadata
-  order := (Frontend.orderAliases globalTextInput.original).toOption.get globalText_ordered
-  ordered := by exact Gabbro.Grammatik.except_ok_get globalText_ordered
-  derived := (Frontend.elaborateConstantScopes globalTextInput.original).toOption.get globalText_scopes
-  elaborated := by exact Gabbro.Grammatik.except_ok_get globalText_scopes
-  aliases := by cbv
-  constants := by cbv
-
-/-- The exact parser output is extracted only after canonical success has been proved. -/
+/-- The canonical parser still supplies the public selected item list. -/
 theorem qualifiedText_parsed :
     (parseTopTief (qualifiedTextScan.tokens ++ [.ende])).toOption.isSome = true := by cbv
 
 def qualifiedTextItems : List SItemTief :=
   (parseTopTief (qualifiedTextScan.tokens ++ [.ende])).toOption.get qualifiedText_parsed
 
-theorem qualifiedText_prepared :
-    (Profil.prepareItems {} qualifiedTextItems).toOption.isSome = true := by cbv
+/-- Infer both complete constructors from their real producer equations before checking any field. -/
+def qualifiedTextInput : SourceInput Gabbro.Stage0.Frontend.ConstValuesWitness.qualifiedText := by
+  refine {
+    tokens := qualifiedTextScan.tokens ++ [.ende]
+    items := ?items
+    lexed := qualifiedText_lexed
+    parsed := ?parsed
+    prepared := ?prepared
+    preparation := ?preparation
+    visibility := ?visibility
+    compileTime := ?compileTime }
+  case parsed => cbv <;> exact Eq.refl _
+  case preparation => cbv <;> exact Eq.refl _
+  case visibility => cbv
+  case compileTime => cbv
 
-/-- Profile preparation, visibility, and the original call-hull guard remain actual checks. -/
-def qualifiedTextInput : SourceInput Gabbro.Stage0.Frontend.ConstValuesWitness.qualifiedText where
-  tokens := qualifiedTextScan.tokens ++ [.ende]
-  items := qualifiedTextItems
-  lexed := qualifiedText_lexed
-  parsed := by exact Gabbro.Grammatik.except_ok_get qualifiedText_parsed
-  prepared := (Profil.prepareItems {} qualifiedTextItems).toOption.get qualifiedText_prepared
-  preparation := by exact Gabbro.Grammatik.except_ok_get qualifiedText_prepared
-  visibility := by cbv
-  compileTime := by cbv
+/-- The public getter receives the already proved whole profile result by exact-domain transport. -/
+theorem qualifiedText_prepared :
+    (Profil.prepareItems {} qualifiedTextItems).toOption.isSome = true := by
+  obtain ⟨prepared, origin, _, _⟩ :=
+    SourceInput.prepared_selected qualifiedTextInput qualifiedText_lexed
+      (items := qualifiedTextItems) (by exact Gabbro.Grammatik.except_ok_get qualifiedText_parsed)
+  rw [origin]
+  rfl
+
+/-- Certify whole alias/scope constructor results before their dependent meaning projections. -/
+def qualifiedTextTail : SourceTail qualifiedTextInput := by
+  refine {
+    metadata := ?metadata
+    order := ?order
+    ordered := ?ordered
+    derived := ?derived
+    elaborated := ?elaborated
+    aliases := ?aliases
+    constants := ?constants }
+  case metadata => cbv <;> exact Eq.refl _
+  case ordered => cbv <;> exact Eq.refl _
+  case elaborated => cbv <;> exact Eq.refl _
+  case aliases => cbv
+  case constants => cbv
 
 theorem qualifiedText_metadata :
-    Konst.checkSourceMetadata qualifiedTextInput.original = .ok () := by cbv
+    Konst.checkSourceMetadata qualifiedTextInput.original = .ok () := qualifiedTextTail.metadata
 
 theorem qualifiedText_ordered :
-    (Frontend.orderAliases qualifiedTextInput.original).toOption.isSome = true := by cbv
+    (Frontend.orderAliases qualifiedTextInput.original).toOption.isSome = true := by
+  rw [qualifiedTextTail.ordered]
+  rfl
 
 theorem qualifiedText_scopes :
-    (Frontend.elaborateConstantScopes qualifiedTextInput.original).toOption.isSome = true := by cbv
-
-/-- Bind the complete alias/scope results before asking either final meaning checker. -/
-def qualifiedTextTail : SourceTail qualifiedTextInput where
-  metadata := qualifiedText_metadata
-  order := (Frontend.orderAliases qualifiedTextInput.original).toOption.get qualifiedText_ordered
-  ordered := by exact Gabbro.Grammatik.except_ok_get qualifiedText_ordered
-  derived := (Frontend.elaborateConstantScopes qualifiedTextInput.original).toOption.get qualifiedText_scopes
-  elaborated := by exact Gabbro.Grammatik.except_ok_get qualifiedText_scopes
-  aliases := by cbv
-  constants := by cbv
+    (Frontend.elaborateConstantScopes qualifiedTextInput.original).toOption.isSome = true := by
+  rw [qualifiedTextTail.elaborated]
+  rfl
 
 end Gabbro.Stage0.Frontend.ConstPhases

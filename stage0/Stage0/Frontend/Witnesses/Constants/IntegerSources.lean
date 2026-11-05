@@ -89,84 +89,126 @@ attribute [local cbv_eval]
 -- Keep the unused float target and the generic normalization proof symbolic.
 attribute [local cbv_opaque] uFloatLimit Frontend.normalize
 
-/-- The exact parser output is extracted only after canonical success has been proved. -/
+/-- The canonical parser still supplies the public selected item list. -/
 theorem increment_parsed :
     (parseTopTief (incrementScan.tokens ++ [.ende])).toOption.isSome = true := by cbv
 
 def incrementItems : List SItemTief :=
   (parseTopTief (incrementScan.tokens ++ [.ende])).toOption.get increment_parsed
 
-theorem increment_prepared :
-    (Profil.prepareItems {} incrementItems).toOption.isSome = true := by cbv
+/-- Infer both complete constructors from their real producer equations before checking any field. -/
+def incrementInput : SourceInput Gabbro.Stage0.Frontend.ConstWitness.text := by
+  refine {
+    tokens := incrementScan.tokens ++ [.ende]
+    items := ?items
+    lexed := increment_lexed
+    parsed := ?parsed
+    prepared := ?prepared
+    preparation := ?preparation
+    visibility := ?visibility
+    compileTime := ?compileTime }
+  case parsed => cbv <;> exact Eq.refl _
+  case preparation => cbv <;> exact Eq.refl _
+  case visibility => cbv
+  case compileTime => cbv
 
-/-- Profile preparation, visibility, and the original call-hull guard remain actual checks. -/
-def incrementInput : SourceInput Gabbro.Stage0.Frontend.ConstWitness.text where
-  tokens := incrementScan.tokens ++ [.ende]
-  items := incrementItems
-  lexed := increment_lexed
-  parsed := by exact Gabbro.Grammatik.except_ok_get increment_parsed
-  prepared := (Profil.prepareItems {} incrementItems).toOption.get increment_prepared
-  preparation := by exact Gabbro.Grammatik.except_ok_get increment_prepared
-  visibility := by cbv
-  compileTime := by cbv
+/-- The public getter receives the already proved whole profile result by exact-domain transport. -/
+theorem increment_prepared :
+    (Profil.prepareItems {} incrementItems).toOption.isSome = true := by
+  obtain ⟨prepared, origin, _, _⟩ :=
+    SourceInput.prepared_selected incrementInput increment_lexed
+      (items := incrementItems) (by exact Gabbro.Grammatik.except_ok_get increment_parsed)
+  rw [origin]
+  rfl
+
+/-- Certify whole alias/scope constructor results before their dependent meaning projections. -/
+def incrementTail : SourceTail incrementInput := by
+  refine {
+    metadata := ?metadata
+    order := ?order
+    ordered := ?ordered
+    derived := ?derived
+    elaborated := ?elaborated
+    aliases := ?aliases
+    constants := ?constants }
+  case metadata => cbv <;> exact Eq.refl _
+  case ordered => cbv <;> exact Eq.refl _
+  case elaborated => cbv <;> exact Eq.refl _
+  case aliases => cbv
+  case constants => cbv
 
 theorem increment_metadata :
-    Konst.checkSourceMetadata incrementInput.original = .ok () := by cbv
+    Konst.checkSourceMetadata incrementInput.original = .ok () := incrementTail.metadata
 
 theorem increment_ordered :
-    (Frontend.orderAliases incrementInput.original).toOption.isSome = true := by cbv
+    (Frontend.orderAliases incrementInput.original).toOption.isSome = true := by
+  rw [incrementTail.ordered]
+  rfl
 
 theorem increment_scopes :
-    (Frontend.elaborateConstantScopes incrementInput.original).toOption.isSome = true := by cbv
+    (Frontend.elaborateConstantScopes incrementInput.original).toOption.isSome = true := by
+  rw [incrementTail.elaborated]
+  rfl
 
-/-- Bind the complete alias/scope results before asking either final meaning checker. -/
-def incrementTail : SourceTail incrementInput where
-  metadata := increment_metadata
-  order := (Frontend.orderAliases incrementInput.original).toOption.get increment_ordered
-  ordered := by exact Gabbro.Grammatik.except_ok_get increment_ordered
-  derived := (Frontend.elaborateConstantScopes incrementInput.original).toOption.get increment_scopes
-  elaborated := by exact Gabbro.Grammatik.except_ok_get increment_scopes
-  aliases := by cbv
-  constants := by cbv
-
-/-- The exact parser output is extracted only after canonical success has been proved. -/
+/-- The canonical parser still supplies the public selected item list. -/
 theorem initializer_parsed :
     (parseTopTief (initializerScan.tokens ++ [.ende])).toOption.isSome = true := by cbv
 
 def initializerItems : List SItemTief :=
   (parseTopTief (initializerScan.tokens ++ [.ende])).toOption.get initializer_parsed
 
-theorem initializer_prepared :
-    (Profil.prepareItems {} initializerItems).toOption.isSome = true := by cbv
+/-- Infer both complete constructors from their real producer equations before checking any field. -/
+def initializerInput : SourceInput Gabbro.Stage0.Frontend.ConstWitness.initializerText := by
+  refine {
+    tokens := initializerScan.tokens ++ [.ende]
+    items := ?items
+    lexed := initializer_lexed
+    parsed := ?parsed
+    prepared := ?prepared
+    preparation := ?preparation
+    visibility := ?visibility
+    compileTime := ?compileTime }
+  case parsed => cbv <;> exact Eq.refl _
+  case preparation => cbv <;> exact Eq.refl _
+  case visibility => cbv
+  case compileTime => cbv
 
-/-- Profile preparation, visibility, and the original call-hull guard remain actual checks. -/
-def initializerInput : SourceInput Gabbro.Stage0.Frontend.ConstWitness.initializerText where
-  tokens := initializerScan.tokens ++ [.ende]
-  items := initializerItems
-  lexed := initializer_lexed
-  parsed := by exact Gabbro.Grammatik.except_ok_get initializer_parsed
-  prepared := (Profil.prepareItems {} initializerItems).toOption.get initializer_prepared
-  preparation := by exact Gabbro.Grammatik.except_ok_get initializer_prepared
-  visibility := by cbv
-  compileTime := by cbv
+/-- The public getter receives the already proved whole profile result by exact-domain transport. -/
+theorem initializer_prepared :
+    (Profil.prepareItems {} initializerItems).toOption.isSome = true := by
+  obtain ⟨prepared, origin, _, _⟩ :=
+    SourceInput.prepared_selected initializerInput initializer_lexed
+      (items := initializerItems) (by exact Gabbro.Grammatik.except_ok_get initializer_parsed)
+  rw [origin]
+  rfl
+
+/-- Certify whole alias/scope constructor results before their dependent meaning projections. -/
+def initializerTail : SourceTail initializerInput := by
+  refine {
+    metadata := ?metadata
+    order := ?order
+    ordered := ?ordered
+    derived := ?derived
+    elaborated := ?elaborated
+    aliases := ?aliases
+    constants := ?constants }
+  case metadata => cbv <;> exact Eq.refl _
+  case ordered => cbv <;> exact Eq.refl _
+  case elaborated => cbv <;> exact Eq.refl _
+  case aliases => cbv
+  case constants => cbv
 
 theorem initializer_metadata :
-    Konst.checkSourceMetadata initializerInput.original = .ok () := by cbv
+    Konst.checkSourceMetadata initializerInput.original = .ok () := initializerTail.metadata
 
 theorem initializer_ordered :
-    (Frontend.orderAliases initializerInput.original).toOption.isSome = true := by cbv
+    (Frontend.orderAliases initializerInput.original).toOption.isSome = true := by
+  rw [initializerTail.ordered]
+  rfl
 
 theorem initializer_scopes :
-    (Frontend.elaborateConstantScopes initializerInput.original).toOption.isSome = true := by cbv
-
-/-- Bind the complete alias/scope results before asking either final meaning checker. -/
-def initializerTail : SourceTail initializerInput where
-  metadata := initializer_metadata
-  order := (Frontend.orderAliases initializerInput.original).toOption.get initializer_ordered
-  ordered := by exact Gabbro.Grammatik.except_ok_get initializer_ordered
-  derived := (Frontend.elaborateConstantScopes initializerInput.original).toOption.get initializer_scopes
-  elaborated := by exact Gabbro.Grammatik.except_ok_get initializer_scopes
-  aliases := by cbv
-  constants := by cbv
+    (Frontend.elaborateConstantScopes initializerInput.original).toOption.isSome = true := by
+  rw [initializerTail.elaborated]
+  rfl
 
 end Gabbro.Stage0.Frontend.ConstPhases

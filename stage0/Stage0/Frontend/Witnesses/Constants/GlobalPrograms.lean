@@ -1,5 +1,5 @@
 module
-public import Stage0.Frontend.Witnesses.Constants.Compilation
+public import Stage0.Frontend.Witnesses.Constants.ProgramPackets
 public import Stage0.Frontend.Witnesses.Constants.GlobalSources
 import Grammatik.Parser.Elab.Konst.Values.WitnessReaders
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
@@ -81,144 +81,126 @@ attribute [local cbv_eval]
   Gabbro.Grammatik.Parser.UebersetzeProben2.struct_select
   lowStufe_seq lowStufe_struct
 
-/-- The canonical source packet is already certified phase by phase. -/
-def globalTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.globalText := by
-  refine {
-    source := sourceFrom globalTextInput globalTextTail
-    sourceEq := by exact sourceFrom_eq globalTextInput globalTextTail
-    expanded := ?expanded
-    requirements := ?requirements
-    expansion := ?expansion
-    constants := ?constants
-    ordinary := by cbv
-    metadata := by exact globalTextTail.metadata
-    candidate := ?candidate
-    elaborated := ?elaborated }
-  case expansion => cbv <;> exact Eq.refl _
-  case constants =>
-    change Konst.checkSourceConstants globalTextInput.original = .ok ()
-    unfold Konst.checkSourceConstants
-    split
-    · exact globalTextTail.metadata
-    · rfl
-  case elaborated => cbv <;> exact Eq.refl _
-
-/-- Keep all three actual function results together through canonical assembly and admission. -/
-def globalTextBody : Body globalTextHeader := by
-  refine {
-    functions := {
-      values := fun f => Fin.cases (n := 0)
-        (motive := fun f : Fin globalTextHeader.unit.fns.length =>
-          EnsTy globalTextHeader.unit f × RumpTy globalTextHeader.unit f × ReqTy globalTextHeader.unit f)
-        ?functionValue (fun impossible => Fin.elim0 impossible) f
-      equations := ?functionEq
-      noInvariants := by cbv
-      noMeasures := ?noMeasures
-      contracts := by cbv }
-    main := ⟨0, by cbv⟩
-    entry := by cbv
-    initializers := by cbv
-    arrays := ?arrays
-    arrayEq := ?arrayEq
-    program := ?program
-    restored := ?restored
-    accepted := ?accepted }
-  case functionEq =>
-    intro f
-    rcases f with ⟨index, bound⟩
-    have count : globalTextHeader.unit.fns.length = 1 := by cbv
-    have small : index < 1 := by simpa only [count] using bound
-    have zero : index = 0 := by omega
-    subst index
-    cbv <;> exact Eq.refl _
-  case noMeasures =>
-    intro f
-    rcases f with ⟨index, bound⟩
-    have count : globalTextHeader.unit.fns.length = 1 := by cbv
+/-- Retain the actual elaborated constructor and all body facts inside one opaque theorem. -/
+private theorem globalText_program_packet :
+    ∃ header : Header Gabbro.Stage0.Frontend.ConstValuesWitness.globalText,
+      header.unit.fns.length = 1 ∧ Nonempty (Body header) := by
+  let header : Header Gabbro.Stage0.Frontend.ConstValuesWitness.globalText := by
+    refine {
+      source := sourceFrom globalTextInput globalTextTail
+      sourceEq := by exact sourceFrom_eq globalTextInput globalTextTail
+      expanded := ?expanded
+      requirements := ?requirements
+      expansion := ?expansion
+      constants := ?constants
+      ordinary := by cbv
+      metadata := by exact globalTextTail.metadata
+      candidate := ?candidate
+      elaborated := ?elaborated }
+    case expansion => cbv <;> exact Eq.refl _
+    case constants =>
+      change Konst.checkSourceConstants globalTextInput.original = .ok ()
+      unfold Konst.checkSourceConstants
+      split
+      · exact globalTextTail.metadata
+      · rfl
+    case elaborated => cbv <;> exact Eq.refl _
+  have count : header.unit.fns.length = 1 := by cbv
+  have produced : ∀ f : Fin header.unit.fns.length,
+      (lowerFnAt header.unit f).toOption.isSome = true := by
+    rintro ⟨index, bound⟩
     have small : index < 1 := by simpa only [count] using bound
     have zero : index = 0 := by omega
     subst index
     cbv
-  case arrayEq => cbv <;> exact Eq.refl _
-  case restored => cbv <;> exact Eq.refl _
-  case accepted => cbv
+  let functions : Functions header.unit := Functions.of_success produced (by cbv) (by
+    rintro ⟨index, bound⟩
+    have small : index < 1 := by simpa only [count] using bound
+    have zero : index = 0 := by omega
+    subst index
+    cbv) (by cbv)
+  refine ⟨header, count, ?body⟩
+  case body =>
+    refine ⟨{
+      functions := functions
+      main := ⟨0, by omega⟩
+      entry := by cbv
+      initializers := by cbv
+      arrays := ?arrays
+      arrayEq := ?arrayEq
+      program := ?program
+      restored := ?restored
+      accepted := ?accepted }⟩
+    case arrayEq => cbv <;> exact Eq.refl _
+    case restored => cbv <;> exact Eq.refl _
+    case accepted => cbv
 
 theorem globalText_compiled :
     ∃ result : Compiled Gabbro.Stage0.Frontend.ConstValuesWitness.globalText, compile Gabbro.Stage0.Frontend.ConstValuesWitness.globalText = .ok result ∧
       result.unit.fns.length = 1 := by
-  obtain ⟨result, origin, unitEq⟩ := compiled globalTextHeader globalTextBody
-  refine ⟨result, origin, ?_⟩
-  rw [unitEq]
-  cbv
+  obtain ⟨header, count, ⟨body⟩⟩ := globalText_program_packet
+  obtain ⟨result, origin, unitEq⟩ := compiled header body
+  exact ⟨result, origin, (congrArg (fun unit => unit.fns.length) unitEq).trans count⟩
 
-/-- The canonical source packet is already certified phase by phase. -/
-def qualifiedTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.qualifiedText := by
-  refine {
-    source := sourceFrom qualifiedTextInput qualifiedTextTail
-    sourceEq := by exact sourceFrom_eq qualifiedTextInput qualifiedTextTail
-    expanded := ?expanded
-    requirements := ?requirements
-    expansion := ?expansion
-    constants := ?constants
-    ordinary := by cbv
-    metadata := by exact qualifiedTextTail.metadata
-    candidate := ?candidate
-    elaborated := ?elaborated }
-  case expansion => cbv <;> exact Eq.refl _
-  case constants =>
-    change Konst.checkSourceConstants qualifiedTextInput.original = .ok ()
-    unfold Konst.checkSourceConstants
-    split
-    · exact qualifiedTextTail.metadata
-    · rfl
-  case elaborated => cbv <;> exact Eq.refl _
-
-/-- Keep all three actual function results together through canonical assembly and admission. -/
-def qualifiedTextBody : Body qualifiedTextHeader := by
-  refine {
-    functions := {
-      values := fun f => Fin.cases (n := 0)
-        (motive := fun f : Fin qualifiedTextHeader.unit.fns.length =>
-          EnsTy qualifiedTextHeader.unit f × RumpTy qualifiedTextHeader.unit f × ReqTy qualifiedTextHeader.unit f)
-        ?functionValue (fun impossible => Fin.elim0 impossible) f
-      equations := ?functionEq
-      noInvariants := by cbv
-      noMeasures := ?noMeasures
-      contracts := by cbv }
-    main := ⟨0, by cbv⟩
-    entry := by cbv
-    initializers := by cbv
-    arrays := ?arrays
-    arrayEq := ?arrayEq
-    program := ?program
-    restored := ?restored
-    accepted := ?accepted }
-  case functionEq =>
-    intro f
-    rcases f with ⟨index, bound⟩
-    have count : qualifiedTextHeader.unit.fns.length = 1 := by cbv
-    have small : index < 1 := by simpa only [count] using bound
-    have zero : index = 0 := by omega
-    subst index
-    cbv <;> exact Eq.refl _
-  case noMeasures =>
-    intro f
-    rcases f with ⟨index, bound⟩
-    have count : qualifiedTextHeader.unit.fns.length = 1 := by cbv
+/-- Retain the actual elaborated constructor and all body facts inside one opaque theorem. -/
+private theorem qualifiedText_program_packet :
+    ∃ header : Header Gabbro.Stage0.Frontend.ConstValuesWitness.qualifiedText,
+      header.unit.fns.length = 1 ∧ Nonempty (Body header) := by
+  let header : Header Gabbro.Stage0.Frontend.ConstValuesWitness.qualifiedText := by
+    refine {
+      source := sourceFrom qualifiedTextInput qualifiedTextTail
+      sourceEq := by exact sourceFrom_eq qualifiedTextInput qualifiedTextTail
+      expanded := ?expanded
+      requirements := ?requirements
+      expansion := ?expansion
+      constants := ?constants
+      ordinary := by cbv
+      metadata := by exact qualifiedTextTail.metadata
+      candidate := ?candidate
+      elaborated := ?elaborated }
+    case expansion => cbv <;> exact Eq.refl _
+    case constants =>
+      change Konst.checkSourceConstants qualifiedTextInput.original = .ok ()
+      unfold Konst.checkSourceConstants
+      split
+      · exact qualifiedTextTail.metadata
+      · rfl
+    case elaborated => cbv <;> exact Eq.refl _
+  have count : header.unit.fns.length = 1 := by cbv
+  have produced : ∀ f : Fin header.unit.fns.length,
+      (lowerFnAt header.unit f).toOption.isSome = true := by
+    rintro ⟨index, bound⟩
     have small : index < 1 := by simpa only [count] using bound
     have zero : index = 0 := by omega
     subst index
     cbv
-  case arrayEq => cbv <;> exact Eq.refl _
-  case restored => cbv <;> exact Eq.refl _
-  case accepted => cbv
+  let functions : Functions header.unit := Functions.of_success produced (by cbv) (by
+    rintro ⟨index, bound⟩
+    have small : index < 1 := by simpa only [count] using bound
+    have zero : index = 0 := by omega
+    subst index
+    cbv) (by cbv)
+  refine ⟨header, count, ?body⟩
+  case body =>
+    refine ⟨{
+      functions := functions
+      main := ⟨0, by omega⟩
+      entry := by cbv
+      initializers := by cbv
+      arrays := ?arrays
+      arrayEq := ?arrayEq
+      program := ?program
+      restored := ?restored
+      accepted := ?accepted }⟩
+    case arrayEq => cbv <;> exact Eq.refl _
+    case restored => cbv <;> exact Eq.refl _
+    case accepted => cbv
 
 theorem qualifiedText_compiled :
     ∃ result : Compiled Gabbro.Stage0.Frontend.ConstValuesWitness.qualifiedText, compile Gabbro.Stage0.Frontend.ConstValuesWitness.qualifiedText = .ok result ∧
       result.unit.fns.length = 1 := by
-  obtain ⟨result, origin, unitEq⟩ := compiled qualifiedTextHeader qualifiedTextBody
-  refine ⟨result, origin, ?_⟩
-  rw [unitEq]
-  cbv
+  obtain ⟨header, count, ⟨body⟩⟩ := qualifiedText_program_packet
+  obtain ⟨result, origin, unitEq⟩ := compiled header body
+  exact ⟨result, origin, (congrArg (fun unit => unit.fns.length) unitEq).trans count⟩
 
 end Gabbro.Stage0.Frontend.ConstPhases

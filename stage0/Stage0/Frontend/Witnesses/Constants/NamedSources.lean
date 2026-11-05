@@ -89,84 +89,126 @@ attribute [local cbv_eval]
 -- Keep the unused float target and the generic normalization proof symbolic.
 attribute [local cbv_opaque] uFloatLimit Frontend.normalize
 
-/-- The exact parser output is extracted only after canonical success has been proved. -/
+/-- The canonical parser still supplies the public selected item list. -/
 theorem tagText_parsed :
     (parseTopTief (tagTextScan.tokens ++ [.ende])).toOption.isSome = true := by cbv
 
 def tagTextItems : List SItemTief :=
   (parseTopTief (tagTextScan.tokens ++ [.ende])).toOption.get tagText_parsed
 
-theorem tagText_prepared :
-    (Profil.prepareItems {} tagTextItems).toOption.isSome = true := by cbv
+/-- Infer both complete constructors from their real producer equations before checking any field. -/
+def tagTextInput : SourceInput Gabbro.Stage0.Frontend.ConstValuesWitness.tagText := by
+  refine {
+    tokens := tagTextScan.tokens ++ [.ende]
+    items := ?items
+    lexed := tagText_lexed
+    parsed := ?parsed
+    prepared := ?prepared
+    preparation := ?preparation
+    visibility := ?visibility
+    compileTime := ?compileTime }
+  case parsed => cbv <;> exact Eq.refl _
+  case preparation => cbv <;> exact Eq.refl _
+  case visibility => cbv
+  case compileTime => cbv
 
-/-- Profile preparation, visibility, and the original call-hull guard remain actual checks. -/
-def tagTextInput : SourceInput Gabbro.Stage0.Frontend.ConstValuesWitness.tagText where
-  tokens := tagTextScan.tokens ++ [.ende]
-  items := tagTextItems
-  lexed := tagText_lexed
-  parsed := by exact Gabbro.Grammatik.except_ok_get tagText_parsed
-  prepared := (Profil.prepareItems {} tagTextItems).toOption.get tagText_prepared
-  preparation := by exact Gabbro.Grammatik.except_ok_get tagText_prepared
-  visibility := by cbv
-  compileTime := by cbv
+/-- The public getter receives the already proved whole profile result by exact-domain transport. -/
+theorem tagText_prepared :
+    (Profil.prepareItems {} tagTextItems).toOption.isSome = true := by
+  obtain ⟨prepared, origin, _, _⟩ :=
+    SourceInput.prepared_selected tagTextInput tagText_lexed
+      (items := tagTextItems) (by exact Gabbro.Grammatik.except_ok_get tagText_parsed)
+  rw [origin]
+  rfl
+
+/-- Certify whole alias/scope constructor results before their dependent meaning projections. -/
+def tagTextTail : SourceTail tagTextInput := by
+  refine {
+    metadata := ?metadata
+    order := ?order
+    ordered := ?ordered
+    derived := ?derived
+    elaborated := ?elaborated
+    aliases := ?aliases
+    constants := ?constants }
+  case metadata => cbv <;> exact Eq.refl _
+  case ordered => cbv <;> exact Eq.refl _
+  case elaborated => cbv <;> exact Eq.refl _
+  case aliases => cbv
+  case constants => cbv
 
 theorem tagText_metadata :
-    Konst.checkSourceMetadata tagTextInput.original = .ok () := by cbv
+    Konst.checkSourceMetadata tagTextInput.original = .ok () := tagTextTail.metadata
 
 theorem tagText_ordered :
-    (Frontend.orderAliases tagTextInput.original).toOption.isSome = true := by cbv
+    (Frontend.orderAliases tagTextInput.original).toOption.isSome = true := by
+  rw [tagTextTail.ordered]
+  rfl
 
 theorem tagText_scopes :
-    (Frontend.elaborateConstantScopes tagTextInput.original).toOption.isSome = true := by cbv
+    (Frontend.elaborateConstantScopes tagTextInput.original).toOption.isSome = true := by
+  rw [tagTextTail.elaborated]
+  rfl
 
-/-- Bind the complete alias/scope results before asking either final meaning checker. -/
-def tagTextTail : SourceTail tagTextInput where
-  metadata := tagText_metadata
-  order := (Frontend.orderAliases tagTextInput.original).toOption.get tagText_ordered
-  ordered := by exact Gabbro.Grammatik.except_ok_get tagText_ordered
-  derived := (Frontend.elaborateConstantScopes tagTextInput.original).toOption.get tagText_scopes
-  elaborated := by exact Gabbro.Grammatik.except_ok_get tagText_scopes
-  aliases := by cbv
-  constants := by cbv
-
-/-- The exact parser output is extracted only after canonical success has been proved. -/
+/-- The canonical parser still supplies the public selected item list. -/
 theorem stringText_parsed :
     (parseTopTief (stringTextScan.tokens ++ [.ende])).toOption.isSome = true := by cbv
 
 def stringTextItems : List SItemTief :=
   (parseTopTief (stringTextScan.tokens ++ [.ende])).toOption.get stringText_parsed
 
-theorem stringText_prepared :
-    (Profil.prepareItems {} stringTextItems).toOption.isSome = true := by cbv
+/-- Infer both complete constructors from their real producer equations before checking any field. -/
+def stringTextInput : SourceInput Gabbro.Stage0.Frontend.ConstValuesWitness.stringText := by
+  refine {
+    tokens := stringTextScan.tokens ++ [.ende]
+    items := ?items
+    lexed := stringText_lexed
+    parsed := ?parsed
+    prepared := ?prepared
+    preparation := ?preparation
+    visibility := ?visibility
+    compileTime := ?compileTime }
+  case parsed => cbv <;> exact Eq.refl _
+  case preparation => cbv <;> exact Eq.refl _
+  case visibility => cbv
+  case compileTime => cbv
 
-/-- Profile preparation, visibility, and the original call-hull guard remain actual checks. -/
-def stringTextInput : SourceInput Gabbro.Stage0.Frontend.ConstValuesWitness.stringText where
-  tokens := stringTextScan.tokens ++ [.ende]
-  items := stringTextItems
-  lexed := stringText_lexed
-  parsed := by exact Gabbro.Grammatik.except_ok_get stringText_parsed
-  prepared := (Profil.prepareItems {} stringTextItems).toOption.get stringText_prepared
-  preparation := by exact Gabbro.Grammatik.except_ok_get stringText_prepared
-  visibility := by cbv
-  compileTime := by cbv
+/-- The public getter receives the already proved whole profile result by exact-domain transport. -/
+theorem stringText_prepared :
+    (Profil.prepareItems {} stringTextItems).toOption.isSome = true := by
+  obtain ⟨prepared, origin, _, _⟩ :=
+    SourceInput.prepared_selected stringTextInput stringText_lexed
+      (items := stringTextItems) (by exact Gabbro.Grammatik.except_ok_get stringText_parsed)
+  rw [origin]
+  rfl
+
+/-- Certify whole alias/scope constructor results before their dependent meaning projections. -/
+def stringTextTail : SourceTail stringTextInput := by
+  refine {
+    metadata := ?metadata
+    order := ?order
+    ordered := ?ordered
+    derived := ?derived
+    elaborated := ?elaborated
+    aliases := ?aliases
+    constants := ?constants }
+  case metadata => cbv <;> exact Eq.refl _
+  case ordered => cbv <;> exact Eq.refl _
+  case elaborated => cbv <;> exact Eq.refl _
+  case aliases => cbv
+  case constants => cbv
 
 theorem stringText_metadata :
-    Konst.checkSourceMetadata stringTextInput.original = .ok () := by cbv
+    Konst.checkSourceMetadata stringTextInput.original = .ok () := stringTextTail.metadata
 
 theorem stringText_ordered :
-    (Frontend.orderAliases stringTextInput.original).toOption.isSome = true := by cbv
+    (Frontend.orderAliases stringTextInput.original).toOption.isSome = true := by
+  rw [stringTextTail.ordered]
+  rfl
 
 theorem stringText_scopes :
-    (Frontend.elaborateConstantScopes stringTextInput.original).toOption.isSome = true := by cbv
-
-/-- Bind the complete alias/scope results before asking either final meaning checker. -/
-def stringTextTail : SourceTail stringTextInput where
-  metadata := stringText_metadata
-  order := (Frontend.orderAliases stringTextInput.original).toOption.get stringText_ordered
-  ordered := by exact Gabbro.Grammatik.except_ok_get stringText_ordered
-  derived := (Frontend.elaborateConstantScopes stringTextInput.original).toOption.get stringText_scopes
-  elaborated := by exact Gabbro.Grammatik.except_ok_get stringText_scopes
-  aliases := by cbv
-  constants := by cbv
+    (Frontend.elaborateConstantScopes stringTextInput.original).toOption.isSome = true := by
+  rw [stringTextTail.elaborated]
+  rfl
 
 end Gabbro.Stage0.Frontend.ConstPhases

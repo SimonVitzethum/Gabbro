@@ -84,18 +84,29 @@ theorem blockText_parsed :
 def blockTextItems : List SItemTief :=
   (parseTopTief (blockTextScan.tokens ++ [.ende])).toOption.get blockText_parsed
 
-theorem blockText_prepared :
-    (Profil.prepareItems {} blockTextItems).toOption.isSome = true := by cbv
+/-- Bind the actual parser/profile constructors before either source guard is inspected. -/
+def blockTextInput : SourceInput Gabbro.Stage0.Frontend.ConstValuesWitness.blockText := by
+  refine {
+    tokens := blockTextScan.tokens ++ [.ende]
+    items := ?items
+    lexed := blockText_lexed
+    parsed := ?parsed
+    prepared := ?prepared
+    preparation := ?preparation
+    visibility := ?visibility
+    compileTime := ?compileTime }
+  case parsed => cbv <;> exact Eq.refl _
+  case preparation => cbv <;> exact Eq.refl _
+  case visibility => cbv
+  case compileTime => cbv
 
-def blockTextInput : SourceInput Gabbro.Stage0.Frontend.ConstValuesWitness.blockText where
-  tokens := blockTextScan.tokens ++ [.ende]
-  items := blockTextItems
-  lexed := blockText_lexed
-  parsed := by exact Gabbro.Grammatik.except_ok_get blockText_parsed
-  prepared := (Profil.prepareItems {} blockTextItems).toOption.get blockText_prepared
-  preparation := by exact Gabbro.Grammatik.except_ok_get blockText_prepared
-  visibility := by cbv
-  compileTime := by cbv
+theorem blockText_prepared :
+    (Profil.prepareItems {} blockTextItems).toOption.isSome = true := by
+  obtain ⟨prepared, origin, _, _⟩ :=
+    SourceInput.prepared_selected blockTextInput blockText_lexed
+      (items := blockTextItems) (by exact Gabbro.Grammatik.except_ok_get blockText_parsed)
+  rw [origin]
+  rfl
 
 /-- Classify the actual failed metadata phase, not a guessed diagnostic or source result. -/
 theorem blockText_metadata_refused :
