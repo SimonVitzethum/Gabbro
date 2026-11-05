@@ -56,10 +56,11 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   the Runner library, native generator and all 14 Runner axiom audits pass with that component.
   Targeted arithmetic CPU edge cases pass; downstream package-wide closure remains open.
   Fresh goal/SC/GX/linking/termination/waiting audits pass for all 13 checked sentences with exactly
-  the three standard axioms. Passlogik (16 jobs) and Programmlogik (1,015 jobs) also build; the bridge
-  is being rechecked. The malformed `None()` success fixture now uses the existing bare `None`
-  syntax with unchanged expected value; its lexical proof is being revalidated. Optional/tagged
-  constructor dependency classification and the remaining constant packets are still open.
+  the three standard axioms. Passlogik (16 jobs), Programmlogik (1,015 jobs) and Bruecke
+  (1,592 jobs) also build. The malformed `None()` success fixture now uses the existing bare `None`
+  syntax with unchanged expected value; its lexical proof is being revalidated. The dependency
+  classifier now builds with canonical optional/tagged constructor lookup; its concrete source
+  packets and the remaining constant compilation packets still need validation.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
   The authorised acceptance scope is Lean and the Lean parts of GabbroV; Rust, Cargo and LLVM checks are
   deliberately unmeasured. The owner authorises pushing once the named Lean builds and GabbroV's Lean
