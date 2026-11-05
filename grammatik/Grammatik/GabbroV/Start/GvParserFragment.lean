@@ -5,8 +5,8 @@
   The bridge from GabbroV duties to premise (b) is closed only for the
   fragment the Lean parser elaborates. This module classifies the first
   rejection of an elaboration (`ErstAblehnung`, `erstAblehnung`) and proves
-  what the item check refuses (`uRestFehler_faellt`): an item of a kind the
-  elaborator has no G form for refuses the whole unit.
+  what the item check refuses (`uRestFehler_faellt`): a refused item in the
+  expanded unit forces an error, preserving the first actual diagnostic.
 -/
 module
 
@@ -41,6 +41,13 @@ import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 public import Grammatik.Parser.Elab.Uebersetze
+
+-- Concrete witnesses execute the actual empty check/static gates.
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
+import all Grammatik.Parser.Elab.Generic.StaticConformance
 @[expose] public section
 
 
@@ -74,7 +81,7 @@ theorem erstAblehnung_104_zeuge :
 
 /-
   CUTS: PROVED here: the first-rejection classifier (`ErstAblehnung`, `erstAblehnung`, 104-acceptance, no
-  axioms); the refusal of off-fragment items (`uRestFehler_kopf`, `kopf_gut`, `schritt`, `faellt`,
+  extra axioms); the refusal of off-fragment items (`uRestFehler_kopf`, `kopf_gut`, `schritt`, `faellt`,
   `elabU_bei_RestFehler`, `elabU_verweigert_noch` with a synthetic `use` witness); the corpus witness 108
   (`w108_elab`). NOT proved: anything beyond the elaborator -- no duty, bridge, start-duty or TSO statement.
   The wrapper elaborators that dropped statics, prototypes, `format`/reason items or normalised bounds
@@ -87,249 +94,93 @@ theorem erstAblehnung_104_zeuge :
 
 /-! ## What is still refused -/
 
-/-- **Is this item outside the elaborated fragment?** True for every
-    `SItemTief` kind `uRestFehler` refuses (everything but `constT`,
-    `typeT`, `tableT`, `lockT`, `fnT`, `entryT`, `concT`, `checkT`) except the
-    kinds the unit may carry (`concurrent`, `static`, `atomic`, `arena`, `extern fn`, `assume`, `reason`, `syscall` gates and their bindings, `device`).
-    Translators (`transT`) are consumed by the certified expansion before the item check, so they
-    are not off-fragment. -/
+/-- Is the item refused at the actual item-check boundary? Expansion runs first:
+    adapters and module templates/uses must already have been consumed there.
+    Accumulators use the canonical admitted-form guard; their named refusals and
+    the safe-walk refusal are retained by the singleton check, not reconstructed. -/
 def istGegenstand : SItemTief → Bool
-  | .constT .. => false
-  | .typeT .. => false
-  | .tableT .. => false
-  | .lockT .. => false
-  | .fnT .. => false
-  | .entryT .. => false
-  | .globT .. => false
-  | .atomT .. => false
-  | .arenaT .. => false
-  | .protoT .. => false
-  | .assumT .. => false
-  | .whyT .. => false
-  | .callT .. => false
-  | .varT .. => false
-  | .goalT .. => false
-  | .concT .. => false
-  | .devT .. => false
-  | .groupT .. => false
-  | .stateT .. => false
-  | .specT .. => false
-  | .asmT .. => false
+  | .constT .. | .typeT .. | .tableT .. | .lockT .. | .fnT .. | .entryT .. => false
+  | .globT .. | .atomT .. | .arenaT .. | .protoT .. | .assumT .. | .whyT .. => false
+  | .callT .. | .varT .. | .goalT .. | .concT .. | .devT .. | .groupT .. => false
+  | .stateT .. | .specT .. | .asmT .. | .transT .. | .checkT .. => false
   | .axiomT _ _ _ .none _ _ => false
-  | .transT _ _ _ => false
-  | .checkT .. => false
+  | item@(.accT ..) => !akkuFormZulaessig item
   | _ => true
 
-/-- **One off-fragment item fails the item check.** By cases over all
-    33 surface-item kinds: the accepted ones contradict the premise,
-    the rest reduce to the refusal arm. -/
-theorem uRestFehler_kopf (hd : SItemTief) (tl : List SItemTief)
-    (he : istGegenstand hd = true) :
-    uRestFehler (hd :: tl) = .error "item without G form" := by
-  cases hd with
-  | constT _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | typeT _ _ _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | tableT _ _ _ _ _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | lockT _ _ _ _ _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | fnT _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | entryT _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | modT _ _ => rfl
-  | useT _ => rfl
-  | globT _ _ _ _ _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | protoT _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | specT _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | asmT _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | formatT _ _ _ _ => rfl
-  | arenaT _ _ _ _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | whyT _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | stateT _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | devT _ _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | assumT _ _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | axiomT _ _ _ q _ _ =>
-    cases q with
-    | none => simp only [istGegenstand, Bool.false_eq_true] at he
-    | some _ => rfl
-  | checkT _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | atomT _ _ _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | rcuT _ _ _ => rfl
-  | groupT _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | concT _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | accT _ _ _ _ _ => rfl
-  | walkT _ => rfl
-  | trustT _ _ _ _ _ _ _ => rfl
-  | bootT _ _ _ _ => rfl
-  | callT _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | varT _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | goalT _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | transT _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | profT _ _ => rfl
-  | gateT _ => rfl
-  | pubT _ => rfl
-  | taggedByT _ _ => rfl
-  | specGroupT _ _ _ _ => rfl
-  | implGroupT _ _ _ _ => rfl
-
-/-- **Is this item accepted by the item check?** Exactly the kinds `uRestFehler` recurses on (accepted
-    heads step past; off-fragment heads refuse at once). -/
+/-- Exactly the heads past which the actual item check recurses. This is item
+    admission, not a claim that every later elaboration gate accepts the unit. -/
 def istAngenommen : SItemTief → Bool
-  | .constT .. => true
-  | .typeT .. => true
-  | .tableT .. => true
-  | .lockT .. => true
-  | .fnT .. => true
-  | .entryT .. => true
-  | .globT .. => true
-  | .atomT .. => true
-  | .arenaT .. => true
-  | .protoT .. => true
-  | .assumT .. => true
-  | .whyT .. => true
-  | .callT .. => true
-  | .varT .. => true
-  | .goalT .. => true
-  | .concT .. => true
-  | .devT .. => true
-  | .groupT .. => true
-  | .stateT .. => true
-  | .specT .. => true
-  | .asmT .. => true
+  | .constT .. | .typeT .. | .tableT .. | .lockT .. | .fnT .. | .entryT .. => true
+  | .globT .. | .atomT .. | .arenaT .. | .protoT .. | .assumT .. | .whyT .. => true
+  | .callT .. | .varT .. | .goalT .. | .concT .. | .devT .. | .groupT .. => true
+  | .stateT .. | .specT .. | .asmT .. | .transT .. | .checkT .. => true
   | .axiomT _ _ _ .none _ _ => true
-  | .transT _ _ _ => true
-  | .checkT .. => true
+  | item@(.accT ..) => akkuFormZulaessig item
   | _ => false
 
-/-- **An accepted head steps past the item check.** The mirror of
-    `uRestFehler_kopf`: the accepted kinds recurse, everything else
-    contradicts the premise. -/
+/-- Read the classification from the real singleton result. No diagnostic table
+    is duplicated: existential error witnesses are the checker's own messages. -/
+private theorem singleton_classification (hd : SItemTief) :
+    (istAngenommen hd = true ↔ uRestFehler [hd] = .ok ()) ∧
+    (istGegenstand hd = true ↔ ∃ e, uRestFehler [hd] = .error e) := by
+  cases hd with
+  | axiomT name params result requirement effects cost =>
+    cases requirement <;> simp [istAngenommen, istGegenstand, uRestFehler]
+  | accT name ty operator cores aggregate =>
+    cases cores <;> cases ho : akkuOperatorOk operator <;>
+      simp [istAngenommen, istGegenstand, uRestFehler, akkuFormZulaessig, ho]
+  | _ => simp [istAngenommen, istGegenstand, uRestFehler]
+
+/-- The item check composes the actual singleton result with the tail. This
+    preserves both the first error and every admitted head, including accumulators. -/
+theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief) :
+    uRestFehler (hd :: tl) = (uRestFehler [hd]).bind (fun _ => uRestFehler tl) := by
+  cases hd with
+  | axiomT name params result requirement effects cost => cases requirement <;> rfl
+  | accT name ty operator cores aggregate =>
+    cases ha : akkuFormZulaessig (.accT name ty operator cores aggregate) <;>
+      cases ho : akkuOperatorOk operator <;> simp [uRestFehler, ha, ho]
+  | _ => rfl
+
+/-- A refused head retains precisely its actual singleton diagnostic. -/
+theorem uRestFehler_kopf (hd : SItemTief) (tl : List SItemTief)
+    (he : istGegenstand hd = true) :
+    uRestFehler (hd :: tl) = uRestFehler [hd] := by
+  rcases (singleton_classification hd).2.mp he with ⟨e, checked⟩
+  rw [uRestFehler_schritt, checked]
+  rfl
+
+/-- An accepted head steps past the actual item check. -/
 theorem uRestFehler_kopf_gut (hd : SItemTief) (tl : List SItemTief)
     (he : istAngenommen hd = true) :
     uRestFehler (hd :: tl) = uRestFehler tl := by
-  cases hd with
-  | constT _ _ _ => rfl
-  | typeT _ _ _ _ _ => rfl
-  | tableT _ _ _ _ _ _ _ => rfl
-  | lockT _ _ _ _ _ _ _ => rfl
-  | fnT _ _ => rfl
-  | entryT _ => rfl
-  | modT _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
-  | useT _ => simp only [istAngenommen, Bool.false_eq_true] at he
-  | globT _ _ _ _ _ _ _ => rfl
-  | protoT _ => rfl
-  | specT _ _ => rfl
-  | asmT _ _ => rfl
-  | formatT _ _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
-  | arenaT _ _ _ _ _ _ => rfl
-  | whyT _ _ _ => rfl
-  | stateT _ _ => rfl
-  | devT _ _ _ _ => rfl
-  | assumT _ _ _ _ => rfl
-  | axiomT _ _ _ q _ _ =>
-    cases q with
-    | none => rfl
-    | some _ => simp only [istAngenommen, Bool.false_eq_true] at he
-  | checkT _ => rfl
-  | atomT _ _ _ _ _ => rfl
-  | rcuT _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
-  | groupT _ _ _ => rfl
-  | concT _ => rfl
-  | accT _ _ _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
-  | walkT _ => simp only [istAngenommen, Bool.false_eq_true] at he
-  | trustT _ _ _ _ _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
-  | bootT _ _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
-  | callT _ => rfl
-  | varT _ => rfl
-  | goalT _ _ => rfl
-  | transT _ _ _ => rfl
-  | profT _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
-  | gateT _ => simp only [istAngenommen, Bool.false_eq_true] at he
-  | pubT _ => simp only [istAngenommen, Bool.false_eq_true] at he
-  | taggedByT _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
-  | specGroupT _ _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
-  | implGroupT _ _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
+  rw [uRestFehler_schritt, (singleton_classification hd).1.mp he]
+  rfl
 
-/-- **A head that is neither accepted nor excused fails at once.** With
-    no fragment excuse (`istGegenstand` false) and no accepted shape
-    (`istAngenommen` false) the head is off the fragment
-    (a `use`, a `format`, ...), and `uRestFehler` refuses it without looking at the tail. -/
-theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief)
-    (he : istGegenstand hd = false) (ha : istAngenommen hd = false) :
-    uRestFehler (hd :: tl) = .error "item without G form" := by
-  cases hd with
-  | constT _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | typeT _ _ _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | tableT _ _ _ _ _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | lockT _ _ _ _ _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | fnT _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | entryT _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | modT _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
-  | useT _ => simp only [istGegenstand, Bool.true_eq_false] at he
-  | globT _ _ _ _ _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | protoT _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | specT _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | asmT _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | formatT _ _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
-  | arenaT _ _ _ _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | whyT _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | stateT _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | devT _ _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | assumT _ _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | axiomT _ _ _ q _ _ =>
-    cases q with
-    | none => simp only [istAngenommen, Bool.true_eq_false] at ha
-    | some _ => simp only [istGegenstand, Bool.true_eq_false] at he
-  | checkT _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | atomT _ _ _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | rcuT _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
-  | groupT _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | concT _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | accT _ _ _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
-  | walkT _ => simp only [istGegenstand, Bool.true_eq_false] at he
-  | trustT _ _ _ _ _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
-  | bootT _ _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
-  | callT _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | varT _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | goalT _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | transT _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | profT _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
-  | gateT _ => simp only [istGegenstand, Bool.true_eq_false] at he
-  | pubT _ => simp only [istGegenstand, Bool.true_eq_false] at he
-  | taggedByT _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
-  | specGroupT _ _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
-  | implGroupT _ _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
-
-/-- **An off-fragment item anywhere fails the item check.** Induction:
-    empty lists hold no witness; a bad head fails at once, otherwise the
-    witness sits in the tail. -/
+/-- A refused item anywhere forces an actual error. An earlier refusal keeps
+    its own message; otherwise the successful singleton check exposes the tail. -/
 theorem uRestFehler_faellt (l : List SItemTief)
     (h : ∃ it ∈ l, istGegenstand it = true) :
-    uRestFehler l = .error "item without G form" := by
+    ∃ e, uRestFehler l = .error e := by
   induction l with
   | nil =>
-    cases h with
-    | intro w hw =>
-      cases hw with
-      | intro hmem hbad => simp only [List.not_mem_nil] at hmem
+    rcases h with ⟨it, member, _⟩
+    cases member
   | cons hd tl ih =>
-    cases h with
-    | intro w hw =>
-      cases hw with
-      | intro hmem hbad =>
-        cases he : istGegenstand hd with
-        | true => exact uRestFehler_kopf hd tl he
-        | false =>
-          cases ha : istAngenommen hd with
-          | true =>
-            have hmem' : w ∈ tl := by
-              simp only [List.mem_cons] at hmem
-              cases hmem with
-              | inl heq =>
-                cases heq
-                rw [he] at hbad
-                simp only [Bool.false_eq_true] at hbad
-              | inr hm => exact hm
-            rw [uRestFehler_kopf_gut hd tl ha]
-            exact ih ⟨w, hmem', hbad⟩
-          | false => exact uRestFehler_schritt hd tl he ha
+    cases checked : uRestFehler [hd] with
+    | error e =>
+      exact ⟨e, by rw [uRestFehler_schritt, checked]; rfl⟩
+    | ok value =>
+      have inTail : ∃ it ∈ tl, istGegenstand it = true := by
+        rcases h with ⟨it, member, bad⟩
+        rcases List.mem_cons.mp member with same | later
+        · subst it
+          rcases (singleton_classification hd).2.mp bad with ⟨e, refused⟩
+          rw [checked] at refused
+          cases refused
+        · exact ⟨it, later, bad⟩
+      rcases ih inTail with ⟨e, refused⟩
+      exact ⟨e, by rw [uRestFehler_schritt, checked]; exact refused⟩
 
 /-- **A failing item check fails the elaboration.** `elabU` runs the certified expansion and
     then `uRestFehler`; a refused expanded item list refuses the unit. -/
@@ -347,15 +198,15 @@ theorem elabU_verweigert_noch (items msE : List SItemTief)
     (hE : expandU items = .ok (msE, requirements))
     (h : ∃ it ∈ msE, istGegenstand it = true) :
     ∃ e, elabU items = .error e := by
-  have hR := uRestFehler_faellt _ h
-  exact ⟨_, elabU_bei_RestFehler _ _ _ requirements hE hR⟩
+  rcases uRestFehler_faellt _ h with ⟨e, hR⟩
+  exact ⟨e, elabU_bei_RestFehler _ _ e requirements hE hR⟩
 
 /-- **Witness for `elabU_verweigert_noch`**: a lone `use` item is
     still refused -- minimal synthetic fixture; corpus-scale refusal is
     measured by probe #2 (81 `Gegenstand` files). -/
 theorem elabU_verweigert_noch_zeuge :
     ∃ e, elabU [.useT ["x"]] = .error e :=
-  ⟨_, rfl⟩
+  ⟨_, by cbv⟩
 
 /-! ## 108 elaborates -/
 
@@ -387,7 +238,7 @@ def w108prog : UProg :=
 /-- **108 elaborates**: `elabU` yields exactly the pasted program, the `concurrent` members as its thread
     roots (and `lowerAllg` succeeds on it). -/
 theorem w108_elab : beqElabU (elabU w108items) (.ok w108prog) = true := by
-  decide
+  cbv
 
 #print axioms Gabbro.Grammatik.GabbroV.GvParserFragment.w108_elab
 
