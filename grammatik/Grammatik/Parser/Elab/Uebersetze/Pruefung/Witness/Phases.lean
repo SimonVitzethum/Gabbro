@@ -89,7 +89,7 @@ private theorem recording_block (heads : List UFnKopf) (check : SCheck)
     recordCheckCode heads check fuel ctx point
       (.block statements (some (.ret (some value)))) = match fuel with
       | 0 => .error "check recording expansion exhausted"
-      | n + 1 => do
+      | n + 1 => (do
         let (statements, ctx, reporters, extraHeads, point) ←
           recordCheckStatements heads check n ctx point statements
         let (body, reporter, head) ← recordCheckReturn ctx check point value
@@ -97,7 +97,7 @@ private theorem recording_block (heads : List UFnKopf) (check : SCheck)
         | .block recorded ending =>
           pure (.block (statements ++ recorded) ending, reporters ++ [reporter],
             extraHeads ++ [head], point + 1)
-        | _ => .error "check reporter expansion is not a block" := by
+        | _ => .error "check reporter expansion is not a block") := by
   cases fuel <;> rfl
 
 private theorem recording_bind (heads : List UFnKopf) (check : SCheck)
@@ -119,7 +119,7 @@ private theorem recording_cons (heads : List UFnKopf) (check : SCheck)
     (fuel : Nat) (ctx : UCtx) (point : Nat) (statement : SAnw) (rest : List SAnw) :
     recordCheckStatements heads check fuel ctx point (statement :: rest) = match fuel with
       | 0 => .error "check recording expansion exhausted"
-      | n + 1 => do
+      | n + 1 => (do
         let (transformed, reporters, extraHeads, point) ←
           recordCheckCode heads check n ctx point statement
         let (_, nextCtx) ← uAnwReihe ctx.tabs heads 1000000 ctx [statement]
@@ -128,7 +128,7 @@ private theorem recording_cons (heads : List UFnKopf) (check : SCheck)
         let recorded := match statement, transformed with
           | .ret _, .block before (some (.ret result)) => before ++ [.ret result]
           | _, _ => [transformed]
-        pure (recorded ++ rest, endCtx, reporters ++ more, extraHeads ++ moreHeads, point) := by
+        pure (recorded ++ rest, endCtx, reporters ++ more, extraHeads ++ moreHeads, point)) := by
   cases fuel <;> rfl
 
 private theorem sample_binary (bindings : List (SExpr × SExpr)) (fuel : Nat)
@@ -191,9 +191,18 @@ private theorem check_measure_gate (u : UProg) (exported : Measures.Export u)
     rw [empty f, empty g]
     change (!zykS P (List.finRange u.fns.length) f g || true) = true
     exact Bool.or_true _
-  unfold Measures.checkedProgram
-  rw [made, cycles]
-  rfl
+  -- Pin the whole tuple at the declaration's actual function type before
+  -- reducing the dependent export match. No rewrite crosses its binder.
+  let accepted : Programm (declOf u) × List (declOf u).Fn :=
+    (P, List.finRange u.fns.length)
+  change (match Measures.lowerMeasures u with
+    | .error error => .error error
+    | .ok actual =>
+      if Measures.cycleLengths u P actual.mass then .ok accepted
+      else .error "differing decreases tuple lengths in a recursion cycle") = .ok accepted
+  rw [made]
+  dsimp only
+  exact if_pos cycles
 
 -- Retain the complete dependent endpoints together. Transporting this certificate
 -- along the whole source result never has to eliminate a function index or a body.
@@ -218,7 +227,7 @@ private structure CheckWitness (u : UProg) (floors : Nat) : Prop where
   gateCounts : ((uCheckDecls u).toOption.get derived).map (fun d => d.gates.length) = [1]
   probeReturn : (u.fns.find? (fun f => strEq f.name "p#probe")).map (·.ret) =
     some (.bool (.var "#checkReport"))
-  admitted : Zielsatz.checkB ((lowerAllg u).toOption.get lowered).1 [] []
+  admitted : Gabbro.Grammatik.checkB ((lowerAllg u).toOption.get lowered).1 [] []
     (List.finRange u.fns.length) ((uCheckDecls u).toOption.get derived) = true
   accepted : Zielsatz.AkzeptiertX ((lowerAllg u).toOption.get lowered).1
     (Cover.Differenz.sperrFamilie u) (List.finRange u.fns.length) [] [] [] []

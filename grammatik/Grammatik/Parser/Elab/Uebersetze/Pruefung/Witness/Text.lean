@@ -47,8 +47,9 @@ private def passingTail : List Char :=
     'u', '6', '4', ' ', '=', ' ', '3', ';', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 'x', ' ',
     '>', '=', ' ', '2', ';', ' ', '}', ' ', 'f', 'l', 'o', 'o', 'r', ' ', 'x', ' ', '>', '=',
     ' ', '2', ' ', '}']
+-- Built-in widths are vocabulary words in the actual lexer, including u64.
 private def passingTailTokens : List Token :=
-  [.wort "can_fail", .zeichen "{", .wort "let", .wort "x", .zeichen ":", .ident "u64",
+  [.wort "can_fail", .zeichen "{", .wort "let", .wort "x", .zeichen ":", .wort "u64",
     .zeichen "=", .num 3, .zeichen ";", .wort "return", .wort "x", .zeichen ">=",
     .num 2, .zeichen ";", .zeichen "}", .wort "floor", .wort "x", .zeichen ">=",
     .num 2, .zeichen "}"]
@@ -80,7 +81,7 @@ private def failingTail : List Char :=
     '>', '=', ' ', '4', ';', ' ', '}', ' ', 'f', 'l', 'o', 'o', 'r', ' ', 'x', ' ', '>', '=',
     ' ', '4', ' ', '}']
 private def failingTailTokens : List Token :=
-  [.wort "can_fail", .zeichen "{", .wort "let", .wort "x", .zeichen ":", .ident "u64",
+  [.wort "can_fail", .zeichen "{", .wort "let", .wort "x", .zeichen ":", .wort "u64",
     .zeichen "=", .num 3, .zeichen ";", .wort "return", .wort "x", .zeichen ">=",
     .num 4, .zeichen ";", .zeichen "}", .wort "floor", .wort "x", .zeichen ">=",
     .num 4, .zeichen "}"]
@@ -141,7 +142,7 @@ private def bypassTail : List Char :=
     'u', 'e', ';', ' ', '}', ' ', 'f', 'l', 'o', 'o', 'r', ' ', 'x', ' ', '>', '=', ' ', '4',
     ' ', '}']
 private def bypassTailTokens : List Token :=
-  [.wort "can_fail", .zeichen "{", .wort "let", .wort "x", .zeichen ":", .ident "u64",
+  [.wort "can_fail", .zeichen "{", .wort "let", .wort "x", .zeichen ":", .wort "u64",
     .zeichen "=", .num 3, .zeichen ";", .wort "return", .wort "true", .zeichen ";",
     .zeichen "}", .wort "floor", .wort "x", .zeichen ">=", .num 4, .zeichen "}"]
 
