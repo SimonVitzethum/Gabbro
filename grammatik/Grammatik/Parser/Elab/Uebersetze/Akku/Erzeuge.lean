@@ -119,13 +119,16 @@ def uAkkuAktArm (p : AkkuPlan) (lo hi : Int) (op : String) (i : Nat) : SAnw :=
   .locks false (.variable sperre) gamb
 
 /-- The dispatch over the queried core: arm `i` runs at answer `i`, the last
-    else is empty (the query answers in `0 .. k - 1`). -/
+    else is empty (the query answers in `0 .. k - 1`). Recursive alternatives
+    are canonical blocks; the terminal block contains no statement. -/
 def uAkkuVersand (p : AkkuPlan) (lo hi : Int) (op : String) : Nat → SAnw
   | 0 => .block [] none
   | k + 1 =>
     .cond (.bin "==" (.variable "k") (.lit k))
       (.block [uAkkuAktArm p lo hi op k] none) []
-      (some (uAkkuVersand p lo hi op k))
+      (some (.block (match k with
+        | 0 => []
+        | _ + 1 => [uAkkuVersand p lo hi op k]) none))
 
 /-- The update body: call the query wrapper once, dispatch, locked load/merge/store. -/
 def uAkkuAktKoerper (p : AkkuPlan) (lo hi : Int) (op : String) : SAnw :=
