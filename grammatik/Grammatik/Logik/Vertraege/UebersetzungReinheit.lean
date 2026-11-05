@@ -25,13 +25,18 @@ public import Grammatik.Logik.Vertraege.Uebersetzung
 namespace Gabbro.Grammatik.Uebersetzung
 
 open Gabbro.Grammatik.Parser
+open Gabbro.Grammatik.Parser.Uebersetze
+open Gabbro.Grammatik.Parser.UebersetzeAllg
+open Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 /-- The declared source effects of a stage-1 translator: every `effects`
     arm is `pure`. Reads, writes, locks, masks, allocations, takes, posts
     and loops all refuse; a translator body needing them has no certificate
     path (`TranslationDecl.noCalls`, or the `torZurErweiterung` gate). -/
 def effekteRein (ks : List SKlausel) : Bool :=
-  ks.all fun | .effs es => es.all fun | .pure => true | _ => false | _ => true
+  ks.all fun
+    | .effs es => es.all (fun | .pure => true | _ => false)
+    | _ => true
 
 /-- The empty clause list is pure. -/
 theorem effekteRein_leer : effekteRein [] = true := rfl
