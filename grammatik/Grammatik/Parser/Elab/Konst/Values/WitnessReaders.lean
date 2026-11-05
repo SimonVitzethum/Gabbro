@@ -89,4 +89,3 @@ theorem reader_missing {D : Deklaration} {Γ : Ctx} (names : Locals Γ)
 
 
 end Gabbro.Grammatik.Parser.Konst.Values.WitnessReaders
-
