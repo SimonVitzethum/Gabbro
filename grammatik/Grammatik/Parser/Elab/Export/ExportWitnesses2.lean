@@ -1,5 +1,5 @@
 module
-public import Grammatik.Parser.Elab.Export.ExportQuantifiers
+public import Grammatik.Parser.Elab.Export.QuantifierWitnesses
 public import Grammatik.Parser.Elab.Export.ExportComparisons
 public import Grammatik.Parser.Elab.Export.ExportArrays
 import all Init.Data.Repr
