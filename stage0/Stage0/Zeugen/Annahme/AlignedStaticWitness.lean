@@ -1,5 +1,5 @@
 module
-public import Stage0.SourceWitness
+public import Stage0.IRBild
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
