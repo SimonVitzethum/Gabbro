@@ -255,11 +255,10 @@ private theorem qual_phase_data :
     (fun library unit image => DeclarationData library unit image
       (⟨0, 10, 2⟩ : IntegerSchema) (fun input => input)) ?_
     qual_library_success qual_elab_success qual_lower_success
-  refine ⟨?library, ?found, ?unit, ?made, ?image, ?emitted, ?data⟩
+  refine ⟨?library, ?found, ?unit, ?made, ?imageData⟩
   case found => cbv <;> exact Eq.refl _
   case made => cbv <;> exact Eq.refl _
-  case emitted => library_emitted
-  case data => library_data_fields
+  case imageData => library_emitted
 
 /-- Preserve the complete qualified phase result before typed projections. -/
 theorem translation_qual_export_data :

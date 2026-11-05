@@ -93,6 +93,15 @@ theorem certifyResults (members : List SItemTief) (call : SLibraryCall)
   subst image
   exact facts
 
+/-- Choose the complete image only after its success certificate is fixed.
+    No output metavariable is solved through an equality's right-hand side. -/
+theorem certifyImage {unit : UProg}
+    {Q : (Programm (declOf unit) × List (declOf unit).Fn) → Prop}
+    (lowered : (lowerAllg unit).toOption.isSome = true)
+    (facts : Q ((lowerAllg unit).toOption.get lowered)) :
+    ∃ image, lowerAllg unit = .ok image ∧ Q image :=
+  ⟨(lowerAllg unit).toOption.get lowered, except_ok_get lowered, facts⟩
+
 /-- Recover the first function from its actual lowering equation. The image is
     the canonical selected result, never a second concrete program assembly. -/
 theorem declarationData_of_function
@@ -356,18 +365,20 @@ theorem lowering_ok (u : UProg) (noInvs : u.invs = []) (contracts : contractGate
         · contradiction
   exact lowered
 
--- The image witness is the existing success-dependent selection. In particular,
--- this never unfolds `progOfFn`, its dependent collector, or checkedProgram.
+-- Retain the complete existential until the actual success-dependent image can
+-- be supplied explicitly. The body facts concern precisely that same image.
 macro "library_emitted" : tactic => `(tactic| (
-  apply except_ok_get
-  apply lowering_ok
-  · rfl
-  · cbv
-  · rintro ⟨index, bound⟩
-    have small : index < 1 := bound
-    have zero : index = 0 := by omega
-    subst index
-    constructor <;> cbv))
+  refine certifyImage ?lowered ?data
+  case lowered =>
+    apply lowering_ok
+    · rfl
+    · cbv
+    · rintro ⟨index, bound⟩
+      have small : index < 1 := bound
+      have zero : index = 0 := by omega
+      subst index
+      constructor <;> cbv
+  case data => library_data_fields))
 
 /-- Transport the complete metadata certificate before introducing any function
     index of the extracted unit. The concrete assembler is never evaluated here. -/

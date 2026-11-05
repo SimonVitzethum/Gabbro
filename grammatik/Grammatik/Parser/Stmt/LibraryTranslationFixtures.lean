@@ -366,21 +366,19 @@ private theorem translation_phase_data (reverse : Bool) :
       (fun library unit image => DeclarationData library unit image translationSchema
         (fun input => input)) ?_ (translation_library_success false)
       (translation_elab_success false) (translation_lower_success false)
-    refine ⟨?libraryFalse, ?foundFalse, ?unitFalse, ?madeFalse, ?imageFalse, ?emittedFalse, ?dataFalse⟩
+    refine ⟨?libraryFalse, ?foundFalse, ?unitFalse, ?madeFalse, ?imageDataFalse⟩
     case foundFalse => cbv <;> exact Eq.refl _
     case madeFalse => cbv <;> exact Eq.refl _
-    case emittedFalse => library_emitted
-    case dataFalse => library_data_fields
+    case imageDataFalse => library_emitted
   | true =>
     refine certifyResults (translationPhaseMembers true) translationCall
       (fun library unit image => DeclarationData library unit image translationSchema
         (fun input index => input index.rev)) ?_ (translation_library_success true)
       (translation_elab_success true) (translation_lower_success true)
-    refine ⟨?libraryTrue, ?foundTrue, ?unitTrue, ?madeTrue, ?imageTrue, ?emittedTrue, ?dataTrue⟩
+    refine ⟨?libraryTrue, ?foundTrue, ?unitTrue, ?madeTrue, ?imageDataTrue⟩
     case foundTrue => cbv <;> exact Eq.refl _
     case madeTrue => cbv <;> exact Eq.refl _
-    case emittedTrue => library_emitted
-    case dataTrue => library_data_fields
+    case imageDataTrue => library_emitted
 
 /-- Full phase success and typed image facts for the public selected values.
     The substitutions happen before any finite index or result projection. -/
