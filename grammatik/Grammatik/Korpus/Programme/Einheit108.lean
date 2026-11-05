@@ -23,6 +23,9 @@ import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
 import all Grammatik.Parser.Elab.Generic.StaticConformance
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest1
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Body
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest2a
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -123,12 +126,56 @@ def bodyC8 : Endblock D8 (vertragVon D8 c8) false (D8.params c8) [] :=
   .ret (.val (Expr.widen (lo' := 0) (hi' := 4294967295) (by decide) (by decide)
     (Expr.slot t8 f8 (.widen (by decide) (by decide) (.lit 1)) darf8))) (List.Perm.refl _)
 
-theorem rumpf_a8 : P8.rumpf a8 = bodyA8 := by cbv
-theorem rumpf_c8 : P8.rumpf c8 = bodyC8 := by cbv
+private theorem lowerA8 : lowerFnAt uExp108 a8 = .ok (.tru, bodyA8, .tru) := by
+  cbv <;> rfl
+
+private theorem lowerC8 : lowerFnAt uExp108 c8 = .ok (.tru, bodyC8, .tru) := by
+  cbv <;> rfl
+
+theorem rumpf_a8 : P8.rumpf a8 = bodyA8 := by
+  obtain ⟨value, origin, _, body, _⟩ := lowerAllg_fields uExp108 P8 fs8 low8 a8
+  rw [lowerA8] at origin
+  cases origin
+  exact body
+
+theorem rumpf_c8 : P8.rumpf c8 = bodyC8 := by
+  obtain ⟨value, origin, _, body, _⟩ := lowerAllg_fields uExp108 P8 fs8 low8 c8
+  rw [lowerC8] at origin
+  cases origin
+  exact body
+
 theorem ens8 (f : D8.Fn) : P8.ensures f = .tru := by
-  rcases fn_zwei f with e | e <;> subst e <;> cbv
-theorem req8 (f : D8.Fn) : P8.requires f = .tru := by
-  rcases fn_zwei f with e | e <;> subst e <;> cbv
+  obtain ⟨value, origin, post, _, _⟩ := lowerAllg_fields uExp108 P8 fs8 low8 f
+  rcases fn_zwei f with e | e <;> subst e
+  · rw [lowerA8] at origin
+    cases origin
+    exact post
+  · rw [lowerC8] at origin
+    cases origin
+    exact post
+
+/-- Successful assembly retains the actual requires and pointer-contract table;
+    their projections do not evaluate the complete compiler again. -/
+private theorem assembly8 : (∀ f : D8.Fn, P8.requires f = .tru) ∧
+    (∀ n, P8.ptrVertrag n = ptrVertragOf uExp108 n) := by
+  have assembled := low8
+  unfold lowerAllg at assembled
+  split at assembled
+  · cases assembled
+  · split at assembled
+    · cases assembled
+    · split at assembled
+      · obtain ⟨same, _⟩ := Measures.checkedProgram_eq assembled
+        rw [same]
+        constructor
+        · intro f
+          apply reqOf_leer
+          rcases fn_zwei f with e | e <;> subst e <;> rfl
+        · intro n
+          rfl
+      · cases assembled
+
+theorem req8 (f : D8.Fn) : P8.requires f = .tru := assembly8.1 f
 
 private theorem reqEntry8 (f : D8.Fn) (s : World D8) (ρ : Env D8 (D8.params f)) :
     ReqAmEintritt P8 f s ρ := by
@@ -140,7 +187,8 @@ private theorem reqEntry8 (f : D8.Fn) (s : World D8) (ρ : Env D8 (D8.params f))
     whose gives lists are empty. No other interface contract is substituted. -/
 private theorem ptrPost8 (n : Nat) (bound : n < 2) :
     (P8.ptrVertrag n).post = .tru := by
-  rcases (by omega : n = 0 ∨ n = 1) with rfl | rfl <;> cbv
+  rw [assembly8.2]
+  rcases (by omega : n = 0 ∨ n = 1) with rfl | rfl <;> cbv <;> rfl
 
 private theorem ptrRefinement8 : PtrVerfeinert P8 := by
   intro f n conforms
