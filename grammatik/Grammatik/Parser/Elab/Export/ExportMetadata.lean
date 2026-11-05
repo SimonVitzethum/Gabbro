@@ -139,10 +139,10 @@ def itemMetadata : SItemTief → Bool
   | .groupT .. => true
   /- Alignment is read and validated by the existing profile/uGlobs path. Names
       need its real constant environment; sections remain an unbound duty here. -/
-  | .globT _ _ ty _ alignment section _ => typeMetadata ty || alignment.any (fun e =>
+  | .globT _ _ ty _ alignment sectionName _ => typeMetadata ty || alignment.any (fun e =>
       match e with
       | .variable _ => false
-      | _ => (ProfilBindung.ausrichtungWert [] e).isNone) || section.isSome
+      | _ => (ProfilBindung.ausrichtungWert [] e).isNone) || sectionName.isSome
   | .adaptT s ps adapter b => (s.art != "" && s.art != "impl") ||
     clausesMetadata s.klauseln || (b.map (bodyMetadata 10000)).getD false ||
     adapter.vorspiel.any (bodyMetadata 10000) || adapter.sonst.any (fun (_, body) => bodyMetadata 10000 body) ||
@@ -173,10 +173,10 @@ def itemMetadata : SItemTief → Bool
     Actual value/name validity still belongs to profile placement and uGlobs. -/
 theorem globT_alignment_bound (constants : List (String × Nat)) (writable : Bool)
     (name : String) (ty : STyp) (initial : SKonstWert) (expression : SExpr)
-    (alignment : Nat) (section : Option String) (shared : Bool)
+    (alignment : Nat) (sectionName : Option String) (shared : Bool)
     (read : ProfilBindung.ausrichtungWert constants expression = some alignment) :
-    itemMetadata (.globT writable name ty initial (some expression) section shared) =
-      (typeMetadata ty || section.isSome) := by
+    itemMetadata (.globT writable name ty initial (some expression) sectionName shared) =
+      (typeMetadata ty || sectionName.isSome) := by
   cases expression <;> simp_all [ProfilBindung.ausrichtungWert, itemMetadata]
 
 /-- Alignment stays in the canonical reader's domain; sections stay refused. -/
