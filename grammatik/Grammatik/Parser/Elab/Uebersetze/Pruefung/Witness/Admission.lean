@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
+import Grammatik.Parser.Elab.UebersetzeAllg3.TransitionCert
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
 import all Grammatik.Parser.Lex.Lexer.Teil1
 import all Grammatik.Parser.Elab.Uebersetze.Folds.Expressions
@@ -80,7 +81,7 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 -- The emitted source stays unchanged; these proof equations select its real callbacks.
 attribute [local cbv_opaque] uFloatLimit uAnwReihe uAnwReiheCore
   uAkkuBinder uZeigerAnw uStartNamen elabKlauseln expandReturnCall expandFoldEnd
-  recordCheckCode recordCheckStatements checkSampleSubstitute lowStufe lowSeqL lowStructL
+  recordCheckCode recordCheckStatements checkSampleSubstitute lowStufe lowSeqL lowStructL lowEndL
   Measures.checkedProgram
 attribute [local cbv_eval] row_nil row_cons core_bind core_call core_set core_cond
   bound_names_select pointer_source_select start_source_select
@@ -88,7 +89,8 @@ attribute [local cbv_eval] row_nil row_cons core_bind core_call core_set core_co
   fold_end_none fold_end_empty fold_end_variable
   recording_block recording_bind recording_nil recording_cons
   sample_binary sample_variable sample_literal
-  check_sequence_select check_structure_select lowStufe_seq lowStufe_struct
+  check_sequence_select check_structure_select lowEndL_succ
+  lowStufe_seq lowStufe_struct lowStufe_ende
 
 -- Infer this exact unit from canonical elaboration, once, before dependent indices.
 private def admissionUnitMade : {unit : UProg // elabU (textItems "c" "g") = .ok unit} := by
@@ -159,7 +161,7 @@ private theorem admission_each :
 private theorem admission_pair (index : Fin admissionUnitMade.val.fns.length)
     (success : ∃ result, lowerFnAt admissionUnitMade.val index = .ok result) :
     lowerAtPair admissionUnitMade.val index success = (admissionFunctions index).val := by
-  simp only [lowerAtPair, admission_function]
+  exact lowerAtPair_of_ok admissionUnitMade.val index success (admission_function index)
 
 private def admissionMeasures :
     {exported : Measures.Export admissionUnitMade.val //
