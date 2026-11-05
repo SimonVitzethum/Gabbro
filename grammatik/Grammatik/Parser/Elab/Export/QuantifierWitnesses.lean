@@ -180,10 +180,10 @@ private theorem closed_sequence (u : UProg) (caller : Fin u.fns.length) (Γ : Ct
 /-- Nonempty represented domain, two ordered index binders and a current-world count
     jointly reach the production consuming branch of the structured lowerer. -/
 theorem consuming_traversal_lower_zeuge :
-    let fn := {relationFunction with puts := ["T"]}
-    let u := {relationUnit with fns := [fn]}
+    let fn : UFn := {relationFunction with puts := ["T"]}
+    let u : UProg := {relationUnit with fns := [fn]}
     let caller : Fin u.fns.length := ⟨0, by decide⟩
-    let header := UStmt.consumeLoopBeg "node" "T" "#consume:predecessor"
+    let header : UStmt := UStmt.consumeLoopBeg "node" "T" "#consume:predecessor"
       (.reach "T" "next" (.param "root") (.param "node"))
       (.reach "T" "next" (.param "#consume:predecessor") (.param "node")) .tru
       (.zaehleBaum "T" "j" "next" false (.param "root") .tru) "consumes T.slots"
@@ -248,7 +248,8 @@ theorem consuming_traversal_lower_zeuge :
     have counted : lowSeiteZ u Γ [] fn none mass = .ok countSide :=
       tree_count_lower u Γ [] fn "T" "j" "next" (.param "root") t edge (.var .here)
         gate found typed seed finite nonnegative guard
-    have measured := consuming_measure_lower u Γ [] fn mass countSide rfl counted (Int.le_refl 0)
+    have measured := consuming_measure_lower u Γ [] fn mass countSide
+      (by simp only [mass, seiteAltErg, ensAltErg]) counted (Int.le_refl 0)
     have inside := closed_sequence u caller (.index 3 :: Γ) node 0 [] []
     have emitted := consuming_traversal_lower (loop := false) u caller Γ fn 1 [] []
       "node" "T" "#consume:predecessor"
@@ -256,8 +257,16 @@ theorem consuming_traversal_lower_zeuge :
       (.reach "T" "next" (.param "#consume:predecessor") (.param "node")) .tru mass
       "consumes T.slots" [.blkEnd] [] t selected relation .tru countSide.range.2
       (Expr.widen (Int.le_refl 0) (Int.le_refl _) countSide.term) Block.nil found
-      (by simpa [fn, strEq] using consuming_effect_checked [fn] ["T"] true) (by rfl) measured
-      (by simpa only [lowEns] using members) (by simpa only [lowEns] using edges) inside
+      (by simpa [fn, strEq] using consuming_effect_checked [fn] ["T"] true)
+      (by simp only [lowEns]) measured
+      (by
+        change lowEns u (.index 3 :: Γ) [] node none
+          (.reach "T" "next" (.param "root") (.param "node")) = .ok selected
+        simpa only [lowEns, Option.isSome, Bool.false_eq_true, ite_false] using members)
+      (by
+        change lowEns u (.index 3 :: .index 3 :: Γ) [] predecessor none
+          (.reach "T" "next" (.param "#consume:predecessor") (.param "node")) = .ok relation
+        simpa only [lowEns, Option.isSome, Bool.false_eq_true, ite_false] using edges) inside
     exact congrArg (fun result => result.toOption.isSome) emitted
 
 theorem index_scope_zeuge (entry state : World (declOf relationUnit))
@@ -265,7 +274,12 @@ theorem index_scope_zeuge (entry state : World (declOf relationUnit))
     eval entry (Expr.weaken (Expr.var (D := declOf relationUnit) (Λ := [])
       (Γ := [.index 3, .index 3]) (τ := .index 3) .here)) state
         (.cons (τ := .index 3) binder (.cons root (.cons other .nil))) = root := by
+  have lowered : lowIdx relationUnit [.index 3, .index 3] [] relationFunction 0
+      (⟨0, by decide⟩ : Fin relationUnit.tabs.length) (.param "root") = .ok (.var .here) :=
+    index_parameter_lower relationUnit [.index 3, .index 3] [] relationFunction 0 0 "root"
+      ⟨0, by decide⟩ 0 .here (by simp [paramPos, relationFunction]) rfl (lowVar_same_head _ _)
   exact index_scope relationUnit [.index 3, .index 3] [] relationFunction 0
-    ⟨0, by decide⟩ (.param "root") (.var .here) rfl (binderTy := .index 3) binder entry state (.cons root (.cons other .nil))
+    ⟨0, by decide⟩ (.param "root") (.var .here) lowered
+    (binderTy := .index 3) binder entry state (.cons root (.cons other .nil))
 
 end Gabbro.Grammatik.Parser.ExportPreservation
