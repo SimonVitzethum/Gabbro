@@ -129,15 +129,14 @@ private theorem translation_false_phases :
       elabU (pre108 (translatorItems (translationMembers false) library)) = .ok unit ∧
       (lowerAllg unit).toOption.isSome = true := by
   unfold translationMembers translationItems translationTokens
-  refine certifyPhases (translationText false).toList translationCall
+  simp only [translation_text, String.toList_ofList]
+  refine certifyPhases (translationCharacters false) translationCall
     (fun (members : List SItemTief) =>
       members[3]? = some (SItemTief.fnT translationCaller translationCallerBody)) ?_
   refine ⟨?tokensfalse, ?itemsfalse, ?membersfalse, ?libraryfalse, ?unitfalse,
     ?lexedfalse, ?parsedfalse, ?resolvedfalse, ?keptfalse,
     ?foundfalse, ?elaboratedfalse, ?loweredfalse⟩
-  case lexedfalse =>
-    rw [translation_text, String.toList_ofList]
-    cbv <;> exact Eq.refl _
+  case lexedfalse => cbv <;> exact Eq.refl _
   case parsedfalse => cbv <;> exact Eq.refl _
   case resolvedfalse => cbv <;> exact Eq.refl _
   case keptfalse => cbv
@@ -161,15 +160,14 @@ private theorem translation_true_phases :
       elabU (pre108 (translatorItems (translationMembers true) library)) = .ok unit ∧
       (lowerAllg unit).toOption.isSome = true := by
   unfold translationMembers translationItems translationTokens
-  refine certifyPhases (translationText true).toList translationCall
+  simp only [translation_text, String.toList_ofList]
+  refine certifyPhases (translationCharacters true) translationCall
     (fun (members : List SItemTief) =>
       members[3]? = some (SItemTief.fnT translationCaller translationCallerBody)) ?_
   refine ⟨?tokenstrue, ?itemstrue, ?memberstrue, ?librarytrue, ?unittrue,
     ?lexedtrue, ?parsedtrue, ?resolvedtrue, ?kepttrue,
     ?foundtrue, ?elaboratedtrue, ?loweredtrue⟩
-  case lexedtrue =>
-    rw [translation_text, String.toList_ofList]
-    cbv <;> exact Eq.refl _
+  case lexedtrue => cbv <;> exact Eq.refl _
   case parsedtrue => cbv <;> exact Eq.refl _
   case resolvedtrue => cbv <;> exact Eq.refl _
   case kepttrue => cbv
@@ -310,14 +308,13 @@ private theorem translation_qual_phases :
       elabU (pre108 (translatorItems translationQualMembers library)) = .ok unit ∧
       (lowerAllg unit).toOption.isSome = true := by
   unfold translationQualMembers translationQualItems translationQualTokens
-  refine certifyPhases translationQualText.toList translationQualCall
+  simp only [translation_qual_text, String.toList_ofList]
+  refine certifyPhases translationQualCharacters translationQualCall
     (fun (members : List SItemTief) =>
       members[6]? = some (SItemTief.fnT translationQualCaller translationQualCallerBody)) ?_
   refine ⟨?tokens, ?items, ?members, ?library, ?unit,
     ?lexed, ?parsed, ?resolved, ?kept, ?found, ?elaborated, ?lowered⟩
-  case lexed =>
-    rw [translation_qual_text, String.toList_ofList]
-    cbv <;> exact Eq.refl _
+  case lexed => cbv <;> exact Eq.refl _
   case parsed => cbv <;> exact Eq.refl _
   case resolved => cbv <;> exact Eq.refl _
   case kept => cbv
@@ -420,13 +417,12 @@ private theorem translation_rek_phases :
       elabU (pre108 (translatorItems translationRekMembers library)) = .ok unit ∧
       (lowerAllg unit).toOption.isSome = true := by
   unfold translationRekMembers translationRekItems translationRekTokens
-  refine certifyPhases translationRekText.toList ⟨["sample"], ["consume"], [], [.num 3]⟩
+  simp only [translation_rek_text, String.toList_ofList]
+  refine certifyPhases translationRekCharacters ⟨["sample"], ["consume"], [], [.num 3]⟩
     (fun (_ : List SItemTief) => True) ?_
   refine ⟨?tokens, ?items, ?members, ?library, ?unit,
     ?lexed, ?parsed, ?resolved, ?kept, ?found, ?elaborated, ?lowered⟩
-  case lexed =>
-    rw [translation_rek_text, String.toList_ofList]
-    cbv <;> exact Eq.refl _
+  case lexed => cbv <;> exact Eq.refl _
   case parsed => cbv <;> exact Eq.refl _
   case resolved => cbv <;> exact Eq.refl _
   case kept => trivial
