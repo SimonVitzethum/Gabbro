@@ -15,25 +15,34 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 -- resources are still symbolic. No capability/type matcher is instantiated at
 -- a concrete check unit merely to pass its Bool or integer argument.
 private theorem check_argument_bool (u : UProg) (caller : Fin u.fns.length)
-    (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u))) (value : UEns) :
-    lowCallArgOneL u caller Γ fn Λ .bool .bool (.bval value) =
-      lowEns u Γ Λ fn none value := by
-  rfl
+    (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u))) (ty : Ty) (value : UEns) :
+    lowCallArgOneL u caller Γ fn Λ .bool ty (.bval value) =
+      match ty with
+      | .bool => lowEns u Γ Λ fn none value
+      | _ => .error "argument type without G form" := by
+  cases ty <;> rfl
 
 private theorem check_argument_integer (u : UProg) (caller : Fin u.fns.length)
     (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u)))
-    (lo hi : Int) (value : USide) :
-    lowCallArgOneL u caller Γ fn Λ .int (.int lo hi) (.val value) =
-      lowWertAt u Γ Λ fn lo hi value := by
+    (ty : Ty) (value : USide) :
+    lowCallArgOneL u caller Γ fn Λ .int ty (.val value) =
+      match ty with
+      | .int lo hi => lowWertAt u Γ Λ fn lo hi value
+      | _ => .error "argument type without G form" := by
+  cases ty <;> try rfl
+  rename_i lo hi
   change (match lowWertAt u Γ Λ fn lo hi value with
     | .error error => Except.error error
-    | .ok term => Except.ok term) = _
+    | .ok term => Except.ok term) = lowWertAt u Γ Λ fn lo hi value
   cases lowWertAt u Γ Λ fn lo hi value <;> rfl
 
 private theorem check_arguments_nil (u : UProg) (caller : Fin u.fns.length)
-    (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u))) :
-    lowCallArgsAuxL u caller Γ fn Λ [] [] [] = .ok Args.nil := by
-  rfl
+    (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u))) (types : List Ty) :
+    lowCallArgsAuxL u caller Γ fn Λ [] types [] =
+      match types with
+      | [] => .ok Args.nil
+      | _ :: _ => .error "argument count without G form" := by
+  cases types <;> rfl
 
 -- Retain all three lists and the exact dependent Args.cons endpoint, including
 -- both error branches. The tail is the actual canonical recursive collector.
