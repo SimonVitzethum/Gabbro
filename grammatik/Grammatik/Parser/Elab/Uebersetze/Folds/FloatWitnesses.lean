@@ -7,6 +7,7 @@ public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil3
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil10
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Rest2a
 public import NativeFloat.Primitives
+import Grammatik.Parser.Elab.UebersetzePipeline
 import all Grammatik.Parser.Lex.Lexer.Teil1
 import all Grammatik.Parser.Elab.Uebersetze.Folds.Expressions
 import all Grammatik.Parser.Elab.Uebersetze.Folds.Expansion
@@ -81,6 +82,9 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 set_option maxRecDepth 100000
 set_option maxHeartbeats 800000
 
+-- The compiler carries this exact bound; its large integer expansion is not a witness phase.
+attribute [local cbv_opaque] uFloatLimit
+
 def table : UTab :=
   {name := "T", count := 3, cols := [("v", (0, 0)), ("open", (0, 1))],
     bools := ["open"], werte := [("v", uFloatTy)]}
@@ -113,9 +117,43 @@ public theorem f64_type_zeuge :
 private def resultContext (ctx : UCtx) : UCtx :=
   uMitLokal ctx "#fold:0:acc:result" .wert uFloatTy ctx.muts
 
+private def domainContext (count : Int) : UCtx :=
+  {context with tabs := [{table with count := count}]}
+
+private def iteratorContext (count : Int) : UCtx :=
+  {domainContext count with names := ["k"], kinds := [.index 0], types := [.index count],
+    bits := [0], loops := ["k"]}
+
+section DomainDispatch
+attribute [local cbv_opaque] expandFloatFold
+
+-- These certificates stop before the float-code producer, including for an empty domain.
+private theorem domain_dispatch (kind : XKind) :
+    expandFold context 0 kind ["k", "slots"] (operands kind) =
+      expandFloatFold context (iteratorContext 3) 0 kind (.loopBeg "k" "T" .tru) .tru
+        (foldPlaces 1000 value) (if kind == .foldAdd then [] else [.lit 0]) := by cbv <;> simp only [bind_pure]
+
+private theorem filtered_dispatch :
+    expandFold context 0 .foldAdd ["k", "slots"]
+      [.variable "T", .field (.index (.variable "T") (.variable "k")) "open", value] =
+      expandFloatFold context (iteratorContext 3) 0 .foldAdd (.loopBeg "k" "T" .tru)
+        (.tabB "T" "open" (.param "k")) (foldPlaces 1000 value) [] := by cbv <;> simp only [bind_pure]
+
+private theorem empty_dispatch :
+    expandFold (domainContext 0) 0 .foldAdd ["k", "slots"] (operands .foldAdd) =
+      expandFloatFold (domainContext 0) (iteratorContext 0) 0 .foldAdd
+        (.loopBeg "k" "T" .tru) .tru (foldPlaces 1000 value) [] := by cbv <;> simp only [bind_pure]
+end DomainDispatch
+
+private theorem float_leaf (count : Int) (stem : String) (serial : Nat) :
+    foldFloatValue 1000 (iteratorContext count) stem serial (foldPlaces 1000 value) =
+      .ok ([], serial, .tab "T" "v" (.param "k")) := by cbv
+
 private theorem expanded_add :
     expandFold context 0 .foldAdd ["k", "slots"] (operands .foldAdd) =
       .ok (expectedAdd, resultContext context, .variable "#fold:0:acc:result") := by
+  rw [domain_dispatch .foldAdd]
+  simp only [expandFloatFold, foldName, float_leaf, bind, Except.bind, pure, Except.pure]
   cbv
 
 /-- Three slots and a real float table read: one loop, left accumulator first,
@@ -137,12 +175,18 @@ public theorem filtered_add_slot_order_zeuge :
       [.variable "T", .field (.index (.variable "T") (.variable "k")) "open", value]).toOption.map
       (fun expanded => expanded.1[2]?) =
       some (some (.ifBeg (.tabB "T" "open" (.param "k")))) := by
+  rw [filtered_dispatch]
+  simp only [expandFloatFold, foldName, float_leaf, bind, Except.bind, pure, Except.pure]
   cbv
 
 public theorem empty_add_still_initializes_positive_zero_zeuge :
     (expandFold {context with tabs := [{table with count := 0}]} 0 .foldAdd ["k", "slots"]
       (operands .foldAdd)).toOption.map (fun expanded => expanded.1.head?) =
       some (some (.floatLit "#fold:0:acc" (0, 1) (-uFloatLimit, 1) (uFloatLimit, 1))) := by
+  change (expandFold (domainContext 0) 0 .foldAdd ["k", "slots"]
+    (operands .foldAdd)).toOption.map (fun expanded => expanded.1.head?) = _
+  rw [empty_dispatch]
+  simp only [expandFloatFold, foldName, float_leaf, bind, Except.bind, pure, Except.pure]
   cbv
 
 public theorem literal_rational_zeuge : uFloatRational "1.5e-3 rounded" = .ok (15, 10000) := by
@@ -172,11 +216,15 @@ def expectedExtremum (kind : XKind) : List UStmt :=
 private theorem expanded_min :
     expandFold context 0 .foldMin ["k", "slots"] (operands .foldMin) =
       .ok (expectedExtremum .foldMin, resultContext context, .variable "#fold:0:acc:result") := by
+  rw [domain_dispatch .foldMin]
+  simp only [expandFloatFold, foldName, float_leaf, bind, Except.bind, pure, Except.pure]
   cbv
 
 private theorem expanded_max :
     expandFold context 0 .foldMax ["k", "slots"] (operands .foldMax) =
       .ok (expectedExtremum .foldMax, resultContext context, .variable "#fold:0:acc:result") := by
+  rw [domain_dispatch .foldMax]
+  simp only [expandFloatFold, foldName, float_leaf, bind, Except.bind, pure, Except.pure]
   cbv
 
 public theorem min_order_and_empty_fallback_zeuge :
@@ -190,6 +238,8 @@ public theorem max_order_and_empty_fallback_zeuge :
       some (expectedExtremum .foldMax) := by
   rw [expanded_max]
   rfl
+
+attribute [local cbv_eval] expanded_add expanded_min expanded_max
 
 /-- Exercise the connected generic G block lowering in a continuing branch. -/
 def lowered (kind : XKind) : Bool :=
@@ -236,25 +286,47 @@ private theorem source_continuing (kind : XKind)
         [] none] = .ok (continuingBody kind, context) := by
   rcases numeric with rfl | rfl | rfl <;> cbv
 
-/-- Unfold only the selected sequence request at the unchanged fuel level.
-    The callback record stays the existing lowerer's record. -/
-private theorem sequence_step {l : Bool} (unit : UProg) (caller : Fin unit.fns.length)
+/-- Match the actual fuel before selecting one callback from the canonical record. -/
+private theorem sequence_select {l : Bool} (unit : UProg) (caller : Fin unit.fns.length)
     (Γ : Ctx) (fn : UFn) (fuel : Nat) (Λ : List (Res (declOf unit)))
     (top : AtTop unit caller Λ) (statements : List UStmt) :
-    lowSeqL (l := l) unit caller Γ fn (fuel + 1) Λ top statements =
-      lowSeqStep unit caller (lowStufe unit caller fuel) Γ fn Λ top statements := rfl
+    lowSeqL (l := l) unit caller Γ fn fuel Λ top statements = match fuel with
+      | 0 => .error "lower: blocks nested too deep"
+      | n + 1 => lowSeqStep unit caller (lowStufe unit caller n) Γ fn Λ top statements := by
+  cases fuel <;> rfl
 
-attribute [local cbv_eval] sequence_step lowStructL_succ
+private theorem structure_select {l : Bool} (unit : UProg) (caller : Fin unit.fns.length)
+    (Γ : Ctx) (fn : UFn) (fuel : Nat) (Λ : List (Res (declOf unit)))
+    (top : AtTop unit caller Λ) (statement : UStmt) (rest : List UStmt) :
+    lowStructL (l := l) unit caller Γ fn fuel Λ top statement rest = match fuel with
+      | 0 => .error "lower: blocks nested too deep"
+      | n + 1 => lowStructStep unit caller (lowStufe unit caller n) Γ fn Λ top statement rest := by
+  cases fuel <;> rfl
+
+private theorem variable_head (Γ : Ctx) (ty : Ty) :
+    lowVar (ty :: Γ) 0 ty = .ok (.here : Var (ty :: Γ) ty) := by
+  unfold lowVar
+  rw [dite_eq_left (rfl : ty = ty)]
+  rfl
+
+private theorem fit_same {unit : UProg} {Γ : Ctx} {Λ : List (Res (declOf unit))}
+    (ty : Ty) (value : Expr (declOf unit) Γ Λ ty) : fitW ty ⟨ty, value⟩ = .ok value := by
+  unfold fitW
+  rw [dite_eq_left (rfl : ty = ty)]
+
+attribute [local cbv_opaque] lowStufe lowSeqL lowStructL
+attribute [local cbv_eval] sequence_select structure_select lowStufe_seq lowStufe_struct
+  variable_head fit_same
 
 /-- The certificate stops at the actual function-success constructor, before
     dependent program assembly or the source-measure gate is evaluated. -/
 private theorem continuing_function (kind : XKind)
     (numeric : kind = .foldAdd ∨ kind = .foldMin ∨ kind = .foldMax) :
-    (lowerFnAt (fixtureUnit (continuingBody kind)) ⟨0, by decide⟩).toOption.isSome = true := by
+    (lowerFnAt (fixtureUnit (continuingBody kind)) ⟨0, by change 0 < 1; decide⟩).toOption.isSome = true := by
   rcases numeric with rfl | rfl | rfl <;> cbv
 
 private theorem ending_function :
-    (lowerFnAt (fixtureUnit expectedAdd) ⟨0, by decide⟩).toOption.isSome = true := by
+    (lowerFnAt (fixtureUnit expectedAdd) ⟨0, by change 0 < 1; decide⟩).toOption.isSome = true := by
   cbv
 
 private theorem each_success (unit : UProg)
@@ -339,9 +411,9 @@ private theorem lowering_phases (unit : UProg)
       · contradiction
 
 private theorem unit_success (body : List UStmt)
-    (first : (lowerFnAt (fixtureUnit body) ⟨0, by decide⟩).toOption.isSome = true) :
+    (first : (lowerFnAt (fixtureUnit body) ⟨0, by change 0 < 1; decide⟩).toOption.isSome = true) :
     (lowerAllg (fixtureUnit body)).toOption.isSome = true := by
-  have singleton (f : Fin (fixtureUnit body).fns.length) : f = ⟨0, by decide⟩ := by
+  have singleton (f : Fin (fixtureUnit body).fns.length) : f = ⟨0, by change 0 < 1; decide⟩ := by
     apply Fin.ext
     have bound : f.val < 1 := f.isLt
     omega
