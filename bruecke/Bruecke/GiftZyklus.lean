@@ -74,7 +74,7 @@ def uZ : UProg :=
       { name := "h", params := [], kinds := [], res := none, held := [], puts := [],
         gives := [.fls], body := [.call "h" []], ret := .empty, decreases := none, measureConstants := [] }] }
 
-theorem low_some : (lowerAllg uZ).toOption.isSome = true := by decide
+theorem low_some : (lowerAllg uZ).toOption.isSome = true := by decide +kernel
 
 def PZ : Programm (declOf uZ) := ((lowerAllg uZ).toOption.get low_some).1
 def fsZ : List (declOf uZ).Fn := ((lowerAllg uZ).toOption.get low_some).2
