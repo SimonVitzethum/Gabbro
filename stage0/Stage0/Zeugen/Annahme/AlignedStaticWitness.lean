@@ -143,6 +143,17 @@ private def sourceInput : SourceInput text := by
   case visibility => cbv
   case compileTime => cbv
 
+-- Specialize the reader theorem to the unchanged requested alignment, while
+-- keeping the actual source static's name, type, initializer and flags generic.
+private theorem static_alignment_metadata (writable : Bool) (name : String)
+    (ty : STyp) (initial : SKonstWert) (shared : Bool) :
+    ExportMetadata.itemMetadata (.globT writable name ty initial (some (.lit 16)) none shared) =
+      ExportMetadata.typeMetadata ty := by
+  simpa only [Option.isSome, Bool.or_false] using
+    ExportMetadata.globT_alignment_bound [] writable name ty initial (.lit 16) 16 none shared rfl
+
+attribute [local cbv_eval] static_alignment_metadata
+
 private def sourceTail : SourceTail sourceInput := by
   refine {
     metadata := ?metadata
