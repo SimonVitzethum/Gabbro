@@ -188,7 +188,7 @@ public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben7
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben8
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben9
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben10
-public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben11
+public import Grammatik.Parser.Elab.Proben.RightsConstants.UebersetzeProben11
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben12
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben13
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Proben
