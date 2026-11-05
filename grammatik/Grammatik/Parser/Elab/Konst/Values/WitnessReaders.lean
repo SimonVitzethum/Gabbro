@@ -1,5 +1,5 @@
 module
-public import Grammatik.Parser.Elab.Konst.Values.Expression
+public import Grammatik.Parser.Elab.Konst.ErsetzungTor
 
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Konst.Values.WitnessReaders
@@ -86,6 +86,73 @@ theorem reader_missing {D : Deklaration} {Γ : Ctx} (names : Locals Γ)
     Values.payloadExpression (D := D) names globals schemas (fuel + 1) (some τ) none =
       .error "const tagged constructor payload does not match its declared type" := by
   rw [Values.payloadExpression] <;> simp
+
+/-- Replaying an already certified source function preserves its complete model,
+    including both original contracts, before any denotation is projected. -/
+theorem elaborate_certified {k : UKonstFn} (certificate : Values.SourceFunction k) :
+    Values.elaborate k = .ok certificate := by
+  rcases certificate with ⟨source, body, model, typed, pre, post⟩
+  simp only [Values.elaborate, body, typed, pre, post, pure, Except.pure]
+
+/-- Substitute the whole elaboration result into the actual checker continuation.
+    In particular, do not rewrite inside an abstract Code's Boolean projection. -/
+theorem checkCall_elaborated {k : UKonstFn} (fns : List UKonstFn)
+    (env : List (String × Int)) (sources : List SExpr)
+    (fn : Values.SourceFunction k) (accepted : Values.elaborate k = .ok fn) :
+    Values.checkCall k fns env sources =
+      (match hv : checkArguments fns env k.params sources with
+      | .error error => throw ("const argument failure at `" ++ k.name ++ "`: " ++ error)
+      | .ok checkedArguments =>
+        let values := checkedArguments.values
+        have evaluated : Scalar.argumentValues fns env k.params sources = .ok values := by
+          simp only [Scalar.argumentValues, hv, Except.map] <;> rfl
+        match ha : arguments (declaration (k.params.map Prod.snd) k.erg) k.params values with
+        | .error error => throw error
+        | .ok args => do
+          letI : Decidable (@Eq Bool (fn.model.pre.denote args) true) := Bool.decEq _ _
+          if hp : @Eq Bool (fn.model.pre.denote args) true then
+            let value := fn.model.body.denote args
+            letI : Decidable (@Eq Bool (fn.model.post.denote (.cons value args)) true) := Bool.decEq _ _
+            if hq : @Eq Bool (fn.model.post.denote (.cons value args)) true then do
+              let quoted ← Values.reify (D := declaration (k.params.map Prod.snd) k.erg)
+                (Γ := k.params.map Prod.snd) (Values.resultSchemas k)
+                (Values.textLiterals fn.source) 64 k.erg value
+              return ⟨fn, values, evaluated, checkedArguments.meaning, args, ha, value,
+                fn.model.body.equation _ _ _, ⟨rfl, hp, hq⟩, quoted⟩
+            else throw ("const contract violated at `" ++ k.name ++ "`: ensures failed")
+          else throw ("const contract violated at `" ++ k.name ++ "`: requires failed") :
+        Except String (Values.CheckedCall k fns env sources)) := by
+  exact congrArg (fun result : Except String (Values.SourceFunction k) => result.bind _) accepted
+
+theorem checkCall_failed {k : UKonstFn} (fns : List UKonstFn)
+    (env : List (String × Int)) (sources : List SExpr) (error : String)
+    (refused : Values.elaborate k = .error error) :
+    Values.checkCall k fns env sources = .error error := by
+  exact congrArg (fun result : Except String (Values.SourceFunction k) => result.bind _) refused
+
+/-- The existing substitution prefix exposes the complete portable call result.
+    These premises are phase equations for the original source, not new gates. -/
+theorem substitute_portable (fns : List UKonstFn) (name : String)
+    (sources args : List SExpr) (k : UKonstFn)
+    (arguments : ersetzeSExprListIn [] fns sources = .ok args)
+    (callee : fns.find? (fun fn => strEq fn.name name) = some k)
+    (constants : k.constants = [])
+    (closed : geschlossenSExprListB
+      (args.map (normalizeNames ([] : Locals []) [])) = true)
+    (portable : Values.resultType k.erg = true) :
+    ersetzeSExpr fns (.call name sources) =
+      (Values.checkCall k fns [] args).map (fun checked => checked.quoted.syntax) := by
+  simp only [ersetzeSExpr, ersetzeSExprIn, arguments, callee, constants,
+    List.filter_nil, closed, Bool.not_true, Bool.false_eq_true, ↓reduceIte]
+  cases shape : k.erg <;> try {
+    have impossible : False := by
+      simpa only [shape, Values.resultType, Bool.false_eq_true] using portable
+    exact impossible.elim }
+  all_goals
+    have admitted := portable
+    simp only [shape] at admitted
+    simp only [checkReplacement, shape, admitted, Bool.true_eq_true, ↓reduceIte]
+    cases actual : Values.checkCall k fns [] args <;> rfl
 
 
 end Gabbro.Grammatik.Parser.Konst.Values.WitnessReaders

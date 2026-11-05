@@ -1,6 +1,7 @@
 module
-public import Grammatik.Parser.Elab.Konst.ErsetzungTor
+public import Grammatik.Parser.Elab.Konst.Values.WitnessData
 import Grammatik.Parser.Elab.Konst.Values.WitnessReaders
+import Grammatik.Parser.Elab.Konst.Values.WitnessPhases
 import all Grammatik.Parser.Elab.Konst.Ersetzung
 import all Grammatik.Parser.Elab.Konst.ErsetzungTor
 import all Grammatik.Parser.Elab.Konst.Scope
@@ -59,83 +60,16 @@ attribute [local cbv_eval] reader_bool reader_int reader_text reader_sum
   reader_payload reader_empty reader_missing
 
 
-def positive : UKonstFn where
-  name := "positive"
-  params := [("x", .int 0 10)]
-  erg := .bool
-  rumpf := .block [] (some (.ret (some (.bin ">" (.variable "x") (.lit 0)))))
-  signature :=
-    { art := "const"
-      name := "positive"
-      params := [("x", .range (.atom "u8") (.lit 0) (.lit 10) false)]
-      res := some (.atom "bool")
-      fehler := none
-      klauseln := [.gives (.bin "==" .res (.bin ">" (.variable "x") (.lit 0)))]
-      generics := [] }
-
 /-- Both Boolean values are delivered, with the original ensures retained. -/
 theorem bool_values_zeuge :
     ersetzeSExpr [positive] (.call "positive" [.lit 3]) = .ok .tru ∧
     ersetzeSExpr [positive] (.call "positive" [.lit 0]) = .ok .fls := by
-  cbv <;> dsimp only <;> simp only [reader_bool] <;> cbv
-
-def optional : UKonstFn where
-  name := "optional"
-  params := [("x", .int 0 3)]
-  erg := .opt 4
-  rumpf := .block [] (some (.ret (some (.call "Some" [.variable "x"]))))
-  signature :=
-    { art := "const"
-      name := "optional"
-      params := [("x", .range (.atom "u8") (.lit 0) (.lit 3) false)]
-      res := some (.index true "Slots")
-      fehler := none
-      klauseln := []
-      generics := [] }
-
-def absent : UKonstFn :=
-  { optional with
-    name := "absent"
-    params := []
-    rumpf := .block [] (some (.ret (some (.call "None" [])))),
-    signature := { optional.signature with name := "absent", params := [] } }
+  exact Phases.bool_results
 
 /-- Option absence and the actual present index remain distinct typed values. -/
 theorem option_values_zeuge :
     ersetzeSExpr [optional] (.call "optional" [.lit 3]) = .ok (.call "Some" [.lit 3]) ∧
     ersetzeSExpr [absent] (.call "absent" []) = .ok (.call "None" []) := by cbv
-
-def schema : USum :=
-  { name := "Choice"
-    cases := [("Empty", none), ("Data", some (.int 0 255)),
-      ("Flag", some .bool), ("Text", some (.str 1))] }
-
-def tagged : UKonstFn where
-  name := "tagged"
-  params := [("x", .int 0 10)]
-  erg := .sum schema.spec
-  rumpf := .block [] (some (.ret (some (.call "Data" [.bin "+" (.variable "x") (.lit 1)]))))
-  signature :=
-    { art := "const"
-      name := "tagged"
-      params := [("x", .range (.atom "u8") (.lit 0) (.lit 10) false)]
-      res := some (.atom "Choice")
-      fehler := none
-      klauseln := []
-      generics := [] }
-  sums := [schema]
-
-def emptyTag : UKonstFn :=
-  { tagged with
-    params := []
-    rumpf := .block [] (some (.ret (some (.variable "Empty"))))
-    signature := { tagged.signature with params := [] } }
-
-def flagTag : UKonstFn :=
-  { emptyTag with rumpf := .block [] (some (.ret (some (.call "Flag" [.tru])))) }
-
-def textTag : UKonstFn :=
-  { emptyTag with rumpf := .block [] (some (.ret (some (.call "Text" [.ext .text ["Z"] []])))) }
 
 /-- Tag identity and complete numeric/Boolean/string payloads survive quotation. -/
 theorem tag_values_zeuge :
@@ -143,32 +77,13 @@ theorem tag_values_zeuge :
     ersetzeSExpr [emptyTag] (.call "tagged" []) = .ok (.variable "Empty") ∧
     ersetzeSExpr [flagTag] (.call "tagged" []) = .ok (.call "Flag" [.tru]) ∧
     ersetzeSExpr [textTag] (.call "tagged" []) = .ok (.call "Text" [.ext .text ["Z"] []]) := by
-  -- Transport the whole Code result through the named elaboration match first.
-  cbv <;> dsimp only <;> simp only [reader_sum] <;> cbv
-  all_goals simp only [reader_payload, reader_empty, reader_missing]
-  all_goals cbv
-  all_goals simp only [reader_int, reader_bool, reader_text]
-  all_goals cbv
-
-def shortText (text : String) (maximum : Nat := 1) : UKonstFn where
-  name := "shortText"
-  params := []
-  erg := .str maximum
-  rumpf := .block [] (some (.ret (some (.ext .text [text] []))))
-  signature :=
-    { art := "const"
-      name := "shortText"
-      params := []
-      res := some (.str (.lit maximum))
-      fehler := none
-      klauseln := []
-      generics := [] }
+  exact Phases.tag_results
 
 /-- Empty and one-byte results preserve the actual UTF-8 spelling and length. -/
 theorem string_values_zeuge :
     ersetzeSExpr [shortText ""] (.call "shortText" []) = .ok (.ext .text [""] []) ∧
     ersetzeSExpr [shortText "A"] (.call "shortText" []) = .ok (.ext .text ["A"] []) := by
-  cbv <;> dsimp only <;> simp only [reader_text] <;> cbv
+  exact Phases.text_results
 
 /-- The production collector binds the Boolean fixture to its actual source signature. -/
 theorem bool_collected_zeuge :
@@ -177,23 +92,7 @@ theorem bool_collected_zeuge :
 /-- A zero-byte maximum is checked separately from an empty string under maximum one. -/
 theorem zero_string_zeuge :
     ersetzeSExpr [shortText "" 0] (.call "shortText" []) = .ok (.ext .text [""] []) := by
-  cbv <;> dsimp only <;> simp only [reader_text] <;> cbv
-
-def reasonTag : UKonstFn where
-  name := "reasonTag"
-  params := []
-  erg := .why 2
-  rumpf := .block [] (some (.ret (some (.why "Reason" "Second"))))
-  signature :=
-    { art := "const"
-      name := "reasonTag"
-      params := []
-      res := some (.atom "Reason")
-      fehler := none
-      klauseln := []
-      generics := [] }
-  sums := [{ name := "Foreign", cases := [("Other", none), ("Second", none)] },
-    { name := "Reason", cases := [("First", none), ("Second", none)] }]
+  exact Phases.zero_text_result
 
 /-- Ordinary reason-tag values keep both their owner and the exact selected case. -/
 theorem reason_value_zeuge :
@@ -227,7 +126,7 @@ theorem portable_call_sound_zeuge :
 theorem bool_type_refused_zeuge :
     ersetzeSExpr [{ positive with rumpf := .block [] (some (.ret (some (.lit 1)))) }]
       (.call "positive" [.lit 3]) = .error "const value has a different declared type" := by
-  cbv <;> dsimp only <;> simp only [reader_bool] <;> cbv
+  exact Phases.wrong_type_result
 
 theorem option_bound_refused_zeuge :
     ersetzeSExpr [{ optional with
@@ -238,21 +137,17 @@ theorem option_bound_refused_zeuge :
 theorem tag_payload_refused_zeuge :
     ersetzeSExpr [{ emptyTag with rumpf := .block [] (some (.ret (some (.call "Data" [.tru])))) }]
       (.call "tagged" []) = .error "const value has a different declared type" := by
-  cbv <;> dsimp only <;> simp only [reader_sum] <;> cbv
-  all_goals simp only [reader_payload]
-  all_goals cbv
-  all_goals simp only [reader_int]
-  all_goals cbv
+  exact Phases.wrong_payload_result
 
 theorem tag_unknown_refused_zeuge :
     ersetzeSExpr [{ emptyTag with rumpf := .block [] (some (.ret (some (.variable "Foreign")))) }]
       (.call "tagged" []) = .error "const tagged constructor is unknown: Foreign" := by
-  cbv <;> dsimp only <;> simp only [reader_sum] <;> cbv
+  exact Phases.unknown_tag_result
 
 theorem string_utf8_bound_refused_zeuge :
     ersetzeSExpr [shortText "é"] (.call "shortText" []) =
       .error "const string literal exceeds its declared maximum" := by
-  cbv <;> dsimp only <;> simp only [reader_text] <;> cbv
+  exact Phases.long_text_result
 
 theorem wide_string_refused_zeuge :
     ersetzeSExpr [shortText "A" 2] (.call "shortText" []) =
@@ -262,21 +157,19 @@ theorem portable_post_refused_zeuge :
     ersetzeSExpr [{ positive with signature := { positive.signature with klauseln := [.gives .fls] } }]
       (.call "positive" [.lit 3]) =
       .error "const contract violated at `positive`: ensures failed" := by
-  cbv <;> dsimp only <;> simp only [reader_bool] <;> cbv
+  exact Phases.post_refused_result
 
 theorem portable_requires_refused_zeuge :
     ersetzeSExpr [{ positive with signature := { positive.signature with klauseln := [.needs .fls] } }]
       (.call "positive" [.lit 3]) =
       .error "const contract violated at `positive`: requires failed" := by
-  cbv <;> dsimp only <;> simp only [reader_bool] <;> cbv
+  exact Phases.pre_refused_result
 
 theorem tag_missing_payload_refused_zeuge :
     ersetzeSExpr [{ emptyTag with rumpf := .block [] (some (.ret (some (.variable "Data")))) }]
       (.call "tagged" []) =
       .error "const tagged constructor payload does not match its declared type" := by
-  cbv <;> dsimp only <;> simp only [reader_sum] <;> cbv
-  all_goals simp only [reader_missing]
-  all_goals cbv
+  exact Phases.missing_payload_result
 
 /-- Statement-position calls keep their call-log-sensitive refusal after value expansion. -/
 theorem portable_statement_refused_zeuge :
@@ -292,21 +185,6 @@ theorem portable_statement_refused_zeuge :
       .fnT signature (.block [.call "positive" [.lit 3]] (some (.ret none)))]
     checkErsetzt items items =
       .error "const call without certified value: refusing runtime export" := by cbv
-
-def captured : UKonstFn where
-  name := "captured"
-  params := [("x", .int 0 10)]
-  erg := .int 0 20
-  rumpf := .block [] (some (.ret (some (.bin "+" (.variable "x") (.variable "math::K")))))
-  signature :=
-    { art := "const"
-      name := "captured"
-      params := [("x", .range (.atom "u8") (.lit 0) (.lit 10) false)]
-      res := some (.range (.atom "u8") (.lit 0) (.lit 20) false)
-      fehler := none
-      klauseln := []
-      generics := [] }
-  constants := [("math::K", 5), ("x", 99)]
 
 /-- Original global names in both body and arguments reach their certificates.
     The parameter x shadows the captured global x even in the body derivation. -/
