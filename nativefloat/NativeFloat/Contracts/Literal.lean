@@ -10,14 +10,14 @@ namespace RootNativeFloat.Contracts
     These are explicit hardware assumptions; this module supplies no implementation or instance. -/
 structure Literal : Prop where
   canonLiteral_integer : ∀ (z : Int),
-      canonLiteral (z, 1) = Float.ofInt z
+      canonLiteral (z, 1) = Float.hwOfInt z
 
-  canonLiteral_subnormal_one : (canonLiteral (1, 2 ^ 1074)).toBits = 1
+  canonLiteral_subnormal_one : (canonLiteral (1, 2 ^ 1074)).hwToBits = 1
 
-  canonLiteral_subnormal_two : (canonLiteral (2, 2 ^ 1074)).toBits = 2
+  canonLiteral_subnormal_two : (canonLiteral (2, 2 ^ 1074)).hwToBits = 2
 
-  canonLiteral_subnormal_negative : (canonLiteral (-1, 2 ^ 1074)).toBits = 0x8000000000000001 ∧
-        (canonLiteral (1, -(2 ^ 1074))).toBits = 0x8000000000000001 ∧
-        (canonLiteral (-1, -(2 ^ 1074))).toBits = 1
+  canonLiteral_subnormal_negative : (canonLiteral (-1, 2 ^ 1074)).hwToBits = 0x8000000000000001 ∧
+        (canonLiteral (1, -(2 ^ 1074))).hwToBits = 0x8000000000000001 ∧
+        (canonLiteral (-1, -(2 ^ 1074))).hwToBits = 1
 
 end RootNativeFloat.Contracts

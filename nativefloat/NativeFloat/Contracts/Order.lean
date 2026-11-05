@@ -1,6 +1,6 @@
 module
 
-public import Init.Data.Float.Float
+public import NativeFloat.Primitives
 
 public section
 
@@ -9,18 +9,18 @@ namespace RootNativeFloat.Contracts
 /-- Native comparison contracts used by interval inclusion.
     These are explicit hardware assumptions; this module supplies no implementation or instance. -/
 structure Order : Prop where
-  le_refl : ∀ {a : Float} (ha : a.isFinite = true),
-      Float.le a a = true
+  le_refl : ∀ {a : Float} (ha : a.hwIsFinite = true),
+      Float.hwLe a a = true
 
-  le_trans : ∀ {a b c : Float} (ab : Float.le a b = true) (bc : Float.le b c = true),
-      Float.le a c = true
+  le_trans : ∀ {a b c : Float} (ab : Float.hwLe a b = true) (bc : Float.hwLe b c = true),
+      Float.hwLe a c = true
 
-  le_upper : ∀ {a x y : Float} (ha : a.isFinite = false)
-      (hx : x.isFinite = true) (hy : y.isFinite = true) (xa : Float.le x a = true),
-      Float.le y a = true
+  le_upper : ∀ {a x y : Float} (ha : a.hwIsFinite = false)
+      (hx : x.hwIsFinite = true) (hy : y.hwIsFinite = true) (xa : Float.hwLe x a = true),
+      Float.hwLe y a = true
 
-  lower_le : ∀ {a x y : Float} (ha : a.isFinite = false)
-      (hx : x.isFinite = true) (hy : y.isFinite = true) (ax : Float.le a x = true),
-      Float.le a y = true
+  lower_le : ∀ {a x y : Float} (ha : a.hwIsFinite = false)
+      (hx : x.hwIsFinite = true) (hy : y.hwIsFinite = true) (ax : Float.hwLe a x = true),
+      Float.hwLe a y = true
 
 end RootNativeFloat.Contracts
