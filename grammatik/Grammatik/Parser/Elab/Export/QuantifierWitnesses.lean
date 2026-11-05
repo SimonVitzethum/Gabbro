@@ -124,7 +124,7 @@ theorem consuming_negative_measure_zeuge :
     lowConsumingMass relationUnit [] [] relationFunction (.lit (-1)) =
       .error "consuming traversal decreases must have a nonnegative range" := by
   simp [lowConsumingMass, seiteAltErg, lowSeiteZ, lowWertE, zahlVon,
-    LowWert.zahl, LowSide.wert, bind, Except.bind, pure, Except.pure,
+    LowWert.zahl, LowSide.wert, Except.mapError, bind, Except.bind, pure, Except.pure,
     MonadExcept.throw, throwThe, MonadExceptOf.throw]
 
 theorem consuming_exits_refused_zeuge :
