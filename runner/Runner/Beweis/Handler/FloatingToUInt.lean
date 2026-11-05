@@ -25,74 +25,127 @@ private abbrev uintFinite (format : FPFormat) : List Ins :=
 private abbrev uintBody (format : FPFormat) : List Ins :=
   fpClassify format ++ fpChoose .b [.movi .rax 0] (uintFinite format)
 
-private theorem high_match {L : Lay} {t : IR.T} {x : X} {tail : List Ins}
-    {k : W → Res IR.T} (format : FPFormat) (exit : Exit L t tail k)
-    (code : Code L.C x.rip (uintHigh format ++ tail)) (controls : Controls L t x) :
-    Match L (Runner.fp (.sub format) x.rax format.int64Limit fun reduced =>
-      Runner.fp (.truncateInt64 format) reduced 0 fun integer =>
-        k (integer ||| 0x8000000000000000)) x := by
-  let advance (instruction : Ins) (before : X) : X :=
-    { before with rip := before.rip + BitVec.ofNat 64 (enc instruction).length }
-  let loaded : X := (advance (.movToXmm format .xmm0 .rax) x).setXmm .xmm0
+private abbrev highLoad (format : FPFormat) : List Ins :=
+  [.movToXmm format .xmm0 .rax] ++ fpLimit .rdx format false ++ [.movToXmm format .xmm1 .rdx]
+
+private abbrev highOr : List Ins :=
+  fpSignMask .rdx .f64 ++ [.alu .or .rax .rdx]
+
+/-- Both physical input lanes are prepared without opening a request tree.
+    Its actual state, rather than an address-normalized record, is retained. -/
+private theorem high_load (format : FPFormat) (before : X) :
+    ∃ after, runL (highLoad format) before = .next after ∧
+      after.rip = before.rip + BitVec.ofNat 64 (lenOfL (highLoad format)) ∧
+      after.xmmWord format .xmm0 = format.scalarBits before.rax ∧
+      after.xmmWord format .xmm1 = format.int64Limit ∧
+      after.r12 = before.r12 ∧ after.r13 = before.r13 ∧ after.r14 = before.r14 ∧
+      after.fpReady = before.fpReady := by
+  let advance (i : Ins) (x : X) : X :=
+    { x with rip := (x.rip + BitVec.ofNat 64 (enc i).length) }
+  let loaded := (advance (.movToXmm format .xmm0 .rax) before).setXmm .xmm0
     (match format with
-      | .f32 => (x.rax.setWidth 32).setWidth 128
-      | .f64 => x.rax.setWidth 128)
+      | .f32 => (before.rax.setWidth 32).setWidth 128
+      | .f64 => before.rax.setWidth 128)
   let limited : X := match format with
     | .f32 => (advance (.movi .rdx 0x5F000000) loaded).set .rdx (sx32 0x5F000000)
     | .f64 =>
       let upper := (advance (.movi .rdx 0x43E0) loaded).set .rdx (sx32 0x43E0)
       let amount := (advance (.movi .rcx 48) upper).set .rcx (sx32 48)
       ((advance (.shl .rdx) amount).set .rdx (amount.rdx <<< (amount.rcx.toNat % 64))).nof
-  let operands : X := (advance (.movToXmm format .xmm1 .rdx) limited).setXmm .xmm1
+  let after := (advance (.movToXmm format .xmm1 .rdx) limited).setXmm .xmm1
     (match format with
       | .f32 => (limited.rdx.setWidth 32).setWidth 128
       | .f64 => limited.rdx.setWidth 128)
+  have run : runL (highLoad format) before = .next after := by
+    cases format <;> rfl
+  have position : after.rip = before.rip + BitVec.ofNat 64 (lenOfL (highLoad format)) := by
+    cases format
+    all_goals
+      dsimp only [after, limited, loaded, advance, X.set, X.setXmm, X.nof]
+      simp [highLoad, fpLimit, fpUpper, lenOfL, BitVec.ofNat_add, BitVec.add_assoc]
+  refine ⟨after, run, position, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  all_goals
+    cases format
+    all_goals
+      dsimp only [after, limited, loaded, advance, X.set, X.setXmm, X.xmmWord, X.nof, X.fpReady]
+  all_goals
+    simp (disch := decide) [FPFormat.scalarBits, FPFormat.int64Limit, fpLow32,
+      BitVec.setWidth_setWidth_of_le, sx32_ofNat]
+
+/-- The integer OR suffix is independent of either preceding FP answer. -/
+private theorem high_or (before : X) :
+    ∃ after, runL highOr before = .next after ∧
+      after.rip = before.rip + BitVec.ofNat 64 (lenOfL highOr) ∧
+      after.rax = before.rax ||| 0x8000000000000000 ∧
+      after.r12 = before.r12 ∧ after.r13 = before.r13 ∧ after.r14 = before.r14 ∧
+      after.fpReady = before.fpReady := by
+  let advance (i : Ins) (x : X) : X :=
+    { x with rip := (x.rip + BitVec.ofNat 64 (enc i).length) }
+  let one := (advance (.movi .rdx 1) before).set .rdx (sx32 1)
+  let counted := (advance (.movi .rcx 63) one).set .rcx (sx32 63)
+  let shifted := ((advance (.shl .rdx) counted).set .rdx
+    (counted.rdx <<< (counted.rcx.toNat % 64))).nof
+  let after := aluStep (advance (.alu .or .rax .rdx) shifted) .or .rax shifted.rdx
+  have run : runL highOr before = .next after := rfl
+  have position : after.rip = before.rip + BitVec.ofNat 64 (lenOfL highOr) := by
+    dsimp only [after, shifted, counted, one, advance, aluStep, aluOp, X.get, X.set, X.nof]
+    simp [highOr, fpSignMask, fpUpper, lenOfL, BitVec.ofNat_add, BitVec.add_assoc]
+  have mask : sx32 (1#32) <<< ((sx32 (63#32)).toNat % 64) = (0x8000000000000000 : W) := by decide
+  refine ⟨after, run, position, ?_, rfl, rfl, rfl, rfl⟩
+  change before.rax ||| (sx32 (1#32) <<< ((sx32 (63#32)).toNat % 64)) = _
+  rw [mask]
+
+private theorem high_exit {L : Lay} {t : IR.T} {tail : List Ins} {k : W → Res IR.T}
+    (exit : Exit L t tail k) :
+    Exit L t (highOr ++ tail) (fun integer => k (integer ||| 0x8000000000000000)) := by
+  constructor
+  intro x code controls
+  obtain ⟨after, run, position, output, pc, frame, table, mode⟩ := high_or x
+  have placed : Code L.C after.rip tail := by
+    rw [position]
+    exact code_append code
+  have leaf := exit.finish after placed
+    ⟨pc.trans controls.pc, frame.trans controls.frame,
+      table.trans controls.table, mode.trans controls.mode⟩
+  have continued : Match L (k (x.rax ||| 0x8000000000000000)) after :=
+    (congrArg (fun word => Match L (k word) after) output).mp leaf
+  exact pure_match code (by decide) run continued
+
+/-- Only the two adjacent native instructions enter this request reducer.
+    The loader and OR states remain behind independent typed certificates. -/
+private theorem sub_truncate {L : Lay} {t : IR.T} {x : X} {tail : List Ins}
+    {k : W → Res IR.T} (format : FPFormat) (exit : Exit L t tail k)
+    (code : Code L.C x.rip
+      ([.scalar .sub format .xmm0 .xmm1, .truncateScalar format .rax .xmm0] ++ tail))
+    (controls : Controls L t x) :
+    Match L (Runner.fp (.sub format) (x.xmmWord format .xmm0) (x.xmmWord format .xmm1)
+      fun reduced => Runner.fp (.truncateInt64 format) reduced 0 k) x := by
   let subtracted (reduced : W) : X :=
-    (advance (.scalar .sub format .xmm0 .xmm1) operands).setScalar format .xmm0 reduced
-  let converted (reduced integer : W) : X :=
-    (advance (.truncateScalar format .rax .xmm0) (subtracted reduced)).set .rax integer
-  let maskLoaded (reduced integer : W) : X :=
-    (advance (.movi .rdx 1) (converted reduced integer)).set .rdx (sx32 1)
-  let shiftLoaded (reduced integer : W) : X :=
-    (advance (.movi .rcx 63) (maskLoaded reduced integer)).set .rcx (sx32 63)
-  let shifted (reduced integer : W) : X :=
-    let before := shiftLoaded reduced integer
-    ((advance (.shl .rdx) before).set .rdx (before.rdx <<< (before.rcx.toNat % 64))).nof
+    ({ x with rip := (x.rip + BitVec.ofNat 64
+      (enc (.scalar .sub format .xmm0 .xmm1)).length) }).setScalar format .xmm0 reduced
   let after (reduced integer : W) : X :=
-    let before := shifted reduced integer
-    aluStep (advance (.alu .or .rax .rdx) before) .or .rax before.rdx
-  let reducedWord (value : W) : W := (NativeFPOp.sub format).resultWord value
-  have mask : sx32 (1 : BitVec 32) <<< ((sx32 (63 : BitVec 32)).toNat % 64) =
-      (0x8000000000000000 : W) := by decide
-  have resultWord (reduced integer : W) :
-      (after reduced integer).rax = integer ||| 0x8000000000000000 := by
-    cases format
-    all_goals
-      change integer ||| (sx32 (1 : BitVec 32) <<< ((sx32 (63 : BitVec 32)).toNat % 64)) = _
-      rw [mask]
+    ({ subtracted reduced with rip := ((subtracted reduced).rip + BitVec.ofNat 64
+      (enc (.truncateScalar format .rax .xmm0)).length) }).set .rax integer
+  let subWord (value : W) := (NativeFPOp.sub format).resultWord value
   have position (reduced integer : W) :
-      (after reduced integer).rip = x.rip + BitVec.ofNat 64 (lenOfL (uintHigh format)) := by
-    cases format
-    all_goals
-      simp only [after, aluStep_rip, shifted, X.nof, set_rip, shiftLoaded,
-        maskLoaded, converted, subtracted, setScalar_rip, operands, setXmm_rip,
-        limited, loaded, advance]
-      simp [uintHigh, fpLimit, fpSignMask, fpUpper, lenOfL,
-        BitVec.ofNat_add, BitVec.add_assoc]
-  have controlsAfter (reduced integer : W) : Controls L t (after reduced integer) := by
+      (after reduced integer).rip = x.rip + BitVec.ofNat 64
+        (lenOfL [.scalar .sub format .xmm0 .xmm1, .truncateScalar format .rax .xmm0]) := by
+    simp only [after, set_rip, subtracted, setScalar_rip]
+    simp [lenOfL, BitVec.ofNat_add, BitVec.add_assoc]
+  have kept (reduced integer : W) : Controls L t (after reduced integer) := by
     cases format <;> exact ⟨controls.pc, controls.frame, controls.table, controls.mode⟩
   have placed := code_append code
-  apply go (uintHigh format) x
-    (Runner.fp (.sub format) x.rax format.int64Limit fun reduced =>
-      Runner.fp (.truncateInt64 format) reduced 0 fun integer =>
-        k (integer ||| 0x8000000000000000))
+  have finish (reduced integer : W) : Match L (k integer) (after reduced integer) := by
+    have continuationCode : Code L.C (after reduced integer).rip tail := by
+      rw [position]
+      exact placed
+    exact exit.finish (after reduced integer) continuationCode (kept reduced integer)
+  apply go [.scalar .sub format .xmm0 .xmm1, .truncateScalar format .rax .xmm0] x _
     (by cases format <;> decide) (code_prefix code)
   have ready := controls.mode
   simp only [X.fpReady, beq_iff_eq] at ready
   cases format
   all_goals
-    simp only [uintHigh, fpLimit, fpSignMask, fpUpper, FPFormat.int64Limit,
-      List.cons_append, List.nil_append, List.append_assoc]
     fp_reduce ready
     repeat (first
       | (apply corrM_ask; intro _; fp_reduce ready)
@@ -100,16 +153,42 @@ private theorem high_match {L : Lay} {t : IR.T} {x : X} {tail : List Ins}
       | (rw [runL]; fp_reduce ready))
     rename_i _ subtraction _ integer
     simp only [CorrM]
-    change Match L (k (integer.1 ||| 0x8000000000000000))
-      (after (reducedWord subtraction.1) integer.1)
-    have continuationCode : Code L.C
-        (after (reducedWord subtraction.1) integer.1).rip tail := by
-      rw [position]
-      exact placed
-    have finished := exit.finish
-      (after (reducedWord subtraction.1) integer.1)
-      continuationCode (controlsAfter (reducedWord subtraction.1) integer.1)
-    simpa only [resultWord] using finished
+    change Match L (k integer.1) (after (subWord subtraction.1) integer.1)
+    exact finish (subWord subtraction.1) integer.1
+
+private theorem high_match {L : Lay} {t : IR.T} {x : X} {tail : List Ins}
+    {k : W → Res IR.T} (format : FPFormat) (exit : Exit L t tail k)
+    (code : Code L.C x.rip (uintHigh format ++ tail)) (controls : Controls L t x) :
+    Match L (Runner.fp (.sub format) x.rax format.int64Limit fun reduced =>
+      Runner.fp (.truncateInt64 format) reduced 0 fun integer =>
+        k (integer ||| 0x8000000000000000)) x := by
+  have complete : Code L.C x.rip (highLoad format ++
+      ([.scalar .sub format .xmm0 .xmm1, .truncateScalar format .rax .xmm0] ++
+        (highOr ++ tail))) := by
+    simpa only [uintHigh, highLoad, highOr, List.cons_append, List.nil_append,
+      List.append_assoc] using code
+  obtain ⟨z, run, position, input, limit, pc, frame, table, mode⟩ := high_load format x
+  have placed : Code L.C z.rip
+      ([.scalar .sub format .xmm0 .xmm1, .truncateScalar format .rax .xmm0] ++
+        (highOr ++ tail)) := by
+    rw [position]
+    exact code_append complete
+  have leaf : Match L (Runner.fp (.sub format)
+      (z.xmmWord format .xmm0) (z.xmmWord format .xmm1) fun reduced =>
+      Runner.fp (.truncateInt64 format) reduced 0 fun integer =>
+        k (integer ||| 0x8000000000000000)) z := sub_truncate format (high_exit exit) placed
+    ⟨pc.trans controls.pc, frame.trans controls.frame,
+      table.trans controls.table, mode.trans controls.mode⟩
+  rw [input, limit] at leaf
+  have request : (Runner.fp (.sub format) (format.scalarBits x.rax) format.int64Limit
+      fun reduced => Runner.fp (.truncateInt64 format) reduced 0 fun integer =>
+        k (integer ||| 0x8000000000000000)) =
+      (Runner.fp (.sub format) x.rax format.int64Limit
+      fun reduced => Runner.fp (.truncateInt64 format) reduced 0 fun integer =>
+        k (integer ||| 0x8000000000000000)) := by
+    cases format <;> simp only [FPFormat.scalarBits, Runner.fp, NativeFPOp.inputs, fpLow32_idem]
+  rw [request] at leaf
+  exact pure_match complete (by cases format <;> decide) run leaf
 
 private theorem inRange_match {L : Lay} {t : IR.T} {x : X} {tail : List Ins}
     {k : W → Res IR.T} (format : FPFormat) (value : W) (exit : Exit L t tail k)

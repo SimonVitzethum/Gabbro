@@ -12,38 +12,78 @@ open Runner.X86 Runner.Prog
     makes only the original field/slot reads and destination write, never a
     floating request or an assumed hardware callback. -/
 
-/- Reduce one active instruction before consuming an answer. Keep runL out of
-   the reducer, so the remaining list stays closed under unknown read/write
-   answers. The shared FP reducer also normalizes actual CMP flag projections. -/
-macro "fp_codec_reduce" ready:term : tactic => `(tactic| (
-  fp_reduce $ready
-  try simp (disch := decide) [bind_next, bind_ask, bind_opt,
-    fpNegWord_word32, fpNegWord, fpFiniteWord_word32, fpFiniteWord_word64, flagWord,
-    X.cmpf, X.get, X.set, X.nof, Cond.eval, sx32_ofNat,
-    eq_flags, setcc_zx, zx_bool, zx_prop]))
+private abbrev negPrefix (format : FPFormat) : List Ins :=
+  fpNormalizeInput format ++ fpSignMask .rdx format ++ [.alu .xor .rax .rdx]
 
-macro "fp_codec_corr" hm:term : tactic => `(tactic| (
-  have ready := $hm
-  simp only [X.fpReady, beq_iff_eq] at ready
-  simp only [IR.op, IR.fp, fpSequence, IR.ret1, IR.f1, IR.f2, IR.f3, IR.ld,
-    IR.slot, IR.nxt, binBody, fpNormalizeInput, fpSignMask, fpUpper, fpInfinity,
-    fpNegWord_word32, fpNegWord, fpFiniteWord_word32, fpFiniteWord_word64, flagWord,
-    List.cons_append, List.nil_append, List.append_assoc]
-  fp_codec_reduce ready
-  repeat (first
-    | (apply corr_ask; intro _; fp_codec_reduce ready)
-    | (apply corr_opt; intro _; fp_codec_reduce ready)
-    | (rw [runL]; fp_codec_reduce ready))
-  all_goals simp [Corr, X.fpReady]))
+/-- NEG's pure prefix is checked before any destination request is composed.
+    The witness retains the actual instruction-by-instruction RIP and lanes. -/
+private theorem neg_prefix (format : FPFormat) (before : X) :
+    ∃ after, runL (negPrefix format) before = .next after ∧
+      after.rip = before.rip + BitVec.ofNat 64 (lenOfL (negPrefix format)) ∧
+      after.rax = fpNegWord format before.rax ∧
+      after.r12 = before.r12 ∧ after.r13 = before.r13 ∧ after.r14 = before.r14 ∧
+      after.fpReady = before.fpReady := by
+  let advance (i : Ins) (x : X) : X :=
+    { x with rip := (x.rip + BitVec.ofNat 64 (enc i).length) }
+  let normalized : X := match format with
+    | .f32 =>
+      let loaded := (advance (.movToXmm .f32 .xmm0 .rax) before).setXmm .xmm0
+        ((before.rax.setWidth 32).setWidth 128)
+      (advance (.movFromXmm .f32 .rax .xmm0) loaded).set .rax (loaded.xmmWord .f32 .xmm0)
+    | .f64 => before
+  let loaded := (advance (.movi .rdx 1) normalized).set .rdx (sx32 1)
+  let amount : BitVec 32 := match format with | .f32 => 31 | .f64 => 63
+  let counted := (advance (.movi .rcx amount) loaded).set .rcx (sx32 amount)
+  let shifted := ((advance (.shl .rdx) counted).set .rdx
+    (counted.rdx <<< (counted.rcx.toNat % 64))).nof
+  let after := aluStep (advance (.alu .xor .rax .rdx) shifted) .xor .rax shifted.rdx
+  have run : runL (negPrefix format) before = .next after := by
+    cases format <;> rfl
+  have position : after.rip = before.rip + BitVec.ofNat 64 (lenOfL (negPrefix format)) := by
+    cases format
+    all_goals
+      dsimp only [after, shifted, counted, amount, loaded, normalized, advance,
+        aluStep, aluOp, X.get, X.set, X.setXmm, X.nof]
+      simp [negPrefix, fpNormalizeInput, fpSignMask, fpUpper, lenOfL,
+        BitVec.ofNat_add, BitVec.add_assoc]
+  have mask32 : sx32 (1#32) <<< ((sx32 (31#32)).toNat % 64) = (0x80000000 : W) := by decide
+  have mask64 : sx32 (1#32) <<< ((sx32 (63#32)).toNat % 64) =
+      (0x8000000000000000 : W) := by decide
+  refine ⟨after, run, position, ?_, ?_, ?_, ?_, ?_⟩
+  all_goals
+    cases format
+    all_goals
+      dsimp only [after, shifted, counted, amount, loaded, normalized, advance,
+        aluStep, aluOp, X.get, X.set, X.setXmm, X.xmmWord, X.nof, X.fpReady]
+  all_goals
+    simp only [mask32, mask64, fpNegWord_word32, fpNegWord, fpLow32,
+      BitVec.setWidth_setWidth_of_le _ (k := 32) (l := 128) (by decide),
+      BitVec.setWidth_eq]
 
 theorem fp_neg_ok {L : Lay} {y : X} (format : FPFormat)
     (h : HPre L (NativeFPOp.neg format).code y) :
     Match L (IR.op (NativeFPOp.neg format).code ⟨y.r12, y.r13⟩) y := by
-  refine straight_go h.tb h.mode
-    (binBody (fpNormalizeInput format ++ fpSignMask .rdx format ++ [.alu .xor .rax .rdx])) y _ ?_ ?_ ?_
-  · cases format <;> decide
+  rw [IR.op_fp_neg]
+  simp only [IR.fp, fpSequence]
+  refine FPSaturation.read_body (negPrefix format)
+    (fun word k => k (fpNegWord format word)) h.tb h.mode ?_ ?_
   · cases format <;> exact h.code
-  · cases format <;> fp_codec_corr h.mode
+  · intro x controls code
+    have complete : Code L.C x.rip (negPrefix format ++
+        ([fld .rcx 1, sst .rcx .rax, .alui .add .r12 16] ++ dispatch)) := by
+      simpa only [List.append_assoc] using code
+    obtain ⟨after, run, position, output, pc, frame, table, mode⟩ := neg_prefix format x
+    have continuationCode : Code L.C after.rip
+        ([fld .rcx 1, sst .rcx .rax, .alui .add .r12 16] ++ dispatch) := by
+      rw [position]
+      exact code_append complete
+    have kept : FPSaturation.Controls L ⟨y.r12, y.r13⟩ after :=
+      ⟨pc.trans controls.pc, frame.trans controls.frame,
+        table.trans controls.table, mode.trans controls.mode⟩
+    have leaf := (FPSaturation.store_exit L ⟨y.r12, y.r13⟩).finish after continuationCode kept
+    have continued : Match L (IR.ret1 ⟨y.r12, y.r13⟩ (fpNegWord format x.rax)) after :=
+      (congrArg (fun word => Match L (IR.ret1 ⟨y.r12, y.r13⟩ word) after) output).mp leaf
+    exact FPSaturation.pure_match complete (by cases format <;> decide) run continued
 
 private abbrev finitePrefix (format : FPFormat) : List Ins :=
   fpNormalizeInput format ++ fpInfinity .rdx format ++
