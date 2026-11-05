@@ -231,7 +231,16 @@ theorem lowBody_cons_ok (c : Fin u.fns.length) (r : URet) (s : UStmt) (ss : List
     cases s
     case assign | assignTab | call =>
       unfold lowStmt
-      rw [lowBodyF] <;> simp
+      rw [lowBodyF] <;> try simp
+      all_goals
+        split <;> rename_i hread
+        all_goals erw [hread]
+        all_goals dsimp only
+        all_goals
+          split <;> rename_i hrest
+          all_goals erw [hrest]
+          all_goals dsimp only
+        all_goals rfl
     all_goals simp [stmtBody] at h
   have key : ∀ n, lowBodyF u c (ctxOf u c) (fnAt u c) (n + 1) Λ (s :: ss) r = .ok b0 →
       ∃ (Λ' : List (Res (declOf u))) (st : Stmt (declOf u) (verOf u c) false (ctxOf u c) Λ Λ')
@@ -251,7 +260,7 @@ theorem lowBody_cons_ok (c : Fin u.fns.length) (r : URet) (s : UStmt) (ss : List
       | ok e =>
         rw [he] at hn
         cases hn
-        exact ⟨Λ', st, e, rfl, rfl, rfl⟩
+        exact ⟨Λ', st, e, rfl, he, rfl⟩
   exact key _ hb
 
 theorem stmtsBody_isSome {f : UFn} {ss : List UStmt} {bs : List Gabbro.Body.Stmt}
