@@ -106,7 +106,7 @@ theorem fn_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklaratio
   simp only [hkopf, klauselnVon_measure z P f req ens (fun k hk => (hkl k hk).1) als]
   set ctx := { uCtxVon als [] tabs locks globs (kopfVon z gNr devs f ps ks mitGriff) (nFn (fN z f)) annahmen whys
     sums regs zustaende with zeiger := zeiger, zeigerBasis := zb } with hctx
-  rw [elabFn_eq ctx _ _ _ _ rfl, gibt_klauseln _ P f req ens hreqF, braucht_klauseln _ P f req ens hensF]
+  erw [elabFn_eq ctx _ _ _ _ rfl, gibt_klauseln _ P f req ens hreqF, braucht_klauseln _ P f req ens hensF]
   -- ensures
   have hG : uSeq (ens.filterMap (gibtF ctx)) = .ok gives := by
     rcases hE with ⟨rfl, rfl⟩ | ⟨e, u, rfl, rfl, he, hu⟩
