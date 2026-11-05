@@ -32,13 +32,7 @@ theorem translation_no_direct_call_zeuge :
 theorem translationCertificate_weltTreu_zeuge
     (oracle : Orakel (declOf (translationUnit true))) (passes : Nat)
     (world : World (declOf (translationUnit true))) :
-    ∃ output : ErgVal (declOf (translationUnit true))
-        ((declOf (translationUnit true)).erg (translationDeclaration true).translator),
-      rufAt (translationDeclaration true).program oracle passes
-      (translationCertificate true).fuel (translationDeclaration true).translator world
-      ((translationDeclaration true).arguments (translationCertificate true).input) =
-        (.ok world output : RufAusgang (D := declOf (translationUnit true))
-          (translationDeclaration true).translator) :=
+    (translationCertificate true).WorldPreserving oracle passes world :=
   translationCertificate_weltTreu (source := translationSource true)
     (u := translationUnit true) (decl := translationDeclaration true)
     (translationCertificate true) oracle passes world

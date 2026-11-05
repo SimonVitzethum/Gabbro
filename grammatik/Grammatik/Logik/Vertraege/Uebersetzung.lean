@@ -356,11 +356,17 @@ theorem libraryExpansion_traegt_zertifikat {source : LibrarySource} {u : UProg}
 /-- Compile-time translation has no runtime side effect: the certified execution answers with the
     same world it started in, for every oracle, pass count and loop budget. There is no hidden
     runtime input, carrier, foreign, atomic or lock effect behind the payload. -/
+def TranslationCertificate.WorldPreserving {source : LibrarySource} {u : UProg}
+    {decl : TranslationDecl source u} (certificate : TranslationCertificate decl)
+    (oracle : Orakel (declOf u)) (passes : Nat) (world : World (declOf u)) : Prop :=
+  ∃ output, rufAt decl.program oracle passes certificate.fuel decl.translator world
+    (decl.arguments certificate.input) = .ok world output
+
+/-- Bind the complete execution proposition before instantiating a concrete source unit. -/
 theorem translationCertificate_weltTreu {source : LibrarySource} {u : UProg}
     {decl : TranslationDecl source u} (certificate : TranslationCertificate decl)
     (oracle : Orakel (declOf u)) (passes : Nat) (world : World (declOf u)) :
-    ∃ output, rufAt decl.program oracle passes certificate.fuel decl.translator world
-      (decl.arguments certificate.input) = .ok world output :=
+    certificate.WorldPreserving oracle passes world :=
   ⟨_, certificate.execution oracle passes world⟩
 
 /-!
