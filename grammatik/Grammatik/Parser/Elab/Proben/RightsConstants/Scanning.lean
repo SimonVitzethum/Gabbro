@@ -74,8 +74,9 @@ scoped macro "rights_input " source:term " with_cuts " "[" cuts:ident,* "]"
     " with_text " "[" fragments:str,* "]" : term => do
   let text := fragments.getElems.foldl (fun text fragment => text ++ fragment.getString) ""
   let _ := text
-  let textFacts : Array (Lean.TSyntax `term) := cuts.getElems.map fun piece =>
-    ⟨(Lean.mkIdentFrom piece (piece.getId.appendAfter "_text")).raw⟩
+  let textFacts ← cuts.getElems.mapM fun piece => do
+    let fact := Lean.mkIdentFrom piece (piece.getId.appendAfter "_text")
+    `(Lean.Parser.Tactic.simpLemma| $fact:term)
   let mut bounded : Lean.TSyntax `term ← `(Eq.refl true)
   for piece in cuts.getElems.reverse do
     let proof : Lean.TSyntax `term :=
@@ -87,7 +88,7 @@ scoped macro "rights_input " source:term " with_cuts " "[" cuts:ident,* "]"
     case text =>
       simp only [pieces, Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters,
         List.flatMap_cons, List.flatMap_nil, String.ofList_append, String.ofList_nil,
-        $textFacts,*]
+        $[$textFacts],*]
       cbv
     case room =>
       exact Nat.le_trans (steps_bound pieces $bounded) (Nat.le_succ _))
