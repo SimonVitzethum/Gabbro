@@ -55,9 +55,11 @@ def Input.of_chunks {source : String} (pieces : List Chunk)
 
 -- Infer the token data from the real short lexer result. The final certificate
 -- checks this exact fragment again with an arbitrary scanner continuation.
-scoped macro "rights_cut " text:str : term =>
+scoped macro "rights_cut " text:str : term => do
+  let letters : Array (Lean.TSyntax `term) := text.getString.toList.toArray.map fun char =>
+    ⟨(Lean.Syntax.mkCharLit char).raw⟩
   `(show Chunk from by
-    let chars : List Char := ($text : String).toList
+    let chars : List Char := [$letters,*]
     let emitted : List Token := ?emitted
     have decoded : lexL chars = .ok emitted := by cbv <;> exact Eq.refl _
     refine {
