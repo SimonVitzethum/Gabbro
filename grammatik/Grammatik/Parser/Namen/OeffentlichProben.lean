@@ -1,5 +1,16 @@
 module
 public import Grammatik.Parser.Namen.AufloesungProben
+-- Reuse the existing dependent lowering assembly, including its private certificates.
+import all Grammatik.Parser.Namen.AufloesungProben
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
+import all Grammatik.Parser.Elab.Generic.StaticConformance
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest1
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest2a
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Body
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Export
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -46,6 +57,8 @@ namespace Gabbro.Grammatik.Parser.OeffentlichProben
 
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Oeffentlich Gabbro.Grammatik.Parser.Aufloesung
 open Gabbro.Grammatik.Parser.AufloesungProben (stufe c schreib zwei)
+open Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg2
+open Gabbro.Grammatik.Parser.UebersetzeAllg
 
 set_option maxRecDepth 100000
 
@@ -53,13 +66,50 @@ set_option maxRecDepth 100000
 def zu : List SItemTief :=
   [.modT "a" [.pubT c, .pubT (schreib "f" [.variable "C"] [.variable "C"])]]
 theorem zu_huelle : huelleZu zu = true := by decide +kernel
-theorem zu_ok : stufe zu = "OK" := by decide +kernel
+
+-- Bind the whole actual elaboration before introducing its dependent function
+-- index. The fields are certificates of the real producer, not an output snapshot.
+private theorem zu_phases : ∃ unit : UProg,
+    elabU (pre108 zu) = .ok unit ∧ unit.invs = [] ∧ contractGate unit = true ∧
+    ∀ f : Fin unit.fns.length,
+      (lowerFnAt unit f).toOption.isSome = true ∧ (fnAt unit f).decreases = none := by
+  refine ⟨?unit, ?elaborated, ?invariants, ?contracts, ?functions⟩
+  case elaborated => cbv <;> exact Eq.refl _
+  case invariants => cbv
+  case contracts => cbv
+  case functions =>
+    intro f
+    rcases f with ⟨index, bound⟩
+    have small : index < 1 := bound
+    have zero : index = 0 := by omega
+    subst index
+    constructor <;> cbv
+
+theorem zu_ok : stufe zu = "OK" := by
+  rcases zu_phases with ⟨unit, elaborated, invariants, contracts, functions⟩
+  exact AufloesungProben.stufe_certified (items := zu) (u := unit)
+    elaborated invariants (fun f => (functions f).1) contracts
+    (fun f => (functions f).2)
+    (AufloesungProben.absent_measures unit (fun f => (functions f).2))
 
 /-- PLANTED DEFECT: the exported `f` writes a carrier that does not cross. -/
 def offen : List SItemTief :=
   [.modT "a" [c, .pubT (schreib "f" [.variable "C"] [.variable "C"])]]
 theorem offen_huelle : huelleZu offen = false := by decide +kernel
-theorem offen_refused : stufe offen = "elab: item without G form" := by decide +kernel
+
+private theorem offen_preprocessed : pre108 offen = [.useT ["pub"]] := by
+  have ordinary : Modules.syntaxList offen = false := by decide +kernel
+  simp only [pre108, ordinary, offen_huelle, Bool.false_eq_true, reduceIte]
+
+-- Preserve the canonical refusal of the preprocessing sentinel independently of
+-- source hull computation and of the successful unit's dependent lowering.
+private theorem pub_sentinel_refused :
+    elabU [.useT ["pub"]] = .error "item without G form" := by cbv
+
+theorem offen_refused : stufe offen = "elab: item without G form" := by
+  unfold stufe
+  rw [offen_preprocessed, pub_sentinel_refused]
+  rfl
 
 /-- PLANTED DEFECT: `a::C` crosses, `b::C` does not, and `b`'s exported `g` names its own `C`. The rule
     sees items, not texts: the public `a::C` of the same short name does not close `g`'s hull. -/
