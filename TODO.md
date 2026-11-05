@@ -33,9 +33,11 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   single-fault refusals; 179/282 register members are exercised and the remaining gaps are explicitly
   accounted for. This measures the model generator, not complete source-to-IR syntax admission.
   The constant grammar witness chain, qualified/ordinary/recursive library producers, final
-  `LibraryCertificates` consumer and fresh `Stage0.Frontend.ExportCorrectness` checks pass.
-  The Stage0 constant input/scanner/scalar certificates and generic compiler-phase composition pass;
-  concrete constant program packets and check/floor witnesses are still under repair. Their downstream
+  `LibraryCertificates`, complete qualified `LibraryExport`, ordinary `LibraryAnnahme`, and fresh
+  `Stage0.Frontend.ExportCorrectness` checks pass.
+  The Stage0 constant input/scanner/scalar certificates and generic compiler-phase composition pass.
+  The generic constant source packet and all-guard call-head certificates also pass direct checks;
+  concrete constant program packets and check/floor witnesses remain under repair. Their downstream
   `ConstWitness`/`ConstValuesWitness` resource closure remains unmeasured after the new phase port.
   Full-package closure and the remaining concrete witness consumers are being revalidated.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
