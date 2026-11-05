@@ -41,6 +41,8 @@ namespace Gabbro.Grammatik
 
 namespace K109
 
+instance : DecidableEq kD.Ax := inferInstanceAs (DecidableEq Empty)
+
 /-- `write_a(i)`: `T.slots[i].v = 1;`. -/
 def kRumpfWriteA : Endblock kD (vertragVon kD kWriteA) false [Ty.index 4] kLA :=
   .cons (.assignSlot KTab.t () (.var .here) kEins rfl kDarfTA)

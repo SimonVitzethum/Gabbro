@@ -42,6 +42,8 @@ namespace Gabbro.Grammatik
 
 namespace K124
 
+instance : DecidableEq kD.Ax := inferInstanceAs (DecidableEq Empty)
+
 /-- The call `setze(30)` inside `hauptA`'s lock. -/
 def kRufA : Stmt kD (vertragVon kD kHauptA) false [] kL kL :=
   .call kSetze (.cons k30 .nil) kHpSetzeA rfl

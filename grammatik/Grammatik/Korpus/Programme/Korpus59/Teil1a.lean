@@ -39,6 +39,8 @@ public import Grammatik.Korpus.Programme.Korpus59.Teil1
 namespace Gabbro.Grammatik
 
 namespace K59
+instance : DecidableEq kD.Ax := inferInstanceAs (DecidableEq Empty)
+
 /-- `zaehle(i)`: `Takte.slots[i].stand = 1;`. -/
 def kRumpfZaehle : Endblock kD (vertragVon kD kZaehle) false [Ty.index 64] kLT :=
   .cons (.assignSlot KTab.takte () (.var .here) kEins rfl kDarfTakte)

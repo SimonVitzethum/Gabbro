@@ -67,6 +67,8 @@ import all Init.Data.String.ToSlice
 namespace Gabbro.Grammatik
 
 namespace K125
+instance : DecidableEq kD.Ax := inferInstanceAs (DecidableEq Empty)
+
 /-- **The lock family**: `WACHE` protects `z`; the source declares no
     invariant, so it is trivially true. -/
 def kSI : SperrInv kD :=
@@ -213,7 +215,12 @@ def kSp5 : Speicher kD :=
 /-- **`beispiele/125` as ONE declaration**: code `kP`, lock family `kSI`,
     no axiom, declared starts `lese_schreibe` and `setze_null` (the
     `concurrent` members), initial memory `z = 0` as declared. -/
-def kE : Zielsatz.Einheit kD := ⟨kP, kSI, axWahr kD, [⟨kLese, .nil⟩, ⟨kSetzeNull, .nil⟩], kSp, [], []⟩
+def kE : Zielsatz.Einheit kD where
+  P := kP
+  S := kSI
+  Q := axWahr kD
+  starts := [⟨kLese, .nil⟩, ⟨kSetzeNull, .nil⟩]
+  sp0 := kSp
 
 /-- **The user's premise group on `beispiele/125`.** -/
 theorem korpus125_nutzer : Zielsatz.NutzerPflicht kE :=
