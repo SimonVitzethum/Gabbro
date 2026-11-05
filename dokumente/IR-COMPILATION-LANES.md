@@ -1,6 +1,6 @@
 # Gabbro-to-IR compilation lanes
 
-## Native CPU floating point (owner decision, 2026-11-04)
+## Native CPU floating point (owner decisions, 2026-11-04 and 2026-11-05)
 
 This decision supersedes the software-floating-point implementation described in the
 historical checkpoints below. Stage 0 compiles and proves the IR; the assembly runner
@@ -10,18 +10,32 @@ conversions and finite/range checks use the corresponding CPU instructions and i
 bit operations; full-range UInt64 conversion uses a portable native instruction sequence.
 The runner establishes the required floating-point control mode itself.
 
-The canonical model uses the toolchain's `Float`/`Float32` primitives instead of Gabbro's
-own IEEE value representation and arithmetic. Compile-time rational literals and bounds
-use the toolchain division on exact integer mantissas before the first rounding, preserving
-subnormal literals without intermediate numerator/denominator overflow. Runtime operations
-still execute on the CPU. `Ty.fl` retains its existing formatless
+The canonical model uses opaque native operations over `Float`/`Float32`. Their numerical
+properties are supplied explicitly by `RootNativeFloat.Hardware`, the fourth named
+component of `HardwareAnnahmen`; there is no global instance and no new Lean axiom.
+The replaced rounding, packing, sticky-bit and IEEE arithmetic proof implementation is
+deleted. Compiler literal preparation crosses the same opaque native boundary; neither
+literal conversion nor arithmetic is replayed as an IEEE calculation by the proof kernel.
+`Ty.fl` retains its existing formatless
 binary64 model value; the separate Code model retains distinct binary32/binary64 types.
 Finite/range obligations, failure channels, resources, memory, contracts and user duties
 remain required. Native NaN payload bits are not fixed by the semantic result relation.
 
+The shared CPU model is architecture-independent: logical operations and contracts,
+32/64-bit value widths, memory and explicit target parameters. ARM, x86, RISC-V and
+other targets must supply their own checked instruction/profile correspondence.
+Registers, flags, encodings, ABI details and physical invalid-conversion results stay
+in those target adapters. The x86 assembly runner is the current concrete backend;
+these abstract interfaces do not establish an ARM or RISC-V backend implementation.
+Concrete numerical probes retain their expected results, with primitive hardware
+response certificates for proof witnesses and actual CPU execution for measurements.
+No hardware certificate assumes the final source/IR simulation or its safety result.
+
 Integration is in progress. Neither these implementation changes nor an isolated adapter
 check establish an end-to-end result: the connected lowering, physical instruction proofs,
-CPU regressions and four guardians must all pass before a green push.
+CPU regressions and acceptance checks still require integration. The owner's current
+validation scope is Lean and the Lean portions of GabbroV; all Rust/Cargo and LLVM
+checks are deliberately unmeasured. This is not a green four-guardian acceptance.
 
 **RESUMED with two agents (2026-10-31).** The owner ended the pause and authorized exactly TWO Claude
 Sonnet 5.5 implementation agents, no others: IR-06 (memory, Lean slot 1) in its preserved worktree

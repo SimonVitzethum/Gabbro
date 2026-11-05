@@ -317,8 +317,9 @@
     admitted declarations expand to guarded storage, but updates, reads and the core query
     are still refused at elaboration (they need C08) and the goal has no accumulator leg
     yet);
-  * properties beyond the toolchain-native CPU float operations. Gabbro uses `Float`/`Float32`
-    primitives, with the existing finite/range user duties; it has no separate software IEEE model;
+  * a proof of hardware floating arithmetic: the opaque native operations and their
+    numerical properties are the named `RootNativeFloat.Hardware` assumption, with
+    the existing finite/range user duties and no software IEEE arithmetic model;
   * that a prose `claim` is true, or that one successful sample proves it (C16, 2026-11-02): a `false` verdict
     or floor outcome is a completed measurement with a negative verdict, and an unrun counterprobe is
     unmeasured, never passed;

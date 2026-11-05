@@ -13,10 +13,14 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
 
 ## Right now
 
-- **Integration validation (2026-11-05).** The model goal, SC/GX and linking variants compile with exactly
-  `propext`, `Classical.choice`, `Quot.sound`. The generic Stage-0 statement dispatcher, compiler, image theorem,
-  bridge simulation and native runner compile; the runner's fourteen-theorem axiom audit is green.
-  Open: the remaining parser/export fixture checks, complete default package builds and all four acceptance guardians.
+- **Integration validation (2026-11-05).** Before the new hardware abstraction, the model goal, SC/GX and linking
+  variants, generic Stage-0 compiler/image theorem, bridge and runner compiled on the standard axioms.
+  The owner now requires opaque, ISA-independent floating operations with explicit `RootNativeFloat.Hardware`,
+  replacing the software IEEE proof implementation. The revised core, native value codec and answer-class
+  prefix compile; the remaining checker/goal, Stage-0 and runner consumers are being revalidated.
+  Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
+  The authorised acceptance scope is Lean and the Lean parts of GabbroV; Rust, Cargo and LLVM checks are
+  deliberately unmeasured. No four-guardian green is claimed.
   A partial successful build does not establish package-wide acceptance or admission of every source form listed below.
 - **Scoped-return model and consumers compile (2026-11-05).** Completion follows cleanup. `fertig_abschluss`
   classifies an ordinary value return or the whole completed saved value, with start reasons excluded explicitly.
@@ -178,7 +182,7 @@ Thus a parser/exporter or an expanded-unit certificate can exist while the origi
   [`lowEnsAt`](stage0/Stage0/Senke/Ausdruck/Old/Code.lean) supports snapshots only in its explicit subtree fragment;
   unsupported snapshots (including old under nonempty folds) fail its `currentOld := false` fallback.
   Open: source production of byte-span operations and unsupported snapshot subtrees.
-- **Native CPU float binders: Block and Endblock generic lowering checked (2026-11-05).** Both support
+- **Native CPU float binders: connected implementation; new hardware abstraction under validation (2026-11-05).** Both support
   `floatLit`/`float`/`floatOf`/`floatNarrow` in the actual dispatcher and connected correctness proofs.
   Computed wide binary64 conversion retains `computedFloatOfE_ok`; overflow/range failure is stop 107,
   and explicit narrowing keeps its original fallback. The Endblock proofs in
@@ -189,8 +193,10 @@ Thus a parser/exporter or an expanded-unit certificate can exist while the origi
   ending binder forms execute on the assembly runner with the unchanged exits 7/41/107. Each measured
   image has 421 IR instructions, including exactly one native f64-add opcode. The runner's CPU regression
   passed 20989 checks with zero differences, including 966 full float-operation IR images.
-  Shared native Float/Float32 adapters and all 32 float opcodes compile; replaced software IEEE emitters
-  are removed. Lean compiles and proves the IR; the assembly runner executes it.
+  These measurements precede the owner's opaque-hardware migration and do not validate its current consumers.
+  The replaced software IEEE emitters and proof implementation are removed. Shared numerical contracts are
+  supplied explicitly; concrete numerical proof witnesses take primitive hardware replies, while the actual
+  CPU regression checks numerical outputs. Lean compiles and proves the IR; the assembly runner executes it.
   Source `f32`/`f64` retain the existing formatless binary64 model. Open: final package acceptance and the
   remaining source/export witnesses; the historical source inventories below are not a fresh coverage measurement.
 - **Other named item duties.** C01 product and C03 tag paths use the connected aggregate arms above; C02 library/translator
