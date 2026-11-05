@@ -116,22 +116,27 @@ example : ((elabU [probenFn, .checkT probenCheck]).bind fun u =>
   exact facts.1
 
 /-- A gate naming no function is refused on the resolved unit. -/
+private def withCheckUnit (u : UProg)
+    (result : Except String (Fin u.fns.length × List (Fin u.fns.length))) :
+    Except String (Σ unit : UProg, Fin unit.fns.length × List (Fin unit.fns.length)) :=
+  result.map (fun indices => ⟨u, indices⟩)
+
 example : ((elabU [probenFn, .checkT probenCheck]).bind fun u =>
-    match u.checks with
+    withCheckUnit u (match u.checks with
     | [c] => uCheckIdx u { c with tore := ["h"] }
-    | _ => .error "shape") = .error "function unknown: p#tor#h" := by
+    | _ => .error "shape")) = .error "function unknown: p#tor#h" := by
   obtain ⟨u, elaborated, facts⟩ := probe_certificate
-  rw [elaborated]
-  exact facts.2.1
+  simpa only [elaborated, bind, Except.bind, withCheckUnit, Except.map] using
+    congrArg (withCheckUnit u) facts.2.1
 
 /-- A Duty outside the mark table is refused on the resolved unit. -/
 example : ((elabU [probenFn, .checkT probenCheck]).bind fun u =>
-    match u.checks with
+    withCheckUnit u (match u.checks with
     | [c] => uCheckIdx u { c with duty := "q#duty" }
-    | _ => .error "shape") = .error "duty unknown: q#duty" := by
+    | _ => .error "shape")) = .error "duty unknown: q#duty" := by
   obtain ⟨u, elaborated, facts⟩ := probe_certificate
-  rw [elaborated]
-  exact facts.2.2
+  simpa only [elaborated, bind, Except.bind, withCheckUnit, Except.map] using
+    congrArg (withCheckUnit u) facts.2.2
 
 /-! ## From source text through the actual stages -/
 
@@ -180,7 +185,10 @@ private theorem token_maps (tokens tail : List Token) :
       (.ok tail : Except LexFehler (List Token)) = .ok (tokens ++ tail) := by
   induction tokens with
   | nil => rfl
-  | cons token tokens ih => simp only [List.foldr_cons, ih, Except.map, List.cons_append]
+  | cons token tokens ih =>
+    simp only [List.foldr_cons]
+    rw [ih]
+    rfl
 
 private theorem scan_compose {source rest : List Char} {fuel remaining : Nat}
     {emitted tokens : List Token} (tail : scan false rest remaining = .ok tokens)
@@ -255,8 +263,9 @@ private theorem text_lexed : lexL (textCharacters 'c' 'g') = .ok (textTokens "c"
   have complete := scan_compose complete (scan_measure_cg (tailCharacters ++ ['}']) 58)
   have complete := scan_compose complete
     (scan_head (measureCharacters 'c' 'g' ++ tailCharacters ++ ['}']) 68)
-  exact scan_compose complete
+  have all := scan_compose complete
     (scan_gate (headCharacters ++ measureCharacters 'c' 'g' ++ tailCharacters ++ ['}']) 76)
+  simpa only [textTokens, textCharacters, List.append_assoc] using all
 
 private theorem foreign_lexed : lexL (textCharacters 'c' 'h') = .ok (textTokens "c" "h") := by
   change scan false (textCharacters 'c' 'h') 91 = _
@@ -264,8 +273,9 @@ private theorem foreign_lexed : lexL (textCharacters 'c' 'h') = .ok (textTokens 
   have complete := scan_compose complete (scan_measure_ch (tailCharacters ++ ['}']) 58)
   have complete := scan_compose complete
     (scan_head (measureCharacters 'c' 'h' ++ tailCharacters ++ ['}']) 68)
-  exact scan_compose complete
+  have all := scan_compose complete
     (scan_gate (headCharacters ++ measureCharacters 'c' 'h' ++ tailCharacters ++ ['}']) 76)
+  simpa only [textTokens, textCharacters, List.append_assoc] using all
 
 private theorem duplicate_lexed : lexL duplicateCharacters = .ok duplicateTokens := by
   change scan false duplicateCharacters 158 = _
@@ -280,8 +290,9 @@ private theorem duplicate_lexed : lexL duplicateCharacters = .ok duplicateTokens
     (scan_measure_cg (tailCharacters ++ ['}', ' '] ++ second) 125)
   have complete := scan_compose complete
     (scan_head (measureCharacters 'c' 'g' ++ tailCharacters ++ ['}', ' '] ++ second) 135)
-  exact scan_compose complete
+  have all := scan_compose complete
     (scan_gate (headCharacters ++ measureCharacters 'c' 'g' ++ tailCharacters ++ ['}', ' '] ++ second) 143)
+  simpa only [duplicateTokens, duplicateCharacters, second, List.append_assoc] using all
 
 private def textGate : SItemTief :=
   .fnT
@@ -360,14 +371,14 @@ example : ((elabText checkText).bind fun u =>
   rw [elaborated]
   exact facts.2.2.2
 
-private theorem foreign_refused : (elabU (textItems "c" "h")).isErr = true := by cbv
-private theorem duplicate_refused : (elabU duplicateItems).isErr = true := by cbv
+private theorem foreign_refused : (elabU (textItems "c" "h")).isOk = false := by cbv
+private theorem duplicate_refused : (elabU duplicateItems).isOk = false := by cbv
 
-example : (elabText checkTextFremdTor).isErr = true := by
+example : (elabText checkTextFremdTor).isOk = false := by
   rw [elabText_phases foreign_source foreign_lexed foreign_parsed]
   exact foreign_refused
 
-example : (elabText checkTextDoppelt).isErr = true := by
+example : (elabText checkTextDoppelt).isOk = false := by
   rw [elabText_phases duplicate_source duplicate_lexed duplicate_parsed]
   exact duplicate_refused
 
