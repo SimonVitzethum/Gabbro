@@ -1,6 +1,11 @@
 module
 public import Bruecke.Quelle
 public import Duty.Duty0130DerivedContractPure
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
+import all Grammatik.Parser.Elab.Generic.StaticConformance
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -89,7 +94,7 @@ theorem lex_ok : lexL zeilen.flatten = .ok toks := by decide +kernel
 
 private theorem parse_ok : parseTopTief toks = .ok items := rfl
 
-private theorem elab_ok : elabU (pre108 items) = .ok u := rfl
+private theorem elab_ok : elabU (pre108 items) = .ok u := by cbv
 
 theorem low_ok : (lowerAllg u).toOption.isSome = true := by decide +kernel
 
@@ -151,7 +156,7 @@ def P130 : Gabbro.Grammatik.Programm (Gabbro.Grammatik.Parser.UebersetzeAllg.dec
 theorem ht : u.tabs = [] := rfl
 
 theorem akz130 : akzeptiert_pruefer.akzeptiert (einheitAllg u P130 null)
-    (aufzFn u).1 (aufzLock u).1 (aufzTraegerLeer u ht rfl).1 = true := by decide
+    (aufzFn u).1 (aufzLock u).1 (aufzTraegerLeer u ht rfl).1 = true := by decide +kernel
 
 #print axioms pflichten
 #print axioms nutzer
