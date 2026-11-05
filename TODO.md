@@ -18,7 +18,9 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   The owner now requires opaque, ISA-independent floating operations with explicit `RootNativeFloat.Hardware`,
   replacing the software IEEE proof implementation. The revised core, native value codec and answer-class
   prefix compile. The SC/GX, linked, termination and waiting goal audit passes for all 13 checked
-  sentences using only the standard axioms; remaining Stage-0 and runner consumers are being revalidated.
+  sentences using only the standard axioms. The current Runner library and executable build, all 14 Runner
+  axiom audits pass, and the CPU regression reports 20,989 checks with zero differences, including 966 float IR cases.
+  The remaining Stage-0 consumers are being revalidated.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
   The authorised acceptance scope is Lean and the Lean parts of GabbroV; Rust, Cargo and LLVM checks are
   deliberately unmeasured. The owner authorises pushing once the named Lean builds and GabbroV's Lean

@@ -2,8 +2,9 @@
 
 > **Development snapshot — 2026-11-05: WIP, not fully buildable or validated.**
 > The Stage-0 integration and abstract floating-point hardware-contract migration are unfinished.
-> Targeted goal-theorem and axiom audits and the Runner Lean library build passed. Grammar and Stage 0 still
-> have known proof failures and resource-limited probe checks; the complete Stage-0/GabbroV Lean closure remains open.
+> Targeted goal-theorem audits, the Runner library/executable, all 14 Runner axiom audits and 20,989 CPU checks
+> passed, including 966 floating-operation IR cases. Grammar and Stage 0 still have known proof failures and
+> resource-limited probe checks; the complete Stage-0/GabbroV Lean closure remains open.
 > Rust, Cargo and LLVM validation are deliberately excluded from this checkpoint. This is not a release
 > or a claim of complete userspace-language coverage.
 
