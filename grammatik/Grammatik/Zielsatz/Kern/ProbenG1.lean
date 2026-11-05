@@ -260,11 +260,12 @@ theorem g1_holen_dekodiert (v : Wert g1D g1Erg) (t : Int) (σ : World g1D) :
 /-- **The oracle can answer `holen`** (G1, direction 1): for a declared ensures that holds at
     some answer, an oracle meets every hardware assumption (c) and its answer FITS the
     `ok | err` type -- the answer class is not empty any more. -/
-theorem g1_holen_antwortet (Q : AxEns g1D) (hlok : AxEnsLokal Q)
+theorem g1_holen_antwortet [RootNativeFloat.Hardware] (Q : AxEns g1D) (hlok : AxEnsLokal Q)
     (v : Wert g1D g1Erg) (σ₀ : World g1D) (hq : Q g1Holen σ₀ v = true) :
     ∃ O : Orakel g1D, HardwareAnnahmen O Q ∧
       ∀ σ : World g1D, (axiomAntwort O g1Holen σ .nil).2 = some v := by
-  refine ⟨g1O (summeRoh g1Fall v) 0, ⟨g1O_gut _ _, g1O_lokal _ _, ?_⟩, fun σ => ?_⟩
+  refine ⟨g1O (summeRoh g1Fall v) 0,
+    ⟨g1O_gut _ _, g1O_lokal _ _, ?_, inferInstance⟩, fun σ => ?_⟩
   · intro a σ ρ u hu
     cases a
     have hρ : ρ = .nil := by cases ρ; rfl
