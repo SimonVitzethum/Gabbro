@@ -1,5 +1,5 @@
 module
-import Grammatik.Parser.Elab.Konst.Values.WitnessData
+public import Grammatik.Parser.Elab.Konst.Values.WitnessData
 import Grammatik.Parser.Elab.Konst.Values.WitnessReaders
 import all Grammatik.Parser.Elab.Konst.Ersetzung
 import all Grammatik.Parser.Elab.Konst.ErsetzungTor
@@ -56,9 +56,13 @@ set_option maxHeartbeats 4000000
 -- happens here, before the checker projects any Boolean denotation.
 
 private def positiveSource : Values.SourceFunction positive := by
-  refine { source := (.bin ">" (.variable "x") (.lit 0)), sourceBody := rfl,
-    model := ⟨?preCode, ?bodyCode, ?postCode⟩,
-    bodySource := ?bodyEq, preSource := ?preEq, postSource := ?postEq }
+  refine {
+    source := (.bin ">" (.variable "x") (.lit 0))
+    sourceBody := rfl
+    model := ⟨?preCode, ?bodyCode, ?postCode⟩
+    bodySource := ?bodyEq
+    preSource := ?preEq
+    postSource := ?postEq }
   case bodyEq =>
     change Values.expression (D := declaration [.int 0 10] .bool)
       (locals [("x", .int 0 10)]) [] [] 64 .bool (.bin ">" (.variable "x") (.lit 0)) = .ok _
@@ -69,24 +73,36 @@ private def positiveSource : Values.SourceFunction positive := by
 
 private def postFalseSource : Values.SourceFunction
     { positive with signature := { positive.signature with klauseln := [.gives .fls] } } := by
-  refine { source := (.bin ">" (.variable "x") (.lit 0)), sourceBody := rfl,
-    model := ⟨?preCode, positiveSource.model.body, ?postCode⟩,
-    bodySource := positiveSource.bodySource, preSource := ?preEq, postSource := ?postEq }
+  refine {
+    source := (.bin ">" (.variable "x") (.lit 0))
+    sourceBody := rfl
+    model := ⟨?preCode, positiveSource.model.body, ?postCode⟩
+    bodySource := positiveSource.bodySource
+    preSource := ?preEq
+    postSource := ?postEq }
   case preEq => cbv <;> rfl
   case postEq => cbv <;> rfl
 
 private def preFalseSource : Values.SourceFunction
     { positive with signature := { positive.signature with klauseln := [.needs .fls] } } := by
-  refine { source := (.bin ">" (.variable "x") (.lit 0)), sourceBody := rfl,
-    model := ⟨?preCode, positiveSource.model.body, ?postCode⟩,
-    bodySource := positiveSource.bodySource, preSource := ?preEq, postSource := ?postEq }
+  refine {
+    source := (.bin ">" (.variable "x") (.lit 0))
+    sourceBody := rfl
+    model := ⟨?preCode, positiveSource.model.body, ?postCode⟩
+    bodySource := positiveSource.bodySource
+    preSource := ?preEq
+    postSource := ?postEq }
   case preEq => cbv <;> rfl
   case postEq => cbv <;> rfl
 
 private def taggedSource : Values.SourceFunction tagged := by
-  refine { source := (.call "Data" [.bin "+" (.variable "x") (.lit 1)]), sourceBody := rfl,
-    model := ⟨?preCode, ?bodyCode, ?postCode⟩,
-    bodySource := ?bodyEq, preSource := ?preEq, postSource := ?postEq }
+  refine {
+    source := (.call "Data" [.bin "+" (.variable "x") (.lit 1)])
+    sourceBody := rfl
+    model := ⟨?preCode, ?bodyCode, ?postCode⟩
+    bodySource := ?bodyEq
+    preSource := ?preEq
+    postSource := ?postEq }
   case bodyEq =>
     change Values.expression (D := declaration [.int 0 10] (.sum schema.spec))
       (locals [("x", .int 0 10)]) [] [schema] 64 (.sum schema.spec) (.call "Data" [.bin "+" (.variable "x") (.lit 1)]) = .ok _
@@ -100,9 +116,13 @@ private def taggedSource : Values.SourceFunction tagged := by
   case postEq => cbv <;> rfl
 
 private def emptyTagSource : Values.SourceFunction emptyTag := by
-  refine { source := (.variable "Empty"), sourceBody := rfl,
-    model := ⟨?preCode, ?bodyCode, ?postCode⟩,
-    bodySource := ?bodyEq, preSource := ?preEq, postSource := ?postEq }
+  refine {
+    source := (.variable "Empty")
+    sourceBody := rfl
+    model := ⟨?preCode, ?bodyCode, ?postCode⟩
+    bodySource := ?bodyEq
+    preSource := ?preEq
+    postSource := ?postEq }
   case bodyEq =>
     change Values.expression (D := declaration [] (.sum schema.spec))
       (locals []) [] [schema] 64 (.sum schema.spec) (.variable "Empty") = .ok _
@@ -116,9 +136,13 @@ private def emptyTagSource : Values.SourceFunction emptyTag := by
   case postEq => cbv <;> rfl
 
 private def flagTagSource : Values.SourceFunction flagTag := by
-  refine { source := (.call "Flag" [.tru]), sourceBody := rfl,
-    model := ⟨?preCode, ?bodyCode, ?postCode⟩,
-    bodySource := ?bodyEq, preSource := ?preEq, postSource := ?postEq }
+  refine {
+    source := (.call "Flag" [.tru])
+    sourceBody := rfl
+    model := ⟨?preCode, ?bodyCode, ?postCode⟩
+    bodySource := ?bodyEq
+    preSource := ?preEq
+    postSource := ?postEq }
   case bodyEq =>
     change Values.expression (D := declaration [] (.sum schema.spec))
       (locals []) [] [schema] 64 (.sum schema.spec) (.call "Flag" [.tru]) = .ok _
@@ -132,9 +156,13 @@ private def flagTagSource : Values.SourceFunction flagTag := by
   case postEq => cbv <;> rfl
 
 private def textTagSource : Values.SourceFunction textTag := by
-  refine { source := (.call "Text" [.ext .text ["Z"] []]), sourceBody := rfl,
-    model := ⟨?preCode, ?bodyCode, ?postCode⟩,
-    bodySource := ?bodyEq, preSource := ?preEq, postSource := ?postEq }
+  refine {
+    source := (.call "Text" [.ext .text ["Z"] []])
+    sourceBody := rfl
+    model := ⟨?preCode, ?bodyCode, ?postCode⟩
+    bodySource := ?bodyEq
+    preSource := ?preEq
+    postSource := ?postEq }
   case bodyEq =>
     change Values.expression (D := declaration [] (.sum schema.spec))
       (locals []) [] [schema] 64 (.sum schema.spec) (.call "Text" [.ext .text ["Z"] []]) = .ok _
@@ -148,9 +176,13 @@ private def textTagSource : Values.SourceFunction textTag := by
   case postEq => cbv <;> rfl
 
 private def emptyTextSource : Values.SourceFunction (shortText "") := by
-  refine { source := (.ext .text [""] []), sourceBody := rfl,
-    model := ⟨?preCode, ?bodyCode, ?postCode⟩,
-    bodySource := ?bodyEq, preSource := ?preEq, postSource := ?postEq }
+  refine {
+    source := (.ext .text [""] [])
+    sourceBody := rfl
+    model := ⟨?preCode, ?bodyCode, ?postCode⟩
+    bodySource := ?bodyEq
+    preSource := ?preEq
+    postSource := ?postEq }
   case bodyEq =>
     change Values.expression (D := declaration [] (.str 1))
       (locals []) [] [] 64 (.str 1) (.ext .text [""] []) = .ok _
@@ -160,9 +192,13 @@ private def emptyTextSource : Values.SourceFunction (shortText "") := by
   case postEq => cbv <;> rfl
 
 private def oneTextSource : Values.SourceFunction (shortText "A") := by
-  refine { source := (.ext .text ["A"] []), sourceBody := rfl,
-    model := ⟨?preCode, ?bodyCode, ?postCode⟩,
-    bodySource := ?bodyEq, preSource := ?preEq, postSource := ?postEq }
+  refine {
+    source := (.ext .text ["A"] [])
+    sourceBody := rfl
+    model := ⟨?preCode, ?bodyCode, ?postCode⟩
+    bodySource := ?bodyEq
+    preSource := ?preEq
+    postSource := ?postEq }
   case bodyEq =>
     change Values.expression (D := declaration [] (.str 1))
       (locals []) [] [] 64 (.str 1) (.ext .text ["A"] []) = .ok _
@@ -172,9 +208,13 @@ private def oneTextSource : Values.SourceFunction (shortText "A") := by
   case postEq => cbv <;> rfl
 
 private def zeroTextSource : Values.SourceFunction (shortText "" 0) := by
-  refine { source := (.ext .text [""] []), sourceBody := rfl,
-    model := ⟨?preCode, ?bodyCode, ?postCode⟩,
-    bodySource := ?bodyEq, preSource := ?preEq, postSource := ?postEq }
+  refine {
+    source := (.ext .text [""] [])
+    sourceBody := rfl
+    model := ⟨?preCode, ?bodyCode, ?postCode⟩
+    bodySource := ?bodyEq
+    preSource := ?preEq
+    postSource := ?postEq }
   case bodyEq =>
     change Values.expression (D := declaration [] (.str 0))
       (locals []) [] [] 64 (.str 0) (.ext .text [""] []) = .ok _
@@ -336,4 +376,3 @@ public theorem pre_refused_result :
   cbv
 
 end Gabbro.Grammatik.Parser.Konst.Values.Witness.Phases
-

@@ -118,4 +118,3 @@ def captured : UKonstFn where
   constants := [("math::K", 5), ("x", 99)]
 
 end Gabbro.Grammatik.Parser.Konst.Values.Witness
-
