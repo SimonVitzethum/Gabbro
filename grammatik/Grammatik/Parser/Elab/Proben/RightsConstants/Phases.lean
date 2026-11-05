@@ -18,6 +18,7 @@ namespace Gabbro.Grammatik.Parser.UebersetzeProben11.Phases
 open Gabbro.Grammatik Gabbro.Grammatik.Parser
 open Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
+open scoped Gabbro.Grammatik.Parser.UebersetzeProben11.Phases
 set_option maxRecDepth 100000
 
 /-- Only the actual frontend phases are replayed; the continuation remains symbolic. -/
@@ -80,7 +81,7 @@ theorem stage_counts {source : String} (input : Input source) {items : List SIte
 
 -- Classify the actual finite carrier only after the complete unit has been inferred.
 -- The closed count equation is established independently of this caller index.
-macro "rights_members " step:tactic : tactic => `(tactic| (
+scoped macro "rights_members " step:tactic : tactic => `(tactic| (
   rintro ⟨index, bound⟩
   have small : index < 2 := by omega
   have choices : index = 0 ∨ index = 1 := by omega
@@ -90,14 +91,14 @@ macro "rights_members " step:tactic : tactic => `(tactic| (
   · subst index
     first | omega | $step))
 
-macro "rights_elab_error " supplied:term " reason " error:term : tactic => `(tactic| (
+scoped macro "rights_elab_error " supplied:term " with_reason " error:term : tactic => `(tactic| (
   let input := $supplied
   let items : List SItemTief := ?items
   have parsed : parseTopTief input.tokens = .ok items := by cbv <;> exact Eq.refl _
   have rejected : elabU (pre108 items) = .error $error := by cbv <;> exact Eq.refl _
   exact elab_error input parsed rejected))
 
-macro "rights_ok " supplied:term : tactic => `(tactic| (
+scoped macro "rights_ok " supplied:term : tactic => `(tactic| (
   let input := $supplied
   let items : List SItemTief := ?items
   have parsed : parseTopTief input.tokens = .ok items := by cbv <;> exact Eq.refl _
@@ -111,7 +112,7 @@ macro "rights_ok " supplied:term : tactic => `(tactic| (
   · cbv
   · rights_members (constructor <;> cbv)))
 
-macro "rights_lower_error " supplied:term " reason " error:term " member " number:term : tactic =>
+scoped macro "rights_lower_error " supplied:term " with_reason " error:term " at_member " number:term : tactic =>
   `(tactic| (
     let input := $supplied
     let items : List SItemTief := ?items
@@ -127,7 +128,7 @@ macro "rights_lower_error " supplied:term " reason " error:term " member " numbe
     · refine ⟨⟨$number, by omega⟩, ?_⟩
       cbv))
 
-macro "rights_counts " supplied:term : tactic => `(tactic| (
+scoped macro "rights_counts " supplied:term : tactic => `(tactic| (
   let input := $supplied
   let items : List SItemTief := ?items
   have parsed : parseTopTief input.tokens = .ok items := by cbv <;> exact Eq.refl _
