@@ -13,6 +13,9 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
 
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 
+local instance (u : UProg) : DecidableEq (declOf u).Fn :=
+  inferInstanceAs (DecidableEq (Fin u.fns.length))
+
 /-- Copyable observations only. A floor is a Bool, never an integer silently
     interpreted as a successful verdict. Capabilities have no encoding here. -/
 inductive CheckAtom where
@@ -88,7 +91,7 @@ theorem decodeCheckReturn_origin (site : UCheckReturn) (atoms : List (Option Che
         by_cases hv : verdict = floors.foldl (fun result floor => result && floor) written
         · simp [decodeCheckReturn, hs, hf, hw, hv] at origin
           cases origin
-          exact ⟨hs, hf, written, hw, hv⟩
+          exact ⟨rfl, rfl, written, rfl, rfl⟩
         · simp [decodeCheckReturn, hs, hf, hw, hv] at origin
 
 /-- Read the actual saved arguments and actual returned Bool of a private
@@ -99,7 +102,9 @@ def actualCheckReturn (u : UProg) (f : (declOf u).Fn)
   let site ← (fnAt u f).checkReturn
   match he : (declOf u).erg f with
   | some .bool =>
-    let report ← decodeCheckReturn site (checkEnvAtoms env) (he ▸ value)
+    let verdict : ErgVal (declOf u) (some .bool) :=
+      cast (congrArg (ErgVal (declOf u)) he) value
+    let report ← decodeCheckReturn site (checkEnvAtoms env) verdict
     pure (site.check, report)
   | _ => none
 
@@ -156,7 +161,8 @@ def checkGhostStep (u : UProg) (c : CheckDecl (declOf u))
     (consumer gate : (declOf u).Fn) (state : CheckGhostState (declOf u)) :
     RufEreignisF (declOf u) → CheckGhostState (declOf u)
   | .eintritt f _ _ =>
-    { state with frames := f :: state.frames,
+    { state with
+      frames := f :: state.frames,
       pending := if f = c.probe then none else state.pending,
       activation := if f = c.probe then state.nextActivation else state.activation,
       nextActivation := if f = c.probe then state.nextActivation + 1 else state.nextActivation }
@@ -168,7 +174,8 @@ def checkGhostStep (u : UProg) (c : CheckDecl (declOf u))
       match state.pending with
       | some report =>
         if rueckUrteil c (.rueck f env value s0 s1) = some report.urteil then
-          { result with pending := none,
+          { result with
+            pending := none,
             history := ⟨c.probe, report, true, none⟩ :: state.history }
         else { result with pending := none, refused := true }
       | none => { result with refused := true }
@@ -182,7 +189,8 @@ def checkGhostStep (u : UProg) (c : CheckDecl (declOf u))
       | none => result
     else result
   | .why f _ _ _ _ =>
-    let result := { state with frames := state.frames.drop 1,
+    let result := { state with
+      frames := state.frames.drop 1,
       pending := if f = c.probe then none else state.pending }
     if state.frames.head? != some f then { result with refused := true }
     else if f = consumer then checkGhostConsume gate result
