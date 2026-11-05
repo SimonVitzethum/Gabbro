@@ -50,6 +50,7 @@ def druck : SExpr → String
   | .res => "result"
   | .why g f => g ++ "::" ++ f
   | .ext .dyn [n] [value] => "dyn " ++ n ++ "(" ++ druck value ++ ")"
+  | .ext .array [] values => "[" ++ druckArgs values ++ "]"
   | .ext .instantiate (name :: words) args => name ++ "::[" ++ String.intercalate ", " words ++ "](" ++ druckArgs args ++ ")"
   | .ext .text ns _ => "\"" ++ ("".intercalate ns) ++ "\""
   | .ext .label [name] [value] => name ++ ": " ++ druck value

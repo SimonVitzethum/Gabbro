@@ -129,6 +129,14 @@ def uRecordPosition : (fields : List (String × Ty)) → (name : String) →
     if strEq name selected then .ok ⟨ty, .head⟩
     else (uRecordPosition rest selected).map fun ⟨ty, position⟩ => ⟨ty, .tail position⟩
 
+/-- A common source type for ordered array elements. This only selects the checking
+    type: the dependent lowerer still checks every element and every bound. -/
+def uArrayElementType : Ty → Ty → Option Ty
+  | .int a b, .int c d => some (.int (min a c) (max b d))
+  | .arr a n, .arr b m =>
+    if n = m then (uArrayElementType a b).map (.arr · n) else none
+  | a, b => if a = b then some a else none
+
 /-- Source-side type information for aggregate binding. The dependent lowering checks it again. -/
 def uValueType (ctx : UCtx) : USide → Option Ty
   | .param name => (ctx.names.findIdx? (strEq · name)).bind (ctx.types[·]?)
@@ -141,6 +149,14 @@ def uValueType (ctx : UCtx) : USide → Option Ty
     (schema.fields.find? (fun entry => strEq entry.1 field)).map (·.2)
   | .replace base _ _ => uValueType ctx base
   | .idx base _ => match uValueType ctx base with | some (.arr ty _) => some ty | _ => none
+  | .arrCons value .arrNil => do
+    let ty ← uValueType ctx value
+    pure (.arr ty 1)
+  | .arrCons value rest => do
+    let head ← uValueType ctx value
+    let .arr tail count ← uValueType ctx rest | none
+    let ty ← uArrayElementType head tail
+    pure (.arr ty (count + 1))
   | .truth _ => some .bool
   | .lit value => some (.int value value)
   | .conv lo hi _ | .eng _ lo hi => some (.int lo hi)
@@ -200,6 +216,21 @@ def uRecordSide (ctx : UCtx) : (value : SExpr) →
       | _ => rechne (.variable name) (Nat.le_refl _)
     | .error _ => rechne (.variable name) (Nat.le_refl _)
   | value, rechne => rechne value (Nat.le_refl _)
+
+/-- Array elements share the canonical component reader. Every recursive callback
+    concerns an actual smaller element of the original list, in source order. -/
+def uArraySides (ctx : UCtx) : (values : List SExpr) →
+    ((source : SExpr) → sizeOf source < sizeOf values → Except String USide) → Except String USide
+  | [], _ => .ok .arrNil
+  | value :: rest, read => do
+    let head ← uRecordSide ctx value fun source smaller => read source (by
+      have nested : sizeOf value < sizeOf (value :: rest) := by simp +arith
+      exact Nat.lt_of_le_of_lt smaller nested)
+    let tail ← uArraySides ctx rest fun source smaller => read source (by
+      have nested : sizeOf rest < sizeOf (value :: rest) := by simp +arith
+      exact Nat.lt_trans smaller nested)
+    pure (.arrCons head tail)
+termination_by structural values _ => values
 
 /-- Labelled constructors arrive as `.ext .label` applications in source order. Every callback
     argument is smaller than this actual source list, including across recursive tails. -/

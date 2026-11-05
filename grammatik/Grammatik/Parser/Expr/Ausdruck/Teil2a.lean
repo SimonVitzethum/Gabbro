@@ -130,6 +130,9 @@ def parsePrimary (f : Nat) (toks : List Token) :
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match toks with
+    | .zeichen "[" :: rest => do
+      let (values, tail) ← parseArrayElements f rest
+      parseSuffixe f (.ext .array [] values) tail
     | .wort "dyn" :: name :: .zeichen "(" :: rest => do
       let some spec := nameText name | .error "dyn.spec.required"
       let (payload, tail) ← parseOr f rest
@@ -194,6 +197,22 @@ def parsePrimary (f : Nat) (toks : List Token) :
         else parseKopf f toks
       | none => .error "expression expected"
     | [] => .error "expression expected"
+/-- Ordered literal elements. Nested brackets belong to the recursively read
+    expression; only the delimiter after that complete expression closes this row. -/
+def parseArrayElements (f : Nat) (toks : List Token) :
+    Except String (List SExpr × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match toks with
+    | .zeichen "]" :: rest => .ok ([], rest)
+    | _ => do
+      let (value, tail) ← parseOr f toks
+      match tail with
+      | .zeichen "," :: rest => do
+        let (values, rest) ← parseArrayElements f rest
+        pure (value :: values, rest)
+      | .zeichen "]" :: rest => pure ([value], rest)
+      | _ => .error "array literal without ]"
 def parseEingebaut (f : Nat) (w : String) (n : Nat)
     (toks : List Token) : Except String (SExpr × List Token) :=
   match f with

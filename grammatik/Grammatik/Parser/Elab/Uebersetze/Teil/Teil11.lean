@@ -36,6 +36,7 @@ public import Grammatik.Parser.Elab.Export.ExportMetadata
 import all Init.Data.Repr
 public import Grammatik.Parser.Elab.Uebersetze.Folds.Substitution
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil10
+public import Grammatik.Parser.Elab.Uebersetze.Einheit.ReturnCalls
 public import Grammatik.Parser.Elab.Uebersetze.Tagged.Initializers
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
@@ -93,13 +94,16 @@ def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln0 : List SKlausel)
       | .ok (body, ctxE) =>
         match expandFoldEnd ctxE ende with
         | .error e => .error e
-        | .ok (beforeEnd, ctxE, ende) =>
-        match uEnde ctxE ende with
+        | .ok (beforeEnd, ctxEnd, ending) =>
+        match expandReturnCall ctxEnd koepfe ending with
+        | .error e => .error e
+        | .ok (beforeCall, ctxReturn, returning) =>
+        match uEnde ctxReturn returning with
         | .error e =>
-          if ende.isNone && (match ss.getLast? with | some s => uEndetTief 64 s | none => false) then
+          if returning.isNone && (match ss.getLast? with | some s => uEndetTief 64 s | none => false) then
             .ok (gives, needs, body, .keins)
           else .error e
-        | .ok r => .ok (gives, needs, body ++ beforeEnd, r)
+        | .ok r => .ok (gives, needs, body ++ beforeEnd ++ beforeCall, r)
     | _ => .error "fn body without G form"
 /-- The context of a function from its head. -/
 def uCtxVon (alias : List (String × (Int × Int))) (lits : List (String × Int))

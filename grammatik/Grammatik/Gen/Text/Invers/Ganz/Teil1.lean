@@ -369,12 +369,15 @@ theorem elabFn_eq (ctx : UCtx) (koepfe : List UFnKopf) (kl : List SKlausel) (ss 
             match expandFoldEnd ctxE ende with
             | .error e => .error e
             | .ok (beforeEnd, ctxEnd, ending) =>
-              match uEnde ctxEnd ending with
-              | .error e =>
-                if ending.isNone && (match ss.getLast? with | some s => uEndetTief 64 s | none => false) then
-                  .ok (gives, needs, body, .keins)
-                else .error e
-              | .ok r => .ok (gives, needs, body ++ beforeEnd, r) := by
+              match expandReturnCall ctxEnd koepfe ending with
+              | .error e => .error e
+              | .ok (beforeCall, ctxReturn, returning) =>
+                match uEnde ctxReturn returning with
+                | .error e =>
+                  if returning.isNone && (match ss.getLast? with | some s => uEndetTief 64 s | none => false) then
+                    .ok (gives, needs, body, .keins)
+                  else .error e
+                | .ok r => .ok (gives, needs, body ++ beforeEnd ++ beforeCall, r) := by
   unfold elabFn elabKlauseln
   simp only [hsp, List.isEmpty_nil, ↓reduceIte]
   have givesReader : (fun clause : SKlausel => match clause with

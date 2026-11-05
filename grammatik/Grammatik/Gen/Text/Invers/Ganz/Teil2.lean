@@ -127,7 +127,8 @@ theorem fn_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklaratio
   obtain ⟨cE, hB, hEnde, _⟩ := (rumpf_satz gNr ctx.tabs koepfe hM hK hI (sizeOf (P.rumpf f) + 1)).2.2 (P.rumpf f) ctx
     (artListe ks) 1000000 ss ende body r (by omega) hsize H hb hbr
   have hFold := delabEnd_foldFree (P.rumpf f) (output := (ss, ende)) hb cE
-  simp only [hG, hN, hB, hFold, hEnde, List.append_nil]
+  have hReturn := expandReturnCall_of_ok cE koepfe ende r hEnde
+  simp only [hG, hN, hB, hFold, hReturn, hEnde, List.append_nil]
   congr 1
   simp only [kopfVon, kanalVon]
   congr 1

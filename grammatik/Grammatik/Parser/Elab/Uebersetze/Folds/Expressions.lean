@@ -7,8 +7,9 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
 
 mutual
 /-- Detect folds only along the operand paths visited by `expandFoldExpr`.
-    Non-fold extensions and all other leaves stay opaque to that traversal. -/
+    Array elements are traversed in order; other non-fold extensions stay opaque. -/
 def needsFoldExpansion : SExpr → Bool
+  | .ext .array [] args => needsFoldExpansionList args
   | .ext kind _ _ => isFold kind
   | .bin _ a b | .index a b => needsFoldExpansion a || needsFoldExpansion b
   | .un _ value | .field value _ => needsFoldExpansion value
@@ -26,6 +27,11 @@ end
 def expandFoldExpr : Nat → UCtx → Nat → SExpr →
     Except String (List UStmt × UCtx × Nat × SExpr)
   | 0, _, _, _ => .error "fold: expression nesting limit"
+  | fuel + 1, ctx, serial, .ext .array [] args => do
+    let (code, ctx, serial, args) ← args.foldlM (fun (code, ctx, serial, values) value => do
+      let (more, ctx, serial, value) ← expandFoldExpr fuel ctx serial value
+      pure (code ++ more, ctx, serial, values ++ [value])) ([], ctx, serial, [])
+    pure (code, ctx, serial, .ext .array [] args)
   | fuel + 1, ctx, serial, .ext kind names args =>
     if isFold kind then do
       let (code, ctx, value) ← expandFold ctx serial kind names args

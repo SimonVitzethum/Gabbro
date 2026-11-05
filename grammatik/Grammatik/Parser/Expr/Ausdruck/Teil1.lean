@@ -32,6 +32,8 @@ inductive XKind
   | instantiate
   /-- Folds: binder/domain names; domain operands, filter, value, optional empty value. -/
   | foldAdd | foldMin | foldMax | foldAnd | foldOr
+  /-- Ordered array literal elements; names are empty. -/
+  | array
   deriving DecidableEq, Repr
 
 def beqWorte : List String → List String → Bool
@@ -47,8 +49,8 @@ def beqWorte : List String → List String → Bool
     (`ruf "Some" [x]`, `ruf "None" []`, as `parse.rs` builds them);
     `FnWert` is `fnref` with the path text; `Eingebaut` is
     `built` with the head word and the argument expressions;
-    `Klammer` vanishes (the printer re-parenthesises); `Zaehle`,
-    `ArrayLit` and `LibraryCall` are refused (see CUTS). -/
+    `Klammer` vanishes (the printer re-parenthesises); counting uses `ext count`,
+    array literals use `ext array [] elements`; library calls are statement forms. -/
 inductive SExpr
   | lit : Nat → SExpr
   | float : String → SExpr
@@ -66,8 +68,8 @@ inductive SExpr
   | old : SExpr → SExpr
   | res : SExpr
   | why : String → String → SExpr
-  /-- Predicate forms, string literals and calls through places (layout at `XKind`). They have no
-      spelling in `druckToks`: the printer is total on the printable core only (`gut`). -/
+  /-- Extended forms, including ordered arrays (layout at `XKind`). The token printer
+      spells them separately from the printable scalar core (`gut`). -/
   | ext : XKind → List String → List SExpr → SExpr
   deriving Repr
 

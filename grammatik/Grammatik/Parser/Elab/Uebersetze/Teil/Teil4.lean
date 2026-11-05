@@ -225,6 +225,8 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
     match uRechne ctx blatt a with
     | .error e => .error e
     | .ok x => .ok (.len x)
+  | .ext .array [] values =>
+    uArraySides ctx values (fun source smaller => uRechne ctx blatt source)
   | .ext .text [t] [] => .ok (.text (t.toUTF8.toList.map (fun b => Int.ofNat b.toNat)))
   | .index a i =>
     if uTraegerIndex ctx a then blatt (.index a i) else
