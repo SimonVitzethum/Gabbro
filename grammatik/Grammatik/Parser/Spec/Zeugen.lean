@@ -3,6 +3,24 @@ module
 public import Grammatik.Parser.Spec.Expand
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil13
 
+-- The elaboration witness executes the actual empty static/check gates.
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
+import all Grammatik.Parser.Elab.Generic.StaticConformance
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Legacy
+import all Init.Data.String.Slice
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.ToSlice
+
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Spec
@@ -12,7 +30,8 @@ set_option maxHeartbeats 4000000
 /-- The non-degenerate Shape/Circles instance of §5.1, with its actual arithmetic body. -/
 def areaSpec : FnSig :=
   { art := "spec", name := "area", params := [("s", .atom "T")], res := some (.atom "u64"),
-    fehler := none, klauseln := [.gives (.bin ">=" .res (.lit 1)), .effs [.param "E"], .cost (.lit 50)] }
+    fehler := none, klauseln := [.gives (.bin ">=" .res (.lit 1)), .effs [.param "E"], .cost (.lit 50)],
+    generics := [] }
 
 def radius : SExpr := .field (.index (.variable "Circles") (.variable "s")) "r"
 
@@ -20,7 +39,9 @@ def areaBody : SAnw := .block [] (some (.ret (some
   (.bin "+" (.bin "*" (.bin "*" (.lit 3) radius) radius) (.lit 1)))))
 
 def areaImpl : FnSig :=
-  { areaSpec with art := "impl", params := [("s", .index false "Circles")],
+  { areaSpec with
+    art := "impl"
+    params := [("s", .index false "Circles")]
     klauseln := [.gives (.bin ">=" .res (.lit 1)), .effs [.reads (.variable "Circles")], .cost (.lit 20)] }
 
 def shapeSpec : SItemTief := .specGroupT "Shape" ["T"] ["E"] [areaSpec]
@@ -33,7 +54,7 @@ def callerBody (name : String := "Shape::area") : SAnw :=
 
 def caller : FnSig :=
   { art := "impl", name := "draw", params := [("c", .index false "Circles")],
-    res := some (.atom "u64"), fehler := none, klauseln := [] }
+    res := some (.atom "u64"), fehler := none, klauseln := [], generics := [] }
 
 def circles : SItemTief := .tableT "Circles" none (some (.lit 4)) none none false
   [.tSlot [⟨"r", .range (.atom "u64") (.lit 0) (.lit 9) false, none, none, none, false, false⟩]]

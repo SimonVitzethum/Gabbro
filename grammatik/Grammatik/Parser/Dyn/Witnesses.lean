@@ -1,64 +1,86 @@
 module
 
-import Grammatik.Parser.TaggedDispatch.Frontend
-import Grammatik.Parser.Elab.Uebersetze.Teil.Teil13
+public import Grammatik.Parser.TaggedDispatch.Frontend
+
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Legacy
+import all Init.Data.String.Slice
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.ToSlice
+
+@[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Dyn
 open Spec
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
 
-private def area : FnSig :=
+-- Fixture data exposed only to retain the public witness propositions.
+namespace WitnessData
+
+def area : FnSig :=
   ⟨"spec", "area", [("s", .atom "T")], some (.atom "u64"), none,
-    [.gives (.bin ">=" .res (.lit 1)), .effs [.param "E"], .cost (.lit 50)]⟩
+    [.gives (.bin ">=" .res (.lit 1)), .effs [.param "E"], .cost (.lit 50)], []⟩
 
-private def shape : SItemTief := .specGroupT "Shape" ["T"] ["E"] [area]
+def shape : SItemTief := .specGroupT "Shape" ["T"] ["E"] [area]
 
-private def implementation (ty : STyp) (effects : List SEffekt) : SItemTief :=
+def implementation (ty : STyp) (effects : List SEffekt) : SItemTief :=
   .implGroupT "Shape" [ty] [effects]
-    [.fnT { area with art := "impl", params := [("s", ty)],
+    [.fnT { area with
+      art := "impl"
+      params := [("s", ty)]
       klauseln := [.gives (.bin ">=" .res (.lit 1)), .effs effects, .cost (.lit 20)] }
       (.block [] (some (.ret (some (.lit 1)))))]
 
-private def circle : SItemTief :=
+def circle : SItemTief :=
   implementation (.index false "Circles") [.reads (.variable "Circles")]
 
-private def rect : SItemTief :=
+def rect : SItemTief :=
   implementation (.index false "Rects") [.reads (.variable "Rects")]
 
-private def dynamic : STyp := .dyn "Shape" (some "reads Circles , reads Rects } ")
+def dynamic : STyp := .dyn "Shape" (some "reads Circles , reads Rects } ")
 
-private def scene : SItemTief :=
+def scene : SItemTief :=
   .tableT "Scene" none (some (.lit 256)) none none false
     [.tSlot [⟨"s", dynamic, none, none, none, false, false⟩]]
 
-private def table (name : String) : SItemTief :=
+def table (name : String) : SItemTief :=
   .tableT name none (some (.lit 4)) none none false
     [.tSlot [⟨"r", .atom "u64", none, none, none, false, false⟩]]
 
-private def sample : FnSig :=
+def sample : FnSig :=
   ⟨"impl", "sample", [("i", .index false "Scene"), ("j", .index false "Scene"),
-    ("c", .index false "Circles")], some (.atom "u64"), none, []⟩
+    ("c", .index false "Circles")], some (.atom "u64"), none, [], []⟩
 
-private def fieldAt (n : String) : SExpr :=
+def fieldAt (n : String) : SExpr :=
   .field (.index (.variable "Scene") (.variable n)) "s"
 
-private def body : SAnw :=
+def body : SAnw :=
   .block [.set (fieldAt "i") "=" (.ext .dyn ["Shape"] [.variable "c"]),
     .bind false "a" none (.call "Shape::area" [fieldAt "j"])]
     (some (.ret (some (.variable "a"))))
 
-private def fixture : List SItemTief :=
+def fixture : List SItemTief :=
   [table "Circles", table "Rects", shape, circle, rect, scene, .fnT sample body]
 
-private def expanded : Except String (List SItemTief) := exportDeclarationUnit fixture
+def expanded : Except String (List SItemTief) := exportDeclarationUnit fixture
 
-private def functionBody (name : String) : Except String SAnw := do
+def functionBody (name : String) : Except String SAnw := do
   let items ← expanded
   let some body := items.findSome? (fun
     | .fnT s b => if strEq s.name name then some b else none
     | _ => none) | throw "witness.function"
   return body
+
+end WitnessData
+
+open WitnessData
 
 /-- The real declaration entry point closes both linked implementations into one ordinary sum. -/
 public theorem scene_sum_zeuge :

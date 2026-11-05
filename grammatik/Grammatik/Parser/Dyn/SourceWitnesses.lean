@@ -1,13 +1,31 @@
 module
 
-import Grammatik.Parser.TaggedDispatch.Frontend
-import Grammatik.Parser.Print.Item
+public import Grammatik.Parser.TaggedDispatch.Frontend
+public import Grammatik.Parser.Expr.Ausdruck.Teil3
+public import Grammatik.Parser.Expr.Typ
+
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Legacy
+import all Init.Data.String.Slice
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.ToSlice
+
+@[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Dyn
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
 
-private def source : String :=
+-- Source fixtures have their own namespace, distinct from the AST witnesses.
+namespace SourceWitnessData
+
+def source : String :=
   "table Circles count 4 { slot { r: u64, } } " ++
   "table Rects count 4 { slot { r: u64, } } " ++
   "spec Shape[T; effects E] { fn area(s: T) -> u64 " ++
@@ -23,11 +41,18 @@ private def source : String :=
   "effects { reads Circles, reads Rects, reads Scene, writes Scene } costs <= 100 ops { " ++
   "Scene[i].s = dyn Shape(c); let a = Shape::area(Scene[j].s); return a; }"
 
-private def parsed : Except String (List SItemTief) := do
-  parseTopTief (← lex source)
+-- Use the same lexer-error channel as the canonical source pipeline.
+def parsed : Except String (List SItemTief) :=
+  match lex source with
+  | .error _ => .error "lex"
+  | .ok tokens => parseTopTief tokens
 
-private def expanded : Except String (List SItemTief) := do
+def expanded : Except String (List SItemTief) := do
   exportDeclarationUnit (← parsed)
+
+end SourceWitnessData
+
+open SourceWitnessData
 
 /-- Source text, lexer, parser and the actual front-end expansion agree on the closed cases. -/
 public theorem dyn_source_scene_zeuge :
