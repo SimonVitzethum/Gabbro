@@ -244,57 +244,83 @@ private theorem row_nil (tabs : List UTab) (heads : List UFnKopf)
 
 private theorem row_cons (tabs : List UTab) (heads : List UFnKopf)
     (fuel : Nat) (ctx : UCtx) (statement : SAnw) (rest : List SAnw) :
-    uAnwReihe tabs heads (fuel + 1) ctx (statement :: rest) = do
+    uAnwReihe tabs heads (fuel + 1) ctx (statement :: rest) = (do
       let (before, ctx, statement) ← expandFoldStmt ctx statement
       let (code, ctx) ← uAnwReiheCore tabs heads (fuel + 1) ctx (statement :: rest)
-      pure (before ++ code, ctx) := by
+      pure (before ++ code, ctx)) := by
   simp only [uAnwReihe]
 
 private theorem core_bind (tabs : List UTab) (heads : List UFnKopf)
     (fuel : Nat) (ctx : UCtx) (mutable : Bool) (name : String)
     (ty : Option STyp) (value : SExpr) (rest : List SAnw) :
-    uAnwReiheCore tabs heads (fuel + 1) ctx (.bind mutable name ty value :: rest) = do
+    uAnwReiheCore tabs heads (fuel + 1) ctx (.bind mutable name ty value :: rest) = (do
       let (statement, next) ← uBindWert ctx tabs heads mutable name ty value
       let (code, ending) ← uAnwReihe tabs heads fuel
         (foldBindingContext ctx next statement) rest
-      pure (statement :: code, ending) := by
+      pure (statement :: code, ending)) := by
   simp only [uAnwReiheCore]
+  cases uBindWert ctx tabs heads mutable name ty value with
+  | error _ => rfl
+  | ok pair =>
+    rcases pair with ⟨statement, next⟩
+    dsimp only [bind, Except.bind]
+    cases uAnwReihe tabs heads fuel (foldBindingContext ctx next statement) rest <;> rfl
 
 private theorem core_trim (tabs : List UTab) (heads : List UFnKopf)
     (fuel : Nat) (ctx : UCtx) (name range : String) (rest : List SAnw) :
-    uAnwReiheCore tabs heads (fuel + 1) ctx (.trimReq (.variable name) range :: rest) = do
+    uAnwReiheCore tabs heads (fuel + 1) ctx (.trimReq (.variable name) range :: rest) = (do
       let (lo, hi, next) ← uNarrowKopf ctx name range
       let (code, ending) ← uAnwReihe tabs heads fuel next rest
-      pure ([UStmt.narrowReqBeg name lo hi] ++ code, ending) := by
+      pure ([UStmt.narrowReqBeg name lo hi] ++ code, ending)) := by
   simp only [uAnwReiheCore]
+  cases uNarrowKopf ctx name range with
+  | error _ => rfl
+  | ok triple =>
+    rcases triple with ⟨lo, hi, next⟩
+    dsimp only [bind, Except.bind]
+    cases uAnwReihe tabs heads fuel next rest <;> rfl
 
 private theorem core_locks (tabs : List UTab) (heads : List UFnKopf)
     (fuel : Nat) (ctx : UCtx) (name : String) (body rest : List SAnw) :
     uAnwReiheCore tabs heads (fuel + 1) ctx
       (.locks false (.variable name) (.block body none) :: rest) =
-      match ctx.locks.find? (fun lock => strEq lock.name name) with
+      (match ctx.locks.find? (fun lock => strEq lock.name name) with
       | none => .error ("lock unknown: " ++ name)
       | some _ => do
         let (code, _) ← uAnwReihe tabs heads fuel { ctx with held := name :: ctx.held } body
         let (tail, ending) ← uAnwReihe tabs heads fuel ctx rest
-        pure ([UStmt.lockBeg name] ++ code ++ [UStmt.blkEnd] ++ tail, ending) := by
+        pure ([UStmt.lockBeg name] ++ code ++ [UStmt.blkEnd] ++ tail, ending)) := by
   simp only [uAnwReiheCore, Bool.false_eq_true, ite_false]
+  cases ctx.locks.find? (fun lock => strEq lock.name name) with
+  | none => rfl
+  | some _ =>
+    cases uAnwReihe tabs heads fuel { ctx with held := name :: ctx.held } body with
+    | error _ => rfl
+    | ok pair =>
+      rcases pair with ⟨code, next⟩
+      cases uAnwReihe tabs heads fuel ctx rest <;> rfl
 
 private theorem core_call (tabs : List UTab) (heads : List UFnKopf)
     (fuel : Nat) (ctx : UCtx) (name : String) (args : List SExpr) (rest : List SAnw) :
-    uAnwReiheCore tabs heads (fuel + 1) ctx (.call name args :: rest) = do
+    uAnwReiheCore tabs heads (fuel + 1) ctx (.call name args :: rest) = (do
       let statement ← uAnw1 ctx tabs heads (.call name args)
       let (code, ending) ← uAnwReihe tabs heads fuel ctx rest
-      pure (statement :: code, ending) := by
+      pure (statement :: code, ending)) := by
   simp only [uAnwReiheCore]
+  cases uAnw1 ctx tabs heads (.call name args) with
+  | error _ => rfl
+  | ok statement => cases uAnwReihe tabs heads fuel ctx rest <;> rfl
 
 private theorem core_set (tabs : List UTab) (heads : List UFnKopf)
     (fuel : Nat) (ctx : UCtx) (target value : SExpr) (op : String) (rest : List SAnw) :
-    uAnwReiheCore tabs heads (fuel + 1) ctx (.set target op value :: rest) = do
+    uAnwReiheCore tabs heads (fuel + 1) ctx (.set target op value :: rest) = (do
       let statement ← uAnw1 ctx tabs heads (.set target op value)
       let (code, ending) ← uAnwReihe tabs heads fuel ctx rest
-      pure (statement :: code, ending) := by
+      pure (statement :: code, ending)) := by
   simp only [uAnwReiheCore]
+  cases uAnw1 ctx tabs heads (.set target op value) with
+  | error _ => rfl
+  | ok statement => cases uAnwReihe tabs heads fuel ctx rest <;> rfl
 
 attribute [local cbv_opaque] uAnwReihe uAnwReiheCore
 attribute [local cbv_eval] row_nil row_cons core_bind core_trim core_locks
