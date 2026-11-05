@@ -58,12 +58,11 @@ attribute [local cbv_opaque] lowStufe lowSeqL lowStructL uFloatLimit
 attribute [local cbv_eval] UebersetzeProben2.seq_select UebersetzeProben2.struct_select
   lowStufe_seq lowStufe_struct
 
-/-- The parser accepts the stage marker, but one-stage exported declarations
-    cannot satisfy the canonical advance constructor's successor premise. -/
+/-- An undeclared input stage reaches the canonical lowering refusal. -/
 theorem advances_refused_zeuge :
     stufe "module m { impl fn f() { advances setup -> live; } }" =
-      "elab: advances without G form: exported marks have only stage 0" := by
-  rights_elab_error Phases.Inputs.advanceBare with_reason "advances without G form: exported marks have only stage 0"
+      "lower: advance of unknown stage: setup" := by
+  rights_lower_error Phases.Inputs.advanceBare with_reason "advance of unknown stage: setup" at_member 0
 
 /-! ## Wall 4: `own` pointers and the complement `~p` over the declared storage width -/
 

@@ -85,7 +85,9 @@ theorem konst_ueberlauf_refused : stufe konst_ueberlauf = "elab: name unknown: X
 theorem konst_negativ_refused : stufe konst_negativ = "elab: name unknown: Y" := by
   rights_elab_error Phases.Inputs.konst_negativ with_reason "name unknown: Y"
 
-theorem konst_argument_refused : stufe konst_argument = "elab: name unknown: C" := by
-  rights_elab_error Phases.Inputs.konst_argument with_reason "name unknown: C"
+theorem konst_argument_refused : stufe konst_argument =
+    "elab: const argument failure at `doppelt`: const argument is not a compile-time value in its declared range" := by
+  rights_elab_error Phases.Inputs.konst_argument with_reason
+    "const argument failure at `doppelt`: const argument is not a compile-time value in its declared range"
 
 end Gabbro.Grammatik.Parser.UebersetzeProben11
