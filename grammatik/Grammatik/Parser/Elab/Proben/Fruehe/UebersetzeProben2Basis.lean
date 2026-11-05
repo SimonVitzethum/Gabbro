@@ -283,17 +283,24 @@ private theorem collect_success : ∀ (n : Nat) (T : Fin n → Type)
     rw [Measures.collect, head]
     dsimp only [bind, Except.bind]
     rw [tailValue]
+    rfl
 
 private theorem absent_measures (unit : Uebersetze.UProg)
     (absent : ∀ f : Fin unit.fns.length, (fnAt unit f).decreases = none) :
     (Measures.lowerMeasures unit).toOption.isSome = true := by
   have entries := collect_success unit.fns.length (fun f => Measures.At unit f)
     (fun f => Measures.lowerAt unit f) (fun f => by
-      simp only [Measures.lowerAt, absent f, Except.toOption, Option.isSome])
+      unfold Measures.lowerAt
+      split
+      · rfl
+      · rename_i source selected
+        rw [absent f] at selected
+        cases selected)
   have collected := except_ok_get (ε := String) (α := (f : Fin unit.fns.length) → Measures.At unit f)
     (x := Measures.collect unit.fns.length (Measures.At unit) (Measures.lowerAt unit)) entries
   unfold Measures.lowerMeasures
   rw [collected]
+  rfl
 
 /-- Actual function successes, contracts and absent source measures close the
     existing assembler without normalizing its dependent program body. -/
@@ -319,8 +326,10 @@ theorem lowerStage_ok (unit : Uebersetze.UProg) (noInvs : unit.invs = [])
       exact Bool.or_true _
     unfold Measures.checkedProgram
     rw [measured]
-    change (if Measures.cycleLengths unit P exported.mass then true else false) = true
-    rw [ite_eq_left lengths]
+    dsimp only
+    split
+    · rfl
+    · contradiction
   have invariants := invs_empty unit noInvs
   have functions := each_success unit (fun f => (functions f).1) (List.finRange unit.fns.length)
   have lowered : (lowerAllg unit).toOption.isSome = true := by
