@@ -3,7 +3,7 @@
   Subject:   Walls 4 and 5: `own`/`~p` and constants (split from `UebersetzeProben`: the kernel probes of one file share one memory budget).
 -/
 module
-public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben
+public import Grammatik.Parser.Elab.Proben.RightsConstants.Data
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -55,13 +55,6 @@ theorem advances_refused_zeuge :
 
 /-! ## Wall 4: `own` pointers and the complement `~p` over the declared storage width -/
 
-/-- One table program with the source rights supplied at its capability parameter. -/
-def tableRights (rights : String) : String :=
-  "module m { table T count 2 { slot { b : bool, } } impl fn u(r : ptr<normal, " ++ rights ++
-  "> T, i : index into T) -> bool effects { reads r.slots, writes r.slots } { r.slots[i].b = true; return r.slots[i].b; } }"
-
-/-- Ownership cannot be erased into ordinary read/write permission. This source declares no owner mark. -/
-def own1 : String := tableRights "own"
 theorem own1_refused : stufe own1 = "elab: pointer rights without checked data/owner form: own" := by
   decide +kernel
 
@@ -73,170 +66,72 @@ theorem write_only_refused :
     stufe (tableRights "w") = "elab: read through pointer without read right" := by
   decide +kernel
 
-/-- Write-only source reaches the ordinary checked table-store lowering. -/
-def storeOnly : String :=
-  "module m { table T count 2 { slot { b : bool, } } impl fn u(r : ptr<normal, w> T, i : index into T) effects { writes r.slots } { r.slots[i].b = true; } }"
-
 theorem write_only_store_ok : stufe storeOnly = "OK" := by decide +kernel
 
-/-- C12: a function borrowing an owner-guarded table reads and writes through
-    its `own@Marke` capability and returns the mark: the `borrows Marke` loan
-    holds the mark for the call (`OwnerFlow.loans`), `thruOwn`/`assignThruOwn`
-    lower on the underlying table exactly like `thru`/`assignThru`, and the
-    loan comes back at return (`Vertrag.ende`). -/
-def ownAtMarke : String :=
-  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn u(r : ptr<normal, rw+own@Marke> T, i : index into T) -> bool effects { reads r.slots, writes r.slots, borrows Marke } { r.slots[i].b = true; return r.slots[i].b; } }"
 theorem ownAtMarke_borrow_ok : stufe ownAtMarke = "OK" := by
   decide +kernel
 
-/-- C12: the same access without the loan is refused: the owner guard is not
-    held, so the lowering finds no guard (`darf` over the `.inr` entry). -/
-def ownAtMarkeOhneLeiht : String :=
-  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn u(r : ptr<normal, rw+own@Marke> T, i : index into T) -> bool effects { reads r.slots, writes r.slots } { r.slots[i].b = true; return r.slots[i].b; } }"
 theorem ownAtMarke_ohneLeiht_refused :
     stufe ownAtMarkeOhneLeiht = "lower: access without held guard" := by
   decide +kernel
 
-/-- C12: borrowing a mark no table owns is refused by name: a call-scoped
-    loan is only an owner handback, never a mint. -/
-def ownAtMarkeFremdLeiht : String :=
-  "module m { linear type Marke; linear type Fremd; table T count 2 owner Marke { slot { b : bool, } } impl fn u(r : ptr<normal, rw+own@Marke> T, i : index into T) -> bool effects { reads r.slots, writes r.slots, borrows Fremd } { r.slots[i].b = true; return r.slots[i].b; } }"
 theorem ownAtMarke_fremdLeiht_refused :
     stufe ownAtMarkeFremdLeiht = "elab: loan without owner: Fremd" := by
   decide +kernel
 
-/-- C12: a table `owner M` where `M` is no declared linear mark is refused by name.
-    The guard would be unholdable (no mark to hold), so the front end refuses it
-    instead of elaborating it. Mirrors gift probe 0934 (Rust D265). -/
-def ownerOhneLinear : String :=
-  "module m { table T count 2 owner Marke { slot { b : bool, } } type Marke = u32; }"
 theorem ownerOhneLinear_refused : stufe ownerOhneLinear = "elab: owner without declared linear mark: Marke" := by
   decide +kernel
 
-/-- WITNESS (`beispiele/62`, `61`): `~p` is `p ^ (2^w - 1)` over the parameter's declared storage width. -/
-def bnot1 : String :=
-  "module m { impl fn f(m : u8) -> u8 { return ~m; } impl fn g(w : u8) -> bool { return (w ^ u8::max) == ~w; } }"
 theorem bnot1_ok : stufe bnot1 = "OK" := by decide +kernel
 
-/-- WITNESS: the width is the DECLARED word's, not the range's: `u8 in 0 .. 15` is stored in 8 bits, so
-    its complement is `255 - x` (`beispiele/61`, `hohes_nibble`), and `u16 in 0 .. 255` in 16. -/
-def bnot_schmal : String :=
-  "module m { impl fn f(x : u8 in 0 .. 15) -> u8 { return ~x; } impl fn k(w : u16 in 0 .. 255) -> u16 { return ~w; } }"
 theorem bnot_schmal_ok : stufe bnot_schmal = "OK" := by decide +kernel
 
-/-- PLANTED DEFECT: the complement of an EXPRESSION has no known width here -- it is refused, not
-    guessed from a range (a range would give `15 - x` for `0 .. 15`, where the C says `255 - x`). -/
-def bnot_ausdruck : String :=
-  "module m { impl fn f(x : u32) -> u32 { return ~(x + 1); } }"
 theorem bnot_ausdruck_refused : stufe bnot_ausdruck = "elab: value without G form" := by decide +kernel
 
-/-- PLANTED DEFECT: the complement of a signed parameter (its width has no unsigned reading). -/
-def bnot_vorzeichen : String :=
-  "module m { impl fn f(x : i32) -> i32 { return ~x; } }"
 theorem bnot_vorzeichen_refused :
     stufe bnot_vorzeichen = "elab: complement of unknown width" := by decide +kernel
 
 /-! ## Wall 5: compile-time constants -- expressions and `const fn` calls -/
 
-/-- WITNESS (`beispiele/93`, shortened): a constant computed from earlier constants with `+ - * ^ >>`. -/
-def konst_ausdruck : String :=
-  "module m { const A : u32 = 6 * 7; const B : u32 = A + 2 * (A ^ 3) - (A >> 1); impl fn f() -> u32 { return B; } }"
 theorem konst_ausdruck_ok : stufe konst_ausdruck = "OK" := by decide +kernel
 
-/-- WITNESS: a constant computed by a `const fn` call (arguments checked against the parameter's range). -/
-def konst_fn : String :=
-  "module m { const fn doppelt(n : u32 in 0 .. 1000) -> u32 in 0 .. 2000 { return n + n; } const C : u32 = doppelt(21); impl fn f() -> u32 { return C; } }"
 theorem konst_fn_ok : stufe konst_fn = "OK" := by decide +kernel
 
-/-- PLANTED DEFECT: an intermediate value outside the declared type (`200 + 100` in a `u8`): the emitted C
-    would wrap, the exact value would not -- the constant is UNKNOWN, so its use is refused. -/
-def konst_ueberlauf : String :=
-  "module m { const X : u8 = 200 + 100; impl fn f() -> u8 { return X; } }"
 theorem konst_ueberlauf_refused : stufe konst_ueberlauf = "elab: name unknown: X" := by decide +kernel
 
-/-- PLANTED DEFECT: a negative intermediate in an unsigned constant. -/
-def konst_negativ : String :=
-  "module m { const Y : u32 = 3 - 5; impl fn f() -> u32 { return Y; } }"
 theorem konst_negativ_refused : stufe konst_negativ = "elab: name unknown: Y" := by decide +kernel
 
-/-- PLANTED DEFECT: an argument outside the `const fn` parameter's range. -/
-def konst_argument : String :=
-  "module m { const fn doppelt(n : u32 in 0 .. 1000) -> u32 in 0 .. 2000 { return n + n; } const C : u32 = doppelt(2000); impl fn f() -> u32 { return C; } }"
 theorem konst_argument_refused : stufe konst_argument = "elab: name unknown: C" := by decide +kernel
 
 /-! ## C09: owner mint and linear handoff -/
 
-/-- C09: the minter holds its fresh owner from the start frame and reads and
-    writes through it: `mints Marke` is the checked `OwnerFlow.mints` output --
-    held at entry (`anfang`), returned (`ende`), never ordinary production. -/
-def mintAtMarke : String :=
-  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn minter(r : ptr<normal, rw+own@Marke> T, i : index into T) -> bool effects { reads r.slots, writes r.slots, mints Marke } { r.slots[i].b = true; return r.slots[i].b; } }"
 theorem mintAtMarke_ok : stufe mintAtMarke = "OK" := by
   decide +kernel
 
-/-- C09: a linear handoff through a call: the caller holds the mark, the
-    callee receives the same nominal identity for the call and hands it back
-    on return (`moves Marke` is the `OwnerMove` handback). The capability rides
-    a variable, as a fresh `&T` has no owned form. -/
-def moveAtMarke : String :=
-  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn mover(p : ptr<normal, rw+own@Marke> T, i : index into T) -> bool effects { reads p.slots, writes p.slots, moves Marke } { p.slots[i].b = true; return p.slots[i].b; } impl fn caller(r : ptr<normal, rw+own@Marke> T, i : index into T) -> bool effects { reads r.slots, writes r.slots, moves Marke } { mover(r, i); return r.slots[i].b; } }"
 theorem moveAtMarke_ok : stufe moveAtMarke = "OK" := by
   decide +kernel
 
-/-- C09: the handed-back mark comes back on the reason channel too: the
-    reason return balances against the same `ende`, so the moved output is
-    received on either channel. -/
-def moveReasonAtMarke : String :=
-  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } reason G { Weg = 1 \"weg\" exhaustive } impl fn mover(p : ptr<normal, rw+own@Marke> T, i : index into T) -> bool or G effects { reads p.slots, writes p.slots, moves Marke } { p.slots[i].b = true; return G::Weg; } }"
 theorem moveReasonAtMarke_ok : stufe moveReasonAtMarke = "OK" := by
   decide +kernel
 
-/-- C09: the second mint of the same instance is refused: one-shot mint
-    authority per region instance. -/
-def mintTwice : String :=
-  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn a() -> bool effects { mints Marke } { return true; } impl fn b() -> bool effects { mints Marke } { return true; } }"
 theorem mintTwice_refused : stufe mintTwice = "elab: duplicate mint: Marke" := by
   decide +kernel
 
-/-- C09: minting a mark no table owns is refused: a mint is only an owner
-    handback from a declared owner, never a creation from nothing. -/
-def mintFremd : String :=
-  "module m { linear type Marke; linear type Fremd; table T count 2 owner Marke { slot { b : bool, } } impl fn a() -> bool effects { mints Fremd } { return true; } }"
 theorem mintFremd_refused : stufe mintFremd = "elab: mint without owner: Fremd" := by
   decide +kernel
 
-/-- C09: moving a mark no table owns is refused, like the loan twin. -/
-def moveFremd : String :=
-  "module m { linear type Marke; linear type Fremd; table T count 2 owner Marke { slot { b : bool, } } impl fn a() -> bool effects { moves Fremd } { return true; } }"
 theorem moveFremd_refused : stufe moveFremd = "elab: move without owner: Fremd" := by
   decide +kernel
 
-/-- C09: a mark both borrowed and moved is refused: one occurrence per owner
-    identity across stages. -/
-def moveBorrowed : String :=
-  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn a() -> bool effects { borrows Marke, moves Marke } { return true; } }"
 theorem moveBorrowed_refused :
     stufe moveBorrowed = "elab: mark both borrowed and moved: Marke" := by
   decide +kernel
 
-/-- C09: moving a mark the caller does not hold is refused at the call: the
-    escrow cannot hand over a binding the caller never had. The callee takes
-    no capability, so the call -- not the argument -- is what fails. -/
-def moveDropped : String :=
-  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn mover(i : index into T) -> bool effects { moves Marke } { return true; } impl fn caller() { mover(0); } }"
 theorem moveDropped_refused :
     stufe moveDropped = "lower: call without held mark" := by
   decide +kernel
 
 /-! ## C09 terminal moves and C16 ordinary consumption -/
-
-/-- A terminal owner callee and its consuming caller, using the existing
-    `consumes` effect (`takes` in the surface model), never ordinary production. -/
-def terminalMoveSource (body : String) : String :=
-  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn finish() effects { consumes Marke } { " ++
-  body ++ " } impl fn main() -> u8 effects { consumes Marke } { finish(); return 23; } }"
-
-def terminalMoveRetires : String := terminalMoveSource "retires Marke;"
 
 theorem terminalMoveRetires_zeuge : stufe terminalMoveRetires = "OK" := by
   decide +kernel
@@ -247,17 +142,9 @@ theorem terminalMoveDropped_refused :
     stufe (terminalMoveSource "") = "lower: lower: return without produced marks" := by
   decide +kernel
 
-/-- Returning a loan is mandatory; retiring it is refused directly. -/
-def borrowedRetire : String :=
-  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn f() effects { borrows Marke } { retires Marke; } }"
-
 theorem borrowedRetire_refused :
     stufe borrowedRetire = "lower: retire of borrowed mark: Marke" := by
   decide +kernel
-
-/-- Declaring a nominal mark does not mean holding it. -/
-def unheldRetire : String :=
-  "module m { linear type Marke; impl fn f() { retires Marke; } }"
 
 theorem unheldRetire_refused :
     stufe unheldRetire = "lower: retire without held mark: Marke" := by
@@ -268,49 +155,21 @@ theorem repeatedRetire_refused :
       "lower: retire without held mark: Marke" := by
   decide +kernel
 
-/-- Ordinary C16 marks use the same body operation and exact return check. -/
-def ordinaryRetire : String :=
-  "module m { linear type Duty; impl fn gate() effects { consumes Duty } { retires Duty; } impl fn caller() effects { consumes Duty } { gate(); } }"
-
 theorem ordinaryRetire_zeuge : stufe ordinaryRetire = "OK" := by
   decide +kernel
-
-/-- Retiring a handback move cannot satisfy its promised returned owner. -/
-def handbackRetire : String :=
-  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn f() effects { moves Marke } { retires Marke; } }"
 
 theorem handbackRetire_refused :
     stufe handbackRetire = "lower: lower: return without produced marks" := by
   decide +kernel
-
-/-- Retire is valid before a terminal reason return as well. -/
-def terminalReasonRetire : String :=
-  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } reason R { Gone = 1 \"gone\" exhaustive } impl fn f() -> bool or R effects { consumes Marke } { retires Marke; return R::Gone; } }"
 
 theorem terminalReasonRetire_ok : stufe terminalReasonRetire = "OK" := by
   decide +kernel
 
 /-! ## Declared linear stages: two checked advances and terminal discharge -/
 
-/-- A three-stage owner, with a terminal signature so the advanced mark is
-    retired rather than silently reset to the stage-0 call interface. -/
-def stagedOwnerSource (body : String) : String :=
-  "module m { linear ghost type Phase order { cold, warm, hot }; table T count 2 owner Phase { slot { b : bool, } } impl fn finish() effects { consumes Phase } { " ++
-    body ++ " } }"
-
-def stagedOwner : String :=
-  stagedOwnerSource "advances cold -> warm; advances warm -> hot; retires Phase;"
-
 /-- Source text reaches canonical G through both consecutive stage changes. -/
 theorem staged_owner_advances_twice_zeuge : stufe stagedOwner = "OK" := by
   decide +kernel
-
-/-- Measure declaration stage counts after parsing and the actual unit export. -/
-def sourceMarkStageCounts (source : String) : Option (List Nat) := do
-  let tokens ← (lex source).toOption
-  let items ← (parseTopTief tokens).toOption
-  let u ← (elabU (pre108 items)).toOption
-  pure ((List.finRange u.marken.length).map ((declOf u).stufen))
 
 /-- The declaration exported from that same source has three stages. -/
 theorem staged_owner_declared_count_zeuge : sourceMarkStageCounts stagedOwner = some [3] := by
@@ -322,10 +181,6 @@ theorem staged_counts_and_default_zeuge :
       "module m { linear type Plain; linear type Phase order { cold, warm, hot }; linear type Pair order { first, second }; impl fn f() { } }" =
       some [1, 3, 2] := by
   decide +kernel
-
-/-- An ordinary linear mark uses the same stage bookkeeping without an owner. -/
-def stagedOrdinary : String :=
-  "module m { linear type Phase order { cold, warm, hot }; impl fn finish() effects { consumes Phase } { advances cold -> warm; advances warm -> hot; retires Phase; } }"
 
 theorem staged_ordinary_advances_twice_zeuge : stufe stagedOrdinary = "OK" := by
   decide +kernel
@@ -363,24 +218,13 @@ theorem staged_unknown_label_refused_zeuge :
       "lower: advance of unknown stage: missing" := by
   decide +kernel
 
-/-- A callee cannot change the stage it owes back under an exclusive loan. -/
-def stagedBorrowed : String :=
-  "module m { linear type Phase order { cold, warm, hot }; table T count 2 owner Phase { slot { b : bool, } } impl fn f() effects { borrows Phase } { advances cold -> warm; } }"
-
 theorem staged_borrowed_refused_zeuge :
     stufe stagedBorrowed = "lower: advance of borrowed mark: Phase" := by
   decide +kernel
 
-/-- Unqualified labels cannot select between two nominal protocols. -/
-def stagedAmbiguous : String :=
-  "module m { linear type Phase order { cold, warm, hot }; linear type Other order { cold, warm }; impl fn f() effects { consumes Phase } { advances cold -> warm; } }"
-
 theorem staged_ambiguous_refused_zeuge :
     stufe stagedAmbiguous = "lower: advance of ambiguous stage: cold" := by
   decide +kernel
-
-def stagedDuplicate : String :=
-  "module m { linear type Phase order { cold, cold, hot }; impl fn f() { } }"
 
 theorem staged_duplicate_label_refused_zeuge :
     stufe stagedDuplicate = "elab: duplicate stage in linear mark: Phase" := by
