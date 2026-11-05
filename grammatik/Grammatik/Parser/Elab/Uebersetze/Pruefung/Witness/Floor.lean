@@ -3,6 +3,7 @@ module
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
 import Grammatik.Parser.Elab.UebersetzeAllg3.TransitionCert
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Calls
 import all Init.Data.List.MapIdx
 import all Grammatik.Parser.Lex.Lexer.Teil1
 import all Grammatik.Parser.Elab.Uebersetze.Folds.Expressions
@@ -85,7 +86,7 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 attribute [local cbv_opaque] uFloatLimit uAnwReihe uAnwReiheCore
   uAkkuBinder uZeigerAnw uStartNamen elabKlauseln expandReturnCall expandFoldEnd
   recordCheckCode recordCheckStatements checkSampleSubstitute lowStufe lowSeqL lowStructL lowEndL
-  Measures.checkedProgram
+  Measures.checkedProgram lowCallArgOneL lowCallArgsAuxL withErg lowErg lowEnd
 attribute [local cbv_eval] row_nil row_cons core_bind core_call core_set core_cond
   bound_names_select pointer_source_select start_source_select
   clauses_nil return_none return_empty return_variable
@@ -94,6 +95,8 @@ attribute [local cbv_eval] row_nil row_cons core_bind core_call core_set core_co
   sample_binary sample_variable sample_literal
   check_sequence_select check_structure_select lowEndL_succ
   lowStufe_seq lowStufe_struct lowStufe_ende
+  check_argument_bool check_argument_integer check_arguments_nil check_arguments_cons
+  check_result_select check_return_empty check_return_bool check_end_empty check_end_bool
 
 -- Normalize the actual function fields before forming any dependent code type.
 -- Whole-function equality below certifies the headers, code and retained reporter metadata.
