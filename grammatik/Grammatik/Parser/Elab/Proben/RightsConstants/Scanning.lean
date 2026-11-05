@@ -54,223 +54,232 @@ def Input.of_chunks {source spelling : String} (pieces : List Chunk)
   ⟨Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces, Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.tokens pieces,
     text.trans certificate.text.symm, lex_chunks pieces certificate.room⟩
 
--- Compose the existing fragment evidence before constructing Input. The only
--- closed reduction below compares Strings, never the full character-list fold.
+-- Give the actual chunk list, spelling and closed proofs their own declarations
+-- before constructing Input. Data stays transparent; no large local lets need
+-- to be abstracted or substituted while the final constructor is checked.
 
-scoped macro "rights_input " source:term " with_cuts " "[" cuts:ident,* "]"
-    " with_text " "[" fragments:str,* "]" : term => do
+scoped macro "rights_input " name:ident " : " source:term
+    " with_cuts " "[" cuts:ident,* "]" " with_text " "[" fragments:str,* "]" : command => do
   unless cuts.getElems.size == fragments.getElems.size do
     Lean.Macro.throwError "each scanner cut needs its exact original spelling"
+  let chunkName := Lean.mkIdentFrom name (name.getId.appendAfter "_chunks")
+  let spellingName := Lean.mkIdentFrom name (name.getId.appendAfter "_spelling")
+  let certificateName := Lean.mkIdentFrom name (name.getId.appendAfter "_certificate")
+  let sourceName := Lean.mkIdentFrom name (name.getId.appendAfter "_source_eq")
   let mut pieces : Lean.TSyntax `term ← `(([] : List Chunk))
   let mut spelling : Lean.TSyntax `term ← `(("" : String))
   let mut certificate : Lean.TSyntax `term ← `(ChunkCertificate.empty)
-  for (name, fragment) in (cuts.getElems.zip fragments.getElems).toList.reverse do
-    let piece : Lean.TSyntax `term := ⟨name.raw⟩
+  for (cutName, fragment) in (cuts.getElems.zip fragments.getElems).toList.reverse do
+    let piece : Lean.TSyntax `term := ⟨cutName.raw⟩
     let literal : Lean.TSyntax `term := ⟨fragment.raw⟩
     let decoded : Lean.TSyntax `term :=
-      ⟨(Lean.mkIdentFrom name (name.getId.appendAfter "_text")).raw⟩
+      ⟨(Lean.mkIdentFrom cutName (cutName.getId.appendAfter "_text")).raw⟩
     let bounded : Lean.TSyntax `term :=
-      ⟨(Lean.mkIdentFrom name (name.getId.appendAfter "_bounded")).raw⟩
+      ⟨(Lean.mkIdentFrom cutName (cutName.getId.appendAfter "_bounded")).raw⟩
     certificate ← `(ChunkCertificate.cons (piece := $piece) (pieces := $pieces)
       (front := $literal) (back := $spelling) $decoded $bounded $certificate)
     pieces ← `($piece :: $pieces)
     spelling ← `($literal ++ $spelling)
-  `(show Input $source from by
-    let pieces : List Chunk := [$cuts,*]
-    let spelling : String := $spelling
-    have certificate : ChunkCertificate pieces spelling := by
-      dsimp only [pieces, spelling]
-      as_aux_lemma => exact $certificate
-    have original : $source = spelling := by
-      dsimp only [spelling]
-      as_aux_lemma => cbv
-    exact Input.of_chunks (source := $source) pieces certificate original)
+  let chunks : Lean.TSyntax `command ← `(command|
+    def $chunkName : List Chunk := [$cuts,*])
+  let spelled : Lean.TSyntax `command ← `(command|
+    def $spellingName : String := $spelling)
+  let certified : Lean.TSyntax `command ← `(command|
+    theorem $certificateName : ChunkCertificate $chunkName $spellingName := by
+      change ChunkCertificate $pieces $spelling
+      exact $certificate)
+  let original : Lean.TSyntax `command ← `(command|
+    theorem $sourceName : $source = $spellingName := by cbv)
+  let input : Lean.TSyntax `command ← `(command|
+    def $name : Input $source :=
+      Input.of_chunks (source := $source) $chunkName $certificateName $sourceName)
+  return ⟨Lean.mkNullNode #[chunks, spelled, certified, original, input]⟩
 
 open scoped Gabbro.Grammatik.Parser.UebersetzeProben11.Phases
 namespace Inputs
 
 
-def advanceBare : Input "module m { impl fn f() { advances setup -> live; } }" := rights_input "module m { impl fn f() { advances setup -> live; } }"
+rights_input advanceBare : "module m { impl fn f() { advances setup -> live; } }"
   with_cuts [cut0]
   with_text ["module m { impl fn f() { advances setup -> live; } }"]
 
-def own1 : Input Gabbro.Grammatik.Parser.UebersetzeProben11.own1 := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.own1
+rights_input own1 : Gabbro.Grammatik.Parser.UebersetzeProben11.own1
   with_cuts [cut1, cut2, cut3, cut4]
   with_text ["module m { table T count 2 { slot { b : bool, } } impl fn ", "u(r : ptr<normal, own> T, i : index into T) -> bool effects ", "{ reads r.slots, writes r.slots } { r.slots[i].b = true; ", "return r.slots[i].b; } }"]
 
-def rightsUnion : Input (Gabbro.Grammatik.Parser.UebersetzeProben11.tableRights "w+r") := rights_input (Gabbro.Grammatik.Parser.UebersetzeProben11.tableRights "w+r")
+rights_input rightsUnion : (Gabbro.Grammatik.Parser.UebersetzeProben11.tableRights "w+r")
   with_cuts [cut1, cut5, cut3, cut4]
   with_text ["module m { table T count 2 { slot { b : bool, } } impl fn ", "u(r : ptr<normal, w+r> T, i : index into T) -> bool effects ", "{ reads r.slots, writes r.slots } { r.slots[i].b = true; ", "return r.slots[i].b; } }"]
 
-def writeOnly : Input (Gabbro.Grammatik.Parser.UebersetzeProben11.tableRights "w") := rights_input (Gabbro.Grammatik.Parser.UebersetzeProben11.tableRights "w")
+rights_input writeOnly : (Gabbro.Grammatik.Parser.UebersetzeProben11.tableRights "w")
   with_cuts [cut1, cut6, cut7, cut4]
   with_text ["module m { table T count 2 { slot { b : bool, } } impl fn ", "u(r : ptr<normal, w> T, i : index into T) -> bool effects { ", "reads r.slots, writes r.slots } { r.slots[i].b = true; ", "return r.slots[i].b; } }"]
 
-def storeOnly : Input Gabbro.Grammatik.Parser.UebersetzeProben11.storeOnly := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.storeOnly
+rights_input storeOnly : Gabbro.Grammatik.Parser.UebersetzeProben11.storeOnly
   with_cuts [cut1, cut8, cut9]
   with_text ["module m { table T count 2 { slot { b : bool, } } impl fn ", "u(r : ptr<normal, w> T, i : index into T) effects { writes ", "r.slots } { r.slots[i].b = true; } }"]
 
-def ownAtMarke : Input Gabbro.Grammatik.Parser.UebersetzeProben11.ownAtMarke := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.ownAtMarke
+rights_input ownAtMarke : Gabbro.Grammatik.Parser.UebersetzeProben11.ownAtMarke
   with_cuts [cut10, cut11, cut12, cut13, cut14]
   with_text ["module m { linear type Marke; table T count 2 owner Marke { ", "slot { b : bool, } } impl fn u(r : ptr<normal, rw+own@Marke> ", "T, i : index into T) -> bool effects { reads r.slots, writes ", "r.slots, borrows Marke } { r.slots[i].b = true; return ", "r.slots[i].b; } }"]
 
-def ownAtMarkeOhneLeiht : Input Gabbro.Grammatik.Parser.UebersetzeProben11.ownAtMarkeOhneLeiht := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.ownAtMarkeOhneLeiht
+rights_input ownAtMarkeOhneLeiht : Gabbro.Grammatik.Parser.UebersetzeProben11.ownAtMarkeOhneLeiht
   with_cuts [cut10, cut11, cut12, cut15]
   with_text ["module m { linear type Marke; table T count 2 owner Marke { ", "slot { b : bool, } } impl fn u(r : ptr<normal, rw+own@Marke> ", "T, i : index into T) -> bool effects { reads r.slots, writes ", "r.slots } { r.slots[i].b = true; return r.slots[i].b; } }"]
 
-def ownAtMarkeFremdLeiht : Input Gabbro.Grammatik.Parser.UebersetzeProben11.ownAtMarkeFremdLeiht := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.ownAtMarkeFremdLeiht
+rights_input ownAtMarkeFremdLeiht : Gabbro.Grammatik.Parser.UebersetzeProben11.ownAtMarkeFremdLeiht
   with_cuts [cut16, cut17, cut18, cut19, cut20]
   with_text ["module m { linear type Marke; linear type Fremd; table T ", "count 2 owner Marke { slot { b : bool, } } impl fn u(r : ", "ptr<normal, rw+own@Marke> T, i : index into T) -> bool ", "effects { reads r.slots, writes r.slots, borrows Fremd } { ", "r.slots[i].b = true; return r.slots[i].b; } }"]
 
-def ownerOhneLinear : Input Gabbro.Grammatik.Parser.UebersetzeProben11.ownerOhneLinear := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.ownerOhneLinear
+rights_input ownerOhneLinear : Gabbro.Grammatik.Parser.UebersetzeProben11.ownerOhneLinear
   with_cuts [cut21, cut22]
   with_text ["module m { table T count 2 owner Marke { slot { b : bool, } ", "} type Marke = u32; }"]
 
-def bnot1 : Input Gabbro.Grammatik.Parser.UebersetzeProben11.bnot1 := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.bnot1
+rights_input bnot1 : Gabbro.Grammatik.Parser.UebersetzeProben11.bnot1
   with_cuts [cut23, cut24]
   with_text ["module m { impl fn f(m : u8) -> u8 { return ~m; } impl fn ", "g(w : u8) -> bool { return (w ^ u8::max) == ~w; } }"]
 
-def bnot_schmal : Input Gabbro.Grammatik.Parser.UebersetzeProben11.bnot_schmal := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.bnot_schmal
+rights_input bnot_schmal : Gabbro.Grammatik.Parser.UebersetzeProben11.bnot_schmal
   with_cuts [cut25, cut26]
   with_text ["module m { impl fn f(x : u8 in 0 .. 15) -> u8 { return ~x; } ", "impl fn k(w : u16 in 0 .. 255) -> u16 { return ~w; } }"]
 
-def bnot_ausdruck : Input Gabbro.Grammatik.Parser.UebersetzeProben11.bnot_ausdruck := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.bnot_ausdruck
+rights_input bnot_ausdruck : Gabbro.Grammatik.Parser.UebersetzeProben11.bnot_ausdruck
   with_cuts [cut27]
   with_text ["module m { impl fn f(x : u32) -> u32 { return ~(x + 1); } }"]
 
-def bnot_vorzeichen : Input Gabbro.Grammatik.Parser.UebersetzeProben11.bnot_vorzeichen := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.bnot_vorzeichen
+rights_input bnot_vorzeichen : Gabbro.Grammatik.Parser.UebersetzeProben11.bnot_vorzeichen
   with_cuts [cut28]
   with_text ["module m { impl fn f(x : i32) -> i32 { return ~x; } }"]
 
-def konst_ausdruck : Input Gabbro.Grammatik.Parser.UebersetzeProben11.konst_ausdruck := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.konst_ausdruck
+rights_input konst_ausdruck : Gabbro.Grammatik.Parser.UebersetzeProben11.konst_ausdruck
   with_cuts [cut29, cut30]
   with_text ["module m { const A : u32 = 6 * 7; const B : u32 = A + 2 * (A ", "^ 3) - (A >> 1); impl fn f() -> u32 { return B; } }"]
 
-def konst_fn : Input Gabbro.Grammatik.Parser.UebersetzeProben11.konst_fn := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.konst_fn
+rights_input konst_fn : Gabbro.Grammatik.Parser.UebersetzeProben11.konst_fn
   with_cuts [cut31, cut32, cut33]
   with_text ["module m { const fn doppelt(n : u32 in 0 .. 1000) -> u32 in ", "0 .. 2000 { return n + n; } const C : u32 = doppelt(21); ", "impl fn f() -> u32 { return C; } }"]
 
-def konst_ueberlauf : Input Gabbro.Grammatik.Parser.UebersetzeProben11.konst_ueberlauf := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.konst_ueberlauf
+rights_input konst_ueberlauf : Gabbro.Grammatik.Parser.UebersetzeProben11.konst_ueberlauf
   with_cuts [cut34, cut35]
   with_text ["module m { const X : u8 = 200 + 100; impl fn f() -> u8 { ", "return X; } }"]
 
-def konst_negativ : Input Gabbro.Grammatik.Parser.UebersetzeProben11.konst_negativ := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.konst_negativ
+rights_input konst_negativ : Gabbro.Grammatik.Parser.UebersetzeProben11.konst_negativ
   with_cuts [cut36, cut37]
   with_text ["module m { const Y : u32 = 3 - 5; impl fn f() -> u32 { ", "return Y; } }"]
 
-def konst_argument : Input Gabbro.Grammatik.Parser.UebersetzeProben11.konst_argument := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.konst_argument
+rights_input konst_argument : Gabbro.Grammatik.Parser.UebersetzeProben11.konst_argument
   with_cuts [cut31, cut38, cut33]
   with_text ["module m { const fn doppelt(n : u32 in 0 .. 1000) -> u32 in ", "0 .. 2000 { return n + n; } const C : u32 = doppelt(2000); ", "impl fn f() -> u32 { return C; } }"]
 
-def mintAtMarke : Input Gabbro.Grammatik.Parser.UebersetzeProben11.mintAtMarke := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.mintAtMarke
+rights_input mintAtMarke : Gabbro.Grammatik.Parser.UebersetzeProben11.mintAtMarke
   with_cuts [cut10, cut39, cut40, cut41, cut42]
   with_text ["module m { linear type Marke; table T count 2 owner Marke { ", "slot { b : bool, } } impl fn minter(r : ptr<normal, ", "rw+own@Marke> T, i : index into T) -> bool effects { reads ", "r.slots, writes r.slots, mints Marke } { r.slots[i].b = ", "true; return r.slots[i].b; } }"]
 
-def moveAtMarke : Input Gabbro.Grammatik.Parser.UebersetzeProben11.moveAtMarke := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.moveAtMarke
+rights_input moveAtMarke : Gabbro.Grammatik.Parser.UebersetzeProben11.moveAtMarke
   with_cuts [cut10, cut43, cut40, cut44, cut45, cut40, cut46, cut14]
   with_text ["module m { linear type Marke; table T count 2 owner Marke { ", "slot { b : bool, } } impl fn mover(p : ptr<normal, ", "rw+own@Marke> T, i : index into T) -> bool effects { reads ", "p.slots, writes p.slots, moves Marke } { p.slots[i].b = ", "true; return p.slots[i].b; } impl fn caller(r : ptr<normal, ", "rw+own@Marke> T, i : index into T) -> bool effects { reads ", "r.slots, writes r.slots, moves Marke } { mover(r, i); return ", "r.slots[i].b; } }"]
 
-def moveReasonAtMarke : Input Gabbro.Grammatik.Parser.UebersetzeProben11.moveReasonAtMarke := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.moveReasonAtMarke
+rights_input moveReasonAtMarke : Gabbro.Grammatik.Parser.UebersetzeProben11.moveReasonAtMarke
   with_cuts [cut10, cut47, cut48, cut49, cut50, cut51]
   with_text ["module m { linear type Marke; table T count 2 owner Marke { ", "slot { b : bool, } } reason G { Weg = 1 \"weg\" exhaustive } ", "impl fn mover(p : ptr<normal, rw+own@Marke> T, i : index ", "into T) -> bool or G effects { reads p.slots, writes ", "p.slots, moves Marke } { p.slots[i].b = true; return G::Weg; ", "} }"]
 
-def mintTwice : Input Gabbro.Grammatik.Parser.UebersetzeProben11.mintTwice := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.mintTwice
+rights_input mintTwice : Gabbro.Grammatik.Parser.UebersetzeProben11.mintTwice
   with_cuts [cut10, cut52, cut53, cut54]
   with_text ["module m { linear type Marke; table T count 2 owner Marke { ", "slot { b : bool, } } impl fn a() -> bool effects { mints ", "Marke } { return true; } impl fn b() -> bool effects { mints ", "Marke } { return true; } }"]
 
-def mintFremd : Input Gabbro.Grammatik.Parser.UebersetzeProben11.mintFremd := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.mintFremd
+rights_input mintFremd : Gabbro.Grammatik.Parser.UebersetzeProben11.mintFremd
   with_cuts [cut16, cut55, cut56]
   with_text ["module m { linear type Marke; linear type Fremd; table T ", "count 2 owner Marke { slot { b : bool, } } impl fn a() -> ", "bool effects { mints Fremd } { return true; } }"]
 
-def moveFremd : Input Gabbro.Grammatik.Parser.UebersetzeProben11.moveFremd := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.moveFremd
+rights_input moveFremd : Gabbro.Grammatik.Parser.UebersetzeProben11.moveFremd
   with_cuts [cut16, cut55, cut57]
   with_text ["module m { linear type Marke; linear type Fremd; table T ", "count 2 owner Marke { slot { b : bool, } } impl fn a() -> ", "bool effects { moves Fremd } { return true; } }"]
 
-def moveBorrowed : Input Gabbro.Grammatik.Parser.UebersetzeProben11.moveBorrowed := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.moveBorrowed
+rights_input moveBorrowed : Gabbro.Grammatik.Parser.UebersetzeProben11.moveBorrowed
   with_cuts [cut10, cut58, cut59]
   with_text ["module m { linear type Marke; table T count 2 owner Marke { ", "slot { b : bool, } } impl fn a() -> bool effects { borrows ", "Marke, moves Marke } { return true; } }"]
 
-def moveDropped : Input Gabbro.Grammatik.Parser.UebersetzeProben11.moveDropped := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.moveDropped
+rights_input moveDropped : Gabbro.Grammatik.Parser.UebersetzeProben11.moveDropped
   with_cuts [cut10, cut60, cut61, cut62]
   with_text ["module m { linear type Marke; table T count 2 owner Marke { ", "slot { b : bool, } } impl fn mover(i : index into T) -> bool ", "effects { moves Marke } { return true; } impl fn caller() { ", "mover(0); } }"]
 
-def terminalMoveRetires : Input Gabbro.Grammatik.Parser.UebersetzeProben11.terminalMoveRetires := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.terminalMoveRetires
+rights_input terminalMoveRetires : Gabbro.Grammatik.Parser.UebersetzeProben11.terminalMoveRetires
   with_cuts [cut10, cut63, cut64, cut65]
   with_text ["module m { linear type Marke; table T count 2 owner Marke { ", "slot { b : bool, } } impl fn finish() effects { consumes ", "Marke } { retires Marke; } impl fn main() -> u8 effects { ", "consumes Marke } { finish(); return 23; } }"]
 
-def terminalMoveDropped : Input (Gabbro.Grammatik.Parser.UebersetzeProben11.terminalMoveSource "") := rights_input (Gabbro.Grammatik.Parser.UebersetzeProben11.terminalMoveSource "")
+rights_input terminalMoveDropped : (Gabbro.Grammatik.Parser.UebersetzeProben11.terminalMoveSource "")
   with_cuts [cut10, cut63, cut66, cut67]
   with_text ["module m { linear type Marke; table T count 2 owner Marke { ", "slot { b : bool, } } impl fn finish() effects { consumes ", "Marke } {  } impl fn main() -> u8 effects { consumes Marke } ", "{ finish(); return 23; } }"]
 
-def borrowedRetire : Input Gabbro.Grammatik.Parser.UebersetzeProben11.borrowedRetire := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.borrowedRetire
+rights_input borrowedRetire : Gabbro.Grammatik.Parser.UebersetzeProben11.borrowedRetire
   with_cuts [cut10, cut68, cut69]
   with_text ["module m { linear type Marke; table T count 2 owner Marke { ", "slot { b : bool, } } impl fn f() effects { borrows Marke } { ", "retires Marke; } }"]
 
-def unheldRetire : Input Gabbro.Grammatik.Parser.UebersetzeProben11.unheldRetire := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.unheldRetire
+rights_input unheldRetire : Gabbro.Grammatik.Parser.UebersetzeProben11.unheldRetire
   with_cuts [cut70, cut71]
   with_text ["module m { linear type Marke; impl fn f() { retires Marke; } ", "}"]
 
-def repeatedRetire : Input (Gabbro.Grammatik.Parser.UebersetzeProben11.terminalMoveSource "retires Marke; retires Marke;") := rights_input (Gabbro.Grammatik.Parser.UebersetzeProben11.terminalMoveSource "retires Marke; retires Marke;")
+rights_input repeatedRetire : (Gabbro.Grammatik.Parser.UebersetzeProben11.terminalMoveSource "retires Marke; retires Marke;")
   with_cuts [cut10, cut63, cut72, cut73]
   with_text ["module m { linear type Marke; table T count 2 owner Marke { ", "slot { b : bool, } } impl fn finish() effects { consumes ", "Marke } { retires Marke; retires Marke; } impl fn main() -> ", "u8 effects { consumes Marke } { finish(); return 23; } }"]
 
-def ordinaryRetire : Input Gabbro.Grammatik.Parser.UebersetzeProben11.ordinaryRetire := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.ordinaryRetire
+rights_input ordinaryRetire : Gabbro.Grammatik.Parser.UebersetzeProben11.ordinaryRetire
   with_cuts [cut74, cut75, cut76]
   with_text ["module m { linear type Duty; impl fn gate() effects { ", "consumes Duty } { retires Duty; } impl fn caller() effects { ", "consumes Duty } { gate(); } }"]
 
-def handbackRetire : Input Gabbro.Grammatik.Parser.UebersetzeProben11.handbackRetire := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.handbackRetire
+rights_input handbackRetire : Gabbro.Grammatik.Parser.UebersetzeProben11.handbackRetire
   with_cuts [cut10, cut77, cut69]
   with_text ["module m { linear type Marke; table T count 2 owner Marke { ", "slot { b : bool, } } impl fn f() effects { moves Marke } { ", "retires Marke; } }"]
 
-def terminalReasonRetire : Input Gabbro.Grammatik.Parser.UebersetzeProben11.terminalReasonRetire := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.terminalReasonRetire
+rights_input terminalReasonRetire : Gabbro.Grammatik.Parser.UebersetzeProben11.terminalReasonRetire
   with_cuts [cut10, cut78, cut79, cut80]
   with_text ["module m { linear type Marke; table T count 2 owner Marke { ", "slot { b : bool, } } reason R { Gone = 1 \"gone\" exhaustive } ", "impl fn f() -> bool or R effects { consumes Marke } { ", "retires Marke; return R::Gone; } }"]
 
-def stagedOwner : Input Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOwner := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOwner
+rights_input stagedOwner : Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOwner
   with_cuts [cut81, cut82, cut83, cut84]
   with_text ["module m { linear ghost type Phase order { cold, warm, hot ", "}; table T count 2 owner Phase { slot { b : bool, } } impl ", "fn finish() effects { consumes Phase } { advances cold -> ", "warm; advances warm -> hot; retires Phase; } }"]
 
-def stagedCounts : Input "module m { linear type Plain; linear type Phase order { cold, warm, hot }; linear type Pair order { first, second }; impl fn f() { } }" := rights_input "module m { linear type Plain; linear type Phase order { cold, warm, hot }; linear type Pair order { first, second }; impl fn f() { } }"
+rights_input stagedCounts : "module m { linear type Plain; linear type Phase order { cold, warm, hot }; linear type Pair order { first, second }; impl fn f() { } }"
   with_cuts [cut85, cut86, cut87]
   with_text ["module m { linear type Plain; linear type Phase order { ", "cold, warm, hot }; linear type Pair order { first, second }; ", "impl fn f() { } }"]
 
-def stagedOrdinary : Input Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOrdinary := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOrdinary
+rights_input stagedOrdinary : Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOrdinary
   with_cuts [cut88, cut83, cut84]
   with_text ["module m { linear type Phase order { cold, warm, hot }; impl ", "fn finish() effects { consumes Phase } { advances cold -> ", "warm; advances warm -> hot; retires Phase; } }"]
 
-def stagedLast : Input (Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOwnerSource "advances cold -> warm; advances warm -> hot; advances hot -> cold;") := rights_input (Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOwnerSource "advances cold -> warm; advances warm -> hot; advances hot -> cold;")
+rights_input stagedLast : (Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOwnerSource "advances cold -> warm; advances warm -> hot; advances hot -> cold;")
   with_cuts [cut81, cut82, cut83, cut89]
   with_text ["module m { linear ghost type Phase order { cold, warm, hot ", "}; table T count 2 owner Phase { slot { b : bool, } } impl ", "fn finish() effects { consumes Phase } { advances cold -> ", "warm; advances warm -> hot; advances hot -> cold; } }"]
 
-def stagedSkip : Input (Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOwnerSource "advances cold -> hot;") := rights_input (Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOwnerSource "advances cold -> hot;")
+rights_input stagedSkip : (Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOwnerSource "advances cold -> hot;")
   with_cuts [cut81, cut82, cut83, cut90]
   with_text ["module m { linear ghost type Phase order { cold, warm, hot ", "}; table T count 2 owner Phase { slot { b : bool, } } impl ", "fn finish() effects { consumes Phase } { advances cold -> ", "hot; } }"]
 
-def stagedBackward : Input (Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOwnerSource "advances cold -> warm; advances warm -> cold;") := rights_input (Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOwnerSource "advances cold -> warm; advances warm -> cold;")
+rights_input stagedBackward : (Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOwnerSource "advances cold -> warm; advances warm -> cold;")
   with_cuts [cut81, cut82, cut83, cut91]
   with_text ["module m { linear ghost type Phase order { cold, warm, hot ", "}; table T count 2 owner Phase { slot { b : bool, } } impl ", "fn finish() effects { consumes Phase } { advances cold -> ", "warm; advances warm -> cold; } }"]
 
-def stagedWrongInput : Input (Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOwnerSource "advances warm -> hot;") := rights_input (Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOwnerSource "advances warm -> hot;")
+rights_input stagedWrongInput : (Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOwnerSource "advances warm -> hot;")
   with_cuts [cut81, cut82, cut92, cut90]
   with_text ["module m { linear ghost type Phase order { cold, warm, hot ", "}; table T count 2 owner Phase { slot { b : bool, } } impl ", "fn finish() effects { consumes Phase } { advances warm -> ", "hot; } }"]
 
-def stagedRepeated : Input (Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOwnerSource "advances cold -> warm; advances cold -> warm;") := rights_input (Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOwnerSource "advances cold -> warm; advances cold -> warm;")
+rights_input stagedRepeated : (Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOwnerSource "advances cold -> warm; advances cold -> warm;")
   with_cuts [cut81, cut82, cut83, cut93]
   with_text ["module m { linear ghost type Phase order { cold, warm, hot ", "}; table T count 2 owner Phase { slot { b : bool, } } impl ", "fn finish() effects { consumes Phase } { advances cold -> ", "warm; advances cold -> warm; } }"]
 
-def stagedUnknown : Input (Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOwnerSource "advances missing -> warm;") := rights_input (Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOwnerSource "advances missing -> warm;")
+rights_input stagedUnknown : (Gabbro.Grammatik.Parser.UebersetzeProben11.stagedOwnerSource "advances missing -> warm;")
   with_cuts [cut81, cut82, cut94, cut95]
   with_text ["module m { linear ghost type Phase order { cold, warm, hot ", "}; table T count 2 owner Phase { slot { b : bool, } } impl ", "fn finish() effects { consumes Phase } { advances missing -> ", "warm; } }"]
 
-def stagedBorrowed : Input Gabbro.Grammatik.Parser.UebersetzeProben11.stagedBorrowed := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.stagedBorrowed
+rights_input stagedBorrowed : Gabbro.Grammatik.Parser.UebersetzeProben11.stagedBorrowed
   with_cuts [cut96, cut97, cut98]
   with_text ["module m { linear type Phase order { cold, warm, hot }; ", "table T count 2 owner Phase { slot { b : bool, } } impl fn ", "f() effects { borrows Phase } { advances cold -> warm; } }"]
 
-def stagedAmbiguous : Input Gabbro.Grammatik.Parser.UebersetzeProben11.stagedAmbiguous := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.stagedAmbiguous
+rights_input stagedAmbiguous : Gabbro.Grammatik.Parser.UebersetzeProben11.stagedAmbiguous
   with_cuts [cut96, cut99, cut100]
   with_text ["module m { linear type Phase order { cold, warm, hot }; ", "linear type Other order { cold, warm }; impl fn f() effects ", "{ consumes Phase } { advances cold -> warm; } }"]
 
-def stagedDuplicate : Input Gabbro.Grammatik.Parser.UebersetzeProben11.stagedDuplicate := rights_input Gabbro.Grammatik.Parser.UebersetzeProben11.stagedDuplicate
+rights_input stagedDuplicate : Gabbro.Grammatik.Parser.UebersetzeProben11.stagedDuplicate
   with_cuts [cut101, cut102]
   with_text ["module m { linear type Phase order { cold, cold, hot }; impl ", "fn f() { } }"]
 

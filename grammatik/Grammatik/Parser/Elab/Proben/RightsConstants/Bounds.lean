@@ -56,9 +56,10 @@ theorem steps_bound (pieces : List Chunk) :
 structure ChunkCertificate (pieces : List Chunk) (spelling : String) : Prop where
   text : String.ofList
     (Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces) = spelling
-  bounded : pieces.all (fun piece => decide (piece.steps ≤ piece.characters.length)) = true
+  bounded : steps pieces ≤
+    (Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces).length
 
-theorem ChunkCertificate.empty : ChunkCertificate [] "" := ⟨rfl, rfl⟩
+theorem ChunkCertificate.empty : ChunkCertificate [] "" := ⟨rfl, Nat.le_refl _⟩
 
 theorem ChunkCertificate.cons {piece : Chunk} {pieces : List Chunk} {front back : String}
     (text : String.ofList piece.characters = front)
@@ -69,9 +70,11 @@ theorem ChunkCertificate.cons {piece : Chunk} {pieces : List Chunk} {front back 
   · change String.ofList (piece.characters ++
       Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces) = front ++ back
     rw [String.ofList_append, text, tail.text]
-  · change (decide (piece.steps ≤ piece.characters.length) &&
-      pieces.all (fun entry => decide (entry.steps ≤ entry.characters.length))) = true
-    exact Bool.and_eq_true_iff.mpr ⟨bound, tail.bounded⟩
+  · change piece.steps + steps pieces ≤
+      (piece.characters ++
+        Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces).length
+    rw [List.length_append]
+    exact Nat.add_le_add (of_decide_eq_true bound) tail.bounded
 
 /-- The original character-count fuel, derived while the whole chunk list is
     still abstract rather than by normalization of a concrete concatenation. -/
@@ -79,7 +82,7 @@ theorem ChunkCertificate.room {pieces : List Chunk} {spelling : String}
     (certificate : ChunkCertificate pieces spelling) :
     steps pieces ≤
       (Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces).length + 1 :=
-  Nat.le_trans (steps_bound pieces certificate.bounded) (Nat.le_succ _)
+  Nat.le_trans certificate.bounded (Nat.le_succ _)
 
 -- Separate each small numeric certificate from later multi-fragment inputs.
 scoped macro "bound_fragment " fragment:ident " as " text:str : command => do
