@@ -94,11 +94,11 @@ structure Body {text : String} (header : Header text) where
     header.unit functions.program = .ok program
   accepted : OldSource.accepts header.unit program = .ok true
 
-/-- Replay the canonical compiler with the complete typed packets before taking any projection. -/
 section fullCompilation
 set_option maxRecDepth 2000
 set_option maxHeartbeats 100000
 
+/-- Replay the canonical compiler with the complete typed packets before taking any projection. -/
 def compiledResult {text : String} (header : Header text) (body : Body header) :
     {result : Compiled text // compile text = .ok result} := by
   refine ⟨{
