@@ -109,12 +109,21 @@ private theorem signed_overflow (format : FPFormat) (value : W)
     rw [nan32] at nan
     change (fpMagnitude .f32 value).ult ((0x5F000000 : BitVec 32).setWidth 64) = false at large
     rw [magnitude32_ult] at large
-    simpa only [negative32] using
+    have post : (readFloat32 value).toInt64.toBitVec =
+        if (value.setWidth 32).msb then (0x8000000000000000 : W) else 0x7FFFFFFFFFFFFFFF :=
       RootNativeFloat.float32_toInt64_overflow (value.setWidth 32) nan large
+    change (readFloat32 value).toInt64.toBitVec = _
+    rw [negative32]
+    exact post
   | f64 =>
     change (0x7FF0000000000000 : W).ult (value &&& 0x7FFFFFFFFFFFFFFF) = false at nan
     change (value &&& 0x7FFFFFFFFFFFFFFF).ult 0x43E0000000000000 = false at large
-    simpa only [negative64] using RootNativeFloat.float64_toInt64_overflow value nan large
+    have post : (readFloat value).toInt64.toBitVec =
+        if value.msb then (0x8000000000000000 : W) else 0x7FFFFFFFFFFFFFFF :=
+      RootNativeFloat.float64_toInt64_overflow value nan large
+    change (readFloat value).toInt64.toBitVec = _
+    rw [negative64]
+    exact post
 
 private theorem unsigned_negative (format : FPFormat) (value : W)
     (negative : fpNegative format value = true) : nativeFPBits (.toUInt64 format) value 0 = 0 := by
@@ -171,22 +180,42 @@ private theorem unsigned_high (format : FPFormat) (value reduced : W)
     change (fpMagnitude .f32 value).ult ((0x5F000000 : BitVec 32).setWidth 64) = false at lower
     change (fpMagnitude .f32 value).ult ((0x5F800000 : BitVec 32).setWidth 64) = true at upper
     rw [magnitude32_ult] at lower upper
-    have post := RootNativeFloat.float32_toUInt64_high (value.setWidth 32) nonnegative lower upper
+    let difference := Float32.sub (readFloat32 value) (Float32.ofBits 0x5F000000)
+    have post : (readFloat32 value).toUInt64.toBitVec =
+        difference.toInt64.toBitVec ||| (0x8000000000000000 : W) ∧
+        difference.isNaN = false ∧ Float32.lt difference Int64.minValue.toFloat32 = false ∧
+        Float32.lt difference (UInt64.ofNat (2 ^ 63)).toFloat32 = true :=
+      RootNativeFloat.float32_toUInt64_high (value.setWidth 32) nonnegative lower upper
     change reduced = (reduced.setWidth 32).setWidth 64 ∧
-      readFloat32 reduced = readFloat32 value - Float32.ofBits 0x5F000000 at subtracted
+      readFloat32 reduced = difference at subtracted
+    have domain : (readFloat32 reduced).isNaN = false ∧
+        Float32.lt (readFloat32 reduced) Int64.minValue.toFloat32 = false ∧
+        Float32.lt (readFloat32 reduced) (UInt64.ofNat (2 ^ 63)).toFloat32 = true := by
+      rw [subtracted.2]
+      exact post.2
     change (readFloat32 value).toUInt64.toBitVec =
       truncateFloat32 (readFloat32 reduced) ||| 0x8000000000000000
-    rw [subtracted.2, truncate32_domain _ post.2]
+    rw [truncate32_domain (readFloat32 reduced) domain, subtracted.2]
     exact post.1
   | f64 =>
     rw [negative64] at nonnegative
     change (value &&& 0x7FFFFFFFFFFFFFFF).ult 0x43E0000000000000 = false at lower
     change (value &&& 0x7FFFFFFFFFFFFFFF).ult 0x43F0000000000000 = true at upper
-    have post := RootNativeFloat.float64_toUInt64_high value nonnegative lower upper
-    change readFloat reduced = readFloat value - Float.ofBits 0x43E0000000000000 at subtracted
+    let difference := Float.sub (readFloat value) (Float.ofBits 0x43E0000000000000)
+    have post : (readFloat value).toUInt64.toBitVec =
+        difference.toInt64.toBitVec ||| (0x8000000000000000 : W) ∧
+        difference.isNaN = false ∧ Float.lt difference Int64.minValue.toFloat = false ∧
+        Float.lt difference (UInt64.ofNat (2 ^ 63)).toFloat = true :=
+      RootNativeFloat.float64_toUInt64_high value nonnegative lower upper
+    change readFloat reduced = difference at subtracted
+    have domain : (readFloat reduced).isNaN = false ∧
+        Float.lt (readFloat reduced) Int64.minValue.toFloat = false ∧
+        Float.lt (readFloat reduced) (UInt64.ofNat (2 ^ 63)).toFloat = true := by
+      rw [subtracted]
+      exact post.2
     change (readFloat value).toUInt64.toBitVec =
       truncateFloat64 (readFloat reduced) ||| 0x8000000000000000
-    rw [subtracted, truncate64_domain _ post.2]
+    rw [truncate64_domain (readFloat reduced) domain, subtracted]
     exact post.1
 
 namespace IR
