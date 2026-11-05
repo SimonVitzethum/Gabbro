@@ -3,6 +3,7 @@ module
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
 import Grammatik.Parser.Elab.UebersetzeAllg3.TransitionCert
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
+import all Init.Data.List.MapIdx
 import all Grammatik.Parser.Lex.Lexer.Teil1
 import all Grammatik.Parser.Elab.Uebersetze.Folds.Expressions
 import all Grammatik.Parser.Elab.Uebersetze.Folds.Expansion
@@ -92,10 +93,60 @@ attribute [local cbv_eval] row_nil row_cons core_bind core_call core_set core_co
   check_sequence_select check_structure_select lowEndL_succ
   lowStufe_seq lowStufe_struct lowStufe_ende
 
+-- A proof-only record update: no body, type, contract, range or source obligation is rebuilt.
+-- The equations below certify all replacements against the actual elaborator result.
+private def admissionMetadataFn : Nat → UFn → UFn
+  | 0, fn => {fn with name := "g", nimmt := [], gibt := []}
+  | 1, fn => {fn with name := "p#probe", nimmt := ["p#duty"], gibt := ["p#duty"]}
+  | 2, fn => {fn with name := "p#report#0", nimmt := [], gibt := []}
+  | 3, fn => {fn with name := "p#tor#g", nimmt := ["p#duty"], gibt := ["p#duty"]}
+  | _, fn => fn
+private def admissionMetadataCheck (check : UCheck) : UCheck :=
+  {check with name := "p", tore := ["g"], probe := "p#probe", duty := "p#duty"}
+private def admissionMetadataUnit (unit : UProg) : UProg :=
+  {unit with marken := ["p#duty"], fns := unit.fns.mapIdx admissionMetadataFn,
+    checks := unit.checks.map admissionMetadataCheck, tabs := [], locks := [], globs := [],
+    axs := [], invs := [], regs := [], ptrs := [], eigner := [], markOrders := []}
+
+private theorem admission_name_self (name : String) : strEq name name = true := by
+  simp [strEq]
+
+-- Resolve the canonical singleton without decoding the same UTF-8 name at every use.
+private theorem admission_mark_self (name : String) :
+    markFin [name] name = some (⟨0, by decide⟩ : Fin 1) := by
+  have same : strEq name name = true := admission_name_self name
+  unfold markFin
+  change (if strEq name name then some (⟨0, by decide⟩ : Fin 1) else none) = _
+  rw [same]
+  rfl
+attribute [local cbv_eval] admission_name_self admission_mark_self
+
 -- Infer this exact unit from canonical elaboration, once, before dependent indices.
-private def admissionUnitMade : {unit : UProg // elabU (textItems "c" "g") = .ok unit} := by
+private def admissionUnitRead : {unit : UProg // elabU (textItems "c" "g") = .ok unit} := by
   refine ⟨?unit, ?made⟩
   case made => cbv <;> exact Eq.refl _
+
+-- Nondependent field equalities are proved before any declaration/code index exists.
+private theorem admission_metadata : admissionMetadataUnit admissionUnitRead.val = admissionUnitRead.val := by
+  have marks : admissionUnitRead.val.marken = ["p#duty"] := by cbv
+  have tables : admissionUnitRead.val.tabs = [] := by cbv
+  have locks : admissionUnitRead.val.locks = [] := by cbv
+  have globals : admissionUnitRead.val.globs = [] := by cbv
+  have foreignBodies : admissionUnitRead.val.axs = [] := by cbv
+  have invariants : admissionUnitRead.val.invs = [] := by cbv
+  have registers : admissionUnitRead.val.regs = [] := by cbv
+  have pointers : admissionUnitRead.val.ptrs = [] := by cbv
+  have owners : admissionUnitRead.val.eigner = [] := by cbv
+  have orders : admissionUnitRead.val.markOrders = [] := by cbv
+  have functions : admissionUnitRead.val.fns.mapIdx admissionMetadataFn = admissionUnitRead.val.fns := by cbv
+  have checks : admissionUnitRead.val.checks.map admissionMetadataCheck = admissionUnitRead.val.checks := by cbv
+  generalize source : admissionUnitRead.val = actualUnit at *
+  cases actualUnit
+  simp_all only [admissionMetadataUnit]
+
+private def admissionUnitMade : {unit : UProg // elabU (textItems "c" "g") = .ok unit} :=
+  ⟨admissionMetadataUnit admissionUnitRead.val, admissionUnitRead.property.trans
+    (congrArg (fun unit : UProg => (Except.ok unit : Except String UProg)) admission_metadata.symm)⟩
 
 private theorem admission_unit : elabU (textItems "c" "g") = .ok admissionUnitMade.val :=
   admissionUnitMade.property
@@ -116,21 +167,6 @@ private def admissionGateFunction :
 private def admissionProbeIndex : Fin admissionUnitMade.val.fns.length :=
   ⟨1, by change 1 < 4; decide⟩
 
--- Fix the raw body result before transporting it into the declaration's function triple.
-private def admissionProbeBody :
-    {body : Endblock (declOf admissionUnitMade.val) (verOf admissionUnitMade.val admissionProbeIndex) false
-      (ctxOf admissionUnitMade.val admissionProbeIndex) (resOf admissionUnitMade.val admissionProbeIndex) //
-      lowBody admissionUnitMade.val admissionProbeIndex (fnAt admissionUnitMade.val admissionProbeIndex).body
-        (fnAt admissionUnitMade.val admissionProbeIndex).ret = .ok body} := by
-  refine ⟨?body, ?made⟩
-  case made => cbv <;> exact Eq.refl _
-
-private theorem admission_probe_body :
-    lowBody admissionUnitMade.val admissionProbeIndex (fnAt admissionUnitMade.val admissionProbeIndex).body
-      (fnAt admissionUnitMade.val admissionProbeIndex).ret = .ok admissionProbeBody.val :=
-  admissionProbeBody.property
-attribute [local cbv_eval] admission_probe_body
-
 private def admissionProbeFunction :
     {result : admissionFunctionType admissionProbeIndex //
       lowerFnAt admissionUnitMade.val admissionProbeIndex = .ok result} := by
@@ -148,35 +184,6 @@ private def admissionReportFunction :
 
 private def admissionWrapperIndex : Fin admissionUnitMade.val.fns.length :=
   ⟨3, by change 3 < 4; decide⟩
-
--- The wrapper's actual entry call is certified before constructing its statement/body.
-private def admissionWrapperHead :
-    {head : RufKopf admissionUnitMade.val admissionWrapperIndex
-      (ctxOf admissionUnitMade.val admissionWrapperIndex) (resOf admissionUnitMade.val admissionWrapperIndex) //
-      lowRufKopf admissionUnitMade.val admissionWrapperIndex (ctxOf admissionUnitMade.val admissionWrapperIndex)
-        (fnAt admissionUnitMade.val admissionWrapperIndex) (resOf admissionUnitMade.val admissionWrapperIndex) "g" [] = .ok head} := by
-  refine ⟨?head, ?made⟩
-  case made => cbv <;> exact Eq.refl _
-private theorem admission_wrapper_head :
-    lowRufKopf admissionUnitMade.val admissionWrapperIndex (ctxOf admissionUnitMade.val admissionWrapperIndex)
-      (fnAt admissionUnitMade.val admissionWrapperIndex) (resOf admissionUnitMade.val admissionWrapperIndex) "g" [] =
-        .ok admissionWrapperHead.val := admissionWrapperHead.property
-attribute [local cbv_eval] admission_wrapper_head
-
--- Fix the raw body result before transporting it into the declaration's function triple.
-private def admissionWrapperBody :
-    {body : Endblock (declOf admissionUnitMade.val) (verOf admissionUnitMade.val admissionWrapperIndex) false
-      (ctxOf admissionUnitMade.val admissionWrapperIndex) (resOf admissionUnitMade.val admissionWrapperIndex) //
-      lowBody admissionUnitMade.val admissionWrapperIndex (fnAt admissionUnitMade.val admissionWrapperIndex).body
-        (fnAt admissionUnitMade.val admissionWrapperIndex).ret = .ok body} := by
-  refine ⟨?body, ?made⟩
-  case made => cbv <;> exact Eq.refl _
-
-private theorem admission_wrapper_body :
-    lowBody admissionUnitMade.val admissionWrapperIndex (fnAt admissionUnitMade.val admissionWrapperIndex).body
-      (fnAt admissionUnitMade.val admissionWrapperIndex).ret = .ok admissionWrapperBody.val :=
-  admissionWrapperBody.property
-attribute [local cbv_eval] admission_wrapper_body
 
 private def admissionWrapperFunction :
     {result : admissionFunctionType admissionWrapperIndex //
@@ -303,23 +310,10 @@ private def admissionWithoutGivesGate :
   case made => cbv <;> exact Eq.refl _
 
 -- The ordinary probe lowering produces this error; no replacement refusal is introduced.
-private def admissionWithoutGivesBody : {error : String //
-    lowBody admissionWithoutGivesMade.val admissionWithoutGivesProbeIndex
-      (fnAt admissionWithoutGivesMade.val admissionWithoutGivesProbeIndex).body
-      (fnAt admissionWithoutGivesMade.val admissionWithoutGivesProbeIndex).ret = .error error} := by
+private def admissionWithoutGivesProbe : {error : String //
+    lowerFnAt admissionWithoutGivesMade.val admissionWithoutGivesProbeIndex = .error error} := by
   refine ⟨?error, ?made⟩
   case made => cbv <;> exact Eq.refl _
-
-private theorem admission_without_gives_body :
-    lowBody admissionWithoutGivesMade.val admissionWithoutGivesProbeIndex
-      (fnAt admissionWithoutGivesMade.val admissionWithoutGivesProbeIndex).body
-      (fnAt admissionWithoutGivesMade.val admissionWithoutGivesProbeIndex).ret =
-        .error admissionWithoutGivesBody.val := admissionWithoutGivesBody.property
-attribute [local cbv_eval] admission_without_gives_body
-
-private def admissionWithoutGivesProbe : {error : String //
-    lowerFnAt admissionWithoutGivesMade.val admissionWithoutGivesProbeIndex = .error error} :=
-  ⟨admissionWithoutGivesBody.val, by cbv⟩
 
 private theorem admissionWithoutGives_each :
     lowerEach admissionWithoutGivesMade.val (List.finRange admissionWithoutGivesMade.val.fns.length) =

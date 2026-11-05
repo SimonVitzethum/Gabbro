@@ -3,6 +3,7 @@ module
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
 import Grammatik.Parser.Elab.UebersetzeAllg3.TransitionCert
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
+import all Init.Data.List.MapIdx
 import all Grammatik.Parser.Lex.Lexer.Teil1
 import all Grammatik.Parser.Elab.Uebersetze.Folds.Expressions
 import all Grammatik.Parser.Elab.Uebersetze.Folds.Expansion
@@ -94,10 +95,60 @@ attribute [local cbv_eval] row_nil row_cons core_bind core_call core_set core_co
   check_sequence_select check_structure_select lowEndL_succ
   lowStufe_seq lowStufe_struct lowStufe_ende
 
+-- A proof-only record update: no body, type, contract, range or source obligation is rebuilt.
+-- The equations below certify all replacements against the actual elaborator result.
+private def floorMetadataFn : Nat → UFn → UFn
+  | 0, fn => {fn with name := "g", nimmt := [], gibt := []}
+  | 1, fn => {fn with name := "p#probe", nimmt := ["p#duty"], gibt := ["p#duty"]}
+  | 2, fn => {fn with name := "p#report#0", nimmt := [], gibt := []}
+  | 3, fn => {fn with name := "p#tor#g", nimmt := ["p#duty"], gibt := ["p#duty"]}
+  | _, fn => fn
+private def floorMetadataCheck (check : UCheck) : UCheck :=
+  {check with name := "p", tore := ["g"], probe := "p#probe", duty := "p#duty"}
+private def floorMetadataUnit (unit : UProg) : UProg :=
+  {unit with marken := ["p#duty"], fns := unit.fns.mapIdx floorMetadataFn,
+    checks := unit.checks.map floorMetadataCheck, tabs := [], locks := [], globs := [],
+    axs := [], invs := [], regs := [], ptrs := [], eigner := [], markOrders := []}
+
+private theorem floor_name_self (name : String) : strEq name name = true := by
+  simp [strEq]
+
+-- Resolve the canonical singleton without decoding the same UTF-8 name at every use.
+private theorem floor_mark_self (name : String) :
+    markFin [name] name = some (⟨0, by decide⟩ : Fin 1) := by
+  have same : strEq name name = true := floor_name_self name
+  unfold markFin
+  change (if strEq name name then some (⟨0, by decide⟩ : Fin 1) else none) = _
+  rw [same]
+  rfl
+attribute [local cbv_eval] floor_name_self floor_mark_self
+
 -- Infer this exact unit from canonical elaboration, once, before dependent indices.
-private def floorPassingUnitMade : {unit : UProg // elabU (floorItems 2 true true) = .ok unit} := by
+private def floorPassingUnitRead : {unit : UProg // elabU (floorItems 2 true true) = .ok unit} := by
   refine ⟨?unit, ?made⟩
   case made => cbv <;> exact Eq.refl _
+
+-- Nondependent field equalities are proved before any declaration/code index exists.
+private theorem floorPassing_metadata : floorMetadataUnit floorPassingUnitRead.val = floorPassingUnitRead.val := by
+  have marks : floorPassingUnitRead.val.marken = ["p#duty"] := by cbv
+  have tables : floorPassingUnitRead.val.tabs = [] := by cbv
+  have locks : floorPassingUnitRead.val.locks = [] := by cbv
+  have globals : floorPassingUnitRead.val.globs = [] := by cbv
+  have foreignBodies : floorPassingUnitRead.val.axs = [] := by cbv
+  have invariants : floorPassingUnitRead.val.invs = [] := by cbv
+  have registers : floorPassingUnitRead.val.regs = [] := by cbv
+  have pointers : floorPassingUnitRead.val.ptrs = [] := by cbv
+  have owners : floorPassingUnitRead.val.eigner = [] := by cbv
+  have orders : floorPassingUnitRead.val.markOrders = [] := by cbv
+  have functions : floorPassingUnitRead.val.fns.mapIdx floorMetadataFn = floorPassingUnitRead.val.fns := by cbv
+  have checks : floorPassingUnitRead.val.checks.map floorMetadataCheck = floorPassingUnitRead.val.checks := by cbv
+  generalize source : floorPassingUnitRead.val = actualUnit at *
+  cases actualUnit
+  simp_all only [floorMetadataUnit]
+
+private def floorPassingUnitMade : {unit : UProg // elabU (floorItems 2 true true) = .ok unit} :=
+  ⟨floorMetadataUnit floorPassingUnitRead.val, floorPassingUnitRead.property.trans
+    (congrArg (fun unit : UProg => (Except.ok unit : Except String UProg)) floorPassing_metadata.symm)⟩
 
 private theorem floorPassing_unit : elabU (floorItems 2 true true) = .ok floorPassingUnitMade.val :=
   floorPassingUnitMade.property
@@ -118,21 +169,6 @@ private def floorPassingGateFunction :
 private def floorPassingProbeIndex : Fin floorPassingUnitMade.val.fns.length :=
   ⟨1, by change 1 < 4; decide⟩
 
--- Fix the raw body result before transporting it into the declaration's function triple.
-private def floorPassingProbeBody :
-    {body : Endblock (declOf floorPassingUnitMade.val) (verOf floorPassingUnitMade.val floorPassingProbeIndex) false
-      (ctxOf floorPassingUnitMade.val floorPassingProbeIndex) (resOf floorPassingUnitMade.val floorPassingProbeIndex) //
-      lowBody floorPassingUnitMade.val floorPassingProbeIndex (fnAt floorPassingUnitMade.val floorPassingProbeIndex).body
-        (fnAt floorPassingUnitMade.val floorPassingProbeIndex).ret = .ok body} := by
-  refine ⟨?body, ?made⟩
-  case made => cbv <;> exact Eq.refl _
-
-private theorem floorPassing_probe_body :
-    lowBody floorPassingUnitMade.val floorPassingProbeIndex (fnAt floorPassingUnitMade.val floorPassingProbeIndex).body
-      (fnAt floorPassingUnitMade.val floorPassingProbeIndex).ret = .ok floorPassingProbeBody.val :=
-  floorPassingProbeBody.property
-attribute [local cbv_eval] floorPassing_probe_body
-
 private def floorPassingProbeFunction :
     {result : floorPassingFunctionType floorPassingProbeIndex //
       lowerFnAt floorPassingUnitMade.val floorPassingProbeIndex = .ok result} := by
@@ -150,35 +186,6 @@ private def floorPassingReportFunction :
 
 private def floorPassingWrapperIndex : Fin floorPassingUnitMade.val.fns.length :=
   ⟨3, by change 3 < 4; decide⟩
-
--- The wrapper's actual entry call is certified before constructing its statement/body.
-private def floorPassingWrapperHead :
-    {head : RufKopf floorPassingUnitMade.val floorPassingWrapperIndex
-      (ctxOf floorPassingUnitMade.val floorPassingWrapperIndex) (resOf floorPassingUnitMade.val floorPassingWrapperIndex) //
-      lowRufKopf floorPassingUnitMade.val floorPassingWrapperIndex (ctxOf floorPassingUnitMade.val floorPassingWrapperIndex)
-        (fnAt floorPassingUnitMade.val floorPassingWrapperIndex) (resOf floorPassingUnitMade.val floorPassingWrapperIndex) "g" [] = .ok head} := by
-  refine ⟨?head, ?made⟩
-  case made => cbv <;> exact Eq.refl _
-private theorem floorPassing_wrapper_head :
-    lowRufKopf floorPassingUnitMade.val floorPassingWrapperIndex (ctxOf floorPassingUnitMade.val floorPassingWrapperIndex)
-      (fnAt floorPassingUnitMade.val floorPassingWrapperIndex) (resOf floorPassingUnitMade.val floorPassingWrapperIndex) "g" [] =
-        .ok floorPassingWrapperHead.val := floorPassingWrapperHead.property
-attribute [local cbv_eval] floorPassing_wrapper_head
-
--- Fix the raw body result before transporting it into the declaration's function triple.
-private def floorPassingWrapperBody :
-    {body : Endblock (declOf floorPassingUnitMade.val) (verOf floorPassingUnitMade.val floorPassingWrapperIndex) false
-      (ctxOf floorPassingUnitMade.val floorPassingWrapperIndex) (resOf floorPassingUnitMade.val floorPassingWrapperIndex) //
-      lowBody floorPassingUnitMade.val floorPassingWrapperIndex (fnAt floorPassingUnitMade.val floorPassingWrapperIndex).body
-        (fnAt floorPassingUnitMade.val floorPassingWrapperIndex).ret = .ok body} := by
-  refine ⟨?body, ?made⟩
-  case made => cbv <;> exact Eq.refl _
-
-private theorem floorPassing_wrapper_body :
-    lowBody floorPassingUnitMade.val floorPassingWrapperIndex (fnAt floorPassingUnitMade.val floorPassingWrapperIndex).body
-      (fnAt floorPassingUnitMade.val floorPassingWrapperIndex).ret = .ok floorPassingWrapperBody.val :=
-  floorPassingWrapperBody.property
-attribute [local cbv_eval] floorPassing_wrapper_body
 
 private def floorPassingWrapperFunction :
     {result : floorPassingFunctionType floorPassingWrapperIndex //
@@ -273,9 +280,31 @@ private theorem floorPassing_facts : CheckWitness floorPassingUnitMade.val 1 := 
 end floorPassingAssembly
 
 -- Infer this exact unit from canonical elaboration, once, before dependent indices.
-private def floorFailingUnitMade : {unit : UProg // elabU (floorItems 4 true true) = .ok unit} := by
+private def floorFailingUnitRead : {unit : UProg // elabU (floorItems 4 true true) = .ok unit} := by
   refine ⟨?unit, ?made⟩
   case made => cbv <;> exact Eq.refl _
+
+-- Nondependent field equalities are proved before any declaration/code index exists.
+private theorem floorFailing_metadata : floorMetadataUnit floorFailingUnitRead.val = floorFailingUnitRead.val := by
+  have marks : floorFailingUnitRead.val.marken = ["p#duty"] := by cbv
+  have tables : floorFailingUnitRead.val.tabs = [] := by cbv
+  have locks : floorFailingUnitRead.val.locks = [] := by cbv
+  have globals : floorFailingUnitRead.val.globs = [] := by cbv
+  have foreignBodies : floorFailingUnitRead.val.axs = [] := by cbv
+  have invariants : floorFailingUnitRead.val.invs = [] := by cbv
+  have registers : floorFailingUnitRead.val.regs = [] := by cbv
+  have pointers : floorFailingUnitRead.val.ptrs = [] := by cbv
+  have owners : floorFailingUnitRead.val.eigner = [] := by cbv
+  have orders : floorFailingUnitRead.val.markOrders = [] := by cbv
+  have functions : floorFailingUnitRead.val.fns.mapIdx floorMetadataFn = floorFailingUnitRead.val.fns := by cbv
+  have checks : floorFailingUnitRead.val.checks.map floorMetadataCheck = floorFailingUnitRead.val.checks := by cbv
+  generalize source : floorFailingUnitRead.val = actualUnit at *
+  cases actualUnit
+  simp_all only [floorMetadataUnit]
+
+private def floorFailingUnitMade : {unit : UProg // elabU (floorItems 4 true true) = .ok unit} :=
+  ⟨floorMetadataUnit floorFailingUnitRead.val, floorFailingUnitRead.property.trans
+    (congrArg (fun unit : UProg => (Except.ok unit : Except String UProg)) floorFailing_metadata.symm)⟩
 
 private theorem floorFailing_unit : elabU (floorItems 4 true true) = .ok floorFailingUnitMade.val :=
   floorFailingUnitMade.property
@@ -296,21 +325,6 @@ private def floorFailingGateFunction :
 private def floorFailingProbeIndex : Fin floorFailingUnitMade.val.fns.length :=
   ⟨1, by change 1 < 4; decide⟩
 
--- Fix the raw body result before transporting it into the declaration's function triple.
-private def floorFailingProbeBody :
-    {body : Endblock (declOf floorFailingUnitMade.val) (verOf floorFailingUnitMade.val floorFailingProbeIndex) false
-      (ctxOf floorFailingUnitMade.val floorFailingProbeIndex) (resOf floorFailingUnitMade.val floorFailingProbeIndex) //
-      lowBody floorFailingUnitMade.val floorFailingProbeIndex (fnAt floorFailingUnitMade.val floorFailingProbeIndex).body
-        (fnAt floorFailingUnitMade.val floorFailingProbeIndex).ret = .ok body} := by
-  refine ⟨?body, ?made⟩
-  case made => cbv <;> exact Eq.refl _
-
-private theorem floorFailing_probe_body :
-    lowBody floorFailingUnitMade.val floorFailingProbeIndex (fnAt floorFailingUnitMade.val floorFailingProbeIndex).body
-      (fnAt floorFailingUnitMade.val floorFailingProbeIndex).ret = .ok floorFailingProbeBody.val :=
-  floorFailingProbeBody.property
-attribute [local cbv_eval] floorFailing_probe_body
-
 private def floorFailingProbeFunction :
     {result : floorFailingFunctionType floorFailingProbeIndex //
       lowerFnAt floorFailingUnitMade.val floorFailingProbeIndex = .ok result} := by
@@ -328,35 +342,6 @@ private def floorFailingReportFunction :
 
 private def floorFailingWrapperIndex : Fin floorFailingUnitMade.val.fns.length :=
   ⟨3, by change 3 < 4; decide⟩
-
--- The wrapper's actual entry call is certified before constructing its statement/body.
-private def floorFailingWrapperHead :
-    {head : RufKopf floorFailingUnitMade.val floorFailingWrapperIndex
-      (ctxOf floorFailingUnitMade.val floorFailingWrapperIndex) (resOf floorFailingUnitMade.val floorFailingWrapperIndex) //
-      lowRufKopf floorFailingUnitMade.val floorFailingWrapperIndex (ctxOf floorFailingUnitMade.val floorFailingWrapperIndex)
-        (fnAt floorFailingUnitMade.val floorFailingWrapperIndex) (resOf floorFailingUnitMade.val floorFailingWrapperIndex) "g" [] = .ok head} := by
-  refine ⟨?head, ?made⟩
-  case made => cbv <;> exact Eq.refl _
-private theorem floorFailing_wrapper_head :
-    lowRufKopf floorFailingUnitMade.val floorFailingWrapperIndex (ctxOf floorFailingUnitMade.val floorFailingWrapperIndex)
-      (fnAt floorFailingUnitMade.val floorFailingWrapperIndex) (resOf floorFailingUnitMade.val floorFailingWrapperIndex) "g" [] =
-        .ok floorFailingWrapperHead.val := floorFailingWrapperHead.property
-attribute [local cbv_eval] floorFailing_wrapper_head
-
--- Fix the raw body result before transporting it into the declaration's function triple.
-private def floorFailingWrapperBody :
-    {body : Endblock (declOf floorFailingUnitMade.val) (verOf floorFailingUnitMade.val floorFailingWrapperIndex) false
-      (ctxOf floorFailingUnitMade.val floorFailingWrapperIndex) (resOf floorFailingUnitMade.val floorFailingWrapperIndex) //
-      lowBody floorFailingUnitMade.val floorFailingWrapperIndex (fnAt floorFailingUnitMade.val floorFailingWrapperIndex).body
-        (fnAt floorFailingUnitMade.val floorFailingWrapperIndex).ret = .ok body} := by
-  refine ⟨?body, ?made⟩
-  case made => cbv <;> exact Eq.refl _
-
-private theorem floorFailing_wrapper_body :
-    lowBody floorFailingUnitMade.val floorFailingWrapperIndex (fnAt floorFailingUnitMade.val floorFailingWrapperIndex).body
-      (fnAt floorFailingUnitMade.val floorFailingWrapperIndex).ret = .ok floorFailingWrapperBody.val :=
-  floorFailingWrapperBody.property
-attribute [local cbv_eval] floorFailing_wrapper_body
 
 private def floorFailingWrapperFunction :
     {result : floorFailingFunctionType floorFailingWrapperIndex //
