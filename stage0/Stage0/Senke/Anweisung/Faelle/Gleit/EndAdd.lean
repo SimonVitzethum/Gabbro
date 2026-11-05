@@ -53,8 +53,18 @@ theorem endFloatArithmetic_case (op : GleitOp) {O : Orakel D} [TorOK L O] [Sicht
       (by simp only [frei, contextWords_cons] at hlo2 ⊢; omega) hu hk hw
       (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega))
     hp hu hk hWa
-  cases success : gleitPasst low high x <;>
-    simpa only [execEnd, success, floatEnd_schrumpf, EndAusgang.zuAusgang] using result
+  have outcome : (execEnd O passes R (.float op a b low high rest) σ ρ).zuAusgang =
+      (match gleitPasst low high x with
+      | none => .logik .bereich
+      | some v => (execEnd O passes R rest σr (Env.cons v ρ)).zuAusgang.schrumpf) := by
+    change (match gleitPasst low high x with
+      | some v => (execEnd O passes R rest σr (Env.cons v ρ)).schrumpf
+      | none => .logik .bereich).zuAusgang = _
+    cases success : gleitPasst low high x with
+    | none => rfl
+    | some v => exact floatEnd_schrumpf (execEnd O passes R rest σr (Env.cons v ρ))
+  rw [outcome]
+  exact result
 
 
 #print axioms endFloatArithmetic_case
