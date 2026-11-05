@@ -1,180 +1,69 @@
 # Gabbro
 
-> **Development snapshot — 2026-11-05: WIP, not fully buildable or validated.**
-> The Stage-0 integration and abstract floating-point hardware-contract migration are unfinished.
-> Targeted goal-theorem audits, the Runner library/executable, all 14 Runner axiom audits and 20,989 CPU checks
-> passed, including 966 floating-operation IR cases. The generic Stage-0 statement/image correctness chain
-> also builds (2,709 jobs). The native compiler builds (5,403 jobs), and three freshly compiled float-end
-> programs return their unchanged expected exits 7/41/107 on the assembly runner. Grammar and Stage 0 still have known proof failures and
-> resource-limited probe checks; the complete Stage-0/GabbroV Lean closure remains open.
-> The source regression currently passes 218/315 cases: 76 expected executions are refused during compilation,
-> and 21 refusal expectations differ. No executed case returned an incorrect exit code. These test counts are not syntax coverage.
-> Rust, Cargo and LLVM validation are deliberately excluded from this checkpoint. This is not a release
-> or a claim of complete userspace-language coverage.
+> **Status 2026-11-05: research prototype, work in progress. There is NO working Gabbro compiler and NO working
+> Gabbro checker yet.**
+> What exists is a Lean 4 model with a proved goal theorem, and Stage 0, a partial verified path from Gabbro to an
+> assembly IR. The Rust checker and the LLVM emitter in this repository are **outdated**. They remain only for
+> testing and demonstration until a working, verified Gabbro checker and compiler exist. Do not use them for real
+> programs, and do not treat anything they accept or emit as checked.
 
-Gabbro is a systems programming language with a Rust compiler and a Lean 4 model of its core language and safety properties.
+Gabbro is a systems programming language designed so that **the user proves only their own logic and named hardware
+assumptions**. Memory safety, race freedom, contracts and time are meant to be carried by the language and proved once
+over its model.
 
-> **Gabbro's goal: the user proves only their own logic and named hardware assumptions; the language carries the rest, on a multicore
-> kernel with DMA.**
+## What exists
 
-Memory safety, race freedom, contracts where claimed (in concurrent runs too) and time are carried by the language and proved once over
-its model. Per program the user owes what is explicit and named: the logic (`NutzerPflichtA`: bodies at every budget and against every
-shared-atomic-read value, plus start duties) and the hardware assumptions (`HardwareAnnahmen`). Loader, runtime thread creation and
-foreign behaviour are still named assumed premises (c)/(d); their correspondence is unproved.
+| Part | State |
+|---|---|
+| **Lean model and goal theorem** (`grammatik/`) | `gabbro_ziel` is proved over the model on exactly `propext`, `Classical.choice`, `Quot.sound`, with witnesses and refusal probes. The checker inside the statement is the Lean one. |
+| **Stage 0** (`stage0/`, `runner/`) | Lean compiles part of the userspace language to the IR `S0IR` with a generic lowering theorem; an x86-64 assembly runner executes it. Of 315 source regressions, 218 pass, 76 expected executions are refused at compilation and 21 refusal expectations differ; no executed case returned a wrong exit code. These counts are not language coverage. |
+| **Native floats** (`nativefloat/`) | Floating operations are opaque in Lean and executed by the CPU. `RootNativeFloat.Hardware` is the explicit, ISA-independent hardware assumption (bit codec, order, conversions, literals, correct rounding of `+ - * /`). Instruction-level correspondence per target is still owed. |
+| **GabbroV** (`programmlogik/`, `bruecke/`) | Derives the user's logic obligations in Lean from source, for five programs. |
+| **Rust checker and LLVM emitter** (`crates/`) | **Outdated, not verified, not maintained to the Lean model.** Kept for tests and demonstration only. |
 
-**In one sentence about the state:** the goal theorem is proved over the model, with a witness and non-degeneracy; the Rust checker and
-the LLVM backend are **not** verified, and no bridge to any binary exists yet ([section 5](#5-proved-and-not-proved)).
+## What does not exist
 
-## What Gabbro is
+- A working Gabbro compiler, and a working Gabbro checker for the full language.
+- A final-binary validator, or any bridge from the model to a binary. Never call the compiler or a binary verified.
+- A standard library; programs bring their own `syscall` items and bindings.
+- Full source-to-IR coverage. Open forms and all measurements are in [TODO.md](TODO.md) and
+  [IR-COMPILATION-LANES](dokumente/IR-COMPILATION-LANES.md).
 
-- **No standard library, no libc, no linked runtime.** Everything a program does to the outside world goes through its own `syscall`
-  items (raw kernel gates with declared registers, contracts and error channels) or through hardware register forms. The operating system
-  is user logic, never an assumption of the language. Networking, files, TLS and the like are written in Gabbro, in your program or in a
-  binding library, and checked like any other code. The container, text and time helpers every program needs are meant to become
-  native Gabbro modules, not C behind a border; none exist yet (the earlier plan and the Linux bindings were removed on 2026-11-01,
-  see `git log`).
-- **One backend: LLVM.** Checked Gabbro lowers directly to LLVM IR for x86-64 and AArch64: no C, no libc; locks, threads and arenas are
-  generated IR over raw kernel gates (`crates/gabbro-check`, `llvm.rs`). The C11 emitter was removed on 2026-10-17 (tag
-  `archiv/c-emitter-2026-10-17`, which also holds its Lean line).
-- **The backend is not verified.** Final-binary refinement needs a complete Lean model of the CPU; the earlier AArch64 model (`arm/`)
-  and its Sail-Arm plan were retired on 2026-11-01 (git history).
-- **Stage 0: the verified path that exists today.** `stage0/` compiles Gabbro in Lean to the IR `S0IR`, with a generic lowering
-  theorem (`irBild_correct`), and the x86-64 assembly runner in `runner/` executes it. It covers part of the userspace language; state
-  and limits per form are in [IR-COMPILATION-LANES](dokumente/IR-COMPILATION-LANES.md). Lean performs compilation and proof checking;
-  all runtime operations execute in the assembly runner. Native CPU floating-point integration is in progress.
-  Floating operations are opaque in Lean, with an explicit ISA-independent hardware contract; numerical IEEE
-  arithmetic is not replayed by the proof kernel. Target instruction correspondence remains a separate obligation.
-
-## 1. Quick start
-
-**With Nix** (flakes enabled): `nix build github:SimonVitzethum/Gabbro` builds the `gabbro` command with its LLVM tools,
-and `nix develop` (or `direnv allow`, the checkout has an `.envrc`) gives a shell with Rust, elan, LLVM/lld, qemu-user and
-Python for working on the repository. The flake builds the Cargo workspace (`Cargo.toml`, `Cargo.lock`), so those stay.
-
-**Without Nix**: install **Rust 1.86 or newer** (the crates have no third-party dependencies) and put `~/.cargo/bin` on your
-`PATH`; `gabbro build` additionally needs the LLVM tools `opt`, `llc` and `ld.lld`; there is no C compiler in the chain.
-
-```bash
-git clone https://github.com/SimonVitzethum/Gabbro
-cd Gabbro
-nix build && export PATH=$PWD/result/bin:$PATH     # or: cargo install --path crates/gabbro-cli
-mkdir hello && cd hello
-gabbro new hello
-gabbro check hello.gab
-gabbro build
-./build/hello
-gabbro test -C build
-```
-
-The program prints `Hi`. `gabbro new` creates `hello.gab` (source) and `gabbro.build` (the project file, after Meson:
-targets, tests, options -- [`BUILD-SYSTEM.md`](dokumente/BUILD-SYSTEM.md)); read them next to the
-[tutorial](dokumente/TUTORIAL.md). `gabbro passes` shows checker coverage, `gabbro obligations hello.gab` the user obligations left.
-
-## 2. Proof check in two commands
-
-**Everything above is a claim; this is how you stop taking it on trust.** The goal theorem is proved in Lean 4 over the language model
-(thread machine over GX, shared-atomic rely):
+## Check the proof yourself
 
 ```bash
 git clone https://github.com/SimonVitzethum/Gabbro && cd Gabbro/grammatik
-lake build Grammatik.Zielsatz.Kern.Beweis Grammatik.Zielsatz.Kern.Proben Grammatik.Zielsatz.Kern.ProbenW1 \
-  Grammatik.Zielsatz.Atomar.BeweisAtomar Grammatik.Zielsatz.Atomar.BeweisTerminierung \
-  Grammatik.Zielsatz.Atomar.TerminierungZeuge Grammatik.Zielsatz.Atomar.BeweisWarten
-lake env lean NachpruefungZiel.lean     # prints the axioms of every sentence named below
+lake build Grammatik.Zielsatz.Kern.Beweis Grammatik.Zielsatz.Atomar.BeweisAtomar
+lake env lean NachpruefungZiel.lean     # prints the axioms of every named sentence
 ```
 
-`elan`/`lake` come from [leanprover/elan](https://github.com/leanprover/elan); Lean 4.35.0 pins itself from `grammatik/lean-toolchain`.
-The only dependency is [Mathlib](https://github.com/leanprover-community/mathlib4), pinned to the matching tag in
-`grammatik/lakefile.toml`; the first build fetches it (about 7.5 GB with precompiled oleans via `lake exe cache get`). The goal theorem
-itself does not import it, and `#print axioms` still prints exactly the three standard axioms.
+Lean 4.35.0 pins itself from `grammatik/lean-toolchain`; the only dependency is Mathlib (first build is large). A
+`sorryAx` in the printed axiom list would mean the sentence is not proved.
 
-| Printed line | What it means |
-|---|---|
-| `gabbro_ziel … [propext, Classical.choice, Quot.sound]` | only Lean's standard three: no `sorryAx`, no axiom of ours. **A `sorryAx` here would mean it is not proved.** |
-| `…_zeuge` | a two-thread program that moves memory satisfies it, so the sentence is not empty |
-| `…probeA/D…`, `w1_abgelehnt` | programs the checker **refuses**: a checker that accepts everything would make the theorem worthless |
+**What this does not say:** an axiom list shows a proof is valid, not that the statement is right. The statement is
+`grammatik/Grammatik/Zielsatz/Kern/Spec.lean`; its header is the one list of named assumptions and of what is NOT
+CLAIMED, and wins wherever other text disagrees. The user still owes the logic of their program and the hardware
+assumptions. Loader, runtime thread creation and foreign behaviour are named assumptions whose correspondence is unproved.
 
-**What those lines do NOT say:** an axiom list shows a *proof* is valid, not that the *statement* is right. The three axioms prove no
-model fidelity and remove no premise: checked program, user logic, hardware assumptions and runtime stay owed. The statement is
-`Zielsatz/Kern/Spec.lean`; its header is the one list of named assumptions and of what is NOT CLAIMED, and wins wherever other text
-disagrees.
+## Intended design
 
-## 3. How the guarantee is meant to work
+The compiler is untrusted and shows its work: every accepted program gets a certificate that Lean checks (source parses to
+the model, the model's rules hold, the final image refines the model). Only the Lean parser and model certificates exist in
+part; the AArch64 semantics, the final-byte validator and the per-access memory-order bridge are planned.
 
-The Rust checker and compiler will **not** be verified: the compiler is untrusted and shows its work. **Every accepted program gets a
-Lean-checked certificate:**
+## Legacy tools (testing only)
 
-> **Lean accepts the certificate ⟹ (1)** the source parses to `P`, **(2)** `P` satisfies the model, **(3)** every execution of the
-> validated final image refines `P` / GX: bytes, layout, relocations, entries, conventions.
+`gabbro check`, `gabbro build` and the other `crates/` commands need Rust 1.86+ and, for `build`, the LLVM tools `opt`,
+`llc` and `ld.lld`. They run the outdated Rust checker and emitter, so their results prove nothing about Gabbro. See the
+[tutorial](dokumente/TUTORIAL.md) and [build system](dokumente/BUILD-SYSTEM.md) for what they do.
 
-Five pieces (the design document `PLAN-TRANSLATION-VALIDATION.md` was removed on 2026-11-01; read it with
-`git show 15efa71da^:dokumente/PLAN-TRANSLATION-VALIDATION.md`):
+## Documents
 
-| Piece | What | State |
-|---|---|---|
-| **T3** | Lean parser, source to `P` | items in; generics and round trip in flight |
-| **T1** | model certificates per constructor | partial; design in the removed plan, §1 |
-| **T4** | AArch64 semantics and image decoding | planned; the Sail-Arm route was retired on 2026-11-01 |
-| **T2** | final-byte correspondence validator | planned |
-| **T5** | proof templates for runtime, entries, locks, recurring duties | 41 templates, 30 machine-checked |
+[Open work](TODO.md) · [goal statement](grammatik/Grammatik/Zielsatz/Kern/Spec.lean) · [syntax](dokumente/SYNTAX.md) ·
+[language](dokumente/LANGUAGE.md) · [Stage-0 compilation](dokumente/IR-COMPILATION-LANES.md) ·
+[GabbroV](dokumente/GABBROV.md) · [low-level plan](dokumente/LOW-LEVEL-SYNTAX-PLAN.md) ·
+[long-range plan](dokumente/PLAN-LONG-RANGE.md) · [how work is run](AGENTS.md)
 
-Concurrency reuses W / GX; the per-access bridge to the Arm memory model is open. A proved validator would refuse bad output, but it still
-needs the new validator and its proof.
-
-## 4. Status
-
-**Last measured 2026-10-17 and not re-measured since.** Corpus, tests and several documents were trimmed on 2026-11-01, so these
-figures are history until the guardians run again. Each figure names its command; they are dated results, not guarded values (see
-[MEASUREMENTS](dokumente/MEASUREMENTS.md), [TOOLBOX](dokumente/TOOLBOX.md)). Work in progress is in [TODO.md](TODO.md); the Stage-0
-state is in [IR-COMPILATION-LANES](dokumente/IR-COMPILATION-LANES.md).
-
-| | | |
-|---|---|---|
-| **Compiler** | 12 passes: 3 complete, 9 carried with a named residue, 0 partial, 0 open | 497 diagnostics · `gabbro passes` |
-| **Grammar** | 189 EBNF rules, closed and reachable | vocabulary covers every terminal, 245 / 245 |
-| **Proof templates** | 41, of which 30 are machine-checked | `gabbro templates` |
-| **Corpus** | 170 clean examples, 898 poison files (2026-11-01 in the tree: 177 `.gab` examples, 830 poison files, counted, not run) | `cargo test --no-fail-fast` |
-| **Backend** | LLVM (the only one), x86_64 and aarch64 | `./instrumente/pruefe-llvm.py` |
-| **Guardians** | exactly 4: Lean model, LLVM compiler, checker, GabbroV; each prints its work quantity, exit `2` means not measured | `./instrumente/abnahme.py` |
-| **Blind spots** | 72 blind · 176 covered · 24 poison-only · 12 no cell (of 285 pairs); poison-only is a hint, not a proof | `gabbro blindspots` |
-| **Usability** | 312 of 2431 teaching sites and 14 of 110 real-code sites may fall (2564 and 110 clause sites) | `gabbro ceremony` |
-
-The frozen Isabelle theories were removed on 2026-11-01; their Lean ports are in `grammatik/Grammatik/Isabelle/`. All proofs
-are in Lean.
-
-## 5. Proved and not proved
-
-**Proved over the model:** `theorem gabbro_ziel : GabbroZiel` ([statement](grammatik/Grammatik/Zielsatz/Kern/Spec.lean), proof
-`Zielsatz/Atomar/BeweisAtomar.lean`; tags `milestone-2026-09-15-gabbro-ziel` and `-zielsatz-bestaetigt`). Six review rounds; round 6: *"the goal
-with named gaps, no unnamed gap found"*. The checker inside the statement is the **Lean** checker, not the Rust one. GabbroV derives
-premise (b), the user's logic, in Lean from the source for five programs; that does not certify binaries.
-
-The 2026-11-05 floating-point migration adds `RootNativeFloat.Hardware` to the named hardware premise,
-without a default instance or a new Lean axiom. Revalidation of the connected goal/compiler/runner pipeline
-under this boundary is in progress. Current acceptance runs exclude Rust/Cargo and LLVM by owner instruction.
-
-**Not proved, still open:**
-- No pass is proved individually (sentences are measured on checked cases, never the rule).
-- Complete backend validation, final-byte validation and hardware/concurrency correspondence are **open**; the final-binary validator is
-  not implemented. Never call the compiler or a binary verified.
-- Most accepted programs are not judged in Lean at all; the rest are refused by the exporter and listed by name as not claimed in
-  `target/zertifikate/REGISTER.txt`, written on every `cargo test --test zertifikate`.
-
-## 6. Documents
-
-| | |
-|---|---|
-| Start here | [Tutorial](dokumente/TUTORIAL.md) · [open work](TODO.md) · [goal statement](grammatik/Grammatik/Zielsatz/Kern/Spec.lean) · [how work is run](AGENTS.md) |
-| Language | [Syntax](dokumente/SYNTAX.md) · [language](dokumente/LANGUAGE.md) · [build system](dokumente/BUILD-SYSTEM.md) |
-| Compiler | [Stage-0 IR compilation](dokumente/IR-COMPILATION-LANES.md) · [self-hosting](dokumente/PLAN-SELF-HOSTING.md) · [GabbroV](dokumente/GABBROV.md) |
-| Plans | [long-range](dokumente/PLAN-LONG-RANGE.md) · [low-level syntax](dokumente/LOW-LEVEL-SYNTAX-PLAN.md) |
-| Measurements | [MESSUNGEN](dokumente/MEASUREMENTS.md) · [TOOLBOX](dokumente/TOOLBOX.md) |
-
-> **How this repository is written: AI agents, and where the human stands.** Agents do implementation, checking and coordination; Simon
-> decides what counts as reached, refused or merged. Commits name the model that wrote them (`Co-Authored-By`). **Nothing counts because an agent
-> said so:** numbers are re-measured at merge time, and a claim bigger than its proof gets sent back.
-
-> **License: AGPL-3.0** ([LICENSE](LICENSE)). What you write in Gabbro is not a derived work: your program, everything the compiler
-> makes of it and the binaries are yours, under any license. **The condition applies only if you call the result formally verified or secure:** then the
-> generated files say which checker said so. Claim nothing and you owe nothing ([addendum](LICENSE-ADDENDUM.md)). The working language is
-> **English**; example identifiers stay German (grammar data).
+> **License: AGPL-3.0** ([LICENSE](LICENSE)). Your Gabbro programs, what the compiler makes of them and the binaries are
+> yours, under any license. The condition applies only if you call the result formally verified or secure
+> ([addendum](LICENSE-ADDENDUM.md)). The working language is English; example identifiers stay German (grammar data).
