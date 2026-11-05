@@ -43,12 +43,12 @@ set_option maxRecDepth 100000
 scoped macro "bound_fragment " fragment:ident " as " text:str : command => do
   let bound := Lean.mkIdentFrom fragment (fragment.getId.appendAfter "_bounded")
   let named := Lean.mkIdentFrom fragment (fragment.getId.appendAfter "_text")
-  `(command| section
-    theorem $bound :
+  let bounded ← `(command| theorem $bound :
       decide (($fragment : Chunk).steps ≤ ($fragment : Chunk).characters.length) = true := by
-        cbv
-    theorem $named : String.ofList ($fragment : Chunk).characters = $text := by cbv
-    end)
+        cbv)
+  let decoded ← `(command| theorem $named :
+      String.ofList ($fragment : Chunk).characters = $text := by cbv)
+  return Lean.mkNullNode #[bounded, decoded]
 
 open scoped Gabbro.Grammatik.Parser.UebersetzeProben11.Phases
 namespace Inputs
