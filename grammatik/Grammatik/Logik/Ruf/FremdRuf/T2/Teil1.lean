@@ -103,12 +103,12 @@ theorem mitVorbedingung_gleich {D : Deklaration} (Pre : AxPre D) (O : Orakel D)
     words outside every declared result type, give the FULL hardware
     premise `HardwareAnnahmen` for the re-dressed oracle. The ill-formed
     calls are exactly the ones whose answers no longer fit. -/
-theorem hardware_aus_vertragP {D : Deklaration} (Pre : AxPre D) (Q : AxEns D) (O : Orakel D)
+theorem hardware_aus_vertragP [RootNativeFloat.Hardware] {D : Deklaration} (Pre : AxPre D) (Q : AxEns D) (O : Orakel D)
     (raus : D.Ax → Int)
     (hO : GutO O) (hR : RegLokal O) (hQ : AxVertragOP Pre Q O)
     (hraus : ∀ a, einpassenErg O.zeiger (D.aerg a) (raus a) = none) :
     Zielsatz.HardwareAnnahmen (mitVorbedingung Pre O raus) Q := by
-  refine ⟨fun a σ ρ => hO a σ ρ, hR, ?_⟩
+  refine ⟨fun a σ ρ => hO a σ ρ, hR, ?_, inferInstance⟩
   intro a σ ρ v hfit
   by_cases hp : Pre a σ ρ = true
   · have e := mitVorbedingung_gleich Pre O raus a σ ρ hp

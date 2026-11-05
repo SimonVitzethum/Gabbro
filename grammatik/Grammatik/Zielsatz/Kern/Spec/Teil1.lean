@@ -46,6 +46,7 @@ public import Grammatik.Logik.Terminierung.LaufGX
 public import Grammatik.Bausteine.Arena.Ownership.Ruhe.Lift
 public import Grammatik.Bausteine.Arena.Ownership.Machine.Reach
 public import Grammatik.Logik.Ruf.Schnittstellen.Vertrag
+public import NativeFloat.Hardware
 public import Grammatik.Bausteine.Arena.ArenaStaticReset
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Bibliothek
 public import Grammatik.Bausteine.Kernzelle.Zulassung
@@ -266,7 +267,7 @@ structure NutzerPflicht (E : Einheit D) : Prop where
   start : StartPflicht E
 /-! ## (c) What the hardware is assumed to do -/
 def HardwareAnnahmen (O : Orakel D) (Q : AxEns D) : Prop :=
-  GutO O ∧ RegLokal O ∧ AxVertragO Q O
+  GutO O ∧ RegLokal O ∧ AxVertragO Q O ∧ RootNativeFloat.Hardware
 /-! ## (d) What the runtime is assumed to do (A4) -/
 /-- **Assumption A4, the loader and the runtime's thread creation.** The machine runs
     `E.P.mitRuhe` (the program with the runtime's idle root `none`, MitRuhe.lean) from

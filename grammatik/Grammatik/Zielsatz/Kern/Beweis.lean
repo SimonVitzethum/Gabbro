@@ -146,11 +146,11 @@ theorem ziel_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) (fs : Aufzaehlu
   have hGrund : StartOhneGrund init := fun t => (wurzel_of hA hZ t).2
   have mainAt := fun (M : RufMaschineG D) (hr : RufErreichbarG P O passes (RufStartG P sp init) M) =>
     ziel_ort_mehrfaden_ende P O Q S fs.1 sp init (kVon P fs.1 init) hH.1 hH.2.1
-    hH.2.2 hN.2.2.1 hS fs.2 hFrag hAbg hW hFuss (fun pa f => (hN.1 pa f).1) hStart hSstart hex
+    hH.2.2.1 hN.2.2.1 hS fs.2 hFrag hAbg hW hFuss (fun pa f => (hN.1 pa f).1) hStart hSstart hex
     (fun pa f => (hN.1 pa f).2.1) hGrund passes M hr
   have hIGAt := fun (M : RufMaschineG D) (hr : RufErreichbarG P O passes (RufStartG P sp init) M) =>
     ziel_ort_mehrfaden_invGrund P O Q S fs.1 sp init (kVon P fs.1 init) hH.1 hH.2.1
-    hH.2.2 hN.2.2.1 hS fs.2 hFrag hAbg hW hFuss (fun pa f => (hN.1 pa f).1) hStart hSstart hex
+    hH.2.2.1 hN.2.2.1 hS fs.2 hFrag hAbg hW hFuss (fun pa f => (hN.1 pa f).1) hStart hSstart hex
     (fun pa f => (hN.1 pa f).2.2) passes M hr
   have main := mainAt M hr
   have hIG := hIGAt M hr
@@ -181,7 +181,7 @@ theorem ziel_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) (fs : Aufzaehlu
     keinKernHalt := kernHaltE_aus fs.2 hA.abg hA.masken sp init M
     fortschritt := fortschrittG_aus hH.1 hSt sp init (startSpur_nodup_leer init hLeer) hr
       main.1.1.2.2.1
-      (bereichG_mehrfaden P O passes Q S fs.1 sp init (kVon P fs.1 init) hH.1 hH.2.1 hH.2.2
+      (bereichG_mehrfaden P O passes Q S fs.1 sp init (kVon P fs.1 init) hH.1 hH.2.1 hH.2.2.1
         hN.2.2.1 hS fs.2 hFrag hAbg hW hFuss (fun f => (hN.1 passes f).1) hStart hSstart hex M hr)
       hA.antworten
     zeit := fun f g n _ _ _ hadm hE _ run hA' =>

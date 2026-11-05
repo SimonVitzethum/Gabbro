@@ -49,6 +49,7 @@ inductive HwKomponente where
   | gut
   | regLokal
   | axVertrag
+  | nativeFloat
   deriving DecidableEq, Repr
 
 /-- What each component says (Spec.lean, THE ONE ASSUMPTION LIST). -/
@@ -56,22 +57,25 @@ def HwKomponente.gilt (O : Orakel D) (Q : AxEns D) : HwKomponente → Prop
   | .gut => GutO O
   | .regLokal => RegLokal O
   | .axVertrag => AxVertragO Q O
+  | .nativeFloat => RootNativeFloat.Hardware
 
 /-- All named components. -/
-def hwAlle : List HwKomponente := [.gut, .regLokal, .axVertrag]
+def hwAlle : List HwKomponente := [.gut, .regLokal, .axVertrag, .nativeFloat]
 
 /-- **`HardwareAnnahmen` is exactly the conjunction of the named components.** -/
 theorem hardware_iff_komponenten (O : Orakel D) (Q : AxEns D) :
     HardwareAnnahmen O Q ↔ ∀ k ∈ hwAlle, k.gilt O Q := by
   constructor
-  · rintro ⟨h1, h2, h3⟩ k hk
+  · rintro ⟨h1, h2, h3, h4⟩ k hk
     simp only [hwAlle, List.mem_cons, List.not_mem_nil, or_false] at hk
-    rcases hk with rfl | rfl | rfl
+    rcases hk with rfl | rfl | rfl | rfl
     · exact h1
     · exact h2
     · exact h3
+    · exact h4
   · intro h
-    exact ⟨h .gut (by simp [hwAlle]), h .regLokal (by simp [hwAlle]), h .axVertrag (by simp [hwAlle])⟩
+    exact ⟨h .gut (by simp [hwAlle]), h .regLokal (by simp [hwAlle]),
+      h .axVertrag (by simp [hwAlle]), h .nativeFloat (by simp [hwAlle])⟩
 
 /-! ## The selected unit -/
 

@@ -77,17 +77,17 @@ theorem axVertragOSw_ohne {Q : AxEns D} {O : Orakel D}
 /-- **(c) narrowed to the hardware**: the frame, the register locality and the hardware
     items' declared ensures. -/
 def HardwareAnnahmenHw (O : Orakel D) (Q : AxEns D) : Prop :=
-  GutO O ∧ RegLokal O ∧ AxVertragOHw Q O
+  GutO O ∧ RegLokal O ∧ AxVertragOHw Q O ∧ RootNativeFloat.Hardware
 
 /-- The narrowed hardware premise together with the software duty is the old premise. -/
 theorem hardwareAnnahmen_of_split {O : Orakel D} {Q : AxEns D} (hh : HardwareAnnahmenHw O Q)
     (hs : AxVertragOSw Q O) : HardwareAnnahmen O Q :=
-  ⟨hh.1, hh.2.1, axVertragO_of_split hh.2.2 hs⟩
+  ⟨hh.1, hh.2.1, axVertragO_of_split hh.2.2.1 hs, hh.2.2.2⟩
 
 /-- The old premise contains the narrowed one. -/
 theorem hardwareAnnahmenHw_of {O : Orakel D} {Q : AxEns D} (h : HardwareAnnahmen O Q) :
     HardwareAnnahmenHw O Q :=
-  ⟨h.1, h.2.1, axVertragOHw_of_O h.2.2⟩
+  ⟨h.1, h.2.1, axVertragOHw_of_O h.2.2.1, h.2.2.2⟩
 
 /-- **The software duty in replay form**: at every entry world and original arguments,
     the answer of the binding in the world with the question recorded meets `Q`. -/

@@ -7,6 +7,14 @@
   GOAL (Simon): a Gabbro user proves only their own logic plus named hardware assumptions; memory safety, race
   freedom, contracts where claimed -- in concurrent runs too -- and time are carried by the language.
 
+  NATIVE FLOAT HARDWARE BOUNDARY (owner, 2026-11-05). All floating operations,
+  comparisons, conversions, codecs and literal interpretation use opaque native
+  primitives. `RootNativeFloat.Hardware` is the named fourth component of (c),
+  including its finite/range, unsigned and saturating-conversion contracts. The
+  proof kernel does not execute an IEEE arithmetic, rounding or packing model.
+  There is no global instance discharging this hardware assumption. Memory,
+  ownership, concurrency, user contracts and cost conclusions remain unchanged.
+
   C03 DESCRIPTOR STAGE (2026-11-02). `ReasonSpec`/`ReasonVal` describe nominal u128 codes, including unknown
   open codes, and source collection retains their identity, code order and closed flag. The current G/GX goals
   still use finite-index reason channels and scalar raw answers: open transport and typed payloads are NOT

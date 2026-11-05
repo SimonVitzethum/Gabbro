@@ -59,7 +59,7 @@ theorem axVertrag_mitRuhe {Q : AxEns D} {O : Orakel D} (h : AxVertragO Q O) :
 /-- **The hardware assumptions on `O` are the ones on `O.mitRuhe`.** -/
 theorem hardware_mitRuhe {O : Orakel D} {Q : AxEns D} (h : HardwareAnnahmen O Q) :
     HardwareAnnahmen O.mitRuhe (axEnsRuhe Q) :=
-  ⟨gutO_mitRuhe h.1, regLokal_mitRuhe h.2.1, axVertrag_mitRuhe h.2.2⟩
+  ⟨gutO_mitRuhe h.1, regLokal_mitRuhe h.2.1, axVertrag_mitRuhe h.2.2.1, h.2.2.2⟩
 
 #print axioms Gabbro.Grammatik.koerperGutS_mitRuhe
 #print axioms Gabbro.Grammatik.invGutS_mitRuhe

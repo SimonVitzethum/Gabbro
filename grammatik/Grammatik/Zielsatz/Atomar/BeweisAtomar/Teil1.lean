@@ -249,15 +249,15 @@ theorem zielX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.F
   have hex := startExklusiv_ohne_haelt init hLeer
   have hGA := gx_ga_lauf hTA hX
   have hV := ziel_ort_atomar_voll P O passes Q S (kVon P fs init) (GeteiltV P ws) (lokW P fs ws)
-    sp init hH.1 hH.2.1 hH.2.2 hN.2.2.1 hS hvoll (fun t => hA.abg _)
+    sp init hH.1 hH.2.1 hH.2.2.1 hN.2.2.1 hS hvoll (fun t => hA.abg _)
     (fun t => reachB_wurzel P fs _) hTA hTV hTS hTO (fragX_ok hvoll hA.frag hA.fuss) hA.fuss
     hlokK hK hI hIG hZ.req hZ.sperren hex (fun t => (hW t).2) M hX
   have hInv := invarianten_atomar P O passes Q S (kVon P fs init) (GeteiltV P ws) (lokW P fs ws)
-    sp init hH.1 hH.2.1 hH.2.2 hN.2.2.1 hS hvoll (fun t => hA.abg _)
+    sp init hH.1 hH.2.1 hH.2.2.1 hN.2.2.1 hS hvoll (fun t => hA.abg _)
     (fun t => reachB_wurzel P fs _) hTA hTV hTS hTO (fragX_ok hvoll hA.frag hA.fuss) hA.fuss
     hlokK hK hI hIG hZ.req hZ.sperren hex (fun t => (hW t).2) M hX
   have hZI := zielInvSA_erreichbarGX P O passes Q S (kVon P fs init) (GeteiltV P ws) (lokW P fs ws)
-    sp init hH.1 hH.2.1 hH.2.2 hN.2.2.1 hS hvoll (fun t => hA.abg _)
+    sp init hH.1 hH.2.1 hH.2.2.1 hN.2.2.1 hS hvoll (fun t => hA.abg _)
     (fun t => reachB_wurzel P fs _) hTA hTV hTS hTO (fragX_ok hvoll hA.frag hA.fuss) hA.fuss
     hlokK hK (fun f => massPflicht_aus P passes Q S (GeteiltV P ws) Mass.leer f) hZ.req hZ.sperren hex M hX
   exact
@@ -287,7 +287,7 @@ theorem zielX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.F
       keinZyklus := kein_warteZyklusGA hH.1 hA.stufen sp init hLeer hGA
       keinKernHalt := kernHaltEA_aus hvoll hA.abg hA.masken sp init M
       fortschritt := fortschrittG_GA hH.1 hA.stufen sp init (startSpur_nodup_leer init hLeer) hGA
-        hV.2.2.1 (fun t => fadenSA_bereich hH.1 hH.2.1 hH.2.2 hS hZ.sperren hK hA.fuss t
+        hV.2.2.1 (fun t => fadenSA_bereich hH.1 hH.2.1 hH.2.2.1 hS hZ.sperren hK hA.fuss t
           (hZI.1.1 t)) hA.antworten
       zeit := fun f g n _ _ _ hadm hE _ run hA' =>
         frame_schritte_beschraenktX f g n hadm hE run hA'
