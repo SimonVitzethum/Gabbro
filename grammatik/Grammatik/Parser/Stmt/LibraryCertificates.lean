@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Logik.Vertraege.Uebersetzung
 public import Grammatik.Parser.Stmt.LibraryFixtures
+import Grammatik.Parser.Stmt.LibraryFixtureProofs
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -42,6 +43,7 @@ open Gabbro.Grammatik.Parser
 open Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
+open LibraryFixtureProofs
 
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
@@ -51,27 +53,21 @@ set_option maxHeartbeats 4000000
 def translationDeclaration (reverse : Bool) : TranslationDecl (translationSource reverse) (translationUnit reverse) where
   library := translationLibrary reverse
   resolved := except_ok_get (translation_library_exists reverse)
-  elaborated := by cases reverse <;> decide +kernel
+  elaborated := (translation_export_data reverse).1
   program := (translationLowered reverse).1
   functions := (translationLowered reverse).2
   lowered := except_ok_get (translation_lower_exists reverse)
-  translator := ⟨0, by cases reverse <;> decide +kernel⟩
-  translatorName := by cases reverse <;> rfl
+  translator := ⟨0, (translation_export_data reverse).2.positive⟩
+  translatorName := (translation_export_data reverse).2.name
   schema := translationSchema
-  parameters := by cases reverse <;> rfl
+  parameters := (translation_export_data reverse).2.parameters
   outputType := translationSchema.ty
-  result := by cases reverse <;> rfl
+  result := (translation_export_data reverse).2.result
   immutable := .arr _ _ (.int _ _)
-  noCalls := by cases reverse <;> decide +kernel
-  noIndirectCalls := by cases reverse <;> decide +kernel
-  bounded := by cases reverse <;> decide +kernel
-  noCycle := by
-    intro callee
-    rcases callee with ⟨index, bound⟩
-    have zero : index = 0 := by
-      cases reverse <;> change index < 1 at bound <;> omega
-    subst index
-    cases reverse <;> decide +kernel
+  noCalls := (translation_export_data reverse).2.noCalls
+  noIndirectCalls := (translation_export_data reverse).2.noIndirectCalls
+  bounded := (translation_export_data reverse).2.bounded
+  noCycle := (translation_export_data reverse).2.noCycle
 
 def translationInput (reverse : Bool) : Wert (declOf (translationUnit reverse)) translationSchema.ty :=
   fun index => ([⟨3, by decide, by decide⟩, ⟨5, by decide, by decide⟩] : List (Zahl 0 10)).get index
@@ -89,15 +85,18 @@ def translationCertificate (reverse : Bool) : TranslationCertificate (translatio
   fuel := 1
   execution := by
     intro oracle passes world
-    cases reverse <;> first
-      | rfl
-      | apply congrArg (RufAusgang.ok world)
+    have executed := (translation_export_data reverse).2.execution oracle passes world (translationInput reverse)
+    have output : (if reverse then fun index => translationInput reverse index.rev else translationInput reverse) =
+        translationOutput reverse := by
+      cases reverse with
+      | false => rfl
+      | true =>
         funext index
         rcases index with ⟨position, bound⟩
-        have choices : position = 0 ∨ position = 1 := by
-          change position < 2 at bound
-          omega
+        have choices : position = 0 ∨ position = 1 := by change position < 2 at bound; omega
         rcases choices with rfl | rfl <;> rfl
+    rw [output] at executed
+    exact executed
 
 theorem translation_result_unique_zeuge :
     ((translationCertificate false).output ⟨0, by decide⟩).n = 3 ∧
@@ -111,7 +110,7 @@ theorem translation_wrong_output_zeuge :
 theorem translation_body_change_zeuge :
     strEq (translationLibrary false).translator.name (translationLibrary true).translator.name = true ∧
     beqSAnw (translationLibrary false).translatorBody (translationLibrary true).translatorBody = false := by
-  decide +kernel
+  exact translation_library_change_data
 
 /-- Typing alone cannot certify identity output for the reversing source body. -/
 theorem translation_wrong_execution_zeuge
@@ -123,7 +122,7 @@ theorem translation_wrong_execution_zeuge
       .ok world ((translationDeclaration true).answer (translationInput true)) := by
   intro wrong
   have equal := translation_result_unique (translationCertificate true) oracle passes world _ wrong
-  change translationInput true = translationOutput true at equal
+  have equal := answer_injective (translationDeclaration true) equal
   have first := congrArg (fun value => (value ⟨0, by decide⟩).n) equal
   have distinct : (3 : Int) ≠ 5 := by decide
   exact distinct first
@@ -148,28 +147,21 @@ theorem translation_measure_zeuge (passes : Nat) (Q : AxEns (declOf (translation
 def translationQualDeclaration : TranslationDecl translationQualSource translationQualUnit where
   library := translationQualLibrary
   resolved := except_ok_get translation_qual_library_zeuge
-  elaborated := by decide +kernel
+  elaborated := translation_qual_export_data.1
   program := translationQualLowered.1
   functions := translationQualLowered.2
   lowered := except_ok_get translation_qual_lower_zeuge
-  translator := ⟨0, by decide +kernel⟩
-  translatorName := by rfl
+  translator := ⟨0, translation_qual_export_data.2.positive⟩
+  translatorName := translation_qual_export_data.2.name
   schema := translationSchema
-  parameters := by rfl
+  parameters := translation_qual_export_data.2.parameters
   outputType := translationSchema.ty
-  result := by rfl
+  result := translation_qual_export_data.2.result
   immutable := .arr _ _ (.int _ _)
-  noCalls := by decide +kernel
-  noIndirectCalls := by decide +kernel
-  bounded := by decide +kernel
-  noCycle := by
-    intro callee
-    rcases callee with ⟨index, bound⟩
-    have zero : index = 0 := by
-      change index < 1 at bound
-      omega
-    subst index
-    decide +kernel
+  noCalls := translation_qual_export_data.2.noCalls
+  noIndirectCalls := translation_qual_export_data.2.noIndirectCalls
+  bounded := translation_qual_export_data.2.bounded
+  noCycle := translation_qual_export_data.2.noCycle
 
 def translationQualInput : Wert (declOf translationQualUnit) translationSchema.ty :=
   fun index => ([⟨3, by decide, by decide⟩, ⟨5, by decide, by decide⟩] : List (Zahl 0 10)).get index
@@ -182,7 +174,7 @@ def translationQualCertificate : TranslationCertificate translationQualDeclarati
   fuel := 1
   execution := by
     intro oracle passes world
-    rfl
+    exact translation_qual_export_data.2.execution oracle passes world translationQualInput
 
 /-- The per-site payload of the identity translation: site `[0]`, content the certified output. -/
 def translationPayload : LibraryPayload (translationCertificate false) where
@@ -203,15 +195,25 @@ theorem translationPayload_standort_zeuge : translationPayload.site ≠ [1] := b
 def translationExpansion : LibraryExpansion translationPayload where
   nutzlastArg := .variable "sample_payload_0"
   aufruf := .call "consume" (translationCall.args ++ [.variable "sample_payload_0"])
-  erweitert := Or.inl rfl
-  stelligkeit := by decide +kernel
+  erweitert := Or.inl (by
+    change .call "consume" (translationCall.args ++ [.variable "sample_payload_0"]) =
+      .call (translationLibrary false).function.name (translationCall.args ++ [.variable "sample_payload_0"])
+    rw [(translation_library_shape false).1])
+  stelligkeit := by
+    simpa only [List.length_append, List.length_singleton] using (translation_library_shape false).2
 
 /-- The certified `bindLib` expansion: the ordinary call value bound as usual. -/
 def translationExpansionBind : LibraryExpansion translationPayload where
   nutzlastArg := .variable "sample_payload_0"
   aufruf := .bind false "value" none (.call "consume" (translationCall.args ++ [.variable "sample_payload_0"]))
-  erweitert := Or.inr ⟨false, "value", (none : Option STyp), rfl⟩
-  stelligkeit := by decide +kernel
+  erweitert := Or.inr ⟨false, "value", (none : Option STyp), by
+    change .bind false "value" none
+      (.call "consume" (translationCall.args ++ [.variable "sample_payload_0"])) =
+      .bind false "value" none
+        (.call (translationLibrary false).function.name (translationCall.args ++ [.variable "sample_payload_0"]))
+    rw [(translation_library_shape false).1]⟩
+  stelligkeit := by
+    simpa only [List.length_append, List.length_singleton] using (translation_library_shape false).2
 
 /-- Both expansions are ordinary: no library construct remains for the lowering. -/
 theorem translationExpansion_ohne_zeuge :
@@ -230,7 +232,9 @@ theorem torZurErweiterung_zeuge :
 /-- The generated translator program is library-closed. -/
 theorem translation_libraryB_zeuge :
     Gabbro.Grammatik.Zielsatz.libraryB (translationLowered false).1
-      (translationLowered false).2 = true := rfl
+      (translationLowered false).2 = true := by
+  unfold Gabbro.Grammatik.Zielsatz.libraryB
+  exact List.all_eq_true.mpr (fun _ _ => rfl)
 
 /-- The library admission holds on the generated program, through the checker binding. -/
 theorem translation_libraryAdmission_zeuge :

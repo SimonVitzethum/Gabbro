@@ -11,6 +11,66 @@ namespace Gabbro.Grammatik.Uebersetzung.LibraryFixtureProofs
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 
+/-- Facts of the actual typed image at its first function. All fields are
+    proved from phase results; none is an admission premise for source code. -/
+structure DeclarationData (library : ULibrary) (unit : UProg)
+    (image : Programm (declOf unit) × List (declOf unit).Fn) (schema : IntegerSchema)
+    (reorder : Wert (declOf unit) schema.ty → Wert (declOf unit) schema.ty) : Prop where
+  positive : 0 < unit.fns.length
+  name : (fnAt unit ⟨0, positive⟩).name = library.translator.name
+  parameters : (declOf unit).params ⟨0, positive⟩ = [schema.ty]
+  result : (declOf unit).erg ⟨0, positive⟩ = some schema.ty
+  noCalls : (befund image.1 ⟨0, positive⟩).rufe = []
+  noIndirectCalls : (befund image.1 ⟨0, positive⟩).sigs = []
+  bounded : (befund image.1 ⟨0, positive⟩).ewig = false
+  noCycle : ∀ callee, zykS image.1 image.2 ⟨0, positive⟩ callee = false
+  execution : ∀ oracle passes world (input : Wert (declOf unit) schema.ty),
+    rufAt image.1 oracle passes 1 ⟨0, positive⟩ world
+      (parameters.symm ▸ (Env.cons input Env.nil : Env (declOf unit) [schema.ty])) =
+      .ok world (result.symm ▸ (reorder input : ErgVal (declOf unit) (some schema.ty)))
+
+/-- Substitute complete selected library/unit values before touching their
+    dependent program pair. Success proofs may differ only proof-irrelevantly. -/
+theorem certifyData (members : List SItemTief) (call : SLibraryCall)
+    (present : (libraryDecl members call).toOption.isSome = true)
+    (Q : (library : ULibrary) → (unit : UProg) →
+      (Programm (declOf unit) × List (declOf unit).Fn) → Prop)
+    (library : ULibrary) (unit : UProg)
+    (found : libraryDecl members call = .ok library)
+    (elaborated : elabU (pre108 (translatorItems members library)) = .ok unit)
+    (lowered : (lowerAllg unit).toOption.isSome = true)
+    (facts : Q library unit ((lowerAllg unit).toOption.get lowered)) :
+    let selected := (libraryDecl members call).toOption.get present
+    let exported := (elabU (pre108 (translatorItems members selected))).toOption.getD
+      { tabs := [], locks := [], fns := [] }
+    ∀ checked : (lowerAllg exported).toOption.isSome = true,
+      elabU (pre108 (translatorItems members selected)) = .ok exported ∧
+        Q selected exported ((lowerAllg exported).toOption.get checked) := by
+  dsimp only
+  intro checked
+  have selected : library = (libraryDecl members call).toOption.get present :=
+    Except.ok.inj (found.symm.trans (except_ok_get present))
+  subst library
+  have selected : unit =
+      (elabU (pre108 (translatorItems members
+        ((libraryDecl members call).toOption.get present)))).toOption.getD
+          { tabs := [], locks := [], fns := [] } := by
+    rw [elaborated]
+    rfl
+  subst unit
+  exact ⟨elaborated, facts⟩
+
+/-- Equality of answers may be cancelled without reducing a concrete unit
+    beneath its dependent result type. -/
+theorem answer_injective {source : LibrarySource} {unit : UProg}
+    (decl : TranslationDecl source unit) : Function.Injective decl.answer := by
+  intro first second same
+  have cancel {left right : Option Ty} (equal : left = right)
+      (a b : ErgVal (declOf unit) left) (h : (equal ▸ a) = (equal ▸ b)) : a = b := by
+    cases equal
+    exact h
+  exact cancel decl.result.symm first second same
+
 -- Each computed phase supplies the next phase's concrete canonical input. The
 -- public getD definitions are retained, but success never follows from a default.
 theorem certifyPhases (characters : List Char) (call : SLibraryCall)

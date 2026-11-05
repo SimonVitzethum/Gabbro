@@ -247,5 +247,43 @@ def translationQualLowered :
     Programm (declOf translationQualUnit) × List (declOf translationQualUnit).Fn :=
   (lowerAllg translationQualUnit).toOption.get translation_qual_lower_zeuge
 
+private theorem qual_phase_data :
+    DeclarationData qualPhaseLibrary qualPhaseUnit
+      ((lowerAllg qualPhaseUnit).toOption.get qual_lower_success)
+      (⟨0, 10, 2⟩ : IntegerSchema) (fun input => input) := by
+  have count : qualPhaseUnit.fns.length = 1 := by cbv
+  refine { positive := by omega, name := ?_, parameters := ?_, result := ?_,
+    noCalls := ?_, noIndirectCalls := ?_, bounded := ?_, noCycle := ?_, execution := ?_ }
+  · cbv
+  · cbv
+  · cbv
+  · cbv
+  · cbv
+  · cbv
+  · rintro ⟨index, bound⟩
+    have small : index < 1 := by rw [← count]; exact bound
+    have zero : index = 0 := by omega
+    subst index
+    cbv
+  · intro oracle passes world input
+    cbv
+
+/-- Preserve the complete qualified phase result before typed projections. -/
+theorem translation_qual_export_data :
+    elabU (pre108 (translatorItems translationQualMembers translationQualLibrary)) =
+      .ok translationQualUnit ∧
+    DeclarationData translationQualLibrary translationQualUnit translationQualLowered
+      (⟨0, 10, 2⟩ : IntegerSchema) (fun input => input) := by
+  have members : translationQualMembers = qualPhaseMembers := by
+    simp only [translationQualMembers, translationQualItems, translationQualTokens,
+      translation_qual_text, String.toList_ofList, qual_lexed, except_ok_get qual_parse_success]
+    rfl
+  exact certifyData translationQualMembers translationQualCall translation_qual_library_zeuge
+    (fun library unit image => DeclarationData library unit image
+      (⟨0, 10, 2⟩ : IntegerSchema) (fun input => input)) qualPhaseLibrary qualPhaseUnit
+    (by rw [members]; exact except_ok_get qual_library_success)
+    (by rw [members]; exact except_ok_get qual_elab_success)
+    qual_lower_success qual_phase_data translation_qual_lower_zeuge
+
 end Gabbro.Grammatik.Uebersetzung
 
