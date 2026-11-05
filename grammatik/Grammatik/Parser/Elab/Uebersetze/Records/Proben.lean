@@ -67,6 +67,41 @@ def recordLiteral : USide :=
 def recordLiteralUmgestellt : USide :=
   .product 7 true [(.bool, .truth true), (.int 0 255, .lit 42)]
 
+private def recordArgs : Args (declOf recordUnit) [] [] [.int 0 255, .bool] :=
+  .cons (Expr.widen (by decide) (by decide) (Expr.lit 42)) (.cons Expr.tru .nil)
+
+private theorem record_schema_selected :
+    uRecordOf recordUnit.records recordFixture.ty = .ok ⟨recordFixture, rfl⟩ := by
+  cbv <;> rfl
+
+private theorem record_named_fields_arranged :
+    uRecordValues recordFixture [("flag", .truth true), ("small", .lit 42)] =
+      .ok (.product 7 true [(.int 0 255, .lit 42), (.bool, .truth true)]) := by
+  cbv <;> rfl
+
+private theorem record_fields_lowered :
+    lowProductArgs recordUnit [] [] recordFunction none
+      [(.int 0 255, .lit 42), (.bool, .truth true)] = .ok recordArgs := by
+  cbv <;> rfl
+
+private theorem record_product_lowered (reordered : Bool) :
+    lowWertE recordUnit [] [] recordFunction none
+      (.product 7 reordered [(.int 0 255, .lit 42), (.bool, .truth true)]) =
+      .ok ⟨recordFixture.ty, Expr.prod 7 recordArgs⟩ := by
+  exact record_lower recordUnit [] [] recordFunction none 7 reordered _ recordArgs
+    (by cbv) record_fields_lowered ⟨recordFixture, rfl⟩ record_schema_selected
+
+private theorem record_swapped_types_refused :
+    lowWertE recordUnit [] [] recordFunction none
+      (.product 7 true [(.bool, .truth true), (.int 0 255, .lit 42)]) =
+      .error "source export: unknown nominal record schema" := by
+  cbv <;> rfl
+
+private theorem record_constant_quoted (number : Int) :
+    uConstantValue (.product 7 false [(.int 0 255, .lit number), (.bool, .truth true)]) =
+      .ok (.product 7 [.zahl number, .wahr true]) := by
+  cbv <;> rfl
+
 /-- Nondegenerate nominal schema, construction (in and out of declaration order), projection,
     replacement and nested replacement, all through the real lowering. -/
 theorem record_lower_zeuge :
