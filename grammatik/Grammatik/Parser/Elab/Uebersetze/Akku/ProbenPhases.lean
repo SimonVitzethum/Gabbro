@@ -180,7 +180,7 @@ private theorem bound_names_select (fuel : Nat) (statement : SAnw) :
           .watch _ body | .waive _ body | .grow _ _ body | .child body => uAkkuBinder fuel body
         | .block statements _ => statements.flatMap (uAkkuBinder fuel)
         | _ => [] := by
-  cases fuel <;> rfl
+  cases fuel <;> cases statement <;> rfl
 
 -- The unit collects these source descriptors before and after elaborating its
 -- functions. Select their real fuel before forming a recursive list callback.
@@ -223,7 +223,7 @@ private theorem start_source_select (fuel : Nat) (statement : SAnw) :
         | .cases _ arms => arms.flatMap (uStartNamen fuel)
         | .arm _ _ body => uStartNamen fuel body
         | _ => [] := by
-  cases fuel <;> rfl
+  cases fuel <;> cases statement <;> rfl
 
 -- These are the actual clause shapes of the two uses and three generated
 -- functions. They introduce neither preconditions nor postconditions, even
