@@ -77,7 +77,7 @@ def positive : UKonstFn where
 theorem bool_values_zeuge :
     ersetzeSExpr [positive] (.call "positive" [.lit 3]) = .ok .tru ∧
     ersetzeSExpr [positive] (.call "positive" [.lit 0]) = .ok .fls := by
-  cbv <;> dsimp only <;> cbv
+  cbv <;> dsimp only <;> simp only [reader_bool] <;> cbv
 
 def optional : UKonstFn where
   name := "optional"
@@ -143,7 +143,12 @@ theorem tag_values_zeuge :
     ersetzeSExpr [emptyTag] (.call "tagged" []) = .ok (.variable "Empty") ∧
     ersetzeSExpr [flagTag] (.call "tagged" []) = .ok (.call "Flag" [.tru]) ∧
     ersetzeSExpr [textTag] (.call "tagged" []) = .ok (.call "Text" [.ext .text ["Z"] []]) := by
-  cbv <;> dsimp only <;> cbv
+  -- Transport the whole Code result through the named elaboration match first.
+  cbv <;> dsimp only <;> simp only [reader_sum] <;> cbv
+  all_goals simp only [reader_payload, reader_empty, reader_missing]
+  all_goals cbv
+  all_goals simp only [reader_int, reader_bool, reader_text]
+  all_goals cbv
 
 def shortText (text : String) (maximum : Nat := 1) : UKonstFn where
   name := "shortText"
@@ -163,7 +168,7 @@ def shortText (text : String) (maximum : Nat := 1) : UKonstFn where
 theorem string_values_zeuge :
     ersetzeSExpr [shortText ""] (.call "shortText" []) = .ok (.ext .text [""] []) ∧
     ersetzeSExpr [shortText "A"] (.call "shortText" []) = .ok (.ext .text ["A"] []) := by
-  cbv <;> dsimp only <;> cbv
+  cbv <;> dsimp only <;> simp only [reader_text] <;> cbv
 
 /-- The production collector binds the Boolean fixture to its actual source signature. -/
 theorem bool_collected_zeuge :
@@ -172,7 +177,7 @@ theorem bool_collected_zeuge :
 /-- A zero-byte maximum is checked separately from an empty string under maximum one. -/
 theorem zero_string_zeuge :
     ersetzeSExpr [shortText "" 0] (.call "shortText" []) = .ok (.ext .text [""] []) := by
-  cbv <;> dsimp only <;> cbv
+  cbv <;> dsimp only <;> simp only [reader_text] <;> cbv
 
 def reasonTag : UKonstFn where
   name := "reasonTag"
@@ -222,7 +227,7 @@ theorem portable_call_sound_zeuge :
 theorem bool_type_refused_zeuge :
     ersetzeSExpr [{ positive with rumpf := .block [] (some (.ret (some (.lit 1)))) }]
       (.call "positive" [.lit 3]) = .error "const value has a different declared type" := by
-  cbv <;> dsimp only <;> cbv
+  cbv <;> dsimp only <;> simp only [reader_bool] <;> cbv
 
 theorem option_bound_refused_zeuge :
     ersetzeSExpr [{ optional with
@@ -233,17 +238,21 @@ theorem option_bound_refused_zeuge :
 theorem tag_payload_refused_zeuge :
     ersetzeSExpr [{ emptyTag with rumpf := .block [] (some (.ret (some (.call "Data" [.tru])))) }]
       (.call "tagged" []) = .error "const value has a different declared type" := by
-  cbv <;> dsimp only <;> cbv
+  cbv <;> dsimp only <;> simp only [reader_sum] <;> cbv
+  all_goals simp only [reader_payload]
+  all_goals cbv
+  all_goals simp only [reader_int]
+  all_goals cbv
 
 theorem tag_unknown_refused_zeuge :
     ersetzeSExpr [{ emptyTag with rumpf := .block [] (some (.ret (some (.variable "Foreign")))) }]
       (.call "tagged" []) = .error "const tagged constructor is unknown: Foreign" := by
-  cbv <;> dsimp only <;> cbv
+  cbv <;> dsimp only <;> simp only [reader_sum] <;> cbv
 
 theorem string_utf8_bound_refused_zeuge :
     ersetzeSExpr [shortText "é"] (.call "shortText" []) =
       .error "const string literal exceeds its declared maximum" := by
-  cbv <;> dsimp only <;> cbv
+  cbv <;> dsimp only <;> simp only [reader_text] <;> cbv
 
 theorem wide_string_refused_zeuge :
     ersetzeSExpr [shortText "A" 2] (.call "shortText" []) =
@@ -253,19 +262,21 @@ theorem portable_post_refused_zeuge :
     ersetzeSExpr [{ positive with signature := { positive.signature with klauseln := [.gives .fls] } }]
       (.call "positive" [.lit 3]) =
       .error "const contract violated at `positive`: ensures failed" := by
-  cbv <;> dsimp only <;> cbv
+  cbv <;> dsimp only <;> simp only [reader_bool] <;> cbv
 
 theorem portable_requires_refused_zeuge :
     ersetzeSExpr [{ positive with signature := { positive.signature with klauseln := [.needs .fls] } }]
       (.call "positive" [.lit 3]) =
       .error "const contract violated at `positive`: requires failed" := by
-  cbv <;> dsimp only <;> cbv
+  cbv <;> dsimp only <;> simp only [reader_bool] <;> cbv
 
 theorem tag_missing_payload_refused_zeuge :
     ersetzeSExpr [{ emptyTag with rumpf := .block [] (some (.ret (some (.variable "Data")))) }]
       (.call "tagged" []) =
       .error "const tagged constructor payload does not match its declared type" := by
-  cbv <;> dsimp only <;> cbv
+  cbv <;> dsimp only <;> simp only [reader_sum] <;> cbv
+  all_goals simp only [reader_missing]
+  all_goals cbv
 
 /-- Statement-position calls keep their call-log-sensitive refusal after value expansion. -/
 theorem portable_statement_refused_zeuge :
