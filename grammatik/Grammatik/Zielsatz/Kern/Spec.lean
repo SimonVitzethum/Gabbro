@@ -10,7 +10,11 @@
   NATIVE FLOAT HARDWARE BOUNDARY (owner, 2026-11-05). All floating operations,
   comparisons, conversions, codecs and literal interpretation use opaque native
   primitives. `RootNativeFloat.Hardware` is the named fourth component of (c),
-  including its finite/range, unsigned and saturating-conversion contracts. The
+  including its finite/range, unsigned and saturating-conversion contracts.
+  Its seventh component additionally assumes nearest-even rounding for finite
+  binary32/binary64 addition, subtraction, multiplication and division, with
+  signed overflow and division-by-zero results. This strengthens the named
+  hardware premise; zero signs and NaN payloads remain unconstrained. The
   proof kernel does not execute an IEEE arithmetic, rounding or packing model.
   There is no global instance discharging this hardware assumption. Memory,
   ownership, concurrency, user contracts and cost conclusions remain unchanged.
