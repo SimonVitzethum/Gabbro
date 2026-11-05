@@ -10,6 +10,9 @@ import all Grammatik.Parser.Elab.Generic.StaticConformance
 import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest1
 import all Grammatik.Parser.Elab.UebersetzeAllg3.Body
 import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest2a
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Stufe
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Seq
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Struct
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -53,6 +56,18 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
+
+-- Reduce only the selected operation of the canonical fuel record. Evaluating
+-- its unused fields eagerly would construct all 100000 recursive levels.
+private theorem seq_succ (u : UProg) (caller : Fin u.fns.length) (n : Nat)
+    {l : Bool} (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u)))
+    (pe : AtTop u caller Λ) (ss : List UStmt) :
+    lowSeqL (l := l) u caller Γ fn (n + 1) Λ pe ss =
+      lowSeqStep u caller (lowStufe u caller n) Γ fn Λ pe ss := rfl
+
+attribute [local cbv_opaque] lowStufe lowSeqL lowStructL lowEndL
+attribute [local cbv_eval] seq_succ lowStructL_succ lowEndL_succ
+  lowStufe_seq lowStufe_struct lowStufe_ende
 
 -- Each computed phase supplies the next phase's concrete canonical input. The
 -- public getD definitions are retained, but success never follows from a default.
@@ -103,6 +118,29 @@ def translationText (reverse : Bool) : String :=
   "effects { pure } { return " ++ (if reverse then "[region[1], region[0]]" else "region") ++
   "; } impl fn caller() { @sample#consume() { 3 5 }; return; } }"
 
+-- The source equality below encodes these exact characters; later phases never
+-- decode the complete UTF-8 source literal again.
+private def translationCharacters (reverse : Bool) : List Char :=
+  ['m', 'o', 'd', 'u', 'l', 'e', ' ', 's', 'a', 'm', 'p', 'l', 'e', ' ', '{', ' ', 't', 'a', 'b', 'l', 'e', ' ', 'R',
+   'o', 'w', 's', ' ', 'c', 'o', 'u', 'n', 't', ' ', '2', ' ', '{', ' ', 's', 'l', 'o', 't', ' ', '{', ' ', 'v', ' ',
+   ':', ' ', 'u', '8', ' ', 'i', 'n', ' ', '0', ' ', '.', '.', ' ', '1', '0', ',', ' ', '}', ' ', '}', ' ', 'l', 'i',
+   'b', 'r', 'a', 'r', 'y', ' ', 'f', 'n', ' ', 'c', 'o', 'n', 's', 'u', 'm', 'e', '(', 'p', ' ', ':', ' ', 'p', 't',
+   'r', '<', 'n', 'o', 'r', 'm', 'a', 'l', ',', ' ', 'r', '>', ' ', 'R', 'o', 'w', 's', ')', ' ', 'p', 'a', 'y', 'l',
+   'o', 'a', 'd', ' ', 'R', 'o', 'w', 's', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ';', ' ', '}', ' ', 't', 'r',
+   'a', 'n', 's', 'l', 'a', 't', 'o', 'r', ' ', 'b', 'u', 'i', 'l', 'd', ' ', 'f', 'o', 'r', ' ', 'c', 'o', 'n', 's',
+   'u', 'm', 'e', '(', 'r', 'e', 'g', 'i', 'o', 'n', ' ', ':', ' ', '[', 'u', '8', ' ', 'i', 'n', ' ', '0', ' ', '.',
+   '.', ' ', '1', '0', ';', ' ', '2', ']', ')', ' ', '-', '>', ' ', '[', 'u', '8', ' ', 'i', 'n', ' ', '0', ' ', '.',
+   '.', ' ', '1', '0', ';', ' ', '2', ']', ' ', 'e', 'f', 'f', 'e', 'c', 't', 's', ' ', '{', ' ', 'p', 'u', 'r', 'e',
+   ' ', '}', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' '] ++
+  (if reverse then ['[', 'r', 'e', 'g', 'i', 'o', 'n', '[', '1', ']', ',', ' ', 'r', 'e', 'g', 'i', 'o', 'n', '[', '0', ']', ']'] else ['r', 'e', 'g', 'i', 'o', 'n']) ++
+  [';', ' ', '}', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'c', 'a', 'l', 'l', 'e', 'r', '(', ')', ' ', '{', ' ',
+   '@', 's', 'a', 'm', 'p', 'l', 'e', '#', 'c', 'o', 'n', 's', 'u', 'm', 'e', '(', ')', ' ', '{', ' ', '3', ' ', '5',
+   ' ', '}', ';', ' ', 'r', 'e', 't', 'u', 'r', 'n', ';', ' ', '}', ' ', '}']
+
+private theorem translation_text (reverse : Bool) :
+    translationText reverse = String.ofList (translationCharacters reverse) := by
+  cases reverse <;> cbv
+
 def translationTokens (reverse : Bool) : List Token :=
   (lexL (translationText reverse).toList).toOption.getD []
 
@@ -136,7 +174,9 @@ private theorem translation_phases (reverse : Bool) :
       ?lexed, ?parsed, ?resolved, ?kept, ?found, ?elaborated, ?lowered⟩
     -- Explicit equality elaboration assigns the computed phase's witness;
     -- cbv's own closing attempt does not assign synthetic opaque holes.
-    case lexed => cbv <;> exact Eq.refl _
+    case lexed =>
+      rw [translation_text, String.toList_ofList]
+      cbv <;> exact Eq.refl _
     case parsed => cbv <;> exact Eq.refl _
     case resolved => cbv <;> exact Eq.refl _
     case kept => cbv
@@ -206,6 +246,35 @@ def translationQualText : String :=
   "effects { pure } { return region; } } " ++
   "impl fn caller() { @a#consume() { 3 5 }; return; }"
 
+private def translationQualCharacters : List Char :=
+  ['m', 'o', 'd', 'u', 'l', 'e', ' ', 'a', ' ', '{', ' ', 't', 'a', 'b', 'l', 'e', ' ', 'R', 'o', 'w', 's', ' ', 'c',
+   'o', 'u', 'n', 't', ' ', '2', ' ', '{', ' ', 's', 'l', 'o', 't', ' ', '{', ' ', 'v', ' ', ':', ' ', 'u', '8', ' ',
+   'i', 'n', ' ', '0', ' ', '.', '.', ' ', '1', '0', ',', ' ', '}', ' ', '}', ' ', 'l', 'i', 'b', 'r', 'a', 'r', 'y',
+   ' ', 'f', 'n', ' ', 'c', 'o', 'n', 's', 'u', 'm', 'e', '(', 'p', ' ', ':', ' ', 'p', 't', 'r', '<', 'n', 'o', 'r',
+   'm', 'a', 'l', ',', ' ', 'r', '>', ' ', 'R', 'o', 'w', 's', ')', ' ', 'p', 'a', 'y', 'l', 'o', 'a', 'd', ' ', 'R',
+   'o', 'w', 's', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ';', ' ', '}', ' ', 't', 'r', 'a', 'n', 's', 'l', 'a',
+   't', 'o', 'r', ' ', 'b', 'u', 'i', 'l', 'd', ' ', 'f', 'o', 'r', ' ', 'c', 'o', 'n', 's', 'u', 'm', 'e', '(', 'r',
+   'e', 'g', 'i', 'o', 'n', ' ', ':', ' ', '[', 'u', '8', ' ', 'i', 'n', ' ', '0', ' ', '.', '.', ' ', '1', '0', ';',
+   ' ', '2', ']', ')', ' ', '-', '>', ' ', '[', 'u', '8', ' ', 'i', 'n', ' ', '0', ' ', '.', '.', ' ', '1', '0', ';',
+   ' ', '2', ']', ' ', 'e', 'f', 'f', 'e', 'c', 't', 's', ' ', '{', ' ', 'p', 'u', 'r', 'e', ' ', '}', ' ', '{', ' ',
+   'r', 'e', 't', 'u', 'r', 'n', ' ', 'r', 'e', 'g', 'i', 'o', 'n', ';', ' ', '}', ' ', '}', ' ', 'm', 'o', 'd', 'u',
+   'l', 'e', ' ', 'b', ' ', '{', ' ', 't', 'a', 'b', 'l', 'e', ' ', 'R', 'o', 'w', 's', ' ', 'c', 'o', 'u', 'n', 't',
+   ' ', '2', ' ', '{', ' ', 's', 'l', 'o', 't', ' ', '{', ' ', 'v', ' ', ':', ' ', 'u', '8', ' ', 'i', 'n', ' ', '0',
+   ' ', '.', '.', ' ', '1', '0', ',', ' ', '}', ' ', '}', ' ', 'l', 'i', 'b', 'r', 'a', 'r', 'y', ' ', 'f', 'n', ' ',
+   'c', 'o', 'n', 's', 'u', 'm', 'e', '(', 'p', ' ', ':', ' ', 'p', 't', 'r', '<', 'n', 'o', 'r', 'm', 'a', 'l', ',',
+   ' ', 'r', '>', ' ', 'R', 'o', 'w', 's', ')', ' ', 'p', 'a', 'y', 'l', 'o', 'a', 'd', ' ', 'R', 'o', 'w', 's', ' ',
+   '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ';', ' ', '}', ' ', 't', 'r', 'a', 'n', 's', 'l', 'a', 't', 'o', 'r', ' ',
+   'b', 'u', 'i', 'l', 'd', ' ', 'f', 'o', 'r', ' ', 'c', 'o', 'n', 's', 'u', 'm', 'e', '(', 'r', 'e', 'g', 'i', 'o',
+   'n', ' ', ':', ' ', '[', 'u', '8', ' ', 'i', 'n', ' ', '0', ' ', '.', '.', ' ', '1', '0', ';', ' ', '2', ']', ')',
+   ' ', '-', '>', ' ', '[', 'u', '8', ' ', 'i', 'n', ' ', '0', ' ', '.', '.', ' ', '1', '0', ';', ' ', '2', ']', ' ',
+   'e', 'f', 'f', 'e', 'c', 't', 's', ' ', '{', ' ', 'p', 'u', 'r', 'e', ' ', '}', ' ', '{', ' ', 'r', 'e', 't', 'u',
+   'r', 'n', ' ', 'r', 'e', 'g', 'i', 'o', 'n', ';', ' ', '}', ' ', '}', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ',
+   'c', 'a', 'l', 'l', 'e', 'r', '(', ')', ' ', '{', ' ', '@', 'a', '#', 'c', 'o', 'n', 's', 'u', 'm', 'e', '(', ')',
+   ' ', '{', ' ', '3', ' ', '5', ' ', '}', ';', ' ', 'r', 'e', 't', 'u', 'r', 'n', ';', ' ', '}']
+
+private theorem translation_qual_text :
+    translationQualText = String.ofList translationQualCharacters := by cbv
+
 def translationQualTokens : List Token := (lexL translationQualText.toList).toOption.getD []
 
 def translationQualItems : List SItemTief := (parseTopTief translationQualTokens).toOption.getD []
@@ -234,7 +303,9 @@ private theorem translation_qual_phases :
       members[6]? = some (SItemTief.fnT translationQualCaller translationQualCallerBody)) ?_
   refine ⟨?tokens, ?items, ?members, ?library, ?unit,
     ?lexed, ?parsed, ?resolved, ?kept, ?found, ?elaborated, ?lowered⟩
-  case lexed => cbv <;> exact Eq.refl _
+  case lexed =>
+    rw [translation_qual_text, String.toList_ofList]
+    cbv <;> exact Eq.refl _
   case parsed => cbv <;> exact Eq.refl _
   case resolved => cbv <;> exact Eq.refl _
   case kept => cbv
@@ -295,6 +366,25 @@ def translationRekText : String :=
   "translator build for consume(region : [u8 in 0 .. 10; 1]) -> [u8 in 0 .. 10; 1] " ++
   "effects { pure } { return build(region); } impl fn caller() { @sample#consume() { 3 }; return; } }"
 
+private def translationRekCharacters : List Char :=
+  ['m', 'o', 'd', 'u', 'l', 'e', ' ', 's', 'a', 'm', 'p', 'l', 'e', ' ', '{', ' ', 't', 'a', 'b', 'l', 'e', ' ', 'R',
+   'o', 'w', 's', ' ', 'c', 'o', 'u', 'n', 't', ' ', '1', ' ', '{', ' ', 's', 'l', 'o', 't', ' ', '{', ' ', 'v', ' ',
+   ':', ' ', 'u', '8', ' ', 'i', 'n', ' ', '0', ' ', '.', '.', ' ', '1', '0', ',', ' ', '}', ' ', '}', ' ', 'l', 'i',
+   'b', 'r', 'a', 'r', 'y', ' ', 'f', 'n', ' ', 'c', 'o', 'n', 's', 'u', 'm', 'e', '(', 'p', ' ', ':', ' ', 'p', 't',
+   'r', '<', 'n', 'o', 'r', 'm', 'a', 'l', ',', ' ', 'r', '>', ' ', 'R', 'o', 'w', 's', ')', ' ', 'p', 'a', 'y', 'l',
+   'o', 'a', 'd', ' ', 'R', 'o', 'w', 's', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ';', ' ', '}', ' ', 't', 'r',
+   'a', 'n', 's', 'l', 'a', 't', 'o', 'r', ' ', 'b', 'u', 'i', 'l', 'd', ' ', 'f', 'o', 'r', ' ', 'c', 'o', 'n', 's',
+   'u', 'm', 'e', '(', 'r', 'e', 'g', 'i', 'o', 'n', ' ', ':', ' ', '[', 'u', '8', ' ', 'i', 'n', ' ', '0', ' ', '.',
+   '.', ' ', '1', '0', ';', ' ', '1', ']', ')', ' ', '-', '>', ' ', '[', 'u', '8', ' ', 'i', 'n', ' ', '0', ' ', '.',
+   '.', ' ', '1', '0', ';', ' ', '1', ']', ' ', 'e', 'f', 'f', 'e', 'c', 't', 's', ' ', '{', ' ', 'p', 'u', 'r', 'e',
+   ' ', '}', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 'b', 'u', 'i', 'l', 'd', '(', 'r', 'e', 'g', 'i', 'o',
+   'n', ')', ';', ' ', '}', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'c', 'a', 'l', 'l', 'e', 'r', '(', ')', ' ',
+   '{', ' ', '@', 's', 'a', 'm', 'p', 'l', 'e', '#', 'c', 'o', 'n', 's', 'u', 'm', 'e', '(', ')', ' ', '{', ' ', '3',
+   ' ', '}', ';', ' ', 'r', 'e', 't', 'u', 'r', 'n', ';', ' ', '}', ' ', '}']
+
+private theorem translation_rek_text :
+    translationRekText = String.ofList translationRekCharacters := by cbv
+
 def translationRekTokens : List Token := (lexL translationRekText.toList).toOption.getD []
 
 def translationRekItems : List SItemTief := (parseTopTief translationRekTokens).toOption.getD []
@@ -314,7 +404,9 @@ private theorem translation_rek_phases :
     (fun (_ : List SItemTief) => True) ?_
   refine ⟨?tokens, ?items, ?members, ?library, ?unit,
     ?lexed, ?parsed, ?resolved, ?kept, ?found, ?elaborated, ?lowered⟩
-  case lexed => cbv <;> exact Eq.refl _
+  case lexed =>
+    rw [translation_rek_text, String.toList_ofList]
+    cbv <;> exact Eq.refl _
   case parsed => cbv <;> exact Eq.refl _
   case resolved => cbv <;> exact Eq.refl _
   case kept => trivial
