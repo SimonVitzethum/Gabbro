@@ -27,6 +27,8 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   compilation and 21 refusal expectations differ. No executed case has a wrong exit code. Open source
   boundaries include alias constants, cost/proof metadata, atomic declarations and scoped-return admission;
   these tests are not a measurement of complete language coverage. Refusal expectations have not been relaxed.
+  In that run, 28 of the 76 compilation failures stop at the unbound `assumT` gate, 15 at `main`'s
+  type/proof/header binding, five at lock statements, five at atomic declarations and four at cost bindings.
   All four existing source I/O probes currently refuse at the unbound `SItemTief.assumT` source gate;
   the assembly Runner's independently measured I/O/instruction regression remains separate.
   The Lean generator coverage guardian passes with unchanged bounds: 66,448 valid programs and 766
