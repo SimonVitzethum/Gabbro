@@ -212,16 +212,31 @@ def relationFunction : UFn := {name := "sample", params := [("root", .index 3), 
 
 private theorem lowVar_same_head (Γ : Ctx) (ty : Ty) :
     lowVar (ty :: Γ) 0 ty = .ok (.here : Var (ty :: Γ) ty) := by
-  simp only [lowVar, dif_pos rfl]
+  unfold lowVar
+  rw [dite_eq_left (rfl : ty = ty)]
+
+private theorem lowVar_next_head (Γ : Ctx) (head ty : Ty) :
+    lowVar (head :: ty :: Γ) 1 ty = .ok (.there .here : Var (head :: ty :: Γ) ty) := by
+  change (match lowVar (ty :: Γ) 0 ty with
+    | .error error => .error error
+    | .ok value => .ok (.there value)) = _
+  rw [lowVar_same_head]
+
+private theorem relation_table_guard :
+    darf (declOf relationUnit) (⟨0, by decide⟩ : Fin relationUnit.tabs.length) [] := by
+  intro resource present
+  have empty : (declOf relationUnit).braucht (⟨0, by decide⟩ : Fin relationUnit.tabs.length) = [] := rfl
+  rw [empty] at present
+  cases present
 
 private theorem member_root_checked :
     lowMember relationUnit [.index 3, .index 3] [] relationFunction 0 "T" (.param "root") =
       .ok (Expr.existsSlots (⟨0, by decide⟩ : Fin relationUnit.tabs.length)
-        (Expr.eq (.var .here) (.var (.there .here))) (by decide)) := by
-  exact member_lower relationUnit [.index 3, .index 3] [] relationFunction 0 "T" (.param "root")
+        (Expr.eq (.var .here) (.var (.there .here))) relation_table_guard) := by
+  exact member_lower relationUnit [.int 0 2, .int 0 2] [] relationFunction 0 "T" (.param "root")
     ⟨0, by decide⟩ {range := (0, 2), term := .var .here} rfl rfl
-    (by simp [lowMemberValue, lowParamSide, relationFunction, paramPos, lowVar_same_head,
-      bind, Except.bind, pure, Except.pure]) (by decide)
+    (by simp [lowMemberValue, lowParamSide, relationFunction, paramPos, Ty.index,
+      lowVar_same_head, bind, Except.bind, pure, Except.pure]) relation_table_guard
 
 theorem count_export_zeuge :
     uAnzahl [("N", 2)] (.bin "*" (.variable "N") (.lit 3)) = .ok 6 ∧
@@ -243,7 +258,24 @@ theorem reach_lower_zeuge :
     (lowReach relationUnit [.index 3, .index 3] [] relationFunction 0 "T" "next"
       (.param "root") (.param "last")).toOption.isSome = true ∧
     (lowMember relationUnit [.index 3, .index 3] [] relationFunction 0 "T" (.param "root")).toOption.isSome = true := by
-  exact ⟨rfl, by rw [member_root_checked]; rfl⟩
+  constructor
+  · have ready : (selfEdge relationUnit (⟨0, by decide⟩ : Fin relationUnit.tabs.length)
+        "next").toOption.isSome = true := rfl
+    cases typed : selfEdge relationUnit (⟨0, by decide⟩ : Fin relationUnit.tabs.length) "next" with
+    | error error =>
+      simp [typed] at ready
+    | ok edge =>
+      have emitted := reach_lower relationUnit [.index 3, .index 3] [] relationFunction 0
+        "T" "next" (.param "root") (.param "last") ⟨0, by decide⟩ edge
+        (.var .here) (.var (.there .here)) rfl rfl typed
+        (by simp [lowIdx, relationFunction, paramPos, Ty.index, declOf, tabAt, relationUnit,
+          lowVar_same_head])
+        (by simp [lowIdx, relationFunction, paramPos, Ty.index, declOf, tabAt, relationUnit,
+          lowVar_same_head, lowVar_next_head]) relation_table_guard
+      rw [emitted]
+      rfl
+  · rw [member_root_checked]
+    rfl
 
 theorem tree_membership_export_zeuge :
     uSichert relationContext (.ext .mem ["descendants"] [.variable "last", .variable "root"]) =
@@ -273,11 +305,11 @@ def numericMemberFunction : UFn := {relationFunction with params := [("value", .
 private theorem member_numeric_param_checked :
     lowMember relationUnit [.int 0 255] [] numericMemberFunction 0 "T" (.param "value") =
       .ok (Expr.existsSlots (⟨0, by decide⟩ : Fin relationUnit.tabs.length)
-        (Expr.eq (.var .here) (.var (.there .here))) (by decide)) := by
+        (Expr.eq (.var .here) (.var (.there .here))) relation_table_guard) := by
   exact member_lower relationUnit [.int 0 255] [] numericMemberFunction 0 "T" (.param "value")
     ⟨0, by decide⟩ {range := (0, 255), term := .var .here} rfl rfl
     (by simp [lowMemberValue, lowParamSide, numericMemberFunction, relationFunction, paramPos,
-      lowVar_same_head, bind, Except.bind, pure, Except.pure]) (by decide)
+      lowVar_same_head, bind, Except.bind, pure, Except.pure]) relation_table_guard
 
 theorem member_numeric_param_zeuge :
     uSichert numericMemberContext (.ext .mem ["slots"] [.variable "value", .variable "T"]) =
