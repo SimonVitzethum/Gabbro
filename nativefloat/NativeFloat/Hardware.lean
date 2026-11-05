@@ -6,6 +6,7 @@ public import NativeFloat.Contracts.SourceInt
 public import NativeFloat.Contracts.Unsigned
 public import NativeFloat.Contracts.SaturatingCast
 public import NativeFloat.Contracts.Literal
+public import NativeFloat.Contracts.Arith
 
 public section
 
@@ -25,6 +26,7 @@ class Hardware : Prop where
   unsigned : Contracts.Unsigned
   saturatingCast : Contracts.SaturatingCast
   literal : Contracts.Literal
+  arith : Contracts.Arith
 
 /- The public adapters only project the supplied hardware certificate. -/
 
@@ -242,5 +244,13 @@ theorem canonLiteral_subnormal_negative [hardware : Hardware] :
       (canonLiteral (1, -(2 ^ 1074))).hwToBits = 0x8000000000000001 ∧
       (canonLiteral (-1, -(2 ^ 1074))).hwToBits = 1 :=
   hardware.literal.canonLiteral_subnormal_negative
+
+theorem binary64_arith [hardware : Hardware] :
+    Contracts.Format.binary64.Arith Float.hwAdd Float.hwSub Float.hwMul Float.hwDiv :=
+  hardware.arith.binary64
+
+theorem binary32_arith [hardware : Hardware] :
+    Contracts.Format.binary32.Arith Float32.hwAdd Float32.hwSub Float32.hwMul Float32.hwDiv :=
+  hardware.arith.binary32
 
 end RootNativeFloat
