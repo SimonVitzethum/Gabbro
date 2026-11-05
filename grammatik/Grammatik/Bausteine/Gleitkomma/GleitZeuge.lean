@@ -97,11 +97,15 @@ def GzRangeAnswers.value {lo hi : Int × Int} {x : Float}
     (answers : GzRangeAnswers lo hi x true true true) : Gleit lo hi :=
   ⟨x, answers.finite_reply, answers.lower_reply, answers.upper_reply⟩
 
+theorem GzRangeAnswers.value_x {lo hi : Int × Int} {x : Float}
+    (answers : GzRangeAnswers lo hi x true true true) : answers.value.x = x := rfl
+
 theorem GzRangeAnswers.fits {lo hi : Int × Int} {x : Float}
     (answers : GzRangeAnswers lo hi x true true true) :
     gleitPasst lo hi x = some answers.value := by
   unfold gleitPasst
   rw [dif_pos ⟨answers.finite_reply, answers.lower_reply, answers.upper_reply⟩]
+  rfl
 
 theorem GzRangeAnswers.above {lo hi : Int × Int} {x : Float}
     (answers : GzRangeAnswers lo hi x true true false) : gleitPasst lo hi x = none := by
@@ -157,9 +161,12 @@ theorem lauf01_gespeichert
   have a := first.fits
   have b := second.fits
   have c := sum.fits
-  simp [gzSumme, execBlock, execStmt, eval, Expr.orte, World.lese, World.merke,
-    a, b, c, gleitRechne, Ausgang.schrumpf, gzGespeichert,
-    World.schreibGlob, World.storeGlob, GzRangeAnswers.value, word]
+  simp only [gzSumme, execBlock, execStmt, eval, Expr.orte, World.lese, World.merke,
+    a, b, gleitRechne]
+  erw [c]
+  change some sum.value.x.hwToBits.toNat = some 0x3FD3333333333334
+  rw [sum.value_x, word]
+  rfl
 
 /-- The block of `lauf01_ueber03`: the sum declared in `0 .. 3/10`, bound and
     dropped (the global keeps `0 .. 1`; the step's range is the one checked). -/
@@ -179,8 +186,10 @@ theorem lauf01_ueber03
   have a := first.fits
   have b := second.fits
   have c := sum.above
-  simp [gzSummeEng, execBlock, eval, Expr.orte, World.lese, World.merke,
-    a, b, c, gleitRechne, Ausgang.schrumpf, gzIeee, GzRangeAnswers.value]
+  simp only [gzSummeEng, execBlock, eval, Expr.orte, World.lese, World.merke,
+    a, b, gleitRechne]
+  erw [c]
+  rfl
 
 /-- Native comparison replies retain both strict directions and the upper-bound comparison. -/
 theorem lauf01_vergleich
@@ -241,8 +250,10 @@ theorem laufDurchNull
   have a := one.fits
   have b := zero.fits
   have c := gz_nonfinite gzLo gzHi _ quotient
-  simp [gzDurchNull, execBlock, eval, Expr.orte, World.lese, World.merke,
-    a, b, c, gleitAusInt, gleitRechne, Ausgang.schrumpf, gzIeee, GzRangeAnswers.value]
+  simp only [gzDurchNull, execBlock, eval, Expr.orte, World.lese, World.merke,
+    a, b, gleitAusInt, gleitRechne]
+  erw [c]
+  rfl
 
 /-- A native nonfinite reply rejects infinity at every range, through the canonical guard. -/
 theorem gleitPasst_unendlich (lo hi : Int × Int) (infinite : Float.inf.hwIsFinite = false) :
