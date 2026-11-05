@@ -70,19 +70,22 @@ scoped macro "rights_cut " text:str : term => do
     intro rest remaining
     cbv)
 
-scoped macro "rights_input " source:term " with_cuts " cuts:term " with_text " fragments:term : term =>
+scoped macro "rights_input " source:term " with_cuts " cuts:term
+    " with_text " "[" fragments:str,* "]" : term => do
+  let text := fragments.getElems.foldl (fun text fragment => text ++ fragment.getString) ""
+  let letters : Array (Lean.TSyntax `term) := text.toList.toArray.map fun char =>
+    ⟨(Lean.Syntax.mkCharLit char).raw⟩
   `(show Input $source from by
     let pieces : List Chunk := $cuts
-    let fragments : List String := $fragments
     have charsEq : Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces =
-        fragments.flatMap String.toList := by rfl
+        ([$letters,*] : List Char) := by rfl
     refine Input.of_chunks (source := $source) pieces ?text ?room
     case text =>
       rw [charsEq]
-      simp only [fragments, List.flatMap_cons, List.flatMap_nil, List.append_nil,
-        String.ofList_append, String.ofList_toList]
       cbv
-    case room => cbv <;> omega)
+    case room =>
+      rw [charsEq]
+      cbv <;> omega)
 
 open scoped Gabbro.Grammatik.Parser.UebersetzeProben11.Phases
 namespace Inputs
