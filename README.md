@@ -4,7 +4,8 @@
 > The Stage-0 integration and abstract floating-point hardware-contract migration are unfinished.
 > Targeted goal-theorem audits, the Runner library/executable, all 14 Runner axiom audits and 20,989 CPU checks
 > passed, including 966 floating-operation IR cases. The generic Stage-0 statement/image correctness chain
-> also builds (2,709 jobs). Grammar and Stage 0 still have known proof failures and
+> also builds (2,709 jobs). The native compiler builds (5,403 jobs), and three freshly compiled float-end
+> programs return their unchanged expected exits 7/41/107 on the assembly runner. Grammar and Stage 0 still have known proof failures and
 > resource-limited probe checks; the complete Stage-0/GabbroV Lean closure remains open.
 > Rust, Cargo and LLVM validation are deliberately excluded from this checkpoint. This is not a release
 > or a claim of complete userspace-language coverage.

@@ -21,6 +21,8 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   sentences using only the standard axioms. The current Runner library and executable build, all 14 Runner
   axiom audits pass, and the CPU regression reports 20,989 checks with zero differences, including 966 float IR cases.
   The generic Stage-0 statement/image correctness chain through `Stage0.IRBild` builds (2,709 jobs).
+  The native compiler builds (5,403 jobs); three newly compiled float-end sources execute on the assembly
+  runner with their unchanged expected exits 7/41/107 under the current hardware abstraction.
   Full-package closure and the remaining concrete witness consumers are being revalidated.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
   The authorised acceptance scope is Lean and the Lean parts of GabbroV; Rust, Cargo and LLVM checks are
@@ -194,11 +196,11 @@ Thus a parser/exporter or an expanded-unit certificate can exist while the origi
   `Faelle/Gleit/{EndLiteral,EndAdd,EndNarrow}` and their integration through `Anweisung.Satz.Teil5`,
   `Anweisung.Satz`, `Rekursion` and `Images.BildSatz` have passed fresh module checks. Source producers include
   conversion/narrowing in `UebersetzeAllg3/{Ende,Body}`; the parser export pipeline has also checked.
-  The native compiler executable built successfully (5417 jobs). Emitted source programs for the four
-  ending binder forms execute on the assembly runner with the unchanged exits 7/41/107. Each measured
-  image has 421 IR instructions, including exactly one native f64-add opcode. The runner's CPU regression
-  passed 20989 checks with zero differences, including 966 full float-operation IR images.
-  These measurements precede the owner's opaque-hardware migration and do not validate its current consumers.
+  Under the current opaque-hardware model, the native compiler executable builds (5,403 jobs), and freshly
+  compiled `float-end-inside`, `float-end-fallback` and `float-end-range-failure` sources execute on the
+  assembly runner with their unchanged exits 7/41/107. The current Runner CPU regression passes 20,989
+  checks with zero differences, including 966 full floating-operation IR images. The earlier four-form
+  instruction-count measurements precede this abstraction and are not a fresh size measurement.
   The replaced software IEEE emitters and proof implementation are removed. Shared numerical contracts are
   supplied explicitly; concrete numerical proof witnesses take primitive hardware replies, while the actual
   CPU regression checks numerical outputs. Lean compiles and proves the IR; the assembly runner executes it.
