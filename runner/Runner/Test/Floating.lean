@@ -93,8 +93,64 @@ structure Case where
   a : W
   b : W
 
-def fixtures : List Case := operations.flatMap fun kind =>
-  (inputs kind).map fun (a, b) => { kind := kind, a := a, b := b }
+/-- Finite raw operands for the native arithmetic contract. No expected value
+    is encoded here: Case.expected still delegates only to nativeFPBits. -/
+def arithmeticEdgeCases (format : FPFormat) : List Case :=
+  let sign : W := match format with | .f32 => 0x80000000 | .f64 => 0x8000000000000000
+  let one : W := match format with | .f32 => 0x3F800000 | .f64 => 0x3FF0000000000000
+  let half : W := match format with | .f32 => 0x3F000000 | .f64 => 0x3FE0000000000000
+  let two : W := match format with | .f32 => 0x40000000 | .f64 => 0x4000000000000000
+  let halfMore : W := match format with | .f32 => 0x3FC00000 | .f64 => 0x3FF8000000000000
+  -- Half the ULP at one: 2^-24 (binary32), 2^-53 (binary64). Neighbors select both
+  -- lower-significand parities; the multiply-by-1.5 pairs do the same.
+  let halfUlp : W := match format with | .f32 => 0x33800000 | .f64 => 0x3CA0000000000000
+  let minNormal : W := match format with | .f32 => 0x00800000 | .f64 => 0x0010000000000000
+  let largestSub := minNormal - 1
+  let maxFinite : W := match format with | .f32 => 0x7F7FFFFF | .f64 => 0x7FEFFFFFFFFFFFFF
+  let largestHalf : W := match format with | .f32 => 0x7EFFFFFF | .f64 => 0x7FDFFFFFFFFFFFFF
+  -- Add 2^103 (binary32) or 2^970 (binary64) to maxFinite to reach the
+  -- exact overflow threshold: 2^128 - 2^103 or 2^1024 - 2^970, respectively.
+  let overflowHalf : W := match format with | .f32 => 0x73000000 | .f64 => 0x7C90000000000000
+  let additions : List (W × W) :=
+    [(one, halfUlp), (one + 1, halfUlp),
+     (1, 1), (largestSub, 1), (minNormal, 1 ||| sign), (largestSub, largestSub),
+     (maxFinite, overflowHalf - 1), (maxFinite, overflowHalf), (maxFinite, overflowHalf + 1)]
+  let subtractions : List (W × W) :=
+    [(one + 1, halfUlp), (one + 2, halfUlp),
+     (minNormal, 1), (minNormal + 1, 1), (1, 1), (2, 1), (minNormal, largestSub),
+     (maxFinite, (overflowHalf - 1) ||| sign), (maxFinite, overflowHalf ||| sign),
+     (maxFinite, (overflowHalf + 1) ||| sign)]
+  let multiplications : List (W × W) :=
+    [(one + 1, halfMore), (one + 3, halfMore),
+     -- Half-min-subnormal, 1.5 and 2.5 min-subnormals: both tie parities,
+     -- with the representable neighbors of the half-min-subnormal tie.
+     (1, half - 1), (1, half), (1, half + 1), (3, half), (5, half),
+     (largestSub, half), (minNormal, half), (minNormal, one - 1),
+     (minNormal, one - 2), (largestSub, one + 1),
+     (maxFinite, one - 1), (maxFinite, one), (maxFinite, one + 1),
+     (largestHalf, two - 1), (largestHalf, two), (largestHalf, two + 1)]
+  let divisions : List (W × W) :=
+    [-- Division by two supplies exact subnormal ties of both parities;
+     -- the neighboring divisors straddle the half-min-subnormal boundary.
+     (1, two - 1), (1, two), (1, two + 1), (3, two), (5, two),
+     (largestSub, two), (minNormal, two), (minNormal, one - 1),
+     (minNormal, one + 1), (largestSub, one - 1),
+     (maxFinite, one - 1), (maxFinite, one), (maxFinite, one + 1),
+     (largestHalf, half - 1), (largestHalf, half), (largestHalf, half + 1)]
+  -- Negate both operands for addition/subtraction and the numerator for
+  -- multiplication/division. This retains each boundary at both result signs.
+  let signed (kind : NativeFPOp) (both : Bool) (pairs : List (W × W)) : List Case :=
+    pairs.flatMap fun (a, b) =>
+      [{ kind := kind, a := a, b := b },
+       { kind := kind, a := a ^^^ sign, b := if both then b ^^^ sign else b }]
+  signed (.add format) true additions ++ signed (.sub format) true subtractions ++
+    signed (.mul format) false multiplications ++ signed (.div format) false divisions
+
+def fixtures : List Case :=
+  -- Keep every original case and its manifest index before the new inputs.
+  (operations.flatMap fun kind =>
+    (inputs kind).map fun (a, b) => { kind := kind, a := a, b := b }) ++
+    arithmeticEdgeCases .f32 ++ arithmeticEdgeCases .f64
 
 def Case.expected (test : Case) : W := nativeFPBits test.kind test.a test.b
 
