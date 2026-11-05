@@ -143,6 +143,41 @@ private theorem index_parameter_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (de
     lowIdx u Γ Λ fn shift table (.param name) = .ok (.var indexVar) := by
   simp only [lowIdx, found, kind, lookup]
 
+/-- Keep the canonical count cast symbolic until the complete source certificate is assembled. -/
+private theorem tree_count_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
+    (name binder field : String) (source : UIdx) (table : Fin u.tabs.length)
+    (edge : SelfEdge u table field) (seed : Expr (declOf u) Γ Λ (.index ((declOf u).count table)))
+    (gate : u.exportGate = .ok ()) (found : tabIdx u.tabs name = .ok table)
+    (typed : selfEdge u table field = .ok edge) (outer : lowIdx u Γ Λ fn 0 table source = .ok seed)
+    (finite : (declOf u).offen table = false) (nonnegative : 0 ≤ (declOf u).count table)
+    (guard : darf (declOf u) table Λ) :
+    lowSeiteZ u Γ Λ fn none (.zaehleBaum name binder field false source .tru) =
+      .ok (LowSide.zaehleVon u Γ Λ ((declOf u).count table).toNat
+        (umIdx (Int.toNat_of_nonneg nonnegative).symm
+          (.and (.reaches table edge.field edge.self seed.weaken (.var .here) guard) .tru))) := by
+  simp only [lowSeiteZ, gate, found, typed, outer, ergAlsParam, bind, Except.bind,
+    finite, Bool.false_eq_true, ite_false]
+  rw [dite_eq_left nonnegative, dite_eq_left guard]
+  rfl
+
+/-- The actual consuming measure checker widens its checked side without inspecting its term. -/
+private theorem consuming_measure_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) (source : USide) (side : LowSide u Γ Λ)
+    (fresh : seiteAltErg source = false) (counted : lowSeiteZ u Γ Λ fn none source = .ok side)
+    (lower : 0 ≤ side.range.1) :
+    lowConsumingMass u Γ Λ fn source =
+      .ok ⟨side.range.2, Expr.widen lower (Int.le_refl _) side.term⟩ := by
+  simp only [lowConsumingMass, fresh, Bool.false_eq_true, ite_false, counted, Except.mapError,
+    bind, Except.bind, pure, Except.pure]
+  rw [dite_eq_left lower]
+  rfl
+
+/-- Select just the canonical one-fuel sequence operation; the remaining level stays abstract. -/
+private theorem closed_sequence (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (fuel : Nat) (Λ : List (Res (declOf u))) (top : AtTop u caller Λ) :
+    lowSeqL (l := true) u caller Γ fn (fuel + 1) Λ top [.blkEnd] =
+      .ok (⟨Λ, (Block.nil : Block (declOf u) (verOf u caller) true Γ Λ Λ)⟩, [.blkEnd]) := rfl
+
 /-- Nonempty represented domain, two ordered index binders and a current-world count
     jointly reach the production consuming branch of the structured lowerer. -/
 theorem consuming_traversal_lower_zeuge :
@@ -207,32 +242,24 @@ theorem consuming_traversal_lower_zeuge :
       (index_parameter_lower u (.index 3 :: .index 3 :: Γ) [] predecessor 0 1 "node" t 0 (.there .here)
         (by simp [paramPos, predecessor, node, UFn.mitIndex, privateName])
         rfl (lowVar_next_head _ _ _)) guard
-    let count : Expr (declOf u) Γ [] (.int 0 3) := .count 3 (.and selected .tru)
     have finite : (declOf u).offen t = false := rfl
     have nonnegative : 0 ≤ (declOf u).count t := by decide
-    have counted : lowSeiteZ u Γ [] fn none mass =
-        .ok ({range := (0, 3), term := count} : LowSide u Γ []) := by
-      simp only [mass, lowSeiteZ, gate, found, typed, seed, ergAlsParam, bind, Except.bind,
-        finite, Bool.false_eq_true, ite_false]
-      rw [dite_eq_left nonnegative, dite_eq_left guard]
-      rfl
-    have measured : lowConsumingMass u Γ [] fn mass =
-        .ok ⟨3, Expr.widen (Int.le_refl 0) (Int.le_refl 3) count⟩ := by
-      simp [lowConsumingMass, mass, seiteAltErg, ensAltErg, counted,
-        bind, Except.bind, Except.mapError, pure, Except.pure]
-    have inside : lowSeqL (l := true) u caller (.index 3 :: Γ) node 1 [] [] [.blkEnd] =
-        .ok (⟨[], (Block.nil : Block (declOf u) (verOf u caller) true (.index 3 :: Γ) [] [])⟩,
-          [.blkEnd]) := rfl
+    let countSide : LowSide u Γ [] := LowSide.zaehleVon u Γ [] ((declOf u).count t).toNat
+      (umIdx (Int.toNat_of_nonneg nonnegative).symm (.and selected .tru))
+    have counted : lowSeiteZ u Γ [] fn none mass = .ok countSide :=
+      tree_count_lower u Γ [] fn "T" "j" "next" (.param "root") t edge (.var .here)
+        gate found typed seed finite nonnegative guard
+    have measured := consuming_measure_lower u Γ [] fn mass countSide rfl counted (Int.le_refl 0)
+    have inside := closed_sequence u caller (.index 3 :: Γ) node 0 [] []
     have emitted := consuming_traversal_lower (loop := false) u caller Γ fn 1 [] []
       "node" "T" "#consume:predecessor"
       (.reach "T" "next" (.param "root") (.param "node"))
       (.reach "T" "next" (.param "#consume:predecessor") (.param "node")) .tru mass
-      "consumes T.slots" [.blkEnd] [] t selected relation .tru 3
-      (Expr.widen (Int.le_refl 0) (Int.le_refl 3) count) Block.nil found
+      "consumes T.slots" [.blkEnd] [] t selected relation .tru countSide.range.2
+      (Expr.widen (Int.le_refl 0) (Int.le_refl _) countSide.term) Block.nil found
       (by simpa [fn, strEq] using consuming_effect_checked [fn] ["T"] true) (by rfl) measured
       (by simpa only [lowEns] using members) (by simpa only [lowEns] using edges) inside
-    rw [emitted]
-    rfl
+    exact congrArg (fun result => result.toOption.isSome) emitted
 
 theorem index_scope_zeuge (entry state : World (declOf relationUnit))
     (root other binder : Zahl 0 2) :
