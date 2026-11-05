@@ -69,9 +69,7 @@ scoped macro "rights_input " source:term " with_cuts " cuts:term
     refine Input.of_chunks (source := $source) pieces ?text ?room
     case text =>
       rw [charsEq] <;> cbv
-    case room =>
-      rw [charsEq]
-      cbv <;> omega)
+    case room => decide +kernel)
 
 open scoped Gabbro.Grammatik.Parser.UebersetzeProben11.Phases
 namespace Inputs
