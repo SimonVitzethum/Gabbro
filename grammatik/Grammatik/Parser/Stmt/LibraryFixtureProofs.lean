@@ -154,4 +154,18 @@ theorem lowering_ok (u : UProg) (noInvs : u.invs = []) (contracts : contractGate
         · contradiction
   exact lowered
 
+/-- Transport the complete metadata certificate before introducing any function
+    index of the extracted unit. The concrete assembler is never evaluated here. -/
+theorem lowering_from_elaboration (source : Except String UProg)
+    (success : source.toOption.isSome = true)
+    (certificate : ∃ unit, source = .ok unit ∧ unit.invs = [] ∧
+      contractGate unit = true ∧ ∀ f : Fin unit.fns.length,
+        (lowerFnAt unit f).toOption.isSome = true ∧ (fnAt unit f).decreases = none) :
+    (lowerAllg (source.toOption.get success)).toOption.isSome = true := by
+  obtain ⟨unit, elaborated, noInvs, contracts, functions⟩ := certificate
+  have same : unit = source.toOption.get success :=
+    Except.ok.inj (elaborated.symm.trans (except_ok_get success))
+  rw [← same]
+  exact lowering_ok unit noInvs contracts functions
+
 end Gabbro.Grammatik.Uebersetzung.LibraryFixtureProofs
