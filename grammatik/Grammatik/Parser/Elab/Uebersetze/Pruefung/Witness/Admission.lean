@@ -4,6 +4,8 @@ public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
 import Grammatik.Parser.Elab.UebersetzeAllg3.TransitionCert
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Calls
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Units
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Heads
 import all Init.Data.List.MapIdx
 import all Grammatik.Parser.Lex.Lexer.Teil1
 import all Grammatik.Parser.Elab.Uebersetze.Folds.Expressions
@@ -84,7 +86,7 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 attribute [local cbv_opaque] uFloatLimit uAnwReihe uAnwReiheCore
   uAkkuBinder uZeigerAnw uStartNamen elabKlauseln expandReturnCall expandFoldEnd
   recordCheckCode recordCheckStatements checkSampleSubstitute lowStufe lowSeqL lowStructL lowEndL
-  Measures.checkedProgram lowCallArgOneL lowCallArgsAuxL withErg lowErg lowEnd
+  Measures.checkedProgram lowRufKopf lowCallArgOneL lowCallArgsAuxL withErg lowErg lowEnd
 attribute [local cbv_eval] row_nil row_cons core_bind core_call core_set core_cond
   bound_names_select pointer_source_select start_source_select
   clauses_nil return_none return_empty return_variable
@@ -96,107 +98,54 @@ attribute [local cbv_eval] row_nil row_cons core_bind core_call core_set core_co
   check_argument_bool check_argument_integer check_arguments_nil check_arguments_cons
   check_result_select check_return_empty check_return_bool check_end_empty check_end_bool
 
--- Normalize the actual function fields before forming any dependent code type.
--- Whole-function equality below certifies the headers, code and retained reporter metadata.
-private def admissionMetadataFn (index : Nat) (fn : UFn) : UFn :=
-  let header : UFn := {fn with
-    params := []
-    kinds := []
-    res := none
-    resBool := false
-    resOpt := none
-    resSum := none
-    resWhy := none
-    resTy := none
-    gruende := 0
-    held := []
-    puts := []
-    gputs := []
-    gives := []
-    needs := []
-    boden := none
-    decreases := none
-    measureConstants := []
-    measureTypes := []
-    leiht := []
-    bewegt := []
-    praegt := []}
-  match index with
-  | 0 => {header with name := "g", nimmt := [], gibt := [], body := [], ret := .empty}
-  | 1 => {header with
-    name := "p#probe", resBool := true, nimmt := ["p#duty"], gibt := ["p#duty"],
-    body := [.bindB "#checkVerdict" .tru,
-      .bindCall "#checkReport" "p#report#0" [.bval (.var "#checkVerdict")]],
-    ret := .bool (.var "#checkReport")}
-  | 2 => {header with
-    name := "p#report#0", params := [("v", .bool)], kinds := [.bool],
-    resBool := true, nimmt := [], gibt := [], body := [], ret := .bool (.var "v")}
-  | 3 => {header with
-    name := "p#tor#g", nimmt := ["p#duty"], gibt := ["p#duty"],
-    body := [.call "g" []], ret := .empty}
-  | _ => fn
-private def admissionMetadataCheck (check : UCheck) : UCheck :=
-  {check with name := "p", tore := ["g"], probe := "p#probe", duty := "p#duty"}
-private def admissionMetadataUnit (unit : UProg) : UProg :=
-  {unit with
-    marken := ["p#duty"]
-    fns := unit.fns.mapIdx admissionMetadataFn
-    checks := unit.checks.map admissionMetadataCheck
-    tabs := []
-    locks := []
-    globs := []
-    axs := []
-    invs := []
-    regs := []
-    ptrs := []
-    eigner := []
-    markOrders := []}
-
-private theorem admission_name_self (name : String) : strEq name name = true := by
-  simp [strEq]
-
--- Resolve the canonical singleton without decoding the same UTF-8 name at every use.
-private theorem admission_mark_self (name : String) :
-    markFin [name] name = some (⟨0, by decide⟩ : Fin 1) := by
-  simp [markFin, List.finRange_succ, admission_name_self]
 attribute [local cbv_eval] admission_name_self admission_mark_self
 
--- Infer this exact unit from canonical elaboration, once, before dependent indices.
-private def admissionUnitRead : {unit : UProg // elabU (textItems "c" "g") = .ok unit} := by
-  refine ⟨?unit, ?made⟩
-  case made => cbv <;> exact Eq.refl _
-
--- Nondependent field equalities are proved before any declaration/code index exists.
-private theorem admission_metadata : admissionMetadataUnit admissionUnitRead.val = admissionUnitRead.val := by
-  have marks : admissionUnitRead.val.marken = ["p#duty"] := by cbv
-  have tables : admissionUnitRead.val.tabs = [] := by cbv
-  have locks : admissionUnitRead.val.locks = [] := by cbv
-  have globals : admissionUnitRead.val.globs = [] := by cbv
-  have foreignBodies : admissionUnitRead.val.axs = [] := by cbv
-  have invariants : admissionUnitRead.val.invs = [] := by cbv
-  have registers : admissionUnitRead.val.regs = [] := by cbv
-  have pointers : admissionUnitRead.val.ptrs = [] := by cbv
-  have owners : admissionUnitRead.val.eigner = [] := by cbv
-  have orders : admissionUnitRead.val.markOrders = [] := by cbv
-  have functions : admissionUnitRead.val.fns.mapIdx admissionMetadataFn = admissionUnitRead.val.fns := by cbv
-  have checks : admissionUnitRead.val.checks.map admissionMetadataCheck = admissionUnitRead.val.checks := by cbv
-  generalize source : admissionUnitRead.val = actualUnit at *
-  cases actualUnit
-  simp_all only [admissionMetadataUnit]
-
-private def admissionUnitMade : {unit : UProg // elabU (textItems "c" "g") = .ok unit} :=
-  ⟨admissionMetadataUnit admissionUnitRead.val, admissionUnitRead.property.trans
-    (congrArg (fun unit : UProg => (Except.ok unit : Except String UProg)) admission_metadata.symm)⟩
-
-private theorem admission_unit : elabU (textItems "c" "g") = .ok admissionUnitMade.val :=
-  admissionUnitMade.property
-
 -- Fix every actual function index before inferring a dependent lowered value.
-private abbrev admissionFunctionType (index : Fin admissionUnitMade.val.fns.length) :=
-  EnsTy admissionUnitMade.val index × RumpTy admissionUnitMade.val index × ReqTy admissionUnitMade.val index
-
 private def admissionGateIndex : Fin admissionUnitMade.val.fns.length :=
   ⟨0, by change 0 < 4; decide⟩
+
+private def admissionReportIndex : Fin admissionUnitMade.val.fns.length :=
+  ⟨2, by change 2 < 4; decide⟩
+
+private theorem admission_call_data : CheckCallUnit admissionUnitMade.val := by
+  have headers : admissionUnitMade.val.fns.all (fun fn =>
+      decide (fn.boden = none ∧ fn.leiht = [] ∧ fn.bewegt = [] ∧ fn.praegt = [])) = true := by cbv
+  exact ⟨rfl, rfl, rfl, fun fn member =>
+    of_decide_eq_true (List.all_eq_true.mp headers fn member)⟩
+
+private theorem admission_call_ready (caller callee : Fin admissionUnitMade.val.fns.length)
+    (Λ : List (Res (declOf admissionUnitMade.val))) (takes : (fnAt admissionUnitMade.val callee).nimmt = []) :
+    CheckCallGuards admissionUnitMade.val caller callee Λ :=
+  check_unit_call_ready admissionUnitMade.val admission_call_data caller callee Λ takes
+
+private theorem admission_gate_call (caller : Fin admissionUnitMade.val.fns.length)
+    (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf admissionUnitMade.val))) (source : List UArg) :
+    lowRufKopf admissionUnitMade.val caller Γ fn Λ "g" source =
+      (lowCallArgsAuxL admissionUnitMade.val caller Γ fn Λ (fnAt admissionUnitMade.val admissionGateIndex).kinds
+        ((fnAt admissionUnitMade.val admissionGateIndex).params.map (·.2)) source).map
+        (fun arguments => check_call_head admissionUnitMade.val caller admissionGateIndex Γ Λ
+          (check_arguments_cast admissionUnitMade.val Γ Λ (params_eq admissionUnitMade.val admissionGateIndex) arguments)
+          (admission_call_ready caller admissionGateIndex Λ rfl)) := by
+  have found : fnIdx admissionUnitMade.val.fns "g" = .ok admissionGateIndex := by cbv
+  exact check_call_phase admissionUnitMade.val caller admissionGateIndex Γ fn Λ "g" source found
+    (admission_call_ready caller admissionGateIndex Λ rfl)
+
+private theorem admission_report_call (caller : Fin admissionUnitMade.val.fns.length)
+    (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf admissionUnitMade.val))) (source : List UArg) :
+    lowRufKopf admissionUnitMade.val caller Γ fn Λ "p#report#0" source =
+      (lowCallArgsAuxL admissionUnitMade.val caller Γ fn Λ (fnAt admissionUnitMade.val admissionReportIndex).kinds
+        ((fnAt admissionUnitMade.val admissionReportIndex).params.map (·.2)) source).map
+        (fun arguments => check_call_head admissionUnitMade.val caller admissionReportIndex Γ Λ
+          (check_arguments_cast admissionUnitMade.val Γ Λ (params_eq admissionUnitMade.val admissionReportIndex) arguments)
+          (admission_call_ready caller admissionReportIndex Λ rfl)) := by
+  have found : fnIdx admissionUnitMade.val.fns "p#report#0" = .ok admissionReportIndex := by cbv
+  exact check_call_phase admissionUnitMade.val caller admissionReportIndex Γ fn Λ "p#report#0" source found
+    (admission_call_ready caller admissionReportIndex Λ rfl)
+
+attribute [local cbv_eval] admission_gate_call admission_report_call
+
+private abbrev admissionFunctionType (index : Fin admissionUnitMade.val.fns.length) :=
+  EnsTy admissionUnitMade.val index × RumpTy admissionUnitMade.val index × ReqTy admissionUnitMade.val index
 
 private def admissionGateFunction :
     {result : admissionFunctionType admissionGateIndex //
@@ -212,9 +161,6 @@ private def admissionProbeFunction :
       lowerFnAt admissionUnitMade.val admissionProbeIndex = .ok result} := by
   refine ⟨?result, ?made⟩
   case made => cbv <;> exact Eq.refl _
-
-private def admissionReportIndex : Fin admissionUnitMade.val.fns.length :=
-  ⟨2, by change 2 < 4; decide⟩
 
 private def admissionReportFunction :
     {result : admissionFunctionType admissionReportIndex //
@@ -342,6 +288,46 @@ private def admissionWithoutGivesGateIndex : Fin admissionWithoutGivesMade.val.f
 
 private def admissionWithoutGivesProbeIndex : Fin admissionWithoutGivesMade.val.fns.length :=
   ⟨1, by change 1 < 4; decide⟩
+
+private def admissionWithoutGivesReportIndex : Fin admissionWithoutGivesMade.val.fns.length :=
+  ⟨2, by change 2 < 4; decide⟩
+
+private theorem admissionWithoutGives_call_data : CheckCallUnit admissionWithoutGivesMade.val := by
+  have headers : admissionWithoutGivesMade.val.fns.all (fun fn =>
+      decide (fn.boden = none ∧ fn.leiht = [] ∧ fn.bewegt = [] ∧ fn.praegt = [])) = true := by cbv
+  exact ⟨rfl, rfl, rfl, fun fn member =>
+    of_decide_eq_true (List.all_eq_true.mp headers fn member)⟩
+
+private theorem admissionWithoutGives_call_ready (caller callee : Fin admissionWithoutGivesMade.val.fns.length)
+    (Λ : List (Res (declOf admissionWithoutGivesMade.val))) (takes : (fnAt admissionWithoutGivesMade.val callee).nimmt = []) :
+    CheckCallGuards admissionWithoutGivesMade.val caller callee Λ :=
+  check_unit_call_ready admissionWithoutGivesMade.val admissionWithoutGives_call_data caller callee Λ takes
+
+private theorem admissionWithoutGives_gate_call (caller : Fin admissionWithoutGivesMade.val.fns.length)
+    (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf admissionWithoutGivesMade.val))) (source : List UArg) :
+    lowRufKopf admissionWithoutGivesMade.val caller Γ fn Λ "g" source =
+      (lowCallArgsAuxL admissionWithoutGivesMade.val caller Γ fn Λ (fnAt admissionWithoutGivesMade.val admissionWithoutGivesGateIndex).kinds
+        ((fnAt admissionWithoutGivesMade.val admissionWithoutGivesGateIndex).params.map (·.2)) source).map
+        (fun arguments => check_call_head admissionWithoutGivesMade.val caller admissionWithoutGivesGateIndex Γ Λ
+          (check_arguments_cast admissionWithoutGivesMade.val Γ Λ (params_eq admissionWithoutGivesMade.val admissionWithoutGivesGateIndex) arguments)
+          (admissionWithoutGives_call_ready caller admissionWithoutGivesGateIndex Λ rfl)) := by
+  have found : fnIdx admissionWithoutGivesMade.val.fns "g" = .ok admissionWithoutGivesGateIndex := by cbv
+  exact check_call_phase admissionWithoutGivesMade.val caller admissionWithoutGivesGateIndex Γ fn Λ "g" source found
+    (admissionWithoutGives_call_ready caller admissionWithoutGivesGateIndex Λ rfl)
+
+private theorem admissionWithoutGives_report_call (caller : Fin admissionWithoutGivesMade.val.fns.length)
+    (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf admissionWithoutGivesMade.val))) (source : List UArg) :
+    lowRufKopf admissionWithoutGivesMade.val caller Γ fn Λ "p#report#0" source =
+      (lowCallArgsAuxL admissionWithoutGivesMade.val caller Γ fn Λ (fnAt admissionWithoutGivesMade.val admissionWithoutGivesReportIndex).kinds
+        ((fnAt admissionWithoutGivesMade.val admissionWithoutGivesReportIndex).params.map (·.2)) source).map
+        (fun arguments => check_call_head admissionWithoutGivesMade.val caller admissionWithoutGivesReportIndex Γ Λ
+          (check_arguments_cast admissionWithoutGivesMade.val Γ Λ (params_eq admissionWithoutGivesMade.val admissionWithoutGivesReportIndex) arguments)
+          (admissionWithoutGives_call_ready caller admissionWithoutGivesReportIndex Λ rfl)) := by
+  have found : fnIdx admissionWithoutGivesMade.val.fns "p#report#0" = .ok admissionWithoutGivesReportIndex := by cbv
+  exact check_call_phase admissionWithoutGivesMade.val caller admissionWithoutGivesReportIndex Γ fn Λ "p#report#0" source found
+    (admissionWithoutGives_call_ready caller admissionWithoutGivesReportIndex Λ rfl)
+
+attribute [local cbv_eval] admissionWithoutGives_gate_call admissionWithoutGives_report_call
 
 private def admissionWithoutGivesGate :
     {result : EnsTy admissionWithoutGivesMade.val admissionWithoutGivesGateIndex ×
