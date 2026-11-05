@@ -87,8 +87,12 @@ private theorem globalText_parsed :
 
 /-- Construct the complete source and elaborator packet before projecting its dependent unit. -/
 def globalTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.globalText := by
-  have parsed := Gabbro.Grammatik.except_ok_get (ε := String)
-    (α := List SItemTief) (x := parseTopTief (globalTextScan.tokens ++ [.ende])) globalText_parsed
+  have parsing : (parseTopTief (globalTextScan.tokens ++ [.ende])).toOption.isSome = true := by
+    exact globalText_parsed
+  have parsed : parseTopTief (globalTextScan.tokens ++ [.ende]) =
+      .ok ((parseTopTief (globalTextScan.tokens ++ [.ende])).toOption.get parsing) := by
+    exact Gabbro.Grammatik.except_ok_get (ε := String)
+      (α := List SItemTief) (x := parseTopTief (globalTextScan.tokens ++ [.ende])) parsing
   refine {
     source := ?source
     sourceEq := ?sourceEq
@@ -102,11 +106,26 @@ def globalTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.globalTe
     elaborated := ?elaborated }
   case sourceEq =>
     unfold Frontend.source
-    rw [globalText_lexed]
-    dsimp only
-    rw [parsed]
-    dsimp only
-    cbv <;> exact Eq.refl _
+    split
+    · rename_i error rejected
+      cases rejected.symm.trans globalText_lexed
+    · rename_i tokens selected
+      have same : tokens = globalTextScan.tokens ++ [.ende] :=
+        Except.ok.inj (selected.symm.trans globalText_lexed)
+      subst tokens
+      have proofEq : selected = globalText_lexed := Subsingleton.elim _ _
+      subst selected
+      split
+      · rename_i error rejected
+        cases rejected.symm.trans parsed
+      · rename_i items selected
+        have same : items =
+            (parseTopTief (globalTextScan.tokens ++ [.ende])).toOption.get parsing :=
+          Except.ok.inj (selected.symm.trans parsed)
+        subst items
+        have proofEq : selected = parsed := Subsingleton.elim _ _
+        subst selected
+        cbv <;> exact Eq.refl _
   case expansion => cbv <;> exact Eq.refl _
   case constants => cbv <;> exact Eq.refl _
   case ordinary => cbv
@@ -117,7 +136,10 @@ def globalTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.globalTe
 def globalTextBody : Body globalTextHeader := by
   refine {
     functions := {
-      values := Fin.cases ?functionValue (fun impossible => Fin.elim0 impossible)
+      values := fun f => Fin.cases (n := 0)
+        (motive := fun f : Fin globalTextHeader.unit.fns.length =>
+          EnsTy globalTextHeader.unit f × RumpTy globalTextHeader.unit f × ReqTy globalTextHeader.unit f)
+        ?functionValue (fun impossible => Fin.elim0 impossible) f
       equations := ?functionEq
       noInvariants := by cbv
       noMeasures := ?noMeasures
@@ -133,14 +155,16 @@ def globalTextBody : Body globalTextHeader := by
   case functionEq =>
     intro f
     rcases f with ⟨index, bound⟩
-    have small : index < 1 := bound
+    have count : globalTextHeader.unit.fns.length = 1 := by cbv
+    have small : index < 1 := by simpa only [count] using bound
     have zero : index = 0 := by omega
     subst index
     cbv <;> exact Eq.refl _
   case noMeasures =>
     intro f
     rcases f with ⟨index, bound⟩
-    have small : index < 1 := bound
+    have count : globalTextHeader.unit.fns.length = 1 := by cbv
+    have small : index < 1 := by simpa only [count] using bound
     have zero : index = 0 := by omega
     subst index
     cbv
@@ -162,8 +186,12 @@ private theorem qualifiedText_parsed :
 
 /-- Construct the complete source and elaborator packet before projecting its dependent unit. -/
 def qualifiedTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.qualifiedText := by
-  have parsed := Gabbro.Grammatik.except_ok_get (ε := String)
-    (α := List SItemTief) (x := parseTopTief (qualifiedTextScan.tokens ++ [.ende])) qualifiedText_parsed
+  have parsing : (parseTopTief (qualifiedTextScan.tokens ++ [.ende])).toOption.isSome = true := by
+    exact qualifiedText_parsed
+  have parsed : parseTopTief (qualifiedTextScan.tokens ++ [.ende]) =
+      .ok ((parseTopTief (qualifiedTextScan.tokens ++ [.ende])).toOption.get parsing) := by
+    exact Gabbro.Grammatik.except_ok_get (ε := String)
+      (α := List SItemTief) (x := parseTopTief (qualifiedTextScan.tokens ++ [.ende])) parsing
   refine {
     source := ?source
     sourceEq := ?sourceEq
@@ -177,11 +205,26 @@ def qualifiedTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.quali
     elaborated := ?elaborated }
   case sourceEq =>
     unfold Frontend.source
-    rw [qualifiedText_lexed]
-    dsimp only
-    rw [parsed]
-    dsimp only
-    cbv <;> exact Eq.refl _
+    split
+    · rename_i error rejected
+      cases rejected.symm.trans qualifiedText_lexed
+    · rename_i tokens selected
+      have same : tokens = qualifiedTextScan.tokens ++ [.ende] :=
+        Except.ok.inj (selected.symm.trans qualifiedText_lexed)
+      subst tokens
+      have proofEq : selected = qualifiedText_lexed := Subsingleton.elim _ _
+      subst selected
+      split
+      · rename_i error rejected
+        cases rejected.symm.trans parsed
+      · rename_i items selected
+        have same : items =
+            (parseTopTief (qualifiedTextScan.tokens ++ [.ende])).toOption.get parsing :=
+          Except.ok.inj (selected.symm.trans parsed)
+        subst items
+        have proofEq : selected = parsed := Subsingleton.elim _ _
+        subst selected
+        cbv <;> exact Eq.refl _
   case expansion => cbv <;> exact Eq.refl _
   case constants => cbv <;> exact Eq.refl _
   case ordinary => cbv
@@ -192,7 +235,10 @@ def qualifiedTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.quali
 def qualifiedTextBody : Body qualifiedTextHeader := by
   refine {
     functions := {
-      values := Fin.cases ?functionValue (fun impossible => Fin.elim0 impossible)
+      values := fun f => Fin.cases (n := 0)
+        (motive := fun f : Fin qualifiedTextHeader.unit.fns.length =>
+          EnsTy qualifiedTextHeader.unit f × RumpTy qualifiedTextHeader.unit f × ReqTy qualifiedTextHeader.unit f)
+        ?functionValue (fun impossible => Fin.elim0 impossible) f
       equations := ?functionEq
       noInvariants := by cbv
       noMeasures := ?noMeasures
@@ -208,14 +254,16 @@ def qualifiedTextBody : Body qualifiedTextHeader := by
   case functionEq =>
     intro f
     rcases f with ⟨index, bound⟩
-    have small : index < 1 := bound
+    have count : qualifiedTextHeader.unit.fns.length = 1 := by cbv
+    have small : index < 1 := by simpa only [count] using bound
     have zero : index = 0 := by omega
     subst index
     cbv <;> exact Eq.refl _
   case noMeasures =>
     intro f
     rcases f with ⟨index, bound⟩
-    have small : index < 1 := bound
+    have count : qualifiedTextHeader.unit.fns.length = 1 := by cbv
+    have small : index < 1 := by simpa only [count] using bound
     have zero : index = 0 := by omega
     subst index
     cbv

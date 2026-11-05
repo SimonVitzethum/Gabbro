@@ -87,8 +87,12 @@ private theorem tagText_parsed :
 
 /-- Construct the complete source and elaborator packet before projecting its dependent unit. -/
 def tagTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.tagText := by
-  have parsed := Gabbro.Grammatik.except_ok_get (ε := String)
-    (α := List SItemTief) (x := parseTopTief (tagTextScan.tokens ++ [.ende])) tagText_parsed
+  have parsing : (parseTopTief (tagTextScan.tokens ++ [.ende])).toOption.isSome = true := by
+    exact tagText_parsed
+  have parsed : parseTopTief (tagTextScan.tokens ++ [.ende]) =
+      .ok ((parseTopTief (tagTextScan.tokens ++ [.ende])).toOption.get parsing) := by
+    exact Gabbro.Grammatik.except_ok_get (ε := String)
+      (α := List SItemTief) (x := parseTopTief (tagTextScan.tokens ++ [.ende])) parsing
   refine {
     source := ?source
     sourceEq := ?sourceEq
@@ -102,11 +106,26 @@ def tagTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.tagText := 
     elaborated := ?elaborated }
   case sourceEq =>
     unfold Frontend.source
-    rw [tagText_lexed]
-    dsimp only
-    rw [parsed]
-    dsimp only
-    cbv <;> exact Eq.refl _
+    split
+    · rename_i error rejected
+      cases rejected.symm.trans tagText_lexed
+    · rename_i tokens selected
+      have same : tokens = tagTextScan.tokens ++ [.ende] :=
+        Except.ok.inj (selected.symm.trans tagText_lexed)
+      subst tokens
+      have proofEq : selected = tagText_lexed := Subsingleton.elim _ _
+      subst selected
+      split
+      · rename_i error rejected
+        cases rejected.symm.trans parsed
+      · rename_i items selected
+        have same : items =
+            (parseTopTief (tagTextScan.tokens ++ [.ende])).toOption.get parsing :=
+          Except.ok.inj (selected.symm.trans parsed)
+        subst items
+        have proofEq : selected = parsed := Subsingleton.elim _ _
+        subst selected
+        cbv <;> exact Eq.refl _
   case expansion => cbv <;> exact Eq.refl _
   case constants => cbv <;> exact Eq.refl _
   case ordinary => cbv
@@ -117,7 +136,10 @@ def tagTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.tagText := 
 def tagTextBody : Body tagTextHeader := by
   refine {
     functions := {
-      values := Fin.cases ?functionValue (fun impossible => Fin.elim0 impossible)
+      values := fun f => Fin.cases (n := 0)
+        (motive := fun f : Fin tagTextHeader.unit.fns.length =>
+          EnsTy tagTextHeader.unit f × RumpTy tagTextHeader.unit f × ReqTy tagTextHeader.unit f)
+        ?functionValue (fun impossible => Fin.elim0 impossible) f
       equations := ?functionEq
       noInvariants := by cbv
       noMeasures := ?noMeasures
@@ -133,14 +155,16 @@ def tagTextBody : Body tagTextHeader := by
   case functionEq =>
     intro f
     rcases f with ⟨index, bound⟩
-    have small : index < 1 := bound
+    have count : tagTextHeader.unit.fns.length = 1 := by cbv
+    have small : index < 1 := by simpa only [count] using bound
     have zero : index = 0 := by omega
     subst index
     cbv <;> exact Eq.refl _
   case noMeasures =>
     intro f
     rcases f with ⟨index, bound⟩
-    have small : index < 1 := bound
+    have count : tagTextHeader.unit.fns.length = 1 := by cbv
+    have small : index < 1 := by simpa only [count] using bound
     have zero : index = 0 := by omega
     subst index
     cbv
@@ -162,8 +186,12 @@ private theorem stringText_parsed :
 
 /-- Construct the complete source and elaborator packet before projecting its dependent unit. -/
 def stringTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.stringText := by
-  have parsed := Gabbro.Grammatik.except_ok_get (ε := String)
-    (α := List SItemTief) (x := parseTopTief (stringTextScan.tokens ++ [.ende])) stringText_parsed
+  have parsing : (parseTopTief (stringTextScan.tokens ++ [.ende])).toOption.isSome = true := by
+    exact stringText_parsed
+  have parsed : parseTopTief (stringTextScan.tokens ++ [.ende]) =
+      .ok ((parseTopTief (stringTextScan.tokens ++ [.ende])).toOption.get parsing) := by
+    exact Gabbro.Grammatik.except_ok_get (ε := String)
+      (α := List SItemTief) (x := parseTopTief (stringTextScan.tokens ++ [.ende])) parsing
   refine {
     source := ?source
     sourceEq := ?sourceEq
@@ -177,11 +205,26 @@ def stringTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.stringTe
     elaborated := ?elaborated }
   case sourceEq =>
     unfold Frontend.source
-    rw [stringText_lexed]
-    dsimp only
-    rw [parsed]
-    dsimp only
-    cbv <;> exact Eq.refl _
+    split
+    · rename_i error rejected
+      cases rejected.symm.trans stringText_lexed
+    · rename_i tokens selected
+      have same : tokens = stringTextScan.tokens ++ [.ende] :=
+        Except.ok.inj (selected.symm.trans stringText_lexed)
+      subst tokens
+      have proofEq : selected = stringText_lexed := Subsingleton.elim _ _
+      subst selected
+      split
+      · rename_i error rejected
+        cases rejected.symm.trans parsed
+      · rename_i items selected
+        have same : items =
+            (parseTopTief (stringTextScan.tokens ++ [.ende])).toOption.get parsing :=
+          Except.ok.inj (selected.symm.trans parsed)
+        subst items
+        have proofEq : selected = parsed := Subsingleton.elim _ _
+        subst selected
+        cbv <;> exact Eq.refl _
   case expansion => cbv <;> exact Eq.refl _
   case constants => cbv <;> exact Eq.refl _
   case ordinary => cbv
@@ -192,7 +235,10 @@ def stringTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.stringTe
 def stringTextBody : Body stringTextHeader := by
   refine {
     functions := {
-      values := Fin.cases ?functionValue (fun impossible => Fin.elim0 impossible)
+      values := fun f => Fin.cases (n := 0)
+        (motive := fun f : Fin stringTextHeader.unit.fns.length =>
+          EnsTy stringTextHeader.unit f × RumpTy stringTextHeader.unit f × ReqTy stringTextHeader.unit f)
+        ?functionValue (fun impossible => Fin.elim0 impossible) f
       equations := ?functionEq
       noInvariants := by cbv
       noMeasures := ?noMeasures
@@ -208,14 +254,16 @@ def stringTextBody : Body stringTextHeader := by
   case functionEq =>
     intro f
     rcases f with ⟨index, bound⟩
-    have small : index < 1 := bound
+    have count : stringTextHeader.unit.fns.length = 1 := by cbv
+    have small : index < 1 := by simpa only [count] using bound
     have zero : index = 0 := by omega
     subst index
     cbv <;> exact Eq.refl _
   case noMeasures =>
     intro f
     rcases f with ⟨index, bound⟩
-    have small : index < 1 := bound
+    have count : stringTextHeader.unit.fns.length = 1 := by cbv
+    have small : index < 1 := by simpa only [count] using bound
     have zero : index = 0 := by omega
     subst index
     cbv

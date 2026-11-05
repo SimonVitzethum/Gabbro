@@ -87,8 +87,12 @@ private theorem increment_parsed :
 
 /-- Construct the complete source and elaborator packet before projecting its dependent unit. -/
 def incrementHeader : Header Gabbro.Stage0.Frontend.ConstWitness.text := by
-  have parsed := Gabbro.Grammatik.except_ok_get (ε := String)
-    (α := List SItemTief) (x := parseTopTief (incrementScan.tokens ++ [.ende])) increment_parsed
+  have parsing : (parseTopTief (incrementScan.tokens ++ [.ende])).toOption.isSome = true := by
+    exact increment_parsed
+  have parsed : parseTopTief (incrementScan.tokens ++ [.ende]) =
+      .ok ((parseTopTief (incrementScan.tokens ++ [.ende])).toOption.get parsing) := by
+    exact Gabbro.Grammatik.except_ok_get (ε := String)
+      (α := List SItemTief) (x := parseTopTief (incrementScan.tokens ++ [.ende])) parsing
   refine {
     source := ?source
     sourceEq := ?sourceEq
@@ -102,11 +106,26 @@ def incrementHeader : Header Gabbro.Stage0.Frontend.ConstWitness.text := by
     elaborated := ?elaborated }
   case sourceEq =>
     unfold Frontend.source
-    rw [increment_lexed]
-    dsimp only
-    rw [parsed]
-    dsimp only
-    cbv <;> exact Eq.refl _
+    split
+    · rename_i error rejected
+      cases rejected.symm.trans increment_lexed
+    · rename_i tokens selected
+      have same : tokens = incrementScan.tokens ++ [.ende] :=
+        Except.ok.inj (selected.symm.trans increment_lexed)
+      subst tokens
+      have proofEq : selected = increment_lexed := Subsingleton.elim _ _
+      subst selected
+      split
+      · rename_i error rejected
+        cases rejected.symm.trans parsed
+      · rename_i items selected
+        have same : items =
+            (parseTopTief (incrementScan.tokens ++ [.ende])).toOption.get parsing :=
+          Except.ok.inj (selected.symm.trans parsed)
+        subst items
+        have proofEq : selected = parsed := Subsingleton.elim _ _
+        subst selected
+        cbv <;> exact Eq.refl _
   case expansion => cbv <;> exact Eq.refl _
   case constants => cbv <;> exact Eq.refl _
   case ordinary => cbv
@@ -117,7 +136,10 @@ def incrementHeader : Header Gabbro.Stage0.Frontend.ConstWitness.text := by
 def incrementBody : Body incrementHeader := by
   refine {
     functions := {
-      values := Fin.cases ?functionValue (fun impossible => Fin.elim0 impossible)
+      values := fun f => Fin.cases (n := 0)
+        (motive := fun f : Fin incrementHeader.unit.fns.length =>
+          EnsTy incrementHeader.unit f × RumpTy incrementHeader.unit f × ReqTy incrementHeader.unit f)
+        ?functionValue (fun impossible => Fin.elim0 impossible) f
       equations := ?functionEq
       noInvariants := by cbv
       noMeasures := ?noMeasures
@@ -133,14 +155,16 @@ def incrementBody : Body incrementHeader := by
   case functionEq =>
     intro f
     rcases f with ⟨index, bound⟩
-    have small : index < 1 := bound
+    have count : incrementHeader.unit.fns.length = 1 := by cbv
+    have small : index < 1 := by simpa only [count] using bound
     have zero : index = 0 := by omega
     subst index
     cbv <;> exact Eq.refl _
   case noMeasures =>
     intro f
     rcases f with ⟨index, bound⟩
-    have small : index < 1 := bound
+    have count : incrementHeader.unit.fns.length = 1 := by cbv
+    have small : index < 1 := by simpa only [count] using bound
     have zero : index = 0 := by omega
     subst index
     cbv
@@ -162,8 +186,12 @@ private theorem initializer_parsed :
 
 /-- Construct the complete source and elaborator packet before projecting its dependent unit. -/
 def initializerHeader : Header Gabbro.Stage0.Frontend.ConstWitness.initializerText := by
-  have parsed := Gabbro.Grammatik.except_ok_get (ε := String)
-    (α := List SItemTief) (x := parseTopTief (initializerScan.tokens ++ [.ende])) initializer_parsed
+  have parsing : (parseTopTief (initializerScan.tokens ++ [.ende])).toOption.isSome = true := by
+    exact initializer_parsed
+  have parsed : parseTopTief (initializerScan.tokens ++ [.ende]) =
+      .ok ((parseTopTief (initializerScan.tokens ++ [.ende])).toOption.get parsing) := by
+    exact Gabbro.Grammatik.except_ok_get (ε := String)
+      (α := List SItemTief) (x := parseTopTief (initializerScan.tokens ++ [.ende])) parsing
   refine {
     source := ?source
     sourceEq := ?sourceEq
@@ -177,11 +205,26 @@ def initializerHeader : Header Gabbro.Stage0.Frontend.ConstWitness.initializerTe
     elaborated := ?elaborated }
   case sourceEq =>
     unfold Frontend.source
-    rw [initializer_lexed]
-    dsimp only
-    rw [parsed]
-    dsimp only
-    cbv <;> exact Eq.refl _
+    split
+    · rename_i error rejected
+      cases rejected.symm.trans initializer_lexed
+    · rename_i tokens selected
+      have same : tokens = initializerScan.tokens ++ [.ende] :=
+        Except.ok.inj (selected.symm.trans initializer_lexed)
+      subst tokens
+      have proofEq : selected = initializer_lexed := Subsingleton.elim _ _
+      subst selected
+      split
+      · rename_i error rejected
+        cases rejected.symm.trans parsed
+      · rename_i items selected
+        have same : items =
+            (parseTopTief (initializerScan.tokens ++ [.ende])).toOption.get parsing :=
+          Except.ok.inj (selected.symm.trans parsed)
+        subst items
+        have proofEq : selected = parsed := Subsingleton.elim _ _
+        subst selected
+        cbv <;> exact Eq.refl _
   case expansion => cbv <;> exact Eq.refl _
   case constants => cbv <;> exact Eq.refl _
   case ordinary => cbv
@@ -192,7 +235,10 @@ def initializerHeader : Header Gabbro.Stage0.Frontend.ConstWitness.initializerTe
 def initializerBody : Body initializerHeader := by
   refine {
     functions := {
-      values := Fin.cases ?functionValue (fun impossible => Fin.elim0 impossible)
+      values := fun f => Fin.cases (n := 0)
+        (motive := fun f : Fin initializerHeader.unit.fns.length =>
+          EnsTy initializerHeader.unit f × RumpTy initializerHeader.unit f × ReqTy initializerHeader.unit f)
+        ?functionValue (fun impossible => Fin.elim0 impossible) f
       equations := ?functionEq
       noInvariants := by cbv
       noMeasures := ?noMeasures
@@ -208,14 +254,16 @@ def initializerBody : Body initializerHeader := by
   case functionEq =>
     intro f
     rcases f with ⟨index, bound⟩
-    have small : index < 1 := bound
+    have count : initializerHeader.unit.fns.length = 1 := by cbv
+    have small : index < 1 := by simpa only [count] using bound
     have zero : index = 0 := by omega
     subst index
     cbv <;> exact Eq.refl _
   case noMeasures =>
     intro f
     rcases f with ⟨index, bound⟩
-    have small : index < 1 := bound
+    have count : initializerHeader.unit.fns.length = 1 := by cbv
+    have small : index < 1 := by simpa only [count] using bound
     have zero : index = 0 := by omega
     subst index
     cbv

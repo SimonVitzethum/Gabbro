@@ -87,8 +87,12 @@ private theorem boolText_parsed :
 
 /-- Construct the complete source and elaborator packet before projecting its dependent unit. -/
 def boolTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.boolText := by
-  have parsed := Gabbro.Grammatik.except_ok_get (ε := String)
-    (α := List SItemTief) (x := parseTopTief (boolTextScan.tokens ++ [.ende])) boolText_parsed
+  have parsing : (parseTopTief (boolTextScan.tokens ++ [.ende])).toOption.isSome = true := by
+    exact boolText_parsed
+  have parsed : parseTopTief (boolTextScan.tokens ++ [.ende]) =
+      .ok ((parseTopTief (boolTextScan.tokens ++ [.ende])).toOption.get parsing) := by
+    exact Gabbro.Grammatik.except_ok_get (ε := String)
+      (α := List SItemTief) (x := parseTopTief (boolTextScan.tokens ++ [.ende])) parsing
   refine {
     source := ?source
     sourceEq := ?sourceEq
@@ -102,11 +106,26 @@ def boolTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.boolText :
     elaborated := ?elaborated }
   case sourceEq =>
     unfold Frontend.source
-    rw [boolText_lexed]
-    dsimp only
-    rw [parsed]
-    dsimp only
-    cbv <;> exact Eq.refl _
+    split
+    · rename_i error rejected
+      cases rejected.symm.trans boolText_lexed
+    · rename_i tokens selected
+      have same : tokens = boolTextScan.tokens ++ [.ende] :=
+        Except.ok.inj (selected.symm.trans boolText_lexed)
+      subst tokens
+      have proofEq : selected = boolText_lexed := Subsingleton.elim _ _
+      subst selected
+      split
+      · rename_i error rejected
+        cases rejected.symm.trans parsed
+      · rename_i items selected
+        have same : items =
+            (parseTopTief (boolTextScan.tokens ++ [.ende])).toOption.get parsing :=
+          Except.ok.inj (selected.symm.trans parsed)
+        subst items
+        have proofEq : selected = parsed := Subsingleton.elim _ _
+        subst selected
+        cbv <;> exact Eq.refl _
   case expansion => cbv <;> exact Eq.refl _
   case constants => cbv <;> exact Eq.refl _
   case ordinary => cbv
@@ -117,7 +136,10 @@ def boolTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.boolText :
 def boolTextBody : Body boolTextHeader := by
   refine {
     functions := {
-      values := Fin.cases ?functionValue (fun impossible => Fin.elim0 impossible)
+      values := fun f => Fin.cases (n := 0)
+        (motive := fun f : Fin boolTextHeader.unit.fns.length =>
+          EnsTy boolTextHeader.unit f × RumpTy boolTextHeader.unit f × ReqTy boolTextHeader.unit f)
+        ?functionValue (fun impossible => Fin.elim0 impossible) f
       equations := ?functionEq
       noInvariants := by cbv
       noMeasures := ?noMeasures
@@ -133,14 +155,16 @@ def boolTextBody : Body boolTextHeader := by
   case functionEq =>
     intro f
     rcases f with ⟨index, bound⟩
-    have small : index < 1 := bound
+    have count : boolTextHeader.unit.fns.length = 1 := by cbv
+    have small : index < 1 := by simpa only [count] using bound
     have zero : index = 0 := by omega
     subst index
     cbv <;> exact Eq.refl _
   case noMeasures =>
     intro f
     rcases f with ⟨index, bound⟩
-    have small : index < 1 := bound
+    have count : boolTextHeader.unit.fns.length = 1 := by cbv
+    have small : index < 1 := by simpa only [count] using bound
     have zero : index = 0 := by omega
     subst index
     cbv
@@ -162,8 +186,12 @@ private theorem optionText_parsed :
 
 /-- Construct the complete source and elaborator packet before projecting its dependent unit. -/
 def optionTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.optionText := by
-  have parsed := Gabbro.Grammatik.except_ok_get (ε := String)
-    (α := List SItemTief) (x := parseTopTief (optionTextScan.tokens ++ [.ende])) optionText_parsed
+  have parsing : (parseTopTief (optionTextScan.tokens ++ [.ende])).toOption.isSome = true := by
+    exact optionText_parsed
+  have parsed : parseTopTief (optionTextScan.tokens ++ [.ende]) =
+      .ok ((parseTopTief (optionTextScan.tokens ++ [.ende])).toOption.get parsing) := by
+    exact Gabbro.Grammatik.except_ok_get (ε := String)
+      (α := List SItemTief) (x := parseTopTief (optionTextScan.tokens ++ [.ende])) parsing
   refine {
     source := ?source
     sourceEq := ?sourceEq
@@ -177,11 +205,26 @@ def optionTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.optionTe
     elaborated := ?elaborated }
   case sourceEq =>
     unfold Frontend.source
-    rw [optionText_lexed]
-    dsimp only
-    rw [parsed]
-    dsimp only
-    cbv <;> exact Eq.refl _
+    split
+    · rename_i error rejected
+      cases rejected.symm.trans optionText_lexed
+    · rename_i tokens selected
+      have same : tokens = optionTextScan.tokens ++ [.ende] :=
+        Except.ok.inj (selected.symm.trans optionText_lexed)
+      subst tokens
+      have proofEq : selected = optionText_lexed := Subsingleton.elim _ _
+      subst selected
+      split
+      · rename_i error rejected
+        cases rejected.symm.trans parsed
+      · rename_i items selected
+        have same : items =
+            (parseTopTief (optionTextScan.tokens ++ [.ende])).toOption.get parsing :=
+          Except.ok.inj (selected.symm.trans parsed)
+        subst items
+        have proofEq : selected = parsed := Subsingleton.elim _ _
+        subst selected
+        cbv <;> exact Eq.refl _
   case expansion => cbv <;> exact Eq.refl _
   case constants => cbv <;> exact Eq.refl _
   case ordinary => cbv
@@ -192,7 +235,10 @@ def optionTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.optionTe
 def optionTextBody : Body optionTextHeader := by
   refine {
     functions := {
-      values := Fin.cases ?functionValue (fun impossible => Fin.elim0 impossible)
+      values := fun f => Fin.cases (n := 0)
+        (motive := fun f : Fin optionTextHeader.unit.fns.length =>
+          EnsTy optionTextHeader.unit f × RumpTy optionTextHeader.unit f × ReqTy optionTextHeader.unit f)
+        ?functionValue (fun impossible => Fin.elim0 impossible) f
       equations := ?functionEq
       noInvariants := by cbv
       noMeasures := ?noMeasures
@@ -208,14 +254,16 @@ def optionTextBody : Body optionTextHeader := by
   case functionEq =>
     intro f
     rcases f with ⟨index, bound⟩
-    have small : index < 1 := bound
+    have count : optionTextHeader.unit.fns.length = 1 := by cbv
+    have small : index < 1 := by simpa only [count] using bound
     have zero : index = 0 := by omega
     subst index
     cbv <;> exact Eq.refl _
   case noMeasures =>
     intro f
     rcases f with ⟨index, bound⟩
-    have small : index < 1 := bound
+    have count : optionTextHeader.unit.fns.length = 1 := by cbv
+    have small : index < 1 := by simpa only [count] using bound
     have zero : index = 0 := by omega
     subst index
     cbv
@@ -237,8 +285,12 @@ private theorem noneText_parsed :
 
 /-- Construct the complete source and elaborator packet before projecting its dependent unit. -/
 def noneTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.noneText := by
-  have parsed := Gabbro.Grammatik.except_ok_get (ε := String)
-    (α := List SItemTief) (x := parseTopTief (noneTextScan.tokens ++ [.ende])) noneText_parsed
+  have parsing : (parseTopTief (noneTextScan.tokens ++ [.ende])).toOption.isSome = true := by
+    exact noneText_parsed
+  have parsed : parseTopTief (noneTextScan.tokens ++ [.ende]) =
+      .ok ((parseTopTief (noneTextScan.tokens ++ [.ende])).toOption.get parsing) := by
+    exact Gabbro.Grammatik.except_ok_get (ε := String)
+      (α := List SItemTief) (x := parseTopTief (noneTextScan.tokens ++ [.ende])) parsing
   refine {
     source := ?source
     sourceEq := ?sourceEq
@@ -252,11 +304,26 @@ def noneTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.noneText :
     elaborated := ?elaborated }
   case sourceEq =>
     unfold Frontend.source
-    rw [noneText_lexed]
-    dsimp only
-    rw [parsed]
-    dsimp only
-    cbv <;> exact Eq.refl _
+    split
+    · rename_i error rejected
+      cases rejected.symm.trans noneText_lexed
+    · rename_i tokens selected
+      have same : tokens = noneTextScan.tokens ++ [.ende] :=
+        Except.ok.inj (selected.symm.trans noneText_lexed)
+      subst tokens
+      have proofEq : selected = noneText_lexed := Subsingleton.elim _ _
+      subst selected
+      split
+      · rename_i error rejected
+        cases rejected.symm.trans parsed
+      · rename_i items selected
+        have same : items =
+            (parseTopTief (noneTextScan.tokens ++ [.ende])).toOption.get parsing :=
+          Except.ok.inj (selected.symm.trans parsed)
+        subst items
+        have proofEq : selected = parsed := Subsingleton.elim _ _
+        subst selected
+        cbv <;> exact Eq.refl _
   case expansion => cbv <;> exact Eq.refl _
   case constants => cbv <;> exact Eq.refl _
   case ordinary => cbv
@@ -267,7 +334,10 @@ def noneTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.noneText :
 def noneTextBody : Body noneTextHeader := by
   refine {
     functions := {
-      values := Fin.cases ?functionValue (fun impossible => Fin.elim0 impossible)
+      values := fun f => Fin.cases (n := 0)
+        (motive := fun f : Fin noneTextHeader.unit.fns.length =>
+          EnsTy noneTextHeader.unit f × RumpTy noneTextHeader.unit f × ReqTy noneTextHeader.unit f)
+        ?functionValue (fun impossible => Fin.elim0 impossible) f
       equations := ?functionEq
       noInvariants := by cbv
       noMeasures := ?noMeasures
@@ -283,14 +353,16 @@ def noneTextBody : Body noneTextHeader := by
   case functionEq =>
     intro f
     rcases f with ⟨index, bound⟩
-    have small : index < 1 := bound
+    have count : noneTextHeader.unit.fns.length = 1 := by cbv
+    have small : index < 1 := by simpa only [count] using bound
     have zero : index = 0 := by omega
     subst index
     cbv <;> exact Eq.refl _
   case noMeasures =>
     intro f
     rcases f with ⟨index, bound⟩
-    have small : index < 1 := bound
+    have count : noneTextHeader.unit.fns.length = 1 := by cbv
+    have small : index < 1 := by simpa only [count] using bound
     have zero : index = 0 := by omega
     subst index
     cbv
