@@ -102,6 +102,7 @@ theorem bild_initialized_frames_u {u : UProg} {P : Programm (declOf u)} {passes 
   have result := startFrameBytes_frame frameMade frameMemory room
   simpa only [Nat.mul_assoc] using result
 
+omit [Kern] in
 /-- Initialized payload length follows from the successful image, without a separate
     InitialLayout or world-end capacity premise at the source emitter. -/
 theorem bild_initialized_length_u {u : UProg} {P : Programm (declOf u)} {passes : Nat}

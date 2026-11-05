@@ -43,7 +43,7 @@ theorem emit_eq {src : String} {K : Nat} {options : Profil.Options}
   dsimp only [bind, Except.bind]
   simp only [foreigns, List.forIn_nil]
   dsimp only [bind, Except.bind, pure, Except.pure]
-  rw [gateMap, starts]
+  erw [gateMap, starts]
   dsimp only [bind, Except.bind]
   rw [dif_pos result.initialValid, result.pointers, result.emission]
   rfl

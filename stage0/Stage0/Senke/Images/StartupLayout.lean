@@ -45,18 +45,22 @@ structure BildLage (passes : Nat) (P : Programm D) (fs : List D.Fn) (pos : D.Fn 
   hops : (spawnC (startScratch main) sp ++ startC A main n 231 true ++ rootsC A n roots ++ body).all
     (fun i => decide (i.o < 256)) = true
 
+omit [Kern] in
 theorem BildLage.head (h : BildLage passes P fs pos main roots K Ks Yb A cs body n fp0 sp ρ rootArgs) :
     (spawnC (startScratch main) sp ++ startC A main n 231 true ++ rootsC A n roots).length = headLen roots.length := by
   rw [h.hsp]
   simp only [List.length_append, spawnC_len, List.length_map, List.length_range, startC_len, rootsC_len, headLen]
 
+omit [Kern] in
 /-- Every admitted start serializes successfully; the complete stack band has exactly
     the byte length reserved by the source-independent image geometry. -/
 theorem BildLage.stacks (h : BildLage passes P fs pos main roots K Ks Yb A cs body n fp0 sp ρ rootArgs) :
     ∃ stackBytes, startStackBytes Ks (FB + FB) (encodeEnv Yb ρ :: rootArgs) = some stackBytes ∧
       stackBytes.length = 8 * (Ks * (roots.length + 1)) := by
   have hexm := h.hex main (by simp)
-  have hge := startScratch_ge main
+  have hge : FB + FB + contextWords (D.params main) + 1 ≤ startScratch main := by
+    rw [startScratch_eq]
+    omega
   obtain ⟨stackBytes, made⟩ := startStackBytes_some (slots := Ks) (base := FB + FB) (encodeEnv Yb ρ :: rootArgs)
     (by
       intro words member

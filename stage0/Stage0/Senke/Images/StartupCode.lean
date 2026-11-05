@@ -9,6 +9,7 @@ set_option linter.unusedSectionVars false
 variable [Kern]
 variable {D : Deklaration} {passes : Nat}
 
+omit [Kern] in
 theorem leN_len (n v : Nat) : (Runner.Prog.leN n v).length = n := by simp [Runner.Prog.leN]
 
 /-- The image's first word is the first frame: the loader starts the IR thread at `⟨IMG + 16, fp0⟩`. -/

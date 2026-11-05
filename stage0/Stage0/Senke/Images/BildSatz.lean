@@ -6,7 +6,8 @@ public import Stage0.Senke.Images.StartupExecution
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {passes : Nat}
-/-- What `bild` lays out holds of its image. -/
+omit [Kern] in
+/-- What `bild` lays out holds of its image, independently of instruction execution. -/
 theorem bild_lage {P : Programm D} {fs : List D.Fn} {pos : D.Fn → Nat} {name : D.Fn → String} {main : D.Fn}
     {ρ : Env D (D.params main)} {starts : List (Σ f : D.Fn, Env D (D.params f))} {Ks req : Nat} {Y : Nat → Lay D} {b : Bild D}
     (hb : bild passes P Y fs pos name main ρ starts Ks req = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
@@ -40,7 +41,9 @@ theorem bild_lage {P : Programm D} {fs : List D.Fn} {pos : D.Fn → Nat} {name :
         have fits : startScratch start.1 + 8 ≤ Ks := by
           simpa using List.all_eq_true.mp hexK start.1
             (List.mem_cons_of_mem _ (List.mem_map.mpr ⟨start, startMem, rfl⟩))
-        have above := startScratch_ge start.1
+        have above : FB + FB + contextWords (D.params start.1) + 1 ≤ startScratch start.1 := by
+          rw [startScratch_eq]
+          omega
         rw [← encoded, encodeEnv_length]
         dsimp only at fits above ⊢
         omega
@@ -59,6 +62,7 @@ theorem bild_bytes {b : Bild D} {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG
   simp only [leN_len] at hm2
   simpa [codeBase] using hm2
 
+omit [Kern] in
 /-- Initialized root frames replace the reserved zero stack bytes without changing the
     total image length or any subsequent world/lock address. -/
 theorem bild_length {P : Programm D} {fs : List D.Fn} {pos : D.Fn → Nat} {name : D.Fn → String} {main : D.Fn}
