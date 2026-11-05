@@ -41,12 +41,15 @@ import all Init.Data.String.ToSlice
 namespace Gabbro.Grammatik.Zielsatz
 open Gabbro.Grammatik
 
+local instance : DecidableEq mD.Ax := inferInstanceAs (DecidableEq Empty)
+local instance : DecidableEq zD.Ax := inferInstanceAs (DecidableEq Empty)
+
 /-- **THE GOAL ON A `start` RUN.** On the accepted unit `zStart`, the idle root starts two
     `haupt` threads (dormant before), both step, thread 1 takes the lock; the starter waits
     for its unfinished roots holding nothing -- and `gabbro_ziel` gives every leg of `ZielF`
     there: `Ziel` over the two spawned threads (race freedom between them included), and the
     join legs. -/
-theorem spawn_start_ziel : ∃ K2 K3 K4 : FadenMaschine zD.mitRuhe,
+theorem spawn_start_ziel [RootNativeFloat.Hardware] : ∃ K2 K3 K4 : FadenMaschine zD.mitRuhe,
     FadenErreichbar zPB.mitRuhe zO.mitRuhe 0 zsK0 K4 ∧
     zsK0.lebt 1 = false ∧ zsK0.lebt 2 = false ∧ K4.lebt 1 = true ∧ K4.lebt 2 = true ∧
     RufSchrittG zPB.mitRuhe zO.mitRuhe 0 zsK1.m 1 K2.m ∧
@@ -101,17 +104,29 @@ theorem spawn_start_ziel : ∃ K2 K3 K4 : FadenMaschine zD.mitRuhe,
     exact Bool.false_ne_true h
   · exact gabbro_ziel_sc akzeptiert_pruefer zD zStart ⟨zFs, zFs_voll⟩ ⟨[()], zLs_voll⟩
       ⟨[.inl ()], zCs_voll⟩ zStart_akzeptiert zStart_nutzerPflicht zO
-      ⟨zO_gut, zO_lokal, axVertragO_wahr zO⟩ 0 _ _ zStart_laufzeit zsLebt0 K4 hr
+      ⟨zO_gut, zO_lokal, axVertragO_wahr zO, inferInstance⟩ 0 _ _ zStart_laufzeit zsLebt0 K4 hr
 
 /-- **Probe B with a `child`**: `haupt` is a declared start AND the root of a run-time child
     (`gestartet`). `ws = [haupt, haupt, haupt]`. -/
-def zKind : Einheit zD := ⟨zPB, zS, axWahr zD, [⟨zHaupt, .nil⟩], zSp, [⟨zHaupt, .nil⟩], []⟩
+def zKind : Einheit zD where
+  P := zPB
+  S := zS
+  Q := axWahr zD
+  starts := [⟨zHaupt, .nil⟩]
+  sp0 := zSp
+  gestartet := [⟨zHaupt, .nil⟩]
+  arenen := []
+  akku := []
+  pruefungen := []
+  grants0 := []
 
 theorem zKind_ws : zKind.ws = [zHaupt, zHaupt, zHaupt] := by rfl
 
 theorem zKind_akzeptiert :
-    akzeptiert_pruefer.akzeptiert zKind zFs [()] [.inl ()] = true :=
-  (by show Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt, zHaupt, zHaupt] = true; decide)
+    akzeptiert_pruefer.akzeptiert zKind zFs [()] [.inl ()] = true := by
+  rw [akzeptiert_pruefer_eq]
+  show Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt, zHaupt, zHaupt] = true
+  decide
 
 theorem zKind_nutzerPflicht : NutzerPflicht zKind :=
   ⟨⟨fun passes f => ⟨koerperGutS_alle zFs_voll (by decide) zPB_koerper passes f, zInvGutS f,
@@ -155,20 +170,15 @@ def zkK1 : FadenMaschine zD.mitRuhe :=
 theorem zk_schritt1 : FadenSchritt zPB.mitRuhe zO.mitRuhe 0 zkK0 zkK1 :=
   FadenSchritt.kind zkK0 0 1 rfl rfl rfl
 
-/-- **THE GOAL ON A `child` RUN.** On the accepted unit `zKind`, the live `haupt` on thread 0
-    spawns a `haupt` child on thread 1 (dormant before) and goes on: parent step, child step,
-    parent takes the lock -- and `gabbro_ziel` gives every leg of `ZielF` there; the child
-    entered holding nothing (`schlafendFrei` before the spawn, its empty trace after). -/
-theorem spawn_kind_ziel : ∃ K2 K3 K4 : FadenMaschine zD.mitRuhe,
+/-- The actual child-run steps, independently of the goal's hardware premise. -/
+private theorem spawn_kind_run : ∃ K2 K3 K4 : FadenMaschine zD.mitRuhe,
     FadenErreichbar zPB.mitRuhe zO.mitRuhe 0 zkK0 K4 ∧
     zkK0.lebt 1 = false ∧ K4.lebt 1 = true ∧ K4.wartet 0 = [] ∧
     RufSchrittG zPB.mitRuhe zO.mitRuhe 0 zkK1.m 0 K2.m ∧
     RufSchrittG zPB.mitRuhe zO.mitRuhe 0 K2.m 1 K3.m ∧
     RufSchrittG zPB.mitRuhe zO.mitRuhe 0 K3.m 0 K4.m ∧
     (() : zD.mitRuhe.Lock) ∈ offen (K4.m.faeden 0).spur ∧
-    offen (K3.m.faeden 1).spur = [] ∧
-    ZielF zKind.P.mitRuhe zKind.S.mitRuhe zO.mitRuhe 0
-      (RufStartG zKind.P.mitRuhe (speicherR zSp) zkInit) K4 := by
+    offen (K3.m.faeden 1).spur = [] := by
   have hoff : ∀ g, offen (zkK1.m.faeden g).spur = [] :=
     start_offen_leer zPB.mitRuhe (speicherR zSp) zkInit zkInit_leer
   obtain ⟨M2, s2, hZ2⟩ := w_endeEntf (P := zPB.mitRuhe) (O := zO.mitRuhe) (passes := 0)
@@ -206,10 +216,25 @@ theorem spawn_kind_ziel : ∃ K2 K3 K4 : FadenMaschine zD.mitRuhe,
     rw [hZ4.1]
     show () ∈ () :: offen (M3.weltVon 0).spur
     exact List.mem_cons_self
-  exact ⟨K2, K3, K4, hr, rfl, rfl, rfl, s2, s3, s4, hL0, h3sp,
+  exact ⟨K2, K3, K4, hr, rfl, rfl, rfl, s2, s3, s4, hL0, h3sp⟩
+
+/-- **THE GOAL ON A `child` RUN.** The parent spawns a dormant child, both step,
+    and the parent takes the lock. The generic theorem supplies every `ZielF` leg. -/
+theorem spawn_kind_ziel [RootNativeFloat.Hardware] : ∃ K2 K3 K4 : FadenMaschine zD.mitRuhe,
+    FadenErreichbar zPB.mitRuhe zO.mitRuhe 0 zkK0 K4 ∧
+    zkK0.lebt 1 = false ∧ K4.lebt 1 = true ∧ K4.wartet 0 = [] ∧
+    RufSchrittG zPB.mitRuhe zO.mitRuhe 0 zkK1.m 0 K2.m ∧
+    RufSchrittG zPB.mitRuhe zO.mitRuhe 0 K2.m 1 K3.m ∧
+    RufSchrittG zPB.mitRuhe zO.mitRuhe 0 K3.m 0 K4.m ∧
+    (() : zD.mitRuhe.Lock) ∈ offen (K4.m.faeden 0).spur ∧
+    offen (K3.m.faeden 1).spur = [] ∧
+    ZielF zKind.P.mitRuhe zKind.S.mitRuhe zO.mitRuhe 0
+      (RufStartG zKind.P.mitRuhe (speicherR zSp) zkInit) K4 := by
+  obtain ⟨K2, K3, K4, hr, asleep, awake, waiting, s2, s3, s4, held, free⟩ := spawn_kind_run
+  exact ⟨K2, K3, K4, hr, asleep, awake, waiting, s2, s3, s4, held, free,
     gabbro_ziel_sc akzeptiert_pruefer zD zKind ⟨zFs, zFs_voll⟩ ⟨[()], zLs_voll⟩
       ⟨[.inl ()], zCs_voll⟩ zKind_akzeptiert zKind_nutzerPflicht zO
-      ⟨zO_gut, zO_lokal, axVertragO_wahr zO⟩ 0 _ _ zKind_laufzeit zkLebt0 K4 hr⟩
+      ⟨zO_gut, zO_lokal, axVertragO_wahr zO, inferInstance⟩ 0 _ _ zKind_laufzeit zkLebt0 K4 hr⟩
 
 /-! ## 5. The refusals -/
 
@@ -217,7 +242,17 @@ theorem spawn_kind_ziel : ∃ K2 K3 K4 : FadenMaschine zD.mitRuhe,
     of the two-thread fixture writes `privB` unguarded. As a run-time root (`gestartet`) it stands
     twice in `ws`, and the checker Bool refuses -- at the pool component alone. The same routine
     as an ordinary declared start beside `hauptA` is accepted: the refusal is the spawn's. -/
-def mStartB : Einheit mD := ⟨mP, mSI, axWahr mD, [⟨mHauptA, .nil⟩], mSp, [⟨mHauptB, .nil⟩], []⟩
+def mStartB : Einheit mD where
+  P := mP
+  S := mSI
+  Q := axWahr mD
+  starts := [⟨mHauptA, .nil⟩]
+  sp0 := mSp
+  gestartet := [⟨mHauptB, .nil⟩]
+  arenen := []
+  akku := []
+  pruefungen := []
+  grants0 := []
 
 theorem start_nicht_poolsicher_abgelehnt :
     akzeptiert_pruefer.akzeptiert mStartB mFs [()] mCs = false ∧
@@ -228,12 +263,13 @@ theorem start_nicht_poolsicher_abgelehnt :
     einzelnPoolB mP mFs mCs [mHauptA, mHauptB, mHauptB] = false ∧
     Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB] = true := by
   refine ⟨?_, by decide, by decide, mP_akzeptiert⟩
+  rw [akzeptiert_pruefer_eq]
   show Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB, mHauptB] = false
   decide
 
 /-- The same refusal at the specification: no `AkzeptiertSpec` for `mStartB`, because a
     run-time root must be pool-safe (`akzeptiertSpec_gestartet`). -/
-theorem start_nicht_poolsicher_spec : ¬ AkzeptiertSpec mP mSI mFs mStartB.ws := fun h =>
+theorem start_nicht_poolsicher_spec : ¬ AkzeptiertSpec mP mSI mFs mStartB.ws mStartB.akku := fun h =>
   pool_abgelehnt.2.2.2 (akzeptiertSpec_gestartet mStartB mFs h ⟨mHauptB, .nil⟩
     (List.mem_singleton_self _)).2.2
 
@@ -241,8 +277,17 @@ theorem start_nicht_poolsicher_spec : ¬ AkzeptiertSpec mP mSI mFs mStartB.ws :=
     `locks L` lifts to a root that needs `L` at entry -- `wrap` of probe B, which holds the lock
     by signature (it is called only inside `haupt`'s `locks`). As a run-time root it is refused
     by the checker Bool at the root component (`wurzelnB`: a thread root holds nothing). -/
-def zKindUnterSperre : Einheit zD :=
-  ⟨zPB, zS, axWahr zD, [⟨zHaupt, .nil⟩], zSp, [⟨zWrap, .nil⟩], []⟩
+def zKindUnterSperre : Einheit zD where
+  P := zPB
+  S := zS
+  Q := axWahr zD
+  starts := [⟨zHaupt, .nil⟩]
+  sp0 := zSp
+  gestartet := [⟨zWrap, .nil⟩]
+  arenen := []
+  akku := []
+  pruefungen := []
+  grants0 := []
 
 theorem kind_unter_sperre_abgelehnt :
     zD.haelt zWrap = [()] ∧
@@ -250,10 +295,11 @@ theorem kind_unter_sperre_abgelehnt :
     wurzelnB [zHaupt, zWrap, zWrap] = false ∧
     Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt] = true := by
   refine ⟨rfl, ?_, by decide, zPB_akzeptiert⟩
+  rw [akzeptiert_pruefer_eq]
   show Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt, zWrap, zWrap] = false
   decide
 
-theorem kind_unter_sperre_spec : ¬ AkzeptiertSpec zPB zS zFs zKindUnterSperre.ws := fun h => by
+theorem kind_unter_sperre_spec : ¬ AkzeptiertSpec zPB zS zFs zKindUnterSperre.ws zKindUnterSperre.akku := fun h => by
   have := (akzeptiertSpec_gestartet zKindUnterSperre zFs h ⟨zWrap, .nil⟩
     (List.mem_singleton_self _)).1
   exact absurd this (by decide)
@@ -279,7 +325,7 @@ theorem start_unter_sperre_zeuge : ∃ K : FadenMaschine zD.mitRuhe,
     FadenErreichbar zPB.mitRuhe zO.mitRuhe 0 zkK0 K ∧
     (() : zD.mitRuhe.Lock) ∈ offen (K.m.faeden 0).spur ∧
     ∀ K', FadenSchritt zPB.mitRuhe zO.mitRuhe 0 K K' → K'.wartet 0 = [] := by
-  obtain ⟨_, _, K, hr, _, _, hw, _, _, _, hL, _⟩ := spawn_kind_ziel
+  obtain ⟨_, _, K, hr, _, _, hw, _, _, _, hL, _⟩ := spawn_kind_run
   refine ⟨K, hr, hL, fun K' hs => Classical.byContradiction fun hne => ?_⟩
   rw [start_unter_sperre_kein_schritt hs 0 hw hne] at hL
   exact List.not_mem_nil hL
