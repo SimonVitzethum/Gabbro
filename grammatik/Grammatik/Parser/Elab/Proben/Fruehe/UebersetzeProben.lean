@@ -133,8 +133,10 @@ private theorem lowering_ok (unit : UProg)
       exact Bool.or_true _
     unfold Measures.checkedProgram
     rw [measured]
-    change (if Measures.cycleLengths unit program exported.mass then true else false) = true
-    rw [ite_eq_left cycles]
+    dsimp only
+    split
+    · rfl
+    · contradiction
   unfold lowerAllg
   split
   · rename_i error failed
@@ -351,8 +353,58 @@ private def bit1Characters : List Char :=
 
 private theorem bit1_text : bit1 = String.ofList bit1Characters := by cbv
 
-private theorem bit1_lexed : (lexL bit1Characters).toOption.isSome = true := by cbv
-private def bit1Tokens : List Token := (lexL bit1Characters).toOption.get bit1_lexed
+-- Equations of the canonical scanner stop before their symbolic continuation.
+private theorem bit_scan_module (rest : List Char) (n : Nat) :
+    scan false (['m', 'o', 'd', 'u', 'l', 'e', ' ', 'm', ' ', '{', ' '] ++ rest) (n + 6) =
+    [.wort "module", .ident "m", .zeichen "{"].foldr (fun t result => Except.map (t :: ·) result) (scan false rest n) := by cbv
+
+private theorem bit_scan_first_head (rest : List Char) (n : Nat) :
+    scan false (['i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'k', '(', 'a', ' ', ':', ' ', 'u', '3', '2', ',', ' ', 'b', ' ', ':', ' ', 'u', '3', '2', ')', ' ', '-', '>', ' ', 'u', '6', '4', ' ', '{', ' '] ++ rest) (n + 26) =
+    [.wort "impl", .wort "fn", .ident "k", .zeichen "(", .ident "a", .zeichen ":", .wort "u32", .zeichen ",", .ident "b", .zeichen ":", .wort "u32", .zeichen ")", .zeichen "->", .wort "u64", .zeichen "{"].foldr (fun t result => Except.map (t :: ·) result) (scan false rest n) := by cbv
+
+private theorem bit_scan_first_body (rest : List Char) (n : Nat) :
+    scan false (['r', 'e', 't', 'u', 'r', 'n', ' ', 'u', '6', '4', '(', 'a', ')', ' ', '|', ' ', 'u', '6', '4', '(', 'b', ')', ';', ' ', '}', ' '] ++ rest) (n + 17) =
+    [.wort "return", .wort "u64", .zeichen "(", .ident "a", .zeichen ")", .zeichen "|", .wort "u64", .zeichen "(", .ident "b", .zeichen ")", .zeichen ";", .zeichen "}"].foldr (fun t result => Except.map (t :: ·) result) (scan false rest n) := by cbv
+
+private theorem bit_scan_second_head (rest : List Char) (n : Nat) :
+    scan false (['i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'i', '(', 'w', ' ', ':', ' ', 'u', '3', '2', ')', ' ', '-', '>', ' ', 'u', '3', '2', ' ', '{', ' '] ++ rest) (n + 19) =
+    [.wort "impl", .wort "fn", .ident "i", .zeichen "(", .wort "w", .zeichen ":", .wort "u32", .zeichen ")", .zeichen "->", .wort "u32", .zeichen "{"].foldr (fun t result => Except.map (t :: ·) result) (scan false rest n) := by cbv
+
+private theorem bit_scan_second_body (rest : List Char) (n : Nat) :
+    scan false (['r', 'e', 't', 'u', 'r', 'n', ' ', 'w', ' ', '^', ' ', 'u', '3', '2', ':', ':', 'm', 'a', 'x', ';', ' ', '}', ' '] ++ rest) (n + 13) =
+    [.wort "return", .wort "w", .zeichen "^", .wort "u32", .zeichen "::", .wort "max", .zeichen ";", .zeichen "}"].foldr (fun t result => Except.map (t :: ·) result) (scan false rest n) := by cbv
+
+private theorem bit_scan_third_head (rest : List Char) (n : Nat) :
+    scan false (['i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'm', '(', 'a', ' ', ':', ' ', 'u', '8', ',', ' ', 'b', ' ', ':', ' ', 'u', '8', ')', ' ', '-', '>', ' ', 'u', '8', ' ', '{', ' '] ++ rest) (n + 26) =
+    [.wort "impl", .wort "fn", .ident "m", .zeichen "(", .ident "a", .zeichen ":", .wort "u8", .zeichen ",", .ident "b", .zeichen ":", .wort "u8", .zeichen ")", .zeichen "->", .wort "u8", .zeichen "{"].foldr (fun t result => Except.map (t :: ·) result) (scan false rest n) := by cbv
+
+private theorem bit_scan_third_body (rest : List Char) (n : Nat) :
+    scan false (['r', 'e', 't', 'u', 'r', 'n', ' ', 'a', ' ', '&', ' ', 'b', ';', ' ', '}', ' '] ++ rest) (n + 11) =
+    [.wort "return", .ident "a", .zeichen "&", .ident "b", .zeichen ";", .zeichen "}"].foldr (fun t result => Except.map (t :: ·) result) (scan false rest n) := by cbv
+
+private theorem bit_scan_end (n : Nat) :
+    scan false ['}'] (n + 1) = .ok [.zeichen "}", .ende] := by cbv
+
+private theorem bit_token_maps (tokens : List Token) (result : Except LexFehler (List Token)) :
+    tokens.foldr (fun t answer => Except.map (t :: ·) answer) result =
+      Except.map (tokens ++ ·) result := by
+  induction tokens with
+  | nil => cases result <;> rfl
+  | cons t ts ih => simp only [List.foldr, ih]; cases result <;> rfl
+
+private def bit1Tokens : List Token :=
+  [.wort "module", .ident "m", .zeichen "{", .wort "impl", .wort "fn", .ident "k", .zeichen "(", .ident "a", .zeichen ":", .wort "u32", .zeichen ",", .ident "b",
+   .zeichen ":", .wort "u32", .zeichen ")", .zeichen "->", .wort "u64", .zeichen "{", .wort "return", .wort "u64", .zeichen "(", .ident "a", .zeichen ")", .zeichen "|",
+   .wort "u64", .zeichen "(", .ident "b", .zeichen ")", .zeichen ";", .zeichen "}", .wort "impl", .wort "fn", .ident "i", .zeichen "(", .wort "w", .zeichen ":",
+   .wort "u32", .zeichen ")", .zeichen "->", .wort "u32", .zeichen "{", .wort "return", .wort "w", .zeichen "^", .wort "u32", .zeichen "::", .wort "max", .zeichen ";",
+   .zeichen "}", .wort "impl", .wort "fn", .ident "m", .zeichen "(", .ident "a", .zeichen ":", .wort "u8", .zeichen ",", .ident "b", .zeichen ":", .wort "u8",
+   .zeichen ")", .zeichen "->", .wort "u8", .zeichen "{", .wort "return", .ident "a", .zeichen "&", .ident "b", .zeichen ";", .zeichen "}", .zeichen "}", .ende]
+
+private theorem bit1_lexed : lexL bit1Characters = .ok bit1Tokens := by
+  change scan false bit1Characters 177 = .ok bit1Tokens
+  simp only [bit1Characters, bit1Tokens, bit_scan_module, bit_scan_first_head, bit_scan_first_body,
+    bit_scan_second_head, bit_scan_second_body, bit_scan_third_head, bit_scan_third_body,
+    bit_scan_end, bit_token_maps, Except.map]
 
 private theorem bit1_parsed : (parseTopTief bit1Tokens).toOption.isSome = true := by cbv
 private def bit1Items : List SItemTief := (parseTopTief bit1Tokens).toOption.get bit1_parsed
@@ -374,7 +426,7 @@ private theorem bit1_elaborated : elabU (pre108 bit1Items) = .ok bit1Unit := by 
 private theorem bit1_front : Frontend bit1 bit1Unit := by
   have lexed : lex bit1 = .ok bit1Tokens := by
     rw [bit1_text, lex_ofList]
-    exact except_ok_get bit1_lexed
+    exact bit1_lexed
   have parsed : parseTopTief bit1Tokens = .ok bit1Items := except_ok_get bit1_parsed
   intro after
   rw [lexed]
