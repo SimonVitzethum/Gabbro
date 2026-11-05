@@ -73,8 +73,9 @@ theorem steps_bound (pieces : List Chunk) :
 scoped macro "rights_input " source:term " with_cuts " "[" cuts:ident,* "]"
     " with_text " "[" fragments:str,* "]" : term => do
   let text := fragments.getElems.foldl (fun text fragment => text ++ fragment.getString) ""
-  let letters : Array (Lean.TSyntax `term) := text.toList.toArray.map fun char =>
-    ⟨(Lean.Syntax.mkCharLit char).raw⟩
+  let _ := text
+  let textFacts : Array (Lean.TSyntax `term) := cuts.getElems.map fun piece =>
+    ⟨(Lean.mkIdentFrom piece (piece.getId.appendAfter "_text")).raw⟩
   let mut bounded : Lean.TSyntax `term ← `(Eq.refl true)
   for piece in cuts.getElems.reverse do
     let proof : Lean.TSyntax `term :=
@@ -82,11 +83,12 @@ scoped macro "rights_input " source:term " with_cuts " "[" cuts:ident,* "]"
     bounded ← `(Bool.and_eq_true_iff.mpr ⟨$proof, $bounded⟩)
   `(show Input $source from by
     let pieces : List Chunk := [$cuts,*]
-    have charsEq : Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces =
-        ([$letters,*] : List Char) := by rfl
     refine Input.of_chunks (source := $source) pieces ?text ?room
     case text =>
-      rw [charsEq] <;> cbv
+      simp only [pieces, Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters,
+        List.flatMap_cons, List.flatMap_nil, String.ofList_append, String.ofList_nil,
+        $textFacts,*]
+      cbv
     case room =>
       exact Nat.le_trans (steps_bound pieces $bounded) (Nat.le_succ _))
 
