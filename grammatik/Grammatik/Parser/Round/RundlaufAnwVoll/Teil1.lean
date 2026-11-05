@@ -180,22 +180,46 @@ theorem parseStmt_ident (f : Nat) (a : String) (r : List Token)
   by_cases keyword : istSchluessel a = true
   · simp only [nameTok, keyword, ↓reduceIte] at placed ⊢
     rw [parseStmt.eq_def]
+    dsimp only
     split
-    · split <;> simp_all
-    all_goals
+    · rename_i same
+      cases same
+      split
+      · rw [placed]
+      · exact placed
+    · rename_i same
+      cases same
       rcases hw with hw | hw
-      · simp_all
+      · rw [if_pos hw] <;> exact placed
       · have e := fun w (hw' : istAnwWort w = true) => anwWort_strEq hw w hw'
-        simp_all [e "let" rfl, Bool.false_eq_true, ↓reduceIte, e "if" rfl,
-          e "match" rfl, e "traverse" rfl, e "retry" rfl, e "forever" rfl,
-          e "breaking" rfl, e "narrow" rfl, e "locks" rfl, e "observes" rfl,
-          e "leave" rfl, e "next" rfl, e "return" rfl, e "reset" rfl,
-          e "grow" rfl, e "free" rfl, e "child" rfl, e "transition" rfl,
-          e "advances" rfl, e "retires" rfl, ite_self]
+        split
+        · exact placed
+        · simpa only [e "let" rfl, e "if" rfl, e "match" rfl, e "traverse" rfl,
+            e "retry" rfl, e "forever" rfl, e "breaking" rfl, e "narrow" rfl,
+            e "locks" rfl, e "observes" rfl, e "leave" rfl, e "next" rfl,
+            e "return" rfl, e "reset" rfl, e "grow" rfl, e "free" rfl,
+            e "child" rfl, e "transition" rfl, e "advances" rfl, e "retires" rfl,
+            Bool.false_eq_true, ite_false] using placed
+    · rename_i same
+      cases same
+    · rename_i same
+      cases same
+    · rename_i absentArray absentWord absentStart absentLibrary
+      exact (absentWord a r rfl).elim
   · simp only [nameTok, keyword, ↓reduceIte] at placed ⊢
     rw [parseStmt.eq_def]
-    simp only
-    split <;> simp_all
+    dsimp only
+    split
+    · rename_i same
+      cases same
+    · rename_i same
+      cases same
+    · rename_i same
+      cases same
+      exact (h _ rfl).elim
+    · rename_i same
+      cases same
+    · exact placed
 
 theorem parsePlatzStmt_ident (f : Nat) (a : String) (r : List Token) (ht : a ≠ "transition") :
     parsePlatzStmt (f + 1) (nameTok a :: r) = parseKopfStmt f (nameTok a :: r) := by
