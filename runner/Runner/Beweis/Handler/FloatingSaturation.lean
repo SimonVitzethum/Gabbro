@@ -103,13 +103,13 @@ theorem truncate {L : Lay} {t : IR.T} {x : X} {tail : List Ins} {k : W → Res I
     (format : FPFormat) (exit : Exit L t tail k)
     (code : Code L.C x.rip (fpTruncateBody format ++ tail)) (controls : Controls L t x) :
     Match L (Runner.fp (.truncateInt64 format) x.rax 0 k) x := by
-  let loaded : X := ({ x with rip := x.rip + BitVec.ofNat 64
-    (enc (.movToXmm format .xmm0 .rax)).length }).setXmm .xmm0
+  let loaded : X := ({ x with rip := (x.rip + BitVec.ofNat 64
+    (enc (.movToXmm format .xmm0 .rax)).length) }).setXmm .xmm0
       (match format with
         | .f32 => (x.rax.setWidth 32).setWidth 128
         | .f64 => x.rax.setWidth 128)
-  let after (value : W) : X := ({ loaded with rip := loaded.rip + BitVec.ofNat 64
-    (enc (.truncateScalar format .rax .xmm0)).length }).set .rax value
+  let after (value : W) : X := ({ loaded with rip := (loaded.rip + BitVec.ofNat 64
+    (enc (.truncateScalar format .rax .xmm0)).length) }).set .rax value
   have position (value : W) :
       (after value).rip = x.rip + BitVec.ofNat 64 (lenOfL (fpTruncateBody format)) := by
     dsimp only [after, loaded, X.set, X.setXmm]
