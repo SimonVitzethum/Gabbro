@@ -18,11 +18,46 @@ BIN is the `runner` executable of the Lean package `runner/`; DIR a scratch dire
 
 Exit 0 all green, 1 a difference (printed), 2 nothing or not everything measured.
 """
+import csv
 import os
 import subprocess
 import sys
 
 KINDS = 36  # Runner.Test.KINDS, including the native floating-point families
+
+
+def floating_cases(exe, directory, runner):
+    """Exercise each complete FP handler, including portable conversion branches."""
+    generated = subprocess.run([exe, "floating", directory], capture_output=True, text=True, timeout=600)
+    if generated.returncode != 0:
+        print("runner-cpu: floating image generation failed:", generated.stderr[-1000:])
+        return 1, 0
+    with open(os.path.join(directory, "floating.tsv")) as manifest:
+        reader = csv.DictReader(manifest, delimiter="\t")
+        if reader.fieldnames != ["file", "opcode", "case", "exit", "input_a", "input_b", "expected", "comparison"]:
+            print("runner-cpu: floating manifest has an invalid header")
+            return 1, 0
+        cases = list(reader)
+    opcodes = {int(case["opcode"]) for case in cases}
+    names = {case["file"] for case in cases}
+    if opcodes != set(range(28, 60)) or len(names) != len(cases):
+        print("runner-cpu: incomplete or duplicate floating cases:", sorted(opcodes), len(cases))
+        return 1, 0
+    bad = 0
+    for case in cases:
+        image = os.path.join(directory, case["file"])
+        try:
+            actual = subprocess.run([runner, image], capture_output=True, timeout=10)
+            passed = case["exit"] == "0" and actual.returncode == 0 and not actual.stdout
+            detail = f"exit {actual.returncode}, stdout {actual.stdout[:80]!r}"
+        except subprocess.TimeoutExpired:
+            passed, detail = False, "timeout"
+        if not passed:
+            bad += 1
+            print(f"runner-cpu: {case['file']}: {detail}; inputs {case['input_a']}, {case['input_b']}; "
+                  f"expected {case['expected']} ({case['comparison']})")
+    print(f"runner-cpu: floating {len(cases)} whole-IR cases, opcodes 28..59, {bad} differences")
+    return bad, len(cases)
 
 
 def listing_matches(binary, listing):
@@ -125,6 +160,9 @@ def main():
                       f"flags {fa & m:#x} vs {fe:#x} (mask {m:#x})")
     missing = [k for k in range(KINDS) if kinds.get(k, 0) == 0]
     print("runner-cpu: cases per kind", [kinds.get(k, 0) for k in range(KINDS)])
+    floating_bad, floating_measured = floating_cases(exe, d, os.path.join(d, "runner"))
+    bad += floating_bad
+    measured += floating_measured
     # 3. faults
     for line in open(os.path.join(d, "faults.txt")).read().splitlines():
         name, sig, model = line.split()
