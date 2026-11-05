@@ -3,11 +3,13 @@ public import Runner.Prog.Elf
 public import Runner.Prog.Proben
 public import Runner.Prog.Liste
 public import Runner.Test.Diff
+public import Runner.Test.Floating
 -- `lean --run` needs the generators' IR and that of their transitive dependencies.
 -- Keep the ordinary imports and definitions for the native Lake executable as well.
 meta import Runner.Prog.Proben
 meta import Runner.Prog.Liste
 meta import Runner.Test.Diff
+meta import Runner.Test.Floating
 @[expose] public section
 
 
@@ -16,7 +18,8 @@ meta import Runner.Test.Diff
 Off the trust path: it prints the bytes the proofs are about (`Runner.Prog.image`), the listing `runner.s`, and the
 probe images. No Lean program runs the IR: the probes' outputs are fixed files (`runner/proben/NAME.aus`,
 `NAME.code`) that only the runner on the processor is compared with. `runner difftest DIR N` writes the
-differential tests of the x86-64 model (`Runner/Test/`). -/
+differential tests of the x86-64 model (`Runner/Test/`). `runner floating DIR`
+writes the whole-IR floating boundary images and their `floating.tsv` manifest. -/
 
 open Runner Runner.Prog
 
@@ -35,9 +38,21 @@ def difftest (dir : String) (n : Nat) : IO UInt32 := do
   IO.println s!"difftest: {masks.length} cases, {Runner.Test.faults.length} fault programs"
   return 0
 
+def floatingTests (dir : String) : IO UInt32 := do
+  let mut manifest := Runner.Test.Floating.manifestHeader
+  let mut count := 0
+  for test in Runner.Test.Floating.fixtures do
+    IO.FS.writeBinFile (dir ++ "/" ++ test.fileName count) (toBytes test.image)
+    manifest := manifest ++ test.manifestRow count
+    count := count + 1
+  IO.FS.writeFile (dir ++ "/floating.tsv") manifest
+  IO.println s!"floating: {count} IR images, opcodes 28..59, manifest floating.tsv"
+  return 0
+
 def main (args : List String) : IO UInt32 := do
   match args with
   | ["difftest", dir, n] => return (← difftest dir n.toNat!)
+  | ["floating", dir] => return (← floatingTests dir)
   | _ => pure ()
   let dir := args.headD "."
   IO.FS.writeBinFile (dir ++ "/runner") (toBytes image)
