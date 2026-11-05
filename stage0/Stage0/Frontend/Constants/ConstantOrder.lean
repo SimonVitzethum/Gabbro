@@ -57,42 +57,52 @@ def DependencyName.label : DependencyName → String
 mutual
 /-- Canonical scalar operands. Limit words are builtin type queries, not constant references.
     Function bodies use parameter bindings only; call nodes below track their signature scopes. -/
-def valueReferences : SExpr → List DependencyName
+def valueReferences (source : SExpr) (declared : String → Bool := fun _ => false) : List DependencyName :=
+  match source with
   | .variable name => [.value name]
   | .field (.variable _) _ => []
-  | .field a _ | .arrow a _ | .un _ a | .old a => valueReferences a
-  | .index a b | .bin _ a b => valueReferences a ++ valueReferences b
-  | .call name args => .function name :: valueReferenceList args
-  | .built _ args | .ext _ _ args => valueReferenceList args
+  | .field a _ | .arrow a _ | .un _ a | .old a => valueReferences a declared
+  | .index a b | .bin _ a b => valueReferences a declared ++ valueReferences b declared
+  | .call name args => (dependencyCallHead declared name args).map DependencyName.function ++
+      valueReferenceList args declared
+  | .built _ args | .ext _ _ args => valueReferenceList args declared
   | _ => []
-def valueReferenceList : List SExpr → List DependencyName
+def valueReferenceList (sources : List SExpr) (declared : String → Bool := fun _ => false) : List DependencyName :=
+  match sources with
   | [] => []
-  | a :: rest => valueReferences a ++ valueReferenceList rest
+  | a :: rest => valueReferences a declared ++ valueReferenceList rest declared
 end
 
 /-- Bounds and counts use the same original operands as canonical type elaboration. Range
     bases contribute too: uTypIn resolves the base before admitting its numeric bounds. -/
-def typeReferences : STyp → List DependencyName
+def typeReferences (source : STyp) (declared : String → Bool := fun _ => false) : List DependencyName :=
+  match source with
   | .atom name => [.type name]
-  | .range base lo hi _ => typeReferences base ++ valueReferences lo ++ valueReferences hi
-  | .array element count => typeReferences element ++ valueReferences count
-  | .wrap ty | .embed ty _ _ => typeReferences ty
-  | .str count => valueReferences count
+  | .range base lo hi _ => typeReferences base declared ++ valueReferences lo declared ++ valueReferences hi declared
+  | .array element count => typeReferences element declared ++ valueReferences count declared
+  | .wrap ty | .embed ty _ _ => typeReferences ty declared
+  | .str count => valueReferences count declared
   | _ => []
 
 mutual
 /-- Every row leaf remains in the graph, including unused constant arrays. -/
-def payloadReferences : SKonstWert → List DependencyName
-  | .one expr => valueReferences expr
-  | .rows rows => payloadReferenceList rows
-def payloadReferenceList : List SKonstWert → List DependencyName
+def payloadReferences (source : SKonstWert) (declared : String → Bool := fun _ => false) : List DependencyName :=
+  match source with
+  | .one expr => valueReferences expr declared
+  | .rows rows => payloadReferenceList rows declared
+def payloadReferenceList (sources : List SKonstWert) (declared : String → Bool := fun _ => false) : List DependencyName :=
+  match sources with
   | [] => []
-  | row :: rest => payloadReferences row ++ payloadReferenceList rest
+  | row :: rest => payloadReferences row declared ++ payloadReferenceList rest declared
 end
 
 /-- Source declarations and their compile-time dependencies. Function bodies cannot capture
     global constants in uKonstWert; only calls and signature types contribute global edges. -/
 def dependencyDeclarations (items : List SItemTief) : List (DependencyName × List DependencyName) :=
+  let declared := fun name => items.any fun
+    | .fnT sig _ => sig.art == "const" && strEq sig.name name
+    | _ => false
+  let head := dependencyCallHead declared
   let constructor := fun name => items.any fun
     | .typeT flags declared [] [] (some (.raw _)) => strEq declared name &&
         !flags.any (fun flag => strEq flag "tagged" || strEq flag "linear")
@@ -102,17 +112,18 @@ def dependencyDeclarations (items : List SItemTief) : List (DependencyName × Li
     | _ => reference
   (items.filterMap fun
     | .typeT _ name [] _ (some ty@(.atom _))
-    | .typeT _ name [] _ (some ty@(.range _ _ _ _)) => some (.type name, typeReferences ty)
+    | .typeT _ name [] _ (some ty@(.range _ _ _ _)) => some (.type name, typeReferences ty declared)
     | .typeT flags name [] [] (some (.raw _)) =>
       if flags.any (fun flag => strEq flag "tagged" || strEq flag "linear") then none
       else match expandRecord (items.length + 1) items [] name with
-        | .ok fields => some (.type name, fields.flatMap (fun field => typeReferences field.ftyp))
+        | .ok fields => some (.type name, fields.flatMap (fun field => typeReferences field.ftyp declared))
         | .error _ => some (.type name, [.type name])
-    | .constT name ty payload => some (.value name, typeReferences ty ++ payloadReferences payload)
+    | .constT name ty payload => some (.value name, typeReferences ty declared ++ payloadReferences payload declared)
     | .fnT sig (.block [] (some (.ret (some body)))) =>
       if sig.art == "const" then some (.function sig.name,
-        sig.params.flatMap (fun p => typeReferences p.2) ++
-        (sig.res.toList.flatMap typeReferences) ++ (calls body).map DependencyName.function)
+        sig.params.flatMap (fun p => typeReferences p.2 declared) ++
+        (sig.res.toList.flatMap (fun ty => typeReferences ty declared)) ++
+        (callsWith head body).map DependencyName.function)
       else none
     | _ => none).map fun (name, deps) => (name, deps.map resolve)
 
@@ -202,5 +213,30 @@ theorem orderConstants_cycle_zeuge :
     orderConstants [SItemTief.constT "A" (.atom "u8") (.one (.variable "B")),
       .constT "B" (.atom "u8") (.one (.variable "A"))] =
       .error "compile-time dependency cycle at constant A" := by rfl
+
+/-- Removing a constructor head retains nested function and original value edges. -/
+theorem option_dependencies_zeuge :
+    valueReferences (.call "Some" [.call "work" [.variable "LIMIT"]]) =
+      [.function "work", .value "LIMIT"] ∧
+    valueReferences (.call "None" []) = [] ∧
+    valueReferences (.call "Some" [.lit 1]) (fun name => strEq name "Some") =
+      [.function "Some"] := ⟨rfl, rfl, rfl⟩
+
+/-- A malformed constructor or an unknown head is never silently removed. -/
+theorem option_wrong_arity_zeuge :
+    valueReferences (.call "Some" []) = [.function "Some"] ∧
+    valueReferences (.call "Some" [.lit 1, .lit 2]) = [.function "Some"] ∧
+    valueReferences (.call "None" [.lit 1]) = [.function "None"] ∧
+    valueReferences (.call "unknown" []) = [.function "unknown"] := ⟨rfl, rfl, rfl, rfl⟩
+
+/-- Constructor operands cannot hide an unresolved call or an unused user cycle. -/
+theorem option_nested_unresolved_zeuge :
+    orderConstants [.constT "K" (.atom "u8") (.one (.call "Some" [.call "missing" []]))] =
+      .error "unresolved compile-time dependency: const function missing" := by rfl
+
+theorem option_nested_cycle_zeuge :
+    let fn := SItemTief.fnT ⟨"const", "loop", [], some (.atom "u8"), none, [], []⟩
+      (.block [] (some (.ret (some (.call "Some" [.call "loop" []])))))
+    orderConstants [fn] = .error "compile-time dependency cycle at const function loop" := by rfl
 
 end Gabbro.Stage0.Frontend

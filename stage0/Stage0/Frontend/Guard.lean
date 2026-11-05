@@ -37,18 +37,36 @@ import all Init.Data.String.ToSlice
 namespace Gabbro.Stage0.Frontend
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 
+/-- Only the exact option constructors lack a function dependency. An actual
+    const declaration keeps priority, as in canonical const substitution.
+    Wrong arities and every other name retain the ordinary function edge. -/
+def dependencyCallHead (declared : String → Bool) (name : String) (args : List SExpr) : List String :=
+  if declared name then [name] else
+  match name, args with
+  | "Some", [_] | "None", [] => []
+  | _, _ => [name]
+
 mutual
-/-- Direct calls nested anywhere in a compile-time expression. Variable spellings are not calls. -/
-def calls : SExpr → List String
-  | .call name args => name :: callsList args
-  | .field a _ | .arrow a _ | .un _ a | .old a => calls a
-  | .index a b | .bin _ a b => calls a ++ calls b
-  | .built _ args | .ext _ _ args => callsList args
+/-- One traversal retains every operand while the caller classifies call heads. -/
+def callsWith (head : String → List SExpr → List String) : SExpr → List String
+  | .call name args => head name args ++ callsListWith head args
+  | .field a _ | .arrow a _ | .un _ a | .old a => callsWith head a
+  | .index a b | .bin _ a b => callsWith head a ++ callsWith head b
+  | .built _ args | .ext _ _ args => callsListWith head args
   | _ => []
-def callsList : List SExpr → List String
+def callsListWith (head : String → List SExpr → List String) : List SExpr → List String
   | [] => []
-  | a :: rest => calls a ++ callsList rest
+  | a :: rest => callsWith head a ++ callsListWith head rest
 end
+
+/-- The safety hull conservatively retains all original call-shaped heads,
+    including absent constructor names; its existing guarantees are unchanged. -/
+def calls (expr : SExpr) : List String := callsWith (fun name _ => [name]) expr
+
+def callsList (args : List SExpr) : List String := callsListWith (fun name _ => [name]) args
+
+theorem calls_call (name : String) (args : List SExpr) :
+    calls (.call name args) = name :: callsList args := rfl
 
 /-- Static call-hull check, not execution. Each newly visited name consumes one unit of fuel;
     a source unit has at most items.length distinct declared functions. -/
