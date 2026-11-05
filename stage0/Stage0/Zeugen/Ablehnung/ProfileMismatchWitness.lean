@@ -122,9 +122,29 @@ private theorem preparation_refused : Profil.prepareItems {} items =
 private theorem source_refused : Frontend.source text =
     .error "ir: profile binding refused: modes, assumptions or library requirements are not consistent" := by
   unfold Frontend.source
-  rw [lexed, except_ok_get parsed]
-  dsimp only
-  rw [preparation_refused]
+  split
+  · rename_i error rejected
+    cases rejected.symm.trans lexed
+  · rename_i tokens selected
+    have same : tokens = scanned.tokens ++ [.ende] :=
+      Except.ok.inj (selected.symm.trans lexed)
+    subst tokens
+    split
+    · rename_i error rejected
+      cases rejected.symm.trans (except_ok_get parsed)
+    · rename_i actualItems selected
+      have same : actualItems = items :=
+        Except.ok.inj (selected.symm.trans (except_ok_get parsed))
+      subst actualItems
+      split
+      · rename_i error rejected
+        have same : error =
+            "ir: profile binding refused: modes, assumptions or library requirements are not consistent" :=
+          Except.error.inj (rejected.symm.trans preparation_refused)
+        subst error
+        rfl
+      · rename_i prepared selected
+        cases selected.symm.trans preparation_refused
 
 private theorem compilation_refused : compile text =
     .error "ir: profile binding refused: modes, assumptions or library requirements are not consistent" := by

@@ -204,9 +204,57 @@ private def compiledBody : Body compiledHeader := by
   case restored => cbv <;> exact Eq.refl _
   case accepted => cbv
 
+-- The image assembler consumes this actual IR producer result for arbitrary
+-- layout/address values; it never recomputes a source execution.
+private theorem ir_function_present (layout : Senke.Lay (declOf compiledHeader.unit))
+    (addresses : (declOf compiledHeader.unit).Fn → Nat)
+    (f : (declOf compiledHeader.unit).Fn) :
+    (Senke.lowFun irDurchlaeufe compiledBody.program addresses layout f).isSome = true := by
+  rcases f with ⟨index, bound⟩
+  change index < compiledHeader.unit.fns.length at bound
+  have small : index < 1 := by simpa only [function_count] using bound
+  have zero : index = 0 := by omega
+  subst index
+  cbv
+
 private theorem compilation :
     ∃ result : Compiled text, compile text = .ok result ∧ result.unit = compiledHeader.unit :=
   compiled compiledHeader compiledBody
+
+private theorem global_count : compiledHeader.unit.globs.length = 1 := by cbv
+
+private theorem global_alignment (g : Fin compiledHeader.unit.globs.length) :
+    Senke.globAlign compiledHeader.unit g = 16 := by
+  rcases g with ⟨index, bound⟩
+  have small : index < 1 := by simpa only [global_count] using bound
+  have zero : index = 0 := by omega
+  subst index
+  cbv
+
+-- Geometry comes from the accepted canonical builder, independently of
+-- native arithmetic, concrete emitted bytes or the selected function body.
+private theorem emitted_base_grid {src : String} {K : Nat}
+    (emitted : Emitted src K) (grid : Nat)
+    (divides : grid ∣ Senke.bodenAusrichtung emitted.compiled.unit) :
+    grid ∣ emitted.image.Y.lo := by
+  have builder := emitted.emission
+  generalize chosen : emitted.image = image at builder ⊢
+  simp only [Senke.bild] at builder
+  split at builder
+  · cases builder
+  · next preliminary preliminaryEq =>
+    split at builder
+    · cases builder
+    · next actual actualEq =>
+      split at builder
+      · next accepted =>
+        simp only [Except.ok.injEq] at builder
+        rw [← builder]
+        exact Nat.dvd_trans divides (Senke.alignUp_dvd _ _ (Senke.boden_pos _))
+      · exfalso
+        revert builder
+        repeat' split
+        all_goals intro builder; cases builder
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
@@ -225,7 +273,13 @@ theorem align_sixteen : Senke.globAlign output.compiled.unit g0 = 16 := by decid
 
 /-- The built image base lies on the combined sixteen-grid: the builder aligned it
     up to the required base alignment, which the sixteen-grid divides. -/
-theorem base_grid : Nat.lcm 8 16 ∣ output.image.Y.lo := by decide +kernel
+theorem base_grid : Nat.lcm 8 16 ∣ output.image.Y.lo := by
+  have positive : 0 < Senke.globAlign output.compiled.unit g0 := by
+    rw [align_sixteen]
+    decide
+  have divides := Senke.boden_teilt output.compiled.unit g0 positive
+  rw [align_sixteen] at divides
+  exact emitted_base_grid output (Nat.lcm 8 16) divides
 
 /-- The aligned global's absolute address is divisible by sixteen (and eight):
     `placed` holds unconditionally for every successfully built image. -/

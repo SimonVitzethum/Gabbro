@@ -204,6 +204,19 @@ private def compiledBody : Body compiledHeader := by
   case restored => cbv <;> exact Eq.refl _
   case accepted => cbv
 
+-- The image assembler consumes this actual IR producer result for arbitrary
+-- layout/address values; it never recomputes a source execution.
+private theorem ir_function_present (layout : Senke.Lay (declOf compiledHeader.unit))
+    (addresses : (declOf compiledHeader.unit).Fn → Nat)
+    (f : (declOf compiledHeader.unit).Fn) :
+    (Senke.lowFun irDurchlaeufe compiledBody.program addresses layout f).isSome = true := by
+  rcases f with ⟨index, bound⟩
+  change index < compiledHeader.unit.fns.length at bound
+  have small : index < 1 := by simpa only [function_count] using bound
+  have zero : index = 0 := by omega
+  subst index
+  cbv
+
 private theorem compilation :
     ∃ result : Compiled text, compile text = .ok result ∧ result.unit = compiledHeader.unit :=
   compiled compiledHeader compiledBody
