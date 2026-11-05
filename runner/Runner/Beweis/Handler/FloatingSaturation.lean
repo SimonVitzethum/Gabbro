@@ -22,31 +22,36 @@ structure Exit (L : Lay) (t : IR.T) (tail : List Ins) (k : W → Res IR.T) : Pro
 
 /-- State terms at the two targets in the existing fpChoose code lemmas. -/
 abbrev choiceTaken (x : X) (condition : Cond) (no : List Ins) : X :=
-  { x with rip := x.rip + BitVec.ofNat 64
+  { x with rip := (x.rip + BitVec.ofNat 64
       (enc (.jcc condition (BitVec.ofNat 32 (lenOf no + lenOf [.jmp 0])))).length +
-      sx32 (BitVec.ofNat 32 (lenOf no + lenOf [.jmp 0])) }
+      sx32 (BitVec.ofNat 32 (lenOf no + lenOf [.jmp 0]))) }
 
 abbrev choiceFallthrough (x : X) (condition : Cond) (no : List Ins) : X :=
-  { x with rip := x.rip + BitVec.ofNat 64
-      (enc (.jcc condition (BitVec.ofNat 32 (lenOf no + lenOf [.jmp 0])))).length }
+  { x with rip := (x.rip + BitVec.ofNat 64
+      (enc (.jcc condition (BitVec.ofNat 32 (lenOf no + lenOf [.jmp 0])))).length) }
 
 theorem Exit.jump {L : Lay} {t : IR.T} {tail yes : List Ins} {k : W → Res IR.T}
     (exit : Exit L t tail k) (small : lenOf yes < 2 ^ 31) :
     Exit L t (.jmp (BitVec.ofNat 32 (lenOf yes)) :: yes ++ tail) k := by
   constructor
   intro x code controls
+  let joined : X := { x with rip := (x.rip + BitVec.ofNat 64
+    (enc (.jmp (BitVec.ofNat 32 (lenOf yes)))).length +
+    sx32 (BitVec.ofNat 32 (lenOf yes))) }
   refine .priv ((step_code code).trans rfl) ?_
-  exact exit.finish _ (fpChoose_join_code code small)
+  exact exit.finish joined (fpChoose_join_code code small)
     ⟨controls.pc, controls.frame, controls.table, controls.mode⟩
 
 theorem pure_match {L : Lay} {x z : X} {body tail : List Ins} {r : Res IR.T}
     (code : Code L.C x.rip (body ++ tail))
     (fall : ∀ i ∈ body, Fall i = true) (run : runL body x = .next z)
     (next : Match L r z) : Match L r x := by
-  apply go body x r ?_ (code_prefix code)
-  · intro i hi
+  have falling : ∀ i ∈ body.dropLast, Fall i = true := by
+    intro i hi
     exact fall i (List.dropLast_subset body hi)
-  · simpa only [run, CorrM] using next
+  have continued : CorrM L r (runL body x) := by
+    simpa only [run, CorrM] using next
+  exact go body x r falling (code_prefix code) continued
 
 theorem scalar_idempotent (format : FPFormat) (value : W) :
     format.scalarBits (format.scalarBits value) = format.scalarBits value := by
@@ -83,7 +88,12 @@ theorem word_constant {L : Lay} {t : IR.T} {x : X} {tail : List Ins} {k : W → 
     (code : Code L.C x.rip (.movi .rax value :: tail)) (controls : Controls L t x) :
     Match L (k (sx32 value)) x := by
   let z := ({ x with rip := x.rip + BitVec.ofNat 64 (enc (.movi .rax value)).length }).set .rax (sx32 value)
-  apply pure_match (body := [.movi .rax value]) code (by decide) rfl
+  have falling : ∀ i ∈ [.movi .rax value], Fall i = true := by
+    intro i hi
+    have same : i = .movi .rax value := List.mem_singleton.mp hi
+    subst i
+    rfl
+  apply pure_match (body := [.movi .rax value]) (z := z) code falling rfl
   exact exit.finish z code.2.2
     ⟨controls.pc, controls.frame, controls.table, controls.mode⟩
 
@@ -93,6 +103,19 @@ theorem truncate {L : Lay} {t : IR.T} {x : X} {tail : List Ins} {k : W → Res I
     (format : FPFormat) (exit : Exit L t tail k)
     (code : Code L.C x.rip (fpTruncateBody format ++ tail)) (controls : Controls L t x) :
     Match L (Runner.fp (.truncateInt64 format) x.rax 0 k) x := by
+  let loaded : X := ({ x with rip := x.rip + BitVec.ofNat 64
+    (enc (.movToXmm format .xmm0 .rax)).length }).setXmm .xmm0
+      (match format with
+        | .f32 => (x.rax.setWidth 32).setWidth 128
+        | .f64 => x.rax.setWidth 128)
+  let after (value : W) : X := ({ loaded with rip := loaded.rip + BitVec.ofNat 64
+    (enc (.truncateScalar format .rax .xmm0)).length }).set .rax value
+  have position (value : W) :
+      (after value).rip = x.rip + BitVec.ofNat 64 (lenOfL (fpTruncateBody format)) := by
+    dsimp only [after, loaded, X.set, X.setXmm]
+    simp [fpTruncateBody, lenOfL, BitVec.ofNat_add, BitVec.add_assoc]
+  have controlsAfter (value : W) : Controls L t (after value) :=
+    ⟨controls.pc, controls.frame, controls.table, controls.mode⟩
   have placed := code_append code
   apply go (fpTruncateBody format) x _ (by cases format <;> decide) (code_prefix code)
   have ready := controls.mode
@@ -106,10 +129,11 @@ theorem truncate {L : Lay} {t : IR.T} {x : X} {tail : List Ins} {k : W → Res I
     apply corrM_opt
     intro result
     simp only [bind_next, runL, CorrM]
-    apply exit.finish
-    · simpa (disch := decide) [fpTruncateBody, lenOfL, enc, regEnc,
-        BitVec.ofNat_add, BitVec.add_assoc, X.set, X.setXmm, X.setScalar] using placed
-    · exact ⟨controls.pc, controls.frame, controls.table, controls.mode⟩
+    change Match L (k result.1) (after result.1)
+    have continuationCode : Code L.C (after result.1).rip tail := by
+      rw [position]
+      exact placed
+    exact exit.finish (after result.1) continuationCode (controlsAfter result.1)
 
 /-- The shared operand prefix reads both fields and full words, in their
     original order, before a saturation body is entered. -/
@@ -134,9 +158,26 @@ theorem read_body {L : Lay} {y : X} (body : List Ins)
   simp [IR.f2, IR.f3, IR.ld, IR.slot, first, runL, exec, fld, sld, mb, ms,
     ea, X.get, X.set, rd64, rd32]
   repeat (first | (apply corrM_ask; intro _) | (apply corrM_opt; intro _))
+  rename_i _ fieldA _ valueA _ fieldB _ valueB
   simp only [CorrM]
-  apply body_ok _ ⟨rfl, rfl, table, mode⟩
-  simpa [first, lenOfL, enc, memEnc, regEnc, le32, BitVec.ofNat_add,
-    BitVec.add_assoc, X.set] using placed
+  -- Retain the actual four instruction advances in the continuation state.
+  -- Only its separate RIP certificate reassociates the address additions.
+  let after : X := { y with
+    rax := valueA.1
+    rdx := valueB.1
+    rip := (((y.rip + BitVec.ofNat 64 (enc (fld .rax 2)).length) +
+      BitVec.ofNat 64 (enc (sld .rax .rax)).length) +
+      BitVec.ofNat 64 (enc (fld .rdx 3)).length) +
+      BitVec.ofNat 64 (enc (sld .rdx .rdx)).length }
+  change Match L (convert valueA.1 (IR.ret1 ⟨y.r12, y.r13⟩)) after
+  have position : after.rip = y.rip + BitVec.ofNat 64 (lenOfL first) := by
+    dsimp only [after]
+    simp [first, lenOfL, BitVec.ofNat_add, BitVec.add_assoc]
+  have continuationCode : Code L.C after.rip
+      (body ++ [fld .rcx 1, sst .rcx .rax, .alui .add .r12 16] ++ dispatch) := by
+    rw [position]
+    exact placed
+  have controlsAfter : Controls L ⟨y.r12, y.r13⟩ after := ⟨rfl, rfl, table, mode⟩
+  exact body_ok after controlsAfter continuationCode
 
 end Runner.Beweis.FPSaturation
