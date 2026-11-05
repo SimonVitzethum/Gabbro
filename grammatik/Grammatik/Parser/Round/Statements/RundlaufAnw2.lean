@@ -56,27 +56,74 @@ theorem strEq_next_leave : strEq "next" "leave" = false := by decide
 theorem strEq_next_next : strEq "next" "next" = true := by decide
 theorem strEq_let_let : strEq "let" "let" = true := by decide
 
+private theorem word_dispatch (f : Nat) (word : String) (rest : List Token)
+    (plain : istOrtsFort rest = false) :
+    parseStmt (f + 1) (.wort word :: rest) =
+      (if strEq word "let" then parseLet f rest
+      else if strEq word "if" then parseWenn f rest
+      else if strEq word "match" then parseMatchS f rest
+      else if strEq word "traverse" then parseTraverse f rest
+      else if strEq word "retry" then parseSchleife f rest 1
+      else if strEq word "forever" then parseSchleife f rest 2
+      else if strEq word "breaking" then parseBricht f rest
+      else if strEq word "narrow" then parseNarrow f rest
+      else if strEq word "locks" then parseSperrt f rest
+      else if strEq word "observes" then parseBeobachtet f rest
+      else if strEq word "leave" then parseVerlasse f rest
+      else if strEq word "next" then parseWeiter f rest
+      else if strEq word "return" then parseRueck f rest
+      else if strEq word "reset" then parseReset f rest
+      else if strEq word "grow" then parseGrow f rest
+      else if strEq word "free" then parseFree f rest
+      else if strEq word "child" then parseChild f rest
+      else if strEq word "transition" then parseUebergang f rest
+      else if strEq word "advances" then parseSchreitet f rest
+      else if strEq word "retires" then parseRetires rest
+      else parsePlatzStmt f (.wort word :: rest)) := by
+  simp only [parseStmt]
+  split
+  · rename_i equation
+    simp only [List.cons.injEq, Token.wort.injEq] at equation
+    rcases equation with ⟨rfl, rfl⟩
+    cases plain
+  · rename_i equation
+    simp only [List.cons.injEq, Token.wort.injEq] at equation
+    rcases equation with ⟨rfl, rfl⟩
+    simp only [plain, Bool.false_eq_true, ↓reduceIte]
+  · rename_i equation
+    simp only [List.cons.injEq, reduceCtorEq] at equation
+    exact equation.1.elim
+  · rename_i equation
+    simp only [List.cons.injEq, reduceCtorEq] at equation
+    exact equation.1.elim
+  · rename_i absentArray absentWord absentStart absentAt
+    exact (absentWord word rest rfl).elim
+
 theorem parseStmt_ret_eq (f : Nat) (r : List Token) (h : istOrtsFort r = false) :
     parseStmt (f + 1) (.wort "return" :: r) = parseRueck f r := by
-  simp only [parseStmt, h, Bool.false_eq_true, ↓reduceIte, strEq_ret_let, strEq_ret_if, strEq_ret_match,
+  rw [word_dispatch f "return" r h]
+  simp only [Bool.false_eq_true, ↓reduceIte, strEq_ret_let, strEq_ret_if, strEq_ret_match,
   strEq_ret_traverse, strEq_ret_retry, strEq_ret_forever, strEq_ret_breaking, strEq_ret_narrow, strEq_ret_locks,
   strEq_ret_observes, strEq_ret_leave, strEq_ret_next, strEq_self]
 
 theorem parseStmt_leave_eq (f : Nat) (r : List Token) (h : istOrtsFort r = false) :
     parseStmt (f + 1) (.wort "leave" :: r) = parseVerlasse f r := by
-  simp only [parseStmt, h, Bool.false_eq_true, ↓reduceIte, strEq_leave_let, strEq_leave_if, strEq_leave_match,
+  rw [word_dispatch f "leave" r h]
+  simp only [Bool.false_eq_true, ↓reduceIte, strEq_leave_let, strEq_leave_if, strEq_leave_match,
   strEq_leave_traverse, strEq_leave_retry, strEq_leave_forever, strEq_leave_breaking, strEq_leave_narrow,
   strEq_leave_locks, strEq_leave_observes, strEq_self]
 
 theorem parseStmt_next_eq (f : Nat) (r : List Token) (h : istOrtsFort r = false) :
     parseStmt (f + 1) (.wort "next" :: r) = parseWeiter f r := by
-  simp only [parseStmt, h, Bool.false_eq_true, ↓reduceIte, strEq_next_let, strEq_next_if, strEq_next_match,
+  rw [word_dispatch f "next" r h]
+  simp only [Bool.false_eq_true, ↓reduceIte, strEq_next_let, strEq_next_if, strEq_next_match,
   strEq_next_traverse, strEq_next_retry, strEq_next_forever, strEq_next_breaking, strEq_next_narrow, strEq_next_locks,
   strEq_next_observes, strEq_next_leave, strEq_self]
 
 theorem parseStmt_let_eq (f : Nat) (r : List Token) (h : istOrtsFort r = false) :
     parseStmt (f + 1) (.wort "let" :: r) = parseLet f r := by
-  simp only [parseStmt, h, Bool.false_eq_true, ↓reduceIte, strEq_self]
+  rw [word_dispatch f "let" r h]
+  simp only [strEq_self, ↓reduceIte]
 
 /-- `return` with no value: a `;` behind it. -/
 theorem parseRueck_leer (f : Nat) (r : List Token) :
