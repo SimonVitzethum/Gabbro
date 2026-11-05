@@ -170,21 +170,30 @@ theorem anwWort_strEq {a : String} (h : istAnwWort a = false) (w : String)
   · rfl
   · have := (strEq_eq _ _).mp hc; subst this; rw [h] at hw; exact absurd hw (by decide)
 
-/-- A statement headed by a printed name goes to the place reader: the name is no head word, or a
-    place continuation follows; and it is not `transition`; and it is not `start {`. -/
-theorem parseStmt_ident (f : Nat) (a : String) (r : List Token) (h : ∀ r', r ≠ .zeichen "{" :: r')
-    (hw : istOrtsFort r = true ∨ istAnwWort a = false) :
-    parseStmt (f + 1) (nameTok a :: r) = parsePlatzStmt f (nameTok a :: r) := by
-  unfold nameTok
-  split
-  · rcases hw with hw | hw
-    · simp only [parseStmt, hw, ↓reduceIte]
-    · have e := fun w (hw' : istAnwWort w = true) => anwWort_strEq hw w hw'
-      simp only [parseStmt, e "let" rfl, Bool.false_eq_true, ↓reduceIte, e "if" rfl, e "match" rfl,
-  e "traverse" rfl, e "retry" rfl, e "forever" rfl, e "breaking" rfl, e "narrow" rfl, e "locks" rfl, e "observes" rfl,
-  e "leave" rfl, e "next" rfl, e "return" rfl, e "reset" rfl, e "grow" rfl, e "free" rfl, e "child" rfl,
-  e "transition" rfl, e "advances" rfl, e "retires" rfl, ite_self]
-  · rw [parseStmt.eq_def]
+/-- A successfully read printed place retains its complete statement and follow.
+    Indexed soft-keyword places keep that result even at the return-array prefix. -/
+theorem parseStmt_ident (f : Nat) (a : String) (r : List Token)
+    (h : ∀ r', r ≠ .zeichen "{" :: r')
+    (hw : istOrtsFort r = true ∨ istAnwWort a = false) {result : SAnw × List Token}
+    (placed : parsePlatzStmt f (nameTok a :: r) = .ok result) :
+    parseStmt (f + 1) (nameTok a :: r) = .ok result := by
+  by_cases keyword : istSchluessel a = true
+  · simp only [nameTok, keyword, ↓reduceIte] at placed ⊢
+    rw [parseStmt.eq_def]
+    split
+    · split <;> simp_all
+    all_goals
+      rcases hw with hw | hw
+      · simp_all
+      · have e := fun w (hw' : istAnwWort w = true) => anwWort_strEq hw w hw'
+        simp_all [e "let" rfl, Bool.false_eq_true, ↓reduceIte, e "if" rfl,
+          e "match" rfl, e "traverse" rfl, e "retry" rfl, e "forever" rfl,
+          e "breaking" rfl, e "narrow" rfl, e "locks" rfl, e "observes" rfl,
+          e "leave" rfl, e "next" rfl, e "return" rfl, e "reset" rfl,
+          e "grow" rfl, e "free" rfl, e "child" rfl, e "transition" rfl,
+          e "advances" rfl, e "retires" rfl, ite_self]
+  · simp only [nameTok, keyword, ↓reduceIte] at placed ⊢
+    rw [parseStmt.eq_def]
     simp only
     split <;> simp_all
 

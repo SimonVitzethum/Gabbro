@@ -45,13 +45,18 @@ theorem anw_callElse (name : String) (args : List SExpr) (reason : String) (body
       (druckToksListe args ++ [.zeichen ")"] ++ tail) := by
     simp only [druckAnw, rohToks_nameGut name hn, tail, List.cons_append, List.nil_append, List.append_assoc]
   have ht : name ≠ "transition" := by intro e; subst e; revert hw; decide
-  rw [hd, parseStmt_ident _ _ _ (by intro r e; simp only [List.append_assoc, List.cons_append,
-    List.nil_append, List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and] at e)
-    (Or.inr hw), parsePlatzStmt_ident _ _ _ ht]
-  have hA := argsM args tail G (args_gut args ha) (by omega)
-  have hB := hb (.zeichen ";" :: rest) (G + 1) (by simp only [fbA]; omega)
-  simp only [parseKopfStmt]
-  rw [kopf_ruf_head, hA]
-  exact callElse_tail (parseBlock (G + 1)) name args reason body rest hk hB
+  have placed : parsePlatzStmt (G + 3) (nameTok name :: .zeichen "(" ::
+      (druckToksListe args ++ [.zeichen ")"] ++ tail)) = .ok (.callElse name args reason body, rest) := by
+    rw [parsePlatzStmt_ident _ _ _ ht]
+    have hA := argsM args tail G (args_gut args ha) (by omega)
+    have hB := hb (.zeichen ";" :: rest) (G + 1) (by simp only [fbA]; omega)
+    simp only [parseKopfStmt]
+    rw [kopf_ruf_head, hA]
+    exact callElse_tail (parseBlock (G + 1)) name args reason body rest hk hB
+  rw [hd]
+  exact parseStmt_ident (G + 3) name _ (by
+    intro r e
+    simp only [List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and] at e)
+    (Or.inr hw) placed
 
 end Gabbro.Grammatik.Parser

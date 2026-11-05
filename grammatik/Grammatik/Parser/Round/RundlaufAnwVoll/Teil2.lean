@@ -92,19 +92,22 @@ theorem anw_set (z : SExpr) (o : String) (w : SExpr) (hz : gutPlatz z = true)
         rcases zuweis_is "{" ho with h | h | h | h | h <;> exact absurd h (by decide))
     (by rcases zuweis_is o ho with h | h | h | h | h <;> subst h <;> rfl)
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 3 := ⟨F - 3, by omega⟩
-  rw [hd, hzr, parseStmt_ident _ _ _ hr (Or.inl hro), parsePlatzStmt_ident _ _ _ hrt, ← hzr]
-  have hK := kopfP z hz (.zeichen o :: (druckToks w ++ .zeichen ";" :: rest)) F'
-    (by rcases zuweis_is o ho with h | h | h | h | h <;> subst h <;> rfl) (by omega)
-  have hO := ausdruck w hw (.zeichen ";" :: rest) F' rfl rfl rfl (by omega)
-  obtain ⟨hmiss, hgeneric⟩ := zuweis_keineRufOeffnung o ho
-    (druckToks w ++ .zeichen ";" :: rest)
-  simp only [parseKopfStmt, hK]
-  split
-  · simp only [gutPlatz, Bool.false_eq_true] at hz
-  · simp only [gutPlatz, Bool.false_eq_true] at hz
-  · simp only [gutPlatz, Bool.false_eq_true] at hz
-  · rcases zuweis_is o ho with h | h | h | h | h <;> subst h <;> split <;>
-      simp_all [hO, fordereZeichen, strEq_self]
+  have placed : parsePlatzStmt (F' + 2) (nameTok a :: r) = .ok (.set z o w, rest) := by
+    rw [parsePlatzStmt_ident _ _ _ hrt, ← hzr]
+    have hK := kopfP z hz (.zeichen o :: (druckToks w ++ .zeichen ";" :: rest)) F'
+      (by rcases zuweis_is o ho with h | h | h | h | h <;> subst h <;> rfl) (by omega)
+    have hO := ausdruck w hw (.zeichen ";" :: rest) F' rfl rfl rfl (by omega)
+    obtain ⟨hmiss, hgeneric⟩ := zuweis_keineRufOeffnung o ho
+      (druckToks w ++ .zeichen ";" :: rest)
+    simp only [parseKopfStmt, hK]
+    split
+    · simp only [gutPlatz, Bool.false_eq_true] at hz
+    · simp only [gutPlatz, Bool.false_eq_true] at hz
+    · simp only [gutPlatz, Bool.false_eq_true] at hz
+    · rcases zuweis_is o ho with h | h | h | h | h <;> subst h <;> split <;>
+        simp_all [hO, fordereZeichen, strEq_self]
+  rw [hd, hzr]
+  exact parseStmt_ident (F' + 2) a r hr (Or.inl hro) placed
 
 theorem anw_shift (z : SExpr) (a b : String) (hz : gutPlatz z = true) : AnwBein (.shift z a b) := by
   intro rest F _ hF
@@ -155,12 +158,18 @@ theorem anw_call (f : String) (xs : List SExpr) (hf : NameGut f) (hw : istAnwWor
       (druckToksListe xs ++ [.zeichen ")"] ++ (.zeichen ";" :: rest)) := by
     simp only [druckAnw, rohToks_nameGut f hf, List.cons_append, List.nil_append, List.append_assoc]
   have ht : f ≠ "transition" := by intro e; subst e; revert hw; decide
-  rw [hd, parseStmt_ident _ _ _ (by intro r e; simp only [List.append_assoc, List.cons_append, List.nil_append, List.cons.injEq, Token.zeichen.injEq,
-  String.reduceEq, false_and] at e) (Or.inr hw), parsePlatzStmt_ident _ _ _ ht]
-  have hA := argsM xs (.zeichen ";" :: rest) F' (args_gut xs hxs) (by omega)
-  simp only [parseKopfStmt]
-  rw [show F' + 1 = F' + 1 from rfl, kopf_ruf_head, hA]
-  simp only [parseRufMitElse, parseRufSchwanz, strEq_semi_frage, Bool.false_eq_true, fordereZeichen, strEq_self, ↓reduceIte]
+  have placed : parsePlatzStmt (F' + 3) (nameTok f :: .zeichen "(" ::
+      (druckToksListe xs ++ [.zeichen ")"] ++ (.zeichen ";" :: rest))) = .ok (.call f xs, rest) := by
+    rw [parsePlatzStmt_ident _ _ _ ht]
+    have hA := argsM xs (.zeichen ";" :: rest) F' (args_gut xs hxs) (by omega)
+    simp only [parseKopfStmt]
+    rw [show F' + 1 = F' + 1 from rfl, kopf_ruf_head, hA]
+    simp only [parseRufMitElse, parseRufSchwanz, strEq_semi_frage, Bool.false_eq_true, fordereZeichen, strEq_self, ↓reduceIte]
+  rw [hd]
+  exact parseStmt_ident (F' + 3) f _ (by
+    intro r e
+    simp only [List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and] at e)
+    (Or.inr hw) placed
 
 /-! ### Statements with a block -/
 
