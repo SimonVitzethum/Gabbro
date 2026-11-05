@@ -93,14 +93,45 @@ attribute [local cbv_eval] row_nil row_cons core_bind core_call core_set core_co
   check_sequence_select check_structure_select lowEndL_succ
   lowStufe_seq lowStufe_struct lowStufe_ende
 
--- A proof-only record update: no body, type, contract, range or source obligation is rebuilt.
--- The equations below certify all replacements against the actual elaborator result.
-private def admissionMetadataFn : Nat → UFn → UFn
-  | 0, fn => {fn with name := "g", nimmt := [], gibt := []}
-  | 1, fn => {fn with name := "p#probe", nimmt := ["p#duty"], gibt := ["p#duty"]}
-  | 2, fn => {fn with name := "p#report#0", nimmt := [], gibt := []}
-  | 3, fn => {fn with name := "p#tor#g", nimmt := ["p#duty"], gibt := ["p#duty"]}
-  | _, fn => fn
+-- Normalize the actual function fields before forming any dependent code type.
+-- Whole-function equality below certifies the headers, code and retained reporter metadata.
+private def admissionMetadataFn (index : Nat) (fn : UFn) : UFn :=
+  let header : UFn := {fn with
+    params := []
+    kinds := []
+    res := none
+    resBool := false
+    resOpt := none
+    resSum := none
+    resWhy := none
+    resTy := none
+    gruende := 0
+    held := []
+    puts := []
+    gputs := []
+    gives := []
+    needs := []
+    boden := none
+    decreases := none
+    measureConstants := []
+    measureTypes := []
+    leiht := []
+    bewegt := []
+    praegt := []}
+  match index with
+  | 0 => {header with name := "g", nimmt := [], gibt := [], body := [], ret := .empty}
+  | 1 => {header with
+    name := "p#probe", resBool := true, nimmt := ["p#duty"], gibt := ["p#duty"],
+    body := [.bindB "#checkVerdict" .tru,
+      .bindCall "#checkReport" "p#report#0" [.bval (.var "#checkVerdict")]],
+    ret := .bool (.var "#checkReport")}
+  | 2 => {header with
+    name := "p#report#0", params := [("v", .bool)], kinds := [.bool],
+    resBool := true, nimmt := [], gibt := [], body := [], ret := .bool (.var "v")}
+  | 3 => {header with
+    name := "p#tor#g", nimmt := ["p#duty"], gibt := ["p#duty"],
+    body := [.call "g" []], ret := .empty}
+  | _ => fn
 private def admissionMetadataCheck (check : UCheck) : UCheck :=
   {check with name := "p", tore := ["g"], probe := "p#probe", duty := "p#duty"}
 private def admissionMetadataUnit (unit : UProg) : UProg :=
@@ -295,11 +326,12 @@ private theorem admission_wrapper_refused :
       (uCheckDecls admissionWithoutWrappersMade.val)
       (.error "function unknown: p#tor#g") := by cbv
 
+-- Keep the same certified function fields in the refusal path, changing only `gibt`.
 private def admissionWithoutGivesMade : {unit : UProg //
     ({admissionUnitMade.val with fns := admissionUnitMade.val.fns.map fun f =>
-      (if strEq f.name "p#probe" then {f with gibt := []} else f)} : UProg) = unit} := by
-  refine ⟨?unit, ?made⟩
-  case made => cbv <;> exact Eq.refl _
+      (if strEq f.name "p#probe" then {f with gibt := []} else f)} : UProg) = unit} :=
+  ⟨{admissionUnitMade.val with fns := admissionUnitMade.val.fns.map fun f =>
+    (if strEq f.name "p#probe" then {f with gibt := []} else f)}, rfl⟩
 
 private def admissionWithoutGivesGateIndex : Fin admissionWithoutGivesMade.val.fns.length :=
   ⟨0, by change 0 < 4; decide⟩

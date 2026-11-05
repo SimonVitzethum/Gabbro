@@ -95,20 +95,55 @@ attribute [local cbv_eval] row_nil row_cons core_bind core_call core_set core_co
   check_sequence_select check_structure_select lowEndL_succ
   lowStufe_seq lowStufe_struct lowStufe_ende
 
--- A proof-only record update: no body, type, contract, range or source obligation is rebuilt.
--- The equations below certify all replacements against the actual elaborator result.
-private def floorMetadataFn : Nat → UFn → UFn
-  | 0, fn => {fn with name := "g", nimmt := [], gibt := []}
-  | 1, fn => {fn with name := "p#probe", nimmt := ["p#duty"], gibt := ["p#duty"]}
-  | 2, fn => {fn with name := "p#report#0", nimmt := [], gibt := []}
-  | 3, fn => {fn with name := "p#tor#g", nimmt := ["p#duty"], gibt := ["p#duty"]}
-  | _, fn => fn
+-- Normalize the actual function fields before forming any dependent code type.
+-- Whole-function equality below certifies the headers, code and retained reporter metadata.
+private def floorMetadataFn (bound : Int) (index : Nat) (fn : UFn) : UFn :=
+  let header : UFn := {fn with
+    params := []
+    kinds := []
+    res := none
+    resBool := false
+    resOpt := none
+    resSum := none
+    resWhy := none
+    resTy := none
+    gruende := 0
+    held := []
+    puts := []
+    gputs := []
+    gives := []
+    needs := []
+    boden := none
+    decreases := none
+    measureConstants := []
+    measureTypes := []
+    leiht := []
+    bewegt := []
+    praegt := []}
+  match index with
+  | 0 => {header with name := "g", nimmt := [], gibt := [], body := [], ret := .empty}
+  | 1 => {header with
+    name := "p#probe", resBool := true, nimmt := ["p#duty"], gibt := ["p#duty"],
+    body := [.bind "x" (some (0, 18446744073709551615)) (.lit 3),
+      .bindB "#checkVerdict" (.cmp ">=" (.param "x") (.lit bound)),
+      .bind "#checkSample#0" none (.param "x"),
+      .bindCall "#checkReport" "p#report#0" [.val (.param "#checkSample#0"),
+        .bval (.cmp ">=" (.param "#checkSample#0") (.lit bound)), .bval (.var "#checkVerdict")]],
+    ret := .bool (.var "#checkReport")}
+  | 2 => {header with
+    name := "p#report#0", resBool := true, nimmt := [], gibt := [],
+    params := [("s0", .int 0 18446744073709551615), ("f0", .bool), ("v", .bool)],
+    kinds := [.int, .bool, .bool], body := [], ret := .bool (.and (.var "v") (.var "f0"))}
+  | 3 => {header with
+    name := "p#tor#g", nimmt := ["p#duty"], gibt := ["p#duty"],
+    body := [.call "g" []], ret := .empty}
+  | _ => fn
 private def floorMetadataCheck (check : UCheck) : UCheck :=
   {check with name := "p", tore := ["g"], probe := "p#probe", duty := "p#duty"}
-private def floorMetadataUnit (unit : UProg) : UProg :=
+private def floorMetadataUnit (bound : Int) (unit : UProg) : UProg :=
   {unit with
     marken := ["p#duty"]
-    fns := unit.fns.mapIdx floorMetadataFn
+    fns := unit.fns.mapIdx (floorMetadataFn bound)
     checks := unit.checks.map floorMetadataCheck
     tabs := []
     locks := []
@@ -135,7 +170,7 @@ private def floorPassingUnitRead : {unit : UProg // elabU (floorItems 2 true tru
   case made => cbv <;> exact Eq.refl _
 
 -- Nondependent field equalities are proved before any declaration/code index exists.
-private theorem floorPassing_metadata : floorMetadataUnit floorPassingUnitRead.val = floorPassingUnitRead.val := by
+private theorem floorPassing_metadata : floorMetadataUnit 2 floorPassingUnitRead.val = floorPassingUnitRead.val := by
   have marks : floorPassingUnitRead.val.marken = ["p#duty"] := by cbv
   have tables : floorPassingUnitRead.val.tabs = [] := by cbv
   have locks : floorPassingUnitRead.val.locks = [] := by cbv
@@ -146,14 +181,14 @@ private theorem floorPassing_metadata : floorMetadataUnit floorPassingUnitRead.v
   have pointers : floorPassingUnitRead.val.ptrs = [] := by cbv
   have owners : floorPassingUnitRead.val.eigner = [] := by cbv
   have orders : floorPassingUnitRead.val.markOrders = [] := by cbv
-  have functions : floorPassingUnitRead.val.fns.mapIdx floorMetadataFn = floorPassingUnitRead.val.fns := by cbv
+  have functions : floorPassingUnitRead.val.fns.mapIdx (floorMetadataFn 2) = floorPassingUnitRead.val.fns := by cbv
   have checks : floorPassingUnitRead.val.checks.map floorMetadataCheck = floorPassingUnitRead.val.checks := by cbv
   generalize source : floorPassingUnitRead.val = actualUnit at *
   cases actualUnit
   simp_all only [floorMetadataUnit]
 
 private def floorPassingUnitMade : {unit : UProg // elabU (floorItems 2 true true) = .ok unit} :=
-  ⟨floorMetadataUnit floorPassingUnitRead.val, floorPassingUnitRead.property.trans
+  ⟨floorMetadataUnit 2 floorPassingUnitRead.val, floorPassingUnitRead.property.trans
     (congrArg (fun unit : UProg => (Except.ok unit : Except String UProg)) floorPassing_metadata.symm)⟩
 
 private theorem floorPassing_unit : elabU (floorItems 2 true true) = .ok floorPassingUnitMade.val :=
@@ -291,7 +326,7 @@ private def floorFailingUnitRead : {unit : UProg // elabU (floorItems 4 true tru
   case made => cbv <;> exact Eq.refl _
 
 -- Nondependent field equalities are proved before any declaration/code index exists.
-private theorem floorFailing_metadata : floorMetadataUnit floorFailingUnitRead.val = floorFailingUnitRead.val := by
+private theorem floorFailing_metadata : floorMetadataUnit 4 floorFailingUnitRead.val = floorFailingUnitRead.val := by
   have marks : floorFailingUnitRead.val.marken = ["p#duty"] := by cbv
   have tables : floorFailingUnitRead.val.tabs = [] := by cbv
   have locks : floorFailingUnitRead.val.locks = [] := by cbv
@@ -302,14 +337,14 @@ private theorem floorFailing_metadata : floorMetadataUnit floorFailingUnitRead.v
   have pointers : floorFailingUnitRead.val.ptrs = [] := by cbv
   have owners : floorFailingUnitRead.val.eigner = [] := by cbv
   have orders : floorFailingUnitRead.val.markOrders = [] := by cbv
-  have functions : floorFailingUnitRead.val.fns.mapIdx floorMetadataFn = floorFailingUnitRead.val.fns := by cbv
+  have functions : floorFailingUnitRead.val.fns.mapIdx (floorMetadataFn 4) = floorFailingUnitRead.val.fns := by cbv
   have checks : floorFailingUnitRead.val.checks.map floorMetadataCheck = floorFailingUnitRead.val.checks := by cbv
   generalize source : floorFailingUnitRead.val = actualUnit at *
   cases actualUnit
   simp_all only [floorMetadataUnit]
 
 private def floorFailingUnitMade : {unit : UProg // elabU (floorItems 4 true true) = .ok unit} :=
-  ⟨floorMetadataUnit floorFailingUnitRead.val, floorFailingUnitRead.property.trans
+  ⟨floorMetadataUnit 4 floorFailingUnitRead.val, floorFailingUnitRead.property.trans
     (congrArg (fun unit : UProg => (Except.ok unit : Except String UProg)) floorFailing_metadata.symm)⟩
 
 private theorem floorFailing_unit : elabU (floorItems 4 true true) = .ok floorFailingUnitMade.val :=
