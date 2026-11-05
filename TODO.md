@@ -20,7 +20,8 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   prefix compile. The SC/GX, linked, termination and waiting goal audit passes for all 13 checked
   sentences using only the standard axioms. The current Runner library and executable build, all 14 Runner
   axiom audits pass, and the CPU regression reports 20,989 checks with zero differences, including 966 float IR cases.
-  The remaining Stage-0 consumers are being revalidated.
+  The generic Stage-0 statement/image correctness chain through `Stage0.IRBild` builds (2,709 jobs).
+  Full-package closure and the remaining concrete witness consumers are being revalidated.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
   The authorised acceptance scope is Lean and the Lean parts of GabbroV; Rust, Cargo and LLVM checks are
   deliberately unmeasured. The owner authorises pushing once the named Lean builds and GabbroV's Lean
