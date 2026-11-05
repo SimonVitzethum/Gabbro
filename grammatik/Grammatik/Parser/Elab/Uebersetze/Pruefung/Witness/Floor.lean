@@ -100,29 +100,68 @@ private def floorPassingUnitMade : {unit : UProg // elabU (floorItems 2 true tru
 private theorem floorPassing_unit : elabU (floorItems 2 true true) = .ok floorPassingUnitMade.val :=
   floorPassingUnitMade.property
 
--- Each function gets a typed success certificate before the whole program is assembled.
+-- Fix every actual function index before inferring a dependent lowered value.
+private abbrev floorPassingFunctionType (index : Fin floorPassingUnitMade.val.fns.length) :=
+  EnsTy floorPassingUnitMade.val index × RumpTy floorPassingUnitMade.val index × ReqTy floorPassingUnitMade.val index
+
+private def floorPassingGateIndex : Fin floorPassingUnitMade.val.fns.length :=
+  ⟨0, by change 0 < 4; decide⟩
+
+private def floorPassingGateFunction :
+    {result : floorPassingFunctionType floorPassingGateIndex //
+      lowerFnAt floorPassingUnitMade.val floorPassingGateIndex = .ok result} := by
+  refine ⟨?result, ?made⟩
+  case made => cbv <;> exact Eq.refl _
+
+private def floorPassingProbeIndex : Fin floorPassingUnitMade.val.fns.length :=
+  ⟨1, by change 1 < 4; decide⟩
+
+private def floorPassingProbeFunction :
+    {result : floorPassingFunctionType floorPassingProbeIndex //
+      lowerFnAt floorPassingUnitMade.val floorPassingProbeIndex = .ok result} := by
+  refine ⟨?result, ?made⟩
+  case made => cbv <;> exact Eq.refl _
+
+private def floorPassingReportIndex : Fin floorPassingUnitMade.val.fns.length :=
+  ⟨2, by change 2 < 4; decide⟩
+
+private def floorPassingReportFunction :
+    {result : floorPassingFunctionType floorPassingReportIndex //
+      lowerFnAt floorPassingUnitMade.val floorPassingReportIndex = .ok result} := by
+  refine ⟨?result, ?made⟩
+  case made => cbv <;> exact Eq.refl _
+
+private def floorPassingWrapperIndex : Fin floorPassingUnitMade.val.fns.length :=
+  ⟨3, by change 3 < 4; decide⟩
+
+private def floorPassingWrapperFunction :
+    {result : floorPassingFunctionType floorPassingWrapperIndex //
+      lowerFnAt floorPassingUnitMade.val floorPassingWrapperIndex = .ok result} := by
+  refine ⟨?result, ?made⟩
+  case made => cbv <;> exact Eq.refl _
+
+-- All four certificates are already closed when this dependent selector is formed.
 private def floorPassingFunctions (index : Fin floorPassingUnitMade.val.fns.length) :
-    {result : EnsTy floorPassingUnitMade.val index × RumpTy floorPassingUnitMade.val index ×
-      ReqTy floorPassingUnitMade.val index // lowerFnAt floorPassingUnitMade.val index = .ok result} := by
-  rcases index with ⟨n, bound⟩
-  change n < 4 at bound
-  rcases n with _ | n
-  · refine ⟨?result, ?made⟩
-    case made => cbv <;> exact Eq.refl _
-  rcases n with _ | n
-  · refine ⟨?result, ?made⟩
-    case made => cbv <;> exact Eq.refl _
-  rcases n with _ | n
-  · refine ⟨?result, ?made⟩
-    case made => cbv <;> exact Eq.refl _
-  rcases n with _ | n
-  · refine ⟨?result, ?made⟩
-    case made => cbv <;> exact Eq.refl _
-  omega
+    {result : floorPassingFunctionType index // lowerFnAt floorPassingUnitMade.val index = .ok result} :=
+  Fin.cases floorPassingGateFunction
+    (Fin.cases floorPassingProbeFunction
+      (Fin.cases floorPassingReportFunction
+        (Fin.cases floorPassingWrapperFunction (fun i => Fin.elim0 i)))) index
 
 private theorem floorPassing_function (index : Fin floorPassingUnitMade.val.fns.length) :
     lowerFnAt floorPassingUnitMade.val index = .ok (floorPassingFunctions index).val :=
   (floorPassingFunctions index).property
+
+private theorem floorPassing_each :
+    lowerEach floorPassingUnitMade.val (List.finRange floorPassingUnitMade.val.fns.length) = .ok () := by
+  change lowerEach floorPassingUnitMade.val
+    [floorPassingGateIndex, floorPassingProbeIndex, floorPassingReportIndex, floorPassingWrapperIndex] = .ok ()
+  simp only [lowerEach, floorPassing_function]
+
+private theorem floorPassing_pair (index : Fin floorPassingUnitMade.val.fns.length)
+    (success : ∃ result, lowerFnAt floorPassingUnitMade.val index = .ok result) :
+    lowerAtPair floorPassingUnitMade.val index success = (floorPassingFunctions index).val := by
+  simp only [lowerAtPair, floorPassing_function]
 
 private def floorPassingMeasures :
     {exported : Measures.Export floorPassingUnitMade.val //
@@ -131,14 +170,17 @@ private def floorPassingMeasures :
   case made => cbv <;> exact Eq.refl _
 
 private theorem floorPassing_measure_gate (P : Programm (declOf floorPassingUnitMade.val)) :
-    Measures.checkedProgram floorPassingUnitMade.val P =
-      .ok (P, List.finRange floorPassingUnitMade.val.fns.length) := by
+    @Eq (Except String (Programm (declOf floorPassingUnitMade.val) × List (declOf floorPassingUnitMade.val).Fn))
+      (Measures.checkedProgram floorPassingUnitMade.val P)
+      (.ok (P, List.finRange floorPassingUnitMade.val.fns.length)) := by
   apply check_measure_gate _ floorPassingMeasures.val floorPassingMeasures.property
   have all : floorPassingUnitMade.val.fns.all (fun fn => decide (fn.decreases = none)) = true := by cbv
   intro fn member
   exact of_decide_eq_true (List.all_eq_true.mp all fn member)
 
-attribute [local cbv_eval] floorPassing_function floorPassing_measure_gate
+section floorPassingAssembly
+attribute [local cbv_opaque] lowerFnAt lowerEach lowerAtPair
+attribute [local cbv_eval] floorPassing_function floorPassing_each floorPassing_pair floorPassing_measure_gate
 
 private def floorPassingProgram :
     {result : Programm (declOf floorPassingUnitMade.val) × List (declOf floorPassingUnitMade.val).Fn //
@@ -164,6 +206,8 @@ attribute [local cbv_eval] floorPassing_program floorPassing_checks
 private theorem floorPassing_facts : CheckWitness floorPassingUnitMade.val 1 := by
   constructor <;> cbv
 
+end floorPassingAssembly
+
 -- Infer this exact unit from canonical elaboration, once, before dependent indices.
 private def floorFailingUnitMade : {unit : UProg // elabU (floorItems 4 true true) = .ok unit} := by
   refine ⟨?unit, ?made⟩
@@ -172,29 +216,68 @@ private def floorFailingUnitMade : {unit : UProg // elabU (floorItems 4 true tru
 private theorem floorFailing_unit : elabU (floorItems 4 true true) = .ok floorFailingUnitMade.val :=
   floorFailingUnitMade.property
 
--- Each function gets a typed success certificate before the whole program is assembled.
+-- Fix every actual function index before inferring a dependent lowered value.
+private abbrev floorFailingFunctionType (index : Fin floorFailingUnitMade.val.fns.length) :=
+  EnsTy floorFailingUnitMade.val index × RumpTy floorFailingUnitMade.val index × ReqTy floorFailingUnitMade.val index
+
+private def floorFailingGateIndex : Fin floorFailingUnitMade.val.fns.length :=
+  ⟨0, by change 0 < 4; decide⟩
+
+private def floorFailingGateFunction :
+    {result : floorFailingFunctionType floorFailingGateIndex //
+      lowerFnAt floorFailingUnitMade.val floorFailingGateIndex = .ok result} := by
+  refine ⟨?result, ?made⟩
+  case made => cbv <;> exact Eq.refl _
+
+private def floorFailingProbeIndex : Fin floorFailingUnitMade.val.fns.length :=
+  ⟨1, by change 1 < 4; decide⟩
+
+private def floorFailingProbeFunction :
+    {result : floorFailingFunctionType floorFailingProbeIndex //
+      lowerFnAt floorFailingUnitMade.val floorFailingProbeIndex = .ok result} := by
+  refine ⟨?result, ?made⟩
+  case made => cbv <;> exact Eq.refl _
+
+private def floorFailingReportIndex : Fin floorFailingUnitMade.val.fns.length :=
+  ⟨2, by change 2 < 4; decide⟩
+
+private def floorFailingReportFunction :
+    {result : floorFailingFunctionType floorFailingReportIndex //
+      lowerFnAt floorFailingUnitMade.val floorFailingReportIndex = .ok result} := by
+  refine ⟨?result, ?made⟩
+  case made => cbv <;> exact Eq.refl _
+
+private def floorFailingWrapperIndex : Fin floorFailingUnitMade.val.fns.length :=
+  ⟨3, by change 3 < 4; decide⟩
+
+private def floorFailingWrapperFunction :
+    {result : floorFailingFunctionType floorFailingWrapperIndex //
+      lowerFnAt floorFailingUnitMade.val floorFailingWrapperIndex = .ok result} := by
+  refine ⟨?result, ?made⟩
+  case made => cbv <;> exact Eq.refl _
+
+-- All four certificates are already closed when this dependent selector is formed.
 private def floorFailingFunctions (index : Fin floorFailingUnitMade.val.fns.length) :
-    {result : EnsTy floorFailingUnitMade.val index × RumpTy floorFailingUnitMade.val index ×
-      ReqTy floorFailingUnitMade.val index // lowerFnAt floorFailingUnitMade.val index = .ok result} := by
-  rcases index with ⟨n, bound⟩
-  change n < 4 at bound
-  rcases n with _ | n
-  · refine ⟨?result, ?made⟩
-    case made => cbv <;> exact Eq.refl _
-  rcases n with _ | n
-  · refine ⟨?result, ?made⟩
-    case made => cbv <;> exact Eq.refl _
-  rcases n with _ | n
-  · refine ⟨?result, ?made⟩
-    case made => cbv <;> exact Eq.refl _
-  rcases n with _ | n
-  · refine ⟨?result, ?made⟩
-    case made => cbv <;> exact Eq.refl _
-  omega
+    {result : floorFailingFunctionType index // lowerFnAt floorFailingUnitMade.val index = .ok result} :=
+  Fin.cases floorFailingGateFunction
+    (Fin.cases floorFailingProbeFunction
+      (Fin.cases floorFailingReportFunction
+        (Fin.cases floorFailingWrapperFunction (fun i => Fin.elim0 i)))) index
 
 private theorem floorFailing_function (index : Fin floorFailingUnitMade.val.fns.length) :
     lowerFnAt floorFailingUnitMade.val index = .ok (floorFailingFunctions index).val :=
   (floorFailingFunctions index).property
+
+private theorem floorFailing_each :
+    lowerEach floorFailingUnitMade.val (List.finRange floorFailingUnitMade.val.fns.length) = .ok () := by
+  change lowerEach floorFailingUnitMade.val
+    [floorFailingGateIndex, floorFailingProbeIndex, floorFailingReportIndex, floorFailingWrapperIndex] = .ok ()
+  simp only [lowerEach, floorFailing_function]
+
+private theorem floorFailing_pair (index : Fin floorFailingUnitMade.val.fns.length)
+    (success : ∃ result, lowerFnAt floorFailingUnitMade.val index = .ok result) :
+    lowerAtPair floorFailingUnitMade.val index success = (floorFailingFunctions index).val := by
+  simp only [lowerAtPair, floorFailing_function]
 
 private def floorFailingMeasures :
     {exported : Measures.Export floorFailingUnitMade.val //
@@ -203,14 +286,17 @@ private def floorFailingMeasures :
   case made => cbv <;> exact Eq.refl _
 
 private theorem floorFailing_measure_gate (P : Programm (declOf floorFailingUnitMade.val)) :
-    Measures.checkedProgram floorFailingUnitMade.val P =
-      .ok (P, List.finRange floorFailingUnitMade.val.fns.length) := by
+    @Eq (Except String (Programm (declOf floorFailingUnitMade.val) × List (declOf floorFailingUnitMade.val).Fn))
+      (Measures.checkedProgram floorFailingUnitMade.val P)
+      (.ok (P, List.finRange floorFailingUnitMade.val.fns.length)) := by
   apply check_measure_gate _ floorFailingMeasures.val floorFailingMeasures.property
   have all : floorFailingUnitMade.val.fns.all (fun fn => decide (fn.decreases = none)) = true := by cbv
   intro fn member
   exact of_decide_eq_true (List.all_eq_true.mp all fn member)
 
-attribute [local cbv_eval] floorFailing_function floorFailing_measure_gate
+section floorFailingAssembly
+attribute [local cbv_opaque] lowerFnAt lowerEach lowerAtPair
+attribute [local cbv_eval] floorFailing_function floorFailing_each floorFailing_pair floorFailing_measure_gate
 
 private def floorFailingProgram :
     {result : Programm (declOf floorFailingUnitMade.val) × List (declOf floorFailingUnitMade.val).Fn //
@@ -235,6 +321,8 @@ attribute [local cbv_eval] floorFailing_program floorFailing_checks
 -- These are computed only on the certified unit/program/check results above.
 private theorem floorFailing_facts : CheckWitness floorFailingUnitMade.val 1 := by
   constructor <;> cbv
+
+end floorFailingAssembly
 
 private theorem floor_absent_refused : (elabU (floorItems 2 false false)).toOption.isNone = true := by cbv
 

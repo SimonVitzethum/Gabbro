@@ -98,29 +98,68 @@ private def admissionUnitMade : {unit : UProg // elabU (textItems "c" "g") = .ok
 private theorem admission_unit : elabU (textItems "c" "g") = .ok admissionUnitMade.val :=
   admissionUnitMade.property
 
--- Each function gets a typed success certificate before the whole program is assembled.
+-- Fix every actual function index before inferring a dependent lowered value.
+private abbrev admissionFunctionType (index : Fin admissionUnitMade.val.fns.length) :=
+  EnsTy admissionUnitMade.val index × RumpTy admissionUnitMade.val index × ReqTy admissionUnitMade.val index
+
+private def admissionGateIndex : Fin admissionUnitMade.val.fns.length :=
+  ⟨0, by change 0 < 4; decide⟩
+
+private def admissionGateFunction :
+    {result : admissionFunctionType admissionGateIndex //
+      lowerFnAt admissionUnitMade.val admissionGateIndex = .ok result} := by
+  refine ⟨?result, ?made⟩
+  case made => cbv <;> exact Eq.refl _
+
+private def admissionProbeIndex : Fin admissionUnitMade.val.fns.length :=
+  ⟨1, by change 1 < 4; decide⟩
+
+private def admissionProbeFunction :
+    {result : admissionFunctionType admissionProbeIndex //
+      lowerFnAt admissionUnitMade.val admissionProbeIndex = .ok result} := by
+  refine ⟨?result, ?made⟩
+  case made => cbv <;> exact Eq.refl _
+
+private def admissionReportIndex : Fin admissionUnitMade.val.fns.length :=
+  ⟨2, by change 2 < 4; decide⟩
+
+private def admissionReportFunction :
+    {result : admissionFunctionType admissionReportIndex //
+      lowerFnAt admissionUnitMade.val admissionReportIndex = .ok result} := by
+  refine ⟨?result, ?made⟩
+  case made => cbv <;> exact Eq.refl _
+
+private def admissionWrapperIndex : Fin admissionUnitMade.val.fns.length :=
+  ⟨3, by change 3 < 4; decide⟩
+
+private def admissionWrapperFunction :
+    {result : admissionFunctionType admissionWrapperIndex //
+      lowerFnAt admissionUnitMade.val admissionWrapperIndex = .ok result} := by
+  refine ⟨?result, ?made⟩
+  case made => cbv <;> exact Eq.refl _
+
+-- All four certificates are already closed when this dependent selector is formed.
 private def admissionFunctions (index : Fin admissionUnitMade.val.fns.length) :
-    {result : EnsTy admissionUnitMade.val index × RumpTy admissionUnitMade.val index ×
-      ReqTy admissionUnitMade.val index // lowerFnAt admissionUnitMade.val index = .ok result} := by
-  rcases index with ⟨n, bound⟩
-  change n < 4 at bound
-  rcases n with _ | n
-  · refine ⟨?result, ?made⟩
-    case made => cbv <;> exact Eq.refl _
-  rcases n with _ | n
-  · refine ⟨?result, ?made⟩
-    case made => cbv <;> exact Eq.refl _
-  rcases n with _ | n
-  · refine ⟨?result, ?made⟩
-    case made => cbv <;> exact Eq.refl _
-  rcases n with _ | n
-  · refine ⟨?result, ?made⟩
-    case made => cbv <;> exact Eq.refl _
-  omega
+    {result : admissionFunctionType index // lowerFnAt admissionUnitMade.val index = .ok result} :=
+  Fin.cases admissionGateFunction
+    (Fin.cases admissionProbeFunction
+      (Fin.cases admissionReportFunction
+        (Fin.cases admissionWrapperFunction (fun i => Fin.elim0 i)))) index
 
 private theorem admission_function (index : Fin admissionUnitMade.val.fns.length) :
     lowerFnAt admissionUnitMade.val index = .ok (admissionFunctions index).val :=
   (admissionFunctions index).property
+
+private theorem admission_each :
+    lowerEach admissionUnitMade.val (List.finRange admissionUnitMade.val.fns.length) = .ok () := by
+  change lowerEach admissionUnitMade.val
+    [admissionGateIndex, admissionProbeIndex, admissionReportIndex, admissionWrapperIndex] = .ok ()
+  simp only [lowerEach, admission_function]
+
+private theorem admission_pair (index : Fin admissionUnitMade.val.fns.length)
+    (success : ∃ result, lowerFnAt admissionUnitMade.val index = .ok result) :
+    lowerAtPair admissionUnitMade.val index success = (admissionFunctions index).val := by
+  simp only [lowerAtPair, admission_function]
 
 private def admissionMeasures :
     {exported : Measures.Export admissionUnitMade.val //
@@ -129,14 +168,17 @@ private def admissionMeasures :
   case made => cbv <;> exact Eq.refl _
 
 private theorem admission_measure_gate (P : Programm (declOf admissionUnitMade.val)) :
-    Measures.checkedProgram admissionUnitMade.val P =
-      .ok (P, List.finRange admissionUnitMade.val.fns.length) := by
+    @Eq (Except String (Programm (declOf admissionUnitMade.val) × List (declOf admissionUnitMade.val).Fn))
+      (Measures.checkedProgram admissionUnitMade.val P)
+      (.ok (P, List.finRange admissionUnitMade.val.fns.length)) := by
   apply check_measure_gate _ admissionMeasures.val admissionMeasures.property
   have all : admissionUnitMade.val.fns.all (fun fn => decide (fn.decreases = none)) = true := by cbv
   intro fn member
   exact of_decide_eq_true (List.all_eq_true.mp all fn member)
 
-attribute [local cbv_eval] admission_function admission_measure_gate
+section admissionAssembly
+attribute [local cbv_opaque] lowerFnAt lowerEach lowerAtPair
+attribute [local cbv_eval] admission_function admission_each admission_pair admission_measure_gate
 
 private def admissionProgram :
     {result : Programm (declOf admissionUnitMade.val) × List (declOf admissionUnitMade.val).Fn //
@@ -162,13 +204,68 @@ attribute [local cbv_eval] admission_program admission_checks
 private theorem admission_facts : CheckWitness admissionUnitMade.val 0 := by
   constructor <;> cbv
 
+end admissionAssembly
+
+-- Normalize the actual metadata update before introducing any dependent check index.
+private def admissionWithoutWrappersMade : {unit : UProg //
+    ({admissionUnitMade.val with
+      fns := admissionUnitMade.val.fns.filter fun f => !(strEq f.name "p#tor#g")} : UProg) = unit} := by
+  refine ⟨?unit, ?made⟩
+  case made => cbv <;> exact Eq.refl _
+
 private theorem admission_wrapper_refused :
-    uCheckDecls {admissionUnitMade.val with
-      fns := admissionUnitMade.val.fns.filter fun f => !(strEq f.name "p#tor#g")} =
-      .error "function unknown: p#tor#g" := by cbv
+    @Eq (Except String (List (CheckDecl (declOf admissionWithoutWrappersMade.val))))
+      (uCheckDecls admissionWithoutWrappersMade.val)
+      (.error "function unknown: p#tor#g") := by cbv
+
+private def admissionWithoutGivesMade : {unit : UProg //
+    ({admissionUnitMade.val with fns := admissionUnitMade.val.fns.map fun f =>
+      (if strEq f.name "p#probe" then {f with gibt := []} else f)} : UProg) = unit} := by
+  refine ⟨?unit, ?made⟩
+  case made => cbv <;> exact Eq.refl _
+
+private def admissionWithoutGivesGateIndex : Fin admissionWithoutGivesMade.val.fns.length :=
+  ⟨0, by change 0 < 4; decide⟩
+
+private def admissionWithoutGivesProbeIndex : Fin admissionWithoutGivesMade.val.fns.length :=
+  ⟨1, by change 1 < 4; decide⟩
+
+private def admissionWithoutGivesGate :
+    {result : EnsTy admissionWithoutGivesMade.val admissionWithoutGivesGateIndex ×
+      RumpTy admissionWithoutGivesMade.val admissionWithoutGivesGateIndex ×
+      ReqTy admissionWithoutGivesMade.val admissionWithoutGivesGateIndex //
+      lowerFnAt admissionWithoutGivesMade.val admissionWithoutGivesGateIndex = .ok result} := by
+  refine ⟨?result, ?made⟩
+  case made => cbv <;> exact Eq.refl _
+
+-- The ordinary probe lowering produces this error; no replacement refusal is introduced.
+private def admissionWithoutGivesProbe : {error : String //
+    lowerFnAt admissionWithoutGivesMade.val admissionWithoutGivesProbeIndex = .error error} := by
+  refine ⟨?error, ?made⟩
+  case made => cbv <;> exact Eq.refl _
+
+private theorem admissionWithoutGives_each :
+    lowerEach admissionWithoutGivesMade.val (List.finRange admissionWithoutGivesMade.val.fns.length) =
+      .error admissionWithoutGivesProbe.val := by
+  change lowerEach admissionWithoutGivesMade.val
+    [admissionWithoutGivesGateIndex, admissionWithoutGivesProbeIndex,
+      ⟨2, by change 2 < 4; decide⟩, ⟨3, by change 3 < 4; decide⟩] = _
+  simp only [lowerEach, admissionWithoutGivesGate.property, admissionWithoutGivesProbe.property]
+
+private theorem refused_functions (unit : UProg) (error : String)
+    (failed : lowerEach unit (List.finRange unit.fns.length) = .error error) :
+    (lowerAllg unit).toOption.isNone = true := by
+  unfold lowerAllg
+  split
+  · rfl
+  · split
+    · rfl
+    · rename_i made
+      rw [failed] at made
+      cases made
 
 private theorem admission_gives_refused :
-    (lowerAllg {admissionUnitMade.val with fns := admissionUnitMade.val.fns.map fun f =>
-      if strEq f.name "p#probe" then {f with gibt := []} else f}).toOption.isNone = true := by cbv
+    (lowerAllg admissionWithoutGivesMade.val).toOption.isNone = true :=
+  refused_functions _ _ admissionWithoutGives_each
 
 end Gabbro.Grammatik.Parser.Uebersetze

@@ -155,13 +155,13 @@ def checkUOhneHuellen : UProg :=
 theorem checkU_ohne_huelle :
     uCheckDecls checkUOhneHuellen = .error "function unknown: p#tor#g" := by
   unfold checkUOhneHuellen
-  rw [admission_unit_actual]
+  rw [admission_unit_actual, admissionWithoutWrappersMade.property]
   exact admission_wrapper_refused
 
 /-- The probe with its `gibt` emptied: the Duty would be dropped. -/
 def checkUOhneGibt : UProg :=
   { checkU with fns := checkU.fns.map fun f =>
-    if strEq f.name "p#probe" then { f with gibt := [] } else f }
+    (if strEq f.name "p#probe" then { f with gibt := [] } else f) }
 
 /-- Removing `gibt` cannot silently drop a physical mark at return: the
     actual body still holds it, so ordinary lowering refuses the mismatch. -/
@@ -170,7 +170,7 @@ set_option maxHeartbeats 2000000 in
 theorem checkU_gibt_abgelehnt :
     (lowerAllg checkUOhneGibt).toOption.isNone = true := by
   unfold checkUOhneGibt
-  rw [admission_unit_actual]
+  rw [admission_unit_actual, admissionWithoutGivesMade.property]
   exact admission_gives_refused
 
 end Gabbro.Grammatik.Parser.Uebersetze
