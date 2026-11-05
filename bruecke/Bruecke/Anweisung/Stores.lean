@@ -13,13 +13,15 @@ variable {u : UProg}
 abbrev StmtC (u : UProg) (c : Fin u.fns.length) :=
   Stmt (declOf u) (verOf u c) false (ctxOf u c) (resOf u c) (resOf u c)
 
-def lowAssignDurch (u : UProg) (c : Fin u.fns.length) (b fname : String) (ix : UIdx) (v : USide) :
-    Except String (StmtC u c) :=
-  lowAssignDurchL u c (ctxOf u c) (fnAt u c) (resOf u c) b fname ix v
+def lowAssignDurch (u : UProg) (c : Fin u.fns.length) (b fname : String) (ix : UIdx) (v : USide)
+    (Λ : List (Res (declOf u)) := resOf u c) :
+    Except String (Stmt (declOf u) (verOf u c) false (ctxOf u c) Λ Λ) :=
+  lowAssignDurchL u c (ctxOf u c) (fnAt u c) Λ b fname ix v
 
-def lowAssignTab (u : UProg) (c : Fin u.fns.length) (b fname : String) (ix : UIdx) (v : USide) :
-    Except String (StmtC u c) :=
-  lowAssignTabL u c (ctxOf u c) (fnAt u c) (resOf u c) b fname ix v
+def lowAssignTab (u : UProg) (c : Fin u.fns.length) (b fname : String) (ix : UIdx) (v : USide)
+    (Λ : List (Res (declOf u)) := resOf u c) :
+    Except String (Stmt (declOf u) (verOf u c) false (ctxOf u c) Λ Λ) :=
+  lowAssignTabL u c (ctxOf u c) (fnAt u c) Λ b fname ix v
 
 /-! ## 1. The writes: the lowering's casts are the constructors -/
 
@@ -67,10 +69,11 @@ theorem assignDurchOwnStmt_eq {space : Nat} {read : Bool}
 
 /-- **A slot write through a pointer parameter**: the G write and the Body write take related
     states to related states, and the place's carrier is a table the function writes. -/
-theorem lowAssignDurch_sim (c : Fin u.fns.length) {b fname : String} {ix : UIdx} {v : USide}
-    {g : Stmt (declOf u) (verOf u c) false (ctxOf u c) (resOf u c) (resOf u c)}
+theorem lowAssignDurch_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
+    {b fname : String} {ix : UIdx} {v : USide}
+    {g : Stmt (declOf u) (verOf u c) false (ctxOf u c) Λ Λ}
     {bst : Gabbro.Body.Stmt}
-    (h : lowAssignDurch u c b fname ix v = .ok g)
+    (h : lowAssignDurch u c b fname ix v (Λ := Λ) = .ok g)
     (hb : stmtBody u (fnAt u c) (.assign b fname ix v) = some bst)
     (hA : ArtStimmt (fnAt u c)) (hT : TabEindeutig u)
     (O : Orakel (declOf u)) (passes : Nat)
@@ -109,12 +112,13 @@ theorem lowAssignDurch_sim (c : Fin u.fns.length) {b fname : String} {ix : UIdx}
                     cases hcap : checkedTableCap u space num hlt with
                     | error error =>
                       simp only [hcap] at h
-                      change (Except.error error : Except String (StmtC u c)) = .ok g at h
+                      change (Except.error error : Except String
+                        (Stmt (declOf u) (verOf u c) false (ctxOf u c) Λ Λ)) = .ok g at h
                       cases h
                     | ok cap =>
                       simp only [hcap, bind, Except.bind] at h
                       cases h
-                      obtain ⟨e2, he2, heq⟩ := assignDurchStmt_eq (ctxOf u c) (resOf u c) (verOf u c)
+                      obtain ⟨e2, he2, heq⟩ := assignDurchStmt_eq (ctxOf u c) Λ (verOf u c)
                         ⟨num, hlt⟩ fh (Expr.var pv) cap.down i e _ hG
                       rw [heq]
                       have hparam : ((fnAt u c).params[j]?).map (·.2) =
@@ -128,7 +132,7 @@ theorem lowAssignDurch_sim (c : Fin u.fns.length) {b fname : String} {ix : UIdx}
                       | some ve =>
                         rw [hsv] at hb
                         cases hb
-                        let σl := σ.lese (resOf u c) ((Expr.var (D := declOf u) (Λ := resOf u c) pv).orte ++ i.orte ++ e2.orte)
+                        let σl := σ.lese Λ ((Expr.var (D := declOf u) (Λ := Λ) pv).orte ++ i.orte ++ e2.orte)
                         have hWl : WRel u σl s.world := wrel_slots u rfl hW
                         have hv := lowWertAt_sim he hsv hA hT σl σl ρ s.world s.local' hWl hL
                         have hk := lowIdx_sim hi σl σl ρ s.world s.local' hL
@@ -172,12 +176,13 @@ theorem lowAssignDurch_sim (c : Fin u.fns.length) {b fname : String} {ix : UIdx}
                         cases hcap : checkedTableCap u space num hlt with
                         | error error =>
                           simp only [hcap] at h
-                          change (Except.error error : Except String (StmtC u c)) = .ok g at h
+                          change (Except.error error : Except String
+                            (Stmt (declOf u) (verOf u c) false (ctxOf u c) Λ Λ)) = .ok g at h
                           cases h
                         | ok cap =>
                           simp only [hcap, bind, Except.bind] at h
                           cases h
-                          obtain ⟨e2, he2, heq⟩ := assignDurchOwnStmt_eq (ctxOf u c) (resOf u c) (verOf u c)
+                          obtain ⟨e2, he2, heq⟩ := assignDurchOwnStmt_eq (ctxOf u c) Λ (verOf u c)
                             ⟨num, hlt⟩ fh owner m (Expr.var pv) cap.down i e hm heig _ hG
                           rw [heq]
                           have hparam : ((fnAt u c).params[j]?).map (·.2) =
@@ -191,7 +196,7 @@ theorem lowAssignDurch_sim (c : Fin u.fns.length) {b fname : String} {ix : UIdx}
                           | some ve =>
                             rw [hsv] at hb
                             cases hb
-                            let σl := σ.lese (resOf u c) ((Expr.var (D := declOf u) (Λ := resOf u c) pv).orte ++ i.orte ++ e2.orte)
+                            let σl := σ.lese Λ ((Expr.var (D := declOf u) (Λ := Λ) pv).orte ++ i.orte ++ e2.orte)
                             have hWl : WRel u σl s.world := wrel_slots u rfl hW
                             have hv := lowWertAt_sim he hsv hA hT σl σl ρ s.world s.local' hWl hL
                             have hk := lowIdx_sim hi σl σl ρ s.world s.local' hL
@@ -212,10 +217,11 @@ theorem lowAssignDurch_sim (c : Fin u.fns.length) {b fname : String} {ix : UIdx}
     · cases h
 
 /-- **A slot write at a table.** -/
-theorem lowAssignTab_sim (c : Fin u.fns.length) {b fname : String} {ix : UIdx} {v : USide}
-    {g : Stmt (declOf u) (verOf u c) false (ctxOf u c) (resOf u c) (resOf u c)}
+theorem lowAssignTab_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
+    {b fname : String} {ix : UIdx} {v : USide}
+    {g : Stmt (declOf u) (verOf u c) false (ctxOf u c) Λ Λ}
     {bst : Gabbro.Body.Stmt}
-    (h : lowAssignTab u c b fname ix v = .ok g)
+    (h : lowAssignTab u c b fname ix v (Λ := Λ) = .ok g)
     (hb : stmtBody u (fnAt u c) (.assignTab b fname ix v) = some bst)
     (hA : ArtStimmt (fnAt u c)) (hT : TabEindeutig u)
     (O : Orakel (declOf u)) (passes : Nat)
@@ -245,7 +251,7 @@ theorem lowAssignTab_sim (c : Fin u.fns.length) {b fname : String} {ix : UIdx} {
             split at h
             · rename_i hw
               cases h
-              obtain ⟨e2, he2, heq⟩ := assignSlotStmt_eq (ctxOf u c) (resOf u c) (verOf u c)
+              obtain ⟨e2, he2, heq⟩ := assignSlotStmt_eq (ctxOf u c) Λ (verOf u c)
                 t fh i e _ hG
               rw [heq]
               simp only [stmtBody] at hb
@@ -254,7 +260,7 @@ theorem lowAssignTab_sim (c : Fin u.fns.length) {b fname : String} {ix : UIdx} {
               | some ve =>
                 rw [hsv] at hb
                 cases hb
-                let σl := σ.lese (resOf u c) (i.orte ++ e2.orte)
+                let σl := σ.lese Λ (i.orte ++ e2.orte)
                 have hWl : WRel u σl s.world := wrel_slots u rfl hW
                 have hv := lowWertAt_sim he hsv hA hT σl σl ρ s.world s.local' hWl hL
                 have hk := lowIdx_sim hi σl σl ρ s.world s.local' hL

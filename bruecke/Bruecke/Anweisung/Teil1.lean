@@ -25,32 +25,37 @@ variable {u : UProg}
 
 /-- The function-level views of the scope- and `Λ`-general readers: the parameters of `c` as the
     scope (`Γ := ctxOf u c`, `fn := fnAt u c`), its held list (`Λ := resOf u c`), outside a loop. -/
-def lowCallArgOne (u : UProg) (c : Fin u.fns.length) (k : UParamArt) (t : Ty) (a : UArg) :
-    Except String (Expr (declOf u) (ctxOf u c) (resOf u c) t) :=
-  lowCallArgOneL u c (ctxOf u c) (fnAt u c) (resOf u c) k t a
+def lowCallArgOne (u : UProg) (c : Fin u.fns.length) (k : UParamArt) (t : Ty) (a : UArg)
+    (Λ : List (Res (declOf u)) := resOf u c) :
+    Except String (Expr (declOf u) (ctxOf u c) Λ t) :=
+  lowCallArgOneL u c (ctxOf u c) (fnAt u c) Λ k t a
 
 def lowCallArgsAux (u : UProg) (c : Fin u.fns.length) (ks : List UParamArt) (ts : List Ty)
-    (as : List UArg) : Except String (Args (declOf u) (ctxOf u c) (resOf u c) ts) :=
-  lowCallArgsAuxL u c (ctxOf u c) (fnAt u c) (resOf u c) ks ts as
+    (as : List UArg) (Λ : List (Res (declOf u)) := resOf u c) :
+    Except String (Args (declOf u) (ctxOf u c) Λ ts) :=
+  lowCallArgsAuxL u c (ctxOf u c) (fnAt u c) Λ ks ts as
 
-def castNachStmt (u : UProg) (caller callee : Fin u.fns.length)
-    (s : Stmt (declOf u) (verOf u caller) false (ctxOf u caller)
-      (resOf u caller) (nach (declOf u) callee (resOf u caller))) :
-    Stmt (declOf u) (verOf u caller) false (ctxOf u caller)
-      (resOf u caller) (resOf u caller) :=
-  castNachStmtL u caller callee (ctxOf u caller) (resOf u caller) s
+def lowStmt (u : UProg) (c : Fin u.fns.length) (st : UStmt)
+    (Λ : List (Res (declOf u)) := resOf u c) :
+    Except String (Σ Λ', Stmt (declOf u) (verOf u c) false (ctxOf u c) Λ Λ') :=
+  lowStmtL u c (ctxOf u c) (fnAt u c) Λ st
 
-def lowStmt (u : UProg) (c : Fin u.fns.length) (st : UStmt) : Except String (StmtC u c) :=
-  lowStmtL u c (ctxOf u c) (fnAt u c) (resOf u c) st
-
-def lowCall (u : UProg) (c : Fin u.fns.length) (cname : String) (args : List UArg) :
-    Except String (StmtC u c) :=
-  lowCallL u c (ctxOf u c) (fnAt u c) (resOf u c) cname args
+def lowCall (u : UProg) (c : Fin u.fns.length) (cname : String) (args : List UArg)
+    (Λ : List (Res (declOf u)) := resOf u c) :
+    Except String (Σ Λ', Stmt (declOf u) (verOf u c) false (ctxOf u c) Λ Λ') :=
+  lowCallL u c (ctxOf u c) (fnAt u c) Λ cname args
 
 /-- The trailing return of `c`, in the scope of its parameters. -/
-def lowEndF (u : UProg) (c : Fin u.fns.length) (r : URet) :
-    Except String (Endblock (declOf u) (verOf u c) false (ctxOf u c) (resOf u c)) :=
-  lowEnd u c (ctxOf u c) (fnAt u c) r
+def lowEndF (u : UProg) (c : Fin u.fns.length) (r : URet)
+    (Λ : List (Res (declOf u)) := resOf u c) :
+    Except String (Endblock (declOf u) (verOf u c) false (ctxOf u c) Λ) :=
+  lowEnd u c (ctxOf u c) Λ (fnAt u c) r
+
+/-- The canonical body reader at the actual resources of a continuation. -/
+def lowBodyAt (u : UProg) (c : Fin u.fns.length) (Λ : List (Res (declOf u)))
+    (ss : List UStmt) (r : URet) :
+    Except String (Endblock (declOf u) (verOf u c) false (ctxOf u c) Λ) :=
+  lowBodyF u c (ctxOf u c) (fnAt u c) (ss.length + 1) Λ ss r
 
 /-! ## 2. The call: arguments, the callee's entry state, its precondition -/
 
@@ -59,12 +64,6 @@ theorem execStmt_heq {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ
     (hΛ : Λ₁ = Λ₂) (s₁ : Stmt D V l Γ Λ Λ₁) (s₂ : Stmt D V l Γ Λ Λ₂) (hs : HEq s₁ s₂)
     (σ : World D) (ρ : Env D Γ) : execStmt O passes R s₁ σ ρ = execStmt O passes R s₂ σ ρ := by
   subst hΛ; cases hs; rfl
-
-theorem castNachStmt_heq (caller callee : Fin u.fns.length)
-    (s : Stmt (declOf u) (verOf u caller) false (ctxOf u caller)
-      (resOf u caller) (nach (declOf u) callee (resOf u caller))) :
-    HEq (castNachStmtL u caller callee (ctxOf u caller) (resOf u caller) s) s := by
-  unfold castNachStmtL; exact mp_heq _ _
 
 /-- The Body values of a G environment, in order. -/
 def envVals {D : Deklaration} : {Γ : Ctx} → Env D Γ → List Gabbro.Body.Value
@@ -105,14 +104,24 @@ theorem lrel_ptr (c : Fin u.fns.length) {ρ : Env (declOf u) (ctxOf u c)} {β : 
   rw [hL p j hj, Nat.zero_add]
   exact nthVal_ptr ρ j cap (by rw [ctxOf_get]; exact hτ)
 
-theorem uIdxOfSide_expr {sd : USide} {ix : UIdx} (h : uIdxOfSide sd = .ok ix) :
-    sideExpr u fn sd = some (idxExpr ix) := by
-  cases sd <;> simp [uIdxOfSide] at h <;> subst h <;> rfl
+theorem uIdxOfSide_expr {sd : USide} {ix : UIdx} {eB : Gabbro.Body.Expr}
+    (h : uIdxOfSide sd = .ok ix) (hb : sideExpr u fn sd = some eB) :
+    eB = idxExpr ix := by
+  cases sd with
+  | lit n => cases h; exact (Option.some.inj hb).symm
+  | param p =>
+    cases h
+    simp only [sideExpr] at hb
+    split at hb
+    · exact (Option.some.inj hb).symm
+    · cases hb
+  | _ => simp [uIdxOfSide] at h
 
 /-- **One call argument**: the Body argument term evaluates to the G argument value. -/
-theorem lowCallArgOne_sim (c : Fin u.fns.length) {k : UParamArt} {τ : Ty} {a : UArg}
-    {e : Expr (declOf u) (ctxOf u c) (resOf u c) τ} {eB : Gabbro.Body.Expr}
-    (h : lowCallArgOne u c k τ a = .ok e) (hb : argExpr u (fnAt u c) a = some eB)
+theorem lowCallArgOne_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
+    {k : UParamArt} {τ : Ty} {a : UArg}
+    {e : Expr (declOf u) (ctxOf u c) Λ τ} {eB : Gabbro.Body.Expr}
+    (h : lowCallArgOne u c k τ a (Λ := Λ) = .ok e) (hb : argExpr u (fnAt u c) a = some eB)
     (hK : ArtSchlicht k = true)
     (hA : ArtStimmt (fnAt u c)) (hT : TabEindeutig u) (hN : NamenEindeutig (fnAt u c))
     (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) (ctxOf u c)) (s : Gabbro.Body.State)
@@ -162,52 +171,62 @@ theorem lowCallArgOne_sim (c : Fin u.fns.length) {k : UParamArt} {τ : Ty} {a : 
       all_goals first | (cases h; exact goal) | cases h
   | val sd =>
     simp only [argExpr] at hb
-    simp only [lowCallArgOne, lowCallArgOneL] at h
-    split at h
-    · simp at h
-    · split at h
-      · rename_i num _ lo hi
-        split at h
-        · rename_i hlt
-          split at h
-          · rename_i hLo
-            split at h
-            · rename_i hHi
-              split at h
-              · cases h
-              · rename_i ix hix
-                split at h
-                · cases h
-                · rename_i ei hei
+    cases k with
+    | ptr cap =>
+      simp only [lowCallArgOne, lowCallArgOneL] at h
+      repeat' split at h
+      all_goals cases h
+    | index num =>
+      cases τ with
+      | int lo hi =>
+        simp only [lowCallArgOne, lowCallArgOneL] at h
+        by_cases hlt : num < u.tabs.length
+        · rw [dif_pos hlt] at h
+          by_cases hLo : lo = 0
+          · rw [dif_pos hLo] at h
+            by_cases hHi : hi = (declOf u).count ⟨num, hlt⟩ - 1
+            · rw [dif_pos hHi] at h
+              cases hix : uIdxOfSide sd with
+              | error error => rw [hix] at h; cases h
+              | ok ix =>
+                rw [hix] at h
+                cases hei : lowIdx u (ctxOf u c) Λ (fnAt u c) 0 ⟨num, hlt⟩ ix with
+                | error error => rw [hei] at h; cases h
+                | ok ei =>
+                  rw [hei] at h
                   cases h
-                  rw [uIdxOfSide_expr hix] at hb
-                  cases hb
+                  rw [uIdxOfSide_expr hix hb]
                   rw [lowIdx_sim hei σ₀ σ ρ s.world s.local' hL]
                   have hτ : Ty.int lo hi = Ty.index ((declOf u).count ⟨num, hlt⟩) := by rw [hLo, hHi]
                   rw [valOf_eval_heq hτ _ ei ((mpr_heq _ _).trans (mpr_heq _ _)) σ₀ σ ρ]
                   rfl
-            · cases h
-          · cases h
-        · cases h
-      · cases h
-    · split at h
-      · cases h
-      · rename_i e' he'
-        cases h
-        cases s
-        exact lowWertAt_sim he' hb hA hT σ₀ σ ρ _ _ hW hL
-    all_goals first | (cases h; done) | (simp [ArtSchlicht] at hK)
+            · rw [dif_neg hHi] at h; cases h
+          · rw [dif_neg hLo] at h; cases h
+        · rw [dif_neg hlt] at h; cases h
+      | _ => simp only [lowCallArgOne, lowCallArgOneL] at h; cases h
+    | int =>
+      cases τ with
+      | int lo hi =>
+        simp only [lowCallArgOne, lowCallArgOneL] at h
+        cases he' : lowWertAt u (ctxOf u c) Λ (fnAt u c) lo hi sd with
+        | error error => rw [he'] at h; cases h
+        | ok value =>
+          rw [he'] at h
+          cases h
+          exact lowWertAt_sim he' hb hA hT σ₀ σ ρ s.world s.local' hW hL
+      | _ => simp only [lowCallArgOne, lowCallArgOneL] at h; cases h
+    | _ => simp [ArtSchlicht] at hK
   | bval _ | oval _ | gval _ | fnref _ => simp [argExpr] at hb
 
 /-- **The argument list.** -/
-theorem lowCallArgsAux_sim (c : Fin u.fns.length)
+theorem lowCallArgsAux_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
     (hA : ArtStimmt (fnAt u c)) (hT : TabEindeutig u) (hN : NamenEindeutig (fnAt u c))
     (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) (ctxOf u c)) (s : Gabbro.Body.State)
     (hW : WRel u σ s.world) (hL : LRel (fnAt u c) 0 ρ s.local') :
     ∀ (ks : List UParamArt) (ts : List Ty) (as : List UArg)
-      (a : Args (declOf u) (ctxOf u c) (resOf u c) ts) (es : List Gabbro.Body.Expr),
+      (a : Args (declOf u) (ctxOf u c) Λ ts) (es : List Gabbro.Body.Expr),
       (∀ k ∈ ks, ArtSchlicht k = true) →
-      lowCallArgsAux u c ks ts as = .ok a → argsExpr u (fnAt u c) as = some es →
+      lowCallArgsAux u c ks ts as (Λ := Λ) = .ok a → argsExpr u (fnAt u c) as = some es →
       Gabbro.Body.evalAll s es = some (envVals (evalArgs σ₀ a σ ρ))
   | [], ts, as, a, es, _, h, hb => by
       simp only [lowCallArgsAux, lowCallArgsAuxL] at h
