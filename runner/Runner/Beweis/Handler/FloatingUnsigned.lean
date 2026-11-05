@@ -31,15 +31,15 @@ private theorem native_step {L : Lay} {x : X} {tail : List Ins} {k : W → Res I
   intro answer
   apply corrM_opt
   intro result
-  exact continued result.1
+  simpa only [CorrM] using continued result.1
 
 /-- The scalar move preserves the exact lane word at its own instruction join. -/
 private theorem scalar_move {L : Lay} {t : IR.T} {x : X} {tail : List Ins}
     {k : W → Res IR.T} (format : FPFormat) (exit : Exit L t tail k)
     (code : Code L.C x.rip (.movFromXmm format .rax .xmm0 :: tail))
     (controls : Controls L t x) : Match L (k (x.xmmWord format .xmm0)) x := by
-  let after := ({ x with rip := x.rip + BitVec.ofNat 64
-    (enc (.movFromXmm format .rax .xmm0)).length }).set .rax (x.xmmWord format .xmm0)
+  let after := ({ x with rip := (x.rip + BitVec.ofNat 64
+    (enc (.movFromXmm format .rax .xmm0)).length) }).set .rax (x.xmmWord format .xmm0)
   have run : runL [.movFromXmm format .rax .xmm0] x = .next after := rfl
   have placed : Code L.C after.rip tail := code.2.2
   have kept : Controls L t after :=
@@ -57,8 +57,8 @@ private theorem double_match {L : Lay} {t : IR.T} {x : X} {tail : List Ins}
     (controls : Controls L t x) (input : x.xmmWord format .xmm0 = value) :
     Match L (Runner.fp (.add format) value value k) x := by
   let after (word : W) : X :=
-    ({ x with rip := x.rip + BitVec.ofNat 64
-      (enc (.scalar .add format .xmm0 .xmm0)).length }).setScalar format .xmm0 word
+    ({ x with rip := (x.rip + BitVec.ofNat 64
+      (enc (.scalar .add format .xmm0 .xmm0)).length) }).setScalar format .xmm0 word
   have execution : exec (.scalar .add format .xmm0 .xmm0)
       (enc (.scalar .add format .xmm0 .xmm0)).length x =
       Runner.fp (.add format) value value (fun word => .next (after word)) := by
@@ -74,7 +74,8 @@ private theorem double_match {L : Lay} {t : IR.T} {x : X} {tail : List Ins}
     · simpa only [after, fp_scalar_pc] using controls.pc
     · simpa only [after, fp_scalar_frame] using controls.frame
     · simpa only [after, fp_scalar_table] using controls.table
-    · simpa only [after, fp_scalar_mode] using controls.mode
+    · have unchanged : (after word).fpReady = x.fpReady := by cases format <;> rfl
+      exact unchanged.trans controls.mode
   have output : (after word).xmmWord format .xmm0 = word := by
     cases format <;>
       simp only [after, word, xmmWord_setScalar, NativeFPOp.resultWord, fpLow32_idem]
@@ -93,8 +94,8 @@ private theorem integer_match {L : Lay} {t : IR.T} {x : X} {tail : List Ins}
   have complete : Code L.C x.rip (.fromIntScalar format .xmm0 .rax :: rest ++ tail) := by
     simpa only [integerBody, rest, List.cons_append, List.nil_append, List.append_assoc] using code
   let after (word : W) : X :=
-    ({ x with rip := x.rip + BitVec.ofNat 64
-      (enc (.fromIntScalar format .xmm0 .rax)).length }).setScalar format .xmm0 word
+    ({ x with rip := (x.rip + BitVec.ofNat 64
+      (enc (.fromIntScalar format .xmm0 .rax)).length) }).setScalar format .xmm0 word
   have execution : exec (.fromIntScalar format .xmm0 .rax)
       (enc (.fromIntScalar format .xmm0 .rax)).length x =
       Runner.fp (.fromInt64 format) x.rax 0 (fun word => .next (after word)) := by
@@ -104,13 +105,14 @@ private theorem integer_match {L : Lay} {t : IR.T} {x : X} {tail : List Ins}
   intro raw
   let word := (NativeFPOp.fromInt64 format).resultWord raw
   have placed : Code L.C (after word).rip (rest ++ tail) := by
-    simpa only [after, setScalar_rip] using complete.2.2
+    simpa only [after, setScalar_rip, List.append_eq] using complete.2.2
   have kept : Controls L t (after word) := by
     refine ⟨?_, ?_, ?_, ?_⟩
     · simpa only [after, fp_scalar_pc] using controls.pc
     · simpa only [after, fp_scalar_frame] using controls.frame
     · simpa only [after, fp_scalar_table] using controls.table
-    · simpa only [after, fp_scalar_mode] using controls.mode
+    · have unchanged : (after word).fpReady = x.fpReady := by cases format <;> rfl
+      exact unchanged.trans controls.mode
   have output : (after word).xmmWord format .xmm0 = word := by
     cases format <;>
       simp only [after, word, xmmWord_setScalar, NativeFPOp.resultWord, fpLow32_idem]
@@ -182,8 +184,8 @@ private theorem sign_test (before : X) :
       Cond.eval after .s = some before.rax.msb ∧ after.rax = before.rax ∧
       after.r12 = before.r12 ∧ after.r13 = before.r13 ∧ after.r14 = before.r14 ∧
       after.fpReady = before.fpReady := by
-  let after := aluStep { before with rip := before.rip +
-    BitVec.ofNat 64 (enc (Ins.alu .test .rax .rax)).length } .test .rax before.rax
+  let after := aluStep { before with rip := (before.rip +
+    BitVec.ofNat 64 (enc (Ins.alu .test .rax .rax)).length) } .test .rax before.rax
   refine ⟨after, rfl, rfl, ?_, rfl, rfl, rfl, rfl, rfl⟩
   simp only [Cond.eval, after, aluStep, X.get, BitVec.and_self]
 
@@ -226,7 +228,7 @@ private theorem body_match {L : Lay} {t : IR.T} {x : X} {tail : List Ins}
     have selectedCode : Code L.C selected.rip
         (integerBody format false ++ (.jmp (BitVec.ofNat 32 (lenOf (fpFromUIntHigh format))) ::
           fpFromUIntHigh format ++ tail)) := by
-      simpa only [integerBody, Bool.false_eq_true, ↓reduceIte, fpFromIntBody,
+      simpa only [selected, choiceFallthrough, integerBody, Bool.false_eq_true, ↓reduceIte, fpFromIntBody,
         List.cons_append, List.nil_append, List.append_assoc] using fpChoose_no_code placed
     have selectedControls : Controls L t selected :=
       ⟨kept.pc, kept.frame, kept.table, kept.mode⟩
