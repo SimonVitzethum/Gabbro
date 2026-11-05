@@ -258,7 +258,7 @@ private theorem qual_phase_data :
   refine ⟨?library, ?found, ?unit, ?made, ?image, ?emitted, ?data⟩
   case found => cbv <;> exact Eq.refl _
   case made => cbv <;> exact Eq.refl _
-  case emitted => cbv <;> exact Eq.refl _
+  case emitted => library_emitted
   case data => library_data_fields
 
 /-- Preserve the complete qualified phase result before typed projections. -/

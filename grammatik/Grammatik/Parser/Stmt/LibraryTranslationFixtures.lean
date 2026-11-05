@@ -369,7 +369,7 @@ private theorem translation_phase_data (reverse : Bool) :
     refine ⟨?libraryFalse, ?foundFalse, ?unitFalse, ?madeFalse, ?imageFalse, ?emittedFalse, ?dataFalse⟩
     case foundFalse => cbv <;> exact Eq.refl _
     case madeFalse => cbv <;> exact Eq.refl _
-    case emittedFalse => cbv <;> exact Eq.refl _
+    case emittedFalse => library_emitted
     case dataFalse => library_data_fields
   | true =>
     refine certifyResults (translationPhaseMembers true) translationCall
@@ -379,7 +379,7 @@ private theorem translation_phase_data (reverse : Bool) :
     refine ⟨?libraryTrue, ?foundTrue, ?unitTrue, ?madeTrue, ?imageTrue, ?emittedTrue, ?dataTrue⟩
     case foundTrue => cbv <;> exact Eq.refl _
     case madeTrue => cbv <;> exact Eq.refl _
-    case emittedTrue => cbv <;> exact Eq.refl _
+    case emittedTrue => library_emitted
     case dataTrue => library_data_fields
 
 /-- Full phase success and typed image facts for the public selected values.

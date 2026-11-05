@@ -3,6 +3,7 @@ module
 public import Grammatik.Logik.Vertraege.Uebersetzung
 import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest2a
 import all Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Export
+import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Fixtures
 
 public section
 
@@ -92,36 +93,110 @@ theorem certifyResults (members : List SItemTief) (call : SLibraryCall)
   subst image
   exact facts
 
--- This bounded proof template is applied only after the three producer
--- equalities have fixed concrete library/unit/image values. It computes no
--- source, changes no limits, and proves every field, including universal runs.
-macro "library_data_fields" : tactic => `(tactic|
+/-- Recover the first function from its actual lowering equation. The image is
+    the canonical selected result, never a second concrete program assembly. -/
+theorem declarationData_of_function
+    {library : ULibrary} {unit : UProg}
+    {lowered : (lowerAllg unit).toOption.isSome = true}
+    {schema : IntegerSchema}
+    {reorder : Wert (declOf unit) schema.ty → Wert (declOf unit) schema.ty}
+    (positive : 0 < unit.fns.length)
+    (named : (fnAt unit ⟨0, positive⟩).name = library.translator.name)
+    (parameters : (declOf unit).params ⟨0, positive⟩ = [schema.ty])
+    (result : (declOf unit).erg ⟨0, positive⟩ = some schema.ty)
+    (needs : (fnAt unit ⟨0, positive⟩).needs = [])
+    (invariants : (declOf unit).invs = [])
+    {body : RumpTy unit ⟨0, positive⟩}
+    (functionLowered : lowerFnAt unit ⟨0, positive⟩ = .ok (.tru, body, .tru))
+    (calls : (befE false false body).rufe = [])
+    (indirect : (befE false false body).sigs = [])
+    (bounded : (befE false false body).ewig = false)
+    (callFree : ∀ callee, mE
+      ⟨fun h => !(decide (h = callee)), fun n => !((declOf unit).passt callee n),
+        fun _ => true⟩ body = true)
+    (run : ∀ oracle passes
+      (handler : ∀ f : (declOf unit).Fn,
+        World (declOf unit) → Env (declOf unit) ((declOf unit).params f) → RufAusgang f)
+      world (input : Wert (declOf unit) schema.ty),
+      execEnd oracle passes handler body world
+        (parameters.symm ▸ (Env.cons input Env.nil : Env (declOf unit) [schema.ty])) =
+        .zurueck world (result.symm ▸
+          (reorder input : ErgVal (declOf unit) (some schema.ty)))) :
+    DeclarationData library unit ((lowerAllg unit).toOption.get lowered) schema reorder := by
+  let image := (lowerAllg unit).toOption.get lowered
+  have fields := lowerAllg_fields unit image.1 image.2 (except_ok_get lowered) ⟨0, positive⟩
+  obtain ⟨value, origin, ensuresEq, bodyEq, _⟩ := fields
+  rw [functionLowered] at origin
+  cases origin
+  have requiresEq : image.1.requires ⟨0, positive⟩ = .tru := by
+    have required := Parser.Measures.Fixtures.program_requires_of_lowerFn
+      (lowered := lowered) functionLowered
+    simpa only [Parser.Measures.Fixtures.program, needs, reduceIte] using required
+  have absent (callee : (declOf unit).Fn) :
+      ruftB image.1 ⟨0, positive⟩ callee = false := by
+    simp only [ruftB, bodyEq, callFree callee, Bool.not_true]
   refine {
-    positive := by decide
-    name := by cbv
-    parameters := by cbv
-    result := by cbv
-    noCalls := by cbv
-    noIndirectCalls := by cbv
-    bounded := by cbv
-    noCycle := by
-      rintro ⟨index, bound⟩
-      have small : index < 1 := bound
-      have zero : index = 0 := by omega
-      subst index
-      cbv
-    execution := by
-      intro oracle passes world input
-      cbv
-      all_goals first
-        | rfl
-        | apply congrArg (RufAusgang.ok world)
-          funext index
-          rcases index with ⟨position, bound⟩
-          have choices : position = 0 ∨ position = 1 := by
-            change position < 2 at bound
-            omega
-          rcases choices with rfl | rfl <;> rfl })
+    positive := positive
+    name := named
+    parameters := parameters
+    result := result
+    noCalls := ?_
+    noIndirectCalls := ?_
+    bounded := ?_
+    noCycle := ?_
+    execution := ?_ }
+  · change (befE false false (image.1.rumpf ⟨0, positive⟩)).rufe = []
+    rw [bodyEq]
+    exact calls
+  · change (befE false false (image.1.rumpf ⟨0, positive⟩)).sigs = []
+    rw [bodyEq]
+    exact indirect
+  · change (befE false false (image.1.rumpf ⟨0, positive⟩)).ewig = false
+    rw [bodyEq]
+    exact bounded
+  · intro callee
+    have empty : (image.2.any fun h =>
+        ruftB image.1 ⟨0, positive⟩ h && reachB image.1 image.2 h ⟨0, positive⟩) = false := by
+      rw [List.any_eq_false]
+      intro h _
+      simp only [absent h, Bool.false_and, Bool.false_eq_true, not_false_eq_true]
+    unfold zykS
+    rw [empty]
+    exact Bool.and_false _
+  · intro oracle passes world input
+    rw [rufAt, requiresEq]
+    simp only [Expr.orte, lese_nil, eval, wahr?, Bool.true_eq_false, reduceIte]
+    rw [bodyEq, run oracle passes (rufAt image.1 oracle passes 0) world input]
+    simp only [ensuresEq, Expr.orte, lese_nil, eval, wahr?, Bool.true_eq_false,
+      reduceIte, invariants, List.filter_nil, List.foldl_nil, List.find?_nil]
+
+-- Only the concrete single-function producer and its small body are evaluated.
+-- The full dependent image remains behind the generic projection certificates.
+macro "library_data_fields" : tactic => `(tactic|
+  refine declarationData_of_function
+    (positive := by decide) (named := by cbv)
+    (parameters := by cbv) (result := by cbv)
+    (needs := by cbv) (invariants := by cbv)
+    (functionLowered := ?functionLowered) (calls := ?calls)
+    (indirect := ?indirect) (bounded := ?bounded)
+    (callFree := ?callFree) (run := ?run)
+  case functionLowered => cbv <;> exact Eq.refl _
+  case calls => cbv
+  case indirect => cbv
+  case bounded => cbv
+  case callFree => intro callee; cbv
+  case run =>
+    intro oracle passes handler world input
+    cbv
+    all_goals first
+      | rfl
+      | apply congrArg (EndAusgang.zurueck world)
+        funext index
+        rcases index with ⟨position, bound⟩
+        have choices : position = 0 ∨ position = 1 := by
+          change position < 2 at bound
+          omega
+        rcases choices with rfl | rfl <;> rfl)
 
 /-- Equality of answers may be cancelled without reducing a concrete unit
     beneath its dependent result type. -/
@@ -276,6 +351,19 @@ theorem lowering_ok (u : UProg) (noInvs : u.invs = []) (contracts : contractGate
         · exact checked _
         · contradiction
   exact lowered
+
+-- The image witness is the existing success-dependent selection. In particular,
+-- this never unfolds `progOfFn`, its dependent collector, or checkedProgram.
+macro "library_emitted" : tactic => `(tactic|
+  apply except_ok_get
+  apply lowering_ok
+  · rfl
+  · cbv
+  · rintro ⟨index, bound⟩
+    have small : index < 1 := bound
+    have zero : index = 0 := by omega
+    subst index
+    constructor <;> cbv)
 
 /-- Transport the complete metadata certificate before introducing any function
     index of the extracted unit. The concrete assembler is never evaluated here. -/
