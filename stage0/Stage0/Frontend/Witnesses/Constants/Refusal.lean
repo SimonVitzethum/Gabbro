@@ -1,5 +1,6 @@
 module
 public import Stage0.Frontend.Witnesses.Constants.Lexical
+public import Stage0.Frontend.Witnesses.Constants.SourcePackets
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
@@ -56,37 +57,57 @@ import all Grammatik.Parser.Elab.Konst.Values.Expression
 import all Grammatik.Parser.Elab.Konst.Values.Quotation
 import all Grammatik.Parser.Elab.Konst.Values.Export
 
+import all Stage0.Profil
+import all Stage0.Frontend.AliasOrder
+import all Stage0.Frontend.Correctness
+import all Stage0.Frontend.Environments
+import all Stage0.Frontend.EnvironmentsPart1
+import all Stage0.Frontend.DependentScopes
+import all Stage0.Frontend.DependentScopesa
+import all Stage0.Frontend.Functions
+import all Stage0.Frontend.Guard
+import all Stage0.Frontend.Constants.ConstantScopes
+import all Stage0.Frontend.Constants.ConstantMeaning
+
 @[expose] public section
 namespace Gabbro.Stage0.Frontend.ConstPhases
 open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
 
+-- This integer/Boolean fixture never uses the elaborator's float target.
+attribute [local cbv_opaque] uFloatLimit Frontend.normalize
+
+theorem blockText_parsed :
+    (parseTopTief (blockTextScan.tokens ++ [.ende])).toOption.isSome = true := by cbv
+
+def blockTextItems : List SItemTief :=
+  (parseTopTief (blockTextScan.tokens ++ [.ende])).toOption.get blockText_parsed
+
+theorem blockText_prepared :
+    (Profil.prepareItems {} blockTextItems).toOption.isSome = true := by cbv
+
+def blockTextInput : SourceInput Gabbro.Stage0.Frontend.ConstValuesWitness.blockText where
+  tokens := blockTextScan.tokens ++ [.ende]
+  items := blockTextItems
+  lexed := blockText_lexed
+  parsed := by exact Gabbro.Grammatik.except_ok_get blockText_parsed
+  prepared := (Profil.prepareItems {} blockTextItems).toOption.get blockText_prepared
+  preparation := by exact Gabbro.Grammatik.except_ok_get blockText_prepared
+  visibility := by cbv
+  compileTime := by cbv
+
+/-- Classify the actual failed metadata phase, not a guessed diagnostic or source result. -/
+theorem blockText_metadata_refused :
+    ∃ error : String, Konst.checkSourceMetadata blockTextInput.original = .error error := by
+  refine ⟨?error, ?equation⟩
+  case equation => cbv <;> exact Eq.refl _
+
 /-- The original unsupported const body fails the actual frontend, before any G compilation. -/
 theorem blockText_refused :
     ∃ error : String, Frontend.source Gabbro.Stage0.Frontend.ConstValuesWitness.blockText = .error error := by
-  have parsed : (parseTopTief (blockTextScan.tokens ++ [.ende])).toOption.isSome = true := by cbv
-  have parsedEq := Gabbro.Grammatik.except_ok_get (ε := String)
-    (α := List SItemTief) (x := parseTopTief (blockTextScan.tokens ++ [.ende])) parsed
-  refine ⟨?error, ?equation⟩
-  case equation =>
-    unfold Frontend.source
-    split
-    · rename_i error rejected
-      cases rejected.symm.trans blockText_lexed
-    · rename_i tokens selected
-      have same : tokens = blockTextScan.tokens ++ [.ende] :=
-        Except.ok.inj (selected.symm.trans blockText_lexed)
-      subst tokens
-      split
-      · rename_i error rejected
-        cases rejected.symm.trans parsedEq
-      · rename_i items selected
-        have same : items =
-            (parseTopTief (blockTextScan.tokens ++ [.ende])).toOption.get parsed :=
-          Except.ok.inj (selected.symm.trans parsedEq)
-        subst items
-        cbv <;> exact Eq.refl _
+  obtain ⟨error, refused⟩ := blockText_metadata_refused
+  exact ⟨error, source_metadata_refused blockTextInput error refused⟩
 
 theorem blockText_compile_refused :
     (compile Gabbro.Stage0.Frontend.ConstValuesWitness.blockText).toOption.isSome = false := by

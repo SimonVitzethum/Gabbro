@@ -1,6 +1,6 @@
 module
 public import Stage0.Frontend.Witnesses.Constants.Compilation
-public import Stage0.Frontend.Witnesses.Constants.Lexical
+public import Stage0.Frontend.Witnesses.Constants.GlobalSources
 import Grammatik.Parser.Elab.Konst.Values.WitnessReaders
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
@@ -75,57 +75,32 @@ attribute [local cbv_eval]
   Konst.Values.WitnessReaders.reader_missing
 
 -- Select a used field of the actual fuel record instead of expanding its unused operations.
-attribute [local cbv_opaque] lowStufe lowSeqL lowStructL
+attribute [local cbv_opaque] lowStufe lowSeqL lowStructL uFloatLimit Frontend.normalize
 attribute [local cbv_eval]
   Gabbro.Grammatik.Parser.UebersetzeProben2.seq_select
   Gabbro.Grammatik.Parser.UebersetzeProben2.struct_select
   lowStufe_seq lowStufe_struct
 
-/-- Parse this already certified token stream once. -/
-theorem globalText_parsed :
-    (parseTopTief (globalTextScan.tokens ++ [.ende])).toOption.isSome = true := by cbv
-
-/-- Construct the complete source and elaborator packet before projecting its dependent unit. -/
+/-- The canonical source packet is already certified phase by phase. -/
 def globalTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.globalText := by
-  have parsing : (parseTopTief (globalTextScan.tokens ++ [.ende])).toOption.isSome = true := by
-    exact globalText_parsed
-  have parsed : parseTopTief (globalTextScan.tokens ++ [.ende]) =
-      .ok ((parseTopTief (globalTextScan.tokens ++ [.ende])).toOption.get parsing) := by
-    exact Gabbro.Grammatik.except_ok_get (ε := String)
-      (α := List SItemTief) (x := parseTopTief (globalTextScan.tokens ++ [.ende])) parsing
   refine {
-    source := ?source
-    sourceEq := ?sourceEq
+    source := sourceFrom globalTextInput globalTextTail
+    sourceEq := by exact sourceFrom_eq globalTextInput globalTextTail
     expanded := ?expanded
     requirements := ?requirements
     expansion := ?expansion
     constants := ?constants
-    ordinary := ?ordinary
-    metadata := ?metadata
+    ordinary := by cbv
+    metadata := by exact globalTextTail.metadata
     candidate := ?candidate
     elaborated := ?elaborated }
-  case sourceEq =>
-    unfold Frontend.source
-    split
-    · rename_i error rejected
-      cases rejected.symm.trans globalText_lexed
-    · rename_i tokens selected
-      have same : tokens = globalTextScan.tokens ++ [.ende] :=
-        Except.ok.inj (selected.symm.trans globalText_lexed)
-      subst tokens
-      split
-      · rename_i error rejected
-        cases rejected.symm.trans parsed
-      · rename_i items selected
-        have same : items =
-            (parseTopTief (globalTextScan.tokens ++ [.ende])).toOption.get parsing :=
-          Except.ok.inj (selected.symm.trans parsed)
-        subst items
-        cbv <;> exact Eq.refl _
   case expansion => cbv <;> exact Eq.refl _
-  case constants => cbv <;> exact Eq.refl _
-  case ordinary => cbv
-  case metadata => cbv <;> exact Eq.refl _
+  case constants =>
+    change Konst.checkSourceConstants globalTextInput.original = .ok ()
+    unfold Konst.checkSourceConstants
+    split
+    · exact globalTextTail.metadata
+    · rfl
   case elaborated => cbv <;> exact Eq.refl _
 
 /-- Keep all three actual function results together through canonical assembly and admission. -/
@@ -176,51 +151,26 @@ theorem globalText_compiled :
   rw [unitEq]
   cbv
 
-/-- Parse this already certified token stream once. -/
-theorem qualifiedText_parsed :
-    (parseTopTief (qualifiedTextScan.tokens ++ [.ende])).toOption.isSome = true := by cbv
-
-/-- Construct the complete source and elaborator packet before projecting its dependent unit. -/
+/-- The canonical source packet is already certified phase by phase. -/
 def qualifiedTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.qualifiedText := by
-  have parsing : (parseTopTief (qualifiedTextScan.tokens ++ [.ende])).toOption.isSome = true := by
-    exact qualifiedText_parsed
-  have parsed : parseTopTief (qualifiedTextScan.tokens ++ [.ende]) =
-      .ok ((parseTopTief (qualifiedTextScan.tokens ++ [.ende])).toOption.get parsing) := by
-    exact Gabbro.Grammatik.except_ok_get (ε := String)
-      (α := List SItemTief) (x := parseTopTief (qualifiedTextScan.tokens ++ [.ende])) parsing
   refine {
-    source := ?source
-    sourceEq := ?sourceEq
+    source := sourceFrom qualifiedTextInput qualifiedTextTail
+    sourceEq := by exact sourceFrom_eq qualifiedTextInput qualifiedTextTail
     expanded := ?expanded
     requirements := ?requirements
     expansion := ?expansion
     constants := ?constants
-    ordinary := ?ordinary
-    metadata := ?metadata
+    ordinary := by cbv
+    metadata := by exact qualifiedTextTail.metadata
     candidate := ?candidate
     elaborated := ?elaborated }
-  case sourceEq =>
-    unfold Frontend.source
-    split
-    · rename_i error rejected
-      cases rejected.symm.trans qualifiedText_lexed
-    · rename_i tokens selected
-      have same : tokens = qualifiedTextScan.tokens ++ [.ende] :=
-        Except.ok.inj (selected.symm.trans qualifiedText_lexed)
-      subst tokens
-      split
-      · rename_i error rejected
-        cases rejected.symm.trans parsed
-      · rename_i items selected
-        have same : items =
-            (parseTopTief (qualifiedTextScan.tokens ++ [.ende])).toOption.get parsing :=
-          Except.ok.inj (selected.symm.trans parsed)
-        subst items
-        cbv <;> exact Eq.refl _
   case expansion => cbv <;> exact Eq.refl _
-  case constants => cbv <;> exact Eq.refl _
-  case ordinary => cbv
-  case metadata => cbv <;> exact Eq.refl _
+  case constants =>
+    change Konst.checkSourceConstants qualifiedTextInput.original = .ok ()
+    unfold Konst.checkSourceConstants
+    split
+    · exact qualifiedTextTail.metadata
+    · rfl
   case elaborated => cbv <;> exact Eq.refl _
 
 /-- Keep all three actual function results together through canonical assembly and admission. -/

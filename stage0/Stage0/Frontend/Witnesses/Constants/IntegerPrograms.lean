@@ -1,6 +1,6 @@
 module
 public import Stage0.Frontend.Witnesses.Constants.Compilation
-public import Stage0.Frontend.Witnesses.Constants.Lexical
+public import Stage0.Frontend.Witnesses.Constants.IntegerSources
 import Grammatik.Parser.Elab.Konst.Values.WitnessReaders
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
@@ -75,57 +75,32 @@ attribute [local cbv_eval]
   Konst.Values.WitnessReaders.reader_missing
 
 -- Select a used field of the actual fuel record instead of expanding its unused operations.
-attribute [local cbv_opaque] lowStufe lowSeqL lowStructL
+attribute [local cbv_opaque] lowStufe lowSeqL lowStructL uFloatLimit Frontend.normalize
 attribute [local cbv_eval]
   Gabbro.Grammatik.Parser.UebersetzeProben2.seq_select
   Gabbro.Grammatik.Parser.UebersetzeProben2.struct_select
   lowStufe_seq lowStufe_struct
 
-/-- Parse this already certified token stream once. -/
-theorem increment_parsed :
-    (parseTopTief (incrementScan.tokens ++ [.ende])).toOption.isSome = true := by cbv
-
-/-- Construct the complete source and elaborator packet before projecting its dependent unit. -/
+/-- The canonical source packet is already certified phase by phase. -/
 def incrementHeader : Header Gabbro.Stage0.Frontend.ConstWitness.text := by
-  have parsing : (parseTopTief (incrementScan.tokens ++ [.ende])).toOption.isSome = true := by
-    exact increment_parsed
-  have parsed : parseTopTief (incrementScan.tokens ++ [.ende]) =
-      .ok ((parseTopTief (incrementScan.tokens ++ [.ende])).toOption.get parsing) := by
-    exact Gabbro.Grammatik.except_ok_get (ε := String)
-      (α := List SItemTief) (x := parseTopTief (incrementScan.tokens ++ [.ende])) parsing
   refine {
-    source := ?source
-    sourceEq := ?sourceEq
+    source := sourceFrom incrementInput incrementTail
+    sourceEq := by exact sourceFrom_eq incrementInput incrementTail
     expanded := ?expanded
     requirements := ?requirements
     expansion := ?expansion
     constants := ?constants
-    ordinary := ?ordinary
-    metadata := ?metadata
+    ordinary := by cbv
+    metadata := by exact incrementTail.metadata
     candidate := ?candidate
     elaborated := ?elaborated }
-  case sourceEq =>
-    unfold Frontend.source
-    split
-    · rename_i error rejected
-      cases rejected.symm.trans increment_lexed
-    · rename_i tokens selected
-      have same : tokens = incrementScan.tokens ++ [.ende] :=
-        Except.ok.inj (selected.symm.trans increment_lexed)
-      subst tokens
-      split
-      · rename_i error rejected
-        cases rejected.symm.trans parsed
-      · rename_i items selected
-        have same : items =
-            (parseTopTief (incrementScan.tokens ++ [.ende])).toOption.get parsing :=
-          Except.ok.inj (selected.symm.trans parsed)
-        subst items
-        cbv <;> exact Eq.refl _
   case expansion => cbv <;> exact Eq.refl _
-  case constants => cbv <;> exact Eq.refl _
-  case ordinary => cbv
-  case metadata => cbv <;> exact Eq.refl _
+  case constants =>
+    change Konst.checkSourceConstants incrementInput.original = .ok ()
+    unfold Konst.checkSourceConstants
+    split
+    · exact incrementTail.metadata
+    · rfl
   case elaborated => cbv <;> exact Eq.refl _
 
 /-- Keep all three actual function results together through canonical assembly and admission. -/
@@ -176,51 +151,26 @@ theorem increment_compiled :
   rw [unitEq]
   cbv
 
-/-- Parse this already certified token stream once. -/
-theorem initializer_parsed :
-    (parseTopTief (initializerScan.tokens ++ [.ende])).toOption.isSome = true := by cbv
-
-/-- Construct the complete source and elaborator packet before projecting its dependent unit. -/
+/-- The canonical source packet is already certified phase by phase. -/
 def initializerHeader : Header Gabbro.Stage0.Frontend.ConstWitness.initializerText := by
-  have parsing : (parseTopTief (initializerScan.tokens ++ [.ende])).toOption.isSome = true := by
-    exact initializer_parsed
-  have parsed : parseTopTief (initializerScan.tokens ++ [.ende]) =
-      .ok ((parseTopTief (initializerScan.tokens ++ [.ende])).toOption.get parsing) := by
-    exact Gabbro.Grammatik.except_ok_get (ε := String)
-      (α := List SItemTief) (x := parseTopTief (initializerScan.tokens ++ [.ende])) parsing
   refine {
-    source := ?source
-    sourceEq := ?sourceEq
+    source := sourceFrom initializerInput initializerTail
+    sourceEq := by exact sourceFrom_eq initializerInput initializerTail
     expanded := ?expanded
     requirements := ?requirements
     expansion := ?expansion
     constants := ?constants
-    ordinary := ?ordinary
-    metadata := ?metadata
+    ordinary := by cbv
+    metadata := by exact initializerTail.metadata
     candidate := ?candidate
     elaborated := ?elaborated }
-  case sourceEq =>
-    unfold Frontend.source
-    split
-    · rename_i error rejected
-      cases rejected.symm.trans initializer_lexed
-    · rename_i tokens selected
-      have same : tokens = initializerScan.tokens ++ [.ende] :=
-        Except.ok.inj (selected.symm.trans initializer_lexed)
-      subst tokens
-      split
-      · rename_i error rejected
-        cases rejected.symm.trans parsed
-      · rename_i items selected
-        have same : items =
-            (parseTopTief (initializerScan.tokens ++ [.ende])).toOption.get parsing :=
-          Except.ok.inj (selected.symm.trans parsed)
-        subst items
-        cbv <;> exact Eq.refl _
   case expansion => cbv <;> exact Eq.refl _
-  case constants => cbv <;> exact Eq.refl _
-  case ordinary => cbv
-  case metadata => cbv <;> exact Eq.refl _
+  case constants =>
+    change Konst.checkSourceConstants initializerInput.original = .ok ()
+    unfold Konst.checkSourceConstants
+    split
+    · exact initializerTail.metadata
+    · rfl
   case elaborated => cbv <;> exact Eq.refl _
 
 /-- Keep all three actual function results together through canonical assembly and admission. -/
