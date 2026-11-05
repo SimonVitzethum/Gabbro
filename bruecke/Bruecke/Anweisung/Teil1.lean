@@ -173,9 +173,13 @@ theorem lowCallArgOne_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
     simp only [argExpr] at hb
     cases k with
     | ptr cap =>
-      simp only [lowCallArgOne, lowCallArgOneL] at h
-      repeat' split at h
-      all_goals cases h
+      cases τ with
+      | ptr target =>
+        obtain ⟨space, ⟨read, write, owner⟩, ⟨num⟩⟩ := target
+        cases owner <;> simp only [lowCallArgOne, lowCallArgOneL] at h
+        all_goals repeat' split at h
+        all_goals cases h
+      | _ => simp only [lowCallArgOne, lowCallArgOneL] at h; cases h
     | index num =>
       cases τ with
       | int lo hi =>
@@ -190,10 +194,11 @@ theorem lowCallArgOne_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
               | error error => rw [hix] at h; cases h
               | ok ix =>
                 rw [hix] at h
+                dsimp only at h
                 cases hei : lowIdx u (ctxOf u c) Λ (fnAt u c) 0 ⟨num, hlt⟩ ix with
-                | error error => rw [hei] at h; cases h
+                | error error => erw [hei] at h; cases h
                 | ok ei =>
-                  rw [hei] at h
+                  erw [hei] at h
                   cases h
                   rw [uIdxOfSide_expr hix hb]
                   rw [lowIdx_sim hei σ₀ σ ρ s.world s.local' hL]
