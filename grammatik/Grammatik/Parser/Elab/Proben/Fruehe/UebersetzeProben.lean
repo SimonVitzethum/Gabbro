@@ -125,24 +125,47 @@ private theorem lowering_ok (unit : UProg)
       intro f _
       apply List.all_eq_true.mpr
       intro g _
-      have empty (i : Fin unit.fns.length) : exported.mass i = [] :=
-        Measures.lowerMeasures_absent unit exported measured i
+      have empty (i : (declOf unit).Fn) : exported.mass i = [] :=
+        Measures.lowerMeasures_absent unit exported i
           (absent (fnAt unit i) (List.get_mem unit.fns i))
-      simp only [empty, List.length_nil]
-      simp
-    rw [Measures.checkedProgram, measured, if_pos cycles]
-    rfl
+      rw [empty f, empty g]
+      change (!zykS program (List.finRange unit.fns.length) f g || true) = true
+      exact Bool.or_true _
+    unfold Measures.checkedProgram
+    rw [measured]
+    change (if Measures.cycleLengths unit program exported.mass then true else false) = true
+    rw [ite_eq_left cycles]
   unfold lowerAllg
-  simp only [invariants, functions]
-  rw [dite_eq_left contracts]
-  exact checked _
+  split
+  · rename_i error failed
+    rw [invariants] at failed
+    cases failed
+  · split
+    · rename_i error failed
+      rw [functions] at failed
+      cases failed
+    · split
+      · exact checked _
+      · contradiction
 
 private theorem lowering_error (unit : UProg) (error : String)
     (invariants : lowerInvs unit (List.finRange unit.invs.length) = .ok ())
     (functions : lowerEach unit (List.finRange unit.fns.length) = .error error) :
     lowerAllg unit = .error error := by
   unfold lowerAllg
-  simp only [invariants, functions]
+  split
+  · rename_i message failed
+    rw [invariants] at failed
+    cases failed
+  · split
+    · rename_i message failed
+      rw [functions] at failed
+      have same : error = message := Except.error.inj failed
+      subst message
+      rfl
+    · rename_i succeeded
+      rw [functions] at succeeded
+      cases succeeded
 
 private theorem stufe_ok {source : String} {unit : UProg} (front : Frontend source unit)
     (lowered : (lowerAllg unit).toOption.isSome = true) : stufe source = "OK" := by
@@ -316,22 +339,70 @@ theorem konst1_fremd_refused : stufe konst1_fremd = "elab: name unknown: L" := b
 /-- WITNESS (`beispiele/69`): `|` of two conversions, `^` with a limit word (`beispiele/62`), `&`. -/
 def bit1 : String :=
   "module m { impl fn k(a : u32, b : u32) -> u64 { return u64(a) | u64(b); } impl fn i(w : u32) -> u32 { return w ^ u32::max; } impl fn m(a : u8, b : u8) -> u8 { return a & b; } }"
-theorem bit1_ok : stufe bit1 = "OK" := by
-  let unit : UProg :=
-    { tabs := []
-      locks := []
-      fns := (scalarUnit "k" [("a", .int 0 4294967295), ("b", .int 0 4294967295)]
-          (0, 18446744073709551615)
-          (.bor (.conv 0 18446744073709551615 (.param "a"))
-            (.conv 0 18446744073709551615 (.param "b")))).fns ++
-        (scalarUnit "i" [("w", .int 0 4294967295)] (0, 4294967295)
-          (.bxor (.param "w") (.lit 4294967295))).fns ++
-        (scalarUnit "m" [("a", .int 0 255), ("b", .int 0 255)] (0, 255)
-          (.band (.param "a") (.param "b"))).fns }
-  have front : Frontend bit1 unit := by intro after; cbv
-  apply stufe_ok front
-  exact lowering_ok unit rfl (by cbv) (by cbv) (by cbv)
-    (by simp [unit, scalarUnit])
+private def bit1Characters : List Char :=
+  ['m', 'o', 'd', 'u', 'l', 'e', ' ', 'm', ' ', '{', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'k', '(', 'a', ' ', ':',
+   ' ', 'u', '3', '2', ',', ' ', 'b', ' ', ':', ' ', 'u', '3', '2', ')', ' ', '-', '>', ' ', 'u', '6', '4', ' ', '{', ' ',
+   'r', 'e', 't', 'u', 'r', 'n', ' ', 'u', '6', '4', '(', 'a', ')', ' ', '|', ' ', 'u', '6', '4', '(', 'b', ')', ';', ' ',
+   '}', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'i', '(', 'w', ' ', ':', ' ', 'u', '3', '2', ')', ' ', '-', '>', ' ',
+   'u', '3', '2', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 'w', ' ', '^', ' ', 'u', '3', '2', ':', ':', 'm', 'a',
+   'x', ';', ' ', '}', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'm', '(', 'a', ' ', ':', ' ', 'u', '8', ',', ' ', 'b',
+   ' ', ':', ' ', 'u', '8', ')', ' ', '-', '>', ' ', 'u', '8', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 'a', ' ',
+   '&', ' ', 'b', ';', ' ', '}', ' ', '}']
+
+private theorem bit1_text : bit1 = String.ofList bit1Characters := by cbv
+
+private theorem bit1_lexed : (lexL bit1Characters).toOption.isSome = true := by cbv
+private def bit1Tokens : List Token := (lexL bit1Characters).toOption.get bit1_lexed
+
+private theorem bit1_parsed : (parseTopTief bit1Tokens).toOption.isSome = true := by cbv
+private def bit1Items : List SItemTief := (parseTopTief bit1Tokens).toOption.get bit1_parsed
+
+private def bit1Unit : UProg :=
+  { tabs := []
+    locks := []
+    fns := (scalarUnit "k" [("a", .int 0 4294967295), ("b", .int 0 4294967295)]
+        (0, 18446744073709551615)
+        (.bor (.conv 0 18446744073709551615 (.param "a"))
+          (.conv 0 18446744073709551615 (.param "b")))).fns ++
+      (scalarUnit "i" [("w", .int 0 4294967295)] (0, 4294967295)
+        (.bxor (.param "w") (.lit 4294967295))).fns ++
+      (scalarUnit "m" [("a", .int 0 255), ("b", .int 0 255)] (0, 255)
+        (.band (.param "a") (.param "b"))).fns }
+
+private theorem bit1_elaborated : elabU (pre108 bit1Items) = .ok bit1Unit := by cbv
+
+private theorem bit1_front : Frontend bit1 bit1Unit := by
+  have lexed : lex bit1 = .ok bit1Tokens := by
+    rw [bit1_text, lex_ofList]
+    exact except_ok_get bit1_lexed
+  have parsed : parseTopTief bit1Tokens = .ok bit1Items := except_ok_get bit1_parsed
+  intro after
+  rw [lexed]
+  dsimp only
+  rw [parsed]
+  dsimp only
+  rw [bit1_elaborated]
+
+private theorem bit1_function0 :
+    (lowerFnAt bit1Unit ⟨0, by decide⟩).toOption.isSome = true := by cbv
+private theorem bit1_function1 :
+    (lowerFnAt bit1Unit ⟨1, by decide⟩).toOption.isSome = true := by cbv
+private theorem bit1_function2 :
+    (lowerFnAt bit1Unit ⟨2, by decide⟩).toOption.isSome = true := by cbv
+
+private theorem bit1_functions : lowerEach bit1Unit (List.finRange bit1Unit.fns.length) = .ok () := by
+  change lowerEach bit1Unit [⟨0, by decide⟩, ⟨1, by decide⟩, ⟨2, by decide⟩] = .ok ()
+  rw [lowerEach, except_ok_get bit1_function0, lowerEach, except_ok_get bit1_function1,
+    lowerEach, except_ok_get bit1_function2, lowerEach]
+
+private theorem bit1_contracts : contractGate bit1Unit = true := by cbv
+private theorem bit1_measures : (Measures.lowerMeasures bit1Unit).toOption.isSome = true := by cbv
+
+private theorem bit1_lowered : (lowerAllg bit1Unit).toOption.isSome = true :=
+  lowering_ok bit1Unit rfl bit1_functions bit1_contracts bit1_measures
+    (by simp [bit1Unit, scalarUnit])
+
+theorem bit1_ok : stufe bit1 = "OK" := stufe_ok bit1_front bit1_lowered
 
 /-- PLANTED DEFECT: a bit operation over a signed range (M137 allows non-negative ranges only). -/
 def bit1_vorz : String :=
