@@ -1,5 +1,8 @@
 module
 public import Stage0.IRBild
+public import Stage0.SourceWitness.Image
+import all Stage0.SourceWitness.Image
+import all Stage0.SourceWitness.Compiled
 public import Stage0.Senke.Images.InitialRead
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -104,27 +107,34 @@ theorem InitialState.start_environments [Runner.IR.Kern]
       (fun x => Senke.layU_sync image.compiled.unit image.tor x)
   exact ⟨mainArgs, roots, rootArgs⟩
 
-/-- Character-pinned source avoids reducing the UTF decoder through a whole compiler witness. -/
-def characters : List Char := ['t', 'y', 'p', 'e', ' ', 'A', ' ', '=', ' ', 'i', '8', ';', ' ', 't', 'y', 'p', 'e', ' ', 'B', ' ', '=', ' ', 'A', ';', ' ', 'c', 'o', 'n', 's', 't', ' ', 'f', 'n', ' ', 'n', 'e', 'g', 'a', 't', 'i', 'v', 'e', '(', ')', ' ', '-', '>', ' ', 'B', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', '0', ' ', '-', ' ', '1', ';', ' ', '}', ' ', 'c', 'o', 'n', 's', 't', ' ', 'N', 'E', 'G', 'A', 'T', 'I', 'V', 'E', ' ', ':', ' ', 'B', ' ', '=', ' ', 'n', 'e', 'g', 'a', 't', 'i', 'v', 'e', '(', ')', ';', ' ', 'c', 'o', 'n', 's', 't', ' ', 'C', ' ', ':', ' ', 'B', ' ', '=', ' ', 'N', 'E', 'G', 'A', 'T', 'I', 'V', 'E', ' ', '+', ' ', '4', '3', ';', ' ', 't', 'y', 'p', 'e', ' ', 'B', 'o', 'u', 'n', 'd', ' ', '=', ' ', 'u', '8', ' ', 'i', 'n', ' ', '0', ' ', '.', '.', ' ', 'C', ';', ' ', 't', 'y', 'p', 'e', ' ', 'F', 'i', 'n', 'a', 'l', ' ', '=', ' ', 'B', 'o', 'u', 'n', 'd', ';', ' ', 'c', 'o', 'n', 's', 't', ' ', 'A', 'N', 'S', 'W', 'E', 'R', ' ', ':', ' ', 'F', 'i', 'n', 'a', 'l', ' ', '=', ' ', 'C', ';', ' ', 't', 'a', 'b', 'l', 'e', ' ', 'E', 'm', 'p', 't', 'y', ' ', 'c', 'o', 'u', 'n', 't', ' ', '4', '2', '9', '4', '9', '6', '7', '2', '9', '6', ' ', '{', ' ', 's', 'l', 'o', 't', ' ', '{', '}', ' ', '}', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'm', 'a', 'i', 'n', '(', ')', ' ', '-', '>', ' ', 'F', 'i', 'n', 'a', 'l', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 'A', 'N', 'S', 'W', 'E', 'R', ';', ' ', '}']
-def text : String := String.ofList characters
+-- The unchanged character pin and its complete phase packets are imported above.
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
-theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
+theorem candidate_present : candidate.toOption.isSome = true := by
+  change (emit text 64).toOption.isSome = true
+  rw [sourceImage.property]
+  rfl
 
 def output : Emitted text 64 := candidate.toOption.get candidate_present
-
+private theorem output_selected : output = sourceImage.val := by
+  unfold output candidate
+  rw [sourceImage.property]
+  rfl
 
 theorem carrier_shape :
     output.compiled.unit.tabs.length = 1 ∧ output.compiled.unit.globs.length = 0 ∧
     output.compiled.unit.axs.length = 0 ∧ output.compiled.unit.regs.length = 0 := by
-  decide +kernel
+  rw [output_selected]
+  exact compiled_carriers
 
 theorem params_empty : (declOf output.compiled.unit).params output.compiled.main = [] := by
-  decide +kernel
+  rw [output_selected]
+  exact compiled_params
 
 theorem result_type : (declOf output.compiled.unit).erg output.compiled.main = some (.int 0 42) := by
-  decide +kernel
+  rw [output_selected]
+  exact compiled_result
 
 abbrev D := declOf output.compiled.unit
 
@@ -142,9 +152,13 @@ def emptyOracle (u : UProg) (ha : u.axs.length = 0) (hr : u.regs.length = 0) :
 def oracle : Orakel D := emptyOracle output.compiled.unit carrier_shape.2.2.1 carrier_shape.2.2.2
 
 theorem fieldless : ∀ t : Fin output.compiled.unit.tabs.length,
-    fieldCount output.compiled.unit t = 0 := by decide +kernel
+    fieldCount output.compiled.unit t = 0 := by
+  rw [output_selected]
+  exact compiled_fieldless
 
-theorem table_count : output.compiled.unit.tabs.map (·.count) = [2 ^ 32] := by decide +kernel
+theorem table_count : output.compiled.unit.tabs.map (·.count) = [2 ^ 32] := by
+  rw [output_selected]
+  exact compiled_table_count
 
 def world : World D := Senke.initialWorld output.compiled.unit output.initialValid
 
@@ -174,21 +188,26 @@ def loadedMemory (bytes : List Runner.B) : Runner.Mem where
 def memory : Runner.Mem := loadedMemory output.bytes
 
 theorem accepted_image : emit text 64 = .ok output :=
-  Gabbro.Grammatik.except_ok_get candidate_present
-
+  sourceImage.property.trans (congrArg
+    (fun image : Emitted text 64 => (Except.ok image : Except String (Emitted text 64)))
+    output_selected.symm)
 
 theorem source_scopes :
     output.compiled.source.scopes.values = [("NEGATIVE", -1), ("C", 42), ("ANSWER", 42)] ∧
     output.compiled.source.scopes.declared = [("A", (-128, 127)), ("B", (-128, 127)), ("Bound", (0, 42)), ("Final", (0, 42))] ∧
     output.compiled.unit.fns.length = 1 ∧ 0 < output.image.code.length := by
-  decide +kernel
+  rw [output_selected]
+  exact ⟨compiled_scopes.1, compiled_scopes.2.1, compiled_scopes.2.2,
+    (ImagePhases.geometry sourceImage.val).1⟩
 
 /-- This accepted image actually uses the new final-original-values alias path. -/
 theorem aliases_final :
     output.compiled.source.scopes.aliasConstants = output.compiled.source.scopes.values := by
-  decide +kernel
+  rw [output_selected]
+  exact compiled_aliases
 
-theorem image_bound : Runner.Prog.IMG + output.bytes.length < 2 ^ 64 := by decide +kernel
+theorem image_bound : Runner.Prog.IMG + output.bytes.length < 2 ^ 64 :=
+  (ImagePhases.geometry output).2
 
 theorem loadedBytes (bytes : List Runner.B) (bound : Runner.Prog.IMG + bytes.length < 2 ^ 64) :
     Senke.BytesAt (loadedMemory bytes) Runner.Prog.IMG bytes := by
