@@ -165,10 +165,13 @@ theorem declarationData_of_function
     rw [empty]
     exact Bool.and_false _
   · intro oracle passes world input
-    rw [rufAt.eq_def, requiresEq]
+    erw [rufAt.eq_def]
+    dsimp only
+    erw [requiresEq]
     simp only [Expr.orte, lese_nil, eval, wahr?, Bool.true_eq_false, reduceIte]
     rw [bodyEq, run oracle passes (rufAt image.1 oracle passes 0) world input]
-    simp only [ensuresEq, Expr.orte, lese_nil, eval, wahr?, Bool.true_eq_false,
+    erw [ensuresEq]
+    simp only [Expr.orte, lese_nil, eval, wahr?, Bool.true_eq_false,
       reduceIte, invariants, List.filter_nil, List.foldl_nil, List.find?_nil]
 
 -- Only the concrete single-function producer and its small body are evaluated.
