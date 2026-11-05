@@ -127,7 +127,7 @@ private theorem substitution_select (bindings : List (String × SExpr))
             | binder :: _, subject :: filter :: value :: fallback =>
               let inner := bindings.filter (fun pair => !strEq pair.1 binder)
               .ext kind names (sErsetze bindings next subject :: sErsetze inner next filter ::
-                sErsetze inner next value :: fallback.map (sErsetze inner next))
+                sErsetze inner next value :: fallback.map (sErsetze bindings next))
             | _, _ => .ext kind names (args.map (sErsetze bindings next))
           else if kind == XKind.all || kind == XKind.any || kind == XKind.count then
             let inner := bindings.filter (fun p => !(names.head?.any (strEq p.1 ·)))
