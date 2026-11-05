@@ -6,6 +6,15 @@ public import NativeFloat.IntScaling
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
+
+private theorem wideFloat_numeric (z : Int) (big : 2 ^ 55 ≤ z.natAbs) :
+    Float.mul
+      (Int64.ofInt (integerFloatJam z.natAbs (integerFloatShift z.natAbs) : Int)).toFloat
+      (Float.ofBits (UInt64.ofNat ((if z < 0 then 2 ^ 63 else 0) +
+        (integerFloatIndex z.natAbs - 55) * 2 ^ 52))) = gleitAusInt z := by
+  simpa only [gleitAusInt, integerFloatJam, integerFloatShift, integerFloatIndex] using
+    (RootNativeFloat.ofInt_jam56 z big).symm
+
 variable [Kern] {D : Deklaration} {L : Lay D}
 
 private theorem wideComputedFloatOfE_value_ok {Γ : Ctx} {Λ : List (Res D)}
@@ -41,7 +50,10 @@ private theorem wideComputedFloatOfE_value_ok {Γ : Ctx} {Λ : List (Res D)}
       WideFloat.word (ρ := ρ) (σ₀ := σ₀) (σ := σ)
         (WideFloat.small e) (by decide) lay same world reserved
     rw [WideFloat.small_value (σ₀ := σ₀) (σ := σ) (ρ := ρ) (e := e) narrow] at child
-    exact nativeIntegerFloatL_source_ok true z ⟨by omega, by omega⟩ child
+    intro fp K d c top hc ht m pc pre
+    exact nativeIntegerFloatL_source_ok
+      (child := fun (j : Nat) => lowE L (WideFloat.small e) j reserved)
+      true z ⟨by omega, by omega⟩ child hc ht m pc pre
   have sign : WordCode (L := L) (reserved := reserved) ρ W
       (fun d => lowE L (.lt e (.lit 0)) d reserved)
       (Runner.IR.bool (wahr? (eval σ₀ (.lt e (.lit 0)) σ ρ))) :=
@@ -71,26 +83,33 @@ private theorem wideComputedFloatOfE_value_ok {Γ : Ctx} {Λ : List (Res D)}
     rw [WideFloat.guard_value (σ₀ := σ₀) (σ := σ) (ρ := ρ) (e := e) bound (by omega)] at guard
     rw [WideFloat.index_value (σ₀ := σ₀) (σ := σ) (ρ := ρ) (e := e) bound big,
       BitVec.ofInt_natCast] at index
+    let retainedValue : Float :=
+      (Int64.ofInt (integerFloatJam z.natAbs (integerFloatShift z.natAbs) : Int)).toFloat
+    let powerValue : Float := Float.ofBits (UInt64.ofNat ((if z < 0 then 2 ^ 63 else 0) +
+      (integerFloatIndex z.natAbs - 55) * 2 ^ 52))
     have converted : NativeFloatCode (L := L) (reserved := reserved) ρ W
         (fun j => nativeIntegerFloatL true j
-          (fun d => lowE L (WideFloat.guard w e) d reserved))
-        (Int64.ofBitVec (BitVec.ofInt 64
-          (integerFloatJam z.natAbs (integerFloatShift z.natAbs) : Int))).toFloat :=
-      nativeIntegerFloatL_ok true
-        (BitVec.ofInt 64 (integerFloatJam z.natAbs (integerFloatShift z.natAbs) : Int)) guard
+          (fun d => lowE L (WideFloat.guard w e) d reserved)) retainedValue := by
+      intro fp K d c top hc ht m pc pre
+      exact nativeIntegerFloatL_ok
+        (child := fun (j : Nat) => lowE L (WideFloat.guard w e) j reserved) true
+        (BitVec.ofInt 64 (integerFloatJam z.natAbs (integerFloatShift z.natAbs) : Int))
+        guard hc ht m pc pre
     have scale : WordCode (L := L) (reserved := reserved) ρ W
         (fun j => nativeFloatScaleL j (fun d => lowE L (.lt e (.lit 0)) d reserved)
           (fun d => lowE L (WideFloat.index w e) d reserved))
-        (nativeFloatScaleWord (decide (z < 0)) (integerFloatIndex z.natAbs)) :=
-      nativeFloatScaleL_ok sign index
+        (nativeFloatScaleWord (decide (z < 0)) (integerFloatIndex z.natAbs)) := by
+      intro fp K d c top hc ht m pc pre
+      exact nativeFloatScaleL_ok
+        (sign := fun (j : Nat) => lowE L (.lt e (.lit 0)) j reserved)
+        (index := fun (j : Nat) => lowE L (WideFloat.index w e) j reserved)
+        sign index hc ht m pc pre
     have lower : 55 ≤ integerFloatIndex z.natAbs := by unfold integerFloatIndex; omega
     have upper : integerFloatIndex z.natAbs ≤ 2047 := by unfold integerFloatIndex; omega
     rw [nativeFloatScaleWord_eq _ _ lower upper] at scale
     have power : NativeFloatCode (L := L) (reserved := reserved) ρ W
         (fun j => nativeFloatScaleL j (fun d => lowE L (.lt e (.lit 0)) d reserved)
-          (fun d => lowE L (WideFloat.index w e) d reserved))
-        (Float.ofBits (UInt64.ofNat ((if z < 0 then 2 ^ 63 else 0) +
-          (integerFloatIndex z.natAbs - 55) * 2 ^ 52))) := by
+          (fun d => lowE L (WideFloat.index w e) d reserved)) powerValue := by
       intro fp K d c top hc ht m pc pre
       exact (scale hc ht m pc pre).mono (fun word hw => by
         rw [hw]
@@ -100,20 +119,34 @@ private theorem wideComputedFloatOfE_value_ok {Γ : Ctx} {Λ : List (Res D)}
           (nativeIntegerFloatL true j (fun d => lowE L (WideFloat.guard w e) d reserved))
           (nativeFloatScaleL (j + 1) (fun d => lowE L (.lt e (.lit 0)) d reserved)
             (fun d => lowE L (WideFloat.index w e) d reserved)))
-        (Float.mul
-          (Int64.ofBitVec (BitVec.ofInt 64
-            (integerFloatJam z.natAbs (integerFloatShift z.natAbs) : Int))).toFloat
-          (Float.ofBits (UInt64.ofNat ((if z < 0 then 2 ^ 63 else 0) +
-            (integerFloatIndex z.natAbs - 55) * 2 ^ 52)))) :=
-      nativeFloatMulL_ok converted power
-    change NativeFloatCode _ _ _ (Float.ofInt z) _
-    rw [RootNativeFloat.ofInt_jam56 z big]
-    exact multiplied
+        (Float.mul retainedValue powerValue) := by
+      intro fp K d c top hc ht m pc pre
+      exact nativeFloatMulL_ok
+        (a := fun (j : Nat) => nativeIntegerFloatL true j
+          (fun (k : Nat) => lowE L (WideFloat.guard w e) k reserved))
+        (b := fun (j : Nat) => nativeFloatScaleL j
+          (fun (k : Nat) => lowE L (.lt e (.lit 0)) k reserved)
+          (fun (k : Nat) => lowE L (WideFloat.index w e) k reserved))
+        (x := retainedValue) (y := powerValue) converted power hc ht m pc pre
+    have numeric : Float.mul retainedValue powerValue = gleitAusInt z := wideFloat_numeric z big
+    intro fp K d c top hc ht m pc pre
+    exact (multiplied hc ht m pc pre).mono (fun word decoded => decoded.trans numeric)
   have chosen : NativeFloatCode (L := L) (reserved := reserved) ρ W
       (fun d => wideComputedFloatOfE L e d reserved)
-      (if decide ((z.natAbs : Int) < 2 ^ 55) then gleitAusInt z else gleitAusInt z) :=
-    nativeFloatChooseL_ok condition small large
-  simpa only [ite_self] using chosen
+      (if decide ((z.natAbs : Int) < 2 ^ 55) then gleitAusInt z else gleitAusInt z) := by
+    intro fp K d c top hc ht m pc pre
+    exact nativeFloatChooseL_ok
+      (flag := decide ((z.natAbs : Int) < 2 ^ 55)) (yv := gleitAusInt z) (nv := gleitAusInt z)
+      (condition := fun (j : Nat) => lowE L (.lt (WideFloat.magnitude w e) (.lit (2 ^ 55))) j reserved)
+      (yes := fun (j : Nat) => nativeIntegerFloatL true j
+        (fun (k : Nat) => lowE L (WideFloat.small e) k reserved))
+      (no := fun (j : Nat) => nativeFPWordL (.mul .f64) j
+        (nativeIntegerFloatL true j (fun (k : Nat) => lowE L (WideFloat.guard w e) k reserved))
+        (nativeFloatScaleL (j + 1) (fun (k : Nat) => lowE L (.lt e (.lit 0)) k reserved)
+          (fun (k : Nat) => lowE L (WideFloat.index w e) k reserved)))
+      condition small large hc ht m pc pre
+  intro fp K d c top hc ht m pc pre
+  simpa only [ite_self] using chosen (fp := fp) (K := K) (d := d) (c := c) (top := top) hc ht m pc pre
 
 /-- The former complete-word guarantee is retained also for overflow to signed
     infinity. Integer conversion is never NaN; this is derived internally. -/
