@@ -120,8 +120,9 @@ theorem declarationData_of_function
       world (input : Wert (declOf unit) schema.ty),
       execEnd oracle passes handler body world
         (parameters.symm ▸ (Env.cons input Env.nil : Env (declOf unit) [schema.ty])) =
-        .zurueck world (result.symm ▸
-          (reorder input : ErgVal (declOf unit) (some schema.ty)))) :
+        .zurueck world
+          ((result.symm ▸ (reorder input : ErgVal (declOf unit) (some schema.ty))) :
+            ErgVal (declOf unit) ((declOf unit).erg ⟨0, positive⟩))) :
     DeclarationData library unit ((lowerAllg unit).toOption.get lowered) schema reorder := by
   let image := (lowerAllg unit).toOption.get lowered
   have fields := lowerAllg_fields unit image.1 image.2 (except_ok_get lowered) ⟨0, positive⟩
@@ -164,7 +165,7 @@ theorem declarationData_of_function
     rw [empty]
     exact Bool.and_false _
   · intro oracle passes world input
-    rw [rufAt, requiresEq]
+    rw [rufAt.eq_def, requiresEq]
     simp only [Expr.orte, lese_nil, eval, wahr?, Bool.true_eq_false, reduceIte]
     rw [bodyEq, run oracle passes (rufAt image.1 oracle passes 0) world input]
     simp only [ensuresEq, Expr.orte, lese_nil, eval, wahr?, Bool.true_eq_false,
@@ -172,7 +173,7 @@ theorem declarationData_of_function
 
 -- Only the concrete single-function producer and its small body are evaluated.
 -- The full dependent image remains behind the generic projection certificates.
-macro "library_data_fields" : tactic => `(tactic|
+macro "library_data_fields" : tactic => `(tactic| (
   refine declarationData_of_function
     (positive := by decide) (named := by cbv)
     (parameters := by cbv) (result := by cbv)
@@ -196,7 +197,7 @@ macro "library_data_fields" : tactic => `(tactic|
         have choices : position = 0 ∨ position = 1 := by
           change position < 2 at bound
           omega
-        rcases choices with rfl | rfl <;> rfl)
+        rcases choices with rfl | rfl <;> rfl))
 
 /-- Equality of answers may be cancelled without reducing a concrete unit
     beneath its dependent result type. -/
@@ -354,7 +355,7 @@ theorem lowering_ok (u : UProg) (noInvs : u.invs = []) (contracts : contractGate
 
 -- The image witness is the existing success-dependent selection. In particular,
 -- this never unfolds `progOfFn`, its dependent collector, or checkedProgram.
-macro "library_emitted" : tactic => `(tactic|
+macro "library_emitted" : tactic => `(tactic| (
   apply except_ok_get
   apply lowering_ok
   · rfl
@@ -363,7 +364,7 @@ macro "library_emitted" : tactic => `(tactic|
     have small : index < 1 := bound
     have zero : index = 0 := by omega
     subst index
-    constructor <;> cbv)
+    constructor <;> cbv))
 
 /-- Transport the complete metadata certificate before introducing any function
     index of the extracted unit. The concrete assembler is never evaluated here. -/
