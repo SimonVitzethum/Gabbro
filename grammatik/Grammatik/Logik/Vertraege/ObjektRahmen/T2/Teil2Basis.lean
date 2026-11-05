@@ -78,7 +78,12 @@ theorem stmt_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .callIndElse .., hok, _, _, _, _ => hok.elim
   | .locks L hr body, hok, σ, ρ, hlen, hinv => by
       simp only [execStmt]
-      exact ObjA.gibt L (block_obj body hok (σ.nimmt L) ρ hlen hinv)
+      have hb := block_obj body hok (σ.nimmt L) ρ hlen hinv
+      have hm := ObjA.gibt L hb
+      -- Terminal frames come from the body; local exits use the released frame.
+      generalize hout : execBlock O passes R body (σ.nimmt L) ρ = outcome at hb hm ⊢
+      cases outcome <;> simp only [ObjA, Ausgang.mapWelt] at hb hm ⊢
+      all_goals first | exact hm | exact hb
   | .breaking _ body, hok, σ, ρ, hlen, hinv => by
       simp only [execStmt]
       exact block_obj body hok σ ρ hlen hinv
@@ -288,18 +293,9 @@ theorem block_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
       split
       · exact ObjA.vor (slotRahmen_gleich rfl) (block_obj rest hok.2 _ ρ hlen hinv)
       · exact ObjA.vor (slotRahmen_gleich rfl) (end_obj sonst hok.1 _ ρ hlen hinv).zuAusgang
-  | .float op a b lo hi rest, hok, σ, ρ, hlen, hinv => by
-      simp only [execBlock]
-      split
-      · exact ObjA.vor (slotRahmen_gleich rfl)
-          (block_obj rest hok _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
-      · trivial
-  | .floatLit q lo hi rest, hok, σ, ρ, hlen, hinv => by
-      simp only [execBlock]
-      split
-      · exact (block_obj rest hok _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
-      · trivial
-  | .floatOf e lo hi rest, hok, σ, ρ, hlen, hinv => by
+  | .float _ _ _ _ _ rest, hok, σ, ρ, hlen, hinv
+  | .floatLit _ _ _ rest, hok, σ, ρ, hlen, hinv
+  | .floatOf _ _ _ rest, hok, σ, ρ, hlen, hinv => by
       simp only [execBlock]
       split
       · exact ObjA.vor (slotRahmen_gleich rfl)
@@ -466,18 +462,21 @@ theorem end_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       · exact ObjE.vor (slotRahmen_gleich rfl) (end_obj t hok.1 _ ρ hlen hinv)
       · exact ObjE.vor (slotRahmen_gleich rfl) (end_obj e hok.2 _ ρ hlen hinv)
 
-  | .float op a b lo hi rest, hok, σ, ρ, hlen, hinv => by simp only [execEnd]; split
-      · exact ObjE.vor (slotRahmen_gleich rfl) (end_obj rest hok _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+  | .float _ _ _ _ _ rest, hok, σ, ρ, hlen, hinv
+  | .floatLit _ _ _ rest, hok, σ, ρ, hlen, hinv
+  | .floatOf _ _ _ rest, hok, σ, ρ, hlen, hinv => by
+      simp only [execEnd]
+      split
+      · exact ObjE.vor (slotRahmen_gleich rfl)
+          (end_obj rest hok _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
       · trivial
-  | .floatLit q lo hi rest, hok, σ, ρ, hlen, hinv => by simp only [execEnd]; split
-      · exact (end_obj rest hok _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
-      · trivial
-  | .floatOf e lo hi rest, hok, σ, ρ, hlen, hinv => by simp only [execEnd]; split
-      · exact ObjE.vor (slotRahmen_gleich rfl) (end_obj rest hok _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
-      · trivial
-  | .floatNarrow e lo hi sonst rest, hok, σ, ρ, hlen, hinv => by simp only [execEnd]; split
-      · exact ObjE.vor (slotRahmen_gleich rfl) (end_obj rest hok.2 _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+  | .floatNarrow e lo hi sonst rest, hok, σ, ρ, hlen, hinv => by
+      simp only [execEnd]
+      split
+      · exact ObjE.vor (slotRahmen_gleich rfl)
+          (end_obj rest hok.2 _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
       · exact ObjE.vor (slotRahmen_gleich rfl) (end_obj sonst hok.1 _ ρ hlen hinv)
+
 theorem arms_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} :
     ∀ (arms : Arms D V l Γ Λ Λ' cs), oA objs ps arms → ∀ (v : Wert D (.sum cs)) (σ : World D)
