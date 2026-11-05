@@ -42,7 +42,7 @@ variable {D : Deklaration} [DecidableEq D.Fn] [DecidableEq D.Ax]
 /-- **`ziel_ort_mehrfaden_ende` from `Akzeptiert`**: the checker's Bool and
     an admitted start replace every decidable premise; the call graphs are
     the computed ones. -/
-theorem akzeptiert_mehrfaden (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
+theorem akzeptiert_mehrfaden [RootNativeFloat.Hardware] (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock) (cs : List (D.Tab ⊕ D.Glob))
     (ws : List D.Fn) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f))
@@ -62,7 +62,7 @@ theorem akzeptiert_mehrfaden (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
     ((sperrInvOk_iff S).mpr ⟨hSO, hSL⟩) hvoll hFrag hAbg hW hFuss hK hStart hSs hex hI
 
 /-- **`keine_verklemmungG` from `Akzeptiert`.** -/
-theorem akzeptiert_verklemmung {P : Programm D} {O : Orakel D} {passes : Nat} {S : SperrInv D}
+theorem akzeptiert_verklemmung [RootNativeFloat.Hardware] {P : Programm D} {O : Orakel D} {passes : Nat} {S : SperrInv D}
     {fs : List D.Fn} {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
     {sp : Speicher D} {init : Faden → Σ f : D.Fn, Env D (D.params f)}
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
@@ -74,7 +74,7 @@ theorem akzeptiert_verklemmung {P : Programm D} {O : Orakel D} {passes : Nat} {S
   exact keine_verklemmungG hO hSt sp init hLeer ls hls hr hW
 
 /-- **Race freedom for every carrier from `Akzeptiert`** (`rennfreiBis_of`). -/
-theorem akzeptiert_rennfrei {P : Programm D} {O : Orakel D} {passes : Nat} {S : SperrInv D}
+theorem akzeptiert_rennfrei [RootNativeFloat.Hardware] {P : Programm D} {O : Orakel D} {passes : Nat} {S : SperrInv D}
     {fs : List D.Fn} {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
     {sp : Speicher D} {init : Faden → Σ f : D.Fn, Env D (D.params f)}
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
@@ -138,7 +138,7 @@ theorem mP_startZulaessig : StartZulaessig mP mSI mFs [mHauptA, mHauptB] mSp mIn
 /-- **The flagship on the fixture, fed by `Akzeptiert`**: only the user
     obligations (`mP_koerper`, `mP_inv`, `mSI_ok.2`), the hardware (`mO`)
     and the member lists are supplied by hand. -/
-theorem mP_ziel_aus_akzeptiert : ∀ M : RufMaschineG mD,
+theorem mP_ziel_aus_akzeptiert [RootNativeFloat.Hardware] : ∀ M : RufMaschineG mD,
     RufErreichbarG mP mO 0 (RufStartG mP mSp mInit) M →
       ((VertragAmOrtG mP M ∧ SperrInvG mSI M ∧ KeinLogikHaltG mO 0 M ∧
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
@@ -148,7 +148,7 @@ theorem mP_ziel_aus_akzeptiert : ∀ M : RufMaschineG mD,
     mFs_voll mLocks_voll mCs_voll mP_akzeptiert mP_startZulaessig mSI_ok.2 axEnsLokal_wahr
     mP_koerper mP_inv mO_gut mO_lokal (axVertragO_wahr mO)
 
-theorem mP_verklemmung_aus_akzeptiert : ∀ M : RufMaschineG mD,
+theorem mP_verklemmung_aus_akzeptiert [RootNativeFloat.Hardware] : ∀ M : RufMaschineG mD,
     RufErreichbarG mP mO 0 (RufStartG mP mSp mInit) M →
       (∀ t, ¬ FertigG M t → WartetG M t) → ∀ t, FertigG M t :=
   fun _ hr hW => akzeptiert_verklemmung mFs_voll mLocks_voll mCs_voll mP_akzeptiert
@@ -156,7 +156,7 @@ theorem mP_verklemmung_aus_akzeptiert : ∀ M : RufMaschineG mD,
 
 /-- **Race freedom for every carrier on the fixture**, private tables
     included. -/
-theorem mP_rennfrei_aus_akzeptiert (passes : Nat) (M : RufMaschineG mD) :
+theorem mP_rennfrei_aus_akzeptiert [RootNativeFloat.Hardware] (passes : Nat) (M : RufMaschineG mD) :
     RennfreiBis mP mO passes (RufStartG mP mSp mInit) M :=
   akzeptiert_rennfrei mFs_voll mLocks_voll mCs_voll mP_akzeptiert mP_startZulaessig mO_gut M
 

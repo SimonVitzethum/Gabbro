@@ -102,12 +102,12 @@ theorem n1_logikA (T : nD.Tab ⊕ nD.Glob → Prop) : LogikPflichtA nP SchwachZe
 
 /-- **THE FLAG, COVERED**: at every machine W reaches from configuration 1 -- every order
     assignment, budget, start memory -- every leg of `ZielAtomar`. -/
-theorem n1_ziel_atomar (sp : Speicher nD) (ord : nD.Glob → Ordnung) (passes : Nat) :
+theorem n1_ziel_atomar [RootNativeFloat.Hardware] (sp : Speicher nD) (ord : nD.Glob → Ordnung) (passes : Nat) :
     ∀ W : RufMaschineW nD, RufErreichbarW nP nO passes ord (RufStartW (RufStartG nP sp init1)) W →
       ZielAtomar nP SchwachZeuge.nS nO passes ord (GeteiltV nP n1ws) (RufStartG nP sp init1) W :=
   ziel_atomar_spec nP SchwachZeuge.nS (axWahr nD) nFs_voll (ls := []) (fun L => nomatch L) n1ws
     (akzeptiertSpecX_of nFs_voll (fun L => nomatch L) nCs_voll [] n1_akzeptiertX)
-    (n1_logikA _) nO ⟨nO_gut, nO_lokal, axVertragO_wahr nO⟩ passes ord sp init1
+    (n1_logikA _) nO ⟨nO_gut, nO_lokal, axVertragO_wahr nO, inferInstance⟩ passes ord sp init1
     (AtomarZeuge.n1_start sp)
 
 /-- **Non-degenerate: `konfig` is an admitted shared atomic** -- atomic, unguarded, read by
@@ -124,7 +124,7 @@ theorem n1_konfig_geteilt : GeteiltV nP n1ws (.inr NGlob.konfig) := by
 /-- **Non-degenerate: W's stale read happens on a covered run.** After `kern` wrote
     `konfig := 3`, W lets `hauptA` store the INITIAL `konfig` (0) into `tabA[0]`, where G on the
     same schedule stores 3; the machine after that step satisfies every leg of `ZielAtomar`. -/
-theorem n1_stale_gedeckt (ord : nD.Glob → Ordnung) :
+theorem n1_stale_gedeckt [RootNativeFloat.Hardware] (ord : nD.Glob → Ordnung) :
     ∃ W1 W2 : RufMaschineW nD,
       RufErreichbarW nP nO 0 ord (RufStartW (RufStartG nP sp0 init1)) W1 ∧
       RufSchrittW nP nO 0 ord W1 0 W2 ∧
@@ -373,7 +373,7 @@ theorem n1E_nutzerPflichtA : NutzerPflichtA n1E :=
     (which accepts it, where the goal's checker refuses it: `n1_alt_abgelehnt`), the runtime's
     full start: every leg of `ZielAtomar` at every machine W reaches, every order assignment,
     every budget. -/
-theorem n1E_ziel (ord : nD.mitRuhe.Glob → Ordnung) (passes : Nat) :
+theorem n1E_ziel [RootNativeFloat.Hardware] (ord : nD.mitRuhe.Glob → Ordnung) (passes : Nat) :
     ∀ W : RufMaschineW nD.mitRuhe,
       RufErreichbarW n1E.P.mitRuhe nO.mitRuhe passes ord
         (RufStartW (RufStartG n1E.P.mitRuhe (speicherR n1E.sp0) (initRuhe n1E.starts))) W →
@@ -384,7 +384,7 @@ theorem n1E_ziel (ord : nD.mitRuhe.Glob → Ordnung) (passes : Nat) :
     ⟨nCs, nCs_voll⟩
     (by show (AkzeptiertX nP SchwachZeuge.nS nFs [] nCs n1ws && besitzB n1E nFs) = true
         rw [n1_akzeptiertX]; rfl)
-    n1E_nutzerPflichtA nO ⟨nO_gut, nO_lokal, axVertragO_wahr nO⟩
+    n1E_nutzerPflichtA nO ⟨nO_gut, nO_lokal, axVertragO_wahr nO, inferInstance⟩
     passes ord _ _ (laufzeit_voll n1E)
 
 #print axioms n1E_ziel

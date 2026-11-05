@@ -251,9 +251,9 @@ theorem mE_nutzerPflicht : NutzerPflicht mE :=
       simp only [mE, List.append_nil, List.mem_cons, List.not_mem_nil, or_false] at ha
       rcases ha with rfl | rfl <;> rfl⟩⟩
 
-theorem zweiFaeden_erfuellbar_gilt : zweiFaeden_erfuellbar :=
+theorem zweiFaeden_erfuellbar_gilt [RootNativeFloat.Hardware] : zweiFaeden_erfuellbar :=
   ⟨⟨mFs, mFs_voll⟩, akzeptiertSpec_of mFs_voll mLocks_voll mCs_voll [] mP_akzeptiert,
-    mE_nutzerPflicht, ⟨mO, mO_gut, mO_lokal, axVertragO_wahr mO⟩,
+    mE_nutzerPflicht, ⟨mO, mO_gut, mO_lokal, axVertragO_wahr mO, inferInstance⟩,
     speicherR mSp, _, laufzeit_initRuhe mE, initRuhe_laeuft mE rfl⟩
 
 /-- **The runtime's start of `mE` moves memory**: one step of thread 0 (`hauptA`'s first
@@ -305,30 +305,30 @@ theorem zStartPflicht (E : Einheit zD) (hS : E.S = zS) (hst : E.starts = [⟨zHa
 
 /-- **Probe B satisfies every premise group with `haupt` as a DECLARED start** (it runs on
     thread 0; the root on every other thread). -/
-theorem probeB_erfuellbar_haupt : Erfuellbar zEB ⟨zFs, zFs_voll⟩ :=
+theorem probeB_erfuellbar_haupt [RootNativeFloat.Hardware] : Erfuellbar zEB ⟨zFs, zFs_voll⟩ :=
   ⟨akzeptiertSpec_of zFs_voll zLs_voll zCs_voll [] zPB_akzeptiert,
     ⟨⟨fun passes f => ⟨koerperGutS_alle zFs_voll (by decide) zPB_koerper passes f, zInvGutS f,
       zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩, zStartPflicht zEB rfl rfl rfl rfl⟩,
-    ⟨zO, zO_gut, zO_lokal, axVertragO_wahr zO⟩, _, _, laufzeit_initRuhe zEB,
+    ⟨zO, zO_gut, zO_lokal, axVertragO_wahr zO, inferInstance⟩, _, _, laufzeit_initRuhe zEB,
     initRuhe_laeuft zEB rfl⟩
 
-theorem probeC_erfuellbar_haupt : Erfuellbar zEC ⟨zFs, zFs_voll⟩ :=
+theorem probeC_erfuellbar_haupt [RootNativeFloat.Hardware] : Erfuellbar zEC ⟨zFs, zFs_voll⟩ :=
   ⟨akzeptiertSpec_of zFs_voll zLs_voll zCs_voll [] zPC_akzeptiert,
     ⟨⟨fun passes f => ⟨koerperGutS_alle zFs_voll (by decide) zPC_koerper passes f, zInvGutS f,
       zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩, zStartPflicht zEC rfl rfl rfl rfl⟩,
-    ⟨zO, zO_gut, zO_lokal, axVertragO_wahr zO⟩, _, _, laufzeit_initRuhe zEC,
+    ⟨zO, zO_gut, zO_lokal, axVertragO_wahr zO, inferInstance⟩, _, _, laufzeit_initRuhe zEC,
     initRuhe_laeuft zEC rfl⟩
 
-theorem probeB_erfuellbar_gilt : probeB_erfuellbar := ⟨_, probeB_erfuellbar_haupt⟩
+theorem probeB_erfuellbar_gilt [RootNativeFloat.Hardware] : probeB_erfuellbar := ⟨_, probeB_erfuellbar_haupt⟩
 
-theorem probeC_erfuellbar_gilt : probeC_erfuellbar := ⟨_, probeC_erfuellbar_haupt⟩
+theorem probeC_erfuellbar_gilt [RootNativeFloat.Hardware] : probeC_erfuellbar := ⟨_, probeC_erfuellbar_haupt⟩
 
 /-! ## 6. The assembled goal, applied -/
 
 /-- **`gabbro_ziel` applied to the two-thread program**: on the runtime's start with both
     declared starts, at a machine reached in one step with CHANGED memory, every leg of
     `Ziel` holds -- by the theorem, not by hand. -/
-theorem gabbro_ziel_zeuge : ∃ (sp : Speicher mD.mitRuhe)
+theorem gabbro_ziel_zeuge [RootNativeFloat.Hardware] : ∃ (sp : Speicher mD.mitRuhe)
     (init : Faden → Σ f : mD.mitRuhe.Fn, Env mD.mitRuhe (mD.mitRuhe.params f))
     (M : RufMaschineG mD.mitRuhe),
     Laufzeit mE sp init ∧
@@ -350,7 +350,7 @@ theorem gabbro_ziel_zeuge : ∃ (sp : Speicher mD.mitRuhe)
   · exact gabbro_ziel_g akzeptiert_pruefer mD mE ⟨mFs, mFs_voll⟩ ⟨[()], mLocks_voll⟩
       ⟨mCs, mCs_voll⟩
       (by show Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB] [] = true; exact mP_akzeptiert)
-      mE_nutzerPflicht mO ⟨mO_gut, mO_lokal, axVertragO_wahr mO⟩ 0 _ _ hL M1
+      mE_nutzerPflicht mO ⟨mO_gut, mO_lokal, axVertragO_wahr mO, inferInstance⟩ 0 _ _ hL M1
       (.schritt _ _ _ .start s1)
 
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_zeuge

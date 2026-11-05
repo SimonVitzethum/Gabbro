@@ -196,7 +196,7 @@ theorem verbinde_leer (E E' : Einheit D) (h1 : E'.starts = []) (h2 : E'.gestarte
 
 /-- **The linked unit is accepted by the concrete checker** -- at both units' declared
     checks, so it can be linked again: a chain of units, by iteration. -/
-theorem verbinde_akzeptiert {E₁ E₂ : Einheit D} {e : D.Fn → Bool} {fs : List D.Fn}
+theorem verbinde_akzeptiert [RootNativeFloat.Hardware] {E₁ E₂ : Einheit D} {e : D.Fn → Bool} {fs : List D.Fn}
     {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hls : ∀ L : D.Lock, L ∈ ls) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
     (h₁ : Akzeptiert E₁.P E₁.S fs ls cs E₁.ws E₁.akku = true)

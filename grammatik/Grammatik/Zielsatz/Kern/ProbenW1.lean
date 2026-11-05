@@ -115,9 +115,27 @@ theorem w1_abgelehnt (E : Einheit w1D) (hP : E.P = w1P) (fs : Aufzaehlung w1D.Fn
     akzeptiert_pruefer.akzeptiert E fs.1 ls.1 cs.1 = false := by
   cases h : akzeptiert_pruefer.akzeptiert E fs.1 ls.1 cs.1
   · rfl
-  · have hA := akzeptiert_pruefer.korrekt E fs ls cs h
-    rw [hP] at hA
-    exact absurd hA (w1_spec_nicht _ _ _)
+  · -- This concrete answer-site refusal needs no native CPU certificate.
+    have checks := h
+    rw [akzeptiert_pruefer_eq] at checks
+    simp only [Akzeptiert, GuestBoundary.admissionB_nil, Bool.and_true,
+      Bool.and_eq_true, and_assoc] at checks
+    obtain ⟨_, _, _, _, _, _, _, _, answers, _⟩ := checks
+    rw [hP] at answers
+    unfold antwortenB at answers
+    have atFunction : (w1P.rumpf ()).ants.all (stelleB fs.1) = true :=
+      List.all_eq_true.mp answers () (fs.2 ())
+    have atSite : stelleB fs.1 (Sum.inl (() : w1D.Ax)) = true :=
+      List.all_eq_true.mp atFunction (.inl ())
+        (by rw [w1_ants]; exact List.mem_singleton_self _)
+    have absent : stelleB fs.1 (Sum.inl (() : w1D.Ax)) = false := by
+      change (false || fs.1.any (fun f => w1D.passt f 5)) = false
+      rw [Bool.false_or, List.any_eq_false]
+      intro f _
+      cases f
+      decide
+    rw [absent] at atSite
+    exact False.elim (Bool.false_ne_true atSite)
 
 /-- Computed: the checker's Bool on the probe (with `haupt` declared) is `false`. -/
 theorem w1_bool : Akzeptiert w1P w1S [()] [] [] [()] = false := by decide +kernel

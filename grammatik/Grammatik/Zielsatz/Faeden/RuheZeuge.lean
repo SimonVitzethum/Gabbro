@@ -64,7 +64,7 @@ def x104Sp : Speicher x104D :=
     | .Konto, .stand => ⟨0, by decide, by decide⟩, fun g => nomatch g⟩
 
 /-- **The checker's Bool holds on the export with the runtime's root.** -/
-theorem gP_mitRuhe_akzeptiert :
+theorem gP_mitRuhe_akzeptiert [RootNativeFloat.Hardware] :
     Akzeptiert x104P.mitRuhe x104S.mitRuhe (fsRuhe x104Fs) x104Ls x104Cs (wsRuhe []) = true :=
   akzeptiert_mitRuhe x104P x104Fs_voll x104Ls_voll x104Cs_voll gP_akzeptiert
 
@@ -94,7 +94,7 @@ theorem probeC_start :
 
 /-! ## 3. The two-thread fixture with its declared starts -/
 
-theorem mP_mitRuhe_akzeptiert :
+theorem mP_mitRuhe_akzeptiert [RootNativeFloat.Hardware] :
     Akzeptiert mP.mitRuhe mSI.mitRuhe (fsRuhe mFs) [()] mCs (wsRuhe [mHauptA, mHauptB]) = true :=
   akzeptiert_mitRuhe mP mFs_voll mLocks_voll mCs_voll mP_akzeptiert
 

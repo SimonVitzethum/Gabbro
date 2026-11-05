@@ -28,7 +28,7 @@ open Gabbro.Grammatik Speichermodell Zielsatz NIZeuge
 
 /-- **`GabbroZiel` on configuration 1** (the flag): `ZielFX` on every reachable thread machine
     over GX of the runtime's full start -- every budget, every set of initially live threads. -/
-theorem n1E_gabbro (passes : Nat) (lebt0 : Faden → Bool) (K : FadenMaschine nD.mitRuhe)
+theorem n1E_gabbro [RootNativeFloat.Hardware] (passes : Nat) (lebt0 : Faden → Bool) (K : FadenMaschine nD.mitRuhe)
     (hK : FadenErreichbarX n1E.P.mitRuhe nO.mitRuhe passes (GeteiltV (D := nD) n1E.P n1E.ws)
       (FadenStart n1E.P.mitRuhe (speicherR n1E.sp0) (initRuhe n1E.starts) lebt0) K) :
     ZielFX n1E.P.mitRuhe n1E.S.mitRuhe nO.mitRuhe passes (GeteiltV (D := nD) n1E.P n1E.ws)
@@ -37,19 +37,19 @@ theorem n1E_gabbro (passes : Nat) (lebt0 : Faden → Bool) (K : FadenMaschine nD
     ⟨nCs, nCs_voll⟩
     (by show (AkzeptiertX nP SchwachZeuge.nS nFs [] nCs n1ws && besitzB n1E nFs) = true
         rw [n1_akzeptiertX]; rfl)
-    n1E_nutzerPflichtA nO ⟨nO_gut, nO_lokal, axVertragO_wahr nO⟩ passes _ _ (laufzeit_voll n1E)
+    n1E_nutzerPflichtA nO ⟨nO_gut, nO_lokal, axVertragO_wahr nO, inferInstance⟩ passes _ _ (laufzeit_voll n1E)
     lebt0 K hK
 
 /-- The checker facts of configuration 1, as `AkzeptiertSpecX`. -/
-theorem n1_specX : AkzeptiertSpecX nP SchwachZeuge.nS nFs n1ws [] [] :=
+theorem n1_specX [RootNativeFloat.Hardware] : AkzeptiertSpecX nP SchwachZeuge.nS nFs n1ws [] [] :=
   akzeptiertSpecX_of nFs_voll (fun L => nomatch L) nCs_voll [] n1_akzeptiertX
 
 /-- `ZielX` at every machine GX reaches from configuration 1's start. -/
-theorem n1_zielX (sp : Speicher nD) (passes : Nat) (M : RufMaschineG nD)
+theorem n1_zielX [RootNativeFloat.Hardware] (sp : Speicher nD) (passes : Nat) (M : RufMaschineG nD)
     (hX : RufErreichbarGX nP nO passes (GeteiltV nP n1ws) (RufStartG nP sp init1) M) :
     ZielX nP SchwachZeuge.nS nO passes (GeteiltV nP n1ws) (RufStartG nP sp init1) M :=
   zielX_aus nP SchwachZeuge.nS (axWahr nD) nFs_voll (ls := []) (fun L => nomatch L) n1ws n1_specX
-    (n1_logikA _) nO ⟨nO_gut, nO_lokal, axVertragO_wahr nO⟩ passes sp init1
+    (n1_logikA _) nO ⟨nO_gut, nO_lokal, axVertragO_wahr nO, inferInstance⟩ passes sp init1
     (AtomarZeuge.n1_start sp) M hX
 
 /-- **NON-DEGENERATE: the stale read is a covered GX step, and no G step.** After `kern` wrote
@@ -57,7 +57,7 @@ theorem n1_zielX (sp : Speicher nD) (passes : Nat) (M : RufMaschineG nD)
     (0) into `tabA[0]`; that step is a GX step over the admitted shared atomics, every leg of
     `ZielX` holds at the machine it reaches, and no G step of `hauptA` from the same machine
     stores 0 there. -/
-theorem n1_stale_x (ord : nD.Glob → Ordnung) :
+theorem n1_stale_x [RootNativeFloat.Hardware] (ord : nD.Glob → Ordnung) :
     ∃ W1 W2 : RufMaschineW nD,
       RufErreichbarGX nP nO 0 (GeteiltV nP n1ws) (RufStartG nP sp0 init1) W1.g ∧
       RufSchrittGX nP nO 0 (GeteiltV nP n1ws) W1.g 0 W2.g ∧
@@ -76,7 +76,7 @@ theorem n1_stale_x (ord : nD.Glob → Ordnung) :
 
 /-- **GX strictly contains G on an accepted program**: the stale step is a GX step and no G
     step. -/
-theorem n1_gx_nicht_g :
+theorem n1_gx_nicht_g [RootNativeFloat.Hardware] :
     ∃ M M' : RufMaschineG nD,
       RufErreichbarGX nP nO 0 (GeteiltV nP n1ws) (RufStartG nP sp0 init1) M ∧
       RufSchrittGX nP nO 0 (GeteiltV nP n1ws) M 0 M' ∧ ¬ RufSchrittG nP nO 0 M 0 M' := by

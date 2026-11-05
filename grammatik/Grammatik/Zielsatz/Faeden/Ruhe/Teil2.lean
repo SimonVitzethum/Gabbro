@@ -16,7 +16,7 @@ variable [DecidableEq D.Fn] [DecidableEq D.Ax] (P : Programm D) {S : SperrInv D}
 /-- **The checker's Bool on `P.mitRuhe` follows from the Bool on `P`**
     (the member lists of locks and carriers are the same; the checks ride
     along under `some`, transported with the value). -/
-theorem akzeptiert_mitRuhe {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)}
+theorem akzeptiert_mitRuhe [RootNativeFloat.Hardware] {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)}
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {checks : List (CheckDecl D)}
     (h : Akzeptiert P S fs ls cs ws [] checks = true) :
