@@ -42,8 +42,8 @@ the allocation and returns; the unit declares the arena with its interfaces.
 The concrete checker of the goal accepts the unit -- its ownership acceptance
 included: the bodies pass the ownership check, the allocator words are plain,
 the declared start memory holds an empty arena, the start is handed no
-allocation -- the user's obligation holds and the oracle meets the hardware
-assumptions: every premise of `gabbro_ziel` is discharged, and its leg
+allocation -- the user's obligation holds and the oracle clauses are discharged.
+Under the supplied native CPU hardware contract, the goal theorem's leg
 `besitz` holds on every thread-machine run over GX. The function's actual run
 executes both allocator forms. -/
 
@@ -120,9 +120,9 @@ def O : Orakel FD where
   regSchreib := fun r => nomatch r
   sichtbar := fun _ _ => true
 
-/-- (c) The oracle meets the hardware assumptions. -/
-theorem hardware : HardwareAnnahmen O E.Q :=
-  ⟨(fun a => nomatch a), ⟨(fun r => nomatch r), fun _ _ _ _ => rfl⟩, axVertragO_wahr O⟩
+/-- (c) The oracle clauses hold under the explicitly supplied native CPU contract. -/
+theorem hardware [RootNativeFloat.Hardware] : HardwareAnnahmen O E.Q :=
+  ⟨(fun a => nomatch a), ⟨(fun r => nomatch r), fun _ _ _ _ => rfl⟩, axVertragO_wahr O, inferInstance⟩
 
 /-- The body never ends in a `logik` outcome, whatever the environment answers. -/
 theorem body_no_logik (S' : SperrInv FD) (O' : Orakel FD) (U : Umwelt FD) (A' : AUmwelt FD) (passes : Nat)
@@ -148,9 +148,9 @@ theorem nutzer : NutzerPflichtA E := by
   · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ r _
     exact r.elim0
 
-/-- **The witness**: every premise of `gabbro_ziel` holds on this unit, so its leg `besitz` -- ownership of
+/-- **The witness**: under the supplied native CPU contract every goal premise holds, so `besitz` -- ownership of
     the arena -- holds on every thread-machine run over GX of its runtime start. -/
-theorem besitz_zeuge (passes : Nat) (lebt0 : Faden → Bool) (K : FadenMaschine FD.mitRuhe)
+theorem besitz_zeuge [RootNativeFloat.Hardware] (passes : Nat) (lebt0 : Faden → Bool) (K : FadenMaschine FD.mitRuhe)
     (hK : FadenErreichbarX E.P.mitRuhe O.mitRuhe passes (GeteiltV (D := FD) E.P E.ws)
       (FadenStart E.P.mitRuhe (speicherR E.sp0) (initRuhe E.starts) lebt0) K) :
     OwnInv (liftA FA) (liftI I) K.m :=

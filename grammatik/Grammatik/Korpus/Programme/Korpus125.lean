@@ -236,7 +236,8 @@ theorem kO_gut : GutO kO := fun a => (nomatch a)
 
 theorem kO_lokal : RegLokal kO := ⟨(fun r _ _ _ => nomatch r), (fun g σ σ' _ => rfl)⟩
 
-theorem kO_hw : Zielsatz.HardwareAnnahmen kO kE.Q := ⟨kO_gut, kO_lokal, axVertragO_wahr kO⟩
+theorem kO_hw [RootNativeFloat.Hardware] : Zielsatz.HardwareAnnahmen kO kE.Q :=
+  ⟨kO_gut, kO_lokal, axVertragO_wahr kO, inferInstance⟩
 
 theorem kE_akzeptiert : akzeptiert_pruefer.akzeptiert kE kFs [QLock.w] kCs = true :=
   (by show Akzeptiert kP kSI kFs [QLock.w] kCs [kLese, kSetzeNull] [] = true; exact kP_akzeptiert)

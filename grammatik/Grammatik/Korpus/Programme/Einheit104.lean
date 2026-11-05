@@ -400,9 +400,9 @@ def O4 : Orakel D4 where
   regSchreib := fun r _ => nomatch r
   sichtbar := fun g => nomatch g
 
-theorem hw4 : HardwareAnnahmen O4 E4.Q :=
-  And.intro (fun a => nomatch a)
-    (And.intro (And.intro (fun r => nomatch r) (fun g => nomatch g)) (axVertragO_wahr O4))
+theorem hw4 [RootNativeFloat.Hardware] : HardwareAnnahmen O4 E4.Q :=
+  ⟨(fun a => nomatch a), ⟨(fun r => nomatch r), (fun g => nomatch g)⟩,
+    axVertragO_wahr O4, inferInstance⟩
 
 /-- Gabbro's arguments of `einzahlen(k, 0, 7)`. -/
 def rho7 : Env D4 (D4.params ein4) :=

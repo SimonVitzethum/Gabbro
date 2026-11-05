@@ -13,7 +13,7 @@
   COMPLETE -- every conjunct of `LogikPflicht` at EVERY budget and both
   conjuncts of `StartPflicht`, nothing assumed. `p108_ziel` closes the chain
   with only the two NAMED assumptions beside it: `HardwareAnnahmen`
-  (discharged here -- `gD` has no axiom, register or global) and A4
+  (native CPU contract supplied; `gD`'s empty oracle clauses discharged here) and A4
   (`Zielsatz.Laufzeit`, discharged by `laufzeit_initRuhe` for the runtime's
   own start).
 
@@ -228,11 +228,10 @@ def p108_O : Orakel G108_disjoint_start_locks_oblig.gD where
   regSchreib := fun r _ => nomatch r
   sichtbar := fun g => nomatch g
 
-/-- **THE NAMED HARDWARE ASSUMPTION, discharged on this declaration.** -/
-theorem p108_hw : Zielsatz.HardwareAnnahmen p108_O G108_disjoint_start_locks_oblig.gE.Q :=
-  And.intro (fun a => nomatch a)
-    (And.intro (And.intro (fun r => nomatch r) (fun g => nomatch g))
-      (axVertragO_wahr p108_O))
+/-- The oracle clauses are discharged; the native CPU contract is supplied explicitly. -/
+theorem p108_hw [RootNativeFloat.Hardware] : Zielsatz.HardwareAnnahmen p108_O G108_disjoint_start_locks_oblig.gE.Q :=
+  ⟨(fun a => nomatch a), ⟨(fun r => nomatch r), (fun g => nomatch g)⟩,
+    axVertragO_wahr p108_O, inferInstance⟩
 
 /-- **THE NAMED RUNTIME ASSUMPTION (A4), discharged for the runtime's own
     start**: the loader establishes `gE.sp0`, thread `0` runs `read_a`,
@@ -245,9 +244,9 @@ theorem p108_laufzeit :
 
 /-- **THE CHAIN, CLOSED ON 108, CONCURRENTLY**: with the duty proved above,
     the goal holds at every reachable machine of the two-threaded run the
-    runtime starts -- with NO open hypothesis beyond the two named ones,
-    both discharged here. -/
-theorem p108_ziel (passes : Nat)
+    runtime starts under the supplied native CPU contract, with the remaining
+    named oracle and runtime clauses discharged here. -/
+theorem p108_ziel [RootNativeFloat.Hardware] (passes : Nat)
     (M : RufMaschineG G108_disjoint_start_locks_oblig.gD.mitRuhe)
     (hr : RufErreichbarGX G108_disjoint_start_locks_oblig.gE.P.mitRuhe p108_O.mitRuhe passes
       (Zielsatz.GeteiltV (D := G108_disjoint_start_locks_oblig.gD)

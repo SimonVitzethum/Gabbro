@@ -282,9 +282,9 @@ def O8 : Orakel D8 where
   regSchreib := fun r _ => nomatch r
   sichtbar := fun g => nomatch g
 
-theorem hw8 : HardwareAnnahmen O8 E8.Q :=
-  And.intro (fun a => nomatch a)
-    (And.intro (And.intro (fun r => nomatch r) (fun g => nomatch g)) (axVertragO_wahr O8))
+theorem hw8 [RootNativeFloat.Hardware] : HardwareAnnahmen O8 E8.Q :=
+  ⟨(fun a => nomatch a), ⟨(fun r => nomatch r), (fun g => nomatch g)⟩,
+    axVertragO_wahr O8, inferInstance⟩
 
 #print axioms Gabbro.Grammatik.Einheit108.nutzer8
 

@@ -133,7 +133,7 @@ theorem kM0_handler (t : Faden) (h : HandlerVon kP.mitRuhe kM0 t) : t = 0 := by
     section, and it is the only thread of that core that steps from then on. The leg
     `keinKernHalt` of `Ziel` -- from `gabbro_ziel` through `korpus59_ziel`, discharged from (a)
     -- says the lock the handler stands at is not one the interrupted thread holds. -/
-theorem masken_zeuge : ∃ M1 M2 M3 : RufMaschineG kD.mitRuhe,
+theorem masken_zeuge [RootNativeFloat.Hardware] : ∃ M1 M2 M3 : RufMaschineG kD.mitRuhe,
     Zielsatz.Laufzeit kE (speicherR kSp) (initRuhe kE.starts) ∧
     RufSchrittG kP.mitRuhe kO.mitRuhe 0 kM0 1 M1 ∧
     RufSchrittG kP.mitRuhe kO.mitRuhe 0 M1 1 M2 ∧

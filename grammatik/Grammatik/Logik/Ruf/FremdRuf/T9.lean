@@ -100,10 +100,10 @@ theorem fdHistorie_treu : ProviderTreueG fdO fdHistorie :=
 theorem fdKonz_ueberlappt : fdKonz1.ueberschneidet fdKonz3 := by
   refine ⟨rfl, ?_, ?_⟩ <;> decide
 
-/-- The fixture's oracle meets the narrowed hardware premise: frame, register locality, and the
-    declared ensures of every item not declared software. -/
-theorem fdO_hwHw : HardwareAnnahmenHw fdO fdQ :=
-  ⟨fdO_gut, ⟨fun r => (nomatch r), fun g => (nomatch g)⟩, axVertragOHw_of_O fdQ_vertrag⟩
+/-- The fixture's oracle supplies frame, register locality and nonsoftware ensures;
+    the native CPU contract is supplied explicitly. -/
+theorem fdO_hwHw [RootNativeFloat.Hardware] : HardwareAnnahmenHw fdO fdQ :=
+  ⟨fdO_gut, ⟨fun r => (nomatch r), fun g => (nomatch g)⟩, axVertragOHw_of_O fdQ_vertrag, inferInstance⟩
 
 /-- The fixture declares no software item, so the software duty is empty. -/
 theorem fdD_ohne_software : ∀ a : fdD.Ax, fdD.axHerkunft a ≠ some AxOrigin.software := by
@@ -113,7 +113,7 @@ theorem fdD_ohne_software : ∀ a : fdD.Ax, fdD.axHerkunft a ≠ some AxOrigin.s
 
 /-- **ZEUGE** (premise split): the narrowed hardware premise and the empty software duty give the
     old premise (c) on the fixture. -/
-theorem fdO_hw_aus_split : HardwareAnnahmen fdO fdQ :=
+theorem fdO_hw_aus_split [RootNativeFloat.Hardware] : HardwareAnnahmen fdO fdQ :=
   hardwareAnnahmen_of_split fdO_hwHw (axVertragOSw_ohne fdD_ohne_software)
 
 /-- The trivial contracts of the fixture read nothing: every frame covers them. -/

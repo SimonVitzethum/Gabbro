@@ -15,8 +15,8 @@
   COMPLETE -- every conjunct of `LogikPflicht` at EVERY budget and both
   conjuncts of `StartPflicht`, with nothing assumed. `oblig_ziel` then closes
   the chain "tool states -> user proves -> `Ziel` holds" on a concrete run,
-  with only the named hardware assumption (`HardwareAnnahmen`, discharged
-  here for the empty oracle) and the runtime assumption A4
+  with the native CPU hardware contract supplied explicitly, the remaining
+  `HardwareAnnahmen` clauses discharged here for the empty oracle, and A4
   (`Zielsatz.Laufzeit`, discharged here by `laufzeit_initRuhe`) beside it.
 
   MIGRATED 2026-09-15 (from the pre-`Einheit` obligation form). Until then
@@ -290,12 +290,11 @@ def oO : Orakel G104_referenz_oblig.gD where
   regSchreib := fun r _ => nomatch r
   sichtbar := fun g => nomatch g
 
-/-- **THE NAMED HARDWARE ASSUMPTION, discharged on this declaration**: `gD`
-    has no axiom, no register and no global, so every oracle -- this one
-    included -- meets it. -/
-theorem oblig_hw : Zielsatz.HardwareAnnahmen oO G104_referenz_oblig.gE.Q :=
-  And.intro (fun a => nomatch a)
-    (And.intro (And.intro (fun r => nomatch r) (fun g => nomatch g)) (axVertragO_wahr oO))
+/-- The empty oracle meets the oracle clauses of the named hardware assumption;
+    the native CPU contract is supplied explicitly. -/
+theorem oblig_hw [RootNativeFloat.Hardware] : Zielsatz.HardwareAnnahmen oO G104_referenz_oblig.gE.Q :=
+  ⟨(fun a => nomatch a), ⟨(fun r => nomatch r), (fun g => nomatch g)⟩,
+    axVertragO_wahr oO, inferInstance⟩
 
 /-- **THE NAMED RUNTIME ASSUMPTION (A4), discharged for the runtime's own
     start**: the loader establishes `gE.sp0`, and every thread runs the idle
@@ -307,10 +306,10 @@ theorem oblig_laufzeit :
 
 /-- **THE CHAIN, CLOSED ON 104**: what the exporter states, the user proved
     above, and so the goal holds at every reachable machine of the run the
-    runtime starts -- with NO open hypothesis. `gP_gabbro` is the exporter's
+    runtime starts under the supplied native CPU contract. `gP_gabbro` is the exporter's
     own theorem; `oblig_nutzer`, `oblig_hw` and `oblig_laufzeit` are its
-    three premises, all three discharged here. -/
-theorem oblig_ziel (passes : Nat) (M : RufMaschineG G104_referenz_oblig.gD.mitRuhe)
+    three premises, with their other clauses discharged here. -/
+theorem oblig_ziel [RootNativeFloat.Hardware] (passes : Nat) (M : RufMaschineG G104_referenz_oblig.gD.mitRuhe)
     (hr : RufErreichbarGX G104_referenz_oblig.gE.P.mitRuhe oO.mitRuhe passes
       (Zielsatz.GeteiltV (D := G104_referenz_oblig.gD) G104_referenz_oblig.gE.P
         G104_referenz_oblig.gE.ws)

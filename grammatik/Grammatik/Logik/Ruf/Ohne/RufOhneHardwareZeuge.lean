@@ -9,8 +9,8 @@
     witness program `axP` of `AxiomVertrag.lean` -- which is in the checker's
     fragment (`programmImFragmentV`), passes the footprint check, and whose
     every function meets the user's obligation `KoerperGutA` AGAINST EVERY
-    ORACLE in the premise class -- the oracle `axOBoese` meets all three legs
-    of `HardwareAnnahmen` (`GutO`, `RegLokal`, `AxVertragO`) and the call
+    ORACLE in the premise class -- the oracle `axOBoese` meets the three oracle
+    clauses (`GutO`, `RegLokal`, `AxVertragO`). With the supplied native CPU contract the call
     `zaehle` still ends in `.hardware (.annahme inc)` at every depth.
     `AxVertragO` is met VACUOUSLY, and that is the whole point: the declared
     axiom ensures constrains the oracle only WHERE its raw answer fits the
@@ -65,8 +65,8 @@ theorem axOBoese_vertrag : AxVertragO axQ axOBoese := by
   rw [axOBoese_passt_nicht a σ ρ] at hv
   cases hv
 
-theorem axOBoese_hardware : HardwareAnnahmen axOBoese axQ :=
-  ⟨axOBoese_gut, axOBoese_reglokal, axOBoese_vertrag⟩
+theorem axOBoese_hardware [RootNativeFloat.Hardware] : HardwareAnnahmen axOBoese axQ :=
+  ⟨axOBoese_gut, axOBoese_reglokal, axOBoese_vertrag, inferInstance⟩
 
 /-- The axiom's answer at any world: the world is `axO`'s, the value is none. -/
 theorem axOBoese_antwort (σ : World axD) :
@@ -94,7 +94,7 @@ theorem axOBoese_rufAt (passes n : Nat) (σ : World axD) :
     premises do not speak about. The shape is the axiom call; the reason is
     that `AxVertragO` is conditional on the answer fitting. The check of
     `RufOhneHardware.lean` sees the shape (`hardwareFrei = false`). -/
-theorem befund_hardware_bleibt :
+theorem befund_hardware_bleibt [RootNativeFloat.Hardware] :
     -- the checker's fragment admits the body, and the footprint checks
     programmImFragmentV axP axFs = true ∧ fussOrtB axP axFs = true ∧
     -- the user's duty holds for every function, against EVERY oracle in the

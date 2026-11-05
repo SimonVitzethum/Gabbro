@@ -115,7 +115,7 @@ theorem scopes4 : ScopesOkProg P4 := by
     the callee's `requires` -- with NO hypothesis about the frame beyond the discipline,
     which `rufAt_treu` turns into the frame. The entry discipline is a real restriction
     (`heldB_faellt_104`); the runs below show the statement is about real work. -/
-theorem nurAbstieg_zeuge_104 :
+theorem nurAbstieg_zeuge_104 [RootNativeFloat.Hardware] :
     (∀ (passes n : Nat) (f : D4.Fn) (σ : World D4) (ρG : Env D4 (D4.params f)) (e : Logik D4),
       HeldB (D4.signatur f).boden (Signatur.anfang D4 (D4.signatur f)) σ.haelt →
       ReqAmEintritt P4 f σ ρG → rufAt P4 O4 passes n f σ ρG = .logik e →
@@ -142,7 +142,7 @@ theorem nurAbstieg_zeuge_104 :
       rcases fn_zwei g with e | e <;> subst e
       · rw [rumpf_ein4]; rfl
       · rw [rumpf_lies4]; rfl
-    exact rufAt_nurAbstieg P4 O4 passes E4.Q E4.S U (gutO_treuO hw4.1) hw4.2.1 hw4.2.2 hU
+    exact rufAt_nurAbstieg P4 O4 passes E4.Q E4.S U (gutO_treuO hw4.1) hw4.2.1 hw4.2.2.1 hU
       hlocks (fun g => (nutzer4.logik.1 passes g).1) (fun g => (nutzer4.logik.1 passes g).2.1)
       scopes4 n f σ ρG e hh hq hl
 
@@ -166,7 +166,7 @@ theorem scopes8 : ScopesOkProg P8 := by
 /-- **WITNESS for `rufAt_nurAbstieg` on 108**, the lock-free control: no call of 108's program
     ends in a `logik` outcome other than an `abstieg`, at any depth, at any entry meeting
     the callee's discipline and `requires`. Non-degenerate: 108's own call returns. -/
-theorem nurAbstieg_zeuge_108 :
+theorem nurAbstieg_zeuge_108 [RootNativeFloat.Hardware] :
     (∀ (passes n : Nat) (f : D8.Fn) (σ : World D8) (ρG : Env D8 (D8.params f)) (e : Logik D8),
       HeldB (D8.signatur f).boden (Signatur.anfang D8 (D8.signatur f)) σ.haelt →
       ReqAmEintritt P8 f σ ρG → rufAt P8 O8 passes n f σ ρG = .logik e →
@@ -183,7 +183,7 @@ theorem nurAbstieg_zeuge_108 :
       rcases fn_zwei g with e | e <;> subst e
       · rw [rumpf_a8]; rfl
       · rw [rumpf_c8]; rfl
-    exact rufAt_nurAbstieg P8 O8 passes E8.Q E8.S U (gutO_treuO hw8.1) hw8.2.1 hw8.2.2 hU
+    exact rufAt_nurAbstieg P8 O8 passes E8.Q E8.S U (gutO_treuO hw8.1) hw8.2.1 hw8.2.2.1 hU
       hlocks (fun g => (nutzer8.logik.1 passes g).1) (fun g => (nutzer8.logik.1 passes g).2.1)
       scopes8 n f σ ρG e hh hq hl
   · exact ⟨_, _, rfl⟩
