@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Logik.Vertraege.Uebersetzung
+import Grammatik.Parser.Stmt.LibraryFixtureProofs
 -- Concrete phase certificates need the bodies of the canonical export gates.
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
@@ -53,6 +54,7 @@ open Gabbro.Grammatik.Parser
 open Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
+open LibraryFixtureProofs
 
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
@@ -69,45 +71,6 @@ attribute [local cbv_opaque] lowStufe lowSeqL lowStructL lowEndL
 attribute [local cbv_eval] seq_succ lowStructL_succ lowEndL_succ
   lowStufe_seq lowStufe_struct lowStufe_ende
 
--- Each computed phase supplies the next phase's concrete canonical input. The
--- public getD definitions are retained, but success never follows from a default.
-private theorem certifyPhases (characters : List Char) (call : SLibraryCall)
-    (retained : List SItemTief → Prop)
-    (phases : ∃ tokens items members library unit,
-      lexL characters = .ok tokens ∧ parseTopTief tokens = .ok items ∧
-      Aufloesung.loeseL (Aufloesung.quelle items) [] items = members ∧ retained members ∧
-      libraryDecl members call = .ok library ∧
-      elabU (pre108 (translatorItems members library)) = .ok unit ∧
-      (lowerAllg unit).toOption.isSome = true) :
-    let tokens := (lexL characters).toOption.getD []
-    let items := (parseTopTief tokens).toOption.getD []
-    let members := Aufloesung.loeseL (Aufloesung.quelle items) [] items
-    lexL characters = .ok tokens ∧ parseTopTief tokens = .ok items ∧ retained members ∧
-      ∃ library unit, libraryDecl members call = .ok library ∧
-        elabU (pre108 (translatorItems members library)) = .ok unit ∧
-        (lowerAllg unit).toOption.isSome = true := by
-  obtain ⟨tokens, items, members, library, unit, lexed, parsed, resolved, kept,
-    found, elaborated, lowered⟩ := phases
-  dsimp only
-  have tokenEq : (lexL characters).toOption.getD [] = tokens := by rw [lexed]; rfl
-  rw [tokenEq]
-  have itemEq : (parseTopTief tokens).toOption.getD [] = items := by rw [parsed]; rfl
-  rw [itemEq, resolved]
-  exact ⟨lexed, parsed, kept, library, unit, found, elaborated, lowered⟩
-
-private theorem lowerFromPhases (members : List SItemTief) (call : SLibraryCall)
-    (present : (libraryDecl members call).toOption.isSome = true)
-    (phases : ∃ library unit, libraryDecl members call = .ok library ∧
-      elabU (pre108 (translatorItems members library)) = .ok unit ∧
-      (lowerAllg unit).toOption.isSome = true) :
-    (lowerAllg ((elabU (pre108 (translatorItems members
-      ((libraryDecl members call).toOption.get present)))).toOption.getD
-        { tabs := [], locks := [], fns := [] })).toOption.isSome = true := by
-  obtain ⟨library, unit, found, elaborated, lowered⟩ := phases
-  have selected : (libraryDecl members call).toOption.get present = library := by
-    exact (Except.ok.inj (found.symm.trans (except_ok_get present))).symm
-  rw [selected, elaborated]
-  exact lowered
 
 /-- Both fixtures retain the whole source. The second translator reverses two rows, rather than
     returning the input unchanged. Runtime library expansion is deliberately still refused. -/
@@ -157,6 +120,71 @@ def translationCaller : FnSig :=
 
 def translationCallerBody : SAnw := .block [.lcall translationCall] (some (.ret none))
 
+-- The two source branches have separate proof terms and independent phase witnesses.
+private theorem translation_false_phases :
+    lexL (translationText false).toList = .ok (translationTokens false) ∧
+    parseTopTief (translationTokens false) = .ok (translationItems false) ∧
+    (translationMembers false)[3]? = some (.fnT translationCaller translationCallerBody) ∧
+    ∃ library unit, libraryDecl (translationMembers false) translationCall = .ok library ∧
+      elabU (pre108 (translatorItems (translationMembers false) library)) = .ok unit ∧
+      (lowerAllg unit).toOption.isSome = true := by
+  unfold translationMembers translationItems translationTokens
+  refine certifyPhases (translationText false).toList translationCall
+    (fun (members : List SItemTief) =>
+      members[3]? = some (SItemTief.fnT translationCaller translationCallerBody)) ?_
+  refine ⟨?tokensfalse, ?itemsfalse, ?membersfalse, ?libraryfalse, ?unitfalse,
+    ?lexedfalse, ?parsedfalse, ?resolvedfalse, ?keptfalse,
+    ?foundfalse, ?elaboratedfalse, ?loweredfalse⟩
+  case lexedfalse =>
+    rw [translation_text, String.toList_ofList]
+    cbv <;> exact Eq.refl _
+  case parsedfalse => cbv <;> exact Eq.refl _
+  case resolvedfalse => cbv <;> exact Eq.refl _
+  case keptfalse => cbv
+  case foundfalse => cbv <;> exact Eq.refl _
+  case elaboratedfalse => cbv <;> exact Eq.refl _
+  case loweredfalse =>
+    apply lowering_ok
+    · cbv
+    · cbv
+    · rintro ⟨index, bound⟩
+      have small : index < 1 := bound
+      have zero : index = 0 := by omega
+      subst index
+      constructor <;> cbv
+
+private theorem translation_true_phases :
+    lexL (translationText true).toList = .ok (translationTokens true) ∧
+    parseTopTief (translationTokens true) = .ok (translationItems true) ∧
+    (translationMembers true)[3]? = some (.fnT translationCaller translationCallerBody) ∧
+    ∃ library unit, libraryDecl (translationMembers true) translationCall = .ok library ∧
+      elabU (pre108 (translatorItems (translationMembers true) library)) = .ok unit ∧
+      (lowerAllg unit).toOption.isSome = true := by
+  unfold translationMembers translationItems translationTokens
+  refine certifyPhases (translationText true).toList translationCall
+    (fun (members : List SItemTief) =>
+      members[3]? = some (SItemTief.fnT translationCaller translationCallerBody)) ?_
+  refine ⟨?tokenstrue, ?itemstrue, ?memberstrue, ?librarytrue, ?unittrue,
+    ?lexedtrue, ?parsedtrue, ?resolvedtrue, ?kepttrue,
+    ?foundtrue, ?elaboratedtrue, ?loweredtrue⟩
+  case lexedtrue =>
+    rw [translation_text, String.toList_ofList]
+    cbv <;> exact Eq.refl _
+  case parsedtrue => cbv <;> exact Eq.refl _
+  case resolvedtrue => cbv <;> exact Eq.refl _
+  case kepttrue => cbv
+  case foundtrue => cbv <;> exact Eq.refl _
+  case elaboratedtrue => cbv <;> exact Eq.refl _
+  case loweredtrue =>
+    apply lowering_ok
+    · cbv
+    · cbv
+    · rintro ⟨index, bound⟩
+      have small : index < 1 := bound
+      have zero : index = 0 := by omega
+      subst index
+      constructor <;> cbv
+
 private theorem translation_phases (reverse : Bool) :
     lexL (translationText reverse).toList = .ok (translationTokens reverse) ∧
     parseTopTief (translationTokens reverse) = .ok (translationItems reverse) ∧
@@ -164,25 +192,9 @@ private theorem translation_phases (reverse : Bool) :
     ∃ library unit, libraryDecl (translationMembers reverse) translationCall = .ok library ∧
       elabU (pre108 (translatorItems (translationMembers reverse) library)) = .ok unit ∧
       (lowerAllg unit).toOption.isSome = true := by
-  unfold translationMembers translationItems translationTokens
-  refine certifyPhases (translationText reverse).toList translationCall
-    (fun (members : List SItemTief) =>
-      members[3]? = some (SItemTief.fnT translationCaller translationCallerBody)) ?_
-  cases reverse
-  all_goals
-    refine ⟨?tokens, ?items, ?members, ?library, ?unit,
-      ?lexed, ?parsed, ?resolved, ?kept, ?found, ?elaborated, ?lowered⟩
-    -- Explicit equality elaboration assigns the computed phase's witness;
-    -- cbv's own closing attempt does not assign synthetic opaque holes.
-    case lexed =>
-      rw [translation_text, String.toList_ofList]
-      cbv <;> exact Eq.refl _
-    case parsed => cbv <;> exact Eq.refl _
-    case resolved => cbv <;> exact Eq.refl _
-    case kept => cbv
-    case found => cbv <;> exact Eq.refl _
-    case elaborated => cbv <;> exact Eq.refl _
-    case lowered => cbv
+  cases reverse with
+  | false => exact translation_false_phases
+  | true => exact translation_true_phases
 
 /-- The exact caller is at member 3 and its call at statement path `[0]`. -/
 def translationSource (reverse : Bool) : LibrarySource where
@@ -311,7 +323,15 @@ private theorem translation_qual_phases :
   case kept => cbv
   case found => cbv <;> exact Eq.refl _
   case elaborated => cbv <;> exact Eq.refl _
-  case lowered => cbv
+  case lowered =>
+    apply lowering_ok
+    · cbv
+    · cbv
+    · rintro ⟨index, bound⟩
+      have small : index < 1 := bound
+      have zero : index = 0 := by omega
+      subst index
+      constructor <;> cbv
 
 /-- The exact caller is at member 6 (two opened modules) and its call at statement path `[0]`. -/
 def translationQualSource : LibrarySource where
@@ -412,7 +432,15 @@ private theorem translation_rek_phases :
   case kept => trivial
   case found => cbv <;> exact Eq.refl _
   case elaborated => cbv <;> exact Eq.refl _
-  case lowered => cbv
+  case lowered =>
+    apply lowering_ok
+    · cbv
+    · cbv
+    · rintro ⟨index, bound⟩
+      have small : index < 1 := bound
+      have zero : index = 0 := by omega
+      subst index
+      constructor <;> cbv
 
 theorem translation_rek_library_zeuge :
     (libraryDecl translationRekMembers ⟨["sample"], ["consume"], [], [.num 3]⟩).toOption.isSome = true := by
