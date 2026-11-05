@@ -126,7 +126,9 @@ theorem zaehle_baum_lower_zeuge :
     (lowSeiteZ bU [.index 3] [] bF none (.zaehleBaum "T" "x" "next" false (.param "root") .tru)).toOption.map
         (·.range) = some (0, 3) ∧
     (lowSeiteZ bU [.index 3] [] bF none (.zaehleBaum "T" "x" "next" true (.param "root") .tru)).toOption.map
-        (·.range) = some (0, 3) := by cbv
+        (·.range) = some (0, 3) := by
+  cbv
+  exact ⟨rfl, rfl⟩
 
 /-- The array domain: an array of two elements, the carrier of length two. -/
 def aU : UProg := {tabs := [{name := "#array-elements:2", count := 2, cols := []}], locks := [], fns := []}

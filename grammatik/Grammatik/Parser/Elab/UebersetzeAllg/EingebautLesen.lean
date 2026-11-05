@@ -238,7 +238,9 @@ theorem sizeof_lesen_zeuge :
     uSeite cw (.built "sizeof" [.variable "a"]) = .ok (.lit 1) ∧
     uSeite ct (.built "sizeof" [.field (.index (.field (.variable "p") "slots") (.lit 0)) "v"]) = .ok (.lit 1) ∧
     uSeite { cw with alias := [("W", (0, 65535)), ("W#bits", (32, 32))] } (.built "sizeof" [.variable "W"]) =
-      .ok (.lit 4) := by cbv
+      .ok (.lit 4) := by
+  cbv
+  exact ⟨rfl, rfl, rfl, rfl, rfl⟩
 
 /-- An unresolved operand, a literal and a parameter without a declared word have no size. -/
 theorem sizeof_abgelehnt_lesen_zeuge :
