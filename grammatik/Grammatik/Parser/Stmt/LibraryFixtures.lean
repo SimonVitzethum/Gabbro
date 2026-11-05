@@ -437,7 +437,6 @@ private def rekPhaseLibrary : ULibrary :=
 
 -- The ordinary-call binder's unused float target keeps its endpoints symbolic.
 attribute [local cbv_opaque] uFloatLimit
-
 private theorem rek_elab_success :
     (elabU (pre108 (translatorItems rekPhaseMembers rekPhaseLibrary))).toOption.isSome = true := by cbv
 
