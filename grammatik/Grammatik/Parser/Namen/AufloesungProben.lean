@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Elab.UebersetzeAllg3
+import Grammatik.Parser.Elab.UebersetzePipeline
 -- Kernel probes need the bodies of the phase's floor, check, wrapper and static gates.
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
@@ -78,8 +79,41 @@ private theorem lowerEach_certified (u : Uebersetze.UProg) :
       (∀ f ∈ fs, (lowerFnAt u f).toOption.isSome = true) → lowerEach u fs = .ok ()
   | [], _ => rfl
   | f :: fs, success => by
-    rw [lowerEach, except_ok_get (success f (List.mem_cons_self ..))]
+    rw [lowerEach, Gabbro.Grammatik.except_ok_get (ε := String)
+      (α := EnsTy u f × RumpTy u f × ReqTy u f) (x := lowerFnAt u f)
+      (success f (List.mem_cons_self ..))]
     exact lowerEach_certified u fs (fun g hg => success g (List.mem_cons_of_mem _ hg))
+
+/-- Success follows the canonical dependent collector without reducing a concrete unit
+    underneath its indexed motive. Every entry is supplied by its actual producer. -/
+private theorem collect_certified : ∀ (n : Nat) (T : Fin n → Type)
+    (get : (i : Fin n) → Except String (T i)),
+    (∀ i, (get i).toOption.isSome = true) →
+      (Measures.collect n T get).toOption.isSome = true
+  | 0, _, _, _ => rfl
+  | n + 1, T, get, success => by
+    have head := Gabbro.Grammatik.except_ok_get (ε := String) (α := T 0)
+      (x := get 0) (success 0)
+    have tail := collect_certified n (fun i => T i.succ) (fun i => get i.succ)
+      (fun i => success i.succ)
+    have tailValue := Gabbro.Grammatik.except_ok_get (ε := String)
+      (α := (i : Fin n) → T i.succ)
+      (x := Measures.collect n (fun i => T i.succ) (fun i => get i.succ)) tail
+    rw [Measures.collect, head]
+    dsimp only [bind, Except.bind]
+    rw [tailValue]
+
+private theorem absent_measures (u : Uebersetze.UProg)
+    (absent : ∀ f : Fin u.fns.length, (fnAt u f).decreases = none) :
+    (Measures.lowerMeasures u).toOption.isSome = true := by
+  have entries := collect_certified u.fns.length (fun f => Measures.At u f)
+    (fun f => Measures.lowerAt u f) (fun f => by
+      simp only [Measures.lowerAt, absent f, Except.toOption, Option.isSome])
+  have collected := Gabbro.Grammatik.except_ok_get (ε := String)
+    (α := (f : Fin u.fns.length) → Measures.At u f)
+    (x := Measures.collect u.fns.length (Measures.At u) (Measures.lowerAt u)) entries
+  unfold Measures.lowerMeasures
+  rw [collected]
 
 /-- Close the canonical assembler from its real phase certificates. Empty source measures
     have equal tuple lengths on every call edge, independently of the assembled program. -/
@@ -90,11 +124,13 @@ private theorem stufe_certified {items : List SItemTief} {u : Uebersetze.UProg}
     (noMeasures : ∀ f : Fin u.fns.length, (fnAt u f).decreases = none)
     (measures : (Measures.lowerMeasures u).toOption.isSome = true) : stufe items = "OK" := by
   let exported : Measures.Export u := (Measures.lowerMeasures u).toOption.get measures
-  have measured : Measures.lowerMeasures u = .ok exported := except_ok_get measures
+  have measured : Measures.lowerMeasures u = .ok exported :=
+    Gabbro.Grammatik.except_ok_get (ε := String) (α := Measures.Export u)
+      (x := Measures.lowerMeasures u) measures
   have empty : ∀ f, exported.mass f = [] :=
     fun f => Measures.lowerMeasures_absent u exported f (noMeasures f)
   have checked : ∀ P : Programm (declOf u),
-      Measures.checkedProgram u P = .ok (P, List.finRange u.fns.length) := by
+      (Measures.checkedProgram u P).toOption.isSome = true := by
     intro P
     have lengths : Measures.cycleLengths u P exported.mass = true := by
       unfold Measures.cycleLengths
@@ -106,7 +142,9 @@ private theorem stufe_certified {items : List SItemTief} {u : Uebersetze.UProg}
       change (!zykS P (List.finRange u.fns.length) f g || true) = true
       exact Bool.or_true _
     unfold Measures.checkedProgram
-    rw [measured, if_pos lengths]
+    rw [measured]
+    change (if Measures.cycleLengths u P exported.mass then true else false) = true
+    rw [ite_eq_left lengths]
   have invs : lowerInvs u (List.finRange u.invs.length) = .ok () := by
     cases enumeration : List.finRange u.invs.length with
     | nil => rfl
@@ -115,20 +153,26 @@ private theorem stufe_certified {items : List SItemTief} {u : Uebersetze.UProg}
       have bound := i.isLt
       omega
   have each := lowerEach_certified u (List.finRange u.fns.length) (fun f _ => functions f)
-  unfold stufe
-  rw [elaborated]
-  unfold lowerAllg
-  split
-  · rename_i error failed
-    rw [invs] at failed
-    cases failed
-  · split
+  have lowered : (lowerAllg u).toOption.isSome = true := by
+    unfold lowerAllg
+    split
     · rename_i error failed
-      rw [each] at failed
+      rw [invs] at failed
       cases failed
     · split
-      · rw [checked]
-      · contradiction
+      · rename_i error failed
+        rw [each] at failed
+        cases failed
+      · split
+        · exact checked _
+        · contradiction
+  have result := Gabbro.Grammatik.except_ok_get (ε := String)
+    (α := Programm (declOf u) × List (declOf u).Fn) (x := lowerAllg u) lowered
+  unfold stufe
+  rw [elaborated]
+  change (match lowerAllg u with
+    | .error error => "lower: " ++ error | .ok _ => "OK") = "OK"
+  rw [result]
 
 /-- The carriers (`static` items) a unit elaborates to, by name. -/
 def traeger (items : List SItemTief) : List String :=
@@ -165,21 +209,27 @@ def zwei : List SItemTief :=
 private theorem zwei_elaborated : (elabU (pre108 zwei)).toOption.isSome = true := by cbv
 private def zweiU : Uebersetze.UProg := (elabU (pre108 zwei)).toOption.get zwei_elaborated
 
+private theorem zwei_count : zweiU.fns.length = 2 := by cbv
+private def zwei_first : Fin zweiU.fns.length := ⟨0, by rw [zwei_count]; decide⟩
+private def zwei_second : Fin zweiU.fns.length := ⟨1, by rw [zwei_count]; decide⟩
+
 private theorem zwei_functions (f : Fin zweiU.fns.length) :
     (lowerFnAt zweiU f).toOption.isSome = true ∧ (fnAt zweiU f).decreases = none := by
-  have count : zweiU.fns.length = 2 := by cbv
-  have bound : f.val < 2 := by rw [← count]; exact f.isLt
+  have bound : f.val < 2 := by rw [← zwei_count]; exact f.isLt
   rcases (by omega : f.val = 0 ∨ f.val = 1) with zero | one
-  · have same : f = ⟨0, by omega⟩ := Fin.ext zero
+  · have same : f = zwei_first := Fin.ext zero
     subst f
     constructor <;> cbv <;> rfl
-  · have same : f = ⟨1, by omega⟩ := Fin.ext one
+  · have same : f = zwei_second := Fin.ext one
     subst f
     constructor <;> cbv <;> rfl
 
 theorem zwei_ok : stufe zwei = "OK" :=
-  stufe_certified (u := zweiU) (except_ok_get zwei_elaborated) (by cbv)
-    (fun f => (zwei_functions f).1) (by cbv) (fun f => (zwei_functions f).2) (by cbv)
+  stufe_certified (items := zwei) (u := zweiU)
+    (Gabbro.Grammatik.except_ok_get (ε := String) (α := Uebersetze.UProg)
+      (x := elabU (pre108 zwei)) zwei_elaborated) (by cbv)
+    (fun f => (zwei_functions f).1) (by cbv) (fun f => (zwei_functions f).2)
+    (absent_measures zweiU (fun f => (zwei_functions f).2))
 theorem zwei_traeger : traeger zwei = ["a::C", "b::C"] := by cbv
 theorem zwei_wirkung :
     wirkungUndRumpf (pre108 zwei) = [(["a::C"], ["a::C"]), (["a::C", "b::C"], ["b::C"])] := by
@@ -204,17 +254,22 @@ def tief : List SItemTief :=
 private theorem tief_elaborated : (elabU (pre108 tief)).toOption.isSome = true := by cbv
 private def tiefU : Uebersetze.UProg := (elabU (pre108 tief)).toOption.get tief_elaborated
 
+private theorem tief_count : tiefU.fns.length = 1 := by cbv
+private def tief_first : Fin tiefU.fns.length := ⟨0, by rw [tief_count]; decide⟩
+
 private theorem tief_functions (f : Fin tiefU.fns.length) :
     (lowerFnAt tiefU f).toOption.isSome = true ∧ (fnAt tiefU f).decreases = none := by
-  have count : tiefU.fns.length = 1 := by cbv
-  have bound : f.val < 1 := by rw [← count]; exact f.isLt
-  have same : f = ⟨0, by omega⟩ := Fin.ext (by omega)
+  have bound : f.val < 1 := by rw [← tief_count]; exact f.isLt
+  have same : f = tief_first := Fin.ext (by omega)
   subst f
   constructor <;> cbv <;> rfl
 
 theorem tief_ok : stufe tief = "OK" :=
-  stufe_certified (u := tiefU) (except_ok_get tief_elaborated) (by cbv)
-    (fun f => (tief_functions f).1) (by cbv) (fun f => (tief_functions f).2) (by cbv)
+  stufe_certified (items := tief) (u := tiefU)
+    (Gabbro.Grammatik.except_ok_get (ε := String) (α := Uebersetze.UProg)
+      (x := elabU (pre108 tief)) tief_elaborated) (by cbv)
+    (fun f => (tief_functions f).1) (by cbv) (fun f => (tief_functions f).2)
+    (absent_measures tiefU (fun f => (tief_functions f).2))
 theorem tief_traeger : traeger tief = ["x::y::C", "b::C"] := by cbv
 
 /-- PLANTED DEFECT: a module that neither declares nor `use`s `C` names it bare. Two items carry the
