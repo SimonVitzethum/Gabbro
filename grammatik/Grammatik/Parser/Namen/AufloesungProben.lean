@@ -143,8 +143,10 @@ private theorem stufe_certified {items : List SItemTief} {u : Uebersetze.UProg}
       exact Bool.or_true _
     unfold Measures.checkedProgram
     rw [measured]
-    change (if Measures.cycleLengths u P exported.mass then true else false) = true
-    rw [ite_eq_left lengths]
+    dsimp only
+    split
+    · rfl
+    · contradiction
   have invs : lowerInvs u (List.finRange u.invs.length) = .ok () := by
     cases enumeration : List.finRange u.invs.length with
     | nil => rfl
