@@ -60,6 +60,23 @@ theorem checkGhostConsume_form {D : Deklaration} {c : CheckDecl D} {gate : D.Fn}
   | some history =>
     simpa [checkGhostConsume, consumed] using consumeCheckEntry_form form consumed
 
+-- Capturing a reporter's actual return updates pending observations only.
+-- Prove the whole Option/pair/Bool projection before instantiating it with
+-- dependent event arguments, so no return-signature index is eliminated.
+private theorem captured_history {D : Deklaration} (check : String)
+    (state : CheckGhostState D) (captured : Option (String × CheckReport)) :
+    (match captured with
+      | some (name, report) =>
+        if name == check then
+          { state with pending := some (stampCheckReport state.activation report) }
+        else state
+      | none => state).history = state.history := by
+  cases captured with
+  | none => rfl
+  | some sampled =>
+    rcases sampled with ⟨name, report⟩
+    split <;> rfl
+
 /-- Every actual event preserves producer identity and the chosen consumer.
     No user-provided report or assumption about memory values is needed. -/
 theorem checkGhostStep_form (u : UProg) (c : CheckDecl (declOf u))
@@ -84,16 +101,24 @@ theorem checkGhostStep_form (u : UProg) (c : CheckDecl (declOf u))
         | none => exact form
         | some report =>
           split
-          · exact checkHistoryForm_cons ⟨rfl, fun impossible => by cases impossible⟩ form
+          · let entry : CheckEvidenz (declOf u) := ⟨c.probe, report, true, none⟩
+            have head : entry.erzeuger = c.probe ∧
+                (entry.lebt = false → entry.tor = some gate) := by
+              refine ⟨rfl, ?_⟩
+              intro dead
+              have impossible : (true : Bool) = false := dead
+              cases impossible
+            have appended : CheckHistoryForm c gate (entry :: state.history) :=
+              checkHistoryForm_cons (entry := entry) head form
+            exact appended
           · exact form
       · split
         · exact checkGhostConsume_form _ form
         · split
-          · cases captured : actualCheckReturn u f env value with
-            | none => exact form
-            | some sampled =>
-              rcases sampled with ⟨name, report⟩
-              split <;> exact form
+          · let popped : CheckGhostState (declOf u) :=
+              { state with frames := state.frames.drop 1 }
+            have preserved := captured_history c.name popped (actualCheckReturn u f env value)
+            exact (congrArg (CheckHistoryForm c gate) preserved).mpr form
           · exact form
 
 /-- The whole chronological fold preserves its inventory, not merely one
@@ -101,7 +126,7 @@ theorem checkGhostStep_form (u : UProg) (c : CheckDecl (declOf u))
 theorem checkGhostHistory_form (u : UProg) (c : CheckDecl (declOf u))
     (consumer gate : (declOf u).Fn) (log : List (RufEreignisF (declOf u))) :
     CheckHistoryForm c gate (checkGhostHistory u c consumer gate log).history := by
-  have foldForm : ∀ events (state : CheckGhostState (declOf u)),
+  have foldForm : ∀ (events : List (RufEreignisF (declOf u))) (state : CheckGhostState (declOf u)),
       CheckHistoryForm c gate state.history →
       CheckHistoryForm c gate
         (events.foldl (checkGhostStep u c consumer gate) state).history := by
