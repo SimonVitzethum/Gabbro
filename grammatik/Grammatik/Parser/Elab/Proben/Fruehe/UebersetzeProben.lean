@@ -403,9 +403,13 @@ private def bit1Tokens : List Token :=
 private theorem bit1_lexed : lexL bit1Characters = .ok bit1Tokens := by
   change scan false bit1Characters 177 = .ok bit1Tokens
   dsimp only [bit1Characters, bit1Tokens]
-  rw [bit_scan_module _ 171, bit_scan_first_head _ 145, bit_scan_first_body _ 128,
-    bit_scan_second_head _ 109, bit_scan_second_body _ 96, bit_scan_third_head _ 70,
-    bit_scan_third_body _ 59, bit_scan_end 58]
+  rw [bit_scan_module (bit1Characters.drop 11) 171,
+    bit_scan_first_head (bit1Characters.drop 48) 145,
+    bit_scan_first_body (bit1Characters.drop 74) 128,
+    bit_scan_second_head (bit1Characters.drop 102) 109,
+    bit_scan_second_body (bit1Characters.drop 125) 96,
+    bit_scan_third_head (bit1Characters.drop 159) 70,
+    bit_scan_third_body (bit1Characters.drop 175) 59, bit_scan_end 58]
 
 private theorem bit1_parsed : (parseTopTief bit1Tokens).toOption.isSome = true := by cbv
 private def bit1Items : List SItemTief := (parseTopTief bit1Tokens).toOption.get bit1_parsed
