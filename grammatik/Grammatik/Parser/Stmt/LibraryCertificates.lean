@@ -83,6 +83,15 @@ def declarationFromData : TranslationDecl source unit where
 private theorem declarationFromData_library :
     (declarationFromData data resolved elaborated lowered).library = library := rfl
 
+/-- The original identity-answer rejection at the complete phase-data boundary.
+    Its inputs use the schema carrier before the declaration is instantiated. -/
+def LibraryFixtureProofs.DeclarationData.RejectsIdentity
+    (input : Wert (declOf unit) schema.ty) (oracle : Orakel (declOf unit))
+    (passes : Nat) (world : World (declOf unit)) : Prop :=
+  let declaration := declarationFromData data resolved elaborated lowered
+  rufAt declaration.program oracle passes 1 declaration.translator world
+    (declaration.arguments input) ≠ .ok world (declaration.answer input)
+
 variable (input output : Wert (declOf unit) schema.ty)
   (decoded : decodeIntegerRows (declOf unit) schema source.call.region = some input)
   (produced : reorder input = output)
@@ -108,16 +117,6 @@ private theorem certificateFromData_output :
 private theorem certificateFromData_fuel :
     (certificateFromData data resolved elaborated lowered input output decoded produced).fuel = 1 := rfl
 end PhaseCertificates
-
-/-- The existing exact call rejection, elaborated before a concrete function
-    carrier is substituted. Unfolding this proposition gives the original claim. -/
-def TranslationDecl.Rejects {source : LibrarySource} {unit : UProg}
-    (declaration : TranslationDecl source unit) (fuel : Nat)
-    (input : Wert (declOf unit) declaration.schema.ty)
-    (other : Wert (declOf unit) declaration.outputType)
-    (oracle : Orakel (declOf unit)) (passes : Nat) (world : World (declOf unit)) : Prop :=
-  rufAt declaration.program oracle passes fuel declaration.translator world
-    (declaration.arguments input) ≠ .ok world (declaration.answer other)
 
 /-- The unchanged measure duty, retaining the complete typed declaration. -/
 def TranslationDecl.MeasureDuty {source : LibrarySource} {unit : UProg}
@@ -202,8 +201,7 @@ private theorem declarationFromData_rejects_identity
     (lowered : lowerAllg unit = .ok image)
     (input : Wert (declOf unit) schema.ty) (different : reorder input ≠ input)
     (oracle : Orakel (declOf unit)) (passes : Nat) (world : World (declOf unit)) :
-    (declarationFromData data resolved elaborated lowered).Rejects 1 input input
-      oracle passes world := by
+    data.RejectsIdentity resolved elaborated lowered input oracle passes world := by
   let declaration := declarationFromData data resolved elaborated lowered
   have executed : rufAt declaration.program oracle passes 1 declaration.translator world
       (declaration.arguments input) = .ok world (declaration.answer (reorder input)) :=
@@ -323,8 +321,10 @@ theorem translation_body_change_zeuge :
 theorem translation_wrong_execution_zeuge
     (oracle : Orakel (declOf (translationUnit true))) (passes : Nat)
     (world : World (declOf (translationUnit true))) :
-    (translationDeclaration true).Rejects 1 (translationInput true) (translationInput true)
-      oracle passes world := by
+    LibraryFixtureProofs.DeclarationData.RejectsIdentity (source := translationSource true)
+      (translation_export_data true).2 (except_ok_get (translation_library_exists true))
+      (translation_export_data true).1 (except_ok_get (translation_lower_exists true))
+      (translationInput true) oracle passes world := by
   exact declarationFromData_rejects_identity (source := translationSource true)
     (translation_export_data true).2 (except_ok_get (translation_library_exists true))
     (translation_export_data true).1 (except_ok_get (translation_lower_exists true))
