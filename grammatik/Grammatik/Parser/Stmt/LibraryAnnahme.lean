@@ -29,7 +29,7 @@ import all Init.Data.String.FindPos
 import all Init.Data.String.Hashable
 import all Init.Data.String.Iter
 import all Init.Data.String.Iter.Basic
-import all Init.Data.String.Intercalate
+import all Init.Data.String.Iter.Intercalate
 import all Init.Data.String.Iterate
 import all Init.Data.String.Iterator
 import all Init.Data.String.Legacy
@@ -130,8 +130,8 @@ private theorem ident_phases :
         contracts := by cbv
         measures := by ident_functions
         functions := ?_ }
-      refine ⟨Fin.cases ?first (Fin.cases ?second (fun i => i.elim0)), ?origin, ?safe⟩
-      case origin => ident_functions
+      refine functions_of_success _ ?produced ?safe
+      case produced => ident_functions
       case safe => intro invariants pointers foreigns; cbv
 
 /-- The identity caller unit through the export: the source text with an
