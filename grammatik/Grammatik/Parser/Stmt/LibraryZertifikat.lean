@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Parser.Stmt.LibraryFixtures
 public import Grammatik.Parser.Stmt.LibraryCertificates
+import all Grammatik.Parser.Stmt.LibraryTranslationFixtures
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -46,6 +47,9 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
 
+attribute [local cbv_opaque] translationPhaseItems
+attribute [local cbv_eval] translation_items
+
 /-! ## C02 item 5: source-bound translation certificates.
 
     The certificate names the exact source item, the resolved translator
@@ -63,22 +67,26 @@ set_option maxHeartbeats 4000000
 theorem zertifikat_eingabe_nachgerechnet_zeuge (reverse : Bool) :
     decodeIntegerRows (declOf (translationUnit reverse)) translationSchema
       (translationSource reverse).call.region =
-      some (translationCertificate reverse).input :=
-  (translationCertificate reverse).decoded
+      some (translationCertificate reverse).input := by
+  have decoded := (translationCertificate reverse).decoded
+  exact decoded
 
 /-- The certificate resolves the exact source call: the declaration's
     library is the resolution of the retained call against the retained
     items. -/
 theorem zertifikat_aufgeloest_zeuge (reverse : Bool) :
     libraryDecl (translationMembers reverse) translationCall =
-      .ok (translationDeclaration reverse).library :=
-  (translationDeclaration reverse).resolved
+      .ok (translationDeclaration reverse).library := by
+  have resolved := (translationDeclaration reverse).resolved
+  dsimp only [translationSource] at resolved
+  simpa only [translationMembers] using resolved
 
 /-- The resolved translator carries the source-selected key: both fixtures
     select the translator named `build`, never a same-named foreign body. -/
 theorem zertifikat_uebersetzer_name_zeuge (reverse : Bool) :
     (translationLibrary reverse).translator.name = "build" := by
-  cases reverse <;> rfl
+  rw [(translation_library_selected reverse).2]
+  cases reverse <;> cbv
 
 /-- Payload content is unique per certificate: two payloads of one
     certificate agree, so no second content can ride the same site. -/
@@ -92,7 +100,9 @@ theorem nutzlast_inhalt_eindeutig {source : LibrarySource} {u : UProg}
 /-- The payload of the identity translation sits at the exact source call
     site `[0]`. -/
 theorem zertifikat_standort_gebunden_zeuge :
-    translationPayload.site = (translationSource false).path := rfl
+    translationPayload.site = (translationSource false).path := by
+  have located := translationPayload.amStandort
+  exact located
 
 /-- The Rust printer's claimed payload (`sumPayloadVals`, `sumPayloadOk`)
     is re-derived by the Lean decoder from raw tokens: output typing is

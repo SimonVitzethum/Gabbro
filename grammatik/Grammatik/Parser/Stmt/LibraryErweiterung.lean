@@ -3,6 +3,7 @@ module
 public import Grammatik.Logik.Vertraege.UebersetzungReinheit
 public import Grammatik.Parser.Stmt.LibraryFixtures
 public import Grammatik.Parser.Stmt.LibraryCertificates
+import all Grammatik.Parser.Stmt.LibraryTranslationFixtures
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -47,6 +48,9 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
 
+attribute [local cbv_opaque] translationPhaseItems
+attribute [local cbv_eval] translation_items
+
 /-! ## C02 item 7: immutable payload initialization and ordinary call expansion.
 
     The certified expansion runs in the ACTUAL compiler path:
@@ -60,13 +64,15 @@ set_option maxHeartbeats 4000000
     resolution, so payload mutation has no interface. -/
 
 /-- The actual pre-pass expands the fixture caller to the export shape:
-    ordinary call, payload last. -/
+    ordinary call, payload last, inside the retained caller block and end. -/
 theorem translation_erweitert_form_zeuge :
     (exportLibraryStmt (translationMembers false) translationCallerBody).toOption.map
       (fun s => beqSAnw s
-        (exportLibraryCall (translationLibrary false) translationCall)) =
+        (.block [exportLibraryCall (translationLibrary false) translationCall]
+          (some (.ret none)))) =
       some true := by
-  decide +kernel
+  rw [(translation_library_selected false).1, (translation_library_selected false).2]
+  cbv
 
 /-- The export shape is the certified shape with the export's payload
     place (`libraryPayloadArg`). -/
@@ -77,16 +83,17 @@ theorem translation_erweitert_zertifikat_form_zeuge :
   exportLibraryCall_form _ _
 
 /-- The actual pre-pass expands the `let`-bound fixture caller the same
-    way: the ordinary call value bound as usual. -/
+    way: the ordinary call value bound inside the retained block and end. -/
 theorem translation_erweitert_bind_zeuge :
     (exportLibraryStmt (translationMembers false)
       (.block [.bindLib false "value" none translationCall]
         (some (.ret none)))).toOption.map
       (fun s => beqSAnw s
-        (exportLibraryBind false "value" none (translationLibrary false)
-          translationCall)) =
+        (.block [exportLibraryBind false "value" none (translationLibrary false)
+          translationCall] (some (.ret none)))) =
       some true := by
-  decide +kernel
+  rw [(translation_library_selected false).1, (translation_library_selected false).2]
+  cbv
 
 /-- The `let`-bound export shape is the certified `let`-bound shape. -/
 theorem translation_erweitert_bind_zertifikat_form_zeuge :
@@ -100,7 +107,8 @@ theorem translation_erweitert_bind_zertifikat_form_zeuge :
 theorem translation_translator_rein_zeuge :
     effekteRein (translationLibrary false).translator.klauseln = true ∧
     effekteRein (translationLibrary true).translator.klauseln = true := by
-  decide +kernel
+  rw [(translation_library_selected false).2, (translation_library_selected true).2]
+  constructor <;> cbv
 
 /-- A writable payload parameter refuses: the payload channel is a
     read-only table capability, so payload mutation has no interface. -/
@@ -128,7 +136,8 @@ theorem translation_schreib_nutzlast_verweigert_zeuge :
 theorem translation_nutzlast_stelligkeit_verweigert_zeuge :
     (libraryDecl (translationMembers false)
       { translationCall with args := [.lit 7] }).toOption.isNone = true := by
-  decide +kernel
+  rw [(translation_library_selected false).1]
+  cbv
 
 /-- An ambiguous library function refuses through the actual pre-pass:
     resolution never picks the first match. -/

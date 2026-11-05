@@ -380,6 +380,20 @@ private theorem translation_phase_data (reverse : Bool) :
     case madeTrue => cbv <;> exact Eq.refl _
     case imageDataTrue => library_emitted
 
+-- One shared opaque proof for metadata consumers. The selected phase value
+-- stays private; no new data view of the source or resolver is exported.
+private theorem translation_library_selected (reverse : Bool) :
+    translationMembers reverse = translationPhaseMembers reverse ∧
+      translationLibrary reverse = translationPhaseLibrary reverse := by
+  have members : translationMembers reverse = translationPhaseMembers reverse := by
+    simp only [translationMembers, translationItems, translationTokens, translation_text,
+      String.toList_ofList, translation_lexed, translationPhaseMembers, translationPhaseItems,
+      translation_parsed, Except.toOption, Option.getD_some] <;> rfl
+  refine ⟨members, ?_⟩
+  apply Except.ok.inj
+  exact (except_ok_get (translation_library_exists reverse)).symm.trans
+    (by rw [members]; exact except_ok_get (translation_library_success reverse))
+
 /-- Full phase success and typed image facts for the public selected values.
     The substitutions happen before any finite index or result projection. -/
 theorem translation_export_data (reverse : Bool) :
@@ -387,10 +401,7 @@ theorem translation_export_data (reverse : Bool) :
       .ok (translationUnit reverse) ∧
     DeclarationData (translationLibrary reverse) (translationUnit reverse) (translationLowered reverse)
       translationSchema (fun input => if reverse then fun index => input index.rev else input) := by
-  have members : translationMembers reverse = translationPhaseMembers reverse := by
-    simp only [translationMembers, translationItems, translationTokens, translation_text,
-      String.toList_ofList, translation_lexed, translationPhaseMembers, translationPhaseItems,
-      translation_parsed, Except.toOption, Option.getD_some] <;> rfl
+  have members := (translation_library_selected reverse).1
   exact certifyData (translationMembers reverse) translationCall (translation_library_exists reverse)
     (fun library unit image => DeclarationData library unit image translationSchema
       (fun input => if reverse then fun index => input index.rev else input))
@@ -404,15 +415,7 @@ theorem translation_export_data (reverse : Bool) :
 theorem translation_library_shape (reverse : Bool) :
     (translationLibrary reverse).function.name = "consume" ∧
     translationCall.args.length + 1 = (translationLibrary reverse).function.params.length := by
-  have members : translationMembers reverse = translationPhaseMembers reverse := by
-    simp only [translationMembers, translationItems, translationTokens, translation_text,
-      String.toList_ofList, translation_lexed, translationPhaseMembers, translationPhaseItems,
-      translation_parsed, Except.toOption, Option.getD_some] <;> rfl
-  have selected : translationLibrary reverse = translationPhaseLibrary reverse := by
-    apply Except.ok.inj
-    exact (except_ok_get (translation_library_exists reverse)).symm.trans
-      (by rw [members]; exact except_ok_get (translation_library_success reverse))
-  rw [selected]
+  rw [(translation_library_selected reverse).2]
   cases reverse <;> constructor <;> cbv
 
 /-- Source-selected names and bodies are compared after selection success,
@@ -420,15 +423,7 @@ theorem translation_library_shape (reverse : Bool) :
 theorem translation_library_change_data :
     strEq (translationLibrary false).translator.name (translationLibrary true).translator.name = true ∧
     beqSAnw (translationLibrary false).translatorBody (translationLibrary true).translatorBody = false := by
-  have selected (reverse : Bool) : translationLibrary reverse = translationPhaseLibrary reverse := by
-    have members : translationMembers reverse = translationPhaseMembers reverse := by
-      simp only [translationMembers, translationItems, translationTokens, translation_text,
-        String.toList_ofList, translation_lexed, translationPhaseMembers, translationPhaseItems,
-        translation_parsed, Except.toOption, Option.getD_some] <;> rfl
-    apply Except.ok.inj
-    exact (except_ok_get (translation_library_exists reverse)).symm.trans
-      (by rw [members]; exact except_ok_get (translation_library_success reverse))
-  rw [selected false, selected true]
+  rw [(translation_library_selected false).2, (translation_library_selected true).2]
   constructor <;> cbv
 
 end Gabbro.Grammatik.Uebersetzung
