@@ -40,6 +40,5 @@ private theorem check_assembly (u : UProg)
     · rename_i error rejected
       cases rejected.symm.trans each
     · simp only [dif_pos contracts, measures, paired]
-      rfl
 
 end Gabbro.Grammatik.Parser.Uebersetze
