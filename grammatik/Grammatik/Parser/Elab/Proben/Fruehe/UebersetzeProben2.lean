@@ -175,10 +175,10 @@ private theorem scan_call (rest : List Char) (n : Nat) :
 private theorem scan_end (n : Nat) :
     scan false ['}'] (n + 1) = .ok [.zeichen "}", .ende] := by cbv
 
-private theorem token_maps (prefix : List Token) (result : Except LexFehler (List Token)) :
-    prefix.foldr (fun t answer => Except.map (t :: ·) answer) result =
-      Except.map (prefix ++ ·) result := by
-  induction prefix with
+private theorem token_maps (tokens : List Token) (result : Except LexFehler (List Token)) :
+    tokens.foldr (fun t answer => Except.map (t :: ·) answer) result =
+      Except.map (tokens ++ ·) result := by
+  induction tokens with
   | nil => cases result <;> rfl
   | cons t ts ih =>
     simp only [List.foldr, ih]

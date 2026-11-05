@@ -322,8 +322,7 @@ theorem consuming_edge_zeuge :
     uConsumingEdge relationContext "T" = .ok "next" ∧
     uConsumingEdge {relationContext with tabs := [{name := "T", count := 3, cols := []}]} "T" =
       .error "consuming traversal requires one declared child edge" ∧
-    uConsumingEdge {relationContext with tabs := [{name := "T", count := 3, cols := [],
-      kanten := [("child", "a"), ("child", "b")]}]} "T" =
+    uConsumingEdge {relationContext with tabs := [{name := "T", count := 3, cols := [], kanten := [("child", "a"), ("child", "b")]}]} "T" =
       .error "consuming traversal requires exactly one declared child edge" := by
   exact ⟨rfl, rfl, rfl⟩
 
