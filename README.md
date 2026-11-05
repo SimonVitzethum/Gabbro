@@ -30,6 +30,8 @@ the LLVM backend are **not** verified, and no bridge to any binary exists yet ([
   theorem (`irBild_correct`), and the x86-64 assembly runner in `runner/` executes it. It covers part of the userspace language; state
   and limits per form are in [IR-COMPILATION-LANES](dokumente/IR-COMPILATION-LANES.md). Lean performs compilation and proof checking;
   all runtime operations execute in the assembly runner. Native CPU floating-point integration is in progress.
+  Floating operations are opaque in Lean, with an explicit ISA-independent hardware contract; numerical IEEE
+  arithmetic is not replayed by the proof kernel. Target instruction correspondence remains a separate obligation.
 
 ## 1. Quick start
 
@@ -134,6 +136,10 @@ are in Lean.
 `Zielsatz/Atomar/BeweisAtomar.lean`; tags `milestone-2026-09-15-gabbro-ziel` and `-zielsatz-bestaetigt`). Six review rounds; round 6: *"the goal
 with named gaps, no unnamed gap found"*. The checker inside the statement is the **Lean** checker, not the Rust one. GabbroV derives
 premise (b), the user's logic, in Lean from the source for five programs; that does not certify binaries.
+
+The 2026-11-05 floating-point migration adds `RootNativeFloat.Hardware` to the named hardware premise,
+without a default instance or a new Lean axiom. Revalidation of the connected goal/compiler/runner pipeline
+under this boundary is in progress. Current acceptance runs exclude Rust/Cargo and LLVM by owner instruction.
 
 **Not proved, still open:**
 - No pass is proved individually (sentences are measured on checked cases, never the rule).
