@@ -232,9 +232,8 @@ theorem torZurErweiterung_zeuge :
 /-- The generated translator program is library-closed. -/
 theorem translation_libraryB_zeuge :
     Gabbro.Grammatik.Zielsatz.libraryB (translationLowered false).1
-      (translationLowered false).2 = true := by
-  unfold Gabbro.Grammatik.Zielsatz.libraryB
-  exact List.all_eq_true.mpr (fun _ _ => rfl)
+      (translationLowered false).2 = true :=
+  Gabbro.Grammatik.Zielsatz.libraryB_immer _ _
 
 /-- The library admission holds on the generated program, through the checker binding. -/
 theorem translation_libraryAdmission_zeuge :

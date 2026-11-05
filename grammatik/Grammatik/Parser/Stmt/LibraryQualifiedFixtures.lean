@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Logik.Vertraege.Uebersetzung
-import Grammatik.Parser.Stmt.LibraryFixtureProofs
+public import Grammatik.Parser.Stmt.LibraryFixtureProofs
 import Grammatik.Parser.Stmt.LibraryFixtureScanning
 -- Concrete phase certificates need the bodies of the canonical export gates.
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
@@ -252,8 +252,16 @@ private theorem qual_phase_data :
       ((lowerAllg qualPhaseUnit).toOption.get qual_lower_success)
       (⟨0, 10, 2⟩ : IntegerSchema) (fun input => input) := by
   have count : qualPhaseUnit.fns.length = 1 := by cbv
-  refine { positive := by omega, name := ?_, parameters := ?_, result := ?_,
-    noCalls := ?_, noIndirectCalls := ?_, bounded := ?_, noCycle := ?_, execution := ?_ }
+  refine {
+    positive := by omega
+    name := ?_
+    parameters := ?_
+    result := ?_
+    noCalls := ?_
+    noIndirectCalls := ?_
+    bounded := ?_
+    noCycle := ?_
+    execution := ?_ }
   · cbv
   · cbv
   · cbv

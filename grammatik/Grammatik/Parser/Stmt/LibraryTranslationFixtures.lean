@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Logik.Vertraege.Uebersetzung
-import Grammatik.Parser.Stmt.LibraryFixtureProofs
+public import Grammatik.Parser.Stmt.LibraryFixtureProofs
 import Grammatik.Parser.Stmt.LibraryFixtureScanning
 public import Grammatik.Parser.Stmt.LibraryQualifiedFixtures
 -- Concrete phase certificates need the bodies of the canonical export gates.
@@ -361,8 +361,16 @@ private theorem translation_phase_data (reverse : Bool) :
       ((lowerAllg (translationPhaseUnit reverse)).toOption.get (translation_lower_success reverse))
       translationSchema (fun input => if reverse then fun index => input index.rev else input) := by
   have count : (translationPhaseUnit reverse).fns.length = 1 := by cases reverse <;> cbv
-  refine { positive := by omega, name := ?_, parameters := ?_, result := ?_,
-    noCalls := ?_, noIndirectCalls := ?_, bounded := ?_, noCycle := ?_, execution := ?_ }
+  refine {
+    positive := by omega
+    name := ?_
+    parameters := ?_
+    result := ?_
+    noCalls := ?_
+    noIndirectCalls := ?_
+    bounded := ?_
+    noCycle := ?_
+    execution := ?_ }
   · cases reverse <;> cbv
   · cases reverse <;> cbv
   · cases reverse <;> cbv
