@@ -107,4 +107,12 @@ def resultType : Ty → Bool
   | .str n => n ≤ 1
   | _ => false
 
+/-- Give downstream computation one canonical equation, without generating
+    imported pattern equations independently in concurrent elaboration tasks. -/
+@[cbv_eval] theorem resultType_eq (ty : Ty) :
+    resultType ty = (match ty with
+      | .bool | .opt _ | .sum _ | .why _ => true
+      | .str n => n ≤ 1
+      | _ => false) := rfl
+
 end Gabbro.Grammatik.Parser.Konst.Values
