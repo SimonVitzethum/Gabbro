@@ -32,6 +32,14 @@ private theorem check_assembly (u : UProg)
   have paired (f : Fin u.fns.length) (success : ∃ value, lowerFnAt u f = .ok value) :
       lowerAtPair u f success = functions f :=
     lowerAtPair_of_ok u f success (made f)
-  simp only [lowerAllg, invariants, each, dif_pos contracts, measures, paired] <;> rfl
+  unfold lowerAllg
+  split
+  · rename_i error rejected
+    cases rejected.symm.trans invariants
+  · split
+    · rename_i error rejected
+      cases rejected.symm.trans each
+    · simp only [dif_pos contracts, measures, paired]
+      rfl
 
 end Gabbro.Grammatik.Parser.Uebersetze
