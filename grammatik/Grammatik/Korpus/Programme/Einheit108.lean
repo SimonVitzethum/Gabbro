@@ -18,6 +18,11 @@ public import Grammatik.Zielsatz.Kern.Beweis
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 public import Grammatik.Logik.Ruf.RufLogik
 public import Grammatik.Logik.Ruf.RufLogika
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
+import all Grammatik.Parser.Elab.Generic.StaticConformance
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -62,7 +67,13 @@ set_option maxRecDepth 100000
 
 abbrev D8 : Deklaration := declOf uExp108
 
-theorem low_some : (lowerAllg uExp108).toOption.isSome = true := by decide
+theorem low_some : (lowerAllg uExp108).toOption.isSome = true := by
+  cases lowered : lowerAllg uExp108 with
+  | error error =>
+    have checked := lowerAllg108fragment
+    rw [lowered] at checked
+    cases checked
+  | ok output => rfl
 
 def P8 : Programm D8 := ((lowerAllg uExp108).toOption.get low_some).1
 
@@ -70,7 +81,7 @@ def fs8 : List D8.Fn := ((lowerAllg uExp108).toOption.get low_some).2
 
 theorem parse8 : parseTopTief toks108 = .ok items108 := by rfl
 
-theorem elab8 : elabU (pre108 items108) = .ok uExp108 := by rfl
+theorem elab8 : elabU (pre108 items108) = .ok uExp108 := by cbv
 
 theorem low8 : lowerAllg uExp108 = .ok (P8, fs8) := except_ok_get low_some
 
@@ -112,10 +123,35 @@ def bodyC8 : Endblock D8 (vertragVon D8 c8) false (D8.params c8) [] :=
   .ret (.val (Expr.widen (lo' := 0) (hi' := 4294967295) (by decide) (by decide)
     (Expr.slot t8 f8 (.widen (by decide) (by decide) (.lit 1)) darf8))) (List.Perm.refl _)
 
-theorem rumpf_a8 : P8.rumpf a8 = bodyA8 := by rfl
-theorem rumpf_c8 : P8.rumpf c8 = bodyC8 := by rfl
-theorem ens8 (f : D8.Fn) : P8.ensures f = .tru := by rcases fn_zwei f with e | e <;> subst e <;> rfl
-theorem req8 (f : D8.Fn) : P8.requires f = .tru := by rcases fn_zwei f with e | e <;> subst e <;> rfl
+theorem rumpf_a8 : P8.rumpf a8 = bodyA8 := by cbv
+theorem rumpf_c8 : P8.rumpf c8 = bodyC8 := by cbv
+theorem ens8 (f : D8.Fn) : P8.ensures f = .tru := by
+  rcases fn_zwei f with e | e <;> subst e <;> cbv
+theorem req8 (f : D8.Fn) : P8.requires f = .tru := by
+  rcases fn_zwei f with e | e <;> subst e <;> cbv
+
+private theorem reqEntry8 (f : D8.Fn) (s : World D8) (ρ : Env D8 (D8.params f)) :
+    ReqAmEintritt P8 f s ρ := by
+  unfold ReqAmEintritt
+  rw [req8]
+  rfl
+
+/-- These are the actual lowered interface posts of the two source readers,
+    whose gives lists are empty. No other interface contract is substituted. -/
+private theorem ptrPost8 (n : Nat) (bound : n < 2) :
+    (P8.ptrVertrag n).post = .tru := by
+  rcases (by omega : n = 0 ∨ n = 1) with rfl | rfl <;> cbv
+
+private theorem ptrRefinement8 : PtrVerfeinert P8 := by
+  intro f n conforms
+  have bound : n < 2 := passtAt_lt uExp108 f n conforms
+  constructor
+  · intro s ρ _
+    exact reqEntry8 f s (umsig conforms ρ)
+  · intro s0 s1 ρ v _ _
+    unfold CallContract.postHolds
+    rw [ptrPost8 n bound]
+    rfl
 
 /-! ## 3. Enumerations, unit, checker -/
 
@@ -148,7 +184,7 @@ def E8 : Einheit D8 where
   sp0 := sp8
 
 /-- The checker accepts the unit WITH its two concurrent starts. -/
-theorem akzeptiert8 : akzeptiert_pruefer.akzeptiert E8 fsA.1 lsA.1 csA.1 = true := by decide
+theorem akzeptiert8 : akzeptiert_pruefer.akzeptiert E8 fsA.1 lsA.1 csA.1 = true := by decide +kernel
 
 /-! ## 4. The user's logic -/
 
@@ -166,9 +202,9 @@ theorem koerperV8 (f : D8.Fn) : KoerperGutV P8 0 f := by
       simp only [bodyC8, execEnd] at hrun
       cases hrun
 
-theorem logikFrei8 : programmLogikFrei P8 fsA.1 = true := by decide
+theorem logikFrei8 : programmLogikFrei P8 fsA.1 = true := by decide +kernel
 
-theorem ohneEwig8 : ohneEwigB P8 fsA.1 = true := by decide
+theorem ohneEwig8 : ohneEwigB P8 fsA.1 = true := by decide +kernel
 
 theorem koerperS8 : ∀ f : D8.Fn, KoerperGutS P8 0 (axWahr D8) (SperrInv.leer D8) f := fun f =>
   koerperGutS_leer ⟨koerperGutRQ_of_R _ (koerperGutR_of_V (koerperV8 f)),
@@ -183,7 +219,7 @@ theorem nutzer8 : NutzerPflicht E8 where
         have h := r.isLt
         have h0 : D8.gruende f = 0 := sigGruende_null uExp108 (by decide) f
         omega⟩,
-    fun _ _ _ _ => rfl, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩
+    fun _ _ _ _ => rfl, axEnsLokal_wahr, ptrRefinement8⟩
   start := ⟨fun L => (kein_lock L).elim, fun a _ => by
     show ReqAmEintritt P8 a.1 _ a.2
     unfold ReqAmEintritt
