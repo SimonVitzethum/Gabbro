@@ -64,7 +64,12 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   The full grammar integration run exposed errors in 27 modules before it was stopped at
   `UebersetzeProben11` after sustained memory-high throttling. That witness and the remaining
   package suffix are resource-unmeasured, not a proved false statement. Repairs are being
-  checked module by module; `LibraryErweiterung` and the gate-model witness now pass.
+  checked module by module; `LibraryErweiterung`, the gate-model witness, `Capabilities`, both
+  count/builtin reader witnesses, public-name probes, five repaired corpus modules and the
+  pointer-duty witnesses for 104/108 now pass. The generic world-preservation statement and
+  its concrete library witness build through the same transparent proposition. The numbered
+  coverage-cell predicates were re-read against the current checker and the refreshed closure
+  pins pass; this does not extend the measured source or descriptor coverage.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
   The authorised acceptance scope is Lean and the Lean parts of GabbroV; Rust, Cargo and LLVM checks are
   deliberately unmeasured. The owner authorises pushing once the named Lean builds and GabbroV's Lean
