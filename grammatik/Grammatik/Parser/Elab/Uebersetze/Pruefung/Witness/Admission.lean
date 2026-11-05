@@ -116,6 +116,21 @@ private def admissionGateFunction :
 private def admissionProbeIndex : Fin admissionUnitMade.val.fns.length :=
   ⟨1, by change 1 < 4; decide⟩
 
+-- Fix the raw body result before transporting it into the declaration's function triple.
+private def admissionProbeBody :
+    {body : Endblock (declOf admissionUnitMade.val) (verOf admissionUnitMade.val admissionProbeIndex) false
+      (ctxOf admissionUnitMade.val admissionProbeIndex) (resOf admissionUnitMade.val admissionProbeIndex) //
+      lowBody admissionUnitMade.val admissionProbeIndex (fnAt admissionUnitMade.val admissionProbeIndex).body
+        (fnAt admissionUnitMade.val admissionProbeIndex).ret = .ok body} := by
+  refine ⟨?body, ?made⟩
+  case made => cbv <;> exact Eq.refl _
+
+private theorem admission_probe_body :
+    lowBody admissionUnitMade.val admissionProbeIndex (fnAt admissionUnitMade.val admissionProbeIndex).body
+      (fnAt admissionUnitMade.val admissionProbeIndex).ret = .ok admissionProbeBody.val :=
+  admissionProbeBody.property
+attribute [local cbv_eval] admission_probe_body
+
 private def admissionProbeFunction :
     {result : admissionFunctionType admissionProbeIndex //
       lowerFnAt admissionUnitMade.val admissionProbeIndex = .ok result} := by
@@ -133,6 +148,35 @@ private def admissionReportFunction :
 
 private def admissionWrapperIndex : Fin admissionUnitMade.val.fns.length :=
   ⟨3, by change 3 < 4; decide⟩
+
+-- The wrapper's actual entry call is certified before constructing its statement/body.
+private def admissionWrapperHead :
+    {head : RufKopf admissionUnitMade.val admissionWrapperIndex
+      (ctxOf admissionUnitMade.val admissionWrapperIndex) (resOf admissionUnitMade.val admissionWrapperIndex) //
+      lowRufKopf admissionUnitMade.val admissionWrapperIndex (ctxOf admissionUnitMade.val admissionWrapperIndex)
+        (fnAt admissionUnitMade.val admissionWrapperIndex) (resOf admissionUnitMade.val admissionWrapperIndex) "g" [] = .ok head} := by
+  refine ⟨?head, ?made⟩
+  case made => cbv <;> exact Eq.refl _
+private theorem admission_wrapper_head :
+    lowRufKopf admissionUnitMade.val admissionWrapperIndex (ctxOf admissionUnitMade.val admissionWrapperIndex)
+      (fnAt admissionUnitMade.val admissionWrapperIndex) (resOf admissionUnitMade.val admissionWrapperIndex) "g" [] =
+        .ok admissionWrapperHead.val := admissionWrapperHead.property
+attribute [local cbv_eval] admission_wrapper_head
+
+-- Fix the raw body result before transporting it into the declaration's function triple.
+private def admissionWrapperBody :
+    {body : Endblock (declOf admissionUnitMade.val) (verOf admissionUnitMade.val admissionWrapperIndex) false
+      (ctxOf admissionUnitMade.val admissionWrapperIndex) (resOf admissionUnitMade.val admissionWrapperIndex) //
+      lowBody admissionUnitMade.val admissionWrapperIndex (fnAt admissionUnitMade.val admissionWrapperIndex).body
+        (fnAt admissionUnitMade.val admissionWrapperIndex).ret = .ok body} := by
+  refine ⟨?body, ?made⟩
+  case made => cbv <;> exact Eq.refl _
+
+private theorem admission_wrapper_body :
+    lowBody admissionUnitMade.val admissionWrapperIndex (fnAt admissionUnitMade.val admissionWrapperIndex).body
+      (fnAt admissionUnitMade.val admissionWrapperIndex).ret = .ok admissionWrapperBody.val :=
+  admissionWrapperBody.property
+attribute [local cbv_eval] admission_wrapper_body
 
 private def admissionWrapperFunction :
     {result : admissionFunctionType admissionWrapperIndex //
@@ -182,11 +226,29 @@ section admissionAssembly
 attribute [local cbv_opaque] lowerFnAt lowerEach lowerAtPair
 attribute [local cbv_eval] admission_function admission_each admission_pair admission_measure_gate
 
+private theorem admission_invariants :
+    lowerInvs admissionUnitMade.val (List.finRange admissionUnitMade.val.invs.length) = .ok () := by cbv
+private theorem admission_contracts : contractGate admissionUnitMade.val = true := by cbv
+attribute [local cbv_eval] admission_invariants admission_contracts
+
+-- This is the canonical assembler with the already certified complete fields.
+-- Pin the whole pair before proving its production equality.
+private def admissionImage :
+    Programm (declOf admissionUnitMade.val) × List (declOf admissionUnitMade.val).Fn :=
+  (progOfFn admissionUnitMade.val
+    (fun f => (admissionFunctions f).val.1)
+    (fun f => (admissionFunctions f).val.2.1)
+    (fun f => (admissionFunctions f).val.2.2)
+    (fun i => lowerInvGut admissionUnitMade.val i
+      (lowerInvs_all_ok admissionUnitMade.val _ i (List.mem_finRange i) admission_invariants))
+    (ptrVertragOf admissionUnitMade.val)
+    (fun a => axVertragOf admissionUnitMade.val a (Bool.and_eq_true_iff.mp admission_contracts).2),
+    List.finRange admissionUnitMade.val.fns.length)
+
 private def admissionProgram :
     {result : Programm (declOf admissionUnitMade.val) × List (declOf admissionUnitMade.val).Fn //
-      lowerAllg admissionUnitMade.val = .ok result} := by
-  refine ⟨?result, ?made⟩
-  case made => cbv <;> exact Eq.refl _
+      lowerAllg admissionUnitMade.val = .ok result} :=
+  ⟨admissionImage, by cbv⟩
 
 private theorem admission_program :
     lowerAllg admissionUnitMade.val = .ok admissionProgram.val := admissionProgram.property
@@ -241,10 +303,23 @@ private def admissionWithoutGivesGate :
   case made => cbv <;> exact Eq.refl _
 
 -- The ordinary probe lowering produces this error; no replacement refusal is introduced.
-private def admissionWithoutGivesProbe : {error : String //
-    lowerFnAt admissionWithoutGivesMade.val admissionWithoutGivesProbeIndex = .error error} := by
+private def admissionWithoutGivesBody : {error : String //
+    lowBody admissionWithoutGivesMade.val admissionWithoutGivesProbeIndex
+      (fnAt admissionWithoutGivesMade.val admissionWithoutGivesProbeIndex).body
+      (fnAt admissionWithoutGivesMade.val admissionWithoutGivesProbeIndex).ret = .error error} := by
   refine ⟨?error, ?made⟩
   case made => cbv <;> exact Eq.refl _
+
+private theorem admission_without_gives_body :
+    lowBody admissionWithoutGivesMade.val admissionWithoutGivesProbeIndex
+      (fnAt admissionWithoutGivesMade.val admissionWithoutGivesProbeIndex).body
+      (fnAt admissionWithoutGivesMade.val admissionWithoutGivesProbeIndex).ret =
+        .error admissionWithoutGivesBody.val := admissionWithoutGivesBody.property
+attribute [local cbv_eval] admission_without_gives_body
+
+private def admissionWithoutGivesProbe : {error : String //
+    lowerFnAt admissionWithoutGivesMade.val admissionWithoutGivesProbeIndex = .error error} :=
+  ⟨admissionWithoutGivesBody.val, by cbv⟩
 
 private theorem admissionWithoutGives_each :
     lowerEach admissionWithoutGivesMade.val (List.finRange admissionWithoutGivesMade.val.fns.length) =
