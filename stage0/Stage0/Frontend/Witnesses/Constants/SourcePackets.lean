@@ -20,6 +20,20 @@ structure SourceInput (text : String) where
 def SourceInput.original {text : String} (input : SourceInput text) : List SItemTief :=
   uMembers (pre108 input.prepared.elaborierbar)
 
+/-- Transport the complete profile result to a selected parser output without reducing that getter. -/
+theorem SourceInput.prepared_selected {text : String} (input : SourceInput text)
+    {tokens : List Token} {items : List SItemTief}
+    (lexed : lex text = .ok tokens) (parsed : parseTopTief tokens = .ok items) :
+    ∃ prepared : Profil.Prepared {} items,
+      Profil.prepareItems {} items = .ok prepared ∧
+      Oeffentlich.huelleZu prepared.elaborierbar = true ∧
+      Frontend.compileTimeSafe (uMembers (pre108 prepared.elaborierbar)) = true := by
+  have sameTokens : tokens = input.tokens := Except.ok.inj (lexed.symm.trans input.lexed)
+  subst tokens
+  have sameItems : items = input.items := Except.ok.inj (parsed.symm.trans input.parsed)
+  subst items
+  exact ⟨input.prepared, input.preparation, input.visibility, input.compileTime⟩
+
 /-- Complete successes of the remaining source phases, before dependent scope projections. -/
 structure SourceTail {text : String} (input : SourceInput text) where
   metadata : Konst.checkSourceMetadata input.original = .ok ()
