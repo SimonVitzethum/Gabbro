@@ -229,7 +229,9 @@ theorem lowBody_cons_ok (c : Fin u.fns.length) (r : URet) (s : UStmt) (ss : List
         | .error error => .error error
         | .ok ending => .ok (Endblock.cons st ending)) := by
     cases s
-    case assign | assignTab | call => rw [lowBodyF] <;> rfl
+    case assign | assignTab | call =>
+      unfold lowStmt
+      rw [lowBodyF] <;> simp
     all_goals simp [stmtBody] at h
   have key : ∀ n, lowBodyF u c (ctxOf u c) (fnAt u c) (n + 1) Λ (s :: ss) r = .ok b0 →
       ∃ (Λ' : List (Res (declOf u))) (st : Stmt (declOf u) (verOf u c) false (ctxOf u c) Λ Λ')
