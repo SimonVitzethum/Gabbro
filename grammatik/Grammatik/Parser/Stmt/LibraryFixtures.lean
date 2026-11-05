@@ -70,12 +70,12 @@ private theorem empty_row (tabs : List UTab) (heads : List UFnKopf)
 
 private theorem empty_function (ctx : UCtx) (heads : List UFnKopf)
     (clauses : List SKlausel) (ending : Option SEnde) :
-    elabFn ctx heads clauses (.block [] ending) = do
+    elabFn ctx heads clauses (.block [] ending) = (do
       let (gives, needs) ← elabKlauseln ctx clauses
       let (beforeFold, ctxEnd, ending) ← expandFoldEnd ctx ending
       let (beforeCall, ctxReturn, returning) ← expandReturnCall ctxEnd heads ending
       let result ← uEnde ctxReturn returning
-      pure (gives, needs, beforeFold ++ beforeCall, result) := by
+      pure (gives, needs, beforeFold ++ beforeCall, result)) := by
   simp only [elabFn, empty_row, List.getLast?_nil, Bool.and_false,
     Bool.false_eq_true, ite_false, List.nil_append, bind, Except.bind, pure, Except.pure]
 
@@ -199,9 +199,11 @@ private def parsedFixture (count : Nat) (result : SExpr) (values : List Token) :
   [.modT "sample"
     [.tableT "Rows" none (some (.lit count)) none none false
       [.tSlot [⟨"v", scalar, none, none, none, false, false⟩]],
-     .fnT { art := "library", name := "consume", params := [("p", .ptr "normal" "r" (.atom "Rows"))],
+     .fnT {
+       art := "library", name := "consume", params := [("p", .ptr "normal" "r" (.atom "Rows"))],
        res := none, fehler := none, klauseln := [.load ["Rows"]] } (.block [] (some (.ret none))),
-     .transT "consume" { art := "", name := "build", params := [("region", region)],
+     .transT "consume" {
+       art := "", name := "build", params := [("region", region)],
        res := some region, fehler := none, klauseln := [.effs [.pure]] }
        (.block [] (some (.ret (some result)))),
      .fnT translationCaller (.block [.lcall ⟨["sample"], ["consume"], [], values⟩]
