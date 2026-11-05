@@ -86,12 +86,14 @@ scoped macro "rights_input " source:term " with_cuts " "[" cuts:ident,* "]"
     let pieces : List Chunk := [$cuts,*]
     refine Input.of_chunks (source := $source) pieces ?text ?room
     case text =>
-      simp only [pieces, Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters,
-        List.flatMap_cons, List.flatMap_nil, String.ofList_append, String.ofList_nil,
-        $[$textFacts],*]
-      cbv
+      as_aux_lemma =>
+        simp only [pieces, Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters,
+          List.flatMap_cons, List.flatMap_nil, String.ofList_append, String.ofList_nil,
+          $[$textFacts],*]
+        cbv
     case room =>
-      exact Nat.le_trans (steps_bound pieces $bounded) (Nat.le_succ _))
+      as_aux_lemma =>
+        exact Nat.le_trans (steps_bound pieces $bounded) (Nat.le_succ _))
 
 open scoped Gabbro.Grammatik.Parser.UebersetzeProben11.Phases
 namespace Inputs
