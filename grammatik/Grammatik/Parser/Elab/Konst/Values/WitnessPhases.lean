@@ -71,8 +71,13 @@ private def positiveSource : Values.SourceFunction positive := by
   case preEq => cbv <;> rfl
   case postEq => cbv <;> rfl
 
-private def postFalseSource : Values.SourceFunction
-    { positive with signature := { positive.signature with klauseln := [.gives .fls] } } := by
+private def postFalseInput : UKonstFn :=
+  { positive with signature := { positive.signature with klauseln := [.gives .fls] } }
+
+private def preFalseInput : UKonstFn :=
+  { positive with signature := { positive.signature with klauseln := [.needs .fls] } }
+
+private def postFalseSource : Values.SourceFunction postFalseInput := by
   refine {
     source := (.bin ">" (.variable "x") (.lit 0))
     sourceBody := rfl
@@ -83,8 +88,7 @@ private def postFalseSource : Values.SourceFunction
   case preEq => cbv <;> rfl
   case postEq => cbv <;> rfl
 
-private def preFalseSource : Values.SourceFunction
-    { positive with signature := { positive.signature with klauseln := [.needs .fls] } } := by
+private def preFalseSource : Values.SourceFunction preFalseInput := by
   refine {
     source := (.bin ">" (.variable "x") (.lit 0))
     sourceBody := rfl
@@ -104,14 +108,11 @@ private def taggedSource : Values.SourceFunction tagged := by
     preSource := ?preEq
     postSource := ?postEq }
   case bodyEq =>
-    change Values.expression (D := declaration [.int 0 10] (.sum schema.spec))
-      (locals [("x", .int 0 10)]) [] [schema] 64 (.sum schema.spec) (.call "Data" [.bin "+" (.variable "x") (.lit 1)]) = .ok _
-    rw [reader_sum]
-    cbv <;> dsimp only
-    all_goals try simp only [reader_payload, reader_empty, reader_missing]
-    all_goals cbv <;> dsimp only
-    all_goals try simp only [reader_int, reader_bool, reader_text]
-    all_goals cbv <;> rfl
+    change Values.expression (D := declaration [.int 0 10] (.sum [none, some (.int 0 255), some .bool, some (.str 1)]))
+      (locals [("x", .int 0 10)]) [] [{ name := "Choice"
+         cases := [("Empty", none), ("Data", some (.int 0 255)),
+           ("Flag", some .bool), ("Text", some (.str 1))] }] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) (.call "Data" [.bin "+" (.variable "x") (.lit 1)]) = .ok _
+    rfl
   case preEq => cbv <;> rfl
   case postEq => cbv <;> rfl
 
@@ -124,14 +125,11 @@ private def emptyTagSource : Values.SourceFunction emptyTag := by
     preSource := ?preEq
     postSource := ?postEq }
   case bodyEq =>
-    change Values.expression (D := declaration [] (.sum schema.spec))
-      (locals []) [] [schema] 64 (.sum schema.spec) (.variable "Empty") = .ok _
-    rw [reader_sum]
-    cbv <;> dsimp only
-    all_goals try simp only [reader_payload, reader_empty, reader_missing]
-    all_goals cbv <;> dsimp only
-    all_goals try simp only [reader_int, reader_bool, reader_text]
-    all_goals cbv <;> rfl
+    change Values.expression (D := declaration [] (.sum [none, some (.int 0 255), some .bool, some (.str 1)]))
+      (locals []) [] [{ name := "Choice"
+         cases := [("Empty", none), ("Data", some (.int 0 255)),
+           ("Flag", some .bool), ("Text", some (.str 1))] }] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) (.variable "Empty") = .ok _
+    rfl
   case preEq => cbv <;> rfl
   case postEq => cbv <;> rfl
 
@@ -144,14 +142,11 @@ private def flagTagSource : Values.SourceFunction flagTag := by
     preSource := ?preEq
     postSource := ?postEq }
   case bodyEq =>
-    change Values.expression (D := declaration [] (.sum schema.spec))
-      (locals []) [] [schema] 64 (.sum schema.spec) (.call "Flag" [.tru]) = .ok _
-    rw [reader_sum]
-    cbv <;> dsimp only
-    all_goals try simp only [reader_payload, reader_empty, reader_missing]
-    all_goals cbv <;> dsimp only
-    all_goals try simp only [reader_int, reader_bool, reader_text]
-    all_goals cbv <;> rfl
+    change Values.expression (D := declaration [] (.sum [none, some (.int 0 255), some .bool, some (.str 1)]))
+      (locals []) [] [{ name := "Choice"
+         cases := [("Empty", none), ("Data", some (.int 0 255)),
+           ("Flag", some .bool), ("Text", some (.str 1))] }] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) (.call "Flag" [.tru]) = .ok _
+    rfl
   case preEq => cbv <;> rfl
   case postEq => cbv <;> rfl
 
@@ -164,14 +159,11 @@ private def textTagSource : Values.SourceFunction textTag := by
     preSource := ?preEq
     postSource := ?postEq }
   case bodyEq =>
-    change Values.expression (D := declaration [] (.sum schema.spec))
-      (locals []) [] [schema] 64 (.sum schema.spec) (.call "Text" [.ext .text ["Z"] []]) = .ok _
-    rw [reader_sum]
-    cbv <;> dsimp only
-    all_goals try simp only [reader_payload, reader_empty, reader_missing]
-    all_goals cbv <;> dsimp only
-    all_goals try simp only [reader_int, reader_bool, reader_text]
-    all_goals cbv <;> rfl
+    change Values.expression (D := declaration [] (.sum [none, some (.int 0 255), some .bool, some (.str 1)]))
+      (locals []) [] [{ name := "Choice"
+         cases := [("Empty", none), ("Data", some (.int 0 255)),
+           ("Flag", some .bool), ("Text", some (.str 1))] }] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) (.call "Text" [.ext .text ["Z"] []]) = .ok _
+    rfl
   case preEq => cbv <;> rfl
   case postEq => cbv <;> rfl
 
@@ -223,31 +215,92 @@ private def zeroTextSource : Values.SourceFunction (shortText "" 0) := by
   case preEq => cbv <;> rfl
   case postEq => cbv <;> rfl
 
-private theorem wrongTypeSource :
-    Values.elaborate { positive with rumpf := .block [] (some (.ret (some (.lit 1)))) } = .error "const value has a different declared type" := by
-  cbv <;> dsimp only <;> simp only [reader_bool] <;> cbv
+-- Certify quotation as one typed result, with concrete canonical indices.
+-- Consumers keep reify closed until these complete equations are available.
+private theorem taggedQuotation :
+    ∃ literal, Values.reify (D := declaration (tagged.params.map Prod.snd) tagged.erg)
+      (Γ := tagged.params.map Prod.snd) (Values.resultSchemas tagged) [] 64 tagged.erg
+      (taggedSource.model.body.denote (.cons (⟨4, by decide, by decide⟩ : Zahl 0 10) .nil)) = .ok literal ∧ literal.syntax = (.call "Data" [.lit 5]) := by
+  refine ⟨?literal, ?produced, ?spelling⟩
+  case produced =>
+    change Values.reify (D := declaration [.int 0 10] (.sum [none, some (.int 0 255), some .bool, some (.str 1)])) (Γ := [.int 0 10])
+      [{ name := "Choice"
+         cases := [("Empty", none), ("Data", some (.int 0 255)),
+           ("Flag", some .bool), ("Text", some (.str 1))] }] [] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) ⟨⟨1, by decide⟩, (⟨5, by decide, by decide⟩ : Zahl 0 255)⟩ = .ok _
+    rfl
+  case spelling => rfl
 
-private theorem wrongPayloadSource :
-    Values.elaborate { emptyTag with rumpf := .block [] (some (.ret (some (.call "Data" [.tru])))) } = .error "const value has a different declared type" := by
-  cbv <;> dsimp only <;> simp only [reader_sum] <;> cbv
-  all_goals simp only [reader_payload]
-  all_goals cbv <;> dsimp only
-  all_goals simp only [reader_int]
-  all_goals cbv
+private theorem emptyTagQuotation :
+    ∃ literal, Values.reify (D := declaration (emptyTag.params.map Prod.snd) emptyTag.erg)
+      (Γ := emptyTag.params.map Prod.snd) (Values.resultSchemas emptyTag) [] 64 emptyTag.erg
+      (emptyTagSource.model.body.denote .nil) = .ok literal ∧ literal.syntax = (.variable "Empty") := by
+  refine ⟨?literal, ?produced, ?spelling⟩
+  case produced =>
+    change Values.reify (D := declaration [] (.sum [none, some (.int 0 255), some .bool, some (.str 1)])) (Γ := [])
+      [{ name := "Choice"
+         cases := [("Empty", none), ("Data", some (.int 0 255)),
+           ("Flag", some .bool), ("Text", some (.str 1))] }] [] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) ⟨⟨0, by decide⟩, ()⟩ = .ok _
+    rfl
+  case spelling => rfl
 
-private theorem unknownTagSource :
-    Values.elaborate { emptyTag with rumpf := .block [] (some (.ret (some (.variable "Foreign")))) } = .error "const tagged constructor is unknown: Foreign" := by
-  cbv <;> dsimp only <;> simp only [reader_sum] <;> cbv
+private theorem flagTagQuotation :
+    ∃ literal, Values.reify (D := declaration (flagTag.params.map Prod.snd) flagTag.erg)
+      (Γ := flagTag.params.map Prod.snd) (Values.resultSchemas flagTag) [] 64 flagTag.erg
+      (flagTagSource.model.body.denote .nil) = .ok literal ∧ literal.syntax = (.call "Flag" [.tru]) := by
+  refine ⟨?literal, ?produced, ?spelling⟩
+  case produced =>
+    change Values.reify (D := declaration [] (.sum [none, some (.int 0 255), some .bool, some (.str 1)])) (Γ := [])
+      [{ name := "Choice"
+         cases := [("Empty", none), ("Data", some (.int 0 255)),
+           ("Flag", some .bool), ("Text", some (.str 1))] }] [] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) ⟨⟨2, by decide⟩, true⟩ = .ok _
+    rfl
+  case spelling => rfl
 
-private theorem longTextSource :
-    Values.elaborate (shortText "é") = .error "const string literal exceeds its declared maximum" := by
-  cbv <;> dsimp only <;> simp only [reader_text] <;> cbv
+private theorem textTagQuotation :
+    ∃ literal, Values.reify (D := declaration (textTag.params.map Prod.snd) textTag.erg)
+      (Γ := textTag.params.map Prod.snd) (Values.resultSchemas textTag) ["Z"] 64 textTag.erg
+      (textTagSource.model.body.denote .nil) = .ok literal ∧ literal.syntax = (.call "Text" [.ext .text ["Z"] []]) := by
+  refine ⟨?literal, ?produced, ?spelling⟩
+  case produced =>
+    change Values.reify (D := declaration [] (.sum [none, some (.int 0 255), some .bool, some (.str 1)])) (Γ := [])
+      [{ name := "Choice"
+         cases := [("Empty", none), ("Data", some (.int 0 255)),
+           ("Flag", some .bool), ("Text", some (.str 1))] }] ["Z"] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) ⟨⟨3, by decide⟩, (⟨[⟨90, by decide, by decide⟩], by decide⟩ : Wert (declaration [] (.sum [none, some (.int 0 255), some .bool, some (.str 1)])) (.str 1))⟩ = .ok _
+    rfl
+  case spelling => rfl
 
-private theorem missingPayloadSource :
-    Values.elaborate { emptyTag with rumpf := .block [] (some (.ret (some (.variable "Data")))) } = .error "const tagged constructor payload does not match its declared type" := by
-  cbv <;> dsimp only <;> simp only [reader_sum] <;> cbv
-  all_goals simp only [reader_missing]
-  all_goals cbv
+private theorem emptyTextQuotation :
+    ∃ literal, Values.reify (D := declaration ((shortText "").params.map Prod.snd) (shortText "").erg)
+      (Γ := (shortText "").params.map Prod.snd) (Values.resultSchemas (shortText "")) [""] 64 (shortText "").erg
+      (emptyTextSource.model.body.denote .nil) = .ok literal ∧ literal.syntax = (.ext .text [""] []) := by
+  refine ⟨?literal, ?produced, ?spelling⟩
+  case produced =>
+    change Values.reify (D := declaration [] (.str 1)) (Γ := [])
+      [] [""] 64 (.str 1) ⟨[], by decide⟩ = .ok _
+    rfl
+  case spelling => rfl
+
+private theorem oneTextQuotation :
+    ∃ literal, Values.reify (D := declaration ((shortText "A").params.map Prod.snd) (shortText "A").erg)
+      (Γ := (shortText "A").params.map Prod.snd) (Values.resultSchemas (shortText "A")) ["A"] 64 (shortText "A").erg
+      (oneTextSource.model.body.denote .nil) = .ok literal ∧ literal.syntax = (.ext .text ["A"] []) := by
+  refine ⟨?literal, ?produced, ?spelling⟩
+  case produced =>
+    change Values.reify (D := declaration [] (.str 1)) (Γ := [])
+      [] ["A"] 64 (.str 1) ⟨[⟨65, by decide, by decide⟩], by decide⟩ = .ok _
+    rfl
+  case spelling => rfl
+
+private theorem zeroTextQuotation :
+    ∃ literal, Values.reify (D := declaration ((shortText "" 0).params.map Prod.snd) (shortText "" 0).erg)
+      (Γ := (shortText "" 0).params.map Prod.snd) (Values.resultSchemas (shortText "" 0)) [""] 64 (shortText "" 0).erg
+      (zeroTextSource.model.body.denote .nil) = .ok literal ∧ literal.syntax = (.ext .text [""] []) := by
+  refine ⟨?literal, ?produced, ?spelling⟩
+  case produced =>
+    change Values.reify (D := declaration [] (.str 0)) (Γ := [])
+      [] [""] 64 (.str 0) ⟨[], by decide⟩ = .ok _
+    rfl
+  case spelling => rfl
 
 public theorem bool_results :
     ersetzeSExpr [positive] (.call "positive" [.lit 3]) = .ok .tru ∧
@@ -266,6 +319,9 @@ public theorem bool_results :
       (elaborate_certified positiveSource)]
     cbv
 
+section QuotationResults
+attribute [local cbv_opaque] Values.reify
+
 public theorem tag_results :
     ersetzeSExpr [tagged] (.call "tagged" [.lit 4]) = .ok (.call "Data" [.lit 5]) ∧
     ersetzeSExpr [emptyTag] (.call "tagged" []) = .ok (.variable "Empty") ∧
@@ -273,105 +329,95 @@ public theorem tag_results :
     ersetzeSExpr [textTag] (.call "tagged" []) = .ok (.call "Text" [.ext .text ["Z"] []]) := by
   refine ⟨?data, ?empty, ?flag, ?text⟩
   case data =>
+    obtain ⟨literal, produced, spelling⟩ := taggedQuotation
     rw [substitute_portable [tagged] "tagged" [.lit 4] [.lit 4] tagged
       (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
     rw [checkCall_elaborated [tagged] [] [.lit 4] taggedSource
       (elaborate_certified taggedSource)]
     cbv
+    rw [produced]
+    simpa only [spelling, bind, Except.bind, pure, Except.pure, Except.map]
   case empty =>
+    obtain ⟨literal, produced, spelling⟩ := emptyTagQuotation
     rw [substitute_portable [emptyTag] "tagged" [] [] emptyTag
       (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
     rw [checkCall_elaborated [emptyTag] [] [] emptyTagSource
       (elaborate_certified emptyTagSource)]
     cbv
+    rw [produced]
+    simpa only [spelling, bind, Except.bind, pure, Except.pure, Except.map]
   case flag =>
+    obtain ⟨literal, produced, spelling⟩ := flagTagQuotation
     rw [substitute_portable [flagTag] "tagged" [] [] flagTag
       (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
     rw [checkCall_elaborated [flagTag] [] [] flagTagSource
       (elaborate_certified flagTagSource)]
     cbv
+    rw [produced]
+    simpa only [spelling, bind, Except.bind, pure, Except.pure, Except.map]
   case text =>
+    obtain ⟨literal, produced, spelling⟩ := textTagQuotation
     rw [substitute_portable [textTag] "tagged" [] [] textTag
       (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
     rw [checkCall_elaborated [textTag] [] [] textTagSource
       (elaborate_certified textTagSource)]
     cbv
+    rw [produced]
+    simpa only [spelling, bind, Except.bind, pure, Except.pure, Except.map]
 
 public theorem text_results :
     ersetzeSExpr [shortText ""] (.call "shortText" []) = .ok (.ext .text [""] []) ∧
     ersetzeSExpr [shortText "A"] (.call "shortText" []) = .ok (.ext .text ["A"] []) := by
   refine ⟨?empty, ?one⟩
   case empty =>
+    obtain ⟨literal, produced, spelling⟩ := emptyTextQuotation
     rw [substitute_portable [(shortText "")] "shortText" [] [] (shortText "")
       (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
     rw [checkCall_elaborated [(shortText "")] [] [] emptyTextSource
       (elaborate_certified emptyTextSource)]
     cbv
+    rw [produced]
+    simpa only [spelling, bind, Except.bind, pure, Except.pure, Except.map]
   case one =>
+    obtain ⟨literal, produced, spelling⟩ := oneTextQuotation
     rw [substitute_portable [(shortText "A")] "shortText" [] [] (shortText "A")
       (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
     rw [checkCall_elaborated [(shortText "A")] [] [] oneTextSource
       (elaborate_certified oneTextSource)]
     cbv
+    rw [produced]
+    simpa only [spelling, bind, Except.bind, pure, Except.pure, Except.map]
 
 public theorem zero_text_result :
     ersetzeSExpr [shortText "" 0] (.call "shortText" []) = .ok (.ext .text [""] []) := by
+  obtain ⟨literal, produced, spelling⟩ := zeroTextQuotation
   rw [substitute_portable [(shortText "" 0)] "shortText" [] [] (shortText "" 0)
     (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
   rw [checkCall_elaborated [(shortText "" 0)] [] [] zeroTextSource
     (elaborate_certified zeroTextSource)]
   cbv
+  rw [produced]
+  simpa only [spelling, bind, Except.bind, pure, Except.pure, Except.map]
 
-public theorem wrong_type_result :
-    ersetzeSExpr [{ positive with rumpf := .block [] (some (.ret (some (.lit 1)))) }] (.call "positive" [.lit 3]) = .error "const value has a different declared type" := by
-  rw [substitute_portable [{ positive with rumpf := .block [] (some (.ret (some (.lit 1)))) }] "positive" [.lit 3] [.lit 3] { positive with rumpf := .block [] (some (.ret (some (.lit 1)))) }
-    (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
-  rw [checkCall_failed [{ positive with rumpf := .block [] (some (.ret (some (.lit 1)))) }] [] [.lit 3] "const value has a different declared type" wrongTypeSource]
-  rfl
-
-public theorem wrong_payload_result :
-    ersetzeSExpr [{ emptyTag with rumpf := .block [] (some (.ret (some (.call "Data" [.tru])))) }] (.call "tagged" []) = .error "const value has a different declared type" := by
-  rw [substitute_portable [{ emptyTag with rumpf := .block [] (some (.ret (some (.call "Data" [.tru])))) }] "tagged" [] [] { emptyTag with rumpf := .block [] (some (.ret (some (.call "Data" [.tru])))) }
-    (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
-  rw [checkCall_failed [{ emptyTag with rumpf := .block [] (some (.ret (some (.call "Data" [.tru])))) }] [] [] "const value has a different declared type" wrongPayloadSource]
-  rfl
-
-public theorem unknown_tag_result :
-    ersetzeSExpr [{ emptyTag with rumpf := .block [] (some (.ret (some (.variable "Foreign")))) }] (.call "tagged" []) = .error "const tagged constructor is unknown: Foreign" := by
-  rw [substitute_portable [{ emptyTag with rumpf := .block [] (some (.ret (some (.variable "Foreign")))) }] "tagged" [] [] { emptyTag with rumpf := .block [] (some (.ret (some (.variable "Foreign")))) }
-    (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
-  rw [checkCall_failed [{ emptyTag with rumpf := .block [] (some (.ret (some (.variable "Foreign")))) }] [] [] "const tagged constructor is unknown: Foreign" unknownTagSource]
-  rfl
-
-public theorem long_text_result :
-    ersetzeSExpr [(shortText "é")] (.call "shortText" []) = .error "const string literal exceeds its declared maximum" := by
-  rw [substitute_portable [(shortText "é")] "shortText" [] [] (shortText "é")
-    (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
-  rw [checkCall_failed [(shortText "é")] [] [] "const string literal exceeds its declared maximum" longTextSource]
-  rfl
-
-public theorem missing_payload_result :
-    ersetzeSExpr [{ emptyTag with rumpf := .block [] (some (.ret (some (.variable "Data")))) }] (.call "tagged" []) = .error "const tagged constructor payload does not match its declared type" := by
-  rw [substitute_portable [{ emptyTag with rumpf := .block [] (some (.ret (some (.variable "Data")))) }] "tagged" [] [] { emptyTag with rumpf := .block [] (some (.ret (some (.variable "Data")))) }
-    (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
-  rw [checkCall_failed [{ emptyTag with rumpf := .block [] (some (.ret (some (.variable "Data")))) }] [] [] "const tagged constructor payload does not match its declared type" missingPayloadSource]
-  rfl
+end QuotationResults
 
 public theorem post_refused_result :
     ersetzeSExpr [{ positive with signature := { positive.signature with klauseln := [.gives .fls] } }] (.call "positive" [.lit 3]) =
       .error "const contract violated at `positive`: ensures failed" := by
-  rw [substitute_portable [{ positive with signature := { positive.signature with klauseln := [.gives .fls] } }] "positive" [.lit 3] [.lit 3] { positive with signature := { positive.signature with klauseln := [.gives .fls] } }
+  change ersetzeSExpr [postFalseInput] (.call "positive" [.lit 3]) = _
+  rw [substitute_portable [postFalseInput] "positive" [.lit 3] [.lit 3] postFalseInput
     (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
-  rw [checkCall_elaborated [{ positive with signature := { positive.signature with klauseln := [.gives .fls] } }] [] [.lit 3] postFalseSource
+  rw [checkCall_elaborated [postFalseInput] [] [.lit 3] postFalseSource
     (elaborate_certified postFalseSource)]
   cbv
 
 public theorem pre_refused_result :
     ersetzeSExpr [{ positive with signature := { positive.signature with klauseln := [.needs .fls] } }] (.call "positive" [.lit 3]) =
       .error "const contract violated at `positive`: requires failed" := by
-  rw [substitute_portable [{ positive with signature := { positive.signature with klauseln := [.needs .fls] } }] "positive" [.lit 3] [.lit 3] { positive with signature := { positive.signature with klauseln := [.needs .fls] } }
+  change ersetzeSExpr [preFalseInput] (.call "positive" [.lit 3]) = _
+  rw [substitute_portable [preFalseInput] "positive" [.lit 3] [.lit 3] preFalseInput
     (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
-  rw [checkCall_elaborated [{ positive with signature := { positive.signature with klauseln := [.needs .fls] } }] [] [.lit 3] preFalseSource
+  rw [checkCall_elaborated [preFalseInput] [] [.lit 3] preFalseSource
     (elaborate_certified preFalseSource)]
   cbv
 

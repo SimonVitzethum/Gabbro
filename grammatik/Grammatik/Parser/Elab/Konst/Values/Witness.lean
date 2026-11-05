@@ -60,6 +60,105 @@ attribute [local cbv_eval] reader_bool reader_int reader_text reader_sum
   reader_payload reader_empty reader_missing
 
 
+namespace Phases
+
+private theorem elaborate_refused {k : UKonstFn} {source : SExpr} {error : String}
+    (body : k.rumpf = .block [] (some (.ret (some source))))
+    (refused : Values.expression (D := declaration (k.params.map Prod.snd) k.erg)
+      (locals k.params) k.constants (Values.resultSchemas k) 64 k.erg source = .error error) :
+    Values.elaborate k = .error error := by
+  rcases k with ⟨name, params, result, statement, signature, globals, schemas⟩
+  dsimp only at body
+  cases body
+  dsimp only at refused
+  unfold Values.elaborate
+  dsimp only
+  split
+  · rename_i actualError found
+    have same : actualError = error := Except.error.inj (found.symm.trans refused)
+    subst actualError
+    rfl
+  · rename_i code found
+    cases found.symm.trans refused
+
+private theorem wrongTypeSource :
+    Values.elaborate { positive with rumpf := .block [] (some (.ret (some (.lit 1)))) } = .error "const value has a different declared type" := by
+  apply elaborate_refused (source := (.lit 1)) rfl
+  change Values.expression (D := declaration [.int 0 10] .bool)
+    (locals [("x", .int 0 10)]) [] [] 64 .bool (.lit 1) = .error _
+  rfl
+
+private theorem wrongPayloadSource :
+    Values.elaborate { emptyTag with rumpf := .block [] (some (.ret (some (.call "Data" [.tru])))) } = .error "const value has a different declared type" := by
+  apply elaborate_refused (source := (.call "Data" [.tru])) rfl
+  change Values.expression (D := declaration [] (.sum [none, some (.int 0 255), some .bool, some (.str 1)]))
+    (locals []) [] [{ name := "Choice"
+         cases := [("Empty", none), ("Data", some (.int 0 255)),
+           ("Flag", some .bool), ("Text", some (.str 1))] }] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) (.call "Data" [.tru]) = .error _
+  rfl
+
+private theorem unknownTagSource :
+    Values.elaborate { emptyTag with rumpf := .block [] (some (.ret (some (.variable "Foreign")))) } = .error "const tagged constructor is unknown: Foreign" := by
+  apply elaborate_refused (source := (.variable "Foreign")) rfl
+  change Values.expression (D := declaration [] (.sum [none, some (.int 0 255), some .bool, some (.str 1)]))
+    (locals []) [] [{ name := "Choice"
+         cases := [("Empty", none), ("Data", some (.int 0 255)),
+           ("Flag", some .bool), ("Text", some (.str 1))] }] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) (.variable "Foreign") = .error _
+  rfl
+
+private theorem longTextSource :
+    Values.elaborate (shortText "é") = .error "const string literal exceeds its declared maximum" := by
+  apply elaborate_refused (source := (.ext .text ["é"] [])) rfl
+  change Values.expression (D := declaration [] (.str 1))
+    (locals []) [] [] 64 (.str 1) (.ext .text ["é"] []) = .error _
+  rfl
+
+private theorem missingPayloadSource :
+    Values.elaborate { emptyTag with rumpf := .block [] (some (.ret (some (.variable "Data")))) } = .error "const tagged constructor payload does not match its declared type" := by
+  apply elaborate_refused (source := (.variable "Data")) rfl
+  change Values.expression (D := declaration [] (.sum [none, some (.int 0 255), some .bool, some (.str 1)]))
+    (locals []) [] [{ name := "Choice"
+         cases := [("Empty", none), ("Data", some (.int 0 255)),
+           ("Flag", some .bool), ("Text", some (.str 1))] }] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) (.variable "Data") = .error _
+  rfl
+
+public theorem wrong_type_result :
+    ersetzeSExpr [{ positive with rumpf := .block [] (some (.ret (some (.lit 1)))) }] (.call "positive" [.lit 3]) = .error "const value has a different declared type" := by
+  rw [substitute_portable [{ positive with rumpf := .block [] (some (.ret (some (.lit 1)))) }] "positive" [.lit 3] [.lit 3] { positive with rumpf := .block [] (some (.ret (some (.lit 1)))) }
+    (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
+  rw [checkCall_failed [{ positive with rumpf := .block [] (some (.ret (some (.lit 1)))) }] [] [.lit 3] "const value has a different declared type" wrongTypeSource]
+  rfl
+
+public theorem wrong_payload_result :
+    ersetzeSExpr [{ emptyTag with rumpf := .block [] (some (.ret (some (.call "Data" [.tru])))) }] (.call "tagged" []) = .error "const value has a different declared type" := by
+  rw [substitute_portable [{ emptyTag with rumpf := .block [] (some (.ret (some (.call "Data" [.tru])))) }] "tagged" [] [] { emptyTag with rumpf := .block [] (some (.ret (some (.call "Data" [.tru])))) }
+    (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
+  rw [checkCall_failed [{ emptyTag with rumpf := .block [] (some (.ret (some (.call "Data" [.tru])))) }] [] [] "const value has a different declared type" wrongPayloadSource]
+  rfl
+
+public theorem unknown_tag_result :
+    ersetzeSExpr [{ emptyTag with rumpf := .block [] (some (.ret (some (.variable "Foreign")))) }] (.call "tagged" []) = .error "const tagged constructor is unknown: Foreign" := by
+  rw [substitute_portable [{ emptyTag with rumpf := .block [] (some (.ret (some (.variable "Foreign")))) }] "tagged" [] [] { emptyTag with rumpf := .block [] (some (.ret (some (.variable "Foreign")))) }
+    (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
+  rw [checkCall_failed [{ emptyTag with rumpf := .block [] (some (.ret (some (.variable "Foreign")))) }] [] [] "const tagged constructor is unknown: Foreign" unknownTagSource]
+  rfl
+
+public theorem long_text_result :
+    ersetzeSExpr [(shortText "é")] (.call "shortText" []) = .error "const string literal exceeds its declared maximum" := by
+  rw [substitute_portable [(shortText "é")] "shortText" [] [] (shortText "é")
+    (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
+  rw [checkCall_failed [(shortText "é")] [] [] "const string literal exceeds its declared maximum" longTextSource]
+  rfl
+
+public theorem missing_payload_result :
+    ersetzeSExpr [{ emptyTag with rumpf := .block [] (some (.ret (some (.variable "Data")))) }] (.call "tagged" []) = .error "const tagged constructor payload does not match its declared type" := by
+  rw [substitute_portable [{ emptyTag with rumpf := .block [] (some (.ret (some (.variable "Data")))) }] "tagged" [] [] { emptyTag with rumpf := .block [] (some (.ret (some (.variable "Data")))) }
+    (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
+  rw [checkCall_failed [{ emptyTag with rumpf := .block [] (some (.ret (some (.variable "Data")))) }] [] [] "const tagged constructor payload does not match its declared type" missingPayloadSource]
+  rfl
+
+end Phases
+
 /-- Both Boolean values are delivered, with the original ensures retained. -/
 theorem bool_values_zeuge :
     ersetzeSExpr [positive] (.call "positive" [.lit 3]) = .ok .tru ∧
