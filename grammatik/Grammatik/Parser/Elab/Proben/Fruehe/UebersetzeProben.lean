@@ -400,16 +400,23 @@ private def bit1Tokens : List Token :=
    .zeichen "}", .wort "impl", .wort "fn", .ident "m", .zeichen "(", .ident "a", .zeichen ":", .wort "u8", .zeichen ",", .ident "b", .zeichen ":", .wort "u8",
    .zeichen ")", .zeichen "->", .wort "u8", .zeichen "{", .wort "return", .ident "a", .zeichen "&", .ident "b", .zeichen ";", .zeichen "}", .zeichen "}", .ende]
 
+private theorem bit_scan_compose {source rest : List Char} {fuel remaining : Nat}
+    {emitted tokens : List Token} (tail : scan false rest remaining = .ok tokens)
+    (head : scan false source fuel = emitted.foldr (fun t result => Except.map (t :: ·) result)
+      (scan false rest remaining)) : scan false source fuel = .ok (emitted ++ tokens) := by
+  rw [tail, bit_token_maps] at head
+  exact head
+
 private theorem bit1_lexed : lexL bit1Characters = .ok bit1Tokens := by
   change scan false bit1Characters 177 = .ok bit1Tokens
-  dsimp only [bit1Characters, bit1Tokens]
-  rw [bit_scan_module (bit1Characters.drop 11) 171,
-    bit_scan_first_head (bit1Characters.drop 48) 145,
-    bit_scan_first_body (bit1Characters.drop 74) 128,
-    bit_scan_second_head (bit1Characters.drop 102) 109,
-    bit_scan_second_body (bit1Characters.drop 125) 96,
-    bit_scan_third_head (bit1Characters.drop 159) 70,
-    bit_scan_third_body (bit1Characters.drop 175) 59, bit_scan_end 58]
+  have composed := bit_scan_compose (bit_scan_end 58) (bit_scan_third_body (bit1Characters.drop 175) 59)
+  have composed := bit_scan_compose composed (bit_scan_third_head (bit1Characters.drop 159) 70)
+  have composed := bit_scan_compose composed (bit_scan_second_body (bit1Characters.drop 125) 96)
+  have composed := bit_scan_compose composed (bit_scan_second_head (bit1Characters.drop 102) 109)
+  have composed := bit_scan_compose composed (bit_scan_first_body (bit1Characters.drop 74) 128)
+  have composed := bit_scan_compose composed (bit_scan_first_head (bit1Characters.drop 48) 145)
+  have complete := bit_scan_compose composed (bit_scan_module (bit1Characters.drop 11) 171)
+  exact complete
 
 private theorem bit1_parsed : (parseTopTief bit1Tokens).toOption.isSome = true := by cbv
 private def bit1Items : List SItemTief := (parseTopTief bit1Tokens).toOption.get bit1_parsed

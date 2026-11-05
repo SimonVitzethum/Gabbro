@@ -14,7 +14,8 @@ private theorem scan_compose {source rest : List Char} {fuel remaining : Nat}
     {emitted tokens : List Token} (tail : scan false rest remaining = .ok tokens)
     (head : scan false source fuel = emitted.foldr (fun t result => Except.map (t :: ·) result) (scan false rest remaining)) :
     scan false source fuel = .ok (emitted ++ tokens) := by
-  simpa only [tail, token_maps, Except.map] using head
+  rw [tail, token_maps] at head
+  exact head
 
 def locks1_ok : String :=
   "module m { table T count 2 { slot { v : u32, } } lock L protects { T } rank 0; impl fn w(k : ptr<normal, rw> T, i : index into T) effects { writes k.slots, locks L } { locks L { k.slots[i].v = 1; } } }"
@@ -47,7 +48,8 @@ theorem locks1_ok_lexed : lexL locks1_ok_characters = .ok locks1_ok_tokens := by
   have composed := scan_compose composed (scan_writer (locks1_ok_characters.drop 112) 133)
   have composed := scan_compose composed (scan_lock (locks1_ok_characters.drop 79) 154)
   have composed := scan_compose composed (scan_slot (locks1_ok_characters.drop 49) 171)
-  exact scan_compose composed (scan_prelude (locks1_ok_characters.drop 29) 186)
+  have complete := scan_compose composed (scan_prelude (locks1_ok_characters.drop 29) 186)
+  exact complete
 
 
 def locks2_ok : String :=
@@ -88,7 +90,8 @@ theorem locks2_ok_lexed : lexL locks2_ok_characters = .ok locks2_ok_tokens := by
   have composed := scan_compose composed (scan_writer (locks2_ok_characters.drop 112) 181)
   have composed := scan_compose composed (scan_lock (locks2_ok_characters.drop 79) 202)
   have composed := scan_compose composed (scan_slot (locks2_ok_characters.drop 49) 219)
-  exact scan_compose composed (scan_prelude (locks2_ok_characters.drop 29) 234)
+  have complete := scan_compose composed (scan_prelude (locks2_ok_characters.drop 29) 234)
+  exact complete
 
 
 def locks_nested_same : String :=
@@ -124,7 +127,8 @@ theorem locks_nested_same_lexed : lexL locks_nested_same_characters = .ok locks_
   have composed := scan_compose composed (scan_writer (locks_nested_same_characters.drop 112) 145)
   have composed := scan_compose composed (scan_lock (locks_nested_same_characters.drop 79) 166)
   have composed := scan_compose composed (scan_slot (locks_nested_same_characters.drop 49) 183)
-  exact scan_compose composed (scan_prelude (locks_nested_same_characters.drop 29) 198)
+  have complete := scan_compose composed (scan_prelude (locks_nested_same_characters.drop 29) 198)
+  exact complete
 
 
 def locks_rank_ok : String :=
@@ -164,7 +168,8 @@ theorem locks_rank_ok_lexed : lexL locks_rank_ok_characters = .ok locks_rank_ok_
   have composed := scan_compose composed (scan_second_lock (locks_rank_ok_characters.drop 107) 188)
   have composed := scan_compose composed (scan_lock (locks_rank_ok_characters.drop 79) 203)
   have composed := scan_compose composed (scan_slot (locks_rank_ok_characters.drop 49) 220)
-  exact scan_compose composed (scan_prelude (locks_rank_ok_characters.drop 29) 235)
+  have complete := scan_compose composed (scan_prelude (locks_rank_ok_characters.drop 29) 235)
+  exact complete
 
 
 def locks_rank_down : String :=
@@ -204,7 +209,8 @@ theorem locks_rank_down_lexed : lexL locks_rank_down_characters = .ok locks_rank
   have composed := scan_compose composed (scan_second_lock (locks_rank_down_characters.drop 107) 188)
   have composed := scan_compose composed (scan_lock (locks_rank_down_characters.drop 79) 203)
   have composed := scan_compose composed (scan_slot (locks_rank_down_characters.drop 49) 220)
-  exact scan_compose composed (scan_prelude (locks_rank_down_characters.drop 29) 235)
+  have complete := scan_compose composed (scan_prelude (locks_rank_down_characters.drop 29) 235)
+  exact complete
 
 
 def locks_call_needing_it : String :=
@@ -254,6 +260,7 @@ theorem locks_call_needing_it_lexed : lexL locks_call_needing_it_characters = .o
   have composed := scan_compose composed (scan_callee (locks_call_needing_it_characters.drop 112) 245)
   have composed := scan_compose composed (scan_lock (locks_call_needing_it_characters.drop 79) 266)
   have composed := scan_compose composed (scan_slot (locks_call_needing_it_characters.drop 49) 283)
-  exact scan_compose composed (scan_prelude (locks_call_needing_it_characters.drop 29) 298)
+  have complete := scan_compose composed (scan_prelude (locks_call_needing_it_characters.drop 29) 298)
+  exact complete
 
 end Gabbro.Grammatik.Parser.UebersetzeProben2
