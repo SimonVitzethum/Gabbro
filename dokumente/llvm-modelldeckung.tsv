@@ -146,7 +146,7 @@ Expr.forallSlots	ERASED	crates/gabbro-check/src/llvm.rs::senke_expr	Specificatio
 Expr.existsSlots	ERASED	crates/gabbro-check/src/llvm.rs::senke_expr	Specification/contract expression; no independent executable value.
 Expr.reaches	ERASED	crates/gabbro-check/src/llvm.rs::senke_expr	Specification/contract expression; no independent executable value.
 NutzlastExpr.empty	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
-NutzlastExpr.num	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
+NutzlastExpr.val	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
 Args.nil	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
 Args.cons	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
 ErgExpr.empty	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
