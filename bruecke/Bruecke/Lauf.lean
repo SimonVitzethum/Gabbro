@@ -271,7 +271,7 @@ theorem lauf {P : Programm (declOf u)} (G : Gesenkt u P) (S : Stimmig u) (c : Fi
           · simp only [List.cons_append, Gabbro.Body.exec, hstep ρB]; exact h2
         cases st
         case assign b fname ix val =>
-          rw [lowStmt_assign S.tab] at hgst
+          rw [lowStmt_assign S.tab c b fname ix val (Λ := Λ)] at hgst
           cases stored : lowAssignDurch u c b fname ix val (Λ := Λ) with
           | error error => simp only [stored, Except.map] at hgst; cases hgst
           | ok statement =>
@@ -281,7 +281,7 @@ theorem lauf {P : Programm (declOf u)} (G : Gesenkt u P) (S : Stimmig u) (c : Fi
               lowAssignDurch_sim c stored hx (S.art c) S.tab O passes R σ ρ s hW hL
             exact schreib σ₁ cn k fld v' hex hstep hW₁
         case assignTab b fname ix val =>
-          rw [lowStmt_assignTab S.tab] at hgst
+          rw [lowStmt_assignTab S.tab c b fname ix val (Λ := Λ)] at hgst
           cases stored : lowAssignTab u c b fname ix val (Λ := Λ) with
           | error error => simp only [stored, Except.map] at hgst; cases hgst
           | ok statement =>
@@ -291,7 +291,7 @@ theorem lauf {P : Programm (declOf u)} (G : Gesenkt u P) (S : Stimmig u) (c : Fi
               lowAssignTab_sim c stored hx (S.art c) S.tab O passes R σ ρ s hW hL
             exact schreib σ₁ cn k fld v' hex hstep hW₁
         case call cname args =>
-          rw [lowStmt_call] at hgst
+          rw [lowStmt_call (u := u) c cname args (Λ := Λ)] at hgst
           obtain ⟨callee, σr, envA, hname, hfs, hsl, hstep, hLt, _, hcases, _⟩ :=
             lowCall_sim c hgst hx (S.art c) S.tab S.namen (fun c' => (S.art c').2.1) O passes R σ ρ s hW hL
           have hWr : WRel u σr s.world := wrel_slots u hsl hW
