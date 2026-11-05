@@ -1,6 +1,9 @@
 module
 
 public import Grammatik.Parser.Spec.Expand
+import all Grammatik.Parser.Spec.Walk
+import all Grammatik.Parser.Spec.Items
+import all Grammatik.Parser.Spec.Expand
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil13
 
 -- The elaboration witness executes the actual empty static/check gates.
@@ -70,17 +73,51 @@ theorem shape_explicit_call_zeuge :
     resolveCall shape [] "Shape::area" (some [.index false "Circles"]) [.variable "c"] =
       .ok "$spec$0$area" := by rfl
 
-/-- The actual elaborator sees the instantiated program, including the arithmetic implementation. -/
-theorem shape_elaboration_zeuge : (Uebersetze.elabU shape).toOption.isSome = true := by rfl
+-- Retain the whole actual result before projecting success or finding a body.
+private theorem shape_elaborated : ∃ unit, Uebersetze.elabU shape = .ok unit := by
+  refine ⟨?unit, ?checked⟩
+  case checked => cbv <;> exact Eq.refl _
 
-theorem shape_expansion_zeuge : (expand shape).toOption.isSome = true := by rfl
+/-- The actual elaborator sees the instantiated program, including the arithmetic implementation. -/
+theorem shape_elaboration_zeuge : (Uebersetze.elabU shape).toOption.isSome = true := by
+  rcases shape_elaborated with ⟨unit, checked⟩
+  rw [checked]
+  rfl
 
 def expandedDraw : Option SAnw := (expand shape).toOption.bind fun its => its.findSome? fun
   | .fnT s body => if strEq s.name "draw" then some body else none
   | _ => none
 
+private theorem expand_from_phases {source output : List SItemTief}
+    (checked : check source = .ok ())
+    (unique : uniqueNames ((functionHeads (materialize source)).map (·.name)) = true)
+    (rewritten : ((materialize source).mapM
+      (({ source, instantiate := true } : Walk).item 100000)) = .ok output)
+    (accepted : ordinary source output = true) : expand source = .ok output := by
+  simp only [expand, checked, unique, rewritten, accepted, Bool.not_true,
+    Bool.false_eq_true, reduceIte, bind, Except.bind, pure, Except.pure]
+
+private theorem shape_expanded : ∃ items, expand shape = .ok items ∧
+    beqSAnw ((items.findSome? fun
+      | .fnT s body => if strEq s.name "draw" then some body else none
+      | _ => none).getD (.other "missing")) (callerBody "$spec$0$area") = true := by
+  refine ⟨?items, ?checked, ?body⟩
+  case checked =>
+    apply expand_from_phases
+    all_goals cbv <;> exact Eq.refl _
+  case body => cbv
+
+theorem shape_expansion_zeuge : (expand shape).toOption.isSome = true := by
+  rcases shape_expanded with ⟨items, checked, _⟩
+  rw [checked]
+  rfl
+
 theorem shape_rewritten_call_zeuge :
-    beqSAnw (expandedDraw.getD (.other "missing")) (callerBody "$spec$0$area") = true := by rfl
+    beqSAnw (expandedDraw.getD (.other "missing")) (callerBody "$spec$0$area") = true := by
+  rcases shape_expanded with ⟨items, checked, body⟩
+  unfold expandedDraw
+  rw [checked]
+  exact body
 
 /-- Exact parser tokens avoid decoding a whole source string in the kernel. -/
 def specTokens : List Token :=
