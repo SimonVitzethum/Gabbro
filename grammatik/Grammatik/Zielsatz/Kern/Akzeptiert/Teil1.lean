@@ -457,7 +457,7 @@ theorem wurzelnB_iff : wurzelnB (D := D) ws = true ↔ ∀ w ∈ ws, D.haelt w =
   simp only [Bool.and_eq_true, List.isEmpty_iff, decide_eq_true_eq]
 
 omit [DecidableEq D.Fn] in
-theorem stelleB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (x : D.Ax ⊕ D.Reg) :
+theorem stelleB_iff [RootNativeFloat.Hardware] (hvoll : ∀ g : D.Fn, g ∈ fs) (x : D.Ax ⊕ D.Reg) :
     stelleB fs x = true ↔ StelleOk D x := by
   cases x with
   | inl a =>
@@ -469,7 +469,7 @@ theorem stelleB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (x : D.Ax ⊕ D.Reg) :
 
 omit [DecidableEq D.Fn] in
 /-- **The answer component decides its field** (`AkzeptiertSpec.antworten`). -/
-theorem antwortenB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) :
+theorem antwortenB_iff [RootNativeFloat.Hardware] (hvoll : ∀ g : D.Fn, g ∈ fs) :
     antwortenB P fs = true ↔ ∀ f, ∀ x ∈ (P.rumpf f).ants, StelleOk D x := by
   unfold antwortenB
   constructor
