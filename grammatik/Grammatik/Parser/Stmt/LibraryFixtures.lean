@@ -435,6 +435,9 @@ private theorem rek_library_success :
 private def rekPhaseLibrary : ULibrary :=
   (libraryDecl rekPhaseMembers ⟨["sample"], ["consume"], [], [.num 3]⟩).toOption.get rek_library_success
 
+-- The ordinary-call binder's unused float target keeps its endpoints symbolic.
+attribute [local cbv_opaque] uFloatLimit
+
 private theorem rek_elab_success :
     (elabU (pre108 (translatorItems rekPhaseMembers rekPhaseLibrary))).toOption.isSome = true := by cbv
 
