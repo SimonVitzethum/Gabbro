@@ -187,6 +187,7 @@ theorem declarationData_of_function
 -- The full dependent image remains behind the generic projection certificates.
 macro "library_data_fields" : tactic => `(tactic| (
   refine declarationData_of_function
+    (body := ?body)
     (positive := by decide) (named := by cbv)
     (parameters := by cbv) (result := by cbv)
     (needs := by cbv) (invariants := by cbv)
