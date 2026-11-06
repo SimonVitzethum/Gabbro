@@ -197,6 +197,9 @@ private def floorPassingUnitMade : {unit : UProg // elabU (floorItems 2 true tru
 private theorem floorPassing_unit : elabU (floorItems 2 true true) = .ok floorPassingUnitMade.val :=
   floorPassingUnitMade.property
 
+/-- The actual constructor-valued unit retained by the passing-floor source certificate. -/
+@[expose] def uBodenWahr : UProg := floorPassingUnitMade.val
+
 -- Normalize the actual function fields before forming any dependent code type.
 -- Whole-function equality below certifies the headers, code and retained reporter metadata.
 private def admissionMetadataFn (index : Nat) (fn : UFn) : UFn :=
@@ -321,5 +324,8 @@ private def floorFailingUnitMade : {unit : UProg // elabU (floorItems 4 true tru
 
 private theorem floorFailing_unit : elabU (floorItems 4 true true) = .ok floorFailingUnitMade.val :=
   floorFailingUnitMade.property
+
+/-- The actual constructor-valued unit retained by the failing-floor source certificate. -/
+@[expose] def uBodenFalsch : UProg := floorFailingUnitMade.val
 
 end Gabbro.Grammatik.Parser.Uebersetze

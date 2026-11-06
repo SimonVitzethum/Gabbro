@@ -14,6 +14,7 @@ module
 
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Export
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Ableitung
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Units
 public import Grammatik.Parser.Elab.UebersetzeAllg3
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Rest2a
 public import Grammatik.Parser.Cover.Differenz
@@ -104,12 +105,6 @@ theorem checkTextBodenWahr_ok : (elabText checkTextBodenWahr).toOption.isSome = 
 theorem checkTextBodenFalsch_ok : (elabText checkTextBodenFalsch).toOption.isSome = true := by
   rw [bodenFalsch_source]
   rfl
-
-/-- The actual constructor-valued elaboration result certified by `bodenWahr_source`. -/
-def uBodenWahr : UProg := by exact floorPassingUnitMade.val
-
-/-- The actual constructor-valued elaboration result certified by `bodenFalsch_source`. -/
-def uBodenFalsch : UProg := by exact floorFailingUnitMade.val
 
 private theorem bodenWahr_facts : CheckWitness uBodenWahr 1 :=
   floorPassing_facts
