@@ -278,21 +278,16 @@ public theorem missing_min_else_zeuge :
 public theorem missing_max_else_zeuge :
     beqTop (parseTop (tokens "max")) (.error "fold min/max: else is required") = true := by cbv
 
--- The producer now shares its add/and/or diagnostic. Keep its exact equation
--- separate from the original expected-diagnostic claim below.
+-- The producer shares this diagnostic across add, and and or folds.
 private theorem parsed_add_else :
     parseTop (tokens "add" [.wort "else", .num 99]) =
       .error "fold add/and/or: else is not allowed" := by cbv
 
-private theorem old_add_else_diagnostic :
-    beqTop (parseTop (tokens "add" [.wort "else", .num 99]))
-      (.error "fold add: else is not allowed") = false := by
-  simp only [parsed_add_else]
-  cbv
-
 public theorem unexpected_add_else_zeuge :
     beqTop (parseTop (tokens "add" [.wort "else", .num 99]))
-      (.error "fold add: else is not allowed") = true := rfl
+      (.error "fold add/and/or: else is not allowed") = true := by
+  rw [parsed_add_else]
+  cbv
 
 public theorem open_domain_refused_zeuge :
     (expandFold {context with tabs := [{table with count := 0, von := some "provider"}]}
