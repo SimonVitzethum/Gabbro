@@ -97,7 +97,11 @@ private def call_head (u : UProg) (f callee : Fin u.fns.length) (name : String) 
     { actual : RufKopf u f (ctxOf u f) (resOf u f) //
       lowRufKopf u f (ctxOf u f) (fnAt u f) (resOf u f) name raw = .ok actual } := by
   refine ⟨?_, by
-    rw [lowRufKopf, found, arguments.property, dif_pos gates.writes, dif_pos gates.globals,
+    erw [lowRufKopf, found]
+    dsimp only
+    erw [arguments.property]
+    dsimp only
+    erw [dif_pos gates.writes, dif_pos gates.globals,
       dif_pos gates.held, dif_pos gates.floor, dif_pos gates.extra,
       dif_pos gates.inventory, dif_pos gates.owners] <;> exact Eq.refl _⟩
 
@@ -107,10 +111,13 @@ private def call_step (u : UProg) (f : Fin u.fns.length) (name : String) (raw : 
     (reason : (declOf u).gruende head.val.callee = 0) :
     { actual : BodyStep u f (resOf u f) //
       lowStmtL (l := false) u f (ctxOf u f) (fnAt u f) (resOf u f) (.call name raw) = .ok actual } := by
-  refine ⟨⟨nach (declOf u) head.val.callee (resOf u f),
+  rcases head with ⟨actual, made⟩
+  refine ⟨⟨nach (declOf u) actual.callee (resOf u f),
     Stmt.call (D := declOf u) (V := verOf u f) (l := false) (Γ := ctxOf u f)
-      head.val.callee head.val.args head.val.hp reason⟩, ?_⟩
+      actual.callee actual.args actual.hp reason⟩, ?_⟩
   change lowCallL (l := false) u f (ctxOf u f) (fnAt u f) (resOf u f) name raw = _
-  rw [lowCallL, head.property, dif_pos reason]
+  erw [lowCallL, made]
+  dsimp only
+  rw [dif_pos reason]
 
 end Gabbro.Grammatik.Parser.UebersetzeProben11
