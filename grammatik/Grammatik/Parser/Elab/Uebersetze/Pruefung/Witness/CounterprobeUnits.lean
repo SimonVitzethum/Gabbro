@@ -75,6 +75,7 @@ import all Init.Data.String.Termination
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Export
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Ableitung
 import all Grammatik.Parser.Elab.Uebersetze.Einheit.Elaboration
+import all Grammatik.Parser.Elab.Uebersetze.Einheit.ReturnCalls
 import all Grammatik.Parser.Elab.Uebersetze.Einheit.Signatures
 import all Grammatik.Parser.Elab.Uebersetze.Akku.ProbenPhases
 
@@ -85,6 +86,19 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
 
+-- A literal Boolean return introduces neither folds nor a call adapter. Keep
+-- the complete lexical context and head list symbolic; elabFn still runs its
+-- actual uEnde type/channel check on the unchanged ending afterwards.
+private theorem counterprobe_return_false (ctx : UCtx) (heads : List UFnKopf) :
+    expandReturnCall ctx heads (some (.ret (some .fls))) =
+      .ok ([], ctx, some (.ret (some .fls))) := by
+  unfold expandReturnCall
+  cases uEnde ctx (some (.ret (some .fls))) <;> rfl
+
+private theorem counterprobe_fold_end_false (ctx : UCtx) :
+    expandFoldEnd ctx (some (.ret (some .fls))) =
+      .ok ([], ctx, some (.ret (some .fls))) := rfl
+
 -- The emitted source stays unchanged; these proof equations select its real callbacks.
 attribute [local cbv_opaque] uFloatLimit uAnwReihe uAnwReiheCore
   uAkkuBinder uZeigerAnw uStartNamen elabKlauseln expandReturnCall expandFoldEnd
@@ -92,8 +106,8 @@ attribute [local cbv_opaque] uFloatLimit uAnwReihe uAnwReiheCore
   Measures.checkedProgram lowRufKopf lowCallArgOneL lowCallArgsAuxL withErg lowErg lowEnd
 attribute [local cbv_eval] row_nil row_cons core_bind core_call core_set core_cond
   bound_names_select pointer_source_select start_source_select
-  clauses_nil return_none return_empty return_variable
-  fold_end_none fold_end_empty fold_end_variable
+  clauses_nil return_none return_empty return_variable counterprobe_return_false
+  fold_end_none fold_end_empty fold_end_variable counterprobe_fold_end_false
   recording_block recording_bind recording_nil recording_cons
   sample_binary sample_variable sample_literal
   check_sequence_select check_structure_select lowEndL_succ
