@@ -184,8 +184,7 @@ private abbrev ScopeData :=
 private def sourceScopeData : {actual : ScopeData //
     (sourceScopes.val.scope.values, sourceScopes.val.scope.types,
       sourceScopes.val.scope.functions) = actual} := by
-  refine ⟨(?values, ?types, ?functions), ?produced⟩
-  case produced => cbv <;> exact Eq.refl _
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
 
 private theorem source_values : sourceScopes.val.scope.values = sourceScopeData.val.1 :=
   congrArg Prod.fst sourceScopeData.property
@@ -274,7 +273,11 @@ private theorem source_header_data :
       (sourceFrom sourceInput sourceTail).scopes.values,
       (sourceFrom sourceInput sourceTail).scopes.types,
       (sourceFrom sourceInput sourceTail).scopes.functions) = sourceHeaderData :=
-  congrArg2 Prod.mk sourcePrepared.property source_scope_fields
+  (congrArg (fun prepared : List SItemTief =>
+    (prepared, ((sourceFrom sourceInput sourceTail).scopes.values,
+      (sourceFrom sourceInput sourceTail).scopes.types,
+      (sourceFrom sourceInput sourceTail).scopes.functions))) sourcePrepared.property).trans
+    (congrArg (fun fields : ScopeData => (sourcePrepared.val, fields)) source_scope_fields)
 
 -- Infer the complete expansion pair and complete selected UProg independently
 -- before Header introduces any dependent fields or synthetic result metavariables.
