@@ -169,11 +169,16 @@ private theorem tag_elaborated : Konst.Values.elaborate tagDescriptor = .ok tagF
 
 attribute [local cbv_eval] tag_elaborated
 
+section
+attribute [local cbv_opaque] Konst.Values.elaborate
+
 private theorem tag_metadata :
     Konst.checkSourceMetadata tagTextInput.original = .ok () := by
   unfold Konst.checkSourceMetadata Konst.konstErsetzePipeline
   rw [tag_collected]
-  cbv <;> rfl
+  cbv <;> (erw [tag_elaborated]; cbv)
+
+end
 
 /-- Certify whole alias/scope constructor results before their dependent meaning projections. -/
 def tagTextTail : SourceTail tagTextInput := by
@@ -276,11 +281,16 @@ private theorem text_elaborated : Konst.Values.elaborate textDescriptor = .ok te
 
 attribute [local cbv_eval] text_elaborated
 
+section
+attribute [local cbv_opaque] Konst.Values.elaborate
+
 private theorem text_metadata :
     Konst.checkSourceMetadata stringTextInput.original = .ok () := by
   unfold Konst.checkSourceMetadata Konst.konstErsetzePipeline
   rw [text_collected]
-  cbv <;> rfl
+  cbv <;> (erw [text_elaborated]; cbv)
+
+end
 
 /-- Certify whole alias/scope constructor results before their dependent meaning projections. -/
 def stringTextTail : SourceTail stringTextInput := by

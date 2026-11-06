@@ -202,11 +202,16 @@ private theorem positive_elaborated :
 
 attribute [local cbv_eval] positive_elaborated
 
+section
+attribute [local cbv_opaque] Konst.Values.elaborate
+
 private theorem positive_metadata :
     Konst.checkSourceMetadata boolTextInput.original = .ok () := by
   unfold Konst.checkSourceMetadata Konst.konstErsetzePipeline
   rw [positive_collected]
-  cbv <;> rfl
+  cbv <;> (erw [positive_elaborated]; cbv)
+
+end
 
 /-- Certify whole alias/scope constructor results before their dependent meaning projections. -/
 def boolTextTail : SourceTail boolTextInput := by
