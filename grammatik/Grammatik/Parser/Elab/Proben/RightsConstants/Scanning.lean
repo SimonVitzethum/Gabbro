@@ -72,7 +72,7 @@ scoped macro "rights_input " name:ident " : " source:term
   let mut pieces : Lean.TSyntax `term ← `(([] : List Chunk))
   let mut spellings : Lean.TSyntax `term ← `(([] : List String))
   let mut bounds : Lean.TSyntax `term ← `(Nat.le_refl 0)
-  let mut decodedFacts : Array (Lean.TSyntax `simpLemma) := #[]
+  let mut decodedFacts : Array (Lean.TSyntax `Lean.Parser.Tactic.simpLemma) := #[]
   for (cutName, fragment) in (cuts.getElems.zip fragments.getElems).toList.reverse do
     let piece : Lean.TSyntax `term := ⟨cutName.raw⟩
     let literal : Lean.TSyntax `term := ⟨fragment.raw⟩
@@ -81,17 +81,18 @@ scoped macro "rights_input " name:ident " : " source:term
     let bounded : Lean.TSyntax `term :=
       ⟨(Lean.mkIdentFrom cutName (cutName.getId.appendAfter "_bounded")).raw⟩
     bounds ← `(Nat.add_le_add (of_decide_eq_true $bounded) $bounds)
-    decodedFacts := decodedFacts.push (← `(simpLemma| $decoded))
+    decodedFacts := decodedFacts.push (← `(Lean.Parser.Tactic.simpLemma| $decoded:term))
     pieces ← `($piece :: $pieces)
     spellings ← `($literal :: $spellings)
   let chunks : Lean.TSyntax `command ← `(command|
     def $chunkName : List Chunk := [$cuts,*])
   let spelled : Lean.TSyntax `command ← `(command|
     def $spellingsName : List String := $spellings)
+  let decodedFacts := decodedFacts.reverse
   let textCertified : Lean.TSyntax `command ← `(command|
     theorem $textName :
         $chunkName.map (fun piece => String.ofList piece.characters) = $spellingsName := by
-      simp only [$chunkName, $spellingsName, List.map_cons, List.map_nil, $decodedFacts,*])
+      simp only [$chunkName, $spellingsName, List.map_cons, List.map_nil, $[$decodedFacts],*])
   let boundCertified : Lean.TSyntax `command ← `(command|
     theorem $boundName : steps $chunkName ≤
         (Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters $chunkName).length := by

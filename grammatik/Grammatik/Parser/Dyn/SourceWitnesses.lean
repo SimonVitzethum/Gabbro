@@ -32,6 +32,7 @@ import all Init.Data.String.Iter.Intercalate
 import all Init.Data.String.Legacy
 import all Init.Data.String.Slice
 import all Init.Data.String.Pattern.String
+import all Init.Data.String.Pattern.Basic
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.ToSlice
 
