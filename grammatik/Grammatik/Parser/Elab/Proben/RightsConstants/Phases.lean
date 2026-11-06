@@ -1,6 +1,7 @@
 module
 public import Grammatik.Parser.Elab.Proben.RightsConstants.Scanning
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben2Basis
+import Grammatik.Parser.Stmt.LibraryFixtureProofs
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge

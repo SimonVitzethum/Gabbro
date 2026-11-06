@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Parser.Stmt.LibraryFixtureProofs
+public import Grammatik.Parser.Lex.Lexer.Teil1
 import Init.Data.String.Lemmas.Intercalate
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -112,7 +112,7 @@ theorem lex_chunks (chunks : List Chunk)
     lexL (characters chunks) = .ok (tokens chunks) := by
   have complete := scan_chunks chunks ((characters chunks).length + 1 - steps chunks)
   have fuel : steps chunks + ((characters chunks).length + 1 - steps chunks) =
-      (characters chunks).length + 1 := by omega
+      (characters chunks).length + 1 := Nat.add_sub_of_le room
   rw [fuel] at complete
   exact complete
 
