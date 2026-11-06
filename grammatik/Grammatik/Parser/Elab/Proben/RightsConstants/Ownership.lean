@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Elab.Proben.RightsConstants.Phases
+import Grammatik.Parser.Elab.UebersetzeAllg3.FunctionResults
 import all Grammatik.Kern.Syntax.Typen.Shape
 import all Grammatik.Parser.Elab.Uebersetze.Kontext.Eigner
 import all Grammatik.Parser.Elab.Generic.SignatureData
@@ -90,34 +91,6 @@ scoped macro "ownership_phase " name:ident " from " supplied:term : command => d
       refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
   return ⟨Lean.mkNullNode #[parsed, elaborated]⟩
 
--- Preserve the dispatch and contract gates independently of the body result.
-private structure FunctionHeader (unit : UProg) (f : Fin unit.fns.length) : Prop where
-  transition : transitionOfFn unit f = none
-  ordinary : (fnAt unit f).name.startsWith "#transition#" = false
-  requires : (fnAt unit f).needs = []
-  ensures : (fnAt unit f).gives = []
-
-private abbrev FunctionBody (unit : UProg) (f : Fin unit.fns.length) :=
-  Endblock (declOf unit) (verOf unit f) false (ctxOf unit f) (resOf unit f)
-
-private def function_from_body {unit : UProg} {f : Fin unit.fns.length}
-    (header : FunctionHeader unit f)
-    (body : { actual : FunctionBody unit f //
-      lowBody unit f (fnAt unit f).body (fnAt unit f).ret = .ok actual }) :
-    { actual : EnsTy unit f × RumpTy unit f × ReqTy unit f //
-      lowerFnAt unit f = .ok actual } := by
-  refine ⟨?_, by
-    simp only [lowerFnAt, header.transition, header.ordinary, Bool.false_eq_true,
-      reduceIte, lowerFnPlain, header.requires, header.ensures, lowEnsList, body.property] <;>
-      exact Eq.refl _⟩
-
-private theorem function_error_from_body {unit : UProg} {f : Fin unit.fns.length} {error : String}
-    (header : FunctionHeader unit f)
-    (body : lowBody unit f (fnAt unit f).body (fnAt unit f).ret = .error error) :
-    lowerFnAt unit f = .error error := by
-  simp only [lowerFnAt, header.transition, header.ordinary, Bool.false_eq_true,
-    reduceIte, lowerFnPlain, header.requires, header.ensures, lowEnsList, body]
-
 -- Fix the complete typed result before inspecting its success/refusal tag.
 scoped macro "ownership_function " name:ident " for " unit:ident " at " number:num : command => do
   let index := Lean.mkIdentFrom name (name.getId.appendAfter "_index")
@@ -127,16 +100,16 @@ scoped macro "ownership_function " name:ident " for " unit:ident " at " number:n
   let member : Lean.TSyntax `command ← `(command|
     private def $index : Fin ($unit).val.fns.length := ⟨$ordinal, by decide +kernel⟩)
   let gates : Lean.TSyntax `command ← `(command|
-    private theorem $header : FunctionHeader ($unit).val $index := by constructor <;> cbv)
+    private theorem $header : PlainFunctionHeader ($unit).val $index := by constructor <;> cbv)
   let lowered : Lean.TSyntax `command ← `(command|
-    private def $body : { actual : FunctionBody ($unit).val $index //
+    private def $body : { actual : PlainFunctionBody ($unit).val $index //
         lowBody ($unit).val $index (fnAt ($unit).val $index).body
           (fnAt ($unit).val $index).ret = .ok actual } := by
       refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
   let result : Lean.TSyntax `command ← `(command|
     private def $name : { actual :
         EnsTy ($unit).val $index × RumpTy ($unit).val $index × ReqTy ($unit).val $index //
-        lowerFnAt ($unit).val $index = .ok actual } := function_from_body $header $body)
+        lowerFnAt ($unit).val $index = .ok actual } := lowerFnAt_from_body $header $body)
   return ⟨Lean.mkNullNode #[member, gates, lowered, result]⟩
 
 scoped macro "ownership_refusal " name:ident " for " unit:ident " at " number:num
@@ -148,13 +121,13 @@ scoped macro "ownership_refusal " name:ident " for " unit:ident " at " number:nu
   let member : Lean.TSyntax `command ← `(command|
     private def $index : Fin ($unit).val.fns.length := ⟨$ordinal, by decide +kernel⟩)
   let gates : Lean.TSyntax `command ← `(command|
-    private theorem $header : FunctionHeader ($unit).val $index := by constructor <;> cbv)
+    private theorem $header : PlainFunctionHeader ($unit).val $index := by constructor <;> cbv)
   let refused : Lean.TSyntax `command ← `(command|
     private theorem $body : lowBody ($unit).val $index (fnAt ($unit).val $index).body
         (fnAt ($unit).val $index).ret = .error $error := by cbv)
   let result : Lean.TSyntax `command ← `(command|
     private theorem $name : lowerFnAt ($unit).val $index = .error $error :=
-      function_error_from_body $header $body)
+      lowerFnAt_error_from_body $header $body)
   return ⟨Lean.mkNullNode #[member, gates, refused, result]⟩
 
 private theorem function_accepted {unit : UProg} {f : Fin unit.fns.length}
