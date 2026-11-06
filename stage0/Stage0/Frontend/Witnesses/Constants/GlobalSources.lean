@@ -184,48 +184,38 @@ theorem qualifiedText_prepared :
   rw [origin]
   rfl
 
--- Extract only actual successful producer results before dependent record typing.
-private theorem qualified_order_ready :
-    (Frontend.orderAliases qualifiedTextInput.original).toOption.isSome = true := by cbv
+-- Infer normalized data from each complete canonical success equation. The
+-- value field stores that data, rather than an Option getter of the producer.
+private def qualifiedOrderPacket :
+    { actual : Frontend.AliasOrder qualifiedTextInput.original //
+      Frontend.orderAliases qualifiedTextInput.original = .ok actual } := by
+  refine ⟨?actual, ?produced⟩
+  case produced => cbv <;> rfl
 
-private def qualifiedOrder : Frontend.AliasOrder qualifiedTextInput.original :=
-  (Frontend.orderAliases qualifiedTextInput.original).toOption.get qualified_order_ready
-
-private theorem qualified_order_selected :
-    Frontend.orderAliases qualifiedTextInput.original = .ok qualifiedOrder :=
-  Gabbro.Grammatik.except_ok_get
-    (ε := String) (α := Frontend.AliasOrder qualifiedTextInput.original)
-    (x := Frontend.orderAliases qualifiedTextInput.original) qualified_order_ready
-
-private theorem qualified_scopes_ready :
-    (Frontend.elaborateConstantScopes qualifiedTextInput.original).toOption.isSome = true := by cbv
-
-private def qualifiedScopes : Frontend.DerivedScopes qualifiedTextInput.original :=
-  (Frontend.elaborateConstantScopes qualifiedTextInput.original).toOption.get qualified_scopes_ready
-
-private theorem qualified_scopes_selected :
-    Frontend.elaborateConstantScopes qualifiedTextInput.original = .ok qualifiedScopes :=
-  Gabbro.Grammatik.except_ok_get
-    (ε := String) (α := Frontend.DerivedScopes qualifiedTextInput.original)
-    (x := Frontend.elaborateConstantScopes qualifiedTextInput.original) qualified_scopes_ready
+private def qualifiedScopesPacket :
+    { actual : Frontend.DerivedScopes qualifiedTextInput.original //
+      Frontend.elaborateConstantScopes qualifiedTextInput.original = .ok actual } := by
+  refine ⟨?actual, ?produced⟩
+  case produced => cbv <;> rfl
 
 private theorem qualified_metadata :
     Konst.checkSourceMetadata qualifiedTextInput.original = .ok () := by cbv
 
 private theorem qualified_aliases :
-    qualifiedTextInput.original.all (Frontend.checkAliasMeaning qualifiedScopes.scope.types) = true := by cbv
+    qualifiedTextInput.original.all
+      (Frontend.checkAliasMeaning qualifiedScopesPacket.val.scope.types) = true := by cbv
 
 private theorem qualified_constants :
-    qualifiedTextInput.original.all (Frontend.checkConstantMeaning qualifiedScopes.scope.types
-      qualifiedScopes.scope.functions qualifiedScopes.scope.values) = true := by cbv
+    qualifiedTextInput.original.all (Frontend.checkConstantMeaning qualifiedScopesPacket.val.scope.types
+      qualifiedScopesPacket.val.scope.functions qualifiedScopesPacket.val.scope.values) = true := by cbv
 
 /-- Retain each complete producer and field certificate without re-inferring its dependent data. -/
 def qualifiedTextTail : SourceTail qualifiedTextInput := {
   metadata := qualified_metadata
-  order := qualifiedOrder
-  ordered := qualified_order_selected
-  derived := qualifiedScopes
-  elaborated := qualified_scopes_selected
+  order := qualifiedOrderPacket.val
+  ordered := qualifiedOrderPacket.property
+  derived := qualifiedScopesPacket.val
+  elaborated := qualifiedScopesPacket.property
   aliases := qualified_aliases
   constants := qualified_constants }
 
