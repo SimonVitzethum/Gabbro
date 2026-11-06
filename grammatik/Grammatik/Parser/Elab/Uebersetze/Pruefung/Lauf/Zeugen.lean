@@ -169,6 +169,7 @@ theorem retiringDriver_empty_end :
 theorem retiringConsumer_conservation :
     nach (declOf retiringU) retiringConsumer [Res.vonMarke (declOf retiringU) retiringCheck.duty] =
       [] := by
+  dsimp only [nach]
   have flow := retiring_facts.resources retiringCheck retiring_check_member
     retiringProbe retiringConsumer rfl rfl
   exact duty_consumer_conservation (declOf retiringU) retiringCheck
@@ -179,6 +180,7 @@ theorem retiringCycle_conservation :
     nach (declOf retiringU) retiringConsumer
       (nach (declOf retiringU) retiringProbe
         [Res.vonMarke (declOf retiringU) retiringCheck.duty]) = [] := by
+  dsimp only [nach]
   have flow := retiring_facts.resources retiringCheck retiring_check_member
     retiringProbe retiringConsumer rfl rfl
   exact duty_cycle_conservation (declOf retiringU) retiringCheck
