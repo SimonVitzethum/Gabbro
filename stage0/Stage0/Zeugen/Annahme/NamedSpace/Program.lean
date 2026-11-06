@@ -55,10 +55,10 @@ def candidateUnit : (pointer : Bool) →
         (Profil.selectUnit {})) = .ok value }
   | false => by
     refine ⟨?plainResult, ?plainResultEq⟩
-    case plainResultEq => cbv <;> simp only [uChecks, uChecksAux] <;> cbv <;> exact Eq.refl _
+    case plainResultEq => cbv <;> exact Eq.refl _
   | true => by
     refine ⟨?pointerResult, ?pointerResultEq⟩
-    case pointerResultEq => cbv <;> simp only [uChecks, uChecksAux] <;> cbv <;> exact Eq.refl _
+    case pointerResultEq => cbv <;> exact Eq.refl _
 
 def header (pointer : Bool) : Header (sourceText pointer) where
   source := source pointer
@@ -83,6 +83,11 @@ theorem header_unit (pointer : Bool) : (header pointer).unit = unit pointer := b
   rfl
 
 attribute [local cbv_eval] header_unit
+
+private theorem main_ordinary : "main".startsWith "#transition#" = false := by
+  decide +kernel
+
+attribute [local cbv_eval] main_ordinary
 
 private theorem function_count (pointer : Bool) : (header pointer).unit.fns.length = 1 := by
   rw [header_unit]

@@ -9,13 +9,15 @@ import all Stage0.Senke.Welt.MainEnv
 @[expose] public section
 namespace Gabbro.Stage0.NamedSpaceWitness.Phases
 open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
+open Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 open Frontend.ConstPhases
 set_option maxRecDepth 2000
 set_option maxHeartbeats 400000
 
-attribute [local cbv_opaque] Frontend.normalize uFloatLimit compiledResult
+attribute [local cbv_opaque] Frontend.normalize uFloatLimit
 attribute [local cbv_eval] compiledResult_source compiledResult_unit
   compiledResult_main compiledResult_program header_unit
+  compilation_source compilation_unit compilation_main compilation_program
 
 private theorem target (pointer : Bool) :
     validateTargetFor ({} : Profil.Options).arch ({} : Profil.Options).target

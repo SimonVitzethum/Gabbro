@@ -61,7 +61,7 @@ def uProbeFn (consts : List (String × Int)) (alias : List (String × (Int × In
 def uProbeNeu (belegt : List String) (bekannt : List String) (pname : String) : Except String Unit :=
   if belegt.any (fun n => strEq n pname) || bekannt.any (fun n => strEq n pname) then .error ("duplicate probe: " ++ pname) else .ok ()
 
-def uProbeFnsAux (consts : List (String × Int)) (alias : List (String × (Int × Int))) (tabs : List UTab)
+@[expose] def uProbeFnsAux (consts : List (String × Int)) (alias : List (String × (Int × Int))) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (koepfe : List UFnKopf) (whys : List UWhy)
     (sums : List USum) (devs : List String) (regs : List UReg) (zustaende : List UZustand)
     (specs : List (String × List String × SExpr)) (arrKonst : List (String × USide))
@@ -80,7 +80,7 @@ def uProbeFnsAux (consts : List (String × Int)) (alias : List (String × (Int �
         | .ok fs => .ok (f :: (reporters ++ fs))
 
 /-- Elaborate every `can_fail` body of the unit into its generated producer. -/
-def uProbeFns (consts : List (String × Int)) (alias : List (String × (Int × Int))) (tabs : List UTab)
+@[expose] def uProbeFns (consts : List (String × Int)) (alias : List (String × (Int × Int))) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (koepfe : List UFnKopf) (whys : List UWhy)
     (sums : List USum) (devs : List String) (regs : List UReg) (zustaende : List UZustand)
     (specs : List (String × List String × SExpr)) (arrKonst : List (String × USide))

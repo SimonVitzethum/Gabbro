@@ -51,11 +51,11 @@ set_option maxRecDepth 100000
 
 /-- The declaration's mark table: the names of the `linear`-flagged type items in
     declaration order, then every check's Duty, deduplicated. -/
-def uMarken (ms : List SItemTief) (checks : List UCheck) : List String :=
+@[expose] def uMarken (ms : List SItemTief) (checks : List UCheck) : List String :=
   uEindeutig ((ms.filterMap fun | .typeT flags n _ _ _ => if flags.any (fun f => strEq f "linear") then some n else none | _ => none) ++ checks.map fun c => c.duty)
 
 /-- Every consumed, produced, borrowed, moved or minted mark of every function names a member of the mark table. -/
-def uMarkenPruefAux (marken : List String) : List UFn → Except String Unit
+@[expose] def uMarkenPruefAux (marken : List String) : List UFn → Except String Unit
   | [] => .ok ()
   | f :: rest =>
     match (f.nimmt ++ f.gibt ++ f.leiht ++ f.bewegt ++ f.praegt).find? (fun m => !(marken.any (fun n => strEq n m))) with
@@ -63,13 +63,13 @@ def uMarkenPruefAux (marken : List String) : List UFn → Except String Unit
     | none => uMarkenPruefAux marken rest
 
 /-- The mark check of the unit: every `nimmt`/`gibt`/`leiht`/`moves`/`mints` names a declared mark. -/
-def uMarkenPruef (marken : List String) (fns : List UFn) : Except String Unit :=
+@[expose] def uMarkenPruef (marken : List String) (fns : List UFn) : Except String Unit :=
   uMarkenPruefAux marken fns
 
 /-- A produced mark is never a table owner (C16): signatures never produce owners
     (`eigner_nie_erzeugt`); only the one-shot C09 mint creates one. A `gibt` naming
     a table's `owner` mark is refused by name. -/
-def uGibtPruefAux (owners : List String) : List UFn → Except String Unit
+@[expose] def uGibtPruefAux (owners : List String) : List UFn → Except String Unit
   | [] => .ok ()
   | f :: rest =>
     match f.gibt.find? (fun m => owners.any (fun o => strEq o m)) with
@@ -77,7 +77,7 @@ def uGibtPruefAux (owners : List String) : List UFn → Except String Unit
     | none => uGibtPruefAux owners rest
 
 /-- The owner-production check of the unit: no `gibt` names a table owner. -/
-def uGibtPruef (owners : List String) (fns : List UFn) : Except String Unit :=
+@[expose] def uGibtPruef (owners : List String) (fns : List UFn) : Except String Unit :=
   uGibtPruefAux owners fns
 
 /-- A borrowed mark is a table owner, borrowed alone (C12): every `leiht` names a
@@ -85,7 +85,7 @@ def uGibtPruef (owners : List String) (fns : List UFn) : Except String Unit :=
     (a call-scoped loan is disjoint from ordinary consumption: `OwnerFlow.Valid`
     keeps one occurrence per owner identity across stages, `RufPasst.ownerReady`
     the disjointness). Both violations are refused by name. -/
-def uLeihtPruefAux (owners : List String) : List UFn → Except String Unit
+@[expose] def uLeihtPruefAux (owners : List String) : List UFn → Except String Unit
   | [] => .ok ()
   | f :: rest =>
     match f.leiht.find? (fun m => !(owners.any (fun o => strEq o m))) with
@@ -97,7 +97,7 @@ def uLeihtPruefAux (owners : List String) : List UFn → Except String Unit
 
 /-- The owner-loan check of the unit: every `leiht` names a table owner no
     `nimmt` of the same function takes. -/
-def uLeihtPruef (owners : List String) (fns : List UFn) : Except String Unit :=
+@[expose] def uLeihtPruef (owners : List String) (fns : List UFn) : Except String Unit :=
   uLeihtPruefAux owners fns
 
 /-- A handed-over mark is a table owner, handed over alone (C09): every `moves`
@@ -106,7 +106,7 @@ def uLeihtPruef (owners : List String) (fns : List UFn) : Except String Unit :=
     and from call-scoped loans: `OwnerFlow.Valid` keeps one occurrence per
     owner identity across stages, `RufPasst.ownerReady` the disjointness).
     All three violations are refused by name. -/
-def uBewegtPruefAux (owners : List String) : List UFn → Except String Unit
+@[expose] def uBewegtPruefAux (owners : List String) : List UFn → Except String Unit
   | [] => .ok ()
   | f :: rest =>
     match f.bewegt.find? (fun m => !(owners.any (fun o => strEq o m))) with
@@ -121,12 +121,12 @@ def uBewegtPruefAux (owners : List String) : List UFn → Except String Unit
 
 /-- The owner-handoff check of the unit: every `moves` names a table owner
     neither consumed nor borrowed by the same function. -/
-def uBewegtPruef (owners : List String) (fns : List UFn) : Except String Unit :=
+@[expose] def uBewegtPruef (owners : List String) (fns : List UFn) : Except String Unit :=
   uBewegtPruefAux owners fns
 
 /-- No owner is minted twice in one unit: the second mint of the same instance
     is refused by name. The seen list carries the minters so far. -/
-def uMintEindeutig : List String → List String → Except String Unit
+@[expose] def uMintEindeutig : List String → List String → Except String Unit
   | [], _ => .ok ()
   | m :: rest, gesehen =>
     if gesehen.any (strEq · m) then .error ("duplicate mint: " ++ m)
@@ -136,7 +136,7 @@ def uMintEindeutig : List String → List String → Except String Unit
     names a table's `owner` mark, and no two functions mint the same mark
     (one-shot mint authority per region instance: the ledger's spent set
     refuses a second `recordMint`). Both violations are refused by name. -/
-def uMintPruefAux (owners : List String) : List UFn → Except String Unit
+@[expose] def uMintPruefAux (owners : List String) : List UFn → Except String Unit
   | [] => .ok ()
   | f :: rest =>
     match f.praegt.find? (fun m => !(owners.any (fun o => strEq o m))) with
@@ -145,7 +145,7 @@ def uMintPruefAux (owners : List String) : List UFn → Except String Unit
 
 /-- The owner-mint check of the unit: every `mints` names a table owner, and
     every owner is minted at most once. -/
-def uMintPruef (owners : List String) (fns : List UFn) : Except String Unit :=
+@[expose] def uMintPruef (owners : List String) (fns : List UFn) : Except String Unit :=
   match uMintPruefAux owners fns with
   | .error e => .error e
   | .ok _ => uMintEindeutig (fns.flatMap (·.praegt)) []
@@ -231,7 +231,7 @@ def uTorTore (fns : List UFn) (fremd : List UFnKopf) (cname duty : String) :
       | .error e => .error e
       | .ok ws => .ok (w :: ws)
 
-def uTorHuellenAux (fns : List UFn) (fremd : List UFnKopf) (checks : List UCheck) :
+@[expose] def uTorHuellenAux (fns : List UFn) (fremd : List UFnKopf) (checks : List UCheck) :
     List UCheck → Except String (List UFn)
   | [] => .ok []
   | c :: rest =>
@@ -246,7 +246,7 @@ def uTorHuellenAux (fns : List UFn) (fremd : List UFnKopf) (checks : List UCheck
         | .ok mehr => .ok (ws ++ mehr)
 
 /-- Every gate of every check derives its Duty-threading wrapper. -/
-def uTorHuellen (fns : List UFn) (fremd : List UFnKopf) (checks : List UCheck) :
+@[expose] def uTorHuellen (fns : List UFn) (fremd : List UFnKopf) (checks : List UCheck) :
     Except String (List UFn) :=
   uTorHuellenAux fns fremd checks checks
 
