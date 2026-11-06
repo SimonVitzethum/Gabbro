@@ -86,11 +86,12 @@ def GvRelyDuty (P : Programm D) (S : SperrInv D) (Q : AxEns D)
     (T : D.Tab ⊕ D.Glob → Prop) (passes : Nat) (f : D.Fn) : Prop :=
   KoerperGutSA P passes Q S T f ∧ InvGutSA P passes Q S T f ∧ InvGutGrundA P passes Q S T f
 
-/-- **The user-level GabbroV duty with the rely**: the arbitrary-values duty
-    over the unit's shared atomics, plus the start duty. Locality of the lock
+/-- **The user-level GabbroV duty with the rely**: the arbitrary-values duty,
+    the existing pointer-interface refinement and the start duty. Locality of the lock
     family and axiom ensures stays checker-side (see `gvDutyA_gibt_nutzerA`). -/
 structure GvDutyA [DecidableEq D.Fn] (E : Einheit D) : Prop where
   logik : ∀ (passes : Nat) (f : D.Fn), GvRelyDuty E.P E.S E.Q (GeteiltA E.P E.ws) passes f
+  pointers : PtrVerfeinert E.P
   start : StartPflicht E
 
 /-! ## 2. The bridge: GabbroV duties give premise (b) -/
@@ -100,7 +101,7 @@ structure GvDutyA [DecidableEq D.Fn] (E : Einheit D) : Prop where
 theorem gvDutyA_gibt_nutzerA {E : Einheit D} [DecidableEq D.Fn]
     (h : GvDutyA E) (hlokS : SperrInvLokal E.S) (hlokQ : AxEnsLokal E.Q) :
     NutzerPflichtA E :=
-  ⟨⟨h.logik, hlokS, hlokQ⟩, h.start⟩
+  ⟨⟨h.logik, hlokS, hlokQ, h.pointers⟩, h.start⟩
 
 /-- **On the parser fragment GabbroV's PLAIN duty implies the
     arbitrary-values duty.** The fragment has no atomic global (V5
@@ -110,7 +111,7 @@ theorem gvDutyA_gibt_nutzerA {E : Einheit D} [DecidableEq D.Fn]
 theorem gv_plain_gibt_relyDuty_parserfragment {E : Einheit D} [DecidableEq D.Fn]
     (hat : ∀ g : D.Glob, D.atomar g = false)
     (h : NutzerPflicht E) : GvDutyA E :=
-  ⟨(nutzerPflichtA_ohne_atomar hat h).logik.1, h.start⟩
+  ⟨(nutzerPflichtA_ohne_atomar hat h).logik.1, h.logik.2.2.2, h.start⟩
 
 /-- **No atomic global on 104's exported declaration** (its `Glob` is
     `Empty`; the same term `oblig_nutzerA` uses). Standalone so a failure
