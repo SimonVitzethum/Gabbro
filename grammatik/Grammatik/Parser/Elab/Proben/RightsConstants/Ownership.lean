@@ -70,6 +70,11 @@ attribute [local cbv_opaque] lowStufe lowSeqL lowStructL uFloatLimit
 attribute [local cbv_eval] UebersetzeProben2.seq_select UebersetzeProben2.struct_select
   lowStufe_seq lowStufe_struct
 
+-- Evaluate the selected node of the canonical typed mutual before projecting
+-- its result, as in the generic count-reader witnesses.
+attribute [local cbv_eval] lowWertE.eq_def lowCmp.eq_def lowEns.eq_def
+  lowArrayValue.eq_def lowSeiteZ.eq_def
+
 /-! ## C09: owner mint and linear handoff -/
 
 theorem mintAtMarke_ok : stufe mintAtMarke = "OK" := by
