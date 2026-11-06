@@ -47,8 +47,8 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   array/literal, restore and acceptance certificates. Other concrete constant
   program packets remain under repair. `ConstWitness` now builds; the dependent
   `ConstValuesWitness` source packets remain under repair after the new phase port.
-  The complete optional source/program packets and qualified global source packet now build;
-  named quotation and final global program certificates still have measured proof failures.
+  The complete optional source/program packets, named quotation source packet and qualified global
+  source packet now build. Final named and global program certificates remain under repair.
   The shared complete compilation packet, hardware-free image phase/geometry theorem and the
   conflicting-profile refusal witness build. Both successful profile and requires-profile images build.
   The aligned-static fixture now also builds end to end with its unchanged sixteen-byte alignment.
@@ -80,7 +80,8 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   equalities use kernel reflexivity. The 47 downstream rights/ownership claims remain to be replayed.
   Their fresh check exposed a producer bug: a table's owner mark was also used as its address space.
   Canonical elaboration now preserves the table producer's space and keeps ownership separate;
-  capability guards, sources and claims are unchanged. The connected replay is running.
+  capability guards, sources and claims are unchanged. That producer and the consistent GabbroV
+  diagnostic path build; the connected rights replay is running.
   The specification witness builds with its actual outer substitution environment, and all six Dyn
   pass-result packets pass an isolated prefix check for all three fixtures after independent result
   inference and canonical numeral/string-prefix reduction. Shared scanner spelling/fuel composition builds.
