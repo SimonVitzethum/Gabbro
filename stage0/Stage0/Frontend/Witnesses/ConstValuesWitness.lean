@@ -3,7 +3,7 @@ public import Stage0.Frontend.Witnesses.ConstWitness
 public import Grammatik.Parser.Elab.Konst.Values.Witness
 public import Stage0.Frontend.Witnesses.Constants.OptionPrograms
 public import Stage0.Frontend.Witnesses.Constants.NamedPrograms
-public import Stage0.Frontend.Witnesses.Constants.GlobalPrograms
+public import Stage0.Frontend.Witnesses.Constants.GlobalPrograms.Qualified
 public import Stage0.Frontend.Witnesses.Constants.Refusal
 
 @[expose] public section
