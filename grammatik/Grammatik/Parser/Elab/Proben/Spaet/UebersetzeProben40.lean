@@ -204,30 +204,6 @@ private def sourceSpellings (writes provider : Bool) : List String :=
     if provider then providerTargetChunk_spelling else finiteTargetChunk_spelling,
     returnChunk_spelling]
 
--- Both composition proofs keep the actual chunks abstract.
-private theorem chunks_text (chunks : List Chunk) :
-    String.ofList (characters chunks) =
-      String.join (chunks.map (fun chunk => String.ofList chunk.characters)) := by
-  induction chunks with
-  | nil => rfl
-  | cons chunk chunks ih =>
-    change String.ofList (chunk.characters ++ characters chunks) =
-      String.join (String.ofList chunk.characters ::
-        chunks.map (fun entry => String.ofList entry.characters))
-    rw [String.ofList_append, String.join_cons, ih]
-
-private theorem chunks_bound (chunks : List Chunk) :
-    chunks.all (fun chunk => decide (chunk.steps ≤ chunk.characters.length)) = true →
-      steps chunks ≤ (characters chunks).length := by
-  induction chunks with
-  | nil => intro _; exact Nat.le_refl _
-  | cons chunk chunks ih =>
-    intro bounded
-    simp only [List.all_cons, Bool.and_eq_true] at bounded
-    change chunk.steps + steps chunks ≤ (chunk.characters ++ characters chunks).length
-    rw [List.length_append]
-    exact Nat.add_le_add (of_decide_eq_true bounded.1) (ih bounded.2)
-
 private theorem source_fragment_text (writes provider : Bool) :
     (sourceChunks writes provider).map (fun chunk => String.ofList chunk.characters) =
       sourceSpellings writes provider := by
@@ -247,12 +223,12 @@ private theorem source_characters (writes provider : Bool) :
     quelle (if writes then "writes T.slots" else "pure") (if provider then "T" else "U") =
       String.ofList (characters (sourceChunks writes provider)) :=
   (source_spelling writes provider).trans
-    ((chunks_text (sourceChunks writes provider)).trans
+    ((characters_join (sourceChunks writes provider)).trans
       (congrArg String.join (source_fragment_text writes provider))).symm
 
 private theorem source_bound (writes provider : Bool) :
     steps (sourceChunks writes provider) ≤ (characters (sourceChunks writes provider)).length := by
-  apply chunks_bound
+  apply steps_le_length
   cases writes <;> cases provider <;>
     simp only [sourceChunks, targetChunk, Bool.true_eq_true, Bool.false_eq_true,
       reduceIte, List.all_cons, List.all_nil, moduleChunk_bounded, providerChunk_bounded,

@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.Stmt.LibraryFixtureProofs
+import Init.Data.String.Lemmas.Intercalate
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -66,6 +67,31 @@ def tokens (chunks : List Chunk) : List Token := chunks.flatMap Chunk.tokens ++ 
 def steps : List Chunk → Nat
   | [] => 0
   | chunk :: rest => chunk.steps + steps rest
+
+/-- Compose fragment spellings while their scanner data remains abstract. -/
+theorem characters_join (chunks : List Chunk) :
+    String.ofList (characters chunks) =
+      String.join (chunks.map (fun chunk => String.ofList chunk.characters)) := by
+  induction chunks with
+  | nil => rfl
+  | cons chunk chunks ih =>
+    change String.ofList (chunk.characters ++ characters chunks) =
+      String.join (String.ofList chunk.characters ::
+        chunks.map (fun entry => String.ofList entry.characters))
+    rw [String.ofList_append, String.join_cons, ih]
+
+/-- Local checked scanner costs compose at the original character-count fuel. -/
+theorem steps_le_length (chunks : List Chunk) :
+    chunks.all (fun chunk => decide (chunk.steps ≤ chunk.characters.length)) = true →
+      steps chunks ≤ (characters chunks).length := by
+  induction chunks with
+  | nil => intro _; exact Nat.le_refl _
+  | cons chunk chunks ih =>
+    intro bounded
+    simp only [List.all_cons, Bool.and_eq_true] at bounded
+    change chunk.steps + steps chunks ≤ (chunk.characters ++ characters chunks).length
+    rw [List.length_append]
+    exact Nat.add_le_add (of_decide_eq_true bounded.1) (ih bounded.2)
 
 private theorem scan_chunks (chunks : List Chunk) (remaining : Nat) :
     scan false (characters chunks) (steps chunks + remaining) = .ok (tokens chunks) := by
