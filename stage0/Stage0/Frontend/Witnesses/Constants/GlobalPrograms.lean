@@ -1,7 +1,9 @@
 module
 public import Stage0.Frontend.Witnesses.Constants.ProgramPackets
 public import Stage0.Frontend.Witnesses.Constants.GlobalSources
+import all Stage0.Frontend.Witnesses.Constants.GlobalSources
 import Grammatik.Parser.Elab.Konst.Values.WitnessReaders
+import Init.Data.String.Lemmas.Intercalate
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
@@ -82,123 +84,410 @@ attribute [local cbv_eval]
   lowStufe_seq lowStufe_struct
   uKonstZeile.eq_def uKonstZeilen.eq_def lowLit.eq_def
 
-/-- Retain the actual elaborated constructor and all body facts inside one opaque theorem. -/
+-- Use the source owner's successful metadata and closed qualified-name equation.
+attribute [local cbv_eval] globalText_metadata qualifiedText_metadata String.intercalate_singleton
+
+-- Eliminate the source-list reindexing while all phase values are still abstract.
+private theorem original_scope_data {text : String} (input : SourceInput text)
+    (items : List SItemTief) (origin : input.original = items)
+    (metadata : Konst.checkSourceMetadata items = .ok ())
+    (order : Frontend.AliasOrder items) (ordered : Frontend.orderAliases items = .ok order)
+    (derived : Frontend.DerivedScopes items)
+    (elaborated : Frontend.elaborateConstantScopes items = .ok derived)
+    (aliases : items.all (Frontend.checkAliasMeaning derived.scope.types) = true)
+    (constants : items.all (Frontend.checkConstantMeaning derived.scope.types
+      derived.scope.functions derived.scope.values) = true) :
+    let tail := SourceTail.ofOriginal input items origin metadata order ordered
+      derived elaborated aliases constants
+    (tail.derived.scope.types, tail.derived.scope.functions, tail.derived.scope.values) =
+      (derived.scope.types, derived.scope.functions, derived.scope.values) := by
+  cases origin
+  rfl
+
+private theorem qualified_scope_data :
+    (qualifiedTextTail.derived.scope.types, qualifiedTextTail.derived.scope.functions,
+      qualifiedTextTail.derived.scope.values) =
+    (qualifiedScopesPacket.val.scope.types, qualifiedScopesPacket.val.scope.functions,
+      qualifiedScopesPacket.val.scope.values) :=
+  original_scope_data qualifiedTextInput qualifiedOriginalPacket.val qualifiedOriginalPacket.property
+    qualified_metadata qualifiedOrderPacket.val qualifiedOrderPacket.property
+    qualifiedScopesPacket.val qualifiedScopesPacket.property qualified_aliases qualified_constants
+
+@[local cbv_eval] private theorem qualified_scope_types :
+    qualifiedTextTail.derived.scope.types = qualifiedScopesPacket.val.scope.types :=
+  congrArg Prod.fst qualified_scope_data
+@[local cbv_eval] private theorem qualified_scope_functions :
+    qualifiedTextTail.derived.scope.functions = qualifiedScopesPacket.val.scope.functions :=
+  congrArg (fun data => data.2.1) qualified_scope_data
+@[local cbv_eval] private theorem qualified_scope_values :
+    qualifiedTextTail.derived.scope.values = qualifiedScopesPacket.val.scope.values :=
+  congrArg (fun data => data.2.2) qualified_scope_data
+
+-- Select the real constant checker with its original meaning, type, value and literal gates.
+private theorem checked_u8_five {original : List SItemTief}
+    (u : UProg) (scope : Frontend.Scopes original) (name : String)
+    (meaning : Frontend.checkConstantMeaning scope.types scope.functions scope.values
+      (.constT name (.atom "u8") (.one (.lit 5))) = true)
+    (typed : uTypIn scope.types [] (uRecordConstantTypes u.records) [] []
+      (.atom "u8") = .ok (.int 0 255)) :
+    (Frontend.checkArrayItem u scope
+      (.constT name (.atom "u8") (.one (.lit 5)))).toOption.isSome = true := by
+  have evaluated : uKonstZeile scope.types scope.functions scope.values (.int 0 255)
+      (.one (.lit 5)) (uRecordConstant u.records scope.types scope.functions scope.values) =
+      some (.lit 5) := by
+    rw [uKonstZeile_int]
+    rfl
+  have lower : (0 : Int) ≤ 5 := by decide
+  have upper : (5 : Int) ≤ 255 := by decide
+  have lowered : lowLit (u := u) (Γ := []) (Λ := []) (.int 0 255) (.lit 5) =
+      .ok (.widen lower upper (.lit 5)) := by
+    simp only [lowLit, dite_eq_left lower, dite_eq_left upper]
+  unfold Frontend.checkArrayItem
+  dsimp only [Frontend.arrayInput]
+  split
+  · split
+    · rename_i error rejected
+      cases rejected.symm.trans typed
+    · rename_i actual selected
+      have same : actual = .int 0 255 := Except.ok.inj (selected.symm.trans typed)
+      subst actual
+      split
+      · rename_i rejected
+        cases rejected.symm.trans evaluated
+      · rename_i actual selected
+        have same : actual = .lit 5 := Option.some.inj (selected.symm.trans evaluated)
+        subst actual
+        split
+        · rename_i error rejected
+          cases rejected.symm.trans lowered
+        · rfl
+  · rename_i rejected
+    exact False.elim (rejected meaning)
+
+-- Compose item successes through the existing dependent array checker.
+private theorem checked_array_items {original : List SItemTief}
+    (u : UProg) (scope : Frontend.Scopes original) :
+    ∀ items : List SItemTief,
+      (∀ item ∈ items, (Frontend.checkArrayItem u scope item).toOption.isSome = true) →
+      (Frontend.checkArrays u scope items).toOption.isSome = true := by
+  intro items
+  induction items with
+  | nil => intro _; rfl
+  | cons item rest ih =>
+    intro each
+    have head := Gabbro.Grammatik.except_ok_get (each item (List.mem_cons_self))
+    have tail := Gabbro.Grammatik.except_ok_get
+      (ih (fun entry member => each entry (List.mem_cons_of_mem item member)))
+    rw [Frontend.checkArrays, head, tail]
+    rfl
+
+-- Keep the assembler symbolic when all actual function posts are entry-free.
+private theorem collect_values (n : Nat) :
+    ∀ (T : Fin n → Type) (values : (i : Fin n) → T i),
+      OldSource.collect n T (fun i => .ok (values i)) = .ok values := by
+  induction n with
+  | zero =>
+    intro T values
+    apply congrArg (fun result : (i : Fin 0) → T i => Except.ok (ε := String) result)
+    funext i
+    exact Fin.elim0 i
+  | succ n ih =>
+    intro T values
+    rw [OldSource.collect, ih]
+    apply congrArg (fun result : (i : Fin (n + 1)) → T i => Except.ok (ε := String) result)
+    funext i
+    refine Fin.cases ?_ ?_ i
+    · rfl
+    · intro j; rfl
+
+private theorem restore_entry_free (items expanded : List SItemTief)
+    (requirements : List (STyp × String)) (unit : UProg) (program : Programm (declOf unit))
+    (expansion : expandU items = .ok (expanded, requirements))
+    (entryFree : ∀ f : Fin unit.fns.length,
+      (OldSource.clauses expanded (fnAt unit f).name).any OldSource.hasEntry = false) :
+    OldSource.restore items unit program = .ok program := by
+  have readers : OldSource.atFunction expanded unit program =
+      (fun f => .ok (program.ensures f)) := by
+    funext f
+    unfold OldSource.atFunction
+    dsimp only
+    erw [entryFree f]
+    rfl
+  unfold OldSource.restore
+  rw [expansion]
+  dsimp only [bind, Except.bind]
+  erw [readers, collect_values]
+  rfl
+
+-- Check the real function triples before selecting invariant/interface families.
+private theorem accepts_function_results {unit : UProg} (functions : Functions unit)
+    (checked : ∀ (invariants : ∀ i : Fin unit.invs.length, InvTy unit i)
+      (pointers : ∀ n, CallContract (declOf unit) ((declOf unit).sigNr n))
+      (foreigns : ∀ a, CallContract (declOf unit) ((declOf unit).asignatur a)),
+      OldSource.accepts unit
+        (progOfFn unit (fun f => (functions.values f).1)
+          (fun f => (functions.values f).2.1) (fun f => (functions.values f).2.2)
+          invariants pointers foreigns) = .ok true) :
+    OldSource.accepts unit functions.program = .ok true := by
+  unfold Functions.program
+  exact checked _ _ _
+
+-- Name the complete canonical header before any dependent code projection.
+private def globalTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.globalText := by
+  refine {
+    source := sourceFrom globalTextInput globalTextTail
+    sourceEq := sourceFrom_eq globalTextInput globalTextTail
+    expanded := ?expanded
+    requirements := ?requirements
+    expansion := ?expansion
+    constants := ?constants
+    ordinary := by cbv
+    metadata := globalTextTail.metadata
+    candidate := ?candidate
+    elaborated := ?elaborated }
+  case expansion => cbv <;> exact Eq.refl _
+  case constants =>
+    change Konst.checkSourceConstants globalTextInput.original = .ok ()
+    unfold Konst.checkSourceConstants
+    split
+    · exact globalTextTail.metadata
+    · rfl
+  case elaborated => cbv <;> exact Eq.refl _
+
+private theorem globalText_count : globalTextHeader.unit.fns.length = 1 := by cbv
+private def globalTextMain : Fin globalTextHeader.unit.fns.length :=
+  ⟨0, by have count := globalText_count; omega⟩
+private theorem globalText_only_main (f : Fin globalTextHeader.unit.fns.length) :
+    f = globalTextMain := by
+  apply Fin.ext
+  have small : f.val < 1 := by simpa only [globalText_count] using f.isLt
+  change f.val = 0
+  omega
+
+private def globalTextCode :
+    { value : EnsTy globalTextHeader.unit globalTextMain ×
+        RumpTy globalTextHeader.unit globalTextMain × ReqTy globalTextHeader.unit globalTextMain //
+      lowerFnAt globalTextHeader.unit globalTextMain = .ok value } := by
+  refine ⟨?value, ?produced⟩
+  case produced => cbv <;> exact Eq.refl _
+
+@[local cbv_eval] private theorem globalText_code_eq :
+    lowerFnAt globalTextHeader.unit globalTextMain = .ok globalTextCode.val := globalTextCode.property
+
+private def globalTextFunctions : Functions globalTextHeader.unit :=
+  Functions.of_success (fun f => by
+    have same := globalText_only_main f
+    subst f
+    rw [globalText_code_eq]
+    rfl) (by cbv) (fun f => by
+      have same := globalText_only_main f
+      subst f
+      cbv) (by cbv)
+
+-- Obtain the original item spine from the producer; only its scalar leaf is fixed here.
+private theorem globalText_arrays_ready :
+    (Frontend.checkArrays globalTextHeader.unit globalTextHeader.source.scopes
+      globalTextInput.original).toOption.isSome = true := by
+  have typed : uTypIn globalTextHeader.source.scopes.types []
+      (uRecordConstantTypes globalTextHeader.unit.records) [] [] (.atom "u8") =
+      .ok (.int 0 255) := by cbv
+  have itemSpine : ∃ name firstSig firstBody lastSig lastBody,
+      globalTextInput.original = [.constT name (.atom "u8") (.one (.lit 5)),
+        .fnT firstSig firstBody, .fnT lastSig lastBody] := by
+    refine ⟨?name, ?firstSig, ?firstBody, ?lastSig, ?lastBody, ?origin⟩
+    case origin => cbv <;> exact Eq.refl _
+  obtain ⟨name, firstSig, firstBody, lastSig, lastBody, origin⟩ := itemSpine
+  have meanings : globalTextInput.original.all
+      (Frontend.checkConstantMeaning globalTextHeader.source.scopes.types
+        globalTextHeader.source.scopes.functions globalTextHeader.source.scopes.values) = true :=
+    globalTextTail.constants
+  apply checked_array_items
+  intro item member
+  have meaning := List.all_eq_true.mp meanings item member
+  rw [origin] at member
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with rfl | rfl | rfl
+  · exact checked_u8_five globalTextHeader.unit globalTextHeader.source.scopes name meaning typed
+  · rfl
+  · rfl
+
+private theorem globalText_entry_free (f : Fin globalTextHeader.unit.fns.length) :
+    (OldSource.clauses globalTextHeader.expanded (fnAt globalTextHeader.unit f).name).any
+      OldSource.hasEntry = false := by
+  have same := globalText_only_main f
+  subst f
+  cbv
+
+private theorem globalText_restored :
+    OldSource.restore (pre108 globalTextHeader.source.prepared.elaborierbar)
+      globalTextHeader.unit globalTextFunctions.program = .ok globalTextFunctions.program :=
+  restore_entry_free _ globalTextHeader.expanded globalTextHeader.requirements
+    globalTextHeader.unit globalTextFunctions.program globalTextHeader.expansion globalText_entry_free
+
+private theorem globalText_accepted :
+    OldSource.accepts globalTextHeader.unit globalTextFunctions.program = .ok true := by
+  apply accepts_function_results globalTextFunctions
+  intro invariants pointers foreigns
+  cbv
+
+private def globalTextBody : Body globalTextHeader where
+  functions := globalTextFunctions
+  main := globalTextMain
+  entry := by cbv
+  initializers := by cbv
+  arrays := (Frontend.checkArrays globalTextHeader.unit globalTextHeader.source.scopes
+    globalTextInput.original).toOption.get globalText_arrays_ready
+  arrayEq := Gabbro.Grammatik.except_ok_get globalText_arrays_ready
+  program := globalTextFunctions.program
+  restored := globalText_restored
+  accepted := globalText_accepted
+
 private theorem globalText_program_packet :
     ∃ header : Header Gabbro.Stage0.Frontend.ConstValuesWitness.globalText,
-      header.unit.fns.length = 1 ∧ Nonempty (Body header) := by
-  let header : Header Gabbro.Stage0.Frontend.ConstValuesWitness.globalText := by
-    refine {
-      source := sourceFrom globalTextInput globalTextTail
-      sourceEq := by exact sourceFrom_eq globalTextInput globalTextTail
-      expanded := ?expanded
-      requirements := ?requirements
-      expansion := ?expansion
-      constants := ?constants
-      ordinary := by cbv
-      metadata := by exact globalTextTail.metadata
-      candidate := ?candidate
-      elaborated := ?elaborated }
-    case expansion => cbv <;> exact Eq.refl _
-    case constants =>
-      change Konst.checkSourceConstants globalTextInput.original = .ok ()
-      unfold Konst.checkSourceConstants
-      split
-      · exact globalTextTail.metadata
-      · rfl
-    case elaborated => cbv <;> exact Eq.refl _
-  have count : header.unit.fns.length = 1 := by cbv
-  have produced : ∀ f : Fin header.unit.fns.length,
-      (lowerFnAt header.unit f).toOption.isSome = true := by
-    rintro ⟨index, bound⟩
-    have small : index < 1 := by simpa only [count] using bound
-    have zero : index = 0 := by omega
-    subst index
-    cbv
-  let functions : Functions header.unit := Functions.of_success produced (by cbv) (by
-    rintro ⟨index, bound⟩
-    have small : index < 1 := by simpa only [count] using bound
-    have zero : index = 0 := by omega
-    subst index
-    cbv) (by cbv)
-  refine ⟨header, count, ?body⟩
-  case body =>
-    refine ⟨{
-      functions := functions
-      main := ⟨0, by omega⟩
-      entry := by cbv
-      initializers := by cbv
-      arrays := ?arrays
-      arrayEq := ?arrayEq
-      program := ?program
-      restored := ?restored
-      accepted := ?accepted }⟩
-    case arrayEq => cbv <;> exact Eq.refl _
-    case restored => cbv <;> exact Eq.refl _
-    case accepted => cbv
+      header.unit.fns.length = 1 ∧ Nonempty (Body header) :=
+  ⟨globalTextHeader, globalText_count, ⟨globalTextBody⟩⟩
 
 theorem globalText_compiled :
-    ∃ result : Compiled Gabbro.Stage0.Frontend.ConstValuesWitness.globalText, compile Gabbro.Stage0.Frontend.ConstValuesWitness.globalText = .ok result ∧
+    ∃ result : Compiled Gabbro.Stage0.Frontend.ConstValuesWitness.globalText,
+      compile Gabbro.Stage0.Frontend.ConstValuesWitness.globalText = .ok result ∧
       result.unit.fns.length = 1 := by
   obtain ⟨header, count, ⟨body⟩⟩ := globalText_program_packet
   obtain ⟨result, origin, unitEq⟩ := compiled header body
   exact ⟨result, origin, (congrArg (fun unit => unit.fns.length) unitEq).trans count⟩
 
-/-- Retain the actual elaborated constructor and all body facts inside one opaque theorem. -/
+-- Name the complete canonical header before any dependent code projection.
+private def qualifiedTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.qualifiedText := by
+  refine {
+    source := sourceFrom qualifiedTextInput qualifiedTextTail
+    sourceEq := sourceFrom_eq qualifiedTextInput qualifiedTextTail
+    expanded := ?expanded
+    requirements := ?requirements
+    expansion := ?expansion
+    constants := ?constants
+    ordinary := by
+      change qualifiedTextInput.original.any Frontend.expansionHeader = false
+      rw [qualifiedOriginalPacket.property]
+      cbv
+    metadata := qualifiedTextTail.metadata
+    candidate := ?candidate
+    elaborated := ?elaborated }
+  case expansion => cbv <;> exact Eq.refl _
+  case constants =>
+    change Konst.checkSourceConstants qualifiedTextInput.original = .ok ()
+    unfold Konst.checkSourceConstants
+    split
+    · exact qualifiedTextTail.metadata
+    · rfl
+  case elaborated =>
+    change ((Frontend.elabWithScopes (pre108 qualifiedTextInput.prepared.elaborierbar)
+      qualifiedTextTail.derived.scope.values qualifiedTextTail.derived.scope.types
+      qualifiedTextTail.derived.scope.functions (Frontend.tableWithEmpty
+        qualifiedTextTail.derived.scope.values qualifiedTextTail.derived.scope.types)).bind
+          (Profil.selectUnit {})) = .ok _
+    rw [qualified_scope_values, qualified_scope_types, qualified_scope_functions]
+    cbv <;> exact Eq.refl _
+
+private theorem qualifiedText_count : qualifiedTextHeader.unit.fns.length = 1 := by cbv
+private def qualifiedTextMain : Fin qualifiedTextHeader.unit.fns.length :=
+  ⟨0, by have count := qualifiedText_count; omega⟩
+private theorem qualifiedText_only_main (f : Fin qualifiedTextHeader.unit.fns.length) :
+    f = qualifiedTextMain := by
+  apply Fin.ext
+  have small : f.val < 1 := by simpa only [qualifiedText_count] using f.isLt
+  change f.val = 0
+  omega
+
+private def qualifiedTextCode :
+    { value : EnsTy qualifiedTextHeader.unit qualifiedTextMain ×
+        RumpTy qualifiedTextHeader.unit qualifiedTextMain × ReqTy qualifiedTextHeader.unit qualifiedTextMain //
+      lowerFnAt qualifiedTextHeader.unit qualifiedTextMain = .ok value } := by
+  refine ⟨?value, ?produced⟩
+  case produced => cbv <;> exact Eq.refl _
+
+@[local cbv_eval] private theorem qualifiedText_code_eq :
+    lowerFnAt qualifiedTextHeader.unit qualifiedTextMain = .ok qualifiedTextCode.val := qualifiedTextCode.property
+
+private def qualifiedTextFunctions : Functions qualifiedTextHeader.unit :=
+  Functions.of_success (fun f => by
+    have same := qualifiedText_only_main f
+    subst f
+    rw [qualifiedText_code_eq]
+    rfl) (by cbv) (fun f => by
+      have same := qualifiedText_only_main f
+      subst f
+      cbv) (by cbv)
+
+-- Obtain the original item spine from the producer; only its scalar leaf is fixed here.
+private theorem qualifiedText_arrays_ready :
+    (Frontend.checkArrays qualifiedTextHeader.unit qualifiedTextHeader.source.scopes
+      qualifiedTextInput.original).toOption.isSome = true := by
+  have typed : uTypIn qualifiedTextHeader.source.scopes.types []
+      (uRecordConstantTypes qualifiedTextHeader.unit.records) [] [] (.atom "u8") =
+      .ok (.int 0 255) := by
+    change uTypIn qualifiedTextTail.derived.scope.types []
+      (uRecordConstantTypes qualifiedTextHeader.unit.records) [] [] (.atom "u8") = .ok (.int 0 255)
+    rw [qualified_scope_types]
+    cbv
+  have itemSpine : ∃ name firstSig firstBody lastSig lastBody,
+      qualifiedTextInput.original = [.constT name (.atom "u8") (.one (.lit 5)),
+        .fnT firstSig firstBody, .fnT lastSig lastBody] := by
+    rw [qualifiedOriginalPacket.property]
+    refine ⟨?name, ?firstSig, ?firstBody, ?lastSig, ?lastBody, ?origin⟩
+    case origin => cbv <;> exact Eq.refl _
+  obtain ⟨name, firstSig, firstBody, lastSig, lastBody, origin⟩ := itemSpine
+  have meanings : qualifiedTextInput.original.all
+      (Frontend.checkConstantMeaning qualifiedTextHeader.source.scopes.types
+        qualifiedTextHeader.source.scopes.functions qualifiedTextHeader.source.scopes.values) = true :=
+    qualifiedTextTail.constants
+  apply checked_array_items
+  intro item member
+  have meaning := List.all_eq_true.mp meanings item member
+  rw [origin] at member
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with rfl | rfl | rfl
+  · exact checked_u8_five qualifiedTextHeader.unit qualifiedTextHeader.source.scopes name meaning typed
+  · rfl
+  · rfl
+
+private theorem qualifiedText_entry_free (f : Fin qualifiedTextHeader.unit.fns.length) :
+    (OldSource.clauses qualifiedTextHeader.expanded (fnAt qualifiedTextHeader.unit f).name).any
+      OldSource.hasEntry = false := by
+  have same := qualifiedText_only_main f
+  subst f
+  cbv
+
+private theorem qualifiedText_restored :
+    OldSource.restore (pre108 qualifiedTextHeader.source.prepared.elaborierbar)
+      qualifiedTextHeader.unit qualifiedTextFunctions.program = .ok qualifiedTextFunctions.program :=
+  restore_entry_free _ qualifiedTextHeader.expanded qualifiedTextHeader.requirements
+    qualifiedTextHeader.unit qualifiedTextFunctions.program qualifiedTextHeader.expansion qualifiedText_entry_free
+
+private theorem qualifiedText_accepted :
+    OldSource.accepts qualifiedTextHeader.unit qualifiedTextFunctions.program = .ok true := by
+  apply accepts_function_results qualifiedTextFunctions
+  intro invariants pointers foreigns
+  cbv
+
+private def qualifiedTextBody : Body qualifiedTextHeader where
+  functions := qualifiedTextFunctions
+  main := qualifiedTextMain
+  entry := by cbv
+  initializers := by cbv
+  arrays := (Frontend.checkArrays qualifiedTextHeader.unit qualifiedTextHeader.source.scopes
+    qualifiedTextInput.original).toOption.get qualifiedText_arrays_ready
+  arrayEq := Gabbro.Grammatik.except_ok_get qualifiedText_arrays_ready
+  program := qualifiedTextFunctions.program
+  restored := qualifiedText_restored
+  accepted := qualifiedText_accepted
+
 private theorem qualifiedText_program_packet :
     ∃ header : Header Gabbro.Stage0.Frontend.ConstValuesWitness.qualifiedText,
-      header.unit.fns.length = 1 ∧ Nonempty (Body header) := by
-  let header : Header Gabbro.Stage0.Frontend.ConstValuesWitness.qualifiedText := by
-    refine {
-      source := sourceFrom qualifiedTextInput qualifiedTextTail
-      sourceEq := by exact sourceFrom_eq qualifiedTextInput qualifiedTextTail
-      expanded := ?expanded
-      requirements := ?requirements
-      expansion := ?expansion
-      constants := ?constants
-      ordinary := by cbv
-      metadata := by exact qualifiedTextTail.metadata
-      candidate := ?candidate
-      elaborated := ?elaborated }
-    case expansion => cbv <;> exact Eq.refl _
-    case constants =>
-      change Konst.checkSourceConstants qualifiedTextInput.original = .ok ()
-      unfold Konst.checkSourceConstants
-      split
-      · exact qualifiedTextTail.metadata
-      · rfl
-    case elaborated => cbv <;> exact Eq.refl _
-  have count : header.unit.fns.length = 1 := by cbv
-  have produced : ∀ f : Fin header.unit.fns.length,
-      (lowerFnAt header.unit f).toOption.isSome = true := by
-    rintro ⟨index, bound⟩
-    have small : index < 1 := by simpa only [count] using bound
-    have zero : index = 0 := by omega
-    subst index
-    cbv
-  let functions : Functions header.unit := Functions.of_success produced (by cbv) (by
-    rintro ⟨index, bound⟩
-    have small : index < 1 := by simpa only [count] using bound
-    have zero : index = 0 := by omega
-    subst index
-    cbv) (by cbv)
-  refine ⟨header, count, ?body⟩
-  case body =>
-    refine ⟨{
-      functions := functions
-      main := ⟨0, by omega⟩
-      entry := by cbv
-      initializers := by cbv
-      arrays := ?arrays
-      arrayEq := ?arrayEq
-      program := ?program
-      restored := ?restored
-      accepted := ?accepted }⟩
-    case arrayEq => cbv <;> exact Eq.refl _
-    case restored => cbv <;> exact Eq.refl _
-    case accepted => cbv
+      header.unit.fns.length = 1 ∧ Nonempty (Body header) :=
+  ⟨qualifiedTextHeader, qualifiedText_count, ⟨qualifiedTextBody⟩⟩
 
 theorem qualifiedText_compiled :
-    ∃ result : Compiled Gabbro.Stage0.Frontend.ConstValuesWitness.qualifiedText, compile Gabbro.Stage0.Frontend.ConstValuesWitness.qualifiedText = .ok result ∧
+    ∃ result : Compiled Gabbro.Stage0.Frontend.ConstValuesWitness.qualifiedText,
+      compile Gabbro.Stage0.Frontend.ConstValuesWitness.qualifiedText = .ok result ∧
       result.unit.fns.length = 1 := by
   obtain ⟨header, count, ⟨body⟩⟩ := qualifiedText_program_packet
   obtain ⟨result, origin, unitEq⟩ := compiled header body
