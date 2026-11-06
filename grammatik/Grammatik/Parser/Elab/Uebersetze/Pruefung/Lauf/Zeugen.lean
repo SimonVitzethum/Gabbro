@@ -63,9 +63,7 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 
 @[expose] public section
-
 namespace Gabbro.Grammatik.Parser.Uebersetze
-
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
 open Gabbro.Grammatik.Zielsatz
@@ -73,56 +71,116 @@ open Gabbro.Grammatik.Zielsatz
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
 
--- Pin the finite axiom dictionary independently of the actual source packet.
+-- Pin the dictionary before substituting the source-backed declaration.
 local instance retiringWitnessAxiomEquality (u : UProg) : DecidableEq (declOf u).Ax :=
   inferInstanceAs (DecidableEq (Fin u.axs.length))
+
+theorem retiringSource_selected :
+    ((elabText checkTextBodenWahr).bind fun u =>
+      uSelectCheckConsumers u [retiringSelection]).toOption.isSome = true := by
+  rw [RetiringWitness.selected.property]
+  rfl
+
+-- Public runtime data retain their original canonical getter definitions.
+-- Only propositions cross the private implementation boundary below.
+def retiringU : UProg :=
+  ((elabText checkTextBodenWahr).bind fun u =>
+    uSelectCheckConsumers u [retiringSelection]).toOption.get retiringSource_selected
+
+private theorem retiring_unit : retiringU = RetiringWitness.unit :=
+  Except.ok.inj ((except_ok_get (x := (elabText checkTextBodenWahr).bind fun u =>
+    uSelectCheckConsumers u [retiringSelection]) retiringSource_selected).symm.trans
+      RetiringWitness.selected.property)
+
+private theorem retiring_facts : RetiringWitness.RetiringFacts retiringU :=
+  Eq.mpr (congrArg (fun u : UProg => RetiringWitness.RetiringFacts u) retiring_unit)
+    RetiringWitness.facts
+
+theorem retiringU_lowered : (lowerAllg retiringU).toOption.isSome = true :=
+  retiring_facts.common.lowered
+
+def retiringP : Programm (declOf retiringU) :=
+  ((lowerAllg retiringU).toOption.get retiringU_lowered).1
+
+theorem retiringU_checks : (uCheckDecls retiringU).toOption.isSome = true :=
+  retiring_facts.common.derived
+
+def retiringChecks : List (CheckDecl (declOf retiringU)) :=
+  (uCheckDecls retiringU).toOption.get retiringU_checks
+
+private theorem retiring_check_nonempty : 0 < retiringChecks.length := by
+  have count : retiringChecks.length = 1 := retiring_facts.checkCount
+  omega
+
+private theorem retiring_index_lt (index : Nat) (bound : index < 6) :
+    index < retiringU.fns.length := by
+  rw [retiring_facts.functionCount]
+  exact bound
+
+def retiringCheck : CheckDecl (declOf retiringU) :=
+  retiringChecks.get ⟨0, by exact retiring_check_nonempty⟩
+
+def retiringProbe : (declOf retiringU).Fn := ⟨1, by exact retiring_index_lt 1 (by decide)⟩
+def retiringReporter : (declOf retiringU).Fn := ⟨2, by exact retiring_index_lt 2 (by decide)⟩
+def retiringWrapper : (declOf retiringU).Fn := ⟨3, by exact retiring_index_lt 3 (by decide)⟩
+def retiringConsumer : (declOf retiringU).Fn := ⟨4, by exact retiring_index_lt 4 (by decide)⟩
+def retiringDriver : (declOf retiringU).Fn := ⟨5, by exact retiring_index_lt 5 (by decide)⟩
+
+private theorem retiring_check_member : retiringCheck ∈ retiringChecks := List.get_mem _ _
+
+private theorem retiring_descriptor : retiringCheck.name = "p" ∧
+    retiringCheck.probe.val = 1 ∧ retiringCheck.gates.map Fin.val = [3] :=
+  retiring_facts.descriptor retiringCheck retiring_check_member
+
+private theorem retiring_check_probe : retiringCheck.probe = retiringProbe :=
+  Fin.ext retiring_descriptor.2.1
+
+private theorem retiring_check_name : retiringCheck.name = "p" := retiring_descriptor.1
+
+private theorem retiring_probe_result : (declOf retiringU).erg retiringProbe = some .bool :=
+  retiring_facts.boolResult retiringProbe (Or.inl rfl)
+
+private theorem retiring_reporter_result : (declOf retiringU).erg retiringReporter = some .bool :=
+  retiring_facts.boolResult retiringReporter (Or.inr rfl)
+
+private theorem retiring_wrapper_declared : retiringWrapper ∈ retiringCheck.gates := by
+  have member : retiringWrapper.val ∈ retiringCheck.gates.map Fin.val := by
+    rw [retiring_descriptor.2.2]
+    exact List.mem_singleton.mpr rfl
+  obtain ⟨f, member, same⟩ := List.mem_map.mp member
+  exact (Fin.ext same : f = retiringWrapper) ▸ member
 
 /-- Source text, ordinary lowering and the full acceptance Bool, with the
     real declared check and selected physical consumer present. -/
 theorem retiringU_accepted :
     AkzeptiertX retiringP (Cover.Differenz.sperrFamilie retiringU)
-      (List.finRange retiringU.fns.length) [] [] [] [] retiringChecks = true := by
-  cbv
+      (List.finRange retiringU.fns.length) [] [] [] [] retiringChecks = true :=
+  retiring_facts.common.accepted
 
 /-- The complete entry returns no physical Duty. -/
 theorem retiringDriver_empty_end :
-    (vertragVon (declOf retiringU) retiringDriver).ende = [] := rfl
+    (vertragVon (declOf retiringU) retiringDriver).ende = [] :=
+  retiring_facts.driverEnd retiringDriver rfl
 
 /-- The consumer's physical resource effect agrees with its ghost discharge. -/
 theorem retiringConsumer_conservation :
     nach (declOf retiringU) retiringConsumer [Res.vonMarke (declOf retiringU) retiringCheck.duty] =
       [] := by
+  have flow := retiring_facts.resources retiringCheck retiring_check_member
+    retiringProbe retiringConsumer rfl rfl
   exact duty_consumer_conservation (declOf retiringU) retiringCheck
-    ((declOf retiringU).signatur retiringConsumer) rfl rfl
+    ((declOf retiringU).signatur retiringConsumer) flow.2.2.1 flow.2.2.2
 
 /-- The producer and selected consumer jointly leave no residual token. -/
 theorem retiringCycle_conservation :
     nach (declOf retiringU) retiringConsumer
       (nach (declOf retiringU) retiringProbe
         [Res.vonMarke (declOf retiringU) retiringCheck.duty]) = [] := by
+  have flow := retiring_facts.resources retiringCheck retiring_check_member
+    retiringProbe retiringConsumer rfl rfl
   exact duty_cycle_conservation (declOf retiringU) retiringCheck
     ((declOf retiringU).signatur retiringProbe) ((declOf retiringU).signatur retiringConsumer)
-    rfl rfl rfl rfl
-
--- A failed actual function cannot occur in a successful canonical program.
--- This uses the assembler's complete function-field theorem, not a second gate.
-private theorem retiring_function_refused (u : UProg) (f : Fin u.fns.length)
-    (error : String) (rejected : lowerFnAt u f = .error error) :
-    (lowerAllg u).toOption.isNone = true := by
-  cases made : lowerAllg u with
-  | error error => rfl
-  | ok result =>
-    obtain ⟨fields, produced, _, _, _⟩ := lowerAllg_fields u result.1 result.2 made f
-    rw [rejected] at produced
-    cases produced
-
--- The same selected scalar/body equations apply to the two modified drivers.
--- Every actual mark, owner and return-permission check remains in the producer.
-attribute [local cbv_opaque] lowCallArgOneL lowCallArgsAuxL withErg lowErg lowEnd
-attribute [local cbv_eval] check_argument_bool check_argument_integer
-  check_arguments_nil check_arguments_cons
-  check_result_select check_return_empty check_return_bool check_end_empty check_end_bool
-  floor_name_self floor_mark_self
+    flow.1 flow.2.1 flow.2.2.1 flow.2.2.2
 
 /-- An executable program with the consumer call omitted cannot return with
     its Duty outstanding. This is the real lowering gate, not a report-shape test. -/
@@ -133,13 +191,7 @@ def retiringUnconsumed : UProg :=
     else f }
 
 theorem retiringUnconsumed_refused :
-    (lowerAllg retiringUnconsumed).toOption.isNone = true := by
-  have failed : ∃ error : String,
-      lowerFnAt retiringUnconsumed ⟨5, by change 5 < 6; decide⟩ = .error error := by
-    refine ⟨?error, ?rejected⟩
-    case rejected => cbv <;> exact Eq.refl _
-  obtain ⟨error, rejected⟩ := failed
-  exact retiring_function_refused retiringUnconsumed _ error rejected
+    (lowerAllg retiringUnconsumed).toOption.isNone = true := retiring_facts.unconsumed
 
 /-- The second consumer call has no mark available; a copy of the ghost
     report cannot supply the missing physical resource. -/
@@ -150,26 +202,18 @@ def retiringDouble : UProg :=
     else f }
 
 theorem retiringDouble_refused :
-    (lowerAllg retiringDouble).toOption.isNone = true := by
-  have failed : ∃ error : String,
-      lowerFnAt retiringDouble ⟨5, by change 5 < 6; decide⟩ = .error error := by
-    refine ⟨?error, ?rejected⟩
-    case rejected => cbv <;> exact Eq.refl _
-  obtain ⟨error, rejected⟩ := failed
-  exact retiring_function_refused retiringDouble _ error rejected
+    (lowerAllg retiringDouble).toOption.isNone = true := retiring_facts.double
 
 /-- Actual reporter parameters: measured x=3, floor=true, written verdict=true. -/
 def retiringReporterEnv : Env (declOf retiringU) ((declOf retiringU).params retiringReporter) :=
   .cons ⟨3, by decide, by decide⟩ (.cons true (.cons true .nil))
 
-def retiringReport : CheckReport :=
-  { proben := [⟨"x", 0, 3, true⟩], boeden := [true], urteil := true }
-
 /-- The generic decoder reads the measured value and floor directly from
     the actual saved parameter environment. -/
 theorem retiringActual_samples :
     actualCheckReturn retiringU retiringReporter retiringReporterEnv true =
-      some ("p", retiringReport) := rfl
+      some ("p", retiringReport) := by
+  exact retiring_facts.capture retiringReporter rfl retiringReporterEnv retiring_reporter_result rfl
 
 /-- Chronological call/return events of the generated ordinary cycle. The
     root remains at its empty-resource return; G logs callee pops only. -/
@@ -182,17 +226,23 @@ def retiringEvents (world : World (declOf retiringU)) :
     .rueck retiringProbe .nil true world world,
     .eintritt retiringConsumer .nil world,
     .eintritt retiringWrapper .nil world,
-    .eintritt ⟨0, by decide⟩ .nil world,
-    .rueck ⟨0, by decide⟩ .nil () world world,
+    .eintritt ⟨0, by exact retiring_index_lt 0 (by decide)⟩ .nil world,
+    .rueck ⟨0, by exact retiring_index_lt 0 (by decide)⟩ .nil () world world,
     .rueck retiringWrapper .nil () world world,
     .rueck retiringConsumer .nil () world world]
 
-section retiringReplay
-attribute [local cbv_opaque] actualCheckReturn
-attribute [local cbv_eval] retiringActual_samples
+private theorem retiring_probe_verdict (before after : World (declOf retiringU)) :
+    rueckUrteil retiringCheck (.rueck retiringProbe .nil true before after) = some true := by
+  exact retiring_facts.verdict retiringCheck retiring_check_member retiringProbe rfl
+    .nil retiring_probe_result before after
 
--- The saved-argument decoder above supplies the report. Infer the actual
--- state from the eleven real events before inspecting history/completeness.
+section retiringReplay
+-- These equations are projections of the transported source certificate.
+-- Replay cannot unfold the source, lowerAllg or the descriptor getter.
+attribute [local cbv_opaque] retiringU retiringChecks retiringCheck actualCheckReturn rueckUrteil
+attribute [local cbv_eval] retiring_check_probe retiring_check_name
+  retiringActual_samples retiring_probe_verdict
+
 private def retiringReplay (world : World (declOf retiringU)) :
     {state : CheckGhostState (declOf retiringU) //
       checkGhostHistory retiringU retiringCheck retiringConsumer retiringWrapper
@@ -200,21 +250,18 @@ private def retiringReplay (world : World (declOf retiringU)) :
   refine ⟨?state, ?replayed⟩
   case replayed => cbv <;> exact Eq.refl _
 
-end retiringReplay
-
 /-- The ghost entry retains the actual sample/floor report, consumed once. -/
 theorem retiringHistory_samples (world : World (declOf retiringU)) :
     (checkGhostHistory retiringU retiringCheck retiringConsumer retiringWrapper
       (retiringEvents world).reverse).history =
       [replayEintrag retiringCheck retiringReport retiringWrapper] := by
   rw [(retiringReplay world).property]
-  rfl
+  simp only [replayEintrag, retiring_check_probe] <;> rfl
 
 theorem retiringHistory_complete (world : World (declOf retiringU)) :
     checkGhostComplete (checkGhostHistory retiringU retiringCheck retiringConsumer
       retiringWrapper (retiringEvents world).reverse) = true := by
-  rw [(retiringReplay world).property]
-  rfl
+  rw [(retiringReplay world).property] <;> rfl
 
 /-- The real recorded samples, once consumed, satisfy the unchanged goal leg
     by the generic conservation theorem, not a per-report shape argument. -/
@@ -223,7 +270,7 @@ theorem retiringHistory_treu (world : World (declOf retiringU)) :
       (checkGhostHistory retiringU retiringCheck retiringConsumer retiringWrapper
         (retiringEvents world).reverse).history :=
   checkGhostHistory_treu retiringU retiringP retiringCheck retiringConsumer retiringWrapper
-    (by cbv) (retiringEvents world).reverse (retiringHistory_complete world)
+    retiring_wrapper_declared (retiringEvents world).reverse (retiringHistory_complete world)
 
 /-- A repeated consumption is also refused by ghost replay. -/
 theorem retiringHistory_double_refused (world : World (declOf retiringU)) :
@@ -238,8 +285,9 @@ theorem retiringHistory_double_refused (world : World (declOf retiringU)) :
     rw [List.reverse_append]
     rfl
   rw [appended, checkGhostHistory_event, checkGhostHistory_event,
-    (retiringReplay world).property]
-  cbv
+    (retiringReplay world).property] <;> cbv
+
+end retiringReplay
 
 /-- The sample cannot be replaced by a neighboring claimed value. -/
 theorem retiringHistory_fabrication_refused :
