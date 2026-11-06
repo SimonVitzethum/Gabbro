@@ -214,11 +214,21 @@ private theorem source_has_const : sourceOriginal.val.any
 
 -- Close the collector and substitution independently. Both certificates keep
 -- the original declarations and all unused/original metadata obligations.
+-- Consume the actual scope-producing collector before projecting a stored
+-- scope tuple; its fixed result type contains only the function descriptors.
+private def sourceCollectionOutput : {actual : List UKonstFn //
+    Konst.collectFunctions sourceOriginal.val = .ok actual} := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
 private def sourceCollected : {actual : List UKonstFn //
     Konst.collectFunctionsWith sourceOriginal.val sourceScopeData.val.1
       sourceScopeData.val.2.1 = .ok actual} := by
-  refine ⟨?actual, ?produced⟩
-  case produced => cbv <;> exact Eq.refl _
+  refine ⟨sourceCollectionOutput.val, ?_⟩
+  have selected := Konst.collectFunctions_from_scopes sourceOriginal.val sourceScopes.val
+    source_has_const sourceScopes.property
+  have fields := congrArg (fun data : ScopeData =>
+    Konst.collectFunctionsWith sourceOriginal.val data.1 data.2.1) sourceScopeData.property
+  exact fields.symm.trans (selected.symm.trans sourceCollectionOutput.property)
 
 private def sourceReplaced : {actual : List SItemTief //
     Konst.ersetzeItems sourceCollected.val sourceOriginal.val = .ok actual} := by
@@ -299,10 +309,24 @@ private theorem source_header_data :
 
 -- Infer the complete expansion pair and complete selected UProg independently
 -- before Header introduces any dependent fields or synthetic result metavariables.
+-- The expansion has no scope input. Compose the actual profile and module
+-- producers so reducing it cannot inspect the unrelated HeaderData scope half.
+private def sourceExpansionOutput : {actual : List SItemTief × List (STyp × String) //
+    ((Profil.prepareItems {} sourceInput.items).bind fun prepared =>
+      Modules.prepare (pre108 prepared.elaborierbar)) = .ok actual} := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
 private def sourceExpansion : {actual : List SItemTief × List (STyp × String) //
     Modules.prepare sourceHeaderData.1 = .ok actual} := by
-  refine ⟨?actual, ?produced⟩
-  case produced => cbv <;> exact Eq.refl _
+  refine ⟨sourceExpansionOutput.val, ?_⟩
+  have selected : ((Profil.prepareItems {} sourceInput.items).bind fun prepared =>
+      Modules.prepare (pre108 prepared.elaborierbar)) =
+      Modules.prepare (pre108 sourceInput.prepared.elaborierbar) :=
+    congrArg (fun produced : Except String (Profil.Prepared {} sourceInput.items) =>
+      produced.bind fun prepared => Modules.prepare (pre108 prepared.elaborierbar))
+      sourceInput.preparation
+  exact (congrArg Modules.prepare sourcePrepared.property).symm.trans
+    (selected.symm.trans sourceExpansionOutput.property)
 
 -- The canonical elaborator revisits the original const pass. Reuse its exact
 -- checked result instead of reopening the dependency/scope discovery graph.
