@@ -136,7 +136,8 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   checked call-head certificates instead of its former 4-million-heartbeat timeout.
   Tagged's two functionless fixtures now witness the existing no-function refusal and retain
   positive collection coverage on their original inputs. Its complete PayloadProbes and
-  InitializerProbes leaves build; the remaining parent still needs a terminal check.
+  InitializerProbes leaves build, and the complete parent now builds through its generic
+  collection/refusal composition without re-evaluating the concrete exporter.
   The complete old-array snapshot/environment witness also builds with its original two-word
   parameter. Fresh goal and Runner audits pass for all 13 and 14 checked sentences, respectively,
   using only standard axioms. Final Stage0 audits remain pending its SourceWitness build;
