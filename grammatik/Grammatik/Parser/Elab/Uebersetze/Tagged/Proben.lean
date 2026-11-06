@@ -312,6 +312,14 @@ private theorem tagged_expanded_declaration (body : Option String)
 
 -- Expansion and each subsequent phase are certified separately. The complete
 -- actual pair is transported before any projection feeds the elaborator.
+private theorem tagged_refused_from_phases (items : List SItemTief)
+    (expanded : List SItemTief × List (STyp × String)) (error : String)
+    (produced : expandU items = .ok expanded)
+    (refused : elabUExpanded expanded = .error error) :
+    elabU items = .error error := by
+  rw [elabU, produced]
+  exact refused
+
 private def declaration_without_fn_expanded :
     { actual : List SItemTief × List (STyp × String) //
       expandU (taggedItems "{ Bytes([u8; 3]), Empty }") = .ok actual } := by
@@ -330,9 +338,8 @@ private theorem declaration_without_fn_phase :
 
 private theorem declaration_without_fn :
     elabU (taggedItems "{ Bytes([u8; 3]), Empty }") = .error "unit without a fn" :=
-  (congrArg (fun result : Except String (List SItemTief × List (STyp × String)) =>
-    result.bind elabUExpanded) declaration_without_fn_expanded.property).trans
-      declaration_without_fn_phase
+  tagged_refused_from_phases _ declaration_without_fn_expanded.val _
+    declaration_without_fn_expanded.property declaration_without_fn_phase
 
 private def declaration_duplicate_expanded :
     { actual : List SItemTief × List (STyp × String) //
@@ -354,9 +361,8 @@ private theorem declaration_duplicate_phase :
 
 private theorem declaration_duplicate :
     elabU (taggedItems "{ Data(u8), Data }") = .error "duplicate tagged case name" :=
-  (congrArg (fun result : Except String (List SItemTief × List (STyp × String)) =>
-    result.bind elabUExpanded) declaration_duplicate_expanded.property).trans
-      declaration_duplicate_phase
+  tagged_refused_from_phases _ declaration_duplicate_expanded.val _
+    declaration_duplicate_expanded.property declaration_duplicate_phase
 
 private def declaration_shape_expanded :
     { actual : List SItemTief × List (STyp × String) //
@@ -379,8 +385,8 @@ private theorem declaration_shape_phase :
 private theorem declaration_shape :
     elabU [.typeT ["tagged"] "Message" [] [] none] =
       .error "tagged declaration without G form" :=
-  (congrArg (fun result : Except String (List SItemTief × List (STyp × String)) =>
-    result.bind elabUExpanded) declaration_shape_expanded.property).trans declaration_shape_phase
+  tagged_refused_from_phases _ declaration_shape_expanded.val _
+    declaration_shape_expanded.property declaration_shape_phase
 /-- The full exporter still requires an actual function; schema support does not bypass this gate. -/
 theorem elabU_tagged_payload_without_function_refused :
     elabU (taggedItems "{ Bytes([u8; 3]), Empty }") = .error "unit without a fn" :=
