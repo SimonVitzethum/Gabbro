@@ -171,7 +171,7 @@ attribute [local cbv_eval] floor_name_self floor_mark_self
 -- Infer this exact unit from canonical elaboration, once, before dependent indices.
 @[expose] def floorPassingUnitRead : {unit : UProg // elabU (floorItems 2 true true) = .ok unit} := by
   refine ⟨?unit, ?made⟩
-  case made => cbv <;> exact Eq.refl _
+  case made => as_aux_lemma => cbv <;> exact Eq.refl _
 
 -- Nondependent field equalities are proved before any declaration/code index exists.
 private theorem floorPassing_metadata : floorMetadataUnit 2 floorPassingUnitRead.val = floorPassingUnitRead.val := by
@@ -300,7 +300,7 @@ private theorem admission_unit : elabU (textItems "c" "g") = .ok admissionUnitMa
 -- Infer this exact unit from canonical elaboration, once, before dependent indices.
 @[expose] def floorFailingUnitRead : {unit : UProg // elabU (floorItems 4 true true) = .ok unit} := by
   refine ⟨?unit, ?made⟩
-  case made => cbv <;> exact Eq.refl _
+  case made => as_aux_lemma => cbv <;> exact Eq.refl _
 
 -- Nondependent field equalities are proved before any declaration/code index exists.
 private theorem floorFailing_metadata : floorMetadataUnit 4 floorFailingUnitRead.val = floorFailingUnitRead.val := by
