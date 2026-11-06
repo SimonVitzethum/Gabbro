@@ -128,6 +128,37 @@ local instance counterprobeAxiomEquality (u : UProg) : DecidableEq (declOf u).Ax
 attribute [local cbv_opaque] lowerAllg uCheckDecls
 attribute [local cbv_eval] sonde_program sonde_checks
 
+-- Observation is independent of how a typed return was transported: when
+-- both carrier types are empty, its actual footprint cannot contain a cell.
+-- Keep the result index and expression arbitrary instead of reducing Eq.mpr
+-- inside the dependent ErgExpr matcher at a concrete function signature.
+private theorem counterprobe_return_orte_empty (unit : UProg)
+    (tables : unit.tabs = []) (globals : unit.globs = [])
+    {Γ : Ctx} {Λ : List (Res (declOf unit))} {result : Option Ty}
+    (value : ErgExpr (declOf unit) Γ Λ result) : value.orte = [] := by
+  cases observed : value.orte with
+  | nil => rfl
+  | cons cell rest =>
+    cases cell with
+    | inl table =>
+      have empty : unit.tabs.length = 0 := by rw [tables]; rfl
+      have actual : Fin unit.tabs.length := table
+      exact Fin.elim0 (empty ▸ actual)
+    | inr global =>
+      have empty : unit.globs.length = 0 := by rw [globals]; rfl
+      have actual : Fin unit.globs.length := global
+      exact Fin.elim0 (empty ▸ actual)
+
+private theorem sonde_tables_empty : sondeUnitMade.val.tabs = [] := by cbv
+private theorem sonde_globals_empty : sondeUnitMade.val.globs = [] := by cbv
+
+private theorem sonde_return_orte_empty {Γ : Ctx}
+    {Λ : List (Res (declOf sondeUnitMade.val))} {result : Option Ty}
+    (value : ErgExpr (declOf sondeUnitMade.val) Γ Λ result) : value.orte = [] :=
+  counterprobe_return_orte_empty sondeUnitMade.val sonde_tables_empty sonde_globals_empty value
+
+attribute [local cbv_eval] sonde_return_orte_empty
+
 private theorem sonde_common : CheckWitness sondeUnitMade.val 0 := by
   constructor <;> cbv
 
@@ -158,20 +189,21 @@ private theorem sonde_facts : CounterprobeFacts sondeUnitMade.val := by
 -- This is the actual metadata edit from the refusal witness, certified before
 -- its dependent descriptor reader is entered.
 private def sondeWithoutBindingMade : {unit : UProg //
-    ({sondeUnitMade.val with fns := sondeUnitMade.val.fns.filter
-      (fun f => !strEq f.name "p#sonde#ext")} : UProg) = unit} := by
+    ({sondeUnitMade.val with
+      fns := sondeUnitMade.val.fns.filter (fun f => !strEq f.name "p#sonde#ext")} : UProg) = unit} := by
   refine ⟨?_, by cbv <;> exact Eq.refl _⟩
 
 private def sondeWithoutBindingError : {error : String //
     uCheckDecls sondeWithoutBindingMade.val = .error error} := by
-  refine ⟨?_, ?_⟩
+  refine ⟨?error, ?made⟩
   -- Here only descriptor derivation is active, not the whole source pipeline.
-  unfold uCheckDecls
-  cbv <;> exact Eq.refl _
+  case made =>
+    unfold uCheckDecls
+    cbv <;> exact Eq.refl _
 
 private theorem sonde_without_binding_refused :
-    (uCheckDecls ({sondeUnitMade.val with fns := sondeUnitMade.val.fns.filter
-      (fun f => !strEq f.name "p#sonde#ext")} : UProg)).toOption.isNone = true := by
+    (uCheckDecls ({sondeUnitMade.val with
+      fns := sondeUnitMade.val.fns.filter (fun f => !strEq f.name "p#sonde#ext")} : UProg)).toOption.isNone = true := by
   rw [sondeWithoutBindingMade.property, sondeWithoutBindingError.property]
   rfl
 
