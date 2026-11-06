@@ -115,12 +115,12 @@ rights_cut setter as "set(t : ptr<normal, rw> T, i : index into T) effects "
 bound_fragment setter as "set(t : ptr<normal, rw> T, i : index into T) effects "
 rights_cut boolWrite as "{ writes t.slots } { t.slots[i].b = true; } "
 bound_fragment boolWrite as "{ writes t.slots } { t.slots[i].b = true; } "
-rights_cut boolGetter as "impl fn get(t : ptr<normal, r> T, i : index into T) -> bool "
-bound_fragment boolGetter as "impl fn get(t : ptr<normal, r> T, i : index into T) -> bool "
+rights_cut boolGetter as "impl fn get(t : ptr<normal, r> T, i : index into T) -> bool effects "
+bound_fragment boolGetter as "impl fn get(t : ptr<normal, r> T, i : index into T) -> bool effects "
 rights_cut boolRead as "{ reads t.slots } { return t.slots[i].b; } }"
 bound_fragment boolRead as "{ reads t.slots } { return t.slots[i].b; } }"
-rights_cut numberGetter as "get(t : ptr<normal, r> T, i : index into T) -> u32 "
-bound_fragment numberGetter as "get(t : ptr<normal, r> T, i : index into T) -> u32 "
+rights_cut numberGetter as "get(t : ptr<normal, r> T, i : index into T) -> u32 effects "
+bound_fragment numberGetter as "get(t : ptr<normal, r> T, i : index into T) -> u32 effects "
 rights_cut numberRead as "{ reads t.slots } { return t.slots[i].n; } }"
 bound_fragment numberRead as "{ reads t.slots } { return t.slots[i].n; } }"
 rights_cut wrongBoolWrite as "{ writes t.slots } { t.slots[i].b = 1; } }"
@@ -150,7 +150,7 @@ rights_input bool1 : Gabbro.Grammatik.Parser.UebersetzeProben10.bool1 with_cuts 
   with_text ["module m { table T count 2 { slot { ", "b : bool, } } impl fn ",
     "set(t : ptr<normal, rw> T, i : index into T) effects ",
     "{ writes t.slots } { t.slots[i].b = true; } ",
-    "impl fn get(t : ptr<normal, r> T, i : index into T) -> bool ",
+    "impl fn get(t : ptr<normal, r> T, i : index into T) -> bool effects ",
     "{ reads t.slots } { return t.slots[i].b; } }"]
 rights_input bool2 : Gabbro.Grammatik.Parser.UebersetzeProben10.bool2 with_cuts [Cuts.moduleHead, Cuts.comparison, Cuts.comparisonReturn]
   with_text ["module m { ", "impl fn le(x : u32 in 0 .. 9) -> bool { ", "return x <= 5; } }"]
@@ -159,13 +159,13 @@ rights_input bool3 : Gabbro.Grammatik.Parser.UebersetzeProben10.bool3 with_cuts 
     "return x <= 5 && !(y == 3) || false; } }"]
 rights_input byops1 : Gabbro.Grammatik.Parser.UebersetzeProben10.byops1 with_cuts [Cuts.tableHead, Cuts.opsField, Cuts.numberGetter, Cuts.numberRead]
   with_text ["module m { table T count 2 { slot { ", "n : u32 in 0 .. 9 by ops, } } impl fn ",
-    "get(t : ptr<normal, r> T, i : index into T) -> u32 ", "{ reads t.slots } { return t.slots[i].n; } }"]
+    "get(t : ptr<normal, r> T, i : index into T) -> u32 effects ", "{ reads t.slots } { return t.slots[i].n; } }"]
 rights_input bool_zahl : Gabbro.Grammatik.Parser.UebersetzeProben10.bool_zahl with_cuts [Cuts.tableHead, Cuts.boolField, Cuts.setter, Cuts.wrongBoolWrite]
   with_text ["module m { table T count 2 { slot { ", "b : bool, } } impl fn ",
     "set(t : ptr<normal, rw> T, i : index into T) effects ", "{ writes t.slots } { t.slots[i].b = 1; } }"]
 rights_input bool_als_zahl : Gabbro.Grammatik.Parser.UebersetzeProben10.bool_als_zahl with_cuts [Cuts.tableHead, Cuts.boolField, Cuts.numberGetter, Cuts.boolRead]
   with_text ["module m { table T count 2 { slot { ", "b : bool, } } impl fn ",
-    "get(t : ptr<normal, r> T, i : index into T) -> u32 ", "{ reads t.slots } { return t.slots[i].b; } }"]
+    "get(t : ptr<normal, r> T, i : index into T) -> u32 effects ", "{ reads t.slots } { return t.slots[i].b; } }"]
 rights_input zahl_wahr : Gabbro.Grammatik.Parser.UebersetzeProben10.zahl_wahr with_cuts [Cuts.tableHead, Cuts.numberField, Cuts.setter, Cuts.wrongNumberWrite]
   with_text ["module m { table T count 2 { slot { ", "n : u32 in 0 .. 9, } } impl fn ",
     "set(t : ptr<normal, rw> T, i : index into T) effects ", "{ writes t.slots } { t.slots[i].n = true; } }"]
