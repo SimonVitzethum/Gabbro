@@ -303,15 +303,100 @@ theorem constant_scopes_preserved {items : List SItemTief}
   rw [elaborated]
   simp only [meaning, ↓reduceIte, pure, Except.pure]
 
+/-- Reuse the complete checked scope without reopening its discovery proof in
+    the metadata collector or the final dependent SourceTail constructor. -/
+private theorem initializer_scope_origin :
+    Frontend.elaborateConstantScopes initializerInput.original = .ok initializerConservative :=
+  constant_scopes_preserved initializerConstantOrder.val initializerConservative
+    initializerConstantOrder.property initializer_conservative_kept initializer_scope_meaning
+
+/-- Infer the original item constructors from the actual profile/name pipeline,
+    once, before any descriptor or replacement certificate projects their data. -/
+private def initializerMetadataItems :
+    { items : List SItemTief // initializerInput.original = items } := by
+  refine ⟨?items, ?origin⟩
+  case origin => cbv <;> exact Eq.refl _
+
+/-- Normalize only the values and types of the already certified scope. The
+    original scalar fold and its proof are retained behind their existing cuts. -/
+private def initializerMetadataScope :
+    { data : List (String × Int) × List (String × (Int × Int)) //
+      (initializerConservative.scope.values, initializerConservative.scope.types) = data } := by
+  refine ⟨?data, ?origin⟩
+  case origin =>
+    have transported := congrArg (fun prepared : Frontend.Prepared =>
+      (initializerScalarFold.val,
+        prepared.env ++ initializerScalarFold.val.map (fun c => (c.1, (c.2, c.2)))))
+      initializerScopePreparation.property
+    exact transported.trans (by cbv <;> exact Eq.refl _)
+
+/-- These descriptors come from the real collector at the proved final scope,
+    including the original contracts and captured scalar values. -/
+private def initializerMetadataFunctions :
+    { functions : List UKonstFn //
+      Konst.collectFunctionsWith initializerMetadataItems.val
+        initializerMetadataScope.val.1 initializerMetadataScope.val.2 = .ok functions } := by
+  refine ⟨?functions, ?origin⟩
+  case origin => cbv <;> exact Eq.refl _
+
+/-- The sole replacement pass still produces each checked call, its typed entry
+    arguments, contracts, costs and quotation before the resulting item list. -/
+private def initializerMetadataRewritten :
+    { rewritten : List SItemTief //
+      Konst.ersetzeItems initializerMetadataFunctions.val initializerMetadataItems.val =
+        .ok rewritten } := by
+  refine ⟨?rewritten, ?origin⟩
+  case origin => cbv <;> exact Eq.refl _
+
+private theorem initializer_runtime_metadata :
+    ExportMetadata.check (Konst.ohneKonst initializerMetadataItems.val) = .ok () := by cbv
+
+private theorem initializer_rewritten_metadata :
+    Konst.checkErsetzt initializerMetadataItems.val initializerMetadataRewritten.val = .ok () := by cbv
+
+/-- Compose the actual post-scope producer equations while their complete data
+    arguments are normalized, before transporting to the prepared SourceInput. -/
+private theorem initializer_metadata_after_scopes :
+    (do
+      let rewritten ← (Konst.collectFunctionsWith initializerMetadataItems.val
+        initializerMetadataScope.val.1 initializerMetadataScope.val.2).bind
+        (fun functions => Konst.ersetzeItems functions initializerMetadataItems.val)
+      ExportMetadata.check (Konst.ohneKonst initializerMetadataItems.val)
+      Konst.checkErsetzt initializerMetadataItems.val rewritten) = .ok () := by
+  simpa only [initializerMetadataFunctions.property, bind, Except.bind,
+    initializerMetadataRewritten.property, initializer_runtime_metadata] using
+    initializer_rewritten_metadata
+
+private theorem initializer_metadata_certified :
+    Konst.checkSourceMetadata initializerInput.original = .ok () := by
+  let remaining (items : List SItemTief)
+      (data : List (String × Int) × List (String × (Int × Int))) : Except String Unit := do
+    let rewritten ← (Konst.collectFunctionsWith items data.1 data.2).bind
+      (fun functions => Konst.ersetzeItems functions items)
+    ExportMetadata.check (Konst.ohneKonst items)
+    Konst.checkErsetzt items rewritten
+  have present : initializerInput.original.any
+      (fun | .fnT signature _ => strEq signature.art "const" | _ => false) = true := by
+    have kept : initializerMetadataItems.val.any
+        (fun | .fnT signature _ => strEq signature.art "const" | _ => false) = true := by cbv
+    exact (congrArg (fun items : List SItemTief => items.any
+      (fun | .fnT signature _ => strEq signature.art "const" | _ => false))
+      initializerMetadataItems.property).trans kept
+  have origin := Konst.checkSourceMetadata_from_scopes initializerInput.original
+    initializerConservative present initializer_scope_origin
+  have scopeTransport := congrArg (remaining initializerInput.original)
+    initializerMetadataScope.property
+  have itemsTransport := congrArg (fun items => remaining items initializerMetadataScope.val)
+    initializerMetadataItems.property
+  exact origin.trans (scopeTransport.trans (itemsTransport.trans initializer_metadata_after_scopes))
+
 /-- Compose the real dependency, scalar, alias, and meaning phases without rerunning their graph. -/
 def initializerTail : SourceTail initializerInput where
-  metadata := by cbv
+  metadata := initializer_metadata_certified
   order := initializerAliasOrder.val
   ordered := initializerAliasOrder.property
   derived := initializerConservative
-  elaborated := by
-    exact constant_scopes_preserved initializerConstantOrder.val initializerConservative
-      initializerConstantOrder.property initializer_conservative_kept initializer_scope_meaning
+  elaborated := initializer_scope_origin
   aliases := (Bool.and_eq_true_iff.mp initializer_scope_meaning).1
   constants := (Bool.and_eq_true_iff.mp initializer_scope_meaning).2
 
