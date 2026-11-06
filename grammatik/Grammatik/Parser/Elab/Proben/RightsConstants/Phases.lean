@@ -86,7 +86,7 @@ scoped macro "rights_members " count:term " bounded_by " room:term " with " step
   rintro ⟨index, bound⟩
   have actualBound := bound
   rw [($count:term)] at actualBound
-  dsimp only at actualBound
+  try dsimp only at actualBound
   have limited : index < 2 := Nat.lt_of_lt_of_le actualBound $room
   have choices : index = 0 ∨ index = 1 := by omega
   rcases choices with zero | one <;> subst index
@@ -107,7 +107,7 @@ scoped macro "rights_ok " supplied:term : tactic => `(tactic| (
   have elaborated : elabU (pre108 items) = .ok unit := by cbv <;> exact Eq.refl _
   let size : Nat := ?size
   have count : unit.fns.length = size := by cbv <;> exact Eq.refl _
-  have small : size ≤ 2 := by cbv <;> omega
+  have small : size ≤ 2 := by decide +kernel
   apply lower_ok input parsed elaborated
   · cbv
   · cbv
@@ -122,11 +122,11 @@ scoped macro "rights_lower_error " supplied:term " with_reason " error:term " at
     have elaborated : elabU (pre108 items) = .ok unit := by cbv <;> exact Eq.refl _
     let size : Nat := ?size
     have count : unit.fns.length = size := by cbv <;> exact Eq.refl _
-    have small : size ≤ 2 := by cbv <;> omega
+    have small : size ≤ 2 := by decide +kernel
     apply lower_error (error := $error) input parsed elaborated
     · cbv
     · rights_members count bounded_by small with (first | (left; cbv; done) | (right; cbv; done))
-    · refine ⟨⟨$number, by rw [count]; dsimp only; omega⟩, ?_⟩
+    · refine ⟨⟨$number, by rw [count]; decide +kernel⟩, ?_⟩
       cbv))
 
 scoped macro "rights_counts " supplied:term : tactic => `(tactic| (
