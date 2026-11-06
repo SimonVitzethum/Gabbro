@@ -195,7 +195,7 @@ scoped macro "ownership_call_body " name:ident " for " unit:ident " at " number:
   let a ← `(command| private def $index : Fin ($unit).val.fns.length := ⟨$ordinal, by decide +kernel⟩)
   let b ← `(command| private def $shape : { actual : String × List UArg //
       (fnAt ($unit).val $index).body = [.call actual.1 actual.2] } := by
-    refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+    refine ⟨(?_, ?_), by cbv <;> exact Eq.refl _⟩)
   let c ← `(command| private def $step : { actual : BodyStep ($unit).val $index (resOf ($unit).val $index) //
       lowStmtL ($unit).val $index (ctxOf ($unit).val $index) (fnAt ($unit).val $index)
         (resOf ($unit).val $index) (.call ($shape).val.1 ($shape).val.2) = .ok actual } := by
@@ -208,7 +208,8 @@ scoped macro "ownership_call_body " name:ident " for " unit:ident " at " number:
   let e ← `(command| private def $name : { actual : PlainFunctionBody ($unit).val $index //
       lowBody ($unit).val $index (fnAt ($unit).val $index).body (fnAt ($unit).val $index).ret = .ok actual } := by
     refine ⟨Endblock.cons ($step).val.2 ($ending).val, ?_⟩
-    rw [call_body _ _ _ _ ($shape).property ($step).val ($step).property, ($ending).property] <;> rfl)
+    exact (call_body _ _ _ _ ($shape).property ($step).val ($step).property).trans
+      ((congrArg (fun answer => answer.map (Endblock.cons ($step).val.2)) ($ending).property).trans (by rfl)))
   return ⟨Lean.mkNullNode #[a, b, c, d, e]⟩
 
 scoped macro "ownership_retire_body " name:ident " for " unit:ident " at " number:num : command => do
@@ -233,7 +234,8 @@ scoped macro "ownership_retire_body " name:ident " for " unit:ident " at " numbe
   let e ← `(command| private def $name : { actual : PlainFunctionBody ($unit).val $index //
       lowBody ($unit).val $index (fnAt ($unit).val $index).body (fnAt ($unit).val $index).ret = .ok actual } := by
     refine ⟨Endblock.cons ($step).val.2 ($ending).val, ?_⟩
-    rw [retire_body _ _ _ ($shape).property ($step).val ($step).property, ($ending).property] <;> rfl)
+    exact (retire_body _ _ _ ($shape).property ($step).val ($step).property).trans
+      ((congrArg (fun answer => answer.map (Endblock.cons ($step).val.2)) ($ending).property).trans (by rfl)))
   return ⟨Lean.mkNullNode #[a, b, c, d, e]⟩
 
 scoped macro "ownership_retire_refusal " name:ident " for " unit:ident " at " number:num
@@ -255,7 +257,8 @@ scoped macro "ownership_retire_refusal " name:ident " for " unit:ident " at " nu
       ($step).val.1 (fnAt ($unit).val $index) (fnAt ($unit).val $index).ret = .error $error := by cbv)
   let e ← `(command| private theorem $name : lowBody ($unit).val $index (fnAt ($unit).val $index).body
       (fnAt ($unit).val $index).ret = .error $error := by
-    rw [retire_body _ _ _ ($shape).property ($step).val ($step).property, ($ending:term)] <;> rfl)
+    exact (retire_body _ _ _ ($shape).property ($step).val ($step).property).trans
+      ((congrArg (fun answer => answer.map (Endblock.cons ($step).val.2)) $ending).trans (by rfl)))
   return ⟨Lean.mkNullNode #[a, b, c, d, e]⟩
 
 scoped macro "ownership_repeat_refusal " name:ident " for " unit:ident " at " number:num
@@ -268,7 +271,7 @@ scoped macro "ownership_repeat_refusal " name:ident " for " unit:ident " at " nu
   let a ← `(command| private def $index : Fin ($unit).val.fns.length := ⟨$ordinal, by decide +kernel⟩)
   let b ← `(command| private def $shape : { actual : String × String //
       (fnAt ($unit).val $index).body = [.retires actual.1, .retires actual.2] } := by
-    refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+    refine ⟨(?_, ?_), by cbv <;> exact Eq.refl _⟩)
   let c ← `(command| private def $step : { actual : BodyStep ($unit).val $index (resOf ($unit).val $index) //
       lowStmtL ($unit).val $index (ctxOf ($unit).val $index) (fnAt ($unit).val $index)
         (resOf ($unit).val $index) (.retires ($shape).val.1) = .ok actual } := by
