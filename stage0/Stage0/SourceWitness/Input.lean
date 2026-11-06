@@ -136,15 +136,15 @@ private theorem checked_scope_meaning (items : List SItemTief)
         else throw "compile-time declarations do not match their canonical final meaning") = .ok result) :
       Frontend.scopeMeaning result = true := by
     cases aliasesEq : Frontend.orderAliases items with
-    | error error => simp only [aliasesEq, bind, Except.bind] at accepted; cases accepted
+    | error error => cases accepted
     | ok aliases =>
-      dsimp only [aliasesEq, bind, Except.bind] at accepted
+      try simp only [aliasesEq, bind, Except.bind] at accepted
       cases candidateEq : Frontend.discoverScopes items (items.length + 1)
           (Frontend.prepare items).initial ⟨aliases.ordered, aliases.permutation⟩
           ⟨order.ordered, order.permutation⟩ with
-      | error error => simp only [candidateEq, bind, Except.bind] at accepted; cases accepted
+      | error error => cases accepted
       | ok candidate =>
-        simp only [candidateEq, bind, Except.bind] at accepted
+        try simp only [candidateEq, bind, Except.bind] at accepted
         split at accepted
         · rename_i meaning
           cases Except.ok.inj accepted
@@ -152,9 +152,9 @@ private theorem checked_scope_meaning (items : List SItemTief)
         · cases accepted
   unfold Frontend.elaborateConstantScopes at produced
   cases orderEq : Frontend.orderConstants items with
-  | error error => simp only [orderEq, bind, Except.bind] at produced; cases produced
+  | error error => cases produced
   | ok order =>
-    dsimp only [orderEq, bind, Except.bind] at produced
+    simp only [orderEq, bind, Except.bind] at produced
     cases previousEq : Frontend.elaborateScopes items with
     | error error =>
       simp only [previousEq] at produced
@@ -167,7 +167,10 @@ private theorem checked_scope_meaning (items : List SItemTief)
         exact meaning
       · exact discovery order produced
 
-private theorem source_metadata : Konst.checkSourceMetadata sourceOriginal.val = .ok () := by cbv
+private theorem source_metadata : Konst.checkSourceMetadata sourceOriginal.val = .ok () := by
+  rw [Konst.checkSourceMetadata_from_scopes sourceOriginal.val sourceScopes.val
+    (by cbv) sourceScopes.property]
+  cbv
 private theorem source_aliases :
     sourceOriginal.val.all (Frontend.checkAliasMeaning sourceScopes.val.scope.types) = true :=
   (Bool.and_eq_true_iff.mp (checked_scope_meaning _ _ sourceScopes.property)).1
@@ -188,7 +191,10 @@ private def sourceHeader : Header text := by
     requirements := ?requirements
     expansion := ?expansion
     constants := ?constants
-    ordinary := by cbv
+    ordinary := by
+      change sourceInput.original.any Frontend.expansionHeader = false
+      rw [sourceOriginal.property]
+      cbv
     metadata := sourceTail.metadata
     candidate := ?candidate
     elaborated := ?elaborated }
