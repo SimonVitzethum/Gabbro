@@ -120,4 +120,33 @@ private def call_step (u : UProg) (f : Fin u.fns.length) (name : String) (raw : 
   dsimp only
   rw [dif_pos reason]
 
+-- Generate the independent guard facts separately from dependent argument/head data.
+scoped macro "ownership_call_gates " name:ident " for " unit:ident " at " index:ident
+    " callee " callee:ident : command => do
+  let writes := Lean.mkIdentFrom name (name.getId.appendAfter "_writes")
+  let globals := Lean.mkIdentFrom name (name.getId.appendAfter "_globals")
+  let held := Lean.mkIdentFrom name (name.getId.appendAfter "_held")
+  let floor := Lean.mkIdentFrom name (name.getId.appendAfter "_floor")
+  let extra := Lean.mkIdentFrom name (name.getId.appendAfter "_extra")
+  let inventory := Lean.mkIdentFrom name (name.getId.appendAfter "_inputs")
+  let owners := Lean.mkIdentFrom name (name.getId.appendAfter "_owners")
+  let c ← `(command| private theorem $writes : ∀ t : Fin ($unit).val.tabs.length,
+      writesAt ($unit).val (fnAt ($unit).val ($callee).val) t = true →
+        writesAt ($unit).val (fnAt ($unit).val $index) t = true := by decide +kernel)
+  let d ← `(command| private theorem $globals : ∀ g : Fin ($unit).val.globs.length,
+      writesGAt ($unit).val (fnAt ($unit).val ($callee).val) g = true →
+        writesGAt ($unit).val (fnAt ($unit).val $index) g = true := by decide +kernel)
+  let e ← `(command| private theorem $held : ∀ L ∈ ((declOf ($unit).val).signatur ($callee).val).haelt,
+      Res.held (D := declOf ($unit).val) L ∈ resOf ($unit).val $index := by decide +kernel)
+  let f ← `(command| private theorem $floor : floorLeB ($unit).val $index ($callee).val = true := by cbv)
+  let g ← `(command| private theorem $extra : ∀ L ∈ heldLocksD ($unit).val (resOf ($unit).val $index),
+      L ∈ ((declOf ($unit).val).signatur ($callee).val).haelt ∨
+        floorUeberB ($unit).val ($callee).val L = true := by decide +kernel)
+  let h ← `(command| private theorem $inventory : decide (Untermulti
+      (((declOf ($unit).val).signatur ($callee).val).inputMarks.map (Res.vonMarke (declOf ($unit).val)))
+        (resOf ($unit).val $index)) = true := by decide +kernel)
+  let i ← `(command| private theorem $owners :
+      ownerReadyB ($unit).val ((declOf ($unit).val).signatur ($callee).val) = true := by cbv)
+  return ⟨Lean.mkNullNode #[c, d, e, f, g, h, i]⟩
+
 end Gabbro.Grammatik.Parser.UebersetzeProben11

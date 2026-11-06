@@ -190,23 +190,7 @@ scoped macro "ownership_call_step " name:ident " for " unit:ident " at " index:i
         (resOf ($unit).val $index) (fnAt ($unit).val ($callee).val).kinds
           ((declOf ($unit).val).params ($callee).val) $raw = .ok actual } := by
     refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
-  let c ← `(command| private theorem $writes : ∀ t : Fin ($unit).val.tabs.length,
-      writesAt ($unit).val (fnAt ($unit).val ($callee).val) t = true →
-        writesAt ($unit).val (fnAt ($unit).val $index) t = true := by decide +kernel)
-  let d ← `(command| private theorem $globals : ∀ g : Fin ($unit).val.globs.length,
-      writesGAt ($unit).val (fnAt ($unit).val ($callee).val) g = true →
-        writesGAt ($unit).val (fnAt ($unit).val $index) g = true := by decide +kernel)
-  let e ← `(command| private theorem $held : ∀ L ∈ ((declOf ($unit).val).signatur ($callee).val).haelt,
-      Res.held (D := declOf ($unit).val) L ∈ resOf ($unit).val $index := by decide +kernel)
-  let f ← `(command| private theorem $floor : floorLeB ($unit).val $index ($callee).val = true := by cbv)
-  let g ← `(command| private theorem $extra : ∀ L ∈ heldLocksD ($unit).val (resOf ($unit).val $index),
-      L ∈ ((declOf ($unit).val).signatur ($callee).val).haelt ∨
-        floorUeberB ($unit).val ($callee).val L = true := by decide +kernel)
-  let h ← `(command| private theorem $inventory : decide (Untermulti
-      (((declOf ($unit).val).signatur ($callee).val).inputMarks.map (Res.vonMarke (declOf ($unit).val)))
-        (resOf ($unit).val $index)) = true := by decide +kernel)
-  let i ← `(command| private theorem $owners :
-      ownerReadyB ($unit).val ((declOf ($unit).val).signatur ($callee).val) = true := by cbv)
+  let gates ← `(command| ownership_call_gates $name for $unit at $index callee $callee)
   let j ← `(command| private def $head : { actual : RufKopf ($unit).val $index
       (ctxOf ($unit).val $index) (resOf ($unit).val $index) //
       lowRufKopf ($unit).val $index (ctxOf ($unit).val $index) (fnAt ($unit).val $index)
@@ -222,7 +206,7 @@ scoped macro "ownership_call_step " name:ident " for " unit:ident " at " index:i
       nach (declOf ($unit).val) ($head).val.callee (resOf ($unit).val $index) = actual } := by
     refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
   let n ← `(command| private theorem $remaining : ($name).val.1 = ($after).val := ($after).property)
-  return ⟨Lean.mkNullNode #[a, b, c, d, e, f, g, h, i, j, k, l, m, n]⟩
+  return ⟨Lean.mkNullNode #[a, b, gates, j, k, l, m, n]⟩
 
 -- The source shape is inferred from the actual unit, not supplied as an AST.
 scoped macro "ownership_call_body " name:ident " for " unit:ident " at " number:num : command => do
