@@ -1,6 +1,18 @@
 module
 public import Grammatik.Parser.Elab.Proben.RightsConstants.Phases
 import all Grammatik.Kern.Syntax.Typen.Shape
+import all Grammatik.Parser.Elab.Uebersetze.Kontext.Eigner
+import all Grammatik.Parser.Elab.Generic.SignatureData
+import all Grammatik.Parser.Elab.Generic.C09Flows
+import all Grammatik.Parser.Elab.Generic.Signatures
+import all Grammatik.Parser.Elab.UebersetzeAllg.Teil1
+import all Grammatik.Parser.Elab.UebersetzeAllg.Teil2
+import all Grammatik.Parser.Elab.UebersetzeAllg.Teil5
+import all Grammatik.Parser.Elab.UebersetzeAllg.TableCapabilities
+import all Grammatik.Parser.Elab.UebersetzeAllg2.Teil1
+import all Grammatik.Parser.Elab.UebersetzeAllg2.Teil2
+import all Grammatik.Parser.Elab.UebersetzeAllg2.CallArguments
+import all Grammatik.Parser.Elab.UebersetzeAllg2.Marken
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge

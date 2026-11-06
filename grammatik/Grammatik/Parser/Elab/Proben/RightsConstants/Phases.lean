@@ -81,15 +81,15 @@ theorem stage_counts {source : String} (input : Input source) {items : List SIte
 
 -- Classify the actual finite carrier only after the complete unit has been inferred.
 -- The closed count equation is established independently of this caller index.
-scoped macro "rights_members " step:tactic : tactic => `(tactic| (
+scoped macro "rights_members " count:term " bounded_by " room:term " with " step:tactic : tactic => `(tactic| (
   rintro ⟨index, bound⟩
-  have small : index < 2 := by omega
+  have actualBound := bound
+  rw [$count] at actualBound
+  dsimp only at actualBound
+  have limited : index < 2 := Nat.lt_of_lt_of_le actualBound $room
   have choices : index = 0 ∨ index = 1 := by omega
-  rcases choices with zero | one
-  · subst index
-    $step:tactic
-  · subst index
-    first | omega | $step:tactic))
+  rcases choices with zero | one <;> subst index
+  all_goals first | (exfalso; omega) | $step:tactic))
 
 scoped macro "rights_elab_error " supplied:term " with_reason " error:term : tactic => `(tactic| (
   let input := $supplied
@@ -110,7 +110,7 @@ scoped macro "rights_ok " supplied:term : tactic => `(tactic| (
   apply lower_ok input parsed elaborated
   · cbv
   · cbv
-  · rights_members (constructor <;> cbv)))
+  · rights_members count bounded_by small with (constructor <;> cbv)))
 
 scoped macro "rights_lower_error " supplied:term " with_reason " error:term " at_member " number:term : tactic =>
   `(tactic| (
@@ -124,8 +124,8 @@ scoped macro "rights_lower_error " supplied:term " with_reason " error:term " at
     have small : size ≤ 2 := by cbv <;> omega
     apply lower_error (error := $error) input parsed elaborated
     · cbv
-    · rights_members (first | (left; cbv; done) | (right; cbv; done))
-    · refine ⟨⟨$number, by omega⟩, ?_⟩
+    · rights_members count bounded_by small with (first | (left; cbv; done) | (right; cbv; done))
+    · refine ⟨⟨$number, by rw [count]; dsimp only; omega⟩, ?_⟩
       cbv))
 
 scoped macro "rights_counts " supplied:term : tactic => `(tactic| (

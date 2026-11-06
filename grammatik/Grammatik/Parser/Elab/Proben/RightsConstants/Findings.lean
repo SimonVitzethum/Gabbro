@@ -85,7 +85,6 @@ theorem advance_old_claim_false :
   have impossible := advance_dispatch.symm.trans claimed
   have lengths := congrArg String.length impossible
   cbv at lengths
-  omega
 
 /-- The certified const argument gate runs before the runtime name reader. -/
 theorem argument_dispatch :
@@ -100,6 +99,5 @@ theorem argument_old_claim_false : stufe konst_argument ≠ "elab: name unknown:
   have impossible := argument_dispatch.symm.trans claimed
   have lengths := congrArg String.length impossible
   cbv at lengths
-  omega
 
 end Gabbro.Grammatik.Parser.UebersetzeProben11.Findings
