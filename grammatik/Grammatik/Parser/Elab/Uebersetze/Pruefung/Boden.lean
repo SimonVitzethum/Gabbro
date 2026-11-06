@@ -104,16 +104,17 @@ theorem checkTextBodenFalsch_ok : (elabText checkTextBodenFalsch).toOption.isSom
   rw [bodenFalsch_source]
   rfl
 
-/-- The elaborated units behind the floor witnesses. -/
-def uBodenWahr : UProg := (elabText checkTextBodenWahr).toOption.get checkTextBodenWahr_ok
+/-- The actual constructor-valued elaboration result certified by `bodenWahr_source`. -/
+def uBodenWahr : UProg := floorPassingUnitMade.val
 
-def uBodenFalsch : UProg := (elabText checkTextBodenFalsch).toOption.get checkTextBodenFalsch_ok
+/-- The actual constructor-valued elaboration result certified by `bodenFalsch_source`. -/
+def uBodenFalsch : UProg := floorFailingUnitMade.val
 
-private theorem bodenWahr_facts : CheckWitness uBodenWahr 1 := by
-  simpa only [uBodenWahr, bodenWahr_source, Except.toOption, Option.get_some] using floorPassing_facts
+private theorem bodenWahr_facts : CheckWitness uBodenWahr 1 :=
+  floorPassing_facts
 
-private theorem bodenFalsch_facts : CheckWitness uBodenFalsch 1 := by
-  simpa only [uBodenFalsch, bodenFalsch_source, Except.toOption, Option.get_some] using floorFailing_facts
+private theorem bodenFalsch_facts : CheckWitness uBodenFalsch 1 :=
+  floorFailing_facts
 
 /-- The floors elaborate to the retained comparison predicates. -/
 example : (elabText checkTextBodenWahr).map (fun u => u.checks.map (·.boeden.length)) =
