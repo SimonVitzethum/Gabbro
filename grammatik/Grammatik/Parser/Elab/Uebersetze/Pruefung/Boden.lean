@@ -24,6 +24,7 @@ public import Grammatik.Kern.Syntax.Satz.PruefungMessung
 public import Grammatik.Kern.Syntax.Satz.PruefungAbschluss
 
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Floor
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Units
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Text
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Export
@@ -105,10 +106,10 @@ theorem checkTextBodenFalsch_ok : (elabText checkTextBodenFalsch).toOption.isSom
   rfl
 
 /-- The actual constructor-valued elaboration result certified by `bodenWahr_source`. -/
-def uBodenWahr : UProg := floorPassingUnitMade.val
+def uBodenWahr : UProg := by exact floorPassingUnitMade.val
 
 /-- The actual constructor-valued elaboration result certified by `bodenFalsch_source`. -/
-def uBodenFalsch : UProg := floorFailingUnitMade.val
+def uBodenFalsch : UProg := by exact floorFailingUnitMade.val
 
 private theorem bodenWahr_facts : CheckWitness uBodenWahr 1 :=
   floorPassing_facts
@@ -123,9 +124,9 @@ example : (elabText checkTextBodenWahr).map (fun u => u.checks.map (·.boeden.le
   exact congrArg (fun xs : List Nat => (Except.ok xs : Except String (List Nat)))
     floorPassing_facts.sourceFloors
 
-/-- Both units lower. -/
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
+/-- Both units lower. -/
 theorem uBodenWahr_lowered : (lowerAllg uBodenWahr).toOption.isSome = true := bodenWahr_facts.lowered
 
 set_option maxRecDepth 100000 in
@@ -221,9 +222,9 @@ theorem bodenFalsch_tore :
 
 /-! ## Acceptance with the real Duty -/
 
-/-- The lowered units with their derived checks are admitted. -/
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
+/-- The lowered units with their derived checks are admitted. -/
 theorem bodenWahr_checkB :
     checkB checkPBodenWahr [] [] (List.finRange uBodenWahr.fns.length) checkChecksBodenWahr = true := bodenWahr_facts.admitted
 
@@ -232,9 +233,9 @@ set_option maxHeartbeats 2000000 in
 theorem bodenFalsch_checkB :
     checkB checkPBodenFalsch [] [] (List.finRange uBodenFalsch.fns.length) checkChecksBodenFalsch = true := bodenFalsch_facts.admitted
 
-/-- End-to-end acceptance from source text with a real Duty. -/
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
+/-- End-to-end acceptance from source text with a real Duty. -/
 theorem bodenWahr_akzeptiert :
     AkzeptiertX checkPBodenWahr (Cover.Differenz.sperrFamilie uBodenWahr)
       (List.finRange uBodenWahr.fns.length) [] [] [] [] checkChecksBodenWahr = true := bodenWahr_facts.accepted
@@ -259,11 +260,11 @@ theorem bodenWahr_admission :
     CheckAdmission checkPBodenWahr (List.finRange uBodenWahr.fns.length) checkChecksBodenWahr :=
   (checkB_iff (fun g => List.mem_finRange g)
     (fun t => by
-      have h0 : uBodenWahr.tabs.length = 0 := by rw [uBodenWahr_tabs_leer]
+      have h0 : uBodenWahr.tabs.length = 0 := congrArg List.length uBodenWahr_tabs_leer
       have t' : Fin uBodenWahr.tabs.length := t
       exact Fin.elim0 (h0 ▸ t'))
     (fun g => by
-      have h0 : uBodenWahr.globs.length = 0 := by rw [uBodenWahr_globs_leer]
+      have h0 : uBodenWahr.globs.length = 0 := congrArg List.length uBodenWahr_globs_leer
       have g' : Fin uBodenWahr.globs.length := g
       exact Fin.elim0 (h0 ▸ g'))).mp bodenWahr_checkB
 
@@ -271,11 +272,11 @@ theorem bodenFalsch_admission :
     CheckAdmission checkPBodenFalsch (List.finRange uBodenFalsch.fns.length) checkChecksBodenFalsch :=
   (checkB_iff (fun g => List.mem_finRange g)
     (fun t => by
-      have h0 : uBodenFalsch.tabs.length = 0 := by rw [uBodenFalsch_tabs_leer]
+      have h0 : uBodenFalsch.tabs.length = 0 := congrArg List.length uBodenFalsch_tabs_leer
       have t' : Fin uBodenFalsch.tabs.length := t
       exact Fin.elim0 (h0 ▸ t'))
     (fun g => by
-      have h0 : uBodenFalsch.globs.length = 0 := by rw [uBodenFalsch_globs_leer]
+      have h0 : uBodenFalsch.globs.length = 0 := congrArg List.length uBodenFalsch_globs_leer
       have g' : Fin uBodenFalsch.globs.length := g
       exact Fin.elim0 (h0 ▸ g'))).mp bodenFalsch_checkB
 
@@ -330,7 +331,7 @@ theorem bodenWahr_entladung (d : CheckDecl (declOf uBodenWahr))
   match hg : d.gates with
   | [] => simp [hg] at hlen
   | g :: _ =>
-    refine ⟨g, bodenWahr_abschluss d hd, ?_, List.mem_cons.mpr (Or.inl rfl)⟩
+    refine ⟨g, bodenWahr_abschluss d hd, ?_, by rw [hg]; exact List.mem_cons_self⟩
     have hall : (checkChecksBodenWahr.all fun d =>
         d.gates.all fun g =>
           decide (d.duty ∈ ((declOf uBodenWahr).signatur g).konsumiert)) = true := by
@@ -356,7 +357,7 @@ theorem bodenFalsch_entladung (d : CheckDecl (declOf uBodenFalsch))
   match hg : d.gates with
   | [] => simp [hg] at hlen
   | g :: _ =>
-    refine ⟨g, bodenFalsch_abschluss d hd, ?_, List.mem_cons.mpr (Or.inl rfl)⟩
+    refine ⟨g, bodenFalsch_abschluss d hd, ?_, by rw [hg]; exact List.mem_cons_self⟩
     have hall : (checkChecksBodenFalsch.all fun d =>
         d.gates.all fun g =>
           decide (d.duty ∈ ((declOf uBodenFalsch).signatur g).konsumiert)) = true := by
