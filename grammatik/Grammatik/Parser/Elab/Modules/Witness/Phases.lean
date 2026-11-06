@@ -95,8 +95,10 @@ attribute [local cbv_eval] parseTyp.eq_def parseTypNach.eq_def parseOr.eq_def pa
 private theorem parsed_from_input {source : String} (input : Input source)
     (result : { actual : List SItemTief // parseTopTief input.tokens = .ok actual }) :
     parsedSource source = .ok result.val := by
+  have lexed : lex source = .ok input.tokens :=
+    (congrArg lex input.text).trans ((lex_ofList input.characters).trans input.lexed)
   unfold parsedSource Generic.tokens
-  rw [input.text, lex_ofList, input.lexed]
+  rw [lexed]
   simpa only [bind, Except.bind] using result.property
 
 private def templateParsed : { actual : List SItemTief //
