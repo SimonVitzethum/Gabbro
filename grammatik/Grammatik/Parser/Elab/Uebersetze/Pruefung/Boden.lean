@@ -304,9 +304,12 @@ theorem bodenWahr_abschluss (d : CheckDecl (declOf uBodenWahr))
     (hd : d ∈ checkChecksBodenWahr) :
     CheckAbschluss checkPBodenWahr d messBerichtWahr := by
   obtain ⟨hexp, _, _, _, _⟩ := bodenWahr_admission
-  refine ⟨hexp d hd, by decide, ?_⟩
-  show messBerichtWahr.boeden.length = d.boden.length
-  rw [show messBerichtWahr.boeden.length = 1 from rfl, bodenWahr_boden_laenge d hd]
+  refine ⟨hexp d hd, ?_, ?_⟩
+  · intro p hp
+    cases List.mem_singleton.mp hp
+    rfl
+  · show messBerichtWahr.boeden.length = d.boden.length
+    rw [show messBerichtWahr.boeden.length = 1 from rfl, bodenWahr_boden_laenge d hd]
 
 /-- The failing report completes every derived check of the failing unit:
     the sample was read, the one floor failed, the negative verdict records it --
@@ -315,9 +318,12 @@ theorem bodenFalsch_abschluss (d : CheckDecl (declOf uBodenFalsch))
     (hd : d ∈ checkChecksBodenFalsch) :
     CheckAbschluss checkPBodenFalsch d messBerichtFalsch := by
   obtain ⟨hexp, _, _, _, _⟩ := bodenFalsch_admission
-  refine ⟨hexp d hd, by decide, ?_⟩
-  show messBerichtFalsch.boeden.length = d.boden.length
-  rw [show messBerichtFalsch.boeden.length = 1 from rfl, bodenFalsch_boden_laenge d hd]
+  refine ⟨hexp d hd, ?_, ?_⟩
+  · intro p hp
+    cases List.mem_singleton.mp hp
+    rfl
+  · show messBerichtFalsch.boeden.length = d.boden.length
+    rw [show messBerichtFalsch.boeden.length = 1 from rfl, bodenFalsch_boden_laenge d hd]
 
 /-- The gate wrapper discharges the completed passing report. -/
 theorem bodenWahr_entladung (d : CheckDecl (declOf uBodenWahr))
