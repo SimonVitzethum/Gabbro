@@ -113,7 +113,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   match uInvs consts alias tabs locks globs ms with
   | .error e => .error e
   | .ok invs =>
-  let transitionCtx : UCtx := { names := [], kinds := [], types := [], tabs, locks, held := [], res := none, fname := "transition", alias, lits := consts, globs, records := valueScope.records, namedTypes := valueScope.types, eigner := eigner }
+  let transitionCtx : UCtx := { names := [], kinds := [], types := [], tabs, locks, held := [], res := none, fname := "transition", alias, lits := consts, globs, spaces := spaces, records := valueScope.records, namedTypes := valueScope.types, eigner := eigner }
   match uSeq (ms.filterMap (fun | .stateT n ts => some (uZustand n ts transitionCtx) | _ => none)) with
   | .error e => .error e
   | .ok zustaende =>
@@ -135,19 +135,19 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   | .error e => .error e
   | .ok [] => .error "unit without a fn"
   | .ok kopfPaare =>
-  match uSeq (fremdPaare.map (fun (sig, asm) => elabAxKopf alias tabs whys globs asm (eigner := eigner) sig)) with
+  match uSeq (fremdPaare.map (fun (sig, asm) => elabAxKopf alias tabs whys globs asm (eigner := eigner) (spaces := spaces) sig)) with
   | .error e => .error e
   | .ok axKoepfe0 =>
-  match uSeq ((ms.filterMap (fun | .callT sc => some sc | _ => none)).map (fun sc => elabGateKopf alias tabs whys globs sc (eigner := eigner))) with
+  match uSeq ((ms.filterMap (fun | .callT sc => some sc | _ => none)).map (fun sc => elabGateKopf alias tabs whys globs sc (eigner := eigner) (spaces := spaces))) with
   | .error e => .error e
   | .ok gateKoepfe =>
   let axKoepfe := axKoepfe0 ++ gateKoepfe ++ akkuFrage
-  match uSeq (axKoepfe.map (fun k => guestForeign alias consts tabs globs whys annahmen guests k (eigner := eigner))) with
+  match uSeq (axKoepfe.map (fun k => guestForeign alias consts tabs globs whys annahmen guests k (eigner := eigner) (spaces := spaces))) with
   | .error e => .error e
   | .ok axs =>
   let koepfe := kopfPaare.map (·.1) ++ axKoepfe ++ zeigerPaare.map (·.1)
   -- C16: every `can_fail` body elaborates into its generated Boolean producer now.
-  match uProbeFns consts alias tabs locks globs koepfe whys sums devs regs zustaende (ms.filterMap (fun | .specT sg body => some (sg.name, sg.params.map (·.1), body) | _ => none)) constants zeiger zb (fnItems.map (fun (s, _) => s.name) ++ axKoepfe.map (·.name) ++ zeigerPaare.map (fun p => p.1.name)) (ms.filterMap (fun | .checkT c => some c | _ => none)) with
+  match uProbeFns consts alias tabs locks globs koepfe whys sums devs regs zustaende (ms.filterMap (fun | .specT sg body => some (sg.name, sg.params.map (·.1), body) | _ => none)) constants zeiger zb (fnItems.map (fun (s, _) => s.name) ++ axKoepfe.map (·.name) ++ zeigerPaare.map (fun p => p.1.name)) (ms.filterMap (fun | .checkT c => some c | _ => none)) spaces eigner with
   | .error e => .error e
   | .ok probeFns =>
   match uSeq (fnItems.map (fun (s, b) =>

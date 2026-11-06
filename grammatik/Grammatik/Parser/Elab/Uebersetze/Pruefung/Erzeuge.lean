@@ -38,14 +38,18 @@ def uProbeFn (consts : List (String × Int)) (alias : List (String × (Int × In
     (locks : List ULock) (globs : List UGlob) (koepfe : List UFnKopf) (whys : List UWhy)
     (sums : List USum) (devs : List String) (regs : List UReg) (zustaende : List UZustand)
     (specs : List (String × List String × SExpr)) (arrKonst : List (String × USide))
-    (zeiger : List String) (zb : Nat) (c : SCheck) : Except String (UFn × List UFn) := do
+    (zeiger : List String) (zb : Nat) (c : SCheck)
+    (spaces : List String := []) (eigner : List String := []) : Except String (UFn × List UFn) := do
   match c.canFail with
   | .block ss ende =>
     let pname := probeFnName c.cname
-    match elabKopf consts alias tabs locks globs whys sums (probeSig pname) devs zeiger zb with
+    match elabKopf consts alias tabs locks globs whys sums (probeSig pname) devs zeiger zb
+        (spaces := spaces) (eigner := eigner) with
     | .error e => .error e
     | .ok (kopf, schreibt) =>
-      let ctx := uCtxVon alias consts tabs locks globs kopf pname [] whys sums regs zustaende specs arrKonst
+      let ctx := { uCtxVon alias consts tabs locks globs kopf pname [] whys sums regs zustaende specs arrKonst with
+        spaces := spaces
+        eigner := eigner }
       let (recorded, reporters, sampleHeads, _) ←
         recordCheckCode koepfe c 100000 ctx 0 (.block ss ende)
       match elabFn ctx (koepfe ++ sampleHeads) [] recorded with
@@ -61,16 +65,17 @@ def uProbeFnsAux (consts : List (String × Int)) (alias : List (String × (Int �
     (locks : List ULock) (globs : List UGlob) (koepfe : List UFnKopf) (whys : List UWhy)
     (sums : List USum) (devs : List String) (regs : List UReg) (zustaende : List UZustand)
     (specs : List (String × List String × SExpr)) (arrKonst : List (String × USide))
-    (zeiger : List String) (zb : Nat) (belegt bekannt : List String) : List SCheck → Except String (List UFn)
+    (zeiger : List String) (zb : Nat) (belegt bekannt : List String)
+    (spaces : List String := []) (eigner : List String := []) : List SCheck → Except String (List UFn)
   | [] => .ok []
   | c :: rest =>
     match uProbeNeu belegt bekannt (probeFnName c.cname) with
     | .error e => .error e
     | .ok _ =>
-      match uProbeFn consts alias tabs locks globs koepfe whys sums devs regs zustaende specs arrKonst zeiger zb c with
+      match uProbeFn consts alias tabs locks globs koepfe whys sums devs regs zustaende specs arrKonst zeiger zb c spaces eigner with
       | .error e => .error e
       | .ok (f, reporters) =>
-        match uProbeFnsAux consts alias tabs locks globs koepfe whys sums devs regs zustaende specs arrKonst zeiger zb belegt (probeFnName c.cname :: bekannt) rest with
+        match uProbeFnsAux consts alias tabs locks globs koepfe whys sums devs regs zustaende specs arrKonst zeiger zb belegt (probeFnName c.cname :: bekannt) spaces eigner rest with
         | .error e => .error e
         | .ok fs => .ok (f :: (reporters ++ fs))
 
@@ -79,7 +84,8 @@ def uProbeFns (consts : List (String × Int)) (alias : List (String × (Int × I
     (locks : List ULock) (globs : List UGlob) (koepfe : List UFnKopf) (whys : List UWhy)
     (sums : List USum) (devs : List String) (regs : List UReg) (zustaende : List UZustand)
     (specs : List (String × List String × SExpr)) (arrKonst : List (String × USide))
-    (zeiger : List String) (zb : Nat) (belegt : List String) (checks : List SCheck) : Except String (List UFn) :=
-  uProbeFnsAux consts alias tabs locks globs koepfe whys sums devs regs zustaende specs arrKonst zeiger zb belegt [] checks
+    (zeiger : List String) (zb : Nat) (belegt : List String) (checks : List SCheck)
+    (spaces : List String := []) (eigner : List String := []) : Except String (List UFn) :=
+  uProbeFnsAux consts alias tabs locks globs koepfe whys sums devs regs zustaende specs arrKonst zeiger zb belegt [] spaces eigner checks
 
 end Gabbro.Grammatik.Parser.Uebersetze

@@ -106,8 +106,10 @@ def guestSources (items : List SItemTief) : Except String (List UGuest × List S
 def guestForeign (alias : List (String × (Int × Int))) (consts : List (String × Int))
     (tabs : List UTab) (globs : List UGlob) (whys : List UWhy)
     (assumptions : List String) (guests : List UGuest) (k : UFnKopf)
-    (eigner : List String := []) : Except String UAx := do
-  let ctx := { uCtxVon alias consts tabs [] globs k k.name assumptions whys with eigner := eigner }
+    (eigner : List String := []) (spaces : List String := []) : Except String UAx := do
+  let ctx := { uCtxVon alias consts tabs [] globs k k.name assumptions whys with
+    eigner := eigner
+    spaces := spaces }
   let (gives, needs) ← elabKlauseln ctx k.clauses
   let software := guests.any fun g => strEq g.service k.name
   if software && k.annahme.isSome then
