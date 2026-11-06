@@ -20,7 +20,11 @@ theorem parameter_at : EnvAt layout memory 4096 params 4 := by
   apply envAt_cons (ρ := (Env.nil : Env D [])) (fun _ x => nomatch x)
   constructor
   · intro i; trivial
-  · change WordsAt memory 4096 8 [33, 34]
+  · have width : integerWords 0 100 = 1 := integerWords_word (by decide) (by decide)
+    have encoded : encodeWords layout (.arr (.int 0 100) 2) parameter = [33, 34] := by
+      simp [encodeWords, elementEncoding, parameter, width, integerEncoding]
+    rw [encoded]
+    change WordsAt memory 4096 8 [33, 34]
     intro i hi
     have cases : i = 0 ∨ i = 1 := by change i < 2 at hi; omega
     rcases cases with rfl | rfl <;> decide +kernel +revert
