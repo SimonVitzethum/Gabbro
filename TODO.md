@@ -196,15 +196,19 @@ Thus a parser/exporter or an expanded-unit certificate can exist while the origi
   ([definition](grammatik/Grammatik/Logik/Ruf/Maschine/RufMaschineG/T1Basis.lean)); they have no direct source syntax or
   standalone Stage-0 emitter. `rueckBereit` is still an inert pending-return placeholder without a consuming step rule;
   its replay/unwind connection remains open. The source constructs use the scoped-return/traversal arms above.
-- **C12 capabilities.** Named table spaces and decoded rights have source export (`Uebersetze/Teil/Teil3`,
+- **C12 capabilities.** Normal-space table capabilities and decoded rights have source export (`Uebersetze/Teil/Teil3`,
   `Kontext/Eigner`) and connected ordinary `ptrOf`/`thru`/`assignThru`/reference access paths.
+  Named spaces exist in the model, but no independent table-space source binding was found: the fifth
+  `tableT` field is the owner. The existing `NamedSpaceWitness` confuses that owner field with a space
+  declaration and still needs an honest source/proof connection; it is not completed source coverage.
   Owned `Expr.thruOwn` and `Stmt.assignThruOwn` also use those slot paths with real `lowE_ok`/`lowS_ok` arms;
   the source exporters exist in
   [`UebersetzeAllg/Teil3`](grammatik/Grammatik/Parser/Elab/UebersetzeAllg/Teil3.lean) and
   [`UebersetzeAllg2/Teil1`](grammatik/Grammatik/Parser/Elab/UebersetzeAllg2/Teil1.lean), and `borrows` has call-flow export.
   **Original `own@...` types still fail `ExportMetadata.typeMetadata`**, even though the canonical owned-access path is connected.
   Live byte, raw and entry targets remain refused there and/or by `uTypWert`; no source export to live byte/entry operations exists.
-  Open: bind original owner/byte/raw/entry duties to live grants/history and transferred capabilities.
+  Open: checked named-space source binding, and original owner/byte/raw/entry duties to live grants/history
+  and transferred capabilities.
 - **C14 selection, profiles, placement and entrust.**
   [`Profil.prepareItems`](stage0/Stage0/Profil.lean) selects `when TESTBUILD`, checks `ProfileBinding.bindungB`,
   and removes admitted `profile` blocks with `ohneProfilL` **before** elaboration; consistent profiles and covered
@@ -309,7 +313,8 @@ it does not override metadata or target refusal. Items use their checked expansi
 | Owner `moves` / `borrows` | admit (static call flow; owner-typed signatures refuse) | yes (ordinary calls) | yes |
 | Owner `mints` | refuse (original mint-effect duty) | no (dynamic mint bridge) | yes |
 | `Expr.thruOwn`, `Stmt.assignThruOwn` / `own@...` | refuse (original owner type); admit G only | yes | yes |
-| `ptrOf`, `thru`, `assignThru`, named table spaces | admit (decoded rights/target) | yes | yes |
+| `ptrOf`, `thru`, `assignThru`, normal table spaces | admit (decoded rights/target) | yes | yes |
+| Named table spaces | model only; source binding missing (owner is independent) | yes (generic capability arms) | no (checked table-space declaration) |
 | Safe `slotRef`, `assignSlotRef`, `refEq` | admit (declared reference/origin) | yes | yes |
 | Live byte/raw/entry targets | refuse (grant/history/binding duties) | no (live source path) | no (operational export) |
 | Exclusive `locks` | admit (`retFreiB` body only) | yes | yes |
