@@ -61,4 +61,20 @@ theorem Replacement.sound (replacement : Replacement k fns env sources) : replac
   | integer call => exact ⟨call.function.normalized, call.normalized_denotation, call.sound⟩
   | portable call => exact call.sound
 
+/-- The actual replacement retains the entry-context proofs for every declared
+    operation bound, independently of the execution/quotation theorem above. -/
+def ReplacementEvidence.Costs : {«syntax» : SExpr} →
+    ReplacementEvidence k fns env sources «syntax» → Prop
+  | _, .integer call => Nonempty (Scalar.CostBounds (Scalar.locals k.params) k.constants
+      (kostenExpr call.function.model.body.2.2.expr) call.args k.signature.klauseln)
+  | _, .portable call => Nonempty (Scalar.CostBounds (Scalar.locals k.params) k.constants
+      (kostenExpr call.function.model.body.expr) call.args k.signature.klauseln)
+
+theorem Replacement.costs (replacement : Replacement k fns env sources) :
+    replacement.evidence.Costs := by
+  rcases replacement with ⟨«syntax», evidence⟩
+  cases evidence with
+  | integer call => exact ⟨call.costs⟩
+  | portable call => exact ⟨call.costs⟩
+
 end Gabbro.Grammatik.Parser.Konst

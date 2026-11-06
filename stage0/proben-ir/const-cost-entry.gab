@@ -1,0 +1,8 @@
+// The operation bound is evaluated at the actual typed entry argument.
+module const_cost_entry {
+const fn increment(x : u8) -> u8 effects { pure } costs <= x ops {
+    return x + 1;
+}
+const ANSWER : u8 = increment(41);
+impl fn main() -> u8 effects { pure } { return ANSWER; }
+}

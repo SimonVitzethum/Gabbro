@@ -134,7 +134,9 @@ theorem checkCall_elaborated {k : UKonstFn} (fns : List UKonstFn)
         | .error error => throw error
         | .ok args => do
           letI : Decidable (@Eq Bool (fn.model.pre.denote args) true) := Bool.decEq _ _
-          if hp : @Eq Bool (fn.model.pre.denote args) true then
+          if hp : @Eq Bool (fn.model.pre.denote args) true then do
+            let costs ← checkCosts k.name (locals k.params) k.constants
+              (kostenExpr fn.model.body.expr) args k.signature.klauseln
             let value := fn.model.body.denote args
             letI : Decidable (@Eq Bool (fn.model.post.denote (.cons value args)) true) := Bool.decEq _ _
             if hq : @Eq Bool (fn.model.post.denote (.cons value args)) true then do
@@ -142,7 +144,7 @@ theorem checkCall_elaborated {k : UKonstFn} (fns : List UKonstFn)
                 (Γ := k.params.map Prod.snd) (Values.resultSchemas k)
                 (Values.textLiterals fn.source) 64 k.erg value
               return ⟨fn, values, evaluated, checkedArguments.meaning, args, ha, value,
-                fn.model.body.equation _ _ _, ⟨rfl, hp, hq⟩, quoted⟩
+                fn.model.body.equation _ _ _, ⟨rfl, hp, hq⟩, quoted, costs⟩
             else throw ("const contract violated at `" ++ k.name ++ "`: ensures failed")
           else throw ("const contract violated at `" ++ k.name ++ "`: requires failed") :
         Except String (Values.CheckedCall k fns env sources)) := by

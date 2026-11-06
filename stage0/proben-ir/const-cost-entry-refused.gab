@@ -1,0 +1,8 @@
+// An expression whose type admits positive bounds still denotes zero here.
+module const_cost_entry_refused {
+const fn increment(x : u8) -> u8 effects { pure } costs <= x - x ops {
+    return x + 1;
+}
+const ANSWER : u8 = increment(41);
+impl fn main() -> u8 effects { pure } { return ANSWER; }
+}

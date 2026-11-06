@@ -1,6 +1,7 @@
 module
 public import Grammatik.Parser.Elab.Konst.Scalar.Arguments
 public import Grammatik.Parser.Elab.Konst.Scalar.KExpr
+public import Grammatik.Parser.Elab.Konst.Scalar.Costs
 
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Konst.Scalar
@@ -232,6 +233,8 @@ structure CheckedCall (k : UKonstFn) (fns : List UKonstFn)
   certificate : Function.Certificate function.model args value
   quoted : Quoted args function.model.body.2.2.expr
   syntaxValue : quoted.syntax.evalInt = some value
+  costs : CostBounds (locals k.params) k.constants
+    (kostenExpr function.model.body.2.2.expr) args k.signature.klauseln
 
 /-- The sole call-site folding entry point. Every failure names the source callee. -/
 def checkCall (k : UKonstFn) (fns : List UKonstFn)
@@ -250,19 +253,32 @@ def checkCall (k : UKonstFn) (fns : List UKonstFn)
       letI : Decidable (@Eq Bool (fn.model.pre.denote args) false) := Bool.decEq _ _
       if @Eq Bool (fn.model.pre.denote args) false then
         throw ("const contract violated at `" ++ k.name ++ "`: requires failed")
-      else
-      match hn : uKonstBinde k.params values with
-      | none => throw ("const argument binding failed at `" ++ k.name ++ "`")
-      | some bindings =>
-        match hc : uKonstWert lo hi fns bindings 64
-            (normalizeNames (locals k.params) k.constants fn.source) with
-        | none => throw ("const range failure at `" ++ k.name ++ "`: arithmetic overflow or no value")
-        | some value => do
-          let cert ← Function.certify k.name fn.model args value
-          let quoted ← quote fn.model.body.2.2.expr args
-          have syntaxValue : quoted.syntax.evalInt = some value := by
-            rw [quoted.equation (world _ _) (world _ _), fn.model.body.2.2.equation, cert.body] <;> rfl
-          return ⟨lo, hi, fn, values, evaluated, checkedArguments.meaning, args, ha, bindings, hn, value, hc, cert, quoted, syntaxValue⟩
+      else do
+        let costs ← checkCosts k.name (locals k.params) k.constants
+          (kostenExpr fn.model.body.2.2.expr) args k.signature.klauseln
+        match hn : uKonstBinde k.params values with
+        | none => throw ("const argument binding failed at `" ++ k.name ++ "`")
+        | some bindings =>
+          match hc : uKonstWert lo hi fns bindings 64
+              (normalizeNames (locals k.params) k.constants fn.source) with
+          | none => throw ("const range failure at `" ++ k.name ++ "`: arithmetic overflow or no value")
+          | some value => do
+            let cert ← Function.certify k.name fn.model args value
+            let quoted ← quote fn.model.body.2.2.expr args
+            have syntaxValue : quoted.syntax.evalInt = some value := by
+              rw [quoted.equation (world _ _) (world _ _), fn.model.body.2.2.equation, cert.body] <;> rfl
+            return ⟨lo, hi, fn, values, evaluated, checkedArguments.meaning, args, ha, bindings, hn, value, hc, cert, quoted, syntaxValue, costs⟩
+
+/-- Every source operation bound is discharged at the original typed arguments.
+    Return-range administration is separate from the declared operation metric. -/
+theorem CheckedCall.cost_bound (call : CheckedCall k fns env sources) (source : SExpr)
+    (member : SKlausel.cost source ∈ k.signature.klauseln) :
+    ∃ (lower upper : Int) (code : Code (declaration (k.params.map Prod.snd) (.int call.lo call.hi))
+        (k.params.map Prod.snd) (.int lower upper)),
+      SourceMeaning (locals k.params) k.constants source ⟨_, code⟩ ∧
+      ∀ before after, (kostenExpr call.function.model.body.2.2.expr : Int) ≤
+        (eval before code.expr after call.args).n :=
+  call.costs.bound source member
 
 /-- Every value the actual replacement entry point can obtain denotes the ordinary
     machine G call of its source-derived body, with both contracts retained. -/

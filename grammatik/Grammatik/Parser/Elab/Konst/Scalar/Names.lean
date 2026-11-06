@@ -126,7 +126,9 @@ def normalize {D : Deklaration} {Γ : Ctx} (names : Locals Γ)
     | .ok code => return ⟨code, .binary op left right a.code b.code code a.meaning b.meaning ht⟩
   | _ => .error "const expression without a source-to-G derivation"
 
-/-- Contracts normalize in their own entry/result context and preserve clause order. -/
+/-- Predicates normalize in their own entry/result context and preserve clause
+    order. Operation bounds are certified separately by `checkCosts` at the actual
+    entry arguments; they are not Boolean preconditions or postconditions. -/
 def normalizeClauses {D : Deklaration} {Γ : Ctx} (names : Locals Γ)
     (globals : List (String × Int)) (post : Bool) : List SKlausel → Except String (Code D Γ .bool)
   | [] => .ok (Code.truth true)
@@ -142,6 +144,7 @@ def normalizeClauses {D : Deklaration} {Γ : Ctx} (names : Locals Γ)
     | .effs effects =>
       if effects.all (fun | .pure => true | _ => false) then return tail
       else throw "const effect clause is not pure"
+    | .cost _ => return tail
     | _ => throw "const clause without a compile-time certificate"
 
 

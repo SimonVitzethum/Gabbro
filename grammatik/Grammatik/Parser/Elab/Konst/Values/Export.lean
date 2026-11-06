@@ -179,6 +179,8 @@ structure CheckedCall (k : UKonstFn) (fns : List UKonstFn)
   certificate : Function.Certificate function.model args value
   quoted : Reified (declaration (k.params.map Prod.snd) k.erg)
     (k.params.map Prod.snd) (resultSchemas k) k.erg value
+  costs : CostBounds (locals k.params) k.constants
+    (kostenExpr function.model.body.expr) args k.signature.klauseln
 
 /-- Evaluate once in G, check both predicates, then produce the exact typed literal. -/
 def checkCall (k : UKonstFn) (fns : List UKonstFn)
@@ -194,16 +196,28 @@ def checkCall (k : UKonstFn) (fns : List UKonstFn)
     | .error error => throw error
     | .ok args => do
       letI : Decidable (@Eq Bool (fn.model.pre.denote args) true) := Bool.decEq _ _
-      if hp : @Eq Bool (fn.model.pre.denote args) true then
+      if hp : @Eq Bool (fn.model.pre.denote args) true then do
+        let costs ← checkCosts k.name (locals k.params) k.constants
+          (kostenExpr fn.model.body.expr) args k.signature.klauseln
         let value := fn.model.body.denote args
         letI : Decidable (@Eq Bool (fn.model.post.denote (.cons value args)) true) := Bool.decEq _ _
         if hq : @Eq Bool (fn.model.post.denote (.cons value args)) true then do
           let quoted ← reify (D := declaration (k.params.map Prod.snd) k.erg)
             (Γ := k.params.map Prod.snd) (resultSchemas k) (textLiterals fn.source) 64 k.erg value
           return ⟨fn, values, evaluated, checkedArguments.meaning, args, ha, value, fn.model.body.equation _ _ _,
-            ⟨rfl, hp, hq⟩, quoted⟩
+            ⟨rfl, hp, hq⟩, quoted, costs⟩
         else throw ("const contract violated at `" ++ k.name ++ "`: ensures failed")
       else throw ("const contract violated at `" ++ k.name ++ "`: requires failed")
+
+/-- Portable results carry the same source-bound certificate as scalar results. -/
+theorem CheckedCall.cost_bound (call : CheckedCall k fns env sources) (source : SExpr)
+    (member : SKlausel.cost source ∈ k.signature.klauseln) :
+    ∃ (lower upper : Int) (code : Code (declaration (k.params.map Prod.snd) k.erg)
+        (k.params.map Prod.snd) (.int lower upper)),
+      SourceMeaning (locals k.params) k.constants source ⟨_, code⟩ ∧
+      ∀ before after, (kostenExpr call.function.model.body.expr : Int) ≤
+        (eval before code.expr after call.args).n :=
+  call.costs.bound source member
 
 /-- Both call evaluation and literal evaluation yield the same complete typed
     result, for every world, oracle, pass budget and positive recursion depth. -/
