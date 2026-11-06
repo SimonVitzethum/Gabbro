@@ -198,7 +198,7 @@ private theorem floorPassing_unit : elabU (floorItems 2 true true) = .ok floorPa
   floorPassingUnitMade.property
 
 /-- The actual constructor-valued unit retained by the passing-floor source certificate. -/
-@[expose] def uBodenWahr : UProg := floorPassingUnitMade.val
+@[expose] def uBodenWahr : UProg := (floorPassingUnitMade).val
 
 -- Normalize the actual function fields before forming any dependent code type.
 -- Whole-function equality below certifies the headers, code and retained reporter metadata.
@@ -326,6 +326,6 @@ private theorem floorFailing_unit : elabU (floorItems 4 true true) = .ok floorFa
   floorFailingUnitMade.property
 
 /-- The actual constructor-valued unit retained by the failing-floor source certificate. -/
-@[expose] def uBodenFalsch : UProg := floorFailingUnitMade.val
+@[expose] def uBodenFalsch : UProg := (floorFailingUnitMade).val
 
 end Gabbro.Grammatik.Parser.Uebersetze
