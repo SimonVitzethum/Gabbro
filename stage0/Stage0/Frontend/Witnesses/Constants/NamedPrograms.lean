@@ -1,6 +1,7 @@
 module
 public import Stage0.Frontend.Witnesses.Constants.ProgramPackets
 public import Stage0.Frontend.Witnesses.Constants.NamedSources
+import all Stage0.Frontend.Witnesses.Constants.NamedSources
 import Grammatik.Parser.Elab.Konst.Values.WitnessReaders
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
@@ -67,7 +68,7 @@ set_option maxHeartbeats 4000000
 
 -- These are the existing generic typed reader equations used by the green const witnesses.
 attribute [local cbv_eval] Konst.Values.expression.eq_def Konst.Values.payloadExpression.eq_def
-attribute [local cbv_eval] Konst.Values.reify.eq_def Konst.Values.reifyPayload.eq_def
+attribute [local cbv_eval] Konst.Values.reifyPayload.eq_def
 attribute [local cbv_eval]
   Konst.Values.WitnessReaders.reader_bool Konst.Values.WitnessReaders.reader_int
   Konst.Values.WitnessReaders.reader_text Konst.Values.WitnessReaders.reader_sum
@@ -82,59 +83,130 @@ attribute [local cbv_eval]
   lowStufe_seq lowStufe_struct
   uKonstZeile.eq_def uKonstZeilen.eq_def lowLit.eq_def
 
-/-- Retain the actual elaborated constructor and all body facts inside one opaque theorem. -/
+attribute [local cbv_eval] tagText_metadata stringText_metadata
+
+section tagCompilation
+attribute [local cbv_eval] tag_collected tag_elaborated
+attribute [local cbv_opaque] Konst.Values.elaborate Konst.Values.reify
+
+-- Replay the actual const call before the unit elaborator consumes its syntax.
+-- The whole quotation retains its canonical value, schema and payload evidence.
+@[local cbv_eval] private theorem tagText_replaced :
+    Konst.ersetzeSExprIn [] [tagDescriptor] (.call "selected" [.lit 4]) =
+      .ok (.call "Data" [.lit 5]) := by
+  obtain ⟨literal, produced, spelling⟩ := tag_quoted
+  rw [Konst.Values.WitnessReaders.substitute_portable [tagDescriptor] "selected"
+    [.lit 4] [.lit 4] tagDescriptor (by cbv) (by cbv) (by rfl) (by cbv) (by cbv),
+    Konst.Values.WitnessReaders.checkCall_elaborated [tagDescriptor] [] [.lit 4]
+      tagFunction tag_elaborated]
+  cbv
+  erw [produced]
+  simpa only [spelling, bind, Except.bind, pure, Except.pure, Except.map]
+
+private def tagTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.tagText := by
+  refine {
+    source := sourceFrom tagTextInput tagTextTail
+    sourceEq := sourceFrom_eq tagTextInput tagTextTail
+    expanded := ?expanded
+    requirements := ?requirements
+    expansion := ?expansion
+    constants := ?constants
+    ordinary := by cbv
+    metadata := tagTextTail.metadata
+    candidate := ?candidate
+    elaborated := ?elaborated }
+  case expansion => cbv <;> exact Eq.refl _
+  case constants =>
+    change Konst.checkSourceConstants tagTextInput.original = .ok ()
+    unfold Konst.checkSourceConstants
+    split
+    · exact tagTextTail.metadata
+    · rfl
+  case elaborated => cbv <;> exact Eq.refl _
+
+private theorem tagText_count : tagTextHeader.unit.fns.length = 1 := by cbv
+
+private def tagTextMain : Fin tagTextHeader.unit.fns.length :=
+  ⟨0, by have count := tagText_count; omega⟩
+
+private theorem tagText_only_main (f : Fin tagTextHeader.unit.fns.length) :
+    f = tagTextMain := by
+  apply Fin.ext
+  have small : f.val < 1 := by simpa only [tagText_count] using f.isLt
+  change f.val = 0
+  omega
+
+private def tagTextCode :
+    { value : EnsTy tagTextHeader.unit tagTextMain × RumpTy tagTextHeader.unit tagTextMain ×
+        ReqTy tagTextHeader.unit tagTextMain //
+      lowerFnAt tagTextHeader.unit tagTextMain = .ok value } := by
+  refine ⟨?value, ?produced⟩
+  case produced => cbv <;> exact Eq.refl _
+
+@[local cbv_eval] private theorem tagText_code_eq :
+    lowerFnAt tagTextHeader.unit tagTextMain = .ok tagTextCode.val := tagTextCode.property
+
+private def tagTextFunctions : Functions tagTextHeader.unit :=
+  Functions.of_success (fun f => by
+    have same := tagText_only_main f
+    subst f
+    rw [tagText_code_eq]
+    rfl) (by cbv) (fun f => by
+      have same := tagText_only_main f
+      subst f
+      cbv) (by cbv)
+
+-- Check the actual original declaration spine. Neither the tagged schema nor
+-- either function is an array initializer; all const-function gates remain above.
+private theorem tagText_arrays_ready :
+    (Frontend.checkArrays tagTextHeader.unit tagTextHeader.source.scopes
+      tagTextInput.original).toOption.isSome = true := by
+  have nonConstants : tagTextInput.original.all
+      (fun | .constT _ _ _ => false | _ => true) = true := by cbv
+  apply checked_array_items
+  intro item member
+  have shape := List.all_eq_true.mp nonConstants item member
+  cases item
+  case constT name ty value =>
+    change (false : Bool) = true at shape
+    cases shape
+  all_goals rfl
+
+private theorem tagText_entry_free (f : Fin tagTextHeader.unit.fns.length) :
+    (OldSource.clauses tagTextHeader.expanded (fnAt tagTextHeader.unit f).name).any
+      OldSource.hasEntry = false := by
+  have same := tagText_only_main f
+  subst f
+  cbv
+
+private theorem tagText_restored :
+    OldSource.restore (pre108 tagTextHeader.source.prepared.elaborierbar)
+      tagTextHeader.unit tagTextFunctions.program = .ok tagTextFunctions.program :=
+  restore_entry_free _ tagTextHeader.expanded tagTextHeader.requirements
+    tagTextHeader.unit tagTextFunctions.program tagTextHeader.expansion tagText_entry_free
+
+private theorem tagText_accepted :
+    OldSource.accepts tagTextHeader.unit tagTextFunctions.program = .ok true := by
+  apply accepts_function_results tagTextFunctions
+  intro invariants pointers foreigns
+  cbv
+
+private def tagTextBody : Body tagTextHeader where
+  functions := tagTextFunctions
+  main := tagTextMain
+  entry := by cbv
+  initializers := by cbv
+  arrays := (Frontend.checkArrays tagTextHeader.unit tagTextHeader.source.scopes
+    tagTextInput.original).toOption.get tagText_arrays_ready
+  arrayEq := Gabbro.Grammatik.except_ok_get tagText_arrays_ready
+  program := tagTextFunctions.program
+  restored := tagText_restored
+  accepted := tagText_accepted
+
 private theorem tagText_program_packet :
     ∃ header : Header Gabbro.Stage0.Frontend.ConstValuesWitness.tagText,
-      header.unit.fns.length = 1 ∧ Nonempty (Body header) := by
-  let header : Header Gabbro.Stage0.Frontend.ConstValuesWitness.tagText := by
-    refine {
-      source := sourceFrom tagTextInput tagTextTail
-      sourceEq := by exact sourceFrom_eq tagTextInput tagTextTail
-      expanded := ?expanded
-      requirements := ?requirements
-      expansion := ?expansion
-      constants := ?constants
-      ordinary := by cbv
-      metadata := by exact tagTextTail.metadata
-      candidate := ?candidate
-      elaborated := ?elaborated }
-    case expansion => cbv <;> exact Eq.refl _
-    case constants =>
-      change Konst.checkSourceConstants tagTextInput.original = .ok ()
-      unfold Konst.checkSourceConstants
-      split
-      · exact tagTextTail.metadata
-      · rfl
-    case elaborated => cbv <;> exact Eq.refl _
-  have count : header.unit.fns.length = 1 := by cbv
-  have produced : ∀ f : Fin header.unit.fns.length,
-      (lowerFnAt header.unit f).toOption.isSome = true := by
-    rintro ⟨index, bound⟩
-    have small : index < 1 := by simpa only [count] using bound
-    have zero : index = 0 := by omega
-    subst index
-    cbv
-  let functions : Functions header.unit := Functions.of_success produced (by cbv) (by
-    rintro ⟨index, bound⟩
-    have small : index < 1 := by simpa only [count] using bound
-    have zero : index = 0 := by omega
-    subst index
-    cbv) (by cbv)
-  refine ⟨header, count, ?body⟩
-  case body =>
-    refine ⟨{
-      functions := functions
-      main := ⟨0, by omega⟩
-      entry := by cbv
-      initializers := by cbv
-      arrays := ?arrays
-      arrayEq := ?arrayEq
-      program := ?program
-      restored := ?restored
-      accepted := ?accepted }⟩
-    case arrayEq => cbv <;> exact Eq.refl _
-    case restored => cbv <;> exact Eq.refl _
-    case accepted => cbv
+      header.unit.fns.length = 1 ∧ Nonempty (Body header) :=
+  ⟨tagTextHeader, tagText_count, ⟨tagTextBody⟩⟩
 
 theorem tagText_compiled :
     ∃ result : Compiled Gabbro.Stage0.Frontend.ConstValuesWitness.tagText, compile Gabbro.Stage0.Frontend.ConstValuesWitness.tagText = .ok result ∧
@@ -143,59 +215,126 @@ theorem tagText_compiled :
   obtain ⟨result, origin, unitEq⟩ := compiled header body
   exact ⟨result, origin, (congrArg (fun unit => unit.fns.length) unitEq).trans count⟩
 
-/-- Retain the actual elaborated constructor and all body facts inside one opaque theorem. -/
+end tagCompilation
+
+section textCompilation
+attribute [local cbv_eval] text_collected text_elaborated
+attribute [local cbv_opaque] Konst.Values.elaborate Konst.Values.reify
+
+@[local cbv_eval] private theorem stringText_replaced :
+    Konst.ersetzeSExprIn [] [textDescriptor] (.call "selected" []) =
+      .ok (.ext .text ["A"] []) := by
+  obtain ⟨literal, produced, spelling⟩ := text_quoted
+  rw [Konst.Values.WitnessReaders.substitute_portable [textDescriptor] "selected"
+    [] [] textDescriptor (by cbv) (by cbv) (by rfl) (by cbv) (by cbv),
+    Konst.Values.WitnessReaders.checkCall_elaborated [textDescriptor] [] []
+      textFunction text_elaborated]
+  cbv
+  erw [produced]
+  simpa only [spelling, bind, Except.bind, pure, Except.pure, Except.map]
+
+private def stringTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.stringText := by
+  refine {
+    source := sourceFrom stringTextInput stringTextTail
+    sourceEq := sourceFrom_eq stringTextInput stringTextTail
+    expanded := ?expanded
+    requirements := ?requirements
+    expansion := ?expansion
+    constants := ?constants
+    ordinary := by cbv
+    metadata := stringTextTail.metadata
+    candidate := ?candidate
+    elaborated := ?elaborated }
+  case expansion => cbv <;> exact Eq.refl _
+  case constants =>
+    change Konst.checkSourceConstants stringTextInput.original = .ok ()
+    unfold Konst.checkSourceConstants
+    split
+    · exact stringTextTail.metadata
+    · rfl
+  case elaborated => cbv <;> exact Eq.refl _
+
+private theorem stringText_count : stringTextHeader.unit.fns.length = 1 := by cbv
+
+private def stringTextMain : Fin stringTextHeader.unit.fns.length :=
+  ⟨0, by have count := stringText_count; omega⟩
+
+private theorem stringText_only_main (f : Fin stringTextHeader.unit.fns.length) :
+    f = stringTextMain := by
+  apply Fin.ext
+  have small : f.val < 1 := by simpa only [stringText_count] using f.isLt
+  change f.val = 0
+  omega
+
+private def stringTextCode :
+    { value : EnsTy stringTextHeader.unit stringTextMain × RumpTy stringTextHeader.unit stringTextMain ×
+        ReqTy stringTextHeader.unit stringTextMain //
+      lowerFnAt stringTextHeader.unit stringTextMain = .ok value } := by
+  refine ⟨?value, ?produced⟩
+  case produced => cbv <;> exact Eq.refl _
+
+@[local cbv_eval] private theorem stringText_code_eq :
+    lowerFnAt stringTextHeader.unit stringTextMain = .ok stringTextCode.val := stringTextCode.property
+
+private def stringTextFunctions : Functions stringTextHeader.unit :=
+  Functions.of_success (fun f => by
+    have same := stringText_only_main f
+    subst f
+    rw [stringText_code_eq]
+    rfl) (by cbv) (fun f => by
+      have same := stringText_only_main f
+      subst f
+      cbv) (by cbv)
+
+private theorem stringText_arrays_ready :
+    (Frontend.checkArrays stringTextHeader.unit stringTextHeader.source.scopes
+      stringTextInput.original).toOption.isSome = true := by
+  have nonConstants : stringTextInput.original.all
+      (fun | .constT _ _ _ => false | _ => true) = true := by cbv
+  apply checked_array_items
+  intro item member
+  have shape := List.all_eq_true.mp nonConstants item member
+  cases item
+  case constT name ty value =>
+    change (false : Bool) = true at shape
+    cases shape
+  all_goals rfl
+
+private theorem stringText_entry_free (f : Fin stringTextHeader.unit.fns.length) :
+    (OldSource.clauses stringTextHeader.expanded (fnAt stringTextHeader.unit f).name).any
+      OldSource.hasEntry = false := by
+  have same := stringText_only_main f
+  subst f
+  cbv
+
+private theorem stringText_restored :
+    OldSource.restore (pre108 stringTextHeader.source.prepared.elaborierbar)
+      stringTextHeader.unit stringTextFunctions.program = .ok stringTextFunctions.program :=
+  restore_entry_free _ stringTextHeader.expanded stringTextHeader.requirements
+    stringTextHeader.unit stringTextFunctions.program stringTextHeader.expansion stringText_entry_free
+
+private theorem stringText_accepted :
+    OldSource.accepts stringTextHeader.unit stringTextFunctions.program = .ok true := by
+  apply accepts_function_results stringTextFunctions
+  intro invariants pointers foreigns
+  cbv
+
+private def stringTextBody : Body stringTextHeader where
+  functions := stringTextFunctions
+  main := stringTextMain
+  entry := by cbv
+  initializers := by cbv
+  arrays := (Frontend.checkArrays stringTextHeader.unit stringTextHeader.source.scopes
+    stringTextInput.original).toOption.get stringText_arrays_ready
+  arrayEq := Gabbro.Grammatik.except_ok_get stringText_arrays_ready
+  program := stringTextFunctions.program
+  restored := stringText_restored
+  accepted := stringText_accepted
+
 private theorem stringText_program_packet :
     ∃ header : Header Gabbro.Stage0.Frontend.ConstValuesWitness.stringText,
-      header.unit.fns.length = 1 ∧ Nonempty (Body header) := by
-  let header : Header Gabbro.Stage0.Frontend.ConstValuesWitness.stringText := by
-    refine {
-      source := sourceFrom stringTextInput stringTextTail
-      sourceEq := by exact sourceFrom_eq stringTextInput stringTextTail
-      expanded := ?expanded
-      requirements := ?requirements
-      expansion := ?expansion
-      constants := ?constants
-      ordinary := by cbv
-      metadata := by exact stringTextTail.metadata
-      candidate := ?candidate
-      elaborated := ?elaborated }
-    case expansion => cbv <;> exact Eq.refl _
-    case constants =>
-      change Konst.checkSourceConstants stringTextInput.original = .ok ()
-      unfold Konst.checkSourceConstants
-      split
-      · exact stringTextTail.metadata
-      · rfl
-    case elaborated => cbv <;> exact Eq.refl _
-  have count : header.unit.fns.length = 1 := by cbv
-  have produced : ∀ f : Fin header.unit.fns.length,
-      (lowerFnAt header.unit f).toOption.isSome = true := by
-    rintro ⟨index, bound⟩
-    have small : index < 1 := by simpa only [count] using bound
-    have zero : index = 0 := by omega
-    subst index
-    cbv
-  let functions : Functions header.unit := Functions.of_success produced (by cbv) (by
-    rintro ⟨index, bound⟩
-    have small : index < 1 := by simpa only [count] using bound
-    have zero : index = 0 := by omega
-    subst index
-    cbv) (by cbv)
-  refine ⟨header, count, ?body⟩
-  case body =>
-    refine ⟨{
-      functions := functions
-      main := ⟨0, by omega⟩
-      entry := by cbv
-      initializers := by cbv
-      arrays := ?arrays
-      arrayEq := ?arrayEq
-      program := ?program
-      restored := ?restored
-      accepted := ?accepted }⟩
-    case arrayEq => cbv <;> exact Eq.refl _
-    case restored => cbv <;> exact Eq.refl _
-    case accepted => cbv
+      header.unit.fns.length = 1 ∧ Nonempty (Body header) :=
+  ⟨stringTextHeader, stringText_count, ⟨stringTextBody⟩⟩
 
 theorem stringText_compiled :
     ∃ result : Compiled Gabbro.Stage0.Frontend.ConstValuesWitness.stringText, compile Gabbro.Stage0.Frontend.ConstValuesWitness.stringText = .ok result ∧
@@ -203,5 +342,7 @@ theorem stringText_compiled :
   obtain ⟨header, count, ⟨body⟩⟩ := stringText_program_packet
   obtain ⟨result, origin, unitEq⟩ := compiled header body
   exact ⟨result, origin, (congrArg (fun unit => unit.fns.length) unitEq).trans count⟩
+
+end textCompilation
 
 end Gabbro.Stage0.Frontend.ConstPhases
