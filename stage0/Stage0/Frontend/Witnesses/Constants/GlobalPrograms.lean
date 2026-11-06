@@ -4,6 +4,7 @@ public import Stage0.Frontend.Witnesses.Constants.GlobalSources
 import all Stage0.Frontend.Witnesses.Constants.GlobalSources
 import Grammatik.Parser.Elab.Konst.Values.WitnessReaders
 import Init.Data.String.Lemmas.Intercalate
+import Grammatik.Parser.Elab.UebersetzeAllg3.FunctionResults
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
@@ -380,12 +381,24 @@ private theorem qualifiedText_only_main (f : Fin qualifiedTextHeader.unit.fns.le
   change f.val = 0
   omega
 
+-- Certify the real dispatcher gates and body before constructing the result triple.
+private theorem qualifiedText_function_header :
+    PlainFunctionHeader qualifiedTextHeader.unit qualifiedTextMain := by
+  constructor <;> cbv
+
+private def qualifiedTextLoweredBody :
+    { actual : PlainFunctionBody qualifiedTextHeader.unit qualifiedTextMain //
+      lowBody qualifiedTextHeader.unit qualifiedTextMain
+        (fnAt qualifiedTextHeader.unit qualifiedTextMain).body
+        (fnAt qualifiedTextHeader.unit qualifiedTextMain).ret = .ok actual } := by
+  refine ⟨?actual, ?produced⟩
+  case produced => cbv <;> exact Eq.refl _
+
 private def qualifiedTextCode :
     { value : EnsTy qualifiedTextHeader.unit qualifiedTextMain ×
         RumpTy qualifiedTextHeader.unit qualifiedTextMain × ReqTy qualifiedTextHeader.unit qualifiedTextMain //
-      lowerFnAt qualifiedTextHeader.unit qualifiedTextMain = .ok value } := by
-  refine ⟨?value, ?produced⟩
-  case produced => cbv <;> exact Eq.refl _
+      lowerFnAt qualifiedTextHeader.unit qualifiedTextMain = .ok value } :=
+  lowerFnAt_from_body qualifiedText_function_header qualifiedTextLoweredBody
 
 @[local cbv_eval] private theorem qualifiedText_code_eq :
     lowerFnAt qualifiedTextHeader.unit qualifiedTextMain = .ok qualifiedTextCode.val := qualifiedTextCode.property
