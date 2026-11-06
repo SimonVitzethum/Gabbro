@@ -275,18 +275,31 @@ scoped macro "ownership_repeat_refusal " name:ident " for " unit:ident " at " nu
   let shape := Lean.mkIdentFrom name (name.getId.appendAfter "_shape")
   let step := Lean.mkIdentFrom name (name.getId.appendAfter "_step")
   let failed := Lean.mkIdentFrom name (name.getId.appendAfter "_failed")
+  let mark := Lean.mkIdentFrom step (step.getId.appendAfter "_mark")
+  let loan := Lean.mkIdentFrom step (step.getId.appendAfter "_loan")
+  let remaining := Lean.mkIdentFrom step (step.getId.appendAfter "_remaining")
+  let absent := Lean.mkIdentFrom name (name.getId.appendAfter "_absent")
   let ordinal : Lean.TSyntax `term := ⟨number.raw⟩
   let a ← `(command| private def $index : Fin ($unit).val.fns.length := ⟨$ordinal, by decide +kernel⟩)
   let b ← `(command| private def $shape : { actual : String × String //
       (fnAt ($unit).val $index).body = [.retires actual.1, .retires actual.2] } := by
     refine ⟨(?_, ?_), by cbv <;> exact Eq.refl _⟩)
   let c ← `(command| ownership_retire_step $step for $unit at $index named ($shape).val.1)
+  let missing ← `(command| private theorem $absent :
+      heldMarkStage (D := declOf ($unit).val) ($mark).val ($step).val.1 = none := by
+    exact (congrArg (heldMarkStage (D := declOf ($unit).val) ($mark).val) $remaining).trans (by cbv))
   let d ← `(command| private theorem $failed : lowStmtL (l := false) ($unit).val $index (ctxOf ($unit).val $index)
-      (fnAt ($unit).val $index) ($step).val.1 (.retires ($shape).val.2) = .error $error := by cbv)
+      (fnAt ($unit).val $index) ($step).val.1 (.retires ($shape).val.2) = .error $error := by
+    have names : ($shape).val.2 = ($shape).val.1 := by cbv
+    change lowRetiresL (l := false) ($unit).val $index (ctxOf ($unit).val $index)
+      ($step).val.1 ($shape).val.2 = _
+    rw [names]
+    exact (lowRetiresL_unheld (l := false) ($unit).val $index (ctxOf ($unit).val $index)
+      ($step).val.1 ($shape).val.1 ($mark).val $loan ($mark).property $absent).trans (by cbv))
   let e ← `(command| private theorem $name : lowBody ($unit).val $index (fnAt ($unit).val $index).body
       (fnAt ($unit).val $index).ret = .error $error :=
     repeated_body _ _ _ _ _ ($shape).property ($step).val ($step).property $failed)
-  return ⟨Lean.mkNullNode #[a, b, c, d, e]⟩
+  return ⟨Lean.mkNullNode #[a, b, c, missing, d, e]⟩
 
 private theorem function_accepted {unit : UProg} {f : Fin unit.fns.length}
     (result : { actual : EnsTy unit f × RumpTy unit f × ReqTy unit f //
