@@ -143,6 +143,16 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   using only standard axioms. Final Stage0 audits remain pending its SourceWitness build;
   the primitive scope-output certificate now builds at the unchanged 100k limit, while the
   subsequent SourceWitness collector/expansion and concrete header consumers remain under validation.
+  A subsequent grammar suffix replay reached additional dispatch, fold and generative-module witnesses.
+  Tagged signatures, generic closure, both fold witness modules and all fourteen module-expansion
+  witnesses now build with their existing sources and gates. The shared add/and/or refusal diagnostic
+  replaces only a stale test expectation. Tagged source scanning/parser/initial export phases build
+  as a separate module; its concrete elaboration and the module pipeline consumer remain under validation.
+  The selected-consumer phase and evidence modules also build, including both actual physical
+  resource refusals; the final public replay still needs closure. The SourceWitness scope/collector
+  module builds independently, with replacement and header elaboration still open. The latest scoped
+  static guardian checks find no forbidden declarations, 3,397 module-system files and no layout
+  violations among 3,399 Lean files; GabbroV's five scanned proof files also have no forbidden declarations.
   Earlier sustained memory-high runs without OOM remain unmeasured;
   the new bounded closure proofs and exact matcher transport have terminal green checks.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
