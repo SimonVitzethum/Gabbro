@@ -111,7 +111,7 @@ private theorem functionBody_of_phase {items : List SItemTief} {name : String} {
   unfold functionBody
   rw [checked]
   simp only [bind, Except.bind, pure, Except.pure]
-  rw [found]
+  erw [found]
 
 /-- The real declaration entry point closes both linked implementations into one ordinary sum. -/
 public theorem scene_sum_zeuge :
