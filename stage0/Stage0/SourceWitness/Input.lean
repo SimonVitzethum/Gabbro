@@ -181,10 +181,28 @@ private theorem checked_scope_meaning (items : List SItemTief)
 private abbrev ScopeData :=
   List (String × Int) × List (String × (Int × Int)) × List UKonstFn
 
+-- Fix the primitive output type at the actual producer, before inspecting
+-- the previously certified proof-carrying DerivedScopes value. The same
+-- discovery, dependency and final-meaning guards all run inside this map.
+private def sourceScopeOutput : {actual : ScopeData //
+    (Frontend.elaborateConstantScopes sourceOriginal.val).map
+      (fun result : Frontend.DerivedScopes sourceOriginal.val =>
+        (result.scope.values, result.scope.types, result.scope.functions)) = .ok actual} := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
 private def sourceScopeData : {actual : ScopeData //
     (sourceScopes.val.scope.values, sourceScopes.val.scope.types,
       sourceScopes.val.scope.functions) = actual} := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+  refine ⟨sourceScopeOutput.val, ?_⟩
+  have selected : (Frontend.elaborateConstantScopes sourceOriginal.val).map
+      (fun result : Frontend.DerivedScopes sourceOriginal.val =>
+        (result.scope.values, result.scope.types, result.scope.functions)) =
+      .ok (sourceScopes.val.scope.values, sourceScopes.val.scope.types,
+        sourceScopes.val.scope.functions) :=
+    congrArg (fun produced : Except String (Frontend.DerivedScopes sourceOriginal.val) =>
+      produced.map (fun result : Frontend.DerivedScopes sourceOriginal.val =>
+        (result.scope.values, result.scope.types, result.scope.functions))) sourceScopes.property
+  exact Except.ok.inj (selected.symm.trans sourceScopeOutput.property)
 
 private theorem source_values : sourceScopes.val.scope.values = sourceScopeData.val.1 :=
   congrArg Prod.fst sourceScopeData.property
