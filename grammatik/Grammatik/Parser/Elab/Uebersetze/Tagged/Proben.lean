@@ -263,6 +263,7 @@ private theorem tagged_scoped_declaration (body : Option STyp)
   have noDuplicates : ((uEindeutig ([] : List String)).length != 0) = false := by rfl
   have pointers : uOhneDoppelte [] = [] := by rfl
   change elabExpandedWithScopes items [] [] [] (uTabelle [] []) requirements = _
+  dsimp only [items] at *
   -- Apply whole producer equations before reducing their owner/item arguments.
   simp only [elabExpandedWithScopes, guests, remaining, constants, sinks, globs,
     spaces, owners, orders]
