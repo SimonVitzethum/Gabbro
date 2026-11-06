@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Text
 import Grammatik.Parser.Elab.UebersetzeAllg3.TransitionCert
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Calls
@@ -191,8 +192,9 @@ private theorem floorPassing_metadata : floorMetadataUnit 2 floorPassingUnitRead
   simp_all only [floorMetadataUnit]
 
 @[expose] def floorPassingUnitMade : {unit : UProg // elabU (floorItems 2 true true) = .ok unit} :=
-  ⟨floorMetadataUnit 2 floorPassingUnitRead.val, by exact floorPassingUnitRead.property.trans
-    (congrArg (fun unit : UProg => (Except.ok unit : Except String UProg)) floorPassing_metadata.symm)⟩
+  ⟨floorMetadataUnit 2 floorPassingUnitRead.val, by
+    exact floorPassingUnitRead.property.trans
+      (congrArg (fun unit : UProg => (Except.ok unit : Except String UProg)) floorPassing_metadata.symm)⟩
 
 private theorem floorPassing_unit : elabU (floorItems 2 true true) = .ok floorPassingUnitMade.val :=
   floorPassingUnitMade.property
@@ -319,8 +321,9 @@ private theorem floorFailing_metadata : floorMetadataUnit 4 floorFailingUnitRead
   simp_all only [floorMetadataUnit]
 
 @[expose] def floorFailingUnitMade : {unit : UProg // elabU (floorItems 4 true true) = .ok unit} :=
-  ⟨floorMetadataUnit 4 floorFailingUnitRead.val, by exact floorFailingUnitRead.property.trans
-    (congrArg (fun unit : UProg => (Except.ok unit : Except String UProg)) floorFailing_metadata.symm)⟩
+  ⟨floorMetadataUnit 4 floorFailingUnitRead.val, by
+    exact floorFailingUnitRead.property.trans
+      (congrArg (fun unit : UProg => (Except.ok unit : Except String UProg)) floorFailing_metadata.symm)⟩
 
 private theorem floorFailing_unit : elabU (floorItems 4 true true) = .ok floorFailingUnitMade.val :=
   floorFailingUnitMade.property
