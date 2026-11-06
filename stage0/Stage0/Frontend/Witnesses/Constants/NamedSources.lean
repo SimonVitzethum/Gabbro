@@ -3,6 +3,7 @@ public import Stage0.Frontend.Witnesses.Constants.SourcePackets
 public import Stage0.Frontend.Witnesses.Constants.Lexical
 import Grammatik.Parser.Elab.Konst.Values.WitnessReaders
 import Init.Data.String.Lemmas.Intercalate
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil2
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
@@ -123,6 +124,51 @@ theorem tagText_prepared :
   rw [origin]
   rfl
 
+local notation "tagDescriptor" => ({
+  name := "selected"
+  params := [("x", .int 0 10)]
+  erg := .sum [none, some (.int 0 255)]
+  rumpf := .block [] (some (.ret (some (.call "Data" [.bin "+" (.variable "x") (.lit 1)]))))
+  signature := {
+    art := "const"
+    name := "selected"
+    params := [("x", .range (.atom "u8") (.lit 0) (.lit 10) false)]
+    res := some (.atom "Choice")
+    fehler := none
+    klauseln := []
+    generics := [] }
+  constants := []
+  sums := [{ name := "Choice", cases := [("Empty", none), ("Data", some (.int 0 255))] }] } : UKonstFn)
+
+private theorem tag_collected :
+    Konst.collectFunctions tagTextInput.original = .ok [tagDescriptor] := by
+  cbv <;> rfl
+
+private def tagFunction : Konst.Values.SourceFunction tagDescriptor := by
+  refine {
+    source := .call "Data" [.bin "+" (.variable "x") (.lit 1)]
+    sourceBody := rfl
+    model := ⟨?preCode, ?bodyCode, ?postCode⟩
+    bodySource := ?bodyEq
+    preSource := ?preEq
+    postSource := ?postEq }
+  case bodyEq =>
+    change Konst.Values.expression
+      (D := Konst.Scalar.declaration [.int 0 10] (.sum [none, some (.int 0 255)]))
+      (Konst.Scalar.locals [("x", .int 0 10)]) []
+      [{ name := "Choice", cases := [("Empty", none), ("Data", some (.int 0 255))] }]
+      64 (.sum [none, some (.int 0 255)])
+      (.call "Data" [.bin "+" (.variable "x") (.lit 1)]) = .ok _
+    rw [Konst.Values.WitnessReaders.reader_sum]
+    cbv <;> rfl
+  case preEq => cbv <;> rfl
+  case postEq => cbv <;> rfl
+
+private theorem tag_elaborated : Konst.Values.elaborate tagDescriptor = .ok tagFunction :=
+  Konst.Values.WitnessReaders.elaborate_certified tagFunction
+
+attribute [local cbv_eval] tag_elaborated
+
 /-- Certify whole alias/scope constructor results before their dependent meaning projections. -/
 def tagTextTail : SourceTail tagTextInput := by
   refine {
@@ -134,22 +180,9 @@ def tagTextTail : SourceTail tagTextInput := by
     aliases := ?aliases
     constants := ?constants }
   case metadata =>
-    cbv
-    -- Reader equations cross the dependent source match as whole typed values.
-    all_goals
-      repeat' first
-        | erw [Konst.Values.WitnessReaders.reader_sum]
-        | erw [Konst.Values.WitnessReaders.reader_payload]
-        | erw [Konst.Values.WitnessReaders.reader_int]
-        | erw [Konst.Values.WitnessReaders.reader_empty]
-    all_goals cbv
-    -- Schema selection exposes the actual payload's declared type and presence.
-    all_goals
-      repeat' first
-        | erw [Konst.Values.WitnessReaders.reader_payload]
-        | erw [Konst.Values.WitnessReaders.reader_int]
-        | erw [Konst.Values.WitnessReaders.reader_empty]
-    all_goals cbv <;> rfl
+    unfold Konst.checkSourceMetadata Konst.konstErsetzePipeline
+    rw [tag_collected]
+    cbv <;> rfl
   case ordered => cbv <;> exact Eq.refl _
   case elaborated => cbv <;> exact Eq.refl _
   case aliases => cbv
@@ -200,6 +233,47 @@ theorem stringText_prepared :
   rw [origin]
   rfl
 
+local notation "textDescriptor" => ({
+  name := "selected"
+  params := []
+  erg := .str 1
+  rumpf := .block [] (some (.ret (some (.ext .text ["A"] []))))
+  signature := {
+    art := "const"
+    name := "selected"
+    params := []
+    res := some (.str (.lit 1))
+    fehler := none
+    klauseln := []
+    generics := [] }
+  constants := []
+  sums := [] } : UKonstFn)
+
+private theorem text_collected :
+    Konst.collectFunctions stringTextInput.original = .ok [textDescriptor] := by
+  cbv <;> rfl
+
+private def textFunction : Konst.Values.SourceFunction textDescriptor := by
+  refine {
+    source := .ext .text ["A"] []
+    sourceBody := rfl
+    model := ⟨?preCode, ?bodyCode, ?postCode⟩
+    bodySource := ?bodyEq
+    preSource := ?preEq
+    postSource := ?postEq }
+  case bodyEq =>
+    change Konst.Values.expression (D := Konst.Scalar.declaration [] (.str 1))
+      (Konst.Scalar.locals []) [] [] 64 (.str 1) (.ext .text ["A"] []) = .ok _
+    rw [Konst.Values.WitnessReaders.reader_text]
+    cbv <;> rfl
+  case preEq => cbv <;> rfl
+  case postEq => cbv <;> rfl
+
+private theorem text_elaborated : Konst.Values.elaborate textDescriptor = .ok textFunction :=
+  Konst.Values.WitnessReaders.elaborate_certified textFunction
+
+attribute [local cbv_eval] text_elaborated
+
 /-- Certify whole alias/scope constructor results before their dependent meaning projections. -/
 def stringTextTail : SourceTail stringTextInput := by
   refine {
@@ -211,10 +285,9 @@ def stringTextTail : SourceTail stringTextInput := by
     aliases := ?aliases
     constants := ?constants }
   case metadata =>
-    cbv
-    all_goals
-      repeat' erw [Konst.Values.WitnessReaders.reader_text]
-    all_goals cbv <;> rfl
+    unfold Konst.checkSourceMetadata Konst.konstErsetzePipeline
+    rw [text_collected]
+    cbv <;> rfl
   case ordered => cbv <;> exact Eq.refl _
   case elaborated => cbv <;> exact Eq.refl _
   case aliases => cbv

@@ -184,21 +184,50 @@ theorem qualifiedText_prepared :
   rw [origin]
   rfl
 
-/-- Certify whole alias/scope constructor results before their dependent meaning projections. -/
-def qualifiedTextTail : SourceTail qualifiedTextInput := by
-  refine {
-    metadata := ?metadata
-    order := ?order
-    ordered := ?ordered
-    derived := ?derived
-    elaborated := ?elaborated
-    aliases := ?aliases
-    constants := ?constants }
-  case metadata => cbv <;> exact Eq.refl _
-  case ordered => cbv <;> exact Eq.refl _
-  case elaborated => cbv <;> exact Eq.refl _
-  case aliases => cbv
-  case constants => cbv
+-- Extract only actual successful producer results before dependent record typing.
+private theorem qualified_order_ready :
+    (Frontend.orderAliases qualifiedTextInput.original).toOption.isSome = true := by cbv
+
+private def qualifiedOrder : Frontend.AliasOrder qualifiedTextInput.original :=
+  (Frontend.orderAliases qualifiedTextInput.original).toOption.get qualified_order_ready
+
+private theorem qualified_order_selected :
+    Frontend.orderAliases qualifiedTextInput.original = .ok qualifiedOrder :=
+  Gabbro.Grammatik.except_ok_get
+    (ε := String) (α := Frontend.AliasOrder qualifiedTextInput.original)
+    (x := Frontend.orderAliases qualifiedTextInput.original) qualified_order_ready
+
+private theorem qualified_scopes_ready :
+    (Frontend.elaborateConstantScopes qualifiedTextInput.original).toOption.isSome = true := by cbv
+
+private def qualifiedScopes : Frontend.DerivedScopes qualifiedTextInput.original :=
+  (Frontend.elaborateConstantScopes qualifiedTextInput.original).toOption.get qualified_scopes_ready
+
+private theorem qualified_scopes_selected :
+    Frontend.elaborateConstantScopes qualifiedTextInput.original = .ok qualifiedScopes :=
+  Gabbro.Grammatik.except_ok_get
+    (ε := String) (α := Frontend.DerivedScopes qualifiedTextInput.original)
+    (x := Frontend.elaborateConstantScopes qualifiedTextInput.original) qualified_scopes_ready
+
+private theorem qualified_metadata :
+    Konst.checkSourceMetadata qualifiedTextInput.original = .ok () := by cbv
+
+private theorem qualified_aliases :
+    qualifiedTextInput.original.all (Frontend.checkAliasMeaning qualifiedScopes.scope.types) = true := by cbv
+
+private theorem qualified_constants :
+    qualifiedTextInput.original.all (Frontend.checkConstantMeaning qualifiedScopes.scope.types
+      qualifiedScopes.scope.functions qualifiedScopes.scope.values) = true := by cbv
+
+/-- Retain each complete producer and field certificate without re-inferring its dependent data. -/
+def qualifiedTextTail : SourceTail qualifiedTextInput := {
+  metadata := qualified_metadata
+  order := qualifiedOrder
+  ordered := qualified_order_selected
+  derived := qualifiedScopes
+  elaborated := qualified_scopes_selected
+  aliases := qualified_aliases
+  constants := qualified_constants }
 
 theorem qualifiedText_metadata :
     Konst.checkSourceMetadata qualifiedTextInput.original = .ok () := qualifiedTextTail.metadata

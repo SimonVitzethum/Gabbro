@@ -3,6 +3,7 @@ public import Stage0.Frontend.Witnesses.Constants.SourcePackets
 public import Stage0.Frontend.Witnesses.Constants.Lexical
 import Grammatik.Parser.Elab.Konst.Values.WitnessReaders
 import Init.Data.String.Lemmas.Intercalate
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil2
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
@@ -157,6 +158,50 @@ theorem boolText_prepared :
   rw [origin]
   rfl
 
+-- This is the complete collected descriptor, not a sampled Boolean answer.
+local notation "positiveDescriptor" => ({
+  name := "positive"
+  params := [("x", .int 0 10)]
+  erg := .bool
+  rumpf := .block [] (some (.ret (some (.bin ">" (.variable "x") (.lit 0)))))
+  signature := {
+    art := "const"
+    name := "positive"
+    params := [("x", .range (.atom "u8") (.lit 0) (.lit 10) false)]
+    res := some (.atom "bool")
+    fehler := none
+    klauseln := [.gives (.bin "==" .res (.bin ">" (.variable "x") (.lit 0)))]
+    generics := [] }
+  constants := []
+  sums := [] } : UKonstFn)
+
+private theorem positive_collected :
+    Konst.collectFunctions boolTextInput.original = .ok [positiveDescriptor] := by
+  cbv <;> rfl
+
+private def positiveFunction : Konst.Values.SourceFunction positiveDescriptor := by
+  refine {
+    source := .bin ">" (.variable "x") (.lit 0)
+    sourceBody := rfl
+    model := ⟨?preCode, ?bodyCode, ?postCode⟩
+    bodySource := ?bodyEq
+    preSource := ?preEq
+    postSource := ?postEq }
+  case bodyEq =>
+    change Konst.Values.expression (D := Konst.Scalar.declaration [.int 0 10] .bool)
+      (Konst.Scalar.locals [("x", .int 0 10)]) [] [] 64 .bool
+      (.bin ">" (.variable "x") (.lit 0)) = .ok _
+    rw [Konst.Values.WitnessReaders.reader_bool]
+    cbv <;> rfl
+  case preEq => cbv <;> rfl
+  case postEq => cbv <;> rfl
+
+private theorem positive_elaborated :
+    Konst.Values.elaborate positiveDescriptor = .ok positiveFunction :=
+  Konst.Values.WitnessReaders.elaborate_certified positiveFunction
+
+attribute [local cbv_eval] positive_elaborated
+
 /-- Certify whole alias/scope constructor results before their dependent meaning projections. -/
 def boolTextTail : SourceTail boolTextInput := by
   refine {
@@ -168,14 +213,9 @@ def boolTextTail : SourceTail boolTextInput := by
     aliases := ?aliases
     constants := ?constants }
   case metadata =>
-    cbv
-    -- Rewrite the whole typed reader under its dependent source equation,
-    -- then resume the unchanged original-source metadata continuation.
-    all_goals
-      repeat' first
-        | erw [Konst.Values.WitnessReaders.reader_bool]
-        | erw [Konst.Values.WitnessReaders.reader_int]
-    all_goals cbv <;> rfl
+    unfold Konst.checkSourceMetadata Konst.konstErsetzePipeline
+    rw [positive_collected]
+    cbv <;> rfl
   case ordered => cbv <;> exact Eq.refl _
   case elaborated => cbv <;> exact Eq.refl _
   case aliases => cbv
