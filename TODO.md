@@ -64,7 +64,9 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   `Stage0.Compiler`. All 56 alias/const source/IR cases now pass, including forward alias and
   signature bounds, aliased const calls and both actual-entry operation-bound cases. Incomplete
   scope recovery preserves the canonical range failure, and candidate evaluation carries cost
-  metadata to the mandatory typed call check. Concrete constant witness replay remains open. The separate
+  metadata to the mandatory typed call check. The concrete constant witness replay now closes in a
+  fresh 2,760-job target build, including the normalized initializer elaboration/header and all
+  original array, restore and acceptance checks. The separate
   compile-time operation-bound checker now preserves each original cost clause as a typed entry-context
   certificate. Both call families and the actual replacement path build; the native positive case
   executes with exit 42 and the negative case refuses at the cost check. Ordinary runtime-cost
@@ -122,9 +124,13 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   The corpus units retain both declared starts and their original memory; corpus 124's
   admitted pointer interfaces retain the actual target pre/postconditions instead of an
   invalid trivial contract. The stopped Proben10 run remains resource-unmeasured; its nine
-  unchanged claims are being checked through canonical phase certificates. The initializer
-  source packet builds again after the shared-scope extraction; its new compiler-header
-  composition and the complete package suffix still require terminal checks.
+  unchanged claims now build through canonical phase certificates. The latest complete builds
+  pass for NativeFloat (13 jobs), Runner (86), Passlogik (16), Programmlogik (1,015) and
+  Bruecke (1,607). The complete grammar and Stage0 runs remain open: memory-high comparisons
+  were stopped at Tagged.Proben and Boden, without treating them as terminal logical failures.
+  Tagged's two functionless fixtures have false whole-unit success expectations; their existing
+  no-function refusal remains unchanged while the probes are corrected and positive collection
+  coverage is retained. The new Tagged and floor-consumer proof cuts still require final checks.
   Earlier sustained memory-high runs without OOM remain unmeasured;
   the new bounded closure proofs and exact matcher transport have terminal green checks.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
