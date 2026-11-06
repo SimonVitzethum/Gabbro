@@ -117,6 +117,14 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   probes now supply the explicit EOF token required by the unchanged statement-reader protocol.
   The stopped older comparison at that module remains resource-unmeasured, without a terminal
   logical finding; this does not establish a complete grammar build.
+  The next final integration replay exposed seven additional module failures. The repaired
+  corpus 59/109/124 units, GabbroV rely-duty bridge, library identity and Proben40 now build.
+  The corpus units retain both declared starts and their original memory; corpus 124's
+  admitted pointer interfaces retain the actual target pre/postconditions instead of an
+  invalid trivial contract. The stopped Proben10 run remains resource-unmeasured; its nine
+  unchanged claims are being checked through canonical phase certificates. The initializer
+  source packet builds again after the shared-scope extraction; its new compiler-header
+  composition and the complete package suffix still require terminal checks.
   Earlier sustained memory-high runs without OOM remain unmeasured;
   the new bounded closure proofs and exact matcher transport have terminal green checks.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
