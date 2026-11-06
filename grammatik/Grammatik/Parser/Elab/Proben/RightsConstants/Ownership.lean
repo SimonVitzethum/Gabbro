@@ -133,6 +133,8 @@ scoped macro "ownership_refusal " name:ident " for " unit:ident " at " number:nu
       lowerFnAt_error_from_body $header $body)
   return ⟨Lean.mkNullNode #[member, gates, refused, result]⟩
 
+open scoped Gabbro.Grammatik.Parser.UebersetzeProben11
+
 private abbrev BodyStep (u : UProg) (f : Fin u.fns.length) (Λ : List (Res (declOf u))) :=
   Σ after, Stmt (declOf u) (verOf u f) false (ctxOf u f) Λ after
 
@@ -185,6 +187,49 @@ private theorem repeated_body (u : UProg) (f : Fin u.fns.length) (a b error : St
   rw [retire_prefix u f (fnAt u f) 2 _ _ _ _ step made, lowBodyF, failed] <;> simp
   rfl
 
+-- Assemble exactly the existing retirement constructor from separately checked
+-- name, loan and held-stage facts; do not normalize a whole dependent result.
+private def retire_step (u : UProg) (f : Fin u.fns.length) (name : String)
+    (m : Fin u.marken.length) (a : Nat)
+    (hb : (fnAt u f).leiht.any (strEq · name) = false)
+    (hm : markFin u.marken name = some m) (hs : heldMarkStage (D := declOf u) m (resOf u f) = some a) :
+    { actual : BodyStep u f (resOf u f) //
+      lowStmtL (l := false) u f (ctxOf u f) (fnAt u f) (resOf u f) (.retires name) = .ok actual } := by
+  refine ⟨⟨(resOf u f).erase (.marke m a), Stmt.retires (D := declOf u) (V := verOf u f)
+    (l := false) (Γ := ctxOf u f) (Λ := resOf u f) m a (heldMarkStage_mem (D := declOf u) m _ a hs) none⟩, ?_⟩
+  exact lowRetiresL_exact (l := false) u f (ctxOf u f) (resOf u f) name m a hb hm hs
+
+scoped macro "ownership_retire_step " name:ident " for " unit:ident " at " index:ident
+    " named " text:term : command => do
+  let mark := Lean.mkIdentFrom name (name.getId.appendAfter "_mark")
+  let entry := Lean.mkIdentFrom name (name.getId.appendAfter "_entry")
+  let stage := Lean.mkIdentFrom name (name.getId.appendAfter "_stage")
+  let loan := Lean.mkIdentFrom name (name.getId.appendAfter "_loan")
+  let held := Lean.mkIdentFrom name (name.getId.appendAfter "_held")
+  let remaining := Lean.mkIdentFrom name (name.getId.appendAfter "_remaining")
+  let a ← `(command| private def $mark : { actual : Fin ($unit).val.marken.length //
+      markFin ($unit).val.marken $text = some actual } := by
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+  let b ← `(command| private def $entry : { actual : List (Res (declOf ($unit).val)) //
+      resOf ($unit).val $index = actual } := by
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+  let c ← `(command| private def $stage : { actual : Nat //
+      heldMarkStage (D := declOf ($unit).val) ($mark).val ($entry).val = some actual } := by
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+  let d ← `(command| private theorem $loan :
+      (fnAt ($unit).val $index).leiht.any (strEq · $text) = false := by cbv)
+  let e ← `(command| private theorem $held :
+      heldMarkStage (D := declOf ($unit).val) ($mark).val (resOf ($unit).val $index) = some ($stage).val :=
+    (congrArg (heldMarkStage (D := declOf ($unit).val) ($mark).val) ($entry).property).trans ($stage).property)
+  let f ← `(command| private def $name : { actual : BodyStep ($unit).val $index (resOf ($unit).val $index) //
+      lowStmtL (l := false) ($unit).val $index (ctxOf ($unit).val $index) (fnAt ($unit).val $index)
+        (resOf ($unit).val $index) (.retires $text) = .ok actual } :=
+    retire_step ($unit).val $index $text ($mark).val ($stage).val $loan ($mark).property $held)
+  let g ← `(command| private theorem $remaining : ($name).val.1 =
+      ($entry).val.erase (.marke ($mark).val ($stage).val) :=
+    congrArg (fun resources : List (Res (declOf ($unit).val)) => resources.erase (.marke ($mark).val ($stage).val)) ($entry).property)
+  return ⟨Lean.mkNullNode #[a, b, c, d, e, f, g]⟩
+
 -- The source shape is inferred from the actual unit, not supplied as an AST.
 scoped macro "ownership_call_body " name:ident " for " unit:ident " at " number:num : command => do
   let index := Lean.mkIdentFrom name (name.getId.appendAfter "_index")
@@ -222,10 +267,7 @@ scoped macro "ownership_retire_body " name:ident " for " unit:ident " at " numbe
   let b ← `(command| private def $shape : { actual : String //
       (fnAt ($unit).val $index).body = [.retires actual] } := by
     refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
-  let c ← `(command| private def $step : { actual : BodyStep ($unit).val $index (resOf ($unit).val $index) //
-      lowStmtL ($unit).val $index (ctxOf ($unit).val $index) (fnAt ($unit).val $index)
-        (resOf ($unit).val $index) (.retires ($shape).val) = .ok actual } := by
-    refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+  let c ← `(command| ownership_retire_step $step for $unit at $index named ($shape).val)
   let d ← `(command| private def $ending : { actual : Endblock (declOf ($unit).val)
       (verOf ($unit).val $index) false (ctxOf ($unit).val $index) ($step).val.1 //
       lowEnd ($unit).val $index (ctxOf ($unit).val $index) ($step).val.1 (fnAt ($unit).val $index)
@@ -249,10 +291,7 @@ scoped macro "ownership_retire_refusal " name:ident " for " unit:ident " at " nu
   let b ← `(command| private def $shape : { actual : String //
       (fnAt ($unit).val $index).body = [.retires actual] } := by
     refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
-  let c ← `(command| private def $step : { actual : BodyStep ($unit).val $index (resOf ($unit).val $index) //
-      lowStmtL ($unit).val $index (ctxOf ($unit).val $index) (fnAt ($unit).val $index)
-        (resOf ($unit).val $index) (.retires ($shape).val) = .ok actual } := by
-    refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+  let c ← `(command| ownership_retire_step $step for $unit at $index named ($shape).val)
   let d ← `(command| private theorem $ending : lowEnd ($unit).val $index (ctxOf ($unit).val $index)
       ($step).val.1 (fnAt ($unit).val $index) (fnAt ($unit).val $index).ret = .error $error := by cbv)
   let e ← `(command| private theorem $name : lowBody ($unit).val $index (fnAt ($unit).val $index).body
@@ -272,10 +311,7 @@ scoped macro "ownership_repeat_refusal " name:ident " for " unit:ident " at " nu
   let b ← `(command| private def $shape : { actual : String × String //
       (fnAt ($unit).val $index).body = [.retires actual.1, .retires actual.2] } := by
     refine ⟨(?_, ?_), by cbv <;> exact Eq.refl _⟩)
-  let c ← `(command| private def $step : { actual : BodyStep ($unit).val $index (resOf ($unit).val $index) //
-      lowStmtL ($unit).val $index (ctxOf ($unit).val $index) (fnAt ($unit).val $index)
-        (resOf ($unit).val $index) (.retires ($shape).val.1) = .ok actual } := by
-    refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+  let c ← `(command| ownership_retire_step $step for $unit at $index named ($shape).val.1)
   let d ← `(command| private theorem $failed : lowStmtL (l := false) ($unit).val $index (ctxOf ($unit).val $index)
       (fnAt ($unit).val $index) ($step).val.1 (.retires ($shape).val.2) = .error $error := by cbv)
   let e ← `(command| private theorem $name : lowBody ($unit).val $index (fnAt ($unit).val $index).body
@@ -289,8 +325,6 @@ private theorem function_accepted {unit : UProg} {f : Fin unit.fns.length}
     (lowerFnAt unit f).toOption.isSome = true := by
   rw [result.property]
   rfl
-
-open scoped Gabbro.Grammatik.Parser.UebersetzeProben11
 
 ownership_phase ownMove from Phases.Inputs.moveAtMarke
 ownership_phase ownTerminal from Phases.Inputs.terminalMoveRetires
