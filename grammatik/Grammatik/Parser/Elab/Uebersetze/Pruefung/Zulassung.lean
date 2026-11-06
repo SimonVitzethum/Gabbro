@@ -164,10 +164,10 @@ def checkUOhneGibt : UProg :=
   { checkU with fns := checkU.fns.map fun f =>
     (if strEq f.name "p#probe" then { f with gibt := [] } else f) }
 
-/-- Removing `gibt` cannot silently drop a physical mark at return: the
-    actual body still holds it, so ordinary lowering refuses the mismatch. -/
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
+/-- Removing `gibt` cannot silently drop a physical mark at return: the
+    actual body still holds it, so ordinary lowering refuses the mismatch. -/
 theorem checkU_gibt_abgelehnt :
     (lowerAllg checkUOhneGibt).toOption.isNone = true := by
   unfold checkUOhneGibt
