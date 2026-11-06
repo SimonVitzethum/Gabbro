@@ -102,6 +102,7 @@ attribute [local cbv_eval] check_argument_bool check_argument_integer
   check_arguments_nil check_arguments_cons
   check_result_select check_return_empty check_return_bool check_end_empty check_end_bool
   floor_name_self floor_mark_self
+attribute [local cbv_eval] lowWertE.eq_def lowCmp.eq_def lowEns.eq_def
 
 private abbrev FunctionType (index : Fin unit.fns.length) :=
   EnsTy unit index × RumpTy unit index × ReqTy unit index
