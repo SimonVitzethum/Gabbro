@@ -261,6 +261,7 @@ private theorem common : CheckWitness unit 1 := by
 
 -- These equations retain the actual call and resource transitions, selecting
 -- a single reader node before any concrete edited unit is substituted.
+set_option maxHeartbeats 400000
 private def source_call_ready (u : UProg) (caller callee : Fin u.fns.length)
     (Λ : List (Res (declOf u))) (tables : u.tabs = []) (globals : u.globs = [])
     (locks : u.locks = []) (floor : (fnAt u caller).boden = none)

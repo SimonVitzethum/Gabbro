@@ -65,8 +65,6 @@ import all Init.Data.String.ToSlice
 import Grammatik.Parser.Elab.UebersetzeAllg3.FunctionResults
 
 public section
-set_option maxRecDepth 100000
-set_option maxHeartbeats 4000000
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg
