@@ -294,7 +294,7 @@ private theorem duplicate_lexed : lexL duplicateCharacters = .ok duplicateTokens
     (scan_gate (headCharacters ++ measureCharacters 'c' 'g' ++ tailCharacters ++ ['}', ' '] ++ second) 143)
   simpa only [duplicateTokens, duplicateCharacters, second, List.append_assoc] using all
 
-private def textGate : SItemTief :=
+@[expose] def textGate : SItemTief :=
   .fnT
     { art := "impl"
       name := "g"

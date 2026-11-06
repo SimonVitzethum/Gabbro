@@ -100,7 +100,7 @@ attribute [local cbv_eval] row_nil row_cons core_bind core_call core_set core_co
 
 -- Normalize the actual function fields before forming any dependent code type.
 -- Whole-function equality below certifies the headers, code and retained reporter metadata.
-private def floorMetadataFn (bound : Int) (index : Nat) (fn : UFn) : UFn :=
+@[expose] def floorMetadataFn (bound : Int) (index : Nat) (fn : UFn) : UFn :=
   let header : UFn := {fn with
     params := []
     kinds := []
@@ -141,9 +141,9 @@ private def floorMetadataFn (bound : Int) (index : Nat) (fn : UFn) : UFn :=
     name := "p#tor#g", nimmt := ["p#duty"], gibt := ["p#duty"],
     body := [.call "g" []], ret := .empty}
   | _ => fn
-private def floorMetadataCheck (check : UCheck) : UCheck :=
+@[expose] def floorMetadataCheck (check : UCheck) : UCheck :=
   {check with name := "p", tore := ["g"], probe := "p#probe", duty := "p#duty"}
-private def floorMetadataUnit (bound : Int) (unit : UProg) : UProg :=
+@[expose] def floorMetadataUnit (bound : Int) (unit : UProg) : UProg :=
   {unit with
     marken := ["p#duty"]
     fns := unit.fns.mapIdx (floorMetadataFn bound)
@@ -168,7 +168,7 @@ private theorem floor_mark_self (name : String) :
 attribute [local cbv_eval] floor_name_self floor_mark_self
 
 -- Infer this exact unit from canonical elaboration, once, before dependent indices.
-private def floorPassingUnitRead : {unit : UProg // elabU (floorItems 2 true true) = .ok unit} := by
+@[expose] def floorPassingUnitRead : {unit : UProg // elabU (floorItems 2 true true) = .ok unit} := by
   refine ⟨?unit, ?made⟩
   case made => cbv <;> exact Eq.refl _
 
@@ -190,8 +190,8 @@ private theorem floorPassing_metadata : floorMetadataUnit 2 floorPassingUnitRead
   cases actualUnit
   simp_all only [floorMetadataUnit]
 
-private def floorPassingUnitMade : {unit : UProg // elabU (floorItems 2 true true) = .ok unit} :=
-  ⟨floorMetadataUnit 2 floorPassingUnitRead.val, floorPassingUnitRead.property.trans
+@[expose] def floorPassingUnitMade : {unit : UProg // elabU (floorItems 2 true true) = .ok unit} :=
+  ⟨floorMetadataUnit 2 floorPassingUnitRead.val, by exact floorPassingUnitRead.property.trans
     (congrArg (fun unit : UProg => (Except.ok unit : Except String UProg)) floorPassing_metadata.symm)⟩
 
 private theorem floorPassing_unit : elabU (floorItems 2 true true) = .ok floorPassingUnitMade.val :=
@@ -296,7 +296,7 @@ private theorem admission_unit : elabU (textItems "c" "g") = .ok admissionUnitMa
   admissionUnitMade.property
 
 -- Infer this exact unit from canonical elaboration, once, before dependent indices.
-private def floorFailingUnitRead : {unit : UProg // elabU (floorItems 4 true true) = .ok unit} := by
+@[expose] def floorFailingUnitRead : {unit : UProg // elabU (floorItems 4 true true) = .ok unit} := by
   refine ⟨?unit, ?made⟩
   case made => cbv <;> exact Eq.refl _
 
@@ -318,8 +318,8 @@ private theorem floorFailing_metadata : floorMetadataUnit 4 floorFailingUnitRead
   cases actualUnit
   simp_all only [floorMetadataUnit]
 
-private def floorFailingUnitMade : {unit : UProg // elabU (floorItems 4 true true) = .ok unit} :=
-  ⟨floorMetadataUnit 4 floorFailingUnitRead.val, floorFailingUnitRead.property.trans
+@[expose] def floorFailingUnitMade : {unit : UProg // elabU (floorItems 4 true true) = .ok unit} :=
+  ⟨floorMetadataUnit 4 floorFailingUnitRead.val, by exact floorFailingUnitRead.property.trans
     (congrArg (fun unit : UProg => (Except.ok unit : Except String UProg)) floorFailing_metadata.symm)⟩
 
 private theorem floorFailing_unit : elabU (floorItems 4 true true) = .ok floorFailingUnitMade.val :=
