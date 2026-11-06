@@ -220,6 +220,13 @@ private def sourceCollectionOutput : {actual : List UKonstFn //
     Konst.collectFunctions sourceOriginal.val = .ok actual} := by
   refine ⟨?_, by cbv <;> exact Eq.refl _⟩
 
+private theorem source_collection :
+    Konst.collectFunctions sourceOriginal.val = .ok sourceCollectionOutput.val :=
+  sourceCollectionOutput.property
+
+attribute [local cbv_opaque] Konst.collectFunctions
+attribute [local cbv_eval] source_collection
+
 private def sourceCollected : {actual : List UKonstFn //
     Konst.collectFunctionsWith sourceOriginal.val sourceScopeData.val.1
       sourceScopeData.val.2.1 = .ok actual} := by
