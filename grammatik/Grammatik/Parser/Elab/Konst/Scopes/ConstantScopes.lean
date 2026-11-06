@@ -57,9 +57,7 @@ def elaborateConstantScopes (items : List SItemTief) : Except String (DerivedSco
   match elaborateScopes items with
   | .ok result =>
     if scopeMeaning result then pure result
-    else match discover () with
-      | .ok complete => pure complete
-      | .error _ => throw "compile-time declarations do not match their canonical final meaning"
+    else discover ()
   | .error _ => discover ()
 
 /-- A previously complete scope is retained exactly. Only an unsuccessful final
@@ -71,6 +69,22 @@ theorem elaborateConstantScopes_preserves (items : List SItemTief)
     elaborateConstantScopes items = .ok result := by
   simp only [elaborateConstantScopes, ordered, bind, Except.bind, previous,
     meaning, ↓reduceIte, pure, Except.pure]
+
+/-- An incomplete conservative fold is not a final diagnosis. Replaying the
+    original declarations in the checked schedule retains the actual range or
+    dependency failure, and a success still checks the complete final meaning. -/
+theorem elaborateConstantScopes_incomplete (items : List SItemTief)
+    (order : ConstantOrder items) (ordered : orderConstants items = .ok order)
+    (previousScope : DerivedScopes items) (previous : elaborateScopes items = .ok previousScope)
+    (incomplete : scopeMeaning previousScope = false) :
+    elaborateConstantScopes items = (do
+      let aliases ← orderAliases items
+      let result ← discoverScopes items (items.length + 1) (prepare items).initial
+        ⟨aliases.ordered, aliases.permutation⟩ ⟨order.ordered, order.permutation⟩
+      if scopeMeaning result then pure result
+      else throw "compile-time declarations do not match their canonical final meaning") := by
+  simp only [elaborateConstantScopes, ordered, bind, Except.bind, previous,
+    incomplete, Bool.false_eq_true, ↓reduceIte]
 
 /-- Every successful path checks all source dependency edges, even unused constants and arrays. -/
 theorem elaborateConstantScopes_dependencies (items : List SItemTief) (result : DerivedScopes items)

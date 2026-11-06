@@ -74,6 +74,10 @@ def uKonstEval (bounds : Option (Int × Int)) (fns : List UKonstFn)
           | .needs predicate => post || uKonstEval none fns scope fuel predicate == some 1
           | .gives predicate => !post || uKonstEval none fns scope fuel predicate == some 1
           | .effs effects => effects.all (fun | .pure => true | _ => false)
+          -- This evaluator proposes values, not source cost certificates.
+          -- CheckedCall retains and checks every original bound at its typed
+          -- entry arguments before checkReplacement can return a source literal.
+          | .cost _ => true
           | _ => false
       if !permits false bindings then none else do
       match fn.erg, fn.rumpf with
