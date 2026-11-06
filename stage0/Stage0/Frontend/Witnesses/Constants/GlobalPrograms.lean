@@ -363,7 +363,9 @@ private def qualifiedTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitne
   candidate := qualifiedElaboration.val
   elaborated := qualified_elaborated
 
-private theorem qualifiedText_count : qualifiedTextHeader.unit.fns.length = 1 := by cbv
+private theorem qualifiedText_count : qualifiedTextHeader.unit.fns.length = 1 := by
+  change qualifiedElaboration.val.fns.length = 1
+  rfl
 private def qualifiedTextMain : Fin qualifiedTextHeader.unit.fns.length :=
   ⟨0, by have count := qualifiedText_count; omega⟩
 private theorem qualifiedText_only_main (f : Fin qualifiedTextHeader.unit.fns.length) :
@@ -378,7 +380,7 @@ private def qualifiedTextCode :
         RumpTy qualifiedTextHeader.unit qualifiedTextMain × ReqTy qualifiedTextHeader.unit qualifiedTextMain //
       lowerFnAt qualifiedTextHeader.unit qualifiedTextMain = .ok value } := by
   refine ⟨?value, ?produced⟩
-  case produced => cbv <;> exact Eq.refl _
+  case produced => exact Eq.refl _
 
 @[local cbv_eval] private theorem qualifiedText_code_eq :
     lowerFnAt qualifiedTextHeader.unit qualifiedTextMain = .ok qualifiedTextCode.val := qualifiedTextCode.property
