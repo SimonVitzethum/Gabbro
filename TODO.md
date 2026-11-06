@@ -126,11 +126,15 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   invalid trivial contract. The stopped Proben10 run remains resource-unmeasured; its nine
   unchanged claims now build through canonical phase certificates. The latest complete builds
   pass for NativeFloat (13 jobs), Runner (86), Passlogik (16), Programmlogik (1,015) and
-  Bruecke (1,607). The complete grammar and Stage0 runs remain open: memory-high comparisons
-  were stopped at Tagged.Proben and Boden, without treating them as terminal logical failures.
-  Tagged's two functionless fixtures have false whole-unit success expectations; their existing
-  no-function refusal remains unchanged while the probes are corrected and positive collection
-  coverage is retained. The new Tagged and floor-consumer proof cuts still require final checks.
+  Bruecke (1,607). The complete grammar and Stage0 runs remain open. The complete Boden and
+  Zulassung witnesses now build after supplying their canonical local finite axiom equality
+  dictionaries; History and Treue also build with distinct local instance names. The later
+  Gegenprobe comparison hit its 15-GiB scope's OOM limit without a terminal logical finding;
+  its new source/function/fact certificates are under validation. Lauf.Zeugen remains
+  resource-unmeasured and is being split at the actual consumer-selection phases.
+  Tagged's two functionless fixtures now witness the existing no-function refusal and retain
+  positive collection coverage on their original inputs. Its complete PayloadProbes and
+  InitializerProbes leaves build; the remaining parent still needs a terminal check.
   Earlier sustained memory-high runs without OOM remain unmeasured;
   the new bounded closure proofs and exact matcher transport have terminal green checks.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
