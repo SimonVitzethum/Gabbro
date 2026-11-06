@@ -214,9 +214,146 @@ theorem tagged_declaration_payload_zeuge :
       .ok [{ name := "Message", cases := [("Bytes", some (.arr (.int 0 255) 3)), ("Empty", none)] }] :=
   declarationSums.property
 
-tagged_rejected declaration_without_fn from (taggedItems "{ Bytes([u8; 3]), Empty }")
-tagged_rejected declaration_duplicate from (taggedItems "{ Data(u8), Data }")
-tagged_rejected declaration_shape from [.typeT ["tagged"] "Message" [] [] none]
+-- Keep the schema result abstract while selecting the actual empty function
+-- list. In particular, do not normalize any function elaborator callback or
+-- the successful UProg constructor, neither of which this source can reach.
+private theorem tagged_scoped_declaration (body : Option STyp)
+    (requirements : List (STyp × String)) :
+    elabExpandedWithScopes [.typeT ["tagged"] "Message" [] [] body]
+      [] [] [] (uTabelle [] []) requirements =
+      (uSums [] [.typeT ["tagged"] "Message" [] [] body] [] ["normal"] []).bind
+        (fun _ => .error "unit without a fn") := by
+  let items : List SItemTief := [.typeT ["tagged"] "Message" [] [] body]
+  have guests : guestSources items = .ok ([], items) := by rfl
+  have remaining : uRestFehler items = .ok () := by rfl
+  have constants : Konst.checkSourceConstants items = .ok () := by rfl
+  have sinks : uOhneSenken items = items := by rfl
+  have globs : uGlobs [] [] items = .ok [] := by rfl
+  have spaces : uSpaces items = ["normal"] := by rfl
+  have owners : uOhneDoppelte (uEignerMs items) = [] := by rfl
+  have orders : uMarkOrders items = .ok [] := by rfl
+  have arenas : uArenen [] [] items = .ok ([], []) := by rfl
+  have carriers : uArrayCarriers [] items = [] := by rfl
+  have types : uTypes [] [] [] items [] ["normal"] =
+      .ok ({ types := [], records := [] } : UTypeScope) := by rfl
+  have checks : uChecks [] [] items = .ok [] := by rfl
+  have locks : uSperrInvs [] [] [] [] items [] = .ok [] := by rfl
+  have storage : uAkkuErweiterung [] [] 1 items = .ok ([], []) := by rfl
+  have replacement : Konst.konstErsetzePipeline items = .ok items := by rfl
+  have functions : uAkkuVorlauf [] [] items [] = .ok ([], [], []) := by rfl
+  have reasons : uWhys items [] = .ok [] := by rfl
+  have sumGlobs (schemas : List USum) :
+      uSumGlobs [] schemas items [] = .ok [] := by rfl
+  have sumTabs (schemas : List USum) : uSumTabs schemas [] = .ok [] := by rfl
+  have registers : uRegs [] [] [] [] items = .ok [] := by rfl
+  have invariants : uInvs [] [] [] [] [] items = .ok [] := by rfl
+  have transitions : uGenerateTransitions [] [] [] = .ok [] := by rfl
+  change elabExpandedWithScopes items [] [] [] (uTabelle [] []) requirements = _
+  simp only [elabExpandedWithScopes, guests, remaining, constants, sinks, globs,
+    spaces, owners, orders, arenas, carriers, types, checks, locks, storage,
+    replacement, functions, reasons, sumGlobs, sumTabs, registers, invariants,
+    transitions, items, List.filterMap_cons, List.filterMap_nil, List.filter_cons,
+    List.filter_nil, List.map_nil, List.flatMap_nil, List.append_nil, List.nil_append,
+    List.length_nil, List.range_zero, List.zip_nil_left, List.zip_nil_right,
+    uSeq, uIdxTabs, uOptGlobs, uOhneDoppelte, uEindeutig, uEindeutigAux, List.foldl_nil,
+    List.any_nil, List.all_nil, Bool.not_false, Bool.not_true, Bool.false_or, Bool.or_false,
+    Bool.false_eq_true, ite_false, Nat.zero_add, Nat.add_zero, bind, Except.bind] <;> rfl
+
+/-- Canonical collection remains before the no-function gate. Only the
+    surrounding, type-only phases reduce; the payload parser stays symbolic. -/
+private theorem tagged_expanded_declaration (body : Option String)
+    (requirements : List (STyp × String)) :
+    elabUExpanded ([.typeT ["tagged"] "Message" [] [] (body.map STyp.raw)], requirements) =
+      (uSums [] [.typeT ["tagged"] "Message" [] [] (body.map STyp.raw)]
+        [] ["normal"] []).bind (fun _ => .error "unit without a fn") := by
+  have canonical : checkCanonicalConstants
+      [.typeT ["tagged"] "Message" [] [] (body.map STyp.raw)] = .ok () := by rfl
+  have sourceFunctions : uKonstFns
+      [.typeT ["tagged"] "Message" [] [] (body.map STyp.raw)] = [] := by rfl
+  have values : uConstsRech []
+      [.typeT ["tagged"] "Message" [] [] (body.map STyp.raw)] [] = [] := by rfl
+  have runtimeFunctions : uKonstFns (uOhneSenken
+      [.typeT ["tagged"] "Message" [] [] (body.map STyp.raw)]) = [] := by rfl
+  have collectors :
+      uAliase [] [.typeT ["tagged"] "Message" [] [] (body.map STyp.raw)] ++
+        uAliasBreiten [.typeT ["tagged"] "Message" [] [] (body.map STyp.raw)] = [] := by
+    cases body <;> rfl
+  unfold elabUExpanded
+  simpa only [canonical, sourceFunctions, values, runtimeFunctions, bind, Except.bind,
+    collectors, List.map_nil, List.append_nil] using
+    tagged_scoped_declaration (body.map STyp.raw) requirements
+
+-- Expansion and each subsequent phase are certified separately. The complete
+-- actual pair is transported before any projection feeds the elaborator.
+private def declaration_without_fn_expanded :
+    { actual : List SItemTief × List (STyp × String) //
+      expandU (taggedItems "{ Bytes([u8; 3]), Empty }") = .ok actual } := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
+private theorem declaration_without_fn_phase :
+    elabUExpanded declaration_without_fn_expanded.val = .error "unit without a fn" := by
+  have actual : declaration_without_fn_expanded.val =
+      (taggedItems "{ Bytes([u8; 3]), Empty }", []) := by rfl
+  have schema : uSums [] (taggedItems "{ Bytes([u8; 3]), Empty }") [] ["normal"] [] =
+      .ok declarationSums.val := by cbv <;> exact Eq.refl _
+  exact (congrArg elabUExpanded actual).trans
+    ((tagged_expanded_declaration (some "{ Bytes([u8; 3]), Empty }") []).trans
+      (congrArg (fun result : Except String (List USum) =>
+        result.bind (fun _ => (.error "unit without a fn" : Except String UProg))) schema))
+
+private theorem declaration_without_fn :
+    elabU (taggedItems "{ Bytes([u8; 3]), Empty }") = .error "unit without a fn" :=
+  (congrArg (fun result : Except String (List SItemTief × List (STyp × String)) =>
+    result.bind elabUExpanded) declaration_without_fn_expanded.property).trans
+      declaration_without_fn_phase
+
+private def declaration_duplicate_expanded :
+    { actual : List SItemTief × List (STyp × String) //
+      expandU (taggedItems "{ Data(u8), Data }") = .ok actual } := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
+private theorem declaration_duplicate_phase :
+    elabUExpanded declaration_duplicate_expanded.val =
+      .error "duplicate tagged case name" := by
+  have actual : declaration_duplicate_expanded.val =
+      (taggedItems "{ Data(u8), Data }", []) := by rfl
+  have schema : uSums [] (taggedItems "{ Data(u8), Data }") [] ["normal"] [] =
+      .error "duplicate tagged case name" := by
+    simp only [uSums, uSumSchemas_duplicate_refused, bind, Except.bind]
+  exact (congrArg elabUExpanded actual).trans
+    ((tagged_expanded_declaration (some "{ Data(u8), Data }") []).trans
+      (congrArg (fun result : Except String (List USum) =>
+        result.bind (fun _ => (.error "unit without a fn" : Except String UProg))) schema))
+
+private theorem declaration_duplicate :
+    elabU (taggedItems "{ Data(u8), Data }") = .error "duplicate tagged case name" :=
+  (congrArg (fun result : Except String (List SItemTief × List (STyp × String)) =>
+    result.bind elabUExpanded) declaration_duplicate_expanded.property).trans
+      declaration_duplicate_phase
+
+private def declaration_shape_expanded :
+    { actual : List SItemTief × List (STyp × String) //
+      expandU [.typeT ["tagged"] "Message" [] [] none] = .ok actual } := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
+private theorem declaration_shape_phase :
+    elabUExpanded declaration_shape_expanded.val =
+      .error "tagged declaration without G form" := by
+  have actual : declaration_shape_expanded.val =
+      ([.typeT ["tagged"] "Message" [] [] none], []) := by rfl
+  have schema : uSums [] [.typeT ["tagged"] "Message" [] [] none] [] ["normal"] [] =
+      .error "tagged declaration without G form" := by
+    simp only [uSums, uSumSchemas_missing_body_refused, bind, Except.bind]
+  exact (congrArg elabUExpanded actual).trans
+    ((tagged_expanded_declaration none []).trans
+      (congrArg (fun result : Except String (List USum) =>
+        result.bind (fun _ => (.error "unit without a fn" : Except String UProg))) schema))
+
+private theorem declaration_shape :
+    elabU [.typeT ["tagged"] "Message" [] [] none] =
+      .error "tagged declaration without G form" :=
+  (congrArg (fun result : Except String (List SItemTief × List (STyp × String)) =>
+    result.bind elabUExpanded) declaration_shape_expanded.property).trans declaration_shape_phase
 /-- The full exporter still requires an actual function; schema support does not bypass this gate. -/
 theorem elabU_tagged_payload_without_function_refused :
     elabU (taggedItems "{ Bytes([u8; 3]), Empty }") = .error "unit without a fn" :=
