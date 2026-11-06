@@ -49,12 +49,13 @@ structure Input (source : String) where
   text : source = String.ofList characters
   lexed : lexL characters = .ok tokens
 
-def Input.of_chunks {source spelling : String} (pieces : List Chunk)
-    (certificate : ChunkCertificate pieces spelling) (text : source = spelling) : Input source :=
+def Input.of_chunks {source : String} {spellings : List String} (pieces : List Chunk)
+    (certificate : ChunkCertificate pieces spellings)
+    (text : source = String.join spellings) : Input source :=
   ⟨Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces, Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.tokens pieces,
-    text.trans certificate.text.symm, lex_chunks pieces certificate.room⟩
+    text.trans certificate.joined_text.symm, lex_chunks pieces certificate.room⟩
 
--- Give the actual chunk list, spelling and closed proofs their own declarations
+-- Give the actual chunk list, fragment spellings and proofs their own declarations
 -- before constructing Input. Data stays transparent; no large local lets need
 -- to be abstracted or substituted while the final constructor is checked.
 
@@ -63,11 +64,11 @@ scoped macro "rights_input " name:ident " : " source:term
   unless cuts.getElems.size == fragments.getElems.size do
     Lean.Macro.throwError "each scanner cut needs its exact original spelling"
   let chunkName := Lean.mkIdentFrom name (name.getId.appendAfter "_chunks")
-  let spellingName := Lean.mkIdentFrom name (name.getId.appendAfter "_spelling")
+  let spellingsName := Lean.mkIdentFrom name (name.getId.appendAfter "_spellings")
   let certificateName := Lean.mkIdentFrom name (name.getId.appendAfter "_certificate")
   let sourceName := Lean.mkIdentFrom name (name.getId.appendAfter "_source_eq")
   let mut pieces : Lean.TSyntax `term ← `(([] : List Chunk))
-  let mut spelling : Lean.TSyntax `term ← `(("" : String))
+  let mut spellings : Lean.TSyntax `term ← `(([] : List String))
   let mut certificate : Lean.TSyntax `term ← `(ChunkCertificate.empty)
   for (cutName, fragment) in (cuts.getElems.zip fragments.getElems).toList.reverse do
     let piece : Lean.TSyntax `term := ⟨cutName.raw⟩
@@ -77,19 +78,19 @@ scoped macro "rights_input " name:ident " : " source:term
     let bounded : Lean.TSyntax `term :=
       ⟨(Lean.mkIdentFrom cutName (cutName.getId.appendAfter "_bounded")).raw⟩
     certificate ← `(ChunkCertificate.cons (piece := $piece) (pieces := $pieces)
-      (front := $literal) (back := $spelling) $decoded $bounded $certificate)
+      (front := $literal) (back := $spellings) $decoded $bounded $certificate)
     pieces ← `($piece :: $pieces)
-    spelling ← `($literal ++ $spelling)
+    spellings ← `($literal :: $spellings)
   let chunks : Lean.TSyntax `command ← `(command|
     def $chunkName : List Chunk := [$cuts,*])
   let spelled : Lean.TSyntax `command ← `(command|
-    def $spellingName : String := $spelling)
+    def $spellingsName : List String := $spellings)
   let certified : Lean.TSyntax `command ← `(command|
-    theorem $certificateName : ChunkCertificate $chunkName $spellingName := by
-      change ChunkCertificate $pieces $spelling
+    theorem $certificateName : ChunkCertificate $chunkName $spellingsName := by
+      change ChunkCertificate $pieces $spellings
       exact $certificate)
   let original : Lean.TSyntax `command ← `(command|
-    theorem $sourceName : $source = $spellingName := by cbv)
+    theorem $sourceName : $source = String.join $spellingsName := by cbv)
   let input : Lean.TSyntax `command ← `(command|
     def $name : Input $source :=
       Input.of_chunks (source := $source) $chunkName $certificateName $sourceName)

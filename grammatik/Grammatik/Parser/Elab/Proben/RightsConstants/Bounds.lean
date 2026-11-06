@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Elab.Proben.RightsConstants.Fragments
+import Init.Data.String.Lemmas.Intercalate
 
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -53,33 +54,54 @@ theorem steps_bound (pieces : List Chunk) :
 
 /-- Proof-only composition over the original chunks, before normalizing any
     concrete concatenation. No token or scanner data is reconstructed. -/
-structure ChunkCertificate (pieces : List Chunk) (spelling : String) : Prop where
-  text : String.ofList
-    (Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces) = spelling
+structure ChunkCertificate (pieces : List Chunk) (spellings : List String) : Prop where
+  text : pieces.map (fun piece => String.ofList piece.characters) = spellings
   bounded : steps pieces ≤
     (Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces).length
 
-theorem ChunkCertificate.empty : ChunkCertificate [] "" := ⟨rfl, Nat.le_refl _⟩
+theorem ChunkCertificate.empty : ChunkCertificate [] [] := ⟨rfl, Nat.le_refl _⟩
 
-theorem ChunkCertificate.cons {piece : Chunk} {pieces : List Chunk} {front back : String}
+theorem ChunkCertificate.cons {piece : Chunk} {pieces : List Chunk}
+    {front : String} {back : List String}
     (text : String.ofList piece.characters = front)
     (bound : decide (piece.steps ≤ piece.characters.length) = true)
     (tail : ChunkCertificate pieces back) :
-    ChunkCertificate (piece :: pieces) (front ++ back) := by
+    ChunkCertificate (piece :: pieces) (front :: back) := by
   constructor
-  · change String.ofList (piece.characters ++
-      Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces) = front ++ back
-    rw [String.ofList_append, text, tail.text]
+  · change String.ofList piece.characters ::
+      pieces.map (fun entry => String.ofList entry.characters) = front :: back
+    rw [text, tail.text]
   · change piece.steps + steps pieces ≤
       (piece.characters ++
         Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces).length
     rw [List.length_append]
     exact Nat.add_le_add (of_decide_eq_true bound) tail.bounded
 
+/-- Concatenate only in the generic factory, after the per-fragment spelling
+    list is certified. Closed certificate types never contain the full text. -/
+theorem ChunkCertificate.joined_text {pieces : List Chunk} {spellings : List String}
+    (certificate : ChunkCertificate pieces spellings) :
+    String.ofList
+      (Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces) =
+      String.join spellings := by
+  have concatenate (chunks : List Chunk) :
+      String.ofList
+        (Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters chunks) =
+        String.join (chunks.map (fun piece => String.ofList piece.characters)) := by
+    induction chunks with
+    | nil => rfl
+    | cons piece chunks ih =>
+      change String.ofList (piece.characters ++
+        Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters chunks) =
+        String.join (String.ofList piece.characters ::
+          chunks.map (fun entry => String.ofList entry.characters))
+      rw [String.ofList_append, String.join_cons, ih]
+  exact (concatenate pieces).trans (congrArg String.join certificate.text)
+
 /-- The original character-count fuel, derived while the whole chunk list is
     still abstract rather than by normalization of a concrete concatenation. -/
-theorem ChunkCertificate.room {pieces : List Chunk} {spelling : String}
-    (certificate : ChunkCertificate pieces spelling) :
+theorem ChunkCertificate.room {pieces : List Chunk} {spellings : List String}
+    (certificate : ChunkCertificate pieces spellings) :
     steps pieces ≤
       (Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters pieces).length + 1 :=
   Nat.le_trans certificate.bounded (Nat.le_succ _)
