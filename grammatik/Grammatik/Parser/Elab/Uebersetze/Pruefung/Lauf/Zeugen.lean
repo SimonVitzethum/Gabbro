@@ -190,10 +190,11 @@ theorem retiringCycle_conservation :
 /-- An executable program with the consumer call omitted cannot return with
     its Duty outstanding. This is the real lowering gate, not a report-shape test. -/
 def retiringUnconsumed : UProg :=
-  { retiringU with fns := retiringU.fns.map fun f =>
-    if strEq f.name "p#driver#g" then
-      { f with body := [.bindCall "verdict" "p#probe" []] }
-    else f }
+  { retiringU with
+    fns := retiringU.fns.map fun f =>
+      if strEq f.name "p#driver#g" then
+        { f with body := [.bindCall "verdict" "p#probe" []] }
+      else f }
 
 theorem retiringUnconsumed_refused :
     (lowerAllg retiringUnconsumed).toOption.isNone = true := by
@@ -203,10 +204,11 @@ theorem retiringUnconsumed_refused :
 /-- The second consumer call has no mark available; a copy of the ghost
     report cannot supply the missing physical resource. -/
 def retiringDouble : UProg :=
-  { retiringU with fns := retiringU.fns.map fun f =>
-    if strEq f.name "p#driver#g" then
-      { f with body := f.body ++ [.call "p#consume#g" []] }
-    else f }
+  { retiringU with
+    fns := retiringU.fns.map fun f =>
+      if strEq f.name "p#driver#g" then
+        { f with body := f.body ++ [.call "p#consume#g" []] }
+      else f }
 
 theorem retiringDouble_refused :
     (lowerAllg retiringDouble).toOption.isNone = true := by
