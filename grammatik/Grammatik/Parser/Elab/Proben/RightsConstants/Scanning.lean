@@ -91,12 +91,13 @@ scoped macro "rights_input " name:ident " : " source:term
   decodedFacts := decodedFacts.reverse
   let textCertified : Lean.TSyntax `command ← `(command|
     theorem $textName :
-        $chunkName.map (fun piece => String.ofList piece.characters) = $spellingsName := by
-      simp only [$chunkName, $spellingsName, List.map_cons, List.map_nil, $[$decodedFacts],*])
+        ($chunkName).map (fun piece => String.ofList piece.characters) = $spellingsName := by
+      simp only [$chunkName:ident, $spellingsName:ident,
+        List.map_cons, List.map_nil, $[$decodedFacts],*])
   let boundCertified : Lean.TSyntax `command ← `(command|
     theorem $boundName : steps $chunkName ≤
         (Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters $chunkName).length := by
-      simpa only [$chunkName, steps,
+      simpa only [$chunkName:ident, steps,
         Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters,
         List.flatMap_cons, List.flatMap_nil, List.length_append, List.length_nil] using $bounds)
   let certified : Lean.TSyntax `command ← `(command|
