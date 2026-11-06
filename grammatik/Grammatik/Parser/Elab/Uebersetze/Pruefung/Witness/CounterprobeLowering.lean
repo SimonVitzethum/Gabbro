@@ -128,8 +128,9 @@ private def counterprobe_boolean_end (u : UProg) (caller : Fin u.fns.length)
       exact ⟨_, rfl⟩
     all_goals exfalso
     all_goals simp_all
-  refine ⟨Endblock.ret returned.val (of_decide_eq_true ready), ?_⟩
-  rw [check_end_bool, returned.property]
+  obtain ⟨value, produced⟩ := returned
+  refine ⟨Endblock.ret value (of_decide_eq_true ready), ?_⟩
+  rw [check_end_bool, produced]
   simp only [dif_pos ready]
 
 private def sondeIndex0 : Fin sondeUnitMade.val.fns.length :=
