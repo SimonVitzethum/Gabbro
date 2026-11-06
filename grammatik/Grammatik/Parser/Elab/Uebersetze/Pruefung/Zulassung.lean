@@ -35,7 +35,7 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
 open Gabbro.Grammatik.Zielsatz
 
-local instance (u : UProg) : DecidableEq (declOf u).Ax :=
+local instance admissionAxiomEquality (u : UProg) : DecidableEq (declOf u).Ax :=
   inferInstanceAs (DecidableEq (Fin u.axs.length))
 
 private theorem admission_source : elabText checkText = .ok admissionUnitMade.val :=

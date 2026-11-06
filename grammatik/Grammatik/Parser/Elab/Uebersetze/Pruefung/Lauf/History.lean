@@ -13,7 +13,7 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
 
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 
-local instance (u : UProg) : DecidableEq (declOf u).Fn :=
+local instance historyFunctionEquality (u : UProg) : DecidableEq (declOf u).Fn :=
   inferInstanceAs (DecidableEq (Fin u.fns.length))
 
 /-- Copyable observations only. A floor is a Bool, never an integer silently

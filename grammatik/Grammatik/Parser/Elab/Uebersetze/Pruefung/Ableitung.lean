@@ -37,7 +37,7 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
 
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 
-local instance (u : UProg) : DecidableEq (declOf u).Fn :=
+local instance derivedCheckFunctionEquality (u : UProg) : DecidableEq (declOf u).Fn :=
   inferInstanceAs (DecidableEq (Fin u.fns.length))
 
 /-- The Duty of a check as a declared mark: its index in the unit's mark table
