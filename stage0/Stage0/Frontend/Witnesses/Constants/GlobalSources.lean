@@ -190,13 +190,13 @@ private def qualifiedOrderPacket :
     { actual : Frontend.AliasOrder qualifiedTextInput.original //
       Frontend.orderAliases qualifiedTextInput.original = .ok actual } := by
   refine ⟨?actual, ?produced⟩
-  case produced => cbv <;> rfl
+  case produced => cbv <;> exact Eq.refl _
 
 private def qualifiedScopesPacket :
     { actual : Frontend.DerivedScopes qualifiedTextInput.original //
       Frontend.elaborateConstantScopes qualifiedTextInput.original = .ok actual } := by
   refine ⟨?actual, ?produced⟩
-  case produced => cbv <;> rfl
+  case produced => cbv <;> exact Eq.refl _
 
 private theorem qualified_metadata :
     Konst.checkSourceMetadata qualifiedTextInput.original = .ok () := by cbv
