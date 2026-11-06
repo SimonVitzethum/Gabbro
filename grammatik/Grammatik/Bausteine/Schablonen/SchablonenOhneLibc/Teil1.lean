@@ -252,6 +252,5 @@ theorem start_nolibc_haken_zeuge :
   start_nolibc_haken 0x7ffc12345678 (by decide) true true (some 42) false (fun _ => rfl) rfl
 
 /-! ## 3. `tor.fehlbar` -- the stub of a fallible gate -/
-end Region
 end OhneLibc
 end Gabbro.Grammatik
