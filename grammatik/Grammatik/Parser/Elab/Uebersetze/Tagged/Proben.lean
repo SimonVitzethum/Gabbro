@@ -53,6 +53,15 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
 
 attribute [local cbv_eval] Nat.log2_def
 
+-- Select one actual parser step without expanding the mutually recursive fuel tuple.
+attribute [local cbv_opaque] parseTyp parseTypNach parseOr parseOrL parseAnd parseAndL
+  parseCmp parseBit parseBitL parseAdd parseAddL parseMul parseMulL parseUnary
+  parsePrimary parseKopf parseSuffixe
+attribute [local cbv_eval] parseTyp.eq_def parseTypNach.eq_def parseOr.eq_def parseOrL.eq_def
+  parseAnd.eq_def parseAndL.eq_def parseCmp.eq_def parseBit.eq_def parseBitL.eq_def
+  parseAdd.eq_def parseAddL.eq_def parseMul.eq_def parseMulL.eq_def parseUnary.eq_def
+  parsePrimary.eq_def parseKopf.eq_def parseSuffixe.eq_def
+
 open scoped Gabbro.Grammatik.Parser.Uebersetze
 
 def nestedPayload : List Token :=
