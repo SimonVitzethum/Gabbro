@@ -122,11 +122,58 @@ private def sourceScopes : { actual : Frontend.DerivedScopes sourceOriginal.val 
     Frontend.elaborateConstantScopes sourceOriginal.val = .ok actual } := by
   refine ⟨?_, by cbv <;> exact Eq.refl _⟩
 
+private theorem checked_scope_meaning (items : List SItemTief)
+    (result : Frontend.DerivedScopes items)
+    (produced : Frontend.elaborateConstantScopes items = .ok result) :
+    Frontend.scopeMeaning result = true := by
+  have discovery (order : Frontend.ConstantOrder items)
+      (accepted : (do
+        let aliases ← Frontend.orderAliases items
+        let candidate ← Frontend.discoverScopes items (items.length + 1)
+          (Frontend.prepare items).initial ⟨aliases.ordered, aliases.permutation⟩
+          ⟨order.ordered, order.permutation⟩
+        if Frontend.scopeMeaning candidate then pure candidate
+        else throw "compile-time declarations do not match their canonical final meaning") = .ok result) :
+      Frontend.scopeMeaning result = true := by
+    cases aliasesEq : Frontend.orderAliases items with
+    | error error => simp only [aliasesEq, bind, Except.bind] at accepted; cases accepted
+    | ok aliases =>
+      dsimp only [aliasesEq, bind, Except.bind] at accepted
+      cases candidateEq : Frontend.discoverScopes items (items.length + 1)
+          (Frontend.prepare items).initial ⟨aliases.ordered, aliases.permutation⟩
+          ⟨order.ordered, order.permutation⟩ with
+      | error error => simp only [candidateEq, bind, Except.bind] at accepted; cases accepted
+      | ok candidate =>
+        simp only [candidateEq, bind, Except.bind] at accepted
+        split at accepted
+        · rename_i meaning
+          cases Except.ok.inj accepted
+          exact meaning
+        · cases accepted
+  unfold Frontend.elaborateConstantScopes at produced
+  cases orderEq : Frontend.orderConstants items with
+  | error error => simp only [orderEq, bind, Except.bind] at produced; cases produced
+  | ok order =>
+    dsimp only [orderEq, bind, Except.bind] at produced
+    cases previousEq : Frontend.elaborateScopes items with
+    | error error =>
+      simp only [previousEq] at produced
+      exact discovery order produced
+    | ok previous =>
+      simp only [previousEq] at produced
+      split at produced
+      · rename_i meaning
+        cases Except.ok.inj produced
+        exact meaning
+      · exact discovery order produced
+
 private theorem source_metadata : Konst.checkSourceMetadata sourceOriginal.val = .ok () := by cbv
 private theorem source_aliases :
-    sourceOriginal.val.all (Frontend.checkAliasMeaning sourceScopes.val.scope.types) = true := by cbv
+    sourceOriginal.val.all (Frontend.checkAliasMeaning sourceScopes.val.scope.types) = true :=
+  (Bool.and_eq_true_iff.mp (checked_scope_meaning _ _ sourceScopes.property)).1
 private theorem source_constants : sourceOriginal.val.all (Frontend.checkConstantMeaning
-    sourceScopes.val.scope.types sourceScopes.val.scope.functions sourceScopes.val.scope.values) = true := by cbv
+    sourceScopes.val.scope.types sourceScopes.val.scope.functions sourceScopes.val.scope.values) = true :=
+  (Bool.and_eq_true_iff.mp (checked_scope_meaning _ _ sourceScopes.property)).2
 
 private def sourceTail : SourceTail sourceInput :=
   SourceTail.ofOriginal sourceInput sourceOriginal.val sourceOriginal.property
