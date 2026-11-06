@@ -142,7 +142,8 @@ private theorem call_prefix (u : UProg) (f : Fin u.fns.length) (fn : UFn) (n : N
     lowBodyF u f (ctxOf u f) fn (n + 1) Λ (.call name args :: rest) ret =
       (lowBodyF u f (ctxOf u f) fn n step.1 rest ret).map (Endblock.cons step.2) := by
   rcases step with ⟨after, statement⟩
-  rw [lowBodyF, made] <;> cases lowBodyF u f (ctxOf u f) fn n after rest ret <;> rfl
+  rw [lowBodyF, made] <;> simp
+  cases lowBodyF u f (ctxOf u f) fn n after rest ret <;> rfl
 
 private theorem retire_prefix (u : UProg) (f : Fin u.fns.length) (fn : UFn) (n : Nat)
     (Λ : List (Res (declOf u))) (name : String) (rest : List UStmt) (ret : URet)
@@ -150,7 +151,8 @@ private theorem retire_prefix (u : UProg) (f : Fin u.fns.length) (fn : UFn) (n :
     lowBodyF u f (ctxOf u f) fn (n + 1) Λ (.retires name :: rest) ret =
       (lowBodyF u f (ctxOf u f) fn n step.1 rest ret).map (Endblock.cons step.2) := by
   rcases step with ⟨after, statement⟩
-  rw [lowBodyF, made] <;> cases lowBodyF u f (ctxOf u f) fn n after rest ret <;> rfl
+  rw [lowBodyF, made] <;> simp
+  cases lowBodyF u f (ctxOf u f) fn n after rest ret <;> rfl
 
 private theorem call_body (u : UProg) (f : Fin u.fns.length) (name : String) (args : List UArg)
     (shape : (fnAt u f).body = [.call name args]) (step : BodyStep u f (resOf u f))
@@ -158,7 +160,9 @@ private theorem call_body (u : UProg) (f : Fin u.fns.length) (name : String) (ar
     lowBody u f (fnAt u f).body (fnAt u f).ret =
       (lowEnd u f (ctxOf u f) step.1 (fnAt u f) (fnAt u f).ret).map (Endblock.cons step.2) := by
   unfold lowBody
-  rw [shape, call_prefix u f (fnAt u f) 1 _ _ _ _ _ step made] <;> rfl
+  rw [shape]
+  dsimp only [List.length_cons, List.length_nil]
+  rw [call_prefix u f (fnAt u f) 1 _ _ _ _ _ step made] <;> rfl
 
 private theorem retire_body (u : UProg) (f : Fin u.fns.length) (name : String)
     (shape : (fnAt u f).body = [.retires name]) (step : BodyStep u f (resOf u f))
@@ -166,15 +170,20 @@ private theorem retire_body (u : UProg) (f : Fin u.fns.length) (name : String)
     lowBody u f (fnAt u f).body (fnAt u f).ret =
       (lowEnd u f (ctxOf u f) step.1 (fnAt u f) (fnAt u f).ret).map (Endblock.cons step.2) := by
   unfold lowBody
-  rw [shape, retire_prefix u f (fnAt u f) 1 _ _ _ _ step made] <;> rfl
+  rw [shape]
+  dsimp only [List.length_cons, List.length_nil]
+  rw [retire_prefix u f (fnAt u f) 1 _ _ _ _ step made] <;> rfl
 
 private theorem repeated_body (u : UProg) (f : Fin u.fns.length) (a b error : String)
     (shape : (fnAt u f).body = [.retires a, .retires b]) (step : BodyStep u f (resOf u f))
     (made : lowStmtL u f (ctxOf u f) (fnAt u f) (resOf u f) (.retires a) = .ok step)
-    (failed : lowStmtL u f (ctxOf u f) (fnAt u f) step.1 (.retires b) = .error error) :
+    (failed : lowStmtL (l := false) u f (ctxOf u f) (fnAt u f) step.1 (.retires b) = .error error) :
     lowBody u f (fnAt u f).body (fnAt u f).ret = .error error := by
   unfold lowBody
-  rw [shape, retire_prefix u f (fnAt u f) 2 _ _ _ _ step made, lowBodyF, failed] <;> rfl
+  rw [shape]
+  dsimp only [List.length_cons, List.length_nil]
+  rw [retire_prefix u f (fnAt u f) 2 _ _ _ _ step made, lowBodyF, failed] <;> simp
+  rfl
 
 -- The source shape is inferred from the actual unit, not supplied as an AST.
 scoped macro "ownership_call_body " name:ident " for " unit:ident " at " number:num : command => do
@@ -264,7 +273,7 @@ scoped macro "ownership_repeat_refusal " name:ident " for " unit:ident " at " nu
       lowStmtL ($unit).val $index (ctxOf ($unit).val $index) (fnAt ($unit).val $index)
         (resOf ($unit).val $index) (.retires ($shape).val.1) = .ok actual } := by
     refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
-  let d ← `(command| private theorem $failed : lowStmtL ($unit).val $index (ctxOf ($unit).val $index)
+  let d ← `(command| private theorem $failed : lowStmtL (l := false) ($unit).val $index (ctxOf ($unit).val $index)
       (fnAt ($unit).val $index) ($step).val.1 (.retires ($shape).val.2) = .error $error := by cbv)
   let e ← `(command| private theorem $name : lowBody ($unit).val $index (fnAt ($unit).val $index).body
       (fnAt ($unit).val $index).ret = .error $error :=
