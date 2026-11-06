@@ -45,6 +45,28 @@ structure SourceTail {text : String} (input : SourceInput text) where
   constants : input.original.all
     (Frontend.checkConstantMeaning derived.scope.types derived.scope.functions derived.scope.values) = true
 
+/-- Transport all source duties together before instantiating their dependent
+    indices with a concrete prepared input. The list equality retains every
+    original declaration and the producer equations retain the actual results. -/
+def SourceTail.ofOriginal {text : String} (input : SourceInput text)
+    (items : List SItemTief) (origin : input.original = items)
+    (metadata : Konst.checkSourceMetadata items = .ok ())
+    (order : Frontend.AliasOrder items) (ordered : Frontend.orderAliases items = .ok order)
+    (derived : Frontend.DerivedScopes items)
+    (elaborated : Frontend.elaborateConstantScopes items = .ok derived)
+    (aliases : items.all (Frontend.checkAliasMeaning derived.scope.types) = true)
+    (constants : items.all (Frontend.checkConstantMeaning derived.scope.types
+      derived.scope.functions derived.scope.values) = true) : SourceTail input := by
+  cases origin
+  exact {
+    metadata := metadata
+    order := order
+    ordered := ordered
+    derived := derived
+    elaborated := elaborated
+    aliases := aliases
+    constants := constants }
+
 /-- Retain the canonical normalizer and its generic proof without reducing that proof at each fixture. -/
 def sourceFrom {text : String} (input : SourceInput text) (tail : SourceTail input) :
     Frontend.Source text where

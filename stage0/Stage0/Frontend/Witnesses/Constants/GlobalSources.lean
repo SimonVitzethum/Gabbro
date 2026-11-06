@@ -184,40 +184,42 @@ theorem qualifiedText_prepared :
   rw [origin]
   rfl
 
--- Infer normalized data from each complete canonical success equation. The
--- value field stores that data, rather than an Option getter of the producer.
+-- Normalize the actual prepared/pre108/uMembers output before introducing any
+-- AliasOrder or DerivedScopes index. No source declaration is supplied by hand.
+private def qualifiedOriginalPacket :
+    { actual : List SItemTief // qualifiedTextInput.original = actual } := by
+  refine ⟨?original, ?produced⟩
+  case produced => cbv <;> exact Eq.refl _
+
+-- Infer the complete results at the already normalized, certified source list.
 private def qualifiedOrderPacket :
-    { actual : Frontend.AliasOrder qualifiedTextInput.original //
-      Frontend.orderAliases qualifiedTextInput.original = .ok actual } := by
+    { actual : Frontend.AliasOrder qualifiedOriginalPacket.val //
+      Frontend.orderAliases qualifiedOriginalPacket.val = .ok actual } := by
   refine ⟨?actual, ?produced⟩
   case produced => cbv <;> exact Eq.refl _
 
 private def qualifiedScopesPacket :
-    { actual : Frontend.DerivedScopes qualifiedTextInput.original //
-      Frontend.elaborateConstantScopes qualifiedTextInput.original = .ok actual } := by
+    { actual : Frontend.DerivedScopes qualifiedOriginalPacket.val //
+      Frontend.elaborateConstantScopes qualifiedOriginalPacket.val = .ok actual } := by
   refine ⟨?actual, ?produced⟩
   case produced => cbv <;> exact Eq.refl _
 
 private theorem qualified_metadata :
-    Konst.checkSourceMetadata qualifiedTextInput.original = .ok () := by cbv
+    Konst.checkSourceMetadata qualifiedOriginalPacket.val = .ok () := by cbv
 
 private theorem qualified_aliases :
-    qualifiedTextInput.original.all
+    qualifiedOriginalPacket.val.all
       (Frontend.checkAliasMeaning qualifiedScopesPacket.val.scope.types) = true := by cbv
 
 private theorem qualified_constants :
-    qualifiedTextInput.original.all (Frontend.checkConstantMeaning qualifiedScopesPacket.val.scope.types
+    qualifiedOriginalPacket.val.all (Frontend.checkConstantMeaning qualifiedScopesPacket.val.scope.types
       qualifiedScopesPacket.val.scope.functions qualifiedScopesPacket.val.scope.values) = true := by cbv
 
-/-- Retain each complete producer and field certificate without re-inferring its dependent data. -/
-def qualifiedTextTail : SourceTail qualifiedTextInput := {
-  metadata := qualified_metadata
-  order := qualifiedOrderPacket.val
-  ordered := qualifiedOrderPacket.property
-  derived := qualifiedScopesPacket.val
-  elaborated := qualifiedScopesPacket.property
-  aliases := qualified_aliases
-  constants := qualified_constants }
+/-- Reindex the complete checked packet once at the original input. -/
+def qualifiedTextTail : SourceTail qualifiedTextInput :=
+  SourceTail.ofOriginal qualifiedTextInput qualifiedOriginalPacket.val qualifiedOriginalPacket.property
+    qualified_metadata qualifiedOrderPacket.val qualifiedOrderPacket.property
+    qualifiedScopesPacket.val qualifiedScopesPacket.property qualified_aliases qualified_constants
 
 theorem qualifiedText_metadata :
     Konst.checkSourceMetadata qualifiedTextInput.original = .ok () := qualifiedTextTail.metadata
