@@ -104,7 +104,7 @@ scoped macro "rights_input " name:ident " : " source:term
     theorem $certificateName : ChunkCertificate $chunkName $spellingsName :=
       ⟨$textName, $boundName⟩)
   let original : Lean.TSyntax `command ← `(command|
-    theorem $sourceName : $source = String.join $spellingsName := by cbv)
+    theorem $sourceName : $source = String.join $spellingsName := by rfl)
   let input : Lean.TSyntax `command ← `(command|
     def $name : Input $source :=
       Input.of_chunks (source := $source) $chunkName $certificateName $sourceName)
