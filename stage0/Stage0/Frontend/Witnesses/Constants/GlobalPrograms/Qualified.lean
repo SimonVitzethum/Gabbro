@@ -194,6 +194,14 @@ private def qualifiedUnit : UProg := { qualifiedElaboration.val with exportGate 
 private def qualifiedUnitMain : Fin qualifiedUnit.fns.length :=
   ⟨0, by change (0 : Nat) < 1; decide⟩
 
+private theorem qualifiedUnit_only_main (f : Fin qualifiedUnit.fns.length) :
+    f = qualifiedUnitMain := by
+  apply Fin.ext
+  have bound := f.isLt
+  change f.val < 1 at bound
+  change f.val = 0
+  omega
+
 private theorem qualifiedText_function_header :
     PlainFunctionHeader qualifiedUnit qualifiedUnitMain := by
   constructor <;> cbv
@@ -215,11 +223,14 @@ private def qualifiedTextCode :
     lowerFnAt qualifiedUnit qualifiedUnitMain = .ok qualifiedTextCode.val := qualifiedTextCode.property
 
 private def qualifiedUnitFunctions : Functions qualifiedUnit :=
-  Functions.of_success (by
-    apply Fin.forall_fin_one.mpr
-    change (lowerFnAt qualifiedUnit qualifiedUnitMain).toOption.isSome = true
+  Functions.of_success (fun f => by
+    have same := qualifiedUnit_only_main f
+    subst f
     rw [qualifiedText_code_eq]
-    rfl) (by cbv) (by apply Fin.forall_fin_one.mpr; cbv) (by cbv)
+    rfl) (by cbv) (fun f => by
+      have same := qualifiedUnit_only_main f
+      subst f
+      cbv) (by cbv)
 
 private theorem qualifiedUnit_accepted :
     OldSource.accepts qualifiedUnit qualifiedUnitFunctions.program = .ok true := by
