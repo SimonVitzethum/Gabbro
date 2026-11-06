@@ -27,12 +27,7 @@ private def counterprobe_body_integer (u : UProg) (caller : Fin u.fns.length)
       (fn.mitBindung name side.val.range) fuel Λ rest returning) :
     CounterprobeBodyPacket u caller Γ fn (fuel + 1) Λ (.bind name annotation value :: rest) returning := by
   refine ⟨Endblock.bind side.val.term tail.val, ?_⟩
-  change (match lowBindWert u Γ Λ fn annotation value with
-    | .error error => .error error
-    | .ok actual => match lowBodyF u caller (.int actual.range.1 actual.range.2 :: Γ)
-        (fn.mitBindung name actual.range) fuel Λ rest returning with
-      | .error error => .error error
-      | .ok ending => .ok (Endblock.bind actual.term ending)) = _
+  rw [lowBodyF]
   simp only [side.property, tail.property]
 
 private def counterprobe_body_boolean (u : UProg) (caller : Fin u.fns.length)
@@ -42,11 +37,7 @@ private def counterprobe_body_boolean (u : UProg) (caller : Fin u.fns.length)
     (tail : CounterprobeBodyPacket u caller (.bool :: Γ) (fn.mitBindungB name) fuel Λ rest returning) :
     CounterprobeBodyPacket u caller Γ fn (fuel + 1) Λ (.bindB name value :: rest) returning := by
   refine ⟨Endblock.bind term.val tail.val, ?_⟩
-  change (match lowEns u Γ Λ fn none value with
-    | .error error => .error error
-    | .ok actual => match lowBodyF u caller (.bool :: Γ) (fn.mitBindungB name) fuel Λ rest returning with
-      | .error error => .error error
-      | .ok ending => .ok (Endblock.bind actual ending)) = _
+  rw [lowBodyF]
   simp only [term.property, tail.property]
 
 private theorem counterprobe_with_result {α : Type} (u : UProg) (callee : Fin u.fns.length)
@@ -71,25 +62,10 @@ private def counterprobe_body_call (u : UProg) (caller : Fin u.fns.length)
         (fn.mitTy name .bool) returning = .ok actual}) :
     CounterprobeBodyPacket u caller Γ fn 2 Λ [.bindCall name calleeName arguments] returning := by
   refine ⟨Endblock.bindCall head.val.callee head.val.args result head.val.hp reason ending.val, ?_⟩
-  change (match lowRufKopf u caller Γ fn Λ calleeName arguments with
-    | .error error => .error error
-    | .ok call => withErg u call.callee fun ty found =>
-      match lowBodyF u caller (ty :: Γ) (fn.mitTy name ty) 1
-          (nach (declOf u) call.callee Λ) [] returning with
-      | .error error => .error error
-      | .ok tail =>
-        if noReason : (declOf u).gruende call.callee = 0 then
-          .ok (Endblock.bindCall call.callee call.args found call.hp noReason tail)
-        else .error "call of a function with a reason channel needs `let .. else`") = _
+  rw [lowBodyF]
   simp only [head.property]
   rw [counterprobe_with_result u head.val.callee .bool result]
-  change (match lowEnd u caller (.bool :: Γ) (nach (declOf u) head.val.callee Λ)
-      (fn.mitTy name .bool) returning with
-    | .error error => .error error
-    | .ok tail =>
-      if noReason : (declOf u).gruende head.val.callee = 0 then
-        .ok (Endblock.bindCall head.val.callee head.val.args result head.val.hp noReason tail)
-      else .error "call of a function with a reason channel needs `let .. else`") = _
+  rw [lowBodyF]
   simp only [ending.property, dif_pos reason]
 
 end Gabbro.Grammatik.Parser.Uebersetze
