@@ -73,9 +73,9 @@ example : (elabText checkTextSonde).map (fun u => u.checks.map (·.sonde)) =
   exact mapped.trans (congrArg (fun result : List (Option (String × String)) =>
     (Except.ok result : Except String (List (Option (String × String))))) sonde_facts.sourceIdentity)
 
-/-- The unit lowers. -/
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
+/-- The unit lowers. -/
 theorem uSonde_lowered : (lowerAllg uSonde).toOption.isSome = true := sonde_facts_actual.common.lowered
 
 /-- The lowered program behind the counterprobe witness. -/
@@ -146,15 +146,15 @@ theorem sonde_testbau_single (d : CheckDecl (declOf uSonde))
 
 /-! ## Acceptance with the real Duty -/
 
-/-- The lowered unit with its derived check is admitted. -/
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
+/-- The lowered unit with its derived check is admitted. -/
 theorem sonde_checkB :
     checkB checkPSonde [] [] (List.finRange uSonde.fns.length) checkChecksSonde = true := sonde_facts_actual.common.admitted
 
-/-- End-to-end acceptance from source text with a real Duty. -/
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
+/-- End-to-end acceptance from source text with a real Duty. -/
 theorem sonde_akzeptiert :
     AkzeptiertX checkPSonde (Cover.Differenz.sperrFamilie uSonde)
       (List.finRange uSonde.fns.length) [] [] [] [] checkChecksSonde = true := sonde_facts_actual.common.accepted
@@ -164,11 +164,11 @@ theorem sonde_admission :
     CheckAdmission checkPSonde (List.finRange uSonde.fns.length) checkChecksSonde :=
   (checkB_iff (fun g => List.mem_finRange g)
     (fun t => by
-      have h0 : uSonde.tabs.length = 0 := by rw [uSonde_tabs_leer]
+      have h0 : uSonde.tabs.length = 0 := by rw [uSonde_tabs_leer]; rfl
       have t' : Fin uSonde.tabs.length := t
       exact Fin.elim0 (h0 ▸ t'))
     (fun g => by
-      have h0 : uSonde.globs.length = 0 := by rw [uSonde_globs_leer]
+      have h0 : uSonde.globs.length = 0 := by rw [uSonde_globs_leer]; rfl
       have g' : Fin uSonde.globs.length := g
       exact Fin.elim0 (h0 ▸ g'))).mp sonde_checkB
 
@@ -179,14 +179,19 @@ theorem sonde_abschluss (d : CheckDecl (declOf uSonde))
     (hd : d ∈ checkChecksSonde) :
     CheckAbschluss checkPSonde d berichtSondeFalsch := by
   obtain ⟨hexp, _, _, _, _⟩ := sonde_admission
-  refine ⟨hexp d hd, by decide, ?_⟩
-  show berichtSondeFalsch.boeden.length = d.boden.length
-  have hlen : d.boden.length = 0 := by
-    have hm : d.boden.length ∈ checkChecksSonde.map (fun d => d.boden.length) :=
-      List.mem_map.mpr ⟨d, hd, rfl⟩
-    rw [sonde_boeden] at hm
-    exact List.mem_singleton.mp hm
-  rw [show berichtSondeFalsch.boeden.length = 0 from rfl, hlen]
+  refine ⟨hexp d hd, ?_, ?_⟩
+  · intro probe member
+    have same : probe = { ort := "x", punkt := 0, wert := 3, gelesen := true } :=
+      List.mem_singleton.mp member
+    cases same
+    rfl
+  · show berichtSondeFalsch.boeden.length = d.boden.length
+    have hlen : d.boden.length = 0 := by
+      have hm : d.boden.length ∈ checkChecksSonde.map (fun d => d.boden.length) :=
+        List.mem_map.mpr ⟨d, hd, rfl⟩
+      rw [sonde_boeden] at hm
+      exact List.mem_singleton.mp hm
+    rw [show berichtSondeFalsch.boeden.length = 0 from rfl, hlen]
 
 /-- The single bound sonde owns its name on the derived unit. -/
 theorem sonde_eindeutig : SondenEindeutig checkChecksSonde :=
@@ -215,7 +220,7 @@ theorem sonde_bindung (d : CheckDecl (declOf uSonde))
 theorem artefakt_passt_sonde (d : CheckDecl (declOf uSonde))
     (hd : d ∈ checkChecksSonde) : artefaktPasst d artefaktSonde := by
   refine ⟨?_, ?_, "ext text", sonde_behalten_single d hd⟩
-  · rw [sonde_behalten_single d hd]
+  · rw [sonde_behalten_single d hd]; rfl
   · show d.testbau = false
     exact sonde_testbau_single d hd
 
@@ -239,7 +244,7 @@ theorem sonde_entladung (d : CheckDecl (declOf uSonde))
   match hg : d.gates with
   | [] => simp [hg] at hlen
   | g :: _ =>
-    refine ⟨g, sonde_abschluss d hd, ?_, List.mem_cons.mpr (Or.inl rfl)⟩
+    refine ⟨g, sonde_abschluss d hd, ?_, hg ▸ List.mem_cons_self⟩
     have hall : (checkChecksSonde.all fun d =>
         d.gates.all fun g =>
           decide (d.duty ∈ ((declOf uSonde).signatur g).konsumiert)) = true := sonde_facts_actual.gateDuty
@@ -272,7 +277,8 @@ theorem artefakt_fremd_sonde (d : CheckDecl (declOf uSonde))
   have hs := sonde_behalten_single d hd
   rw [hs] at ht
   have h2 : ("ext", "ext text") = ("alt", t) := by simpa using ht
-  exact absurd (congrArg Prod.fst h2) (by decide)
+  have distinct : ("ext" : String) ≠ "alt" := by decide
+  exact distinct (congrArg Prod.fst h2)
 
 /-- A stale artifact never yields a measurement. -/
 theorem gemessen_fremd_verweigert (d : CheckDecl (declOf uSonde))
