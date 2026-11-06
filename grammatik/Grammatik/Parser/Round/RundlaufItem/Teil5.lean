@@ -157,7 +157,7 @@ theorem tabKopf_rund_space (cnt : Option SExpr) (von backed owner : Option Strin
       simp only [nameOptToks, List.cons_append, List.nil_append, List.length_cons, List.length_append] at hF
       omega⟩
     have tail := tabKopf_rund cnt von backed owner sh hc R F' (by
-      simp only [nameOptToks, List.cons_append, List.nil_append, List.length_cons, List.length_append] at hF
+      simp only [nameOptToks, List.cons_append, List.nil_append, List.length_cons, List.length_append] at hF ⊢
       omega)
     simpa only [nameOptToks, List.cons_append, List.nil_append, List.append_assoc] using
       tabKopf_space F' name _ _ cnt von backed owner sh tail
