@@ -136,13 +136,19 @@ private theorem checked_scope_meaning (items : List SItemTief)
         else throw "compile-time declarations do not match their canonical final meaning") = .ok result) :
       Frontend.scopeMeaning result = true := by
     cases aliasesEq : Frontend.orderAliases items with
-    | error error => cases accepted
+    | error error =>
+      have impossible : (Except.error error : Except String (Frontend.DerivedScopes items)) = .ok result := by
+        simpa only [aliasesEq, bind, Except.bind] using accepted
+      cases impossible
     | ok aliases =>
       try simp only [aliasesEq, bind, Except.bind] at accepted
       cases candidateEq : Frontend.discoverScopes items (items.length + 1)
           (Frontend.prepare items).initial ⟨aliases.ordered, aliases.permutation⟩
           ⟨order.ordered, order.permutation⟩ with
-      | error error => cases accepted
+      | error error =>
+        have impossible : (Except.error error : Except String (Frontend.DerivedScopes items)) = .ok result := by
+          simpa only [candidateEq, bind, Except.bind] using accepted
+        cases impossible
       | ok candidate =>
         try simp only [candidateEq, bind, Except.bind] at accepted
         split at accepted
@@ -152,7 +158,10 @@ private theorem checked_scope_meaning (items : List SItemTief)
         · cases accepted
   unfold Frontend.elaborateConstantScopes at produced
   cases orderEq : Frontend.orderConstants items with
-  | error error => cases produced
+  | error error =>
+    have impossible : (Except.error error : Except String (Frontend.DerivedScopes items)) = .ok result := by
+      simpa only [orderEq, bind, Except.bind] using produced
+    cases impossible
   | ok order =>
     simp only [orderEq, bind, Except.bind] at produced
     cases previousEq : Frontend.elaborateScopes items with
