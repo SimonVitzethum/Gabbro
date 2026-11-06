@@ -52,7 +52,7 @@ def checkTextSonde : String :=
 -- Each cut proves the existing scanner's arbitrary-suffix equation. The
 -- complete source uses its original character-count fuel, never a new lexer.
 scoped macro "counterprobe_cut " name:ident " as " text:str
-    " lexemes " emitted:term " steps " count:num : command => do
+    " lexemes " emitted:term " fuelUsed " count:num : command => do
   let literal : Lean.TSyntax `term := ⟨text.raw⟩
   let fuel : Lean.TSyntax `term := ⟨count.raw⟩
   let decoded := Lean.mkIdentFrom name (name.getId.appendAfter "_text")
@@ -74,36 +74,36 @@ open scoped Gabbro.Grammatik.Parser.Uebersetze
 
 counterprobe_cut sondeGate as "impl fn g() { return; } "
   lexemes [.wort "impl", .wort "fn", .ident "g", .zeichen "(", .zeichen ")",
-    .zeichen "{", .wort "return", .zeichen ";", .zeichen "}"] steps 15
+    .zeichen "{", .wort "return", .zeichen ";", .zeichen "}"] fuelUsed 15
 counterprobe_cut sondeExternal as "impl fn ext() -> bool { return false; } "
   lexemes [.wort "impl", .wort "fn", .ident "ext", .zeichen "(", .zeichen ")",
     .zeichen "->", .wort "bool", .zeichen "{", .wort "return", .wort "false",
-    .zeichen ";", .zeichen "}"] steps 21
+    .zeichen ";", .zeichen "}"] fuelUsed 21
 counterprobe_cut sondeHeadP as "check p { claim "
-  lexemes [.wort "check", .ident "p", .zeichen "{", .wort "claim"] steps 8
+  lexemes [.wort "check", .ident "p", .zeichen "{", .wort "claim"] fuelUsed 8
 counterprobe_cut sondeHeadQ as "check q { claim "
-  lexemes [.wort "check", .ident "q", .zeichen "{", .wort "claim"] steps 8
+  lexemes [.wort "check", .ident "q", .zeichen "{", .wort "claim"] fuelUsed 8
 counterprobe_cut sondeMeasure as "\"c\" measures x gates g "
-  lexemes [.text "c", .wort "measures", .wort "x", .wort "gates", .ident "g"] steps 10
+  lexemes [.text "c", .wort "measures", .wort "x", .wort "gates", .ident "g"] fuelUsed 10
 counterprobe_cut sondeBodyHead as "can_fail { "
-  lexemes [.wort "can_fail", .zeichen "{"] steps 4
+  lexemes [.wort "can_fail", .zeichen "{"] fuelUsed 4
 counterprobe_cut sondeBinding as "let x: u64 = 3; "
   lexemes [.wort "let", .wort "x", .zeichen ":", .wort "u64", .zeichen "=",
-    .num 3, .zeichen ";"] steps 12
+    .num 3, .zeichen ";"] fuelUsed 12
 counterprobe_cut sondeFalse as "return false; } "
-  lexemes [.wort "return", .wort "false", .zeichen ";", .zeichen "}"] steps 7
+  lexemes [.wort "return", .wort "false", .zeichen ";", .zeichen "}"] fuelUsed 7
 counterprobe_cut sondeComparison as "return x < 0; } "
   lexemes [.wort "return", .wort "x", .zeichen "<", .num 0, .zeichen ";",
-    .zeichen "}"] steps 11
+    .zeichen "}"] fuelUsed 11
 counterprobe_cut sondeBindingText as "counterprobe \"ext text\" expects ext }"
   lexemes [.wort "counterprobe", .text "ext text", .wort "expects", .ident "ext",
-    .zeichen "}"] steps 9
+    .zeichen "}"] fuelUsed 9
 counterprobe_cut sondeBindingOne as "counterprobe \"one\" expects ext } "
   lexemes [.wort "counterprobe", .text "one", .wort "expects", .ident "ext",
-    .zeichen "}"] steps 10
+    .zeichen "}"] fuelUsed 10
 counterprobe_cut sondeBindingTwo as "counterprobe \"two\" expects ext }"
   lexemes [.wort "counterprobe", .text "two", .wort "expects", .ident "ext",
-    .zeichen "}"] steps 9
+    .zeichen "}"] fuelUsed 9
 
 private def sondeChunks : List Chunk :=
   [sondeGate, sondeExternal, sondeHeadP, sondeMeasure, sondeBodyHead,
@@ -158,14 +158,22 @@ private theorem sonde_duplicate_bound :
     sondeBodyHead_bounded, sondeFalse_bounded, sondeBindingOne_bounded,
     sondeHeadQ_bounded, sondeBindingTwo_bounded, Bool.and_self]
 
+-- Adapt the canonical room certificate while every character list is symbolic.
+-- Concrete applications then compare the complete lexical proposition directly,
+-- without inferring Nat.le_trans's intermediate length from an expanded source.
+private theorem counterprobe_lexed_of_room (chunks : List Chunk)
+    (room : steps chunks ≤ (characters chunks).length) :
+    lexL (characters chunks) = .ok (tokens chunks) :=
+  lex_chunks chunks (Nat.le_trans room (Nat.le_succ _))
+
 private theorem sonde_lexed : lexL (characters sondeChunks) = .ok (tokens sondeChunks) :=
-  lex_chunks sondeChunks (Nat.le_trans sonde_bound (Nat.le_succ _))
+  counterprobe_lexed_of_room sondeChunks sonde_bound
 private theorem sonde_unbound_lexed :
     lexL (characters sondeUnboundChunks) = .ok (tokens sondeUnboundChunks) :=
-  lex_chunks sondeUnboundChunks (Nat.le_trans sonde_unbound_bound (Nat.le_succ _))
+  counterprobe_lexed_of_room sondeUnboundChunks sonde_unbound_bound
 private theorem sonde_duplicate_lexed :
     lexL (characters sondeDuplicateChunks) = .ok (tokens sondeDuplicateChunks) :=
-  lex_chunks sondeDuplicateChunks (Nat.le_trans sonde_duplicate_bound (Nat.le_succ _))
+  counterprobe_lexed_of_room sondeDuplicateChunks sonde_duplicate_bound
 
 -- Infer the complete parser results only from the actual successful equations.
 private def sondeParsed : {items : List SItemTief //
