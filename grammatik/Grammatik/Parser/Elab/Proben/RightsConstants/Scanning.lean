@@ -66,10 +66,13 @@ scoped macro "rights_input " name:ident " : " source:term
   let chunkName := Lean.mkIdentFrom name (name.getId.appendAfter "_chunks")
   let spellingsName := Lean.mkIdentFrom name (name.getId.appendAfter "_spellings")
   let certificateName := Lean.mkIdentFrom name (name.getId.appendAfter "_certificate")
+  let textName := Lean.mkIdentFrom name (name.getId.appendAfter "_text_certificate")
+  let boundName := Lean.mkIdentFrom name (name.getId.appendAfter "_bound_certificate")
   let sourceName := Lean.mkIdentFrom name (name.getId.appendAfter "_source_eq")
   let mut pieces : Lean.TSyntax `term ← `(([] : List Chunk))
   let mut spellings : Lean.TSyntax `term ← `(([] : List String))
-  let mut certificate : Lean.TSyntax `term ← `(ChunkCertificate.empty)
+  let mut bounds : Lean.TSyntax `term ← `(Nat.le_refl 0)
+  let mut decodedFacts : Array (Lean.TSyntax `simpLemma) := #[]
   for (cutName, fragment) in (cuts.getElems.zip fragments.getElems).toList.reverse do
     let piece : Lean.TSyntax `term := ⟨cutName.raw⟩
     let literal : Lean.TSyntax `term := ⟨fragment.raw⟩
@@ -77,24 +80,34 @@ scoped macro "rights_input " name:ident " : " source:term
       ⟨(Lean.mkIdentFrom cutName (cutName.getId.appendAfter "_text")).raw⟩
     let bounded : Lean.TSyntax `term :=
       ⟨(Lean.mkIdentFrom cutName (cutName.getId.appendAfter "_bounded")).raw⟩
-    certificate ← `(ChunkCertificate.cons (piece := $piece) (pieces := $pieces)
-      (front := $literal) (back := $spellings) $decoded $bounded $certificate)
+    bounds ← `(Nat.add_le_add (of_decide_eq_true $bounded) $bounds)
+    decodedFacts := decodedFacts.push (← `(simpLemma| $decoded))
     pieces ← `($piece :: $pieces)
     spellings ← `($literal :: $spellings)
   let chunks : Lean.TSyntax `command ← `(command|
     def $chunkName : List Chunk := [$cuts,*])
   let spelled : Lean.TSyntax `command ← `(command|
     def $spellingsName : List String := $spellings)
+  let textCertified : Lean.TSyntax `command ← `(command|
+    theorem $textName :
+        $chunkName.map (fun piece => String.ofList piece.characters) = $spellingsName := by
+      simp only [$chunkName, $spellingsName, List.map_cons, List.map_nil, $decodedFacts,*])
+  let boundCertified : Lean.TSyntax `command ← `(command|
+    theorem $boundName : steps $chunkName ≤
+        (Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters $chunkName).length := by
+      simpa only [$chunkName, steps,
+        Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning.characters,
+        List.flatMap_cons, List.flatMap_nil, List.length_append, List.length_nil] using $bounds)
   let certified : Lean.TSyntax `command ← `(command|
-    theorem $certificateName : ChunkCertificate $chunkName $spellingsName := by
-      change ChunkCertificate $pieces $spellings
-      exact $certificate)
+    theorem $certificateName : ChunkCertificate $chunkName $spellingsName :=
+      ⟨$textName, $boundName⟩)
   let original : Lean.TSyntax `command ← `(command|
     theorem $sourceName : $source = String.join $spellingsName := by cbv)
   let input : Lean.TSyntax `command ← `(command|
     def $name : Input $source :=
       Input.of_chunks (source := $source) $chunkName $certificateName $sourceName)
-  return ⟨Lean.mkNullNode #[chunks, spelled, certified, original, input]⟩
+  return ⟨Lean.mkNullNode #[chunks, spelled, textCertified, boundCertified,
+    certified, original, input]⟩
 
 open scoped Gabbro.Grammatik.Parser.UebersetzeProben11.Phases
 namespace Inputs
