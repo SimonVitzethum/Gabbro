@@ -91,20 +91,27 @@ private def sourceInput : SourceInput text := by
   case visibility => cbv
   case compileTime => cbv
 
-private def sourceTail : SourceTail sourceInput := by
-  refine {
-    metadata := ?metadata
-    order := ?order
-    ordered := ?ordered
-    derived := ?derived
-    elaborated := ?elaborated
-    aliases := ?aliases
-    constants := ?constants }
-  case metadata => cbv <;> exact Eq.refl _
-  case ordered => cbv <;> exact Eq.refl _
-  case elaborated => cbv <;> exact Eq.refl _
-  case aliases => cbv
-  case constants => cbv
+private def sourceOriginal : { actual : List SItemTief // sourceInput.original = actual } := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
+private def sourceOrder : { actual : Frontend.AliasOrder sourceOriginal.val //
+    Frontend.orderAliases sourceOriginal.val = .ok actual } := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
+private def sourceScopes : { actual : Frontend.DerivedScopes sourceOriginal.val //
+    Frontend.elaborateConstantScopes sourceOriginal.val = .ok actual } := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
+private theorem source_metadata : Konst.checkSourceMetadata sourceOriginal.val = .ok () := by cbv
+private theorem source_aliases :
+    sourceOriginal.val.all (Frontend.checkAliasMeaning sourceScopes.val.scope.types) = true := by cbv
+private theorem source_constants : sourceOriginal.val.all (Frontend.checkConstantMeaning
+    sourceScopes.val.scope.types sourceScopes.val.scope.functions sourceScopes.val.scope.values) = true := by cbv
+
+private def sourceTail : SourceTail sourceInput :=
+  SourceTail.ofOriginal sourceInput sourceOriginal.val sourceOriginal.property
+    source_metadata sourceOrder.val sourceOrder.property sourceScopes.val sourceScopes.property
+    source_aliases source_constants
 
 private def sourceHeader : Header text := by
   refine {
