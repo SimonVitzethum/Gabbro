@@ -46,7 +46,7 @@ theorem uTabelleMitRaum_sound (spaces : List String)
       | error error => simp only [resolved, bind, Except.bind] at accepted; cases accepted
       | ok index =>
         simp only [resolved, bind, Except.bind, pure, Except.pure] at accepted
-        exact ⟨name, index, base, named, produced, resolved, (Except.ok.inj accepted).symm⟩
+        exact ⟨name, index, base, rfl, rfl, resolved, (Except.ok.inj accepted).symm⟩
 
 theorem uTabelleMitRaum_fields (spaces : List String)
     (lower : SItemTief → Except String UTab) (item : SItemTief) (table : UTab)
