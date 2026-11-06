@@ -52,7 +52,7 @@ def checkTextSonde : String :=
 -- Each cut proves the existing scanner's arbitrary-suffix equation. The
 -- complete source uses its original character-count fuel, never a new lexer.
 scoped macro "counterprobe_cut " name:ident " as " text:str
-    " tokens " emitted:term " steps " count:num : command => do
+    " lexemes " emitted:term " steps " count:num : command => do
   let literal : Lean.TSyntax `term := ⟨text.raw⟩
   let fuel : Lean.TSyntax `term := ⟨count.raw⟩
   `(command| private def $name : Chunk where
@@ -64,36 +64,36 @@ scoped macro "counterprobe_cut " name:ident " as " text:str
 open scoped Gabbro.Grammatik.Parser.Uebersetze
 
 counterprobe_cut sondeGate as "impl fn g() { return; } "
-  tokens [.wort "impl", .wort "fn", .ident "g", .zeichen "(", .zeichen ")",
+  lexemes [.wort "impl", .wort "fn", .ident "g", .zeichen "(", .zeichen ")",
     .zeichen "{", .wort "return", .zeichen ";", .zeichen "}"] steps 15
 counterprobe_cut sondeExternal as "impl fn ext() -> bool { return false; } "
-  tokens [.wort "impl", .wort "fn", .ident "ext", .zeichen "(", .zeichen ")",
+  lexemes [.wort "impl", .wort "fn", .ident "ext", .zeichen "(", .zeichen ")",
     .zeichen "->", .wort "bool", .zeichen "{", .wort "return", .wort "false",
     .zeichen ";", .zeichen "}"] steps 21
 counterprobe_cut sondeHeadP as "check p { claim "
-  tokens [.wort "check", .ident "p", .zeichen "{", .wort "claim"] steps 8
+  lexemes [.wort "check", .ident "p", .zeichen "{", .wort "claim"] steps 8
 counterprobe_cut sondeHeadQ as "check q { claim "
-  tokens [.wort "check", .ident "q", .zeichen "{", .wort "claim"] steps 8
+  lexemes [.wort "check", .ident "q", .zeichen "{", .wort "claim"] steps 8
 counterprobe_cut sondeMeasure as "\"c\" measures x gates g "
-  tokens [.text "c", .wort "measures", .wort "x", .wort "gates", .ident "g"] steps 10
+  lexemes [.text "c", .wort "measures", .wort "x", .wort "gates", .ident "g"] steps 10
 counterprobe_cut sondeBodyHead as "can_fail { "
-  tokens [.wort "can_fail", .zeichen "{"] steps 4
+  lexemes [.wort "can_fail", .zeichen "{"] steps 4
 counterprobe_cut sondeBinding as "let x: u64 = 3; "
-  tokens [.wort "let", .wort "x", .zeichen ":", .wort "u64", .zeichen "=",
+  lexemes [.wort "let", .wort "x", .zeichen ":", .wort "u64", .zeichen "=",
     .num 3, .zeichen ";"] steps 12
 counterprobe_cut sondeFalse as "return false; } "
-  tokens [.wort "return", .wort "false", .zeichen ";", .zeichen "}"] steps 7
+  lexemes [.wort "return", .wort "false", .zeichen ";", .zeichen "}"] steps 7
 counterprobe_cut sondeComparison as "return x < 0; } "
-  tokens [.wort "return", .wort "x", .zeichen "<", .num 0, .zeichen ";",
+  lexemes [.wort "return", .wort "x", .zeichen "<", .num 0, .zeichen ";",
     .zeichen "}"] steps 11
 counterprobe_cut sondeBindingText as "counterprobe \"ext text\" expects ext }"
-  tokens [.wort "counterprobe", .text "ext text", .wort "expects", .ident "ext",
+  lexemes [.wort "counterprobe", .text "ext text", .wort "expects", .ident "ext",
     .zeichen "}"] steps 9
 counterprobe_cut sondeBindingOne as "counterprobe \"one\" expects ext } "
-  tokens [.wort "counterprobe", .text "one", .wort "expects", .ident "ext",
+  lexemes [.wort "counterprobe", .text "one", .wort "expects", .ident "ext",
     .zeichen "}"] steps 10
 counterprobe_cut sondeBindingTwo as "counterprobe \"two\" expects ext }"
-  tokens [.wort "counterprobe", .text "two", .wort "expects", .ident "ext",
+  lexemes [.wort "counterprobe", .text "two", .wort "expects", .ident "ext",
     .zeichen "}"] steps 9
 
 private def sondeChunks : List Chunk :=
