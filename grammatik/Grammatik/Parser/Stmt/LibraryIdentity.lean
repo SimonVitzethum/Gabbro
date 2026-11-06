@@ -177,7 +177,7 @@ theorem translation_qual_index_zeuge :
 theorem library_region_geschachtelt_zeuge :
     let call : SLibraryCall := ⟨["sample"], ["consume"], [.lit 7],
       [.zeichen "{", .num 1, .zeichen "}", .num 2]⟩
-    beqTopStmt (parseTopStmt (druckAnw (.lcall call))) (.ok (.lcall call)) = true := by
+    beqTopStmt (parseTopStmt (druckAnw (.lcall call) ++ [.ende])) (.ok (.lcall call)) = true := by
   decide +kernel
 
 end Gabbro.Grammatik.Uebersetzung
