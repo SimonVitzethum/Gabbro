@@ -45,13 +45,13 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   certificate. Both integer source packets, including computed initialization, build; the final
   initializer compiler packet and its `IntegerPrograms` consumer now build through named
   array/literal, restore and acceptance certificates. Other concrete constant
-  program packets remain under repair. `ConstWitness` now builds; the dependent
-  `ConstValuesWitness` source packets remain under repair after the new phase port.
+  program packets are checked through their actual production phases. `ConstWitness` and the
+  dependent `ConstValuesWitness` now build completely.
   The complete optional source/program packets, named quotation source packet and qualified global
-  source packet now build. The complete named program module passes a fresh direct Lean check;
-  both public compiler witnesses use only the three standard axioms. The qualified global program
-  certificate remains under repair: actual unit projections still time out before the
-  header/body composition, at unchanged resource limits.
+  source packet now build. The complete named program module passes direct Lean and regular
+  Lake checks; both public compiler witnesses use only the three standard axioms. Both ordinary
+  and qualified global program certificates now build. The final constant compiler chain closes
+  successfully in a 2,746-job Lake target build, with unchanged gates and resource limits.
   The shared complete compilation packet, hardware-free image phase/geometry theorem and the
   conflicting-profile refusal witness build. Both successful profile and requires-profile images build.
   The aligned-static fixture now also builds end to end with its unchanged sixteen-byte alignment.
