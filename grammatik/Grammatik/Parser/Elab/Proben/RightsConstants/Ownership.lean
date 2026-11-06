@@ -12,6 +12,8 @@ import all Grammatik.Parser.Elab.UebersetzeAllg.Teil5
 import all Grammatik.Parser.Elab.UebersetzeAllg.TableCapabilities
 import all Grammatik.Parser.Elab.UebersetzeAllg2.Teil1
 import all Grammatik.Parser.Elab.UebersetzeAllg2.Teil2
+import all Grammatik.Parser.Elab.UebersetzeAllg2.Teil3
+import all Grammatik.Parser.Elab.UebersetzeAllg2.Teil4
 import all Grammatik.Parser.Elab.UebersetzeAllg2.CallArguments
 import all Grammatik.Parser.Elab.UebersetzeAllg2.Marken
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
@@ -22,6 +24,7 @@ import all Grammatik.Parser.Elab.Generic.StaticConformance
 import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest1
 import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest2a
 import all Grammatik.Parser.Elab.UebersetzeAllg3.Body
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Returns
 import all Grammatik.Parser.Elab.UebersetzeAllg3.Stufe
 import all Grammatik.Parser.Elab.UebersetzeAllg3.Seq
 import all Grammatik.Parser.Elab.UebersetzeAllg3.Struct
@@ -92,7 +95,7 @@ scoped macro "ownership_phase " name:ident " from " supplied:term : command => d
   return ⟨Lean.mkNullNode #[parsed, elaborated]⟩
 
 -- Fix the complete typed result before inspecting its success/refusal tag.
-scoped macro "ownership_function " name:ident " for " unit:ident " at " number:num : command => do
+scoped macro "ownership_function " name:ident " for " unit:ident " at " number:num " with_body " supplied:term : command => do
   let index := Lean.mkIdentFrom name (name.getId.appendAfter "_index")
   let header := Lean.mkIdentFrom name (name.getId.appendAfter "_header")
   let body := Lean.mkIdentFrom name (name.getId.appendAfter "_body")
@@ -105,7 +108,7 @@ scoped macro "ownership_function " name:ident " for " unit:ident " at " number:n
     private def $body : { actual : PlainFunctionBody ($unit).val $index //
         lowBody ($unit).val $index (fnAt ($unit).val $index).body
           (fnAt ($unit).val $index).ret = .ok actual } := by
-      refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+      exact $supplied)
   let result : Lean.TSyntax `command ← `(command|
     private def $name : { actual :
         EnsTy ($unit).val $index × RumpTy ($unit).val $index × ReqTy ($unit).val $index //
@@ -113,7 +116,7 @@ scoped macro "ownership_function " name:ident " for " unit:ident " at " number:n
   return ⟨Lean.mkNullNode #[member, gates, lowered, result]⟩
 
 scoped macro "ownership_refusal " name:ident " for " unit:ident " at " number:num
-    " with_reason " error:term : command => do
+    " with_reason " error:term " with_body " supplied:term : command => do
   let index := Lean.mkIdentFrom name (name.getId.appendAfter "_index")
   let header := Lean.mkIdentFrom name (name.getId.appendAfter "_header")
   let body := Lean.mkIdentFrom name (name.getId.appendAfter "_body")
@@ -124,11 +127,149 @@ scoped macro "ownership_refusal " name:ident " for " unit:ident " at " number:nu
     private theorem $header : PlainFunctionHeader ($unit).val $index := by constructor <;> cbv)
   let refused : Lean.TSyntax `command ← `(command|
     private theorem $body : lowBody ($unit).val $index (fnAt ($unit).val $index).body
-        (fnAt ($unit).val $index).ret = .error $error := by cbv)
+        (fnAt ($unit).val $index).ret = .error $error := $supplied)
   let result : Lean.TSyntax `command ← `(command|
     private theorem $name : lowerFnAt ($unit).val $index = .error $error :=
       lowerFnAt_error_from_body $header $body)
   return ⟨Lean.mkNullNode #[member, gates, refused, result]⟩
+
+private abbrev BodyStep (u : UProg) (f : Fin u.fns.length) (Λ : List (Res (declOf u))) :=
+  Σ after, Stmt (declOf u) (verOf u f) false (ctxOf u f) Λ after
+
+private theorem call_prefix (u : UProg) (f : Fin u.fns.length) (fn : UFn) (n : Nat)
+    (Λ : List (Res (declOf u))) (name : String) (args : List UArg) (rest : List UStmt) (ret : URet)
+    (step : BodyStep u f Λ) (made : lowStmtL u f (ctxOf u f) fn Λ (.call name args) = .ok step) :
+    lowBodyF u f (ctxOf u f) fn (n + 1) Λ (.call name args :: rest) ret =
+      (lowBodyF u f (ctxOf u f) fn n step.1 rest ret).map (Endblock.cons step.2) := by
+  rcases step with ⟨after, statement⟩
+  rw [lowBodyF, made] <;> cases lowBodyF u f (ctxOf u f) fn n after rest ret <;> rfl
+
+private theorem retire_prefix (u : UProg) (f : Fin u.fns.length) (fn : UFn) (n : Nat)
+    (Λ : List (Res (declOf u))) (name : String) (rest : List UStmt) (ret : URet)
+    (step : BodyStep u f Λ) (made : lowStmtL u f (ctxOf u f) fn Λ (.retires name) = .ok step) :
+    lowBodyF u f (ctxOf u f) fn (n + 1) Λ (.retires name :: rest) ret =
+      (lowBodyF u f (ctxOf u f) fn n step.1 rest ret).map (Endblock.cons step.2) := by
+  rcases step with ⟨after, statement⟩
+  rw [lowBodyF, made] <;> cases lowBodyF u f (ctxOf u f) fn n after rest ret <;> rfl
+
+private theorem call_body (u : UProg) (f : Fin u.fns.length) (name : String) (args : List UArg)
+    (shape : (fnAt u f).body = [.call name args]) (step : BodyStep u f (resOf u f))
+    (made : lowStmtL u f (ctxOf u f) (fnAt u f) (resOf u f) (.call name args) = .ok step) :
+    lowBody u f (fnAt u f).body (fnAt u f).ret =
+      (lowEnd u f (ctxOf u f) step.1 (fnAt u f) (fnAt u f).ret).map (Endblock.cons step.2) := by
+  unfold lowBody
+  rw [shape, call_prefix u f (fnAt u f) 1 _ _ _ _ _ step made] <;> rfl
+
+private theorem retire_body (u : UProg) (f : Fin u.fns.length) (name : String)
+    (shape : (fnAt u f).body = [.retires name]) (step : BodyStep u f (resOf u f))
+    (made : lowStmtL u f (ctxOf u f) (fnAt u f) (resOf u f) (.retires name) = .ok step) :
+    lowBody u f (fnAt u f).body (fnAt u f).ret =
+      (lowEnd u f (ctxOf u f) step.1 (fnAt u f) (fnAt u f).ret).map (Endblock.cons step.2) := by
+  unfold lowBody
+  rw [shape, retire_prefix u f (fnAt u f) 1 _ _ _ _ step made] <;> rfl
+
+private theorem repeated_body (u : UProg) (f : Fin u.fns.length) (a b error : String)
+    (shape : (fnAt u f).body = [.retires a, .retires b]) (step : BodyStep u f (resOf u f))
+    (made : lowStmtL u f (ctxOf u f) (fnAt u f) (resOf u f) (.retires a) = .ok step)
+    (failed : lowStmtL u f (ctxOf u f) (fnAt u f) step.1 (.retires b) = .error error) :
+    lowBody u f (fnAt u f).body (fnAt u f).ret = .error error := by
+  unfold lowBody
+  rw [shape, retire_prefix u f (fnAt u f) 2 _ _ _ _ step made, lowBodyF, failed] <;> rfl
+
+-- The source shape is inferred from the actual unit, not supplied as an AST.
+scoped macro "ownership_call_body " name:ident " for " unit:ident " at " number:num : command => do
+  let index := Lean.mkIdentFrom name (name.getId.appendAfter "_index")
+  let shape := Lean.mkIdentFrom name (name.getId.appendAfter "_shape")
+  let step := Lean.mkIdentFrom name (name.getId.appendAfter "_step")
+  let ending := Lean.mkIdentFrom name (name.getId.appendAfter "_end")
+  let ordinal : Lean.TSyntax `term := ⟨number.raw⟩
+  let a ← `(command| private def $index : Fin ($unit).val.fns.length := ⟨$ordinal, by decide +kernel⟩)
+  let b ← `(command| private def $shape : { actual : String × List UArg //
+      (fnAt ($unit).val $index).body = [.call actual.1 actual.2] } := by
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+  let c ← `(command| private def $step : { actual : BodyStep ($unit).val $index (resOf ($unit).val $index) //
+      lowStmtL ($unit).val $index (ctxOf ($unit).val $index) (fnAt ($unit).val $index)
+        (resOf ($unit).val $index) (.call ($shape).val.1 ($shape).val.2) = .ok actual } := by
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+  let d ← `(command| private def $ending : { actual : Endblock (declOf ($unit).val)
+      (verOf ($unit).val $index) false (ctxOf ($unit).val $index) ($step).val.1 //
+      lowEnd ($unit).val $index (ctxOf ($unit).val $index) ($step).val.1 (fnAt ($unit).val $index)
+        (fnAt ($unit).val $index).ret = .ok actual } := by
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+  let e ← `(command| private def $name : { actual : PlainFunctionBody ($unit).val $index //
+      lowBody ($unit).val $index (fnAt ($unit).val $index).body (fnAt ($unit).val $index).ret = .ok actual } := by
+    refine ⟨Endblock.cons ($step).val.2 ($ending).val, ?_⟩
+    rw [call_body _ _ _ _ ($shape).property ($step).val ($step).property, ($ending).property] <;> rfl)
+  return ⟨Lean.mkNullNode #[a, b, c, d, e]⟩
+
+scoped macro "ownership_retire_body " name:ident " for " unit:ident " at " number:num : command => do
+  let index := Lean.mkIdentFrom name (name.getId.appendAfter "_index")
+  let shape := Lean.mkIdentFrom name (name.getId.appendAfter "_shape")
+  let step := Lean.mkIdentFrom name (name.getId.appendAfter "_step")
+  let ending := Lean.mkIdentFrom name (name.getId.appendAfter "_end")
+  let ordinal : Lean.TSyntax `term := ⟨number.raw⟩
+  let a ← `(command| private def $index : Fin ($unit).val.fns.length := ⟨$ordinal, by decide +kernel⟩)
+  let b ← `(command| private def $shape : { actual : String //
+      (fnAt ($unit).val $index).body = [.retires actual] } := by
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+  let c ← `(command| private def $step : { actual : BodyStep ($unit).val $index (resOf ($unit).val $index) //
+      lowStmtL ($unit).val $index (ctxOf ($unit).val $index) (fnAt ($unit).val $index)
+        (resOf ($unit).val $index) (.retires ($shape).val) = .ok actual } := by
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+  let d ← `(command| private def $ending : { actual : Endblock (declOf ($unit).val)
+      (verOf ($unit).val $index) false (ctxOf ($unit).val $index) ($step).val.1 //
+      lowEnd ($unit).val $index (ctxOf ($unit).val $index) ($step).val.1 (fnAt ($unit).val $index)
+        (fnAt ($unit).val $index).ret = .ok actual } := by
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+  let e ← `(command| private def $name : { actual : PlainFunctionBody ($unit).val $index //
+      lowBody ($unit).val $index (fnAt ($unit).val $index).body (fnAt ($unit).val $index).ret = .ok actual } := by
+    refine ⟨Endblock.cons ($step).val.2 ($ending).val, ?_⟩
+    rw [retire_body _ _ _ ($shape).property ($step).val ($step).property, ($ending).property] <;> rfl)
+  return ⟨Lean.mkNullNode #[a, b, c, d, e]⟩
+
+scoped macro "ownership_retire_refusal " name:ident " for " unit:ident " at " number:num
+    " with_reason " error:term : command => do
+  let index := Lean.mkIdentFrom name (name.getId.appendAfter "_index")
+  let shape := Lean.mkIdentFrom name (name.getId.appendAfter "_shape")
+  let step := Lean.mkIdentFrom name (name.getId.appendAfter "_step")
+  let ending := Lean.mkIdentFrom name (name.getId.appendAfter "_end")
+  let ordinal : Lean.TSyntax `term := ⟨number.raw⟩
+  let a ← `(command| private def $index : Fin ($unit).val.fns.length := ⟨$ordinal, by decide +kernel⟩)
+  let b ← `(command| private def $shape : { actual : String //
+      (fnAt ($unit).val $index).body = [.retires actual] } := by
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+  let c ← `(command| private def $step : { actual : BodyStep ($unit).val $index (resOf ($unit).val $index) //
+      lowStmtL ($unit).val $index (ctxOf ($unit).val $index) (fnAt ($unit).val $index)
+        (resOf ($unit).val $index) (.retires ($shape).val) = .ok actual } := by
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+  let d ← `(command| private theorem $ending : lowEnd ($unit).val $index (ctxOf ($unit).val $index)
+      ($step).val.1 (fnAt ($unit).val $index) (fnAt ($unit).val $index).ret = .error $error := by cbv)
+  let e ← `(command| private theorem $name : lowBody ($unit).val $index (fnAt ($unit).val $index).body
+      (fnAt ($unit).val $index).ret = .error $error := by
+    rw [retire_body _ _ _ ($shape).property ($step).val ($step).property, ($ending:term)] <;> rfl)
+  return ⟨Lean.mkNullNode #[a, b, c, d, e]⟩
+
+scoped macro "ownership_repeat_refusal " name:ident " for " unit:ident " at " number:num
+    " with_reason " error:term : command => do
+  let index := Lean.mkIdentFrom name (name.getId.appendAfter "_index")
+  let shape := Lean.mkIdentFrom name (name.getId.appendAfter "_shape")
+  let step := Lean.mkIdentFrom name (name.getId.appendAfter "_step")
+  let failed := Lean.mkIdentFrom name (name.getId.appendAfter "_failed")
+  let ordinal : Lean.TSyntax `term := ⟨number.raw⟩
+  let a ← `(command| private def $index : Fin ($unit).val.fns.length := ⟨$ordinal, by decide +kernel⟩)
+  let b ← `(command| private def $shape : { actual : String × String //
+      (fnAt ($unit).val $index).body = [.retires actual.1, .retires actual.2] } := by
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+  let c ← `(command| private def $step : { actual : BodyStep ($unit).val $index (resOf ($unit).val $index) //
+      lowStmtL ($unit).val $index (ctxOf ($unit).val $index) (fnAt ($unit).val $index)
+        (resOf ($unit).val $index) (.retires ($shape).val.1) = .ok actual } := by
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+  let d ← `(command| private theorem $failed : lowStmtL ($unit).val $index (ctxOf ($unit).val $index)
+      (fnAt ($unit).val $index) ($step).val.1 (.retires ($shape).val.2) = .error $error := by cbv)
+  let e ← `(command| private theorem $name : lowBody ($unit).val $index (fnAt ($unit).val $index).body
+      (fnAt ($unit).val $index).ret = .error $error :=
+    repeated_body _ _ _ _ _ ($shape).property ($step).val ($step).property $failed)
+  return ⟨Lean.mkNullNode #[a, b, c, d, e]⟩
 
 private theorem function_accepted {unit : UProg} {f : Fin unit.fns.length}
     (result : { actual : EnsTy unit f × RumpTy unit f × ReqTy unit f //
@@ -147,18 +288,28 @@ ownership_phase ownOrdinary from Phases.Inputs.ordinaryRetire
 ownership_phase ownHandback from Phases.Inputs.handbackRetire
 ownership_phase ownReason from Phases.Inputs.terminalReasonRetire
 
-ownership_function ownMove0 for ownMove_unit at 0
-ownership_function ownMove1 for ownMove_unit at 1
-ownership_function ownTerminal0 for ownTerminal_unit at 0
-ownership_function ownTerminal1 for ownTerminal_unit at 1
-ownership_refusal ownDropped0 for ownDropped_unit at 0 with_reason "lower: return without produced marks"
-ownership_function ownDropped1 for ownDropped_unit at 1
-ownership_refusal ownRepeated0 for ownRepeated_unit at 0 with_reason "retire without held mark: Marke"
-ownership_function ownRepeated1 for ownRepeated_unit at 1
-ownership_function ownOrdinary0 for ownOrdinary_unit at 0
-ownership_function ownOrdinary1 for ownOrdinary_unit at 1
-ownership_refusal ownHandback0 for ownHandback_unit at 0 with_reason "lower: return without produced marks"
-ownership_function ownReason0 for ownReason_unit at 0
+ownership_call_body moveCaller for ownMove_unit at 1
+ownership_retire_body terminalCallee for ownTerminal_unit at 0
+ownership_call_body terminalCaller for ownTerminal_unit at 1
+ownership_call_body droppedCaller for ownDropped_unit at 1
+ownership_call_body repeatedCaller for ownRepeated_unit at 1
+ownership_call_body ordinaryCaller for ownOrdinary_unit at 1
+ownership_retire_body reasonCallee for ownReason_unit at 0
+ownership_repeat_refusal repeatedCallee for ownRepeated_unit at 0 with_reason "retire without held mark: Marke"
+ownership_retire_refusal handbackCallee for ownHandback_unit at 0 with_reason "lower: return without produced marks"
+
+ownership_function ownMove0 for ownMove_unit at 0 with_body (by refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+ownership_function ownMove1 for ownMove_unit at 1 with_body moveCaller
+ownership_function ownTerminal0 for ownTerminal_unit at 0 with_body terminalCallee
+ownership_function ownTerminal1 for ownTerminal_unit at 1 with_body terminalCaller
+ownership_refusal ownDropped0 for ownDropped_unit at 0 with_reason "lower: return without produced marks" with_body (by cbv)
+ownership_function ownDropped1 for ownDropped_unit at 1 with_body droppedCaller
+ownership_refusal ownRepeated0 for ownRepeated_unit at 0 with_reason "retire without held mark: Marke" with_body repeatedCallee
+ownership_function ownRepeated1 for ownRepeated_unit at 1 with_body repeatedCaller
+ownership_function ownOrdinary0 for ownOrdinary_unit at 0 with_body (by refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+ownership_function ownOrdinary1 for ownOrdinary_unit at 1 with_body ordinaryCaller
+ownership_refusal ownHandback0 for ownHandback_unit at 0 with_reason "lower: return without produced marks" with_body handbackCallee
+ownership_function ownReason0 for ownReason_unit at 0 with_body reasonCallee
 
 -- These finite selectors are formed only after both complete results exist.
 private theorem move_members : ∀ f : Fin ownMove_unit.val.fns.length,
