@@ -84,7 +84,7 @@ theorem stage_counts {source : String} (input : Input source) {items : List SIte
 scoped macro "rights_members " count:term " bounded_by " room:term " with " step:tactic : tactic => `(tactic| (
   rintro ⟨index, bound⟩
   have actualBound := bound
-  rw [$count] at actualBound
+  rw [($count:term)] at actualBound
   dsimp only at actualBound
   have limited : index < 2 := Nat.lt_of_lt_of_le actualBound $room
   have choices : index = 0 ∨ index = 1 := by omega
