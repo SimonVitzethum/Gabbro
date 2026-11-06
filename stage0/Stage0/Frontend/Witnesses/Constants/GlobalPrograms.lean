@@ -369,6 +369,9 @@ private def qualifiedTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitne
   exact congrArg (fun gate => { qualifiedElaboration.val with exportGate := gate })
     qualifiedTextHeader.metadata
 
+-- Let the proved unit equation fire before cbv traverses the complete Source record.
+attribute [local cbv_opaque] qualifiedTextHeader
+
 private theorem qualifiedText_count : qualifiedTextHeader.unit.fns.length = 1 := by
   change qualifiedElaboration.val.fns.length = 1
   rfl
@@ -381,7 +384,6 @@ private theorem qualifiedText_only_main (f : Fin qualifiedTextHeader.unit.fns.le
   change f.val = 0
   omega
 
--- Certify the real dispatcher gates and body before constructing the result triple.
 private theorem qualifiedText_function_header :
     PlainFunctionHeader qualifiedTextHeader.unit qualifiedTextMain := by
   constructor <;> cbv
@@ -450,6 +452,8 @@ private theorem qualifiedText_entry_free (f : Fin qualifiedTextHeader.unit.fns.l
       OldSource.hasEntry = false := by
   have same := qualifiedText_only_main f
   subst f
+  change (OldSource.clauses qualifiedExpansion.val.1
+    (fnAt qualifiedTextHeader.unit qualifiedTextMain).name).any OldSource.hasEntry = false
   cbv
 
 private theorem qualifiedText_restored :
@@ -468,7 +472,10 @@ private def qualifiedTextBody : Body qualifiedTextHeader where
   functions := qualifiedTextFunctions
   main := qualifiedTextMain
   entry := by cbv
-  initializers := by cbv
+  initializers := by
+    change Frontend.checkInitializers qualifiedTextInput.original qualifiedTextHeader.unit = .ok ()
+    rw [qualifiedOriginalPacket.property]
+    cbv
   arrays := (Frontend.checkArrays qualifiedTextHeader.unit qualifiedTextHeader.source.scopes
     qualifiedTextInput.original).toOption.get qualifiedText_arrays_ready
   arrayEq := Gabbro.Grammatik.except_ok_get qualifiedText_arrays_ready
