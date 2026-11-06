@@ -275,7 +275,8 @@ private theorem tagged_scoped_declaration (body : Option STyp)
   try simp only [checks, lockItems, List.map_nil, uSeq, locks, List.foldl_nil,
     Int.zero_add, storage, List.append_nil, List.nil_append, List.all_nil,
     Bool.not_true, Bool.false_eq_true, ite_false]
-  try simp only [replacement, runtimeItems, functions, reasons]
+  try simp only [replacement, runtimeItems, List.filterMap_cons, List.filterMap_nil,
+    functions, reasons]
   simp only [sumGlobs, sumTabs, registers, invariants, stateItems, List.map_nil,
     uSeq, List.length_nil, noDuplicates, Bool.false_eq_true, ite_false, transitions,
     List.any_nil, List.flatMap_nil, pointers, List.range_zero, List.zip_nil_right,
