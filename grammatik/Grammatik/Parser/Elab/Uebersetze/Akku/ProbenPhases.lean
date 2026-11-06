@@ -102,6 +102,8 @@ private theorem core_locks (tabs : List UTab) (heads : List UFnKopf)
       | error _ => rfl
       | ok pair =>
         rcases pair with ⟨code, next⟩
+        simp only [uFoldEndeStmt, expandFoldEnd, uEndeStmt, bind, Except.bind,
+          pure, Except.pure, List.append_nil]
         cases uAnwReihe tabs heads fuel ctx rest <;> rfl
 
 private theorem core_call (tabs : List UTab) (heads : List UFnKopf)

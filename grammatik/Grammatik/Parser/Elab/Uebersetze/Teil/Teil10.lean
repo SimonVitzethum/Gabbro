@@ -250,7 +250,7 @@ def uAnwReiheCore (tabs : List UTab) (koepfe : List UFnKopf) :
       | .ok (xs, cE) => .ok ([UStmt.narrowReqBeg x lo hi] ++ xs, cE)
   | f + 1, ctx, .waive names body :: rest =>
     uBreaking (uAnwReihe tabs koepfe f) ctx names body rest
-  | f + 1, ctx, .locks g lk (.block ss .none) :: rest =>
+  | f + 1, ctx, .locks g lk (.block ss ending) :: rest =>
     if g then .error "shared lock without G form"
     else
       match lk with
@@ -260,10 +260,13 @@ def uAnwReiheCore (tabs : List UTab) (koepfe : List UFnKopf) :
         | .some _ =>
           match uAnwReihe tabs koepfe f { ctx with held := l :: ctx.held } ss with
           | .error e => .error e
-          | .ok (body, _) =>
-            match uAnwReihe tabs koepfe f ctx rest with
+          | .ok (body, ctxB) =>
+            match uFoldEndeStmt ctxB ending with
             | .error e => .error e
-            | .ok (xs, cE) => .ok ([UStmt.lockBeg l] ++ body ++ [UStmt.blkEnd] ++ xs, cE)
+            | .ok endS =>
+              match uAnwReihe tabs koepfe f ctx rest with
+              | .error e => .error e
+              | .ok (xs, cE) => .ok ([UStmt.lockBeg l] ++ body ++ endS ++ [UStmt.blkEnd] ++ xs, cE)
       | _ => .error "lock expression without G form"
   | f + 1, ctx, .cond c (.block ss e) ei els :: rest =>
     uCond (uAnwReihe tabs koepfe f) ctx c ss e ei els rest
@@ -291,6 +294,60 @@ def uAnwReiheCore (tabs : List UTab) (koepfe : List UFnKopf) :
 termination_by fuel _ _ => (fuel, (0 : Nat))
 decreasing_by all_goals exact Prod.Lex.left _ _ (by omega)
 end
+
+/-- Exclusive blocks read their ending in the actual body context, then resume
+    the outer context. The existing shared/expression/name guards are unchanged. -/
+theorem uAnwReiheCore_locks (tabs : List UTab) (koepfe : List UFnKopf) (fuel : Nat)
+    (ctx : UCtx) (shared : Bool) (lock : SExpr) (statements : List SAnw)
+    (ending : Option SEnde) (rest : List SAnw) :
+    uAnwReiheCore tabs koepfe (fuel + 1) ctx (.locks shared lock (.block statements ending) :: rest) =
+      if shared then .error "shared lock without G form"
+      else match lock with
+      | .variable name =>
+        match ctx.locks.find? (fun x => strEq x.name name) with
+        | none => .error ("lock unknown: " ++ name)
+        | some _ =>
+          match uAnwReihe tabs koepfe fuel { ctx with held := name :: ctx.held } statements with
+          | .error error => .error error
+          | .ok (body, bodyCtx) =>
+            match uFoldEndeStmt bodyCtx ending with
+            | .error error => .error error
+            | .ok exits =>
+              match uAnwReihe tabs koepfe fuel ctx rest with
+              | .error error => .error error
+              | .ok (tail, after) => .ok ([.lockBeg name] ++ body ++ exits ++ [.blkEnd] ++ tail, after)
+      | _ => .error "lock expression without G form" := by
+  cases lock <;> simp [uAnwReiheCore]
+
+/-- Compose the actual nested ending without leaking its local context into the rest. -/
+theorem uAnwReihe_locks (tabs : List UTab) (koepfe : List UFnKopf) (fuel : Nat)
+    (ctx : UCtx) (name : String) (statements : List SAnw) (ending : Option SEnde)
+    (rest : List SAnw) (lock : ULock) (body exits tail : List UStmt) (bodyCtx after : UCtx)
+    (found : ctx.locks.find? (fun x => strEq x.name name) = some lock)
+    (bodyOk : uAnwReihe tabs koepfe fuel { ctx with held := name :: ctx.held } statements =
+      .ok (body, bodyCtx))
+    (endOk : uFoldEndeStmt bodyCtx ending = .ok exits)
+    (restOk : uAnwReihe tabs koepfe fuel ctx rest = .ok (tail, after)) :
+    uAnwReihe tabs koepfe (fuel + 1) ctx (.locks false (.variable name) (.block statements ending) :: rest) =
+      .ok ([.lockBeg name] ++ body ++ exits ++ [.blkEnd] ++ tail, after) := by
+  have unchanged : expandFoldStmt ctx (.locks false (.variable name) (.block statements ending)) =
+      .ok ([], ctx, .locks false (.variable name) (.block statements ending)) := rfl
+  rw [uAnwReihe, unchanged]
+  simp only [bind, Except.bind]
+  simp only [uAnwReiheCore_locks, Bool.false_eq_true, ite_false, found, bodyOk, endOk, restOk,
+    pure, Except.pure, List.nil_append]
+
+/-- An invalid ending remains the first error, before any outer rest is read. -/
+theorem uAnwReiheCore_locks_end_error (tabs : List UTab) (koepfe : List UFnKopf) (fuel : Nat)
+    (ctx : UCtx) (name : String) (statements : List SAnw) (ending : Option SEnde)
+    (rest : List SAnw) (lock : ULock) (body : List UStmt) (bodyCtx : UCtx) (error : String)
+    (found : ctx.locks.find? (fun x => strEq x.name name) = some lock)
+    (bodyOk : uAnwReihe tabs koepfe fuel { ctx with held := name :: ctx.held } statements =
+      .ok (body, bodyCtx))
+    (endError : uFoldEndeStmt bodyCtx ending = .error error) :
+    uAnwReiheCore tabs koepfe (fuel + 1) ctx
+      (.locks false (.variable name) (.block statements ending) :: rest) = .error error := by
+  simp only [uAnwReiheCore_locks, Bool.false_eq_true, ite_false, found, bodyOk, endError]
 
 /-- Match dispatch supplies the same recursive reader and predecessor fuel to every arm. -/
 theorem uAnwReiheCore_cases (tabs : List UTab) (koepfe : List UFnKopf) (fuel : Nat)

@@ -393,8 +393,8 @@ theorem reihe_locks (f : Nat) (ctx : UCtx) (L : String) (ss rest : List SAnw) (l
     (h2 : uAnwReihe tabs koepfe f ctx rest = .ok (xs, cE)) :
     uAnwReihe tabs koepfe (f + 1) ctx (.locks false (.variable L) (.block ss none) :: rest) =
       .ok ([.lockBeg L] ++ body ++ [.blkEnd] ++ xs, cE) := by
-  rw [reihe_unexpanded tabs koepfe f ctx _ rest (by rfl)]
-  simp only [uAnwReiheCore, hl, h1, h2, Bool.false_eq_true, ite_false]
+  simpa only [List.append_nil] using
+    (uAnwReihe_locks tabs koepfe f ctx L ss none rest lk body [] xs cB cE hl h1 rfl h2)
 
 theorem reihe_cond (f : Nat) (ctx : UCtx) (c : SExpr) (ss : List SAnw) (els : Option SAnw) (rest : List SAnw)
     (cv : UEns) (body elseS xs : List UStmt) (cB cE : UCtx) (hc : uBool ctx c = .ok cv)
