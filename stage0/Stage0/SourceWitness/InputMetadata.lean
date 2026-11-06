@@ -33,12 +33,23 @@ private theorem source_pipeline_selected :
     produced.bind (fun functions => Konst.ersetzeItems functions sourceOriginal.val))
     sourceCollectionOutput.property
 
--- Normalize the one actual descriptor before its result type becomes a
--- Scalar declaration index. Its fields are inferred from the checked
--- collector result, not copied from the expected source or from prepare.
+-- Fix the actual singleton shape at the canonical collector, using the
+-- already certified primitive scope fields. No stored collector result or
+-- proof-carrying scope getter is evaluated to infer this descriptor.
+private def negativeDescriptorOutput : {actual : UKonstFn //
+    Konst.collectFunctionsWith sourceOriginal.val sourceScopeData.val.1
+      sourceScopeData.val.2.1 = .ok [actual]} := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
+-- Both packets certify the same producer at the same actual environments.
+-- Transport the complete successful list before the descriptor becomes a
+-- Scalar declaration index, without reducing either stored result.
 private def negativeDescriptor : {actual : UKonstFn //
     sourceCollectionOutput.val = [actual]} := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+  refine ⟨negativeDescriptorOutput.val, ?_⟩
+  have collected : Konst.collectFunctionsWith sourceOriginal.val sourceScopeData.val.1
+      sourceScopeData.val.2.1 = .ok sourceCollectionOutput.val := sourceCollected.property
+  exact Except.ok.inj (collected.symm.trans negativeDescriptorOutput.property)
 
 private def negativeFunction :
     {actual : (Sigma fun lo : Int => Sigma fun hi : Int =>
