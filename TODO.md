@@ -130,15 +130,18 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   Zulassung witnesses now build after supplying their canonical local finite axiom equality
   dictionaries; History and Treue also build with distinct local instance names. The later
   Gegenprobe comparison hit its 15-GiB scope's OOM limit without a terminal logical finding;
-  its new source/function/fact certificates are under validation. Lauf.Zeugen remains
-  resource-unmeasured and is being split at the actual consumer-selection phases.
+  the replacement Text, Units, Bodies, Lowering and Facts modules now build, and the complete
+  public Gegenprobe module builds with all original claims. Lauf.Zeugen remains open: selection
+  and the first two functions pass isolated checks; the larger probe closes through the existing
+  checked call-head certificates instead of its former 4-million-heartbeat timeout.
   Tagged's two functionless fixtures now witness the existing no-function refusal and retain
   positive collection coverage on their original inputs. Its complete PayloadProbes and
   InitializerProbes leaves build; the remaining parent still needs a terminal check.
   The complete old-array snapshot/environment witness also builds with its original two-word
   parameter. Fresh goal and Runner audits pass for all 13 and 14 checked sentences, respectively,
   using only standard axioms. Final Stage0 audits remain pending its SourceWitness build;
-  that replay exposed a 100k-limit dependent scope-proof timeout now under repair.
+  the primitive scope-output certificate now builds at the unchanged 100k limit, while the
+  subsequent SourceWitness collector/expansion and concrete header consumers remain under validation.
   Earlier sustained memory-high runs without OOM remain unmeasured;
   the new bounded closure proofs and exact matcher transport have terminal green checks.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
