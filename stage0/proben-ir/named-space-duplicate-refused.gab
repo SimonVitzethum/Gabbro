@@ -1,0 +1,5 @@
+// A second space binder is refused instead of overriding the first.
+module named_space_duplicate {
+table T count 1 space Data space Other { slot { value : u8, } }
+impl fn main() -> u8 effects { pure } { return 42; }
+}

@@ -1,0 +1,8 @@
+// Registering Data does not admit a pointer in an unrelated named space.
+module named_space_unknown {
+table T count 1 space Data { slot { value : u8, } }
+impl fn read(p : ptr<Missing, r> T) -> u8 effects { reads p.slots } {
+    return p.slots[0].value;
+}
+impl fn main() -> u8 effects { pure } { return 42; }
+}

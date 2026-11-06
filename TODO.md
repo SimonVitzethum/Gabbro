@@ -23,7 +23,8 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   The expanded floating regression now separately passes all 1,178 IR images, including 212 additional
   nearest-even tie, subnormal, underflow and signed-overflow cases; the original 966 manifest rows are unchanged.
   The generic Stage-0 statement/image correctness chain through `Stage0.IRBild` builds (2,709 jobs).
-  The native compiler builds (5,403 jobs); three newly compiled float-end sources execute on the assembly
+  The native compiler builds (5,407 jobs), including the real nominal-space lexer/parser path;
+  three newly compiled float-end sources execute on the assembly
   runner with their unchanged expected exits 7/41/107 under the current hardware abstraction.
   The complete existing `proben-ir` source regression passes 218/315 cases: 76 expected executions fail
   compilation and 21 refusal expectations differ. One old width-refusal fixture now compiles through
@@ -82,14 +83,15 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   dispatch equations now pass. The successful-place parser theorem and its direct printed
   assignment/call/emission consumers build. The rights/ownership scanner fragments, individual
   numeric/text certificates and complete source/lexer composition build; pure source spelling
-  equalities use kernel reflexivity. Constants, Rights and Findings now build completely; Ownership
-  remains under repair after default-limit timeouts. Its next replay uses separate actual
-  statement, residual-resource and return certificates before composing body/function results.
+  equalities use kernel reflexivity. Constants, Rights and Findings build completely. Ownership now
+  also builds in a fresh 1,535-job target run, using separate actual statement, residual-resource
+  and return certificates before composing body/function results. All sixteen Ownership witness
+  axiom audits use only the three standard axioms; the default 400k limit is unchanged.
   Their fresh check exposed a producer bug: a table's owner mark was also used as its address space.
   Canonical elaboration now preserves the table producer's space and keeps ownership separate;
   capability guards, sources and claims are unchanged. That producer and the consistent GabbroV
   diagnostic path build. The shared ordinary body-to-function result composition passes a direct
-  Lean check; the complete Ownership replay remains to be measured.
+  Lean check and the complete Ownership replay passes.
   The specification witness builds with its actual outer substitution environment, and all six Dyn
   pass-result packets pass an isolated prefix check for all three fixtures after independent result
   inference and canonical numeral/string-prefix reduction. Shared scanner spelling/fuel composition builds.
@@ -210,10 +212,13 @@ Thus a parser/exporter or an expanded-unit certificate can exist while the origi
   The owner-approved `table ... space Name ...` binder is implemented independently of `owner`;
   the fifth `tableT` field remains the owner and a trailing optional field carries the space.
   AST/parser/printer/size, full item/program roundtrip, registry/elaboration/census and the changed
-  Stage0 Tables/Compiler/IRBild targets build on the integrated snapshot. The concrete
-  `NamedSpaceWitness` still fails: its scanner certificate reaches the kernel limit, followed by
-  dependent typing and phase-composition errors. Its complete source/image and CPU validation
-  remain open. Nominal names imply no physical protection or hardware behavior.
+  Stage0 Tables/Compiler/IRBild targets build on the integrated snapshot. A real source regression
+  exposed the missing lexer keyword/bucket; both and the vocabulary certificate are corrected.
+  The freshly rebuilt native compiler passes all three additional source regressions: locked table
+  write/read executes with exit 42, and duplicate binders and unknown spaces are refused.
+  The original concrete `NamedSpaceWitness` reached the kernel limit and had dependent typing
+  errors; its replacement uses separate scanner/program/image certificates and is under validation.
+  Complete witness/package closure remains open. Nominal names imply no physical protection or hardware behavior.
   Owned `Expr.thruOwn` and `Stmt.assignThruOwn` also use those slot paths with real `lowE_ok`/`lowS_ok` arms;
   the source exporters exist in
   [`UebersetzeAllg/Teil3`](grammatik/Grammatik/Parser/Elab/UebersetzeAllg/Teil3.lean) and

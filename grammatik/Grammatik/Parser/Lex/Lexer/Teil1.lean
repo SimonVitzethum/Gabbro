@@ -31,13 +31,8 @@ inductive LexFehler
   | zahlOhneZiffern : LexFehler
   deriving DecidableEq, Repr
 
-/-- The closed vocabulary: SYNTAX.md vocabulary table plus `kw.rs`
-    (`Kw::text` over `ALLE`). 248 words (`blw`, `free`, `grow`, `pb`, `target` joined the 243 on
-    2026-10-17, found by diffing `kw.rs`); SYNTAX.md prints 239 because
-    five words stand in two rows each (`fields`, `protects`, `rank`,
-    `chain`, `via`) -- the Lean list counts each once. `depends`
-    (the lane-140 register clause) was missing until lane 157
-    caught it through a device probe. -/
+/-- The canonical Lean keyword vocabulary. `space` introduces the nominal
+    table-space binder independently of the linear `owner` binder. -/
 def wortschatz : List String :=
   ["module", "pub", "use", "type", "opaque", "linear", "ghost", "tagged",
    "const", "static", "fn", "spec", "impl", "raw", "divergent", "prim",
@@ -55,7 +50,7 @@ def wortschatz : List String :=
    "interrupt_routing", "arena", "capacity", "alloc", "reset",
    "translator", "for", "format", "table", "slot", "invariant", "reason",
    "state", "transition", "device", "reg", "class", "w1c", "rc", "fields",
-   "bank", "at", "stride", "count", "owner", "backed", "mirrors", "from",
+   "bank", "at", "stride", "count", "owner", "space", "backed", "mirrors", "from",
    "depends",
    "assume", "falsifier", "unfalsifiable", "axiom", "lock", "rcu",
    "observes", "reclaims", "group", "concurrent", "protects", "rank",
@@ -102,7 +97,7 @@ def schluesselTafelC : Char → List (List Char)
   | 'p' => [['p','u','b'], ['p','r','i','m'], ['p','u','b','l','i','s','h','e','s'], ['p','u','r','e'], ['p','r','o','g','r','e','s','s'], ['p','e','r','_','p','a','s','s'], ['p','t','r'], ['p','a','y','l','o','a','d'], ['p','r','o','f','i','l','e'], ['p','r','o','t','e','c','t','s'], ['p','r','e','s','e','r','v','e','s'], ['p','e','r'], ['p','o','r','t'], ['p','a','r','e','n','t'], ['p','b']]
   | 'q' => [['q','u','e','u','e']]
   | 'r' => [['r','a','w'], ['r','e','q','u','i','r','e','s'], ['r','e','f','i','n','e','s'], ['r','e','a','d','s'], ['r','e','t','r','y'], ['r','e','t','u','r','n'], ['r','e','m','o','v','e'], ['r','e','l','a','b','e','l'], ['r','e','s','u','l','t'], ['r','e','t','u','r','n','s'], ['r'], ['r','w'], ['r','o','u','n','d','i','n','g'], ['r','e','s','e','t'], ['r','e','a','s','o','n'], ['r','e','g'], ['r','c'], ['r','c','u'], ['r','e','c','l','a','i','m','s'], ['r','a','n','k'], ['r','e','t','i','r','e','s'], ['r','e','s','e','r','v','e','d'], ['r','u','n','s'], ['r','e','l','e','a','s','e'], ['r','e','l','a','x','e','d'], ['r','e','g','s'], ['r','e','a','c','h','e','s'], ['r','o','u','n','d','e','d']]
-  | 's' => [['s','t','a','t','i','c'], ['s','p','e','c'], ['s','e','c','t','i','o','n'], ['s','l','o','t'], ['s','t','a','t','e'], ['s','t','r','i','d','e'], ['s','e','q'], ['s','h','a','r','e','d'], ['s','c','a','l','e'], ['s','y','s','c','a','l','l'], ['s','t','a','c','k'], ['s','t','e','p'], ['s','l','o','t','s'], ['s','i','b','l','i','n','g'], ['s','i','z','e','o','f']]
+  | 's' => [['s','t','a','t','i','c'], ['s','p','e','c'], ['s','p','a','c','e'], ['s','e','c','t','i','o','n'], ['s','l','o','t'], ['s','t','a','t','e'], ['s','t','r','i','d','e'], ['s','e','q'], ['s','h','a','r','e','d'], ['s','c','a','l','e'], ['s','y','s','c','a','l','l'], ['s','t','a','c','k'], ['s','t','e','p'], ['s','l','o','t','s'], ['s','i','b','l','i','n','g'], ['s','i','z','e','o','f']]
   | 't' => [['t','y','p','e'], ['t','a','g','g','e','d'], ['t','o'], ['t','r','a','v','e','r','s','e'], ['t','o','u','c','h','e','s'], ['t','r','a','n','s','l','a','t','o','r'], ['t','a','b','l','e'], ['t','r','a','n','s','i','t','i','o','n'], ['t','r','e','e'], ['t','h','r','e','a','d','s'], ['t','r','u','e'], ['t','a','r','g','e','t']]
   | 'u' => [['u','s','e'], ['u','n','t','i','l'], ['u','n','v','i','s','i','t','e','d'], ['u','p','d','a','t','e'], ['u','n','f','a','l','s','i','f','i','a','b','l','e'], ['u','8'], ['u','1','6'], ['u','3','2'], ['u','6','4']]
   | 'v' => [['v','e','c','t','o','r'], ['v','i','a']]

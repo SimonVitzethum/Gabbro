@@ -30,7 +30,7 @@ theorem lex_total (s : String) : ∃ r, lex s = r :=
 set_option maxRecDepth 100000
 
 /-- Every word of the closed vocabulary table lexes as its keyword
-    token, checked by `decide` over the whole 248-word list. The
+    token, checked by `decide` over the whole vocabulary list. The
     raised recursion depth above is the price of the whole-table
     check (the default depth fails). -/
 theorem lex_keywords :
@@ -48,6 +48,11 @@ theorem lex_keywords_zeuge :
 /-- A non-table word lexes as an identifier, not a keyword. -/
 theorem lex_ident_beispiel :
     lex "konto" = .ok [Token.ident "konto", Token.ende] := by
+  decide
+
+/-- The source table-space header reaches the parser's keyword arm. -/
+theorem lex_table_space :
+    lex "space Data" = .ok [Token.wort "space", Token.ident "Data", Token.ende] := by
   decide
 
 /-- Hex and binary literals with `_` separators take their value. -/
