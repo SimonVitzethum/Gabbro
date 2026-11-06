@@ -176,10 +176,57 @@ private theorem checked_scope_meaning (items : List SItemTief)
         exact meaning
       · exact discovery order produced
 
+-- Read only primitive scope fields before any SourceTail equality transport.
+-- These are the actual discovery outputs, not a conservative prepare snapshot.
+private abbrev ScopeData :=
+  List (String × Int) × List (String × (Int × Int)) × List UKonstFn
+
+private def sourceScopeData : {actual : ScopeData //
+    (sourceScopes.val.scope.values, sourceScopes.val.scope.types,
+      sourceScopes.val.scope.functions) = actual} := by
+  refine ⟨(?values, ?types, ?functions), ?produced⟩
+  case produced => cbv <;> exact Eq.refl _
+
+private theorem source_values : sourceScopes.val.scope.values = sourceScopeData.val.1 :=
+  congrArg Prod.fst sourceScopeData.property
+private theorem source_types : sourceScopes.val.scope.types = sourceScopeData.val.2.1 :=
+  congrArg (fun data : ScopeData => data.2.1) sourceScopeData.property
+
+private theorem source_has_const : sourceOriginal.val.any
+    (fun | .fnT signature _ => strEq signature.art "const" | _ => false) = true := by cbv
+
+-- Close the collector and substitution independently. Both certificates keep
+-- the original declarations and all unused/original metadata obligations.
+private def sourceCollected : {actual : List UKonstFn //
+    Konst.collectFunctionsWith sourceOriginal.val sourceScopeData.val.1
+      sourceScopeData.val.2.1 = .ok actual} := by
+  refine ⟨?actual, ?produced⟩
+  case produced => cbv <;> exact Eq.refl _
+
+private def sourceReplaced : {actual : List SItemTief //
+    Konst.ersetzeItems sourceCollected.val sourceOriginal.val = .ok actual} := by
+  refine ⟨?actual, ?produced⟩
+  case produced => cbv <;> exact Eq.refl _
+
+private theorem source_runtime_metadata :
+    ExportMetadata.check (Konst.ohneKonst sourceOriginal.val) = .ok () := by cbv
+
+private theorem source_replaced_metadata :
+    Konst.checkErsetzt sourceOriginal.val sourceReplaced.val = .ok () := by cbv
+
+private theorem source_pipeline :
+    Konst.konstErsetzePipeline sourceOriginal.val = .ok sourceReplaced.val := by
+  rw [Konst.konstErsetzePipeline_from_scopes sourceOriginal.val sourceScopes.val
+    source_has_const sourceScopes.property]
+  simpa only [source_values, source_types, sourceCollected.property, bind, Except.bind] using
+    sourceReplaced.property
+
 private theorem source_metadata : Konst.checkSourceMetadata sourceOriginal.val = .ok () := by
   rw [Konst.checkSourceMetadata_from_scopes sourceOriginal.val sourceScopes.val
-    (by cbv) sourceScopes.property]
-  cbv
+    source_has_const sourceScopes.property]
+  simp only [source_values, source_types, sourceCollected.property, bind, Except.bind,
+    sourceReplaced.property, source_runtime_metadata, source_replaced_metadata]
+
 private theorem source_aliases :
     sourceOriginal.val.all (Frontend.checkAliasMeaning sourceScopes.val.scope.types) = true :=
   (Bool.and_eq_true_iff.mp (checked_scope_meaning _ _ sourceScopes.property)).1
@@ -192,28 +239,106 @@ private def sourceTail : SourceTail sourceInput :=
     source_metadata sourceOrder.val sourceOrder.property sourceScopes.val sourceScopes.property
     source_aliases source_constants
 
-private def sourceHeader : Header text := by
-  refine {
-    source := sourceFrom sourceInput sourceTail
-    sourceEq := sourceFrom_eq sourceInput sourceTail
-    expanded := ?expanded
-    requirements := ?requirements
-    expansion := ?expansion
-    constants := ?constants
-    ordinary := by
-      change sourceInput.original.any Frontend.expansionHeader = false
-      rw [sourceOriginal.property]
-      cbv
-    metadata := sourceTail.metadata
-    candidate := ?candidate
-    elaborated := ?elaborated }
-  case expansion => cbv <;> exact Eq.refl _
-  case constants =>
-    change Konst.checkSourceConstants sourceInput.original = .ok ()
-    unfold Konst.checkSourceConstants
-    split
-    · exact sourceTail.metadata
-    · rfl
-  case elaborated => cbv <;> exact Eq.refl _
+-- Eliminate the original-list equality at a symbolic input first. Successful
+-- discovery is deterministic, so the complete tail retains these same fields.
+-- No concrete cast or SourceTail proof is unfolded by a later projection.
+private theorem original_scope_fields {text : String} (input : SourceInput text)
+    (items : List SItemTief) (origin : input.original = items) (tail : SourceTail input)
+    (derived : Frontend.DerivedScopes items)
+    (produced : Frontend.elaborateConstantScopes items = .ok derived) :
+    ((sourceFrom input tail).scopes.values, (sourceFrom input tail).scopes.types,
+      (sourceFrom input tail).scopes.functions) =
+    (derived.scope.values, derived.scope.types, derived.scope.functions) := by
+  cases origin
+  have same : tail.derived = derived := Except.ok.inj (tail.elaborated.symm.trans produced)
+  cases same
+  rfl
+
+private theorem source_scope_fields :
+    ((sourceFrom sourceInput sourceTail).scopes.values,
+      (sourceFrom sourceInput sourceTail).scopes.types,
+      (sourceFrom sourceInput sourceTail).scopes.functions) = sourceScopeData.val :=
+  (original_scope_fields sourceInput sourceOriginal.val sourceOriginal.property
+    sourceTail sourceScopes.val sourceScopes.property).trans sourceScopeData.property
+
+private def sourcePrepared : {actual : List SItemTief //
+    pre108 sourceInput.prepared.elaborierbar = actual} := by
+  refine ⟨?actual, ?produced⟩
+  case produced => cbv <;> exact Eq.refl _
+
+private abbrev HeaderData := List SItemTief × ScopeData
+private def sourceHeaderData : HeaderData := (sourcePrepared.val, sourceScopeData.val)
+
+private theorem source_header_data :
+    (pre108 (sourceFrom sourceInput sourceTail).prepared.elaborierbar,
+      (sourceFrom sourceInput sourceTail).scopes.values,
+      (sourceFrom sourceInput sourceTail).scopes.types,
+      (sourceFrom sourceInput sourceTail).scopes.functions) = sourceHeaderData :=
+  congrArg2 Prod.mk sourcePrepared.property source_scope_fields
+
+-- Infer the complete expansion pair and complete selected UProg independently
+-- before Header introduces any dependent fields or synthetic result metavariables.
+private def sourceExpansion : {actual : List SItemTief × List (STyp × String) //
+    Modules.prepare sourceHeaderData.1 = .ok actual} := by
+  refine ⟨?actual, ?produced⟩
+  case produced => cbv <;> exact Eq.refl _
+
+-- The canonical elaborator revisits the original const pass. Reuse its exact
+-- checked result instead of reopening the dependency/scope discovery graph.
+attribute [local cbv_opaque] Konst.konstErsetzePipeline Konst.checkSourceMetadata
+attribute [local cbv_eval] source_pipeline source_metadata
+
+private def sourceElaboration : {actual : UProg //
+    ((Frontend.elabWithScopes sourceHeaderData.1 sourceHeaderData.2.1
+      sourceHeaderData.2.2.1 sourceHeaderData.2.2.2
+      (Frontend.tableWithEmpty sourceHeaderData.2.1 sourceHeaderData.2.2.1)).bind
+        (Profil.selectUnit {})) = .ok actual} := by
+  refine ⟨?actual, ?produced⟩
+  case produced =>
+    unfold Frontend.elabWithScopes
+    rw [show expandU sourceHeaderData.1 = .ok sourceExpansion.val from sourceExpansion.property]
+    dsimp only [bind, Except.bind]
+    cbv <;> exact Eq.refl _
+
+private theorem source_expansion :
+    Modules.prepare (pre108 (sourceFrom sourceInput sourceTail).prepared.elaborierbar) =
+      .ok sourceExpansion.val :=
+  (congrArg (fun data : HeaderData => Modules.prepare data.1) source_header_data).trans
+    sourceExpansion.property
+
+private theorem source_elaborated :
+    ((Frontend.elabWithScopes (pre108 (sourceFrom sourceInput sourceTail).prepared.elaborierbar)
+      (sourceFrom sourceInput sourceTail).scopes.values
+      (sourceFrom sourceInput sourceTail).scopes.types
+      (sourceFrom sourceInput sourceTail).scopes.functions
+      (Frontend.tableWithEmpty (sourceFrom sourceInput sourceTail).scopes.values
+        (sourceFrom sourceInput sourceTail).scopes.types)).bind (Profil.selectUnit {})) =
+      .ok sourceElaboration.val :=
+  (congrArg (fun data : HeaderData =>
+    (Frontend.elabWithScopes data.1 data.2.1 data.2.2.1 data.2.2.2
+      (Frontend.tableWithEmpty data.2.1 data.2.2.1)).bind (Profil.selectUnit {}))
+    source_header_data).trans sourceElaboration.property
+
+private theorem source_constant_gate : Konst.checkSourceConstants sourceInput.original = .ok () := by
+  unfold Konst.checkSourceConstants
+  split
+  · exact sourceTail.metadata
+  · rfl
+
+private theorem source_ordinary_gate : sourceInput.original.any Frontend.expansionHeader = false := by
+  rw [sourceOriginal.property]
+  cbv
+
+private def sourceHeader : Header text where
+  source := sourceFrom sourceInput sourceTail
+  sourceEq := sourceFrom_eq sourceInput sourceTail
+  expanded := sourceExpansion.val.1
+  requirements := sourceExpansion.val.2
+  expansion := by exact source_expansion
+  constants := by exact source_constant_gate
+  ordinary := by exact source_ordinary_gate
+  metadata := by exact sourceTail.metadata
+  candidate := sourceElaboration.val
+  elaborated := by exact source_elaborated
 
 end Gabbro.Stage0.SourceWitness
