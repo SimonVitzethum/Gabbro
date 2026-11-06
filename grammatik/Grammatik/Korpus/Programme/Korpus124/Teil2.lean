@@ -152,11 +152,35 @@ def kSp : Speicher kD := ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g =>
 /-- **`beispiele/124` as ONE declaration**: code `kP`, lock invariant `kSI`,
     no axiom, declared starts `hauptA` and `hauptB` (no parameters), initial
     memory all zero. -/
-def kE : Zielsatz.Einheit kD := ⟨kP, kSI, axWahr kD, [⟨kHauptA, .nil⟩, ⟨kHauptB, .nil⟩], kSp, [], []⟩
+def kE : Zielsatz.Einheit kD where
+  P := kP
+  S := kSI
+  Q := axWahr kD
+  starts := [⟨kHauptA, .nil⟩, ⟨kHauptB, .nil⟩]
+  sp0 := kSp
+  gestartet := []
+  arenen := []
+  akku := []
+  pruefungen := []
+  grants0 := []
+
+/-- Every admitted pointer uses its target's actual pre/post contract. The
+    nontrivial requirements of `setze` and `pruefeA` are retained, not proved
+    unconditionally from the old trivial interface. -/
+private theorem corpus_pointer_contracts : PtrVerfeinert kP := by
+  intro f n hf
+  have signature : kSigOf f = n := by
+    change decide (kSigOf f = n) = true at hf
+    exact of_decide_eq_true hf
+  subst n
+  cases f <;> constructor
+  all_goals first
+    | (intro entry arguments accepted; exact accepted)
+    | (intro entry current arguments value _ returned; exact returned)
 
 theorem kE_nutzerPflicht : Zielsatz.NutzerPflicht kE :=
   ⟨⟨fun passes f => ⟨kP_koerper_alle passes f, kP_inv_alle passes f,
-      invGutGrund_ohneGrund (by cases f <;> rfl)⟩, kSI_ok.2, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩,
+      invGutGrund_ohneGrund (by cases f <;> rfl)⟩, kSI_ok.2, axEnsLokal_wahr, corpus_pointer_contracts⟩,
     ⟨fun L => by cases L; decide, fun a ha => by
       simp only [kE, List.append_nil, List.mem_cons, List.not_mem_nil, or_false] at ha
       rcases ha with rfl | rfl <;> rfl⟩⟩
@@ -175,8 +199,9 @@ theorem kO_lokal : RegLokal kO := ⟨(fun r _ _ _ => nomatch r), (fun g _ _ _ =>
 theorem kO_hw [RootNativeFloat.Hardware] : Zielsatz.HardwareAnnahmen kO kE.Q :=
   ⟨kO_gut, kO_lokal, axVertragO_wahr kO, inferInstance⟩
 
-theorem kE_akzeptiert : akzeptiert_pruefer.akzeptiert kE kFs [()] kCs = true :=
-  (by show Akzeptiert kP kSI kFs [()] kCs [kHauptA, kHauptB] [] = true; exact kP_akzeptiert)
+theorem kE_akzeptiert : akzeptiert_pruefer.akzeptiert kE kFs [()] kCs = true := by
+  rw [akzeptiert_pruefer_eq]
+  exact kP_akzeptiert
 
 /-- **The goal theorem on `beispiele/124`**: for every oracle meeting (c), every
     budget, every runtime start meeting (d), and every reachable machine of

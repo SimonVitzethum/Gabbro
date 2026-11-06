@@ -59,7 +59,17 @@ def kSp : Speicher kD := ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g =>
 /-- **`beispiele/59` as ONE declaration**: code `kP`, lock family `kSI`,
     no axiom, declared starts `takt_verteiler` and `ruf_verteiler` (the two
     entry dispatch roots, no parameters), initial memory all zero. -/
-def kE : Zielsatz.Einheit kD := ⟨kP, kSI, axWahr kD, [⟨kTaktVert, .nil⟩, ⟨kRufVert, .nil⟩], kSp, [], []⟩
+def kE : Zielsatz.Einheit kD where
+  P := kP
+  S := kSI
+  Q := axWahr kD
+  starts := [⟨kTaktVert, .nil⟩, ⟨kRufVert, .nil⟩]
+  sp0 := kSp
+  gestartet := []
+  arenen := []
+  akku := []
+  pruefungen := []
+  grants0 := []
 
 theorem korpus59_nutzer : Zielsatz.NutzerPflicht kE :=
   ⟨⟨fun passes f => ⟨kP_koerper_alle passes f, kP_inv_alle passes f,
@@ -82,8 +92,9 @@ theorem kO_lokal : RegLokal kO := ⟨(fun r _ _ _ => nomatch r), (fun g _ _ _ =>
 theorem kO_hw [RootNativeFloat.Hardware] : Zielsatz.HardwareAnnahmen kO kE.Q :=
   ⟨kO_gut, kO_lokal, axVertragO_wahr kO, inferInstance⟩
 
-theorem kE_akzeptiert : akzeptiert_pruefer.akzeptiert kE kFs [KLock.takt, KLock.ring] kCs = true :=
-  (by show Akzeptiert kP kSI kFs [KLock.takt, KLock.ring] kCs [kTaktVert, kRufVert] [] = true; exact kP_akzeptiert)
+theorem kE_akzeptiert : akzeptiert_pruefer.akzeptiert kE kFs [KLock.takt, KLock.ring] kCs = true := by
+  rw [akzeptiert_pruefer_eq]
+  exact kP_akzeptiert
 
 /-- **The goal theorem on `beispiele/59`**: for every oracle meeting (c), every
     budget, every runtime start meeting (d), and every reachable machine of
