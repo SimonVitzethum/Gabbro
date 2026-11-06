@@ -91,11 +91,13 @@ impl fn f()
 /-- The accepted unit. -/
 def src : String := quelle "writes T.slots" "T"
 
+private def allTables (unit : UProg) : List (declOf unit).Tab := List.finRange unit.tabs.length
+
 /-- The core checker on what the pipeline makes of a text (`false` when the pipeline refuses it). -/
 def akzeptiertText (s : String) : Bool :=
   match uebersetzeAllg s with
   | .ok ⟨u, P, fs⟩ =>
-    Akzeptiert P ⟨fun _ => [], fun _ _ => true⟩ fs [] ((List.finRange u.tabs.length).map Sum.inl) fs
+    Akzeptiert P ⟨fun _ => [], fun _ _ => true⟩ fs [] ((allTables u).map Sum.inl) fs
   | .error _ => false
 
 -- These cuts carry equations of the existing scanner, with arbitrary suffixes.
@@ -140,7 +142,7 @@ private def functionChunk : Chunk where
 private def writesChunk : Chunk where
   characters := "writes T.slots ".toList
   tokens := [.wort "writes", .ident "T", .zeichen ".", .wort "slots"]
-  steps := 5
+  steps := 6
   scanned := by intro rest remaining; cbv
 
 private def pureChunk : Chunk where
@@ -188,7 +190,11 @@ private theorem source_characters (writes provider : Bool) :
 
 private theorem source_lexed (writes provider : Bool) :
     lexL (characters (sourceChunks writes provider)) = .ok (tokens (sourceChunks writes provider)) :=
-  lex_chunks _ (by cases writes <;> cases provider <;> cbv <;> omega)
+  lex_chunks _ (by
+    cases writes <;> cases provider <;>
+      simp only [sourceChunks, Bool.true_eq_true, Bool.false_eq_true, reduceIte,
+        steps, characters, List.flatMap_cons, List.flatMap_nil, List.length_append,
+        List.length_nil] <;> cbv <;> omega)
 
 -- Select only the operation used by this body from the canonical fuel record.
 attribute [local cbv_opaque] lowStufe lowSeqL lowStructL uFloatLimit
@@ -202,7 +208,7 @@ private def observed (unit : UProg) : Bool :=
 private def checkedImage (unit : UProg)
     (image : Programm (declOf unit) × List (declOf unit).Fn) : Prop :=
   Akzeptiert image.1 ⟨fun _ => [], fun _ _ => true⟩ image.2 []
-    ((List.finRange unit.tabs.length).map Sum.inl) image.2 = true
+    ((allTables unit).map Sum.inl) image.2 = true
 
 /-- The checker certificate is attached to actual function results before assembly projects them. -/
 private structure RegionFacts (unit : UProg) : Prop where
@@ -384,6 +390,7 @@ theorem region_akzeptiert : akzeptiertText src = true := by
 theorem alloc_ohne_anbieter : akzeptiertText (quelle "writes T.slots" "U") = false := by
   obtain ⟨items, error, parsed, elaborated⟩ := elab_refused
   have rejected := pipeline_elab_error parsed elaborated
+  simp only [Bool.true_eq_true, Bool.false_eq_true, reduceIte] at rejected
   unfold akzeptiertText
   rw [rejected]
 
@@ -391,6 +398,7 @@ theorem alloc_ohne_anbieter : akzeptiertText (quelle "writes T.slots" "U") = fal
 theorem schreiben_ohne_recht : akzeptiertText (quelle "pure" "T") = false := by
   obtain ⟨items, unit, error, parsed, elaborated, lowered⟩ := write_refused
   have rejected := pipeline_lower_error parsed elaborated lowered
+  simp only [Bool.true_eq_true, Bool.false_eq_true, reduceIte] at rejected
   unfold akzeptiertText
   rw [rejected]
 
