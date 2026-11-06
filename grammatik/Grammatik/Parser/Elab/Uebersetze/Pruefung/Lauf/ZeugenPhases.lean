@@ -7,6 +7,7 @@ import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Boden
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Units
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Calls
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Heads
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Assembly
 import all Grammatik.Parser.Elab.UebersetzeAllg3.TransitionCert
 import all Grammatik.Parser.Elab.UebersetzeAllg.Teil1
@@ -110,6 +111,48 @@ private abbrev FunctionType (index : Fin unit.fns.length) :=
   EnsTy unit index × RumpTy unit index × ReqTy unit index
 
 private def index0 : Fin unit.fns.length := ⟨0, by change 0 < 6; decide⟩
+
+private def reportIndex : Fin unit.fns.length := ⟨2, by change 2 < 6; decide⟩
+
+private theorem retiring_call_data : CheckCallUnit unit := by
+  have headers : unit.fns.all (fun fn =>
+      decide (fn.boden = none ∧ fn.leiht = [] ∧ fn.bewegt = [] ∧ fn.praegt = [])) = true := by cbv
+  exact ⟨rfl, rfl, rfl, fun fn member =>
+    of_decide_eq_true (List.all_eq_true.mp headers fn member)⟩
+
+private theorem retiring_call_ready (caller callee : Fin unit.fns.length)
+    (Λ : List (Res (declOf unit))) (takes : (fnAt unit callee).nimmt = []) :
+    CheckCallGuards unit caller callee Λ :=
+  check_unit_call_ready unit retiring_call_data caller callee Λ takes
+
+-- The original gate/report calls use the same complete checked head as the
+-- source fixture. Close its guards before entering the dependent arguments.
+private theorem retiring_gate_call (caller : Fin unit.fns.length)
+    (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf unit))) (source : List UArg) :
+    lowRufKopf unit caller Γ fn Λ "g" source =
+      (lowCallArgsAuxL unit caller Γ fn Λ (fnAt unit index0).kinds
+        ((fnAt unit index0).params.map (·.2)) source).map
+        (fun arguments => check_call_head unit caller index0 Γ Λ
+          (check_arguments_cast unit Γ Λ (params_eq unit index0) arguments)
+          (retiring_call_ready caller index0 Λ rfl)) := by
+  have found : fnIdx unit.fns "g" = .ok index0 := by cbv
+  exact check_call_phase unit caller index0 Γ fn Λ "g" source found
+    (retiring_call_ready caller index0 Λ rfl)
+
+private theorem retiring_report_call (caller : Fin unit.fns.length)
+    (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf unit))) (source : List UArg) :
+    lowRufKopf unit caller Γ fn Λ "p#report#0" source =
+      (lowCallArgsAuxL unit caller Γ fn Λ (fnAt unit reportIndex).kinds
+        ((fnAt unit reportIndex).params.map (·.2)) source).map
+        (fun arguments => check_call_head unit caller reportIndex Γ Λ
+          (check_arguments_cast unit Γ Λ (params_eq unit reportIndex) arguments)
+          (retiring_call_ready caller reportIndex Λ rfl)) := by
+  have found : fnIdx unit.fns "p#report#0" = .ok reportIndex := by cbv
+  exact check_call_phase unit caller reportIndex Γ fn Λ "p#report#0" source found
+    (retiring_call_ready caller reportIndex Λ rfl)
+
+attribute [local cbv_opaque] lowRufKopf
+attribute [local cbv_eval] retiring_gate_call retiring_report_call
 
 private def function0 : {result : FunctionType index0 //
     lowerFnAt unit index0 = .ok result} := by
