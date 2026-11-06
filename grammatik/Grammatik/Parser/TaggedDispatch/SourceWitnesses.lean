@@ -42,7 +42,7 @@ import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
 import all Grammatik.Parser.Elab.Generic.StaticConformance
-import Grammatik.Parser.Elab.UebersetzeAllg3.Rest2
+public import Grammatik.Parser.Elab.UebersetzeAllg3.Rest2
 import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
