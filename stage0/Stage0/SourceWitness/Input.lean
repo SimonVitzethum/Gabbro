@@ -98,6 +98,26 @@ private def sourceOrder : { actual : Frontend.AliasOrder sourceOriginal.val //
     Frontend.orderAliases sourceOriginal.val = .ok actual } := by
   refine ⟨?_, by cbv <;> exact Eq.refl _⟩
 
+private def sourcePreparation : { actual : Frontend.Prepared //
+    Frontend.prepare sourceOriginal.val = actual } := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
+private def sourceDependencies :
+    { actual : List (Frontend.DependencyName × List Frontend.DependencyName) //
+      Frontend.dependencyDeclarations sourceOriginal.val = actual } := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
+private theorem source_preparation : Frontend.prepare sourceOriginal.val = sourcePreparation.val :=
+  sourcePreparation.property
+private theorem source_dependencies :
+    Frontend.dependencyDeclarations sourceOriginal.val = sourceDependencies.val :=
+  sourceDependencies.property
+
+-- Discovery revisits the same original declarations. Retain their actual
+-- preparation and graph rather than recomputing either inside each callback.
+attribute [local cbv_opaque] Frontend.prepare Frontend.dependencyDeclarations
+attribute [local cbv_eval] source_preparation source_dependencies
+
 private def sourceScopes : { actual : Frontend.DerivedScopes sourceOriginal.val //
     Frontend.elaborateConstantScopes sourceOriginal.val = .ok actual } := by
   refine ⟨?_, by cbv <;> exact Eq.refl _⟩
