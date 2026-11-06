@@ -27,15 +27,16 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   and the shared checked scope/cost producers;
   three newly compiled float-end sources execute on the assembly
   runner with their unchanged expected exits 7/41/107 under the current hardware abstraction.
-  The refreshed complete `proben-ir` source regression passes 235/320 cases: 164 actual executions
-  and 71 expected refusals. Seventy expected executions fail compilation and fifteen refusal
-  expectations differ. The previous baseline was 218/315. One old width-refusal fixture now compiles through
-  the existing verified multiword-sum path and executes with its expected exit 42; the other 14
-  differences remain refusals. No executed case has a wrong exit code. Open source
+  The refreshed complete `proben-ir` source regression passes 242/320 cases: 167 actual executions
+  and 75 expected refusals. Sixty-eight expected executions fail compilation and ten refusal
+  diagnostics differ. Earlier baselines were 218/315 and 235/320. The obsolete width refusal is
+  retained as a positive regression: the verified multiword-sum path executes with exit 42.
+  All ten remaining diagnostic differences still refuse. No executed case has a wrong exit code. Open source
   boundaries include alias constants, cost/proof metadata, atomic declarations and scoped-return admission;
   these tests are not a measurement of complete language coverage. Refusal expectations have not been relaxed.
-  In that run, 28 of the 70 compilation failures stop at the unbound `assumT` gate, 15 at `main`'s
-  type/proof/header binding, five at lock statements, five at atomic declarations and four at cost bindings.
+  In that run, 28 of the 68 compilation failures stop at the unbound `assumT` gate, 15 at `main`'s
+  type/proof/header binding, eight at physical scoped-return IR admission, five at atomic declarations
+  and four at runtime-cost bindings.
   All four existing source I/O probes currently refuse at the unbound `SItemTief.assumT` source gate;
   the assembly Runner's independently measured I/O/instruction regression remains separate.
   The Lean generator coverage guardian passes with unchanged bounds: 66,448 valid programs and 766
@@ -60,14 +61,14 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   A subsequent source-regression repair shares that checked scope core with the canonical
   const-signature collector, preserving final alias/scalar environments. This new extraction and
   collector connection build through all twelve shared modules, the canonical metadata gate and
-  `Stage0.Compiler`. A fresh focused source/IR regression passes 52/56 alias/const cases, including
-  forward alias and signature bounds. Two accepted cases and the new negative cost case still
-  fail before cost evaluation at the canonical scalar range gate; another expected refusal has
-  a changed final-meaning diagnostic. Concrete constant witness replay remains open. The separate
+  `Stage0.Compiler`. All 56 alias/const source/IR cases now pass, including forward alias and
+  signature bounds, aliased const calls and both actual-entry operation-bound cases. Incomplete
+  scope recovery preserves the canonical range failure, and candidate evaluation carries cost
+  metadata to the mandatory typed call check. Concrete constant witness replay remains open. The separate
   compile-time operation-bound checker now preserves each original cost clause as a typed entry-context
-  certificate. Both call families and the actual replacement path build; native positive/negative
-  regression closure remains open at the earlier range gate. Ordinary runtime-cost metadata still
-  keeps its existing named refusal.
+  certificate. Both call families and the actual replacement path build; the native positive case
+  executes with exit 42 and the negative case refuses at the cost check. Ordinary runtime-cost
+  metadata still keeps its existing named refusal.
   The shared complete compilation packet, hardware-free image phase/geometry theorem and the
   conflicting-profile refusal witness build. Both successful profile and requires-profile images build.
   The aligned-static fixture now also builds end to end with its unchanged sixteen-byte alignment.
@@ -111,6 +112,11 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   The serialized Dyn phase module, complete witness consumer and source/lexer/parser/export
   consumer now build. All freshly audited Dyn witness sentences use only the three standard axioms.
   The repaired region-write Proben40 module also builds with all four original claims.
+  `LibraryWitnesses` now builds in 16 seconds through actual phase certificates; all eleven public
+  witness axiom audits use exactly the three standard axioms. Two previously false print/parse
+  probes now supply the explicit EOF token required by the unchanged statement-reader protocol.
+  The stopped older comparison at that module remains resource-unmeasured, without a terminal
+  logical finding; this does not establish a complete grammar build.
   Earlier sustained memory-high runs without OOM remain unmeasured;
   the new bounded closure proofs and exact matcher transport have terminal green checks.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
@@ -200,6 +206,11 @@ Thus a parser/exporter or an expanded-unit certificate can exist while the origi
   Their scope release is ghost in this simulation; this does not remove the enclosing lock-body refusal.
   Source returns under scopes are exported by
   [`lowRetStmt`/`lowRetEnd`](grammatik/Grammatik/Parser/Elab/UebersetzeAllg3/Returns.lean).
+  The exclusive source reader now accepts optional lock-block endings in the actual body context,
+  while the continuation uses the outer context. Its generic dispatcher and existing empty-ending
+  equations pass direct Lean checks; the inverse reader builds. The fresh inherited-lock source
+  reaches the physical IR refusal instead of failing at source export, and the rank violation
+  again refuses at the unchanged rank gate. Physical cleanup/admission remains open.
   Shared `locks` still fails `Uebersetze/Teil/Teil10` (“shared lock without G form”); RCU declarations fail `itemMetadata`.
   Open: return-capable physical lock cleanup/admission, mode-aware RW/RCU source-to-IR integration and reader-wait liveness.
   **Scoped-return model completion checked (2026-11-05):** `StartScopedEndeG` covers saved answers,
