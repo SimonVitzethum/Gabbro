@@ -169,20 +169,22 @@ private theorem tag_elaborated : Konst.Values.elaborate tagDescriptor = .ok tagF
 
 attribute [local cbv_eval] tag_elaborated
 
+private theorem tag_metadata :
+    Konst.checkSourceMetadata tagTextInput.original = .ok () := by
+  unfold Konst.checkSourceMetadata Konst.konstErsetzePipeline
+  rw [tag_collected]
+  cbv <;> rfl
+
 /-- Certify whole alias/scope constructor results before their dependent meaning projections. -/
 def tagTextTail : SourceTail tagTextInput := by
   refine {
-    metadata := ?metadata
+    metadata := by exact tag_metadata
     order := ?order
     ordered := ?ordered
     derived := ?derived
     elaborated := ?elaborated
     aliases := ?aliases
     constants := ?constants }
-  case metadata =>
-    unfold Konst.checkSourceMetadata Konst.konstErsetzePipeline
-    rw [tag_collected]
-    cbv <;> rfl
   case ordered => cbv <;> exact Eq.refl _
   case elaborated => cbv <;> exact Eq.refl _
   case aliases => cbv
@@ -274,20 +276,22 @@ private theorem text_elaborated : Konst.Values.elaborate textDescriptor = .ok te
 
 attribute [local cbv_eval] text_elaborated
 
+private theorem text_metadata :
+    Konst.checkSourceMetadata stringTextInput.original = .ok () := by
+  unfold Konst.checkSourceMetadata Konst.konstErsetzePipeline
+  rw [text_collected]
+  cbv <;> rfl
+
 /-- Certify whole alias/scope constructor results before their dependent meaning projections. -/
 def stringTextTail : SourceTail stringTextInput := by
   refine {
-    metadata := ?metadata
+    metadata := by exact text_metadata
     order := ?order
     ordered := ?ordered
     derived := ?derived
     elaborated := ?elaborated
     aliases := ?aliases
     constants := ?constants }
-  case metadata =>
-    unfold Konst.checkSourceMetadata Konst.konstErsetzePipeline
-    rw [text_collected]
-    cbv <;> rfl
   case ordered => cbv <;> exact Eq.refl _
   case elaborated => cbv <;> exact Eq.refl _
   case aliases => cbv

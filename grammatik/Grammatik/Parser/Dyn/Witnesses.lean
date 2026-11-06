@@ -110,7 +110,10 @@ private theorem functionBody_of_phase {items : List SItemTief} {name : String} {
       | _ => none) = some body) : functionBody name = .ok body := by
   unfold functionBody
   rw [checked]
-  simp only [bind, Except.bind, found, pure, Except.pure]
+  simp only [bind, Except.bind, pure, Except.pure]
+  exact congrArg (fun answer : Option SAnw => match answer with
+    | some actual => Except.ok actual
+    | none => Except.error "witness.function") found
 
 /-- The real declaration entry point closes both linked implementations into one ordinary sum. -/
 public theorem scene_sum_zeuge :
@@ -246,8 +249,7 @@ public theorem scene_inferred_let_zeuge :
       [.fnT { sample with name := "inferred" }
         (.block [.bind false "s" none (.ext .dyn ["Shape"] [.variable "c"]),
           .bind false "a" none (.call "Shape::area" [.variable "s"])]
-          (some (.ret (some (.variable "a")))))]))
-      .map fun items => items.filterMap fun
+          (some (.ret (some (.variable "a")))))])).map fun items => items.filterMap fun
         | .fnT sig body => if strEq sig.name "inferred" then some body else none
         | _ => none) =
     .ok [.block [.bind false "s" none (.call "GabbroDyn0Case0" [.variable "c"]),
@@ -261,7 +263,7 @@ public theorem scene_inferred_let_zeuge :
 
 /-- Reordered bounds denote one generated type, not two incompatible representations. -/
 public theorem scene_bound_order_zeuge :
-    ((catalog fixture [dynamic, .dyn "Shape" (some "reads Rects , reads Circles } ")])
-      .map (fun cs => cs.length)) = .ok 1 := by cbv
+    ((catalog fixture [dynamic, .dyn "Shape" (some "reads Rects , reads Circles } ")]).map
+      (fun cs => cs.length)) = .ok 1 := by cbv
 
 end Gabbro.Grammatik.Parser.Dyn

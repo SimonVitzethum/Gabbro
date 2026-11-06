@@ -202,20 +202,22 @@ private theorem positive_elaborated :
 
 attribute [local cbv_eval] positive_elaborated
 
+private theorem positive_metadata :
+    Konst.checkSourceMetadata boolTextInput.original = .ok () := by
+  unfold Konst.checkSourceMetadata Konst.konstErsetzePipeline
+  rw [positive_collected]
+  cbv <;> rfl
+
 /-- Certify whole alias/scope constructor results before their dependent meaning projections. -/
 def boolTextTail : SourceTail boolTextInput := by
   refine {
-    metadata := ?metadata
+    metadata := by exact positive_metadata
     order := ?order
     ordered := ?ordered
     derived := ?derived
     elaborated := ?elaborated
     aliases := ?aliases
     constants := ?constants }
-  case metadata =>
-    unfold Konst.checkSourceMetadata Konst.konstErsetzePipeline
-    rw [positive_collected]
-    cbv <;> rfl
   case ordered => cbv <;> exact Eq.refl _
   case elaborated => cbv <;> exact Eq.refl _
   case aliases => cbv
