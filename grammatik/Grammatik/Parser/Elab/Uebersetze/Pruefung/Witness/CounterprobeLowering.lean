@@ -106,6 +106,28 @@ attribute [local cbv_eval] row_nil row_cons core_bind core_call core_set core_co
 
 attribute [local cbv_eval] admission_name_self admission_mark_self
 
+-- These are the three actual mutual branches used below: numeric parameter /
+-- literal, comparison, and Bool variable. Select their canonical equations
+-- rather than reducing the well-founded mutual implementation at a concrete unit.
+attribute [local cbv_eval] lowWertE.eq_def lowCmp.eq_def lowEns.eq_def
+
+-- Construct the complete return at abstract carriers, before any fixture Fn is
+-- substituted. Keep both the real result-type equality and resource permutation.
+private def counterprobe_boolean_end (u : UProg) (caller : Fin u.fns.length)
+    (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (source : UEns)
+    (result : (fnAt u caller).ergTy = some .bool)
+    (read : {term : Expr (declOf u) Γ Λ .bool // lowEns u Γ Λ fn none source = .ok term})
+    (ready : decide (Λ.Perm (verOf u caller).ende) = true) :
+    {ending : Endblock (declOf u) (verOf u caller) false Γ Λ //
+      lowEnd u caller Γ Λ fn (.bool source) = .ok ending} := by
+  let value : ErgExpr (declOf u) Γ Λ (verOf u caller).erg := by
+    rw [show (verOf u caller).erg = (vertragVon (declOf u) caller).erg from rfl,
+      vErg_eq u caller, result]
+    exact ErgExpr.val read.val
+  refine ⟨Endblock.ret value (of_decide_eq_true ready), ?_⟩
+  rw [check_end_bool, check_return_bool]
+  simp only [result, read.property, dif_pos ready, value]
+
 private def sondeIndex0 : Fin sondeUnitMade.val.fns.length :=
   ⟨0, by rw [sonde_function_count]; decide⟩
 private def sondeIndex1 : Fin sondeUnitMade.val.fns.length :=
@@ -223,19 +245,46 @@ private def sondeProbeSampleValue : {side : LowSide sondeUnitMade.val sondeProbe
 private abbrev sondeProbeCtx3 := .int sondeProbeSampleValue.val.range.1 sondeProbeSampleValue.val.range.2 :: sondeProbeCtx2
 private abbrev sondeProbeFn3 := sondeProbeFn2.mitBindung "#checkSample#0" sondeProbeSampleValue.val.range
 
+-- Certify the complete recorded argument list before transporting it to the
+-- declaration's parameter type or constructing the call permission proof.
+private def sondeProbeArguments : {arguments : Args (declOf sondeUnitMade.val)
+      sondeProbeCtx3 sondeProbeResources ((fnAt sondeUnitMade.val sondeIndex3).params.map (·.2)) //
+    lowCallArgsAuxL sondeUnitMade.val sondeIndex2 sondeProbeCtx3 sondeProbeFn3 sondeProbeResources
+      (fnAt sondeUnitMade.val sondeIndex3).kinds ((fnAt sondeUnitMade.val sondeIndex3).params.map (·.2))
+      [.val (.param "#checkSample#0"), .bval (.var "#checkVerdict")] = .ok arguments} := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
 private def sondeProbeHead : {head : RufKopf sondeUnitMade.val sondeIndex2 sondeProbeCtx3 sondeProbeResources //
     lowRufKopf sondeUnitMade.val sondeIndex2 sondeProbeCtx3 sondeProbeFn3 sondeProbeResources
       "p#report#0" [.val (.param "#checkSample#0"), .bval (.var "#checkVerdict")] = .ok head} := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+  refine ⟨check_call_head sondeUnitMade.val sondeIndex2 sondeIndex3 sondeProbeCtx3 sondeProbeResources
+    (check_arguments_cast sondeUnitMade.val sondeProbeCtx3 sondeProbeResources
+      (params_eq sondeUnitMade.val sondeIndex3) sondeProbeArguments.val)
+    (sonde_call_ready sondeIndex2 sondeIndex3 sondeProbeResources rfl), ?_⟩
+  simp only [sonde_report_call, sondeProbeArguments.property, Except.map]
 private theorem sonde_probe_result : (declOf sondeUnitMade.val).erg sondeProbeHead.val.callee = some .bool := by cbv
 private theorem sonde_probe_reason : (declOf sondeUnitMade.val).gruende sondeProbeHead.val.callee = 0 := by cbv
+
+private def sondeProbeAnswer : {term : Expr (declOf sondeUnitMade.val) (.bool :: sondeProbeCtx3)
+      (nach (declOf sondeUnitMade.val) sondeProbeHead.val.callee sondeProbeResources) .bool //
+    lowEns sondeUnitMade.val (.bool :: sondeProbeCtx3)
+      (nach (declOf sondeUnitMade.val) sondeProbeHead.val.callee sondeProbeResources)
+      (sondeProbeFn3.mitTy "#checkReport" .bool) none (.var "#checkReport") = .ok term} := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+private theorem sonde_probe_return_type : (fnAt sondeUnitMade.val sondeIndex2).ergTy = some .bool := by cbv
+private theorem sonde_probe_return_ready :
+    decide ((nach (declOf sondeUnitMade.val) sondeProbeHead.val.callee sondeProbeResources).Perm
+      (verOf sondeUnitMade.val sondeIndex2).ende) = true := by cbv
 
 private def sondeProbeEnding : {ending : Endblock (declOf sondeUnitMade.val) (verOf sondeUnitMade.val sondeIndex2)
       false (.bool :: sondeProbeCtx3) (nach (declOf sondeUnitMade.val) sondeProbeHead.val.callee sondeProbeResources) //
     lowEnd sondeUnitMade.val sondeIndex2 (.bool :: sondeProbeCtx3)
       (nach (declOf sondeUnitMade.val) sondeProbeHead.val.callee sondeProbeResources)
-      (sondeProbeFn3.mitTy "#checkReport" .bool) sondeProbeReturn = .ok ending} := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+      (sondeProbeFn3.mitTy "#checkReport" .bool) sondeProbeReturn = .ok ending} :=
+  counterprobe_boolean_end sondeUnitMade.val sondeIndex2 (.bool :: sondeProbeCtx3)
+    (nach (declOf sondeUnitMade.val) sondeProbeHead.val.callee sondeProbeResources)
+    (sondeProbeFn3.mitTy "#checkReport" .bool) (.var "#checkReport")
+    sonde_probe_return_type sondeProbeAnswer sonde_probe_return_ready
 
 private def sondeProbeCallBody := counterprobe_body_call sondeUnitMade.val sondeIndex2
   sondeProbeCtx3 sondeProbeFn3 sondeProbeResources "#checkReport" "p#report#0"
@@ -285,12 +334,25 @@ private def sondeAdapterHead : {head : RufKopf sondeUnitMade.val sondeIndex4 son
   refine ⟨?_, by cbv <;> exact Eq.refl _⟩
 private theorem sonde_adapter_result : (declOf sondeUnitMade.val).erg sondeAdapterHead.val.callee = some .bool := by cbv
 private theorem sonde_adapter_reason : (declOf sondeUnitMade.val).gruende sondeAdapterHead.val.callee = 0 := by cbv
+private def sondeAdapterAnswer : {term : Expr (declOf sondeUnitMade.val) (.bool :: sondeAdapterCtx)
+      (nach (declOf sondeUnitMade.val) sondeAdapterHead.val.callee sondeAdapterResources) .bool //
+    lowEns sondeUnitMade.val (.bool :: sondeAdapterCtx)
+      (nach (declOf sondeUnitMade.val) sondeAdapterHead.val.callee sondeAdapterResources)
+      (sondeAdapterFn.mitTy "ans" .bool) none (.var "ans") = .ok term} := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+private theorem sonde_adapter_return_type : (fnAt sondeUnitMade.val sondeIndex4).ergTy = some .bool := by cbv
+private theorem sonde_adapter_return_ready :
+    decide ((nach (declOf sondeUnitMade.val) sondeAdapterHead.val.callee sondeAdapterResources).Perm
+      (verOf sondeUnitMade.val sondeIndex4).ende) = true := by cbv
 private def sondeAdapterEnding : {ending : Endblock (declOf sondeUnitMade.val) (verOf sondeUnitMade.val sondeIndex4)
       false (.bool :: sondeAdapterCtx) (nach (declOf sondeUnitMade.val) sondeAdapterHead.val.callee sondeAdapterResources) //
     lowEnd sondeUnitMade.val sondeIndex4 (.bool :: sondeAdapterCtx)
       (nach (declOf sondeUnitMade.val) sondeAdapterHead.val.callee sondeAdapterResources)
-      (sondeAdapterFn.mitTy "ans" .bool) sondeAdapterReturn = .ok ending} := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+      (sondeAdapterFn.mitTy "ans" .bool) sondeAdapterReturn = .ok ending} :=
+  counterprobe_boolean_end sondeUnitMade.val sondeIndex4 (.bool :: sondeAdapterCtx)
+    (nach (declOf sondeUnitMade.val) sondeAdapterHead.val.callee sondeAdapterResources)
+    (sondeAdapterFn.mitTy "ans" .bool) (.var "ans")
+    sonde_adapter_return_type sondeAdapterAnswer sonde_adapter_return_ready
 private def sondeAdapterBody := counterprobe_body_call sondeUnitMade.val sondeIndex4
   sondeAdapterCtx sondeAdapterFn sondeAdapterResources "ans" "ext" [] sondeAdapterReturn
   sondeAdapterHead sonde_adapter_result sonde_adapter_reason sondeAdapterEnding
