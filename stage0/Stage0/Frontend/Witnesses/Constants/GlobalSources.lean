@@ -186,19 +186,19 @@ theorem qualifiedText_prepared :
 
 -- Normalize the actual prepared/pre108/uMembers output before introducing any
 -- AliasOrder or DerivedScopes index. No source declaration is supplied by hand.
-private def qualifiedOriginalPacket :
+def qualifiedOriginalPacket :
     { actual : List SItemTief // qualifiedTextInput.original = actual } := by
   refine ⟨?original, ?produced⟩
   case produced => cbv <;> exact Eq.refl _
 
 -- Infer the complete results at the already normalized, certified source list.
-private def qualifiedOrderPacket :
+def qualifiedOrderPacket :
     { actual : Frontend.AliasOrder qualifiedOriginalPacket.val //
       Frontend.orderAliases qualifiedOriginalPacket.val = .ok actual } := by
   refine ⟨?actual, ?produced⟩
   case produced => cbv <;> exact Eq.refl _
 
-private def qualifiedScopesPacket :
+def qualifiedScopesPacket :
     { actual : Frontend.DerivedScopes qualifiedOriginalPacket.val //
       Frontend.elaborateConstantScopes qualifiedOriginalPacket.val = .ok actual } := by
   refine ⟨?actual, ?produced⟩
@@ -218,8 +218,9 @@ private theorem qualified_constants :
 /-- Reindex the complete checked packet once at the original input. -/
 def qualifiedTextTail : SourceTail qualifiedTextInput :=
   SourceTail.ofOriginal qualifiedTextInput qualifiedOriginalPacket.val qualifiedOriginalPacket.property
-    qualified_metadata qualifiedOrderPacket.val qualifiedOrderPacket.property
-    qualifiedScopesPacket.val qualifiedScopesPacket.property qualified_aliases qualified_constants
+    (by exact qualified_metadata) qualifiedOrderPacket.val qualifiedOrderPacket.property
+    qualifiedScopesPacket.val qualifiedScopesPacket.property
+    (by exact qualified_aliases) (by exact qualified_constants)
 
 theorem qualifiedText_metadata :
     Konst.checkSourceMetadata qualifiedTextInput.original = .ok () := qualifiedTextTail.metadata
