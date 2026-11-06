@@ -320,55 +320,67 @@ private theorem parsed_from_phases {ts : List Token} {items : List SItemTief}
   rw [scanned]
   exact read
 
--- Fix the actual parsed value before opening the six exporter stages.
+-- Retain normalized data from each real phase, including the parsed input.
+-- No later value contains a get that re-runs its producer chain.
+private def source_items_result : { actual : List SItemTief // parseTopTief (tokens chunks) = .ok actual } := by
+  refine ⟨?actual, ?origin⟩
+  case origin => cbv <;> exact Eq.refl _
+private def source_items : List SItemTief := source_items_result.val
 private theorem source_items_success :
-    (parseTopTief (tokens chunks)).toOption.isSome = true := by cbv
-private def source_items : List SItemTief :=
-  (parseTopTief (tokens chunks)).toOption.get source_items_success
+    parseTopTief (tokens chunks) = .ok source_items := source_items_result.property
+
 private theorem source_items_read : parsed = .ok source_items :=
-  parsed_from_phases source_lexed (phase_eq source_items_success)
+  parsed_from_phases source_lexed source_items_success
 
+private def source_fold_result : { actual : List SItemTief // SourceFolds.prepare source_items = .ok actual } := by
+  refine ⟨?actual, ?origin⟩
+  case origin => cbv <;> exact Eq.refl _
+private def source_fold_value : List SItemTief := source_fold_result.val
 private theorem source_fold_success :
-    (SourceFolds.prepare source_items).toOption.isSome = true := by cbv
-private def source_fold_value : List SItemTief :=
-  (SourceFolds.prepare source_items).toOption.get source_fold_success
+    SourceFolds.prepare source_items = .ok source_fold_value := source_fold_result.property
 
+private def source_close_result : { actual : List Closed × List SItemTief // prepare source_fold_value = .ok actual } := by
+  refine ⟨?actual, ?origin⟩
+  case origin => cbv <;> exact Eq.refl _
+private def source_close_value : List Closed × List SItemTief := source_close_result.val
 private theorem source_close_success :
-    (prepare source_fold_value).toOption.isSome = true := by cbv
-private def source_close_value : List Closed × List SItemTief :=
-  (prepare source_fold_value).toOption.get source_close_success
+    prepare source_fold_value = .ok source_close_value := source_close_result.property
 
+private def source_tagged_result : { actual : List SItemTief × List String // exportTaggedUnitDetailed source_close_value.2 = .ok actual } := by
+  refine ⟨?actual, ?origin⟩
+  case origin => cbv <;> exact Eq.refl _
+private def source_tagged_value : List SItemTief × List String := source_tagged_result.val
 private theorem source_tagged_success :
-    (exportTaggedUnitDetailed source_close_value.2).toOption.isSome = true := by cbv
-private def source_tagged_value : List SItemTief × List String :=
-  (exportTaggedUnitDetailed source_close_value.2).toOption.get source_tagged_success
+    exportTaggedUnitDetailed source_close_value.2 = .ok source_tagged_value := source_tagged_result.property
 
+private def source_spec_result : { actual : List SItemTief // Spec.prepare (finish source_close_value.1 source_tagged_value.1) = .ok actual } := by
+  refine ⟨?actual, ?origin⟩
+  case origin => cbv <;> exact Eq.refl _
+private def source_spec_value : List SItemTief := source_spec_result.val
 private theorem source_spec_success :
-    (Spec.prepare (finish source_close_value.1 source_tagged_value.1)).toOption.isSome = true := by cbv
-private def source_spec_value : List SItemTief :=
-  (Spec.prepare (finish source_close_value.1 source_tagged_value.1)).toOption.get source_spec_success
+    Spec.prepare (finish source_close_value.1 source_tagged_value.1) = .ok source_spec_value := source_spec_result.property
 
+private def source_checked_result : { actual : List SItemTief // checkedOutput source_tagged_value.1 source_spec_value = .ok actual } := by
+  refine ⟨?actual, ?origin⟩
+  case origin => cbv <;> exact Eq.refl _
+private def source_checked_value : List SItemTief := source_checked_result.val
 private theorem source_checked_success :
-    (checkedOutput source_tagged_value.1 source_spec_value).toOption.isSome = true := by cbv
-private def source_checked_value : List SItemTief :=
-  (checkedOutput source_tagged_value.1 source_spec_value).toOption.get source_checked_success
+    checkedOutput source_tagged_value.1 source_spec_value = .ok source_checked_value := source_checked_result.property
 
+private def source_library_result : { actual : List SItemTief // exportLibraryUnit source_checked_value = .ok actual } := by
+  refine ⟨?actual, ?origin⟩
+  case origin => cbv <;> exact Eq.refl _
+private def source_library_value : List SItemTief := source_library_result.val
 private theorem source_library_success :
-    (exportLibraryUnit source_checked_value).toOption.isSome = true := by cbv
-private def source_library_value : List SItemTief :=
-  (exportLibraryUnit source_checked_value).toOption.get source_library_success
+    exportLibraryUnit source_checked_value = .ok source_library_value := source_library_result.property
 
 private theorem source_exported : exportDeclarationUnit source_items = .ok source_library_value := by
   exact export_from_phases (source := source_items) (folded := source_fold_value)
     (closed := source_close_value.1) (rewritten := source_close_value.2)
     (tagged := source_tagged_value.1) (names := source_tagged_value.2)
     (ordinary := source_spec_value) (validated := source_checked_value) (output := source_library_value)
-    (phase_eq (result := SourceFolds.prepare source_items) source_fold_success)
-    (phase_eq (result := prepare source_fold_value) source_close_success)
-    (phase_eq (result := exportTaggedUnitDetailed source_close_value.2) source_tagged_success)
-    (phase_eq (result := Spec.prepare (finish source_close_value.1 source_tagged_value.1)) source_spec_success)
-    (phase_eq (result := checkedOutput source_tagged_value.1 source_spec_value) source_checked_success)
-    (phase_eq (result := exportLibraryUnit source_checked_value) source_library_success)
+    source_fold_success source_close_success source_tagged_success
+    source_spec_success source_checked_success source_library_success
 
 private theorem source_phases : ∃ items output,
     parsed = .ok items ∧ exportDeclarationUnit items = .ok output ∧

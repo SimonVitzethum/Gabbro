@@ -156,47 +156,67 @@ private def phase_input : ExportFixture → List SItemTief
           .bind false "a" none (.call "Shape::area" [.variable "s"])]
           (some (.ret (some (.variable "a")))))]
 
-private theorem phase_eq {α : Type} {result : Except String α}
-    (success : result.toOption.isSome = true) : result = .ok (result.toOption.get success) := by
-  cases result with
-  | error error => simp only [Except.toOption, Option.isSome_none, Bool.false_eq_true] at success
-  | ok value => rfl
-
+-- Each data value is inferred only from its own producer equality. Projecting
+-- .val later reads the retained constructors, not a new evaluation of a getter.
+private def fold_result (fixture : ExportFixture) :
+    { actual : List SItemTief // SourceFolds.prepare (phase_input fixture) = .ok actual } := by
+  cases fixture
+  all_goals
+    refine ⟨?actual, ?origin⟩
+    case origin => cbv <;> exact Eq.refl _
+private def fold_value (fixture : ExportFixture) : List SItemTief := (fold_result fixture).val
 private theorem fold_success (fixture : ExportFixture) :
-    (SourceFolds.prepare (phase_input fixture)).toOption.isSome = true := by
-  cases fixture <;> cbv
-private def fold_value (fixture : ExportFixture) : List SItemTief :=
-  (SourceFolds.prepare (phase_input fixture)).toOption.get (fold_success fixture)
+    SourceFolds.prepare (phase_input fixture) = .ok (fold_value fixture) := (fold_result fixture).property
 
+private def close_result (fixture : ExportFixture) :
+    { actual : List Closed × List SItemTief // prepare (fold_value fixture) = .ok actual } := by
+  cases fixture
+  all_goals
+    refine ⟨?actual, ?origin⟩
+    case origin => cbv <;> exact Eq.refl _
+private def close_value (fixture : ExportFixture) : List Closed × List SItemTief := (close_result fixture).val
 private theorem close_success (fixture : ExportFixture) :
-    (prepare (fold_value fixture)).toOption.isSome = true := by
-  cases fixture <;> cbv
-private def close_value (fixture : ExportFixture) : List Closed × List SItemTief :=
-  (prepare (fold_value fixture)).toOption.get (close_success fixture)
+    prepare (fold_value fixture) = .ok (close_value fixture) := (close_result fixture).property
 
+private def tagged_result (fixture : ExportFixture) :
+    { actual : List SItemTief × List String // exportTaggedUnitDetailed (close_value fixture).2 = .ok actual } := by
+  cases fixture
+  all_goals
+    refine ⟨?actual, ?origin⟩
+    case origin => cbv <;> exact Eq.refl _
+private def tagged_value (fixture : ExportFixture) : List SItemTief × List String := (tagged_result fixture).val
 private theorem tagged_success (fixture : ExportFixture) :
-    (exportTaggedUnitDetailed (close_value fixture).2).toOption.isSome = true := by
-  cases fixture <;> cbv
-private def tagged_value (fixture : ExportFixture) : List SItemTief × List String :=
-  (exportTaggedUnitDetailed (close_value fixture).2).toOption.get (tagged_success fixture)
+    exportTaggedUnitDetailed (close_value fixture).2 = .ok (tagged_value fixture) := (tagged_result fixture).property
 
+private def spec_result (fixture : ExportFixture) :
+    { actual : List SItemTief // Spec.prepare (finish (close_value fixture).1 (tagged_value fixture).1) = .ok actual } := by
+  cases fixture
+  all_goals
+    refine ⟨?actual, ?origin⟩
+    case origin => cbv <;> exact Eq.refl _
+private def spec_value (fixture : ExportFixture) : List SItemTief := (spec_result fixture).val
 private theorem spec_success (fixture : ExportFixture) :
-    (Spec.prepare (finish (close_value fixture).1 (tagged_value fixture).1)).toOption.isSome = true := by
-  cases fixture <;> cbv
-private def spec_value (fixture : ExportFixture) : List SItemTief :=
-  (Spec.prepare (finish (close_value fixture).1 (tagged_value fixture).1)).toOption.get (spec_success fixture)
+    Spec.prepare (finish (close_value fixture).1 (tagged_value fixture).1) = .ok (spec_value fixture) := (spec_result fixture).property
 
+private def checked_result (fixture : ExportFixture) :
+    { actual : List SItemTief // checkedOutput (tagged_value fixture).1 (spec_value fixture) = .ok actual } := by
+  cases fixture
+  all_goals
+    refine ⟨?actual, ?origin⟩
+    case origin => cbv <;> exact Eq.refl _
+private def checked_value (fixture : ExportFixture) : List SItemTief := (checked_result fixture).val
 private theorem checked_success (fixture : ExportFixture) :
-    (checkedOutput (tagged_value fixture).1 (spec_value fixture)).toOption.isSome = true := by
-  cases fixture <;> cbv
-private def checked_value (fixture : ExportFixture) : List SItemTief :=
-  (checkedOutput (tagged_value fixture).1 (spec_value fixture)).toOption.get (checked_success fixture)
+    checkedOutput (tagged_value fixture).1 (spec_value fixture) = .ok (checked_value fixture) := (checked_result fixture).property
 
+private def library_result (fixture : ExportFixture) :
+    { actual : List SItemTief // exportLibraryUnit (checked_value fixture) = .ok actual } := by
+  cases fixture
+  all_goals
+    refine ⟨?actual, ?origin⟩
+    case origin => cbv <;> exact Eq.refl _
+private def library_value (fixture : ExportFixture) : List SItemTief := (library_result fixture).val
 private theorem library_success (fixture : ExportFixture) :
-    (exportLibraryUnit (checked_value fixture)).toOption.isSome = true := by
-  cases fixture <;> cbv
-private def library_value (fixture : ExportFixture) : List SItemTief :=
-  (exportLibraryUnit (checked_value fixture)).toOption.get (library_success fixture)
+    exportLibraryUnit (checked_value fixture) = .ok (library_value fixture) := (library_result fixture).property
 
 private theorem fixture_exported (fixture : ExportFixture) :
     exportDeclarationUnit (phase_input fixture) = .ok (library_value fixture) := by
@@ -204,21 +224,15 @@ private theorem fixture_exported (fixture : ExportFixture) :
     (closed := (close_value fixture).1) (rewritten := (close_value fixture).2)
     (tagged := (tagged_value fixture).1) (names := (tagged_value fixture).2)
     (ordinary := spec_value fixture) (validated := checked_value fixture) (output := library_value fixture)
-    (phase_eq (result := SourceFolds.prepare (phase_input fixture)) (fold_success fixture))
-    (phase_eq (result := prepare (fold_value fixture)) (close_success fixture))
-    (phase_eq (result := exportTaggedUnitDetailed (close_value fixture).2) (tagged_success fixture))
-    (phase_eq (result := Spec.prepare (finish (close_value fixture).1 (tagged_value fixture).1))
-      (spec_success fixture))
-    (phase_eq (result := checkedOutput (tagged_value fixture).1 (spec_value fixture)) (checked_success fixture))
-    (phase_eq (result := exportLibraryUnit (checked_value fixture)) (library_success fixture))
+    (fold_success fixture) (close_success fixture) (tagged_success fixture)
+    (spec_success fixture) (checked_success fixture) (library_success fixture)
 
 -- Refusals retain the same actual first two passes. Their folded value is fixed
 -- before running the refusing close pass, rather than an output metavariable.
 private theorem export_refused_from_fold {source : List SItemTief} {error : String}
-    (success : (SourceFolds.prepare source).toOption.isSome = true)
-    (refused : prepare ((SourceFolds.prepare source).toOption.get success) = .error error) :
-    exportDeclarationUnit source = .error error :=
-  export_refused_at_close (phase_eq success) refused
+    (folded : { actual : List SItemTief // SourceFolds.prepare source = .ok actual })
+    (refused : prepare folded.val = .error error) : exportDeclarationUnit source = .error error :=
+  export_refused_at_close folded.property refused
 
 -- Compute the whole canonical exporter result once. Every projection below is
 -- certified only after its actual output list has been bound.
@@ -335,9 +349,11 @@ public theorem scene_equality_refused_zeuge :
         (.block [] (some (.ret (some (.bin "==" (fieldAt "i") (fieldAt "j"))))))])).map (fun _ => ()) =
     .error "dyn.equality" := by
   apply map_from_refusal
-  apply export_refused_from_fold
-  · cbv
-  · cbv
+  refine export_refused_from_fold ?folded ?refused
+  case folded =>
+    refine ⟨?actual, ?origin⟩
+    case origin => cbv <;> exact Eq.refl _
+  case refused => cbv
 
 public theorem scene_implementation_test_refused_zeuge :
     (exportDeclarationUnit (fixture ++
@@ -345,9 +361,11 @@ public theorem scene_implementation_test_refused_zeuge :
         (.block [.cases (fieldAt "i") []] none)])).map (fun _ => ()) =
     .error "dyn.implementation-test" := by
   apply map_from_refusal
-  apply export_refused_from_fold
-  · cbv
-  · cbv
+  refine export_refused_from_fold ?folded ?refused
+  case folded =>
+    refine ⟨?actual, ?origin⟩
+    case origin => cbv <;> exact Eq.refl _
+  case refused => cbv
 
 public theorem scene_bound_required_zeuge :
     (close [shape, circle] 0 (.dyn "Shape" none)).map (fun _ => ()) =
@@ -379,9 +397,11 @@ public theorem scene_downcast_refused_zeuge :
         (.block [.trim (fieldAt "i") "u64" (.block [] none)] none)])).map (fun _ => ()) =
     .error "dyn.downcast" := by
   apply map_from_refusal
-  apply export_refused_from_fold
-  · cbv
-  · cbv
+  refine export_refused_from_fold ?folded ?refused
+  case folded =>
+    refine ⟨?actual, ?origin⟩
+    case origin => cbv <;> exact Eq.refl _
+  case refused => cbv
 
 -- Inspect the final checked value only after the six named success boundaries.
 private theorem inferred_metadata :
