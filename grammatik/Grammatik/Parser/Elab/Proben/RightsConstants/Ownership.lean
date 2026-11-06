@@ -1,6 +1,7 @@
 module
 public import Grammatik.Parser.Elab.Proben.RightsConstants.Phases
 import Grammatik.Parser.Elab.UebersetzeAllg3.FunctionResults
+import all Grammatik.Parser.Elab.Proben.RightsConstants.OwnershipSteps
 import all Grammatik.Kern.Syntax.Typen.Shape
 import all Grammatik.Parser.Elab.Uebersetze.Kontext.Eigner
 import all Grammatik.Parser.Elab.Generic.SignatureData
@@ -135,70 +136,6 @@ scoped macro "ownership_refusal " name:ident " for " unit:ident " at " number:nu
 
 open scoped Gabbro.Grammatik.Parser.UebersetzeProben11
 
-private abbrev BodyStep (u : UProg) (f : Fin u.fns.length) (Λ : List (Res (declOf u))) :=
-  Σ after, Stmt (declOf u) (verOf u f) false (ctxOf u f) Λ after
-
-private theorem call_prefix (u : UProg) (f : Fin u.fns.length) (fn : UFn) (n : Nat)
-    (Λ : List (Res (declOf u))) (name : String) (args : List UArg) (rest : List UStmt) (ret : URet)
-    (step : BodyStep u f Λ) (made : lowStmtL u f (ctxOf u f) fn Λ (.call name args) = .ok step) :
-    lowBodyF u f (ctxOf u f) fn (n + 1) Λ (.call name args :: rest) ret =
-      (lowBodyF u f (ctxOf u f) fn n step.1 rest ret).map (Endblock.cons step.2) := by
-  rcases step with ⟨after, statement⟩
-  rw [lowBodyF, made] <;> simp
-  cases lowBodyF u f (ctxOf u f) fn n after rest ret <;> rfl
-
-private theorem retire_prefix (u : UProg) (f : Fin u.fns.length) (fn : UFn) (n : Nat)
-    (Λ : List (Res (declOf u))) (name : String) (rest : List UStmt) (ret : URet)
-    (step : BodyStep u f Λ) (made : lowStmtL u f (ctxOf u f) fn Λ (.retires name) = .ok step) :
-    lowBodyF u f (ctxOf u f) fn (n + 1) Λ (.retires name :: rest) ret =
-      (lowBodyF u f (ctxOf u f) fn n step.1 rest ret).map (Endblock.cons step.2) := by
-  rcases step with ⟨after, statement⟩
-  rw [lowBodyF, made] <;> simp
-  cases lowBodyF u f (ctxOf u f) fn n after rest ret <;> rfl
-
-private theorem call_body (u : UProg) (f : Fin u.fns.length) (name : String) (args : List UArg)
-    (shape : (fnAt u f).body = [.call name args]) (step : BodyStep u f (resOf u f))
-    (made : lowStmtL u f (ctxOf u f) (fnAt u f) (resOf u f) (.call name args) = .ok step) :
-    lowBody u f (fnAt u f).body (fnAt u f).ret =
-      (lowEnd u f (ctxOf u f) step.1 (fnAt u f) (fnAt u f).ret).map (Endblock.cons step.2) := by
-  unfold lowBody
-  rw [shape]
-  dsimp only [List.length_cons, List.length_nil]
-  rw [call_prefix u f (fnAt u f) 1 _ _ _ _ _ step made] <;> rfl
-
-private theorem retire_body (u : UProg) (f : Fin u.fns.length) (name : String)
-    (shape : (fnAt u f).body = [.retires name]) (step : BodyStep u f (resOf u f))
-    (made : lowStmtL u f (ctxOf u f) (fnAt u f) (resOf u f) (.retires name) = .ok step) :
-    lowBody u f (fnAt u f).body (fnAt u f).ret =
-      (lowEnd u f (ctxOf u f) step.1 (fnAt u f) (fnAt u f).ret).map (Endblock.cons step.2) := by
-  unfold lowBody
-  rw [shape]
-  dsimp only [List.length_cons, List.length_nil]
-  rw [retire_prefix u f (fnAt u f) 1 _ _ _ _ step made] <;> rfl
-
-private theorem repeated_body (u : UProg) (f : Fin u.fns.length) (a b error : String)
-    (shape : (fnAt u f).body = [.retires a, .retires b]) (step : BodyStep u f (resOf u f))
-    (made : lowStmtL u f (ctxOf u f) (fnAt u f) (resOf u f) (.retires a) = .ok step)
-    (failed : lowStmtL (l := false) u f (ctxOf u f) (fnAt u f) step.1 (.retires b) = .error error) :
-    lowBody u f (fnAt u f).body (fnAt u f).ret = .error error := by
-  unfold lowBody
-  rw [shape]
-  dsimp only [List.length_cons, List.length_nil]
-  rw [retire_prefix u f (fnAt u f) 2 _ _ _ _ step made, lowBodyF, failed] <;> simp
-  rfl
-
--- Assemble exactly the existing retirement constructor from separately checked
--- name, loan and held-stage facts; do not normalize a whole dependent result.
-private def retire_step (u : UProg) (f : Fin u.fns.length) (name : String)
-    (m : Fin u.marken.length) (a : Nat)
-    (hb : (fnAt u f).leiht.any (strEq · name) = false)
-    (hm : markFin u.marken name = some m) (hs : heldMarkStage (D := declOf u) m (resOf u f) = some a) :
-    { actual : BodyStep u f (resOf u f) //
-      lowStmtL (l := false) u f (ctxOf u f) (fnAt u f) (resOf u f) (.retires name) = .ok actual } := by
-  refine ⟨⟨(resOf u f).erase (.marke m a), Stmt.retires (D := declOf u) (V := verOf u f)
-    (l := false) (Γ := ctxOf u f) (Λ := resOf u f) m a (heldMarkStage_mem (D := declOf u) m _ a hs) none⟩, ?_⟩
-  exact lowRetiresL_exact (l := false) u f (ctxOf u f) (resOf u f) name m a hb hm hs
-
 scoped macro "ownership_retire_step " name:ident " for " unit:ident " at " index:ident
     " named " text:term : command => do
   let mark := Lean.mkIdentFrom name (name.getId.appendAfter "_mark")
@@ -230,6 +167,63 @@ scoped macro "ownership_retire_step " name:ident " for " unit:ident " at " index
     congrArg (fun resources : List (Res (declOf ($unit).val)) => resources.erase (.marke ($mark).val ($stage).val)) ($entry).property)
   return ⟨Lean.mkNullNode #[a, b, c, d, e, f, g]⟩
 
+scoped macro "ownership_call_step " name:ident " for " unit:ident " at " index:ident
+    " named " text:term " arguments " raw:term : command => do
+  let callee := Lean.mkIdentFrom name (name.getId.appendAfter "_callee")
+  let args := Lean.mkIdentFrom name (name.getId.appendAfter "_arguments")
+  let writes := Lean.mkIdentFrom name (name.getId.appendAfter "_writes")
+  let globals := Lean.mkIdentFrom name (name.getId.appendAfter "_globals")
+  let held := Lean.mkIdentFrom name (name.getId.appendAfter "_held")
+  let floor := Lean.mkIdentFrom name (name.getId.appendAfter "_floor")
+  let extra := Lean.mkIdentFrom name (name.getId.appendAfter "_extra")
+  let inventory := Lean.mkIdentFrom name (name.getId.appendAfter "_inputs")
+  let owners := Lean.mkIdentFrom name (name.getId.appendAfter "_owners")
+  let head := Lean.mkIdentFrom name (name.getId.appendAfter "_head")
+  let reason := Lean.mkIdentFrom name (name.getId.appendAfter "_reason")
+  let after := Lean.mkIdentFrom name (name.getId.appendAfter "_after")
+  let remaining := Lean.mkIdentFrom name (name.getId.appendAfter "_remaining")
+  let a ← `(command| private def $callee : { actual : Fin ($unit).val.fns.length //
+      fnIdx ($unit).val.fns $text = .ok actual } := by refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+  let b ← `(command| private def $args : { actual : Args (declOf ($unit).val) (ctxOf ($unit).val $index)
+      (resOf ($unit).val $index) ((declOf ($unit).val).params ($callee).val) //
+      lowCallArgsAuxL ($unit).val $index (ctxOf ($unit).val $index) (fnAt ($unit).val $index)
+        (resOf ($unit).val $index) (fnAt ($unit).val ($callee).val).kinds
+          ((declOf ($unit).val).params ($callee).val) $raw = .ok actual } := by
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+  let c ← `(command| private theorem $writes : ∀ t : Fin ($unit).val.tabs.length,
+      writesAt ($unit).val (fnAt ($unit).val ($callee).val) t = true →
+        writesAt ($unit).val (fnAt ($unit).val $index) t = true := by decide +kernel)
+  let d ← `(command| private theorem $globals : ∀ g : Fin ($unit).val.globs.length,
+      writesGAt ($unit).val (fnAt ($unit).val ($callee).val) g = true →
+        writesGAt ($unit).val (fnAt ($unit).val $index) g = true := by decide +kernel)
+  let e ← `(command| private theorem $held : ∀ L ∈ ((declOf ($unit).val).signatur ($callee).val).haelt,
+      Res.held (D := declOf ($unit).val) L ∈ resOf ($unit).val $index := by decide +kernel)
+  let f ← `(command| private theorem $floor : floorLeB ($unit).val $index ($callee).val = true := by cbv)
+  let g ← `(command| private theorem $extra : ∀ L ∈ heldLocksD ($unit).val (resOf ($unit).val $index),
+      L ∈ ((declOf ($unit).val).signatur ($callee).val).haelt ∨
+        floorUeberB ($unit).val ($callee).val L = true := by decide +kernel)
+  let h ← `(command| private theorem $inventory : decide (Untermulti
+      (((declOf ($unit).val).signatur ($callee).val).inputMarks.map (Res.vonMarke (declOf ($unit).val)))
+        (resOf ($unit).val $index)) = true := by decide +kernel)
+  let i ← `(command| private theorem $owners :
+      ownerReadyB ($unit).val ((declOf ($unit).val).signatur ($callee).val) = true := by cbv)
+  let j ← `(command| private def $head : { actual : RufKopf ($unit).val $index
+      (ctxOf ($unit).val $index) (resOf ($unit).val $index) //
+      lowRufKopf ($unit).val $index (ctxOf ($unit).val $index) (fnAt ($unit).val $index)
+        (resOf ($unit).val $index) $text $raw = .ok actual } :=
+    call_head ($unit).val $index ($callee).val $text $raw ($callee).property $args
+      ⟨$writes, $globals, $held, $floor, $extra, $inventory, $owners⟩)
+  let k ← `(command| private theorem $reason : (declOf ($unit).val).gruende ($head).val.callee = 0 := by cbv)
+  let l ← `(command| private def $name : { actual : BodyStep ($unit).val $index (resOf ($unit).val $index) //
+      lowStmtL (l := false) ($unit).val $index (ctxOf ($unit).val $index) (fnAt ($unit).val $index)
+        (resOf ($unit).val $index) (.call $text $raw) = .ok actual } :=
+    call_step ($unit).val $index $text $raw $head $reason)
+  let m ← `(command| private def $after : { actual : List (Res (declOf ($unit).val)) //
+      nach (declOf ($unit).val) ($head).val.callee (resOf ($unit).val $index) = actual } := by
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+  let n ← `(command| private theorem $remaining : ($name).val.1 = ($after).val := ($after).property)
+  return ⟨Lean.mkNullNode #[a, b, c, d, e, f, g, h, i, j, k, l, m, n]⟩
+
 -- The source shape is inferred from the actual unit, not supplied as an AST.
 scoped macro "ownership_call_body " name:ident " for " unit:ident " at " number:num : command => do
   let index := Lean.mkIdentFrom name (name.getId.appendAfter "_index")
@@ -241,10 +235,8 @@ scoped macro "ownership_call_body " name:ident " for " unit:ident " at " number:
   let b ← `(command| private def $shape : { actual : String × List UArg //
       (fnAt ($unit).val $index).body = [.call actual.1 actual.2] } := by
     refine ⟨(?_, ?_), by cbv <;> exact Eq.refl _⟩)
-  let c ← `(command| private def $step : { actual : BodyStep ($unit).val $index (resOf ($unit).val $index) //
-      lowStmtL ($unit).val $index (ctxOf ($unit).val $index) (fnAt ($unit).val $index)
-        (resOf ($unit).val $index) (.call ($shape).val.1 ($shape).val.2) = .ok actual } := by
-    refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+  let c ← `(command| ownership_call_step $step for $unit at $index
+    named ($shape).val.1 arguments ($shape).val.2)
   let d ← `(command| private def $ending : { actual : Endblock (declOf ($unit).val)
       (verOf ($unit).val $index) false (ctxOf ($unit).val $index) ($step).val.1 //
       lowEnd ($unit).val $index (ctxOf ($unit).val $index) ($step).val.1 (fnAt ($unit).val $index)
