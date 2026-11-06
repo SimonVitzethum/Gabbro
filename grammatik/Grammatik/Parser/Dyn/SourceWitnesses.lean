@@ -15,7 +15,7 @@ import all Grammatik.Parser.Spec.Parse
 import all Grammatik.Parser.Expr.Ausdruck.Teil2a
 import all Grammatik.Parser.Expr.Typ
 import Grammatik.Parser.Stmt.LibraryFixtureScanning
-import all Grammatik.Parser.Dyn.Witnesses
+import all Grammatik.Parser.Dyn.WitnessPhases
 import all Grammatik.Parser.Dyn.Collect
 import all Grammatik.Parser.Dyn.Rewrite
 import all Grammatik.Parser.Spec.Contract
