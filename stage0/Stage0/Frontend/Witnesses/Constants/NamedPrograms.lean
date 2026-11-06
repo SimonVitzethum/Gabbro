@@ -94,6 +94,8 @@ attribute [local cbv_opaque] Konst.Values.elaborate Konst.Values.reify
 @[local cbv_eval] private theorem tagText_replaced :
     Konst.ersetzeSExprIn [] [tagDescriptor] (.call "selected" [.lit 4]) =
       .ok (.call "Data" [.lit 5]) := by
+  change Konst.ersetzeSExpr [tagDescriptor] (.call "selected" [.lit 4]) =
+    .ok (.call "Data" [.lit 5])
   obtain ⟨literal, produced, spelling⟩ := tag_quoted
   rw [Konst.Values.WitnessReaders.substitute_portable [tagDescriptor] "selected"
     [.lit 4] [.lit 4] tagDescriptor (by cbv) (by cbv) (by rfl) (by cbv) (by cbv),
@@ -224,6 +226,8 @@ attribute [local cbv_opaque] Konst.Values.elaborate Konst.Values.reify
 @[local cbv_eval] private theorem stringText_replaced :
     Konst.ersetzeSExprIn [] [textDescriptor] (.call "selected" []) =
       .ok (.ext .text ["A"] []) := by
+  change Konst.ersetzeSExpr [textDescriptor] (.call "selected" []) =
+    .ok (.ext .text ["A"] [])
   obtain ⟨literal, produced, spelling⟩ := text_quoted
   rw [Konst.Values.WitnessReaders.substitute_portable [textDescriptor] "selected"
     [] [] textDescriptor (by cbv) (by cbv) (by rfl) (by cbv) (by cbv),
