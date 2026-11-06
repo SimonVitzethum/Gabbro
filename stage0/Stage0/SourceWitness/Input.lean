@@ -98,11 +98,30 @@ private def sourceOrder : { actual : Frontend.AliasOrder sourceOriginal.val //
     Frontend.orderAliases sourceOriginal.val = .ok actual } := by
   refine ⟨?_, by cbv <;> exact Eq.refl _⟩
 
-private def sourceScopes : { actual : Frontend.DerivedScopes sourceOriginal.val //
-    Frontend.elaborateConstantScopes sourceOriginal.val = .ok actual } := by
+private def sourceConservative : { actual : Frontend.DerivedScopes sourceOriginal.val //
+    Frontend.deriveScopes sourceOriginal.val = .ok actual } := by
   refine ⟨?_, by cbv <;> exact Eq.refl _⟩
 
-private theorem source_metadata : Konst.checkSourceMetadata sourceOriginal.val = .ok () := by cbv
+private def sourceConstantOrder : { actual : Frontend.ConstantOrder sourceOriginal.val //
+    Frontend.orderConstants sourceOriginal.val = .ok actual } := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
+private theorem source_previous : Frontend.elaborateScopes sourceOriginal.val =
+    .ok sourceConservative.val :=
+  Frontend.elaborateScopes_preserves sourceOriginal.val sourceConservative.val
+    sourceOrder.val sourceOrder.property sourceConservative.property
+    (by cbv) (by cbv) (by cbv)
+
+private def sourceScopes : { actual : Frontend.DerivedScopes sourceOriginal.val //
+    Frontend.elaborateConstantScopes sourceOriginal.val = .ok actual } :=
+  ⟨sourceConservative.val, Frontend.elaborateConstantScopes_preserves sourceOriginal.val
+    sourceConstantOrder.val sourceConstantOrder.property sourceConservative.val source_previous
+    (by cbv)⟩
+
+private theorem source_metadata : Konst.checkSourceMetadata sourceOriginal.val = .ok () := by
+  rw [Konst.checkSourceMetadata_from_scopes sourceOriginal.val sourceScopes.val
+    (by cbv) sourceScopes.property]
+  cbv
 private theorem source_aliases :
     sourceOriginal.val.all (Frontend.checkAliasMeaning sourceScopes.val.scope.types) = true := by cbv
 private theorem source_constants : sourceOriginal.val.all (Frontend.checkConstantMeaning
