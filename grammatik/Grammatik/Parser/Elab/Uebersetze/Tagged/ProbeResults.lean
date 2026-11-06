@@ -45,13 +45,13 @@ private theorem chain_first_error {α β : Type} {first : Except String α} {nex
 scoped macro "tagged_ok " reader:term : tactic => `(tactic| (
   let operation := $reader
   let certificate : { actual // operation = .ok actual } := by
-    refine ⟨?_, by cbv <;> exact Eq.refl _⟩
-  exact reader_ok (reader := operation) certificate))
+    refine ⟨?_, by dsimp only [operation]; cbv <;> exact Eq.refl _⟩
+  simpa only [operation] using (reader_ok (reader := operation) certificate)))
 scoped macro "tagged_error " reader:term : tactic => `(tactic| (
   let operation := $reader
   let certificate : { error : String // operation = .error error } := by
-    refine ⟨?_, by cbv <;> exact Eq.refl _⟩
-  exact reader_error (reader := operation) certificate))
+    refine ⟨?_, by dsimp only [operation]; cbv <;> exact Eq.refl _⟩
+  simpa only [operation] using (reader_error (reader := operation) certificate)))
 
 -- No successful UProg is assumed: both expansion data and the actual subsequent
 -- rejection are inferred separately from the same canonical elaborator.
