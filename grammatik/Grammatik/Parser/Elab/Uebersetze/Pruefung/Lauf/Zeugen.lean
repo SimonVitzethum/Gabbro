@@ -196,7 +196,9 @@ def retiringUnconsumed : UProg :=
     else f }
 
 theorem retiringUnconsumed_refused :
-    (lowerAllg retiringUnconsumed).toOption.isNone = true := retiring_facts.unconsumed
+    (lowerAllg retiringUnconsumed).toOption.isNone = true := by
+  dsimp only [retiringUnconsumed]
+  exact retiring_facts.unconsumed
 
 /-- The second consumer call has no mark available; a copy of the ghost
     report cannot supply the missing physical resource. -/
@@ -207,7 +209,9 @@ def retiringDouble : UProg :=
     else f }
 
 theorem retiringDouble_refused :
-    (lowerAllg retiringDouble).toOption.isNone = true := retiring_facts.double
+    (lowerAllg retiringDouble).toOption.isNone = true := by
+  dsimp only [retiringDouble]
+  exact retiring_facts.double
 
 /-- Actual reporter parameters: measured x=3, floor=true, written verdict=true. -/
 def retiringReporterEnv : Env (declOf retiringU) ((declOf retiringU).params retiringReporter) :=
