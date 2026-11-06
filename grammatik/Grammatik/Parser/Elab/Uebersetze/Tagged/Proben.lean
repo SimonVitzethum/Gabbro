@@ -280,7 +280,9 @@ private theorem tagged_scoped_declaration (body : Option STyp)
   simp only [sumGlobs, sumTabs, registers, invariants, stateItems, List.map_nil,
     uSeq, List.length_nil, noDuplicates, Bool.false_eq_true, ite_false, transitions,
     List.any_nil, List.flatMap_nil, pointers, List.range_zero, List.zip_nil_right,
-    bind, Except.bind] <;> rfl
+    bind, Except.bind]
+  all_goals cases collected : uSums [] [.typeT ["tagged"] "Message" [] [] body]
+    [] ["normal"] [] <;> rfl
 
 /-- Canonical collection remains before the no-function gate. Only the
     surrounding, type-only phases reduce; the payload parser stays symbolic. -/
