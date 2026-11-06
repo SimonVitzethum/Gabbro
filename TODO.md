@@ -26,7 +26,9 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   The native compiler builds (5,403 jobs); three newly compiled float-end sources execute on the assembly
   runner with their unchanged expected exits 7/41/107 under the current hardware abstraction.
   The complete existing `proben-ir` source regression passes 218/315 cases: 76 expected executions fail
-  compilation and 21 refusal expectations differ. No executed case has a wrong exit code. Open source
+  compilation and 21 refusal expectations differ. One old width-refusal fixture now compiles through
+  the existing verified multiword-sum path and executes with its expected exit 42; the other 20
+  differences remain refusals. No executed case has a wrong exit code. Open source
   boundaries include alias constants, cost/proof metadata, atomic declarations and scoped-return admission;
   these tests are not a measurement of complete language coverage. Refusal expectations have not been relaxed.
   In that run, 28 of the 76 compilation failures stop at the unbound `assumT` gate, 15 at `main`'s
@@ -205,19 +207,20 @@ Thus a parser/exporter or an expanded-unit certificate can exist while the origi
   its replay/unwind connection remains open. The source constructs use the scoped-return/traversal arms above.
 - **C12 capabilities.** Normal-space table capabilities and decoded rights have source export (`Uebersetze/Teil/Teil3`,
   `Kontext/Eigner`) and connected ordinary `ptrOf`/`thru`/`assignThru`/reference access paths.
-  Named spaces exist in the model, but no independent table-space source binding was found: the fifth
-  `tableT` field is the owner. The existing `NamedSpaceWitness` confuses that owner field with a space
-  declaration and still needs an honest source/proof connection; it is not completed source coverage.
-  The owner approved an explicit `table ... space Name ...` binder on 2026-11-06, independent of
-  `owner`; its implementation and generic source-to-IR connection are in progress. Nominal space
-  names imply no physical protection or hardware behavior.
+  The owner-approved `table ... space Name ...` binder is implemented independently of `owner`;
+  the fifth `tableT` field remains the owner and a trailing optional field carries the space.
+  AST/parser/printer/size, full item/program roundtrip, registry/elaboration/census and the changed
+  Stage0 Tables/Compiler/IRBild targets build on the integrated snapshot. The concrete
+  `NamedSpaceWitness` still fails: its scanner certificate reaches the kernel limit, followed by
+  dependent typing and phase-composition errors. Its complete source/image and CPU validation
+  remain open. Nominal names imply no physical protection or hardware behavior.
   Owned `Expr.thruOwn` and `Stmt.assignThruOwn` also use those slot paths with real `lowE_ok`/`lowS_ok` arms;
   the source exporters exist in
   [`UebersetzeAllg/Teil3`](grammatik/Grammatik/Parser/Elab/UebersetzeAllg/Teil3.lean) and
   [`UebersetzeAllg2/Teil1`](grammatik/Grammatik/Parser/Elab/UebersetzeAllg2/Teil1.lean), and `borrows` has call-flow export.
   **Original `own@...` types still fail `ExportMetadata.typeMetadata`**, even though the canonical owned-access path is connected.
   Live byte, raw and entry targets remain refused there and/or by `uTypWert`; no source export to live byte/entry operations exists.
-  Open: checked named-space source binding, and original owner/byte/raw/entry duties to live grants/history
+  Open: complete named-space witness/image validation, and original owner/byte/raw/entry duties to live grants/history
   and transferred capabilities.
 - **C14 selection, profiles, placement and entrust.**
   [`Profil.prepareItems`](stage0/Stage0/Profil.lean) selects `when TESTBUILD`, checks `ProfileBinding.bindungB`,
@@ -324,7 +327,7 @@ it does not override metadata or target refusal. Items use their checked expansi
 | Owner `mints` | refuse (original mint-effect duty) | no (dynamic mint bridge) | yes |
 | `Expr.thruOwn`, `Stmt.assignThruOwn` / `own@...` | refuse (original owner type); admit G only | yes | yes |
 | `ptrOf`, `thru`, `assignThru`, normal table spaces | admit (decoded rights/target) | yes | yes |
-| Named table spaces | model only; source binding missing (owner is independent) | yes (generic capability arms) | no (checked table-space declaration) |
+| Named table spaces | explicit independent binder; generic compiler builds, concrete witness still fails | yes (generic capability arms) | yes (registry and checked same-space declaration) |
 | Safe `slotRef`, `assignSlotRef`, `refEq` | admit (declared reference/origin) | yes | yes |
 | Live byte/raw/entry targets | refuse (grant/history/binding duties) | no (live source path) | no (operational export) |
 | Exclusive `locks` | admit (`retFreiB` body only) | yes | yes |
