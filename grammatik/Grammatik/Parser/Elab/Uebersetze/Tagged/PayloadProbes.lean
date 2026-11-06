@@ -66,42 +66,54 @@ theorem payload_index_bound : 0 < unit.sums.length := by decide
 /-- The actual tagged lowering path accepts complete record-free payloads. -/
 theorem lower_bool_zeuge :
     (match lowSVal unit [] [] scope 0 0 payload_index_bound (.fall 1 (some (.truth true))) with
-      | .ok _ => true | .error _ => false) = true := by tagged_ok
+      | .ok _ => true | .error _ => false) = true := by
+  tagged_ok (lowSVal unit [] [] scope 0 0 payload_index_bound (.fall 1 (some (.truth true))))
 
 theorem lower_bool_variable_zeuge :
     (match lowSVal unit [.bool] [] { scope with params := [("flag", .bool)], kinds := [.bool] }
       0 0 payload_index_bound (.fall 1 (some (.param "flag"))) with
-      | .ok _ => true | .error _ => false) = true := by tagged_ok
+      | .ok _ => true | .error _ => false) = true := by
+  tagged_ok (lowSVal unit [.bool] [] { scope with params := [("flag", .bool)], kinds := [.bool] }
+      0 0 payload_index_bound (.fall 1 (some (.param "flag"))))
 
 theorem lower_scalar_zeuge :
     (match lowSVal unit [] [] scope 0 0 payload_index_bound (.fall 2 (some (.lit 37))) with
-      | .ok _ => true | .error _ => false) = true := by tagged_ok
+      | .ok _ => true | .error _ => false) = true := by
+  tagged_ok (lowSVal unit [] [] scope 0 0 payload_index_bound (.fall 2 (some (.lit 37))))
 
 theorem lower_array_zeuge :
     (match lowSVal unit [] [] scope 0 0 payload_index_bound
       (.fall 3 (some (.arrCons (.lit 7) (.arrCons (.lit 9) .arrNil)))) with
-      | .ok _ => true | .error _ => false) = true := by tagged_ok
+      | .ok _ => true | .error _ => false) = true := by
+  tagged_ok (lowSVal unit [] [] scope 0 0 payload_index_bound
+      (.fall 3 (some (.arrCons (.lit 7) (.arrCons (.lit 9) .arrNil)))))
 
 theorem lower_string_zeuge :
     (match lowSVal unit [] [] scope 0 0 payload_index_bound (.fall 4 (some (.text [65, 66]))) with
-      | .ok _ => true | .error _ => false) = true := by tagged_ok
+      | .ok _ => true | .error _ => false) = true := by
+  tagged_ok (lowSVal unit [] [] scope 0 0 payload_index_bound (.fall 4 (some (.text [65, 66]))))
 
 theorem lower_nested_sum_zeuge :
     (match lowSVal unit [] [] scope 0 0 payload_index_bound
       (.fall 5 (some (.taggedValue [none, some .bool] 1 (.truth false)))) with
-      | .ok _ => true | .error _ => false) = true := by tagged_ok
+      | .ok _ => true | .error _ => false) = true := by
+  tagged_ok (lowSVal unit [] [] scope 0 0 payload_index_bound
+      (.fall 5 (some (.taggedValue [none, some .bool] 1 (.truth false)))))
 
 theorem lower_missing_payload_refused :
     (match lowSVal unit [] [] scope 0 0 payload_index_bound (.fall 1 none) with
-      | .ok _ => false | .error _ => true) = true := by tagged_error
+      | .ok _ => false | .error _ => true) = true := by
+  tagged_error (lowSVal unit [] [] scope 0 0 payload_index_bound (.fall 1 none))
 
 theorem lower_extra_payload_refused :
     (match lowSVal unit [] [] scope 0 0 payload_index_bound (.fall 0 (some (.lit 1))) with
-      | .ok _ => false | .error _ => true) = true := by tagged_error
+      | .ok _ => false | .error _ => true) = true := by
+  tagged_error (lowSVal unit [] [] scope 0 0 payload_index_bound (.fall 0 (some (.lit 1))))
 
 theorem lower_wrong_payload_refused :
     (match lowSVal unit [] [] scope 0 0 payload_index_bound (.fall 1 (some (.lit 1))) with
-      | .ok _ => false | .error _ => true) = true := by tagged_error
+      | .ok _ => false | .error _ => true) = true := by
+  tagged_error (lowSVal unit [] [] scope 0 0 payload_index_bound (.fall 1 (some (.lit 1))))
 
 /-- Dependency resolution preserves source order even for a forward reference. -/
 theorem nested_schema_export_zeuge :
@@ -113,7 +125,9 @@ theorem nested_schema_export_zeuge :
 theorem recursive_schema_refused :
     (match uSums [] [.typeT ["tagged"] "Recursive" [] []
         (some (.raw "{ Wrap(Recursive) }"))] with
-      | .ok _ => false | .error _ => true) = true := by tagged_error
+      | .ok _ => false | .error _ => true) = true := by
+  tagged_error (uSums [] [.typeT ["tagged"] "Recursive" [] []
+        (some (.raw "{ Wrap(Recursive) }"))])
 
 /-- Export and lower a source predicate as the selected complete bool payload. -/
 def sourceBoolPayload (locks : List ULock) (source : SExpr) : Bool :=
@@ -129,52 +143,45 @@ def sourceBoolPayload (locks : List ULock) (source : SExpr) : Bool :=
 
 theorem source_comparison_payload_zeuge :
     sourceBoolPayload [] (.bin "<" (.variable "n") (.lit 7)) = true := by
-  unfold sourceBoolPayload
-  apply chain_ok <;> refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+  cbv
 
 theorem source_boolean_payload_zeuge :
     sourceBoolPayload [] (.bin "&&" (.un "!" (.variable "flag")) (.bin "<" (.variable "n") (.lit 7))) = true := by
-  unfold sourceBoolPayload
-  apply chain_ok <;> refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+  cbv
 
 def sourceFlagRead : SExpr := .field (.index (.field (.variable "Flags") "slots") (.lit 1)) "ready"
 
 theorem source_bool_field_payload_zeuge : sourceBoolPayload [] sourceFlagRead = true := by
-  unfold sourceBoolPayload
-  apply chain_ok <;> refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+  cbv
 
 theorem source_guarded_payload_refused :
     sourceBoolPayload [{ name := "Guard", rank := 1, guard := ["Flags"] }] sourceFlagRead = false := by
-  unfold sourceBoolPayload
-  apply chain_first_error
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+  cbv
 
 theorem source_numeric_bool_payload_refused : sourceBoolPayload [] (.lit 1) = false := by
-  unfold sourceBoolPayload
-  apply chain_first_error
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+  cbv
 
 theorem source_old_payload_refused :
     sourceBoolPayload [] (.old sourceFlagRead) = false := by
-  unfold sourceBoolPayload
-  apply chain_first_error
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+  cbv
 
 theorem source_result_payload_refused : sourceBoolPayload [] .res = false := by
-  unfold sourceBoolPayload
-  apply chain_first_error
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+  cbv
 
 /-- Scalar introductions are typed by the common value lowerer. -/
 theorem lower_option_payload_zeuge :
     (match Gabbro.Grammatik.Parser.UebersetzeAllg.lowWertAtE unit [] [] scope none (.sum [some (.opt 4)])
       (.taggedValue [some (.opt 4)] 0 (.present 4 (.lit 2))) with
-      | .ok _ => true | .error _ => false) = true := by tagged_ok
+      | .ok _ => true | .error _ => false) = true := by
+  tagged_ok (Gabbro.Grammatik.Parser.UebersetzeAllg.lowWertAtE unit [] [] scope none (.sum [some (.opt 4)])
+      (.taggedValue [some (.opt 4)] 0 (.present 4 (.lit 2))))
 
 theorem lower_option_payload_range_refused :
     (match Gabbro.Grammatik.Parser.UebersetzeAllg.lowWertAtE unit [] [] scope none (.sum [some (.opt 4)])
       (.taggedValue [some (.opt 4)] 0 (.present 4 (.lit 4))) with
-      | .ok _ => false | .error _ => true) = true := by tagged_error
+      | .ok _ => false | .error _ => true) = true := by
+  tagged_error (Gabbro.Grammatik.Parser.UebersetzeAllg.lowWertAtE unit [] [] scope none (.sum [some (.opt 4)])
+      (.taggedValue [some (.opt 4)] 0 (.present 4 (.lit 4))))
 
 end TypedPayload
 

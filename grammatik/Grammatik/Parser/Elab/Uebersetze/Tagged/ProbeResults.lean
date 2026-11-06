@@ -41,12 +41,17 @@ private theorem chain_first_error {α β : Type} {first : Except String α} {nex
   exact congrArg (fun answer : Except String α => match answer with
     | .error _ => false
     | .ok value => match next value with | .ok _ => true | .error _ => false) refused.property
-scoped macro "tagged_ok" : tactic => `(tactic| (
-  apply reader_ok
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩))
-scoped macro "tagged_error" : tactic => `(tactic| (
-  apply reader_error
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩))
+-- Elaborate the supplied producer and its result before comparing Bool observations.
+scoped macro "tagged_ok " reader:term : tactic => `(tactic| (
+  let operation := $reader
+  let certificate : { actual // operation = .ok actual } := by
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+  exact reader_ok (reader := operation) certificate))
+scoped macro "tagged_error " reader:term : tactic => `(tactic| (
+  let operation := $reader
+  let certificate : { error : String // operation = .error error } := by
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+  exact reader_error (reader := operation) certificate))
 
 -- No successful UProg is assumed: both expansion data and the actual subsequent
 -- rejection are inferred separately from the same canonical elaborator.
