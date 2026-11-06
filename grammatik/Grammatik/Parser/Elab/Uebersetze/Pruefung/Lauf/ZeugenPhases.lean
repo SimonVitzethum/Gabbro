@@ -9,6 +9,7 @@ import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Calls
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Heads
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Assembly
+import Grammatik.Parser.Elab.UebersetzeAllg3.FunctionResults
 import all Grammatik.Parser.Elab.UebersetzeAllg3.TransitionCert
 import all Grammatik.Parser.Elab.UebersetzeAllg.Teil1
 import all Grammatik.Parser.Elab.UebersetzeAllg.Teil2
@@ -258,201 +259,110 @@ attribute [local cbv_eval] program_made checks_made
 private theorem common : CheckWitness unit 1 := by
   constructor <;> cbv
 
-end RetiringWitness
+-- These equations retain the actual call and resource transitions, selecting
+-- a single reader node before any concrete edited unit is substituted.
+private def source_call_ready (u : UProg) (caller callee : Fin u.fns.length)
+    (Λ : List (Res (declOf u))) (tables : u.tabs = []) (globals : u.globs = [])
+    (locks : u.locks = []) (floor : (fnAt u caller).boden = none)
+    (marks : decide (Untermulti (((declOf u).signatur callee).inputMarks.map
+      (Res.vonMarke (declOf u))) Λ) = true)
+    (owner : ownerReadyB u ((declOf u).signatur callee) = true) :
+    CheckCallGuards u caller callee Λ := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, marks, owner⟩
+  · intro table _
+    exact False.elim (Nat.not_lt_zero table.val (by
+      simpa only [tables, List.length_nil] using table.isLt))
+  · intro global _
+    exact False.elim (Nat.not_lt_zero global.val (by
+      simpa only [globals, List.length_nil] using global.isLt))
+  · intro lock _
+    exact False.elim (check_no_lock u locks lock)
+  · simp only [floorLeB, floor]
+  · intro lock _
+    exact False.elim (check_no_lock u locks lock)
 
-end Gabbro.Grammatik.Parser.Uebersetze
+private def nullary_arguments (u : UProg) (caller callee : Fin u.fns.length)
+    (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u)))
+    (kinds : (fnAt u callee).kinds = []) (parameters : (fnAt u callee).params = []) :
+    {arguments : Args (declOf u) Γ Λ ((declOf u).params callee) //
+      lowCallArgsAuxL u caller Γ fn Λ (fnAt u callee).kinds ((declOf u).params callee) [] = .ok arguments} := by
+  let recorded : Args (declOf u) Γ Λ ((fnAt u callee).params.map (·.2)) := by
+    rw [parameters]
+    exact Args.nil
+  have read : lowCallArgsAuxL u caller Γ fn Λ (fnAt u callee).kinds
+      ((fnAt u callee).params.map (·.2)) [] = .ok recorded := by
+    simp only [kinds, parameters, List.map_nil, check_arguments_nil, recorded]
+  refine ⟨check_arguments_cast u Γ Λ (params_eq u callee) recorded, ?_⟩
+  exact (check_arguments_types u caller Γ fn Λ (fnAt u callee).kinds []
+    ((declOf u).params callee) ((fnAt u callee).params.map (·.2)) (params_eq u callee)).trans
+      (congrArg (fun answer => answer.map (check_arguments_cast u Γ Λ (params_eq u callee))) read)
 
-namespace Gabbro.Grammatik.Parser.Uebersetze
-open Gabbro.Grammatik.Parser.UebersetzeAllg
-open Gabbro.Grammatik.Parser.UebersetzeAllg2
-open Gabbro.Grammatik.Zielsatz
+private def permitted_head (u : UProg) (caller callee : Fin u.fns.length)
+    (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u))) (name : String)
+    (found : fnIdx u.fns name = .ok callee) (ready : CheckCallGuards u caller callee Λ)
+    (arguments : {actual : Args (declOf u) Γ Λ ((declOf u).params callee) //
+      lowCallArgsAuxL u caller Γ fn Λ (fnAt u callee).kinds ((declOf u).params callee) [] = .ok actual}) :
+    {head : RufKopf u caller Γ Λ // lowRufKopf u caller Γ fn Λ name [] = .ok head} :=
+  ⟨check_call_head u caller callee Γ Λ arguments.val ready,
+    check_call_success u caller callee Γ fn Λ name [] arguments.val found arguments.property ready⟩
 
-local instance retiringFactsAxiomEquality (u : UProg) : DecidableEq (declOf u).Ax :=
-  inferInstanceAs (DecidableEq (Fin u.axs.length))
-local instance retiringFactsFunctionEquality (u : UProg) : DecidableEq (declOf u).Fn :=
-  inferInstanceAs (DecidableEq (Fin u.fns.length))
+private theorem bind_failure (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
+    (fn : UFn) (fuel : Nat) (Λ : List (Res (declOf u))) (binder name : String)
+    (rest : List UStmt) (returning : URet) (error : String)
+    (head : {actual : RufKopf u caller Γ Λ // lowRufKopf u caller Γ fn Λ name [] = .ok actual})
+    (result : (fnAt u head.val.callee).ergTy = some .bool)
+    (failed : lowBodyF u caller (.bool :: Γ) (fn.mitTy binder .bool) fuel
+      (nach (declOf u) head.val.callee Λ) rest returning = .error error) :
+    lowBodyF u caller Γ fn (fuel + 1) Λ (.bindCall binder name [] :: rest) returning = .error error := by
+  rw [lowBodyF, head.property, check_result_select]
+  simp only [result, check_result_value, failed]
 
-namespace RetiringWitness
+private theorem empty_return_failure (u : UProg) (caller : Fin u.fns.length)
+    (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u)))
+    (result : (fnAt u caller).ergTy = none)
+    (unreturned : decide (Λ.Perm (verOf u caller).ende) = false) :
+    lowBodyF u caller Γ fn 1 Λ [] .empty = .error "lower: return without produced marks" := by
+  rw [lowBodyF, check_end_empty, check_return_empty]
+  simp only [result, unreturned, Bool.false_eq_true, dite_false]
 
--- This proposition contains the original getter-facing statements, together
--- with the actual header/index facts needed by their typed consumers. It is
--- transported as a whole; none of its computational packets is public data.
-private structure RetiringFacts (u : UProg) : Prop where
-  common : CheckWitness u 1
-  functionCount : u.fns.length = 6
-  checkCount : ((uCheckDecls u).toOption.get common.derived).length = 1
-  driverEnd : ∀ f : (declOf u).Fn, f.val = 5 → (vertragVon (declOf u) f).ende = []
-  resources : ∀ c ∈ (uCheckDecls u).toOption.get common.derived,
-    ∀ producer consumer : (declOf u).Fn, producer.val = 1 → consumer.val = 4 →
-      ((declOf u).signatur producer).inputMarks = [c.duty] ∧
-      ((declOf u).signatur producer).outputMarks = [c.duty] ∧
-      ((declOf u).signatur consumer).inputMarks = [c.duty] ∧
-      ((declOf u).signatur consumer).outputMarks = []
-  descriptor : ∀ c ∈ (uCheckDecls u).toOption.get common.derived,
-    c.name = "p" ∧ c.probe.val = 1 ∧ c.gates.map Fin.val = [3]
-  boolResult : ∀ f : (declOf u).Fn, f.val = 1 ∨ f.val = 2 →
-    (declOf u).erg f = some .bool
-  capture : ∀ (f : (declOf u).Fn), f.val = 2 →
-    ∀ (env : Env (declOf u) ((declOf u).params f))
-      (truth : (declOf u).erg f = some .bool),
-      checkEnvAtoms env = [some (.number 3), some (.truth true), some (.truth true)] →
-      actualCheckReturn u f env (Eq.mpr (congrArg (ErgVal (declOf u)) truth) true) =
-        some ("p", retiringReport)
-  verdict : ∀ c ∈ (uCheckDecls u).toOption.get common.derived,
-    ∀ (f : (declOf u).Fn), f.val = 1 →
-      ∀ (env : Env (declOf u) ((declOf u).params f))
-        (truth : (declOf u).erg f = some .bool) (before after : World (declOf u)),
-        rueckUrteil c (.rueck f env
-          (Eq.mpr (congrArg (ErgVal (declOf u)) truth) true) before after) = some true
-  unconsumed : (lowerAllg {u with
-    fns := u.fns.map fun f =>
-      if strEq f.name "p#driver#g" then
-        {f with body := [.bindCall "verdict" "p#probe" []]} else f}).toOption.isNone = true
-  double : (lowerAllg {u with
-    fns := u.fns.map fun f =>
-      if strEq f.name "p#driver#g" then
-        {f with body := f.body ++ [.call "p#consume#g" []]} else f}).toOption.isNone = true
+private theorem call_failure (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
+    (fn : UFn) (fuel : Nat) (Λ : List (Res (declOf u))) (name error : String)
+    (rest : List UStmt) (returning : URet)
+    (failed : lowRufKopf u caller Γ fn Λ name [] = .error error) :
+    lowBodyF u caller Γ fn (fuel + 1) Λ (.call name [] :: rest) returning = .error error := by
+  rw [lowBodyF]
+  simp only [lowStmtL, lowCallL, failed]
 
-private theorem actual_checks : (uCheckDecls unit).toOption.get common.derived = checks.val :=
-  Except.ok.inj ((except_ok_get (x := uCheckDecls unit) common.derived).symm.trans checks_made)
+private theorem after_call_failure (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
+    (fn : UFn) (fuel : Nat) (Λ : List (Res (declOf u))) (name error : String)
+    (rest : List UStmt) (returning : URet)
+    (step : {actual : Σ after, Stmt (declOf u) (verOf u caller) false Γ Λ after //
+      lowStmtL u caller Γ fn Λ (.call name []) = .ok actual})
+    (failed : lowBodyF u caller Γ fn fuel step.val.1 rest returning = .error error) :
+    lowBodyF u caller Γ fn (fuel + 1) Λ (.call name [] :: rest) returning = .error error := by
+  rw [lowBodyF]
+  simp only [step.property, failed]
 
-private theorem single_check : checks.val = [checks.val.get ⟨0, by change 0 < 1; decide⟩] := rfl
-
-private theorem check_member {c : CheckDecl (declOf unit)}
-    (member : c ∈ (uCheckDecls unit).toOption.get common.derived) :
-    c = checks.val.get ⟨0, by change 0 < 1; decide⟩ := by
-  rw [actual_checks, single_check] at member
-  exact List.mem_singleton.mp member
-
-private theorem check_descriptor : ∀ c ∈ (uCheckDecls unit).toOption.get common.derived,
-    c.name = "p" ∧ c.probe.val = 1 ∧ c.gates.map Fin.val = [3] := by
-  intro c member
-  obtain rfl := check_member member
-  cbv
-
-private theorem check_resources : ∀ c ∈ (uCheckDecls unit).toOption.get common.derived,
-    ∀ producer consumer : (declOf unit).Fn, producer.val = 1 → consumer.val = 4 →
-      ((declOf unit).signatur producer).inputMarks = [c.duty] ∧
-      ((declOf unit).signatur producer).outputMarks = [c.duty] ∧
-      ((declOf unit).signatur consumer).inputMarks = [c.duty] ∧
-      ((declOf unit).signatur consumer).outputMarks = [] := by
-  intro c member producer consumer producerAt consumerAt
-  have producerEq : producer = index1 := Fin.ext producerAt
-  have consumerEq : consumer = index4 := Fin.ext consumerAt
-  subst producer
-  subst consumer
-  obtain rfl := check_member member
-  cbv
-  exact ⟨rfl, rfl, rfl, rfl⟩
-
--- Read the actual saved reporter metadata once, without spelling another
--- return-site schema or assuming a completed source/IR outcome.
-private def reporterSite : {site : UCheckReturn //
-    (fnAt unit index2).checkReturn = some site} := by
-  refine ⟨?site, ?produced⟩
-  case produced => cbv <;> exact Eq.refl _
-
-private theorem check_capture : ∀ (f : (declOf unit).Fn), f.val = 2 →
-    ∀ (env : Env (declOf unit) ((declOf unit).params f))
-      (truth : (declOf unit).erg f = some .bool),
-      checkEnvAtoms env = [some (.number 3), some (.truth true), some (.truth true)] →
-      actualCheckReturn unit f env (Eq.mpr (congrArg (ErgVal (declOf unit)) truth) true) =
-        some ("p", retiringReport) := by
-  intro f position env truth atoms
-  have same : f = index2 := Fin.ext position
-  subst f
-  unfold actualCheckReturn
-  rw [reporterSite.property]
-  change (do
-    let report ← decodeCheckReturn reporterSite.val (checkEnvAtoms env) true
-    pure ("p", report)) = some ("p", retiringReport)
-  rw [atoms]
-  cbv
-
-private theorem check_verdict : ∀ c ∈ (uCheckDecls unit).toOption.get common.derived,
-    ∀ (f : (declOf unit).Fn), f.val = 1 →
-      ∀ (env : Env (declOf unit) ((declOf unit).params f))
-        (truth : (declOf unit).erg f = some .bool) (before after : World (declOf unit)),
-        rueckUrteil c (.rueck f env
-          (Eq.mpr (congrArg (ErgVal (declOf unit)) truth) true) before after) = some true := by
-  intro c member f position env truth before after
-  have same : f = index1 := Fin.ext position
-  subst f
-  have probe : c.probe = index1 := Fin.ext (check_descriptor c member).2.1
-  simp only [rueckUrteil, if_pos probe.symm]
-  cbv
-
--- Every resource-refusal witness is an actual failed function of the same
--- assembler. This implication neither bypasses nor duplicates that assembler.
-private theorem function_refused (u : UProg) (f : Fin u.fns.length)
-    (error : String) (rejected : lowerFnAt u f = .error error) :
-    (lowerAllg u).toOption.isNone = true := by
-  cases made : lowerAllg u with
-  | error error => rfl
-  | ok result =>
-    obtain ⟨fields, produced, _, _, _⟩ := lowerAllg_fields u result.1 result.2 made f
-    rw [rejected] at produced
-    cases produced
-
-attribute [local cbv_opaque] lowCallArgOneL lowCallArgsAuxL withErg lowErg lowEnd
-attribute [local cbv_eval] check_argument_bool check_argument_integer
-  check_arguments_nil check_arguments_cons
-  check_result_select check_return_empty check_return_bool check_end_empty check_end_bool
-  floor_name_self floor_mark_self
-
-private def unconsumedUnit : {actual : UProg // {unit with
-      fns := unit.fns.map fun f =>
-        if strEq f.name "p#driver#g" then
-          {f with body := [.bindCall "verdict" "p#probe" []]} else f} = actual} := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
-
-private def doubledUnit : {actual : UProg // {unit with
-      fns := unit.fns.map fun f =>
-        if strEq f.name "p#driver#g" then
-          {f with body := f.body ++ [.call "p#consume#g" []]} else f} = actual} := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
-
-private theorem selected_unconsumed :
-    (lowerAllg {unit with
-      fns := unit.fns.map fun f =>
-        if strEq f.name "p#driver#g" then
-          {f with body := [.bindCall "verdict" "p#probe" []]} else f}).toOption.isNone = true := by
-  have failed : ∃ error : String,
-      lowerFnAt unconsumedUnit.val
-        ⟨5, by change 5 < 6; decide⟩ = .error error := by
-    refine ⟨?error, ?rejected⟩
-    case rejected => cbv <;> exact Eq.refl _
-  obtain ⟨error, rejected⟩ := failed
-  rw [unconsumedUnit.property]
-  exact function_refused _ _ error rejected
-
-private theorem selected_double :
-    (lowerAllg {unit with
-      fns := unit.fns.map fun f =>
-        if strEq f.name "p#driver#g" then
-          {f with body := f.body ++ [.call "p#consume#g" []]} else f}).toOption.isNone = true := by
-  have failed : ∃ error : String,
-      lowerFnAt doubledUnit.val
-        ⟨5, by change 5 < 6; decide⟩ = .error error := by
-    refine ⟨?error, ?rejected⟩
-    case rejected => cbv <;> exact Eq.refl _
-  obtain ⟨error, rejected⟩ := failed
-  rw [doubledUnit.property]
-  exact function_refused _ _ error rejected
-
-private theorem facts : RetiringFacts unit := by
-  refine ⟨common, rfl, ?_, ?_, check_resources, check_descriptor, ?_,
-    check_capture, check_verdict, selected_unconsumed, selected_double⟩
-  · rw [actual_checks]
-    rfl
-  · intro f position
-    have same : f = index5 := Fin.ext position
-    subst f
-    rfl
-  · have all : (List.finRange unit.fns.length).all (fun f =>
-        decide ((f.val = 1 ∨ f.val = 2) → (declOf unit).erg f = some .bool)) = true := by cbv
-    intro f position
-    exact of_decide_eq_true (List.all_eq_true.mp all f (List.mem_finRange f)) position
+-- The first invocation's checked writes/floor remain identical. With no locks,
+-- the two remaining lock guards hold also at the actual post-consumer inventory.
+-- The marks test is still the canonical first failing guard, before ownerReadyB.
+private theorem missing_mark_failure (u : UProg) (caller callee : Fin u.fns.length)
+    (Γ : Ctx) (fn : UFn) (before after : List (Res (declOf u))) (name : String)
+    (locks : u.locks = []) (ready : CheckCallGuards u caller callee before)
+    (found : fnIdx u.fns name = .ok callee)
+    (arguments : {actual : Args (declOf u) Γ after ((declOf u).params callee) //
+      lowCallArgsAuxL u caller Γ fn after (fnAt u callee).kinds ((declOf u).params callee) [] = .ok actual})
+    (missing : decide (Untermulti (((declOf u).signatur callee).inputMarks.map
+      (Res.vonMarke (declOf u))) after) = false) :
+    lowRufKopf u caller Γ fn after name [] = .error "call without held mark" := by
+  have held : ∀ L ∈ ((declOf u).signatur callee).haelt, Res.held (D := declOf u) L ∈ after :=
+    fun L _ => False.elim (check_no_lock u locks L)
+  have extra : ∀ L ∈ heldLocksD u after,
+      L ∈ ((declOf u).signatur callee).haelt ∨ floorUeberB u callee L = true :=
+    fun L _ => False.elim (check_no_lock u locks L)
+  simp only [lowRufKopf, found, arguments.property, dif_pos ready.writes,
+    dif_pos ready.globals, dif_pos held, dif_pos ready.floor, dif_pos extra,
+    missing, Bool.false_eq_true, dite_false]
 
 end RetiringWitness
 end Gabbro.Grammatik.Parser.Uebersetze

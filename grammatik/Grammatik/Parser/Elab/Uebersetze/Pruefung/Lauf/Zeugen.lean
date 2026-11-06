@@ -1,11 +1,12 @@
 module
 
-public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.ZeugenPhases
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.ZeugenFacts
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.Consumer
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.Erhaltung
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.History
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.Treue
 
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.ZeugenFacts
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.ZeugenPhases
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.History
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
