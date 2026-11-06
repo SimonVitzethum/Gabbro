@@ -73,7 +73,7 @@ def uCheck (tabs : List UTab) (globs : List UGlob) (fns : List String)
   -- The parser stores (text, expects-name); the kernel stores (name, text).
   .ok { name := c.cname, claim := c.claim, misst := misst, tore := tore, boeden := boeden, sonde := c.sonde.map fun pair => (pair.2, pair.1), probe := probeFnName c.cname, duty := dutyName c.cname }
 
-def uChecksAux (tabs : List UTab) (globs : List UGlob) (fns namen fremd bekannt : List String) :
+@[expose] def uChecksAux (tabs : List UTab) (globs : List UGlob) (fns namen fremd bekannt : List String) :
     List SCheck → Except String (List UCheck)
   | [] => .ok []
   | c :: rest =>
@@ -88,7 +88,7 @@ def uChecksAux (tabs : List UTab) (globs : List UGlob) (fns namen fremd bekannt 
         | .ok us => .ok (u :: us)
 
 /-- Elaborate every `check` item of the unit. -/
-def uChecks (tabs : List UTab) (globs : List UGlob) (ms : List SItemTief) :
+@[expose] def uChecks (tabs : List UTab) (globs : List UGlob) (ms : List SItemTief) :
     Except String (List UCheck) :=
   uChecksAux tabs globs
     (ms.filterMap (fun | .fnT s _ => some s.name | _ => none))

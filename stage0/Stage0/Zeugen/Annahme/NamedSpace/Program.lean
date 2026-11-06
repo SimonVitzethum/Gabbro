@@ -4,6 +4,10 @@ public import Stage0.Frontend.Witnesses.Constants.ProgramPackets
 import Init.Data.String.Lemmas.Intercalate
 import all Stage0.Zeugen.Annahme.NamedSpace.Input
 import all Stage0.SourceWitness.Owners
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
+import all Grammatik.Parser.Elab.Generic.StaticConformance
 
 @[expose] public section
 namespace Gabbro.Stage0.NamedSpaceWitness.Phases
@@ -25,11 +29,11 @@ def expansion : (pointer : Bool) →
     { value : List SItemTief × List (STyp × String) //
       Modules.prepare (pre108 (source pointer).prepared.elaborierbar) = .ok value }
   | false => by
-    refine ⟨?value, ?made⟩
-    case made => cbv <;> exact Eq.refl _
+    refine ⟨?plainResult, ?plainResultEq⟩
+    case plainResultEq => cbv <;> exact Eq.refl _
   | true => by
-    refine ⟨?value, ?made⟩
-    case made => cbv <;> exact Eq.refl _
+    refine ⟨?pointerResult, ?pointerResultEq⟩
+    case pointerResultEq => cbv <;> exact Eq.refl _
 
 private theorem constantGate (pointer : Bool) :
     Konst.checkSourceConstants (uMembers (pre108 (source pointer).prepared.elaborierbar)) = .ok () := by
@@ -50,11 +54,11 @@ def candidateUnit : (pointer : Bool) →
         (Frontend.tableWithEmpty (source pointer).scopes.values (source pointer).scopes.types)).bind
         (Profil.selectUnit {})) = .ok value }
   | false => by
-    refine ⟨?value, ?made⟩
-    case made => cbv <;> exact Eq.refl _
+    refine ⟨?plainResult, ?plainResultEq⟩
+    case plainResultEq => cbv <;> simp only [uChecks, uChecksAux] <;> cbv <;> exact Eq.refl _
   | true => by
-    refine ⟨?value, ?made⟩
-    case made => cbv <;> exact Eq.refl _
+    refine ⟨?pointerResult, ?pointerResultEq⟩
+    case pointerResultEq => cbv <;> simp only [uChecks, uChecksAux] <;> cbv <;> exact Eq.refl _
 
 def header (pointer : Bool) : Header (sourceText pointer) where
   source := source pointer
@@ -99,11 +103,11 @@ def code : (pointer : Bool) →
         RumpTy (header pointer).unit (main pointer) × ReqTy (header pointer).unit (main pointer) //
       lowerFnAt (header pointer).unit (main pointer) = .ok value }
   | false => by
-    refine ⟨?value, ?made⟩
-    case made => cbv <;> exact Eq.refl _
+    refine ⟨?plainResult, ?plainResultEq⟩
+    case plainResultEq => cbv <;> exact Eq.refl _
   | true => by
-    refine ⟨?value, ?made⟩
-    case made => cbv <;> exact Eq.refl _
+    refine ⟨?pointerResult, ?pointerResultEq⟩
+    case pointerResultEq => cbv <;> exact Eq.refl _
 
 -- Transport the complete actual triple at an abstract unit before substituting
 -- either fixture. In particular, Functions.values never re-runs lowerFnAt
@@ -141,11 +145,11 @@ def arrays : (pointer : Bool) →
       Frontend.checkArrays (header pointer).unit (header pointer).source.scopes
         (uMembers (pre108 (header pointer).source.prepared.elaborierbar)) = .ok value }
   | false => by
-    refine ⟨?value, ?made⟩
-    case made => cbv <;> exact Eq.refl _
+    refine ⟨?plainResult, ?plainResultEq⟩
+    case plainResultEq => cbv <;> exact Eq.refl _
   | true => by
-    refine ⟨?value, ?made⟩
-    case made => cbv <;> exact Eq.refl _
+    refine ⟨?pointerResult, ?pointerResultEq⟩
+    case pointerResultEq => cbv <;> exact Eq.refl _
 
 private theorem entry_free (pointer : Bool) (f : Fin (header pointer).unit.fns.length) :
     (OldSource.clauses (header pointer).expanded (fnAt (header pointer).unit f).name).any

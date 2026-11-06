@@ -42,11 +42,11 @@ def plan : (pointer : Bool) →
         (uMembers (pre108 (compilation pointer).val.source.prepared.elaborierbar))
         (compilation pointer).val.main = .ok value }
   | false => by
-    refine ⟨?value, ?made⟩
-    case made => cbv <;> exact Eq.refl _
+    refine ⟨?plainResult, ?plainResultEq⟩
+    case plainResultEq => cbv <;> exact Eq.refl _
   | true => by
-    refine ⟨?value, ?made⟩
-    case made => cbv <;> exact Eq.refl _
+    refine ⟨?pointerResult, ?pointerResultEq⟩
+    case pointerResultEq => cbv <;> exact Eq.refl _
 
 theorem initial (pointer : Bool) : GabbroV.sp0OkB (compilation pointer).val.unit = true := by
   rw [compilation_unit]
@@ -58,11 +58,11 @@ def arguments : (pointer : Bool) →
       Senke.mainEnv ((declOf (compilation pointer).val.unit).params (compilation pointer).val.main) =
         some value }
   | false => by
-    refine ⟨?value, ?made⟩
-    case made => cbv <;> exact Eq.refl _
+    refine ⟨?plainResult, ?plainResultEq⟩
+    case plainResultEq => cbv <;> exact Eq.refl _
   | true => by
-    refine ⟨?value, ?made⟩
-    case made => cbv <;> exact Eq.refl _
+    refine ⟨?pointerResult, ?pointerResultEq⟩
+    case pointerResultEq => cbv <;> exact Eq.refl _
 
 -- Only the actual finite builder runs here: source parsing, collection,
 -- lowering, restoration and admission have already supplied whole values.
@@ -76,11 +76,11 @@ def emission : (pointer : Bool) →
         ((plan pointer).val.starts (Senke.initialWorld (compilation pointer).val.unit (initial pointer)))
         64 (Senke.bodenAusrichtung (compilation pointer).val.unit) = .ok value }
   | false => by
-    refine ⟨?value, ?made⟩
-    case made => cbv <;> exact Eq.refl _
+    refine ⟨?plainResult, ?plainResultEq⟩
+    case plainResultEq => cbv <;> exact Eq.refl _
   | true => by
-    refine ⟨?value, ?made⟩
-    case made => cbv <;> exact Eq.refl _
+    refine ⟨?pointerResult, ?pointerResultEq⟩
+    case pointerResultEq => cbv <;> exact Eq.refl _
 
 -- A thin data constructor is independent of its closed success theorem.
 -- It is exactly the constructor certified by the shared original-emitter API.
