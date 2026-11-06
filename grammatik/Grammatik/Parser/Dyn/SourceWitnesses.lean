@@ -22,6 +22,7 @@ import all Grammatik.Parser.Spec.Contract
 import all Grammatik.Parser.Spec.Resolve
 import all Grammatik.Parser.Elab.Uebersetze.Folds.ConstEvaluation
 
+import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Decode
