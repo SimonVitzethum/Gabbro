@@ -162,9 +162,7 @@ private def fold_result (fixture : ExportFixture) :
     { actual : List SItemTief // SourceFolds.prepare (phase_input fixture) = .ok actual } := by
   cases fixture
   all_goals
-    refine ⟨?_, ?_⟩
-    swap
-    cbv <;> exact Eq.refl _
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩
 private def fold_value (fixture : ExportFixture) : List SItemTief := (fold_result fixture).val
 private theorem fold_success (fixture : ExportFixture) :
     SourceFolds.prepare (phase_input fixture) = .ok (fold_value fixture) := (fold_result fixture).property
@@ -173,9 +171,7 @@ private def close_result (fixture : ExportFixture) :
     { actual : List Closed × List SItemTief // prepare (fold_value fixture) = .ok actual } := by
   cases fixture
   all_goals
-    refine ⟨?_, ?_⟩
-    swap
-    cbv <;> exact Eq.refl _
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩
 private def close_value (fixture : ExportFixture) : List Closed × List SItemTief := (close_result fixture).val
 private theorem close_success (fixture : ExportFixture) :
     prepare (fold_value fixture) = .ok (close_value fixture) := (close_result fixture).property
@@ -184,9 +180,7 @@ private def tagged_result (fixture : ExportFixture) :
     { actual : List SItemTief × List String // exportTaggedUnitDetailed (close_value fixture).2 = .ok actual } := by
   cases fixture
   all_goals
-    refine ⟨?_, ?_⟩
-    swap
-    cbv <;> exact Eq.refl _
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩
 private def tagged_value (fixture : ExportFixture) : List SItemTief × List String := (tagged_result fixture).val
 private theorem tagged_success (fixture : ExportFixture) :
     exportTaggedUnitDetailed (close_value fixture).2 = .ok (tagged_value fixture) := (tagged_result fixture).property
@@ -195,9 +189,7 @@ private def spec_result (fixture : ExportFixture) :
     { actual : List SItemTief // Spec.prepare (finish (close_value fixture).1 (tagged_value fixture).1) = .ok actual } := by
   cases fixture
   all_goals
-    refine ⟨?_, ?_⟩
-    swap
-    cbv <;> exact Eq.refl _
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩
 private def spec_value (fixture : ExportFixture) : List SItemTief := (spec_result fixture).val
 private theorem spec_success (fixture : ExportFixture) :
     Spec.prepare (finish (close_value fixture).1 (tagged_value fixture).1) = .ok (spec_value fixture) := (spec_result fixture).property
@@ -206,9 +198,7 @@ private def checked_result (fixture : ExportFixture) :
     { actual : List SItemTief // checkedOutput (tagged_value fixture).1 (spec_value fixture) = .ok actual } := by
   cases fixture
   all_goals
-    refine ⟨?_, ?_⟩
-    swap
-    cbv <;> exact Eq.refl _
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩
 private def checked_value (fixture : ExportFixture) : List SItemTief := (checked_result fixture).val
 private theorem checked_success (fixture : ExportFixture) :
     checkedOutput (tagged_value fixture).1 (spec_value fixture) = .ok (checked_value fixture) := (checked_result fixture).property
@@ -217,9 +207,7 @@ private def library_result (fixture : ExportFixture) :
     { actual : List SItemTief // exportLibraryUnit (checked_value fixture) = .ok actual } := by
   cases fixture
   all_goals
-    refine ⟨?_, ?_⟩
-    swap
-    cbv <;> exact Eq.refl _
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩
 private def library_value (fixture : ExportFixture) : List SItemTief := (library_result fixture).val
 private theorem library_success (fixture : ExportFixture) :
     exportLibraryUnit (checked_value fixture) = .ok (library_value fixture) := (library_result fixture).property
