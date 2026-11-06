@@ -287,37 +287,81 @@ theorem globalText_compiled :
   obtain ⟨result, origin, unitEq⟩ := compiled header body
   exact ⟨result, origin, (congrArg (fun unit => unit.fns.length) unitEq).trans count⟩
 
--- Name the complete canonical header before any dependent code projection.
-private def qualifiedTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.qualifiedText := by
-  refine {
-    source := sourceFrom qualifiedTextInput qualifiedTextTail
-    sourceEq := sourceFrom_eq qualifiedTextInput qualifiedTextTail
-    expanded := ?expanded
-    requirements := ?requirements
-    expansion := ?expansion
-    constants := ?constants
-    ordinary := by
-      change qualifiedTextInput.original.any Frontend.expansionHeader = false
-      rw [qualifiedOriginalPacket.property]
-      cbv
-    metadata := qualifiedTextTail.metadata
-    candidate := ?candidate
-    elaborated := ?elaborated }
-  case expansion => cbv <;> exact Eq.refl _
-  case constants =>
-    change Konst.checkSourceConstants qualifiedTextInput.original = .ok ()
-    unfold Konst.checkSourceConstants
-    split
-    · exact qualifiedTextTail.metadata
-    · rfl
-  case elaborated =>
-    change ((Frontend.elabWithScopes (pre108 qualifiedTextInput.prepared.elaborierbar)
+-- Select complete canonical data before the module and elaboration consumers inspect it.
+private def qualifiedPreparedData :
+    { actual : List SItemTief × List SItemTief //
+      qualifiedTextInput.prepared.elaborierbar = actual.1 ∧ pre108 actual.1 = actual.2 } := by
+  refine ⟨(?elaborierbar, ?preprocessed), ?prepared, ?processed⟩
+  case prepared => cbv <;> exact Eq.refl _
+  case processed => cbv <;> exact Eq.refl _
+
+private theorem qualified_preprocessed :
+    pre108 qualifiedTextInput.prepared.elaborierbar = qualifiedPreparedData.val.2 :=
+  (congrArg pre108 qualifiedPreparedData.property.1).trans qualifiedPreparedData.property.2
+
+private def qualifiedExpansion :
+    { actual : List SItemTief × List (STyp × String) //
+      Modules.prepare qualifiedPreparedData.val.2 = .ok actual } := by
+  refine ⟨?actual, ?produced⟩
+  case produced => cbv <;> exact Eq.refl _
+
+private def qualifiedElaboration :
+    { actual : UProg //
+      ((Frontend.elabWithScopes qualifiedPreparedData.val.2
+        qualifiedScopesPacket.val.scope.values qualifiedScopesPacket.val.scope.types
+        qualifiedScopesPacket.val.scope.functions (Frontend.tableWithEmpty
+          qualifiedScopesPacket.val.scope.values qualifiedScopesPacket.val.scope.types)).bind
+            (Profil.selectUnit {})) = .ok actual } := by
+  refine ⟨?actual, ?produced⟩
+  case produced =>
+    unfold Frontend.elabWithScopes
+    rw [show expandU qualifiedPreparedData.val.2 = .ok qualifiedExpansion.val from
+      qualifiedExpansion.property]
+    dsimp only [bind, Except.bind]
+    cbv <;> exact Eq.refl _
+
+-- Transport the whole UProg result; scope indices never become rewrite motives.
+private theorem qualified_elaborated :
+    ((Frontend.elabWithScopes (pre108 qualifiedTextInput.prepared.elaborierbar)
       qualifiedTextTail.derived.scope.values qualifiedTextTail.derived.scope.types
       qualifiedTextTail.derived.scope.functions (Frontend.tableWithEmpty
         qualifiedTextTail.derived.scope.values qualifiedTextTail.derived.scope.types)).bind
-          (Profil.selectUnit {})) = .ok _
-    rw [qualified_scope_values, qualified_scope_types, qualified_scope_functions]
-    cbv <;> exact Eq.refl _
+          (Profil.selectUnit {})) = .ok qualifiedElaboration.val := by
+  have inputEq := congrArg (fun items : List SItemTief =>
+    (Frontend.elabWithScopes items qualifiedScopesPacket.val.scope.values
+      qualifiedScopesPacket.val.scope.types qualifiedScopesPacket.val.scope.functions
+      (Frontend.tableWithEmpty qualifiedScopesPacket.val.scope.values
+        qualifiedScopesPacket.val.scope.types)).bind (Profil.selectUnit {})) qualified_preprocessed
+  have scopesEq := congrArg
+    (fun data : List (String × (Int × Int)) × List UKonstFn × List (String × Int) =>
+      (Frontend.elabWithScopes (pre108 qualifiedTextInput.prepared.elaborierbar)
+        data.2.2 data.1 data.2.1 (Frontend.tableWithEmpty data.2.2 data.1)).bind
+          (Profil.selectUnit {})) qualified_scope_data
+  exact scopesEq.trans (inputEq.trans qualifiedElaboration.property)
+
+private theorem qualified_constant_gate :
+    Konst.checkSourceConstants qualifiedTextInput.original = .ok () := by
+  unfold Konst.checkSourceConstants
+  split
+  · exact qualifiedTextTail.metadata
+  · rfl
+
+private theorem qualified_ordinary_gate :
+    qualifiedTextInput.original.any Frontend.expansionHeader = false := by
+  rw [qualifiedOriginalPacket.property]
+  cbv
+
+private def qualifiedTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.qualifiedText where
+  source := sourceFrom qualifiedTextInput qualifiedTextTail
+  sourceEq := sourceFrom_eq qualifiedTextInput qualifiedTextTail
+  expanded := qualifiedExpansion.val.1
+  requirements := qualifiedExpansion.val.2
+  expansion := (congrArg Modules.prepare qualified_preprocessed).trans qualifiedExpansion.property
+  constants := qualified_constant_gate
+  ordinary := qualified_ordinary_gate
+  metadata := qualifiedTextTail.metadata
+  candidate := qualifiedElaboration.val
+  elaborated := qualified_elaborated
 
 private theorem qualifiedText_count : qualifiedTextHeader.unit.fns.length = 1 := by cbv
 private def qualifiedTextMain : Fin qualifiedTextHeader.unit.fns.length :=
