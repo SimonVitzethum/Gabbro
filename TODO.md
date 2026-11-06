@@ -45,8 +45,8 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   certificate. Both integer source packets, including computed initialization, build; the final
   initializer compiler packet and its `IntegerPrograms` consumer now build through named
   array/literal, restore and acceptance certificates. Other concrete constant
-  program packets remain under repair. Their downstream
-  `ConstWitness`/`ConstValuesWitness` resource closure remains unmeasured after the new phase port.
+  program packets remain under repair. `ConstWitness` now builds; the dependent
+  `ConstValuesWitness` source packets remain under repair after the new phase port.
   The shared complete compilation packet, hardware-free image phase/geometry theorem and the
   conflicting-profile refusal witness build. Both successful profile and requires-profile images build.
   The aligned-static fixture now also builds end to end with its unchanged sixteen-byte alignment.
@@ -75,7 +75,10 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   dispatch equations now pass. The successful-place parser theorem and its direct printed
   assignment/call/emission consumers build. The rights/ownership scanner fragments and their
   individual numeric/text certificates build; long input composition still reaches the kernel
-  recursion limit. The bounded Dyn witness remains resource-unmeasured after sustained
+  recursion limit. Separate text/bound certificate fields and their record pass an isolated check.
+  The specification witness builds with its actual outer substitution environment, and the Dyn
+  fold/closure prefix passes after independent result inference and canonical numeral formatting.
+  The complete Dyn witness remains resource-unmeasured after sustained
   memory-high throttling in both single-module and larger integration scopes, without OOM.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
   The authorised acceptance scope is Lean and the Lean parts of GabbroV; Rust, Cargo and LLVM checks are
