@@ -304,12 +304,14 @@ private structure RetiringFacts (u : UProg) : Prop where
         (truth : (declOf u).erg f = some .bool) (before after : World (declOf u)),
         rueckUrteil c (.rueck f env
           (Eq.mpr (congrArg (ErgVal (declOf u)) truth) true) before after) = some true
-  unconsumed : (lowerAllg {u with fns := u.fns.map fun f =>
-    if strEq f.name "p#driver#g" then
-      {f with body := [.bindCall "verdict" "p#probe" []]} else f}).toOption.isNone = true
-  double : (lowerAllg {u with fns := u.fns.map fun f =>
-    if strEq f.name "p#driver#g" then
-      {f with body := f.body ++ [.call "p#consume#g" []]} else f}).toOption.isNone = true
+  unconsumed : (lowerAllg {u with
+    fns := u.fns.map fun f =>
+      if strEq f.name "p#driver#g" then
+        {f with body := [.bindCall "verdict" "p#probe" []]} else f}).toOption.isNone = true
+  double : (lowerAllg {u with
+    fns := u.fns.map fun f =>
+      if strEq f.name "p#driver#g" then
+        {f with body := f.body ++ [.call "p#consume#g" []]} else f}).toOption.isNone = true
 
 private theorem actual_checks : (uCheckDecls unit).toOption.get common.derived = checks.val :=
   Except.ok.inj ((except_ok_get (x := uCheckDecls unit) common.derived).symm.trans checks_made)
@@ -340,7 +342,7 @@ private theorem check_resources : ∀ c ∈ (uCheckDecls unit).toOption.get comm
   subst producer
   subst consumer
   obtain rfl := check_member member
-  cbv
+  cbv <;> rfl
 
 -- Read the actual saved reporter metadata once, without spelling another
 -- return-site schema or assuming a completed source/IR outcome.
@@ -376,9 +378,7 @@ private theorem check_verdict : ∀ c ∈ (uCheckDecls unit).toOption.get common
   have same : f = index1 := Fin.ext position
   subst f
   have probe : c.probe = index1 := Fin.ext (check_descriptor c member).2.1
-  unfold rueckUrteil
-  change (if index1 = c.probe then some true else none) = some true
-  exact if_pos probe.symm
+  simp only [rueckUrteil, if_pos probe.symm]
 
 -- Every resource-refusal witness is an actual failed function of the same
 -- assembler. This implication neither bypasses nor duplicates that assembler.
@@ -399,13 +399,15 @@ attribute [local cbv_eval] check_argument_bool check_argument_integer
   floor_name_self floor_mark_self
 
 private theorem selected_unconsumed :
-    (lowerAllg {unit with fns := unit.fns.map fun f =>
-      if strEq f.name "p#driver#g" then
-        {f with body := [.bindCall "verdict" "p#probe" []]} else f}).toOption.isNone = true := by
-  have failed : ∃ error : String,
-      lowerFnAt {unit with fns := unit.fns.map fun f =>
+    (lowerAllg {unit with
+      fns := unit.fns.map fun f =>
         if strEq f.name "p#driver#g" then
-          {f with body := [.bindCall "verdict" "p#probe" []]} else f}
+          {f with body := [.bindCall "verdict" "p#probe" []]} else f}).toOption.isNone = true := by
+  have failed : ∃ error : String,
+      lowerFnAt {unit with
+        fns := unit.fns.map fun f =>
+          if strEq f.name "p#driver#g" then
+            {f with body := [.bindCall "verdict" "p#probe" []]} else f}
         ⟨5, by change 5 < 6; decide⟩ = .error error := by
     refine ⟨?error, ?rejected⟩
     case rejected => cbv <;> exact Eq.refl _
@@ -413,13 +415,15 @@ private theorem selected_unconsumed :
   exact function_refused _ _ error rejected
 
 private theorem selected_double :
-    (lowerAllg {unit with fns := unit.fns.map fun f =>
-      if strEq f.name "p#driver#g" then
-        {f with body := f.body ++ [.call "p#consume#g" []]} else f}).toOption.isNone = true := by
-  have failed : ∃ error : String,
-      lowerFnAt {unit with fns := unit.fns.map fun f =>
+    (lowerAllg {unit with
+      fns := unit.fns.map fun f =>
         if strEq f.name "p#driver#g" then
-          {f with body := f.body ++ [.call "p#consume#g" []]} else f}
+          {f with body := f.body ++ [.call "p#consume#g" []]} else f}).toOption.isNone = true := by
+  have failed : ∃ error : String,
+      lowerFnAt {unit with
+        fns := unit.fns.map fun f =>
+          if strEq f.name "p#driver#g" then
+            {f with body := f.body ++ [.call "p#consume#g" []]} else f}
         ⟨5, by change 5 < 6; decide⟩ = .error error := by
     refine ⟨?error, ?rejected⟩
     case rejected => cbv <;> exact Eq.refl _
