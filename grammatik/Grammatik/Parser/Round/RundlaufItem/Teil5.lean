@@ -148,8 +148,10 @@ theorem tabKopf_rund_space (cnt : Option SExpr) (von backed owner : Option Strin
       nameOptToks "backed" backed ++ nameOptToks "owner" owner ++ shToks sh ++ .zeichen "{" :: R) =
       .ok ((cnt, von, backed, owner, sh, space), .zeichen "{" :: R) := by
   cases space with
-  | none => simpa only [nameOptToks, List.nil_append] using tabKopf_rund cnt von backed owner sh hc R F
-      (by simpa only [nameOptToks, List.nil_append] using hF)
+  | none =>
+    simpa only [nameOptToks, List.nil_append] using
+      (tabKopf_rund cnt von backed owner sh hc R F
+        (by simpa only [nameOptToks, List.nil_append] using hF))
   | some name =>
     obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by
       simp only [nameOptToks, List.cons_append, List.nil_append, List.length_cons, List.length_append] at hF
