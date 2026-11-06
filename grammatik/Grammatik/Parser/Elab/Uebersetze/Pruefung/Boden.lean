@@ -111,10 +111,12 @@ def uBodenWahr : UProg := (elabText checkTextBodenWahr).toOption.get checkTextBo
 def uBodenFalsch : UProg := (elabText checkTextBodenFalsch).toOption.get checkTextBodenFalsch_ok
 
 private theorem bodenWahr_unit : uBodenWahr = floorPassingUnitMade.val :=
-  Except.ok.inj ((except_ok_get checkTextBodenWahr_ok).symm.trans bodenWahr_source)
+  Except.ok.inj ((except_ok_get (x := elabText checkTextBodenWahr)
+    checkTextBodenWahr_ok).symm.trans bodenWahr_source)
 
 private theorem bodenFalsch_unit : uBodenFalsch = floorFailingUnitMade.val :=
-  Except.ok.inj ((except_ok_get checkTextBodenFalsch_ok).symm.trans bodenFalsch_source)
+  Except.ok.inj ((except_ok_get (x := elabText checkTextBodenFalsch)
+    checkTextBodenFalsch_ok).symm.trans bodenFalsch_source)
 
 private theorem bodenWahr_facts : CheckWitness uBodenWahr 1 :=
   Eq.mpr (congrArg (fun unit : UProg => CheckWitness unit 1) bodenWahr_unit) floorPassing_facts
