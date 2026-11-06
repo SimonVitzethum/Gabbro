@@ -230,10 +230,20 @@ private def sourceCollected : {actual : List UKonstFn //
     Konst.collectFunctionsWith sourceOriginal.val data.1 data.2.1) sourceScopeData.property
   exact fields.symm.trans (selected.symm.trans sourceCollectionOutput.property)
 
+-- Keep substitution at its canonical producer too. The collector result
+-- enters this traversal directly, before a stored descriptor is projected.
+private def sourceReplacementOutput : {actual : List SItemTief //
+    Konst.konstErsetzePipeline sourceOriginal.val = .ok actual} := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
 private def sourceReplaced : {actual : List SItemTief //
     Konst.ersetzeItems sourceCollected.val sourceOriginal.val = .ok actual} := by
-  refine ⟨?actual, ?produced⟩
-  case produced => cbv <;> exact Eq.refl _
+  refine ⟨sourceReplacementOutput.val, ?_⟩
+  have selected : Konst.konstErsetzePipeline sourceOriginal.val =
+      Konst.ersetzeItems sourceCollectionOutput.val sourceOriginal.val := by
+    unfold Konst.konstErsetzePipeline
+    rw [sourceCollectionOutput.property] <;> rfl
+  exact selected.symm.trans sourceReplacementOutput.property
 
 private theorem source_runtime_metadata :
     ExportMetadata.check (Konst.ohneKonst sourceOriginal.val) = .ok () := by cbv
@@ -242,11 +252,8 @@ private theorem source_replaced_metadata :
     Konst.checkErsetzt sourceOriginal.val sourceReplaced.val = .ok () := by cbv
 
 private theorem source_pipeline :
-    Konst.konstErsetzePipeline sourceOriginal.val = .ok sourceReplaced.val := by
-  rw [Konst.konstErsetzePipeline_from_scopes sourceOriginal.val sourceScopes.val
-    source_has_const sourceScopes.property]
-  simpa only [source_values, source_types, sourceCollected.property, bind, Except.bind] using
-    sourceReplaced.property
+    Konst.konstErsetzePipeline sourceOriginal.val = .ok sourceReplaced.val :=
+  sourceReplacementOutput.property
 
 private theorem source_metadata : Konst.checkSourceMetadata sourceOriginal.val = .ok () := by
   rw [Konst.checkSourceMetadata_from_scopes sourceOriginal.val sourceScopes.val
@@ -333,17 +340,60 @@ private def sourceExpansion : {actual : List SItemTief × List (STyp × String) 
 attribute [local cbv_opaque] Konst.konstErsetzePipeline Konst.checkSourceMetadata
 attribute [local cbv_eval] source_pipeline source_metadata
 
+-- Replay these actual stages with a fixed UProg result before inspecting
+-- HeaderData. No source scopes are supplied independently of discovery.
+private def sourceElaborationOutput : {actual : UProg //
+    ((Profil.prepareItems {} sourceInput.items).bind fun prepared =>
+      (Frontend.elaborateConstantScopes (uMembers (pre108 prepared.elaborierbar))).bind
+        fun derived =>
+          (Frontend.elabWithScopes (pre108 prepared.elaborierbar)
+            derived.scope.values derived.scope.types derived.scope.functions
+            (Frontend.tableWithEmpty derived.scope.values derived.scope.types)).bind
+              (Profil.selectUnit {})) = .ok actual} := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
+-- Establish the complete equality at a symbolic input/tail. The concrete
+-- ofOriginal cast never becomes an elaborator argument or rewrite motive.
+private theorem prepared_elaboration {text : String} (input : SourceInput text)
+    (tail : SourceTail input) :
+    ((Profil.prepareItems {} input.items).bind fun prepared =>
+      (Frontend.elaborateConstantScopes (uMembers (pre108 prepared.elaborierbar))).bind
+        fun derived =>
+          (Frontend.elabWithScopes (pre108 prepared.elaborierbar)
+            derived.scope.values derived.scope.types derived.scope.functions
+            (Frontend.tableWithEmpty derived.scope.values derived.scope.types)).bind
+              (Profil.selectUnit {})) =
+    ((Frontend.elabWithScopes (pre108 (sourceFrom input tail).prepared.elaborierbar)
+      (sourceFrom input tail).scopes.values (sourceFrom input tail).scopes.types
+      (sourceFrom input tail).scopes.functions
+      (Frontend.tableWithEmpty (sourceFrom input tail).scopes.values
+        (sourceFrom input tail).scopes.types)).bind (Profil.selectUnit {})) := by
+  rw [input.preparation]
+  dsimp only [bind, Except.bind]
+  change ((Frontend.elaborateConstantScopes input.original).bind fun derived =>
+    (Frontend.elabWithScopes (pre108 input.prepared.elaborierbar)
+      derived.scope.values derived.scope.types derived.scope.functions
+      (Frontend.tableWithEmpty derived.scope.values derived.scope.types)).bind
+        (Profil.selectUnit {})) =
+    ((Frontend.elabWithScopes (pre108 input.prepared.elaborierbar)
+      tail.derived.scope.values tail.derived.scope.types tail.derived.scope.functions
+      (Frontend.tableWithEmpty tail.derived.scope.values tail.derived.scope.types)).bind
+        (Profil.selectUnit {}))
+  rw [tail.elaborated]
+  rfl
+
 private def sourceElaboration : {actual : UProg //
     ((Frontend.elabWithScopes sourceHeaderData.1 sourceHeaderData.2.1
       sourceHeaderData.2.2.1 sourceHeaderData.2.2.2
       (Frontend.tableWithEmpty sourceHeaderData.2.1 sourceHeaderData.2.2.1)).bind
         (Profil.selectUnit {})) = .ok actual} := by
-  refine ⟨?actual, ?produced⟩
-  case produced =>
-    unfold Frontend.elabWithScopes
-    rw [show expandU sourceHeaderData.1 = .ok sourceExpansion.val from sourceExpansion.property]
-    dsimp only [bind, Except.bind]
-    cbv <;> exact Eq.refl _
+  refine ⟨sourceElaborationOutput.val, ?_⟩
+  have selected := prepared_elaboration sourceInput sourceTail
+  have fields := congrArg (fun data : HeaderData =>
+    (Frontend.elabWithScopes data.1 data.2.1 data.2.2.1 data.2.2.2
+      (Frontend.tableWithEmpty data.2.1 data.2.2.1)).bind (Profil.selectUnit {}))
+    source_header_data
+  exact fields.symm.trans (selected.symm.trans sourceElaborationOutput.property)
 
 private theorem source_expansion :
     Modules.prepare (pre108 (sourceFrom sourceInput sourceTail).prepared.elaborierbar) =
