@@ -1,5 +1,8 @@
 module
 
+public import Grammatik.Parser.TaggedDispatch.SourcePhases
+import all Grammatik.Parser.TaggedDispatch.SourcePhases
+
 public import Grammatik.Parser.TaggedDispatch.Frontend
 public import Grammatik.Parser.Expr.Ausdruck.Teil3
 public import Grammatik.Parser.Expr.Typ
@@ -49,54 +52,8 @@ import all Init.Data.String.Basic
 
 namespace Gabbro.Grammatik.Parser
 open Uebersetze UebersetzeAllg2
-
 set_option maxRecDepth 100000
 set_option maxHeartbeats 800000
-
-/-- Two distinct payload types, a receiver between ordinary arguments, and a
-    static member with complete conforming implementations in the same group. -/
-@[expose] public def taggedSource (rectResult : String) : String :=
-  "spec Shape[T] { " ++
-  "fn area(prefix: bool, s: T, suffix: bool) -> bool effects {} costs <= 50 ops; " ++
-  "fn copy(s: T) -> T effects {} costs <= 50 ops; } " ++
-  "impl Shape[u8] { fn area(prefix: bool, s: u8, suffix: bool) -> bool " ++
-  "effects {} costs <= 20 ops { return prefix; } fn copy(s: u8) -> u8 effects {} costs <= 20 ops { return s; } } " ++
-  "impl Shape[bool] { fn area(prefix: bool, s: bool, suffix: bool) -> " ++ rectResult ++
-  " effects {} costs <= 20 ops { return suffix; } fn copy(s: bool) -> bool effects {} costs <= 20 ops { return s; } } " ++
-  "tagged type AnyShape = { Circle(u8), Rect(bool) } by Shape; " ++
-  "impl fn sample(s: AnyShape) -> bool effects {} costs <= 20 ops { " ++
-  "let answer = Shape::area(false, s, true); return answer; }"
-
-@[expose] public def taggedSourceItems (rectResult : String) : Except String (List SItemTief) := do
-  match lex (taggedSource rectResult) with
-  | .error _ => .error "lex"
-  | .ok tokens => parseTopTief tokens
-
-@[expose] public def taggedSourceExpanded (rectResult : String) : Except String (List SItemTief) := do
-  exportDeclarationUnit (uMembers (pre108 (← taggedSourceItems rectResult)))
-
-@[expose] public def taggedSourceBody (name : String) : Except String SAnw := do
-  let items ← taggedSourceExpanded "bool"
-  let bodies := items.filterMap fun
-    | .fnT sig body => if strEq sig.name name then some body else none
-    | _ => none
-  match bodies with
-  | [body] => pure body
-  | _ => throw "witness: generated function not unique"
-
-@[expose] public def taggedExpectedMatch : SAnw :=
-  .block [.cases (.variable "s")
-    [.arm "Circle" (some "#dispatch")
-      (.block [.bind false "#dispatch-result" none
-        (.call "$spec$0$area"
-          [.variable "prefix", .variable "#dispatch", .variable "suffix"])]
-        (some (.ret (some (.variable "#dispatch-result"))))),
-     .arm "Rect" (some "#dispatch")
-      (.block [.bind false "#dispatch-result" none
-        (.call "$spec$1$area"
-          [.variable "prefix", .variable "#dispatch", .variable "suffix"])]
-        (some (.ret (some (.variable "#dispatch-result")))))]] none
-
 
 attribute [local cbv_opaque]
   Spec.Walk.expr Spec.Walk.type Spec.Walk.statement Spec.Walk.statements
@@ -127,58 +84,6 @@ attribute [local cbv_eval] parseTyp.eq_def parseTypNach.eq_def parseOr.eq_def pa
   parseAdd.eq_def parseAddL.eq_def parseMul.eq_def parseMulL.eq_def parseUnary.eq_def
   parsePrimary.eq_def parseKopf.eq_def parseSuffixe.eq_def
 
-open scoped Gabbro.Grammatik.Parser.UebersetzeProben11.Phases
-open Gabbro.Grammatik.Parser.UebersetzeProben11.Phases (Input)
-namespace TaggedSourceCuts
-rights_cut piece0 as "spec Shape[T] { "
-bound_fragment piece0 as "spec Shape[T] { "
-rights_cut piece1 as "fn area(prefix: bool, s: T, suffix: bool) -> bool effects {} costs <= 50 ops; "
-bound_fragment piece1 as "fn area(prefix: bool, s: T, suffix: bool) -> bool effects {} costs <= 50 ops; "
-rights_cut piece2 as "fn copy(s: T) -> T effects {} costs <= 50 ops; } "
-bound_fragment piece2 as "fn copy(s: T) -> T effects {} costs <= 50 ops; } "
-rights_cut piece3 as "impl Shape[u8] { fn area(prefix: bool, s: u8, suffix: bool) -> bool "
-bound_fragment piece3 as "impl Shape[u8] { fn area(prefix: bool, s: u8, suffix: bool) -> bool "
-rights_cut piece4 as "effects {} costs <= 20 ops { return prefix; } fn copy(s: u8) -> u8 effects {} costs <= 20 ops { return s; } } "
-bound_fragment piece4 as "effects {} costs <= 20 ops { return prefix; } fn copy(s: u8) -> u8 effects {} costs <= 20 ops { return s; } } "
-rights_cut piece5 as "impl Shape[bool] { fn area(prefix: bool, s: bool, suffix: bool) -> "
-bound_fragment piece5 as "impl Shape[bool] { fn area(prefix: bool, s: bool, suffix: bool) -> "
-rights_cut piece7 as "tagged type AnyShape = { Circle(u8), Rect(bool) } by Shape; "
-bound_fragment piece7 as "tagged type AnyShape = { Circle(u8), Rect(bool) } by Shape; "
-rights_cut piece8 as "impl fn sample(s: AnyShape) -> bool effects {} costs <= 20 ops { "
-bound_fragment piece8 as "impl fn sample(s: AnyShape) -> bool effects {} costs <= 20 ops { "
-rights_cut piece9 as "let answer = Shape::area(false, s, true); return answer; }"
-bound_fragment piece9 as "let answer = Shape::area(false, s, true); return answer; }"
-rights_cut resultbool as "bool effects {} costs <= 20 ops { return suffix; } fn copy(s: bool) -> bool effects {} costs <= 20 ops { return s; } } "
-bound_fragment resultbool as "bool effects {} costs <= 20 ops { return suffix; } fn copy(s: bool) -> bool effects {} costs <= 20 ops { return s; } } "
-rights_cut resultu8 as "u8 effects {} costs <= 20 ops { return suffix; } fn copy(s: bool) -> bool effects {} costs <= 20 ops { return s; } } "
-bound_fragment resultu8 as "u8 effects {} costs <= 20 ops { return suffix; } fn copy(s: bool) -> bool effects {} costs <= 20 ops { return s; } } "
-rights_input inputbool : (taggedSource "bool")
-  with_cuts [piece0, piece1, piece2, piece3, piece4, piece5, resultbool, piece7, piece8, piece9]
-  with_text ["spec Shape[T] { ", "fn area(prefix: bool, s: T, suffix: bool) -> bool effects {} costs <= 50 ops; ", "fn copy(s: T) -> T effects {} costs <= 50 ops; } ", "impl Shape[u8] { fn area(prefix: bool, s: u8, suffix: bool) -> bool ", "effects {} costs <= 20 ops { return prefix; } fn copy(s: u8) -> u8 effects {} costs <= 20 ops { return s; } } ", "impl Shape[bool] { fn area(prefix: bool, s: bool, suffix: bool) -> ", "bool effects {} costs <= 20 ops { return suffix; } fn copy(s: bool) -> bool effects {} costs <= 20 ops { return s; } } ", "tagged type AnyShape = { Circle(u8), Rect(bool) } by Shape; ", "impl fn sample(s: AnyShape) -> bool effects {} costs <= 20 ops { ", "let answer = Shape::area(false, s, true); return answer; }"]
-rights_input inputu8 : (taggedSource "u8")
-  with_cuts [piece0, piece1, piece2, piece3, piece4, piece5, resultu8, piece7, piece8, piece9]
-  with_text ["spec Shape[T] { ", "fn area(prefix: bool, s: T, suffix: bool) -> bool effects {} costs <= 50 ops; ", "fn copy(s: T) -> T effects {} costs <= 50 ops; } ", "impl Shape[u8] { fn area(prefix: bool, s: u8, suffix: bool) -> bool ", "effects {} costs <= 20 ops { return prefix; } fn copy(s: u8) -> u8 effects {} costs <= 20 ops { return s; } } ", "impl Shape[bool] { fn area(prefix: bool, s: bool, suffix: bool) -> ", "u8 effects {} costs <= 20 ops { return suffix; } fn copy(s: bool) -> bool effects {} costs <= 20 ops { return s; } } ", "tagged type AnyShape = { Circle(u8), Rect(bool) } by Shape; ", "impl fn sample(s: AnyShape) -> bool effects {} costs <= 20 ops { ", "let answer = Shape::area(false, s, true); return answer; }"]
-end TaggedSourceCuts
-
-private def sourceItems : {actual : List SItemTief // taggedSourceItems "bool" = .ok actual} := by
-  refine ⟨?_, by
-    rw [taggedSourceItems, TaggedSourceCuts.inputbool.text, lex_ofList, TaggedSourceCuts.inputbool.lexed]
-    cbv <;> exact Eq.refl _⟩
-
-private def wrongItems : {actual : List SItemTief // taggedSourceItems "u8" = .ok actual} := by
-  refine ⟨?_, by
-    rw [taggedSourceItems, TaggedSourceCuts.inputu8.text, lex_ofList, TaggedSourceCuts.inputu8.lexed]
-    cbv <;> exact Eq.refl _⟩
-
-private def sourceFold : {actual : List SItemTief //
-    SourceFolds.prepare (uMembers (pre108 sourceItems.val)) = .ok actual} := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
-private def sourceClose : {actual : List Dyn.Closed × List SItemTief //
-    Dyn.prepare sourceFold.val = .ok actual} := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
-private def sourceTagged : {actual : List SItemTief × List String //
-    exportTaggedUnitDetailed sourceClose.val.2 = .ok actual} := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
 private def sourceSpec : {actual : List SItemTief //
     Spec.prepare (Dyn.finish sourceClose.val.1 sourceTagged.val.1) = .ok actual} := by
   refine ⟨?_, by cbv <;> exact Eq.refl _⟩
@@ -198,9 +103,16 @@ private theorem source_exported :
     sourceFold.property sourceClose.property sourceTagged.property sourceSpec.property
     sourceChecked.property sourceLibrary.property
 
-private theorem source_expanded : taggedSourceExpanded "bool" = .ok sourceLibrary.val := by
-  rw [taggedSourceExpanded, sourceItems.property]
-  exact source_exported
+private theorem expanded_from_items (word : String) (items : List SItemTief)
+    (result : Except String (List SItemTief))
+    (parsed : taggedSourceItems word = .ok items)
+    (exported : exportDeclarationUnit (uMembers (pre108 items)) = result) :
+    taggedSourceExpanded word = result := by
+  simpa only [taggedSourceExpanded, parsed, bind, Except.bind] using exported
+
+private theorem source_expanded : taggedSourceExpanded "bool" = .ok sourceLibrary.val :=
+  expanded_from_items "bool" sourceItems.val (.ok sourceLibrary.val)
+    sourceItems.property source_exported
 
 private def wrongFold : {actual : List SItemTief //
     SourceFolds.prepare (uMembers (pre108 wrongItems.val)) = .ok actual} := by
@@ -212,7 +124,8 @@ private theorem wrong_signature :
     exportTaggedUnitDetailed wrongClose.val.2 = .error "spec.signature" := by cbv
 
 private theorem source_refused : taggedSourceExpanded "u8" = .error "spec.signature" := by
-  simp only [taggedSourceExpanded, wrongItems.property, exportDeclarationUnit,
+  apply expanded_from_items "u8" wrongItems.val _ wrongItems.property
+  simp only [exportDeclarationUnit,
     exportDeclarationUnitDetailed, wrongFold.property, wrongClose.property,
     wrong_signature, bind, Except.bind, Except.map]
 
