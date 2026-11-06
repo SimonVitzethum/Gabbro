@@ -23,16 +23,18 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   The expanded floating regression now separately passes all 1,178 IR images, including 212 additional
   nearest-even tie, subnormal, underflow and signed-overflow cases; the original 966 manifest rows are unchanged.
   The generic Stage-0 statement/image correctness chain through `Stage0.IRBild` builds (2,709 jobs).
-  The native compiler builds (5,407 jobs), including the real nominal-space lexer/parser path;
+  The native compiler builds (5,433 jobs), including the real nominal-space lexer/parser path
+  and the shared checked scope/cost producers;
   three newly compiled float-end sources execute on the assembly
   runner with their unchanged expected exits 7/41/107 under the current hardware abstraction.
-  The complete existing `proben-ir` source regression passes 218/315 cases: 76 expected executions fail
-  compilation and 21 refusal expectations differ. One old width-refusal fixture now compiles through
-  the existing verified multiword-sum path and executes with its expected exit 42; the other 20
+  The refreshed complete `proben-ir` source regression passes 235/320 cases: 164 actual executions
+  and 71 expected refusals. Seventy expected executions fail compilation and fifteen refusal
+  expectations differ. The previous baseline was 218/315. One old width-refusal fixture now compiles through
+  the existing verified multiword-sum path and executes with its expected exit 42; the other 14
   differences remain refusals. No executed case has a wrong exit code. Open source
   boundaries include alias constants, cost/proof metadata, atomic declarations and scoped-return admission;
   these tests are not a measurement of complete language coverage. Refusal expectations have not been relaxed.
-  In that run, 28 of the 76 compilation failures stop at the unbound `assumT` gate, 15 at `main`'s
+  In that run, 28 of the 70 compilation failures stop at the unbound `assumT` gate, 15 at `main`'s
   type/proof/header binding, five at lock statements, five at atomic declarations and four at cost bindings.
   All four existing source I/O probes currently refuse at the unbound `SItemTief.assumT` source gate;
   the assembly Runner's independently measured I/O/instruction regression remains separate.
@@ -58,10 +60,14 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   A subsequent source-regression repair shares that checked scope core with the canonical
   const-signature collector, preserving final alias/scalar environments. This new extraction and
   collector connection build through all twelve shared modules, the canonical metadata gate and
-  `Stage0.Compiler`; fresh native source regressions and concrete constant witness replay remain open. The separate
+  `Stage0.Compiler`. A fresh focused source/IR regression passes 52/56 alias/const cases, including
+  forward alias and signature bounds. Two accepted cases and the new negative cost case still
+  fail before cost evaluation at the canonical scalar range gate; another expected refusal has
+  a changed final-meaning diagnostic. Concrete constant witness replay remains open. The separate
   compile-time operation-bound checker now preserves each original cost clause as a typed entry-context
-  certificate. Both call families and the actual replacement path build; fresh native positive/negative
-  regressions remain open. Ordinary runtime-cost metadata still keeps its existing named refusal.
+  certificate. Both call families and the actual replacement path build; native positive/negative
+  regression closure remains open at the earlier range gate. Ordinary runtime-cost metadata still
+  keeps its existing named refusal.
   The shared complete compilation packet, hardware-free image phase/geometry theorem and the
   conflicting-profile refusal witness build. Both successful profile and requires-profile images build.
   The aligned-static fixture now also builds end to end with its unchanged sixteen-byte alignment.
@@ -223,18 +229,19 @@ Thus a parser/exporter or an expanded-unit certificate can exist while the origi
   exposed the missing lexer keyword/bucket; both and the vocabulary certificate are corrected.
   The freshly rebuilt native compiler passes all three additional source regressions: locked table
   write/read executes with exit 42, and duplicate binders and unknown spaces are refused.
-  The original concrete `NamedSpaceWitness` reached the kernel limit and had dependent typing
-  errors; its replacement uses separate scanner/program/image certificates and is under validation.
-  The scanner and input modules now build separately in 12 and 10 seconds after removing raw
-  string decoding from the scanner type index. The program/image suffix still has measured errors.
-  Complete witness/package closure remains open. Nominal names imply no physical protection or hardware behavior.
+  The complete replacement `NamedSpaceWitness` builds through separate scanner, input, program
+  and image certificates in a 2,745-job target build. All fourteen public witness axiom audits
+  use only the three standard axioms. Scanner/input/program/image take 12/10/16/29 seconds
+  after removing raw string decoding from the scanner type index and exposing the existing
+  checked unit collector equations. Package-wide closure remains open. Nominal names imply no
+  physical protection or hardware behavior.
   Owned `Expr.thruOwn` and `Stmt.assignThruOwn` also use those slot paths with real `lowE_ok`/`lowS_ok` arms;
   the source exporters exist in
   [`UebersetzeAllg/Teil3`](grammatik/Grammatik/Parser/Elab/UebersetzeAllg/Teil3.lean) and
   [`UebersetzeAllg2/Teil1`](grammatik/Grammatik/Parser/Elab/UebersetzeAllg2/Teil1.lean), and `borrows` has call-flow export.
   **Original `own@...` types still fail `ExportMetadata.typeMetadata`**, even though the canonical owned-access path is connected.
   Live byte, raw and entry targets remain refused there and/or by `uTypWert`; no source export to live byte/entry operations exists.
-  Open: complete named-space witness/image validation, and original owner/byte/raw/entry duties to live grants/history
+  Open: package-wide revalidation, and original owner/byte/raw/entry duties to live grants/history
   and transferred capabilities.
 - **C14 selection, profiles, placement and entrust.**
   [`Profil.prepareItems`](stage0/Stage0/Profil.lean) selects `when TESTBUILD`, checks `ProfileBinding.bindungB`,
