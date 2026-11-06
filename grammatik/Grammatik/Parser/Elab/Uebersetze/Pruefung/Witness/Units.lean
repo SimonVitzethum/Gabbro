@@ -1,7 +1,6 @@
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
-public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Text
 import Grammatik.Parser.Elab.UebersetzeAllg3.TransitionCert
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Calls
@@ -101,7 +100,7 @@ attribute [local cbv_eval] row_nil row_cons core_bind core_call core_set core_co
 
 -- Normalize the actual function fields before forming any dependent code type.
 -- Whole-function equality below certifies the headers, code and retained reporter metadata.
-@[expose] def floorMetadataFn (bound : Int) (index : Nat) (fn : UFn) : UFn :=
+private def floorMetadataFn (bound : Int) (index : Nat) (fn : UFn) : UFn :=
   let header : UFn := {fn with
     params := []
     kinds := []
@@ -142,9 +141,9 @@ attribute [local cbv_eval] row_nil row_cons core_bind core_call core_set core_co
     name := "p#tor#g", nimmt := ["p#duty"], gibt := ["p#duty"],
     body := [.call "g" []], ret := .empty}
   | _ => fn
-@[expose] def floorMetadataCheck (check : UCheck) : UCheck :=
+private def floorMetadataCheck (check : UCheck) : UCheck :=
   {check with name := "p", tore := ["g"], probe := "p#probe", duty := "p#duty"}
-@[expose] def floorMetadataUnit (bound : Int) (unit : UProg) : UProg :=
+private def floorMetadataUnit (bound : Int) (unit : UProg) : UProg :=
   {unit with
     marken := ["p#duty"]
     fns := unit.fns.mapIdx (floorMetadataFn bound)
@@ -169,9 +168,9 @@ private theorem floor_mark_self (name : String) :
 attribute [local cbv_eval] floor_name_self floor_mark_self
 
 -- Infer this exact unit from canonical elaboration, once, before dependent indices.
-@[expose] def floorPassingUnitRead : {unit : UProg // elabU (floorItems 2 true true) = .ok unit} := by
+private def floorPassingUnitRead : {unit : UProg // elabU (floorItems 2 true true) = .ok unit} := by
   refine ⟨?unit, ?made⟩
-  case made => as_aux_lemma => cbv <;> exact Eq.refl _
+  case made => cbv <;> exact Eq.refl _
 
 -- Nondependent field equalities are proved before any declaration/code index exists.
 private theorem floorPassing_metadata : floorMetadataUnit 2 floorPassingUnitRead.val = floorPassingUnitRead.val := by
@@ -191,16 +190,12 @@ private theorem floorPassing_metadata : floorMetadataUnit 2 floorPassingUnitRead
   cases actualUnit
   simp_all only [floorMetadataUnit]
 
-@[expose] def floorPassingUnitMade : {unit : UProg // elabU (floorItems 2 true true) = .ok unit} :=
-  ⟨floorMetadataUnit 2 floorPassingUnitRead.val, by
-    exact floorPassingUnitRead.property.trans
-      (congrArg (fun unit : UProg => (Except.ok unit : Except String UProg)) floorPassing_metadata.symm)⟩
+private def floorPassingUnitMade : {unit : UProg // elabU (floorItems 2 true true) = .ok unit} :=
+  ⟨floorMetadataUnit 2 floorPassingUnitRead.val, floorPassingUnitRead.property.trans
+    (congrArg (fun unit : UProg => (Except.ok unit : Except String UProg)) floorPassing_metadata.symm)⟩
 
 private theorem floorPassing_unit : elabU (floorItems 2 true true) = .ok floorPassingUnitMade.val :=
   floorPassingUnitMade.property
-
-/-- The actual constructor-valued unit retained by the passing-floor source certificate. -/
-@[expose] def uBodenWahr : UProg := (floorPassingUnitMade).val
 
 -- Normalize the actual function fields before forming any dependent code type.
 -- Whole-function equality below certifies the headers, code and retained reporter metadata.
@@ -298,9 +293,9 @@ private theorem admission_unit : elabU (textItems "c" "g") = .ok admissionUnitMa
   admissionUnitMade.property
 
 -- Infer this exact unit from canonical elaboration, once, before dependent indices.
-@[expose] def floorFailingUnitRead : {unit : UProg // elabU (floorItems 4 true true) = .ok unit} := by
+private def floorFailingUnitRead : {unit : UProg // elabU (floorItems 4 true true) = .ok unit} := by
   refine ⟨?unit, ?made⟩
-  case made => as_aux_lemma => cbv <;> exact Eq.refl _
+  case made => cbv <;> exact Eq.refl _
 
 -- Nondependent field equalities are proved before any declaration/code index exists.
 private theorem floorFailing_metadata : floorMetadataUnit 4 floorFailingUnitRead.val = floorFailingUnitRead.val := by
@@ -320,15 +315,11 @@ private theorem floorFailing_metadata : floorMetadataUnit 4 floorFailingUnitRead
   cases actualUnit
   simp_all only [floorMetadataUnit]
 
-@[expose] def floorFailingUnitMade : {unit : UProg // elabU (floorItems 4 true true) = .ok unit} :=
-  ⟨floorMetadataUnit 4 floorFailingUnitRead.val, by
-    exact floorFailingUnitRead.property.trans
-      (congrArg (fun unit : UProg => (Except.ok unit : Except String UProg)) floorFailing_metadata.symm)⟩
+private def floorFailingUnitMade : {unit : UProg // elabU (floorItems 4 true true) = .ok unit} :=
+  ⟨floorMetadataUnit 4 floorFailingUnitRead.val, floorFailingUnitRead.property.trans
+    (congrArg (fun unit : UProg => (Except.ok unit : Except String UProg)) floorFailing_metadata.symm)⟩
 
 private theorem floorFailing_unit : elabU (floorItems 4 true true) = .ok floorFailingUnitMade.val :=
   floorFailingUnitMade.property
-
-/-- The actual constructor-valued unit retained by the failing-floor source certificate. -/
-@[expose] def uBodenFalsch : UProg := (floorFailingUnitMade).val
 
 end Gabbro.Grammatik.Parser.Uebersetze

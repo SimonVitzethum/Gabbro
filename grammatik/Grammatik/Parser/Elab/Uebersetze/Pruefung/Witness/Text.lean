@@ -168,7 +168,7 @@ private theorem bypass_lexed :
   simpa only [bypassCharacters, bypassTokens, List.append_assoc, List.append_nil] using complete
 
 -- The unchanged parser must certify the complete block, bound and floor.
-@[expose] def floorItems (bound : Nat) (localValue compare : Bool) : List SItemTief :=
+private def floorItems (bound : Nat) (localValue compare : Bool) : List SItemTief :=
   [textGate, .checkT {
     cname := "p"
     claim := "c"
