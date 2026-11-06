@@ -213,6 +213,29 @@ private def initializerExpansion :
   refine ⟨?actual, ?origin⟩
   case origin => cbv <;> exact Eq.refl _
 
+/-- Identify the whole normalized input before any elaborator callback reads it. -/
+private theorem initializer_expanded_items :
+    initializerExpansion.val.1.map OldSource.normalizeItem = initializerMetadataItems.val := by
+  cbv <;> exact Eq.refl _
+
+private theorem initializer_guest_items :
+    guestSources initializerMetadataItems.val = .ok ([], initializerMetadataItems.val) := by
+  have declarations : initializerMetadataItems.val.filter
+      (fun | .trustT .. => true | _ => false) = [] := by cbv
+  simp only [guestSources, declarations, List.map_nil, uSeq, bind, Except.bind,
+    pure, Except.pure, List.append_nil] <;> rfl
+
+private theorem initializer_no_sinks :
+    uOhneSenken initializerMetadataItems.val = initializerMetadataItems.val := by
+  cbv <;> exact Eq.refl _
+
+private theorem initializer_runtime_constants :
+    Konst.checkSourceConstants initializerMetadataItems.val = .ok () := by
+  unfold Konst.checkSourceConstants
+  split
+  · exact initializer_metadata_on_items
+  · rfl
+
 /-- Infer the whole canonical UProg on normalized producer data before the
     Header's dependent fields or function indices can force its source graph. -/
 private def initializerElaboration :
@@ -227,6 +250,12 @@ private def initializerElaboration :
     rw [show expandU initializerPreparedData.val.2 = .ok initializerExpansion.val from
       initializerExpansion.property]
     dsimp only [bind, Except.bind]
+    -- Rewrite complete, already checked phase results before cbv normalizes
+    -- their arguments. Its post-order rules cannot recover this boundary
+    -- after unfolding the item packets inside the elaborator's callbacks.
+    simp only [initializer_expanded_items, elabExpandedWithScopes,
+      initializer_guest_items, initializer_runtime_constants, initializer_no_sinks,
+      initializer_pipeline_on_items, initializer_rewritten_metadata]
     cbv <;> exact Eq.refl _
 
 private theorem initializer_elaborated :
