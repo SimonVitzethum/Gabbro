@@ -3,6 +3,11 @@ module
 public import Grammatik.Parser.TaggedDispatch.SourcePhases
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil13
 public import Grammatik.Parser.Item.ElementTief.Defs7
+import all Grammatik.Parser.Spec.Zeugen
+import all Grammatik.Parser.Elab.Uebersetze.Akku.ProbenPhases
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil10
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
+import all Grammatik.Parser.Elab.Uebersetze.Einheit.Elaboration
 import all Grammatik.Parser.TaggedDispatch.SourcePhases
 
 public import Grammatik.Parser.TaggedDispatch.Frontend
@@ -119,16 +124,12 @@ private theorem source_expanded : taggedSourceExpanded "bool" = .ok sourceLibrar
 private def wrongFold : {actual : List SItemTief //
     SourceFolds.prepare (uMembers (pre108 wrongItems.val)) = .ok actual} := by
   refine ⟨?_, by cbv <;> exact Eq.refl _⟩
-private def wrongClose : {actual : List Dyn.Closed × List SItemTief //
-    Dyn.prepare wrongFold.val = .ok actual} := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
-private theorem wrong_signature :
-    exportTaggedUnitDetailed wrongClose.val.2 = .error "spec.signature" := by cbv
+private theorem wrong_signature : Dyn.prepare wrongFold.val = .error "spec.signature" := by cbv
 
 private theorem source_refused : taggedSourceExpanded "u8" = .error "spec.signature" := by
   apply expanded_from_items "u8" wrongItems.val _ wrongItems.property
   simp only [exportDeclarationUnit,
-    exportDeclarationUnitDetailed, wrongFold.property, wrongClose.property,
+    exportDeclarationUnitDetailed, wrongFold.property,
     wrong_signature, bind, Except.bind, Except.map]
 
 attribute [local cbv_opaque] taggedSourceExpanded
@@ -145,6 +146,12 @@ public theorem tagged_source_call_zeuge :
       .ok (.block [.bind false "answer" none
         (.call "#tagged-AnyShape::Shape::area" [.fls, .variable "s", .tru])]
         (some (.ret (some (.variable "answer"))))) := by cbv
+
+attribute [local cbv_opaque] elabFn uAnwReihe uAnwReiheCore
+  uAkkuBinder uZeigerAnw uStartNamen uSondenFns uTorHuellen
+attribute [local cbv_eval] Spec.function_block row_nil row_cons core_bind
+  bound_names_select pointer_source_select start_source_select sonden_nil wrappers_nil
+  uAnwReiheCore_cases
 
 /-- This also runs through the actual elaborator, beyond the expansion witness. -/
 public theorem tagged_source_elaborated_zeuge :
