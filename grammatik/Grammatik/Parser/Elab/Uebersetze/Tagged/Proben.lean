@@ -266,6 +266,8 @@ private theorem tagged_scoped_declaration (body : Option STyp)
   -- Apply whole producer equations before reducing their owner/item arguments.
   simp only [elabExpandedWithScopes, guests, remaining, constants, sinks, globs,
     spaces, owners, orders]
+  simp only [items, List.filterMap_cons, List.filterMap_nil, List.filter_cons,
+    List.filter_nil, Bool.false_eq_true, ite_false]
   simp only [tableOwners, tables, List.map_nil, uSeq, arenas, carriers,
     List.append_nil, List.nil_append, uIdxTabs, uOptGlobs, types]
   -- The floor is Int-valued; normalize only the selected empty-lock fold.
