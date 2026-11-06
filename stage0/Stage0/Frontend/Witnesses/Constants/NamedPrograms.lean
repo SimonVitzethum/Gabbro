@@ -105,26 +105,66 @@ attribute [local cbv_opaque] Konst.Values.elaborate Konst.Values.reify
   erw [produced]
   simpa only [spelling, bind, Except.bind, pure, Except.pure, Except.map]
 
-private def tagTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.tagText := by
-  refine {
-    source := sourceFrom tagTextInput tagTextTail
-    sourceEq := sourceFrom_eq tagTextInput tagTextTail
-    expanded := ?expanded
-    requirements := ?requirements
-    expansion := ?expansion
-    constants := ?constants
-    ordinary := by cbv
-    metadata := tagTextTail.metadata
-    candidate := ?candidate
-    elaborated := ?elaborated }
-  case expansion => cbv <;> exact Eq.refl _
-  case constants =>
+-- Normalize the actual source and all three supplied scope fields together,
+-- before the Header introduces a candidate or any dependent code projection.
+private def tagTextData :
+    { actual : List SItemTief × List (String × Int) ×
+        List (String × (Int × Int)) × List UKonstFn //
+      (pre108 tagTextInput.prepared.elaborierbar, tagTextTail.derived.scope.values,
+        tagTextTail.derived.scope.types, tagTextTail.derived.scope.functions) = actual } := by
+  refine ⟨(?items, ?values, ?types, ?functions), ?produced⟩
+  case produced => cbv <;> exact Eq.refl _
+
+private def tagTextExpansion :
+    { actual : List SItemTief × List (STyp × String) //
+      Modules.prepare tagTextData.val.1 = .ok actual } := by
+  refine ⟨?actual, ?produced⟩
+  case produced => cbv <;> exact Eq.refl _
+
+private def tagTextElaboration :
+    { actual : UProg //
+      ((Frontend.elabWithScopes tagTextData.val.1 tagTextData.val.2.1
+        tagTextData.val.2.2.1 tagTextData.val.2.2.2
+        (Frontend.tableWithEmpty tagTextData.val.2.1 tagTextData.val.2.2.1)).bind
+          (Profil.selectUnit {})) = .ok actual } := by
+  refine ⟨?actual, ?produced⟩
+  case produced =>
+    unfold Frontend.elabWithScopes
+    rw [show expandU tagTextData.val.1 = .ok tagTextExpansion.val from tagTextExpansion.property]
+    dsimp only [bind, Except.bind]
+    obtain ⟨literal, quoted, spelling⟩ := tag_quoted
+    cbv <;> (
+      try erw [tag_elaborated]
+      cbv <;> first
+        | (erw [quoted]
+           simp only [spelling, bind, Except.bind, pure, Except.pure, Except.map] <;>
+             cbv <;> exact Eq.refl _)
+        | exact Eq.refl _)
+
+private def tagTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.tagText where
+  source := sourceFrom tagTextInput tagTextTail
+  sourceEq := sourceFrom_eq tagTextInput tagTextTail
+  expanded := tagTextExpansion.val.1
+  requirements := tagTextExpansion.val.2
+  expansion := (congrArg (fun data => Modules.prepare data.1) tagTextData.property).trans
+    tagTextExpansion.property
+  constants := by
     change Konst.checkSourceConstants tagTextInput.original = .ok ()
     unfold Konst.checkSourceConstants
     split
     · exact tagTextTail.metadata
     · rfl
-  case elaborated => cbv <;> exact Eq.refl _
+  ordinary := by cbv
+  metadata := tagTextTail.metadata
+  candidate := tagTextElaboration.val
+  elaborated := by
+    have inputs := congrArg
+      (fun data : List SItemTief × List (String × Int) ×
+          List (String × (Int × Int)) × List UKonstFn =>
+        (Frontend.elabWithScopes data.1 data.2.1 data.2.2.1 data.2.2.2
+          (Frontend.tableWithEmpty data.2.1 data.2.2.1)).bind (Profil.selectUnit {}))
+      tagTextData.property
+    exact inputs.trans tagTextElaboration.property
 
 private theorem tagText_count : tagTextHeader.unit.fns.length = 1 := by cbv
 
@@ -237,26 +277,65 @@ attribute [local cbv_opaque] Konst.Values.elaborate Konst.Values.reify
   erw [produced]
   simpa only [spelling, bind, Except.bind, pure, Except.pure, Except.map]
 
-private def stringTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.stringText := by
-  refine {
-    source := sourceFrom stringTextInput stringTextTail
-    sourceEq := sourceFrom_eq stringTextInput stringTextTail
-    expanded := ?expanded
-    requirements := ?requirements
-    expansion := ?expansion
-    constants := ?constants
-    ordinary := by cbv
-    metadata := stringTextTail.metadata
-    candidate := ?candidate
-    elaborated := ?elaborated }
-  case expansion => cbv <;> exact Eq.refl _
-  case constants =>
+private def stringTextData :
+    { actual : List SItemTief × List (String × Int) ×
+        List (String × (Int × Int)) × List UKonstFn //
+      (pre108 stringTextInput.prepared.elaborierbar, stringTextTail.derived.scope.values,
+        stringTextTail.derived.scope.types, stringTextTail.derived.scope.functions) = actual } := by
+  refine ⟨(?items, ?values, ?types, ?functions), ?produced⟩
+  case produced => cbv <;> exact Eq.refl _
+
+private def stringTextExpansion :
+    { actual : List SItemTief × List (STyp × String) //
+      Modules.prepare stringTextData.val.1 = .ok actual } := by
+  refine ⟨?actual, ?produced⟩
+  case produced => cbv <;> exact Eq.refl _
+
+private def stringTextElaboration :
+    { actual : UProg //
+      ((Frontend.elabWithScopes stringTextData.val.1 stringTextData.val.2.1
+        stringTextData.val.2.2.1 stringTextData.val.2.2.2
+        (Frontend.tableWithEmpty stringTextData.val.2.1 stringTextData.val.2.2.1)).bind
+          (Profil.selectUnit {})) = .ok actual } := by
+  refine ⟨?actual, ?produced⟩
+  case produced =>
+    unfold Frontend.elabWithScopes
+    rw [show expandU stringTextData.val.1 = .ok stringTextExpansion.val from
+      stringTextExpansion.property]
+    dsimp only [bind, Except.bind]
+    obtain ⟨literal, quoted, spelling⟩ := text_quoted
+    cbv <;> (
+      try erw [text_elaborated]
+      cbv <;> first
+        | (erw [quoted]
+           simp only [spelling, bind, Except.bind, pure, Except.pure, Except.map] <;>
+             cbv <;> exact Eq.refl _)
+        | exact Eq.refl _)
+
+private def stringTextHeader : Header Gabbro.Stage0.Frontend.ConstValuesWitness.stringText where
+  source := sourceFrom stringTextInput stringTextTail
+  sourceEq := sourceFrom_eq stringTextInput stringTextTail
+  expanded := stringTextExpansion.val.1
+  requirements := stringTextExpansion.val.2
+  expansion := (congrArg (fun data => Modules.prepare data.1) stringTextData.property).trans
+    stringTextExpansion.property
+  constants := by
     change Konst.checkSourceConstants stringTextInput.original = .ok ()
     unfold Konst.checkSourceConstants
     split
     · exact stringTextTail.metadata
     · rfl
-  case elaborated => cbv <;> exact Eq.refl _
+  ordinary := by cbv
+  metadata := stringTextTail.metadata
+  candidate := stringTextElaboration.val
+  elaborated := by
+    have inputs := congrArg
+      (fun data : List SItemTief × List (String × Int) ×
+          List (String × (Int × Int)) × List UKonstFn =>
+        (Frontend.elabWithScopes data.1 data.2.1 data.2.2.1 data.2.2.2
+          (Frontend.tableWithEmpty data.2.1 data.2.2.1)).bind (Profil.selectUnit {}))
+      stringTextData.property
+    exact inputs.trans stringTextElaboration.property
 
 private theorem stringText_count : stringTextHeader.unit.fns.length = 1 := by cbv
 
