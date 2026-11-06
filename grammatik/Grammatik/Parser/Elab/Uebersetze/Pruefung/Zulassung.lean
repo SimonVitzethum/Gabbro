@@ -35,6 +35,9 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
 open Gabbro.Grammatik.Zielsatz
 
+local instance (u : UProg) : DecidableEq (declOf u).Ax :=
+  inferInstanceAs (DecidableEq (Fin u.axs.length))
+
 private theorem admission_source : elabText checkText = .ok admissionUnitMade.val :=
   (elabText_phases text_source text_lexed text_parsed).trans admission_unit
 
@@ -46,20 +49,18 @@ theorem checkText_ok : (elabText checkText).toOption.isSome = true := by
 /-- The elaborated unit behind the end-to-end witness. -/
 def checkU : UProg := (elabText checkText).toOption.get checkText_ok
 
-private theorem admission_facts_actual : CheckWitness checkU 0 := by
-  simpa only [checkU, admission_source, Except.toOption, Option.get_some] using admission_facts
+private theorem admission_unit_actual : checkU = admissionUnitMade.val :=
+  Except.ok.inj ((except_ok_get (x := elabText checkText) checkText_ok).symm.trans admission_source)
 
-private theorem admission_unit_actual : checkU = admissionUnitMade.val := by
-  unfold checkU
-  rw [admission_source]
-  rfl
+private theorem admission_facts_actual : CheckWitness checkU 0 :=
+  Eq.mpr (congrArg (fun unit : UProg => CheckWitness unit 0) admission_unit_actual) admission_facts
 
 /-- The unit carries its Duty in the mark table. -/
 theorem checkU_marken : checkU.marken = ["p#duty"] := admission_facts_actual.marks
 
-/-- The unit lowers. -/
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
+/-- The unit lowers. -/
 theorem checkU_lowered : (lowerAllg checkU).toOption.isSome = true := admission_facts_actual.lowered
 
 /-- The lowered program behind the end-to-end witness. -/
@@ -109,17 +110,17 @@ theorem checkU_tor_threadet :
 
 /-! ## Acceptance with the real Duty -/
 
-/-- The lowered unit with its derived checks is admitted by `checkB`: the
-    Duty mark of every check is declared, threaded and discharged. -/
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
+/-- The lowered unit with its derived checks is admitted by `checkB`: the
+    Duty mark of every check is declared, threaded and discharged. -/
 theorem checkU_checkB :
     checkB checkP [] [] (List.finRange checkU.fns.length) checkChecks = true := admission_facts_actual.admitted
 
-/-- End-to-end acceptance from source text with a real, non-vacuous Duty:
-    `AkzeptiertX` holds with the derived checks, not the empty leg. -/
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
+/-- End-to-end acceptance from source text with a real, non-vacuous Duty:
+    `AkzeptiertX` holds with the derived checks, not the empty leg. -/
 theorem checkU_akzeptiert :
     AkzeptiertX checkP (Cover.Differenz.sperrFamilie checkU)
       (List.finRange checkU.fns.length) [] [] [] [] checkChecks = true := admission_facts_actual.accepted
@@ -136,11 +137,11 @@ theorem checkU_admission :
     CheckAdmission checkP (List.finRange checkU.fns.length) checkChecks :=
   (checkB_iff (fun g => List.mem_finRange g)
     (fun t => by
-      have h0 : checkU.tabs.length = 0 := by rw [checkU_tabs_leer]
+      have h0 : checkU.tabs.length = 0 := congrArg List.length checkU_tabs_leer
       have t' : Fin checkU.tabs.length := t
       exact Fin.elim0 (h0 ▸ t'))
     (fun g => by
-      have h0 : checkU.globs.length = 0 := by rw [checkU_globs_leer]
+      have h0 : checkU.globs.length = 0 := congrArg List.length checkU_globs_leer
       have g' : Fin checkU.globs.length := g
       exact Fin.elim0 (h0 ▸ g'))).mp checkU_checkB
 
