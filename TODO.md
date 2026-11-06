@@ -13,7 +13,7 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
 
 ## Right now
 
-- **Integration validation (2026-11-05).** Before the new hardware abstraction, the model goal, SC/GX and linking
+- **Integration validation (2026-11-06).** Before the new hardware abstraction, the model goal, SC/GX and linking
   variants, generic Stage-0 compiler/image theorem, bridge and runner compiled on the standard axioms.
   The owner now requires opaque, ISA-independent floating operations with explicit `RootNativeFloat.Hardware`,
   replacing the software IEEE proof implementation. The revised core, native value codec and answer-class
@@ -135,6 +135,10 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   Tagged's two functionless fixtures now witness the existing no-function refusal and retain
   positive collection coverage on their original inputs. Its complete PayloadProbes and
   InitializerProbes leaves build; the remaining parent still needs a terminal check.
+  The complete old-array snapshot/environment witness also builds with its original two-word
+  parameter. Fresh goal and Runner audits pass for all 13 and 14 checked sentences, respectively,
+  using only standard axioms. Final Stage0 audits remain pending its SourceWitness build;
+  that replay exposed a 100k-limit dependent scope-proof timeout now under repair.
   Earlier sustained memory-high runs without OOM remain unmeasured;
   the new bounded closure proofs and exact matcher transport have terminal green checks.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
