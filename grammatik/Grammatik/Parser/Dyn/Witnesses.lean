@@ -154,14 +154,14 @@ public theorem scene_producer_and_call_zeuge :
 public theorem scene_wide_payload_closed_zeuge :
     ((close (fixture ++ [implementation (.array (.atom "u64") (.lit 2)) []]) 1 dynamic).map
       (fun c => c.cases.map (·.payload))) =
-    .ok [.index false "Circles", .index false "Rects", .array (.atom "u64") (.lit 2)] := rfl
+    .ok [.index false "Circles", .index false "Rects", .array (.atom "u64") (.lit 2)] := by cbv
 
 /-- A non-scalar payload behind a type alias is carried as written. -/
 public theorem scene_alias_payload_closed_zeuge :
     ((close (fixture ++ [.typeT [] "Handle" [] [] (some (.index false "Circles")),
       implementation (.atom "Handle") []]) 1 dynamic).map
       (fun c => c.cases.map (·.payload))) =
-    .ok [.index false "Circles", .index false "Rects", .atom "Handle"] := rfl
+    .ok [.index false "Circles", .index false "Rects", .atom "Handle"] := by cbv
 
 /-- The wide payload reaches the ordinary declaration expansion unchanged. -/
 public theorem scene_wide_payload_accepted_zeuge :
@@ -198,7 +198,7 @@ public theorem scene_implementation_test_refused_zeuge :
 
 public theorem scene_bound_required_zeuge :
     (close [shape, circle] 0 (.dyn "Shape" none)).map (fun _ => ()) =
-    .error "dyn.effects.required: Shape" := rfl
+    .error "dyn.effects.required: Shape" := by cbv
 
 public theorem scene_dispatch_bound_and_cost_zeuge :
     (expanded.map fun items => items.filterMap fun
@@ -213,12 +213,12 @@ public theorem scene_dispatch_bound_and_cost_zeuge :
 /-- Excluding Rects excludes that implementation from the linked sum. -/
 public theorem scene_effect_filter_zeuge :
     ((close fixture 0 (.dyn "Shape" (some "reads Circles } "))).map
-      (fun c => c.cases.map (·.implementation))) = .ok [0] := rfl
+      (fun c => c.cases.map (·.implementation))) = .ok [0] := by cbv
 
 /-- An excluded oversized implementation is irrelevant to a read-only bound. -/
 public theorem scene_excluded_large_payload_zeuge :
     ((close (fixture ++ [implementation (.array (.atom "u64") (.lit 2))
-      [.writes (.variable "Rects")]]) 0 dynamic).map (fun c => c.cases.length)) = .ok 2 := rfl
+      [.writes (.variable "Rects")]]) 0 dynamic).map (fun c => c.cases.length)) = .ok 2 := by cbv
 
 public theorem scene_downcast_refused_zeuge :
     (exportDeclarationUnit (fixture ++
@@ -262,6 +262,6 @@ public theorem scene_inferred_let_zeuge :
 /-- Reordered bounds denote one generated type, not two incompatible representations. -/
 public theorem scene_bound_order_zeuge :
     ((catalog fixture [dynamic, .dyn "Shape" (some "reads Rects , reads Circles } ")])
-      .map (fun cs => cs.length)) = .ok 1 := rfl
+      .map (fun cs => cs.length)) = .ok 1 := by cbv
 
 end Gabbro.Grammatik.Parser.Dyn
