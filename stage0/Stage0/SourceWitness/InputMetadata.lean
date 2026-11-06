@@ -53,11 +53,11 @@ private def negativeCall :
       negativeDescriptor.val.constants [] //
       Konst.Scalar.checkCall negativeDescriptor.val [negativeDescriptor.val]
         negativeDescriptor.val.constants [] = .ok actual} := by
-  refine ⟨?_, ?_⟩
-  unfold Konst.Scalar.checkCall
-  rw [negativeFunction.property]
-  dsimp only [bind, Except.bind]
-  cbv <;> exact Eq.refl _
+  refine ⟨?_, by
+    unfold Konst.Scalar.checkCall
+    rw [negativeFunction.property]
+    dsimp only [bind, Except.bind]
+    cbv <;> exact Eq.refl _⟩
 
 -- Select just the delivered source literal before the statement traversal
 -- needs it; no final source or compiler outcome is assumed here.
@@ -65,9 +65,9 @@ private def negativeSyntax : {actual : SExpr //
     (Konst.Scalar.checkCall negativeDescriptor.val [negativeDescriptor.val]
       negativeDescriptor.val.constants []).map
         (fun checked => Konst.literalVonInt checked.value) = .ok actual} := by
-  refine ⟨?_, ?_⟩
-  rw [negativeCall.property]
-  cbv <;> exact Eq.refl _
+  refine ⟨?_, by
+    rw [negativeCall.property]
+    cbv <;> exact Eq.refl _⟩
 
 private theorem negative_replaced :
     Konst.ersetzeSExprIn [] [negativeDescriptor.val] (.call "negative" []) =
@@ -85,8 +85,7 @@ private theorem negative_replaced :
   simp only [Konst.ersetzeSExprIn, arguments, found, globals, List.map_nil,
     Konst.geschlossenSExprListB, Bool.not_true, Bool.false_eq_true, ite_false]
   have integer : ∃ lo hi, negativeDescriptor.val.erg = .int lo hi := by
-    refine ⟨?_, ?_, ?_⟩
-    cbv <;> exact Eq.refl _
+    refine ⟨?_, ?_, by cbv <;> exact Eq.refl _⟩
   obtain ⟨lo, hi, result⟩ := integer
   simpa only [Konst.checkReplacement, result, negativeCall.property, bind, Except.bind,
     pure, Except.pure] using quoted
