@@ -55,11 +55,20 @@ scoped macro "counterprobe_cut " name:ident " as " text:str
     " lexemes " emitted:term " steps " count:num : command => do
   let literal : Lean.TSyntax `term := ⟨text.raw⟩
   let fuel : Lean.TSyntax `term := ⟨count.raw⟩
-  `(command| private def $name : Chunk where
+  let decoded := Lean.mkIdentFrom name (name.getId.appendAfter "_text")
+  let bounded := Lean.mkIdentFrom name (name.getId.appendAfter "_bounded")
+  let data : Lean.TSyntax `command ← `(command| private def $name : Chunk where
     characters := ($literal).toList
     tokens := $emitted
     steps := $fuel
     scanned := by intro rest remaining; cbv)
+  let spelling : Lean.TSyntax `command ← `(command|
+    private theorem $decoded : String.ofList ($name).characters = $literal := by
+      change String.ofList (($literal).toList) = $literal
+      exact String.ofList_toList)
+  let room : Lean.TSyntax `command ← `(command|
+    private theorem $bounded : decide (($name).steps ≤ ($name).characters.length) = true := by cbv)
+  return ⟨Lean.mkNullNode #[data, spelling, room]⟩
 
 open scoped Gabbro.Grammatik.Parser.Uebersetze
 
@@ -107,28 +116,56 @@ private def sondeDuplicateChunks : List Chunk :=
 
 private theorem sonde_source : checkTextSonde = String.ofList (characters sondeChunks) := by
   rw [characters_join]
-  cbv
+  simp only [sondeChunks, List.map_cons, List.map_nil, sondeGate_text,
+    sondeExternal_text, sondeHeadP_text, sondeMeasure_text, sondeBodyHead_text,
+    sondeBinding_text, sondeComparison_text, sondeBindingText_text] <;> cbv
 private theorem sonde_unbound_source :
     "impl fn g() { return; } check p { claim \"c\" measures x gates g can_fail { return false; } counterprobe \"ext text\" expects ext }" =
       String.ofList (characters sondeUnboundChunks) := by
   rw [characters_join]
-  cbv
+  simp only [sondeUnboundChunks, List.map_cons, List.map_nil, sondeGate_text,
+    sondeHeadP_text, sondeMeasure_text, sondeBodyHead_text, sondeFalse_text,
+    sondeBindingText_text] <;> cbv
 private theorem sonde_duplicate_source :
     "impl fn g() { return; } impl fn ext() -> bool { return false; } check p { claim \"c\" measures x gates g can_fail { return false; } counterprobe \"one\" expects ext } check q { claim \"c\" measures x gates g can_fail { return false; } counterprobe \"two\" expects ext }" =
       String.ofList (characters sondeDuplicateChunks) := by
   rw [characters_join]
-  cbv
+  simp only [sondeDuplicateChunks, List.map_cons, List.map_nil, sondeGate_text,
+    sondeExternal_text, sondeHeadP_text, sondeMeasure_text, sondeBodyHead_text,
+    sondeFalse_text, sondeBindingOne_text, sondeHeadQ_text, sondeBindingTwo_text] <;> cbv
+
+-- Certify each short fragment's room once, then compose only opaque Bool facts.
+-- No List.all proof decodes a complete source or traverses its scanner payload.
+private theorem sonde_bound : steps sondeChunks ≤ (characters sondeChunks).length := by
+  apply steps_le_length
+  simp only [sondeChunks, List.all_cons, List.all_nil, sondeGate_bounded,
+    sondeExternal_bounded, sondeHeadP_bounded, sondeMeasure_bounded,
+    sondeBodyHead_bounded, sondeBinding_bounded, sondeComparison_bounded,
+    sondeBindingText_bounded, Bool.and_self]
+
+private theorem sonde_unbound_bound :
+    steps sondeUnboundChunks ≤ (characters sondeUnboundChunks).length := by
+  apply steps_le_length
+  simp only [sondeUnboundChunks, List.all_cons, List.all_nil, sondeGate_bounded,
+    sondeHeadP_bounded, sondeMeasure_bounded, sondeBodyHead_bounded,
+    sondeFalse_bounded, sondeBindingText_bounded, Bool.and_self]
+
+private theorem sonde_duplicate_bound :
+    steps sondeDuplicateChunks ≤ (characters sondeDuplicateChunks).length := by
+  apply steps_le_length
+  simp only [sondeDuplicateChunks, List.all_cons, List.all_nil, sondeGate_bounded,
+    sondeExternal_bounded, sondeHeadP_bounded, sondeMeasure_bounded,
+    sondeBodyHead_bounded, sondeFalse_bounded, sondeBindingOne_bounded,
+    sondeHeadQ_bounded, sondeBindingTwo_bounded, Bool.and_self]
 
 private theorem sonde_lexed : lexL (characters sondeChunks) = .ok (tokens sondeChunks) :=
-  lex_chunks sondeChunks (Nat.le_trans (steps_le_length sondeChunks (by cbv)) (Nat.le_succ _))
+  lex_chunks sondeChunks (Nat.le_trans sonde_bound (Nat.le_succ _))
 private theorem sonde_unbound_lexed :
     lexL (characters sondeUnboundChunks) = .ok (tokens sondeUnboundChunks) :=
-  lex_chunks sondeUnboundChunks
-    (Nat.le_trans (steps_le_length sondeUnboundChunks (by cbv)) (Nat.le_succ _))
+  lex_chunks sondeUnboundChunks (Nat.le_trans sonde_unbound_bound (Nat.le_succ _))
 private theorem sonde_duplicate_lexed :
     lexL (characters sondeDuplicateChunks) = .ok (tokens sondeDuplicateChunks) :=
-  lex_chunks sondeDuplicateChunks
-    (Nat.le_trans (steps_le_length sondeDuplicateChunks (by cbv)) (Nat.le_succ _))
+  lex_chunks sondeDuplicateChunks (Nat.le_trans sonde_duplicate_bound (Nat.le_succ _))
 
 -- Infer the complete parser results only from the actual successful equations.
 private def sondeParsed : {items : List SItemTief //
