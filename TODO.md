@@ -50,7 +50,8 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   The complete optional source/program packets, named quotation source packet and qualified global
   source packet now build. The complete named program module passes a fresh direct Lean check;
   both public compiler witnesses use only the three standard axioms. The qualified global program
-  certificate remains under repair at its actual function-body result.
+  certificate remains under repair: actual unit projections still time out before the
+  header/body composition, at unchanged resource limits.
   The shared complete compilation packet, hardware-free image phase/geometry theorem and the
   conflicting-profile refusal witness build. Both successful profile and requires-profile images build.
   The aligned-static fixture now also builds end to end with its unchanged sixteen-byte alignment.
@@ -80,7 +81,8 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   assignment/call/emission consumers build. The rights/ownership scanner fragments, individual
   numeric/text certificates and complete source/lexer composition build; pure source spelling
   equalities use kernel reflexivity. Constants, Rights and Findings now build completely; Ownership
-  remains under repair after default-limit timeouts, with separate actual body/function certificates.
+  remains under repair after default-limit timeouts. Its next replay uses separate actual
+  statement, residual-resource and return certificates before composing body/function results.
   Their fresh check exposed a producer bug: a table's owner mark was also used as its address space.
   Canonical elaboration now preserves the table producer's space and keeps ownership separate;
   capability guards, sources and claims are unchanged. That producer and the consistent GabbroV
