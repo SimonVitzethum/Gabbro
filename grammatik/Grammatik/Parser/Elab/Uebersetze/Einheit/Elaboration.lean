@@ -216,7 +216,7 @@ theorem elabExpandedWithScopes_spaces (items : List SItemTief)
   | ok result =>
     rcases result with ⟨guests, declarations⟩
     simp only [expanded] at accepted
-    refine ⟨guests, declarations, expanded, ?_⟩
+    refine ⟨guests, declarations, rfl, ?_⟩
     repeat' first | (split at accepted) | contradiction
     all_goals
       have same := Except.ok.inj accepted
