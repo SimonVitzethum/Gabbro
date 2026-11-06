@@ -113,7 +113,7 @@ public theorem exists_boolean_concrete_term_zeuge :
       let predicate ← elaborated
       lowEns unit [] [] function none predicate) =
       .ok (Expr.and (D := declOf unit) Expr.tru
-        (Expr.existsSlots (D := declOf unit) (0 : Fin unit.tabs.length) Expr.fls
+        (Expr.existsSlots (D := declOf unit) (⟨0, by change 0 < 1; decide⟩ : Fin unit.tabs.length) Expr.fls
           (by intro resource member; cases member))) := by
   simp only [exists_boolean_elaboration_zeuge, bind, Except.bind]
   cbv
