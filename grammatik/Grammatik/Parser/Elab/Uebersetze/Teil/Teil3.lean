@@ -327,7 +327,8 @@ def uTabelleSlots (consts : List (String × Int)) (alias : List (String × (Int 
 /// Invariants, `ops`, tree edges, the occupancy mark,
     a `backed`/`shared` flag and a missing slot
     are explicit errors (the refused arms of `read_table`).
-    The `owner` mark travels in `UTab.owner` (`D.eigner`/`braucht`). -/
+    The `owner` mark travels in `UTab.owner` (`D.eigner`/`braucht`). The unit
+    collector binds nominal space separately through `uTabelleMitRaum`. -/
 def uTabelle (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tnames : List String) : SItemTief → Except String UTab
   | .tableT n .none (.some cnt) .none o sh parts _ =>

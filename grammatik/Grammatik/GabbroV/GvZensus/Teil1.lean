@@ -338,10 +338,11 @@ def befundeElab (ms : List SItemTief) : List Befund :=
   let eigner := uOhneDoppelte (uEignerMs ms)
   let consts := uConstsRech (uKonstFns ms) ms []
   let alias := uAliase consts ms ++ consts.map (fun c => (c.1, (c.2, c.2)))
-  let sumOk := match uSums alias ms (spaces := spaces) (eigner := eigner) with | .ok w => w | .error _ => []
-  -- a field of an unknown type is read as a tagged type and refused there, as `elabU` does (`uSumTabs`)
-  let tabs := (sammleTabellen consts alias
-    (ms.filterMap (fun | .tableT n _ _ _ _ _ _ _ => some n | _ => none)) spaces ms).map
+  let rawTables := sammleTabellen consts alias
+    (ms.filterMap (fun | .tableT n _ _ _ _ _ _ _ => some n | _ => none)) spaces ms
+  let sumOk := match uSums alias ms (werte rawTables) spaces eigner with | .ok w => w | .error _ => []
+  -- Resolve payload pointers against those same registered tables before field admission.
+  let tabs := rawTables.map
     fun (n, r) => (n, match r with
       | .ok t =>
         (match uSumTabs sumOk [t] with
