@@ -71,6 +71,10 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
 open Gabbro.Grammatik.Zielsatz
 
+-- Resolve the existing finite axiom carrier before any concrete source getter.
+local instance (u : UProg) : DecidableEq (declOf u).Ax :=
+  inferInstanceAs (DecidableEq (Fin u.axs.length))
+
 /-! ## The floored units, from source text -/
 
 /-- The passing floor: the probe answers `true`, the floor holds. -/
