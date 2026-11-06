@@ -248,16 +248,35 @@ private theorem tagged_scoped_declaration (body : Option STyp)
   have registers : uRegs [] [] [] [] items = .ok [] := by rfl
   have invariants : uInvs [] [] [] [] [] items = .ok [] := by rfl
   have transitions : uGenerateTransitions [] [] [] = .ok [] := by rfl
+  have tableOwners : items.filterMap
+      (fun | .tableT _ _ _ _ owner _ _ _ => owner | _ => none) = [] := by rfl
+  have tables : items.filter
+      (fun | .tableT _ _ _ _ _ _ _ _ => true | _ => false) = [] := by rfl
+  have lockItems : items.filter
+      (fun | .lockT _ _ _ _ _ _ _ => true | _ => false) = [] := by rfl
+  have runtimeItems : items.filterMap (fun
+      | .fnT signature code => if strEq signature.art "const" then none else some (signature, code)
+      | _ => none) = [] := by rfl
+  have stateItems (ctx : UCtx) : items.filterMap
+      (fun | .stateT name transitions => some (uZustand name transitions ctx) | _ => none) =
+        [] := by rfl
+  have noDuplicates : ((uEindeutig ([] : List String)).length != 0) = false := by rfl
+  have pointers : uOhneDoppelte [] = [] := by rfl
   change elabExpandedWithScopes items [] [] [] (uTabelle [] []) requirements = _
+  -- Apply whole producer equations before reducing their owner/item arguments.
   simp only [elabExpandedWithScopes, guests, remaining, constants, sinks, globs,
-    spaces, owners, orders, arenas, carriers, types, checks, locks, storage,
-    replacement, functions, reasons, sumGlobs, sumTabs, registers, invariants,
-    transitions, items, List.filterMap_cons, List.filterMap_nil, List.filter_cons,
-    List.filter_nil, List.map_nil, List.flatMap_nil, List.append_nil, List.nil_append,
-    List.length_nil, List.range_zero, List.zip_nil_left, List.zip_nil_right,
-    uSeq, uIdxTabs, uOptGlobs, uOhneDoppelte, uEindeutig, uEindeutigAux, List.foldl_nil,
-    List.any_nil, List.all_nil, Bool.not_false, Bool.not_true, Bool.false_or, Bool.or_false,
-    Bool.false_eq_true, ite_false, Nat.zero_add, Nat.add_zero, bind, Except.bind] <;> rfl
+    spaces, owners, orders]
+  simp only [tableOwners, tables, List.map_nil, uSeq, arenas, carriers,
+    List.append_nil, List.nil_append, uIdxTabs, uOptGlobs, types]
+  -- The floor is Int-valued; normalize only the selected empty-lock fold.
+  simp only [checks, lockItems, List.map_nil, uSeq, locks, List.foldl_nil,
+    Int.zero_add, storage, List.append_nil, List.nil_append, List.all_nil,
+    Bool.not_true, Bool.false_eq_true, ite_false]
+  simp only [replacement, runtimeItems, functions, reasons]
+  simp only [sumGlobs, sumTabs, registers, invariants, stateItems, List.map_nil,
+    uSeq, List.length_nil, noDuplicates, Bool.false_eq_true, ite_false, transitions,
+    List.any_nil, List.flatMap_nil, pointers, List.range_zero, List.zip_nil_right,
+    bind, Except.bind] <;> rfl
 
 /-- Canonical collection remains before the no-function gate. Only the
     surrounding, type-only phases reduce; the payload parser stays symbolic. -/
@@ -279,8 +298,9 @@ private theorem tagged_expanded_declaration (body : Option String)
         uAliasBreiten [.typeT ["tagged"] "Message" [] [] (body.map STyp.raw)] = [] := by
     cases body <;> rfl
   unfold elabUExpanded
-  simpa only [canonical, sourceFunctions, values, runtimeFunctions, bind, Except.bind,
-    collectors, List.map_nil, List.append_nil] using
+  simp only [canonical, bind, Except.bind]
+  simp only [sourceFunctions, values, runtimeFunctions]
+  simpa only [List.map_nil, List.append_nil, collectors, bind, Except.bind] using
     tagged_scoped_declaration (body.map STyp.raw) requirements
 
 -- Expansion and each subsequent phase are certified separately. The complete
