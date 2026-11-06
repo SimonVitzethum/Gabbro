@@ -342,7 +342,8 @@ private theorem check_resources : ∀ c ∈ (uCheckDecls unit).toOption.get comm
   subst producer
   subst consumer
   obtain rfl := check_member member
-  cbv <;> rfl
+  cbv
+  exact ⟨rfl, rfl, rfl, rfl⟩
 
 -- Read the actual saved reporter metadata once, without spelling another
 -- return-site schema or assuming a completed source/IR outcome.
@@ -379,6 +380,7 @@ private theorem check_verdict : ∀ c ∈ (uCheckDecls unit).toOption.get common
   subst f
   have probe : c.probe = index1 := Fin.ext (check_descriptor c member).2.1
   simp only [rueckUrteil, if_pos probe.symm]
+  cbv
 
 -- Every resource-refusal witness is an actual failed function of the same
 -- assembler. This implication neither bypasses nor duplicates that assembler.
@@ -398,20 +400,30 @@ attribute [local cbv_eval] check_argument_bool check_argument_integer
   check_result_select check_return_empty check_return_bool check_end_empty check_end_bool
   floor_name_self floor_mark_self
 
+private def unconsumedUnit : {actual : UProg // {unit with
+      fns := unit.fns.map fun f =>
+        if strEq f.name "p#driver#g" then
+          {f with body := [.bindCall "verdict" "p#probe" []]} else f} = actual} := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
+private def doubledUnit : {actual : UProg // {unit with
+      fns := unit.fns.map fun f =>
+        if strEq f.name "p#driver#g" then
+          {f with body := f.body ++ [.call "p#consume#g" []]} else f} = actual} := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
 private theorem selected_unconsumed :
     (lowerAllg {unit with
       fns := unit.fns.map fun f =>
         if strEq f.name "p#driver#g" then
           {f with body := [.bindCall "verdict" "p#probe" []]} else f}).toOption.isNone = true := by
   have failed : ∃ error : String,
-      lowerFnAt {unit with
-        fns := unit.fns.map fun f =>
-          if strEq f.name "p#driver#g" then
-            {f with body := [.bindCall "verdict" "p#probe" []]} else f}
+      lowerFnAt unconsumedUnit.val
         ⟨5, by change 5 < 6; decide⟩ = .error error := by
     refine ⟨?error, ?rejected⟩
     case rejected => cbv <;> exact Eq.refl _
   obtain ⟨error, rejected⟩ := failed
+  rw [unconsumedUnit.property]
   exact function_refused _ _ error rejected
 
 private theorem selected_double :
@@ -420,14 +432,12 @@ private theorem selected_double :
         if strEq f.name "p#driver#g" then
           {f with body := f.body ++ [.call "p#consume#g" []]} else f}).toOption.isNone = true := by
   have failed : ∃ error : String,
-      lowerFnAt {unit with
-        fns := unit.fns.map fun f =>
-          if strEq f.name "p#driver#g" then
-            {f with body := f.body ++ [.call "p#consume#g" []]} else f}
+      lowerFnAt doubledUnit.val
         ⟨5, by change 5 < 6; decide⟩ = .error error := by
     refine ⟨?error, ?rejected⟩
     case rejected => cbv <;> exact Eq.refl _
   obtain ⟨error, rejected⟩ := failed
+  rw [doubledUnit.property]
   exact function_refused _ _ error rejected
 
 private theorem facts : RetiringFacts unit := by
