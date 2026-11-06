@@ -217,7 +217,7 @@ private theorem source_fragment_text (writes provider : Bool) :
 private theorem source_spelling (writes provider : Bool) :
     quelle (if writes then "writes T.slots" else "pure") (if provider then "T" else "U") =
       String.join (sourceSpellings writes provider) := by
-  cases writes <;> cases provider <;> cbv
+  cases writes <;> cases provider <;> rfl
 
 private theorem source_characters (writes provider : Bool) :
     quelle (if writes then "writes T.slots" else "pure") (if provider then "T" else "U") =

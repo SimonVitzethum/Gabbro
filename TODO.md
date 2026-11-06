@@ -73,14 +73,15 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   pins pass; this does not extend the measured source or descriptor coverage.
   The repaired record probes, scoped-await contract, recording report and all nineteen keyword
   dispatch equations now pass. The successful-place parser theorem and its direct printed
-  assignment/call/emission consumers build. The rights/ownership scanner fragments and their
-  individual numeric/text certificates build; long input composition still reaches the kernel
-  recursion limit. Separate text/bound certificate fields and their record pass an isolated check.
+  assignment/call/emission consumers build. The rights/ownership scanner fragments, individual
+  numeric/text certificates and complete source/lexer composition build; pure source spelling
+  equalities use kernel reflexivity. The 47 downstream rights/ownership claims remain to be replayed.
   The specification witness builds with its actual outer substitution environment, and all six Dyn
   pass-result packets pass an isolated prefix check for all three fixtures after independent result
   inference and canonical numeral/string-prefix reduction. Shared scanner spelling/fuel composition builds.
-  The complete Dyn witness remains resource-unmeasured after sustained
-  memory-high throttling in both single-module and larger integration scopes, without OOM.
+  The serialized Dyn phase module, complete witness consumer and source/lexer/parser/export
+  consumer now build. Earlier sustained memory-high runs without OOM remain unmeasured;
+  the new bounded closure proofs and exact matcher transport have terminal green checks.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
   The authorised acceptance scope is Lean and the Lean parts of GabbroV; Rust, Cargo and LLVM checks are
   deliberately unmeasured. Work-in-progress snapshots on `dev` are owner-authorised while
