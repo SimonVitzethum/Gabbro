@@ -194,9 +194,9 @@ private theorem tag_quoted :
       (some (.int 0 255)) value,
       Konst.Values.reifyPayload [schema] [] 63 (some (.int 0 255)) value = .ok literal ∧
         literal.syntax = some (.lit 5) := by
-    refine ⟨?_, ?_, ?_⟩
-    · cbv <;> rfl
-    · rfl
+    refine ⟨?literal, ?produced, ?spelling⟩
+    case produced => cbv <;> exact Eq.refl _
+    case spelling => rfl
   obtain ⟨payload, produced, spelling⟩ := payload
   have selected : [schema].find? (fun actual => actual.spec = caseTypes) = some schema := by cbv
   have named : (schema.cases[i.val]?).map Prod.fst = some "Data" := rfl
