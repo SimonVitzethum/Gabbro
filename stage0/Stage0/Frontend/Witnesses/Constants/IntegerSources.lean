@@ -392,11 +392,11 @@ private theorem initializer_metadata_certified :
 
 /-- Compose the real dependency, scalar, alias, and meaning phases without rerunning their graph. -/
 def initializerTail : SourceTail initializerInput where
-  metadata := initializer_metadata_certified
+  metadata := by exact initializer_metadata_certified
   order := initializerAliasOrder.val
   ordered := initializerAliasOrder.property
   derived := initializerConservative
-  elaborated := initializer_scope_origin
+  elaborated := by exact initializer_scope_origin
   aliases := (Bool.and_eq_true_iff.mp initializer_scope_meaning).1
   constants := (Bool.and_eq_true_iff.mp initializer_scope_meaning).2
 
