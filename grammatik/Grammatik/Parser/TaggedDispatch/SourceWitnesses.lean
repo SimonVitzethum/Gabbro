@@ -1,6 +1,8 @@
 module
 
 public import Grammatik.Parser.TaggedDispatch.SourcePhases
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil13
+public import Grammatik.Parser.Item.ElementTief.Defs7
 import all Grammatik.Parser.TaggedDispatch.SourcePhases
 
 public import Grammatik.Parser.TaggedDispatch.Frontend
