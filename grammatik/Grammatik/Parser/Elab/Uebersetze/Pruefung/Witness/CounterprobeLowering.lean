@@ -120,14 +120,14 @@ private def counterprobe_boolean_end (u : UProg) (caller : Fin u.fns.length)
     (ready : decide (Λ.Perm (verOf u caller).ende) = true) :
     {ending : Endblock (declOf u) (verOf u caller) false Γ Λ //
       lowEnd u caller Γ Λ fn (.bool source) = .ok ending} := by
-have returned : ∃ value : ErgExpr (declOf u) Γ Λ (verOf u caller).erg,
-    lowErg u caller Γ Λ fn (.bool source) = .ok value := by
-  rw [check_return_bool]
-  split <;> simp_all [read.property]
-obtain ⟨value, produced⟩ := returned
-refine ⟨Endblock.ret value (of_decide_eq_true ready), ?_⟩
-rw [check_end_bool, produced]
-simp only [dif_pos ready]
+  have returned : ∃ value : ErgExpr (declOf u) Γ Λ (verOf u caller).erg,
+      lowErg u caller Γ Λ fn (.bool source) = .ok value := by
+    rw [check_return_bool]
+    split <;> simp_all [read.property]
+  obtain ⟨value, produced⟩ := returned
+  refine ⟨Endblock.ret value (of_decide_eq_true ready), ?_⟩
+  rw [check_end_bool, produced]
+  simp only [dif_pos ready]
 
 private def sondeIndex0 : Fin sondeUnitMade.val.fns.length :=
   ⟨0, by rw [sonde_function_count]; decide⟩
