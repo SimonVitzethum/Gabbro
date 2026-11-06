@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
+public import Grammatik.Parser.Elab.Konst.Scopes.ConstantScopes
 
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Konst
@@ -15,15 +16,10 @@ def constDomains (values : List (String × Int)) : List SItemTief → Except Str
     return { name, count, cols := [] } :: (← constDomains values rest)
   | _ :: rest => constDomains values rest
 
-/-- Resolve every const signature in the same canonical value/type environment.
-    Original source bodies and predicates remain available to their certificates. -/
-def collectFunctions (items : List SItemTief) : Except String (List UKonstFn) := do
-  if !items.any (fun | .fnT signature _ => strEq signature.art "const" | _ => false) then
-    return []
-  let initial := uConstsRech (uKonstFns items) items []
-  let aliases := uAliase initial items
-  let values := uConstsRech (uKonstFnsWith aliases items) items []
-  let types := uAliase values items ++ values.map (fun (name, value) => (name, (value, value)))
+/-- One descriptor collector at the supplied canonical value/type environment.
+    Original source bodies, parameters and predicates remain unchanged. -/
+def collectFunctionsWith (items : List SItemTief) (values : List (String × Int))
+    (types : List (String × (Int × Int))) : Except String (List UKonstFn) := do
   let domains ← constDomains values items
   let schemas ← uSums types items domains (spaces := []) (eigner := [])
   let reasons ← uWhys items types
@@ -57,5 +53,23 @@ def collectFunctions (items : List SItemTief) : Except String (List UKonstFn) :=
           constants := values
           sums := resultSchemas } : UKonstFn) :: rest
     | _ => pure rest) []
+
+/-- Resolve signatures and close call arguments only after the existing checked
+    alias/scalar schedule has established their complete original-source scope. -/
+def collectFunctions (items : List SItemTief) : Except String (List UKonstFn) := do
+  if !items.any (fun | .fnT signature _ => strEq signature.art "const" | _ => false) then
+    return []
+  let checkedScope ← Gabbro.Stage0.Frontend.elaborateConstantScopes items
+  collectFunctionsWith items checkedScope.scope.values checkedScope.scope.types
+
+/-- The actual substitution entry consumes exactly the certified scope, not a
+    second discovery environment or a caller-supplied range approximation. -/
+theorem collectFunctions_from_scopes (items : List SItemTief)
+    (checkedScope : Gabbro.Stage0.Frontend.DerivedScopes items)
+    (present : items.any (fun | .fnT signature _ => strEq signature.art "const" | _ => false) = true)
+    (selected : Gabbro.Stage0.Frontend.elaborateConstantScopes items = .ok checkedScope) :
+    collectFunctions items = collectFunctionsWith items checkedScope.scope.values checkedScope.scope.types := by
+  simp [collectFunctions, present, selected]
+  rfl
 
 end Gabbro.Grammatik.Parser.Konst

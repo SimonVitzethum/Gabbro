@@ -53,6 +53,18 @@ def konstErsetzePipeline (items : List SItemTief) : Except String (List SItemTie
   let functions ← collectFunctions items
   ersetzeItems functions items
 
+/-- The actual rewriting pass consumes the same checked scope as signature
+    elaboration, including forward scalar operands and reverse alias chains. -/
+theorem konstErsetzePipeline_from_scopes (items : List SItemTief)
+    (checkedScope : Gabbro.Stage0.Frontend.DerivedScopes items)
+    (present : items.any (fun | .fnT signature _ => strEq signature.art "const" | _ => false) = true)
+    (selected : Gabbro.Stage0.Frontend.elaborateConstantScopes items = .ok checkedScope) :
+    konstErsetzePipeline items =
+      (collectFunctionsWith items checkedScope.scope.values checkedScope.scope.types).bind
+        (fun functions => ersetzeItems functions items) := by
+  unfold konstErsetzePipeline
+  rw [collectFunctions_from_scopes items checkedScope present selected] <;> rfl
+
 mutual
 /-- A surface call still names a dropped const function. -/
 def hatKonstRufSExpr (namen : List String) : SExpr → Bool
@@ -239,6 +251,20 @@ def checkSourceMetadata (items : List SItemTief) : Except String Unit := do
   let rewritten ← konstErsetzePipeline items
   ExportMetadata.check (ohneKonst items)
   checkErsetzt items rewritten
+
+/-- Scope transport keeps both original runtime metadata and the complete
+    post-substitution gate; neither annotations nor residual calls are erased. -/
+theorem checkSourceMetadata_from_scopes (items : List SItemTief)
+    (checkedScope : Gabbro.Stage0.Frontend.DerivedScopes items)
+    (present : items.any (fun | .fnT signature _ => strEq signature.art "const" | _ => false) = true)
+    (selected : Gabbro.Stage0.Frontend.elaborateConstantScopes items = .ok checkedScope) :
+    checkSourceMetadata items = (do
+      let rewritten ← (collectFunctionsWith items checkedScope.scope.values checkedScope.scope.types).bind
+        (fun functions => ersetzeItems functions items)
+      ExportMetadata.check (ohneKonst items)
+      checkErsetzt items rewritten) := by
+  unfold checkSourceMetadata
+  rw [konstErsetzePipeline_from_scopes items checkedScope present selected]
 
 /-- The original runtime metadata check is retained without any rewrite assumption. -/
 theorem checkSourceMetadata_runtime_sound (items : List SItemTief)
