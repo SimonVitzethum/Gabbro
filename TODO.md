@@ -55,6 +55,13 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   Lake checks; both public compiler witnesses use only the three standard axioms. Both ordinary
   and qualified global program certificates now build. The final constant compiler chain closes
   successfully in a 2,746-job Lake target build, with unchanged gates and resource limits.
+  A subsequent source-regression repair shares that checked scope core with the canonical
+  const-signature collector, preserving final alias/scalar environments. This new extraction and
+  collector connection build through all twelve shared modules, the canonical metadata gate and
+  `Stage0.Compiler`; fresh native source regressions and concrete constant witness replay remain open. The separate
+  compile-time operation-bound checker now preserves each original cost clause as a typed entry-context
+  certificate. Both call families and the actual replacement path build; fresh native positive/negative
+  regressions remain open. Ordinary runtime-cost metadata still keeps its existing named refusal.
   The shared complete compilation packet, hardware-free image phase/geometry theorem and the
   conflicting-profile refusal witness build. Both successful profile and requires-profile images build.
   The aligned-static fixture now also builds end to end with its unchanged sixteen-byte alignment.
@@ -218,6 +225,8 @@ Thus a parser/exporter or an expanded-unit certificate can exist while the origi
   write/read executes with exit 42, and duplicate binders and unknown spaces are refused.
   The original concrete `NamedSpaceWitness` reached the kernel limit and had dependent typing
   errors; its replacement uses separate scanner/program/image certificates and is under validation.
+  The scanner and input modules now build separately in 12 and 10 seconds after removing raw
+  string decoding from the scanner type index. The program/image suffix still has measured errors.
   Complete witness/package closure remains open. Nominal names imply no physical protection or hardware behavior.
   Owned `Expr.thruOwn` and `Stmt.assignThruOwn` also use those slot paths with real `lowE_ok`/`lowS_ok` arms;
   the source exporters exist in
