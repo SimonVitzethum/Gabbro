@@ -333,8 +333,7 @@ def befundeFn (consts : List (String × Int))
 /-- Findings of a whole elaborated item list (collect mode over the
     `elabU` stages; cascades documented in CUTS). -/
 def befundeElab (ms : List SItemTief) : List Befund :=
-  let spaces := ["normal"] ++ uOhneDoppelte ((ms.filterMap
-    (fun | .tableT _ _ _ _ space _ _ => space | _ => none)).filter (fun n => !strEq n "normal"))
+  let spaces := ["normal"]
   let eigner := uOhneDoppelte (uEignerMs ms)
   let consts := uConstsRech (uKonstFns ms) ms []
   let alias := uAliase consts ms ++ consts.map (fun c => (c.1, (c.2, c.2)))
@@ -343,10 +342,6 @@ def befundeElab (ms : List SItemTief) : List Befund :=
   let tabs := (sammleTabellen consts alias (ms.filterMap (fun | .tableT n _ _ _ _ _ _ => some n | _ => none)) ms).map
     fun (n, r) => (n, match r with
       | .ok t =>
-        let tableSpace := ((ms.find? (fun | .tableT name .. => strEq name t.name | _ => false)).bind
-          (fun | .tableT _ _ _ _ space _ _ => space | _ => none)).map
-          (fun name => (spaces.zipIdx.find? (fun entry => strEq entry.1 name)).map (·.2) |>.getD 0) |>.getD 0
-        let t := { t with space := tableSpace }
         (match uSumTabs sumOk [t] with
         | .ok [t'] => .ok t'
         | .ok _ => .ok t

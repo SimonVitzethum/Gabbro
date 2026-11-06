@@ -446,9 +446,9 @@ theorem gateT_zeuge :
     check (Auswahl.waehleL .pruefbau [.gateT (.groupT "G" [] [])]) =
       .error "source export: invariant cost/runs/by duties lack a checked source binding" := by
   exact ⟨rfl, rfl, rfl, rfl⟩
-/-- Named table spaces are registered by the unit elaborator; providers and placement remain gated. -/
-theorem tableSpace_bound (name space : String) (count : Option SExpr) (shared : Bool) :
-    itemMetadata (.tableT name none count none (some space) shared []) = false := by rfl
+/-- The table owner field adds no unbound placement duty; providers and backing remain gated. -/
+theorem tableSpace_bound (name owner : String) (count : Option SExpr) (shared : Bool) :
+    itemMetadata (.tableT name none count none (some owner) shared []) = false := by rfl
 
 theorem tableSpace_zeuge :
     check [.tableT "T" none (some (.lit 2)) none (some "Data") false []] = .ok () ∧
