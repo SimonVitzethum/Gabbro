@@ -10,6 +10,7 @@
 module
 public import Grammatik.Parser.Elab.UebersetzePipeline
 public import Grammatik.Zielsatz.Kern.Akzeptiert
+import Init.Data.String.Lemmas.Intercalate
 import Grammatik.Parser.Stmt.LibraryFixtureScanning
 import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben2Basis
 import all Grammatik.Kern.Syntax.Typen.Shape
@@ -100,101 +101,168 @@ def akzeptiertText (s : String) : Bool :=
     Akzeptiert P ⟨fun _ => [], fun _ _ => true⟩ fs [] ((allTables u).map Sum.inl) fs
   | .error _ => false
 
--- These cuts carry equations of the existing scanner, with arbitrary suffixes.
-private def moduleChunk : Chunk where
-  characters := "module zellen::region {\n".toList
-  tokens := [.wort "module", .ident "zellen", .zeichen "::", .ident "region", .zeichen "{"]
-  steps := 8
-  scanned := by intro rest remaining; cbv
+-- Data projections retain the original spelling, tokens and step count;
+-- the arbitrary-suffix scanner proof is a separate opaque theorem.
+scoped macro "region_chunk " name:ident " as " text:str
+    " with_tokens " emitted:term " with_steps " fuel:num : command => do
+  let spelling := Lean.mkIdentFrom name (name.getId.appendAfter "_spelling")
+  let chars := Lean.mkIdentFrom name (name.getId.appendAfter "_characters")
+  let ts := Lean.mkIdentFrom name (name.getId.appendAfter "_tokens")
+  let count := Lean.mkIdentFrom name (name.getId.appendAfter "_steps")
+  let scanned := Lean.mkIdentFrom name (name.getId.appendAfter "_scanned")
+  let decoded := Lean.mkIdentFrom name (name.getId.appendAfter "_text")
+  let bounded := Lean.mkIdentFrom name (name.getId.appendAfter "_bounded")
+  let literal : Lean.TSyntax `term := ⟨text.raw⟩
+  let steps : Lean.TSyntax `term := ⟨fuel.raw⟩
+  let a : Lean.TSyntax `command ← `(command| private def $spelling : String := $literal)
+  let b : Lean.TSyntax `command ← `(command| private def $chars : List Char := ($spelling).toList)
+  let c : Lean.TSyntax `command ← `(command| private def $ts : List Token := $emitted)
+  let d : Lean.TSyntax `command ← `(command| private def $count : Nat := $steps)
+  let e : Lean.TSyntax `command ← `(command|
+    private theorem $scanned (rest : List Char) (remaining : Nat) :
+        scan false ($chars ++ rest) (remaining + $count) =
+          ($ts).foldr (fun token answer => Except.map (token :: ·) answer)
+            (scan false rest remaining) := by cbv)
+  let f : Lean.TSyntax `command ← `(command|
+    private def $name : Chunk := ⟨$chars, $ts, $count, $scanned⟩)
+  let g : Lean.TSyntax `command ← `(command|
+    private theorem $decoded : String.ofList ($name).characters = $spelling := by
+      change String.ofList (($spelling).toList) = $spelling
+      exact String.ofList_toList)
+  let h : Lean.TSyntax `command ← `(command|
+    private theorem $bounded : decide (($name).steps ≤ ($name).characters.length) = true := by cbv)
+  return ⟨Lean.mkNullNode #[a, b, c, d, e, f, g, h]⟩
 
-private def providerChunk : Chunk where
-  characters := "table T from neu {\n    slot {\n        x : u64 in 0 .. 255,\n    }\n}\n".toList
-  tokens := [.wort "table", .ident "T", .wort "from", .ident "neu", .zeichen "{",
+open scoped Gabbro.Grammatik.Parser.UebersetzeProben40
+
+region_chunk moduleChunk as "module zellen::region {\n"
+  with_tokens [.wort "module", .ident "zellen", .zeichen "::", .ident "region", .zeichen "{"]
+  with_steps 8
+
+region_chunk providerChunk as "table T from neu {\n    slot {\n        x : u64 in 0 .. 255,\n    }\n}\n"
+  with_tokens [.wort "table", .ident "T", .wort "from", .ident "neu", .zeichen "{",
     .wort "slot", .zeichen "{", .wort "x", .zeichen ":", .wort "u64", .wort "in",
     .num 0, .zeichen "..", .num 255, .zeichen ",", .zeichen "}", .zeichen "}"]
-  steps := 49
-  scanned := by intro rest remaining; cbv
+  with_steps 49
 
-private def finiteChunk : Chunk where
-  characters := "table U count 4 {\n    slot {\n        y : u64 in 0 .. 255,\n    }\n}\n".toList
-  tokens := [.wort "table", .ident "U", .wort "count", .num 4, .zeichen "{",
+region_chunk finiteChunk as "table U count 4 {\n    slot {\n        y : u64 in 0 .. 255,\n    }\n}\n"
+  with_tokens [.wort "table", .ident "U", .wort "count", .num 4, .zeichen "{",
     .wort "slot", .zeichen "{", .ident "y", .zeichen ":", .wort "u64", .wort "in",
     .num 0, .zeichen "..", .num 255, .zeichen ",", .zeichen "}", .zeichen "}"]
-  steps := 49
-  scanned := by intro rest remaining; cbv
+  with_steps 49
 
-private def externChunk : Chunk where
-  characters := "extern fn neu() -> index into T effects { pure } costs <= 1000 ops;\n".toList
-  tokens := [.wort "extern", .wort "fn", .ident "neu", .zeichen "(", .zeichen ")",
+region_chunk externChunk as "extern fn neu() -> index into T effects { pure } costs <= 1000 ops;\n"
+  with_tokens [.wort "extern", .wort "fn", .ident "neu", .zeichen "(", .zeichen ")",
     .zeichen "->", .wort "index", .wort "into", .ident "T", .wort "effects",
     .zeichen "{", .wort "pure", .zeichen "}", .wort "costs", .zeichen "<=",
     .num 1000, .wort "ops", .zeichen ";"]
-  steps := 33
-  scanned := by intro rest remaining; cbv
+  with_steps 33
 
-private def functionChunk : Chunk where
-  characters := "impl fn f()\n    effects { ".toList
-  tokens := [.wort "impl", .wort "fn", .ident "f", .zeichen "(", .zeichen ")",
+region_chunk functionChunk as "impl fn f()\n    effects { "
+  with_tokens [.wort "impl", .wort "fn", .ident "f", .zeichen "(", .zeichen ")",
     .wort "effects", .zeichen "{"]
-  steps := 16
-  scanned := by intro rest remaining; cbv
+  with_steps 16
 
-private def writesChunk : Chunk where
-  characters := "writes T.slots ".toList
-  tokens := [.wort "writes", .ident "T", .zeichen ".", .wort "slots"]
-  steps := 6
-  scanned := by intro rest remaining; cbv
+region_chunk writesChunk as "writes T.slots "
+  with_tokens [.wort "writes", .ident "T", .zeichen ".", .wort "slots"]
+  with_steps 6
 
-private def pureChunk : Chunk where
-  characters := "pure ".toList
-  tokens := [.wort "pure"]
-  steps := 2
-  scanned := by intro rest remaining; cbv
+region_chunk pureChunk as "pure "
+  with_tokens [.wort "pure"]
+  with_steps 2
 
-private def allocationChunk : Chunk where
-  characters := "}\n    costs   <= 1000 ops\n{\n    let r = alloc ".toList
-  tokens := [.zeichen "}", .wort "costs", .zeichen "<=", .num 1000, .wort "ops",
+region_chunk allocationChunk as "}\n    costs   <= 1000 ops\n{\n    let r = alloc "
+  with_tokens [.zeichen "}", .wort "costs", .zeichen "<=", .num 1000, .wort "ops",
     .zeichen "{", .wort "let", .wort "r", .zeichen "=", .wort "alloc"]
-  steps := 30
-  scanned := by intro rest remaining; cbv
+  with_steps 30
 
-private def targetChunk (provider : Bool) : Chunk := if provider then {
-  characters := "T;\n".toList
-  tokens := [.ident "T", .zeichen ";"]
-  steps := 3
-  scanned := by intro rest remaining; cbv } else {
-  characters := "U;\n".toList
-  tokens := [.ident "U", .zeichen ";"]
-  steps := 3
-  scanned := by intro rest remaining; cbv }
+region_chunk providerTargetChunk as "T;\n"
+  with_tokens [.ident "T", .zeichen ";"]
+  with_steps 3
 
-private def returnChunk : Chunk where
-  characters := "    r->x = 7;\n    return;\n}\n}\n".toList
-  tokens := [.wort "r", .zeichen "->", .wort "x", .zeichen "=", .num 7, .zeichen ";",
+region_chunk finiteTargetChunk as "U;\n"
+  with_tokens [.ident "U", .zeichen ";"]
+  with_steps 3
+
+private def targetChunk (provider : Bool) : Chunk :=
+  if provider then providerTargetChunk else finiteTargetChunk
+
+region_chunk returnChunk as "    r->x = 7;\n    return;\n}\n}\n"
+  with_tokens [.wort "r", .zeichen "->", .wort "x", .zeichen "=", .num 7, .zeichen ";",
     .wort "return", .zeichen ";", .zeichen "}", .zeichen "}"]
-  steps := 24
-  scanned := by intro rest remaining; cbv
+  with_steps 24
 
 private def sourceChunks (writes provider : Bool) : List Chunk :=
   [moduleChunk, providerChunk, finiteChunk, externChunk, functionChunk,
     if writes then writesChunk else pureChunk, allocationChunk, targetChunk provider, returnChunk]
 
+private def sourceSpellings (writes provider : Bool) : List String :=
+  [moduleChunk_spelling, providerChunk_spelling, finiteChunk_spelling,
+    externChunk_spelling, functionChunk_spelling,
+    if writes then writesChunk_spelling else pureChunk_spelling,
+    allocationChunk_spelling,
+    if provider then providerTargetChunk_spelling else finiteTargetChunk_spelling,
+    returnChunk_spelling]
+
+-- Both composition proofs keep the actual chunks abstract.
+private theorem chunks_text (chunks : List Chunk) :
+    String.ofList (characters chunks) =
+      String.join (chunks.map (fun chunk => String.ofList chunk.characters)) := by
+  induction chunks with
+  | nil => rfl
+  | cons chunk chunks ih =>
+    change String.ofList (chunk.characters ++ characters chunks) =
+      String.join (String.ofList chunk.characters ::
+        chunks.map (fun entry => String.ofList entry.characters))
+    rw [String.ofList_append, String.join_cons, ih]
+
+private theorem chunks_bound (chunks : List Chunk) :
+    chunks.all (fun chunk => decide (chunk.steps ≤ chunk.characters.length)) = true →
+      steps chunks ≤ (characters chunks).length := by
+  induction chunks with
+  | nil => intro _; exact Nat.le_refl _
+  | cons chunk chunks ih =>
+    intro bounded
+    simp only [List.all_cons, Bool.and_eq_true] at bounded
+    change chunk.steps + steps chunks ≤ (chunk.characters ++ characters chunks).length
+    rw [List.length_append]
+    exact Nat.add_le_add (of_decide_eq_true bounded.1) (ih bounded.2)
+
+private theorem source_fragment_text (writes provider : Bool) :
+    (sourceChunks writes provider).map (fun chunk => String.ofList chunk.characters) =
+      sourceSpellings writes provider := by
+  cases writes <;> cases provider <;>
+    simp only [sourceChunks, sourceSpellings, targetChunk, Bool.true_eq_true,
+      Bool.false_eq_true, reduceIte, List.map_cons, List.map_nil,
+      moduleChunk_text, providerChunk_text, finiteChunk_text, externChunk_text,
+      functionChunk_text, writesChunk_text, pureChunk_text, allocationChunk_text,
+      providerTargetChunk_text, finiteTargetChunk_text, returnChunk_text]
+
+private theorem source_spelling (writes provider : Bool) :
+    quelle (if writes then "writes T.slots" else "pure") (if provider then "T" else "U") =
+      String.join (sourceSpellings writes provider) := by
+  cases writes <;> cases provider <;> cbv
+
 private theorem source_characters (writes provider : Bool) :
     quelle (if writes then "writes T.slots" else "pure") (if provider then "T" else "U") =
-      String.ofList (characters (sourceChunks writes provider)) := by
+      String.ofList (characters (sourceChunks writes provider)) :=
+  (source_spelling writes provider).trans
+    ((chunks_text (sourceChunks writes provider)).trans
+      (congrArg String.join (source_fragment_text writes provider))).symm
+
+private theorem source_bound (writes provider : Bool) :
+    steps (sourceChunks writes provider) ≤ (characters (sourceChunks writes provider)).length := by
+  apply chunks_bound
   cases writes <;> cases provider <;>
-    simp only [characters, sourceChunks, moduleChunk, providerChunk, finiteChunk,
-      externChunk, functionChunk, writesChunk, pureChunk, allocationChunk, targetChunk,
-      returnChunk, List.flatMap_cons, List.flatMap_nil, List.append_nil,
-      String.ofList_append, String.ofList_toList] <;> cbv
+    simp only [sourceChunks, targetChunk, Bool.true_eq_true, Bool.false_eq_true,
+      reduceIte, List.all_cons, List.all_nil, moduleChunk_bounded, providerChunk_bounded,
+      finiteChunk_bounded, externChunk_bounded, functionChunk_bounded, writesChunk_bounded,
+      pureChunk_bounded, allocationChunk_bounded, providerTargetChunk_bounded,
+      finiteTargetChunk_bounded, returnChunk_bounded, Bool.and_self]
 
 private theorem source_lexed (writes provider : Bool) :
     lexL (characters (sourceChunks writes provider)) = .ok (tokens (sourceChunks writes provider)) :=
-  lex_chunks _ (by
-    cases writes <;> cases provider <;>
-      simp only [sourceChunks, Bool.true_eq_true, Bool.false_eq_true, reduceIte,
-        steps, characters, List.flatMap_cons, List.flatMap_nil, List.length_append,
-        List.length_nil] <;> cbv <;> omega)
+  lex_chunks _ (Nat.le_trans (source_bound writes provider) (Nat.le_succ _))
 
 -- Select only the operation used by this body from the canonical fuel record.
 attribute [local cbv_opaque] lowStufe lowSeqL lowStructL uFloatLimit
