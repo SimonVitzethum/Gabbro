@@ -1,6 +1,7 @@
 module
 public import Stage0.Frontend.Witnesses.Constants.ProgramPackets
 public import Stage0.Frontend.Witnesses.Constants.IntegerSources
+import all Stage0.Frontend.Witnesses.Constants.IntegerSources
 import Grammatik.Parser.Elab.Konst.Values.WitnessReaders
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
@@ -148,43 +149,165 @@ private theorem checked_constant_item {original : List SItemTief}
   · rename_i rejected
     exact False.elim (rejected meaning)
 
-/-- The same canonical Header constructor, shared by all later proof cuts. -/
-private def initializerHeader : Header Gabbro.Stage0.Frontend.ConstWitness.initializerText := by
-  refine {
+/-- Select the actual profile/name data before expansion or elaboration inspects
+    it. The two lists are inferred from the unchanged producer equations. -/
+private def initializerPreparedData :
+    { actual : List SItemTief × List SItemTief //
+      initializerInput.prepared.elaborierbar = actual.1 ∧ pre108 actual.1 = actual.2 } := by
+  refine ⟨(?elaborierbar, ?preprocessed), ?prepared, ?processed⟩
+  case prepared => cbv <;> exact Eq.refl _
+  case processed => cbv <;> exact Eq.refl _
+
+private theorem initializer_preprocessed :
+    pre108 initializerInput.prepared.elaborierbar = initializerPreparedData.val.2 :=
+  (congrArg pre108 initializerPreparedData.property.1).trans initializerPreparedData.property.2
+
+/-- Reuse the certified scalar fold, retaining the complete ordered scope data
+    before it becomes an argument of the runtime elaborator. -/
+private def initializerScopeData :
+    { actual : List (String × (Int × Int)) × List UKonstFn × List (String × Int) //
+      (initializerConservative.scope.types, initializerConservative.scope.functions,
+        initializerConservative.scope.values) = actual } := by
+  refine ⟨?actual, ?origin⟩
+  case origin =>
+    exact initializer_scope_data (fun types functions values => (types, functions, values) = _)
+      (by cbv <;> exact Eq.refl _)
+
+-- These are the source owner's actual checked call/replacement packets. Keep
+-- the cost and contract checks, but do not recompute their discovery graph.
+@[local cbv_eval] private theorem initializer_metadata_on_items :
+    Konst.checkSourceMetadata initializerMetadataItems.val = .ok () :=
+  (congrArg Konst.checkSourceMetadata initializerMetadataItems.property).symm.trans
+    initializerTail.metadata
+
+@[local cbv_eval] private theorem initializer_pipeline_on_items :
+    Konst.konstErsetzePipeline initializerMetadataItems.val = .ok initializerMetadataRewritten.val := by
+  let remaining (items : List SItemTief)
+      (data : List (String × Int) × List (String × (Int × Int))) :=
+    (Konst.collectFunctionsWith items data.1 data.2).bind
+      (fun functions => Konst.ersetzeItems functions items)
+  have present : initializerInput.original.any
+      (fun | .fnT signature _ => strEq signature.art "const" | _ => false) = true := by
+    have kept : initializerMetadataItems.val.any
+        (fun | .fnT signature _ => strEq signature.art "const" | _ => false) = true := by cbv
+    exact (congrArg (fun items : List SItemTief => items.any
+      (fun | .fnT signature _ => strEq signature.art "const" | _ => false))
+      initializerMetadataItems.property).trans kept
+  have origin := Konst.konstErsetzePipeline_from_scopes initializerInput.original
+    initializerConservative present initializer_scope_origin
+  have scopes := congrArg (remaining initializerInput.original) initializerMetadataScope.property
+  have items := congrArg (fun items => remaining items initializerMetadataScope.val)
+    initializerMetadataItems.property
+  have produced : remaining initializerMetadataItems.val initializerMetadataScope.val =
+      .ok initializerMetadataRewritten.val := by
+    simpa only [remaining, initializerMetadataFunctions.property, bind, Except.bind] using
+      initializerMetadataRewritten.property
+  have original := origin.trans (scopes.trans (items.trans produced))
+  exact (congrArg Konst.konstErsetzePipeline initializerMetadataItems.property).symm.trans original
+
+attribute [local cbv_eval] initializer_rewritten_metadata
+
+private def initializerExpansion :
+    { actual : List SItemTief × List (STyp × String) //
+      Modules.prepare initializerPreparedData.val.2 = .ok actual } := by
+  refine ⟨?actual, ?origin⟩
+  case origin => cbv <;> exact Eq.refl _
+
+/-- Infer the whole canonical UProg on normalized producer data before the
+    Header's dependent fields or function indices can force its source graph. -/
+private def initializerElaboration :
+    { actual : UProg //
+      ((Frontend.elabWithScopes initializerPreparedData.val.2
+        initializerScopeData.val.2.2 initializerScopeData.val.1 initializerScopeData.val.2.1
+        (Frontend.tableWithEmpty initializerScopeData.val.2.2 initializerScopeData.val.1)).bind
+          (Profil.selectUnit {})) = .ok actual } := by
+  refine ⟨?actual, ?origin⟩
+  case origin =>
+    unfold Frontend.elabWithScopes
+    rw [show expandU initializerPreparedData.val.2 = .ok initializerExpansion.val from
+      initializerExpansion.property]
+    dsimp only [bind, Except.bind]
+    cbv <;> exact Eq.refl _
+
+private theorem initializer_elaborated :
+    ((Frontend.elabWithScopes (pre108 initializerInput.prepared.elaborierbar)
+      initializerConservative.scope.values initializerConservative.scope.types
+      initializerConservative.scope.functions (Frontend.tableWithEmpty
+        initializerConservative.scope.values initializerConservative.scope.types)).bind
+          (Profil.selectUnit {})) = .ok initializerElaboration.val := by
+  let run (items : List SItemTief)
+      (data : List (String × (Int × Int)) × List UKonstFn × List (String × Int)) :=
+    (Frontend.elabWithScopes items data.2.2 data.1 data.2.1
+      (Frontend.tableWithEmpty data.2.2 data.1)).bind (Profil.selectUnit {})
+  have scopes := congrArg (run (pre108 initializerInput.prepared.elaborierbar)) initializerScopeData.property
+  have items := congrArg (fun items => run items initializerScopeData.val) initializer_preprocessed
+  exact scopes.trans (items.trans initializerElaboration.property)
+
+private theorem initializer_constant_gate :
+    Konst.checkSourceConstants initializerInput.original = .ok () := by
+  unfold Konst.checkSourceConstants
+  split
+  · exact initializerTail.metadata
+  · rfl
+
+private theorem initializer_ordinary_gate :
+    initializerInput.original.any Frontend.expansionHeader = false := by
+  exact (congrArg (fun items : List SItemTief => items.any Frontend.expansionHeader)
+    initializerMetadataItems.property).trans (by cbv)
+
+/-- The same canonical Header, assembled only from complete producer packets. -/
+private def initializerHeader : Header Gabbro.Stage0.Frontend.ConstWitness.initializerText where
     source := sourceFrom initializerInput initializerTail
     sourceEq := by exact sourceFrom_eq initializerInput initializerTail
-    expanded := ?expanded
-    requirements := ?requirements
-    expansion := ?expansion
-    constants := ?constants
-    ordinary := by cbv
+    expanded := initializerExpansion.val.1
+    requirements := initializerExpansion.val.2
+    expansion := by exact (congrArg Modules.prepare initializer_preprocessed).trans initializerExpansion.property
+    constants := by exact initializer_constant_gate
+    ordinary := by exact initializer_ordinary_gate
     metadata := by exact initializerTail.metadata
-    candidate := ?candidate
-    elaborated := ?elaborated }
-  case expansion => cbv <;> exact Eq.refl _
-  case constants =>
-    change Konst.checkSourceConstants initializerInput.original = .ok ()
-    unfold Konst.checkSourceConstants
-    split
-    · exact initializerTail.metadata
-    · rfl
-  case elaborated => cbv <;> exact Eq.refl _
+    candidate := initializerElaboration.val
+    elaborated := by exact initializer_elaborated
 
-private theorem initializer_count : initializerHeader.unit.fns.length = 1 := by cbv
+@[local cbv_eval] private theorem initializer_unit_data :
+    initializerHeader.unit = { initializerElaboration.val with exportGate := .ok () } := by
+  exact congrArg (fun gate => { initializerElaboration.val with exportGate := gate })
+    initializerHeader.metadata
+
+-- Let the whole proved unit equation select its data before cbv visits Source.
+attribute [local cbv_opaque] initializerHeader
+
+private theorem initializer_count : initializerHeader.unit.fns.length = 1 := by
+  change initializerElaboration.val.fns.length = 1
+  rfl
 
 private def initializerMain : Fin initializerHeader.unit.fns.length :=
   ⟨0, by have count := initializer_count; omega⟩
 
+/-- This is the same produced unit with exactly the gate proved above. Build
+    dependent function data here and transport the complete certificate once. -/
+private def initializerUnit : UProg := { initializerElaboration.val with exportGate := .ok () }
+
+private def initializerUnitMain : Fin initializerUnit.fns.length :=
+  ⟨0, by change (0 : Nat) < 1; decide⟩
+
+private theorem initializerUnit_only_main (f : Fin initializerUnit.fns.length) :
+    f = initializerUnitMain := by
+  apply Fin.ext
+  have bound := f.isLt
+  change f.val < 1 at bound
+  change f.val = 0
+  omega
+
 /-- The complete triple is inferred only from the actual lowering equation. -/
 private def initializerCode :
-    { code : EnsTy initializerHeader.unit initializerMain ×
-        RumpTy initializerHeader.unit initializerMain × ReqTy initializerHeader.unit initializerMain //
-      lowerFnAt initializerHeader.unit initializerMain = .ok code } := by
+    { code : EnsTy initializerUnit initializerUnitMain ×
+        RumpTy initializerUnit initializerUnitMain × ReqTy initializerUnit initializerUnitMain //
+      lowerFnAt initializerUnit initializerUnitMain = .ok code } := by
   refine ⟨?code, ?origin⟩
   case origin => cbv <;> exact Eq.refl _
 
 private theorem initializer_code_eq :
-    lowerFnAt initializerHeader.unit initializerMain = .ok initializerCode.val :=
+    lowerFnAt initializerUnit initializerUnitMain = .ok initializerCode.val :=
   initializerCode.property
 
 private theorem initializer_only_main (f : Fin initializerHeader.unit.fns.length) :
@@ -194,33 +317,36 @@ private theorem initializer_only_main (f : Fin initializerHeader.unit.fns.length
   change f.val = 0
   omega
 
-private def initializerFunctions : Functions initializerHeader.unit := {
-    values := by
-      change (f : Fin 1) → EnsTy initializerHeader.unit f ×
-        RumpTy initializerHeader.unit f × ReqTy initializerHeader.unit f
-      exact Fin.cases (motive := fun f : Fin 1 =>
-        EnsTy initializerHeader.unit f × RumpTy initializerHeader.unit f × ReqTy initializerHeader.unit f)
-        initializerCode.val (fun f : Fin 0 => Fin.elim0 f)
-    equations := by
-      intro f
-      have same := initializer_only_main f
+private def initializerUnitFunctions : Functions initializerUnit :=
+  Functions.of_success (fun f => by
+    have same := initializerUnit_only_main f
+    subst f
+    rw [initializer_code_eq]
+    rfl) (by cbv) (fun f => by
+      have same := initializerUnit_only_main f
       subst f
-      exact initializer_code_eq
-    noInvariants := by cbv
-    noMeasures := by
-      intro f
-      have same := initializer_only_main f
-      subst f
-      cbv
-    contracts := by cbv }
+      cbv) (by cbv)
 
 -- The successful checker proof remains unchanged, but is an opaque proof
 -- constant instead of a large local let inside the final Body constructor.
-private theorem initializer_accepted :
-    OldSource.accepts initializerHeader.unit initializerFunctions.program = .ok true := by
-  apply accepts_function_results initializerFunctions
+private theorem initializerUnit_accepted :
+    OldSource.accepts initializerUnit initializerUnitFunctions.program = .ok true := by
+  apply accepts_function_results initializerUnitFunctions
   intro invariants pointers foreigns
   cbv
+
+private def initializerFunctionCertificate :
+    { functions : Functions initializerHeader.unit //
+      OldSource.accepts initializerHeader.unit functions.program = .ok true } :=
+  Eq.mpr (congrArg (fun unit : UProg =>
+    { functions : Functions unit // OldSource.accepts unit functions.program = .ok true })
+      initializer_unit_data) ⟨initializerUnitFunctions, initializerUnit_accepted⟩
+
+private def initializerFunctions : Functions initializerHeader.unit := initializerFunctionCertificate.val
+
+private theorem initializer_accepted :
+    OldSource.accepts initializerHeader.unit initializerFunctions.program = .ok true :=
+  initializerFunctionCertificate.property
 
 /-- Resolve the scalar collector and literal path before the dependent array fold. -/
 private theorem initializer_arrays_ready :
@@ -286,6 +412,8 @@ private theorem initializer_entry_free (f : Fin initializerHeader.unit.fns.lengt
       OldSource.hasEntry = false := by
   have same := initializer_only_main f
   subst f
+  change (OldSource.clauses initializerExpansion.val.1
+    (fnAt initializerHeader.unit initializerMain).name).any OldSource.hasEntry = false
   cbv
 
 private theorem initializer_restored :
@@ -299,7 +427,10 @@ private theorem initializer_entry :
 
 private theorem initializer_initializers :
     Frontend.checkInitializers (uMembers (pre108 initializerHeader.source.prepared.elaborierbar))
-      initializerHeader.unit = .ok () := by cbv
+      initializerHeader.unit = .ok () := by
+  have transported := congrArg (fun items : List SItemTief =>
+    Frontend.checkInitializers (uMembers items) initializerHeader.unit) initializer_preprocessed
+  exact transported.trans (by cbv)
 
 /-- Assemble only the already certified fields; no source or checker rerun occurs here. -/
 private def initializerBody : Body initializerHeader where
