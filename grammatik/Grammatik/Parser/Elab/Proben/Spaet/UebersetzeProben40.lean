@@ -12,6 +12,7 @@ public import Grammatik.Parser.Elab.UebersetzePipeline
 public import Grammatik.Zielsatz.Kern.Akzeptiert
 import Init.Data.String.Lemmas.Intercalate
 import Grammatik.Parser.Stmt.LibraryFixtureScanning
+import Grammatik.Parser.Stmt.LibraryFixtureProofs
 import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben2Basis
 import all Grammatik.Kern.Syntax.Typen.Shape
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
