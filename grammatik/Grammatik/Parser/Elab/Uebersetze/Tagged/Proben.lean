@@ -269,7 +269,7 @@ private theorem tagged_scoped_declaration (body : Option STyp)
   simp only [tableOwners, tables, List.map_nil, uSeq, arenas, carriers,
     List.append_nil, List.nil_append, uIdxTabs, uOptGlobs, types]
   -- The floor is Int-valued; normalize only the selected empty-lock fold.
-  simp only [checks, lockItems, List.map_nil, uSeq, locks, List.foldl_nil,
+  try simp only [checks, lockItems, List.map_nil, uSeq, locks, List.foldl_nil,
     Int.zero_add, storage, List.append_nil, List.nil_append, List.all_nil,
     Bool.not_true, Bool.false_eq_true, ite_false]
   simp only [replacement, runtimeItems, functions, reasons]
