@@ -83,6 +83,8 @@ namespace RetiringWitness
 -- Resolve the dictionary at the abstract unit, before any checker projection.
 local instance retiringPhaseAxiomEquality (u : UProg) : DecidableEq (declOf u).Ax :=
   inferInstanceAs (DecidableEq (Fin u.axs.length))
+local instance retiringPhaseFunctionEquality (u : UProg) : DecidableEq (declOf u).Fn :=
+  inferInstanceAs (DecidableEq (Fin u.fns.length))
 
 private def selected : {unit : UProg //
     ((elabText checkTextBodenWahr).bind fun original =>
