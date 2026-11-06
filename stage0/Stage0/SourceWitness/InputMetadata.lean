@@ -26,18 +26,23 @@ attribute [local cbv_eval] source_preparation source_dependencies source_collect
 
 -- Keep substitution at its canonical producer too. The collector result
 -- enters this traversal directly, before a stored descriptor is projected.
+private theorem source_pipeline_selected :
+    Konst.konstErsetzePipeline sourceOriginal.val =
+      Konst.ersetzeItems sourceCollectionOutput.val sourceOriginal.val :=
+  congrArg (fun produced : Except String (List UKonstFn) =>
+    produced.bind (fun functions => Konst.ersetzeItems functions sourceOriginal.val))
+    sourceCollectionOutput.property
+
 private def sourceReplacementOutput : {actual : List SItemTief //
     Konst.konstErsetzePipeline sourceOriginal.val = .ok actual} := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+  refine ⟨?_, by
+    rw [source_pipeline_selected]
+    cbv <;> exact Eq.refl _⟩
 
 private def sourceReplaced : {actual : List SItemTief //
     Konst.ersetzeItems sourceCollected.val sourceOriginal.val = .ok actual} := by
   refine ⟨sourceReplacementOutput.val, ?_⟩
-  have selected : Konst.konstErsetzePipeline sourceOriginal.val =
-      Konst.ersetzeItems sourceCollectionOutput.val sourceOriginal.val := by
-    unfold Konst.konstErsetzePipeline
-    rw [sourceCollectionOutput.property] <;> rfl
-  exact selected.symm.trans sourceReplacementOutput.property
+  exact source_pipeline_selected.symm.trans sourceReplacementOutput.property
 
 private theorem source_runtime_metadata :
     ExportMetadata.check (Konst.ohneKonst sourceOriginal.val) = .ok () := by cbv
