@@ -99,6 +99,13 @@ def kP : Programm kD where
     | .hauptA => kRumpfA
     | .hauptB => kRumpfB
     | .pruefeA => kRumpfP
+  ptrVertrag
+    | 0 => { pre := kGleich
+             post := .and kGleich (.eq (.slot KTab.konto () kI0 kDarfK) (.var .here)) }
+    | 1 => { pre := .tru, post := kA7 }
+    | 2 => { pre := .tru, post := .tru }
+    | 3 => { pre := kA7, post := .eq (.var .here) k7 }
+    | n => CallContract.trivial kD (kD.sigNr n)
 
 def kFs : List kD.Fn := [kSetze, kHauptA, kHauptB, kPruefeA]
 
