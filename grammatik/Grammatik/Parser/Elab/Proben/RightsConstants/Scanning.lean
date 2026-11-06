@@ -88,7 +88,7 @@ scoped macro "rights_input " name:ident " : " source:term
     def $chunkName : List Chunk := [$cuts,*])
   let spelled : Lean.TSyntax `command ← `(command|
     def $spellingsName : List String := $spellings)
-  let decodedFacts := decodedFacts.reverse
+  decodedFacts := decodedFacts.reverse
   let textCertified : Lean.TSyntax `command ← `(command|
     theorem $textName :
         $chunkName.map (fun piece => String.ofList piece.characters) = $spellingsName := by
