@@ -64,7 +64,7 @@ def nestedPayload : List Token :=
 theorem uSumFaelle_nested_zeuge :
     uSumFaelle 100 nestedPayload =
       .ok [("Data", some (.range (.atom "u32") (.bin "+" (.lit 1) (.lit 2)) (.lit 10) false)),
-        ("Empty", none)] := rfl
+        ("Empty", none)] := by cbv
 
 theorem uSumFaelle_nested_resolved_zeuge :
     (uSumFaelle 100 nestedPayload).bind (USum.resolveCases (uSumPayload [])) =
@@ -72,26 +72,26 @@ theorem uSumFaelle_nested_resolved_zeuge :
 
 theorem uSumFaelle_bool_zeuge :
     uSumFaelle 100 [.ident "Flag", .zeichen "(", .wort "bool", .zeichen ")"] =
-      .ok [("Flag", some (.atom "bool"))] := rfl
+      .ok [("Flag", some (.atom "bool"))] := by cbv
 
 theorem uSumFaelle_array_zeuge :
     uSumFaelle 100 [.ident "Bytes", .zeichen "(", .zeichen "[", .wort "u8", .zeichen ";",
       .num 3, .zeichen "]", .zeichen ")", .zeichen ",", .ident "Empty"] =
-      .ok [("Bytes", some (.array (.atom "u8") (.lit 3))), ("Empty", none)] := rfl
+      .ok [("Bytes", some (.array (.atom "u8") (.lit 3))), ("Empty", none)] := by cbv
 
 theorem uSumFaelle_string_zeuge :
     uSumFaelle 100 [.ident "Text", .zeichen "(", .ident "string", .wort "max", .num 8,
-      .zeichen ")"] = .ok [("Text", some (.str (.lit 8)))] := rfl
+      .zeichen ")"] = .ok [("Text", some (.str (.lit 8)))] := by cbv
 
 theorem uSumFaelle_reference_zeuge :
     uSumFaelle 100 [.ident "Cell", .zeichen "(", .wort "index", .wort "into", .ident "Region",
-      .zeichen ")"] = .ok [("Cell", some (.index false "Region"))] := rfl
+      .zeichen ")"] = .ok [("Cell", some (.index false "Region"))] := by cbv
 
 /-- Inline record syntax survives as the canonical parser's complete balanced group. -/
 theorem uSumFaelle_record_zeuge :
     uSumFaelle 100 [.ident "Record", .zeichen "(", .zeichen "{", .ident "flag", .zeichen ":",
       .wort "bool", .zeichen "}", .zeichen ")", .zeichen ",", .ident "Empty"] =
-      .ok [("Record", some (.raw "{ flag : bool } ")), ("Empty", none)] := rfl
+      .ok [("Record", some (.raw "{ flag : bool } ")), ("Empty", none)] := by cbv
 
 def taggedSourceSchema : USum STyp :=
   { name := "Message", cases := [("Empty", none),
@@ -138,7 +138,7 @@ def taggedItems (body : String) : List SItemTief :=
 
 theorem uSumSchemas_bool_zeuge :
     uSumSchemas (taggedItems "{ Flag(bool), Empty }") =
-      .ok [{ name := "Message", cases := [("Flag", some (.atom "bool")), ("Empty", none)] }] := rfl
+      .ok [{ name := "Message", cases := [("Flag", some (.atom "bool")), ("Empty", none)] }] := by cbv
 
 theorem uSums_numeric_zeuge :
     uSums [] (taggedItems "{ Data(u8), Empty }") =
@@ -149,24 +149,24 @@ theorem uSums_alias_zeuge :
       .ok [{ name := "Message", cases := [("Data", some (.int 3 10)), ("Empty", none)] }] := by cbv
 
 theorem uSumSchemas_duplicate_refused :
-    uSumSchemas (taggedItems "{ Data(u8), Data }") = .error "duplicate tagged case name" := rfl
+    uSumSchemas (taggedItems "{ Data(u8), Data }") = .error "duplicate tagged case name" := by cbv
 theorem uSumSchemas_empty_refused :
-    uSumSchemas (taggedItems "{ }") = .error "tagged type without cases" := rfl
+    uSumSchemas (taggedItems "{ }") = .error "tagged type without cases" := by cbv
 theorem uSumSchemas_duplicate_type_refused :
     uSumSchemas (taggedItems "{ Data(u8) }" ++ taggedItems "{ Empty }") =
-      .error "duplicate tagged type name" := rfl
+      .error "duplicate tagged type name" := by cbv
 theorem uSumSchemas_parameters_refused :
     uSumSchemas [.typeT ["tagged"] "Message" [.atom "u8"] []
-      (some (.raw "{ Empty }"))] = .error "tagged declaration without G form" := rfl
+      (some (.raw "{ Empty }"))] = .error "tagged declaration without G form" := by cbv
 theorem uSumSchemas_constraints_refused :
     uSumSchemas [.typeT ["tagged"] "Message" [] ["discarded"]
-      (some (.raw "{ Empty }"))] = .error "tagged declaration without G form" := rfl
+      (some (.raw "{ Empty }"))] = .error "tagged declaration without G form" := by cbv
 theorem uSumSchemas_linear_refused :
     uSumSchemas [.typeT ["linear", "tagged"] "Message" [] []
-      (some (.raw "{ Empty }"))] = .error "tagged declaration without G form" := rfl
+      (some (.raw "{ Empty }"))] = .error "tagged declaration without G form" := by cbv
 theorem uSumSchemas_missing_body_refused :
     uSumSchemas [.typeT ["tagged"] "Message" [] [] none] =
-      .error "tagged declaration without G form" := rfl
+      .error "tagged declaration without G form" := by cbv
 
 theorem uSums_ranged_bool_refused :
     (match uSums [] (taggedItems "{ Flag(bool in 0 .. 1) }") with
