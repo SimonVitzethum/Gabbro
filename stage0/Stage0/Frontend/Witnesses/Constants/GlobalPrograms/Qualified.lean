@@ -188,36 +188,55 @@ private theorem qualifiedText_only_main (f : Fin qualifiedTextHeader.unit.fns.le
   change f.val = 0
   omega
 
+-- The data is the actual elaboration result, with exactly the gate justified by qualified_unit_data.
+private def qualifiedUnit : UProg := { qualifiedElaboration.val with exportGate := .ok () }
+
+private def qualifiedUnitMain : Fin qualifiedUnit.fns.length :=
+  ⟨0, by change (0 : Nat) < 1; decide⟩
+
 private theorem qualifiedText_function_header :
-    PlainFunctionHeader qualifiedTextHeader.unit qualifiedTextMain := by
+    PlainFunctionHeader qualifiedUnit qualifiedUnitMain := by
   constructor <;> cbv
 
 private def qualifiedTextLoweredBody :
-    { actual : PlainFunctionBody qualifiedTextHeader.unit qualifiedTextMain //
-      lowBody qualifiedTextHeader.unit qualifiedTextMain
-        (fnAt qualifiedTextHeader.unit qualifiedTextMain).body
-        (fnAt qualifiedTextHeader.unit qualifiedTextMain).ret = .ok actual } := by
+    { actual : PlainFunctionBody qualifiedUnit qualifiedUnitMain //
+      lowBody qualifiedUnit qualifiedUnitMain (fnAt qualifiedUnit qualifiedUnitMain).body
+        (fnAt qualifiedUnit qualifiedUnitMain).ret = .ok actual } := by
   refine ⟨?actual, ?produced⟩
   case produced => cbv <;> exact Eq.refl _
 
 private def qualifiedTextCode :
-    { value : EnsTy qualifiedTextHeader.unit qualifiedTextMain ×
-        RumpTy qualifiedTextHeader.unit qualifiedTextMain × ReqTy qualifiedTextHeader.unit qualifiedTextMain //
-      lowerFnAt qualifiedTextHeader.unit qualifiedTextMain = .ok value } :=
+    { value : EnsTy qualifiedUnit qualifiedUnitMain ×
+        RumpTy qualifiedUnit qualifiedUnitMain × ReqTy qualifiedUnit qualifiedUnitMain //
+      lowerFnAt qualifiedUnit qualifiedUnitMain = .ok value } :=
   lowerFnAt_from_body qualifiedText_function_header qualifiedTextLoweredBody
 
 @[local cbv_eval] private theorem qualifiedText_code_eq :
-    lowerFnAt qualifiedTextHeader.unit qualifiedTextMain = .ok qualifiedTextCode.val := qualifiedTextCode.property
+    lowerFnAt qualifiedUnit qualifiedUnitMain = .ok qualifiedTextCode.val := qualifiedTextCode.property
+
+private def qualifiedUnitFunctions : Functions qualifiedUnit :=
+  Functions.of_success (by
+    apply Fin.forall_fin_one.mpr
+    change (lowerFnAt qualifiedUnit qualifiedUnitMain).toOption.isSome = true
+    rw [qualifiedText_code_eq]
+    rfl) (by cbv) (by apply Fin.forall_fin_one.mpr; cbv) (by cbv)
+
+private theorem qualifiedUnit_accepted :
+    OldSource.accepts qualifiedUnit qualifiedUnitFunctions.program = .ok true := by
+  apply accepts_function_results qualifiedUnitFunctions
+  intro invariants pointers foreigns
+  cbv
+
+-- Transport the entire family and its checker result, before projecting any function or program.
+private def qualifiedFunctionCertificate :
+    { functions : Functions qualifiedTextHeader.unit //
+      OldSource.accepts qualifiedTextHeader.unit functions.program = .ok true } :=
+  Eq.mpr (congrArg (fun unit : UProg =>
+    { functions : Functions unit // OldSource.accepts unit functions.program = .ok true })
+      qualified_unit_data) ⟨qualifiedUnitFunctions, qualifiedUnit_accepted⟩
 
 private def qualifiedTextFunctions : Functions qualifiedTextHeader.unit :=
-  Functions.of_success (fun f => by
-    have same := qualifiedText_only_main f
-    subst f
-    rw [qualifiedText_code_eq]
-    rfl) (by cbv) (fun f => by
-      have same := qualifiedText_only_main f
-      subst f
-      cbv) (by cbv)
+  qualifiedFunctionCertificate.val
 
 -- Obtain the original item spine from the producer; only its scalar leaf is fixed here.
 private theorem qualifiedText_arrays_ready :
@@ -267,10 +286,8 @@ private theorem qualifiedText_restored :
     qualifiedTextHeader.unit qualifiedTextFunctions.program qualifiedTextHeader.expansion qualifiedText_entry_free
 
 private theorem qualifiedText_accepted :
-    OldSource.accepts qualifiedTextHeader.unit qualifiedTextFunctions.program = .ok true := by
-  apply accepts_function_results qualifiedTextFunctions
-  intro invariants pointers foreigns
-  cbv
+    OldSource.accepts qualifiedTextHeader.unit qualifiedTextFunctions.program = .ok true :=
+  qualifiedFunctionCertificate.property
 
 private def qualifiedTextBody : Body qualifiedTextHeader where
   functions := qualifiedTextFunctions
