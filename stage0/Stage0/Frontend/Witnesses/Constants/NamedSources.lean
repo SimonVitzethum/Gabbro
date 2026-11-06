@@ -81,7 +81,7 @@ set_option maxHeartbeats 4000000
 
 -- These are the existing generic typed reader equations used by the green const witnesses.
 attribute [local cbv_eval] Konst.Values.expression.eq_def Konst.Values.payloadExpression.eq_def
-attribute [local cbv_eval] Konst.Values.reify.eq_def Konst.Values.reifyPayload.eq_def
+attribute [local cbv_eval] Konst.Values.reifyPayload.eq_def
 attribute [local cbv_eval]
   Konst.Values.WitnessReaders.reader_bool Konst.Values.WitnessReaders.reader_int
   Konst.Values.WitnessReaders.reader_text Konst.Values.WitnessReaders.reader_sum
@@ -169,6 +169,11 @@ private theorem tag_elaborated : Konst.Values.elaborate tagDescriptor = .ok tagF
 
 attribute [local cbv_eval] tag_elaborated
 
+section
+-- This recursive equation is needed only while certifying the integer payload.
+-- Keeping it out of metadata replay lets its reify opacity preserve the packet.
+attribute [local cbv_eval] Konst.Values.reify.eq_def
+
 -- Realize the certified function value before introducing the dependent
 -- quotation result. The payload still comes from the canonical reify producer.
 private theorem tag_quoted :
@@ -198,6 +203,12 @@ private theorem tag_quoted :
     case produced => cbv <;> exact Eq.refl _
     case spelling => rfl
   obtain ⟨payload, produced, spelling⟩ := payload
+  have payloadProduced :
+      Konst.Values.reifyPayload (D := D) (Γ := [.int 0 10]) [schema] [] 63
+        (caseTypes.get i) (Fall.toNutzlast D.Fn D.passt caseTypes i value) = .ok payload := by
+    change Konst.Values.reifyPayload (D := D) (Γ := [.int 0 10]) [schema] [] 63
+      (some (.int 0 255)) value = .ok payload
+    exact produced
   have selected : [schema].find? (fun actual => actual.spec = caseTypes) = some schema := by cbv
   have named : (schema.cases[i.val]?).map Prod.fst = some "Data" := rfl
   refine ⟨{
@@ -221,10 +232,13 @@ private theorem tag_quoted :
         · rename_i actualName found
           have same : actualName = "Data" := Option.some.inj (found.symm.trans named)
           subst actualName
-          simp only [produced, bind, Except.bind, pure, Except.pure] <;> rfl
+          erw [payloadProduced]
+          rfl
       · rename_i different
         exact False.elim (different rfl)
   · exact congrArg (Konst.Values.tagSyntax "Data") spelling
+
+end
 
 section
 attribute [local cbv_opaque] Konst.Values.elaborate Konst.Values.reify
