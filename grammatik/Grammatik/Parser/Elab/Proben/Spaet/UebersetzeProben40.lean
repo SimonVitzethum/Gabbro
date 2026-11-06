@@ -92,7 +92,7 @@ impl fn f()
 /-- The accepted unit. -/
 def src : String := quelle "writes T.slots" "T"
 
-private def allTables (unit : UProg) : List (declOf unit).Tab := List.finRange unit.tabs.length
+def allTables (unit : UProg) : List (declOf unit).Tab := List.finRange unit.tabs.length
 
 /-- The core checker on what the pipeline makes of a text (`false` when the pipeline refuses it). -/
 def akzeptiertText (s : String) : Bool :=
@@ -208,7 +208,7 @@ private theorem source_fragment_text (writes provider : Bool) :
     (sourceChunks writes provider).map (fun chunk => String.ofList chunk.characters) =
       sourceSpellings writes provider := by
   cases writes <;> cases provider <;>
-    simp only [sourceChunks, sourceSpellings, targetChunk, Bool.true_eq_true,
+    simp only [sourceChunks, sourceSpellings, targetChunk,
       Bool.false_eq_true, reduceIte, List.map_cons, List.map_nil,
       moduleChunk_text, providerChunk_text, finiteChunk_text, externChunk_text,
       functionChunk_text, writesChunk_text, pureChunk_text, allocationChunk_text,
@@ -217,7 +217,7 @@ private theorem source_fragment_text (writes provider : Bool) :
 private theorem source_spelling (writes provider : Bool) :
     quelle (if writes then "writes T.slots" else "pure") (if provider then "T" else "U") =
       String.join (sourceSpellings writes provider) := by
-  cases writes <;> cases provider <;> rfl
+  cases writes <;> cases provider <;> decide +kernel
 
 private theorem source_characters (writes provider : Bool) :
     quelle (if writes then "writes T.slots" else "pure") (if provider then "T" else "U") =
@@ -230,7 +230,7 @@ private theorem source_bound (writes provider : Bool) :
     steps (sourceChunks writes provider) ≤ (characters (sourceChunks writes provider)).length := by
   apply steps_le_length
   cases writes <;> cases provider <;>
-    simp only [sourceChunks, targetChunk, Bool.true_eq_true, Bool.false_eq_true,
+    simp only [sourceChunks, targetChunk, Bool.false_eq_true,
       reduceIte, List.all_cons, List.all_nil, moduleChunk_bounded, providerChunk_bounded,
       finiteChunk_bounded, externChunk_bounded, functionChunk_bounded, writesChunk_bounded,
       pureChunk_bounded, allocationChunk_bounded, providerTargetChunk_bounded,
@@ -433,16 +433,16 @@ theorem region_akzeptiert : akzeptiertText src = true := by
 /-- Refused: `alloc U`, a table without a provider. -/
 theorem alloc_ohne_anbieter : akzeptiertText (quelle "writes T.slots" "U") = false := by
   obtain ⟨items, error, parsed, elaborated⟩ := elab_refused
-  have rejected := pipeline_elab_error parsed elaborated
-  simp only [Bool.true_eq_true, Bool.false_eq_true, reduceIte] at rejected
+  have rejected : uebersetzeAllg (quelle "writes T.slots" "U") = .error error :=
+    pipeline_elab_error (writes := true) (provider := false) parsed elaborated
   unfold akzeptiertText
   rw [rejected]
 
 /-- Refused: the write through the reference without the write right on `T`. -/
 theorem schreiben_ohne_recht : akzeptiertText (quelle "pure" "T") = false := by
   obtain ⟨items, unit, error, parsed, elaborated, lowered⟩ := write_refused
-  have rejected := pipeline_lower_error parsed elaborated lowered
-  simp only [Bool.true_eq_true, Bool.false_eq_true, reduceIte] at rejected
+  have rejected : uebersetzeAllg (quelle "pure" "T") = .error error :=
+    pipeline_lower_error (writes := false) (provider := true) parsed elaborated lowered
   unfold akzeptiertText
   rw [rejected]
 
