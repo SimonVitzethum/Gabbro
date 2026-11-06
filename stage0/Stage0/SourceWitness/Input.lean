@@ -98,73 +98,11 @@ private def sourceOrder : { actual : Frontend.AliasOrder sourceOriginal.val //
     Frontend.orderAliases sourceOriginal.val = .ok actual } := by
   refine ⟨?_, by cbv <;> exact Eq.refl _⟩
 
-private def sourcePreparation : { actual : Frontend.Prepared //
-    Frontend.prepare sourceOriginal.val = actual } := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
-
-private def sourceScalars : { actual : List (String × Int) //
-    Frontend.typedConstants sourcePreparation.val.env sourcePreparation.val.fns
-      sourceOriginal.val [] = some actual } := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
-
-private theorem source_scalar_origin :
-    Frontend.typedConstants (Frontend.prepare sourceOriginal.val).env
-      (Frontend.prepare sourceOriginal.val).fns sourceOriginal.val [] = some sourceScalars.val :=
-  (congrArg (fun prepared : Frontend.Prepared =>
-    Frontend.typedConstants prepared.env prepared.fns sourceOriginal.val [])
-    sourcePreparation.property).trans sourceScalars.property
-
-private theorem source_stable :
-    uAliase sourceScalars.val (Frontend.prepare sourceOriginal.val).expanded =
-      (Frontend.prepare sourceOriginal.val).env := by
-  have kept : uAliase sourceScalars.val sourcePreparation.val.expanded =
-      sourcePreparation.val.env := by cbv
-  exact Eq.mpr (congrArg (fun prepared : Frontend.Prepared =>
-    uAliase sourceScalars.val prepared.expanded = prepared.env)
-    sourcePreparation.property) kept
-
-private def sourceConservativeValue : Frontend.DerivedScopes sourceOriginal.val := by
-  refine ⟨Frontend.evaluatedScopes sourceOriginal.val sourceScalars.val source_scalar_origin, ?_⟩
-  change uAliase sourceScalars.val (Frontend.prepare sourceOriginal.val).expanded =
-    (Frontend.prepare sourceOriginal.val).env
-  exact source_stable
-
-private def sourceConservative : { actual : Frontend.DerivedScopes sourceOriginal.val //
-    Frontend.deriveScopes sourceOriginal.val = .ok actual } := by
-  refine ⟨sourceConservativeValue, ?_⟩
-  unfold Frontend.deriveScopes
-  split
-  · rename_i rejected
-    cases rejected.symm.trans source_scalar_origin
-  · rename_i values selected
-    have same : values = sourceScalars.val :=
-      Option.some.inj (selected.symm.trans source_scalar_origin)
-    subst values
-    split
-    · rfl
-    · rename_i rejected
-      exact False.elim (rejected source_stable)
-
-private def sourceConstantOrder : { actual : Frontend.ConstantOrder sourceOriginal.val //
-    Frontend.orderConstants sourceOriginal.val = .ok actual } := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
-
-private theorem source_previous : Frontend.elaborateScopes sourceOriginal.val =
-    .ok sourceConservative.val :=
-  Frontend.elaborateScopes_preserves sourceOriginal.val sourceConservative.val
-    sourceOrder.val sourceOrder.property sourceConservative.property
-    (by cbv) (by cbv) (by cbv)
-
 private def sourceScopes : { actual : Frontend.DerivedScopes sourceOriginal.val //
-    Frontend.elaborateConstantScopes sourceOriginal.val = .ok actual } :=
-  ⟨sourceConservative.val, Frontend.elaborateConstantScopes_preserves sourceOriginal.val
-    sourceConstantOrder.val sourceConstantOrder.property sourceConservative.val source_previous
-    (by cbv)⟩
+    Frontend.elaborateConstantScopes sourceOriginal.val = .ok actual } := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
 
-private theorem source_metadata : Konst.checkSourceMetadata sourceOriginal.val = .ok () := by
-  rw [Konst.checkSourceMetadata_from_scopes sourceOriginal.val sourceScopes.val
-    (by cbv) sourceScopes.property]
-  cbv
+private theorem source_metadata : Konst.checkSourceMetadata sourceOriginal.val = .ok () := by cbv
 private theorem source_aliases :
     sourceOriginal.val.all (Frontend.checkAliasMeaning sourceScopes.val.scope.types) = true := by cbv
 private theorem source_constants : sourceOriginal.val.all (Frontend.checkConstantMeaning
