@@ -76,8 +76,9 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   assignment/call/emission consumers build. The rights/ownership scanner fragments and their
   individual numeric/text certificates build; long input composition still reaches the kernel
   recursion limit. Separate text/bound certificate fields and their record pass an isolated check.
-  The specification witness builds with its actual outer substitution environment, and the Dyn
-  fold/closure prefix passes after independent result inference and canonical numeral formatting.
+  The specification witness builds with its actual outer substitution environment, and all six Dyn
+  pass-result packets pass an isolated prefix check for all three fixtures after independent result
+  inference and canonical numeral/string-prefix reduction. Shared scanner spelling/fuel composition builds.
   The complete Dyn witness remains resource-unmeasured after sustained
   memory-high throttling in both single-module and larger integration scopes, without OOM.
   Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
