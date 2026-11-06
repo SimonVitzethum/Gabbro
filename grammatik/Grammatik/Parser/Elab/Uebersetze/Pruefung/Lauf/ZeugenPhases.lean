@@ -282,17 +282,28 @@ private def source_call_ready (u : UProg) (caller callee : Fin u.fns.length)
   · intro lock _
     exact False.elim (check_no_lock u locks lock)
 
+-- Eliminate the whole list-indexed result while the list is still a variable.
+-- No dependent match over fnAt.params is rewritten after taking its value.
+private def empty_parameter_arguments (u : UProg) (caller : Fin u.fns.length)
+    (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u)))
+    (types : List Ty) (empty : types = []) :
+    {arguments : Args (declOf u) Γ Λ types //
+      lowCallArgsAuxL u caller Γ fn Λ [] types [] = .ok arguments} := by
+  subst types
+  exact ⟨Args.nil, rfl⟩
+
 private def nullary_arguments (u : UProg) (caller callee : Fin u.fns.length)
     (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u)))
     (kinds : (fnAt u callee).kinds = []) (parameters : (fnAt u callee).params = []) :
     {arguments : Args (declOf u) Γ Λ ((declOf u).params callee) //
       lowCallArgsAuxL u caller Γ fn Λ (fnAt u callee).kinds ((declOf u).params callee) [] = .ok arguments} := by
-  let recorded : Args (declOf u) Γ Λ ((fnAt u callee).params.map (·.2)) := by
-    rw [parameters]
-    exact Args.nil
+  let packet := empty_parameter_arguments u caller Γ fn Λ
+    ((fnAt u callee).params.map (·.2)) (by simp only [parameters, List.map_nil])
+  let recorded := packet.val
   have read : lowCallArgsAuxL u caller Γ fn Λ (fnAt u callee).kinds
       ((fnAt u callee).params.map (·.2)) [] = .ok recorded := by
-    simp only [kinds, parameters, List.map_nil, check_arguments_nil, recorded]
+    rw [kinds]
+    exact packet.property
   refine ⟨check_arguments_cast u Γ Λ (params_eq u callee) recorded, ?_⟩
   exact (check_arguments_types u caller Γ fn Λ (fnAt u callee).kinds []
     ((declOf u).params callee) ((fnAt u callee).params.map (·.2)) (params_eq u callee)).trans
@@ -315,23 +326,46 @@ private theorem bind_failure (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
     (failed : lowBodyF u caller (.bool :: Γ) (fn.mitTy binder .bool) fuel
       (nach (declOf u) head.val.callee Λ) rest returning = .error error) :
     lowBodyF u caller Γ fn (fuel + 1) Λ (.bindCall binder name [] :: rest) returning = .error error := by
-  rw [lowBodyF, head.property, check_result_select]
-  simp only [result, check_result_value, failed]
+  rw [lowBodyF]
+  simp only [head.property]
+  rw [check_result_select, check_result_transport _ _ result]
+  simp only [check_result_value, failed]
 
 private theorem empty_return_failure (u : UProg) (caller : Fin u.fns.length)
     (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u)))
     (result : (fnAt u caller).ergTy = none)
     (unreturned : decide (Λ.Perm (verOf u caller).ende) = false) :
     lowBodyF u caller Γ fn 1 Λ [] .empty = .error "lower: return without produced marks" := by
-  rw [lowBodyF, check_end_empty, check_return_empty]
-  simp only [result, unreturned, Bool.false_eq_true, dite_false]
+  have produced : ∃ value : ErgExpr (declOf u) Γ Λ (verOf u caller).erg,
+      lowErg u caller Γ Λ fn .empty = .ok value := by
+    rw [check_return_empty]
+    split
+    · exact ⟨_, rfl⟩
+    all_goals simp_all
+  obtain ⟨value, made⟩ := produced
+  rw [lowBodyF, check_end_empty, made]
+  simp only [unreturned, Bool.false_eq_true, dite_false]
+
+-- The unconditional equation of the existing call node avoids the generated
+-- catch-all equation's separate nonmatching-constructor proof obligations.
+private theorem call_body_equation (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
+    (fn : UFn) (fuel : Nat) (Λ : List (Res (declOf u))) (name : String)
+    (rest : List UStmt) (returning : URet) :
+    lowBodyF u caller Γ fn (fuel + 1) Λ (.call name [] :: rest) returning =
+      (match lowStmtL u caller Γ fn Λ (.call name []) with
+      | .error error => .error error
+      | .ok ⟨after, statement⟩ =>
+        match lowBodyF u caller Γ fn fuel after rest returning with
+        | .error error => .error error
+        | .ok ending => .ok (Endblock.cons statement ending)) := by
+  cases returning <;> rfl
 
 private theorem call_failure (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
     (fn : UFn) (fuel : Nat) (Λ : List (Res (declOf u))) (name error : String)
     (rest : List UStmt) (returning : URet)
     (failed : lowRufKopf u caller Γ fn Λ name [] = .error error) :
     lowBodyF u caller Γ fn (fuel + 1) Λ (.call name [] :: rest) returning = .error error := by
-  rw [lowBodyF]
+  rw [call_body_equation]
   simp only [lowStmtL, lowCallL, failed]
 
 private theorem after_call_failure (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
@@ -341,8 +375,9 @@ private theorem after_call_failure (u : UProg) (caller : Fin u.fns.length) (Γ :
       lowStmtL u caller Γ fn Λ (.call name []) = .ok actual})
     (failed : lowBodyF u caller Γ fn fuel step.val.1 rest returning = .error error) :
     lowBodyF u caller Γ fn (fuel + 1) Λ (.call name [] :: rest) returning = .error error := by
-  rw [lowBodyF]
-  simp only [step.property, failed]
+  obtain ⟨⟨after, statement⟩, made⟩ := step
+  rw [call_body_equation]
+  simp only [made, failed]
 
 -- The first invocation's checked writes/floor remain identical. With no locks,
 -- the two remaining lock guards hold also at the actual post-consumer inventory.
