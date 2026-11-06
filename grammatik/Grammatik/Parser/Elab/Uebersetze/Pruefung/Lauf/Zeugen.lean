@@ -81,8 +81,8 @@ local instance retiringWitnessFunctionEquality (u : UProg) : DecidableEq (declOf
 theorem retiringSource_selected :
     ((elabText checkTextBodenWahr).bind fun u =>
       uSelectCheckConsumers u [retiringSelection]).toOption.isSome = true := by
-  rw [RetiringWitness.selected.property]
-  rfl
+  exact congrArg (fun produced : Except String UProg => produced.toOption.isSome)
+    RetiringWitness.selected.property
 
 -- Public runtime data retain their original canonical getter definitions.
 -- Only propositions cross the private implementation boundary below.
