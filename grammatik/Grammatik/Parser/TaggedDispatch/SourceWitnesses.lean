@@ -8,6 +8,11 @@ import all Grammatik.Parser.Elab.Uebersetze.Akku.ProbenPhases
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil10
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
 import all Grammatik.Parser.Elab.Uebersetze.Einheit.Elaboration
+import all Grammatik.Parser.Elab.Modules.Frontend
+import all Grammatik.Parser.Elab.Modules.Expansion
+import all Grammatik.Parser.Elab.Generic.Expansion
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil18
+import all Grammatik.Parser.Elab.Uebersetze.Folds.Substitution
 import all Grammatik.Parser.TaggedDispatch.SourcePhases
 
 public import Grammatik.Parser.TaggedDispatch.Frontend
@@ -148,16 +153,99 @@ public theorem tagged_source_call_zeuge :
         (some (.ret (some (.variable "answer"))))) := by cbv
 
 attribute [local cbv_opaque] elabFn uAnwReihe uAnwReiheCore
-  uAkkuBinder uZeigerAnw uStartNamen uSondenFns uTorHuellen
+  uAkkuBinder uZeigerAnw uStartNamen uSondenFns uTorHuellen uSpecEin
 attribute [local cbv_eval] Spec.function_block row_nil row_cons core_bind
   bound_names_select pointer_source_select start_source_select sonden_nil wrappers_nil
-  uAnwReiheCore_cases
+  Spec.spec_expression_select Spec.substitution_select
+  clauses_nil clauses_effect clauses_cost clauses_effect_cost
+  return_none return_empty return_variable fold_end_none fold_end_empty fold_end_variable
+
+-- Select the actual predecessor before passing the recursive reader to uCases.
+-- No arm, continuation, end reader or body context is evaluated by this equation.
+private theorem source_cases (tabs : List UTab) (heads : List UFnKopf)
+    (fuel : Nat) (ctx : UCtx) (scrutinee : SExpr) (arms rest : List SAnw) :
+    uAnwReiheCore tabs heads fuel ctx (.cases scrutinee arms :: rest) =
+      match fuel with
+      | 0 => .error "nesting without G form"
+      | next + 1 => uCases (uAnwReihe tabs heads next) ctx scrutinee arms rest := by
+  cases fuel <;> simp only [uAnwReiheCore]
+
+attribute [local cbv_eval] source_cases
+
+-- Keep the existing declaration packets at the real Modules boundary. In
+-- particular the elaboration proof below never repeats fold/closure/tag/spec
+-- expansion while normalizing a function's body context.
+private def sourceDeclarationNames : {names : List String //
+    exportDeclarationUnitDetailed (uMembers (pre108 sourceItems.val)) =
+      .ok (sourceLibrary.val, names)} := by
+  refine ⟨?_, by
+    simp only [exportDeclarationUnitDetailed, sourceFold.property,
+      sourceClose.property, sourceTagged.property, sourceSpec.property,
+      sourceChecked.property, sourceLibrary.property, bind, Except.bind]
+    cbv <;> exact Eq.refl _⟩
+
+private theorem modules_from_phases (items : List SItemTief)
+    (output : List SItemTief) (names : List String)
+    (ordinary : Modules.syntaxList items = false)
+    (modules : Modules.expandWithRequirements items = .ok { items := items })
+    (generic : Generic.expandDetailed (uMembers items) [] =
+      .ok { items := uMembers items })
+    (adapters : entzuckere (uMembers items) = .ok (uMembers items))
+    (declarations : exportDeclarationUnitDetailed (uMembers items) = .ok (output, names))
+    (accepted : Modules.validOutput items
+      { items := output, requirements := [],
+        generatedNames := names.filter ((Modules.outputNames output).contains) } = true) :
+    expandU items = .ok (output, []) := by
+  simp only [expandU, Modules.prepare, Modules.prepareDetailedRaw, modules,
+    ordinary, Bool.false_eq_true, ite_false, generic, adapters, declarations,
+    bind, Except.bind, List.nil_append, accepted, ite_true, pure, Except.pure]
+
+private theorem source_no_modules : Modules.syntaxList (pre108 sourceItems.val) = false := by cbv
+
+private theorem source_module_expansion :
+    Modules.expandWithRequirements (pre108 sourceItems.val) =
+      .ok { items := pre108 sourceItems.val } := by cbv
+
+private theorem source_generic_expansion :
+    Generic.expandDetailed (uMembers (pre108 sourceItems.val)) [] =
+      .ok { items := uMembers (pre108 sourceItems.val) } := by cbv
+
+private theorem source_adapters :
+    entzuckere (uMembers (pre108 sourceItems.val)) =
+      .ok (uMembers (pre108 sourceItems.val)) := by cbv
+
+private theorem source_output_valid : Modules.validOutput (pre108 sourceItems.val)
+    { items := sourceLibrary.val, requirements := [],
+      generatedNames := sourceDeclarationNames.val.filter
+        ((Modules.outputNames sourceLibrary.val).contains) } = true := by cbv
+
+private theorem source_prepared :
+    expandU (pre108 sourceItems.val) = .ok (sourceLibrary.val, []) :=
+  modules_from_phases _ _ _ source_no_modules source_module_expansion
+    source_generic_expansion source_adapters sourceDeclarationNames.property source_output_valid
+
+private def sourceElaboration : {unit : UProg //
+    elabUExpanded (sourceLibrary.val, []) = .ok unit} := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
+private theorem elaborated_from_prepared (items : List SItemTief)
+    (prepared : List SItemTief × List (STyp × String)) (unit : UProg)
+    (expanded : expandU items = .ok prepared)
+    (elaborated : elabUExpanded prepared = .ok unit) :
+    elabU items = .ok unit := by
+  simp only [elabU, expanded, bind, Except.bind, elaborated]
+
+private theorem source_elaborated :
+    elabU (pre108 sourceItems.val) = .ok sourceElaboration.val :=
+  elaborated_from_prepared _ _ _ source_prepared sourceElaboration.property
 
 /-- This also runs through the actual elaborator, beyond the expansion witness. -/
 public theorem tagged_source_elaborated_zeuge :
     ((taggedSourceItems "bool").bind (fun items => elabU (pre108 items))).toOption.isSome = true := by
   rw [sourceItems.property]
-  cbv
+  change (elabU (pre108 sourceItems.val)).toOption.isSome = true
+  rw [source_elaborated]
+  rfl
 
 /-- A parsed implementation with the wrong result type is refused by name
     before any dispatcher is admitted. -/
