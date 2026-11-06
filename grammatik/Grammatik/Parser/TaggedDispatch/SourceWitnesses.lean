@@ -161,14 +161,14 @@ rights_input inputu8 : (taggedSource "u8")
 end TaggedSourceCuts
 
 private def sourceItems : {actual : List SItemTief // taggedSourceItems "bool" = .ok actual} := by
-  refine ⟨?_, ?_⟩
-  rw [taggedSourceItems, TaggedSourceCuts.inputbool.text, lex_ofList, TaggedSourceCuts.inputbool.lexed]
-  cbv <;> exact Eq.refl _
+  refine ⟨?_, by
+    rw [taggedSourceItems, TaggedSourceCuts.inputbool.text, lex_ofList, TaggedSourceCuts.inputbool.lexed]
+    cbv <;> exact Eq.refl _⟩
 
 private def wrongItems : {actual : List SItemTief // taggedSourceItems "u8" = .ok actual} := by
-  refine ⟨?_, ?_⟩
-  rw [taggedSourceItems, TaggedSourceCuts.inputu8.text, lex_ofList, TaggedSourceCuts.inputu8.lexed]
-  cbv <;> exact Eq.refl _
+  refine ⟨?_, by
+    rw [taggedSourceItems, TaggedSourceCuts.inputu8.text, lex_ofList, TaggedSourceCuts.inputu8.lexed]
+    cbv <;> exact Eq.refl _⟩
 
 private def sourceFold : {actual : List SItemTief //
     SourceFolds.prepare (uMembers (pre108 sourceItems.val)) = .ok actual} := by
