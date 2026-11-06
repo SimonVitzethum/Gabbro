@@ -37,15 +37,17 @@ import all Init.Data.String.ToSlice
 
 namespace Gabbro.Grammatik.Parser
 
-private def dispatchSignature : FnSig :=
+@[expose] public def dispatchSignature : FnSig :=
   ⟨"spec", "area", [("before", .atom "bool"), ("self", .atom "Self"),
     ("after", .atom "bool")], some (.atom "bool"), none, [], []⟩
 
-private def dispatchActual (name : String) (variant : STyp) : FnSig :=
-  { dispatchSignature with art := "impl", name := name,
+@[expose] public def dispatchActual (name : String) (variant : STyp) : FnSig :=
+  { dispatchSignature with
+    art := "impl"
+    name := name
     params := [("a", .atom "bool"), ("value", variant), ("b", .atom "bool")] }
 
-private def dispatchImplementations : List TaggedImplementation :=
+@[expose] public def dispatchImplementations : List TaggedImplementation :=
   [⟨.atom "u8", [("area", dispatchActual "circleArea" (.atom "u8"))]⟩,
    ⟨.atom "bool", [("area", dispatchActual "rectArea" (.atom "bool"))]⟩]
 
@@ -55,7 +57,7 @@ public theorem tagged_group_static_ignored_zeuge :
       ⟨"spec", "copy", [("self", .atom "Self")], some (.atom "Self"), none, [], []⟩]
       [("Circle", some (.atom "u8")), ("Rect", some (.atom "bool"))]
       dispatchImplementations).map (fun fs => fs.map (fun f => f.2.map (·.implementation))) =
-    .ok [[some "circleArea", some "rectArea"]] := rfl
+    .ok [[some "circleArea", some "rectArea"]] := by cbv
 
 /-- Lookup covers the second member and second case, rather than stopping after
     the first complete member or the first variant implementation. -/
@@ -65,7 +67,7 @@ public theorem tagged_group_every_member_zeuge :
       [⟨.atom "u8", [("area", dispatchActual "circleArea" (.atom "u8")),
         ("perimeter", dispatchActual "circlePerimeter" (.atom "u8"))]⟩,
        ⟨.atom "bool", [("area", dispatchActual "rectArea" (.atom "bool"))]⟩]).map (fun _ => ()) =
-      .error "tagged-dispatch-missing-implementation: Rect::perimeter" := rfl
+      .error "tagged-dispatch-missing-implementation: Rect::perimeter" := by cbv
 
 public theorem tagged_group_missing_member_zeuge :
     (checkTaggedGroup [dispatchSignature]
@@ -75,32 +77,32 @@ public theorem tagged_group_missing_member_zeuge :
 public theorem tagged_wrong_parameter_refused_zeuge :
     checkTaggedSignature (.atom "u8") dispatchSignature
       (dispatchActual "wrongReceiver" (.atom "bool")) =
-      .error "tagged-dispatch-signature-mismatch: wrongReceiver" := rfl
+      .error "tagged-dispatch-signature-mismatch: wrongReceiver" := by cbv
 
 public theorem tagged_wrong_channel_refused_zeuge :
     checkTaggedSignature (.atom "u8") dispatchSignature
       { dispatchActual "wrongChannel" (.atom "u8") with fehler := some "Failure" } =
-      .error "tagged-dispatch-signature-mismatch: wrongChannel" := rfl
+      .error "tagged-dispatch-signature-mismatch: wrongChannel" := by cbv
 
 public theorem tagged_multiple_receivers_not_dispatched_zeuge :
     taggedDispatchable { dispatchSignature with
-      params := [("x", .atom "Self"), ("y", .atom "Self")] } = false := rfl
+      params := [("x", .atom "Self"), ("y", .atom "Self")] } = false := by cbv
 
 public theorem tagged_nested_receiver_not_dispatched_zeuge :
     taggedDispatchable { dispatchSignature with
-      params := [("x", .atom "Self"), ("ys", .array (.atom "Self") (.lit 2))] } = false := rfl
+      params := [("x", .atom "Self"), ("ys", .array (.atom "Self") (.lit 2))] } = false := by cbv
 
 public theorem tagged_held_refused_zeuge :
     (checkTaggedGroup [{ dispatchSignature with klauseln := [.needs (.call "Held" [.variable "L"])] }]
       [("Circle", some (.atom "u8"))] dispatchImplementations).toOption.isSome = false := by decide +kernel
 
-private def dispatchConformanceSignature : FnSig :=
+@[expose] public def dispatchConformanceSignature : FnSig :=
   { dispatchSignature with klauseln := [.effs [], .cost (.lit 1)] }
 
-private def dispatchConformanceActual (variant : STyp) : FnSig :=
+@[expose] public def dispatchConformanceActual (variant : STyp) : FnSig :=
   { dispatchActual "area" variant with klauseln := dispatchConformanceSignature.klauseln }
 
-private def dispatchConformanceItems (second : FnSig) : List SItemTief :=
+@[expose] public def dispatchConformanceItems (second : FnSig) : List SItemTief :=
   [.specGroupT "Shape" ["Self"] [] [dispatchConformanceSignature],
    .implGroupT "Shape" [.atom "u8"] []
      [.fnT (dispatchConformanceActual (.atom "u8")) (.block [] none)],
@@ -110,7 +112,7 @@ set_option maxRecDepth 100000 in
 /-- The unified spec gate accepts both variant signatures, with a receiver between arguments. -/
 public theorem tagged_unified_signature_accepted_zeuge :
     Spec.check (dispatchConformanceItems (dispatchConformanceActual (.atom "bool"))) =
-      .ok () := rfl
+      .ok () := by cbv
 
 set_option maxRecDepth 100000 in
 /-- The unified gate names signature failures in the second variant, covering the receiver,
