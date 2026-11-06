@@ -32,6 +32,8 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil13
 public import Grammatik.Parser.Elab.UebersetzeSum
+import all Grammatik.Parser.Elab.Uebersetze.Tagged.ProbeResults
+import all Grammatik.GabbroV.Start.GvStartPflichta
 public import Grammatik.GabbroV.Start.GvStartPflicht
 
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
@@ -54,50 +56,8 @@ attribute [local cbv_eval] Gabbro.Grammatik.Parser.UebersetzeAllg.lowWertE.eq_de
   Gabbro.Grammatik.Parser.UebersetzeAllg.lowEns.eq_def
   Gabbro.Grammatik.Parser.UebersetzeAllg.lowCmp.eq_def
 attribute [local cbv_eval] uSumKonst.eq_def uKonst.eq_def
-
--- Proof cuts retain the complete canonical result before its Boolean projection.
-private theorem reader_ok {α : Type} {reader : Except String α}
-    (result : { actual : α // reader = .ok actual }) :
-    (match reader with | .ok _ => true | .error _ => false) = true := by rw [result.property]
-private theorem reader_error {α : Type} {reader : Except String α}
-    (result : { error : String // reader = .error error }) :
-    (match reader with | .ok _ => false | .error _ => true) = true := by rw [result.property]
-private theorem chain_ok {α β : Type} {first : Except String α} {next : α → Except String β}
-    (parsed : { actual : α // first = .ok actual })
-    (lowered : { actual : β // next parsed.val = .ok actual }) :
-    (match first with | .error _ => false | .ok value =>
-      match next value with | .ok _ => true | .error _ => false) = true := by
-  rw [parsed.property, lowered.property]
-private theorem chain_first_error {α β : Type} {first : Except String α} {next : α → Except String β}
-    (refused : { error : String // first = .error error }) :
-    (match first with | .error _ => false | .ok value =>
-      match next value with | .ok _ => true | .error _ => false) = false := by rw [refused.property]
-private theorem chain_second_error {α β : Type} {first : Except String α} {next : α → Except String β}
-    (parsed : { actual : α // first = .ok actual })
-    (refused : { error : String // next parsed.val = .error error }) :
-    (match first with | .error _ => false | .ok value =>
-      match next value with | .ok _ => true | .error _ => false) = false := by
-  rw [parsed.property, refused.property]
-scoped macro "tagged_ok" : tactic => `(tactic| (
-  apply reader_ok
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩))
-scoped macro "tagged_error" : tactic => `(tactic| (
-  apply reader_error
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩))
-
--- No successful UProg is assumed: both expansion data and the actual subsequent
--- rejection are inferred separately from the same canonical elaborator.
-scoped macro "tagged_rejected " name:ident " from " items:term : command => do
-  let expanded := Lean.mkIdentFrom name (name.getId.appendAfter "_expanded")
-  let error := Lean.mkIdentFrom name (name.getId.appendAfter "_error")
-  let a ← `(command| private def $expanded : { actual : List SItemTief × List (STyp × String) //
-      expandU $items = .ok actual } := by refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
-  let b ← `(command| private def $error : { message : String //
-      elabUExpanded ($expanded).val = .error message } := by refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
-  let c ← `(command| private theorem $name : elabU $items = .error ($error).val := by
-    rw [elabU, ($expanded).property]
-    exact ($error).property)
-  return ⟨Lean.mkNullNode #[a, b, c]⟩
+attribute [local cbv_eval] Gabbro.Grammatik.GabbroV.konstWert.eq_def
+  Gabbro.Grammatik.GabbroV.nutzKonst.eq_def
 
 open scoped Gabbro.Grammatik.Parser.Uebersetze
 
@@ -281,44 +241,47 @@ def scope : UFn :=
   { name := "fixture", params := [], kinds := [], res := none, held := [], puts := [],
     gives := [], body := [], ret := .empty }
 
+-- The indexed result type is fixed before any match elaboration.
+theorem payload_index_bound : 0 < unit.sums.length := by decide
+
 /-- The actual tagged lowering path accepts complete record-free payloads. -/
 theorem lower_bool_zeuge :
-    (match lowSVal unit [] [] scope 0 0 (by decide) (.fall 1 (some (.truth true))) with
+    (match lowSVal unit [] [] scope 0 0 payload_index_bound (.fall 1 (some (.truth true))) with
       | .ok _ => true | .error _ => false) = true := by tagged_ok
 
 theorem lower_bool_variable_zeuge :
     (match lowSVal unit [.bool] [] { scope with params := [("flag", .bool)], kinds := [.bool] }
-      0 0 (by decide) (.fall 1 (some (.param "flag"))) with
+      0 0 payload_index_bound (.fall 1 (some (.param "flag"))) with
       | .ok _ => true | .error _ => false) = true := by tagged_ok
 
 theorem lower_scalar_zeuge :
-    (match lowSVal unit [] [] scope 0 0 (by decide) (.fall 2 (some (.lit 37))) with
+    (match lowSVal unit [] [] scope 0 0 payload_index_bound (.fall 2 (some (.lit 37))) with
       | .ok _ => true | .error _ => false) = true := by tagged_ok
 
 theorem lower_array_zeuge :
-    (match lowSVal unit [] [] scope 0 0 (by decide)
+    (match lowSVal unit [] [] scope 0 0 payload_index_bound
       (.fall 3 (some (.arrCons (.lit 7) (.arrCons (.lit 9) .arrNil)))) with
       | .ok _ => true | .error _ => false) = true := by tagged_ok
 
 theorem lower_string_zeuge :
-    (match lowSVal unit [] [] scope 0 0 (by decide) (.fall 4 (some (.text [65, 66]))) with
+    (match lowSVal unit [] [] scope 0 0 payload_index_bound (.fall 4 (some (.text [65, 66]))) with
       | .ok _ => true | .error _ => false) = true := by tagged_ok
 
 theorem lower_nested_sum_zeuge :
-    (match lowSVal unit [] [] scope 0 0 (by decide)
+    (match lowSVal unit [] [] scope 0 0 payload_index_bound
       (.fall 5 (some (.taggedValue [none, some .bool] 1 (.truth false)))) with
       | .ok _ => true | .error _ => false) = true := by tagged_ok
 
 theorem lower_missing_payload_refused :
-    (match lowSVal unit [] [] scope 0 0 (by decide) (.fall 1 none) with
+    (match lowSVal unit [] [] scope 0 0 payload_index_bound (.fall 1 none) with
       | .ok _ => false | .error _ => true) = true := by tagged_error
 
 theorem lower_extra_payload_refused :
-    (match lowSVal unit [] [] scope 0 0 (by decide) (.fall 0 (some (.lit 1))) with
+    (match lowSVal unit [] [] scope 0 0 payload_index_bound (.fall 0 (some (.lit 1))) with
       | .ok _ => false | .error _ => true) = true := by tagged_error
 
 theorem lower_wrong_payload_refused :
-    (match lowSVal unit [] [] scope 0 0 (by decide) (.fall 1 (some (.lit 1))) with
+    (match lowSVal unit [] [] scope 0 0 payload_index_bound (.fall 1 (some (.lit 1))) with
       | .ok _ => false | .error _ => true) = true := by tagged_error
 
 /-- Dependency resolution preserves source order even for a forward reference. -/
@@ -338,10 +301,10 @@ def sourceBoolPayload (locks : List ULock) (source : SExpr) : Bool :=
   let tabs : List UTab := [{ name := "Flags", count := 2, cols := [("ready", (0, 1))], bools := ["ready"] }]
   let ctx : UCtx := { names := ["flag", "n"], kinds := [.bool, .int], types := [.bool, .int 0 255], tabs, locks, held := [], res := none, fname := "fixture", alias := [], lits := [], sums }
   let fn := { scope with params := [("flag", .bool), ("n", .int 0 255)], kinds := [.bool, .int] }
-  match uSVal ctx 0 (.call "Flag" [source]) with
+  match (generalizing := false) uSVal ctx 0 (.call "Flag" [source]) with
   | .error _ => false
   | .ok value =>
-    match lowSVal { unit with tabs, locks } [.bool, .int 0 255] [] fn 0 0 (by decide) value with
+    match (generalizing := false) lowSVal { unit with tabs, locks } [.bool, .int 0 255] [] fn 0 0 payload_index_bound value with
     | .ok _ => true
     | .error _ => false
 
@@ -364,7 +327,8 @@ theorem source_bool_field_payload_zeuge : sourceBoolPayload [] sourceFlagRead = 
 theorem source_guarded_payload_refused :
     sourceBoolPayload [{ name := "Guard", rank := 1, guard := ["Flags"] }] sourceFlagRead = false := by
   unfold sourceBoolPayload
-  apply chain_second_error <;> refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+  apply chain_first_error
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
 
 theorem source_numeric_bool_payload_refused : sourceBoolPayload [] (.lit 1) = false := by
   unfold sourceBoolPayload
@@ -428,7 +392,7 @@ theorem static_nested_value_zeuge :
       (konstWert (F := Unit) (P := fun _ _ => true) (.sum outer.spec))) =
       some ⟨⟨3, by decide⟩, ⟨⟨1, by decide⟩, false⟩⟩ := by
   rw [static_nested_payload_zeuge]
-  rfl
+  cbv
 
 private def wrongInitializer : { actual : UKonst //
     uSumKonst [] schemas outer (.one (.call "Flag" [.lit 1])) = .ok actual } := by
