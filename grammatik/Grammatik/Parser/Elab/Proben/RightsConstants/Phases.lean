@@ -82,15 +82,16 @@ theorem stage_counts {source : String} (input : Input source) {items : List SIte
 
 -- Classify the actual finite carrier only after the complete unit has been inferred.
 -- The closed count equation is established independently of this caller index.
-scoped macro "rights_members " count:term " bounded_by " room:term " with " step:tactic : tactic => `(tactic| (
+scoped macro "rights_members " unit:term " counting " size:term " via " count:term
+    " bounded_by " room:term " with " step:tactic : tactic => `(tactic| (
   rintro ⟨index, bound⟩
   have actualBound := bound
   rw [($count:term)] at actualBound
-  try dsimp only at actualBound
+  try dsimp only [($size:term)] at actualBound
   have limited : index < 2 := Nat.lt_of_lt_of_le actualBound $room
   have choices : index = 0 ∨ index = 1 := by omega
   rcases choices with zero | one <;> subst index
-  all_goals first | (exfalso; omega) | $step:tactic))
+  all_goals first | (exfalso; omega) | (try dsimp only [($unit:term)]; $step:tactic)))
 
 scoped macro "rights_elab_error " supplied:term " with_reason " error:term : tactic => `(tactic| (
   let input := $supplied
@@ -111,7 +112,7 @@ scoped macro "rights_ok " supplied:term : tactic => `(tactic| (
   apply lower_ok input parsed elaborated
   · cbv
   · cbv
-  · rights_members count bounded_by small with (constructor <;> cbv)))
+  · rights_members unit counting size via count bounded_by small with (constructor <;> cbv)))
 
 scoped macro "rights_lower_error " supplied:term " with_reason " error:term " at_member " number:term : tactic =>
   `(tactic| (
@@ -125,8 +126,9 @@ scoped macro "rights_lower_error " supplied:term " with_reason " error:term " at
     have small : size ≤ 2 := by decide +kernel
     apply lower_error (error := $error) input parsed elaborated
     · cbv
-    · rights_members count bounded_by small with (first | (left; cbv; done) | (right; cbv; done))
+    · rights_members unit counting size via count bounded_by small with (first | (left; cbv; done) | (right; cbv; done))
     · refine ⟨⟨$number, by rw [count]; decide +kernel⟩, ?_⟩
+      dsimp only [unit]
       cbv))
 
 scoped macro "rights_counts " supplied:term : tactic => `(tactic| (
