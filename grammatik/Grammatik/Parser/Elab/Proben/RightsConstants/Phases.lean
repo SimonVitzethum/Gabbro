@@ -87,9 +87,9 @@ scoped macro "rights_members " step:tactic : tactic => `(tactic| (
   have choices : index = 0 ∨ index = 1 := by omega
   rcases choices with zero | one
   · subst index
-    $step
+    $step:tactic
   · subst index
-    first | omega | $step))
+    first | omega | $step:tactic))
 
 scoped macro "rights_elab_error " supplied:term " with_reason " error:term : tactic => `(tactic| (
   let input := $supplied
