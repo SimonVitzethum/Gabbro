@@ -82,16 +82,16 @@ theorem stage_counts {source : String} (input : Input source) {items : List SIte
 
 -- Classify the actual finite carrier only after the complete unit has been inferred.
 -- The closed count equation is established independently of this caller index.
-scoped macro "rights_members " unit:term " counting " size:term " via " count:term
+scoped macro "rights_members " unit:ident " counting " size:ident " via " count:term
     " bounded_by " room:term " with " step:tactic : tactic => `(tactic| (
   rintro ⟨index, bound⟩
   have actualBound := bound
   rw [($count:term)] at actualBound
-  try dsimp only [($size:term)] at actualBound
+  dsimp only [$size:ident] at actualBound
   have limited : index < 2 := Nat.lt_of_lt_of_le actualBound $room
   have choices : index = 0 ∨ index = 1 := by omega
   rcases choices with zero | one <;> subst index
-  all_goals first | (exfalso; omega) | (try dsimp only [($unit:term)]; $step:tactic)))
+  all_goals first | (exfalso; omega) | (dsimp only [$unit:ident]; $step:tactic)))
 
 scoped macro "rights_elab_error " supplied:term " with_reason " error:term : tactic => `(tactic| (
   let input := $supplied
