@@ -190,7 +190,7 @@ scoped macro "ownership_call_step " name:ident " for " unit:ident " at " index:i
         (resOf ($unit).val $index) (fnAt ($unit).val ($callee).val).kinds
           ((declOf ($unit).val).params ($callee).val) $raw = .ok actual } := by
     refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
-  let gates ← `(command| ownership_call_gates $name for $unit at $index callee $callee)
+  let gates ← `(command| ownership_call_gates $name for $unit at $index using_callee $callee)
   let j ← `(command| private def $head : { actual : RufKopf ($unit).val $index
       (ctxOf ($unit).val $index) (resOf ($unit).val $index) //
       lowRufKopf ($unit).val $index (ctxOf ($unit).val $index) (fnAt ($unit).val $index)

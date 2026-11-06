@@ -122,7 +122,7 @@ private def call_step (u : UProg) (f : Fin u.fns.length) (name : String) (raw : 
 
 -- Generate the independent guard facts separately from dependent argument/head data.
 scoped macro "ownership_call_gates " name:ident " for " unit:ident " at " index:ident
-    " callee " callee:ident : command => do
+    " using_callee " callee:ident : command => do
   let writes := Lean.mkIdentFrom name (name.getId.appendAfter "_writes")
   let globals := Lean.mkIdentFrom name (name.getId.appendAfter "_globals")
   let held := Lean.mkIdentFrom name (name.getId.appendAfter "_held")
