@@ -124,7 +124,7 @@ theorem tagText_prepared :
   rw [origin]
   rfl
 
-local notation "tagDescriptor" => ({
+private def tagDescriptor : UKonstFn := {
   name := "selected"
   params := [("x", .int 0 10)]
   erg := .sum [none, some (.int 0 255)]
@@ -138,7 +138,7 @@ local notation "tagDescriptor" => ({
     klauseln := []
     generics := [] }
   constants := []
-  sums := [{ name := "Choice", cases := [("Empty", none), ("Data", some (.int 0 255))] }] } : UKonstFn)
+  sums := [{ name := "Choice", cases := [("Empty", none), ("Data", some (.int 0 255))] }] }
 
 private theorem tag_collected :
     Konst.collectFunctions tagTextInput.original = .ok [tagDescriptor] := by
@@ -233,7 +233,7 @@ theorem stringText_prepared :
   rw [origin]
   rfl
 
-local notation "textDescriptor" => ({
+private def textDescriptor : UKonstFn := {
   name := "selected"
   params := []
   erg := .str 1
@@ -247,7 +247,7 @@ local notation "textDescriptor" => ({
     klauseln := []
     generics := [] }
   constants := []
-  sums := [] } : UKonstFn)
+  sums := [] }
 
 private theorem text_collected :
     Konst.collectFunctions stringTextInput.original = .ok [textDescriptor] := by

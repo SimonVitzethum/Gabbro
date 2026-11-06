@@ -159,7 +159,7 @@ theorem boolText_prepared :
   rfl
 
 -- This is the complete collected descriptor, not a sampled Boolean answer.
-local notation "positiveDescriptor" => ({
+private def positiveDescriptor : UKonstFn := {
   name := "positive"
   params := [("x", .int 0 10)]
   erg := .bool
@@ -173,7 +173,7 @@ local notation "positiveDescriptor" => ({
     klauseln := [.gives (.bin "==" .res (.bin ">" (.variable "x") (.lit 0)))]
     generics := [] }
   constants := []
-  sums := [] } : UKonstFn)
+  sums := [] }
 
 private theorem positive_collected :
     Konst.collectFunctions boolTextInput.original = .ok [positiveDescriptor] := by
