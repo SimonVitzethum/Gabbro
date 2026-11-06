@@ -81,6 +81,7 @@ import all Grammatik.Parser.Elab.Uebersetze.Akku.ProbenPhases
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.CounterprobeText
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.CounterprobeUnits
 import Grammatik.Parser.Elab.UebersetzeAllg3.FunctionResults
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.CounterprobeBodies
 
 public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
@@ -187,13 +188,78 @@ private def sondeBody1 : {body : PlainFunctionBody sondeUnitMade.val sondeIndex1
 
 private def sondeFunction1 := lowerFnAt_from_body sonde_header1 sondeBody1
 
+-- Split the actual probe at each binding before the dependent call continuation.
+private abbrev sondeProbeFn0 := fnAt sondeUnitMade.val sondeIndex2
+private abbrev sondeProbeCtx0 := ctxOf sondeUnitMade.val sondeIndex2
+private abbrev sondeProbeResources := resOf sondeUnitMade.val sondeIndex2
+private def sondeProbeReturn : URet := .bool (.var "#checkReport")
+private def sondeProbeCall : UStmt := .bindCall "#checkReport" "p#report#0"
+  [.val (.param "#checkSample#0"), .bval (.var "#checkVerdict")]
+private def sondeProbeSample : UStmt := .bind "#checkSample#0" none (.param "x")
+private def sondeProbeVerdict : UStmt := .bindB "#checkVerdict" (.cmp "<" (.param "x") (.lit 0))
+private def sondeProbeAnnotation : Option (Int × Int) := some (0, 18446744073709551615)
+
+private theorem sonde_probe_body : sondeProbeFn0.body =
+    [.bind "x" sondeProbeAnnotation (.lit 3), sondeProbeVerdict, sondeProbeSample, sondeProbeCall] := by cbv
+private theorem sonde_probe_return : sondeProbeFn0.ret = sondeProbeReturn := by cbv
+
+private def sondeProbeInput : {side : LowSide sondeUnitMade.val sondeProbeCtx0 sondeProbeResources //
+    lowBindWert sondeUnitMade.val sondeProbeCtx0 sondeProbeResources sondeProbeFn0
+      sondeProbeAnnotation (.lit 3) = .ok side} := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+private abbrev sondeProbeCtx1 := .int sondeProbeInput.val.range.1 sondeProbeInput.val.range.2 :: sondeProbeCtx0
+private abbrev sondeProbeFn1 := sondeProbeFn0.mitBindung "x" sondeProbeInput.val.range
+
+private def sondeProbePredicate : {term : Expr (declOf sondeUnitMade.val) sondeProbeCtx1 sondeProbeResources .bool //
+    lowEns sondeUnitMade.val sondeProbeCtx1 sondeProbeResources sondeProbeFn1 none
+      (.cmp "<" (.param "x") (.lit 0)) = .ok term} := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+private abbrev sondeProbeCtx2 := .bool :: sondeProbeCtx1
+private abbrev sondeProbeFn2 := sondeProbeFn1.mitBindungB "#checkVerdict"
+
+private def sondeProbeSampleValue : {side : LowSide sondeUnitMade.val sondeProbeCtx2 sondeProbeResources //
+    lowBindWert sondeUnitMade.val sondeProbeCtx2 sondeProbeResources sondeProbeFn2 none (.param "x") = .ok side} := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+private abbrev sondeProbeCtx3 := .int sondeProbeSampleValue.val.range.1 sondeProbeSampleValue.val.range.2 :: sondeProbeCtx2
+private abbrev sondeProbeFn3 := sondeProbeFn2.mitBindung "#checkSample#0" sondeProbeSampleValue.val.range
+
+private def sondeProbeHead : {head : RufKopf sondeUnitMade.val sondeIndex2 sondeProbeCtx3 sondeProbeResources //
+    lowRufKopf sondeUnitMade.val sondeIndex2 sondeProbeCtx3 sondeProbeFn3 sondeProbeResources
+      "p#report#0" [.val (.param "#checkSample#0"), .bval (.var "#checkVerdict")] = .ok head} := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+private theorem sonde_probe_result : (declOf sondeUnitMade.val).erg sondeProbeHead.val.callee = some .bool := by cbv
+private theorem sonde_probe_reason : (declOf sondeUnitMade.val).gruende sondeProbeHead.val.callee = 0 := by cbv
+
+private def sondeProbeEnding : {ending : Endblock (declOf sondeUnitMade.val) (verOf sondeUnitMade.val sondeIndex2)
+      false (.bool :: sondeProbeCtx3) (nach (declOf sondeUnitMade.val) sondeProbeHead.val.callee sondeProbeResources) //
+    lowEnd sondeUnitMade.val sondeIndex2 (.bool :: sondeProbeCtx3)
+      (nach (declOf sondeUnitMade.val) sondeProbeHead.val.callee sondeProbeResources)
+      (sondeProbeFn3.mitTy "#checkReport" .bool) sondeProbeReturn = .ok ending} := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
+private def sondeProbeCallBody := counterprobe_body_call sondeUnitMade.val sondeIndex2
+  sondeProbeCtx3 sondeProbeFn3 sondeProbeResources "#checkReport" "p#report#0"
+  [.val (.param "#checkSample#0"), .bval (.var "#checkVerdict")] sondeProbeReturn
+  sondeProbeHead sonde_probe_result sonde_probe_reason sondeProbeEnding
+private def sondeProbeSampleBody := counterprobe_body_integer sondeUnitMade.val sondeIndex2
+  sondeProbeCtx2 sondeProbeFn2 2 sondeProbeResources "#checkSample#0" none (.param "x")
+  [sondeProbeCall] sondeProbeReturn sondeProbeSampleValue sondeProbeCallBody
+private def sondeProbeVerdictBody := counterprobe_body_boolean sondeUnitMade.val sondeIndex2
+  sondeProbeCtx1 sondeProbeFn1 3 sondeProbeResources "#checkVerdict" (.cmp "<" (.param "x") (.lit 0))
+  [sondeProbeSample, sondeProbeCall] sondeProbeReturn sondeProbePredicate sondeProbeSampleBody
+private def sondeProbeCompleteBody := counterprobe_body_integer sondeUnitMade.val sondeIndex2
+  sondeProbeCtx0 sondeProbeFn0 4 sondeProbeResources "x" sondeProbeAnnotation (.lit 3)
+  [sondeProbeVerdict, sondeProbeSample, sondeProbeCall] sondeProbeReturn sondeProbeInput sondeProbeVerdictBody
+
 private theorem sonde_header2 : PlainFunctionHeader sondeUnitMade.val sondeIndex2 := by
   constructor <;> cbv
 
 private def sondeBody2 : {body : PlainFunctionBody sondeUnitMade.val sondeIndex2 //
     lowBody sondeUnitMade.val sondeIndex2 (fnAt sondeUnitMade.val sondeIndex2).body
       (fnAt sondeUnitMade.val sondeIndex2).ret = .ok body} := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+  refine ⟨sondeProbeCompleteBody.val, ?_⟩
+  simpa only [lowBody, sonde_probe_body, sonde_probe_return, List.length_cons, List.length_nil] using
+    sondeProbeCompleteBody.property
 
 private def sondeFunction2 := lowerFnAt_from_body sonde_header2 sondeBody2
 
@@ -207,13 +273,37 @@ private def sondeBody3 : {body : PlainFunctionBody sondeUnitMade.val sondeIndex3
 
 private def sondeFunction3 := lowerFnAt_from_body sonde_header3 sondeBody3
 
+-- The ordinary external adapter has a separately certified head and return.
+private abbrev sondeAdapterCtx := ctxOf sondeUnitMade.val sondeIndex4
+private abbrev sondeAdapterFn := fnAt sondeUnitMade.val sondeIndex4
+private abbrev sondeAdapterResources := resOf sondeUnitMade.val sondeIndex4
+private def sondeAdapterReturn : URet := .bool (.var "ans")
+private theorem sonde_adapter_body : sondeAdapterFn.body = [.bindCall "ans" "ext" []] := by cbv
+private theorem sonde_adapter_return : sondeAdapterFn.ret = sondeAdapterReturn := by cbv
+private def sondeAdapterHead : {head : RufKopf sondeUnitMade.val sondeIndex4 sondeAdapterCtx sondeAdapterResources //
+    lowRufKopf sondeUnitMade.val sondeIndex4 sondeAdapterCtx sondeAdapterFn sondeAdapterResources "ext" [] = .ok head} := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+private theorem sonde_adapter_result : (declOf sondeUnitMade.val).erg sondeAdapterHead.val.callee = some .bool := by cbv
+private theorem sonde_adapter_reason : (declOf sondeUnitMade.val).gruende sondeAdapterHead.val.callee = 0 := by cbv
+private def sondeAdapterEnding : {ending : Endblock (declOf sondeUnitMade.val) (verOf sondeUnitMade.val sondeIndex4)
+      false (.bool :: sondeAdapterCtx) (nach (declOf sondeUnitMade.val) sondeAdapterHead.val.callee sondeAdapterResources) //
+    lowEnd sondeUnitMade.val sondeIndex4 (.bool :: sondeAdapterCtx)
+      (nach (declOf sondeUnitMade.val) sondeAdapterHead.val.callee sondeAdapterResources)
+      (sondeAdapterFn.mitTy "ans" .bool) sondeAdapterReturn = .ok ending} := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+private def sondeAdapterBody := counterprobe_body_call sondeUnitMade.val sondeIndex4
+  sondeAdapterCtx sondeAdapterFn sondeAdapterResources "ans" "ext" [] sondeAdapterReturn
+  sondeAdapterHead sonde_adapter_result sonde_adapter_reason sondeAdapterEnding
+
 private theorem sonde_header4 : PlainFunctionHeader sondeUnitMade.val sondeIndex4 := by
   constructor <;> cbv
 
 private def sondeBody4 : {body : PlainFunctionBody sondeUnitMade.val sondeIndex4 //
     lowBody sondeUnitMade.val sondeIndex4 (fnAt sondeUnitMade.val sondeIndex4).body
       (fnAt sondeUnitMade.val sondeIndex4).ret = .ok body} := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+  refine ⟨sondeAdapterBody.val, ?_⟩
+  simpa only [lowBody, sonde_adapter_body, sonde_adapter_return, List.length_cons, List.length_nil] using
+    sondeAdapterBody.property
 
 private def sondeFunction4 := lowerFnAt_from_body sonde_header4 sondeBody4
 

@@ -83,6 +83,7 @@ import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.CounterprobeUnits
 import Grammatik.Parser.Elab.UebersetzeAllg3.FunctionResults
 
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.CounterprobeLowering
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.CounterprobeBodies
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Admission
 public import Grammatik.Kern.Syntax.Satz.PruefungArtefakt
 public import Grammatik.Kern.Syntax.Satz.PruefungMessung
