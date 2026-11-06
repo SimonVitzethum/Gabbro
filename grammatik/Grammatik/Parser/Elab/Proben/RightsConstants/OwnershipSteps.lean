@@ -121,6 +121,20 @@ private def call_step (u : UProg) (f : Fin u.fns.length) (name : String) (raw : 
   rw [dif_pos reason]
 
 -- Generate the independent guard facts separately from dependent argument/head data.
+scoped macro "ownership_call_inputs " name:ident " for " unit:ident " at " index:ident
+    " named " text:term " arguments " raw:term : command => do
+  let callee := Lean.mkIdentFrom name (name.getId.appendAfter "_callee")
+  let args := Lean.mkIdentFrom name (name.getId.appendAfter "_arguments")
+  let a ← `(command| private def $callee : { actual : Fin ($unit).val.fns.length //
+      fnIdx ($unit).val.fns $text = .ok actual } := by refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+  let b ← `(command| private def $args : { actual : Args (declOf ($unit).val) (ctxOf ($unit).val $index)
+      (resOf ($unit).val $index) ((declOf ($unit).val).params ($callee).val) //
+      lowCallArgsAuxL ($unit).val $index (ctxOf ($unit).val $index) (fnAt ($unit).val $index)
+        (resOf ($unit).val $index) (fnAt ($unit).val ($callee).val).kinds
+          ((declOf ($unit).val).params ($callee).val) $raw = .ok actual } := by
+    refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+  return ⟨Lean.mkNullNode #[a, b]⟩
+
 scoped macro "ownership_call_gates " name:ident " for " unit:ident " at " index:ident
     " using_callee " callee:ident : command => do
   let writes := Lean.mkIdentFrom name (name.getId.appendAfter "_writes")

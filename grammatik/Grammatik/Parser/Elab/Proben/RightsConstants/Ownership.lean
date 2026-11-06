@@ -182,14 +182,7 @@ scoped macro "ownership_call_step " name:ident " for " unit:ident " at " index:i
   let reason := Lean.mkIdentFrom name (name.getId.appendAfter "_reason")
   let after := Lean.mkIdentFrom name (name.getId.appendAfter "_after")
   let remaining := Lean.mkIdentFrom name (name.getId.appendAfter "_remaining")
-  let a ← `(command| private def $callee : { actual : Fin ($unit).val.fns.length //
-      fnIdx ($unit).val.fns $text = .ok actual } := by refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
-  let b ← `(command| private def $args : { actual : Args (declOf ($unit).val) (ctxOf ($unit).val $index)
-      (resOf ($unit).val $index) ((declOf ($unit).val).params ($callee).val) //
-      lowCallArgsAuxL ($unit).val $index (ctxOf ($unit).val $index) (fnAt ($unit).val $index)
-        (resOf ($unit).val $index) (fnAt ($unit).val ($callee).val).kinds
-          ((declOf ($unit).val).params ($callee).val) $raw = .ok actual } := by
-    refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
+  let inputs ← `(command| ownership_call_inputs $name for $unit at $index named $text arguments $raw)
   let gates ← `(command| ownership_call_gates $name for $unit at $index using_callee $callee)
   let j ← `(command| private def $head : { actual : RufKopf ($unit).val $index
       (ctxOf ($unit).val $index) (resOf ($unit).val $index) //
@@ -206,7 +199,7 @@ scoped macro "ownership_call_step " name:ident " for " unit:ident " at " index:i
       nach (declOf ($unit).val) ($head).val.callee (resOf ($unit).val $index) = actual } := by
     refine ⟨?_, by cbv <;> exact Eq.refl _⟩)
   let n ← `(command| private theorem $remaining : ($name).val.1 = ($after).val := ($after).property)
-  return ⟨Lean.mkNullNode #[a, b, gates, j, k, l, m, n]⟩
+  return ⟨Lean.mkNullNode #[inputs, gates, j, k, l, m, n]⟩
 
 -- The source shape is inferred from the actual unit, not supplied as an AST.
 scoped macro "ownership_call_body " name:ident " for " unit:ident " at " number:num : command => do
