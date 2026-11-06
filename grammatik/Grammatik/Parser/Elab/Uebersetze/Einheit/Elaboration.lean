@@ -31,7 +31,9 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   match uGlobs consts alias ms with
   | .error e => .error e
   | .ok globs0 =>
-  let spaces := ["normal"] ++ uOhneDoppelte ((ms.filterMap (fun | .tableT _ _ _ _ space _ _ => space | _ => none)).filter (fun n => !strEq n "normal"))
+  -- The fifth table argument is an ownership mark, not an address-space declaration.
+  -- Ordinary source tables inhabit the registered normal space; ownership stays in `UTab.owner`.
+  let spaces := ["normal"]
   let eigner := uOhneDoppelte (uEignerMs ms)
   let linear := uLinearNamen ms
   match uMarkOrders ms with
@@ -48,7 +50,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   match uArenen consts alias ms with
   | .error e => .error e
   | .ok (arTabs, arGlobs) =>
-  let tabs := uIdxTabs ((tabs0.map (fun t => { t with space := ((ms.find? (fun | .tableT n .. => strEq n t.name | _ => false)).bind (fun | .tableT _ _ _ _ s _ _ => s | _ => none)).map (fun n => (spaces.zipIdx.find? (fun p => strEq p.1 n)).map (·.2) |>.getD 0) |>.getD 0 })) ++ arTabs ++ uArrayCarriers alias msE)
+  let tabs := uIdxTabs (tabs0 ++ arTabs ++ uArrayCarriers alias msE)
   match uOptGlobs tabs (globs0 ++ arGlobs) with
   | .error e => .error e
   | .ok globs =>
