@@ -75,6 +75,8 @@ set_option maxHeartbeats 4000000
 -- Pin the dictionary before substituting the source-backed declaration.
 local instance retiringWitnessAxiomEquality (u : UProg) : DecidableEq (declOf u).Ax :=
   inferInstanceAs (DecidableEq (Fin u.axs.length))
+local instance retiringWitnessFunctionEquality (u : UProg) : DecidableEq (declOf u).Fn :=
+  inferInstanceAs (DecidableEq (Fin u.fns.length))
 
 theorem retiringSource_selected :
     ((elabText checkTextBodenWahr).bind fun u =>
