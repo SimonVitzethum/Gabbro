@@ -208,6 +208,9 @@ Thus a parser/exporter or an expanded-unit certificate can exist while the origi
   Named spaces exist in the model, but no independent table-space source binding was found: the fifth
   `tableT` field is the owner. The existing `NamedSpaceWitness` confuses that owner field with a space
   declaration and still needs an honest source/proof connection; it is not completed source coverage.
+  The owner approved an explicit `table ... space Name ...` binder on 2026-11-06, independent of
+  `owner`; its implementation and generic source-to-IR connection are in progress. Nominal space
+  names imply no physical protection or hardware behavior.
   Owned `Expr.thruOwn` and `Stmt.assignThruOwn` also use those slot paths with real `lowE_ok`/`lowS_ok` arms;
   the source exporters exist in
   [`UebersetzeAllg/Teil3`](grammatik/Grammatik/Parser/Elab/UebersetzeAllg/Teil3.lean) and
