@@ -167,7 +167,9 @@ inductive SItemTief
   | specT : FnSig → SExpr → SItemTief
   | asmT : FnSig → String → SItemTief
   | formatT : String → Option SExpr → Option String → List SFeld → SItemTief
-  | tableT : String → Option String → Option SExpr → Option String → Option String → Bool → List STabTeil → SItemTief
+  | tableT (name : String) (provider : Option String) (count : Option SExpr)
+      (backed owner : Option String) (shared : Bool) (parts : List STabTeil)
+      (space : Option String := none) : SItemTief
   | arenaT : String → SExpr → SExpr → Option SExpr → STyp → Option (List String × SExpr) → SItemTief
   | whyT : String → List (String × SExpr × String) → Bool → SItemTief
   | stateT : String → List STrans → SItemTief
@@ -248,9 +250,9 @@ def beqSItemTief : SItemTief → SItemTief → Bool
   | .asmT s a, .asmT t b => beqFnSig s t && strEq a b
   | .formatT a v e f, .formatT b w g h =>
     strEq a b && beqOptExpr v w && beqOptWort e g && beqSFeldList f h
-  | .tableT a v c b o g p, .tableT d w f e h i q =>
+  | .tableT a v c b o g p s, .tableT d w f e h i q t =>
     strEq a d && beqOptWort v w && beqOptExpr c f && beqOptWort b e &&
-    beqOptWort o h && (g == i) && beqSTabTeilList p q
+    beqOptWort o h && (g == i) && beqSTabTeilList p q && beqOptWort s t
   | .arenaT a l h x t p, .arenaT b m i y u q =>
     strEq a b && beqSExpr l m && beqSExpr h i && beqOptExpr x y && beqSTyp t u &&
     beqOptPathExpr p q

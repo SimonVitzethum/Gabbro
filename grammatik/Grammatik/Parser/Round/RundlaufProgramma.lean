@@ -61,7 +61,7 @@ inductive ItemGut : SItemTief → Prop
       ItemGut (.concT ps)
   | tableT (n : String) (von : Option String) (cnt : Option SExpr) (backed owner : Option String) (sh : Bool)
       (parts : List STabTeil) : (∀ e, cnt = some e → gut e = true) → (∀ t ∈ parts, TeilGut t) →
-      ItemGut (.tableT n von cnt backed owner sh parts)
+      (space : Option String := none) → ItemGut (.tableT n von cnt backed owner sh parts space)
   | entryT (e : SEingang) : EingangGut e → ItemGut (.entryT e)
   | devT (n : String) (ps : List (String × STyp)) (sp : String) (ms : List SGerTeil) :
       GeraetGut ps ms → ItemGut (.devT n ps sp ms)
@@ -119,8 +119,8 @@ theorem item_bein : ∀ (it : SItemTief), ItemGut it → ItemBein it ∧ ItemKop
   | whyT n cs ex hg => exact ⟨item_why n cs ex hg, itemKopf_wort _ "reason" (by decide) (by decide) ⟨_, rfl⟩⟩
   | concT ps hps =>
     exact ⟨item_conc ps hps, itemKopf_wort _ "concurrent" (by decide) (by decide) ⟨_, rfl⟩⟩
-  | tableT n von cnt backed owner sh parts hc hp =>
-    exact ⟨item_table n von cnt backed owner sh parts hc hp,
+  | tableT n von cnt backed owner sh parts hc hp space =>
+    exact ⟨item_table n von cnt backed owner sh parts hc hp space,
       itemKopf_wort _ "table" (by decide) (by decide) ⟨_, rfl⟩⟩
   | entryT e he =>
     refine ⟨item_entry e he, itemKopf_wort _ "entry" (by decide) (by decide) ?_⟩

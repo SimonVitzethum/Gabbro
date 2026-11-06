@@ -86,7 +86,7 @@ def kopfNamen : SItemTief → List String
   | .transT target s _ => target :: namenSig s
   | .globT _ _ t _ _ _ _ | .constT _ t _ | .atomT _ t _ _ _ | .arenaT _ _ _ _ t _ => namenT t
   | .typeT _ _ args _ t => args.flatMap namenT ++ namenTO t
-  | .tableT _ v _ _ _ _ ps => v.toList ++ ps.flatMap namenTeil
+  | .tableT _ v _ _ _ _ ps _ => v.toList ++ ps.flatMap namenTeil
   | .lockT _ ps _ _ _ _ _ => namenL [] ps
   | .formatT _ _ _ fs => fs.flatMap fun f => namenT f.ftyp
   | .devT _ ps _ _ => ps.flatMap fun p => namenT p.2

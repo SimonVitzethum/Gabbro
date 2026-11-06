@@ -41,7 +41,9 @@ private def fieldTypes (type : Expr) (ctorName : Name) : MetaM (Array Expr) := d
     let params := args.extract 0 info.numParams
     let mut fields := #[]
     for field in args.extract info.numParams args.size do
-      let fieldType := (← inferType field).replaceFVars params type.getAppArgs
+      -- Constructor defaults use optParam; its carrier is the same original
+      -- field type and sizeOf instance, not a second representation.
+      let fieldType ← whnf ((← inferType field).replaceFVars params type.getAppArgs)
       if fieldType.hasFVar then throwError "exact source size: dependent constructor field in {ctorName}"
       if ← isProp fieldType then throwError "exact source size: unexpected proof field in {ctorName}"
       fields := fields.push fieldType

@@ -337,6 +337,15 @@ shared state — which is why this is in the language now and not a later retrof
 
 ### 5.1 Spaces and rights
 
+Canonical Lean table export binds a nominal space explicitly with
+`table T count N space Data { ... }`; without this clause the table belongs to
+`normal`. Names receive stable ordinals in first declaration order, with normal
+at zero, and several tables may deliberately share one name. `ptr<Data, r> T`
+retains both that space and the particular table target. `owner Mark` is an
+independent linear mark and is never interpreted as a space declaration.
+Fresh nominal names imply no physical isolation, device behavior or protection;
+all existing target, hardware, owner and guard obligations remain explicit.
+
 ```gabbro
 module sprache::zeiger {
 

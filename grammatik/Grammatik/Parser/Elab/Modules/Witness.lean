@@ -129,7 +129,7 @@ def twoUsesSource : String := stackSource ++ " use Other = stack::[index into Ta
 /-- Equal module arguments are deliberately not memoized: each use owns all its storage. -/
 theorem two_uses_disjoint_tables_zeuge :
     (expandedSource twoUsesSource).map (fun items => items.filterMap fun
-      | .tableT name _ _ _ _ _ _ => some name
+      | .tableT name _ _ _ _ _ _ _ => some name
       | _ => none) =
       .ok ["Tasks", memberName ["Jobs", "Items"], memberName ["Other", "Items"]] := by decide +kernel
 

@@ -175,7 +175,7 @@ def itemName : SItemTief → Option String
   | .specT s _ => some s.name
   | .asmT s _ => some s.name
   | .formatT n _ _ _ => some n
-  | .tableT n _ _ _ _ _ _ => some n
+  | .tableT n _ _ _ _ _ _ _ => some n
   | .arenaT n _ _ _ _ _ => some n
   | .whyT n _ _ => some n
   | .stateT n _ => some n

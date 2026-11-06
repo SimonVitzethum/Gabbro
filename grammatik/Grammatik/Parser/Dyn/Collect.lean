@@ -122,7 +122,7 @@ def itemUses : SItemTief → List STyp
   | .atomT _ t _ _ _ | .accT _ t _ _ _
   | .arenaT _ _ _ _ t _ => typeUses t
   | .formatT _ _ _ fs => fs.flatMap fun f => typeUses f.ftyp
-  | .tableT _ _ _ _ _ _ ps => ps.flatMap tableUses
+  | .tableT _ _ _ _ _ _ ps _ => ps.flatMap tableUses
   | .axiomT _ ps t _ _ _ => (ps.map Prod.snd ++ t.toList).flatMap typeUses
   | .callT c => (c.params.map Prod.snd ++ c.res.toList).flatMap typeUses
   | .devT _ ps _ parts => ps.flatMap (fun p => typeUses p.2) ++ parts.flatMap (fun

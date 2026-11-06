@@ -327,7 +327,7 @@ def uRestFehler : List SItemTief → Except String Unit
   | .transT .. :: rest => uRestFehler rest
   | .constT _ _ _ :: rest => uRestFehler rest
   | .typeT _ _ _ _ _ :: rest => uRestFehler rest
-  | .tableT _ _ _ _ _ _ _ :: rest => uRestFehler rest
+  | .tableT _ _ _ _ _ _ _ _ :: rest => uRestFehler rest
   | .lockT _ _ _ _ _ _ _ :: rest => uRestFehler rest
   | .globT .. :: rest => uRestFehler rest
   | .atomT .. :: rest => uRestFehler rest

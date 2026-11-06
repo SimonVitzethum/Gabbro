@@ -25,7 +25,7 @@ def uEignerMs (ms : List SItemTief) : List String :=
     | .typeT flags n _ _ _ => if flags.any (fun f => strEq f "linear") then some n else none
     | _ => none) ++
     (ms.filterMap fun it => match it with
-      | .tableT _ _ _ _ o _ _ => o
+      | .tableT _ _ _ _ o _ _ _ => o
       | _ => none)
 
 /-- The declared linear marks (C12): the `linear`-flagged type names in

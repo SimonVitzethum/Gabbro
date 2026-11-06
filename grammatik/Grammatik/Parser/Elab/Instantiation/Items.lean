@@ -64,7 +64,7 @@ def item (scope : Scope) : SItemTief → SurfaceFacts
       (expression (scope.bind (sig.params.map Prod.fst)) pred)
   | .formatT _ aligned _ fields => merge (optional (expression scope) aligned)
       (gather (fields.map (field scope)))
-  | .tableT _ provider count _ _ _ parts => gather [optional globalReference provider,
+  | .tableT _ provider count _ _ _ parts _ => gather [optional globalReference provider,
       optional (expression scope) count, gather (parts.map (tablePart scope))]
   | .arenaT _ lo hi maximum ty provider => gather [expression scope lo, expression scope hi,
       optional (expression scope) maximum, inspectType scope ty,
@@ -120,7 +120,7 @@ def constructorNames (source : List SItemTief) : List String :=
 
 def carrierNames (source : List SItemTief) : List String :=
   source.filterMap fun
-    | .tableT name _ _ _ _ _ _ | .arenaT name _ _ _ _ _ => some name
+    | .tableT name _ _ _ _ _ _ _ | .arenaT name _ _ _ _ _ => some name
     | _ => none
 
 /-- No generic headers, explicit applications, parametric modules or literal-bearing generic

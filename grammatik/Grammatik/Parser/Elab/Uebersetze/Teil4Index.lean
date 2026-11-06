@@ -134,7 +134,7 @@ def uArrayItemTypes : SItemTief → List STyp
   | .protoT signature => uArraySignatureTypes signature
   | .constT _ ty _ | .globT _ _ ty _ _ _ _ => [ty]
   | .typeT _ _ _ _ body => body.toList
-  | .tableT _ _ _ _ _ _ parts => parts.flatMap fun
+  | .tableT _ _ _ _ _ _ parts _ => parts.flatMap fun
       | .tSlot fields => fields.map (·.ftyp)
       | _ => []
   | _ => []

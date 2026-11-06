@@ -123,7 +123,7 @@ def checkRaw (items : List SItemTief) (closed : List Closed)
       | some n => strEq n "dyn" ||
           (dynamicType items closed locals (.variable n)).isSome ||
           items.any (fun
-            | .tableT table _ _ _ _ _ parts =>
+            | .tableT table _ _ _ _ _ parts _ =>
               strEq table n && (parts.flatMap fun | .tSlot fs => fs | _ => []).any
                 (fun f => (lookup items closed 128 f.ftyp).isSome)
             | _ => false)

@@ -220,14 +220,15 @@ def werte {α : Type} : List (String × Except String α) → List α
 
 /-- Collect per-table outcomes. -/
 def sammleTabellen (consts : List (String × Int))
-    (alias : List (String × (Int × Int))) (tnames : List String) :
+    (alias : List (String × (Int × Int))) (tnames spaces : List String) :
     List SItemTief → List (String × Except String UTab)
   | [] => []
   | it :: rest =>
     match it with
-    | .tableT n _ _ _ _ _ _ =>
-      (n, uTabelle consts alias tnames it) :: sammleTabellen consts alias tnames rest
-    | _ => sammleTabellen consts alias tnames rest
+    | .tableT n _ _ _ _ _ _ _ =>
+      (n, uTabelleMitRaum spaces (uTabelle consts alias tnames) it) ::
+        sammleTabellen consts alias tnames spaces rest
+    | _ => sammleTabellen consts alias tnames spaces rest
 
 /-- Collect per-lock outcomes (against the clean tables). -/
 def sammleSperren (consts : List (String × Int)) (alias : List (String × (Int × Int))) (globs : List UGlob)
@@ -333,13 +334,14 @@ def befundeFn (consts : List (String × Int))
 /-- Findings of a whole elaborated item list (collect mode over the
     `elabU` stages; cascades documented in CUTS). -/
 def befundeElab (ms : List SItemTief) : List Befund :=
-  let spaces := ["normal"]
+  let spaces := uSpaces ms
   let eigner := uOhneDoppelte (uEignerMs ms)
   let consts := uConstsRech (uKonstFns ms) ms []
   let alias := uAliase consts ms ++ consts.map (fun c => (c.1, (c.2, c.2)))
   let sumOk := match uSums alias ms (spaces := spaces) (eigner := eigner) with | .ok w => w | .error _ => []
   -- a field of an unknown type is read as a tagged type and refused there, as `elabU` does (`uSumTabs`)
-  let tabs := (sammleTabellen consts alias (ms.filterMap (fun | .tableT n _ _ _ _ _ _ => some n | _ => none)) ms).map
+  let tabs := (sammleTabellen consts alias
+    (ms.filterMap (fun | .tableT n _ _ _ _ _ _ _ => some n | _ => none)) spaces ms).map
     fun (n, r) => (n, match r with
       | .ok t =>
         (match uSumTabs sumOk [t] with
@@ -361,7 +363,7 @@ def befundeElab (ms : List SItemTief) : List Befund :=
     | .ok _ => none
   let linear := uLinearNamen ms
   let eigF := ms.filterMap fun
-    | .tableT n _ _ _ (some m) _ _ =>
+    | .tableT n _ _ _ (some m) _ _ _ =>
       if linear.any (fun l => strEq l m) then none
       else some ({
         stufe := "tabelle"

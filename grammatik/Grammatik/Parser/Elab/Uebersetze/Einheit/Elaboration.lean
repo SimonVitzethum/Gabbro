@@ -1,6 +1,7 @@
 module
 public import Grammatik.Parser.Elab.Uebersetze.Einheit.Signatures
 public import Grammatik.Parser.Elab.Uebersetze.Kontext.Eigner
+public import Grammatik.Parser.Elab.Uebersetze.Kontext.Spaces
 public import Grammatik.Parser.Elab.Uebersetze.Akku.Expand
 public import Grammatik.Parser.Elab.Generic.StaticConformance
 public import Grammatik.Parser.Elab.Uebersetze.Guest.Source
@@ -31,20 +32,20 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   match uGlobs consts alias ms with
   | .error e => .error e
   | .ok globs0 =>
-  -- The fifth table argument is an ownership mark, not an address-space declaration.
-  -- Ordinary source tables inhabit the registered normal space; ownership stays in `UTab.owner`.
-  let spaces := ["normal"]
+  -- Nominal space binders and linear owner marks have independent namespaces.
+  let spaces := uSpaces ms
   let eigner := uOhneDoppelte (uEignerMs ms)
   let linear := uLinearNamen ms
   match uMarkOrders ms with
   | .error error => .error error
   | .ok markOrders =>
-  match uSeq ((ms.filterMap (fun | .tableT _ _ _ _ o _ _ => o | _ => none)).map (uPruefEigner linear)) with
+  match uSeq ((ms.filterMap (fun | .tableT _ _ _ _ o _ _ _ => o | _ => none)).map (uPruefEigner linear)) with
   | .error e => .error e
   | .ok _ =>
-  let tnames := ms.filterMap (fun | .tableT n _ _ _ _ _ _ => some n | _ => none)
+  let tnames := ms.filterMap (fun | .tableT n _ _ _ _ _ _ _ => some n | _ => none)
   match uSeq ((ms.filter (fun
-      | .tableT _ _ _ _ _ _ _ => true | _ => false)).map (tableLowering tnames)) with
+      | .tableT _ _ _ _ _ _ _ _ => true | _ => false)).map
+        (uTabelleMitRaum spaces (tableLowering tnames))) with
   | .error e => .error e
   | .ok tabs0 =>
   match uArenen consts alias ms with
@@ -54,7 +55,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   match uOptGlobs tabs (globs0 ++ arGlobs) with
   | .error e => .error e
   | .ok globs =>
-  match uTypes consts alias tabs msE eigner with
+  match uTypes consts alias tabs msE eigner spaces with
   | .error e => .error e
   | .ok valueScope =>
   let constants := uKonstArrays alias functions consts ms
@@ -169,16 +170,16 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   match uMarkenPruef marken (fns ++ torFns ++ zeigerPaare.map (·.2)) with
   | .error e => .error e
   | .ok _ =>
-  match uGibtPruef (ms.filterMap (fun | .tableT _ _ _ _ o _ _ => o | _ => none)) (fns ++ torFns ++ zeigerPaare.map (·.2)) with
+  match uGibtPruef (ms.filterMap (fun | .tableT _ _ _ _ o _ _ _ => o | _ => none)) (fns ++ torFns ++ zeigerPaare.map (·.2)) with
   | .error e => .error e
   | .ok _ =>
-  match uLeihtPruef (ms.filterMap (fun | .tableT _ _ _ _ o _ _ => o | _ => none)) (fns ++ torFns ++ zeigerPaare.map (·.2)) with
+  match uLeihtPruef (ms.filterMap (fun | .tableT _ _ _ _ o _ _ _ => o | _ => none)) (fns ++ torFns ++ zeigerPaare.map (·.2)) with
   | .error e => .error e
   | .ok _ =>
-  match uBewegtPruef (ms.filterMap (fun | .tableT _ _ _ _ o _ _ => o | _ => none)) (fns ++ torFns ++ zeigerPaare.map (·.2)) with
+  match uBewegtPruef (ms.filterMap (fun | .tableT _ _ _ _ o _ _ _ => o | _ => none)) (fns ++ torFns ++ zeigerPaare.map (·.2)) with
   | .error e => .error e
   | .ok _ =>
-  match uMintPruef (ms.filterMap (fun | .tableT _ _ _ _ o _ _ => o | _ => none)) (fns ++ torFns ++ zeigerPaare.map (·.2)) with
+  match uMintPruef (ms.filterMap (fun | .tableT _ _ _ _ o _ _ _ => o | _ => none)) (fns ++ torFns ++ zeigerPaare.map (·.2)) with
   | .error e => .error e
   | .ok _ =>
   match uWurzeln spaces tabs fns ms with
@@ -198,5 +199,28 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
     match Generic.checkStaticConformance consts alias u staticRequirements valueScope.types with
     | .error error => .error error
     | .ok () => .ok u
+
+/-- Successful source elaboration retains the registry of the actual expanded
+    declarations. Guest expansion and every existing admission error remain in
+    the premise's one canonical producer; no space is supplied by the caller. -/
+theorem elabExpandedWithScopes_spaces (items : List SItemTief)
+    (consts : List (String × Int)) (alias : List (String × (Int × Int)))
+    (functions : List UKonstFn) (tableLowering : List String → SItemTief → Except String UTab)
+    (requirements : List (STyp × String)) (u : UProg)
+    (accepted : elabExpandedWithScopes items consts alias functions tableLowering requirements = .ok u) :
+    ∃ guests declarations, guestSources items = .ok (guests, declarations) ∧
+      u.spaces = uSpaces (uOhneSenken declarations) := by
+  unfold elabExpandedWithScopes at accepted
+  cases expanded : guestSources items with
+  | error error => simp only [expanded] at accepted; cases accepted
+  | ok result =>
+    rcases result with ⟨guests, declarations⟩
+    simp only [expanded] at accepted
+    refine ⟨guests, declarations, expanded, ?_⟩
+    repeat' first | (split at accepted) | contradiction
+    all_goals
+      have same := Except.ok.inj accepted
+      cases same
+      rfl
 
 end Gabbro.Grammatik.Parser.Uebersetze

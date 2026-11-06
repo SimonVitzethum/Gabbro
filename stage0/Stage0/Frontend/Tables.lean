@@ -18,8 +18,8 @@ def emptyTable (name : String) (count : Int) (shared : Bool)
 /-- Provenance of the sole newly elaborated case. Invariants remain in the original item for
     canonical uInvs and the checker; this adapter only exports the table declaration data. -/
 def EmptyTableMeaning (values : List (String × Int)) (item : SItemTief) (table : UTab) : Prop :=
-  ∃ name count shared parts invs amount,
-    item = .tableT name none (some count) none none shared parts ∧
+  ∃ name count shared parts invs amount space,
+    item = .tableT name none (some count) none none shared parts space ∧
     parts.filter (fun p => match p with | .tTree _ => false | _ => true) = .tSlot [] :: invs ∧
     invs.all (fun p => match p with | .tInv _ => true | _ => false) = true ∧
     uAnzahl values count = .ok amount ∧ 0 ≤ amount ∧
@@ -31,7 +31,7 @@ def EmptyTableMeaning (values : List (String × Int)) (item : SItemTief) (table 
 def tableWithEmpty (values : List (String × Int)) (typeEnv : List (String × (Int × Int)))
     (names : List String) (item : SItemTief) : Except String UTab :=
   match item with
-  | .tableT name none (some count) none none shared parts =>
+  | .tableT name none (some count) none none shared parts space =>
     match parts.filter (fun p => match p with | .tTree _ => false | _ => true) with
     | .tSlot [] :: invs =>
       if !invs.all (fun p => match p with | .tInv _ => true | _ => false) then
@@ -53,7 +53,7 @@ theorem tableWithEmpty_sound (values : List (String × Int)) (typeEnv : List (St
     uTabelle values typeEnv names item = .ok table ∨ EmptyTableMeaning values item table := by
   unfold tableWithEmpty at h
   split at h
-  · rename_i name count shared parts
+  · rename_i name count shared parts space
     split at h
     · rename_i invs hf
       split at h
@@ -69,7 +69,7 @@ theorem tableWithEmpty_sound (values : List (String × Int)) (typeEnv : List (St
           split at h
           · rename_i hn
             have he := Except.ok.inj h
-            exact Or.inr ⟨name, count, shared, parts, invs, amount, rfl, hf, hi', hc, hn, he.symm⟩
+            exact Or.inr ⟨name, count, shared, parts, invs, amount, space, rfl, hf, hi', hc, hn, he.symm⟩
           · contradiction
     · exact Or.inl h
   · exact Or.inl h

@@ -196,7 +196,7 @@ def uSperrInvs (consts : List (String × Int)) (alias : List (String × (Int × 
 def uInvs (consts : List (String × Int)) (alias : List (String × (Int × Int))) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (ms : List SItemTief) : Except String (List UInv) :=
   let ausTab := ms.flatMap fun it => match it with
-    | .tableT n _ _ _ _ _ parts => parts.filterMap fun p => match p with
+    | .tableT n _ _ _ _ _ parts _ => parts.filterMap fun p => match p with
       | .tInv g => some (uInv consts alias tabs locks globs [n] g)
       | _ => none
     | _ => []

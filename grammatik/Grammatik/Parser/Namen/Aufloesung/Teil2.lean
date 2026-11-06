@@ -114,7 +114,7 @@ def item (k : Kontext) : SItemTief → SItemTief
   | .protoT s => .protoT (sig k s)
   | .specT s p => .specT (sig k s) (aus (k.mit (s.generics.map SGenericParam.name ++ s.params.map Prod.fst)) p)
   | .asmT s h => .asmT (sig k s) h
-  | .tableT n v c b o sh ps => .tableT (k.eigen n) (v.map k.ref) (ausO k c) b o sh (ps.map (tabTeil k))
+  | .tableT n v c b o sh ps space => .tableT (k.eigen n) (v.map k.ref) (ausO k c) b o sh (ps.map (tabTeil k)) space
   | .lockT n ps rk h sh m i =>
     .lockT (k.eigen n) (ps.map (aus k)) (aus k rk) (ausO k h) (ausO k sh) m (ausO k i)
   | .atomT n t p o b => .atomT (k.eigen n) (typ k t) (p.map (·.map (aus k))) o b

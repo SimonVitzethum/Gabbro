@@ -1842,10 +1842,15 @@ function's: SUGAR, the function's contract is what the theorem holds.
 ## 9. Tables, traversals, formats
 
 ```ebnf
-table      = [ "pub" ] "table" ident [ "count" constexpr ] [ "backed" ident ]
+table      = [ "pub" ] "table" ident [ "space" ident ] [ "count" constexpr ] [ "backed" ident ]
              [ "owner" ident ]                                   (* NEW «SG-9» *)
              [ "shared" ]                                        (* CHANGED «SG-21»: no new word *)
              "{" { constdecl | slotdecl | invariant | opdecl | treedecl | occdecl } "}" ;
+(* Canonical Lean table export: `space Name` binds a nominal space independently
+   of `owner Mark`. The reader accepts the optional header clauses in either
+   order; a duplicate `space` clause is refused. The default is `normal`.
+   Explicitly repeated names on different tables share that nominal space.
+   This binder supplies no address, protection or implicit hardware behavior. *)
 (* `shared`: the carrier is reachable from more than one thread (`H013` as a declaration).
    A shared carrier HAS a guard (`protects` or `owner`) -- a shared carrier without one is
    not declarable; an unshared one belongs to one thread (`per cpu`, a stack, boot). This is

@@ -92,10 +92,10 @@ def substituteItem (env : Environment) (bindings : Bindings) : SItemTief → Rew
     return .globT mu n
       (← rewriteType env bindings ty) (← constant env bindings value)
       (← aligned.mapM (rewriteExpression env bindings)) sectionName shared
-  | .tableT n sourceName count backed owner shared parts => do
+  | .tableT n sourceName count backed owner shared parts space => do
     return .tableT n sourceName
       (← count.mapM (rewriteExpression env bindings)) backed owner shared
-      (← parts.mapM (tablePart env bindings))
+      (← parts.mapM (tablePart env bindings)) space
   | .formatT n version endian fields => do
     return .formatT n
       (← version.mapM (rewriteExpression env bindings)) endian (← fields.mapM (field env bindings))

@@ -9,7 +9,7 @@ open Uebersetze
     fields. This descriptor grants no runtime memory access or capability. -/
 def constDomains (values : List (String × Int)) : List SItemTief → Except String (List UTab)
   | [] => .ok []
-  | .tableT name _ (some count) _ _ _ _ :: rest => do
+  | .tableT name _ (some count) _ _ _ _ _ :: rest => do
     let count ← uAnzahl values count
     if count < 0 then throw ("const domain has a negative extent: " ++ name)
     return { name, count, cols := [] } :: (← constDomains values rest)

@@ -60,7 +60,7 @@ def Walk.expr (w : Walk) (locals : Locals) : Nat → SExpr → Except String SEx
         match x with
         | .index (.variable table) i =>
           if w.resolveSpecs && !(locals.any fun p => strEq p.1 table) && w.source.any (fun
-              | .tableT t _ _ _ _ _ _ => strEq t table
+              | .tableT t _ _ _ _ _ _ _ => strEq t table
               | _ => false) then
             return .field (.index (.field (.variable table) "slots") i) n
           else return .field x n

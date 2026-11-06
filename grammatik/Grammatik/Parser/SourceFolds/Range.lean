@@ -195,7 +195,7 @@ theorem checkBoundsFree_ok {lo hi : SExpr} (h : checkBoundsFree lo hi = .ok ()) 
     provider-backed table has no static capacity here; its folds stay refused. -/
 def tableCapacity (source : List SItemTief) (name : String) : Option SExpr :=
   source.findSome? fun
-    | .tableT t none (some count) _ _ _ _ => if strEq t name then some count else none
+    | .tableT t none (some count) _ _ _ _ _ => if strEq t name then some count else none
     | _ => none
 
 /-- Validate one range fold node: operator shape, literal lower bound, upper bound

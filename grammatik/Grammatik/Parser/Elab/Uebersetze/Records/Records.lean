@@ -30,20 +30,21 @@ def uRecordFieldMetadata (field : SFeld) : Bool :=
 /-- One field type: a nominal record reference resolves through the collected schemas, every other
     shape through the canonical type reader (records never weaken a range reading). -/
 def uRecordFeldTyp (scope : UTypeScope) (alias : List (String × (Int × Int))) (tabs : List UTab)
-    (eigner : List String := []) : STyp → Except String Ty := uTypIn alias tabs scope.types [] eigner
+    (eigner : List String := []) (spaces : List String := []) : STyp → Except String Ty :=
+  uTypIn alias tabs scope.types spaces eigner
 
 /-- One schema field: no metadata duties, then the resolved type. -/
 def uRecordField (scope : UTypeScope) (alias : List (String × (Int × Int))) (tabs : List UTab)
-    (field : SFeld) (eigner : List String := []) : Except String (String × Ty) := do
+    (field : SFeld) (eigner : List String := []) (spaces : List String := []) : Except String (String × Ty) := do
   if uRecordFieldMetadata field then
     throw "source export: record field placement/where/resource duties are unsupported"
-  let ty ← uRecordFeldTyp scope alias tabs eigner field.ftyp
+  let ty ← uRecordFeldTyp scope alias tabs eigner spaces field.ftyp
   pure (field.fname, ty)
 
 /-- One dependency pass. Identity is the original declaration position, independent of resolution
     order. A deferred declaration is retried only after another declaration has resolved. -/
 def uTypePass (scope : UTypeScope) (alias : List (String × (Int × Int))) (tabs : List UTab)
-    (items : List SItemTief) (pending : List (Nat × SItemTief)) (eigner : List String := []) :
+    (items : List SItemTief) (pending : List (Nat × SItemTief)) (eigner : List String := []) (spaces : List String := []) :
     Except String (UTypeScope × List (Nat × SItemTief)) :=
   pending.foldlM (fun (scope, deferred) (identity, item) => do
     match item with
@@ -59,36 +60,36 @@ def uTypePass (scope : UTypeScope) (alias : List (String × (Int × Int))) (tabs
           throw ("source export: duplicate record field: " ++ name)
         if fields.any uRecordFieldMetadata then
           throw ("source export: record field placement/where/resource duties are unsupported: " ++ name)
-        match fields.mapM (fun field => uRecordField scope alias tabs field eigner) with
+        match fields.mapM (fun field => uRecordField scope alias tabs field eigner spaces) with
         | .error _ => pure (scope, deferred ++ [(identity, item)])
         | .ok resolved =>
           let schema : URecord := { name, identity, fields := resolved, modifiers := flags }
           pure ({ types := scope.types ++ [(name, schema.ty)], records := scope.records ++ [schema] }, deferred)
       | _ =>
-        match uTypIn alias tabs scope.types [] eigner body with
+        match uTypIn alias tabs scope.types spaces eigner body with
         | .error _ => pure (scope, deferred ++ [(identity, item)])
         | .ok ty => pure ({ scope with types := scope.types ++ [(name, ty)] }, deferred)
     | _ => throw "source export: type declaration has no value schema") (scope, [])
 
 /-- There are at most as many productive passes as declarations. Cycles and missing names fail closed. -/
-def uResolveTypes (items : List SItemTief) (eigner : List String := []) : Nat → UTypeScope → List (String × (Int × Int)) → List UTab →
+def uResolveTypes (items : List SItemTief) (eigner : List String := []) (spaces : List String := []) : Nat → UTypeScope → List (String × (Int × Int)) → List UTab →
     List (Nat × SItemTief) → Except String UTypeScope
   | _, scope, _, _, [] => .ok scope
   | 0, _, _, _, _ => .error "source export: cyclic or unresolved by-value record schema"
   | fuel + 1, scope, alias, tabs, pending => do
-    let (next, deferred) ← uTypePass scope alias tabs items pending eigner
-    if deferred.length < pending.length then uResolveTypes items eigner fuel next alias tabs deferred
+    let (next, deferred) ← uTypePass scope alias tabs items pending eigner spaces
+    if deferred.length < pending.length then uResolveTypes items eigner spaces fuel next alias tabs deferred
     else throw "source export: cyclic, unsupported or unresolved by-value record schema"
 
 /-- Tagged declarations and linear resources retain their separate canonical collectors.
     Every ordinary value type resolves here. -/
 def uTypes (constants : List (String × Int)) (alias : List (String × (Int × Int)))
-    (tabs : List UTab) (items : List SItemTief) (eigner : List String := []) : Except String UTypeScope :=
+    (tabs : List UTab) (items : List SItemTief) (eigner : List String := []) (spaces : List String := []) : Except String UTypeScope :=
   let pending := (List.range items.length).zip items |>.filter fun (_, item) =>
     match item with
     | .typeT flags .. => !flags.any (fun flag => strEq flag "tagged" || strEq flag "linear")
     | _ => false
-  uResolveTypes items eigner pending.length { types := constants.map (fun (name, value) => (name, .int value value)) } alias tabs pending
+  uResolveTypes items eigner spaces pending.length { types := constants.map (fun (name, value) => (name, .int value value)) } alias tabs pending
 
 /-- The nominal schema of a product value, with the proof that the identity matches. Unknown nominal
     identities stay refused; they never default to a structural guess. -/

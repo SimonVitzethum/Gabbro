@@ -142,6 +142,25 @@ Fold costs use the existing traversal and statement cost computation: capacity
 times the per-slot work, including filter and update, plus loop and binding
 overhead. These syntax extensions do not change the model's guarantees.
 
+### Nominal table spaces
+
+The canonical Lean source exporter accepts an independent optional table binder:
+
+```gabbro
+table T count 2 space Data { slot { value : u32 in 0 .. 100, } }
+```
+
+`space Data` binds the table to the nominal space used by `ptr<Data, r> T`.
+Omitting it selects `normal`. The registry starts with `normal` and then uses
+first declaration order; several tables may explicitly share one name. The
+printer puts the binder before `count`; the reader also accepts it among the
+other header clauses and refuses a second `space` clause in the same header.
+
+`owner Mark` remains a separate linear-mark obligation and may coexist with
+`space Data`. A space name supplies no address, hardware protection or implicit
+permission. Existing owner, lock, field, binding and hardware duties still apply.
+Unknown pointer-space names and incompatible table capabilities remain refused.
+
 ### Call-scoped owner loans and owned access
 
 ```ebnf

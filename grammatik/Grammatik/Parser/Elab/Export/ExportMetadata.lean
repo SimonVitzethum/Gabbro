@@ -123,7 +123,7 @@ def itemMetadata : SItemTief → Bool
     sc.res.any typeMetadata
   | .protoT sig => clausesMetadata sig.klauseln || sig.params.any (fun p => typeMetadata p.2) ||
       sig.res.any typeMetadata
-  | .tableT _ provider _ place _ _ parts => provider.isSome || place.isSome ||
+  | .tableT _ provider _ place _ _ parts _ => provider.isSome || place.isSome ||
       parts.any fun
         | .tSlot fields => fields.any (fun field => typeMetadata field.ftyp || field.pos.isSome ||
             field.bezug.isSome || field.wo.isSome || field.reserviert || field.byOps)
@@ -188,7 +188,7 @@ theorem globT_alignment_zeuge :
   exact ⟨rfl, rfl, rfl, rfl⟩
 
 def metadataReason : SItemTief → String
-  | .tableT _ provider _ _ _ _ parts =>
+  | .tableT _ provider _ _ _ _ parts _ =>
     if parts.any (fun | .tInv _ => true | _ => false) then
       "invariant cost/runs/by duties lack a checked source binding"
     else if provider.isSome then "table provider duties lack a checked source binding"
@@ -221,7 +221,7 @@ def check (items : List SItemTief) : Except String Unit :=
 
 /-- Only the newly evaluable header/initializer positions need the new original-source gate. -/
 def constantExpansion : SItemTief → Bool
-  | .tableT _ _ (some count) _ _ _ _ | .arenaT _ _ count _ _ _ =>
+  | .tableT _ _ (some count) _ _ _ _ _ | .arenaT _ _ count _ _ _ =>
       match count with | .lit _ | .variable _ => false | _ => true
   | .lockT _ _ rank _ _ _ _ => match rank with | .lit _ => false | _ => true
   | .globT _ _ _ (.one expression) _ _ _ =>
@@ -455,6 +455,12 @@ theorem tableSpace_zeuge :
     itemMetadata (.tableT "T" (some "provider") (some (.lit 2)) none (some "Data") false []) = true ∧
     itemMetadata (.tableT "T" none (some (.lit 2)) (some "place") (some "Data") false []) = true := by
   exact ⟨rfl, rfl, rfl⟩
+
+/-- A nominal space is bound by the table declaration and resolved by the
+    canonical collector. It discharges no placement, owner or hardware duty. -/
+theorem tableNominalSpace_bound (name space : String) (owner : Option String)
+    (count : Option SExpr) (shared : Bool) :
+    itemMetadata (.tableT name none count none owner shared [] (some space)) = false := rfl
 
 theorem namedPointer_bound (space target : String) :
     typeMetadata (.ptr space "r" (.atom target)) = (target == "u8") := by

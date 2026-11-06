@@ -31,8 +31,8 @@ def normSigU32 (s : FnSig) : FnSig :=
 /-- One item with bare `u32` normalised (no module recursion:
     `uMembers` unwraps the single module `elabU` supports). -/
 def normU32Item : SItemTief → SItemTief
-  | .tableT n v c a b g parts =>
-    .tableT n v c a b g (parts.map normTabTeilU32)
+  | .tableT n v c a b g parts space =>
+    .tableT n v c a b g (parts.map normTabTeilU32) space
   | .fnT s k => .fnT (normSigU32 s) k
   | .specGroupT n ts es fs => .specGroupT n ts es (fs.map normSigU32)
   | .implGroupT n ts es fs => .implGroupT n (ts.map normTypU32) es (fs.map fun

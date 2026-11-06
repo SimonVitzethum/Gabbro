@@ -128,7 +128,7 @@ def parseTabTeile (f : Nat) (toks : List Token) :
 
 def parseTabellenKopf (f : Nat) (toks : List Token) :
     Except String
-      ((Option SExpr × Option String × Option String × Option String × Bool) × List Token) :=
+      ((Option SExpr × Option String × Option String × Option String × Bool × Option String) × List Token) :=
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match toks with
@@ -137,29 +137,35 @@ def parseTabellenKopf (f : Nat) (toks : List Token) :
         | .error e => .error e
         | .ok (e, r1) => match parseTabellenKopf f r1 with
           | .error e => .error e
-          | .ok (((_, v, b, o, g)), r) => .ok ((((some e, v, b, o, g))), r)
+          | .ok (((_, v, b, o, g, space)), r) => .ok ((((some e, v, b, o, g, space))), r)
       else if strEq s "from" then match nimmName rest with
         | .error e => .error e
         | .ok (n, r1) => match parseTabellenKopf f r1 with
           | .error e => .error e
-          | .ok (((c, _, b, o, g)), r) => .ok ((((c, some n, b, o, g))), r)
+          | .ok (((c, _, b, o, g, space)), r) => .ok ((((c, some n, b, o, g, space))), r)
       else if strEq s "backed" then match nimmName rest with
         | .error e => .error e
         | .ok (n, r1) => match parseTabellenKopf f r1 with
           | .error e => .error e
-          | .ok (((c, v, _, o, g)), r) => .ok ((((c, v, some n, o, g))), r)
+          | .ok (((c, v, _, o, g, space)), r) => .ok ((((c, v, some n, o, g, space))), r)
       else if strEq s "owner" then match nimmName rest with
         | .error e => .error e
         | .ok (n, r1) => match parseTabellenKopf f r1 with
           | .error e => .error e
-          | .ok (((c, v, b, _, g)), r) => .ok ((((c, v, b, some n, g))), r)
+          | .ok (((c, v, b, _, g, space)), r) => .ok ((((c, v, b, some n, g, space))), r)
+      else if strEq s "space" then match nimmName rest with
+        | .error e => .error e
+        | .ok (n, r1) => match parseTabellenKopf f r1 with
+          | .error e => .error e
+          | .ok ((c, v, b, o, g, none), r) => .ok ((c, v, b, o, g, some n), r)
+          | .ok ((_, _, _, _, _, some _), _) => .error "duplicate table space binding"
       else if strEq s "shared" then match parseTabellenKopf f rest with
         | .error e => .error e
-        | .ok (((c, v, b, o, _)), r) => .ok ((((c, v, b, o, true))), r)
-      else .ok ((((none, none, none, none, false))), toks)
-    | _ => .ok ((((none, none, none, none, false))), toks)
+        | .ok (((c, v, b, o, _, space)), r) => .ok ((((c, v, b, o, true, space))), r)
+      else .ok ((((none, none, none, none, false, none))), toks)
+    | _ => .ok ((((none, none, none, none, false, none))), toks)
 
-/-- `table n [count e] [from p] [backed b] [owner o] [shared] { parts }`; `from p` names the provider of an OPEN
+/-- `table n [count e] [from p] [backed b] [owner o] [space s] [shared] { parts }`; `from p` names the provider of an OPEN
     table (`Deklaration.anbieter`). -/
 def parseTabellenTief (f : Nat) (toks : List Token) :
     Except String (SItemTief × List Token) :=
@@ -171,7 +177,7 @@ def parseTabellenTief (f : Nat) (toks : List Token) :
       | .error e => .error e
       | .ok (n, r2) => match parseTabellenKopf f r2 with
         | .error e => .error e
-        | .ok (((cnt, von, backed, owner, g)), r3) =>
+        | .ok (((cnt, von, backed, owner, g, space)), r3) =>
           match fordereZeichen "{" r3 with
           | .error e => .error e
           | .ok r4 => match parseTabTeile f r4 with
@@ -179,7 +185,7 @@ def parseTabellenTief (f : Nat) (toks : List Token) :
             | .ok (ps, r5) => match fordereZeichen "}" r5 with
               | .error e => .error e
               | .ok r => .ok
-                (.tableT n von cnt backed owner g ps, r)
+                (.tableT n von cnt backed owner g ps space, r)
 
 def parseProfEintraege (f : Nat) (toks : List Token) :
     Except String (List SProfEintrag × List Token) :=

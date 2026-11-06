@@ -31,8 +31,8 @@ def functionHeads (items : List SItemTief) : List FnSig := items.filterMap fun
 
 /-- Read the table field type from the existing surface declaration. -/
 def tableField (items : List SItemTief) (table field : String) : Option STyp := do
-  let .tableT _ _ _ _ _ _ parts ← items.find? (fun
-    | .tableT n _ _ _ _ _ _ => strEq n table
+  let .tableT _ _ _ _ _ _ parts _ ← items.find? (fun
+    | .tableT n _ _ _ _ _ _ _ => strEq n table
     | _ => false) | none
   let fields := parts.flatMap fun | .tSlot fs => fs | _ => []
   return (← fields.find? fun f => strEq f.fname field).ftyp

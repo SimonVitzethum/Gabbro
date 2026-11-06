@@ -80,7 +80,7 @@ def Walk.item (w : Walk) : Nat → SItemTief → Except String SItemTief
     | .constT n t v => return .constT n (← ty t) (← { w with expected := some (← ty t) }.constant f v)
     | .globT b n t v a s sh => return .globT b n (← ty t) (← { w with expected := some (← ty t) }.constant f v) (← a.mapM ex) s sh
     | .formatT n a b fs => return .formatT n (← a.mapM ex) b (← fs.mapM w.field)
-    | .tableT n v c b o sh ps => return .tableT n v (← c.mapM ex) b o sh (← ps.mapM w.tablePart)
+    | .tableT n v c b o sh ps space => return .tableT n v (← c.mapM ex) b o sh (← ps.mapM w.tablePart) space
     | .arenaT n lo hi mx t pb => do
       let pb ← pb.mapM fun (ps, e) => return (ps, ← ex e)
       return .arenaT n (← ex lo) (← ex hi) (← mx.mapM ex) (← ty t) pb

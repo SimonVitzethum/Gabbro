@@ -330,13 +330,13 @@ def uTabelleSlots (consts : List (String × Int)) (alias : List (String × (Int 
     The `owner` mark travels in `UTab.owner` (`D.eigner`/`braucht`). -/
 def uTabelle (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tnames : List String) : SItemTief → Except String UTab
-  | .tableT n .none (.some cnt) .none o sh parts =>
+  | .tableT n .none (.some cnt) .none o sh parts _ =>
     -- `tree { parent p, child c }` names the fields `reaches … via` and the tree domains read; it adds no carrier
     match parts.filter (fun p => match p with | .tTree _ => false | _ => true) with
     | .tSlot fds :: invs => uTabelleSlots consts alias tnames n cnt sh fds invs
         (parts.flatMap (fun p => match p with | .tTree ks => ks | _ => [])) o
     | _ => .error "table without G form"
-  | .tableT n (.some p) .none .none o sh (.tSlot fds :: invs) =>
+  | .tableT n (.some p) .none .none o sh (.tSlot fds :: invs) _ =>
     if !invs.all (fun p => match p with | .tInv _ => true | _ => false) then .error "table without G form" else
     match uFelder alias tnames fds with
     | .error e => .error e
