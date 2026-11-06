@@ -169,14 +169,74 @@ private theorem tag_elaborated : Konst.Values.elaborate tagDescriptor = .ok tagF
 
 attribute [local cbv_eval] tag_elaborated
 
+-- Realize the certified function value before introducing the dependent
+-- quotation result. The payload still comes from the canonical reify producer.
+private theorem tag_quoted :
+    ∃ literal : Konst.Values.Reified
+        (Konst.Scalar.declaration (tagDescriptor.params.map Prod.snd) tagDescriptor.erg)
+        (tagDescriptor.params.map Prod.snd) (Konst.Values.resultSchemas tagDescriptor)
+        tagDescriptor.erg
+        (tagFunction.model.body.denote (.cons (⟨4, by decide, by decide⟩ : Zahl 0 10) .nil)),
+      Konst.Values.reify (Konst.Values.resultSchemas tagDescriptor) [] 64 tagDescriptor.erg
+        (tagFunction.model.body.denote (.cons (⟨4, by decide, by decide⟩ : Zahl 0 10) .nil)) =
+          .ok literal ∧ literal.syntax = .call "Data" [.lit 5] := by
+  let schema : USum := {
+    name := "Choice"
+    cases := [("Empty", none), ("Data", some (.int 0 255))] }
+  let caseTypes := [none, some (Ty.int 0 255)]
+  let D := Konst.Scalar.declaration [.int 0 10] (.sum caseTypes)
+  let i : Fin caseTypes.length := ⟨1, by decide⟩
+  let value : Zahl 0 255 := ⟨5, by decide, by decide⟩
+  change ∃ literal : Konst.Values.Reified D [.int 0 10] [schema] (.sum caseTypes) ⟨i, value⟩,
+    Konst.Values.reify [schema] [] 64 (.sum caseTypes) ⟨i, value⟩ = .ok literal ∧
+      literal.syntax = .call "Data" [.lit 5]
+  have payload : ∃ literal : Konst.Values.ReifiedPayload D [.int 0 10] [schema]
+      (some (.int 0 255)) value,
+      Konst.Values.reifyPayload [schema] [] 63 (some (.int 0 255)) value = .ok literal ∧
+        literal.syntax = some (.lit 5) := by
+    refine ⟨?_, ?_, ?_⟩
+    · cbv <;> rfl
+    · rfl
+  obtain ⟨payload, produced, spelling⟩ := payload
+  have selected : [schema].find? (fun actual => actual.spec = caseTypes) = some schema := by cbv
+  have named : (schema.cases[i.val]?).map Prod.fst = some "Data" := rfl
+  refine ⟨{
+    «syntax» := Konst.Values.tagSyntax "Data" payload.syntax
+    expr := .case caseTypes i payload.expr
+    source := Konst.Values.LiteralMeaning.tag schema (by simp) rfl i "Data" named
+      payload.syntax value payload.source
+    equation := by intros; simp only [eval, payload.equation] <;> rfl }, ?_, ?_⟩
+  · erw [Konst.Values.reify.eq_def]
+    dsimp only
+    split
+    · rename_i missing
+      cases missing.symm.trans selected
+    · rename_i actual found
+      have same : actual = schema := Option.some.inj (found.symm.trans selected)
+      subst actual
+      split
+      · split
+        · rename_i missing
+          cases missing.symm.trans named
+        · rename_i actualName found
+          have same : actualName = "Data" := Option.some.inj (found.symm.trans named)
+          subst actualName
+          simp only [produced, bind, Except.bind, pure, Except.pure] <;> rfl
+      · rename_i different
+        exact False.elim (different rfl)
+  · exact congrArg (Konst.Values.tagSyntax "Data") spelling
+
 section
-attribute [local cbv_opaque] Konst.Values.elaborate
+attribute [local cbv_opaque] Konst.Values.elaborate Konst.Values.reify
 
 private theorem tag_metadata :
     Konst.checkSourceMetadata tagTextInput.original = .ok () := by
+  obtain ⟨literal, quoted, spelling⟩ := tag_quoted
   unfold Konst.checkSourceMetadata Konst.konstErsetzePipeline
   rw [tag_collected]
   cbv <;> (erw [tag_elaborated]; cbv)
+  erw [quoted]
+  simp only [spelling, bind, Except.bind, pure, Except.pure, Except.map] <;> cbv
 
 end
 
@@ -281,14 +341,56 @@ private theorem text_elaborated : Konst.Values.elaborate textDescriptor = .ok te
 
 attribute [local cbv_eval] text_elaborated
 
+-- Keep the exact UTF-8 decoding equation together with the typed body value;
+-- no string spelling is inferred from an unchecked numeric result.
+private theorem text_quoted :
+    ∃ literal : Konst.Values.Reified
+        (Konst.Scalar.declaration (textDescriptor.params.map Prod.snd) textDescriptor.erg)
+        (textDescriptor.params.map Prod.snd) (Konst.Values.resultSchemas textDescriptor)
+        textDescriptor.erg (textFunction.model.body.denote .nil),
+      Konst.Values.reify (Konst.Values.resultSchemas textDescriptor) ["A"] 64 textDescriptor.erg
+        (textFunction.model.body.denote .nil) = .ok literal ∧
+          literal.syntax = .ext .text ["A"] [] := by
+  let D := Konst.Scalar.declaration [] (.str 1)
+  let value : Wert D (.str 1) := textFunction.model.body.denote .nil
+  change ∃ literal : Konst.Values.Reified D [] [] (.str 1) value,
+    Konst.Values.reify [] ["A"] 64 (.str 1) value = .ok literal ∧
+      literal.syntax = .ext .text ["A"] []
+  have decoded : bytesZahl ("A".toUTF8.toList.map (fun byte => Int.ofNat byte.toNat)) =
+      some value.val := by cbv
+  have found : Konst.Values.findText value.val ["A"] = .ok ⟨"A", decoded⟩ := by
+    unfold Konst.Values.findText
+    split
+    · rename_i missing
+      cases missing.symm.trans decoded
+    · rename_i actual selected
+      have same : actual = value.val := Option.some.inj (selected.symm.trans decoded)
+      subst actual
+      split
+      · rfl
+      · rename_i different
+        exact False.elim (different rfl)
+  refine ⟨{
+    «syntax» := .ext .text ["A"] []
+    expr := .strLit value.val value.property
+    source := .text "A" value.val decoded value.property
+    equation := by intros; rfl }, ?_, rfl⟩
+  erw [Konst.Values.reify.eq_def]
+  dsimp only
+  simp only [show ¬ (1 : Nat) > 1 by decide, ↓reduceIte, found,
+    bind, Except.bind, pure, Except.pure]
+
 section
-attribute [local cbv_opaque] Konst.Values.elaborate
+attribute [local cbv_opaque] Konst.Values.elaborate Konst.Values.reify
 
 private theorem text_metadata :
     Konst.checkSourceMetadata stringTextInput.original = .ok () := by
+  obtain ⟨literal, quoted, spelling⟩ := text_quoted
   unfold Konst.checkSourceMetadata Konst.konstErsetzePipeline
   rw [text_collected]
   cbv <;> (erw [text_elaborated]; cbv)
+  erw [quoted]
+  simp only [spelling, bind, Except.bind, pure, Except.pure, Except.map] <;> cbv
 
 end
 
