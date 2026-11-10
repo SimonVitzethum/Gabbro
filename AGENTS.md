@@ -34,7 +34,7 @@ The Lean module-system migration and the split of every Lean file below 500 line
 - **One integration branch.** The lead merges the branches of all its agents and its own work
   into ONE integration branch and builds/checks that branch only; never one build per agent.
 - **No `.py` helper scripts for agents**: none are written, kept or used. Agents work with git, `lake`, `lean` and
-  the shell. The four guardians stay root's tools.
+  the shell. The two guardians stay root's tools.
 - Root owns form-based coverage measurement and reviews; agents implement.
 
 ### Scope: every userspace Gabbro form to Stage-0 IR
@@ -45,7 +45,7 @@ programs into Stage-0 IR and build the connected translation pipeline, formally 
 boot code, privileged instructions, address/context/view types with the raw-address syntax, device-register
 reads/writes/fallible reads/register transitions, and the proof boundary of that plan (ASM/boot behaviour is user
 logic with explicit proof obligations, never silently a hardware assumption). The low-level work starts only AFTER the C packages are finished and does NOT touch the assembly IR runner or Stage 0
-(owner, 2026-11-03): its scope is the Lean model, checker, parser/exporter and the Rust front end. It follows the plan's
+(owner, 2026-11-03): its scope is the Lean model, checker and parser/exporter. It follows the plan's
 own order (canonical Lean model first, then generic refinement and bridge, then parser/exporter/checker/lowering);
 the recommended answers to its four owner questions are approved, EXCEPT that the proposed diff of `Spec.lean`
 (question 2: splitting the software foreign assumptions into user obligations) is shown to the owner before it is
@@ -125,7 +125,7 @@ The machine has 20 threads and 31 GB and no swap; the caps below follow the OOM/
   (asynchronous elaboration is the standard; the threads of one process share its imports), module by module in
   dependency order. Never run a `lake build` of `stage0/` inside such a slot: it spawns one `lean -M16384` per
   module and thrashes inside the 5G scope.
-- **No swap for ANY run:** every process that can use real memory (`lean`, `lake`, `cargo`, the runner and
+- **No swap for ANY run:** every process that can use real memory (`lean`, `lake`, the runner and
   regression loops, guardians, Python measurement scripts) runs inside a scope with `-p MemorySwapMax=0` and a
   MemoryMax/MemoryHigh. No exceptions.
 - **Nothing heavy starts** when the load average is above 16 or less than 8 GiB are available (`free -g` before
@@ -165,8 +165,8 @@ interface does not rebuild dependents. A non-module Lean file is a layout findin
 The end sequence:
 
 1. **The goal theorem** over the Lean model (`gabbro_ziel`, §2) — proved.
-2. **Transfer into the checker and the compiler**: everything the model proves becomes the Rust checker
-   (`crates/gabbro-check`) and the compiler, in the order of §3 (Lean model first).
+2. **Transfer into the checker and the compiler**: everything the model proves becomes the verified checker
+   and compiler written in Lean (Stage 0 first), in the order of §3 (Lean model first).
 3. **Translation validation**: source → model → final machine bytes, checked in Lean, with W / GX reused for
    concurrency.
 
@@ -177,7 +177,7 @@ the commit and in the relevant plan section.
 
 **What may be said:** "The goal theorem is proved over the model, with a witness and non-degeneracy."
 **What may NOT be said:** "Gabbro is verified." The checker inside the statement is the Lean Bool `Akzeptiert`,
-not the Rust checker, and no bridge to any binary is built. The
+not a deployed checker, and no bridge to any binary is built. The
 [proof-status section](README.md#5-proved-and-not-proved) says exactly this; keep it that way.
 
 ## 2. The goal theorem — what a newcomer must know
@@ -245,9 +245,10 @@ not the Rust checker, and no bridge to any binary is built. The
 **Compiler, checker, parser**
 - **No legacy**: only the newest state. What is replaced is deleted (history stays in git): no compatibility
   layers, deprecated paths, old names or flag aliases, retired-but-kept codes.
-- **LLVM is the only backend** (`llvm.rs`, `llvm/`); `gabbro build` drives it (checker, IR, `opt`, `llc`,
-  `ld.lld`). A form LLVM cannot lower is refused by name (`Y1xx`). The removed C emitter is in the tag
-  `archiv/c-emitter-2026-10-17`.
+- **No Rust and no handwritten C in the repository (owner, 2026-11-10).** The Rust checker, CLI and LLVM
+  emitter (`crates/`) and the C probes were deleted; they are in git history before `254a5cc5c`, the older C
+  emitter in the tag `archiv/c-emitter-2026-10-17`. The compiler is the Lean Stage-0 path; the assembly runner
+  (`runner/runner.s`) executes. Nothing is rebuilt in Rust or C.
 - **Target direction: AArch64** (Armv9-A); the former Lean model of it (`arm/`) was removed on 2026-11-01 and lives
   in git history. The x86-64 hardware model is archived (branch `archive`); the one exception is the verified
   stage-0 runner (`PLAN-SELF-HOSTING.md` §2.2, Simon 2026-10-28), whose x86-64 instruction subset is written anew and tested against the CPU.
@@ -304,19 +305,17 @@ not the Rust checker, and no bridge to any binary is built. The
 
 ## 4. Where things run
 
-Everything runs locally, in this checkout or in worktrees beside it: Lean builds, `cargo` runs, acceptance
+Everything runs locally, in this checkout or in worktrees beside it: Lean builds, acceptance
 runs and QEMU stages. There is no build server. One exception (Simon, 2026-10-28): the differential tests of the
 x86-64 runner model against the CPU run on Simon's x86-64 machine (`PLAN-SELF-HOSTING.md` §2.2).
 
 - **GitHub:** push is `git@github.com:SimonVitzethum/Gabbro.git` with key `~/.ssh/id_ed25519_github`; fetch
   goes over https.
-- **One heavy run at a time per tree**, with `free -g` beside it. Heavy are `cargo build`, `cargo test`,
-  `lake build` and the acceptance run. Every heavy run goes under a memory scope (`systemd-run --user --scope -p
+- **One heavy run at a time per tree**, with `free -g` beside it. Heavy are `lake build`, direct `lean` checks and
+  the acceptance run. Every heavy run goes under a memory scope (`systemd-run --user --scope -p
   MemoryHigh=… -p MemoryMax=… -p MemorySwapMax=0`); the soft limit lets the kernel reclaim before the hard limit
   kills. An abort for lack of memory is not a finding.
-- **`cargo test` and a Lean run must not run at the same time in ONE tree:** `cargo test` calls `gabbro prove`,
-  which rebuilds with `lake` and replaces `.olean` files that running `lean` processes read.
-- `rustc`/`cargo` live in `~/.cargo/bin`; Lean through `elan` (`ELAN_TOOLCHAIN` must not be set).
+- Lean comes through `elan` (`ELAN_TOOLCHAIN` must not be set).
 
 ## 5. Procedure: branch, build, merge, push
 
@@ -326,18 +325,15 @@ x86-64 runner model against the CPU run on Simon's x86-64 machine (`PLAN-SELF-HO
   commit there; merge when the acceptance of §1 holds.
 - **After every merge:** build `grammatik/` (also after a clean merge: a new structure field or a changed arity
   only shows in the build), run the layout check, then the guardians.
-- **The push gate is the four guardians** (`./instrumente/abnahme.py`):
+- **The push gate is the two guardians** (`./instrumente/abnahme.py`):
 
   | Guardian | Subject | What it checks |
   |---|---|---|
   | `instrumente/pruefe-lean.py` | the Lean model and stage 0 (`stage0/`) | `lake build` of both, `gabbro_ziel` on the standard axioms only, no `sorry`/`admit`/`native_decide`/`axiom`, layout |
-  | `instrumente/pruefe-llvm.py` | the LLVM compiler | `cargo test --test llvm`, the reference programs as binaries on x86_64 and aarch64 with the same result |
-  | `instrumente/pruefe-pruefer.py` | the Rust checker | `cargo test --workspace --no-fail-fast`, sentence register, identifiers assigned once |
-  | `instrumente/pruefe-gabbrov.py` | GabbroV | `lake build`, proofs without `sorry`, `gabbro prove` GREEN, no GREEN without Lean, the bridge `bruecke/` built on the standard axioms |
+  | `instrumente/pruefe-gabbrov.py` | GabbroV | `lake build`, proofs without `sorry`, the bridge `bruecke/` built on the standard axioms over the tracked duty files |
 
   Exit code `0` measured and green, `1` measured and red, `2` nothing or not everything measured — that is not a
-  green. A fifth guardian is not built: a new check becomes a test in `cargo test`, a Lean theorem, or a stage
-  in one of the four.
+  green. A third guardian is not built: a new check becomes a Lean theorem or a stage in one of the two.
 - **Push master after checked merges**, without asking: first grep the outgoing diff for keys; never push red;
   never force-push; if origin moved, merge first and check again. No new branches on GitHub.
 - **Delete worktrees and clones right after their merge.**
@@ -347,7 +343,7 @@ x86-64 runner model against the CPU run on Simon's x86-64 machine (`PLAN-SELF-HO
 - **Every parallel worker (another session, a subagent) gets its OWN worktree** and scratch directory, never
   this checkout; its tree is on `master` before it starts. Two runs in one tree measure a mixture.
 - A lead tree gets its warm caches (`grammatik/.lake`, `programmlogik/.lake`) as in "One Mathlib for all trees":
-  Mathlib hard-linked, never copied; with no cache `gabbro prove` goes off to clone Mathlib and hangs, and a stale
+  Mathlib hard-linked, never copied; with no cache `lake` goes off to clone Mathlib and hangs, and a stale
   `.lake` is worse than none. Sub-agent trees carry no `.lake`.
 - Before starting work in an area, check whether another session already works there (worktrees, recent file
   times) and do not duplicate it.
@@ -357,17 +353,12 @@ x86-64 runner model against the CPU run on Simon's x86-64 machine (`PLAN-SELF-HO
 
 | Kind | Next free |
 |---|---|
-| Diagnostic codes | **N594** (N459, N460, N295 and N297 are retired and not reused). Alias rules: next `R016` |
 | Gift (poison-probe) numbers | **1488** (1448-1469 stay unused; 1149, 1150, 956, 957 and 958 retired) |
 | Example numbers | **1172** |
 
-Re-measure instead of trusting this table: `grep -rho '\bN[0-9]\{3\}\b' crates/ | sort -u | tail`,
-`ls beispiele beispiele/gift | tail`. The highest number in the tree does not drift; a ledger does.
-
-- Next free is always above the highest number in use.
-- The test `keine_zwei_korpusdateien_teilen_eine_nummer` catches collisions.
-- **Every new refusal code comes with its sentence** in `saetze.rs` in the same commit (the sentence register
-  in `pruefe-pruefer.py`), and with a poison probe.
+Re-measure instead of trusting this table: `ls beispiele beispiele/gift | tail`. The highest number in the tree
+does not drift; a ledger does. Next free is always above the highest number in use. (The diagnostic-code range
+and the sentence register went with the Rust checker.)
 
 ## 8. Files that matter
 
@@ -380,26 +371,21 @@ Re-measure instead of trusting this table: `grep -rho '\bN[0-9]\{3\}\b' crates/ 
 | Plans | `dokumente/IR-COMPILATION-LANES.md`, `dokumente/PLAN-SELF-HOSTING.md`, `dokumente/PLAN-LONG-RANGE.md`, `dokumente/LOW-LEVEL-SYNTAX-PLAN.md`, `dokumente/ABSTRACTION-SYNTAX-PLAN.md` |
 | Theorem map | `dokumente/THEOREM-MAP.md` (new sections at the end) |
 | Known absences | `TODO.md` |
-| Guardians | `instrumente/abnahme.py` and the four `instrumente/pruefe-*.py` (`dokumente/TOOLBOX.md`) |
-| Rust tools | `gabbro lean-g` (exporter), `gabbro obligations --g`, `gabbro counterexample`, `gabbro certificate`, `gabbro pruefe --fix`, `gabbro abgeleitet`, `gabbro zeremonie`, `gabbro paesse` |
+| Guardians | `instrumente/abnahme.py` and the two `instrumente/pruefe-*.py` (`dokumente/TOOLBOX.md`) |
 
 ## 9. Pitfalls that cost real time (each happened)
 
 **Tools**
-- **`rsync -a` + `cargo` build a mixture**, because `cargo` trusts mtimes. Copy trees that cargo builds with
-  `-rlpgoD`.
 - **`pgrep -f` / `pkill -f` match their own command line.** Kill by PID; wait by polling a file or `ps -C`.
 - **A guardian that aborts reads like one that passed.** Look for the numbers it no longer prints; measure the
-  base in a throwaway worktree before guessing. `cargo test` always with `--no-fail-fast` (also `set -e` in
-  scripts stops counting at the first hit).
+  base in a throwaway worktree before guessing. `set -e` in scripts stops counting at the first hit.
 - **Mechanical edits over many files:** a regex that matches a pattern alternative can strip its prefix or
   indentation; patterns with non-ASCII characters (`t₂`, `σ`) need a UTF-8 aware tool. Rebuild after every
   mechanical edit and read what it changed.
 
 **Merging**
 - Recurring conflicts: `Grammatik.lean` imports (take the union); duplicate THEOREM-MAP section numbers
-  (renumber); two branches defining the same Lean name (rename one); duplicate sentence insertions in
-  `saetze.rs` (keep both).
+  (renumber); two branches defining the same Lean name (rename one).
 - **Semantic merge breaks** show up only in the build: a new structure field needs its value at every
   positional literal; an arity change needs every caller updated. Always build after a merge.
 - **A new constructor of `Expr` or `Stmt`** belongs at the END of its inductive: the fine cells and the generator
@@ -430,7 +416,7 @@ Re-measure instead of trusting this table: `grep -rho '\bN[0-9]\{3\}\b' crates/ 
 
 The hardware model and the full Gabbro-to-final-binary pipeline are completed in Lean without a persistent SSA
 IR or a second source interpreter: the typed source plus checked target blocks and bytes, recomputed
-certificates, and Rust producing untrusted candidates that a Lean validator checks (source-derived unit, all
+certificates, and candidates that a Lean validator checks (source-derived unit, all
 reachable support, entry and binding bytes, linking and relocation, the final mapping). Source safety, G/GX
 concurrency, IEEE, contracts, call logs and budget guarantees remain; OS and freestanding profiles stay generic.
 

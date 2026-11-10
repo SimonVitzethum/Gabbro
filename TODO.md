@@ -13,154 +13,30 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
 
 ## Right now
 
-- **Integration validation (2026-11-06).** Before the new hardware abstraction, the model goal, SC/GX and linking
-  variants, generic Stage-0 compiler/image theorem, bridge and runner compiled on the standard axioms.
-  The owner now requires opaque, ISA-independent floating operations with explicit `RootNativeFloat.Hardware`,
-  replacing the software IEEE proof implementation. The revised core, native value codec and answer-class
-  prefix compile. The SC/GX, linked, termination and waiting goal audit passes for all 13 checked
-  sentences using only the standard axioms. The current Runner library and executable build, all 14 Runner
-  axiom audits pass, and the CPU regression reports 20,989 checks with zero differences, including 966 float IR cases.
-  The expanded floating regression now separately passes all 1,178 IR images, including 212 additional
-  nearest-even tie, subnormal, underflow and signed-overflow cases; the original 966 manifest rows are unchanged.
-  The generic Stage-0 statement/image correctness chain through `Stage0.IRBild` builds (2,709 jobs).
-  The native compiler builds (5,433 jobs), including the real nominal-space lexer/parser path
-  and the shared checked scope/cost producers;
-  three newly compiled float-end sources execute on the assembly
-  runner with their unchanged expected exits 7/41/107 under the current hardware abstraction.
-  The refreshed complete `proben-ir` source regression passes 242/320 cases: 167 actual executions
-  and 75 expected refusals. Sixty-eight expected executions fail compilation and ten refusal
-  diagnostics differ. Earlier baselines were 218/315 and 235/320. The obsolete width refusal is
-  retained as a positive regression: the verified multiword-sum path executes with exit 42.
-  All ten remaining diagnostic differences still refuse. No executed case has a wrong exit code. Open source
-  boundaries include alias constants, cost/proof metadata, atomic declarations and scoped-return admission;
-  these tests are not a measurement of complete language coverage. Refusal expectations have not been relaxed.
-  In that run, 28 of the 68 compilation failures stop at the unbound `assumT` gate, 15 at `main`'s
-  type/proof/header binding, eight at physical scoped-return IR admission, five at atomic declarations
-  and four at runtime-cost bindings.
-  All four existing source I/O probes currently refuse at the unbound `SItemTief.assumT` source gate;
-  the assembly Runner's independently measured I/O/instruction regression remains separate.
-  The Lean generator coverage guardian passes with unchanged bounds: 66,448 valid programs and 766
-  single-fault refusals; 179/282 register members are exercised and the remaining gaps are explicitly
-  accounted for. This measures the model generator, not complete source-to-IR syntax admission.
-  The constant grammar witness chain, qualified/ordinary/recursive library producers, final
-  `LibraryCertificates`, complete qualified `LibraryExport`, ordinary `LibraryAnnahme`, and fresh
-  `Stage0.Frontend.ExportCorrectness` checks pass.
-  The Stage0 constant input/scanner/scalar certificates and generic compiler-phase composition pass.
-  The generic constant source packet and all-guard call-head certificates also pass direct checks;
-  the complete call-check admission and floor witness modules now build through the shared assembly
-  certificate. Both integer source packets, including computed initialization, build; the final
-  initializer compiler packet and its `IntegerPrograms` consumer now build through named
-  array/literal, restore and acceptance certificates. Other concrete constant
-  program packets are checked through their actual production phases. `ConstWitness` and the
-  dependent `ConstValuesWitness` now build completely.
-  The complete optional source/program packets, named quotation source packet and qualified global
-  source packet now build. The complete named program module passes direct Lean and regular
-  Lake checks; both public compiler witnesses use only the three standard axioms. Both ordinary
-  and qualified global program certificates now build. The final constant compiler chain closes
-  successfully in a 2,746-job Lake target build, with unchanged gates and resource limits.
-  A subsequent source-regression repair shares that checked scope core with the canonical
-  const-signature collector, preserving final alias/scalar environments. This new extraction and
-  collector connection build through all twelve shared modules, the canonical metadata gate and
-  `Stage0.Compiler`. All 56 alias/const source/IR cases now pass, including forward alias and
-  signature bounds, aliased const calls and both actual-entry operation-bound cases. Incomplete
-  scope recovery preserves the canonical range failure, and candidate evaluation carries cost
-  metadata to the mandatory typed call check. The concrete constant witness replay now closes in a
-  fresh 2,760-job target build, including the normalized initializer elaboration/header and all
-  original array, restore and acceptance checks. The separate
-  compile-time operation-bound checker now preserves each original cost clause as a typed entry-context
-  certificate. Both call families and the actual replacement path build; the native positive case
-  executes with exit 42 and the negative case refuses at the cost check. Ordinary runtime-cost
-  metadata still keeps its existing named refusal.
-  The shared complete compilation packet, hardware-free image phase/geometry theorem and the
-  conflicting-profile refusal witness build. Both successful profile and requires-profile images build.
-  The aligned-static fixture now also builds end to end with its unchanged sixteen-byte alignment.
-  Its source gate uses the existing alignment reader; profile/global value checks and section refusals remain.
-  Full-package closure and the remaining concrete witness consumers are being revalidated.
-  The additional arithmetic hardware contract is built in `NativeFloat` (13 jobs), including the
-  corrected binary32 nearest-even overflow threshold. It strengthens the named hardware assumption;
-  the Runner library, native generator and all 14 Runner axiom audits pass with that component.
-  Targeted arithmetic CPU edge cases pass; downstream package-wide closure remains open.
-  Fresh goal/SC/GX/linking/termination/waiting audits pass for all 13 checked sentences with exactly
-  the three standard axioms. Passlogik (16 jobs), Programmlogik (1,015 jobs) and Bruecke
-  (1,592 jobs) also build. The malformed `None()` success fixture now uses the existing bare `None`
-  syntax with unchanged expected value; its lexical proof builds. The dependency
-  classifier now builds with canonical optional/tagged constructor lookup; its concrete source
-  packets and the remaining constant compilation packets still need validation.
-  The full grammar integration run exposed errors in 27 modules before it was stopped at
-  `UebersetzeProben11` after sustained memory-high throttling. That witness and the remaining
-  package suffix are resource-unmeasured, not a proved false statement. Repairs are being
-  checked module by module; `LibraryErweiterung`, the gate-model witness, `Capabilities`, both
-  count/builtin reader witnesses, public-name probes, five repaired corpus modules and the
-  pointer-duty witnesses for 104/108 now pass. The generic world-preservation statement and
-  its concrete library witness build through the same transparent proposition. The numbered
-  coverage-cell predicates were re-read against the current checker and the refreshed closure
-  pins pass; this does not extend the measured source or descriptor coverage.
-  The repaired record probes, scoped-await contract, recording report and all nineteen keyword
-  dispatch equations now pass. The successful-place parser theorem and its direct printed
-  assignment/call/emission consumers build. The rights/ownership scanner fragments, individual
-  numeric/text certificates and complete source/lexer composition build; pure source spelling
-  equalities use kernel reflexivity. Constants, Rights and Findings build completely. Ownership now
-  also builds in a fresh 1,535-job target run, using separate actual statement, residual-resource
-  and return certificates before composing body/function results. All sixteen Ownership witness
-  axiom audits use only the three standard axioms; the default 400k limit is unchanged.
-  Their fresh check exposed a producer bug: a table's owner mark was also used as its address space.
-  Canonical elaboration now preserves the table producer's space and keeps ownership separate;
-  capability guards, sources and claims are unchanged. That producer and the consistent GabbroV
-  diagnostic path build. The shared ordinary body-to-function result composition passes a direct
-  Lean check and the complete Ownership replay passes.
-  The specification witness builds with its actual outer substitution environment, and all six Dyn
-  pass-result packets pass an isolated prefix check for all three fixtures after independent result
-  inference and canonical numeral/string-prefix reduction. Shared scanner spelling/fuel composition builds.
-  The serialized Dyn phase module, complete witness consumer and source/lexer/parser/export
-  consumer now build. All freshly audited Dyn witness sentences use only the three standard axioms.
-  The repaired region-write Proben40 module also builds with all four original claims.
-  `LibraryWitnesses` now builds in 16 seconds through actual phase certificates; all eleven public
-  witness axiom audits use exactly the three standard axioms. Two previously false print/parse
-  probes now supply the explicit EOF token required by the unchanged statement-reader protocol.
-  The stopped older comparison at that module remains resource-unmeasured, without a terminal
-  logical finding; this does not establish a complete grammar build.
-  The next final integration replay exposed seven additional module failures. The repaired
-  corpus 59/109/124 units, GabbroV rely-duty bridge, library identity and Proben40 now build.
-  The corpus units retain both declared starts and their original memory; corpus 124's
-  admitted pointer interfaces retain the actual target pre/postconditions instead of an
-  invalid trivial contract. The stopped Proben10 run remains resource-unmeasured; its nine
-  unchanged claims now build through canonical phase certificates. The latest complete builds
-  pass for NativeFloat (13 jobs), Runner (86), Passlogik (16), Programmlogik (1,015) and
-  Bruecke (1,607). The complete grammar and Stage0 runs remain open. The complete Boden and
-  Zulassung witnesses now build after supplying their canonical local finite axiom equality
-  dictionaries; History and Treue also build with distinct local instance names. The later
-  Gegenprobe comparison hit its 15-GiB scope's OOM limit without a terminal logical finding;
-  the replacement Text, Units, Bodies, Lowering and Facts modules now build, and the complete
-  public Gegenprobe module builds with all original claims. Lauf.Zeugen remains open: selection
-  and the first two functions pass isolated checks; the larger probe closes through the existing
-  checked call-head certificates instead of its former 4-million-heartbeat timeout.
-  Tagged's two functionless fixtures now witness the existing no-function refusal and retain
-  positive collection coverage on their original inputs. Its complete PayloadProbes and
-  InitializerProbes leaves build, and the complete parent now builds through its generic
-  collection/refusal composition without re-evaluating the concrete exporter.
-  The complete old-array snapshot/environment witness also builds with its original two-word
-  parameter. Fresh goal and Runner audits pass for all 13 and 14 checked sentences, respectively,
-  using only standard axioms. Final Stage0 audits remain pending its SourceWitness build;
-  the primitive scope-output certificate now builds at the unchanged 100k limit, while the
-  subsequent SourceWitness collector/expansion and concrete header consumers remain under validation.
-  A subsequent grammar suffix replay reached additional dispatch, fold and generative-module witnesses.
-  Tagged signatures, generic closure, both fold witness modules and all fourteen module-expansion
-  witnesses now build with their existing sources and gates. The shared add/and/or refusal diagnostic
-  replaces only a stale test expectation. Tagged source scanning/parser/initial export phases build
-  as a separate module; its concrete elaboration and the module pipeline consumer remain under validation.
-  The selected-consumer phase and evidence modules also build, including both actual physical
-  resource refusals; the final public replay still needs closure. The SourceWitness scope/collector
-  module builds independently, with replacement and header elaboration still open. The latest scoped
-  static guardian checks find no forbidden declarations, 3,397 module-system files and no layout
-  violations among 3,399 Lean files; GabbroV's five scanned proof files also have no forbidden declarations.
-  Earlier sustained memory-high runs without OOM remain unmeasured;
-  the new bounded closure proofs and exact matcher transport have terminal green checks.
-  Open: that connected revalidation, parser/library fixture checks and complete Lean package acceptance.
-  The authorised acceptance scope is Lean and the Lean parts of GabbroV; Rust, Cargo and LLVM checks are
-  deliberately unmeasured. Work-in-progress snapshots on `dev` are owner-authorised while
-  revalidation is open; a checked release still requires the named Lean builds and GabbroV's
-  Lean checks. No four-guardian green is claimed.
-  A partial successful build does not establish package-wide acceptance or admission of every source form listed below.
+- **Package acceptance on `dev` (state of 2026-11-10).** The log of single-module repairs that stood here is in
+  `git show 254a5cc5c:TODO.md`. Dated measurements of 2026-11-06, not re-measured since: goal/SC/GX/linking/
+  termination/waiting audits pass for all 13 checked sentences on the three standard axioms; NativeFloat (13 jobs),
+  Runner (86, all 14 axiom audits), Passlogik (16), Programmlogik (1,015) and Bruecke (1,607) build; the Runner CPU
+  regression reports 20,989 checks without a difference, the float regression 1,178 IR images.
+  Open:
+  1. **A complete `grammatik/` build.** The last full run was stopped at `UebersetzeProben11` under memory
+     throttling; the probe witnesses need 7-12 GB each and are resource-unmeasured, not refuted.
+  2. **A complete `stage0/` build** including `SourceWitness` (collector/expansion and header consumers) and
+     `Lauf.Zeugen`, then the Stage-0 axiom audits.
+  3. **Source regression `proben-ir`: 242 of 320 pass** (167 executions, 75 expected refusals); 68 expected
+     executions fail compilation and 10 refusal diagnostics differ; no executed case has a wrong exit code.
+     The 68 by gate: 28 unbound `assumT`, 15 `main` type/proof/header binding, 8 physical scoped-return IR
+     admission, 5 atomic declarations, 4 runtime-cost bindings, 8 others. All four source I/O probes stop at
+     `SItemTief.assumT`. Closing `assumT` and the `main` binding is the next coverage step.
+  4. **Generator coverage:** 66,448 valid programs and 766 single-fault refusals; 179 of 282 register members
+     exercised, the rest declared gaps. This measures the model generator, not source-to-IR admission.
+  5. **Native floats:** `RootNativeFloat.Hardware` is the named assumption; the instruction-level correspondence
+     per target is owed.
+- **Rust and C are removed (owner, 2026-11-10).** `crates/`, the Cargo files and the C probes are deleted; two
+  guardians remain (`pruefe-lean.py`, `pruefe-gabbrov.py`). Owed in Lean because their Rust producers are gone:
+  the duty printer for `programmlogik/Duty/` (the five files the bridge imports are tracked inputs), the
+  certificate generator of the former Lean-guardian stage 5, and a source-to-G exporter outside Stage 0.
+  Diagnostic codes (`Nxxx`, `Rxxx`, `Yxxx`, `Mxxx`) named below refer to the deleted checker and are historical.
 - **Scoped-return model and consumers compile (2026-11-05).** Completion follows cleanup. `fertig_abschluss`
   classifies an ordinary value return or the whole completed saved value, with start reasons excluded explicitly.
   `fertig_inv` obtains the current-world invariant from the actual replay guarantee for both G/GX consumers;
@@ -659,44 +535,19 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   G stack operations now carry exact ownership-grant effects (13.5); an actual G `runs until stack-is-empty` loop has the exact
   proved boundary `initialStack.length < passes`, including a core-accepted conditional-class function witness (13.6).
 
-## 3. Checker
+## 3. Checker and compiler
 
-- **Legacy cleanup** (fixed rule 2026-10-17: no legacy in compiler, checker, parser). Done: `cnamen.rs`, `N041`/`N046`/`N052` with sentences and
-  17 poison probes, 42 dead functions and constants, the Lean folder `CBackend` (22 233 lines, deleted 2026-10-18; tag
-  `archiv/c-emitter-2026-10-17`). Open: 13 compiler warnings in `llvm.rs`/`nulpfad.rs`/`certstmt.rs` (two unreachable patterns, the
-  link-unit init for constants, never-read fields); the C templates in `schablonen.rs`; comments naming `emit.rs`/C11. Remove, do not rename.
-- **Differential harness** (`CHECKER.md`† §12.6). Class (b) is empty over 62 000 generated programs. The groups of class (a) left
-  (`ERWARTET_A`: costs, `locks`/`reads` effects, `N511`/`N275` user logic, `const fn`) need Lean components; the model gaps (`return` under
-  `locks`, `Endblock` formers, `Block.arenaAlloc` at the top level) are listed there with the exact change. Open rulings: `M104`, `N001`,
-  `M133`, `M147`. Track P: 79 % of the generated space is outside the elaboration fragment.
-- **Guardian remnants** (four guardians since 2026-10-17). The tree-wide `gabbro prove` run and the E1 comparison (duties manifest) hang in no guardian; the mutation run over the checker
-  is dropped without replacement; 8 600 German comment lines in the checker are unguarded. Details: `dokumente/TOOLBOX.md`.
-- **O11 (guardless invariant).** A `table`/`group` invariant that no function `maintains` is booked by NOTHING (`N275`-`N277` check only
-  anchored ones).
-- **Alias / `own`** (built 2026-10-17). `R014` (error) and `R015` (hint) separate pointer roots at call boundaries; Lean has `ParamGetrennt`
-  and `ObjGetrennt` with a bridge to `R014`; LLVM sets `noalias` on internal writable pointer parameters. Paper: `A1-OWN-PAPER.md`†.
-  Open: records over byte buffers (range objects in the model, `LG005`/`LG001`); the four bridge hypotheses (`ParamVerschieden`,
-  `RechteOk`, `HerkunftTreu`, `FrischNeu` only for the model allocator) and the checker's `let` run in Lean; `R004`/`R007` as special cases
-  of `R014`; `noalias` is no Lean judgment (O27).
-- **O26-Rest (foreign lock primitives).** Own primitives are checked (`N481`-`N483`); foreign ones stay assumed (weak memory assumes
-  acquire/release).
+The Rust checker and the LLVM backend were deleted on 2026-11-10; their open lists are in
+`git show 254a5cc5c:TODO.md` (sections 3 and 4). What stays open on the Lean side:
 
-## 4. LLVM backend
-
-Full table: `LLVM-BACKEND.md`† §5.
-
-- **Lowerings without a Lean model** (2026-10-17; rule: language follows the Lean model). Built, evidenced only by text/qemu: aarch64
-  `entry` (the meaning of `vector`/`via` on aarch64 is the lowerer's reading; `LANGUAGE.md` and the model are silent), `masks irqs`, the
-  x86_64 port space, assembler bodies. REFUSED because lowering would invent semantics: `boot` and `entrust`. To do: put the aarch64
-  meaning of `vector`/`via` into the model, then connect the `boot` model and bounded `entrust` service export.
-- **O22 (group execution and stack lifecycle; built 2026-10-17).** Every invocation owns a guarded mapping and completion word; all roots start
-  before any join; kernel `clear_child_tid` ends the join after actual exit. Open: runtime syscall numbers still belong to the Linux profile;
-  OS-neutral bindings/profiles and the target-to-GX proof.
-- **`entries` (12 sites).** Hardware dispatch without a model; refused by name.
-- **Stack gates and `child` (12).** The `clone` trampoline is missing.
-- **`publish` with a payload (11).** Not covered by the goal theorem: Phase B item 1.
-- **Shared locks (3), library calls (3).** Own primitive / payload model missing.
-- **O40-Rest (emitter names).** Checker half built (`N042`); module-qualified names are missing (LLVM mangles `m_` only on a collision).
+- **O11 (guardless invariant).** A `table`/`group` invariant that no function `maintains` is booked by nothing in the model.
+- **Alias / `own`.** Lean has `ParamGetrennt` and `ObjGetrennt`. Open: records over byte buffers (range objects in the model); the four
+  bridge hypotheses (`ParamVerschieden`, `RechteOk`, `HerkunftTreu`, `FrischNeu` only for the model allocator); `noalias` is no Lean
+  judgment (O27).
+- **O26-Rest (foreign lock primitives).** Foreign primitives stay assumed (weak memory assumes acquire/release).
+- **Forms without a model:** the aarch64 meaning of `vector`/`via`, `masks irqs`, the x86_64 port space, `boot` and bounded `entrust`
+  service export; `entries` hardware dispatch; the `clone` trampoline for `child`; `publish` with a payload (Phase B item 1); shared locks.
+- **O22 (group execution and stack lifecycle).** OS-neutral bindings/profiles and the target-to-GX proof.
 
 ## 5. Translation validation (MUCH later)
 

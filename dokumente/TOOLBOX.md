@@ -1,6 +1,6 @@
-# Toolbox — the four guardians, the tools, and the working rules
+# Toolbox — the two guardians, the tools, and the working rules
 
-**What this is.** What measures the project (four guardians), the helper parts and tools beside
+**What this is.** What measures the project (two guardians since 2026-11-10, when Rust and C left the repository), the helper parts and tools beside
 them, the probe corpora, and the working rules **W1–W29** the old instrument folder earned.
 *On 2026-10-17 the folder of 95 entries (54 `pruefe-*` guardians, 22 `zaehle-*` counters, a mutation
 run, `abnahme.py`, helpers) was cut to four guardians (Simon's decision: exactly four).* Everything
@@ -9,40 +9,33 @@ else stays in Git: `git show 414feafc:instrumente/<name>`.
 **Admission condition for a rule:** it comes from a *mistake in this folder* and the mistake is named.
 The rule ids are cited from source comments and other documents and are never renumbered.
 
-## 1. The four guardians
+## 1. The two guardians
 
 | Guardian | Subject | Stages |
 |---|---|---|
 | `instrumente/pruefe-lean.py` | the Lean model (`grammatik/`) and stage 0 (`stage0/`) | `lake build` of both · `gabbro_ziel` and its siblings depend on exactly `propext`, `Classical.choice`, `Quot.sound` (`NachpruefungZiel.lean`) · no `sorry`/`admit`/`native_decide`/`sorryAx`/`unsafe`, no `axiom` outside `teile/kein-sorry-allowlist.txt` · at most 20 entries per folder · the stage-0 probes `stage0/proben/` print what they must |
-| `instrumente/pruefe-llvm.py` | the LLVM compiler | `cargo test --test llvm` (IR, refusals `Y101`–`Y106`, model-coverage register, noalias, the Lean certificate elaborating with plain `lean`) · four programs through `teile/baue-llvm.sh` (`opt -O3`, `llc`, `ld.lld`, static, no INTERP/NEEDED) on x86_64 and aarch64 (qemu) with the same, expected exit code |
-| `instrumente/pruefe-pruefer.py` | the checker (Rust) | `cargo test --workspace --no-fail-fast` (poison probes, examples, tutorial, grammar and word tables, doc code blocks, certificates) · sentence register `teile/saetze.py` (60 codes without a sentence is the booked ratchet; a sentence for a rule that does not exist is always red) · every code issued from one place (`teile/kennungen.py`) |
-| `instrumente/pruefe-gabbrov.py` | GabbroV (`programmlogik/`) | `lake build` without `sorryAx` · the person's proofs and the GabbroV files carry no `sorry`/`axiom` · `gabbro prove` GREEN on the four proof units · `cargo test -p gabbro-cli --test beweismessung` (no GREEN unless Lean checked something) · the bridge `bruecke/`: its duty files equal the printer, `lake build` green, every bridge theorem on the three standard axioms |
+| `instrumente/pruefe-gabbrov.py` | GabbroV (`programmlogik/`) | `lake build` without `sorryAx` · the person's proofs and the GabbroV files carry no `sorry`/`axiom` · the bridge `bruecke/` builds over the tracked duty files and its theorems depend on the standard axioms only |
 
 ```bash
-./instrumente/abnahme.py                 # all four, one after the other
-./instrumente/abnahme.py --lean          # or --llvm, --pruefer, --gabbrov
+./instrumente/abnahme.py                 # both, one after the other
+./instrumente/abnahme.py --lean          # or --gabbrov
 ```
 
-**Exit codes, the same in all four:** `0` measured and green · `1` measured and something is open ·
+**Exit codes, the same in both:** `0` measured and green · `1` measured and something is open ·
 `2` **nothing, or not everything, was measured** (a missing tool, a stage that could not run). `2` is
 never green, and what stands behind it was not measured. Each guardian prints its work quantity beside
 the verdict (W17) and runs with a pinned locale.
 
-**A fifth guardian is not built.** What is to be checked next becomes a test in `cargo test`, a Lean
-theorem, or a stage in one of the four. The old counters (mark ratchets, document-figure guards,
-the mutation run, the C-emitter stages) are retired (the C emitter itself was removed on 2026-10-17, tag `archiv/c-emitter-2026-10-17`); their figures in other documents are dated
-results, not guarded values.
+**A third guardian is not built.** What is to be checked next becomes a Lean theorem or a stage in one of
+the two. The Rust-side guardians (LLVM compiler, checker, sentence register) were deleted with `crates/` on
+2026-11-10; their figures in other documents are dated results, not guarded values.
 
-**Heavy runs — one at a time, with `free -g` beside them:** `cargo build`, `cargo test --no-fail-fast`,
-`lake build`, the acceptance run. Never two in one tree (`cargo test` rebuilds the model with `lake` and
-replaces the `.olean` files running `lean` processes read). An agent gets its own working directory.
+**Heavy runs — one at a time, inside a memory scope, with `free -g` beside them:** `lake build`, direct `lean`
+checks, the acceptance run. An agent gets its own working directory.
 
 ### Known open items of the guardians
-* `pruefe-gabbrov.py` covers four proof units; the tree-wide duty run (`gabbro prove` over every unit)
-  and the obligation-manifest completeness comparison (E1) are not wired in.
-* The mutation run over the checker (388 anchors, 34 measured nothing at the last run) is retired and
-  not replaced.
-* The German comment ratchet (8 600 of 48 500 checker comment lines are German) is not guarded.
+* The duty files the bridge imports are tracked inputs; the generator that printed them (Rust) is gone and a
+  Lean generator is owed.
 
 ## 2. The working rules
 

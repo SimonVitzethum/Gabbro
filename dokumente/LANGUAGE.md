@@ -7,7 +7,7 @@ kernels, drivers and ordinary programs.
 | For | Read |
 |---|---|
 | the notation (EBNF, closed vocabulary, one Lean constructor per production) | [`SYNTAX.md`](SYNTAX.md) — machine-read by guardians; **this file does not repeat it** |
-| a first program | [`TUTORIAL.md`](TUTORIAL.md) |
+| a first program | [`TUTORIAL.md`](SYNTAX.md) |
 | what is proved, and the goal theorem | [`PROOF.md`](PROOF.md) |
 | the checker: every pass, rule and diagnostic code | [`CHECKER.md`](CHECKER.md) |
 | why the design is the way it is | [`DESIGN.md`](DESIGN.md) |

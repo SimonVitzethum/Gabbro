@@ -1,11 +1,10 @@
 # Gabbro
 
-> **Status 2026-11-05: research prototype, work in progress. There is NO working Gabbro compiler and NO working
+> **Status 2026-11-10: research prototype, work in progress. There is NO working Gabbro compiler and NO working
 > Gabbro checker yet.**
 > What exists is a Lean 4 model with a proved goal theorem, and Stage 0, a partial verified path from Gabbro to an
-> assembly IR. The Rust checker and the LLVM emitter in this repository are **outdated**. They remain only for
-> testing and demonstration until a working, verified Gabbro checker and compiler exist. Do not use them for real
-> programs, and do not treat anything they accept or emit as checked.
+> assembly IR. The repository holds Lean and one assembly file (the runner); the outdated Rust checker, the LLVM
+> emitter and the C probes were deleted on 2026-11-10 and live in git history only.
 
 Gabbro is a systems programming language designed so that **the user proves only their own logic and named hardware
 assumptions**. Memory safety, race freedom, contracts and time are meant to be carried by the language and proved once
@@ -16,10 +15,9 @@ over its model.
 | Part | State |
 |---|---|
 | **Lean model and goal theorem** (`grammatik/`) | `gabbro_ziel` is proved over the model on exactly `propext`, `Classical.choice`, `Quot.sound`, with witnesses and refusal probes. The checker inside the statement is the Lean one. |
-| **Stage 0** (`stage0/`, `runner/`) | Lean compiles part of the userspace language to the IR `S0IR` with a generic lowering theorem; an x86-64 assembly runner executes it. Of 315 source regressions, 218 pass, 76 expected executions are refused at compilation and 21 refusal expectations differ; no executed case returned a wrong exit code. These counts are not language coverage. |
+| **Stage 0** (`stage0/`, `runner/`) | Lean compiles part of the userspace language to the IR `S0IR` with a generic lowering theorem; an x86-64 assembly runner executes it. Of 320 source regressions, 242 pass (167 executions, 75 expected refusals), 68 expected executions are refused at compilation and 10 refusal diagnostics differ; no executed case returned a wrong exit code (measured 2026-11-06). These counts are not language coverage. |
 | **Native floats** (`nativefloat/`) | Floating operations are opaque in Lean and executed by the CPU. `RootNativeFloat.Hardware` is the explicit, ISA-independent hardware assumption (bit codec, order, conversions, literals, correct rounding of `+ - * /`). Instruction-level correspondence per target is still owed. |
-| **GabbroV** (`programmlogik/`, `bruecke/`) | Derives the user's logic obligations in Lean from source, for five programs. |
-| **Rust checker and LLVM emitter** (`crates/`) | **Outdated, not verified, not maintained to the Lean model.** Kept for tests and demonstration only. |
+| **GabbroV** (`programmlogik/`, `bruecke/`) | The `Body` model and the bridge to machine G, with duty files for five programs. The duty printer was part of the deleted Rust tool; the five files are tracked inputs until a Lean generator exists. |
 
 ## What does not exist
 
@@ -54,12 +52,6 @@ specification, and the compiled code is verified against the CPU. The proof runs
 (`vollstaendig_hinreichend`), together with logic proofs (GabbroV). Stage 0 is the first verified slice of this path.
 Open: M and N as concrete values for the whole model, the lowering cells, the CPU model for the final machine code
 (the x86-64 runner's instruction subset is tested against the CPU), and the checker and compiler themselves.
-
-## Legacy tools (testing only)
-
-`gabbro check`, `gabbro build` and the other `crates/` commands need Rust 1.86+ and, for `build`, the LLVM tools `opt`,
-`llc` and `ld.lld`. They run the outdated Rust checker and emitter, so their results prove nothing about Gabbro. See the
-[tutorial](dokumente/TUTORIAL.md) and [build system](dokumente/BUILD-SYSTEM.md) for what they do.
 
 ## Documents
 
