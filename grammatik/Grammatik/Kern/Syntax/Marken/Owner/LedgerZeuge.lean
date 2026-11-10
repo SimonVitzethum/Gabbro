@@ -50,22 +50,22 @@ end Gabbro.Grammatik.OwnerWitness
 
 namespace Gabbro.Grammatik.OwnerWitness
 
-private def stepProgram : Programm D where
+def stepProgram : Programm D where
   invariante := fun i => nomatch i
   requires := fun _ => .tru
   ensures := fun _ => .tru
   rumpf := fun _ => .cons (.ite .tru .nil .nil) (.ret .empty List.Perm.nil)
 
-private def stepOracle : Orakel D where
-  wirkt := fun _ w _ => (w, .empty)
+def stepOracle : Orakel D where
+  wirkt := fun _ w _ => (w, 0)
   regLies := fun r => nomatch r
   regSchreib := fun r => nomatch r
   sichtbar := fun g => nomatch g
 
-private def stepStore : Speicher D :=
+def stepStore : Speicher D :=
   ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g => nomatch g⟩
-private def stepInit : Faden → Σ f : D.Fn, Env D (D.params f) := fun _ => ⟨0, .nil⟩
-private abbrev stepStart := RufStartG stepProgram stepStore stepInit
+def stepInit : Faden → Σ f : D.Fn, Env D (D.params f) := fun _ => ⟨0, .nil⟩
+abbrev stepStart := RufStartG stepProgram stepStore stepInit
 
 /-- One executed unfolding preserves the minted owner on a reachable machine. -/
 theorem ownerInvG_erreichbar_zeuge : ∃ M : RufMaschineG D,

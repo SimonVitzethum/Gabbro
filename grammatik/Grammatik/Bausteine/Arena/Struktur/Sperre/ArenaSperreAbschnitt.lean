@@ -61,8 +61,8 @@ theorem freiH_post {a : Abs} {o : Ausgang V l Γ} (h : StrukturPost K a o) :
     have hok : (K.sperr L).inv L σ.speicher = true := (Dekl.sperr_inv_iff' σ).mpr h.1
     simp only [freiH, hok, if_true]
     exact ⟨⟨h.1.gibt K L, StrukturPasst.leer K _ _⟩, fun e he => by cases he⟩
-  | zurueck σ v => exact ⟨h.gibt K L, fun e he => by cases he⟩
-  | why σ r => exact ⟨h.gibt K L, fun e he => by cases he⟩
+  | zurueck σ v => exact ⟨h, fun e he => by cases he⟩
+  | why σ r => exact ⟨h, fun e he => by cases he⟩
   | leave hh σ ρ => exact absurd h id
   | next hh σ ρ => exact absurd h id
   | logik e => exact ⟨trivial, fun e' he => he⟩

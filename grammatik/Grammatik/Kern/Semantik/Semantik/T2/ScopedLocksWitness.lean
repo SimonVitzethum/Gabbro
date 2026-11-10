@@ -13,7 +13,7 @@ def unit : UProg := {
   locks := [{name := "inherited", rank := 0, guard := []},
     {name := "outer", rank := 1, guard := []}, {name := "inner", rank := 2, guard := []}]
   fns := [{name := "returner", params := [], kinds := [], res := none, resBool := true,
-    gruende := 1, held := ["inherited"], puts := [], gives := [], body := [], ret := .bool .tru}] }
+           gruende := 1, held := ["inherited"], puts := [], gives := [], body := [], ret := .bool .tru}] }
 
 abbrev D := declOf unit
 def fn : D.Fn := ⟨0, by decide⟩
