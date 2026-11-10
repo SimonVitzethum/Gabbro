@@ -414,11 +414,15 @@ and the sentence register went with the Rust checker.)
 
 ## 11. Direct compiler: goals that still stand
 
-The hardware model and the full Gabbro-to-final-binary pipeline are completed in Lean without a persistent SSA
-IR or a second source interpreter: the typed source plus checked target blocks and bytes, recomputed
-certificates, and candidates that a Lean validator checks (source-derived unit, all
-reachable support, entry and binding bytes, linking and relocation, the final mapping). Source safety, G/GX
-concurrency, IEEE, contracts, call logs and budget guarantees remain; OS and freestanding profiles stay generic.
+The full compiler is written in Gabbro and formally verified, without refinement and without translation
+validation (owner, 2026-11-10): nothing is checked per compilation and refused. Its design is
+[MACHINE-IR-PLAN.md](dokumente/MACHINE-IR-PLAN.md): one architecture-neutral SSA IR (GIR) of micro-operations;
+every optimisation, register allocation and scheduling included, has a logic proof with GabbroV; real
+instructions are assigned to neutral cells of GIR by a per-target table; the test set M over the cells proves the
+emitted machine code and is the evidence of the one named hardware assumption. GabbroV is independent of M and N.
+Order: Stage 0 first, then GabbroV written in Gabbro with an initial Lean proof, then the compiler. Source safety,
+G/GX concurrency, floats, contracts, call logs and budget guarantees remain; OS and freestanding profiles stay
+generic.
 
 Performance against equivalent C built with `gcc -O3` or `clang -O3` (the faster of the two): minimum 100 % on every workload
 class and ISA (Simon, 2026-10-25; was 80 %), ambitious above 110 %.
