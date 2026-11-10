@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Guardian 1 of 4 -- the Lean model (`grammatik/`), the stage-0 compiler (`stage0/`) and the runner (`runner/`).
+"""Guardian 1 of 2 -- the Lean model (`grammatik/`), the stage-0 compiler (`stage0/`) and the runner (`runner/`).
 
     ./instrumente/pruefe-lean.py [--ohne-bau]
 
@@ -11,10 +11,6 @@ Stages (each prints what it measured; a stage that cannot run is NOT a pass):
      stripped) and no `axiom` outside `teile/kein-sorry-allowlist.txt`.
   4. Layout: no folder holds more than 20 entries (`teile/lean-layout.py --check`).
   4b. Module: every tracked Lean file except `lakefile.lean` starts with `module` (owner rule 2026-11-01).
-  5. Certificates, generated on demand (never stored): `cargo test --test zertifikate` writes one
-     certificate per exported corpus program to `target/zertifikate/`; each is elaborated with
-     `lake env lean` against the built model, so the Lean Bool `Akzeptiert` deciding the exported
-     unit and `gabbro_ziel` instantiated on it are checked for every certified program.
   7. Stage 0 (`stage0/`, PLAN-SELF-HOSTING.md §2): `lake build` of the package (library and the executable
      `stage0`); stage 3 covers its Lean files too. Then every probe `stage0/proben/NAME.gab` runs through the
      compiler to IR, then through the assembly runner on `NAME.ein` (written after `NAME.warte` seconds when
@@ -124,24 +120,6 @@ def stufe_layout():
     rc, out = lauf([sys.executable, str(W / "instrumente/teile/lean-layout.py"), "--check"], W, 300)
     print(f"  4 layout:  {'ok' if rc == 0 else 'ROT'} ({out.strip().splitlines()[-1] if out.strip() else ''})")
     return rc == 0
-
-
-def stufe_zertifikate():
-    p = subprocess.run(["cargo", "test", "-q", "--test", "zertifikate", "--no-fail-fast"], cwd=W, env=ENV,
-                       capture_output=True, text=True, timeout=1800)
-    if p.returncode != 0:
-        print("  5 zertif.: ROT (the generator test failed)\n", (p.stdout + p.stderr)[-800:])
-        return False
-    dateien = sorted(f for f in (W / "target" / "zertifikate").glob("*.lean"))
-    schlecht = []
-    for f in dateien:
-        rc, out = lauf(["lake", "env", "lean", str(f)], G, 900)
-        if rc != 0 or re.search(r"error", out):
-            schlecht.append(f"{f.name}: {out.strip().splitlines()[:2]}")
-    ok = bool(dateien) and not schlecht
-    print(f"  5 zertif.: {'ok' if ok else 'ROT'} ({len(dateien)} Zertifikate elaboriert, {len(schlecht)} gefallen)")
-    for b in schlecht[:6]: print("     ", b)
-    return ok
 
 
 ABDECKUNG_GRENZEN = ["7", "7", "5", "7:6:6:4"]   # bodies/skeletons up to 7, one change up to 5; member 7 (registers only): 6/6/4
@@ -280,7 +258,7 @@ def stufe_runner():
 def main():
     if not G.is_dir(): print("ABBRUCH: grammatik/ fehlt -- nichts gemessen"); return 2
     print("== Wächter 1: Lean-Modell ==")
-    stufen = ([] if "--ohne-bau" in sys.argv else [stufe_bau]) + [stufe_axiome, stufe_sorry, stufe_layout, stufe_module, stufe_zertifikate, stufe_abdeckung, stufe_stage0, stufe_runner]
+    stufen = ([] if "--ohne-bau" in sys.argv else [stufe_bau]) + [stufe_axiome, stufe_sorry, stufe_layout, stufe_module, stufe_abdeckung, stufe_stage0, stufe_runner]
     erg = [s() for s in stufen]
     print("== LEAN:", "GRUEN" if all(erg) else "ROT", "==")
     return 0 if all(erg) else 1

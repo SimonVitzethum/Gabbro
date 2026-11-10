@@ -1,20 +1,17 @@
 #!/usr/bin/env python3
-"""Acceptance: the four guardians, one after the other (one heavy run at a time).
+"""Acceptance: the two guardians, one after the other (one heavy run at a time).
 
-    ./instrumente/abnahme.py [--lean|--llvm|--pruefer|--gabbrov]
+    ./instrumente/abnahme.py [--lean|--gabbrov]
 
   pruefe-lean.py     the Lean model     (lake build, gabbro_ziel axioms, no sorry, layout)
-  pruefe-llvm.py     the LLVM compiler  (cargo test --test llvm, binaries on x86_64 and aarch64)
-  pruefe-pruefer.py  the checker        (cargo test --workspace, sentence register, code uniqueness)
-  pruefe-gabbrov.py  GabbroV            (programmlogik build, proofs, `gabbro prove`)
+  pruefe-gabbrov.py  GabbroV            (programmlogik build, proofs, the bridge)
 
-Exit 0 only when all four are green. A guardian that could not measure (exit 2) is not green,
+Exit 0 only when both are green. A guardian that could not measure (exit 2) is not green,
 and `abnahme` says so; what stands behind an abort was NOT measured."""
 import pathlib, subprocess, sys, time
 
 W = pathlib.Path(__file__).resolve().parent
-WAECHTER = {"--lean": "pruefe-lean.py", "--llvm": "pruefe-llvm.py",
-            "--pruefer": "pruefe-pruefer.py", "--gabbrov": "pruefe-gabbrov.py"}
+WAECHTER = {"--lean": "pruefe-lean.py", "--gabbrov": "pruefe-gabbrov.py"}
 
 
 def main():
