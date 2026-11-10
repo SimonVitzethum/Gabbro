@@ -133,10 +133,13 @@ theorem gvLuecke_statik_ohne_form
     (h : (match al with
       | none => some 1
       | some e => ProfilBindung.ausrichtungWert
-          (consts.map (fun (n, z) => (n, z.toNat))) e).any ausrichtungB = false) :
+          (consts.map (fun ((n, z) : String × Int) => (n, Int.toNat z))) e).any ausrichtungB = false) :
     ∃ e, uGlobs consts alias (.globT m a t v al s sh :: rest) = .error e := by
   refine ⟨"global " ++ a ++ ": invalid alignment", ?_⟩
-  simp only [uGlobs, h, Bool.not_false, ↓reduceIte]
+  simp only [uGlobs]
+  rw [if_pos]
+  simp only [Bool.not_eq_true']
+  exact h
 /-
   CUTS (review gaps, agent 01 follow-up -- ALL CLOSED as theorems):
   L_a (`gvLuecke_sp4_ist_sp0`: computed memory is 104's declared memory, by
