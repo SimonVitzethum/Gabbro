@@ -6,7 +6,7 @@
   stehen je Datei im Kopf. *Der Wert dieser Arbeit liegt darin, dass das Modell dem Rust
   WIDERSPRECHEN kann -- wer den Rust abschreibt, vernichtet genau das.*
 
-  Kein `mathlib`. `TODO.md`: "Der Prueferalgorithmus -- Bereichsverbaende, Wirkungshuellen
+  Kein `mathlib`. The former work list: "Der Prueferalgorithmus -- Bereichsverbaende, Wirkungshuellen
   ueber dem Aufrufgraphen, Rangordnung, Linearitaet -- ist endliche Mathematik ohne
   `mathlib`-Tiefe."
 

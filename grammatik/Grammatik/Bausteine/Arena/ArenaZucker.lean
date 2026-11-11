@@ -43,7 +43,7 @@
   hard bound, the `else` branch is not entered, so the surface form that omits it is sound
   for any choice of branch. That is the syntactic half of `Arena.alloc_innerhalb_reserve`.
 
-  WHAT IS STILL OPEN AND IS BOOKED, NOT HIDDEN (`dokumente/TODO.md` O14): the Rust exporter
+  WHAT IS STILL OPEN AND IS BOOKED, NOT HIDDEN (former work item O14): the Rust exporter
   `lean_g.rs` refuses an arena declaration (`LG001`) instead of lowering it to this
   table-plus-global pair, so no arena program closes a translation-validation chain YET.
   The form now exists; the export does not.

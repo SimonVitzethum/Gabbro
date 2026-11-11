@@ -2,7 +2,7 @@
   File:      Grammatik/GabbroV/GvSplits.lean
   Subject:   GabbroV: disjunctive callee postconditions and call chains (agent 05).
 
-  TODO.md section 0f, two open items: (a) a callee with a DISJUNCTIVE
+  Two open items of the former work list (section 0f): (a) a callee with a DISJUNCTIVE
   postcondition multiplies the proof goals of the GabbroV pipeline
   (`beispiele/126`: 94 goals); (b) a CHAIN of 64 calls (`beispiele/147`,
   `148`, `tick_runde`) is not instantiated by twelve rounds of the

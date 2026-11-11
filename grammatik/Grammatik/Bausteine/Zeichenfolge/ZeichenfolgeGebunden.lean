@@ -211,7 +211,7 @@ end Gabbro.Grammatik
     (`bindex_geschuetzt`), never `k < max` alone (`bindex_max_beweist_nichts`).
   - The max bound (`N486`, `1 ..= 65535`) is the checker's decision, not the model's: `BString max` takes any `max`.
   - NO library text (L4): formatting, parsing and UTF handling stay
-    library work per `TODO.md` section 0b.
+    library work.
   - Planted-defect check: `bconcat_ablehnt` / `bliteral_ablehnt` prove
     the refusals, and a claim of an over-max concat success fails red
     (defect probe kept outside the tree, see the report).

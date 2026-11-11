@@ -70,7 +70,7 @@ def groesseExpr : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}, Expr D Γ Λ τ 
   | _, _, _, .forallSlots _ body _ => 1 + groesseExpr body
   | _, _, _, .existsSlots _ body _ => 1 + groesseExpr body
   | _, _, _, .reaches _ _ _ a b _ => 1 + groesseExpr a + groesseExpr b
-  -- Aggregate values (2026-10-25) are not generated yet: outside every finite stage (TODO.md).
+  -- Aggregate values (2026-10-25) are not generated yet: outside every finite stage.
   | _, _, _, .arrNil => unendlich
   | _, _, _, .arrCons a b => unendlich + 1 + groesseExpr a + groesseExpr b
   | _, _, _, .arrGet a i => unendlich + 1 + groesseExpr a + groesseExpr i
@@ -203,7 +203,7 @@ def groesseEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l �
   | _, _, _, .bindCallInd p args _ _ _ rest => 1 + groesseExpr p + groesseArgs args + groesseEnd rest
   | _, _, _, .bindCallIndElse p args _ _ _ err rest =>
     1 + groesseExpr p + groesseArgs args + groesseEnd err + groesseEnd rest
-  -- the end-block forms of stage 0 are not drawn yet (TODO.md): their size lies beyond every bound
+  -- the end-block forms of stage 0 are not drawn yet: their size lies beyond every bound
   | _, _, _, .narrow e _ _ sonst rest => unendlich + 1 + groesseExpr e + groesseEnd sonst + groesseEnd rest
   | _, _, _, .bindAxiomOpt .. => unendlich + 1
   | _, _, _, .bindAxiomOptElse .. => unendlich + 1

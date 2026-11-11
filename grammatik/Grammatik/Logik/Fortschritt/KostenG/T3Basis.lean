@@ -206,7 +206,7 @@ def spiegelE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .awaits _ _ _ _ _ rest => spiegelE rest
   | .bindCallInd .. => false
   | .bindCallIndElse .. => false
-  -- the end-block forms of stage 0 are outside the checker's mirror until `kosten.rs` prices them (TODO.md)
+  -- the end-block forms of stage 0 are outside the checker's mirror until `kosten.rs` prices them
   | .narrow .. => false
   | .narrowRequired .. => false
   | .retScoped .. => false

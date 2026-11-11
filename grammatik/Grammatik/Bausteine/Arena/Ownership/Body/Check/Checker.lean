@@ -279,7 +279,7 @@ def chkE : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → Endblock D V l 
       chkE err k ((c.afterCall (modeList (sigIface A I fs n).1) (originList c args)).bind none) &&
       chkE rest k (resultContextB (c.afterCall (modeList (sigIface A I fs n).1) (originList c args))
         (sigIface A I fs n).2)
-  -- the end-block forms of stage 0 have no ownership judgment yet (`OE`, TODO.md): refused, never passed
+  -- the end-block forms of stage 0 have no ownership judgment yet (`OE`): refused, never passed
   | _, _, _, .narrow .., _, _ => false
   | _, _, _, .narrowRequired .., _, _ => false
   | _, _, _, .retScoped .., _, _ => false

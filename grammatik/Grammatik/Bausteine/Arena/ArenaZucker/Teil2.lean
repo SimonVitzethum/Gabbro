@@ -70,7 +70,7 @@ end Gabbro.Grammatik
     its only model-side consequence -- the `else` branch cannot run while the counter is
     under the bound -- IS proved (`arenaAlloc_unter_schranke`).
   * **The exporter does not produce these terms.** `gabbro lean-g` refuses an arena
-    declaration (`LG001`), so no arena program closes a chain yet. Booked as `TODO.md`
+    declaration (`LG001`), so no arena program closes a chain yet. Booked as former work item
     O14; the form existing is the precondition for that work, not a substitute for it.
   * **`Arena.lookup` returns the slot POSITION, not a stored value** (`Arena.lean`'s own
     cuts), so the bridge in section 5 is about the counter and the index, not about

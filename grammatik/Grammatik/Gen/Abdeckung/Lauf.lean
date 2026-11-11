@@ -81,7 +81,7 @@ def G_REGION : String :=
 
 def G_AGGREGAT : String :=
   "aggregate values (THEOREM-MAP 99): the generator gives arrays and strings the size `unendlich` and never draws " ++
-  "them (TODO.md §2, generator support for aggregates)"
+  "them (generator support for aggregates)"
 
 def G_WENN : String :=
   "the conditional and the narrowed value (THEOREM-MAP 103): the generator gives it the size `unendlich` and never draws it"
