@@ -163,6 +163,7 @@ def textLiterals : SExpr → List String
   | .bin _ a b => textLiterals a ++ textLiterals b
   | .call _ args | .built _ args | .ext _ _ args => args.flatMap textLiterals
   | _ => []
+termination_by e => sizeOf e
 
 /-- The candidate is canonical G evaluation. Its literal is certified separately,
     retaining the complete value and its exact source constructor. -/

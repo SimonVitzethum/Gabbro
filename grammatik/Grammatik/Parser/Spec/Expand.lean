@@ -33,6 +33,7 @@ def resolveKnownBodies (source : List SItemTief) : SItemTief → Except String S
   | .pubT it => do return .pubT (← resolveKnownBodies source it)
   | .gateT it => do return .gateT (← resolveKnownBodies source it)
   | it => pure it
+termination_by item => sizeOf item
 
 
 

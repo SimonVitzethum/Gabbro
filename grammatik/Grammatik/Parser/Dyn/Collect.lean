@@ -66,6 +66,7 @@ end
 def constantUses : SKonstWert → List STyp
   | .one e => expressionUses e
   | .rows values => values.flatMap constantUses
+termination_by v => sizeOf v
 
 /-- Collect written dynamic types before erasing their abstract identity. -/
 def typeUses : STyp → List STyp

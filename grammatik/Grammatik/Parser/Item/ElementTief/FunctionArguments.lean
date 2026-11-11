@@ -57,5 +57,6 @@ def literalLocals : SAnw → List String
     .locks _ _ body | .watch _ body | .grow _ _ body | .child body => literalLocals body
   | .block statements _ => statements.flatMap literalLocals
   | _ => []
+termination_by s => sizeOf s
 
 end Gabbro.Grammatik.Parser

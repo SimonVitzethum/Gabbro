@@ -19,6 +19,7 @@ def expression (values : List (String × SExpr)) : SExpr → SExpr
   | .old e => .old (expression values e)
   | .ext k ns args => .ext k ns (args.map (expression values))
   | e => e
+termination_by e => sizeOf e
 
 /-- Substitute both kinds of parameters in structured surface types. -/
 def surfaceType (types : List (String × STyp)) (values : List (String × SExpr)) :

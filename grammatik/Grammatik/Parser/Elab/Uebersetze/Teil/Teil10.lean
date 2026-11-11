@@ -22,8 +22,8 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
     let (beforeStmt, ctx, statement) ← expandFoldStmt ctx statement
     let (code, ctx) ← uAnwReiheCore tabs koepfe (fuel + 1) ctx (statement :: rest)
     pure (beforeStmt ++ code, ctx)
-termination_by fuel _ _ => (fuel, (1 : Nat))
-decreasing_by all_goals exact Prod.Lex.right _ (by omega)
+termination_by fuel _ _ => 2 * fuel + 1
+decreasing_by all_goals (simp_wf <;> omega)
 /-- A run of body statements as a flat list. A `let` extends the context for the rest of the run;
     `locks L { ... }` elaborates its body with `L` HELD (guards, calls) and the bindings made inside it
     end with it; returns retain lexical cleanup scopes, while unsupported lock expressions are refused.
@@ -291,8 +291,8 @@ def uAnwReiheCore (tabs : List UTab) (koepfe : List UFnKopf) :
       match uAnwReihe tabs koepfe f ctx rest with
       | .error e => .error e
       | .ok (xs, cE) => .ok (st :: xs, cE)
-termination_by fuel _ _ => (fuel, (0 : Nat))
-decreasing_by all_goals exact Prod.Lex.left _ _ (by omega)
+termination_by fuel _ _ => 2 * fuel
+decreasing_by all_goals (simp_wf <;> omega)
 end
 
 /-- Exclusive blocks read their ending in the actual body context, then resume

@@ -399,6 +399,7 @@ def entfalteItem (ks : FrageKontext) : SItemTief → Except String SItemTief
   | .implGroupT name types effects bodies => do
     pure (.implGroupT name types effects (← bodies.mapM (entfalteItem ks)))
   | item => pure item
+termination_by item => sizeOf item
 
 /-- The single Phase-1 expansion: adapters first, then `?` with their complete signatures.
     Adapter targets keep the existing ordinary-function admission rule. -/
