@@ -164,10 +164,10 @@ def itemMetadata : SItemTief → Bool
   | .stateT .. => false
   | .checkT c => c.sonde.isSome || bodyMetadata 10000 c.canFail
   | .accT _ _ m p _ => p.isNone || !accOperatorBound m
-  | .modT .. | .useT .. | .asmT .. | .formatT .. | .devT .. | .assumT ..
+  | .assumT .. => false -- the unit keeps the name (`UProg.annahmen`); the assumption stays owed
+  | .modT .. | .useT .. | .asmT .. | .formatT .. | .devT ..
   | .axiomT .. | .atomT .. | .rcuT .. | .concT .. | .walkT .. | .entryT ..
-  | .bootT .. | .varT .. | .goalT .. | .profT .. | .gateT .. | .pubT ..
-  | .arenaT .. => true
+  | .bootT .. | .varT .. | .goalT .. | .profT .. | .gateT .. | .pubT .. | .arenaT .. => true
 
 /-- Reader-supported alignment erases no duty: type and section checks remain.
     Actual value/name validity still belongs to profile placement and uGlobs. -/
