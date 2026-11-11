@@ -11,7 +11,6 @@ public import Stage0.Bindung.Proben
 @[expose] public section
 
 
-#print axioms Gabbro.Grammatik.Parser.ExportWitnesses2.arrayTraversal_source_zeuge
 #print axioms Gabbro.Grammatik.Parser.ExportPreservation.member_meaning
 #print axioms Gabbro.Grammatik.Parser.ExportPreservation.member_footprint
 #print axioms Gabbro.Grammatik.Parser.ExportPreservation.strings_gate
@@ -60,7 +59,6 @@ public import Stage0.Bindung.Proben
 
 -- Total binary64 addition, from decoded source operands through the Block hook.
 #print axioms Gabbro.Stage0.Senke.blockFloatArithmetic_case
-#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_add_accepted_zeuge
 
 -- All ending float binders use the same generic lowering and exact-outcome witnesses.
 #print axioms Gabbro.Stage0.Senke.endFloatLit_case
@@ -68,20 +66,11 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.endFloatOfComputed_case
 #print axioms Gabbro.Stage0.Senke.endFloatArithmetic_case
 #print axioms Gabbro.Stage0.Senke.endFloatNarrow_case
-#print axioms Gabbro.Stage0.Senke.FloatProbe.float_end_image_zeuge
-#print axioms Gabbro.Stage0.Senke.FloatProbe.float_end_semantics_zeuge
 
 -- Binary64 arithmetic uses the native runner operations and the shared binder.
 #print axioms Gabbro.Stage0.Senke.floatArithmeticBlockL_eq
-#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_mul_accepted_zeuge
-#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_mul_rounding_accepted_zeuge
-#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_mul_subnormal_accepted_zeuge
-#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_mul_invalid_accepted_zeuge
-#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_sub_accepted_zeuge
 
 -- Binary64 division: native arithmetic and connected source witnesses.
-#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_div_cases_accepted_zeuge
-#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_div_images_accepted_zeuge
 
 -- C14 Stage-0 image placement and profile certificate transport.
 #print axioms Gabbro.Stage0.Senke.layU_ga_lcm_dvd

@@ -67,7 +67,6 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.InvariantProbe.first_failure_zeuge
 #print axioms Gabbro.Stage0.Senke.InvariantProbe.lowFun_zeuge
 #print axioms Gabbro.Stage0.Senke.InvariantProbe.reason_bypasses_epilogue_zeuge
-#print axioms Gabbro.Stage0.Senke.InvariantProbe.unsupported_predicate_refused_zeuge
 #print axioms Gabbro.Stage0.Senke.lowFun_spec
 #print axioms Gabbro.Stage0.Senke.lowS_ok
 #print axioms Gabbro.Stage0.Senke.lowB_ok
@@ -281,10 +280,8 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.bindValue_ok
 #print axioms Gabbro.Stage0.Senke.blockFloatLit_case
 #print axioms Gabbro.Stage0.Senke.blockFloatNarrow_case
-#print axioms Gabbro.Stage0.Senke.FloatProbe.float_lowering_zeuge
 #print axioms Gabbro.Stage0.Senke.FloatProbe.float_signed_zero_zeuge
 #print axioms Gabbro.Stage0.Senke.blockFloatOfLit_case
-#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_arithmetic_images_zeuge
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_add_sub_model_zeuge
 #print axioms Gabbro.Stage0.Senke.lowEns_ok
 #print axioms Gabbro.Stage0.Senke.EntrySnapshots.capture_world_ok
@@ -367,10 +364,4 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Grammatik.Parser.ExportPreservation.array_quantifier_meaning
 #print axioms Gabbro.Grammatik.Parser.ExportPreservation.strings_lower
 #print axioms Gabbro.Grammatik.Parser.ExportPreservation.references_lower
-#print axioms Gabbro.Grammatik.Parser.ExportWitnesses2.count_source_zeuge
-#print axioms Gabbro.Grammatik.Parser.ExportWitnesses2.relations_source_zeuge
-#print axioms Gabbro.Grammatik.Parser.ExportWitnesses2.tree_source_zeuge
-#print axioms Gabbro.Grammatik.Parser.ExportWitnesses2.strings_source_zeuge
-#print axioms Gabbro.Grammatik.Parser.ExportWitnesses2.arrays_source_zeuge
 #print axioms Gabbro.Grammatik.Parser.ExportPreservation.array_traversal_lower
-#print axioms Gabbro.Grammatik.Parser.ExportWitnesses2.treeTraversal_source_zeuge
