@@ -1,5 +1,6 @@
 module
 public import Stage0.IRBild
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -45,36 +46,17 @@ set_option maxHeartbeats 2000000
 def text : String :=
   "module tagged_dispatch_probe { spec Select[T] { fn choose(value : T) -> bool effects {} costs <= 8 ops; } impl Select[u8] { fn choose(value : u8) -> bool effects {} costs <= 3 ops { return value == 7; } } impl Select[bool] { fn choose(value : bool) -> bool effects {} costs <= 3 ops { return value; } } tagged type Choice = { Number(u8), Truth(bool) } by Select; impl fn main() -> u8 { let left : Choice = Number(7); let a = Select::choose(left); let right : Choice = Truth(false); let b = Select::choose(right); if a && !b { return 23; } return 0; } }"
 
-/-- The actual source frontend retains the parsed closed-dispatch declarations. -/
-theorem source_present : (Frontend.source text).toOption.isSome = true := by
-  decide +kernel
+/-- A spec function must declare its cost, and the export gate refuses every declared cost of
+    a spec group: no checked binding carries it to the generated dispatcher. The closed
+    dispatch therefore stops at source loading, before its dispatcher is generated. -/
+theorem source_refused : Frontend.source text = .error
+    "source export: SItemTief.specGroupT: type/provider/proof duties lack a checked source binding" := by
+  kernel_rfl
 
-/-- The candidate includes spec resolution, both implementation bodies and the generated dispatcher. -/
-def candidate : Except String (Emitted text 256) := emit text 256
-
-theorem candidate_present : candidate.toOption.isSome = true := by
-  decide +kernel
-
-def output : Emitted text 256 := candidate.toOption.get candidate_present
-
-theorem accepted_image : emit text 256 = .ok output :=
-  Gabbro.Grammatik.except_ok_get candidate_present
-
-/-- Both case implementations and the dispatcher are emitted with the caller; the sum is retained. -/
-theorem image_shape :
-    output.compiled.unit.fns.length = 4 ∧
-    output.compiled.unit.sums.map (·.name) = ["Choice"] ∧
-    output.compiled.unit.fns.any (fun fn => fn.name ==
-      Gabbro.Grammatik.Parser.taggedDispatchName "Choice" "Select" "choose") = true ∧
-    (fnAt output.compiled.unit output.compiled.main).body.countP
-      (fun | .bindCall _ callee _ => callee ==
-        Gabbro.Grammatik.Parser.taggedDispatchName "Choice" "Select" "choose" | _ => false) = 2 ∧
-    0 < output.image.code.length ∧ 16 < output.bytes.length := by
-  decide +kernel
-
-theorem canonical_source : CanonicalSourceProgram output.compiled :=
-  compile_source_program text output.compiled
-
-theorem image_correct [Runner.IR.Kern] [Senke.CloneOK] : output.Correct := output.correct
+/-- This is a source-to-image refusal, not an isolated declaration-expansion probe. -/
+theorem compilation_refused : (compile text).toOption.isNone = true ∧
+    emit text 256 = .error
+      "source export: SItemTief.specGroupT: type/provider/proof duties lack a checked source binding" :=
+  ⟨by kernel_rfl, by kernel_rfl⟩
 
 end Gabbro.Stage0.Pipeline.TaggedDispatchWitness
