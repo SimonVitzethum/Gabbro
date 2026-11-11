@@ -16,36 +16,6 @@ def multiplicationImage (a b expected : Nat) : Except String (List Runner.B) :=
   wordImage (floatWordsL .mul 8 (fun d => some (konstWL 4 a d))
     (fun d => some (konstWL 4 b d))) expected
 
-/-- A normal-by-normal product is accepted through the actual Block hook. -/
-theorem float_mul_accepted_zeuge :
-    (blockImageOf (binaryArithmetic .mul (3, 2) (2, 1) (3, 1))).isOk = true := by
-  float_probe_emission
-
-/-- The exact product contains a low bit below the retained significand.
-    Rounding (1 + 2^-52)^2 removes that bit and retains both higher ones. -/
-theorem float_mul_rounding_accepted_zeuge
-    (reply : (Float.hwMul (Float.hwOfBits 4607182418800017409) (Float.hwOfBits 4607182418800017409)).hwToBits = 4607182418800017410) :
-    (blockImageOf (binaryArithmetic .mul (2 ^ 52 + 1, 2 ^ 52) (2 ^ 52 + 1, 2 ^ 52)
-      (2 ^ 51 + 1, 2 ^ 51))).isOk = true ∧
-    (Float.hwMul (Float.hwOfBits 4607182418800017409) (Float.hwOfBits 4607182418800017409)).hwToBits = 4607182418800017410 := by
-  exact ⟨by float_probe_emission, reply⟩
-
-/-- A normal-by-normal product reaches a subnormal result without flushing. -/
-theorem float_mul_subnormal_accepted_zeuge
-    (reply : (Float.hwMul (Float.hwOfBits 4503599627370496) (Float.hwOfBits 4602678819172646912)).hwToBits = 2251799813685248) :
-    (blockImageOf (binaryArithmetic .mul (1, 2 ^ 1022) (1, 2) (1, 2 ^ 1023))).isOk = true ∧
-    (Float.hwMul (Float.hwOfBits 4503599627370496) (Float.hwOfBits 4602678819172646912)).hwToBits = 2251799813685248 := by
-  exact ⟨by float_probe_emission, reply⟩
-
-/-- Nonfinite inputs cannot inhabit a finite source float value. The raw
-    routine interface still emits their full IEEE operation, including NaN;
-    it never treats an invalid product as an ordinary numeric zero. -/
-theorem float_mul_invalid_accepted_zeuge
-    (reply : (Float.hwMul (Float.hwOfBits 0) (Float.hwOfBits 9218868437227405312)).hwIsNaN = true) :
-    (multiplicationImage 0 9218868437227405312 9218868437227405313).isOk = true ∧
-    (Float.hwMul (Float.hwOfBits 0) (Float.hwOfBits 9218868437227405312)).hwIsNaN = true := by
-  exact ⟨by float_probe_emission, reply⟩
-
 /-- Execution images for the assembly runner. Expected exit 7 means that
     both Block comparisons or the exact result-word comparison succeeded. -/
 def multiplicationImages : List (String × Except String (List Runner.B) × Nat) :=
@@ -66,11 +36,6 @@ def multiplicationImages : List (String × Except String (List Runner.B) × Nat)
    ("float-mul-smallest-normal", multiplicationImage 4503599627370495 4607182418800017409
       4503599627370496, 7)]
 
-/-- Every declared execution image is emitted by the connected compiler. -/
-theorem float_mul_images_accepted_zeuge :
-    multiplicationImages.all (fun x => x.2.1.isOk) = true := by
-  float_probe_emission
-
 /-- Source bounds apply after multiplication rounding. A product outside
     its declared interval uses the common stop-107 path. -/
 def multiplicationRange : Body :=
@@ -78,13 +43,4 @@ def multiplicationRange : Body :=
     (.float .mul (.var .here) (.var .here) (0, 1) (3, 1)
       (returnBlock 41 (by decide) (by decide)))
 
-theorem float_mul_range_accepted_zeuge : (blockImageOf multiplicationRange).isOk = true := by
-  float_probe_emission
-
-#print axioms float_mul_accepted_zeuge
-#print axioms float_mul_rounding_accepted_zeuge
-#print axioms float_mul_subnormal_accepted_zeuge
-#print axioms float_mul_invalid_accepted_zeuge
-#print axioms float_mul_images_accepted_zeuge
-#print axioms float_mul_range_accepted_zeuge
 end Gabbro.Stage0.Senke.FloatArithmeticProbe

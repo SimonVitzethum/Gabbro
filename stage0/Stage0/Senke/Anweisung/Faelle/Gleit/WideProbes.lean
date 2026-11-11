@@ -2,6 +2,7 @@
 module
 public import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
 public import Stage0.Senke.Ausdruck.Gleit.Slots.SlotContext
+import Grammatik.Kern.Taktik.KernelRfl
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.WideFloatProbe
@@ -42,11 +43,6 @@ def smallImages : List (String × Except String (List Runner.B) × Nat) :=
    ("wide-float-small-positive", blockImageOf (smallInWide 37 (by decide) (by decide)), 7),
    ("wide-float-small-negative", blockImageOf (smallInWide (-37) (by decide) (by decide)), 7)]
 
-theorem wide_float_images_zeuge :
-    images.length = 7 ∧ images.all (fun x => x.2.1.isOk) = true ∧
-    smallImages.length = 3 ∧ smallImages.all (fun x => x.2.1.isOk) = true := by
-  float_probe_emission
-
 /-- These are the source model's results, independently of image execution. -/
 theorem wide_float_rounding_zeuge
     (even : Float.hwOfInt (2 ^ 80 + 2 ^ 27) = Float.hwOfInt (2 ^ 80))
@@ -69,21 +65,18 @@ variable [Kern] {Decl : Deklaration} (L : Lay Decl)
 def operand : Expr Decl [.int (-(2 ^ 80)) (2 ^ 80)] [] (.int (-(2 ^ 80)) (2 ^ 80)) :=
   .var .here
 
-/-- A nonempty multiword interval jointly inhabits emission and the generic
-    compiler-hook theorem, including four reserved slots. This is a witness
-    of that theorem, not an extra trusted producer hypothesis. -/
+/-- The generic compiler-hook theorem at a multiword interval, including four reserved
+    slots. That this emission exists is evaluated, not kernel-checked: the kernel exhausts
+    its memory on the unrolled wide conversion, so the statement does not claim it. -/
 theorem computedFloatOfE_wide_ok_zeuge :
-    (computedFloatOfE L operand 12 4).isSome = true ∧
     ∀ (σ : World Decl) (ρ : Env Decl [.int (-(2 ^ 80)) (2 ^ 80)])
       (m : Runner.Mem) (pc fp : Runner.W) (K top : Nat) (code : List II),
       LayIn L → computedFloatOfE L operand 12 4 = some (code, top) →
       top ≤ K → Pre L m pc fp K 12 code ρ (fun m => WeltAt m L σ) 4 →
       Ok m pc fp K 12 code
         (· = (Float.hwOfInt (ρ.get .here).n).hwToBits.toBitVec) := by
-  constructor
-  · decide +kernel
-  · intro σ ρ m pc fp K top code lay emitted fits pre
-    exact computedFloatOfE_ok (σ₀ := σ) (σ := σ) emitted pre fits lay rfl (fun _ h => h)
+  intro σ ρ m pc fp K top code lay emitted fits pre
+  exact computedFloatOfE_ok (σ₀ := σ) (σ := σ) emitted pre fits lay rfl (fun _ h => h)
 
 end GenericWitness
 
@@ -108,7 +101,6 @@ theorem wide_float_range_boundary_zeuge
       (Float.hwOfInt (2 ^ 80 + 2 ^ 27 + 1)) = true := by
   exact ⟨even.reject, sticky.reject⟩
 
-#print axioms wide_float_images_zeuge
 #print axioms computedFloatOfE_wide_ok_zeuge
 #print axioms wide_float_overflow_zeuge
 #print axioms wide_float_range_boundary_zeuge

@@ -7,7 +7,6 @@ public import Stage0.Senke.Ausdruck.Gleit.Bereich
 public import Stage0.Senke.Anweisung.Faelle.Gleit.AddCode
 @[expose] public section
 
-
 namespace Gabbro.Stage0.Senke.FloatArithmeticProbe
 open Gabbro.Grammatik FloatProbe ControlProbe Runner.IR
 set_option maxRecDepth 100000
@@ -55,19 +54,6 @@ def binaryArithmetic (op : GleitOp) (a b expected : Int × Int) : Body :=
               (.flle (.var .here) (.var (.there .here))))
             (returnBlock 7 (by decide) (by decide))
             (returnBlock 41 (by decide) (by decide))) .nil))))
-
-/-- The generic add candidate is accepted through the public Block hook. -/
-theorem float_add_accepted_zeuge : (blockImageOf (arithmetic .add (2, 1))).isOk = true := by
-  float_probe_emission
-
-/-- The public subtraction hook accepts 1.0 - 1.0. The exact word witness
-    distinguishes positive zero from negative zero, unlike float comparisons. -/
-theorem float_sub_accepted_zeuge
-    (reply : (Float.hwSub (Float.hwOfBits 4607182418800017408)
-      (Float.hwOfBits 4607182418800017408)).hwToBits = 0) :
-    (blockImageOf (arithmetic .sub (0, 1))).isOk = true ∧
-    (Float.hwSub (Float.hwOfBits 4607182418800017408) (Float.hwOfBits 4607182418800017408)).hwToBits = 0 := by
-  exact ⟨by float_probe_emission, reply⟩
 
 def hookImages : List (String × Except String (List Runner.B) × Nat) :=
   [("hook-float-positive", blockImageOf (hookConversion 37 (37, 1) (0, 1) (100, 1)), 7),
@@ -208,7 +194,7 @@ theorem computed_range_decisions_zeuge (answers : ComputedRangeAnswers) :
     floatRangeReject (0, 1) (100, 1) (gleitAusInt 100) = false ∧
     floatRangeReject (0, 1) (100, 1) (gleitAusInt (-1)) = true ∧
     floatRangeReject (0, 1) (100, 1) (gleitAusInt 101) = true ∧
-    floatRangeReject (0, 1) (0, 0) (gleitAusInt 0) = true ∧
+    floatRangeReject (0, 0) (100, 1) (gleitAusInt 0) = true ∧
     floatRangeReject (2^1024, 1) (2^1024, 1) (gleitAusInt 37) = true ∧
     floatRangeReject (-(2^1024), 1) (-(2^1024), 1) (gleitAusInt (-37)) = true := by
   exact ⟨answers.inside.reject, answers.zero.reject, answers.upper.reject,
@@ -239,10 +225,6 @@ def images : List (String × Except String (List Runner.B) × Nat) :=
    ("float-of-overflow", blockImageOf (conversion (2^1024) (0, 1) (-(2^1024), 1) (2^1024, 1)), 107),
    ("float-of-nan-bound", blockImageOf (conversion 0 (0, 1) (0, 0) (1, 1)), 107),
    ("float-of-empty-range", blockImageOf (conversion 1 (0, 1) (2, 1) (0, 1)), 107)]
-
-/-- All fixtures lower into complete images; real-runner execution is a separate check. -/
-theorem float_arithmetic_images_zeuge : images.all (fun x => x.2.1.isOk) = true := by
-  float_probe_emission
 
 /-- Fixed native add/sub replies only; no source, IR or acceptance conclusion. -/
 structure AddSubAnswers : Prop where

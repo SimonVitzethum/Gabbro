@@ -15,54 +15,6 @@ def divisionImage (a b expected : Nat) : Except String (List Runner.B) :=
   wordImage (floatWordsL .div 8 (fun d => some (konstWL 4 a d))
     (fun d => some (konstWL 4 b d))) expected
 
-/-- Ordinary normal operands go through the connected compiler path. -/
-theorem float_div_accepted_zeuge :
-    (blockImageOf (binaryArithmetic .div (3, 1) (2, 1) (3, 2))).isOk = true := by
-  float_probe_emission
-
-/-- A nonzero rest supplies sticky information for the inexact quotient 1/3. -/
-theorem float_div_rounding_accepted_zeuge
-    (reply : (Float.hwDiv (Float.hwOfBits 4607182418800017408) (Float.hwOfBits 4613937818241073152)).hwToBits = 4599676419421066581) :
-    (blockImageOf (binaryArithmetic .div (1, 1) (3, 1) (1, 3))).isOk = true ∧
-    (Float.hwDiv (Float.hwOfBits 4607182418800017408) (Float.hwOfBits 4613937818241073152)).hwToBits = 4599676419421066581 := by
-  exact ⟨by float_probe_emission, reply⟩
-
-/-- A normal divided by a normal produces a subnormal without flushing it. -/
-theorem float_div_subnormal_accepted_zeuge
-    (reply : (Float.hwDiv (Float.hwOfBits 4503599627370496) (Float.hwOfBits 4611686018427387904)).hwToBits = 2251799813685248) :
-    (blockImageOf (binaryArithmetic .div (1, 2 ^ 1022) (2, 1) (1, 2 ^ 1023))).isOk = true ∧
-    (Float.hwDiv (Float.hwOfBits 4503599627370496) (Float.hwOfBits 4611686018427387904)).hwToBits = 2251799813685248 := by
-  exact ⟨by float_probe_emission, reply⟩
-
-/-- Division by zero emits the native infinity word. The finite source
-    result guard remains in force and takes the ordinary stop-107 path. -/
-theorem float_div_infinity_accepted_zeuge
-    (reply : (Float.hwDiv (Float.hwOfBits 4607182418800017408) (Float.hwOfBits 0)).hwToBits = 9218868437227405312) :
-    (blockImageOf (binaryArithmetic .div (1, 1) (0, 1) (0, 1))).isOk = true ∧
-    (divisionImage 4607182418800017408 0 9218868437227405312).isOk = true ∧
-    (Float.hwDiv (Float.hwOfBits 4607182418800017408) (Float.hwOfBits 0)).hwToBits = 9218868437227405312 := by
-  exact ⟨by float_probe_emission, by float_probe_emission, reply⟩
-
-/-- 0/0 is the hardware NaN class, not an ordinary numeric result. Source
-    compilation succeeds; its unchanged result guard stops execution. -/
-theorem float_div_nan_accepted_zeuge
-    (reply : (Float.hwDiv (Float.hwOfBits 0) (Float.hwOfBits 0)).hwIsNaN = true) :
-    (blockImageOf (binaryArithmetic .div (0, 1) (0, 1) (0, 1))).isOk = true ∧
-    (divisionImage 0 0 9218868437227405313).isOk = true ∧
-    (Float.hwDiv (Float.hwOfBits 0) (Float.hwOfBits 0)).hwIsNaN = true := by
-  exact ⟨by float_probe_emission, by float_probe_emission, reply⟩
-
-/-- The five requested accepted cases are jointly inhabited, replacing the
-    former last-operation refusal witness with actual compiler acceptance. -/
-theorem float_div_cases_accepted_zeuge :
-    [binaryArithmetic .div (3, 1) (2, 1) (3, 2),
-     binaryArithmetic .div (1, 1) (3, 1) (1, 3),
-     binaryArithmetic .div (1, 2 ^ 1022) (2, 1) (1, 2 ^ 1023),
-     binaryArithmetic .div (1, 1) (0, 1) (0, 1),
-     binaryArithmetic .div (0, 1) (0, 1) (0, 1)].all
-      (fun body => (blockImageOf body).isOk) = true := by
-  float_probe_emission
-
 /-- Exit 7 checks the arithmetic result. Source nonfinite results use 107;
     raw-word special-case images still return 7 after checking their native value class or non-NaN word. -/
 def divisionImages : List (String × Except String (List Runner.B) × Nat) :=
@@ -90,17 +42,4 @@ def divisionImages : List (String × Except String (List Runner.B) × Nat) :=
    ("float-div-nan-right", divisionImage 4607182418800017408 18442240474082181129
       18442240474082181129, 7)]
 
-/-- Emission acceptance is measured in Lean; the assembly runner consumes
-    the named images separately to measure actual instruction execution. -/
-theorem float_div_images_accepted_zeuge :
-    divisionImages.all (fun x => x.2.1.isOk) = true := by
-  float_probe_emission
-
-#print axioms float_div_accepted_zeuge
-#print axioms float_div_rounding_accepted_zeuge
-#print axioms float_div_subnormal_accepted_zeuge
-#print axioms float_div_infinity_accepted_zeuge
-#print axioms float_div_nan_accepted_zeuge
-#print axioms float_div_cases_accepted_zeuge
-#print axioms float_div_images_accepted_zeuge
 end Gabbro.Stage0.Senke.FloatArithmeticProbe

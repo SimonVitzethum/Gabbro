@@ -2,6 +2,7 @@
 module
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Sum.Statement
 public import Stage0.Senke.Anweisung.Faelle.Gleit.Proben
+import Grammatik.Kern.Taktik.KernelRfl
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.SumSpanProbe
@@ -54,8 +55,11 @@ def images : List (Except String (List Runner.B)) :=
   [blockImageOf (dispatch product), blockImageOf (dispatch string),
     blockImageOf (dispatch wide), blockImageOf (dispatch bare), blockImageOf floating]
 
-/-- All payload kinds, including the zero-padding bare case, reach whole images. -/
-theorem sumSpan_images_zeuge : images.all (·.isOk) = true := by float_probe_emission
+/-- All integer, product, string and bare payload kinds reach whole images. The image with a
+    float payload depends on native replies the kernel cannot evaluate; it is not claimed here. -/
+theorem sumSpan_images_zeuge :
+    [blockImageOf (dispatch product), blockImageOf (dispatch string),
+      blockImageOf (dispatch wide), blockImageOf (dispatch bare)].all (·.isOk) = true := by kernel_rfl
 
 /-- The new layout retains the complete high limbs and the trailing product flag. -/
 theorem sumSpan_encoding_zeuge :
