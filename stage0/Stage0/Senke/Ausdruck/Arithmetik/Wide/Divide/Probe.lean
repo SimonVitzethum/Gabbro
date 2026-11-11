@@ -21,9 +21,11 @@ def frameByte (words : List Nat) (a : Runner.W) : Runner.B :=
     BitVec.ofNat 8 (words.getD ((a.toNat - 1048640) / 8) 0 / 256 ^ ((a.toNat - 1048640) % 8))
   else 0
 
+/-- The frame words are looked up first, so a frame read never evaluates the code. -/
 def probeMem (code : List II) (words : List Nat) : Runner.Mem where
-  b a := if 2048 ≤ a.toNat ∧ a.toNat < 2048 + (code.flatMap encII).length then
-      ((code.flatMap encII)[a.toNat - 2048]?).getD 0 else frameByte words a
+  b a := if 1048640 ≤ a.toNat ∧ a.toNat < 1048640 + 8 * words.length then frameByte words a
+    else if 2048 ≤ a.toNat ∧ a.toNat < 2048 + (code.flatMap encII).length then
+      ((code.flatMap encII)[a.toNat - 2048]?).getD 0 else 0
   rd _ := true
   wr _ := true
 
@@ -40,11 +42,15 @@ theorem probe_code (code : List II) (words : List Nat)
   have low : 2048 ≤ 2048 + i := by omega
   have upper : 2048 + i < 2048 + (code.flatMap encII).length := by omega
   change (probeMem code words).b (BitVec.ofNat 64 (2048 + i)) = (code.flatMap encII)[i]
-  show (if 2048 ≤ (BitVec.ofNat 64 (2048 + i)).toNat ∧
+  show (if 1048640 ≤ (BitVec.ofNat 64 (2048 + i)).toNat ∧
+      (BitVec.ofNat 64 (2048 + i)).toNat < 1048640 + 8 * words.length then
+        frameByte words (BitVec.ofNat 64 (2048 + i))
+      else if 2048 ≤ (BitVec.ofNat 64 (2048 + i)).toNat ∧
       (BitVec.ofNat 64 (2048 + i)).toNat < 2048 + (code.flatMap encII).length then
         ((code.flatMap encII)[(BitVec.ofNat 64 (2048 + i)).toNat - 2048]?).getD 0
-      else frameByte words (BitVec.ofNat 64 (2048 + i))) = _
-  rw [address, if_pos ⟨low, upper⟩, Nat.add_sub_cancel_left, List.getElem?_eq_getElem hi]
+      else 0) = _
+  rw [address, if_neg (by omega), if_pos ⟨low, upper⟩, Nat.add_sub_cancel_left,
+    List.getElem?_eq_getElem hi]
   rfl
 
 theorem probe_frame (code : List II) (words : List Nat) : FrameOK (probeMem code words) 1048576 34 :=

@@ -9,6 +9,38 @@
     (`Zulassung.checkU_akzeptiert` accepts them in `AkzeptiertX`). -/
 module
 public import Stage0.IRBild
+import Grammatik.Kern.Taktik.KernelRfl
+import all Init.Data.Repr
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Export
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Ableitung
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Zulassung
@@ -40,7 +72,7 @@ theorem stage0_anspruch_erfuellt :
         d.gates.map fun g => (fnAt checkU g).name)) =
       .ok [("p#probe", ["p#tor#g"])] ∧
     checkB checkP [] [] (List.finRange checkU.fns.length) checkChecks = true :=
-  ⟨rfl, checkU_checkB⟩
+  ⟨by kernel_rfl, checkU_checkB⟩
 
 /-- Both floor verdicts, the executable bound counterprobe, and both foreign
     gate forms use the same source/elaboration/lowering/admission path. No
