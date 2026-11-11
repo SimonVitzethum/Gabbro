@@ -2,12 +2,17 @@
 module
 public import Stage0.Senke.Images.BildLese
 public import Grammatik.Proben.InvGlobalZeuge
+import Grammatik.Kern.Taktik.KernelRfl
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.InvariantProbe
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option maxRecDepth 100000
 set_option maxHeartbeats 2000000
+
+local macro "bounded" : tactic => `(tactic| exact Nat.le_of_ble_eq_true rfl)
+local macro "listed" : tactic => `(tactic| first
+  | exact List.mem_cons_self | exact List.mem_cons_of_mem _ List.mem_cons_self)
 
 /-- Both predicates are owed by the global-only writer; the mixed group has two guards. -/
 def D (mixed : Bool) : Deklaration := { cgD with
@@ -16,15 +21,19 @@ def D (mixed : Bool) : Deklaration := { cgD with
   invs := [false, true]
   invarianten_gehalten := by
     intro n i owed c member lock held
-    cases lock <;> decide }
+    cases lock <;> listed }
 
 def globalAccess (mixed i : Bool) : gdarf (D mixed) () (invSicht (D mixed) i) := by
   intro w hw
-  cases mixed <;> simp_all [D, invSicht, cgD, Res.von]
+  have guard : w = Sum.inl true := by cases mixed <;> exact List.eq_of_mem_singleton hw
+  subst guard
+  cases mixed <;> listed
 
 def tableAccess (i : Bool) : darf (D true) () (invSicht (D true) i) := by
   intro w hw
-  simp_all [D, invSicht, cgD, Res.von]
+  have guard : w = Sum.inl false := List.eq_of_mem_singleton hw
+  subst guard
+  listed
 
 def predicate : (mixed : Bool) → Bool → Expr (D mixed) [] (invSicht (D mixed) false) .bool
   | false, _ => .eq (.glob () (globalAccess false false)) (.lit 0)
@@ -34,8 +43,9 @@ def predicate : (mixed : Bool) → Bool → Expr (D mixed) [] (invSicht (D mixed
 def postAccess (mixed : Bool) (f : (D mixed).Fn) :
     gdarf (D mixed) () (vertragVon (D mixed) f).ende := by
   intro w hw
-  cases f <;> simp_all [D, cgD, cgSig, vertragVon, Vertrag.vonSig, Vertrag.ende,
-    Deklaration.signatur, Res.von]
+  have guard : w = Sum.inl true := List.eq_of_mem_singleton hw
+  subst guard
+  cases f <;> listed
 
 def program (mixed : Bool) : Programm (D mixed) where
   invariante i := by
@@ -47,9 +57,9 @@ def program (mixed : Bool) : Programm (D mixed) where
   rumpf f := match f with
     | .nurGlob =>
       .cons (.assignGlob () (.widen (by decide) (by decide) (.lit 1))
-          (by decide) (postAccess mixed CgFn.nurGlob))
+          rfl (postAccess mixed CgFn.nurGlob))
         (.cons (.assignGlob () (.widen (by decide) (by decide) (.lit 0))
-            (by decide) (postAccess mixed CgFn.nurGlob))
+            rfl (postAccess mixed CgFn.nurGlob))
           (.ret .empty (.refl _)))
     | .nurTab | .frei => .ret .empty (.refl _)
 
@@ -84,13 +94,13 @@ theorem frame (code : List II) : FrameOK (memory code) 8192 32 :=
   ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩
 
 theorem lay (mixed : Bool) : LayIn (layout mixed) := by
-  refine ⟨?_, ?_, by decide⟩
+  refine ⟨?_, ?_, by bounded⟩
   · intro t field k hk
     change (k : Int) < 2 at hk
     change 16384 ≤ 16400 + 8 * k ∧ 16400 + 8 * k + 8 ≤ 16416
     omega
   · intro g
-    exact ⟨by decide, by decide⟩
+    exact ⟨by bounded, by bounded⟩
 
 theorem represented [Kern] (mixed : Bool) :
     WeltAt (memory (emitted mixed).1) (layout mixed) (world mixed ⟨0, by decide, by decide⟩) := by
@@ -98,9 +108,9 @@ theorem represented [Kern] (mixed : Bool) :
   · intro t field k hk
     have bound : k = 0 ∨ k = 1 := by change (k : Int) < 2 at hk; omega
     rcases bound with rfl | rfl <;> cases mixed <;>
-      exact ValueAt.ofCellWord (w := 0) (by decide) (by decide +kernel) rfl
+      exact ValueAt.ofCellWord (w := 0) (by rfl) (by kernel_rfl) rfl
   · intro g
-    cases mixed <;> exact ValueAt.ofCellWord (w := 0) (by decide) (by decide +kernel) rfl
+    cases mixed <;> exact ValueAt.ofCellWord (w := 0) (by rfl) (by kernel_rfl) rfl
 
 theorem loaded (mixed : Bool) : CodeAt (memory (emitted mixed).1) 0 (emitted mixed).1 := by
   apply codeAt_bytes (emitted mixed).1 0 (by cases mixed <;> decide +kernel)
@@ -114,7 +124,8 @@ theorem loaded (mixed : Bool) : CodeAt (memory (emitted mixed).1) 0 (emitted mix
 theorem pre [Kern] (mixed : Bool) :
     PreS (layout mixed) (memory (emitted mixed).1) 0 8192 32 6 (emitted mixed).1
       (Env.nil : Env (D mixed) []) 1 := by
-  refine ⟨by decide, by decide, frame _, loaded mixed, ?_, (fun _ x => nomatch x),
+  refine ⟨by first | decide | bounded, by first | decide | bounded, frame _, loaded mixed, ?_,
+    (fun _ x => nomatch x),
     trivial, wstab_true _ _⟩
   cases mixed <;> unfold CodeFar <;> decide +kernel
 
@@ -134,12 +145,17 @@ theorem lowPost_ok_zeuge [Kern] (mixed : Bool) :
   refine ⟨by cases mixed <;> decide, by cases mixed <;> decide, ?_⟩
   have result := lowPost_ok (program mixed) CgFn.nurGlob
     (world mixed ⟨0, by decide, by decide⟩) (world mixed ⟨0, by decide, by decide⟩) .nil ()
-    (lower mixed) (by cases mixed <;> decide +kernel) (by decide) (lay mixed) (by decide) (memory (emitted mixed).1) 0 (pre mixed)
+    (lower mixed) (by cases mixed <;> decide +kernel) (by decide) (lay mixed) (by bounded)
+    (memory (emitted mixed).1) 0 (pre mixed)
     (represented mixed) (snapshots mixed)
   have noFault : returnFault (program mixed) CgFn.nurGlob
       (world mixed ⟨0, by decide, by decide⟩) (world mixed ⟨0, by decide, by decide⟩) .nil () = 0 := by
     cases mixed <;> decide +kernel
-  simpa only [noFault, ne_eq, not_true_eq_false, if_false, BitVec.zero_add] using result
+  simp only [noFault, ne_eq, not_true_eq_false, ite_false] at result
+  obtain ⟨m', star, agree⟩ := result
+  have zero : ∀ x : Runner.W, 0 + x = x := fun x => BitVec.zero_add x
+  rw [zero] at star
+  exact ⟨m', star, agree⟩
 
 /-- Ensures failure wins over a simultaneously false invariant. -/
 theorem ensures_first_zeuge :
@@ -152,7 +168,7 @@ theorem first_failure_zeuge (mixed : Bool) :
       (world mixed ⟨1, by decide, by decide⟩) .nil () = 103 ∧
     owedFailure (program mixed) CgFn.nurGlob
       (owedWorld (program mixed) CgFn.nurGlob (world mixed ⟨1, by decide, by decide⟩)) = some false := by
-  cases mixed <;> decide +kernel
+  cases mixed <;> exact ⟨by kernel_rfl, by kernel_rfl⟩
 
 /-- The actual function path accepts both carrier sets instead of rejecting every owed group. -/
 theorem lowFun_zeuge (mixed : Bool) :
@@ -181,7 +197,7 @@ def reasonProgram (mixed : Bool) : Programm (reasonD mixed) where
   invariante _ := .fls
   requires _ := .tru
   ensures _ := .fls
-  rumpf _ := .retWhy ⟨0, by decide⟩ (.refl _)
+  rumpf _ := .retWhy ⟨0, Nat.le_of_ble_eq_true rfl⟩ (.refl _)
 
 def reasonOracle (mixed : Bool) : Orakel (reasonD mixed) where
   wirkt a := nomatch a
@@ -200,6 +216,6 @@ theorem reason_bypasses_epilogue_zeuge (mixed : Bool) :
     schuldet (D := reasonD mixed) CgFn.nurGlob false = true ∧
     (match rufAt (reasonProgram mixed) (reasonOracle mixed) 1 1 CgFn.nurGlob
       (reasonWorld mixed) .nil with | .why _ r => r.val = 0 | _ => False) := by
-  cases mixed <;> decide +kernel
+  cases mixed <;> exact ⟨by kernel_rfl, by kernel_change ((0 : Nat) = 0); rfl⟩
 
 end Gabbro.Stage0.Senke.InvariantProbe
