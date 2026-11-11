@@ -16,7 +16,7 @@ def code : List II := [ci 1 5 2048 0, ci 15 5 5 0]
 theorem code_at : CodeAt (OldProbe.memory code) 0 code := by
   intro k hk
   have cases : k = 0 ∨ k = 1 := by change k < 2 at hk; omega
-  rcases cases with rfl | rfl <;> constructor <;> decide +kernel
+  rcases cases with rfl | rfl <;> constructor <;> decide +kernel +revert
 
 theorem pre [Kern] :
     PreS layout (OldProbe.memory code) 0 1024 16 5 code

@@ -4,6 +4,7 @@ public import Stage0.Senke.Tore.Answers
 public import Stage0.Senke.Tore.FallibleRun
 public import Stage0.Bindung.Proben
 public import Stage0.Senke.Welt.Schreib
+import Grammatik.Kern.Taktik.KernelRfl
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.ForeignAreaProbe
@@ -15,10 +16,10 @@ set_option maxHeartbeats 3000000
 def answerTy (bits : Nat) : Ty := .int 0 (2 ^ bits - 1)
 def u (bits : Nat) (fallible : Bool) : UProg := { ControlProbe.u with
   axs := [{name := "provider", params := [], kinds := [], res := some (answerTy bits),
-    gruende := if fallible then 1 else 0}] }
+           gruende := if fallible then 1 else 0}] }
 abbrev D (bits : Nat) (fallible : Bool) := declOf (u bits fallible)
-abbrev entry (bits : Nat) (fallible : Bool) : (D bits fallible).Fn := ⟨0, by decide⟩
-abbrev gate (bits : Nat) (fallible : Bool) : (D bits fallible).Ax := ⟨0, by decide⟩
+abbrev entry (bits : Nat) (fallible : Bool) : (D bits fallible).Fn := ⟨0, Nat.le_of_ble_eq_true rfl⟩
+abbrev gate (bits : Nat) (fallible : Bool) : (D bits fallible).Ax := ⟨0, Nat.le_of_ble_eq_true rfl⟩
 
 def retN (bits : Nat) (fallible : Bool) {Γ : Ctx} (n : Int) (lower : 0 ≤ n) (upper : n ≤ 100) :
     Endblock (D bits fallible) (vertragVon (D bits fallible) (entry bits fallible)) false Γ [] :=
@@ -55,14 +56,14 @@ def normal (bits : Nat) :
 def fallible (bits : Nat) :
     Endblock (D bits true) (vertragVon (D bits true) (entry bits true)) false [] [] :=
   .bindAxiomOptElse (some (answerTy bits)) (gate bits true) .nil rfl (admission bits true)
-    (fun t => Fin.elim0 t) (fun g => Fin.elim0 g) (by decide)
+    (fun t => Fin.elim0 t) (fun g => Fin.elim0 g) (Nat.le_of_ble_eq_true rfl)
     (handler bits) (success bits true)
 
 def nested (bits : Nat) :
     Endblock (D bits true) (vertragVon (D bits true) (entry bits true)) false [] [] :=
   .cons (.ite .tru
     (.bindAxiomOptElse (some (answerTy bits)) (gate bits true) .nil rfl (admission bits true)
-      (fun t => Fin.elim0 t) (fun g => Fin.elim0 g) (by decide) (handler bits)
+      (fun t => Fin.elim0 t) (fun g => Fin.elim0 g) (Nat.le_of_ble_eq_true rfl) (handler bits)
       (.cons (.ite (.eq (.var .here) (.lit (2 ^ 80)))
         (.cons (.ret (.val (.widen (by decide) (by decide) (.lit 17))) (.refl [])) .nil)
         (.cons (.ret (.val (.widen (by decide) (by decide) (.lit 19))) (.refl [])) .nil)) .nil)) .nil)
@@ -95,23 +96,23 @@ theorem multiword_images_zeuge :
     (image 96 false false).isOk = true ∧ (image 96 true false).isOk = true ∧
     (image 96 true true).isOk = true ∧ (image 192 false false).isOk = true ∧
     (image 192 true false).isOk = true ∧ (image 192 true true).isOk = true := by
-  decide +kernel
+  (repeat' apply And.intro) <;> kernel_rfl
 
 /-- The fixtures satisfy the canonical checker jointly with the emitted paths;
     the complete carrier enumeration is empty for this table-free program. -/
 theorem multiword_admission_zeuge :
-    Akzeptiert (program 96 false false) ⟨fun l => l.elim, fun l => l.elim⟩
+    Akzeptiert (program 96 false false) ⟨fun l => Fin.elim0 l, fun l => Fin.elim0 l⟩
       [entry 96 false] [] [] [entry 96 false] = true ∧
-    Akzeptiert (program 96 true false) ⟨fun l => l.elim, fun l => l.elim⟩
+    Akzeptiert (program 96 true false) ⟨fun l => Fin.elim0 l, fun l => Fin.elim0 l⟩
       [entry 96 true] [] [] [entry 96 true] = true ∧
-    Akzeptiert (program 96 true true) ⟨fun l => l.elim, fun l => l.elim⟩
+    Akzeptiert (program 96 true true) ⟨fun l => Fin.elim0 l, fun l => Fin.elim0 l⟩
       [entry 96 true] [] [] [entry 96 true] = true := by
-  decide +kernel
+  (repeat' apply And.intro) <;> kernel_rfl
 
 /-- A twelve-word value also exercises overlap when copied back down the frame. -/
 theorem overlapping_multiword_image_zeuge :
     valueWords (answerTy 768) = 12 ∧ (image 768 false false).isOk = true := by
-  decide +kernel
+  (repeat' apply And.intro) <;> kernel_rfl
 
 def oracle (bits : Nat) (canFail fail : Bool) : Orakel (D bits canFail) where
   wirkt _ σ _ := (σ, if fail then 1 else (2 ^ 80) * (if canFail then 2 else 1))
@@ -137,14 +138,14 @@ theorem multiword_paths_zeuge :
     observed 96 false false false = 17 ∧ observed 96 true false false = 17 ∧
     observed 96 true false true = 9 ∧ observed 96 true true false = 17 ∧
     observed 96 true true true = 9 ∧ observed 192 false false false = 17 := by
-  decide +kernel
+  (repeat' apply And.intro) <;> kernel_rfl
 
 /-- Omitting the clause cannot silently project an answer to its low word. -/
 theorem missing_area_refused_zeuge :
     plainForeignC (layU (u 96 false) (fun _ => some { binding false with resultArea := none }) 0)
       (gate 96 false) (.nil : Args (D 96 false) [] [] []) (answerTy 96) 8 0 = none ∧
     areaGut { binding false with resultArea := some 6 } 0 6 = false := by
-  decide +kernel
+  (repeat' apply And.intro) <;> kernel_rfl
 
 end Gabbro.Stage0.Senke.ForeignAreaProbe
 
@@ -159,7 +160,7 @@ def value : Wert D (answerTy 96) := ⟨2 ^ 80, by decide, by decide⟩
 /-- This is an explicit software service witness on the abstract runner
     relation, not a claim that a host system call implements this provider. -/
 theorem area_contract_zeuge :
-    @AreaContract { toHardware := inferInstance, ans := fun _ _ _ _ => True } D layout provider := by
+    @AreaContract D ({ toHardware := inferInstance, ans := fun _ _ _ _ => True } : Kern) layout provider := by
   letI : Kern := { toHardware := inferInstance, ans := fun _ _ _ _ => True }
   intro a b τ he j bound accepted σ ρ request m fp base K frame capacity separated below
     number arguments hidden unused world
@@ -193,6 +194,7 @@ theorem area_contract_zeuge :
     rw [slot_toNat frame.room (by have := valueWords_pos (answerTy 96); omega)]
     simp only [BitVec.toNat_ofNat]
     have room := frame.room
+    have positive : 0 < words.length := by rw [width]; exact valueWords_pos _
     dsimp only [address]
     omega
   have payload : ValueAt layout output fp base (answerTy 96) value := by
@@ -210,7 +212,7 @@ theorem area_contract_zeuge :
   · exact ⟨(fun t => Fin.elim0 t), (fun g => Fin.elim0 g),
       world.2.2.keep (writeSpan_wr _ _ _)⟩
   · refine .inl ⟨value, ?_, Or.inl rfl, payload⟩
-    decide +kernel
+    kernel_rfl
 
 /-- The exact layout/oracle pair jointly satisfies all inherited gate
     premises. Register-only obligations are impossible for an area profile. -/
