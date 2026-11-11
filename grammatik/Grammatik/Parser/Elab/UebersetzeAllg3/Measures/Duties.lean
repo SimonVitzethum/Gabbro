@@ -46,7 +46,7 @@ private theorem countP_rumpf : countP.rumpf 0 =
         (rufPasstB_ok (u := countdown) (by decide)) (by rfl)) .nil) .nil)
       (.ret .empty (List.Perm.refl [])) := by
   apply program_rumpf_of_lowerFn (ens := .tru) (req := .tru)
-  rfl
+  with_unfolding_all rfl
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -57,7 +57,7 @@ private theorem mutualP_rumpf_zero : mutualP.rumpf 0 =
         (rufPasstB_ok (u := mutualU) (by decide)) (by rfl)) .nil) .nil)
       (.ret .empty (List.Perm.refl [])) := by
   apply program_rumpf_of_lowerFn (ens := .tru) (req := .tru)
-  rfl
+  with_unfolding_all rfl
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -68,7 +68,7 @@ private theorem mutualP_rumpf_one : mutualP.rumpf 1 =
         (rufPasstB_ok (u := mutualU) (by decide)) (by rfl)) .nil) .nil)
       (.ret .empty (List.Perm.refl [])) := by
   apply program_rumpf_of_lowerFn (ens := .tru) (req := .tru)
-  rfl
+  with_unfolding_all rfl
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -81,7 +81,7 @@ private theorem nonTailP_rumpf : nonTailP.rumpf 0 =
           (rufPasstB_ok (u := nonTail) (by decide)) (by rfl)) .nil)) .nil)
       (.ret .empty (List.Perm.refl [])) := by
   apply program_rumpf_of_lowerFn (ens := .tru) (req := .tru)
-  rfl
+  with_unfolding_all rfl
 
 set_option maxRecDepth 100000 in
 private theorem acyclicP_rumpf : acyclicP.rumpf 0 = .ret .empty (List.Perm.refl []) := by
@@ -122,16 +122,22 @@ theorem countdown_duty_zeuge (passes : Nat) (Q : AxEns (declOf countdown))
     have casesN : n = 0 ∨ n = 1 := by omega
     rcases casesN with zero | one
     · subst n
-      simp [execEndHA, execStmtHA, execBlockHA, eval, Env.get, wahr?]
+      intro bad
+      with_unfolding_all cases bad
     · subst n
       intro bad
+      have hg : ∀ (v : Zahl 0 1) (ρ : Env (declOf countdown) _),
+          Env.get (Γ := (declOf countdown).params 0) (Env.cons (τ := .int 0 1) v ρ) Var.here = v :=
+        fun _ _ => rfl
       have safe := noDescent 0 (A [] (A [] state))
         (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) target
       cases hr : R 0 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
       | why world reason => exact Fin.elim0 reason
-      | _ => simp_all [execEndHA, execStmtHA, execBlockHA, massTor, Mass.wert,
-          countM_mass, lexLt, eval, evalArgs, evalErg, Env.get, Expr.orte, Args.orte,
+      | _ =>
+          simp_all [execEndHA, execStmtHA, execBlockHA, massTor, Mass.wert,
+          countM_mass, lexLt, eval, evalArgs, evalErg, Expr.orte, Args.orte,
           leseA, World.lese, World.merke, wahr?, Zahl.weiter]
+          all_goals first | exact safe rfl | exact safeNext rfl | (with_unfolding_all cases bad)
 
 /-- Both functions of the mutual cycle carry the same singleton tuple. -/
 theorem mutual_lengths_zeuge :
@@ -156,16 +162,25 @@ theorem mutual_duty_zeuge (passes : Nat) (Q : AxEns (declOf mutualU))
       have casesN : n = 0 ∨ n = 1 := by omega
       rcases casesN with zero | one
       · subst n
-        simp [execEndHA, execStmtHA, execBlockHA, eval, Env.get, wahr?]
+        intro bad
+        with_unfolding_all cases bad
       · subst n
         intro bad
+        have hg : ∀ (v : Zahl 0 1) (ρ : Env (declOf mutualU) _),
+            Env.get (Γ := (declOf mutualU).params 0) (Env.cons (τ := .int 0 1) v ρ) Var.here = v :=
+          fun _ _ => rfl
+        have hg1 : ∀ (v : Zahl 0 1) (ρ : Env (declOf mutualU) _),
+            Env.get (Γ := (declOf mutualU).params 1) (Env.cons (τ := .int 0 1) v ρ) Var.here = v :=
+          fun _ _ => rfl
         have safe := noDescent 1 (A [] (A [] state))
           (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) target
         cases hr : R 1 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
         | why world reason => exact Fin.elim0 reason
-        | _ => simp_all [execEndHA, execStmtHA, execBlockHA, massTor, Mass.wert,
+        | _ =>
+          simp_all [execEndHA, execStmtHA, execBlockHA, massTor, Mass.wert,
             mutualM_mass_zero, mutualM_mass_one, lexLt, eval, evalArgs, evalErg, Env.get,
             Expr.orte, Args.orte, leseA, World.lese, World.merke, wahr?, Zahl.weiter]
+          all_goals first | exact safe rfl | (with_unfolding_all cases bad)
   · change MassPflicht mutualP passes Q S T mutualM.mass (zykS mutualP [0, 1]) 1
     intro O _ _ _ U _ A _ R _ noDescent _ state env _ target _
     rw [mutualP_rumpf_one]
@@ -176,16 +191,25 @@ theorem mutual_duty_zeuge (passes : Nat) (Q : AxEns (declOf mutualU))
       have casesN : n = 0 ∨ n = 1 := by omega
       rcases casesN with zero | one
       · subst n
-        simp [execEndHA, execStmtHA, execBlockHA, eval, Env.get, wahr?]
+        intro bad
+        with_unfolding_all cases bad
       · subst n
         intro bad
+        have hg : ∀ (v : Zahl 0 1) (ρ : Env (declOf mutualU) _),
+            Env.get (Γ := (declOf mutualU).params 1) (Env.cons (τ := .int 0 1) v ρ) Var.here = v :=
+          fun _ _ => rfl
+        have hg0 : ∀ (v : Zahl 0 1) (ρ : Env (declOf mutualU) _),
+            Env.get (Γ := (declOf mutualU).params 0) (Env.cons (τ := .int 0 1) v ρ) Var.here = v :=
+          fun _ _ => rfl
         have safe := noDescent 0 (A [] (A [] state))
           (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) target
         cases hr : R 0 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
         | why world reason => exact Fin.elim0 reason
-        | _ => simp_all [execEndHA, execStmtHA, execBlockHA, massTor, Mass.wert,
+        | _ =>
+          simp_all [execEndHA, execStmtHA, execBlockHA, massTor, Mass.wert,
             mutualM_mass_zero, mutualM_mass_one, lexLt, eval, evalArgs, evalErg, Env.get,
             Expr.orte, Args.orte, leseA, World.lese, World.merke, wahr?, Zahl.weiter]
+          all_goals first | exact safe rfl | (with_unfolding_all cases bad)
 
 /-- The first call of this cycle is not in tail position; both calls really decrease the measure. -/
 theorem nonTail_duty_zeuge (passes : Nat) (Q : AxEns (declOf nonTail))
@@ -200,9 +224,13 @@ theorem nonTail_duty_zeuge (passes : Nat) (Q : AxEns (declOf nonTail))
     have casesN : n = 0 ∨ n = 1 := by omega
     rcases casesN with zero | one
     · subst n
-      simp [execEndHA, execStmtHA, execBlockHA, eval, Env.get, wahr?]
+      intro bad
+      with_unfolding_all cases bad
     · subst n
       intro bad
+      have hg : ∀ (v : Zahl 0 1) (ρ : Env (declOf nonTail) _),
+          Env.get (Γ := (declOf nonTail).params 0) (Env.cons (τ := .int 0 1) v ρ) Var.here = v :=
+        fun _ _ => rfl
       have safe := noDescent 0 (A [] (A [] state))
         (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) target
       cases hr : R 0 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
@@ -212,12 +240,16 @@ theorem nonTail_duty_zeuge (passes : Nat) (Q : AxEns (declOf nonTail))
           (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) target
         cases hs : R 0 (A [] world) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
         | why world' reason => exact Fin.elim0 reason
-        | _ => simp_all [execEndHA, execStmtHA, execBlockHA, massTor, Mass.wert,
-            nonTailM_mass, lexLt, eval, evalArgs, evalErg, Env.get, Expr.orte, Args.orte,
+        | _ =>
+          simp_all [execEndHA, execStmtHA, execBlockHA, massTor, Mass.wert,
+            nonTailM_mass, lexLt, eval, evalArgs, evalErg, Env.get.eq_def, Expr.orte, Args.orte,
             leseA, World.lese, World.merke, wahr?, Zahl.weiter]
-      | _ => simp_all [execEndHA, execStmtHA, execBlockHA, massTor, Mass.wert,
-          nonTailM_mass, lexLt, eval, evalArgs, evalErg, Env.get, Expr.orte, Args.orte,
+          all_goals first | exact safe rfl | exact safeNext rfl | (with_unfolding_all cases bad)
+      | _ =>
+          simp_all [execEndHA, execStmtHA, execBlockHA, massTor, Mass.wert,
+          nonTailM_mass, lexLt, eval, evalArgs, evalErg, Env.get.eq_def, Expr.orte, Args.orte,
           leseA, World.lese, World.merke, wahr?, Zahl.weiter]
+          all_goals first | exact safe rfl | exact safeNext rfl | (with_unfolding_all cases bad)
 
 /-- Acyclic source functions reuse the existing vacuous-cycle theorem, with their real exported measure. -/
 theorem acyclic_duty_zeuge (passes : Nat) (Q : AxEns (declOf acyclic))
