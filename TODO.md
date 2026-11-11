@@ -19,8 +19,36 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   Runner (86, all 14 axiom audits), Passlogik (16), Programmlogik (1,015) and Bruecke (1,607) build; the Runner CPU
   regression reports 20,989 checks without a difference, the float regression 1,178 IR images.
   Open:
-  1. **A complete `grammatik/` build.** The last full run was stopped at `UebersetzeProben11` under memory
-     throttling; the probe witnesses need 7-12 GB each and are resource-unmeasured, not refuted.
+  1. **A complete `grammatik/` build: 2,536 of 2,660 modules build (2026-11-11); 47 fail when built alone, 77
+     more wait behind them.** Root causes repaired on `dev`: `Ty.decEq`, `USide.decEq` and `UEns.decEq` recurse
+     structurally; the check elaborators under `Uebersetze/Pruefung` are exposed; `Size.source` is the kernel
+     `sizeOf` with its native realization as `implemented_by` (owner question open); seven front-end functions
+     under `elabU` have a `Nat` termination measure, so Lean compiles them through `WellFounded.Nat.fix` and the
+     kernel evaluates the elaborator on closed terms (one-function module: 1 s and 328 MB, before more than
+     9 GB). `Generic.instanceClosure` keeps its lexicographic measure and still does not reduce.
+     The 47, by class:
+     - **Statement false under the current model (decide which side is right before touching the witness):**
+       `Akku/Herkunft` (`herkunft_akku_angenommen`: `Kernzelle.accumulatorB` refuses the fixture; the first
+       witnesses of that file pass once `Init.Data.Int.Repr` and the string modules are imported with
+       `import all`, uncommitted in the tree); the 20 modules under `Gen/Text/Zeugen` (`textCheck` evaluates
+       to `false`, measured on `N3_0`); `Gen/Fein/Satz` (a cell no longer matches `NutzlastExpr.val`).
+     - **Pinned hashes moved** (also by the repairs above; re-read the components, then update the pins):
+       `Gen/Abdeckung/ZellenPruefung`, `Gen/Fein/Pruefung`.
+     - **Mechanical** (continued structure fields indented left of the first field, `private` fixtures named by
+       public statements, `rfl` over an irreducible function where `decide +kernel` is needed):
+       `Proben/Formen/UebersetzeProben32`, `Logik/Ruf/Guest/Witness`, `SourceFolds/HoistProofs`,
+       `SourceFolds/RangeZeugen`, `Instantiation/Witness`, `Measures/Duties`, `Transition/Proben/Refusals`,
+       `Logik/Ruf/RufLogikZeuge`.
+     - **Kernel evaluation still stuck or above 12 GB, cause not yet located:** `Export/ExportWitnesses`,
+       `Export/ExportWitnesses2`, `Generic/PipelineWitness`, `Modules/PipelineWitness/Parsing`,
+       `Proben/CallElse/Accepted`, `Proben/IndirectElse/Accepted`, `Proben/Formen/UebersetzeProben18` and `20`,
+       `Proben/Spaet/UebersetzeProben42`, `Proben/RightsConstants/Constants` and `Findings`,
+       `Pruefung/Fremdtor`, `Pruefung/Lauf/Zeugen`, `Records/EmbeddingProben`, `TaggedDispatch/SourceWitnesses`.
+     How to locate a stuck evaluation: follow `Lean.Kernel.whnf` down the major premises of the stuck recursor
+     to the blocking constant; its module is the missing `import all`, or it evaluates to `false` and the
+     statement is wrong. Plain `decide` reports "stuck" for a false kernel result too, so that message alone
+     says nothing. How to build: one module at a time (`lake build <Module>`, `LEAN_NUM_THREADS=1`, 14 GB
+     scope); eight probe modules at once exhaust 20 GB.
   2. **A complete `stage0/` build** including `SourceWitness` (collector/expansion and header consumers) and
      `Lauf.Zeugen`, then the Stage-0 axiom audits.
   3. **Source regression `proben-ir`: 242 of 320 pass** (167 executions, 75 expected refusals); 68 expected
