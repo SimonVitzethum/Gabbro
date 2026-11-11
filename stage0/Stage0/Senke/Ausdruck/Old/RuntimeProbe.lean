@@ -25,10 +25,13 @@ def params : Env D [.index 4] := .cons ⟨1, by decide, by decide⟩ .nil
 def expr : Expr D [.index 4] [] (.opt 4) := .oldS tab field (.var .here) access
 def code : List II := [ci 2 10 8 0] ++ selectFrameSpan 1 4 9 10 11
 
-/-- The four saved entry words are [0,3,0,0], and the original parameter is 1.
-    All current-world slots are empty, so reading the exit column would be wrong. -/
+/-- The four saved entry words are [-1, 2, -1, -1] (an absent option is -1), the original
+    parameter is 1, and every current-world slot holds -1, so reading the exit column
+    would be wrong. -/
 def memory : Runner.Mem where
-  b a := if a.toNat = 4136 then 3 else if a.toNat = 4160 then 1
+  b a := if 4136 ≤ a.toNat ∧ a.toNat < 4144 then (if a.toNat = 4136 then 2 else 0)
+    else if (4128 ≤ a.toNat ∧ a.toNat < 4160) ∨ (8192 ≤ a.toNat ∧ a.toNat < 8224) then 255
+    else if a.toNat = 4160 then 1
     else ((code.flatMap encII)[a.toNat]?).getD 0
   rd _ := true
   wr _ := true
@@ -50,10 +53,10 @@ theorem params_at : EnvAt layout memory 4096 params 4 := by
 
 theorem saved : EntrySnapshots.At layout entry memory 4096 (oldCells expr) 4 := by
   refine ⟨?_, ?_, ?_, ?_, trivial⟩
-  · exact ValueAt.of_enc (w := 0) (by decide) (by decide +kernel) (by show _ = _; kernel_rfl)
-  · exact ValueAt.of_enc (w := 3) (by decide) (by decide +kernel) (by show _ = _; kernel_rfl)
-  · exact ValueAt.of_enc (w := 0) (by decide) (by decide +kernel) (by show _ = _; kernel_rfl)
-  · exact ValueAt.of_enc (w := 0) (by decide) (by decide +kernel) (by show _ = _; kernel_rfl)
+  · exact ValueAt.of_enc (w := 18446744073709551615) (by decide) (by decide +kernel) (by show _ = _; kernel_rfl)
+  · exact ValueAt.of_enc (w := 2) (by decide) (by decide +kernel) (by show _ = _; kernel_rfl)
+  · exact ValueAt.of_enc (w := 18446744073709551615) (by decide) (by decide +kernel) (by show _ = _; kernel_rfl)
+  · exact ValueAt.of_enc (w := 18446744073709551615) (by decide) (by decide +kernel) (by show _ = _; kernel_rfl)
 
 theorem layout_in : LayIn layout := by
   refine ⟨?_, (fun g => Fin.elim0 g), by decide⟩
@@ -79,7 +82,8 @@ theorem world_at [Kern] : WeltAt memory layout exitWorld := by
   subst f
   have cases : k = 0 ∨ k = 1 ∨ k = 2 ∨ k = 3 := by change (k : Int) < 4 at hk; omega
   rcases cases with rfl | rfl | rfl | rfl <;>
-    exact ValueAt.ofCellWord (w := 0) (by decide) (by decide +kernel) rfl
+    exact ValueAt.ofCellWord (w := 18446744073709551615) (by rfl) (by decide +kernel +revert)
+      (by show _ = _; kernel_rfl)
 
 theorem pre [Kern] : PreS layout memory 0 4096 32 9 code params 4 :=
   ⟨by decide, by decide, frame, code_at, by unfold CodeFar; decide +kernel,
@@ -93,10 +97,14 @@ theorem runtime_oldS_ok_zeuge [Kern] :
     EntrySnapshots.At layout entry memory 4096 (oldCells expr) 4 ∧
     eval entry expr exitWorld params ≠ eval exitWorld expr exitWorld params ∧
     ValueOk layout memory 0 4096 32 9 code (.opt 4) (eval entry expr exitWorld params) := by
-  refine ⟨rfl, pre, saved, by decide +kernel, ?_⟩
-  exact lowEns_ok placement entry exitWorld (fun _ h => h) layout_in expr 9 code 12
-    rfl (by decide) memory 0 params
-    (PreS.welt pre (Nat.le_refl _) world_at layout_in (by decide)) saved rfl
+  refine ⟨rfl, pre, saved, ?_, ?_⟩
+  · intro same
+    have numbers := congrArg (optN (n := 4)) same
+    kernel_change ((2 : Int) = -1) at numbers
+    omega
+  · exact lowEns_ok placement entry exitWorld (fun _ h => h) layout_in expr 9 code 12
+      rfl (by decide) memory 0 params
+      (PreS.welt pre (Nat.le_refl _) world_at layout_in (by decide)) saved rfl
 
 /-- The complete column is captured in ascending order below the original parameter. -/
 theorem column_layout_zeuge :
@@ -107,17 +115,20 @@ theorem column_layout_zeuge :
   exact ⟨rfl, rfl, by decide +kernel⟩
 
 def oversizedUnit : Parser.Uebersetze.UProg := {QuantProbe.u with
-  tabs := [{name := "Links", count := 2 ^ 31, cols := [("link", (0, 1))], opts := [("link", 0)]}] }
+  tabs := [{name := "Links", count := 2147483648, cols := [("link", (0, 1))], opts := [("link", 0)]}] }
 abbrev oversizedD := Parser.UebersetzeAllg.declOf oversizedUnit
 
-def oversizedExpr : Expr oversizedD [.index (2 ^ 31)] [] (.opt (2 ^ 31)) :=
-  .oldS ⟨0, by decide⟩ ⟨0, by decide⟩ (.var .here) (by intro w hw; change w ∈ [] at hw; cases hw)
+abbrev oversizedTab : oversizedD.Tab := ⟨0, by decide⟩
+abbrev oversizedField : oversizedD.Feld oversizedTab := ⟨0, by decide⟩
+
+def oversizedExpr : Expr oversizedD [.index (2147483648)] [] (.opt (2147483648)) :=
+  .oldS oversizedTab oversizedField (.var .here) (by intro w hw; change w ∈ [] at hw; cases hw)
 
 /-- The bound is checked before enumeration, so this never constructs 2^31 cells. -/
 theorem oversized_oldS_refused_zeuge :
     oldCells oversizedExpr = [] ∧
     lowEns (layU oversizedUnit (fun _ => none) 8192)
-      ⟨[.index (2 ^ 31)], some (.opt (2 ^ 31)), 0, 0, 0⟩ oversizedExpr 8 = none := by
-  exact ⟨rfl, rfl⟩
+      ⟨[.index (2147483648)], some (.opt (2147483648)), 0, 0, 0⟩ oversizedExpr 8 = none := by
+  exact ⟨by kernel_rfl, by kernel_rfl⟩
 
 end Gabbro.Stage0.Senke.RuntimeOldProbe
