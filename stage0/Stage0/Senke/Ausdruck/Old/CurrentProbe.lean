@@ -2,6 +2,7 @@
 module
 public import Stage0.Senke.Ausdruck.Old.FunctionProbe
 public import Stage0.Senke.Ausdruck.Old.Admission
+import Grammatik.Kern.Taktik.KernelRfl
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.CurrentOldProbe
@@ -39,7 +40,7 @@ theorem lowE_oldG_ok_zeuge [Kern] :
     have value := congrArg (fun v : Wert FnptrProben.D (.fnptr 0) => v.1.val) equal
     change (0 : Nat) = 1 at value
     omega
-  · exact lowE_ok (same := by intro _; rfl) exitWorld exitWorld (fun _ h => h) OldProbe.lay
+  · exact lowE_ok (currentOld := true) (same := by intro _; rfl) exitWorld exitWorld (fun _ h => h) OldProbe.lay
       expr 5 code 6 (by decide +kernel) (by decide) (OldProbe.memory code) 0 .nil
       (PreS.welt pre (Nat.le_refl _) (OldProbe.world code) OldProbe.lay (by decide))
 
@@ -71,11 +72,14 @@ def program : Programm D := { OldFunctionProbe.program with
     subst f
     exact body }
 
+local instance : DecidableEq D.Ax :=
+  inferInstanceAs (DecidableEq (Fin OldFunctionProbe.unit.axs.length))
+
 /-- The canonical checker accepts these raw-model old occurrences outside ensures.
     The enumeration covers the complete singleton function, table and global domains. -/
 theorem raw_model_admission_zeuge :
     AkzeptiertX program (SperrInv.leer D) [function] [] [.inl tab, .inr global] [] = true := by
-  decide +kernel
+  kernel_rfl
 
 /-- The connected function compiler accepts old in raw-model requires and body expressions.
     G returns the just-written 1, not the entry field 0, and the original ensures is preserved. -/
@@ -86,6 +90,8 @@ theorem ordinary_old_function_zeuge :
         OldFunctionProbe.initial OldFunctionProbe.params with
       | .ok final value => value.n = 1 ∧ (final.globs global).n = 1 ∧ (final.slots tab 1 field).n = 1
       | _ => False) := by
-  exact ⟨by decide +kernel, by decide +kernel⟩
+  refine ⟨by kernel_rfl, ?_⟩
+  kernel_change ((1 : Int) = 1 ∧ (1 : Int) = 1 ∧ (1 : Int) = 1)
+  exact ⟨rfl, rfl, rfl⟩
 
 end Gabbro.Stage0.Senke.CurrentOldProbe
