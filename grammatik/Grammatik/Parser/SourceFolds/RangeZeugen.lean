@@ -1,6 +1,38 @@
 module
 
 public import Grammatik.Parser.SourceFolds.Range
+import all Init.Data.Int.Repr
+import all Init.Data.Repr
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.SourceFolds
@@ -36,7 +68,7 @@ theorem foldInit_and_zeuge : foldInit .foldAnd none = .tru := rfl
 
 theorem reservedNames_one_zeuge :
     reservedNames 1 =
-      ["$rangeFold$acc$0", "$rangeFold$value$0", "$rangeFold$result$0"] := rfl
+      ["$rangeFold$acc$0", "$rangeFold$value$0", "$rangeFold$result$0"] := by decide +kernel
 
 theorem tagFoldNodes_single_zeuge :
     (tagFoldNodes (.ext .foldAdd ["i", "range"]
@@ -57,11 +89,11 @@ theorem parseFoldNode_no_array_zeuge :
       (.ext .foldAdd ["i", "range"] [.lit 0, .lit 2, .tru, .variable "x"]) =
       .error "fold range: indexed array required" := rfl
 
-private def tableSource : List SItemTief :=
+def tableSource : List SItemTief :=
   [.tableT "T" none (some (.lit 2)) none none false
     [.tSlot [⟨"v", .atom "u8", none, none, none, false, false⟩]]]
 
-private def rowProjection : SExpr :=
+def rowProjection : SExpr :=
   .field (.index (.variable "T") (.variable "k")) "v"
 
 /-- A fold over a table reads row projections and accumulates in `u64`. -/
@@ -71,7 +103,7 @@ theorem parseFoldNode_table_zeuge :
       .ok ⟨.foldAdd, "k", .lit 0, .lit 2, .tru, rowProjection,
         none, .atom "u64", "T", .lit 2, true⟩ := rfl
 
-private def nestedRowFold : SExpr :=
+def nestedRowFold : SExpr :=
   .ext .foldAdd ["i", "range"]
     [.lit 0, .lit 2, .tru,
       .bin "+" (.index (.variable "xs") (.variable "i"))
@@ -98,6 +130,6 @@ theorem returnFold_nested_row_zeuge :
                 (.variable "$rangeFold$result$1")),
             .set (.variable "$rangeFold$acc$0") "+="
               (.variable "$rangeFold$value$0")] none)]
-      (some (.ret (some (.variable "$rangeFold$acc$0"))))) := rfl
+      (some (.ret (some (.variable "$rangeFold$acc$0"))))) := by with_unfolding_all rfl
 
 end Gabbro.Grammatik.Parser.SourceFolds
