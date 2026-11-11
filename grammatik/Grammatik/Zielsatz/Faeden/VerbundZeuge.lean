@@ -69,7 +69,7 @@ import all Init.Data.String.ToSlice
 
 namespace Gabbro.Grammatik.Zielsatz
 open Gabbro.Grammatik
-local instance : DecidableEq zD.Ax := inferInstanceAs (DecidableEq Empty)
+local instance verbundZeugeAxGleich : DecidableEq zD.Ax := inferInstanceAs (DecidableEq Empty)
 
 /-! ## 1. POSITIVE: a library exports a lock-guarded table writer, an app calls it from two
     threads -/

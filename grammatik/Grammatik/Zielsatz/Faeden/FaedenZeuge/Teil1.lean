@@ -43,7 +43,7 @@ namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik
 
-local instance : DecidableEq zD.Ax := inferInstanceAs (DecidableEq Empty)
+local instance faedenZeugeAxGleich1 : DecidableEq zD.Ax := inferInstanceAs (DecidableEq Empty)
 
 /-- **THE START-AND-JOIN RUN.** Thread 0 starts the dormant roots 1 and 2 (holding nothing) and
     waits; root 1 writes and finishes, root 2 writes and finishes; only then the join fires;

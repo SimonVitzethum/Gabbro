@@ -67,8 +67,9 @@ public import Grammatik.Parser.Elab.Instantiation.Witness
 
 public import Grammatik.Parser.Elab.Konst.Values.Witness
 
-@[expose] public section
 public import Grammatik.Logik.Ruf.Guest.Witness
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Guest.Connection
 
 public import Grammatik.Parser.Elab.Export.QuantifierWitnesses
+
+@[expose] public section

@@ -42,7 +42,7 @@ namespace Gabbro.Grammatik.Zielsatz
 open Gabbro.Grammatik
 
 local instance : DecidableEq mD.Ax := inferInstanceAs (DecidableEq Empty)
-local instance : DecidableEq zD.Ax := inferInstanceAs (DecidableEq Empty)
+local instance faedenZeugeAxGleich2 : DecidableEq zD.Ax := inferInstanceAs (DecidableEq Empty)
 
 /-- **THE GOAL ON A `start` RUN.** On the accepted unit `zStart`, the idle root starts two
     `haupt` threads (dormant before), both step, thread 1 takes the lock; the starter waits

@@ -73,7 +73,7 @@ namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik
 
-local instance : DecidableEq zD.Ax := inferInstanceAs (DecidableEq Empty)
+local instance poolZeugeAxGleich : DecidableEq zD.Ax := inferInstanceAs (DecidableEq Empty)
 
 /-! ## 1. The pool unit -/
 
