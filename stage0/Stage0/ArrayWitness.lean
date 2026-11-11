@@ -1,6 +1,38 @@
 module
 public import Stage0.SourceWitness
 public import Stage0.Frontend.ExportCorrectness
+import Grammatik.Kern.Taktik.KernelRfl
+import all Init.Data.Repr
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 @[expose] public section
 
 
@@ -15,27 +47,31 @@ def text : String := String.ofList characters
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
-theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
+theorem candidate_present : candidate.toOption.isSome = true := by kernel_rfl
 
 def output : Emitted text 64 := candidate.toOption.get candidate_present
 
 theorem accepted_image : emit text 64 = .ok output := Gabbro.Grammatik.except_ok_get candidate_present
 
 theorem fieldless : ∀ t : Fin output.compiled.unit.tabs.length, fieldCount output.compiled.unit t = 0 := by
-  decide +kernel
+  have each : (List.finRange _).all (fun t => fieldCount output.compiled.unit t == 0) = true := by
+    kernel_rfl
+  intro t
+  exact beq_iff_eq.mp (List.all_eq_true.mp each t (List.mem_finRange t))
 
 theorem carriers : output.compiled.unit.globs.length = 0 ∧ output.compiled.unit.axs.length = 0 ∧
-    output.compiled.unit.regs.length = 0 := by decide +kernel
+    output.compiled.unit.regs.length = 0 := ⟨by kernel_rfl, by kernel_rfl, by kernel_rfl⟩
 
-theorem params_empty : (declOf output.compiled.unit).params output.compiled.main = [] := by decide +kernel
+theorem params_empty : (declOf output.compiled.unit).params output.compiled.main = [] := by kernel_rfl
 
-theorem image_bound : Runner.Prog.IMG + output.bytes.length < 2 ^ 64 := by decide +kernel
+theorem image_bound : Runner.Prog.IMG + output.bytes.length < 2 ^ 64 :=
+  (ImagePhases.geometry output).2
 
 attribute [irreducible] output
 
 def members := uMembers (pre108 output.compiled.source.prepared.elaborierbar)
 
-theorem first_present : (members[0]?).isSome = true := by decide +kernel
+theorem first_present : (members[0]?).isSome = true := by kernel_rfl
 
 def item : SItemTief := (members[0]?).get first_present
 
@@ -48,10 +84,10 @@ def exactShape : Bool := match item with
       (.rows [.rows [.one (.lit 42)]]) => true
   | _ => false
 
-theorem array_shape : exactShape = true := by decide +kernel
+theorem array_shape : exactShape = true := by kernel_rfl
 
 theorem array_case : ∃ name element count payload, item = .constT name (.array element count) payload := by
-  have h : (match item with | .constT _ (.array _ _) _ => true | _ => false) = true := by decide +kernel
+  have h : (match item with | .constT _ (.array _ _) _ => true | _ => false) = true := by kernel_rfl
   split at h
   · rename_i name element count payload he
     exact ⟨name, element, count, payload, he⟩

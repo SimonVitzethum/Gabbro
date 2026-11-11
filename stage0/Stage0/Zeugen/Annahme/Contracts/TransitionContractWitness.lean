@@ -1,5 +1,6 @@
 module
 public import Stage0.SourceWitness
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -43,7 +44,7 @@ def text : String :=
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
-theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
+theorem candidate_present : candidate.toOption.isSome = true := by kernel_rfl
 
 def output : Emitted text 64 := candidate.toOption.get candidate_present
 
@@ -57,7 +58,7 @@ def text : String :=
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
-theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
+theorem candidate_present : candidate.toOption.isSome = true := by kernel_rfl
 
 def output : Emitted text 64 := candidate.toOption.get candidate_present
 
