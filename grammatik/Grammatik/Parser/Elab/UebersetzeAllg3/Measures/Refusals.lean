@@ -93,11 +93,11 @@ private def increasingBody : RumpTy increasing 0 :=
     (rufPasstB_ok (u := increasing) (by decide)) (by rfl)) (.ret .empty (List.Perm.refl []))
 
 set_option maxRecDepth 100000 in
-private theorem unchanged_function : lowerFnAt unchanged 0 = .ok (.tru, unchangedBody, .tru) := by rfl
+private theorem unchanged_function : lowerFnAt unchanged 0 = .ok (.tru, unchangedBody, .tru) := by with_unfolding_all rfl
 
 set_option maxRecDepth 100000 in
 private theorem increasing_function :
-    lowerFnAt increasing 0 = .ok (.tru, increasingBody, .eq (.var .here) (.lit 0)) := by rfl
+    lowerFnAt increasing 0 = .ok (.tru, increasingBody, .eq (.var .here) (.lit 0)) := by with_unfolding_all rfl
 
 private theorem unchangedP_rumpf : unchangedP.rumpf 0 = unchangedBody :=
   program_rumpf_of_lowerFn unchanged_function
@@ -145,7 +145,10 @@ theorem increasing_argument_zeuge
     massTor increasingM.mass (zykS increasingP [0] 0)
       (increasingM.mass.wert 0 state (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil)) R
       0 state (.cons (⟨1, by decide, by decide⟩ : Zahl 0 1) .nil) = .logik (.abstieg 0) := by
-  simp [massTor, increasing_cycle, Mass.wert, increasingM_mass, lexLt, eval, Env.get, Zahl.weiter]
+  have hg : ∀ (v : Zahl 0 1) (ρ : Env (declOf increasing) _),
+      Env.get (Γ := (declOf increasing).params 0) (Env.cons (τ := .int 0 1) v ρ) Var.here = v :=
+    fun _ _ => rfl
+  simp_all [massTor, increasing_cycle, Mass.wert, increasingM_mass, lexLt, eval, Zahl.weiter]
 
 /-- The unchanged-call program cannot discharge the semantic duty, irrespective of its contracts' oracle. -/
 theorem unchanged_no_duty_zeuge (passes : Nat) (Q : AxEns (declOf unchanged))
@@ -172,7 +175,10 @@ theorem unchanged_no_duty_zeuge (passes : Nat) (Q : AxEns (declOf unchanged))
     (by simp [ReqAmEintritt, unchangedP_requires, eval, wahr?]) 0 unchanged_cycle
   apply bad
   rw [unchangedP_rumpf]
-  simp [unchangedBody, execEndHA, execStmtHA, unchanged_argument_zeuge,
+  have hg : ∀ (v : Zahl 0 1) (ρ : Env (declOf unchanged) _),
+      Env.get (Γ := (declOf unchanged).params 0) (Env.cons (τ := .int 0 1) v ρ) Var.here = v :=
+    fun _ _ => rfl
+  simp_all [unchangedBody, execEndHA, execStmtHA, unchanged_argument_zeuge,
     evalArgs, eval, Env.get, Zahl.weiter, leseA, idA, World.lese, World.merke,
     Expr.orte, Args.orte]
 
@@ -198,10 +204,13 @@ theorem increasing_no_duty_zeuge (passes : Nat) (Q : AxEns (declOf increasing))
     ⟨fun r => Fin.elim0 r, fun g => Fin.elim0 g⟩ (fun a => Fin.elim0 a)
     (fun L => Fin.elim0 L) (fun L => Fin.elim0 L) idA (havocA_id T)
     R frame noDescent noPre state (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil)
-    (by simp [ReqAmEintritt, increasingP_requires, eval, Env.get, wahr?]) 0 increasing_cycle
+    (by simp [ReqAmEintritt, increasingP_requires, eval, wahr?]; with_unfolding_all rfl) 0 increasing_cycle
   apply bad
   rw [increasingP_rumpf]
-  simp [increasingBody, execEndHA, execStmtHA, increasing_argument_zeuge,
+  have hg : ∀ (v : Zahl 0 1) (ρ : Env (declOf increasing) _),
+      Env.get (Γ := (declOf increasing).params 0) (Env.cons (τ := .int 0 1) v ρ) Var.here = v :=
+    fun _ _ => rfl
+  simp_all [increasingBody, execEndHA, execStmtHA, increasing_argument_zeuge,
     evalArgs, eval, Env.get, Zahl.weiter, leseA, idA, World.lese, World.merke,
     Expr.orte, Args.orte]
 
@@ -242,6 +251,7 @@ theorem lowerMeasures_denotes_zeuge :
 
 /-- Division over a positive denominator lowers with an empty footprint. -/
 def divU : UProg := withMeasure (.bin "/" (.variable "n") (.lit 1))
+instance : NeZero divU.fns.length := ⟨by decide⟩
 theorem divLowered : (lowerAllg divU).toOption.isSome = true := by decide +kernel
 def divM := (exported divU divLowered).val
 theorem divSource : SourceTuple divU 0 (divM.mass 0) := divM.source 0
@@ -267,6 +277,7 @@ theorem div_negative_gate_zeuge :
 
 /-- Remainder over a positive denominator lowers with an empty footprint. -/
 def remU : UProg := withMeasure (.bin "%" (.variable "n") (.lit 2))
+instance : NeZero remU.fns.length := ⟨by decide⟩
 theorem remLowered : (lowerAllg remU).toOption.isSome = true := by decide +kernel
 def remM := (exported remU remLowered).val
 theorem remSource : SourceTuple remU 0 (remM.mass 0) := remM.source 0
@@ -285,6 +296,7 @@ theorem rem_zero_zeuge :
 
 /-- Bitwise and over non-negative ranges lowers with an empty footprint. -/
 def andU : UProg := withMeasure (.bin "&" (.variable "n") (.lit 1))
+instance : NeZero andU.fns.length := ⟨by decide⟩
 theorem andLowered : (lowerAllg andU).toOption.isSome = true := by decide +kernel
 def andM := (exported andU andLowered).val
 theorem andSource : SourceTuple andU 0 (andM.mass 0) := andM.source 0
@@ -304,6 +316,7 @@ theorem and_negative_zeuge :
 
 /-- Bitwise or over non-negative ranges lowers with an empty footprint. -/
 def orU : UProg := withMeasure (.bin "|" (.variable "n") (.lit 1))
+instance : NeZero orU.fns.length := ⟨by decide⟩
 theorem orLowered : (lowerAllg orU).toOption.isSome = true := by decide +kernel
 def orM := (exported orU orLowered).val
 theorem orSource : SourceTuple orU 0 (orM.mass 0) := orM.source 0
@@ -323,6 +336,7 @@ theorem or_negative_zeuge :
 
 /-- Bitwise xor over non-negative ranges lowers with an empty footprint. -/
 def xorU : UProg := withMeasure (.bin "^" (.variable "n") (.lit 1))
+instance : NeZero xorU.fns.length := ⟨by decide⟩
 theorem xorLowered : (lowerAllg xorU).toOption.isSome = true := by decide +kernel
 def xorM := (exported xorU xorLowered).val
 theorem xorSource : SourceTuple xorU 0 (xorM.mass 0) := xorM.source 0
@@ -342,6 +356,7 @@ theorem xor_negative_zeuge :
 
 /-- Shift left over non-negative ranges lowers with an empty footprint. -/
 def shlU : UProg := withMeasure (.bin "<<" (.variable "n") (.lit 1))
+instance : NeZero shlU.fns.length := ⟨by decide⟩
 theorem shlLowered : (lowerAllg shlU).toOption.isSome = true := by decide +kernel
 def shlM := (exported shlU shlLowered).val
 theorem shlSource : SourceTuple shlU 0 (shlM.mass 0) := shlM.source 0
@@ -360,6 +375,7 @@ theorem shl_range_zeuge :
 
 /-- Shift right over non-negative ranges lowers with an empty footprint. -/
 def shrU : UProg := withMeasure (.bin ">>" (.variable "n") (.lit 1))
+instance : NeZero shrU.fns.length := ⟨by decide⟩
 theorem shrLowered : (lowerAllg shrU).toOption.isSome = true := by decide +kernel
 def shrM := (exported shrU shrLowered).val
 theorem shrSource : SourceTuple shrU 0 (shrM.mass 0) := shrM.source 0
@@ -378,6 +394,7 @@ theorem shr_range_zeuge :
 
 /-- A conversion through a built-in width lowers with an empty footprint. -/
 def convU : UProg := withMeasure (.conv "u8" (.variable "n"))
+instance : NeZero convU.fns.length := ⟨by decide⟩
 theorem convLowered : (lowerAllg convU).toOption.isSome = true := by decide +kernel
 def convM := (exported convU convLowered).val
 theorem convSource : SourceTuple convU 0 (convM.mass 0) := convM.source 0
@@ -392,6 +409,7 @@ theorem convDenotes :
 /-- A conversion through a unit alias lowers once the alias scope travels with the function. -/
 def convAliasU : UProg := { countdown with fns :=
   [{function "countdown" "countdown" with decreases := some (.conv "A" (.variable "n")), measureTypes := [("A", (0, 7))]}] }
+instance : NeZero convAliasU.fns.length := ⟨by decide⟩
 theorem convAliasLowered : (lowerAllg convAliasU).toOption.isSome = true := by decide +kernel
 def convAliasM := (exported convAliasU convAliasLowered).val
 theorem convAliasSource : SourceTuple convAliasU 0 (convAliasM.mass 0) := convAliasM.source 0
