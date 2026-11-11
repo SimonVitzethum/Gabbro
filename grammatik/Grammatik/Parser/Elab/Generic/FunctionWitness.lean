@@ -61,10 +61,17 @@ def literalSource : String :=
 
 def literalInstance : Instance := ⟨"apply_all", [canonicalDoublingLiteral]⟩
 
+mutual
 def surfaceCalls : SAnw → List String
   | .call name _ | .bind _ _ _ (.call name _) => [name]
-  | .block statements _ => statements.flatMap surfaceCalls
+  | .block statements _ => surfaceCallsList statements
   | _ => []
+termination_by structural statement => statement
+def surfaceCallsList : List SAnw → List String
+  | [] => []
+  | statement :: rest => surfaceCalls statement ++ surfaceCallsList rest
+termination_by structural statements => statements
+end
 
 /-- Parser/AST: the last argument constructor is a complete function literal, with its own binder. -/
 theorem literal_parser_zeuge :

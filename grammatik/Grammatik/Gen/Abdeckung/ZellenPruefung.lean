@@ -72,7 +72,10 @@ def huelleHash (env : Environment) (start : Name) : UInt64 :=
     guest admission. These are not additional numbered cells: reset has its own cell,
     while `Gueltig.akzeptiertX_iff` states the descriptor-free generator boundary.
     Pinning the whole checker detects future drift; it does not claim coverage of
-    every source form or of the extra descriptor gates. -/
+    every source form or of the extra descriptor gates.
+    Re-pinned 2026-11-11: `Ty.decEq` (and the two front-end equalities beside it) recurse structurally
+    instead of by a size measure, which changes the closures of `8 answers`, `komp` and `AkzeptiertX`
+    without changing what they decide; no component formula was touched. -/
 def erwartet : List (String × UInt64) :=
   [("0 fragment", 12310482679876591554),
    ("1 closedness", 13800082909054645524),
@@ -82,10 +85,10 @@ def erwartet : List (String × UInt64) :=
    ("5 roots", 17739234837013753632),
    ("6 single pool", 498286097438491847),
    ("7 race freedom", 16948703990380454043),
-   ("8 answers", 8026916965665620149),
+   ("8 answers", 17025460873829671098),
    ("9 masks", 11679533481577547307),
-   ("komp", 8376091305020244546),
-   ("AkzeptiertX", 5966813553801955746)]
+   ("komp", 9954942803692629413),
+   ("AkzeptiertX", 3625294885073887937)]
 
 /-- The check: every pinned definition closure has its expected hash. -/
 def pruefe : MetaM Unit := do
