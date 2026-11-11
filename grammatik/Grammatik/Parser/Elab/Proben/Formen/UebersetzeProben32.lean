@@ -85,11 +85,11 @@ theorem gruppe_ok_traeger : traeger gruppe_ok = some [[.inl 0, .inl 1]] := by de
 
 /-- Statement text is transported as a labelled scope, rather than dropped.
     This checks shape only: full invariant declarations retain their metadata gate. -/
-private def breakingText (source : String) : Option (List UStmt) := do
+def breakingText (source : String) : Option (List UStmt) := do
   let tokens ← (lex source).toOption
   let statement ← (parseTopStmt tokens).toOption
   let ctx : UCtx := { names := [], kinds := [], types := [], tabs := [], locks := [],
-    held := [], res := none, fname := "sample", alias := [], lits := [] }
+                      held := [], res := none, fname := "sample", alias := [], lits := [] }
   ((uAnwReihe [] [] 1000 ctx [statement]).toOption).map (·.1)
 
 theorem breaking_text_export_zeuge :
