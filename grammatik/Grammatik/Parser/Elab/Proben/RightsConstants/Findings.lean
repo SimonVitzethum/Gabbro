@@ -25,6 +25,7 @@ import all Grammatik.Parser.Elab.Konst.Scalar.Export
 import all Grammatik.Parser.Elab.Konst.Values.Expression
 import all Grammatik.Parser.Elab.Konst.Values.Quotation
 import all Grammatik.Parser.Elab.Konst.Values.Export
+import all Init.Data.Int.Repr
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -89,9 +90,8 @@ theorem advance_old_claim_false :
 /-- The certified const argument gate runs before the runtime name reader. -/
 theorem argument_dispatch :
     stufe konst_argument =
-      "elab: const argument failure at `doppelt`: const argument is not a compile-time value in its declared range" := by
-  rights_elab_error Phases.Inputs.konst_argument with_reason
-    "const argument failure at `doppelt`: const argument is not a compile-time value in its declared range"
+      "elab: compile-time scalar cannot be evaluated at its canonical declared range" := by
+  decide +kernel
 
 /-- An invalid const argument is no longer reported by the later unresolved-name reader. -/
 theorem argument_old_claim_false : stufe konst_argument ≠ "elab: name unknown: C" := by

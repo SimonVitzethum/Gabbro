@@ -31,6 +31,7 @@ import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest2a
 import all Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Export
 import all Grammatik.Parser.Elab.Generic.Signatures
 import all Grammatik.Parser.Elab.Generic.StaticConformance
+import all Init.Data.Int.Repr
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -84,16 +85,17 @@ theorem retiringSource_selected :
   exact congrArg (fun produced : Except String UProg => produced.toOption.isSome)
     RetiringWitness.selected.property
 
--- Public runtime data retain their original canonical getter definitions.
--- Only propositions cross the private implementation boundary below.
-def retiringU : UProg :=
-  ((elabText checkTextBodenWahr).bind fun u =>
-    uSelectCheckConsumers u [retiringSelection]).toOption.get retiringSource_selected
+-- The fixture is the certified unit itself, so typed environments over it elaborate without
+-- running the source pipeline in the elaborator; `retiringU_source` ties it to the source text.
+def retiringU : UProg := RetiringWitness.unit
 
-private theorem retiring_unit : retiringU = RetiringWitness.unit :=
-  Except.ok.inj ((except_ok_get (x := (elabText checkTextBodenWahr).bind fun u =>
-    uSelectCheckConsumers u [retiringSelection]) retiringSource_selected).symm.trans
-      RetiringWitness.selected.property)
+/-- The source text elaborates and selects to exactly this unit. -/
+theorem retiringU_source :
+    ((elabText checkTextBodenWahr).bind fun u =>
+      uSelectCheckConsumers u [retiringSelection]) = .ok retiringU :=
+  RetiringWitness.selected.property
+
+private theorem retiring_unit : retiringU = RetiringWitness.unit := rfl
 
 private theorem retiring_facts : RetiringWitness.RetiringFacts retiringU :=
   Eq.mpr (congrArg (fun u : UProg => RetiringWitness.RetiringFacts u) retiring_unit)
@@ -215,20 +217,22 @@ theorem retiringDouble_refused :
   dsimp only [retiringDouble]
   exact retiring_facts.double
 
+-- From here on the statements type environments and values over the unit's own parameter and
+-- result types, which only the module's private scope can unfold; the witnesses stay module-local.
 /-- Actual reporter parameters: measured x=3, floor=true, written verdict=true. -/
-def retiringReporterEnv : Env (declOf retiringU) ((declOf retiringU).params retiringReporter) :=
+private def retiringReporterEnv : Env (declOf retiringU) ((declOf retiringU).params retiringReporter) :=
   .cons ⟨3, by decide, by decide⟩ (.cons true (.cons true .nil))
 
 /-- The generic decoder reads the measured value and floor directly from
     the actual saved parameter environment. -/
-theorem retiringActual_samples :
+private theorem retiringActual_samples :
     actualCheckReturn retiringU retiringReporter retiringReporterEnv true =
       some ("p", retiringReport) := by
   exact retiring_facts.capture retiringReporter rfl retiringReporterEnv retiring_reporter_result rfl
 
 /-- Chronological call/return events of the generated ordinary cycle. The
     root remains at its empty-resource return; G logs callee pops only. -/
-def retiringEvents (world : World (declOf retiringU)) :
+private def retiringEvents (world : World (declOf retiringU)) :
     List (RufEreignisF (declOf retiringU)) :=
   [.eintritt retiringDriver .nil world,
     .eintritt retiringProbe .nil world,
@@ -262,21 +266,21 @@ private def retiringReplay (world : World (declOf retiringU)) :
   case replayed => cbv <;> exact Eq.refl _
 
 /-- The ghost entry retains the actual sample/floor report, consumed once. -/
-theorem retiringHistory_samples (world : World (declOf retiringU)) :
+private theorem retiringHistory_samples (world : World (declOf retiringU)) :
     (checkGhostHistory retiringU retiringCheck retiringConsumer retiringWrapper
       (retiringEvents world).reverse).history =
       [replayEintrag retiringCheck retiringReport retiringWrapper] := by
   rw [(retiringReplay world).property]
   simp only [replayEintrag, retiring_check_probe] <;> rfl
 
-theorem retiringHistory_complete (world : World (declOf retiringU)) :
+private theorem retiringHistory_complete (world : World (declOf retiringU)) :
     checkGhostComplete (checkGhostHistory retiringU retiringCheck retiringConsumer
       retiringWrapper (retiringEvents world).reverse) = true := by
   rw [(retiringReplay world).property] <;> rfl
 
 /-- The real recorded samples, once consumed, satisfy the unchanged goal leg
     by the generic conservation theorem, not a per-report shape argument. -/
-theorem retiringHistory_treu (world : World (declOf retiringU)) :
+private theorem retiringHistory_treu (world : World (declOf retiringU)) :
     Zielsatz.CheckTreueG retiringP [retiringCheck]
       (checkGhostHistory retiringU retiringCheck retiringConsumer retiringWrapper
         (retiringEvents world).reverse).history :=
@@ -284,15 +288,15 @@ theorem retiringHistory_treu (world : World (declOf retiringU)) :
     retiring_wrapper_declared (retiringEvents world).reverse (retiringHistory_complete world)
 
 /-- A repeated consumption is also refused by ghost replay. -/
-theorem retiringHistory_double_refused (world : World (declOf retiringU)) :
+private theorem retiringHistory_double_refused (world : World (declOf retiringU)) :
     checkGhostComplete (checkGhostHistory retiringU retiringCheck retiringConsumer retiringWrapper
-      ((retiringEvents world ++ [.eintritt retiringConsumer .nil world,
-        .rueck retiringConsumer .nil () world world]).reverse)) = false := by
+      ((retiringEvents world ++ [RufEreignisF.eintritt retiringConsumer .nil world,
+        RufEreignisF.rueck retiringConsumer .nil () world world]).reverse)) = false := by
   have appended :
-      (retiringEvents world ++ [.eintritt retiringConsumer .nil world,
-        .rueck retiringConsumer .nil () world world]).reverse =
-      .rueck retiringConsumer .nil () world world ::
-        .eintritt retiringConsumer .nil world :: (retiringEvents world).reverse := by
+      (retiringEvents world ++ [RufEreignisF.eintritt retiringConsumer .nil world,
+        RufEreignisF.rueck retiringConsumer .nil () world world]).reverse =
+      RufEreignisF.rueck retiringConsumer .nil () world world ::
+        RufEreignisF.eintritt retiringConsumer .nil world :: (retiringEvents world).reverse := by
     rw [List.reverse_append]
     rfl
   rw [appended, checkGhostHistory_event, checkGhostHistory_event,
@@ -301,7 +305,7 @@ theorem retiringHistory_double_refused (world : World (declOf retiringU)) :
 end retiringReplay
 
 /-- The sample cannot be replaced by a neighboring claimed value. -/
-theorem retiringHistory_fabrication_refused :
+private theorem retiringHistory_fabrication_refused :
     actualCheckReturn retiringU retiringReporter retiringReporterEnv true ≠
       some ("p", { retiringReport with proben := [⟨"x", 0, 4, true⟩] }) := by
   rw [retiringActual_samples]

@@ -36,18 +36,37 @@ import all Grammatik.Parser.Dyn.Rewrite
 import all Grammatik.Parser.Spec.Contract
 import all Grammatik.Parser.Spec.Resolve
 import all Grammatik.Parser.Elab.Uebersetze.Folds.ConstEvaluation
+import all Init.Data.Int.Repr
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Decode
 import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
 import all Init.Data.String.Iter.Basic
 import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
 import all Init.Data.String.Legacy
-import all Init.Data.String.Slice
-import all Init.Data.String.Pattern.String
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
 import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 import all Grammatik.Parser.Elab.Proben.RightsConstants.Scanning
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil13
@@ -58,9 +77,6 @@ import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
 import all Grammatik.Parser.Elab.Generic.StaticConformance
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Rest2
-import all Init.Data.Repr
-import all Init.Data.String.Defs
-import all Init.Data.String.Basic
 
 namespace Gabbro.Grammatik.Parser
 open Uebersetze UebersetzeAllg2
@@ -214,38 +230,16 @@ private theorem source_adapters :
     entzuckere (uMembers (pre108 sourceItems.val)) =
       .ok (uMembers (pre108 sourceItems.val)) := by cbv
 
-private theorem source_output_valid : Modules.validOutput (pre108 sourceItems.val)
-    { items := sourceLibrary.val, requirements := [],
-      generatedNames := sourceDeclarationNames.val.filter
-        ((Modules.outputNames sourceLibrary.val).contains) } = true := by cbv
-
-private theorem source_prepared :
-    expandU (pre108 sourceItems.val) = .ok (sourceLibrary.val, []) :=
-  modules_from_phases _ _ _ source_no_modules source_module_expansion
-    source_generic_expansion source_adapters sourceDeclarationNames.property source_output_valid
-
-private def sourceElaboration : {unit : UProg //
-    elabUExpanded (sourceLibrary.val, []) = .ok unit} := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
-
-private theorem elaborated_from_prepared (items : List SItemTief)
-    (prepared : List SItemTief × List (STyp × String)) (unit : UProg)
-    (expanded : expandU items = .ok prepared)
-    (elaborated : elabUExpanded prepared = .ok unit) :
-    elabU items = .ok unit := by
-  simp only [elabU, expanded, bind, Except.bind, elaborated]
-
-private theorem source_elaborated :
-    elabU (pre108 sourceItems.val) = .ok sourceElaboration.val :=
-  elaborated_from_prepared _ _ _ source_prepared sourceElaboration.property
-
-/-- This also runs through the actual elaborator, beyond the expansion witness. -/
-public theorem tagged_source_elaborated_zeuge :
-    ((taggedSourceItems "bool").bind (fun items => elabU (pre108 items))).toOption.isSome = true := by
+/-- **FINDING (open): the dispatching source expands but does not elaborate.** The call
+    `Shape::area(false, s, true)` passes the tagged value `s : AnyShape`, and the argument
+    reader of the elaborator has no form for a sum-typed argument (`argument without G form`).
+    The expansion witnesses above are unaffected; the elaboration was stated as successful
+    and never built. -/
+public theorem tagged_source_elaboration_refused_zeuge :
+    ((taggedSourceItems "bool").bind (fun items => elabU (pre108 items))).toOption.isSome = false := by
   rw [sourceItems.property]
-  change (elabU (pre108 sourceItems.val)).toOption.isSome = true
-  rw [source_elaborated]
-  rfl
+  change (elabU (pre108 sourceItems.val)).toOption.isSome = false
+  decide +kernel
 
 /-- A parsed implementation with the wrong result type is refused by name
     before any dispatcher is admitted. -/

@@ -2,7 +2,9 @@ module
 public import Grammatik.Parser.Elab.Generic.ClosureWitness
 public import Grammatik.Parser.Elab.Generic.Expansion
 public import Grammatik.Parser.Elab.UebersetzeAllg3
+import Grammatik.Kern.Taktik.KernelRfl
 
+import all Init.Data.Int.Repr
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -69,11 +71,11 @@ def instanceBody (ty : STyp) : SAnw :=
 
 def instanceItem (key : Instance) (ty : STyp) : SItemTief :=
   .fnT { art := "", name := instanceName key, params := [("x", ty)],
-    res := some ty, fehler := none, klauseln := [] } (instanceBody ty)
+          res := some ty, fehler := none, klauseln := [] } (instanceBody ty)
 
 def callerItem (name : String) (ty : STyp) (key : Instance) : SItemTief :=
   .fnT { art := "", name, params := [("x", ty)], res := some ty,
-    fehler := none, klauseln := [] }
+          fehler := none, klauseln := [] }
     (.block [.bind false "value" none (.call (instanceName key) [.variable "x"])]
       (some (.ret (some (.variable "value")))))
 
@@ -103,7 +105,9 @@ theorem exporter_two_types_zeuge :
 
 /-- Ordinary generic lowering consumes the same exported function bodies. -/
 theorem lowering_two_types_zeuge :
-    ((exportedSource pipelineSource).bind lowerAllg).toOption.isSome = true := by decide +kernel
+    (match exportedSource pipelineSource with
+    | .ok unit => (lowerAllg unit).toOption.isSome
+    | .error _ => false) = true := by decide +kernel
 
 /-- A constant expression is evaluated before it becomes part of the deterministic instance key. -/
 def constantSource : String :=
@@ -113,7 +117,7 @@ def constantSource : String :=
 theorem constant_body_zeuge :
     (expandedSource constantSource).map (fun items => items.filterMap fun
       | .fnT sig (.block [] (some (.ret (some (.lit n))))) => some (sig.name, n)
-      | _ => none) = .ok [(instanceName ⟨"limit", ["8"]⟩, 8)] := by decide +kernel
+      | _ => none) = .ok [(instanceName ⟨"limit", ["8"]⟩, 8)] := by kernel_rfl
 
 /-- Generic calls are available as statements too, without adding a runtime instruction form. -/
 def statementSource : String :=
@@ -123,23 +127,23 @@ def statementSource : String :=
 theorem statement_call_zeuge :
     (expandedSource statementSource).map (fun items => items.filterMap fun
       | .fnT _ (.block [.call name [.variable "x"]] none) => some name
-      | _ => none) = .ok [instanceName ⟨"consume", ["u8"]⟩] := by decide +kernel
+      | _ => none) = .ok [instanceName ⟨"consume", ["u8"]⟩] := by kernel_rfl
 
 theorem explicit_arguments_required_zeuge :
     expandedSource ("module m { fn identity[T](x: T) -> T { return x; } " ++
       "fn use_value(x: u8) -> u8 { let value = identity(x); return value; } }") =
-      .error "generic call requires explicit ::[arguments]: identity" := by decide +kernel
+      .error "generic call requires explicit ::[arguments]: identity" := by kernel_rfl
 
 theorem argument_count_refused_zeuge :
     expandedSource ("module m { fn identity[T](x: T) -> T { return x; } " ++
       "fn use_value(x: u8) -> u8 { let value = identity::[u8, u16](x); return value; } }") =
-      .error "generic argument count does not match declaration" := by decide +kernel
+      .error "generic argument count does not match declaration" := by kernel_rfl
 
 /-- A finite change of instance arguments along a recursive edge is still polymorphic recursion. -/
 theorem polymorphic_recursion_refused_zeuge :
     expandedSource ("module m { fn recur[T]() { recur::[u16](); } " ++
       "fn use_value() { recur::[u8](); } }") =
-      .error "polymorphic generic recursion is refused" := by decide +kernel
+      .error "polymorphic generic recursion is refused" := by kernel_rfl
 
 /-- The declaration spelling requested by the owner retains both parameter kinds in the AST. -/
 theorem mixed_parameter_parser_zeuge :

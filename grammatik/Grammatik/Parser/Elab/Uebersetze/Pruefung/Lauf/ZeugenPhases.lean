@@ -96,7 +96,7 @@ private def selected : {unit : UProg //
     rw [bodenWahr_source]
     cbv <;> exact Eq.refl _
 
-private abbrev unit : UProg := selected.val
+@[reducible, no_expose] def unit : UProg := selected.val
 
 -- Select the actual scalar calls and returning channels at symbolic types.
 -- lowRufKopf remains the complete resource/owner/footprint dispatcher here;

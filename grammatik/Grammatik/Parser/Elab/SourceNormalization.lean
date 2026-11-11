@@ -34,6 +34,9 @@ def normU32Item : SItemTief → SItemTief
   | .tableT n v c a b g parts space =>
     .tableT n v c a b g (parts.map normTabTeilU32) space
   | .fnT s k => .fnT (normSigU32 s) k
+  -- An adapter is an ordinary function after desugaring: its head is normalised like one.
+  | .adaptT s ps a body => .adaptT (normSigU32 s)
+      (ps.map fun | .neu n t => .neu n (normTypU32 t) | p => p) a body
   | .specGroupT n ts es fs => .specGroupT n ts es (fs.map normSigU32)
   | .implGroupT n ts es fs => .implGroupT n (ts.map normTypU32) es (fs.map fun
       | .fnT s b => .fnT (normSigU32 s) b

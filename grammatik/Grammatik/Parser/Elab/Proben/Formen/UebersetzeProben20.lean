@@ -7,6 +7,7 @@
 -/
 module
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+import all Init.Data.Int.Repr
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -78,9 +79,10 @@ def arg_range_refused : String :=
   "module m { extern fn out(v : u32 in 0 .. 9) effects { pure } costs <= 1 ops; impl fn f() effects { pure } { out(30); } }"
 theorem arg_range_refused_stufe : stufe arg_range_refused = "lower: value outside range" := by decide +kernel
 
-/-- A foreign body with a contract clause has no form. -/
-def ensures_refused : String :=
+/-- A foreign body keeps its declared `ensures` as its contract (a named assumption of the unit,
+    `AxVertragO`); the clause is retained since the foreign-contract export and no longer refused. -/
+def ensures_retained : String :=
   "module m { extern fn rd() -> u32 in 0 .. 9 ensures result < 5 effects { pure } costs <= 1 ops; impl fn f() { } }"
-theorem ensures_refused_stufe : stufe ensures_refused = "elab: foreign fn clause without G form" := by decide +kernel
+theorem ensures_retained_stufe : stufe ensures_retained = "OK" := by decide +kernel
 
 end Gabbro.Grammatik.Parser.UebersetzeProben20

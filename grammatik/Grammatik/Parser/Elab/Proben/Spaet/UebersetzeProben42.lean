@@ -15,6 +15,8 @@
 module
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
 public import Grammatik.Parser.Elab.Uebersetze
+import Grammatik.Kern.Taktik.KernelRfl
+import all Init.Data.Int.Repr
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -90,16 +92,18 @@ def frageExplizit : List SItemTief :=
         (some (.ret (some (.variable "y")))))]
 
 /-- The desugarer maps `?` to exactly the explicit `else` form (definitional). -/
-theorem frage_ist_else : entzuckere frageSugared = .ok frageExplizit := rfl
+theorem frage_ist_else : entzuckere frageSugared = .ok frageExplizit := by kernel_rfl
 
 /-- The explicit form elaborates. -/
 theorem frage_explizit_ok : (elabU frageExplizit).isOk = true := by
   decide +kernel
 
+deriving instance DecidableEq for Except
+
 /-- The desugared unit elaborates exactly like the written one: same functions. -/
 theorem frage_gleiches_programm :
     (elabU frageSugared).map (fun u => u.fns.map (fun f => f.name)) =
-      (elabU frageExplizit).map (fun u => u.fns.map (fun f => f.name)) := rfl
+      (elabU frageExplizit).map (fun u => u.fns.map (fun f => f.name)) := by decide +kernel
 
 /-- Refused: `?` with a different channel than the callee keeps the written `else`. -/
 def frageFalschKanal : String :=
@@ -146,7 +150,7 @@ def adaptExplizit : List SItemTief :=
         (some (.ret (some (.variable "a")))))]
 
 /-- The desugarer maps the adapter to exactly the ordinary function (definitional). -/
-theorem adapt_ist_funktion : entzuckere adaptSugared = .ok adaptExplizit := rfl
+theorem adapt_ist_funktion : entzuckere adaptSugared = .ok adaptExplizit := by kernel_rfl
 
 /-- The expanded function elaborates. -/
 theorem adapt_explizit_ok : (elabU adaptExplizit).isOk = true := by

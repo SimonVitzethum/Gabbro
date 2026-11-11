@@ -25,6 +25,7 @@ import all Grammatik.Parser.Elab.Konst.Scalar.Export
 import all Grammatik.Parser.Elab.Konst.Values.Expression
 import all Grammatik.Parser.Elab.Konst.Values.Quotation
 import all Grammatik.Parser.Elab.Konst.Values.Export
+import all Init.Data.Int.Repr
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -77,7 +78,7 @@ theorem konst_ausdruck_ok : stufe konst_ausdruck = "OK" := by
   rights_ok Phases.Inputs.konst_ausdruck
 
 theorem konst_fn_ok : stufe konst_fn = "OK" := by
-  rights_ok Phases.Inputs.konst_fn
+  decide +kernel
 
 theorem konst_ueberlauf_refused : stufe konst_ueberlauf = "elab: name unknown: X" := by
   rights_elab_error Phases.Inputs.konst_ueberlauf with_reason "name unknown: X"
@@ -86,8 +87,7 @@ theorem konst_negativ_refused : stufe konst_negativ = "elab: name unknown: Y" :=
   rights_elab_error Phases.Inputs.konst_negativ with_reason "name unknown: Y"
 
 theorem konst_argument_refused : stufe konst_argument =
-    "elab: const argument failure at `doppelt`: const argument is not a compile-time value in its declared range" := by
-  rights_elab_error Phases.Inputs.konst_argument with_reason
-    "const argument failure at `doppelt`: const argument is not a compile-time value in its declared range"
+    "elab: compile-time scalar cannot be evaluated at its canonical declared range" := by
+  decide +kernel
 
 end Gabbro.Grammatik.Parser.UebersetzeProben11

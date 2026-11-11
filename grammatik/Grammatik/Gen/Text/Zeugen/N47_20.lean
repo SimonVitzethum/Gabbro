@@ -6,6 +6,7 @@
 module
 public import Grammatik.Gen.Text.Pruefung
 public import Grammatik.Gen.Zeugen.N.N47_20
+import all Init.Data.Int.Repr
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
