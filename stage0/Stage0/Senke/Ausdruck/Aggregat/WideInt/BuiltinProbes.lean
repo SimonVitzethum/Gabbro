@@ -3,6 +3,7 @@ module
 public import Stage0.Senke.Ausdruck.Aggregat.Proben
 public import Stage0.Senke.Ausdruck.Quant.Proben
 public import Stage0.Senke.Ausdruck.Old.Sound
+import Grammatik.Kern.Taktik.KernelRfl
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.BuiltinProbe
@@ -75,7 +76,7 @@ def checks : Expr D [] [] .bool :=
     .eq (.count 0 .tru) (.lit 0)
   ].foldr Expr.and .tru
 
-theorem semantics_zeuge : eval world checks world .nil = true := by decide +kernel
+theorem semantics_zeuge : eval world checks world .nil = true := by kernel_rfl
 
 def compiled : List II × Nat := (lowE layout checks 4).getD ([], 0)
 
@@ -138,12 +139,12 @@ def image : Except String (List Runner.B) := do
 
 theorem connected_image_zeuge : image.isOk = true := by decide +kernel
 
-theorem mask_modulus_zeuge :
+theorem mask_modulus_zeuge [Kern] :
     (((2 ^ 70 + 5 : Int).toNat &&& (2 ^ 70 - 1) : Nat) : Int) = 5 := by
   rw [mask_modulus 69 _ (by decide)]
   decide
 
-theorem countL_bounds_zeuge :
+theorem countL_bounds_zeuge [Kern] :
     ∃ c top, lowE layout (reserved := 3) nested 9 = some (c, top) ∧
       9 < top ∧ c.length < 2 ^ 31 := by
   let ct := (lowE layout (reserved := 3) nested 9).getD ([], 0)
@@ -151,7 +152,7 @@ theorem countL_bounds_zeuge :
   have bounds := countL_bounds emitted
   exact ⟨ct.1, ct.2, emitted, bounds.1, bounds.2.2⟩
 
-theorem countVal_idxAb_bound_zeuge :
+theorem countVal_idxAb_bound_zeuge [Kern] :
     countVal (idxAb 4 1 3) (fun k => decide (k.n < 3)) = 2 ∧
     countVal (idxAb 4 1 3) (fun k => decide (k.n < 3)) ≤ 3 ∧
     1 + countVal (idxAb 4 1 3) (fun k => decide (k.n < 3)) ≤ 4 := by

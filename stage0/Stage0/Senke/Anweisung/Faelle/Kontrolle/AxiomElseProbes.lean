@@ -45,8 +45,8 @@ set_option maxHeartbeats 2000000
 def u (result : Option Ty) : UProg := { ControlProbe.u with
   axs := [{name := "gate", params := [], kinds := [], res := result, gruende := 1}] }
 abbrev D (result : Option Ty) := declOf (u result)
-abbrev entry (result : Option Ty) : (D result).Fn := ⟨0, by decide⟩
-abbrev gate (result : Option Ty) : (D result).Ax := ⟨0, by decide⟩
+abbrev entry (result : Option Ty) : (D result).Fn := ⟨0, Nat.le_of_ble_eq_true rfl⟩
+abbrev gate (result : Option Ty) : (D result).Ax := ⟨0, Nat.le_of_ble_eq_true rfl⟩
 
 def retN (result : Option Ty) {Γ : Ctx} (n : Int) (hl : 0 ≤ n) (hh : n ≤ 100) :
     Endblock (D result) (vertragVon (D result) (entry result)) false Γ [] :=
@@ -66,7 +66,7 @@ def statement (result : Option Ty) {Γ : Ctx} :
       hg := fun g => Fin.elim0 g
       hk := ⟨[], List.Perm.refl _, List.Sublist.refl _⟩
       hh := fun l => Fin.elim0 l }
-    (fun t => Fin.elim0 t) (fun g => Fin.elim0 g) (by decide) (handler result)
+    (fun t => Fin.elim0 t) (fun g => Fin.elim0 g) (Nat.le_of_ble_eq_true rfl) (handler result)
 
 /-- Success must preserve an existing local; no discarded result shadows it. -/
 def body (result : Option Ty) :
@@ -90,7 +90,7 @@ def program (result : Option Ty) (nested : Bool) : Programm (D result) where
     subst f
     exact if nested then nestedBody result else body result
 
-def binding : TorB := ⟨1, [none, none, none, none, none, none], [(-9, 0)]⟩
+def binding : TorB := ⟨1, [none, none, none, none, none, none], [(-9, 0)], none⟩
 
 def image (result : Option Ty) (nested : Bool) : Except String (List Runner.B) := do
   let b ← bild 1 (program result nested) (layU (u result) (fun _ => some binding))

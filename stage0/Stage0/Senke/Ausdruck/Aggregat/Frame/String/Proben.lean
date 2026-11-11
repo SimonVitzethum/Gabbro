@@ -2,6 +2,7 @@
 module
 public import Stage0.Senke.Ausdruck.Aggregat.Proben
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.String.Values
+import Grammatik.Kern.Taktik.KernelRfl
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.StringSpanProbe
@@ -17,7 +18,7 @@ def right : Expr D [] [] (.str 11) := .strLit
   [⟨103, by decide, by decide⟩, ⟨104, by decide, by decide⟩, ⟨105, by decide, by decide⟩,
    ⟨106, by decide, by decide⟩, ⟨107, by decide, by decide⟩] (by decide)
 
-def prefix : Expr D [] [] (.str 9) := .strLit
+def shortText : Expr D [] [] (.str 9) := .strLit
   [⟨97, by decide, by decide⟩, ⟨0, by decide, by decide⟩] (by decide)
 
 def zeroTail : Expr D [] [] (.str 10) := .strLit
@@ -38,10 +39,10 @@ theorem accepted_zeuge :
     (lowE layout (.strCat right letter) 4).isSome = true ∧
     (lowE layout (.strLt left right) 4).isSome = true ∧
     (lowE layout (.strLt right left) 4).isSome = true ∧
-    (lowE layout (.strLt prefix left) 4).isSome = true ∧
-    (lowE layout (.strLt left prefix) 4).isSome = true ∧
+    (lowE layout (.strLt shortText left) 4).isSome = true ∧
+    (lowE layout (.strLt left shortText) 4).isSome = true ∧
     (lowE layout (.strLt left left) 4).isSome = true ∧
-    (lowE layout (.strLt prefix zeroTail) 4).isSome = true ∧
+    (lowE layout (.strLt shortText zeroTail) 4).isSome = true ∧
     (lowE layout (.strLt emptyLong zero) 4).isSome = true ∧
     (lowE layout (.strLt zero emptyLong) 4).isSome = true ∧
     (lowE layout (.strLt letter right) 4).isSome = true ∧
@@ -54,7 +55,7 @@ theorem concatenate_meaning_zeuge :
     (eval world combined world .nil).1.length = 13 ∧
     (eval world (.strCat empty left) world .nil).1 = (eval world left world .nil).1 ∧
     (eval world (.strCat right emptyLong) world .nil).1 = (eval world right world .nil).1 := by
-  decide +kernel
+  exact ⟨by kernel_rfl, by kernel_rfl, by kernel_rfl, by kernel_rfl⟩
 
 /-- Compare both ways, distinguish a proper prefix from a present zero byte, and
     compare long strings whose runtime lengths differ from their declared capacities. -/
@@ -62,14 +63,15 @@ theorem order_meaning_zeuge :
     eval world (.strLt left right) world .nil = true ∧
     eval world (.strLt right left) world .nil = false ∧
     eval world (.strLt left left) world .nil = false ∧
-    eval world (.strLt prefix left) world .nil = true ∧
-    eval world (.strLt left prefix) world .nil = false ∧
-    eval world (.strLt prefix zeroTail) world .nil = true ∧
-    eval world (.strLt zeroTail prefix) world .nil = false ∧
+    eval world (.strLt shortText left) world .nil = true ∧
+    eval world (.strLt left shortText) world .nil = false ∧
+    eval world (.strLt shortText zeroTail) world .nil = true ∧
+    eval world (.strLt zeroTail shortText) world .nil = false ∧
     eval world (.strLt left combined) world .nil = true ∧
     eval world (.strLt combined left) world .nil = false ∧
     eval world (.strLt emptyLong zero) world .nil = true ∧
-    eval world (.strLt zero emptyLong) world .nil = false := by decide +kernel
+    eval world (.strLt zero emptyLong) world .nil = false := by
+  (repeat' apply And.intro) <;> kernel_rfl
 
 /-- The accepted concatenation uses the same generic theorem as arbitrary expressions. -/
 theorem concatenation_correct [Kern] {m : Runner.Mem} {pc fp : Runner.W} {K top : Nat} {c : List II}

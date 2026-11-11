@@ -1,6 +1,7 @@
 /- Product construction, projection and replacement through expression and block lowering. -/
 module
 public import Stage0.Senke.Ausdruck.Aggregat.Proben
+import Grammatik.Kern.Taktik.KernelRfl
 @[expose] public section
 
 namespace Gabbro.Stage0.Pipeline.ProductValueWitness
@@ -25,13 +26,13 @@ def checks : Expr D [] [] .bool :=
       (.eq (.prodGet updated .head) (.lit 17)))
 
 theorem semantics_zeuge : eval world checks world .nil = true := by
-  decide +kernel
+  kernel_rfl
 
 /-- The update retains both words, rather than returning only its selected field. -/
 theorem encoding_zeuge :
-    encodeWords layout Pair (eval world pair world .nil) = [17, 1] ∧
+    encodeWords layout Pair (eval world (pair (Λ := [])) world .nil) = [17, 1] ∧
     encodeWords layout Pair (eval world updated world .nil) = [17, 0] := by
-  exact ⟨rfl, rfl⟩
+  exact ⟨by kernel_rfl, by kernel_rfl⟩
 
 /-- A multiword middle field is followed by an integer with a nonzero high limb. -/
 def widePair : Expr D [] []

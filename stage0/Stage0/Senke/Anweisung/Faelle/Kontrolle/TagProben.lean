@@ -38,7 +38,7 @@ theorem pre [Kern] : PreS layout memory 0 65536 64 4 code (Env.nil : Env D []) :
 /-- The real constructor leaves 10753 (tag 1, offset 42); the decoder recovers
     2^32 + 42. Both phases use their generic memory simulation theorem. -/
 theorem simulation_zeuge [Kern] :
-    tagPayloadC 4 (some (2 ^ 32, 2 ^ 32 + 100)) = some decoder ∧
+    tagPayloadC 4 (some (.int (2 ^ 32) (2 ^ 32 + 100))) = some decoder ∧
     Case.top = 7 ∧ decoder.length = 20 ∧
     PreS layout memory 0 65536 64 4 code (Env.nil : Env D []) ∧
     Ok memory 0 65536 64 4 code (· = BitVec.ofInt 64 (2 ^ 32 + 42)) := by
@@ -68,7 +68,7 @@ theorem simulation_zeuge [Kern] :
 theorem dispatcher_zeuge (A : D.Fn → Nat) (frame : FrameLayout) (ens : List II × Nat)
     (pr : List Nat) (ex : Int × Int) :
     ∀ lower ∈ ([2 ^ 32, -(2 ^ 32) - 100, 2 ^ 64 - 101] : List Int),
-      let cs := [none, some (lower, lower + 100)]
+      let cs := [none, some (.int lower (lower + 100))]
       let arms : Arms D (vertragVon D (⟨0, by decide⟩ : D.Fn)) false [.sum cs] [] [] cs :=
         .cons .nil (.cons .nil .nil)
       ∃ c top, lowS 0 A layout frame ens pr ex (.onTag (.var .here) arms) = some (c, top) := by

@@ -1,6 +1,7 @@
 /- Joint runtime-index simulation: entry payload, current index and preserved parameters. -/
 module
 public import Stage0.Senke.Ausdruck.Old.Proben
+import Grammatik.Kern.Taktik.KernelRfl
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.RuntimeOldProbe
@@ -49,10 +50,10 @@ theorem params_at : EnvAt layout memory 4096 params 4 := by
 
 theorem saved : EntrySnapshots.At layout entry memory 4096 (oldCells expr) 4 := by
   refine ⟨?_, ?_, ?_, ?_, trivial⟩
-  · exact ValueAt.of_enc (w := 0) (by decide) (by decide +kernel) rfl
-  · exact ValueAt.of_enc (w := 3) (by decide) (by decide +kernel) rfl
-  · exact ValueAt.of_enc (w := 0) (by decide) (by decide +kernel) rfl
-  · exact ValueAt.of_enc (w := 0) (by decide) (by decide +kernel) rfl
+  · exact ValueAt.of_enc (w := 0) (by decide) (by decide +kernel) (by show _ = _; kernel_rfl)
+  · exact ValueAt.of_enc (w := 3) (by decide) (by decide +kernel) (by show _ = _; kernel_rfl)
+  · exact ValueAt.of_enc (w := 0) (by decide) (by decide +kernel) (by show _ = _; kernel_rfl)
+  · exact ValueAt.of_enc (w := 0) (by decide) (by decide +kernel) (by show _ = _; kernel_rfl)
 
 theorem layout_in : LayIn layout := by
   refine ⟨?_, (fun g => Fin.elim0 g), by decide⟩

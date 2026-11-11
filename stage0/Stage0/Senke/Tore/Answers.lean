@@ -13,8 +13,8 @@ variable [RootNativeFloat.Hardware] {D : Deklaration}
 theorem torOK_zeuge (L : Lay D) (O : Orakel D) (hO : ∀ a σ ρ, O.wirkt a σ ρ = (σ, 0))
     (href : ∀ a n, D.aerg a = some (.ref n) → L.tor a ≠ none →
       ValueValid L (.ref n) (Val.vonZelle 0))
-    (harea : @AreaContract { toHardware := inferInstance, ans := fun _ _ _ _ => True } D L O) :
-    @TorOK { toHardware := inferInstance, ans := fun _ _ _ _ => True } D L O := by
+    (harea : @AreaContract ({ toHardware := inferInstance, ans := fun _ _ _ _ => True } : Kern) D L O) :
+    @TorOK ({ toHardware := inferInstance, ans := fun _ _ _ _ => True } : Kern) D L O := by
   letI : Kern := { toHardware := inferInstance, ans := fun _ _ _ _ => True }
   refine ⟨fun a b _ _ _ σ ρ q m _ _ _ hW => ⟨0, 0, m, trivial, ⟨rfl, rfl, fun _ _ => rfl⟩, ?_, ?_⟩,
     fun a b _ _ j nt rw t f _ _ _ hτ σ ρ q m _ _ _ hW hB => ⟨0, 0, m, trivial, rfl, rfl, fun _ _ => rfl, ?_, ?_, ?_⟩, ?_, harea⟩

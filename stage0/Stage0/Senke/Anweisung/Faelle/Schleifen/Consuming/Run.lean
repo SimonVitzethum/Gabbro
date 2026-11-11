@@ -1,6 +1,7 @@
 /- Connected lowering witnesses on the actual emitted images and table cells. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Consuming.Probe
+import Mathlib.Tactic.FinCases
 public section
 
 namespace Gabbro.Stage0.Senke.ConsumeProbe
@@ -64,9 +65,7 @@ theorem code_at (kind : Fin 4) : CodeAt (memory kind) 16384 (code kind) := by
        (memory kind).rd32 (16384 + BitVec.ofNat 64 (16 * k.val) + 4) = some (II.f (code kind)[k.val].a) ∧
        (memory kind).rd32 (16384 + BitVec.ofNat 64 (16 * k.val) + 8) = some (II.f (code kind)[k.val].b) ∧
        (memory kind).rd32 (16384 + BitVec.ofNat 64 (16 * k.val) + 12) = some (II.f (code kind)[k.val].c))) = true := by
-    rcases kind with ⟨k, hk⟩
-    have casesK : k = 0 ∨ k = 1 ∨ k = 2 ∨ k = 3 := by omega
-    rcases casesK with rfl | rfl | rfl | rfl <;> decide +kernel
+    fin_cases kind <;> decide +kernel
   intro k hk
   have h := of_decide_eq_true (List.all_eq_true.mp all ⟨k, hk⟩ (by simp))
   simpa only [BitVec.zero_add] using (show InsAt (memory kind)
@@ -82,9 +81,7 @@ theorem functions_at (kind : Fin 4) :
        (memory kind).rd32 (2048 + BitVec.ofNat 64 (16 * k.val) + 4) = some (II.f functionCode[k.val].a) ∧
        (memory kind).rd32 (2048 + BitVec.ofNat 64 (16 * k.val) + 8) = some (II.f functionCode[k.val].b) ∧
        (memory kind).rd32 (2048 + BitVec.ofNat 64 (16 * k.val) + 12) = some (II.f functionCode[k.val].c))) = true := by
-    rcases kind with ⟨k, hk⟩
-    have casesK : k = 0 ∨ k = 1 ∨ k = 2 ∨ k = 3 := by omega
-    rcases casesK with rfl | rfl | rfl | rfl <;> decide +kernel
+    fin_cases kind <;> decide +kernel
   intro k hk
   have h := of_decide_eq_true (List.all_eq_true.mp all ⟨k, hk⟩ (by simp))
   exact ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩
@@ -96,9 +93,7 @@ theorem pre [Kern] (kind : Fin 4) :
     PreS layout (memory kind) 16384 4096 64 8 (code kind) (Env.nil : Env D []) (reserved := controlReserved) := by
   refine ⟨by decide, by decide, frame kind, code_at kind, ?_, ?_, trivial, wstab_true _ _⟩
   · unfold CodeFar
-    rcases kind with ⟨k, hk⟩
-    have casesK : k = 0 ∨ k = 1 ∨ k = 2 ∨ k = 3 := by omega
-    rcases casesK with rfl | rfl | rfl | rfl <;> decide +kernel
+    fin_cases kind <;> decide +kernel
   · intro _ x; nomatch x
 
 theorem world_at [Kern] (kind : Fin 4) : WeltAt (memory kind) layout initial := by
@@ -147,9 +142,7 @@ theorem functions_spec [Kern] :
 theorem lowering_zeuge (kind : Fin 4) :
     loweredVariant kind = some (code kind, top kind) ∧ 0 < (code kind).length ∧
       top kind + 8 ≤ 64 ∧ 16 * (code kind).length < 2 ^ 31 := by
-  rcases kind with ⟨k, hk⟩
-  have casesK : k = 0 ∨ k = 1 ∨ k = 2 ∨ k = 3 := by omega
-  rcases casesK with rfl | rfl | rfl | rfl <;> decide +kernel
+  fin_cases kind <;> decide +kernel
 
 /-- Jointly inhabit the general theorem, including its ABI, world, code and
     call-contract premises. The emitted image, not a detached candidate, runs. -/
