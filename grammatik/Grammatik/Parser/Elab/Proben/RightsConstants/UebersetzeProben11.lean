@@ -16,6 +16,7 @@ import all Grammatik.Parser.Elab.UebersetzeAllg3.Body
 import all Grammatik.Parser.Elab.UebersetzeAllg3.Stufe
 import all Grammatik.Parser.Elab.UebersetzeAllg3.Seq
 import all Grammatik.Parser.Elab.UebersetzeAllg3.Struct
+import all Init.Data.Int.Repr
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -66,7 +67,7 @@ attribute [local cbv_eval] UebersetzeProben2.seq_select UebersetzeProben2.struct
 
 /-- Source text reaches canonical G through both consecutive stage changes. -/
 theorem staged_owner_advances_twice_zeuge : stufe stagedOwner = "OK" := by
-  rights_ok Phases.Inputs.stagedOwner
+  decide +kernel
 
 /-- The declaration exported from that same source has three stages. -/
 theorem staged_owner_declared_count_zeuge : sourceMarkStageCounts stagedOwner = some [3] := by
@@ -80,7 +81,7 @@ theorem staged_counts_and_default_zeuge :
   rights_counts Phases.Inputs.stagedCounts
 
 theorem staged_ordinary_advances_twice_zeuge : stufe stagedOrdinary = "OK" := by
-  rights_ok Phases.Inputs.stagedOrdinary
+  decide +kernel
 
 /-- The declaration bound refuses an advance from the last stage by mark name. -/
 theorem staged_last_stage_refused_zeuge :

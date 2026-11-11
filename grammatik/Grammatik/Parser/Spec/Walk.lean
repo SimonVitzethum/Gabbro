@@ -144,11 +144,17 @@ def bindings (items : List SItemTief) (locals : Locals)
   | .alloc _ n t _ _ _ | .allocVon _ n t _ => (t.map fun ty => [(n, ty)]).getD []
   | _ => []
 
+/-- Whether the characters `needle` occur in `text`. Structural over the characters, so the kernel
+    reduces it (`String.splitOn` does not). -/
+def zeichenInfix (needle : List Char) : List Char → Bool
+  | [] => needle.isEmpty
+  | c :: rest => needle.isPrefixOf (c :: rest) || zeichenInfix needle rest
+
 /-- Raw headers have their own ordinary elaborators. Refuse an abstract call hidden there. -/
 def Walk.raw (w : Walk) (s : String) (locals : Locals := []) : Except String String := do
   w.rawCheck locals s
-  let compact := String.ofList (s.toList.filter fun c => c != ' ' && c != '\t' && c != '\n' && c != '\r')
-  if w.resolveSpecs && (groups w.source).any (fun g => (compact.splitOn (g.name ++ "::")).length > 1) then
+  let compact := s.toList.filter fun c => c != ' ' && c != '\t' && c != '\n' && c != '\r'
+  if w.resolveSpecs && (groups w.source).any (fun g => zeichenInfix (g.name ++ "::").toList compact) then
     .error "spec.call.raw.header"
   else .ok s
 

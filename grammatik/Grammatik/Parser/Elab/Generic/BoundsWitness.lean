@@ -2,6 +2,8 @@ module
 public import Grammatik.Parser.Elab.Generic.PipelineWitness
 public import Grammatik.Parser.Spec.Zeugen
 
+import Grammatik.Kern.Taktik.KernelRfl
+import all Init.Data.Int.Repr
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -63,7 +65,7 @@ def totalKey : Instance := ⟨"total", ["index into Circles", "2"]⟩
 
 def totalCaller : SItemTief :=
   .fnT { art := "", name := "measure", params := [("xs", .array (.index false "Circles") (.lit 2))],
-    res := some (.atom "u64"), fehler := none, klauseln := [] }
+         res := some (.atom "u64"), fehler := none, klauseln := [] }
     (.block [.bind false "result_value" none
       (.ext .instantiate ["total", "index into Circles", "2"] [.variable "xs"])]
       (some (.ret (some (.variable "result_value")))))
@@ -76,13 +78,13 @@ def boundedExpansion : Except String (List SItemTief) := do
   exportDeclarationUnit (← expand boundedSource)
 
 theorem total_body_parametric_zeuge :
-    checkParametricBody boundedSource totalSignature (totalBody) = .ok () := rfl
+    checkParametricBody boundedSource totalSignature (totalBody) = .ok () := by kernel_rfl
 
 theorem multiple_bounds_parser_zeuge :
     (parsedSource "fn both[T: Shape + Other](x: T) -> T { return x; }").map (fun items =>
       match items with
       | [.fnT sig _] => beqSGenericParams sig.generics [.type "T" ["Shape", "Other"]]
-      | _ => false) = .ok true := by decide +kernel
+      | _ => false) = .ok true := by kernel_rfl
 
 
 /-- The traverse body calls the Circles implementation directly, with no abstract call left.
@@ -94,26 +96,26 @@ theorem total_circles_direct_calls_zeuge :
           beqSAnw body (totalExpandedBody (Spec.implementationName 0 "area")) &&
           beqSKlauselList sig.klauseln [.effs [.reads (.variable "Circles")],
             .cost (.bin "*" (.lit 2) (.lit 60))]
-      | _ => false) = .ok true := rfl
+      | _ => false) = .ok true := by kernel_rfl
 
 /-- The full declaration expansion inhabits the canonical ordinary-form theorem. -/
 theorem bounded_output_ordinary_zeuge :
-    boundedExpansion.map (Spec.ordinary boundedSource) = .ok true := rfl
+    boundedExpansion.map (Spec.ordinary boundedSource) = .ok true := by kernel_rfl
 
 theorem all_bounds_required_zeuge :
     checkTypeBounds [Spec.shapeSpec, Spec.shapeImpl, .specGroupT "Other" ["U"] [] []]
       (.index false "Circles") ["Shape", "Other"] =
-      .error "generic.bound.implementation.missing: Other" := rfl
+      .error "generic.bound.implementation.missing: Other" := by kernel_rfl
 
 theorem missing_impl_zeuge :
     expand [Spec.shapeSpec, .fnT totalSignature (totalBody), totalCaller] =
-      .error "generic.bound.implementation.missing: Shape" := rfl
+      .error "generic.bound.implementation.missing: Shape" := by kernel_rfl
 
 /-- An alias uses the unified spec resolver's canonical type identity. -/
 theorem bound_alias_zeuge :
     checkTypeBounds [Spec.shapeSpec, Spec.shapeImpl,
       .typeT [] "Circle" [] [] (some (.index false "Circles"))]
-      (.atom "Circle") ["Shape"] = .ok () := rfl
+      (.atom "Circle") ["Shape"] = .ok () := by kernel_rfl
 
 def abstractSignature : FnSig :=
   { art := "", name := "abstract", params := [("x", .atom "T")],
@@ -123,41 +125,41 @@ def abstractSignature : FnSig :=
 theorem abstract_arithmetic_refused_zeuge :
     expand [Spec.shapeSpec, .fnT abstractSignature
       (.block [] (some (.ret (some (.bin "+" (.variable "x") (.lit 1))))))] =
-      .error "generic.parametricity.arithmetic: +" := rfl
+      .error "generic.parametricity.arithmetic: +" := by kernel_rfl
 
 theorem inferred_binding_remains_abstract_zeuge :
     checkParametricBody [Spec.shapeSpec] abstractSignature
       (.block [.bind false "copy" none (.variable "x")]
         (some (.ret (some (.bin "+" (.variable "copy") (.lit 1)))))) =
-      .error "generic.parametricity.arithmetic: +" := rfl
+      .error "generic.parametricity.arithmetic: +" := by kernel_rfl
 
 theorem abstract_comparison_refused_zeuge :
     checkParametricBody [Spec.shapeSpec] { abstractSignature with res := some (.atom "bool") }
       (.block [] (some (.ret (some (.bin "==" (.variable "x") (.variable "x")))))) =
-      .error "generic.parametricity.comparison: ==" := rfl
+      .error "generic.parametricity.comparison: ==" := by kernel_rfl
 
 theorem abstract_field_refused_zeuge :
     checkParametricBody [Spec.shapeSpec] abstractSignature
       (.block [] (some (.ret (some (.field (.variable "x") "r"))))) =
-      .error "generic.parametricity.field" := rfl
+      .error "generic.parametricity.field" := by kernel_rfl
 
 theorem concrete_annotation_refused_zeuge :
     checkParametricBody [Spec.shapeSpec] abstractSignature
       (.block [.bind false "copy" (some (.atom "u64")) (.variable "x")] none) =
-      .error "generic.parametricity.binding" := rfl
+      .error "generic.parametricity.binding" := by kernel_rfl
 
 theorem unwritten_bound_refused_zeuge :
     checkParametricBody [Spec.shapeSpec]
       { abstractSignature with generics := [.type "T" []], res := some (.atom "u64") }
       (.block [] (some (.ret (some (.call "Shape::area" [.variable "x"]))))) =
-      .error "generic.parametricity.bound: Shape" := rfl
+      .error "generic.parametricity.bound: Shape" := by kernel_rfl
 
 /-- Generic forwarding cannot obtain a bound from the eventual concrete specialization. -/
 theorem forwarded_bound_refused_zeuge :
     checkParametricBody [Spec.shapeSpec, .fnT abstractSignature (.block [] none)]
       { abstractSignature with name := "forward", generics := [.type "T" []] }
       (.block [] (some (.ret (some (.ext .instantiate ["abstract", "T"] [.variable "x"]))))) =
-      .error "generic.parametricity.bound: Shape" := rfl
+      .error "generic.parametricity.bound: Shape" := by kernel_rfl
 
 /-- Inferred results of spec functions returning T remain abstract too. -/
 theorem abstract_spec_result_refused_zeuge :
@@ -167,22 +169,22 @@ theorem abstract_spec_result_refused_zeuge :
       { abstractSignature with generics := [.type "T" ["Copy"]] }
       (.block [.bind false "copy" none (.call "Copy::copy" [.variable "x"])]
         (some (.ret (some (.bin "+" (.variable "copy") (.lit 1)))))) =
-      .error "generic.parametricity.arithmetic: +" := rfl
+      .error "generic.parametricity.arithmetic: +" := by kernel_rfl
 
 /-- A global concrete alias with the same spelling as T cannot impersonate the binder. -/
 theorem concrete_alias_is_not_parameter_zeuge :
     checkParametricBody [.typeT [] "T" [] [] (some (.atom "u64")),
       .globT false "default_value" (.atom "T") (.one (.lit 0)) none none false]
       abstractSignature (.block [] (some (.ret (some (.variable "default_value"))))) =
-      .error "generic.parametricity.binding" := rfl
+      .error "generic.parametricity.binding" := by kernel_rfl
 
 
 theorem concrete_alias_call_refused_zeuge :
     checkParametricBody [.typeT [] "T" [] [] (some (.atom "u64")),
       .fnT { art := "", name := "concrete", params := [("x", .atom "T")],
-        res := none, fehler := none, klauseln := [] } (.block [] none)]
+             res := none, fehler := none, klauseln := [] } (.block [] none)]
       abstractSignature (.block [.call "concrete" [.variable "x"]] none) =
-      .error "generic.parametricity.argument: concrete" := rfl
+      .error "generic.parametricity.argument: concrete" := by kernel_rfl
 
 
 /-- Explicit spec type arguments share the generic application AST and defer to the spec pass. -/
@@ -192,12 +194,12 @@ theorem explicit_bound_statement_zeuge :
         .fnT { abstractSignature with name := "visit", res := none }
           (.block [.genericCall "Shape::area" ["T"] [.variable "x"]] none),
         .fnT { art := "", name := "entry", params := [("c", .index false "Circles")],
-          res := none, fehler := none, klauseln := [] }
+               res := none, fehler := none, klauseln := [] }
           (.block [.genericCall "visit" ["index into Circles"] [.variable "c"]] none)]
       exportDeclarationUnit items) : Except String (List SItemTief)).map (fun items => items.any fun
         | .fnT sig body => strEq sig.name (instanceName ⟨"visit", ["index into Circles"]⟩) &&
             beqSAnw body (.block [.call "$spec$0$area" [.variable "x"]] none)
-        | _ => false) = .ok true := rfl
+        | _ => false) = .ok true := by kernel_rfl
 
 /-- Full source parsing, instance closure and declaration expansion of the exact plan example. -/
 def boundedText : String :=
@@ -218,26 +220,26 @@ theorem bounded_source_direct_calls_zeuge :
       (fun items => items.any fun
         | .fnT sig body => strEq sig.name (instanceName totalKey) &&
             beqSAnw body (totalExpandedBody "$spec$0$area")
-        | _ => false) = .ok true := by decide +kernel
+        | _ => false) = .ok true := by kernel_rfl
 
 /-- The source witness actually parses the fold, rather than supplying a pre-expanded body. -/
 theorem bounded_source_exact_fold_zeuge :
     (parsedSource boundedText).map (fun items => items.any fun
       | .fnT sig body => strEq sig.name "total" && beqSAnw body totalBody
-      | _ => false) = .ok true := by decide +kernel
+      | _ => false) = .ok true := by kernel_rfl
 
 /-- Symbolic N agrees with the array length before any concrete instance exists. -/
 theorem total_symbolic_traverse_zeuge :
     ((SourceFolds.prepare boundedSource).map fun items => items.any fun
       | .fnT sig body => strEq sig.name "total" && beqSAnw body totalExpandedBody
-      | _ => false) = .ok true := rfl
+      | _ => false) = .ok true := by kernel_rfl
 
 theorem total_range_length_refused_zeuge :
     SourceFolds.returnFold boundedSource [("xs", .array (.atom "T") (.lit 3))]
       (some (.atom "u64"))
       (.ret (some (.ext .foldAdd ["i", "range"] [.lit 0, .lit 5, .tru,
         .call "Shape::area" [.index (.variable "xs") (.variable "i")]]))) =
-      .error "fold range: upper bound exceeds the array length" := rfl
+      .error "fold range: upper bound exceeds the array length" := by kernel_rfl
 
 /-- A short upper bound truncates the range with a filter test. -/
 theorem total_range_truncated_zeuge :
@@ -253,6 +255,6 @@ theorem total_range_truncated_zeuge :
                 (.call "Shape::area" [.index (.variable "xs") (.variable "i")]),
                 .set (.variable "$rangeFold$acc$0") "+=" (.variable "$rangeFold$value$0")] none)
               [] none] none)]
-        (some (.ret (some (.variable "$rangeFold$acc$0"))))) := rfl
+        (some (.ret (some (.variable "$rangeFold$acc$0"))))) := by kernel_rfl
 
 end Gabbro.Grammatik.Parser.Generic

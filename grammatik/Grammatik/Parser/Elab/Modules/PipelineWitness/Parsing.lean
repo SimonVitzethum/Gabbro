@@ -34,6 +34,7 @@ import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil2
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil3
 import all Grammatik.Parser.Elab.Uebersetze.Folds.ConstEvaluation
 import Init.Data.String.Lemmas.Intercalate
+import all Init.Data.Int.Repr
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap

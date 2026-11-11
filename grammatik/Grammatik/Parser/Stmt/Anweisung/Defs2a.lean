@@ -16,13 +16,14 @@ def nimmFrage : List Token → Bool × List Token
 theorem strEq_gleich_frage : strEq "=" "?" = false := by decide
 theorem strEq_doppelpunkt_frage : strEq ":" "?" = false := by decide
 
-/-- `?` behind a binding's call: `;` follows, and the bound value must be a call. -/
+/-- `?` behind a binding's call: `;` follows, and the bound value must be a call, written
+    directly or as an explicit generic instantiation (which expansion turns into a call). -/
 def frageEnde (m : Bool) (name : String) (ty : Option STyp) (e : SExpr) :
     List Token → Except String (SAnw × List Token)
   | .zeichen t :: rest' =>
     if strEq t ";" then
       match e with
-      | .call _ _ => pure (.bindQ m name ty e, rest')
+      | .call _ _ | .ext .instantiate _ _ => pure (.bindQ m name ty e, rest')
       | _ => .error "? needs a call"
     else .error "? without ;"
   | _ => .error "? without ;"
