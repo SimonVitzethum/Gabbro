@@ -164,6 +164,16 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
           | .error e => .error e
           | .ok x => .ok (Expr.var x)
       | _ => .error "argument without G form"
+    | .sum _, .sum cases =>
+      match a with
+      | .var p =>
+        match paramPos fn.params p with
+        | .error e => .error e
+        | .ok j =>
+          match lowVar Γ j (.sum cases) with
+          | .error e => .error e
+          | .ok x => .ok (Expr.var x)
+      | _ => .error "tagged argument without G form"
     | .wert, .prod name fields =>
       match a with
       | .val source => lowWertAtE u Γ Λ fn none (.prod name fields) source

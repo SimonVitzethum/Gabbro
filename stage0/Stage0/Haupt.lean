@@ -1,6 +1,7 @@
 /- Compile checked Gabbro source to an S0IR image. Execution belongs to the assembly runner. -/
 module
 public import Stage0.IRBild
+public import Stage0.Diagnose
 -- Load transitive compiler IR for `lean --run`; retain the runtime import and native main.
 meta import Stage0.IRBild
 @[expose] public section
@@ -15,7 +16,11 @@ def haupt (args : List String) : IO UInt32 := do
     | .error error => IO.eprintln ("stage0: " ++ error); return 2
     | .ok options =>
       match irBild (← IO.FS.readFile source) irStapel options with
-      | .error error => IO.eprintln ("stage0: " ++ error); return 1
+      | .error error =>
+        IO.eprintln ("stage0: " ++ error)
+        for note in Diagnose.notes (← IO.FS.readFile source) options do
+          IO.eprintln ("stage0: note: " ++ note)
+        return 1
       | .ok bytes =>
         IO.FS.writeBinFile output ⟨(bytes.map fun b => b.toNat.toUInt8).toArray⟩
         return 0

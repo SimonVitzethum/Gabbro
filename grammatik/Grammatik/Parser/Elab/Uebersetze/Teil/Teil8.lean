@@ -321,9 +321,11 @@ def uBindWert (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (mu : Bool
             | .ok true =>
               .ok (.bindCall x c xs, uMitLokal ctx x UParamArt.int (Ty.int lo hi) muts)
           | false, .none =>
-            match callee.resWhy, t with
-            | .some (k, n), .none => .ok (.bindCall x c xs, uMitLokal ctx x (UParamArt.why k) (Ty.why n) muts)
-            | _, _ => .error "call without a value"
+            match callee.resSum, callee.resWhy, t with
+            | .some (k, cases), _, .none =>
+              .ok (.bindCall x c xs, uMitLokal ctx x (UParamArt.sum k) (Ty.sum cases) muts)
+            | .none, .some (k, n), .none => .ok (.bindCall x c xs, uMitLokal ctx x (UParamArt.why k) (Ty.why n) muts)
+            | _, _, _ => .error "call without a value"
   | _ => uBindWertAllg ctx mu x t e
 
 /-- `return R::C` through the reason channel. -/

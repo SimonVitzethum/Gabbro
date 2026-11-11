@@ -310,6 +310,14 @@ def uArg (ctx : UCtx) (tabs : List UTab) : UParamArt → SExpr →
         if m == m2 then .ok (.var p) else .error "function pointer of another type as an argument"
       | _ => .error "pointer argument without G form"
   | .fnptr _, .fnref f => .ok (.fnref f)
+  -- A tagged value is passed by a local or parameter of the same declaration.
+  | .sum k, .variable p =>
+    match uParamNr ctx p with
+    | .error e => .error e
+    | .ok j =>
+      match uArtBei ctx.kinds j with
+      | .ok (.sum k2) => if k == k2 then .ok (.var p) else .error "argument of another tagged type"
+      | _ => .error "tagged argument without G form"
   | _, _ => .error "argument without G form"
 
 def uArgs (ctx : UCtx) (tabs : List UTab) : List UParamArt → List SExpr →
