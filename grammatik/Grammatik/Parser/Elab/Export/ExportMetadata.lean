@@ -1,6 +1,7 @@
 module
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.Export.ItemKind
+public import Grammatik.Parser.Elab.Export.TraversalHeader
 public import Grammatik.Kern.Syntax.Typen.DataRights
 public import Grammatik.Parser.Elab.Uebersetze.MeasureSource
 public import Grammatik.Parser.Profil.Auswahl
@@ -102,7 +103,7 @@ def itemMetadata : SItemTief → Bool
       clausesMetadataWithoutLoad sig.klauseln || bodyMetadata 10000 body ||
         sig.params.any (fun p => typeMetadata p.2) || sig.res.any typeMetadata
     else (sig.art != "" && sig.art != "impl") ||
-      clausesMetadata sig.klauseln || bodyMetadata 10000 body ||
+      clausesMetadata sig.klauseln || bodyMetadata 10000 (eraseCovered (touchesCovered sig.klauseln) 10000 body) ||
       sig.params.any (fun p => typeMetadata p.2) || sig.res.any typeMetadata
   /- Tagged groups expand to ordinary functions before elaboration. Inspect every original
       header and implementation body, so expansion cannot erase cost/proof/type duties. -/
@@ -119,8 +120,7 @@ def itemMetadata : SItemTief → Bool
   | .transT _ translator _ => clausesMetadata translator.klauseln ||
       translator.params.any (fun p => typeMetadata p.2) || translator.res.any typeMetadata
   | .specT .. => true -- Typed macro/proof admission is not supplied by predicate inlining alone.
-  | .callT sc => sc.gate.cost.isSome || sc.params.any (fun p => typeMetadata p.2) ||
-    sc.res.any typeMetadata
+  | .callT sc => sc.params.any (fun p => typeMetadata p.2) || sc.res.any typeMetadata
   | .protoT sig => clausesMetadata sig.klauseln || sig.params.any (fun p => typeMetadata p.2) ||
       sig.res.any typeMetadata
   | .tableT _ provider _ place _ _ parts _ => provider.isSome || place.isSome ||
@@ -165,9 +165,9 @@ def itemMetadata : SItemTief → Bool
   | .checkT c => c.sonde.isSome || bodyMetadata 10000 c.canFail
   | .accT _ _ m p _ => p.isNone || !accOperatorBound m
   | .assumT .. => false -- the unit keeps the name (`UProg.annahmen`); the assumption stays owed
-  | .modT .. | .useT .. | .asmT .. | .formatT .. | .devT ..
-  | .axiomT .. | .atomT .. | .rcuT .. | .concT .. | .walkT .. | .entryT ..
-  | .bootT .. | .varT .. | .goalT .. | .profT .. | .gateT .. | .pubT .. | .arenaT .. => true
+  | .varT .. | .goalT .. => false -- backend data: the image builder binds every gate or refuses
+  | .modT .. | .useT .. | .asmT .. | .formatT .. | .devT .. | .axiomT .. | .atomT .. | .rcuT ..
+  | .concT .. | .walkT .. | .entryT .. | .bootT .. | .profT .. | .gateT .. | .pubT .. | .arenaT .. => true
 
 /-- Reader-supported alignment erases no duty: type and section checks remain.
     Actual value/name validity still belongs to profile placement and uGlobs. -/
