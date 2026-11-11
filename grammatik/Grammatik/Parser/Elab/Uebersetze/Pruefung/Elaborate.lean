@@ -20,7 +20,7 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 
 /-- Resolve one measured place by its source shape. -/
-def uMessOrt : SExpr → Except String UMessOrt
+@[expose] def uMessOrt : SExpr → Except String UMessOrt
   | .variable n => .ok (.variable n)
   | .field (.variable b) f => .ok (.feld b f)
   | .field (.index (.field (.variable b) s) (.lit n)) f =>
@@ -28,7 +28,7 @@ def uMessOrt : SExpr → Except String UMessOrt
   | _ => .error "measure without G form"
 
 /-- A duplicate check name is refused, never merged. -/
-def uCheckDoppelt (bekannt : List String) (n : String) : Except String Unit :=
+@[expose] def uCheckDoppelt (bekannt : List String) (n : String) : Except String Unit :=
   if bekannt.any (fun m => strEq m n) then .error ("duplicate check: " ++ n) else .ok ()
 
 /-- The foreign bodies of the unit that a gate may name (C08): `extern`/`raw`/`prim`
@@ -36,7 +36,7 @@ def uCheckDoppelt (bekannt : List String) (n : String) : Except String Unit :=
     (read as `extern fn`), and `syscall` gates. Mirrors the canonical `uFremdSig`
     name set (`Einheit/Signatures`), inlined here: that module already imports this
     one, so importing it would close a cycle. -/
-def uFremdNamen : List SItemTief → List String
+@[expose] def uFremdNamen : List SItemTief → List String
   | [] => []
   | .protoT sig :: rest => sig.name :: uFremdNamen rest
   | .asmT sig _ :: rest => sig.name :: uFremdNamen rest
@@ -46,7 +46,7 @@ def uFremdNamen : List SItemTief → List String
 
 /-- Elaborate one `check` item against the unit's function, foreign-body and
     sibling-check names. -/
-def uCheck (tabs : List UTab) (globs : List UGlob) (fns : List String)
+@[expose] def uCheck (tabs : List UTab) (globs : List UGlob) (fns : List String)
     (checks : List String) (fremd : List String) (c : SCheck) : Except String UCheck := do
   let misst ← uSeq (c.misst.map uMessOrt)
   let tore ← uSeq (c.gates.map fun g =>

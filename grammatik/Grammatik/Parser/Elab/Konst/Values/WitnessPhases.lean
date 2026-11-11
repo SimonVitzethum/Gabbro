@@ -420,22 +420,16 @@ public theorem tag_results :
     rw [substitute_portable [tagged] "tagged" [.lit 4] [.lit 4] tagged (by cbv) (by cbv) (by rfl) (by cbv) (by cbv),
       checkCall_elaborated [tagged] [] [.lit 4] taggedSource (elaborate_certified taggedSource)]
     cbv
-    erw [produced]
-    simpa only [spelling, bind, Except.bind, pure, Except.pure, Except.map]
   case empty =>
     obtain ⟨literal, produced, spelling⟩ := emptyTagQuotation
     rw [substitute_portable [emptyTag] "tagged" [] [] emptyTag (by cbv) (by cbv) (by rfl) (by cbv) (by cbv),
       checkCall_elaborated [emptyTag] [] [] emptyTagSource (elaborate_certified emptyTagSource)]
     cbv
-    rw [produced]
-    simpa only [spelling, bind, Except.bind, pure, Except.pure, Except.map]
   case flag =>
     obtain ⟨literal, produced, spelling⟩ := flagTagQuotation
     rw [substitute_portable [flagTag] "tagged" [] [] flagTag (by cbv) (by cbv) (by rfl) (by cbv) (by cbv),
       checkCall_elaborated [flagTag] [] [] flagTagSource (elaborate_certified flagTagSource)]
     cbv
-    rw [produced]
-    simpa only [spelling, bind, Except.bind, pure, Except.pure, Except.map]
   case text =>
     obtain ⟨literal, produced, spelling⟩ := textTagQuotation
     rw [substitute_portable [textTag] "tagged" [] [] textTag (by cbv) (by cbv) (by rfl) (by cbv) (by cbv),

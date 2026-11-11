@@ -30,11 +30,11 @@ set_option maxRecDepth 100000
 
 /-- The synthesized head of a probe: implemented, parameterless, `bool`,
     reason-free and clause-free. -/
-def probeSig (pname : String) : FnSig :=
+@[expose] def probeSig (pname : String) : FnSig :=
   { art := "", name := pname, params := [], res := some (.atom "bool"), fehler := none, klauseln := [] }
 
 /-- Elaborate one check's `can_fail` body into its generated producer. -/
-def uProbeFn (consts : List (String × Int)) (alias : List (String × (Int × Int))) (tabs : List UTab)
+@[expose] def uProbeFn (consts : List (String × Int)) (alias : List (String × (Int × Int))) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (koepfe : List UFnKopf) (whys : List UWhy)
     (sums : List USum) (devs : List String) (regs : List UReg) (zustaende : List UZustand)
     (specs : List (String × List String × SExpr)) (arrKonst : List (String × USide))
@@ -58,7 +58,7 @@ def uProbeFn (consts : List (String × Int)) (alias : List (String × (Int × In
   | _ => .error "check body without G form"
 
 /-- A generated name that meets a written function or foreign body is refused. -/
-def uProbeNeu (belegt : List String) (bekannt : List String) (pname : String) : Except String Unit :=
+@[expose] def uProbeNeu (belegt : List String) (bekannt : List String) (pname : String) : Except String Unit :=
   if belegt.any (fun n => strEq n pname) || bekannt.any (fun n => strEq n pname) then .error ("duplicate probe: " ++ pname) else .ok ()
 
 @[expose] def uProbeFnsAux (consts : List (String × Int)) (alias : List (String × (Int × Int))) (tabs : List UTab)

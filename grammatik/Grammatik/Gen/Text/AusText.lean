@@ -64,8 +64,8 @@ instance aufzU (u : UProg) : Aufz (declOf u) where
   glob_mem := fun g => List.mem_finRange g
   lock := List.finRange u.locks.length
   lock_mem := fun L => List.mem_finRange L
-  marke := []
-  marke_mem := fun m => nomatch m
+  marke := List.finRange _
+  marke_mem := fun m => List.mem_finRange m
   fn := List.finRange u.fns.length
   fn_mem := fun f => List.mem_finRange f
   inv := List.finRange u.invs.length

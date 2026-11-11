@@ -152,11 +152,11 @@ set_option maxRecDepth 100000
 
 /-- The wrapper of gate `gate` of check `cname`: it cannot collide with a written
     function, since `#` never stands in a source identifier. -/
-def torHuellenName (cname gate : String) : String := cname ++ "#tor#" ++ gate
+@[expose] def torHuellenName (cname gate : String) : String := cname ++ "#tor#" ++ gate
 
 /-- The forwarded call and its return: the gate's value, bound and returned, or a bare
     call for a gate without a result. -/
-def torErgebnis (gate : String) (f : UFn) : List UStmt × URet :=
+@[expose] def torErgebnis (gate : String) (f : UFn) : List UStmt × URet :=
   if f.resBool then ([.bindCall "ans" gate []], .bool (.var "ans"))
   else if f.res.isSome then ([.bindCall "ans" gate []], .val (.param "ans"))
   else if f.resOpt.isSome then ([.bindCall "ans" gate []], .opt (.var "ans"))
@@ -168,7 +168,7 @@ def torErgebnis (gate : String) (f : UFn) : List UStmt × URet :=
 /-- Preserve every case of a closed foreign reason channel. Each arm returns
     that exact case; the final return only closes the syntactic continuation
     after the exhaustive match. All returns still owe the same Duty. -/
-def torFehler (count : Nat) : List UStmt :=
+@[expose] def torFehler (count : Nat) : List UStmt :=
   [.matchWhyBeg "e"] ++
     uMitTrenner ((List.range count).map fun i => [.ret (.why i)]) ++
     [.blkEnd, .ret (.why 0)]
@@ -178,7 +178,7 @@ def torFehler (count : Nat) : List UStmt :=
     The Duty threads on every path -- success and error alike -- so no path
     forges or drops it; foreign failures retain their exact reason channel and
     cannot complete the gate normally. -/
-def uFremdHuelle (duty cname gate : String) (k : UFnKopf) : Except String UFn :=
+@[expose] def uFremdHuelle (duty cname gate : String) (k : UFnKopf) : Except String UFn :=
   if !k.names.isEmpty then .error ("gate with parameters without wrapper form: " ++ gate)
   else if !k.griffe.isEmpty then .error ("gate with device handles without wrapper form: " ++ gate)
   else if k.resNever then .error ("gate without a return without wrapper form: " ++ gate)
@@ -204,7 +204,7 @@ def uFremdHuelle (duty cname gate : String) (k : UFnKopf) : Except String UFn :=
 /-- One gate wrapper: a nullary function that threads the check's Duty and invokes
     the gate, forwarding its result shape. A gate naming no function of the unit
     falls through to the foreign bodies (`uFremdHuelle`). -/
-def uTorHuelle (duty : String) (fns : List UFn) (fremd : List UFnKopf)
+@[expose] def uTorHuelle (duty : String) (fns : List UFn) (fremd : List UFnKopf)
     (cname gate : String) : Except String UFn :=
   match fns.find? (fun f => strEq f.name gate) with
   | some f =>
@@ -219,7 +219,7 @@ def uTorHuelle (duty : String) (fns : List UFn) (fremd : List UFnKopf)
     | none => .error ("gate without wrapper form: " ++ gate)
     | some k => uFremdHuelle duty cname gate k
 
-def uTorTore (fns : List UFn) (fremd : List UFnKopf) (cname duty : String) :
+@[expose] def uTorTore (fns : List UFn) (fremd : List UFnKopf) (cname duty : String) :
     List String → List String → Except String (List UFn)
   | [], _ => .ok []
   | g :: rest, gesehen =>

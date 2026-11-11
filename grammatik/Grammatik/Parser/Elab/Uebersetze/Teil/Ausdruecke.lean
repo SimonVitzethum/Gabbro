@@ -295,7 +295,7 @@ def USide.decEq (a b : USide) : Decidable (a = b) := by
     exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.reason.injEq])
   case function.function a0 a1 b0 b1 =>
     exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.function.injEq])
-termination_by sizeOf a
+termination_by structural a
 
 def UEns.decEq (a b : UEns) : Decidable (a = b) := by
   cases a <;> cases b <;> try (refine isFalse ?_; intro h; cases h; done)
@@ -353,7 +353,7 @@ def UEns.decEq (a b : UEns) : Decidable (a = b) := by
     letI := USide.decEq a1 b1
     letI := UEns.decEq a3 b3
     exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2 ∧ a3 = b3) (by simp only [UEns.arrayElements.injEq])
-termination_by sizeOf a
+termination_by structural a
 
 def USide.decFields : (a b : List (Ty × USide)) → Decidable (a = b)
   | [], [] => isTrue rfl
@@ -363,7 +363,7 @@ def USide.decFields : (a b : List (Ty × USide)) → Decidable (a = b)
       exact decidable_of_iff ((ta = tb ∧ a = b) ∧ as = bs)
         (by simp only [List.cons.injEq, Prod.mk.injEq])
   | [], _ :: _ | _ :: _, [] => isFalse (by intro h; cases h)
-termination_by a _ => sizeOf a
+termination_by structural a _ => a
 end
 
 instance : DecidableEq USide := USide.decEq
