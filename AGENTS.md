@@ -2,7 +2,8 @@
 
 This is the operating manual for everyone who works in this repository, human or model (`CLAUDE.md` is a
 symlink to it, so Claude Code loads the same text); it states the goal, the standing rules, the procedures and
-the pitfalls. The current work list is `TODO.md`. History (who decided what, when, and how earlier rounds
+the pitfalls. There is no work-list file in the repository (owner, 2026-11-11): open work and findings are not
+recorded in a tracked document; a lead keeps them in a gitignored scratch file. History (who decided what, when, and how earlier rounds
 were organised) is in `git log`, not here.
 
 ---
@@ -286,7 +287,7 @@ not a deployed checker, and no bridge to any binary is built. The
 
 **Repository**
 - **Language:** everything in the repository is English — documents (every `.md` and its file name), comments,
-  commit messages, diagnostics, `TODO.md`. The conversation with the project owner is in German.
+  commit messages, diagnostics. The conversation with the project owner is in German.
 - **At most 30 `.md` files** in the repository. Reports, verdicts and interim states belong in git, not in the
   tree.
 - **Commits** are plain `git commit` with a Conventional Commits subject (`type(scope): summary`, types `feat`,
@@ -370,7 +371,6 @@ and the sentence register went with the Rust checker.)
 | Test sets M and N | `grammatik/Grammatik/Gen/` (generator, coverage cells, fine cells) |
 | Plans | `dokumente/IR-COMPILATION-LANES.md`, `dokumente/MACHINE-IR-PLAN.md`, `dokumente/PLAN-SELF-HOSTING.md`, `dokumente/PLAN-LONG-RANGE.md`, `dokumente/LOW-LEVEL-SYNTAX-PLAN.md`, `dokumente/ABSTRACTION-SYNTAX-PLAN.md` |
 | Theorem map | `dokumente/THEOREM-MAP.md` (new sections at the end) |
-| Known absences | `TODO.md` |
 | Guardians | `instrumente/abnahme.py` and the two `instrumente/pruefe-*.py` (`dokumente/TOOLBOX.md`) |
 
 ## 9. Pitfalls that cost real time (each happened)

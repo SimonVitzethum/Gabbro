@@ -223,7 +223,7 @@ theorem herkunft_melde_schreibt_zelle :
       (.inr (finName UGlob.name herkunftU.globs "s#zelle0" herkunft_globs_nichtleer)) = true := by
   decide +kernel
 
-/-- **FINDING (C15, open, `TODO.md`): the accumulator component refuses a unit
+/-- **FINDING (C15, open): the accumulator component refuses a unit
     whose user function calls the generated update.** `akkuZulaessig` demands
     that no function besides the update and the fold has a cell in its write
     set; a call demands the callee's write set inside the caller's. `melde`

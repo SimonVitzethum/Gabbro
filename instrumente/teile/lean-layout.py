@@ -43,7 +43,7 @@ exec(open(ROOT / 'instrumente' / 'teile' / 'lean-layout-rules.py').read())
 # Lean projects: folders from the project root down to a folder holding Lean files are counted.
 PROJECTS = ['grammatik', 'bruecke', 'passlogik', 'programmlogik', 'stage0', 'runner', 'nativefloat']
 TEXT_TREES = ['crates', 'instrumente', 'dokumente', 'beispiele', 'bibliothek', 'laufzeit', 'bruecke',
-              'passlogik', 'programmlogik', 'beweise', 'README.md', 'TODO.md', 'DIRECT-COMPILER-DESIGN.md',
+              'passlogik', 'programmlogik', 'beweise', 'README.md', 'DIRECT-COMPILER-DESIGN.md',
               'AGENTS.md', 'DONE.md', 'grammatik']
 SKIP_PREFIX = ('messung/muse/', 'lanes/', '.claude/', '.town/', 'target/', '.lake',
                'instrumente/teile/lean-layout')   # the tool's own rules and map name paths on purpose (PINNED): never rewritten

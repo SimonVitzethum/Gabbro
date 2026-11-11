@@ -13,7 +13,7 @@ Stages:
      `Classical.choice`, `Quot.sound`.
 
 The duty files under `programmlogik/Duty/` were printed by the removed Rust tool; they are tracked
-inputs now. A verified generator in Lean is owed (TODO.md).
+inputs now. A verified generator in Lean is owed.
 
 Exit 0 green, 1 red, 2 nothing measured."""
 import os, pathlib, re, subprocess, sys

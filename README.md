@@ -24,7 +24,7 @@ over its model.
 - A working Gabbro compiler, and a working Gabbro checker for the full language (the verified ones are the goal).
 - A verified compiler, or any proved bridge from the model to a binary. Never call the compiler or a binary verified.
 - A standard library; programs bring their own `syscall` items and bindings.
-- Full source-to-IR coverage. Open forms and all measurements are in [TODO.md](TODO.md) and
+- Full source-to-IR coverage. Open forms are in
   [IR-COMPILATION-LANES](dokumente/IR-COMPILATION-LANES.md).
 
 ## Check the proof yourself
@@ -55,7 +55,7 @@ Open: M and N as concrete values for the whole model, the lowering cells, the CP
 
 ## Documents
 
-[Open work](TODO.md) · [goal statement](grammatik/Grammatik/Zielsatz/Kern/Spec.lean) · [syntax](dokumente/SYNTAX.md) ·
+[goal statement](grammatik/Grammatik/Zielsatz/Kern/Spec.lean) · [syntax](dokumente/SYNTAX.md) ·
 [language](dokumente/LANGUAGE.md) · [Stage-0 compilation](dokumente/IR-COMPILATION-LANES.md) ·
 [GabbroV](dokumente/GABBROV.md) · [low-level plan](dokumente/LOW-LEVEL-SYNTAX-PLAN.md) ·
 [long-range plan](dokumente/PLAN-LONG-RANGE.md) · [how work is run](AGENTS.md)
