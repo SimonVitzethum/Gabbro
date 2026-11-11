@@ -133,6 +133,5 @@ public import Stage0.Zeugen.Ablehnung.ProfileMismatchWitness
 public import Stage0.Zeugen.Annahme.RequiresProfileWitness
 public import Stage0.Zeugen.Annahme.TestBuildWitness
 public import Stage0.Zeugen.Ablehnung.SectionWitness
-public import Stage0.Zeugen.Ablehnung.EntrustWitness
 
 @[expose] public section
