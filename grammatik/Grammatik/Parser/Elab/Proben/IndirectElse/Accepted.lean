@@ -39,7 +39,7 @@ import all Init.Data.String.ToSlice
 
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.IndirectElseProben
-open Uebersetze UebersetzeAllg UebersetzeAllg2
+open Uebersetze UebersetzeAllg UebersetzeAllg2 Zielsatz
 
 set_option maxRecDepth 100000
 set_option maxHeartbeats 2000000

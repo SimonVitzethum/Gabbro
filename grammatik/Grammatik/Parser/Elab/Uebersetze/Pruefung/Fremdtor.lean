@@ -15,15 +15,50 @@ public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Falte
 public import Grammatik.Parser.Elab.UebersetzeAllg3
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Rest2a
 public import Grammatik.Parser.Cover.Differenz
+public import Grammatik.Parser.Elab.UebersetzePipeline
 public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
 public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide
 public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckProof
 public import Grammatik.Kern.Syntax.Satz.PruefungMessung
 public import Grammatik.Kern.Syntax.Satz.PruefungAbschluss
+import Grammatik.Kern.Taktik.KernelRfl
+import all Init.Data.Int.Repr
+import all Init.Data.Repr
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
+
 
 open Gabbro.Grammatik
 open Gabbro.Grammatik.Parser.UebersetzeAllg
@@ -58,42 +93,42 @@ def uFremdFallible : UProg :=
 
 /-- The foreign bodies stay foreign: they elaborate to `axs`, never to `fns`. -/
 example : (elabText checkTextFremd).map (fun u => u.axs.map (·.name)) =
-    .ok ["f"] := rfl
+    .ok ["f"] := by kernel_rfl
 
 example : (elabText checkTextFremdFallible).map (fun u => u.axs.map (·.name)) =
-    .ok ["f"] := rfl
+    .ok ["f"] := by kernel_rfl
 
 /-- The wrappers travel as ordinary functions of the units. -/
 example : (elabText checkTextFremd).map (fun u => u.fns.map (·.name)) =
-    .ok ["g", "p#probe", "p#report#0", "p#tor#f"] := rfl
+    .ok ["g", "p#probe", "p#report#0", "p#tor#f"] := by kernel_rfl
 
 example : (elabText checkTextFremdFallible).map (fun u => u.fns.map (·.name)) =
-    .ok ["g", "p#probe", "p#report#0", "p#tor#f"] := rfl
+    .ok ["g", "p#probe", "p#report#0", "p#tor#f"] := by kernel_rfl
 
 /-- The infallible wrapper calls the foreign body with `axCall`, threading the Duty. -/
 example : (elabText checkTextFremd).map
     (fun u => (u.fns.find? fun f => strEq f.name "p#tor#f").map (·.body)) =
-    .ok (some [.axCall "f" []]) := rfl
+    .ok (some [.axCall "f" []]) := by kernel_rfl
 
 /-- The fallible wrapper threads the Duty through both paths: the call, the
     error-branch return and the branch marker. -/
 example : (elabText checkTextFremdFallible).map
     (fun u => (u.fns.find? fun f => strEq f.name "p#tor#f").map
       fun f => (f.nimmt, f.gibt, f.body.length)) =
-    .ok (some (["p#duty"], ["p#duty"], 6)) := rfl
+    .ok (some (["p#duty"], ["p#duty"], 6)) := by kernel_rfl
 
 /-- The units have no tables and no statics. -/
-theorem uFremd_tabs_leer : uFremd.tabs = [] := rfl
+theorem uFremd_tabs_leer : uFremd.tabs = [] := by kernel_rfl
 
-theorem uFremd_globs_leer : uFremd.globs = [] := rfl
+theorem uFremd_globs_leer : uFremd.globs = [] := by kernel_rfl
 
-theorem uFremdFallible_tabs_leer : uFremdFallible.tabs = [] := rfl
+theorem uFremdFallible_tabs_leer : uFremdFallible.tabs = [] := by kernel_rfl
 
-theorem uFremdFallible_globs_leer : uFremdFallible.globs = [] := rfl
+theorem uFremdFallible_globs_leer : uFremdFallible.globs = [] := by kernel_rfl
 
-/-- Both units lower. -/
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
+/-- Both units lower. -/
 theorem uFremd_lowered : (lowerAllg uFremd).toOption.isSome = true := by
   decide +kernel
 
@@ -128,21 +163,21 @@ def checkChecksFremdFallible : List (CheckDecl (declOf uFremdFallible)) :=
 
 /-- The derived checks travel under their elaborated names. -/
 theorem fremd_namen :
-    (uCheckDecls uFremd).map (List.map CheckDecl.name) = .ok ["p"] := rfl
+    (uCheckDecls uFremd).map (List.map CheckDecl.name) = .ok ["p"] := by kernel_rfl
 
 theorem fremdFallible_namen :
-    (uCheckDecls uFremdFallible).map (List.map CheckDecl.name) = .ok ["p"] := rfl
+    (uCheckDecls uFremdFallible).map (List.map CheckDecl.name) = .ok ["p"] := by kernel_rfl
 
 /-- The Duty is the declared mark `p#duty` at stage 0. -/
 theorem fremd_duty_marke :
     (uCheckDecls uFremd).map
       (List.map fun d => (uFremd.marken.get d.duty.1, d.duty.2)) =
-    .ok [("p#duty", 0)] := rfl
+    .ok [("p#duty", 0)] := by kernel_rfl
 
 theorem fremdFallible_duty_marke :
     (uCheckDecls uFremdFallible).map
       (List.map fun d => (uFremdFallible.marken.get d.duty.1, d.duty.2)) =
-    .ok [("p#duty", 0)] := rfl
+    .ok [("p#duty", 0)] := by kernel_rfl
 
 /-- The foreign wrappers discharge the Duty: they consume it in their lowered
     signatures. -/
@@ -162,9 +197,9 @@ theorem fremdFallible_tor_threadet :
 
 /-! ## Acceptance with the real Duty -/
 
-/-- The lowered units with their derived checks are admitted. -/
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
+/-- The lowered units with their derived checks are admitted. -/
 theorem fremd_checkB :
     checkB checkPFremd [] [] (List.finRange uFremd.fns.length) checkChecksFremd = true := by
   decide +kernel
@@ -175,9 +210,9 @@ theorem fremdFallible_checkB :
     checkB checkPFremdFallible [] [] (List.finRange uFremdFallible.fns.length) checkChecksFremdFallible = true := by
   decide +kernel
 
-/-- End-to-end acceptance from source text with a real Duty. -/
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
+/-- End-to-end acceptance from source text with a real Duty. -/
 theorem fremd_akzeptiert :
     AkzeptiertX checkPFremd (Cover.Differenz.sperrFamilie uFremd)
       (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = true := by
@@ -195,11 +230,11 @@ theorem fremd_admission :
     CheckAdmission checkPFremd (List.finRange uFremd.fns.length) checkChecksFremd :=
   (checkB_iff (fun g => List.mem_finRange g)
     (fun t => by
-      have h0 : uFremd.tabs.length = 0 := by rw [uFremd_tabs_leer]
+      have h0 : uFremd.tabs.length = 0 := by rw [uFremd_tabs_leer]; rfl
       have t' : Fin uFremd.tabs.length := t
       exact Fin.elim0 (h0 ▸ t'))
     (fun g => by
-      have h0 : uFremd.globs.length = 0 := by rw [uFremd_globs_leer]
+      have h0 : uFremd.globs.length = 0 := by rw [uFremd_globs_leer]; rfl
       have g' : Fin uFremd.globs.length := g
       exact Fin.elim0 (h0 ▸ g'))).mp fremd_checkB
 
@@ -207,11 +242,11 @@ theorem fremdFallible_admission :
     CheckAdmission checkPFremdFallible (List.finRange uFremdFallible.fns.length) checkChecksFremdFallible :=
   (checkB_iff (fun g => List.mem_finRange g)
     (fun t => by
-      have h0 : uFremdFallible.tabs.length = 0 := by rw [uFremdFallible_tabs_leer]
+      have h0 : uFremdFallible.tabs.length = 0 := by rw [uFremdFallible_tabs_leer]; rfl
       have t' : Fin uFremdFallible.tabs.length := t
       exact Fin.elim0 (h0 ▸ t'))
     (fun g => by
-      have h0 : uFremdFallible.globs.length = 0 := by rw [uFremdFallible_globs_leer]
+      have h0 : uFremdFallible.globs.length = 0 := by rw [uFremdFallible_globs_leer]; rfl
       have g' : Fin uFremdFallible.globs.length := g
       exact Fin.elim0 (h0 ▸ g'))).mp fremdFallible_checkB
 
@@ -219,10 +254,10 @@ theorem fremdFallible_admission :
 
 /-- Every derived check carries exactly one floor entry. -/
 theorem fremd_boeden :
-    (checkChecksFremd.map fun d => d.boden.length) = [1] := rfl
+    (checkChecksFremd.map fun d => d.boden.length) = [1] := by kernel_rfl
 
 theorem fremdFallible_boeden :
-    (checkChecksFremdFallible.map fun d => d.boden.length) = [1] := rfl
+    (checkChecksFremdFallible.map fun d => d.boden.length) = [1] := by kernel_rfl
 
 theorem fremd_boden_laenge (d : CheckDecl (declOf uFremd))
     (hd : d ∈ checkChecksFremd) : d.boden.length = 1 := by
@@ -243,7 +278,7 @@ theorem fremd_abschluss (d : CheckDecl (declOf uFremd))
     (hd : d ∈ checkChecksFremd) :
     CheckAbschluss checkPFremd d messBerichtWahr := by
   obtain ⟨hexp, _, _, _, _⟩ := fremd_admission
-  refine ⟨hexp d hd, by decide, ?_⟩
+  refine ⟨hexp d hd, messBerichtWahr_vollstaendig, ?_⟩
   show messBerichtWahr.boeden.length = d.boden.length
   rw [show messBerichtWahr.boeden.length = 1 from rfl, fremd_boden_laenge d hd]
 
@@ -252,7 +287,7 @@ theorem fremdFallible_abschluss (d : CheckDecl (declOf uFremdFallible))
     (hd : d ∈ checkChecksFremdFallible) :
     CheckAbschluss checkPFremdFallible d messBerichtWahr := by
   obtain ⟨hexp, _, _, _, _⟩ := fremdFallible_admission
-  refine ⟨hexp d hd, by decide, ?_⟩
+  refine ⟨hexp d hd, messBerichtWahr_vollstaendig, ?_⟩
   show messBerichtWahr.boeden.length = d.boden.length
   rw [show messBerichtWahr.boeden.length = 1 from rfl, fremdFallible_boden_laenge d hd]
 
@@ -263,13 +298,13 @@ theorem fremd_entladung (d : CheckDecl (declOf uFremd))
   have hlen : d.gates.length = 1 := by
     have hm : d.gates.length ∈ checkChecksFremd.map (fun d => d.gates.length) :=
       List.mem_map.mpr ⟨d, hd, rfl⟩
-    have hr : (checkChecksFremd.map fun d => d.gates.length) = [1] := rfl
+    have hr : (checkChecksFremd.map fun d => d.gates.length) = [1] := by kernel_rfl
     rw [hr] at hm
     exact List.mem_singleton.mp hm
   match hg : d.gates with
   | [] => simp [hg] at hlen
   | g :: _ =>
-    refine ⟨g, fremd_abschluss d hd, ?_, List.mem_cons.mpr (Or.inl rfl)⟩
+    refine ⟨g, fremd_abschluss d hd, ?_, hg ▸ List.mem_cons_self⟩
     have hall : (checkChecksFremd.all fun d =>
         d.gates.all fun g =>
           decide (d.duty ∈ ((declOf uFremd).signatur g).konsumiert)) = true := by
@@ -288,13 +323,13 @@ theorem fremdFallible_entladung (d : CheckDecl (declOf uFremdFallible))
   have hlen : d.gates.length = 1 := by
     have hm : d.gates.length ∈ checkChecksFremdFallible.map (fun d => d.gates.length) :=
       List.mem_map.mpr ⟨d, hd, rfl⟩
-    have hr : (checkChecksFremdFallible.map fun d => d.gates.length) = [1] := rfl
+    have hr : (checkChecksFremdFallible.map fun d => d.gates.length) = [1] := by kernel_rfl
     rw [hr] at hm
     exact List.mem_singleton.mp hm
   match hg : d.gates with
   | [] => simp [hg] at hlen
   | g :: _ =>
-    refine ⟨g, fremdFallible_abschluss d hd, ?_, List.mem_cons.mpr (Or.inl rfl)⟩
+    refine ⟨g, fremdFallible_abschluss d hd, ?_, hg ▸ List.mem_cons_self⟩
     have hall : (checkChecksFremdFallible.all fun d =>
         d.gates.all fun g =>
           decide (d.duty ∈ ((declOf uFremdFallible).signatur g).konsumiert)) = true := by
@@ -322,46 +357,52 @@ theorem fremdFallible_treue (d : CheckDecl (declOf uFremdFallible))
 /-- The fallible wrapper with its error branch unclosed: the end block marker
     is gone, so the error path falls through instead of threading the Duty. -/
 def uFremdOhneFehler : UProg :=
-  { uFremdFallible with fns := uFremdFallible.fns.map fun f =>
-    if strEq f.name "p#tor#f" then
-      { f with body := f.body.filter fun s => match s with
-        | .blkEnd => false | _ => true }
-    else f }
-
+  { uFremdFallible with
+    fns := uFremdFallible.fns.map fun f =>
+      if strEq f.name "p#tor#f" then
+        { f with body := f.body.filter fun s => match s with
+          | .blkEnd => false | _ => true }
+      else f }
 /-- The lowering refuses the unclosed error branch: no silent Duty drop. -/
 theorem uFremdOhneFehler_verweigert :
     (lowerAllg uFremdOhneFehler).toOption.isNone = true := by
   decide +kernel
 
 /-- The selected foreign gate wrapper retains the declared reason channel. -/
-def fremdTorIndex : Fin uFremdFallible.fns.length := ⟨3, by decide +kernel⟩
+def fremdTorIndex : (declOf uFremdFallible).Fn :=
+  (⟨3, by decide +kernel⟩ : Fin uFremdFallible.fns.length)
 
-example : (declOf uFremdFallible).gruende fremdTorIndex = 1 := rfl
+example : (declOf uFremdFallible).gruende fremdTorIndex = 1 := by kernel_rfl
 
 /-- The generated error handler rethrows the foreign case rather than inventing
     a successful numeric answer. -/
 example : (uFremdFallible.fns.find? (fun f => strEq f.name "p#tor#f")).map
     (fun f => (f.gruende, f.body)) =
     some (1, [.bindAxElse "ans" "f" [] "e", .matchWhyBeg "e",
-      .ret (.why 0), .blkEnd, .ret (.why 0), .blkEnd]) := rfl
+      .ret (.why 0), .blkEnd, .ret (.why 0), .blkEnd]) := by kernel_rfl
 
 /-- An error return cannot consume this gate's completed report, even when the
     log later contains unrelated normal returns. -/
 theorem fremdTor_fehler_pending
     (rho : Env (declOf uFremdFallible) ((declOf uFremdFallible).params fremdTorIndex))
+    (reason : Fin ((declOf uFremdFallible).gruende fremdTorIndex))
     (s0 s1 : World (declOf uFremdFallible))
     (rest : List (RufEreignisF (declOf uFremdFallible))) :
-    torAbschluss fremdTorIndex 0
-      (.why fremdTorIndex rho ⟨0, by decide +kernel⟩ s0 s1 :: rest) = false := rfl
+    torAbschluss fremdTorIndex 0 (.why fremdTorIndex rho reason s0 s1 :: rest) = false :=
+  torAbschluss_fehler fremdTorIndex rho reason s0 s1 rest
 
+section Erfolg
+-- The unit stays folded: the statement only instantiates the generic lemma.
+attribute [local irreducible] uFremdFallible fremdTorIndex
 /-- A normal return completes the same activation. -/
 theorem fremdTor_erfolg
     (rho : Env (declOf uFremdFallible) ((declOf uFremdFallible).params fremdTorIndex))
     (value : ErgVal (declOf uFremdFallible) ((declOf uFremdFallible).erg fremdTorIndex))
     (s0 s1 : World (declOf uFremdFallible)) :
     torPush fremdTorIndex [.eintritt fremdTorIndex rho s0,
-      .rueck fremdTorIndex rho value s0 s1] = true := by
-  simp [torPush, torAbschluss]
+      .rueck fremdTorIndex rho value s0 s1] = true :=
+  torPush_erfolg fremdTorIndex rho value s0 s1
+end Erfolg
 
 /-- A gate's source declaration supplies no actual parameter arguments. -/
 example : (elabText

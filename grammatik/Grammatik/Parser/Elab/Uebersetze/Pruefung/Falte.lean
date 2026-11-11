@@ -40,6 +40,12 @@ theorem torAbschluss_fehler (g : D.Fn) (rho : Env D (D.params g))
     (rest : List (RufEreignisF D)) :
     torAbschluss g 0 (.why g rho reason s0 s1 :: rest) = false := rfl
 
+/-- A normal return right after the entry completes the activation. -/
+theorem torPush_erfolg (g : D.Fn) (rho : Env D (D.params g)) (value : ErgVal D (D.erg g))
+    (s0 s1 : World D) :
+    torPush g [.eintritt g rho s0, .rueck g rho value s0 s1] = true := by
+  simp only [torPush, torAbschluss, eq_self, decide_true, Bool.and_self, Bool.true_or]
+
 end GateActivation
 
 end Gabbro.Grammatik

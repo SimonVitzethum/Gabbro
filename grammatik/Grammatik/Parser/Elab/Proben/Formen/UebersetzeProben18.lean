@@ -8,6 +8,7 @@
 module
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
 public import Grammatik.Parser.Cover.Mitglieder
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -100,7 +101,7 @@ theorem float_narrow_falls_refused_zeuge :
 
 /-- Check the actual G constructor after lexing, parsing and both elaboration
     stages, rather than just observing that the source was accepted. -/
-private def reachesFloatOf (source : String) : Bool :=
+def reachesFloatOf (source : String) : Bool :=
   (do
     let tokens ← (lex source).toOption
     let items ← (parseTopTief tokens).toOption
@@ -122,8 +123,8 @@ theorem float_of_f32_computed_zeuge :
 
 /-- Float annotations retain exact rational endpoints, including fractions. -/
 theorem float_of_rational_target_zeuge :
-    uTyp [] [] (.range (.atom "f64") (.float "0.5") (.float "10.5") false) =
-      .ok (.fl (5, 10) (105, 10)) := rfl
+    uTyp [] [] (spaces := []) (eigner := []) (.range (.atom "f64") (.float "0.5") (.float "10.5") false) =
+      .ok (.fl (5, 10) (105, 10)) := by kernel_rfl
 
 /-- A float argument fails the integer-operand premise at the dependent exporter. -/
 theorem float_of_noninteger_refused_zeuge :
@@ -136,7 +137,7 @@ theorem float_of_noninteger_refused_zeuge :
 def float_of_end : String :=
   "module m { impl fn f(n : u8) -> f64 { let y = f64(n); return y; } }"
 
-private def reachesEndFloatOf (source : String) : Bool :=
+def reachesEndFloatOf (source : String) : Bool :=
   (do
     let tokens ← (lex source).toOption
     let items ← (parseTopTief tokens).toOption
