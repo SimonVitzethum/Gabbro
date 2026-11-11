@@ -47,7 +47,9 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
      How to locate a stuck evaluation: follow `Lean.Kernel.whnf` down the major premises of the stuck recursor
      to the blocking constant; its module is the missing `import all`, or it evaluates to `false` and the
      statement is wrong. Plain `decide` reports "stuck" for a false kernel result too, so that message alone
-     says nothing. How to build: one module at a time (`lake build <Module>`, `LEAN_NUM_THREADS=1`, 14 GB
+     says nothing. An `rfl` over an irreducible producer closes with `with_unfolding_all rfl` (no
+     `DecidableEq` needed). Repaired since: `UebersetzeProben32`, `SourceFolds/RangeZeugen`; partial repairs of
+     `Akku/Herkunft`, `Logik/Ruf/Guest/Witness` and `Measures/Duties` are uncommitted in the tree. How to build: one module at a time (`lake build <Module>`, `LEAN_NUM_THREADS=1`, 14 GB
      scope); eight probe modules at once exhaust 20 GB.
   2. **A complete `stage0/` build** including `SourceWitness` (collector/expansion and header consumers) and
      `Lauf.Zeugen`, then the Stage-0 axiom audits.
