@@ -1,9 +1,37 @@
 module
-public import Stage0.Zeugen.Annahme.NamedSpace.Image
-import all Stage0.Zeugen.Annahme.NamedSpace.Program
-import all Stage0.Zeugen.Annahme.NamedSpace.Input
-import all Grammatik.Parser.Elab.UebersetzeAllg.TableCapabilities
-
+public import Stage0.IRBild
+import Grammatik.Kern.Taktik.KernelRfl
+import all Init.Data.Repr
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 @[expose] public section
 namespace Gabbro.Stage0.NamedSpaceWitness
 open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
@@ -11,48 +39,41 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAl
 set_option maxRecDepth 2000
 set_option maxHeartbeats 400000
 
-attribute [local cbv_opaque] Frontend.normalize Frontend.ConstPhases.compiledResult
-attribute [local cbv_eval] Phases.header_unit
+def text : String :=
+  "module named_space_probe { table T count 2 space sharedData { slot { v : u32 in 0 .. 100, } } impl fn main() -> u32 in 0 .. 100 effects { reads T.slots } { return T.slots[0].v; } }"
+
+def pointerText : String :=
+  "module named_space_pointer_probe { table T count 2 space sharedData { slot { v : u32 in 0 .. 100, } } impl fn main(p : ptr<sharedData, r> T) -> u32 in 0 .. 100 effects { reads p.slots } { return p.slots[0].v; } }"
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
 theorem candidate_present : candidate.toOption.isSome = true := by
-  change (emit (Phases.sourceText false) 64).toOption.isSome = true
-  rw [Phases.image_produced]
-  rfl
+  kernel_rfl
 
-def output : Emitted text 64 := Phases.image false
+def output : Emitted text 64 := candidate.toOption.get candidate_present
 
-theorem accepted_image : emit text 64 = .ok output := Phases.image_produced false
+theorem accepted_image : emit text 64 = .ok output := except_ok_get candidate_present
 
 def pointerCandidate : Except String (Emitted pointerText 64) := emit pointerText 64
 
 theorem pointer_candidate_present : pointerCandidate.toOption.isSome = true := by
-  change (emit (Phases.sourceText true) 64).toOption.isSome = true
-  rw [Phases.image_produced]
-  rfl
+  kernel_rfl
 
-def pointerOutput : Emitted pointerText 64 := Phases.image true
+def pointerOutput : Emitted pointerText 64 :=
+  pointerCandidate.toOption.get pointer_candidate_present
 
-theorem pointer_accepted_image : emit pointerText 64 = .ok pointerOutput := Phases.image_produced true
-
-private theorem pointer_unit : pointerOutput.compiled.unit = Phases.unit true :=
-  Phases.image_unit true
-
-private theorem plain_unit : output.compiled.unit = Phases.unit false :=
-  Phases.image_unit false
+theorem pointer_accepted_image : emit pointerText 64 = .ok pointerOutput :=
+  except_ok_get pointer_candidate_present
 
 theorem pointer_table_bound : 0 < pointerOutput.compiled.unit.tabs.length := by
-  rw [pointer_unit]
-  cbv
+  exact Nat.lt_of_lt_of_eq Nat.zero_lt_one (by kernel_rfl : (1 : Nat) = _)
 
 /-- Both actual source units register a nonzero nominal space without an owner. -/
 theorem table_space :
     output.compiled.unit.spaces = ["normal", "sharedData"] ∧
     (output.compiled.unit.tabs[0]?).map (fun table => (table.space, table.owner, table.count)) =
       some (1, none, 2) := by
-  rw [plain_unit]
-  constructor <;> cbv
+  exact ⟨by kernel_rfl, by kernel_rfl⟩
 
 /-- The written pointer retains the same space, table identity and exact read right. -/
 theorem pointer_space :
@@ -61,12 +82,9 @@ theorem pointer_space :
     ∀ bound : 0 < pointerOutput.compiled.unit.tabs.length,
       (declOf pointerOutput.compiled.unit).capTab 1 0 = some ⟨0, bound⟩ := by
   constructor
-  · change (declOf (Phases.compilation true).val.unit).params (Phases.compilation true).val.main = _
-    rw [Phases.compilation_parameters]
-    cbv
-  · rw [pointer_unit]
-    intro bound
-    cbv
+  · kernel_rfl
+  · intro bound
+    kernel_rfl
 
 /-- The checked lowerer's own gate refuses a foreign space on the same actual
     source table; no inconsistent function metadata or fabricated image is used. -/
@@ -74,9 +92,8 @@ theorem incompatible_space_refused :
     ∀ bound : 0 < pointerOutput.compiled.unit.tabs.length,
       checkedTableCap pointerOutput.compiled.unit 0 0 bound =
         .error "pointer table space is not registered" := by
-  rw [pointer_unit]
   intro bound
-  cbv
+  kernel_rfl
 
 theorem incompatible_table_cap_refused :
     checkedTableCap pointerOutput.compiled.unit 0 0 pointer_table_bound =
@@ -86,8 +103,7 @@ theorem incompatible_table_cap_refused :
 theorem unknown_pointer_space_refused :
     uTypIn [] pointerOutput.compiled.unit.tabs [] pointerOutput.compiled.unit.spaces []
       (.ptr "missing" "r" (.atom "T")) = .error "unknown data space: missing" := by
-  rw [pointer_unit]
-  cbv
+  kernel_rfl
 
 /-- Repeated declarations share an ordinal; repeated binders in one header fail. -/
 theorem space_declarations :
