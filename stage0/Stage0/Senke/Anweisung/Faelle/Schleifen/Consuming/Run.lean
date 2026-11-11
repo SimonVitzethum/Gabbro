@@ -1,11 +1,19 @@
 /- Connected lowering witnesses on the actual emitted images and table cells. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Consuming.Probe
-import Mathlib.Tactic.FinCases
 public section
 
 namespace Gabbro.Stage0.Senke.ConsumeProbe
 open Gabbro.Grammatik Runner.IR Runner.Mem
+
+/-- A statement about every variant follows from the four closed cases. -/
+private theorem each (P : Fin 4 → Prop) (h0 : P 0) (h1 : P 1) (h2 : P 2) (h3 : P 3) (k : Fin 4) : P k :=
+  match k with
+  | ⟨0, _⟩ => h0 | ⟨1, _⟩ => h1 | ⟨2, _⟩ => h2 | ⟨3, _⟩ => h3
+
+set_option hygiene false in
+local macro "by_kind" : tactic =>
+  `(tactic| (revert kind; refine each _ ?_ ?_ ?_ ?_ <;> decide +kernel))
 set_option maxRecDepth 100000
 set_option maxHeartbeats 20000000
 
@@ -65,7 +73,7 @@ theorem code_at (kind : Fin 4) : CodeAt (memory kind) 16384 (code kind) := by
        (memory kind).rd32 (16384 + BitVec.ofNat 64 (16 * k.val) + 4) = some (II.f (code kind)[k.val].a) ∧
        (memory kind).rd32 (16384 + BitVec.ofNat 64 (16 * k.val) + 8) = some (II.f (code kind)[k.val].b) ∧
        (memory kind).rd32 (16384 + BitVec.ofNat 64 (16 * k.val) + 12) = some (II.f (code kind)[k.val].c))) = true := by
-    fin_cases kind <;> decide +kernel
+    by_kind
   intro k hk
   have h := of_decide_eq_true (List.all_eq_true.mp all ⟨k, hk⟩ (by simp))
   simpa only [BitVec.zero_add] using (show InsAt (memory kind)
@@ -81,7 +89,7 @@ theorem functions_at (kind : Fin 4) :
        (memory kind).rd32 (2048 + BitVec.ofNat 64 (16 * k.val) + 4) = some (II.f functionCode[k.val].a) ∧
        (memory kind).rd32 (2048 + BitVec.ofNat 64 (16 * k.val) + 8) = some (II.f functionCode[k.val].b) ∧
        (memory kind).rd32 (2048 + BitVec.ofNat 64 (16 * k.val) + 12) = some (II.f functionCode[k.val].c))) = true := by
-    fin_cases kind <;> decide +kernel
+    by_kind
   intro k hk
   have h := of_decide_eq_true (List.all_eq_true.mp all ⟨k, hk⟩ (by simp))
   exact ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩
@@ -93,7 +101,7 @@ theorem pre [Kern] (kind : Fin 4) :
     PreS layout (memory kind) 16384 4096 64 8 (code kind) (Env.nil : Env D []) (reserved := controlReserved) := by
   refine ⟨by decide, by decide, frame kind, code_at kind, ?_, ?_, trivial, wstab_true _ _⟩
   · unfold CodeFar
-    fin_cases kind <;> decide +kernel
+    by_kind
   · intro _ x; nomatch x
 
 theorem world_at [Kern] (kind : Fin 4) : WeltAt (memory kind) layout initial := by
@@ -104,8 +112,8 @@ theorem world_at [Kern] (kind : Fin 4) : WeltAt (memory kind) layout initial := 
   change (k : Int) < 2 at hk
   have casesK : k = 0 ∨ k = 1 := by omega
   rcases casesK with rfl | rfl
-  · exact ValueAt.ofCellWord (w := 1) (by decide) (by decide +kernel) rfl
-  · exact ValueAt.ofCellWord (w := 1) (by decide) (by decide +kernel) rfl
+  · exact ValueAt.ofCellWord (w := 1) (by decide) (by by_kind) rfl
+  · exact ValueAt.ofCellWord (w := 1) (by decide) (by by_kind) rfl
 
 theorem within [Kern] : WIn layout 4096 64 64 :=
   ⟨layout_in, layout_dis, by decide, by decide, by decide⟩
@@ -117,11 +125,11 @@ theorem sync (kind : Fin 4) : SyncOK (memory kind) layout 4096 64 :=
 
 theorem surroundings [Kern] (kind : Fin 4) :
     Umf layout (fun _ => 2048) (fun _ => functionCode) 0 (memory kind) 4096 64 64 :=
-  ⟨functions_at kind, by decide +kernel, by decide, sync kind, by decide⟩
+  ⟨functions_at kind, by by_kind, by decide, sync kind, by decide⟩
 
 theorem head (kind : Fin 4) :
     Kopf layout () (memory kind) 4096 64 0 0 (Env.nil : Env D []) program initial :=
-  ⟨by decide +kernel, by decide +kernel,
+  ⟨by by_kind, by by_kind,
     (fun _ x => nomatch x), by decide, trivial⟩
 
 local instance [Kern] : TorOK layout oracle where
@@ -142,7 +150,7 @@ theorem functions_spec [Kern] :
 theorem lowering_zeuge (kind : Fin 4) :
     loweredVariant kind = some (code kind, top kind) ∧ 0 < (code kind).length ∧
       top kind + 8 ≤ 64 ∧ 16 * (code kind).length < 2 ^ 31 := by
-  fin_cases kind <;> decide +kernel
+  by_kind
 
 /-- Jointly inhabit the general theorem, including its ABI, world, code and
     call-contract premises. The emitted image, not a detached candidate, runs. -/
