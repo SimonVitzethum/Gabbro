@@ -1,5 +1,7 @@
 module
 public import Stage0.SourceWitness
+import Grammatik.Kern.Taktik.KernelRfl
+import all Init.Data.Int.Repr
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -33,21 +35,18 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 @[expose] public section
 
-namespace Gabbro.Stage0.ResetWholeWitness
+namespace Gabbro.Stage0.AccWitness
 
 set_option maxRecDepth 2000
 set_option maxHeartbeats 400000
 
 def text : String :=
-  "module reset_whole_probe { static mut A : [u8; 4] = 0; impl fn main() -> u64 in 0 .. 100 effects { writes A } { reset A; return 23; } }"
+  "module acc_probe { accumulates c : u32 merge add per cpu 2; impl fn main() -> u64 in 0 .. 100 { return 23; } }"
 
-def candidate : Except String (Emitted text 64) := emit text 64
+/-- Stage 0 does not lower the generated accumulator update yet: the unit elaborates and is accepted, the IR lowering refuses the update function.
+    The evaluated diagnostic is "ir: the function c#aktualisiere uses a form outside the IR fragment"; the kernel
+    checks the refusal itself. -/
+theorem candidate_refused : (emit text 64).toOption.isSome = false := by
+  kernel_rfl
 
-theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
-
-def output : Emitted text 64 := candidate.toOption.get candidate_present
-
-theorem accepted_image : emit text 64 = .ok output :=
-  Gabbro.Grammatik.except_ok_get candidate_present
-
-end Gabbro.Stage0.ResetWholeWitness
+end Gabbro.Stage0.AccWitness

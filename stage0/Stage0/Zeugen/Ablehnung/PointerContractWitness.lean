@@ -1,5 +1,6 @@
 module
 public import Stage0.SourceWitness
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -33,21 +34,19 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 @[expose] public section
 
-namespace Gabbro.Stage0.ReturnCleanupWitness
+namespace Gabbro.Stage0.PointerContractWitness
 
 set_option maxRecDepth 2000
 set_option maxHeartbeats 400000
 
 def text : String :=
-  "module cleanup_probe { lock L protects { } rank 0; impl fn main() -> u64 in 0 .. 100 effects { locks L } { locks L { return 23; } return 0; } }"
+  "module pointer_probe { impl fn identity(a : u64 in 0 .. 9) -> u64 in 0 .. 9 requires a > 0 ensures result == a { return a; } impl fn main() -> u64 in 0 .. 9 { let p : fn(a : u64 in 0 .. 9) -> u64 in 0 .. 9 requires a > 0 ensures result == a effects { } costs <= 8 ops = &identity; let value = p(3); return value; } }"
 
-def candidate : Except String (Emitted text 64) := emit text 64
+/-- A written function-pointer type with a contract and a cost is refused by the export gate. -/
+theorem candidate_refused :
+    emit text 64 = .error
+      "source export: function type/proof/header duties lack a checked source binding: main" := by
+  kernel_rfl
 
-theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
 
-def output : Emitted text 64 := candidate.toOption.get candidate_present
-
-theorem accepted_image : emit text 64 = .ok output :=
-  Gabbro.Grammatik.except_ok_get candidate_present
-
-end Gabbro.Stage0.ReturnCleanupWitness
+end Gabbro.Stage0.PointerContractWitness

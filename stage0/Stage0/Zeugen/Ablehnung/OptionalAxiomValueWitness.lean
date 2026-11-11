@@ -1,5 +1,6 @@
 module
 public import Stage0.SourceWitness
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -33,21 +34,20 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 @[expose] public section
 
-namespace Gabbro.Stage0.PointerContractWitness
+namespace Gabbro.Stage0.OptionalAxiomValueWitness
 
-set_option maxRecDepth 2000
-set_option maxHeartbeats 400000
+set_option maxRecDepth 100000
+set_option maxHeartbeats 2000000
 
+/-- Optional binding preserves the integer result through the source-to-image pipeline. -/
 def text : String :=
-  "module pointer_probe { impl fn identity(a : u64 in 0 .. 9) -> u64 in 0 .. 9 requires a > 0 ensures result == a { return a; } impl fn main() -> u64 in 0 .. 9 { let p : fn(a : u64 in 0 .. 9) -> u64 in 0 .. 9 requires a > 0 ensures result == a effects { } costs <= 8 ops = &identity; let value = p(3); return value; } }"
+  "module optional_value_probe { axiom ax() -> u8 effects { pure } unfalsifiable \"probe\"; impl fn main() -> u8 { let r? = ax(); return r; } }"
 
-def candidate : Except String (Emitted text 64) := emit text 64
+/-- The export gate refuses every axiom item: its proof duty has no checked source binding yet. -/
+theorem candidate_refused :
+    emit text 64 = .error
+      "source export: SItemTief.axiomT: type/provider/proof duties lack a checked source binding" := by
+  kernel_rfl
 
-theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
 
-def output : Emitted text 64 := candidate.toOption.get candidate_present
-
-theorem accepted_image : emit text 64 = .ok output :=
-  Gabbro.Grammatik.except_ok_get candidate_present
-
-end Gabbro.Stage0.PointerContractWitness
+end Gabbro.Stage0.OptionalAxiomValueWitness

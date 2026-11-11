@@ -1,5 +1,6 @@
 module
 public import Stage0.SourceWitness
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -33,22 +34,19 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 @[expose] public section
 
-namespace Gabbro.Stage0.OptionalAxiomValueWitness
+namespace Gabbro.Stage0.ResetWholeWitness
 
-set_option maxRecDepth 100000
-set_option maxHeartbeats 2000000
+set_option maxRecDepth 2000
+set_option maxHeartbeats 400000
 
-/-- Optional binding preserves the integer result through the source-to-image pipeline. -/
 def text : String :=
-  "module optional_value_probe { axiom ax() -> u8 effects { pure } unfalsifiable \"probe\"; impl fn main() -> u8 { let r? = ax(); return r; } }"
+  "module reset_whole_probe { static mut A : [u8; 4] = 0; impl fn main() -> u64 in 0 .. 100 effects { writes A } { reset A; return 23; } }"
 
-def candidate : Except String (Emitted text 64) := emit text 64
+/-- A whole reset of a static array is read as an arena reset and refused; only the ranged form lowers. -/
+theorem candidate_refused :
+    emit text 64 = .error
+      "arena unknown: A" := by
+  kernel_rfl
 
-theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
 
-def output : Emitted text 64 := candidate.toOption.get candidate_present
-
-theorem accepted_image : emit text 64 = .ok output :=
-  Gabbro.Grammatik.except_ok_get candidate_present
-
-end Gabbro.Stage0.OptionalAxiomValueWitness
+end Gabbro.Stage0.ResetWholeWitness

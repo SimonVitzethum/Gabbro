@@ -1,5 +1,6 @@
 module
 public import Stage0.SourceWitness
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -33,21 +34,20 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 @[expose] public section
 
-namespace Gabbro.Stage0.RightsUnionWitness
+namespace Gabbro.Stage0.OptionalAxiomVoidWitness
 
-set_option maxRecDepth 2000
-set_option maxHeartbeats 400000
+set_option maxRecDepth 100000
+set_option maxHeartbeats 2000000
 
+/-- Optional void binding introduces no local and reaches an accepted image. -/
 def text : String :=
-  "module cap_probe { table T count 2 { slot { b : bool, } } impl fn store(r : ptr<normal, w+r+r> T) effects { reads r.slots, writes r.slots } { r.slots[0].b = true; let b = r.slots[0].b; } impl fn main() -> u64 in 0 .. 100 effects { reads T.slots, writes T.slots } { store(T); return 23; } }"
+  "module optional_void_probe { axiom ax() effects { pure } unfalsifiable \"probe\"; impl fn main() -> u8 { let x? = ax(); return 23; } }"
 
-def candidate : Except String (Emitted text 64) := emit text 64
+/-- The export gate refuses every axiom item: its proof duty has no checked source binding yet. -/
+theorem candidate_refused :
+    emit text 64 = .error
+      "source export: SItemTief.axiomT: type/provider/proof duties lack a checked source binding" := by
+  kernel_rfl
 
-theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
 
-def output : Emitted text 64 := candidate.toOption.get candidate_present
-
-theorem accepted_image : emit text 64 = .ok output :=
-  Gabbro.Grammatik.except_ok_get candidate_present
-
-end Gabbro.Stage0.RightsUnionWitness
+end Gabbro.Stage0.OptionalAxiomVoidWitness

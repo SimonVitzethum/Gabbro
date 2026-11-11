@@ -1,5 +1,7 @@
 module
 public import Stage0.SourceWitness
+import Grammatik.Kern.Taktik.KernelRfl
+import all Init.Data.Int.Repr
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -33,22 +35,18 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 @[expose] public section
 
-namespace Gabbro.Stage0.OptionalAxiomVoidWitness
+namespace Gabbro.Stage0.ReturnCleanupWitness
 
-set_option maxRecDepth 100000
-set_option maxHeartbeats 2000000
+set_option maxRecDepth 2000
+set_option maxHeartbeats 400000
 
-/-- Optional void binding introduces no local and reaches an accepted image. -/
 def text : String :=
-  "module optional_void_probe { axiom ax() effects { pure } unfalsifiable \"probe\"; impl fn main() -> u8 { let x? = ax(); return 23; } }"
+  "module cleanup_probe { lock L protects { } rank 0; impl fn main() -> u64 in 0 .. 100 effects { locks L } { locks L { return 23; } return 0; } }"
 
-def candidate : Except String (Emitted text 64) := emit text 64
+/-- A return from inside a lock scope elaborates and is accepted; the IR lowering of the function refuses it.
+    The evaluated diagnostic is "ir: the function main uses a form outside the IR fragment"; the kernel
+    checks the refusal itself. -/
+theorem candidate_refused : (emit text 64).toOption.isSome = false := by
+  kernel_rfl
 
-theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
-
-def output : Emitted text 64 := candidate.toOption.get candidate_present
-
-theorem accepted_image : emit text 64 = .ok output :=
-  Gabbro.Grammatik.except_ok_get candidate_present
-
-end Gabbro.Stage0.OptionalAxiomVoidWitness
+end Gabbro.Stage0.ReturnCleanupWitness

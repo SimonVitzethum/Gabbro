@@ -1,5 +1,6 @@
 module
 public import Stage0.SourceWitness
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -33,21 +34,19 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 @[expose] public section
 
-namespace Gabbro.Stage0.AccWitness
+namespace Gabbro.Stage0.WriteOnlyCapabilityWitness
 
 set_option maxRecDepth 2000
 set_option maxHeartbeats 400000
 
 def text : String :=
-  "module acc_probe { accumulates c : u32 merge add per cpu 2; impl fn main() -> u64 in 0 .. 100 { return 23; } }"
+  "module cap_probe { table T count 2 { slot { b : bool, } } impl fn store(r : ptr<normal, w> T) effects { writes r.slots } { r.slots[0].b = true; } impl fn main() -> u64 in 0 .. 100 effects { writes T.slots } { store(T); return 23; } }"
 
-def candidate : Except String (Emitted text 64) := emit text 64
+/-- A table passed by name as a pointer argument is not resolved by the elaborator. -/
+theorem candidate_refused :
+    emit text 64 = .error
+      "name unknown: T" := by
+  kernel_rfl
 
-theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
 
-def output : Emitted text 64 := candidate.toOption.get candidate_present
-
-theorem accepted_image : emit text 64 = .ok output :=
-  Gabbro.Grammatik.except_ok_get candidate_present
-
-end Gabbro.Stage0.AccWitness
+end Gabbro.Stage0.WriteOnlyCapabilityWitness
