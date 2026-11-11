@@ -1,0 +1,96 @@
+// stage-0 probe (instrumente/pruefe-lean.py stage 7): a lexer written in Gabbro; prints the token count
+// It reads the source from standard input, fills the token table and prints the token count.
+module lexer {
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    Interrupted = 4 "interrupted"
+    exhaustive
+}
+assume linux_io_contract "IO keeps its contract." falsifier sonde_io;
+table quelle count 4096 { slot { b : u32 in 0 .. 255, } }
+table marken count 512 { slot { art : u32 in 0 .. 3, anfang : u32 in 0 .. 4095, laenge : u32 in 0 .. 4096, } }
+table aus count 16 { slot { b : u32 in 0 .. 255, } }
+static mut zahl : u32 in 0 .. 512 = 0;
+static mut art : u32 in 0 .. 3 = 0;
+static mut anfang : u32 in 0 .. 4095 = 0;
+syscall sys_read;
+syscall sys_write;
+syscall read(fd : u64, buf : ptr<normal, rw> quelle, len : u64) -> u64 in 0 .. 4096 or IoError
+    via sys_read
+    effects { writes buf.slots }
+    costs <= 8 ops;
+syscall write(fd : u64, buf : ptr<normal, rw> aus, len : u64) -> u64 or IoError
+    via sys_write
+    effects { pure }
+    costs <= 8 ops;
+// 0 space, 1 letter or underscore, 2 digit, 3 punctuation
+impl fn klasse(b : u32 in 0 .. 255) -> u32 in 0 .. 3 effects { pure } {
+    if b <= 32 { return 0; }
+    if b >= 48 { if b <= 57 { return 2; } }
+    if b >= 65 { if b <= 90 { return 1; } }
+    if b >= 97 { if b <= 122 { return 1; } }
+    if b == 95 { return 1; }
+    return 3;
+}
+impl fn schliesse(ende : u32 in 0 .. 4096)
+    effects { reads zahl, writes zahl, reads art, reads anfang, writes marken.slots }
+{
+    if art != 0 {
+        let z = zahl;
+        narrow z to 0 .. 511 else { return; }
+        let l = ende - anfang;
+        narrow l to 0 .. 4096 else { return; }
+        marken.slots[z].art = art;
+        marken.slots[z].anfang = anfang;
+        marken.slots[z].laenge = l;
+        zahl = z + 1;
+    }
+}
+impl fn main(q : ptr<normal, rw> quelle, a : ptr<normal, rw> aus)
+    effects { reads q.slots, writes q.slots, writes a.slots, reads zahl, writes zahl, reads art, writes art,
+              reads anfang, writes anfang, writes marken.slots }
+{
+    let n = read(0, q, 4096) else (e) {
+        return;
+    }
+    traverse k over slots of q by unvisited
+        touches writes q.slots, writes a.slots, writes zahl, writes art, writes anfang, writes marken.slots {
+        let c : u32 in 0 .. 3 = klasse(q.slots[k].b);
+        let mut weiter : u32 in 0 .. 1 = 0;
+        if c == art { if c != 3 { weiter = 1; } }
+        if art == 1 { if c == 2 { weiter = 1; } }
+        if weiter == 0 {
+            schliesse(k);
+            art = c;
+            anfang = k;
+        }
+    }
+    let h = zahl / 100;
+    narrow h to 0 .. 9 else { return; }
+    let z = (zahl / 10) % 10;
+    narrow z to 0 .. 9 else { return; }
+    let e = zahl % 10;
+    narrow e to 0 .. 9 else { return; }
+    a.slots[0].b = 48 + h;
+    a.slots[1].b = 48 + z;
+    a.slots[2].b = 48 + e;
+    a.slots[3].b = 10;
+    let m = write(1, a, 4) else (f) {
+        return;
+    }
+}
+target linux_x86_64 abi linux arch x86_64 {
+    sys_read = number 0
+        regs in { rdi = fd, rsi = buf, rdx = len }
+        regs out { rax }
+        clobbers { rcx, r11 }
+        errors { EBADF => BadFd, EINTR => Interrupted }
+        assume linux_io_contract falsifier sonde_io;
+    sys_write = number 1
+        regs in { rdi = fd, rsi = buf, rdx = len }
+        regs out { rax }
+        clobbers { rcx, r11 }
+        errors { EBADF => BadFd, EINTR => Interrupted }
+        assume linux_io_contract falsifier sonde_io;
+}
+}
