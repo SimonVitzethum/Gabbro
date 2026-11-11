@@ -70,9 +70,76 @@ theorem touchesCovered_zeuge :
     touchesCovered [] "touches reads t.slots decreases n" = false := by
   decide +kernel
 
+/-- An expression without a call, a function address or a quantifier-like extension: it
+    reads only. Builtins are the pure operators of the language. -/
+def callFree : Nat → SExpr → Bool
+  | 0, _ => false
+  | _ + 1, .lit _ | _ + 1, .float _ | _ + 1, .tru | _ + 1, .fls | _ + 1, .variable _ | _ + 1, .res
+  | _ + 1, .why _ _ => true
+  | n + 1, .field e _ | n + 1, .arrow e _ | n + 1, .un _ e | n + 1, .old e => callFree n e
+  | n + 1, .index a b | n + 1, .bin _ a b => callFree n a && callFree n b
+  | n + 1, .built _ args => args.all (callFree n)
+  | _ + 1, .call .. | _ + 1, .fnref _ | _ + 1, .ext .. => false
+
+/-- The write an assignment target performs: a static, or a slot field of a table or pointer. -/
+def writeTarget : SExpr → Option SEffekt
+  | .variable g => some (.writes (.variable g))
+  | .field (.index (.field base kind) _) _ =>
+    if kind == "slots" then some (.writes (.field base "slots")) else none
+  | _ => none
+
+/-- The writes of a loop body made of bindings, assignments, branches, narrowing, nested
+    traversals and exits; any other statement is not analysed (`none`). -/
+def bodyWrites : Nat → SAnw → Option (List SEffekt)
+  | 0, _ => none
+  | n + 1, .block ss _ => (ss.mapM (bodyWrites n)).map List.flatten
+  | _ + 1, .set target _ value => if callFree 10000 target && callFree 10000 value then
+      (writeTarget target).map fun w => [w] else none
+  | _ + 1, .shift target _ _ => if callFree 10000 target then (writeTarget target).map fun w => [w] else none
+  | n + 1, .cond c a bs b => if callFree 10000 c then do
+      let first ← bodyWrites n a
+      let middle ← bs.mapM (bodyWrites n)
+      let last ← match b with
+        | some e => bodyWrites n e
+        | none => some []
+      pure (first ++ middle.flatten ++ last) else none
+  | n + 1, .elsif c b | n + 1, .trim c _ b => if callFree 10000 c then bodyWrites n b else none
+  | n + 1, .arm _ _ b => bodyWrites n b
+  | n + 1, .cases e arms => if callFree 10000 e then (arms.mapM (bodyWrites n)).map List.flatten else none
+  | n + 1, .each _ origin _ subject _ _ inv body =>
+    if origin.all (callFree 10000) && callFree 10000 subject && inv.all (callFree 10000) then
+      bodyWrites n body else none
+  | _ + 1, .bind _ _ _ e | _ + 1, .trimReq e _ => if callFree 10000 e then some [] else none
+  | _ + 1, .ret e => if e.all (callFree 10000) then some [] else none
+  | _ + 1, .leave _ | _ + 1, .next _ => some []
+  | _ + 1, _ => none
+
+/-- A written header is verified against the loop itself when every expression of the body is
+    call-free and every write it performs is listed: such an expression writes nothing, and the
+    analysed statements write only by assignment. -/
+def touchesVerified (raw : String) (body : SAnw) : Bool :=
+  match touchesHeader raw, bodyWrites 10000 body with
+  | .ok listed, some writes => writes.all fun w => listed.any (beqSEffekt w)
+  | _, _ => false
+
+/-- A header is admitted when the function's declared effects imply it or the loop verifies it. -/
+def touchesAdmitted (clauses : List SKlausel) (raw : String) (body : SAnw) : Bool :=
+  touchesCovered clauses raw || touchesVerified raw body
+
+/-- A loop that assigns one static verifies a header listing it, although the function also
+    writes a table; a header that omits the assigned static, or a body with a call, does not. -/
+theorem touchesVerified_zeuge :
+    touchesVerified "touches reads t.slots, writes sum"
+      (.block [.set (.variable "sum") "=" (.lit 1)] none) = true ∧
+    touchesVerified "touches reads t.slots"
+      (.block [.set (.variable "sum") "=" (.lit 1)] none) = false ∧
+    touchesVerified "touches writes sum"
+      (.block [.set (.variable "sum") "=" (.call "f" [])] none) = false := by
+  decide +kernel
+
 /-- Erase every covered `touches` header of an ordinary traversal, in every position the gate
     inspects; a header that is not covered stays and is refused by the gate. -/
-def eraseCovered (covered : String → Bool) : Nat → SAnw → SAnw
+def eraseCovered (covered : String → SAnw → Bool) : Nat → SAnw → SAnw
   | 0, s => s
   | n + 1, .block ss e => .block (ss.map (eraseCovered covered n)) e
   | n + 1, .bindElse a ty c d b => .bindElse a ty c d (eraseCovered covered n b)
@@ -89,19 +156,19 @@ def eraseCovered (covered : String → Bool) : Nat → SAnw → SAnw
   | n + 1, .arm a b c => .arm a b (eraseCovered covered n c)
   | n + 1, .cases a arms => .cases a (arms.map (eraseCovered covered n))
   | n + 1, .each a b c d mode raw inv body =>
-    .each a b c d mode (if mode == "unvisited" && covered raw then "" else raw) inv
+    .each a b c d mode (if mode == "unvisited" && covered raw body then "" else raw) inv
       (eraseCovered covered n body)
   | n + 1, .alloc m x ty an v (some body) => .alloc m x ty an v (some (eraseCovered covered n body))
   | _ + 1, s => s
 
 /-- A covered header of an ordinary traversal is erased, an uncovered one and a consuming header stay. -/
 theorem eraseCovered_zeuge (body : SAnw) :
-    eraseCovered (fun raw => raw == "h") 2 (.each "i" none "slots" (.variable "t") "unvisited" "h" none body) =
-      .each "i" none "slots" (.variable "t") "unvisited" "" none (eraseCovered (fun raw => raw == "h") 1 body) ∧
-    eraseCovered (fun raw => raw == "h") 2 (.each "i" none "slots" (.variable "t") "unvisited" "x" none body) =
-      .each "i" none "slots" (.variable "t") "unvisited" "x" none (eraseCovered (fun raw => raw == "h") 1 body) ∧
-    eraseCovered (fun raw => raw == "h") 2 (.each "i" none "slots" (.variable "t") "consuming" "h" none body) =
-      .each "i" none "slots" (.variable "t") "consuming" "h" none (eraseCovered (fun raw => raw == "h") 1 body) :=
+    eraseCovered (fun raw _ => raw == "h") 2 (.each "i" none "slots" (.variable "t") "unvisited" "h" none body) =
+      .each "i" none "slots" (.variable "t") "unvisited" "" none (eraseCovered (fun raw _ => raw == "h") 1 body) ∧
+    eraseCovered (fun raw _ => raw == "h") 2 (.each "i" none "slots" (.variable "t") "unvisited" "x" none body) =
+      .each "i" none "slots" (.variable "t") "unvisited" "x" none (eraseCovered (fun raw _ => raw == "h") 1 body) ∧
+    eraseCovered (fun raw _ => raw == "h") 2 (.each "i" none "slots" (.variable "t") "consuming" "h" none body) =
+      .each "i" none "slots" (.variable "t") "consuming" "h" none (eraseCovered (fun raw _ => raw == "h") 1 body) :=
   ⟨rfl, rfl, rfl⟩
 
 end Gabbro.Grammatik.Parser.ExportMetadata

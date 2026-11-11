@@ -103,7 +103,7 @@ def itemMetadata : SItemTief → Bool
       clausesMetadataWithoutLoad sig.klauseln || bodyMetadata 10000 body ||
         sig.params.any (fun p => typeMetadata p.2) || sig.res.any typeMetadata
     else (sig.art != "" && sig.art != "impl") ||
-      clausesMetadata sig.klauseln || bodyMetadata 10000 (eraseCovered (touchesCovered sig.klauseln) 10000 body) ||
+      clausesMetadata sig.klauseln || bodyMetadata 10000 (eraseCovered (touchesAdmitted sig.klauseln) 10000 body) ||
       sig.params.any (fun p => typeMetadata p.2) || sig.res.any typeMetadata
   /- Tagged groups expand to ordinary functions before elaboration. Inspect every original
       header and implementation body, so expansion cannot erase cost/proof/type duties. -/
