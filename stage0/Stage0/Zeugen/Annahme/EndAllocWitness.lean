@@ -1,6 +1,7 @@
 module
 public import Stage0.SourceWitness
 public import Grammatik.Bausteine.Arena.ArenaZucker
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -47,19 +48,19 @@ set_option maxHeartbeats 400000
 def text : String :=
   "module end_alloc_probe { arena A capacity 1 .. 2 of u32; impl fn main() -> u64 in 0 .. 100 effects { writes A } { let i = alloc A (10) else { return 7; }; let j = alloc A (20) else { return 8; }; let k = alloc A (30) else { return 9; }; return 23; } }"
 
-def candidate : Except String (Emitted text 64) := emit text 64
+def candidate : Except String (Emitted text 256) := emit text 256
 
-theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
+theorem candidate_present : candidate.toOption.isSome = true := by kernel_rfl
 
-def output : Emitted text 64 := candidate.toOption.get candidate_present
+def output : Emitted text 256 := candidate.toOption.get candidate_present
 
-theorem accepted_image : emit text 64 = .ok output :=
+theorem accepted_image : emit text 256 = .ok output :=
   Gabbro.Grammatik.except_ok_get candidate_present
 
 /-- The image passes the original-source gate, rather than only the canonical
     G allocation emitter. This was the gate that rejected explicit else arms. -/
 theorem original_metadata_zeuge : output.compiled.unit.exportGate = .ok () := by
-  decide +kernel
+  kernel_rfl
 
 theorem canonical_source_zeuge : CanonicalSourceProgram output.compiled :=
   compile_source_program text output.compiled
@@ -77,11 +78,11 @@ def blockText : String :=
 def blockFitsText : String :=
   "module block_alloc_fits { arena A capacity 1 .. 2 of u32; impl fn main() -> u64 in 0 .. 100 effects { writes A } { if true { let i = alloc A (10) else { return 7; }; return i; } return 23; } }"
 
-theorem fits_image_zeuge : (emit fitsText 64).isOk = true := by decide +kernel
+theorem fits_image_zeuge : (emit fitsText 256).isOk = true := by kernel_rfl
 
-theorem block_image_zeuge : (emit blockText 64).isOk = true := by decide +kernel
+theorem block_image_zeuge : (emit blockText 256).isOk = true := by kernel_rfl
 
-theorem block_fits_image_zeuge : (emit blockFitsText 64).isOk = true := by decide +kernel
+theorem block_fits_image_zeuge : (emit blockFitsText 256).isOk = true := by kernel_rfl
 
 /-- The accepted source image inherits the connected generic lowering theorem,
     including both allocation branches and the store-and-bump continuation. -/
@@ -135,35 +136,35 @@ variable (O : Orakel ZD) (passes : Nat)
 /-- Ordinary-block success stores at the bound index, bumps once, and falls through. -/
 theorem block_fits_zeuge :
     blockResult (execBlock O passes R block emptyWorld .nil) = some (true, 1, 7, 9) := by
-  decide +kernel
+  kernel_rfl
 
 /-- The last available index still fits; the next counter is the exact ceiling. -/
 theorem block_last_fits_zeuge :
     blockResult (execBlock O passes R block lastWorld .nil) = some (true, 4, 9, 7) := by
-  decide +kernel
+  kernel_rfl
 
 /-- At the ceiling `else` returns, preserving both payload and counter. -/
 theorem block_ceiling_zeuge :
     blockResult (execBlock O passes R block fullWorld .nil) = some (false, 4, 9, 9) := by
-  decide +kernel
+  kernel_rfl
 
 theorem end_fits_zeuge :
     endResult (execEnd O passes R ending emptyWorld .nil) = some (1, 7, 9) := by
-  decide +kernel
+  kernel_rfl
 
 theorem end_last_fits_zeuge :
     endResult (execEnd O passes R ending lastWorld .nil) = some (4, 9, 7) := by
-  decide +kernel
+  kernel_rfl
 
 theorem end_ceiling_zeuge :
     endResult (execEnd O passes R ending fullWorld .nil) = some (4, 9, 9) := by
-  decide +kernel
+  kernel_rfl
 
 /-- Required allocation shares the same successful store and counter update. -/
 theorem required_fits_zeuge :
     blockResult (execBlock O passes R requiredBlock emptyWorld .nil) = some (true, 1, 7, 9) ∧
     endResult (execEnd O passes R requiredEnd emptyWorld .nil) = some (1, 7, 9) := by
-  decide +kernel
+  exact ⟨by kernel_rfl, by kernel_rfl⟩
 
 /-- Required allocation has the same logical stop at both nesting levels.
     The caller's existing capacity duty excludes this outcome; it is not OOM. -/

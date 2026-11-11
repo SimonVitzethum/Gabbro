@@ -1,6 +1,7 @@
 module
 public import Stage0.SourceWitness
 public import Stage0.Zeugen.Annahme.NarrowRequiredWitness
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -52,13 +53,13 @@ set_option maxHeartbeats 400000
 def text : String :=
   "module capacity_probe { arena A capacity 1 .. 2 of u32; impl fn main() -> u64 in 0 .. 100 effects { writes A } { let i = alloc A (0); return 23; } }"
 
-def candidate : Except String (Emitted text 64) := emit text 64
+def candidate : Except String (Emitted text 256) := emit text 256
 
-theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
+theorem candidate_present : candidate.toOption.isSome = true := by kernel_rfl
 
-def output : Emitted text 64 := candidate.toOption.get candidate_present
+def output : Emitted text 256 := candidate.toOption.get candidate_present
 
-theorem accepted_image : emit text 64 = .ok output :=
+theorem accepted_image : emit text 256 = .ok output :=
   Gabbro.Grammatik.except_ok_get candidate_present
 
 /-- A required allocation inside an ordinary block, using its bound index. -/
@@ -73,11 +74,11 @@ def lastText : String :=
 def blockLastText : String :=
   "module capacity_block_last { arena A capacity 1 .. 2 of u32; impl fn main() -> u64 in 0 .. 100 effects { writes A } { if true { let i = alloc A (10); let j = alloc A (20); return j; } return 23; } }"
 
-theorem block_image_zeuge : (emit blockText 64).isOk = true := by decide +kernel
+theorem block_image_zeuge : (emit blockText 256).isOk = true := by kernel_rfl
 
-theorem last_image_zeuge : (emit lastText 64).isOk = true := by decide +kernel
+theorem last_image_zeuge : (emit lastText 256).isOk = true := by kernel_rfl
 
-theorem block_last_image_zeuge : (emit blockLastText 64).isOk = true := by decide +kernel
+theorem block_last_image_zeuge : (emit blockLastText 256).isOk = true := by kernel_rfl
 
 /-- Instantiating the source-image theorem keeps the required stop and the
     successful store-and-bump path under the actual compiler's correctness proof. -/
