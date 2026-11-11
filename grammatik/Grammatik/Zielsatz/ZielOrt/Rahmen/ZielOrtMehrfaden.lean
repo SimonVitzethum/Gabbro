@@ -155,6 +155,65 @@ theorem reachB_wurzel (P : Programm D) (fs : List D.Fn) (w : D.Fn) : reachB P fs
   | zero => simp only [erreichB, decide_true]
   | succ n ih => simp only [erreichB, erreichSchritt, ih, Bool.true_or]
 
+/-! ### The executable closure
+
+`erreichB` is the specification: round `n + 1` asks round `n` again for every function, so
+evaluating it costs `(|fs| + 1) ^ |fs|` steps. `reachBSchnell` carries the list of reached
+functions from round to round; compiled code runs it, every theorem keeps the specification. -/
+
+/-- One round on the list of the reached functions of `fs`. -/
+def erreichRunde (P : Programm D) (fs : List D.Fn) (s : List D.Fn) : List D.Fn :=
+  fs.filter fun g => s.contains g || s.any fun f => ruftB P f g
+
+/-- `n` further rounds from the reached list `s`, carrying the answer for `g`. -/
+def erreichLauf (P : Programm D) (fs : List D.Fn) (g : D.Fn) : Nat → List D.Fn → Bool → Bool
+  | 0, _, acc => acc
+  | n + 1, s, acc => erreichLauf P fs g n (erreichRunde P fs s) (acc || s.any fun f => ruftB P f g)
+
+/-- The closure by rounds over the reached list. -/
+def reachBSchnell (P : Programm D) (fs : List D.Fn) (wurzel : D.Fn) : D.Fn → Bool :=
+  fun g => erreichLauf P fs g fs.length (fs.filter fun f => decide (f = wurzel)) (decide (g = wurzel))
+
+/-- A round on the reached list of round `k` is the reached list of round `k + 1`. -/
+theorem erreichRunde_filter (P : Programm D) (fs : List D.Fn) (w : D.Fn) (k : Nat) :
+    erreichRunde P fs (fs.filter (erreichB P fs w k)) = fs.filter (erreichB P fs w (k + 1)) := by
+  unfold erreichRunde
+  apply List.filter_congr
+  intro g hg
+  have member : (fs.filter (erreichB P fs w k)).contains g = erreichB P fs w k g := by
+    cases value : erreichB P fs w k g with
+    | true => exact List.contains_iff_mem.mpr (List.mem_filter.mpr ⟨hg, value⟩)
+    | false =>
+      apply Bool.eq_false_iff.mpr
+      intro inside
+      have := (List.mem_filter.mp (List.contains_iff_mem.mp inside)).2
+      rw [value] at this
+      cases this
+  rw [member, List.any_filter]
+  rfl
+
+/-- The run from round `k` reaches round `k + n`. -/
+theorem erreichLauf_eq (P : Programm D) (fs : List D.Fn) (w g : D.Fn) :
+    ∀ (n k : Nat), erreichLauf P fs g n (fs.filter (erreichB P fs w k)) (erreichB P fs w k g) =
+      erreichB P fs w (k + n) g
+  | 0, _ => rfl
+  | n + 1, k => by
+    have step : (erreichB P fs w k g || (fs.filter (erreichB P fs w k)).any fun f => ruftB P f g) =
+        erreichB P fs w (k + 1) g := by
+      rw [List.any_filter]
+      rfl
+    rw [erreichLauf, erreichRunde_filter, step, erreichLauf_eq P fs w g n (k + 1)]
+    congr 1
+    omega
+
+/-- **The executable closure is the specification.** -/
+@[csimp] theorem reachB_eq_schnell : @reachB = @reachBSchnell := by
+  funext D _ P fs w g
+  unfold reachB reachBSchnell
+  have run := erreichLauf_eq P fs w g fs.length 0
+  rw [Nat.zero_add] at run
+  exact run.symm
+
 end Erreich
 
 /-! ## 3. Thread-local carriers and the rely -/

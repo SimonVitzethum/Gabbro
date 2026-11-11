@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Elab.Export.ExportControl
+public import Grammatik.Parser.Elab.UebersetzeAllg3.Memo
 public import Grammatik.Parser.Elab.UebersetzeSum
 public import Grammatik.Bausteine.Arena.ArenaZucker
 public import Grammatik.Parser.Namen.Oeffentlich
@@ -177,6 +178,23 @@ def progOfFn (u : UProg) (E : ∀ f : Fin u.fns.length, EnsTy u f)
   unterbricht := fun f => u.hands.any (fun n => strEq n (fnAt u f).name)
   ptrVertrag := Pt
   axVertrag := Ax
+
+/-- The same program with each function's postcondition, body and precondition evaluated once
+    into a table: every later access reads the table instead of elaborating the function again. -/
+def progOfFnSchnell (u : UProg) (E : ∀ f : Fin u.fns.length, EnsTy u f)
+    (B : ∀ f : Fin u.fns.length, RumpTy u f) (R : ∀ f : Fin u.fns.length, ReqTy u f)
+    (I : ∀ i : Fin u.invs.length, InvTy u i)
+    (Pt : ∀ n, CallContract (declOf u) ((declOf u).sigNr n))
+    (Ax : ∀ a, CallContract (declOf u) ((declOf u).asignatur a)) :
+    Programm (declOf u) :=
+  let table := Memo.build (T := fun f : Fin u.fns.length => EnsTy u f × RumpTy u f × ReqTy u f)
+    fun f => (E f, B f, R f)
+  progOfFn u (fun f => (table.get f).1) (fun f => (table.get f).2.1) (fun f => (table.get f).2.2) I Pt Ax
+
+/-- **The table changes no program.** -/
+@[csimp] theorem progOfFn_eq_schnell : @progOfFn = @progOfFnSchnell := by
+  funext u E B R I Pt Ax
+  simp only [progOfFnSchnell, Memo.build_get]
 
 /-- The function of no parameter in whose scope an invariant is read. -/
 def leerFn : UFn :=

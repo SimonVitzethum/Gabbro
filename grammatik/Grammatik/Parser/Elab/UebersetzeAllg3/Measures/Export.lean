@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Expression
+public import Grammatik.Parser.Elab.UebersetzeAllg3.Memo
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Measures
@@ -52,6 +53,35 @@ def collect : (n : Nat) → (T : Fin n → Type) → ((i : Fin n) → Except Str
     let head ← get 0
     let tail ← collect n (fun i => T i.succ) (fun i => get i.succ)
     pure (Fin.cases head tail)
+
+/-- `collect` with direct selection: reading entry `i` visits no smaller index. -/
+def collectDirekt : (n : Nat) → (T : Fin n → Type) → ((i : Fin n) → Except String (T i)) →
+    Except String ((i : Fin n) → T i)
+  | 0, _, _ => pure (fun i => nomatch i)
+  | n + 1, T, get => do
+    let head ← get 0
+    let tail ← collectDirekt n (fun i => T i.succ) (fun i => get i.succ)
+    pure (casesDirekt head tail)
+
+theorem collectDirekt_eq : ∀ (n : Nat) (T : Fin n → Type) (get : (i : Fin n) → Except String (T i)),
+    collectDirekt n T get = collect n T get
+  | 0, _, _ => rfl
+  | n + 1, T, get => by
+    simp only [collectDirekt, collect, collectDirekt_eq n, casesDirekt_eq]
+
+/-- The collected family, read through a table filled once. -/
+def collectSchnell (n : Nat) (T : Fin n → Type) (get : (i : Fin n) → Except String (T i)) :
+    Except String ((i : Fin n) → T i) :=
+  (collectDirekt n T get).map tabelliert
+
+/-- **The table changes no collected family.** -/
+@[csimp] theorem collect_eq_schnell : @collect = @collectSchnell := by
+  funext n T get
+  unfold collectSchnell
+  rw [collectDirekt_eq]
+  cases collect n T get with
+  | error e => rfl
+  | ok values => exact congrArg Except.ok (tabelliert_eq values).symm
 
 /-- Lower all original measures over the complete function enumeration; none is guessed. -/
 def lowerMeasures (u : UProg) : Except String (Export u) := do
