@@ -38,10 +38,10 @@ namespace Gabbro.Grammatik.Parser.Instantiation
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
 
-private def sig (name : String) (params : List (String × STyp)) (result : Option STyp) : FnSig :=
+def sig (name : String) (params : List (String × STyp)) (result : Option STyp) : FnSig :=
   { art := "", name, params, res := result, fehler := none, klauseln := [] }
 
-private def returnX : SAnw := .block [] (some (.ret (some (.variable "x"))))
+def returnX : SAnw := .block [] (some (.ret (some (.variable "x"))))
 
 /-- One module template, two generative uses; one generic function reached at two different
     types. Both modules also use the same capture-free callback literal, which must be shared

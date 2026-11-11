@@ -280,12 +280,14 @@ theorem klauselGutB_sound (k : SKlausel) (h : klauselGutB k = true) : KlauselGut
 
 def sigGutB (s : FnSig) : Bool :=
   (s.art == "" || s.art == "const" || istMod s.art) && s.params.all (fun p => typGutB p.2) &&
-    s.res.all typGutB && s.klauseln.all klauselGutB
+    s.res.all typGutB && s.klauseln.all klauselGutB && s.generics.isEmpty
 
 theorem sigGutB_sound (s : FnSig) (h : sigGutB s = true) : SigGut s := by
-  simp only [sigGutB, Bool.and_eq_true, Bool.or_eq_true, beq_iff_eq, List.all_eq_true] at h
-  obtain ⟨⟨⟨ha, hp⟩, hr⟩, hk⟩ := h
-  refine ⟨?_, fun p hm => typGutB_sound _ (hp p hm), typOptGutB_sound _ hr, fun k hm => klauselGutB_sound k (hk k hm)⟩
+  simp only [sigGutB, Bool.and_eq_true, Bool.or_eq_true, beq_iff_eq, List.all_eq_true,
+    List.isEmpty_iff] at h
+  obtain ⟨⟨⟨⟨ha, hp⟩, hr⟩, hk⟩, hg⟩ := h
+  refine ⟨?_, fun p hm => typGutB_sound _ (hp p hm), typOptGutB_sound _ hr,
+    fun k hm => klauselGutB_sound k (hk k hm), hg⟩
   rcases ha with (h | h) | h
   · exact Or.inl h
   · exact Or.inr (Or.inl h)

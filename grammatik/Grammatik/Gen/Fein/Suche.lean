@@ -30,7 +30,7 @@ def neuFilter {α : Type} (cz : α → List FZelle) (seen : Std.HashSet FZelle) 
     (#[], seen)
   (r.1.toList, r.2)
 
-deriving instance Hashable for Ty
+deriving instance Hashable for DataTarget, DataRights, DataCapTy, Ty
 
 /-- Keep the elements that bring a cell not yet seen or a key not yet seen (one representative per key). -/
 def neuFilterK {α κ : Type} [BEq κ] [Hashable κ] (cz : α → List FZelle) (rk : α → Option κ) (seen : Std.HashSet FZelle)
@@ -253,8 +253,9 @@ def packKern (z : Spez) (basis : ∀ f : z.deklaration.Fn, Option (Rumpf z.dekla
     let b0 : ∀ f : D.Fn, Rumpf D f := fun f => (basis f).get (by
       have := List.all_eq_true.1 hall f (List.mem_finRange f); simpa using this)
     let prog : (∀ f : D.Fn, List (Rumpf D f)) → Programm D := fun L =>
-      Programm.mk (fun _ => .tru) (fun _ => .tru) (fun _ => .tru)
-        (fun f => if (L f).isEmpty then b0 f else gepackt (L f) (b0 f)) (fun _ => false)
+      { invariante := fun _ => .tru, requires := fun _ => .tru, ensures := fun _ => .tru,
+        rumpf := fun f => if (L f).isEmpty then b0 f else gepackt (L f) (b0 f),
+        unterbricht := fun _ => false }
     let leer : ∀ f : D.Fn, List (Rumpf D f) := fun _ => []
     let paare : List (Σ f : D.Fn, Rumpf D f) := tabs.flatMap fun ⟨f, bs⟩ => bs.map fun b => ⟨f, b⟩
     let r := paare.foldl (fun (acc : (∀ f : D.Fn, List (Rumpf D f)) × Nat × Option (Gutes z) × Array (Gutes z)) p =>

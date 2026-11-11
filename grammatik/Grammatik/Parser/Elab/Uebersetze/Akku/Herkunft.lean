@@ -39,14 +39,14 @@ def herkunftAccT : SItemTief :=
 /-- The probe update use: merge the argument. -/
 def herkunftMelde : SItemTief :=
   .fnT { art := "impl", name := "melde", params := [("t", .atom "u32")],
-    res := none, fehler := none,
-    klauseln := [.effs [.writes (.variable "s")]] }
+         res := none, fehler := none,
+         klauseln := [.effs [.writes (.variable "s")]] }
     (.block [.set (.variable "s") "=" (.variable "t")] none)
 
 /-- The probe read use: return the sampled fold. -/
 def herkunftLies : SItemTief :=
   .fnT { art := "impl", name := "lies", params := [],
-    res := some (.atom "u32"), fehler := none, klauseln := [] }
+         res := some (.atom "u32"), fehler := none, klauseln := [] }
     (.block [] (some (.ret (some (.variable "s")))))
 
 /-- The fixture items. -/

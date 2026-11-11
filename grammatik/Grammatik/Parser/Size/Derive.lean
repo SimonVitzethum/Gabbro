@@ -151,8 +151,14 @@ private def emit (output : Ident) (types : Array Expr) (root : Expr) : CommandEl
       for definition in definitions do elabCommand definition
   let functionName ← liftTermElabM <| producer nodes root
   let type ← liftTermElabM <| PrettyPrinter.delab root
-  elabCommand (← `(command| @[no_expose] public def $output:ident (input : $type:term) :
+  -- The native realization keeps its exact certificate and stays opaque. The public function
+  -- is the kernel size itself, so `decide`, `rfl` and `cbv` evaluate it by the structural
+  -- `sizeOf`; compiled code runs the native realization, which is equal to it by its certificate.
+  let native := mkIdent (output.getId.appendAfter "Native")
+  elabCommand (← `(command| @[no_expose] public def $native:ident (input : $type:term) :
     { n : Nat // n = sizeOf input } := $(mkIdent functionName) input))
+  elabCommand (← `(command| @[expose, implemented_by $native] public def $output:ident
+    (input : $type:term) : { n : Nat // n = sizeOf input } := ⟨sizeOf input, rfl⟩))
 
 syntax (name := deriveSourceSize) "derive_source_size " ident " for " ident
   " with " "[" ident,* "]" : command
