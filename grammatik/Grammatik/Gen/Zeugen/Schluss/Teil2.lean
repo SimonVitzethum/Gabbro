@@ -20,7 +20,7 @@ public import Grammatik.Gen.Zeugen.N.N20_1
 public import Grammatik.Gen.Zeugen.N.N23_4
 public import Grammatik.Gen.Zeugen.N.N24_0
 public import Grammatik.Gen.Zeugen.N.N3_0
-public import Grammatik.Gen.Zeugen.N.N47_20
+public import Grammatik.Gen.Zeugen.N.N47_P
 public import Grammatik.Gen.Zeugen.N.N47_45
 public import Grammatik.Gen.Abdeckung.Satz.Neutral
 public import Grammatik.Gen.Abdeckung.Satz.Unmoeglich
@@ -76,9 +76,9 @@ theorem schluss_schlecht : SchlechtGedeckt ncZiel erreicht := by
   · exact fun e h => absurd h (u_0_ohne false true e)
   · exact absurd hs (by decide)
   · exact fun e h => absurd h (u_0_ohne true true e)
-  · exact fun e h => ⟨N47_20.bnoetig, fun w hw => by
-        obtain rfl := (by decide : ∀ w ∈ N47_20.bnoetig, w = ⟨0, 0, true, [true, true, true]⟩) w hw
-        exact h, N47_20.zellen⟩
+  · exact fun e h => ⟨N47_P.bnoetig, fun w hw => by
+        obtain rfl := N47_P.bnoetig_zelle w hw
+        exact h, N47_P.zellen⟩
   · exact absurd hs (by decide)
   · exact absurd hs (by decide)
   · exact absurd hs (by decide)
@@ -269,7 +269,7 @@ theorem compiler_korrekt (K : Einsatz → Prop) (hK : NeutralKorrekt K) (hM : �
 def Mw : List Einsatz := [M99_824.e, M47_549.e, M169_350.e, M16_13.e, M49_50.e, M103_803.e, M103_131.e, M99_825.e, Reset.Good.e]
 
 /-- **N**: the refused tests. -/
-def Nw : List Einsatz := [N16_5.e, N18_0.e, N18_4.e, N19_0.e, N19_2.e, N19_5.e, N19_7.e, N20_1.e, N23_4.e, N24_0.e, N3_0.e, N47_20.e, N47_45.e, Reset.Bad.e]
+def Nw : List Einsatz := [N16_5.e, N18_0.e, N18_4.e, N19_0.e, N19_2.e, N19_5.e, N19_7.e, N20_1.e, N23_4.e, N24_0.e, N3_0.e, N47_P.e, N47_45.e, Reset.Bad.e]
 
 theorem erreicht_mw : ∀ w ∈ erreicht, ∃ m ∈ Mw, m.Hat w := by
   intro w hw

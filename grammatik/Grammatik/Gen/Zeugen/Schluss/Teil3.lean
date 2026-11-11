@@ -20,7 +20,7 @@ public import Grammatik.Gen.Zeugen.N.N20_1
 public import Grammatik.Gen.Zeugen.N.N23_4
 public import Grammatik.Gen.Zeugen.N.N24_0
 public import Grammatik.Gen.Zeugen.N.N3_0
-public import Grammatik.Gen.Zeugen.N.N47_20
+public import Grammatik.Gen.Zeugen.N.N47_P
 public import Grammatik.Gen.Zeugen.N.N47_45
 public import Grammatik.Gen.Abdeckung.Satz.Neutral
 public import Grammatik.Gen.Abdeckung.Satz.Unmoeglich
@@ -223,7 +223,7 @@ theorem zeugen_tafel : Tafel Mw Nw where
     · exact N23_4.e_gueltig
     · exact N24_0.e_gueltig
     · exact N3_0.e_gueltig
-    · exact N47_20.e_gueltig
+    · exact N47_P.e_gueltig
     · exact N47_45.e_gueltig
     · exact Reset.Bad.e_gueltig
   schlecht x hx hs := by
@@ -237,9 +237,9 @@ theorem zeugen_tafel : Tafel Mw Nw where
     · exact fun e h => absurd h (u_0_ohne false true e)
     · exact absurd hs (by decide)
     · exact fun e h => absurd h (u_0_ohne true true e)
-    · exact fun e h => ⟨N47_20.e, by simp only [Nw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], n_deckt Mw erreicht erreicht_mw N47_20.e e N47_20.bnoetig N47_20.e_gedeckt
+    · exact fun e h => ⟨N47_P.e, by simp only [Nw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], n_deckt Mw erreicht erreicht_mw N47_P.e e N47_P.bnoetig N47_P.e_gedeckt
           (fun w hw => by
-          obtain rfl := (by decide : ∀ w ∈ N47_20.bnoetig, w = ⟨0, 0, true, [true, true, true]⟩) w hw
+          obtain rfl := (by decide : ∀ w ∈ N47_P.bnoetig, w = ⟨0, 0, true, [true, true, true]⟩) w hw
           exact h)⟩
     · exact absurd hs (by decide)
     · exact absurd hs (by decide)

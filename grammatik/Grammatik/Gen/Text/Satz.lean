@@ -27,8 +27,9 @@ public import Grammatik.Gen.Text.Zeugen.N20_1
 public import Grammatik.Gen.Text.Zeugen.N23_4
 public import Grammatik.Gen.Text.Zeugen.N24_0
 public import Grammatik.Gen.Text.Zeugen.N3_0
-public import Grammatik.Gen.Text.Zeugen.N47_20
+public import Grammatik.Gen.Text.Zeugen.N47_P
 public import Grammatik.Gen.Text.Zeugen.N47_45
+public import Grammatik.Gen.Text.Zeugen.Reset
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -84,7 +85,8 @@ def mText : List String :=
    textVon Zeugen.M49_50.z Zeugen.M49_50.P Zeugen.M49_50.ws,
    textVon Zeugen.M103_803.z Zeugen.M103_803.P Zeugen.M103_803.ws,
    textVon Zeugen.M103_131.z Zeugen.M103_131.P Zeugen.M103_131.ws,
-   textVon Zeugen.M99_825.z Zeugen.M99_825.P Zeugen.M99_825.ws]
+   textVon Zeugen.M99_825.z Zeugen.M99_825.P Zeugen.M99_825.ws,
+   Zeugen.Reset.Good.text]
 
 /-- The texts of the refused witnesses (the order of `Nw`). -/
 def nText : List String :=
@@ -99,14 +101,15 @@ def nText : List String :=
    textVon Zeugen.N23_4.z Zeugen.N23_4.P Zeugen.N23_4.ws,
    textVon Zeugen.N24_0.z Zeugen.N24_0.P Zeugen.N24_0.ws,
    textVon Zeugen.N3_0.z Zeugen.N3_0.P Zeugen.N3_0.ws,
-   textVon Zeugen.N47_20.z Zeugen.N47_20.P Zeugen.N47_20.ws,
-   textVon Zeugen.N47_45.z Zeugen.N47_45.P Zeugen.N47_45.ws]
+   Zeugen.N47_P.text,
+   textVon Zeugen.N47_45.z Zeugen.N47_45.P Zeugen.N47_45.ws,
+   Zeugen.Reset.Bad.text]
 
 /-- **Every witness has its text**: a text in the list that reads back with the witness's cells and verdict. -/
 theorem m_texte : ∀ m ∈ Zeugen.Mw, ∃ t ∈ mText, ∃ e', ausText t = .ok e' ∧ e'.zellen = m.zellen ∧ e'.gueltig = m.gueltig := by
   intro m hm
   simp only [Zeugen.Mw, List.mem_cons, List.not_mem_nil, or_false] at hm
-  rcases hm with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  rcases hm with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, true_or], Zeugen.M99_824.text⟩
   · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.M47_549.text⟩
   · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.M169_350.text⟩
@@ -114,12 +117,13 @@ theorem m_texte : ∀ m ∈ Zeugen.Mw, ∃ t ∈ mText, ∃ e', ausText t = .ok 
   · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.M49_50.text⟩
   · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.M103_803.text⟩
   · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.M103_131.text⟩
-  · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, or_true], Zeugen.M99_825.text⟩
+  · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.M99_825.text⟩
+  · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, or_true], Zeugen.Reset.Good.text_reads⟩
 
 theorem n_texte : ∀ n ∈ Zeugen.Nw, ∃ t ∈ nText, ∃ e', ausText t = .ok e' ∧ e'.zellen = n.zellen ∧ e'.gueltig = n.gueltig := by
   intro n hn
   simp only [Zeugen.Nw, List.mem_cons, List.not_mem_nil, or_false] at hn
-  rcases hn with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  rcases hn with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or], Zeugen.N16_5.text⟩
   · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.N18_0.text⟩
   · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.N18_4.text⟩
@@ -131,8 +135,9 @@ theorem n_texte : ∀ n ∈ Zeugen.Nw, ∃ t ∈ nText, ∃ e', ausText t = .ok 
   · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.N23_4.text⟩
   · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.N24_0.text⟩
   · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.N3_0.text⟩
-  · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.N47_20.text⟩
-  · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, or_true], Zeugen.N47_45.text⟩
+  · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.N47_P.text_reads⟩
+  · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.N47_45.text⟩
+  · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, or_true], Zeugen.Reset.Bad.text_reads⟩
 
 /-- Acceptance by a cell table depends on the cells only. -/
 theorem akzeptiert_zellen (φ : Zelle → Bool) (e e' : Einsatz) (h : e.zellen = e'.zellen) :
@@ -140,7 +145,7 @@ theorem akzeptiert_zellen (φ : Zelle → Bool) (e e' : Einsatz) (h : e.zellen =
   unfold akzeptiert Einsatz.Hat
   rw [h]
 
-/-- **A cell-neutral checker on source text that answers like the model on the 8 + 13 witness texts answers like
+/-- **A cell-neutral checker on source text that answers like the model on the 9 + 14 witness texts answers like
     the model on every text that is a program of the source.** -/
 theorem pruefer_text_korrekt (R : String → Bool) (hR : NeutralText R)
     (hM : ∀ t ∈ mText, R t = true) (hN : ∀ t ∈ nText, R t = false) :
@@ -181,7 +186,7 @@ theorem pruefer_text_korrekt (R : String → Bool) (hR : NeutralText R)
     intro ha; have := (hφ s e hs).2 ha; rw [hr] at this; cases this
   · symm; simp only [C, decide_eq_true_eq]; exact (hφ s e hs).1 hr
 
-/-- **A cell-neutral compiler on source text correct on the 8 valid witness texts is correct on every text that is a
+/-- **A cell-neutral compiler on source text correct on the 9 valid witness texts is correct on every text that is a
     valid program of the source.** -/
 theorem compiler_text_korrekt (K : String → Prop) (hK : NeutralKorrektText K) (hM : ∀ t ∈ mText, K t) :
     ∀ s e, ausText s = .ok e → e.gueltig = true → K s := by

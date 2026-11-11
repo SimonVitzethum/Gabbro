@@ -77,4 +77,22 @@ theorem textCheck_sound (z : Spez) (P : Programm z.deklaration) (ws : List z.dek
       simp only [Bool.and_eq_true, beq_iff_eq] at h
       exact ⟨e, rfl, h.1, h.2⟩
 
+/-- The check on a text that is lexed: it reads back as a program with the cells `zs` and the verdict `g`.
+    For texts outside the proved print/read round trip (a written pointer type, an array type); the kernel runs
+    the whole front end on the characters. -/
+def textGelesenB (t : String) (zs : List Zelle) (g : Bool) : Bool :=
+  match ausText t with
+  | .ok e => e.zellen == zs && e.gueltig == g
+  | .error _ => false
+
+theorem textGelesenB_sound (t : String) (zs : List Zelle) (g : Bool) (h : textGelesenB t zs g = true) :
+    ∃ e', ausText t = .ok e' ∧ e'.zellen = zs ∧ e'.gueltig = g := by
+  unfold textGelesenB at h
+  cases ha : ausText t with
+  | error m => rw [ha] at h; cases h
+  | ok e =>
+    rw [ha] at h
+    simp only [Bool.and_eq_true, beq_iff_eq] at h
+    exact ⟨e, rfl, h.1, h.2⟩
+
 end Gabbro.Grammatik.Gen.Text

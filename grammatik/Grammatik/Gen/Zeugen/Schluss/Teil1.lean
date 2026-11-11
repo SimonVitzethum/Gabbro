@@ -21,7 +21,7 @@ public import Grammatik.Gen.Zeugen.N.N20_1
 public import Grammatik.Gen.Zeugen.N.N23_4
 public import Grammatik.Gen.Zeugen.N.N24_0
 public import Grammatik.Gen.Zeugen.N.N3_0
-public import Grammatik.Gen.Zeugen.N.N47_20
+public import Grammatik.Gen.Zeugen.N.N47_P
 public import Grammatik.Gen.Zeugen.N.N47_45
 public import Grammatik.Gen.Abdeckung.Satz.Neutral
 public import Grammatik.Gen.Abdeckung.Satz.Unmoeglich

@@ -94,6 +94,7 @@ def typS (otab : Int → Option Nat) : Ty → Except String STyp
   | .opt n => match otab n with
     | some i => .ok (.index true (nTab i))
     | none => .error "option of a count no table has"
+  | .arr τ n => (typS otab τ).map fun t => .array t (.lit n)
   | _ => .error "type without a spelling"
 
 variable (z : Spez)
