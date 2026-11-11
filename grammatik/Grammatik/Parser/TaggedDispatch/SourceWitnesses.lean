@@ -77,6 +77,7 @@ import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
 import all Grammatik.Parser.Elab.Generic.StaticConformance
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Rest2
+import Grammatik.Kern.Taktik.KernelRfl
 
 namespace Gabbro.Grammatik.Parser
 open Uebersetze UebersetzeAllg2
@@ -230,16 +231,13 @@ private theorem source_adapters :
     entzuckere (uMembers (pre108 sourceItems.val)) =
       .ok (uMembers (pre108 sourceItems.val)) := by cbv
 
-/-- **FINDING (open): the dispatching source expands but does not elaborate.** The call
-    `Shape::area(false, s, true)` passes the tagged value `s : AnyShape`, and the argument
-    reader of the elaborator has no form for a sum-typed argument (`argument without G form`).
-    The expansion witnesses above are unaffected; the elaboration was stated as successful
-    and never built. -/
-public theorem tagged_source_elaboration_refused_zeuge :
-    ((taggedSourceItems "bool").bind (fun items => elabU (pre108 items))).toOption.isSome = false := by
+/-- The dispatching source expands and elaborates: the call `Shape::area(false, s, true)` passes
+    the tagged value `s : AnyShape` as an argument of its own declaration. -/
+public theorem tagged_source_elaboration_zeuge :
+    ((taggedSourceItems "bool").bind (fun items => elabU (pre108 items))).toOption.isSome = true := by
   rw [sourceItems.property]
-  change (elabU (pre108 sourceItems.val)).toOption.isSome = false
-  decide +kernel
+  change (elabU (pre108 sourceItems.val)).toOption.isSome = true
+  kernel_rfl
 
 /-- A parsed implementation with the wrong result type is refused by name
     before any dispatcher is admitted. -/
