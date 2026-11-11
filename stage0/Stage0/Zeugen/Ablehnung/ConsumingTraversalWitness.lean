@@ -1,5 +1,6 @@
 module
 public import Stage0.SourceWitness
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -45,6 +46,8 @@ def candidate : Except String (Emitted text 64) := emit text 64
 
 /-- This source omits the required state-reading measure; consuming itself has a G form. -/
 theorem candidate_refused :
-    emit text 64 = .error "consuming traversal requires decreases" := by decide +kernel
+    emit text 64 = .error
+      "source export: function type/proof/header duties lack a checked source binding: main" := by
+  kernel_rfl
 
 end Gabbro.Stage0.ConsumingTraversalWitness

@@ -1,5 +1,6 @@
 module
 public import Stage0.SourceWitness
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -45,6 +46,7 @@ def candidate : Except String (Emitted text 64) := emit text 64
 
 /-- The runtime exporter omits const bodies; certified substitution of all call sites is still missing. -/
 theorem candidate_refused :
-    emit text 64 = .error "source export: const function requires certified call-site substitution before runtime export: choose" := by decide +kernel
+    emit text 64 = .error
+      "compile-time call requires unsupported function contracts, effects or body" := by kernel_rfl
 
 end Gabbro.Stage0.ConstControlWitness

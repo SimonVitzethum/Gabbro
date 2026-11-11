@@ -1,5 +1,6 @@
 module
 public import Stage0.SourceWitness
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -44,6 +45,6 @@ def text : String :=
 def candidate : Except String (Emitted text 64) := emit text 64
 
 theorem candidate_refused :
-    emit text 64 = .error "source export: SItemTief.protoT: type/provider/proof duties lack a checked source binding" := by decide +kernel
+    emit text 64 = .error "source export: SItemTief.protoT: type/provider/proof duties lack a checked source binding" := by kernel_rfl
 
 end Gabbro.Stage0.OwnerMintWitness

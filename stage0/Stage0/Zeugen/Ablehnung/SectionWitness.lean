@@ -1,5 +1,6 @@
 module
 public import Stage0.SourceWitness
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -46,6 +47,6 @@ def candidate : Except String (Emitted text 64) := emit text 64
 /-- A named section is refused by name: the flat runner image carries no section
     relocation policy. Alignment without a section is laid out on the common
     grid instead. -/
-theorem candidate_refused : emit text 64 = .error "ir: section \"data\" of global VALUE has no Stage0 image relocation policy" := by decide +kernel
+theorem candidate_refused : emit text 64 = .error "ir: section \"data\" of global section_probe.VALUE has no Stage0 image relocation policy" := by kernel_rfl
 
 end Gabbro.Stage0.SectionWitness
