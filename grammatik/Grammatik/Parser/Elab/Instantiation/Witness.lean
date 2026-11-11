@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Elab.Modules.Frontend
+import Grammatik.Kern.Taktik.KernelRfl
 
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -84,7 +85,7 @@ private theorem fixture_success : Modules.instantiate fixture = .ok fixtureOutpu
   have shape := fixture_shape_zeuge
   unfold fixtureOutput
   cases hr : Modules.instantiate fixture with
-  | error error => simp [hr] at shape
+  | error error => rw [hr] at shape; cases shape
   | ok output => rfl
 
 /-- The exact same successful, non-degenerate output inhabits all generic theorem premises. -/
@@ -112,38 +113,38 @@ theorem nested_generic_form_refused_zeuge :
       (.block [.cond .tru (.block [] (some (.ret (some
         (.ext .instantiate ["f", "fn() effects {} costs <= 1 ops { return; }"] []))))) [] none]
         none)] =
-      .error "dyn.output" := rfl
+      .error "dyn.output" := by kernel_rfl
 
 /-- Unchanged direct calls are checked too, recursively inside argument expressions. -/
 theorem nested_dangling_refused_zeuge :
     Modules.instantiate [.fnT (sig "entry" [] none)
       (.block [.call "entry" [.call "missing" []]] none)] =
-      .error "generic-output: residual syntax, name collision or unresolved direct global reference" := rfl
+      .error "generic-output: residual syntax, name collision or unresolved direct global reference" := by kernel_rfl
 
 /-- Function addresses participate even if they are never called. -/
 theorem dangling_address_refused_zeuge :
     Modules.instantiate [.constT "address" (.raw "fn() effects {} costs <= 1 ops")
       (.one (.fnref "missing"))] =
-      .error "generic-output: residual syntax, name collision or unresolved direct global reference" := rfl
+      .error "generic-output: residual syntax, name collision or unresolved direct global reference" := by kernel_rfl
 
 /-- Local indirect calls and builtin heads keep the old path; this is no acceptance claim. -/
 theorem builtin_and_indirect_exception_zeuge :
     (Modules.instantiate [.fnT
       (sig "entry" [("callback", .raw "fn() effects {} costs <= 1 ops")] none)
       (.block [.call "callback" [], .bind false "value" none (.call "Some" [.lit 1])]
-        (some (.ret none)))]).toOption.isSome = true := rfl
+        (some (.ret none)))]).toOption.isSome = true := by kernel_rfl
 
 /-- A later binder cannot turn an earlier unresolved global call into an indirect call. -/
 theorem later_local_does_not_hide_global_zeuge :
     Modules.instantiate [.fnT (sig "entry" [] none)
       (.block [.call "missing" [], .bind false "missing" none (.lit 0)] none)] =
-      .error "generic-output: residual syntax, name collision or unresolved direct global reference" := rfl
+      .error "generic-output: residual syntax, name collision or unresolved direct global reference" := by kernel_rfl
 
 /-- Reserved generated targets are checked even under a malicious same-spelling local binder. -/
 theorem generated_target_cannot_be_hidden_zeuge :
     Modules.instantiate [.fnT (sig "entry" [("$literal$missing", .atom "u8")] none)
       (.block [.call "$literal$missing" []] none)] =
-      .error "generic-output: residual syntax, name collision or unresolved direct global reference" := rfl
+      .error "generic-output: residual syntax, name collision or unresolved direct global reference" := by kernel_rfl
 
 /-- The same surface address constructor can denote a table capability. That case remains
     outside function-reference closedness; a genuine function address is still checked. -/
@@ -151,11 +152,11 @@ theorem table_address_exception_zeuge :
     (Modules.instantiate [.tableT "Cells" none (some (.lit 1)) none none false [],
       .fnT (sig "entry" [] none) (.block
         [.bind false "cells" none (.fnref "Cells"),
-         .bind false "function" none (.fnref "entry")] none)]).toOption.isSome = true := rfl
+         .bind false "function" none (.fnref "entry")] none)]).toOption.isSome = true := by kernel_rfl
 
 theorem function_address_is_global_under_local_shadowing_zeuge :
     Modules.instantiate [.fnT (sig "entry" [("missing", .atom "u8")] none)
       (.block [.bind false "function" none (.fnref "missing")] none)] =
-      .error "generic-output: residual syntax, name collision or unresolved direct global reference" := rfl
+      .error "generic-output: residual syntax, name collision or unresolved direct global reference" := by kernel_rfl
 
 end Gabbro.Grammatik.Parser.Instantiation

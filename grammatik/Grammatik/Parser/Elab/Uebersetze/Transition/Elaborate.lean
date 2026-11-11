@@ -86,6 +86,9 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
   let effects ← uEffekte head ctx.tabs ctx.locks ctx.globs [.effs tr.wirkung]
   if !effects.locks.isEmpty then
     throw "transition lock effect has no corresponding lock action"
+  if !effects.nimmt.isEmpty || !effects.gibt.isEmpty || !effects.leiht.isEmpty ||
+      !effects.bewegt.isEmpty || !effects.praegt.isEmpty then
+    throw "transition resource-flow effect has no transition form"
   let clauses ← uSeq (requirements.filterMap fun
     | .needs (.call "Held" _) => none
     | .needs p => some (uBool ctx p)

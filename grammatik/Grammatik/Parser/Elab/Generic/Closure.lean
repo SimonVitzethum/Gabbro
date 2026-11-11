@@ -19,21 +19,28 @@ def instanceName (i : Instance) : String :=
   "$generic$" ++ encodeComponent i.function ++
     String.join (i.arguments.map encodeComponent)
 
+/-- The pending instances from the first one not visited yet. -/
+def firstUnseen (seen : List Instance) : List Instance → List Instance
+  | [] => []
+  | next :: pending => if seen.contains next then firstUnseen seen pending else next :: pending
+
 /-- Reachable instance closure. Fuel is an explicit compilation resource limit,
 not a silently truncated result. Already visited recursive instances need no fuel.
 The expansion correctness theorem attaches to successful closure plus the body
-substitution and call-rewriting pass; closure alone is not that theorem. -/
+substitution and call-rewriting pass; closure alone is not that theorem.
+The recursion is structural in the fuel, so the closure reduces on closed terms. -/
 def instanceClosure (dependencies : Instance → Except String (List Instance)) :
     Nat → List Instance → List Instance → Except String (List Instance)
-  | _, [], seen => .ok seen
-  | fuel, next :: pending, seen =>
-    if seen.contains next then instanceClosure dependencies fuel pending seen
-    else match fuel with
+  | fuel, pending, seen =>
+    match firstUnseen seen pending with
+    | [] => .ok seen
+    | next :: rest =>
+      match fuel with
       | 0 => .error "generic-instance-limit: growing or polymorphically recursive instantiation"
       | n + 1 => do
         let children ← dependencies next
-        instanceClosure dependencies n (pending ++ children) (seen ++ [next])
-termination_by fuel pending _ => (fuel, pending.length)
+        instanceClosure dependencies n (rest ++ children) (seen ++ [next])
+termination_by structural fuel => fuel
 
 /-- Structural compilation budget: declarations times distinct source instantiation
 sites plus one. Exhaustion refuses compilation; it never returns partial closure.

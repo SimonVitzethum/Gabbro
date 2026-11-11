@@ -88,8 +88,9 @@ def item (scope : Scope) : SItemTief → SurfaceFacts
       optional (expression scope) inv]
   | .rcuT _ places epoch => merge (expressions scope places) (optional (expression scope) epoch)
   | .groupT _ _ invs => gather (invs.map (invariant scope))
+  -- A root path selects its last segment, as the root reader of the elaborator does.
   | .concT roots => gather (roots.map fun (path, args) =>
-      merge (globalReference (String.intercalate "::" path)) (expressions scope args))
+      merge (optional globalReference path.getLast?) (expressions scope args))
   | .accT _ ty _ value _ => merge (inspectType scope ty) (optional (expression scope) value)
   | .walkT walk => gather [expression scope walk.stufen, inspectType scope walk.node,
       expression scope walk.dwhen, expression scope walk.blatt,
