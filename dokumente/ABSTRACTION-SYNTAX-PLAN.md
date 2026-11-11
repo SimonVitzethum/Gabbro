@@ -44,7 +44,7 @@ its sentence in `saetze.rs` and a poison probe in the same commit.
 
 Two facts of the current model shape the design:
 
-- **Records are not values** (`TODO.md` O15, `LG002`). Generic values are integers, floats, `bool`, sums,
+- **Records are not values** (former work item O15, `LG002`). Generic values are integers, floats, `bool`, sums,
   indices, reasons and `fnptr`; a structure travels as `ptr<…> T` or as an index.
 - **Function-pointer types carry no contract** (`N589`, O43). `dyn` does not depend on O43 (§6.2); O43 itself is
   planned in §6.3.
@@ -405,8 +405,8 @@ Inheritance; subtyping (also no view `B → A`); methods and receivers; overload
 groups; operator overloading; closures with captured environment; specialisation and overlapping
 implementations; default bodies in specs; downcast and reflection; GC; exceptions; implicit conversion;
 `defer` (linear marks already force the release, and a hidden release does not fit the
-explicit style). §15 of `SYNTAX.md` stands as it is. `async fn`/`.await` is a separate item of
-`TODO.md` (a verified state-machine transformation), not part of this plan.
+explicit style). §15 of `SYNTAX.md` stands as it is. `async fn`/`.await` is separate work
+(a verified state-machine transformation), not part of this plan.
 
 ## 8. Work order and obligations
 

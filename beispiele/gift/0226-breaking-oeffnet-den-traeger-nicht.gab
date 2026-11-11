@@ -1,7 +1,7 @@
 // erwartet: D002
 // **Gift 226 -- `breaking` ist kein Schreibrecht.**
 //
-// Der Durchstich, den `TODO.md` (Stufe 5) als offen fuehrte: *was passiert bei einem
+// Der Durchstich, der (Stufe 5) als offen gefuehrt war: *was passiert bei einem
 // `breaking` an einem `by ops`-Feld?* Die Buchung sagte, der Traeger werde damit **wieder
 // geoeffnet**, statt dass es ein Uebersetzungsfehler waere -- gelesen aus `k_haelt()`, nicht
 // gemessen.

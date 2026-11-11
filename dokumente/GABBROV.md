@@ -230,7 +230,7 @@ held it): one row per Lean construct with its named
 Gabbro counterpart, every name resolving where its side lives. Rows are `GREEN` (the nine
 constructs `∧∨¬→`, `=≠`, quantifiers over table domains, `World`, `State`, `wrapTo`, `.int`,
 `SpecShape`, `reachesIn`, `Atom`), `YELLOW` (Gabbro can, Lean cannot: ends undecided and needs a
-`TODO.md` entry named in the row) or `RED` (Lean can, Gabbro cannot: a failure — the fragment is
+open item named in the row) or `RED` (Lean can, Gabbro cannot: a failure — the fragment is
 taken back or the Gabbro side is built first). **RED is empty and must stay empty**; what keeps it
 empty is the order: a demand gets a table row only when its Gabbro side lands first (`count`
 and the `traverse` fold are `DEMAND` rows today).

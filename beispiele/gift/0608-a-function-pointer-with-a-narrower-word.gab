@@ -30,7 +30,7 @@
 // and the declared RANGE of a number is held by nobody at a `fn(...)` slot -- `u32 in 0 .. 9`
 // and `u32` are one C type and one ABI, so a function accepting less than the slot promises
 // still passes here. *That is a contravariance rule with its own direction, and it is booked
-// in `TODO.md` rather than smuggled in here.*
+// as open work rather than smuggled in here.*
 
 module gift::a_function_pointer_with_a_narrower_word {
 

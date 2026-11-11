@@ -26,7 +26,7 @@
 // Gleicher Rang faellt hier, und das ist die richtige Antwort und nicht die bequeme: zwei
 // Sperren desselben Rangs haben KEINE Ordnung, also koennen zwei Halter sie in zwei
 // Richtungen nehmen. Dass beide Bibliotheken `0` gewaehlt haben, ist kein Zufall, sondern
-// der Normalfall -- **absolute Zahlen komponieren nicht** (siehe «ABI2» in `TODO.md`).
+// der Normalfall -- **absolute Zahlen komponieren nicht**.
 
 module speicher {
 pub const NEINTRAEGE : u32 = 64;

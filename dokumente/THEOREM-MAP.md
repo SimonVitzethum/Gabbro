@@ -31,8 +31,8 @@ distance to the goal.
 > stale pointer, not a stale theorem; grep the name). Retired reports named below (`messung/OPUS-*`,
 > `messung/muse/OPUS-BERICHT-*`, `messung/muse-audit/*` probe files) are gone from the tree; the verdict files (`messung/URTEIL-*`, `messung/review-*`, `dokumente/PROOF.md`) are summarised in the verdict table of `PROOF.md` and likewise leave the tree. The own/separation line of work is
 > §74-§76 (`dokumente/A1-OWN-PAPER.md`).
-> `OFFEN Oxx` ids are cited as they stood when their section was written; the live list is
-> `TODO.md`, and an id that is no longer there is closed or moved, not forgotten.
+> `OFFEN Oxx` ids are cited as they stood when their section was written; there is no live list in the
+> tree any more (it is in git history before `4ba752a3a`); an id is closed, moved or open there.
 
 ## 7. Re-measured premise table (2026-09-12)
 
@@ -2911,7 +2911,7 @@ Removed on 2026-10-18 with the C backend: this section recorded the C runtime's 
 
 *Added 2026-09-15 (Opus lane `alloc`). File: `Grammatik/Bausteine/Arena/ArenaZucker.lean` (new), imported by
 `Grammatik.lean`. Rust: `crates/gabbro-check/src/lean_g.rs` (the arena refusal by name).
-Report: `messung/muse/OPUS-BERICHT-ALLOC.md` (retired report, in the history). Ledger: `TODO.md` O14.*
+Report: `messung/muse/OPUS-BERICHT-ALLOC.md` (retired report, in the history). Ledger: former work item O14.*
 
 **The finding** (`messung/muse/OPUS-BERICHT-GRAMMATIK-EMIT.md` (retired report, in the history) §2.2/§5.3): `let i = alloc A (v)
 [else …];` and `reset A;` are accepted with zero diagnostics, emit C, that C compiles -- and
@@ -3081,9 +3081,9 @@ across calls and parameters). **Runtime:** `laufzeit/arena_dyn.c` (`gabbro_arena
   through a premise its witness discharged without the run) were removed, not renamed.
 - Nothing links `DynArena` to the Rust accounting or to the C by proof: the checker's per-path
   upper bound and `dynGrowListe`'s sum agree by reading. The run model the checker assumes
-  (call-graph roots entered once per load) is not stated in `Spec.lean` (`TODO.md` O20).
+  (call-graph roots entered once per load) is not stated in `Spec.lean` (former work item O20).
 - The PLAN §9 work (`DynForm`, the four Block-form theorems, the simulation) and the two
-  `Spec.lean` (d) assumption texts do not exist (review G08 F5; `TODO.md` wave D note).
+  `Spec.lean` (d) assumption texts do not exist (review G08 F5).
 - `ArenaReset.lean`'s "no handle outlives a reset" holds in the sugar only; in the surface
   language `N211` holds it along one thread of control, not against a concurrent `reset`.
 
@@ -3114,7 +3114,7 @@ argument. No run-level theorem says that a run whose gate calls all meet their p
 is the same run under the two oracles; no exporter builds `AxPre` from a gate's `requires`;
 a result-less gate has no raw word outside its type, so the bridge does not reach it; and the
 fixture's preconditions (a terminator slot, the handed-out descriptor) are analogs of
-`path_nul_terminated` and `len <= lenof(buf)`, not those clauses (`TODO.md` O23).
+`path_nul_terminated` and `len <= lenof(buf)`, not those clauses (former work item O23).
 
 **Axioms:** `propext`, `Quot.sound` (section 9); `#print axioms gabbro_ziel` unchanged.
 
@@ -3138,7 +3138,7 @@ theorems below `bkopie` added by fix lane F6 after review G12 F4/F6). **Rust:**
 **What is NOT claimed.** No theorem says the Rust pass implements these rules: the link is
 the gifts and the test pins, not a proof. The model has no representation (no NUL, no length
 word), no literal surface, no strings in aggregates, and no upper limit on `max`
-(`TODO.md` O24). No string program reaches Lean export.
+(former work item O24). No string program reaches Lean export.
 
 **Axioms:** at most `propext` (`vergl_refl` also `Classical.choice`, `Quot.sound`); the file
 imports nothing (it moved from `CBackend/Semantik/` to `Bausteine/Zeichenfolge/` on 2026-10-18, with `ZeichenfolgeZelle.lean`, restated over `BString`). `#print axioms gabbro_ziel` unchanged.
@@ -4919,7 +4919,7 @@ All axiom lists standard.
   `strGetW` answers `0` outside the length (the bound is the contract's), `strLtW` is lexicographic over the bytes
   (`bytesLt`), `strWeitW m` keeps the first `m` bytes (all of them for `n ≤ m`, the only form the front end writes).
 * Fine cells: constructors 44-54, type heads 10/11 (`kopf_lt` below 12).
-* Open: the generator does not produce aggregates yet (`TODO.md` §2).
+* Open: the generator does not produce aggregates yet.
 
 All axiom lists standard.
 
@@ -4945,7 +4945,7 @@ Lean pipeline, `Parser/Elab/UebersetzeAllg3.lean`) runs it before `elabU`.
   `zwei_wirkung` (two `C`, one written through a `use`d function and one by path), `tief_ok`/`tief_traeger`,
   `unsichtbar_refused`, `falsch_getrennt` (an effect on `a::C` and a body writing `b::C` stay apart).
 * Not yet followed (Simon, 2026-10-25: Lean model only): the Rust parser, checker and LLVM still name items by
-  short name and refuse a second one (`N039`, `N042`) -- `TODO.md` O28.
+  short name and refuse a second one (`N039`, `N042`) -- former work item O28.
 
 
 ## 102. End-block forms: narrow, exchange and a two-armed `if` at the end of a body (2026-10-26)

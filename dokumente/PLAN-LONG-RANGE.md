@@ -1,7 +1,7 @@
 # Long-range plans: generated-program corpus, `async`, self-hosted checker and compiler
 
-*Moved out of `TODO.md` (Phase C items 10, 11, 12) on 2026-10-20, text unchanged in substance. **None of the three is started:**
-Simon asked for no new agents for now (2026-10-18). `TODO.md` keeps the status and the order of work; this file keeps the designs.*
+*Moved out of the former work list (Phase C items 10, 11, 12) on 2026-10-20, text unchanged in substance. **None of the three is started:**
+Simon asked for no new agents for now (2026-10-18). This file keeps the designs.*
 
 ## 1. One-off corpus of ALL generated programs (Simon, 2026-10-18)
 

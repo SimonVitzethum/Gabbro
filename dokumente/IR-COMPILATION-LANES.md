@@ -4411,7 +4411,7 @@ their new replay theorem must handle that history without assuming them equal.
     L01–L14 and the completed C-package regression baseline. Files: existing
     canonical parser/model witness modules, Rust checker integration tests,
     `beispiele/` and `beispiele/gift/`, `dokumente/{SYNTAX,LANGUAGE,THEOREM-MAP}.md`,
-    `AGENTS.md` and `TODO.md` within the Markdown cap.
+    `AGENTS.md` within the Markdown cap.
     **8–14 days; Lean 900–1,600 LOC, Rust 600–1,000 LOC.**
 
 **Proposed `Spec.lean` review diff — text only, NOT applied.** This is the
