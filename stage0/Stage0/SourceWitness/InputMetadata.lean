@@ -1,5 +1,6 @@
 module
 public import Stage0.SourceWitness.InputScopes
+import Grammatik.Kern.Taktik.KernelRfl
 import all Stage0.SourceWitness.InputScopes
 import all Stage0.SourceWitness.Owners
 
@@ -9,7 +10,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 open Frontend.ConstPhases
 set_option maxRecDepth 2000
-set_option maxHeartbeats 100000
+set_option maxHeartbeats 400000
 
 attribute [local cbv_opaque] uFloatLimit Frontend.normalize
 attribute [local cbv_eval] Konst.Values.expression.eq_def Konst.Values.payloadExpression.eq_def
@@ -33,88 +34,15 @@ private theorem source_pipeline_selected :
     produced.bind (fun functions => Konst.ersetzeItems functions sourceOriginal.val))
     sourceCollectionOutput.property
 
--- Fix the actual singleton shape at the canonical collector, using the
--- already certified primitive scope fields. No stored collector result or
--- proof-carrying scope getter is evaluated to infer this descriptor.
-private def negativeDescriptorOutput : {actual : UKonstFn //
-    Konst.collectFunctionsWith sourceOriginal.val sourceScopeData.val.1
-      sourceScopeData.val.2.1 = .ok [actual]} := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
-
--- Both packets certify the same producer at the same actual environments.
--- Transport the complete successful list before the descriptor becomes a
--- Scalar declaration index, without reducing either stored result.
-private def negativeDescriptor : {actual : UKonstFn //
-    sourceCollectionOutput.val = [actual]} := by
-  refine ⟨negativeDescriptorOutput.val, ?_⟩
-  have collected : Konst.collectFunctionsWith sourceOriginal.val sourceScopeData.val.1
-      sourceScopeData.val.2.1 = .ok sourceCollectionOutput.val := sourceCollected.property
-  exact Except.ok.inj (collected.symm.trans negativeDescriptorOutput.property)
-
-private def negativeFunction :
-    {actual : (Sigma fun lo : Int => Sigma fun hi : Int =>
-      Konst.Scalar.SourceFunction negativeDescriptor.val lo hi) //
-      Konst.Scalar.elaborate negativeDescriptor.val = .ok actual} := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
-
--- The canonical call retains argument meaning, both contracts, the candidate
--- agreement, exact range, operation costs and the ordinary G-call certificate.
-private def negativeCall :
-    {actual : Konst.Scalar.CheckedCall negativeDescriptor.val [negativeDescriptor.val]
-      negativeDescriptor.val.constants [] //
-      Konst.Scalar.checkCall negativeDescriptor.val [negativeDescriptor.val]
-        negativeDescriptor.val.constants [] = .ok actual} := by
-  refine ⟨?_, by
-    unfold Konst.Scalar.checkCall
-    rw [negativeFunction.property]
-    dsimp only [bind, Except.bind]
-    cbv <;> exact Eq.refl _⟩
-
--- Select just the delivered source literal before the statement traversal
--- needs it; no final source or compiler outcome is assumed here.
-private def negativeSyntax : {actual : SExpr //
-    (Konst.Scalar.checkCall negativeDescriptor.val [negativeDescriptor.val]
-      negativeDescriptor.val.constants []).map
-        (fun checked => Konst.literalVonInt checked.value) = .ok actual} := by
-  refine ⟨?_, by
-    rw [negativeCall.property]
-    cbv <;> exact Eq.refl _⟩
-
-private theorem negative_replaced :
-    Konst.ersetzeSExprIn [] [negativeDescriptor.val] (.call "negative" []) =
-      .ok negativeSyntax.val := by
-  have quoted : (Except.ok (Konst.literalVonInt negativeCall.val.value) :
-      Except String SExpr) = .ok negativeSyntax.val := by
-    simpa only [negativeCall.property, Except.map] using negativeSyntax.property
-  have named : negativeDescriptor.val.name = "negative" := by cbv
-  have arguments : Konst.ersetzeSExprListIn [] [negativeDescriptor.val] [] = .ok [] := rfl
-  have found : [negativeDescriptor.val].find? (fun k => strEq k.name "negative") =
-      some negativeDescriptor.val := by simp [named, strEq]
-  have globals : negativeDescriptor.val.constants.filter
-      (fun entry => !([] : List String).contains entry.1) =
-      negativeDescriptor.val.constants := by simp
-  simp only [Konst.ersetzeSExprIn, arguments, found, globals, List.map_nil,
-    Konst.geschlossenSExprListB, Bool.not_true, Bool.false_eq_true, ite_false]
-  have integer : ∃ lo hi, negativeDescriptor.val.erg = .int lo hi := by
-    refine ⟨?_, ?_, by cbv <;> exact Eq.refl _⟩
-  obtain ⟨lo, hi, result⟩ := integer
-  simpa only [Konst.checkReplacement, result, negativeCall.property, bind, Except.bind,
-    pure, Except.pure] using quoted
-
-section replacementTraversal
--- Keep the certified descriptor at a stable name while the existing traversal
--- runs. This prevents its successful call equation from being lost after the
--- evaluator has independently expanded the descriptor's type environment.
-attribute [local cbv_opaque] negativeDescriptor
-attribute [local cbv_eval] negative_replaced
+-- The kernel runs the canonical substitution pipeline once; the delivered
+-- item list is the pipeline's own successful result, not a stored copy.
+private theorem source_pipeline_succeeds :
+    (Konst.konstErsetzePipeline sourceOriginal.val).toOption.isSome = true := by kernel_rfl
 
 private def sourceReplacementOutput : {actual : List SItemTief //
-    Konst.konstErsetzePipeline sourceOriginal.val = .ok actual} := by
-  refine ⟨?_, by
-    rw [source_pipeline_selected, negativeDescriptor.property]
-    cbv <;> exact Eq.refl _⟩
-
-end replacementTraversal
+    Konst.konstErsetzePipeline sourceOriginal.val = .ok actual} :=
+  ⟨(Konst.konstErsetzePipeline sourceOriginal.val).toOption.get source_pipeline_succeeds,
+    except_ok_get source_pipeline_succeeds⟩
 
 private def sourceReplaced : {actual : List SItemTief //
     Konst.ersetzeItems sourceCollected.val sourceOriginal.val = .ok actual} := by
@@ -122,10 +50,10 @@ private def sourceReplaced : {actual : List SItemTief //
   exact source_pipeline_selected.symm.trans sourceReplacementOutput.property
 
 private theorem source_runtime_metadata :
-    ExportMetadata.check (Konst.ohneKonst sourceOriginal.val) = .ok () := by cbv
+    ExportMetadata.check (Konst.ohneKonst sourceOriginal.val) = .ok () := by kernel_rfl
 
 private theorem source_replaced_metadata :
-    Konst.checkErsetzt sourceOriginal.val sourceReplaced.val = .ok () := by cbv
+    Konst.checkErsetzt sourceOriginal.val sourceReplaced.val = .ok () := by kernel_rfl
 
 private theorem source_pipeline :
     Konst.konstErsetzePipeline sourceOriginal.val = .ok sourceReplaced.val :=

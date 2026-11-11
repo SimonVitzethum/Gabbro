@@ -211,8 +211,8 @@ namespace Gabbro.Stage0.Senke.AggregateProbe.Case
 open Gabbro.Grammatik Runner.IR Runner.Mem
 
 /-- Both the payload and its lower bound require the shared word materializer. -/
-def expr : Expr D [] [] (.sum [none, some (2 ^ 32, 2 ^ 32 + 100)]) :=
-  .case _ ⟨1, by decide⟩ (.num (.widen (by decide) (by decide) (.lit (2 ^ 32 + 42))))
+def expr : Expr D [] [] (.sum [none, some (.int (2 ^ 32) (2 ^ 32 + 100))]) :=
+  .case _ ⟨1, by decide⟩ (.val (.widen (by decide) (by decide) (.lit (2 ^ 32 + 42))))
 def code : List II := ((lowE layout expr 4).getD ([], 0)).1
 def top : Nat := ((lowE layout expr 4).getD ([], 0)).2
 
@@ -226,7 +226,7 @@ def memory : Runner.Mem where
 theorem simulation_zeuge [Kern] :
     lowE layout expr 4 = some (code, top) ∧ top = 7 ∧ code ≠ [] ∧
     PreS layout memory 0 65536 64 4 code (Env.nil : Env D []) ∧
-    Enc layout (.sum [none, some (2 ^ 32, 2 ^ 32 + 100)])
+    Enc layout (.sum [none, some (.int (2 ^ 32) (2 ^ 32 + 100))])
       (eval world expr world .nil) 10753 ∧
     Ok memory 0 65536 64 4 code (· = 10753) := by
   have hl : lowE layout expr 4 = some (code, top) := by decide +kernel
@@ -248,7 +248,7 @@ theorem simulation_zeuge [Kern] :
       change 65536 ≤ x at hl
       change x < 65536 at hh
       omega
-  have he : Enc layout (.sum [none, some (2 ^ 32, 2 ^ 32 + 100)])
+  have he : Enc layout (.sum [none, some (.int (2 ^ 32) (2 ^ 32 + 100))])
       (eval world expr world .nil) 10753 := by constructor <;> decide +kernel
   refine ⟨hl, by decide +kernel, by decide +kernel, hp, he, ?_⟩
   exact (lowE_ok (same := by intro _; rfl) world world (W := fun _ => True) (fun m _ => hw m) hLay

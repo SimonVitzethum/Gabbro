@@ -215,7 +215,7 @@ namespace Gabbro.Stage0.Senke.WideTraverseProbe
 /-- The real source uses a wide declared count and returns from its first iteration.
     Truncating the count to zero would reach the distinct return value 17 instead. -/
 def source : String :=
-  "module ir_probe { table t count 4294967296 { slot { } } impl fn main() -> u64 in 0 .. 100 effects { reads t.slots } { traverse i over slots of t by unvisited touches reads t.slots { return 23; } return 17; } }"
+  "module ir_probe { table t count 4294967296 { slot { } } impl fn main() -> u64 in 0 .. 100 effects { reads t.slots } { traverse i over slots of t by unvisited { return 23; } return 17; } }"
 
 def sourceCount : Option Int := do
   let compiled ← (Gabbro.Stage0.compile source).toOption

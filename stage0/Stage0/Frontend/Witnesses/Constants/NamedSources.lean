@@ -245,12 +245,9 @@ attribute [local cbv_opaque] Konst.Values.elaborate Konst.Values.reify
 
 private theorem tag_metadata :
     Konst.checkSourceMetadata tagTextInput.original = .ok () := by
-  obtain ⟨literal, quoted, spelling⟩ := tag_quoted
   unfold Konst.checkSourceMetadata Konst.konstErsetzePipeline
   rw [tag_collected]
   cbv <;> (erw [tag_elaborated]; cbv)
-  erw [quoted]
-  simp only [spelling, bind, Except.bind, pure, Except.pure, Except.map] <;> cbv
 
 end
 
