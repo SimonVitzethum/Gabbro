@@ -74,8 +74,11 @@ theorem tiefe_zeuge_104 :
       ((sp4.welt []).slots t4 0 f4).n = 0 ∧ (σ'.slots t4 0 f4).n = 100) ∧
     (∀ k : Nat, rufAt P4 O4 0 (2 + k) ein4 (sp4.welt []) rho7 =
       rufAt P4 O4 0 2 ein4 (sp4.welt []) rho7) := by
-  have hR : rufAt P4 O4 0 2 ein4 (sp4.welt []) rho7 = .ok _ () := rfl
-  refine ⟨rfl, ⟨_, hR, rfl, rfl⟩, ?_⟩
+  have hR : rufAt P4 O4 0 2 ein4 (sp4.welt []) rho7 =
+      .ok (match rufAt P4 O4 0 2 ein4 (sp4.welt []) rho7 with
+        | .ok σ' _ => σ'
+        | _ => sp4.welt []) () := by with_unfolding_all rfl
+  refine ⟨rfl, ⟨_, hR, rfl, by with_unfolding_all rfl⟩, ?_⟩
   exact rufAt_stabil_ab P4 O4 0 2 ein4 (sp4.welt []) rho7 (fun g h => by rw [hR] at h; cases h)
 
 /-- Gabbro's arguments of `lies(k, 0)`. -/
@@ -129,10 +132,12 @@ theorem nurAbstieg_zeuge_104 [RootNativeFloat.Hardware] :
       ∃ (σ'' : World D4) (v : ErgVal D4 (D4.erg lies4)),
         rufAt P4 O4 0 1 lies4 wEin rhoL = .ok σ'' v ∧
         (σ''.slots t4 0 f4).n = 100) := by
-  have hL : rufAt P4 O4 0 1 lies4 wEin rhoL = .ok _ _ := rfl
   have hframe : ∀ n : Nat, RufRahmenTreu P4 (rufAt P4 O4 0 n) :=
     rufAt_rahmenTreu P4 O4 0 (gutO_treuO hw4.1) scopes4
-  refine ⟨?_, hframe, heldB_faellt_104, rfl, rfl, rfl, _, _, hL, rfl⟩
+  refine ⟨?_, hframe, heldB_faellt_104, by with_unfolding_all rfl, by with_unfolding_all rfl, rfl,
+    ?s, ?v, ?hL, ?n⟩
+  case hL => with_unfolding_all rfl
+  case n => with_unfolding_all rfl
   · intro passes n f σ ρG e hh hq hl
     obtain ⟨U, hU⟩ : ∃ U : Umwelt D4, HavocOk E4.S U :=
       ⟨_, havocOk_misch_lokal nutzer4.logik.2.1 (fun _ _ => E4.sp0)
@@ -186,7 +191,8 @@ theorem nurAbstieg_zeuge_108 [RootNativeFloat.Hardware] :
     exact rufAt_nurAbstieg P8 O8 passes E8.Q E8.S U (gutO_treuO hw8.1) hw8.2.1 hw8.2.2.1 hU
       hlocks (fun g => (nutzer8.logik.1 passes g).1) (fun g => (nutzer8.logik.1 passes g).2.1)
       scopes8 n f σ ρG e hh hq hl
-  · exact ⟨_, _, rfl⟩
+  · refine ⟨?s, ?v, ?h⟩
+    case h => with_unfolding_all rfl
 
 #print axioms Gabbro.Grammatik.Einheit108.nurAbstieg_zeuge_108
 
