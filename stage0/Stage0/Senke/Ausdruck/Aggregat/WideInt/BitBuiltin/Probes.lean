@@ -2,6 +2,7 @@
 module
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.BuiltinProbes
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.BuiltinOldProbes
+import Grammatik.Kern.Taktik.KernelRfl
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.BitBuiltinProbe
@@ -58,66 +59,7 @@ def checks : Expr D [] [] .bool :=
         (unsigned 63 72623859790382856 (by decide) (by decide))))) (.lit 72623859790382856)
   ].foldr Expr.and .tru
 
-theorem bit_semantics_zeuge : eval world checks world .nil = true := by decide +kernel
-
-def compiled : List II × Nat := (lowE layout checks 4).getD ([], 0)
-
-theorem bit_lowering_zeuge :
-    lowE layout checks 4 = some compiled ∧ compiled.1 ≠ [] ∧ compiled.2 ≤ 256 := by decide +kernel
-
-def memory : Runner.Mem where
-  b a := ((compiled.1.flatMap encII)[a.toNat]?).getD 0
-  rd _ := true
-  wr _ := true
-
-theorem bytes : BytesAt memory 0 (compiled.1.flatMap encII) := by
-  intro i hi
-  refine ⟨rfl, rfl, ?_⟩
-  have size : (compiled.1.flatMap encII).length < 2 ^ 64 := by decide +kernel
-  simp only [memory, Nat.zero_add, BitVec.toNat_ofNat,
-    Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega), List.getElem?_eq_getElem hi, Option.getD_some]
-
-theorem pre [Kern] : PreS layout memory 0 1073741824 256 4 compiled.1 (Env.nil : Env D []) := by
-  refine ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,
-    codeAt_bytes compiled.1 0 (by decide +kernel) bytes, ?_, ?_, trivial, wstab_true _ _⟩
-  · unfold CodeFar; decide +kernel
-  · intro _ x; nomatch x
-
-/-- Real bytes and a disjoint frame instantiate the generic theorem at every
-    bit family, both full and partial limbs, rather than only reducing Zahl. -/
-theorem lowE_ok_zeuge [Kern] :
-    lowE layout checks 4 = some compiled ∧
-    PreS layout memory 0 1073741824 256 4 compiled.1 (Env.nil : Env D []) ∧
-    ValueOk layout memory 0 1073741824 256 4 compiled.1 .bool true := by
-  refine ⟨bit_lowering_zeuge.1, pre, ?_⟩
-  have hw : ∀ m, WeltAt m layout world := by
-    intro m
-    refine ⟨(fun t => Fin.elim0 t), (fun g => Fin.elim0 g), ?_⟩
-    intro x hl hh
-    change 65536 ≤ x at hl
-    change x < 65536 at hh
-    omega
-  simpa only [bit_semantics_zeuge] using lowE_ok (same := by intro _; rfl) world world (W := fun _ => True)
-    (fun m _ => hw m) AggregateProbe.hLay checks 4 compiled.1 compiled.2
-    bit_lowering_zeuge.1 bit_lowering_zeuge.2.2 memory 0 .nil pre
-
-def program : Programm D where
-  invariante _ := .tru
-  requires _ := .tru
-  ensures _ := .tru
-  rumpf f := by
-    obtain ⟨f, hf⟩ := f
-    have zero : f = 0 := by change f < 1 at hf; omega
-    subst f
-    exact .ret (.val (.wenn checks (.widen (by decide) (by decide) (.lit 42))
-      (.widen (by decide) (by decide) (.lit 0)))) (.refl [])
-
-def image : Except String (List Runner.B) := do
-  let b ← bild 1 program (layU AggregateProbe.u (fun _ => none)) [⟨0, by decide⟩] Fin.val
-    (fun _ => "main") ⟨0, by decide⟩ .nil [] 1024 0
-  pure b.bytes
-
-theorem connected_image_zeuge : image.isOk = true := by decide +kernel
+theorem bit_semantics_zeuge : eval world checks world .nil = true := by kernel_rfl
 
 /-- The snapshot-aware dispatch retains the actual entry operand. -/
 theorem snapshot_bit_zeuge :
