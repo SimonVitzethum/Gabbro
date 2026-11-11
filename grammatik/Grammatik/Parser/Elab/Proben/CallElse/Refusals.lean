@@ -43,7 +43,7 @@ set_option maxHeartbeats 2000000
 
 def sourceError (text : String) : Option String :=
   match lex text with
-  | .error e => some ("lex: " ++ e)
+  | .error _ => some "lex"
   | .ok tokens => match parseTopTief tokens with
     | .error e => some ("parse: " ++ e)
     | .ok items => match elabU (pre108 items) with
