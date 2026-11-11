@@ -2,6 +2,38 @@ module
 
 public import Stage0.Compiler
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.Zeugen
+import Grammatik.Kern.Taktik.KernelRfl
+import all Init.Data.Repr
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 
 @[expose] public section
 
@@ -21,7 +53,7 @@ def text : String :=
 def options : Profil.Options := { checkConsumer := some retiringSelection }
 
 theorem selected_compiles : (compile text options).toOption.isSome = true := by
-  decide +kernel
+  kernel_rfl
 
 def compiled : Compiled text options :=
   (compile text options).toOption.get selected_compiles
@@ -37,7 +69,7 @@ theorem selected_entry :
 /-- The generated entry's returning resource inventory is empty. -/
 theorem selected_retired :
     (Gabbro.Grammatik.vertragVon (declOf compiled.unit) compiled.main).ende = [] := by
-  decide +kernel
+  kernel_rfl
 
 /-- The same canonical-source theorem used by every emitted image includes
     the exact selected source tree and selected elaboration. -/
