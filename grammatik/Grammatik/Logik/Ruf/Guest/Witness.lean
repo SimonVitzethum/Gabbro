@@ -42,7 +42,7 @@ def D : Deklaration where
   sig := fun _ => 0
   sigNr := fun _ =>
     { params := [], erg := none, gruende := 0, haelt := [],
-      schreibt := fun _ => false, gschreibt := fun e => nomatch e,
+      schreibt := fun _ => false, gschreibt := (fun e => nomatch e),
       konsumiert := [], produziert := [] }
   eigner_nie_erzeugt := fun _ _ _ _ _ h => List.not_mem_nil h
   Inv := Empty
@@ -74,8 +74,11 @@ def guest : GuestBoundary D :=
 def transfer : GuestTransfer D := ⟨data, (), 0⟩
 
 def ownedGuest : GuestBoundary D :=
-  { guest with service := some true, transfers := [transfer],
+  { guest with
+    service := some true, transfers := [transfer],
     available := [.marke () 0] }
+
+deriving instance DecidableEq for Except
 
 theorem guest_admitted : guest.check = .ok () := by decide
 theorem owned_admitted : ownedGuest.check = .ok () := by decide
@@ -178,7 +181,10 @@ def program : Programm D where
     fits invocation.writes invocation.globalWrites invocation.fallible
     invocation.failure (.ret .empty (List.Perm.refl _))
 
-def locks : SperrInv D := ⟨fun e => nomatch e, fun e => nomatch e⟩
+instance : DecidableEq D.Fn := inferInstanceAs (DecidableEq Unit)
+instance : DecidableEq D.Ax := inferInstanceAs (DecidableEq Bool)
+
+def locks : SperrInv D := ⟨(fun e => nomatch e), (fun e => nomatch e)⟩
 
 /-- The admission is actually conjoined with the existing whole-program
     checker. This is a model fixture, not a source-to-IR witness. -/
