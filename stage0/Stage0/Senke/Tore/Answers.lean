@@ -13,7 +13,7 @@ variable [RootNativeFloat.Hardware] {D : Deklaration}
 theorem torOK_zeuge (L : Lay D) (O : Orakel D) (hO : ∀ a σ ρ, O.wirkt a σ ρ = (σ, 0))
     (href : ∀ a n, D.aerg a = some (.ref n) → L.tor a ≠ none →
       ValueValid L (.ref n) (Val.vonZelle 0))
-    (harea : @AreaContract ({ toHardware := inferInstance, ans := fun _ _ _ _ => True } : Kern) D L O) :
+    (harea : @AreaContract D ({ toHardware := inferInstance, ans := fun _ _ _ _ => True } : Kern) L O) :
     @TorOK ({ toHardware := inferInstance, ans := fun _ _ _ _ => True } : Kern) D L O := by
   letI : Kern := { toHardware := inferInstance, ans := fun _ _ _ _ => True }
   refine ⟨fun a b _ _ _ σ ρ q m _ _ _ hW => ⟨0, 0, m, trivial, ⟨rfl, rfl, fun _ _ => rfl⟩, ?_, ?_⟩,
@@ -130,9 +130,9 @@ theorem boolean_binder_images_zeuge :
 
 /-- Error handling and both Boolean payloads retain canonical admission. -/
 theorem boolean_binder_admission_zeuge :
-    Akzeptiert (program false false) ⟨fun l => l.elim, fun l => l.elim⟩
+    Akzeptiert (program false false) ⟨fun l => Fin.elim0 l, fun l => Fin.elim0 l⟩
       [entry] [] [] [entry] = true ∧
-    Akzeptiert (program true true) ⟨fun l => l.elim, fun l => l.elim⟩
+    Akzeptiert (program true true) ⟨fun l => Fin.elim0 l, fun l => Fin.elim0 l⟩
       [entry] [] [] [entry] = true := by
   decide +kernel
 
@@ -171,11 +171,12 @@ theorem reference_function_zeuge :
 /-- The new provider premise is jointly satisfiable on a real represented
     region; it is not hidden in an impossible reference layout. -/
 theorem reference_contract_zeuge :
-    @TorOK { toHardware := inferInstance, ans := fun _ _ _ _ => True } GRegion.rD ReferenceProbe.layout (GRegion.oK 0) := by
+    @TorOK ({ toHardware := inferInstance, ans := fun _ _ _ _ => True } : Kern) GRegion.rD ReferenceProbe.layout (GRegion.oK 0) := by
+  letI : Kern := { toHardware := inferInstance, ans := fun _ _ _ _ => True }
   refine torOK_zeuge _ _ (by intro a σ ρ; rfl) ?_ ?_
   · intro a n type bound
     have same : n = 0 := by
-      have eq : some (.ref 0) = some (.ref n) := type
+      have eq : some (Ty.ref 0) = some (Ty.ref n) := type
       cases eq
       rfl
     subst n
@@ -201,7 +202,7 @@ open Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
 def unit : UProg := { ControlProbe.u with
   tabs := [{name := "Bytes", count := 4, cols := [("byte", (0, 255))]}]
   axs := [{name := "region", params := [], kinds := [],
-    res := some (.ptr (.table 0 (false, true)))}] }
+           res := some (.ptr (.table 0 (false, true)))}] }
 abbrev D := declOf unit
 abbrev entry : D.Fn := ⟨0, by decide⟩
 abbrev gate : D.Ax := ⟨0, by decide⟩

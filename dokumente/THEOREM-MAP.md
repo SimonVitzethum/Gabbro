@@ -6694,7 +6694,7 @@ Register state, privileged/stack assumption fields, unknown ABI, missing or
 ambiguous service, absent failure channel and absent region contracts remain
 named refusals. Foreign cost claims retain the metadata gate.
 
-`Stage0/Zeugen/Ablehnung/EntrustWitness.lean` now contains the accepted image
+`Stage0/Zeugen/Ablehnung/EntrustWitness.lean` (removed 2026-11-11: it never built) claimed the accepted image
 attempt: real source text calls the generated guest wrapper with a code-region
 capability, carries a nontrivial declared region contract and executable C08
 gate, checks both the production `AkzeptiertX` path and explicit `Akzeptiert`,
