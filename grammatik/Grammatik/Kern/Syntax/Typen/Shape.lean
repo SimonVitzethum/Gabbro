@@ -279,7 +279,7 @@ def Ty.decEq : (a b : Ty) → Decidable (a = b)
   | .prod _ _, .ref _ => isFalse (by intro h; cases h)
   | .prod _ _, .arr _ _ => isFalse (by intro h; cases h)
   | .prod _ _, .str _ => isFalse (by intro h; cases h)
-termination_by a _ => sizeOf a
+termination_by structural a _ => a
 
 def Ty.decCases : (as bs : List (Option Ty)) → Decidable (as = bs)
   | [], [] => isTrue rfl
@@ -294,7 +294,7 @@ def Ty.decCases : (as bs : List (Option Ty)) → Decidable (as = bs)
         else exact isFalse (fun h => ht (by cases h; rfl))
       else exact isFalse (fun e => h (by cases e; rfl))
   | [], _ :: _ | _ :: _, [] => isFalse (by intro h; cases h)
-termination_by as _ => sizeOf as
+termination_by structural as _ => as
 
 def Ty.decPayload : (a b : Option Ty) → Decidable (a = b)
   | none, none => isTrue rfl
@@ -305,7 +305,7 @@ def Ty.decPayload : (a b : Option Ty) → Decidable (a = b)
         exact isTrue rfl
       else exact isFalse (fun e => h (by cases e; rfl))
   | none, some _ | some _, none => isFalse (by intro h; cases h)
-termination_by a _ => sizeOf a
+termination_by structural a _ => a
 
 def Ty.decFields : (as bs : List Ty) → Decidable (as = bs)
   | [], [] => isTrue rfl
@@ -320,7 +320,7 @@ def Ty.decFields : (as bs : List Ty) → Decidable (as = bs)
         else exact isFalse (fun h => ht (by cases h; rfl))
       else exact isFalse (fun e => h (by cases e; rfl))
   | [], _ :: _ | _ :: _, [] => isFalse (by intro h; cases h)
-termination_by as _ => sizeOf as
+termination_by structural as _ => as
 
 end
 
