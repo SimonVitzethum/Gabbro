@@ -43,8 +43,7 @@ def typeMetadata : STyp → Bool
   | _ => false
 
 /-- A conservative unit domain where no cost, scheduling, proof or reservation duty can disappear.
-    Invariants are deliberately refused: their mandatory cost/runs/by binding is still absent.
-    Local annotations and every nested continuation are inspected as well as function headers. -/
+    Invariants are refused (no cost/runs/by binding); local annotations and nested continuations are inspected. -/
 def bodyMetadata : Nat → SAnw → Bool
   | 0, _ => true
   | n + 1, .block ss _ => ss.any (bodyMetadata n)
@@ -69,7 +68,8 @@ def bodyMetadata : Nat → SAnw → Bool
       and type-annotated binders still elaborate to no G form. -/
   | _ + 1, .alloc false _ none _ _ none => false
   | n + 1, .alloc false _ none _ _ (some body) => bodyMetadata n body
-  | _ + 1, .retry .. | _ + 1, .loop .. | _ + 1, .swap .. | _ + 1, .await .. |
+  | n + 1, .retry header body => !retryHeaderBound header || bodyMetadata n body
+  | _ + 1, .loop .. | _ + 1, .swap .. | _ + 1, .await .. |
     _ + 1, .alloc .. | _ + 1, .allocVon .. | _ + 1, .grow .. |
     _ + 1, .free .. | _ + 1, .child .. | _ + 1, .other .. => true
   | _ + 1, .genericCall .. => true
@@ -165,9 +165,9 @@ def itemMetadata : SItemTief → Bool
   | .checkT c => c.sonde.isSome || bodyMetadata 10000 c.canFail
   | .accT _ _ m p _ => p.isNone || !accOperatorBound m
   | .assumT .. => false -- the unit keeps the name (`UProg.annahmen`); the assumption stays owed
-  | .varT .. | .goalT .. => false -- backend data: the image builder binds every gate or refuses
+  | .varT .. | .goalT .. | .concT .. => false -- backend data and roots: the image builder binds or refuses
   | .modT .. | .useT .. | .asmT .. | .formatT .. | .devT .. | .axiomT .. | .atomT .. | .rcuT ..
-  | .concT .. | .walkT .. | .entryT .. | .bootT .. | .profT .. | .gateT .. | .pubT .. | .arenaT .. => true
+  | .walkT .. | .entryT .. | .bootT .. | .profT .. | .gateT .. | .pubT .. | .arenaT .. => true
 
 /-- Reader-supported alignment erases no duty: type and section checks remain.
     Actual value/name validity still belongs to profile placement and uGlobs. -/

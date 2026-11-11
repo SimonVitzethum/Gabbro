@@ -137,6 +137,46 @@ theorem touchesVerified_zeuge :
       (.block [.set (.variable "sum") "=" (.call "f" [])] none) = false := by
   decide +kernel
 
+/-- The word of a header token. -/
+def headerWord : Token → Option String
+  | .wort w | .ident w => some w
+  | _ => none
+
+/-- The words that open a section of a `retry` or `forever` header (`uSchleifenWort`). -/
+def sectionWord (t : Token) : Bool :=
+  match headerWord t with
+  | some w => ["until", "bounded", "per_pass", "progress", "on_exceeded", "effects", "leaves"].contains w
+  | none => false
+
+/-- A `retry` header whose every clause the elaborator reads (`uRetryKopf`): an optional label,
+    `until` with a brace-free condition, then exactly `bounded N ops progress A on_exceeded F`.
+    No other section can stand in such a header, so no clause is dropped. -/
+def retryHeaderBound (raw : String) : Bool :=
+  match lex raw with
+  | .error _ => false
+  | .ok tokens =>
+    let tokens := tokens.filter fun t => t != .ende
+    let label := tokens.takeWhile fun t => !sectionWord t
+    match tokens.dropWhile fun t => !sectionWord t with
+    | opener :: rest =>
+      let condition := rest.takeWhile fun t => !sectionWord t
+      label.length ≤ 1 && headerWord opener == some "until" && !condition.isEmpty &&
+        (condition.all fun t => t != .zeichen "{" && t != .zeichen "}") &&
+        match rest.dropWhile fun t => !sectionWord t with
+        | [b, .num _, unit, p, a, o, y] =>
+          headerWord b == some "bounded" && (headerWord unit).isSome && !sectionWord unit &&
+            headerWord p == some "progress" && (headerWord a).isSome && !sectionWord a &&
+            headerWord o == some "on_exceeded" && (headerWord y).isSome && !sectionWord y
+        | _ => false
+    | [] => false
+
+/-- The header of the corpus loops is bound; one with a further section or without `progress` is not. -/
+theorem retryHeaderBound_zeuge :
+    retryHeaderBound "attempt until false bounded 3 ops progress tick on_exceeded sched_yield" = true ∧
+    retryHeaderBound "attempt until false bounded 3 ops progress tick on_exceeded sched_yield effects { pure }" = false ∧
+    retryHeaderBound "attempt until false bounded 3 ops on_exceeded sched_yield" = false := by
+  decide +kernel
+
 /-- Erase every covered `touches` header of an ordinary traversal, in every position the gate
     inspects; a header that is not covered stays and is refused by the gate. -/
 def eraseCovered (covered : String → SAnw → Bool) : Nat → SAnw → SAnw
@@ -149,6 +189,7 @@ def eraseCovered (covered : String → SAnw → Bool) : Nat → SAnw → SAnw
   | n + 1, .waive a b => .waive a (eraseCovered covered n b)
   | n + 1, .locks a b c => .locks a b (eraseCovered covered n c)
   | n + 1, .watch a b => .watch a (eraseCovered covered n b)
+  | n + 1, .retry header b => .retry header (eraseCovered covered n b)
   | n + 1, .trim a b c => .trim a b (eraseCovered covered n c)
   | n + 1, .cond c a bs b => .cond c (eraseCovered covered n a) (bs.map (eraseCovered covered n))
       (b.map (eraseCovered covered n))
