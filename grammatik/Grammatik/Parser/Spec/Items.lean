@@ -108,8 +108,10 @@ def Walk.item (w : Walk) : Nat → SItemTief → Except String SItemTief
     | .concT ps => do
       let ps ← ps.mapM fun (p, args) => do
         let args ← args.mapM ex
-        let n ← w.call [] ("::".intercalate p) none args
-        return ([n], args)
+        let joined := "::".intercalate p
+        let n ← w.call [] joined none args
+        -- An ordinary root keeps its written path: the root reader selects its last segment.
+        return (if n == joined then p else [n], args)
       return .concT ps
     | .accT n t c e q => return .accT n (← ty t) c (← e.mapM ex) q
     | .walkT v =>
