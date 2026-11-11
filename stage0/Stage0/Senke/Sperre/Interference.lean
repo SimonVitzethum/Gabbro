@@ -65,7 +65,7 @@ theorem AgreeK.foreign_frame {m m' : Mem} {writer fp : W} {s a K reserved : Nat}
 /-- A three-word local array survives writes to another thread's scratch and
     a shared lock word. Both writes really change memory; all frame and ABI
     premises are supplied jointly. -/
-theorem foreign_frame_zeuge {D : Deklaration} (L : Lay D) :
+theorem foreign_frame_zeuge [Kern] {D : Deklaration} (L : Lay D) :
     let m := ValueProbe.memory
     let m' := write (write m (slot 6144 4) 8 99) 8192 8 2
     AgreeK 6144 4 8192 m m' ∧

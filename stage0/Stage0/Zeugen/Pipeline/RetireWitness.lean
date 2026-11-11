@@ -1,5 +1,6 @@
 module
 public import Stage0.IRBild
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -72,7 +73,10 @@ theorem image_shape :
 /-- Every function must return the exact empty residual inventory. -/
 theorem return_inventory :
     ∀ f : (declOf output.compiled.unit).Fn, (verOf output.compiled.unit f).ende = [] := by
-  decide +kernel
+  have empty : (List.finRange _).all (fun f : (declOf output.compiled.unit).Fn =>
+      (verOf output.compiled.unit f).ende.isEmpty) = true := by kernel_rfl
+  intro f
+  exact List.isEmpty_iff.mp (List.all_eq_true.mp empty f (List.mem_finRange f))
 
 /-- The existing generic statement lowering erases retire for every mark, stage,
     inventory, frame and reservation. The generic `lowS_ok` retire case supplies
@@ -97,7 +101,7 @@ def droppedText : String :=
 
 theorem dropped_image_refused :
     emit droppedText 256 = .error "lower: return without produced marks" := by
-  decide +kernel
+  kernel_rfl
 
 /-- The actual compiler refuses retirement of a held but borrowed owner. -/
 def borrowedText : String :=
@@ -105,6 +109,6 @@ def borrowedText : String :=
 
 theorem borrowed_image_refused :
     emit borrowedText 256 = .error "retire of borrowed mark: Mark" := by
-  decide +kernel
+  kernel_rfl
 
 end Gabbro.Stage0.Pipeline.RetireWitness

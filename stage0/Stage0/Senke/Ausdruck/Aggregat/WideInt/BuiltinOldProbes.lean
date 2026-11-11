@@ -12,7 +12,7 @@ set_option maxRecDepth 100000
 set_option maxHeartbeats 2000000
 
 def unit : UProg := { tabs := [], locks := [], fns := [],
-  globs := [{name := "counter", ty := .int 0 255, init := 0}] }
+                      globs := [{name := "counter", ty := .int 0 255, init := 0}] }
 abbrev D := declOf unit
 abbrev global : D.Glob := ⟨0, by decide⟩
 
@@ -59,7 +59,7 @@ theorem bytes : BytesAt memory 0 (compiled.1.flatMap encII) := by
   have address : (BitVec.ofNat 64 i).toNat = i := by
     rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
   refine ⟨rfl, rfl, ?_⟩
-  change memory.b (BitVec.ofNat 64 i) = (compiled.1.flatMap encII)[i]
+  rw [Nat.zero_add]
   simp only [memory, address, if_neg (show i ≠ 65568 by omega),
     if_neg (show i ≠ 131072 by omega), List.getElem?_eq_getElem hi, Option.getD_some]
 
@@ -72,17 +72,25 @@ theorem pre [Kern] : PreS layout memory 0 65536 256 8 compiled.1 (Env.nil : Env 
 theorem lay : LayIn layout := by
   refine ⟨(fun t => Fin.elim0 t), ?_, by decide⟩
   intro g
-  obtain ⟨g, hg⟩ := g
-  have zero : g = 0 := by change g < 1 at hg; omega
-  subst g
+  have same : g = global := by
+    apply Fin.ext
+    have bound := g.isLt
+    change g.val < 1 at bound
+    change g.val = 0
+    omega
+  subst same
   decide +kernel
 
 theorem loaded [Kern] : WeltAt memory layout exitWorld := by
   refine ⟨(fun t => Fin.elim0 t), ?_, fun _ _ _ => rfl⟩
   intro g
-  obtain ⟨g, hg⟩ := g
-  have zero : g = 0 := by change g < 1 at hg; omega
-  subst g
+  have same : g = global := by
+    apply Fin.ext
+    have bound := g.isLt
+    change g.val < 1 at bound
+    change g.val = 0
+    omega
+  subst same
   exact ValueAt.ofCellWord (w := 3) (by decide) (by decide +kernel) rfl
 
 theorem saved : EntrySnapshots.At layout entry memory 65536 (oldCells expression) 4 := by
@@ -113,11 +121,11 @@ def globalCount : Expr D [] [] (.int 0 4) :=
   .count 4 (.lt (.var .here) (.glob global access))
 
 theorem global_count_zeuge :
-    (eval entry globalCount exitWorld .nil).n = 3 ∧
+    Zahl.n (eval entry globalCount exitWorld .nil) = 3 ∧
     (lowE layout globalCount 8).isSome = true := by decide +kernel
 
 def function : UFn := {name := "snapshot", params := [], kinds := [], res := some (0, 255),
-  held := [], puts := [], gives := [], body := [], ret := .val (.lit 0)}
+                        held := [], puts := [], gives := [], body := [], ret := .val (.lit 0)}
 
 /-- The source restoration calls the same checked builtin exporter and retains
     the entry read before the final restored-program checker runs. -/
@@ -125,7 +133,8 @@ theorem source_old_builtin_zeuge :
     (Gabbro.Stage0.OldSource.side unit [] [] function none
       (.bin "+%" (.old (.variable "counter")) (.lit 250))
       (.ib2 .addW 8 (.glob "counter") (.lit 250))).map
-        (fun s => (eval entry s.term exitWorld .nil).n) = .ok 13 := by
+        (fun (s : LowSide unit [] []) =>
+          (show Zahl s.range.1 s.range.2 from eval entry s.term exitWorld .nil).n) = .ok 13 := by
   decide +kernel
 
 theorem source_old_builtin_mismatch_refused_zeuge :

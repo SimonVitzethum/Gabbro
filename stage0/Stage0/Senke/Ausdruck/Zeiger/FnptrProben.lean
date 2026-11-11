@@ -169,7 +169,7 @@ theorem fnref_ok_zeuge [Kern] :
     PreS refLayout refMem 0 1024 16 4 refCode (Env.nil : Env D []) ∧
     Ok refMem 0 1024 16 4 refCode (Enc refLayout (.fnptr 0) (⟨0, by decide⟩ : Wert D (.fnptr 0))) := by
   refine ⟨rfl, refPre, ?_⟩
-  exact fnref_ok (L := refLayout) (Γ := []) (Λ := []) (f := 0) (n := 0) (hf := by decide)
+  exact fnref_ok (currentOld := true) (L := refLayout) (Γ := []) (Λ := []) (f := 0) (n := 0) (hf := by decide)
     (d := 4) (top := 5) (K := 16) (c := refCode) (m := refMem) (pc := 0) (fp := 1024)
     (ρ := Env.nil) (W := fun _ => True) world world rfl (by decide) refPre
 

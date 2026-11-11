@@ -23,7 +23,6 @@ theorem parameter_at : EnvAt layout memory 4096 params 4 := by
   · have width : integerWords 0 100 = 1 := integerWords_word (by decide) (by decide)
     have encoded : encodeWords layout (.arr (.int 0 100) 2) parameter = [33, 34] := by
       simp [encodeWords, elementEncoding, parameter]
-      erw [encodeWords_int, encodeWords_int]
       simp [width, integerEncoding]
     rw [encoded]
     change WordsAt memory 4096 8 [33, 34]

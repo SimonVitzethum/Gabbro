@@ -25,6 +25,7 @@ def D : Deklaration where
   Tab := Empty
   count t := nomatch t
   Feld t := nomatch t
+  decFeld t := nomatch t
   typ t _ := nomatch t
   erlaubt _ _ _ _ := false
   tabNr _ := none
@@ -46,7 +47,8 @@ def D : Deklaration where
   sig _ := 0
   sigNr _ := {
     params := [], erg := some (.int 0 100), gruende := 1, haelt := []
-    schreibt := fun t => nomatch t, gschreibt := fun g => nomatch g
+    schreibt := fun t => nomatch t
+    gschreibt := fun g => nomatch g
     konsumiert := [], produziert := [] }
   eigner_nie_erzeugt _ _ _ _ h := by cases h
   Inv := Empty
@@ -101,7 +103,7 @@ def world : World D where
 def oracle : Orakel D where
   wirkt a := nomatch a
   regLies r := nomatch r
-  regSchreib _ := ()
+  regSchreib r _ := nomatch r
   sichtbar _ _ := true
 
 def calls (f : D.Fn) (_ : World D) (_ : Env D (D.params f)) : RufAusgang f :=

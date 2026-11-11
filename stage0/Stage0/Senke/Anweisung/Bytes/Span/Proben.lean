@@ -14,7 +14,7 @@ def u : UProg := {
   tabs := [{ name := "Bytes", count := 40, cols := [("byte", (0, 255))] }]
   locks := []
   fns := [{ name := "main", params := [], kinds := [], res := some (0, 100), held := [],
-    puts := ["Bytes"], gives := [], body := [], ret := .val (.lit 0) }]
+            puts := ["Bytes"], gives := [], body := [], ret := .val (.lit 0) }]
 }
 abbrev D := declOf u
 abbrev tab : D.Tab := ⟨0, by decide⟩
@@ -34,7 +34,8 @@ def initial : World D where
   spur := []
 
 def read {Γ : Ctx} (n p : Nat) (bound : p + n ≤ 40) : Expr D Γ [] (.int 0 (256 ^ n - 1)) :=
-  .getBytes tab field rfl n (.lit p) (by omega) (by exact_mod_cast bound)
+  .getBytes tab field rfl n (.lit p) (by omega)
+    (by have count : D.count tab = 40 := rfl; rw [count]; exact_mod_cast bound)
     (by intro w hw; change w ∈ [] at hw; cases hw)
 
 def returnBlock {Γ : Ctx} (good : Bool) : Block D (vertragVon D entry) false Γ [] [] :=

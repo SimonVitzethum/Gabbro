@@ -98,7 +98,7 @@ def initial : World D where
   spur := []
 
 def gateBinding : TorB :=
-  ⟨1, [some 0, some 1, some 2, none, none, none], [(-9, 0), (-4, 1)]⟩
+  ⟨1, [some 0, some 1, some 2, none, none, none], [(-9, 0), (-4, 1)], none⟩
 
 def imageOf (body : Endblock D (vertragVon D entry) false [] []) : Except String (List Runner.B) := do
   let b ← bild 1 (programOf body) (layU u (fun _ => some gateBinding)) [entry] Fin.val (fun _ => "main") entry .nil [] 1024 0

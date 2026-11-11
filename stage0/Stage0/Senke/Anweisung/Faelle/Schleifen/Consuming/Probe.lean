@@ -2,6 +2,7 @@
 module
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Consume
 public import Stage0.Senke.Anweisung.Satz
+public import Stage0.Senke.Images.Bild
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.ConsumeProbe

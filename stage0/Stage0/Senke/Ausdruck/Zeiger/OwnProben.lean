@@ -41,7 +41,7 @@ theorem capTabOwn : D.capTab 0 0 = some tab := by decide
 theorem ownerNrOwn : D.ownerNr 0 = some mark := by decide
 theorem eignerOwn : mark ∈ D.eigner tab := by decide
 theorem brauchtOwn : Sum.inr (mark, 0) ∈ D.braucht tab := by decide
-theorem darfOwn : darf D tab Λown := by decide
+theorem darfOwn : darf D tab Λown := by unfold darf; decide
 theorem schreibtOwn : (vertragVon D entry).schreibt tab = true := by decide
 
 def ptrVar : Expr D Γown Λown ptrCap := .var .here
@@ -89,7 +89,7 @@ theorem ownEval_zeuge : eval world readOwn world env = eval world plainRead worl
 
 /-- Owned and plain reads emit the same fragment. -/
 theorem ownLowerEq_zeuge : lowE layout readOwn 6 = lowE layout plainRead 6 := by
-  simp only [readOwn, plainRead, lowE_thruOwn, lowE_thru]
+  rfl
 
 def readCode : List II := ((lowE layout readOwn 6).getD ([], 0)).1
 def readTop : Nat := ((lowE layout readOwn 6).getD ([], 0)).2

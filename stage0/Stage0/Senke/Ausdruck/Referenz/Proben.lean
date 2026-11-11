@@ -20,7 +20,7 @@ def layout : Lay D where
   ga g := nomatch g
   lo := 8192
   hi := 8208
-  tor _ := some ⟨39, regsIn 0, []⟩
+  tor _ := some ⟨39, regsIn 0, [], none⟩
   byte _ := none
 
 def world : World D where
@@ -218,9 +218,9 @@ theorem write_simulation_zeuge :
     decide +kernel
   obtain ⟨m', hs, ha, hw'⟩ := slotStoreC_ok (σ := world) (kn := 1) made (by decide +kernel) (by decide)
     layout_in layout_dis (by decide) (PreS.welt hp (Nat.le_refl _) hw layout_in (by decide))
-    (fun m pc hp => lowE_ok (same := by intro _; rfl) world world (fun _ h => h) layout_in value 6 valueCode 7
+    (fun m pc hp => lowE_ok (currentOld := true) (same := by intro _; rfl) world world (fun _ h => h) layout_in value 6 valueCode 7
       (by decide +kernel) (by decide) m pc env hp)
-    (fun m pc hp => ((lowE_ok (same := by intro _; rfl) world world (fun _ h => h) layout_in second 7 [ci 2 7 4 0] 8
+    (fun m pc hp => ((lowE_ok (currentOld := true) (same := by intro _; rfl) world world (fun _ h => h) layout_in second 7 [ci 2 7 4 0] 8
       (by decide +kernel) (by decide) m pc env hp).word trivial).mono fun w hw => hw.1)
   refine ⟨m', hs, ha, envAt_agreeW hp.env ha (by decide) (by decide) (by decide) (by decide), hw', ?_, ?_⟩
   · obtain ⟨w, hr, he⟩ := ValueAt.cellWord (by show WordCompatible (.int 0 255); trivial) (hw'.1 () () 0 (by decide))

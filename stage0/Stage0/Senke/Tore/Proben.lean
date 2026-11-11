@@ -93,7 +93,7 @@ def programOf (body : Endblock D (vertragVon D main) false [] []) : Programm D w
     exact body
 
 def binding (a : D.Ax) : Option TorB :=
-  some ⟨if a.val = 1 then 231 else 39, regsIn 0, []⟩
+  some ⟨if a.val = 1 then 231 else 39, regsIn 0, [], none⟩
 
 def imageOf (body : Endblock D (vertragVon D main) false [] []) : Except String (List Runner.B) := do
   let b ← bild 1 (programOf body) (layU u binding) [main] Fin.val (fun _ => "main") main .nil [] 1024 0
