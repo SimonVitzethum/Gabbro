@@ -34,19 +34,21 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 @[expose] public section
 
-namespace Gabbro.Stage0.RightsUnionWitness
+namespace Gabbro.Stage0.WriteOnlyCapabilityWitness
 
 set_option maxRecDepth 2000
 set_option maxHeartbeats 400000
 
 def text : String :=
-  "module cap_probe { table T count 2 { slot { b : bool, } } impl fn store(r : ptr<normal, w+r+r> T) effects { reads r.slots, writes r.slots } { r.slots[0].b = true; let b = r.slots[0].b; } impl fn main() -> u64 in 0 .. 100 effects { reads T.slots, writes T.slots } { store(T); return 23; } }"
+  "module cap_probe { table T count 2 { slot { b : bool, } } impl fn store(r : ptr<normal, w> T) effects { writes r.slots } { r.slots[0].b = true; } impl fn main() -> u64 in 0 .. 100 effects { writes T.slots } { store(&T); return 23; } }"
 
-/-- A table passed by name as a pointer argument is not resolved by the elaborator. -/
-theorem candidate_refused :
-    emit text 64 = .error
-      "name unknown: T" := by
-  kernel_rfl
+def candidate : Except String (Emitted text 256) := emit text 256
 
+theorem candidate_present : candidate.toOption.isSome = true := by kernel_rfl
 
-end Gabbro.Stage0.RightsUnionWitness
+def output : Emitted text 256 := candidate.toOption.get candidate_present
+
+theorem accepted_image : emit text 256 = .ok output :=
+  Gabbro.Grammatik.except_ok_get candidate_present
+
+end Gabbro.Stage0.WriteOnlyCapabilityWitness

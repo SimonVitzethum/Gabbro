@@ -124,8 +124,8 @@ public import Stage0.Zeugen.Pipeline.TaggedDispatchWitness
 public import Stage0.Zeugen.Annahme.MeasureWitness
 public import Stage0.Zeugen.Ablehnung.ConstControlWitness
 public import Stage0.Zeugen.Annahme.Contracts.TransitionContractWitness
-public import Stage0.Zeugen.Ablehnung.WriteOnlyCapabilityWitness
-public import Stage0.Zeugen.Ablehnung.RightsUnionWitness
+public import Stage0.Zeugen.Annahme.Contracts.WriteOnlyCapabilityWitness
+public import Stage0.Zeugen.Annahme.Contracts.RightsUnionWitness
 public import Stage0.Zeugen.Annahme.LibraryBindWitness
 public import Stage0.Zeugen.Annahme.ProfileWitness
 public import Stage0.Zeugen.Ablehnung.ProfileMismatchWitness
