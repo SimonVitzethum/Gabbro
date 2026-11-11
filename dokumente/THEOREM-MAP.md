@@ -6079,8 +6079,8 @@ On `c15-uses`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. 
 
 * **`herkunft_frage_herkunft`**: On the elaborated fixture (`assume` plus two-cell unsigned `add` plus update and read uses), the query is hardware-origin with the named witness.
 * **`herkunft_frage_gestaltB`**, **`herkunft_frage_feld`**, **`herkunft_beleg_vorhanden`**: The decided shape, the `hardware` field and the named witness on the declaration.
-* **`herkunft_akku_angenommen`**: The accumulator component admits the descriptor with the query list.
-* **`herkunft_akzeptiert`**: The fixture is accepted by the core checker `Akzeptiert` with the query list.
+* **`herkunft_melde_schreibt_zelle`**, **`herkunft_akku_abgelehnt`**: FINDING (open): the accumulator component refuses a unit whose user function calls the generated update; the caller inherits the cells in its write set, which the admission forbids.
+* **`herkunft_nicht_akzeptiert`**: the same finding on the core checker `Akzeptiert` with the query list.
 * **`ohne_akku_abgelehnt`**, **`ohne_abgelehnt`**: Without `assume` the unit elaborates but the accumulator component and the core checker refuse it.
 * **`fremd_annahme_abgelehnt`**: An unknown `assume` name is the named elaboration error.
 

@@ -4,10 +4,12 @@
               end to end. An `assume` item, an `accumulates` item naming it,
               an update use and a read use elaborate; the declaration carries
               the hardware origin with its named witness (`D.axHerkunft`,
-              `D.axBeleg`); the core checker `Akzeptiert` accepts the lowered
-              program with the query list. The twins are refused: without
-              `assume` the unit elaborates but `Akzeptiert` refuses it, and an
-              unknown `assume` name is a named elaboration error.
+              `D.axBeleg`). FINDING: the core checker `Akzeptiert` refuses the
+              lowered program, because the admission keeps the cells out of
+              every write set but the update's, and the calling user function
+              inherits them (`herkunft_akku_abgelehnt`). The twins are refused
+              too: without `assume` the query is unwitnessed, and an unknown
+              `assume` name is a named elaboration error.
 -/
 module
 
@@ -20,6 +22,38 @@ public import Grammatik.Parser.Cover.Differenz
 public import Grammatik.Zielsatz.Kern.Akzeptiert
 public import Grammatik.Bausteine.Kernzelle.KernAbfrage
 public import Grammatik.Bausteine.Kernzelle.Zulassung
+import all Init.Data.Int.Repr
+import all Init.Data.Repr
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 
 @[expose] public section
 
@@ -62,15 +96,15 @@ def herkunftU : UProg :=
   (elabU herkunftItems).toOption.get herkunft_elab
 
 /-- The generated query travels as the only foreign body. -/
-theorem herkunft_frage_namen : herkunftU.axs.map (·.name) = ["s#kern"] := rfl
+theorem herkunft_frage_namen : herkunftU.axs.map (·.name) = ["s#kern"] := by decide +kernel
 
 /-- The generated functions travel after the user functions. -/
 theorem herkunft_funktionen_namen :
     herkunftU.fns.map (·.name) =
-      ["melde", "lies", "s#aktualisiere", "s#falte", "s#query"] := rfl
+      ["melde", "lies", "s#aktualisiere", "s#falte", "s#query"] := by decide +kernel
 
 /-- The unit knows its assumption. -/
-theorem herkunft_annahmen : herkunftU.annahmen = ["kern_antwort"] := rfl
+theorem herkunft_annahmen : herkunftU.annahmen = ["kern_antwort"] := by decide +kernel
 
 /-! ## Name resolution inside the elaborated unit -/
 
@@ -82,13 +116,13 @@ def finName {α : Type} (nm : α → String) (xs : List α) (n : String)
   | some j => if hj : j < xs.length then ⟨j, hj⟩ else ⟨0, h0⟩
   | none => ⟨0, h0⟩
 
-theorem herkunft_globs_nichtleer : 0 < herkunftU.globs.length := by decide
+theorem herkunft_globs_nichtleer : 0 < herkunftU.globs.length := by decide +kernel
 
-theorem herkunft_locks_nichtleer : 0 < herkunftU.locks.length := by decide
+theorem herkunft_locks_nichtleer : 0 < herkunftU.locks.length := by decide +kernel
 
-theorem herkunft_fns_nichtleer : 0 < herkunftU.fns.length := by decide
+theorem herkunft_fns_nichtleer : 0 < herkunftU.fns.length := by decide +kernel
 
-theorem herkunft_axs_nichtleer : 0 < herkunftU.axs.length := by decide
+theorem herkunft_axs_nichtleer : 0 < herkunftU.axs.length := by decide +kernel
 
 /-- The query axiom. -/
 def herkunftQax : Fin herkunftU.axs.length :=
@@ -180,25 +214,39 @@ def akzeptiertMit (u : UProg)
       .ok (Akzeptiert P (Cover.Differenz.sperrFamilie u) fs ls cs ws
         [decl] [] qs)
 
-/-- The accumulator component admits the descriptor with the query list. -/
-theorem herkunft_akku_angenommen :
+/-- The user function `melde` carries the first cell in its write set: the
+    expansion of `effects { writes s }`, which the call of the generated
+    update requires (`RufPasst.hg`). -/
+theorem herkunft_melde_schreibt_zelle :
+    TraegerSchreibt (D := UebersetzeAllg.declOf herkunftU)
+      (finName UFn.name herkunftU.fns "melde" herkunft_fns_nichtleer)
+      (.inr (finName UGlob.name herkunftU.globs "s#zelle0" herkunft_globs_nichtleer)) = true := by
+  decide +kernel
+
+/-- **FINDING (C15, open, `TODO.md`): the accumulator component refuses a unit
+    whose user function calls the generated update.** `akkuZulaessig` demands
+    that no function besides the update and the fold has a cell in its write
+    set; a call demands the callee's write set inside the caller's. `melde`
+    therefore carries the cells (`herkunft_melde_schreibt_zelle`) and the
+    descriptor is refused. The provenance witnesses above are unaffected. -/
+theorem herkunft_akku_abgelehnt :
     (match UebersetzeAllg2.lowerAllg herkunftU with
     | .ok (P, fs) => Kernzelle.accumulatorB P fs []
         (List.finRange herkunftU.globs.length)
         herkunftQs [herkunftDecl]
-    | .error _ => false) = true := by
+    | .error _ => true) = false := by
   decide +kernel
 
-/-- **The fixture is accepted by the core checker with the query list.** -/
-theorem herkunft_akzeptiert :
-    akzeptiertMit herkunftU herkunftDecl herkunftQs = .ok true := by
+/-- The same finding on the core checker with the query list. -/
+theorem herkunft_nicht_akzeptiert :
+    akzeptiertMit herkunftU herkunftDecl herkunftQs = .ok false := by
   decide +kernel
 
 /-! ## The twins: refused -/
 
 /-- Without `assume` the unit still elaborates. -/
-theorem ohne_elab : (elabU [probenAccT, probenMelde, probenLies]).isOk = true :=
-  rfl
+theorem ohne_elab : (elabU [probenAccT, probenMelde, probenLies]).isOk = true := by
+  decide +kernel
 
 /-- Without `assume` the unit still elaborates (the `.toOption` form). -/
 theorem ohne_elab_some :
@@ -209,11 +257,11 @@ theorem ohne_elab_some :
 def ohneU : UProg :=
   (elabU [probenAccT, probenMelde, probenLies]).toOption.get ohne_elab_some
 
-theorem ohne_globs_nichtleer : 0 < ohneU.globs.length := by decide
+theorem ohne_globs_nichtleer : 0 < ohneU.globs.length := by decide +kernel
 
-theorem ohne_locks_nichtleer : 0 < ohneU.locks.length := by decide
+theorem ohne_locks_nichtleer : 0 < ohneU.locks.length := by decide +kernel
 
-theorem ohne_fns_nichtleer : 0 < ohneU.fns.length := by decide
+theorem ohne_fns_nichtleer : 0 < ohneU.fns.length := by decide +kernel
 
 /-- The descriptor over the unit without an origin. -/
 theorem ohne_decl_ok :
