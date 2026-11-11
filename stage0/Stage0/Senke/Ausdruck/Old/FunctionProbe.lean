@@ -1,6 +1,7 @@
 /- Whole-function witnesses: increment a global, overwrite a slot, and preserve the entry parameter. -/
 module
 public import Stage0.Senke.Ausdruck.Old.RuntimeProbe
+import Grammatik.Kern.Taktik.KernelRfl
 public import Stage0.Senke.Welt.Anordnung
 @[expose] public section
 
@@ -15,8 +16,8 @@ def unit : UProg := {
   locks := []
   globs := [{name := "G", ty := .wert (.int 0 10), init := 0, var := true}]
   fns := [{name := "increment", params := [("index", .index 4)], kinds := [.wert],
-    res := some (0, 10), held := [], puts := ["Cells"], gputs := ["G"],
-    gives := [], body := [], ret := .empty}] }
+           res := some (0, 10), held := [], puts := ["Cells"], gputs := ["G"],
+           gives := [], body := [], ret := .empty}] }
 abbrev D := declOf unit
 abbrev tab : D.Tab := ⟨0, by decide⟩
 abbrev field : D.Feld tab := ⟨0, by decide⟩
@@ -106,13 +107,17 @@ theorem increment_oldS_zeuge :
     wahr? (eval initial post initial (.cons ⟨1, by decide, by decide⟩ params)) = true ∧
     wahr? (eval initial post initial
       (.cons ⟨1, by decide, by decide⟩ (.cons ⟨2, by decide, by decide⟩ .nil))) = false := by
-  decide +kernel
+  refine ⟨?_, by kernel_rfl, by kernel_rfl⟩
+  kernel_change ((1 : Int) = 1 ∧ (1 : Int) = 1 ∧ (1 : Int) = 1 ∧ (7 : Int) = 7)
+  exact ⟨rfl, rfl, rfl, rfl⟩
 
-def current : World D := {initial with globs := fun g => by
+def currentGlobal (g : D.Glob) : Wert D (D.gtyp g) := by
   obtain ⟨g, hg⟩ := g
   have zero : g = 0 := by change g < 1 at hg; omega
   subst g
-  exact ⟨2, by decide, by decide⟩ }
+  exact ⟨2, by decide, by decide⟩
+
+def current : World D := { initial with globs := currentGlobal }
 
 def currentIndex : Expr D [] [] (.index 4) :=
   .eng (.glob global global_access) 0 3 (.widen (by decide) (by decide) (.lit 0))
@@ -125,6 +130,6 @@ theorem current_index_oldS_zeuge :
     (eval initial indexedOld current .nil).n = 7 ∧
     (eval initial indexedOld initial .nil).n = 0 ∧
     (lowEns (layU unit (fun _ => none) 8192) ⟨[], none, 0, 4, 0⟩ indexedOld 8).isSome = true := by
-  decide +kernel
+  exact ⟨by kernel_rfl, by kernel_rfl, by kernel_rfl⟩
 
 end Gabbro.Stage0.Senke.OldFunctionProbe
