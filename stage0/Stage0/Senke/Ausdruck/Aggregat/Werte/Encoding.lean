@@ -31,7 +31,7 @@ def encodeWords (L : Lay D) : (τ : Ty) → Wert D τ → List Runner.W
       integerEncoding (integerWords 0 (cs.length - 1)) v.1.val ++
         (encodeSumPayload L cs v.1 v.2 ++ List.replicate
           (sumPayloadWords cs - (encodeSumPayload L cs v.1 v.2).length) 0)
-  | .prod _ fs, v => encodeProduct L fs v
+  | .prod _ fs, v => if fs = [] then [0] else encodeProductFields L fs v
   | .arr τ n, v => if n = 0 then [0] else elementEncoding n (fun i => encodeWords L τ (v i))
   | .str n, v => if n ≤ 1 then [BitVec.ofNat 64 (strN v.1)] else
       BitVec.ofNat 64 v.1.length :: v.1.map (fun b => BitVec.ofInt 64 b.n) ++
@@ -40,6 +40,7 @@ def encodeWords (L : Lay D) : (τ : Ty) → Wert D τ → List Runner.W
   | .ptr _, _ => [0]
   | .never, v => nomatch v
 
+termination_by structural τ => τ
 /-- Traverse the selected schema structurally, retaining the payload's own encoding. -/
 def encodeSumPayload (L : Lay D) : (cs : List (Option Ty)) →
     (i : Fin cs.length) → Fall D.Fn D.passt cs i → List Runner.W
@@ -47,6 +48,7 @@ def encodeSumPayload (L : Lay D) : (cs : List (Option Ty)) →
   | none :: _, ⟨0, _⟩, _ => []
   | some τ :: _, ⟨0, _⟩, v => encodeWords L τ v
   | _ :: cs, ⟨i + 1, hi⟩, v => encodeSumPayload L cs ⟨i, Nat.lt_of_succ_lt_succ hi⟩ v
+termination_by structural cs => cs
 
 /-- Encode heterogeneous fields
  in declaration order. -/
@@ -55,12 +57,14 @@ def encodeProductFields (L : Lay D) : (fs : List Ty) →
   | [], _ => []
   | τ :: rest, v => encodeWords L τ (ProdVal.hd v) ++
       encodeProductFields L rest (ProdVal.tl v)
+termination_by structural fs => fs
+end
+
 
 /-- Empty products retain the canonical zero marker. -/
 def encodeProduct (L : Lay D) (fs : List Ty)
     (v : ProdVal D.Fn D.passt fs) : List Runner.W :=
   if fs = [] then [0] else encodeProductFields L fs v
-end
 
 /-- The integer branch of `encodeWords` as an equation (the mutual definition is not unfolded by `change`). -/
 theorem encodeWords_int (L : Lay D) (lo hi : Int) (v : Wert D (.int lo hi)) :
@@ -69,7 +73,7 @@ theorem encodeWords_int (L : Lay D) (lo hi : Int) (v : Wert D (.int lo hi)) :
 
 theorem encodeWords_prod (L : Lay D) (name : Nat) (fs : List Ty) (v : Wert D (.prod name fs)) :
     encodeWords L (.prod name fs) v = encodeProduct L fs v := by
-  rw [encodeWords.eq_def]
+  rw [encodeWords.eq_def]; rfl
 
 /-- Width is determined entirely by the declared type, never by runtime contents. -/
 theorem encodeWords_length (L : Lay D) (τ : Ty) (v : Wert D τ) :
