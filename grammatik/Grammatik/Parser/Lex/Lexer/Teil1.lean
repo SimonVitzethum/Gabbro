@@ -116,6 +116,20 @@ def istSchluessel (s : String) : Bool :=
 def strEq (a b : String) : Bool :=
   a.toList == b.toList
 
+/-- `strEq` through the native comparison, for compiled code. -/
+def strEqSchnell (a b : String) : Bool := decide (a = b)
+
+/-- **The native comparison answers as the character lists do.** The kernel keeps `strEq`. -/
+@[csimp] theorem strEq_eq_schnell : @strEq = @strEqSchnell := by
+  funext a b
+  unfold strEq strEqSchnell
+  by_cases h : a = b
+  · subst h
+    simp only [BEq.rfl, decide_true]
+  · have differ : a.toList ≠ b.toList := fun e => h (String.toList_inj.1 e)
+    rw [beq_eq_false_iff_ne.2 differ]
+    simp only [h, decide_false]
+
 /-- Whitespace of the source (`lex.rs`: space, tab, CR, LF). -/
 def istLeer : Char → Bool
   | ' ' => true
