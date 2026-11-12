@@ -1,0 +1,12 @@
+// Exit 65: matching string bytes 'a' and 'Z' selects 'A' + '\n' - '\t' - 1.
+module ir_probe {
+impl fn main() -> i32 in -100 .. 300 effects { pure } {
+    let text : string max 2 = "a" + "Z";
+    if text[0] == 'a' {
+        if text[1] == 'Z' {
+            return 'A' + '\n' - '\t' - 1;
+        }
+    }
+    return 0;
+}
+}

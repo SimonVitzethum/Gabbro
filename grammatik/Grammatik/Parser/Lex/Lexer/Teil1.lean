@@ -272,6 +272,25 @@ def nimmText : List Char → Option (List Char × List Char)
     | some (h, t) => some (c :: h, t)
     | none => none
 
+/-- Read one ASCII byte after an opening apostrophe, including its closer.
+    Character literals are numeric sugar; no character token is introduced. -/
+def takeCharacter : List Char → Option (Nat × List Char)
+  | '\\' :: c :: '\'' :: rest =>
+    let value := match c with
+      | 'n' => some 10
+      | 't' => some 9
+      | 'r' => some 13
+      | '0' => some 0
+      | '\\' => some 92
+      | '\'' => some 39
+      | _ => none
+    value.map (fun n => (n, rest))
+  | c :: '\'' :: rest =>
+    if 32 ≤ c.toNat && c.toNat ≤ 126 && c != '\'' && c != '\\' then
+      some (c.toNat, rest)
+    else none
+  | _ => none
+
 /-- Cut a line comment body: the text up to (not including) the newline,
     and the rest starting at the newline (or empty). -/
 def nimmZeile : List Char → List Char × List Char
@@ -398,7 +417,11 @@ def scan (mitDoku : Bool) : List Char → Nat → Except LexFehler (List Token)
     else match nimmZeichen (c :: cs) with
       | some (s, rest) =>
         Except.map (Token.zeichen s :: ·) (scan mitDoku rest n)
-      | none => .error (.unbekannt (String.ofList [c]))
+      | none =>
+        if c == '\'' then match takeCharacter cs with
+          | some (value, rest) => Except.map (Token.num value :: ·) (scan mitDoku rest n)
+          | none => .error (.unbekannt "invalid character literal")
+        else .error (.unbekannt (String.ofList [c]))
   | _ :: _, 0 => .error (.unbekannt "out of fuel")
 
 /-- The lexer: `lex.rs` `zerlege` as a total Lean function. The one

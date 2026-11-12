@@ -81,5 +81,6 @@ public import Grammatik.Parser.Elab.Export.Held.Satz
 public import Grammatik.Parser.Elab.Export.Held.SatzZeuge
 public import Grammatik.Parser.Elab.Export.ForeverBinding
 public import Grammatik.Parser.Elab.Modules.CallHoistZeuge
+public import Grammatik.Parser.Elab.Modules.MatchWildcardZeuge
 
 @[expose] public section

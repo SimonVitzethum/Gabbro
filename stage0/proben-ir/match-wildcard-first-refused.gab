@@ -1,0 +1,11 @@
+// A wildcard before a named arm keeps the ordinary elaborator's refusal.
+module ir_match_wildcard_first_refused {
+tagged type Token = { End, Number(u32 in 0 .. 100) };
+impl fn main() -> u32 in 0 .. 255 {
+    let t : Token = End;
+    match t {
+        _ => { return 19; }
+        End => { return 7; }
+    }
+}
+}

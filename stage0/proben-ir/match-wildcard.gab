@@ -1,0 +1,19 @@
+// A final wildcard covers both a payload case and a case without a payload.
+module ir_match_wildcard {
+tagged type Token = { End, Number(u32 in 0 .. 100), Other };
+impl fn classify(t : Token) -> u32 in 0 .. 50 {
+    match t {
+        End => { return 7; }
+        _ => { return 19; }
+    }
+}
+impl fn main() -> u32 in 0 .. 255 {
+    let e : Token = End;
+    let n : Token = Number(3);
+    let o : Token = Other;
+    let a = classify(e);
+    let b = classify(n);
+    let c = classify(o);
+    return a + b + c;
+}
+}

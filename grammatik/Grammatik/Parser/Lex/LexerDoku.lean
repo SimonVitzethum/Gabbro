@@ -86,7 +86,11 @@ theorem scan_ohne_doku (cs : List Char) (n : Nat) :
               (fun _ h' => ih _ _ h') t
           · split at h
             · exact map_cons_ohne_doku _ (by intro _; simp only [ne_eq, reduceCtorEq, not_false_eq_true]) _ _ h (fun _ h' => ih _ _ h') t
-            · simp only [String.ofList_cons, String.ofList_nil, String.append_empty, reduceCtorEq] at h
+            · split at h
+              · split at h
+                · exact map_cons_ohne_doku _ (by intro _; simp only [ne_eq, reduceCtorEq, not_false_eq_true]) _ _ h (fun _ h' => ih _ _ h') t
+                · simp only [reduceCtorEq] at h
+              · simp only [String.ofList_cons, String.ofList_nil, String.append_empty, reduceCtorEq] at h
     · simp only [reduceCtorEq] at h
 
 /-- **`lex` NEVER HOLDS A DOC TOKEN**, for every source text: a `///` comment

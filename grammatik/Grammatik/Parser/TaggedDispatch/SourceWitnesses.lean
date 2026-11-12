@@ -208,6 +208,7 @@ private theorem modules_from_phases (items : List SItemTief)
     (generic : Generic.expandDetailed (uMembers items) [] =
       .ok { items := uMembers items })
     (adapters : entzuckere (uMembers items) = .ok (uMembers items))
+    (wildcards : MatchWildcard.erweitere (uMembers items) = uMembers items)
     (hoisted : CallHoist.hebe (uMembers items) = uMembers items)
     (declarations : exportDeclarationUnitDetailed (uMembers items) = .ok (output, names))
     (accepted : Modules.validOutput items
@@ -215,7 +216,7 @@ private theorem modules_from_phases (items : List SItemTief)
         generatedNames := names.filter ((Modules.outputNames output).contains) } = true) :
     expandU items = .ok (output, []) := by
   simp only [expandU, Modules.prepare, Modules.prepareDetailedRaw, modules,
-    ordinary, Bool.false_eq_true, ite_false, generic, adapters, hoisted, declarations,
+    ordinary, Bool.false_eq_true, ite_false, generic, adapters, wildcards, hoisted, declarations,
     bind, Except.bind, List.nil_append, accepted, ite_true, pure, Except.pure]
 
 private theorem source_no_modules : Modules.syntaxList (pre108 sourceItems.val) = false := by cbv

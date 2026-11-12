@@ -181,7 +181,8 @@ ident      = ( letter | "_" ) { letter | digit | "_" } ;
 letter     = "a" … "z" | "A" … "Z" | "ä" | "ö" | "ü" | "Ä" | "Ö" | "Ü" | "ß" ;
 digit      = "0" … "9" ;
 hexdigit   = digit | "a" … "f" | "A" … "F" ;
-int        = dec | hex | bin ;
+int        = dec | hex | bin | charlit ;
+charlit    = "'" ( ? printable ASCII byte except apostrophe and backslash ? | "\\n" | "\\t" | "\\r" | "\\0" | "\\\\" | "\\'" ) "'" ;
 dec        = digit { digit | "_" } ;
 hex        = "0x" hexdigit { hexdigit | "_" } ;
 bin        = "0b" ( "0" | "1" ) { "0" | "1" | "_" } ;
@@ -210,6 +211,11 @@ pathseg    = ident | "u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64"
 identlist  = ident { "," ident } ;
 regbind    = ident ":" ident ;                                 (* G4 *)
 ```
+
+Character literals are integer sugar: `'a'` produces the same number token as `97`,
+with no new type. A literal holds one printable ASCII byte (32–126) except `'` and `\`,
+or one escape: `'\n'` (10), `'\t'` (9), `'\r'` (13), `'\0'` (0), `'\\'` (92), `'\''` (39).
+Empty, multi-character, non-ASCII, unknown-escape and unterminated literals are lexer errors.
 
 **One comma rule for all lists:** separating comma between the entries, trailing comma
 optional. **The `Sonderform` line (G6):** `O` (in `costexpr`), `@version` (in `format`), `Held`
@@ -1426,8 +1432,11 @@ The C11 emitter lowers the statement through the generated hosted driver's threa
 `LG004` refusal for it is **not re-measured** here; where it still stands, the statement has a
 checker rule and no G model.
 
-**`match` is exhaustive** — there is no catch-all branch; a new variant breaks the
-compilation. **Error propagation** is `let … else (e) { … }`: no hidden control flow, and the
+**`match` is exhaustive.** In ordinary functions, a tagged match may end in one binder-free
+`_ => { … }` arm after at least one named arm. The named cases must identify one unique
+tagged type; the wildcard expands to its remaining cases in declaration order, discarding
+their payloads. A lone, repeated, non-final or binding wildcard stays refused, as do
+wildcards in option and reason matches. **Error propagation** is `let … else (e) { … }`: no hidden control flow, and the
 `else` branch is an `endblock` — it cannot fall off, so the binding after it always has a value.
 
 **Attributes and Lean.** The **resource context** Λ («SG-6») of a position is the multiset of

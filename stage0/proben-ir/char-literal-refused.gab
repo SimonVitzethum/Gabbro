@@ -1,0 +1,6 @@
+// Empty character literals must fail in the lexer.
+module ir_probe {
+impl fn main() -> i32 in 0 .. 255 effects { pure } {
+    return '';
+}
+}

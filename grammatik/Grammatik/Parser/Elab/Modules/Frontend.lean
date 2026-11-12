@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Elab.Modules.CallHoist
+public import Grammatik.Parser.Elab.Modules.MatchWildcard
 public import Grammatik.Parser.Elab.Modules.Expansion
 public import Grammatik.Parser.Elab.SourceNormalization
 public import Grammatik.Parser.Elab.Instantiation.Items
@@ -31,6 +32,8 @@ def prepareDetailedRaw (items : List SItemTief) : Except String Prepared := do
   let members := if syntaxList items then UebersetzeAllg2.normTopU32 members else members
   let result ← Generic.expandDetailed members modules.literals
   let target ← Uebersetze.entzuckere result.items
+  -- Tagged wildcards become explicit arms before calls in their copied bodies are lifted.
+  let target := MatchWildcard.erweitere target
   -- Calls inside expressions become bindings before the unit is exported (`CallHoist`).
   let target := CallHoist.hebe target
   let (target, declarationNames) ← exportDeclarationUnitDetailed target
