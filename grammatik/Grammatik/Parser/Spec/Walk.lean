@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Parser.Spec.Resolve
 public import Grammatik.Parser.Namen.References
+public import Grammatik.Parser.Lex.Tafel
 
 @[expose] public section
 
@@ -27,7 +28,7 @@ structure Walk where
   /-- The materialized source, computed once per walk. Every walk is built with this default. -/
   concrete : List SItemTief := materialize source
   /-- The function heads of the materialized source, computed once per walk (default only). -/
-  heads : List FnSig := functionHeads (materialize source)
+  heads : Tafel FnSig (·.name) := Tafel.von _ (functionHeads (materialize source))
   /-- The spec groups of the source, computed once per walk (default only). -/
   specGroups : List Group := groups source
 
@@ -47,7 +48,7 @@ def Walk.expr (w : Walk) (locals : Locals) : Nat → SExpr → Except String SEx
     let e ← (do
       match e with
       | .call name args => do
-        let signature := w.heads.find? (fun s => strEq s.name name)
+        let signature := w.heads.finde name
         let args ← args.zipIdx.mapM fun (arg, index) => do
           let expected := signature.bind fun s => (s.params[index]?).map Prod.snd
           { w with expected }.expr locals f arg
