@@ -84,10 +84,9 @@ def bindType (parameters : List String) (env : List (String × STyp)) :
     .range a _ _ _, .range b _ _ _ | .embed a _ _, .embed b _ _ => bindType parameters env a b
   | _, _ => .ok env
 
-/-- Resolve to precisely one concrete function; the ordinary elaborator checks its real contract. -/
-def resolveCall (items : List SItemTief) (locals : Locals) (name : String)
+/-- `resolveCall` over spec groups collected beforehand (`gs = groups items`). -/
+def resolveCallWith (gs : List Group) (items : List SItemTief) (locals : Locals) (name : String)
     (explicit : Option (List STyp)) (args : List SExpr) : Except String String := do
-  let gs := groups items
   let candidates := gs.flatMap fun g => g.functions.filterMap fun s =>
     if strEq (g.name ++ "::" ++ s.name) name then some (g, s) else none
   match candidates with
@@ -116,6 +115,11 @@ def resolveCall (items : List SItemTief) (locals : Locals) (name : String)
     | [] => throw "spec.call.implementation.missing"
     | _ => throw "spec.call.implementation.ambiguous"
   | _ => throw "spec.call.ambiguous"
+
+/-- Resolve to precisely one concrete function; the ordinary elaborator checks its real contract. -/
+def resolveCall (items : List SItemTief) (locals : Locals) (name : String)
+    (explicit : Option (List STyp)) (args : List SExpr) : Except String String :=
+  resolveCallWith (groups items) items locals name explicit args
 
 /-- Parse only type arguments here; generic-function argument kinds are a preceding pass (§5.4). -/
 def explicitTypes (raw : String) : Except String (List STyp) := do

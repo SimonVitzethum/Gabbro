@@ -7,22 +7,23 @@ public import Grammatik.Parser.Spec.Items
 namespace Gabbro.Grammatik.Parser.Spec
 
 /-- The visitor of `resolveKnownBodies`: one per source, shared by all its items. -/
-def knownWalk (source : List SItemTief) : Walk := {
-  source
-  instantiate := false
-  resolveSpecs := false
-  exprRewrite := fun locals _ e => do
-    let resolve := fun name types args =>
-      match resolveCall source locals name types args with
-      | .ok target => pure (SExpr.call target args)
-      | .error _ => pure e
-    match e with
-    | .call name args => resolve name none args
-    | .ext .instantiate (name :: words) args =>
-      match explicitTypes (String.intercalate ", " words) with
-      | .ok types => resolve name (some types) args
-      | .error _ => pure e
-    | _ => pure e }
+def knownWalk (source : List SItemTief) : Walk :=
+  let gs := groups source
+  { source
+    instantiate := false
+    resolveSpecs := false
+    exprRewrite := fun locals _ e => do
+      let resolve := fun name types args =>
+        match resolveCallWith gs source locals name types args with
+        | .ok target => pure (SExpr.call target args)
+        | .error _ => pure e
+      match e with
+      | .call name args => resolve name none args
+      | .ext .instantiate (name :: words) args =>
+        match explicitTypes (String.intercalate ", " words) with
+        | .ok types => resolve name (some types) args
+        | .error _ => pure e
+      | _ => pure e }
 
 /-- One item under a visitor built once. -/
 def resolveKnownWith (rewrite : Walk) : SItemTief → Except String SItemTief

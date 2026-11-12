@@ -34,7 +34,7 @@ structure Walk where
 def Walk.call (w : Walk) (locals : Locals) (name : String)
     (types : Option (List STyp)) (args : List SExpr) : Except String String := do
   if !w.resolveSpecs then return name
-  if w.instantiate then resolveCall w.source locals name types args
+  if w.instantiate then resolveCallWith w.specGroups w.source locals name types args
   else if types.isSome || w.specGroups.any (fun g => name.startsWith (g.name ++ "::")) then
     .error "spec.output.call"
   else .ok name
