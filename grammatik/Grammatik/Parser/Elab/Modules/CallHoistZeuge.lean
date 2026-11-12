@@ -79,4 +79,29 @@ theorem zeiger_zeuge :
       .block [.bind false "p" none (.fnref "f"), .bind false "#r0" none (.call "p" [])]
         (some (.ret (some (.bin "+" (.variable "#r0") (.lit 1))))) := by kernel_rfl
 
+/-- A constructed value as an argument and as a stored value is bound first; assigned to a variable
+    or returned it stays: `f(Num(7));  t.slots[i].k = Num(9);  x = Num(5);`. -/
+theorem fall_zeuge :
+    hebeKoerper { zeugeK with faelle := ["Num"] } (.block [.call "f" [.call "Num" [.lit 7]],
+        .set (.field (.index (.field (.variable "t") "slots") (.variable "i")) "k") "=" (.call "Num" [.lit 9]),
+        .set (.variable "x") "=" (.call "Num" [.lit 5])] none) =
+      .block [.bind false "#r0" none (.call "Num" [.lit 7]), .call "f" [.variable "#r0"],
+        .bind false "#r1" none (.call "Num" [.lit 9]),
+        .set (.field (.index (.field (.variable "t") "slots") (.variable "i")) "k") "=" (.variable "#r1"),
+        .set (.variable "x") "=" (.call "Num" [.lit 5])] none := by kernel_rfl
+
+/-- A case without a payload as an argument is bound as well: `return f(End);`. -/
+theorem fall_ohne_nutzlast_zeuge :
+    hebeKoerper { zeugeK with faelle := ["End"] }
+        (.block [] (some (.ret (some (.call "f" [.variable "End"]))))) =
+      .block [.bind false "#r0" none (.variable "End")]
+        (some (.ret (some (.call "f" [.variable "#r0"])))) := by kernel_rfl
+
+/-- An untyped `let` of an aggregate table field gets the field's declared type. -/
+theorem feld_zeuge :
+    hebeKoerper { zeugeK with felder := [("T", "s", .str (.lit 16))] }
+        (.block [.bind false "a" none (.field (.index (.field (.variable "T") "slots") (.lit 1)) "s")] none) =
+      .block [.bind false "a" (some (.str (.lit 16)))
+        (.field (.index (.field (.variable "T") "slots") (.lit 1)) "s")] none := by kernel_rfl
+
 end Gabbro.Grammatik.Parser.CallHoist

@@ -1,0 +1,16 @@
+// A constructed tagged value and a case without a payload stand directly as call arguments and as a
+// stored slot value; each is bound in front of its statement.
+module ir_tagged_argument {
+tagged type Token = { End, Number(u32 in 0 .. 100) };
+table T count 4 { slot { k : Token, } }
+impl fn value(t : Token) -> u32 in 0 .. 50 effects { pure } {
+    match t { End => { return 1; } Number(x) => { narrow x to 0 .. 50 else { return 0; } return x; } }
+}
+impl fn main() -> u32 in 0 .. 255 effects { reads T.slots, writes T.slots } {
+    T.slots[1].k = Number(9);
+    match T.slots[1].k {
+        End => { return 0; }
+        Number(x) => { return value(Number(7)) + value(End) + x; }
+    }
+}
+}

@@ -1,0 +1,15 @@
+// A table field of an aggregate type: a string and an array are stored, read into an untyped `let`
+// (its type is the field's declared type) and used.
+module ir_table_aggregate {
+table Names count 4 { slot { s : string max 16, xs : [u32 in 0 .. 9; 3], } }
+impl fn main() -> u32 in 0 .. 255 effects { reads Names.slots, writes Names.slots } {
+    let v : string max 16 = "main";
+    let w : [u32 in 0 .. 9; 3] = [1, 2, 3];
+    Names.slots[1].s = v;
+    Names.slots[1].xs = w;
+    let a = Names.slots[1].s;
+    let b = Names.slots[1].xs;
+    if a == v { return b[2] + 40; }
+    return 0;
+}
+}

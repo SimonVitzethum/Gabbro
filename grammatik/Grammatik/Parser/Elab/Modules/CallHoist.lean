@@ -28,6 +28,12 @@ structure Kontext where
   fns : List String
   /-- The names in scope: a local may hold a function pointer, so a call of it is bound too. -/
   lokal : List String := []
+  /-- The cases of the unit's tagged types: a constructed value inside an expression is bound like a
+      call (`let x = Case(v);` is the form the elaborator reads). -/
+  faelle : List String := []
+  /-- The aggregate fields of the unit's tables (table, field, declared type): an untyped `let` of
+      such a field read gets the declared type written, the form the elaborator reads. -/
+  felder : List (String × String × STyp) := []
   statics : List String
 
 /-- Whether `&&` or `||`: the right operand is evaluated conditionally. -/
@@ -49,14 +55,30 @@ def ruhig (k : Kontext) : Nat → SExpr → Bool
     fresh number, and whether everything evaluated so far reads no mutable state. -/
 abbrev Schritt := List SAnw × SExpr × Nat × Bool
 
+/-- The declared type of an aggregate table field read by the table's name (`T.slots[i].f`). -/
+def feldTyp (k : Kontext) : SExpr → Option STyp
+  | .field (.index (.field (.variable table) "slots") _) field =>
+    (k.felder.find? fun entry => strEq entry.1 table && strEq entry.2.1 field).map (·.2.2)
+  | _ => none
+
+/-- A case without a payload written as an argument of a function call (`f(End)`): bound like a
+    constructed value. `ruf` says that the surrounding call is one of a function. -/
+def bindeFall (k : Kontext) (ruf : Bool) (nr : Nat) (sauber : Bool) : SExpr → Option Schritt
+  | .variable v =>
+    if ruf && sauber && k.faelle.contains v && !k.lokal.contains v && !k.statics.contains v then
+      some ([.bind false ("#r" ++ toString nr) none (.variable v)], .variable ("#r" ++ toString nr), nr + 1, true)
+    else none
+  | _ => none
+
 /-- Rewrite one expression. `sauber` says that nothing in front of it read mutable state. -/
 def hebeE (k : Kontext) : Nat → Nat → Bool → SExpr → Schritt
   | 0, nr, _, e => ([], e, nr, false)
   | n + 1, nr, sauber, .call f args =>
     let step := args.foldl (fun (acc : List SAnw × List SExpr × Nat × Bool) a =>
-      let r := hebeE k n acc.2.2.1 acc.2.2.2 a
+      let r := (bindeFall k (k.fns.contains f || k.lokal.contains f) acc.2.2.1 acc.2.2.2 a).getD
+        (hebeE k n acc.2.2.1 acc.2.2.2 a)
       (acc.1 ++ r.1, acc.2.1 ++ [r.2.1], r.2.2.1, r.2.2.2)) ([], [], nr, sauber)
-    if k.fns.contains f || k.lokal.contains f then
+    if k.fns.contains f || k.lokal.contains f || k.faelle.contains f then
       if step.2.2.2 then
         let name := "#r" ++ toString step.2.2.1
         (step.1 ++ [.bind false name none (.call f step.2.1)], .variable name, step.2.2.1 + 1, true)
@@ -93,9 +115,10 @@ def hebeE (k : Kontext) : Nat → Nat → Bool → SExpr → Schritt
     `return f(a);`): only the arguments of such a call are rewritten. -/
 def hebeOben (k : Kontext) (n nr : Nat) : SExpr → List SAnw × SExpr × Nat
   | .call f args =>
-    if k.fns.contains f || k.lokal.contains f then
+    if k.fns.contains f || k.lokal.contains f || k.faelle.contains f then
       let step := args.foldl (fun (acc : List SAnw × List SExpr × Nat × Bool) a =>
-        let r := hebeE k n acc.2.2.1 acc.2.2.2 a
+        let r := (bindeFall k (k.fns.contains f || k.lokal.contains f) acc.2.2.1 acc.2.2.2 a).getD
+          (hebeE k n acc.2.2.1 acc.2.2.2 a)
         (acc.1 ++ r.1, acc.2.1 ++ [r.2.1], r.2.2.1, r.2.2.2)) ([], [], nr, true)
       (step.1, .call f step.2.1, step.2.2.1)
     else
@@ -108,7 +131,7 @@ def hebeOben (k : Kontext) (n nr : Nat) : SExpr → List SAnw × SExpr × Nat
 /-- Rewrite the arguments of a call statement. -/
 def hebeArgs (k : Kontext) (n nr : Nat) (args : List SExpr) : List SAnw × List SExpr × Nat :=
   let step := args.foldl (fun (acc : List SAnw × List SExpr × Nat × Bool) a =>
-    let r := hebeE k n acc.2.2.1 acc.2.2.2 a
+    let r := (bindeFall k true acc.2.2.1 acc.2.2.2 a).getD (hebeE k n acc.2.2.1 acc.2.2.2 a)
     (acc.1 ++ r.1, acc.2.1 ++ [r.2.1], r.2.2.1, r.2.2.2)) ([], [], nr, true)
   (step.1, step.2.1, step.2.2.1)
 
@@ -141,7 +164,7 @@ def hebeS (k : Kontext) : Nat → Nat → SAnw → List SAnw × Nat
     match s with
     | .bind mu x ty e =>
       let r := if mu then (let y := hebeE k n nr true e; (y.1, y.2.1, y.2.2.1)) else hebeOben k n nr e
-      (r.1 ++ [.bind mu x ty r.2.1], r.2.2)
+      (r.1 ++ [.bind mu x (ty.orElse fun _ => feldTyp k r.2.1) r.2.1], r.2.2)
     | .bindElse x ty e g b =>
       let r := hebeOben k n nr e
       let y := koerper [g] r.2.2 b
@@ -149,8 +172,13 @@ def hebeS (k : Kontext) : Nat → Nat → SAnw → List SAnw × Nat
     | .set target op value =>
       match target with
       | .variable _ =>
-        let r := hebeE k n nr true value
-        (r.1 ++ [.set target op r.2.1], r.2.2.1)
+        -- `x = Case(v);` is read as it stands; any other call in the value is bound first.
+        let r := match value with
+          | .call c _ =>
+            if k.faelle.contains c then hebeOben k n nr value
+            else (let y := hebeE k n nr true value; (y.1, y.2.1, y.2.2.1))
+          | _ => let y := hebeE k n nr true value; (y.1, y.2.1, y.2.2.1)
+        (r.1 ++ [.set target op r.2.1], r.2.2)
       | .field (.index base i) name =>
         let ri := hebeE k n nr true i
         let rv := hebeE k n ri.2.2.1 ri.2.2.2 value
@@ -233,9 +261,27 @@ def statikNamen (items : List SItemTief) : List String :=
     | .atomT n _ _ _ _ => some n
     | _ => none
 
+/-- The case names of the unit's tagged types. -/
+def fallNamen (items : List SItemTief) : List String :=
+  match Uebersetze.uSumSchemas (items.map fun | .taggedByT declaration _ => declaration | item => item) with
+  | .ok schemas => schemas.flatMap fun schema => schema.cases.map (·.1)
+  | .error _ => []
+
+/-- The fields of the unit's tables whose declared type is a string or an array. -/
+def feldNamen (items : List SItemTief) : List (String × String × STyp) :=
+  items.flatMap fun
+    | .tableT name _ _ _ _ _ parts _ => parts.flatMap fun
+      | .tSlot fields => fields.filterMap fun field =>
+          match field.ftyp with
+          | .array .. | .str _ => some (name, field.fname, field.ftyp)
+          | _ => none
+      | _ => []
+    | _ => []
+
 /-- **Calls inside expressions become bindings**, in every ordinary function of the unit. -/
 def hebe (items : List SItemTief) : List SItemTief :=
-  let k : Kontext := { fns := fnNamen items, statics := statikNamen items }
+  let k : Kontext :=
+    { fns := fnNamen items, statics := statikNamen items, faelle := fallNamen items, felder := feldNamen items }
   items.map (hebeItem k)
 
 end Gabbro.Grammatik.Parser.CallHoist
