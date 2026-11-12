@@ -176,9 +176,11 @@ def uBindElse (tabs : List UTab) (koepfe : List UFnKopf)
         | .none => .error "let else of a call without a reason channel"
         | .some (num, cnt) =>
           if callee.ext then
-            match callee.res with
+            -- A foreign answer is a number or a Boolean (`UFnKopf.axErg`).
+            match (if callee.resBool then some (UParamArt.bool, Ty.bool)
+                else callee.res.map fun r => (UParamArt.int, Ty.int r.1 r.2) : Option (UParamArt × Ty)) with
             | .none => .error "let else of a call without a value"
-            | .some r =>
+            | .some (k, ty) =>
               match run (uMitLokal ctx e (UParamArt.why num) (Ty.why cnt)
                   (ctx.muts.filter (fun m => !strEq m e))) ss with
               | .error err => .error err
@@ -186,7 +188,7 @@ def uBindElse (tabs : List UTab) (koepfe : List UFnKopf)
                 match uFoldEndeStmt ctxEB en with
                 | .error err => .error err
                 | .ok endS =>
-                  match run (uMitLokal ctx y UParamArt.int (Ty.int r.1 r.2)
+                  match run (uMitLokal ctx y k ty
                       (ctx.muts.filter (fun m => !strEq m y))) rest with
                   | .error err => .error err
                   | .ok (ys, cE) => .ok ([UStmt.bindAxElse y c xs e] ++ ebody ++ endS ++ [UStmt.blkEnd] ++ ys, cE)

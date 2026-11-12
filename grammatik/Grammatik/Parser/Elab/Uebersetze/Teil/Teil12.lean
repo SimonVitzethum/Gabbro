@@ -69,7 +69,7 @@ def uAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : L
       match res with
       | .none => .ok base
       | .some (.atom "never") => .ok { base with resNever := true }
-      | .some (.atom "bool") => if kn.isSome then .error "fallible foreign fn with a non-number answer without G form" else .ok { base with resBool := true }
+      | .some (.atom "bool") => .ok { base with resBool := true }
       | .some (.index false tn) =>
         match tabs.findIdx? (fun (y : UTab) => strEq y.name tn && y.von.isSome) with
         | .some num => if kn.isSome then .error "fallible provider without G form" else .ok { base with resRef := some num }

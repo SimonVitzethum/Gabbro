@@ -1,0 +1,13 @@
+// A forever body that costs more than its declared pass bound is refused.
+module ir_forever_bound {
+assume tick "The environment ends the service." falsifier probe_tick;
+static mut counter : u32 in 0 .. 100 = 0;
+impl fn main() -> u64 in 0 .. 100 effects { writes counter } {
+    forever service per_pass bounded 1 ops on_exceeded stopped effects { writes counter } progress tick {
+        counter = 1;
+        counter = 2;
+        leave service;
+    }
+    return 7;
+}
+}

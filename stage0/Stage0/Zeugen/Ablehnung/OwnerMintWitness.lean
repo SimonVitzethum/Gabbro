@@ -44,7 +44,9 @@ def text : String :=
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
+/-- A foreign function cannot answer a linear mark: the prototype passes the export gate (its literal
+    cost is an assumption about the foreign body) and the elaborator knows no value of that type. -/
 theorem candidate_refused :
-    emit text 64 = .error "source export: SItemTief.protoT: type/provider/proof duties lack a checked source binding" := by kernel_rfl
+    emit text 64 = .error "type unknown: Mark" := by kernel_rfl
 
 end Gabbro.Stage0.OwnerMintWitness

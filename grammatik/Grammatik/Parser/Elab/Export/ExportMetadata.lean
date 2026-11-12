@@ -87,8 +87,11 @@ def bodyMetadata : Nat → SAnw → Bool
       a declared atomic, the payload the declared one, the binder's written type the atomic's
       (`uBinderTyp`), and the update text parses or the unit is refused (`uTauschSchwanz`). -/
   | _ + 1, .swap _ ty _ _ | _ + 1, .await _ ty _ _ => ty.any typeMetadata
-  | _ + 1, .loop .. |
-    _ + 1, .alloc .. | _ + 1, .allocVon .. | _ + 1, .grow .. |
+  /- A `forever` whose header is the plain one (label and `progress`) is read completely by the
+      elaborator. A header with a pass bound and effects reaches this point only in its plain form:
+      `eraseCovered` verified its effects, and the compiler checks its pass bound (`ForeverBinding`). -/
+  | n + 1, .loop header body => !foreverPlain header || bodyMetadata n body
+  | _ + 1, .alloc .. | _ + 1, .allocVon .. | _ + 1, .grow .. |
     _ + 1, .free .. | _ + 1, .child .. | _ + 1, .other .. => true
   | _ + 1, .genericCall .. => true
   | _ + 1, .set .. | _ + 1, .shift .. | _ + 1, .call .. |
@@ -132,7 +135,7 @@ def itemMetadata : SItemTief → Bool
       clausesMetadataWithoutLoad sig.klauseln || bodyMetadata 10000 body ||
         sig.params.any (fun p => typeMetadata p.2) || sig.res.any typeMetadata
     else (sig.art != "" && sig.art != "impl") ||
-      clausesMetadataFn sig.klauseln || bodyMetadata 10000 (eraseCovered (touchesAdmitted sig.klauseln) 10000 body) ||
+      clausesMetadataFn sig.klauseln || bodyMetadata 10000 (eraseCovered (touchesAdmitted sig.klauseln) (sig.params.map (·.1)) 10000 body) ||
       sig.params.any (fun p => pointerOrMetadata p.2) || sig.res.any typeMetadata
   /- Tagged groups expand to ordinary functions before elaboration. Inspect every original
       header and implementation body, so expansion cannot erase cost/proof/type duties. -/
@@ -155,7 +158,9 @@ def itemMetadata : SItemTief → Bool
       !(match sig.res with | some (.atom "bool") => true | _ => false) ||
       sig.klauseln.any fun | .effs [.pure] => false | _ => true
   | .callT sc => sc.params.any (fun p => typeMetadata p.2) || sc.res.any typeMetadata
-  | .protoT sig => clausesMetadata sig.klauseln || sig.params.any (fun p => typeMetadata p.2) ||
+  /- A foreign prototype's literal cost is an assumption about the foreign body, like a gate's: a
+      foreign call is one own step of machine G whatever the body takes. -/
+  | .protoT sig => clausesMetadataFn sig.klauseln || sig.params.any (fun p => typeMetadata p.2) ||
       sig.res.any typeMetadata
   | .tableT _ provider _ place _ _ parts _ => provider.isSome || place.isSome ||
       parts.any fun

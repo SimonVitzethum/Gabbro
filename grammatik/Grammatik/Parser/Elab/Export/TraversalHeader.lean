@@ -79,7 +79,9 @@ def callFree : Nat → SExpr → Bool
   | n + 1, .field e _ | n + 1, .arrow e _ | n + 1, .un _ e | n + 1, .old e => callFree n e
   | n + 1, .index a b | n + 1, .bin _ a b => callFree n a && callFree n b
   | n + 1, .built _ args => args.all (callFree n)
-  | _ + 1, .call .. | _ + 1, .fnref _ | _ + 1, .ext .. => false
+  -- `Some` and `None` are keywords: the two constructors of an option, no call.
+  | n + 1, .call name args => (name == "Some" || name == "None") && args.all (callFree n)
+  | _ + 1, .fnref _ | _ + 1, .ext .. => false
 
 /-- The write an assignment target performs: a static, or a slot field of a table or pointer. -/
 def writeTarget : SExpr → Option SEffekt
@@ -122,15 +124,17 @@ def bodyWrites : Nat → SAnw → Option (List SEffekt)
 
 /-- A written header is verified against the loop itself when every expression of the body is
     call-free and every write it performs is listed: such an expression writes nothing, and the
-    analysed statements write only by assignment. -/
-def touchesVerified (raw : String) (body : SAnw) : Bool :=
+    analysed statements write only by assignment. An assignment to a local in scope at the loop
+    (`locals`) is no effect. -/
+def touchesVerified (raw : String) (body : SAnw) (locals : List String := []) : Bool :=
   match touchesHeader raw, bodyWrites 10000 body with
-  | .ok listed, some writes => writes.all fun w => listed.any (beqSEffekt w)
+  | .ok listed, some writes => writes.all fun w =>
+    (match w with | .writes (.variable x) => locals.contains x | _ => false) || listed.any (beqSEffekt w)
   | _, _ => false
 
 /-- A header is admitted when the function's declared effects imply it or the loop verifies it. -/
-def touchesAdmitted (clauses : List SKlausel) (raw : String) (body : SAnw) : Bool :=
-  touchesCovered clauses raw || touchesVerified raw body
+def touchesAdmitted (clauses : List SKlausel) (locals : List String) (raw : String) (body : SAnw) : Bool :=
+  touchesCovered clauses raw || touchesVerified raw body locals
 
 /-- A loop that assigns one static verifies a header listing it, although the function also
     writes a table; a header that omits the assigned static, or a body with a call, does not. -/
@@ -183,39 +187,124 @@ theorem retryHeaderBound_zeuge :
     retryHeaderBound "attempt until false bounded 3 ops on_exceeded sched_yield" = false := by
   decide +kernel
 
+/-- A `forever` header the gate binds: an optional label, then exactly
+    `per_pass bounded N ops on_exceeded stopped effects { … } progress A`. -/
+structure ForeverKopf where
+  label : String
+  /-- The declared bound of one pass, checked against the lowered body (`ForeverBinding.holds`). -/
+  bound : Nat
+  /-- The declared effects as a `touches` header, verified against the body. -/
+  effects : String
+  progress : String
+
+/-- Read a `forever` header of the bound shape. `on_exceeded stopped` is the only handler: the pass
+    bound is checked statically, so the handler is never reached. -/
+def foreverHeader (raw : String) : Option ForeverKopf :=
+  match lex raw with
+  | .error _ => none
+  | .ok tokens =>
+    let tokens := tokens.filter fun t => t != .ende
+    let label := tokens.takeWhile fun t => !sectionWord t
+    if label.length > 1 then none else
+    match tokens.dropWhile fun t => !sectionWord t with
+    | p :: b :: .num n :: unit :: o :: s :: e :: .zeichen "{" :: tail =>
+      let listed := tail.takeWhile fun t => t != .zeichen "}"
+      match tail.dropWhile fun t => t != .zeichen "}" with
+      | [.zeichen "}", pw, a] =>
+        if headerWord p == some "per_pass" && headerWord b == some "bounded" &&
+            (headerWord unit).isSome && !sectionWord unit && headerWord o == some "on_exceeded" &&
+            headerWord s == some "stopped" && headerWord e == some "effects" &&
+            headerWord pw == some "progress" && !sectionWord a then
+          (headerWord a).map fun name =>
+            ⟨String.intercalate " " (label.map zeigeTok), n,
+              "touches " ++ String.intercalate " " (listed.map zeigeTok), name⟩
+        else none
+      | _ => none
+    | _ => none
+
+/-- The header the elaborator reads completely: an optional label and `progress A` (`uForeverKopf`). -/
+def foreverPlain (raw : String) : Bool :=
+  match lex raw with
+  | .error _ => false
+  | .ok tokens =>
+    let tokens := tokens.filter fun t => t != .ende
+    (tokens.takeWhile fun t => !sectionWord t).length ≤ 1 &&
+      match tokens.dropWhile fun t => !sectionWord t with
+      | [pw, a] => headerWord pw == some "progress" && (headerWord a).isSome && !sectionWord a
+      | _ => false
+
+/-- The plain header of a bound one. -/
+def ForeverKopf.plain (k : ForeverKopf) : String := k.label ++ " progress " ++ k.progress
+
+/-- The header of the corpus loops is bound and its plain form is read completely; a header with
+    another handler, or without the pass bound, is not bound. -/
+theorem foreverHeader_zeuge :
+    ((foreverHeader "service per_pass bounded 16 ops on_exceeded stopped effects { pure } progress tick").map
+      fun k => (k.label, k.bound, k.effects, k.progress, foreverPlain k.plain)) =
+        some ("service", 16, "touches pure", "tick", true) ∧
+    (foreverHeader "service per_pass bounded 16 ops on_exceeded halt effects { pure } progress tick").isNone = true ∧
+    (foreverHeader "service effects { pure } progress tick").isNone = true ∧
+    foreverPlain "service per_pass bounded 16 ops on_exceeded stopped effects { pure } progress tick" = false := by
+  decide +kernel
+
+/-- The names a statement binds for the rest of its block. -/
+def binders : SAnw → List String
+  | .bind _ x _ _ | .bindQ _ x _ _ | .bindElse x _ _ _ _ | .bindAxiomOpt x _ _
+  | .bindAxiomOptElse x _ _ _ _ | .await x _ _ _ | .swap x _ _ _ | .bindLib _ x _ _ => [x]
+  | _ => []
+
 /-- Erase every covered `touches` header of an ordinary traversal, in every position the gate
-    inspects; a header that is not covered stays and is refused by the gate. -/
-def eraseCovered (covered : String → SAnw → Bool) : Nat → SAnw → SAnw
-  | 0, s => s
-  | n + 1, .block ss e => .block (ss.map (eraseCovered covered n)) e
-  | n + 1, .bindElse a ty c d b => .bindElse a ty c d (eraseCovered covered n b)
-  | n + 1, .bindAxiomOptElse a ty c d b => .bindAxiomOptElse a ty c d (eraseCovered covered n b)
-  | n + 1, .callIndElse a b c body => .callIndElse a b c (eraseCovered covered n body)
-  | n + 1, .callElse a b c body => .callElse a b c (eraseCovered covered n body)
-  | n + 1, .waive a b => .waive a (eraseCovered covered n b)
-  | n + 1, .locks a b c => .locks a b (eraseCovered covered n c)
-  | n + 1, .watch a b => .watch a (eraseCovered covered n b)
-  | n + 1, .retry header b => .retry header (eraseCovered covered n b)
-  | n + 1, .trim a b c => .trim a b (eraseCovered covered n c)
-  | n + 1, .cond c a bs b => .cond c (eraseCovered covered n a) (bs.map (eraseCovered covered n))
-      (b.map (eraseCovered covered n))
-  | n + 1, .elsif c b => .elsif c (eraseCovered covered n b)
-  | n + 1, .arm a b c => .arm a b (eraseCovered covered n c)
-  | n + 1, .cases a arms => .cases a (arms.map (eraseCovered covered n))
-  | n + 1, .each a b c d mode raw inv body =>
-    .each a b c d mode (if mode == "unvisited" && covered raw body then "" else raw) inv
-      (eraseCovered covered n body)
-  | n + 1, .alloc m x ty an v (some body) => .alloc m x ty an v (some (eraseCovered covered n body))
-  | _ + 1, s => s
+    inspects; a header that is not covered stays and is refused by the gate. `locals` are the
+    names in scope: the parameters and the bindings of the enclosing blocks before the statement. -/
+def eraseCovered (covered : List String → String → SAnw → Bool) : List String → Nat → SAnw → SAnw
+  | _, 0, s => s
+  | locals, n + 1, .block ss e =>
+    .block (ss.foldl (fun (acc : List SAnw × List String) s =>
+      (eraseCovered covered acc.2 n s :: acc.1, binders s ++ acc.2)) ([], locals)).1.reverse e
+  | locals, n + 1, .bindElse a ty c d b => .bindElse a ty c d (eraseCovered covered (d :: locals) n b)
+  | locals, n + 1, .bindAxiomOptElse a ty c d b =>
+    .bindAxiomOptElse a ty c d (eraseCovered covered (d :: locals) n b)
+  | locals, n + 1, .callIndElse a b c body => .callIndElse a b c (eraseCovered covered locals n body)
+  | locals, n + 1, .callElse a b c body => .callElse a b c (eraseCovered covered locals n body)
+  | locals, n + 1, .waive a b => .waive a (eraseCovered covered locals n b)
+  | locals, n + 1, .locks a b c => .locks a b (eraseCovered covered locals n c)
+  | locals, n + 1, .watch a b => .watch a (eraseCovered covered locals n b)
+  | locals, n + 1, .retry header b => .retry header (eraseCovered covered locals n b)
+  | locals, n + 1, .trim a b c => .trim a b (eraseCovered covered locals n c)
+  | locals, n + 1, .cond c a bs b => .cond c (eraseCovered covered locals n a)
+      (bs.map (eraseCovered covered locals n)) (b.map (eraseCovered covered locals n))
+  | locals, n + 1, .elsif c b => .elsif c (eraseCovered covered locals n b)
+  | locals, n + 1, .arm a b c => .arm a b (eraseCovered covered (b.toList ++ locals) n c)
+  | locals, n + 1, .cases a arms => .cases a (arms.map (eraseCovered covered locals n))
+  | locals, n + 1, .each a b c d mode raw inv body =>
+    .each a b c d mode (if mode == "unvisited" && covered (a :: locals) raw body then "" else raw) inv
+      (eraseCovered covered (a :: locals) n body)
+  -- A bound `forever` header whose effects the body keeps is replaced by its plain form.
+  | locals, n + 1, .loop header body =>
+    .loop (match foreverHeader header with
+      | some k => if covered locals k.effects body then k.plain else header
+      | none => header) (eraseCovered covered locals n body)
+  | locals, n + 1, .alloc m x ty an v (some body) =>
+    .alloc m x ty an v (some (eraseCovered covered locals n body))
+  | _, _ + 1, s => s
 
 /-- A covered header of an ordinary traversal is erased, an uncovered one and a consuming header stay. -/
 theorem eraseCovered_zeuge (body : SAnw) :
-    eraseCovered (fun raw _ => raw == "h") 2 (.each "i" none "slots" (.variable "t") "unvisited" "h" none body) =
-      .each "i" none "slots" (.variable "t") "unvisited" "" none (eraseCovered (fun raw _ => raw == "h") 1 body) ∧
-    eraseCovered (fun raw _ => raw == "h") 2 (.each "i" none "slots" (.variable "t") "unvisited" "x" none body) =
-      .each "i" none "slots" (.variable "t") "unvisited" "x" none (eraseCovered (fun raw _ => raw == "h") 1 body) ∧
-    eraseCovered (fun raw _ => raw == "h") 2 (.each "i" none "slots" (.variable "t") "consuming" "h" none body) =
-      .each "i" none "slots" (.variable "t") "consuming" "h" none (eraseCovered (fun raw _ => raw == "h") 1 body) :=
+    eraseCovered (fun _ raw _ => raw == "h") [] 2 (.each "i" none "slots" (.variable "t") "unvisited" "h" none body) =
+      .each "i" none "slots" (.variable "t") "unvisited" "" none (eraseCovered (fun _ raw _ => raw == "h") ["i"] 1 body) ∧
+    eraseCovered (fun _ raw _ => raw == "h") [] 2 (.each "i" none "slots" (.variable "t") "unvisited" "x" none body) =
+      .each "i" none "slots" (.variable "t") "unvisited" "x" none (eraseCovered (fun _ raw _ => raw == "h") ["i"] 1 body) ∧
+    eraseCovered (fun _ raw _ => raw == "h") [] 2 (.each "i" none "slots" (.variable "t") "consuming" "h" none body) =
+      .each "i" none "slots" (.variable "t") "consuming" "h" none (eraseCovered (fun _ raw _ => raw == "h") ["i"] 1 body) :=
   ⟨rfl, rfl, rfl⟩
+
+/-- A loop that adds into a local of the enclosing block verifies a header that lists no write;
+    the same assignment to a name that is no local in scope does not. -/
+theorem touchesVerified_local_zeuge :
+    touchesVerified "touches reads t.slots" (.block [.set (.variable "total") "=" (.lit 1)] none)
+      ["total"] = true ∧
+    touchesVerified "touches reads t.slots" (.block [.set (.variable "total") "=" (.lit 1)] none)
+      [] = false := by
+  decide +kernel
 
 end Gabbro.Grammatik.Parser.ExportMetadata

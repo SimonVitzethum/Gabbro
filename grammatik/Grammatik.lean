@@ -76,5 +76,6 @@ public import Grammatik.Parser.Elab.Export.CostBinding
 public import Grammatik.Parser.Elab.Export.CostBindingZeuge
 public import Grammatik.Parser.Elab.Export.HeldBinding
 public import Grammatik.Parser.Elab.Export.HeldBindingZeuge
+public import Grammatik.Parser.Elab.Export.ForeverBinding
 
 @[expose] public section

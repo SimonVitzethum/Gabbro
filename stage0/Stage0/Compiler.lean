@@ -7,6 +7,7 @@ public import Stage0.Frontend.Initializers
 public import Stage0.Frontend.Measures
 public import Stage0.Senke.Ausdruck.Old.Source
 public import Grammatik.Parser.Elab.Export.HeldBinding
+public import Grammatik.Parser.Elab.Export.ForeverBinding
 @[expose] public section
 
 
@@ -47,6 +48,10 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
       a lock with `held <= n ops` costs at most `n` own steps. -/
   held : HeldBinding.holds (HeldBinding.declared gateMembers) (CostBinding.declared gateMembers) unit program
     irDurchlaeufe = true
+  /-- The declared pass bounds of the gate's `forever` loops hold on the final program: every loop
+      body costs at most the bound declared with its `progress` assumption. -/
+  passBounds : ForeverBinding.holds (ForeverBinding.declared gateMembers) (CostBinding.declared gateMembers)
+    unit program irDurchlaeufe = true
   /-- Every original constant, including unused products and nested rows, has a canonical typed
       literal. Scalar scope deferral alone never admits a declaration. -/
   arrayConstants : ∀ item ∈ uMembers (pre108 source.prepared.elaborierbar), Frontend.ArrayMeaning unit source.scopes item
@@ -126,6 +131,13 @@ def compileChecked (source : Frontend.Source text options)
                   ((HeldBinding.failing (HeldBinding.declared gateMembers) (CostBinding.declared gateMembers)
                     unit program irDurchlaeufe).getD "?") ++
                   " has a locks section over its lock's bound, or one that calls a function without a declared cost")
+              | true =>
+              match hf : ForeverBinding.holds (ForeverBinding.declared gateMembers)
+                  (CostBinding.declared gateMembers) unit program irDurchlaeufe with
+              | false => throw ("declared pass bound does not hold: " ++
+                  ((ForeverBinding.failing (ForeverBinding.declared gateMembers)
+                    (CostBinding.declared gateMembers) unit program irDurchlaeufe).getD "?") ++
+                  " has a forever body over its bound, or one that calls a function without a declared cost")
               | true => pure {
                 source := source
                 unit := unit
@@ -137,6 +149,7 @@ def compileChecked (source : Frontend.Source text options)
                 accepted := ha
                 costs := hk
                 held := hh
+                passBounds := hf
                 arrayConstants := arrays.down
                 initializerExports := hi
                 constantExports := hc
