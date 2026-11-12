@@ -41,7 +41,7 @@ import all Init.Data.String.ToSlice
 
 namespace Gabbro.Grammatik.Parser.CallHoist
 
-def zeugeK : Kontext := { fns := ["f", "g"], statics := ["s"] }
+def zeugeK : Kontext := { fns := Tafel.von _ ["f", "g"], statics := Tafel.von _ ["s"] }
 
 /-- `return f(3) + 1;` binds the call first. -/
 theorem operand_zeuge :
@@ -82,7 +82,7 @@ theorem zeiger_zeuge :
 /-- A constructed value as an argument and as a stored value is bound first; assigned to a variable
     or returned it stays: `f(Num(7));  t.slots[i].k = Num(9);  x = Num(5);`. -/
 theorem fall_zeuge :
-    hebeKoerper { zeugeK with faelle := ["Num"] } (.block [.call "f" [.call "Num" [.lit 7]],
+    hebeKoerper { zeugeK with faelle := Tafel.von _ ["Num"] } (.block [.call "f" [.call "Num" [.lit 7]],
         .set (.field (.index (.field (.variable "t") "slots") (.variable "i")) "k") "=" (.call "Num" [.lit 9]),
         .set (.variable "x") "=" (.call "Num" [.lit 5])] none) =
       .block [.bind false "#r0" none (.call "Num" [.lit 7]), .call "f" [.variable "#r0"],
@@ -92,7 +92,7 @@ theorem fall_zeuge :
 
 /-- A case without a payload as an argument is bound as well: `return f(End);`. -/
 theorem fall_ohne_nutzlast_zeuge :
-    hebeKoerper { zeugeK with faelle := ["End"] }
+    hebeKoerper { zeugeK with faelle := Tafel.von _ ["End"] }
         (.block [] (some (.ret (some (.call "f" [.variable "End"]))))) =
       .block [.bind false "#r0" none (.variable "End")]
         (some (.ret (some (.call "f" [.variable "#r0"])))) := by kernel_rfl

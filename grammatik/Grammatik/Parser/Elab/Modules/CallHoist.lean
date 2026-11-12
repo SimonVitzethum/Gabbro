@@ -23,18 +23,21 @@ public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil18
 
 namespace Gabbro.Grammatik.Parser.CallHoist
 
+/-- A set of names: a list for the kernel, a hash map for compiled code (`Tafel`). -/
+abbrev Namen := Tafel String (fun name => name)
+
 /-- What the rewrite knows of the unit: the functions a `let` can bind a call of, and the statics. -/
 structure Kontext where
-  fns : List String
+  fns : Namen
   /-- The names in scope: a local may hold a function pointer, so a call of it is bound too. -/
   lokal : List String := []
   /-- The cases of the unit's tagged types: a constructed value inside an expression is bound like a
       call (`let x = Case(v);` is the form the elaborator reads). -/
-  faelle : List String := []
+  faelle : Namen := Tafel.von _ []
   /-- The aggregate fields of the unit's tables (table, field, declared type): an untyped `let` of
       such a field read gets the declared type written, the form the elaborator reads. -/
   felder : List (String × String × STyp) := []
-  statics : List String
+  statics : Namen
 
 /-- Whether `&&` or `||`: the right operand is evaluated conditionally. -/
 def bedingt (op : String) : Bool := strEq op "&&" || strEq op "||"
@@ -45,7 +48,7 @@ def ruhig (k : Kontext) : Nat → SExpr → Bool
   | 0, _ => false
   | _ + 1, .lit _ | _ + 1, .float _ | _ + 1, .tru | _ + 1, .fls | _ + 1, .res | _ + 1, .why _ _
   | _ + 1, .fnref _ => true
-  | _ + 1, .variable v => !k.statics.contains v
+  | _ + 1, .variable v => !(k.statics.finde v).isSome
   | n + 1, .un _ e => ruhig k n e
   | n + 1, .bin _ a b => ruhig k n a && ruhig k n b
   | n + 1, .built _ args => args.all (ruhig k n)
@@ -65,7 +68,7 @@ def feldTyp (k : Kontext) : SExpr → Option STyp
     constructed value. `ruf` says that the surrounding call is one of a function. -/
 def bindeFall (k : Kontext) (ruf : Bool) (nr : Nat) (sauber : Bool) : SExpr → Option Schritt
   | .variable v =>
-    if ruf && sauber && k.faelle.contains v && !k.lokal.contains v && !k.statics.contains v then
+    if ruf && sauber && (k.faelle.finde v).isSome && !k.lokal.contains v && !(k.statics.finde v).isSome then
       some ([.bind false ("#r" ++ toString nr) none (.variable v)], .variable ("#r" ++ toString nr), nr + 1, true)
     else none
   | _ => none
@@ -75,10 +78,10 @@ def hebeE (k : Kontext) : Nat → Nat → Bool → SExpr → Schritt
   | 0, nr, _, e => ([], e, nr, false)
   | n + 1, nr, sauber, .call f args =>
     let step := args.foldl (fun (acc : List SAnw × List SExpr × Nat × Bool) a =>
-      let r := (bindeFall k (k.fns.contains f || k.lokal.contains f) acc.2.2.1 acc.2.2.2 a).getD
+      let r := (bindeFall k ((k.fns.finde f).isSome || k.lokal.contains f) acc.2.2.1 acc.2.2.2 a).getD
         (hebeE k n acc.2.2.1 acc.2.2.2 a)
       (acc.1 ++ r.1, acc.2.1 ++ [r.2.1], r.2.2.1, r.2.2.2)) ([], [], nr, sauber)
-    if k.fns.contains f || k.lokal.contains f || k.faelle.contains f then
+    if (k.fns.finde f).isSome || k.lokal.contains f || (k.faelle.finde f).isSome then
       if step.2.2.2 then
         let name := "#r" ++ toString step.2.2.1
         (step.1 ++ [.bind false name none (.call f step.2.1)], .variable name, step.2.2.1 + 1, true)
@@ -108,16 +111,16 @@ def hebeE (k : Kontext) : Nat → Nat → Bool → SExpr → Schritt
   | n + 1, nr, sauber, .arrow e name =>
     let r := hebeE k n nr sauber e
     (r.1, .arrow r.2.1 name, r.2.2.1, false)
-  | _ + 1, nr, sauber, .variable v => ([], .variable v, nr, sauber && !k.statics.contains v)
+  | _ + 1, nr, sauber, .variable v => ([], .variable v, nr, sauber && !(k.statics.finde v).isSome)
   | n + 1, nr, sauber, e => ([], e, nr, sauber && ruhig k n e)
 
 /-- Rewrite an expression in a position where a call may stand as it is (`let x = f(a);`,
     `return f(a);`): only the arguments of such a call are rewritten. -/
 def hebeOben (k : Kontext) (n nr : Nat) : SExpr → List SAnw × SExpr × Nat
   | .call f args =>
-    if k.fns.contains f || k.lokal.contains f || k.faelle.contains f then
+    if (k.fns.finde f).isSome || k.lokal.contains f || (k.faelle.finde f).isSome then
       let step := args.foldl (fun (acc : List SAnw × List SExpr × Nat × Bool) a =>
-        let r := (bindeFall k (k.fns.contains f || k.lokal.contains f) acc.2.2.1 acc.2.2.2 a).getD
+        let r := (bindeFall k ((k.fns.finde f).isSome || k.lokal.contains f) acc.2.2.1 acc.2.2.2 a).getD
           (hebeE k n acc.2.2.1 acc.2.2.2 a)
         (acc.1 ++ r.1, acc.2.1 ++ [r.2.1], r.2.2.1, r.2.2.2)) ([], [], nr, true)
       (step.1, .call f step.2.1, step.2.2.1)
@@ -175,7 +178,7 @@ def hebeS (k : Kontext) : Nat → Nat → SAnw → List SAnw × Nat
         -- `x = Case(v);` is read as it stands; any other call in the value is bound first.
         let r := match value with
           | .call c _ =>
-            if k.faelle.contains c then hebeOben k n nr value
+            if (k.faelle.finde c).isSome then hebeOben k n nr value
             else (let y := hebeE k n nr true value; (y.1, y.2.1, y.2.2.1))
           | _ => let y := hebeE k n nr true value; (y.1, y.2.1, y.2.2.1)
         (r.1 ++ [.set target op r.2.1], r.2.2)
@@ -281,7 +284,8 @@ def feldNamen (items : List SItemTief) : List (String × String × STyp) :=
 /-- **Calls inside expressions become bindings**, in every ordinary function of the unit. -/
 def hebe (items : List SItemTief) : List SItemTief :=
   let k : Kontext :=
-    { fns := fnNamen items, statics := statikNamen items, faelle := fallNamen items, felder := feldNamen items }
+    { fns := Tafel.von _ (fnNamen items), statics := Tafel.von _ (statikNamen items),
+      faelle := Tafel.von _ (fallNamen items), felder := feldNamen items }
   items.map (hebeItem k)
 
 end Gabbro.Grammatik.Parser.CallHoist
