@@ -34,6 +34,31 @@ def lowStufe (u : UProg) (caller : Fin u.fns.length) : Nat → LowStufe u caller
     ⟨lowSeqStep u caller R, lowStructStep u caller R, lowArmsStep u caller R, lowGArmsStep u caller R,
       lowEndStep u caller R⟩
 
+/-- `lowStufe` with every level built on demand. The specification builds the record of every level
+    below `n` before the first step runs (one tower per structured statement at `blockFuel`); here a
+    level is built when a step asks for it. -/
+def lowStufeSchnell (u : UProg) (caller : Fin u.fns.length) : Nat → LowStufe u caller
+  | 0 => ⟨fun _ _ _ _ _ => .error "lower: blocks nested too deep",
+      fun _ _ _ _ _ _ => .error "lower: blocks nested too deep",
+      fun _ _ _ _ _ _ _ => .error "lower: blocks nested too deep",
+      fun _ _ _ _ _ _ => .error "lower: blocks nested too deep",
+      fun _ _ _ _ _ => .error "lower: blocks nested too deep"⟩
+  | n + 1 =>
+    ⟨fun {l} Γ fn Λ pe ss => lowSeqStep (l := l) u caller (lowStufeSchnell u caller n) Γ fn Λ pe ss,
+      fun {l} Γ fn Λ pe s ss => lowStructStep (l := l) u caller (lowStufeSchnell u caller n) Γ fn Λ pe s ss,
+      fun {l} Γ fn Λ pe cs bs ss =>
+        lowArmsStep (l := l) u caller (lowStufeSchnell u caller n) Γ fn Λ pe cs bs ss,
+      fun {l} Γ fn Λ pe m ss => lowGArmsStep (l := l) u caller (lowStufeSchnell u caller n) Γ fn Λ pe m ss,
+      fun {l} Γ fn Λ pe ss => lowEndStep (l := l) u caller (lowStufeSchnell u caller n) Γ fn Λ pe ss⟩
+
+/-- **Building on demand changes no level.** -/
+@[csimp] theorem lowStufe_eq_schnell : @lowStufe = @lowStufeSchnell := by
+  funext u caller n
+  induction n with
+  | zero => rfl
+  | succ n ih =>
+    rw [lowStufe, lowStufeSchnell, ih]
+
 /-- A flat run of statements at `Λ`, up to (not including) the `zu`/`sonst` marker that ends it, or the
     end of the list; returns the block and what is left. A `let` binds for the rest of the run: its
     type is the COMPUTED range of the value (as the exporter pushes it) and the scope grows by it.

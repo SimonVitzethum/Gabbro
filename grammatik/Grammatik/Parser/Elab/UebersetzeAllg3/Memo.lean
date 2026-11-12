@@ -61,12 +61,4 @@ theorem casesDirekt_eq {n : Nat} {motive : Fin (n + 1) → Type} (zero : motive 
   | zero => rfl
   | succ j => rfl
 
-/-- The same family read through a table filled once. -/
-def tabelliert {n : Nat} {T : Fin n → Type} (values : (i : Fin n) → T i) : (i : Fin n) → T i :=
-  (Memo.build values).get
-
-/-- A tabulated family is the family. -/
-theorem tabelliert_eq {n : Nat} {T : Fin n → Type} (values : (i : Fin n) → T i) :
-    tabelliert values = values := funext (Memo.build_get values)
-
 end Gabbro.Grammatik.Parser

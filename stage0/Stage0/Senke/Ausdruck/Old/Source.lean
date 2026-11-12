@@ -139,10 +139,15 @@ theorem collectDirekt_eq : ∀ (n : Nat) (T : Fin n → Type) (get : (i : Fin n)
   | n + 1, T, get => by
     simp only [collectDirekt, collect, collectDirekt_eq n, casesDirekt_eq]
 
-/-- The collected family, read through a table filled once. -/
+/-- The collected family, read through a table filled once. The table is built before the reader
+    exists: a reader that built it itself would build it again at every access. -/
 def collectSchnell (n : Nat) (T : Fin n → Type) (get : (i : Fin n) → Except String (T i)) :
     Except String ((i : Fin n) → T i) :=
-  (collectDirekt n T get).map tabelliert
+  match collectDirekt n T get with
+  | .error e => .error e
+  | .ok values =>
+    let table := Memo.build values
+    .ok fun i => table.get i
 
 /-- **The table changes no collected family.** -/
 @[csimp] theorem collect_eq_schnell : @collect = @collectSchnell := by
@@ -151,7 +156,7 @@ def collectSchnell (n : Nat) (T : Fin n → Type) (get : (i : Fin n) → Except 
   rw [collectDirekt_eq]
   cases collect n T get with
   | error e => rfl
-  | ok values => exact congrArg Except.ok (tabelliert_eq values).symm
+  | ok values => exact congrArg Except.ok (funext fun i => (Memo.build_get values i).symm)
 
 def restore (items : List SItemTief) (u : UProg) (P : Programm (declOf u)) :
     Except String (Programm (declOf u)) := do

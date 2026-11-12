@@ -149,6 +149,25 @@ def ptrPaarGate (u : UProg) : Bool :=
     (List.range (sigFns u).length).all fun n =>
       !(passtAt u f n) || vertragPasstAt u f n
 
+/-- **The pair gate never refuses**: conformance (`passtAt`) already contains the contract part. -/
+theorem ptrPaarGate_wahr (u : UProg) : ptrPaarGate u = true := by
+  apply List.all_eq_true.mpr
+  intro f _
+  apply List.all_eq_true.mpr
+  intro n _
+  unfold passtAt
+  cases vertragPasstAt u f n with
+  | false => simp only [Bool.and_false, Bool.not_false, Bool.or_false]
+  | true => simp only [Bool.or_true]
+
+/-- The constant answer of the pair gate, for compiled code. -/
+def ptrPaarGateSchnell (_ : UProg) : Bool := true
+
+/-- Compiled code does not walk the pairs. -/
+@[csimp] theorem ptrPaarGate_eq_schnell : @ptrPaarGate = @ptrPaarGateSchnell := by
+  funext u
+  exact ptrPaarGate_wahr u
+
 /-- Every pointer contract lowers (no silent `trivial`). -/
 def ptrLowerOk (u : UProg) : Bool :=
   (List.range (sigFns u).length).all fun n => (lowerPtrAt u n).isOk
