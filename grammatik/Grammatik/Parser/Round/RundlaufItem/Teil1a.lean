@@ -144,7 +144,7 @@ theorem parseItemKopf_entry (f : Nat) (rest : List Token) :
     (by decide : strEq "entry" "module" = false), (by decide : strEq "entry" "use" = false), (by decide : strEq "entry" "fn" = false), (by decide : strEq "entry" "translator" = false), (by decide : strEq "entry" "profile" = false), (by decide : strEq "entry" "requires" = false), (by decide : strEq "entry" "concurrent" = false), (by decide : strEq "entry" "type" = false), (by decide : strEq "entry" "const" = false), (by decide : strEq "entry" "static" = false), (by decide : strEq "entry" "format" = false), (by decide : strEq "entry" "table" = false), (by decide : strEq "entry" "arena" = false), (by decide : strEq "entry" "reason" = false), (by decide : strEq "entry" "state" = false), (by decide : strEq "entry" "device" = false), (by decide : strEq "entry" "assume" = false), (by decide : strEq "entry" "axiom" = false), (by decide : strEq "entry" "check" = false), (by decide : strEq "entry" "atomic" = false), (by decide : strEq "entry" "lock" = false), (by decide : strEq "entry" "rcu" = false), (by decide : strEq "entry" "group" = false), (by decide : strEq "entry" "accumulates" = false), (by decide : strEq "entry" "walk" = false), (by decide : strEq "entry" "entry" = true)]
 
 theorem parseItemKopf_fn (f : Nat) (rest : List Token)
-    (ha : istAdaptKopf (.wort "fn" :: rest) = false) :
+    (ha : istAdaptKopf f (.wort "fn" :: rest) = false) :
     parseItemKopfTief (f + 1) (.wort "fn" :: rest) = match parseFnSig f "" (.wort "fn" :: rest) with
       | .error e => .error e
       | .ok (sig, r) => parseFnRest f sig r := by
@@ -154,7 +154,7 @@ theorem parseItemKopf_fn (f : Nat) (rest : List Token)
     (by decide : strEq "fn" "fn" = true), letzteArt, ha] <;> rfl
 
 theorem parseItemKopf_art (f : Nat) (art : String) (rest : List Token) (h : istMod art = true)
-    (ha : istAdaptKopf (.wort "fn" :: rest) = false) :
+    (ha : istAdaptKopf f (.wort "fn" :: rest) = false) :
     parseItemKopfTief (f + 1) (.wort art :: .wort "fn" :: rest) =
       match parseFnSig f art (.wort "fn" :: rest) with
       | .error e => .error e

@@ -400,7 +400,8 @@ def floorOf (u : UProg) (f : UFn) : Option Int :=
 
 /-- The post-pass: every function carries its floor (`UFn.boden`). -/
 def uMitBoden (u : UProg) : UProg :=
-  { u with fns := u.fns.map fun f => { f with boden := floorOf u f } }
+  let fns := u.fns.map fun f => { f with boden := floorOf u f }
+  { u with fns := fns, merk := UMerk.von fns u.ptrs }
 
 
 end Gabbro.Grammatik.Parser.Uebersetze

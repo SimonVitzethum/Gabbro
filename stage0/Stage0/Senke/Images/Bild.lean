@@ -180,7 +180,9 @@ def bild (passes : Nat) (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (p
   | .ok cs0 =>
     let lens := cs0.map (·.1.length)
     let k := roots.length
-    let A : D.Fn → Nat := fun g => (addrs (codeBase + 16 * headLen k) lens).getD (pos g) 0
+    -- An array, filled once: a read of the address list inside `A` walked it at every call site (n²).
+    let T := (addrs (codeBase + 16 * headLen k) lens).toArray
+    let A : D.Fn → Nat := fun g => T.getD (pos g) 0
     let fp0 := codeBase + 16 * (headLen k + lens.sum)
     let b := alignUp (fp0 + 8 * (Ks * (k + 1))) req
     let Yb := { Y b with fa := A, sb := fp0, st := 8 * Ks }

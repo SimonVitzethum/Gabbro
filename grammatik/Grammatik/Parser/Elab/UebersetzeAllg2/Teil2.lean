@@ -244,7 +244,7 @@ structure RufKopf (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (Λ : List 
 def lowRufKopf (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u))) (cname : String) (args : List UArg) :
     Except String (RufKopf u caller Γ Λ) :=
-  match fnIdx u.fns cname with
+  match fnNr u cname with
   | .error e => .error e
   | .ok callee =>
     match lowCallArgsAuxL u caller Γ fn Λ (fnAt u callee).kinds

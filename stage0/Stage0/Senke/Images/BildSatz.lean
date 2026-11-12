@@ -32,7 +32,7 @@ theorem bild_lage {P : Programm D} {fs : List D.Fn} {pos : D.Fn → Nat} {name :
         subst hb
         obtain ⟨⟨hwhy, hrwhy, hlens, hfit, hroomK, hexK, hops, hYlo, hYhi, hYsye⟩, hfp⟩ := hg
         obtain ⟨hcl, hcs⟩ := lowAll_ok fs cs h1
-        refine ⟨cs, cs.flatMap (·.1), _, ⟨rfl, rfl, rfl, rfl, hfp, fun g => by rw [hlens], hcl, hcs, hfs,
+        refine ⟨cs, cs.flatMap (·.1), _, ⟨rfl, rfl, rfl, rfl, hfp, fun g => by rw [hlens]; simp, hcl, hcs, hfs,
           by simp only [List.length_map], ?_, hwhy, hrwhy,
           hfit, hroomK, fun f hf => by simpa using List.all_eq_true.mp hexK f hf, hYlo, hYhi, hYord _, hYin _ (Nat.lt_of_le_of_lt hYhi hfit),
           ⟨(hYdis _).spans, (hYdis _).inj, (hYdis _).grid⟩, rfl, rfl, hYsync _, hYsye, hops⟩, rfl, rfl, rfl, rfl⟩

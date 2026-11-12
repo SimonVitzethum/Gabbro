@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.Spec.Check
+public import Grammatik.Parser.Lex.Tafel
 public import Grammatik.Parser.Elab.Uebersetze.Tagged.Schema
 
 @[expose] public section
@@ -29,47 +30,66 @@ def functionHeads (items : List SItemTief) : List FnSig := items.filterMap fun
       fehler := s.fail, klauseln := [], generics := [] }
   | _ => none
 
+/-- What type inference reads from a source, by name: the function heads, the typed values (statics,
+    constants, atomics), the tables' parts, and the source itself for the tagged sums. A walk builds it
+    once; a scan of the items at every expression made a unit of n functions cost n². -/
+structure Umfeld where
+  items : List SItemTief
+  heads : Tafel FnSig (·.name)
+  werte : Tafel (String × STyp) (·.1)
+  tabellen : Tafel (String × List STabTeil) (·.1)
+
+/-- The environment of a source. -/
+def Umfeld.von (items : List SItemTief) : Umfeld where
+  items := items
+  heads := Tafel.von _ (functionHeads items)
+  werte := Tafel.von _ (items.filterMap fun
+    | .globT _ m t _ _ _ _ | .constT m t _ | .atomT m t _ _ _ => some (m, t)
+    | _ => none)
+  tabellen := Tafel.von _ (items.filterMap fun
+    | .tableT n _ _ _ _ _ parts _ => some (n, parts)
+    | _ => none)
+
 /-- Read the table field type from the existing surface declaration. -/
-def tableField (items : List SItemTief) (table field : String) : Option STyp := do
-  let .tableT _ _ _ _ _ _ parts _ ← items.find? (fun
-    | .tableT n _ _ _ _ _ _ _ => strEq n table
-    | _ => false) | none
+def tableField (U : Umfeld) (table field : String) : Option STyp := do
+  let (_, parts) ← U.tabellen.finde table
   let fields := parts.flatMap fun | .tSlot fs => fs | _ => []
   return (← fields.find? fun f => strEq f.fname field).ftyp
 
-/-- Only types determined by the ordinary source environment participate in inference.
-    An untyped literal alone does not guess an implementation. -/
-def inferType (items : List SItemTief) (locals : Locals) : Nat → SExpr → Option STyp
+/-- `inferType` over an environment built beforehand. -/
+def inferTypeMit (U : Umfeld) (locals : Locals) : Nat → SExpr → Option STyp
   | 0, _ => none
   | f + 1, e =>
     match e with
     | .variable n =>
       ((locals.find? fun p => strEq p.1 n).map Prod.snd).orElse fun _ =>
-        items.findSome? fun
-          | .globT _ m t _ _ _ _ | .constT m t _ | .atomT m t _ _ _ =>
-            if strEq m n then some t else none
-          | _ => none
+        (U.werte.finde n).map Prod.snd
     | .tru | .fls => some (.atom "bool")
     | .call n _ =>
-      (((functionHeads items).find? fun s => strEq s.name n).bind (·.res)).orElse fun _ => do
-        let declarations := items.map fun | .taggedByT decl _ => decl | it => it
+      ((U.heads.finde n).bind (·.res)).orElse fun _ => do
+        let declarations := U.items.map fun | .taggedByT decl _ => decl | it => it
         let schemas ← (Uebersetze.uSumSchemas declarations).toOption
         let [schema] := schemas.filter (fun s => s.cases.any (fun c => strEq c.1 n)) | none
         return .atom schema.name
-    | .field (.index (.variable t) _) fld => tableField items t fld
-    | .field (.index (.field (.variable t) "slots") _) fld => tableField items t fld
+    | .field (.index (.variable t) _) fld => tableField U t fld
+    | .field (.index (.field (.variable t) "slots") _) fld => tableField U t fld
     | .field x fld => do
-      let .index _ t ← inferType items locals f x | none
-      tableField items t fld
+      let .index _ t ← inferTypeMit U locals f x | none
+      tableField U t fld
     | .index a _ => do
-      let .array t _ ← inferType items locals f a | none
+      let .array t _ ← inferTypeMit U locals f a | none
       return t
-    | .old x | .un _ x => inferType items locals f x
+    | .old x | .un _ x => inferTypeMit U locals f x
     | .bin op a b =>
       if ["==", "!=", "<", ">", "<=", ">=", "&&", "||"].any (strEq op) then
         some (.atom "bool")
-      else (inferType items locals f a).orElse fun _ => inferType items locals f b
+      else (inferTypeMit U locals f a).orElse fun _ => inferTypeMit U locals f b
     | _ => none
+
+/-- Only types determined by the ordinary source environment participate in inference.
+    An untyped literal alone does not guess an implementation. -/
+def inferType (items : List SItemTief) (locals : Locals) (fuel : Nat) (e : SExpr) : Option STyp :=
+  inferTypeMit (Umfeld.von items) locals fuel e
 
 /-- Infer occurrences of type parameters structurally, rejecting inconsistent occurrences. -/
 def bindType (parameters : List String) (env : List (String × STyp)) :

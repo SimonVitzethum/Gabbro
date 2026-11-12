@@ -175,9 +175,36 @@ theorem leihtAt_stufe (u : UProg) (f : UFn) (i : Fin u.marken.length) (s : Nat)
 def lockAt (u : UProg) (l : Fin u.locks.length) : ULock :=
   u.locks.get l
 
+/-- The `n`th signature source of a unit: its functions, then its pointer types. -/
+def sigEintrag (u : UProg) (n : Nat) : Option UFn := (u.fns ++ u.ptrs)[n]?
+
+/-- `sigEintrag` from the unit's cache: one index, no walk of the lists. -/
+def sigEintragSchnell (u : UProg) (n : Nat) : Option UFn :=
+  u.mitMerk (fun c _ _ => c.sig[n]?) (fun _ => (u.fns ++ u.ptrs)[n]?)
+    (fun c h1 h2 => by rw [c.sigTreu, h1, h2, List.getElem?_toArray])
+
+/-- **The cache holds the same entry.** -/
+@[csimp] theorem sigEintrag_eq_schnell : @sigEintrag = @sigEintragSchnell := by
+  funext u n
+  unfold sigEintragSchnell
+  rw [UProg.mitMerk_eq]
+  try rfl
+
 /-- The function at an index. -/
 def fnAt (u : UProg) (f : Fin u.fns.length) : UFn :=
   u.fns.get f
+
+/-- `fnAt` by the unit's signature entries: one index, no walk. -/
+def fnAtSchnell (u : UProg) (f : Fin u.fns.length) : UFn :=
+  match sigEintrag u f.val with
+  | some g => g
+  | none => u.fns.get f
+
+/-- **The entry is the same function.** -/
+@[csimp] theorem fnAt_eq_schnell : @fnAt = @fnAtSchnell := by
+  funext u f
+  unfold fnAt fnAtSchnell sigEintrag
+  rw [List.getElem?_append_left f.isLt, List.getElem?_eq_getElem f.isLt, List.get_eq_getElem]
 
 /-- The field count of a table. -/
 def fieldCount (u : UProg) (t : Fin u.tabs.length) : Nat :=
@@ -344,6 +371,71 @@ def regIdx : (rs : List UReg) → (d n : String) → Except String (Fin rs.lengt
     else match regIdx rest d n with
       | .error e => .error e
       | .ok j => .ok j.succ
+
+/-- The first entry of a name among the numbered functions is the function `fnIdx` finds. -/
+theorem fnIdx_zipIdx (n : String) : ∀ (fns : List UFn) (k : Nat) (p : UFn × Nat),
+    (fns.zipIdx k).find? (fun q => strEq q.1.name n) = some p →
+    ∃ h : p.2 - k < fns.length, k ≤ p.2 ∧ fnIdx fns n = .ok ⟨p.2 - k, h⟩
+  | [], k, p, hf => by
+    simp only [List.zipIdx_nil, List.find?_nil] at hf
+    exact absurd hf (by simp only [reduceCtorEq, not_false_eq_true])
+  | f :: rest, k, p, hf => by
+    by_cases hs : strEq f.name n = true
+    · simp only [List.zipIdx_cons, List.find?_cons, hs, Option.some.injEq] at hf
+      subst hf
+      have hb : (f.name == n) = true := by
+        rw [(strEq_eq _ _).mp hs]
+        exact beq_self_eq_true _
+      refine ⟨by simp only [Nat.sub_self, List.length_cons]; omega, Nat.le_refl _, ?_⟩
+      simp only [fnIdx, hb, if_true]
+      exact congrArg Except.ok (Fin.ext (by simp only [Fin.val_zero, Nat.sub_self]))
+    · have hs' : strEq f.name n = false := Bool.eq_false_iff.mpr hs
+      simp only [List.zipIdx_cons, List.find?_cons, hs'] at hf
+      obtain ⟨h, hk, he⟩ := fnIdx_zipIdx n rest (k + 1) p hf
+      have hb : (f.name == n) = false := by
+        cases hb : f.name == n
+        · rfl
+        · exact absurd ((strEq_eq _ _).mpr (eq_of_beq hb)) hs
+      refine ⟨by simp only [List.length_cons]; omega, by omega, ?_⟩
+      simp only [fnIdx, hb, he, Bool.false_eq_true, if_false]
+      exact congrArg Except.ok (Fin.ext (by simp only [Fin.val_succ]; omega))
+
+/-- A function's number by name in a unit (`fnIdx` on the unit's functions). -/
+@[reducible] def fnNr (u : UProg) (n : String) : Except String (Fin u.fns.length) :=
+  fnIdx u.fns n
+
+/-- `fnNr` from a cache of the unit's functions: one lookup in its name table; an unknown name takes
+    the scan and its error. -/
+def fnNrAus (u : UProg) (n : String) (c : UMerk) (h1 : c.fns = u.fns) :
+    Except String (Fin u.fns.length) :=
+  match hf : c.namen.tafel.finde n with
+  | some p => .ok ⟨p.2, by
+      rw [c.namen.finde_eq, h1] at hf
+      obtain ⟨h, -, -⟩ := fnIdx_zipIdx n u.fns 0 p hf
+      exact h⟩
+  | none => fnIdx u.fns n
+
+theorem fnNrAus_eq (u : UProg) (n : String) (c : UMerk) (h1 : c.fns = u.fns) :
+    fnNrAus u n c h1 = fnIdx u.fns n := by
+  unfold fnNrAus
+  split
+  · next p hf =>
+    rw [c.namen.finde_eq, h1] at hf
+    obtain ⟨h, -, he⟩ := fnIdx_zipIdx n u.fns 0 p hf
+    exact he.symm
+  · rfl
+
+/-- `fnNr` by the unit's cache. -/
+def fnNrSchnell (u : UProg) (n : String) : Except String (Fin u.fns.length) :=
+  u.mitMerk (fun c h1 _ => fnNrAus u n c h1) (fun _ => fnIdx u.fns n)
+    (fun c h1 _ => fnNrAus_eq u n c h1)
+
+/-- **The table names the same number.** -/
+@[csimp] theorem fnNr_eq_schnell : @fnNr = @fnNrSchnell := by
+  funext u n
+  unfold fnNrSchnell
+  rw [UProg.mitMerk_eq]
+  try rfl
 
 /-- The mirror of a register (`mirrors R from M`): a register of the same device. -/
 def spiegelAt (u : UProg) (r : Fin u.regs.length) : Option (Fin u.regs.length) :=

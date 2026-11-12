@@ -1,4 +1,5 @@
 module
+public import Std.Data.HashSet.Lemmas
 public import Grammatik.Parser.Elab.Instantiation.Statements
 public import Grammatik.Parser.Elab.Uebersetze.Tagged.Schema
 @[expose] public section
@@ -157,6 +158,17 @@ def functionNames (source : List SItemTief) : List String :=
 /-- Unknown direct global references fail this check as well as missing generated targets. -/
 def closed (source : List SItemTief) : Bool :=
   (directReferences source).all ((functionNames source).contains)
+
+/-- `closed` against a set of the declared names (a list scan per reference was n² for n functions). -/
+def closedSchnell (source : List SItemTief) : Bool :=
+  let names := Std.HashSet.ofList (functionNames source)
+  (directReferences source).all fun name => names.contains name
+
+/-- **The set decides the same closedness.** -/
+@[csimp] theorem closed_eq_schnell : @closed = @closedSchnell := by
+  funext source
+  unfold closed closedSchnell
+  simp only [Std.HashSet.contains_ofList]
 
 /-- Boolean closedness is exactly membership in the output's declaration list. -/
 theorem closed_sound (source : List SItemTief) (h : closed source = true) :

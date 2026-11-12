@@ -96,17 +96,17 @@ theorem adaptParams_druck (ps : List (String × STyp)) (hg : ∀ p ∈ ps, TypGu
       List.cons.injEq, nameTok_ne_zeichen, false_and, imp_self, implies_true, hL]
 
 /-- A printed ordinary signature always takes the ordinary function dispatch, whatever follows it. -/
-theorem istAdaptKopf_sigToks (sig : FnSig) (hs : SigGut sig) (R : List Token) :
-    istAdaptKopf (sigToks sig ++ R) = false := by
+theorem istAdaptKopf_sigToks (sig : FnSig) (hs : SigGut sig) (R : List Token) (F : Nat)
+    (hF : 8 * (sigToks sig).length + 35 ≤ F) :
+    istAdaptKopf F (sigToks sig ++ R) = false := by
   let tail := resToks sig.res ++ fehlerToks sig.fehler ++ druckKlauseln sig.klauseln ++ R
   have hd : sigToks sig ++ R = .wort "fn" :: nameTok sig.name :: .zeichen "(" ::
       (druckParams sig.params ++ .zeichen ")" :: tail) := by
     simp only [sigToks_eq sig hs.2.2.2.2, tail, List.cons_append, List.nil_append, List.append_assoc]
+  rw [sigToks_eq sig hs.2.2.2.2] at hF
   rw [hd]
-  have hP := adaptParams_druck sig.params hs.2.1 tail
-    (8 * (.wort "fn" :: nameTok sig.name :: .zeichen "(" ::
-      (druckParams sig.params ++ .zeichen ")" :: tail)).length + 40)
-    (by simp only [List.length_cons, List.length_append]; omega)
+  have hP := adaptParams_druck sig.params hs.2.1 tail F
+    (by simp only [List.length_cons, List.length_append, List.length_nil] at hF; omega)
   simp only [istAdaptKopf, nameText_nameTok, hP]
   have h : ∀ ps : List (String × STyp),
       (ps.map (fun p => SAdaptParam.neu p.1 p.2)).any (fun p => match p with

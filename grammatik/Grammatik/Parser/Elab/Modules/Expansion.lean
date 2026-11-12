@@ -147,7 +147,7 @@ def expandRaw (items : List SItemTief) : Except String Expansion := do
       { locations, occupied := occupiedList [] items, remaining := Generic.sourceSize items + 1 }
     let env ← argumentEnvironment base work
     let target ← work.locations.mapM (resolve env base work.locations)
-    let sourceNames := base.namen.map (schluessel base.namen)
+    let sourceNames := schluesselAlle base.namen
     let mut names := sourceNames
     for (_, name) in instanceKeys work.locations do
       if names.contains name then throw "parametric-module-name-collision: generated name is already declared"

@@ -64,7 +64,7 @@ freedom, contracts), proved terminating, deterministic and correct with GabbroV.
   again (fixpoint), and the diverse double compilation compares the runner's run with the native binary.
 
 **Current scope (2026-10-31).** Stage 0 only compiles accepted Gabbro source into S0IR images:
-`stage0 --ir PROGRAM.gab IMAGE`. The former Lean source runtime, fast interpreter, replay execution,
+`stage0 --ir SOURCE.gab [SOURCE.gab ...] IMAGE` (several files form one unit). The former Lean source runtime, fast interpreter, replay execution,
 system-call trampoline and their generators are removed. They are not a fallback or a development target.
 The assembly runner executes the images and may be corrected for concrete missing execution capabilities.
 The active work is complete Gabbro-to-IR coverage; independent cost, timing or hardware projects are outside

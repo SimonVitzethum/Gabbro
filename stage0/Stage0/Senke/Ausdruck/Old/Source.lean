@@ -34,10 +34,15 @@ def normalizeItem : SItemTief → SItemTief
       | k => k} body
   | item => item
 
-def clauses (items : List SItemTief) (name : String) : List SExpr :=
-  match items.find? (fun item => match item with | .fnT sig _ => sig.name == name | _ => false) with
-  | some (.fnT sig _) => sig.klauseln.filterMap fun k => match k with | .gives e => some e | _ => none
-  | _ => []
+/-- The heads of the source functions, by name (built once per restoration: a scan of the items for
+    every function was n² for n functions). -/
+def koepfeVon (items : List SItemTief) : Tafel FnSig (·.name) :=
+  Tafel.von _ (items.filterMap fun item => match item with | .fnT sig _ => some sig | _ => none)
+
+def clauses (koepfe : Tafel FnSig (·.name)) (name : String) : List SExpr :=
+  match koepfe.finde name with
+  | some sig => sig.klauseln.filterMap fun k => match k with | .gives e => some e | _ => none
+  | none => []
 
 /-- Preserve the declared type and guard proof when selecting the existing entry-read constructor. -/
 def oldGlobal {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} :
@@ -104,9 +109,9 @@ def predicates (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (e
       pure (.and (← predicate u Γ Λ fn er a x) (← predicates u Γ Λ fn er rest xs))
   | _, _ => .error "ir: old(global) postcondition count mismatch"
 
-def atFunction (items : List SItemTief) (u : UProg) (P : Programm (declOf u))
+def atFunction (koepfe : Tafel FnSig (·.name)) (u : UProg) (P : Programm (declOf u))
     (f : Fin u.fns.length) : Except String (EnsTy u f) := do
-  let src := clauses items (fnAt u f).name
+  let src := clauses koepfe (fnAt u f).name
   if !src.any hasEntry then return P.ensures f
   let e ← predicates u (ErgCtx (ctxOf u f) ((verOf u f).erg)) (verOf u f).ende
     (fnAt u f) (fnAt u f).ergTy src (fnAt u f).gives
@@ -124,44 +129,21 @@ def collect : (n : Nat) → (T : Fin n → Type) → ((i : Fin n) → Except Str
       let tail ← collect n (fun i => T i.succ) (fun i => get i.succ)
       pure (Fin.cases head tail)
 
-/-- `collect` with direct selection: reading entry `i` visits no smaller index. -/
-def collectDirekt : (n : Nat) → (T : Fin n → Type) → ((i : Fin n) → Except String (T i)) →
-    Except String ((i : Fin n) → T i)
-  | 0, _, _ => pure (fun i => nomatch i)
-  | n + 1, T, get => do
-    let head ← get 0
-    let tail ← collectDirekt n (fun i => T i.succ) (fun i => get i.succ)
-    pure (casesDirekt head tail)
-
-theorem collectDirekt_eq : ∀ (n : Nat) (T : Fin n → Type) (get : (i : Fin n) → Except String (T i)),
-    collectDirekt n T get = collect n T get
+theorem collect_eq_sammle : ∀ (n : Nat) (T : Fin n → Type) (get : (i : Fin n) → Except String (T i)),
+    collect n T get = sammle n T get
   | 0, _, _ => rfl
   | n + 1, T, get => by
-    simp only [collectDirekt, collect, collectDirekt_eq n, casesDirekt_eq]
+    simp only [collect, sammle, collect_eq_sammle n]
 
-/-- The collected family, read through a table filled once. The table is built before the reader
-    exists: a reader that built it itself would build it again at every access. -/
-def collectSchnell (n : Nat) (T : Fin n → Type) (get : (i : Fin n) → Except String (T i)) :
-    Except String ((i : Fin n) → T i) :=
-  match collectDirekt n T get with
-  | .error e => .error e
-  | .ok values =>
-    let table := Memo.build values
-    .ok fun i => table.get i
-
-/-- **The table changes no collected family.** -/
-@[csimp] theorem collect_eq_schnell : @collect = @collectSchnell := by
+/-- **Compiled code collects through a table filled once** (`sammleSchnell`). -/
+@[csimp] theorem collect_eq_schnell : @collect = @sammleSchnell := by
   funext n T get
-  unfold collectSchnell
-  rw [collectDirekt_eq]
-  cases collect n T get with
-  | error e => rfl
-  | ok values => exact congrArg Except.ok (funext fun i => (Memo.build_get values i).symm)
+  rw [collect_eq_sammle, sammle_eq_schnell]
 
 def restore (items : List SItemTief) (u : UProg) (P : Programm (declOf u)) :
     Except String (Programm (declOf u)) := do
   let expanded ← expandU items
-  let es ← collect u.fns.length (EnsTy u) (atFunction expanded.1 u P)
+  let es ← collect u.fns.length (EnsTy u) (atFunction (koepfeVon expanded.1) u P)
   pure {P with ensures := es}
 
 /-- Entry-postcondition restoration preserves the exact invariant family. -/
@@ -173,7 +155,7 @@ theorem restore_invariante (items : List SItemTief) (u : UProg)
   | error error => simp only [hx, bind, Except.bind, reduceCtorEq] at h
   | ok expanded =>
     simp only [hx, bind, Except.bind] at h
-    cases hs : collect u.fns.length (EnsTy u) (atFunction expanded.1 u P) with
+    cases hs : collect u.fns.length (EnsTy u) (atFunction (koepfeVon expanded.1) u P) with
     | error error => simp only [hs, bind, Except.bind, reduceCtorEq] at h
     | ok es =>
       simp only [hs, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at h
@@ -230,7 +212,7 @@ theorem restore_axVertrag (items : List SItemTief) (u : UProg)
   | error error => simp only [hx, bind, Except.bind, reduceCtorEq] at h
   | ok expanded =>
     simp only [hx, bind, Except.bind] at h
-    cases hs : collect u.fns.length (EnsTy u) (atFunction expanded.1 u P) with
+    cases hs : collect u.fns.length (EnsTy u) (atFunction (koepfeVon expanded.1) u P) with
     | error error => simp only [hs, bind, Except.bind, reduceCtorEq] at h
     | ok es =>
       simp only [hs, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at h

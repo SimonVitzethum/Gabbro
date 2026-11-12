@@ -61,4 +61,109 @@ theorem casesDirekt_eq {n : Nat} {motive : Fin (n + 1) → Type} (zero : motive 
   | zero => rfl
   | succ j => rfl
 
+
+/-- Whether a result is a value. -/
+def wertDa {α : Type} : Except String α → Bool
+  | .ok _ => true
+  | .error _ => false
+
+/-- The error of a result, if it is one. -/
+def fehlerVon {α : Type} : Except String α → Option String
+  | .ok _ => none
+  | .error e => some e
+
+namespace Memo
+
+variable {n : Nat} {T : Fin n → Type}
+
+/-- The values of a table of results that all succeeded. -/
+def werte (m : Memo fun i => Except String (T i)) (h : ∀ i, wertDa (m.get i) = true) (i : Fin n) : T i :=
+  match hr : m.get i with
+  | .ok v => v
+  | .error _ => by
+    have bad := h i
+    rw [hr] at bad
+    exact Bool.noConfusion bad
+
+/-- Every entry is its value. -/
+theorem werte_get (m : Memo fun i => Except String (T i)) (h : ∀ i, wertDa (m.get i) = true) (i : Fin n) :
+    m.get i = .ok (m.werte h i) := by
+  unfold werte
+  split
+  · next v hr => exact hr
+  · next e hr =>
+    have bad := h i
+    rw [hr] at bad
+    exact Bool.noConfusion bad
+
+end Memo
+
+/-- Evaluate a dependent family of results once: the first error, or every value at its own index. -/
+def sammle : (n : Nat) → (T : Fin n → Type) → ((i : Fin n) → Except String (T i)) →
+    Except String ((i : Fin n) → T i)
+  | 0, _, _ => pure (fun i => nomatch i)
+  | n + 1, T, get => do
+      let head ← get 0
+      let tail ← sammle n (fun i => T i.succ) (fun i => get i.succ)
+      pure (Fin.cases head tail)
+
+/-- A family whose entries all succeed collects to its values. -/
+theorem sammle_ok : ∀ (n : Nat) (T : Fin n → Type) (get : (i : Fin n) → Except String (T i))
+    (v : (i : Fin n) → T i), (∀ i, get i = .ok (v i)) → sammle n T get = .ok v
+  | 0, _, _, _, _ => congrArg Except.ok (funext fun i => nomatch i)
+  | n + 1, T, get, v, h => by
+    have ht := sammle_ok n (fun i => T i.succ) (fun i => get i.succ) (fun i => v i.succ)
+      (fun i => h i.succ)
+    simp only [sammle, h 0, ht, bind, Except.bind, pure, Except.pure]
+    exact congrArg Except.ok (funext fun i => by
+      cases i using Fin.cases with
+      | zero => rfl
+      | succ j => rfl)
+
+/-- A family collects to its first error. -/
+theorem sammle_fehler : ∀ (n : Nat) (T : Fin n → Type) (get : (i : Fin n) → Except String (T i))
+    (e : String), (List.finRange n).findSome? (fun i => fehlerVon (get i)) = some e →
+    sammle n T get = .error e
+  | 0, _, _, _, h => by
+    simp only [List.finRange_zero, List.findSome?_nil, reduceCtorEq] at h
+  | n + 1, T, get, e, h => by
+    rw [List.finRange_succ, List.findSome?_cons] at h
+    cases h0 : get 0 with
+    | error e0 =>
+      simp only [h0, fehlerVon, Option.some.injEq] at h
+      simp only [sammle, h0, h, bind, Except.bind]
+    | ok v0 =>
+      simp only [h0, fehlerVon, List.findSome?_map, Function.comp_def] at h
+      have ht := sammle_fehler n (fun i => T i.succ) (fun i => get i.succ) e h
+      simp only [sammle, h0, ht, bind, Except.bind]
+
+/-- The collected family read from a table of the results. `sonst` is asked only when the table
+    shows neither every value nor an error, which never happens (`sammle_eq_schnell`). -/
+def sammleAus {n : Nat} {T : Fin n → Type} (table : Memo fun i => Except String (T i))
+    (sonst : Unit → Except String ((i : Fin n) → T i)) : Except String ((i : Fin n) → T i) :=
+  if h : (List.finRange n).all (fun i => wertDa (table.get i)) = true then
+    .ok (table.werte fun i => List.all_eq_true.mp h i (List.mem_finRange i))
+  else match (List.finRange n).findSome? (fun i => fehlerVon (table.get i)) with
+    | some e => .error e
+    | none => sonst ()
+
+/-- `sammle` over a table filled once: every entry is evaluated at its own index and read directly.
+    (The recursion passes `get i.succ` down, so entry `i` was reached through `i` closures.) -/
+def sammleSchnell (n : Nat) (T : Fin n → Type) (get : (i : Fin n) → Except String (T i)) :
+    Except String ((i : Fin n) → T i) :=
+  sammleAus (Memo.build get) (fun _ => sammle n T get)
+
+/-- **The table changes no collected family.** -/
+@[csimp] theorem sammle_eq_schnell : @sammle = @sammleSchnell := by
+  funext n T get
+  unfold sammleSchnell sammleAus
+  split
+  · next h =>
+    exact sammle_ok n T get _ fun i => by
+      rw [← Memo.werte_get, Memo.build_get]
+  · split
+    · next e he =>
+      simp only [Memo.build_get] at he
+      exact sammle_fehler n T get e he
+    · rfl
 end Gabbro.Grammatik.Parser

@@ -54,39 +54,16 @@ def collect : (n : Nat) → (T : Fin n → Type) → ((i : Fin n) → Except Str
     let tail ← collect n (fun i => T i.succ) (fun i => get i.succ)
     pure (Fin.cases head tail)
 
-/-- `collect` with direct selection: reading entry `i` visits no smaller index. -/
-def collectDirekt : (n : Nat) → (T : Fin n → Type) → ((i : Fin n) → Except String (T i)) →
-    Except String ((i : Fin n) → T i)
-  | 0, _, _ => pure (fun i => nomatch i)
-  | n + 1, T, get => do
-    let head ← get 0
-    let tail ← collectDirekt n (fun i => T i.succ) (fun i => get i.succ)
-    pure (casesDirekt head tail)
-
-theorem collectDirekt_eq : ∀ (n : Nat) (T : Fin n → Type) (get : (i : Fin n) → Except String (T i)),
-    collectDirekt n T get = collect n T get
+theorem collect_eq_sammle : ∀ (n : Nat) (T : Fin n → Type) (get : (i : Fin n) → Except String (T i)),
+    collect n T get = sammle n T get
   | 0, _, _ => rfl
   | n + 1, T, get => by
-    simp only [collectDirekt, collect, collectDirekt_eq n, casesDirekt_eq]
+    simp only [collect, sammle, collect_eq_sammle n]
 
-/-- The collected family, read through a table filled once. The table is built before the reader
-    exists: a reader that built it itself would build it again at every access. -/
-def collectSchnell (n : Nat) (T : Fin n → Type) (get : (i : Fin n) → Except String (T i)) :
-    Except String ((i : Fin n) → T i) :=
-  match collectDirekt n T get with
-  | .error e => .error e
-  | .ok values =>
-    let table := Memo.build values
-    .ok fun i => table.get i
-
-/-- **The table changes no collected family.** -/
-@[csimp] theorem collect_eq_schnell : @collect = @collectSchnell := by
+/-- **Compiled code collects through a table filled once** (`sammleSchnell`). -/
+@[csimp] theorem collect_eq_schnell : @collect = @sammleSchnell := by
   funext n T get
-  unfold collectSchnell
-  rw [collectDirekt_eq]
-  cases collect n T get with
-  | error e => rfl
-  | ok values => exact congrArg Except.ok (funext fun i => (Memo.build_get values i).symm)
+  rw [collect_eq_sammle, sammle_eq_schnell]
 
 /-- Lower all original measures over the complete function enumeration; none is guessed. -/
 def lowerMeasures (u : UProg) : Except String (Export u) := do

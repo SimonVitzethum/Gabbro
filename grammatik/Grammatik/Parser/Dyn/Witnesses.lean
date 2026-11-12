@@ -43,7 +43,7 @@ set_option maxHeartbeats 4000000
 -- in every pass; no constructor, callback context or refusal is bypassed.
 attribute [local cbv_opaque]
   Spec.Walk.expr Spec.Walk.type Spec.Walk.statement Spec.Walk.statements
-  Spec.Walk.item Spec.Walk.constant Spec.resolveKnownBodies Spec.resolveKnownWith Spec.inferType
+  Spec.Walk.item Spec.Walk.constant Spec.resolveKnownBodies Spec.resolveKnownWith Spec.inferType Spec.inferTypeMit
   Spec.canonicalType Spec.expandEffects Uebersetze.sErsetze Uebersetze.uKonstEval
   SourceFolds.hasRangeFold SourceFolds.hasRangeFoldList SourceFolds.hasRangeFoldAnw SourceFolds.hasRangeFoldAnwList
   SourceFolds.tagFoldNodes SourceFolds.tagFoldNodesList SourceFolds.expandNested statementProducers
@@ -52,7 +52,7 @@ attribute [local cbv_opaque]
 attribute [local cbv_eval]
   Spec.Walk.expr.eq_def Spec.Walk.type.eq_def Spec.Walk.statement.eq_def
   Spec.Walk.statements.eq_def Spec.Walk.item.eq_def Spec.Walk.constant.eq_def
-  Spec.resolveKnownBodies.eq_def Spec.resolveKnownWith.eq_def Spec.inferType.eq_def Spec.canonicalType.eq_def
+  Spec.resolveKnownBodies.eq_def Spec.resolveKnownWith.eq_def Spec.inferType.eq_def Spec.inferTypeMit.eq_def Spec.canonicalType.eq_def
   Spec.expandEffects.eq_def Uebersetze.sErsetze.eq_def Uebersetze.uKonstEval.eq_def
   SourceFolds.hasRangeFold.eq_def SourceFolds.hasRangeFoldList.eq_def SourceFolds.hasRangeFoldAnw.eq_def
   SourceFolds.hasRangeFoldAnwList.eq_def SourceFolds.tagFoldNodes.eq_def SourceFolds.tagFoldNodesList.eq_def

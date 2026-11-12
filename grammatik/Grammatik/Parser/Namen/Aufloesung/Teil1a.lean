@@ -227,6 +227,21 @@ def schluessel (namen : List Pfad) (c : Pfad) : String :=
   if (namen.filter fun q => strEq (letzter q) (letzter c)).length == 1 then letzter c
   else "::".intercalate c
 
+/-- The keys of all declared paths, in order. -/
+@[reducible] def schluesselAlle (namen : List Pfad) : List String :=
+  namen.map (schluessel namen)
+
+/-- `schluesselAlle` with the short names counted once (each key counted them again: n² for n items). -/
+def schluesselAlleSchnell (namen : List Pfad) : List String :=
+  let anzahl := zaehle (namen.map letzter)
+  namen.map fun c => if anzahl.getD (letzter c) 0 == 1 then letzter c else "::".intercalate c
+
+/-- **The counted keys are the keys.** -/
+@[csimp] theorem schluesselAlle_eq_schnell : @schluesselAlle = @schluesselAlleSchnell := by
+  funext namen
+  unfold schluesselAlle schluesselAlleSchnell schluessel
+  simp only [zaehle_getD, List.filter_map, List.length_map, Function.comp_def]
+
 /-- The short name of a non-empty path is one of its segments. -/
 theorem letzter_mem {c : Pfad} (h : c ≠ []) : letzter c ∈ c := by
   unfold letzter

@@ -14,7 +14,7 @@ def outputNames (items : List SItemTief) : List String := items.filterMap Generi
 def userNames (items : List SItemTief) : List String :=
   let ordinary := ordinaryList items
   let source := Aufloesung.quelle ordinary
-  source.namen.map (Aufloesung.schluessel source.namen) ++ outputNames (Uebersetze.uMembers ordinary)
+  Aufloesung.schluesselAlle source.namen ++ outputNames (Uebersetze.uMembers ordinary)
 
 structure Prepared where
   items : List SItemTief

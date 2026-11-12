@@ -25,10 +25,8 @@ structure Walk where
   infer : Locals → SExpr → Option STyp := fun _ _ => none
   expected : Option STyp := none
   result : Option STyp := none
-  /-- The materialized source, computed once per walk. Every walk is built with this default. -/
-  concrete : List SItemTief := materialize source
-  /-- The function heads of the materialized source, computed once per walk (default only). -/
-  heads : Tafel FnSig (·.name) := Tafel.von _ (functionHeads (materialize source))
+  /-- What type inference reads from the materialized source, built once per walk (default only). -/
+  umfeld : Umfeld := Umfeld.von (materialize source)
   /-- The spec groups of the source, computed once per walk (default only). -/
   specGroups : List Group := groups source
 
@@ -48,7 +46,7 @@ def Walk.expr (w : Walk) (locals : Locals) : Nat → SExpr → Except String SEx
     let e ← (do
       match e with
       | .call name args => do
-        let signature := w.heads.finde name
+        let signature := w.umfeld.heads.finde name
         let args ← args.zipIdx.mapM fun (arg, index) => do
           let expected := signature.bind fun s => (s.params[index]?).map Prod.snd
           { w with expected }.expr locals f arg
@@ -141,10 +139,10 @@ def Walk.signature (w : Walk) (s : FnSig) : Except String FnSig := do
                   klauseln := ← s.klauseln.mapM (w.clause params) }
 
 /-- New bindings affect the remainder of their block, including inferred let types. -/
-def bindings (items : List SItemTief) (locals : Locals)
+def bindings (U : Umfeld) (locals : Locals)
     (infer : Locals → SExpr → Option STyp) : SAnw → Locals
   | .bind _ n t e | .bindQ _ n t e | .bindElse n t e _ _ | .bindAxiomOpt n t e | .bindAxiomOptElse n t e _ _ =>
-    match t.orElse (fun _ => (infer locals e).orElse (fun _ => inferType items locals 128 e)) with
+    match t.orElse (fun _ => (infer locals e).orElse (fun _ => inferTypeMit U locals 128 e)) with
     | some ty => [(n, ty)]
     | none => []
   | .await n t _ _ | .swap n t _ _ => (t.map fun ty => [(n, ty)]).getD []
@@ -219,7 +217,7 @@ def Walk.statement (w : Walk) (locals : Locals) : Nat → SAnw → Except String
       return .bindAxiomOptElse n t (← { w with expected := t }.expr locals f e) why (← st body)
     | .set a op b =>
       let a ← ex a
-      let expected ← (inferType w.concrete locals 128 a).mapM ty
+      let expected ← (inferTypeMit w.umfeld locals 128 a).mapM ty
       return .set a op (← { w with expected }.expr locals f b)
     | .shift e a b => return .shift (← ex e) a b
     | .call name args =>
@@ -281,7 +279,7 @@ def Walk.statements (w : Walk) (locals : Locals) : Nat → List SAnw → Except 
   | f + 1, s :: ss => do
     let s ← w.statement locals f s
     let names := Aufloesung.gebunden s
-    let locals := bindings w.concrete locals w.infer s ++
+    let locals := bindings w.umfeld locals w.infer s ++
       locals.filter (fun p => !(names.any (strEq p.1)))
     let (ss, env) ← w.statements locals f ss
     return (s :: ss, env)

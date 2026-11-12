@@ -58,12 +58,13 @@ def parseAdaptParams (f : Nat) (toks : List Token) :
 
 /-- Whether a function head contains an adapter-only parameter. Reuse the parameter
     reader so `..` and `-name` count only at the start of a parameter, never inside
-    its type or expressions. Malformed parameters fall through to the ordinary
+    its type or expressions. The fuel is the caller's (a fuel computed from the length of
+    the remaining tokens made a unit of n functions cost n² here). Malformed parameters fall through to the ordinary
     reader, which reports the error; the variadic `...` marker is not an adapter. -/
-def istAdaptKopf (toks : List Token) : Bool :=
+def istAdaptKopf (f : Nat) (toks : List Token) : Bool :=
   match toks with
   | .wort _ :: t :: rest => match nameText t with
-    | some _ => match parseAdaptParams (8 * toks.length + 40) rest with
+    | some _ => match parseAdaptParams f rest with
       | .ok (ps, _) => ps.any fun p => match p with
         | .alle | .ohne _ => true
         | .neu _ _ => false
@@ -239,7 +240,7 @@ def parseItemKopfTief (f : Nat) (toks : List Token) :
         else if strEq s "module" then parseModulTief f nach
         else if strEq s "use" then parseUseTief nach
         else if strEq s "fn" then
-          if istAdaptKopf nach then parseAdapt f (letzteArt mods) nach
+          if istAdaptKopf f nach then parseAdapt f (letzteArt mods) nach
           else match parseFnSig f (letzteArt mods) nach with
             | .error e => .error e
             | .ok (sig, r) => parseFnRest f sig r

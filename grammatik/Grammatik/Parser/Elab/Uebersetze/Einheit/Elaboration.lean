@@ -146,13 +146,15 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   | .error e => .error e
   | .ok axs =>
   let koepfe := kopfPaare.map (·.1) ++ axKoepfe ++ zeigerPaare.map (·.1)
+  -- The unit's `spec fn`s, collected once (inside the function loop this was a scan per function).
+  let specFns := ms.filterMap (fun | .specT sg body => some (sg.name, sg.params.map (·.1), body) | _ => none)
   -- C16: every `can_fail` body elaborates into its generated Boolean producer now.
-  match uProbeFns consts alias tabs locks globs koepfe whys sums devs regs zustaende (ms.filterMap (fun | .specT sg body => some (sg.name, sg.params.map (·.1), body) | _ => none)) constants zeiger zb (fnItems.map (fun (s, _) => s.name) ++ axKoepfe.map (·.name) ++ zeigerPaare.map (fun p => p.1.name)) (ms.filterMap (fun | .checkT c => some c | _ => none)) spaces eigner with
+  match uProbeFns consts alias tabs locks globs koepfe whys sums devs regs zustaende specFns constants zeiger zb (fnItems.map (fun (s, _) => s.name) ++ axKoepfe.map (·.name) ++ zeigerPaare.map (fun p => p.1.name)) (ms.filterMap (fun | .checkT c => some c | _ => none)) spaces eigner with
   | .error e => .error e
   | .ok probeFns =>
   match uSeq (fnItems.map (fun (s, b) =>
       elabUFunktion (spaces := spaces) (valueScope := valueScope) (eigner := eigner) consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb
-        (ms.filterMap (fun | .specT sg body => some (sg.name, sg.params.map (·.1), body) | _ => none))
+        specFns
         constants)) with
   | .error e => .error e
   | .ok fns =>

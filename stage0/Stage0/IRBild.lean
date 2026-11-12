@@ -1,6 +1,6 @@
 /-
   File:      stage0/Stage0/IRBild.lean
-  Subject:   `stage0 --ir PROGRAM.gab IMAGE`: the program checked by the goal theorem's checker Bool, lowered to G
+  Subject:   `stage0 --ir SOURCE.gab [SOURCE.gab ...] IMAGE`: the program checked by the goal theorem's checker Bool, lowered to G
              (`lowerAllg`), every function lowered to `S0IR` (`Senke/`), laid out as an image the runner loads.
 -/
 module

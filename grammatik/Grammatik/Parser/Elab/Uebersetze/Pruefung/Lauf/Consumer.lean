@@ -67,7 +67,8 @@ def uSelectCheckConsumer (u : UProg) (selection : CheckConsumerSelection) :
     | .error ("selected check wrapper unknown: " ++ selection.gate)
   let consumer := uCheckConsumer c selection.gate wrapper
   let driver := uCheckDriver c selection.gate consumer
-  pure { u with fns := u.fns ++ [consumer, driver] }
+  let fns := u.fns ++ [consumer, driver]
+  pure { u with fns := fns, merk := UMerk.von fns u.ptrs }
 
 /-- Configuration is a list of independent invocations, each with its own
     input permit. A selection never duplicates the token across gate names. -/

@@ -97,7 +97,7 @@ private def call_head (u : UProg) (f callee : Fin u.fns.length) (name : String) 
     { actual : RufKopf u f (ctxOf u f) (resOf u f) //
       lowRufKopf u f (ctxOf u f) (fnAt u f) (resOf u f) name raw = .ok actual } := by
   refine ⟨?_, by
-    erw [lowRufKopf, found]
+    erw [lowRufKopf, fnNr, found]
     dsimp only
     erw [arguments.property]
     dsimp only

@@ -1,5 +1,6 @@
 module
 
+public import Grammatik.Parser.Lex.Tafel
 public import Grammatik.Korpus.Programme.Export104
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.Export.ExportMetadata
@@ -285,6 +286,21 @@ structure UGuest where
   service : String
   deriving DecidableEq, Repr
 
+/-- What compiled code reads instead of walking a unit's function lists: the signatures (`fns`, then
+    `ptrs`) as an array and the functions by name with their positions. It records the lists it was
+    built from; a reader uses it only for a unit whose lists are these (`UProg.mitMerk`). -/
+structure UMerk where
+  fns : List UFn
+  ptrs : List UFn
+  sig : Array UFn
+  sigTreu : sig = (fns ++ ptrs).toArray
+  namen : Tafel.Fest (fun p : UFn × Nat => p.1.name) fns.zipIdx
+
+/-- The cache of two function lists. `cbv` keeps it folded: a witness that evaluates a unit never
+    evaluates its tables. -/
+@[cbv_opaque] def UMerk.von (fns ptrs : List UFn) : Merk UMerk :=
+  Merk.von ⟨fns, ptrs, _, rfl, Tafel.fest _ _⟩
+
 /-- The elaborated program and its original-source export admission. -/
 structure UProg where
   tabs : List UTab
@@ -346,7 +362,43 @@ structure UProg where
   eigner : List String := []
   /-- Declared linear mark orders; an absent or empty order has one stage. -/
   markOrders : List (String × List String) := []
+  /-- The lookups of the function lists for compiled code (`UMerk`). A cache: it is equal in every
+      unit, and a unit that keeps the cache of other lists is still read correctly, only slowly. A pass
+      that replaces `fns` or `ptrs` sets `merk := UMerk.von _ _` again. -/
+  merk : Merk UMerk := UMerk.von fns ptrs
   deriving DecidableEq, Repr
+
+/-- One read of a cache for a unit: the fast answer when the cache was built from the unit's own lists
+    (the same objects, so the comparison is one pointer test each), else the direct answer. -/
+@[inline] def UMerk.lies {β : Type} (u : UProg)
+    (schnell : (c : UMerk) → c.fns = u.fns → c.ptrs = u.ptrs → β) (langsam : Unit → β) (c : UMerk) : β :=
+  match withPtrEqDecEq c.fns u.fns (fun _ => inferInstance),
+      withPtrEqDecEq c.ptrs u.ptrs (fun _ => inferInstance) with
+  | isTrue h1, isTrue h2 => schnell c h1 h2
+  | _, _ => langsam ()
+
+theorem UMerk.lies_eq {β : Type} (u : UProg)
+    (schnell : (c : UMerk) → c.fns = u.fns → c.ptrs = u.ptrs → β) (langsam : Unit → β)
+    (h : ∀ c h1 h2, schnell c h1 h2 = langsam ()) (c : UMerk) :
+    UMerk.lies u schnell langsam c = langsam () := by
+  unfold UMerk.lies
+  split
+  · exact h _ _ _
+  · rfl
+
+/-- Answer from the unit's cache where it fits, else directly. Both are `langsam ()`
+    (`UProg.mitMerk_eq`): the cache only makes the answer cheaper. -/
+@[inline] def UProg.mitMerk {β : Type} (u : UProg)
+    (schnell : (c : UMerk) → c.fns = u.fns → c.ptrs = u.ptrs → β) (langsam : Unit → β)
+    (h : ∀ c h1 h2, schnell c h1 h2 = langsam ()) : β :=
+  u.merk.lies (UMerk.lies u schnell langsam)
+    (fun a b => (UMerk.lies_eq u schnell langsam h a).trans (UMerk.lies_eq u schnell langsam h b).symm)
+
+/-- **A cached answer is the direct answer.** -/
+theorem UProg.mitMerk_eq {β : Type} (u : UProg)
+    (schnell : (c : UMerk) → c.fns = u.fns → c.ptrs = u.ptrs → β) (langsam : Unit → β)
+    (h : ∀ c h1 h2, schnell c h1 h2 = langsam ()) : u.mitMerk schnell langsam h = langsam () :=
+  Merk.lies_eq _ _ _ _ (UMerk.lies_eq u schnell langsam h)
 
 /-- The declared labels of one nominal mark, in source order. -/
 def markStages (u : UProg) (m : Fin u.marken.length) : List String :=
