@@ -12,8 +12,8 @@ measured today by `instrumente/pruefe-gabbrov.py`.*
 > **What GabbroV is, in one sentence.** The part of Gabbro that takes what a person must still
 > say — the logic obligations of their program — states it as Lean, checks it against a model of
 > the program computed from the **source text** by generic theorems, and names what stays open.
-> It proves nothing about machine code; its proofs do not establish final-byte correspondence
-> (that is the translation-validation route, `PLAN-TRANSLATION-VALIDATION.md`). Where it meets
+> Its user-logic proofs do not establish final-byte correspondence; the full compiler's generic GIR route
+> is specified in [MACHINE-IR-PLAN.md](MACHINE-IR-PLAN.md), without translation validation. Where it meets
 > the goal theorem is the bridge of §14: it *derives* premise (b) of `PROOF.md` B1 for the
 > programs the Lean front end elaborates.
 
@@ -34,29 +34,37 @@ and assumptions only**. Over the ten fragments of `FRAGMENTS.md`, the retired `P
 (counted by the retired `zaehle-pflichten`, booked 2026-09) books `239 = 173 K + 66 L`: about a quarter
 of the obligations reach GabbroV.
 
-**Components** (all in the tree):
+**Components** (current Lean path and historical Rust interfaces, corrected 2026-11-12):
 
 | Component | Where | Role |
 |---|---|---|
-| the obligation manifest | `gabbro obligations` / `pflichten`, `crates/gabbro-check/src/pflichten.rs` | one line per open logic obligation (§2) |
-| the manifest harness | `gabbro gabbrov pruefe --manifest M --spec S`, `gabbrov.rs` | each line against a specification: passed / refuted / undecided; E1 wired in |
-| the Lean `Body` channel | `programmlogik/` (§13), `gabbro prove`, `lean.rs`, `beweis.rs` | the duties as Lean statements over a model of the body; GREEN / OWED / RED |
-| the specification channel | `gabbro lean a.gab b.gab`, `programmlogik/gabbrov/V1.lean`, `V2.lean` | the program as a Lean datum; a specification written by hand (§7) |
+| the obligation manifest | historical Rust `gabbro obligations` / `pflichten`, `crates/gabbro-check/src/pflichten.rs` | Deleted on 2026-11-10; duty files are tracked inputs until the Lean generator V1 of PLAN-COMPILER-READY exists. |
+| the manifest harness | historical Rust `gabbro gabbrov pruefe --manifest M --spec S`, `gabbrov.rs` | Deleted with Rust; the current Lean bridge is in `bruecke/`, with tracked duty inputs. |
+| the Lean `Body` channel | `programmlogik/` (§13); historical Rust `gabbro prove`, `lean.rs`, `beweis.rs` | The model remains; the deleted Rust driver is history, and the bridge consumes tracked duties pending Lean V1. |
+| the specification channel | `programmlogik/gabbrov/V1.lean`, `V2.lean`; historical Rust `gabbro lean a.gab b.gab` | The Lean specifications remain; source parsing and elaboration now use `grammatik/Grammatik/Parser/`. |
 | the Lean parser (T3) | `grammatik/Grammatik/Parser/` (§14) | source text → surface tree → `UProg` → G program, computed in Lean |
 | the bridge | `bruecke/Bruecke/` (§14) | GabbroV's duties give premise (b) of the goal theorem |
 | the proof-side census | `grammatik/Grammatik/GabbroV/` (17 files, ≈6 000 lines) | closing the person's linked-structure arguments, the shared-atomic rely, refusal census |
 | the checker's own logic | `passlogik/` (§15) | the pass register's sentences as Lean theorems over models of the rules |
 
+The Rust checker, CLI and printers were deleted on 2026-11-10 (AGENTS.md §3); the current path is the Lean parser
+and elaborator in `grammatik/Grammatik/Parser/`, the bridge in `bruecke/` and tracked duty files until
+[PLAN-COMPILER-READY.md](PLAN-COMPILER-READY.md) V1 computes them from elaborated units, with V0 measuring coverage
+and V2 extending the bridge to every Stage-0 form (R2).
+
 ---
 
 ## 2. The interface: the manifest
 
-`LANGUAGE.md` §15 describes the obligation manifest the compiler emits per translation unit and
+This section records the historical Rust manifest interface (`pflichten.rs`, deleted 2026-11-10); the current
+Lean parser/bridge and tracked duty inputs are listed in §1, with duty generation assigned to plan item V1.
+
+`LANGUAGE.md` §15 describes the obligation manifest the former compiler emitted per translation unit and
 names its addressee as *"the programmer or an external tool"*.
 
-**GabbroV does not read the Gabbro program. It reads the manifest.** (This is the sentence that
-`pflichten.rs` cites.) It needs no program semantics and no verification-condition generator:
-the checker has already computed and named the obligations. Three classes, three tasks:
+**The historical manifest interface read the manifest.** (`pflichten.rs` cited this sentence.) The current
+source-to-duty route instead needs the Lean derivation of V1. The historical checker computed and named the
+obligations. Three classes, three tasks:
 
 | manifest class | GabbroV does |
 |---|---|
@@ -147,8 +155,8 @@ for free).
 `progress` clauses (`F04` `device_completes_or_faults`, `F05` `client_calls_or_endpoint_revoked`,
 `F10` `token_verbraucht`); a `progress` name must resolve to a declared falsifiable `assume`
 (`S003`/`S004`), and the retired `PFLICHTEN` register had booked each also as a logic obligation (`L42`, `L46`,
-`L66`). The emitted manifest never double-booked them: `gabbro annahmen` lists all three,
-`gabbro pflichten` emits no obligation from any `progress` clause. The `K`/`L` column stays
+`L66`). Historically the deleted Rust commands `gabbro annahmen` and `gabbro pflichten` listed the assumptions
+without emitting progress duties; the current Lean parser/bridge uses tracked duties pending V1 (§1). The `K`/`L` column stays
 (it is machine-versus-subject, and a discharged obligation still counts); what moves is
 GabbroV's population, and the figure is derived by command, not by subtraction:
 
@@ -237,17 +245,22 @@ and the `traverse` fold are `DEMAND` rows today).
 
 **What the hand-written channel shows** (`programmlogik/beispiel/`): two `.gab` files are one
 program (`lager.gab` declares the table, `betrieb.gab` writes into it through `use`).
-`gabbro lean lager.gab betrieb.gab` exports every body as a `Stmt` datum, every precondition
+The `gabbro lean`/`gabbro prove` workflow below is historical Rust, deleted on 2026-11-10; the current Lean
+parser/elaborator and bridge use tracked duties until V1 (§1).
+`gabbro lean lager.gab betrieb.gab` exported every body as a `Stmt` datum, every precondition
 it can say and the shape of every declared place — and **no specification**. A person writes
 `Spec.lean` (for example `nur_dieses_fach`, a frame property with a quantifier no `spec fn` can
 express). Three poisoned specifications each fall: one demands a value the body does not write, one demands
 the cleared compartment stay untouched, one names a field no table declares. The third falls
-with "unsolved goals", which reads like a fault in the program; `gabbro prove` (run by
-`instrumente/pruefe-gabbrov.py`) holds every place a specification names against the program's place list and says the true thing.
+with "unsolved goals", which reads like a fault in the program; the former `gabbro prove` held every place a
+specification named against the program's place list.
 What no dictionary catches: a typo from one real field to another proves a true statement about
 the wrong place — the check bounds the hazard, it does not remove it.
 
 ## 8. The one semantics
+
+The channel comparison using `gabbro lean` and `pflichten --lean` below is historical Rust; the current Lean
+parser and bridge (§1, §14) share the source model, with Lean duty generation still V1.
 
 The obligations GabbroC produced and GabbroC's own correctness proof must use **one** meaning of
 Gabbro, or a defect in the difference is invisible to both. Because the manifest is the
@@ -264,11 +277,11 @@ ever been stated by two provers.
 GabbroV *adds* to the list of `PROOF.md` E1: (4) M1–M4 as carriers of the plumbing (without
 them GabbroV is silently unsound), (5) the meaning of the obligation texts (small, reviewable,
 unprovable), (6) the translation Lean fragment → SMT (keep small; reject, do not approximate),
-(7) the Lean kernel, (8) the assumption set. **Z3 is not on it** (§6, route C). Written down
-for the *Body* channel: the parser (`crates/gabbro-syntax`), the export (`lean.rs`, 7 200 lines), the semantics (`programmlogik/Gabbro/Body.lean`, 3 245 lines) and the Lean kernel — and
-explicitly **not** the passes. That the exported datum *is* the program stands in no theorem;
-the answer to it is the Lean parser and the bridge (§14), which compute the duties from the source
-text so that a wrong Rust print is a failed per-unit check and not a wrong theorem.
+(7) the Lean kernel, (8) the assumption set. **Z3 is not on it** (§6, route C).
+The former *Body* trust list naming `crates/gabbro-syntax` and `lean.rs` is historical Rust; the current
+source path is the Lean parser/elaborator and bridge (§14), with tracked duty inputs until V1 (§1).
+The generic bridge derives premise (b) for its supported fragment; the complete source-derived duty path is
+the R2 gate of PLAN-COMPILER-READY, not a property supplied by the deleted printer.
 
 ## 10. Stages and gates
 
@@ -343,11 +356,14 @@ Gabbro itself (checker, emitter, model against emitted code).
 
 ### 13.2 Architecture (former PLAN §2)
 
+The Rust `crates/gabbro-check/src/lean.rs`, `beweis.rs` and `gabbro prove` pipeline is historical (deleted
+2026-11-10); the current architecture uses the Lean parser/elaborator, bridge and tracked duty inputs pending V1:
+
 ```
-unit.gab ──► gabbro pflichten --lean ──► Duty/<Unit>.lean ──► lean ──► GREEN / OWED / RED
-                (crates/gabbro-check/src/lean.rs)      ▲                (gabbro prove)
-                                       programmlogik/Gabbro/Body.lean (model + tactics)
-                                       programmlogik/Proofs/<Unit>.lean (the person's file)
+unit.gab ──► grammatik/Grammatik/Parser/ ──► UProg ──► bruecke/
+                                                      ▲
+                     tracked duty files + user proofs ──┘
+                     Lean duty generator from UProg: V1 (planned)
 ```
 
 * **The model** — `programmlogik/Gabbro/Body.lean` (3 245 lines): `World`, `State`, `Value`,
@@ -358,22 +374,15 @@ unit.gab ──► gabbro pflichten --lean ──► Duty/<Unit>.lean ──► 
   arithmetic; today only `Sicherheit/Ausdruck.lean` imports Mathlib — `Body.lean` imports `Lean` alone;
   Mathlib is allowed everywhere since 2026-10-08, pinned to the toolchain, precompiled via
   `lake exe cache get`).
-* **The emitter** — `lean.rs` writes, per unit, `shapeOf`, every routine's body as a `Stmt` list,
-  `_pre`/`_post`/`_writes`/`_requires`, every loop's `_inv`/`_body`, every foreign contract as an
-  assumption, one theorem per duty (`_meets` for a routine, `_keeps` for a loop pass) with generated
-  openings and `gabbro_auto2`, and the wiring `unit_closed`. What it cannot say it **refuses by tag**
-  (`LeanReason`), and `pflichten.rs` prints the tag next to the duty.
-* **The checker and CLI** — `beweis.rs`: `Stand {Gruen, Geschuldet, Rot, Aufbau}`;
-  `gabbro prove|beweise [--template|--vorlage] [--model|--modell <dir>] <unit.gab>…` writes
-  `Duty/<Unit>.lean`, builds the model with `lake`, holds `Proofs/<Unit>.lean` against it: GREEN
-  (all proved, no `sorry`), OWED (which statements), RED (a Lean error), SETUP (no Lean / model);
-  exit 0/1/3. `gabbro emit --proved` refuses C for a unit that still owes a proof;
-  `--template --source` prints the file *pinned to the source text*, its duties computed by the
-  Lean front end (§14).
+* **The emitter** — the deleted Rust `lean.rs`/`pflichten.rs` printer is history; its replacement is the
+  planned Lean duty generator V1 from elaborated units, while the bridge consumes tracked duty files (§1).
+* **The checker and CLI** — the deleted Rust `beweis.rs` and its `gabbro prove`/`gabbro emit --proved` commands
+  are history; the Lean parser/elaborator and bridge exist, with tracked duties pending V1 (§1).
 * **The measurement** — `programmlogik/_pruefung/` (scratch, untracked): `lauf.sh` runs every
   generated module through `lean` and counts (it never stops at an error); `probe.sh <module>`
   shows what `gabbro_auto?` leaves; the retired `pruefe-lean-pflichten`
-  ran the channel tree-wide (`gabbro prove` over the proof units is run by `instrumente/pruefe-gabbrov.py`).
+  ran the historical Rust channel tree-wide; today `instrumente/pruefe-gabbrov.py` measures the Lean packages
+  and bridge over tracked duty inputs (AGENTS.md §5).
 
 ### 13.3 The model (former PLAN §3.1)
 
@@ -405,6 +414,9 @@ speed step.
 
 ### 13.5 The emitter (former PLAN §3.3)
 
+This is the historical deleted Rust emitter design; the current Lean parser/bridge and tracked duties remain
+as in §1 until V1 supplies generation from the elaborated unit.
+
 Contracts before duties (mutual recursion references forward); `ContractBelow`/`ContractBelowM`
 with SCC wiring; parameter ranges in `_pre` and a `let` of a ranged type carrying its range in
 every invariant in scope; arrays as pseudo-tables (`Rec.field`, static arrays, `elems of`,
@@ -418,7 +430,9 @@ invariant); probes: the retired `pruefe-sperre-beweis` (not guarded today).
 
 ### 13.6 The register of what the emitter decides (former PLAN §16, run 30)
 
-`LeanCarried` in `lean.rs` has **54 variants, one per place the emitter writes a term**, with
+`LeanCarried` in the deleted Rust `lean.rs` is historical; the current Lean parser/bridge uses tracked duties
+pending V1 (§1), and the former emitter census below is not a current coverage measurement.
+It had **54 variants, one per place the emitter wrote a term**, with
 `CarriedForm` saying which `Coverage.lean` form covers it (`Subterm` for a literal). The forcing
 is a fact about the type: `place_term`, `expr_term`, `pred_term`, `domain_of`, `stmt_term`,
 `block_term` return `Carried`, whose only constructor is `LeanCarried::term` in a module of its
@@ -449,13 +463,9 @@ domain), whether `tree { … }` implies parent consistency (`09`), disjunctive c
 multiply the pipeline's splits (`126`: 94 goals, five minutes a compile), and the 64-call chain of
 `tick_runde`.
 
-**What a person does:**
-
-```
-gabbro prove --template unit.gab > programmlogik/Proofs/Unit.lean   # the file to start from
-gabbro prove unit.gab                                                # GREEN / OWED / RED
-gabbro emit --proved unit.gab                                        # C only when green
-```
+**What a person does:** the `gabbro prove --template`, `gabbro prove` and `gabbro emit --proved` workflow is
+historical Rust; the current bridge uses tracked duty files and user Lean proofs, with source-derived generation
+assigned to V1 (§1).
 
 ### 13.8 The assumptions, by name (former PLAN §6)
 
@@ -518,8 +528,10 @@ statement the grammar fixes is handed over). "The tactic closes it" is **not** a
 success is a property of a run, so `carriedByTactic` is a verdict whose `Discharges` is `False`.
 Two general lemmas are false without a side condition, and the negations are proved
 (`store_without_the_shape_can_break_WF`, `a_contract_says_nothing_where_its_precondition_fails`);
-that is a statement about the emitter. **The guard** (the retired `pruefe-deckung`, now `cargo test -p gabbro-check --lib lean::deckung_tests`) holds the
-hand-written mirrors `Form`/`Reason` against `lean.rs` (the population both ways, the order, every
+that is a statement about the emitter. **The guard** (`cargo test -p gabbro-check --lib lean::deckung_tests`
+and `lean.rs`) is historical Rust, deleted on 2026-11-10; the current Lean parser/bridge and tracked duties
+await V0's coverage measurement and V1's generator (§1).
+It held the hand-written mirrors `Form`/`Reason` against the emitter (the population both ways, the order, every
 tag and kind, an arm in `classify` for every form and no catch-all) and
 `lean::deckung_tests` reads `Coverage.lean` at compile time. **Lesson (§11.1):** a register can be
 one step behind its sibling (`PassCounter` stood in neither `LeanReason::ALL` nor
@@ -541,16 +553,19 @@ not a wasted run.
 
 ## 14. The bridge to the goal theorem, and the Lean parser
 
-**T3, the Lean front end** (`grammatik/Grammatik/Parser/`, 19 files, ≈22 700 lines): a total lexer over a
-closed vocabulary of 243 words (`Lexer.lean`; the Rust table prints 239 because five words stand in
-two rows) behind a source-trust gate (`LexerVertrauen.lean`, `P060`–`P063`: bidi controls,
+The comparison with the Rust `lean_g.rs` exporter below is historical, since Rust was deleted on
+2026-11-10; the current source path is the Lean parser/elaborator and bridge, with tracked duties pending V1 (§1).
+
+**T3, the Lean front end (2026-10-17 description)** (`grammatik/Grammatik/Parser/`, 19 files, ≈22 700 lines):
+a total lexer over a closed vocabulary of 243 words (`Lexer.lean`) behind a source-trust gate
+(`LexerVertrauen.lean`, `P060`–`P063`: bidi controls,
 out-of-set identifiers, mixed scripts, invisible characters); fuel-indexed readers for expressions,
 statements and items (`Ausdruck`, `Anweisung`, `Element`, `ElementTief`) with the reserved/contextual
 split pinned (`WortStellung`: seventeen reserved words); a printer and round trip
 (`Rundlauf*.lean`: every printable expression and statement parses back from its printed tokens;
 the premise `gut` books the shapes that have no spelling); and the elaboration
 `uebersetzeAllg`/`lowerAllg` — surface tree → `UProg` (plain data) → `declOf` and a G
-`Programm`, for **the fragment `lean_g.rs` exports**: tables, locks with `Held`, `impl fn` with
+`Programm`, for **the fragment the former `lean_g.rs` exported**: tables, locks with `Held`, `impl fn` with
 pointer/index/range parameters, comparison contracts over slot reads, `old` and `result`, straight-line
 bodies of slot writes, direct calls, a trailing return. Everything else is an explicit
 `.error` (no new diagnostic codes).
@@ -566,13 +581,13 @@ fragment above.
 
 **The bridge** (`bruecke/Bruecke/`, a Lake project over `grammatik` and the original `programmlogik`
 sources, toolchain v4.35.0 with Mathlib through `grammatik` (manifest laid out as `stage0/`'s); ≈5 700 lines, 22 files with
-the instances `Instanz104/108/130/69/73`). **DOES NOT BUILD (2026-10-28):** its `Duty` library names
-`programmlogik/Duty/Duty104Referenz.lean` and four more, deleted in `60b73119` (generated files left the repository); no
-guardian measures `bruecke/`:
+the instances `Instanz104/108/130/69/73`). The 2026-10-28 missing-duty build failure is historical: the five duty
+files are now tracked inputs until Lean V1 exists (MACHINE-IR-PLAN §10), and AGENTS.md §5 includes the bridge in
+the GabbroV guardian; PLAN-COMPILER-READY §1 records its measured green build on `d9019873f` (2026-11-12).
 
 * `Pflichten.lean` — computes, from the parser's `UProg`, the duty statements and the `Body` datum
-  (`zuBody`, `meetsU`), so a wrong Rust print is a failed per-unit check (`Instanz*.lean`), never
-  a wrong theorem; the Rust printer is checked against them.
+  (`zuBody`, `meetsU`); checking a Rust print against this computation is historical, and the bridge now uses
+  tracked duties until the Lean generator V1 exists (§1).
 * `Simulation.lean` (`bruecke_nutzer`) — **the simulation theorem**: for every unit the Lean parser
   lowers (`lowerAllg u = .ok …`) whose call graph has a rank and which passes the per-unit name
   checks, if every GabbroV duty `meetsU` is proved then every function meets `KoerperGutR`, the body
@@ -588,7 +603,8 @@ guardian measures `bruecke/`:
   the front end accepts `src` and it is proved, premise (b) holds for the unit built from what the
   front end produced. What a person supplies for a concrete text is an untrusted *witness*
   (`decide +kernel` against the pinned text) — a hint like a proof term; the statement stays the
-  computed one. `gabbro prove --template --source` prints it.
+  computed one. The deleted Rust `gabbro prove --template --source` printer is history; the Lean source
+  computation and tracked duty inputs remain, with generation assigned to V1 (§1).
 
 **Coverage, honestly.** The bridge covers the parser's fragment only: instances 104, 108, 130, 69
 and 73 are built (`bruecke/lakefile.toml`), a gift program exhibits the refusal of a call cycle
@@ -596,9 +612,9 @@ and 73 are built (`bruecke/lakefile.toml`), a gift program exhibits the refusal 
 unit outside that fragment still carries (b) as an assumption; a unit *with* a shared atomic is not
 bridged. **Open:** duties for atomic-bearing units from `Pflichten src`, the per-access
 TSO-to-W/GX refinement, payload hand-off, whole-`World` stores to edge maps and the `chain`-domain
-bridge (`GvBruecke.lean`: the single-chain case is `kette_gleicht`), the Rust exporter's remaining
-form gaps (OFFEN O27). The Rust back end of the duty printer remains untrusted and checked against
-the Lean computation.
+bridge (`GvBruecke.lean`: the single-chain case is `kette_gleicht`). The Rust exporter's form-gap list is
+historical after deletion; current completeness is measured by V0, followed by the Lean generator V1 and bridge
+extension V2 for every Stage-0 form (PLAN-COMPILER-READY §3).
 
 **The person's linked-structure argument** (`GvVerkettung`, `GvTreeParent`, `GvKetten`,
 `GvTraversal`, …): the declaration does *not* give a `reaches`-invariant (`deklaration_schliesst_eltern_nicht`);
@@ -607,11 +623,12 @@ once, generically.
 
 ## 15. `passlogik` — the checker's logic, in Lean
 
-A formalisation of the **specification** of the passes, not of `crates/**/*.rs` — no line of Rust was
-read when it was written, so the model can *contradict* the Rust. A proved sentence over a model is
-not a statement about the checker; **the seam between the model and `gabbro-check` has not been
-checked by anyone**, and the descent from statement to effect (what a body does, statement by
-statement) is in no file — it is booked as an assumption in four (`B1`, `L1`, `P2`, `R1`): theorems
+A formalisation of the **specification** of the passes; the comparison with `crates/**/*.rs` is historical
+after Rust's deletion, and the current implementation path uses the Lean parser/elaborator and checker, with
+the bridge over tracked duties pending V1 (§1). A proved sentence over a model is not a statement about an
+implementation; the historical seam to `gabbro-check` was unproved, and the descent from statement to effect
+(what a body does, statement by statement) is in no file — it is booked as an assumption in four
+(`B1`, `L1`, `P2`, `R1`): theorems
 about a model whose carrying assumption is unmodelled, on exactly the surface where most findings
 fell historically.
 
@@ -619,8 +636,8 @@ Measured now: 7 files (`Passlogik/{Bereich,Wirkung,Kosten,Rang,Terminierung,Line
 3 033 lines), **137 theorems** (46 / 21 / 22 / 13 / 14 / 10 / 11), `grep '^axiom'` finds none,
 `grep sorry` finds none, no Mathlib (`passlogik/lakefile.toml` has no `require`; the project builds in
 seconds), toolchain v4.33.1. `Abnahme.lean` calls `#print axioms` for every theorem — the axiom table
-is derived, not kept. It is the formal basis of the passes' sentence register and does not replace
-`gabbro paesse` (0 of 216 sentences are PROVED there).
+is derived, not kept. The `gabbro paesse` census (0 of 216 proved) is historical Rust; the current path uses
+the Lean model and checker, with the parser/bridge and tracked duties described in §1.
 
 | File | Carries |
 |---|---|
@@ -639,7 +656,7 @@ at least one operation**, so "ends through `bounded`" does not follow without it
 `LANGUAGE.md`/`SYNTAX.md`); "every program terminates" is false (`forever`), and there are five
 loop forms with or without a measure; recursion is a second source of non-termination
 (`K008`/`K009` with `decreases`, necessary and not sufficient). **Explicitly not proved:** the seam
-to the Rust, the instruction-level descent, the emitter (`K1`: `Ĉ(constant expression) = 0` is a
+to the former Rust implementation, the instruction-level descent, the emitter (`K1`: `Ĉ(constant expression) = 0` is a
 claim about the generator), alias, progress (`keine_verklemmung` does not say every thread gets
 its turn), completeness anywhere (every theorem has the shape "whoever passes satisfies X"),
 the memory-model half (`A10`), IEEE, and the sharpness of interval multiplication and the
@@ -649,10 +666,10 @@ premises of theorems or choices stated in file headers; there is no global axiom
 **Build.** `cd passlogik && lake build` (the project, seconds, peak memory dominated by `lean`'s
 ~500 MB base load per process); a single file: `lean Passlogik/Bereich.lean`. Two concurrent first-time
 `lean` invocations against a fresh `elan` toolchain block on its lock with 0 % CPU (not a hang).
-The first `lean` call downloads the toolchain (minutes). Next most valuable (from the former
-README): a differential test between `kostenK` here and what `gabbro pruefe` computes on a file
-(the seam), deciding the `retry` cost rule, deciding V2's reading, and the three domain theorems of
-`K001` §6 that would turn `kosten.domaenenschranke` from `CONJECTURED` to `PROVED`.
+The first `lean` call downloads the toolchain (minutes). The proposed differential check against `gabbro pruefe`
+is historical Rust; the current implementation is the Lean checker/parser, with the bridge over tracked duties
+pending V1 (§1). Other questions from the former README were the `retry` cost rule, V2's reading, and the three
+domain theorems of `K001` §6 that would turn `kosten.domaenenschranke` from `CONJECTURED` to `PROVED`.
 
 ---
 
@@ -664,9 +681,9 @@ README): a differential test between `kostenK` here and what `gabbro pruefe` com
 | correspondence table | retired `zaehle-pflichten --korrespondenz` (not guarded today) |
 | manifest completeness | retired `pruefe-manifest` (red by design, §2; not guarded today) |
 | manifest, per fragment | `bash messung/gabbrov/manifest-lage.sh` |
-| the Lean channel over the corpus | `programmlogik/_pruefung/lauf.sh` (local scratch; **not** concurrently with `cargo test` in one tree: `gabbro prove` rebuilds the model and replaces the `.olean` the running `lean` reads — 52 phantom errors on 2026-09-08), retired `pruefe-lean-pflichten` |
-| the specification channel | `gabbro prove`, run by `instrumente/pruefe-gabbrov.py` |
-| the coverage register | `cargo test -p gabbro-check --lib lean::deckung_tests` |
+| the Lean channel over the corpus | The deleted Rust `gabbro prove`/`cargo test` workflow is history (52 phantom errors on 2026-09-08); the Lean bridge now uses tracked duty inputs pending V1 (§1). |
+| the specification channel | The deleted Rust `gabbro prove` command is history; `instrumente/pruefe-gabbrov.py` now checks the Lean packages and bridge over tracked duties (AGENTS.md §5). |
+| the coverage register | The deleted Rust `cargo test -p gabbro-check --lib lean::deckung_tests` is history; V0 measures the current Lean bridge before V1 generation and V2 extension (§1). |
 | the bridge | `cd bruecke && lake build` |
 | `passlogik` | `cd passlogik && lake build Abnahme` |
 | certificate ceiling | `python3 messung/gabbrov/cert-theorien.py` |
@@ -686,11 +703,11 @@ missing, none added (`LogikPflichten`, `logikPflichten_iff`, `WP/HA/Zertifikat.l
 calculus in which every true duty is provable (below). The certificates proved in this section are EXAMPLES of user
 proofs, not something GabbroV does.
 
-**Why a new route.** The channel of §13 proves duties against `Body.lean`, a model BESIDE machine G, through an
-emitter in the Rust checker (`lean.rs`) that refuses whole classes of forms (§13.9, §13.10). The self-hosting plan
-(`PLAN-SELF-HOSTING.md` §3.4, §4) needs logic proofs over THE semantics the goal theorem uses, for every form, without
-Rust. So GabbroV is completed directly over machine G (`grammatik/Grammatik/Logik/WP/`); the `Body` route stays until
-the Rust checker is deleted (`PLAN-SELF-HOSTING.md` §6).
+**Why a new route.** The Rust `lean.rs` emitter and the deletion-at-parity schedule of §13 are history after
+2026-11-10; the current Lean parser/elaborator and bridge use tracked duty inputs until the Lean generator V1
+exists (PLAN-COMPILER-READY §3). The machine-G calculus (`grammatik/Grammatik/Logik/WP/`) and the `Body` bridge
+are Lean proof components, not a retained Rust execution path; R2 requires generated duties and the connected
+bridge for every Stage-0 form.
 
 **The core idea.** Machine G is total: every run ends in an outcome (`Ausgang`); what would diverge ends in a budget,
 depth or progress outcome. So the weakest precondition of a postcondition over outcomes is EXACT
@@ -718,8 +735,9 @@ notion.
 | regions and linked structures: reasoning over `RegionRepr` and the ownership ledger (lists, trees, maps over the open region) | | open |
 | specifications stated over the SOURCE TEXT: through the Lean pipeline (`uebersetzeAllg`), "the function named `f` in this text meets `S`" | | open |
 
-**The user's proofs on the certificate (Simon, 2026-10-25).** A certificate (`gabbro obligations --g`) exports a program
-as a G term and instantiates the goal theorem CONDITIONALLY on the user's logic `NutzerPflichtA gE`. That premise is
+**The user's proofs on the certificate (Simon, 2026-10-25).** The `gabbro obligations --g` exporter is historical
+Rust; the current Lean parser/bridge uses tracked duties pending V1 (§1), while the Lean certificates below
+instantiate the goal theorem CONDITIONALLY on the user's logic `NutzerPflichtA gE`. That premise is
 stated over `execEndHA` (lock moves, release checks, the atomic environment), so the calculus exists over that
 semantics too (`WP/HA/Kern.lean`: exact, with the same rules, the call statement included). `WP/HA/Pflicht.lean`
 states the obligation of each function as three weakest preconditions (`PflichtWP`) and proves

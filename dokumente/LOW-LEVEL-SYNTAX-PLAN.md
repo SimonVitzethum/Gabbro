@@ -2,10 +2,14 @@
 
 Status: design 2026-10-31; ORDERED FOR COMPLETE IMPLEMENTATION by the owner on 2026-11-03 (recommendations of
 "Rule changes and owner decisions" approved; the `Spec.lean` diff of decision 2 goes to the owner before merge).
-The syntax below is still not accepted until its canonical Lean rules exist. Source ASM, boot, privileged
-instructions and raw-address access are now part of the active assignment (see AGENTS.md).
-Device-register forms remain excluded; normal RAM authority below never authorizes MMIO, ports,
-DMA or device-register operations. Keep the existing assembly IR runner. Do not restore a source
+The confirmed owner decisions O12–O17 of [PLAN-COMPILER-READY.md](PLAN-COMPILER-READY.md) §8 (2026-11-12)
+replace source ASM with contracted target-binding calls and generated entry/exit code; no assembly text is allowed.
+The syntax below is still not accepted until its canonical Lean rules exist. Boot, privileged operations,
+raw-address access and device-register reads, writes, fallible reads and register transitions are in scope
+(owner, 2026-11-03; AGENTS.md). Normal RAM authority below never authorizes MMIO, ports, DMA or device-register
+operations; device memory has its own class and rules (PLAN-COMPILER-READY §3, L2, after A2 lifts `RegLokal`).
+The implementation targets are the Lean model, parser/exporter and checker, never Stage 0 or the runner.
+Keep the existing assembly IR runner. Do not restore a source
 interpreter, create a second runner or modify seL4 for this design.
 
 ## Evidence and present gaps
@@ -22,30 +26,31 @@ Read against this checkout's AGENTS.md and CLAUDE.md, and these definitions:
   already provide resources and handler identity; they do not establish CPU privilege or mappings.
 - [Spec](../grammatik/Grammatik/Zielsatz/Kern/Spec.lean), especially its ONE ASSUMPTION LIST:
   `GutO`, `AxVertragO`, `ImBereichO`, `Laufzeit.lader/start/einmal`, `KernPlan` and the five
-  weak-memory reading assumptions. It currently includes software ASM/entry behavior in the foreign
+  weak-memory reading assumptions. It currently includes software foreign/entry behavior in the foreign
   oracle boundary. The proposed separation below is a real change of premises, not today's theorem.
 - [Address layout](../grammatik/Grammatik/Speichermodell/Adressen/Layout.lean) and
   [extent preservation](../grammatik/Grammatik/Speichermodell/Adressen/Bereich.lean): `Adresse` is
   `Nat × Nat`; `LayoutOk` separates carriers; OPEN tables occupy separate abstract spaces.
   G's carrier/index memory and arbitrary natural-byte layouts are not a finite physical-address,
   translation-table, alias-coherence or revocation model. `ImBereichO` constrains foreign writes;
-  it is not a proof that an ASM load has authority.
+  it is not a proof that a low-level load has authority.
 - [Provider model](../grammatik/Grammatik/Hardware/Anbieter/Region.lean): `PStep` requires fresh,
   disjoint reservations and aligned commits, with lifetime/release events. Its header calls the
   provider promise a named hardware assumption and also calls kernel correctness user logic.
-  Future integration must resolve that classification: a software provider must prove its contract.
+  Future integration follows O14: a provider inside the verified image proves its contract; one outside it
+  has a declared environment contract, separate from hardware.
 - [Profiles](../grammatik/Grammatik/Kern/Syntax/Profil.lean): keyed architecture/memory modes and
   library requirements exist. `erfuellt` maps free entries to `True`; a free prose profile entry
-  cannot certify ASM, a bootloader, or a mapping invariant.
+  cannot certify a binding operation, a bootloader, or a mapping invariant.
 - [Surface reference](SYNTAX.md), sections 1, 7, 12 and 14, and
   [memory rules](LANGUAGE.md), section 5: existing `arch`, `requires`, `ensures`, `effects`,
   `costs`, `in/out/clobbers`, `entry`, `boot`, `entrust`, phase marks and region extents are reused.
-  Rust `AsmRumpf` in `crates/gabbro-syntax/src/ast.rs` explicitly treats instruction strings as
-  unread assumptions. Neither that representation nor a constraint string proves machine effects.
+  The Rust front end was deleted on 2026-11-10 (AGENTS.md §3); the Lean parser/exporter and checker are
+  the front-end targets, and the existing `asmT` string form must be refused and then removed (L10).
 
-Exact missing connections for this proposal are: structured, validated source ASM operands and decoded
-bytes tied to its contract; an architectural entry/exit state and privilege transition relation in G's
-bridge; authority provenance, finite address arithmetic and physical alias accounting; a mapping/lifetime
+Exact missing connections for this proposal are: contracted binding operations with GIR cells as their
+meaning and target-table rows as their bytes; an architectural entry/exit state and privilege transition
+relation in G's bridge; authority provenance, finite address arithmetic and physical alias accounting; a mapping/lifetime
 relation connecting raw spans to existing carriers; proof-producing boot initialization and root handoff;
 and a generic interleaving simulation discharging the software portions of the oracle and runtime premises.
 Existing isolated hardware/runner lemmas do not by themselves supply those connections. LANGUAGE.md's
@@ -58,23 +63,26 @@ No build, completeness measurement or proof audit was performed for this documen
 1. An unrestricted integer-to-pointer cast inside an `unsafe` block is compact, but exports alias,
    lifetime, privilege and race obligations to every caller and invalidates the current memory rule.
    Reject it; a block marker cannot prove safety.
-2. A separate boot/ASM language with its own memory and concurrency rules isolates early work, but
+2. A separate boot language with its own memory and concurrency rules isolates early work, but
    duplicates semantics, ownership and contracts and makes the safe handoff a second compiler boundary.
-   Reject a parallel language/runtime; architectural instruction semantics remain a necessary layer.
-3. Extend existing callable contracts with checked architectural contexts and linear authority. ASM
-   supplies a body, boot composes calls, raw access creates an ordinary bounded view under existing
+   Reject a parallel language/runtime; neutral architectural state belongs in the canonical model.
+3. Extend existing callable contracts with checked architectural contexts and linear authority. A target-binding
+   function denotes a GIR cell, boot composes calls, raw access creates an ordinary bounded view under existing
    ownership. Choose this approach: a small interface with a substantial shared proof implementation.
 
 The interface has three concepts: an address value, a linear context carrying authority, and a bounded
-region view. Calls and existing read/write effects carry the operations. Privileged instructions stay
-inside contracted ASM functions; do not add one source statement per privileged opcode. Architecture and
+region view. Calls and existing read/write effects carry the operations. Privileged operations are calls of
+target-binding functions with contracts over linear `context<P>`; no binding has an instruction-text body or
+per-body certificate. Its GIR cell is neutral; its bytes are a row of the target table (PLAN-COMPILER-READY §4.1).
+Entry and exit code is generated from `entry` declarations, with one generic theorem per frame kind.
+The `asmT` string form and `prim fn … = asm { … }` are refused first and removed with L10. Architecture and
 ABI details belong to checked target bindings. No implicit host OS, ELF, libc or reset protocol is required.
 
 ## Candidate syntax (not current grammar)
 
 Keep existing declaration shapes. The following extensions are explicitly proposed tokens/types, with
 final spelling subject to the canonical Lean grammar review: `address<S>`, `context<P>`, `region<C,R>`,
-`with`, `proof`, `ram_view`, and an explicit `entry` contract tail. `S` names an address space, `P` a
+`ram_view`, and an explicit `entry` contract. `S` names an address space, `P` a
 checked architecture/ABI state profile, `C` a memory class, and `R` access rights. Names in predicates
 below denote library specifications to be defined in Lean, not magic built-in truths.
 
@@ -83,28 +91,21 @@ below denote library specifications to be defined in Lean, not magic built-in tr
 const SCRATCH : address<physical> = 0x1000;
 
 // Proposed generic operation: success borrows authority, never manufactures it.
-raw fn ram_view(c: context<boot_el1>, a: address<physical>, n: u64)
+raw fn ram_view(c: context<P>, a: address<physical>, n: u64)
     -> region<normal,rw>
     requires owns_ram(c, a, n) && mapped(c, a, n) && nonwrapping(a, n)
     ensures view_of(result, c, a, n)
     effects { reads c };
 
-// Existing ASM body shape, proposed context and proof clauses.
-prim fn install_root(c: context<boot_el1>, root: address<physical>)
-    -> context<boot_el1>
+// Target-binding contract; the meaning is a GIR cell, the bytes a target-table row.
+prim fn install_root(c: context<P>, root: address<physical>)
+    -> context<P>
     requires valid_root(c, root)
     ensures installed(result, root)
-    effects { consumes c }
-    arch aarch64 with el1_abi proof install_root_correct
-    = asm {
-        "msr ttbr0_el1, $root"
-        "isb"
-        in { root : "r" }
-        clobbers { memory }
-    };
+    effects { consumes c };
 
 // Existing boot shape; each step must now carry a checked state transition.
-boot reset arch aarch64 {
+boot firmware_entry arch x86_64 {
     step establish_boot_context();
     step initialize_ram();
     step establish_user_context();
@@ -112,10 +113,10 @@ boot reset arch aarch64 {
 }
 ```
 
-The ASM sample is deliberately not certified: it is only admissible if `valid_root` and the proof
-cover the exact translation regime, required barriers/TLB maintenance, operand substitution and all
-architecturally allowed outcomes. It is not a recommended complete MMU setup sequence. `proof` resolves
-to a kernel-checked certificate indexed by the elaborated body and profile, not a name accepted on trust.
+The binding contract is schematic, not an implemented operation: its GIR cell must cover the translation
+regime, required barriers/TLB maintenance and all architecturally allowed outcomes. `TargetOk` checks the
+target row's shape, M measures it on silicon (privileged rows on a bare-metal image, K2), and `Hardware T`
+is the named assumption that each row computes its cell. No per-body certificate or instruction string exists.
 `costs` is omitted here because no numeric bound has been proved; absence must never create a finite bound.
 
 `ram_view` is one generic elaboration primitive, not an unverified foreign implementation of memory safety.
@@ -126,9 +127,9 @@ call consumes the context through its contract. Internally split contexts may ho
 only checked split/merge of the existing resource discipline may create such partitions. Phase marks still
 express ordered software stages; possessing a mark alone never grants RAM or CPU privilege.
 
-Extend an existing entry declaration with the same `with P proof certificate` contract tail before its
-body. Its `regs in`, `regs out`, `preserves`, `clobbers`, `stack`, nesting and `dispatch` retain their
-roles. An entry contract describes the pre-stack architectural state, not merely a normal function ABI.
+An existing entry declaration supplies the contract from which entry/exit code is generated, covered by
+one generic theorem per frame kind (L5). Its `regs in`, `regs out`, `preserves`, `clobbers`, `stack`, nesting
+and `dispatch` retain their roles. An entry contract describes the pre-stack architectural state, not merely a normal function ABI.
 Extend `entrust` through this same contract mechanism, replacing software `assume` with an isolation/handoff
 proof. A named code destination remains mandatory: no address-to-function-pointer conversion is proposed.
 Unproved guest behavior earns no guest contract, cost or termination guarantee; the proven monitor/isolation
@@ -143,8 +144,9 @@ different types. A numeric value cannot be dereferenced, called, freed or promot
 
 A context contains a non-forgeable authority ledger: live spans, space/translation regime, permissions,
 memory class, owner, lifetime epoch and current privilege/interrupt state. Authority originates in an
-explicit initial machine-state specification and proved acquisition, never a `context` literal or an OS
-assumption. A software allocator must prove partition/freshness; CPU privilege alone cannot establish it.
+explicit initial machine-state specification and proved acquisition, never a `context` literal or an address
+number. At firmware entry the initial state is the declared `FirmwareHandoff` environment contract (§4.4 of
+PLAN-COMPILER-READY). A software allocator must prove partition/freshness; CPU privilege alone cannot establish it.
 An initial-state premise describes the chosen starting boundary; proving software before that boundary
 requires moving the boundary back, not relabeling the software as hardware.
 
@@ -158,53 +160,64 @@ same physical ownership/carrier identity; unequal address-space numbers never pr
 Remapping, reuse and revocation require quiescence of all affected references and cores, with epoch changes
 and proved TLB synchronization. Do not model a finite machine's OPEN region as infinite physical storage.
 
-An ASM body denotes the set of all architectural executions of its decoded bytes under its context and
-hardware profile. Its certificate proves a simulation into G/GX, including all intermediate observable
-steps, faults and interleavings, not just matching input/output values. Internal loops need invariants;
-finite budgets/costs require bounds. Non-returning transitions have no invented return state. A hardware
-fault is only a named hardware outcome if the model specifies it; malformed software cannot silently turn
+Binding operations denote GIR cells over the neutral architectural state (L4), with contracts over the linear
+context. Their generic connection to G/GX must preserve intermediate observable steps, faults and interleavings,
+not just matching input/output values; entry and exit frames have one generic theorem per frame kind (L5).
+Software loops need invariants; finite budgets/costs require bounds. Non-returning transitions have no invented
+return state. A hardware fault is only a named hardware outcome if the model specifies it; malformed software cannot silently turn
 into an allowed `hardware` stop or satisfy `ensures` vacuously.
 
-Acceptance checks the signature, resource/effect accounting, context flow, body/certificate identity,
-instruction semantics availability, ABI and final-image validation. Reject unknown instructions, privilege
-mismatches, unspecified architectural behavior, missing certificates or unsupported targets by name.
+Acceptance checks the signature, resource/effect accounting, context flow, modelled binding operation,
+entry contract and checked profile. Reject privilege mismatches, unmodelled operations, unspecified architectural
+behavior and unsupported targets by name; the full compiler's generic GIR/target-table route establishes
+final-byte correspondence, without refinement or per-compilation translation validation (MACHINE-IR-PLAN §8).
 Architectural nondeterminism must be covered universally, never resolved to an observed result. No fallback
-to opaque ASM execution, implicit `unsafe` acceptance or signature-only GREEN is permitted. Existing runner
+to opaque instruction strings, implicit `unsafe` acceptance or signature-only GREEN is permitted. Existing runner
 support alone does not imply source acceptance; do not extend the runner in this planning task.
 
 ## Obligations and precise trust boundary
 
-Every actual ASM/boot software body owes:
+Every binding contract, generated entry/exit frame and boot software body must account for:
 
 - Entry and exit: all reachable entries, register/flag/vector state, privilege level, translation regime,
   interrupt masks, stack availability/alignment/extent, exception frames, return address and return mode.
   Bootstrap before a stack exists has a separate pre-stack state in the same transition relation.
 - Frame and memory: complete reads and writes including hidden stack traffic; carrier extents, permissions,
-  physical aliases, initialization and lifetimes; preservation of everything not declared. `clobbers memory`
-  is an optimizer constraint, not permission to overwrite arbitrary memory. Register clobbers must include
+  physical aliases, initialization and lifetimes; preservation of everything not declared. A clobber declaration
+  is not permission to overwrite arbitrary memory. Register clobbers must include
   condition codes and implicit architectural operands where relevant; ABI-preserved state must be restored.
 - Control and logic: `requires`/`ensures`, all error/fault exits, named destinations, call logs, locks,
-  ownership and invariants at their required places. An external symbol or handwritten assembly blob is
-  software with the same obligations. A source `ensures` assertion is not an ASM correctness proof.
+  ownership and invariants at their required places. An external symbol without a proved contract is refused;
+  assembly text is refused and removed. A source `ensures` assertion alone is not a correctness proof.
 - Concurrency and time: accesses in the trace, GX/W atomic ordering and release/acquire correspondence,
   no shared atomic hidden from the rely, interrupt nesting/masking and core locality, no deadlock introduced
-  by privilege transitions. ASM is not implicitly atomic. `cli`-like masking is not a multicore lock.
+  by privilege transitions. A binding call is not implicitly atomic. Interrupt masking is not a multicore lock.
   Preserve the existing meaning of finite own-step costs; hardware latency needs separately named CPU
   assumptions and must not assert a boot wait is bounded without software and hardware evidence.
 
 The trusted logical base remains Lean's kernel and exactly `propext`, `Classical.choice`, `Quot.sound` for
-the goal theorem. Decoders, assemblers, compiler and certificate generators produce untrusted candidates;
-the checker must bind certificates to final bytes, operands, relocation, entry addresses and target profile.
-CPU instruction/MMU/interrupt/memory behavior may be named hardware assumptions with precise domains.
-Firmware, bootloaders, OS services, allocators, ABI setup and ASM algorithms are software user logic.
-Probes and CPU differential tests help validate models; they never discharge arbitrary ASM correctness.
+the goal theorem. The compiler's lowering and every pass are proved generically; target-table shape is checked
+by `TargetOk`, and M is evidence for the named assumption `Hardware T` that every row computes its GIR cell
+(MACHINE-IR-PLAN §8–§9). There is no assembler or per-body certificate in this design.
+CPU/MMU/interrupt/memory behavior may be named hardware assumptions with precise domains.
+Software inside the verified image, including boot, allocators and ABI setup, is user logic. Software outside
+the image, including firmware before entry and an operating system below a hosted program, is a named environment
+assumption with a declared contract, listed per unit (PLAN-COMPILER-READY §4.4, O14). Both software classes require
+the caller to prove `pre` at every call; software inside the image proves `pre → post`, while environment software
+has `pre → post` named in premise (c) (A1). Hardware retains its separate, unconditional contract.
+Probes and CPU differential tests provide evidence for hardware assumptions; they never discharge software logic.
 A separate diagnostic mode may display unresolved software obligations but cannot certify the binary.
 
 ## Boot handoff to safe userspace
 
-Start from an explicit architectural state set: reset or an explicitly delimited prior-loader entry.
-Prove that boot's actual instructions establish stack, mappings, initialized data/zero storage, region
-ledger, lock/invariant state and declared root arguments. Reserve image, stacks, page tables and live boot
+The first boundary is firmware entry in 64-bit mode on x86-64 (UEFI), with paging already on and
+`FirmwareHandoff` stating mode, mappings, stack, the truth of the memory map and reserved memory
+(PLAN-COMPILER-READY §4.2, O13). The image is firmware-loadable; the kernel takes over the memory map and leaves
+boot services. Further x86-64 cores use the binding's generated start item made of mode-transition table rows,
+with one proved contract for arrival in 64-bit mode with the declared stack and context (K4, O17); no assembly text.
+Reset in 16-bit mode or a 32-bit loader protocol is outside the first gate.
+Prove that boot's Gabbro calls and generated entry code establish stack, mappings, initialized data/zero storage,
+region ledger, lock/invariant state and declared root arguments. Reserve image, stacks, page tables and live boot
 storage before splitting the userspace RAM authority; account for other cores and external agents.
 Boot then transfers bounded regions and permitted capabilities to the declared userspace root and consumes
 or retains the remaining privileged context according to the contract. Userspace receives no ambient
@@ -214,13 +227,14 @@ not just consumption of a ghost mark. Re-entry and interrupts must preserve that
 Derive the applicable `Laufzeit.lader/start/einmal`, `StartGut`, `GutO`, `AxVertragO` and `ImBereichO`
 software facts from this proof and the connected execution simulation. Do not claim that proving the root's
 precondition verifies the loader. If a prior loader is outside the image, state its entry-state requirement
-as a software obligation explicitly; whole-boot verification is unavailable until it is discharged.
+as a named environment contract explicitly; software before that boundary is outside the verified image.
 
 ## Rule changes and owner decisions
 
-Replace the current absolute memory rule with the following proposed rule, only after owner approval:
+The approved region-producer design is the following rule, to be connected through the canonical model
+before acceptance:
 
-> Safe memory access always requires a live region/reference. External software returns proved regions.
+> Safe memory access always requires a live region/reference. External software returns regions under its declared contract.
 > Low-level code may select a normal-RAM span by an explicit address only through checked authority,
 > producing a bounded region view. A number alone never grants memory or code authority.
 
@@ -229,42 +243,44 @@ casts. `ptr`/reference access, freshness, race freedom and extent checks retain 
 LANGUAGE.md section 5.5 and the canonical typing rules together when implementing; this document does not
 change those standing rules now. Device memory must be rejected by `ram_view`, even with a privileged context.
 
-The owner must decide these language/goal changes before implementation:
+The recommendations were approved on 2026-11-03, with the requirement to show the `Spec.lean` diff of decision 2 before merge;
+the confirmed O12–O17 of PLAN-COMPILER-READY §8 replace decision 3 and the source-ASM design (2026-11-12):
 
 1. Approve address/context/view types and the revised region-producer rule above. Recommendation: scoped
    borrows first, explicit ownership transfer through proved provider contracts; no unrestricted casts.
-2. Approve splitting `Spec.lean`'s software foreign assumptions into user obligations with hardware-only
-   assumptions separately named. Recommendation: derive software `GutO`/`AxVertragO`/`ImBereichO` instances
-   and runtime initialization from certificates; extend `NutzerPflicht`/the bridge with their discharge.
+2. Split `Spec.lean`'s software foreign assumptions into user obligations for software inside the image and
+   declared environment contracts for software outside it, with hardware assumptions separately named (A1, O14).
+   Derive applicable software `GutO`/`AxVertragO`/`ImBereichO` facts and runtime initialization from proofs;
+   extend `NutzerPflicht`/the bridge with their discharge. Show the `Spec.lean` diff to the owner before merge.
    Preserve current theorem users by proving the old-domain corollary, not retaining a second execution path.
-3. Choose the initial boot verification boundary (reset, or specified loader entry) and first architecture/ABI.
-   Recommendation: one AArch64 EL1 normal-RAM profile, then a proved transition to userspace; other entry
-   modes refuse until modelled. An externally established entry state remains an explicit scope limit.
+3. The first boot boundary is firmware entry in 64-bit mode, on x86-64 first, under `FirmwareHandoff`
+   (PLAN-COMPILER-READY §4.2, O13); AArch64 is the second binding running the same kernel sources (K6, O16).
+   Further x86-64 cores use the generated binding start item (K4, O17). Other entry modes refuse until modelled.
 4. Approve the goal's additional coverage: authority/lifetime/privilege preservation and raw-access traces,
    and the `speicherAdressen` extension relating finite mapped physical bytes to existing carriers. Retain
    existing contract/race/deadlock/budget claims and NOT CLAIMED items; add no general termination, fairness,
    guest correctness or hardware-time promise. Review required changes to `KernPlan` and weak-memory reading
-   assumptions where masking, mappings or ASM expose intermediate architectural steps.
+   assumptions where masking, mappings or binding calls expose intermediate architectural steps.
 
 ## Future implementation and validation order
 
 1. Freeze the baseline with the userspace integration owner. Inventory actual region and body support then;
-   resolve the decisions above with an explicit proposed `Spec.lean` diff. No current lane depends on this work.
+   apply the confirmed decisions above with an explicit proposed `Spec.lean` diff. No current lane depends on this work.
 2. Canonical Lean grammar/model first: extend source nodes, address/context typing, state/effect semantics,
    normal-RAM authority and boot transition relations. Append constructors where required. Prove generic
    preservation and non-degenerate joint witnesses, including actual writes and privilege handoff. Check the
-   goal theorem's exact standard axioms and preserve its old-domain consequence. No Rust-first acceptance.
-3. Prove the generic instruction-block/ABI/body refinement and ownership/alias/interleaving bridge, including
-   final bytes and relocation. Add a small precisely supported instruction domain before any ASM acceptance.
-   Certificates are per-body evidence under a generic soundness theorem, not per-program compiler logic.
+   goal theorem's exact standard axioms and preserve its old-domain consequence. No front-end-first acceptance.
+3. Prove the generic binding-operation and generated-frame connection to G/GX, and the ownership/alias/interleaving
+   bridge (L4/L5). Operations mean GIR cells, bytes are target-table rows, and final-byte correspondence follows
+   MACHINE-IR-PLAN's generic theorems; there is no source body, per-body certificate or translation validation.
 4. Implement parser/exporter/checker, proof obligations and lowering only after their canonical rules exist.
    Update source references and replace assumption-only software acceptance without aliases or silent migration.
-   Existing safe userspace forms keep their semantics. Existing opaque ASM/entrust inputs lacking evidence
-   become explicit refusals in certification; no promise of backward acceptance for unsafe foreign bodies.
+   Existing safe userspace forms keep their semantics. Existing `asmT` strings, `prim fn … = asm { … }` and
+   software `assume` on `entrust` become explicit refusals and are then removed (L10).
 5. Validate positive cases (RAM write/read, context transition, boot-to-root handoff, interrupt entry/return)
    and negative cases (forged authority, wraparound, stale epoch, physical alias, bad stack, undeclared clobber,
-   missing barrier, hidden shared write, wrong privilege, unknown opcode, certificate/byte mismatch, MMIO view).
-   Exercise the existing runner only where it supports the exact target/domain. Future canonical builds use
+   missing barrier, hidden shared write, wrong privilege and MMIO view). This work changes neither Stage 0 nor
+   the runner. Future canonical builds use
    the global lock and memory scopes; run full model/axiom/layout and applicable compiler guardians then.
 
 Totality claims must name a domain: parsing/refusal is total over source input; certified lowering covers

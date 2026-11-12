@@ -17,19 +17,24 @@ The Lean module-system migration and the split of every Lean file below 500 line
 
 ### Team
 
-- **One lead** (the root session) runs the C packages and Stage 0 with **four GPT Sol 6.1** (codex `gpt-6.1-sol`),
-  **four Muse** (OpenCode Muse Spark 1.3 Contributor, only through the Go access: model
-  `opencode-go/muse-spark-1.3-contributor`; never `opencode/…`) and **any number of Mercury 3** (opencode
-  `inception/mercury-3`, limited only by API rate limits), all started through T3 `delegate_task`. Sol and Muse
-  slots are occupied at all times: when an agent finishes, its branch goes into the integration branch and it gets
-  its next task at once.
-  - **Muse** takes proof and design work, also hard tasks.
-  - **Sol** takes mechanical migrations with exact grep targets, one coherent migration per task ("do not stop
-    after preparation"); it tends to give up on open-ended proofs.
-  - **Mercury** takes only very light tasks: lint and layout passes, splitting a file that nears the size limit,
-    small mechanical edits.
-- **Work** is the C packages in their three rounds (Scope below) and the Stage-0 side (`stage0/`, the runner,
-  probes): the IR lanes and the Stage-0 lowering of every form the C packages add.
+- **One lead** (the root session) runs [PLAN-COMPILER-READY.md](dokumente/PLAN-COMPILER-READY.md) with agents
+  started through T3 `delegate_task` (owner, 2026-11-12). Upper limits of agents running at the same time:
+  - **one** agent of the Claude family in all: Fable 5.2 (`claude-fable-5-2`), Opus 5.5 (`claude-opus-5-5`) or
+    Sonnet 5.5 (`claude-sonnet-5-5`);
+  - **three** GPT Sol 6.1 (codex `gpt-6.1-sol`, started with `reasoningEffort: high`);
+  - **five** Muse (OpenCode Muse Spark 1.3 Contributor, only through the Go access: model
+    `opencode-go/muse-spark-1.3-contributor`; never `opencode/…`).
+  Which model gets which kind of task follows [MODEL-EVALUATION.md](dokumente/MODEL-EVALUATION.md), not a fixed
+  role: the lead records there, per finished task, how well each model proves and how often it errs, and assigns
+  the next tasks by that record.
+- **Proved theorems are reviewed, their proofs are not.** A proof is valid once it builds without `sorry` and with
+  the standard axioms; what a reviewer reads is the STATEMENT: whether it says what its name and comment claim,
+  whether its premises can hold together (witness), whether it is vacuous. Reviews are tasks for agents too, and
+  the quality of each review is recorded in MODEL-EVALUATION.md.
+- **Work** is the plan in its phases; the C packages in their three rounds (Scope below) and the Stage-0 side
+  (`stage0/`, the runner, probes) are part of it.
+- **The owner is asked only about important things**: a change of the goal statement's meaning, a rule of the
+  language, a decision the plan lists as open. Everything else the lead decides.
 - **Only the lead builds.** Sub-agents and their sub-agents never build or check Lean, and their worktrees carry no
   `.lake` (no Mathlib, no build cache). A lead checks its sub-agents' work in its own tree.
 - **One integration branch.** The lead merges the branches of all its agents and its own work
@@ -42,19 +47,22 @@ The Lean module-system migration and the split of every Lean file below 500 line
 
 The active implementation task is to compile every existing Gabbro language form needed by userspace
 programs into Stage-0 IR and build the connected translation pipeline, formally verified, **and, from 2026-11-03
-(owner), to implement [LOW-LEVEL-SYNTAX-PLAN.md](dokumente/LOW-LEVEL-SYNTAX-PLAN.md) completely**: source ASM bodies,
+(owner), to implement [LOW-LEVEL-SYNTAX-PLAN.md](dokumente/LOW-LEVEL-SYNTAX-PLAN.md) completely**: target-binding calls,
 boot code, privileged instructions, address/context/view types with the raw-address syntax, device-register
-reads/writes/fallible reads/register transitions, and the proof boundary of that plan (ASM/boot behaviour is user
+reads/writes/fallible reads/register transitions, and the proof boundary of that plan (binding/boot behaviour is user
 logic with explicit proof obligations, never silently a hardware assumption). The low-level work starts only AFTER the C packages are finished and does NOT touch the assembly IR runner or Stage 0
 (owner, 2026-11-03): its scope is the Lean model, checker and parser/exporter. It follows the plan's
 own order (canonical Lean model first, then generic refinement and bridge, then parser/exporter/checker/lowering);
 the recommended answers to its four owner questions are approved, EXCEPT that the proposed diff of `Spec.lean`
 (question 2: splitting the software foreign assumptions into user obligations) is shown to the owner before it is
 merged. Hard rules of that work (owner, 2026-11-03): there is NO `unsafe` anywhere (all low-level access is checked
-authority); boot code is user code, written in Gabbro and verified by the user under the generic theorems; the one
-exception is the x86-64 target binding, which offers a bundled, once-proved boot-stub ASM item (16→32→64-bit mode
-switch, Gabbro cannot express it) that the user includes by name; it is a checked target binding with a generic
-contract, not per-program compiler logic. Existing safe region/reference userspace memory stays in scope as before.
+authority); boot code is user code, written in Gabbro and verified by the user under the generic theorems.
+The confirmed decisions O12/O13 of [PLAN-COMPILER-READY.md](dokumente/PLAN-COMPILER-READY.md) §4.1–§4.2 and §8
+(owner, 2026-11-12) supersede source ASM and the bundled boot-stub exception: no assembly anywhere; privileged
+operations are target-binding calls over linear `context<P>`, with GIR cells as their meaning and target-table
+rows as their bytes, and entry/exit code is generated from `entry` declarations.
+The first boot boundary is firmware entry in 64-bit mode on x86-64; further cores use a generated start item of
+the binding (K4, O17), never assembly text. Existing safe region/reference userspace memory stays in scope as before.
 Work is prioritized by completed, connected source-to-IR cases, not by the number of helper lemmas, commits or added
 lines. Cover the whole language rather than repeatedly expanding infrastructure for a small subset.
 
@@ -113,10 +121,16 @@ The machine has 20 threads and 31 GB and no swap; the caps below follow the OOM/
 
   | Run | Locks | Scope |
   |---|---|---|
-  | full `grammatik/` build (only one globally) | both | `-p AllowedCPUs=0-11 -p CPUQuota=1200% -p MemoryMax=<min(MemAvailable-6G, 14G)> -p MemoryHigh=<2G below> -p MemorySwapMax=0` |
+  | full `grammatik/` build (only one globally) | both | `LEAN_NUM_THREADS=3`, `-p AllowedCPUs=0-11 -p CPUQuota=1200% -p MemoryMax=<min(MemAvailable-6G, 13G)> -p MemoryHigh=<2G below> -p MemorySwapMax=0` |
   | Stage-0/runner `lake build` | both | `LEAN_NUM_THREADS=2`, `-p MemoryMax=<min(MemAvailable-4G, 16G)> -p MemoryHigh=<1G below> -p MemorySwapMax=0` |
   | single-module check | one | `-p AllowedCPUs=0-11 -p CPUQuota=400% -p MemoryMax=5G -p MemoryHigh=4G -p MemorySwapMax=0` |
 
+- **Every `lake build` sets `LEAN_NUM_THREADS` (owner, 2026-11-12).** Lake has no job limit of its own; without
+  the variable it starts one `lean` per core. At the end of a full `grammatik/` build that means about fifteen
+  heavy parser probes (7–12 GB each) at once: the scope thrashes at `MemoryHigh` and finishes nothing (measured:
+  one hour stuck at job 3754/3943). Use the value of the table above (3 for a full `grammatik/` build, measured
+  ~30 min, 2 for Stage 0); a build that makes no progress for 10 minutes is stopped by its own PIDs and restarted
+  with the table's values, never left running.
 - **Rebuild single modules only (owner, 2026-11-02).** Check the changed modules and the modules that import
   them, one module at a time in dependency order (`lake build <Module>` or `lean` on the file inside a
   single-module scope); the module system keeps dependents unbuilt when no interface moved. A full package build
@@ -137,6 +151,18 @@ The machine has 20 threads and 31 GB and no swap; the caps below follow the OOM/
 - **Build less, keep working:** batch several finished edits into one check of the affected modules. While a check
   runs or waits for memory or a slot, keep writing the next proofs and code; never stop a run because a check is
   pending, and never end a run while a build it started still runs.
+- **One build per wave (owner, 2026-11-12).** The finished branches of a whole wave of agents are merged into the
+  integration branch and checked by ONE compiler build (and, before a push, one full `grammatik/` build); a
+  failing branch is repaired or dropped and the wave is built again, never branch by branch. The plan is to be
+  finished with as few builds as possible.
+- **A second worktree for writing (owner, 2026-11-12).** A tree is never edited while a build reads it, so a lead
+  that only builds in one tree waits most of its time. The lead keeps a writing tree beside the building one
+  (set up as in "One Mathlib for all trees"): while a build runs in one tree, the next piece is written in the
+  other and brought over by `git` when the build is done. Waiting for a build is not work.
+- **The full `grammatik/` build runs once before a push (owner, 2026-11-12)**, not after every block. A change
+  under `Parser/Elab` rebuilds nearly every parser witness, the heavy probes among them (about 30 minutes).
+  Between pushes the compiler build (`lake build stage0` in `stage0/`) is the check: it rebuilds everything
+  Stage 0 depends on. The full build and the guardians then run on the state that is pushed.
 - **One Mathlib for all trees:** the read-only store is `grammatik/.lake/packages` of the root checkout. A lead
   tree links it with `cp -al <root>/grammatik/.lake/packages <tree>/grammatik/.lake/packages` and copies only its
   own build part (`rsync -rlpgoD --exclude packages …`); nobody copies or rebuilds Mathlib.
@@ -253,6 +279,10 @@ not a deployed checker, and no bridge to any binary is built. The
 - **Target direction: AArch64** (Armv9-A); the former Lean model of it (`arm/`) was removed on 2026-11-01 and lives
   in git history. The x86-64 hardware model is archived (branch `archive`); the one exception is the verified
   stage-0 runner (`PLAN-SELF-HOSTING.md` §2.2, Simon 2026-10-28), whose x86-64 instruction subset is written anew and tested against the CPU.
+- **Three targets from the start (owner, 2026-11-12):** everything is built so that x86-64, AArch64 and RISC-V 64
+  are reached by adding a target table and a binding, not by changing sources, IR, passes or proofs. A program
+  cross-compiles to each of them from one source, and a good compiler still reaches more than optimised C on each
+  (§11). Whatever is specific to one architecture lives in its table or binding and nowhere else.
 - **Target portability**: source semantics, IR, optimisation and validation stay generic; ABI, image and entry
   requirements are described in checked profiles; environment services are Gabbro bindings with user-logic proof
   obligations. No implicit Linux/POSIX/libc/ELF dependency; freestanding has no mandatory host runtime.
@@ -261,9 +291,10 @@ not a deployed checker, and no bridge to any binary is built. The
 - **Optimisations**: a validated optimised image or a refusal, never "optimised but unchecked".
 
 **Operating system, memory, data**
-- **The operating system is user logic, never an assumption, and nothing is OS-specific.** A system or kernel
-  call is a generic call whose contract the program or its binding library declares in Gabbro. Only hardware
-  behaviour is a named assumption.
+- **Software inside the verified image is user logic; software outside it is a named environment assumption
+  with a declared contract** (owner, 2026-11-12; PLAN-COMPILER-READY §4.4, O14): an operating system below a hosted
+  program and firmware before the entry belong to that environment class. Nothing is OS-specific: a system or
+  kernel call is a generic call whose contract the program or its binding library declares in Gabbro.
 - **No handwritten C in a finished Gabbro binary, as far as possible.** Runtimes and binding libraries are
   written in Gabbro; OS access goes through Gabbro `syscall` items; hardware access through Gabbro's
   register/port forms. Handwritten C or assembly stays only where Gabbro cannot express the thing, each piece
@@ -348,7 +379,8 @@ x86-64 runner model against the CPU run on Simon's x86-64 machine (`PLAN-SELF-HO
   `.lake` is worse than none. Sub-agent trees carry no `.lake`.
 - Before starting work in an area, check whether another session already works there (worktrees, recent file
   times) and do not duplicate it.
-- Reviews and assessments are done directly, not delegated.
+- Reviews of theorem statements are delegated like other tasks (see "Team"); the lead checks every finding before
+  it acts on it and records the review's quality.
 
 ## 7. Number ranges and counters (free from here)
 
@@ -399,6 +431,9 @@ and the sentence register went with the Rust checker.)
   poisoned `.lake` with the warm master cache.
 - **Low memory kills jobs silently**, and there is no swap. Twenty parallel `lean` processes of a full rebuild
   exceed a 15 GB hard scope; use a soft limit (`MemoryHigh`) under the hard one.
+- **A full build without `LEAN_NUM_THREADS` thrashes instead of failing** (2026-11-12): the heavy probes at the
+  end all start together, sit at `MemoryHigh` and make no progress for an hour, with no error. Watch the job
+  counter (`[n/m]` in the log); if it stands still, stop the run and restart it with the table's values.
 - **`/tmp` is RAM.** Work in real folders; scratch files go to a scratch directory inside the tree that is not
   committed, and are deleted after use.
 

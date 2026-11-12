@@ -1,37 +1,36 @@
 # PLAN-SELF-HOSTING — checker and compiler written in Gabbro, computing in Gabbro
 
-*Simon, 2026-10-25. Nothing here is started. It supersedes `PLAN-LONG-RANGE.md` §3 (the versions of 2026-10-18 and of the
-morning of 2026-10-25 are in git). The back-end decision of 2026-10-18 stands: LLVM stays the back end; the self-hosted
-compiler emits LLVM IR.*
+*Simon, 2026-10-25; design corrected 2026-11-12. It supersedes `PLAN-LONG-RANGE.md` §3 (earlier versions are in git).
+The LLVM back-end design was superseded by [MACHINE-IR-PLAN.md](MACHINE-IR-PLAN.md) (owner, 2026-11-10): one
+architecture-neutral GIR, every pass proved with GabbroV, real instructions as cells with per-target table rows,
+no refinement and no translation validation; the current gates and order are [PLAN-COMPILER-READY.md](PLAN-COMPILER-READY.md).*
 
 ## 0. The rule of this plan
 
 **Lean specifies and proves; Gabbro computes.**
 
-* **Lean** holds the model (machine G, `AkzeptiertX`, the lowering `Code/Lower`, the generator's definitions, the
-  adequacy theory of `CHECKER.md` §16) and the proofs. Its kernel checks proofs. Lean evaluates nothing on the trust
-  path: no `#eval`, no `lake exe` driver, no kernel evaluation of a test run. The one exception is stage 0 of the
-  bootstrap (§2), used to start and to cross-check, never to produce a result that a theorem rests on alone.
-* **Gabbro** does every computation: checking, compiling, generating the test sets M, N and R, running them, comparing,
-  counting coverage, searching witnesses for open cells, validating IR. Each of these is a Gabbro program, accepted by
-  the checker, and proved against its Lean specification with GabbroV.
-* The Lean drivers that compute today (`gen-abdeckung`, `gen-zellen`, `gen-fein`, the Lean pipeline as a driver, the
-  `Code` validator as an executable) are replaced by Gabbro programs and deleted when those reach parity
-  (CLAUDE.md: no legacy).
+* **Lean** holds the canonical model G/GX, the checker, source parser/elaborator, semantics and generic proofs.
+  Stage 0 is a Lean compiler that translates accepted source into an S0IR image; it executes no source program.
+  The assembly runner executes the image (§2); the retired Lean source runtime is not a fallback.
+* **Gabbro** is the implementation language of the later checker, GabbroV and full compiler. The compiler lowers
+  source to GIR, transforms it with proved passes, tiles neutral cells and emits bytes from a per-target table.
+  GabbroV's initial correctness proof is in Lean and independent of M and N (MACHINE-IR-PLAN §10).
+* **The verification route** is generic: `lower_ok`, the pass theorems, tiling, location assignment, scheduling
+  and emission (MACHINE-IR-PLAN §8). M measures table rows and supplies evidence for `Hardware T`; it does not
+  replace a pass proof. No per-program IR validator is part of this design.
 
 ## 1. The programs
 
 | Program | Computes | Proved against (Lean spec) |
 |---|---|---|
 | `gpruef` | the checker: lex, parse, elaborate, the ten components of `AkzeptiertX` | `pruefSpec src` := the Lean pipeline (`uebersetzeAllg`) then `AkzeptiertX` |
-| `gkomp` | the compiler: the front end shared with `gpruef`, then LLVM IR | `kompSpec p` := `Code/Lower` of the elaborated program, refinement `Code/Refine` |
+| `gkomp` | the compiler: shared front end, GIR, proved passes, cell tiling and table-driven emission | the generic GIR theorems of MACHINE-IR-PLAN §8, with one GabbroV proof per pass |
 | `ggen` | the test sets: M (valid, `Gutes`), N (refused by exactly component `c`, `Schlechtes c`), R (text-level refusals), by exact size, and their printed texts | the Lean generators `genGueltig`, `genBad c` with their soundness and completeness theorems (`Gen/Erzeuger/Gueltig.lean`), the printer `Gen/Druck` |
 | `gabdeck` | coverage: the cells (`Gen/Abdeckung/Zellen`) and fine cells (`Gen/Fein`) each program covers, the open cells, the greedy cover, the witness search | `zellenStimmen`, `feinZellen_uF`, `deckung` |
-| `glauf` | the campaign: runs `gpruef`/`gkomp` over M ∪ N ∪ R, compares each verdict with the label and each IR with `gvalid`, writes the ledger | the comparison predicates of §4 |
-| `gvalid` | per-program IR validation: the IR `gkomp` produced against the lowering of the model | the `Code/Refine` decision procedure |
+| `glauf` | the campaign: checker verdicts against labels; compiler M over GIR cells and target rows | checker comparison predicates (§4); emitter shape contract and `m_vollstaendig` (MACHINE-IR-PLAN §9) |
 
-Every one of them is an ordinary Gabbro program: accepted by `AkzeptiertX` (so `gabbro_ziel` gives memory safety, race
-freedom, contracts), proved terminating, deterministic and correct with GabbroV.
+These are planned ordinary Gabbro programs, to be accepted by the checker and proved terminating, deterministic
+and correct against their Lean specifications; this table is not a claim that they already exist.
 
 ## 2. Bootstrap: stage 0 translates, a verified x86-64 runner runs (Simon, 2026-10-26; changed 2026-10-28)
 
@@ -696,8 +695,8 @@ measure (`Logik/Terminierung/Mass`, `Klasse`); the bound is a theorem.
 
 ### 3.3 Neutrality: H1-H7 of `CHECKER.md` §16.1 as theorems
 
-Today H1-H8 are ASSUMPTIONS about the Rust code, checked by audit and metamorphic tests. For `gpruef` and `gkomp` they
-are proved:
+The H1–H8 assumptions about Rust are historical (the tools were deleted on 2026-11-10); the checker fold's planned
+neutrality obligations are below, while the compiler's correctness follows MACHINE-IR-PLAN §8:
 
 * **H1, syntax-directed with finite state:** the core of the tool is a fold `node : Ctor → List St → St` over the
   elaborated tree with a FINITE state type `St`. Theorem: an `Automat` (`Adaequanz/Baum.lean`) with `m = |St|` states
@@ -709,7 +708,8 @@ are proved:
 * **H4, order:** reordering independent items permutes the output's items.
 * **H5** is §3.2. **H6** (bounded mark multiplicity) and **H7** (whole-program conditions are bounded patterns: a
   function's verdict and code depend on its body and the signatures it uses, `WRAP`) are theorems about the fold.
-* **H8** (LLVM's passes, `llc`, `ld.lld`) stays outside: translation validation, `PLAN-TRANSLATION-VALIDATION.md` §9c.
+* **H8**'s LLVM/translation-validation route is superseded by the generic GIR pass proofs and table-driven
+  emission of MACHINE-IR-PLAN §8–§9.
 
 ### 3.4 Logic proofs where the test route does not reach
 
@@ -717,10 +717,10 @@ are proved:
   parser against `lex`/`parseTopTief` (text-level behaviour, R), the elaborator against `elabU`, and the refusal
   REPORT (`NurAn c` of the refused cell). The ten components are written as the fold of §3.3, so their correctness
   comes from the test route, not from ten functional proofs.
-* **The compiler, `gkomp`:** the IR printer and the symbol handling (outside the fold) are proved against their Lean
-  counterparts.
+* **The compiler, `gkomp`:** lowering, every pass, location assignment, scheduling and emission follow the generic
+  proof route of MACHINE-IR-PLAN §8; M is evidence for the target rows, never for an optimisation's correctness.
 * **The helpers:** `ggen` against the Lean generator (it emits exactly M, N, R with the right labels: soundness and
-  completeness by exact size), `gabdeck` against the cell functions, `gvalid` against the `Code/Refine` decision, `glauf`
+  completeness by exact size), `gabdeck` against the cell functions, `glauf`
   against the comparison predicates. These are functional GabbroV proofs; the helpers are small and loop over data, so
   the proofs are simulations, one per function.
 
@@ -730,17 +730,17 @@ are proved:
   cells open since the search of 2026-10-23 (`CHECKER.md` §16.8). `gabdeck` closes them by witnesses, or a Lean theorem
   proves a cell unreachable.
 * **The campaign:** `glauf` runs `gpruef` on every program of M ∪ N (label: accept, or refuse by exactly `c`) and of R
-  (refuse at the text level), and `gkomp` on every program of M with `gvalid` on the result; it writes a ledger.
+  (refuse at the text level); compiler M is over GIR cells and measures the emitter's rows (MACHINE-IR-PLAN §9).
 * **The theorems:**
   * `gpruef_korrekt`: ∀ `src`, `run_gpruef src = pruefSpec src` -- from §3.1-§3.4 and `hinlaenglich` (`CHECKER.md` §16.2)
     over the agreement on M ∪ N, plus the GabbroV proofs for R.
-  * `gkomp_korrekt`: ∀ `p` with `AkzeptiertX p`, `run_gkomp (print p)` refines `kompSpec p` -- from §3.1-§3.4 and
-    `hinlaenglich` over the agreement on M; with H8, the binary refines the model.
+  * The former compiler adequacy/refinement route is superseded by `lower_ok`, the pass theorems and `emit_ok`
+    under `Hardware T` (MACHINE-IR-PLAN §8), with no per-compilation validation.
 * **Where the computation enters the proof.** The agreement on M ∪ N is a COMPUTED fact: the verified `glauf` ran on a
   native binary. It enters the theorems as the named premise *campaign*, with the ledger as its record. It is not
   circular in the dangerous way: the campaign's binaries are produced by the fixpoint compiler, and the diverse double
-  compilation of §2 re-runs a sample on machine G in Lean. Where a kernel-sized certificate exists for a test (the
-  verdict of a small program), the premise is replaced by a kernel check. `native_decide` stays forbidden in
+  compilation of §2 compares the runner's output with the native compiler's. Where a kernel-sized certificate
+  exists for a test (the verdict of a small program), the premise is replaced by a kernel check. `native_decide` stays forbidden in
   `grammatik/`.
 
 ## 5. What the language needs first (Lean model first)
@@ -759,37 +759,14 @@ The tools read inputs of unbounded size; each need is modelled in Lean before it
 
 ## 6. What is deleted
 
-* At parity of `gpruef`/`gkomp` with the Rust checker and compiler on M ∪ N ∪ R and the corpus: the Rust checker, the
-  Rust compiler and their tests. The guardians `pruefe-pruefer.py` and `pruefe-llvm.py` then measure the Gabbro tools.
-* At parity of `ggen`/`gabdeck`/`gvalid` with the Lean drivers: the Lean drivers (`gen-abdeckung`, `gen-zellen`,
-  `gen-fein`, the executable pipeline and validator). The Lean DEFINITIONS stay: they are the specifications.
+The parity-based Rust deletion schedule was superseded by the actual deletion on 2026-11-10 (AGENTS.md §3);
+Stage 0 compiles today, and the runner leaves the tree when the compiler compiles itself (PLAN-COMPILER-READY K7).
 
 ## 7. Targets: a new ISA is a profile, not a port (Simon, 2026-10-25)
 
-**Requirement:** moving the tools and their output to another 64-bit ISA is easy: a target is a checked profile plus a
-binding library, never a change of the front end, the checker or the compiler's core. **Built:** x86-64 and AArch64
-(AArch64 hardware is available, Simon 2026-10-25). **Kept easy, not built:** RISC-V -- the design must make it items 1-4
-below and nothing else; no RISC-V profile, binding, proof or measurement belongs to this plan's deliverables.
-
-* **One target-independent core.** `gpruef` knows no ISA at all. `gkomp` lowers to target-independent LLVM IR; the ISA
-  enters only through the **target profile** `Ziel`, a Gabbro data item: triple, data layout, calling convention and
-  aggregate ABI, the register and stack conventions of `entry`/`asm` stubs, the width classes of atomics, and the
-  mapping of `acquire`/`release`/`seq`/fences to the target's memory model.
-* **What is per target, and only that:**
-  1. the profile `Ziel` (data);
-  2. the binding library of the environment (syscall numbers, entry stubs) -- Gabbro code with user-logic contracts,
-     never in the compiler (AGENTS.md §3: the OS is user logic);
-  3. the memory-model mapping of the profile, proved in Lean against the target's model (AArch64: `ARM-PLAN.md`;
-     x86-64 TSO is frozen; a later RISC-V owes RVWMO modelled the same way);
-  4. a QEMU stage in `pruefe-llvm.py` and, for performance (§8), real hardware.
-* **Theorem `ziel_neutral`:** `run_gkomp (p, z)` = `abi z (kern p)`: the output is the target-independent core `kern p`
-  followed by a function of the profile alone; the core never reads the profile. So the proofs of §3 and §4 are made
-  ONCE and hold for every profile; a new target owes only items 1-4.
-* **Measure of "easy":** a new 64-bit target with an existing LLVM back end is items 1-4; the gate is the four guardians
-  plus the QEMU stage on the new target. Estimate (a guess): days for 1, 2 and 4; the memory-model proof (3) is the
-  long item, and it is shared by every program.
-* **Hardware model and translation validation** (H8, `PLAN-TRANSLATION-VALIDATION.md` §9c) stay per ISA; `Code` is
-  ISA-neutral by design (§9a there), so a new ISA adds its CPU model, not a new IR.
+The LLVM/profile-only route is superseded by [MACHINE-IR-PLAN.md](MACHINE-IR-PLAN.md) §6–§9 and
+[PLAN-COMPILER-READY.md](PLAN-COMPILER-READY.md) §4.5: x86-64, AArch64 and RISC-V 64 share source semantics,
+GIR, passes and proofs; each target supplies its table, binding library and image profile.
 
 ## 8. Performance: at least `gcc -O3` and `clang -O3` (Simon, 2026-10-25)
 
@@ -800,79 +777,43 @@ later RISC-V target owes the same minimum when it is built.
 * **Score:** per workload `100 · t_C / t_Gabbro` (fixed work) or `100 · throughput_Gabbro / throughput_C`, against the
   FASTER of `gcc -O3` and `clang -O3` (same machine, same ISA extensions, `-march`/`-mcpu` matched, same semantics,
   no `-ffast-math` on either side). **Minimum 100 % on every workload class; ambitious above 110 %.**
-* **Why it is reachable:** `gkomp` hands LLVM's `-O3` pipeline IR that carries what the proofs know and C cannot say:
+* **Why it is reachable:** GIR facts carry what the checker and GabbroV prove; every optimisation is proved
+  with GabbroV (MACHINE-IR-PLAN §3–§5):
   * no bounds checks, no overflow checks where M1 proves the range (they are not emitted, not optimised away);
-  * `!range` from every integer type's bounds, `nsw`/`nuw` where the range proves no wrap, `inbounds` GEPs;
-  * `noalias` from ownership (`own`, the ledger) and from distinct carriers, `!tbaa`-style disjointness per table and
-    field, `nonnull`/`dereferenceable` for references into regions;
-  * loop trip counts from the loop bounds, `llvm.assume` from narrowed facts;
+  * range and non-wrapping facts from integer bounds and narrowing;
+  * alignment, validity and non-aliasing from ownership, distinct carriers and region disjointness;
+  * trip-count bounds from loops and measures;
   * the open region's allocator: a bump/free-list fast path inline, the provider called per chunk, not per cell (OOM is
     user logic, so no refusal path on the fast path);
   * whole-program optimisation across units (LTO) where linking allows (`GabbroZielVerbund`).
-  Every such fact is justified by a proof and checked by translation validation (`PLAN-TRANSLATION-VALIDATION.md` §8,
-  §8.6): a validated optimised image or a refusal, never "optimised but unchecked".
+  Every pass preserves `FaktenGueltig` and its cost bound; the old LLVM metadata and translation-validation
+  route are superseded by MACHINE-IR-PLAN §3 and §8, with no per-compilation check.
 * **Measurement:** a benchmark suite of workload classes (compute kernels, pointer-chasing over regions, parsing and
   string work, the tools themselves as a workload); each Gabbro program beside a C version written to the same
-  algorithm; a performance stage in `pruefe-llvm.py` (no fifth guardian) that records the scores per ISA and fails below
-  100 %. x86-64 runs here, AArch64 on the available AArch64 machine (QEMU timings are no measurement).
+  algorithm; the current work item is PLAN-COMPILER-READY C8, rather than the deleted Rust/LLVM guardian.
+  QEMU timings are no hardware performance measurement.
 * **The compiler itself** is a Gabbro program compiled by itself at `-O3`, so its own speed follows the same requirement;
-  compile latency (checking, optimisation, validation) is measured beside it.
+  compile latency (checking, optimisation and production) is measured beside it.
 
 ## 9. Order of work, estimates, critical path
 
-| | Step | Gate |
-|---|---|---|
-| S1 | the language needs of §5 in the Lean model | full Lean build, `gabbro_ziel` on the standard axioms |
-| S2 | stage 0 (`stage0/`: machine G in Lean with the IO oracle; `GutO` of the oracle proved) | a probe program's run equals its Lean semantics |
-| S3 | libraries in Gabbro (bytes, strings, vector, hash map over the open region), GabbroV contracts | GabbroV GREEN |
-| S4 | the shared front end in Gabbro, proved against `lex`/`parseTopTief`/`elabU` | kernel |
-| S5 | `ggen` and `gabdeck` in Gabbro, proved against the Lean generator and cells; the open cells closed | kernel; coverage complete |
-| S6 | `gpruef` (the fold) with §3.1-§3.3, the campaign on M ∪ N ∪ R, `gpruef_korrekt` | kernel + ledger |
-| S7 | `gkomp` and `gvalid` with §3.1-§3.4, bootstrap stage 0 → stage 1, fixpoint, double compilation, `gkomp_korrekt` | kernel + fixpoint + ledger |
-| S8 | deletions of §6 | the four guardians on the Gabbro tools |
-| S9 | targets (§7): the profile `Ziel` and `ziel_neutral`; the x86-64 and AArch64 profiles, bindings, memory-model proofs; the RISC-V path checked as "profile only" by a design review, not built | QEMU and hardware stage on AArch64 |
-| S10 | performance (§8): the proof-derived IR facts, the benchmark suite, the performance stage | 100 % of the faster of `gcc -O3`/`clang -O3` per workload class, on x86-64 and AArch64 |
+The old S1–S10 schedule is superseded by [PLAN-COMPILER-READY.md](PLAN-COMPILER-READY.md) §3 and §5–§6:
+Stage 0 completes the forms needed by GabbroV and the compiler (R1); Lean duty generation and the bridge reach
+R2; GabbroV is then written in Gabbro with its initial Lean proof, before the full compiler follows the GIR
+route of [MACHINE-IR-PLAN.md](MACHINE-IR-PLAN.md) §12.
 
-**New lines of code (ranges, a guess; measured bases 2026-10-25 in brackets).** Gabbro is denser in ceremony than Rust
-(contracts, effects, costs, no generics: one instance per element type), so a Gabbro tool is costed at 1.5-2.5x its
-Rust counterpart and 2-3x its Lean definition.
+Stage 0 is the translator in `stage0/`: it compiles accepted source to an S0IR image with connected generic
+correctness proofs, and the assembly runner executes that image; it is not machine G running with an IO oracle.
+Its images are hosted images for the runner; the kernel image comes from the full compiler (PLAN-COMPILER-READY D16).
+The compiler has no per-program validator: every pass is proved with GabbroV, and real instructions enter only
+as rows assigning bytes to neutral GIR cells. Privileged and entry rows needed by the first x86-64 kernel
+table are K2, measured on a bare-metal harness.
 
-| Part | Base today | New lines |
-|---|---|---|
-| **Gabbro, written by hand** | | |
-| libraries: bytes, strings, vector, hash map, tree, file IO, formatting | -- | 8 000-15 000 |
-| shared front end: lexer, parser | Rust syntax 11 200; Lean parser without proofs ≈ 8 100 | 15 000-30 000 |
-| shared front end: elaborator to G | Lean `Elab` 10 200 | 15 000-35 000 |
-| `gpruef`: the ten components of `AkzeptiertX` as a fold, refusal reports | Rust checker 110 900 (with diagnostics, passes, tools) | 20 000-45 000 |
-| `gkomp`: lowering, IR facts of §8, IR printer, profile handling | Rust LLVM 12 900; Lean `Code` 17 900 | 20 000-45 000 |
-| `ggen`, `gabdeck`, `glauf`, `gvalid` | Lean `Gen` 22 000 (with proofs) | 24 000-48 000 |
-| target profiles and bindings: x86-64, AArch64 | -- | 2 500-6 000 |
-| benchmark suite: Gabbro side | -- | 8 000-20 000 |
-| **Gabbro total** | | **112 000-244 000** |
-| generated container instances (not written by hand) | -- | 10 000-30 000 |
-| **Lean, specification and proof** | | |
-| language needs of §5 (region release, strings in G, file-gate contracts, measure-based loops) | region in G ≈ 5 000 | 8 000-20 000 |
-| stage 0 (`stage0/`) as the translator into `S0IR` over the whole language: semantics, image, lowering, soft-float, `ir_typed`, `ir_sim`, `ir_budget`, `ir_erase`, `ir_parallel`, `ir_decode` (§2.1.7) | stage 0 ≈ 6 900 | 17 000-39 000 |
-| the verified x86-64 runner of `S0IR` (§2.2): 500-1 000 machine instructions (base and speed set), the x86-64 subset (about 22 instructions) written anew with its CPU tests, x86-TSO, `runner_ok`, `runner_tso`; budget 60 000, hard limit 80 000 | -- | 15 000-30 000 |
-| GabbroV: libraries' contracts | GabbroV today 115 000 | 8 000-20 000 |
-| GabbroV: front end against `lex`/`parseTopTief`/`elabU` | | 30 000-70 000 |
-| GabbroV: helpers, IR printer, refusal reports | | 15 000-35 000 |
-| §3.1-§3.3: termination, determinism (address neutrality), neutrality H1-H7, the fold as `Automat` | Nichtinterferenz 4 300, Terminierung 2 400, Adaequanz 1 600 | 15 000-40 000 |
-| §7: `ziel_neutral`, profile semantics, AArch64 memory-model mapping | `ARM-PLAN.md` parts | 7 000-20 000 |
-| §8: soundness of the IR facts (ranges, `nsw`/`nuw`, `noalias`, disjointness) in translation validation | | 8 000-20 000 |
-| closing the open cells (witness support, unreachability proofs) | 876 fine cells open | 3 000-10 000 |
-| **Lean total** | | **96 000-239 000** |
-| **Other:** C side of the benchmark suite | -- | 5 000-12 000 |
-| guardian stages (performance, AArch64 hardware), scripts | -- | 500-1 500 |
-| **All new lines** | | **≈ 210 000-490 000** |
-| **Deleted at parity (§6)** | Rust checker, compiler, syntax ≈ 122 000 plus their tests; Lean drivers 3 000-6 000 | |
-
-The ranges are wide because the two largest items -- the front end's GabbroV proof and the neutrality theorems -- have
-no precedent in the tree; the low ends assume the fold structure of §3.3 removes most of the per-component proofs.
-
-**Critical path:** S1 → S3 → S4 → S6. The least charted parts are §3.3 (neutrality as theorems), above all H1 for a
-real implementation, and the AArch64 memory-model mapping of §7. The performance minimum (§8) is decided by the IR facts:
-they must be designed into `gkomp` from S7 on, not added afterwards.
+The 2026-10-25 estimate of **112 000–244 000 handwritten Gabbro lines** is historical, before GIR, and remains
+only the historical base cited by PLAN-COMPILER-READY C7; its Rust syntax/checker/LLVM comparisons describe tools
+deleted on 2026-11-10, not components or deletion work still present today (AGENTS.md §3).
+The former detailed totals and critical path are superseded by PLAN-COMPILER-READY §6–§7; this correction adds
+no size or timing estimate.
 
 ## 10. Decisions (Simon, 2026-10-25; 2026-10-26)
 
@@ -884,8 +825,9 @@ All decided:
 1. The premise *campaign* (§4) is accepted: the agreement on M ∪ N, computed by the verified `glauf` on the native
    binary, enters the correctness theorems as a named premise; where a kernel certificate fits, it replaces the premise.
 2. The first `gpruef`/`gkomp` are single-threaded.
-3. The Rust tools and the Lean drivers are deleted at parity (§6).
-4. AArch64 hardware is available: x86-64 and AArch64 are built and measured; RISC-V only stays easy to add (§7).
+3. The deletion-at-parity decision is superseded by the Rust deletion of 2026-11-10 (AGENTS.md §3, §6 above).
+4. The old target schedule is superseded by PLAN-COMPILER-READY §4.5: all three targets are designed in from the
+   start, with the same kernel sources measured on the second binding (AArch64, K6); this is a plan, not a build claim.
 
 First step (Simon, 2026-10-25): complete GabbroV so that full logic proofs of Gabbro programs are possible -- it is what
 §3.4 and §4 rest on.

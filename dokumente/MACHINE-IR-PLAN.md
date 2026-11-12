@@ -18,8 +18,9 @@ Gabbro. It does not change Stage 0: `S0IR` stays the small interpreted IR of Sta
 7. **An SSA IR is allowed** (AGENTS.md §11 says so since this date).
 8. **Length-parametric vectors** (SVE, RVV) are in the types from the start; their cells and passes follow the
    fixed-width ones.
-9. **Privileged and boot instructions** use the same mechanism, later, with
-   [LOW-LEVEL-SYNTAX-PLAN.md](LOW-LEVEL-SYNTAX-PLAN.md).
+9. **Privileged and boot cells** use the same mechanism and are part of the first x86-64 table the kernel gate
+   needs ([PLAN-COMPILER-READY.md](PLAN-COMPILER-READY.md) §3, K2); M measures their rows on a bare-metal harness,
+   since user-mode M cannot run them, under the model of [LOW-LEVEL-SYNTAX-PLAN.md](LOW-LEVEL-SYNTAX-PLAN.md).
 
 ## 2. The pipeline
 
@@ -268,7 +269,8 @@ Every theorem with a ∀-over-syntax premise gets its `_zeuge` on a non-degenera
    plan for the remaining passes is written after this measurement, not before.
 7. **Location assignment and scheduling**, generic in the table.
 8. **Idiom cells and optimisation passes**, each chosen by a measurement against C.
-9. **Further tables** (AArch64 first as the target direction, x86-64, RISC-V), length-parametric vector cells,
-   privileged and boot cells.
+9. **Further tables** (AArch64 first as the target direction, RISC-V 64) and length-parametric vector cells;
+   privileged and boot cells belong to the first x86-64 table required by the kernel gate, with M on a bare-metal
+   harness ([PLAN-COMPILER-READY.md](PLAN-COMPILER-READY.md) §3, K2), rather than waiting for further tables.
 
 Steps 3 to 5 have no proof by GabbroV and can start in Lean as soon as step 1 allows; steps 6 to 8 need step 2.
