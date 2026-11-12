@@ -1,1 +1,1 @@
-compile-time call requires unsupported function contracts, effects or body
+compile-time scalar cannot be evaluated at its canonical declared range

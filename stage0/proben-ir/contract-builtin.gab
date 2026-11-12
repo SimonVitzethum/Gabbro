@@ -1,4 +1,4 @@
-// Compile-time contract calls refuse before either constant evaluator can fold them.
+// A compile-time call whose `requires` fails at the argument has no canonical value: refused.
 module function_probe {
 type Small = u8 in 0 .. 100;
 
