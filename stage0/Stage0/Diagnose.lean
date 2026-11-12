@@ -31,7 +31,17 @@ def notes (text : String) (options : Profil.Options := {}) : List String := Id.r
   let unit ← match (Frontend.elabWithScopes declarations derived.scope.values derived.scope.types
       derived.scope.functions (Frontend.tableWithEmpty derived.scope.values derived.scope.types)).bind
         (Profil.selectUnit options) with
-    | .error _ => return gate
+    | .error _ =>
+      -- The same elaboration once more, asked for the place: the function an error arose in.
+      let place := match expandU declarations with
+        | .error _ => []
+        | .ok (expanded, requirements) =>
+          match elabExpandedWithScopes (expanded.map OldSource.normalizeItem) derived.scope.values
+              derived.scope.types derived.scope.functions
+              (Frontend.tableWithEmpty derived.scope.values derived.scope.types) requirements (ort := true) with
+          | .error reason => ["elaboration: " ++ reason]
+          | .ok _ => []
+      return gate ++ place
     | .ok unit => pure unit
   let functions := (List.finRange unit.fns.length).filterMap fun f =>
     match lowerFnAt unit f with

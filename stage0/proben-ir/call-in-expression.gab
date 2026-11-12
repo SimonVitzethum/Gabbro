@@ -1,0 +1,13 @@
+// Calls inside expressions are bound in front of their statement, left to right: operands, a
+// condition, an assigned value, an argument of another call, a call through a local pointer.
+module ir_call_expression {
+static mut s : u32 in 0 .. 100 = 0;
+impl fn f(b : u32 in 0 .. 20) -> u32 in 0 .. 20 effects { pure } { return b; }
+impl fn big(b : u32 in 0 .. 20) -> bool effects { pure } { return b >= 5; }
+impl fn main() -> u32 in 0 .. 255 effects { reads s, writes s } {
+    s = f(f(3));
+    let p = &f;
+    if big(f(7)) { return f(1) + f(2) + p(4) + s; }
+    return 0;
+}
+}

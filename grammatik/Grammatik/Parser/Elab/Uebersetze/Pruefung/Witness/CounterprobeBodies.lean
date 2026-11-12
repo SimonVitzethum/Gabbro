@@ -66,6 +66,6 @@ private def counterprobe_body_call (u : UProg) (caller : Fin u.fns.length)
   simp only [head.property]
   rw [counterprobe_with_result u head.val.callee .bool result]
   rw [lowBodyF]
-  simp only [ending.property, dif_pos reason]
+  simp only [mitRuf_bool, ending.property, dif_pos reason]
 
 end Gabbro.Grammatik.Parser.Uebersetze

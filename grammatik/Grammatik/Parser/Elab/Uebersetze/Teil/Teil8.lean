@@ -92,8 +92,6 @@ def uBindWertAllg (ctx : UCtx) (mu : Bool) (x : String) (t : Option STyp) (e : S
     | .error err => .error err
     | .ok b => .ok (.bindB x b, boolCtx)
   | .some (.index true tn) =>
-    if mu then .error "let mut of an option without G form"
-    else
       match uTabNr ctx.tabs tn with
       | .error err => .error err
       | .ok (num, c) =>
@@ -213,15 +211,13 @@ def uBindWert (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (mu : Bool
   | none =>
   match (match t with | .some (.atom a) => ctx.sums.findIdx? (fun (s : USum) => strEq s.name a) | _ => none : Option Nat) with
   | .some k =>
-    if mu then .error "let mut of a tagged value without G form"
-    else
       match ctx.sums[k]? with
       | .none => .error "tagged type unknown"
       | .some sm =>
         match uSVal ctx k e with
         | .error err => .error err
         | .ok sv =>
-          .ok (.bindSum x k sv, uMitLokal ctx x (UParamArt.sum k) (Ty.sum sm.spec) (ctx.muts.filter (fun m => !strEq m x)))
+          .ok (.bindSum x k sv, uMitLokal ctx x (UParamArt.sum k) (Ty.sum sm.spec) (if mu then x :: ctx.muts else ctx.muts.filter (fun m => !strEq m x)))
   | .none =>
   match (match e with
       | .fnref f =>
@@ -321,6 +317,11 @@ def uBindWert (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (mu : Bool
             | .ok true =>
               .ok (.bindCall x c xs, uMitLokal ctx x UParamArt.int (Ty.int lo hi) muts)
           | false, .none =>
+            -- A call whose answer is an `option index into T` binds an option of that table.
+            match callee.resOpt, t with
+            | .some (num, cnt), .none =>
+              .ok (.bindCall x c xs, uMitLokal ctx x (UParamArt.opt num) (Ty.opt cnt) muts)
+            | _, _ =>
             match callee.resSum, callee.resWhy, t with
             | .some (k, cases), _, .none =>
               .ok (.bindCall x c xs, uMitLokal ctx x (UParamArt.sum k) (Ty.sum cases) muts)

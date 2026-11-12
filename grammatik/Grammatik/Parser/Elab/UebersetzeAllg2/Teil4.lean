@@ -304,6 +304,7 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .storeAtomB n v => (lowStoreAtomBL u caller Γ fn Λ n v).map fun st => ⟨Λ, st⟩
   | .setVar x v => (lowSetVarL u caller Γ fn Λ x v).map fun st => ⟨Λ, st⟩
   | .setVarB x v => (lowSetVarBL u caller Γ fn Λ x v).map fun st => ⟨Λ, st⟩
+  | .setVarOpt x num o => (lowSetVarOptL u caller Γ fn Λ x num o).map fun st => ⟨Λ, st⟩
   | .retireMark name =>
     if !u.checks.any (fun c => strEq c.duty name) then
       .error ("retirement is not a declared check Duty: " ++ name)
@@ -332,6 +333,7 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
     .error "float: IEEE introduction requires a continuing G block; no canonical Endblock form"
   | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .narrowReqBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .startS | .allocBeg .. | .bindOptBeg .. | .bindOptElseBeg .. | .callIndElseBeg .. | .axCallElseBeg .. | .allocReqBeg .. | .bindElse .. | .matchWhyBeg .. | .bindSum .. | .matchTagBeg .. | .bindAxElse .. | .ifBeg _ | .ifElse | .arrayLoopBeg .. | .loopBeg .. | .regRead .. | .regReadElse .. | .awaitBind .. | .bindFnref .. | .bindCallInd .. | .bindCallIndElse .. | .bindW .. | .tausch .. | .ifEnde .. =>
     .error "lower: a let, if or traverse is read by the block reader"
+  | .setVarSum .. => .error "lower: an assignment of a tagged value is read by the block reader"
   | .ret _ => .error "lower: return in the middle of a body has no G form"
   | .leave _ => .error "lower: leave outside a traverse"
   | .next _ => .error "lower: next outside a traverse"

@@ -181,7 +181,7 @@ theorem nested_else_lower {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ
     (body : Endblock (declOf u) (verOf u caller) l (τ :: Γ) (nach (declOf u) k.callee Λ))
     (herr : lowEndL (l := l) u caller (Ty.why ((declOf u).gruende k.callee) :: Γ)
       (fn.mitWhy reason 0 ((declOf u).gruende k.callee)) fuel (nach (declOf u) k.callee Λ) top source = .ok (err, .blkEnd :: tail))
-    (hbody : lowEndL (l := l) u caller (τ :: Γ) (fn.mitTy y τ) fuel (nach (declOf u) k.callee Λ) top tail = .ok (body, remaining)) :
+    (hbody : lowEndL (l := l) u caller (τ :: Γ) (mitRuf u fn y k.callee τ) fuel (nach (declOf u) k.callee Λ) top tail = .ok (body, remaining)) :
     lowEndL (l := l) u caller Γ fn (fuel + 1) Λ top (.bindElse y callee args reason :: source) =
       .ok (nestedElse u caller Γ Λ k τ he hr err body, remaining) := by
   simp only [lowEndL_succ, lowEndStep, lowStufe_ende, hg, bind, Except.bind, hk,

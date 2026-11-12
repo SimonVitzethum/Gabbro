@@ -96,7 +96,7 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
   | Γ, fn, Λ, pe, .bindCall x cname args :: rest =>
     (lowRufKopf u caller Γ fn Λ cname args).bind fun k =>
       withErg u k.callee fun τ hE =>
-        (R.seq (l := l) (τ :: Γ) (fn.mitTy x τ) (nach (declOf u) k.callee Λ) pe rest).bind fun (⟨Λ', b⟩, r) =>
+        (R.seq (l := l) (τ :: Γ) (mitRuf u fn x k.callee τ) (nach (declOf u) k.callee Λ) pe rest).bind fun (⟨Λ', b⟩, r) =>
           if hr : (declOf u).gruende k.callee = 0 then
             .ok (⟨Λ', Block.bindCall (D := declOf u) k.callee k.args hE k.hp hr b⟩, r)
           else .error "call of a function with a reason channel needs `let .. else`"
@@ -146,7 +146,7 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
         withErg u k.callee fun τ hE =>
           match R.ende (l := l) (Ty.why ((declOf u).gruende k.callee) :: Γ) (fn.mitWhy e 0 ((declOf u).gruende k.callee)) (nach (declOf u) k.callee Λ) pe rest with
           | .error err => .error err
-          | .ok (errb, .blkEnd :: rest') => match R.seq (l := l) (τ :: Γ) (fn.mitTy y τ) (nach (declOf u) k.callee Λ) pe rest' with
+          | .ok (errb, .blkEnd :: rest') => match R.seq (l := l) (τ :: Γ) (mitRuf u fn y k.callee τ) (nach (declOf u) k.callee Λ) pe rest' with
             | .error err => .error err
             | .ok ((⟨Λ', b⟩, r)) =>
               .ok (⟨Λ', Block.bindCallElse (D := declOf u) k.callee k.args hE k.hp hr errb b⟩, r)
@@ -300,6 +300,9 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
   | Γ, fn, Λ, pe, .next _ :: rest =>
     if h : l = true then (R.seq Γ fn Λ pe rest).bind fun (⟨Λ', b⟩, r) => .ok (⟨Λ', Block.cons (Stmt.next h) b⟩, r)
     else .error "lower: next outside a traverse"
+  | Γ, fn, Λ, pe, .setVarSum x sidx v :: rest =>
+    (lowSetVarSumL u caller Γ fn Λ x sidx v).bind fun st =>
+      (R.seq Γ fn Λ pe rest).bind fun (⟨Λ₂, b⟩, r) => .ok (⟨Λ₂, Block.cons st b⟩, r)
   | Γ, fn, Λ, pe, s :: rest =>
     (lowStmtL u caller Γ fn Λ s).bind fun ⟨Λ₁, st⟩ =>
       (R.seq Γ fn Λ₁ pe rest).bind fun (⟨Λ₂, b⟩, r) => .ok (⟨Λ₂, Block.cons st b⟩, r)

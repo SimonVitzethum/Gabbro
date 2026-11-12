@@ -329,7 +329,7 @@ private theorem bind_failure (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
   rw [lowBodyF]
   simp only [head.property]
   rw [check_result_select, check_result_transport _ _ result]
-  simp only [check_result_value, failed]
+  simp only [check_result_value, mitRuf_bool, failed]
 
 private theorem empty_return_failure (u : UProg) (caller : Fin u.fns.length)
     (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u)))

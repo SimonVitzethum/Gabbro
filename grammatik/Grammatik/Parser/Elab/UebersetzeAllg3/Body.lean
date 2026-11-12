@@ -101,7 +101,7 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
     | .error e => .error e
     | .ok k =>
       withErg u k.callee fun τ hE =>
-        match lowBodyF u caller (τ :: Γ) (fn.mitTy x τ) n (nach (declOf u) k.callee Λ) rest r with
+        match lowBodyF u caller (τ :: Γ) (mitRuf u fn x k.callee τ) n (nach (declOf u) k.callee Λ) rest r with
         | .error e => .error e
         | .ok e =>
           if hr : (declOf u).gruende k.callee = 0 then
@@ -288,7 +288,7 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
               (fn.mitWhy e 0 ((declOf u).gruende k.callee)) blockFuel (nach (declOf u) k.callee Λ) [] rest with
           | .error err => .error err
           | .ok (errb, .blkEnd :: rest') =>
-            match lowBodyF u caller (τ :: Γ) (fn.mitTy y τ) n (nach (declOf u) k.callee Λ) rest' r with
+            match lowBodyF u caller (τ :: Γ) (mitRuf u fn y k.callee τ) n (nach (declOf u) k.callee Λ) rest' r with
             | .error err => .error err
             | .ok ee =>
               .ok (Endblock.bindCallElse (D := declOf u) k.callee k.args hE k.hp hr errb ee)
@@ -436,6 +436,13 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
     | .error e => .error e
     | .ok (⟨Λ₁, st⟩, rest') =>
       match lowBodyF u caller Γ fn n Λ₁ rest' r with
+      | .error e => .error e
+      | .ok e => .ok (Endblock.cons st e)
+  | Γ, fn, n + 1, Λ, .setVarSum x sidx v :: rest, r =>
+    match lowSetVarSumL (l := false) u caller Γ fn Λ x sidx v with
+    | .error e => .error e
+    | .ok st =>
+      match lowBodyF u caller Γ fn n Λ rest r with
       | .error e => .error e
       | .ok e => .ok (Endblock.cons st e)
   | Γ, fn, n + 1, Λ, s :: rest, r =>

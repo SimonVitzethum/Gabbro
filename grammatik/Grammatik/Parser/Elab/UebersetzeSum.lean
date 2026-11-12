@@ -64,4 +64,20 @@ def lowSVal (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (sh :
     | some (.error e) => .error e
     | none => .error "tagged value without G form"
 
+/-- `x = v;` at a `let mut` local of the tagged type at `sidx`. -/
+def lowSetVarSumL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (x : String) (sidx : Nat) (v : USVal) :
+    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
+  if hs : sidx < u.sums.length then
+    match paramPos fn.params x with
+    | .error e => .error e
+    | .ok j =>
+      match lowVar Γ j (.sum (u.sums.get ⟨sidx, hs⟩).spec) with
+      | .error e => .error e
+      | .ok var =>
+        match lowSVal u Γ Λ fn 0 sidx hs v with
+        | .error e => .error e
+        | .ok e => .ok (Stmt.assignVar (D := declOf u) var e)
+  else .error "tagged type unknown"
+
 end Gabbro.Grammatik.Parser.UebersetzeAllg2

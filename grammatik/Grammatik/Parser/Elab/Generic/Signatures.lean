@@ -65,6 +65,21 @@ def sigAtSchnell (u : UProg) (n : Nat) :
   · rw [dif_pos h, List.get_eq_getElem, List.getElem?_eq_getElem h]
   · rw [dif_neg h, List.getElem?_eq_none (Nat.le_of_not_lt h)]
 
+/-- The scope after `let x = f(args)`: `x` at the answer type of the callee. An answer
+    `option index into T` keeps its table, as a written `let x : option index into T` does. -/
+def mitRuf (u : UProg) (fn : UFn) (x : String) (callee : Fin u.fns.length) (τ : Ty) : UFn :=
+  match τ, (fnAt u callee).resOpt with
+  | .opt _, some (num, cnt) => fn.mitOpt x num cnt
+  | _, _ => fn.mitTy x τ
+
+/-- A truth-valued answer binds as every truth value does. -/
+@[simp] theorem mitRuf_bool (u : UProg) (fn : UFn) (x : String) (callee : Fin u.fns.length) :
+    mitRuf u fn x callee .bool = fn.mitTy x .bool := rfl
+
+/-- A numeric answer binds as every number does. -/
+@[simp] theorem mitRuf_int (u : UProg) (fn : UFn) (x : String) (callee : Fin u.fns.length) (lo hi : Int) :
+    mitRuf u fn x callee (.int lo hi) = fn.mitTy x (.int lo hi) := rfl
+
 /-- **Conformance, decided** (`SigPasst` over the finite carriers of an elaborated unit): the first
     signature fits the second, with the same owner flow (the C09 handoff is part of conformance). -/
 def sigPasstB {a b c : Nat} {Marke : Type} [DecidableEq Marke] (rang : Fin c → Int) (S T : Signatur (Fin a) (Fin b) (Fin c) Marke) : Bool :=

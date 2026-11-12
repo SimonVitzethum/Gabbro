@@ -12,13 +12,23 @@ public import Grammatik.Parser.Elab.Uebersetze.Records.Constants
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 
+/-- An elaboration result with the function it belongs to, when the caller asks for the place of an
+    error (`ort`). Without the request the result is unchanged, so the compiler's own verdict and
+    every statement about it carry the bare reason; a diagnosis runs the same elaboration with `ort`. -/
+def mitOrt {α : Type} (ort : Bool) (name : String) (r : Except String α) : Except String α :=
+  if ort then
+    match r with
+    | .error e => .error ("function " ++ name ++ ": " ++ e)
+    | .ok a => .ok a
+  else r
+
 /-- One shared phase body over expanded declarations. Stage 0 supplies certified source scopes
     and its checked empty-table adapter; canonical export supplies its ordinary collectors.
     Runtime checks, declaration expansion and G elaboration are never copied into Stage 0. -/
 def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (functions : List UKonstFn)
     (tableLowering : List String → SItemTief → Except String UTab)
-    (staticRequirements : List (STyp × String) := []) : Except String UProg :=
+    (staticRequirements : List (STyp × String) := []) (ort : Bool := false) : Except String UProg :=
   match guestSources msE with
   | .error e => .error e
   | .ok (guests, msE) =>
@@ -131,7 +141,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
       elabZeigerTyp consts alias tabs locks globs whys sums zeiger zb j r spaces valueScope.types eigner)) with
   | .error e => .error e
   | .ok zeigerPaare =>
-  match uSeq (fnItems.map (fun (s, _) => elabKopf consts alias tabs locks globs whys sums s devs zeiger zb spaces valueScope.types eigner)) with
+  match uSeq (fnItems.map (fun (s, _) => mitOrt ort s.name (elabKopf consts alias tabs locks globs whys sums s devs zeiger zb spaces valueScope.types eigner))) with
   | .error e => .error e
   | .ok [] => .error "unit without a fn"
   | .ok kopfPaare =>
@@ -153,7 +163,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   | .error e => .error e
   | .ok probeFns =>
   match uSeq (fnItems.map (fun (s, b) =>
-      elabUFunktion (spaces := spaces) (valueScope := valueScope) (eigner := eigner) consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb
+      mitOrt ort s.name <| elabUFunktion (spaces := spaces) (valueScope := valueScope) (eigner := eigner) consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb
         specFns
         constants)) with
   | .error e => .error e

@@ -176,6 +176,10 @@ inductive UStmt
       `blkEnd`. Retain result binder, pointer, resolved signature, arguments and
       reason binder for the existing typed Block/Endblock lowering. -/
   | bindCallIndElse : String → String → String → List UArg → String → UStmt
+  /-- `x = v;` at a `let mut` local that holds an option over the table `num`. -/
+  | setVarOpt : String → Nat → UOpt → UStmt
+  /-- `x = v;` at a `let mut` local of the tagged type at position `k`. -/
+  | setVarSum : String → Nat → USVal → UStmt
   deriving DecidableEq, Repr
 /-- One elaborated table: slot count and one integer range per
     slot field (the `TableModel` of `lean_g.rs`). -/

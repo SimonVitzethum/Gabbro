@@ -76,6 +76,14 @@ def uSetzeLokal (ctx : UCtx) (x : String) (wert : SExpr) : Except String UStmt :
       match uBool ctx wert with
       | .error e => .error e
       | .ok v => .ok (.setVarB x v)
+    | .ok (.opt num) =>
+      match uOpt ctx num wert with
+      | .error e => .error e
+      | .ok v => .ok (.setVarOpt x num v)
+    | .ok (.sum k) =>
+      match uSVal ctx k wert with
+      | .error e => .error e
+      | .ok v => .ok (.setVarSum x k v)
     | _ => .error "assignment to a pointer or an index"
 
 /-- The binary operator of a compound assignment `x op= v` (the surface has `+= -= &= |=`). -/

@@ -1,4 +1,5 @@
 module
+public import Grammatik.Parser.Elab.Modules.CallHoist
 public import Grammatik.Parser.Elab.Modules.Expansion
 public import Grammatik.Parser.Elab.SourceNormalization
 public import Grammatik.Parser.Elab.Instantiation.Items
@@ -30,6 +31,8 @@ def prepareDetailedRaw (items : List SItemTief) : Except String Prepared := do
   let members := if syntaxList items then UebersetzeAllg2.normTopU32 members else members
   let result ← Generic.expandDetailed members modules.literals
   let target ← Uebersetze.entzuckere result.items
+  -- Calls inside expressions become bindings before the unit is exported (`CallHoist`).
+  let target := CallHoist.hebe target
   let (target, declarationNames) ← exportDeclarationUnitDetailed target
   let allocated := modules.generatedNames ++ result.generatedNames ++ declarationNames
   let generated := allocated.filter ((outputNames target).contains)

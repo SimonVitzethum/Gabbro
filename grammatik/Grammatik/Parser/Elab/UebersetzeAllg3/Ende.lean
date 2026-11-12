@@ -66,7 +66,7 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
   | Γ, fn, Λ, pe, .bindCall x cname args :: rest =>
     (lowRufKopf u caller Γ fn Λ cname args).bind fun k =>
       withErg u k.callee fun τ hE =>
-        (R.ende (l := l) (τ :: Γ) (fn.mitTy x τ) (nach (declOf u) k.callee Λ) pe rest).bind fun (b, r) =>
+        (R.ende (l := l) (τ :: Γ) (mitRuf u fn x k.callee τ) (nach (declOf u) k.callee Λ) pe rest).bind fun (b, r) =>
           if hr : (declOf u).gruende k.callee = 0 then
             .ok (Endblock.bindCall (D := declOf u) k.callee k.args hE k.hp hr b, r)
           else .error "call of a function with a reason channel needs `let .. else`"
@@ -242,7 +242,7 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
         withErg u k.callee fun τ hE =>
           match R.ende (l := l) (Ty.why ((declOf u).gruende k.callee) :: Γ) (fn.mitWhy e 0 ((declOf u).gruende k.callee)) (nach (declOf u) k.callee Λ) pe rest with
           | .error err => .error err
-          | .ok (errb, .blkEnd :: tail) => match R.ende (l := l) (τ :: Γ) (fn.mitTy y τ) (nach (declOf u) k.callee Λ) pe tail with
+          | .ok (errb, .blkEnd :: tail) => match R.ende (l := l) (τ :: Γ) (mitRuf u fn y k.callee τ) (nach (declOf u) k.callee Λ) pe tail with
             | .error err => .error err
             | .ok (body, remaining) => .ok (nestedElse u caller Γ Λ k τ hE hr errb body, remaining)
           | .ok (_, _) => .error "lower: a let else is not closed"
@@ -312,6 +312,9 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
   | Γ, fn, Λ, pe, .foreverBeg k :: rest =>
     (R.struct (l := l) Γ fn Λ pe (.foreverBeg k) rest).bind fun (⟨Λ₁, st⟩, rest') =>
       (R.ende (l := l) Γ fn Λ₁ pe rest').bind fun (b, r) => .ok (Endblock.cons st b, r)
+  | Γ, fn, Λ, pe, .setVarSum x sidx v :: rest =>
+    (lowSetVarSumL u caller Γ fn Λ x sidx v).bind fun st =>
+      (R.ende (l := l) Γ fn Λ pe rest).bind fun (b, r) => .ok (Endblock.cons st b, r)
   | Γ, fn, Λ, pe, s :: rest =>
     (lowStmtL u caller Γ fn Λ s).bind fun ⟨Λ₁, st⟩ =>
       (R.ende (l := l) Γ fn Λ₁ pe rest).bind fun (b, r) => .ok (Endblock.cons st b, r)

@@ -1,0 +1,158 @@
+// A small compiler front end: tokens, a recursive-descent parser into a node table, an evaluator.
+module zeichen {
+pub impl fn ziffer(b : u32 in 0 .. 255) -> bool effects { pure } {
+    if b >= 48 { if b <= 57 { return true; } }
+    return false;
+}
+}
+module rechner {
+use zeichen::ziffer;
+tagged type Marke = { Ende, Zahl(u32 in 0 .. 100000), Plus, Mal, Auf, Zu };
+table quelle count 64 { slot { b : u32 in 0 .. 255, } }
+table knoten count 256 { slot { art : u32 in 0 .. 2, wert : u32 in 0 .. 100000, links : u32 in 0 .. 255, rechts : u32 in 0 .. 255, } }
+static mut stelle : u32 in 0 .. 64 = 0;
+static mut belegt : u32 in 0 .. 256 = 0;
+static mut fehler : u32 in 0 .. 1 = 0;
+
+impl fn lies_zahl(n : u32 in 0 .. 8) -> u32 in 0 .. 100000
+    effects { reads quelle.slots, reads stelle, writes stelle }
+    decreases n
+{
+    narrow n to 1 .. 8 else { return 0; }
+    let s = stelle;
+    narrow s to 0 .. 63 else { return 0; }
+    let b = quelle.slots[s].b;
+    if !ziffer(b) { return 0; }
+    stelle = s + 1;
+    let rest = lies_zahl(n - 1);
+    return rest;
+}
+
+impl fn marke() -> Marke
+    effects { reads quelle.slots, reads stelle, writes stelle }
+{
+    let s = stelle;
+    narrow s to 0 .. 63 else { return Ende; }
+    let b = quelle.slots[s].b;
+    if b == 0 { return Ende; }
+    if b == 43 { stelle = s + 1; return Plus; }
+    if b == 42 { stelle = s + 1; return Mal; }
+    if b == 40 { stelle = s + 1; return Auf; }
+    if b == 41 { stelle = s + 1; return Zu; }
+    if ziffer(b) {
+        stelle = s + 1;
+        let w = b - 48;
+        narrow w to 0 .. 9 else { return Ende; }
+        return Zahl(w);
+    }
+    return Ende;
+}
+
+impl fn neu(art : u32 in 0 .. 2, wert : u32 in 0 .. 100000, l : u32 in 0 .. 255, r : u32 in 0 .. 255) -> u32 in 0 .. 255
+    effects { reads belegt, writes belegt, writes knoten.slots, writes fehler }
+{
+    let k = belegt;
+    narrow k to 0 .. 255 else { fehler = 1; return 0; }
+    knoten.slots[k].art = art;
+    knoten.slots[k].wert = wert;
+    knoten.slots[k].links = l;
+    knoten.slots[k].rechts = r;
+    belegt = k + 1;
+    return k;
+}
+
+impl fn faktor(n : u32 in 0 .. 40) -> u32 in 0 .. 255
+    effects { reads quelle.slots, reads stelle, writes stelle, reads belegt, writes belegt, writes knoten.slots, writes fehler }
+    decreases n
+{
+    narrow n to 1 .. 40 else { fehler = 1; return 0; }
+    let m = marke();
+    match m {
+        Zahl(w) => { let k = neu(0, w, 0, 0); return k; }
+        Auf => {
+            let k = summe(n - 1);
+            let z = marke();
+            match z {
+                Zu => { return k; }
+                Ende => { fehler = 1; return k; }
+                Zahl(w) => { fehler = 1; return k; }
+                Plus => { fehler = 1; return k; }
+                Mal => { fehler = 1; return k; }
+                Auf => { fehler = 1; return k; }
+            }
+        }
+        Ende => { fehler = 1; return 0; }
+        Plus => { fehler = 1; return 0; }
+        Mal => { fehler = 1; return 0; }
+        Zu => { fehler = 1; return 0; }
+    }
+}
+
+impl fn produkt(n : u32 in 0 .. 40) -> u32 in 0 .. 255
+    effects { reads quelle.slots, reads stelle, writes stelle, reads belegt, writes belegt, writes knoten.slots, writes fehler }
+    decreases n
+{
+    narrow n to 1 .. 40 else { fehler = 1; return 0; }
+    let l = faktor(n - 1);
+    let s = stelle;
+    narrow s to 0 .. 63 else { return l; }
+    if quelle.slots[s].b == 42 {
+        stelle = s + 1;
+        let r = produkt(n - 1);
+        let k = neu(2, 0, l, r);
+        return k;
+    }
+    return l;
+}
+
+impl fn summe(n : u32 in 0 .. 40) -> u32 in 0 .. 255
+    effects { reads quelle.slots, reads stelle, writes stelle, reads belegt, writes belegt, writes knoten.slots, writes fehler }
+    decreases n
+{
+    narrow n to 1 .. 40 else { fehler = 1; return 0; }
+    let l = produkt(n - 1);
+    let s = stelle;
+    narrow s to 0 .. 63 else { return l; }
+    if quelle.slots[s].b == 43 {
+        stelle = s + 1;
+        let r = summe(n - 1);
+        let k = neu(1, 0, l, r);
+        return k;
+    }
+    return l;
+}
+
+impl fn wert(k : u32 in 0 .. 255, n : u32 in 0 .. 40) -> u32 in 0 .. 100000
+    effects { reads knoten.slots }
+    decreases n
+{
+    narrow n to 1 .. 40 else { return 0; }
+    let art = knoten.slots[k].art;
+    if art == 0 { return knoten.slots[k].wert; }
+    let a = wert(knoten.slots[k].links, n - 1);
+    let b = wert(knoten.slots[k].rechts, n - 1);
+    if art == 1 {
+        let s = a + b;
+        narrow s to 0 .. 100000 else { return 0; }
+        return s;
+    }
+    let p = a * b;
+    narrow p to 0 .. 100000 else { return 0; }
+    return p;
+}
+
+impl fn main() -> u32 in 0 .. 255
+    effects { reads quelle.slots, writes quelle.slots, reads stelle, writes stelle, reads belegt, writes belegt,
+              reads knoten.slots, writes knoten.slots, reads fehler, writes fehler }
+{
+    // 2*(3+4)+5
+    quelle.slots[0].b = 50; quelle.slots[1].b = 42; quelle.slots[2].b = 40; quelle.slots[3].b = 51;
+    quelle.slots[4].b = 43; quelle.slots[5].b = 52; quelle.slots[6].b = 41; quelle.slots[7].b = 43;
+    quelle.slots[8].b = 53; quelle.slots[9].b = 0;
+    let wurzel = summe(40);
+    if fehler == 1 { return 255; }
+    let w = wert(wurzel, 40);
+    narrow w to 0 .. 255 else { return 254; }
+    return w;
+}
+}

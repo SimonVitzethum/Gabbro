@@ -322,6 +322,22 @@ def lowSetVarBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (f
       | .error e => .error e
       | .ok e => .ok (Stmt.assignVar (D := declOf u) var e)
 
+/-- `x = v;` at a `let mut` local that holds an option over the table `num`. -/
+def lowSetVarOptL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (x : String) (num : Nat) (o : UOpt) :
+    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
+  if hnum : num < u.tabs.length then
+    match paramPos fn.params x with
+    | .error e => .error e
+    | .ok j =>
+      match lowVar Γ j (.opt ((declOf u).count ⟨num, hnum⟩)) with
+      | .error e => .error e
+      | .ok var =>
+        match lowOpt u Γ Λ fn 0 num hnum o with
+        | .error e => .error e
+        | .ok e => .ok (Stmt.assignVar (D := declOf u) var e)
+  else .error "option table unknown"
+
 /-- A number as the value of a register: the register is an integer range. -/
 def alsRegZahl {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} :
     (g : UReg) → Expr D Γ Λ (.int g.lo g.hi) → Except String (Expr D Γ Λ g.ty)

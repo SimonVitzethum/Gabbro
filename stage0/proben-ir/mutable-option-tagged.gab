@@ -1,0 +1,25 @@
+// A `let mut` local may hold an option or a tagged value and be assigned one; a function may answer
+// `option index into T`, and its call binds an option of that table.
+module ir_mutable_values {
+tagged type Token = { End, Number(u32 in 0 .. 100) };
+table T count 8 { slot { v : u32 in 0 .. 100, } }
+impl fn find(x : u32 in 0 .. 100) -> option index into T effects { reads T.slots } {
+    let mut r : option index into T = None;
+    traverse i over slots of T by unvisited touches reads T.slots {
+        if T.slots[i].v == x { r = Some(i); leave i; }
+    }
+    return r;
+}
+impl fn main() -> u32 in 0 .. 255 effects { reads T.slots, writes T.slots } {
+    T.slots[5].v = 9;
+    let mut t : Token = End;
+    match find(9) {
+        Some(k) => { t = Number(k); }
+        None => { t = End; }
+    }
+    match t {
+        End => { return 0; }
+        Number(x) => { return x + 30; }
+    }
+}
+}
