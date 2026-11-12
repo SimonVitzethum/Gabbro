@@ -6,6 +6,7 @@ public import Stage0.Frontend.Constants.ArrayConstants
 public import Stage0.Frontend.Initializers
 public import Stage0.Frontend.Measures
 public import Stage0.Senke.Ausdruck.Old.Source
+public import Grammatik.Parser.Elab.Export.HeldBinding
 @[expose] public section
 
 
@@ -13,6 +14,9 @@ namespace Gabbro.Stage0
 open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
   Gabbro.Grammatik.Parser.Cover.Differenz
+
+/-- Per-loop environment fuel compiled into the image; independent of call depth. -/
+def irDurchlaeufe : Nat := 2 ^ 20
 
 /-- The actual source-to-G endpoint. Canonical expansion consumes lexically scoped declarations
     and certified source scopes. The existing old(global) bridge and full checker remain mandatory. -/
@@ -36,6 +40,13 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
   lowered : ∃ raw fs, lowerAllg unit = .ok (raw, fs) ∧
     OldSource.restore (pre108 source.prepared.elaborierbar) unit raw = .ok program
   accepted : OldSource.accepts unit program = .ok true
+  /-- The declared costs of the gate's functions hold on the final program: the K001 Bool of the model
+      over every function with a declared cost (`CostBinding.holds_sound` is the bound). -/
+  costs : CostBinding.holds (CostBinding.declared gateMembers) unit program irDurchlaeufe = true
+  /-- The declared hold bounds of the gate's locks hold on the final program (K002): every section of
+      a lock with `held <= n ops` costs at most `n` own steps. -/
+  held : HeldBinding.holds (HeldBinding.declared gateMembers) (CostBinding.declared gateMembers) unit program
+    irDurchlaeufe = true
   /-- Every original constant, including unused products and nested rows, has a canonical typed
       literal. Scalar scope deferral alone never admits a declaration. -/
   arrayConstants : ∀ item ∈ uMembers (pre108 source.prepared.elaborierbar), Frontend.ArrayMeaning unit source.scopes item
@@ -104,7 +115,18 @@ def compileChecked (source : Frontend.Source text options)
             match ha : OldSource.accepts unit program with
             | .error e => throw e
             | .ok false => throw "refused by the checker (AkzeptiertX)"
-            | .ok true => pure {
+            | .ok true => do
+              match hk : CostBinding.holds (CostBinding.declared gateMembers) unit program irDurchlaeufe with
+              | false => throw ("declared costs do not hold: " ++
+                  ((CostBinding.failing (CostBinding.declared gateMembers) unit program irDurchlaeufe).getD "?"))
+              | true =>
+              match hh : HeldBinding.holds (HeldBinding.declared gateMembers) (CostBinding.declared gateMembers)
+                  unit program irDurchlaeufe with
+              | false => throw ("declared hold bound does not hold: " ++
+                  ((HeldBinding.failing (HeldBinding.declared gateMembers) (CostBinding.declared gateMembers)
+                    unit program irDurchlaeufe).getD "?") ++
+                  " has a locks section over its lock's bound, or one that calls a function without a declared cost")
+              | true => pure {
                 source := source
                 unit := unit
                 main := main
@@ -113,6 +135,8 @@ def compileChecked (source : Frontend.Source text options)
                 entry := hm
                 lowered := ⟨raw, fs, hl, hr⟩
                 accepted := ha
+                costs := hk
+                held := hh
                 arrayConstants := arrays.down
                 initializerExports := hi
                 constantExports := hc
@@ -154,6 +178,19 @@ def compile (text : String) (options : Profil.Options := {}) : Except String (Co
           | .ok () => do
             compileChecked source hc expanded requirements hp (uMembers expanded) (Or.inl ⟨rfl, hx⟩)
           | .error _ => throw originalError
+
+/-- **Declared costs bound the frames.** A function whose source declares `costs <= n ops` takes, in
+    every frame and on every run on which the frame has not returned before the last step, at most `n`
+    own steps of machine G. -/
+theorem Compiled.declaredCosts {text : String} {options : Profil.Options} (result : Compiled text options)
+    (O : Orakel (declOf result.unit)) (f : Faden) (g : Fin result.unit.fns.length) (n : Nat)
+    (declared : CostBinding.costOf (CostBinding.declared result.gateMembers) result.unit g = some n)
+    {rho : Env (declOf result.unit) ((declOf result.unit).params g)} {s0 : World (declOf result.unit)}
+    {k : Nat} {M1 M2 : RufMaschineG (declOf result.unit)}
+    (entered : Eintritt result.program f g rho s0 k M1)
+    (run : SegLauf result.program O irDurchlaeufe M1 M2) (active : aktivVor f k run) :
+    segZaehle run f ≤ n :=
+  CostBinding.holds_sound _ _ result.costs O f g n declared entered run active
 
 /-- The actual source program keeps all declared table/global carriers and their exact read bound. -/
 theorem Compiled.invariants {text : String} {options : Profil.Options} (result : Compiled text options)

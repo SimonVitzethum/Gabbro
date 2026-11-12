@@ -27,9 +27,6 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 /-- The stack of an image, in slots (4 MiB); the world lies above it (`Senke.layU`). -/
 def irStapel : Nat := 2 ^ 19
 
-/-- Per-loop environment fuel compiled into the image; independent of call depth. -/
-def irDurchlaeufe : Nat := 2 ^ 20
-
 /-- The actual image together with the exact source program and successful canonical IR emission. -/
 structure Emitted (text : String) (K : Nat) (options : Profil.Options := {}) where
   compiled : Compiled text options

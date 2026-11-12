@@ -88,7 +88,7 @@ def writeTarget : SExpr → Option SEffekt
     if kind == "slots" then some (.writes (.field base "slots")) else none
   | _ => none
 
-/-- The writes of a loop body made of bindings, assignments, branches, narrowing, nested
+/-- The writes and lock takes of a loop body made of bindings, assignments, branches, narrowing, sections, nested
     traversals and exits; any other statement is not analysed (`none`). -/
 def bodyWrites : Nat → SAnw → Option (List SEffekt)
   | 0, _ => none
@@ -112,6 +112,12 @@ def bodyWrites : Nat → SAnw → Option (List SEffekt)
   | _ + 1, .bind _ _ _ e | _ + 1, .trimReq e _ => if callFree 10000 e then some [] else none
   | _ + 1, .ret e => if e.all (callFree 10000) then some [] else none
   | _ + 1, .leave _ | _ + 1, .next _ => some []
+  -- An atomic exchange and an atomic store write their static; an await reads.
+  | _ + 1, .swap _ _ (.variable a) _ => some [.writes (.variable a)]
+  | _ + 1, .await .. => some []
+  | _ + 1, .emit (.variable a) value _ => if callFree 10000 value then some [.writes (.variable a)] else none
+  -- A section takes its lock: the header must list it, and what the section writes.
+  | n + 1, .locks shared lock b => (bodyWrites n b).map fun ws => .locks shared lock :: ws
   | _ + 1, _ => none
 
 /-- A written header is verified against the loop itself when every expression of the body is

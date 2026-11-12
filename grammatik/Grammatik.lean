@@ -71,5 +71,10 @@ public import Grammatik.Logik.Ruf.Guest.Witness
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Guest.Connection
 
 public import Grammatik.Parser.Elab.Export.QuantifierWitnesses
+public import Grammatik.Parser.Elab.Export.ExportMetadataBound
+public import Grammatik.Parser.Elab.Export.CostBinding
+public import Grammatik.Parser.Elab.Export.CostBindingZeuge
+public import Grammatik.Parser.Elab.Export.HeldBinding
+public import Grammatik.Parser.Elab.Export.HeldBindingZeuge
 
 @[expose] public section

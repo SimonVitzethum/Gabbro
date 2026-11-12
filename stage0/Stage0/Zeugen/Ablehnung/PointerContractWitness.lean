@@ -42,10 +42,11 @@ set_option maxHeartbeats 400000
 def text : String :=
   "module pointer_probe { impl fn identity(a : u64 in 0 .. 9) -> u64 in 0 .. 9 requires a > 0 ensures result == a { return a; } impl fn main() -> u64 in 0 .. 9 { let p : fn(a : u64 in 0 .. 9) -> u64 in 0 .. 9 requires a > 0 ensures result == a effects { } costs <= 8 ops = &identity; let value = p(3); return value; } }"
 
-/-- A written function-pointer type with a contract and a cost is refused by the export gate. -/
+/-- A written function-pointer type with a contract and a cost passes the export gate; its cost is
+    checked. Here the function behind it declares no cost, so the unit is refused. -/
 theorem candidate_refused :
     emit text 64 = .error
-      "source export: function type/proof/header duties lack a checked source binding: main" := by
+      "declared costs do not hold: a pointer type declares a cost and admits a function without a declared cost within it" := by
   kernel_rfl
 
 

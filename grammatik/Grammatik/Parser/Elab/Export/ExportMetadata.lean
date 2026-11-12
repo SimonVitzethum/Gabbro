@@ -42,6 +42,20 @@ def typeMetadata : STyp → Bool
   | .range ty _ _ _ | .array ty _ => typeMetadata ty
   | _ => false
 
+/-- The type of a table field: a wrapping integer is bound, the elaborator records its modulus
+    (`UTab.wraps`) and every store reduces the value (`uWrap`). -/
+def fieldTypeMetadata : STyp → Bool
+  | .wrap (.atom _) => false
+  | t => typeMetadata t
+
+/-- A written function-pointer type is bound at a parameter and at a `let`, the positions the
+    elaborator collects pointer types from: it reads the head, the effects and the contract
+    (`elabZeigerTyp`, an unreadable text refuses the unit), conformance is decided per function
+    (`passtAt`), and a declared cost is checked (`CostBinding.ptrHolds`). -/
+def pointerOrMetadata : STyp → Bool
+  | .raw r => !r.startsWith "fn ("
+  | t => typeMetadata t
+
 /-- A conservative unit domain where no cost, scheduling, proof or reservation duty can disappear.
     Invariants are refused (no cost/runs/by binding); local annotations and nested continuations are inspected. -/
 def bodyMetadata : Nat → SAnw → Bool
@@ -56,7 +70,7 @@ def bodyMetadata : Nat → SAnw → Bool
   | n + 1, .cond _ a bs b => bodyMetadata n a || bs.any (bodyMetadata n) || b.any (bodyMetadata n)
   | n + 1, .elsif _ b | n + 1, .arm _ _ b => bodyMetadata n b
   | n + 1, .cases _ arms => arms.any (bodyMetadata n)
-  | _ + 1, .bind _ _ ty _ | _ + 1, .bindAxiomOpt _ ty _ => ty.any typeMetadata
+  | _ + 1, .bind _ _ ty _ | _ + 1, .bindAxiomOpt _ ty _ => ty.any pointerOrMetadata
   | n + 1, .each _ _ _ _ mode raw _ body =>
     if mode == "consuming" then (consumingHeader raw).toOption.isNone || bodyMetadata n body
     else mode != "unvisited" || raw != "" || bodyMetadata n body
@@ -69,7 +83,11 @@ def bodyMetadata : Nat → SAnw → Bool
   | _ + 1, .alloc false _ none _ _ none => false
   | n + 1, .alloc false _ none _ _ (some body) => bodyMetadata n body
   | n + 1, .retry header body => !retryHeaderBound header || bodyMetadata n body
-  | _ + 1, .loop .. | _ + 1, .swap .. | _ + 1, .await .. |
+  /- An atomic exchange and an atomic await are read completely by the elaborator: the static must be
+      a declared atomic, the payload the declared one, the binder's written type the atomic's
+      (`uBinderTyp`), and the update text parses or the unit is refused (`uTauschSchwanz`). -/
+  | _ + 1, .swap _ ty _ _ | _ + 1, .await _ ty _ _ => ty.any typeMetadata
+  | _ + 1, .loop .. |
     _ + 1, .alloc .. | _ + 1, .allocVon .. | _ + 1, .grow .. |
     _ + 1, .free .. | _ + 1, .child .. | _ + 1, .other .. => true
   | _ + 1, .genericCall .. => true
@@ -93,6 +111,17 @@ def clausesMetadataWithoutLoad (clauses : List SKlausel) : Bool := clauses.any f
   | .cost _ | .limit _ | .induc _ | .moves .. | .quits _ | .keeps _ | .part _ | .arch _ | .refs _ => true
   | _ => false
 
+/-- Whether a cost clause has no binding: only a literal cost is bound. The compiler checks the K001 Bool
+    `kostenPasst` over every function that declares one (`CostBinding.holds`), so the duty stays. -/
+def costUnbound : SKlausel → Bool
+  | .cost (.lit n) => decide (n < 0)
+  | .cost _ => true
+  | _ => false
+
+/-- The clauses of an ordinary function: as `clausesMetadata`, with a literal cost bound. -/
+def clausesMetadataFn (clauses : List SKlausel) : Bool :=
+  clausesMetadata (clauses.filter fun | .cost _ => false | _ => true) || clauses.any costUnbound
+
 /-- The closed C15 merge operators: storage expansion only binds these five. -/
 def accOperatorBound (m : String) : Bool :=
   strEq m "max" || strEq m "min" || strEq m "add" || strEq m "or" || strEq m "and"
@@ -103,8 +132,8 @@ def itemMetadata : SItemTief → Bool
       clausesMetadataWithoutLoad sig.klauseln || bodyMetadata 10000 body ||
         sig.params.any (fun p => typeMetadata p.2) || sig.res.any typeMetadata
     else (sig.art != "" && sig.art != "impl") ||
-      clausesMetadata sig.klauseln || bodyMetadata 10000 (eraseCovered (touchesAdmitted sig.klauseln) 10000 body) ||
-      sig.params.any (fun p => typeMetadata p.2) || sig.res.any typeMetadata
+      clausesMetadataFn sig.klauseln || bodyMetadata 10000 (eraseCovered (touchesAdmitted sig.klauseln) 10000 body) ||
+      sig.params.any (fun p => pointerOrMetadata p.2) || sig.res.any typeMetadata
   /- Tagged groups expand to ordinary functions before elaboration. Inspect every original
       header and implementation body, so expansion cannot erase cost/proof/type duties. -/
   | .specGroupT _ _ _ functions => functions.any fun sig =>
@@ -119,17 +148,25 @@ def itemMetadata : SItemTief → Bool
   | .moduleTemplateT .. | .moduleUseT .. => true
   | .transT _ translator _ => clausesMetadata translator.klauseln ||
       translator.params.any (fun p => typeMetadata p.2) || translator.res.any typeMetadata
-  | .specT .. => true -- Typed macro/proof admission is not supplied by predicate inlining alone.
+  /- A parameterless Boolean `spec fn` is bound: a contract that names it gets its predicate inlined
+      and elaborated there (`uBool`), which is pure by construction. Inlining does not check a
+      parameter's type, so a spec with parameters stays refused. -/
+  | .specT sig _ => !sig.params.isEmpty || !sig.generics.isEmpty || sig.fehler.isSome ||
+      !(match sig.res with | some (.atom "bool") => true | _ => false) ||
+      sig.klauseln.any fun | .effs [.pure] => false | _ => true
   | .callT sc => sc.params.any (fun p => typeMetadata p.2) || sc.res.any typeMetadata
   | .protoT sig => clausesMetadata sig.klauseln || sig.params.any (fun p => typeMetadata p.2) ||
       sig.res.any typeMetadata
   | .tableT _ provider _ place _ _ parts _ => provider.isSome || place.isSome ||
       parts.any fun
-        | .tSlot fields => fields.any (fun field => typeMetadata field.ftyp || field.pos.isSome ||
+        | .tSlot fields => fields.any (fun field => fieldTypeMetadata field.ftyp || field.pos.isSome ||
             field.bezug.isSome || field.wo.isSome || field.reserviert || field.byOps)
         | .tTree _ => false
         | _ => true
-  | .lockT _ _ _ held reserve mask inv => held.isSome || reserve.isSome || mask.isSome || inv.isSome
+  /- A literal hold bound is bound: the compiler checks K002 over every section of the lock
+      (`HeldBinding.holds`). Reservation, mask and invariant stay refused. -/
+  | .lockT _ _ _ held reserve mask inv =>
+    (match held with | none | some (.lit _) => false | some _ => true) || reserve.isSome || mask.isSome || inv.isSome
   /- A static arena declaration carries no unbound metadata: literal reservation
       and bound, no dynamic ceiling, a checked element type and no
       provider/proof binding (`uArenen` refuses the dynamic and placed shapes;
@@ -166,7 +203,13 @@ def itemMetadata : SItemTief → Bool
   | .accT _ _ m p _ => p.isNone || !accOperatorBound m
   | .assumT .. => false -- the unit keeps the name (`UProg.annahmen`); the assumption stays owed
   | .varT .. | .goalT .. | .concT .. => false -- backend data and roots: the image builder binds or refuses
-  | .modT .. | .useT .. | .asmT .. | .formatT .. | .devT .. | .axiomT .. | .atomT .. | .rcuT ..
+  /- An atomic static: the elaborator binds its type and its payload (`uGlobs`; a table payload and
+      `observed by` are refused there). The ordering word is no duty of the model: the atomic rely
+      holds for every value a shared atomic read may return, whatever the ordering. A payload
+      published through a `relaxed` atomic has no rule and stays refused. -/
+  | .atomT _ ty payload ordering _ => typeMetadata ty ||
+      (ordering == some "relaxed" && !(payload.getD []).isEmpty)
+  | .modT .. | .useT .. | .asmT .. | .formatT .. | .devT .. | .axiomT .. | .rcuT ..
   | .walkT .. | .entryT .. | .bootT .. | .profT .. | .gateT .. | .pubT .. | .arenaT .. => true
 
 /-- Reader-supported alignment erases no duty: type and section checks remain.
@@ -195,7 +238,8 @@ def metadataReason : SItemTief → String
     else "table field/type/placement duties lack a checked source binding"
   | .groupT .. => "invariant cost/runs/by duties lack a checked source binding"
   | .lockT _ _ _ held reserve _ inv =>
-    if held.isSome || reserve.isSome then "held-time/reservation/proof duties lack a checked source binding"
+    if (match held with | none | some (.lit _) => false | some _ => true) || reserve.isSome then
+      "held-time/reservation/proof duties lack a checked source binding"
     else if inv.isSome then "lock invariant duties lack a checked source binding"
     else "lock mask duties lack a checked source binding"
   | .specT .. => "spec signature/proof admission lacks a checked source binding"
@@ -208,7 +252,7 @@ def metadataReason : SItemTief → String
   | .fnT sig _ =>
     if sig.art == "const" then
       "const function requires certified call-site substitution before runtime export: " ++ sig.name
-    else if sig.klauseln.any (fun | .cost _ => true | _ => false) then
+    else if sig.klauseln.any (fun k => if sig.art == "library" then (match k with | .cost _ => true | _ => false) else costUnbound k) then
       "declared costs lack a checked source-to-kostenPasst binding: " ++ sig.name
     else "function type/proof/header duties lack a checked source binding: " ++ sig.name
   | .adaptT s _ _ _ => "adapter without expanded form: " ++ s.name
@@ -247,7 +291,7 @@ theorem check_sound_zeuge :
     let sig : FnSig := ⟨"impl", "sample", [], some (.atom "u8"), none,
       [.gives (.ext .imp [] [.tru, .tru])], []⟩
     check [.fnT sig body] = .ok () ∧
-    check [.fnT {sig with klauseln := .cost (.lit 0) :: sig.klauseln} body] =
+    check [.fnT {sig with klauseln := .cost (.variable "N") :: sig.klauseln} body] =
       .error "source export: declared costs lack a checked source-to-kostenPasst binding: sample" := by
   exact ⟨rfl, rfl⟩
 
@@ -269,7 +313,7 @@ set_option maxRecDepth 100000 in
 theorem nested_duties_refused_zeuge :
     let held := SAnw.bind false "held" none (.call "Held" [.variable "L"])
     let body := SAnw.block [held] (some (.ret (some (.lit 42))))
-    let sig : FnSig := ⟨"impl", "sample", [], some (.atom "u8"), none, [.cost (.lit 0)], []⟩
+    let sig : FnSig := ⟨"impl", "sample", [], some (.atom "u8"), none, [.cost (.variable "N")], []⟩
     check [.fnT sig (.child body)] =
       .error "source export: declared costs lack a checked source-to-kostenPasst binding: sample" ∧
     bodyMetadata 10000 (.alloc false "cell" none "A" (.lit 0)
@@ -285,7 +329,7 @@ set_option maxRecDepth 100000 in
 theorem stateT_zeuge :
     let tr : STrans := ⟨"a", [(.variable "s", .variable "Idle", .variable "Busy")], none, []⟩
     let body := SAnw.block [] (some (.ret (some (.lit 42))))
-    check [.stateT "S" [tr]] = .ok () ∧ check [.stateT "S" [tr], .fnT ⟨"impl", "sample", [], some (.atom "u8"), none, [.cost (.lit 0)], []⟩ body] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: sample" := by
+    check [.stateT "S" [tr]] = .ok () ∧ check [.stateT "S" [tr], .fnT ⟨"impl", "sample", [], some (.atom "u8"), none, [.cost (.variable "N")], []⟩ body] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: sample" := by
   exact ⟨rfl, rfl⟩
 
 /-- C02 library calls are bound by the certified expansion. The payload clause is consumed (`exportLibraryKopf` strips `.load`), the call resolves to exactly one library function plus exactly one translator with exactly one payload (`libraryDecl`), and the translator body must be call-free (`callFreeStmt`, otherwise C17). Unexpanded calls never reach ordinary lowering (`ohneBibliothekAnw`, `uAnwReihe`). Costs and other clauses still refuse via `clausesMetadataWithoutLoad`. -/
@@ -337,7 +381,7 @@ set_option maxRecDepth 100000 in
 theorem reset_zeuge :
     let body := SAnw.block [.reset "A" (some (.lit 1, .lit 2))] (some (.ret (some (.lit 23))))
     let sig : FnSig := ⟨"impl", "main", [], some (.atom "u64"), none, [], []⟩
-    check [.fnT sig body] = .ok () ∧ check [.fnT ⟨"impl", "main", [], some (.atom "u64"), none, [.cost (.lit 0)], []⟩ body] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: main" := by
+    check [.fnT sig body] = .ok () ∧ check [.fnT ⟨"impl", "main", [], some (.atom "u64"), none, [.cost (.variable "N")], []⟩ body] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: main" := by
   exact ⟨rfl, rfl⟩
 
 /-- C05 group and table invariants stay refused: every invariant carries mandatory cost, runs and by duties (`SGruppenInv.kosten/online/proof`), but the exporter only reads the predicate over the declared carriers (`uInv`), ignoring all three. No other checked binding exists, so admitting any shape would silently drop them. -/
@@ -399,100 +443,5 @@ theorem linear_ghost_mark_metadata_zeuge :
     checked source binding; mint effects retain their separate refusal. -/
 theorem owner_mint_type_refused_zeuge :
     itemMetadata (.typeT ["linear", "ghost"] "Mark" [] [] (some (.raw "u32"))) = true := by rfl
-
-end Gabbro.Grammatik.Parser.ExportMetadata
-
-
-namespace Gabbro.Grammatik.Parser.ExportMetadata
-
-/-- C17 retains the exact source tree. Unit alias checks, duplicate-clause refusal and
-    certified measure lowering remain mandatory in `uMeasureClause` and Stage 0. -/
-theorem drops_bound (e : SExpr)
-    (h : (Gabbro.Grammatik.Parser.Uebersetze.uMeasureSource e).toOption.isNone = false) :
-    clausesMetadata [.drops e] = false := by
-  simp [clausesMetadata, h]
-
-theorem drops_zeuge :
-    clausesMetadata [.drops (.variable "n")] = false ∧
-    clausesMetadata [.drops (.old (.variable "n"))] = true := by
-  exact ⟨rfl, rfl⟩
-
-/-- A consuming header is bound only through the same complete parser used by uLoopExport;
-    metadata in every nested continuation is still checked. -/
-theorem consuming_bound (fuel : Nat) (binder kind raw touches : String) (origin : Option SExpr)
-    (subject measure : SExpr) (invariant : Option SExpr) (body : SAnw)
-    (parsed : consumingHeader raw = .ok (measure, touches)) :
-    bodyMetadata (fuel + 1) (.each binder origin kind subject "consuming" raw invariant body) =
-      bodyMetadata fuel body := by
-  simp only [bodyMetadata, BEq.rfl, ↓reduceIte, parsed, Except.toOption,
-    Option.isNone_some, Bool.false_or]
-
-/-- C14 gates are consumed only by canonical build selection, before metadata checking.
-    Raw wrappers remain refused; selection never suppresses the retained item's duties. -/
-theorem gateT_bound (m : Auswahl.BauModus) (items selected : List SItemTief)
-    (selection : selected = Auswahl.waehleL m items)
-    (clear : selected.any itemMetadata = false) :
-    check (Auswahl.waehleL m items) = .ok () := by
-  rw [← selection]
-  exact check_clear selected clear
-
-theorem gateT_zeuge :
-    check [.gateT (.constT "sample" (.atom "u8") (.one (.lit 1)))] =
-      .error "source export: SItemTief.gateT: type/provider/proof duties lack a checked source binding" ∧
-    check (Auswahl.waehleL .auslieferung
-      [.gateT (.constT "sample" (.atom "u8") (.one (.lit 1)))]) = .ok () ∧
-    check (Auswahl.waehleL .pruefbau
-      [.gateT (.constT "sample" (.atom "u8") (.one (.lit 1)))]) = .ok () ∧
-    check (Auswahl.waehleL .pruefbau [.gateT (.groupT "G" [] [])]) =
-      .error "source export: invariant cost/runs/by duties lack a checked source binding" := by
-  exact ⟨rfl, rfl, rfl, rfl⟩
-/-- The table owner field adds no unbound placement duty; providers and backing remain gated. -/
-theorem tableSpace_bound (name owner : String) (count : Option SExpr) (shared : Bool) :
-    itemMetadata (.tableT name none count none (some owner) shared []) = false := by rfl
-
-theorem tableSpace_zeuge :
-    check [.tableT "T" none (some (.lit 2)) none (some "Data") false []] = .ok () ∧
-    itemMetadata (.tableT "T" (some "provider") (some (.lit 2)) none (some "Data") false []) = true ∧
-    itemMetadata (.tableT "T" none (some (.lit 2)) (some "place") (some "Data") false []) = true := by
-  exact ⟨rfl, rfl, rfl⟩
-
-/-- A nominal space is bound by the table declaration and resolved by the
-    canonical collector. It discharges no placement, owner or hardware duty. -/
-theorem tableNominalSpace_bound (name space : String) (owner : Option String)
-    (count : Option SExpr) (shared : Bool) :
-    itemMetadata (.tableT name none count none owner shared [] (some space)) = false := rfl
-
-theorem namedPointer_bound (space target : String) :
-    typeMetadata (.ptr space "r" (.atom target)) = (target == "u8") := by
-  have hd : (match Gabbro.Grammatik.DataRights.decode (fun _ => none) "r" with
-      | some r => r.owner.isSome
-      | none => true) = false := rfl
-  show ((match Gabbro.Grammatik.DataRights.decode (fun _ => none) "r" with
-      | some r => r.owner.isSome
-      | none => true) || target == "u8") = (target == "u8")
-  rw [hd, Bool.false_or]
-
-theorem namedPointer_zeuge :
-    typeMetadata (.ptr "sharedData" "r" (.atom "T")) = false ∧
-    typeMetadata (.ptr "sharedData" "x" (.atom "T")) = true ∧
-    typeMetadata (.ptr "sharedData" "rw" (.atom "u8")) = true ∧
-    typeMetadata (.ptr "sharedData" "r" (.raw "T")) = true := by
-  exact ⟨rfl, rfl, rfl, rfl⟩
-/-- A nonempty reset range carries no unbound metadata. -/
-theorem reset_bound_zeuge :
-    bodyMetadata 3 (.reset "A" (some (.lit 1, .lit 2))) = false :=
-  reset_bound 2 "A" (some (.lit 1, .lit 2))
-
-/-- Mint output admission still needs the root-once and software-call bridge. -/
-theorem mint_effect_metadata_refused :
-    clausesMetadata [.effs [.mints "Mark"]] = true ∧
-    clausesMetadataWithoutLoad [.effs [.mints "Mark"]] = true := by
-  exact ⟨rfl, rfl⟩
-
-/-- Plain marks carry no erased body or proof metadata. -/
-theorem linear_mark_metadata_zeuge :
-    itemMetadata (.typeT ["linear"] "Mark" [] [] none) = false ∧
-    bodyMetadata 1 (.retires "Mark") = false := by
-  exact ⟨rfl, rfl⟩
 
 end Gabbro.Grammatik.Parser.ExportMetadata
