@@ -18,7 +18,7 @@
     `NutzerPflicht`) give the premises here, so every unit the goal covers today is covered.
 
   WHAT IS NOT HERE: the thread machine (`ZielF`: spawn and join legs over GX), the linked
-  statement (`GabbroZielVerbund`), and the Rust checker's alignment with `AkzeptiertX`.
+  statement (`GabbroZielVerbund`).
 -/
 module
 public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert

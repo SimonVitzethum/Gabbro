@@ -216,8 +216,8 @@ not a deployed checker, and no bridge to any binary is built. The
   change that touches `grammatik/` keeps it so.
 - **The header of `Spec.lean`** is the ONE list of named assumptions and the NOT CLAIMED list: termination and
   waiting bounds, stack depth, the hardware, weak memory beyond DRF-SC, unguarded publish/await payloads, floats
-  beyond the kernel IEEE model, starvation freedom, invariants inside a running writer or a held section, a start
-  declared once running on several threads. Linking of separately compiled units is a second statement,
+  beyond the named native hardware assumption, starvation freedom, invariants inside a running writer or a held
+  section, a start declared once running on several threads. Linking of separately compiled units is a second statement,
   `GabbroZielVerbund`. Probabilistic statements are out of scope. Every extension of the goal is a diff of
   `Spec.lean` (or of the definitions it uses) and is described as such.
 

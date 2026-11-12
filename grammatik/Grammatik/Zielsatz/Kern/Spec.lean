@@ -66,8 +66,9 @@
     tree (the source-to-unit pipeline's correspondence), the layout/startup/relocation proofs that discharge
     static placement, an entry/service binding or a guest boundary (C08/C12 services, still refused).
   What may be said: "the goal theorem is proved over the model, with witnesses and non-degeneracy". What may NOT be
-  said: "Gabbro is verified" -- the checker inside the statement is the Lean Bool, not the Rust checker, and no
-  bridge from the model to a binary is built (THE READING, below).
+  said: "Gabbro is verified" -- the checker inside the statement is the Lean Bool `AkzeptiertX`, not a deployed
+  checker, and the only bridge to an executable image is Stage 0's sequential one (THE READING, below), which
+  carries none of the concurrent legs of `ZielFX`.
 
   THE SHAPE. Everything is about ONE value `E : Einheit D`, the program the user wrote: code with contracts `E.P`,
   lock invariants `E.S`, the axioms' declared `ensures` `E.Q`, declared starts with arguments `E.starts`, run-time
@@ -203,21 +204,33 @@
     call expansion or image correspondence. Those source cases remain refused until their generic
     bridges are connected. This strengthens the former output-only translation promise and adds
     no hardware assumption or change to the existing G/GX safety, contract, call-log or time legs.
-  * Machine G (over GX) is the meaning of the compiled code at G's step granularity. The compiler is the LLVM path
-    (`gabbro build`: checker, LLVM IR from `llvm.rs`, `opt`, `llc`, `ld.lld`); the bridge is translation validation
-    (source -> model -> final machine bytes, checked in Lean; dokumente/PLAN-TRANSLATION-VALIDATION.md), which is
-    NOT built. Code/ holds the refinement pieces (`lowerS_ok`, `stmt_gx`, the ticket lock), not a whole-program
-    simulation.
+  * Machine G (over GX) is the meaning of the compiled code at G's step granularity. The compiler is Stage 0
+    (`stage0/`, written in Lean): the Lean elaborator (`Grammatik/Parser/Elab`) turns the source text into the unit,
+    Stage 0 lowers it to an IR image, and the assembly runner (`runner/runner.s`, x86-64) executes the image. The
+    connected bridge is `irBild_correct` (stage0/Stage0/IRBild.lean) over `Senke.bild_ok_u`: for every image Stage 0
+    returns, the runner model started on the image reaches the exit with the value of the SEQUENTIAL G call of the
+    entry function (`rufAt`), or stops with that call's logic or hardware code. Its premises are the runner kernel
+    class `Runner.IR.Kern` (which includes `RootNativeFloat.Hardware`), the clone answer `Senke.CloneOK`, and the
+    image's initial-memory, gate and view conditions (`WeltAt`, `TorOK`, `SichtOK`). What it does NOT give: a
+    simulation of the thread machine over GX, so none of the concurrent legs of `ZielFX` (race freedom, the
+    invariants at every reached machine, deadlock freedom, `keinKernHalt`, time, call logs, ownership) is carried to
+    the image; coverage of every source form (Stage 0 refuses what it cannot lower, dokumente/IR-COMPILATION-LANES.md);
+    that the runner's Lean model (`Runner.IR`) is what the CPU does (that is tested differentially against the CPU,
+    not proved). Code/ holds further refinement pieces (`lowerS_ok`, `stmt_gx`, the ticket lock).
   * The memory model, five named assumptions:
-    (1) the view machine W over-approximates the C11 memory model -- the model LLVM's atomic orderings follow -- for
-        the orderings the lowering uses, at G's step granularity: nothing interleaves inside a step, all reads of a
-        step are checked against the pre-step view, a release message carries the view before the step's own
-        writes; `seq_cst` is modelled as release/acquire (Speichermodell/Sicht.lean, a published promise-free
-        timestamp machine, not proved here against an axiomatic model);
-    (2) the toolchain and the hardware implement the atomic orderings as specified, and an `exchange` is lowered to
-        ONE read-modify-write (`SchrittW.rmw`: the write sits directly above the message read);
-    (3) every lock take is an acquire and every give a release (the runtime's ticket lock: fetch-add on `next`,
-        acquire spin on `now`, release advance);
+    (1) the view machine W over-approximates the memory model of the executing target for the instructions the
+        lowering emits, at G's step granularity: nothing interleaves inside a step, all reads of a step are checked
+        against the pre-step view, a release message carries the view before the step's own writes; `seq_cst` is
+        modelled as release/acquire (Speichermodell/Sicht.lean, a published promise-free timestamp machine, not
+        proved here against an axiomatic model of x86-TSO or of the Armv9-A model);
+    (2) the target implements the instruction mapping of each ordering as its architecture manual specifies, and an
+        `exchange` is lowered to ONE read-modify-write (`SchrittW.rmw`: the write sits directly above the message
+        read; on the runner a `lock cmpxchg`);
+    (3) every lock take is an acquire and every give a release. The model's lock is the FIFO ticket lock
+        (Code/Conc/Lock.lean: fetch-add on `next`, acquire spin on `now`, release advance); the lock Stage 0 emits
+        is a different one (stage0/Stage0/Senke/Sperre: owner word with `cas`, a hold count, a waiter count and
+        `futex_wait`/`futex_wake`), so `GabbroZielLeben` and `GabbroZielWarten`, which are stated over the ticket
+        lock, are NOT statements about the emitted lock;
     (4) carriers are the locations (a table or an atomic array is one location of W);
     (5) what G reads from the outside -- foreign answers (`Orakel.wirkt`), register reads, the visibility of
         `awaits` -- is read over G's memory: the last executed write, not an older message.
@@ -232,15 +245,15 @@
   on that history: lifting it needs the local replay of `ziel_ort_*` to record register answers as it records
   foreign answers -- named, open.
 
-  WHAT A GREEN BUILD COVERS. Certificates are generated on demand (crates/gabbro-check/tests/zertifikate.rs): for
-  every accepted `.gab` under `beispiele/` the exporter (`gabbro obligations --g`) either writes a certificate --
-  the exported unit `gE`, the checker premise decided IN LEAN (`gCheck … := by decide`) and `GabbroZiel`
-  instantiated on it with (b) open (`gP_gabbro_f`) -- which the Lean guardian elaborates, or refuses the program by
-  name (`LG001`-`LG007`); the register is `target/zertifikate/REGISTER.txt`. Checked-in instances:
-  Korpus/Programme/GenOblig104.lean, GenOblig108.lean. For a certified program the Rust checker's verdict is not in
-  the chain. STILL TRUSTED: that `gE` IS the source program (the exporter is unverified; every form it drops is
-  listed in the certificate's header), and THE READING above. A green build says NOTHING about an uncertified
-  program; such a program reaches the statements only through a hand-written term.
+  WHAT A GREEN BUILD COVERS. The goal statements themselves, their witnesses, and the per-program instances checked
+  in under Korpus/ (among them Korpus/Programme/GenOblig104.lean and GenOblig108.lean: the unit as a G term, the
+  checker premise decided IN LEAN by `decide`, and `GabbroZiel` instantiated with (b) open). Those two files were
+  generated by the former Rust exporter (deleted 2026-11-10); there is NO certificate generator any more, and no
+  register of certified programs. A source text reaches the statements only through the Lean elaborator plus a
+  Lean proof of the checker premise and of (b) for the unit it produces (for (b): GabbroV's duty files through
+  `bruecke_nutzer`/`bruecke_nutzerA`). STILL TRUSTED: that the elaborator's unit is what the source text means
+  (the elaborator is the definition of that meaning; its export laws, `ExportPreservation`, cover single forms),
+  and THE READING above. A green build says NOTHING about a program for which no such instance is checked.
 
   TERMINATION (2026-10-22, `GabbroZielTerminierung`). Two more premises beside (a)-(d), both user logic: a measure
   `m` (per function a lexicographic tuple of natural-number expressions over its parameters, the `decreases`
@@ -305,12 +318,13 @@
     (whether a `leave` guard or a base path is ever taken is the program's question); `GabbroZielLeben` claims that a
     lock wait ends unless a holder never lets go, not when, and not for runs over GX or with threads spawned at run
     time;
-  * stack depth (G's stacks are unbounded; the LLVM lowering runs recursion without native stack growth, and
-    exhausted memory fail-stops -- outside the model);
+  * stack depth in the goal (G's stacks are unbounded). Only the sequential Stage-0 bridge bounds it: the image
+    provides the call depth `b.depth`, and a deeper call is the logic stop `abstieg` of `rufAt`, which the image
+    reports as a stop code (`bild_ok_u`);
   * the compiled code and the hardware (THE READING); that the compiler's byte layout is a `LayoutOk` one;
   * reads in their extents as a statement about runs (they are, by the index types); globals and registers have no
     index;
-  * that W is exactly the C11 model; a contract, `requires`, `ensures` or invariant over a shared atomic (refused,
+  * that W is exactly the target's memory model; a contract, `requires`, `ensures` or invariant over a shared atomic (refused,
     `N484`); linked units sharing an atomic across the link; the publish/await hand-off of an
     unguarded PLAIN payload (refused);
   * the run-level cell/history correspondence of per-core cells and their quiescent reduction

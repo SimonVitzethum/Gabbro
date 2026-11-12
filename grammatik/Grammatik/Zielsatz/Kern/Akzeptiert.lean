@@ -61,8 +61,7 @@
   `Aufzaehlung`s -- complete by their type.
 
   `ws : List D.Fn` -- the program's DECLARED THREAD STARTS (the checker's
-  `concurrent { … }` members and `entry`/`boot` dispatch roots,
-  `crates/gabbro-check/src/startexklusiv.rs`). Since 2026-09-15 they are a
+  `concurrent { … }` members and `entry`/`boot` dispatch roots). Since 2026-09-15 they are a
   field of the program (`Einheit.starts`, Spec.lean) and the checker of
   `GabbroZiel` runs on `E.ws` (`akzeptiert_pruefer`); `Akzeptiert` keeps the
   list as an argument. The call graphs are COMPUTED from it (`reachB`),
