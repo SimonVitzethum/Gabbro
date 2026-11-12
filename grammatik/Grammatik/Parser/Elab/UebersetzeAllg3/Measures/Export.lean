@@ -1,5 +1,5 @@
 module
-public import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Expression
+public import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Ranks
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Memo
 @[expose] public section
 
@@ -98,21 +98,6 @@ theorem lowerMeasures_absent (u : UProg) (exported : Export u) (f : (declOf u).F
     (absent : (fnAt u f).decreases = none) : exported.mass f = [] := by
   have h := exported.source f
   simpa only [SourceTuple, absent] using h
-
-instance (u : UProg) : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length))
-
-/-- Check equal tuple lengths on cycles using every function, including functions without clauses. -/
-def cycleLengths (u : UProg) (P : Programm (declOf u)) (m : Mass (declOf u)) : Bool :=
-  (List.finRange u.fns.length).all fun f => (List.finRange u.fns.length).all fun g =>
-    !(zykS P (List.finRange u.fns.length) f g) || decide ((m f).length = (m g).length)
-
-theorem cycleLengths_sound (u : UProg) (P : Programm (declOf u)) (m : Mass (declOf u))
-    (checked : cycleLengths u P m = true) :
-    ∀ f g, zykS P (List.finRange u.fns.length) f g = true → (m f).length = (m g).length := by
-  intro f g cycle
-  have hf := List.all_eq_true.mp checked f (List.mem_finRange f)
-  have hg := List.all_eq_true.mp hf g (List.mem_finRange g)
-  simpa only [cycle, Bool.not_true, Bool.false_or, decide_eq_true_eq] using hg
 
 /-- Structural safety remains the ordinary checker; this gate checks only measure export and lengths. -/
 def checkedProgram (u : UProg) (P : Programm (declOf u)) :

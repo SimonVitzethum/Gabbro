@@ -4,6 +4,7 @@
 module
 public import Grammatik.Parser.Cover.Differenz
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Memo
+public import Grammatik.Zielsatz.Atomar.AkzeptiertSchnell
 @[expose] public section
 
 
@@ -186,6 +187,34 @@ def accepts (u : UProg) (P : Programm (declOf u)) : Except String Bool :=
     (List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr
   let guests ← sourceGuests u
   pure (AkzeptiertX P (sperrFamilie u) (List.finRange u.fns.length) ls cs ws [] [] [] guests)
+
+/-- `accepts` with the checker Bool that leaves out the closedness check, which is constant on the
+    complete list of functions (`akzeptiertX_voll`). Compiled code runs this form. -/
+def acceptsSchnell (u : UProg) (P : Programm (declOf u)) : Except String Bool :=
+  letI : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length))
+  letI : DecidableEq (declOf u).Ax := inferInstanceAs (DecidableEq (Fin u.axs.length))
+  do
+  if !sperrInvsOk u then throw "lock invariant without G form"
+  let ws : List (declOf u).Fn := (u.roots ++ u.gestartet ++ u.gestartet).filterMap fun n => wurzelIdx u n
+  let ls : List (declOf u).Lock := List.finRange u.locks.length
+  let cs : List ((declOf u).Tab ⊕ (declOf u).Glob) :=
+    (List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr
+  let guests ← sourceGuests u
+  pure (AkzeptiertXVoll P (sperrFamilie u) (List.finRange u.fns.length) ls cs ws [] [] [] guests)
+
+/-- **The fast form answers exactly as the full checker.** -/
+@[csimp] theorem accepts_eq_schnell : @accepts = @acceptsSchnell := by
+  funext u P
+  unfold accepts acceptsSchnell
+  split
+  · rfl
+  · cases sourceGuests u with
+    | error e => rfl
+    | ok guests =>
+      exact congrArg Except.ok
+        (@akzeptiertX_voll (declOf u) (inferInstanceAs (DecidableEq (Fin u.fns.length)))
+          (inferInstanceAs (DecidableEq (Fin u.axs.length))) P (sperrFamilie u) _
+          (fun g => List.mem_finRange g) _ _ _ _ _ _ _)
 
 /-- Restoring function postconditions retains the exact foreign contract family. -/
 theorem restore_axVertrag (items : List SItemTief) (u : UProg)
