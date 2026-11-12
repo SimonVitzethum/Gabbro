@@ -93,6 +93,9 @@ public import Stage0.Senke.Anweisung.Faelle.Schleifen.RelocateProbe
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.HookProben
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.CountedLoop
 public import Stage0.Senke.Sperre.Proben
+public import Stage0.Senke.Sperre.Ticket.Nimm
+public import Stage0.Senke.Sperre.Ticket.Gib
+public import Stage0.Senke.Ausdruck.Old.Pruefer
 
 public import Stage0.Senke.Ausdruck.Arithmetik.Proben.ScalarProbe
 

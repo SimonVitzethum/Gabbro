@@ -170,24 +170,41 @@ theorem locks_ok {reserved : Nat} {O : Orakel D} {passes : Nat} {R : (f : D.Fn) 
         AgreeW L fp lo K m m3 ∧ AgreeK fp s a m2 m3 := by
     intro p q hAt hq m2 a2
     subst hq
-    have keep2 : ∀ y, a ≤ y → y ≤ a + 16 → m2.rd64 (BitVec.ofNat 64 y) = m1.rd64 (BitVec.ofNat 64 y) :=
-      fun y h1 h2 => rd64_keep a2.rd fun j hj => a2.b _
-        (fun ⟨_, h3⟩ => by rw [lk_byte (by omega) hj] at h3; omega)
-        (fun ⟨_, h3⟩ => by rw [lk_byte (by omega) hj] at h3; omega)
+    have fern2 : LockFern L fp lo K a := fun k j hk hj => by
+      have e := lk_byte (y := a + 8 * k) (by omega) hj
+      exact ⟨fun ⟨_, h3⟩ => by rw [e] at h3; omega, fun ⟨_, h3⟩ => by rw [e] at h3; omega⟩
+    have klasse2 : LockKlasse m1 m2 a := by
+      have kept := a2.sync Lk (by rw [ha]; exact fern2)
+      rwa [ha] at kept
+    have k0 : m2.rd64 (BitVec.ofNat 64 a) = m1.rd64 (BitVec.ofNat 64 a) := klasse2 0 (by omega)
+    have k1 : m2.rd64 (BitVec.ofNat 64 (a + 8)) = m1.rd64 (BitVec.ofNat 64 (a + 8)) := klasse2 1 (by omega)
+    have k2 : m2.rd64 (BitVec.ofNat 64 (a + 16)) = m1.rd64 (BitVec.ofNat 64 (a + 16)) := klasse2 2 (by omega)
     have E2 : LE m2 pc fp s a (locksCode L a s cb ex.1 ex.2) :=
       ⟨⟨E0.frame.lt, fun i hi => by rw [a2.rd, hL1.ag.rd]; exact E0.frame.rd i hi,
         fun i hi => by rw [a2.wr, hL1.ag.wr]; exact E0.frame.wr i hi⟩, E0.small, hfa, ha31,
        by rw [a2.wr, hL1.ag.wr]; exact hw0, by rw [a2.wr, hL1.ag.wr]; exact hw1, by rw [a2.wr, hL1.ag.wr]; exact hw2,
        codeAt_agreeWIn hW a2 (hL1.ag.codeAt hfa ha31 hp.code hcf) hcf, E0.cfar⟩
-    obtain ⟨f2, hL2⟩ := ls_init E2 (by rw [keep2 _ (Nat.le_refl _) (by omega)]; exact hL1.o)
-      (by rw [keep2 _ (by omega) (by omega)]; exact hL1.c) (by rw [keep2 _ (by omega) (by omega)]; exact hL1.w)
+    obtain ⟨f2, hL2⟩ := ls_init E2 (by rw [k0]; exact hL1.o) (by rw [k1]; exact hL1.c) (by rw [k2]; exact hL1.w)
     obtain ⟨m3, f3, s3, hL3⟩ := gib_paar E2 hL2 hAt hme hst hc1
-    refine ⟨m3, s3, ⟨by rw [hL3.ag.rd, a2.rd, hL1.ag.rd], by rw [hL3.ag.wr, a2.wr, hL1.ag.wr], fun x hx hxw => ?_⟩,
-      hL3.ag⟩
-    by_cases hxl : InLk a x
-    · exact lk_bytes ha31 ho hc hwt hL3.o hL3.c hL3.w x hxl
-    · have hxs : ¬ inSlots fp s (s + 18) x := fun ⟨h1, h2⟩ => hx ⟨by omega, by omega⟩
-      rw [hL3.ag.b x hxs hxl, a2.b x hx hxw, hL1.ag.b x hxs hxl]
+    refine ⟨m3, s3, ⟨by rw [hL3.ag.rd, a2.rd, hL1.ag.rd], by rw [hL3.ag.wr, a2.wr, hL1.ag.wr],
+      fun x hx hxw hxy => ?_, fun Lk' fern => ?_⟩, hL3.ag⟩
+    · by_cases hxl : InLk a x
+      · exact lk_bytes ha31 ho hc hwt hL3.o hL3.c hL3.w x hxl
+      · have hxs : ¬ inSlots fp s (s + 18) x := fun ⟨h1, h2⟩ => hx ⟨by omega, by omega⟩
+        rw [hL3.ag.b x hxs hxl, a2.b x hx hxw hxy, hL1.ag.b x hxs hxl]
+    · -- the lock itself has its three words back; every other lock was never touched
+      by_cases hq : Lk' = Lk
+      · rw [hq, ha]
+        intro k hk
+        match k, hk with
+        | 0, _ => exact hL3.o.trans ho.symm
+        | 1, _ => exact hL3.c.trans hc.symm
+        | 2, _ => exact hL3.w.trans hwt.symm
+      · have hd := hy.dis Lk' Lk hq
+        have hl' := hy.lay Lk'
+        rw [ha] at hd
+        exact ((hL1.ag.klasse (by omega) (by omega) hd).trans (a2.sync Lk' fern)).trans
+          (hL3.ag.klasse (by omega) (by omega) hd)
   -- what holds after the give
   have after : ∀ m2 m3 (σ' : World D) (ρ' : Env D Γ), AgreeK fp s a m2 m3 → EnvAt L m2 fp ρ' reserved → WeltAt m2 L σ' → Keeps fp pr m1 m2 →
       EnvAt L m3 fp ρ' reserved ∧ WeltAt m3 L (σ'.gibt Lk) ∧ Keeps fp pr m m3 := fun m2 m3 σ' ρ' k3 en hw kp =>

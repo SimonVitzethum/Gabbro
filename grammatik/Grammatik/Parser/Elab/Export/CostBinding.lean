@@ -33,19 +33,36 @@ def costValue (consts : List (String × Nat)) : SExpr → Option Nat
     | _, _ => none
   | _ => none
 
-/-- The integer constants of a unit with a value of that kind, each read under the ones before it. -/
+/-- The integer constants of a unit with a value of that kind, each read under the ones before it.
+    The unit's items are flattened over its modules, so a name may be declared more than once; such a
+    name has no value here (which module's constant a cost means is not decided by a name alone). -/
 def constants (items : List SItemTief) : List (String × Nat) :=
-  items.foldl (fun known item =>
+  let names := items.filterMap fun | .constT name _ _ => some name | _ => none
+  (items.foldl (fun known item =>
     match item with
     | .constT name _ (.one e) =>
       match costValue known e with
       | some n => known ++ [(name, n)]
       | none => known
-    | _ => known) []
+    | _ => known) []).filter fun entry => (names.filter (strEq · entry.1)).length == 1
 
-/-- The cost an ordinary function declares, if its clause is a constant expression. -/
+/-- The cost clauses of a head, each with its value if it has one. A parameter hides a constant of
+    its name (as in every other expression of the function), and a cost over a parameter is no
+    constant: the constants are read without the names of the parameters. -/
+def costClauses (consts : List (String × Nat)) (sig : FnSig) : List (Option Nat) :=
+  let visible := consts.filter fun entry => !sig.params.any fun p => strEq p.1 entry.1
+  sig.klauseln.filterMap fun | .cost e => some (costValue visible e) | _ => none
+
+/-- The cost an ordinary function declares: the SMALLEST of its cost clauses, if it has one and every
+    one of them is a constant expression. A head may repeat `costs`; every clause binds. -/
 def declaredCost (consts : List (String × Nat)) (sig : FnSig) : Option Nat :=
-  sig.klauseln.findSome? fun | .cost e => costValue consts e | _ => none
+  match costClauses consts sig with
+  | [] => none
+  | first :: rest =>
+    (first :: rest).foldl (fun least clause =>
+      match least, clause with
+      | some a, some b => some (min a b)
+      | _, _ => none) first
 
 /-- The declared costs of the ordinary source functions, by name: a constant expression over the
     unit's constants. A `const fn` runs at compile time only and is no function of the unit; a
@@ -64,7 +81,7 @@ def unvalued (items : List SItemTief) : Option String :=
   let consts := constants items
   items.findSome? fun
     | .fnT sig _ => if sig.art != "" && sig.art != "impl" then none else
-      if sig.klauseln.any (fun | .cost e => (costValue consts e).isNone | _ => false) then some sig.name
+      if (costClauses consts sig).any (·.isNone) then some sig.name
       else none
     | _ => none
 
@@ -82,11 +99,14 @@ def members : List (Fin u.fns.length) :=
   (List.finRange u.fns.length).filter fun g => (costOf T u g).isSome
 
 /-- The cost a pointer type declares: `some none` without a cost clause, `some (some n)` for a literal
-    cost, `none` for a text that does not read or a cost that is no literal (refused). -/
+    cost, `none` (refused) for a text that does not read, a cost that is no literal, or any other clause
+    the gate would refuse at a function head (a deadline, a measure, a section, ...): the gate admits a
+    written pointer type by its first words only, so its clauses are checked here. -/
 def ptrCost (raw : String) : Option (Option Nat) :=
   match uZeigerSig raw with
   | .error _ => none
   | .ok sig =>
+    if ExportMetadata.clausesMetadata (sig.klauseln.filter fun | .cost _ => false | _ => true) then none else
     match sig.klauseln.filter (fun | .cost _ => true | _ => false) with
     | [] => some none
     | [.cost (.lit n)] => some (some n)

@@ -1,0 +1,16 @@
+// A tagged static is read into a local case by case (`let a = cur;`), and a case without a payload
+// is assigned to it.
+module ir_static_tagged_read {
+tagged type Tok = { End, Num(u32 in 0 .. 9) };
+static mut cur : Tok = End;
+impl fn main() -> u32 in 0 .. 255 effects { reads cur, writes cur } {
+    let a = cur;
+    cur = Num(5);
+    let b : Tok = cur;
+    cur = End;
+    let mut r : u32 in 0 .. 120 = 0;
+    match a { Num(v) => { r = 100; } End => { r = 1; } }
+    let mut q : u32 in 0 .. 9 = 0; match b { Num(v) => { q = v; } End => { q = 9; } }
+    return r + q;
+}
+}

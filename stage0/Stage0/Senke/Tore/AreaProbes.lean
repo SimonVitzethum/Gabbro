@@ -203,7 +203,7 @@ theorem area_contract_zeuge :
     rw [← slot_plus fp base i, baseAddress, ← BitVec.ofNat_add]
     simpa only [Nat.zero_add, absolute_slot] using stored.2 i hi
   refine ⟨0, 0, output, trivial, ?_, ?_, ?_⟩
-  · refine ⟨writeSpan_rd _ _ _, writeSpan_wr _ _ _, ?_⟩
+  · refine AgreeW.stark (writeSpan_rd _ _ _) (writeSpan_wr _ _ _) ?_
     intro x outside outsideWorld
     apply writeSpan_out _ _ _ fits
     unfold inSlots at outside

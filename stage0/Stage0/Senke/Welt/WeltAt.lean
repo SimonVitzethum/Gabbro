@@ -115,34 +115,70 @@ theorem weltAt_stab {L : Lay D} {σ : World D} {fp : Runner.W} {K : Nat} (hl : L
 /-- The byte `x` lies in the world. -/
 def InWelt (L : Lay D) (x : Runner.W) : Prop := L.lo ≤ x.toNat ∧ x.toNat < L.hi
 
-/-- Outside the slots `lo .. K-1` of the frame at `fp` and outside the world, the memory is kept; no permission
-    changes. What a statement of one thread may change. -/
+/-- The byte `x` lies in the lock words: above the world, below `sye` (`LaySync`), in a layout whose lock
+    words end below `2 ^ 31` (as every layout with locks does, `SyncOK.sye`). -/
+def InSync (L : Lay D) (x : Runner.W) : Prop :=
+  L.lo ≤ x.toNat ∧ L.hi ≤ x.toNat ∧ x.toNat < L.sye ∧ L.sye < 2 ^ 31
+
+/-- The three words of the lock at `a` lie outside the slots `lo .. K-1` of the frame at `fp` and outside
+    the world, byte by byte. -/
+def LockFern (L : Lay D) (fp : Runner.W) (lo K a : Nat) : Prop :=
+  ∀ k j, k ≤ 2 → j < 8 →
+    ¬ inSlots fp lo K (BitVec.ofNat 64 (a + 8 * k) + BitVec.ofNat 64 j) ∧
+    ¬ InWelt L (BitVec.ofNat 64 (a + 8 * k) + BitVec.ofNat 64 j)
+
+/-- What a statement keeps of the lock at `a`: its three words. -/
+def LockKlasse (m m' : Runner.Mem) (a : Nat) : Prop :=
+  ∀ k, k ≤ 2 → m'.rd64 (BitVec.ofNat 64 (a + 8 * k)) = m.rd64 (BitVec.ofNat 64 (a + 8 * k))
+
+theorem LockKlasse.refl (m : Runner.Mem) (a : Nat) : LockKlasse m m a := fun _ _ => rfl
+
+theorem LockKlasse.trans {m1 m2 m3 : Runner.Mem} {a : Nat} (h1 : LockKlasse m1 m2 a) (h2 : LockKlasse m2 m3 a) :
+    LockKlasse m1 m3 a := fun k hk => (h2 k hk).trans (h1 k hk)
+
+/-- Outside the slots `lo .. K-1` of the frame at `fp`, outside the world and outside the lock words, the
+    memory is kept; no permission changes; every lock keeps its class (`LockKlasse`). What a statement of
+    one thread may change. -/
 structure AgreeW (L : Lay D) (fp : Runner.W) (lo K : Nat) (m m' : Runner.Mem) : Prop where
   rd : m'.rd = m.rd
   wr : m'.wr = m.wr
-  b : ∀ x, ¬ inSlots fp lo K x → ¬ InWelt L x → m'.b x = m.b x
+  b : ∀ x, ¬ inSlots fp lo K x → ¬ InWelt L x → ¬ InSync L x → m'.b x = m.b x
+  sync : ∀ Lk, LockFern L fp lo K (L.lk Lk) → LockKlasse m m' (L.lk Lk)
+
+/-- A change that keeps every byte outside the slots and the world keeps the lock words with them. -/
+theorem AgreeW.stark {L : Lay D} {fp : Runner.W} {lo K : Nat} {m m' : Runner.Mem} (rd : m'.rd = m.rd)
+    (wr : m'.wr = m.wr) (b : ∀ x, ¬ inSlots fp lo K x → ¬ InWelt L x → m'.b x = m.b x) :
+    AgreeW L fp lo K m m' := by
+  refine ⟨rd, wr, fun x hx hw _ => b x hx hw, fun Lk fern k hk => ?_⟩
+  simp only [Runner.Mem.rd64, rd]
+  rw [le_congr (m := m') (m' := m) (fun j hj => b _ (fern k j hk hj).1 (fern k j hk hj).2)]
 
 theorem agreeW_of {L : Lay D} {fp : Runner.W} {lo K : Nat} {m m' : Runner.Mem} (h : Agree fp lo K m m') :
-    AgreeW L fp lo K m m' := ⟨h.rd, h.wr, fun x hx _ => h.b x hx⟩
+    AgreeW L fp lo K m m' := AgreeW.stark h.rd h.wr fun x hx _ => h.b x hx
 
 /-- A change of the frame's slots alone is a statement's change. -/
 instance {L : Lay D} {fp : Runner.W} {lo K : Nat} {m m' : Runner.Mem} :
     Coe (Agree fp lo K m m') (AgreeW L fp lo K m m') := ⟨agreeW_of⟩
 
 theorem AgreeW.refl (L : Lay D) (fp : Runner.W) (lo K : Nat) (m : Runner.Mem) : AgreeW L fp lo K m m :=
-  ⟨rfl, rfl, fun _ _ _ => rfl⟩
+  ⟨rfl, rfl, fun _ _ _ _ => rfl, fun _ _ => LockKlasse.refl _ _⟩
 
 theorem AgreeW.trans {L : Lay D} {fp : Runner.W} {lo K : Nat} {m1 m2 m3 : Runner.Mem}
     (h1 : AgreeW L fp lo K m1 m2) (h2 : AgreeW L fp lo K m2 m3) : AgreeW L fp lo K m1 m3 :=
-  ⟨h2.rd.trans h1.rd, h2.wr.trans h1.wr, fun x hx hw => (h2.b x hx hw).trans (h1.b x hx hw)⟩
+  ⟨h2.rd.trans h1.rd, h2.wr.trans h1.wr, fun x hx hw hs => (h2.b x hx hw hs).trans (h1.b x hx hw hs),
+    fun Lk fern => (h1.sync Lk fern).trans (h2.sync Lk fern)⟩
 
 theorem AgreeW.mono {L : Lay D} {fp : Runner.W} {lo lo' K : Nat} {m m' : Runner.Mem} (h : AgreeW L fp lo' K m m')
     (hl : lo ≤ lo') : AgreeW L fp lo K m m' :=
-  ⟨h.rd, h.wr, fun x hx hw => h.b x (fun ⟨h1, h2⟩ => hx ⟨by omega, h2⟩) hw⟩
+  ⟨h.rd, h.wr, fun x hx hw => h.b x (fun ⟨h1, h2⟩ => hx ⟨by omega, h2⟩) hw,
+    fun Lk fern => h.sync Lk fun k j hk hj =>
+      ⟨fun ⟨h1, h2⟩ => (fern k j hk hj).1 ⟨by omega, h2⟩, (fern k j hk hj).2⟩⟩
 
 theorem AgreeW.widen {L : Lay D} {fp : Runner.W} {lo Ks K : Nat} {m m' : Runner.Mem} (h : AgreeW L fp lo Ks m m')
     (hs : Ks ≤ K) : AgreeW L fp lo K m m' :=
-  ⟨h.rd, h.wr, fun x hx hw => h.b x (fun ⟨h1, h2⟩ => hx ⟨h1, by omega⟩) hw⟩
+  ⟨h.rd, h.wr, fun x hx hw => h.b x (fun ⟨h1, h2⟩ => hx ⟨h1, by omega⟩) hw,
+    fun Lk fern => h.sync Lk fun k j hk hj =>
+      ⟨fun ⟨h1, h2⟩ => (fern k j hk hj).1 ⟨h1, by omega⟩, (fern k j hk hj).2⟩⟩
 
 /-- A slot below `lo` keeps its word, the world lying above the frame. -/
 theorem agreeW_rd_low {L : Lay D} {m m' : Runner.Mem} {fp : Runner.W} {lo K i : Nat} (ha : AgreeW L fp lo K m m')
@@ -157,12 +193,16 @@ theorem agreeW_rd_low {L : Lay D} {m m' : Runner.Mem} {fp : Runner.W} {lo K i : 
     (fun ⟨h1, h2⟩ => by
       have := fp.isLt
       simp only [BitVec.toNat_add, BitVec.toNat_ofNat, hs] at h1
+      omega)
+    (fun ⟨h1, _, _⟩ => by
+      have := fp.isLt
+      simp only [BitVec.toNat_add, BitVec.toNat_ofNat, hs] at h1
       omega))]
 
 /-- Writing a word of the world. -/
 theorem agreeW_write_welt {L : Lay D} {m : Runner.Mem} {fp : Runner.W} {lo K a : Nat} (h1 : L.lo ≤ a)
     (h2 : a + 8 ≤ L.hi) (hl : L.hi < 2 ^ 31) (v : Nat) : AgreeW L fp lo K m (write m (BitVec.ofNat 64 a) 8 v) := by
-  refine ⟨rfl, rfl, fun x _ hx => ?_⟩
+  refine AgreeW.stark rfl rfl fun x _ hx => ?_
   show (if _ then _ else _) = _
   split
   · next h =>
@@ -177,7 +217,10 @@ theorem agreeW_write_welt {L : Lay D} {m : Runner.Mem} {fp : Runner.W} {lo K a :
 theorem agreeW_big {L : Lay D} {fp : Runner.W} {lo K : Nat} {m m' : Runner.Mem} (h : AgreeW L fp lo K m m')
     (hK : fp.toNat + 8 * K ≤ L.lo) (hl : L.hi < 2 ^ 31) (hord : L.lo ≤ L.hi) (hlK : lo ≤ K) :
     Agree fp lo ((2 ^ 64 - fp.toNat) / 8) m m' := by
-  refine ⟨h.rd, h.wr, fun x hx => h.b x (fun ⟨h1, h2⟩ => hx ⟨h1, ?_⟩) (fun ⟨h1, h2⟩ => hx ⟨?_, ?_⟩)⟩
+  refine ⟨h.rd, h.wr, fun x hx => h.b x (fun ⟨h1, h2⟩ => hx ⟨h1, ?_⟩) (fun ⟨h1, h2⟩ => hx ⟨?_, ?_⟩)
+    (fun ⟨h1, _, h3, h4⟩ => hx ⟨?_, ?_⟩)⟩
+  · have := x.isLt; have := fp.isLt; omega
+  · omega
   · have := x.isLt; have := fp.isLt; omega
   · omega
   · have := x.isLt; have := fp.isLt; omega

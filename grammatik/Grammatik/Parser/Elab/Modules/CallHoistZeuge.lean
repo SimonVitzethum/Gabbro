@@ -139,4 +139,49 @@ theorem statik_zeuge :
         .bind false "#r0" none (.call "Num" [.lit 5]), .set (.variable "s") "=" (.variable "#r0"),
         .bind false "s" none (.lit 1), .bind false "b" none (.variable "s")] none := by kernel_rfl
 
+/-- The context of a unit with one tagged static `cur : Tok`, `Tok` with the cases `Num(..)` and `End`. -/
+def zeugeS : Kontext :=
+  { fns := Tafel.von _ ["f", "g"], statics := Tafel.von _ ["s", "cur"],
+    statikTyp := [("cur", STyp.atom "Tok")],
+    statikFaelle := [("cur", [("Num", true), ("End", false)])] }
+
+/-- `let t = cur;` for a tagged static `cur` is read case by case into a fresh local; a local named
+    `cur` is read as it stands. -/
+theorem statik_fall_zeuge :
+    hebeKoerper zeugeS
+        (.block [.bind false "t" none (.variable "cur"), .bind false "cur" none (.lit 1),
+          .bind false "u" none (.variable "cur")] none) =
+      .block [.bind true "#r0" (some (.atom "Tok")) (.variable "End"),
+        .cases (.variable "cur")
+          [.arm "Num" (some "#r1") (.block [.set (.variable "#r0") "=" (.call "Num" [.variable "#r1"])] none),
+           .arm "End" none (.block [.set (.variable "#r0") "=" (.variable "End")] none)],
+        .bind false "t" (some (.atom "Tok")) (.variable "#r0"),
+        .bind false "cur" none (.lit 1), .bind false "u" none (.variable "cur")] none := by kernel_rfl
+
+/-- `cur = End;` for the tagged static `cur`: the case without a payload is bound first. -/
+theorem statik_fall_ohne_nutzlast_zeuge :
+    hebeKoerper { zeugeS with faelle := Tafel.von _ ["Num", "End"] }
+        (.block [.set (.variable "cur") "=" (.variable "End")] none) =
+      .block [.bind false "#r0" none (.variable "End"),
+        .set (.variable "cur") "=" (.variable "#r0")] none := by kernel_rfl
+
+/-- A compound assignment reads its target first: `s += f(1);` on the static `s` keeps the call where
+    it is (the elaborator refuses it), `x += f(1);` on a local binds it, and a slot target keeps it too. -/
+theorem verbund_zeuge :
+    hebeKoerper zeugeK (.block [.set (.variable "s") "+=" (.call "f" [.lit 1]),
+        .set (.variable "x") "+=" (.call "f" [.lit 1]),
+        .set (.field (.index (.field (.variable "t") "slots") (.lit 0)) "k") "+=" (.call "f" [.lit 1])] none) =
+      .block [.set (.variable "s") "+=" (.call "f" [.lit 1]),
+        .bind false "#r0" none (.call "f" [.lit 1]), .set (.variable "x") "+=" (.variable "#r0"),
+        .set (.field (.index (.field (.variable "t") "slots") (.lit 0)) "k") "+=" (.call "f" [.lit 1])] none := by
+  kernel_rfl
+
+/-- The reason binder of an `else` body is a local there: `f(1) else (cur) { let t = cur; }` reads the
+    reason, not the tagged static `cur`. -/
+theorem grund_binder_zeuge :
+    hebeKoerper zeugeS (.block [.callElse "f" [.lit 1] "cur"
+        (.block [.bind false "t" none (.variable "cur")] none)] none) =
+      .block [.callElse "f" [.lit 1] "cur" (.block [.bind false "t" none (.variable "cur")] none)] none := by
+  kernel_rfl
+
 end Gabbro.Grammatik.Parser.CallHoist

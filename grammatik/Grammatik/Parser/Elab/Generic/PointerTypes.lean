@@ -58,7 +58,9 @@ def uZeigerSig (raw : String) : Except String FnSig :=
 /-- A pointer type of the unit as a head (named `fn#j`) and an elaborated signature with an empty body. -/
 def elabZeigerTyp (consts : List (String × Int)) (alias : List (String × (Int × Int))) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (whys : List UWhy) (sums : List USum) (zeiger : List String)
-    (zb j : Nat) (raw : String) (spaces : List String := []) (named : List (String × Ty) := []) (eigner : List String := []) : Except String (UFnKopf × UFn) :=
+    (zb j : Nat) (raw : String) (spaces : List String := []) (named : List (String × Ty) := []) (eigner : List String := [])
+    (specs : List (String × List String × SExpr) := [])
+    (specTypen : List (String × List STyp) := []) : Except String (UFnKopf × UFn) :=
   match uZeigerSig raw with
   | .error e => .error e
   | .ok sig =>
@@ -68,7 +70,7 @@ def elabZeigerTyp (consts : List (String × Int)) (alias : List (String × (Int 
       let name := "fn#" ++ toString j
       let kopf := { kopf0 with name := name }
       if !kopf.held.isEmpty then .error "locks at a function-pointer type do not cross an indirect call" else
-      let ctx := { uCtxVon alias consts tabs locks globs kopf name [] whys sums [] [] [] [] with zeiger := zeiger, zeigerBasis := zb, spaces := spaces, namedTypes := named, eigner := eigner }
+      let ctx := { uCtxVon alias consts tabs locks globs kopf name [] whys sums [] [] specs [] specTypen with zeiger := zeiger, zeigerBasis := zb, spaces := spaces, namedTypes := named, eigner := eigner }
       match uZeigerVertrag ctx sig.klauseln with
       | .error e => .error e
       | .ok (gives, needs) =>

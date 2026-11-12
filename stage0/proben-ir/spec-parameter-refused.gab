@@ -1,0 +1,8 @@
+module ir_spec_parameter_refused {
+spec fn small(x : u32 in 0 .. 100) -> bool = x < 10;
+impl fn checked(x : u32 in 0 .. 101) -> u32 in 0 .. 101
+effects { pure } requires small(x) ensures result == x
+{ return x; }
+impl fn main() -> u32 in 0 .. 255 effects { pure }
+{ return checked(7); }
+}

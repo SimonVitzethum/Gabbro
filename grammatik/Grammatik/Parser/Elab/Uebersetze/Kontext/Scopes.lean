@@ -140,6 +140,8 @@ structure UCtx where
   /-- Untyped numeric locals whose actual range is deferred to G lowering. A surface
       fold must not mistake their placeholder type for a proved singleton interval. -/
   unknownRanges : List String := []
+  /-- Declared parameter types of each predicate helper, checked before substitution. -/
+  specTypen : List (String × List STyp) := []
 
 /-- One elaborated function: parameters with their `Ty`,
     the optional result range, the held lock names, the written

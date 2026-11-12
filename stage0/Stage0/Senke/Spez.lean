@@ -120,7 +120,11 @@ theorem agreeW_sub {L : Lay D} {m m' : Runner.Mem} {fp : Runner.W} {K F lo : Nat
     have h8 : (8 : Runner.W).toNat = 8 := rfl
     simp only [slot, BitVec.toNat_add, BitVec.toNat_mul, BitVec.toNat_ofNat, h8]
     rw [Nat.mod_eq_of_lt (a := F) (by omega)]; omega
-  refine ⟨h.rd, h.wr, fun x hx hw => h.b x (fun ⟨h1, h2⟩ => hx ⟨?_, ?_⟩) hw⟩
+  refine ⟨h.rd, h.wr, fun x hx hw => h.b x (fun ⟨h1, h2⟩ => hx ⟨?_, ?_⟩) hw,
+    fun Lk fern => h.sync Lk fun k j hk hj =>
+      ⟨fun ⟨h1, h2⟩ => (fern k j hk hj).1 ⟨?_, ?_⟩, (fern k j hk hj).2⟩⟩
+  · rw [hs] at h1; omega
+  · rw [hs] at h2; omega
   · rw [hs] at h1; omega
   · rw [hs] at h2; omega
 

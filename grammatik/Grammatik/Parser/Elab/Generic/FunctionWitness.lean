@@ -185,14 +185,14 @@ theorem literal_name_collision_refused_zeuge :
           res := none, fehler := none, klauseln := [] }, .block [] none)] =
       .error "function-literal-name-collision: generated literal name is already declared" := by kernel_rfl
 
-/-- Spec contracts expand after instantiation and before the named literal is appended. -/
+/-- A literal retains spec calls until the typed elaborator can check their arguments. -/
 theorem literal_spec_contract_zeuge :
     (expandedSource ("module callbacks { spec fn nonnegative(x: u32) -> bool = x >= 0; " ++
       callbackTemplate ++ "fn entry() { apply_all::[fn(x: u32 in 0 .. 1000) -> u32 " ++
       "requires nonnegative(x) effects {} costs <= 3 ops { return x * 2; }](); } }" )).map
       (fun items => items.any fun
         | .fnT sig _ => sig.klauseln.any (fun clause =>
-          beqSKlausel clause (.needs (.bin ">=" (.variable "x") (.lit 0))))
+          beqSKlausel clause (.needs (.call "nonnegative" [.variable "x"])))
         | _ => false) = .ok true := by kernel_rfl
 
 /-- Forwarding a static callback to another generic function keeps its canonical argument. -/

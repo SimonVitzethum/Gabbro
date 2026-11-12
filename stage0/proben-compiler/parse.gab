@@ -1,0 +1,514 @@
+// (c) Recursive-descent parser with precedence. Levels: comparison,
+// addition, multiplication, unary, primary (numbers, names, calls,
+// parentheses). Statements are `let`, `if`/`else` (with `else if`),
+// `return`; a function holds a name, parameters and a block. Every node
+// goes into the `nodes` table; child links are indexes, 255 means none.
+// Node kinds: 0 Num, 1 Name, 2 Add, 3 Sub, 4 Mul, 5 Div, 6 Lt, 7 Eq,
+// 8 Call, 9 Let, 10 If, 11 Return, 12 Seq, 13 Fn, 14 Arg, 15 Gt, 16 Le,
+// 17 Ge, 18 Ne, 19 Param, 20 Sig (a function head: params plus body).
+module front {
+// WANTED: plain structural recursion without a fuel parameter,
+// `impl fn parse_expr(ti) { ... parse_add(ti + 1) ... }`.
+// What Stage 0 accepts is recursion over a narrowed argument (measured),
+// and every function below carries an explicit fuel parameter with
+// `decreases`, the shape of the existing compiler front-end probe. A bare
+// `return` of the recursive call from a branch is additionally refused
+// (see lex.gab); all such returns are `let`-bound below.
+// WANTED: the parser result as a tuple, `return (node, pos);`, and a flag
+// as a `bool`. Stage 0 refuses the tuple: `stage0: ( without )`. A `bool`
+// record field also fails, it projects as a number (`stage0: number as a
+// truth value`). Workaround below: the `POut` record with the flag as
+// `u32 in 0 .. 1` (`ok`: 0 error, 1 done).
+// WANTED: `match` over the token kind with a wildcard for the rest,
+// `match k { ... _ => { ... } }`. Stage 0 refuses the wildcard:
+// `stage0: match arms without G form`. Workaround below: `if` chains over
+// the kind codes, which need no exhaustiveness proof.
+// WANTED: `narrow e.pos to 0 .. 63` on the position field of a parser
+// result. Stage 0 refuses it: `stage0: stmt without G form: trim` with
+// `note: elaboration: ... stmt without G form: trim (statement N of N:
+// narrow)`. A `narrow` on a variable is fine; on a record field or a table
+// slot it has no form (the same reason a bare constructor or a computed
+// array index cannot be written straight into a slot, see below).
+// Workaround below: bind the field to a local first, then narrow the local.
+type POut = { node : u32 in 0 .. 255, pos : u32 in 0 .. 64, ok : u32 in 0 .. 1, };
+table nodes count 96 { slot { k : u32 in 0 .. 31, a : u32 in 0 .. 100000, b : u32 in 0 .. 255, c : u32 in 0 .. 255, } }
+static mut node_used : u32 in 0 .. 96 = 0;
+static mut parse_err : u32 in 0 .. 1 = 0;
+impl fn span_value_rec(start : u32 in 0 .. 159, k : u32 in 0 .. 159, acc : u32 in 0 .. 100000, fuel : u32 in 0 .. 128) -> u32 in 0 .. 100000
+    effects { writes parse_err }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { parse_err = 1; return acc; }
+    if k == 0 { return acc; }
+    let b = byte_at(start);
+    narrow b to 48 .. 57 else { parse_err = 1; return 0; }
+    let d = b - 48;
+    narrow acc to 0 .. 10000 else { parse_err = 1; return 0; }
+    let m = acc * 10;
+    let v = m + d;
+    narrow v to 0 .. 100000 else { parse_err = 1; return 0; }
+    narrow start to 0 .. 158 else { parse_err = 1; return 0; }
+    narrow k to 1 .. 159 else { parse_err = 1; return 0; }
+    let q = span_value_rec(start + 1, k - 1, v, fuel - 1);
+    return q;
+}
+impl fn new_node(kind : u32 in 0 .. 31, a : u32 in 0 .. 100000, b : u32 in 0 .. 255, c : u32 in 0 .. 255) -> u32 in 0 .. 95
+    effects { reads node_used, writes node_used, writes nodes.slots, writes parse_err }
+{
+    let i = node_used;
+    narrow i to 0 .. 95 else { parse_err = 1; return 0; }
+    nodes.slots[i].k = kind;
+    nodes.slots[i].a = a;
+    nodes.slots[i].b = b;
+    nodes.slots[i].c = c;
+    node_used = i + 1;
+    return i;
+}
+impl fn parse_primary(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+    effects { writes parse_err, writes node_used, writes nodes.slots }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { parse_err = 1; return POut(node: 0, pos: ti, ok: 0); }
+    narrow ti to 0 .. 63 else { return POut(node: 0, pos: ti, ok: 0); }
+    let k = tok_kind(ti);
+    if k == 2 {
+        let s = tok_start(ti);
+        let l = tok_len(ti);
+        let v = span_value_rec(s, l, 0, fuel - 1);
+        if parse_err == 1 { return POut(node: 0, pos: ti, ok: 0); }
+        let nd = new_node(0, v, 0, 0);
+        return POut(node: nd, pos: ti + 1, ok: 1);
+    }
+    if k == 1 {
+        let s = tok_start(ti);
+        let l = tok_len(ti);
+        narrow ti to 0 .. 62 else { return POut(node: 0, pos: ti, ok: 0); }
+        let k2 = tok_kind(ti + 1);
+        if k2 == 12 {
+            let a = parse_args(ti + 2, fuel - 1);
+            if a.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+            let nd = new_node(8, s, l, a.node);
+            return POut(node: nd, pos: a.pos, ok: 1);
+        }
+        let nd = new_node(1, s, l, 0);
+        return POut(node: nd, pos: ti + 1, ok: 1);
+    }
+    if k == 12 {
+        let e = parse_expr(ti + 1, fuel - 1);
+        if e.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+        let ep = e.pos;
+        narrow ep to 0 .. 63 else { return POut(node: 0, pos: ti, ok: 0); }
+        let k2 = tok_kind(ep);
+        if k2 == 13 {
+            return POut(node: e.node, pos: ep + 1, ok: 1);
+        }
+        return POut(node: 0, pos: ti, ok: 0);
+    }
+    return POut(node: 0, pos: ti, ok: 0);
+}
+impl fn parse_unary(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+    effects { writes parse_err, writes node_used, writes nodes.slots }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { parse_err = 1; return POut(node: 0, pos: ti, ok: 0); }
+    narrow ti to 0 .. 63 else { return POut(node: 0, pos: ti, ok: 0); }
+    let k = tok_kind(ti);
+    if k == 9 {
+        let e = parse_unary(ti + 1, fuel - 1);
+        if e.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+        let z = new_node(0, 0, 0, 0);
+        let nd = new_node(3, z, e.node, 0);
+        return POut(node: nd, pos: e.pos, ok: 1);
+    }
+    let p = parse_primary(ti, fuel - 1);
+    return p;
+}
+impl fn parse_mul_rest(left : u32 in 0 .. 255, ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+    effects { writes parse_err, writes node_used, writes nodes.slots }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { parse_err = 1; return POut(node: left, pos: ti, ok: 0); }
+    narrow ti to 0 .. 63 else { return POut(node: left, pos: ti, ok: 0); }
+    let k = tok_kind(ti);
+    if k == 10 {
+        let r = parse_unary(ti + 1, fuel - 1);
+        if r.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+        let n = new_node(4, left, r.node, 0);
+        let q = parse_mul_rest(n, r.pos, fuel - 1);
+        return q;
+    }
+    if k == 11 {
+        let r = parse_unary(ti + 1, fuel - 1);
+        if r.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+        let n = new_node(5, left, r.node, 0);
+        let q = parse_mul_rest(n, r.pos, fuel - 1);
+        return q;
+    }
+    return POut(node: left, pos: ti, ok: 1);
+}
+impl fn parse_mul(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+    effects { writes parse_err, writes node_used, writes nodes.slots }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { parse_err = 1; return POut(node: 0, pos: ti, ok: 0); }
+    let l = parse_unary(ti, fuel - 1);
+    if l.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+    let q = parse_mul_rest(l.node, l.pos, fuel - 1);
+    return q;
+}
+impl fn parse_add_rest(left : u32 in 0 .. 255, ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+    effects { writes parse_err, writes node_used, writes nodes.slots }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { parse_err = 1; return POut(node: left, pos: ti, ok: 0); }
+    narrow ti to 0 .. 63 else { return POut(node: left, pos: ti, ok: 0); }
+    let k = tok_kind(ti);
+    if k == 8 {
+        let r = parse_mul(ti + 1, fuel - 1);
+        if r.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+        let n = new_node(2, left, r.node, 0);
+        let q = parse_add_rest(n, r.pos, fuel - 1);
+        return q;
+    }
+    if k == 9 {
+        let r = parse_mul(ti + 1, fuel - 1);
+        if r.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+        let n = new_node(3, left, r.node, 0);
+        let q = parse_add_rest(n, r.pos, fuel - 1);
+        return q;
+    }
+    return POut(node: left, pos: ti, ok: 1);
+}
+impl fn parse_add(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+    effects { writes parse_err, writes node_used, writes nodes.slots }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { parse_err = 1; return POut(node: 0, pos: ti, ok: 0); }
+    let l = parse_mul(ti, fuel - 1);
+    if l.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+    let q = parse_add_rest(l.node, l.pos, fuel - 1);
+    return q;
+}
+impl fn parse_cmp_rest(left : u32 in 0 .. 255, ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+    effects { writes parse_err, writes node_used, writes nodes.slots }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { parse_err = 1; return POut(node: left, pos: ti, ok: 0); }
+    narrow ti to 0 .. 63 else { return POut(node: left, pos: ti, ok: 0); }
+    let k = tok_kind(ti);
+    if k == 18 {
+        let r = parse_add(ti + 1, fuel - 1);
+        if r.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+        let n = new_node(6, left, r.node, 0);
+        let q = parse_cmp_rest(n, r.pos, fuel - 1);
+        return q;
+    }
+    if k == 19 {
+        let r = parse_add(ti + 1, fuel - 1);
+        if r.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+        let n = new_node(15, left, r.node, 0);
+        let q = parse_cmp_rest(n, r.pos, fuel - 1);
+        return q;
+    }
+    if k == 21 {
+        let r = parse_add(ti + 1, fuel - 1);
+        if r.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+        let n = new_node(7, left, r.node, 0);
+        let q = parse_cmp_rest(n, r.pos, fuel - 1);
+        return q;
+    }
+    if k == 23 {
+        let r = parse_add(ti + 1, fuel - 1);
+        if r.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+        let n = new_node(18, left, r.node, 0);
+        let q = parse_cmp_rest(n, r.pos, fuel - 1);
+        return q;
+    }
+    if k == 24 {
+        let r = parse_add(ti + 1, fuel - 1);
+        if r.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+        let n = new_node(16, left, r.node, 0);
+        let q = parse_cmp_rest(n, r.pos, fuel - 1);
+        return q;
+    }
+    if k == 25 {
+        let r = parse_add(ti + 1, fuel - 1);
+        if r.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+        let n = new_node(17, left, r.node, 0);
+        let q = parse_cmp_rest(n, r.pos, fuel - 1);
+        return q;
+    }
+    return POut(node: left, pos: ti, ok: 1);
+}
+impl fn parse_cmp(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+    effects { writes parse_err, writes node_used, writes nodes.slots }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { parse_err = 1; return POut(node: 0, pos: ti, ok: 0); }
+    let l = parse_add(ti, fuel - 1);
+    if l.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+    let q = parse_cmp_rest(l.node, l.pos, fuel - 1);
+    return q;
+}
+impl fn parse_expr(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+    effects { writes parse_err, writes node_used, writes nodes.slots }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { parse_err = 1; return POut(node: 0, pos: ti, ok: 0); }
+    let q = parse_cmp(ti, fuel - 1);
+    return q;
+}
+impl fn parse_args(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+    effects { writes parse_err, writes node_used, writes nodes.slots }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { parse_err = 1; return POut(node: 0, pos: ti, ok: 0); }
+    narrow ti to 0 .. 63 else { return POut(node: 0, pos: ti, ok: 0); }
+    let k = tok_kind(ti);
+    if k == 13 {
+        return POut(node: 255, pos: ti + 1, ok: 1);
+    }
+    let e = parse_expr(ti, fuel - 1);
+    if e.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+    let ep = e.pos;
+    narrow ep to 0 .. 63 else { return POut(node: 0, pos: ti, ok: 0); }
+    let k2 = tok_kind(ep);
+    if k2 == 16 {
+        let r = parse_args(ep + 1, fuel - 1);
+        if r.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+        let n = new_node(14, e.node, r.node, 0);
+        return POut(node: n, pos: r.pos, ok: 1);
+    }
+    if k2 == 13 {
+        let n = new_node(14, e.node, 255, 0);
+        return POut(node: n, pos: ep + 1, ok: 1);
+    }
+    return POut(node: 0, pos: ti, ok: 0);
+}
+impl fn parse_params(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+    effects { writes parse_err, writes node_used, writes nodes.slots }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { parse_err = 1; return POut(node: 0, pos: ti, ok: 0); }
+    narrow ti to 0 .. 63 else { return POut(node: 0, pos: ti, ok: 0); }
+    let k = tok_kind(ti);
+    if k == 13 {
+        return POut(node: 255, pos: ti + 1, ok: 1);
+    }
+    if k == 1 {
+        let s = tok_start(ti);
+        let l = tok_len(ti);
+        narrow ti to 0 .. 62 else { return POut(node: 0, pos: ti, ok: 0); }
+        let k2 = tok_kind(ti + 1);
+        if k2 == 16 {
+            let r = parse_params(ti + 2, fuel - 1);
+            if r.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+            let n = new_node(19, s, l, r.node);
+            return POut(node: n, pos: r.pos, ok: 1);
+        }
+        if k2 == 13 {
+            let n = new_node(19, s, l, 255);
+            return POut(node: n, pos: ti + 2, ok: 1);
+        }
+        return POut(node: 0, pos: ti, ok: 0);
+    }
+    return POut(node: 0, pos: ti, ok: 0);
+}
+impl fn parse_stmt(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+    effects { writes parse_err, writes node_used, writes nodes.slots }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { parse_err = 1; return POut(node: 0, pos: ti, ok: 0); }
+    narrow ti to 0 .. 63 else { return POut(node: 0, pos: ti, ok: 0); }
+    let k = tok_kind(ti);
+    if k == 15 {
+        return POut(node: 255, pos: ti, ok: 1);
+    }
+    if k == 4 {
+        narrow ti to 0 .. 61 else { return POut(node: 0, pos: ti, ok: 0); }
+        let k2 = tok_kind(ti + 1);
+        if k2 == 1 {
+            let s = tok_start(ti + 1);
+            let l = tok_len(ti + 1);
+            let k3 = tok_kind(ti + 2);
+            if k3 == 20 {
+                let e = parse_expr(ti + 3, fuel - 1);
+                if e.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+                let ep = e.pos;
+                narrow ep to 0 .. 63 else { return POut(node: 0, pos: ti, ok: 0); }
+                let k4 = tok_kind(ep);
+                if k4 == 17 {
+                    let nd = new_node(9, s, l, e.node);
+                    return POut(node: nd, pos: ep + 1, ok: 1);
+                }
+                return POut(node: 0, pos: ti, ok: 0);
+            }
+            return POut(node: 0, pos: ti, ok: 0);
+        }
+        return POut(node: 0, pos: ti, ok: 0);
+    }
+    if k == 5 {
+        let e = parse_expr(ti + 1, fuel - 1);
+        if e.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+        let ep = e.pos;
+        narrow ep to 0 .. 63 else { return POut(node: 0, pos: ti, ok: 0); }
+        let k2 = tok_kind(ep);
+        if k2 == 14 {
+            let th = parse_block(ep + 1, fuel - 1);
+            if th.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+            let tp = th.pos;
+            narrow tp to 0 .. 63 else { return POut(node: 0, pos: ti, ok: 0); }
+            let k3 = tok_kind(tp);
+            if k3 == 6 {
+                narrow tp to 0 .. 62 else { return POut(node: 0, pos: ti, ok: 0); }
+                let k4 = tok_kind(tp + 1);
+                if k4 == 5 {
+                    let ei = parse_stmt_else(tp + 1, fuel - 1);
+                    if ei.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+                    let nd = new_node(10, e.node, th.node, ei.node);
+                    return POut(node: nd, pos: ei.pos, ok: 1);
+                }
+                let eb = parse_else_block(tp + 1, fuel - 1);
+                if eb.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+                let nd = new_node(10, e.node, th.node, eb.node);
+                return POut(node: nd, pos: eb.pos, ok: 1);
+            }
+            let nd = new_node(10, e.node, th.node, 255);
+            return POut(node: nd, pos: tp, ok: 1);
+        }
+        return POut(node: 0, pos: ti, ok: 0);
+    }
+    if k == 7 {
+        let e = parse_expr(ti + 1, fuel - 1);
+        if e.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+        let rp = e.pos;
+        narrow rp to 0 .. 63 else { return POut(node: 0, pos: ti, ok: 0); }
+        let k2 = tok_kind(rp);
+        if k2 == 17 {
+            let nd = new_node(11, e.node, 0, 0);
+            return POut(node: nd, pos: rp + 1, ok: 1);
+        }
+        return POut(node: 0, pos: ti, ok: 0);
+    }
+    return POut(node: 0, pos: ti, ok: 0);
+}
+impl fn parse_stmt_else(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+    effects { writes parse_err, writes node_used, writes nodes.slots }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { parse_err = 1; return POut(node: 0, pos: ti, ok: 0); }
+    let q = parse_stmt(ti, fuel - 1);
+    return q;
+}
+impl fn parse_else_block(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+    effects { writes parse_err, writes node_used, writes nodes.slots }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { parse_err = 1; return POut(node: 0, pos: ti, ok: 0); }
+    narrow ti to 0 .. 63 else { return POut(node: 0, pos: ti, ok: 0); }
+    let k = tok_kind(ti);
+    if k == 14 {
+        let b = parse_block(ti + 1, fuel - 1);
+        return b;
+    }
+    return POut(node: 0, pos: ti, ok: 0);
+}
+impl fn parse_block(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+    effects { writes parse_err, writes node_used, writes nodes.slots }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { parse_err = 1; return POut(node: 0, pos: ti, ok: 0); }
+    let s = parse_stmt(ti, fuel - 1);
+    if s.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+    if s.node == 255 {
+        let sp = s.pos;
+        narrow sp to 0 .. 63 else { return POut(node: 0, pos: ti, ok: 0); }
+        return POut(node: 255, pos: sp + 1, ok: 1);
+    }
+    let r = parse_block(s.pos, fuel - 1);
+    if r.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+    let n = new_node(12, s.node, r.node, 0);
+    return POut(node: n, pos: r.pos, ok: 1);
+}
+impl fn parse_fn(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+    effects { writes parse_err, writes node_used, writes nodes.slots }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { parse_err = 1; return POut(node: 0, pos: ti, ok: 0); }
+    narrow ti to 0 .. 61 else { return POut(node: 0, pos: ti, ok: 0); }
+    let k = tok_kind(ti);
+    if k == 3 {
+        let k2 = tok_kind(ti + 1);
+        if k2 == 1 {
+            let s = tok_start(ti + 1);
+            let l = tok_len(ti + 1);
+            let k3 = tok_kind(ti + 2);
+            if k3 == 12 {
+                let p = parse_params(ti + 3, fuel - 1);
+                if p.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+                let pp = p.pos;
+                narrow pp to 0 .. 63 else { return POut(node: 0, pos: ti, ok: 0); }
+                let k4 = tok_kind(pp);
+                if k4 == 14 {
+                    let b = parse_block(pp + 1, fuel - 1);
+                    if b.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+                    let sg = new_node(20, p.node, b.node, 0);
+                    let nd = new_node(13, s, l, sg);
+                    return POut(node: nd, pos: b.pos, ok: 1);
+                }
+                return POut(node: 0, pos: ti, ok: 0);
+            }
+            return POut(node: 0, pos: ti, ok: 0);
+        }
+        return POut(node: 0, pos: ti, ok: 0);
+    }
+    return POut(node: 0, pos: ti, ok: 0);
+}
+impl fn parse_unit(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+    effects { writes parse_err, writes node_used, writes nodes.slots }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { parse_err = 1; return POut(node: 0, pos: ti, ok: 0); }
+    narrow ti to 0 .. 63 else { return POut(node: 0, pos: ti, ok: 0); }
+    let k = tok_kind(ti);
+    if k == 0 {
+        return POut(node: 255, pos: ti + 1, ok: 1);
+    }
+    let f = parse_fn(ti, fuel - 1);
+    if f.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+    let u = parse_unit(f.pos, fuel - 1);
+    if u.ok == 0 { return POut(node: 0, pos: ti, ok: 0); }
+    let n = new_node(12, f.node, u.node, 0);
+    return POut(node: n, pos: u.pos, ok: 1);
+}
+impl fn parse_failed() -> u32 in 0 .. 1
+    effects { reads parse_err }
+{
+    return parse_err;
+}
+impl fn node_count() -> u32 in 0 .. 96
+    effects { reads node_used }
+{
+    return node_used;
+}
+impl fn node_kind(i : u32 in 0 .. 95) -> u32 in 0 .. 31
+    effects { reads nodes.slots }
+{
+    return nodes.slots[i].k;
+}
+impl fn node_a(i : u32 in 0 .. 95) -> u32 in 0 .. 100000
+    effects { reads nodes.slots }
+{
+    return nodes.slots[i].a;
+}
+impl fn node_b(i : u32 in 0 .. 95) -> u32 in 0 .. 255
+    effects { reads nodes.slots }
+{
+    return nodes.slots[i].b;
+}
+impl fn node_c(i : u32 in 0 .. 95) -> u32 in 0 .. 255
+    effects { reads nodes.slots }
+{
+    return nodes.slots[i].c;
+}
+}

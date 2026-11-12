@@ -31,8 +31,9 @@ theorem elabUFunktion_measure (consts : List (String × Int))
     (registers : List UReg) (states : List UZustand) (pointers : List String) (base : Nat)
     (specs : List (String × List String × SExpr)) (arrays : List (String × USide)) (fn : UFn)
     (spaces : List String := []) (valueScope : UTypeScope := { types := [] }) (eigner : List String := [])
+    (specTypen : List (String × List STyp) := [])
     (lowered : elabUFunktion consts alias tabs locks globs heads sig body assumptions whys sums
-      devices registers states pointers base specs arrays spaces valueScope eigner = .ok fn) :
+      devices registers states pointers base specs arrays spaces valueScope eigner specTypen = .ok fn) :
     uMeasureClause alias sig.klauseln = .ok fn.decreases ∧
       fn.measureConstants = (if fn.decreases.isSome then consts else []) ∧
       fn.measureTypes = (if fn.decreases.isSome then alias else []) := by
@@ -40,7 +41,7 @@ theorem elabUFunktion_measure (consts : List (String × Int))
   | error error => simp only [elabUFunktion, hh, reduceCtorEq] at lowered
   | ok pair =>
     rcases pair with ⟨head, writes⟩
-    cases hb : elabFn { uCtxVon alias consts tabs locks globs head sig.name assumptions whys sums registers states specs arrays with zeiger := pointers, zeigerBasis := base, spaces := spaces, records := valueScope.records, namedTypes := valueScope.types, eigner := eigner } heads sig.klauseln body with
+    cases hb : elabFn { uCtxVon alias consts tabs locks globs head sig.name assumptions whys sums registers states specs arrays specTypen with zeiger := pointers, zeigerBasis := base, spaces := spaces, records := valueScope.records, namedTypes := valueScope.types, eigner := eigner } heads sig.klauseln body with
     | error error => simp only [elabUFunktion, hh, hb, reduceCtorEq] at lowered
     | ok parts =>
       rcases parts with ⟨gives, needs, statements, returned⟩

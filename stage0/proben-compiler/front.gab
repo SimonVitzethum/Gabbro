@@ -1,0 +1,390 @@
+// (d) Symbol table with scopes and one checking pass. Scopes nest for
+// functions and for `if` branches: entering pushes the symbol count,
+// leaving truncates it, so only live scopes are ever searched and the
+// innermost declaration wins. The pass reports the first undeclared name
+// in `bad_start`/`bad_len` and answers 0. `main` runs the whole front end
+// and returns the token count plus the node count, so a correct run is
+// visible in the exit code: 255 means the lexer failed, 254 the parser,
+// 252 the checker.
+module front {
+// WANTED: the lookup as a `traverse` over the symbol table with the
+// comparison folded into the body, and `leave` on the first hit.
+// A call inside the body is fine, but a `narrow ... else { next i; }`
+// over a value that depends on the call is refused at the export gate:
+// `stage0: source export: function type/proof/header duties lack a checked
+// source binding: main` with
+// `note: export gate refuses: function type/proof/header duties lack a
+// checked source binding: main`. With `leave i` instead of `next i` the
+// same body compiles, and without the call `next i` compiles too; only the
+// combination fails. Workaround below: the search is a downward recursion
+// with fuel, which also yields the shadowing order directly.
+table syms count 32 { slot { start : u32 in 0 .. 159, len : u32 in 0 .. 159, depth : u32 in 0 .. 8, } }
+table scopebase count 8 { slot { base : u32 in 0 .. 32, } }
+static mut sym_used : u32 in 0 .. 32 = 0;
+static mut cur_depth : u32 in 0 .. 8 = 0;
+static mut scope_top : u32 in 0 .. 8 = 0;
+static mut bad_start : u32 in 0 .. 159 = 0;
+static mut bad_len : u32 in 0 .. 159 = 0;
+static mut check_bad : u32 in 0 .. 1 = 0;
+impl fn sym_enter()
+    effects { reads scope_top, writes scope_top, reads sym_used, writes scopebase.slots, reads cur_depth, writes cur_depth, writes check_bad }
+{
+    let t = scope_top;
+    narrow t to 0 .. 7 else { check_bad = 1; return; }
+    let b = sym_used;
+    scopebase.slots[t].base = b;
+    scope_top = t + 1;
+    let d = cur_depth;
+    narrow d to 0 .. 7 else { check_bad = 1; return; }
+    cur_depth = d + 1;
+}
+impl fn sym_leave()
+    effects { reads scope_top, writes scope_top, writes sym_used, reads scopebase.slots, reads cur_depth, writes cur_depth, writes check_bad }
+{
+    let t = scope_top;
+    narrow t to 1 .. 8 else { check_bad = 1; return; }
+    scope_top = t - 1;
+    let s = scope_top;
+    narrow s to 0 .. 7 else { check_bad = 1; return; }
+    let b = scopebase.slots[s].base;
+    sym_used = b;
+    let d = cur_depth;
+    narrow d to 1 .. 8 else { check_bad = 1; return; }
+    cur_depth = d - 1;
+}
+impl fn sym_declare(start : u32 in 0 .. 159, len : u32 in 0 .. 159)
+    effects { reads sym_used, writes sym_used, writes syms.slots, reads cur_depth, writes check_bad }
+{
+    let i = sym_used;
+    narrow i to 0 .. 31 else { check_bad = 1; return; }
+    syms.slots[i].start = start;
+    syms.slots[i].len = len;
+    syms.slots[i].depth = cur_depth;
+    sym_used = i + 1;
+}
+impl fn cmp_rec(s1 : u32 in 0 .. 159, s2 : u32 in 0 .. 159, k : u32 in 0 .. 159, fuel : u32 in 0 .. 160) -> u32 in 0 .. 1
+    effects { pure }
+    decreases fuel
+{
+    narrow fuel to 1 .. 160 else { return 0; }
+    if k == 0 { return 1; }
+    narrow s1 to 0 .. 158 else { return 0; }
+    narrow s2 to 0 .. 158 else { return 0; }
+    let b1 = byte_at(s1);
+    let b2 = byte_at(s2);
+    if b1 == b2 {
+        narrow k to 1 .. 159 else { return 0; }
+        let q = cmp_rec(s1 + 1, s2 + 1, k - 1, fuel - 1);
+        return q;
+    }
+    return 0;
+}
+impl fn cmp_span(s1 : u32 in 0 .. 159, l1 : u32 in 0 .. 159, s2 : u32 in 0 .. 159, l2 : u32 in 0 .. 159) -> u32 in 0 .. 1
+    effects { pure }
+{
+    if l1 == l2 {
+        let q = cmp_rec(s1, s2, l1, 160);
+        return q;
+    }
+    return 0;
+}
+impl fn sym_lookup_rec(i : u32 in 0 .. 32, start : u32 in 0 .. 159, len : u32 in 0 .. 159, fuel : u32 in 0 .. 32) -> u32 in 0 .. 33
+    effects { reads syms.slots }
+    decreases fuel
+{
+    narrow fuel to 1 .. 32 else { return 33; }
+    if i == 0 { return 33; }
+    narrow i to 1 .. 32 else { return 33; }
+    let j = i - 1;
+    let s = syms.slots[j].start;
+    let l = syms.slots[j].len;
+    let c = cmp_span(s, l, start, len);
+    if c == 1 { return j; }
+    let q = sym_lookup_rec(j, start, len, fuel - 1);
+    return q;
+}
+impl fn sym_lookup(start : u32 in 0 .. 159, len : u32 in 0 .. 159) -> u32 in 0 .. 33
+    effects { reads syms.slots, reads sym_used }
+{
+    let u = sym_used;
+    let q = sym_lookup_rec(u, start, len, 32);
+    return q;
+}
+impl fn is_binop(k : u32 in 0 .. 31) -> u32 in 0 .. 1
+    effects { pure }
+{
+    if k == 2 { return 1; }
+    if k == 3 { return 1; }
+    if k == 4 { return 1; }
+    if k == 5 { return 1; }
+    if k == 6 { return 1; }
+    if k == 7 { return 1; }
+    if k == 15 { return 1; }
+    if k == 16 { return 1; }
+    if k == 17 { return 1; }
+    if k == 18 { return 1; }
+    return 0;
+}
+impl fn check_expr(ni : u32 in 0 .. 95, fuel : u32 in 0 .. 128) -> u32 in 0 .. 1
+    effects { reads nodes.slots, writes check_bad, writes bad_start, writes bad_len, writes sym_used, writes syms.slots, writes scopebase.slots, writes cur_depth, writes scope_top }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { check_bad = 1; return 0; }
+    let k = node_kind(ni);
+    if k == 0 { return 1; }
+    if k == 1 {
+        let s = node_a(ni);
+        narrow s to 0 .. 159 else { check_bad = 1; return 0; }
+        let l = node_b(ni);
+        narrow l to 0 .. 159 else { check_bad = 1; return 0; }
+        let f = sym_lookup(s, l);
+        if f == 33 {
+            bad_start = s;
+            bad_len = l;
+            check_bad = 1;
+            return 0;
+        }
+        return 1;
+    }
+    if k == 8 {
+        let s = node_a(ni);
+        narrow s to 0 .. 159 else { check_bad = 1; return 0; }
+        let l = node_b(ni);
+        narrow l to 0 .. 159 else { check_bad = 1; return 0; }
+        let f = sym_lookup(s, l);
+        if f == 33 {
+            bad_start = s;
+            bad_len = l;
+            check_bad = 1;
+            return 0;
+        }
+        let c = node_c(ni);
+        let q = check_args(c, fuel - 1);
+        return q;
+    }
+    if is_binop(k) == 1 {
+        let l = node_a(ni);
+        narrow l to 0 .. 95 else { check_bad = 1; return 0; }
+        let r = node_b(ni);
+        narrow r to 0 .. 95 else { check_bad = 1; return 0; }
+        let q = check_expr(l, fuel - 1);
+        if q == 0 { return 0; }
+        let w = check_expr(r, fuel - 1);
+        return w;
+    }
+    check_bad = 1;
+    return 0;
+}
+impl fn check_args(ai : u32 in 0 .. 255, fuel : u32 in 0 .. 128) -> u32 in 0 .. 1
+    effects { reads nodes.slots, writes check_bad, writes bad_start, writes bad_len, writes sym_used, writes syms.slots, writes scopebase.slots, writes cur_depth, writes scope_top }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { check_bad = 1; return 0; }
+    if ai == 255 { return 1; }
+    narrow ai to 0 .. 95 else { check_bad = 1; return 0; }
+    let k = node_kind(ai);
+    if k == 14 {
+        let e = node_a(ai);
+        narrow e to 0 .. 95 else { check_bad = 1; return 0; }
+        let q = check_expr(e, fuel - 1);
+        if q == 0 { return 0; }
+        let n = node_b(ai);
+        let w = check_args(n, fuel - 1);
+        return w;
+    }
+    check_bad = 1;
+    return 0;
+}
+impl fn check_seq(si : u32 in 0 .. 255, fuel : u32 in 0 .. 128) -> u32 in 0 .. 1
+    effects { reads nodes.slots, writes check_bad, writes bad_start, writes bad_len, writes sym_used, writes syms.slots, writes scopebase.slots, writes cur_depth, writes scope_top }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { check_bad = 1; return 0; }
+    if si == 255 { return 1; }
+    narrow si to 0 .. 95 else { check_bad = 1; return 0; }
+    let k = node_kind(si);
+    if k == 12 {
+        let a = node_a(si);
+        narrow a to 0 .. 95 else { check_bad = 1; return 0; }
+        let q = check_stmt(a, fuel - 1);
+        if q == 0 { return 0; }
+        let b = node_b(si);
+        let w = check_seq(b, fuel - 1);
+        return w;
+    }
+    check_bad = 1;
+    return 0;
+}
+impl fn declare_params(p : u32 in 0 .. 255, fuel : u32 in 0 .. 128) -> u32 in 0 .. 1
+    effects { reads nodes.slots, writes sym_used, writes syms.slots, reads cur_depth, writes check_bad }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { check_bad = 1; return 0; }
+    if p == 255 { return 1; }
+    narrow p to 0 .. 95 else { check_bad = 1; return 0; }
+    let k = node_kind(p);
+    if k == 19 {
+        let s = node_a(p);
+        narrow s to 0 .. 159 else { check_bad = 1; return 0; }
+        let l = node_b(p);
+        narrow l to 0 .. 159 else { check_bad = 1; return 0; }
+        sym_declare(s, l);
+        let n = node_c(p);
+        let w = declare_params(n, fuel - 1);
+        return w;
+    }
+    check_bad = 1;
+    return 0;
+}
+impl fn check_stmt(ni : u32 in 0 .. 95, fuel : u32 in 0 .. 128) -> u32 in 0 .. 1
+    effects { reads nodes.slots, writes check_bad, writes bad_start, writes bad_len, writes sym_used, writes syms.slots, writes scopebase.slots, writes cur_depth, writes scope_top }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { check_bad = 1; return 0; }
+    let k = node_kind(ni);
+    if k == 9 {
+        let c = node_c(ni);
+        narrow c to 0 .. 95 else { check_bad = 1; return 0; }
+        let q = check_expr(c, fuel - 1);
+        if q == 0 { return 0; }
+        let s = node_a(ni);
+        narrow s to 0 .. 159 else { check_bad = 1; return 0; }
+        let l = node_b(ni);
+        narrow l to 0 .. 159 else { check_bad = 1; return 0; }
+        sym_declare(s, l);
+        return 1;
+    }
+    if k == 10 {
+        let cd = node_a(ni);
+        narrow cd to 0 .. 95 else { check_bad = 1; return 0; }
+        let q = check_expr(cd, fuel - 1);
+        if q == 0 { return 0; }
+        sym_enter();
+        let th = node_b(ni);
+        let w = check_seq(th, fuel - 1);
+        sym_leave();
+        if w == 0 { return 0; }
+        let e = node_c(ni);
+        if e == 255 { return 1; }
+        narrow e to 0 .. 95 else { check_bad = 1; return 0; }
+        let kc = node_kind(e);
+        if kc == 10 {
+            sym_enter();
+            let u = check_stmt(e, fuel - 1);
+            sym_leave();
+            return u;
+        }
+        if kc == 12 {
+            sym_enter();
+            let v = check_seq(e, fuel - 1);
+            sym_leave();
+            return v;
+        }
+        check_bad = 1;
+        return 0;
+    }
+    if k == 11 {
+        let r = node_a(ni);
+        narrow r to 0 .. 95 else { check_bad = 1; return 0; }
+        let q = check_expr(r, fuel - 1);
+        return q;
+    }
+    if k == 12 {
+        let a = node_a(ni);
+        narrow a to 0 .. 95 else { check_bad = 1; return 0; }
+        let q = check_stmt(a, fuel - 1);
+        if q == 0 { return 0; }
+        let b = node_b(ni);
+        let w = check_seq(b, fuel - 1);
+        return w;
+    }
+    if k == 13 {
+        sym_enter();
+        let sg = node_c(ni);
+        narrow sg to 0 .. 95 else { check_bad = 1; sym_leave(); return 0; }
+        let p = node_a(sg);
+        narrow p to 0 .. 255 else { check_bad = 1; sym_leave(); return 0; }
+        let d = declare_params(p, fuel - 1);
+        if d == 0 { sym_leave(); return 0; }
+        let bd = node_b(sg);
+        let w = check_seq(bd, fuel - 1);
+        sym_leave();
+        return w;
+    }
+    check_bad = 1;
+    return 0;
+}
+impl fn declare_fns(ui : u32 in 0 .. 255, fuel : u32 in 0 .. 128) -> u32 in 0 .. 1
+    effects { reads nodes.slots, writes sym_used, writes syms.slots, reads cur_depth, writes check_bad }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { check_bad = 1; return 0; }
+    if ui == 255 { return 1; }
+    narrow ui to 0 .. 95 else { check_bad = 1; return 0; }
+    let k = node_kind(ui);
+    if k == 12 {
+        let a = node_a(ui);
+        narrow a to 0 .. 95 else { check_bad = 1; return 0; }
+        let ka = node_kind(a);
+        if ka == 13 {
+            let s = node_a(a);
+            narrow s to 0 .. 159 else { check_bad = 1; return 0; }
+            let l = node_b(a);
+            narrow l to 0 .. 159 else { check_bad = 1; return 0; }
+            sym_declare(s, l);
+            let b = node_b(ui);
+            let w = declare_fns(b, fuel - 1);
+            return w;
+        }
+        check_bad = 1;
+        return 0;
+    }
+    check_bad = 1;
+    return 0;
+}
+impl fn check_unit(ui : u32 in 0 .. 255, fuel : u32 in 0 .. 128) -> u32 in 0 .. 1
+    effects { reads nodes.slots, writes check_bad, writes bad_start, writes bad_len, writes sym_used, writes syms.slots, writes scopebase.slots, writes cur_depth, writes scope_top }
+    decreases fuel
+{
+    narrow fuel to 1 .. 128 else { check_bad = 1; return 0; }
+    if ui == 255 { return 1; }
+    narrow ui to 0 .. 95 else { check_bad = 1; return 0; }
+    let k = node_kind(ui);
+    if k == 12 {
+        let a = node_a(ui);
+        narrow a to 0 .. 95 else { check_bad = 1; return 0; }
+        let q = check_stmt(a, fuel - 1);
+        if q == 0 { return 0; }
+        let b = node_b(ui);
+        let w = check_unit(b, fuel - 1);
+        return w;
+    }
+    check_bad = 1;
+    return 0;
+}
+impl fn check_failed() -> u32 in 0 .. 1
+    effects { reads check_bad }
+{
+    return check_bad;
+}
+impl fn main() -> u32 in 0 .. 255
+    effects { writes src.slots, writes srclen, writes tok_used, writes toks.slots, writes lex_err, writes node_used, writes nodes.slots, writes parse_err, writes sym_used, writes syms.slots, writes scopebase.slots, writes cur_depth, writes scope_top, writes check_bad, writes bad_start, writes bad_len }
+{
+    fill();
+    lex_all(0, 160);
+    if lex_failed() == 1 { return 255; }
+    let u = parse_unit(0, 128);
+    if u.ok == 0 { return 254; }
+    if parse_failed() == 1 { return 253; }
+    let d = declare_fns(u.node, 128);
+    if d == 0 { return 252; }
+    if check_failed() == 1 { return 252; }
+    let c = check_unit(u.node, 128);
+    if c == 0 { return 252; }
+    if check_failed() == 1 { return 252; }
+    let t = tok_count();
+    let n = node_count();
+    let s = t + n;
+    return s;
+}
+}

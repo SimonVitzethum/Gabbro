@@ -164,6 +164,13 @@ theorem AgreeK.pcode {m m1 : Mem} {fp : W} {s a K : Nat} {A : D.Fn → Nat} {C :
     (h : AgreeK fp s a m m1) (hp : PCode m A C fp K) (hf : fp.toNat + 8 * (s + 18) ≤ a) (ha : a + 24 < 2 ^ 31) :
     PCode m1 A C fp K := fun g => ⟨h.codeAt hf ha (hp g).1 (hp g).2, (hp g).2⟩
 
+/-- The words of another lock, apart from the lock at `a` and above the scratch slots, are kept. -/
+theorem AgreeK.klasse {m m1 : Mem} {fp : W} {s a b : Nat} (h : AgreeK fp s a m m1) (hb31 : b + 24 < 2 ^ 31)
+    (hf : fp.toNat + 8 * (s + 18) ≤ b) (hd : b + 24 ≤ a ∨ a + 24 ≤ b) : LockKlasse m m1 b :=
+  fun k hk => rd64_keep h.rd fun j hj => h.b _
+    (fun ⟨_, h3⟩ => by rw [lk_byte (by omega) hj] at h3; omega)
+    (fun ⟨h3, h4⟩ => by rw [lk_byte (by omega) hj] at h3 h4; omega)
+
 /-- The lock words of another lock survive. -/
 theorem AgreeK.lockOK {m m1 : Mem} {fp : W} {s Ks Ks' : Nat} {L : Lay D} {Lk Lk' : D.Lock}
     (h : AgreeK fp s (L.lk Lk) m m1) (hy : SyncOK m L fp Ks) (hne : Lk' ≠ Lk) (hs : Ks' ≤ Ks)

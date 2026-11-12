@@ -97,18 +97,7 @@ def checkRecursion (env : Environment) : Nat → List Instance → Instance → 
       for child in children do
         checkRecursion env fuel (key :: ancestors) child
 
-/-- Reuse the canonical specification-call expansion after monomorphisation and before literal
-    materialization. Only the spec table and parameter names are read by uSpecKlauseln. -/
-def expandSpecificationContracts (specs : List (String × List String × SExpr))
-    (sig : FnSig) : Except String FnSig := do
-  if specs.isEmpty then pure sig else
-    let ctx : Uebersetze.UCtx :=
-      { names := sig.params.map Prod.fst, kinds := [], types := [], tabs := [], locks := [],
-        held := [], res := none, fname := sig.name, alias := [], lits := [], specs }
-    let clauses ← Uebersetze.uSpecKlauseln ctx (sig.params.map Prod.fst) sig.klauseln
-    pure { sig with klauseln := clauses }
-
-/-- Resolve known spec calls over ordinary declarations and pending literal
+/-- Resolve known spec-group calls over ordinary declarations and pending literal
     bodies together, retaining spec metadata for later tagged/dyn closure. The final append
     binds literals before adapter, reason and dispatch desugaring. -/
 def expandDeclarationsBeforeLiterals (sourceNames : List String) (ordinary : List SItemTief)
@@ -170,15 +159,9 @@ def expandTemplates (source : List SItemTief)
     SItemTief.fnT sig body)
   let literals := seedLiterals ++ results.flatMap (fun result => result.1.2.1)
   let requirements := results.flatMap (fun result => result.1.2.2)
-  let specs := ordinary.filterMap fun
-    | .specT sig predicate => some (sig.name, sig.params.map Prod.fst, predicate)
-    | _ => none
-  let ordinary ← (ordinary ++ generated).mapM fun
-    | .fnT sig body => return .fnT (← expandSpecificationContracts specs sig) body
-    | item => pure item
-  let literals ← literals.mapM fun (sig, body) => do
-    pure (← expandSpecificationContracts specs sig, body)
-  let target ← expandDeclarationsBeforeLiterals (names ++ instances.map instanceName) ordinary literals
+  -- Predicate helpers must reach typed elaboration intact: inlining with only parameter names
+  -- would erase the very calls whose declared argument types still need checking.
+  let target ← expandDeclarationsBeforeLiterals (names ++ instances.map instanceName) (ordinary ++ generated) literals
   pure {
     items := target
     requirements

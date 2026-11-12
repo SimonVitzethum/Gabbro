@@ -174,7 +174,7 @@ def retryHeaderBound (raw : String) : Bool :=
         (condition.all fun t => t != .zeichen "{" && t != .zeichen "}") &&
         match rest.dropWhile fun t => !sectionWord t with
         | [b, .num _, unit, p, a, o, y] =>
-          headerWord b == some "bounded" && (headerWord unit).isSome && !sectionWord unit &&
+          headerWord b == some "bounded" && headerWord unit == some "ops" &&
             headerWord p == some "progress" && (headerWord a).isSome && !sectionWord a &&
             headerWord o == some "on_exceeded" && (headerWord y).isSome && !sectionWord y
         | _ => false
@@ -212,7 +212,7 @@ def foreverHeader (raw : String) : Option ForeverKopf :=
       match tail.dropWhile fun t => t != .zeichen "}" with
       | [.zeichen "}", pw, a] =>
         if headerWord p == some "per_pass" && headerWord b == some "bounded" &&
-            (headerWord unit).isSome && !sectionWord unit && headerWord o == some "on_exceeded" &&
+            headerWord unit == some "ops" && headerWord o == some "on_exceeded" &&
             headerWord s == some "stopped" && headerWord e == some "effects" &&
             headerWord pw == some "progress" && !sectionWord a then
           (headerWord a).map fun name =>
@@ -243,6 +243,7 @@ theorem foreverHeader_zeuge :
       fun k => (k.label, k.bound, k.effects, k.progress, foreverPlain k.plain)) =
         some ("service", 16, "touches pure", "tick", true) ∧
     (foreverHeader "service per_pass bounded 16 ops on_exceeded halt effects { pure } progress tick").isNone = true ∧
+    (foreverHeader "service per_pass bounded 16 ms on_exceeded stopped effects { pure } progress tick").isNone = true ∧
     (foreverHeader "service effects { pure } progress tick").isNone = true ∧
     foreverPlain "service per_pass bounded 16 ops on_exceeded stopped effects { pure } progress tick" = false := by
   decide +kernel

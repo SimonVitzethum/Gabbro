@@ -39,7 +39,8 @@ set_option maxRecDepth 100000
     (sums : List USum) (devs : List String) (regs : List UReg) (zustaende : List UZustand)
     (specs : List (String × List String × SExpr)) (arrKonst : List (String × USide))
     (zeiger : List String) (zb : Nat) (c : SCheck)
-    (spaces : List String := []) (eigner : List String := []) : Except String (UFn × List UFn) := do
+    (spaces : List String := []) (eigner : List String := [])
+    (specTypen : List (String × List STyp) := []) : Except String (UFn × List UFn) := do
   match c.canFail with
   | .block ss ende =>
     let pname := probeFnName c.cname
@@ -47,7 +48,7 @@ set_option maxRecDepth 100000
         (spaces := spaces) (eigner := eigner) with
     | .error e => .error e
     | .ok (kopf, schreibt) =>
-      let ctx := { uCtxVon alias consts tabs locks globs kopf pname [] whys sums regs zustaende specs arrKonst with
+      let ctx := { uCtxVon alias consts tabs locks globs kopf pname [] whys sums regs zustaende specs arrKonst specTypen with
         spaces := spaces
         eigner := eigner }
       let (recorded, reporters, sampleHeads, _) ←
@@ -66,16 +67,17 @@ set_option maxRecDepth 100000
     (sums : List USum) (devs : List String) (regs : List UReg) (zustaende : List UZustand)
     (specs : List (String × List String × SExpr)) (arrKonst : List (String × USide))
     (zeiger : List String) (zb : Nat) (belegt bekannt : List String)
-    (spaces : List String := []) (eigner : List String := []) : List SCheck → Except String (List UFn)
+    (spaces : List String := []) (eigner : List String := [])
+    (specTypen : List (String × List STyp) := []) : List SCheck → Except String (List UFn)
   | [] => .ok []
   | c :: rest =>
     match uProbeNeu belegt bekannt (probeFnName c.cname) with
     | .error e => .error e
     | .ok _ =>
-      match uProbeFn consts alias tabs locks globs koepfe whys sums devs regs zustaende specs arrKonst zeiger zb c spaces eigner with
+      match uProbeFn consts alias tabs locks globs koepfe whys sums devs regs zustaende specs arrKonst zeiger zb c spaces eigner specTypen with
       | .error e => .error e
       | .ok (f, reporters) =>
-        match uProbeFnsAux consts alias tabs locks globs koepfe whys sums devs regs zustaende specs arrKonst zeiger zb belegt (probeFnName c.cname :: bekannt) spaces eigner rest with
+        match uProbeFnsAux consts alias tabs locks globs koepfe whys sums devs regs zustaende specs arrKonst zeiger zb belegt (probeFnName c.cname :: bekannt) spaces eigner specTypen rest with
         | .error e => .error e
         | .ok fs => .ok (f :: (reporters ++ fs))
 
@@ -85,7 +87,8 @@ set_option maxRecDepth 100000
     (sums : List USum) (devs : List String) (regs : List UReg) (zustaende : List UZustand)
     (specs : List (String × List String × SExpr)) (arrKonst : List (String × USide))
     (zeiger : List String) (zb : Nat) (belegt : List String) (checks : List SCheck)
-    (spaces : List String := []) (eigner : List String := []) : Except String (List UFn) :=
-  uProbeFnsAux consts alias tabs locks globs koepfe whys sums devs regs zustaende specs arrKonst zeiger zb belegt [] spaces eigner checks
+    (spaces : List String := []) (eigner : List String := [])
+    (specTypen : List (String × List STyp) := []) : Except String (List UFn) :=
+  uProbeFnsAux consts alias tabs locks globs koepfe whys sums devs regs zustaende specs arrKonst zeiger zb belegt [] spaces eigner specTypen checks
 
 end Gabbro.Grammatik.Parser.Uebersetze

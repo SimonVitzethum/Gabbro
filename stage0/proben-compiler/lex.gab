@@ -1,0 +1,270 @@
+// (b) Lexer: bytes become a token table. Tokens are kind plus start plus
+// length; the kind codes are 0 End, 1 Ident, 2 Int, 3 Fn, 4 Let, 5 If,
+// 6 Else, 7 Return, 8 Plus, 9 Minus, 10 Star, 11 Slash, 12 Lparen,
+// 13 Rparen, 14 Lbrace, 15 Rbrace, 16 Comma, 17 Semi, 18 Lt, 19 Gt, 20 Eq,
+// 21 EqEq, 22 Bang, 23 BangEq, 24 Le, 25 Ge. White space and both comment
+// forms are skipped; an unterminated block comment sets `lex_err`.
+module front {
+// WANTED: character literals in the classifier, e.g. `if b == 'a'`.
+// Stage 0 refuses the literal: `stage0: lex`. Workaround below: numeric
+// byte codes with a comment naming the character.
+// WANTED: the scan as a cursor loop, `while pos < n { ... }`, and keywords
+// looked up in a table. Both are refused (see srcbuf.gab): there is no
+// `while`, and a table-driven keyword check would still need the same byte
+// comparisons. Workaround below: recursion with fuel plus `decreases`, and
+// hand-written per-keyword byte checks, which is also what the keyword
+// decision of a small compiler looks like once the table is unrolled.
+// WANTED: `return` the recursive call directly from a branch,
+// `if b == 32 { return skip_ws(pos + 1, fuel - 1); }`.
+// Stage 0 refuses it: `stage0: value without G form` with
+// `note: elaboration: function skip_ws: value without G form
+// (statement 6 of 9: if)`. The same call at the top level of the function
+// body, a bare call statement, or a `let`-bound call in the same branch all
+// compile. Workaround below: every in-branch `return f(...)` is written as
+// `let q = f(...); return q;`.
+type TOut = { kind : u32 in 0 .. 31, start : u32 in 0 .. 159, len : u32 in 0 .. 159, pos : u32 in 0 .. 160, };
+table toks count 64 { slot { k : u32 in 0 .. 31, start : u32 in 0 .. 159, len : u32 in 0 .. 159, } }
+static mut tok_used : u32 in 0 .. 64 = 0;
+static mut lex_err : u32 in 0 .. 1 = 0;
+impl fn is_alpha(b : u32 in 0 .. 255) -> bool
+    effects { pure }
+{
+    if b >= 65 { if b <= 90 { return true; } }
+    if b >= 97 { if b <= 122 { return true; } }
+    if b == 95 { return true; }
+    return false;
+}
+impl fn is_digit(b : u32 in 0 .. 255) -> bool
+    effects { pure }
+{
+    if b >= 48 { if b <= 57 { return true; } }
+    return false;
+}
+impl fn kw_kind(start : u32 in 0 .. 159, len : u32 in 0 .. 159) -> u32 in 0 .. 31
+    effects { pure }
+{
+    narrow start to 0 .. 153 else { return 1; }
+    let b0 = byte_at(start);
+    if len == 2 {
+        let b1 = byte_at(start + 1);
+        if b0 == 102 { if b1 == 110 { return 3; } }
+        if b0 == 105 { if b1 == 102 { return 5; } }
+        return 1;
+    }
+    if len == 3 {
+        let b1 = byte_at(start + 1);
+        let b2 = byte_at(start + 2);
+        if b0 == 108 { if b1 == 101 { if b2 == 116 { return 4; } } }
+        return 1;
+    }
+    if len == 4 {
+        let b1 = byte_at(start + 1);
+        let b2 = byte_at(start + 2);
+        let b3 = byte_at(start + 3);
+        if b0 == 101 { if b1 == 108 { if b2 == 115 { if b3 == 101 { return 6; } } } }
+        return 1;
+    }
+    if len == 6 {
+        let b1 = byte_at(start + 1);
+        let b2 = byte_at(start + 2);
+        let b3 = byte_at(start + 3);
+        let b4 = byte_at(start + 4);
+        let b5 = byte_at(start + 5);
+        if b0 == 114 { if b1 == 101 { if b2 == 116 { if b3 == 117 { if b4 == 114 { if b5 == 110 { return 7; } } } } } }
+        return 1;
+    }
+    return 1;
+}
+impl fn skip_ws(pos : u32 in 0 .. 160, fuel : u32 in 0 .. 160) -> u32 in 0 .. 160
+    effects { writes lex_err }
+    decreases fuel
+{
+    narrow fuel to 1 .. 160 else { lex_err = 1; return pos; }
+    let n = src_len();
+    if pos == n { return pos; }
+    narrow pos to 0 .. 159 else { return n; }
+    let b = byte_at(pos);
+    if b == 32 { let lex_q10 = skip_ws(pos + 1, fuel - 1); return lex_q10; }
+    if b == 10 { let lex_q11 = skip_ws(pos + 1, fuel - 1); return lex_q11; }
+    if b == 9 { let lex_q12 = skip_ws(pos + 1, fuel - 1); return lex_q12; }
+    if b == 47 {
+        narrow pos to 0 .. 158 else { return n; }
+        let c = byte_at(pos + 1);
+        if c == 47 { let lex_q13 = skip_line(pos + 2, fuel - 1); return lex_q13; }
+        if c == 42 {
+            let q = skip_block(pos + 2, 1, fuel - 1);
+            let lex_q1 = skip_ws(q, fuel - 1); return lex_q1;
+        }
+        return pos;
+    }
+    return pos;
+}
+impl fn skip_line(pos : u32 in 0 .. 160, fuel : u32 in 0 .. 160) -> u32 in 0 .. 160
+    effects { writes lex_err }
+    decreases fuel
+{
+    narrow fuel to 1 .. 160 else { lex_err = 1; return pos; }
+    let n = src_len();
+    if pos == n { return pos; }
+    narrow pos to 0 .. 159 else { return n; }
+    let b = byte_at(pos);
+    if b == 10 { let lex_q14 = skip_ws(pos + 1, fuel - 1); return lex_q14; }
+    let lex_q2 = skip_line(pos + 1, fuel - 1); return lex_q2;
+}
+impl fn skip_block(pos : u32 in 0 .. 160, depth : u32 in 0 .. 8, fuel : u32 in 0 .. 160) -> u32 in 0 .. 160
+    effects { writes lex_err }
+    decreases fuel
+{
+    narrow fuel to 1 .. 160 else { lex_err = 1; return pos; }
+    let n = src_len();
+    if pos == n { lex_err = 1; return pos; }
+    narrow pos to 0 .. 158 else { lex_err = 1; return n; }
+    narrow depth to 1 .. 8 else { lex_err = 1; return n; }
+    let b = byte_at(pos);
+    if b == 42 {
+        let c = byte_at(pos + 1);
+        if c == 47 {
+            if depth == 1 { return pos + 2; }
+            narrow depth to 2 .. 8 else { lex_err = 1; return n; }
+            let lex_q3 = skip_block(pos + 2, depth - 1, fuel - 1); return lex_q3;
+        }
+        let lex_q4 = skip_block(pos + 1, depth, fuel - 1); return lex_q4;
+    }
+    if b == 47 {
+        let c = byte_at(pos + 1);
+        if c == 42 {
+            narrow depth to 0 .. 7 else { lex_err = 1; return n; }
+            let lex_q5 = skip_block(pos + 2, depth + 1, fuel - 1); return lex_q5;
+        }
+        let lex_q6 = skip_block(pos + 1, depth, fuel - 1); return lex_q6;
+    }
+    let lex_q7 = skip_block(pos + 1, depth, fuel - 1); return lex_q7;
+}
+impl fn scan_span(start : u32 in 0 .. 159, pos : u32 in 0 .. 160, len : u32 in 0 .. 159, plain : u32 in 0 .. 1, fuel : u32 in 0 .. 160) -> TOut
+    effects { writes lex_err }
+    decreases fuel
+{
+    narrow fuel to 1 .. 160 else { lex_err = 1; return TOut(kind: 0, start: 0, len: 0, pos: pos); }
+    let n = src_len();
+    if pos == n {
+        if plain == 1 {
+            let k = kw_kind(start, len);
+            return TOut(kind: k, start: start, len: len, pos: pos);
+        }
+        return TOut(kind: 2, start: start, len: len, pos: pos);
+    }
+    narrow pos to 0 .. 159 else { lex_err = 1; return TOut(kind: 0, start: 0, len: 0, pos: n); }
+    let b = byte_at(pos);
+    if is_alpha(b) {
+        narrow len to 0 .. 158 else { lex_err = 1; return TOut(kind: 0, start: 0, len: 0, pos: pos); }
+        let lex_q8 = scan_span(start, pos + 1, len + 1, plain, fuel - 1); return lex_q8;
+    }
+    if is_digit(b) {
+        narrow len to 0 .. 158 else { lex_err = 1; return TOut(kind: 0, start: 0, len: 0, pos: pos); }
+        let lex_q9 = scan_span(start, pos + 1, len + 1, plain, fuel - 1); return lex_q9;
+    }
+    if plain == 1 {
+        let k = kw_kind(start, len);
+        return TOut(kind: k, start: start, len: len, pos: pos);
+    }
+    return TOut(kind: 2, start: start, len: len, pos: pos);
+}
+impl fn next_tok(pos : u32 in 0 .. 160, fuel : u32 in 0 .. 160) -> TOut
+    effects { writes lex_err }
+    decreases fuel
+{
+    narrow fuel to 1 .. 160 else { lex_err = 1; return TOut(kind: 0, start: 0, len: 0, pos: pos); }
+    let p = skip_ws(pos, fuel - 1);
+    let n = src_len();
+    if p == n { return TOut(kind: 0, start: 0, len: 0, pos: p); }
+    narrow p to 0 .. 158 else { lex_err = 1; return TOut(kind: 0, start: 0, len: 0, pos: n); }
+    let b = byte_at(p);
+    if b == 40 { return TOut(kind: 12, start: p, len: 1, pos: p + 1); }
+    if b == 41 { return TOut(kind: 13, start: p, len: 1, pos: p + 1); }
+    if b == 123 { return TOut(kind: 14, start: p, len: 1, pos: p + 1); }
+    if b == 125 { return TOut(kind: 15, start: p, len: 1, pos: p + 1); }
+    if b == 44 { return TOut(kind: 16, start: p, len: 1, pos: p + 1); }
+    if b == 59 { return TOut(kind: 17, start: p, len: 1, pos: p + 1); }
+    if b == 43 { return TOut(kind: 8, start: p, len: 1, pos: p + 1); }
+    if b == 45 { return TOut(kind: 9, start: p, len: 1, pos: p + 1); }
+    if b == 42 { return TOut(kind: 10, start: p, len: 1, pos: p + 1); }
+    if b == 47 { return TOut(kind: 11, start: p, len: 1, pos: p + 1); }
+    if b == 60 {
+        let c = byte_at(p + 1);
+        if c == 61 { return TOut(kind: 24, start: p, len: 2, pos: p + 2); }
+        return TOut(kind: 18, start: p, len: 1, pos: p + 1);
+    }
+    if b == 62 {
+        let c = byte_at(p + 1);
+        if c == 61 { return TOut(kind: 25, start: p, len: 2, pos: p + 2); }
+        return TOut(kind: 19, start: p, len: 1, pos: p + 1);
+    }
+    if b == 61 {
+        let c = byte_at(p + 1);
+        if c == 61 { return TOut(kind: 21, start: p, len: 2, pos: p + 2); }
+        return TOut(kind: 20, start: p, len: 1, pos: p + 1);
+    }
+    if b == 33 {
+        let c = byte_at(p + 1);
+        if c == 61 { return TOut(kind: 23, start: p, len: 2, pos: p + 2); }
+        return TOut(kind: 22, start: p, len: 1, pos: p + 1);
+    }
+    if is_alpha(b) { let lex_q15 = scan_span(p, p + 1, 1, 1, fuel - 1); return lex_q15; }
+    if is_digit(b) { let lex_q16 = scan_span(p, p + 1, 1, 0, fuel - 1); return lex_q16; }
+    lex_err = 1;
+    return TOut(kind: 0, start: 0, len: 0, pos: p);
+}
+impl fn emit(kind : u32 in 0 .. 31, start : u32 in 0 .. 159, len : u32 in 0 .. 159) -> u32 in 0 .. 64
+    effects { reads tok_used, writes tok_used, writes toks.slots, writes lex_err }
+{
+    let i = tok_used;
+    narrow i to 0 .. 63 else { lex_err = 1; return 64; }
+    toks.slots[i].k = kind;
+    toks.slots[i].start = start;
+    toks.slots[i].len = len;
+    tok_used = i + 1;
+    return i;
+}
+impl fn lex_all(pos : u32 in 0 .. 160, fuel : u32 in 0 .. 160)
+    effects { writes tok_used, writes toks.slots, writes lex_err }
+    decreases fuel
+{
+    narrow fuel to 1 .. 160 else { lex_err = 1; return; }
+    let t = next_tok(pos, fuel - 1);
+    if t.kind == 0 {
+        if lex_err == 1 { return; }
+        let e = emit(0, 0, 0);
+        if e == 64 { return; }
+        return;
+    }
+    let e = emit(t.kind, t.start, t.len);
+    if e == 64 { return; }
+    if lex_err == 1 { return; }
+    lex_all(t.pos, fuel - 1);
+}
+impl fn lex_failed() -> u32 in 0 .. 1
+    effects { reads lex_err }
+{
+    return lex_err;
+}
+impl fn tok_count() -> u32 in 0 .. 64
+    effects { reads tok_used }
+{
+    return tok_used;
+}
+impl fn tok_kind(i : u32 in 0 .. 63) -> u32 in 0 .. 31
+    effects { reads toks.slots }
+{
+    return toks.slots[i].k;
+}
+impl fn tok_start(i : u32 in 0 .. 63) -> u32 in 0 .. 159
+    effects { reads toks.slots }
+{
+    return toks.slots[i].start;
+}
+impl fn tok_len(i : u32 in 0 .. 63) -> u32 in 0 .. 159
+    effects { reads toks.slots }
+{
+    return toks.slots[i].len;
+}
+}

@@ -60,6 +60,7 @@ public import Grammatik.Parser.Elab.Generic.FunctionWitness
 public import Grammatik.Parser.Elab.Generic.BoundsWitness
 
 public import Grammatik.Parser.Elab.Uebersetze.Folds.Witnesses
+public import Grammatik.Parser.Elab.Uebersetze.Folds.SpecArgumentsZeuge
 public import Grammatik.Parser.Elab.Uebersetze.Folds.ExistsWitness
 public import Grammatik.Parser.Elab.Uebersetze.Folds.FloatWitnesses
 public import Grammatik.Parser.Elab.Modules.PipelineWitness
@@ -76,6 +77,8 @@ public import Grammatik.Parser.Elab.Export.CostBinding
 public import Grammatik.Parser.Elab.Export.CostBindingZeuge
 public import Grammatik.Parser.Elab.Export.HeldBinding
 public import Grammatik.Parser.Elab.Export.HeldBindingZeuge
+public import Grammatik.Parser.Elab.Export.Held.Satz
+public import Grammatik.Parser.Elab.Export.Held.SatzZeuge
 public import Grammatik.Parser.Elab.Export.ForeverBinding
 public import Grammatik.Parser.Elab.Modules.CallHoistZeuge
 

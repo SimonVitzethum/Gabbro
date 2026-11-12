@@ -130,7 +130,7 @@ theorem argsW_congr {f g : Nat → Runner.W} : {τs : List Ty} → (ρ : Env D �
 theorem kernW_agreeW {L : Lay D} {fp : Runner.W} {lo K : Nat} {m m' : Runner.Mem} (h : KernW L m m') :
     AgreeW L fp lo K m m' := by
   obtain ⟨h1, h2, h3⟩ := h
-  exact ⟨h1, h2, fun x _ hx => h3 x hx⟩
+  exact AgreeW.stark h1 h2 fun x _ hx => h3 x hx
 
 /-- The word of slot `i`, zero where none is read. -/
 def rdW (m : Runner.Mem) (fp : Runner.W) (i : Nat) : Runner.W := (m.rd64 (slot fp (BitVec.ofNat 64 i))).getD 0

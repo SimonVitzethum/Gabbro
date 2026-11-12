@@ -9,7 +9,8 @@
   The rewrite keeps the order of evaluation, left to right:
   * the calls of one statement are bound in the order they are written, arguments before their call;
   * a call is moved only when nothing in front of it in the statement reads mutable state (a static,
-    a table slot): such a read would otherwise happen after the call. That call stays where it is and
+    a table slot): such a read would otherwise happen after the call. The target of a compound
+    assignment (`S += f();`) is such a read. Such a call stays where it is and
     the elaborator refuses it as before, so the writer binds it by hand;
   * the right operand of `&&` and `||` is evaluated conditionally: its calls are bound inside an `if`
     over the left operand, and a fresh mutable `bool` carries the result;
@@ -42,6 +43,9 @@ structure Kontext where
   statics : Namen
   /-- The statics whose declared type an untyped `let` of them gets written (option and tagged). -/
   statikTyp : List (String × STyp) := []
+  /-- The tagged statics with the cases of their type (name, whether it carries a payload): a `let` of
+      such a static is read case by case, the one form in which machine G reads a tagged static. -/
+  statikFaelle : List (String × List (String × Bool)) := []
 
 /-- Whether `&&` or `||`: the right operand is evaluated conditionally. -/
 def bedingt (op : String) : Bool := strEq op "&&" || strEq op "||"
@@ -167,6 +171,27 @@ def statikTypVon (k : Kontext) : SExpr → Option STyp
     if k.lokal.contains v then none else (k.statikTyp.find? fun entry => strEq entry.1 v).map (·.2)
   | _ => none
 
+/-- `let x = S;` for a tagged static `S` whose type has a case without a payload: a fresh mutable
+    local starts at that case and a `match S` assigns it the case `S` holds; `x` is then bound to it.
+    `none` when `e` is no such static. -/
+def leseStatik (k : Kontext) (nr : Nat) (mu : Bool) (x : String) (ty : Option STyp) : SExpr → Option (List SAnw × Nat)
+  | .variable v =>
+    if k.lokal.contains v then none else
+    match k.statikFaelle.find? (fun entry => strEq entry.1 v), k.statikTyp.find? (fun entry => strEq entry.1 v) with
+    | some (_, faelle), some (_, typ) =>
+      match faelle.find? (fun fall => !fall.2) with
+      | none => none
+      | some (start, _) =>
+        let r := "#r" ++ toString nr
+        let p := "#r" ++ toString (nr + 1)
+        some ([.bind true r (some typ) (.variable start),
+          .cases (.variable v) (faelle.map fun (fall, nutzlast) =>
+            if nutzlast then .arm fall (some p) (.block [.set (.variable r) "=" (.call fall [.variable p])] none)
+            else .arm fall none (.block [.set (.variable r) "=" (.variable fall)] none)),
+          .bind mu x (ty.orElse fun _ => some typ) (.variable r)], nr + 2)
+    | _, _ => none
+  | _ => none
+
 /-- Rewrite one statement into the statements that replace it, with the next fresh number. -/
 def hebeS (k : Kontext) : Nat → Nat → SAnw → List SAnw × Nat
   | 0, nr, s => ([s], nr)
@@ -195,8 +220,11 @@ def hebeS (k : Kontext) : Nat → Nat → SAnw → List SAnw × Nat
         (acc.1 ++ [x.1], x.2)) ([], nr)
     match s with
     | .bind mu x ty e =>
-      let r := if mu then (let y := hebeE k n nr true e; (y.1, y.2.1, y.2.2.1)) else hebeOben k n nr e
-      (r.1 ++ [.bind mu x (ty.orElse fun _ => (feldTyp k r.2.1).orElse fun _ => statikTypVon k r.2.1) r.2.1], r.2.2)
+      match leseStatik k nr mu x ty e with
+      | some gelesen => gelesen
+      | none =>
+        let r := if mu then (let y := hebeE k n nr true e; (y.1, y.2.1, y.2.2.1)) else hebeOben k n nr e
+        (r.1 ++ [.bind mu x (ty.orElse fun _ => (feldTyp k r.2.1).orElse fun _ => statikTypVon k r.2.1) r.2.1], r.2.2)
     | .bindElse x ty e g b =>
       let r := hebeOben k n nr e
       let y := koerper [g] r.2.2 b
@@ -205,16 +233,24 @@ def hebeS (k : Kontext) : Nat → Nat → SAnw → List SAnw × Nat
       match target with
       | .variable x =>
         -- `x = Case(v);` is read as it stands for a local; for a static the value is bound first, as
-        -- is any other call in the value.
+        -- is any other call in the value. A compound assignment `x op= v` is `x = x op v`: the target
+        -- is read first, so a call in `v` moves only when that read is no read of mutable state.
+        let plain := strEq op "="
+        let lokal := k.lokal.contains x || !(k.statics.finde x).isSome
         let r := match value with
           | .call c _ =>
-            if (k.faelle.finde c).isSome && (k.lokal.contains x || !(k.statics.finde x).isSome) then hebeOben k n nr value
-            else (let y := hebeE k n nr true value; (y.1, y.2.1, y.2.2.1))
-          | _ => let y := hebeE k n nr true value; (y.1, y.2.1, y.2.2.1)
+            if plain && (k.faelle.finde c).isSome && lokal then hebeOben k n nr value
+            else (let y := hebeE k n nr (plain || lokal) value; (y.1, y.2.1, y.2.2.1))
+          | _ =>
+            -- `S = End;` for a static `S`: the case without a payload is bound first as well.
+            match (if !plain || lokal then none else bindeFall k true nr true value) with
+            | some y => (y.1, y.2.1, y.2.2.1)
+            | none => let y := hebeE k n nr (plain || lokal) value; (y.1, y.2.1, y.2.2.1)
         (r.1 ++ [.set target op r.2.1], r.2.2)
       | .field (.index base i) name =>
+        -- A compound assignment reads the slot before the value: nothing in the value moves then.
         let ri := hebeE k n nr true i
-        let rv := hebeE k n ri.2.2.1 ri.2.2.2 value
+        let rv := hebeE k n ri.2.2.1 (ri.2.2.2 && strEq op "=") value
         (ri.1 ++ rv.1 ++ [.set (.field (.index base ri.2.1) name) op rv.2.1], rv.2.2.1)
       | _ => ([s], nr)
     | .call f args =>
@@ -222,11 +258,11 @@ def hebeS (k : Kontext) : Nat → Nat → SAnw → List SAnw × Nat
       (r.1 ++ [.call f r.2.1], r.2.2)
     | .callElse f args g b =>
       let r := hebeArgs k n nr args
-      let y := koerper [] r.2.2 b
+      let y := koerper [g] r.2.2 b
       (r.1 ++ [.callElse f r.2.1 g y.1], y.2)
     | .callIndElse p args g b =>
       let r := hebeArgs k n nr args
-      let y := koerper [] r.2.2 b
+      let y := koerper [g] r.2.2 b
       (r.1 ++ [.callIndElse p r.2.1 g y.1], y.2)
     | .ret (some e) =>
       let r := hebeOben k n nr e
@@ -332,11 +368,23 @@ def statikTypen (items : List SItemTief) : List (String × STyp) :=
       | _ => none
     | _ => none
 
+/-- The tagged statics with the cases of their type. -/
+def statikFaelleVon (items : List SItemTief) : List (String × List (String × Bool)) :=
+  match Uebersetze.uSumSchemas (items.map fun | .taggedByT declaration _ => declaration | item => item) with
+  | .error _ => []
+  | .ok schemas =>
+    items.filterMap fun
+      | .globT _ n (.atom a) _ _ _ _ =>
+        (schemas.find? fun schema => strEq schema.name a).map fun schema =>
+          (n, schema.cases.map fun fall => (fall.1, fall.2.isSome))
+      | _ => none
+
 /-- **Calls inside expressions become bindings**, in every ordinary function of the unit. -/
 def hebe (items : List SItemTief) : List SItemTief :=
   let k : Kontext :=
     { fns := Tafel.von _ (fnNamen items), statics := Tafel.von _ (statikNamen items),
-      faelle := Tafel.von _ (fallNamen items), felder := feldNamen items, statikTyp := statikTypen items }
+      faelle := Tafel.von _ (fallNamen items), felder := feldNamen items, statikTyp := statikTypen items,
+      statikFaelle := statikFaelleVon items }
   items.map (hebeItem k)
 
 end Gabbro.Grammatik.Parser.CallHoist

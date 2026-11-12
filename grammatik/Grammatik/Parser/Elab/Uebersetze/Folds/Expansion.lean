@@ -9,28 +9,47 @@ def isFold : XKind → Bool
   | .foldAdd | .foldMin | .foldMax | .foldAnd | .foldOr => true
   | _ => false
 
+/-- Only a resolved local has an integer interval; deferred placeholders carry no evidence. -/
+def foldLocalRange (ctx : UCtx) (name : String) : Option (Int × Int) := do
+  if ctx.unknownRanges.contains name then none else do
+    let position ← ctx.names.findIdx? (strEq · name)
+    let .int lo hi ← ctx.types[position]? | none
+    some (lo, hi)
+
+/-- Table indices reuse the same local interval lookup as ordinary numeric values. -/
+def foldIndexRange (ctx : UCtx) : UIdx → Option (Int × Int)
+  | .lit n => some (n, n)
+  | .param name => foldLocalRange ctx name
+
 /-- Integer interval calculation reuses the elaborated value tree. Unknown values stay
-    refused; no guessed range can license a fold. -/
+    refused; conversion and indexing premises are checked before their result range is used.
+    This also makes the calculation usable before an unused spec argument disappears. -/
 def foldRange (ctx : UCtx) : USide → Option (Int × Int)
   | .lit n => some (n, n)
-  | .param name => do
-    if ctx.unknownRanges.contains name then none else do
-      let position ← ctx.names.findIdx? (strEq · name)
-      let .int lo hi ← ctx.types[position]? | none
-      some (lo, hi)
-  | .tab table field _ => do
+  | .param name => foldLocalRange ctx name
+  | .tab table field index => do
     let table ← ctx.tabs.find? (fun tab => strEq tab.name table)
-    let field ← table.cols.find? (fun column => strEq column.1 field)
-    if table.bools.contains field.1 || (table.werte.any (fun entry => entry.1 == field.1)) then none
-    else some field.2
-  | .idx array _ => do
-    let .arr (.int lo hi) _ ← uValueType ctx array | none
-    some (lo, hi)
+    let bounds ← foldIndexRange ctx index
+    if !(0 ≤ bounds.1 && bounds.2 < table.count) then none else do
+      let field ← table.cols.find? (fun column => strEq column.1 field)
+      if table.bools.contains field.1 || (table.werte.any (fun entry => entry.1 == field.1)) then none
+      else some field.2
+  | .idx array index => do
+    let .arr (.int lo hi) count ← uValueType ctx array | none
+    let bounds ← foldRange ctx index
+    if 0 ≤ bounds.1 && bounds.2 < (count : Int) then some (lo, hi) else none
   | .glob name => do
     let global ← ctx.globs.find? (fun global => strEq global.name name)
     let .int lo hi := global.ty | none
     some (lo, hi)
-  | .typed (.int lo hi) _ | .conv lo hi _ | .eng _ lo hi => some (lo, hi)
+  | .typed (.int lo hi) (.lit n) =>
+    if lo ≤ n && n ≤ hi then some (lo, hi) else none
+  | .conv lo hi value => do
+    let range ← foldRange ctx value
+    if lo ≤ range.1 && range.2 ≤ hi then some (lo, hi) else none
+  | .eng value lo hi => do
+    let _ ← foldRange ctx value
+    if lo ≤ hi then some (lo, hi) else none
   | .neg value => do
     let (lo, hi) ← foldRange ctx value
     some (-hi, -lo)

@@ -77,10 +77,26 @@ theorem SyncOK.keep {m m' : Mem} {L : Lay D} {fp : W} {Ks : Nat} {waiters : D.Lo
   exact ⟨o, c, by rw [keep _ (Nat.le_refl _) (by omega)]; exact ho, by rw [keep _ (by omega) (by omega)]; exact hc,
     by rw [keep _ (by omega) (Nat.le_refl _)]; exact hw, hs⟩
 
-/-- A statement's change keeps the lock words. -/
+/-- The lock state kept where the three words of every lock are. -/
+theorem SyncOK.keepWords {m m' : Mem} {L : Lay D} {fp : W} {Ks : Nat} {waiters : D.Lock → W} (h : SyncOK m L fp Ks waiters)
+    (hrd : m'.rd = m.rd) (hwr : m'.wr = m.wr) (hk : ∀ Lk, LockKlasse m m' (L.lk Lk)) :
+    SyncOK m' L fp Ks waiters := by
+  refine ⟨h.sb31, h.st, h.st31, h.lo, h.room, h.band, h.lay, h.sye, h.dis, fun Lk k hk' => by
+    rw [hwr]; exact h.wr Lk k hk', fun Lk => ?_⟩
+  obtain ⟨o, c, ho, hc, hw, hs⟩ := h.zust Lk
+  have e0 : m'.rd64 (BitVec.ofNat 64 (L.lk Lk)) = m.rd64 (BitVec.ofNat 64 (L.lk Lk)) := hk Lk 0 (by omega)
+  have e1 : m'.rd64 (BitVec.ofNat 64 (L.lk Lk + 8)) = m.rd64 (BitVec.ofNat 64 (L.lk Lk + 8)) := hk Lk 1 (by omega)
+  have e2 : m'.rd64 (BitVec.ofNat 64 (L.lk Lk + 16)) = m.rd64 (BitVec.ofNat 64 (L.lk Lk + 16)) := hk Lk 2 (by omega)
+  exact ⟨o, c, by rw [e0]; exact ho, by rw [e1]; exact hc, by rw [e2]; exact hw, hs⟩
+
+/-- A statement's change keeps the lock state: every lock keeps its class. -/
 theorem SyncOK.agreeW {m m' : Mem} {L : Lay D} {fp : W} {Ks lo K : Nat} {waiters : D.Lock → W} (h : SyncOK m L fp Ks waiters)
     (ha : AgreeW L fp lo K m m') (hK : fp.toNat + 8 * K ≤ L.hi) : SyncOK m' L fp Ks waiters :=
-  h.keep ha.rd ha.wr fun x h1 _ => ha.b x (fun ⟨_, h3⟩ => by omega) (fun ⟨_, h3⟩ => by omega)
+  h.keepWords ha.rd ha.wr fun Lk => ha.sync Lk fun k j hk hj => by
+    have hl := h.lay Lk
+    have hsy := h.sye
+    have e := lk_byte (y := L.lk Lk + 8 * k) (by omega) hj
+    exact ⟨fun ⟨_, h3⟩ => by rw [e] at h3; omega, fun ⟨_, h3⟩ => by rw [e] at h3; omega⟩
 
 theorem SyncOK.agree {m m' : Mem} {L : Lay D} {fp : W} {Ks lo K : Nat} {waiters : D.Lock → W} (h : SyncOK m L fp Ks waiters)
     (ha : Agree fp lo K m m') (hK : fp.toNat + 8 * K ≤ L.hi) : SyncOK m' L fp Ks waiters :=

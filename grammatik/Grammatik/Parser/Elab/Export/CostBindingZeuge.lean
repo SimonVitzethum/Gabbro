@@ -64,4 +64,19 @@ theorem costValue_zeuge :
       ([("N", 20), ("M", 40)], some 44, none, none) := by
   decide +kernel
 
+/-- **Every cost clause binds, and a parameter is no constant.** Two clauses declare the smaller cost;
+    a clause over a parameter that hides a constant of its name has no value, and neither has a clause
+    over a name two constants declare; each such function is named by `unvalued`. -/
+theorem declaredCost_zeuge :
+    let consts := constants [.constT "N" (.atom "u32") (.one (.lit 20))]
+    let kopf : String → List (String × STyp) → List SKlausel → FnSig := fun name params klauseln =>
+      { art := "impl", name := name, params := params, res := none, fehler := none, klauseln := klauseln }
+    let zwei := kopf "f" [] [.cost (.lit 100), .cost (.variable "N")]
+    let verdeckt := kopf "g" [("N", .atom "u32")] [.cost (.variable "N")]
+    (declaredCost consts zwei, declaredCost consts verdeckt,
+      constants [.constT "N" (.atom "u32") (.one (.lit 20)), .constT "N" (.atom "u32") (.one (.lit 7))],
+      unvalued [.constT "N" (.atom "u32") (.one (.lit 20)), .fnT verdeckt (.block [] none)]) =
+      (some 20, none, [], some "g") := by
+  decide +kernel
+
 end Gabbro.Grammatik.Parser.CostBinding

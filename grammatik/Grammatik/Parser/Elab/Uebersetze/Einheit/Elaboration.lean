@@ -135,10 +135,13 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   if transitionFns.any (fun g => fnItems.any (fun (s, _) => strEq s.name g.name)) then
     .error "generated transition function conflicts with an explicit function" else
   let devs := ms.filterMap (fun | .devT n _ _ _ => some n | _ => none)
+  -- Preserve both predicate syntax and its declared parameter types until typed elaboration.
+  let specFns := ms.filterMap (fun | .specT sg body => some (sg.name, sg.params.map (·.1), body) | _ => none)
+  let specTypen := ms.filterMap (fun | .specT sg _ => some (sg.name, sg.params.map (·.2)) | _ => none)
   let zeiger := uOhneDoppelte (fnItems.flatMap (fun (s, b) => uZeigerTexte (s.params.map (·.2)) ++ uZeigerAnw 100000 b))
   let zb := fnItems.length + transitionFns.length
   match uSeq ((List.range zeiger.length).zip zeiger |>.map (fun (j, r) =>
-      elabZeigerTyp consts alias tabs locks globs whys sums zeiger zb j r spaces valueScope.types eigner)) with
+      elabZeigerTyp consts alias tabs locks globs whys sums zeiger zb j r spaces valueScope.types eigner specFns specTypen)) with
   | .error e => .error e
   | .ok zeigerPaare =>
   match uSeq (fnItems.map (fun (s, _) => mitOrt ort s.name (elabKopf consts alias tabs locks globs whys sums s devs zeiger zb spaces valueScope.types eigner))) with
@@ -156,14 +159,12 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   | .error e => .error e
   | .ok axs =>
   let koepfe := kopfPaare.map (·.1) ++ axKoepfe ++ zeigerPaare.map (·.1)
-  -- The unit's `spec fn`s, collected once (inside the function loop this was a scan per function).
-  let specFns := ms.filterMap (fun | .specT sg body => some (sg.name, sg.params.map (·.1), body) | _ => none)
   -- C16: every `can_fail` body elaborates into its generated Boolean producer now.
-  match uProbeFns consts alias tabs locks globs koepfe whys sums devs regs zustaende specFns constants zeiger zb (fnItems.map (fun (s, _) => s.name) ++ axKoepfe.map (·.name) ++ zeigerPaare.map (fun p => p.1.name)) (ms.filterMap (fun | .checkT c => some c | _ => none)) spaces eigner with
+  match uProbeFns consts alias tabs locks globs koepfe whys sums devs regs zustaende specFns constants zeiger zb (fnItems.map (fun (s, _) => s.name) ++ axKoepfe.map (·.name) ++ zeigerPaare.map (fun p => p.1.name)) (ms.filterMap (fun | .checkT c => some c | _ => none)) spaces eigner specTypen with
   | .error e => .error e
   | .ok probeFns =>
   match uSeq (fnItems.map (fun (s, b) =>
-      mitOrt ort s.name <| elabUFunktion (spaces := spaces) (valueScope := valueScope) (eigner := eigner) consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb
+      mitOrt ort s.name <| elabUFunktion (spaces := spaces) (valueScope := valueScope) (eigner := eigner) (specTypen := specTypen) consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb
         specFns
         constants)) with
   | .error e => .error e
@@ -208,7 +209,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
     let u : UProg :=
       { tabs := tabs, locks := locks, fns := fns ++ torFns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axs, guests := guests, annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := Gabbro.Grammatik.Parser.Konst.checkErsetzt msE msSub, checks := checks, marken := marken, markOrders := markOrders, spaces := spaces, records := valueScope.records, eigner := eigner }
     let u := uMitBoden u
-    match Generic.checkStaticConformance consts alias u staticRequirements valueScope.types with
+    match Generic.checkStaticConformance consts alias u staticRequirements valueScope.types specFns specTypen with
     | .error error => .error error
     | .ok () => .ok u
 
