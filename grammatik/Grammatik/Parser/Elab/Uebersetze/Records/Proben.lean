@@ -180,4 +180,11 @@ theorem record_initial_zeuge :
   · simpa only [record_constant_quoted, Except.toOption, Option.bind] using record_konst_zeuge.1
   · simpa only [record_constant_quoted, Except.toOption, Option.bind] using record_konst_zeuge.2.2.1
 
+/-- A slot field of a record type starts with every field at zero, where each field holds a zero;
+    a record with a field whose range excludes zero has no such start. -/
+theorem record_slot_null_zeuge :
+    (GabbroV.slotNull (F := Unit) (P := fun _ _ => false) recordFixture.ty).isSome = true ∧
+    (GabbroV.slotNull (F := Unit) (P := fun _ _ => false) (.prod 7 [.int 1 9, .bool])).isSome = false := by
+  decide +kernel
+
 end Gabbro.Grammatik.Parser.Uebersetze

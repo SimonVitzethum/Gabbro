@@ -140,4 +140,11 @@ theorem prodKonst_valid {D : Deklaration} (L : Lay D) (fs : List Ty) :
 termination_by sizeOf fs
 end
 
+/-- The zero value of a slot field keeps the representation obligations of its type. -/
+theorem slotNull_valid {D : Deklaration} (L : Lay D) (τ : Ty) (v : Wert D τ)
+    (made : @GabbroV.slotNull D.Fn D.passt τ = some v) : ValueValid L τ v := by
+  cases τ with
+  | prod name fs => exact prodKonst_valid L fs _ v made
+  | _ => exact initialConstant_valid L _ .null v made
+
 end Gabbro.Stage0.Senke

@@ -1,0 +1,6 @@
+// A declared cost may be a constant expression over the unit's constants.
+module ir_cost_constant {
+const N : u32 = 20;
+impl fn f(b : u32 in 0 .. 20) -> u32 in 0 .. 20 costs <= N ops effects { pure } { return b; }
+impl fn main() -> u32 in 0 .. 255 costs <= N * 2 + 4 ops effects { pure } { let x = f(3); return x; }
+}

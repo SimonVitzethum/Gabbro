@@ -1,0 +1,14 @@
+// A table field of a record type: written as a whole, read as a whole (typed or not), and starting
+// with every field at zero.
+module ir_table_record {
+type Pos = { line : u32 in 0 .. 50, col : u32 in 0 .. 50, };
+table T count 4 { slot { at : Pos, v : u32 in 0 .. 9, } }
+impl fn main() -> u32 in 0 .. 255 effects { reads T.slots, writes T.slots } {
+    T.slots[1].at = Pos(line: 7, col: 3);
+    T.slots[2].at = Pos(line: 20, col: 30);
+    T.slots[1].v = 4;
+    let p = T.slots[1].at;
+    let q : Pos = T.slots[2].at;
+    return p.line + p.col + q.col + T.slots[1].v;
+}
+}

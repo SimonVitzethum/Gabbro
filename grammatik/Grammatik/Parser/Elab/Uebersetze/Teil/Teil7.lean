@@ -105,6 +105,10 @@ def uSetze (ctx : UCtx) (ziel : SExpr) (op : String) (wert : SExpr) : Except Str
       match uRecordLocal ctx ziel with
       | some name => uSetzeRecord ctx name ziel w
       | none => uSetzePlatz ctx ziel w
+    | .index base i =>
+      match uArrayLocal ctx ziel with
+      | some _ => uSetzeElement ctx base i w
+      | none => uSetzePlatz ctx ziel w
     | .arrow (.variable r) f =>
       match uRefLokal ctx r with
       | .some _ =>

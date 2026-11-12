@@ -65,12 +65,12 @@ theorem bedingung_zeuge :
         .bind false "#r2" none (.call "f" [.lit 2]),
         .set (.variable "x") "=" (.bin "+" (.variable "#r1") (.variable "#r2"))] none := by kernel_rfl
 
-/-- A call behind a read of the static `s`, and a call in the right operand of `&&`, stay. -/
+/-- A call behind a read of the static `s` stays, also as the right operand of `&&`. -/
 theorem bleibt_zeuge :
     hebeKoerper zeugeK (.block [.bind false "a" none (.bin "+" (.variable "s") (.call "f" [.lit 1])),
-        .bind false "b" none (.bin "&&" (.variable "c") (.call "g" [.lit 1]))] none) =
+        .bind false "b" none (.bin "&&" (.variable "s") (.call "g" [.lit 1]))] none) =
       .block [.bind false "a" none (.bin "+" (.variable "s") (.call "f" [.lit 1])),
-        .bind false "b" none (.bin "&&" (.variable "c") (.call "g" [.lit 1]))] none := by kernel_rfl
+        .bind false "b" none (.bin "&&" (.variable "s") (.call "g" [.lit 1]))] none := by kernel_rfl
 
 /-- A call through a local pointer is bound as well: `let p = &f; return p() + 1;`. -/
 theorem zeiger_zeuge :
@@ -103,5 +103,40 @@ theorem feld_zeuge :
         (.block [.bind false "a" none (.field (.index (.field (.variable "T") "slots") (.lit 1)) "s")] none) =
       .block [.bind false "a" (some (.str (.lit 16)))
         (.field (.index (.field (.variable "T") "slots") (.lit 1)) "s")] none := by kernel_rfl
+
+/-- A call in the right operand runs only when the left operand admits it: `if c && g(1) { }` and
+    `let b = c || g(2);` carry the result in a fresh mutable `bool`. -/
+theorem bedingt_zeuge :
+    hebeKoerper zeugeK (.block [.cond (.bin "&&" (.variable "c") (.call "g" [.lit 1])) (.block [] none) [] none,
+        .bind false "b" none (.bin "||" (.variable "c") (.call "g" [.lit 2]))] none) =
+      .block [.bind true "#r0" (some (.atom "bool")) .fls,
+        .cond (.variable "c") (.block [.bind false "#r1" none (.call "g" [.lit 1]),
+          .set (.variable "#r0") "=" (.variable "#r1")] none) [] none,
+        .cond (.variable "#r0") (.block [] none) [] none,
+        .bind true "#r2" (some (.atom "bool")) .tru,
+        .cond (.un "!" (.variable "c")) (.block [.bind false "#r3" none (.call "g" [.lit 2]),
+          .set (.variable "#r2") "=" (.variable "#r3")] none) [] none,
+        .bind false "b" none (.variable "#r2")] none := by kernel_rfl
+
+/-- An `else if` with a call becomes an `if` inside an `else`; the arms in front of it and behind it
+    keep their place: `if a { } else if b { } else if g(1) { } else if d { } else { }`. -/
+theorem elsif_zeuge :
+    hebeKoerper zeugeK (.block [.cond (.variable "a") (.block [] none)
+        [.elsif (.variable "b") (.block [] none), .elsif (.call "g" [.lit 1]) (.block [] none),
+          .elsif (.variable "d") (.block [] none)] (some (.block [] none))] none) =
+      .block [.cond (.variable "a") (.block [] none) [.elsif (.variable "b") (.block [] none)]
+        (some (.block [.bind false "#r0" none (.call "g" [.lit 1]),
+          .cond (.variable "#r0") (.block [] none) [.elsif (.variable "d") (.block [] none)]
+            (some (.block [] none))] none))] none := by kernel_rfl
+
+/-- An untyped `let` of an option static gets its declared type, and a constructed value assigned to
+    a static is bound first; a local of the same name is left alone. -/
+theorem statik_zeuge :
+    hebeKoerper { zeugeK with faelle := Tafel.von _ ["Num"], statikTyp := [("s", .index true "T")] }
+        (.block [.bind false "a" none (.variable "s"), .set (.variable "s") "=" (.call "Num" [.lit 5]),
+          .bind false "s" none (.lit 1), .bind false "b" none (.variable "s")] none) =
+      .block [.bind false "a" (some (.index true "T")) (.variable "s"),
+        .bind false "#r0" none (.call "Num" [.lit 5]), .set (.variable "s") "=" (.variable "#r0"),
+        .bind false "s" none (.lit 1), .bind false "b" none (.variable "s")] none := by kernel_rfl
 
 end Gabbro.Grammatik.Parser.CallHoist

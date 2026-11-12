@@ -254,4 +254,15 @@ def uRecordSides (ctx : UCtx) : (args : List SExpr) →
   | _, _ => .error "source export: record construction requires labelled fields"
 termination_by structural args _ => args
 
+/-- The tables with their fields of a record type typed (`werte`): a field whose type names a record
+    of the unit holds a value of that record. The remaining named fields are those of tagged types
+    (`uSumTabs`). A table without such a field is returned as it is. -/
+def uRecordTabs (records : List URecord) (tabs : List UTab) : List UTab :=
+  tabs.map fun t =>
+    let hit := t.sumNamen.filterMap fun (f, a) =>
+      (records.find? fun record => strEq record.name a).map fun record => (f, record.ty)
+    if hit.isEmpty then t
+    else { t with werte := t.werte ++ hit,
+                  sumNamen := t.sumNamen.filter fun (_, a) => !records.any fun record => strEq record.name a }
+
 end Gabbro.Grammatik.Parser.Uebersetze

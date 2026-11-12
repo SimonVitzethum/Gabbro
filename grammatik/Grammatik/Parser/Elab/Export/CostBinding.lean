@@ -1,7 +1,7 @@
 /-
   The binding of declared costs (`costs <= n ops` on a function).
 
-  The export gate admits a literal cost on an ordinary function (`ExportMetadata.costUnbound`). The
+  The export gate admits a constant cost expression on an ordinary function (`ExportMetadata.costUnbound`). The
   duty does not disappear: `holds` is the K001 Bool of the model (`kostenPasst`) over every function
   that declares a cost, with each call counted at the callee's declared cost. A function that
   declares a cost calls only functions that declare one, and takes no indirect call. `holds_sound`
@@ -17,13 +17,56 @@ public import Grammatik.Parser.Elab.Generic.PointerTypes
 namespace Gabbro.Grammatik.Parser.CostBinding
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
 
-/-- The declared literal costs of the ordinary source functions, by name. A `const fn` runs at compile
-    time only and is no function of the unit; a library function keeps its cost refused at the gate. -/
+/-- The value of a constant cost expression: literals, the unit's integer constants, `+`, `*`, `-`
+    (never below zero) and `/` (never by zero). Anything else has no value. -/
+def costValue (consts : List (String × Nat)) : SExpr → Option Nat
+  | .lit n => some n
+  | .variable v => (consts.find? fun entry => strEq entry.1 v).map (·.2)
+  | .bin op a b =>
+    match costValue consts a, costValue consts b with
+    | some x, some y =>
+      if strEq op "+" then some (x + y)
+      else if strEq op "*" then some (x * y)
+      else if strEq op "-" then (if y ≤ x then some (x - y) else none)
+      else if strEq op "/" then (if y = 0 then none else some (x / y))
+      else none
+    | _, _ => none
+  | _ => none
+
+/-- The integer constants of a unit with a value of that kind, each read under the ones before it. -/
+def constants (items : List SItemTief) : List (String × Nat) :=
+  items.foldl (fun known item =>
+    match item with
+    | .constT name _ (.one e) =>
+      match costValue known e with
+      | some n => known ++ [(name, n)]
+      | none => known
+    | _ => known) []
+
+/-- The cost an ordinary function declares, if its clause is a constant expression. -/
+def declaredCost (consts : List (String × Nat)) (sig : FnSig) : Option Nat :=
+  sig.klauseln.findSome? fun | .cost e => costValue consts e | _ => none
+
+/-- The declared costs of the ordinary source functions, by name: a constant expression over the
+    unit's constants. A `const fn` runs at compile time only and is no function of the unit; a
+    library function keeps its cost refused at the gate. -/
 def declared (items : List SItemTief) : Tafel (String × Nat) (·.1) :=
+  let consts := constants items
   Tafel.von _ (items.filterMap fun
     | .fnT sig _ => if sig.art != "" && sig.art != "impl" then none else
-      (sig.klauseln.findSome? fun | .cost (.lit n) => some n | _ => none).map fun n => (sig.name, n)
+      (declaredCost consts sig).map fun n => (sig.name, n)
     | _ => none)
+
+/-- The first ordinary function with a cost clause that has no constant value. The gate admits the
+    shape of the expression (`ExportMetadata.costUnbound`); a cost without a value is refused here,
+    so no declared cost goes unchecked. -/
+def unvalued (items : List SItemTief) : Option String :=
+  let consts := constants items
+  items.findSome? fun
+    | .fnT sig _ => if sig.art != "" && sig.art != "impl" then none else
+      if sig.klauseln.any (fun | .cost e => (costValue consts e).isNone | _ => false) then some sig.name
+      else none
+    | _ => none
 
 variable (T : Tafel (String × Nat) (·.1)) (u : UProg)
 

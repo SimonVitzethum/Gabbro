@@ -1,0 +1,8 @@
+// A declared cost that depends on a parameter has no constant value and is refused.
+module ir_cost_parameter {
+impl fn f(b : u32 in 0 .. 20) -> u32 in 0 .. 20 costs <= b ops effects { pure } { return b; }
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let x = f(3);
+    return x;
+}
+}

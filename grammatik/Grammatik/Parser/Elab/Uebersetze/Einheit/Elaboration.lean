@@ -114,7 +114,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   match uSumGlobs consts sums ms globs with
   | .error e => .error e
   | .ok globs =>
-  match uSumTabs sums tabs with
+  match uSumTabs sums (uRecordTabs valueScope.records tabs) with
   | .error e => .error e
   | .ok tabs =>
   match uRegs alias consts tabs globs ms with

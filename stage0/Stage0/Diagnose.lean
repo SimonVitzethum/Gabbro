@@ -43,8 +43,26 @@ def firstFailing (attempt : List SAnw → Option String) (reason : String) (stat
   let k := search 64 0 statements.length
   (statements[k - 1]?).map fun s => (k, s)
 
-/-- The notes for one source text under the given options. -/
-def notes (text : String) (options : Profil.Options := {}) : List String := Id.run do
+/-- The line (from 1) of the joined source text that declares the function `name`: the first line
+    holding `fn name` followed by `(`, `[` or a blank. -/
+def fnLine (text name : String) : Option Nat :=
+  let heads := ["(", "[", " "].map fun close => "fn " ++ name ++ close
+  ((text.splitOn "\n").findIdx? fun line => heads.any fun head => (line.splitOn head).length > 1).map (· + 1)
+
+/-- A note that names its function (`function NAME: ...`), with the place of the declaration added. -/
+def withLine (text : String) (place : Nat → String) (note : String) : String :=
+  match (note.splitOn "function ").drop 1 with
+  | rest :: _ =>
+    match rest.splitOn ": " with
+    | name :: _ :: _ =>
+      match fnLine text name with
+      | some line => note ++ " [declared at " ++ place line ++ "]"
+      | none => note
+    | _ => note
+  | [] => note
+
+/-- The notes for one source text under the given options, without the places. -/
+def notesPlain (text : String) (options : Profil.Options := {}) : List String := Id.run do
   let tokens ← match lex text with
     | .error _ => return []
     | .ok tokens => pure tokens
@@ -108,5 +126,11 @@ def notes (text : String) (options : Profil.Options := {}) : List String := Id.r
     | .ok _ => none
     | .error reason => some ("function " ++ (fnAt unit f).name ++ ": " ++ reason)
   return gate ++ functions
+
+/-- The notes for one source text under the given options. `place` words a line of the joined text
+    (the driver names the file and the line in it). -/
+def notes (text : String) (options : Profil.Options := {})
+    (place : Nat → String := fun line => "line " ++ toString line) : List String :=
+  (notesPlain text options).map (withLine text place)
 
 end Gabbro.Stage0.Diagnose

@@ -11,8 +11,10 @@
   * a call is moved only when nothing in front of it in the statement reads mutable state (a static,
     a table slot): such a read would otherwise happen after the call. That call stays where it is and
     the elaborator refuses it as before, so the writer binds it by hand;
-  * the right operand of `&&` and `||` is evaluated conditionally and is never touched, as is the
-    condition of an `else if`.
+  * the right operand of `&&` and `||` is evaluated conditionally: its calls are bound inside an `if`
+    over the left operand, and a fresh mutable `bool` carries the result;
+  * an `else if` whose condition holds a call becomes an `if` inside an `else`, so its calls run only
+    when the conditions in front of it failed.
 
   The fresh names (`#r0`, `#r1`, ...) cannot be written in source text. The result contains only forms
   the elaborator already reads; no form of the language is added.
@@ -38,6 +40,8 @@ structure Kontext where
       such a field read gets the declared type written, the form the elaborator reads. -/
   felder : List (String × String × STyp) := []
   statics : Namen
+  /-- The statics whose declared type an untyped `let` of them gets written (option and tagged). -/
+  statikTyp : List (String × STyp) := []
 
 /-- Whether `&&` or `||`: the right operand is evaluated conditionally. -/
 def bedingt (op : String) : Bool := strEq op "&&" || strEq op "||"
@@ -97,7 +101,17 @@ def hebeE (k : Kontext) : Nat → Nat → Bool → SExpr → Schritt
     (r.1, .un op r.2.1, r.2.2.1, r.2.2.2)
   | n + 1, nr, sauber, .bin op a b =>
     let ra := hebeE k n nr sauber a
-    if bedingt op then (ra.1, .bin op ra.2.1 b, ra.2.2.1, ra.2.2.2 && ruhig k n b)
+    if bedingt op then
+      -- `a && f()`: `let mut t : bool = false; if a { t = f(); }` (`||`: `true` and `!a`).
+      let name := "#r" ++ toString ra.2.2.1
+      let rb := hebeE k n (ra.2.2.1 + 1) ra.2.2.2 b
+      if rb.1.isEmpty then (ra.1, .bin op ra.2.1 b, ra.2.2.1, ra.2.2.2 && ruhig k n b)
+      else
+        let und := strEq op "&&"
+        (ra.1 ++ [.bind true name (some (.atom "bool")) (if und then .fls else .tru),
+            .cond (if und then ra.2.1 else .un "!" ra.2.1)
+              (.block (rb.1 ++ [.set (.variable name) "=" rb.2.1]) none) [] none],
+          .variable name, rb.2.2.1, rb.2.2.2)
     else
       let rb := hebeE k n ra.2.2.1 ra.2.2.2 b
       (ra.1 ++ rb.1, .bin op ra.2.1 rb.2.1, rb.2.2.1, rb.2.2.2)
@@ -138,6 +152,21 @@ def hebeArgs (k : Kontext) (n nr : Nat) (args : List SExpr) : List SAnw × List 
     (acc.1 ++ r.1, acc.2.1 ++ [r.2.1], r.2.2.1, r.2.2.2)) ([], [], nr, true)
   (step.1, step.2.1, step.2.2.1)
 
+/-- The first `else if` whose condition satisfies `p`: the arms in front, the condition, its body, the
+    arms behind. -/
+def elsifSpalte (p : SExpr → Bool) : List SAnw → Option (List SAnw × SExpr × SAnw × List SAnw)
+  | [] => none
+  | .elsif c b :: rest =>
+    if p c then some ([], c, b, rest)
+    else (elsifSpalte p rest).map fun (vor, c2, b2, nach) => (.elsif c b :: vor, c2, b2, nach)
+  | arm :: rest => (elsifSpalte p rest).map fun (vor, c2, b2, nach) => (arm :: vor, c2, b2, nach)
+
+/-- The declared type of an option or tagged static read by its name, outside any local of that name. -/
+def statikTypVon (k : Kontext) : SExpr → Option STyp
+  | .variable v =>
+    if k.lokal.contains v then none else (k.statikTyp.find? fun entry => strEq entry.1 v).map (·.2)
+  | _ => none
+
 /-- Rewrite one statement into the statements that replace it, with the next fresh number. -/
 def hebeS (k : Kontext) : Nat → Nat → SAnw → List SAnw × Nat
   | 0, nr, s => ([s], nr)
@@ -167,18 +196,19 @@ def hebeS (k : Kontext) : Nat → Nat → SAnw → List SAnw × Nat
     match s with
     | .bind mu x ty e =>
       let r := if mu then (let y := hebeE k n nr true e; (y.1, y.2.1, y.2.2.1)) else hebeOben k n nr e
-      (r.1 ++ [.bind mu x (ty.orElse fun _ => feldTyp k r.2.1) r.2.1], r.2.2)
+      (r.1 ++ [.bind mu x (ty.orElse fun _ => (feldTyp k r.2.1).orElse fun _ => statikTypVon k r.2.1) r.2.1], r.2.2)
     | .bindElse x ty e g b =>
       let r := hebeOben k n nr e
       let y := koerper [g] r.2.2 b
       (r.1 ++ [.bindElse x ty r.2.1 g y.1], y.2)
     | .set target op value =>
       match target with
-      | .variable _ =>
-        -- `x = Case(v);` is read as it stands; any other call in the value is bound first.
+      | .variable x =>
+        -- `x = Case(v);` is read as it stands for a local; for a static the value is bound first, as
+        -- is any other call in the value.
         let r := match value with
           | .call c _ =>
-            if (k.faelle.finde c).isSome then hebeOben k n nr value
+            if (k.faelle.finde c).isSome && (k.lokal.contains x || !(k.statics.finde x).isSome) then hebeOben k n nr value
             else (let y := hebeE k n nr true value; (y.1, y.2.1, y.2.2.1))
           | _ => let y := hebeE k n nr true value; (y.1, y.2.1, y.2.2.1)
         (r.1 ++ [.set target op r.2.1], r.2.2)
@@ -202,14 +232,18 @@ def hebeS (k : Kontext) : Nat → Nat → SAnw → List SAnw × Nat
       let r := hebeOben k n nr e
       (r.1 ++ [.ret (some r.2.1)], r.2.2)
     | .cond c t eis sonst =>
-      let r := hebeE k n nr true c
-      let yt := koerper [] r.2.2.1 t
-      let ye := koerperL yt.2 eis
-      match sonst with
-      | some b =>
-        let ys := koerper [] ye.2 b
-        (r.1 ++ [.cond r.2.1 yt.1 ye.1 (some ys.1)], ys.2)
-      | none => (r.1 ++ [.cond r.2.1 yt.1 ye.1 none], ye.2)
+      match elsifSpalte (fun bed => !(hebeE k n 0 true bed).1.isEmpty) eis with
+      | some (vor, c2, b2, nach) =>
+        hebeS k n nr (.cond c t vor (some (.block [.cond c2 b2 nach sonst] none)))
+      | none =>
+        let r := hebeE k n nr true c
+        let yt := koerper [] r.2.2.1 t
+        let ye := koerperL yt.2 eis
+        match sonst with
+        | some b =>
+          let ys := koerper [] ye.2 b
+          (r.1 ++ [.cond r.2.1 yt.1 ye.1 (some ys.1)], ys.2)
+        | none => (r.1 ++ [.cond r.2.1 yt.1 ye.1 none], ye.2)
     | .elsif c b =>
       let y := koerper [] nr b
       ([.elsif c y.1], y.2)
@@ -270,22 +304,39 @@ def fallNamen (items : List SItemTief) : List String :=
   | .ok schemas => schemas.flatMap fun schema => schema.cases.map (·.1)
   | .error _ => []
 
-/-- The fields of the unit's tables whose declared type is a string or an array. -/
+/-- The fields of the unit's tables whose declared type is a string, an array or a record. -/
 def feldNamen (items : List SItemTief) : List (String × String × STyp) :=
+  let records : List String := items.filterMap fun
+    | .typeT _ name _ _ (some (.raw _)) => some name
+    | _ => none
   items.flatMap fun
     | .tableT name _ _ _ _ _ parts _ => parts.flatMap fun
       | .tSlot fields => fields.filterMap fun field =>
           match field.ftyp with
           | .array .. | .str _ => some (name, field.fname, field.ftyp)
+          | .atom a => if records.contains a then some (name, field.fname, field.ftyp) else none
           | _ => none
       | _ => []
     | _ => []
+
+/-- The statics of option or tagged type, with their declared type. -/
+def statikTypen (items : List SItemTief) : List (String × STyp) :=
+  let tagged : List String := match Uebersetze.uSumSchemas (items.map fun | .taggedByT declaration _ => declaration | item => item) with
+    | .ok schemas => schemas.map fun schema => schema.name
+    | .error _ => []
+  items.filterMap fun
+    | .globT _ n t _ _ _ _ =>
+      match t with
+      | .index true _ => some (n, t)
+      | .atom a => if tagged.contains a then some (n, t) else none
+      | _ => none
+    | _ => none
 
 /-- **Calls inside expressions become bindings**, in every ordinary function of the unit. -/
 def hebe (items : List SItemTief) : List SItemTief :=
   let k : Kontext :=
     { fns := Tafel.von _ (fnNamen items), statics := Tafel.von _ (statikNamen items),
-      faelle := Tafel.von _ (fallNamen items), felder := feldNamen items }
+      faelle := Tafel.von _ (fallNamen items), felder := feldNamen items, statikTyp := statikTypen items }
   items.map (hebeItem k)
 
 end Gabbro.Grammatik.Parser.CallHoist

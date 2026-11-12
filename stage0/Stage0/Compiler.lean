@@ -44,6 +44,8 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
   /-- The declared costs of the gate's functions hold on the final program: the K001 Bool of the model
       over every function with a declared cost (`CostBinding.holds_sound` is the bound). -/
   costs : CostBinding.holds (CostBinding.declared gateMembers) unit program irDurchlaeufe = true
+  /-- Every cost an ordinary function of the gate declares has a constant value, so none is unchecked. -/
+  costsValued : CostBinding.unvalued gateMembers = none
   /-- The declared hold bounds of the gate's locks hold on the final program (K002): every section of
       a lock with `held <= n ops` costs at most `n` own steps. -/
   held : HeldBinding.holds (HeldBinding.declared gateMembers) (CostBinding.declared gateMembers) unit program
@@ -121,6 +123,9 @@ def compileChecked (source : Frontend.Source text options)
             | .error e => throw e
             | .ok false => throw "refused by the checker (AkzeptiertX)"
             | .ok true => do
+              match hv : CostBinding.unvalued gateMembers with
+              | some name => throw ("declared cost is no constant expression: " ++ name)
+              | none =>
               match hk : CostBinding.holds (CostBinding.declared gateMembers) unit program irDurchlaeufe with
               | false => throw ("declared costs do not hold: " ++
                   ((CostBinding.failing (CostBinding.declared gateMembers) unit program irDurchlaeufe).getD "?"))
@@ -148,6 +153,7 @@ def compileChecked (source : Frontend.Source text options)
                 lowered := ⟨raw, fs, hl, hr⟩
                 accepted := ha
                 costs := hk
+                costsValued := hv
                 held := hh
                 passBounds := hf
                 arrayConstants := arrays.down

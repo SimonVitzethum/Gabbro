@@ -44,8 +44,8 @@ theorem initialWorld_global_valid (u : UProg) (valid : GabbroV.sp0OkB u = true)
       rfl
     exact valid_cast_back L kind _ hv
 
-/-- Table initialization uses the canonical zero constructor only where its source check
-    succeeds. In particular this does not invent default fields for products. -/
+/-- Table initialization uses the zero value of a slot field (`slotNull`) only where its source
+    check succeeds: a record field starts with every field at zero, like separate columns. -/
 theorem initialWorld_slot_valid (u : UProg) (valid : GabbroV.sp0OkB u = true)
     (L : Lay (declOf u)) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) (k : Int) :
     ValueValid L ((declOf u).typ t f) ((initialWorld u valid).slots t k f) := by
@@ -72,11 +72,11 @@ theorem initialWorld_slot_valid (u : UProg) (valid : GabbroV.sp0OkB u = true)
       · next optional =>
         split
         · next τ aggregate =>
-          have accepted : (GabbroV.konstWert (F := (declOf u).Fn) (P := (declOf u).passt)
-              τ .null).isSome = true := by
+          have accepted : (GabbroV.slotNull (F := (declOf u).Fn) (P := (declOf u).passt)
+              τ).isSome = true := by
             simpa only [GabbroV.sp0WertOkB, aggregate] using hw
           exact valid_cast_back L (typAt_wert u t f τ nonbool optional aggregate) _
-            (initialConstant_valid L τ _ _ (Option.some_get accepted).symm)
+            (slotNull_valid L τ _ (Option.some_get accepted).symm)
         · next aggregate =>
           split
           · have range : fieldRangeO u t f = some q.2 := by

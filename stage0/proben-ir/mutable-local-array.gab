@@ -1,0 +1,14 @@
+// A `let mut` array is assigned element by element, also at a computed index; a `let mut` string
+// is assigned as a whole.
+module ir_mutable_array {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let mut xs : [u32 in 0 .. 2; 4] = [0, 0, 0, 0];
+    let mut s : string max 4 = "ab";
+    xs[2] = 2;
+    xs[0] = 1;
+    s = "abcd";
+    let i : u32 in 0 .. 3 = 3;
+    xs[i] = 2;
+    return xs[0] + xs[2] * 10 + xs[3] * 50 + lenof(s);
+}
+}

@@ -196,6 +196,14 @@ theorem konstWert_product {F : Type} {P : F → Nat → Bool}
   rw [konstWert]
   rfl
 
+/-- **The zero value of a slot field** (`slotNull`): zero memory at the field's type. A record field
+    starts with every field of the record at its zero value, exactly as the same fields written as
+    separate columns would; any other type has the zero value of `konstWert`. A static keeps its
+    explicit initialiser: `konstWert` itself has no zero record. -/
+def slotNull {F : Type} {P : F → Nat → Bool} : (τ : Ty) → Option (Val F P τ)
+  | .prod _ fs => prodKonst konstWert fs (List.replicate fs.length .null)
+  | τ => konstWert τ .null
+
 /-- **The per-field `Sp0Ok` test** (`sp0FeldOkB`): the field entry is present and
     is a `bool` field or its recorded range holds `0` (the `none` arm is
     unreachable through a live index, kept for totality). Values (`sp0FeldWert`)
@@ -211,7 +219,7 @@ def sp0FeldOkB (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) : 
     in it holds `0`); any other field passes. -/
 def sp0WertOkB (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) : Bool :=
   match wertFeldAt u t f with
-  | some τ => (konstWert (F := (declOf u).Fn) (P := (declOf u).passt) τ .null).isSome
+  | some τ => (slotNull (F := (declOf u).Fn) (P := (declOf u).passt) τ).isSome
   | none => true
 
 /-- **The tables of the decider** (`sp0TabOkB`): the per-field test over every table and every field index
@@ -309,7 +317,7 @@ def sp0FeldWert (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t))
             have hbf : boolFeldAt u t f = false := by unfold boolFeldAt; rw [hq]; exact hb
             have ht : (declOf u).typ t f = τ := typAt_wert u t f τ hbf hO hW
             rw [ht]
-            have hc : (konstWert (F := (declOf u).Fn) (P := (declOf u).passt) τ .null).isSome = true := by
+            have hc : (slotNull (F := (declOf u).Fn) (P := (declOf u).passt) τ).isSome = true := by
               unfold sp0WertOkB at hw0
               rw [hW] at hw0
               exact hw0

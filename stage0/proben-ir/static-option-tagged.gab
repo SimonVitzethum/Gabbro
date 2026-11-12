@@ -1,0 +1,16 @@
+// A constructed value is assigned to a tagged static, and an untyped `let` reads an option static.
+module ir_static_values {
+tagged type Tok = { End, Num(u32 in 0 .. 9) };
+table T count 4 { slot { v : u32 in 0 .. 9, } }
+static mut sel : option index into T = None;
+static mut cur : Tok = End;
+impl fn main() -> u32 in 0 .. 255 effects { reads sel, writes sel, reads cur, writes cur } {
+    cur = Num(5);
+
+    let s = sel;
+    let mut r : u32 in 0 .. 120 = 0;
+    match cur { Num(v) => { r = v; } End => { r = 100; } }
+    match s { Some(i) => { r = 110; } None => { if r == 5 { r = 6; } } }
+    return r;
+}
+}

@@ -114,11 +114,18 @@ def clausesMetadataWithoutLoad (clauses : List SKlausel) : Bool := clauses.any f
   | .cost _ | .limit _ | .induc _ | .moves .. | .quits _ | .keeps _ | .part _ | .arch _ | .refs _ => true
   | _ => false
 
-/-- Whether a cost clause has no binding: only a literal cost is bound. The compiler checks the K001 Bool
-    `kostenPasst` over every function that declares one (`CostBinding.holds`), so the duty stays. -/
+/-- Whether an expression has the shape of a constant cost: literals, names, `+`, `*`, `-`, `/`. -/
+def costShape : SExpr → Bool
+  | .lit _ | .variable _ => true
+  | .bin op a b =>
+    (strEq op "+" || strEq op "*" || strEq op "-" || strEq op "/") && costShape a && costShape b
+  | _ => false
+
+/-- Whether a cost clause has no binding: a constant cost expression is bound. The compiler refuses
+    one without a value (`CostBinding.unvalued`) and checks the K001 Bool `kostenPasst` over every
+    function that declares one (`CostBinding.holds`), so the duty stays. -/
 def costUnbound : SKlausel → Bool
-  | .cost (.lit n) => decide (n < 0)
-  | .cost _ => true
+  | .cost e => !costShape e
   | _ => false
 
 /-- The clauses of an ordinary function: as `clausesMetadata`, with a literal cost bound. -/
@@ -296,7 +303,7 @@ theorem check_sound_zeuge :
     let sig : FnSig := ⟨"impl", "sample", [], some (.atom "u8"), none,
       [.gives (.ext .imp [] [.tru, .tru])], []⟩
     check [.fnT sig body] = .ok () ∧
-    check [.fnT {sig with klauseln := .cost (.variable "N") :: sig.klauseln} body] =
+    check [.fnT {sig with klauseln := .cost (.un "-" (.lit 1)) :: sig.klauseln} body] =
       .error "source export: declared costs lack a checked source-to-kostenPasst binding: sample" := by
   exact ⟨rfl, rfl⟩
 
@@ -318,7 +325,7 @@ set_option maxRecDepth 100000 in
 theorem nested_duties_refused_zeuge :
     let held := SAnw.bind false "held" none (.call "Held" [.variable "L"])
     let body := SAnw.block [held] (some (.ret (some (.lit 42))))
-    let sig : FnSig := ⟨"impl", "sample", [], some (.atom "u8"), none, [.cost (.variable "N")], []⟩
+    let sig : FnSig := ⟨"impl", "sample", [], some (.atom "u8"), none, [.cost (.un "-" (.lit 1))], []⟩
     check [.fnT sig (.child body)] =
       .error "source export: declared costs lack a checked source-to-kostenPasst binding: sample" ∧
     bodyMetadata 10000 (.alloc false "cell" none "A" (.lit 0)
@@ -334,7 +341,7 @@ set_option maxRecDepth 100000 in
 theorem stateT_zeuge :
     let tr : STrans := ⟨"a", [(.variable "s", .variable "Idle", .variable "Busy")], none, []⟩
     let body := SAnw.block [] (some (.ret (some (.lit 42))))
-    check [.stateT "S" [tr]] = .ok () ∧ check [.stateT "S" [tr], .fnT ⟨"impl", "sample", [], some (.atom "u8"), none, [.cost (.variable "N")], []⟩ body] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: sample" := by
+    check [.stateT "S" [tr]] = .ok () ∧ check [.stateT "S" [tr], .fnT ⟨"impl", "sample", [], some (.atom "u8"), none, [.cost (.un "-" (.lit 1))], []⟩ body] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: sample" := by
   exact ⟨rfl, rfl⟩
 
 /-- C02 library calls are bound by the certified expansion. The payload clause is consumed (`exportLibraryKopf` strips `.load`), the call resolves to exactly one library function plus exactly one translator with exactly one payload (`libraryDecl`), and the translator body must be call-free (`callFreeStmt`, otherwise C17). Unexpanded calls never reach ordinary lowering (`ohneBibliothekAnw`, `uAnwReihe`). Costs and other clauses still refuse via `clausesMetadataWithoutLoad`. -/
@@ -386,7 +393,7 @@ set_option maxRecDepth 100000 in
 theorem reset_zeuge :
     let body := SAnw.block [.reset "A" (some (.lit 1, .lit 2))] (some (.ret (some (.lit 23))))
     let sig : FnSig := ⟨"impl", "main", [], some (.atom "u64"), none, [], []⟩
-    check [.fnT sig body] = .ok () ∧ check [.fnT ⟨"impl", "main", [], some (.atom "u64"), none, [.cost (.variable "N")], []⟩ body] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: main" := by
+    check [.fnT sig body] = .ok () ∧ check [.fnT ⟨"impl", "main", [], some (.atom "u64"), none, [.cost (.un "-" (.lit 1))], []⟩ body] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: main" := by
   exact ⟨rfl, rfl⟩
 
 /-- C05 group and table invariants stay refused: every invariant carries mandatory cost, runs and by duties (`SGruppenInv.kosten/online/proof`), but the exporter only reads the predicate over the declared carriers (`uInv`), ignoring all three. No other checked binding exists, so admitting any shape would silently drop them. -/

@@ -17,6 +17,20 @@ def quelltext (files : List String) : IO String := do
     text := text ++ (← IO.FS.readFile file) ++ "\n"
   return text
 
+/-- The file and the line in it of a line (from 1) of the joined text of `files`. -/
+def stelle (files : List (String × Nat)) (line : Nat) : String :=
+  match files with
+  | [] => "line " ++ toString line
+  | (name, count) :: rest =>
+    if line ≤ count || rest.isEmpty then name ++ ":" ++ toString line else stelle rest (line - count)
+
+/-- The number of lines each file adds to the joined text (`quelltext` closes every file with a
+    line break). -/
+def zeilen (files : List String) : IO (List (String × Nat)) :=
+  files.mapM fun (file : String) => do
+    let text ← IO.FS.readFile file
+    return (file, (text.splitOn "\n").length)
+
 def haupt (args : List String) : IO UInt32 := do
   match args with
   | "--ir" :: rest =>
@@ -28,10 +42,11 @@ def haupt (args : List String) : IO UInt32 := do
       | .error error => IO.eprintln ("stage0: " ++ error); return 2
       | .ok options =>
         let text ← quelltext (source :: more)
+        let place := stelle (← zeilen (source :: more))
         match irBild text irStapel options with
         | .error error =>
-          IO.eprintln ("stage0: " ++ error)
-          for note in Diagnose.notes text options do
+          IO.eprintln ("stage0: " ++ Diagnose.withLine text place error)
+          for note in Diagnose.notes text options place do
             IO.eprintln ("stage0: note: " ++ note)
           return 1
         | .ok bytes =>

@@ -127,14 +127,13 @@ def uBindWertAllg (ctx : UCtx) (mu : Bool) (x : String) (t : Option STyp) (e : S
           | .none => .error err
           | .some tb => .ok (.bindOpt x num o, uMitLokal ctx x (UParamArt.opt num) (Ty.opt tb.count) muts)
   | .some ty@(.array _ _) | .some ty@(.str _) =>
-    if mu then .error "let mut of an aggregate without G form"
-    else
-      match uTypIn ctx.alias ctx.tabs ctx.namedTypes ctx.spaces ctx.eigner ty with
+    -- A `let mut` array or string is assigned as a whole (`x = v;`, `x[i] = v;` replaces an element).
+    match uTypIn ctx.alias ctx.tabs ctx.namedTypes ctx.spaces ctx.eigner ty with
+    | .error err => .error err
+    | .ok τ =>
+      match uWertBody ctx e with
       | .error err => .error err
-      | .ok τ =>
-        match uWertBody ctx e with
-        | .error err => .error err
-        | .ok sd => .ok (.bindW x (some τ) sd, uMitLokal ctx x UParamArt.wert τ muts)
+      | .ok sd => .ok (.bindW x (some τ) sd, uMitLokal ctx x UParamArt.wert τ muts)
   | .some ty =>
     match uTypIn ctx.alias ctx.tabs ctx.namedTypes ctx.spaces ctx.eigner ty with
     | .ok ty@(.fl ..) | .ok ty@(.prod ..) => do

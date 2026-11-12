@@ -54,4 +54,14 @@ theorem holds_zeuge :
        (members (Tafel.von _ [("leere", 100)]) uReset).length)) = some (true, false, false, 1) := by
   decide +kernel
 
+/-- **Constant cost expressions have their value**: a literal, a constant, a constant defined by an
+    earlier one, a sum of products; a name that is no constant and a difference below zero have none. -/
+theorem costValue_zeuge :
+    let consts := constants [.constT "N" (.atom "u32") (.one (.lit 20)),
+      .constT "M" (.atom "u32") (.one (.bin "*" (.variable "N") (.lit 2)))]
+    (consts, costValue consts (.bin "+" (.variable "M") (.lit 4)), costValue consts (.variable "n"),
+      costValue consts (.bin "-" (.lit 1) (.variable "N"))) =
+      ([("N", 20), ("M", 40)], some 44, none, none) := by
+  decide +kernel
+
 end Gabbro.Grammatik.Parser.CostBinding
