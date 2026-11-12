@@ -10,7 +10,7 @@ namespace Gabbro.Grammatik.Parser.Dyn
     environment for producer inference and the no-reflection checks. -/
 def prepare (items : List SItemTief) : Except String (List Closed × List SItemTief) := do
   Spec.check items
-  let items ← items.mapM (Spec.resolveKnownBodies items)
+  let items ← Spec.resolveKnownAll items items
   let uses := uniqueTypes (itemsUses items)
   let closed ← catalog items uses
   if closed.isEmpty then return ([], items)

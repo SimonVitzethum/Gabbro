@@ -117,7 +117,7 @@ def expandDeclarationsBeforeLiterals (sourceNames : List String) (ordinary : Lis
   let names := literals.map (fun literal => literal.1.name)
   let source := ordinary ++ literals.map (fun (sig, body) => .fnT sig body)
   Spec.check source
-  let visited ← source.mapM (Spec.resolveKnownBodies source)
+  let visited ← Spec.resolveKnownAll source source
   let literals := visited.filterMap fun
     | .fnT sig body => if names.contains sig.name then some (sig, body) else none
     | _ => none
@@ -195,7 +195,7 @@ def expandRaw (source : List SItemTief) (literals : List (FnSig × SAnw)) :
     Except String Expansion := do
   if literals.isEmpty && !(source.any genericHeader) then
     Spec.check source
-    pure { items := ← source.mapM (Spec.resolveKnownBodies source) }
+    pure { items := ← Spec.resolveKnownAll source source }
   else expandTemplates source literals
 
 /-- One residual-header gate covers ordinary units and instantiated templates alike. -/

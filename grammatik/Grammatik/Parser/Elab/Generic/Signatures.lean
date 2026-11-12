@@ -50,6 +50,34 @@ def sigAt (u : UProg) (n : Nat) :
     Signatur (Fin u.tabs.length) (Fin u.globs.length) (Fin u.locks.length) (Fin u.marken.length) :=
   if h : n < (sigFns u).length then mkSig u ((sigFns u).get ⟨n, h⟩) else dummySig u
 
+/-- `sigAt` without building the joined list: one walk to the entry. -/
+def sigAtSchnell (u : UProg) (n : Nat) :
+    Signatur (Fin u.tabs.length) (Fin u.globs.length) (Fin u.locks.length) (Fin u.marken.length) :=
+  match u.fns[n]? with
+  | some f => mkSig u f
+  | none =>
+    match u.ptrs[n - u.fns.length]? with
+    | some f => mkSig u f
+    | none => dummySig u
+
+/-- **The direct walk reads the same signature.** -/
+@[csimp] theorem sigAt_eq_schnell : @sigAt = @sigAtSchnell := by
+  funext u n
+  unfold sigAt sigAtSchnell sigFns
+  by_cases h : n < (u.fns ++ u.ptrs).length
+  · rw [dif_pos h, List.get_eq_getElem]
+    by_cases hf : n < u.fns.length
+    · rw [List.getElem?_eq_getElem hf, List.getElem_append_left hf]
+    · have hp : n - u.fns.length < u.ptrs.length := by
+        rw [List.length_append] at h
+        omega
+      rw [List.getElem?_eq_none (Nat.le_of_not_lt hf), List.getElem?_eq_getElem hp,
+        List.getElem_append_right (Nat.le_of_not_lt hf)]
+  · rw [dif_neg h]
+    rw [List.length_append] at h
+    rw [List.getElem?_eq_none (show u.fns.length ≤ n by omega),
+      List.getElem?_eq_none (show u.ptrs.length ≤ n - u.fns.length by omega)]
+
 /-- **Conformance, decided** (`SigPasst` over the finite carriers of an elaborated unit): the first
     signature fits the second, with the same owner flow (the C09 handoff is part of conformance). -/
 def sigPasstB {a b c : Nat} {Marke : Type} [DecidableEq Marke] (rang : Fin c → Int) (S T : Signatur (Fin a) (Fin b) (Fin c) Marke) : Bool :=

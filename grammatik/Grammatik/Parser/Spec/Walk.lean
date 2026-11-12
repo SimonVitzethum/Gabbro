@@ -24,12 +24,18 @@ structure Walk where
   infer : Locals → SExpr → Option STyp := fun _ _ => none
   expected : Option STyp := none
   result : Option STyp := none
+  /-- The materialized source, computed once per walk. Every walk is built with this default. -/
+  concrete : List SItemTief := materialize source
+  /-- The function heads of the materialized source, computed once per walk (default only). -/
+  heads : List FnSig := functionHeads (materialize source)
+  /-- The spec groups of the source, computed once per walk (default only). -/
+  specGroups : List Group := groups source
 
 def Walk.call (w : Walk) (locals : Locals) (name : String)
     (types : Option (List STyp)) (args : List SExpr) : Except String String := do
   if !w.resolveSpecs then return name
   if w.instantiate then resolveCall w.source locals name types args
-  else if types.isSome || (groups w.source).any (fun g => name.startsWith (g.name ++ "::")) then
+  else if types.isSome || w.specGroups.any (fun g => name.startsWith (g.name ++ "::")) then
     .error "spec.output.call"
   else .ok name
 
@@ -41,7 +47,7 @@ def Walk.expr (w : Walk) (locals : Locals) : Nat → SExpr → Except String SEx
     let e ← (do
       match e with
       | .call name args => do
-        let signature := (functionHeads (materialize w.source)).find? (fun s => strEq s.name name)
+        let signature := w.heads.find? (fun s => strEq s.name name)
         let args ← args.zipIdx.mapM fun (arg, index) => do
           let expected := signature.bind fun s => (s.params[index]?).map Prod.snd
           { w with expected }.expr locals f arg
@@ -154,7 +160,7 @@ def zeichenInfix (needle : List Char) : List Char → Bool
 def Walk.raw (w : Walk) (s : String) (locals : Locals := []) : Except String String := do
   w.rawCheck locals s
   let compact := s.toList.filter fun c => c != ' ' && c != '\t' && c != '\n' && c != '\r'
-  if w.resolveSpecs && (groups w.source).any (fun g => zeichenInfix (g.name ++ "::").toList compact) then
+  if w.resolveSpecs && w.specGroups.any (fun g => zeichenInfix (g.name ++ "::").toList compact) then
     .error "spec.call.raw.header"
   else .ok s
 
@@ -212,7 +218,7 @@ def Walk.statement (w : Walk) (locals : Locals) : Nat → SAnw → Except String
       return .bindAxiomOptElse n t (← { w with expected := t }.expr locals f e) why (← st body)
     | .set a op b =>
       let a ← ex a
-      let expected ← (inferType (materialize w.source) locals 128 a).mapM ty
+      let expected ← (inferType w.concrete locals 128 a).mapM ty
       return .set a op (← { w with expected }.expr locals f b)
     | .shift e a b => return .shift (← ex e) a b
     | .call name args =>
@@ -274,7 +280,7 @@ def Walk.statements (w : Walk) (locals : Locals) : Nat → List SAnw → Except 
   | f + 1, s :: ss => do
     let s ← w.statement locals f s
     let names := Aufloesung.gebunden s
-    let locals := bindings (materialize w.source) locals w.infer s ++
+    let locals := bindings w.concrete locals w.infer s ++
       locals.filter (fun p => !(names.any (strEq p.1)))
     let (ss, env) ← w.statements locals f ss
     return (s :: ss, env)
