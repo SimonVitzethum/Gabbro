@@ -1,7 +1,6 @@
 module
 
 public import Grammatik.Logik.Invarianten.Frag.Translation
-public import Grammatik.Logik.Invarianten.Frag.Normal
 
 @[expose] public section
 
@@ -193,10 +192,5 @@ theorem quantified_zeuge (values : Assignment Nat) : quantified.denote values :=
   intro value
   refine ⟨value + 1, ?_⟩
   simp [LProp.denote, LTerm.denote, Assignment.bind]
-
-theorem normalization_zeuge (values : Assignment Nat) :
-    (quantified.nnf false).zeroForm.denote values ↔ quantified.denote values := by
-  exact (LProp.zeroForm_denote (quantified.nnf false) values).trans
-    (quantified.nnf_denote false values)
 
 end Gabbro.Grammatik.Invarianten.Frag.Witness

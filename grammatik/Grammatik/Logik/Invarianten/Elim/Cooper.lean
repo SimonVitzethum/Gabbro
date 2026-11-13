@@ -103,10 +103,10 @@ def prepare [DecidableEq α] (name : α) (body : QF α) : CooperStep α :=
     original formula. Boundary branches are actual witnesses in normalized units. -/
 def project [DecidableEq α] (name : α) (step : CooperStep α) : QF α :=
   let residues := List.range step.modulus
-  let below := anyOf (residues.map fun j => step.infinity.subst name (.konst (j + 1)))
+  let below := anyOf (residues.map fun j => step.infinity.subst name (.konst ((j + 1 : Nat) : Int)))
   let above := anyOf (step.boundaries.map fun boundary =>
     anyOf (residues.map fun j =>
-      step.body.subst name (addTerm boundary (.konst (j + 1)))))
+      step.body.subst name (addTerm boundary (.konst ((j + 1 : Nat) : Int)))))
   disj below above
 
 def eliminateOne [DecidableEq α] (name : α) (body : QF α) : QF α :=

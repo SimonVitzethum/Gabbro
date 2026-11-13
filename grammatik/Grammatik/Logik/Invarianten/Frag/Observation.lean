@@ -76,7 +76,7 @@ def encodeConstant (τ : Ty) (value : Wert D τ) :
       { payload := .konst value.n
         correct := fun _ => rfl }
   | .bool, value => .ok
-      { payload := if value then .tru else .fls
+      { payload := if value = true then .tru else .fls
         correct := fun _ => by cases value <;> simp [Represents, LProp.denote] }
   | .str _, value => .ok
       { payload := .konst value.val.length
