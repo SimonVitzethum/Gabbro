@@ -300,10 +300,10 @@ def wLay : Layout wD where
   fno := fun | .get => 0 | .put => 1 | .wipe => 2 | .main => 3 | .mt => 4 | .bits => 5 | .fail => 6 | .callf => 7
 
 def wO : Orakel wD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 /-- A world: every slot holds `0`. -/
 def w0 : World wD := ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, (fun e => nomatch e), []⟩

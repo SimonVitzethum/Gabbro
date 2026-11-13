@@ -101,10 +101,10 @@ abbrev D174 : Deklaration := G174_tor_im_modell_oblig.gD
     and answers `1` (a valid `getpid` answer; `exit_group` has no answer to
     give). -/
 def o174 : Orakel D174 where
-  wirkt := fun _ σ _ => (σ, 1)
-  regLies := fun r => nomatch r
+  wirktL := fun _ σ _ => ({ σ with spur := [] }, 1)
+  regLiesL := fun r => nomatch r
   regSchreib := fun r => nomatch r
-  sichtbar := fun _ _ => true
+  sichtbarL := fun _ _ => true
 
 /-- The then-block of `ende_wenn` in the certified export, verbatim: the
     call `exit_group(1)` as `Block.bindAxiom` with the empty rest. -/

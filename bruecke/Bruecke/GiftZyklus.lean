@@ -206,10 +206,10 @@ theorem σ7_0 : ((σ7.slots tT 0 vF : Zahl 0 10)).n = 7 := rfl
 theorem σ7_1 : ((σ7.slots tT 1 vF : Zahl 0 10)).n = 0 := rfl
 
 def O0 : Orakel (declOf uZ) where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 /-- **The handler**: `g` answers normally, leaving the world as it is, exactly where slot 0 holds 7
     -- where `g`'s contract is met; every other call is a hardware stop. -/

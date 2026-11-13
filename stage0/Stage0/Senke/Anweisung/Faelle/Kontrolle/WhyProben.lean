@@ -34,10 +34,10 @@ def P : Programm D where
     else .ret (.val (.widen (by decide) (by decide) (.lit 42))) List.Perm.nil
 
 def O : Orakel D where
-  wirkt a := nomatch a
-  regLies r := nomatch r
+  wirktL a := nomatch a
+  regLiesL r := nomatch r
   regSchreib r := nomatch r
-  sichtbar _ _ := true
+  sichtbarL _ _ := true
 
 def world : World D where
   slots t := nomatch t

@@ -43,10 +43,10 @@ theorem eP_fussS_falsch : fussSperreB eP (SperrInv.leer eD) eFs = false := by de
 theorem eP_fragmentG : programmImFragmentG eP eFs = true := by decide
 
 def eO : Orakel eD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 theorem eO_gut : GutO eO := fun a => nomatch a
 

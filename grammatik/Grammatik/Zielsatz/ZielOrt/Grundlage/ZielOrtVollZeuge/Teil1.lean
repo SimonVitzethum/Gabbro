@@ -13,17 +13,17 @@ namespace Gabbro.Grammatik
 
 /-- The oracle: sets the slot to `true`, records the write. -/
 def vO : Orakel vD where
-  wirkt := fun _ σ _ =>
-    ({ slots := fun _ _ _ => true, globs := (fun g => (nomatch g)), spur := axiomSpur [()] [] () [Res.held ()] σ.haelt ++ σ.spur }, 0)
-  regLies := fun r => nomatch r
+  wirktL := fun _ σ _ =>
+    ({ slots := fun _ _ _ => true, globs := (fun g => (nomatch g)), spur := axiomSpur [()] [] () [Res.held ()] σ.haelt }, 0)
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 theorem vO_gut : GutO vO := by
   intro a σ ρ
   cases a
   have hW : vO.wirkt () σ ρ =
-      ({ slots := fun _ _ _ => true, globs := (fun g => (nomatch g)), spur := axiomSpur [()] [] () [Res.held ()] σ.haelt ++ σ.spur }, 0) := rfl
+      ({ slots := fun _ _ _ => true, globs := (fun g => (nomatch g)), spur := axiomSpur [()] [] () [Res.held ()] σ.ohneLese.haelt ++ σ.spur }, 0) := rfl
   refine ⟨?_, ?_, ?_⟩
   · constructor
     · intro t ht
@@ -32,7 +32,7 @@ theorem vO_gut : GutO vO := by
     · intro g
       exact nomatch g
   · rw [hW]
-    show offen (axiomSpur [()] [] () [Res.held ()] σ.haelt ++ σ.spur) = offen σ.spur
+    show offen (axiomSpur [()] [] () [Res.held ()] σ.ohneLese.haelt ++ σ.spur) = offen σ.spur
     exact offen_nurZugriff _ _ (fun e he => by
       simp only [axiomSpur, List.mem_append, List.mem_map, List.mem_filter] at he
       rcases he with ⟨t, _, rfl⟩ | ⟨g, _, _⟩
@@ -56,7 +56,7 @@ theorem vO_gut : GutO vO := by
       have eL : L = () := rfl
       rw [eL]
       exact hgt () rfl () (List.Mem.head _)
-    · rw [hW]
+    · rw [hW, World.ohneLese_haelt]
 
 /-- The start memory: the slot `false`. -/
 def vSp : Speicher vD := ⟨fun _ _ _ => false, fun g => nomatch g⟩

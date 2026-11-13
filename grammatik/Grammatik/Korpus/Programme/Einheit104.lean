@@ -395,10 +395,10 @@ theorem nutzer4 : NutzerPflicht E4 where
 
 /-- The oracle of `D4`: no axiom, register or global exists. -/
 def O4 : Orakel D4 where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 theorem hw4 [RootNativeFloat.Hardware] : HardwareAnnahmen O4 E4.Q :=
   ⟨(fun a => nomatch a), ⟨(fun r => nomatch r), (fun g => nomatch g)⟩,

@@ -231,10 +231,10 @@ theorem ivFs_voll : ∀ g : ivD.Fn, g ∈ ivFs := by
   · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self)
 
 def ivO : Orakel ivD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 theorem ivO_gut : GutO ivO := fun a => nomatch a
 

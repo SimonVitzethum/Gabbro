@@ -87,11 +87,11 @@ def swQ : AxEns foreignSoftwareD
 /-- The actual binding: memory untouched, recording only, raw answer the
     current slot value. -/
 def foreignSoftwareO : Orakel foreignSoftwareD where
-  wirkt
-    | (), σ, _ => (σ.merke (axiomSpur [()] [] () [] σ.haelt), (σ.slots () 0 ()).n)
-  regLies := fun r _ => nomatch r
+  wirktL
+    | (), σ, _ => ({ σ with spur := axiomSpur [()] [] () [] σ.haelt }, (σ.slots () 0 ()).n)
+  regLiesL := fun r _ => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g _ => nomatch g
+  sichtbarL := fun g _ => nomatch g
 
 /-- The fixture guards nothing, so every access is allowed with no holdings. -/
 theorem swD_darf (t : foreignSoftwareD.Tab) : darf foreignSoftwareD t [] := by
@@ -113,8 +113,8 @@ theorem swO_rahmen (σ : World foreignSoftwareD) (ρ : Env foreignSoftwareD (for
 /-- The software call keeps the held locks: recording only. -/
 theorem swO_haelt (σ : World foreignSoftwareD) (ρ : Env foreignSoftwareD (foreignSoftwareD.aparams ())) :
     (foreignSoftwareO.wirkt () σ ρ).1.haelt = σ.haelt := by
-  show offen (axiomSpur [()] [] () [] σ.haelt ++ σ.spur) = offen σ.spur
-  exact offen_append_zugriffe σ.haelt _ _ (axiomSpur_zugriffMit _ _ _ _ _)
+  show offen (axiomSpur [()] [] () [] σ.ohneLese.haelt ++ σ.spur) = offen σ.spur
+  exact offen_append_zugriffe _ _ _ (axiomSpur_zugriffMit _ _ _ _ _)
 
 /-- Recording of the software call over the complete domains. -/
 theorem swO_spur (σ : World foreignSoftwareD) (ρ : Env foreignSoftwareD (foreignSoftwareD.aparams ()))
@@ -140,7 +140,7 @@ theorem swO_spur (σ : World foreignSoftwareD) (ρ : Env foreignSoftwareD (forei
   · intro m st hm
     exact nomatch m
   · exact swHeldIn_nil _
-  · rfl
+  · exact congrArg (· ++ σ.spur) (congrArg (axiomSpur _ _ _ _) (World.ohneLese_haelt σ))
 
 /-- The binding stays in its declared frame and records its write. -/
 theorem swO_gut : GutO foreignSoftwareO := by

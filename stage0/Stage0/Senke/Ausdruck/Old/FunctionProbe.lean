@@ -63,10 +63,10 @@ def program : Programm D where
     exact body
 
 def oracle : Orakel D where
-  wirkt a := Fin.elim0 a
-  regLies r := Fin.elim0 r
+  wirktL a := Fin.elim0 a
+  regLiesL r := Fin.elim0 r
   regSchreib r := Fin.elim0 r
-  sichtbar _ _ := true
+  sichtbarL _ _ := true
 
 def initial : World D where
   slots t k f := by

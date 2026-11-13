@@ -104,10 +104,10 @@ def initial (result : Option Ty) : World (D result) where
 
 /-- The oracle uses exactly the packing supplied by the gate's errno binding. -/
 def oracle (result : Option Ty) (reason : Bool) : Orakel (D result) where
-  wirkt _ σ _ := (σ, rohW binding 1 (if reason then BitVec.ofInt 64 (-9) else 7))
-  regLies r := Fin.elim0 r
+  wirktL _ σ _ := ({ σ with spur := [] }, rohW binding 1 (if reason then BitVec.ofInt 64 (-9) else 7))
+  regLiesL r := Fin.elim0 r
   regSchreib r := Fin.elim0 r
-  sichtbar _ _ := true
+  sichtbarL _ _ := true
 
 def calls (result : Option Ty) (f : (D result).Fn) (_ : World (D result))
     (_ : Env (D result) ((D result).params f)) : RufAusgang f := .logik .schleife

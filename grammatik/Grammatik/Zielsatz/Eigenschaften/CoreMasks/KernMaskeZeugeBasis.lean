@@ -131,10 +131,10 @@ def wRet (m : Bool) (f : WFn) : Endblock (wD m) (vertragVon (wD m) f) false [] [
   .ret .empty List.Perm.nil
 
 def wO (m : Bool) : Orakel (wD m) where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 def wInit (m : Bool) : Faden → Σ f : (wD m).Fn, Env (wD m) ((wD m).params f)
   | 0 => ⟨WFn.h, .nil⟩

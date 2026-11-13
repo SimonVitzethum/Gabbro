@@ -161,10 +161,10 @@ def rufPF : Programm rufDF where
 
 /-- The witness oracle: no axioms, no registers, nothing visible. -/
 def rufOF : Orakel rufDF where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 /-- The empty world over the witness declaration. -/
 def rufWeltF : World rufDF :=

@@ -222,10 +222,10 @@ theorem fdarf3 (t : FD3.Tab) : darf FD3 t ([] : List (Res FD3)) := by
   intro w hw; cases hw
 
 def o3 : Orakel FD3 where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r => nomatch r
-  sichtbar := fun _ _ => false
+  sichtbarL := fun _ _ => false
 
 def r3 : ∀ f : FD3.Fn, World FD3 → Env FD3 (FD3.params f) → RufAusgang f := fun _ _ _ => .logik .vorzustand
 

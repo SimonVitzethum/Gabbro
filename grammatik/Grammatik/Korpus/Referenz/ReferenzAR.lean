@@ -30,12 +30,12 @@ def arV100 : Wert arD (.int 0 100) := ⟨100, by decide, by decide⟩
     `ruf1` answers raw `7` (in `.int 0 10`), `ruf0` answers raw `0`
     (ignored, it has no result). Register reads answer `0`. -/
 def arO : Orakel arD where
-  wirkt := fun a σ _ => match a with
-    | .ruf0 => (σ.storeSlot () 0 () arV100, 0)
-    | .ruf1 => (σ.storeSlot () 0 () arV100, 7)
-  regLies := fun _ _ => 0
+  wirktL := fun a σ _ => match a with
+    | .ruf0 => ({ σ.storeSlot () 0 () arV100 with spur := [] }, 0)
+    | .ruf1 => ({ σ.storeSlot () 0 () arV100 with spur := [] }, 7)
+  regLiesL := fun _ _ => 0
   regSchreib := fun _ _ => ()
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 /-- The start memory: every slot reads `0`. -/
 def arSp0 : Speicher arD :=

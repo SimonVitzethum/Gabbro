@@ -89,11 +89,11 @@ def aP : Programm aD where
 def aS : Speicher aD := ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g => g.elim⟩
 
 /-- A foreign body that writes nothing. -/
-def oG : Orakel aD := ⟨fun _ σ _ => (σ, 0), fun r => r.elim, fun r => r.elim, fun g => g.elim, fun _ => none⟩
+def oG : Orakel aD := ⟨fun _ σ _ => ({ σ with spur := [] }, 0), fun r => r.elim, fun r => r.elim, fun g => g.elim, fun _ => none⟩
 
 /-- A foreign body that writes `T[7]`, outside the declared extent `0 .. 1`. -/
 def oB : Orakel aD :=
-  ⟨fun _ σ _ => (σ.storeSlot () 7 () ⟨5, by decide, by decide⟩, 0), fun r => r.elim, fun r => r.elim,
+  ⟨fun _ σ _ => ({ σ.storeSlot () 7 () ⟨5, by decide, by decide⟩ with spur := [] }, 0), fun r => r.elim, fun r => r.elim,
     fun g => g.elim, fun _ => none⟩
 
 theorem oG_gut : ImBereichO oG := fun _ _ _ _ _ _ _ => rfl

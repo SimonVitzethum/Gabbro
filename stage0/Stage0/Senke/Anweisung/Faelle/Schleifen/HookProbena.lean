@@ -133,10 +133,10 @@ def world : World D where
   spur := []
 
 def oracle : Orakel D where
-  wirkt a := Fin.elim0 a
-  regLies r := Fin.elim0 r
+  wirktL a := Fin.elim0 a
+  regLiesL r := Fin.elim0 r
   regSchreib r := Fin.elim0 r
-  sichtbar _ _ := true
+  sichtbarL _ _ := true
 
 /-- Evaluate the same complete source program, retaining the canonical call and loop semantics. -/
 def sourceOutcome (budget mode : Nat) : Int :=

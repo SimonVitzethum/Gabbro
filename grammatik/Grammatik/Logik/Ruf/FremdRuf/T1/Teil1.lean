@@ -36,7 +36,7 @@ theorem fdO_spur_open (σ : World fdD) (ρ : Env fdD (fdD.aparams true))
   · intro m st hm
     exact nomatch m
   · exact fdHeldIn_nil _
-  · rfl
+  · exact congrArg (· ++ σ.spur) (congrArg (axiomSpur _ _ _ _) (World.ohneLese_haelt σ))
 
 /-- Recording of the reading call over the complete domains. -/
 theorem fdO_spur_read (σ : World fdD) (ρ : Env fdD (fdD.aparams false))
@@ -62,7 +62,7 @@ theorem fdO_spur_read (σ : World fdD) (ρ : Env fdD (fdD.aparams false))
   · intro m st hm
     exact nomatch m
   · exact fdHeldIn_nil _
-  · rfl
+  · exact congrArg (· ++ σ.spur) (congrArg (axiomSpur _ _ _ _) (World.ohneLese_haelt σ))
 
 /-- The oracle stays in its declared frames and records its writes. -/
 theorem fdO_gut : GutO fdO := by

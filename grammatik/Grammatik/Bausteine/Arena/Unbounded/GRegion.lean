@@ -96,7 +96,7 @@ theorem alloc_in_T : rD.tabNr 0 = some () ∧ rD.offen () = true := Block.alloc_
 
 /-- The provider answering cell `K` (the raw word `K`). -/
 def oK (K : Nat) : Orakel rD :=
-  ⟨fun _ σ _ => (σ, (K : Int)), fun r => r.elim, fun r => r.elim, fun g => g.elim, fun _ => none⟩
+  ⟨fun _ σ _ => ({ σ with spur := [] }, (K : Int)), fun r => r.elim, fun r => r.elim, fun g => g.elim, fun _ => none⟩
 
 /-- A start world: every cell holds `0`. -/
 def w0 : World rD := ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g => g.elim, []⟩

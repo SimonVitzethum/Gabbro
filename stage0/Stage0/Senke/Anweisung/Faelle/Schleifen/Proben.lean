@@ -52,10 +52,10 @@ def initialF : World DF where
   spur := []
 
 def oracleF : Orakel DF where
-  wirkt _ σ _ := (σ, 0)
-  regLies r := Fin.elim0 r
+  wirktL _ σ _ := ({ σ with spur := [] }, 0)
+  regLiesL r := Fin.elim0 r
   regSchreib r := Fin.elim0 r
-  sichtbar _ _ := true
+  sichtbarL _ _ := true
 
 def callsF (f : DF.Fn) (_ : World DF) (_ : Env DF (DF.params f)) : RufAusgang f := .logik .schleife
 

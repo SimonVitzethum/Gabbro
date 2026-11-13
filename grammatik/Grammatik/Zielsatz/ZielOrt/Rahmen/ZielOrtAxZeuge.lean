@@ -42,13 +42,13 @@ def axNeu (σ : World axD) : Wert axD (.int 0 3) :=
 /-- The oracle: `inc` increments the slot (capped) and answers the new
     value, recording its write. -/
 def axO : Orakel axD where
-  wirkt := fun _ σ _ =>
+  wirktL := fun _ σ _ =>
     ({ slots := fun _ _ _ => axNeu σ
        globs := fun g => nomatch g
-       spur := axiomSpur [()] [] () [Res.held ()] σ.haelt ++ σ.spur }, (axNeu σ).n)
-  regLies := fun r => nomatch r
+       spur := axiomSpur [()] [] () [Res.held ()] σ.haelt }, (axNeu σ).n)
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 theorem axO_gut : GutO axO := by
   intro a σ ρ
@@ -56,7 +56,7 @@ theorem axO_gut : GutO axO := by
   have hW : axO.wirkt () σ ρ =
       ({ slots := fun _ _ _ => axNeu σ
          globs := fun g => nomatch g
-         spur := axiomSpur [()] [] () [Res.held ()] σ.haelt ++ σ.spur }, (axNeu σ).n) := rfl
+         spur := axiomSpur [()] [] () [Res.held ()] σ.ohneLese.haelt ++ σ.spur }, (axNeu σ).n) := rfl
   refine ⟨?_, ?_, ?_⟩
   · constructor
     · intro t ht
@@ -64,7 +64,7 @@ theorem axO_gut : GutO axO := by
     · intro g
       exact nomatch g
   · rw [hW]
-    show offen (axiomSpur [()] [] () [Res.held ()] σ.haelt ++ σ.spur) = offen σ.spur
+    show offen (axiomSpur [()] [] () [Res.held ()] σ.ohneLese.haelt ++ σ.spur) = offen σ.spur
     exact offen_nurZugriff _ _ (fun e he => by
       simp only [axiomSpur, List.mem_append, List.mem_map, List.mem_filter] at he
       rcases he with ⟨t, _, rfl⟩ | ⟨g, _, _⟩
@@ -88,7 +88,7 @@ theorem axO_gut : GutO axO := by
       have eL : L = () := rfl
       rw [eL]
       exact hgt () rfl () (List.Mem.head _)
-    · rw [hW]
+    · rw [hW, World.ohneLese_haelt]
 
 /-- **The machine's `inc` meets its declared ensures**: the answer is the
     new value of the slot. -/

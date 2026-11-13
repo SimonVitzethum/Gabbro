@@ -137,10 +137,10 @@ theorem boolean_binder_admission_zeuge :
   decide +kernel
 
 def oracle (raw : Runner.W) : Orakel D where
-  wirkt _ σ _ := (σ, rohW AxiomElseProbe.binding 1 raw)
-  regLies r := Fin.elim0 r
+  wirktL _ σ _ := ({ σ with spur := [] }, rohW AxiomElseProbe.binding 1 raw)
+  regLiesL r := Fin.elim0 r
   regSchreib r := Fin.elim0 r
-  sichtbar _ _ := true
+  sichtbarL _ _ := true
 
 def observed (optional nested : Bool) (raw : Runner.W) : Int :=
   match execEnd (oracle raw) 1 (AxiomElseProbe.calls result)

@@ -128,10 +128,10 @@ def program (why : Bool) : Programm D where
   rumpf := fun _ => body why
 
 def oracle : Orakel D where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r => nomatch r
-  sichtbar := fun _ _ => true
+  sichtbarL := fun _ _ => true
 
 def answer (why : Bool) : Answer := if why then .inr reason else .inl value
 

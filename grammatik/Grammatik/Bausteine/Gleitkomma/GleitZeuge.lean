@@ -77,10 +77,10 @@ def gzD : Deklaration where
 abbrev gzV : Vertrag gzD := vertragVon gzD ()
 
 def gzO : Orakel gzD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun _ _ => true
+  sichtbarL := fun _ _ => true
 
 /-- The calls of the block (there are none): any meaning will do. -/
 def gzR : ∀ f : gzD.Fn, World gzD → Env gzD (gzD.params f) → RufAusgang f :=

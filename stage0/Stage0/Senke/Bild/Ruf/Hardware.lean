@@ -54,10 +54,10 @@ theorem leseblindP_hardware {P : Programm D} {O : Orakel D} {Q : AxEns D} (h : Z
 /-- An oracle that is NOT read-blind: a foreign call answers the length of the trace, read events included. Registers
     read `0`, every publication is visible. -/
 def zaehlOrakel (D : Deklaration) : Orakel D where
-  wirkt := fun _ σ _ => (σ, (σ.spur.length : Int))
-  regLies := fun _ _ => 0
+  wirktL := fun _ σ _ => (σ, (σ.spur.length : Int))
+  regLiesL := fun _ _ => 0
   regSchreib := fun _ _ => ()
-  sichtbar := fun _ _ => true
+  sichtbarL := fun _ _ => true
 
 /-- The counting oracle is register-local. -/
 theorem zaehlOrakel_regLokal (D : Deklaration) : RegLokal (zaehlOrakel D) :=

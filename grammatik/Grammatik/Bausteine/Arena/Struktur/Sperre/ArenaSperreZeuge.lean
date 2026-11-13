@@ -174,10 +174,10 @@ theorem schlecht_lauf (O : Orakel FDL) (passes : Nat)
 
 /-- An oracle for the shared witness declaration (no axioms, no registers). -/
 def oL : Orakel FDL where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r => nomatch r
-  sichtbar := fun _ _ => false
+  sichtbarL := fun _ _ => false
 
 /-- A callee for the shared witness declaration (the bodies call nothing). -/
 def rL : ∀ f : FDL.Fn, World FDL → Env FDL (FDL.params f) → RufAusgang f := fun _ _ _ => .logik .vorzustand

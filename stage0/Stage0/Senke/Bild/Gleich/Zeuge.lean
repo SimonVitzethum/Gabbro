@@ -19,10 +19,10 @@ open Gabbro.Grammatik
 /-- An oracle that ignores the trace: a foreign call leaves the world and answers `0`, a register reads `0`, every
     publication is visible. -/
 def stillesOrakel (D : Deklaration) : Orakel D where
-  wirkt := fun _ σ _ => (σ, 0)
-  regLies := fun _ _ => 0
+  wirktL := fun _ σ _ => ({ σ with spur := [] }, 0)
+  regLiesL := fun _ _ => 0
   regSchreib := fun _ _ => ()
-  sichtbar := fun _ _ => true
+  sichtbarL := fun _ _ => true
 
 /-- **The oracle premise is satisfiable for every declaration.** -/
 theorem leseblind_still (D : Deklaration) : Leseblind (stillesOrakel D) :=

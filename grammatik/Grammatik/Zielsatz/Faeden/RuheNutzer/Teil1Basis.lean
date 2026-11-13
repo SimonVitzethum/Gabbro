@@ -60,15 +60,23 @@ theorem gleichAuf_worldZ {l : List (D.Tab ⊕ D.Glob)} {σ σ' : World D.mitRuhe
     rw [show σ.globs g = σ'.globs g from h.2 g hg]⟩
 
 theorem rahmenO_zurueck {O' : Orakel D.mitRuhe} (h : RahmenO O') : RahmenO (Orakel.zurueck O') :=
-  fun a σ ρ => rahmen_worldZ (h a (worldR σ) (envR ρ))
+  fun a σ ρ => by
+    rw [wirkt_zurueck_welt]
+    exact rahmen_worldZ (h a (worldR σ) (envR ρ))
 
 theorem regLokal_zurueck {O' : Orakel D.mitRuhe} (h : RegLokal O') :
     RegLokal (Orakel.zurueck O') :=
-  ⟨fun r _ _ hg => h.1 r _ _ (gleichAuf_worldR hg), fun g _ _ hg => h.2 g _ _ (gleichAuf_worldR hg)⟩
+  ⟨fun r _ _ hg => by
+      rw [regLies_zurueck_welt, regLies_zurueck_welt]
+      exact h.1 r _ _ (gleichAuf_worldR hg),
+    fun g _ _ hg => by
+      rw [sichtbar_zurueck_welt, sichtbar_zurueck_welt]
+      exact h.2 g _ _ (gleichAuf_worldR hg)⟩
 
 theorem axVertrag_zurueck {Q : AxEns D} {O' : Orakel D.mitRuhe} (h : AxVertragO (axEnsRuhe Q) O') :
     AxVertragO Q (Orakel.zurueck O') := by
   intro a σ ρ v hv
+  rw [wirkt_zurueck_welt] at hv ⊢
   change einpassenErg (Orakel.zurueck O').zeiger (D.aerg a) (O'.wirkt a (worldR σ) (envR ρ)).2 =
     some v at hv
   have e : einpassenErg (D := D.mitRuhe) O'.zeiger ((D.aerg a).map tyR)
