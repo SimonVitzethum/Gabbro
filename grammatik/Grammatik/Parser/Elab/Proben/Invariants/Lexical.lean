@@ -436,6 +436,6 @@ def compareA : Chunk where
 theorem lexed (chunks : List Chunk)
     (room : chunks.all (fun chunk => decide (chunk.steps ≤ chunk.characters.length)) = true) :
     lexL (characters chunks) = .ok (tokens chunks) :=
-  lex_chunks chunks ((steps_le_length chunks room).trans (Nat.le_succ _))
+  lex_chunks chunks (Nat.le_trans (steps_le_length chunks room) (Nat.le_succ _))
 
 end Gabbro.Grammatik.Parser.InvariantText

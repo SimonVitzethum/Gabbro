@@ -146,10 +146,12 @@ theorem invariant_clauses_refused_zeuge :
       .error "wanted :" ∧
     parseGruppenInv 100 [.wort "invariant", .ident "I", .ident "runs", .ident "online",
       .zeichen ":", .wort "true", .zeichen ";"] = .error "wanted :" ∧
+    parseGruppenInv 100 [.wort "invariant", .ident "I", .ident "runs", .ident "offline",
+      .zeichen ":", .wort "true", .zeichen ";"] = .error "wanted :" ∧
     parseGruppenInv 100 [.wort "invariant", .ident "I", .wort "by", .wort "induction",
       .wort "over", .ident "T", .zeichen ":", .wort "true", .zeichen ";"] =
       .error "wanted :" := by
-  exact ⟨rfl, rfl, rfl⟩
+  exact ⟨rfl, rfl, rfl, rfl⟩
 -- The `group` frame is beispiele/0017-gruppe-ueber-zwei-sperren.gab:42-47;
 -- the `pred` is simplified (the corpus body quantifies -- see CUTS).
 def tt35 : List Token :=
