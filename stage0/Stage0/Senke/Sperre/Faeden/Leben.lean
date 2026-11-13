@@ -1,6 +1,7 @@
 /-
   File:      stage0/Stage0/Senke/Sperre/Faeden/Leben.lean
-  Subject:   THE CROSS-THREAD LOCK THEOREM, liveness half: `GabbroZielLeben`'s conclusion for the EMITTED lock.
+  Subject:   THE CROSS-THREAD LOCK THEOREM, liveness half: `GabbroZielLeben`'s conclusion, in its shape, for the
+             EMITTED lock (the instance of the model statement itself is Faeden/Transfer.lean).
              On every run of the emitted lock (Faeden/Maschine.lean) from a state meeting the invariant (the start
              does, `Inv.start`), with at most 2147483647 threads, on which
              * the scheduler is weakly fair over the threads not blocked in FUTEX_WAIT (`Lauf.Fair`; a blocked

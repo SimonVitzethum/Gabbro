@@ -4,8 +4,9 @@
              (contended paths included: FUTEX_WAIT blocking, returning at once and spuriously, FUTEX_WAKE of all
              waiters, the waiter count, the failed `cas` loops) is, step by step, a run of the abstract ticket lock
              with stuttering (`Lauf.abbild`): each scheduler step is a stutter or one abstract step of the scheduled
-             thread. Along it the four facts the model's ticket lock `FifoLauf` (Logik/Fortschritt/PlanLauf.lean)
-             states of its queue hold for the emitted lock:
+             thread. Along it the four facts of the queue of the model's `FifoLauf` (Logik/Fortschritt/PlanLauf.lean)
+             hold for the emitted lock, ADAPTED to access granularity (`Lauf.kopf` asks only the entering step to
+             be the head; the link to the model's `Tkt` and `FifoLauf` is Faeden/Geist*.lean and Transfer.lean):
              * `Lauf.glied` -- the waiting threads are exactly the threads with a ticket that do not hold the lock;
                a thread blocked in FUTEX_WAIT is one of them (`Lauf.schlaeft_wartet`);
              * `Lauf.eindeutig` -- each once;

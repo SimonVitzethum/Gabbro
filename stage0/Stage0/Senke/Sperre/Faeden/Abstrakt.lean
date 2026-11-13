@@ -1,9 +1,10 @@
 /-
   File:      stage0/Stage0/Senke/Sperre/Faeden/Abstrakt.lean
   Subject:   THE ABSTRACT TICKET LOCK: a holder and the queue of the waiting threads in ticket order. Its three steps
-             are the model's lock (Code/Conc/Lock.lean, `FifoLauf` in Logik/Fortschritt/PlanLauf.lean): `Zieht` (take
-             a ticket: join the end of the queue), `Tritt` (the head of the queue takes the free lock), `Gibt` (the
-             holder gives it). `Weg u a d` is what ONE step of machine G by thread `u` can do to one lock: give,
+             are those of the model's lock (Code/Conc/Lock.lean; proved in Faeden/Geist.lean against its
+             ghost `Tkt`): `Zieht` (take a ticket: join the end of the queue), `Tritt` (the head of the queue takes
+             the free lock), `Gibt` (the holder gives it). `Weg u a d` is what ONE step of machine G by thread `u`
+             can do to one lock: give,
              then draw, then enter, each at most once and in this order (a G step that takes a lock does nothing
              else to it). `AbsOK` (the queue has no duplicate, the holder is not in it) holds along every such run.
              `Weg.kopf` and `Weg.ordnung` are the two facts the queue of a `FifoLauf` needs.
