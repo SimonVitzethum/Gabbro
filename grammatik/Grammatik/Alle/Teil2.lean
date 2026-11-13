@@ -144,6 +144,10 @@ public import Grammatik.Zielsatz.Atomar.AtomarGoalZeuge
 public import Grammatik.Speichermodell.Maschine.ZaehlerW
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 public import Grammatik.Zielsatz.Atomar.GabbroZielFremd
+public import Grammatik.Zielsatz.RuheLift.Fragment
+public import Grammatik.Zielsatz.RuheLift.Grenze
+public import Grammatik.Zielsatz.RuheLift.Korollar
+public import Grammatik.Zielsatz.RuheLift.Zeuge
 public import Grammatik.GabbroV.Start.GvStartPflicht
 public import Grammatik.GabbroV.GvAtomRely
 public import Grammatik.GabbroV.GvTraversal
@@ -382,3 +386,7 @@ public import Grammatik.Niedrig.Uebersetzung.Zeuge
 public import Grammatik.Niedrig.Register.Register
 public import Grammatik.Niedrig.Register.RegisterSaetze
 public import Grammatik.Niedrig.Register.RegisterZeuge
+public import Grammatik.Niedrig.Bytes.Grants
+public import Grammatik.Niedrig.Bytes.GrantsSaetze
+public import Grammatik.Niedrig.Bytes.Erreichbar
+public import Grammatik.Niedrig.Bytes.GrantsZeuge
