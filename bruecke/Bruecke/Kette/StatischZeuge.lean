@@ -1,7 +1,6 @@
 module
-public import Bruecke.Kette.Quelle
+public import Bruecke.Kette.Formen.ZeugenSchritte
 public import Bruecke.Anweisung.Zweig.SchattenZeuge
-import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.String.Length
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -38,6 +37,9 @@ import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
 import all Grammatik.Parser.Elab.Generic.StaticConformance
+import all Grammatik.Parser.Elab.UebersetzeAllg.Teil5
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest1
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Body
 @[expose] public section
 
 namespace Gabbro.Bruecke.StatischZeuge
@@ -46,7 +48,9 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 set_option maxRecDepth 100000
-set_option maxHeartbeats 2000000
+set_option maxHeartbeats 400000
+
+attribute [local cbv_eval] Nat.log2_def lowEns.eq_def lowCmp.eq_def lowWertE.eq_def
 
 def writer : UFn :=
   { name := "write_counter", params := [], kinds := [], res := none, held := [], puts := [],
@@ -79,23 +83,41 @@ def callerBody : List Gabbro.Body.Stmt :=
 theorem reader_forms :
     zuBodyZ unit writer = some writerBody ∧ zuBodyZ unit reader = some readerBody ∧
       zuBodyZ unit caller = some callerBody := by
-  exact ⟨by kernel_rfl, by kernel_rfl, by kernel_rfl⟩
+  exact ⟨by cbv, by cbv, by cbv⟩
 
-theorem lowered_some : (lowerAllg unit).toOption.isSome = true := by decide +kernel
+theorem lowered_some : (lowerAllg unit).toOption.isSome = true := by
+  apply Gabbro.Grammatik.Uebersetzung.LibraryFixtureProofs.lowering_ok
+  · rfl
+  · cbv
+  · rintro ⟨index, bound⟩
+    have small : index < 3 := bound
+    have choices : index = 0 ∨ index = 1 ∨ index = 2 := by omega
+    rcases choices with rfl | rfl | rfl
+    all_goals constructor <;> cbv
 
 def program : Programm (declOf unit) := ((lowerAllg unit).toOption.get lowered_some).1
 def functions : List (declOf unit).Fn := ((lowerAllg unit).toOption.get lowered_some).2
 
 theorem lowered : lowerAllg unit = .ok (program, functions) := except_ok_get lowered_some
 
-theorem translated : uebersetzeAllg source = .ok ⟨unit, program, functions⟩ := by kernel_rfl
+private def scanned : { tokens : List Parser.Token // Parser.lex source = .ok tokens } := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
+private def parsed : { items : List Parser.SItemTief //
+    Parser.parseTopTief scanned.val = .ok items } := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
+private theorem exported : elabU (pre108 parsed.val) = .ok unit := by cbv
+
+theorem translated : uebersetzeAllg source = .ok ⟨unit, program, functions⟩ :=
+  witness_translation scanned.property parsed.property exported lowered
 
 /-- Initializer seven is retained even though the declared range excludes zero. -/
 theorem initial_value_zeuge : nullB unit = true ∧
     ∀ hn : nullB unit = true,
       valOf ((declOf unit).gtyp ⟨0, by decide⟩) ((nullSp unit hn).globs ⟨0, by decide⟩) = .int 7 := by
-  refine ⟨by decide +kernel, fun hn => ?_⟩
-  kernel_rfl
+  refine ⟨by cbv, fun hn => ?_⟩
+  cbv
 
 /-- Unsupported static kinds and an out-of-range initializer keep explicit refusal gates. -/
 theorem static_refusals_zeuge :
@@ -103,24 +125,18 @@ theorem static_refusals_zeuge :
     staticsB { unit with globs := [{ name := "array", ty := .wert (.arr (.int 0 10) 1), init := 0 }] } = false ∧
     staticsB { unit with globs := [{ name := "atomic", ty := .int 0 10, init := 0, atomic := true }] } = false ∧
     nullB { unit with globs := [{ name := "outside", ty := .int 3 10, init := 0 }] } = false := by
-  decide +kernel
+  cbv
 
 /-- O43 is proved over every matching computed signature of all three lowered functions. -/
 theorem interfaces : SchnittstellenPflicht unit := by
-  intro P fs hlow c n hf
-  have hp : program = P := congrArg Prod.fst (Except.ok.inj (lowered.symm.trans hlow))
-  subst P
-  have hn : n < 3 := by
-    have hh := passtAt_lt unit c n hf
-    have hl : (sigFns unit).length = 3 := by kernel_rfl
-    rw [hl] at hh
-    exact hh
-  rcases c with ⟨_ | _ | _ | c, hc⟩
-  all_goals try (have hh : c + 3 < 3 := hc; omega)
-  all_goals rcases n with _ | _ | _ | n
-  all_goals try omega
-  all_goals refine ⟨fun s0 ρ _ => ?_, fun s0 s1 ρ v _ _ => ?_⟩
-  all_goals (kernel_change (true = true); rfl)
+  apply witness_interfaces_empty
+  · rintro ⟨index, bound⟩
+    have small : index < 3 := bound
+    have choices : index = 0 ∨ index = 1 ∨ index = 2 := by omega
+    rcases choices with rfl | rfl | rfl
+    all_goals cbv
+  · intro n
+    rcases n with _ | _ | _ | n <;> constructor <;> cbv
 
 theorem writer_meets : meetsU unit (wfU unit) writer writerBody := by
   intro ρB s hW _
@@ -128,10 +144,10 @@ theorem writer_meets : meetsU unit (wfU unit) writer writerBody := by
   refine ⟨⟨Gabbro.Body.store s.world (.global "counter") (.int 9), s.local'⟩, rfl, ?_⟩
   apply Gabbro.Body.WF_store (shapeOfUG unit) s.world (.global "counter") (.int 9) hW
   intro sh hsh
-  have hs : shapeOfUG unit (.global "counter") = some (.intIn 3 10) := by kernel_rfl
+  have hs : shapeOfUG unit (.global "counter") = some (.intIn 3 10) := by cbv
   rw [hs] at hsh
   cases hsh
-  decide +kernel
+  cbv
 
 theorem reader_meets : meetsU unit (wfU unit) reader readerBody := by
   intro ρB s hW _
@@ -142,10 +158,10 @@ theorem caller_meets : meetsU unit (wfU unit) caller callerBody := by
   intro ρB s hW _
   change Gabbro.Body.Contract ρB "read_counter" (preProp (wfU unit) reader)
       (fun s s' r => (postU unit (wfU unit) reader s s' r).getD False) →
-    Gabbro.Body.Frame ρB "read_counter" [] →
+    Gabbro.Body.Frame ρB "read_counter" [callClock] →
     Gabbro.Body.Contract ρB "write_counter" (preProp (wfU unit) writer)
       (fun s s' r => (postU unit (wfU unit) writer s s' r).getD False) →
-    Gabbro.Body.Frame ρB "write_counter" ["counter"] →
+    Gabbro.Body.Frame ρB "write_counter" ["counter", callClock] →
     ∃ s', Gabbro.Body.finalState (Gabbro.Body.exec ρB callerBody s) = some s' ∧ wfU unit s'
   intro hread _ hwrite _
   let t0 : Gabbro.Body.State := ⟨s.world, fun _ => .absent⟩
@@ -167,13 +183,13 @@ theorem duties : ∀ c : Fin unit.fns.length, ∃ bs,
     omega
 
 theorem all_duties : PflichtenAlle source :=
-  ⟨unit, uOf_eq translated, (by decide +kernel), (by decide +kernel),
-    (by decide +kernel), (by decide +kernel), (by decide +kernel), interfaces, duties⟩
+  ⟨unit, uOf_eq translated, (by cbv), (by cbv),
+    (by cbv), (by cbv), (by cbv), interfaces, duties⟩
 
 theorem carried_duties : PflichtenTeilG source (u := unit) (fun _ => True) := by
-  refine ⟨uOf_eq translated, (by decide +kernel),
-    getragenG_of_bools (by decide +kernel) (by decide +kernel) (by decide +kernel),
-    (by decide +kernel), fun P fs hlow c _ => interfaces P fs hlow c,
+  refine ⟨uOf_eq translated, (by cbv),
+    getragenG_of_bools (by cbv) (by cbv) (by cbv),
+    (by cbv), fun P fs hlow c _ => interfaces P fs hlow c,
     fun c _ => duties c, ?_⟩
   intro c hc
   exact (hc True.intro).elim

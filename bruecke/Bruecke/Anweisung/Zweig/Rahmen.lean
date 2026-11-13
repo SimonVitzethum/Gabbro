@@ -1,6 +1,7 @@
 module
 public import Bruecke.Anweisung.Zweig.Schritt
 public import Bruecke.Anweisung.Lokal.Rahmen
+public import Bruecke.Anweisung.Ruf.Rahmen
 @[expose] public section
 
 /-!
@@ -41,6 +42,19 @@ inductive Statisch (ρB : Gabbro.Body.Env) (puts : List String) : List Gabbro.Bo
   | ite (ce : Gabbro.Body.Expr) (tb te xs : List Gabbro.Body.Stmt) :
       Statisch ρB puts tb → Statisch ρB puts te → Statisch ρB puts xs →
       Statisch ρB puts (.ite ce tb te :: xs)
+  | bindCall (x cn : String) (ps : List String) (es : List Gabbro.Body.Expr)
+      (pre : Gabbro.Body.Expr) (xs : List Gabbro.Body.Stmt) :
+      (∀ t p, p.carrier ∉ puts → (ρB cn t).1.world p = t.world p) →
+      Statisch ρB puts xs → Statisch ρB puts (.bindCall x cn ps es pre :: xs)
+  | forEach (x : String) (indices : List Int) (body xs : List Gabbro.Body.Stmt) :
+      Statisch ρB puts body → Statisch ρB puts xs →
+      Statisch ρB puts (.forEach x indices body :: xs)
+
+  /-- A selected structured step with an explicit frame proof composes with the rest. -/
+  | selected (x : Gabbro.Body.Stmt) (xs : List Gabbro.Body.Stmt) :
+      (∀ t s', Gabbro.Body.finalState (Gabbro.Body.step ρB x t) = some s' →
+        ∀ p, p.carrier ∉ puts → s'.world p = t.world p) →
+      Statisch ρB puts xs → Statisch ρB puts (x :: xs)
 
 /-- A branch that runs, then the rest: each keeps the places outside `puts`. -/
 theorem rahmen_zweig {ρB : Gabbro.Body.Env} {puts : List String} {x : Gabbro.Body.Stmt}
@@ -152,6 +166,30 @@ theorem exec_statisch {ρB : Gabbro.Body.Env} {puts : List String} {bs : List Ga
         simp only [Gabbro.Body.exec, hs]
       rw [h'] at h
       simp [Gabbro.Body.finalState] at h
+  | bindCall x cn ps es pre xs hfr _ ih =>
+    intro t s' h p hp
+    rcases step_bindCall ρB x cn ps es pre t with hs | ⟨t', v, ht', hs⟩
+    · simp [Gabbro.Body.exec, hs, Gabbro.Body.finalState] at h
+    · simp only [Gabbro.Body.exec, hs] at h
+      rw [ih _ s' h p hp]
+      show (ρB cn t').1.world p = t.world p
+      rw [hfr t' p hp, ht']
+  | selected x xs hx _ ih =>
+    intro t s' h p hp
+    cases hs : Gabbro.Body.step ρB x t with
+    | running t1 =>
+      simp only [Gabbro.Body.exec, hs] at h
+      exact (ih t1 s' h p hp).trans (hx t t1 (by simp only [hs, Gabbro.Body.finalState]) p hp)
+    | returned t1 v | exited t1 | left t1 =>
+      simp only [Gabbro.Body.exec, hs] at h
+      exact hx t s' (by rw [hs]; exact h) p hp
+    | stuck => simp only [Gabbro.Body.exec, hs, Gabbro.Body.finalState, reduceCtorEq] at h
+  | forEach x indices body xs _ _ ihb ihx =>
+    intro t s' h
+    apply rahmen_zweig (Gabbro.Body.exec_singleton ρB (.forEach x indices body) t).symm
+      (fun t s' h p hp => Gabbro.Body.forEach_frame ρB x body p
+        (fun a b he => ihb a b he p hp) indices t s'
+        (by simpa only [Gabbro.Body.exec_singleton] using h)) ihx h
 
 theorem statisch_rets {ρB : Gabbro.Body.Env} {puts : List String} :
     ∀ (eB : List Gabbro.Body.Stmt), (∀ x ∈ eB, ∃ e, x = .ret (some e)) → Statisch ρB puts eB

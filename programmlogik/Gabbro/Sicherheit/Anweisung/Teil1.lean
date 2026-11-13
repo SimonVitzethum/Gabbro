@@ -162,6 +162,7 @@ theorem WFU_binde {Δ Δ' : Umgebung} {β : Binding} {n : String} {g : Ge} {v : 
       · simpa [bindLocal, hmn] using hw m g' hm
     · cases h
 
+mutual
 /-- Passt ein gerechneter Wert in die Gestalt des Ziels? Das ist `M104` an der Zuweisung:
     ein Bereich in einen weiteren, eine Zahl ohne Bereich nur in `.int`. -/
 def passt : Shape → Shape → Bool
@@ -171,8 +172,19 @@ def passt : Shape → Shape → Bool
   | .bool, .bool => true
   | .opt, .opt => true
   | .sum a, .sum b => decide (a = b)
+  | .record a, .record b => passtFelder a b
   | _, _ => false
+termination_by structural a _ => a
 
+/-- Record assignment checks every position and refuses different arities. -/
+def passtFelder : List Shape → List Shape → Bool
+  | [], [] => true
+  | a :: as, b :: bs => passt a b && passtFelder as bs
+  | _, _ => false
+termination_by structural as _ => as
+end
+
+mutual
 theorem passt_hasShape {a b : Shape} {v : Value} (hp : passt a b = true) (hv : v.hasShape a = true) :
     v.hasShape b = true := by
   cases a <;> cases b <;> simp only [passt, Bool.false_eq_true, Bool.decide_and, Bool.and_eq_true, decide_eq_true_eq] at hp
@@ -182,6 +194,35 @@ theorem passt_hasShape {a b : Shape} {v : Value} (hp : passt a b = true) (hv : v
   · obtain ⟨n, rfl, h1, h2⟩ := Value.hasShape_intIn_true v _ _ hv; simp only [Value.hasShape]
   · obtain ⟨n, rfl, h1, h2⟩ := Value.hasShape_intIn_true v _ _ hv; simp only [Value.hasShape, Bool.decide_and, Bool.and_eq_true, decide_eq_true_eq]; omega
   · subst hp; exact hv
+  · rename_i as bs
+    obtain ⟨vs, rfl, hlen, hf⟩ := Value.hasShape_rec_true v as hv
+    obtain ⟨hlen', hf'⟩ := passtFelder_hasShape hp hf
+    simp [hlen, hlen', hf']
+termination_by structural a
+
+theorem passtFelder_hasShape {as bs : List Shape} {vs : List Value}
+    (hp : passtFelder as bs = true) (hv : Value.fieldsHaveShape vs as = true) :
+    as.length = bs.length ∧ Value.fieldsHaveShape vs bs = true := by
+  cases as with
+  | nil =>
+      cases bs with
+      | nil => exact ⟨rfl, hv⟩
+      | cons b bs => simp only [passtFelder, Bool.false_eq_true] at hp
+  | cons a as =>
+      cases bs with
+      | nil => simp only [passtFelder, Bool.false_eq_true] at hp
+      | cons b bs =>
+          have hh := Bool.and_eq_true_iff.mp hp
+          cases vs with
+          | nil => simp only [Value.fieldsHaveShape_nil_cons, Bool.false_eq_true] at hv
+          | cons v vs =>
+              have hvs := Bool.and_eq_true_iff.mp hv
+              obtain ⟨hlen, hf⟩ := passtFelder_hasShape hh.2 hvs.2
+              exact ⟨by simp only [List.length_cons, hlen], by
+                simp only [Value.fieldsHaveShape_cons_cons,
+                  passt_hasShape hh.1 hvs.1, hf, Bool.true_and]⟩
+termination_by structural as
+end
 
 /-- Ein Wert in ein ZIEL, das eine Gestalt tragen kann oder nicht: traegt es keine, ist
     jeder Wert recht (die Stelle ist untypisiert, `WF` fragt sie nicht). -/

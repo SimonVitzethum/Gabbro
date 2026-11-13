@@ -255,6 +255,7 @@ theorem pruefe_sicher_bindCallElse (P : Programm) (Γ : Typing) (ρ : Env) (hD :
                   | absent => exact bindCallElse_wert h hres hr2 (by simp only [ne_eq, reduceCtorEq, not_false_eq_true, implies_true]) hw' hl
                   | present k => exact bindCallElse_wert h hres hr2 (by simp only [ne_eq, reduceCtorEq, not_false_eq_true, implies_true]) hw' hl
                   | tagged t q => exact bindCallElse_wert h hres hr2 (by simp only [ne_eq, reduceCtorEq, not_false_eq_true, implies_true]) hw' hl
+                  | record vs => exact bindCallElse_wert h hres hr2 (by simp only [ne_eq, reduceCtorEq, not_false_eq_true, implies_true]) hw' hl
           · cases h
         · cases h
   · cases h

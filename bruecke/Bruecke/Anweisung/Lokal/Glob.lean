@@ -11,10 +11,10 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
 variable {u : UProg}
 
 /-- A successfully lowered numeric store carries a declared static write right. -/
-theorem lowAssignGlob_writes (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn}
+theorem lowAssignGlob_writes {loopMode : Bool} (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn}
     {Λ : List (Res (declOf u))} {n : String} {v : USide}
-    {gst : Stmt (declOf u) (verOf u c) false Γ Λ Λ}
-    (h : lowAssignGlobL (l := false) u c Γ fn Λ n v = .ok gst)
+    {gst : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ}
+    (h : lowAssignGlobL (l := loopMode) u c Γ fn Λ n v = .ok gst)
     (hNumeric : NumericStatics u) : n ∈ (fnAt u c).gputs := by
   unfold lowAssignGlobL at h
   split at h
@@ -40,10 +40,10 @@ theorem lowAssignGlob_writes (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn}
 /-- A numeric static write reads through the positional scope, updates the Body world,
     and re-establishes the combined relation. The canonical lowering checks write rights
     and guards; neither is reconstructed from the source spelling. -/
-theorem lowAssignGlob_sim (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames}
+theorem lowAssignGlob_sim {loopMode : Bool} (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames}
     {Λ : List (Res (declOf u))} {n : String} {v : USide}
-    {gst : Stmt (declOf u) (verOf u c) false Γ Λ Λ} {bst : Gabbro.Body.Stmt}
-    (h : lowAssignGlobL (l := false) u c Γ fn Λ n v = .ok gst)
+    {gst : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ} {bst : Gabbro.Body.Stmt}
+    (h : lowAssignGlobL (l := loopMode) u c Γ fn Λ n v = .ok gst)
     (hb : namedStmt u fn ns (.assignGlob n v) = some bst)
     (hNumeric : NumericStatics u) (hU : UmfangB Γ fn ns) (hT : TabEindeutig u)
     (O : Orakel (declOf u)) (passes : Nat)
@@ -73,8 +73,7 @@ theorem lowAssignGlob_sim (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : Bod
             cases h
             have hty : (declOf u).gtyp i = .int lo hi' := by
               change (globAt u i).ty.toTy = _
-              rw [ht]
-              rfl
+              rw [ht] <;> rfl
             let e2 : Expr (declOf u) Γ Λ ((declOf u).gtyp i) := by rw [hty]; exact ev
             have he2 : HEq e2 ev := mpr_heq _ _
             let σl := σ.lese Λ e2.orte

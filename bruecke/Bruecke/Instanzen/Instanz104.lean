@@ -104,7 +104,7 @@ theorem start : Gabbro.Grammatik.Zielsatz.StartPflicht Gabbro.Grammatik.Einheit1
     per-unit `rfl` checks above tie to the Lean computation. The conclusion is premise (b) of the
     goal theorem for the chain's unit `E4`. -/
 
-theorem wfU_eq : wfU u = wellFormed := by rw [wf_eq]; rfl
+theorem wfU_eq : wfU u = wellFormed := by rw [wf_eq] <;> rfl
 
 /-- Every duty of the unit, as the bridge states it: GabbroV's proofs. -/
 theorem meets_alle : ∀ c : Fin u.fns.length, ∃ body, zuBodyZ u (fnAt u c) = some body ∧

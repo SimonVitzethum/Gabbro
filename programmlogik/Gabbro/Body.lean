@@ -99,6 +99,8 @@
 -/
 
 module
+public import Gabbro.Body.Traverse
+public import Gabbro.Body.Finite
 
 public import Gabbro.Body.Teil1
 public import Gabbro.Body.Teil2
@@ -108,3 +110,6 @@ public import Gabbro.Body.Teil5
 public import Gabbro.Body.Teil6
 public import Gabbro.Body.Teil7
 public import Gabbro.Body.Teil8
+public import Gabbro.Body.Teil9Rec
+public import Gabbro.Body.Teil10RecRegeln
+public import Gabbro.Body.Teil11RecZeuge

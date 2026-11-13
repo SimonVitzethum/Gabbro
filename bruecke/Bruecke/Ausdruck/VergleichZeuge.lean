@@ -1,7 +1,7 @@
 module
 
 public import Bruecke.Ausdruck.Teil3
-public import Bruecke.Anweisung.Zweig.Uebersetzung
+public import Bruecke.Anweisung.Lokal.Kopf
 public import Bruecke.Anweisung.Zweig.Benannt
 import Grammatik.Kern.Taktik.KernelRfl
 

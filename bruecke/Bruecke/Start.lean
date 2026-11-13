@@ -58,8 +58,7 @@ theorem startPflicht_wahr {D : Deklaration} (E : Einheit D)
     (hS : ∀ L, E.S.inv L E.sp0 = true) (hR : ∀ f, E.P.requires f = .tru) : StartPflicht E :=
   ⟨hS, fun a _ => by
     unfold ReqAmEintritt
-    rw [hR]
-    rfl⟩
+    rw [hR] <;> rfl⟩
 
 end Gabbro.Bruecke
 

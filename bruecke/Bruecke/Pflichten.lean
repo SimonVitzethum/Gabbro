@@ -1,6 +1,7 @@
 module
 public import Grammatik.Parser.Elab.Uebersetze
 public import Gabbro.Body
+public import Bruecke.Ausdruck.RecordData
 public import Grammatik.Parser.Elab.Generic.SignatureData
 @[expose] public section
 
@@ -16,10 +17,12 @@ source text in Lean -- so a wrong Rust print is a failed per-unit check (`Instan
 a wrong theorem. The definitions here are the reference; the Rust printer is checked against them.
 
 FRAGMENT: numeric module-static and slot writes through a pointer or at a table, direct calls with scalar or
-capability arguments, a trailing numeric or void `return`, and numeric `ensures` comparisons
-and their boolean combinations. This is a subset of the Lean parser's output. Products,
+capability and bool arguments, numeric/bool local bindings and assignments, bool conditions,
+scalar, record or void returns, and numeric `ensures` comparisons and bool variables with boolean combinations. This is a subset of the Lean parser's output.
 indirect/fallible/foreign call binders, consuming traversals, scoped returns and required
 narrowing have no Body representation here: the readers' catch-all arms return `none`.
+The positional reader in `Anweisung/Lokal/Benannt` also carries scalar direct-result
+bindings. Its shared call discovery includes those calls in contracts, closure and rank checks.
 -/
 
 open Gabbro.Grammatik.Parser.Uebersetze
@@ -79,23 +82,27 @@ def numericParam (f : UFn) (p : String) : Bool :=
   | some (_, .int ..) => true
   | _ => false
 
+/-- Assignment supports value parameters; capability parameters remain protected. -/
+def assignableParam (f : UFn) (p : String) : Bool :=
+  numericParam f p || (valueParamTy f p).isSome
+
 /-- A scalar side outside an `ensures`: no `old` or `erg`. Integer arithmetic and bit
     operations use Body's exact integer operators; a widening conversion retains its number.
     Capability values are represented only by `argExpr`'s pointer-argument cases. -/
-def sideExpr (u : UProg) (f : UFn) : USide → Option Expr
+def numericSideExpr (u : UProg) (f : UFn) : USide → Option Expr
   | .lit n => some (.lit (.int n))
   | .param p => if numericParam f p then some (.name p) else none
   | .slot p fld i => slotPlace u f (.slot p fld i)
   | .tab t fld i => slotPlace u f (.tab t fld i)
   | .old .. => none
   | .erg => none
-  | .add a b => binE .add (sideExpr u f a) (sideExpr u f b)
-  | .sub a b => binE .sub (sideExpr u f a) (sideExpr u f b)
-  | .mul a b => binE .mul (sideExpr u f a) (sideExpr u f b)
-  | .conv _ _ a => sideExpr u f a
-  | .band a b => binE .band (sideExpr u f a) (sideExpr u f b)
-  | .bor a b => binE .bor (sideExpr u f a) (sideExpr u f b)
-  | .bxor a b => binE .bxor (sideExpr u f a) (sideExpr u f b)
+  | .add a b => binE .add (numericSideExpr u f a) (numericSideExpr u f b)
+  | .sub a b => binE .sub (numericSideExpr u f a) (numericSideExpr u f b)
+  | .mul a b => binE .mul (numericSideExpr u f a) (numericSideExpr u f b)
+  | .conv _ _ a => numericSideExpr u f a
+  | .band a b => binE .band (numericSideExpr u f a) (numericSideExpr u f b)
+  | .bor a b => binE .bor (numericSideExpr u f a) (numericSideExpr u f b)
+  | .bxor a b => binE .bxor (numericSideExpr u f a) (numericSideExpr u f b)
   | _ => none
 
 /-- Only numeric, non-atomic module statics belong to this bridge fragment. -/
@@ -104,7 +111,7 @@ def NumericStatics (u : UProg) : Prop :=
     (globAt u g).ty = .int lo hi ∧ (globAt u g).atomic = false
 
 /-- Numeric expressions including module statics; nonnumeric static access is refused by lowering. -/
-def sideExprG (u : UProg) (f : UFn) : USide → Option Expr
+def numericSideExprG (u : UProg) (f : UFn) : USide → Option Expr
   | .lit n => some (.lit (.int n))
   | .param p => if numericParam f p then some (.name p) else none
   | .slot p fld i => slotPlace u f (.slot p fld i)
@@ -118,14 +125,21 @@ def sideExprG (u : UProg) (f : UFn) : USide → Option Expr
           | .bool | .wert _ => none
   | .old .. => none
   | .erg => none
-  | .add a b => binE .add (sideExprG u f a) (sideExprG u f b)
-  | .sub a b => binE .sub (sideExprG u f a) (sideExprG u f b)
-  | .mul a b => binE .mul (sideExprG u f a) (sideExprG u f b)
-  | .conv _ _ a => sideExprG u f a
-  | .band a b => binE .band (sideExprG u f a) (sideExprG u f b)
-  | .bor a b => binE .bor (sideExprG u f a) (sideExprG u f b)
-  | .bxor a b => binE .bxor (sideExprG u f a) (sideExprG u f b)
+  | .add a b => binE .add (numericSideExprG u f a) (numericSideExprG u f b)
+  | .sub a b => binE .sub (numericSideExprG u f a) (numericSideExprG u f b)
+  | .mul a b => binE .mul (numericSideExprG u f a) (numericSideExprG u f b)
+  | .conv _ _ a => numericSideExprG u f a
+  | .band a b => binE .band (numericSideExprG u f a) (numericSideExprG u f b)
+  | .bor a b => binE .bor (numericSideExprG u f a) (numericSideExprG u f b)
+  | .bxor a b => binE .bxor (numericSideExprG u f a) (numericSideExprG u f b)
   | _ => none
+
+/-- Source values, including positional nominal records; the scalar reader is shared. -/
+def sideExpr (u : UProg) (f : UFn) (sd : USide) : Option Expr :=
+  (recordRead u f (numericSideExpr u f) sd).map (·.2)
+
+def sideExprG (u : UProg) (f : UFn) (sd : USide) : Option Expr :=
+  (recordRead u f (numericSideExprG u f) sd).map (·.2)
 
 /-- An `ensures` side, numbering the `old(..)` reads met so far: the term, the reads in order,
     whether `result` occurs. -/
@@ -139,7 +153,7 @@ def ensSide (u : UProg) (f : UFn) (a : Acc) : USide → Option (Expr × Acc)
   | .erg => some (.name "result", { a with result := true })
   -- Pure arithmetic reuses the scalar reader without changing the accumulator. Nested
   -- `old`/`result` still have no scalar form and are refused by `sideExprG`.
-  | s => (sideExprG u f s).map (fun e => (e, a))
+  | s => (numericSideExprG u f s).map (fun e => (e, a))
 
 def opOf : String → Option BinOp
   | "==" => some .eq | "<" => some .lt | "<=" => some .le
@@ -148,6 +162,7 @@ def opOf : String → Option BinOp
 def ensExpr (u : UProg) (f : UFn) (a : Acc) : UEns → Option (Expr × Acc)
   | .tru => some (.lit (.bool true), a)
   | .fls => some (.lit (.bool false), a)
+  | .var p => some (.name p, a)
   | .cmp op l r =>
       match opOf op, ensSide u f a l with
       | some o, some (le, a1) =>
@@ -173,17 +188,16 @@ def ensExpr (u : UProg) (f : UFn) (a : Acc) : UEns → Option (Expr × Acc)
       match ensExpr u f a x with
       | some (xe, a1) => some (.un .not xe, a1)
       | none => none
-  -- A `bool` slot read has no bridge form yet (Body's shapes know numbers only): REFUSED by name,
-  -- so `postU` is `none` and the duty is false, never weaker. (A unit with a bool field or a bool
-  -- result is refused up front by `stimmigB`'s `keinBoolB`.)
+  -- Bool fields have no slot encoding in this bridge and remain refused by name.
   | .slotB .. | .tabB .. => none
   | _ => none
 
-/-! ## 2. Shapes, the precondition, the frame -/
+def rawCond (u : UProg) (fn : UFn) (c : UEns) : Option Gabbro.Body.Expr :=
+  match ensExpr u fn {} c with
+  | some (x, a) => if a.olds.length = 0 ∧ a.result = false then some x else none
+  | none => none
 
-def shapeOfTy : Ty → Option Shape
-  | .int lo hi => some (.intIn lo hi)
-  | _ => none
+/-! ## 2. Shapes, the precondition, the frame -/
 
 /-- `conj`: right-nested `and`, the empty conjunction is `true` (as the printer writes it). -/
 def conjE : List Expr → Expr
@@ -192,7 +206,7 @@ def conjE : List Expr → Expr
   | e :: es => .bin .and e (conjE es)
 
 def shapeConjuncts (f : UFn) : List Expr :=
-  f.params.filterMap (fun q => (shapeOfTy q.2).map (fun sh => Expr.hasShape q.1 sh))
+  f.params.filterMap (fun q => entryCheck q.1 q.2)
 
 /-- `requires`: the fragment states `Held(L)` only, one clause per held lock, and it reads as
     `true` (a held lock is the caller's duty, carried by the lock rule, not by the value). -/
@@ -218,6 +232,7 @@ def argExpr (u : UProg) (f : UFn) : UArg → Option Expr
   | .var p => some (.name p)
   | .freshPtr tab _ => (ptrParam u f tab).map (fun p => .name p)
   | .val s => sideExprG u f s
+  | .bval b => rawCond u f b
   | _ => none
 
 def argsExpr (u : UProg) (f : UFn) : List UArg → Option (List Expr)
@@ -278,9 +293,18 @@ def clauseProp (t : Expr) (a : Acc) (s s' : State) (r : Option Value) : Prop :=
 def ensClause (u : UProg) (f : UFn) (e : UEns) (s s' : State) (r : Option Value) : Option Prop :=
   (ensExpr u f {} e).map (fun p => clauseProp p.1 p.2 s s' r)
 
-/-- The answer clause: the declared range of the result. -/
+/-- Whether an aggregate result has a complete representable shape. -/
+def resultTypeB (f : UFn) : Bool :=
+  match f.resTy with
+  | none => true
+  | some ty => (shapeOfTy ty).isSome
+
+/-- The declared result shape, including all fields of a record result. -/
 def resultClause (f : UFn) (r : Option Value) : Option Prop :=
-  f.res.map (fun lr => ∃ x, r = some (.int x) ∧ lr.1 ≤ x ∧ x ≤ lr.2)
+  match f.resTy with
+  | some ty => (shapeOfTy ty).map (fun sh => ∃ v, r = some v ∧ v.hasShape sh = true)
+  | none => if f.resBool then some (∃ b, r = some (.bool b))
+    else f.res.map (fun lr => ∃ x, r = some (.int x) ∧ lr.1 ≤ x ∧ x ≤ lr.2)
 
 /-- All clauses of the promise beyond well-formedness, in the printer's order. `False`-free:
     a clause outside the fragment makes `ensList` answer `none`. -/
@@ -322,12 +346,62 @@ def sortDedup : List String → List String
   | [] => []
   | x :: xs => insertS x (sortDedup xs)
 
-/-- The callees of the body, in the printer's order (sorted by name, each once). -/
-def calleesOf (f : UFn) : List String :=
-  sortDedup (f.body.filterMap (fun s => match s with | .call g _ => some g | _ => none))
+/-- Every direct call, including a call whose answer is bound. -/
+def directCall : UStmt → Option (String × List UArg)
+  | .call g args | .bindCall _ g args => some (g, args)
+  | _ => none
 
-/-- Body frames name all world carriers, including module statics. -/
-def writesU (f : UFn) : List String := f.puts ++ f.gputs
+def CallsIn (ss : List UStmt) (g : String) (args : List UArg) : Prop :=
+  ∃ st ∈ ss, directCall st = some (g, args)
+
+theorem CallsIn.discard {ss : List UStmt} {g : String} {args : List UArg}
+    (h : UStmt.call g args ∈ ss) : CallsIn ss g args := ⟨_, h, rfl⟩
+
+theorem CallsIn.bind {ss : List UStmt} {g x : String} {args : List UArg}
+    (h : UStmt.bindCall x g args ∈ ss) : CallsIn ss g args := ⟨_, h, rfl⟩
+
+theorem CallsIn.mono {ss ts : List UStmt} {g : String} {args : List UArg}
+    (h : CallsIn ss g args) (hm : ∀ st ∈ ss, st ∈ ts) : CallsIn ts g args := by
+  obtain ⟨st, hs, hc⟩ := h
+  exact ⟨st, hm st hs, hc⟩
+
+theorem CallsIn.cons {ss : List UStmt} {g : String} {args : List UArg}
+    (h : CallsIn ss g args) (st : UStmt) : CallsIn (st :: ss) g args :=
+  h.mono (fun _ hm => List.mem_cons_of_mem st hm)
+
+theorem CallsIn.tail {ss : List UStmt} {g : String} {args : List UArg} {st : UStmt}
+    (hn : directCall st = none) (h : CallsIn (st :: ss) g args) : CallsIn ss g args := by
+  obtain ⟨s, hm, hc⟩ := h
+  rcases List.mem_cons.mp hm with rfl | hm
+  · rw [hn] at hc
+    cases hc
+  · exact ⟨s, hm, hc⟩
+
+theorem CallsIn.head_or_tail {ss : List UStmt} {g : String} {args : List UArg} {st : UStmt}
+    (h : CallsIn (st :: ss) g args) :
+    directCall st = some (g, args) ∨ CallsIn ss g args := by
+  obtain ⟨s, hm, hc⟩ := h
+  rcases List.mem_cons.mp hm with rfl | hm
+  · exact .inl hc
+  · exact .inr ⟨s, hm, hc⟩
+
+/-- The callees of the body, sorted by name, each once. -/
+def calleesOf (f : UFn) : List String :=
+  sortDedup (f.body.filterMap (fun s => (directCall s).map Prod.fst))
+
+/-- A proof-only carrier: source expressions cannot read its field `#`. Each call may
+    advance this clock, including a pure call. It separates answer-table keys without
+    changing any canonical table/static write right. -/
+def callClock : String := "#bridge:call"
+
+/-- Body frames contain the source carriers and the private answer-table clock. -/
+def writesU (f : UFn) : List String := f.puts ++ (f.gputs ++ [callClock])
+
+theorem writesU_table {f : UFn} {w : String} (h : w ∈ f.puts) : w ∈ writesU f :=
+  List.mem_append_left _ h
+
+theorem writesU_global {f : UFn} {w : String} (h : w ∈ f.gputs) : w ∈ writesU f :=
+  List.mem_append_right _ (List.mem_append_left _ h)
 
 /-- The callee hypotheses in front of the turnstile: contract and frame of every callee. -/
 def hyps (u : UProg) (wf : State → Prop) (ρ : Env) : List String → Prop → Prop

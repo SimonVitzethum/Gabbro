@@ -92,7 +92,7 @@ theorem start : Gabbro.Grammatik.Zielsatz.StartPflicht Gabbro.Grammatik.Einheit1
 theorem wf_eq : wellFormed = fun s => Gabbro.Body.WF (shapeOfUG u) s.world := by
   funext s; unfold wellFormed; rw [shape_eq]
 
-theorem wfU_eq : wfU u = wellFormed := by rw [wf_eq]; rfl
+theorem wfU_eq : wfU u = wellFormed := by rw [wf_eq] <;> rfl
 
 /-- Every duty of the unit, as the bridge states it: GabbroV's proofs. -/
 theorem meets_alle : ∀ c : Fin u.fns.length, ∃ body, zuBodyZ u (fnAt u c) = some body ∧

@@ -2,6 +2,7 @@ module
 
 public import Lean
 public import Gabbro.Body.Teil2
+public import Gabbro.Body.TraverseRun
 
 @[expose] public section
 
@@ -117,6 +118,13 @@ inductive Stmt where
       to hold, and no pass follows (`iterate` stops). A `return` inside a loop is desugared
       to this by the emitter, with the value in a local. -/
   | leave
+  /-- Operational finite traversal. The ordered indices are explicit; the binder is local
+      to the translation. Returns propagate, `next` continues and `leave` finishes. -/
+  | forEach (binder : String) (indices : List Int) (body : List Stmt)
+  /-- Finite operational retry. `stop` is tested before the first pass and after the
+      last; exhaustion runs `onExceeded`. `next` continues, `leave` finishes and return
+      propagates. The fuel is the source's static bound. -/
+  | retry (fuel : Nat) (stop : Expr) (body onExceeded : List Stmt)
   deriving Repr
 
 /-- **What every routine of the program does, as a map from name to state transformer.**
@@ -235,14 +243,6 @@ def bindAll : List String → List Value → Binding → Binding
   | [], _, β => β
   | _, [], β => β
   | n :: ns, v :: vs, β => bindAll ns vs (bindLocal β n v)
-
-/-- Evaluate a list of expressions, or get stuck on the first that does. -/
-def evalAll (s : State) : List Expr → Option (List Value)
-  | [] => some []
-  | e :: es =>
-      match eval s e, evalAll s es with
-      | some v, some vs => some (v :: vs)
-      | _, _ => none
 
 /-- How a descent ends. **`stuck` is an outcome of its own and not a `running`** -- a model
     that conflated getting stuck with carrying on would prove things about a body that never
@@ -397,6 +397,23 @@ def step (ρ : Env) : Stmt → State → Outcome
       | none => .stuck
   | .exit, s => .exited s
   | .leave, s => .left s
+  | .forEach x indices body, s =>
+      traverseRun
+        (fun t => match exec ρ body t with
+          | .running t' | .exited t' => .inl t'
+          | .left t' => .inr (.running t')
+          | out => .inr out)
+        Outcome.running (fun t i => { t with local' := bindLocal t.local' x (.int i) }) indices s
+  | .retry fuel stop body onExceeded, s =>
+      retryRun
+        (fun t => match eval t stop with
+          | some (.bool b) => some b
+          | _ => none)
+        (fun t => match exec ρ body t with
+          | .running t' | .exited t' => .inl t'
+          | .left t' => .inr (.running t')
+          | out => .inr out)
+        Outcome.running (exec ρ onExceeded) Outcome.stuck fuel s
 
 def exec (ρ : Env) : List Stmt → State → Outcome
   | [], s => .running s

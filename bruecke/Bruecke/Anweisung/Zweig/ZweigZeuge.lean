@@ -3,7 +3,7 @@ public import Bruecke.Anweisung.Zweig.Schritt
 public import Bruecke.Anweisung.Zweig.Realisierung
 public import Bruecke.Anweisung.Lokal.SimulationB
 public import Bruecke.Quelle
-import Grammatik.Kern.Taktik.KernelRfl
+import Grammatik.Parser.Stmt.LibraryFixtureProofs
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -35,6 +35,9 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+import all Grammatik.Parser.Elab.UebersetzeAllg.Teil5
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest1
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Body
 @[expose] public section
 
 
@@ -59,7 +62,9 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 set_option maxRecDepth 100000
-set_option maxHeartbeats 2000000
+set_option maxHeartbeats 400000
+
+attribute [local cbv_eval] Nat.log2_def lowEns.eq_def lowCmp.eq_def lowWertE.eq_def
 
 def tafel : UTab := { name := "T", count := 2, cols := [("v", (0, 9))] }
 
@@ -84,15 +89,23 @@ def koerper : List Gabbro.Body.Stmt :=
 /-! ## 1. The translation and the decided checks -/
 
 /-- The translation reads both conditionals as Body `ite`, the early return as `ret`. -/
-theorem zuBodyZ_zeuge : zuBodyZ unit routine = some koerper := by kernel_rfl
+theorem zuBodyZ_zeuge : zuBodyZ unit routine = some koerper := by cbv
 
 
-theorem lowered_some : (lowerAllg unit).toOption.isSome = true := by decide +kernel
+theorem lowered_some : (lowerAllg unit).toOption.isSome = true := by
+  apply Gabbro.Grammatik.Uebersetzung.LibraryFixtureProofs.lowering_ok
+  · rfl
+  · cbv
+  · rintro ⟨index, bound⟩
+    have small : index < 1 := bound
+    have zero : index = 0 := by omega
+    subst index
+    all_goals constructor <;> cbv
 
 theorem checks_zeuge :
     nullB unit = true ∧ stimmigB unit = true ∧ bindFrischAllB unit = true ∧
       rangB unit (rangAuto unit) = true ∧ ohneTransitionB unit = true :=
-  ⟨by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel⟩
+  ⟨by cbv, by cbv, by cbv, by cbv, by cbv⟩
 
 /-! ## 2. The duty -/
 
@@ -114,15 +127,15 @@ theorem exec_halt (ρ : Gabbro.Body.Env) (x : Gabbro.Body.Stmt) (xs : List Gabbr
     Gabbro.Body.exec ρ (x :: xs) s = .returned s' v := by
   simp only [Gabbro.Body.exec, h]
 
-theorem pre_eq : preExpr routine = .hasShape "k" (.intIn 0 9) := by kernel_rfl
+theorem pre_eq : preExpr routine = .hasShape "k" (.intIn 0 9) := by cbv
 
 theorem post_eq (s s' : Gabbro.Body.State) (r : Option Gabbro.Body.Value) :
     (postU unit (wfU unit) routine s s' r).getD False =
       (wfU unit s' ∧ ∃ x, r = some (.int x) ∧ (0 : Int) ≤ x ∧ x ≤ 9) := rfl
 
-theorem shape0 : shapeOfUG unit (.slot "T" 0 "v") = some (.intIn 0 9) := by kernel_rfl
+theorem shape0 : shapeOfUG unit (.slot "T" 0 "v") = some (.intIn 0 9) := by cbv
 
-theorem shape1 : shapeOfUG unit (.slot "T" 1 "v") = some (.intIn 0 9) := by kernel_rfl
+theorem shape1 : shapeOfUG unit (.slot "T" 1 "v") = some (.intIn 0 9) := by cbv
 
 /-- **The duty of `pick`, proved**: from `k ∈ 0..9`, `k = 0` returns `0` at once; otherwise the
     conditional writes `T[0].v = k` (for `k < 5`) or `5`, the body writes `T[1].v = k` and returns

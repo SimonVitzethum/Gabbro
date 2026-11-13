@@ -74,7 +74,7 @@ theorem invPflichten_teil {u : UProg} {C : Fin u.fns.length → Prop} (S : Getra
     InvGutS P passes (axWahr (declOf u)) (SperrInv.leer (declOf u)) c ∧
     Zielsatz.InvGutGrund P passes (axWahr (declOf u)) (SperrInv.leer (declOf u)) c := by
   have hi : List.finRange u.invs.length = [] :=
-    List.eq_nil_of_length_eq_zero (by rw [List.length_finRange, S.ohneInv]; rfl)
+    List.eq_nil_of_length_eq_zero (by rw [List.length_finRange, S.ohneInv] <;> rfl)
   refine ⟨invGutS_leer hi c, ?_⟩
   intro O hR hL hQ U hU R hRR hOV σ ρ hreq σ' r hrun i him
   have him' : i ∈ List.finRange u.invs.length := him

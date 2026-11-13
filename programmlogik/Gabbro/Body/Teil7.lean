@@ -262,9 +262,9 @@ elab "gabbro_mul" : tactic => do
       catch _ => saved.restore
 
 open Lean Elab Tactic Meta in
-/-- **`gabbro_values` -- a callee's answer of a shape the model does not carry, by cases.**
+/-- **`gabbro_values` -- a callee's answer without a shape promise, by cases.**
     A `let x = f(a) else (e) { … }` reads the answer as `match some v with | reason e => …
-    | v => …`, and where `f`'s answer has no shape (a record value, a token) the promise
+    | v => …`, and where `f`'s promise carries no shape (a record or a token) it
     only says `∃ v, r = some v`: the `match` stands on a variable. It is split by its
     constructors here -- each arm is one program path, and the other steps close them. -/
 elab "gabbro_values" : tactic => do

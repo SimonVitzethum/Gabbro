@@ -118,6 +118,10 @@ def pruefe (P : Programm) (erg : Option Shape) : Umgebung → Stmt → Option Um
       | _, _ => none
   | Δ, .exit => some Δ
   | Δ, .leave => some Δ
+  -- Finite traversal is discharged by the source bridge's generic simulation.
+  -- This independent Body shape checker has no iteration typing rule yet.
+  | _, .forEach .. => none
+  | _, .retry .. => none
 
 def pruefeBlock (P : Programm) (erg : Option Shape) : Umgebung → List Stmt → Option Umgebung
   | Δ, [] => some Δ

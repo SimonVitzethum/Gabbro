@@ -1,5 +1,7 @@
 module
 public import Bruecke.Anweisung.Zweig.Lesen
+public import Bruecke.Anweisung.Bereich.Lesen
+public import Bruecke.Anweisung.Schleife.Lesen
 @[expose] public section
 
 namespace Gabbro.Bruecke
@@ -22,9 +24,19 @@ theorem schrittB_used {fn fn' : UFn} {ns ns' : BodyNames} {st : UStmt}
   case setVar x v =>
     obtain ⟨_, id, e, _, _, _, _, rfl⟩ := schrittB_setVar h
     exact fun _ hx => hx
+  case bindB x v =>
+    obtain ⟨e, _, _, _, rfl⟩ := schrittB_bindB h
+    exact BodyNames.used_push ns x
+  case bindCall x g args =>
+    obtain ⟨ty, _, _, rfl⟩ := schrittB_bindCall h
+    exact BodyNames.used_push ns x
+  case setVarB x v =>
+    obtain ⟨id, e, _, _, _, _, rfl⟩ := schrittB_setVarB h
+    exact fun _ hx => hx
   all_goals
     obtain ⟨_, _, rfl⟩ := schrittB_stmt h (fun _ _ _ h => by cases h)
       (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
     exact fun _ hx => hx
 
 /-- Returned histories include allocations from both arms and the continuation. -/
@@ -52,6 +64,16 @@ theorem seqZ_used : ∀ (k : Nat) (fn : UFn) (ns : BodyNames) (ss : List UStmt)
       case ret r =>
         obtain ⟨b, ys, _, hY, _⟩ := seqZ_ret_some h
         exact seqZ_used k fn ns ss ys rest used hY
+      case narrowBeg x lo hi =>
+        obtain ⟨e, err, tail, ys, _, _, hY, _⟩ := seqZ_narrow_some h
+        have hy := seqZ_used k (fn.mitBindung x (lo, hi)) (ns.push x) tail ys rest used hY
+        exact fun y hm => hy y (BodyNames.used_push ns x y hm)
+      case loopBeg x tab inv =>
+        obtain ⟨rfl, _, t, body, tail, allocated, ys, _, hB, hY, _⟩ := seqZ_loop_some h
+        have hBody := seqZ_used k (fn.mitIndex x t.val ((Gabbro.Grammatik.Parser.UebersetzeAllg.declOf u).count t))
+          (ns.push x) ss body _ allocated hB
+        have hTail := seqZ_used k fn (ns.resume allocated) tail ys rest used hY
+        exact fun y hy => hTail y (hBody y (BodyNames.used_push ns x y hy))
       all_goals
         simp only [seqZ] at h
         split at h
