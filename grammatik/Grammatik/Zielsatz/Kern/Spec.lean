@@ -424,8 +424,12 @@
   The run-level CallSitePflicht, PostDeckt and ForeignVertrag are unchanged.
   All existing goal statements retain their text and unconditional hardware
   premises; their proofs lift full-summary oracles into the conditional class.
-  The call-site goal and the proof that the actual binding inhabits this class
-  are staged separately; no such class-membership claim is made here.
+  The call-site goal remains staged. ForeignVertrag covers question-recorded
+  queries, whereas AxVertragOP quantifies over every world. Thus the actual
+  binding need not inhabit the body-duty class: CallSiteQuestionBlocker gives
+  a trace-faithful binding with a nontrivial passing pre and an on-pre body
+  that uses its summary, but a false answer at an unasked query. The proposed
+  direct class-membership step is invalid; no call-site goal is claimed here.
 -/
 module
 
