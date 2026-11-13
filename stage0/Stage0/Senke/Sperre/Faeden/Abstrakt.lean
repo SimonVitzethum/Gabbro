@@ -138,8 +138,8 @@ theorem Weg.ordnung {u : τ} {a d : Abs τ} (hw : Weg u a d) (ha : AbsOK a) (p :
   obtain ⟨b, c, h1, h2, h3⟩ := hw
   have hbq : b.queue = a.queue := by
     rcases h1 with h | ⟨_, h⟩
-    · exact (congrArg Abs.queue h).symm
-    · exact congrArg Abs.queue h
+    · exact (congrArg Abs.queue h :).symm
+    · exact (congrArg Abs.queue h :)
   have hall : ∀ x ∈ a.queue, x ∈ c.queue := by
     intro x hx
     rcases h2 with h | ⟨_, _, h⟩
@@ -159,19 +159,19 @@ theorem Weg.ordnung {u : τ} {a d : Abs τ} (hw : Weg u a d) (ha : AbsOK a) (p :
       rw [← h, h']
       show a.queue ++ [u] = b.queue ++ [u]
       rw [hbq]
-  · have hdq : d.queue = c.queue.tail := congrArg Abs.queue h
+  · have hdq : d.queue = c.queue.tail := (congrArg Abs.queue h :)
     obtain ⟨r, hr⟩ := List.head?_eq_some_iff.1 hq
     have hcq : c.queue = u :: d.queue := by
       rw [hdq, hr, List.tail_cons]
     rcases h2 with h' | ⟨hu, _, h'⟩
-    · have hac : a.queue = u :: d.queue := hbq.symm.trans ((congrArg Abs.queue h').trans hcq)
+    · have hac : a.queue = u :: d.queue := hbq.symm.trans ((congrArg Abs.queue h' :).trans hcq)
       have hn := ha.nodup
       rw [hac] at hn
       have hpu : ¬ p u = true := fun hpu' => (List.nodup_cons.1 hn).1 ((hp u).1 hpu')
       have e : a.queue.filter p = d.queue := by
         rw [hac, List.filter_cons_of_neg hpu, List.filter_eq_self.2 (fun x hx => (hp x).2 hx)]
       exact ⟨[], by rw [List.append_nil, e]⟩
-    · have hcq' : c.queue = b.queue ++ [u] := congrArg Abs.queue h'
+    · have hcq' : c.queue = b.queue ++ [u] := (congrArg Abs.queue h' :)
       rw [hbq] at hcq' hu
       have hae : a.queue = [] := by
         cases hq' : a.queue with

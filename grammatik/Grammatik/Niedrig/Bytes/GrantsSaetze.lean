@@ -141,7 +141,7 @@ theorem leiheGenerationen {table next : GrantTable} {g : Grant} {c : ByteCap}
     {id : Nat} {scope : Option Nat}
     (h : leihe table g c id scope = Except.ok next) :
     next.generation = table.generation := by
-  exact congrArg GrantTable.generation (leiheFakten h).2.2.2
+  rw [(leiheFakten h).2.2.2]
 
 /-- A return changes only the loan stack, never generations. -/
 theorem rueckgabeGenerationen {table next : GrantTable} {id : Nat}

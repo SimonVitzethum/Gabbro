@@ -186,11 +186,13 @@ theorem World.ohneLese_eq_of {σ σ' : World D} (hs : σ.slots = σ'.slots) (hg 
     { slots := σ'.slots, globs := σ'.globs, spur := spurOhneLese σ'.spur }
   rw [hs, hg, hsp]
 
-theorem World.slots_of_ohneLese {σ σ' : World D} (h : σ.ohneLese = σ'.ohneLese) : σ.slots = σ'.slots :=
-  congrArg World.slots h
+theorem World.slots_of_ohneLese {σ σ' : World D} (h : σ.ohneLese = σ'.ohneLese) : σ.slots = σ'.slots := by
+  have e := congrArg World.slots h
+  exact e
 
-theorem World.globs_of_ohneLese {σ σ' : World D} (h : σ.ohneLese = σ'.ohneLese) : σ.globs = σ'.globs :=
-  congrArg World.globs h
+theorem World.globs_of_ohneLese {σ σ' : World D} (h : σ.ohneLese = σ'.ohneLese) : σ.globs = σ'.globs := by
+  have e := congrArg World.globs h
+  exact e
 
 theorem World.spur_of_ohneLese {σ σ' : World D} (h : σ.ohneLese = σ'.ohneLese) :
     spurOhneLese σ.spur = spurOhneLese σ'.spur :=

@@ -25,7 +25,7 @@ reference numbers, not the cells to which those references grant access.
 /-- The replaced array element reads back its replacement. -/
 theorem arrSetW_same {α : Type} {n : Nat} (a : Fin n → α) (k : Fin n) (v : α) :
     arrSetW a k v k = v := by
-  simp only [arrSetW, if_pos rfl]
+  simp only [arrSetW, ite_true]
 
 /-- Every other array element retains its old value. -/
 theorem arrSetW_other {α : Type} {n : Nat} (a : Fin n → α) (k j : Fin n)

@@ -21,14 +21,21 @@ def taggedSubstituteType (parameter : String) (variant : STyp) : STyp → STyp
 def taggedSubstituteSelf (variant : STyp) : STyp → STyp :=
   taggedSubstituteType "Self" variant
 
+mutual
 /-- Conservative occurrence check, including nested result types. -/
 def taggedContainsSelf : STyp → Bool
   | .atom "Self" => true
-  | .tuple types => types.any taggedContainsSelf
+  | .tuple types => taggedContainsSelfList types
   | .ptr _ _ t | .range t _ _ _ | .array t _ | .wrap t | .embed t _ _ =>
     taggedContainsSelf t
   | .entry _ (some result) => taggedContainsSelf result
   | _ => false
+
+/-- The occurrence check over the components of a tuple. -/
+def taggedContainsSelfList : List STyp → Bool
+  | [] => false
+  | t :: rest => taggedContainsSelf t || taggedContainsSelfList rest
+end
 
 /-- Result-producing static functions do not participate in closed dispatch. -/
 def taggedDispatchable (signature : FnSig) : Bool :=
