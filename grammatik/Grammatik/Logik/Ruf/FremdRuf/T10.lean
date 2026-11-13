@@ -15,8 +15,10 @@
    `ForeignPflicht` and the machine linkage, into the software leg of
    `VertragANeu` (the recorded-post premise `orakelAus_vertrag_neu` consumes)
    and into the declared ensures at each recorded answer. The run-level fact
-   that G/GX/spawn/link record the same keys is a premise (`hlink`), proved by
-   the lead at integration over the machine steps. -/
+   that G/GX/spawn/link record the same keys is supplied by direct answer
+   linkage (`PasstA`) and key provenance (`SchluesselHerkunft`), proved by the
+   lead at integration over the machine steps. A stored key already includes
+   the question; it must not be queried with a second question. -/
 module
 
 public import Grammatik.Logik.Ruf.FremdRuf.T8
@@ -28,6 +30,17 @@ namespace Gabbro.Grammatik
 open Zielsatz
 
 variable {D : Deklaration}
+
+/-- Every stored key comes from recording a question in an entry world.
+    This records the origin of the last question, not uniqueness of earlier calls. -/
+def SchluesselHerkunft (HA : List (AxEintrag D)) : Prop :=
+  ∀ e ∈ HA, ∃ τ : World D, e.2.1 = τ.fragt (.inl e.1)
+
+/-- Restrictions of a run's recorded history preserve key provenance. -/
+theorem schluesselHerkunft_mono {HA HA' : List (AxEintrag D)}
+    (h : SchluesselHerkunft HA) (hsub : ∀ e ∈ HA', e ∈ HA) :
+    SchluesselHerkunft HA' :=
+  fun e hm => h e (hsub e hm)
 
 /-- **The call-site duty for software foreign items (C08):** every recorded
     software call meets the interface pre at its key world and original
@@ -60,22 +73,29 @@ theorem callSitePflichtFremd_mono {ax : ∀ a : D.Ax, CallContract D (D.asignatu
 theorem vertragANeu_sw_of_foreign {E : Einheit D} {O : Orakel D}
     {H : List (BoundaryRecord D)} {HA : List (AxEintrag D)}
     (hf : ForeignPflicht E O H) (hpre : CallSitePflichtFremd E.P.axVertrag HA)
-    (hlink : ∀ (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) (x : World D × Int),
-      (⟨a, σ, ρ, x⟩ : AxEintrag D) ∈ HA → D.axHerkunft a = some AxOrigin.software →
-        O.wirkt a (σ.fragt (.inl a)) ρ = x)
+    (hdir : PasstA O HA) (hprov : SchluesselHerkunft HA)
     {a : D.Ax} {σ : World D} {ρ : Env D (D.aparams a)} {x : World D × Int}
     (hmem : (⟨a, σ, ρ, x⟩ : AxEintrag D) ∈ HA)
     (hsw : D.axHerkunft a = some AxOrigin.software)
     {v : ErgVal D (D.aerg a)} (hv : einpassenErg O.zeiger (D.aerg a) x.2 = some v) :
     AxNach E.P.axVertrag a σ ρ x.1 v := by
-  have hpre' := hpre a σ ρ x hmem hsw
-  have hlink' := hlink a σ ρ x hmem hsw
-  have h2 : einpassenErg O.zeiger (D.aerg a) (O.wirkt a (σ.fragt (.inl a)) ρ).2 = some v := by
-    rw [hlink']
+  obtain ⟨τ, hτ⟩ := hprov _ hmem
+  change σ = τ.fragt (.inl a) at hτ
+  have hpre' : AxVor E.P.axVertrag a τ ρ := by
+    apply (axVor_fragt E.P.axVertrag a τ ρ).mpr
+    rw [← hτ]
+    exact hpre a σ ρ x hmem hsw
+  have hdir' : O.wirkt a (τ.fragt (.inl a)) ρ = x := by
+    rw [← hτ]
+    exact hdir a σ ρ x hmem
+  have h2 : einpassenErg O.zeiger (D.aerg a) (O.wirkt a (τ.fragt (.inl a)) ρ).2 = some v := by
+    rw [hdir']
     exact hv
-  have hcon := hf.vertrag a hsw σ ρ hpre' v h2
-  rw [hlink'] at hcon
-  exact hcon
+  have hcon := hf.vertrag a hsw τ ρ hpre' v h2
+  rw [hdir'] at hcon
+  rw [hτ]
+  exact (congrArg wahr? (eval_spurfrei (E.P.axVertrag a).post τ (τ.fragt (.inl a))
+    x.1 x.1 rfl rfl rfl rfl (ergEnv (D.aerg a) v ρ))).symm.trans hcon
 
 /-- **Declared ensures at each recorded software answer:** when the contract
     post implies the declared `Q`, the wiring above gives `Q` at the recorded
@@ -84,9 +104,7 @@ theorem vertragANeu_sw_of_foreign {E : Einheit D} {O : Orakel D}
 theorem qAmDatensatz_of_foreign {E : Einheit D} {O : Orakel D}
     {H : List (BoundaryRecord D)} {HA : List (AxEintrag D)}
     (hf : ForeignPflicht E O H) (hpre : CallSitePflichtFremd E.P.axVertrag HA)
-    (hlink : ∀ (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) (x : World D × Int),
-      (⟨a, σ, ρ, x⟩ : AxEintrag D) ∈ HA → D.axHerkunft a = some AxOrigin.software →
-        O.wirkt a (σ.fragt (.inl a)) ρ = x)
+    (hdir : PasstA O HA) (hprov : SchluesselHerkunft HA)
     (hdeckt : ∀ (a : D.Ax), D.axHerkunft a = some AxOrigin.software →
       ∀ (σ0 : World D) (ρ : Env D (D.aparams a)) (σ1 : World D) (v : ErgVal D (D.aerg a)),
         AxNach E.P.axVertrag a σ0 ρ σ1 v → E.Q a σ1 v = true)
@@ -95,6 +113,6 @@ theorem qAmDatensatz_of_foreign {E : Einheit D} {O : Orakel D}
     (hsw : D.axHerkunft a = some AxOrigin.software)
     {v : ErgVal D (D.aerg a)} (hv : einpassenErg O.zeiger (D.aerg a) x.2 = some v) :
     E.Q a x.1 v = true :=
-  hdeckt a hsw σ ρ x.1 v (vertragANeu_sw_of_foreign hf hpre hlink hmem hsw hv)
+  hdeckt a hsw σ ρ x.1 v (vertragANeu_sw_of_foreign hf hpre hdir hprov hmem hsw hv)
 
 end Gabbro.Grammatik

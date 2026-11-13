@@ -65,6 +65,55 @@ theorem actualHistory_passt (σ : World decl) : PasstA traceOracle (actualHistor
   rw [hτ]
   exact hx.symm
 
+/-- The stored key is a question world, rather than a second oracle query. -/
+theorem actualHistory_provenance (σ : World decl) : SchluesselHerkunft (actualHistory σ) := by
+  intro e hm
+  have he : e = ⟨(), σ.fragt (.inl ()), rho true,
+      traceOracle.wirkt () (σ.fragt (.inl ())) (rho true)⟩ := by
+    simpa only [actualHistory, List.mem_singleton] using hm
+  subst e
+  exact ⟨σ, rfl⟩
+
+theorem actualHistory_good (σ : World decl) :
+    CallSitePflichtFremd unit.P.axVertrag (actualHistory σ) := by
+  intro a τ ρ x hm hsw
+  have he : (⟨a, τ, ρ, x⟩ : AxEintrag decl) =
+      ⟨(), σ.fragt (.inl ()), rho true,
+        traceOracle.wirkt () (σ.fragt (.inl ())) (rho true)⟩ := by
+    simpa only [actualHistory, List.mem_singleton] using hm
+  cases a
+  have hr := congrArg (fun e : AxEintrag decl => (e.2.2.1 : Env decl [.int 0 1])) he
+  change ρ = rho true at hr
+  rw [hr]
+  exact pre_true τ
+
+theorem foreign_trace : ForeignPflicht unit traceOracle [] where
+  vertrag := by
+    intro a hsw σ ρ hpre v hv
+    rfl
+  dekodiert := by
+    intro a hsw σ ρ
+    change some (Sum.inl ()) ≠ none
+    decide
+  klauseln := by
+    intro n
+    exact Fin.elim0 n
+  anbieter := providerRealisiert_nil traceOracle
+
+/-- The corrected transports apply to the same trace-faithful oracle that
+    refutes the double-question linkage below. -/
+theorem actualHistory_posts (σ : World decl) :
+    AxNach unit.P.axVertrag () (σ.fragt (.inl ())) (rho true) (σ.fragt (.inl ())) () ∧
+    unit.Q () (σ.fragt (.inl ())) () = true := by
+  have hm : (⟨(), σ.fragt (.inl ()), rho true, (σ.fragt (.inl ()), 0)⟩ : AxEintrag decl) ∈
+      actualHistory σ := by simp only [actualHistory, traceOracle, List.mem_singleton]
+  have hv : einpassenErg traceOracle.zeiger (decl.aerg ()) (0 : Int) = some () := rfl
+  exact ⟨vertragANeu_sw_of_foreign foreign_trace (actualHistory_good σ)
+      (actualHistory_passt σ) (actualHistory_provenance σ) hm rfl hv,
+    qAmDatensatz_of_foreign foreign_trace (actualHistory_good σ)
+      (actualHistory_passt σ) (actualHistory_provenance σ)
+      (fun _ _ _ _ _ _ _ => rfl) hm rfl hv⟩
+
 /-- T10's extra question changes the answer world, even for a good binding.
     Thus its hlink cannot be a generic consequence of machine recording. -/
 theorem recorded_key_not_twice (σ : World decl) :

@@ -43,6 +43,14 @@ def AxVor (ax : ∀ a : D.Ax, CallContract D (D.asignatur a)) (a : D.Ax) (σ0 : 
     (ρ : Env D (D.aparams a)) : Prop :=
   wahr? (eval σ0 (ax a).pre σ0 ρ) = true
 
+/-- Recording a question changes neither world read by the interface pre. -/
+theorem axVor_fragt (ax : ∀ a : D.Ax, CallContract D (D.asignatur a))
+    (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
+    AxVor ax a σ ρ ↔ AxVor ax a (σ.fragt (.inl a)) ρ := by
+  unfold AxVor
+  rw [eval_spurfrei (ax a).pre σ (σ.fragt (.inl a)) σ (σ.fragt (.inl a))
+    rfl rfl rfl rfl ρ]
+
 /-- The interface postcondition on normal return: the contract post over the post
     world and the transported result, with the entry world as `old`. -/
 def AxNach (ax : ∀ a : D.Ax, CallContract D (D.asignatur a)) (a : D.Ax) (σ0 : World D)

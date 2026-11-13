@@ -106,10 +106,9 @@ def memory : Speicher decl where
 
 def world : World decl := memory.welt []
 
-/-- A deliberately trace-insensitive binding: this tiny witness satisfies
-    both T10's `hlink` and direct answering at recorded keys. No `GutO` or
-    hardware fidelity is claimed for this fixture. The run-key projection
-    itself never requires this extra trace-insensitivity. -/
+/-- A deliberately trace-insensitive binding for the run-key witnesses.
+    No `GutO` or hardware fidelity is claimed for this fixture; the joint
+    trace-faithful witness is separate. -/
 def answer : World decl := world.fragt (.inl ())
 
 def oracle : Orakel decl where
@@ -179,10 +178,8 @@ theorem foreign : ForeignPflicht unit oracle [] where
     exact Fin.elim0 n
   anbieter := providerRealisiert_nil oracle
 
-theorem link (b : Bool) (a : decl.Ax) (σ : World decl)
-    (ρ : Env decl (decl.aparams a)) (x : World decl × Int)
-    (hm : (⟨a, σ, ρ, x⟩ : AxEintrag decl) ∈ history b)
-    (_ : decl.axHerkunft a = some .software) : oracle.wirkt a (σ.fragt (.inl a)) ρ = x := by
+theorem link (b : Bool) : PasstA oracle (history b) := by
+  intro a σ ρ x hm
   have h : (⟨a, σ, ρ, x⟩ : AxEintrag decl) = record key1 true ∨
       (⟨a, σ, ρ, x⟩ : AxEintrag decl) = record key2 b := by
     simpa only [history, List.mem_cons, List.not_mem_nil, or_false] using hm
@@ -191,12 +188,22 @@ theorem link (b : Bool) (a : decl.Ax) (σ : World decl)
     have hx := congrArg (fun e : AxEintrag decl => e.2.2.2) h
     exact hx.symm
 
+theorem history_provenance (b : Bool) : SchluesselHerkunft (history b) := by
+  intro e hm
+  have he : e = record key1 true ∨ e = record key2 b := by
+    simpa only [history, List.mem_cons, List.not_mem_nil, or_false] using hm
+  rcases he with he | he
+  · subst e
+    exact ⟨world, rfl⟩
+  · subst e
+    exact ⟨answer, rfl⟩
+
 /-- Both records use the actual T10 contract and declared-ensures transports. -/
 theorem posts (σ : World decl) (hm : record σ true ∈ history true) :
     AxNach unit.P.axVertrag () σ (rho true) answer () ∧ unit.Q () answer () = true := by
   have fit : einpassenErg oracle.zeiger (decl.aerg ()) (0 : Int) = some () := rfl
-  exact ⟨vertragANeu_sw_of_foreign foreign history_good (link true) hm rfl fit,
-    qAmDatensatz_of_foreign foreign history_good (link true)
+  exact ⟨vertragANeu_sw_of_foreign foreign history_good (link true) (history_provenance true) hm rfl fit,
+    qAmDatensatz_of_foreign foreign history_good (link true) (history_provenance true)
       (fun _ _ _ _ _ _ _ => rfl) hm rfl fit⟩
 
 def start (b : Bool) : RufMaschineG decl :=

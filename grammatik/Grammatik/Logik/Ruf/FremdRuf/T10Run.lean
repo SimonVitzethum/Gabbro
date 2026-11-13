@@ -116,9 +116,8 @@ def CallSitePflicht [DecidableEq D.Fn] (E : Einheit D) : Prop :=
       (RufStartG E.P.mitRuhe sp init)
 
 /-- Project the run duty to the replay history. The integration proof supplies
-    occurrence of each recorded key; answer linkage remains T10's separate
-    `hlink` premise. In particular, no extra `fragt` is added to a replay key
-    here. T10's linkage with `σ.fragt` must still be discharged separately.
+    occurrence of each recorded key; T10 separately requires `PasstA` at the
+    stored key and `SchluesselHerkunft`. No extra question is added to a key.
     `HA'` can be a frame's or thread's restriction of the recorded history. -/
 theorem callSitePflichtFremd_of_run {P : Programm D} {O : Orakel D} {passes : Nat}
     {Tg : D.Tab ⊕ D.Glob → Prop} {M0 : RufMaschineG D}
