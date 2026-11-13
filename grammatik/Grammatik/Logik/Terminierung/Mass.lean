@@ -123,10 +123,11 @@ def OhneAbstieg (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang
 /-- **The user's duty for the measure of `f`**: run against every frame-respecting handler that never answers
     `abstieg` or `vorbedingung` itself, behind the measure gate for `f`'s cycle `zyk f`, from every entry where `requires f` holds,
     the body never ends in `abstieg g` for a `g` of the cycle -- every call back into the cycle has a smaller
-    measure than `f`'s entry. Vacuous where `zyk f` names nothing. -/
+    measure than `f`'s entry. Software summaries are available only at question worlds
+    satisfying their interface pre, as in the other body duties. Vacuous where `zyk f` names nothing. -/
 def MassPflicht (passes : Nat) (Q : AxEns D) (S : SperrInv D) (T : D.Tab ⊕ D.Glob → Prop) (m : Mass D)
     (zyk : D.Fn → D.Fn → Bool) (f : D.Fn) : Prop :=
-  ∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragO Q O' →
+  ∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragOP (PreQ P) Q O' →
     ∀ U : Umwelt D, HavocOk S U → ∀ A : AUmwelt D, HavocA T A →
     ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f),
       RespektiertRahmen P R → OhneAbstieg R → OhneVorbedingung R →

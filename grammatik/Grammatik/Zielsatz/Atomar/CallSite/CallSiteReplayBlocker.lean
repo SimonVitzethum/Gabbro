@@ -114,7 +114,14 @@ theorem good_user : NutzerPflichtA goodUnit where
 
 /-- Premise (a) does not check logical truth of a function's ensures. -/
 theorem checker : akzeptiertX_pruefer.akzeptiert unit [()] [] [] = true := by
-  decide +kernel
+  have hvoll : ∀ f : decl.Fn, f ∈ [()] := fun f => by
+    cases f
+    exact List.mem_singleton_self _
+  simp only [akzeptiertX_pruefer, AkzeptiertX, Bool.and_eq_true]
+  and_intros
+  all_goals first
+    | exact (schnittstellenB_iff hvoll).mpr (schnittstellen_standard _ _)
+    | decide
 
 /- The following small invariant proves the full unit call-site duty, not just
    a duty on an empty chosen replay history. Every runtime start is already at

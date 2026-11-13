@@ -426,12 +426,13 @@
   no premise of `GabbroZiel` any more; the statement under the full summary premise keeps
   its text as `GabbroZielVoll` (`gabbro_ziel_voll`), as do `GabbroZielSC`, `-Verbund`,
   `-Leben`, `-Warten`, `-Profil` and `GabbroZielFremd`.
-  The body duties (KoerperGut/InvGut/PflichtWP, SC and atomic) quantify over every
+  The body duties (KoerperGut/InvGut/PflichtWP/MassPflicht, SC and atomic) quantify over every
   frame-respecting oracle of the class `AxVertragOP (PreQ P) Q`: a declared summary is
   required exactly at QUESTION worlds `σ0.fragt (.inl a)` -- the only worlds machine G asks
   an oracle in -- and for a software item only where its interface pre holds there
   (hardware and unresolved items: at every question). This enlarges the quantified class
-  and strengthens (b): an unsatisfiable software summary off-pre or at a never-asked world
+  and strengthens (b), including the measure duty of `GabbroZielTerminierung`:
+  an unsatisfiable software summary off-pre or at a never-asked world
   no longer empties the body duties, and a body depending on an off-pre software answer is
   refused (`CallSiteConditionalBite`). The every-world class of the first repair
   (`AxVertragOPAlle`) excluded the actual trace-faithful binding

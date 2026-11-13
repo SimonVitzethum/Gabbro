@@ -273,6 +273,6 @@ theorem checker : akzeptiertX_pruefer.akzeptiert wE [()] [] [] = true := by
   and_intros
   all_goals first
     | exact (schnittstellenB_iff fs_voll).mpr (schnittstellen_standard _ _)
-    | decide +kernel
+    | decide
 
 end Gabbro.Grammatik.Zielsatz.CallSiteGoal

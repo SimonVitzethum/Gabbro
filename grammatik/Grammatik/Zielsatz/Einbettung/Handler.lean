@@ -389,33 +389,31 @@ noncomputable def _root_.Gabbro.Grammatik.World.alsFrage {D₀ : Deklaration} (w
 
 theorem _root_.Gabbro.Grammatik.World.alsFrage_fragt {D₀ : Deklaration} (w0 : World D₀)
     (b : D₀.Ax) : (w0.fragt (.inl b)).alsFrage b = w0.fragt (.inl b) := by
-  unfold World.alsFrage
-  split
-  · rfl
-  · rename_i h
-    exact absurd ⟨w0, rfl⟩ h
+  simp only [World.alsFrage, if_pos (show ∃ w : World D₀,
+    w0.fragt (.inl b) = w.fragt (.inl b) from ⟨w0, rfl⟩)]
 
 theorem _root_.Gabbro.Grammatik.World.alsFrage_frage {D₀ : Deklaration} (w : World D₀)
     (b : D₀.Ax) : ∃ w0 : World D₀, w.alsFrage b = w0.fragt (.inl b) := by
-  unfold World.alsFrage
-  split
-  · rename_i h
-    exact h
-  · exact ⟨w, rfl⟩
+  classical
+  by_cases h : ∃ w0 : World D₀, w = w0.fragt (.inl b)
+  · simpa only [World.alsFrage, if_pos h] using h
+  · exact ⟨w, by simp only [World.alsFrage, if_neg h]⟩
 
 theorem _root_.Gabbro.Grammatik.World.alsFrage_slots {D₀ : Deklaration} (w : World D₀)
     (b : D₀.Ax) : (w.alsFrage b).slots = w.slots := by
-  unfold World.alsFrage
-  split
-  · rfl
-  · rfl
+  classical
+  by_cases h : ∃ w0 : World D₀, w = w0.fragt (.inl b)
+  · simp only [World.alsFrage, if_pos h]
+  · rw [World.alsFrage, if_neg h]
+    rfl
 
 theorem _root_.Gabbro.Grammatik.World.alsFrage_globs {D₀ : Deklaration} (w : World D₀)
     (b : D₀.Ax) : (w.alsFrage b).globs = w.globs := by
-  unfold World.alsFrage
-  split
-  · rfl
-  · rfl
+  classical
+  by_cases h : ∃ w0 : World D₀, w = w0.fragt (.inl b)
+  · simp only [World.alsFrage, if_pos h]
+  · rw [World.alsFrage, if_neg h]
+    rfl
 
 section Induziert
 
