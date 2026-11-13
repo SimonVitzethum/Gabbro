@@ -1,0 +1,33 @@
+/- Dependencies of the mutual expression simulation theorem. -/
+module
+public import Stage0.Senke.Ausdruck.Aggregat.Prod.ProdSet
+public import Stage0.Senke.Ausdruck.Aggregat.Prod.ProdArgsOk
+public import Stage0.Senke.Ausdruck.Referenz.Lesen
+public import Stage0.Senke.Ausdruck.Gleit.Fall
+public import Stage0.Senke.Ausdruck.Lesen
+public import Stage0.Senke.Ausdruck.Wenn
+public import Stage0.Senke.Ausdruck.Zeiger.Fnptr
+public import Stage0.Senke.Ausdruck.Tops.Eng
+public import Stage0.Senke.Ausdruck.Arithmetik.Mixed
+public import Stage0.Senke.Ausdruck.Satz.Payload
+public import Stage0.Senke.Ausdruck.Aggregat.KopieSatz
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.IntegerResize
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.IntegerOps
+public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Compare
+public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Eng
+public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Builtin
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.StringOps
+public import Stage0.Senke.Ausdruck.Option
+public import Stage0.Senke.Anweisung.Bytes.Span.Read
+public import Stage0.Senke.Ausdruck.Quant.Satz
+public import Stage0.Senke.Ausdruck.Quant.Count
+public import Stage0.Senke.Ausdruck.Quant.Reach
+public import Stage0.Senke.Welt.WeltAt
+public import Stage0.Senke.Ausdruck.Current
+public import Stage0.Senke.Ausdruck.Referenz.CellIndex
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqOk
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringGetOk
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringTakeOk
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringExpandOk
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.String.Values
+public import Stage0.Senke.Ausdruck.Aggregat.Stored.Address

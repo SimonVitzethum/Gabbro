@@ -41,6 +41,7 @@ public import Stage0.Senke.Ausdruck.Aggregat.Werte.Encoding
 public import Stage0.Senke.Welt.Rahmen
 public import Stage0.Senke.Ausdruck.FrameCache
 public import Stage0.Senke.Ausdruck.Aggregat.Hilfen
+public import Stage0.Senke.Ausdruck.Aggregat.Stored.Code
 public import Stage0.Senke.Ausdruck.Aggregat.Prod.ProdArgs
 public import Stage0.Senke.Ausdruck.Aggregat.Werte.Sum.Code
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Place
@@ -147,7 +148,10 @@ mutual
       let head ← lowEWith (frame := frame) (currentOld := currentOld) lookup L (reserved := reserved) a d
       let tail ← lowEWith (frame := frame) (currentOld := currentOld) lookup L (reserved := reserved) rest (d + valueWords τ)
       pure (head.1 ++ tail.1, max (max head.2 tail.2) (d + valueWords (.arr τ (n + 1))))
-  | _, _, @Expr.arrGet _ _ _ τ n a i, d => if n = 1 then lowEWith (frame := frame) (currentOld := currentOld) lookup L (reserved := reserved) a d else
+  | _, _, @Expr.arrGet _ _ _ τ n a i, d => if storedExpr a then
+      arrReadL τ n d (lowStorageWith (frame := frame) (currentOld := currentOld) lookup L (reserved := reserved) a (d + valueWords τ))
+        (lowEWith (frame := frame) (currentOld := currentOld) lookup L (reserved := reserved) i (d + valueWords τ + 1))
+    else if n = 1 then lowEWith (frame := frame) (currentOld := currentOld) lookup L (reserved := reserved) a d else
     arrGetL τ n d (lowEWith (frame := frame) (currentOld := currentOld) lookup L (reserved := reserved) a d)
       (lowEWith (frame := frame) (currentOld := currentOld) lookup L (reserved := reserved) i (d + valueWords (.arr τ n)))
   | _, _, @Expr.arrSet _ _ _ τ n a i v, d => if n = 1 then lowEWith (frame := frame) (currentOld := currentOld) lookup L (reserved := reserved) v d else
@@ -237,6 +241,23 @@ mutual
     else none
 termination_by structural e
 
+/-- Compute only the physical address of a stored value. This traversal is used
+    exclusively by aggregate reads; ordinary value lowering keeps its copy semantics. -/
+@[specialize lookup] def lowStorageWith (lookup : FrameLookup) (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty}
+    (e : Expr D Γ Λ τ) (d : Nat) (reserved : Nat := 0) (currentOld : Bool := true) (frame : FrameCache Γ) :
+    Option (List II × Nat) :=
+  match e with
+  | .var x => some ([ci 17 d (lookup.slot frame x reserved) 0], d + 1)
+  | .glob g _ => if L.ga g < 2 ^ 31 then some ([ci 1 d (L.ga g) 0], d + 1) else none
+  | .slot t f i _ | .thru _ t _ f i _ | .thruOwn _ t _ f i _ _ _ _ _ _ => do
+    let index ← lowEWith (frame := frame) (currentOld := currentOld) lookup L (reserved := reserved) i d
+    cellAddressC L t f d index
+  | .slotRef r t _ _ f _ => do
+    let index ← lowEWith (frame := frame) (currentOld := currentOld) lookup L (reserved := reserved) r d
+    cellAddressC L t f d index
+  | _ => none
+termination_by structural e
+
 /-- Traverse a complete sum payload directly in the canonical expression family. The caller
     owns its tag and padding; an absent payload emits no words at the supplied payload base. -/
 @[specialize lookup] def lowPayloadWith (lookup : FrameLookup) (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {c : Option Ty}
@@ -275,6 +296,12 @@ end
     (e : Expr D Γ Λ τ) (d : Nat) (reserved : Nat := 0) (currentOld : Bool := true) :
     Option (List II × Nat) :=
   lowEWith specLookup L e d reserved currentOld (FrameCache.ofCtx Γ)
+
+/-- Storage addresses use the same canonical frame lookup as expression values. -/
+@[inline] def lowStorage (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty}
+    (e : Expr D Γ Λ τ) (d : Nat) (reserved : Nat := 0) (currentOld : Bool := true) :
+    Option (List II × Nat) :=
+  lowStorageWith specLookup L e d reserved currentOld (FrameCache.ofCtx Γ)
 
 @[inline] def lowPayload (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {c : Option Ty}
     (e : NutzlastExpr D Γ Λ c) (d : Nat) (reserved : Nat := 0) (currentOld : Bool := true) :
