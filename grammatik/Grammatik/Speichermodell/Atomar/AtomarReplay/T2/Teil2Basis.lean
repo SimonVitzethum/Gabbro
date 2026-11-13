@@ -170,7 +170,8 @@ theorem fadenSA_ax {z : RufFadenG D} {W : World D}
       (axWeltF a ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)) xm.1, xm.2)⟩], HU, HX',
     axWeltF a ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)) xm.1, hreq, hf, hv, hm,
     kurzVBA_mono hk hlen2, ?_, ?_, ?_, ?_,
-    hfu, hiu, kurzUB_mono hku hlen2, ⟨hfx', kurzX_mono hkx' (Nat.le_trans (Nat.le_succ _) (axWeltF_laengeV _ _ _))⟩, ?_, hok hok', ?_⟩, hS⟩
+    hfu, hiu, kurzUB_mono hku hlen2, ⟨hfx', kurzX_mono hkx' (Nat.le_trans (Nat.le_succ _)
+      (axWeltF_laengeV a ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)) xm.1 :))⟩, ?_, hok hok', ?_⟩, hS⟩
   · by_cases hN : Nonempty (Ereignis D)
     · exact funkA_append hfa (hka.1 hN) _ hlen ⟨frischSpur D, rfl⟩
     · exact funkA_of_passtA hN (hpa hN)

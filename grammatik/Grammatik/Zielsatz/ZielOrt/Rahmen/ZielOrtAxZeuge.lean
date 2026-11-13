@@ -215,12 +215,13 @@ theorem axLauf : ∃ M : RufMaschineG axD,
       rw [hn]
       rfl)
     (axiomSpur [()] [] () [Res.held ()] ((M3.weltVon 0).lese axL []).haelt ++ [Ereignis.fremd (.inl axInc)])
-    (by rw [List.append_assoc]; rfl)
+    (by simp only [Orakel.wirkt, axO, World.auf, World.ohneLese_haelt, List.append_assoc] <;> rfl)
     (axHgL (axHoff e3 hoff3))
   have hoff4 : offen (M4.faeden 0).spur = [()] := by
     rw [hZ4.spur]
     exact (offen_nurZugriff _ _ (fun e he => by
-      simp only [axiomSpur, List.mem_append, List.mem_map, List.mem_filter] at he
+      simp only [Orakel.wirkt, axO, World.auf, axiomSpur, List.mem_append, List.mem_map,
+        List.mem_filter] at he
       rcases he with ⟨t, _, rfl⟩ | ⟨g, _, _⟩
       · rfl
       · exact nomatch g)).trans (((Erw.lese _ _ _).offen).trans hoff3)
