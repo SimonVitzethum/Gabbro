@@ -19,19 +19,20 @@ theorem bind_view_zeuge :
       (.ok receipt, before) := rfl
 
 theorem bind_view_typing_zeuge :
-    bindViewB span 2 100 4 1 LowLevel.Witness.readWriteRights [0] = true := by decide
+    bindViewB span layout 2 100 4 1 LowLevel.Witness.readWriteRights [0] = true := by decide
 
 theorem view_refusal_zeuge :
     (bindViewStep authority initial start 9 LowLevel.Witness.readWriteRights OwnerWitness.child before).1 =
       .error .bounds ∧
-    bindViewB { span with memoryClass := .device } 2 100 4 1
+    bindViewB { span with memoryClass := .device } layout 2 100 4 1
       LowLevel.Witness.readWriteRights [0] = false := ⟨rfl, by decide⟩
 
 theorem view_get_put_zeuge :
-    (before.slots () 0 ()).n = 0 ∧
+    (before.slots false 0 ()).n = 0 ∧
     (viewGetStep view layout () rfl 0 1 resources getChecked written).value.n = 42 ∧
-    written.spur = [.zugriff () true resources []] ∧
-    returnViewStep authority receipt.next written = (.ok initial, written) := ⟨rfl, rfl, rfl, rfl⟩
+    written.spur = [.zugriff false true resources []] ∧
+    returnViewStep authority receipt.next written = (.ok initial, written) :=
+  ⟨rfl, rfl, rfl, congrArg (fun result => (result, written)) (ram_view_return initial_valid receipt)⟩
 
 theorem initial_sim_zeuge : SimRel authority initial before := simRel_initial initial_valid rfl before
 
@@ -49,7 +50,7 @@ theorem roundtrip_sim_zeuge :
     SimRel authority receipt.next
       (viewGetStep view layout () rfl 0 1 resources getChecked written).world ∧
     SimRel authority initial (returnViewStep authority receipt.next written).2 ∧
-    (written.slots () 0 ()).n = 42 :=
+    (written.slots false 0 ()).n = 42 :=
   ⟨(viewGetStep_sim view layout () rfl 0 1 resources getChecked written written_sim_zeuge
       (List.mem_cons_self ..) rfl).1,
     returnViewStep_sim written_sim_zeuge rfl, rfl⟩
@@ -65,17 +66,23 @@ theorem scope_run_zeuge :
     runViewScope authority initial start 4 LowLevel.Witness.readWriteRights OwnerWitness.child before
       (fun _ _ => (.error 7, receipt.next, written))
       (fun _ world => (.ok 0, world)) =
-      (.ok ((.error 7 : Except Nat Nat), initial), written) := rfl
+      (.ok ((.error 7 : Except Nat Nat), initial), written) := by
+  have produced := congrArg Prod.fst bind_view_zeuge
+  simp only [bindViewStep] at produced
+  simpa only [runViewScope, produced] using
+    closeViewExitStep_success (.error 7 : Except Nat Nat) written (ram_view_return initial_valid receipt)
 
-theorem scope_run_sim_zeuge : SimRel authority initial before :=
-  runViewScope_sim authority initial start 4 LowLevel.Witness.readWriteRights OwnerWitness.child before
-    (fun result world => ((.error 7 : Except Nat Nat), result.next, world))
+theorem scope_run_sim_zeuge : SimRel authority initial written := by
+  have executed := runViewScope_sim authority initial start 4 LowLevel.Witness.readWriteRights OwnerWitness.child before
+    (fun _ _ => ((.error 7 : Except Nat Nat), receipt.next, written))
     (fun _ world => (.ok 0, world)) initial_sim_zeuge
-    (fun _ _ simulation => simulation) (fun _ _ => initial_sim_zeuge) rfl
+    (fun _ _ _ => written_sim_zeuge)
+    (fun _ _ => initial_sim_zeuge) (congrArg Prod.fst scope_run_zeuge)
+  simpa only [scope_run_zeuge] using executed
 
 theorem getBytes_correspondence_zeuge :
     (viewGetStep view layout () rfl 0 1 resources getChecked written).value =
-      eval written (.getBytes () () rfl 1
+      eval written (.getBytes false () rfl 1
         (.lit 0 : Expr D [] resources (.int 0 0)) (by decide) (by decide) (by decide)) written .nil :=
   viewGetStep_eval_getBytes view layout () rfl 1
     (.lit 0 : Expr D [] resources (.int 0 0)) (by decide) (by decide) (by decide) written .nil getChecked
@@ -101,12 +108,13 @@ theorem array_slice_zeuge :
     (arrSliceStep array 1 3 (by decide) before).world = before := ⟨rfl, rfl, rfl⟩
 
 theorem context_typing_zeuge :
-    bindCtxB () true 0 ghost renamedGhost 10 11 = true ∧
+    bindCtxB 0 true 0 ghost renamedGhost 10 11 = true ∧
     ctxMoveB true 0 renamedGhost ghost 10 11 = false := ⟨by decide, by decide⟩
 
 theorem context_step_zeuge :
-    bindCtxStep (resources := []) oracle () true 0 .nil .nil ghost renamedGhost 10 11
+    bindCtxStep (resources := []) oracle 0 true 0 .nil .nil ghost renamedGhost 10 11
       (by decide) before =
-      some (renamedGhost, before.fragt (.inl ()), some (.inl ())) := rfl
+      some (renamedGhost, before.fragt (.inl 0), some (.inl ())) :=
+  bindCtxStep_eq oracle 0 true 0 .nil .nil ghost renamedGhost 10 11 (by decide) before
 
 end Gabbro.Grammatik.LowLevel.Construct.Witness

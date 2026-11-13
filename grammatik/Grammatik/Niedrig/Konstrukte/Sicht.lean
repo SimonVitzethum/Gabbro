@@ -9,6 +9,8 @@ namespace Gabbro.Grammatik.LowLevel.Construct
 variable {D : Deklaration}
 
 /-- Exactly getBytes' projection and result type, including its byte order.
+    Authorization is ViewGetOk plus G6's range/liveness lifting; the simulation
+    lemma below establishes preservation only. Device views use mmioReadStep.
     G6 supplies a live view variable and lifts the local check over index ranges.
     This pure expression does not itself record the enclosing step's reads. -/
 def viewGetStep (view : View D) (layout : AdressLayout D)
@@ -103,7 +105,7 @@ theorem viewPutStep_gut (view : View D) (layout : AdressLayout D)
     (globals : D.Glob → Bool) (held : HeldIn resources world.haelt) :
     Gut writes globals world (viewPutStep view layout field index value resources writes checked world) :=
   gut_schreibSlot world view.span.table resources index field value
-    checked.1 checked.2.2.1.2.2 held
+    checked.1 checked.2.2.1.2.2.1 held
 
 theorem viewPutStep_sim {P I : Type} {a : Authority D} {c : Context D P I}
     (view : View D) (layout : AdressLayout D) (field : D.Feld view.span.table)
@@ -115,7 +117,7 @@ theorem viewPutStep_sim {P I : Type} {a : Authority D} {c : Context D P I}
     SimRel a c (viewPutStep view layout field index value resources writes checked world) :=
   viewwrite_sim simulation correct realizes
     (viewPutReceipt view layout field index value resources writes checked world simulation.valid live active)
-    resources checked.2.2.1.2.2 held
+    resources checked.2.2.1.2.2.1 held
 
 theorem viewGetStep_sim {P I : Type} {a : Authority D} {c : Context D P I}
     (view : View D) (layout : AdressLayout D)

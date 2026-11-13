@@ -8,12 +8,20 @@ public import Grammatik.Logik.Fortschritt.KostenG.T1.Teil1a
 namespace Gabbro.Grammatik.LowLevel.Construct
 
 /-!
-Pre-constructor semantics for the single G6 cascade. Append these thirteen
+Pre-constructor semantics for the single G6 cascade. Append these fifteen
 constructors at the ends of their existing inductives:
 * Ty: addr, viewRef.
 * Expr: addrLit, addrOff, narrowAddr, viewGet, arrSlice, strSlice.
 * Stmt: viewPut.
-* Block and Endblock: bindView, bindCtx in each.
+* Block and Endblock: bindView, bindCtx, viewRead in each.
+
+bindView carries the RAM/device class; viewGet/viewPut carry the declared
+layout/field interpretation. Device reads need viewRead's returning/hardware
+channels and cannot be pure expressions. viewRead has a strict/fallible mode,
+so it does not need separate constructor names for the two modes. MMU, masks
+and interrupt return reuse bindCtx. Firmware/IRQ entry uses entry metadata,
+not a new executable constructor. System/Bindung and Klassen are the complete
+pre-constructor semantics; Cascade records the final list for G6.
 
 The functions below and in sibling modules consume already evaluated values.
 G6 retains operand evaluation, its read tracing, and its scope/call guards.
