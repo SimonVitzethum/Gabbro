@@ -58,7 +58,7 @@ mutual
 def sectionsOkS (h : D.Lock → Option Nat) (c : D.Fn → Nat) (Z : D.Fn → Bool) (pa : Nat)
     {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Prop
   | .locks L _ body =>
-    (∀ n, h L = some n → kostenBlock c pa body ≤ n ∧ rufeB Z (fun _ => false) true body = true) ∧
+    (∀ n, h L = some n → kostenBlock 0 c pa body ≤ n ∧ rufeB Z (fun _ => false) true body = true) ∧
       sectionsOkB h c Z pa body
   | .ite _ t e => sectionsOkB h c Z pa t ∧ sectionsOkB h c Z pa e
   | .onOption _ p a => sectionsOkB h c Z pa p ∧ sectionsOkB h c Z pa a
@@ -396,7 +396,7 @@ theorem sectionsOkS_locks (h : D.Lock → Option Nat) (c : D.Fn → Nat) (Z : D.
     (hr : ∀ M, Res.held M ∈ Λ → D.rang M < D.rang L)
     (body : Block D V l Γ (Res.held L :: Λ) (Res.held L :: Λ))
     (q : sectionsOkS h c Z pa (Stmt.locks L hr body)) :
-    (∀ n, h L = some n → kostenBlock c pa body ≤ n ∧ rufeB Z (fun _ => false) true body = true) ∧
+    (∀ n, h L = some n → kostenBlock 0 c pa body ≤ n ∧ rufeB Z (fun _ => false) true body = true) ∧
       sectionsOkB h c Z pa body := q
 
 end Gabbro.Grammatik.Parser.HeldBinding

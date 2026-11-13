@@ -137,6 +137,17 @@
   * `fortschritt` -- every thread is finished, waits for a lock, stands at a NAMED stop, or can step (SAFETY: no
     unnamed stuck state). (a), (b), (c).
   * `zeit` -- a frame with a finite call tree takes at most `kostenTief` own steps while active. --.
+  C05 EPILOGUE COST (2026-11-13, strengthening of the `zeit` cost account).
+  `kostenTief`, hence `ZeitAb`/`ZeitAbX`, includes the callee's `ensures` and
+  every owed invariant predicate at each value return, including scoped
+  returns, via `kostenEpilog` in `kostenStmt`/`kostenEnd`/`kostenSonst`.
+  The `lese` bookkeeping and evaluation occur inside the G return step;
+  predicate primitive costs include their loads. Reason exits (`retWhy`,
+  `retWhyScoped`, `leave`, `next`) evaluate no return predicate and add no
+  epilogue price. The writer's declared `costs` must cover body plus epilogue.
+  No new assumption, stop or weakened safety leg. Surface removal of the
+  invariant's own cost/runs/by clauses is a separate subsequent package.
+
   * `folge` -- the order of calls in every thread's call log, for every order specification the program passes
     (Folge.lean). --.
   * `pruefstand` (`CheckTreueG`, C16, 2026-11-02) -- check evidence and its consumption: every completed probe

@@ -11,9 +11,9 @@ variable {D : Deklaration}
 
 /-- Every pending lexical marker contributes at least one unit. Completed
     residues contribute zero, and cleanup contains exactly its pending units. -/
-theorem GRest.freis_budget (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
+theorem GRest.freis_budget (ep : Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (r : GRest D V l Γ Λ) :
-    r.freis.length ≤ potRest c pa r := by
+    r.freis.length ≤ potRest ep c pa r := by
   induction r <;> simp only [GRest.freis, potRest, List.length_cons, List.length_nil] at *
   all_goals omega
 
@@ -21,12 +21,12 @@ theorem GRest.freis_budget (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
 def scopedReturnSteps (scopes : List D.Lock) : Nat := 1 + scopes.length
 
 /-- The source return pays for evaluation, and its skipped continuation
-    already pays for the releases. No source cost changes. -/
-theorem GRest.scopedWert_budget (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
+    already pays for the releases. Value returns additionally carry `ep`. -/
+theorem GRest.scopedWert_budget (ep : Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (r : GRest D V l Γ Λ)
     (e : ErgExpr D Γ Λ V.erg) (R : RueckRessourcen D V Λ)
     (hb : r.scopeBalance) (hr : r.scopedWert = some (e, R)) :
-    scopedReturnSteps R.scopes ≤ potRest c pa r := by
+    scopedReturnSteps R.scopes ≤ potRest ep c pa r := by
   have hlen := r.scopes_length R hb
   rcases GRest.scopedWert_faelle hr with rfl | ⟨rest, rfl⟩ | ⟨Λ', rest, k, rfl⟩
   · simp only [GRest.freis, List.length_nil] at hlen
@@ -35,16 +35,16 @@ theorem GRest.scopedWert_budget (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
   · simp only [GRest.freis, List.length_nil] at hlen
     simp only [scopedReturnSteps, potRest, kostenEnd, kostenStmt]
     omega
-  · have hk := k.freis_budget c pa
+  · have hk := k.freis_budget ep c pa
     simp only [GRest.freis] at hlen
     simp only [scopedReturnSteps, potRest, kostenBlock, kostenStmt]
     omega
 
-theorem GRest.scopedGrund_budget (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
+theorem GRest.scopedGrund_budget (ep : Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (r : GRest D V l Γ Λ)
     (grund : Fin V.gruende) (R : RueckRessourcen D V Λ)
     (hb : r.scopeBalance) (hr : r.scopedGrund = some (grund, R)) :
-    scopedReturnSteps R.scopes ≤ potRest c pa r := by
+    scopedReturnSteps R.scopes ≤ potRest ep c pa r := by
   have hlen := r.scopes_length R hb
   rcases GRest.scopedGrund_faelle hr with rfl | ⟨rest, rfl⟩ | ⟨Λ', rest, k, rfl⟩
   · simp only [GRest.freis, List.length_nil] at hlen
@@ -53,7 +53,7 @@ theorem GRest.scopedGrund_budget (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
   · simp only [GRest.freis, List.length_nil] at hlen
     simp only [scopedReturnSteps, potRest, kostenEnd, kostenStmt]
     omega
-  · have hk := k.freis_budget c pa
+  · have hk := k.freis_budget ep c pa
     simp only [GRest.freis] at hlen
     simp only [scopedReturnSteps, potRest, kostenBlock, kostenStmt]
     omega

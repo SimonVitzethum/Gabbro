@@ -35,7 +35,7 @@ def passS (h : D.Annahme → Option Nat) (c : D.Fn → Nat) (Z : D.Fn → Bool) 
   | .retry _ _ body ueber => passB h c Z pa body && passB h c Z pa ueber
   | .forever a _ body =>
     (match h a with
-      | some n => decide (kostenBlock c pa body ≤ n) && rufeB Z (fun _ => false) true body
+      | some n => decide (kostenBlock 0 c pa body ≤ n) && rufeB Z (fun _ => false) true body
       | none => true) && passB h c Z pa body
   | .assignSlot .. => true
   | .assignThru .. | .assignThruOwn .. | .assignSlotRef .. => true

@@ -298,7 +298,8 @@ def KernHaltE (P : Programm D) (O : Orakel D) (passes : Nat) (M0 M : RufMaschine
       AnSperre M g L → L ∉ offen ((M.faeden f).spur)
 -- END handler leg --
 /-- **Time**: a frame entered at `M`, of a function whose calls nest at most `n` deep, takes
-    at most `kostenTief P passes (n + 1) g` own steps on every run while it is active. -/
+    at most `kostenTief P passes (n + 1) g` own steps on every run while it is active.
+    C05: this cost account includes ensures and every owed invariant on value returns. -/
 def ZeitAb (P : Programm D) (O : Orakel D) (passes : Nat) (M : RufMaschineG D) : Prop :=
   ∀ (f : Faden) (g : D.Fn) (n : Nat) (rho : Env D (D.params g)) (s0 : World D) (k : Nat),
     rufTief P (n + 1) g = true → Eintritt P f g rho s0 k M →

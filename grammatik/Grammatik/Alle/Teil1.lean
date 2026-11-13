@@ -138,6 +138,7 @@ public import Grammatik.Zielsatz.Atomar.TerminierungZeuge
 public import Grammatik.Zielsatz.Atomar.BeweisWarten
 public import Grammatik.Logik.Fortschritt.KostenG
 public import Grammatik.Logik.Fortschritt.KostenGZeuge
+public import Grammatik.Logik.Fortschritt.KostenG.EpilogZeuge
 public import Grammatik.Proben.AuditFinal
 public import Grammatik.Korpus.Zeugnis.ZeugnisStmt
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll

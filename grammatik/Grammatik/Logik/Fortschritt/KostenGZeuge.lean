@@ -7,8 +7,8 @@
   * `zP` (ZielOrtZeuge.lean): `haupt` takes the lock in a `locks` block and
     calls `wrap`, which calls `lies` and `einzahlen`. On the reached run of
     `zLauf`, the frame of `wrap` in thread 1 is entered by the third step
-    and returns by the tenth: 7 own steps against the bound 11; the start
-    frame of `haupt` takes 12 own steps (lock, call, release) against 18.
+    and returns by the tenth: 7 own steps against the bound 19; the start
+    frame of `haupt` takes 12 own steps (lock, call, release) against 26.
   * `hP` (RufMaschineG.lean §9): a `retry 1` loop whose body binds a call
     and leaves; 9 own steps of the start frame against its bound.
 -/
@@ -28,25 +28,30 @@ instance zD_fn_deq : DecidableEq zD.Fn := inferInstanceAs (DecidableEq ZFn)
 
 theorem zP_tief_wrap : rufTief zP 2 zWrap = true := by decide
 theorem zP_tief_haupt : rufTief zP 3 zHaupt = true := by decide
-theorem zP_kosten_wrap : kostenTief zP 0 2 zWrap = 11 := by decide
-theorem zP_kosten_haupt : kostenTief zP 0 3 zHaupt = 18 := by decide
-/-- The callees `lies` and `einzahlen` cost 4 each; `wrap` has no call
+theorem zP_kosten_wrap : kostenTief zP 0 2 zWrap = 19 := by decide
+theorem zP_kosten_haupt : kostenTief zP 0 3 zHaupt = 26 := by decide
+/-- The non-trivial ensures of two callees are part of their counted costs. -/
+theorem kostenEpilog_ensures_zeuge :
+    kostenEpilog zP zEin = 5 ∧ kostenEpilog zP zLies = 3 ∧
+    kostenTief zP 0 1 zEin = 9 ∧ kostenTief zP 0 1 zLies = 7 := by decide
+
+/-- The callees `lies` and `einzahlen` cost 7 and 9 including their ensures; `wrap` has no call
     deeper than one, so depth 2 is its admission depth and depth 1 is not. -/
 theorem zP_tief_wrap_eins : rufTief zP 1 zWrap = false := by decide
 
 /-- A declared cost table for `zP` (what `costs <= N ops` would say). -/
 def zDecl : zD.Fn → Nat
-  | .ein => 4
-  | .lies => 4
-  | .wrap => 12
-  | .haupt => 20
+  | .ein => 9
+  | .lies => 7
+  | .wrap => 20
+  | .haupt => 28
 
 /-- The `K001` check holds on the complete function list. -/
 theorem zP_kostenPasst : kostenPasst zP 0 zDecl zFs = true := by decide
 
 /-- A table that is one short at `wrap` fails the check. -/
 theorem zP_kostenPasst_knapp :
-    kostenPasst zP 0 (fun g => if g = zWrap then 10 else zDecl g) zFs = false := by decide
+    kostenPasst zP 0 (fun g => if g = zWrap then 18 else zDecl g) zFs = false := by decide
 
 /-! ## 2. The runs of `zP` -/
 
@@ -201,18 +206,18 @@ theorem zP_laeufe : ∃ (M3 M10 M12 M17 : RufMaschineG zD) (rho : Env zD (zD.par
 /-! ## 3. The witnesses -/
 
 /-- **`frame_schritte_beschraenkt_zeuge`.** On `zP`, the depth admissions
-    and the bounds are computed by `decide` (`wrap`: 11 at depth 2,
-    `haupt`: 18 at depth 3); on the reached run, the frame of `wrap`
+    and the bounds are computed by `decide` (`wrap`: 19 at depth 2,
+    `haupt`: 26 at depth 3); on the reached run, the frame of `wrap`
     (entered by thread 1's third step, returned by its tenth) takes 7 own
     steps and the start frame of `haupt` 12 -- and `frame_schritte_beschraenkt`
     (its premises holding jointly) and `kosten_passt_deklaration` (the
     declared table `zDecl` passing the Bool check) both bound them. On the
     run extended by thread 0's five steps, thread 1's count stays 12. The
-    checker's number of `wrap`'s body is 8 (two calls at 4) and the
-    remainder 3 (two pushes, one `return`), `8 + 3 = 11`. -/
+    checker's number of `wrap`'s body is 16 (calls at 7 and 9) and the
+    remainder 3 (two pushes, one `return`), `16 + 3 = 19`. -/
 theorem frame_schritte_beschraenkt_zeuge :
-    rufTief zP 2 zWrap = true ∧ kostenTief zP 0 2 zWrap = 11 ∧
-    rufTief zP 3 zHaupt = true ∧ kostenTief zP 0 3 zHaupt = 18 ∧
+    rufTief zP 2 zWrap = true ∧ kostenTief zP 0 2 zWrap = 19 ∧
+    rufTief zP 3 zHaupt = true ∧ kostenTief zP 0 3 zHaupt = 26 ∧
     kostenPasst zP 0 zDecl zFs = true ∧
     ∃ (M3 M10 M12 M17 : RufMaschineG zD) (lauf : SegLauf zP zO 0 M3 M10)
       (lauf0 : SegLauf zP zO 0 (RufStartG zP zSp zInit) M12)
@@ -225,8 +230,8 @@ theorem frame_schritte_beschraenkt_zeuge :
       segZaehle lauf0 1 ≤ zDecl zHaupt ∧
       segZaehle lauf17 1 = 12 ∧ segZaehle lauf17 0 = 5 ∧
       segZaehle lauf17 1 ≤ kostenTief zP 0 3 zHaupt ∧
-      segZaehle lauf 1 ≤ kostenKE (kostenTief zP 0 1) (zP.rumpf zWrap) + zusatzE (zP.rumpf zWrap) ∧
-      kostenKE (kostenTief zP 0 1) (zP.rumpf zWrap) = 8 ∧ zusatzE (zP.rumpf zWrap) = 3 := by
+      segZaehle lauf 1 ≤ kostenKE (kostenTief zP 0 1) (zP.rumpf zWrap) + zusatzE 0 (zP.rumpf zWrap) ∧
+      kostenKE (kostenTief zP 0 1) (zP.rumpf zWrap) = 16 ∧ zusatzE 0 (zP.rumpf zWrap) = 3 := by
   obtain ⟨M3, M10, M12, M17, rho, s0, lauf, lauf0, lauf17, hr, hE, hA, hl, hz, hE0, hA0, hz0,
     hA17, hz17, hz17'⟩ := zP_laeufe
   refine ⟨zP_tief_wrap, zP_kosten_wrap, zP_tief_haupt, zP_kosten_haupt, zP_kostenPasst,
@@ -292,12 +297,12 @@ theorem fremd_zeuge_axInc : fremdBlock (fun _ => 3) 0 axIncBlock = 3 := by rfl
 
 /-- The foreign-inclusive block cost splits into §1 plus foreign: `4 + 3`. -/
 theorem fremd_kostenF_zeuge :
-    kostenBlockF (fun _ => 3) (fun _ => 0) 0 axIncBlock
-      = kostenBlock (fun _ => 0) 0 axIncBlock + 3 := by rfl
+    kostenBlockF 0 (fun _ => 3) (fun _ => 0) 0 axIncBlock
+      = kostenBlock 0 (fun _ => 0) 0 axIncBlock + 3 := by rfl
 
 /-- No zero slip on a real foreign site: `inc` declared at `0` still costs. -/
 theorem fremd_kein_null_zeuge :
-    1 ≤ kostenBlockF (fun _ => 0) (fun _ => 0) 0 axIncBlock := by decide
+    1 ≤ kostenBlockF 0 (fun _ => 0) (fun _ => 0) 0 axIncBlock := by decide
 
 /-- **`fremd_budget_erhalten_zeuge`.** On `zP` the foreign layer is empty
     (`Ax = Empty`), so the foreign-inclusive bound is the §1 bound -- and the

@@ -21,9 +21,9 @@ theorem frame_schritte_pruefer (P : Programm D) (O : Orakel D) (passes : Nat)
     {rho : Env D (D.params g)} {s0 : World D} {k : Nat} {M1 M2 : RufMaschineG D}
     (hE : Eintritt P f g rho s0 k M1)
     (run : SegLauf P O passes M1 M2) (hA : aktivVor f k run) :
-    segZaehle run f ≤ kostenKE (kostenTief P passes n) (P.rumpf g) + zusatzE (P.rumpf g) :=
+    segZaehle run f ≤ kostenKE (kostenTief P passes n) (P.rumpf g) + zusatzE (kostenEpilog P g) (P.rumpf g) :=
   Nat.le_trans (frame_schritte_beschraenkt P O passes f g n hadm hE run hA)
-    (spiegel_end (kostenTief P passes n) passes (P.rumpf g) hsp)
+    (spiegel_end (kostenEpilog P g) (kostenTief P passes n) passes (P.rumpf g) hsp)
 
 /-! ## 12. The admission depth of the adequacy theorems
 

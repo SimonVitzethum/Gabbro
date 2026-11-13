@@ -154,59 +154,59 @@ def rufeR (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l
     iterations (list length, tries, budget) times one pass plus one; a
     `Rest` shim one more than the loop it resumes; a waiting caller its
     continuation (the callee's steps are counted in the callee's frame). -/
-def potRest (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+def potRest (ep : Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} : GRest D V l Γ Λ → Nat
-  | .ende e => kostenEnd c pa e
-  | .dann b k => kostenBlock c pa b + potRest c pa k
-  | .schrumpf k => 1 + potRest c pa k
-  | .frei _ k => 1 + potRest c pa k
+  | .ende e => kostenEnd ep c pa e
+  | .dann b k => kostenBlock ep c pa b + potRest ep c pa k
+  | .schrumpf k => 1 + potRest ep c pa k
+  | .frei _ k => 1 + potRest ep c pa k
   | .trav _ inv body ks k =>
-      1 + ks.length * (kostenBlock c pa body + kostenExpr inv + 2) + potRest c pa k
+      1 + ks.length * (kostenBlock ep c pa body + kostenExpr inv + 2) + potRest ep c pa k
   | .travRest _ inv body ks k =>
-      2 + ks.length * (kostenBlock c pa body + kostenExpr inv + 2) + potRest c pa k
+      2 + ks.length * (kostenBlock ep c pa body + kostenExpr inv + 2) + potRest ep c pa k
   | .verbrauch _ member edge inv _ mass body rest k =>
-      1 + rest * (kostenBlock c pa body + kostenExpr member + kostenExpr edge +
-        kostenExpr inv + kostenExpr mass + 2) + potRest c pa k
+      1 + rest * (kostenBlock ep c pa body + kostenExpr member + kostenExpr edge +
+        kostenExpr inv + kostenExpr mass + 2) + potRest ep c pa k
   | .verbrauchRest _ member edge inv _ mass body rest _ k =>
-      2 + rest * (kostenBlock c pa body + kostenExpr member + kostenExpr edge +
-        kostenExpr inv + kostenExpr mass + 2) + potRest c pa k
+      2 + rest * (kostenBlock ep c pa body + kostenExpr member + kostenExpr edge +
+        kostenExpr inv + kostenExpr mass + 2) + potRest ep c pa k
   | .wieder n bis body ueber k =>
-      1 + n * (kostenBlock c pa body + kostenExpr bis + 2) + (2 + kostenExpr bis + kostenBlock c pa ueber) +
-        potRest c pa k
+      1 + n * (kostenBlock ep c pa body + kostenExpr bis + 2) + (2 + kostenExpr bis + kostenBlock ep c pa ueber) +
+        potRest ep c pa k
   | .wiederRest n bis body ueber k =>
-      2 + n * (kostenBlock c pa body + kostenExpr bis + 2) + (2 + kostenExpr bis + kostenBlock c pa ueber) +
-        potRest c pa k
+      2 + n * (kostenBlock ep c pa body + kostenExpr bis + 2) + (2 + kostenExpr bis + kostenBlock ep c pa ueber) +
+        potRest ep c pa k
   | .ewig _ n inv body k =>
-      1 + n * (kostenBlock c pa body + kostenExpr inv + 2) + potRest c pa k
+      1 + n * (kostenBlock ep c pa body + kostenExpr inv + 2) + potRest ep c pa k
   | .ewigRest _ n inv body k =>
-      2 + n * (kostenBlock c pa body + kostenExpr inv + 2) + potRest c pa k
-  | .wartet rest k => kostenBlock c pa rest + 1 + potRest c pa k
+      2 + n * (kostenBlock ep c pa body + kostenExpr inv + 2) + potRest ep c pa k
+  | .wartet rest k => kostenBlock ep c pa rest + 1 + potRest ep c pa k
   | .wartetSonst _ err rest k =>
-      max (kostenSonst c pa err + 2 + potRest c pa k) (kostenBlock c pa rest + 1 + potRest c pa k)
-  | .abbruch k => 1 + potRest c pa k
+      max (kostenSonst ep c pa err + 2 + potRest ep c pa k) (kostenBlock ep c pa rest + 1 + potRest ep c pa k)
+  | .abbruch k => 1 + potRest ep c pa k
   | .zurueckgekehrt _ => 0
   | .aufraeumen _ remaining => remaining.length
   | .leer => 1
-  | .rueckBereit _ k => 1 + potRest c pa k
+  | .rueckBereit _ k => 1 + potRest ep c pa k
 
 section Positiv
 
-variable (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+variable (ep : Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
 
 theorem kostenStmt_pos {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') :
-    1 ≤ kostenStmt c pa s := by
+    1 ≤ kostenStmt ep c pa s := by
   cases s <;> simp only [kostenStmt] <;> omega
 
 theorem kostenBlock_pos {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ') :
-    1 ≤ kostenBlock c pa b := by
+    1 ≤ kostenBlock ep c pa b := by
   cases b with
-  | cons s rest => have := kostenStmt_pos c pa s; simp only [kostenBlock]; omega
+  | cons s rest => have := kostenStmt_pos ep c pa s; simp only [kostenBlock]; omega
   | _ => simp only [kostenBlock]; omega
 
 theorem kostenEnd_pos {Λ : List (Res D)} (e : Endblock D V l Γ Λ) :
-    1 ≤ kostenEnd c pa e := by
+    1 ≤ kostenEnd ep c pa e := by
   cases e with
-  | cons s rest => have := kostenStmt_pos c pa s; simp only [kostenEnd]; omega
+  | cons s rest => have := kostenStmt_pos ep c pa s; simp only [kostenEnd]; omega
   | _ => simp only [kostenEnd]; omega
 
 /-- A completed answer has no own step, and an empty cleanup has no rule. -/
@@ -217,10 +217,10 @@ def GRest.arbeitsfaehig {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)
   | _ => true
 
 theorem potRest_pos {Λ : List (Res D)} (r : GRest D V l Γ Λ)
-    (h : r.arbeitsfaehig = true) : 1 ≤ potRest c pa r := by
+    (h : r.arbeitsfaehig = true) : 1 ≤ potRest ep c pa r := by
   cases r with
-  | ende e => exact kostenEnd_pos c pa e
-  | dann b k => have := kostenBlock_pos c pa b; simp only [potRest]; omega
+  | ende e => exact kostenEnd_pos ep c pa e
+  | dann b k => have := kostenBlock_pos ep c pa b; simp only [potRest]; omega
   | wartet rest k => simp only [potRest]; omega
   | wartetSonst n err rest k => simp only [potRest]; omega
   | zurueckgekehrt a => cases h

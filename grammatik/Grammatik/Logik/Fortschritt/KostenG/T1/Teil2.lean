@@ -10,12 +10,12 @@ public import Grammatik.Logik.Fortschritt.KostenG.T1.Teil1
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
 section Positiv
-variable (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+variable (ep : Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
 
 /-- An end block run as a block costs `kostenSonst`. -/
 theorem kostenBlock_alsBlock :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ),
-      kostenBlock c pa e.alsBlock.2 = kostenSonst c pa e
+      kostenBlock ep c pa e.alsBlock.2 = kostenSonst ep c pa e
   | _, _, .ret _ _ => by simp only [Endblock.alsBlock, kostenBlock, kostenStmt, kostenSonst]; omega
   | _, _, .retWhy _ _ => by simp only [Endblock.alsBlock, kostenBlock, kostenStmt, kostenSonst]
   | _, _, .retScoped _ _ => by simp only [Endblock.alsBlock, kostenBlock, kostenStmt, kostenSonst]; omega
@@ -121,15 +121,15 @@ theorem rufeB_alsBlock (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
 end Positiv
 /-! ## 4. Arm selection keeps cost and callees -/
 
-theorem kostenBlock_armWahlG (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+theorem kostenBlock_armWahlG (ep : Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} :
     ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
-    kostenBlock c pa (armWahlG arms v).2.1 ≤ kostenArms c pa arms
+    kostenBlock ep c pa (armWahlG arms v).2.1 ≤ kostenArms ep c pa arms
   | _, .nil, ⟨⟨k, hk⟩, _⟩ => (Nat.not_lt_zero k hk).elim
   | _, .cons b rest, ⟨⟨0, _⟩, _⟩ => by
       simp only [armWahlG, kostenArms]; omega
   | _, .cons b rest, ⟨⟨n + 1, h⟩, nutz⟩ => by
-      have ih := kostenBlock_armWahlG c pa rest ⟨⟨n, Nat.lt_of_succ_lt_succ h⟩, nutz⟩
+      have ih := kostenBlock_armWahlG ep c pa rest ⟨⟨n, Nat.lt_of_succ_lt_succ h⟩, nutz⟩
       simp only [armWahlG, kostenArms]; omega
 
 theorem rufeB_armWahlG (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
@@ -144,15 +144,15 @@ theorem rufeB_armWahlG (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : 
       simp only [rufeArms, Bool.and_eq_true] at h
       exact rufeB_armWahlG Z ZS EW rest _ h.2
 
-theorem kostenBlock_grundWahlG (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool}
+theorem kostenBlock_grundWahlG (ep : Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} :
     ∀ {n : Nat} (arms : GrundArms D V l Γ Λ Λ' n) (r : Fin n),
-    kostenBlock c pa (grundWahlG arms r) ≤ kostenGrundArms c pa arms
+    kostenBlock ep c pa (grundWahlG arms r) ≤ kostenGrundArms ep c pa arms
   | _, .nil, ⟨k, hk⟩ => (Nat.not_lt_zero k hk).elim
   | _, .cons b rest, ⟨0, _⟩ => by
       simp only [grundWahlG, kostenGrundArms]; omega
   | _, .cons b rest, ⟨k + 1, h⟩ => by
-      have ih := kostenBlock_grundWahlG c pa rest ⟨k, Nat.lt_of_succ_lt_succ h⟩
+      have ih := kostenBlock_grundWahlG ep c pa rest ⟨k, Nat.lt_of_succ_lt_succ h⟩
       simp only [grundWahlG, kostenGrundArms]; omega
 
 theorem rufeB_grundWahlG (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}

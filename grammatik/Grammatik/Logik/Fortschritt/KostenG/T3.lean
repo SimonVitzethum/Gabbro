@@ -135,9 +135,9 @@ def kostenKE (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
 end
 mutual
 /-- **The remainder**: G's dispatch steps plus what the checker does not
-    read (F1, F4, F5, F6). No callee table: a call's callee cost is the
+    read (F1, F4, F5, F6, F10). No callee table: a call's callee cost is the
     same on both sides. -/
-def zusatzS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+def zusatzS (ep : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     Stmt D V l Γ Λ Λ' → Nat
   | .assignSlot _ _ i _ _ _ => kostenExpr i
   | .assignThru p _ _ _ i _ _ _ => kostenExpr p + kostenExpr i
@@ -147,130 +147,130 @@ def zusatzS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .putBytes _ _ _ _ i _ _ _ _ _ => kostenExpr i
   | .assignVar .. => 0
   | .shift _ _ _ i _ _ _ _ _ _ => kostenExpr i
-  | .ite _ t e => 1 + max (zusatzB t) (zusatzB e)
-  | .onOption _ p a => 2 + max (zusatzB p) (zusatzB a)
-  | .onTag _ arms => 2 + zusatzArms arms
-  | .onWhy _ arms => 1 + zusatzGArms arms
+  | .ite _ t e => 1 + max (zusatzB ep t) (zusatzB ep e)
+  | .onOption _ p a => 2 + max (zusatzB ep p) (zusatzB ep a)
+  | .onTag _ arms => 2 + zusatzArms ep arms
+  | .onWhy _ arms => 1 + zusatzGArms ep arms
   | .call .. => 1
   | .callInd .. => 0
-  | .callIndElse _ _ _ _ _ err => zusatzSonst err
-  | .locks _ _ body => 2 + zusatzB body
-  | .breaking _ body => 1 + zusatzB body
-  | .traverse t inv body => 2 + (D.count t).toNat * (zusatzB body + kostenExpr inv + 2)
+  | .callIndElse _ _ _ _ _ err => zusatzSonst ep err
+  | .locks _ _ body => 2 + zusatzB ep body
+  | .breaking _ body => 1 + zusatzB ep body
+  | .traverse t inv body => 2 + (D.count t).toNat * (zusatzB ep body + kostenExpr inv + 2)
   | .consumeTraverse t member edge inv _ mass body =>
-      2 + (D.count t).toNat * (zusatzB body + kostenExpr member + kostenExpr edge +
+      2 + (D.count t).toNat * (zusatzB ep body + kostenExpr member + kostenExpr edge +
         kostenExpr inv + kostenExpr mass + 2)
   | .retry .. => 0
   | .forever .. => 0
   | .axiomCall .. => 0
-  | .axiomCallElse _ _ _ _ _ _ _ _ err => zusatzSonst err
+  | .axiomCallElse _ _ _ _ _ _ _ _ err => zusatzSonst ep err
   | .regWrite .. => 0
   | .transition .. => 0
   | .publish .. => 0
   | .advances .. => 0
   | .retires .. => 0
-  | .ret .. => 1
+  | .ret .. => 1 + ep
   | .retWhy .. => 1
-  | .retScoped .. => 1
+  | .retScoped .. => 1 + ep
   | .retWhyScoped .. => 1
   | .leave _ => 1
   | .next _ => 1
 
-def zusatzB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+def zusatzB (ep : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     Block D V l Γ Λ Λ' → Nat
   | .nil => 1
-  | .cons s rest => zusatzS s + zusatzB rest
-  | .bind _ rest => 1 + zusatzB rest
-  | .bindCall _ _ _ _ _ rest => 1 + zusatzB rest
+  | .cons s rest => zusatzS ep s + zusatzB ep rest
+  | .bind _ rest => 1 + zusatzB ep rest
+  | .bindCall _ _ _ _ _ rest => 1 + zusatzB ep rest
   | .bindCallInd .. => 0
-  | .bindCallIndElse _ _ _ _ _ err rest => zusatzSonst err + zusatzB rest
-  | .bindCallElse _ _ _ _ _ err rest => 3 + zusatzSonst err + zusatzB rest
+  | .bindCallIndElse _ _ _ _ _ err rest => zusatzSonst ep err + zusatzB ep rest
+  | .bindCallElse _ _ _ _ _ err rest => 3 + zusatzSonst ep err + zusatzB ep rest
   | .bindAxiom .. => 0
   | .bindAxiomElse .. => 0
   | .bindAxiomOpt .. => 0
   | .bindAxiomOptElse .. => 0
-  | .regRead _ _ rest => zusatzB rest
-  | .regReadElse _ _ z sonst rest => 2 + kostenExpr z + zusatzSonst sonst + zusatzB rest
-  | .awaits _ _ _ _ _ rest => 1 + zusatzB rest
-  | .exchange _ _ _ _ rest => 1 + zusatzB rest
-  | .narrow e _ _ sonst rest => 3 + kostenExpr e + zusatzSonst sonst + zusatzB rest
-  | .narrowRequired e _ _ rest => 3 + kostenExpr e + zusatzB rest
-  | .check _ sonst rest => 1 + max (zusatzSonst sonst + 1) (zusatzB rest)
-  | .float _ _ _ _ _ rest => zusatzB rest
-  | .floatLit _ _ _ rest => 1 + zusatzB rest
-  | .floatOf _ _ _ rest => zusatzB rest
-  | .floatNarrow e _ _ sonst rest => 3 + kostenExpr e + zusatzSonst sonst + zusatzB rest
+  | .regRead _ _ rest => zusatzB ep rest
+  | .regReadElse _ _ z sonst rest => 2 + kostenExpr z + zusatzSonst ep sonst + zusatzB ep rest
+  | .awaits _ _ _ _ _ rest => 1 + zusatzB ep rest
+  | .exchange _ _ _ _ rest => 1 + zusatzB ep rest
+  | .narrow e _ _ sonst rest => 3 + kostenExpr e + zusatzSonst ep sonst + zusatzB ep rest
+  | .narrowRequired e _ _ rest => 3 + kostenExpr e + zusatzB ep rest
+  | .check _ sonst rest => 1 + max (zusatzSonst ep sonst + 1) (zusatzB ep rest)
+  | .float _ _ _ _ _ rest => zusatzB ep rest
+  | .floatLit _ _ _ rest => 1 + zusatzB ep rest
+  | .floatOf _ _ _ rest => zusatzB ep rest
+  | .floatNarrow e _ _ sonst rest => 3 + kostenExpr e + zusatzSonst ep sonst + zusatzB ep rest
 
-def zusatzArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+def zusatzArms (ep : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Nat
   | .nil => 0
-  | .cons b rest => max (zusatzB b) (zusatzArms rest)
+  | .cons b rest => max (zusatzB ep b) (zusatzArms ep rest)
 
-def zusatzGArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+def zusatzGArms (ep : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {n : Nat} : GrundArms D V l Γ Λ Λ' n → Nat
   | .nil => 0
-  | .cons b rest => max (zusatzB b) (zusatzGArms rest)
+  | .cons b rest => max (zusatzB ep b) (zusatzGArms ep rest)
 
-def zusatzE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+def zusatzE (ep : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → Nat
-  | .ret .. => 1
+  | .ret .. => 1 + ep
   | .retWhy .. => 1
-  | .retScoped .. => 1
+  | .retScoped .. => 1 + ep
   | .retWhyScoped .. => 1
   | .leave _ => 1
   | .next _ => 1
-  | .cons s rest => entfZ s + zusatzS s + zusatzE rest
-  | .bind _ rest => zusatzE rest
-  | .bindCall _ _ _ _ _ rest => 4 + zusatzSonst rest
-  | .bindCallElse _ _ _ _ _ err rest => 6 + zusatzSonst err + zusatzSonst rest
+  | .cons s rest => entfZ s + zusatzS ep s + zusatzE ep rest
+  | .bind _ rest => zusatzE ep rest
+  | .bindCall _ _ _ _ _ rest => 4 + zusatzSonst ep rest
+  | .bindCallElse _ _ _ _ _ err rest => 6 + zusatzSonst ep err + zusatzSonst ep rest
   | .bindAxiom .. => 0
   | .bindAxiomElse .. => 0
   | .bindAxiomOpt .. => 0
   | .bindAxiomOptElse .. => 0
-  | .regRead _ _ rest => 3 + zusatzSonst rest
-  | .regReadElse _ _ z sonst rest => 5 + kostenExpr z + zusatzSonst sonst + zusatzSonst rest
-  | .awaits _ _ _ _ _ rest => 4 + zusatzSonst rest
+  | .regRead _ _ rest => 3 + zusatzSonst ep rest
+  | .regReadElse _ _ z sonst rest => 5 + kostenExpr z + zusatzSonst ep sonst + zusatzSonst ep rest
+  | .awaits _ _ _ _ _ rest => 4 + zusatzSonst ep rest
   | .bindCallInd .. => 0
-  | .bindCallIndElse _ _ _ _ _ err rest => zusatzSonst err + zusatzSonst rest
+  | .bindCallIndElse _ _ _ _ _ err rest => zusatzSonst ep err + zusatzSonst ep rest
   | .narrow .. => 0
   | .narrowRequired .. => 0
   | .exchange .. => 0
   | .ite .. => 0
 
-  | .float _ _ _ _ _ rest => zusatzE rest
-  | .floatLit _ _ _ rest => 1 + zusatzE rest
-  | .floatOf _ _ _ rest => zusatzE rest
-  | .floatNarrow e _ _ sonst rest => 3 + kostenExpr e + zusatzE sonst + zusatzE rest
+  | .float _ _ _ _ _ rest => zusatzE ep rest
+  | .floatLit _ _ _ rest => 1 + zusatzE ep rest
+  | .floatOf _ _ _ rest => zusatzE ep rest
+  | .floatNarrow e _ _ sonst rest => 3 + kostenExpr e + zusatzE ep sonst + zusatzE ep rest
 /-- The remainder of an `else` branch run as a block (`kostenSonst`). -/
-def zusatzSonst {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+def zusatzSonst (ep : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → Nat
-  | .ret .. => 2
+  | .ret .. => 2 + ep
   | .retWhy .. => 2
-  | .retScoped .. => 2
+  | .retScoped .. => 2 + ep
   | .retWhyScoped .. => 2
   | .leave _ => 2
   | .next _ => 2
-  | .cons s rest => zusatzS s + zusatzSonst rest
-  | .bind _ rest => 1 + zusatzSonst rest
-  | .bindCall _ _ _ _ _ rest => 1 + zusatzSonst rest
-  | .bindCallElse _ _ _ _ _ err rest => 3 + zusatzSonst err + zusatzSonst rest
+  | .cons s rest => zusatzS ep s + zusatzSonst ep rest
+  | .bind _ rest => 1 + zusatzSonst ep rest
+  | .bindCall _ _ _ _ _ rest => 1 + zusatzSonst ep rest
+  | .bindCallElse _ _ _ _ _ err rest => 3 + zusatzSonst ep err + zusatzSonst ep rest
   | .bindAxiom .. => 0
   | .bindAxiomElse .. => 0
   | .bindAxiomOpt .. => 0
   | .bindAxiomOptElse .. => 0
-  | .regRead _ _ rest => zusatzSonst rest
-  | .regReadElse _ _ z sonst rest => 2 + kostenExpr z + zusatzSonst sonst + zusatzSonst rest
-  | .awaits _ _ _ _ _ rest => 1 + zusatzSonst rest
+  | .regRead _ _ rest => zusatzSonst ep rest
+  | .regReadElse _ _ z sonst rest => 2 + kostenExpr z + zusatzSonst ep sonst + zusatzSonst ep rest
+  | .awaits _ _ _ _ _ rest => 1 + zusatzSonst ep rest
   | .bindCallInd .. => 0
-  | .bindCallIndElse _ _ _ _ _ err rest => zusatzSonst err + zusatzSonst rest
+  | .bindCallIndElse _ _ _ _ _ err rest => zusatzSonst ep err + zusatzSonst ep rest
   | .narrow .. => 0
   | .narrowRequired .. => 0
   | .exchange .. => 0
   | .ite .. => 0
-  | .float _ _ _ _ _ rest => zusatzSonst rest
-  | .floatLit _ _ _ rest => 1 + zusatzSonst rest
-  | .floatOf _ _ _ rest => zusatzSonst rest
-  | .floatNarrow e _ _ sonst rest => 3 + kostenExpr e + zusatzSonst sonst + zusatzSonst rest
+  | .float _ _ _ _ _ rest => zusatzSonst ep rest
+  | .floatLit _ _ _ rest => 1 + zusatzSonst ep rest
+  | .floatOf _ _ _ rest => zusatzSonst ep rest
+  | .floatNarrow e _ _ sonst rest => 3 + kostenExpr e + zusatzSonst ep sonst + zusatzSonst ep rest
 
 end
 

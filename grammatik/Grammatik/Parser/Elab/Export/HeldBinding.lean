@@ -30,7 +30,7 @@ def haltS (h : D.Lock → Option Nat) (c : D.Fn → Nat) (Z : D.Fn → Bool) (pa
   | .callIndElse _ _ _ _ _ err => haltE h c Z pa err
   | .locks L _ body =>
     (match h L with
-      | some n => decide (kostenBlock c pa body ≤ n) && rufeB Z (fun _ => false) true body
+      | some n => decide (kostenBlock 0 c pa body ≤ n) && rufeB Z (fun _ => false) true body
       | none => true) && haltB h c Z pa body
   | .breaking _ body => haltB h c Z pa body
   | .traverse _ _ body => haltB h c Z pa body

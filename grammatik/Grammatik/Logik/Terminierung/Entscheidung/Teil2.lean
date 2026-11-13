@@ -54,7 +54,7 @@ theorem ewigFrei_schritt (hvoll : ∀ g : D.Fn, g ∈ fs) {M M' : RufMaschineG D
   have hfa' : M'.faeden t = M''.faeden t := by rw [hfa]
   rw [hfa']
   have hI' : ∀ r ∈ ((mitSpeicher M σ).faeden t).kopf :: ((mitSpeicher M σ).faeden t).stapel, EFR P fs r := hI
-  rcases schrittArt hg hb (fun _ => 0) (ewigFrei P fs) (ewigFreiS P fs) false with
+  rcases schrittArt hg hb 0 (fun _ => 0) (ewigFrei P fs) (ewigFreiS P fs) false with
     ⟨hst, hpot⟩ | ⟨g, caller', rho, s0, hst, hkopf, hpush⟩ | ⟨caller, rst, hst, hst', hpop⟩
   · intro r hr
     rw [hst] at hr
@@ -79,7 +79,7 @@ theorem ewigFrei_schritt (hvoll : ∀ g : D.Fn, g ∈ fs) {M M' : RufMaschineG D
   · intro r hr
     rcases List.mem_cons.mp hr with rfl | hr
     · have hc : EFR P fs caller := hI' caller (by rw [hst]; exact List.mem_cons_of_mem _ List.mem_cons_self)
-      exact (hpop (fun _ => 0) _ _ false).1 hc
+      exact (hpop 0 (fun _ => 0) _ _ false).1 hc
     · rw [hst'] at hr
       exact hI' r (by rw [hst]; exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ hr))
 

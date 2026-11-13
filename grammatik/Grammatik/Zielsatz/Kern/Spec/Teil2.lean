@@ -366,7 +366,7 @@ def SchwachX (P : Programm D) (O : Orakel D) (passes : Nat) (Tg : D.Tab ⊕ D.Gl
     RufSchrittGX P O passes Tg M u W'.g ∧ ∀ c, ¬ Tg c → TraegerGleich σ M.speicher c
 
 /-- **Time over GX**: `ZeitAb` for every run of GX from `M` (the weak memory answering the
-    shared atomics). -/
+    shared atomics). Its cost account includes the value-return epilogue (C05). -/
 def ZeitAbX (P : Programm D) (O : Orakel D) (passes : Nat) (Tg : D.Tab ⊕ D.Glob → Prop)
     (M : RufMaschineG D) : Prop :=
   ∀ (f : Faden) (g : D.Fn) (n : Nat) (rho : Env D (D.params g)) (s0 : World D) (k : Nat),
