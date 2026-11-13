@@ -399,6 +399,9 @@ theorem wit64_put_udiv : (lowerFn wLay wP WFn.put "put").map (usesOp .udiv) = so
 
 theorem wit64_get_urem : (lowerFn wLay wP WFn.get "get").map (usesOp .urem) = some true := by decide_cbv
 
+-- Use the proved payload equations before CBV requests the dependent matcher's equations.
+attribute [local cbv_eval] lowerNutz_empty lowerNutz_int
+
 /-- The three matches lower: `mt` has a `switch` (the reason and the tagged value), a signed branch (the
     option), the case number and the payload are an unsigned remainder and division. -/
 theorem wit64_mt_forms : (lowerFn wLay wP WFn.mt "mt").map (fun f =>
