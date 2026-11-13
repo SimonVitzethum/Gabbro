@@ -78,7 +78,9 @@ theorem Emitted.akzeptiertSpec (output : Emitted src K options) (Q : AxEns (decl
     final worlds of the two differ in their traces even when every contract holds. What would discharge `hRuf`:
     (i) `rufAt n g σ ρ = .ok σ' v → ∃ σ'', rufRumpf n g σ ρ = .ok σ'' v ∧ σ''` equal to `σ'` up to read events,
     by induction over the depth with a handler-substitution lemma for `execEnd`; and (ii) a version of `RufOk`
-    (and of `Rand`) whose world equality is taken up to read events. Neither exists yet.
+    (and of `Rand`) whose world equality is taken up to read events. (i) is `rufAt_rufRumpf_lg` (`Gleich/RufAt.lean`),
+    (ii) is `RufOkGleich`/`RandL` (`Ruf/`); `Emitted.bild_ziel_ruf` and `Emitted.bild_ziel_tief`
+    (`Ruf/EmittedZielL.lean`) state this theorem with calls admitted.
 
     **The idle start (not lifted here).** Machine G runs `P`; every thread but `thr` starts the idle function `r`.
     The lift to `gabbro_ziel`'s machine of `P.mitRuhe` must provide: (1) `Laufzeit (output.einheit Q)
