@@ -62,7 +62,7 @@ theorem holds100_zeuge :
     declares a bound of 100, every function body satisfies the section property. -/
 theorem holds_sectionsE_zeuge {r : Programm (declOf sectionUnit) × List (declOf sectionUnit).Fn}
     (hr : (lowerAllg sectionUnit).toOption = some r) (g : Fin sectionUnit.fns.length) :
-    sectionsOkE (boundOf (Tafel.von _ [("L", 100)]) sectionUnit)
+    sectionsOkE (boundOf (Tafel.von _ [("L", 100)]) sectionUnit) (kostenEpilog r.1 g)
       (CostBinding.decl (Tafel.von _ []) sectionUnit)
       (fun x => (CostBinding.costOf (Tafel.von _ []) sectionUnit x).isSome)
       0 (r.1.rumpf g) := by

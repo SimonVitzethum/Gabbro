@@ -113,10 +113,13 @@ theorem exhausted_G_zeuge :
     exact h7
 
 /-- The same static bound covers both paths, independently of outer passes or
-    the callee cost table (there are no calls). Negation is included. -/
-theorem kostenStmt_wloop_zeuge (finish : Bool) (cost : t4D.Fn → Nat) (passes : Nat) :
-    kostenStmt cost passes (loop finish) = 25 ∧
-      kostenEnd cost passes (whole finish) = 29 := by
+    the callee cost table (there are no calls). Negation is included. The loop
+    contains no return, so its cost holds at every epilogue price; the body is
+    priced at its own epilogue (C05), which is `0` here (`ensures true`, no
+    invariants). -/
+theorem kostenStmt_wloop_zeuge (finish : Bool) (ep : Nat) (cost : t4D.Fn → Nat) (passes : Nat) :
+    kostenStmt ep cost passes (loop finish) = 25 ∧
+      kostenEnd (kostenEpilog (program finish) t4F) cost passes (whole finish) = 29 := by
   cases finish <;> exact ⟨rfl, rfl⟩
 
 theorem wloop_scopesOk_zeuge (finish : Bool) :

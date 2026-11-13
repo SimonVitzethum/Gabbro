@@ -8,8 +8,9 @@
     the derived hold times are `haltSchranke [false, true] N false = 7`, `… true = 4`.
   * `haltezeit_aus_zeuge`: on the two-thread witness run of `wartezeit_zeuge` (LebendigkeitZeuge), whose
     thread 0 holds the lock for six scheduler steps, the program passes `haltPasst` (sections at most
-    `20`, `setze` declared at `10`), and `haltezeit_aus` gives `Haltezeit` with `h = k = 22` -- every
-    premise of the theorem discharged on a non-degenerate run.
+    `20`, `setze` declared at `14`: body `5` plus its return predicates `9`, C05), and `haltezeit_aus`
+    gives `Haltezeit` with `h = k = 22` -- every premise of the theorem
+    discharged on a non-degenerate run.
 -/
 module
 public import Grammatik.Logik.Fortschritt.Halten.Haltezeit
@@ -42,12 +43,12 @@ def hzN (L : Bool) : Nat := if L then 1 else 4
 
 /-- **The checker accepts the nested section at its bounds.** -/
 theorem hzAussen_geprueft :
-    haltB (fun (L : Bool) => some (hzN L)) (fun _ => 0) (fun _ => false) 0 hzAussen = true := by
+    haltB (fun (L : Bool) => some (hzN L)) 0 (fun _ => 0) (fun _ => false) 0 hzAussen = true := by
   decide +kernel
 
 /-- **The check is not vacuous**: one step less for the outer lock and the nested section is refused. -/
 theorem hzAussen_eng :
-    haltB (fun (L : Bool) => some (if L then 1 else 3)) (fun _ => 0) (fun _ => false) 0 hzAussen =
+    haltB (fun (L : Bool) => some (if L then 1 else 3)) 0 (fun _ => 0) (fun _ => false) 0 hzAussen =
       false := by
   decide +kernel
 
@@ -63,12 +64,12 @@ theorem hzSchranke :
     6-11) belongs to a program the hold-bound check accepts, and the derived hold time holds on it. -/
 theorem haltezeit_aus_zeuge : ∃ R : PlanLauf mP mO 0,
     R.M 0 = RufStartG mP mSp mInit ∧
-    haltPasst mP 0 (fun _ => 20) (fun _ => 10) mFs [mSetze] = true ∧
+    haltPasst mP 0 (fun _ => 20) (fun _ => 14) mFs [mSetze] = true ∧
     Haltezeit R (haltSchranke [()] (fun _ => 20)) (haltSchranke [()] (fun _ => 20)) ∧
     (∀ j, 6 ≤ j → j ≤ 11 → () ∈ offen ((R.M j).faeden 0).spur) ∧
     haltSchranke (D := mD) [()] (fun _ => 20) () = 22 := by
   obtain ⟨R, h0, -, -, -, -, -, -, -, halt0, -, -⟩ := lZeuge
-  have hK : haltPasst mP 0 (fun _ => 20) (fun _ => 10) mFs [mSetze] = true := by
+  have hK : haltPasst mP 0 (fun _ => 20) (fun _ => 14) mFs [mSetze] = true := by
     decide +kernel
   exact ⟨R, h0, hK,
     haltezeit_aus R mO_gut mP_stufen mSp mInit mInit_leer (by rw [h0]; exact .start) (ls := [()])

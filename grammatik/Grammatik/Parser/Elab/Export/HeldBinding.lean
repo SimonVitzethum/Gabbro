@@ -32,7 +32,8 @@ def boundOf (L : Fin u.locks.length) : Option Nat := (H.finde (lockAt u L).name)
 def holds (P : Programm (declOf u)) (passes : Nat) : Bool :=
   H.liste.all (fun p => u.locks.any (fun l => strEq l.name p.1)) &&
     (List.finRange u.fns.length).all fun g =>
-      haltE (D := declOf u) (boundOf H u) (CostBinding.decl C u) (fun x => (CostBinding.costOf C u x).isSome)
+      haltE (D := declOf u) (boundOf H u) (kostenEpilog P g) (CostBinding.decl C u)
+        (fun x => (CostBinding.costOf C u x).isSome)
         passes (P.rumpf g)
 
 /-- The first function with a section over its lock's bound, for the refusal. -/
@@ -40,7 +41,7 @@ def failing (P : Programm (declOf u)) (passes : Nat) : Option String :=
   match H.liste.find? (fun p => !u.locks.any (fun l => strEq l.name p.1)) with
   | some p => some p.1
   | none => ((List.finRange u.fns.length).find? fun g =>
-      !haltE (D := declOf u) (boundOf H u) (CostBinding.decl C u)
+      !haltE (D := declOf u) (boundOf H u) (kostenEpilog P g) (CostBinding.decl C u)
         (fun x => (CostBinding.costOf C u x).isSome) passes (P.rumpf g)).map fun g => (fnAt u g).name
 
 end Gabbro.Grammatik.Parser.HeldBinding

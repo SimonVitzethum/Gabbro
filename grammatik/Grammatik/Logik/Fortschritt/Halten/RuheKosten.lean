@@ -41,25 +41,35 @@ theorem kostenArgs_ru {Γ : Ctx} {Λ : List (Res D)} {ts : List Ty} (args : Args
 termination_by structural args
 end
 
-@[simp] theorem kostenExpr_umΓ {Γ Γ' : Ctx} {Λ : List (Res D)} {τ : Ty}
-    (h : Γ = Γ') (e : Expr D Γ Λ τ) : kostenExpr (Expr.umΓ h e) = kostenExpr e := by
-  subst h
-  rfl
-
-@[simp] theorem kostenExpr_umΛ {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty}
-    (h : Λ = Λ') (e : Expr D Γ Λ τ) : kostenExpr (Expr.umΛ h e) = kostenExpr e := by
-  subst h
-  rfl
-
-/-- User returns retain their predicate costs when the idle root is added. -/
-theorem kostenEpilog_ru (P : Programm D) (f : D.Fn) :
-    kostenEpilog P.mitRuhe (some f) = kostenEpilog P f := by
-  simp only [kostenEpilog, Programm.mitRuhe, kostenExpr_umΓ, kostenExpr_umΛ,
-    kostenExpr_ru] <;> rfl
-
 theorem kostenErg_ru {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty} (e : ErgExpr D Γ Λ o) :
     kostenErg (ruErg e) = kostenErg e := by
   cases e <;> simp only [ruErg, kostenErg, kostenExpr_ru]
+
+@[simp] theorem kostenExpr_umΛ {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty} (h : Λ = Λ')
+    (e : Expr D Γ Λ τ) : kostenExpr (Expr.umΛ h e) = kostenExpr e := by
+  subst h
+  rfl
+
+@[simp] theorem kostenExpr_umΓ {Γ Γ' : Ctx} {Λ : List (Res D)} {τ : Ty} (h : Γ = Γ')
+    (e : Expr D Γ Λ τ) : kostenExpr (Expr.umΓ h e) = kostenExpr e := by
+  subst h
+  rfl
+
+/-- **The return-predicate price of a user function is unchanged by the idle root** (C05): its
+    `ensures` and owed invariants are the translated ones of `P`, owed exactly as in `P`. -/
+theorem kostenEpilog_mitRuhe (P : Programm D) (f : D.Fn) :
+    kostenEpilog P.mitRuhe (some f) = kostenEpilog P f := by
+  have he : kostenExpr (P.mitRuhe.ensures (some f)) = kostenExpr (P.ensures f) := by
+    show kostenExpr (Expr.umΓ _ (Expr.umΛ _ (ruE (P.ensures f)))) = _
+    rw [kostenExpr_umΓ, kostenExpr_umΛ, kostenExpr_ru]
+  have hi : (fun i => kostenExpr (P.mitRuhe.invariante i)) =
+      (fun i => kostenExpr (P.invariante i)) := by
+    funext i
+    show kostenExpr (Expr.umΛ _ (ruE (P.invariante i))) = _
+    rw [kostenExpr_umΛ, kostenExpr_ru]
+  unfold kostenEpilog
+  rw [he, hi]
+  rfl
 
 section Transport
 variable (ep : Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}

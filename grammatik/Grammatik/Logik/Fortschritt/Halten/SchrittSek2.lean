@@ -25,36 +25,36 @@ set_option maxHeartbeats 4000000 in
 theorem schrittSek4 (hs : RufSchrittG4 P O pa M f M') (hb : RestScopeBalance (M.faeden f).kopf.rest)
     (hL : L ∈ offen (M.faeden f).spur) (hL' : L ∈ offen (M'.faeden f).spur)
     (hnd : (offen (M.faeden f).spur).Nodup)
-    (c : D.Fn → Nat) (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
-    SekArt L P pa M M' f c Z ZS EW := by
+    (ep : Nat) (c : D.Fn → Nat) (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
+    SekArt L P pa M M' f ep c Z ZS EW := by
   unfold SekArt
   cases hs with
   | rueckCons caller rst hpop =>
     refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' ZS' EW' => ?_⟩)
+      fun ep c' Z' ZS' EW' => ?_⟩)
     dsimp only; rw [rufUpdateG_self]
     exact ⟨id, Nat.le_refl _⟩
   | dannRet l Γ Λ Λ'' e hperm rest k ρ hhead caller rst hpop =>
     refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' ZS' EW' => ?_⟩)
+      fun ep c' Z' ZS' EW' => ?_⟩)
     dsimp only; rw [rufUpdateG_self]
     exact ⟨id, Nat.le_refl _⟩
   | dannRetBind lk Γk Λk Λk'' e hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc
       hcaller =>
     refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' ZS' EW' => ?_⟩)
+      fun ep c' Z' ZS' EW' => ?_⟩)
     dsimp only; rw [rufUpdateG_self]; dsimp only
     rcases hcaller with hc | ⟨n, err, hc⟩ <;> rw [hc] <;> dsimp only <;>
       simp only [potSek, rufeV, Bool.and_eq_true] <;> exact ⟨fun h => by simp_all, by omega⟩
   | rueckConsBind lk Γk Λk e hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller =>
     refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' ZS' EW' => ?_⟩)
+      fun ep c' Z' ZS' EW' => ?_⟩)
     dsimp only; rw [rufUpdateG_self]; dsimp only
     rcases hcaller with hc | ⟨n, err, hc⟩ <;> rw [hc] <;> dsimp only <;>
       simp only [potSek, rufeV, Bool.and_eq_true] <;> exact ⟨fun h => by simp_all, by omega⟩
   | rueckGrund r hperm ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
     refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' ZS' EW' => ?_⟩)
+      fun ep c' Z' ZS' EW' => ?_⟩)
     dsimp only; rw [rufUpdateG_self]; dsimp only
     rw [hcaller]; dsimp only
     simp only [potSek, rufeV, kostenBlock_alsBlock, rufeB_alsBlock, Bool.and_eq_true]
@@ -62,19 +62,19 @@ theorem schrittSek4 (hs : RufSchrittG4 P O pa M f M') (hb : RestScopeBalance (M.
   | peelDannLeave l Γ Λ rest b k ρ hleave hhead =>
     kopfS
     · simp_all
-    · have := kostenBlock_pos 0 c pa rest; have := kostenBlock_pos 0 c pa b; omega
+    · have := kostenBlock_pos ep c pa rest; have := kostenBlock_pos ep c pa b; omega
   | peelDannNext l Γ Λ rest b k ρ hnext hhead =>
     kopfS
     · simp_all
-    · have := kostenBlock_pos 0 c pa rest; have := kostenBlock_pos 0 c pa b; omega
+    · have := kostenBlock_pos ep c pa rest; have := kostenBlock_pos ep c pa b; omega
   | peelSchrumpfLeave l Γ Λ τ rest k ρ hleave hhead =>
     kopfS
     · simp_all
-    · have := kostenBlock_pos 0 c pa rest; omega
+    · have := kostenBlock_pos ep c pa rest; omega
   | peelSchrumpfNext l Γ Λ τ rest k ρ hnext hhead =>
     kopfS
     · simp_all
-    · have := kostenBlock_pos 0 c pa rest; omega
+    · have := kostenBlock_pos ep c pa rest; omega
   | peelFreiLeave l Γ Λ L' rest k ρ hleave hhead =>
     by_cases hne : L' = L
     · exfalso
@@ -83,7 +83,7 @@ theorem schrittSek4 (hs : RufSchrittG4 P O pa M f M') (hb : RestScopeBalance (M.
       exact hnd.not_mem_erase hL'
     · kopfSn
       · simp_all
-      · have := kostenBlock_pos 0 c pa rest; omega
+      · have := kostenBlock_pos ep c pa rest; omega
   | peelFreiNext l Γ Λ L' rest k ρ hnext hhead =>
     by_cases hne : L' = L
     · exfalso
@@ -92,15 +92,15 @@ theorem schrittSek4 (hs : RufSchrittG4 P O pa M f M') (hb : RestScopeBalance (M.
       exact hnd.not_mem_erase hL'
     · kopfSn
       · simp_all
-      · have := kostenBlock_pos 0 c pa rest; omega
+      · have := kostenBlock_pos ep c pa rest; omega
   | peelAbbruchLeave Γ Λ Λ1 Λk rest k ρ hleave hhead =>
     kopfS
     · simp_all
-    · have := kostenBlock_pos 0 c pa rest; omega
+    · have := kostenBlock_pos ep c pa rest; omega
   | peelAbbruchNext Γ Λ Λ1 Λk rest k ρ hnext hhead =>
     kopfS
     · simp_all
-    · have := kostenBlock_pos 0 c pa rest; omega
+    · have := kostenBlock_pos ep c pa rest; omega
   | _ =>
     kopfS
     · cases EW <;> simp_all
@@ -111,8 +111,8 @@ set_option maxHeartbeats 4000000 in
 theorem schrittSek5 (hs : RufSchrittG5 P O pa M f M') (hb : RestScopeBalance (M.faeden f).kopf.rest)
     (hL : L ∈ offen (M.faeden f).spur) (hL' : L ∈ offen (M'.faeden f).spur)
     (hnd : (offen (M.faeden f).spur).Nodup)
-    (c : D.Fn → Nat) (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
-    SekArt L P pa M M' f c Z ZS EW := by
+    (ep : Nat) (c : D.Fn → Nat) (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
+    SekArt L P pa M M' f ep c Z ZS EW := by
   unfold SekArt
   cases hs with
   | dannBindAxiomOpt _ _ l Γ Λ Λ' e a args he hp hd hgd rest k ρ hhead
@@ -127,14 +127,14 @@ theorem schrittSek5 (hs : RufSchrittG5 P O pa M f M') (hb : RestScopeBalance (M.
     all_goals first | (solve | simp_all) | omega
   | rueckConsGrund _ _ r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
     refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' ZS' EW' => ?_⟩)
+      fun ep c' Z' ZS' EW' => ?_⟩)
     dsimp only; rw [rufUpdateG_self]; dsimp only
     rw [hcaller]; dsimp only
     simp only [potSek, rufeV, kostenBlock_alsBlock, rufeB_alsBlock, Bool.and_eq_true]
     exact ⟨fun h => ⟨h.1.1, h.2⟩, by omega⟩
   | dannRetGrund _ _ r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
     refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' ZS' EW' => ?_⟩)
+      fun ep c' Z' ZS' EW' => ?_⟩)
     dsimp only; rw [rufUpdateG_self]; dsimp only
     rw [hcaller]; dsimp only
     simp only [potSek, rufeV, kostenBlock_alsBlock, rufeB_alsBlock, Bool.and_eq_true]
@@ -149,8 +149,8 @@ set_option maxHeartbeats 4000000 in
 theorem schrittSek6 (hs : RufSchrittG6 P O pa M f M') (hb : RestScopeBalance (M.faeden f).kopf.rest)
     (hL : L ∈ offen (M.faeden f).spur) (hL' : L ∈ offen (M'.faeden f).spur)
     (hnd : (offen (M.faeden f).spur).Nodup)
-    (c : D.Fn → Nat) (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
-    SekArt L P pa M M' f c Z ZS EW := by
+    (ep : Nat) (c : D.Fn → Nat) (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
+    SekArt L P pa M M' f ep c Z ZS EW := by
   unfold SekArt
   cases hs with
   | _ =>
@@ -163,8 +163,8 @@ set_option maxHeartbeats 4000000 in
 theorem schrittSek7 (hs : RufSchrittG7 P O pa M f M') (hb : RestScopeBalance (M.faeden f).kopf.rest)
     (hL : L ∈ offen (M.faeden f).spur) (hL' : L ∈ offen (M'.faeden f).spur)
     (hnd : (offen (M.faeden f).spur).Nodup)
-    (c : D.Fn → Nat) (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
-    SekArt L P pa M M' f c Z ZS EW := by
+    (ep : Nat) (c : D.Fn → Nat) (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
+    SekArt L P pa M M' f ep c Z ZS EW := by
   unfold SekArt
   cases hs with
   | dannVerbrauch l Γ Λ Λ'' t member edge inv bound mass body rest k ρ hhead =>
@@ -198,7 +198,7 @@ theorem schrittSek7 (hs : RufSchrittG7 P O pa M f M') (hb : RestScopeBalance (M.
     · simp_all
     · omega
   | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hnonempty =>
-    have hbudget := r.scopedWert_budgetSek L c pa e R (scopeBalance_von hhead hb) hret
+    have hbudget := r.scopedWert_budgetSek L ep c pa e R (scopeBalance_von hhead hb) hret
     dsimp only
     generalize hw : rufUpdateG M.faeden f _ f = w
     rw [rufUpdateG_self] at hw
@@ -206,11 +206,11 @@ theorem schrittSek7 (hs : RufSchrittG7 P O pa M f M') (hb : RestScopeBalance (M.
     refine Or.inl ⟨rfl, fun _ => ?_⟩
     refine ⟨rfl, ?_⟩
     rw [hhead]
-    change R.scopes.length + 1 ≤ potSek L c pa r
+    change R.scopes.length + 1 ≤ potSek L ep c pa r
     unfold scopedReturnSteps at hbudget
     omega
   | rueckScopedGrund ρ r grund R hhead hret hscope hΛ hnonempty =>
-    have hbudget := r.scopedGrund_budgetSek L c pa grund R (scopeBalance_von hhead hb) hret
+    have hbudget := r.scopedGrund_budgetSek L ep c pa grund R (scopeBalance_von hhead hb) hret
     dsimp only
     generalize hw : rufUpdateG M.faeden f _ f = w
     rw [rufUpdateG_self] at hw
@@ -218,21 +218,21 @@ theorem schrittSek7 (hs : RufSchrittG7 P O pa M f M') (hb : RestScopeBalance (M.
     refine Or.inl ⟨rfl, fun _ => ?_⟩
     refine ⟨rfl, ?_⟩
     rw [hhead]
-    change R.scopes.length + 1 ≤ potSek L c pa r
+    change R.scopes.length + 1 ≤ potSek L ep c pa r
     unfold scopedReturnSteps at hbudget
     omega
   | rueckFreigabe ρ a K remaining hhead hnonempty =>
     kopfS
     omega
   | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
-    have hbudget := r.scopedWert_budgetSek L c pa e R (scopeBalance_von hhead hb) hret
+    have hbudget := r.scopedWert_budgetSek L ep c pa e R (scopeBalance_von hhead hb) hret
     rcases rufAntwortG_kostenSek L ha pa with ⟨hst, hroot⟩ | hpop
     · dsimp only
       generalize hw : rufUpdateG M.faeden f _ f = w
       rw [rufUpdateG_self] at hw
       subst hw
       refine Or.inl ⟨hst, fun _ => ?_⟩
-      obtain ⟨hok, hzero⟩ := hroot c Z ZS EW
+      obtain ⟨hok, hzero⟩ := hroot ep c Z ZS EW
       refine ⟨hok, ?_⟩
       rw [hhead, hzero]
       simpa only [hempty, scopedReturnSteps, List.length_nil, Nat.add_zero] using hbudget
@@ -242,14 +242,14 @@ theorem schrittSek7 (hs : RufSchrittG7 P O pa M f M') (hb : RestScopeBalance (M.
       subst hw
       exact Or.inr (Or.inr hpop)
   | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
-    have hbudget := r.scopedGrund_budgetSek L c pa grund R (scopeBalance_von hhead hb) hret
+    have hbudget := r.scopedGrund_budgetSek L ep c pa grund R (scopeBalance_von hhead hb) hret
     rcases rufAntwortG_kostenSek L ha pa with ⟨hst, hroot⟩ | hpop
     · dsimp only
       generalize hw : rufUpdateG M.faeden f _ f = w
       rw [rufUpdateG_self] at hw
       subst hw
       refine Or.inl ⟨hst, fun _ => ?_⟩
-      obtain ⟨hok, hzero⟩ := hroot c Z ZS EW
+      obtain ⟨hok, hzero⟩ := hroot ep c Z ZS EW
       refine ⟨hok, ?_⟩
       rw [hhead, hzero]
       simpa only [hempty, scopedReturnSteps, List.length_nil, Nat.add_zero] using hbudget
@@ -265,7 +265,7 @@ theorem schrittSek7 (hs : RufSchrittG7 P O pa M f M') (hb : RestScopeBalance (M.
       rw [rufUpdateG_self] at hw
       subst hw
       refine Or.inl ⟨hst, fun _ => ?_⟩
-      obtain ⟨hok, hzero⟩ := hroot c Z ZS EW
+      obtain ⟨hok, hzero⟩ := hroot ep c Z ZS EW
       refine ⟨hok, ?_⟩
       rw [hhead, hzero]
       exact Nat.le_refl 1
@@ -284,15 +284,15 @@ theorem schrittSek (L : D.Lock) {P : Programm D} {O : Orakel D} {pa : Nat} {M M'
     {f : Faden} (hs : RufSchrittG P O pa M f M') (hb : RestScopeBalance (M.faeden f).kopf.rest)
     (hL : L ∈ offen (M.faeden f).spur) (hL' : L ∈ offen (M'.faeden f).spur)
     (hnd : (offen (M.faeden f).spur).Nodup)
-    (c : D.Fn → Nat) (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
-    SekArt L P pa M M' f c Z ZS EW := by
+    (ep : Nat) (c : D.Fn → Nat) (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
+    SekArt L P pa M M' f ep c Z ZS EW := by
   cases hs with
-  | g1 hs => exact schrittSek1 L hs hb hL hL' hnd c Z ZS EW
-  | g2 hs => exact schrittSek2 L hs hb hL hL' hnd c Z ZS EW
-  | g3 hs => exact schrittSek3 L hs hb hL hL' hnd c Z ZS EW
-  | g4 hs => exact schrittSek4 L hs hb hL hL' hnd c Z ZS EW
-  | g5 hs => exact schrittSek5 L hs hb hL hL' hnd c Z ZS EW
-  | g6 hs => exact schrittSek6 L hs hb hL hL' hnd c Z ZS EW
-  | g7 hs => exact schrittSek7 L hs hb hL hL' hnd c Z ZS EW
+  | g1 hs => exact schrittSek1 L hs hb hL hL' hnd ep c Z ZS EW
+  | g2 hs => exact schrittSek2 L hs hb hL hL' hnd ep c Z ZS EW
+  | g3 hs => exact schrittSek3 L hs hb hL hL' hnd ep c Z ZS EW
+  | g4 hs => exact schrittSek4 L hs hb hL hL' hnd ep c Z ZS EW
+  | g5 hs => exact schrittSek5 L hs hb hL hL' hnd ep c Z ZS EW
+  | g6 hs => exact schrittSek6 L hs hb hL hL' hnd ep c Z ZS EW
+  | g7 hs => exact schrittSek7 L hs hb hL hL' hnd ep c Z ZS EW
 
 end Gabbro.Grammatik

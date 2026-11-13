@@ -27,8 +27,8 @@ theorem haltPasst_mitRuhe [DecidableEq D.Fn] (P : Programm D) (passes : Nat)
     intro g hg
     obtain ⟨f, hf, rfl⟩ := List.mem_map.mp hg
     have row := List.all_eq_true.mp costs f hf
-    simpa only [members, HaltRuhe.kostenEpilog_ru, Programm.mitRuhe,
-      HaltRuhe.kostenEnd_umΛ, HaltRuhe.kostenEnd_ru,
+    simpa only [members, ↓HaltRuhe.kostenEpilog_mitRuhe, Programm.mitRuhe, HaltRuhe.kostenEnd_umΛ,
+      HaltRuhe.kostenEnd_ru,
       HaltRuhe.rufeE_umΛ, HaltRuhe.rufeE_ru, Option.elim] using row
   · apply List.all_eq_true.mpr
     intro g hg
@@ -37,6 +37,7 @@ theorem haltPasst_mitRuhe [DecidableEq D.Fn] (P : Programm D) (passes : Nat)
       rfl
     · obtain ⟨f, hf, rfl⟩ := List.mem_map.mp user
       have row := List.all_eq_true.mp sections f hf
-      simpa only [members, Programm.mitRuhe, HaltRuhe.haltE_umΛ, HaltRuhe.haltE_ru] using row
+      simpa only [members, ↓HaltRuhe.kostenEpilog_mitRuhe, Programm.mitRuhe, HaltRuhe.haltE_umΛ,
+        HaltRuhe.haltE_ru] using row
 
 end Gabbro.Grammatik

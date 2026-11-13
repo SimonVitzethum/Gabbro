@@ -3,7 +3,9 @@
   Subject:   THE HOLD-BOUND CHECK READ ON A RESIDUE: `GRest.hR` says every block, end block and loop body
              still to run passes the section walker `haltB`/`haltE` (Halten/Pruefung.lean). It is what the
              thread invariant `HaltInvG` (Halten/SchrittHalt.lean) carries along every rule of machine G, so
-             that the `locks` statement a thread takes was checked by `haltPasst`.
+             that the `locks` statement a thread takes was checked by `haltPasst`. The walker runs at the
+             return-predicate price `ep` the frame's body was checked with (C05); it never changes along a
+             frame, so every rule carries `hR` at the same `ep`.
 -/
 module
 public import Grammatik.Logik.Fortschritt.Halten.Pruefung
@@ -14,41 +16,42 @@ namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
 /-- **The residue predicate**: every block, end block and loop body still to run passes the walker. -/
-def GRest.hR (h : D.Lock → Option Nat) (c : D.Fn → Nat) (Z : D.Fn → Bool) (pa : Nat) {V : Vertrag D} :
+def GRest.hR (h : D.Lock → Option Nat) (ep : Nat) (c : D.Fn → Nat) (Z : D.Fn → Bool) (pa : Nat)
+    {V : Vertrag D} :
     {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l Γ Λ → Prop
-  | _, _, _, .ende e => haltE h c Z pa e = true
-  | _, _, _, .dann b k => haltB h c Z pa b = true ∧ GRest.hR h c Z pa k
-  | _, _, _, .schrumpf k => GRest.hR h c Z pa k
-  | _, _, _, .frei _ k => GRest.hR h c Z pa k
-  | _, _, _, .trav _ _ body _ k => haltB h c Z pa body = true ∧ GRest.hR h c Z pa k
-  | _, _, _, .travRest _ _ body _ k => haltB h c Z pa body = true ∧ GRest.hR h c Z pa k
-  | _, _, _, .verbrauch _ _ _ _ _ _ body _ k => haltB h c Z pa body = true ∧ GRest.hR h c Z pa k
+  | _, _, _, .ende e => haltE h ep c Z pa e = true
+  | _, _, _, .dann b k => haltB h ep c Z pa b = true ∧ GRest.hR h ep c Z pa k
+  | _, _, _, .schrumpf k => GRest.hR h ep c Z pa k
+  | _, _, _, .frei _ k => GRest.hR h ep c Z pa k
+  | _, _, _, .trav _ _ body _ k => haltB h ep c Z pa body = true ∧ GRest.hR h ep c Z pa k
+  | _, _, _, .travRest _ _ body _ k => haltB h ep c Z pa body = true ∧ GRest.hR h ep c Z pa k
+  | _, _, _, .verbrauch _ _ _ _ _ _ body _ k => haltB h ep c Z pa body = true ∧ GRest.hR h ep c Z pa k
   | _, _, _, .verbrauchRest _ _ _ _ _ _ body _ _ k =>
-      haltB h c Z pa body = true ∧ GRest.hR h c Z pa k
+      haltB h ep c Z pa body = true ∧ GRest.hR h ep c Z pa k
   | _, _, _, .wieder _ _ body ueber k =>
-      haltB h c Z pa body = true ∧ haltB h c Z pa ueber = true ∧ GRest.hR h c Z pa k
+      haltB h ep c Z pa body = true ∧ haltB h ep c Z pa ueber = true ∧ GRest.hR h ep c Z pa k
   | _, _, _, .wiederRest _ _ body ueber k =>
-      haltB h c Z pa body = true ∧ haltB h c Z pa ueber = true ∧ GRest.hR h c Z pa k
-  | _, _, _, .ewig _ _ _ body k => haltB h c Z pa body = true ∧ GRest.hR h c Z pa k
-  | _, _, _, .ewigRest _ _ _ body k => haltB h c Z pa body = true ∧ GRest.hR h c Z pa k
-  | _, _, _, .wartet b k => haltB h c Z pa b = true ∧ GRest.hR h c Z pa k
+      haltB h ep c Z pa body = true ∧ haltB h ep c Z pa ueber = true ∧ GRest.hR h ep c Z pa k
+  | _, _, _, .ewig _ _ _ body k => haltB h ep c Z pa body = true ∧ GRest.hR h ep c Z pa k
+  | _, _, _, .ewigRest _ _ _ body k => haltB h ep c Z pa body = true ∧ GRest.hR h ep c Z pa k
+  | _, _, _, .wartet b k => haltB h ep c Z pa b = true ∧ GRest.hR h ep c Z pa k
   | _, _, _, .wartetSonst _ err b k =>
-      haltE h c Z pa err = true ∧ haltB h c Z pa b = true ∧ GRest.hR h c Z pa k
-  | _, _, _, .abbruch k => GRest.hR h c Z pa k
+      haltE h ep c Z pa err = true ∧ haltB h ep c Z pa b = true ∧ GRest.hR h ep c Z pa k
+  | _, _, _, .abbruch k => GRest.hR h ep c Z pa k
   | _, _, _, .leer => True
-  | _, _, _, .rueckBereit _ k => GRest.hR h c Z pa k
+  | _, _, _, .rueckBereit _ k => GRest.hR h ep c Z pa k
   | _, _, _, .zurueckgekehrt _ => True
   | _, _, _, .aufraeumen _ _ => True
 
 section Hilfen
 
-variable (h : D.Lock → Option Nat) (c : D.Fn → Nat) (Z : D.Fn → Bool) (pa : Nat) {V : Vertrag D}
+variable (h : D.Lock → Option Nat) (ep : Nat) (c : D.Fn → Nat) (Z : D.Fn → Bool) (pa : Nat) {V : Vertrag D}
   {l : Bool}
 
 /-- An end block run as a block passes the walker exactly when the end block does. -/
 theorem haltB_alsBlock :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ),
-      haltB h c Z pa e.alsBlock.2 = haltE h c Z pa e
+      haltB h ep c Z pa e.alsBlock.2 = haltE h ep c Z pa e
   | _, _, .ret _ _ => rfl
   | _, _, .retWhy _ _ => rfl
   | _, _, .retScoped _ _ => rfl
@@ -100,7 +103,7 @@ theorem haltB_alsBlock :
 
 theorem haltB_armWahlG {Γ : Ctx} {Λ Λ' : List (Res D)} :
     ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
-    haltArms h c Z pa arms = true → haltB h c Z pa (armWahlG arms v).2.1 = true
+    haltArms h ep c Z pa arms = true → haltB h ep c Z pa (armWahlG arms v).2.1 = true
   | _, .nil, ⟨⟨k, hk⟩, _⟩, _ => (Nat.not_lt_zero k hk).elim
   | _, .cons b rest, ⟨⟨0, _⟩, _⟩, hb => by
       simp only [haltArms, Bool.and_eq_true] at hb
@@ -111,7 +114,7 @@ theorem haltB_armWahlG {Γ : Ctx} {Λ Λ' : List (Res D)} :
 
 theorem haltB_grundWahlG {Γ : Ctx} {Λ Λ' : List (Res D)} :
     ∀ {n : Nat} (arms : GrundArms D V l Γ Λ Λ' n) (r : Fin n),
-    haltGArms h c Z pa arms = true → haltB h c Z pa (grundWahlG arms r) = true
+    haltGArms h ep c Z pa arms = true → haltB h ep c Z pa (grundWahlG arms r) = true
   | _, .nil, ⟨k, hk⟩, _ => (Nat.not_lt_zero k hk).elim
   | _, .cons b rest, ⟨0, _⟩, hb => by
       simp only [haltGArms, Bool.and_eq_true] at hb
@@ -122,17 +125,18 @@ theorem haltB_grundWahlG {Γ : Ctx} {Λ Λ' : List (Res D)} :
 
 /-- The residue behind an optional foreign binder carries the predicate of its continuation. -/
 theorem GRest.hR_weiterOpt {Γ : Ctx} {Λ Λ' : List (Res D)} (e : Option Ty)
-    (k : GRest D V l Γ Λ') : GRest.hR h c Z pa (GRest.weiterOpt (Λ := Λ) e k) ↔ GRest.hR h c Z pa k := by
+    (k : GRest D V l Γ Λ') : GRest.hR h ep c Z pa (GRest.weiterOpt (Λ := Λ) e k) ↔ GRest.hR h ep c Z pa k := by
   cases e <;> exact Iff.rfl
 
 end Hilfen
 
 /-- A resumed caller keeps the predicate its suspended residue had. -/
-theorem antwortRestG_hR (h : D.Lock → Option Nat) (c : D.Fn → Nat) (Z : D.Fn → Bool) (pa : Nat)
+theorem antwortRestG_hR (h : D.Lock → Option Nat) (ep : Nat) (c : D.Fn → Nat) (Z : D.Fn → Bool)
+    (pa : Nat)
     (g : D.Fn) (a : ErgVal D (vertragVon D g).erg ⊕ Fin (vertragVon D g).gruende) {V : Vertrag D}
     (x y : Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D), Env D Γ × GRest D V l Γ Λ)
-    (ha : antwortRestG g a x = some y) (hm : GRest.hR h c Z pa x.2.2.2.2) :
-    GRest.hR h c Z pa y.2.2.2.2 := by
+    (ha : antwortRestG g a x = some y) (hm : GRest.hR h ep c Z pa x.2.2.2.2) :
+    GRest.hR h ep c Z pa y.2.2.2.2 := by
   obtain ⟨l, Γ, Λ, ρ, r⟩ := x
   cases a with
   | inl v =>
@@ -164,15 +168,15 @@ theorem rufAntwortG_hRcls (h : D.Lock → Option Nat) (c : D.Fn → Nat) (Z : D.
     {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
     (ha : rufAntwortG z vor σ a = some z') :
     (z'.stapel = z.stapel ∧
-      (GRest.hR h c Z pa z.kopf.rest.2.2.2.2 → GRest.hR h c Z pa z'.kopf.rest.2.2.2.2)) ∨
+      ∀ ep, (GRest.hR h ep c Z pa z.kopf.rest.2.2.2.2 → GRest.hR h ep c Z pa z'.kopf.rest.2.2.2.2)) ∨
     (∃ (caller : RufRahmenG D) (rst : List (RufRahmenG D)),
       z.stapel = caller :: rst ∧ z'.stapel = rst ∧
-      (GRest.hR h c Z pa caller.rest.2.2.2.2 → GRest.hR h c Z pa z'.kopf.rest.2.2.2.2)) := by
+      ∀ ep, (GRest.hR h ep c Z pa caller.rest.2.2.2.2 → GRest.hR h ep c Z pa z'.kopf.rest.2.2.2.2)) := by
   cases hst : z.stapel with
   | nil =>
       simp only [rufAntwortG, hst, Option.some.injEq] at ha
       subst z'
-      exact Or.inl ⟨rfl, fun _ => trivial⟩
+      exact Or.inl ⟨rfl, fun _ _ => trivial⟩
   | cons cl st =>
       obtain ⟨r, hr⟩ : ∃ r, antwortRestG z.kopf.f a cl.rest = some r := by
         cases hr : antwortRestG z.kopf.f a cl.rest with
@@ -180,6 +184,6 @@ theorem rufAntwortG_hRcls (h : D.Lock → Option Nat) (c : D.Fn → Nat) (Z : D.
         | some r => exact ⟨r, rfl⟩
       simp [rufAntwortG, hst, hr] at ha
       subst z'
-      exact Or.inr ⟨cl, st, rfl, rfl, fun hm => antwortRestG_hR h c Z pa _ _ _ _ hr hm⟩
+      exact Or.inr ⟨cl, st, rfl, rfl, fun ep hm => antwortRestG_hR h ep c Z pa _ _ _ _ hr hm⟩
 
 end Gabbro.Grammatik

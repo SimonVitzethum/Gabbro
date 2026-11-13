@@ -16,7 +16,10 @@
   `haltE` prices a section in `kostenBlock`, the G-step cost of KostenG, in which every step the old
   operation count priced at `0` (branch choice, lock take and release, `leave`, empty-block close, loop
   resume) is paid by a constant; a call costs its callee's declared cost, which `kostenPasst` checks
-  against the callee's body. What `kostenBlock` does not contain is paid by the constant part of
+  against the callee's body including its return predicates (C05). A value `return` inside the section is
+  priced with the return predicates of the section's own function (`kostenBlock ep`, `ep = kostenEpilog P g`,
+  carried per frame by `HaltInvG` and `SekInv`), so the epilogue is part of `N L`, not of the constant part.
+  What `kostenBlock` does not contain is paid by the constant part of
   `haltSchranke`: the release of `L` (`1`) and the releases a scoped `return` performs before `L`
   (at most one per lock, `ls.length`).
 -/
@@ -78,12 +81,12 @@ variable {ι : Type} (T : ι → D.Fn → Nat) (S : ι → D.Fn → Bool) (nx : 
   {P : Programm D} {O : Orakel D} {pa : Nat} (N : D.Lock → Nat) (ls : List D.Lock)
 
 /-- **Every held lock has its section invariant, at most at the checked hold time.** -/
-theorem sekInv_erreichbar (hO : GutO O) (hSt : StufenM P) (sp : Speicher D)
+theorem sekInv_erreichbar (E : D.Fn → Nat) (hO : GutO O) (hSt : StufenM P) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hLeer : ∀ t, D.haelt (init t).1 = [])
     (hls : ∀ K, K ∈ ls)
     (hS1 : ∀ i g, S i g = true → kostenEnd (kostenEpilog P g) (T (nx i g)) pa (P.rumpf g) ≤ T i g)
     (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (fun _ => false) true (P.rumpf g) = true)
-    (i0 : ι) (hP : ∀ g, haltE (fun K => some (N K)) (T i0) (S i0) pa (P.rumpf g) = true)
+    (i0 : ι) (hP : ∀ g, haltE (fun K => some (N K)) (E g) (T i0) (S i0) pa (P.rumpf g) = true)
     {M : RufMaschineG D} (hr : RufErreichbarG P O pa (RufStartG P sp init) M) :
     ∀ u L, L ∈ offen (M.faeden u).spur →
       ∃ Φ, Φ ≤ haltSchranke ls N L ∧ SekInv T S pa L (M.faeden u) Φ := by
@@ -113,10 +116,11 @@ theorem sekInv_erreichbar (hO : GutO O) (hSt : StufenM P) (sp : Speicher D)
     · by_cases hgu : g = u
       · subst hgu
         have hA := nimmt_an_sperre hO hs hL hL'
-        have hH := haltInvG_erreichbar (fun K => some (N K)) (T i0) (S i0) hP sp init hr' g
+        have hH := haltInvG_erreichbar (fun K => some (N K)) E (T i0) (S i0) hP sp init hr' g
         have hha := rufG_haeltInv hO sp init hr' g
+        obtain ⟨ep, hHk⟩ := hH _ List.mem_cons_self
         refine ⟨haltSchranke ls N L, Nat.le_refl _, ?_⟩
-        exact sekInv_nimmt T S N ls i0 hA hs (hH _ List.mem_cons_self) hL
+        exact sekInv_nimmt T S N ls i0 hA hs hHk hL
           (hha.alle _ List.mem_cons_self) hbal.1
           ((M.faeden g).kopf.rest.2.2.2.2.freis_nodup (hha.2.1 _ List.mem_cons_self)) hls
       · rw [rufSchrittG_passt_anders P O pa M M' g u (fun h => hgu h.symm) hs] at hL'
@@ -128,7 +132,8 @@ end Erreichbar
 
 /-- **THE HOLD TIME FROM THE CHECKER (`haltezeit_aus`).** Let the run start at a reachable machine of a
     program accepted by the hold-bound check `haltPasst P passes N decl fs ks` (every section of every
-    function of the complete list `fs` costs at most `N L` in `kostenBlock` and calls only functions of
+    function `g` of the complete list `fs` costs at most `N L` in `kostenBlock (kostenEpilog P g)` and calls
+    only functions of
     `ks`, each of which fits its declared cost `decl`), under `GutO`, the rank stages `StufenM`, and
     starts without signature locks. Then on every stretch on which a thread holds `L` it takes at most
     `haltSchranke ls N L = N L + 1 + ls.length` own steps (and as many at a `locks` head):
@@ -151,10 +156,12 @@ theorem haltezeit_aus [DecidableEq D.Fn] {P : Programm D} {O : Orakel D} {pa : N
     have := List.all_eq_true.mp hKP h hh
     simp only [Bool.and_eq_true, decide_eq_true_eq] at this
     exact this
-  have hP : ∀ g, haltE (fun K => some (N K)) decl (fun h => ks.contains h) pa (P.rumpf g) = true :=
+  have hP : ∀ g, haltE (fun K => some (N K)) (kostenEpilog P g) decl (fun h => ks.contains h) pa
+      (P.rumpf g) = true :=
     fun g => List.all_eq_true.mp hKH g (hfs g)
   have hS1 : ∀ (i : Unit) g, (fun (_ : Unit) h => ks.contains h) i g = true →
-      kostenEnd (kostenEpilog P g) ((fun (_ : Unit) => decl) ((fun (_ : Unit) (_ : D.Fn) => ()) i g)) pa (P.rumpf g) ≤
+      kostenEnd (kostenEpilog P g) ((fun (_ : Unit) => decl) ((fun (_ : Unit) (_ : D.Fn) => ()) i g)) pa
+        (P.rumpf g) ≤
         (fun (_ : Unit) => decl) i g :=
     fun _ h hS => (hfs' h (List.contains_iff_mem.mp hS)).1
   have hS2 : ∀ (i : Unit) g, (fun (_ : Unit) h => ks.contains h) i g = true →
@@ -167,7 +174,8 @@ theorem haltezeit_aus [DecidableEq D.Fn] {P : Programm D} {O : Orakel D} {pa : N
     rcases Nat.eq_zero_or_pos n with hn | hn
     · subst hn; exact Nat.zero_le _
     · obtain ⟨Φ, hΦ, hI⟩ := sekInv_erreichbar (fun (_ : Unit) => decl) (fun _ h => ks.contains h)
-        (fun _ _ => ()) N ls hO hSt sp init hLeer hls hS1 hS2 () hP (R.erreichbar hr0 a) u L
+        (fun _ _ => ()) N ls (kostenEpilog P) hO hSt sp init hLeer hls hS1 hS2 () hP (R.erreichbar hr0 a)
+        u L
         (by simpa using hheld 0 hn)
       have hz := zaehl_potential (fun j => R.akt j = some u)
         (fun j => L ∈ offen ((R.M j).faeden u).spur)
