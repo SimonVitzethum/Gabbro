@@ -109,7 +109,7 @@ def prepare (items : List SItemTief) :
 def instantiate (items : List SItemTief) : Except String (List SItemTief) :=
   (prepare items).map Prod.fst
 
-private theorem prepare_valid (source target : List SItemTief) (requirements : List (STyp × String))
+theorem prepare_valid (source target : List SItemTief) (requirements : List (STyp × String))
     (h : prepare source = .ok (target, requirements)) :
     ∃ result, prepareDetailedRaw source = .ok result ∧ result.items = target ∧
       validOutput source result = true := by
@@ -124,7 +124,7 @@ private theorem prepare_valid (source target : List SItemTief) (requirements : L
           Except.ok.injEq, Prod.mk.injEq] using h
       exact ⟨result, rfl, returned.1, hv⟩
 
-private theorem instantiate_valid (source target : List SItemTief)
+theorem instantiate_valid (source target : List SItemTief)
     (h : instantiate source = .ok target) :
     ∃ result, prepareDetailedRaw source = .ok result ∧ result.items = target ∧
       validOutput source result = true := by
@@ -137,7 +137,7 @@ private theorem instantiate_valid (source target : List SItemTief)
     subst target
     exact prepare_valid source actual requirements hp
 
-private theorem validOutput_parts (source : List SItemTief) (result : Prepared)
+theorem validOutput_parts (source : List SItemTief) (result : Prepared)
     (h : validOutput source result = true) :
     existingForms result.items = true ∧ Instantiation.ohneGenerik result.items = true ∧
       Instantiation.freshNames (userNames source) result.generatedNames = true ∧

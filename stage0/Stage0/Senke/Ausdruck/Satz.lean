@@ -424,7 +424,7 @@ theorem lowStorage_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.
     ∀ m pc (ρ : Env D Γ), Pre L m pc fp K d c ρ W reserved →
       StoredOk (L := L) m pc fp K d c ρ W reserved τ (eval σ₀ e σ ρ)
   | _, _, e, d, c, top, h, hK, m, pc, ρ, hp => by
-    apply lowStorage_sound σ₀ σ hWL e ?_ h hK hp
+    refine lowStorage_sound (currentOld := currentOld) σ₀ σ hWL e ?_ h hK hp
     cases e <;> simp only [StorageChildrenOk]
     all_goals first
       | trivial

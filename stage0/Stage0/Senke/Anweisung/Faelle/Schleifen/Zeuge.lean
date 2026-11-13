@@ -29,21 +29,40 @@ local instance (m : Runner.Mem) (pc : Runner.W) (o : Nat) (a b c : BitVec 32) :
   else .isFalse (fun h' => h ⟨h'.op, h'.f1, h'.f2, h'.f3⟩)
 
 theorem code_at : CodeAt memory 2048 code := by
-  have h : ∀ k : Fin code.length, InsAt memory (2048 + BitVec.ofNat 64 (16 * k.val))
-      code[k.val].o (II.f code[k.val].a) (II.f code[k.val].b) (II.f code[k.val].c) := by
-    apply allFin
-    decide +kernel
-  exact fun k hk => h ⟨k, hk⟩
+  refine codeAt_bytes code 2048 (by decide) ?_
+  intro i hi
+  have length := flatMap_enc_len code
+  have room : 2048 + 16 * code.length < 2 ^ 64 := by decide
+  have small : 2048 + i < 2 ^ 64 := by omega
+  refine ⟨rfl, rfl, ?_⟩
+  simp only [memory, BitVec.toNat_ofNat, Nat.mod_eq_of_lt small,
+    if_pos (by omega : 2048 ≤ 2048 + i ∧ 2048 + i < 2048 + 16 * code.length),
+    Nat.add_sub_cancel_left, List.getElem?_eq_getElem hi, Option.getD_some]
 
 theorem functions_at : PCode memory addresses target 4096 256 := by
-  have h : (List.finRange 3).all (fun f => (List.finRange (target f).length).all (fun k =>
-      decide (InsAt memory (BitVec.ofNat 64 (addresses f) + BitVec.ofNat 64 (16 * k.val))
-        (target f)[k.val].o (II.f (target f)[k.val].a) (II.f (target f)[k.val].b) (II.f (target f)[k.val].c)))) = true := by
-    decide +kernel
+  have changed : Agree 2048 0 (2 * code.length) callMem memory := by
+    refine ⟨rfl, rfl, ?_⟩
+    intro a outside
+    simp only [memory]
+    split
+    · next inside => exfalso; simp only [inSlots, BitVec.toNat_ofNat] at outside; omega
+    · rfl
+  have below : ∀ f : Fin 3, addresses f + 16 * (target f).length ≤ 2048 := by
+    apply allFin
+    decide
   change ∀ f : Fin 3, CodeAt memory (BitVec.ofNat 64 (addresses f)) (target f) ∧
     CodeFar (BitVec.ofNat 64 (addresses f)) (target f).length 4096 256
-  refine fun f => ⟨fun k hk => ?_, (targets_code f).2⟩
-  exact of_decide_eq_true (List.all_eq_true.mp (List.all_eq_true.mp h f (by simp)) ⟨k, hk⟩ (by simp))
+  intro f
+  refine ⟨(targets_code f).1.agree changed ?_, (targets_code f).2⟩
+  have bound := below f
+  have address := addresses_bound f
+  simp only [CodeFar, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega : addresses f < 2 ^ 64)]
+  constructor
+  · omega
+  · constructor
+    · have room : 2048 + 16 * code.length < 2 ^ 64 := by decide
+      omega
+    · omega
 
 theorem frame : FrameOK memory 4096 256 := ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩
 

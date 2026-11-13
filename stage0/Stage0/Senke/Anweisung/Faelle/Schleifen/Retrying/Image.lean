@@ -105,7 +105,7 @@ theorem Ready.control (h : x.Ready m σ ρ) :
       (foreverCounter x.counter x.one (16 * (x.body.length + 3)) ++
         (x.body ++ [ci 18 (-(16 * (x.condition.length + x.body.length + 4 : Nat) : Int)) 0 0] ++
           x.overflow)) ρ reserved := by
-  apply h.slice _
+  refine h.slice _
     (x.condition ++ [ci 19 (frei Γ reserved) 32 0,
       ci 18 (16 * (x.body.length + x.overflow.length + 4)) 0 0]) _ [] ?_ ?_
   · simp only [code, retryHeader_eq, foreverCounter, List.append_assoc,
@@ -136,7 +136,7 @@ theorem Ready.back (h : x.Ready m σ ρ) :
 
 theorem Ready.overflow (h : x.Ready m σ ρ) :
     PreS L m (x.addr x.overflowIndex) x.fp x.K (frei Γ reserved) x.overflow ρ reserved := by
-  apply h.slice _
+  refine h.slice _
     ((x.condition ++ [ci 19 (frei Γ reserved) 32 0,
       ci 18 (16 * (x.body.length + x.overflow.length + 4)) 0 0,
       ci 19 x.counter (16 * (x.body.length + 3)) 0, ci 4 x.counter x.counter x.one]) ++
