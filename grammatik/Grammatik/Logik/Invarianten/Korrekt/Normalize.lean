@@ -3,6 +3,7 @@ module
 public import Grammatik.Logik.Invarianten.Korrekt.Terms
 public import Grammatik.Logik.Invarianten.Elim.Cooper
 import Mathlib.Tactic.Linarith
+import Mathlib.Tactic.Ring
 
 public section
 
@@ -47,33 +48,43 @@ theorem normalizeAtom_denote [DecidableEq α] (name : α) (multiple : Nat)
     have ha : 0 < (splitVar name term).1.natAbs := Int.natAbs_pos.mpr hz
     have hf : 0 < multiple / (splitVar name term).1.natAbs :=
       Nat.div_pos (Nat.le_of_dvd positive hd) ha
-    have hm : (multiple / (splitVar name term).1.natAbs : Int) *
+    have hm : ((multiple / (splitVar name term).1.natAbs : Nat) : Int) *
         ((splitVar name term).1.natAbs : Int) = (multiple : Int) := by
       exact_mod_cast Nat.div_mul_cancel hd
     have hs : (if (splitVar name term).1 < 0 then (-1 : Int) else 1) *
         ((multiple : Int) * x) =
-        (multiple / (splitVar name term).1.natAbs : Int) * ((splitVar name term).1 * x) := by
+        ((multiple / (splitVar name term).1.natAbs : Nat) : Int) * ((splitVar name term).1 * x) := by
       by_cases hn : (splitVar name term).1 < 0
       · have habs := Int.ofNat_natAbs_of_nonpos (by omega : (splitVar name term).1 ≤ 0)
         simp only [hn, ↓reduceIte]
         rw [habs] at hm
-        nlinarith [hm]
+        have hmul : ((multiple / (splitVar name term).1.natAbs : Nat) : Int) *
+            (splitVar name term).1 = -(multiple : Int) := by nlinarith [hm]
+        calc
+          -1 * ((multiple : Int) * x) = -(multiple : Int) * x := by ring
+          _ = (((multiple / (splitVar name term).1.natAbs : Nat) : Int) *
+              (splitVar name term).1) * x := by rw [hmul]
+          _ = _ := by ring
       · have habs := Int.natAbs_of_nonneg (by omega : 0 ≤ (splitVar name term).1)
         simp only [hn, ↓reduceIte]
         rw [habs] at hm
-        nlinarith [hm]
+        calc
+          1 * ((multiple : Int) * x) = (multiple : Int) * x := by ring
+          _ = (((multiple / (splitVar name term).1.natAbs : Nat) : Int) *
+              (splitVar name term).1) * x := by rw [hm]
+          _ = _ := by ring
     have ht : (addTerm
           (scaleTerm (if (splitVar name term).1 < 0 then -1 else 1) (.var name))
-          (scaleTerm (multiple / (splitVar name term).1.natAbs : Int) (splitVar name term).2)).denote
+          (scaleTerm ((multiple / (splitVar name term).1.natAbs : Nat) : Int) (splitVar name term).2)).denote
           (values.bind name ((multiple : Int) * x)) =
-        (multiple / (splitVar name term).1.natAbs : Int) * term.denote (values.bind name x) := by
+        ((multiple / (splitVar name term).1.natAbs : Nat) : Int) * term.denote (values.bind name x) := by
       simp only [addTerm_denote, scaleTerm_denote, LTerm.denote, bind_same, remainder_bind]
       rw [hs, term_bind]
       ring
     cases relation with
     | lt =>
         simp only [normalizeAtom, hz, ↓reduceIte, atom_denote, ht, Relation.denote]
-        have hf' : (0 : Int) < (multiple / (splitVar name term).1.natAbs : Int) := by omega
+        have hf' : (0 : Int) < ((multiple / (splitVar name term).1.natAbs : Nat) : Int) := by omega
         constructor <;> intro h <;> nlinarith
     | dvd k =>
         simp only [normalizeAtom, hz, ↓reduceIte, atom_denote, ht, Relation.denote]
