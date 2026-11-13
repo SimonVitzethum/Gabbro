@@ -18,6 +18,8 @@ open Gabbro.Grammatik
 #check @Gabbro.Grammatik.Zielsatz.GabbroZiel
 #check @Gabbro.Grammatik.Zielsatz.gabbro_ziel
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel
+#check @Gabbro.Grammatik.Zielsatz.GabbroZielVoll
+#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_voll
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_sc
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_sc_aus
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_verbund

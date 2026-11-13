@@ -16,7 +16,7 @@ section Schritte
 variable {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D} {S : SperrInv D}
   {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {m : Mass D} {zyk : D.Fn → D.Fn → Bool}
 /-- **The call leg** (as `pushS_req`), for a caller whose record repeats `HX`. -/
-theorem pushSA_req (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : SperrInvOk S)
+theorem pushSA_req (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O) (hS : SperrInvOk S)
     {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f) {F : RufRahmenG D}
     {H : List (EintragV D)} {HA : List (AxEintrag D)} {HU : List (UEintrag D)}
@@ -51,14 +51,14 @@ theorem pushSA_req (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : 
       rw [hlogik _ _ _ _ _ hPX hHA htor] at h1
       have hex := zErgG_gleich_logik (ZErgG.folgt_logik h1)
       exact ((hK F.f).1 (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
-        (orakelAus_vertrag hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu)
+        (orakelAus_vertragOP hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu)
         (umweltAusA Tg HX) hHA (rufAusV H) (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1)
         F.s0 F.rho hreq).2 g hex
 
 /-- **The measure leg** (T4, as `pushSA_req`): a call into the caller's own cycle has a smaller measure than the
     caller's entry. Were it not so, the measure gate would answer `abstieg` there, the replay would carry that to
     the caller's body, and the user's duty `MassPflicht` excludes it. -/
-theorem pushSA_mass (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : SperrInvOk S)
+theorem pushSA_mass (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O) (hS : SperrInvOk S)
     {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hM : ∀ f, MassPflicht P passes Q S Tg m zyk f) {F : RufRahmenG D}
     {H : List (EintragV D)} {HA : List (AxEintrag D)} {HU : List (UEintrag D)}
@@ -94,7 +94,7 @@ theorem pushSA_mass (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS :
       rw [hlogik _ _ _ _ _ hPX hHA htor] at h1
       have hex := zErgG_gleich_logik (ZErgG.folgt_logik h1)
       exact hM F.f (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
-        (orakelAus_vertrag hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu)
+        (orakelAus_vertragOP hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu)
         (umweltAusA Tg HX) hHA (rufAusM H) (rufAusM_rahmen hv) (rufAusM_ohneAbstieg hv) (rufAusM_ohneVorbedingung hv)
         F.s0 F.rho hreq g hz hex
 

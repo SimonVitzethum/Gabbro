@@ -125,4 +125,37 @@ theorem stabilS_relyX (hO : GutO O) (hS : SperrInvOk S) {K : Faden → D.Fn → 
 
 end Rely
 
+/-! ## 3. The oracle rely of the replay over GX (C08 R3b) -/
+
+section Antwort
+
+/-- **The answer facts at every reachable question.** At every machine GX reaches, on
+    every memory the weak memory may present, the current question of each thread is
+    answered within `Q`. This is what the replay records at a foreign step. -/
+def AntwortQLauf (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
+    (Tg : D.Tab ⊕ D.Glob → Prop) (M0 : RufMaschineG D) : Prop :=
+  ∀ M : RufMaschineG D, RufErreichbarGX P O passes Tg M0 M → ∀ σ : Speicher D,
+    (∀ c, ¬ Tg c → TraegerGleich σ M.speicher c) → ∀ t : Faden, AntwortQ Q O (mitSpeicher M σ) t
+
+/-- **The oracle rely of the replay**: the oracle is in the body duties' class (so the
+    replay oracle is too, `orakelAus_vertragOP`), and every question the run asks is
+    answered within `Q`. -/
+def RelyQ (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
+    (Tg : D.Tab ⊕ D.Glob → Prop) (M0 : RufMaschineG D) : Prop :=
+  AxVertragOP (PreQ P) Q O ∧ AntwortQLauf P O passes Q Tg M0
+
+/-- The full summary premise gives the rely on every run. -/
+theorem antwortQLauf_of_O {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D}
+    {Tg : D.Tab ⊕ D.Glob → Prop} {M0 : RufMaschineG D} (h : AxVertragO Q O) :
+    AntwortQLauf P O passes Q Tg M0 := by
+  intro M _ σ _ t a σ1 ρ _ v hv
+  exact h a (σ1.fragt (.inl a)) ρ v hv
+
+theorem relyQ_of_O {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D}
+    {Tg : D.Tab ⊕ D.Glob → Prop} {M0 : RufMaschineG D} (h : AxVertragO Q O) :
+    RelyQ P O passes Q Tg M0 :=
+  ⟨axVertragOP_of_O _ h, antwortQLauf_of_O h⟩
+
+end Antwort
+
 end Gabbro.Grammatik

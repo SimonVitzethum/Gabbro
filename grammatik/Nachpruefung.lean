@@ -32,6 +32,8 @@ open Gabbro.Grammatik
 
 -- The whole chain of the goal theorem, in one line of kernel output.
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel
+#check @Gabbro.Grammatik.Zielsatz.GabbroZielVoll
+#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_voll
 -- The statement of before (without the atomic rely, lane O25c), and its derivation.
 #check @Gabbro.Grammatik.Zielsatz.GabbroZielSC
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_sc

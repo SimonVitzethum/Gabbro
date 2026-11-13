@@ -32,11 +32,16 @@ public import Grammatik.Logik.Ruf.FremdRuf.T2
 public import Grammatik.Logik.Ruf.FremdRuf.T3
 public import Grammatik.Logik.Ruf.FremdRuf.T4
 public import Grammatik.Logik.Ruf.FremdRuf.T5
+public import Grammatik.Logik.Ruf.FremdRuf.T5Duties
 public import Grammatik.Logik.Ruf.FremdRuf.T6
 public import Grammatik.Logik.Ruf.FremdRuf.T7
 public import Grammatik.Logik.Ruf.FremdRuf.T8
 public import Grammatik.Logik.Ruf.FremdRuf.T9
 public import Grammatik.Logik.Ruf.FremdRuf.T10
+public import Grammatik.Logik.Ruf.FremdRuf.T10Run
+public import Grammatik.Logik.Ruf.FremdRuf.T10RunZeuge
+public import Grammatik.Logik.Ruf.FremdRuf.T10IntegrationBlocker
+public import Grammatik.Logik.Ruf.FremdRuf.T10CallSiteZeuge
 public import Grammatik.Logik.Ruf.FremdRuf.T11
 public import Grammatik.Logik.Ruf.FremdRuf.T12
 @[expose] public section

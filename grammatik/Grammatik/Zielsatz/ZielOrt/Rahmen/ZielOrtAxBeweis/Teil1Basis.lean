@@ -129,7 +129,7 @@ theorem popA_ens (hO : GutO O) (hQ : AxVertragO Q O) (hK : ∀ f, KoerperGutA P 
   simp only at h1
   have h2 := ZErg.folgt_zurueck (ZErg.folgt_trans h1 (ZErg.folgt_of_gleich (hsem _ _ σ)))
   obtain ⟨σ'', hex, hsg⟩ := zErg_gleich_zurueck h2
-  have hE := (hK G.f (orakelAus O HA) (orakelAus_rahmen hO hra) (orakelAus_vertrag hQ hqa) (rufAusV H)
+  have hE := (hK G.f (orakelAus O HA) (orakelAus_rahmen hO hra) (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa) (rufAusV H)
     (rufAusV_respektiert hv) (rufAusV_ohneVorbedingung hv) G.s0 G.rho hreq).1 σ'' _ hex
   have hgl : GleichAuf (fussOrte P G.f) (σ.lese Λ e.orte) (W.lese Λ e.orte) :=
     hg.lese Λ Λ e.orte e.orte
@@ -163,7 +163,7 @@ theorem pushA_req (hO : GutO O) (hQ : AxVertragO Q O) (hK : ∀ f, KoerperGutA P
         (orakelAus_passt O hfa) rfl
       rw [hlogik _ _ _ htor] at h1
       have hex := zErg_gleich_logik (ZErg.folgt_logik h1)
-      exact (hK F.f (orakelAus O HA) (orakelAus_rahmen hO hra) (orakelAus_vertrag hQ hqa) (rufAusV H)
+      exact (hK F.f (orakelAus O HA) (orakelAus_rahmen hO hra) (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa) (rufAusV H)
         (rufAusV_respektiert hv) (rufAusV_ohneVorbedingung hv) F.s0 F.rho hreq).2 g hex
 
 

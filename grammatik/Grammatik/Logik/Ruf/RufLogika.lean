@@ -205,7 +205,7 @@ theorem rufAt_nurAbstieg (hTO : TreuO O) (hRL : RegLokal O) (hQ : AxVertragO Q O
               (σ.lese (Signatur.anfang D (D.signatur g)) (P.requires g).orte) ρ ≠
                 EndAusgang.logik (Logik.vorbedingung g') := by
           intro g' hcon
-          refine ((hK g).1 O hRO hRL hQ U hU (rufEintritt P O passes m) (hRE m)
+          refine ((hK g).1 O hRO hRL (axVertragOP_of_O _ hQ) U hU (rufEintritt P O passes m) (hRE m)
             (eintritt_ohneVorbedingung P O passes m)
             (σ.lese (Signatur.anfang D (D.signatur g)) (P.requires g).orte) ρ hreq1).2 g' ?_
           rw [Endblock.execH_ohne S O U passes (torRuf P (rufEintritt P O passes m))
@@ -231,7 +231,7 @@ theorem rufAt_nurAbstieg (hTO : TreuO O) (hRL : RegLokal O) (hQ : AxVertragO Q O
                 EndAusgang.logik e' := by
           intro e' hcon
           rw [← hEqTor m g σ ρ hh, hYYstar] at hcon
-          refine (hK g).2 O hRO hRL hQ U hU (rufEintritt P O passes m) (hRE m)
+          refine (hK g).2 O hRO hRL (axVertragOP_of_O _ hQ) U hU (rufEintritt P O passes m) (hRE m)
             (eintritt_ohneLogik P O passes m)
             (σ.lese (Signatur.anfang D (D.signatur g)) (P.requires g).orte) ρ hreq1 e' ?_
           rw [Endblock.execH_ohne S O U passes (rufEintritt P O passes m) (P.rumpf g) (hlocks g)]
@@ -244,7 +244,7 @@ theorem rufAt_nurAbstieg (hTO : TreuO O) (hRL : RegLokal O) (hQ : AxVertragO Q O
                 σ₂ ρ v := by
           intro σ₂ v hz
           rw [← hEqTor m g σ ρ hh, hYYstar] at hz
-          refine ((hK g).1 O hRO hRL hQ U hU (rufEintritt P O passes m) (hRE m)
+          refine ((hK g).1 O hRO hRL (axVertragOP_of_O _ hQ) U hU (rufEintritt P O passes m) (hRE m)
             (eintritt_ohneVorbedingung P O passes m)
             (σ.lese (Signatur.anfang D (D.signatur g)) (P.requires g).orte) ρ hreq1).1 σ₂ v ?_
           rw [Endblock.execH_ohne S O U passes (rufEintritt P O passes m) (P.rumpf g) (hlocks g)]
@@ -255,7 +255,7 @@ theorem rufAt_nurAbstieg (hTO : TreuO O) (hRL : RegLokal O) (hQ : AxVertragO Q O
                 .zurueck σ₂ v → InvAmRueck P g σ₂ := by
           intro σ₂ v hz
           rw [← hEqTor m g σ ρ hh, hYYstar] at hz
-          refine hI g O hRO hRL hQ U hU (rufEintritt P O passes m) (hRE m)
+          refine hI g O hRO hRL (axVertragOP_of_O _ hQ) U hU (rufEintritt P O passes m) (hRE m)
             (eintritt_ohneVorbedingung P O passes m)
             (σ.lese (Signatur.anfang D (D.signatur g)) (P.requires g).orte) ρ hreq1 σ₂ v ?_
           rw [Endblock.execH_ohne S O U passes (rufEintritt P O passes m) (P.rumpf g) (hlocks g)]

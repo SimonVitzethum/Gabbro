@@ -74,7 +74,7 @@ structure FadenFakten (P : Programm D) (K : Faden → D.Fn → Bool) (M : RufMas
   graph : ∀ t, ∀ F ∈ (M.faeden t).kopf :: (M.faeden t).stapel, K t F.f = true
 
 /-- **One GX step keeps the replay, the frame invariant and the machine lock invariant.** -/
-theorem zielInvSA_schrittGX (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+theorem zielInvSA_schrittGX (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O)
     (hlok : AxEnsLokal Q) (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f) (hM : ∀ f, MassPflicht P passes Q S Tg m zyk f)
     (hTV : ∀ c, Tg c → VertragsFrei P c)
@@ -85,7 +85,9 @@ theorem zielInvSA_schrittGX (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q 
     {M M' : RufMaschineG D} {u : Faden} (hs : RufSchrittGX P O passes Tg M u M')
     (hFF : FadenFakten P K M)
     (hI : ZielInvSA P O passes Q S lok Tg m zyk M) (hRS : RahmenInvS P S lok M)
-    (hSG : SperrInvG S M) :
+    (hSG : SperrInvG S M)
+    (hAQ : ∀ σ : Speicher D, (∀ c, ¬ Tg c → TraegerGleich σ M.speicher c) →
+      AntwortQ Q O (mitSpeicher M σ) u) :
     ZielInvSA P O passes Q S lok Tg m zyk M' ∧ RahmenInvS P S lok M' ∧ SperrInvG S M' := by
   obtain ⟨σ, M'', hs1, hσ, h1, h2, hfa, _, _⟩ := hs
   let M1 := mitSpeicher M σ
@@ -106,6 +108,7 @@ theorem zielInvSA_schrittGX (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q 
       (M1.faeden u).stapel :=
     rahmenStapelS_fremd (hRS u) fun F _ c hc => hj c fun ht => hTS c ht _ _ hc
   have hA := akteurSA hO hRL hQ hlok hS hsp hK hM hTV hFragS hFS hs1 hFu1 (hI.2 u) hRSu1 hSG1
+    (hAQ σ hσ)
   -- the rely for the other threads, from the thread invariants at M1 (= M's threads)
   have hFF1 : FadenFakten P K M1 := ⟨hFF.halt, hFF.exkl, hFF.graph⟩
   have hrely : ∀ t, t ≠ u → ∀ F ∈ (M.faeden t).kopf :: (M.faeden t).stapel,
@@ -213,7 +216,7 @@ theorem fadenFakten_GX {fs : List D.Fn} (hO : GutO O) (hvoll : ∀ g : D.Fn, g �
 theorem zielInvSA_erreichbarGX (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     (S : SperrInv D) {fs : List D.Fn} (K : Faden → D.Fn → Bool) (Tg : D.Tab ⊕ D.Glob → Prop)
     (lok : D.Tab ⊕ D.Glob → Bool) (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
-    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    (hO : GutO O) (hRL : RegLokal O) (hQ : RelyQ P O passes Q Tg (RufStartG P sp init)) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hAbg : ∀ t, AbgK P fs (K t)) (hWurzel : ∀ t, K t (init t).1 = true)
     (hTA : ∀ c, Tg c → AtomarAusgenommen c) (hTV : ∀ c, Tg c → VertragsFrei P c)
@@ -241,14 +244,15 @@ theorem zielInvSA_erreichbarGX (P : Programm D) (O : Orakel D) (passes : Nat) (Q
       rw [e]
       trivial
   | schritt M M' u hr' hs ih =>
-      exact zielInvSA_schrittGX hO hRL hQ hlok hS hsp hK hM hTV hTS hTO hFragS hFS hlokK hs
+      exact zielInvSA_schrittGX hO hRL hQ.1 hlok hS hsp hK hM hTV hTS hTO hFragS hFS hlokK hs
         (fadenFakten_GX hO hvoll hTA sp init hex hAbg hWurzel hr') ih.1 ih.2.1 ih.2.2
+        (fun σ hσ => hQ.2 M hr' σ hσ u)
 
 /-- **A replayed thread is stopped at no `logik` check of G** (as `fadenS_prueft`): the check
     reads the MACHINE's memory; the rely lets the sequential run read the same values at the
     shared atomics (a record made here), so a failing check would be a `logik` outcome of the
     obligation. -/
-theorem fadenSA_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+theorem fadenSA_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f) (hFS : ∀ f, FussSX P S lok Tg f)
     {M : RufMaschineG D} (t : Faden)
@@ -414,7 +418,7 @@ theorem fadenSA_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
 theorem ziel_ort_atomar (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     (S : SperrInv D) {fs : List D.Fn} (K : Faden → D.Fn → Bool) (Tg : D.Tab ⊕ D.Glob → Prop)
     (lok : D.Tab ⊕ D.Glob → Bool) (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
-    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    (hO : GutO O) (hRL : RegLokal O) (hQ : RelyQ P O passes Q Tg (RufStartG P sp init)) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hAbg : ∀ t, AbgK P fs (K t)) (hWurzel : ∀ t, K t (init t).1 = true)
     (hTA : ∀ c, Tg c → AtomarAusgenommen c) (hTV : ∀ c, Tg c → VertragsFrei P c)
@@ -431,7 +435,7 @@ theorem ziel_ort_atomar (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEn
     hWurzel hTA hTV hTS hTO hFragS hFS hlokK hK (fun f => massPflicht_aus P passes Q S Tg Mass.leer f)
     hStart hsp hex M hr
   exact ⟨fun t ev hev => hI.1.2 t ev hev, hI.2.2,
-    fun t => fadenSA_prueft hO hRL hQ hS hsp hK hFS t (hI.1.1 t)⟩
+    fun t => fadenSA_prueft hO hRL hQ.1 hS hsp hK hFS t (hI.1.1 t)⟩
 
 #print axioms Gabbro.Grammatik.zielInvSA_schrittGX
 #print axioms Gabbro.Grammatik.zielInvSA_erreichbarGX

@@ -239,7 +239,7 @@ theorem kopfS_keineLogik (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     (orakelAus_passt O hfa) (umweltAus_passt S sp hfu) (gleichRS_orakelAus O HA)
   rw [he] at h1
   exact (hK F.f).2 (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
-    (orakelAus_vertrag hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (rufAusL H)
+    (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (rufAusL H)
     (rufAusL_rahmen hv) (rufAusL_ohneLogik hv.1) F.s0 F.rho hreq e
     (zErgG_gleich_logik (ZErgG.folgt_logik h1))
 

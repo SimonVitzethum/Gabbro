@@ -308,7 +308,7 @@ theorem gP_gabbro_f (hN : Zielsatz.NutzerPflichtA gE) (O : Orakel gD)
       (FadenStart gE.P.mitRuhe sp init lebt0) K) :
     Zielsatz.ZielFX gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes (Zielsatz.GeteiltV (D := gD) gE.P gE.ws)
       (RufStartG gE.P.mitRuhe sp init) [] K :=
-  Zielsatz.gabbro_ziel Zielsatz.akzeptiertX_pruefer gD gE ⟨gFs, gFs_voll⟩ ⟨gLs, gLs_voll⟩ ⟨gCs, gCs_voll⟩
+  Zielsatz.gabbro_ziel_voll Zielsatz.akzeptiertX_pruefer gD gE ⟨gFs, gFs_voll⟩ ⟨gLs, gLs_voll⟩ ⟨gCs, gCs_voll⟩
     gCheck hN O hH passes sp init hL lebt0 K hK
 
 -- RELEASE OBLIGATIONS (stated, not discharged -- O12).

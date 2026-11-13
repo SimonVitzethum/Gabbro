@@ -146,17 +146,17 @@ structure NutzerTeilO (p : Projekt D) : Prop where
 
 /-- A stronger axiom ensures is a weaker obligation: fewer oracles to answer against. -/
 theorem koerperGutSA_Q {P : Programm D} {passes : Nat} {Q Q' : AxEns D} {S : SperrInv D}
-    {T : D.Tab ⊕ D.Glob → Prop} {f : D.Fn} (hQ : ∀ O, AxVertragO Q' O → AxVertragO Q O)
+    {T : D.Tab ⊕ D.Glob → Prop} {f : D.Fn} (hQ : ∀ O, AxVertragOP (PreQ P) Q' O → AxVertragOP (PreQ P) Q O)
     (h : KoerperGutSA P passes Q S T f) : KoerperGutSA P passes Q' S T f :=
   ⟨fun O' a b c => h.1 O' a b (hQ O' c), fun O' a b c => h.2 O' a b (hQ O' c)⟩
 
 theorem invGutSA_Q {P : Programm D} {passes : Nat} {Q Q' : AxEns D} {S : SperrInv D}
-    {T : D.Tab ⊕ D.Glob → Prop} {f : D.Fn} (hQ : ∀ O, AxVertragO Q' O → AxVertragO Q O)
+    {T : D.Tab ⊕ D.Glob → Prop} {f : D.Fn} (hQ : ∀ O, AxVertragOP (PreQ P) Q' O → AxVertragOP (PreQ P) Q O)
     (h : InvGutSA P passes Q S T f) : InvGutSA P passes Q' S T f :=
   fun O' a b c => h O' a b (hQ O' c)
 
 theorem invGutGrundA_Q {P : Programm D} {passes : Nat} {Q Q' : AxEns D} {S : SperrInv D}
-    {T : D.Tab ⊕ D.Glob → Prop} {f : D.Fn} (hQ : ∀ O, AxVertragO Q' O → AxVertragO Q O)
+    {T : D.Tab ⊕ D.Glob → Prop} {f : D.Fn} (hQ : ∀ O, AxVertragOP (PreQ P) Q' O → AxVertragOP (PreQ P) Q O)
     (h : InvGutGrundA P passes Q S T f) : InvGutGrundA P passes Q' S T f :=
   fun O' a b c => h O' a b (hQ O' c)
 
@@ -166,6 +166,15 @@ theorem axVertragO_qAlle {ps : List (Projekt D)} {p : Projekt D} (hp : p ∈ ps)
   have := h a σ ρ v hv
   simp only [qAlle, List.all_eq_true] at this
   exact this p hp
+
+/-- Conjunction of summaries restricts every conditional oracle class too. -/
+theorem axVertragOP_qAlle {Pre : AxPre D} {ps : List (Projekt D)} {p : Projekt D}
+    (hp : p ∈ ps) {O : Orakel D} (h : AxVertragOP Pre (qAlle ps) O) :
+    AxVertragOP Pre p.E.Q O := by
+  intro a σ ρ v hpre hv
+  have hq := h a σ ρ v hpre hv
+  simp only [qAlle, List.all_eq_true] at hq
+  exact hq p hp
 
 theorem axEnsLokal_qAlle {ps : List (Projekt D)} (h : ∀ p ∈ ps, AxEnsLokal p.E.Q) :
     AxEnsLokal (qAlle ps) := by
@@ -235,7 +244,9 @@ theorem nutzerPflichtA_komponiere (hV : ∀ p ∈ ps, Passend B p) (hne : ps ≠
     have hP : p.E.P = mitRumpf B.P p.E.P.rumpf := passend_P (hV p hp)
     have hS : p.E.S = B.S := (hV p hp).sperrInv.symm
     rw [hP, hS] at k i g
-    have hQ : ∀ O, AxVertragO (qAlle ps) O → AxVertragO p.E.Q O := fun O => axVertragO_qAlle hp
+    have hQ : ∀ O, AxVertragOP (PreQ (mitRumpf B.P p.E.P.rumpf)) (qAlle ps) O →
+        AxVertragOP (PreQ (mitRumpf B.P p.E.P.rumpf)) p.E.Q O :=
+      fun O => axVertragOP_qAlle hp
     have hT : ∀ c, GeteiltA (komponiere B ps).P (komponiere B ps).ws c → OffenA c :=
       fun c hc => geteiltA_offen hc
     exact ⟨(koerperGutSA_mitRumpf2 B.P _ _ passes _ _ _ f hk).mpr

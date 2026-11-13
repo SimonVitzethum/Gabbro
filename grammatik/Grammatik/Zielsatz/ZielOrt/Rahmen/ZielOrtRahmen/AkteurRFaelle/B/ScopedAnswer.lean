@@ -23,7 +23,7 @@ private theorem kopfR_fertig_ens (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertra
   rw [hhead] at h1
   have h2 := ZErg.folgt_zurueck h1
   obtain ⟨σ', hex, hsg⟩ := zErg_gleich_zurueck h2
-  have hens := (hK F.f (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA) (orakelAus_vertrag hQ hqa) (rufAusV H) (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) F.s0 F.rho hreq).1 σ' v hex
+  have hens := (hK F.f (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA) (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa) (rufAusV H) (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) F.s0 F.rho hreq).1 σ' v hex
   exact ens_transfer hens (GleichAuf.refl _ _)
     (GleichAuf.mono (fun _ h => fuss_ensG P F.f h) ((gleichAuf_SG hsg).trans hg))
 

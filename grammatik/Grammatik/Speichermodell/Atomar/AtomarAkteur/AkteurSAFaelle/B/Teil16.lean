@@ -32,7 +32,7 @@ theorem semHA_dannCallIndElse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' Λ''
 set_option maxHeartbeats 4000000 in
 theorem akteurSA_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
     {Q : AxEns D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {m : Mass D}
-    {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ (L : D.Lock), S.inv L sp = true)
     (hK : ∀ (f : D.Fn), KoerperGutSA P passes Q S Tg f) (hM : ∀ (f : D.Fn), MassPflicht P passes Q S Tg m zyk f)
     (hTV : ∀ (c : D.Tab ⊕ D.Glob), Tg c → VertragsFrei P c)

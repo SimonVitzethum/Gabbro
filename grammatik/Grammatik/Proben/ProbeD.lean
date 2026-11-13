@@ -181,7 +181,8 @@ theorem probeD_nicht (Q : AxEns zD) (S : SperrInv zD)
       S.inv L s = S.inv L s') (s : Speicher zD)
     (hs : ∀ L, S.inv L s = true) : ¬ ∀ (passes : Nat) (f : zD.Fn), KoerperGutS (fvP false) passes Q S f := by
   intro h
-  refine (h 1 zHaupt).2 zO zO_rahmen zO_lokal (zO_vertrag Q) (fun L σ => mischU S L σ s)
+  refine (h 1 zHaupt).2 zO zO_rahmen zO_lokal (axVertragOP_of_O _ (zO_vertrag Q))
+    (fun L σ => mischU S L σ s)
     (havocOk_misch_lokal hS (fun _ _ => s) (fun L _ => hs L)) hwRuf (hwRuf_rahmen _) hwRuf_ohneLogik
     (zSp.welt []) fvRho rfl .schleife ?_
   rw [Endblock.execH_ohne S zO _ 1 hwRuf _ (fvP_ohneLocks false zHaupt)]
@@ -200,7 +201,8 @@ theorem fwP_nicht (Q : AxEns zD) (S : SperrInv zD)
       S.inv L s = S.inv L s') (s : Speicher zD)
     (hs : ∀ L, S.inv L s = true) : ¬ ∀ (passes : Nat) (f : zD.Fn), KoerperGutS (fvP true) passes Q S f := by
   intro h
-  have h1 := ((h 1 zHaupt).1 zO zO_rahmen zO_lokal (zO_vertrag Q) (fun L σ => mischU S L σ s)
+  have h1 := ((h 1 zHaupt).1 zO zO_rahmen zO_lokal (axVertragOP_of_O _ (zO_vertrag Q))
+    (fun L σ => mischU S L σ s)
     (havocOk_misch_lokal hS (fun _ _ => s) (fun L _ => hs L)) hwRuf (hwRuf_rahmen _)
     hwRuf_ohneVorbedingung (zSp.welt []) fvRho rfl).1
   obtain ⟨σ', v, hrun⟩ := fvP_lauf1_wahr zO hwRuf zHaupt (zSp.welt []) fvRho

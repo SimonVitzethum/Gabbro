@@ -295,7 +295,7 @@ theorem hP_rely_nicht :
   have hR : RespektiertRahmen hP R := ⟨fun _ _ _ _ _ _ h => (by cases h), fun _ _ _ _ _ h => (by cases h)⟩
   have hOV : OhneVorbedingung R := fun _ _ _ _ h => by cases h
   have hU : HavocOk SchwachZeuge.nS (fun _ σ => σ) := fun L => (nomatch L)
-  have hE := (h.1 nO (gutO_rahmenO nO_gut) nO_lokal (axVertragO_wahr nO) (fun _ σ => σ) hU aFuenf
+  have hE := (h.1 nO (gutO_rahmenO nO_gut) nO_lokal (axVertragOP_of_O _ (axVertragO_wahr nO)) (fun _ σ => σ) hU aFuenf
     aFuenf_havoc R hR hOV (sp0.welt []) .nil rfl).1
   obtain ⟨σ', v, hr⟩ := hRumpf_zurueckA SchwachZeuge.nS nO (fun _ σ => σ) aFuenf 0 R (sp0.welt []) .nil
   have h2 := hP_wert_A SchwachZeuge.nS nO (fun _ σ => σ) 0 R

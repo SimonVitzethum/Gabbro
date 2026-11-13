@@ -165,3 +165,8 @@ rules('grammatik/Grammatik/Bausteine/Arena/Struktur', [
     # the shared arena: lock invariant, section theorem, machine bridge, witnesses (Phase A step 3, 2026-10-18)
     (r'^Arena(Sperre\w*)$', 'Sperre'),
 ])
+
+# The C08 call-site witnesses and blockers get a folder of their own (room for the 20-entry limit, 2026-11-13).
+rules('grammatik/Grammatik/Zielsatz/Atomar', [
+    (r'^CallSite\w*$', 'CallSite'),
+])

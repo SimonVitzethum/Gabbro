@@ -36,7 +36,9 @@
 
   THE STATEMENTS (proofs in Zielsatz/Atomar/BeweisAtomar.lean; `#print axioms` of each is exactly `propext`,
   `Classical.choice`, `Quot.sound`):
-  * `GabbroZiel` -- safety, on every reached machine: the legs of `ZielFX` (below). Proof `gabbro_ziel`.
+  * `GabbroZiel` (Spec/Fremd.lean) -- safety, on every reached machine: the legs of `ZielFX` (below), with the
+    call-site duties of software foreign items (C08 below). Proof `gabbro_ziel`. `GabbroZielVoll` -- the same
+    under the full summary premise (c) of before (`gabbro_ziel_voll`).
   * `GabbroZielSC` -- the same over machine G without the atomic rely and without the ownership leg; proved directly
     (`gabbro_ziel_sc`), and on every unit without an arena a corollary (`gabbro_ziel_sc_aus`), kept as a name
     because corpus theorems and embeddings are stated over it.
@@ -411,18 +413,55 @@
   unchanged: wiring the software obligations into (b), narrowing the foreign part of (c)
   to named hardware, and the provider history in G are staged next.
 
-  C08 PREMISE SPLIT (2026-11-02, authorized change of what (c) means; `GabbroZiel` itself is
-  untouched and stays proved). `Zielsatz/Atomar/GabbroZielFremd.lean` states the same goal as
+  C08 PREMISE SPLIT (2026-11-02, authorized change of what (c) means; the statement of before is
+  untouched and stays proved, now `GabbroZielVoll`). `Zielsatz/Atomar/GabbroZielFremd.lean` states it as
   `GabbroZielFremd` with the foreign premise split by provenance: (c) of the above reads
   "the hardware and foreign code", but a foreign item declared SOFTWARE (`axHerkunft`) is user
   logic -- its implementation proves its declared ensures against the actual binding `O`
-  (`AxVertragOSw`, now part of (b)), and only the named hardware stays in (c')
+  (`AxVertragOSw`, now part of (b)), and the remaining assumptions stay in (c')
   (`HardwareAnnahmenHw`: frame, register locality, the ensures of every item NOT declared
   software; unresolved provenance reads as hardware, the meaning of every unit before C08).
-  `hardwareAnnahmen_of_split` shows the pair is exactly the old (c) (`gabbro_ziel_fremd` is
-  `gabbro_ziel` recombined): no guarantee is weakened and nothing is newly assumed. The
+  `GutO` still covers software bindings as well: frame respect and preservation of held locks in
+  every world, and the prescribed trace suffix when the declared write guards are held, remain
+  assumptions in (c'), not duties discharged by `AxVertragOSw`.
+  `hardwareAnnahmen_of_split` shows the pair is exactly the old (c) (`gabbro_ziel_fremd` is `gabbro_ziel_voll`
+  recombined): no guarantee is weakened and nothing is newly assumed. The
   call-site form (the software contract's pre proved at each call, `CallSitePflicht`) and the
   provider history in the machine replace the unconditional software premise in a later step.
+
+  C08 CALL-SITE GOAL (2026-11-13, change of meaning of `GabbroZiel` and of premise (b);
+  decision C08, PLAN-COMPILER-READY §8.1). `GabbroZiel` (Spec/Fremd.lean) carries the
+  call-site duties in (b): the `requires` of a foreign item declared SOFTWARE is owed at
+  every call a GX run reaches (`CallSitePflicht`); its `ensures` is relied on only where
+  that pre held -- by the actual binding's proof (`ForeignVertrag`: under the pre at the
+  question world every answer meets the post; every answer decodes), with the post covering
+  the declared summary (`PostDeckt`), and by the body duties. Premise (c)
+  (`HardwareAnnahmenHw`) retains `GutO` for ALL items, including software bindings: frame
+  respect and preservation of held locks in every world, and the prescribed trace suffix when the
+  declared write guards are held, remain explicit assumptions, not duties discharged by
+  `ForeignVertrag` or `CallSitePflicht`. It also retains register locality, the summaries of every
+  item NOT declared software and the native-float hardware. The unconditional software summary is
+  no premise of `GabbroZiel` any more; the statement under the full summary premise keeps
+  its text as `GabbroZielVoll` (`gabbro_ziel_voll`), as do `GabbroZielSC`, `GabbroZielVerbund`,
+  `GabbroZielVerbundSC`, `GabbroZielVerbundN`, `GabbroZielLeben`, `GabbroZielWarten`,
+  `GabbroZielTerminierung`, `GabbroZielProfil`, `GabbroZielProjekte` and `GabbroZielFremd`.
+  The body duties (KoerperGut/InvGut/PflichtWP/MassPflicht, SC and atomic) quantify over every
+  frame-respecting oracle of the class `AxVertragOP (PreQ P) Q`: a declared summary is
+  required exactly at QUESTION worlds `σ0.fragt (.inl a)` -- the only worlds machine G asks
+  an oracle in -- and for a software item only where its interface pre holds there
+  (hardware and unresolved items: at every question). This enlarges the quantified class
+  and strengthens (b), including the measure duty of `GabbroZielTerminierung`:
+  an unsatisfiable software summary off-pre or at a never-asked world
+  no longer empties the body duties, and a body depending on an off-pre software answer is
+  refused (`CallSiteConditionalBite`). The every-world class of the first repair
+  (`AxVertragOPAlle`) excluded the actual trace-faithful binding
+  (`CallSiteQuestionBlocker.old_class_too_strong`); the actual binding inhabits the
+  question-world class (`axVertragOP_of_binding`), every question a run asks is answered
+  within the summary under the call-site duty (`antwortQLauf_of_callSite`), and the replay
+  records exactly those answers (`orakelAus_vertragOP`, `zielFX_rely`). Embeddings ask the
+  image oracle at the image question world (`World.alsFrage`, `orakelΦ`) and carry a true
+  source pre to the image call (`Uebernahme.axPre`). No run-time check, no change of
+  machine G, no new stop kind.
 -/
 module
 

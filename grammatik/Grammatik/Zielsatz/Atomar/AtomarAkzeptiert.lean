@@ -193,11 +193,11 @@ theorem ziel_atomar_spec (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : L
   have hex := startExklusiv_ohne_haelt init hLeer
   intro W hr
   have hZW := ziel_atomar_w P O passes ord Q S ls (kVon P fs init) (GeteiltV P ws) (lokW P fs ws)
-    sp init hH.1 hH.2.1 hH.2.2.1 hN.2.2.1 hS hA.stufen hvoll hls (fun t => hA.abg _)
+    sp init hH.1 hH.2.1 (relyQ_of_O hH.2.2.1) hN.2.2.1 hS hA.stufen hvoll hls (fun t => hA.abg _)
     (fun t => reachB_wurzel P fs _) hTA hTV hTS hTO (fragX_ok hvoll hA.frag hA.fuss) hA.fuss
     hlokK hK hI hIG hZ.req hZ.sperren hex (fun t => (hW t).2) hLeer hA.antworten W hr
   have hInv := invarianten_atomar P O passes Q S (kVon P fs init) (GeteiltV P ws) (lokW P fs ws)
-    sp init hH.1 hH.2.1 hH.2.2.1 hN.2.2.1 hS hvoll (fun t => hA.abg _)
+    sp init hH.1 hH.2.1 (relyQ_of_O hH.2.2.1) hN.2.2.1 hS hvoll (fun t => hA.abg _)
     (fun t => reachB_wurzel P fs _) hTA hTV hTS hTO (fragX_ok hvoll hA.frag hA.fuss) hA.fuss
     hlokK hK hI hIG hZ.req hZ.sperren hex (fun t => (hW t).2) W.g hZW.erreicht
   exact { hZW with

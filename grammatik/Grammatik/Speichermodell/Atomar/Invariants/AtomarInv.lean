@@ -45,7 +45,7 @@ variable {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D} {S : Sperr
   {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {m : Mass D} {zyk : D.Fn → D.Fn → Bool}
 
 /-- **The return leg for invariants** (as `popS_inv`), the returned expression's read recorded. -/
-theorem popSA_inv (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : SperrInvOk S)
+theorem popSA_inv (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O) (hS : SperrInvOk S)
     {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hI : ∀ f, InvGutSA P passes Q S Tg f) {G : RufRahmenG D}
     {W : World D} (hG : KopfSA P O passes Q S lok Tg m zyk G W) {lr : Bool} {Γ : Ctx}
@@ -72,7 +72,7 @@ theorem popSA_inv (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : S
     (ZErgG.folgt_of_gleich (hsem _ _ _ (umweltAusA Tg HX') σ)))
   obtain ⟨σ'', hex, hsg⟩ := zErgG_gleich_zurueck h2
   have hE := (hI G.f) (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
-    (orakelAus_vertrag hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (umweltAusA Tg HX')
+    (orakelAus_vertragOP hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (umweltAusA Tg HX')
     hHA (rufAusV H) (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) G.s0 G.rho hreq σ'' _ hex
   rw [hrec _ hPX hHA] at hsg
   have hgl := mischT_gleichAuf hg he Λ Λ
@@ -126,7 +126,7 @@ private theorem antwort_invLogA {z z' : RufFadenG D} {vor W : World D}
           · exact Or.inl hev
 
 /-- The final checked release delivers the saved value at its full released world. -/
-private theorem popSA_last_inv (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+private theorem popSA_last_inv (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f)
     (hI : ∀ f, InvGutSA P passes Q S Tg f) (hFS : ∀ f, FussSX P S lok Tg f)
@@ -151,7 +151,7 @@ private theorem popSA_last_inv (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO
   simp only [ite_true, semHA, weiterHA, scopesInvH, List.all_nil, List.foldl_nil] at h1
   obtain ⟨σ', hex, hsg⟩ := zErgG_gleich_zurueck (ZErgG.folgt_zurueck h1)
   have hInv := (hI F.f) (orakelAus O HA) (orakelAus_rahmen hO hra)
-    (regLokal_orakelAus hRL HA) (orakelAus_vertrag hQ hqa)
+    (regLokal_orakelAus hRL HA) (orakelAus_vertragOP hQ hqa)
     (umweltAus S sp HU) (umweltAus_ok hS hsp hiu)
     (umweltAusA Tg HX) (umweltAusA_ok Tg HX)
     (rufAusV H) (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) F.s0 F.rho hreq σ' v hex
@@ -167,7 +167,7 @@ private theorem popSA_last_inv (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO
   exact h3
 
 /-- **One step and the logged returns** (as `invLog_schritt`). -/
-theorem invLogA_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : SperrInvOk S)
+theorem invLogA_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O) (hS : SperrInvOk S)
     {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f)
     (hI : ∀ f, InvGutSA P passes Q S Tg f) (hFS : ∀ f, FussSX P S lok Tg f)

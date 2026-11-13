@@ -54,6 +54,74 @@ def AxVertragO (Q : AxEns D) (O : Orakel D) : Prop :=
   ∀ (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) (v : ErgVal D (D.aerg a)),
     einpassenErg O.zeiger (D.aerg a) (O.wirkt a σ ρ).2 = some v → Q a (O.wirkt a σ ρ).1 v = true
 
+/-- A per-gate argument precondition: the declared `requires`, over the
+    world at the call and the passed arguments. -/
+abbrev AxPre (D : Deklaration) := ∀ a : D.Ax, World D → Env D (D.aparams a) → Bool
+
+/-- **The conditional oracle class (C08 R3b).** Machine G asks an oracle about
+    item `a` only in a QUESTION world `σ0.fragt (.inl a)` (the question event is
+    recorded first, `World.fragt`). The class asks the declared ensures exactly
+    there: at every question world whose precondition holds, a fitting raw answer
+    meets `Q`. Worlds without the question are never asked and carry no duty. -/
+def AxVertragOP {D : Deklaration} (Pre : AxPre D) (Q : AxEns D) (O : Orakel D) : Prop :=
+  ∀ (a : D.Ax) (σ0 : World D) (ρ : Env D (D.aparams a)) (v : ErgVal D (D.aerg a)),
+    Pre a (σ0.fragt (.inl a)) ρ = true →
+    einpassenErg O.zeiger (D.aerg a) (O.wirkt a (σ0.fragt (.inl a)) ρ).2 = some v →
+      Q a (O.wirkt a (σ0.fragt (.inl a)) ρ).1 v = true
+
+/-- The precondition-restricted premise over EVERY world, question or not: the
+    form of the gate split of fix lane F5 (`FremdRuf/T2`). It is strictly stronger
+    than `AxVertragOP` (`CallSiteQuestionBlocker.old_class_too_strong`). -/
+def AxVertragOPAlle {D : Deklaration} (Pre : AxPre D) (Q : AxEns D) (O : Orakel D) : Prop :=
+  ∀ (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) (v : ErgVal D (D.aerg a)),
+    Pre a σ ρ = true →
+    einpassenErg O.zeiger (D.aerg a) (O.wirkt a σ ρ).2 = some v → Q a (O.wirkt a σ ρ).1 v = true
+
+/-- The every-world form contains the question-world class. -/
+theorem axVertragOP_of_alle {D : Deklaration} {Pre : AxPre D} {Q : AxEns D} {O : Orakel D}
+    (h : AxVertragOPAlle Pre Q O) : AxVertragOP Pre Q O :=
+  fun a σ0 ρ v hp hfit => h a (σ0.fragt (.inl a)) ρ v hp hfit
+
+/-- (1) Every oracle meeting the full premise is in the class, for every precondition. -/
+theorem axVertragOP_of_O {D : Deklaration} (Pre : AxPre D) {Q : AxEns D} {O : Orakel D}
+    (h : AxVertragO Q O) : AxVertragOP Pre Q O :=
+  fun a σ0 ρ v _ hfit => h a (σ0.fragt (.inl a)) ρ v hfit
+
+/-- The oracle class of body duties: software summaries require the interface
+    pre at the queried world; hardware and unresolved items remain unconditional.
+    This lives below the replay and foreign-call layers to avoid import cycles. -/
+def PreQ (P : Programm D) : AxPre D := fun a σ ρ =>
+  if D.axHerkunft a = some AxOrigin.software then
+    wahr? (eval σ (P.axVertrag a).pre σ ρ)
+  else true
+
+theorem preQ_hw (P : Programm D) {a : D.Ax}
+    (h : D.axHerkunft a ≠ some AxOrigin.software)
+    (σ : World D) (ρ : Env D (D.aparams a)) : PreQ P a σ ρ = true := by
+  unfold PreQ
+  rw [if_neg h]
+
+theorem preQ_sw (P : Programm D) {a : D.Ax}
+    (h : D.axHerkunft a = some AxOrigin.software)
+    (σ : World D) (ρ : Env D (D.aparams a)) :
+    PreQ P a σ ρ = wahr? (eval σ (P.axVertrag a).pre σ ρ) := by
+  unfold PreQ
+  rw [if_pos h]
+
+/-- Without software items the conditional class is the unconditional summary at
+    every question world. -/
+theorem axVertragOP_preQ_ohne {P : Programm D} {Q : AxEns D} {O : Orakel D}
+    (h : ∀ a : D.Ax, D.axHerkunft a ≠ some AxOrigin.software) :
+    AxVertragOP (PreQ P) Q O ↔
+      ∀ (a : D.Ax) (σ0 : World D) (ρ : Env D (D.aparams a)) (v : ErgVal D (D.aerg a)),
+        einpassenErg O.zeiger (D.aerg a) (O.wirkt a (σ0.fragt (.inl a)) ρ).2 = some v →
+          Q a (O.wirkt a (σ0.fragt (.inl a)) ρ).1 v = true := by
+  constructor
+  · intro hQ a σ0 ρ v hv
+    exact hQ a σ0 ρ v (preQ_hw P (h a) _ ρ) hv
+  · intro hQ a σ0 ρ v _ hv
+    exact hQ a σ0 ρ v hv
+
 /-- The declared ensures reads only the axiom's declared write carriers of
     the answer world (and the result). -/
 def AxEnsLokal (Q : AxEns D) : Prop :=
@@ -63,9 +131,10 @@ def AxEnsLokal (Q : AxEns D) : Prop :=
 
 /-- **The strengthened user obligation.** The body triple and the caller
     duty of `KoerperGut`, for every oracle that respects the declared axiom
-    frames AND meets the declared axiom ensures. -/
+    frames AND meets the declared axiom ensures where `PreQ P` holds. The
+    software pre restricts reliance; this enlarges the quantified oracle class. -/
 def KoerperGutA (P : Programm D) (passes : Nat) (Q : AxEns D) (f : D.Fn) : Prop :=
-  ∀ O' : Orakel D, RahmenO O' → AxVertragO Q O' → KoerperGut P O' passes f
+  ∀ O' : Orakel D, RahmenO O' → AxVertragOP (PreQ P) Q O' → KoerperGut P O' passes f
 
 /-- The strengthened obligation is weaker than `KoerperGutV`: fewer oracles. -/
 theorem koerperGutA_of_V {P : Programm D} {passes : Nat} (Q : AxEns D) {f : D.Fn}
@@ -91,6 +160,20 @@ theorem orakelAus_vertrag {Q : AxEns D} {O : Orakel D} (hQ : AxVertragO Q O)
   · rename_i hex
     exact hv a σ ρ _ (Classical.choose_spec hex) v
   · exact hQ a σ ρ v
+
+/-- (3) Conditional summaries survive replay: recorded answers satisfy the summary;
+    every other question retains the actual oracle's conditional contract at the
+    same question world. No non-decoding fallback word or extra realizability
+    premise is required. -/
+theorem orakelAus_vertragOP {Pre : AxPre D} {Q : AxEns D} {O : Orakel D}
+    (hQ : AxVertragOP Pre Q O) {HA : List (AxEintrag D)}
+    (hv : VertragA O.zeiger Q HA) : AxVertragOP Pre Q (orakelAus O HA) := by
+  intro a σ0 ρ v hp
+  simp only [orakelAus]
+  split
+  · rename_i hex
+    exact hv a (σ0.fragt (.inl a)) ρ _ (Classical.choose_spec hex) v
+  · exact hQ a σ0 ρ v hp
 
 /-- The recorded answer world agrees with the machine's answer world on the
     axiom's declared carriers, so a local declared ensures transfers. -/

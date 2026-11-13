@@ -7141,3 +7141,26 @@ the user-logic, hardware, execution or source-to-binary conclusions of the goal 
 The emitted ticket lock's missing WAIT, failed ticket-CAS retry, WAKE and stable cross-thread
 invariant statements are listed in `stage0/Stage0/Senke/Sperre/Ticket/Offen.lean`. The sequential
 `locks_okT` entry above supplies none of those contended-path results.
+
+## 186. C08 call-site goal: `GabbroZiel` with the software duties, and its joint witness (2026-11-13)
+
+`GabbroZiel` changed meaning (Spec.lean header, "C08 CALL-SITE GOAL"): premise (b) carries the
+call-site duties of software foreign items, premise (c) is the named hardware only. The statement
+under the full summary premise of before is kept as `GabbroZielVoll`. This section records the
+statements in the source; no build or axiom audit of them is recorded here (the lead builds).
+
+| Name | File | Statement and boundary |
+|---|---|---|
+| `GabbroZiel` (definition) | `grammatik/Grammatik/Zielsatz/Kern/Spec/Fremd.lean` | (a) `C.akzeptiert`, (b) `NutzerPflichtA`, `CallSitePflicht`, `PostDeckt`, `ForeignVertrag E O`, (c) `HardwareAnnahmenHw O E.Q`, (d) `Laufzeit` give `ZielFX` on every thread machine over GX reachable from the runtime's start. |
+| `gabbro_ziel` | `grammatik/Grammatik/Zielsatz/Atomar/BeweisAtomar/Fremd.lean` | Proof of `GabbroZiel`: the binding inhabits the question-world class (`axVertragOP_of_binding`), the call-site duty answers every reachable question (`relyQ_of_callSite`), then `zielFX_rely`. |
+| `GabbroZielVoll`, `gabbro_ziel_voll` | `grammatik/Grammatik/Zielsatz/Kern/Spec/Teil2.lean`, `.../BeweisAtomar/Voll.lean` | The goal under the unconditional summary premise `HardwareAnnahmen` (the statement of before, text unchanged). |
+| `CallSiteGoal.callSite_goal_zeuge` | `grammatik/Grammatik/Zielsatz/Atomar/CallSite/CallSiteGoalZeuge.lean` | JOINT WITNESS: on the unit `wE` (one function `let r = g(1); return r` with `ensures result == 1`; one SOFTWARE item `g(x : 0..1) -> 0..1`, `requires x != 0`, `ensures result == 1`, summary "answer is 1") and the binding `echo` (answers its argument), all premises hold at once -- (a) `akzeptiertX_pruefer`, (b) `NutzerPflichtA`, `CallSitePflicht`, `PostDeckt`, `ForeignVertrag wE echo`, (c) `HardwareAnnahmenHw`, (d) `Laufzeit` of the runtime's start -- and: the pre holds at `1` and fails at `0`; `echo` breaks the full summary (`¬ AxVertragO`, so `GabbroZielVoll` does not apply to it); the body duty is false without `g`'s summary; the start's question has a true pre; one GX step of thread 0 runs the software call and reaches a machine with thread 0 at its return, where `gabbro_ziel` gives `ZielFX`. |
+| `CallSiteGoal.call_sites` | `.../CallSite/CallSiteGoalSites.lean` | `CallSitePflicht wE` over every binding, budget and start: the head invariant `Koepfe` (empty stacks; a return, or the call whose arguments meet the pre in every world) holds at every start and is kept by every G and GX step. |
+| `bindAxiom_ende_schritt` | `.../CallSite/CallSiteGoalStep.lean` | Generic: at a head `ende (let x = g(…); rest)` every step of the thread is `endeBindAxiom`; stack, frame function, arguments, entry world and log are kept and the residue is `ende rest` with an answer bound. |
+| `CallSiteGoal.user`, `CallSiteGoal.body_out` | `.../CallSite/CallSiteGoalUser.lean` | `NutzerPflichtA wE`: against every frame-respecting oracle of `AxVertragOP (PreQ wP) wQ` the body returns `1` (the class grants the summary because the pre `1 != 0` holds) or stops at the named hardware outcome of an undecodable answer. |
+| `CallSiteGoal.summary_used` | `.../CallSite/CallSiteGoalUser.lean` | With the empty summary in place of `wQ` the body duty is false: an oracle answering `0` is then admitted. |
+| `CallSiteGoal.checker` | `.../CallSite/CallSiteGoalFixture.lean` | `akzeptiertX_pruefer.akzeptiert wE [()] [] [] = true`, decided component by component over the one body (`schnittstellenB` through `schnittstellenB_iff`). |
+
+The three C08 blocker modules (`CallSiteConditionalBite`, `CallSiteQuestionBlocker`,
+`CallSiteReplayBlocker`) moved with the witness into `Zielsatz/Atomar/CallSite/` (layout rule
+added; old module names in `lean-layout-map.json`).

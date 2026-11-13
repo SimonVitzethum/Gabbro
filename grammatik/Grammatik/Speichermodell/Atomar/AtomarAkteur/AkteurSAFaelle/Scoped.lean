@@ -106,7 +106,7 @@ theorem fadenSA_scopedGrund {z : RufFadenG D} {W : World D}
       exact ZErgG.folgt_of_gleich heq
 
 /-- Release one scope and retain the already evaluated answer. -/
-theorem fadenSA_scopedFreigabe (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+theorem fadenSA_scopedFreigabe (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f)
     {z : RufFadenG D} {W : World D} (hF : FadenSA P O passes Q S lok Tg m zyk z W)
@@ -132,7 +132,7 @@ theorem fadenSA_scopedFreigabe (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO
   rfl
 
 /-- A saved value at completed cleanup still satisfies the function contract. -/
-private theorem kopfSA_scopedEns (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+private theorem kopfSA_scopedEns (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f)
     (hFS : ∀ f, FussSX P S lok Tg f)
@@ -151,7 +151,7 @@ private theorem kopfSA_scopedEns (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertra
   simp only [semHA, weiterHA, scopesInvH, List.all_nil, if_true, List.foldl_nil] at h1
   obtain ⟨σ', hex, hsg⟩ := zErgG_gleich_zurueck (ZErgG.folgt_zurueck h1)
   have hens := ((hK F.f).1 (orakelAus O HA) (orakelAus_rahmen hO hra)
-    (regLokal_orakelAus hRL HA) (orakelAus_vertrag hQ hqa)
+    (regLokal_orakelAus hRL HA) (orakelAus_vertragOP hQ hqa)
     (umweltAus S sp HU) (umweltAus_ok hS hsp hiu)
     (umweltAusA Tg HX) (umweltAusA_ok Tg HX)
     (rufAusV H) (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) F.s0 F.rho hreq).1 σ' v hex
@@ -187,7 +187,7 @@ private theorem kopfSA_scopedBegr (hE : ¬ Nonempty (Ereignis D))
     exact ⟨σ', hex⟩
 
 /-- Deliver a completed cleanup through the canonical root/callee answer operation. -/
-theorem fadenSA_scopedAntwort (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+theorem fadenSA_scopedAntwort (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f)
     (hFS : ∀ f, FussSX P S lok Tg f)

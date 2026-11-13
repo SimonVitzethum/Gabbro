@@ -63,11 +63,11 @@ theorem kopfS_scopedRet (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
       r e R hret σ ρ hcheck)))
   obtain ⟨σ', hex, hsg⟩ := zErgG_gleich_zurueck h2
   have hE := ((hK G.f).1 (orakelAus O HA) (orakelAus_rahmen hO hra)
-    (regLokal_orakelAus hRL HA) (orakelAus_vertrag hQ hqa)
+    (regLokal_orakelAus hRL HA) (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa)
     (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (rufAusV H)
     (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) G.s0 G.rho hreq).1 σ' _ hex
   have hInv := (hI G.f) (orakelAus O HA) (orakelAus_rahmen hO hra)
-    (regLokal_orakelAus hRL HA) (orakelAus_vertrag hQ hqa)
+    (regLokal_orakelAus hRL HA) (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa)
     (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (rufAusV H)
     (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) G.s0 G.rho hreq σ' _ hex
   have hgl : GleichAuf (stabilS P S lok G.f Λ) (σ.lese Λ e.orte) (W.lese Λ e.orte) :=

@@ -13,7 +13,8 @@ public import Grammatik.Zielsatz.Kern.Spec
   `D`). A program `P'` over `D'` links it through an embedding `E : D ↪ D'` that keeps what the
   project declared (`Uebernahme`: the bodies and contracts are the images, the image locks protect
   the images of the carriers under the same invariants, the program's rely is no larger on the
-  image, the axiom ensures agree on the image, and an invariant over an image table is an image
+  image, the foreign pre holds at related image calls whenever it held at the source call,
+  the axiom ensures agree on the image, and an invariant over an image table is an image
   invariant). Then every image function meets the obligation of `P'` -- with nothing re-proved
   (`koerperGutSA_E`, `invGutSA_E`, `invGutGrundA_E`, collected in `logikPflicht_E`).
 
@@ -93,6 +94,11 @@ structure Uebernahme (P : Programm D) (S : SperrInv D) (Q : AxEns D) (T : D.Tab 
   orte : ∀ L, S'.orte (E.lock L) = (S.orte L).map E.ortE
   inv : ∀ L s', S'.inv (E.lock L) s' = S.inv L (E.speicherZ hZ s')
   atom : ∀ c, T' (E.ortE c) → T c
+  /-- Pull back the conditional oracle class: a lawful source call is a lawful image call.
+      Hardware and unresolved items have `PreQ = true`; software items use their interface pre. -/
+  axPre : ∀ a (σ : World D) (σ' : World D') (ρ : Env D (D.aparams a)),
+    E.Treu hZ σ.speicher σ' → PreQ P a σ ρ = true →
+      PreQ P' (E.ax a) σ' (E.aparamsUm a ρ) = true
   ax : ∀ a (W' : World D') (v : ErgVal D (D.aerg a)),
     Q' (E.ax a) W' (castV (E.aerg a).symm (E.ergE _ v)) = Q a ((E.speicherZ hZ W'.speicher).welt []) v
   invBild : ∀ i' (c' : D'.Tab ⊕ D'.Glob), c' ∈ D'.traeger i' →
@@ -235,7 +241,7 @@ theorem koerperGutSA_E (hP : KoerperGutSA P passes Q S T f) : KoerperGutSA P' pa
           rw [← E.req_E hZ hS hU.fort (E.inv_anfang hZ σ').treu f _ ρ' (E.envR_parZ hZ hS f ρ')]
           exact hreq
         have hens := (hP.1 _ (E.orakelΦ_rahmen hZ hT hRO) (E.orakelΦ_regLokal hZ hT hRL)
-          (E.orakelΦ_axVertrag hZ hAV hU.ax hQL) _ (E.umweltΦ_ok hZ hT S hSL hU.inv hU') _
+          (E.orakelΦ_axVertragOP hZ hT hAV hU.axPre hU.ax hQL) _ (E.umweltΦ_ok hZ hT S hSL hU.inv hU') _
           (E.aumweltΦ_ok hZ T A') _ (E.rufΦ_rahmen hZ hS hU.fort hp (hU.rueck pad) hT hRR)
           (E.rufΦ_ohneVorbedingung hZ hS hOV) _ _ hreqD).1 σe ve (hΦ _ (E.phiAus_passt hZ hk σ'.speicher))
         unfold EnsAmRueck at hens ⊢
@@ -263,7 +269,7 @@ theorem koerperGutSA_E (hP : KoerperGutSA P passes Q S T f) : KoerperGutSA P' pa
         have hrunD := hΦ _ (E.phiAus_passt hZ hk σ'.speicher)
         rw [E.rufΦ_torRuf hZ hS hU.fort (hU.rueck pad) hT R'] at hrunD
         exact (hP.1 _ (E.orakelΦ_rahmen hZ hT hRO) (E.orakelΦ_regLokal hZ hT hRL)
-          (E.orakelΦ_axVertrag hZ hAV hU.ax hQL) _ (E.umweltΦ_ok hZ hT S hSL hU.inv hU') _
+          (E.orakelΦ_axVertragOP hZ hT hAV hU.axPre hU.ax hQL) _ (E.umweltΦ_ok hZ hT S hSL hU.inv hU') _
           (E.aumweltΦ_ok hZ T A') _ (E.rufΦ_rahmen hZ hS hU.fort hp (hU.rueck pad) hT hRR)
           (E.rufΦ_ohneVorbedingung hZ hS hOV) _ _ hreqD).2 g₀ hrunD
     | _ => simp only [EndRel] at hR
@@ -280,7 +286,7 @@ theorem koerperGutSA_E (hP : KoerperGutSA P passes Q S T f) : KoerperGutSA P' pa
           rw [← E.req_E hZ hS hU.fort (E.inv_anfang hZ σ').treu f _ ρ' (E.envR_parZ hZ hS f ρ')]
           exact hreq
         exact hP.2 _ (E.orakelΦ_rahmen hZ hT hRO) (E.orakelΦ_regLokal hZ hT hRL)
-          (E.orakelΦ_axVertrag hZ hAV hU.ax hQL) _ (E.umweltΦ_ok hZ hT S hSL hU.inv hU') _
+          (E.orakelΦ_axVertragOP hZ hT hAV hU.axPre hU.ax hQL) _ (E.umweltΦ_ok hZ hT S hSL hU.inv hU') _
           (E.aumweltΦ_ok hZ T A') _ (E.rufΦ_rahmen hZ hS hU.fort hp (hU.rueck pad) hT hRR)
           (E.rufΦ_ohneLogik hZ hS hOL) _ _ hreqD e (hΦ _ (E.phiAus_passt hZ hk σ'.speicher))
     | _ => simp only [EndRel] at hR
@@ -304,7 +310,7 @@ theorem invGutSA_E (hP : InvGutSA P passes Q S T f) : InvGutSA P' passes Q' S' T
         rw [← E.req_E hZ hS hU.fort (E.inv_anfang hZ σ').treu f _ ρ' (E.envR_parZ hZ hS f ρ')]
         exact hreq
       exact E.invAmRueck_E hZ hS hU hI.treu f (hP _ (E.orakelΦ_rahmen hZ hT hRO)
-        (E.orakelΦ_regLokal hZ hT hRL) (E.orakelΦ_axVertrag hZ hAV hU.ax hQL) _
+        (E.orakelΦ_regLokal hZ hT hRL) (E.orakelΦ_axVertragOP hZ hT hAV hU.axPre hU.ax hQL) _
         (E.umweltΦ_ok hZ hT S hSL hU.inv hU') _ (E.aumweltΦ_ok hZ T A') _
         (E.rufΦ_rahmen hZ hS hU.fort hp (hU.rueck pad) hT hRR) (E.rufΦ_ohneVorbedingung hZ hS hOV) _ _ hreqD σe ve
         (hΦ _ (E.phiAus_passt hZ hk σ'.speicher)))
@@ -330,7 +336,7 @@ theorem invGutGrundA_E (hP : InvGutGrundA P passes Q S T f) :
         rw [← E.req_E hZ hS hU.fort (E.inv_anfang hZ σ').treu f _ ρ' (E.envR_parZ hZ hS f ρ')]
         exact hreq
       exact E.invAmRueck_E hZ hS hU hI.treu f (hP _ (E.orakelΦ_rahmen hZ hT hRO)
-        (E.orakelΦ_regLokal hZ hT hRL) (E.orakelΦ_axVertrag hZ hAV hU.ax hQL) _
+        (E.orakelΦ_regLokal hZ hT hRL) (E.orakelΦ_axVertragOP hZ hT hAV hU.axPre hU.ax hQL) _
         (E.umweltΦ_ok hZ hT S hSL hU.inv hU') _ (E.aumweltΦ_ok hZ T A') _
         (E.rufΦ_rahmen hZ hS hU.fort hp (hU.rueck pad) hT hRR) (E.rufΦ_ohneVorbedingung hZ hS hOV) _ _ hreqD σe re
         (hΦ _ (E.phiAus_passt hZ hk σ'.speicher)))

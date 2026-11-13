@@ -3,6 +3,7 @@ public import Grammatik.Speichermodell.Atomar.AtomarReplay.T2.Teil2Basis
 
 public import Grammatik.Speichermodell.Atomar.AtomarReplay.T1
 public import Grammatik.Speichermodell.Atomar.AtomarReplay.T2.Teil1
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.Schritt.Fremd
 
 @[expose] public section
 
@@ -96,7 +97,7 @@ theorem vorA_eq {A : AUmwelt D} {σ w : World D} {Λ : List (Res D)} {X : List (
 /-- **A leaf step keeps the replay** (as `fadenS_blatt`): its reads are recorded; a non-axiom
     leaf by leaf locality over the stable carriers AND the read list, an axiom call by recording
     its answer. -/
-theorem fadenSA_blatt (hO : GutO O) (hQ : AxVertragO Q O)
+theorem fadenSA_blatt (hO : GutO O)
     (hlok : AxEnsLokal Q) (hFS : ∀ f, FussSX P S lok Tg f) {z : RufFadenG D} {W : World D}
     (hF : FadenSA P O passes Q S lok Tg m zyk z W) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {ρ : Env D Γ} {r : GRest D (vertragVon D z.kopf.f) l Γ Λ} (hr : z.kopf.rest = ⟨l, Γ, Λ, ρ, r⟩)
@@ -107,7 +108,8 @@ theorem fadenSA_blatt (hO : GutO O) (hQ : AxVertragO Q O)
     (hok : r.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) →
       stmtOrteP P s ⊆ fussOrteG P z.kopf.f ∧ K.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f))
     (hleaf : s.istBlatt = true) (σ' : World D) (ρ' : Env D Γ)
-    (hstep : execStmt O passes keinRuf s W ρ = .ok σ' ρ') :
+    (hstep : execStmt O passes keinRuf s W ρ = .ok σ' ρ')
+    (hQ : AntwortQF Q O (s.foreignCallKey W ρ)) :
     FadenSA P O passes Q S lok Tg m zyk
       ⟨z.stapel, ⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨l, Γ, Λ', ρ', K⟩⟩, σ'.spur, z.log⟩
       (σ'.speicher.welt σ'.spur) := by
@@ -150,7 +152,7 @@ theorem fadenSA_blatt (hO : GutO O) (hQ : AxVertragO Q O)
             hlok
             (fun v hv => by
               rw [e1]
-              exact hQ a _ _ v hv) ?_
+              exact hQ a _ _ (by rfl) v hv) ?_
           intro O' R U A σ0 κ hz hκ hw
           rw [hsem]
           apply ZErgG.folgt_of_eq
