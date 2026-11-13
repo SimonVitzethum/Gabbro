@@ -50,8 +50,8 @@
     in class `endet` never stands at a spent `forever` budget (`gabbro_ziel_terminierung`, proof in
     Zielsatz/Atomar/BeweisTerminierung.lean). See TERMINATION below.
   * `GabbroZielWarten` -- a waiting bound: on every run of the ticket lock a thread standing at `locks L` takes `L`
-    within `wartezeit` scheduler steps, under four named premises of the run (`gabbro_ziel_warten`, proof in
-    Zielsatz/Atomar/BeweisWarten.lean). See WAITING below.
+    within `wartezeit` scheduler steps, under three named premises of the run and the checker's hold bounds
+    (`gabbro_ziel_warten`, proof in Zielsatz/Atomar/BeweisWarten.lean). See WAITING below.
   * `GabbroZielProfil` (C14, 2026-11-02) -- the same conclusion over a SELECTED, profile-bound unit
     (`ProfilEinheit`: the unit with its build mode, the ORIGINAL parsed items and the image's section policy;
     Zielsatz/Projekte/Profil.lean). MEANING CHANGE, two points. (1) Assumption provenance: (c) is stated through
@@ -274,14 +274,26 @@
   -- the loops of class `umgebung` -- ends only at a logic or hardware stop, at its `progress` assumption when the
   passes are spent (`forever_umgebung`).
 
-  WAITING (2026-10-23, `GabbroZielWarten`). Over the runs of the ticket lock (`FifoLauf`) from the runtime's start,
-  four named premises of the run, none derived: the scheduler's fairness window `F` (`FairF`: a thread that can
-  step at each of `F` consecutive steps takes one); the hold time (`Haltezeit h k`: on every stretch on which a
-  thread holds `L` it takes at most `h L` own steps, `k L` of them at a nested `locks`); no named stop inside a
-  critical section (`HardwareImAbschnitt`); the contenders `Ts L` (`Anwaerter`). Claimed: a thread standing at
-  `locks L` takes `L` within `wartezeit ls Ts h k F L` scheduler steps (Logik/Fortschritt/Warten.lean: recursive over
-  the lock ranks, `(c - 1)·(h·F + k·Wn + F) + F`). The hold time is a premise: that the checker's `held <= N ops`
-  bounds the steps of a section in machine G is not proved (Lebendigkeit.lean, the two missing bridges).
+  WAITING (2026-10-23, `GabbroZielWarten`; hold time derived 2026-11-13). Over the runs of the ticket lock
+  (`FifoLauf`) from the runtime's start, three named premises of the run, none derived: the scheduler's fairness
+  window `F` (`FairF`: a thread that can step at each of `F` consecutive steps takes one); no named stop inside a
+  critical section (`HardwareImAbschnitt`); the contenders `Ts L` (`Anwaerter`). Beside them a decidable check of
+  the source program, `haltPasst E.P passes N decl fs ks` (Logik/Fortschritt/Halten/
+  Pruefung.lean): every `locks L` section of every function costs at most `N L` in `kostenBlock` -- the G-step
+  cost of KostenG, the checker's `held <= N ops` (K002) -- and calls only functions of `ks`, each fitting its
+  declared cost `decl` (K001). Claimed: a thread standing at `locks L` takes `L` within
+  `wartezeit ls Ts h h F L` scheduler steps with `h = haltSchranke ls N`, i.e. `h L = N L + 1 + ls.length`
+  (Logik/Fortschritt/Warten.lean: recursive over the lock ranks, `(c - 1)·(h·F + k·Wn + F) + F`). The hold time
+  `Haltezeit h h` was a premise on the run until 2026-11-13; it is now the theorem `haltezeit_aus`
+  (Halten/Haltezeit.lean): a section's own steps are at most its body's `kostenBlock`, one release, and the
+  releases of the frame's outer locks a scoped `return` performs before `L` (at most `ls.length`). The nested-lock
+  steps are not counted apart (`k = h`): the single cost potential bounds all own steps; a tighter count
+  needs a separate acquisition potential through calls and loops. Every lock must carry a bound (`N` is
+  total); a program with an unbounded lock does not meet the check. `HeldBinding.holds_haltPasst` derives
+  this check from the exporter's hold/cost acceptance and a bound for every lock; `haltPasst_mitRuhe`
+  transfers it to the runtime program (the idle root adds no section and no call). Indirect calls inside
+  sections, and anywhere in cost-checked functions of `ks`, are refused; checked pointer-type costs do
+  not yet enter this cost potential. Calls outside sections in functions outside `ks` are unaffected.
 
   PER-CORE ACCUMULATORS (2026-11-02, C15 concurrency/link/export slice; a reviewed change
   of meaning in the sense of §1, staged beside the goal). One `accumulates` declaration

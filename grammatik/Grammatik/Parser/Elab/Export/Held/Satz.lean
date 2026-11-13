@@ -15,30 +15,14 @@
   * `sectionsOkS_locks`: inversion at one section (its body's `kostenBlock` fits under the
     bound of its lock, and its callees declare costs).
 
-  This is item (c) of the task: the syntactic bound for every section body. Items (a) (a
-  run-level hold bound between entering and leaving a `locks` section) and (b) (a run-level
-  bound for a section body as a block) are NOT proved here, and cannot be proved from what
-  exists today:
-
-  * KostenG bounds FRAMES (`kosten_passt_deklaration`: own steps between a frame's `Eintritt`
-    and its return are at most the declared cost, counted by `SegLauf`/`segZaehle` under
-    `aktivVor`). There is no block-level counting lemma: no notion of "entering a `locks`
-    section" on a run, no `SegLauf` restricted to a section body, no bound on the own steps
-    taken while a section is open.
-  * `Deklaration` carries no hold field (a lock is `rang` and `maskiert` only); the bound
-    lives in the source tables `H`, not in the model, so no run-level statement can name it.
-  * `Haltezeit` (in `Logik/Fortschritt/Warten.lean`) counts SCHEDULER steps (`zaehl` over a
-    `PlanLauf`): own steps plus waiting, at most `h L` own steps of which at most `k L` at a
-    `locks` head. This module says nothing about waiting, about steps taken at a `locks`
-    head while acquiring, about named stops inside a section (`return`/`leave`/`next`, some
-    of which have no release yet -- the eight red `c11-scoped` probes), or about fairness
-    and FIFO (`LaufzeitAnnahme`), all of which a run-level hold-time theorem would need.
-  * Calls inside a section are counted at the callee's declared cost (`rufeB`); lifting that
-    number to runs needs the callee's own frame bound, which is future work of the same kind
-    as (b).
-
-  Wiring: this module is built once `public import Grammatik.Parser.Elab.Export.Held.Satz`
-  is added to `grammatik/Grammatik.lean` (not done here: no existing file is touched).
+  This is the syntactic bound for every section body. The run-level hold time is proved in the
+  model (2026-11-13): `haltezeit_aus` (Logik/Fortschritt/Halten/Haltezeit.lean) derives the
+  hold-time premise `Haltezeit` of the waiting bound from the model's Bool `haltPasst` -- the
+  same walker `haltE` with a bound for every lock and the declared costs checked by
+  `kostenPasst` -- by a section potential carried through the residue (`potSek`, `SekInv`).
+  `holds_haltPasst` connects both exporter checks to that Bool when every lock declares
+  a bound. The source-program premise of `GabbroZielWarten` is therefore discharged by
+  those checks and the total bound table; `haltPasst_mitRuhe` handles the idle root.
 -/
 module
 public import Grammatik.Parser.Elab.Export.HeldBinding
@@ -378,6 +362,30 @@ theorem holds_haltE (P : Programm (declOf u)) (passes : Nat)
   unfold holds at hh
   rw [Bool.and_eq_true] at hh
   exact (List.all_eq_true.mp hh.2) g (List.mem_finRange g)
+
+/-- **Exporter acceptance supplies the waiting theorem's source-program check.** Both K001
+    and K002 must pass, and every lock must declare the bound `N`. Indirect calls inside a
+    section, or anywhere in a cost-declaring function, are refused by these checks; pointer
+    type costs are checked by `CostBinding` but do not price indirect calls in `kostenPasst`. -/
+theorem holds_haltPasst (P : Programm (declOf u)) (passes : Nat)
+    (N : (declOf u).Lock → Nat) (total : ∀ L, boundOf H u L = some (N L))
+    (hc : CostBinding.holds C u P passes = true) (hh : holds H C u P passes = true) :
+    haltPasst P passes N (CostBinding.decl C u) (List.finRange u.fns.length)
+      (CostBinding.members C u) = true := by
+  have bounds : boundOf H u = (fun L => some (N L)) := funext total
+  have members : (fun x => (CostBinding.members C u).contains x) =
+      (fun x => (CostBinding.costOf C u x).isSome) := by
+    funext x
+    rw [Bool.eq_iff_iff, List.contains_iff_mem]
+    exact CostBinding.members_mem C u x
+  unfold haltPasst
+  apply Bool.and_eq_true_iff.mpr
+  refine ⟨CostBinding.holds_kostenPasst C u hc, ?_⟩
+  apply List.all_eq_true.mpr
+  intro g _
+  rw [members]
+  rw [← bounds]
+  exact holds_haltE H C u P passes hh g
 
 /-- **The hold bound holds, syntactically.** On a unit accepted by `HeldBinding.holds`,
     every `locks` section occurring in any function body fits under the declared bound of

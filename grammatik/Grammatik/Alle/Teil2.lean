@@ -139,6 +139,8 @@ public import Grammatik.Speichermodell.Maschine.GXMaschine
 public import Grammatik.Logik.Fortschritt.Folge
 public import Grammatik.Logik.Fortschritt.FolgeBeweis
 public import Grammatik.Logik.Fortschritt.FolgeZeuge
+public import Grammatik.Logik.Fortschritt.Halten.Haltezeit
+public import Grammatik.Logik.Fortschritt.Halten.Zeuge
 public import Grammatik.Zielsatz.Eigenschaften.FolgeZiel
 public import Grammatik.Zielsatz.Atomar.AtomarGoalZeuge
 public import Grammatik.Speichermodell.Maschine.ZaehlerW

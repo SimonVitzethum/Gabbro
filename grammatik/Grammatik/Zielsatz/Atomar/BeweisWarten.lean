@@ -3,12 +3,15 @@
   Subject:   THE PROOF OF `GabbroZielWarten` (2026-10-23): the waiting bound `wartezeit_schranke`
              (Logik/Fortschritt/Lebendigkeit.lean) from the four premise groups -- the goal theorem supplies its
              machine facts (no logic stop, every float range check passes, the lock ranks, exclusivity), the ticket
-             lock its FIFO order (`fifoSperre_aus`); fairness window, hold time, no stop inside a section and the
-             contenders are the statement's named premises.
+             lock its FIFO order (`fifoSperre_aus`), the checked hold bounds the hold time (`haltezeit_aus`,
+             2026-11-13); fairness window, no stop inside a section and the contenders are the statement's named
+             premises.
 -/
 module
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 public import Grammatik.Logik.Fortschritt.Lebendigkeit
+public import Grammatik.Logik.Fortschritt.Halten.Haltezeit
+public import Grammatik.Logik.Fortschritt.Halten.Ruhe
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -91,7 +94,7 @@ end Aus
 
 /-- **GABBRO_ZIEL_WARTEN, PROVED.** -/
 theorem gabbro_ziel_warten : GabbroZielWarten := by
-  intro C D _ E fs ls cs hC hN O hH passes sp init hL R F h k Ts hR0 hFair hHz hHw hAnw L t n0 hSp
+  intro C D _ E fs ls cs hC hN O hH passes sp init hL N decl ks hK R F Ts hR0 hFair hHw hAnw L t n0 hSp
   have hA0 := (C.korrekt E fs ls cs hH.2.2.2 hC).1
   have hA := akzeptiertSpecX_mitRuhe E.P fs.2 hA0
   have hN' : LogikPflichtA E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q)
@@ -110,6 +113,8 @@ theorem gabbro_ziel_warten : GabbroZielWarten := by
     · exact h.1
   have hr : ∀ n, RufErreichbarG E.P.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) (R.M n) :=
     R.toPlanLauf.erreichbar (hR0 ▸ RufErreichbarG.start)
+  have hHz := haltezeit_aus R.toPlanLauf hH'.1 hA.stufen sp init hLeer (hR0 ▸ RufErreichbarG.start) ls.2
+    (fsRuhe_voll fs.2) (haltPasst_mitRuhe E.P passes N decl fs.1 ks hK)
   exact wartezeit_schranke R.toPlanLauf hH'.1 hA.stufen sp init hLeer ls.2 (hR0 ▸ RufErreichbarG.start)
     (fun n => (zielX_aus E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q) (fsRuhe_voll fs.2) ls.2 (wsRuhe E.ws) hA hN'
       O.mitRuhe hH' passes sp init hZ (R.M n) (gx_aus_g_lauf (hr n))).keinLogikHalt)

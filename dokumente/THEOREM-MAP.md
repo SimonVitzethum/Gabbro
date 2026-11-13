@@ -7139,3 +7139,31 @@ the user-logic, hardware, execution or source-to-binary conclusions of the goal 
 The emitted ticket lock's missing WAIT, failed ticket-CAS retry, WAKE and stable cross-thread
 invariant statements are listed in `stage0/Stage0/Senke/Sperre/Ticket/Offen.lean`. The sequential
 `locks_okT` entry above supplies none of those contended-path results.
+
+## 186. The hold time of a lock section derived from the checked bound (2026-11-13)
+
+*Files: `grammatik/Grammatik/Logik/Fortschritt/Halten/{Pruefung,RestHalt,SchrittHalt,PotSek,SchrittSek1,SchrittSek2,Invariante,Nimmt,Haltezeit,Zeuge}.lean`; the statement `GabbroZielWarten` in `Zielsatz/Kern/Spec/Teil3.lean`, its proof in `Zielsatz/Atomar/BeweisWarten.lean`. Change of meaning: the run premise `Haltezeit h k` of `GabbroZielWarten` is replaced by the decidable check `haltPasst` on the source program; the bound is `h = k = haltSchranke ls N`.*
+
+| Theorem | File | Statement |
+|---|---|---|
+| `haltPasst`, `haltSchranke` (definitions) | `Halten/Pruefung.lean` | K001 (`kostenPasst` over `ks`) and K002 (every section of every function of `fs` costs at most `N L` in `kostenBlock`, callees in `ks`); `haltSchranke ls N L = N L + 1 + ls.length`. The walker `haltS` … `haltE` moved here unchanged from `HeldBinding.lean`. |
+| `schrittHalt`, `haltInvG_erreichbar` | `Halten/SchrittHalt.lean` | Every rule of G carries the walker predicate `GRest.hR` (head-local, push, pop); every frame of every reachable machine passes it when every body does. |
+| `potSek`, `rufeV` (definitions) | `Halten/PotSek.lean` | `potRest` and `rufeR` cut at the first release marker of `L`; the marker costs `1 + (markers behind it)`. |
+| `schrittSek` | `Halten/SchrittSek2.lean` | One own step of the head while `L` is held before and after: the shape of `schrittArt` for `potSek L`/`rufeV L` (head-local drop by one, push charging the callee, pop resuming the caller). |
+| `sekInv_eigen`, `sekInv_schritt`, `sekInv_pos` | `Halten/Invariante.lean` | `SekInv` (callee frames costed as in `KInv`, the section frame by `potSek L`, naming `L` beyond its end signature): an own step lowers the measure by one, a foreign step keeps it, a stepping holder has a positive measure. |
+| `sekInv_nimmt` | `Halten/Nimmt.lean` | The step that takes `L` (at a `locks L` head whose body passes the walker) establishes `SekInv` at `haltSchranke ls N L`. |
+| `sekInv_erreichbar` | `Halten/Haltezeit.lean` | On every reachable machine of a checked program, every held lock has `SekInv` at a measure at most `haltSchranke ls N L`. |
+| `haltezeit_aus` | `Halten/Haltezeit.lean` | `haltPasst P passes N decl fs ks = true` (complete `fs`, `ls`), `GutO`, `StufenM`, starts without signature locks, a reachable start: `Haltezeit R (haltSchranke ls N) (haltSchranke ls N)` on every scheduled run. |
+| `gabbro_ziel_warten : GabbroZielWarten` | `Zielsatz/Atomar/BeweisWarten.lean` | The waiting bound with the hold time derived (`haltezeit_aus`); remaining run premises `FairF`, `HardwareImAbschnitt`, `Anwaerter`. |
+| `hzAussen_geprueft`, `hzAussen_eng`, `hzSchranke` | `Halten/Zeuge.lean` | `locks false { locks true { } }` passes the walker at `N = (4, 1)`, fails at `N false = 3`; derived hold times `7` and `4`. |
+| `haltezeit_aus_zeuge` | `Halten/Zeuge.lean` | On the run of `wartezeit_zeuge` (lock held at steps 6-11) the program passes `haltPasst` and `haltezeit_aus` gives `Haltezeit` with `h = k = 22`. |
+
+The exporter connection is `HeldBinding.holds_haltPasst` (`Export/Held/Satz.lean`): both
+`HeldBinding.holds` and `CostBinding.holds`, with a bound for every lock, imply `haltPasst` on
+the exported program. `haltPasst_mitRuhe` (`Halten/Ruhe.lean`, cost/check transport in
+`RuheKosten.lean` and `RuhePruefung.lean`) lifts this check to the runtime program.
+`GabbroZielWarten` therefore takes the check on `E.P`. `Held/SatzZeuge.lean` discharges the
+existing exported section fixture's premise from acceptance and applies the generic lift
+and hold-time theorem. Nested acquisitions retain the conservative bound `k = h`; a separate
+acquisition potential through calls/loops is not proved. Indirect calls in sections or in
+cost-checked functions are refused, even with checked pointer-type cost declarations.

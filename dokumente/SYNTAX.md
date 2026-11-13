@@ -3065,7 +3065,7 @@ configuration), DATA (an object, not an obligation). Full map: `dokumente/THEORE
 | `StartGut` — every start function's `requires` at the start world | USER (boot) | the boot assignment `init` against the entry contracts (`ZielOrt.lean`). |
 | `GutO` — axiom answers inside declared frames, held locks and trace untouched | HARDWARE | the `effects` of every `axiom` / `raw` / `prim` / `extern` / `asm` body (§§1, 6, 14); the per-syscall instance from the kernel contract (`syscall_paarung`, `SyscallPaarung.lean`); the fixture instance `refO_gut` (`ReferenzB.lean`). |
 | `RegLokal` — register answers from the register's device carriers, `awaits` visibility from the awaited global only | HARDWARE, named | the `device` / `reg` declarations with `mirrors`, class, and `requires` promises (§10); transfer `regLies_gleich` / `sichtbar_gleich` (`ZielOrtGeraetSem.lean`). |
-| waiting — fair scheduling and a bounded hold time of every lock | HARDWARE assumption, named here and proved nowhere | the surface carries the hold bound (`lock L … held <= N ops`, §11; checker `K002`, `K004` for the shared form), but `Deklaration` has no hold field, so no waiting bound under fairness is stated (TARGET 4 open, `KostenG.lean` CUTS). |
+| waiting — fair scheduling (`FairF`) | runtime assumption, named | the waiting bound `GabbroZielWarten` (`wartezeit`) holds under the fairness window `F`; the hold time of every section is no assumption: it follows from the checked hold bound (`lock L … held <= N ops`, §11, `K002` as the model Bool `haltPasst`) by `haltezeit_aus` (Logik/Fortschritt/Halten/Haltezeit.lean, 2026-11-13). |
 | `programmImFragmentG = true` — every body in the widened `gOk` fragment | DECIDABLE | all forms including loops, exits, reasons, axioms; indirect calls only where `KandOk` holds (every function of the pointer's signature keeps its contract carriers in the caller's footprint); register reads only with their device carriers in the footprint. Soundness: `programmImFragmentG_ok`. Lean-decidable, not yet a checker rule — wiring it per program is emitter work. |
 | `fussOrtGB = true` — every widened-footprint carrier guarded by a signature lock or written by none | DECIDABLE | the footprint covers direct callees' contract carriers and read registers' device carriers; surface: `effects { writes T }`, the `requires Held(L)` signature lock sets, `H007` guard-per-access, `W001` / `W002` concurrent-write refusal. Soundness: `fussOrtGB_ok`. The Bool itself is Lean-side. |
 | `StartExklusiv` — no two start threads share a signature lock | START | the `concurrent` member list against the entry functions' held sets (§11); decidable for constant assignments (`audit_startExklusiv_const`, `AuditZiel.lean`); no checker rule yet. |
@@ -3263,11 +3263,10 @@ row); sample `sonde_tick.c`, row 39 PROGRAM. Time stays a hardware outcome.
       the run: no range check inside the run, no user partition in the world (§16.3). Until
       both stand, check-then-copy across the user/kernel boundary has shapes but no
       discharge.
-- [ ] **The lock hold bound in the Lean model** — `held <= N ops` is surface (`lockdecl`,
-      §11) and checker (`K002`, `K004`), but `Deklaration` carries no hold field, so no
-      waiting bound under fairness is stated (`KostenG.lean` CUTS, TARGET 4 open). The
-      scheduler assumption — fair scheduling and a bounded hold time of every lock — is
-      named in §16.2 and proved nowhere.
+- [x] **The lock hold bound in the Lean model** — `held <= N ops` (`lockdecl`, §11, `K002`)
+      is the model Bool `haltPasst`; the hold time of a section on every run follows from it
+      (`haltezeit_aus`, 2026-11-13), and the waiting bound `GabbroZielWarten` takes it instead
+      of a hold-time premise. Fair scheduling (`FairF`) stays a named runtime assumption.
 - [ ] **What is not covered even after the definition — named, not forgotten:** the seam CPU ↔
       device has no mechanised model (16.4 (3)); the `iasm` entry path has no downstream prover
       (16.4 (7)); liveness and progress fall under no mechanism except the named assumption
