@@ -9,6 +9,7 @@ public import Stage0.Compiler
 public import Grammatik.Parser.Elab.UebersetzePipeline
 public import Grammatik.GabbroV.Start.GvStartPflicht
 public import Stage0.Senke.Images.Bild
+public import Stage0.Senke.Images.StackReserve
 public import Stage0.Senke.Images.InitialExecution
 public import Stage0.Senke.Welt.Anordnung
 public import Stage0.Senke.Welt.GlobalAlignment
@@ -24,8 +25,9 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2 Gabbro.Grammatik.GabbroV
   Gabbro.Grammatik.Parser.Cover.Differenz
 
-/-- The stack of an image, in slots (4 MiB); the world lies above it (`Senke.layU`). -/
-def irStapel : Nat := 2 ^ 19
+/-- Zero selects a stack reserve from the image's static frames, with a 4 MiB floor.
+    Positive explicit capacities retain their exact size in runner words. -/
+def irStapel : Nat := 0
 
 /-- The actual image together with the exact source program and successful canonical IR emission. -/
 structure Emitted (text : String) (K : Nat) (options : Profil.Options := {}) where
@@ -44,6 +46,11 @@ structure Emitted (text : String) (K : Nat) (options : Profil.Options := {}) whe
     (fun g => (compiled.unit.fns[g.val]?.map (·.name)).getD "?") compiled.main args
     (startPlan.starts (Senke.initialWorld compiled.unit initialValid)) K
     (Senke.bodenAusrichtung compiled.unit) = .ok image
+
+/-- Production images check their minimum call depth against the final relocated code. -/
+theorem Emitted.automatic_depth {src : String} {options : Profil.Options}
+    (output : Emitted src irStapel options) : Senke.stackReserveDepth ≤ output.image.depth :=
+  Senke.bild_auto_depth output.emission
 
 /-- One source-to-image path; no separate unchecked emitter is retained. -/
 def emit (src : String) (K : Nat := irStapel) (options : Profil.Options := {}) : Except String (Emitted src K options) := do
