@@ -111,9 +111,10 @@ def AxEnsLokal (Q : AxEns D) : Prop :=
 
 /-- **The strengthened user obligation.** The body triple and the caller
     duty of `KoerperGut`, for every oracle that respects the declared axiom
-    frames AND meets the declared axiom ensures. -/
+    frames AND meets the declared axiom ensures where `PreQ P` holds. The
+    software pre restricts reliance; this enlarges the quantified oracle class. -/
 def KoerperGutA (P : Programm D) (passes : Nat) (Q : AxEns D) (f : D.Fn) : Prop :=
-  ∀ O' : Orakel D, RahmenO O' → AxVertragO Q O' → KoerperGut P O' passes f
+  ∀ O' : Orakel D, RahmenO O' → AxVertragOP (PreQ P) Q O' → KoerperGut P O' passes f
 
 /-- The strengthened obligation is weaker than `KoerperGutV`: fewer oracles. -/
 theorem koerperGutA_of_V {P : Programm D} {passes : Nat} (Q : AxEns D) {f : D.Fn}

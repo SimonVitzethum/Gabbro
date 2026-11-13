@@ -98,7 +98,7 @@ theorem popR_ens (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hK : �
   have h2 := ZErg.folgt_zurueck (ZErg.folgt_trans h1 (ZErg.folgt_of_gleich (hsem _ _ σ)))
   obtain ⟨σ'', hex, hsg⟩ := zErg_gleich_zurueck h2
   have hE := (hK G.f (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
-    (orakelAus_vertrag hQ hqa) (rufAusV H)
+    (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa) (rufAusV H)
     (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) G.s0 G.rho hreq).1 σ'' _ hex
   have hgl : GleichAuf (fussOrteG P G.f) (σ.lese Λ e.orte) (W.lese Λ e.orte) :=
     hg.lese Λ Λ e.orte e.orte
@@ -133,7 +133,7 @@ theorem pushR_req (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hK : �
       rw [hlogik _ _ _ htor] at h1
       have hex := zErg_gleich_logik (ZErg.folgt_logik h1)
       exact (hK F.f (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
-        (orakelAus_vertrag hQ hqa) (rufAusV H)
+        (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa) (rufAusV H)
         (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) F.s0 F.rho hreq).2 g hex
 
 /-- **The caller resumes** after its pending call to `G` was answered by

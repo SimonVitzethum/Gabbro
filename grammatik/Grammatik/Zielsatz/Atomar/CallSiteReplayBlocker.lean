@@ -1,8 +1,7 @@
-/- C08 replay blocker: conditional binding duties do not inhabit the oracle
-   class quantified by the unchanged body obligations. An unused software item
-   with false pre/post and false Q empties that class, admitting a returning
-   body with false ensures. The proposed additive goal therefore cannot hold.
-   This exhibit changes no goal, checker, semantics or assumption. -/
+/- C08 replay-blocker regression: the unused false software summary still
+   makes the old global oracle class empty, but the conditional body class
+   is inhabited. The false body post is now refused by premise (b); a true
+   body post remains provable. No goal or machine semantics is changed. -/
 module
 
 public import Grammatik.Logik.Ruf.FremdRuf.T10CallSiteZeuge
@@ -59,16 +58,51 @@ theorem hardware [RootNativeFloat.Hardware] : HardwareAnnahmenHw traceOracle uni
   ⟨traceOracle_gut, ⟨fun r => nomatch r, fun g => nomatch g⟩,
     (fun a hsw => absurd rfl hsw), inferInstance⟩
 
-/-- All three body predicates are vacuous, even for this false body post.
-    Start admission, locality and pointer refinement still hold separately. -/
-theorem user : NutzerPflichtA unit where
+/-- Unlike the global false summary, the conditional class has an actual
+    frame-respecting, register-local member: the unused software pre is false. -/
+theorem conditional_summary : AxVertragOP (PreQ program) unit.Q traceOracle := by
+  intro a σ ρ v hp
+  have hf : PreQ program a σ ρ = false := by
+    rw [preQ_sw program (by cases a; rfl)]
+    rfl
+  rw [hf] at hp
+  exact False.elim (Bool.false_ne_true hp)
+
+/-- The counterexample formerly used by `proposedGoal_false` no longer
+    satisfies premise (b): an immediate return must prove its false post
+    against the inhabited conditional oracle class. -/
+theorem not_user : ¬ NutzerPflichtA unit := by
+  intro h
+  have hk := ((h.logik.1 0 ()).1).1 traceOracle (gutO_rahmenO traceOracle_gut)
+    ⟨fun r => nomatch r, fun g => nomatch g⟩ conditional_summary
+    (fun _ σ => σ) (fun L => nomatch L) idA (havocA_id _)
+    (rufAusV []) (rufAusV_rahmen (vertraegeOkR_nil program))
+    (rufAusV_ohneVorbedingung (vertraegeOkR_nil program).1) world .nil rfl
+  exact Bool.false_ne_true (hk.1 _ () rfl)
+
+/-- The repaired class also admits a positive duty witness: the same
+    immediate return with a true body post, despite the unused false Q. -/
+def goodProgram : Programm decl :=
+  { program with
+    ensures := fun _ => .tru }
+
+def goodUnit : Einheit decl :=
+  { unit with
+    P := goodProgram }
+
+theorem good_user : NutzerPflichtA goodUnit where
   logik := by
     refine ⟨?_, ?_, ?_, ?_⟩
     · intro passes f
-      exact ⟨⟨fun O _ _ hQ => False.elim (no_global_summary O hQ),
-        fun O _ _ hQ => False.elim (no_global_summary O hQ)⟩,
-        fun O _ _ hQ => False.elim (no_global_summary O hQ),
-        fun O _ _ hQ => False.elim (no_global_summary O hQ)⟩
+      refine ⟨⟨?_, ?_⟩, ?_, ?_⟩
+      · intro O hr hl hQ U hU A hA R hR hOV σ ρ hreq
+        exact ⟨fun _ _ _ => rfl, fun _ h => by cases h⟩
+      · intro O hr hl hQ U hU A hA R hR hOL σ ρ hreq e h
+        cases h
+      · intro O hr hl hQ U hU A hA R hR hOV σ ρ hreq σ' v h i
+        exact nomatch i
+      · intro O hr hl hQ U hU A hA R hR hOV σ ρ hreq σ' r
+        exact r.elim0
     · intro L
       exact nomatch L
     · intro a σ σ' v ht hg
@@ -179,36 +213,14 @@ theorem start_post_fails :
     rfl ⟨List.Perm.nil, Or.inl rfl⟩).1
   exact Bool.false_ne_true hp
 
-/-- Exact proposed sibling-premise shape, kept local to the negative exhibit.
-    The official goal must not acquire a proof of this false statement. -/
-def ProposedGoal : Prop :=
-  ∀ (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
-    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
-    C.akzeptiert E fs.1 ls.1 cs.1 = true →
-    NutzerPflichtA E →
-    CallSitePflicht E →
-    PostDeckt E →
-    ∀ O : Orakel D, ForeignVertrag E O →
-    HardwareAnnahmenHw O E.Q →
-    ∀ (passes : Nat) (sp : Speicher D.mitRuhe)
-      (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)),
-      Laufzeit E sp init →
-      ∀ (lebt0 : Faden → Bool) (K : FadenMaschine D.mitRuhe),
-        FadenErreichbarX E.P.mitRuhe O.mitRuhe passes (GeteiltV E.P E.ws)
-          (FadenStart E.P.mitRuhe sp init lebt0) K →
-          ZielFX E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (GeteiltV E.P E.ws)
-            (RufStartG E.P.mitRuhe sp init) (E.arenen.map (·.mitRuhe)) K
-
-/-- All proposed premises coexist, but the initial return violates ZielFX.
-    The native hardware contract is supplied, exactly as in positive witnesses. -/
-theorem proposedGoal_false [RootNativeFloat.Hardware] : ¬ ProposedGoal := by
-  intro h
-  have hz := h akzeptiertX_pruefer decl unit ⟨[()], by intro f; cases f; exact List.mem_cons_self⟩
-    ⟨[], fun L => nomatch L⟩ ⟨[], fun c => nomatch c⟩ checker user call_sites post_cover
-    traceOracle binding hardware 0 (speicherR memory) initial runtime (fun _ => true)
-    (FadenStart unit.P.mitRuhe (speicherR memory) initial (fun _ => true)) .start
-  exact start_post_fails hz.g.startEnde
+/-- The original counterexample retains its independent call-site, binding
+    and cover duties; precisely the strengthened body duty now excludes it. -/
+theorem counterexample_excluded :
+    CallSitePflicht unit ∧ PostDeckt unit ∧ ForeignVertrag unit traceOracle ∧
+      AxVertragOP (PreQ unit.P) unit.Q traceOracle ∧ ¬ NutzerPflichtA unit :=
+  ⟨call_sites, post_cover, binding, conditional_summary, not_user⟩
 
 end Gabbro.Grammatik.Zielsatz.CallSiteReplayBlocker
 
-#print axioms Gabbro.Grammatik.Zielsatz.CallSiteReplayBlocker.proposedGoal_false
+#print axioms Gabbro.Grammatik.Zielsatz.CallSiteReplayBlocker.counterexample_excluded
+#print axioms Gabbro.Grammatik.Zielsatz.CallSiteReplayBlocker.good_user

@@ -156,7 +156,7 @@ theorem leseA_pinA_X₂ (T : D.Tab ⊕ D.Glob → Prop) (X₁ X₂ : List (D.Tab
 def FlagPersonenPflicht (P : Programm D) (Q : AxEns D) (S : SperrInv D)
     (T : D.Tab ⊕ D.Glob → Prop) (passes : Nat) (f : D.Fn)
     (X₁ X₂ : List (D.Tab ⊕ D.Glob)) : Prop :=
-  (∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragO Q O' →
+  (∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragOP (PreQ P) Q O' →
     ∀ U : Umwelt D, HavocOk S U → ∀ (s₁ s₂ : Speicher D),
     ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f),
       RespektiertRahmen P R → OhneVorbedingung R →
@@ -168,7 +168,7 @@ def FlagPersonenPflicht (P : Programm D) (Q : AxEns D) (S : SperrInv D)
         (∀ g : D.Fn,
           execEndHA (V := vertragVon D f) S O' U (pinA T X₁ X₂ s₁ s₂) passes (torRuf P R)
             (P.rumpf f) σ ρ ≠ EndAusgang.logik (Logik.vorbedingung g))) ∧
-  (∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragO Q O' →
+  (∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragOP (PreQ P) Q O' →
     ∀ U : Umwelt D, HavocOk S U → ∀ (s₁ s₂ : Speicher D),
     ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f),
       RespektiertRahmen P R → OhneLogik R →

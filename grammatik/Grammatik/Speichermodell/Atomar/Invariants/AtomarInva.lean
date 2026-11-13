@@ -186,7 +186,7 @@ private theorem kopfSA_scopedRet (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertra
       rw [hr] at hL
       rw [semHA_scopedWert_falsch S _ _ _ passes _ r e R hret σ ρ hc] at hL
       exact False.elim ((hK F.f).2 _ (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
-        (orakelAus_vertrag hQ hqa) _ (umweltAus_ok hS hsp hiu) _ hHA _ (rufAusL_rahmen hv)
+        (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa) _ (umweltAus_ok hS hsp hiu) _ hHA _ (rufAusL_rahmen hv)
         (rufAusL_ohneLogik hv.1) F.s0 F.rho hreq .schleife (zErgG_gleich_logik (ZErgG.folgt_logik hL)))
   have h1 := hpred (rufAusV H) (rufAusV_passt hf)
   rw [hr] at h1
@@ -196,10 +196,10 @@ private theorem kopfSA_scopedRet (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertra
   obtain ⟨σ', hex, hsg⟩ := zErgG_gleich_zurueck
     (ZErgG.folgt_zurueck (ZErgG.folgt_trans h1 (ZErgG.folgt_of_gleich hsem)))
   have hE := ((hK F.f).1 _ (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
-    (orakelAus_vertrag hQ hqa) _ (umweltAus_ok hS hsp hiu) _ hHA _
+    (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa) _ (umweltAus_ok hS hsp hiu) _ hHA _
     (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) F.s0 F.rho hreq).1 σ' _ hex
   have hInv := (hI F.f) _ (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
-    (orakelAus_vertrag hQ hqa) _ (umweltAus_ok hS hsp hiu) _ hHA _
+    (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa) _ (umweltAus_ok hS hsp hiu) _ hHA _
     (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) F.s0 F.rho hreq σ' _ hex
   rw [hrec _ hPX hHA] at hsg hE
   have hgl := mischT_gleichAuf hg he Λ Λ
@@ -237,7 +237,7 @@ theorem kopfSA_saved_inv (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
   simp only [semHA, weiterHA] at h1
   obtain ⟨σ', hex, hsg⟩ := zErgG_gleich_zurueck (ZErgG.folgt_zurueck h1)
   have hInv := (hI F.f) (orakelAus O HA) (orakelAus_rahmen hO hra)
-    (regLokal_orakelAus hRL HA) (orakelAus_vertrag hQ hqa)
+    (regLokal_orakelAus hRL HA) (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa)
     (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (umweltAusA Tg HX) hHA
     (rufAusV H) (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) F.s0 F.rho hreq σ' v hex
   intro i hi hs

@@ -100,7 +100,7 @@ theorem popS_ens (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : Sp
   have h2 := ZErgG.folgt_zurueck (ZErgG.folgt_trans h1 (ZErgG.folgt_of_gleich (hsem _ _ _ σ)))
   obtain ⟨σ'', hex, hsg⟩ := zErgG_gleich_zurueck h2
   have hE := ((hK G.f).1 (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
-    (orakelAus_vertrag hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (rufAusV H)
+    (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (rufAusV H)
     (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) G.s0 G.rho hreq).1 σ'' _ hex
   have hgl : GleichAuf (stabilS P S lok G.f Λ) (σ.lese Λ e.orte) (W.lese Λ e.orte) :=
     hg.lese Λ Λ e.orte e.orte
@@ -137,7 +137,7 @@ theorem pushS_req (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : S
       rw [hlogik _ _ _ _ htor] at h1
       have hex := zErgG_gleich_logik (ZErgG.folgt_logik h1)
       exact ((hK F.f).1 (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
-        (orakelAus_vertrag hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (rufAusV H)
+        (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (rufAusV H)
         (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) F.s0 F.rho hreq).2 g hex
 
 /-- **A returning head justifies its answer** (no event): the head's

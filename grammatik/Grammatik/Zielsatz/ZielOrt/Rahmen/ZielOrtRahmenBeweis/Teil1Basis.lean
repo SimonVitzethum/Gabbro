@@ -22,11 +22,11 @@ variable {D : Deklaration}
 
 /-- **The user obligation against frame-respecting handlers and the
     oracles that meet the declared axiom ensures `Q`.** `KoerperGutR` with
-    one more oracle condition (`AxVertragO Q O'`): fewer oracles, so it is
+    one more oracle condition (`AxVertragOP (PreQ P) Q O'`): fewer oracles, so it is
     weaker than `KoerperGutR` (`koerperGutRQ_of_R`) and than `KoerperGutA`
     (`koerperGutRQ_of_A`). -/
 def KoerperGutRQ (P : Programm D) (passes : Nat) (Q : AxEns D) (f : D.Fn) : Prop :=
-  ∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragO Q O' →
+  ∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragOP (PreQ P) Q O' →
   ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f),
     RespektiertRahmen P R → OhneVorbedingung R →
     ∀ (σ : World D) (ρ : Env D (D.params f)), ReqAmEintritt P f σ ρ →
@@ -58,7 +58,7 @@ theorem axEnsLokal_wahr : AxEnsLokal (axWahr D) := fun _ _ _ _ _ _ => rfl
 /-- Over the trivial ensures the new obligation IS `KoerperGutR`. -/
 theorem koerperGutR_of_RQ_wahr {P : Programm D} {passes : Nat} {f : D.Fn}
     (h : KoerperGutRQ P passes (axWahr D) f) : KoerperGutR P passes f :=
-  fun O' hr hl R hR hOV σ ρ hreq => h O' hr hl (axVertragO_wahr O') R hR hOV σ ρ hreq
+  fun O' hr hl R hR hOV σ ρ hreq => h O' hr hl (axVertragOP_of_O _ (axVertragO_wahr O')) R hR hOV σ ρ hreq
 
 /-! ## 1. The replay invariants -/
 

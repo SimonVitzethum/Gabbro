@@ -51,7 +51,7 @@ theorem pushSA_req (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : 
       rw [hlogik _ _ _ _ _ hPX hHA htor] at h1
       have hex := zErgG_gleich_logik (ZErgG.folgt_logik h1)
       exact ((hK F.f).1 (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
-        (orakelAus_vertrag hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu)
+        (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu)
         (umweltAusA Tg HX) hHA (rufAusV H) (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1)
         F.s0 F.rho hreq).2 g hex
 
@@ -94,7 +94,7 @@ theorem pushSA_mass (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS :
       rw [hlogik _ _ _ _ _ hPX hHA htor] at h1
       have hex := zErgG_gleich_logik (ZErgG.folgt_logik h1)
       exact hM F.f (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
-        (orakelAus_vertrag hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu)
+        (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu)
         (umweltAusA Tg HX) hHA (rufAusM H) (rufAusM_rahmen hv) (rufAusM_ohneAbstieg hv) (rufAusM_ohneVorbedingung hv)
         F.s0 F.rho hreq g hz hex
 

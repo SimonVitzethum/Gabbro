@@ -63,7 +63,7 @@ def OhneLogik (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f
     and every `state` transition finds its pre-state. A statement over the
     SEQUENTIAL semantics of `f`'s body only. -/
 def KeineLogik (P : Programm D) (passes : Nat) (Q : AxEns D) (f : D.Fn) : Prop :=
-  ∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragO Q O' →
+  ∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragOP (PreQ P) Q O' →
   ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f),
     RespektiertRahmen P R → OhneLogik R →
     ∀ (σ : World D) (ρ : Env D (D.params f)), ReqAmEintritt P f σ ρ →
@@ -144,7 +144,7 @@ theorem kopfR_keineLogik (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     (gleichRS_orakelAus O HA)
   rw [he] at h1
   exact hL F.f (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
-    (orakelAus_vertrag hQ hqa) (rufAusL H) (rufAusL_rahmen hv) (rufAusL_ohneLogik hv.1) F.s0 F.rho
+    (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa) (rufAusL H) (rufAusL_rahmen hv) (rufAusL_ohneLogik hv.1) F.s0 F.rho
     hreq e (zErg_gleich_logik (ZErg.folgt_logik h1))
 
 /-- The same, for a residue named by its shape. -/

@@ -31,7 +31,7 @@ theorem koerperGutS_mitRuhe (h : KoerperGutS P passes Q S f) :
       ⟨envZ ρ, (envR_envZ (Γ := D.params f) ρ).symm⟩
     have hreq0 : ReqAmEintritt P f σ0 ρ0 := (req_mitRuhe_iff P f σ0 ρ0).mp hreq
     have hk := h.1 (Orakel.zurueck O') (rahmenO_zurueck hr) (regLokal_zurueck hl)
-      (axVertrag_zurueck hq) (umweltZ U') (havocOk_umweltZ hU') (rufZuD R') (respektiert_rufZuD hR)
+      (axVertragOP_zurueck hq) (umweltZ U') (havocOk_umweltZ hU') (rufZuD R') (respektiert_rufZuD hR)
       (ohneVorbedingung_rufZuD R') σ0 ρ0 hreq0
     have hrel := rumpf_rel P S passes O' U' (rufZuD R') R' (rufRel_rufZuD hOV) f σ0 ρ0
     have hrel2 := rumpf_rel P S passes O' U' (torRuf P (rufZuD R')) (torRuf P.mitRuhe R')
@@ -78,7 +78,7 @@ theorem koerperGutS_mitRuhe (h : KoerperGutS P passes Q S f) :
     have hreq0 : ReqAmEintritt P f σ0 ρ0 := (req_mitRuhe_iff P f σ0 ρ0).mp hreq
     have hOV : OhneVorbedingung R' := fun g σ ρ e hx => absurd hx (hOL g σ ρ e)
     have hk := h.2 (Orakel.zurueck O') (rahmenO_zurueck hr) (regLokal_zurueck hl)
-      (axVertrag_zurueck hq) (umweltZ U') (havocOk_umweltZ hU') (rufZuD R') (respektiert_rufZuD hR)
+      (axVertragOP_zurueck hq) (umweltZ U') (havocOk_umweltZ hU') (rufZuD R') (respektiert_rufZuD hR)
       (ohneLogik_rufZuD hOL) σ0 ρ0 hreq0
     have hrel := rumpf_rel P S passes O' U' (rufZuD R') R' (rufRel_rufZuD hOV) f σ0 ρ0
     intro e' hx
@@ -102,7 +102,7 @@ theorem invGutS_mitRuhe (h : InvGutS P passes Q S f) :
     ⟨envZ ρ, (envR_envZ (Γ := D.params f) ρ).symm⟩
   have hreq0 : ReqAmEintritt P f σ0 ρ0 := (req_mitRuhe_iff P f σ0 ρ0).mp hreq
   have hk := h (Orakel.zurueck O') (rahmenO_zurueck hr) (regLokal_zurueck hl)
-    (axVertrag_zurueck hq) (umweltZ U') (havocOk_umweltZ hU') (rufZuD R') (respektiert_rufZuD hR)
+    (axVertragOP_zurueck hq) (umweltZ U') (havocOk_umweltZ hU') (rufZuD R') (respektiert_rufZuD hR)
     (ohneVorbedingung_rufZuD R') σ0 ρ0 hreq0
   have hrel := rumpf_rel P S passes O' U' (rufZuD R') R' (rufRel_rufZuD hOV) f σ0 ρ0
   rcases hrel with e | ⟨e', e, h1, h2, ht⟩
@@ -129,7 +129,7 @@ theorem invGutGrund_mitRuhe (h : InvGutGrund P passes Q S f) :
     ⟨envZ ρ, (envR_envZ (Γ := D.params f) ρ).symm⟩
   have hreq0 : ReqAmEintritt P f σ0 ρ0 := (req_mitRuhe_iff P f σ0 ρ0).mp hreq
   have hk := h (Orakel.zurueck O') (rahmenO_zurueck hr) (regLokal_zurueck hl)
-    (axVertrag_zurueck hq) (umweltZ U') (havocOk_umweltZ hU') (rufZuD R') (respektiert_rufZuD hR)
+    (axVertragOP_zurueck hq) (umweltZ U') (havocOk_umweltZ hU') (rufZuD R') (respektiert_rufZuD hR)
     (ohneVorbedingung_rufZuD R') σ0 ρ0 hreq0
   have hrel := rumpf_rel P S passes O' U' (rufZuD R') R' (rufRel_rufZuD hOV) f σ0 ρ0
   rcases hrel with e | ⟨e', e, h1, h2, ht⟩

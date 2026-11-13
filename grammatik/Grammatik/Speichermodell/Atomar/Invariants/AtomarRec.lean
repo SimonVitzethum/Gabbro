@@ -41,7 +41,7 @@ variable {D : Deklaration}
     over `T` (`KoerperGutS` with `execEndHA`). -/
 def KoerperGutSA (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D)
     (T : D.Tab ⊕ D.Glob → Prop) (f : D.Fn) : Prop :=
-  (∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragO Q O' →
+  (∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragOP (PreQ P) Q O' →
     ∀ U : Umwelt D, HavocOk S U → ∀ A : AUmwelt D, HavocA T A →
     ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f),
       RespektiertRahmen P R → OhneVorbedingung R →
@@ -52,7 +52,7 @@ def KoerperGutSA (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D)
         (∀ g : D.Fn,
           execEndHA (V := vertragVon D f) S O' U A passes (torRuf P R) (P.rumpf f) σ ρ ≠
             EndAusgang.logik (Logik.vorbedingung g))) ∧
-  (∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragO Q O' →
+  (∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragOP (PreQ P) Q O' →
     ∀ U : Umwelt D, HavocOk S U → ∀ A : AUmwelt D, HavocA T A →
     ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f),
       RespektiertRahmen P R → OhneLogik R →
@@ -63,7 +63,7 @@ def KoerperGutSA (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D)
 /-- Owed invariants at a value return, against every atomic environment. -/
 def InvGutSA (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D)
     (T : D.Tab ⊕ D.Glob → Prop) (f : D.Fn) : Prop :=
-  ∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragO Q O' →
+  ∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragOP (PreQ P) Q O' →
     ∀ U : Umwelt D, HavocOk S U → ∀ A : AUmwelt D, HavocA T A →
     ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f),
       RespektiertRahmen P R → OhneVorbedingung R →
@@ -76,7 +76,7 @@ def InvGutSA (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D)
     `InvGutGrund`, Spec.lean). -/
 def InvGutGrundA (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D)
     (T : D.Tab ⊕ D.Glob → Prop) (f : D.Fn) : Prop :=
-  ∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragO Q O' →
+  ∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragOP (PreQ P) Q O' →
     ∀ U : Umwelt D, HavocOk S U → ∀ A : AUmwelt D, HavocA T A →
     ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f),
       RespektiertRahmen P R → OhneVorbedingung R →

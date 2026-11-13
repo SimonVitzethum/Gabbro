@@ -39,7 +39,7 @@ variable {D : Deklaration}
     `return`"). -/
 def InvGutGrund (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D) (f : D.Fn) :
     Prop :=
-  ∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragO Q O' → ∀ U : Umwelt D, HavocOk S U →
+  ∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragOP (PreQ P) Q O' → ∀ U : Umwelt D, HavocOk S U →
     ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f),
       RespektiertRahmen P R → OhneVorbedingung R →
       ∀ (σ : World D) (ρ : Env D (D.params f)), ReqAmEintritt P f σ ρ →

@@ -35,7 +35,7 @@ theorem popSA_grund (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS :
     (ZErgG.folgt_of_gleich (hsem _ _ _ (umweltAusA Tg HX) σ)))
   obtain ⟨σ'', hex, hsg⟩ := zErgG_gleich_grund h2
   have hE := (hIG G.f) (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
-    (orakelAus_vertrag hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (umweltAusA Tg HX)
+    (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (umweltAusA Tg HX)
     hHA (rufAusV H) (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) G.s0 G.rho hreq σ'' rg hex
   have hG2 : GleichAuf (stabilS P S lok G.f Λ) σ'' W := (gleichAuf_SG hsg).trans hg
   intro i hi hs
@@ -109,7 +109,7 @@ private theorem popSA_last_grund (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertra
   simp only [ite_true, semHA, weiterHA, scopesInvH, List.all_nil, List.foldl_nil] at h1
   obtain ⟨σ', hex, hsg⟩ := zErgG_gleich_grund (ZErgG.folgt_grund h1)
   have hInv := (hIG F.f) (orakelAus O HA) (orakelAus_rahmen hO hra)
-    (regLokal_orakelAus hRL HA) (orakelAus_vertrag hQ hqa)
+    (regLokal_orakelAus hRL HA) (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa)
     (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (umweltAusA Tg HX) (umweltAusA_ok Tg HX)
     (rufAusV H) (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) F.s0 F.rho hreq σ' r hex
   have hgl : GleichAuf (stabilS P S lok F.f (vertragVon D F.f).ende)

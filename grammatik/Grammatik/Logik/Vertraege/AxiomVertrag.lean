@@ -325,7 +325,7 @@ theorem inc_koerperGutA : KoerperGutA axP 0 axQ axZaehle := by
     | some u =>
         intro e
         cases e
-        exact hQ axInc _ .nil _ hw
+        exact hQ axInc _ .nil _ (preQ_hw axP (by decide) _ _) hw
   · have e := hrun.symm.trans (axZaehle_lauf axEnsInc O' 0 (torRuf axP R) σ _ _ hax)
     revert e
     cases einpassenErg O'.zeiger (axD.aerg axInc) (O'.wirkt axInc (((σ.lese axL []).lese axL []).fragt (.inl axInc)) .nil).2 with

@@ -35,7 +35,7 @@ variable {D : Deklaration}
     owed invariants -- in every environment of the obligation's classes. -/
 def PflichtRueck (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D) (T : D.Tab ⊕ D.Glob → Prop)
     (f : D.Fn) : Prop :=
-  ∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragO Q O' →
+  ∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragOP (PreQ P) Q O' →
     ∀ U : Umwelt D, HavocOk S U → ∀ A : AUmwelt D, HavocA T A →
     ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f),
       RespektiertRahmen P R → OhneVorbedingung R →
@@ -45,7 +45,7 @@ def PflichtRueck (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D) 
 /-- Duty 2 of a function: under the gated call meaning the body ends in no precondition stop (the caller duty). -/
 def PflichtKeineVor (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D) (T : D.Tab ⊕ D.Glob → Prop)
     (f : D.Fn) : Prop :=
-  ∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragO Q O' →
+  ∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragOP (PreQ P) Q O' →
     ∀ U : Umwelt D, HavocOk S U → ∀ A : AUmwelt D, HavocA T A →
     ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f),
       RespektiertRahmen P R → OhneVorbedingung R →
@@ -56,7 +56,7 @@ def PflichtKeineVor (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv 
 /-- Duty 3 of a function: under a call meaning without `logik` the body ends in no `logik` stop at all. -/
 def PflichtKeinHalt (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D) (T : D.Tab ⊕ D.Glob → Prop)
     (f : D.Fn) : Prop :=
-  ∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragO Q O' →
+  ∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragOP (PreQ P) Q O' →
     ∀ U : Umwelt D, HavocOk S U → ∀ A : AUmwelt D, HavocA T A →
     ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f),
       RespektiertRahmen P R → OhneLogik R →

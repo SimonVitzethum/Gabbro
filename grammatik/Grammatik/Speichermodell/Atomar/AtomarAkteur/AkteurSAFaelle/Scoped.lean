@@ -151,7 +151,7 @@ private theorem kopfSA_scopedEns (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertra
   simp only [semHA, weiterHA, scopesInvH, List.all_nil, if_true, List.foldl_nil] at h1
   obtain ⟨σ', hex, hsg⟩ := zErgG_gleich_zurueck (ZErgG.folgt_zurueck h1)
   have hens := ((hK F.f).1 (orakelAus O HA) (orakelAus_rahmen hO hra)
-    (regLokal_orakelAus hRL HA) (orakelAus_vertrag hQ hqa)
+    (regLokal_orakelAus hRL HA) (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa)
     (umweltAus S sp HU) (umweltAus_ok hS hsp hiu)
     (umweltAusA Tg HX) (umweltAusA_ok Tg HX)
     (rufAusV H) (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) F.s0 F.rho hreq).1 σ' v hex

@@ -149,7 +149,7 @@ theorem kopfS_saved_inv (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
   simp only [semH, weiterH] at h1
   obtain ⟨σ', hex, hsg⟩ := zErgG_gleich_zurueck (ZErgG.folgt_zurueck h1)
   have hInv := (hI G.f) (orakelAus O HA) (orakelAus_rahmen hO hra)
-    (regLokal_orakelAus hRL HA) (orakelAus_vertrag hQ hqa)
+    (regLokal_orakelAus hRL HA) (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa)
     (umweltAus S sp HU) (umweltAus_ok hS hsp hiu)
     (rufAusV H) (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) G.s0 G.rho hreq σ' v hex
   intro i hi hs
