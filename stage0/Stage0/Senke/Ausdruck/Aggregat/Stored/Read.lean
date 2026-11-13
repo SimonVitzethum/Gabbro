@@ -42,7 +42,8 @@ theorem arrReadL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     let tail := [ci 1 tmp (8 * valueWords τ) 0, ci 5 ix ix tmp, ci 3 ptr ptr ix] ++
       loadPointerSpan (valueWords τ) d ptr tmp 0
     have hp : Pre L m pc fp K d (ca ++ (ci' ++ tail)) ρ W reserved := by
-      simpa only [ptr, ix, tmp, tail, List.append_assoc, Int.natCast_add] using pre
+      simp only [List.append_assoc] at pre
+      exact pre
     obtain ⟨a, runA, source⟩ := addressOk ca ta ha (by omega) m pc
       (hp.left.raise (by omega))
     obtain ⟨m1, s1, a1, w1, r1, e1⟩ := runA
@@ -68,7 +69,7 @@ theorem arrReadL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
       { p3 with ctx := by have := pre.ctx; dsimp only [ptr]; omega }
     have address3 : m3.rd64 (slot fp (BitVec.ofNat 64 ptr)) = some a := by
       rw [agree_rd_low a3 p2.frame.room (by omega) (by omega),
-        agree_rd_low a2 p1.frame.room (by dsimp only [ix]; omega) (by dsimp only [ix, ptr]; omega)]
+        agree_rd_low a2 p1.frame.room (by omega) (by omega)]
       exact r1
     obtain ⟨m4, s4, a4, w4, r4, e4⟩ := eng_bin_ok
       addPre.left
