@@ -237,9 +237,9 @@ def ghost : OwnerBindings D.Marke := [⟨10, true, 0⟩]
 def renamedGhost : OwnerBindings D.Marke := [⟨11, true, 0⟩]
 
 def oracle : Orakel D :=
-  { wirkt := fun _ world _ => (world, 0)
-    regLies := fun _ _ => 42
+  { wirktL := fun _ world _ => ({ world with spur := [] }, 0)
+    regLiesL := fun _ _ => 42
     regSchreib := fun _ _ => ()
-    sichtbar := fun global => global.elim }
+    sichtbarL := fun global => global.elim }
 
 end Gabbro.Grammatik.LowLevel.Construct.Witness

@@ -38,10 +38,10 @@ def program : Programm decl where
 def summary : AxEns decl := fun _ _ v => v
 
 def oracle (answer : Int) : Orakel decl where
-  wirkt := fun _ σ _ => (σ, answer)
-  regLies := fun r => nomatch r
+  wirktL := fun _ σ _ => ({ σ with spur := [] }, answer)
+  regLiesL := fun r => nomatch r
   regSchreib := fun r => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 def world : World decl :=
   { slots := fun t => nomatch t

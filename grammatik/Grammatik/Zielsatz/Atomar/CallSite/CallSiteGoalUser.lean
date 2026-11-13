@@ -85,10 +85,10 @@ theorem user : NutzerPflichtA wE where
 
 /-- An oracle that answers `0`: frame-respecting, outside `g`'s summary. -/
 def zeroO : Orakel wD where
-  wirkt := fun _ σ _ => (σ, 0)
-  regLies := fun e => nomatch e
+  wirktL := fun _ σ _ => ({ σ with spur := [] }, 0)
+  regLiesL := fun e => nomatch e
   regSchreib := fun e => nomatch e
-  sichtbar := fun e => nomatch e
+  sichtbarL := fun e => nomatch e
 
 theorem zeroO_gut : GutO zeroO := by
   intro a σ ρ

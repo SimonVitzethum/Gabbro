@@ -40,7 +40,7 @@ namespace Gabbro.Grammatik
     precondition. User logic, not hardware. -/
 def AufruferPflicht {D : Deklaration} (Pre : AxPre D) (a : D.Ax) (σ : World D)
     (ρ : Env D (D.aparams a)) : Prop :=
-  Pre a σ.ohneLese ρ = true
+  Pre a σ ρ = true
 
 /-- One gate call under the split premise: the caller's obligation plus the
     restricted hardware premise give the fitting answer's ensures, and the
@@ -73,9 +73,10 @@ def mitVorbedingung {D : Deklaration} (Pre : AxPre D) (O : Orakel D) (raus : D.A
 /-- On a well-formed call the re-dressed oracle IS the machine's oracle. -/
 theorem mitVorbedingung_gleich {D : Deklaration} (Pre : AxPre D) (O : Orakel D)
     (raus : D.Ax → Int) (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a))
+    (hPre : ∀ a σ ρ, Pre a σ.ohneLese ρ = Pre a σ ρ)
     (h : AufruferPflicht Pre a σ ρ) :
     (mitVorbedingung Pre O raus).wirkt a σ ρ = O.wirkt a σ ρ := by
-  have h' : Pre a σ.ohneLese ρ = true := h
+  have h' : Pre a σ.ohneLese ρ = true := (hPre a σ ρ).trans h
   show ((O.wirktL a σ.ohneLese ρ).1.auf σ,
       if Pre a σ.ohneLese ρ = true then (O.wirktL a σ.ohneLese ρ).2 else raus a) =
     ((O.wirktL a σ.ohneLese ρ).1.auf σ, (O.wirktL a σ.ohneLese ρ).2)
@@ -89,14 +90,16 @@ theorem mitVorbedingung_gleich {D : Deklaration} (Pre : AxPre D) (O : Orakel D)
 theorem hardware_aus_vertragP [RootNativeFloat.Hardware] {D : Deklaration} (Pre : AxPre D) (Q : AxEns D) (O : Orakel D)
     (raus : D.Ax → Int)
     (hO : GutO O) (hR : RegLokal O) (hQ : AxVertragOPAlle Pre Q O)
+    (hPre : ∀ a σ ρ, Pre a σ.ohneLese ρ = Pre a σ ρ)
     (hraus : ∀ a, einpassenErg O.zeiger (D.aerg a) (raus a) = none) :
     Zielsatz.HardwareAnnahmen (mitVorbedingung Pre O raus) Q := by
   refine ⟨fun a σ ρ => hO a σ ρ, hR, ?_, inferInstance⟩
   intro a σ ρ v hfit
   by_cases hp : Pre a σ.ohneLese ρ = true
-  · have e := mitVorbedingung_gleich Pre O raus a σ ρ hp
+  · have hp' : Pre a σ ρ = true := (hPre a σ ρ).symm.trans hp
+    have e := mitVorbedingung_gleich Pre O raus a σ ρ hPre hp'
     rw [e] at hfit ⊢
-    exact hQ a σ ρ v hp hfit
+    exact hQ a σ ρ v hp' hfit
   · have hn : ((mitVorbedingung Pre O raus).wirkt a σ ρ).2 = raus a := by
       show (if Pre a σ.ohneLese ρ = true then (O.wirktL a σ.ohneLese ρ).2 else raus a) = raus a
       rw [if_neg hp]
@@ -118,6 +121,10 @@ def fdKopf : Env fdD (fdD.aparams fdRead) → Int
 def fdPre : AxPre fdD
   | true, σ, _ => decide ((σ.slots () 1 ()).n = 0)
   | false, _, ρ => decide (fdKopf ρ = 3)
+
+theorem fdPre_ohneLese (a : fdD.Ax) (σ : World fdD) (ρ : Env fdD (fdD.aparams a)) :
+    fdPre a σ.ohneLese ρ = fdPre a σ ρ := by
+  cases a <;> rfl
 
 /-- An oracle that keeps its contract on well-formed calls only: an open or
     a read with the handed-out descriptor answers as `fdO`; a read with any

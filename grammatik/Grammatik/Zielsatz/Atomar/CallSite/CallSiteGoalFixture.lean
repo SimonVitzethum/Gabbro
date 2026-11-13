@@ -170,10 +170,10 @@ def kopfN : Env wD [.int 0 1] → Int
 
 /-- **The binding**: `g` answers its argument and changes no memory. -/
 def echo : Orakel wD where
-  wirkt := fun _ σ ρ => (σ, kopfN ρ)
-  regLies := fun e => nomatch e
+  wirktL := fun _ σ ρ => ({ σ with spur := [] }, kopfN ρ)
+  regLiesL := fun e => nomatch e
   regSchreib := fun e => nomatch e
-  sichtbar := fun e => nomatch e
+  sichtbarL := fun e => nomatch e
 
 /-- The arguments `1` (`true`) and `0` (`false`). -/
 def rhoW (b : Bool) : Env wD (wD.aparams ()) :=

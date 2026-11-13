@@ -20,12 +20,12 @@ namespace CallSiteBlocker
 open CallSiteZeuge
 
 /-- A binding with no writes preserves the input world, including its trace.
-    Unlike the constant-answer fixture, this binding satisfies GutO. -/
+    This binding supplies no added events and satisfies GutO. -/
 def traceOracle : Orakel decl where
-  wirkt := fun _ σ _ => (σ, 0)
-  regLies := fun e => nomatch e
+  wirktL := fun _ σ _ => ({ σ with spur := [] }, 0)
+  regLiesL := fun e => nomatch e
   regSchreib := fun e => nomatch e
-  sichtbar := fun e => nomatch e
+  sichtbarL := fun e => nomatch e
 
 theorem traceOracle_gut : GutO traceOracle := by
   intro a σ ρ

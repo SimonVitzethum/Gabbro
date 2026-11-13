@@ -172,12 +172,15 @@ theorem orakelAus_vertrag {Q : AxEns D} {O : Orakel D} (hQ : AxVertragO Q O)
 theorem orakelAus_vertragOP {Pre : AxPre D} {Q : AxEns D} {O : Orakel D}
     (hQ : AxVertragOP Pre Q O) {HA : List (AxEintrag D)}
     (hv : VertragA O.zeiger Q HA) : AxVertragOP Pre Q (orakelAus O HA) := by
-  intro a σ0 ρ v hp
-  simp only [orakelAus]
-  split
-  · rename_i hex
-    exact hv a (σ0.fragt (.inl a)) ρ _ (Classical.choose_spec hex) v
-  · exact hQ a σ0 ρ v hp
+  intro a σ0 ρ v hp hfit
+  by_cases h : AxFrage HA a (σ0.fragt (.inl a)).ohneLese ρ
+  · obtain ⟨hs, hg, h2⟩ := orakelAus_frage_speicher O HA h
+    have hfit' : einpassenErg O.zeiger (D.aerg a) (Classical.choose h).2.2 = some v := by
+      rw [← h2]
+      exact hfit
+    exact hv a _ ρ _ (Classical.choose_spec h).1 v hfit' _ hs hg
+  · rw [orakelAus_wirkt_sonst O HA h] at hfit ⊢
+    exact hQ a σ0 ρ v hp hfit
 
 /-- The recorded answer world agrees with the machine's answer world on the
     axiom's declared carriers, so a local declared ensures transfers. -/

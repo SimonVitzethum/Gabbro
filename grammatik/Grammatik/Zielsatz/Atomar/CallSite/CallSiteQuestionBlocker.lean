@@ -44,10 +44,10 @@ def rho (b : Bool) : Env decl (decl.aparams ()) :=
 /-- Actual queries always carry their question. The empty-trace answer is
     deliberately different, while memory and the complete trace are preserved. -/
 def oracle : Orakel decl where
-  wirkt := fun _ σ _ => (σ, if σ.spur.isEmpty then 0 else 1)
-  regLies := fun r => nomatch r
+  wirktL := fun _ σ _ => ({ σ with spur := [] }, if σ.spur.isEmpty then 0 else 1)
+  regLiesL := fun r => nomatch r
   regSchreib := fun r => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 def unit : Einheit decl where
   P := program

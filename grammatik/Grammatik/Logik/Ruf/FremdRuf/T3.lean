@@ -26,13 +26,14 @@ def RufFolgePflicht {D : Deklaration} (Pre : AxPre D) (O : Orakel D) : World D �
     tail, `e` the head agreement. -/
 theorem mitVorbedingung_folge_gleich {D : Deklaration} (Pre : AxPre D) (O : Orakel D)
     (raus : D.Ax → Int) (σ : World D) (ks : List (Σ a : D.Ax, Env D (D.aparams a)))
+    (hPre : ∀ a σ ρ, Pre a σ.ohneLese ρ = Pre a σ ρ)
     (h : RufFolgePflicht Pre O σ ks) :
     rufFolgeWirkt (mitVorbedingung Pre O raus) σ ks = rufFolgeWirkt O σ ks := by
   induction ks generalizing σ with
   | nil => rfl
   | cons k rest ih =>
     obtain ⟨a, ρ⟩ := k
-    have e := mitVorbedingung_gleich Pre O raus a σ ρ h.1
+    have e := mitVorbedingung_gleich Pre O raus a σ ρ hPre h.1
     have t := ih _ h.2
     simp only [rufFolgeWirkt, e, t]
 
@@ -63,7 +64,7 @@ theorem mitVorbedingung_folge_gleich_zeuge :
     rufFolgeWirkt (mitVorbedingung fdPre fdObad fdRaus) fdWelt0 fdFolge =
       rufFolgeWirkt fdObad fdWelt0 fdFolge :=
   ⟨⟨fdFolge_offen_pflicht, fdFolge_lesen_pflicht, trivial⟩,
-    mitVorbedingung_folge_gleich fdPre fdObad fdRaus fdWelt0 fdFolge
+    mitVorbedingung_folge_gleich fdPre fdObad fdRaus fdWelt0 fdFolge fdPre_ohneLese
       ⟨fdFolge_offen_pflicht, fdFolge_lesen_pflicht, trivial⟩⟩
 
 /-! ## CUTS: what is not proved.

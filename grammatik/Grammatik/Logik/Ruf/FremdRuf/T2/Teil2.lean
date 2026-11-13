@@ -53,8 +53,9 @@ theorem hardware_aus_vertragP_zeuge [RootNativeFloat.Hardware] :
         fdObad.wirkt fdRead fdWelt1 fdRho3 :=
   ⟨fdObad_gut, fdObad_regLokal, fdObad_vertragP, fdRaus_passt_nicht, fdObad_nicht_voll,
     hardware_aus_vertragP fdPre fdQ fdObad fdRaus fdObad_gut fdObad_regLokal
-      fdObad_vertragP fdRaus_passt_nicht,
+      fdObad_vertragP fdPre_ohneLese fdRaus_passt_nicht,
     mitVorbedingung_gleich fdPre fdObad fdRaus fdRead fdWelt1 fdRho3
+      fdPre_ohneLese
       (show decide (fdKopf fdRho3 = 3) = true from decide_eq_true rfl)⟩
 
 /-! ## 10. From single calls to call sequences (lane 262, OFFEN O23)

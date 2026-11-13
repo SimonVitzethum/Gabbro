@@ -68,7 +68,7 @@ theorem traceHistory_conditional :
       AxVertragOP (PreQ unit.P) unit.Q (orakelAus traceOracle traceHistory) := by
   have hQ : AxVertragO unit.Q traceOracle := fun _ _ _ _ _ => rfl
   have hrecord : VertragA traceOracle.zeiger unit.Q traceHistory :=
-    fun _ _ _ _ _ _ _ => rfl
+    fun _ _ _ _ _ _ _ _ _ _ => rfl
   exact ⟨axVertragOP_of_O _ hQ, orakelAus_vertragOP (axVertragOP_of_O _ hQ) hrecord⟩
 
 /-- The first call of the existing program uses the good binding too. -/

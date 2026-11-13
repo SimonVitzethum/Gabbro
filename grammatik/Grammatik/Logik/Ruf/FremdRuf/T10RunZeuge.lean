@@ -106,16 +106,14 @@ def memory : Speicher decl where
 
 def world : World decl := memory.welt []
 
-/-- A deliberately trace-insensitive binding for the run-key witnesses.
-    No `GutO` or hardware fidelity is claimed for this fixture; the joint
-    trace-faithful witness is separate. -/
+/-- The first answer world; subsequent answers retain the trace at their own key. -/
 def answer : World decl := world.fragt (.inl ())
 
 def oracle : Orakel decl where
-  wirkt := fun _ _ _ => (answer, 0)
-  regLies := fun e => nomatch e
+  wirktL := fun _ σ _ => ({ σ with spur := [] }, 0)
+  regLiesL := fun e => nomatch e
   regSchreib := fun e => nomatch e
-  sichtbar := fun e => nomatch e
+  sichtbarL := fun e => nomatch e
 
 def unit : Einheit decl where
   P := program true
@@ -128,7 +126,7 @@ def key1 : World decl := world.fragt (.inl ())
 def key2 : World decl := answer.fragt (.inl ())
 
 def record (σ : World decl) (b : Bool) : AxEintrag decl :=
-  ⟨(), σ, rho b, (answer, 0)⟩
+  ⟨(), σ, rho b, (σ, 0)⟩
 
 def history (b : Bool) : List (AxEintrag decl) :=
   [record key1 true, record key2 b]
@@ -164,7 +162,7 @@ theorem history_good : CallSitePflichtFremd (program true).axVertrag (history tr
 
 theorem history_bad : ¬ CallSitePflichtFremd (program true).axVertrag (history false) := by
   intro h
-  exact pre_false key2 (h () key2 (rho false) (answer, 0)
+  exact pre_false key2 (h () key2 (rho false) (key2, 0)
     (by simp only [history, record, List.mem_cons, List.not_mem_nil, or_false, or_true]) rfl)
 
 theorem foreign : ForeignPflicht unit oracle [] where
@@ -188,7 +186,10 @@ theorem link (b : Bool) : PasstA oracle (history b) := by
     simpa only [history, List.mem_cons, List.not_mem_nil, or_false] using hm
   rcases h with h | h
   all_goals
+    have hσ := congrArg (fun e : AxEintrag decl => e.2.1) h
     have hx := congrArg (fun e : AxEintrag decl => e.2.2.2) h
+    change (σ, 0) = x
+    rw [hσ]
     exact hx.symm
 
 theorem history_provenance (b : Bool) : SchluesselHerkunft (history b) := by
@@ -203,7 +204,7 @@ theorem history_provenance (b : Bool) : SchluesselHerkunft (history b) := by
 
 /-- Both records use the actual T10 contract and declared-ensures transports. -/
 theorem posts (σ : World decl) (hm : record σ true ∈ history true) :
-    AxNach unit.P.axVertrag () σ (rho true) answer () ∧ unit.Q () answer () = true := by
+    AxNach unit.P.axVertrag () σ (rho true) σ () ∧ unit.Q () σ () = true := by
   have fit : einpassenErg oracle.zeiger (decl.aerg ()) (0 : Int) = some () := rfl
   exact ⟨vertragANeu_sw_of_foreign foreign history_good (link true) (history_provenance true) hm rfl fit,
     qAmDatensatz_of_foreign foreign history_good (link true) (history_provenance true)
@@ -241,7 +242,7 @@ theorem first_step (b : Bool) :
 theorem second_step (b : Bool) :
     ∃ M : RufMaschineG decl, RufSchrittG (program b) oracle 0 (afterFirst b) 0 M := by
   refine ⟨_, RufSchrittG.blatt (afterFirst b) 0 false [] [] [] (call b)
-    (.ret .empty (by rfl)) .nil rfl rfl ?_ answer .nil [] rfl rfl ?_⟩
+    (.ret .empty (by rfl)) .nil rfl rfl ?_ key2 .nil [.fremd (.inl ())] rfl rfl ?_⟩
   · intro L
     exact nomatch L
   · intro L
@@ -283,7 +284,7 @@ theorem callSitePflicht_zeuge :
     ∀ σ : World CallSiteZeuge.decl,
       CallSiteZeuge.record σ true ∈ CallSiteZeuge.history true →
       AxNach CallSiteZeuge.unit.P.axVertrag () σ (CallSiteZeuge.rho true)
-        CallSiteZeuge.answer () ∧ CallSiteZeuge.unit.Q () CallSiteZeuge.answer () = true := by
+        σ () ∧ CallSiteZeuge.unit.Q () σ () = true := by
   refine ⟨rfl, CallSiteZeuge.keys_distinct, CallSiteZeuge.history_good,
     CallSiteZeuge.history_bad, CallSiteZeuge.foreign, CallSiteZeuge.posts⟩
 

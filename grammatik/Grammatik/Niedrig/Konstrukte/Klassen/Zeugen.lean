@@ -78,7 +78,7 @@ theorem mmio_promised_zeuge :
   mmioReadStep_promised oracle deviceView layout () mmio mmioReadChecked false before
     ⟨42, by decide, by decide⟩ rfl (by decide)
 
-def brokenOracle : Orakel D := { oracle with regLies := fun _ _ => 13 }
+def brokenOracle : Orakel D := { oracle with regLiesL := fun _ _ => 13 }
 
 theorem mmio_reason_zeuge :
     (mmioReadStep brokenOracle deviceView layout () mmio mmioReadChecked true before).value =
