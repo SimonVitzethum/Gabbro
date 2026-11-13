@@ -101,6 +101,10 @@ theorem gleich (a b : Merk α) : a = b := by
   induction b using Quot.ind
   exact Quot.sound trivial
 
+/-- Transform a cache; its contents remain unobservable except through a faithful reader. -/
+def map (f : α → β) (m : Merk α) : Merk β :=
+  Quot.lift (fun a => von (f a)) (fun _ _ _ => gleich _ _) m
+
 instance : DecidableEq (Merk α) := fun a b => isTrue (gleich a b)
 
 instance : Repr (Merk α) := ⟨fun _ _ => "_"⟩

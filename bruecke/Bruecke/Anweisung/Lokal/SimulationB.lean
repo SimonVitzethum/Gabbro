@@ -7,7 +7,8 @@ public import Bruecke.Pruefung
 /-!
 # Decidable binder freshness
 
-The checks follow the flat body and extend the set of occupied names at each binder.
+The checks follow the flat body and retain the protected names of non-integer entries.
+Every local binder has integer kind and does not add a protected source name.
 Their soundness lemmas supply `BindFrisch` for the consolidated carried chain.
 -/
 
@@ -27,11 +28,11 @@ def bindFrischLB : List String → List UStmt → Bool
   | _, [] => true
   | ns, s :: ss =>
       match binderOf s with
-      | some x => nameFrischB ns x && bindFrischLB (x :: ns) ss
+      | some x => nameFrischB ns x && bindFrischLB ns ss
       | none => bindFrischLB ns ss
 
 /-- **`bindFrischB`** -- freshness of every binder of the body of `fn`, decided. -/
-def bindFrischB (fn : UFn) : Bool := bindFrischLB (fn.params.map (·.1)) fn.body
+def bindFrischB (fn : UFn) : Bool := bindFrischLB (protectedNames fn.params fn.kinds) fn.body
 
 def bindFrischAllB (u : UProg) : Bool := u.fns.all bindFrischB
 
@@ -54,10 +55,10 @@ theorem bindFrischLB_ok : ∀ (ns : List String) (ss : List UStmt),
         simp only [BindFrischL, hb]
         exact this
       | some x =>
-        have h' : nameFrischB ns x = true ∧ bindFrischLB (x :: ns) ss = true := by
+        have h' : nameFrischB ns x = true ∧ bindFrischLB ns ss = true := by
           simpa only [bindFrischLB, hb, Bool.and_eq_true] using h
         simp only [BindFrischL, hb]
-        exact ⟨nameFrischB_ok h'.1, bindFrischLB_ok (x :: ns) ss h'.2⟩
+        exact ⟨nameFrischB_ok h'.1, bindFrischLB_ok ns ss h'.2⟩
 
 theorem bindFrischB_ok {fn : UFn} (h : bindFrischB fn = true) : BindFrisch fn :=
   bindFrischLB_ok _ _ h

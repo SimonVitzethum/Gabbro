@@ -42,7 +42,7 @@ import all Init.Data.String.ToSlice
 
 `uOf` ties a duty to the Lean front end's actual output. `einheitAllg` equips that output
 with the empty lock invariant, trivial hardware contract, declared entry roots and checked
-zero memory. The consolidated source endpoints live in `Kette/Quelle.lean`.
+initial memory. The consolidated source endpoints live in `Kette/Quelle.lean`.
 -/
 
 namespace Gabbro.Bruecke
@@ -67,15 +67,34 @@ def uOf (src : String) : Option UProg :=
   | .ok ⟨u, _, _⟩ => some u
   | .error _ => none
 
-/-- No static, no option or aggregate field, and every declared field's range contains 0: the zero
-    memory exists. -/
+/-- Initial values are validated even for a hand-built UProg, independently of elaboration. -/
+def initialStaticsB (u : UProg) : Bool := u.globs.all fun g =>
+  match g.ty with
+  | .int lo hi => decide (lo ≤ g.init ∧ g.init ≤ hi)
+  | .bool | .wert _ => false
+
+/-- Zero-initialized numeric table fields and valid, non-atomic numeric static initializers. -/
 def nullB (u : UProg) : Bool :=
-  u.globs.isEmpty && u.tabs.all fun t => t.opts.isEmpty && t.werte.isEmpty &&
+  (staticsB u && initialStaticsB u) && u.tabs.all fun t => t.opts.isEmpty && t.werte.isEmpty &&
     t.cols.all fun f => decide (f.2.1 ≤ 0) && decide (0 ≤ f.2.2)
 
-theorem nullB_globs {u : UProg} (h : nullB u = true) : u.globs = [] := by
-  simp only [nullB, Bool.and_eq_true] at h
-  exact List.isEmpty_iff.mp h.1
+theorem nullB_statics {u : UProg} (h : nullB u = true) : NumericStatics u :=
+  staticsB_ok (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp h).1).1
+
+theorem initial_bereich {u : UProg} (h : nullB u = true) (g : Fin u.globs.length)
+    (lo hi : Int) (ht : (globAt u g).ty = .int lo hi) :
+    lo ≤ (globAt u g).init ∧ (globAt u g).init ≤ hi := by
+  have hb : initialStaticsB u = true := (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp h).1).2
+  have hg := List.all_eq_true.mp hb (globAt u g) (List.get_mem _ _)
+  simp only [ht, decide_eq_true_eq] at hg
+  exact hg
+
+/-- Numeric statics admitted by this bridge are ordinary world state, never atomics. -/
+theorem declOf_numeric_kein_atomar (u : UProg) (h : NumericStatics u) :
+    ∀ g : (declOf u).Glob, (declOf u).atomar g = false := by
+  intro g
+  obtain ⟨_, _, _, ha⟩ := h g
+  exact ha
 
 theorem nullB_tab {u : UProg} (h : nullB u = true) (t : Fin u.tabs.length) :
     (tabAt u t).opts = [] ∧ (tabAt u t).werte = [] := by
@@ -99,7 +118,7 @@ theorem null_bereich {u : UProg} (h : nullB u = true) (t : Fin u.tabs.length)
     have h2 := (h.2 _ hte).2 _ hfe
     simpa using h2
 
-/-- The zero memory of the parser's declaration. -/
+/-- The declaration's initial memory: zero table fields and the recorded static initializers. -/
 def nullSp (u : UProg) (h : nullB u = true) : Speicher (declOf u) where
   slots := fun t _ f => by
     show Wert (declOf u) (typAt u t f)
@@ -120,10 +139,21 @@ def nullSp (u : UProg) (h : nullB u = true) : Speicher (declOf u) where
         have := null_bereich h t f w hw
         exact (⟨0, this.1, this.2⟩ : Zahl w.1 w.2)
   globs := fun g => by
-    exfalso
-    have h1 : g.val < u.globs.length := g.isLt
-    have h2 : u.globs.length = 0 := by rw [nullB_globs h]; rfl
-    omega
+    change Wert (declOf u) (globAt u g).ty.toTy
+    cases ht : (globAt u g).ty with
+    | int lo hi =>
+      exact (⟨(globAt u g).init, (initial_bereich h g lo hi ht).1,
+        (initial_bereich h g lo hi ht).2⟩ : Zahl lo hi)
+    | bool =>
+      exfalso
+      obtain ⟨_, _, hn, _⟩ := nullB_statics h g
+      rw [ht] at hn
+      cases hn
+    | wert ty =>
+      exfalso
+      obtain ⟨_, _, hn, _⟩ := nullB_statics h g
+      rw [ht] at hn
+      cases hn
 
 /-- The declared thread roots of a unit: the dispatch targets of its `entry` items, each a
     parameterless function (the front end refuses any other), started with the empty environment. -/
@@ -135,7 +165,7 @@ def startsAllg (u : UProg) : List (Σ w : (declOf u).Fn, Env (declOf u) ((declOf
       if h : (declOf u).params i = [] then some ⟨i, by rw [h]; exact Env.nil⟩ else none
 
 /-- The unit of a source the front end accepts: the parsed program, no lock invariant, the
-    trivial axiom ensures, the starts of its `entry` items, the zero memory. -/
+    trivial axiom ensures, the starts of its `entry` items and the declared initial memory. -/
 def einheitAllg (u : UProg) (P : Programm (declOf u)) (h : nullB u = true) : Zielsatz.Einheit (declOf u) where
   P := P
   S := SperrInv.leer (declOf u)

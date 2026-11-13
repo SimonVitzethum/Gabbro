@@ -45,7 +45,7 @@ import all Init.Data.String.ToSlice
 T[1].v = k; return k; }` -- as the elaborated unit with narrowing off (`uCondPlain`: `ifBeg c`,
 the then-statements with their ender, `ifElse`, the else-statements, `blkEnd`; a lowered-unit
 witness, not a measured source-parser acceptance claim). The lowering accepts it, the decided
-per-unit checks hold, `zuBodyB` refuses it (it branches), `zuBodyZ` gives the expected Body
+per-unit checks hold, `zuBodyZ` gives the expected Body
 program -- an early `return` inside a branch with an empty `else`, a non-terminal `if/else`
 whose arms write a slot, a slot write after it -- and its duty `meetsU` is proved: the premises
 of `laufZ`/`bruecke_nutzerZ` hold together on a body that branches.
@@ -86,8 +86,6 @@ def koerper : List Gabbro.Body.Stmt :=
 /-- The translation reads both conditionals as Body `ite`, the early return as `ret`. -/
 theorem zuBodyZ_zeuge : zuBodyZ unit routine = some koerper := by kernel_rfl
 
-/-- The translation without conditionals refuses the body: it branches. -/
-theorem zuBodyB_zeuge : zuBodyB unit routine = none := by kernel_rfl
 
 theorem lowered_some : (lowerAllg unit).toOption.isSome = true := by decide +kernel
 
@@ -122,9 +120,9 @@ theorem post_eq (s s' : Gabbro.Body.State) (r : Option Gabbro.Body.Value) :
     (postU unit (wfU unit) routine s s' r).getD False =
       (wfU unit s' ∧ ∃ x, r = some (.int x) ∧ (0 : Int) ≤ x ∧ x ≤ 9) := rfl
 
-theorem shape0 : shapeOfU unit (.slot "T" 0 "v") = some (.intIn 0 9) := by kernel_rfl
+theorem shape0 : shapeOfUG unit (.slot "T" 0 "v") = some (.intIn 0 9) := by kernel_rfl
 
-theorem shape1 : shapeOfU unit (.slot "T" 1 "v") = some (.intIn 0 9) := by kernel_rfl
+theorem shape1 : shapeOfUG unit (.slot "T" 1 "v") = some (.intIn 0 9) := by kernel_rfl
 
 /-- **The duty of `pick`, proved**: from `k ∈ 0..9`, `k = 0` returns `0` at once; otherwise the
     conditional writes `T[0].v = k` (for `k < 5`) or `5`, the body writes `T[1].v = k` and returns
@@ -191,7 +189,7 @@ theorem routine_meets : meetsU unit (wfU unit) routine koerper := by
       refine ⟨_, rfl, ?_⟩
       rw [post_eq]
       refine ⟨?_, n, rfl, hn.1, hn.2⟩
-      show Gabbro.Body.WF (shapeOfU unit) (Gabbro.Body.store
+      show Gabbro.Body.WF (shapeOfUG unit) (Gabbro.Body.store
         (Gabbro.Body.store s.world (.slot "T" 0 "v") (.int w)) (.slot "T" 1 "v") (.int n))
       refine Gabbro.Body.WF_store _ _ _ _ (Gabbro.Body.WF_store _ _ _ _ hW ?_) ?_
       · intro sh hsh

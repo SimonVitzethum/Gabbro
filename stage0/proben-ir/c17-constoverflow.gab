@@ -1,0 +1,6 @@
+// C17 refusal: a const fn whose body overflows its result range.
+module c17_constoverflow {
+const fn big(x : u8) -> u8 effects { pure } { return x + 1; }
+const ANSWER : u8 = big(255);
+impl fn main() -> u8 effects { pure } { return ANSWER; }
+}

@@ -107,7 +107,11 @@ theorem wf_t0 : wfU uZ t0 := by
   cases p with
   | slot c k fld =>
     obtain ⟨t, _, hf⟩ := slotShape_tabIdx _ c fld sh hp
-    have ht : t = ⟨0, by decide⟩ := Fin.ext (by have := t.isLt; simp [uZ] at this; omega)
+    have ht : t = ⟨0, by decide⟩ := Fin.ext (by
+      have := t.isLt
+      simp [uZ] at this
+      show t.val = 0
+      omega)
     subst ht
     by_cases hv : fld = "v"
     · subst hv
@@ -125,8 +129,8 @@ theorem wf_t0 : wfU uZ t0 := by
         rw [this]
       rw [h2] at hf
       cases hf
-  | field c n => simp [shapeOfU] at hp
-  | global n => simp [shapeOfU] at hp
+  | field c n => simp [shapeOfUG, shapeOfU] at hp
+  | global n => simp [shapeOfUG, globShape, globIdx, uZ] at hp
 
 /-- No environment keeps `h`'s contract: its promise is `false`. -/
 theorem h_unhaltbar (ρ : Gabbro.Body.Env)
@@ -143,7 +147,7 @@ theorem g_unhaltbar (ρ : Gabbro.Body.Env)
   have := hc t0 ⟨wf_t0, rfl⟩
   have hw : (ρ "g" t0).1.world (.slot "T" 0 "v") = .int 0 :=
     hf t0 _ (by simp [fnG, uZ, Gabbro.Body.Place.carrier])
-  simp [postP, postU, ensList, ensClause, ensExpr, ensSide, sideExpr, slotPlace, opOf, idxExpr, clauseProp,
+  simp [postP, postU, ensList, ensClause, ensExpr, ensSide, sideExprG, slotPlace, opOf, idxExpr, clauseProp,
     clauseAux, chain, andAll, resultClause, fnG, uZ, Gabbro.Body.eval, hw, Gabbro.Body.binop] at this
 
 theorem suche_g : fnSuch uZ "g" = some fnG := rfl
@@ -246,10 +250,10 @@ theorem feldZ : ∃ fh : FieldHit uZ tT, fieldHit uZ tT "v" = .ok fh ∧ fh.idx 
   ⟨_, rfl, rfl⟩
 
 /-- The Body place of slot `k` holds the G slot `k`, in any related world. -/
-theorem platz {σ : World (declOf uZ)} {w : Gabbro.Body.World} (hW : WRel uZ σ w) (k : Int) :
+theorem platz {σ : World (declOf uZ)} {w : Gabbro.Body.World} (hW : WGRel uZ σ w) (k : Int) :
     w (.slot "T" k "v") = .int ((σ.slots tT k vF : Zahl 0 10)).n := by
   obtain ⟨fh, hfh, hidx⟩ := feldZ
-  rw [wrel_lies_k uZ hW "T" tT tabZ "v" fh hfh k, hidx]
+  rw [wrel_lies_k uZ hW.1 "T" tT tabZ "v" fh hfh k, hidx]
   rfl
 
 /-- The handler keeps every contract at its place (and every frame): `g`'s answer is the world
@@ -259,14 +263,14 @@ theorem rz_respektiert : RespektiertRahmen PZ RZ := by
   · obtain ⟨hf, hs, h7⟩ := rz_ok h
     subst hf
     rw [hs]
-    have hW := wrel_enc uZ σ (fun _ => .int 0)
+    have hW := wgrel_enc uZ σ (fun _ => .int 0)
     refine (post_iff gesenktZ gI (getragenZ.art gI True.intro) getragenZ.tab (getragenZ.frei gI True.intro) (getragenZ.olds gI True.intro)
       (getragenZ.post gI True.intro) (getragenZ.boolErg gI True.intro) getragenZ.boolTab σ σ ρ v (eintritt uZ gI σ ρ) (eintritt uZ gI σ ρ) hW
       (eintritt_lrel gI σ ρ) hW).mp ?_
     have hv := platz hW 0
     rw [h7] at hv
-    have hwf := wf_of_wrel uZ getragenZ.boolTab hW
-    simp [postU, ensList, ensClause, ensExpr, ensSide, sideExpr, slotPlace, opOf, idxExpr, clauseProp,
+    have hwf := wf_of_wgrel uZ getragenZ.boolTab hW
+    simp [postU, ensList, ensClause, ensExpr, ensSide, sideExprG, slotPlace, opOf, idxExpr, clauseProp,
       clauseAux, chain, andAll, resultClause, fnAt, gI, uZ, Gabbro.Body.eval, Gabbro.Body.binop,
       eintritt] at hv ⊢
     exact ⟨hwf, hv⟩
@@ -291,7 +295,7 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
   have hx : stmtBody uZ (fnAt uZ fI) (.call "g" []) =
       some (.call "g" [] [] (.lit (.bool true))) := rfl
   let ρ₀ : Env (declOf uZ) (ctxOf uZ fI) := .nil
-  have hW0 : WRel uZ σ7 (eintritt uZ fI σ7 .nil).world := wrel_enc uZ σ7 _
+  have hW0 : WGRel uZ σ7 (eintritt uZ fI σ7 .nil).world := wgrel_enc uZ σ7 _
   have hL0 : LRel (fnAt uZ fI) 0 ρ₀ (eintritt uZ fI σ7 .nil).local' := fun p j hj => by
     simp [fnAt, fI, uZ, paramPos] at hj
   obtain ⟨callee, σr, envA, hname, _, hsl, _, _, _, hcases, _⟩ :=
@@ -303,7 +307,11 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
     · simp [fnAt, uZ] at hname
     · exact absurd hc (by simp [uZ])
   subst hcallee
-  have h7 : ((σr.slots tT 0 vF : Zahl 0 10)).n = 7 := by rw [hsl]; rfl
+  have h7 : ((σr.slots tT 0 vF : Zahl 0 10)).n = 7 := by
+    have hp := (platz hW0 0).symm.trans (platz hsl 0)
+    change Gabbro.Body.Value.int 7 = .int _ at hp
+    simp only [Gabbro.Body.Value.int.injEq] at hp
+    exact hp.symm
   have hR : RZ gI σr envA = .ok σr () := by
     unfold RZ; rw [dif_pos rfl]; simp only [h7, ↓reduceIte]
   rcases hcases with ⟨σ', v, hR', hex⟩ | ⟨e, hR', _⟩ | ⟨e, hR', _⟩
@@ -312,21 +320,25 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
     have hrun : execEnd O0 0 RZ (Endblock.cons gst rest) σ7 ρ₀ = execEnd O0 0 RZ rest σr ρ₀ := by
       simp only [execEnd, hex]
     obtain ⟨σ'', v'', hend, hsl'', _⟩ := lowEnd_sim fI (show lowEndF uZ fI .empty (Λ := Λ') = .ok rest from hrest) (rfl : endBody uZ (fnAt uZ fI) .empty = some [])
-      (getragenZ.art fI True.intro) getragenZ.tab O0 0 RZ σr ρ₀ _ (wrel_slots uZ hsl hW0) hL0
+      (getragenZ.art fI True.intro) getragenZ.tab O0 0 RZ σr ρ₀ _ hsl hL0
     have hX := execEnd_heq (V := verOf uZ fI) O0 0 RZ (ctxParams_eq uZ fI).symm
       (anfangRes_eq uZ fI).symm (PZ.rumpf fI) (Endblock.cons gst rest) hPb σ7 .nil ρ₀ HEq.rfl
     have hmain := (zurueck_heq (ctxParams_eq uZ fI).symm _ _ hX σ'' v'').mpr (hrun.trans hend)
     have hens := (hK O0 rahmenO0 regLokal0 RZ rz_respektiert rz_ohneV σ7 .nil
       (reqAmEintritt_wahr gesenktZ fI σ7 .nil)).1 σ'' v'' hmain
-    let s1 : Gabbro.Body.State := ⟨enc uZ σ'' (fun _ => .int 0), (eintritt uZ fI σ7 .nil).local'⟩
-    have hW1 : WRel uZ σ'' s1.world := wrel_enc uZ σ'' _
+    let s1 : Gabbro.Body.State := ⟨encG uZ σ'' (fun _ => .int 0), (eintritt uZ fI σ7 .nil).local'⟩
+    have hW1 : WGRel uZ σ'' s1.world := wgrel_enc uZ σ'' _
     have hpost := (post_iff gesenktZ fI (getragenZ.art fI True.intro) getragenZ.tab (getragenZ.frei fI True.intro)
       (getragenZ.olds fI True.intro) (getragenZ.post fI True.intro) (getragenZ.boolErg fI True.intro) getragenZ.boolTab σ7 σ'' .nil v'' _ s1 hW0
       (eintritt_lrel fI σ7 .nil) hW1).mpr hens
     have h1 := platz hW1 1
-    have h0 : ((σ''.slots tT 1 vF : Zahl 0 10)).n = 0 := by rw [hsl'', hsl]; rfl
+    have h0 : ((σ''.slots tT 1 vF : Zahl 0 10)).n = 0 := by
+      have hp := (platz hW0 1).symm.trans (platz hsl'' 1)
+      change Gabbro.Body.Value.int 0 = .int _ at hp
+      simp only [Gabbro.Body.Value.int.injEq] at hp
+      exact hp.symm
     rw [h0] at h1
-    simp [postU, ensList, ensClause, ensExpr, ensSide, sideExpr, slotPlace, opOf, idxExpr,
+    simp [postU, ensList, ensClause, ensExpr, ensSide, sideExprG, slotPlace, opOf, idxExpr,
       clauseProp, clauseAux, chain, andAll, resultClause, fnAt, fI, uZ, Gabbro.Body.eval,
       Gabbro.Body.binop, s1] at hpost h1
     rw [hpost.2] at h1

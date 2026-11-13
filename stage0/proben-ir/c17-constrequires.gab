@@ -1,0 +1,13 @@
+// C17: a const used in a runtime requires clause.
+module c17_constrequires {
+const LIMIT : u8 = 10;
+impl fn small(x : u8) -> u8
+    effects { pure }
+    requires x < LIMIT
+{
+    return x;
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    return small(7);
+}
+}

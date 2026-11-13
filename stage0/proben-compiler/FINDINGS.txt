@@ -321,7 +321,47 @@ N5. OPEN — the loader is modelled; an assembly-only fix is not valid.
 Line counts (measured with `wc -l`)
 -----------------------------------
 Before: srcbuf.gab 93, lex.gab 270, parse.gab 514, front.gab 390
-(total 1267). After: srcbuf.gab 76, lex.gab 258, parse.gab 494,
-front.gab 366 (total 1194). Net -73 lines; the drop is the deleted
-`sym_lookup_rec`, shorter returns, `bool` tests and comment updates,
-minus the module-split effect lines.
+(total 1267). After the module split etc.: srcbuf.gab 76, lex.gab 258,
+parse.gab 494, front.gab 366 (total 1194). Net -73 lines; the drop is the
+deleted `sym_lookup_rec`, shorter returns, `bool` tests and comment
+updates, minus the module-split effect lines.
+After the iterative-loops rewrite (2026-11-13, evening): srcbuf.gab 82,
+lex.gab 404, parse.gab 779, front.gab 451 (total 1716). Net +522 lines
+(+44%): the loop tax -- cursor/flag/frozen-cursor locals, entry mirrors
+of the fuel/narrow arms, one redundant directly-enclosing ordering guard
+per bounded operation (facts do not travel through nested `if`s or past
+a `mut` assignment), placeholder allocation plus tail patching for the
+four chain-building loops (args, params, block, unit) and the two
+else-if chains, and per-visit immutable freeze bindings for record-field
+projections and mutated cursors. No `assume`/`syscall`/`costs` added
+(the retry/forever route was measured and rejected, DEPTH.txt R4/R8).
+
+State 2026-11-13 (evening): input-length recursion replaced by loops
+---------------------------------------------------------------------
+All 36 `decreases` fuel recursions over the input length are gone (8
+front, 7 lex, 19 parse, 2 srcbuf); every scan and worklist is a
+`traverse` sweep now, so the call depth is bounded by the nesting depth
+of the parsed program instead of its length. Entry 2 (`while` refused)
+stands: the sweep is the accepted shape, documented with its refusal
+trail in DEPTH.txt (R1-R8). What the sweep needs beyond the old
+recursion, per loop: a table domain (own or cross-module qualified --
+both compile), a plain-`u32` frozen cursor copy per visit, redundant
+direct ordering guards (one bounded operation per guard), a helper call
+for constant-array reads (R2), bind-to-local-first for call results
+into slots (R1) and for mutated-slot indexes (narrowed immutable copy),
+and `decreases`+fuel kept stale for cycle consistency (R5). Chain
+loops patch the previous tail: field `b` for Arg (14) and Seq (12),
+field `c` for Param (19) and If (10) -- patching the wrong field
+truncates the chain and the checker then passes vacuously (found via
+the 252-mutant, DEPTH.txt B1). Observable results kept exactly: exit
+87 on the 155-byte text; 255/254/252 re-verified by the same one-byte
+mutations (plus def-side `maz`, plus a custom else-if/3-arg text with
+exit 108 identical on old and new code). Largest running input went
+from 155 bytes (105 already at 310) to 19840 bytes (k=128); k=256
+stops with 105 again, proven width-driven (the k=1 text also stops
+under KMAX=256 bounds), not length-driven -- see DEPTH.txt sections
+3-5 for the tables, the refusal evidence for O18, and the exact
+commands. Frequency notes for a real compiler: every cursor loop pays
+the guard/freeze/patch verbosity above (HIGH, same class as entry 2);
+the chain-link field rule (B1) deserves a checker-side note (a
+truncated chain is a silent pass, only negative tests catch it).

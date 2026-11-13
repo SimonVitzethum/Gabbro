@@ -70,4 +70,17 @@ theorem namensraum_zeuge (Q : Quelle) {n d k₁ k₂ : String} (pub : List Pfad)
 #print axioms eigen_erreicht
 #print axioms abh_erreicht
 
+/-- Full paths distinguish equal short names, and counting retains both declarations.
+    A source record whose names change while its cache is retained still answers correctly. -/
+theorem source_index_zeuge :
+    let source : Quelle := { namen := [["a", "same"], ["b", "same"], ["unique"]], verwendet := [] }
+    let changed := { source with namen := [["new"]] }
+    source.contains ["a", "same"] = true ∧ source.contains ["same"] = false ∧
+      source.shortCount "same" = 2 ∧ source.shortCount "unique" = 1 ∧
+      changed.contains ["new"] = true ∧ changed.contains ["unique"] = false ∧
+      changed.shortCount "new" = 1 := by
+  dsimp only
+  simp only [Quelle.contains_eq, Quelle.shortCount_eq]
+  decide +kernel
+
 end Gabbro.Grammatik.Parser.Namensraum

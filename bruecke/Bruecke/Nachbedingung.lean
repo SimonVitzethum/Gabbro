@@ -189,7 +189,7 @@ theorem ensList_some (fn : UFn) (s s' : Gabbro.Body.State) (r : Option Gabbro.Bo
 
 /-- The unit's well-typed world, as the bridge states it (the duty files' `wellFormed`,
     `Instanz*.wf_eq`). -/
-def wfU (u : UProg) (s : Gabbro.Body.State) : Prop := Gabbro.Body.WF (shapeOfU u) s.world
+def wfU (u : UProg) (s : Gabbro.Body.State) : Prop := Gabbro.Body.WF (shapeOfUG u) s.world
 
 /-- **The promise of one function**: over Body states related to the G entry and exit, the
     duty file's promise is exactly the goal theorem's return check. -/
@@ -199,7 +199,7 @@ theorem post_iff {P : Programm (declOf u)} (G : Gesenkt u P) (f : Fin u.fns.leng
     (hBE : ErgSchlicht (fnAt u f)) (hBT : ∀ t : Fin u.tabs.length, (tabAt u t).bools = [] ∧ (tabAt u t).opts = [] ∧ (tabAt u t).werte = [])
     (σ₀ σ' : World (declOf u)) (ρ : Env (declOf u) ((declOf u).params f))
     (v : ErgVal (declOf u) ((declOf u).erg f)) (s s' : Gabbro.Body.State)
-    (hW₀ : WRel u σ₀ s.world) (hL₀ : LRel (fnAt u f) 0 ρ s.local') (hW : WRel u σ' s'.world) :
+    (hW₀ : WGRel u σ₀ s.world) (hL₀ : LRel (fnAt u f) 0 ρ s.local') (hW : WGRel u σ' s'.world) :
     (postU u (wfU u) (fnAt u f) s s' (ergValOf ((declOf u).erg f) v)).getD False ↔
       EnsAmRueck P f σ₀ σ' ρ v := by
   obtain ⟨cs, hcs⟩ := ensList_some (fnAt u f) s s' (ergValOf ((declOf u).erg f) v) _ hD
@@ -230,7 +230,7 @@ theorem post_iff {P : Programm (declOf u)} (G : Gesenkt u P) (f : Fin u.fns.leng
   · intro ⟨_, hall⟩ q hq
     exact hall q (List.mem_append_right _ hq)
   · intro hall
-    refine ⟨wf_of_wrel u hBT hW, fun q hq => ?_⟩
+    refine ⟨wf_of_wgrel u hBT hW, fun q hq => ?_⟩
     rcases List.mem_append.mp hq with hq | hq
     · exact hrc q hq
     · exact hall q hq
@@ -240,7 +240,7 @@ theorem post_iff {P : Programm (declOf u)} (G : Gesenkt u P) (f : Fin u.fns.leng
 /-- The Body tail `zuBody` appends for the trailing return. -/
 def endBody (u : UProg) (fn : UFn) : URet → Option (List Gabbro.Body.Stmt)
   | .empty => some []
-  | .val v => (sideExpr u fn v).map (fun e => [.ret (some e)])
+  | .val v => (sideExprG u fn v).map (fun e => [.ret (some e)])
   | _ => none
 
 theorem zuBody_eq (fn : UFn) : zuBody u fn =
@@ -281,8 +281,8 @@ theorem lowEnd_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))} {r : URet
     (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
     (σ : World (declOf u)) (ρ : Env (declOf u) (ctxOf u c)) (s : Gabbro.Body.State)
-    (hW : WRel u σ s.world) (hL : LRel (fnAt u c) 0 ρ s.local') :
-    ∃ σ' v, execEnd O passes R eb σ ρ = .zurueck σ' v ∧ σ'.slots = σ.slots ∧
+    (hW : WGRel u σ s.world) (hL : LRel (fnAt u c) 0 ρ s.local') :
+    ∃ σ' v, execEnd O passes R eb σ ρ = .zurueck σ' v ∧ WGRel u σ' s.world ∧
       ∀ ρB : Gabbro.Body.Env, Gabbro.Body.finalState (Gabbro.Body.exec ρB eB s) = some s ∧
         Gabbro.Body.finalValue (Gabbro.Body.exec ρB eB s) = ergValOf (verOf u c).erg v := by
   cases r
@@ -295,7 +295,7 @@ theorem lowEnd_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))} {r : URet
     · rename_i E hE
       split at h
       · cases h
-        refine ⟨_, _, rfl, rfl, fun ρB => ⟨rfl, ?_⟩⟩
+        refine ⟨_, _, rfl, wgrel_same u rfl rfl hW, fun ρB => ⟨rfl, ?_⟩⟩
         simp only [lowErg] at hE
         split at hE
         · rename_i hErg
@@ -308,7 +308,7 @@ theorem lowEnd_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))} {r : URet
       · cases h
   case val sd =>
     simp only [endBody] at hb
-    cases hs : sideExpr u (fnAt u c) sd with
+    cases hs : sideExprG u (fnAt u c) sd with
     | none => rw [hs] at hb; cases hb
     | some e =>
       rw [hs] at hb
@@ -327,13 +327,13 @@ theorem lowEnd_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))} {r : URet
             · cases hE
             · rename_i ve hve
               cases hE
-              refine ⟨_, _, rfl, rfl, fun ρB => ?_⟩
+              refine ⟨_, _, rfl, wgrel_same u rfl rfl hW, fun ρB => ?_⟩
               obtain ⟨sw, sl⟩ := s
               have herg : (verOf u c).erg = some (.int lo hi) := by
                 show (vertragVon (declOf u) c).erg = _
                 rw [vErg_eq u c, hErg]
               generalize hσl : σ.lese _ _ = σl
-              have hWl : WRel u σl sw := by rw [← hσl]; exact wrel_slots u rfl hW
+              have hWl : WGRel u σl sw := by rw [← hσl]; exact wgrel_same u rfl rfl hW
               have hv := lowWertAt_sim hve hs hA hT σl σl ρ sw sl hWl hL
               rw [ergValOf_heq herg _ (evalErg σl (ErgExpr.val (D := declOf u) ve) σl ρ)
                 (evalErg_heq herg _ _ (mpr3_heq _ _ _ _) _ _ _)]

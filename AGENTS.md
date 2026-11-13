@@ -19,8 +19,9 @@ The Lean module-system migration and the split of every Lean file below 500 line
 
 - **One lead** (the root session) runs [PLAN-COMPILER-READY.md](dokumente/PLAN-COMPILER-READY.md) with agents
   started through T3 `delegate_task` (owner, 2026-11-12). Upper limits of agents running at the same time:
-  - **one** agent of the Claude family in all: Fable 5.2 (`claude-fable-5-2`), Opus 5.5 (`claude-opus-5-5`) or
-    Sonnet 5.5 (`claude-sonnet-5-5`);
+  - **two** agents of the Claude family in all (owner, 2026-11-13; was one): Fable 5.2 (`claude-fable-5-2`),
+    Opus 5.5 (`claude-opus-5-5`) or Sonnet 5.5 (`claude-sonnet-5-5`), with at most ONE Fable 5.2 active at any
+    time (the lead session counts when it runs on Fable);
   - **three** GPT Sol 6.1 (codex `gpt-6.1-sol`, started with `reasoningEffort: high`);
   - **five** Muse (OpenCode Muse Spark 1.3 Contributor, only through the Go access: model
     `opencode-go/muse-spark-1.3-contributor`; never `opencode/…`).
@@ -50,8 +51,8 @@ programs into Stage-0 IR and build the connected translation pipeline, formally 
 (owner), to implement [LOW-LEVEL-SYNTAX-PLAN.md](dokumente/LOW-LEVEL-SYNTAX-PLAN.md) completely**: target-binding calls,
 boot code, privileged instructions, address/context/view types with the raw-address syntax, device-register
 reads/writes/fallible reads/register transitions, and the proof boundary of that plan (binding/boot behaviour is user
-logic with explicit proof obligations, never silently a hardware assumption). The low-level work starts only AFTER the C packages are finished and does NOT touch the assembly IR runner or Stage 0
-(owner, 2026-11-03): its scope is the Lean model, checker and parser/exporter. It follows the plan's
+logic with explicit proof obligations, never silently a hardware assumption). The low-level work runs in parallel with the C packages (owner, 2026-11-13; before: only after them) and does NOT
+touch the assembly IR runner, Stage 0 or GabbroV: its scope is the Lean model, checker and parser/exporter. It follows the plan's
 own order (canonical Lean model first, then generic refinement and bridge, then parser/exporter/checker/lowering);
 the recommended answers to its four owner questions are approved, EXCEPT that the proposed diff of `Spec.lean`
 (question 2: splitting the software foreign assumptions into user obligations) is shown to the owner before it is

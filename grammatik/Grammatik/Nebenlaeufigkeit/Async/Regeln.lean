@@ -95,17 +95,20 @@ public theorem asyncCheck_sound (f : AsyncFn) (h : AsyncOk f) :
 public theorem boundary_no_locks {fields required : List String} {b : Boundary}
     (h : BoundarySafe fields required b) : b.heldLocks = [] := h.2.2.2.1
 
-public theorem boundary_moves_once {fields required : List String} {b : Boundary}
+/-- The annotation's moved list equals its owned list and has no duplicate
+    numbers. This list fact does not establish movement of G resources. -/
+public theorem boundary_moved_eq_owned_nodup {fields required : List String} {b : Boundary}
     (h : BoundarySafe fields required b) : b.moved = b.owned ∧ b.moved.Nodup := by
   have moved := h.2.2.2.2.1
   exact ⟨moved, moved.symm ▸ h.2.2.2.2.2.1⟩
 
-/-- The checker adds storage/resource conditions to the unconditional semantic
-    transformation theorem. It does not fabricate a canonical G certificate. -/
-public theorem asyncOk_refines (model : Model Value Child) (f : AsyncFn) (_ok : AsyncOk f)
-    {source target : State Value Child} {event : Event Value} {cost : Nat}
-    (run : MachinePoll model (asyncExpand model f) source event target cost) :
-    DirectPoll model f (decode f source) event (decode f target) cost :=
+/-- The semantic table poll refines the direct-style poll. The additional
+    AsyncOk premise is unused; this is the unconditional poll_refines theorem
+    with that premise retained, not a canonical G reification certificate. -/
+public theorem poll_refines_with_unused_asyncOk (model : Model Value Child W) (f : AsyncFn) (_ok : AsyncOk f)
+    {source target : State Value Child} {before after : W} {event : Event Value} {cost : Nat}
+    (run : MachinePoll model (asyncExpand model f) source before event target after cost) :
+    DirectPoll model f (decode f source) before event (decode f target) after cost :=
   poll_refines model f run
 
 /-- Well-formed tags and storage. This prevents invalid wait tags and forged
@@ -117,71 +120,68 @@ public theorem asyncOk_refines (model : Model Value Child) (f : AsyncFn) (_ok : 
   | .completed _ frame => frame.marks = []
   | .cancelled => True
 
-public theorem cancellation_refines (f : AsyncFn) (state : State Value Child)
+public theorem cancellation_refines (f : AsyncFn) (state : State Value Child) (world : W)
     (valid : StorageValid f state) :
-    directCancel (decode f state) =
-      ((machineCancel state).1, decode f (machineCancel state).2) := by
+    directCancel (decode f state) world =
+      ((machineCancel state world).1, decode f (machineCancel state world).2.1,
+        (machineCancel state world).2.2) := by
   cases state with
   | running tag frame => rfl
   | waiting tag frame child =>
     obtain ⟨name, expr, boundary, rest, h⟩ := valid
-    simp only [decode, h, directCancel, machineCancel, State.marks, List.nil_append, List.append_nil]
+    simp only [decode, h, directCancel, machineCancel, State.marks]
   | completed value frame =>
     simp only [StorageValid] at valid
-    simp only [decode, directCancel, machineCancel, State.marks, valid, List.nil_append, List.append_nil]
+    simp only [decode, directCancel, machineCancel, State.marks, valid]
   | cancelled => rfl
 
-/-- The destructor sees the COMPLETE saved state, including partial join
-    children. Invoke it before clearing storage: marks alone cannot encode
-    child cancellation hooks or the values needed by a resource destructor. -/
-@[expose] public def cancelWith (drop : State Value Child → Heap → List Nat × Heap)
-    (source : State Value Child) (heap : Heap) : List Nat × State Value Child × Heap :=
-  let result := drop source heap
+/-- The destructor receives the full saved state and the actual world. -/
+@[expose] public def cancelWith (drop : State Value Child → W → List Nat × W)
+    (source : State Value Child) (world : W) : List Nat × State Value Child × W :=
+  let result := drop source world
   (result.1, .cancelled, result.2)
 
-/-- An ordinary user duty, not an assumption: the actual destructor receives
-    the saved values and children, releases each owned mark exactly once and
-    leaves no permissions. Owns and drop must be instantiated by G contracts. -/
-@[expose] public def DropDuty (Owns : List Nat → Heap → Prop)
-    (drop : State Value Child → Heap → List Nat × Heap) : Prop :=
-  ∀ state heap, state.marks.Nodup → Owns state.marks heap →
-    (drop state heap).1 = state.marks ∧ (drop state heap).1.Nodup ∧
-      Owns [] (drop state heap).2
+@[expose] public def DropDuty (Owns : List Nat → W → Prop)
+    (drop : State Value Child → W → List Nat × W) : Prop :=
+  ∀ state world, state.marks.Nodup → Owns state.marks world →
+    (drop state world).1 = state.marks ∧ (drop state world).1.Nodup ∧
+      Owns [] (drop state world).2
 
-public theorem cancellation_no_leak (Owns : List Nat → Heap → Prop)
-    (drop : State Value Child → Heap → List Nat × Heap)
-    (duty : DropDuty Owns drop) (state : State Value Child) (heap : Heap)
-    (unique : state.marks.Nodup) (owned : Owns state.marks heap) :
-    (let (released, target, heap') := cancelWith drop state heap
-     released = state.marks ∧ released.Nodup ∧ target.marks = [] ∧ Owns [] heap') := by
-  have good := duty state heap unique owned
+public theorem cancelWith_satisfies_dropDuty (Owns : List Nat → W → Prop)
+    (drop : State Value Child → W → List Nat × W)
+    (duty : DropDuty Owns drop) (state : State Value Child) (world : W)
+    (unique : state.marks.Nodup) (owned : Owns state.marks world) :
+    (let (released, target, world') := cancelWith drop state world
+     released = state.marks ∧ released.Nodup ∧ target.marks = [] ∧ Owns [] world') := by
+  have good := duty state world unique owned
   exact ⟨good.1, good.2.1, rfl, good.2.2⟩
 
-public theorem cancelWith_refines (Owns : List Nat → Heap → Prop)
-    (drop : State Value Child → Heap → List Nat × Heap)
-    (duty : DropDuty Owns drop) (f : AsyncFn) (state : State Value Child) (heap : Heap)
+/-- The receipt agrees with semantic cancellation; cleanup additionally has
+    its explicit world transition, which need not be the identity. -/
+public theorem cancelWith_refines (Owns : List Nat → W → Prop)
+    (drop : State Value Child → W → List Nat × W)
+    (duty : DropDuty Owns drop) (f : AsyncFn) (state : State Value Child) (world : W)
     (valid : StorageValid f state) (unique : state.marks.Nodup)
-    (owned : Owns state.marks heap) :
-    directCancel (decode f state) =
-      ((cancelWith drop state heap).1, decode f (cancelWith drop state heap).2.1) := by
-  have good := duty state heap unique owned
-  rw [cancellation_refines f state valid]
+    (owned : Owns state.marks world) :
+    directCancel (decode f state) (drop state world).2 =
+      ((cancelWith drop state world).1, decode f (cancelWith drop state world).2.1,
+        (cancelWith drop state world).2.2) := by
+  have good := duty state world unique owned
+  rw [cancellation_refines f state (drop state world).2 valid]
   simp only [cancelWith, machineCancel, good.1]
 
-/-- Exact missing boundary: provide actual ordinary target operations, their
-    state encoding, and a proof for EVERY dispatch and destructor execution.
-    No instance is supplied here. In particular this is not source admission,
-    Akzeptiert, a G/GX theorem or a Stage-0 lowering certificate. -/
-public structure ReificationDuty (model : Model Value Child) (f : AsyncFn)
-    (Target : Type) (step : Target → Event Value × Target × Nat)
-    (cancel : Target → List Nat × Target) where
+/-- Every target step must represent the semantic world transition. Cleanup
+    correctness is separate because it may change the world when dropping. -/
+public structure ReificationDuty (model : Model Value Child W) (f : AsyncFn)
+    (Target : Type) (step : Target → W → Event Value × Target × W × Nat)
+    (cancel : Target → W → List Nat × Target × W) where
   encode : State Value Child → Target
-  stepCorrect : ∀ source event target cost,
+  stepCorrect : ∀ source before event target after cost,
     StorageValid f source →
-    machineStep model (asyncExpand model f) source = (event, target, cost) →
-    step (encode source) = (event, encode target, cost)
-  cancelCorrect : ∀ source, StorageValid f source →
-    cancel (encode source) = ((machineCancel source).1, encode (machineCancel source).2)
+    machineStep model (asyncExpand model f) source before = (event, target, after, cost) →
+    step (encode source) before = (event, encode target, after, cost)
+  cancelCorrect : ∀ source world, StorageValid f source →
+    cancel (encode source) world = (source.marks, encode .cancelled, world)
 
 /-- Computed liveness reaches actual generated record fields, transitively
     through the written save list. -/
@@ -196,20 +196,19 @@ public theorem boundary_saves_required {fields required : List String} {b : Boun
 
 /-- No finite tag can escape its code table when starting with create. This
     also keeps completed records empty after the Ready ownership transfer. -/
-public theorem storageValid_step (model : Model Value Child) (f : AsyncFn)
-    {source target : State Value Child} {event : Event Value} {cost : Nat}
+public theorem storageValid_step (model : Model Value Child W) (f : AsyncFn)
+    {source target : State Value Child} {before after : W} {event : Event Value} {cost : Nat}
     (valid : StorageValid f source)
-    (h : machineStep model (asyncExpand model f) source = (event, target, cost)) :
+    (h : machineStep model (asyncExpand model f) source before = (event, target, after, cost)) :
     StorageValid f target := by
   cases source with
   | running tag frame =>
     cases hd : f.body.drop tag with
     | nil =>
-      cases he : model.evaluate f.result frame with
-      | mk value work =>
-        simp only [machineStep, table_drop, drop_compiled, hd, asyncExpand, he, List.map_nil, List.map_cons, Prod.mk.injEq, reduceCtorEq, true_and, false_and] at h
-        obtain ⟨rfl, rfl, rfl⟩ := h
-        rfl
+      rcases he : model.evaluate f.result frame before with ⟨value, world, work⟩
+      simp only [machineStep, table_drop, drop_compiled, hd, asyncExpand, he, List.map_nil, List.map_cons, Prod.mk.injEq, reduceCtorEq, true_and, false_and] at h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      rfl
     | cons command rest =>
       have nextTag : tag + 1 ≤ f.body.length := by
         have size := congrArg List.length hd
@@ -217,49 +216,46 @@ public theorem storageValid_step (model : Model Value Child) (f : AsyncFn)
         omega
       cases command with
       | bind name expr bound =>
-        cases he : model.evaluate expr frame with
-        | mk value work =>
-          simp only [machineStep, table_drop, drop_compiled, hd, compileCommand, he, List.map_nil, List.map_cons, Prod.mk.injEq, reduceCtorEq, true_and, false_and] at h
-          obtain ⟨rfl, rfl, rfl⟩ := h
-          exact nextTag
+        rcases he : model.evaluate expr frame before with ⟨value, world, work⟩
+        simp only [machineStep, table_drop, drop_compiled, hd, compileCommand, he, List.map_nil, List.map_cons, Prod.mk.injEq, reduceCtorEq, true_and, false_and] at h
+        obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+        exact nextTag
       | await name expr boundary =>
-        cases he : makeTask model frame expr with
-        | mk child work =>
-          simp only [machineStep, table_drop, drop_compiled, hd, compileCommand, he, List.map_nil, List.map_cons, Prod.mk.injEq, reduceCtorEq, true_and, false_and] at h
-          obtain ⟨rfl, rfl, rfl⟩ := h
-          exact ⟨name, expr, boundary, rest, hd⟩
+        rcases he : makeTask model frame expr before with ⟨child, world, work⟩
+        simp only [machineStep, table_drop, drop_compiled, hd, compileCommand, he, List.map_nil, List.map_cons, Prod.mk.injEq, reduceCtorEq, true_and, false_and] at h
+        obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+        exact ⟨name, expr, boundary, rest, hd⟩
   | waiting tag frame child =>
     obtain ⟨name, expr, boundary, rest, hd⟩ := valid
     have nextTag : tag + 1 ≤ f.body.length := by
       have size := congrArg List.length hd
       simp only [List.length_drop, List.length_cons] at size
       omega
-    cases hp : pollTask model child with
-    | mk result payload =>
-      cases payload with
-      | mk child' work =>
-        cases result with
-        | pending =>
-          simp only [machineStep, table_drop, drop_compiled, hd, compileCommand, hp, List.map_nil, List.map_cons, Prod.mk.injEq, reduceCtorEq, true_and, false_and] at h
-          obtain ⟨rfl, rfl, rfl⟩ := h
-          exact ⟨name, expr, boundary, rest, hd⟩
-        | ready value =>
-          simp only [machineStep, table_drop, drop_compiled, hd, compileCommand, hp, List.map_nil, List.map_cons, Prod.mk.injEq, reduceCtorEq, true_and, false_and] at h
-          obtain ⟨rfl, rfl, rfl⟩ := h
-          exact nextTag
+    rcases hp : pollTask model child before with ⟨result, child', world, work⟩
+    cases result with
+    | pending =>
+      simp only [machineStep, table_drop, drop_compiled, hd, compileCommand, hp,
+        List.map_nil, List.map_cons, Prod.mk.injEq, reduceCtorEq, true_and, false_and] at h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      exact ⟨name, expr, boundary, rest, hd⟩
+    | ready value =>
+      simp only [machineStep, table_drop, drop_compiled, hd, compileCommand, hp,
+        List.map_nil, List.map_cons, Prod.mk.injEq, reduceCtorEq, true_and, false_and] at h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      exact nextTag
   | completed value frame =>
     simp only [machineStep, List.map_nil, List.map_cons, Prod.mk.injEq, reduceCtorEq, true_and, false_and] at h
-    obtain ⟨rfl, rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
     exact valid
   | cancelled =>
     simp only [machineStep, List.map_nil, List.map_cons, Prod.mk.injEq, reduceCtorEq, true_and, false_and] at h
-    obtain ⟨rfl, rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
     trivial
 
-public theorem storageValid_poll (model : Model Value Child) (f : AsyncFn)
-    {source target : State Value Child} {event : Event Value} {cost : Nat}
+public theorem storageValid_poll (model : Model Value Child W) (f : AsyncFn)
+    {source target : State Value Child} {before after : W} {event : Event Value} {cost : Nat}
     (valid : StorageValid f source)
-    (run : MachinePoll model (asyncExpand model f) source event target cost) :
+    (run : MachinePoll model (asyncExpand model f) source before event target after cost) :
     StorageValid f target := by
   revert valid
   induction run with
@@ -282,41 +278,43 @@ public theorem storageValid_create (f : AsyncFn) (frame : Frame Value) :
   | .ready _ marks => marks
   | _ => []
 
-public theorem step_preserves_authority (model : Model Value Child) (f : AsyncFn)
-    (source : Direct Value Child) :
-    (let (event, target, _) := directStep model f source
+/-- One direct-style step preserves the concatenation of the residual and
+    transferred number lists. This does not establish G resource ownership. -/
+public theorem directStep_marks_append (model : Model Value Child W) (f : AsyncFn)
+    (source : Direct Value Child) (world : W) :
+    (let (event, target, _, _) := directStep model f source world
      directMarks target ++ eventMarks event) = directMarks source := by
   cases source with
   | running rest frame =>
     cases rest with
     | nil =>
-      cases he : model.evaluate f.result frame <;>
-        simp only [directStep, he, directMarks, eventMarks, List.nil_append, List.append_nil]
+      rcases he : model.evaluate f.result frame world with ⟨value, world', cost⟩
+      simp only [directStep, he, directMarks, eventMarks, List.nil_append, List.append_nil]
     | cons command rest =>
       cases command with
       | bind name expr bound =>
-        cases he : model.evaluate expr frame <;>
-          simp only [directStep, he, directMarks, eventMarks, save, List.nil_append, List.append_nil]
+        rcases he : model.evaluate expr frame world with ⟨value, world', cost⟩
+        simp only [directStep, he, directMarks, eventMarks, save, List.nil_append, List.append_nil]
       | await name expr boundary =>
-        cases he : makeTask model frame expr <;>
-          simp only [directStep, he, directMarks, eventMarks, List.nil_append, List.append_nil]
+        rcases he : makeTask model frame expr world with ⟨child, world', cost⟩
+        simp only [directStep, he, directMarks, eventMarks, List.nil_append, List.append_nil]
   | waiting name rest frame child =>
-    cases hp : pollTask model child with
-    | mk result payload =>
-      cases payload with
-      | mk child' work =>
-        cases result <;> simp only [directStep, hp, directMarks, eventMarks, save, List.nil_append, List.append_nil]
+    rcases hp : pollTask model child world with ⟨result, child', world', work⟩
+    cases result <;>
+      simp only [directStep, hp, directMarks, eventMarks, save, List.nil_append, List.append_nil]
   | completed value => rfl
   | cancelled => rfl
 
-public theorem poll_preserves_authority (model : Model Value Child) (f : AsyncFn)
-    {source target : Direct Value Child} {event : Event Value} {cost : Nat}
-    (run : DirectPoll model f source event target cost) :
+/-- A finite direct-style poll preserves the concatenation of the residual
+    and transferred number lists. This does not establish G ownership. -/
+public theorem directPoll_marks_append (model : Model Value Child W) (f : AsyncFn)
+    {source target : Direct Value Child} {before after : W} {event : Event Value} {cost : Nat}
+    (run : DirectPoll model f source before event target after cost) :
     directMarks target ++ eventMarks event = directMarks source := by
-  have exactStep {source target : Direct Value Child} {event : Event Value} {work : Nat}
-      (step : directStep model f source = (event, target, work)) :
+  have exactStep {source target : Direct Value Child} {before after : W} {event : Event Value} {work : Nat}
+      (step : directStep model f source before = (event, target, after, work)) :
       directMarks target ++ eventMarks event = directMarks source := by
-    have conserved := step_preserves_authority model f source
+    have conserved := directStep_marks_append model f source before
     simpa only [step] using conserved
   induction run with
   | stop step terminal => exact exactStep step

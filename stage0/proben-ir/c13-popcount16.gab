@@ -1,0 +1,7 @@
+// C13: popcount on u16: popcount(65535) = 16.
+module c13_popcount16 {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a : u16 = 65535;
+    return popcount(a);
+}
+}

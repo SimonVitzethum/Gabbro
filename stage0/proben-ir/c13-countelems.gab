@@ -1,0 +1,8 @@
+// C13: bounded count over array elems, in a comparison: [1,0,1,0] has two ones.
+module c13_countelems {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a : [u8; 4] = [1, 0, 1, 0];
+    if (count i in elems of a : a[i] == 1) == 2 { return 42; }
+    return 7;
+}
+}

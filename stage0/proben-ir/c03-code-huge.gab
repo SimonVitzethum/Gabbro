@@ -1,0 +1,12 @@
+// C03: a code outside the u128 reason domain.
+module c03_code_huge {
+reason Fault {
+    First = 340282366920938463463374607431768211456 "too big"
+    exhaustive
+}
+impl fn main() -> u32 in 0 .. 255
+    effects { pure }
+{
+    return 7;
+}
+}

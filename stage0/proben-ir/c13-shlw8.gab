@@ -1,0 +1,9 @@
+// C13: wrapping shl on u8: 3 <<% 7 = 128 (384 mod 256).
+module c13_shlw8 {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a : u8 = 3;
+    let r = a <<% 7;
+    if r == 128 { return 42; }
+    return 7;
+}
+}

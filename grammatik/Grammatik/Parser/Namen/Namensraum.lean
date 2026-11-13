@@ -1,5 +1,6 @@
 
 module
+public import Grammatik.Parser.Namen.NameIndex
 
 @[expose] public section
 
@@ -50,6 +51,40 @@ abbrev Name := Option String × Pfad
 structure Quelle where
   namen : List Pfad
   verwendet : List (Pfad × Pfad)
+  /-- Compiled lookup only; all specification functions continue to read `namen`. -/
+  index : Merk NameIndex := NameIndex.von namen
+
+/-- Exact structural path membership, with an index shared by the whole unit. -/
+def Quelle.contains (Q : Quelle) (path : Pfad) : Bool :=
+  NameIndex.cached Q.index Q.namen
+    (fun index _ => (index.paths.finde path).isSome)
+    (fun _ => decide (path ∈ Q.namen)) (fun index same => by
+      simp only [Tafel.Index.finde, id_eq, index.pathsFaithful, same,
+        List.isSome_find?, List.any_beq', List.contains_eq_mem])
+
+theorem Quelle.contains_eq (Q : Quelle) (path : Pfad) :
+    Q.contains path = decide (path ∈ Q.namen) :=
+  NameIndex.cached_eq _ _ _ _ _
+
+/-- Occurrences of a short name, including duplicates, not just distinct paths. -/
+def Quelle.shortCount (Q : Quelle) (name : String) : Nat :=
+  NameIndex.cached Q.index Q.namen
+    (fun index _ => index.shorts.count name)
+    (fun _ => (Q.namen.filter (fun path => strEq (path.getLast?.getD "") name)).length)
+    (fun index same => by
+      simp only [Tafel.Counts.count, index.shortsFaithful, same, List.filter_map,
+        List.length_map, Function.comp_def])
+
+theorem Quelle.shortCount_eq (Q : Quelle) (name : String) :
+    Q.shortCount name =
+      (Q.namen.filter (fun path => strEq (path.getLast?.getD "") name)).length :=
+  NameIndex.cached_eq _ _ _ _ _
+
+theorem Quelle.shortCount_positive (Q : Quelle) (name : String) :
+    0 < Q.shortCount name ↔
+      Q.namen.any (fun path => strEq (path.getLast?.getD "") name) = true := by
+  rw [Quelle.shortCount_eq]
+  simp only [List.length_pos_iff_exists_mem, List.mem_filter, List.any_eq_true]
 
 /-- **Where a project sits in a unit**: its own copy and, per declared dependency, its local name,
     the copy the build assigned to it, and that copy's public names. -/
@@ -97,6 +132,27 @@ def sichtbar (Q : Quelle) (L : Platz) : List Name :=
 /-- The candidate a path resolves to: the first that names something visible. -/
 def aufloeseK (Q : Quelle) (L : Platz) (von p : Pfad) : Option Pfad :=
   (kandidaten Q von p).find? fun c => decide (qualifiziere L c ∈ sichtbar Q L)
+
+/-- Ordinary source resolution has no dependency-copy layer. Avoid rebuilding and scanning
+    the entire visible-name list for each candidate; retain the general specification otherwise. -/
+def aufloeseKSchnell (Q : Quelle) (L : Platz) (von p : Pfad) : Option Pfad :=
+  match L.deps with
+  | [] => (kandidaten Q von p).find? Q.contains
+  | _ :: _ => (kandidaten Q von p).find? fun c => decide (qualifiziere L c ∈ sichtbar Q L)
+
+@[csimp] theorem aufloeseK_eq_schnell : aufloeseK = aufloeseKSchnell := by
+  funext Q L von p
+  cases deps : L.deps with
+  | nil =>
+    have predicate : (fun c => decide (qualifiziere L c ∈ sichtbar Q L)) = Q.contains := by
+      funext c
+      rw [Quelle.contains_eq]
+      apply Bool.eq_iff_iff.mpr
+      simp only [decide_eq_true_eq]
+      cases c <;> simp only [qualifiziere, deps, ziel, sichtbar, List.flatMap_nil,
+        List.append_nil, List.mem_map, Prod.mk.injEq, true_and, exists_eq_right]
+    simp only [aufloeseK, aufloeseKSchnell, deps, predicate]
+  | cons dep rest => simp only [aufloeseK, aufloeseKSchnell, deps]
 
 /-- **The name a path resolves to.** -/
 def aufloese (Q : Quelle) (L : Platz) (von p : Pfad) : Option Name :=

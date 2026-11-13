@@ -128,4 +128,36 @@ theorem wf_of_wrel_grel {σ : World (declOf u)} {w : Gabbro.Body.World}
   | field c n => exact wf_of_wrel u hB hW (.field c n) sh hp
   | global g => exact wfG_of_grel u hG g sh hp
 
+/-- Slots and numeric statics are related to the same Body world. -/
+def WGRel (σ : World (declOf u)) (w : Gabbro.Body.World) : Prop :=
+  WRel u σ w ∧ GRel u σ w
+
+theorem wgrel_enc (σ : World (declOf u)) (base : Gabbro.Body.World) :
+    WGRel u σ (encG u σ base) := ⟨wrel_encG u σ base, grel_encG u σ base⟩
+
+theorem wgrel_same {σ σ' : World (declOf u)} {w : Gabbro.Body.World}
+    (hs : σ'.slots = σ.slots) (hg : σ'.globs = σ.globs) (h : WGRel u σ w) :
+    WGRel u σ' w := ⟨wrel_slots u hs h.1, grel_globs u hg h.2⟩
+
+theorem wgrel_lese {σ : World (declOf u)} {w : Gabbro.Body.World}
+    (h : WGRel u σ w) (Λ) (orte) : WGRel u (σ.lese Λ orte) w :=
+  wgrel_same u rfl rfl h
+
+theorem wgrel_store {σ : World (declOf u)} {w : Gabbro.Body.World} (h : WGRel u σ w)
+    (c : String) (t : Fin u.tabs.length) (ht : tabIdx u.tabs c = .ok t)
+    (fld : String) (fh : FieldHit u t) (hf : fieldHit u t fld = .ok fh) (k : Int)
+    (x : Wert (declOf u) ((declOf u).typ t fh.idx)) :
+    WGRel u (σ.storeSlot t k fh.idx x)
+      (Gabbro.Body.store w (.slot c k fld) (valOf ((declOf u).typ t fh.idx) x)) := by
+  refine ⟨wrel_store u h.1 c t ht fld fh hf k x, ?_⟩
+  intro g v hv
+  have hg := grel_globs u (σ' := σ.storeSlot t k fh.idx x) rfl h.2 g v hv
+  exact (Gabbro.Body.store_elsewhere _ _ _ _ (by intro e; cases e)).trans hg
+
+theorem wf_of_wgrel {σ : World (declOf u)} {w : Gabbro.Body.World}
+    (hB : ∀ t : Fin u.tabs.length,
+      (tabAt u t).bools = [] ∧ (tabAt u t).opts = [] ∧ (tabAt u t).werte = [])
+    (h : WGRel u σ w) : Gabbro.Body.WF (shapeOfUG u) w :=
+  wf_of_wrel_grel u hB h.1 h.2
+
 end Gabbro.Bruecke

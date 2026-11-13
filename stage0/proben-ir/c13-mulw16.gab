@@ -1,0 +1,10 @@
+// C13: wrapping mul on u16: 700 *% 700 = 31248 (490000 mod 65536).
+module c13_mulw16 {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a : u16 = 700;
+    let b : u16 = 700;
+    let r = a *% b;
+    if r == 31248 { return 42; }
+    return 7;
+}
+}

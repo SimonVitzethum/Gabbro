@@ -1,0 +1,7 @@
+// C13: popcount on u8: popcount(180) = 4.
+module c13_popcount8 {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a : u8 = 180;
+    return popcount(a);
+}
+}

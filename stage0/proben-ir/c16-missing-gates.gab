@@ -1,0 +1,12 @@
+// C16: check without a gates line is refused at parse.
+module c16_missing_gates {
+static mut m : u32 in 0 .. 100 = 0;
+check lonely {
+    claim "holds"
+    measures m
+    can_fail {
+        return true;
+    }
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } { return 42; }
+}

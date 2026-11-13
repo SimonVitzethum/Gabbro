@@ -1,0 +1,22 @@
+// C17 refusal probe: a recursion cycle whose second member carries no decreases.
+module c17_mutualnodec {
+impl fn is_even(n : u32 in 0 .. 10) -> bool
+    effects { pure }
+    decreases n
+{
+    if n == 0 { return true; }
+    narrow n to 1 .. 10 else { return false; }
+    return is_odd(n - 1);
+}
+impl fn is_odd(n : u32 in 0 .. 10) -> bool
+    effects { pure }
+{
+    if n == 0 { return false; }
+    narrow n to 1 .. 10 else { return true; }
+    return is_even(n - 1);
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    if is_even(4) { return 42; }
+    return 7;
+}
+}

@@ -1,0 +1,10 @@
+// C14: single consistent profile, returns 42.
+module c14_profile {
+profile {
+    arch x86_64;
+    rounding nearest;
+    fp_contract off;
+    memory_model c11;
+};
+impl fn main() -> u32 in 0 .. 255 effects { pure } { return 42; }
+}

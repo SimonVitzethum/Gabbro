@@ -1,0 +1,10 @@
+// C14: two profile blocks are refused.
+module c14_double {
+profile {
+    arch x86_64;
+};
+profile {
+    arch x86_64;
+};
+impl fn main() -> u32 in 0 .. 255 effects { pure } { return 42; }
+}

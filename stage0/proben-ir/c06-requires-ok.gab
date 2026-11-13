@@ -1,0 +1,9 @@
+// C06: trivial interface pre at a pointer type, first(20)=21.
+module c06_requires {
+impl fn first(x : u32 in 0 .. 100) -> u32 in 0 .. 200 effects { pure } costs <= 4 ops { return x + 1; }
+impl fn apply(p : fn(x : u32 in 0 .. 100) -> u32 in 0 .. 200 requires x <= 50 effects { pure } costs <= 4 ops) -> u32 in 0 .. 200 effects { pure } {
+    let v = p(20);
+    return v;
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } { return apply(&first); }
+}

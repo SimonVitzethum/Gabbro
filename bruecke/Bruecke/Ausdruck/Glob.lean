@@ -13,19 +13,6 @@ open Gabbro.Grammatik
 open Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 
-/-- `sideExpr` with static reads, including statics nested inside its arithmetic forms.
-    The unchanged reader handles every nonrecursive form other than `.glob`. -/
-def sideExprG (u : UProg) (fn : UFn) : USide → Option Gabbro.Body.Expr
-  | .glob g => some (.global g)
-  | .add a b => binE .add (sideExprG u fn a) (sideExprG u fn b)
-  | .sub a b => binE .sub (sideExprG u fn a) (sideExprG u fn b)
-  | .mul a b => binE .mul (sideExprG u fn a) (sideExprG u fn b)
-  | .conv _ _ a => sideExprG u fn a
-  | .band a b => binE .band (sideExprG u fn a) (sideExprG u fn b)
-  | .bor a b => binE .bor (sideExprG u fn a) (sideExprG u fn b)
-  | .bxor a b => binE .bxor (sideExprG u fn a) (sideExprG u fn b)
-  | s => sideExpr u fn s
-
 /-- Preserving successful operands preserves their binary expression. -/
 theorem binE_preserves_some (op : Gabbro.Body.BinOp)
     (a b a' b' : Option Gabbro.Body.Expr)

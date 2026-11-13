@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Parser.Lex.Tafel
+public import Grammatik.Parser.Elab.Uebersetze.Kontext.LookupMemo
 public import Grammatik.Korpus.Programme.Export104
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.Export.ExportMetadata
@@ -17,59 +17,6 @@ public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Data
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
-
-/-- One device register (`device D .. { reg R : T @off class K .. }`, `D.Reg`): its device and name, the range
-    of its type (`D.rtyp`, always an integer range: `regdecl` reads an `intty`), its class (`D.rklasse`), the
-    register its writes carry the other bits from (`mirrors R from M` names `M` at `R`, `D.spiegel`), the
-    carriers its answer rests on (`depends { .. }`, `D.rtraeger`: table or static names), and its promise: a
-    `requires p` WITHOUT `else` is the device's promise about every value read (`D.rzusage`, `zusage`); a
-    `requires p else A::B` makes the read fallible instead (`Block.regReadElse`, `pruefung`), and then the
-    device promises nothing. Both predicates name the register itself as their one variable. -/
-structure UReg where
-  dev : String
-  name : String
-  lo : Int
-  hi : Int
-  klasse : Regklasse
-  spiegel : Option String := none
-  traeger : List String := []
-  zusage : Option UEns := none
-  pruefung : Option UEns := none
-  /-- A truth-valued register (`reg R : bool`): `Ty.bool`, the promise read at `0`/`1`. -/
-  bool : Bool := false
-  deriving DecidableEq, Repr
-
-/-- The type of a register: a truth value, or its integer range. -/
-def UReg.ty (g : UReg) : Ty := bif g.bool then .bool else .int g.lo g.hi
-
-/-- A parameter kind: a pointer to a table, an index into one,
-    or a plain integer range (kept beside the `Ty` so an index
-    parameter stays recognizable after `Ty.index` unfolds it to
-    `.int 0 (n - 1)`). -/
-inductive UParamArt
-  | ptr : DataCapTy → UParamArt
-  | index : Nat → UParamArt
-  | int : UParamArt
-  /-- A truth value: a `bool` parameter or a `let` of a truth value (`Ty.bool` in the context). -/
-  | bool : UParamArt
-  /-- An `option index into T` parameter or local, `T` the table number (`Ty.opt` of its count). -/
-  | opt : Nat → UParamArt
-  /-- A reason (`Ty.why n`): the reason bound by `let .. else (e) { .. }`, `n` the position of its declaration. -/
-  | why : Nat → UParamArt
-  /-- A value of a tagged type (`Ty.sum`), `n` the position of its declaration. -/
-  | sum : Nat → UParamArt
-  /-- A function pointer `fnptr n` (`Ty.fnptr n`): a parameter or `let` of a pointer type (`n` its signature
-      number, behind the functions'), or `let p = &f;` (`n` the number of `f`, its own signature). -/
-  | fnptr : Nat → UParamArt
-  /-- A reference into the open table number `n` (`Ty.ref n`): a local bound to a provider's answer. -/
-  | ref : Nat → UParamArt
-  /-- An aggregate value (`Ty.arr`, `Ty.str`): its type stands beside the kind. -/
-  | wert : UParamArt
-  deriving DecidableEq, Repr
-
-/-- The kind of a local bound to a register read. -/
-def UReg.art (g : UReg) : UParamArt := bif g.bool then .bool else .int
-
 
 /-- The elaboration context of one function body or contract:
     parameter names, kinds and types in order, the tables and
@@ -148,6 +95,8 @@ structure UCtx where
       printed programs, every probe); the Stage-0 compiler turns it on for function bodies
       (`elabUFunktion (narrow := true)`). -/
   narrow : Bool := false
+  /-- Observationally irrelevant persistent local and unit-head indexes. -/
+  lookupMemo : Merk ULookupMemo := ULookupMemo.empty
 
 /-- One elaborated function: parameters with their `Ty`,
     the optional result range, the held lock names, the written

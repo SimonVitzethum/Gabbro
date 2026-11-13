@@ -60,14 +60,25 @@ impl fn cmp_rec(s1 : u32 in 0 .. 159, s2 : u32 in 0 .. 159, k : u32 in 0 .. 159,
     decreases fuel
 {
     narrow fuel to 1 .. 160 else { return false; }
-    if k == 0 { return true; }
-    narrow s1 to 0 .. 158 else { return false; }
-    narrow s2 to 0 .. 158 else { return false; }
-    let b1 = srcbuf::byte_at(s1);
-    let b2 = srcbuf::byte_at(s2);
-    if b1 == b2 {
-        narrow k to 1 .. 159 else { return false; }
-        return cmp_rec(s1 + 1, s2 + 1, k - 1, fuel - 1);
+    let mut ca : u32 in 0 .. 159 = s1;
+    let mut cb : u32 in 0 .. 159 = s2;
+    let mut kn : u32 in 0 .. 159 = k;
+    traverse i over slots of srcbuf::src by unvisited touches reads srcbuf::src.slots {
+        if i == ca {
+            if kn == 0 { return true; }
+            if ca == 159 { return false; }
+            if cb == 159 { return false; }
+            let b1 = srcbuf::byte_at(ca);
+            let b2 = srcbuf::byte_at(cb);
+            if b1 == b2 {
+                let kk = kn;
+                narrow kk to 1 .. 159 else { return false; }
+                kn = kk - 1;
+                if ca < 159 { ca = ca + 1; }
+                if cb < 159 { cb = cb + 1; }
+            }
+            else { return false; }
+        }
     }
     return false;
 }
@@ -164,15 +175,26 @@ impl fn check_args(ai : u32 in 0 .. 255, fuel : u32 in 0 .. 128) -> bool
 {
     narrow fuel to 1 .. 128 else { check_bad = true; return false; }
     if ai == 255 { return true; }
-    narrow ai to 0 .. 95 else { check_bad = true; return false; }
-    let k = parse::node_kind(ai);
-    if k == 14 {
-        let e = parse::node_a(ai);
-        narrow e to 0 .. 95 else { check_bad = true; return false; }
-        let q = check_expr(e, fuel - 1);
-        if !q { return false; }
-        let n = parse::node_b(ai);
-        return check_args(n, fuel - 1);
+    let mut cur : u32 in 0 .. 255 = ai;
+    traverse i over slots of parse::nodes by unvisited touches reads parse::nodes.slots, writes check_bad, writes bad_start, writes bad_len, writes sym_used, writes syms.slots, writes scopebase.slots, writes cur_depth, writes scope_top {
+        if i == cur {
+            if cur == 255 { return true; }
+            if cur < 96 {
+                let cc : u32 in 0 .. 95 = cur;
+                let k = parse::node_kind(cc);
+                if k == 14 {
+                    let ev = parse::node_a(cc);
+                    narrow ev to 0 .. 95 else { check_bad = true; return false; }
+                    let q = check_expr(ev, fuel - 1);
+                    if !q { return false; }
+                    let nv = parse::node_b(cc);
+                    cur = nv;
+                    if cur == 255 { return true; }
+                }
+                else { check_bad = true; return false; }
+            }
+            else { check_bad = true; return false; }
+        }
     }
     check_bad = true;
     return false;
@@ -183,15 +205,26 @@ impl fn check_seq(si : u32 in 0 .. 255, fuel : u32 in 0 .. 128) -> bool
 {
     narrow fuel to 1 .. 128 else { check_bad = true; return false; }
     if si == 255 { return true; }
-    narrow si to 0 .. 95 else { check_bad = true; return false; }
-    let k = parse::node_kind(si);
-    if k == 12 {
-        let a = parse::node_a(si);
-        narrow a to 0 .. 95 else { check_bad = true; return false; }
-        let q = check_stmt(a, fuel - 1);
-        if !q { return false; }
-        let b = parse::node_b(si);
-        return check_seq(b, fuel - 1);
+    let mut cur : u32 in 0 .. 255 = si;
+    traverse i over slots of parse::nodes by unvisited touches reads parse::nodes.slots, writes check_bad, writes bad_start, writes bad_len, writes sym_used, writes syms.slots, writes scopebase.slots, writes cur_depth, writes scope_top {
+        if i == cur {
+            if cur == 255 { return true; }
+            if cur < 96 {
+                let cc : u32 in 0 .. 95 = cur;
+                let k = parse::node_kind(cc);
+                if k == 12 {
+                    let av = parse::node_a(cc);
+                    narrow av to 0 .. 95 else { check_bad = true; return false; }
+                    let q = check_stmt(av, fuel - 1);
+                    if !q { return false; }
+                    let bv = parse::node_b(cc);
+                    cur = bv;
+                    if cur == 255 { return true; }
+                }
+                else { check_bad = true; return false; }
+            }
+            else { check_bad = true; return false; }
+        }
     }
     check_bad = true;
     return false;
@@ -202,16 +235,27 @@ impl fn declare_params(p : u32 in 0 .. 255, fuel : u32 in 0 .. 128) -> bool
 {
     narrow fuel to 1 .. 128 else { check_bad = true; return false; }
     if p == 255 { return true; }
-    narrow p to 0 .. 95 else { check_bad = true; return false; }
-    let k = parse::node_kind(p);
-    if k == 19 {
-        let s = parse::node_a(p);
-        narrow s to 0 .. 159 else { check_bad = true; return false; }
-        let l = parse::node_b(p);
-        narrow l to 0 .. 159 else { check_bad = true; return false; }
-        sym_declare(s, l);
-        let n = parse::node_c(p);
-        return declare_params(n, fuel - 1);
+    let mut cur : u32 in 0 .. 255 = p;
+    traverse i over slots of parse::nodes by unvisited touches reads parse::nodes.slots, writes sym_used, writes syms.slots, writes check_bad {
+        if i == cur {
+            if cur == 255 { return true; }
+            if cur < 96 {
+                let cc : u32 in 0 .. 95 = cur;
+                let k = parse::node_kind(cc);
+                if k == 19 {
+                    let sv = parse::node_a(cc);
+                    narrow sv to 0 .. 159 else { check_bad = true; return false; }
+                    let lv = parse::node_b(cc);
+                    narrow lv to 0 .. 159 else { check_bad = true; return false; }
+                    sym_declare(sv, lv);
+                    let nv = parse::node_c(cc);
+                    cur = nv;
+                    if cur == 255 { return true; }
+                }
+                else { check_bad = true; return false; }
+            }
+            else { check_bad = true; return false; }
+        }
     }
     check_bad = true;
     return false;
@@ -247,18 +291,38 @@ impl fn check_stmt(ni : u32 in 0 .. 95, fuel : u32 in 0 .. 128) -> bool
         let e = parse::node_c(ni);
         if e == 255 { return true; }
         narrow e to 0 .. 95 else { check_bad = true; return false; }
-        let kc = parse::node_kind(e);
-        if kc == 10 {
-            sym_enter();
-            let u = check_stmt(e, fuel - 1);
-            sym_leave();
-            return u;
-        }
-        if kc == 12 {
-            sym_enter();
-            let v = check_seq(e, fuel - 1);
-            sym_leave();
-            return v;
+        let mut ce : u32 in 0 .. 255 = e;
+        traverse i over slots of parse::nodes by unvisited touches reads parse::nodes.slots, writes check_bad, writes bad_start, writes bad_len, writes sym_used, writes syms.slots, writes scopebase.slots, writes cur_depth, writes scope_top {
+            if i == ce {
+                if ce < 96 {
+                    let cc : u32 in 0 .. 95 = ce;
+                    let kc = parse::node_kind(cc);
+                    if kc == 10 {
+                        let ccd = parse::node_a(cc);
+                        narrow ccd to 0 .. 95 else { check_bad = true; return false; }
+                        let q2 = check_expr(ccd, fuel - 1);
+                        if !q2 { return false; }
+                        sym_enter();
+                        let th2 = parse::node_b(cc);
+                        let w2 = check_seq(th2, fuel - 1);
+                        sym_leave();
+                        if !w2 { return false; }
+                        let e2 = parse::node_c(cc);
+                        if e2 == 255 { return true; }
+                        ce = e2;
+                    }
+                    else {
+                        if kc == 12 {
+                            sym_enter();
+                            let v = check_seq(cc, fuel - 1);
+                            sym_leave();
+                            return v;
+                        }
+                        else { check_bad = true; return false; }
+                    }
+                }
+                else { check_bad = true; return false; }
+            }
         }
         check_bad = true;
         return false;
@@ -298,23 +362,33 @@ impl fn declare_fns(ui : u32 in 0 .. 255, fuel : u32 in 0 .. 128) -> bool
 {
     narrow fuel to 1 .. 128 else { check_bad = true; return false; }
     if ui == 255 { return true; }
-    narrow ui to 0 .. 95 else { check_bad = true; return false; }
-    let k = parse::node_kind(ui);
-    if k == 12 {
-        let a = parse::node_a(ui);
-        narrow a to 0 .. 95 else { check_bad = true; return false; }
-        let ka = parse::node_kind(a);
-        if ka == 13 {
-            let s = parse::node_a(a);
-            narrow s to 0 .. 159 else { check_bad = true; return false; }
-            let l = parse::node_b(a);
-            narrow l to 0 .. 159 else { check_bad = true; return false; }
-            sym_declare(s, l);
-            let b = parse::node_b(ui);
-            return declare_fns(b, fuel - 1);
+    let mut cur : u32 in 0 .. 255 = ui;
+    traverse i over slots of parse::nodes by unvisited touches reads parse::nodes.slots, writes sym_used, writes syms.slots, writes check_bad {
+        if i == cur {
+            if cur == 255 { return true; }
+            if cur < 96 {
+                let cc : u32 in 0 .. 95 = cur;
+                let k = parse::node_kind(cc);
+                if k == 12 {
+                    let av = parse::node_a(cc);
+                    narrow av to 0 .. 95 else { check_bad = true; return false; }
+                    let ka = parse::node_kind(av);
+                    if ka == 13 {
+                        let sv = parse::node_a(av);
+                        narrow sv to 0 .. 159 else { check_bad = true; return false; }
+                        let lv = parse::node_b(av);
+                        narrow lv to 0 .. 159 else { check_bad = true; return false; }
+                        sym_declare(sv, lv);
+                        let bv = parse::node_b(cc);
+                        cur = bv;
+                        if cur == 255 { return true; }
+                    }
+                    else { check_bad = true; return false; }
+                }
+                else { check_bad = true; return false; }
+            }
+            else { check_bad = true; return false; }
         }
-        check_bad = true;
-        return false;
     }
     check_bad = true;
     return false;
@@ -325,15 +399,26 @@ impl fn check_unit(ui : u32 in 0 .. 255, fuel : u32 in 0 .. 128) -> bool
 {
     narrow fuel to 1 .. 128 else { check_bad = true; return false; }
     if ui == 255 { return true; }
-    narrow ui to 0 .. 95 else { check_bad = true; return false; }
-    let k = parse::node_kind(ui);
-    if k == 12 {
-        let a = parse::node_a(ui);
-        narrow a to 0 .. 95 else { check_bad = true; return false; }
-        let q = check_stmt(a, fuel - 1);
-        if !q { return false; }
-        let b = parse::node_b(ui);
-        return check_unit(b, fuel - 1);
+    let mut cur : u32 in 0 .. 255 = ui;
+    traverse i over slots of parse::nodes by unvisited touches reads parse::nodes.slots, writes check_bad, writes bad_start, writes bad_len, writes sym_used, writes syms.slots, writes scopebase.slots, writes cur_depth, writes scope_top {
+        if i == cur {
+            if cur == 255 { return true; }
+            if cur < 96 {
+                let cc : u32 in 0 .. 95 = cur;
+                let k = parse::node_kind(cc);
+                if k == 12 {
+                    let av = parse::node_a(cc);
+                    narrow av to 0 .. 95 else { check_bad = true; return false; }
+                    let q = check_stmt(av, fuel - 1);
+                    if !q { return false; }
+                    let bv = parse::node_b(cc);
+                    cur = bv;
+                    if cur == 255 { return true; }
+                }
+                else { check_bad = true; return false; }
+            }
+            else { check_bad = true; return false; }
+        }
     }
     check_bad = true;
     return false;

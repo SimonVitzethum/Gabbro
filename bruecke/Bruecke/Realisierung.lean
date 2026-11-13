@@ -68,7 +68,7 @@ def postP (u : UProg) (gf : UFn) : Gabbro.Body.State → Gabbro.Body.State →
 theorem hyps_elim (wf : Gabbro.Body.State → Prop) (ρ : Gabbro.Body.Env) : ∀ (gs : List String) (C : Prop),
     (∀ g ∈ gs, ∃ gf, fnSuch u g = some gf ∧
       Gabbro.Body.Contract ρ g (preProp wf gf) (fun s s' r => (postU u wf gf s s' r).getD False) ∧
-      Gabbro.Body.Frame ρ g gf.puts) → hyps u wf ρ gs C → C
+      Gabbro.Body.Frame ρ g (writesU gf)) → hyps u wf ρ gs C → C
   | [], C, _, h => h
   | g :: gs, C, hg, h => by
       obtain ⟨gf, hgf, hc, hfr⟩ := hg g (List.mem_cons_self ..)

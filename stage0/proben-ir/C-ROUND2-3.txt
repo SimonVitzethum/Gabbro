@@ -1,0 +1,232 @@
+C ROUND-2/3 PROBE MATRIX (measured 2026-11-13)
+Compiler: prebuilt stage0 binary of 2026-11-13 (root checkout build,
+copied to .scratch-m/stage0); runner: stage0/.lake/ir/runner (copied to
+.scratch-m/runner). Every run inside
+`systemd-run --user --scope -q -p MemoryMax=4G -p MemoryHigh=3G
+-p MemorySwapMax=0`, one compiler run at a time, scratch only in
+.scratch-m/. No lake/lean builds.
+Each probe: one feature; `compile OK + code N` = compiles and the runner
+exits N (hand-computed beforehand, then verified); `refused` = stage0
+exits 1 and the message below is a substring of stderr. New probes
+committed as stage0/proben-ir/c{01,06,07,08,10,11,18,02,12,14,15,16}-*.
+One FAULT found (C08 requires on foreign calls, see C08).
+
+Conventions: [OK] compiles and correct, [D] refused as designed,
+[N] refused not-yet (refusing function with file:line, table only, NOT
+committed), [E] covered by an existing probe, [F] compiles but wrong.
+
+C01 -- records/products (catalogue ~1616; witnesses ~1858)
+form | result | evidence
+construct two-field record, read both fields (17+25) | [OK] | c01-construct, code 42
+record parameter, field projection (get(p)=30) | [OK] | c01-field-read, code 30
+nested record construction and projection (20+22) | [OK] | c01-nested, code 42
+record parameter, swap, record result (10+32) | [OK] | c01-param-result, code 42
+field replacement on a local record (40+20) | [OK] | c01-update, code 60
+record written/read whole in a table slot | [E] existing table-record-field | -
+constructor missing a field | [D] refused: source export: missing, duplicate or unknown record constructor field | c01-missing-field
+projection of an undeclared field | [D] refused: source export: unknown record field | c01-unknown-field
+constructor value outside its field range | [D] refused: value outside range | c01-wrong-range
+recursive-by-value schema | [D] refused: compile-time dependency cycle at type Node | c01-recursive
+record == comparison | [N] refused: aggregate as a number (UebersetzeAllg/Teil3Values.lean:176; no record-equality lowering, as round-1 c03-equality) | table only
+linear/owned record field | [N] refused: source export: cyclic, unsupported or unresolved by-value record schema (Parser/Elab/Uebersetze/Records/Records.lean:82; ownership is C09 work) | table only
+walk declaration and mappings | [N] refused at the item: source export: SItemTief.walkT ... (Parser/Elab/Uebersetze/Teil/Teil11.lean:197: walk requires a proved safe child binding, va scale and traversal correspondence) | table only
+Missing AT THE COMPILER (user order): (1) the ownership derivation for
+linear fields, guarded cell handoff and ghost fields (Records.lean:82
+gate); (2) record equality lowering (Teil3Values.lean:176); (3) walk
+mapping products with proved child binding/scale (Teil11.lean:197).
+
+C06 -- function-pointer contracts (catalogue ~1954; witnesses ~2056)
+form | result | evidence
+trivial indirect call | [E] existing fnptr-local | -
+trivial interface pre at pointer type (first(20)=21) | [OK] | c06-requires-ok, code 21
+branching callback through a pointer (21+32) | [E] existing fnptr-variable | -
+writes effect at a pointer type, returns 42 | [OK] | c06-effects-ok, code 42
+target with a stronger pre (param 0..50 vs 0..100) | [D] refused: function does not conform to the pointer type | c06-stronger-pre
+target without the interface post | [D] refused: same message | c06-ensures
+target with a weaker pre (param 0..200 vs 0..100) | [N] refused by the same exact-conformance gate (UebersetzeAllg/Teil3Values.lean:276); admissible under contravariant O43 refinement, not yet admitted | table only
+Missing AT THE COMPILER: interface caller duty with contravariant/
+covariant refinement (O43); the exact-match gate (Teil3Values.lean:276,
+lowering twin UebersetzeAllg3/Rest2a.lean:325) admits no weaker/stronger
+pair and no state-reading pre/old-post.
+
+C07 -- fallible indirect calls (catalogue ~1971; witnesses ~2057)
+form | result | evidence
+fallible indirect call, both exits (39+7) | [OK] | c07-indirect-else-ok, code 46
+indirect error matched on two cases (39+7+8) | [OK] | c07-indirect-match, code 54
+fallible indirect call without else | [D] refused: call of a function with a reason channel needs `let .. else` | c07-missing-else
+bare fallible indirect call, result discarded | [D] refused: same message | c07-bare-call
+falling-through indirect error block | [D] refused: lower: an else branch falls through | c07-fallthrough-else
+let-else on a channel-less pointer type | [D] refused: let else of a call without a reason channel | c07-no-channel
+Missing AT THE COMPILER: nothing blocking in this slice; open reason
+channels and unknown >64-bit reasons ride on C03.
+
+C08 -- extern/syscall contracts, effects, providers (catalogue ~1982; witnesses ~2058)
+form | result | evidence
+plain syscall (getpid) | [E] existing gate | -
+non-fallible extern with target binding, returns 42 | [OK] | c08-extern-ok, code 42
+extern with satisfied requires (ext(300)>=1), returns 42 | [OK] | c08-extern-requires-ok, code 42
+syscall with errors map, success path, returns 42 | [OK] | c08-syscall-errors-ok, code 42
+fallible extern bool via target | [E] existing foreign-bool-else | -
+extern gate variable without target binding | [D] refused: gate variable ext: no binding for x86_64 in the selected target (Stage0/Bindung.lean:55) | c08-no-binding
+fallible foreign call without else | [D] refused: call of a function with a reason channel needs `let .. else` | c08-fallible-noelse
+provider region answer (index into closed table) | [E] existing export-reference-provider-refused | -
+extern with violated requires (ext(0) vs x>=1; second witness ext(300) vs x<=8) | [F] FAULT: compiles, runner exits 42, no stop 101. Ordinary calls with violated requires stop 101 (c04-requires-false re-verified 101 with the same binaries). The requires check is silently dropped on extern/target calls. Minimal source: c08-req-false (kept in .scratch-m, NOT committed) | reported, table only
+Missing AT THE COMPILER: caller-side requires replay for foreign calls
+(C08 caller/resource rules); provider grant/region realization
+(foreign answer `index into` without G form, Teil/Teil12.lean:76).
+
+C09 -- owner mint, linear handoff, borrow/return (catalogue ~2145)
+form | result | evidence
+mint through a foreign minter | [N] refused: type unknown: Marke (mark has no resolved type at the owner-guarded access; call gate ownerReadyB, UebersetzeAllg/Teil2.lean:45, refuses nonempty flows) | table only
+move through a parameter | [N] same wall | table only
+double use of a moved mark | [N] same wall (second use unreachable behind the first) | table only
+borrow from an owner-guarded table | [N] same wall | table only
+mark with order (retire/advance shape) | [N] same wall | table only
+ghost mark as a value | [N] refused: name unknown: Marke | table only
+Missing AT THE COMPILER: everything (user order): (1) the nominal mark
+registry and source parameter/result flow (observed: type unknown: Marke);
+(2) the unique-mint/escrow machine with OwnerInvG; (3) borrow/return with
+identical-stage restoration. Nothing of C09 compiles.
+
+C10 -- shared locks, observes, RCU (catalogue ~2184)
+form | result | evidence
+nested exclusive locks in rank order, returns 42 | [OK] | c10-locks-ranked, code 42
+taking a lower rank under a higher one | [D] refused: lower: locks against a held lock of higher or equal rank | c10-rank-inversion
+locks shared L (read body) | [N] refused: shared lock without G form (Uebersetze/Teil/Teil10.lean:304, statement path; :254 second path) | table only
+store under locks shared L | [N] same wall | table only
+reader-held function called under locks shared L | [N] same wall | table only
+observes D block | [N] refused at the item: source export: SItemTief.rcuT ... (export gate, Export/ExportMetadata.lean:57-61) | table only
+rcu declaration | [E] existing rcu-model-boundary | -
+Missing AT THE COMPILER (user order): (1) mode-aware RW machine
+(reader/writer acquire, reader-visible invariants: Teil10.lean:304);
+(2) the RCU lifecycle (observation/retirement/grace/reclaim) behind the
+export gate; (3) rank/wait-cycle proofs for reader edges.
+
+C11 -- consuming traversal, no-else alloc, returns across locks (catalogue ~2235)
+form | result | evidence
+alloc without else under capacity (A[i]=10) | [OK] | c11-alloc-required, code 10
+alloc with else, success path | [OK] | c11-alloc-else, code 10
+return across two locks, value and reason | [E] existing c11-scoped-value-two-locks, c11-scoped-reason-two-locks (both green) | -
+consuming traversal over an empty domain, returns 0 | [OK] | c11-empty-consuming, code 0
+consuming traversal without decreases | [D] refused: consuming traversal requires decreases (Export/QuantifierWitnesses.lean:20; MetadataDomain.lean:24) | c11-consuming-decreases
+consuming traversal without exactly one child edge | [D] refused: consuming traversal requires exactly one declared child edge (Teil/Teil9.lean:70) | c11-consuming-edge
+consuming body not consuming its domain | [D] refused: consuming traversal touches must consume its domain (UebersetzeAllg3/Struct.lean:51) | c11-consuming-touches
+next inside a consuming traversal | [D] refused: consuming traversal forbids next (QuantifierWitnesses.lean:133) | c11-consuming-next
+nonempty consuming with an unsatisfiable measure | compiles, stops 104 (logik schleife, Stopp.lean:28) at runtime: the body performs no removal so the measure never falls. Correct stop for a duty-violating body, but no correct nonempty consuming path exists yet (no surface removal operation). Kept out of the corpus like round-1's stop-105 case. | table only
+Missing AT THE COMPILER: body-owned removal with current-state minimal
+selection and its decrease/removal/invariant duties (NutzerPflicht); the
+empty domain is the only complete consuming execution.
+
+C18 -- partial reset, page return (catalogue ~2262)
+form | result | evidence
+partial reset, kept byte readback (RING[100]=7) | [OK] | c18-reset-range, code 7
+empty reset at the end (no-op) | [OK] | c18-reset-zero, code 5
+reset of the first byte, survivor read (63->9) | [OK] | c18-reset-first, code 9
+reset, rewrite, reset, zero readback | [OK] | c18-reset-repeat, code 0
+reset range outside the static array | [D] refused: reset range outside its static array (UebersetzeAllg2/Teil4.lean:281) | c18-reset-outside
+reset of an arena (not a static array, N569) | [D] refused: static unknown: A | c18-reset-arena
+Missing AT THE COMPILER: the page-return service binding
+(PageReturnContract under C08) with backing-state/lifetime accounting;
+the zeroing store loop itself compiles and reads back correctly.
+
+C02 -- translators, library payloads, library calls (catalogue ~2419)
+form | result | evidence
+identity library call over integer rows | [N] refused at the export gate (declared costs lack a checked source-to-kostenPasst binding; SItemTief.transT without binding, Export/ExportMetadata.lean:57-61) before any translator check runs | table only
+library call resolving nowhere | [D] refused: C02: library function is unresolved (Parser/Stmt/LibrarySource.lean:57, the N057 rule) | c02-unresolved
+direct call of a library fn (no region, N061) | [N] same gate (the bypass check is unreachable) | table only
+translator without decreases (N203) | [N] same gate | table only
+translator with effects (N202) | [N] same gate | table only
+library fn without translator (N200) | [N] same gate | table only
+Missing AT THE COMPILER: everything (user order): lossless region
+retention, TranslationDecl/certificate/totality, payload/G expansion and
+LibraryAdmission (LibrarySource.lean:57 is only the unresolved-call guard).
+
+C12 -- spaces, rights, byte slices, entry handles (catalogue ~2452)
+form | result | evidence
+nominal space with lock/memory duties | [E] existing named-space-held | -
+unknown space | [E] existing named-space-unknown-refused | -
+store through a write-only pointer, returns 7 | [OK] | c12-writeonly-store, code 7
+read through a write-only pointer | [N] refused: place without G form (rights check unimplemented; the permanent rule is w-allows-stores-not-reads) | table only
+own right without a mark | [N] refused: pointer rights without checked data/owner form: own (Uebersetze/Teil/Teil3.lean:68) | table only
+entry handle parameter | [N] refused: entry handle requires C08/C14 binding and C09 forwarding flow (Teil/Teil3.lean:132; Proben/Capabilities.lean:128) | table only
+store through a read-only pointer | [D] refused: write through a read pointer | c12-readonly-write
+Missing AT THE COMPILER (user order): (1) the data-capability rights
+form for own/byte/entry (Teil3.lean:68); (2) live slices with grant
+generations and C08 history (entry twin: Teil3.lean:132); (3) the
+read-path rights check (observed: place without G form).
+
+C14 -- profiles, selection, placement, userspace entry (catalogue ~2505)
+form | result | evidence
+single consistent profile, returns 42 | [OK] | c14-profile-ok, code 42
+conflicting arch entries in one profile (N215) | [D] refused: ir: profile binding refused ... (Stage0/Profil.lean:153) | c14-profile-conflict
+two profile blocks (N219) | [D] refused: same message | c14-profile-double
+library requirements without a program profile (N217) | [D] refused: same message | c14-requires-profile
+profile referencing an undeclared assumption (N219) | [D] refused: same message | c14-unknown-assume
+unsupported fp_contract mode | [D] refused: same message | c14-fp-contract
+Missing AT THE COMPILER: static section/placement lowering and the
+userspace guest/entry binding (C12/C08 services); selection and
+consistency checks compile.
+
+C15 -- per-core accumulators (catalogue ~2540)
+form | result | evidence
+add/max/min/or/and writes | [N] refused: declared costs do not hold (no cost binding for the generated update; Export/CostBinding.lean:167) | table only
+accumulator with N=0 | [D] refused: accumulator with non-positive core count without G form (Uebersetze/Teil/Teil17.lean:28) | c15-no-cores
+accumulator read | [N] refused: ir: the function fehlerzahl#query uses a form outside the IR fragment (Stage0/Senke/Images/Bild.lean:144); with costs: the same cost wall | table only
+Missing AT THE COMPILER: everything (user order): (1) the generated
+N-cell store/lock/query expansion with neutral initialization
+(CostBinding.lean:167 wall on writes, Bild.lean:144 on reads);
+(2) core-identity/quiescence/reduction proofs.
+
+C16 -- declared checks (catalogue ~2572)
+form | result | evidence
+check with a true probe, returns 42 | [OK] | c16-probe-true, code 42
+check with a false probe (verdict data, still 42) | [OK] | c16-probe-false, code 42
+check with a floor, returns 42 | [OK] | c16-floor-ok, code 42
+check without a gates line | [D] refused at parse: wanted gates | c16-missing-gates
+forged Duty parameter (no producer) | [N] refused: type unknown: DutyB (linear ghost Duty has no value type yet; same wall as C09) | table only
+check with an external counterprobe | [N] refused at the export gate: check counterprobe duties lack a checked source binding (inner check exists: unbound counterprobe: sonde_basic, Pruefung/SondeCode.lean:26) | table only
+Missing AT THE COMPILER: Duty value flow with C09 marks, counterprobe
+binding to a C08/C14 test service (SondeCode.lean:26), and gate Duty
+transfer proofs; expansion of can_fail/floor/gates themselves compiles.
+
+Refusing functions that block the most forms (one per package):
+C01: Parser/Elab/Uebersetze/Records/Records.lean:82 (by-value schema gate;
+blocks all owned/ghost-field forms) and UebersetzeAllg/Teil3Values.lean:176
+(blocks record equality and every aggregate-as-number position).
+C06: UebersetzeAllg/Teil3Values.lean:276 (exact pointer conformance;
+blocks every contravariant/covariant pair until O43).
+C07: none blocking (all forms resolve; four designed refusals committed).
+C08: no refusing function (the requires check is missing, not refused);
+provider wall is Teil/Teil12.lean:76. The fault has no function: extern
+calls skip the requires pruefung that ordinary calls emit (stop 101).
+C09: UebersetzeAllg/Teil2.lean:45 (ownerReadyB refuses nonempty flows);
+observed elaboration wall "type unknown: Marke" (no mark registry).
+C10: Uebersetze/Teil/Teil10.lean:304 (shared lock without G form;
+blocks every shared/reader form).
+C11: no refusing function for correct nonempty consuming (no surface
+removal operation exists); nearest designed gates are
+Export/QuantifierWitnesses.lean:20 (decreases) and
+UebersetzeAllg3/Struct.lean:51 (touches-must-consume).
+C18: no refusing function (the store loop compiles; the page-return
+service binding is not surfaced yet).
+C02: Parser/Elab/Export/ExportMetadata.lean:57-61 (export gate;
+blocks every translator/payload/call form).
+C12: Uebersetze/Teil/Teil3.lean:68 (rights/data-form gate; blocks own
+and byte/entry capability forms).
+C14: none blocking (all forms resolve; five designed refusals committed).
+C15: Parser/Elab/Export/CostBinding.lean:167 (no cost binding for the
+generated update; blocks all five operator writes) and
+Stage0/Senke/Images/Bild.lean:144 (blocks reads).
+C16: Parser/Elab/Uebersetze/Pruefung/SondeCode.lean:26 (unbound
+counterprobe; blocks external-probe binding) plus the export gate for
+counterprobe duties.
+
+OVERALL: forms tested 92 / compile and correct 32 (25 new committed + 7
+covered by existing probes + 1 fault counted separately below) /
+refused as designed 28 (all committed) / refused not yet 31 (table
+only) / faults 1 (C08 extern requires dropped; minimal source
+.scratch-m/c08-req-false kept out of the corpus).
+Committed: 53 new probes (25 .code + 28 .error) + this table as
+stage0/proben-ir/C-ROUND2-3.txt. Corpus stays green: every committed
+probe re-verified from its committed path (compile rc + runner code or
+refusal rc=1 with the message as stderr substring).

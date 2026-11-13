@@ -1,0 +1,11 @@
+// C01: record parameter, swap, record result, 32+10=42.
+module c01_param_result {
+type Pair = { x : u32 in 0 .. 100, y : u32 in 0 .. 100, };
+impl fn swap(p : Pair) -> Pair effects { pure } {
+    return Pair(x: p.y, y: p.x);
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let r = swap(Pair(x: 10, y: 32));
+    return r.x + r.y;
+}
+}

@@ -35,12 +35,15 @@ theorem lauf_P_G {P : Programm (declOf u)} {fs : List (declOf u).Fn}
   obtain ⟨body, hbody, hmeets⟩ := hZ c hc
   let ρ₀ : Env (declOf u) (ctxOf u c) := cast (congrArg (Env (declOf u)) (ctxParams_eq u c).symm) ρ
   have hρ : HEq ρ ρ₀ := (cast_heq _ _).symm
-  have hW0 : WRel u σ (eintritt u c σ ρ).world := wrel_enc u σ _
+  have hW0 : WGRel u σ (eintritt u c σ ρ).world := wgrel_enc u σ _
   have hL : LRel (fnAt u c) 0 ρ (eintritt u c σ ρ).local' := eintritt_lrel c σ ρ
-  have hL0 : LRel (fnAt u c) 0 ρ₀ (eintritt u c σ ρ).local' := fun p j hj =>
-    (hL p j hj).trans (nthVal_heq (ctxParams_eq u c).symm ρ ρ₀ hρ _)
+  have hLP := PositionalLRel.start (S.namen c hc) hL
+  have hL0 : PositionalLRel (fnAt u c) (BodyNames.start (fnAt u c)).active 0 ρ₀
+      (eintritt u c σ ρ).local' :=
+    ⟨hLP.length, hLP.distinct, fun j id hj =>
+      (hLP.values j id hj).trans (nthVal_heq (ctxParams_eq u c).symm ρ ρ₀ hρ _)⟩
   have hlauf := lauf_G G S.toGetragen c hc O' passes R hRR (fnAt u c).ret ((fnAt u c).body.length + 1)
-    ((fnAt u c).body.length + 1) (fnAt u c).body (fnAt u c) (fnAt u c) b0 body (UmfangB.start c (S.art c hc) (S.namen c hc))
+    ((fnAt u c).body.length + 1) (fnAt u c).body (fnAt u c) (fnAt u c) (BodyNames.start (fnAt u c)) b0 body (UmfangB.start c (S.art c hc) (S.namen c hc))
     (Sicht.refl _) (fun _ hm => hm) (S.frisch c hc) hb0 hbody σ ρ₀ _ hW0 hL0
   have hX := execEnd_heq (V := verOf u c) O' passes R (ctxParams_eq u c).symm
     (anfangRes_eq u c).symm (P.rumpf c) b0 hPb σ ρ ρ₀ hρ
@@ -51,7 +54,7 @@ theorem lauf_P_G {P : Programm (declOf u)} {fs : List (declOf u).Fn}
   have hB := tabEnv_gut_teil hg ρP hP
   obtain ⟨s'', h1, h2, h3⟩ := hrun (tabEnv A ρP) (tabEnv_treu hk ρP)
     (fun n d hd hgf => (hB n d hd hgf).2)
-  have hwf : wfU u (eintritt u c σ ρ) := wf_of_wrel u S.boolTab hW0
+  have hwf : wfU u (eintritt u c σ ρ) := wf_of_wgrel u S.boolTab hW0
   have hpre := preExpr_wahr (fnAt u c) ρ (eintritt u c σ ρ).local' (eintritt u c σ ρ).world
     (S.namen c hc) (params_eq u c) hL
   have hm := hmeets (tabEnv A ρP) (eintritt u c σ ρ) hwf hpre

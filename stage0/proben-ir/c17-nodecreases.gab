@@ -1,0 +1,15 @@
+// C17: recursion without any decreases clause (same body as the decreases probe).
+module c17_nodecreases {
+impl fn down(n : u32 in 0 .. 10) -> u32 in 0 .. 11
+    effects { pure }
+{
+    if n == 0 { return 0; }
+    narrow n to 1 .. 10 else { return 0; }
+    let r = down(n - 1) + 1;
+    narrow r to 0 .. 11 else { return 0; }
+    return r;
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    return down(5);
+}
+}

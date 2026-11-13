@@ -1,0 +1,7 @@
+// C13 refusal: rotate amount must be below the width (8 on u8).
+module c13_rotlamount {
+impl fn rot(x : u8, n : u8 in 0 .. 8) -> u8 effects { pure } { return rotl(x, n); }
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    return rot(129, 8);
+}
+}

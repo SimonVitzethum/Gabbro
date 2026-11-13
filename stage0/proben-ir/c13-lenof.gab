@@ -1,0 +1,7 @@
+// C13: lenof of a fixed array: 4.
+module c13_lenof {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a : [u8; 4] = [1, 2, 3, 4];
+    return lenof(a);
+}
+}

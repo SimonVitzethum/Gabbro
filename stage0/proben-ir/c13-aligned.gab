@@ -1,0 +1,10 @@
+// C13: aligned predicate: 16 aligned to 8, 17 not.
+module c13_aligned {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    if aligned(16, 8) {
+        if aligned(17, 8) { return 7; }
+        return 42;
+    }
+    return 7;
+}
+}

@@ -1,0 +1,8 @@
+// C01: record construction with two ranged fields, 17+25=42.
+module c01_construct {
+type Pair = { x : u32 in 0 .. 100, y : u32 in 0 .. 100, };
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let r = Pair(x: 17, y: 25);
+    return r.x + r.y;
+}
+}

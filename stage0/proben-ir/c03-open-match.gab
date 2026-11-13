@@ -1,0 +1,17 @@
+// C03: match on a non-exhaustive (open) reason.
+module c03_open_match {
+reason Fault {
+    First = 1 "first reason"
+    Second = 2 "second reason"
+}
+impl fn main() -> u32 in 0 .. 255
+    effects { pure }
+{
+    let r = Fault::First;
+    match r {
+        First => { return 42; }
+        Second => { return 7; }
+    }
+    return 7;
+}
+}

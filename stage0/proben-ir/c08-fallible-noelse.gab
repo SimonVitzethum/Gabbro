@@ -1,0 +1,19 @@
+// C08: fallible foreign call without else is refused.
+module c08_pure_noelse {
+reason QueryError {
+    Empty = 9 "the provider has no answer"
+    exhaustive
+}
+assume query_contract "The selected provider realizes the declared query contract."
+    falsifier query_probe;
+extern fn ready() -> bool or QueryError effects { pure } costs <= 8 ops;
+target host abi linux arch x86_64 {
+    ready = number 39 regs in { } regs out { rax } clobbers { rcx, r11 } errors { EBADF => Empty } assume query_contract falsifier query_probe;
+}
+target host;
+impl fn main() -> u32 in 0 .. 100 effects { pure } {
+    let answer = ready();
+    if answer { return 42; }
+    return 7;
+}
+}

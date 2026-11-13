@@ -1,0 +1,15 @@
+// C04: two declarations sharing one edge with different requires clauses.
+module c04_shared_edge {
+table T count 2 { slot { s : u32 in 0 .. 2, v : u8, } }
+state S {
+    transition low { s : Idle -> Busy } requires T.slots[0].v == 1 effects { writes T.slots }
+    transition high { s : Idle -> Busy } requires T.slots[0].v == 2 effects { writes T.slots }
+}
+impl fn main() -> u32 in 0 .. 2
+    effects { reads T.slots, writes T.slots }
+{
+    T.slots[0].v = 1;
+    transition T.slots[1].s : Idle -> Busy;
+    return T.slots[1].s;
+}
+}

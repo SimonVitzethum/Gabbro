@@ -1,0 +1,8 @@
+// C13 probe: wrapping add on u8: 200 +% 100 = 44 (300 mod 256).
+module c13_addw8 {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a : u8 = 200;
+    let b : u8 = 100;
+    return a +% b;
+}
+}

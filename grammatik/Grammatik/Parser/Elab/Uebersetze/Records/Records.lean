@@ -4,7 +4,7 @@ public import Grammatik.Kern.Syntax.Typen.Produkt
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Item.ElementTief.Defs1
 public import Grammatik.Parser.Lex.Lexer
-public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil3
+public import Grammatik.Parser.Elab.Uebersetze.Kontext.LocalLookup
 public import Grammatik.Parser.Elab.Uebersetze.Records.Schema
 public import Grammatik.Parser.Elab.Uebersetze.Records.Embedding
 
@@ -63,8 +63,14 @@ def uTypePass (scope : UTypeScope) (alias : List (String × (Int × Int))) (tabs
         match fields.mapM (fun field => uRecordField scope alias tabs field eigner spaces) with
         | .error _ => pure (scope, deferred ++ [(identity, item)])
         | .ok resolved =>
-          let schema : URecord := { name, identity, fields := resolved, modifiers := flags }
-          pure ({ types := scope.types ++ [(name, schema.ty)], records := scope.records ++ [schema] }, deferred)
+          let schema : URecord :=
+            { name := name
+              identity := identity
+              fields := resolved
+              modifiers := flags }
+          pure (
+            { types := scope.types ++ [(name, schema.ty)]
+              records := scope.records ++ [schema] }, deferred)
       | _ =>
         match uTypIn alias tabs scope.types spaces eigner body with
         | .error _ => pure (scope, deferred ++ [(identity, item)])
@@ -262,7 +268,9 @@ def uRecordTabs (records : List URecord) (tabs : List UTab) : List UTab :=
     let hit := t.sumNamen.filterMap fun (f, a) =>
       (records.find? fun record => strEq record.name a).map fun record => (f, record.ty)
     if hit.isEmpty then t
-    else { t with werte := t.werte ++ hit,
-                  sumNamen := t.sumNamen.filter fun (_, a) => !records.any fun record => strEq record.name a }
+    else
+      { t with
+        werte := t.werte ++ hit
+        sumNamen := t.sumNamen.filter fun (_, a) => !records.any fun record => strEq record.name a }
 
 end Gabbro.Grammatik.Parser.Uebersetze

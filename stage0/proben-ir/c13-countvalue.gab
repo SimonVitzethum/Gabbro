@@ -1,0 +1,9 @@
+// C13 refusal: a count bound to a variable has no G form (counts live in comparisons).
+module c13_countvalue {
+table T count 4 { slot { v : u8, } }
+impl fn main() -> u32 in 0 .. 255 effects { reads T.slots, writes T.slots } {
+    T.slots[0].v = 1;
+    let n = count k in slots of T : T.slots[k].v == 1;
+    return n;
+}
+}

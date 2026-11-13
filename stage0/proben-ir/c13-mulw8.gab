@@ -1,0 +1,8 @@
+// C13: wrapping mul on u8: 200 *% 2 = 144 (400 mod 256).
+module c13_mulw8 {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a : u8 = 200;
+    let b : u8 = 2;
+    return a *% b;
+}
+}

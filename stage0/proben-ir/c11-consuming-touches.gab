@@ -1,0 +1,14 @@
+// C11: consuming traversal not consuming its domain is refused.
+module c11_tree3 {
+table t count 3 {
+    tree { child c }
+    slot { v : u32 in 0 .. 10, c : option index into t, }
+}
+impl fn main() -> u32 in 0 .. 255 effects { reads t.slots, writes t.slots } {
+    let mut acc : u32 in 0 .. 100 = 0;
+    traverse i over slots of t by consuming decreases 3 touches reads t.slots, writes t.slots {
+        acc = acc + t.slots[i].v;
+    }
+    return acc;
+}
+}

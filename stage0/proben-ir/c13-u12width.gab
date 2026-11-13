@@ -1,0 +1,7 @@
+// C13 refusal: u12 is no declared storage width (width is never read off the range).
+module c13_u12width {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a : u12 = 100;
+    return popcount(a);
+}
+}

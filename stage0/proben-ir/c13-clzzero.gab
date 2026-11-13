@@ -1,0 +1,7 @@
+// C13 refusal: clz(0) -- zero scan has no convention.
+module c13_clzzero {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a : u8 = 0;
+    return clz(a);
+}
+}

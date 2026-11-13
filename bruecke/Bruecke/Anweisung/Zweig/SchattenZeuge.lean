@@ -40,7 +40,7 @@ import all Init.Data.String.ToSlice
 
 The whole function binds `x = 1`, shadows it with `x = 0` in the taken branch and
 returns the outer `x`. The positional relation retains both entries while the branch
-runs. This witnesses the new reader and relation, not yet the carried-chain premises.
+runs. The final carried-chain premises are witnessed in `Kette/SchattenZeuge.lean`.
 -/
 
 namespace Gabbro.Bruecke.SchattenZeuge
@@ -66,7 +66,7 @@ def body : List Gabbro.Body.Stmt :=
 
 /-- The source scope and the positional reader agree on the enclosing scope after the branch. -/
 theorem translation_zeuge :
-    namedBody unit (routine.body.length + 1) routine (BodyNames.start routine)
+    stmtsBodyZ unit (routine.body.length + 1) routine (BodyNames.start routine)
       routine.body routine.ret = some body := by
   kernel_rfl
 
@@ -117,7 +117,7 @@ theorem relation_zeuge (β : Gabbro.Body.Binding) :
 /-- Translation, execution and the nonvacuous positional relation hold on the same fixture. -/
 theorem shadowing_zeuge (ρB : Gabbro.Body.Env) (s : Gabbro.Body.State) :
     (lowerAllg unit).toOption.isSome = true ∧
-      namedBody unit (routine.body.length + 1) routine (BodyNames.start routine)
+      stmtsBodyZ unit (routine.body.length + 1) routine (BodyNames.start routine)
         routine.body routine.ret = some body ∧
       meetsU unit (wfU unit) routine body ∧
       Gabbro.Body.exec ρB body s = .returned (after s) (some (.int 1)) ∧

@@ -1,0 +1,6 @@
+// C17 refusal: a const fn calling an undeclared function.
+module c17_constunknown {
+const fn wrap(x : u8) -> u8 effects { pure } { return nosuchfn(x); }
+const ANSWER : u8 = wrap(8);
+impl fn main() -> u8 effects { pure } { return ANSWER; }
+}

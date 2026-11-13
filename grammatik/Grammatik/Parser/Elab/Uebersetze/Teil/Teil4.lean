@@ -6,7 +6,7 @@ public import Grammatik.Parser.Elab.Export.ExportMetadata
 import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
-public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil3
+public import Grammatik.Parser.Elab.Uebersetze.Kontext.LocalLookup
 public import Grammatik.Parser.Elab.Uebersetze.Eingebaut
 public import Grammatik.Parser.Elab.Uebersetze.Records.Records
 public import Grammatik.Parser.Elab.Uebersetze.Teil4Index

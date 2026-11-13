@@ -123,6 +123,7 @@ Grouped by stream. IDs are used in §5–§7. Estimates: LOC / full grammatik bu
 | S7 | the lock's wait strategy as a profile binding (D17): spin for freestanding images, futex for Linux, one ticket order | 300–1 000 / 0 / 3–6 |
 | S8 | `async fn`, `.await`, `join` and a Tokio-style executor library written in Gabbro (design A of PLAN-LONG-RANGE §2: a verified transformation into a state record and a `poll` function built from existing forms; machine G and `Spec.lean` untouched). (a) bring the model of 2026-11-03 (branches `async-model`/`merge-async`, about 2 800 lines, never built, written before the module migration) onto the current tree as modules; (b) close its open wall: the representation invariant between the semantic frames and the generated records, full poll simulation, resource transfer on Ready and cancel (`ReificationDuty` has no complete G instance); (c) control flow, mutable locals and nested awaits across a suspension, awaiting a stored future, fallible and generic async bodies; (d) parser round trip, elaborator and Stage-0 lowering (async is lowered before `Akzeptiert`, so the bridge and the image theorem see only existing forms); (e) the executor library: ownership-taking `spawn`, `block_on`, task queue and wakers over atomics, timers and I/O readiness as bindings of the program (nothing OS-specific), several worker threads. Rules the checker enforces at every `.await`: no lock held, owned marks move into the saved record exactly once, bounded cost per poll. Progress, fairness and waiting bounds stay NOT CLAIMED | 8 000–20 000 / 4–8 / 20–40 |
 | P0 | **The speed criterion of Stage 0 (owner, 2026-11-13): Stage 0 may be slow.** The measure is one run: the compiler written in Gabbro (at least 500 000 lines), compiled by Stage 0 and executed by the runner on its own source, translates itself in under ONE HOUR. Both tools are formally verified, also against the goal theorem (Stage 0: the image theorem R3; the runner: `runner_tso` as the lowest piece of that theorem). Two numbers are to be measured as soon as sources of that size exist, and estimated before from generated sources: Stage 0's compile time and memory on the compiler's source, and the runner's execution time of the resulting image on the same source. No tuning of Stage 0 beyond this criterion | measurement; no Lean |
+| P0 state | 2026-11-13, measured: multi-module name resolution indexed (8×1000 functions 149 s → 3.1 s); elaborator heads and scopes indexed (16 000 chained functions 47 → 36 s, 16 000 plain 13.0 → 9.5 s, byte-identical images). Open: long bodies (5 000 call statements 85 s: lowering, checker and prepare carry the term, a fix is under check); `retry` is lowered by UNROLLING its body per bound unit (bound 640: 23 s, 2 560: > 500 s, 41 KB image per pass) — must be lowered once with a counter (pure lowering, no model change); call depth: the Gabbro front end now iterates with `traverse` and runs on ≥ 19 840 bytes of input (was 1 240), the next limit is frame width (stop 105). | — |
 | P1 | **Value semantics of aggregates and strings (owner, 2026-11-13: on the plan).** Records, arrays, strings and tagged values with payloads are values; without a rule a compiler copies at assignment, parameter passing, return and slot access, where C passes a pointer. To settle IN THE MODEL before the compiler is designed: when a copy may be elided or an aggregate passed by reference (if nothing aliases, by-reference passing of an immutable value is unobservable: state and prove that as a theorem of machine G so that the compiler may rely on it without analysis), and whether the language needs a move form | model theorem 500–2 000; a language form only if the theorem does not suffice (owner) |
 | P2 | **The lock under contention (owner, 2026-11-13: on the plan).** The emitted FIFO ticket lock with wake-all is fair and provable but convoy-prone, and each handover wakes every waiter. Wake-one is INCORRECT for the emitted code (the kernel wakes an arbitrary waiter, a waiter that is not next sleeps again and nobody wakes the next ticket): it needs a re-wake chain, i.e. new code and a new proof. To settle with S7 (the wait strategy as a profile binding): spin-then-wait, a re-wake chain, or per-ticket wait words; each variant only with its proof under the same ticket order | design; 500–2 000 per variant |
 | P3 | **Forms whose absence costs speed (owner, 2026-11-13: on the plan):** `while` (O18: today recursion with a fuel parameter) and slices/views without a copy (O6: today a substring or sub-array is a copy). Both are language decisions with a model part; with the low-level plan's bounded views a slice may be the same form | see O6, O18 |
@@ -165,8 +166,12 @@ Grouped by stream. IDs are used in §5–§7. Estimates: LOC / full grammatik bu
 
 ### L — the low-level model (R4; LOW-LEVEL-SYNTAX-PLAN revised by D12–D14)
 
-Lean model, parser/exporter and checker only; never Stage 0 or the runner. Starts after the C packages and their
-userspace integration are green (owner 2026-11-03). No `unsafe` anywhere; no instruction text anywhere; boot code
+**State 2026-11-13 (built, as LAYERS beside machine G, not yet connected to it):** L1 addresses, context ledger, `ram_view`, boot hand-over (`Niedrig/Authority`, `Niedrig/Boot`); first parts of L2 (register contracts), L3 (byte capabilities with initialisation), L4 (neutral architectural state), L5 (entry frame descriptors with refusals), L6 (translation regime: walk, map, unmap, protect, aliases), L7 (per-core masks, priority nesting). None of these rows is complete: owed for each is the simulation by machine-G steps, the `Akzeptiert` checks and the no-bypass theorem (a review's R1–R3), then parser/exporter.
+
+Lean model, parser/exporter and checker only; never Stage 0, the runner or GabbroV. Runs IN PARALLEL with the C
+packages (owner, 2026-11-13: "Low level ins Model, kann parallel gebaut werden, soll aber nicht in Stage 0 und
+GabbroV"; this replaces the order of 2026-11-03 that it starts after them). The low-level forms are part of "all
+syntax in the model" and therefore of the compiler's start condition; Stage 0 and the bridge keep refusing them. No `unsafe` anywhere; no instruction text anywhere; boot code
 is user code. The designs behind the items are in §4.
 
 | ID | Item | Estimate |
@@ -449,11 +454,43 @@ model today, so their ranges are the least certain of the table.
 | O15 | interrupts with re-entry and nesting (L7) and user-mode guests (L8) are in scope, as the kernel needs them | yes |
 | O16 | a second binding (K6, AArch64) as the measure of architecture neutrality, before the kernel gate is called reached | yes |
 | O17 | further cores on x86-64 through a generated start item of the binding (K4), accepted as the one place where 16-bit and 32-bit rows exist | yes; the alternative is a single-core kernel |
-| O18 | a `while` loop (S0m: the form a compiler writer reaches for first; today recursion with a measure or `retry until … bounded` stand in) | decide: sugar over an existing loop with a user measure, or stay without |
+| O18 | a bounded loop over mutable locals (S0m and the front-end rewrite of 2026-11-13: 36 sweeps as `traverse` cost +44 % lines; `retry` is unrolled by Stage 0) | recommend: `while c bounded N ops on_exceeded h { body }` as a new model statement with `retry`'s safety (static bound, named overrun block, no new stop kind, cost clause and WP rule of `retry`, no `progress` duty); `for i in lo ..< hi` later as sugar over it; no `decreases`-bounded loop (the cost model is static). Independently, Stage 0 lowers `retry` once with a counter (P0, a pure lowering) |
 | O19 | named effect groups: a module declares a name for a set of its places, and other modules write `effects b::group` instead of each table (S0m: cross-module writes need every slot table of the other module in the effect clause; the qualified place `b::T.slots` is a parser case and is done without a decision) | decide: a language addition with a model rule (the group unfolds to its places before `Akzeptiert`), or stay with the listed places |
 | O20 | copy elision and by-reference passing of aggregates (P1): a theorem of the model (unobservable, so always allowed), or additionally a move form in the language | recommend: the theorem first; a move form only if a measured case needs it |
 | O21 | the lock's behaviour under contention (P2): keep wake-all; or a re-wake chain; or spin-then-wait per profile | recommend: keep wake-all until a contended workload is measured; wake-one alone is incorrect |
 | O22 | a future that is neither awaited nor cancelled (S8; was part of O10) | recommend: a future is linear — it is awaited, handed over (`spawn`, `join`) or cancelled explicitly; cancellation runs the destructor of the saved state under the user's contract; dropping it silently is refused (no implicit drop, no leaked lock or mark) |
+
+### 8.1 Decided 2026-11-13 by the lead on the owner's delegation
+
+Owner, 2026-11-13: "entscheide so, dass der Zielsatz maximal ist, ebenso Einfachheit der Sprache und Performance,
+und ein Kernel sowie Treiber müssen in reinem Gabbro schreibbar sein." The open items above are decided as follows;
+every change of `Spec.lean`'s meaning is still described in its commit and reported to the owner when merged.
+
+| Item | Decision |
+|---|---|
+| C05 invariant cost | The return phase (`ensures` and every owed invariant predicate) is counted in the cost account that `ZeitAb` bounds (strengthening). The invariant's own `cost O(…)`, `runs` and `by` clauses are REMOVED from the language: the writer's declared `costs` must cover the epilogue (less ceremony, one cost figure). |
+| C03 open reasons | Descriptors (`Option ReasonSpec`) in stage B already; invariants are owed for every admitted reason including unknown open codes (strengthening). A closed EMPTY reason set is refused at its declaration: "no channel" is said only by omitting `or R`. |
+| O18 loops | `while c bounded N ops on_exceeded h { … }` as a model statement with `retry`'s safety and cost rule and no `progress` duty; `for i in lo ..< hi` as sugar over it; Stage 0 lowers `retry` and `while` once with a counter. Guard facts survive inside a loop and across assignments of OTHER locals (flow-sensitive narrowing, a typing-rule task). |
+| O6 substring and slices | `s[a .. b]` on strings and `a[i .. j]` on arrays as VALUES (value semantics, simple); the compiler represents them as views (zero copy), justified by the unobservability theorem of O20. |
+| Tuples | Elaborated to generated records, with `let (a, b) = …` destructuring. |
+| O19 effect groups | Yes: a group unfolds to its places before `Akzeptiert`. |
+| Field narrowing | Snapshot sugar (read, narrow, bind locally). |
+| O20 aggregates | A model theorem that by-reference passing and in-place update are unobservable; no move form. |
+| Bit operations | `sar` and dynamic shifts whose amount is statically below the width are added (kernels and drivers need them). |
+| Function pointers | Contracts at pointer types (O43) with the conformance rule; callbacks of drivers need them. |
+| Hints | No inline, branch or prefetch hints in the language (simplicity); the compiler decides, profile-guided later. |
+| Names `f32`/`f64` as functions | Refused with a named message. |
+| Async (S8) | Futures are linear (awaited, handed over or cancelled; silent drop refused); `select` cancels the losers before it returns; no async in interfaces and no recursive `async fn` in the first version; `spawn` takes a future that owns all its regions; at every `.await`: no lock held, owned marks move into the saved state exactly once, no reference across it except into a region with a contract, no async in an interrupt handler, the error path is mandatory. |
+| C08 foreign calls | The call-site duty (`requires` proved at every call of a software item) joins premise (b); the software `ensures` holds where the pre held (repairs today's unsound unconditional reliance). No extra run-time check (the duty makes it dead code). |
+| Low level, start gate | Syntax, rules AND the connection of the low-level layer to machine G (R1 realisation, R2 simulation and `Akzeptiert` checks, R3 no-bypass) are part of the compiler's start condition, so that kernel and drivers in pure Gabbro stand under the goal theorem; per-binding hardware proofs may continue beside the compiler. |
+| Hardware assumptions | `Mmu` (translation by the installed tables) and `IrqDelivery` (delivery at an instruction boundary under the kernel's mask and priority) as separate named hardware assumptions. |
+| Entry masking | Whether an entry masks interrupts is a property of the `entry` declaration. |
+| O3, O4, O5, O7, O2 | As recommended in the table above (lift `RegLokal`; batched `Spec` diffs; named stop for stack depth; record fields start at zero; foreign software as user obligation). |
+| O21 locks | Wake-all stays; a queue lock (MCS-style) per lock class is a measured performance item later. |
+| Spec assumption (3) | Narrowed: the ordering part is proved for images whose lock operations are all emitted, once the cross-thread lock theorem is built. |
+| C17 generics | Explicit kinded template syntax; existing payload lists are not reinterpreted. |
+| O9, O10 | Later. |
+
 
 O12–O17 were put to the owner on 2026-11-12 with this plan and answered "passt alles": they are confirmed. AGENTS.md
 and LOW-LEVEL-SYNTAX-PLAN.md are corrected to them in the Phase-0 documentation pass (D12–D14).

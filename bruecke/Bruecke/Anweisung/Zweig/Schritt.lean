@@ -1,5 +1,7 @@
 module
 public import Bruecke.Anweisung.Zweig.Strecke
+public import Bruecke.Anweisung.Zweig.Lesen
+public import Bruecke.Anweisung.Lokal.Werte
 @[expose] public section
 
 /-!
@@ -20,15 +22,15 @@ variable {u : UProg}
 
 /-- **`return [v];` inside a block** (`lowRetStmt` without crossed scopes): the G statement returns
     the value the Body `ret` returns, the world kept. -/
-theorem lowRet_sim (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
+theorem lowRet_sim (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames} {Λ : List (Res (declOf u))}
     {r : URet} {st : Stmt (declOf u) (verOf u c) false Γ Λ Λ} {bst : Gabbro.Body.Stmt}
-    (h : lowRetStmt (l := false) u c Γ fn Λ [] r = .ok st) (hb : retZ u fn r = some bst)
-    (hU : UmfangB Γ fn) (hT : TabEindeutig u)
+    (h : lowRetStmt (l := false) u c Γ fn Λ [] r = .ok st) (hb : retZ u fn ns r = some bst)
+    (hU : UmfangB Γ fn ns) (hT : TabEindeutig u)
     (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
     (σ : World (declOf u)) (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State)
-    (hW : WRel u σ s.world) (hL : LRel fn 0 ρ s.local') :
-    ∃ σ' v, execStmt O passes R st σ ρ = .zurueck σ' v ∧ σ'.slots = σ.slots ∧
+    (hW : WGRel u σ s.world) (hL : PositionalLRel fn ns.active 0 ρ s.local') :
+    ∃ σ' v, execStmt O passes R st σ ρ = .zurueck σ' v ∧ WGRel u σ' s.world ∧
       ∀ ρB : Gabbro.Body.Env,
         Gabbro.Body.step ρB bst s = .returned s (ergValOf (verOf u c).erg v) := by
   have hA := hU.art
@@ -43,7 +45,7 @@ theorem lowRet_sim (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {Λ : List (Res 
       simp only [hE, Except.bind] at h
       split at h
       · cases h
-        refine ⟨_, _, rfl, rfl, fun ρB => ?_⟩
+        refine ⟨_, _, rfl, wgrel_same u rfl rfl hW, fun ρB => ?_⟩
         simp only [lowErg] at hE
         split at hE
         · rename_i hErg
@@ -58,7 +60,7 @@ theorem lowRet_sim (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {Λ : List (Res 
       · cases h
   case val sd =>
     simp only [retZ] at hb
-    cases hs : sideExpr u fn sd with
+    cases hs : namedSide u fn ns sd with
     | none => rw [hs] at hb; cases hb
     | some e =>
       rw [hs] at hb
@@ -78,14 +80,14 @@ theorem lowRet_sim (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {Λ : List (Res 
             · cases hE
             · rename_i ve hve
               cases hE
-              refine ⟨_, _, rfl, rfl, fun ρB => ?_⟩
+              refine ⟨_, _, rfl, wgrel_same u rfl rfl hW, fun ρB => ?_⟩
               obtain ⟨sw, sl⟩ := s
               have herg : (verOf u c).erg = some (.int lo hi) := by
                 show (vertragVon (declOf u) c).erg = _
                 rw [vErg_eq u c, hErg]
               generalize hσl : σ.lese _ _ = σl
-              have hWl : WRel u σl sw := by rw [← hσl]; exact wrel_slots u rfl hW
-              have hv := lowWertAt_sim hve hs hA hT σl σl ρ sw sl hWl hL
+              have hWl : WGRel u σl sw := by rw [← hσl]; exact wgrel_same u rfl rfl hW
+              have hv := lowWertAt_named_sim hve hs hA hT σl σl ρ ⟨sw, sl⟩ hWl hL
               rw [ergValOf_heq herg _ (evalErg σl (ErgExpr.val (D := declOf u) ve) σl ρ)
                 (evalErg_heq herg _ _ (mpr3_heq _ _ _ _) _ _ _)]
               simp only [Gabbro.Body.step, hv]

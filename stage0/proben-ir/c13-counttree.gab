@@ -1,0 +1,14 @@
+// C13: bounded count over a tree domain: descendants of slot 0 holding 1 are slots 1, 2.
+module c13_counttree {
+table T count 3 { tree { child next } slot { next : option index into Self, v : u8, } }
+impl fn main() -> u32 in 0 .. 255 effects { reads T.slots, writes T.slots } {
+    T.slots[0].next = Some(1);
+    T.slots[1].next = Some(2);
+    T.slots[2].next = None;
+    T.slots[0].v = 5;
+    T.slots[1].v = 1;
+    T.slots[2].v = 1;
+    if (count k in descendants of T.slots[0] : T.slots[k].v == 1) == 2 { return 42; }
+    return 7;
+}
+}

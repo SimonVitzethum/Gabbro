@@ -1,6 +1,7 @@
 module
 public import Bruecke.Anweisung.Lokal.SimulationB
 public import Bruecke.Quelle
+public import Bruecke.Anweisung.Zweig.Benannt
 import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -41,7 +42,7 @@ import all Init.Data.String.ToSlice
 `step(p : 0..10) -> 0..20 { let a = p + 1; let mut b : 0..20 = a; b = a + 1; T[0].v = b;
 return b; }` -- as the elaborated unit (a lowered-unit witness, not a measured source-parser
 acceptance claim). The lowering accepts it, the decided per-unit checks hold (freshness of `a`
-and `b` included), `zuBody` refuses it (it has binders), `zuBodyB` gives the expected Body
+and `b` included), `zuBody` refuses it (it has binders), `zuBodyZ` gives the expected Body
 program, and its duty `meetsU` is proved: the local-binding premises of the consolidated chain hold
 together on a body that binds, rebinds and reads its locals.
 
@@ -83,7 +84,7 @@ def koerper : List Gabbro.Body.Stmt :=
 /-! ## 1. The translation and the decided checks -/
 
 /-- The translation threads the scope: every local reads as a Body name. -/
-theorem zuBodyB_zeuge : zuBodyB unit routine = some koerper := by kernel_rfl
+theorem zuBodyZ_zeuge : zuBodyZ unit routine = some koerper := by kernel_rfl
 
 /-- The old translation refuses the body: it binds. -/
 theorem zuBody_zeuge : zuBody unit routine = none := by kernel_rfl
@@ -120,7 +121,7 @@ theorem post_eq (s s' : Gabbro.Body.State) (r : Option Gabbro.Body.Value) :
     (postU unit (wfU unit) routine s s' r).getD False =
       (wfU unit s' ∧ ∃ x, r = some (.int x) ∧ (0 : Int) ≤ x ∧ x ≤ 20) := rfl
 
-theorem shape_eq : shapeOfU unit (.slot "T" 0 "v") = some (.intIn 0 20) := by kernel_rfl
+theorem shape_eq : shapeOfUG unit (.slot "T" 0 "v") = some (.intIn 0 20) := by kernel_rfl
 
 /-- **The duty of `step`, proved**: from `p ∈ 0..10` the body binds `a = p + 1`, `b = a`, rebinds
     `b = a + 1`, writes `T[0].v = b` and returns `b = p + 2 ∈ 0..20`; the world stays typed. -/
@@ -169,7 +170,7 @@ theorem routine_meets : meetsU unit (wfU unit) routine koerper := by
     refine ⟨_, rfl, ?_⟩
     rw [post_eq]
     refine ⟨?_, n + 1 + 1, rfl, by omega, by omega⟩
-    show Gabbro.Body.WF (shapeOfU unit)
+    show Gabbro.Body.WF (shapeOfUG unit)
       (Gabbro.Body.store s.world (.slot "T" 0 "v") (.int (n + 1 + 1)))
     apply Gabbro.Body.WF_store _ _ _ _ hW
     intro sh hsh

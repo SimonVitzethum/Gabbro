@@ -1,0 +1,12 @@
+// C03: a tagged type with a bool payload, matched.
+module c03_tagged_bool {
+tagged type Switch = { Off, On(bool) };
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let s = On(true);
+    match s {
+        Off => { return 7; }
+        On(b) => { if b { return 42; } return 7; }
+    }
+    return 7;
+}
+}

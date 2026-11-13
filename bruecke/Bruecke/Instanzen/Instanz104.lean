@@ -1,4 +1,5 @@
 module
+import Grammatik.Kern.Taktik.KernelRfl
 public import Bruecke.Pflichten
 public import Bruecke.Pruefung
 public import Grammatik.Korpus.Programme.Einheit104
@@ -6,6 +7,37 @@ public import Bruecke.Start
 public import Bruecke.Quelle
 public import Bruecke.Kette.Quelle
 public import Duty.Duty0104Referenz
+import all Init.Data.String.Length
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.Repr
+import all Init.Data.String.Decode
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 @[expose] public section
 
 
@@ -32,15 +64,15 @@ theorem verankert : ∃ P fs, Gabbro.Grammatik.uebersetzeAllg Gabbro.Grammatik.P
 def ein : UFn := u.fns[0]'(by decide)
 def lies : UFn := u.fns[1]'(by decide)
 
-theorem shape_eq : shapeOf = shapeOfU u := by
+theorem shape_eq : shapeOf = shapeOfUG u := by
   funext p
   rcases p with ⟨c, i, f⟩ | ⟨c, n⟩ | n
   · by_cases hc : c = "Konto" <;> by_cases hf : f = "stand" <;>
-      simp [shapeOf, shapeOfU, slotShape, u, uExp104, hc, hf, @eq_comm _ "stand"]
-  · simp [shapeOf, shapeOfU]
-  · simp [shapeOf, shapeOfU]
+      simp [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, slotShape, u, uExp104, hc, hf, @eq_comm _ "stand"]
+  · simp only [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, uExp104]
+  · simp only [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, uExp104]
 
-theorem wf_eq : wellFormed = fun s => WF (shapeOfU u) s.world := by
+theorem wf_eq : wellFormed = fun s => WF (shapeOfUG u) s.world := by
   funext s; unfold wellFormed; rw [shape_eq]
 
 
@@ -75,13 +107,13 @@ theorem start : Gabbro.Grammatik.Zielsatz.StartPflicht Gabbro.Grammatik.Einheit1
 theorem wfU_eq : wfU u = wellFormed := by rw [wf_eq]; rfl
 
 /-- Every duty of the unit, as the bridge states it: GabbroV's proofs. -/
-theorem meets_alle : ∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = some body ∧
+theorem meets_alle : ∀ c : Fin u.fns.length, ∃ body, zuBodyZ u (fnAt u c) = some body ∧
     meetsU u (wfU u) (fnAt u c) body := by
   intro c
   rw [wfU_eq]
   match c with
-  | ⟨0, _⟩ => exact ⟨einzahlen_body, rfl, einzahlen_meets⟩
-  | ⟨1, _⟩ => exact ⟨lies_body, rfl, lies_meets⟩
+  | ⟨0, _⟩ => exact ⟨einzahlen_body, (by kernel_rfl), einzahlen_meets⟩
+  | ⟨1, _⟩ => exact ⟨lies_body, (by kernel_rfl), lies_meets⟩
 
 /-! GENERIC-WITNESS beispiele/0104-referenz.gab pflichten_104
 
@@ -95,7 +127,7 @@ theorem pflichten_104 (hPtr : SchnittstellenPflicht u) :
   ⟨u, uOf_eq Gabbro.Grammatik.Einheit104.uebersetzt4, by decide, by decide, by decide, by decide,
     by decide, hPtr, fun c => by
       obtain ⟨body, hb, hm⟩ := meets_alle c
-      exact ⟨body, zuBodyZ_of_zuBodyB (zuBodyB_of_zuBody hb), hm⟩⟩
+      exact ⟨body, hb, hm⟩⟩
 
 /-- Premise (b) for the unit the GENERIC construction builds from the text. -/
 theorem nutzer_generisch (hPtr : SchnittstellenPflicht u) : ∃ hn : nullB u = true,

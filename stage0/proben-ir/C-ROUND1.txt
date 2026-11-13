@@ -1,0 +1,146 @@
+C ROUND-1 PROBE MATRIX (measured 2026-11-13)
+Compiler: stage0 binary of 2026-11-13 (root checkout build); runner: stage0/.lake/ir/runner.
+Each probe: one feature; `compile OK + code N` = compiles and the runner exits N
+(hand-computed beforehand); `refused` = stage0 exits 1 and the message below is
+a substring of stderr. New probes committed as stage0/proben-ir/c{13,17,05,04,03}-*.
+No fault (compiles but wrong result) was found in the whole matrix.
+
+Conventions: [OK] compiles and correct, [D] refused as designed, [N] refused
+not-yet (the refusing function with file:line), [E] covered by an existing probe.
+
+C13 -- integer builtins, bounded count, sizeof, aligned
+form | result | evidence
++% u8 (200 +% 100 = 44) | [OK] | c13-addw8, code 44
++% u16 (65530 +% 10 = 4) | [OK] | c13-addw16, code 42
+-% u8 (10 -% 20 = 246) | [OK] | c13-subw8, code 246
+-% u16 (5 -% 10 = 65531) | [OK] | c13-subw16, code 42
+*% u8 (200 *% 2 = 144) | [OK] | c13-mulw8, code 144
+*% u16 (700 *% 700 = 31248) | [OK] | c13-mulw16, code 42
+<<% u8 (3 <<% 7 = 128) | [OK] | c13-shlw8, code 42
+<<% u16 (3 <<% 15 = 32768) | [OK] | c13-shlw16, code 42
++| u8 (200 +| 100 = 255, shared-range params) | [OK] | c13-sat8, code 42
++| signed non-power-of-two range (-80 +| -50 = -100) | [OK] | c13-satneg, code 42
+clz u8 (clz(1) = 7) | [OK] | c13-clz8, code 7
+clz u16 (clz(256) = 7) | [OK] | c13-clz16, code 7
+ctz u8 (ctz(12) = 2) | [OK] | c13-ctz8, code 2
+ctz u16 (ctz(4096) = 12) | [OK] | c13-ctz16, code 12
+log2_floor u8 (log2_floor(100) = 6) | [OK] | c13-log28, code 6
+popcount u8 (popcount(180) = 4) | [OK] | c13-popcount8, code 4
+popcount u16 (popcount(65535) = 16) | [OK] | c13-popcount16, code 16
+rotl u8 via full-range param (rotl(129,1) = 3) | [OK] | c13-rotl8, code 3
+rotr u16 via full-range param (rotr(1,1) = 32768) | [OK] | c13-rotr16, code 42
+bswap u16 (bswap(0x1234) = 13330) | [OK] | c13-bswap16, code 42
+bswap u32 (bswap(1) = 16777216) | [OK] | c13-bswap32, code 42
+count over slots in a comparison (2 of 4) | [OK] | c13-countslots, code 42
+count over descendants in a comparison (slots 1,2 of 0) | [OK] | c13-counttree, code 42
+sizeof of a place (u32 param = 4, u8 field = 1) | [OK] | c13-sizeofplace, code 5
+lenof of a fixed array (4) | [OK] | c13-lenof, code 4
+aligned true/false (16 vs 17 mod 8) | [OK] | c13-aligned, code 42
+clz(0) | [D] refused: bit scan of an operand that may be zero | c13-clzzero
+rotl amount = width (8 on u8) | [D] refused: builtin operand outside its range | c13-rotlamount
+<<% amount = width (8 on u8) | [D] refused: builtin operand outside its range | c13-shlamount
+1 +% 2 (no declared width anywhere) | [D] refused: builtin of unknown width | c13-litwidth
+u12 operand (no declared storage width below u16) | [D] refused: builtin of unknown width | c13-u12width
+sizeof(u32) over a bare type word | [D] refused: sizeof over a type | c13-sizeoftype
+count bound to a variable | [N] refused: value without G form (counts live only in comparisons; grammar still refuses body values) | c13-countvalue
+count over elems of an array | [N] refused: table unknown: #array-elements:4 (arrayCarrier, UebersetzeAllg/Teil4.lean:285: tabIdx of the synthesized carrier fails) | c13-countelems
+bswap(u8) | [D] refused: byte swap of an unsupported width | c13-bswap8
+aligned(16, 0) | [D] refused: source export: alignment must be a positive constant | c13-alignedzero
+Missing AT THE COMPILER (user order): (1) count as a value / outside comparisons
+(uWertBody falls through to "value without G form", Teil/Teil5Rest.lean:46-52);
+(2) count over array elems (array carrier never registered, Teil4.lean:285-288).
+Note: +% etc. accept operand sub-ranges at the declared width (passtIn), i.e. the
+compiler is looser than the design's "both exactly 0..2^N-1" (M153) wording.
+Note: rotl/rotr/bswap demand the exact full word range, so let-bound narrow values
+must go through full-range params (refusal: builtin operand is not the full word,
+Eingebaut.lean:34). Widths exist only for u8/u16/u32/u64 (uAtomBreite,
+Teil2.lean:160); u12 and narrower have no width and every builtin over them refuses.
+
+C17 -- decreases, compile-time const fn
+form | result | evidence
+decreases on a countdown (down(5) = 5) | [OK] | c17-decreases-ok, code 5
+same recursion without decreases (down(5) = 5) | [OK] | c17-nodecreases, code 5
+mutual recursion with decreases on both (even(4)) | [OK] | c17-mutual, code 42
+computed measure decreases 10 - n (up(7) = 10) | [OK] | c17-measexpr, code 10
+const in a runtime requires (LIMIT = 10) | [OK] | c17-constrequires, code 7
+const fn with true requires folded (identity(7)) | [OK] | c17-constok, code 7
+const fn in an array length | [E] existing const-forward-array-count | -
+const fn in a range bound | [E] existing const-signature-bound | -
+const fn with false requires | [E] existing contract-transitive (refused) | -
+decreases in the wild | [E] existing compiler-front-end | -
+const fn dividing by zero | [D] refused: compile-time scalar cannot be evaluated at its canonical declared range | c17-constdivzero
+const fn overflowing its result (big(255)) | [D] refused: same message | c17-constoverflow
+const fn calling an undeclared function | [D] refused: unresolved compile-time dependency: const function nosuchfn | c17-constunknown
+cycle member without decreases | [D] refused: differing decreases tuple lengths in a recursion cycle | c17-mutualnodec
+recursive call with unchanged argument | compiles, stops 105 at runtime (depth guard), not a compile refusal (kept out of the corpus: non-terminating) | -
+Missing AT THE COMPILER: nothing blocking in this slice; param-dependent helper
+calls inside const requires with a generic equivalence proof are untested here.
+Note: K008/K009 refuse a decreases-less cycle member, but a same-argument
+self-cycle with decreases still compiles and is caught only by the runtime depth
+guard (stop 105).
+
+C05 -- group invariants over tables and globals
+form | result | evidence
+invariant over a table, writer restores, normal return | [N] refused for all: source export: invariant cost/runs/by duties lack a checked source binding (export gate ExportMetadata.check, Export/ExportMetadata.lean:57-61, reason metadataReason :33-40) | c05-table-inv
+group invariant over two tables, one lock | [N] same gate | c05-group-one-lock
+group invariant over two tables, two locks | [N] same gate | c05-group-two-locks
+group over a table and a global (parse-level: globals ARE accepted as members) | [N] same gate | c05-group-global
+read-only observer under a table invariant (gate fires with no writer at all: item-level) | [N] same gate | c05-readonly
+writer omitting one lock (gate fires first; beneath it the checker reports: access without held guard, i.e. U003 is alive) | [N] same gate | c05-missing-lock
+group invariant reading an undeclared global (gate fires first; the undeclared-read check is unreachable) | [N] same gate | c05-undeclared-read
+Missing AT THE COMPILER (user order): (1) the export gate refuses every table
+with an invariant part (.tInv) and every group (.groupT): no C05 form compiles,
+including touch-only-global, restore on normal return, and restore on reason
+return -- none of these are reachable; (2) behind the gate, the Stage-0 return
+epilogue (lowFun gate) is the next wall per the design.
+
+C04 -- transition with requires/effects and dynamic stages
+form | result | evidence
+constant edge Idle -> Busy | [E] existing shift.gab | -
+constant edge, wrong pre-state stops 106 | [E] existing shift-stop.gab (.code 106) | -
+constant edge, undeclared edge refused | [E] existing shift-edge-refused | -
+declaration with effects only, satisfied use | [OK] | c04-effects, code 1
+declaration with requires + effects, satisfied use | [OK] | c04-requires-ok, code 1
+declaration with requires + effects, violated requires | [OK] stops 101 (generated call rejects its requires; matches checkpoint-2: primitive shift stays 106, generated function is 101) | c04-requires-false, code 101
+declaration with requires but no effects | [D] refused: transition store omitted from declared effects | c04-requires
+pure declaration with a store | [D] refused: same message (permission check fires first) | c04-pure-store
+two declarations sharing one edge, different requires | [D] refused: transition declared by two clauses or states | c04-shared-edge
+use-site endpoint as a number (Idle -> 1) | [D] refused at parse: name expected (parseUebergang, Stmt/Anweisung/Defs1.lean:182-188: endpoints are names, never expressions) | c04-dynamic-num
+Missing AT THE COMPILER (user order): (1) a use route for dynamic-endpoint
+declarations: `transition t { s : 0 -> goal } effects {...}` elaborates, but the
+only use statement takes stage names, so the declaration is unusable (no
+generated-call naming at use sites); (2) requires-only transitions perform no
+stores, but the surface demands at least one step per transition.
+Observation: a use endpoint naming an existing global with no state declaring it
+(`-> target` with `static mut target`) dies in an unlocated parse cascade
+(bare "wanted }", no function note) instead of the located "transition not
+declared by a state"; kept out of the corpus.
+
+C03 -- open reason sets and typed tagged payloads
+form | result | evidence
+closed reason forwarded through else, success path | [OK] | c03-forward, code 42
+closed reason matched after else | [E] existing why.gab | -
+tagged bool payload matched | [OK] | c03-tagged-bool, code 42
+tagged array payload matched ([u8;4], sum 92) | [OK] | c03-tagged-array, code 42
+tagged string payload matched (lenof + 40) | [OK] | c03-tagged-string, code 42
+closed reason as a value (param -> return -> match) | [OK] | c03-reason-value, code 42
+exhaustive reason with zero cases (declaration accepted) | [OK] | c03-empty-closed, code 42
+tagged u32 payload, option payload | [E] existing mutable-option-tagged, case-offset-dispatch | -
+unknown case of a closed reason (Fault::Third) | [D] refused (generic value form): value without G form | c03-unknown-case
+payload on a nullary case (End(5)) | [D] refused: value without G form | c03-nullary-payload
+bare name over a payload case (Number) | [D] refused: name unknown: Number | c03-missing-payload
+duplicate numeric codes | [D] refused: duplicate reason code | c03-duplicate-code
+code outside u128 (2^128) | [D] refused: reason code outside u128 | c03-code-huge
+non-exhaustive (open) reason, forwarded | [N] refused at the item: reason that is not exhaustive without G form (uWhys, Uebersetze/Teil/Teil12.lean:133; "open execution stays refused until the channel migration") | c03-open-forward
+non-exhaustive reason, matched | [N] same wall (the open-match check itself is unreachable) | c03-open-match
+r1 == r2 on closed reasons | [N] refused: compare side without G form (Teil/Teil4.lean:316; the design's whyEq has no surface lowering) | c03-equality
+return <reason variable> into `or R` channel | [N] refused: aggregate as a number (LowWert.zahl, UebersetzeAllg/Teil3Values.lean:172-176; only literal Fault::Case reaches retWhy) | c03-forward-match
+Missing AT THE COMPILER (user order): (1) every open-reason form (declaration
+wall uWhys); (2) reason == comparison (whyEq surface); (3) forwarding a bound
+reason variable into the error channel. Untested: record payloads (need C01
+products, a round-3 package).
+
+Refusing functions most forms hit (blockers):
+1. ExportMetadata.check / metadataReason, grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean:33-40 + :57-61 (reported via stage0/Stage0/Diagnose.lean:177) -- blocks all 7 C05 forms.
+2. uWhys, grammatik/Grammatik/Parser/Elab/Uebersetze/Teil/Teil12.lean:126-139 (refusal at :133) -- blocks the whole open-reason surface (C03).
+3. Value-position count (uWertBody, grammatik/Grammatik/Parser/Elab/Uebersetze/Teil/Teil5Rest.lean:24-55, falls to "value without G form" at :46/:52) together with arrayCarrier (grammatik/Grammatik/Parser/Elab/UebersetzeAllg/Teil4.lean:285-288, "table unknown: #array-elements:4") -- blocks count composition and elems domains (C13).

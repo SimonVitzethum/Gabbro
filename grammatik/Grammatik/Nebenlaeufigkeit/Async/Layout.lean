@@ -16,12 +16,25 @@ public structure TypeResolution where
   childState : String → Ty
   childResult : String → Ty
 
+/-- The optional field schema is shared by frame layout and slot traversal.
+    Annotating the source pair keeps its projection independent of elaboration
+    of the dependent product value. -/
+@[expose] public def slotTypes (types : TypeResolution)
+    (fields : List (String × Parser.STyp)) : List Ty :=
+  fields.map fun (field : String × Parser.STyp) =>
+    Ty.sum [none, some (types.ordinary field.2)]
+
+@[expose] public def frameFields (types : TypeResolution) (f : AsyncFn) : List Ty :=
+  slotTypes types (f.params ++ f.fields)
+
 /-- A local has an explicit uninitialised case. Generating a frame never
     invents an inhabitant of an arbitrary source type. Permissions are NOT
     integers in this record: they remain in the canonical resource index Λ. -/
 @[expose] public def frameType (types : TypeResolution) (f : AsyncFn) : Ty :=
-  .prod (types.recordName [0])
-    ((f.params ++ f.fields).map fun field => .sum [none, some (types.ordinary field.2)])
+  .prod (types.recordName [0]) (frameFields types f)
+
+public theorem frameType_eq (types : TypeResolution) (f : AsyncFn) :
+    frameType types f = .prod (types.recordName [0]) (frameFields types f) := rfl
 
 /-- A join's result has both component types, in source order. Paths identify
     nested joins statically; no recursive or dynamically typed runtime node

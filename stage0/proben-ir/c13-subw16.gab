@@ -1,0 +1,10 @@
+// C13: wrapping sub on u16: 5 -% 10 = 65531.
+module c13_subw16 {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a : u16 = 5;
+    let b : u16 = 10;
+    let r = a -% b;
+    if r == 65531 { return 42; }
+    return 7;
+}
+}

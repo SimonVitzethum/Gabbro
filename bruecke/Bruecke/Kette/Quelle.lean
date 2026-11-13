@@ -81,7 +81,7 @@ theorem nutzerA_aus_quelleG {src : String} {P : Programm (declOf u)}
     (h : uebersetzeAllg src = .ok ⟨u, P, fs⟩) :
     ∃ hn : nullB u = true, Zielsatz.NutzerPflichtA (einheitAllg u P hn) := by
   obtain ⟨hn, hb⟩ := nutzer_aus_quelleG hp hStart h
-  exact ⟨hn, Zielsatz.nutzerPflichtA_ohne_atomar (declOf_kein_atomar u (nullB_globs hn)) hb⟩
+  exact ⟨hn, Zielsatz.nutzerPflichtA_ohne_atomar (declOf_numeric_kein_atomar u (nullB_statics hn)) hb⟩
 
 end Gabbro.Bruecke
 

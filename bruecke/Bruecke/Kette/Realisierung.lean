@@ -45,7 +45,7 @@ theorem realisiert_G (S : Getragen u C)
         have hcallee : ∀ cn gf', fnSuch u cn = some gf' →
             (∃ args, UStmt.call cn args ∈ (fnAt u c).body) →
             Gabbro.Body.Contract ρk cn (preProp (wfU u) gf') (postP u gf') ∧
-            Gabbro.Body.Frame ρk cn gf'.puts := by
+            Gabbro.Body.Frame ρk cn (writesU gf') := by
           intro cn gf' hgf' ⟨args, hm⟩
           obtain ⟨d, rfl, _⟩ := fnSuch_mem hgf'
           exact hk cn d (callee_getragen_teil S hc hm hgf') hgf'
@@ -69,7 +69,7 @@ theorem realisiert_G (S : Getragen u C)
             split
             · rename_i s' hs'
               exact exec_rahmen_G S c hc ρk (fnAt u c).ret ((fnAt u c).body.length + 1)
-                ((fnAt u c).body.length + 1) (fnAt u c).body (fnAt u c) (fnAt u c) b0 body rfl (Sicht.refl _) (fun _ hm => hm) hb0 hbody
+                ((fnAt u c).body.length + 1) (fnAt u c).body (fnAt u c) (fnAt u c) (BodyNames.start (fnAt u c)) b0 body rfl (Sicht.refl _) (fun _ hm => hm) hb0 hbody
                 (fun cn gf' hgf' hm => (hcallee cn gf' hgf' hm).2) t s' hs' p hp
             · rfl
           · rfl
@@ -85,7 +85,7 @@ theorem realisiert_alle_G (S : Getragen u C)
     (rk : String → Nat) (hR : Rang u rk) :
     ∃ ρ : Gabbro.Body.Env, ∀ n c, C c → fnSuch u n = some (fnAt u c) →
       Gabbro.Body.Contract ρ n (preProp (wfU u) (fnAt u c)) (postP u (fnAt u c)) ∧
-      Gabbro.Body.Frame ρ n (fnAt u c).puts := by
+      Gabbro.Body.Frame ρ n (writesU (fnAt u c)) := by
   let K := (u.fns.map (fun f => rk f.name)).foldr max 0 + 1
   obtain ⟨ρ, hρ⟩ := realisiert_G S hZ hlow rk hR K
   refine ⟨ρ, fun n c hc hgf => hρ n c hc hgf ?_⟩

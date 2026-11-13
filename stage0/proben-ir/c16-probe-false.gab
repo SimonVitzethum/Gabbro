@@ -1,0 +1,15 @@
+// C16: check with a false probe, returns 42.
+module c16_false {
+static mut m : u32 in 0 .. 100 = 0;
+impl fn abnahme() -> u32 in 0 .. 100 effects { pure } { return 1; }
+impl fn freigabe() -> u32 in 0 .. 100 effects { pure } { return 1; }
+check basic {
+    claim "fails"
+    measures m
+    gates abnahme, freigabe
+    can_fail {
+        return false;
+    }
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } { return 42; }
+}

@@ -1,0 +1,7 @@
+// C13 refusal: byte swap below u16 has no form.
+module c13_bswap8 {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a : u8 = 18;
+    return bswap(u8(a));
+}
+}

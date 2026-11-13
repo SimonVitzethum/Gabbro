@@ -135,6 +135,66 @@ def expandFoldEnd (ctx : UCtx) (ending : Option SEnde) :
     pure (code, ctx, some (.ret (some value)))
   | _ => pure ([], ctx, ending)
 
+def expandFoldStmtFast (ctx : UCtx) (statement : SAnw) :
+    Except String (List UStmt × UCtx × SAnw) := do
+  let serial := uLocalCount ctx
+  match statement with
+  | .bind mu name ty value =>
+    let (code, ctx, _, value) ← expandFoldValue ctx serial value
+    let target ← if code.isEmpty then pure none else
+      match ty with
+      | none => pure none
+      | some ty => do
+        match ← uTyp ctx.alias ctx.tabs ctx.spaces ctx.eigner ty with
+        | .fl .. => pure none
+        | _ => (uErgBereich ctx.alias ty).map some
+    foldCheckResult ctx code value target
+    pure (code, ctx, .bind mu name ty value)
+  | .set target op value =>
+    let (code, ctx, _, value) ← expandFoldValue ctx serial value
+    pure (code, ctx, .set target op value)
+  | .cond test body branches fallback =>
+    let (code, ctx, _, test) ← expandFoldValue ctx serial test
+    pure (code, ctx, .cond test body branches fallback)
+  | .cases value arms =>
+    let (code, ctx, _, value) ← expandFoldValue ctx serial value
+    pure (code, ctx, .cases value arms)
+  | .callIndElse pointer args reason body =>
+    let (left, ctx, serial, pointer) ← expandFoldValue ctx serial pointer
+    let (right, ctx, _, value) ← expandFoldValue ctx serial (.call "" args)
+    let .call _ args := value | throw "fold: malformed indirect call expansion"
+    pure (left ++ right, ctx, .callIndElse pointer args reason body)
+  | .callElse name args reason body =>
+    let (code, ctx, _, value) ← expandFoldValue ctx serial (.call name args)
+    let .call name args := value | throw "fold: malformed call expansion"
+    pure (code, ctx, .callElse name args reason body)
+  | .call name args =>
+    let (code, ctx, _, value) ← expandFoldValue ctx serial (.call name args)
+    let .call name args := value | throw "fold: malformed call expansion"
+    pure (code, ctx, .call name args)
+  | .ret (some value) =>
+    let (code, ctx, _, value) ← expandFoldValue ctx serial value
+    foldCheckResult ctx code value ctx.res
+    pure (code, ctx, .ret (some value))
+  | statement => pure ([], ctx, statement)
+
+def expandFoldEndFast (ctx : UCtx) (ending : Option SEnde) :
+    Except String (List UStmt × UCtx × Option SEnde) := do
+  match ending with
+  | some (.ret (some value)) =>
+    let (code, ctx, _, value) ← expandFoldValue ctx (uLocalCount ctx) value
+    foldCheckResult ctx code value ctx.res
+    pure (code, ctx, some (.ret (some value)))
+  | _ => pure ([], ctx, ending)
+
+@[csimp] theorem expandFoldStmt_eq_fast : @expandFoldStmt = @expandFoldStmtFast := by
+  funext ctx statement
+  rfl
+
+@[csimp] theorem expandFoldEnd_eq_fast : @expandFoldEnd = @expandFoldEndFast := by
+  funext ctx ending
+  rfl
+
 /-- Nested end blocks use the same expression expansion as a function return. -/
 def uFoldEndeStmt (ctx : UCtx) (ending : Option SEnde) : Except String (List UStmt) := do
   let (code, ctx, ending) ← expandFoldEnd ctx ending

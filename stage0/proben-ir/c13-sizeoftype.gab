@@ -1,0 +1,6 @@
+// C13 refusal: sizeof over a bare type word (a type is not a place).
+module c13_sizeoftype {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    return sizeof(u32);
+}
+}

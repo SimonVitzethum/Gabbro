@@ -1,0 +1,15 @@
+// C05: a table invariant; writers require the carrier lock and return under it.
+module c05_table_inv {
+table T count 2 { slot { v : u8, } invariant small cost O(1) runs online : forall i in slots of T : T.slots[i].v == T.slots[i].v; }
+lock L protects { T } rank 0;
+impl fn set_all(x : u8) effects { writes T.slots } requires Held(L) {
+    T.slots[0].v = x;
+    T.slots[1].v = x;
+}
+impl fn main() -> u32 in 0 .. 255 effects { reads T.slots, writes T.slots, locks L } {
+    locks L {
+        set_all(21);
+        return T.slots[0].v + T.slots[1].v;
+    }
+}
+}

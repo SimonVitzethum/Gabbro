@@ -1,0 +1,23 @@
+// C03: a closed reason returned as a value through a variable.
+module c03_reason_value {
+reason Fault {
+    First = 1 "first reason"
+    Second = 2 "second reason"
+    exhaustive
+}
+impl fn id(r : Fault) -> Fault
+    effects { pure }
+{
+    return r;
+}
+impl fn main() -> u32 in 0 .. 255
+    effects { pure }
+{
+    let x = id(Fault::First);
+    match x {
+        First => { return 42; }
+        Second => { return 7; }
+    }
+    return 7;
+}
+}

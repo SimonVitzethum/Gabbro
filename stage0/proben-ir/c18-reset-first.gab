@@ -1,0 +1,12 @@
+// C18: reset of the first byte, survivor read, returns 9.
+module c18_first_last2 {
+static mut BUF : [u8; 64] = 0;
+impl fn f() -> u32 in 0 .. 255 effects { writes BUF, reads BUF } costs <= 4800 ops {
+    BUF[0] = 5;
+    BUF[63] = 9;
+    reset BUF at 0 count 1;
+    let b : u32 in 0 .. 255 = BUF[63];
+    return b;
+}
+impl fn main() -> u32 in 0 .. 255 effects { reads BUF, writes BUF } { return f(); }
+}

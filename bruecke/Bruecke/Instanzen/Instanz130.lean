@@ -1,4 +1,5 @@
 module
+import Grammatik.Kern.Taktik.KernelRfl
 public import Bruecke.Kette.Quelle
 public import Duty.Duty0130DerivedContractPure
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
@@ -116,9 +117,9 @@ theorem rang : rangB u (rangAuto u) = true := by decide
 
 open GabbroDuty.Duty0130DerivedContractPure
 
-theorem shape_eq : shapeOf = shapeOfU u := by
+theorem shape_eq : shapeOf = shapeOfUG u := by
   funext p
-  rcases p with ⟨c, i, f⟩ | ⟨c, n⟩ | n <;> simp [shapeOf, shapeOfU, slotShape, u]
+  rcases p with ⟨c, i, f⟩ | ⟨c, n⟩ | n <;> simp [shapeOf, shapeOfUG, shapeOfU, globShape, globIdx, slotShape, u]
 
 theorem wfU_eq : wfU u = wellFormed := by
   funext s; unfold wfU wellFormed; rw [shape_eq]
@@ -133,12 +134,12 @@ example : preProp wellFormed add = add_requires := rfl
 example : meetsU u wellFormed add ((zuBody u add).getD []) = add_meets_statement := rfl
 
 /-- The duty of `add`: the computed statement, closed by GabbroV's proof. -/
-theorem pflicht_0 : ∃ body, zuBody u (fnAt u ⟨0, by decide⟩) = some body ∧
+theorem pflicht_0 : ∃ body, zuBodyZ u (fnAt u ⟨0, by decide⟩) = some body ∧
     meetsU u (wfU u) (fnAt u ⟨0, by decide⟩) body :=
-  ⟨add_body, rfl, by rw [wfU_eq]; exact add_meets⟩
+  ⟨add_body, (by kernel_rfl), by rw [wfU_eq]; exact add_meets⟩
 
 theorem pflichten (hPtr : SchnittstellenPflicht u) : PflichtenAlle quelle := by
-  have duties : ∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = some body ∧
+  have duties : ∀ c : Fin u.fns.length, ∃ body, zuBodyZ u (fnAt u c) = some body ∧
       meetsU u (wfU u) (fnAt u c) body := fun c => match c with
     | ⟨0, _⟩ => pflicht_0
     | ⟨_ + 1, h⟩ => absurd h
@@ -146,7 +147,7 @@ theorem pflichten (hPtr : SchnittstellenPflicht u) : PflichtenAlle quelle := by
             omega)
   refine ⟨u, verankert, null, stimmig, by decide, rang, by decide, hPtr, fun c => ?_⟩
   obtain ⟨body, hb, hm⟩ := duties c
-  exact ⟨body, zuBodyZ_of_zuBodyB (zuBodyB_of_zuBody hb), hm⟩
+  exact ⟨body, hb, hm⟩
 
 /-- PREMISE (b) OF THE GOAL THEOREM for the unit the front end builds from `quelle`. -/
 theorem nutzer (hPtr : SchnittstellenPflicht u) {u' : UProg} {P : Gabbro.Grammatik.Programm (declOf u')}

@@ -1,0 +1,14 @@
+// C17: decreases with a computed expression; the call raises n but lowers 10 - n.
+module c17_measexpr {
+impl fn up(n : u32 in 0 .. 10) -> u32 in 0 .. 10
+    effects { pure }
+    decreases 10 - n
+{
+    if n == 10 { return 10; }
+    narrow n to 0 .. 9 else { return 10; }
+    return up(n + 1);
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    return up(7);
+}
+}

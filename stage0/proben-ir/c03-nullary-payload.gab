@@ -1,0 +1,8 @@
+// C03: a payload on a nullary tagged case.
+module c03_nullary_payload {
+tagged type Token = { End, Number(u32 in 0 .. 100) };
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let t = End(5);
+    return 7;
+}
+}

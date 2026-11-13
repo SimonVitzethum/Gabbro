@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Elab.Modules.CallHoist.Expressions
+public import Grammatik.Parser.Elab.Modules.CallHoist.Collect
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.CallHoist
@@ -68,9 +69,9 @@ def hebeS (k : Kontext) : Nat → Nat → SAnw → List SAnw × Nat
     let koerper : List String → Nat → SAnw → SAnw × Nat := fun zus nr b =>
       match b with
       | .block ss ende =>
-        let r := ss.foldl (fun (acc : List SAnw × Nat × List String) t =>
-          let x := hebeS { k with lokal := acc.2.2, oben := false } n acc.2.1 t
-          (acc.1 ++ x.1, x.2, ExportMetadata.binders t ++ acc.2.2)) ([], nr, zus ++ k.lokal)
+        let r := collectSteps (fun (state : Nat × List String) t =>
+          let x := hebeS { k with lokal := state.2, oben := false } n state.1 t
+          (x.1, x.2, ExportMetadata.binders t ++ state.2)) ss (nr, zus ++ k.lokal)
         match ende with
         | some (.ret (some e)) =>
           let x := hebeRet { k with lokal := r.2.2 } n r.2.1 e
@@ -82,9 +83,9 @@ def hebeS (k : Kontext) : Nat → Nat → SAnw → List SAnw × Nat
         | [one] => (one, x.2)
         | many => (.block many none, x.2)
     let koerperL : Nat → List SAnw → List SAnw × Nat := fun nr bs =>
-      bs.foldl (fun (acc : List SAnw × Nat) b =>
-        let x := koerper [] acc.2 b
-        (acc.1 ++ [x.1], x.2)) ([], nr)
+      collectSteps (fun current b =>
+        let x := koerper [] current b
+        ([x.1], x.2)) bs nr
     match s with
     | .bind mu x ty e =>
       match (leseStatik k nr mu x ty e).orElse (fun _ => leseFeld k n nr mu x ty e) with

@@ -1,0 +1,16 @@
+// C11: next inside a consuming traversal is refused.
+module c11_tree6 {
+table t count 3 {
+    tree { child c }
+    slot { v : u32 in 0 .. 10, c : option index into t, }
+}
+impl fn main() -> u32 in 0 .. 200 effects { reads t.slots, writes t.slots } {
+    let mut acc : u32 in 0 .. 200 = 0;
+    traverse i over slots of t by consuming decreases 3 touches reads t.slots, writes t.slots, consumes t.slots {
+        let s = acc + t.slots[i].v;
+        narrow s to 0 .. 200 else { next i; }
+        acc = s;
+    }
+    return acc;
+}
+}

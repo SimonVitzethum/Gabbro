@@ -55,6 +55,18 @@ def Kontext.key (k : Kontext) (path : Pfad) : String :=
   | some entry => entry.2
   | none => schluessel k.q.namen path
 
+/-- Count short names once per source unit, rather than once per declaration/reference.
+    Explicit instance-key overrides retain their first-match order. -/
+def Kontext.keySchnell (k : Kontext) (path : Pfad) : String :=
+  match k.keys.find? (fun entry => entry.1 == path) with
+  | some entry => entry.2
+  | none => if k.q.shortCount (letzter path) == 1 then letzter path else "::".intercalate path
+
+@[csimp] theorem Kontext.key_eq_schnell : Kontext.key = Kontext.keySchnell := by
+  funext k path
+  simp only [Kontext.key, Kontext.keySchnell, schluessel, Quelle.shortCount_eq, letzter]
+  rfl
+
 /-- The context with more locals in scope. -/
 def Kontext.mit (k : Kontext) (xs : List String) : Kontext := { k with lok := xs ++ k.lok }
 
@@ -69,6 +81,19 @@ def Kontext.ref (k : Kontext) (s : String) : String :=
   match aufloeseK k.q ⟨none, []⟩ k.von (segmente s) with
   | some c => k.key c
   | none => if k.q.namen.any (fun q => strEq (letzter q) (letzter (segmente s))) then gift s else s
+
+/-- Unknown names (including builtin type names) need a short-name membership test too.
+    Without this indexed fallback, each `u32` in a multi-module unit still scans every item. -/
+def Kontext.refSchnell (k : Kontext) (s : String) : String :=
+  if k.lok.any (strEq · s) then s else
+  match aufloeseK k.q ⟨none, []⟩ k.von (segmente s) with
+  | some c => k.key c
+  | none => if 0 < k.q.shortCount (letzter (segmente s)) then gift s else s
+
+@[csimp] theorem Kontext.ref_eq_schnell : Kontext.ref = Kontext.refSchnell := by
+  funext k s
+  simp only [Kontext.ref, Kontext.refSchnell, letzter, ← Quelle.shortCount_positive]
+  rfl
 
 /-- The key of an item declared here. -/
 def Kontext.eigen (k : Kontext) (n : String) : String := k.key (k.von ++ [n])

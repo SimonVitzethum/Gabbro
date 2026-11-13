@@ -1,0 +1,9 @@
+// C06: target with a stronger pre does not conform.
+module c06_stronger_pre {
+impl fn narrow(x : u32 in 0 .. 50) -> u32 in 0 .. 200 effects { pure } costs <= 4 ops { return x + 1; }
+impl fn apply(p : fn(x : u32 in 0 .. 100) -> u32 in 0 .. 200 effects { pure } costs <= 4 ops) -> u32 in 0 .. 200 effects { pure } {
+    let v = p(80);
+    return v;
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } { return apply(&narrow); }
+}

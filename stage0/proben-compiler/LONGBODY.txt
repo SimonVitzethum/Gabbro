@@ -1,0 +1,234 @@
+LONGBODY: which phase carries the per-statement superlinear cost (measured 2026-11-13)
+==================================================================================
+Branch: t3/measure-long-body-cost. Method: generated single-function sources, one
+shape per series; every compile inside
+  systemd-run --user --scope -q -p MemoryMax=8G -p MemoryHigh=7G -p MemorySwapMax=0
+gated on >=10 GiB available and load <=14 before each run. Peak RSS is the stage0
+VmHWM polled every 100 ms. Wall time is date +%s.%N around the run. No build was
+run (per task); binaries copied once, only the copies used:
+  cp /home/simon/Dokumente/Gabbro/stage0/.lake/build/bin/stage0 .scratch-m/stage0
+  cp /home/simon/Dokumente/Gabbro/stage0/.lake/ir/runner .scratch-m/runner
+Generator/harness (shell only, kept in .scratch-m, not committed):
+  .scratch-m/gen-longbody.sh SERIES N OUT, .scratch-m/run-one.sh SRC IMG
+  (prints: rc wall_s peak_kb polls lines img_bytes load)
+
+1. Front-end-only mode: does not exist
+--------------------------------------------------------------------------------
+`stage0 --help` prints only
+  `usage: stage0 --ir SOURCE.gab [SOURCE.gab ...] IMAGE [--arch x86_64] [--target NAME] [--testbuild]`
+and stage0/Stage0/Haupt.lean (haupt, lines ~30-60) has exactly one mode: `--ir`
+(full compile to image). Substitution used instead: error injection at
+controlled positions/phases with the same binary (section 4). It separates four
+buckets: lex+parse / source+prepare / elaborator path / lowering+checker+emission.
+
+2. Series (all single main + helpers; every N=10 program compiled AND run, exit 7
+   as computed by hand: independent lets guarded against an impossible value,
+   chains modulo 41 with expected remainder, mut-flip parity, call results == 8)
+--------------------------------------------------------------------------------
+lit        N x (let a_i : u32 in 0..40 = i%32; if a_i == 255 {return 0;}), return 7
+chain      N chained lets x_i = (x_{i-1}+1) % 41, bound 0..20000, final check
+call1      N chained lets a_i = id40(a_{i-1}), final check (one callee)
+bare       N bare call statements id40(base), one binding total
+calln      N distinct callees id0..id_{N-1}, each called once bound+used
+guard      N duplicate guards (if p == 255 return 0) on ONE binding
+mut        N assignments c = c^1 on one let mut (parity-checked return)
+block      lit grouped in `if true { ... }` blocks of 100
+names      lit with 40-char names (vs 5-char in lit)
+spec0/spec1 call1 with callee id40 with/without requires+ensures
+arity0/2/6 N independent k_i = k(…)/uses, callee of 0/2/6 params
+rangenarrow lit with range 0..40; rangewide same shape with 0..4000000000
+
+3. Main table: time (s) / peak RSS (MB) / image (MB); exponent b over last step
+--------------------------------------------------------------------------------
+N          lit              chain            call1            bare
+1500       1.36 / 289 / 4.41  0.63 / 282 / 4.11  0.74 / 294 / 4.14  0.43 / 275 / 4.11
+3000       4.08 / 309 / 4.82  1.37 / 285 / 4.23  1.79 / 283 / 4.28  0.64 / 281 / 4.23
+6000       16.74 / 344 / 5.65 5.04 / 283 / 4.46  6.18 / 296 / 4.55  1.26 / 291 / 4.46
+12000      77.37 / 416 / 7.30 --               28.77 / 317 / 5.10 --
+b(3k->6k)  2.04             1.88             1.79             0.99
+b(6k->12k) 2.21             --               2.22             --
+N          calln            guard            mut              block
+1500       1.58 / 322 / 5.10  0.53 / 280 / 4.39  0.43 / 274 / 4.09  0.53 / 292 / 4.41
+3000       4.92 / 370 / 6.20  1.06 / 303 / 4.78  0.64 / 279 / 4.18  0.63 / 307 / 4.83
+6000       18.41 / 556 / 8.39 2.94 / 351 / 5.56  1.16 / 289 / 4.37  1.05 / 344 / 5.65
+b(3k->6k)  1.90             1.48             0.86             0.74
+Controls at 1500/3000/6000 (s): names 1.26/4.09/15.93 (= lit, b 1.96);
+rangenarrow 1.27/3.98/17.68 (= lit replicate); rangewide 1.47/4.72/18.54
+(+12-15% over narrow, b 1.97); spec1 0.63/1.69/6.28 (= call1: contracts free);
+arity0 1.68/5.24/18.76, arity2 1.47/4.82/19.90, arity6 1.68/5.04/21.78
+(all = lit curve, b 1.8-2.1; params count is a ~15% linear factor at most).
+
+4. Phase ladder: same N, error injected (rc=1) vs full (rc=0); times in seconds
+--------------------------------------------------------------------------------
+Trigger: lexerr appends `\` (lex fails); parseerr appends `let q = = ;`
+(parse fails); sourceerr appends `const BAD9462 : u8 = 999;`
+(fails in source phases: "compile-time scalar cannot be evaluated at its
+canonical declared range", before prepare); errstart/errend insert
+`let bad999 : u32 in 0..40 = nosuchfn_xyz(1);` first/last (fails prepare's
+closed check: "generic-output: residual syntax ..."); elaberr-start/end insert
+`let bad999 : u32 in 0..40 = nosuchlocal_xyz + 1;` first/last, reachable
+(fails elabExpanded: "name unknown", notes add "elaboration: function main:
+... (statement K of N ...)", proving firstFailing bisection ran).
+lit:
+  N     lexerr parseerr sourceerr preparerr_s/e elaberr_s  elaberr_e  full
+  1500  0.11   0.11     0.11      0.52/0.63     0.63       2.52       1.36
+  3000  0.11   0.21     0.22      2.10/2.10     2.20       10.37      4.08
+  6000  0.21   0.22     0.32      9.01/8.90     9.31       49.82      16.74
+chain:
+  1500  --     --       0.11      0.32/0.32     0.32       0.74       0.63
+  3000  --     --       0.21      0.95/0.95     0.95       2.83       1.37
+  6000  --     --       0.32      3.46/3.55     3.55       12.03      5.04
+bare:
+  1500  0.11   0.11     0.11      0.11/0.21     0.22       0.32       0.43
+  3000  0.11   0.11     0.11      0.32/0.32     0.32       0.74       0.64
+  6000  0.12   0.11     0.11      0.74/0.75     0.74       2.42       1.26
+Bucket reading (lit-6000; chain/bare scale the same way, see section 6):
+lex+parse ~0.2 s, linear (lexerr/parseerr rows). The parser is NOT the problem.
+sourceerr ~0.3 s: the source phases THROUGH constant-scope discovery fail fast
+on a bad scalar, so this row does NOT cover the later per-item meaning checks
+or prepare; it only bounds lex..discovery on the failing path.
+preparerr = 2*(source+prepare) + small, error-position independent (start=end):
+whole-unit work before statement elaboration, quadratic (lit b 2.1, chain 1.9,
+bare 1.4), shape-ordered lit >> chain > bare.
+elaberr_e - elaberr_s = E_full-walk + ~11 extra bisection prefix elabs
+(firstFailing, stage0/Stage0/Diagnose.lean:32-44, ~13 elabExpanded runs):
+lit 1.89/8.17/40.51 (b ~2.3), chain 0.42/1.88/8.47 (b ~2.2),
+bare 0.10/0.42/1.68 (b ~2.0). The elaborator path is superlinear for EVERY
+shape, including binding-free bare calls.
+full - preparerr/2 - E, with E ~= (elaberr_e - elaberr_s)/12 (bisection model,
+~12 full-body equivalents): remainder R = lowering+checker+emission:
+lit-1500/3000/6000 ~= 0.95/2.39/9.05 (b ~1.9, QUADRATIC);
+bare-1500/3000/6000 ~= 0.37/0.44/0.76 (~linear).
+So all three buckets (source+prepare, elaborator, lowering/checker) carry a
+superlinear term for binding/guard-heavy bodies; bare-call bodies are ~linear
+in R but still quadratic in the elaborator path (small constant).
+
+5. One-sentence conclusions per series
+--------------------------------------------------------------------------------
+lit: cost per statement grows with the number of live bindings in scope
+(flat memory, time ~N^2.0-2.2 through 12000), independent of calls.
+chain: data-chained lets without guards are still ~N^1.9 (b 2.2 at 12k), so a
+non-guard per-let/per-use scope-proportional step exists beside the guards.
+call1: chained calls cost ~20% over chained plain ops at the same exponent, so
+calls add a linear premium, not the quadratic term.
+bare: N call statements with no new bindings are linear (b 0.99): the quadratic
+needs bindings/uses, not calls or statements per se.
+calln: N distinct callees cost the same as one callee with N independent
+bound uses (18.4 vs 18.8 s): callee count is not the driver; the N bound uses
+in one scope are.
+guard: N guards on ONE binding are still superlinear (b 1.48): per-guard work
+grows with body size even at constant scope (whole-block read walks, §7).
+mut: N assignments to one binding are ~linear (b 0.86): assignment handling
+accumulates nothing.
+block: scoping the same statements in `if true` blocks of 100 makes it ~linear
+(b 0.74): the driver is LIVE scope, not statement count; bounding it fixes it.
+names/range/arity/spec: 40-char names = 5-char names; requires+ensures on the
+callee = no contract (spec1 = call1); 0/2/6 params spread only ~15%; wide
+range +12-15% at the same exponent (bigger words/images, not a new term).
+
+6. Approximate bucket split at N=6000 (seconds; E from the bisection model, R by
+   subtraction; assumptions in section 4)
+--------------------------------------------------------------------------------
+        S+P(source+prepare)  E(elabExpanded pass)  R(lower+check+emit)  full
+lit     ~4.5                 ~3.2                  ~9.0                 16.74
+chain   ~1.7                 ~0.7                  ~2.6                 5.04
+bare    ~0.37                ~0.13                 ~0.76                1.26
+Peak RSS stays startup-dominated (~280 MB floor; lit-12000 416 MB,
+call1-12000 317 MB, calln-6000 556 MB from 6000 declarations); the quadratic
+is time-only here. Caveat: SCALE longc (WITH narrow) peaked 3.2 GB at 15000
+statements vs our narrow-free call1-12000 at 317 MB, so narrow/guard products
+may additionally blow up memory at larger N with narrows present.
+
+7. Code mapping (all paths active in the binary: Stage0.Frontend.elabExpanded
+   runs with narrow=true, stage0/Stage0/Frontend/Elaboration.lean:43-51)
+--------------------------------------------------------------------------------
+Bucket S+P (whole-unit, position-independent; S vs P not separable: no
+front-end-only mode):
+- prepare pipeline, grammatik/Grammatik/Parser/Elab/Modules/Frontend.lean:30-45
+  (prepareDetailedRaw: expandWithRequirements, Generic.expandDetailed,
+  entzuckere, MatchNumber.erweitere, MatchWildcard.erweitere, CallHoist.hebe
+  (hebe target, line 41), exportDeclarationUnitDetailed) plus validOutput
+  (lines 59-61, 65-69): existingForms, ohneGenerik, freshNames, closed.
+  Every one of these walks the whole unit per compile; any per-statement
+  list-append or per-item full-unit scan among them is O(N^2) with a
+  shape-dependent constant (lit bodies carry twice the statements per N).
+- closed → directReferences, grammatik/Grammatik/Parser/Elab/Instantiation/
+  Items.lean:141-142 over SurfaceFacts built by statements/scope.bind
+  (Statements.lean:73-76, scope.bind prepends gebunden names, Surface.lean:49)
+  with membership scans (reference/scope.locals.contains, Surface.lean:44-47;
+  globalReference per call). Already-compiled mitigations of the same pattern
+  in this area: closed_eq_schnell (@[csimp], Items.lean:163-172) and
+  collectSteps_eq_fast (CallHoist/Collect.lean:23-46).
+- Source side: elaborateScopes/discoverScopes + checkAliasMeaning/
+  checkConstantMeaning per item (grammatik/.../Konst/Scopes/Discovery.lean:117,
+  134; ConstantScopes.lean:49-61; ConstantMeaning.lean:56), orderAliases
+  (AliasOrder.lean:108), normalize (Correctness.lean:145), all run before
+  prepare on every compile.
+Bucket E (elaborator path, narrow mode on):
+- Per `if`: uCond, Branches.lean:332-367, calls uWaechterFakten twice
+  (lines 347-348), each starting with a full-scope map uWaechterCtx
+  (Kontext/GuardNarrowing.lean:23-25, over ALL ctx.names per guard) plus
+  uRelFakten (Kontext/GuardRelation.lean:51-54, second full-scope map),
+  uMutFakten (Kontext/GuardMutable.lean:28-29, third, via uWaechterFakten),
+  uLiestL walks of then-block+ending and else-block (Branches.lean:348-349;
+  GuardMutable.lean:108; GuardRelation.lean:194). That is 4-5 whole-scope /
+  whole-block traversals per guard whether or not any fact results; explains
+  lit >> guard at same N (scope N vs 1) and the guard-series residual slope
+  (block walks at constant scope).
+- Per `let`/use: uWertBody/uRechne (Teil/Teil4.lean:125; Teil/Teil5Rest.lean:62),
+  uValueType findIdx? over names (Records/Records.lean:142-143), uParamNr
+  linear search (Teil/Teil3.lean:395-401, head-hit is O(1)), uBindKopf/uMitLokal
+  prepend (Teil/Teil7.lean:359-373), driver uAnwReihe+expandFoldStmt per
+  statement (Teil/Teil10.lean:17-26; Folds/Expressions.lean:86), calls via uRuf
+  koepfe.find? (Teil/Teil6.lean:464-466, O(heads) per call: NOT the driver,
+  calln = arity0 measured).
+- Notes multiplier on the error path only: firstFailing bisection ~13
+  elabExpanded prefix runs (Diagnose.lean:32-44); success path unaffected.
+Bucket R (lowering+checker+emission; emission linear: image bytes strictly
+linear in every series; Senke.bild, Senke/Images/Bild.lean:175):
+- Lowering per occurrence over the live context: frei (Senke/Welt/Rahmen.lean:29)
+  folds contextWords (Senke/Ausdruck/Aggregat/Layout.lean:80-83) on nearly every
+  lowE/lowS call (lowS/lowB, Senke/Anweisung.lean:18-30, 174-184); variableOffset
+  is O(depth) even for the head variable (Rahmen.lean:36-38, via vslot,
+  Ausdruck.lean:69). Code accumulation itself is right-associated (cs.1 ++ cr.1,
+  Anweisung.lean:180) and NOT the problem.
+- Checker: accepts/accepsSchnell (Senke/Ausdruck/Old/Source.lean:174-199) runs
+  AkzeptiertX/AkzeptiertXVoll (Zielsatz/Atomar/AtomarAkzeptiert.lean:297,
+  AkzeptiertSchnell.lean:20) over the elaborated program per compile; its
+  per-statement context/fact work is the remaining suspect inside R alongside
+  lowering. Retained hypothesis, not isolated: isolating lowering from the
+  checker needs a mode the binary does not offer.
+NOT the driver (measured): lexer/parser (0.1-0.2 s, linear); name length
+(string compares); requires/ensures text; parameter count; duplicate-name scan
+doppelterName (Stage0/Compiler.lean:21-26, Tafel-based); call count per se
+(bare linear); statement count per se (block linear; mut linear).
+
+8. Runner check: images of the lit body run in flat time
+--------------------------------------------------------------------------------
+lit N=1500/3000/6000/12000, 10 consecutive runner invocations each (same scope
+caps): 0.127/0.079/0.087/0.095 s total, i.e. ~8-13 ms per run regardless of N
+(scope+loader startup dominates; single run exit 7). No superlinear term on
+the execution side; body execution is linear-or-better (below measurement noise).
+
+9. Reproduction (worktree root; binaries already in .scratch-m)
+--------------------------------------------------------------------------------
+  bash .scratch-m/gen-longbody.sh SERIES N FILE   # SERIES in
+    lit chain call1 bare calln guard mut block names spec1 arity0 arity2 arity6 rangewide
+  bash .scratch-m/run-one.sh FILE IMG             # prints rc wall_s peak_kb polls lines img_bytes load
+Variants: insert `let bad999 : u32 in 0 .. 40 = nosuchfn_xyz(1);` (prepare fail),
+`let bad999 : u32 in 0 .. 40 = nosuchlocal_xyz + 1;` (elab fail), append
+`const BAD9462 : u8 = 999;` (source fail), `\` (lex fail), `let q = = ;` (parse fail).
+Runner (only if rc=0): systemd-run ... .scratch-m/runner IMG (exit 7 expected).
+Results source: .scratch-m/results.tsv (one line per run; error rows included).
+
+10. Faults: none found on the way
+--------------------------------------------------------------------------------
+No compiler faults. All 16 shapes verify at N=10 (compile rc=0, run exit 7).
+All five error triggers fail deterministically with the phase-correct message
+(lex; item expected; scalar-range source error; generic-output residual for
+prepare; name unknown + statement-locating note for elab). Side observation
+(not a fault): statements after `return` are still elaborated (error fires),
+and Diagnose.notes locates the failing statement (K of N) via prefix
+bisection. SCALE findings F1 (f32/f64 callee names) and F2 (duplicate
+cross-module names) were avoided by construction (distinct names) and not
+re-tested.

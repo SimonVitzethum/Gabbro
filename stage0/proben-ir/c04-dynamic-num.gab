@@ -1,0 +1,11 @@
+// C04: a use-site endpoint must be a stage name, never a computed number.
+module c04_dynamic_num {
+table T count 2 { slot { s : u32 in 0 .. 2, } }
+state S { transition begin { s : Idle -> Busy } }
+impl fn main() -> u32 in 0 .. 2
+    effects { reads T.slots, writes T.slots }
+{
+    transition T.slots[1].s : Idle -> 1;
+    return T.slots[1].s;
+}
+}

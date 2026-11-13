@@ -41,6 +41,10 @@ theorem grel_encG_zeuge :
   ⟨by decide, by decide, by decide +kernel, by kernel_rfl,
     grel_encG unit initial base, wrel_encG unit initial base⟩
 
+/-- The joint relation holds for the same nonzero static encoding. -/
+theorem wgrel_encG_zeuge : WGRel unit initial (encG unit initial base) :=
+  wgrel_enc unit initial base
+
 /-- The concrete lowered read used by the simulation witness. -/
 def read : LowSide unit [] [] :=
   { range := (0, 10), term := Expr.glob (D := declOf unit) (⟨0, by decide⟩ : Fin unit.globs.length) (by

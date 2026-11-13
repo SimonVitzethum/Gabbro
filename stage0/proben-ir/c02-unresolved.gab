@@ -1,0 +1,7 @@
+// C02: library call resolving nowhere is refused (N057).
+module c02_unresolved {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let s = @nada#sum() { 10 20 };
+    return s;
+}
+}

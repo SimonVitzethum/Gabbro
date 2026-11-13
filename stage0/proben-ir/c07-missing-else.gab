@@ -1,0 +1,13 @@
+// C07: fallible indirect call without else is refused.
+module c07_fallible_missing_else {
+reason Fault { Bad = 1 "bad" exhaustive }
+impl fn maybe(n : u32 in 0 .. 2) -> u32 in 0 .. 42 or Fault effects { pure } {
+    if n == 0 { return Fault::Bad; }
+    return 39;
+}
+impl fn apply(p : fn(u32 in 0 .. 2) -> u32 in 0 .. 42 or Fault effects { pure } costs <= 4 ops, n : u32 in 0 .. 2) -> u32 in 0 .. 50 effects { pure } {
+    let v = p(n);
+    return v;
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } { return apply(&maybe, 2); }
+}

@@ -1,0 +1,8 @@
+// C13: wrapping sub on u8: 10 -% 20 = 246.
+module c13_subw8 {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a : u8 = 10;
+    let b : u8 = 20;
+    return a -% b;
+}
+}

@@ -1,0 +1,5 @@
+// C01: recursive-by-value record schema is refused.
+module c01_recursive {
+type Node = { next : Node, v : u32 in 0 .. 10, };
+impl fn main() -> u32 in 0 .. 255 effects { pure } { return 0; }
+}

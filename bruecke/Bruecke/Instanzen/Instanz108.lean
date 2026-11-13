@@ -1,4 +1,5 @@
 module
+import Grammatik.Kern.Taktik.KernelRfl
 public import Bruecke.Pflichten
 public import Bruecke.Pruefung
 public import Grammatik.Korpus.Programme.Einheit108
@@ -6,6 +7,37 @@ public import Bruecke.Start
 public import Bruecke.Quelle
 public import Bruecke.Kette.Quelle
 public import Duty.Duty0108DisjointStartLocks
+import all Init.Data.String.Length
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.Repr
+import all Init.Data.String.Decode
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 @[expose] public section
 
 
@@ -27,13 +59,13 @@ theorem verankert : ∃ P fs, Gabbro.Grammatik.uebersetzeAllg Gabbro.Grammatik.P
 def ra : UFn := u.fns[0]'(by decide)
 def rc : UFn := u.fns[1]'(by decide)
 
-theorem shape_eq : shapeOf = shapeOfU u := by
+theorem shape_eq : shapeOf = shapeOfUG u := by
   funext p
   rcases p with ⟨c, i, f⟩ | ⟨c, n⟩ | n
   · by_cases hc : c = "T" <;> by_cases hf : f = "v" <;>
-      simp [shapeOf, shapeOfU, slotShape, u, Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108, hc, hf, @eq_comm _ "v"]
-  · simp [shapeOf, shapeOfU]
-  · simp [shapeOf, shapeOfU]
+      simp [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, slotShape, u, Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108, hc, hf, @eq_comm _ "v"]
+  · simp only [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108]
+  · simp only [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108]
 
 example : zuBody u ra = some read_a_body := rfl
 example : zuBody u rc = some read_c_body := rfl
@@ -57,19 +89,19 @@ theorem start : Gabbro.Grammatik.Zielsatz.StartPflicht Gabbro.Grammatik.Einheit1
     S3 instance: the simulation theorem applied to the parser's program of 108 (see
     `Instanz104.lean`); the duties are GabbroV's `read_a_meets` and `read_c_meets`. -/
 
-theorem wf_eq : wellFormed = fun s => Gabbro.Body.WF (shapeOfU u) s.world := by
+theorem wf_eq : wellFormed = fun s => Gabbro.Body.WF (shapeOfUG u) s.world := by
   funext s; unfold wellFormed; rw [shape_eq]
 
 theorem wfU_eq : wfU u = wellFormed := by rw [wf_eq]; rfl
 
 /-- Every duty of the unit, as the bridge states it: GabbroV's proofs. -/
-theorem meets_alle : ∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = some body ∧
+theorem meets_alle : ∀ c : Fin u.fns.length, ∃ body, zuBodyZ u (fnAt u c) = some body ∧
     meetsU u (wfU u) (fnAt u c) body := by
   intro c
   rw [wfU_eq]
   match c with
-  | ⟨0, _⟩ => exact ⟨read_a_body, rfl, read_a_meets⟩
-  | ⟨1, _⟩ => exact ⟨read_c_body, rfl, read_c_meets⟩
+  | ⟨0, _⟩ => exact ⟨read_a_body, (by kernel_rfl), read_a_meets⟩
+  | ⟨1, _⟩ => exact ⟨read_c_body, (by kernel_rfl), read_c_meets⟩
 
 /-! GENERIC-WITNESS beispiele/0108-disjoint-start-locks.gab pflichten_108
 
@@ -81,7 +113,7 @@ theorem pflichten_108 (hPtr : SchnittstellenPflicht u) :
   ⟨u, uOf_eq Gabbro.Grammatik.Einheit108.uebersetzt8, by decide, by decide, by decide, by decide,
     by decide, hPtr, fun c => by
       obtain ⟨body, hb, hm⟩ := meets_alle c
-      exact ⟨body, zuBodyZ_of_zuBodyB (zuBodyB_of_zuBody hb), hm⟩⟩
+      exact ⟨body, hb, hm⟩⟩
 
 /-- Premise (b) from the Body duties and the separately owed O43 refinement. -/
 theorem nutzer_bruecke (hPtr : SchnittstellenPflicht u) :

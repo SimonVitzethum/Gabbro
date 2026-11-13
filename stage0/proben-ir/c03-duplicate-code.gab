@@ -1,0 +1,13 @@
+// C03: duplicate numeric codes in one reason.
+module c03_duplicate_code {
+reason Fault {
+    First = 1 "first reason"
+    Second = 1 "second reason"
+    exhaustive
+}
+impl fn main() -> u32 in 0 .. 255
+    effects { pure }
+{
+    return 7;
+}
+}

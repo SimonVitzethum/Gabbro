@@ -1,0 +1,17 @@
+// C07: fallible indirect call, both exits, 39+7=46.
+module c07_void_ok {
+reason Fault { Bad = 1 "bad" exhaustive }
+impl fn maybe(n : u32 in 0 .. 2) -> u32 in 0 .. 42 or Fault effects { pure } costs <= 32 ops {
+    if n == 0 { return Fault::Bad; }
+    return 39;
+}
+impl fn run(p : fn(u32 in 0 .. 2) -> u32 in 0 .. 42 or Fault effects { pure } costs <= 32 ops, n : u32 in 0 .. 2) -> u32 in 0 .. 50 effects { pure } {
+    let v = p(n) else (e) { return 7; }
+    return v;
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a = run(&maybe, 2);
+    let b = run(&maybe, 0);
+    return a + b;
+}
+}

@@ -1,0 +1,31 @@
+// C03: a non-exhaustive (open) reason forwarded through else and returned.
+module c03_open_forward {
+reason Fault {
+    First = 1 "first reason"
+    Second = 2 "second reason"
+}
+impl fn fail(n : u32 in 0 .. 2) -> u32 in 0 .. 42 or Fault
+    effects { pure }
+{
+    if n == 0 { return Fault::First; }
+    if n == 1 { return Fault::Second; }
+    return 39;
+}
+impl fn pass(n : u32 in 0 .. 2) -> u32 in 0 .. 42 or Fault
+    effects { pure }
+{
+    let value = fail(n) else (reason) {
+        return reason;
+    }
+    return value;
+}
+impl fn main() -> u32 in 0 .. 255
+    effects { pure }
+{
+    let value = pass(2) else (reason) {
+        return 7;
+    }
+    if value == 39 { return 42; }
+    return 7;
+}
+}

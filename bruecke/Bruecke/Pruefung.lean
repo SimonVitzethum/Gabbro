@@ -55,7 +55,8 @@ def oldsB (u : UProg) (fn : UFn) : Bool :=
 def postB (u : UProg) (fn : UFn) : Bool := fn.gives.all fun e => (ensExpr u fn {} e).isSome
 
 def schreibtB (u : UProg) (fn : UFn) : Bool :=
-  fn.puts.all fun w => u.tabs.any (·.name == w)
+  (fn.puts.all fun w => u.tabs.any (·.name == w)) &&
+    fn.gputs.all fun w => u.globs.any (·.name == w)
 
 /-- No `bool`, option or aggregate field and no `bool` result: the bridge speaks about numbers only
     (Body's shapes are `intIn`), so a unit with such a place is REFUSED here, by name, and
@@ -64,8 +65,24 @@ def keinBoolB (u : UProg) : Bool :=
   u.tabs.all (fun t => t.bools.isEmpty && t.opts.isEmpty && t.werte.isEmpty) &&
     u.fns.all (fun f => !f.resBool && f.resTy.isNone && f.resOpt.isNone && f.resSum.isNone && f.resWhy.isNone)
 
+/-- Boolean, aggregate and atomic statics are refused by the unit gate. -/
+def staticsB (u : UProg) : Bool := u.globs.all fun g =>
+  match g.ty with
+  | .int .. => !g.atomic
+  | .bool | .wert _ => false
+
+theorem staticsB_ok {u : UProg} (h : staticsB u = true) : NumericStatics u := by
+  intro g
+  have hg := List.all_eq_true.mp h (globAt u g) (List.get_mem _ _)
+  cases ht : (globAt u g).ty with
+  | int lo hi =>
+    simp only [ht, Bool.not_eq_eq_eq_not, Bool.not_true] at hg
+    exact ⟨lo, hi, rfl, hg⟩
+  | bool => simp only [ht, Bool.false_eq_true] at hg
+  | wert ty => simp only [ht, Bool.false_eq_true] at hg
+
 def stimmigB (u : UProg) : Bool :=
-  keinBoolB u && tabB u && u.fns.all (fun fn => fn.needs.isEmpty && fn.gruende == 0) && u.invs.isEmpty && u.globs.isEmpty &&
+  keinBoolB u && tabB u && u.fns.all (fun fn => fn.needs.isEmpty && fn.gruende == 0) && u.invs.isEmpty && staticsB u &&
     u.fns.all fun fn =>
     artB fn && namenB fn && freiB fn && oldsB u fn && postB u fn && schreibtB u fn
 
@@ -148,10 +165,18 @@ theorem postB_ok {fn : UFn} (h : postB u fn = true) : PostDef u fn :=
 theorem schreibtB_ok {fn : UFn} (h : schreibtB u fn = true) :
     ∀ w ∈ fn.puts, ∃ t : Fin u.tabs.length, (tabAt u t).name = w := by
   intro w hw
-  have := List.all_eq_true.mp h w hw
+  have := List.all_eq_true.mp (Bool.and_eq_true_iff.mp h).1 w hw
   obtain ⟨x, hx, hxw⟩ := List.any_eq_true.mp this
   obtain ⟨i, hi, rfl⟩ := List.getElem_of_mem hx
   exact ⟨⟨i, hi⟩, by simpa [tabAt] using hxw⟩
+
+theorem gschreibtB_ok {fn : UFn} (h : schreibtB u fn = true) :
+    ∀ w ∈ fn.gputs, ∃ g : Fin u.globs.length, (globAt u g).name = w := by
+  intro w hw
+  have hh := List.all_eq_true.mp (Bool.and_eq_true_iff.mp h).2 w hw
+  obtain ⟨x, hx, hxw⟩ := List.any_eq_true.mp hh
+  obtain ⟨i, hi, rfl⟩ := List.getElem_of_mem hx
+  exact ⟨⟨i, hi⟩, by simpa [globAt] using hxw⟩
 
 /-- **The name conditions, decided.** -/
 theorem keinBoolB_ok (h : keinBoolB u = true) :

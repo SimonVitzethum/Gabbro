@@ -1,0 +1,14 @@
+// C03: an unknown case of a closed reason.
+module c03_unknown_case {
+reason Fault {
+    First = 1 "first reason"
+    Second = 2 "second reason"
+    exhaustive
+}
+impl fn main() -> u32 in 0 .. 255
+    effects { pure }
+{
+    let r = Fault::Third;
+    return 7;
+}
+}

@@ -112,6 +112,27 @@ theorem set {D : Deklaration} {Γ : Ctx} {fn : UFn} {ids : List String}
     rw [if_neg he, Gabbro.Body.bindLocal_elsewhere _ _ _ _ hne]
     simpa only [Nat.zero_add] using h.values k other hk
 
+/-- Declared entry names are distinct, so their visible relation covers every position. -/
+theorem start {D : Deklaration} {Γ : Ctx} {fn : UFn} {sh : Nat} {ρ : Env D Γ}
+    {β : Gabbro.Body.Binding} (hN : NamenEindeutig fn) (h : LRel fn sh ρ β) :
+    PositionalLRel fn (BodyNames.start fn).active sh ρ β := by
+  refine ⟨(by simp only [BodyNames.start, List.length_map]), hN, ?_⟩
+  intro j id hid
+  change (fn.params.map (·.1))[j]? = some id at hid
+  rw [List.getElem?_map] at hid
+  cases hj : fn.params[j]? with
+  | none => rw [hj] at hid; cases hid
+  | some q =>
+    rw [hj] at hid
+    simp only [Option.map_some, Option.some.injEq] at hid
+    have hp : fn.params[j]? = some (id, q.2) := by
+      cases q with
+      | mk name ty =>
+        dsimp only at hid
+        subst id
+        exact hj
+    exact h id j (paramPos_of_nodup _ j id q.2 hN hp)
+
 end PositionalLRel
 
 end Gabbro.Bruecke

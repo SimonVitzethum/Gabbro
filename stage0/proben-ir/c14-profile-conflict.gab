@@ -1,0 +1,8 @@
+// C14: profile with conflicting arch entries is refused.
+module c14_conflict {
+profile {
+    arch x86_64;
+    arch aarch64;
+};
+impl fn main() -> u32 in 0 .. 255 effects { pure } { return 42; }
+}

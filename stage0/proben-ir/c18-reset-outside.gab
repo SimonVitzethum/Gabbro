@@ -1,0 +1,9 @@
+// C18: reset range outside the static array is refused.
+module c18_reset_oob {
+static mut RING : [u8; 64] = 0;
+impl fn geben() -> u32 in 0 .. 255 effects { writes RING, reads RING } costs <= 4800 ops {
+    reset RING at 60 count 8;
+    return 42;
+}
+impl fn main() -> u32 in 0 .. 255 effects { reads RING, writes RING } { return geben(); }
+}

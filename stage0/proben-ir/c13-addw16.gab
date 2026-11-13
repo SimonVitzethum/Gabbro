@@ -1,0 +1,10 @@
+// C13: wrapping add on u16: 65530 +% 10 = 4.
+module c13_addw16 {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a : u16 = 65530;
+    let b : u16 = 10;
+    let r = a +% b;
+    if r == 4 { return 42; }
+    return 7;
+}
+}

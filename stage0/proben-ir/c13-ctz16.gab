@@ -1,0 +1,7 @@
+// C13: ctz on u16: ctz(4096) = 12.
+module c13_ctz16 {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a : u16 = 4096;
+    return ctz(a);
+}
+}

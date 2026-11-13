@@ -7,14 +7,26 @@
 // 8 Call, 9 Let, 10 If, 11 Return, 12 Seq, 13 Fn, 14 Arg, 15 Gt, 16 Le,
 // 17 Ge, 18 Ne, 19 Param, 20 Sig (a function head: params plus body).
 module parse {
-// Every function carries an explicit fuel parameter with `decreases`; a bare
-// `return` of the recursive call from a branch is `let`-bound only where a
-// call argument projects a record field (see lex.gab). The parser result is
-// the `POut` record with a `bool` flag (tuples are refused: `stage0: (
-// without )`). Dispatch stays `if` chains over the u32 kind codes: `match`
-// arms need names (`stage0: name expected`), so a wildcard covers only tagged
-// values. `narrow` on a record field or table slot is refused (`stage0: stmt
-// without G form: trim`); the field is bound to a local first.
+// Every function carries an explicit fuel parameter with `decreases` (kept
+// for cycle consistency even where the body no longer recurses: a call
+// cycle with differing `decreases` tuples is refused); cursor loops are
+// `traverse` sweeps over the token table with a plain `u32` cursor plus
+// done flag (no `while` exists). The sweep visits every slot once in index
+// order; only the visit with `i` equal to the cursor does work and `leave`
+// ends the sweep early. Cursors only move forward, so every cursor value
+// meets its visit. Chain-building loops (`parse_block`, `parse_unit`,
+// `parse_args`, `parse_params`, `else if`) allocate nodes with a placeholder
+// tail and patch the previous tail, since the rest must be known first.
+// A bare `return` of the recursive call from a branch is `let`-bound only
+// where a call argument projects a record field (see lex.gab). The parser
+// result is the `POut` record with a `bool` flag (tuples are refused:
+// `stage0: ( without )`). Dispatch stays `if` chains over the u32 kind
+// codes: `match` arms need names (`stage0: name expected`), so a wildcard
+// covers only tagged values. `narrow` on a record field or table slot is
+// refused (`stage0: stmt without G form: trim`); the field is bound to a
+// local first. Ordering facts do not travel through nested `if`s or past a
+// `mut` assignment inside a loop body, so every bounded operation repeats
+// its own guard directly at its use.
 type POut = { node : u32 in 0 .. 255, pos : u32 in 0 .. 64, ok : bool, };
 table nodes count 96 { slot { k : u32 in 0 .. 31, a : u32 in 0 .. 100000, b : u32 in 0 .. 255, c : u32 in 0 .. 255, } }
 static mut node_used : u32 in 0 .. 96 = 0;
@@ -24,17 +36,28 @@ impl fn span_value_rec(start : u32 in 0 .. 159, k : u32 in 0 .. 159, acc : u32 i
     decreases fuel
 {
     narrow fuel to 1 .. 128 else { parse_err = true; return acc; }
-    if k == 0 { return acc; }
-    let b = srcbuf::byte_at(start);
-    narrow b to '0' .. '9' else { parse_err = true; return 0; }
-    let d = b - '0';
-    narrow acc to 0 .. 10000 else { parse_err = true; return 0; }
-    let m = acc * 10;
-    let v = m + d;
-    narrow v to 0 .. 100000 else { parse_err = true; return 0; }
-    narrow start to 0 .. 158 else { parse_err = true; return 0; }
-    narrow k to 1 .. 159 else { parse_err = true; return 0; }
-    return span_value_rec(start + 1, k - 1, v, fuel - 1);
+    let mut s : u32 in 0 .. 159 = start;
+    let mut a : u32 in 0 .. 100000 = acc;
+    let mut kn : u32 in 0 .. 159 = k;
+    traverse i over slots of srcbuf::src by unvisited touches reads srcbuf::src.slots, writes parse_err {
+        if i == s {
+            if kn == 0 { return a; }
+            let b = srcbuf::byte_at(s);
+            narrow b to '0' .. '9' else { parse_err = true; return 0; }
+            let d = b - '0';
+            let ac = a;
+            narrow ac to 0 .. 10000 else { parse_err = true; return 0; }
+            let m = ac * 10;
+            let v = m + d;
+            narrow v to 0 .. 100000 else { parse_err = true; return 0; }
+            a = v;
+            if s < 159 { s = s + 1; }
+            else { parse_err = true; return 0; }
+            if kn >= 1 { kn = kn - 1; }
+        }
+    }
+    parse_err = true;
+    return 0;
 }
 impl fn new_node(kind : u32 in 0 .. 31, a : u32 in 0 .. 100000, b : u32 in 0 .. 255, c : u32 in 0 .. 255) -> u32 in 0 .. 95
     effects { reads node_used, writes node_used, writes nodes.slots, writes parse_err }
@@ -111,23 +134,48 @@ impl fn parse_mul_rest(left : u32 in 0 .. 255, ti : u32 in 0 .. 64, fuel : u32 i
     decreases fuel
 {
     narrow fuel to 1 .. 128 else { parse_err = true; return POut(node: left, pos: ti, ok: false); }
-    narrow ti to 0 .. 63 else { return POut(node: left, pos: ti, ok: false); }
-    let k = lex::tok_kind(ti);
-    if k == 10 {
-        let r = parse_unary(ti + 1, fuel - 1);
-        if !r.ok { return POut(node: 0, pos: ti, ok: false); }
-        let n = new_node(4, left, r.node, 0);
-        let q = parse_mul_rest(n, r.pos, fuel - 1);
-        return q;
+    if ti == 64 { return POut(node: left, pos: ti, ok: true); }
+    let mut l : u32 in 0 .. 255 = left;
+    let mut p : u32 in 0 .. 64 = ti;
+    let mut fp : u32 in 0 .. 64 = ti;
+    let mut ok : bool = true;
+    let mut done : bool = false;
+    traverse i over slots of lex::toks by unvisited touches reads lex::toks.slots, writes nodes.slots, writes node_used, writes parse_err {
+        if done { leave i; }
+        if i == p {
+            if p < 64 {
+                let k = lex::tok_kind(p);
+                if k == 10 {
+                    if p < 64 {
+                        let r = parse_unary(p + 1, fuel - 1);
+                        if !r.ok { ok = false; fp = p; done = true; }
+                        else {
+                            let nn = new_node(4, l, r.node, 0);
+                            l = nn;
+                            p = r.pos;
+                        }
+                    }
+                }
+                else {
+                    if k == 11 {
+                        if p < 64 {
+                            let r = parse_unary(p + 1, fuel - 1);
+                            if !r.ok { ok = false; fp = p; done = true; }
+                            else {
+                                let nn = new_node(5, l, r.node, 0);
+                                l = nn;
+                                p = r.pos;
+                            }
+                        }
+                    }
+                    else { done = true; }
+                }
+            }
+            else { done = true; }
+        }
     }
-    if k == 11 {
-        let r = parse_unary(ti + 1, fuel - 1);
-        if !r.ok { return POut(node: 0, pos: ti, ok: false); }
-        let n = new_node(5, left, r.node, 0);
-        let q = parse_mul_rest(n, r.pos, fuel - 1);
-        return q;
-    }
-    return POut(node: left, pos: ti, ok: true);
+    if !ok { return POut(node: 0, pos: fp, ok: false); }
+    return POut(node: l, pos: p, ok: true);
 }
 impl fn parse_mul(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
     effects { writes parse_err, writes node_used, writes nodes.slots }
@@ -144,23 +192,48 @@ impl fn parse_add_rest(left : u32 in 0 .. 255, ti : u32 in 0 .. 64, fuel : u32 i
     decreases fuel
 {
     narrow fuel to 1 .. 128 else { parse_err = true; return POut(node: left, pos: ti, ok: false); }
-    narrow ti to 0 .. 63 else { return POut(node: left, pos: ti, ok: false); }
-    let k = lex::tok_kind(ti);
-    if k == 8 {
-        let r = parse_mul(ti + 1, fuel - 1);
-        if !r.ok { return POut(node: 0, pos: ti, ok: false); }
-        let n = new_node(2, left, r.node, 0);
-        let q = parse_add_rest(n, r.pos, fuel - 1);
-        return q;
+    if ti == 64 { return POut(node: left, pos: ti, ok: true); }
+    let mut l : u32 in 0 .. 255 = left;
+    let mut p : u32 in 0 .. 64 = ti;
+    let mut fp : u32 in 0 .. 64 = ti;
+    let mut ok : bool = true;
+    let mut done : bool = false;
+    traverse i over slots of lex::toks by unvisited touches reads lex::toks.slots, writes nodes.slots, writes node_used, writes parse_err {
+        if done { leave i; }
+        if i == p {
+            if p < 64 {
+                let k = lex::tok_kind(p);
+                if k == 8 {
+                    if p < 64 {
+                        let r = parse_mul(p + 1, fuel - 1);
+                        if !r.ok { ok = false; fp = p; done = true; }
+                        else {
+                            let nn = new_node(2, l, r.node, 0);
+                            l = nn;
+                            p = r.pos;
+                        }
+                    }
+                }
+                else {
+                    if k == 9 {
+                        if p < 64 {
+                            let r = parse_mul(p + 1, fuel - 1);
+                            if !r.ok { ok = false; fp = p; done = true; }
+                            else {
+                                let nn = new_node(3, l, r.node, 0);
+                                l = nn;
+                                p = r.pos;
+                            }
+                        }
+                    }
+                    else { done = true; }
+                }
+            }
+            else { done = true; }
+        }
     }
-    if k == 9 {
-        let r = parse_mul(ti + 1, fuel - 1);
-        if !r.ok { return POut(node: 0, pos: ti, ok: false); }
-        let n = new_node(3, left, r.node, 0);
-        let q = parse_add_rest(n, r.pos, fuel - 1);
-        return q;
-    }
-    return POut(node: left, pos: ti, ok: true);
+    if !ok { return POut(node: 0, pos: fp, ok: false); }
+    return POut(node: l, pos: p, ok: true);
 }
 impl fn parse_add(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
     effects { writes parse_err, writes node_used, writes nodes.slots }
@@ -177,51 +250,100 @@ impl fn parse_cmp_rest(left : u32 in 0 .. 255, ti : u32 in 0 .. 64, fuel : u32 i
     decreases fuel
 {
     narrow fuel to 1 .. 128 else { parse_err = true; return POut(node: left, pos: ti, ok: false); }
-    narrow ti to 0 .. 63 else { return POut(node: left, pos: ti, ok: false); }
-    let k = lex::tok_kind(ti);
-    if k == 18 {
-        let r = parse_add(ti + 1, fuel - 1);
-        if !r.ok { return POut(node: 0, pos: ti, ok: false); }
-        let n = new_node(6, left, r.node, 0);
-        let q = parse_cmp_rest(n, r.pos, fuel - 1);
-        return q;
+    if ti == 64 { return POut(node: left, pos: ti, ok: true); }
+    let mut l : u32 in 0 .. 255 = left;
+    let mut p : u32 in 0 .. 64 = ti;
+    let mut fp : u32 in 0 .. 64 = ti;
+    let mut ok : bool = true;
+    let mut done : bool = false;
+    traverse i over slots of lex::toks by unvisited touches reads lex::toks.slots, writes nodes.slots, writes node_used, writes parse_err {
+        if done { leave i; }
+        if i == p {
+            if p < 64 {
+                let k = lex::tok_kind(p);
+                if k == 18 {
+                    if p < 64 {
+                        let r = parse_add(p + 1, fuel - 1);
+                        if !r.ok { ok = false; fp = p; done = true; }
+                        else {
+                            let nn = new_node(6, l, r.node, 0);
+                            l = nn;
+                            p = r.pos;
+                        }
+                    }
+                }
+                else {
+                    if k == 19 {
+                        if p < 64 {
+                            let r = parse_add(p + 1, fuel - 1);
+                            if !r.ok { ok = false; fp = p; done = true; }
+                            else {
+                                let nn = new_node(15, l, r.node, 0);
+                                l = nn;
+                                p = r.pos;
+                            }
+                        }
+                    }
+                    else {
+                        if k == 21 {
+                            if p < 64 {
+                                let r = parse_add(p + 1, fuel - 1);
+                                if !r.ok { ok = false; fp = p; done = true; }
+                                else {
+                                    let nn = new_node(7, l, r.node, 0);
+                                    l = nn;
+                                    p = r.pos;
+                                }
+                            }
+                        }
+                        else {
+                            if k == 23 {
+                                if p < 64 {
+                                    let r = parse_add(p + 1, fuel - 1);
+                                    if !r.ok { ok = false; fp = p; done = true; }
+                                    else {
+                                        let nn = new_node(18, l, r.node, 0);
+                                        l = nn;
+                                        p = r.pos;
+                                    }
+                                }
+                            }
+                            else {
+                                if k == 24 {
+                                    if p < 64 {
+                                        let r = parse_add(p + 1, fuel - 1);
+                                        if !r.ok { ok = false; fp = p; done = true; }
+                                        else {
+                                            let nn = new_node(16, l, r.node, 0);
+                                            l = nn;
+                                            p = r.pos;
+                                        }
+                                    }
+                                }
+                                else {
+                                    if k == 25 {
+                                        if p < 64 {
+                                            let r = parse_add(p + 1, fuel - 1);
+                                            if !r.ok { ok = false; fp = p; done = true; }
+                                            else {
+                                                let nn = new_node(17, l, r.node, 0);
+                                                l = nn;
+                                                p = r.pos;
+                                            }
+                                        }
+                                    }
+                                    else { done = true; }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            else { done = true; }
+        }
     }
-    if k == 19 {
-        let r = parse_add(ti + 1, fuel - 1);
-        if !r.ok { return POut(node: 0, pos: ti, ok: false); }
-        let n = new_node(15, left, r.node, 0);
-        let q = parse_cmp_rest(n, r.pos, fuel - 1);
-        return q;
-    }
-    if k == 21 {
-        let r = parse_add(ti + 1, fuel - 1);
-        if !r.ok { return POut(node: 0, pos: ti, ok: false); }
-        let n = new_node(7, left, r.node, 0);
-        let q = parse_cmp_rest(n, r.pos, fuel - 1);
-        return q;
-    }
-    if k == 23 {
-        let r = parse_add(ti + 1, fuel - 1);
-        if !r.ok { return POut(node: 0, pos: ti, ok: false); }
-        let n = new_node(18, left, r.node, 0);
-        let q = parse_cmp_rest(n, r.pos, fuel - 1);
-        return q;
-    }
-    if k == 24 {
-        let r = parse_add(ti + 1, fuel - 1);
-        if !r.ok { return POut(node: 0, pos: ti, ok: false); }
-        let n = new_node(16, left, r.node, 0);
-        let q = parse_cmp_rest(n, r.pos, fuel - 1);
-        return q;
-    }
-    if k == 25 {
-        let r = parse_add(ti + 1, fuel - 1);
-        if !r.ok { return POut(node: 0, pos: ti, ok: false); }
-        let n = new_node(17, left, r.node, 0);
-        let q = parse_cmp_rest(n, r.pos, fuel - 1);
-        return q;
-    }
-    return POut(node: left, pos: ti, ok: true);
+    if !ok { return POut(node: 0, pos: fp, ok: false); }
+    return POut(node: l, pos: p, ok: true);
 }
 impl fn parse_cmp(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
     effects { writes parse_err, writes node_used, writes nodes.slots }
@@ -245,56 +367,117 @@ impl fn parse_args(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
     decreases fuel
 {
     narrow fuel to 1 .. 128 else { parse_err = true; return POut(node: 0, pos: ti, ok: false); }
-    narrow ti to 0 .. 63 else { return POut(node: 0, pos: ti, ok: false); }
-    let k = lex::tok_kind(ti);
-    if k == 13 {
-        return POut(node: 255, pos: ti + 1, ok: true);
+    if ti == 64 { return POut(node: 0, pos: ti, ok: false); }
+    let mut p : u32 in 0 .. 64 = ti;
+    let mut root : u32 in 0 .. 255 = 255;
+    let mut prev : u32 in 0 .. 255 = 255;
+    traverse i over slots of lex::toks by unvisited touches reads lex::toks.slots, writes nodes.slots, writes node_used, writes parse_err {
+        if i == p {
+            if p < 64 {
+                let pp : u32 in 0 .. 63 = p;
+                let k = lex::tok_kind(pp);
+                if k == 13 {
+                    return POut(node: root, pos: pp + 1, ok: true);
+                }
+                let e = parse_expr(pp, fuel - 1);
+                if !e.ok { return POut(node: 0, pos: pp, ok: false); }
+                let ep : u32 in 0 .. 64 = e.pos;
+                if ep == 64 { return POut(node: 0, pos: pp, ok: false); }
+                else {
+                    if ep < 64 {
+                        let k2 = lex::tok_kind(ep);
+                        if k2 == 16 {
+                            let nn = new_node(14, e.node, 255, 0);
+                            if root == 255 { root = nn; }
+                            else {
+                                let pv = prev;
+                                narrow pv to 0 .. 95 else { parse_err = true; return POut(node: 0, pos: pp, ok: false); }
+                                nodes.slots[pv].b = nn;
+                            }
+                            prev = nn;
+                            if ep < 64 { p = ep + 1; }
+                        }
+                        else {
+                            if k2 == 13 {
+                                let mm = new_node(14, e.node, 255, 0);
+                                if root == 255 { root = mm; }
+                                else {
+                                    let pw = prev;
+                                    narrow pw to 0 .. 95 else { parse_err = true; return POut(node: 0, pos: pp, ok: false); }
+                                    nodes.slots[pw].b = mm;
+                                }
+                                if ep < 64 {
+                                    return POut(node: root, pos: ep + 1, ok: true);
+                                }
+                                return POut(node: 0, pos: pp, ok: false);
+                            }
+                            return POut(node: 0, pos: pp, ok: false);
+                        }
+                    }
+                    else { return POut(node: 0, pos: pp, ok: false); }
+                }
+            }
+        }
     }
-    let e = parse_expr(ti, fuel - 1);
-    if !e.ok { return POut(node: 0, pos: ti, ok: false); }
-    let ep = e.pos;
-    narrow ep to 0 .. 63 else { return POut(node: 0, pos: ti, ok: false); }
-    let k2 = lex::tok_kind(ep);
-    if k2 == 16 {
-        let r = parse_args(ep + 1, fuel - 1);
-        if !r.ok { return POut(node: 0, pos: ti, ok: false); }
-        let n = new_node(14, e.node, r.node, 0);
-        return POut(node: n, pos: r.pos, ok: true);
-    }
-    if k2 == 13 {
-        let n = new_node(14, e.node, 255, 0);
-        return POut(node: n, pos: ep + 1, ok: true);
-    }
-    return POut(node: 0, pos: ti, ok: false);
+    return POut(node: 0, pos: p, ok: false);
 }
 impl fn parse_params(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
     effects { writes parse_err, writes node_used, writes nodes.slots }
     decreases fuel
 {
     narrow fuel to 1 .. 128 else { parse_err = true; return POut(node: 0, pos: ti, ok: false); }
-    narrow ti to 0 .. 63 else { return POut(node: 0, pos: ti, ok: false); }
-    let k = lex::tok_kind(ti);
-    if k == 13 {
-        return POut(node: 255, pos: ti + 1, ok: true);
-    }
-    if k == 1 {
-        let s = lex::tok_start(ti);
-        let l = lex::tok_len(ti);
-        narrow ti to 0 .. 62 else { return POut(node: 0, pos: ti, ok: false); }
-        let k2 = lex::tok_kind(ti + 1);
-        if k2 == 16 {
-            let r = parse_params(ti + 2, fuel - 1);
-            if !r.ok { return POut(node: 0, pos: ti, ok: false); }
-            let n = new_node(19, s, l, r.node);
-            return POut(node: n, pos: r.pos, ok: true);
+    if ti == 64 { return POut(node: 0, pos: ti, ok: false); }
+    let mut p : u32 in 0 .. 64 = ti;
+    let mut root : u32 in 0 .. 255 = 255;
+    let mut prev : u32 in 0 .. 255 = 255;
+    traverse i over slots of lex::toks by unvisited touches reads lex::toks.slots, writes nodes.slots, writes node_used, writes parse_err {
+        if i == p {
+            if p < 64 {
+                let pp : u32 in 0 .. 63 = p;
+                let k = lex::tok_kind(pp);
+                if k == 13 {
+                    return POut(node: root, pos: pp + 1, ok: true);
+                }
+                if k == 1 {
+                    let s = lex::tok_start(pp);
+                    let l = lex::tok_len(pp);
+                    if pp < 63 {
+                        let k2 = lex::tok_kind(pp + 1);
+                        if k2 == 16 {
+                            let nn = new_node(19, s, l, 255);
+                            if root == 255 { root = nn; }
+                            else {
+                                let pv = prev;
+                                narrow pv to 0 .. 95 else { parse_err = true; return POut(node: 0, pos: pp, ok: false); }
+                                nodes.slots[pv].c = nn;
+                            }
+                            prev = nn;
+                            if pp < 63 { p = pp + 2; }
+                        }
+                        else {
+                            if k2 == 13 {
+                                let mm = new_node(19, s, l, 255);
+                                if root == 255 { root = mm; }
+                                else {
+                                    let pw = prev;
+                                    narrow pw to 0 .. 95 else { parse_err = true; return POut(node: 0, pos: pp, ok: false); }
+                                    nodes.slots[pw].c = mm;
+                                }
+                                if pp < 63 {
+                                    return POut(node: root, pos: pp + 2, ok: true);
+                                }
+                                return POut(node: 0, pos: pp, ok: false);
+                            }
+                            return POut(node: 0, pos: pp, ok: false);
+                        }
+                    }
+                    else { return POut(node: 0, pos: pp, ok: false); }
+                }
+                else { return POut(node: 0, pos: pp, ok: false); }
+            }
         }
-        if k2 == 13 {
-            let n = new_node(19, s, l, 255);
-            return POut(node: n, pos: ti + 2, ok: true);
-        }
-        return POut(node: 0, pos: ti, ok: false);
     }
-    return POut(node: 0, pos: ti, ok: false);
+    return POut(node: 0, pos: p, ok: false);
 }
 impl fn parse_stmt(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
     effects { writes parse_err, writes node_used, writes nodes.slots }
@@ -379,7 +562,74 @@ impl fn parse_stmt_else(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
     decreases fuel
 {
     narrow fuel to 1 .. 128 else { parse_err = true; return POut(node: 0, pos: ti, ok: false); }
-    return parse_stmt(ti, fuel - 1);
+    if ti == 64 { return POut(node: 0, pos: ti, ok: false); }
+    let mut tp : u32 in 0 .. 64 = ti;
+    let mut root : u32 in 0 .. 255 = 255;
+    let mut prev : u32 in 0 .. 255 = 255;
+    traverse i over slots of lex::toks by unvisited touches reads lex::toks.slots, writes nodes.slots, writes node_used, writes parse_err {
+        if i == tp {
+            if tp < 64 {
+                let pp : u32 in 0 .. 63 = tp;
+                let e = parse_expr(pp + 1, fuel - 1);
+                if !e.ok { return POut(node: 0, pos: pp, ok: false); }
+                let ep : u32 in 0 .. 64 = e.pos;
+                if ep == 64 { return POut(node: 0, pos: pp, ok: false); }
+                else {
+                    if ep < 64 {
+                        let k = lex::tok_kind(ep);
+                        if k == 14 {
+                            if ep < 64 {
+                                let th = parse_block(ep + 1, fuel - 1);
+                                if !th.ok { return POut(node: 0, pos: pp, ok: false); }
+                                let tpp : u32 in 0 .. 64 = th.pos;
+                                if tpp == 64 { return POut(node: 0, pos: pp, ok: false); }
+                                else {
+                                    if tpp < 64 {
+                                        let nn = new_node(10, e.node, th.node, 255);
+                                        if root == 255 { root = nn; }
+                                        else {
+                                            let pv = prev;
+                                            narrow pv to 0 .. 95 else { parse_err = true; return POut(node: 0, pos: pp, ok: false); }
+                                            nodes.slots[pv].c = nn;
+                                        }
+                                        prev = nn;
+                                        let k3 = lex::tok_kind(tpp);
+                                        if k3 == 6 {
+                                            if tpp < 63 {
+                                                let k4 = lex::tok_kind(tpp + 1);
+                                                if k4 == 5 {
+                                                    if tpp < 64 { tp = tpp + 1; }
+                                                }
+                                                else {
+                                                    if tpp < 64 {
+                                                        let eb = parse_else_block(tpp + 1, fuel - 1);
+                                                        if !eb.ok { return POut(node: 0, pos: pp, ok: false); }
+                                                        let pw = prev;
+                                                        narrow pw to 0 .. 95 else { parse_err = true; return POut(node: 0, pos: pp, ok: false); }
+                                                        nodes.slots[pw].c = eb.node;
+                                                        return POut(node: root, pos: eb.pos, ok: true);
+                                                    }
+                                                    return POut(node: 0, pos: pp, ok: false);
+                                                }
+                                            }
+                                            else { return POut(node: 0, pos: pp, ok: false); }
+                                        }
+                                        else {
+                                            return POut(node: root, pos: tpp, ok: true);
+                                        }
+                                    }
+                                    else { return POut(node: 0, pos: pp, ok: false); }
+                                }
+                            }
+                        }
+                        else { return POut(node: 0, pos: pp, ok: false); }
+                    }
+                    else { return POut(node: 0, pos: pp, ok: false); }
+                }
+            }
+        }
+    }
+    return POut(node: 0, pos: tp, ok: false);
 }
 impl fn parse_else_block(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
     effects { writes parse_err, writes node_used, writes nodes.slots }
@@ -398,17 +648,35 @@ impl fn parse_block(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
     decreases fuel
 {
     narrow fuel to 1 .. 128 else { parse_err = true; return POut(node: 0, pos: ti, ok: false); }
-    let s = parse_stmt(ti, fuel - 1);
-    if !s.ok { return POut(node: 0, pos: ti, ok: false); }
-    if s.node == 255 {
-        let sp = s.pos;
-        narrow sp to 0 .. 63 else { return POut(node: 0, pos: ti, ok: false); }
-        return POut(node: 255, pos: sp + 1, ok: true);
+    let mut p : u32 in 0 .. 64 = ti;
+    let mut root : u32 in 0 .. 255 = 255;
+    let mut prev : u32 in 0 .. 255 = 255;
+    traverse i over slots of lex::toks by unvisited touches reads lex::toks.slots, writes nodes.slots, writes node_used, writes parse_err {
+        if i == p {
+            if p < 64 {
+                let pp : u32 in 0 .. 63 = p;
+                let s = parse_stmt(pp, fuel - 1);
+                if !s.ok { return POut(node: 0, pos: pp, ok: false); }
+                let sp : u32 in 0 .. 64 = s.pos;
+                if s.node == 255 {
+                    if sp < 64 {
+                        return POut(node: root, pos: sp + 1, ok: true);
+                    }
+                    return POut(node: 0, pos: pp, ok: false);
+                }
+                let nn = new_node(12, s.node, 255, 0);
+                if root == 255 { root = nn; }
+                else {
+                    let pv = prev;
+                    narrow pv to 0 .. 95 else { parse_err = true; return POut(node: 0, pos: pp, ok: false); }
+                    nodes.slots[pv].b = nn;
+                }
+                prev = nn;
+                p = sp;
+            }
+        }
     }
-    let r = parse_block(s.pos, fuel - 1);
-    if !r.ok { return POut(node: 0, pos: ti, ok: false); }
-    let n = new_node(12, s.node, r.node, 0);
-    return POut(node: n, pos: r.pos, ok: true);
+    return POut(node: 0, pos: p, ok: false);
 }
 impl fn parse_fn(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
     effects { writes parse_err, writes node_used, writes nodes.slots }
@@ -449,17 +717,34 @@ impl fn parse_unit(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
     decreases fuel
 {
     narrow fuel to 1 .. 128 else { parse_err = true; return POut(node: 0, pos: ti, ok: false); }
-    narrow ti to 0 .. 63 else { return POut(node: 0, pos: ti, ok: false); }
-    let k = lex::tok_kind(ti);
-    if k == 0 {
-        return POut(node: 255, pos: ti + 1, ok: true);
+    if ti == 64 { return POut(node: 255, pos: ti, ok: false); }
+    let mut p : u32 in 0 .. 64 = ti;
+    let mut root : u32 in 0 .. 255 = 255;
+    let mut prev : u32 in 0 .. 255 = 255;
+    traverse i over slots of lex::toks by unvisited touches reads lex::toks.slots, writes nodes.slots, writes node_used, writes parse_err {
+        if i == p {
+            if p < 64 {
+                let pp : u32 in 0 .. 63 = p;
+                let k = lex::tok_kind(pp);
+                if k == 0 {
+                    return POut(node: root, pos: pp + 1, ok: true);
+                }
+                let f = parse_fn(pp, fuel - 1);
+                if !f.ok { return POut(node: 0, pos: pp, ok: false); }
+                let fp : u32 in 0 .. 64 = f.pos;
+                let nn = new_node(12, f.node, 255, 0);
+                if root == 255 { root = nn; }
+                else {
+                    let pv = prev;
+                    narrow pv to 0 .. 95 else { parse_err = true; return POut(node: 0, pos: pp, ok: false); }
+                    nodes.slots[pv].b = nn;
+                }
+                prev = nn;
+                p = fp;
+            }
+        }
     }
-    let f = parse_fn(ti, fuel - 1);
-    if !f.ok { return POut(node: 0, pos: ti, ok: false); }
-    let u = parse_unit(f.pos, fuel - 1);
-    if !u.ok { return POut(node: 0, pos: ti, ok: false); }
-    let n = new_node(12, f.node, u.node, 0);
-    return POut(node: n, pos: u.pos, ok: true);
+    return POut(node: 0, pos: p, ok: false);
 }
 impl fn parse_failed() -> bool
     effects { reads parse_err }

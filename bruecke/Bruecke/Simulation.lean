@@ -81,7 +81,7 @@ theorem logik_heq {D : Deklaration} {V : Vertrag D} {Γ₁ Γ₂ : Ctx} (hΓ : �
     parameter name bound to its position's value. -/
 def eintritt (u : UProg) (c : Fin u.fns.length) (σ : World (declOf u))
     (ρ : Env (declOf u) ((declOf u).params c)) : Gabbro.Body.State :=
-  ⟨enc u σ (fun _ => .int 0), fun p => match paramPos (fnAt u c).params p with
+  ⟨encG u σ (fun _ => .int 0), fun p => match paramPos (fnAt u c).params p with
     | .ok j => nthVal ρ j
     | .error _ => .absent⟩
 

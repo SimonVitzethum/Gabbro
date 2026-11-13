@@ -1,0 +1,7 @@
+// C13: ctz on u8: ctz(12) = 2.
+module c13_ctz8 {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a : u8 = 12;
+    return ctz(a);
+}
+}

@@ -1,0 +1,9 @@
+// C13: saturating add on a signed non-power-of-two range: (-80) +| (-50) = -100.
+module c13_satneg {
+impl fn sat(a : i32 in -100 .. 100, b : i32 in -100 .. 100) -> i32 in -100 .. 100 effects { pure } { return a +| b; }
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let r = sat(-80, -50);
+    if r == -100 { return 42; }
+    return 7;
+}
+}

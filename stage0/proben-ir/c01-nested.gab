@@ -1,0 +1,9 @@
+// C01: nested record construction and projection, 20+22=42.
+module c01_nested {
+type Inner = { a : u32 in 0 .. 50, };
+type Outer = { inner : Inner, b : u32 in 0 .. 50, };
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let o = Outer(inner: Inner(a: 20), b: 22);
+    return o.inner.a + o.b;
+}
+}

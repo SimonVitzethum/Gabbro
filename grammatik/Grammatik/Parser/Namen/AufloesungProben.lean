@@ -340,10 +340,10 @@ theorem falsch_getrennt : wirkungUndRumpf (pre108 falsch) = [(["a::C"], ["b::C"]
 open Gabbro.Grammatik.Parser.Aufloesung
 
 /-- Two items of the short name `C`, in `a` and `b`; seen from module `a`. -/
-def kA : Kontext := { q := ⟨[["a", "C"], ["b", "C"]], []⟩, von := ["a"], lok := [] }
+def kA : Kontext := { q := { namen := [["a", "C"], ["b", "C"]], verwendet := [] }, von := ["a"], lok := [] }
 
 /-- The same unit seen from a module `p` that declares and uses nothing. -/
-def kP : Kontext := { q := ⟨[["a", "C"], ["b", "C"]], []⟩, von := ["p"], lok := [] }
+def kP : Kontext := { q := { namen := [["a", "C"], ["b", "C"]], verwendet := [] }, von := ["p"], lok := [] }
 
 theorem ref_lokal_zeuge : ({ kA with lok := ["C"] } : Kontext).ref "C" = "C" :=
   ref_lokal (by decide +kernel)

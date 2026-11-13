@@ -152,7 +152,7 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
           | .ok b => .ok (Endblock.narrowRequired (D := declOf u) (Expr.var v) lo hi b)
       | _ => .error "lower: narrow of a non-number"
   | Γ, fn, n + 1, Λ, .bindFnref x f m :: rest, r =>
-    match fnIdx u.fns f with
+    match fnNr u f with
     | .error e => .error e
     | .ok g =>
       if h : (declOf u).passt g m = true then

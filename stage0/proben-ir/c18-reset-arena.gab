@@ -1,0 +1,9 @@
+// C18: reset of an arena (not a static array) is refused.
+module c18_arena {
+arena A capacity 2 .. 8 of u32 in 0 .. 42;
+impl fn f() -> u32 in 0 .. 42 effects { writes A } {
+    reset A at 0 count 2;
+    return 42;
+}
+impl fn main() -> u32 in 0 .. 42 effects { writes A } { return f(); }
+}

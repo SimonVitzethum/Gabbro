@@ -116,10 +116,11 @@ theorem getragen_zeuge : GetragenG unit carried := by
     olds := fun c hc => oldsB_ok (carried_checks c hc).2.2.2.1
     post := fun c hc => postB_ok (carried_checks c hc).2.2.2.2.1
     schreibt := fun c hc => schreibtB_ok (carried_checks c hc).2.2.2.2.2.1
+    gschreibt := fun c hc => gschreibtB_ok (carried_checks c hc).2.2.2.2.2.1
     ohneReq := ?_
     ohneGrund := ?_
     ohneInv := rfl
-    ohneGlob := rfl
+    statics := staticsB_ok (by decide +kernel)
     ohneTransition := fun c _ => ohneTransitionB_ok (by decide +kernel) c }
            frisch := fun c hc => bindFrischB_ok (carried_checks c hc).2.2.2.2.2.2 }
   · intro c hc n hn d hd
@@ -283,14 +284,14 @@ theorem kettenpflichten_zeuge (pointer_refinement : PtrVerfeinert program)
     OffeneStartPflicht unit carried program (by decide +kernel) ∧
     startsAllg unit = [⟨⟨1, by decide⟩, Env.nil⟩, ⟨⟨2, by decide⟩, Env.nil⟩] ∧
     carried ⟨0, by decide⟩ ∧ carried ⟨1, by decide⟩ ∧ ¬ carried ⟨2, by decide⟩ ∧
-    zuBodyB unit routine = none ∧ stimmigB unit = false ∧
+    stimmigB unit = false ∧
     Zielsatz.NutzerPflicht (einheitAllg unit program (by decide +kernel)) := by
   have hPtr : SchnittstellenPflichtTeil unit carried :=
     fun P fs hlow c _ => interfaces pointer_refinement P fs hlow c
   have hOpen := offenePflicht_zeuge pointer_refinement hBody
   exact ⟨by decide +kernel, getragen_zeuge, by decide +kernel, hPtr, body_duties_zeuge,
     hOpen, offeneStarts_zeuge, starts_zeuge, by decide, by decide, by decide,
-    by kernel_rfl, by decide +kernel,
+    by decide +kernel,
     bruecke_nutzer_G lowered getragen_zeuge (rangAuto unit) (rang_of (by decide +kernel))
       body_duties_zeuge hPtr hOpen (by decide +kernel) offeneStarts_zeuge⟩
 

@@ -1,0 +1,11 @@
+// C18: partial reset preserves the kept byte, returns 7.
+module c18_reset_ok {
+static mut RING : [u8; 8192] = 0 aligned 4096;
+impl fn geben() -> u32 in 0 .. 255 effects { writes RING, reads RING } costs <= 48000 ops {
+    RING[100] = 7;
+    reset RING at 4096 count 4096;
+    let x : u32 in 0 .. 255 = RING[100];
+    return x;
+}
+impl fn main() -> u32 in 0 .. 255 effects { reads RING, writes RING } { return geben(); }
+}

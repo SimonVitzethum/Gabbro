@@ -5,6 +5,7 @@ public import Grammatik.Parser.Elab.Export.ExportMetadata
 import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
+public import Grammatik.Parser.Elab.Uebersetze.Kontext.Bindings
 public import Grammatik.Parser.Elab.Uebersetze.Transition.Resolve
 public import Grammatik.Parser.Elab.Uebersetze.Records.Update
 public import Grammatik.Parser.Elab.Uebersetze.Narrowing
@@ -136,6 +137,28 @@ def uFnZeiger (ctx : UCtx) (koepfe : List UFnKopf) (p : String) : Option (Except
           | some k => .ok k
           | none => .error "function pointer of no type")
     | _ => none
+
+/-- Executable reader with the identical list specification and cached projections. -/
+def uFnZeigerFast (ctx : UCtx) (koepfe : List UFnKopf) (p : String) : Option (Except String UFnKopf) :=
+  match uParamNr ctx p with
+  | .error _ => none
+  | .ok j =>
+    match uKindAt ctx j with
+    | .ok (.fnptr n) =>
+      if n < ctx.zeigerBasis then
+        some (match uHeadAt ctx koepfe n with
+          | some k => .ok k
+          | none => .error "function pointer to no function")
+      else
+        -- a pointer of a declared pointer type: the head of the type (`fn#j`)
+        some (match uHeadFind ctx koepfe ("fn#" ++ toString (n - ctx.zeigerBasis)) with
+          | some k => .ok k
+          | none => .error "function pointer of no type")
+    | _ => none
+
+@[csimp] theorem uFnZeiger_eq_fast : @uFnZeiger = @uFnZeigerFast := by
+  funext ctx heads name
+  rfl
 
 /-- The kind word of a statement, named in a refusal. -/
 def anwArt : SAnw → String
@@ -353,24 +376,6 @@ def uTauschSchwanz (a k : String) : Except String UTausch :=
             .ok ⟨"#alt", [(p', neu)], .variable "#alt", pub, aw, some p'⟩
         | _ => .error "exchange compare form without G form"
       | _ => .error "exchange without G form"
-
-/-- The context after `let x [: T]`: the annotated range (when there is one) and the context in which the
-    rest of the block reads `x` as a numeric parameter that shadows any earlier name. -/
-def uBindKopf (ctx : UCtx) (x : String) : Option STyp → Except String (Option (Int × Int) × UCtx)
-  | .none =>
-    .ok (.none, { ctx with names := x :: ctx.names, kinds := .int :: ctx.kinds,
-                           types := .int 0 0 :: ctx.types, bits := 0 :: ctx.bits })
-  | .some ty =>
-    match uErgBereich ctx.alias ty with
-    | .error e => .error e
-    | .ok (lo, hi) =>
-      .ok (.some (lo, hi), { ctx with names := x :: ctx.names, kinds := .int :: ctx.kinds,
-                                      types := .int lo hi :: ctx.types,
-                                      bits := uParamBreite ty :: ctx.bits })
-
-/-- The context after a local `x` of kind `k` and type `ty`. -/
-def uMitLokal (ctx : UCtx) (x : String) (k : UParamArt) (ty : Ty) (muts : List String) : UCtx :=
-  { ctx with names := x :: ctx.names, kinds := k :: ctx.kinds, types := ty :: ctx.types, bits := 0 :: ctx.bits, muts := muts }
 
 /-- The words that start a section of a `retry`/`forever` header. -/
 def uSchleifenWort (s : String) : Bool :=

@@ -1,0 +1,14 @@
+// C11: consuming traversal over an empty domain, returns 0.
+module c11_empty {
+table t count 0 {
+    tree { child c }
+    slot { v : u32 in 0 .. 10, c : option index into t, }
+}
+impl fn main() -> u32 in 0 .. 200 effects { reads t.slots, writes t.slots } {
+    let mut acc : u32 in 0 .. 200 = 0;
+    traverse i over slots of t by consuming decreases 0 touches reads t.slots, writes t.slots, consumes t.slots {
+        acc = acc;
+    }
+    return acc;
+}
+}

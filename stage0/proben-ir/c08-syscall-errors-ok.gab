@@ -1,0 +1,10 @@
+// C08: syscall with errors map, success path, returns 42.
+module c08_syscall_err2 {
+reason QErr { Bad = 9 "bad" exhaustive }
+assume linux_getpid "getpid answers." falsifier sonde_getpid;
+syscall getpid() -> u64 in 1 .. 4194304 or QErr abi linux arch x86_64 number 39 regs in { } regs out { rax } clobbers { rcx, r11 } errors { ESRCH => Bad } effects { pure } costs <= 8 ops assume linux_getpid falsifier sonde_getpid;
+impl fn main() -> u32 in 0 .. 100 effects { pure } {
+    let p = getpid() else (e) { return 7; }
+    return 42;
+}
+}

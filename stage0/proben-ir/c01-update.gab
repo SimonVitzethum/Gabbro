@@ -1,0 +1,9 @@
+// C01: field replacement on a local record, 40+20=60.
+module c01_update {
+type Pair = { x : u32 in 0 .. 100, y : u32 in 0 .. 100, };
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let mut r = Pair(x: 10, y: 20);
+    r.x = 40;
+    return r.x + r.y;
+}
+}

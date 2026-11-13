@@ -1,0 +1,25 @@
+// C07: indirect error matched on two cases, 39+7+8=54.
+module c07_error_path {
+reason Fault { Bad = 1 "bad" Good = 2 "good" exhaustive }
+impl fn maybe(n : u32 in 0 .. 2) -> u32 in 0 .. 42 or Fault effects { pure } costs <= 32 ops {
+    if n == 0 { return Fault::Bad; }
+    if n == 1 { return Fault::Good; }
+    return 39;
+}
+impl fn run(p : fn(u32 in 0 .. 2) -> u32 in 0 .. 42 or Fault effects { pure } costs <= 32 ops, n : u32 in 0 .. 2) -> u32 in 0 .. 50 effects { pure } {
+    let v = p(n) else (e) {
+        match e {
+            Bad => { return 7; }
+            Good => { return 8; }
+        }
+        return 9;
+    }
+    return v;
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a = run(&maybe, 2);
+    let b = run(&maybe, 0);
+    let c = run(&maybe, 1);
+    return a + b + c;
+}
+}

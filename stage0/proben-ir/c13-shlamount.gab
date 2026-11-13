@@ -1,0 +1,7 @@
+// C13 refusal: shift amount must be below the width (8 on u8).
+module c13_shlamount {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a : u8 = 3;
+    return a <<% 8;
+}
+}

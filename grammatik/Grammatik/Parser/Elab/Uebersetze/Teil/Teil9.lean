@@ -6,7 +6,7 @@ public import Grammatik.Parser.Elab.Export.ExportMetadata
 import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
-public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil8
+public import Grammatik.Parser.Elab.Uebersetze.Kontext.FastElaboration
 
 @[expose] public section
 
@@ -33,7 +33,13 @@ def uUnvisitedLoopExport (ctx : UCtx) (binder : String) (origin : Option SExpr) 
       if numberCount != (count : Int) then throw "source export: array iterator count disagrees with its value"
       if ctx.muts.any (strEq · binder) then
         throw "source export: array traversal binder shadows a mutable outer name"
-      let context := {ctx with names := binder :: ctx.names, kinds := .int :: ctx.kinds, types := Ty.index count :: ctx.types, bits := 0 :: ctx.bits, loops := binder :: ctx.loops}
+      let context : UCtx :=
+        { ctx with
+          names := binder :: ctx.names
+          kinds := .int :: ctx.kinds
+          types := Ty.index count :: ctx.types
+          bits := 0 :: ctx.bits
+          loops := binder :: ctx.loops }
       pure (.arrayLoopBeg binder array predicate, context, none)
     else
       if kind != "descendants" && kind != "ancestors" then
@@ -50,7 +56,13 @@ def uUnvisitedLoopExport (ctx : UCtx) (binder : String) (origin : Option SExpr) 
             throw "source export: traversal of seed disagrees with its domain"
       | none => pure ()
       let count := (ctx.tabs[number]?).map (·.count) |>.getD 0
-      let context := {ctx with names := binder :: ctx.names, kinds := .index number :: ctx.kinds, types := Ty.index count :: ctx.types, bits := 0 :: ctx.bits, loops := binder :: ctx.loops}
+      let context : UCtx :=
+        { ctx with
+          names := binder :: ctx.names
+          kinds := .index number :: ctx.kinds
+          types := Ty.index count :: ctx.types
+          bits := 0 :: ctx.bits
+          loops := binder :: ctx.loops }
       let filter := if kind == "ancestors" then UEns.reach table edge (.param binder) seed
         else UEns.reach table edge seed (.param binder)
       pure (.loopBeg binder table predicate, context, some filter)

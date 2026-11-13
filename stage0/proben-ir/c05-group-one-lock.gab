@@ -1,0 +1,19 @@
+// C05: a group invariant over two tables under one lock.
+module c05_group_one_lock {
+table A count 2 { slot { v : u8, } }
+table B count 2 { slot { w : u8, } }
+lock L protects { A, B } rank 0;
+group G over { A, B } {
+    invariant same cost O(1) runs online : forall i in slots of A : A.slots[i].v == B.slots[i].w;
+}
+impl fn set_both(x : u8) effects { writes A.slots, writes B.slots } requires Held(L) {
+    A.slots[0].v = x;
+    B.slots[0].w = x;
+}
+impl fn main() -> u32 in 0 .. 255 effects { reads A.slots, reads B.slots, writes A.slots, writes B.slots, locks L } {
+    locks L {
+        set_both(21);
+        return A.slots[0].v + B.slots[0].w;
+    }
+}
+}

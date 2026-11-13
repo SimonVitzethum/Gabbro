@@ -21,8 +21,32 @@ def uWaechterNamen : UEns → List String
     local (`UCtx.unknownRanges`) and every `let mut` local. A guard says nothing about such a name, and
     nothing is read from its type. -/
 def uWaechterCtx (ctx : UCtx) : UCtx :=
-  { ctx with names := ctx.names.map (fun n =>
+  { ctx with
+    names := ctx.names.map (fun n =>
       if ctx.unknownRanges.any (strEq n) || ctx.muts.any (strEq n) then "#hidden" else n) }
+
+/-- Most immutable scopes have nothing to mask. Preserve the shared names and indexes
+    in that case instead of copying the whole growing scope at every guard. -/
+def uWaechterCtxFast (ctx : UCtx) : UCtx :=
+  match ctx.unknownRanges, ctx.muts with
+  | [], [] => ctx
+  | _, _ =>
+    { ctx with
+      names := ctx.names.map (fun n =>
+        if ctx.unknownRanges.any (strEq n) || ctx.muts.any (strEq n) then "#hidden" else n) }
+
+@[csimp] theorem uWaechterCtx_eq_fast : @uWaechterCtx = @uWaechterCtxFast := by
+  funext ctx
+  unfold uWaechterCtxFast
+  split
+  · next unknown muts =>
+    cases ctx
+    dsimp only at unknown muts
+    subst unknown
+    subst muts
+    simp only [uWaechterCtx, List.any_nil, Bool.false_or,
+      Bool.false_eq_true, if_false, List.map_id_fun', id_eq]
+  · rfl
 
 /-- The range an immutable number local or parameter `v` is narrowed within: its type, when its kind is a
     plain number (an index, an option, a float and every other kind keep their binding). -/
@@ -93,8 +117,11 @@ def uWaechterBindung (ctx : UCtx) (v : String) (lo hi : Int) : UStmt × UCtx :=
     | .ok j => ctx.bits.getD j 0
     | .error _ => 0
   (UStmt.bind v (some (lo, hi)) (USide.eng (USide.param v) lo hi),
-   { ctx with names := v :: ctx.names, kinds := UParamArt.int :: ctx.kinds,
-              types := Ty.int lo hi :: ctx.types, bits := bits :: ctx.bits })
+   { ctx with
+     names := v :: ctx.names
+     kinds := UParamArt.int :: ctx.kinds
+     types := Ty.int lo hi :: ctx.types
+     bits := bits :: ctx.bits })
 
 /-- The rebindings of a list of narrowings, in order. -/
 def uWaechterBinde (ctx : UCtx) : List (String × Int × Int) → List UStmt × UCtx

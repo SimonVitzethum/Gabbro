@@ -1,0 +1,9 @@
+// C07: let-else on a channel-less pointer type is refused.
+module c07_no_channel {
+impl fn plain(n : u32 in 0 .. 2) -> u32 in 0 .. 42 effects { pure } costs <= 4 ops { return 39; }
+impl fn run(p : fn(u32 in 0 .. 2) -> u32 in 0 .. 42 effects { pure } costs <= 4 ops, n : u32 in 0 .. 2) -> u32 in 0 .. 50 effects { pure } {
+    let v = p(n) else (e) { return 7; }
+    return v;
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } { return run(&plain, 2); }
+}

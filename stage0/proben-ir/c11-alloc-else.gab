@@ -1,0 +1,8 @@
+// C11: alloc with else, success path, returns 10.
+module c11_alloc_else {
+arena A capacity 2 .. 4 of u32 in 0 .. 42;
+impl fn main() -> u32 in 0 .. 42 effects { writes A } {
+    let i = alloc A(10) else { return 42; };
+    return A[i];
+}
+}

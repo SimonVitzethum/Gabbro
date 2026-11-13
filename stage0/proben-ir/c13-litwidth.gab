@@ -1,0 +1,6 @@
+// C13 refusal: two literals have no declared storage width.
+module c13_litwidth {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    return 1 +% 2;
+}
+}

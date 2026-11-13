@@ -1,0 +1,16 @@
+// C06: writes effect at a pointer type, returns 42.
+module c06_effects {
+table T count 2 { slot { v : u32 in 0 .. 10, } }
+impl fn writer(x : u32 in 0 .. 10) -> u32 in 0 .. 10 effects { writes T.slots } costs <= 8 ops {
+    T.slots[0].v = x;
+    return x;
+}
+impl fn apply(p : fn(u32 in 0 .. 10) -> u32 in 0 .. 10 effects { writes T.slots } costs <= 8 ops, n : u32 in 0 .. 10) -> u32 in 0 .. 10 effects { writes T.slots } {
+    let v = p(n);
+    return v;
+}
+impl fn main() -> u32 in 0 .. 255 effects { reads T.slots, writes T.slots } {
+    let v = apply(&writer, 7);
+    return 42;
+}
+}

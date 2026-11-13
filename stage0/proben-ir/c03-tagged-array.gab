@@ -1,0 +1,12 @@
+// C03: a tagged type with an array payload, matched.
+module c03_tagged_array {
+tagged type Packet = { Empty, Data([u8; 4]) };
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let p = Data([10, 20, 30, 32]);
+    match p {
+        Empty => { return 7; }
+        Data(a) => { let t = a[0] + a[1] + a[2] + a[3]; if t == 92 { return 42; } return 7; }
+    }
+    return 7;
+}
+}

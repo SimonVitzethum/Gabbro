@@ -1,0 +1,304 @@
+DEPTH: replacing input-length recursion with loops in the front-end probes
+================================================================================
+Branch: t3/compiler-front-end-iterative-loops. Date: 2026-11-13.
+Unit: stage0/proben-compiler/ (srcbuf.gab, lex.gab, parse.gab, front.gab).
+Method: GABBRo source only. Nothing built (no `lake`, no `lean`). The
+prebuilt compiler and runner were copied once into .scratch-m/ (never run
+in place, never written into the root checkout); every run inside
+`systemd-run --user --scope -q -p MemoryMax=6G -p MemoryHigh=5G
+-p MemorySwapMax=0`. One compiler run at a time. Scratch only in
+.scratch-m/ (not committed). Shell only.
+
+1. Reproduction (before): exit 105 from 310 bytes on
+----------------------------------------------------
+The input text is the 155-byte constant in srcbuf.gab. Scaled fixtures
+(k = 1, 2, 4, 8, 16; 155, 310, 620, 1240, 2480 bytes) were generated with
+a max-bounds shell script (.scratch-m/mkscale.sh, not committed): every
+bound is sized for KMAX = 16 (positions 0..2560, toks 64*16, nodes
+96*16, syms 32*16, fuels scaled likewise, node-id sentinel 4095); only
+SRCLEN and the TEXT bytes vary with k (TEXT = 155-byte program repeated
+k times, 8 per line, zero-padded to 2560 entries; token-wise split so the
+',' literal survives). Bounds that share a spelling with kind codes
+(0..31) were left alone except sym_declare's capacity narrow, which is
+scaled separately (see section 5, bug B2).
+
+k  bytes  compile  image      run exit
+1  155    0.43 s   4508840 B  87  (= 52 toks + 35 nodes)
+2  310    0.44 s   4647080 B  105 (call-depth budget exhausted)
+4  620    0.46 s   4647080 B  105
+8  1240   0.44 s   4647080 B  105
+16 2480   0.44 s   4647080 B  105
+
+Exit 105 is the call-depth budget stop (RUNSPEED.txt section 1:
+depthOf = (Ks-FB)/L - 1). The front end iterates by recursion (one frame
+per byte/token/node), so ~310 bytes already exhaust it under these bounds.
+(RUNSPEED.txt section 2 measured the same cliff with per-k bounds at
+k = 8 with 16 tiny functions; the max-bounds used here reach it at k = 2
+because wider ranges mean bigger frames.)
+
+2. What was rewritten (after): loops, depth bounded by nesting
+--------------------------------------------------------------
+Every function that recursed in proportion to the input length (bytes,
+tokens, nodes) is now a `traverse` sweep with a plain-u32 cursor plus
+done/return handling; call depth is bounded by the nesting depth of the
+parsed program. Expression nesting (descent parse_primary/unary/mul/add/
+cmp/expr, check_expr, check_stmt statement structure) stays recursive,
+as the task allows. 36 fuel recursions before (8 front, 7 lex, 19 parse,
+2 srcbuf); after: 0 length-recursions remain. The only remaining
+`decreases` annotations sit on functions that still call each other
+(mutual cycles need consistent tuples, see R5); no function recurses
+over the input length anymore.
+
+Per function (in order; after each, the tree compiled and ran exit 87):
+- srcbuf.fill: traverse over src slots, `text_at(i)` helper for the
+  const-array read (entry R1).
+- lex.skip_ws, skip_line, skip_block, scan_span, lex_all: sweeps over
+  src slots with a byte cursor; nested sweeps via calls (entries R4-R6).
+- parse.span_value_rec, parse_mul/add/cmp_rest, parse_args,
+  parse_params, parse_block, parse_unit, parse_stmt_else (else-if
+  chain): sweeps over lex::toks (cross-module domain, entry R7) with a
+  token cursor; chain-building loops allocate nodes with a 255/4095
+  placeholder tail and patch the previous tail (entry R9: the tail field
+  is `b` for Arg (14) and Seq (12) nodes, `c` for Param (19) and If (10)
+  nodes -- patching the wrong field silently truncates the chain and the
+  checker then passes vacuously, found via the 252-mutant going 87).
+- front.cmp_rec: sweep over src; check_args/check_seq/declare_params/
+  declare_fns/check_unit: sweeps over parse::nodes; check_stmt k==10
+  else-chain: sweep over parse::nodes.
+- Unchanged (no length recursion): next_tok, parse_primary/unary/mul/
+  add/cmp/expr, parse_fn, parse_else_block, check_expr, check_stmt
+  arms except the else-chain, sym_lookup (already a traverse), accessors.
+
+3. After: largest input that runs
+---------------------------------
+Same fixtures (regenerated from the rewritten tree), same commands:
+
+k  bytes  compile  image      run exit   run time (min of 3, floor ~8 ms)
+1  155    0.44 s   4513784 B  87         0.009 s
+2  310    0.50 s   4652024 B  173        0.009 s
+4  620    0.51 s   4652024 B  89         0.010 s
+8  1240   0.49 s   4652024 B  177        0.026 s
+16 2480   0.48 s   4652024 B  97         0.049 s
+32 4960   0.51 s   4799480 B  193        0.148 s
+64 9920   0.54 s   5094392 B  129        0.578 s
+128 19840 0.62 s   5684216 B  1          1.467 s
+256 39680 0.76 s   6863864 B  105        4.968 s (call-depth budget again)
+
+Exits equal (tokens + nodes) mod 256 exactly: 52+35=87;
+51k+1 tokens + 35k nodes (one shared End token): k=2: 173, k=4: 345
+(observed 89), k=8: 689 (observed 177), k=16: 1377 (observed 97),
+k=32: 2753 (observed 193), k=64: 5505 (observed 129), k=128: 11009
+(observed 1). Largest input that runs: k=128 (19840 bytes, 128 copies).
+k=256 stops with exit 105 again -- but NOT from input length: the same
+k=128 text fails under KMAX=256 bounds, and even the k=1 text (155
+bytes, nesting depth 3) fails under KMAX=256 bounds, while k=128 runs
+under KMAX=128 bounds. The residual 105 is bound-width-driven (frame
+size vs the fixed nesting depth), not length-driven; the length term is
+eliminated (before: 105 already at 310 bytes under tight bounds).
+
+Run time per byte (startup floor ~8 ms subtracted): ~16 us/B at 2.5 kB,
+~28 us/B at 5 kB, ~57 us/B at 10 kB, ~74 us/B at 20 kB -- roughly
+quadratic total, as expected for sweeps that re-scan the domain per
+cursor call (one full src sweep per skip call, one toks sweep per
+parse/check walk). Before, only k=1 ran (floor-dominated, ~15-20 ms);
+every larger input stopped with 105.
+
+Compile time and image size of the four modules (pristine 155-byte
+unit, best of 3): before 0.43 s / 4508840 B; after 0.43-0.45 s /
+4513784 B (+4944 B, +0.1%). The rewrite is compile-time and image-size
+neutral -- traverse lowers its body once.
+
+Line counts (wc -l): before srcbuf 76, lex 258, parse 494, front 366
+(total 1194). After: srcbuf 82, lex 404, parse 779, front 451 (total
+1716). Net +522 lines (+44%): the loop tax (cursor/flag locals, entry
+mirrors, redundant direct guards, patch link/unlink, per-visit
+freeze bindings).
+
+4. Refusals (all with minimal source, exact message)
+----------------------------------------------------
+These were probed in .scratch-m/probes/ (not committed) before rewriting;
+each is evidence for the pending `while` decision (O18). The wanted
+loop in every case: `while pos < len { pos = pos + 1; ... }` (or the
+analogous token/node cursor loop), i.e. one bounded cursor loop with no
+proof assistant, no table domain, no per-pass unrolling.
+
+R1. Call result straight into a table slot inside traverse (non-main
+  fn) is refused by the export gate; bind-to-local works.
+  Minimal: module with `traverse i over slots of src ... {
+  src.slots[i].b = text_at(i); }` in `fill` (non-main fn)
+  Message: `stage0: source export: function type/proof/header duties
+  lack a checked source binding: fill` (+ `note: export gate refuses`
+  cascade). Accepted shape: `let v = text_at(i); src.slots[i].b = v;`
+  (+1 line; bind-to-local-first idiom, cf. FINDINGS entry 10).
+  Note: the direct shape compiled in `main` (probe ph) but not in a
+  called function -- the gate is caller-sensitive.
+
+R2. Indexing a constant array with the traverse binder is refused.
+  Minimal (`q3.gab` shape): `traverse i over slots of src ...
+  { src.slots[i].b = TEXT[i]; }`
+  Message: `constant TEXT: constant without G form`. Accepted shape: a
+  plain-u32 helper (`text_at(j)`) called with the binder (index-to-u32
+  conversion at calls compiles), then bind-to-local (R1). Cost: one
+  helper function plus one local per read (+5 lines). A `while` over a
+  plain cursor would index TEXT directly.
+
+R3. `retry ... on_exceeded { ... }` (endblock form) is refused.
+  Minimal (`pa.gab`): `retry attempt until done bounded 16 ops
+  on_exceeded { return 99; } { ... }`
+  Message: `stage0: expression expected`. Only the ident form
+  (`on_exceeded some_fn`) parses. Cost: a named overrun handler or, as
+  used in every probe, a syscall; an endblock (set flag, return) is not
+  available.
+
+R4. `retry` without `progress` is refused.
+  Minimal (`pb.gab`, plain-fn overrun handler, no assume/syscall):
+  `retry attempt until done bounded 16 ops on_exceeded over { ... }`
+  Message: `stage0: source export: function type/proof/header duties lack
+  a checked source binding: main` + `note: ... retry header without G
+  form`. Accepted shape (`pc.gab`): module-level `assume tick ...`,
+  a `syscall sched_yield ... assume tick`, and `progress tick` in every
+  header, with the syscall as `on_exceeded`. Cost per module: one
+  assume plus one syscall declaration (+5 lines); per loop: the
+  `progress ... on_exceeded ...` header (+1 line) and a named
+  assumption with a falsifier that the program then never exercises.
+
+R5. A call cycle with differing `decreases` tuples is refused.
+  Minimal: skip_ws rewritten as a sweep (no self-recursion, `decreases`
+  dropped) while skip_line/skip_block keep `decreases fuel` and call it.
+  Message: `stage0: differing decreases tuple lengths in a recursion
+  cycle`. Accepted shape: keep `decreases fuel` (and the fuel parameter
+  with `fuel - 1` call args) on every function in the cycle even where
+  the body no longer recurses. Cost: one stale annotation + one stale
+  parameter per loop function; the fuel is threaded but never consumed
+  by loops (only the nesting chain consumes it).
+
+R6. Ordering-guard facts do not survive a `mut` assignment or a nested
+  `if` inside a loop body; each bounded operation needs its own directly
+  enclosing guard, and at most one bounded operation per guard.
+  Minimal pattern that fails: `if cur < 160 { let b = byte_at(cur);
+  if b == ' ' { cur = cur + 1; } ... }` (the increment is 2 levels
+  below the guard)
+  Message: `stage0: value outside range`. Also failing: two bounded ops
+  under one guard (`if p < 159 { d = d - 1; p = p + 2; }` -- the second
+  op loses the fact). Accepted shapes: repeat the guard directly at
+  each use (`if b == ' ' { if cur < 160 { cur = cur + 1; } }`, always
+  true but required); split multi-mutation arms into sequential
+  singly-guarded statements. Cost: roughly one redundant guard line per
+  bounded operation in every loop body (the bulk of the +522 lines).
+  Purely mechanical, but it is the single largest cost driver.
+
+R7. `narrow` on a `mut` local inside traverse is refused (place rule);
+  `narrow ... else` must diverge (no fall-through).
+  Minimal: `narrow cur to 0 .. 158 else { ret = n; done = true; }` with
+  `let mut cur` inside traverse.
+  Messages: `stage0: place without G form` (narrow on mut); `stage0:
+  narrow else falls through` (fall-through else). Accepted shapes:
+  bind to an immutable first (`let ac = a; narrow ac to ...`), or use
+  ordering `if`s, and make every narrow-else diverge (`return`,
+  `leave`/`next`). Cost: +1 line per narrowed mutable per loop.
+
+R8. Details that also cost lines: record-field projections bound to
+  locals need explicit ranges inside loop bodies (`let ep : u32 in 0 ..
+  64 = e.pos;` -- inferred projection types do not narrow there);
+  frozen immutable copies of mutated cursors (`let pp : u32 in 0 .. 63
+  = p;`) so that arithmetic on them type-checks structurally; patch
+  writes need a narrowed immutable index copy (`let pv = prev; narrow
+  pv to 0 .. 95 ...; nodes.slots[pv].b = nn;` -- a guard alone does not
+  satisfy slot-index checking, entry-10 shape).
+
+What was NOT usable and why:
+- `retry` as the loop vehicle: rejected on compile economics, not on
+  form. `retryC` (Stage0/Senke/Anweisung/Faelle/Schleifen/Code.lean)
+  unrolls the body once per bound unit at COMPILE time ("Code size is
+  linear in the bound"). Measured on a minimal fill body: bound 160 ->
+  2.2 s compile / +6.6 MB image (~41 KB per pass); bound 320 -> 6.0 s;
+  bound 640 -> 23.4 s (quadratic: list append per unroll level); bound
+  2560 did not finish in 500 s. A byte loop needs bound >= input bytes
+  (2560 here), so retry is infeasible at input scale; traverse lowers
+  the body once (0.44 s, +0.1% image).
+- `forever` as the loop vehicle: refused unless every callee declares
+  `costs` (`stage0: declared pass bound does not hold: main has a
+  forever body over its bound, or one that calls a function without a
+  declared cost`). Our functions carry no `costs` clauses anywhere;
+  adding them to the whole call graph was not attempted. Constant-size
+  lowering, but wrong vehicle without a cost-annotated codebase.
+
+5. Bugs found by this rewrite (both mine, both fixed, both verified)
+---------------------------------------------------------------------
+B1. Patched chain links wrote the wrong field (search: "slots[pv].c").
+  Chain tails live in field `b` for Arg (14) and Seq (12) nodes
+  (`new_node(14, e, r, 0)`, `new_node(12, s, r, 0)`), in field `c` for
+  Param (19) and If (10) nodes. Three patch sites (parse_args x2,
+  parse_block, parse_unit) wrote `.c`, silently truncating every chain
+  to its first link; check_seq/check_args then returned true after one
+  element, so the 252-mutant (call to `maz`) passed checking with exit
+  87. Found by re-running the failure mutants; fixed by writing `.b`
+  (params/If correctly keep `.c`). Lesson: a truncated chain fails
+  SAFE (skips checks, exit 87) -- chain-linking mistakes are silent
+  passes, only caught by negative tests. The custom equivalence text
+  (else-if chain + 3-arg call, exit 108 on both old and new code)
+  covers multi-link chains on both sides now.
+B2. The scaler (not the compiler, not the rewrite): sym_declare's
+  `narrow i to 0 .. 31` is a CAPACITY bound sharing its spelling with
+  kind codes, so the first scaling left it at 31 while the syms table
+  grew to 512. Symptom: k=16 fails with 252 (bad_start=43, the first
+  if-cond `a`), k<=15 passes (max symbol index 31 fits exactly).
+  Mechanism verified by instrumenting main to return bad_start.
+  Fixed in the (uncommitted) scaler by scaling that one narrow to
+  SYM-1. Lesson: any literal shared between a domain bound and a
+  capacity bound must be told apart when scaling.
+
+6. Loops that could not be expressed without recursion, and why
+---------------------------------------------------------------
+None for length-driven loops: every byte/token/node recursion is now a
+traverse sweep. What stays recursive is exactly what the task allows:
+expression nesting (parse descent, check_expr, unary minus chains) plus
+structural single-step recursion (check_stmt k==12 arm, depth <= 2 in
+practice). The else-if chains (parse and check) ARE loops (placeholder
++ patch), verified by the custom equivalence text (exit 108 both).
+What the language made hard is not expressiveness but verbosity: R6
+alone accounts for most of the +522 lines. The loop the author wanted
+to write everywhere: `while` with a plain cursor and direct indexing;
+the loop that had to be written: `traverse` over a table domain with a
+frozen cursor copy, redundant per-operation guards, done/return
+plumbing, and (for chains) placeholder allocation plus patching. Extra
+proof duties beyond the guards: none beyond what recursion needed
+(fuel/decreases kept for cycle consistency, R5); the `assume`/syscall
+duty that `retry` would have demanded (R4) was avoided by choosing
+traverse.
+
+7. Compiler faults found (wrong code accepted, or right code refused
+   wrongly)
+---------------------------------------------------------------------
+None of the wrong-code kind: every miscompile-shaped surprise above
+(R1-R8, B1-B2) was either a documented refusal with a usable accepted
+shape, or the author's own bug (B1, B2), each verified by exit codes.
+Two observations for the compiler side (no action taken here):
+- R1's gate refusal is caller-sensitive (direct call-slot store
+  compiles in `main`, refused in a called function) with the same
+  `touches` shape; entry 3 of FINDINGS documents a similar
+  caller/branch sensitivity for `return f(...)`.
+- The `retryC` unroll cost (section 4, quadratic compile, linear
+  image) makes `bounded`-by-input-bytes loops uncompilable well below
+  the sizes this task needs; that is by design (finite control flow)
+  but it rules out retry as the `while` stand-in at scale.
+
+8. Exact reproduction commands (worktree root; binaries already copied)
+-----------------------------------------------------------------------
+cp /home/simon/Dokumente/Gabbro/stage0/.lake/build/bin/stage0 .scratch-m/stage0
+cp /home/simon/Dokumente/Gabbro/stage0/.lake/ir/runner .scratch-m/runner
+# scaled fixtures (shell only; generator lives in .scratch-m/, uncommitted):
+bash .scratch-m/mkscale.sh K .scratch-m/sK            # KMAX=16 default
+KMAX=32 bash .scratch-m/mkscale.sh 32 .scratch-m/s32  # etc.
+# compile + run one input (never run the runner on a missing image):
+./.scratch-m/stage0 --ir .scratch-m/sK/srcbuf.gab .scratch-m/sK/lex.gab \
+  .scratch-m/sK/parse.gab .scratch-m/sK/front.gab .scratch-m/sK.img; echo $?
+systemd-run --user --scope -q -p MemoryMax=6G -p MemoryHigh=5G \
+  -p MemorySwapMax=0 ./.scratch-m/runner .scratch-m/sK.img; echo $?
+# failure mutants (one-byte TEXT changes in scratch copies of srcbuf.gab):
+#   252: 'x'->'z' in max( call; 252b: 'x'->'z' in fn max def;
+#   254: 'x'->'=' in let x; 255: '/'->'.' in */ closer.
+# custom equivalence text (else-if chain + 3-arg call, exit 108 both):
+#   .scratch-m/custom.txt (147 bytes) via mkarr.awk + splice_custom.awk.
+# component bisection mixed scaled fixtures from git HEAD
+# (.scratch-m/orig/) with single rewritten functions spliced in.

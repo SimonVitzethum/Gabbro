@@ -86,7 +86,7 @@ def locatedPath (item : Located) : Option Pfad :=
 
 /-- The source namespace plus virtual alias members; only their checked keys enter the output. -/
 def source (base : Quelle) (items : List Located) : Quelle :=
-  ⟨base.namen ++ items.filterMap locatedPath, base.verwendet⟩
+  { namen := base.namen ++ items.filterMap locatedPath, verwendet := base.verwendet }
 
 def instanceKeys (items : List Located) : List (Pfad × String) :=
   items.filterMap fun item => do
@@ -112,7 +112,7 @@ def context (base : Quelle) (items : List Located) (location : Located) : Kontex
           some (origin ++ path.drop destination.length, key)
         else none
       (entries.map Prod.fst, entries)
-  { q := ⟨q.namen ++ localNames, q.verwendet ++ location.imports⟩, von := location.origin,
+  { q := { namen := q.namen ++ localNames, verwendet := q.verwendet ++ location.imports }, von := location.origin,
     lok := location.bindings.types.map Prod.fst ++ location.bindings.values.map Prod.fst ++
       location.bindings.functions.map Prod.fst,
     keys := localKeys ++ keys }

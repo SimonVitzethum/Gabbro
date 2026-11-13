@@ -1,0 +1,15 @@
+// C10: taking a lower rank under a higher one is refused.
+module c10_lock_rank_bad {
+table A count 1 { slot { v : u32 in 0 .. 10, } }
+table B count 1 { slot { v : u32 in 0 .. 10, } }
+lock L0 protects { A } rank 1;
+lock L1 protects { B } rank 0;
+impl fn main() -> u32 in 0 .. 255 effects { reads A.slots, reads B.slots, writes A.slots, writes B.slots, locks L0, locks L1 } {
+    locks L0 {
+        locks L1 {
+            A.slots[0].v = 1;
+        }
+    }
+    return 42;
+}
+}

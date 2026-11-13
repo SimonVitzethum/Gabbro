@@ -27,7 +27,7 @@ abbrev LaufZielTeilB (u : UProg) (C : Fin u.fns.length → Prop) (c : Fin u.fns.
       ∀ ρB, Treu A ρB → RahmenAlleC u C ρB →
         ∃ s', Gabbro.Body.finalState (Gabbro.Body.exec ρB bs s) = some s' ∧
           Gabbro.Body.finalValue (Gabbro.Body.exec ρB bs s) = ergValOf (verOf u c).erg v ∧
-          WRel u σ' s'.world)
+          WGRel u σ' s'.world)
 
 /-- **One step**: where the G outcome of `b0` is the one of `b1` (for `logik` and for a return), and
     the Body statement `x` steps to `s₁` without lowering a ghost counter, the conclusion for

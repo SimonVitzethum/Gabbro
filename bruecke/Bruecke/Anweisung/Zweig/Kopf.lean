@@ -9,8 +9,7 @@ The lowering reads the two arms of a conditional with the block reader `lowSeqL`
 below the structured reader `lowStructL`, which the body reader `lowBodyF` calls at `blockFuel`).
 These are the dispatch lemmas of the forms the bridge carries inside a block (`let`, `let mut`,
 the statements `lowStmtL` reads, `return`, a nested conditional, the closing markers), the G
-equations of a block, the inversions of `Ausgang.schrumpf`, the binding relation after a block
-(`lrel_tail`: a binder of the block leaves the scope), and freshness of every suffix of a body
+equations of a block, the inversions of `Ausgang.schrumpf`, kind-sensitive admission of every suffix of a body
 (`bindFrischL_suffix`).
 -/
 
@@ -114,7 +113,7 @@ theorem lowSeqStep_einzeln {l : Bool} (R : LowStufe u c) (Γ : Ctx) (fn : UFn)
       (lowStmtL (l := l) u c Γ fn Λ s).bind fun ⟨Λ₁, st⟩ =>
         (R.seq (l := l) Γ fn Λ₁ pe ss).bind fun (⟨Λ₂, b⟩, r) => .ok (⟨Λ₂, Block.cons st b⟩, r) := by
   cases s
-  case assign | assignTab | call | setVar => rfl
+  case assign | assignTab | assignGlob | call | setVar => rfl
   all_goals simp [LeseEinzeln] at hs
 
 theorem lowSeq_einzeln_ok {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
@@ -323,62 +322,19 @@ theorem schrumpfZ_zurueck {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {τ : Ty}
     (h : a.schrumpf = .zurueck σ' v) : a = .zurueck σ' v :=
   schrumpf_zurueck h
 
-/-! ## 3. The scope after a block -/
-
-/-- **A binder of a block leaves the scope**: the binding relation of the scope with a fresh `x`
-    gives the one of the scope without it, on the environment without its first entry. -/
-theorem lrel_tail {D : Deklaration} {Γ : Ctx} {τ : Ty} {fn : UFn} {x : String} {w : Int × Int}
-    {ρ : Env D (τ :: Γ)} {β : Gabbro.Body.Binding}
-    (hL : LRel (fn.mitBindung x w) 0 ρ β) (hx : x ∉ fn.params.map (·.1)) :
-    LRel fn 0 ρ.tail β := by
-  intro p j hj
-  have hpx : x ≠ p := by
-    intro e
-    subst e
-    obtain ⟨τ', hτ'⟩ := paramPos_name _ _ _ hj
-    exact hx (List.mem_map.mpr ⟨(x, τ'), List.mem_of_getElem? hτ', rfl⟩)
-  have hj' : paramPos (fn.mitBindung x w).params p = .ok (j + 1) := by
-    show paramPos ((x, Ty.int w.1 w.2) :: fn.params) p = .ok (j + 1)
-    simp only [paramPos, hj, beq_iff_eq, hpx, ↓reduceIte]
-  rw [hL p (j + 1) hj']
-  cases ρ with
-  | cons v ρ' => simp only [Nat.zero_add, nthVal_cons_succ, Env.tail]
-
-/-! ## 4. Freshness of every suffix -/
-
-theorem bindFrischL_mono : ∀ (ss : List UStmt) (ns ns' : List String),
-    (∀ y, y ∈ ns → y ∈ ns') → BindFrischL ns' ss → BindFrischL ns ss
-  | [], _, _, _, _ => trivial
-  | s :: ss, ns, ns', hsub, h => by
-      cases hb : binderOf s with
-      | none =>
-        simp only [BindFrischL, hb] at h ⊢
-        exact bindFrischL_mono ss ns ns' hsub h
-      | some x =>
-        simp only [BindFrischL, hb, NameFrisch] at h ⊢
-        obtain ⟨⟨h1, h2, h3, h4⟩, h5⟩ := h
-        refine ⟨⟨fun hm => h1 (hsub x hm), h2, h3, h4⟩, ?_⟩
-        exact bindFrischL_mono ss (x :: ns) (x :: ns') (fun y hy => by
-          rcases List.mem_cons.mp hy with rfl | hy
-          · exact List.mem_cons_self ..
-          · exact List.mem_cons_of_mem _ (hsub y hy)) h5
-
+/-- Integer binders never add protected names; freshness is inherited by every suffix. -/
 theorem bindFrischL_append : ∀ (pre : List UStmt) (ns : List String) (rest : List UStmt),
     BindFrischL ns (pre ++ rest) → BindFrischL ns rest
   | [], _, _, h => h
   | s :: pre, ns, rest, h => by
       cases hb : binderOf s with
       | none =>
-        have h' : BindFrischL ns (pre ++ rest) := by
-          simpa only [List.cons_append, BindFrischL, hb] using h
-        exact bindFrischL_append pre ns rest h'
+        simp only [List.cons_append, BindFrischL, hb] at h
+        exact bindFrischL_append pre ns rest h
       | some x =>
-        have h' : NameFrisch ns x ∧ BindFrischL (x :: ns) (pre ++ rest) := by
-          simpa only [List.cons_append, BindFrischL, hb] using h
-        exact bindFrischL_mono rest ns (x :: ns) (fun y hy => List.mem_cons_of_mem _ hy)
-          (bindFrischL_append pre (x :: ns) rest h'.2)
+        simp only [List.cons_append, BindFrischL, hb] at h
+        exact bindFrischL_append pre ns rest h.2
 
-/-- **Every suffix of a fresh body is fresh** in the same scope. -/
 theorem bindFrischL_suffix {ns : List String} {ss rest : List UStmt} (h : BindFrischL ns ss)
     (hs : rest <:+ ss) : BindFrischL ns rest := by
   obtain ⟨pre, rfl⟩ := hs

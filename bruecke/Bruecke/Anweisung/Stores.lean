@@ -79,11 +79,11 @@ theorem lowAssignDurch_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
     (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
     (σ : World (declOf u)) (ρ : Env (declOf u) (ctxOf u c)) (s : Gabbro.Body.State)
-    (hW : WRel u σ s.world) (hL : LRel (fnAt u c) 0 ρ s.local') :
+    (hW : WGRel u σ s.world) (hL : LRel (fnAt u c) 0 ρ s.local') :
     ∃ σ₁ cn k fld val, execStmt O passes R g σ ρ = .ok σ₁ ρ ∧
       (∀ ρB : Gabbro.Body.Env, Gabbro.Body.step ρB bst s =
         .running ⟨Gabbro.Body.store s.world (.slot cn k fld) val, s.local'⟩) ∧
-      WRel u σ₁ (Gabbro.Body.store s.world (.slot cn k fld) val) ∧
+      WGRel u σ₁ (Gabbro.Body.store s.world (.slot cn k fld) val) ∧
       (fnAt u c).puts.any (· == cn) = true := by
   unfold lowAssignDurch lowAssignDurchL at h
   split at h
@@ -127,13 +127,13 @@ theorem lowAssignDurch_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
                           (lowVar_typ (ctxOf u c) j _ pv hpv)
                       have hpt := ptrTab_of_type (fnAt u c) b j num read true hj hparam hlt
                       simp only [stmtBody, hpt] at hb
-                      cases hsv : sideExpr u (fnAt u c) v with
+                      cases hsv : sideExprG u (fnAt u c) v with
                       | none => rw [hsv] at hb; cases hb
                       | some ve =>
                         rw [hsv] at hb
                         cases hb
                         let σl := σ.lese Λ ((Expr.var (D := declOf u) (Λ := Λ) pv).orte ++ i.orte ++ e2.orte)
-                        have hWl : WRel u σl s.world := wrel_slots u rfl hW
+                        have hWl : WGRel u σl s.world := wgrel_same u rfl rfl hW
                         have hv := lowWertAt_sim he hsv hA hT σl σl ρ s.world s.local' hWl hL
                         have hk := lowIdx_sim hi σl σl ρ s.world s.local' hL
                         have hx : valOf ((declOf u).typ ⟨num, hlt⟩ fh.idx) (eval σl e2 σl ρ) =
@@ -144,7 +144,7 @@ theorem lowAssignDurch_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
                         · intro ρB
                           simp only [Gabbro.Body.step]
                           rw [hk, hv, ← hx]
-                        · exact wrel_slots u rfl (wrel_store u hWl _ ⟨num, hlt⟩ (hT.1 _) fname fh hfh _ _)
+                        · exact wgrel_same u rfl rfl (wgrel_store u hWl _ ⟨num, hlt⟩ (hT.1 _) fname fh hfh _ _)
                         · exact hw
                   · cases h
                 · cases h
@@ -191,13 +191,13 @@ theorem lowAssignDurch_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
                               (lowVar_typ (ctxOf u c) j _ pv hpv)
                           have hpt := ptrTab_of_type (fnAt u c) b j num read true hj hparam hlt
                           simp only [stmtBody, hpt] at hb
-                          cases hsv : sideExpr u (fnAt u c) v with
+                          cases hsv : sideExprG u (fnAt u c) v with
                           | none => rw [hsv] at hb; cases hb
                           | some ve =>
                             rw [hsv] at hb
                             cases hb
                             let σl := σ.lese Λ ((Expr.var (D := declOf u) (Λ := Λ) pv).orte ++ i.orte ++ e2.orte)
-                            have hWl : WRel u σl s.world := wrel_slots u rfl hW
+                            have hWl : WGRel u σl s.world := wgrel_same u rfl rfl hW
                             have hv := lowWertAt_sim he hsv hA hT σl σl ρ s.world s.local' hWl hL
                             have hk := lowIdx_sim hi σl σl ρ s.world s.local' hL
                             have hx : valOf ((declOf u).typ ⟨num, hlt⟩ fh.idx) (eval σl e2 σl ρ) =
@@ -208,7 +208,7 @@ theorem lowAssignDurch_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
                             · intro ρB
                               simp only [Gabbro.Body.step]
                               rw [hk, hv, ← hx]
-                            · exact wrel_slots u rfl (wrel_store u hWl _ ⟨num, hlt⟩ (hT.1 _) fname fh hfh _ _)
+                            · exact wgrel_same u rfl rfl (wgrel_store u hWl _ ⟨num, hlt⟩ (hT.1 _) fname fh hfh _ _)
                             · exact hw
                       · cases h
                     · cases h
@@ -227,11 +227,11 @@ theorem lowAssignTab_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
     (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
     (σ : World (declOf u)) (ρ : Env (declOf u) (ctxOf u c)) (s : Gabbro.Body.State)
-    (hW : WRel u σ s.world) (hL : LRel (fnAt u c) 0 ρ s.local') :
+    (hW : WGRel u σ s.world) (hL : LRel (fnAt u c) 0 ρ s.local') :
     ∃ σ₁ cn k fld val, execStmt O passes R g σ ρ = .ok σ₁ ρ ∧
       (∀ ρB : Gabbro.Body.Env, Gabbro.Body.step ρB bst s =
         .running ⟨Gabbro.Body.store s.world (.slot cn k fld) val, s.local'⟩) ∧
-      WRel u σ₁ (Gabbro.Body.store s.world (.slot cn k fld) val) ∧
+      WGRel u σ₁ (Gabbro.Body.store s.world (.slot cn k fld) val) ∧
       (fnAt u c).puts.any (· == cn) = true := by
   unfold lowAssignTab lowAssignTabL at h
   split at h
@@ -255,13 +255,13 @@ theorem lowAssignTab_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
                 t fh i e _ hG
               rw [heq]
               simp only [stmtBody] at hb
-              cases hsv : sideExpr u (fnAt u c) v with
+              cases hsv : sideExprG u (fnAt u c) v with
               | none => rw [hsv] at hb; cases hb
               | some ve =>
                 rw [hsv] at hb
                 cases hb
                 let σl := σ.lese Λ (i.orte ++ e2.orte)
-                have hWl : WRel u σl s.world := wrel_slots u rfl hW
+                have hWl : WGRel u σl s.world := wgrel_same u rfl rfl hW
                 have hv := lowWertAt_sim he hsv hA hT σl σl ρ s.world s.local' hWl hL
                 have hk := lowIdx_sim hi σl σl ρ s.world s.local' hL
                 have hx : valOf ((declOf u).typ t fh.idx) (eval σl e2 σl ρ) =
@@ -271,7 +271,7 @@ theorem lowAssignTab_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
                 · intro ρB
                   simp only [Gabbro.Body.step]
                   rw [hk, hv, ← hx]
-                · exact wrel_slots u rfl (wrel_store u hWl b t ht fname fh hfh _ _)
+                · exact wgrel_same u rfl rfl (wgrel_store u hWl b t ht fname fh hfh _ _)
                 · have hn := tabIdx_name _ _ _ ht
                   have : writesAt u (fnAt u c) t = true := hw
                   unfold writesAt at this

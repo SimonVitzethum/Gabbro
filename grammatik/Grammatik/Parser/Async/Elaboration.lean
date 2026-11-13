@@ -106,9 +106,13 @@ public structure Elaborated (source : Function) where
   if hasAwait result then throw "async: bind the awaited result before returning"
   let (fields, commands) ← elaborateCommands analysis 0 statements
   let function : AsyncFn := {
-    name := source.signature.name, params := source.signature.params,
-    resultType := type, fields := fields, body := commands, result := result,
-    returnCostBound := analysis.cost result }
+      name := source.signature.name
+      params := source.signature.params
+      resultType := type
+      fields := fields
+      body := commands
+      result := result
+      returnCostBound := analysis.cost result }
   if checked : asyncCheck function = true then
     pure ⟨function, checked, rfl, rfl⟩
   else throw "async: duplicate storage, missing saved local, held lock or ownership mismatch"
@@ -116,11 +120,11 @@ public structure Elaborated (source : Function) where
 /-- Every successful source-layer elaboration uses the existing generic
     transformation theorem; it creates no per-program implementation. -/
 public theorem elaborated_refines (source : Function) (result : Elaborated source)
-    (model : Model Value Child) {before after : State Value Child}
-    {event : Event Value} {cost : Nat}
-    (run : MachinePoll model (asyncExpand model result.function) before event after cost) :
-    DirectPoll model result.function (decode result.function before) event
-      (decode result.function after) cost :=
-  asyncOk_refines model result.function result.checked run
+    (model : Model Value Child W) {before after : State Value Child}
+    {beforeWorld afterWorld : W} {event : Event Value} {cost : Nat}
+    (run : MachinePoll model (asyncExpand model result.function) before beforeWorld event after afterWorld cost) :
+    DirectPoll model result.function (decode result.function before) beforeWorld event
+      (decode result.function after) afterWorld cost :=
+  poll_refines_with_unused_asyncOk model result.function result.checked run
 
 end Gabbro.Grammatik.Parser.AsyncSource

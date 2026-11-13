@@ -1,0 +1,9 @@
+// C13: bswap on u16: bswap(0x1234) = 0x3412 = 13330.
+module c13_bswap16 {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a : u16 = 4660;
+    let r = bswap(u16(a));
+    if r == 13330 { return 42; }
+    return 7;
+}
+}

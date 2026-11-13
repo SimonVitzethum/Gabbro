@@ -1,0 +1,13 @@
+// C08: extern with satisfied requires, returns 42.
+module c08_req_ok {
+assume hw_ok "Hardware answers in range." falsifier probe_hw;
+extern fn ext(x : u64 in 0 .. 5000000) -> u64 in 1 .. 4194304 requires x >= 1 effects { pure } costs <= 8 ops;
+target host abi linux arch x86_64 {
+    ext = number 39 regs in { rdi = x } regs out { rax } clobbers { rcx, r11 } errors { } assume hw_ok falsifier probe_hw;
+}
+target host;
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let v = ext(300);
+    return 42;
+}
+}

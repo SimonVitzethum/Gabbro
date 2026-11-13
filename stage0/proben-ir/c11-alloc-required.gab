@@ -1,0 +1,8 @@
+// C11: alloc without else under capacity, returns 10.
+module c11_alloc_noelse2 {
+arena A capacity 4 .. 8 of u32 in 0 .. 42;
+impl fn main() -> u32 in 0 .. 42 effects { writes A } {
+    let i = alloc A(10);
+    return A[i];
+}
+}

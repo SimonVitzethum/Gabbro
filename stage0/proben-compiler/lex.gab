@@ -5,11 +5,16 @@
 // 21 EqEq, 22 Bang, 23 BangEq, 24 Le, 25 Ge. White space and both comment
 // forms are skipped; an unterminated block comment sets `lex_err`.
 module lex {
-// The classifier uses character literals; the scan is recursion with fuel
-// plus `decreases` (no `while` exists) and hand-written per-keyword byte
-// checks. In-branch `return f(...)` compiles for plain arguments; a call
-// whose argument projects a record field still needs `let q = f(...);
-// return q;` (`stage0: value without G form`).
+// The classifier uses character literals; the scan is a `traverse` sweep
+// over the byte table with a plain `u32` cursor plus done flag (no `while`
+// exists: `stage0: assignment or call expected`). The sweep visits every
+// slot once in index order; only the visit with `i == cur` does work and
+// `leave` ends the sweep early. Cursors only move forward, so every cursor
+// value meets its visit. Guards mirror the old fuel/narrow arms exactly:
+// `if done { leave i; }` first, then the `i == cur` work. In-branch
+// `return f(...)` compiles for plain arguments; a call whose argument
+// projects a record field still needs `let q = f(...); return q;`
+// (`stage0: value without G form`).
 type TOut = { kind : u32 in 0 .. 31, start : u32 in 0 .. 159, len : u32 in 0 .. 159, pos : u32 in 0 .. 160, };
 table toks count 64 { slot { k : u32 in 0 .. 31, start : u32 in 0 .. 159, len : u32 in 0 .. 159, } }
 static mut tok_used : u32 in 0 .. 64 = 0;
@@ -68,24 +73,53 @@ impl fn skip_ws(pos : u32 in 0 .. 160, fuel : u32 in 0 .. 160) -> u32 in 0 .. 16
     decreases fuel
 {
     narrow fuel to 1 .. 160 else { lex_err = true; return pos; }
-    let n = srcbuf::src_len();
-    if pos == n { return pos; }
-    narrow pos to 0 .. 159 else { return n; }
-    let b = srcbuf::byte_at(pos);
-    if b == ' ' { return skip_ws(pos + 1, fuel - 1); }
-    if b == '\n' { return skip_ws(pos + 1, fuel - 1); }
-    if b == '\t' { return skip_ws(pos + 1, fuel - 1); }
-    if b == '/' {
-        narrow pos to 0 .. 158 else { return n; }
-        let c = srcbuf::byte_at(pos + 1);
-        if c == '/' { return skip_line(pos + 2, fuel - 1); }
-        if c == '*' {
-            let q = skip_block(pos + 2, 1, fuel - 1);
-            return skip_ws(q, fuel - 1);
+    let mut cur : u32 in 0 .. 160 = pos;
+    let mut ret : u32 in 0 .. 160 = pos;
+    let mut done : bool = false;
+    traverse i over slots of srcbuf::src by unvisited touches reads srcbuf::src.slots, writes lex_err {
+        if done { leave i; }
+        if i == cur {
+            let n = srcbuf::src_len();
+            if cur == n { done = true; ret = cur; }
+            if !done {
+                if cur < 160 {
+                    let b = srcbuf::byte_at(cur);
+                    if b == ' ' { if cur < 160 { cur = cur + 1; } }
+                    else {
+                        if b == '\n' { if cur < 160 { cur = cur + 1; } }
+                        else {
+                            if b == '\t' { if cur < 160 { cur = cur + 1; } }
+                            else {
+                                if b == '/' {
+                                    if cur < 159 {
+                                        let c = srcbuf::byte_at(cur + 1);
+                                        if c == '/' {
+                                            if cur < 159 { ret = skip_line(cur + 2, fuel - 1); done = true; }
+                                        }
+                                        if !done {
+                                            if c == '*' {
+                                                if cur < 159 {
+                                                    let q = skip_block(cur + 2, 1, fuel - 1);
+                                                    ret = skip_ws(q, fuel - 1);
+                                                    done = true;
+                                                }
+                                            }
+                                            if !done { done = true; ret = cur; }
+                                        }
+                                    }
+                                    if !done { ret = n; done = true; }
+                                }
+                                else { done = true; ret = cur; }
+                            }
+                        }
+                    }
+                }
+                else { ret = n; done = true; }
+            }
         }
-        return pos;
     }
-    return pos;
+    if !done { lex_err = true; ret = pos; }
+    return ret;
 }
 impl fn skip_line(pos : u32 in 0 .. 160, fuel : u32 in 0 .. 160) -> u32 in 0 .. 160
     effects { writes lex_err }
@@ -94,10 +128,32 @@ impl fn skip_line(pos : u32 in 0 .. 160, fuel : u32 in 0 .. 160) -> u32 in 0 .. 
     narrow fuel to 1 .. 160 else { lex_err = true; return pos; }
     let n = srcbuf::src_len();
     if pos == n { return pos; }
-    narrow pos to 0 .. 159 else { return n; }
-    let b = srcbuf::byte_at(pos);
-    if b == '\n' { return skip_ws(pos + 1, fuel - 1); }
-    return skip_line(pos + 1, fuel - 1);
+    if pos == 160 { return n; }
+    let mut cur : u32 in 0 .. 160 = pos;
+    let mut ret : u32 in 0 .. 160 = pos;
+    let mut done : bool = false;
+    traverse i over slots of srcbuf::src by unvisited touches reads srcbuf::src.slots, writes lex_err {
+        if done { leave i; }
+        if i == cur {
+            let m = srcbuf::src_len();
+            if cur == m { done = true; ret = cur; }
+            if !done {
+                if cur < 160 {
+                    let b = srcbuf::byte_at(cur);
+                    if b == '\n' {
+                        if cur < 160 { ret = skip_ws(cur + 1, fuel - 1); done = true; }
+                    }
+                    else {
+                        if cur < 159 { cur = cur + 1; }
+                        else { ret = n; done = true; }
+                    }
+                }
+                else { ret = n; done = true; }
+            }
+        }
+    }
+    if !done { lex_err = true; ret = pos; }
+    return ret;
 }
 impl fn skip_block(pos : u32 in 0 .. 160, depth : u32 in 0 .. 8, fuel : u32 in 0 .. 160) -> u32 in 0 .. 160
     effects { writes lex_err }
@@ -106,56 +162,131 @@ impl fn skip_block(pos : u32 in 0 .. 160, depth : u32 in 0 .. 8, fuel : u32 in 0
     narrow fuel to 1 .. 160 else { lex_err = true; return pos; }
     let n = srcbuf::src_len();
     if pos == n { lex_err = true; return pos; }
-    narrow pos to 0 .. 158 else { lex_err = true; return n; }
-    narrow depth to 1 .. 8 else { lex_err = true; return n; }
-    let b = srcbuf::byte_at(pos);
-    if b == '*' {
-        let c = srcbuf::byte_at(pos + 1);
-        if c == '/' {
-            if depth == 1 { return pos + 2; }
-            narrow depth to 2 .. 8 else { lex_err = true; return n; }
-            return skip_block(pos + 2, depth - 1, fuel - 1);
+    if pos == 159 { lex_err = true; return n; }
+    if pos == 160 { lex_err = true; return n; }
+    if depth == 0 { lex_err = true; return n; }
+    let mut p : u32 in 0 .. 160 = pos;
+    let mut d : u32 in 0 .. 8 = depth;
+    let mut ret : u32 in 0 .. 160 = pos;
+    let mut done : bool = false;
+    traverse i over slots of srcbuf::src by unvisited touches reads srcbuf::src.slots, writes lex_err {
+        if done { leave i; }
+        if i == p {
+            let m = srcbuf::src_len();
+            if p == m { lex_err = true; done = true; ret = p; }
+            if !done {
+                if p < 159 {
+                    let b = srcbuf::byte_at(p);
+                    if b == '*' {
+                        if p < 159 {
+                            let c = srcbuf::byte_at(p + 1);
+                            if c == '/' {
+                                if d == 1 {
+                                    if p < 159 { ret = p + 2; done = true; }
+                                }
+                                else {
+                                    if d >= 2 {
+                                        if p < 159 { p = p + 2; }
+                                        if d >= 2 { d = d - 1; }
+                                    }
+                                    else { lex_err = true; ret = m; done = true; }
+                                }
+                            }
+                            else { if p < 159 { p = p + 1; } }
+                        }
+                    }
+                    else {
+                        if b == '/' {
+                            if p < 159 {
+                                let c = srcbuf::byte_at(p + 1);
+                                if c == '*' {
+                                    if d < 8 {
+                                        if p < 159 { p = p + 2; }
+                                        if d < 8 { d = d + 1; }
+                                    }
+                                    else { lex_err = true; ret = m; done = true; }
+                                }
+                                else { if p < 159 { p = p + 1; } }
+                            }
+                        }
+                        else { if p < 159 { p = p + 1; } }
+                    }
+                }
+                else { lex_err = true; ret = m; done = true; }
+            }
         }
-        return skip_block(pos + 1, depth, fuel - 1);
     }
-    if b == '/' {
-        let c = srcbuf::byte_at(pos + 1);
-        if c == '*' {
-            narrow depth to 0 .. 7 else { lex_err = true; return n; }
-            return skip_block(pos + 2, depth + 1, fuel - 1);
-        }
-        return skip_block(pos + 1, depth, fuel - 1);
-    }
-    return skip_block(pos + 1, depth, fuel - 1);
+    if !done { lex_err = true; ret = pos; }
+    return ret;
 }
 impl fn scan_span(start : u32 in 0 .. 159, pos : u32 in 0 .. 160, len : u32 in 0 .. 159, plain : u32 in 0 .. 1, fuel : u32 in 0 .. 160) -> TOut
     effects { writes lex_err }
     decreases fuel
 {
     narrow fuel to 1 .. 160 else { lex_err = true; return TOut(kind: 0, start: 0, len: 0, pos: pos); }
-    let n = srcbuf::src_len();
-    if pos == n {
-        if plain == 1 {
-            let k = kw_kind(start, len);
-            return TOut(kind: k, start: start, len: len, pos: pos);
+    let mut p : u32 in 0 .. 160 = pos;
+    let mut l : u32 in 0 .. 159 = len;
+    let mut rrk : u32 in 0 .. 31 = 0;
+    let mut rrs : u32 in 0 .. 159 = start;
+    let mut rrl : u32 in 0 .. 159 = len;
+    let mut rrp : u32 in 0 .. 160 = pos;
+    let mut done : bool = false;
+    traverse i over slots of srcbuf::src by unvisited touches reads srcbuf::src.slots, writes lex_err {
+        if done { leave i; }
+        if i == p {
+            let n = srcbuf::src_len();
+            if p == n {
+                if plain == 1 {
+                    rrk = kw_kind(start, l);
+                    rrl = l;
+                    rrp = p;
+                    done = true;
+                }
+                else {
+                    rrk = 2;
+                    rrl = l;
+                    rrp = p;
+                    done = true;
+                }
+            }
+            if !done {
+                if p < 160 {
+                    let b = srcbuf::byte_at(p);
+                    let aa = is_alpha(b);
+                    let dd = is_digit(b);
+                    if aa {
+                        if l < 159 { l = l + 1; }
+                        else { lex_err = true; rrk = 0; rrs = 0; rrl = 0; rrp = p; done = true; }
+                        if !done { if p < 160 { p = p + 1; } }
+                    }
+                    else {
+                        if dd {
+                            if l < 159 { l = l + 1; }
+                            else { lex_err = true; rrk = 0; rrs = 0; rrl = 0; rrp = p; done = true; }
+                            if !done { if p < 160 { p = p + 1; } }
+                        }
+                        else {
+                            if plain == 1 {
+                                rrk = kw_kind(start, l);
+                                rrl = l;
+                                rrp = p;
+                                done = true;
+                            }
+                            else {
+                                rrk = 2;
+                                rrl = l;
+                                rrp = p;
+                                done = true;
+                            }
+                        }
+                    }
+                }
+                else { lex_err = true; rrk = 0; rrs = 0; rrl = 0; rrp = n; done = true; }
+            }
         }
-        return TOut(kind: 2, start: start, len: len, pos: pos);
     }
-    narrow pos to 0 .. 159 else { lex_err = true; return TOut(kind: 0, start: 0, len: 0, pos: n); }
-    let b = srcbuf::byte_at(pos);
-    if is_alpha(b) {
-        narrow len to 0 .. 158 else { lex_err = true; return TOut(kind: 0, start: 0, len: 0, pos: pos); }
-        return scan_span(start, pos + 1, len + 1, plain, fuel - 1);
-    }
-    if is_digit(b) {
-        narrow len to 0 .. 158 else { lex_err = true; return TOut(kind: 0, start: 0, len: 0, pos: pos); }
-        return scan_span(start, pos + 1, len + 1, plain, fuel - 1);
-    }
-    if plain == 1 {
-        let k = kw_kind(start, len);
-        return TOut(kind: k, start: start, len: len, pos: pos);
-    }
-    return TOut(kind: 2, start: start, len: len, pos: pos);
+    if !done { lex_err = true; rrk = 0; rrs = 0; rrl = 0; rrp = pos; }
+    return TOut(kind: rrk, start: rrs, len: rrl, pos: rrp);
 }
 impl fn next_tok(pos : u32 in 0 .. 160, fuel : u32 in 0 .. 160) -> TOut
     effects { writes lex_err }
@@ -218,17 +349,32 @@ impl fn lex_all(pos : u32 in 0 .. 160, fuel : u32 in 0 .. 160)
     decreases fuel
 {
     narrow fuel to 1 .. 160 else { lex_err = true; return; }
-    let t = next_tok(pos, fuel - 1);
-    if t.kind == 0 {
-        if lex_err { return; }
-        let e = emit(0, 0, 0);
-        if e == 64 { return; }
-        return;
+    let mut p : u32 in 0 .. 160 = pos;
+    let mut done : bool = false;
+    traverse i over slots of srcbuf::src by unvisited touches reads srcbuf::src.slots, writes toks.slots, writes tok_used, writes lex_err {
+        if done { leave i; }
+        if i == p {
+            let t = next_tok(p, fuel - 1);
+            if t.kind == 0 {
+                if lex_err { done = true; }
+                else {
+                    let z = emit(0, 0, 0);
+                    if z == 64 { done = true; }
+                    if !done { done = true; }
+                }
+            }
+            if !done {
+                let e = emit(t.kind, t.start, t.len);
+                if e == 64 { done = true; }
+                if !done {
+                    if lex_err { done = true; }
+                    else { p = t.pos; }
+                }
+            }
+        }
     }
-    let e = emit(t.kind, t.start, t.len);
-    if e == 64 { return; }
-    if lex_err { return; }
-    lex_all(t.pos, fuel - 1);
+    if !done { lex_err = true; }
+    return;
 }
 impl fn lex_failed() -> bool
     effects { reads lex_err }

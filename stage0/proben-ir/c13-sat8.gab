@@ -1,0 +1,9 @@
+// C13: saturating add on u8 via shared-range params: 200 +| 100 = 255.
+module c13_sat8 {
+impl fn sat(a : u8, b : u8) -> u8 effects { pure } { return a +| b; }
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let r = sat(200, 100);
+    if r == 255 { return 42; }
+    return 7;
+}
+}

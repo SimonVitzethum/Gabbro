@@ -11,10 +11,10 @@ variable {u : UProg} {C : Fin u.fns.length → Prop}
 
 theorem tabEnv_gut_teil {A : List Eintrag} (hG : ∀ e ∈ A, EintragGut u e) (ρP : Gabbro.Body.Env)
     (hP : ∀ n c, C c → fnSuch u n = some (fnAt u c) →
-      Gabbro.Body.Contract ρP n (preProp (wfU u) (fnAt u c)) (postP u (fnAt u c)) ∧ Gabbro.Body.Frame ρP n (fnAt u c).puts) :
+      Gabbro.Body.Contract ρP n (preProp (wfU u) (fnAt u c)) (postP u (fnAt u c)) ∧ Gabbro.Body.Frame ρP n (writesU (fnAt u c))) :
     ∀ n c, C c → fnSuch u n = some (fnAt u c) →
       Gabbro.Body.Contract (tabEnv A ρP) n (preProp (wfU u) (fnAt u c)) (postP u (fnAt u c)) ∧
-      Gabbro.Body.Frame (tabEnv A ρP) n (fnAt u c).puts := by
+      Gabbro.Body.Frame (tabEnv A ρP) n (writesU (fnAt u c)) := by
   intro n c hc hgf
   refine ⟨fun t ht => ?_, fun t p hp => ?_⟩
   · by_cases hex : ∃ e ∈ A, e.name = n ∧ e.ein = t

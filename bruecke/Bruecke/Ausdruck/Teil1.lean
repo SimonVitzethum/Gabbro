@@ -11,7 +11,7 @@ public import Bruecke.Pflichten
 # S3, part 2: the expressions -- a lowered G term and its Body term have the same value
 
 For every expression form of the parser's fragment: an index (`lowIdx` / `idxExpr`), a value side
-(`lowSideVal` / `sideExpr`), an `ensures` side (`lowSideEns` / `ensSide`) and an `ensures`
+(`lowSideVal` / `sideExprG`), an `ensures` side (`lowSideEns` / `ensSide`) and an `ensures`
 predicate (`lowEns` / `ensExpr`), the Body term `Pflichten.lean` computes evaluates, in a Body
 state related to the G state (`WRel`, `LRel`), to the G value read as a Body value.
 -/

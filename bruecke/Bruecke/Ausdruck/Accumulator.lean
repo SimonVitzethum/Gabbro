@@ -27,14 +27,14 @@ theorem Vor.trans {a b c : Acc} (h1 : Vor a b) (h2 : Vor b c) : Vor a c := by
     the accumulator. -/
 theorem ensSide_sonst {fn : UFn} {a a' : Acc} {sd : USide} {x : Gabbro.Body.Expr}
     (h : ensSide u fn a sd = some (x, a')) (h1 : ∀ b f ix, sd ≠ .old b f ix) (h2 : sd ≠ .erg) :
-    sideExpr u fn sd = some x ∧ a' = a := by
+    sideExprG u fn sd = some x ∧ a' = a := by
   unfold ensSide at h
   split at h
   all_goals first
     | exact absurd rfl (h1 _ _ _)
     | exact absurd rfl h2
     | (cases h; done)
-    | (cases hs : sideExpr u fn sd with
+    | (cases hs : sideExprG u fn sd with
        | none => rw [hs] at h; cases h
        | some e =>
          rw [hs] at h
@@ -64,21 +64,21 @@ theorem ensSide_vor {fn : UFn} {a a' : Acc} {sd : USide} {x : Gabbro.Body.Expr}
 
 /-- Scalar arithmetic with a Body form cannot select the separate bounded-count lowering. -/
 theorem sideExpr_ohneCount {fn : UFn} {sd : USide} {x : Gabbro.Body.Expr}
-    (h : sideExpr u fn sd = some x) : usideHatZaehle sd = false := by
+    (h : sideExprG u fn sd = some x) : usideHatZaehle sd = false := by
   have recurse (sd' : USide) (hlt : sizeOf sd' < sizeOf sd) {x' : Gabbro.Body.Expr}
-      (h' : sideExpr u fn sd' = some x') : usideHatZaehle sd' = false :=
+      (h' : sideExprG u fn sd' = some x') : usideHatZaehle sd' = false :=
     sideExpr_ohneCount h'
   cases sd with
   | add l r | sub l r | mul l r =>
-    cases hl : sideExpr u fn l with
-    | none => simp [sideExpr, hl, binE] at h
+    cases hl : sideExprG u fn l with
+    | none => simp [sideExprG, hl, binE] at h
     | some le =>
-      cases hr : sideExpr u fn r with
-      | none => simp [sideExpr, hl, hr, binE] at h
+      cases hr : sideExprG u fn r with
+      | none => simp [sideExprG, hl, hr, binE] at h
       | some re =>
         simp only [usideHatZaehle, recurse l (by simp_wf <;> omega) hl,
           recurse r (by simp_wf <;> omega) hr, Bool.false_or]
-  | _ => simp_all [sideExpr, usideHatZaehle]
+  | _ => simp_all [sideExprG, usideHatZaehle]
 termination_by sizeOf sd
 decreasing_by assumption
 

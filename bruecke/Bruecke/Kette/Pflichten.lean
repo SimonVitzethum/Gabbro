@@ -1,15 +1,16 @@
 module
-public import Bruecke.Teil.Lokal.Pflichten
+public import Bruecke.Teil.Pflichten
 public import Bruecke.Anweisung.Zweig.Uebersetzung
+public import Bruecke.Anweisung.Zweig.Benannt
 public import Bruecke.Anweisung.Lokal.SimulationB
 @[expose] public section
 
 /-!
 # One carried chain: local bindings and structured branches
 
-The carried set is closed over the whole flat body, including both branch arms. The shape
-conditions and freshness are exactly `GetragenB`: branch translation introduces no additional
-function duty. Fuel and freshness of branch suffixes are handled by the reader lemmas.
+The carried set is closed over the whole flat body, including both branch arms. Integer
+source names may repeat; every non-integer entry keeps its source-name freshness.
+The readers allocate distinct Body identifiers and retain the history across all arms.
 -/
 
 namespace Gabbro.Bruecke
@@ -17,8 +18,9 @@ namespace Gabbro.Bruecke
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 
-/-- Carried shape, call closure and binder freshness, shared with the binding-only chain. -/
-abbrev GetragenG (u : UProg) (C : Fin u.fns.length → Prop) : Prop := GetragenB u C
+/-- Carried shape and call closure, with kind-sensitive local admission. -/
+structure GetragenG (u : UProg) (C : Fin u.fns.length → Prop) : Prop extends Getragen u C where
+  frisch : ∀ c, C c → BindFrisch (fnAt u c)
 
 /-- Source duties for the carried functions over the branch-aware Body translation.
     Open functions retain their explicit canonical G duties. -/
@@ -59,10 +61,11 @@ theorem getragenG_of_bools {u : UProg} (hs : stimmigB u = true)
     olds := fun c _ => oldsB_ok (hc c).1.1.2
     post := fun c _ => postB_ok (hc c).1.2
     schreibt := fun c _ => schreibtB_ok (hc c).2
+    gschreibt := fun c _ => gschreibtB_ok (hc c).2
     ohneReq := fun c _ => ?_
     ohneGrund := fun c _ => ?_
     ohneInv := List.isEmpty_iff.mp hi
-    ohneGlob := List.isEmpty_iff.mp hg
+    statics := staticsB_ok hg
     ohneTransition := fun c _ => ohneTransitionB_ok hPlain c }
            frisch := fun c _ => bindFrischAllB_ok hf c }
   · have h := List.all_eq_true.mp hq (fnAt u c) (List.get_mem _ _)

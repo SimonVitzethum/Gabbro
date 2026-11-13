@@ -1,0 +1,9 @@
+// C13: bswap on u32: bswap(1) = 16777216.
+module c13_bswap32 {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a : u32 = 1;
+    let r = bswap(u32(a));
+    if r == 16777216 { return 42; }
+    return 7;
+}
+}

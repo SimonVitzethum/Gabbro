@@ -1,0 +1,8 @@
+// C14: profile referencing an undeclared assumption is refused.
+module c14_unknown_assume {
+profile {
+    arch x86_64;
+    assume nothing_declared;
+};
+impl fn main() -> u32 in 0 .. 255 effects { pure } { return 42; }
+}

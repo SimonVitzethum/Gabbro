@@ -2,6 +2,7 @@ module
 
 public import Bruecke.Ausdruck.Teil3
 public import Bruecke.Anweisung.Zweig.Uebersetzung
+public import Bruecke.Anweisung.Zweig.Benannt
 import Grammatik.Kern.Taktik.KernelRfl
 
 @[expose] public section
@@ -44,7 +45,7 @@ theorem ensExpr_add_zeuge :
       some (.bin .lt (.bin .add (.name "a") (.lit (.int 1))) (.name "n"), {}) := by kernel_rfl
 
 theorem condZ_add_zeuge :
-    condZ unit arithmeticRoutine (.cmp "<" (.add (.param "a") (.lit 1)) (.param "n")) =
+    condZ unit arithmeticRoutine (BodyNames.start arithmeticRoutine) (.cmp "<" (.add (.param "a") (.lit 1)) (.param "n")) =
       some (.bin .lt (.bin .add (.name "a") (.lit (.int 1))) (.name "n")) := by kernel_rfl
 
 theorem ensExpr_sub_mul_zeuge :
@@ -76,7 +77,7 @@ def environment : Env (declOf unit) [.int 0 9] :=
 
 def binding : Gabbro.Body.Binding := fun _ => .int 2
 
-def state : Gabbro.Body.State := ⟨enc unit initial (fun _ => .absent), binding⟩
+def state : Gabbro.Body.State := ⟨encG unit initial (fun _ => .absent), binding⟩
 
 def geTerm : Expr (declOf unit) [.int 0 9] [] .bool :=
   .le (.lit 1) (.var .here)

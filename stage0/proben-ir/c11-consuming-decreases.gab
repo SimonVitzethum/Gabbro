@@ -1,0 +1,11 @@
+// C11: consuming traversal without decreases is refused.
+module c11_consuming {
+table t count 3 { slot { v : u32 in 0 .. 10, } }
+impl fn main() -> u32 in 0 .. 255 effects { reads t.slots, writes t.slots } {
+    let mut acc : u32 in 0 .. 100 = 0;
+    traverse i over slots of t by consuming touches reads t.slots, writes t.slots {
+        acc = acc + t.slots[i].v;
+    }
+    return acc;
+}
+}

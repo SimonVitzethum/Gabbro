@@ -1,5 +1,5 @@
 module
-public import Grammatik.Parser.Elab.Uebersetze.Einheit.Elaboration
+public import Grammatik.Parser.Elab.Uebersetze.Einheit.FastElaboration
 public import Grammatik.Parser.Elab.Modules.Frontend
 @[expose] public section
 
@@ -111,7 +111,9 @@ def lowerSeiteEin (tabs : List UTab) (names : List String)
   | .eng .. => .error "narrowing without G form in the 104 lowering"
   | .ib1 .. | .ib2 .. => .error "builtin without G form in the 104 lowering"
   | .zaehle .. | .zaehleBaum .. | .zaehleFeld .. => .error "count without G form in the 104 lowering"
-  | .lit n => .ok { range := (n, n), term := Expr.lit n }
+  | .lit n => .ok
+      { range := (n, n)
+        term := Expr.lit n }
   | .param p =>
     match uStelle ["k", "i", "b"] p with
     | .error e => .error e
@@ -122,7 +124,9 @@ def lowerSeiteEin (tabs : List UTab) (names : List String)
         else
           match varNumEin j (.int lo hi) with
           | .error e => .error e
-          | .ok v => .ok { range := (lo, hi), term := Expr.var v }
+          | .ok v => .ok
+              { range := (lo, hi)
+                term := Expr.var v }
       | _, _ => .error "parameter without G form"
   | .slot b f ix =>
     if !(strEq b "k" && strEq f "stand") then .error "place without G form"
@@ -133,7 +137,9 @@ def lowerSeiteEin (tabs : List UTab) (names : List String)
         match lowerIdxEin ix with
         | .error e => .error e
         | .ok i =>
-          .ok { range := (0, 100), term := Expr.thru (Expr.var Var.here) G104_referenz.GTab.Konto rfl G104_referenz.GKontoFeld.stand i G104_referenz.gDarf_einzahlen_Konto }
+          .ok
+            { range := (0, 100)
+              term := Expr.thru (Expr.var Var.here) G104_referenz.GTab.Konto rfl G104_referenz.GKontoFeld.stand i G104_referenz.gDarf_einzahlen_Konto }
   | .tab b f ix =>
     if !(strEq b "Konto" && strEq f "stand") then .error "place without G form"
     else
@@ -143,7 +149,9 @@ def lowerSeiteEin (tabs : List UTab) (names : List String)
         match lowerIdxEin ix with
         | .error e => .error e
         | .ok i =>
-          .ok { range := (0, 100), term := Expr.slot G104_referenz.GTab.Konto G104_referenz.GKontoFeld.stand i G104_referenz.gDarf_einzahlen_Konto }
+          .ok
+            { range := (0, 100)
+              term := Expr.slot G104_referenz.GTab.Konto G104_referenz.GKontoFeld.stand i G104_referenz.gDarf_einzahlen_Konto }
   | .old b f ix =>
     if !((strEq b "k" || strEq b "Konto") && strEq f "stand") then
       .error "place without G form"
@@ -154,7 +162,9 @@ def lowerSeiteEin (tabs : List UTab) (names : List String)
         match lowerIdxEin ix with
         | .error e => .error e
         | .ok i =>
-          .ok { range := (0, 100), term := Expr.oldS G104_referenz.GTab.Konto G104_referenz.GKontoFeld.stand i G104_referenz.gDarf_einzahlen_Konto }
+          .ok
+            { range := (0, 100)
+              term := Expr.oldS G104_referenz.GTab.Konto G104_referenz.GKontoFeld.stand i G104_referenz.gDarf_einzahlen_Konto }
   | .erg => .error "result in a body"
   | .add .. | .sub .. | .mul .. | .conv .. | .band .. | .bor .. | .bxor .. | .div .. | .rem .. | .shl .. | .shr .. | .neg .. =>
     .error "arithmetic without G form in the 104 lowering"

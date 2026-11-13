@@ -44,9 +44,10 @@ public theorem wake_not_lost (run : WakeRun before after received) (pending : be
       · exact Or.inr (by simp only [later, Bool.or_true])
     · exact Or.inr (by simp only [claimed, Bool.true_or])
 
-/-- Two claims cannot both receive one isolated wake. A second wake during
-    polling remains visible even after the first has already been claimed. -/
-public theorem notification_twice_zeuge :
+/-- Two explicit WakeRun traces: notify/claim/claim receives at least once
+    and ends clear; claim/notify receives at least once and ends latched.
+    WakeRun's Boolean records any receipt, not the number of receipts. -/
+public theorem notification_claim_traces_zeuge :
     WakeRun false false true ∧ WakeRun true true true := by
   constructor
   · exact .step (.notify false) (.step (.claim true) (.step (.claim false) (.refl false)))

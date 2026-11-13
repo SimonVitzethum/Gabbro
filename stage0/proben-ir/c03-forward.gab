@@ -1,0 +1,28 @@
+// C03: a closed reason value compared and forwarded through an else binder.
+module c03_forward {
+reason Fault {
+    First = 1 "first reason"
+    Second = 2 "second reason"
+    exhaustive
+}
+impl fn fail(n : u32 in 0 .. 2) -> u32 in 0 .. 42 or Fault
+    effects { pure }
+{
+    if n == 0 { return Fault::First; }
+    if n == 1 { return Fault::Second; }
+    return 39;
+}
+impl fn same(a : u32 in 0 .. 2, b : u32 in 0 .. 2) -> bool
+    effects { pure }
+{
+    let x = fail(a) else (r1) { return false; }
+    let y = fail(b) else (r2) { return false; }
+    return true;
+}
+impl fn main() -> u32 in 0 .. 255
+    effects { pure }
+{
+    if same(2, 2) { return 42; }
+    return 7;
+}
+}

@@ -28,6 +28,8 @@ inductive Statisch (ρB : Gabbro.Body.Env) (puts : List String) : List Gabbro.Bo
   | assign (cn : String) (i : Gabbro.Body.Expr) (f : String) (e : Gabbro.Body.Expr)
       (xs : List Gabbro.Body.Stmt) :
       cn ∈ puts → Statisch ρB puts xs → Statisch ρB puts (.assign cn i f e :: xs)
+  | assignGlobal (n : String) (e : Gabbro.Body.Expr) (xs : List Gabbro.Body.Stmt) :
+      n ∈ puts → Statisch ρB puts xs → Statisch ρB puts (.assignGlobal n e :: xs)
   | bindName (x : String) (e : Gabbro.Body.Expr) (xs : List Gabbro.Body.Stmt) :
       Statisch ρB puts xs → Statisch ρB puts (.bindName x e :: xs)
   | ret (e : Option Gabbro.Body.Expr) (xs : List Gabbro.Body.Stmt) :
@@ -100,6 +102,19 @@ theorem exec_statisch {ρB : Gabbro.Body.Env} {puts : List String} {bs : List Ga
       apply hp
       rw [e']
       exact hcn
+  | assignGlobal n e xs hn _ ih =>
+    intro t s' h p hp
+    simp only [Gabbro.Body.exec, Gabbro.Body.step] at h
+    cases hv : Gabbro.Body.eval t e with
+    | none => simp only [hv, Gabbro.Body.finalState, reduceCtorEq] at h
+    | some v =>
+      simp only [hv] at h
+      rw [ih _ s' h p hp]
+      apply Gabbro.Body.store_elsewhere
+      intro he
+      apply hp
+      rw [he]
+      exact hn
   | bindName x e xs _ ih =>
     intro t s' h p hp
     rcases step_bindName ρB x e t with hs | ⟨v, hs⟩

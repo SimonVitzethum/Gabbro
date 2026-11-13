@@ -1,0 +1,12 @@
+// C13: bounded count over table slots, in a comparison: two of four slots hold 1.
+module c13_countslots {
+table T count 4 { slot { v : u8, } }
+impl fn main() -> u32 in 0 .. 255 effects { reads T.slots, writes T.slots } {
+    T.slots[0].v = 1;
+    T.slots[1].v = 0;
+    T.slots[2].v = 1;
+    T.slots[3].v = 0;
+    if (count k in slots of T : T.slots[k].v == 1) == 2 { return 42; }
+    return 7;
+}
+}

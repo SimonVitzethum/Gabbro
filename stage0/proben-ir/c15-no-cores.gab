@@ -1,0 +1,6 @@
+// C15: accumulator with non-positive core count is refused.
+module c15_zero {
+const NKERNE : u32 = 0;
+accumulates fehlerzahl : u32 merge add per cpu NKERNE;
+impl fn main() -> u32 in 0 .. 255 effects { pure } { return 42; }
+}

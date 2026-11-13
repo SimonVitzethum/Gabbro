@@ -220,7 +220,7 @@ end
 /-- The source of a unit for the name-space rule. -/
 def quelle (items : List SItemTief) : Quelle :=
   let s := sammleL [] items
-  ⟨s.1, s.2⟩
+  { namen := s.1, verwendet := s.2 }
 
 /-- **The key of an item**: its short name when no other declared path ends in it, else its path. -/
 def schluessel (namen : List Pfad) (c : Pfad) : String :=

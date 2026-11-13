@@ -1,0 +1,9 @@
+// C13: rotr on u16: rotr(1, 1) = 32768.
+module c13_rotr16 {
+impl fn rot(x : u16, n : u16 in 0 .. 15) -> u16 effects { pure } { return rotr(x, n); }
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let r = rot(1, 1);
+    if r == 32768 { return 42; }
+    return 7;
+}
+}

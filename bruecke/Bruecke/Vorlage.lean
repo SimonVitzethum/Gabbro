@@ -127,7 +127,7 @@ def vorlage (name src : String) : String :=
       "theorem verankert : uOf quelle = some u := uOf_eq uebersetzt\n\n"
     let bools :=
       (if nullB u then "theorem null : nullB u = true := by decide\n"
-       else "-- REFUSED: a field range excludes 0, so there is no zero memory (`nullB u = false`).\n" ++
+       else "-- REFUSED: initial table or static memory is outside the supported numeric ranges (`nullB u = false`).\n" ++
             "theorem null : nullB u = true := by exact?\n") ++
       (if stimmigB u then "theorem stimmig : stimmigB u = true := by decide\n"
        else "-- REFUSED: a name condition fails (`stimmigB u = false`).\n" ++

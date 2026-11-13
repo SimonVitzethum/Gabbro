@@ -1,0 +1,11 @@
+// C03: an exhaustive reason with no cases.
+module c03_empty_closed {
+reason Empty {
+    exhaustive
+}
+impl fn main() -> u32 in 0 .. 255
+    effects { pure }
+{
+    return 42;
+}
+}

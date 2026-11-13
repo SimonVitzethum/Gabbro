@@ -102,6 +102,7 @@ def renameStep (name : String → Option String) : Stmt → Option Stmt
       match renameScalar name i, renameScalar name v with
       | some i', some v' => some (.assign c i' f v')
       | _, _ => none
+  | .assignGlobal g v => (renameScalar name v).map (Stmt.assignGlobal g)
   | .call c ps es pre => (renameScalars name es).map (fun es' => .call c ps es' pre)
   | _ => none
 where

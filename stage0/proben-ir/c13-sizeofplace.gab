@@ -1,0 +1,10 @@
+// C13: sizeof of a place with declared storage: u32 param is 4 bytes, u8 field is 1.
+module c13_sizeofplace {
+table T count 1 { slot { v : u8, } }
+impl fn sz(x : u32) -> u32 in 0 .. 8 effects { pure } { return sizeof(x); }
+impl fn main() -> u32 in 0 .. 255 effects { reads T.slots } {
+    let a = sz(0);
+    let b = sizeof(T.slots[0].v);
+    return a + b;
+}
+}

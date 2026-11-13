@@ -1,0 +1,173 @@
+Stage-0 compile-time and peak-memory scaling (measured 2026-11-13)
+============================================================================
+
+Goal: how compile time and peak memory scale toward a 500 000-line Gabbro
+compiler, and what is superlinear. Method: generated sources, one shape per
+series; every compile inside
+  systemd-run --user --scope -q -p MemoryMax=8G -p MemoryHigh=7G -p MemorySwapMax=0
+before each run: start only with >=10 GiB available and load average <=14.
+/usr/bin/time is not installed; peak memory is the stage0 process VmHWM polled
+every 100 ms (spikes shorter than the poll window can be missed; small-N peaks
+are startup-dominated). Wall time is date +%s.%N around the run.
+Binaries (copied once, then only the copies used):
+  cp /home/simon/Dokumente/Gabbro/stage0/.lake/build/bin/stage0 .scratch-m/stage0
+  cp /home/simon/Dokumente/Gabbro/stage0/.lake/ir/runner .scratch-m/runner
+
+Generator: stage0/proben-compiler/gen-scale.sh (bash/awk/printf only), kinds:
+  plain  N arithmetic chain fns (p0: x+x; pi: let a = p(i-1)(x); return a+1),
+         main checks p(N-1)(5) == N+9, exit 7
+  guard  N fns with 4 narrowing ifs, let mut counter, guarded slot index+write,
+         chained; main checks g(N-1)(50) == 3, exit 7
+  calls  N fns with nested calls in expression/branch positions + narrow,
+         chained; main checks h(N-1)(5) == 15, exit 7
+  tables44 4 tables + 4 statics, N chained fns round-robin; main checks == 5
+  mixed  record result + bool + recursion with decreases+fuel, chained;
+         main checks m(N-1)(7,0,100).v == (8-N if N<9 else 1), exit 7
+  longb  ONE fn with 2N guarded statements (counter loop + slot-write loop)
+  longc  ONE fn with 3N call/narrow statements
+All shapes use only forms from stage0/proben-ir/*.gab and
+stage0/proben-compiler/*.gab. Every generated source with N=10 was compiled
+AND run (exit 7 as predicted) before scaling. Runner checks also ran for every
+N <= 2000 row below (all exit 7); larger N were compile-only.
+Function names avoid f32/f64 (see finding F1); module name is `scale`.
+
+1. Main series: time (s) / peak resident (MB) / source lines / image bytes
+--------------------------------------------------------------------------------
+N        plain            guard            calls            tables44
+1000     0.97 / 282       1.26 / 445       1.58 / 493       0.84 / 367
+2000     0.73 / 305       2.19 / 606       2.94 / 705       1.47 / 445
+4000     1.46 / 348       4.08 / 912       5.87 / 1184      2.74 / 598
+8000     3.56 / 508       9.22 / 1538      14.45 / 2013     6.72 / 904
+16000    10.25 / 706      25.54 / 2795     39.19 / 4037     19.02 / 1550
+32000    37.10 / 1213     78.87 / 5268     138.45 / 7150    70.57 / 2768
+lines    4N+6             18N+9            12N+2            11N+16
+
+N        mixed            indep (control: N unchained fns, body x+x)
+1000     1.37 / 434       0.53 / 275
+2000     2.62 / 639       0.63 / 301
+4000     5.24 / 1148      1.05 / 331
+8000     11.53 / 2043     1.78 / 407
+16000    30.96 / 3901     4.20 / 615
+32000    97.97 / 5793     10.69 / 1076
+lines    14N+7            3N+7
+Image sizes (bytes) grow ~linearly, e.g. mixed: 8.2M, 12.2M, 20.1M, 36.1M,
+67.9M, 131.7M; fixed ~4.2M base (empty main image).
+
+2. Growth: time(2N)/time(N), and fitted exponent b over 16k->32k
+--------------------------------------------------------------------------------
+         2k/1k  4k/2k  8k/4k  16k/8k  32k/16k | b(16k->32k)
+plain    0.75   2.00   2.44   2.88    3.62     | 1.86
+guard    1.74   1.86   2.26   2.77    3.09     | 1.63
+calls    1.86   2.00   2.46   2.71    3.53     | 1.82
+tables44 1.75   1.86   2.45   2.83    3.71     | 1.89
+mixed    1.91   2.00   2.20   2.69    3.16     | 1.66
+indep    1.19   1.67   1.70   2.36    2.55     | 1.35
+EVERY series grows faster than linear. Per-function time at 32k: plain
+1.16 ms, guard 2.46 ms, calls 4.33 ms, tables44 2.20 ms, mixed 3.06 ms,
+indep 0.33 ms. Per-line time at 32k: plain 290 us, guard 137 us, calls
+361 us, tables44 200 us, mixed 219 us, indep 111 us.
+Memory ratios accelerate too (indep MB: 275,301,331,407,615,1076).
+
+3. Long single-function bodies (iters -> statements; time / peak)
+--------------------------------------------------------------------------------
+longb  34->68: 0.42s/280MB; 334->668: 0.53/303; 1667->3334: 1.47/357;
+       4000->8000: 6.08/448; 5000->10000: 8.81/491
+longc  34->102: 0.42/259; 334->1002: 0.73/276; 1667->5001: 7.77/430;
+       5000->15000: 88.24/3235
+Cost per statement grows linearly with body length (quadratic total):
+longc 1002->5001 stmts (5x) takes 10.6x; 5001->15000 (3x) takes 11.4x.
+Same ~8000 lines as 2000 plain functions (0.73 s) costs in one body:
+longb 6.08 s, longcI 23.08 s (8-30x more).
+
+4. Isolation: one feature varied at a time (all at N=4000/8000 unless noted)
+--------------------------------------------------------------------------------
+(a) Name length: plainlong (47-char names) 4000: 1.47s, 8000: 3.47s vs
+    plain 1.46s/3.56s. NO effect.
+(b) Places count: tables11/44/88 at 4000: 2.52/2.74/3.15s; at 8000:
+    5.77/6.72/7.45s. ~+12% per doubling of places; doubling ratios unchanged
+    (2.3x). Minor linear factor, NOT the superlinear driver.
+(c) Chaining: plain vs indep at same N: 4000: 1.46 vs 1.05s; 8000: 3.56 vs
+    1.78s; 16000: 10.25 vs 4.20s; 32000: 37.10 vs 10.69s. Chaining adds a
+    growing premium (1.4x -> 3.5x). But indep itself is superlinear
+    (ratios 1.19->2.55, b=1.35): a global per-module component exists.
+(d) Guard variety: longbC (counter loop only) 1667->5000 iters (3x stmts):
+    0.63s -> 2.30s (3.65x); longbS (identical `if p < 10` slot loop only):
+    0.73s -> 2.83s (3.9x). Even DUPLICATE guards accumulate cost: the
+    per-statement fact/rewriting work grows with body size, not guard variety.
+(e) Narrows: longcN (calls+branch, NO narrow; pick-based) 1667->5000 iters:
+    3.26s -> 42.19s (12.9x for 3x stmts) vs longc with narrow 11.4x.
+    Narrows are NOT the within-body driver.
+(f) Reference chain: longcI (INDEPENDENT lets, each consumed by its own
+    narrow) 1667->5000 iters: 3.99s -> 37.56s (9.4x for 3x stmts).
+    Quadratic WITHOUT any chaining: per-statement scope cost, not use-chain.
+(g) Multi-file: same declarations as several files cost +c*T^2 (T = total
+    functions), with NO extra memory:
+    1x2000: 0.63s/301MB vs 2x1000: 8.1s vs 8x250: 8.5s/294MB vs 1900+100:
+    8.1s (all T=2000; split-independent); 7 near-empty files + 1x250: 0.46s
+    (file count alone is cheap); 1x8000: 1.78s/407MB vs 8x1000 (T=8000):
+    ~121s/401MB. Fit: extra ~= 2e-6 * T^2 s (2000: 8s, 8000: 129s).
+    Real 4-file proben-compiler unit (60 fns): 0.53s (term is 0.007s there).
+(h) Minimal isolated cases: within-body quadratic shows at 3-10k statements
+    (longcI 1667 vs 5000 iters); cross-module quadratic shows at T=2000
+    (8.1s multi vs 0.63s single, same sources); chain premium shows at
+    8000+ (plain 2.0x indep).
+
+5. Findings: refusals and wrong exits (minimal sources kept in .scratch-m,
+   not committed; all deterministic across repeats)
+--------------------------------------------------------------------------------
+F1. A user function named `f32` (also `f64`) mistypes its call results:
+    callers see an aggregate where a u32 belongs.
+    Refused:  `impl fn f32(x : u32 in 0 .. 50) -> u32 in 0 .. 101 { return x + 51; }`
+              + main with `let v = f32(5); if v == 56 ...` -> "aggregate as a number"
+              (also with just `return v` -> same refusal).
+    Controls `f31`, `f33`, `f16`, `u32`, `g32` as function names all compile.
+    The generator avoids f32/f64 (plain uses p-prefix). Presumably the float
+    type names win over function names in call-position resolution.
+F2. Duplicate function names across modules of one unit break above 50 per
+    file: 2 files x 50 same-named fns + 1 main compiles; 2x51, 70+30 (same
+    names) are refused with `type unknown: lex::u32` in the FIRST function
+    (misleading location); 2x60 with DISTINCT names per file compiles.
+    A real multi-file compiler must use distinct names per module (it does),
+    but the 50/51 cliff and the wrong error location need root-causing.
+F3. (Dead end, retracted.) A module literally named `m0` was first suspected
+    from an 8-file failure; retest showed single-file `module m0` compiles at
+    1-1000 functions. The failure was F2 (duplicate u-names), not the module
+    name.
+F4. Robustness note (harness misuse, not a compiler bug): the runner executes
+    a missing image and dies with SIGILL (exit 132). Never run the runner
+    when the compile failed.
+Refusal texts met while shaping the generators (all avoided in final shapes):
+  "call writes without right": callers must cover the callee's WRITES
+    (transitively); reads need no cover (front.gab main claims writes only).
+  "value outside range": e.g. returning a 0..200 static where 0..100 declared.
+  Guard narrowing does NOT see through record fields: `let v = r.v;
+    if v != 255 ...; v + 1` is refused, while the same on params or
+    param-copied locals compiles (probes only narrow params).
+
+6. Extrapolation to 500 000 lines, mixed shape (14.0 lines/fn => ~35 700 fns)
+--------------------------------------------------------------------------------
+Single-module: last-segment exponent b=1.66; T(35700) ~= 98 * 1.1156^1.66
+  ~= 120 s (band 100-200 s if the exponent keeps drifting up as in 2.20 ->
+  2.69 -> 3.16). Memory marginal 0.12 MB/fn at top -> ~6.3 GB (band 6-7.5).
+  Verdict: FEASIBLE on this 31 GB machine as one module, near but under a
+  raised scope cap (the 7 GB cap used here would be marginal).
+Multi-module (realistic file split): extra ~= 2e-6 * 35700^2 s ~= 2550 s
+  ~= 42 min on top, same memory. Verdict: NOT feasible as a multi-file unit
+  today. The O(T^2) cross-module term must be fixed first (it already costs
+  70x at 8000 declarations: 121 s multi vs 1.8 s single). Second: flatten the
+  per-shape N^1.6-1.9 and the within-body quadratic (long bodies cost 8-30x
+  per line vs spread-out functions; calls cost ~8x per statement vs guards).
+
+7. Reproduction (worktree root; binaries already copied to .scratch-m/)
+--------------------------------------------------------------------------------
+  .scratch-m/gen-scale.sh KIND N FILE   # KIND in plain guard calls tables44 mixed longb longc
+  .scratch-m/run-one.sh FILE OUT.img    # prints: rc wall_s peak_kb polls lines img_bytes
+  # multi-file wall+peak: .scratch-m/multi-one.sh A.gab [...] OUT.img
+  # runner (only if rc=0 and, for fn-kinds, N<=2000): systemd-run ... .scratch-m/runner OUT.img
+  Full series: for k in plain guard calls tables44 mixed; do for n in 1000 2000
+  4000 8000 16000 32000; do .scratch-m/step.sh $k $n; done; done
+  (step.sh gates on >=10 GiB available and load <=14, stops nothing
+  automatically; no series hit the 10 min / 7 GB stop rule except
+  calls-32000 peak 7.15 GB, which still completed inside the 8 GB scope.)
+Results table source: .scratch-m/results.tsv (one line per run:
+KIND N rc wall_s peak_kb polls lines img_bytes run_exit).

@@ -1,0 +1,7 @@
+// C13: rotl on u8 needs the full word: operand is a param of range 0 .. 255.
+module c13_rotl8 {
+impl fn rot(x : u8, n : u8 in 0 .. 7) -> u8 effects { pure } { return rotl(x, n); }
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    return rot(129, 1);
+}
+}

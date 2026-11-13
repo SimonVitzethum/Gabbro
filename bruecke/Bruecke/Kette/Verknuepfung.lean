@@ -14,10 +14,10 @@ variable {u : UProg} {C : Fin u.fns.length → Prop}
 variable {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes : Nat}
   {R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f}
 
-theorem blockZiel_nil_G {Γ : Ctx} {Λ : List (Res (declOf u))} (fn : UFn) (σ : World (declOf u))
-    (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State) (hW : WRel u σ s.world)
-    (hL : LRel fn 0 ρ s.local') :
-    BlockZiel_G u C c O passes R fn (Block.nil : Block (declOf u) (verOf u c) false Γ Λ Λ) σ ρ s [] := by
+theorem blockZiel_nil_G {Γ : Ctx} {Λ : List (Res (declOf u))} (fn : UFn) (ids : List String) (σ : World (declOf u))
+    (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State) (hW : WGRel u σ s.world)
+    (hL : PositionalLRel fn ids 0 ρ s.local') :
+    BlockZiel_G u C c O passes R fn ids (Block.nil : Block (declOf u) (verOf u c) false Γ Λ Λ) σ ρ s [] := by
   refine ⟨fun e h => ?_, fun σ' v h => ?_, fun σ' ρ' h => ?_⟩
   · rw [execBlockZ_nil] at h; cases h
   · rw [execBlockZ_nil] at h; cases h
@@ -25,13 +25,13 @@ theorem blockZiel_nil_G {Γ : Ctx} {Λ : List (Res (declOf u))} (fn : UFn) (σ :
     cases h
     exact ⟨[], s, Strecke_G.leer s, hW, hL⟩
 
-theorem stmtZiel_of_G {Γ : Ctx} {Λ Λ₁ : List (Res (declOf u))} {fn : UFn}
+theorem stmtZiel_of_G {Γ : Ctx} {Λ Λ₁ : List (Res (declOf u))} {fn : UFn} {ids : List String}
     {st : Stmt (declOf u) (verOf u c) false Γ Λ Λ₁} {blk : Block (declOf u) (verOf u c) false Γ Λ Λ₁}
     {σ σl : World (declOf u)} {ρ : Env (declOf u) Γ} {s : Gabbro.Body.State}
     {x : Gabbro.Body.Stmt} {tB : List Gabbro.Body.Stmt}
     (hG : execStmt O passes R st σ ρ = execBlock O passes R blk σl ρ)
     (hB : ∀ ρB, Gabbro.Body.step ρB x s = Gabbro.Body.exec ρB tB s)
-    (h : BlockZiel_G u C c O passes R fn blk σl ρ s tB) : StmtZiel_G u C c O passes R fn st σ ρ s x := by
+    (h : BlockZiel_G u C c O passes R fn ids blk σl ρ s tB) : StmtZiel_G u C c O passes R fn ids st σ ρ s x := by
   refine ⟨fun e he => h.1 e (hG.symm.trans he), fun σ' v he => ?_, fun σ' ρ' he => ?_⟩
   · obtain ⟨A, hg, ho, hk, hb⟩ := h.2.1 σ' v (hG.symm.trans he)
     refine ⟨A, hg, ho, hk, fun ρB hT hF => ?_⟩
@@ -42,14 +42,14 @@ theorem stmtZiel_of_G {Γ : Ctx} {Λ Λ₁ : List (Res (declOf u))} {fn : UFn}
     refine ⟨A, s', { hS with lauf := fun ρB hT hF => ?_ }, hW, hL⟩
     simp only [Gabbro.Body.exec, hB ρB, hS.lauf ρB hT hF]
 
-theorem blockZiel_cons_G {Γ : Ctx} {Λ Λ₁ Λ' : List (Res (declOf u))} {fn : UFn}
+theorem blockZiel_cons_G {Γ : Ctx} {Λ Λ₁ Λ' : List (Res (declOf u))} {fn : UFn} {ids : List String}
     {st : Stmt (declOf u) (verOf u c) false Γ Λ Λ₁}
     {rest : Block (declOf u) (verOf u c) false Γ Λ₁ Λ'} {σ : World (declOf u)}
     {ρ : Env (declOf u) Γ} {s : Gabbro.Body.State} {x : Gabbro.Body.Stmt}
-    {ys : List Gabbro.Body.Stmt} (hst : StmtZiel_G u C c O passes R fn st σ ρ s x)
-    (hrest : ∀ σ₁ ρ₁ s₁, WRel u σ₁ s₁.world → LRel fn 0 ρ₁ s₁.local' →
-      BlockZiel_G u C c O passes R fn rest σ₁ ρ₁ s₁ ys) :
-    BlockZiel_G u C c O passes R fn (Block.cons st rest) σ ρ s (x :: ys) := by
+    {ys : List Gabbro.Body.Stmt} (hst : StmtZiel_G u C c O passes R fn ids st σ ρ s x)
+    (hrest : ∀ σ₁ ρ₁ s₁, WGRel u σ₁ s₁.world → PositionalLRel fn ids 0 ρ₁ s₁.local' →
+      BlockZiel_G u C c O passes R fn ids rest σ₁ ρ₁ s₁ ys) :
+    BlockZiel_G u C c O passes R fn ids (Block.cons st rest) σ ρ s (x :: ys) := by
   cases hx : execStmt O passes R st σ ρ with
   | ok σ₁ ρ₁ =>
     obtain ⟨A₁, s₁, hS, hW, hL⟩ := hst.2.2 σ₁ ρ₁ hx
@@ -104,16 +104,15 @@ theorem blockZiel_cons_G {Γ : Ctx} {Λ Λ₁ Λ' : List (Res (declOf u))} {fn :
     exact ⟨fun e h => (by rw [hw] at h; cases h), fun σ'' v' h => (by rw [hw] at h; cases h),
       fun σ'' ρ'' h => (by rw [hw] at h; cases h)⟩
 
-theorem blockZiel_bind_G {Γ : Ctx} {Λ Λ' : List (Res (declOf u))} {fn : UFn} {τ : Ty}
+theorem blockZiel_bind_G {Γ : Ctx} {Λ Λ' : List (Res (declOf u))} {fn : UFn} {ids : List String} {τ : Ty}
     {e : Expr (declOf u) Γ Λ τ} {rest : Block (declOf u) (verOf u c) false (τ :: Γ) Λ Λ'}
     {σ : World (declOf u)} {ρ : Env (declOf u) Γ} {s s₁ : Gabbro.Body.State}
-    {x : Gabbro.Body.Stmt} {ys : List Gabbro.Body.Stmt} {y : String} {w : Int × Int}
-    (hy : y ∉ fn.params.map (·.1))
+    {x : Gabbro.Body.Stmt} {ys : List Gabbro.Body.Stmt} {y id : String} {w : Int × Int}
     (hstep : ∀ ρB, RahmenAlleC u C ρB → Gabbro.Body.step ρB x s = .running s₁)
     (hgz : ∀ w', gz w' s.world ≤ gz w' s₁.world)
-    (h : BlockZiel_G u C c O passes R (fn.mitBindung y w) rest (σ.lese Λ e.orte)
+    (h : BlockZiel_G u C c O passes R (fn.mitBindung y w) (id :: ids) rest (σ.lese Λ e.orte)
       (Env.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) s₁ ys) :
-    BlockZiel_G u C c O passes R fn (Block.bind e rest) σ ρ s (x :: ys) := by
+    BlockZiel_G u C c O passes R fn ids (Block.bind e rest) σ ρ s (x :: ys) := by
   refine ⟨fun err he => ?_, fun σ' v he => ?_, fun σ' ρ' he => ?_⟩
   · rw [execBlockZ_bind] at he
     exact h.1 err (schrumpfZ_logik he)
@@ -123,7 +122,7 @@ theorem blockZiel_bind_G {Γ : Ctx} {Λ Λ' : List (Res (declOf u))} {fn : UFn} 
   · rw [execBlockZ_bind] at he
     obtain ⟨ρ'', hin, rfl⟩ := schrumpfZ_ok he
     obtain ⟨A, s', hS, hW, hL⟩ := h.2.2 σ' ρ'' hin
-    exact ⟨A, s', Strecke_G.vor hstep hgz hS, hW, lrel_tail hL hy⟩
+    exact ⟨A, s', Strecke_G.vor hstep hgz hS, hW, hL.tail⟩
 
 theorem laufZiel_strecke_G {Γ Γ₁ : Ctx} {Λ Λ₁ : List (Res (declOf u))}
     {b0 : Endblock (declOf u) (verOf u c) false Γ Λ}
@@ -170,12 +169,12 @@ theorem laufZiel_logik_G {Γ : Ctx} {Λ : List (Res (declOf u))}
     LaufZielTeilB u C c O passes R b0 σ ρ s bs :=
   ⟨fun e' h' => (by rw [h] at h'; cases h'; exact hb), fun σ' v h' => (by rw [h] at h'; cases h')⟩
 
-theorem laufZiel_cons_G {Γ : Ctx} {Λ Λ₁ : List (Res (declOf u))} {fn : UFn}
+theorem laufZiel_cons_G {Γ : Ctx} {Λ Λ₁ : List (Res (declOf u))} {fn : UFn} {ids : List String}
     {st : Stmt (declOf u) (verOf u c) false Γ Λ Λ₁}
     {rest : Endblock (declOf u) (verOf u c) false Γ Λ₁} {σ : World (declOf u)}
     {ρ : Env (declOf u) Γ} {s : Gabbro.Body.State} {x : Gabbro.Body.Stmt}
-    {bs : List Gabbro.Body.Stmt} (hst : StmtZiel_G u C c O passes R fn st σ ρ s x)
-    (hrest : ∀ σ₁ ρ₁ s₁, WRel u σ₁ s₁.world → LRel fn 0 ρ₁ s₁.local' →
+    {bs : List Gabbro.Body.Stmt} (hst : StmtZiel_G u C c O passes R fn ids st σ ρ s x)
+    (hrest : ∀ σ₁ ρ₁ s₁, WGRel u σ₁ s₁.world → PositionalLRel fn ids 0 ρ₁ s₁.local' →
       LaufZielTeilB u C c O passes R rest σ₁ ρ₁ s₁ bs) :
     LaufZielTeilB u C c O passes R (Endblock.cons st rest) σ ρ s (x :: bs) := by
   cases hx : execStmt O passes R st σ ρ with

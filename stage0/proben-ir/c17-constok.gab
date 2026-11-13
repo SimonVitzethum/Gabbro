@@ -1,0 +1,6 @@
+// C17: a const fn with a true requires, folded at compile time.
+module c17_constok {
+const fn identity(x : u8) -> u8 requires x < 10 effects { pure } { return x; }
+const ANSWER : u8 = identity(7);
+impl fn main() -> u8 effects { pure } { return ANSWER; }
+}

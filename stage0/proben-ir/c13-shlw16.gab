@@ -1,0 +1,9 @@
+// C13: wrapping shl on u16: 3 <<% 15 = 32768 (98304 mod 65536).
+module c13_shlw16 {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a : u16 = 3;
+    let r = a <<% 15;
+    if r == 32768 { return 42; }
+    return 7;
+}
+}

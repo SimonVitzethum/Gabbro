@@ -1,0 +1,9 @@
+// C14: requirements not covered by a program profile are refused.
+module c14_requires {
+assume gpu_progress "The GPU retires one work item per clock." falsifier sonde_gpu_tick;
+requires profile {
+    arch x86_64;
+    assume gpu_progress;
+};
+impl fn main() -> u32 in 0 .. 255 effects { pure } { return 42; }
+}

@@ -234,3 +234,31 @@ checks of `grammatik/`.
 Statement reviews: Sol's reading of the ported async model found five theorems whose names claim more than their
 statements (`asyncOk_refines` does not use its checker premise; `cancellation_no_leak` is relative to free
 parameters). Those are not cited as safety results until the G instance exists.
+
+**After waves 18–27 (2026-11-13, second half).** About forty tasks; the lead checks module by module on throwaway
+branches and returns error lists instead of repairing more than a few lines.
+
+- **Opus 5.5**: image theorem T2 (six proof modules) built after three one-line repairs; the whole-body extension
+  (four commits) built WITHOUT any repair. Its kernel witnesses are its weak spot: two witness modules in a row
+  did not finish in the kernel within 15 minutes (its own estimate: 1–4 minutes). Brief rule: a witness module is
+  delivered separately and checked alone with a time limit.
+- **GPT 6.1 Sol**: large blind changes now need two to four rounds: the positional bridge chain (about twenty
+  repairs), the indexed elaborator scopes (three rounds, then green and measured), the bridge statics (two rounds,
+  green), the lowering/prepare speed change (two rounds, still red), the async segment layer (four rounds, still
+  red and taken off the integration branch). Recurring causes, now in every brief: structure literals with
+  commas or shallow continuation lines; `rfl` between two different recursions; `rw` at the scrutinee of a
+  dependent match; implicit arguments that nothing determines; `cases` on a copy of a term that still occurs in
+  the goal; lemma names that do not exist (`Bool.and_eq_true.mp`, `List.append_eq_nil.mp`). It stops correctly at
+  walls (async: frame-only model; C05: invariant cost without a model meaning) and its reports are accurate.
+- **Muse Spark 1.3**: usable as an IMPLEMENTER for small definition-heavy model layers (low-level: architectural
+  state, entry frames, masks, priorities, bytes, translation, registers — about 4 000 lines, each module green
+  after zero to two rounds with the compiler messages handed back). About every second implementation run ends
+  at its first message without doing anything (a status sentence instead of a tool call); the run is simply
+  repeated. Measurements stayed its strongest contribution (probe matrices for all 18 C packages, 136 probes,
+  no wrong-code fault; long-body cost split; the loop rewrite of the front end with the finding that `retry` is
+  unrolled). One reported fault was not a compiler fault (a foreign call's `requires` is unchecked in the model
+  too) — still a real gap of the goal, recorded.
+
+The lead is now the bottleneck: nine agents produce unbuilt code faster than one builder can check it. What
+helped: check branches for anything on the compiler path, error files handed back verbatim, one repair task per
+delivery, and taking a layer off the integration branch when it does not converge.

@@ -1,0 +1,13 @@
+// C08: non-fallible extern with target binding, returns 42.
+module c08_ext_ok {
+assume hw_ok "Hardware answers in range." falsifier probe_hw;
+extern fn ext() -> u64 in 1 .. 4194304 effects { pure } costs <= 8 ops;
+target host abi linux arch x86_64 {
+    ext = number 39 regs in { } regs out { rax } clobbers { rcx, r11 } errors { } assume hw_ok falsifier probe_hw;
+}
+target host;
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let v = ext();
+    return 42;
+}
+}

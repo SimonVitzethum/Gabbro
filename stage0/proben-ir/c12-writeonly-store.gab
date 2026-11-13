@@ -1,0 +1,11 @@
+// C12: store through a write-only pointer, returns 7.
+module c12_wronly3 {
+table T count 2 { slot { value : u32 in 0 .. 42, } }
+impl fn write(p : ptr<normal, w> T, i : index into T) -> u32 in 0 .. 42 effects { writes p.slots } {
+    p.slots[i].value = 7;
+    return 7;
+}
+impl fn main() -> u32 in 0 .. 42 effects { reads T.slots, writes T.slots } {
+    return write(&T, 0);
+}
+}

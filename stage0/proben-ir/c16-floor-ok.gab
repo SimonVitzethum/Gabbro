@@ -1,0 +1,17 @@
+// C16: check with a floor, returns 42.
+module c16_floor {
+static mut m : u32 in 0 .. 100 = 0;
+impl fn abnahme() -> u32 in 0 .. 100 effects { pure } { return 1; }
+impl fn freigabe() -> u32 in 0 .. 100 effects { pure } { return 1; }
+check basic {
+    claim "holds"
+    measures m
+    gates abnahme, freigabe
+    can_fail {
+        if m >= 1 { return false; }
+        return true;
+    }
+    floor m >= 0
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } { return 42; }
+}

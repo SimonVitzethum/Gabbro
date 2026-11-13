@@ -1,0 +1,19 @@
+// C03: direct equality of two closed reason values.
+module c03_equality {
+reason Fault {
+    First = 1 "first reason"
+    Second = 2 "second reason"
+    exhaustive
+}
+impl fn is_first(r : Fault) -> bool
+    effects { pure }
+{
+    return r == Fault::First;
+}
+impl fn main() -> u32 in 0 .. 255
+    effects { pure }
+{
+    if is_first(Fault::First) { return 42; }
+    return 7;
+}
+}

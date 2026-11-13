@@ -1,0 +1,6 @@
+// C17 refusal: a const fn dividing by zero has no value.
+module c17_constdivzero {
+const fn half(x : u8) -> u8 effects { pure } { return x / 0; }
+const ANSWER : u8 = half(8);
+impl fn main() -> u8 effects { pure } { return ANSWER; }
+}

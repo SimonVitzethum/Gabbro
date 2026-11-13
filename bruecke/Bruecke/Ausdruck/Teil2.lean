@@ -3,6 +3,7 @@ module
 public import Bruecke.Kodierung
 public import Bruecke.Pflichten
 public import Bruecke.Ausdruck.Teil1
+public import Bruecke.Ausdruck.Glob
 
 @[expose] public section
 
@@ -19,27 +20,27 @@ variable {u : UProg}
     term evaluates to the number the G term does. -/
 theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Option Ty}
     {sd : USide} {wv : LowWert u Γ Λ} {eB : Gabbro.Body.Expr}
-    (h : lowWertE u Γ Λ fn er sd = .ok wv) (hb : sideExpr u fn sd = some eB)
+    (h : lowWertE u Γ Λ fn er sd = .ok wv) (hb : sideExprG u fn sd = some eB)
     (hA : ArtStimmt fn) (hT : TabEindeutig u)
     (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) Γ) (w : Gabbro.Body.World)
-    (β : Gabbro.Body.Binding) (hW : WRel u σ w) (hL : LRel fn (if er.isSome then 1 else 0) ρ β) :
+    (β : Gabbro.Body.Binding) (hW : WGRel u σ w) (hL : LRel fn (if er.isSome then 1 else 0) ρ β) :
     ∃ ls : LowSide u Γ Λ, wv = ls.wert ∧
       Gabbro.Body.eval ⟨w, β⟩ eB = some (valOf (.int ls.range.1 ls.range.2) (eval σ₀ ls.term σ ρ)) := by
   have recurse (sd' : USide) (hlt : sizeOf sd' < sizeOf sd)
       {wv' : LowWert u Γ Λ} {eB' : Gabbro.Body.Expr}
       (h' : lowWertE u Γ Λ fn er sd' = .ok wv')
-      (hb' : sideExpr u fn sd' = some eB') :=
+      (hb' : sideExprG u fn sd' = some eB') :=
     lowWertE_sim h' hb' hA hT σ₀ σ ρ w β hW hL
   cases sd with
   | lit n =>
     simp only [lowWertE, Except.ok.injEq] at h
     subst h
-    simp only [sideExpr, Option.some.injEq] at hb
+    simp only [sideExprG, Option.some.injEq] at hb
     subst hb
     exact ⟨_, rfl, rfl⟩
   | param p =>
     have hN : numericParam fn p = true := by
-      simp only [sideExpr] at hb
+      simp only [sideExprG] at hb
       split at hb
       · assumption
       · cases hb
@@ -49,7 +50,7 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
     | ok ls =>
       simp only [hp, Except.map, Except.ok.injEq] at h
       subst h
-      simp only [sideExpr, hN, ↓reduceIte, Option.some.injEq] at hb
+      simp only [sideExprG, hN, ↓reduceIte, Option.some.injEq] at hb
       subst hb
       refine ⟨ls, rfl, ?_⟩
       simp only [Gabbro.Body.eval]
@@ -61,8 +62,8 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
     | ok ls =>
       simp only [hd, Except.map, Except.ok.injEq] at h
       subst h
-      obtain ⟨c, hc, hv⟩ := lowDurch_sim hd hA hT σ₀ σ ρ w β hW hL
-      simp only [sideExpr, slotPlace, hc, Option.map_some, Option.some.injEq] at hb
+      obtain ⟨c, hc, hv⟩ := lowDurch_sim hd hA hT σ₀ σ ρ w β hW.1 hL
+      simp only [sideExprG, slotPlace, hc, Option.map_some, Option.some.injEq] at hb
       subst hb
       exact ⟨ls, rfl, hv⟩
   | tab b f ix =>
@@ -72,17 +73,38 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
     | ok ls =>
       simp only [hd, Except.map, Except.ok.injEq] at h
       subst h
-      simp only [sideExpr, slotPlace, Option.some.injEq] at hb
+      simp only [sideExprG, slotPlace, Option.some.injEq] at hb
       subst hb
-      exact ⟨ls, rfl, lowTabRead_sim hd σ₀ σ ρ w β hW hL⟩
+      exact ⟨ls, rfl, lowTabRead_sim hd σ₀ σ ρ w β hW.1 hL⟩
+  | glob g =>
+    simp only [sideExprG] at hb
+    split at hb
+    · cases hb
+    · rename_i i hi
+      cases ht : (globAt u i).ty with
+      | int lo hi' =>
+        simp only [ht, Option.some.injEq] at hb
+        subst eB
+        have hn : lowGlobWert u Γ Λ g = none := by
+          simp only [lowGlobWert, hi, ht]
+        simp only [lowWertE, hn] at h
+        cases hg : lowGlobSide u Γ Λ g with
+        | error err => simp only [hg, Except.map, reduceCtorEq] at h
+        | ok ls =>
+          simp only [hg, Except.map, Except.ok.injEq] at h
+          subst wv
+          exact ⟨ls, rfl, lowGlobRead_sim hg σ₀ σ ρ w β hW.2⟩
+      | bool => simp only [ht, reduceCtorEq] at hb
+      | wert ty => simp only [ht, reduceCtorEq] at hb
   | add x y =>
-    cases hsx : sideExpr u fn x with
-    | none => simp [sideExpr, hsx, binE] at hb
+
+    cases hsx : sideExprG u fn x with
+    | none => simp [sideExprG, hsx, binE] at hb
     | some ex =>
-      cases hsy : sideExpr u fn y with
-      | none => simp [sideExpr, hsx, hsy, binE] at hb
+      cases hsy : sideExprG u fn y with
+      | none => simp [sideExprG, hsx, hsy, binE] at hb
       | some ey =>
-        simp only [sideExpr, hsx, hsy, binE, Option.some.injEq] at hb
+        simp only [sideExprG, hsx, hsy, binE, Option.some.injEq] at hb
         subst hb
         cases hx : lowWertE u Γ Λ fn er x with
         | error e => simp [lowWertE, zahlVon, lowZwei, hx, Except.map] at h
@@ -105,13 +127,13 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
             rw [h1, h2]
             rfl
   | sub x y =>
-    cases hsx : sideExpr u fn x with
-    | none => simp [sideExpr, hsx, binE] at hb
+    cases hsx : sideExprG u fn x with
+    | none => simp [sideExprG, hsx, binE] at hb
     | some ex =>
-      cases hsy : sideExpr u fn y with
-      | none => simp [sideExpr, hsx, hsy, binE] at hb
+      cases hsy : sideExprG u fn y with
+      | none => simp [sideExprG, hsx, hsy, binE] at hb
       | some ey =>
-        simp only [sideExpr, hsx, hsy, binE, Option.some.injEq] at hb
+        simp only [sideExprG, hsx, hsy, binE, Option.some.injEq] at hb
         subst hb
         cases hx : lowWertE u Γ Λ fn er x with
         | error e => simp [lowWertE, zahlVon, lowZwei, hx, Except.map] at h
@@ -134,13 +156,13 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
             rw [h1, h2]
             rfl
   | mul x y =>
-    cases hsx : sideExpr u fn x with
-    | none => simp [sideExpr, hsx, binE] at hb
+    cases hsx : sideExprG u fn x with
+    | none => simp [sideExprG, hsx, binE] at hb
     | some ex =>
-      cases hsy : sideExpr u fn y with
-      | none => simp [sideExpr, hsx, hsy, binE] at hb
+      cases hsy : sideExprG u fn y with
+      | none => simp [sideExprG, hsx, hsy, binE] at hb
       | some ey =>
-        simp only [sideExpr, hsx, hsy, binE, Option.some.injEq] at hb
+        simp only [sideExprG, hsx, hsy, binE, Option.some.injEq] at hb
         subst hb
         cases hx : lowWertE u Γ Λ fn er x with
         | error e => simp [lowWertE, zahlVon, lowZwei, hx, Except.map] at h
@@ -163,7 +185,7 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
             rw [h1, h2]
             rfl
   | conv lo hi x =>
-    have hb' : sideExpr u fn x = some eB := hb
+    have hb' : sideExprG u fn x = some eB := hb
     cases hx : lowWertE u Γ Λ fn er x with
     | error e => simp [lowWertE, zahlVon, hx, Except.map] at h
     | ok wa =>
@@ -181,13 +203,13 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
         · simp [Except.map] at h
       · simp [Except.map] at h
   | band x y =>
-    cases hsx : sideExpr u fn x with
-    | none => simp [sideExpr, hsx, binE] at hb
+    cases hsx : sideExprG u fn x with
+    | none => simp [sideExprG, hsx, binE] at hb
     | some ex =>
-      cases hsy : sideExpr u fn y with
-      | none => simp [sideExpr, hsx, hsy, binE] at hb
+      cases hsy : sideExprG u fn y with
+      | none => simp [sideExprG, hsx, hsy, binE] at hb
       | some ey =>
-        simp only [sideExpr, hsx, hsy, binE, Option.some.injEq] at hb
+        simp only [sideExprG, hsx, hsy, binE, Option.some.injEq] at hb
         subst hb
         cases hx : lowWertE u Γ Λ fn er x with
         | error e => simp [lowWertE, zahlVon, lowZwei, hx, Except.map] at h
@@ -223,13 +245,13 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
               · simp [Except.map] at h
             · simp [Except.map] at h
   | bor x y =>
-    cases hsx : sideExpr u fn x with
-    | none => simp [sideExpr, hsx, binE] at hb
+    cases hsx : sideExprG u fn x with
+    | none => simp [sideExprG, hsx, binE] at hb
     | some ex =>
-      cases hsy : sideExpr u fn y with
-      | none => simp [sideExpr, hsx, hsy, binE] at hb
+      cases hsy : sideExprG u fn y with
+      | none => simp [sideExprG, hsx, hsy, binE] at hb
       | some ey =>
-        simp only [sideExpr, hsx, hsy, binE, Option.some.injEq] at hb
+        simp only [sideExprG, hsx, hsy, binE, Option.some.injEq] at hb
         subst hb
         cases hx : lowWertE u Γ Λ fn er x with
         | error e => simp [lowWertE, zahlVon, lowZwei, hx, Except.map] at h
@@ -271,13 +293,13 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
               · simp [Except.map] at h
             · simp [Except.map] at h
   | bxor x y =>
-    cases hsx : sideExpr u fn x with
-    | none => simp [sideExpr, hsx, binE] at hb
+    cases hsx : sideExprG u fn x with
+    | none => simp [sideExprG, hsx, binE] at hb
     | some ex =>
-      cases hsy : sideExpr u fn y with
-      | none => simp [sideExpr, hsx, hsy, binE] at hb
+      cases hsy : sideExprG u fn y with
+      | none => simp [sideExprG, hsx, hsy, binE] at hb
       | some ey =>
-        simp only [sideExpr, hsx, hsy, binE, Option.some.injEq] at hb
+        simp only [sideExprG, hsx, hsy, binE, Option.some.injEq] at hb
         subst hb
         cases hx : lowWertE u Γ Λ fn er x with
         | error e => simp [lowWertE, zahlVon, lowZwei, hx, Except.map] at h
@@ -318,16 +340,16 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
                 · simp [Except.map] at h
               · simp [Except.map] at h
             · simp [Except.map] at h
-  | _ => simp [sideExpr] at hb
+  | _ => simp [sideExprG] at hb
 termination_by sizeOf sd
 decreasing_by assumption
 
 theorem lowSideVal_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
     {sd : USide} {ls : LowSide u Γ Λ} {eB : Gabbro.Body.Expr}
-    (h : lowSideVal u Γ Λ fn sd = .ok ls) (hb : sideExpr u fn sd = some eB)
+    (h : lowSideVal u Γ Λ fn sd = .ok ls) (hb : sideExprG u fn sd = some eB)
     (hA : ArtStimmt fn) (hT : TabEindeutig u)
     (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) Γ) (w : Gabbro.Body.World)
-    (β : Gabbro.Body.Binding) (hW : WRel u σ w) (hL : LRel fn 0 ρ β) :
+    (β : Gabbro.Body.Binding) (hW : WGRel u σ w) (hL : LRel fn 0 ρ β) :
     Gabbro.Body.eval ⟨w, β⟩ eB = some (valOf (.int ls.range.1 ls.range.2) (eval σ₀ ls.term σ ρ)) := by
   unfold lowSideVal at h
   split at h
@@ -343,10 +365,10 @@ theorem lowSideVal_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
 /-- A value fitted into a target range (`lowWertAt`) keeps its number. -/
 theorem lowWertAt_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {lo hi : Int}
     {sd : USide} {e : Expr (declOf u) Γ Λ (.int lo hi)} {eB : Gabbro.Body.Expr}
-    (h : lowWertAt u Γ Λ fn lo hi sd = .ok e) (hb : sideExpr u fn sd = some eB)
+    (h : lowWertAt u Γ Λ fn lo hi sd = .ok e) (hb : sideExprG u fn sd = some eB)
     (hA : ArtStimmt fn) (hT : TabEindeutig u)
     (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) Γ) (w : Gabbro.Body.World)
-    (β : Gabbro.Body.Binding) (hW : WRel u σ w) (hL : LRel fn 0 ρ β) :
+    (β : Gabbro.Body.Binding) (hW : WGRel u σ w) (hL : LRel fn 0 ρ β) :
     Gabbro.Body.eval ⟨w, β⟩ eB = some (valOf (.int lo hi) (eval σ₀ e σ ρ)) := by
   unfold lowWertAt at h
   split at h

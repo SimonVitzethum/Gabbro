@@ -109,8 +109,8 @@ theorem clause_iff {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Opti
     {g : Expr (declOf u) Γ Λ .bool} (hg : lowEns u Γ Λ fn er e = .ok g)
     (h9 : A.olds.length ≤ 9)
     (σ₀ σ' : World (declOf u)) (E : Env (declOf u) Γ) (s s' : Gabbro.Body.State)
-    (hW₀ : WRel u σ₀ s.world) (hL₀ : LRel fn (if er.isSome then 1 else 0) E s.local')
-    (hW : WRel u σ' s'.world) (r : Option Gabbro.Body.Value)
+    (hW₀ : WGRel u σ₀ s.world) (hL₀ : LRel fn (if er.isSome then 1 else 0) E s.local')
+    (hW : WGRel u σ' s'.world) (r : Option Gabbro.Body.Value)
     (her : er.isSome = true → r = some (nthVal E 0)) :
     clauseProp x A s s' r ↔ wahr? (eval σ₀ g σ' E) = true := by
   have hz := ensExpr_zuwachs hA hT σ₀ σ' E s hW₀ hL₀ e hx hg
@@ -184,8 +184,8 @@ theorem chain_iff (wf : Prop) : ∀ (ps : List Prop), chain wf ps ↔ wf ∧ ∀
 theorem ensList_iff {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Option Ty}
     (hA : ArtStimmt fn) (hT : TabEindeutig u) (hN : NamenFrei fn)
     (σ₀ σ' : World (declOf u)) (E : Env (declOf u) Γ) (s s' : Gabbro.Body.State)
-    (hW₀ : WRel u σ₀ s.world) (hL₀ : LRel fn (if er.isSome then 1 else 0) E s.local')
-    (hW : WRel u σ' s'.world) (r : Option Gabbro.Body.Value)
+    (hW₀ : WGRel u σ₀ s.world) (hL₀ : LRel fn (if er.isSome then 1 else 0) E s.local')
+    (hW : WGRel u σ' s'.world) (r : Option Gabbro.Body.Value)
     (her : er.isSome = true → r = some (nthVal E 0)) :
     ∀ (es : List UEns) (cs : List Prop) (g : Expr (declOf u) Γ Λ .bool),
       (∀ e ∈ es, match ensExpr u fn {} e with

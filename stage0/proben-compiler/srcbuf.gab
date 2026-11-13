@@ -17,8 +17,14 @@
 // `parse`, `front`); writers are called across modules with qualified
 // effect places (e.g. `main` claims `writes srcbuf::src.slots`).
 module srcbuf {
-// No `while` loop exists: a cursor loop is recursion with an explicit fuel
-// parameter and `decreases` (`stage0: assignment or call expected`).
+// No `while` loop exists: the fill is a `traverse` sweep over the table,
+// one pass per slot (`stage0: assignment or call expected`). Indexing the
+// constant array with the traverse binder is refused (`constant TEXT:
+// constant without G form`), so the body calls a plain `u32` helper for
+// the read (entry 2). A `retry` loop was tried first: it unrolls the body
+// once per bound unit at compile time (`retryC`), so `bounded 2560 ops`
+// on a body with two table accesses takes over eight minutes to compile
+// and emits about 41 KB per pass; `traverse` lowers the body once.
 // A `string` constant cannot hold the text: string literals have no escape
 // for byte 10 and a literal newline is refused (`stage0: lex`), so the text
 // stays a constant array, now written with character literals.
@@ -47,20 +53,20 @@ const TEXT : [u32 in 0 .. 255; 160] = [
 ];
 table src count 160 { slot { b : u32 in 0 .. 255, } }
 static mut srclen : u32 in 0 .. 160 = 0;
-impl fn fill_rec(k : u32 in 0 .. 159, fuel : u32 in 0 .. 160)
-    effects { reads src.slots, writes src.slots }
-    decreases fuel
+impl fn text_at(j : u32 in 0 .. 159) -> u32 in 0 .. 255
+    effects { pure }
 {
-    narrow fuel to 1 .. 160 else { return; }
-    if k == SRCLEN { return; }
-    src.slots[k].b = TEXT[k];
-    narrow k to 0 .. 158 else { return; }
-    fill_rec(k + 1, fuel - 1);
+    return TEXT[j];
 }
 impl fn fill()
     effects { reads src.slots, writes src.slots, writes srclen }
 {
-    fill_rec(0, 160);
+    traverse i over slots of src by unvisited touches reads src.slots, writes src.slots {
+        if i < SRCLEN {
+            let v = text_at(i);
+            src.slots[i].b = v;
+        }
+    }
     srclen = SRCLEN;
 }
 impl fn byte_at(i : u32 in 0 .. 159) -> u32 in 0 .. 255

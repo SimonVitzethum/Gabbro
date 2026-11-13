@@ -113,7 +113,7 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
           (R.ende (l := l) (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) Λ pe rest).bind fun (b, r) => .ok (Endblock.narrowRequired (D := declOf u) (Expr.var v) lo hi b, r)
       | _ => .error "lower: narrow of a non-number"
   | Γ, fn, Λ, pe, .bindFnref x f m :: rest =>
-    (fnIdx u.fns f).bind fun g =>
+    (fnNr u f).bind fun g =>
       if h : (declOf u).passt g m = true then
         (R.ende (l := l) (Ty.fnptr m :: Γ) (fn.mitFnptr x m) Λ pe rest).bind fun (b, r') => .ok (Endblock.bind (Expr.fnref (D := declOf u) g m h) b, r')
       else .error "function does not conform to the pointer type"

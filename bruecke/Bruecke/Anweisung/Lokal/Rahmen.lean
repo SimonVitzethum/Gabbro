@@ -1,6 +1,7 @@
 module
 public import Bruecke.Anweisung.Lokal.Kopf
 public import Bruecke.Realisierung
+public import Bruecke.Anweisung.Lokal.Benannt
 @[expose] public section
 
 /-!
@@ -30,17 +31,17 @@ theorem step_bindName (ρ : Gabbro.Body.Env) (n : String) (e : Gabbro.Body.Expr)
     exact .inr ⟨v, rfl⟩
   · exact .inl rfl
 
-theorem endBody_rets {fn : UFn} {r : URet} {eB : List Gabbro.Body.Stmt}
-    (h : endBody u fn r = some eB) : ∀ x ∈ eB, ∃ e, x = .ret (some e) := by
+theorem namedEnd_rets {fn : UFn} {ns : BodyNames} {r : URet} {eB : List Gabbro.Body.Stmt}
+    (h : namedEnd u fn ns r = some eB) : ∀ x ∈ eB, ∃ e, x = .ret (some e) := by
   intro x hx
   cases r
   case empty =>
-    simp only [endBody, Option.some.injEq] at h
+    simp only [namedEnd, Option.some.injEq] at h
     subst h
     cases hx
   case val v =>
-    simp only [endBody] at h
-    cases hs : sideExpr u fn v with
+    simp only [namedEnd] at h
+    cases hs : namedSide u fn ns v with
     | none => rw [hs] at h; cases h
     | some e =>
       rw [hs] at h
@@ -48,6 +49,6 @@ theorem endBody_rets {fn : UFn} {r : URet} {eB : List Gabbro.Body.Stmt}
       subst h
       simp at hx
       exact ⟨e, hx⟩
-  all_goals simp [endBody] at h
+  all_goals simp only [namedEnd, reduceCtorEq] at h
 
 end Gabbro.Bruecke

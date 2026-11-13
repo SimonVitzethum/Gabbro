@@ -36,9 +36,13 @@ theorem gz_store_slot (w c : String) (k : Int) (fld : String) (W : Gabbro.Body.W
     (v : Gabbro.Body.Value) : gz w (Gabbro.Body.store W (.slot c k fld) v) = gz w W := by
   simp [gz, geistOrt, Gabbro.Body.store]
 
+theorem gz_store_global (w n : String) (W : Gabbro.Body.World) (v : Gabbro.Body.Value) :
+    gz w (Gabbro.Body.store W (.global n) v) = gz w W := by
+  simp only [gz, geistOrt, Gabbro.Body.store, reduceCtorEq, ↓reduceIte]
+
 theorem gz_enc (w : String) (σ : World (declOf u)) (W : Gabbro.Body.World) :
-    gz w (enc u σ W) = gz w W := by
-  simp [gz, geistOrt, enc]
+    gz w (encG u σ W) = gz w W := by
+  simp only [gz, geistOrt, encG, enc]
 
 theorem gz_bump_self (w : String) (W : Gabbro.Body.World) : gz w (bump w W) = gz w W + 1 := by
   simp [gz, bump, Gabbro.Body.store]
@@ -49,12 +53,15 @@ theorem gz_bump_le (w w' : String) (W : Gabbro.Body.World) : gz w' W ≤ gz w' (
   · have : geistOrt w' ≠ geistOrt w := by simp [geistOrt, h]
     simp [gz, bump, Gabbro.Body.store, this]
 
-theorem wrel_bump {σ : World (declOf u)} {W : Gabbro.Body.World} (w : String) (h : WRel u σ W) :
-    WRel u σ (bump w W) := by
-  intro c k fld v hv
-  have : (Gabbro.Body.Place.slot c k fld) ≠ geistOrt w := by simp [geistOrt]
-  simp only [bump, Gabbro.Body.store, this, ↓reduceIte]
-  exact h c k fld v hv
+theorem wgrel_bump {σ : World (declOf u)} {W : Gabbro.Body.World} (w : String)
+    (h : WGRel u σ W) : WGRel u σ (bump w W) := by
+  constructor
+  · intro c k fld v hv
+    have hp : Gabbro.Body.Place.slot c k fld ≠ geistOrt w := by intro e; cases e
+    exact (Gabbro.Body.store_elsewhere _ _ _ _ hp).trans (h.1 c k fld v hv)
+  · intro g v hv
+    have hp : Gabbro.Body.Place.global g ≠ geistOrt w := by intro e; cases e
+    exact (Gabbro.Body.store_elsewhere _ _ _ _ hp).trans (h.2 g v hv)
 
 /-! ## 2. The answer table -/
 
@@ -70,10 +77,10 @@ def Treu (A : List Eintrag) (ρB : Gabbro.Body.Env) : Prop := ∀ e ∈ A, ρB e
 def EintragGut (u : UProg) (e : Eintrag) : Prop :=
   ∀ gf, fnSuch u e.name = some gf →
     (preProp (wfU u) gf e.ein → (postU u (wfU u) gf e.ein e.aus.1 e.aus.2).getD False) ∧
-    (∀ p, p.carrier ∉ gf.puts → e.aus.1.world p = e.ein.world p)
+    (∀ p, p.carrier ∉ (writesU gf) → e.aus.1.world p = e.ein.world p)
 
 /-- The ghost carrier of a callee: its first written carrier. -/
-def geistVon (u : UProg) (n : String) : Option String := (fnSuch u n).bind (fun gf => gf.puts.head?)
+def geistVon (u : UProg) (n : String) : Option String := (fnSuch u n).bind (fun gf => (writesU gf).head?)
 
 /-- Every entry is a writer's, at an entry state whose ghost is at least the one of `W`. -/
 def Oben (u : UProg) (A : List Eintrag) (W : Gabbro.Body.World) : Prop :=
@@ -85,7 +92,7 @@ def Schluessel (A : List Eintrag) : Prop :=
 
 /-- Every declared frame, at the name a call resolves (`fnSuch`, the first function of the name). -/
 def RahmenAlle (u : UProg) (ρB : Gabbro.Body.Env) : Prop :=
-  ∀ n gf, fnSuch u n = some gf → Gabbro.Body.Frame ρB n gf.puts
+  ∀ n gf, fnSuch u n = some gf → Gabbro.Body.Frame ρB n (writesU gf)
 
 /-! ## 3. The entry of one call -/
 
@@ -97,7 +104,7 @@ theorem reqAmEintritt_wahr {P : Programm (declOf u)} (G : Gesenkt u P) (f : Fin 
     the entry world, the ghost of `w` bumped, and the G answer. -/
 def antwort (w : String) (σ' : World (declOf u)) (t : Gabbro.Body.State) (r : Option Gabbro.Body.Value) :
     Gabbro.Body.State × Option Gabbro.Body.Value :=
-  (⟨bump w (enc u σ' t.world), t.local'⟩, r)
+  (⟨bump w (encG u σ' t.world), t.local'⟩, r)
 
 /-! ## 4. The run -/
 

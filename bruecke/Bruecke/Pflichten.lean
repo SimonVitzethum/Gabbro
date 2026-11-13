@@ -1,6 +1,7 @@
 module
 public import Grammatik.Parser.Elab.Uebersetze
 public import Gabbro.Body
+public import Grammatik.Parser.Elab.Generic.SignatureData
 @[expose] public section
 
 
@@ -14,7 +15,7 @@ body of every routine as a `Body.Stmt` datum, its precondition, its postconditio
 source text in Lean -- so a wrong Rust print is a failed per-unit check (`Instanz*.lean`), never
 a wrong theorem. The definitions here are the reference; the Rust printer is checked against them.
 
-FRAGMENT: numeric slot writes through a pointer or at a table, direct calls with scalar or
+FRAGMENT: numeric module-static and slot writes through a pointer or at a table, direct calls with scalar or
 capability arguments, a trailing numeric or void `return`, and numeric `ensures` comparisons
 and their boolean combinations. This is a subset of the Lean parser's output. Products,
 indirect/fallible/foreign call binders, consuming traversals, scoped returns and required
@@ -27,6 +28,7 @@ open Gabbro.Grammatik (Ty)
 namespace Gabbro.Bruecke
 
 open Gabbro.Body
+open Gabbro.Grammatik.Parser.UebersetzeAllg
 
 /-! ## 0. Lookups -/
 
@@ -96,6 +98,35 @@ def sideExpr (u : UProg) (f : UFn) : USide → Option Expr
   | .bxor a b => binE .bxor (sideExpr u f a) (sideExpr u f b)
   | _ => none
 
+/-- Only numeric, non-atomic module statics belong to this bridge fragment. -/
+def NumericStatics (u : UProg) : Prop :=
+  ∀ g : Fin u.globs.length, ∃ lo hi : Int,
+    (globAt u g).ty = .int lo hi ∧ (globAt u g).atomic = false
+
+/-- Numeric expressions including module statics; nonnumeric static access is refused by lowering. -/
+def sideExprG (u : UProg) (f : UFn) : USide → Option Expr
+  | .lit n => some (.lit (.int n))
+  | .param p => if numericParam f p then some (.name p) else none
+  | .slot p fld i => slotPlace u f (.slot p fld i)
+  | .tab t fld i => slotPlace u f (.tab t fld i)
+  | .glob g =>
+      match globIdx u.globs g with
+      | .error _ => none
+      | .ok i =>
+          match (globAt u i).ty with
+          | .int .. => some (.global g)
+          | .bool | .wert _ => none
+  | .old .. => none
+  | .erg => none
+  | .add a b => binE .add (sideExprG u f a) (sideExprG u f b)
+  | .sub a b => binE .sub (sideExprG u f a) (sideExprG u f b)
+  | .mul a b => binE .mul (sideExprG u f a) (sideExprG u f b)
+  | .conv _ _ a => sideExprG u f a
+  | .band a b => binE .band (sideExprG u f a) (sideExprG u f b)
+  | .bor a b => binE .bor (sideExprG u f a) (sideExprG u f b)
+  | .bxor a b => binE .bxor (sideExprG u f a) (sideExprG u f b)
+  | _ => none
+
 /-- An `ensures` side, numbering the `old(..)` reads met so far: the term, the reads in order,
     whether `result` occurs. -/
 structure Acc where
@@ -107,8 +138,8 @@ def ensSide (u : UProg) (f : UFn) (a : Acc) : USide → Option (Expr × Acc)
       (slotPlace u f (.old p fld i)).map (fun pl => (.name (oldName a.olds.length), { a with olds := a.olds ++ [pl] }))
   | .erg => some (.name "result", { a with result := true })
   -- Pure arithmetic reuses the scalar reader without changing the accumulator. Nested
-  -- `old`/`result` still have no scalar form and are refused by `sideExpr`.
-  | s => (sideExpr u f s).map (fun e => (e, a))
+  -- `old`/`result` still have no scalar form and are refused by `sideExprG`.
+  | s => (sideExprG u f s).map (fun e => (e, a))
 
 def opOf : String → Option BinOp
   | "==" => some .eq | "<" => some .lt | "<=" => some .le
@@ -186,7 +217,7 @@ def shapeOfU (u : UProg) : Typing := fun p =>
 def argExpr (u : UProg) (f : UFn) : UArg → Option Expr
   | .var p => some (.name p)
   | .freshPtr tab _ => (ptrParam u f tab).map (fun p => .name p)
-  | .val s => sideExpr u f s
+  | .val s => sideExprG u f s
   | _ => none
 
 def argsExpr (u : UProg) (f : UFn) : List UArg → Option (List Expr)
@@ -198,10 +229,11 @@ def argsExpr (u : UProg) (f : UFn) : List UArg → Option (List Expr)
 
 def stmtBody (u : UProg) (f : UFn) : UStmt → Option Stmt
   | .assign p fld i v =>
-      match ptrTab u f p, sideExpr u f v with
+      match ptrTab u f p, sideExprG u f v with
       | some t, some ve => some (.assign t (idxExpr i) fld ve)
       | _, _ => none
-  | .assignTab t fld i v => (sideExpr u f v).map (fun ve => .assign t (idxExpr i) fld ve)
+  | .assignTab t fld i v => (sideExprG u f v).map (fun ve => .assign t (idxExpr i) fld ve)
+  | .assignGlob g v => (sideExprG u f v).map (fun ve => .assignGlobal g ve)
   | .call g as =>
       match fnSuch u g, argsExpr u f as with
       | some gf, some es => some (.call g (gf.params.map (·.1)) es (preExpr gf))
@@ -223,7 +255,7 @@ def zuBody (u : UProg) (f : UFn) : Option (List Stmt) :=
   | some ss =>
       match f.ret with
       | .empty => some ss
-      | .val v => (sideExpr u f v).map (fun e => ss ++ [Stmt.ret (some e)])
+      | .val v => (sideExprG u f v).map (fun e => ss ++ [Stmt.ret (some e)])
       | _ => none
 
 /-! ## 4. The postcondition -/
@@ -294,13 +326,16 @@ def sortDedup : List String → List String
 def calleesOf (f : UFn) : List String :=
   sortDedup (f.body.filterMap (fun s => match s with | .call g _ => some g | _ => none))
 
+/-- Body frames name all world carriers, including module statics. -/
+def writesU (f : UFn) : List String := f.puts ++ f.gputs
+
 /-- The callee hypotheses in front of the turnstile: contract and frame of every callee. -/
 def hyps (u : UProg) (wf : State → Prop) (ρ : Env) : List String → Prop → Prop
   | [], c => c
   | g :: gs, c =>
       match fnSuch u g with
       | some gf => Contract ρ g (preProp wf gf) (fun s s' r => (postU u wf gf s s' r).getD False) →
-                   Frame ρ g gf.puts → hyps u wf ρ gs c
+                   Frame ρ g (writesU gf) → hyps u wf ρ gs c
       | none => False
 
 /-- **`meets`** -- what a person proves about `f` (`_meets_statement`). -/

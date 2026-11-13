@@ -1,0 +1,7 @@
+// C13: clz on u8: clz(1) = 7.
+module c13_clz8 {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a : u8 = 1;
+    return clz(a);
+}
+}

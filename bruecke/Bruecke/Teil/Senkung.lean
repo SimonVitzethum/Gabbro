@@ -53,7 +53,7 @@ theorem post_iff_teil {P : Programm (declOf u)} (G : GesenktC u C P) (f : Fin u.
     (hBE : ErgSchlicht (fnAt u f)) (hBT : ∀ t : Fin u.tabs.length, (tabAt u t).bools = [] ∧ (tabAt u t).opts = [] ∧ (tabAt u t).werte = [])
     (σ₀ σ' : World (declOf u)) (ρ : Env (declOf u) ((declOf u).params f))
     (v : ErgVal (declOf u) ((declOf u).erg f)) (s s' : Gabbro.Body.State)
-    (hW₀ : WRel u σ₀ s.world) (hL₀ : LRel (fnAt u f) 0 ρ s.local') (hW : WRel u σ' s'.world) :
+    (hW₀ : WGRel u σ₀ s.world) (hL₀ : LRel (fnAt u f) 0 ρ s.local') (hW : WGRel u σ' s'.world) :
     (postU u (wfU u) (fnAt u f) s s' (ergValOf ((declOf u).erg f) v)).getD False ↔
       EnsAmRueck P f σ₀ σ' ρ v := by
   obtain ⟨cs, hcs⟩ := ensList_some (fnAt u f) s s' (ergValOf ((declOf u).erg f) v) _ hD
@@ -84,7 +84,7 @@ theorem post_iff_teil {P : Programm (declOf u)} (G : GesenktC u C P) (f : Fin u.
   · intro ⟨_, hall⟩ q hq
     exact hall q (List.mem_append_right _ hq)
   · intro hall
-    refine ⟨wf_of_wrel u hBT hW, fun q hq => ?_⟩
+    refine ⟨wf_of_wgrel u hBT hW, fun q hq => ?_⟩
     rcases List.mem_append.mp hq with hq | hq
     · exact hrc q hq
     · exact hall q hq

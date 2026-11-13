@@ -1,0 +1,7 @@
+// C13 refusal: alignment must be a positive constant.
+module c13_alignedzero {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    if aligned(16, 0) { return 42; }
+    return 7;
+}
+}

@@ -1,0 +1,16 @@
+// C05: a group over a table and a global.
+module c05_group_global {
+table A count 2 { slot { v : u8, } }
+static mut g : u8 = 0;
+lock L protects { A } rank 0;
+group G over { A, g } {
+    invariant same cost O(1) runs online : forall i in slots of A : A.slots[i].v == g;
+}
+impl fn main() -> u32 in 0 .. 255 effects { reads A.slots, reads g, writes A.slots, writes g, locks L } {
+    locks L {
+        A.slots[0].v = 21;
+        g = 21;
+        return A.slots[0].v + g;
+    }
+}
+}

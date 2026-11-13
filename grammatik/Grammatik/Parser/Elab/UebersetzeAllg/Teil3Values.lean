@@ -270,7 +270,7 @@ def lowParamWert (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) 
 /-- A named function uses the declaration's existing signature-conformance check. -/
 def lowFnRef (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (signature : Nat) (name : String) :
     Except String (Expr (declOf u) Γ Λ (.fnptr signature)) := do
-  let target ← fnIdx u.fns name
+  let target ← fnNr u name
   if fits : (declOf u).passt target signature = true then
     pure (Expr.fnref (D := declOf u) target signature fits)
   else .error "function does not conform to the pointer type"

@@ -1,0 +1,8 @@
+// C01: constructor value outside its field range is refused.
+module c01_wrong_range {
+type Pair = { x : u32 in 0 .. 10, y : u32 in 0 .. 100, };
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let r = Pair(x: 50, y: 1);
+    return r.x;
+}
+}

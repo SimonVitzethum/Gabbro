@@ -27,7 +27,7 @@ variable {u : UProg}
 
 /-- The statements the body reader passes one by one to `lowStmtL` and the bridge carries. -/
 def LeseEinzeln : UStmt → Prop
-  | .assign .. | .assignTab .. | .call .. | .setVar .. => True
+  | .assign .. | .assignTab .. | .assignGlob .. | .call .. | .setVar .. => True
   | _ => False
 
 theorem lowBodyF_cons_ok (c : Fin u.fns.length) (r : URet) {Γ : Ctx} {fn : UFn} (s : UStmt)
@@ -46,7 +46,7 @@ theorem lowBodyF_cons_ok (c : Fin u.fns.length) (r : URet) {Γ : Ctx} {fn : UFn}
         | .error error => .error error
         | .ok ending => .ok (Endblock.cons st ending)) := by
     cases s
-    case assign | assignTab | call | setVar =>
+    case assign | assignTab | assignGlob | call | setVar =>
       rw [lowBodyF] <;> try simp
       all_goals
         split <;> rename_i hread

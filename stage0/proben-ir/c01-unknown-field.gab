@@ -1,0 +1,8 @@
+// C01: projection of an undeclared field is refused.
+module c01_unknown_field {
+type Pair = { x : u32 in 0 .. 100, y : u32 in 0 .. 100, };
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let r = Pair(x: 5, y: 6);
+    return r.z;
+}
+}

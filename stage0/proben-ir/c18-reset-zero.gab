@@ -1,0 +1,11 @@
+// C18: empty reset at the end changes nothing, returns 5.
+module c18_zero_count {
+static mut BUF : [u8; 64] = 0;
+impl fn f() -> u32 in 0 .. 255 effects { writes BUF, reads BUF } costs <= 4800 ops {
+    BUF[10] = 5;
+    reset BUF at 64 count 0;
+    let a : u32 in 0 .. 255 = BUF[10];
+    return a;
+}
+impl fn main() -> u32 in 0 .. 255 effects { reads BUF, writes BUF } { return f(); }
+}

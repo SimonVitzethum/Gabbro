@@ -1,0 +1,8 @@
+// C14: unsupported fp_contract mode is refused.
+module c14_fpcontract {
+profile {
+    arch x86_64;
+    fp_contract fast;
+};
+impl fn main() -> u32 in 0 .. 255 effects { pure } { return 42; }
+}

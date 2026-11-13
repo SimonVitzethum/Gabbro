@@ -1,0 +1,8 @@
+// C03: a missing payload on a payload case.
+module c03_missing_payload {
+tagged type Token = { End, Number(u32 in 0 .. 100) };
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let t = Number;
+    return 7;
+}
+}

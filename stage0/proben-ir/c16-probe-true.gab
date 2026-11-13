@@ -1,0 +1,16 @@
+// C16: check with a true probe, returns 42.
+module c16_min {
+static mut tiefe_max : u32 in 0 .. 100 = 0;
+impl fn abnahme() -> u32 in 0 .. 100 effects { pure } { return 1; }
+impl fn freigabe() -> u32 in 0 .. 100 effects { pure } { return 1; }
+check basic {
+    claim "holds"
+    measures tiefe_max
+    gates abnahme, freigabe
+    can_fail {
+        if tiefe_max >= 1 { return false; }
+        return true;
+    }
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } { return 42; }
+}

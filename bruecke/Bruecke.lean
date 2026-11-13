@@ -25,7 +25,6 @@ public import Bruecke.Instanzen.Instanz73
 public import Bruecke.Instanzen.StartsProbe
 public import Bruecke.Teil.Pflichten
 public import Bruecke.Teil.Simulation
-public import Bruecke.Teil.Lokal.Pflichten
 public import Bruecke.Teil.Lokal.Kopf
 public import Bruecke.Anweisung.Lokal.Kopf
 public import Bruecke.Teil.Lokal.Rahmen
@@ -37,6 +36,8 @@ public import Bruecke.Anweisung.Zweig.Realisierung
 public import Bruecke.Anweisung.Zweig.ZweigZeuge
 public import Bruecke.Kette.Quelle
 public import Bruecke.Kette.KetteZeuge
+public import Bruecke.Kette.SchattenZeuge
+public import Bruecke.Kette.StatischZeuge
 public import Bruecke.Anweisung.Zweig.SchattenZeuge
 @[expose] public section
 

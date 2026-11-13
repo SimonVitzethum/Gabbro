@@ -48,7 +48,7 @@ theorem lowWertEns_int {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : 
     {sd : USide} {wv : LowWert u Γ Λ} {a a' : Acc} {x : Gabbro.Body.Expr}
     (h : lowWertE u Γ Λ fn er sd = .ok wv) (hb : ensSide u fn a sd = some (x, a'))
     (hA : ArtStimmt fn) (hT : TabEindeutig u) (σ₀ : World (declOf u)) (ρ : Env (declOf u) Γ)
-    (s₀ : Gabbro.Body.State) (hW₀ : WRel u σ₀ s₀.world)
+    (s₀ : Gabbro.Body.State) (hW₀ : WGRel u σ₀ s₀.world)
     (hL₀ : LRel fn (if er.isSome then 1 else 0) ρ s₀.local') :
     ∃ ls : LowSide u Γ Λ, wv = ls.wert := by
   by_cases hold : ∃ b f ix, sd = .old b f ix
@@ -74,8 +74,8 @@ theorem lowSideEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
     (hpre : Vor a' A) (hA : ArtStimmt fn) (hT : TabEindeutig u)
     (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) Γ) (s₀ : Gabbro.Body.State)
     (w : Gabbro.Body.World) (β : Gabbro.Body.Binding)
-    (hW₀ : WRel u σ₀ s₀.world) (hL₀ : LRel fn (if er.isSome then 1 else 0) ρ s₀.local')
-    (hW : WRel u σ w) (hB : EnsBind fn er ρ s₀ A β) :
+    (hW₀ : WGRel u σ₀ s₀.world) (hL₀ : LRel fn (if er.isSome then 1 else 0) ρ s₀.local')
+    (hW : WGRel u σ w) (hB : EnsBind fn er ρ s₀ A β) :
     Gabbro.Body.eval ⟨w, β⟩ x = some (valOf (.int ls.range.1 ls.range.2) (eval σ₀ ls.term σ ρ)) := by
   by_cases hold : ∃ b f ix, sd = .old b f ix
   · obtain ⟨b, f, ix, rfl⟩ := hold
@@ -99,7 +99,7 @@ theorem lowSideEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
           simp
         have ho := hB.old a.olds.length hlen
         rw [hget] at ho
-        have hv := lowAltRead_sim hr hA hT c hc σ₀ σ ρ s₀.world s₀.local' hW₀ hL₀
+        have hv := lowAltRead_sim hr hA hT c hc σ₀ σ ρ s₀.world s₀.local' hW₀.1 hL₀
         simp only [Gabbro.Body.eval]
         cases s₀ with
         | mk w₀ β₀ =>
@@ -139,8 +139,8 @@ theorem lowEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
     {er : Option Ty} (hA : ArtStimmt fn) (hT : TabEindeutig u)
     (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) Γ) (s₀ : Gabbro.Body.State)
     (w : Gabbro.Body.World) (β : Gabbro.Body.Binding) (A : Acc)
-    (hW₀ : WRel u σ₀ s₀.world) (hL₀ : LRel fn (if er.isSome then 1 else 0) ρ s₀.local')
-    (hW : WRel u σ w) (hB : EnsBind fn er ρ s₀ A β) :
+    (hW₀ : WGRel u σ₀ s₀.world) (hL₀ : LRel fn (if er.isSome then 1 else 0) ρ s₀.local')
+    (hW : WGRel u σ w) (hB : EnsBind fn er ρ s₀ A β) :
     ∀ (e : UEns) {a a' : Acc} {x : Gabbro.Body.Expr} {g : Expr (declOf u) Γ Λ .bool},
       ensExpr u fn a e = some (x, a') → lowEns u Γ Λ fn er e = .ok g →
       Vor a' A →
@@ -288,7 +288,7 @@ theorem ensSide_zuwachs {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
     (h : lowSideEns u Γ Λ fn er sd = .ok ls) (hb : ensSide u fn a sd = some (x, a'))
     (hA : ArtStimmt fn) (hT : TabEindeutig u)
     (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) Γ) (s₀ : Gabbro.Body.State)
-    (hW₀ : WRel u σ₀ s₀.world) (hL₀ : LRel fn (if er.isSome then 1 else 0) ρ s₀.local') :
+    (hW₀ : WGRel u σ₀ s₀.world) (hL₀ : LRel fn (if er.isSome then 1 else 0) ρ s₀.local') :
     Zuwachs s₀ er a a' := by
   by_cases hold : ∃ b f ix, sd = .old b f ix
   · obtain ⟨b, f, ix, rfl⟩ := hold
@@ -305,7 +305,7 @@ theorem ensSide_zuwachs {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
         simp only [List.mem_append, List.mem_singleton] at ho
         rcases ho with ho | rfl
         · exact .inl ho
-        · have hv := lowAltRead_sim hr hA hT c hc σ₀ σ ρ s₀.world s₀.local' hW₀ hL₀
+        · have hv := lowAltRead_sim hr hA hT c hc σ₀ σ ρ s₀.world s₀.local' hW₀.1 hL₀
           cases s₀
           exact .inr ⟨_, hv⟩
   · by_cases herg : sd = .erg
@@ -324,7 +324,7 @@ theorem ensSide_zuwachs {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
 theorem ensExpr_zuwachs {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
     {er : Option Ty} (hA : ArtStimmt fn) (hT : TabEindeutig u)
     (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) Γ) (s₀ : Gabbro.Body.State)
-    (hW₀ : WRel u σ₀ s₀.world) (hL₀ : LRel fn (if er.isSome then 1 else 0) ρ s₀.local') :
+    (hW₀ : WGRel u σ₀ s₀.world) (hL₀ : LRel fn (if er.isSome then 1 else 0) ρ s₀.local') :
     ∀ (e : UEns) {a a' : Acc} {x : Gabbro.Body.Expr} {g : Expr (declOf u) Γ Λ .bool},
       ensExpr u fn a e = some (x, a') → lowEns u Γ Λ fn er e = .ok g → Zuwachs s₀ er a a'
   | .tru, a, a', x, g, hb, h => by

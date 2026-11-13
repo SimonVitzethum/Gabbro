@@ -1,0 +1,7 @@
+// C13: log2_floor on u8: log2_floor(100) = 6.
+module c13_log28 {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a : u8 = 100;
+    return log2_floor(a);
+}
+}

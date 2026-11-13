@@ -1,5 +1,6 @@
 module
 public import Bruecke.Anweisung.Zweig.Strecke
+public import Bruecke.Anweisung.Lokal.Position
 public import Bruecke.Teil.Lokal.Kopf
 @[expose] public section
 
@@ -27,7 +28,7 @@ abbrev RueckZ_G (u : UProg) (C : Fin u.fns.length → Prop) (A : List Eintrag) (
     (σ' : World (declOf u)) (v : Option Gabbro.Body.Value) : Prop :=
   (∀ e ∈ A, EintragGut u e) ∧ Oben u A s.world ∧ Schluessel A ∧
     ∀ ρB, Treu A ρB → RahmenAlleC u C ρB →
-      ∃ s', Gabbro.Body.exec ρB bs s = .returned s' v ∧ WRel u σ' s'.world
+      ∃ s', Gabbro.Body.exec ρB bs s = .returned s' v ∧ WGRel u σ' s'.world
 
 theorem Strecke_G.leer (s : Gabbro.Body.State) : Strecke_G u C [] s s [] :=
   { gut := fun _ h => absurd h List.not_mem_nil
@@ -118,7 +119,7 @@ theorem RueckZ_G.vor {A : List Eintrag} {s s₁ : Gabbro.Body.State} {x : Gabbro
 
 abbrev StmtZiel_G (u : UProg) (C : Fin u.fns.length → Prop) (c : Fin u.fns.length) (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
-    {Γ : Ctx} {Λ Λ₁ : List (Res (declOf u))} (fn : UFn)
+    {Γ : Ctx} {Λ Λ₁ : List (Res (declOf u))} (fn : UFn) (ids : List String)
     (st : Stmt (declOf u) (verOf u c) false Γ Λ Λ₁) (σ : World (declOf u))
     (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State) (x : Gabbro.Body.Stmt) : Prop :=
   (∀ e, execStmt O passes R st σ ρ = .logik e →
@@ -127,11 +128,11 @@ abbrev StmtZiel_G (u : UProg) (C : Fin u.fns.length → Prop) (c : Fin u.fns.len
   (∀ σ' v, execStmt O passes R st σ ρ = .zurueck σ' v →
     ∃ A, RueckZ_G u C A s [x] σ' (ergValOf (verOf u c).erg v)) ∧
   (∀ σ' ρ', execStmt O passes R st σ ρ = .ok σ' ρ' →
-    ∃ A s', Strecke_G u C A s s' [x] ∧ WRel u σ' s'.world ∧ LRel fn 0 ρ' s'.local')
+    ∃ A s', Strecke_G u C A s s' [x] ∧ WGRel u σ' s'.world ∧ PositionalLRel fn ids 0 ρ' s'.local')
 
 abbrev BlockZiel_G (u : UProg) (C : Fin u.fns.length → Prop) (c : Fin u.fns.length) (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
-    {Γ : Ctx} {Λ Λ' : List (Res (declOf u))} (fn : UFn)
+    {Γ : Ctx} {Λ Λ' : List (Res (declOf u))} (fn : UFn) (ids : List String)
     (b : Block (declOf u) (verOf u c) false Γ Λ Λ') (σ : World (declOf u))
     (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State) (t : List Gabbro.Body.Stmt) : Prop :=
   (∀ e, execBlock O passes R b σ ρ = .logik e →
@@ -140,6 +141,6 @@ abbrev BlockZiel_G (u : UProg) (C : Fin u.fns.length → Prop) (c : Fin u.fns.le
   (∀ σ' v, execBlock O passes R b σ ρ = .zurueck σ' v →
     ∃ A, RueckZ_G u C A s t σ' (ergValOf (verOf u c).erg v)) ∧
   (∀ σ' ρ', execBlock O passes R b σ ρ = .ok σ' ρ' →
-    ∃ A s', Strecke_G u C A s s' t ∧ WRel u σ' s'.world ∧ LRel fn 0 ρ' s'.local')
+    ∃ A s', Strecke_G u C A s s' t ∧ WGRel u σ' s'.world ∧ PositionalLRel fn ids 0 ρ' s'.local')
 
 end Gabbro.Bruecke

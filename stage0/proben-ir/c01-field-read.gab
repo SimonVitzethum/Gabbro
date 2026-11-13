@@ -1,0 +1,9 @@
+// C01: record parameter and field projection, returns 30.
+module c01_field_read {
+type Pair = { x : u32 in 0 .. 100, y : u32 in 0 .. 100, };
+impl fn get(p : Pair) -> u32 in 0 .. 100 effects { pure } { return p.x; }
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let r = Pair(x: 30, y: 12);
+    return get(r);
+}
+}

@@ -1,0 +1,12 @@
+// C03: a tagged type with a string payload, matched.
+module c03_tagged_string {
+tagged type Note = { Blank, Text(string max 4) };
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let n = Text("hi");
+    match n {
+        Blank => { return 7; }
+        Text(s) => { return lenof(s) + 40; }
+    }
+    return 7;
+}
+}

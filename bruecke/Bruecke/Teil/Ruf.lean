@@ -22,10 +22,10 @@ theorem lowCall_sim_teil (c : Fin u.fns.length) {Λ Λ' : List (Res (declOf u))}
     (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
     (σ : World (declOf u)) (ρ : Env (declOf u) (ctxOf u c)) (s : Gabbro.Body.State)
-    (hW : WRel u σ s.world) (hL : LRel (fnAt u c) 0 ρ s.local') :
+    (hW : WGRel u σ s.world) (hL : LRel (fnAt u c) 0 ρ s.local') :
     ∃ (callee : Fin u.fns.length) (σr : World (declOf u))
       (envA : Env (declOf u) ((declOf u).params callee)),
-      cname = (fnAt u callee).name ∧ fnSuch u cname = some (fnAt u callee) ∧ σr.slots = σ.slots ∧
+      cname = (fnAt u callee).name ∧ fnSuch u cname = some (fnAt u callee) ∧ WGRel u σr s.world ∧
       (∀ ρB : Gabbro.Body.Env, Gabbro.Body.step ρB bst s = .running ⟨(ρB cname
           ⟨s.world, Gabbro.Body.bindAll ((fnAt u callee).params.map (·.1)) (envVals envA)
             (fun _ => .absent)⟩).1.world, s.local'⟩) ∧
@@ -56,7 +56,7 @@ theorem lowCall_sim_teil (c : Fin u.fns.length) {Λ Λ' : List (Res (declOf u))}
         simp only [Option.some.injEq] at hb
         subst hb
         let σr := σ.lese Λ a.orte
-        have hWr' : WRel u σr s.world := wrel_slots u rfl hW
+        have hWr' : WGRel u σr s.world := wgrel_same u rfl rfl hW
         have hev := lowCallArgsAux_sim c hA hT hN σr σr ρ s hWr' hL _ _ _ a es
           (hTarget callee hfs).2 ha hes
         have hlen : (fnAt u callee).params.length = ((declOf u).params callee).length := by
@@ -64,7 +64,7 @@ theorem lowCall_sim_teil (c : Fin u.fns.length) {Λ Λ' : List (Res (declOf u))}
         have hLc := lrel_bindAll (fnAt u callee) (evalArgs σr a σr ρ) (hTarget callee hfs).1 hlen
         have hpre := preExpr_wahr (fnAt u callee) (evalArgs σr a σr ρ) _ s.world (hTarget callee hfs).1
           (params_eq u callee) hLc
-        refine ⟨callee, σr, evalArgs σr a σr ρ, (fnIdx_name _ _ _ hcallee).symm, hfs, rfl,
+        refine ⟨callee, σr, evalArgs σr a σr ρ, (fnIdx_name _ _ _ hcallee).symm, hfs, hWr',
           fun ρB => ?_, hLc, hpre, ?_, hWr⟩
         · simp only [Gabbro.Body.step, hev, hpre]
         · simp only [execStmt]

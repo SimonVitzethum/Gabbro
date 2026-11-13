@@ -105,13 +105,13 @@ theorem lrel_ptr (c : Fin u.fns.length) {ρ : Env (declOf u) (ctxOf u c)} {β : 
   exact nthVal_ptr ρ j cap (by rw [ctxOf_get]; exact hτ)
 
 theorem uIdxOfSide_expr {sd : USide} {ix : UIdx} {eB : Gabbro.Body.Expr}
-    (h : uIdxOfSide sd = .ok ix) (hb : sideExpr u fn sd = some eB) :
+    (h : uIdxOfSide sd = .ok ix) (hb : sideExprG u fn sd = some eB) :
     eB = idxExpr ix := by
   cases sd with
   | lit n => cases h; exact (Option.some.inj hb).symm
   | param p =>
     cases h
-    simp only [sideExpr] at hb
+    simp only [sideExprG] at hb
     split at hb
     · exact (Option.some.inj hb).symm
     · cases hb
@@ -125,7 +125,7 @@ theorem lowCallArgOne_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
     (hK : ArtSchlicht k = true)
     (hA : ArtStimmt (fnAt u c)) (hT : TabEindeutig u) (hN : NamenEindeutig (fnAt u c))
     (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) (ctxOf u c)) (s : Gabbro.Body.State)
-    (hW : WRel u σ s.world) (hL : LRel (fnAt u c) 0 ρ s.local') :
+    (hW : WGRel u σ s.world) (hL : LRel (fnAt u c) 0 ρ s.local') :
     Gabbro.Body.eval s eB = some (valOf τ (eval σ₀ e σ ρ)) := by
   cases a with
   | var p =>
@@ -227,7 +227,7 @@ theorem lowCallArgOne_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
 theorem lowCallArgsAux_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
     (hA : ArtStimmt (fnAt u c)) (hT : TabEindeutig u) (hN : NamenEindeutig (fnAt u c))
     (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) (ctxOf u c)) (s : Gabbro.Body.State)
-    (hW : WRel u σ s.world) (hL : LRel (fnAt u c) 0 ρ s.local') :
+    (hW : WGRel u σ s.world) (hL : LRel (fnAt u c) 0 ρ s.local') :
     ∀ (ks : List UParamArt) (ts : List Ty) (as : List UArg)
       (a : Args (declOf u) (ctxOf u c) Λ ts) (es : List Gabbro.Body.Expr),
       (∀ k ∈ ks, ArtSchlicht k = true) →

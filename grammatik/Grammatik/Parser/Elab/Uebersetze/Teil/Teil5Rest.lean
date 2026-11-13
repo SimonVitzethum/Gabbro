@@ -16,7 +16,10 @@ set_option maxRecDepth 100000
 /-- A truth value in a BODY (a returned or stored `bool`): the predicate forms of an `ensures`,
     without `old` and `result`. -/
 def uBool (ctx : UCtx) (e : SExpr) : Except String UEns :=
-  match uSichert { ctx with res := none, resBool := false } e with
+  match uSichert
+      { ctx with
+        res := none
+        resBool := false } e with
   | .error x => .error x
   | .ok v => if ensAltErg v then .error "old or result in a body" else .ok v
 
@@ -57,6 +60,46 @@ def uWertBlatt (ctx : UCtx) : SExpr → Except String USide
         if uBoolFeld ctx tb f then .error "bool field as a number"
         else if (uOptFeld ctx tb f).isSome then .error "option field as a number" else .ok (.tab b f ix)
 
+/-- Executable reader with the identical list specification and cached projections. -/
+def uWertBlattFast (ctx : UCtx) : SExpr → Except String USide
+  | .lit v => .ok (.lit (Int.ofNat v))
+  | .variable p =>
+    match uParamNr ctx p with
+    | .error _ =>
+      match ctx.lits.find? (fun k => strEq k.1 p) with
+      | .some k => .ok (.lit k.2)
+      | .none =>
+        match ctx.arrKonst.find? (fun k => strEq k.1 p) with
+        | .some k => .ok k.2
+        | .none => uGlobLies ctx p
+    | .ok j =>
+      match uKindAt ctx j with
+      | .ok (.ptr _) => .error "pointer as value without G form"
+      | .ok .bool => .error "truth value as a number"
+      | .ok (.ref _) => .error "reference as a number"
+      | .ok _ => .ok (.param p)
+      | .error e => .error e
+  | .arrow (.variable r) f =>
+    match uRefLokal ctx r with
+    | .some _ => .ok (.refSlot r f)
+    | .none => .error "value without G form"
+  | e =>
+    match uGrenzwort ctx e with
+    | .some v => .ok (.lit v)
+    | .none =>
+      match uZugriff ctx e with
+      | .error x => .error (if uPraemisse x then x else "value without G form")
+      | .ok (.thru b, tb, f, ix) =>
+        if uBoolFeld ctx tb f then .error "bool field as a number"
+        else if (uOptFeld ctx tb f).isSome then .error "option field as a number" else .ok (.slot b f ix)
+      | .ok (.tabelle b, tb, f, ix) =>
+        if uBoolFeld ctx tb f then .error "bool field as a number"
+        else if (uOptFeld ctx tb f).isSome then .error "option field as a number" else .ok (.tab b f ix)
+
+@[csimp] theorem uWertBlatt_eq_fast : @uWertBlatt = @uWertBlattFast := by
+  funext ctx value
+  rfl
+
 /-- A value in a body (the `tr_value` of `lean_g.rs` at `in_ensures := false`: `result` and
     `old` have no G form here), with the arithmetic layer of `uRechne`. -/
 def uWertBody (ctx : UCtx) : SExpr → Except String USide :=
@@ -71,54 +114,6 @@ def uSeq : List (Except String α) → Except String (List α)
     match uSeq rest with
     | .error e => .error e
     | .ok xs => .ok (x :: xs)
-
-/-- One function head: name, parameters (names, kinds, types),
-    the optional result range and the held lock names (pass one
-    of `collect` in `lean_g.rs`). -/
-structure UFnKopf where
-  name : String
-  names : List String
-  kinds : List UParamArt
-  types : List Ty
-  res : Option (Int × Int)
-  resBool : Bool := false
-  resOpt : Option (Nat × Int) := none
-  /-- The reason channel: the position of `R` among the unit's reasons and its number of cases. -/
-  kanal : Option (Nat × Nat) := none
-  /-- The result is a tagged type: its position and its specification. -/
-  resSum : Option (Nat × List (Option Ty)) := none
-  /-- The result is a reason (`-> R`): the position of `R` among the unit's reasons and its number of cases. -/
-  resWhy : Option (Nat × Nat) := none
-  bits : List Nat := []
-  held : List String
-  /-- The statics it writes. -/
-  gputs : List String := []
-  /-- A foreign body (`extern fn`): called as `D.Ax`, never as a function of the unit. -/
-  ext : Bool := false
-  /-- The answer of a foreign body is `never` (the call does not return). -/
-  resNever : Bool := false
-  /-- The device handles among the declared parameters: the position in the WRITTEN parameter list, the
-      name and the device. They are erased from `names`/`kinds`/`types`; a call drops their arguments. -/
-  griffe : List (Nat × String × String) := []
-  /-- The answer of a foreign body is a reference into the open table number `n` (`-> index into T`). -/
-  resRef : Option Nat := none
-  /-- The result is an aggregate value: its type. -/
-  resTy : Option Ty := none
-  /-- The tables a foreign body writes (`ext`). -/
-  puts : List String := []
-  nimmt : List String := []
-  gibt : List String := []
-  /-- Call-scoped owner loans (`borrows m`, C12). -/
-  leiht : List String := []
-  /-- Linear owner handoffs (`moves m`, C09). -/
-  bewegt : List String := []
-  /-- Checked owner mints (`mints m`, C09). -/
-  praegt : List String := []
-  /-- The named `assume` witnessing a hardware origin (the generated core
-      query's `assume` clause; `none` for software items and while unresolved). -/
-  annahme : Option String := none
-  /-- Written C08 clauses; lowered in the binding parameter/result context. -/
-  clauses : List SKlausel := []
 
 /-- The kind and the type of the value a call of a function of the unit binds: a truth value, a number, a
     reason. -/
@@ -310,7 +305,9 @@ def uIstGriffOrt (kopf : UFnKopf) : SExpr → Bool
 
 def uEffekteAux (kopf : UFnKopf) (tabs : List UTab) (locks : List ULock) (globs : List UGlob) :
     List SEffekt → Except String UEffekte
-  | [] => .ok { locks := [], puts := [] }
+  | [] => .ok
+      { locks := []
+        puts := [] }
   | .locks false (.variable l) :: rest =>
     match locks.find? (fun x => strEq x.name l) with
     | .none => .error ("lock unknown: " ++ l)
@@ -326,7 +323,10 @@ def uEffekteAux (kopf : UFnKopf) (tabs : List UTab) (locks : List ULock) (globs 
     | some a =>
       match uEffekteAux kopf tabs locks globs rest with
       | .error e => .error e
-      | .ok r => .ok { r with puts := a :: r.puts, gputs := (a ++ "#used") :: r.gputs }
+      | .ok r => .ok
+          { r with
+            puts := a :: r.puts
+            gputs := (a ++ "#used") :: r.gputs }
     | none =>
     match (match o with
         | .variable g => if uIstGlobName kopf tabs globs g then some g else none

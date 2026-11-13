@@ -42,7 +42,7 @@ end
 
 /-- Lookup module templates lexically, with the ordinary source import rule. -/
 def template (all : List Template) (base : Quelle) (scope path : Pfad) : Except String Template := do
-  let q : Quelle := ⟨all.map Template.path, base.verwendet⟩
+  let q : Quelle := { namen := all.map Template.path, verwendet := base.verwendet }
   let target ← match aufloeseK q ⟨none, []⟩ scope path with
     | some target => pure target
     | none => throw ("parametric-module-unknown: " ++ String.intercalate "::" path)

@@ -2,6 +2,7 @@ module
 public import Bruecke.Teil.Lokal.Ruf
 public import Bruecke.Teil.Abschluss
 public import Bruecke.Anweisung.Lokal.Rahmen
+public import Bruecke.Anweisung.Lokal.Glob
 @[expose] public section
 
 /-! Partial frames in every binding scope; only actual carried callees need shape duties. -/
@@ -24,8 +25,9 @@ theorem stmt_statisch_teilB (S : Getragen u C) (c : Fin u.fns.length) (hc : C c)
     (h : lowStmtL (l := false) u c Γ fn Λ st = .ok ⟨Λ', g⟩) {bst : Gabbro.Body.Stmt}
     (hb : stmtBody u fn st = some bst) :
     (∃ cn idx fld ve, bst = .assign cn idx fld ve ∧ cn ∈ (fnAt u c).puts) ∨
+    (∃ n ve, bst = .assignGlobal n ve ∧ n ∈ (fnAt u c).gputs) ∨
     (∃ cname ps es pre gf, bst = .call cname ps es pre ∧ fnSuch u cname = some gf ∧
-      ∀ w ∈ gf.puts, w ∈ (fnAt u c).puts) := by
+      ∀ w ∈ writesU gf, w ∈ writesU (fnAt u c)) := by
   cases st
   case assign b fname ix v =>
     rw [lowStmtL_assign S.tab c Γ fn Λ b fname ix v] at h
@@ -40,7 +42,7 @@ theorem stmt_statisch_teilB (S : Getragen u C) (c : Fin u.fns.length) (hc : C c)
         simpa only [hΓ, List.getElem?_map] using (lowVar_typ Γ j _ pv hpv)
       have hpt := ptrTab_of_type fn b j num read true hj hparam hlt
       simp only [stmtBody, hpt] at hb
-      cases hsv : sideExpr u fn v with
+      cases hsv : sideExprG u fn v with
       | none => rw [hsv] at hb; cases hb
       | some ve =>
         rw [hsv] at hb
@@ -120,7 +122,7 @@ theorem stmt_statisch_teilB (S : Getragen u C) (c : Fin u.fns.length) (hc : C c)
         rename_i hw
         left
         simp only [stmtBody] at hb
-        cases hsv : sideExpr u fn v with
+        cases hsv : sideExprG u fn v with
         | none => rw [hsv] at hb; cases hb
         | some ve =>
           rw [hsv] at hb
@@ -130,6 +132,21 @@ theorem stmt_statisch_teilB (S : Getragen u C) (c : Fin u.fns.length) (hc : C c)
           unfold writesAt at hw'
           rw [show (tabAt u t).name = b from hn] at hw'
           exact ⟨_, _, _, _, rfl, any_mem hw'⟩
+  case assignGlob n v =>
+    simp only [lowStmtL] at h
+    cases hs : lowAssignGlobL (l := false) u c Γ fn Λ n v with
+    | error err => simp only [hs, Except.map] at h; cases h
+    | ok st =>
+      simp only [hs, Except.map] at h
+      cases h
+      have hw := lowAssignGlob_writes c hs S.statics
+      simp only [stmtBody] at hb
+      cases he : sideExprG u fn v with
+      | none => rw [he] at hb; cases hb
+      | some e =>
+        rw [he] at hb
+        cases hb
+        exact .inr (.inl ⟨n, e, rfl, hw⟩)
   case call cname args =>
     have h' : lowCallL (l := false) u c Γ fn Λ cname args = .ok ⟨Λ', g⟩ := h
     unfold lowCallL at h'
@@ -137,6 +154,7 @@ theorem stmt_statisch_teilB (S : Getragen u C) (c : Fin u.fns.length) (hc : C c)
     · cases h'
     · rename_i k hk
       obtain ⟨hcallee, _, hWr⟩ := lowRufKopf_ok hk
+      right
       right
       have hfs : fnSuch u cname = some (fnAt u k.callee) := fnIdx_find _ _ _ hcallee
       simp only [stmtBody, hfs] at hb
@@ -146,12 +164,19 @@ theorem stmt_statisch_teilB (S : Getragen u C) (c : Fin u.fns.length) (hc : C c)
         rw [hes] at hb
         cases hb
         refine ⟨_, _, _, _, _, rfl, hfs, fun w hw => ?_⟩
-        obtain ⟨t, rfl⟩ := S.schreibt k.callee (callee_getragen_teil S hc hmem hfs) w hw
-        have h1 : writesAt u (fnAt u k.callee) t = true := by
-          unfold writesAt; exact List.any_eq_true.mpr ⟨_, hw, by simp⟩
-        have h2 := hWr t h1
-        unfold writesAt at h2
-        exact any_mem h2
+        rcases List.mem_append.mp hw with hw | hw
+        · obtain ⟨t, rfl⟩ := S.schreibt k.callee (callee_getragen_teil S hc hmem hfs) w hw
+          have h1 : writesAt u (fnAt u k.callee) t = true := by
+            unfold writesAt
+            exact List.any_eq_true.mpr ⟨_, hw, beq_self_eq_true _⟩
+          have h2 := hWr t h1
+          exact List.mem_append_left _ (any_mem h2)
+        · obtain ⟨g, rfl⟩ := S.gschreibt k.callee (callee_getragen_teil S hc hmem hfs) w hw
+          have h1 : writesGAt u (fnAt u k.callee) g = true := by
+            unfold writesGAt
+            exact List.any_eq_true.mpr ⟨_, hw, beq_self_eq_true _⟩
+          have h2 := lowRufKopf_gwrites hk g h1
+          exact List.mem_append_right _ (any_mem h2)
   all_goals simp [stmtBody] at hb
 
 end Gabbro.Bruecke
