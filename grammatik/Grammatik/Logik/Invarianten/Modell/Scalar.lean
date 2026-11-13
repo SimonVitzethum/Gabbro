@@ -37,15 +37,17 @@ theorem decodeScalar_sound (τ : Ty) (value : Int) (decoded : Wert D τ)
   | int lo hi =>
       simp only [decodeScalar] at success
       split at success
-      · cases success
+      · rename_i valid
+        cases success
         rfl
       · contradiction
   | str capacity =>
       simp only [decodeScalar] at success
       split at success
-      · cases success
+      · rename_i valid
+        cases success
         simp only [scalarValue, List.length_replicate]
-        exact Int.toNat_of_nonneg ‹0 ≤ value ∧ value ≤ (capacity : Int)›.1
+        exact Int.toNat_of_nonneg valid.1
       · contradiction
   | _ => simp [decodeScalar] at success
 

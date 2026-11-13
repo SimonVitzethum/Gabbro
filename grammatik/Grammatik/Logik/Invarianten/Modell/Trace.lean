@@ -48,8 +48,9 @@ theorem reconstruct_sound [DecidableEq α] (body : QF α)
   | nil =>
       simp only [reconstruct] at success
       split at success
-      · cases success
-        exact (qf_eval body values).mp ‹body.eval values = true›
+      · rename_i accepted
+        cases success
+        exact (qf_eval body values).mp accepted
       · contradiction
   | cons row rows ih =>
       cases selected : recoverOne row values with
@@ -134,7 +135,7 @@ theorem counterexample_complete [DecidableEq α] (names : List α) (formula : LP
     change decideB (universalClosure names formula) = true at evaluated
     rw [rejected] at evaluated
     contradiction
-  apply reconstruct_complete
+  apply reconstruct_complete names (elimination (.not formula)).1 (fun _ => 0)
   apply (eliminationTrace_denote names (elimination (.not formula)).1 (.not formula)
     (fun values => elimination_denote (.not formula) values) (fun _ => 0)).mpr
   exact (closure_negation names formula (fun _ => 0)).mpr invalid
@@ -144,7 +145,7 @@ theorem counterexample_of_exists [DecidableEq α] (names : List α) (formula : L
     ∃ values : Assignment α, counterexample names formula = some values := by
   have valid := (elimination_denote (existentialClosure names (.not formula)) (fun _ => 0)).mp
     ((qf_eval _ _).mp accepted)
-  apply reconstruct_complete
+  apply reconstruct_complete names (elimination (.not formula)).1 (fun _ => 0)
   exact (eliminationTrace_denote names (elimination (.not formula)).1 (.not formula)
     (fun values => elimination_denote (.not formula) values) (fun _ => 0)).mpr valid
 
