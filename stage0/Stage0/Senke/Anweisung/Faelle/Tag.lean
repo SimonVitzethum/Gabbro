@@ -17,6 +17,7 @@ set_option maxHeartbeats 1000000
 set_option maxRecDepth 2048
 variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 variable {H : List D.Lock}
+variable {sc : List D.Lock}
 
 /-- The empty computation keeps the input word. -/
 theorem input_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {w : Runner.W}
@@ -86,8 +87,8 @@ theorem Sim.schrumpfArm {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     {ρ0 : Env D (D.params f)} {rp cfp fp : Runner.W} {lo K : Nat} {pr : List Nat}
     {l : Bool} {Γ : Ctx} {c : Option Ty} {o : Ausgang (vertragVon D f) l (ArmCtx Γ c)}
     {t : T} {m : Runner.Mem} {e eL eN : Runner.W}
-    (h : Sim (reserved := reserved) L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN o) :
-    Sim (reserved := reserved) L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN (o.schrumpfArm c) := by
+    (h : Sim (reserved := reserved) (sc := sc) L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN o) :
+    Sim (reserved := reserved) (sc := sc) L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN (o.schrumpfArm c) := by
   cases c with
   | none => exact h
   | some _ => exact Sim.schrumpf h
@@ -110,20 +111,20 @@ def BlockRuns (O : Orakel D) (passes : Nat)
     (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)
     (L : Lay D) (A : D.Fn → Nat) (C : D.Fn → List II) (dv : Runner.W) (cap : Nat)
     (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.params f)) (rp cfp fp : Runner.W)
-    (lo Ks K : Nat) (ens : List II × Nat) (pr : List Nat) (H : List D.Lock)
+    (lo Ks K : Nat) (ens : List II × Nat) (pr : List Nat) (H : List D.Lock) (sc : List D.Lock)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D (vertragVon D f) l Γ Λ Λ') (reserved : Nat := 0) : Prop :=
-  ∀ ex cb tb, lowB (reserved := reserved) passes A L (functionFrame P f) ens pr ex b = some (cb, tb) → tb + cap ≤ Ks → 16 * cb.length < 2 ^ 31 →
+  ∀ ex cb tb, lowB (reserved := reserved) (sc := sc) passes A L (functionFrame P f) ens pr ex b = some (cb, tb) → tb + cap ≤ Ks → 16 * cb.length < 2 ^ 31 →
   ∀ m pc σ ρ, PreS (reserved := reserved) L m pc fp K (frei Γ reserved) cb ρ → lo ≤ frei Γ reserved →
     Umf L A C dv m fp Ks K H → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ reserved) →
-    Sim (reserved := reserved) L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * cb.length))
+    Sim (reserved := reserved) (sc := sc) L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * cb.length))
       (pc + BitVec.ofNat 64 (16 * cb.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * cb.length) + BitVec.ofInt 64 ex.2) (execBlock O passes R b σ ρ)
 
-local notation "BR" => BlockRuns (reserved := reserved) O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K ens pr H
+local notation "BR" => BlockRuns (reserved := reserved) O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K ens pr H sc
 
 theorem tagArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option Ty}
     {b : Block D (vertragVon D f) l (ArmCtx Γ c) Λ Λ'} {cp cb : List II} {tb : Nat} {ex : Int × Int}
-    (hb : BR b) (hcb : lowB (reserved := reserved) passes A L (functionFrame P f) ens pr ex b = some (cb, tb)) (htb : tb + cap ≤ Ks)
+    (hb : BR b) (hcb : lowB (reserved := reserved) (sc := sc) passes A L (functionFrame P f) ens pr ex b = some (cb, tb)) (htb : tb + cap ≤ Ks)
     (hcp : tagPayloadC (frei Γ reserved) c = some cp) (hs : 16 * (cp.length + cb.length) < 2 ^ 31)
     (hK : frei Γ reserved + 3 ≤ Ks) (hW : WIn L fp Ks K) (hlo : FB ≤ lo)
     (hlo0 : lo = (functionFrame P f).internalResult) (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
@@ -132,7 +133,7 @@ theorem tagArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option Ty}
     (hoff : w >>> 8 = BitVec.ofNat 64 (sumOff c v))
     (hp : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) (cp ++ cb) ρ) (hu : Umf L A C dv m fp Ks K H)
     (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
-    Sim (reserved := reserved) L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * (cp ++ cb).length))
+    Sim (reserved := reserved) (sc := sc) L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * (cp ++ cb).length))
       (pc + BitVec.ofNat 64 (16 * (cp ++ cb).length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * (cp ++ cb).length) + BitVec.ofInt 64 ex.2)
       ((execBlock O passes R b σ (armEnv v ρ)).schrumpfArm c) := by
@@ -174,7 +175,7 @@ theorem tagArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option Ty}
 theorem lowTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} (arms : Arms D (vertragVon D f) l Γ Λ Λ' cs)
     (hblocks : ArmsAll (fun b => BR b) arms) {k : Nat} {cd : List II} {top : Nat}
-    (hc : lowTags (reserved := reserved) passes A L (functionFrame P f) ens pr ex arms k = some (cd, top)) (ht : top + cap ≤ Ks)
+    (hc : lowTags (reserved := reserved) (sc := sc) passes A L (functionFrame P f) ens pr ex arms k = some (cd, top)) (ht : top + cap ≤ Ks)
     (hs : 16 * cd.length < 2 ^ 31) (hW : WIn L fp Ks K) (hlo : FB ≤ lo)
     (hlo0 : lo = (functionFrame P f).internalResult) (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ} {w : Runner.W}
@@ -184,7 +185,7 @@ theorem lowTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (hoff : w >>> 8 = BitVec.ofNat 64 (sumOff (cs.get v.1) (Fall.toNutzlast _ _ _ _ v.2)))
     (hp : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) cd ρ) (hu : Umf L A C dv m fp Ks K H)
     (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
-    Sim (reserved := reserved) L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * cd.length))
+    Sim (reserved := reserved) (sc := sc) L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * cd.length))
       (pc + BitVec.ofNat 64 (16 * cd.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * cd.length) + BitVec.ofInt 64 ex.2)
       (execArms O passes R arms v σ ρ) := by
@@ -203,7 +204,7 @@ theorem lowTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           (tagTestC (frei Γ reserved) k ++ [ci 19 (frei Γ reserved + 1) (16 * ((cp ++ cb).length + 2)) 0] ++
             (cp ++ cb) ++ [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr) ρ := by
         simpa only [List.length_append, List.append_assoc, Int.natCast_add] using hp
-      have hh := choice_ok (P := P) (σ0 := σ0) (ex := ex) (d := frei Γ reserved + 1) (b := k + v.1.val == k)
+      have hh := choice_ok (sc := sc) (P := P) (σ0 := σ0) (ex := ex) (d := frei Γ reserved + 1) (b := k + v.1.val == k)
         (ot := execArms O passes R (.cons b rest) v σ ρ)
         (oe := execArms O passes R (.cons b rest) v σ ρ)
         (by omega) (by have := hW.ks; omega) (by
@@ -246,14 +247,14 @@ theorem onTag_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Optio
     (hblocks : ArmsAll (fun b => BR b) arms)
     (packed : sumFits cs = true)
     (hcv : lowE (reserved := reserved) L v (frei Γ reserved) = some (cv, tv))
-    (hca : lowTags (reserved := reserved) passes A L (functionFrame P f) ens pr ex arms 0 = some (ca, ta))
+    (hca : lowTags (reserved := reserved) (sc := sc) passes A L (functionFrame P f) ens pr ex arms 0 = some (ca, ta))
     (htv : tv ≤ Ks) (hta : ta + cap ≤ Ks) (hs : 16 * (cv.length + ca.length) < 2 ^ 31)
     (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = (functionFrame P f).internalResult)
     (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
     (hp : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) (cv ++ ca) ρ) (hu : Umf L A C dv m fp Ks K H)
     (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
-    Sim (reserved := reserved) L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length))
+    Sim (reserved := reserved) (sc := sc) L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length))
       (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length) + BitVec.ofInt 64 ex.2)
       (execStmt O passes R (.onTag v arms) σ ρ) := by

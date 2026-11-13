@@ -109,6 +109,23 @@ theorem args_rund : ∀ (n : Nat) (Rn : R n)
       simp only [harg, htail, List.cons_append, List.nil_append] at ⊢
 
 -- Calls through `parsePrimary`: head word, then arguments.
+theorem awaitSuffix_stop (value : SExpr) (rest : List Token)
+    (benign : ruhigSuff rest = true) : awaitSuffix value rest = .ok (value, rest) := by
+  cases rest with
+  | nil => rfl
+  | cons token tail =>
+    cases token <;> try rfl
+    rename_i mark
+    cases tail with
+    | nil => rfl
+    | cons name remaining =>
+      have dot : strEq mark "." = false := by
+        cases h : strEq mark "." with
+        | false => rfl
+        | true =>
+          simp only [ruhigSuff, h, Bool.true_or, Bool.not_true, Bool.false_eq_true] at benign
+      simp only [awaitSuffix, dot, Bool.false_and, Bool.false_eq_true, ↓reduceIte]
+
 theorem sammleSeg_paren : ∀ (f : String) (R : List Token),
     sammleSegmente (Token.zeichen "(" :: R) [f] =
       ([f], Token.zeichen "(" :: R) := by
@@ -117,7 +134,7 @@ theorem sammleSeg_paren : ∀ (f : String) (R : List Token),
 theorem kopf_ruf_head : ∀ (F : Nat) (f : String) (R : List Token),
     parseKopf (F + 1) (nameTok f :: Token.zeichen "(" :: R) =
       match parseArgs F R with
-      | .ok (args, rest'') => .ok (.call f args, rest'')
+      | .ok (args, rest'') => awaitSuffix (.call f args) rest''
       | .error e => .error e := by
   intro F f R
   simp only [parseKopf, nameText_nameTok, sammleSeg_paren, rufKopf,
@@ -149,6 +166,7 @@ theorem prim_ruf : ∀ (n : Nat) (Rn : R n)
   have hA := args_rund n Rn xs rest F'' hgl hxs hFa
   simp only [List.cons_append, List.nil_append] at hA ⊢
   simp only [hA] at ⊢
+  exact awaitSuffix_stop _ _ hr
 
 -- Suffix fragments: one `.f`, `->f` or `[i]` step of a place
 -- chain. Every `gutPlatz` tree is a head variable plus fragments

@@ -21,58 +21,58 @@ abbrev StmtCase (L : Lay D) (O : Orakel D) (passes : Nat)
     (A : D.Fn → Nat) (C : D.Fn → List II) (dv : Runner.W) (cap : Nat)
     (P : Programm D) (f : D.Fn) (fp : Runner.W) (K Ks lo : Nat) (rp cfp : Runner.W)
     (σ0 : World D) (ρ0 : Env D (D.params f)) (cens : List II) (tens : Nat)
-    (pr : List Nat) (ex : Int × Int) (H : List D.Lock)
+    (pr : List Nat) (ex : Int × Int) (H : List D.Lock) (sc : List D.Lock)
 {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D (vertragVon D f) l Γ Λ Λ') (reserved : Nat := 0) : Prop :=
     ∀ (c : List II) (top : Nat),
-    lowS (reserved := reserved) passes A L (functionFrame P f) (cens, tens) pr ex s = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
+    lowS (reserved := reserved) (sc := sc) passes A L (functionFrame P f) (cens, tens) pr ex s = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
     ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), PreS L m pc fp K (frei Γ reserved) c ρ reserved →
     FB ≤ lo → lo ≤ frei Γ reserved → Umf L A C dv m fp Ks K H → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ reserved) →
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
-      (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execStmt O passes R s σ ρ) reserved
+      (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execStmt O passes R s σ ρ) reserved sc
 
 abbrev BlockCase (L : Lay D) (O : Orakel D) (passes : Nat)
     (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)
     (A : D.Fn → Nat) (C : D.Fn → List II) (dv : Runner.W) (cap : Nat)
     (P : Programm D) (f : D.Fn) (fp : Runner.W) (K Ks lo : Nat) (rp cfp : Runner.W)
     (σ0 : World D) (ρ0 : Env D (D.params f)) (cens : List II) (tens : Nat)
-    (pr : List Nat) (ex : Int × Int) (H : List D.Lock)
+    (pr : List Nat) (ex : Int × Int) (H : List D.Lock) (sc : List D.Lock)
 {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D (vertragVon D f) l Γ Λ Λ') (reserved : Nat := 0) : Prop :=
     ∀ (c : List II) (top : Nat),
-    lowB (reserved := reserved) passes A L (functionFrame P f) (cens, tens) pr ex b = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
+    lowB (reserved := reserved) (sc := sc) passes A L (functionFrame P f) (cens, tens) pr ex b = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
     ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), PreS L m pc fp K (frei Γ reserved) c ρ reserved →
     FB ≤ lo → lo ≤ frei Γ reserved → Umf L A C dv m fp Ks K H → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ reserved) →
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
-      (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execBlock O passes R b σ ρ) reserved
+      (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execBlock O passes R b σ ρ) reserved sc
 
 abbrev EndFloatCase (L : Lay D) (O : Orakel D) (passes : Nat)
     (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)
     (A : D.Fn → Nat) (C : D.Fn → List II) (dv : Runner.W) (cap : Nat)
     (P : Programm D) (f : D.Fn) (fp : Runner.W) (K Ks lo : Nat) (rp cfp : Runner.W)
     (σ0 : World D) (ρ0 : Env D (D.params f)) (cens : List II) (tens : Nat)
-    (pr : List Nat) (ex : Int × Int) (H : List D.Lock)
+    (pr : List Nat) (ex : Int × Int) (H : List D.Lock) (sc : List D.Lock)
 {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (b : Endblock D (vertragVon D f) l Γ Λ) (reserved : Nat := 0) : Prop :=
     ∀ (c : List II) (top : Nat),
-    lowEnd (reserved := reserved) passes A L (functionFrame P f) (cens, tens) pr ex b = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
+    lowEnd (reserved := reserved) (sc := sc) passes A L (functionFrame P f) (cens, tens) pr ex b = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
     ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), PreS L m pc fp K (frei Γ reserved) c ρ reserved →
     FB ≤ lo → lo ≤ frei Γ reserved → Umf L A C dv m fp Ks K H → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ reserved) →
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
-      (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execEnd O passes R b σ ρ).zuAusgang reserved
+      (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execEnd O passes R b σ ρ).zuAusgang reserved sc
 
 abbrev EndCase (L : Lay D) (O : Orakel D) (passes : Nat)
     (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)
     (A : D.Fn → Nat) (C : D.Fn → List II) (dv : Runner.W) (cap : Nat)
     (P : Programm D) (f : D.Fn) (fp : Runner.W) (K Ks lo : Nat) (rp cfp : Runner.W)
     (σ0 : World D) (ρ0 : Env D (D.params f)) (cens : List II) (tens : Nat)
-    (pr : List Nat) (ex : Int × Int) (H : List D.Lock)
+    (pr : List Nat) (ex : Int × Int) (H : List D.Lock) (sc : List D.Lock)
 {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (b : Endblock D (vertragVon D f) l Γ Λ) (reserved : Nat := 0) : Prop :=
-    ∀ (c : List II) (top : Nat), lowEnd (reserved := reserved) passes A L (functionFrame P f) (cens, tens) pr ex b = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
+    ∀ (c : List II) (top : Nat), lowEnd (reserved := reserved) (sc := sc) passes A L (functionFrame P f) (cens, tens) pr ex b = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
     ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), PreS L m pc fp K (frei Γ reserved) c ρ reserved →
     lo ≤ frei Γ reserved → Umf L A C dv m fp Ks K H → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ reserved) →
     Ret L P f σ0 ρ0 fp lo K pr rp cfp ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
-      (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execEnd O passes R b σ ρ) reserved
+      (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execEnd O passes R b σ ρ) reserved sc
 
 
 end Gabbro.Stage0.Senke

@@ -198,7 +198,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O]
           cb ρ layout.bodyReserved :=
         ⟨Nat.le_refl _, hK, frameR, codeR, farR, lexical, trivial, wstab_true _ _⟩
       have result := lowEnd_ok (O := O) (passes := passes) (σ0 := σR) smaller hA
-        (lo := layout.internalResult) rfl hens (pr := []) (P.rumpf f) hH cb tb hb
+        (lo := layout.internalResult) rfl hens scopes_nil (pr := []) (P.rumpf f) hH cb tb hb
         (by omega) (by simp only [List.length_append] at lengthBound; omega) hW
         mR _ σR ρ bodyPre
         bodyFrontier
@@ -207,7 +207,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O]
       generalize execEnd O passes (rufAt P O passes k) (P.rumpf f) σR ρ = outcome at result ⊢
       cases outcome with
       | zurueck σ' v =>
-        simp only [Ret, RetZ, returnFault] at result
+        simp only [Ret, RetZR, returnFault] at result
         by_cases failed : wahr? (eval σR (P.ensures f)
             (σ'.lese (vertragVon D f).ende (P.ensures f).orte)
             (ergEnv (D.erg f) v ρ)) = false
@@ -232,10 +232,10 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O]
             simp at result
             obtain ⟨m', steps, changed, value, world⟩ := result
             exact ⟨m', entryPrefix.trans steps,
-              (agreeW_of (allChanged.mono (by decide))).trans changed, value, world⟩
+              (agreeW_of (allChanged.mono (by decide))).trans (AgreeWR.nil changed), value, world⟩
       | logik error => exact Stops.prefix entryPrefix result
       | why σ' reason =>
-        exact RetWhy.prefix entryPrefix (agreeW_of (allChanged.mono (by decide))) result
+        exact RetWhy.prefix entryPrefix (agreeW_of (allChanged.mono (by decide))) (RetWhyR.nil result)
       | leave h _ _ => exact absurd h Bool.false_ne_true
       | next h _ _ => exact absurd h Bool.false_ne_true
       | hardware error => exact Stops.prefix entryPrefix result

@@ -89,7 +89,7 @@ theorem retry_case_zeuge [Kern] :
       (execStmt O 1 (rufAt tiny O 1 2) statement world (Env.cons (τ := .bool) false Env.nil)) := by
   refine ⟨lowered, pre, call_win, surroundings, head, world_at, ?_⟩
   have h := lowS_ok (O := O) (passes := 1) (P := tiny) (f := 2) (σ0 := world)
-    (ρ0 := Env.nil) (lo := 4) (pr := []) (ex := (0, 0)) call_spec addresses_bound rfl rfl statement HeldIn.nil code 6
+    (ρ0 := Env.nil) (lo := 4) (pr := []) (ex := (0, 0)) call_spec addresses_bound rfl rfl scopes_nil statement HeldIn.nil code 6
     lowered (by decide) (by decide +kernel) call_win memory 2048 world (Env.cons (τ := .bool) false Env.nil)
     pre (by decide) (by decide) surroundings head world_at (fun _ h => nomatch h)
   simpa using h

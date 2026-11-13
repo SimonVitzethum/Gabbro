@@ -6,7 +6,7 @@ public import Bruecke.Simulation
 /-!
 # S3, part 7: the per-unit conditions as Bool checks, with their soundness
 
-`stimmigB u` decides the name conditions `Stimmig u` rests on, and `rangB u rk` the rank of the
+`stimmigB u` decides the all-carried shape conditions, and `rangB u rk` the rank of the
 call graph; `rangAuto u` computes a rank (the longest call path, with the function count as
 fuel -- on a cycle the check fails). Each is closed per unit by `decide`.
 -/
@@ -59,7 +59,7 @@ def schreibtB (u : UProg) (fn : UFn) : Bool :=
 
 /-- No `bool`, option or aggregate field and no `bool` result: the bridge speaks about numbers only
     (Body's shapes are `intIn`), so a unit with such a place is REFUSED here, by name, and
-    `Pflichten` is false. -/
+    the all-carried source duty is false. -/
 def keinBoolB (u : UProg) : Bool :=
   u.tabs.all (fun t => t.bools.isEmpty && t.opts.isEmpty && t.werte.isEmpty) &&
     u.fns.all (fun f => !f.resBool && f.resTy.isNone && f.resOpt.isNone && f.resSum.isNone && f.resWhy.isNone)
@@ -166,26 +166,6 @@ theorem keinBoolB_ok (h : keinBoolB u = true) :
   · have := List.all_eq_true.mp h2 (fnAt u c) (List.get_mem _ _)
     simp only [Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true, Option.isNone_iff_eq_none] at this
     exact ⟨this.1.1.1.1, this.1.1.1.2, this.1.1.2, this.1.2, this.2⟩
-
-theorem stimmig_of (h : stimmigB u = true) (hPlain : ohneTransitionB u = true) : Stimmig u := by
-  simp only [stimmigB, Bool.and_eq_true] at h
-  obtain ⟨⟨⟨⟨⟨hk, ht⟩, hq⟩, hi⟩, hg⟩, hf⟩ := h
-  have hc : ∀ c : Fin u.fns.length, (artB (fnAt u c) && namenB (fnAt u c) && freiB (fnAt u c) &&
-      oldsB u (fnAt u c) && postB u (fnAt u c) && schreibtB u (fnAt u c)) = true :=
-    fun c => List.all_eq_true.mp hf _ (List.get_mem _ _)
-  simp only [Bool.and_eq_true] at hc
-  exact ⟨(keinBoolB_ok hk).1, (keinBoolB_ok hk).2, tabB_ok ht, fun c => artB_ok (hc c).1.1.1.1.1, fun c => (of_decide_eq_true (hc c).1.1.1.1.2 : ((fnAt u c).params.map (·.1)).Nodup),
-    fun c => freiB_ok (hc c).1.1.1.2, fun c => oldsB_ok (hc c).1.1.2, fun c => postB_ok (hc c).1.2,
-    fun c => schreibtB_ok (hc c).2,
-    fun c => by
-      have := List.all_eq_true.mp hq (fnAt u c) (List.get_mem _ _)
-      simp only [Bool.and_eq_true, List.isEmpty_iff] at this
-      exact this.1,
-    fun g hg => by
-      have := List.all_eq_true.mp hq g hg
-      simp only [Bool.and_eq_true, beq_iff_eq] at this
-      exact this.2,
-    List.isEmpty_iff.mp hi, List.isEmpty_iff.mp hg, ohneTransitionB_ok hPlain⟩
 
 /-! ## The rank -/
 

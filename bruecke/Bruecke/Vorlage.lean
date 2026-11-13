@@ -1,5 +1,5 @@
 module
-public import Bruecke.Quelle
+public import Bruecke.Kette.Quelle
 public import Grammatik.Parser.Lex.Lexer
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -47,10 +47,10 @@ untrusted HINTS: the kernel checks each against the pinned text (`lex_ok`, `pars
 The source is pinned as `.toList` pieces (`zeilen`) and not as one literal: the kernel decodes a
 `String` literal at a cost that explodes with its length (O13, `Parser/Lexer.lean`), and
 `uebersetzeAllg_von_zeichen` lets the chain files avoid the decoder altogether. The output then
-states -- with the computed functions `Pflichten`, `meetsU`, `zuBody`, never a printed statement --
+states -- with the computed functions `PflichtenAlle`, `meetsU`, `zuBodyZ`, never a printed statement --
 one duty per function that a person proves, and closes with the generic theorem
-`nutzer_aus_quelle`. A construct outside the fragment shows up as a NAMED refusal (the front end
-says why, or `zuBody` is `none`, or a Bool check is false): the duty is then unprovable on
+`nutzer_aus_quelleG_alle`. A construct outside the fragment shows up as a NAMED refusal (the front end
+says why, or `zuBodyZ` is `none`, or a Bool check is false): the duty is then unprovable on
 purpose, never weaker.
 -/
 
@@ -98,7 +98,7 @@ def vorlage (name src : String) : String :=
     let wide (x : Std.Format) : String := x.pretty 1000000
     let zeilen := String.intercalate ",\n   " ((stuecke src).map fun s => literal s ++ ".toList")
     let kopf :=
-      "module\npublic import Bruecke.Quelle\n@[expose] public section\n\n" ++
+      "module\npublic import Bruecke.Kette.Quelle\n@[expose] public section\n\n" ++
       "/-! Written by `gabbro prove --template --source`. The statements below are COMPUTED from the\n" ++
       "    pinned source by the Lean front end; nothing in them was printed by Rust. The stage\n" ++
       "    outputs `toks`, `items` and `u` are hints the kernel checks against the text. Replace\n" ++
@@ -132,6 +132,9 @@ def vorlage (name src : String) : String :=
       (if stimmigB u then "theorem stimmig : stimmigB u = true := by decide\n"
        else "-- REFUSED: a name condition fails (`stimmigB u = false`).\n" ++
             "theorem stimmig : stimmigB u = true := by exact?\n") ++
+      (if bindFrischAllB u then "theorem frisch : bindFrischAllB u = true := by decide\n"
+       else "-- REFUSED: a local binder is not fresh (`bindFrischAllB u = false`).\n" ++
+            "theorem frisch : bindFrischAllB u = true := by exact?\n") ++
       (if rangB u (rangAuto u) then "theorem rang : rangB u (rangAuto u) = true := by decide\n"
        else "-- REFUSED: the call graph has a cycle or no rank (`rangB u (rangAuto u) = false`).\n" ++
             "theorem rang : rangB u (rangAuto u) = true := by exact?\n") ++
@@ -142,19 +145,19 @@ def vorlage (name src : String) : String :=
       let name_i := match u.fns[i]? with | some f => f.name | none => "?"
       let hinweis :=
         match u.fns[i]? with
-        | some f => if (zuBody u f).isSome then "" else
+        | some f => if (zuBodyZ u f).isSome then "" else
             "-- REFUSED: the body of this function has a statement or expression outside the bridge's\n" ++
-            "-- fragment (`zuBody` is `none`), so the duty below is false on purpose.\n"
+            "-- fragment (`zuBodyZ` is `none`), so the duty below is false on purpose.\n"
         | none => ""
       acc ++ "/-- The duty of `" ++ name_i ++ "`: the computed statement. -/\n" ++ hinweis ++
-        "theorem pflicht_" ++ toString i ++ " : ∃ body, zuBody u (fnAt u ⟨" ++ toString i ++ ", by decide⟩) = some body ∧\n" ++
+        "theorem pflicht_" ++ toString i ++ " : ∃ body, zuBodyZ u (fnAt u ⟨" ++ toString i ++ ", by decide⟩) = some body ∧\n" ++
         "    meetsU u (wfU u) (fnAt u ⟨" ++ toString i ++ ", by decide⟩) body := by\n  exact?\n\n") ""
     let fall := (List.range n).foldl (fun acc i =>
       acc ++ "  | ⟨" ++ toString i ++ ", _⟩ => pflicht_" ++ toString i ++ "\n") ""
     let schluss :=
       "/-- O43: supply refinement of the actual lowered pointer contracts separately. -/\n" ++
-      "theorem pflichten (schnittstellen : SchnittstellenPflicht u) : Pflichten quelle :=\n" ++
-      "  ⟨u, verankert, null, stimmig, rang, ordinary, schnittstellen, fun c => match c with\n" ++ fall ++
+      "theorem pflichten (schnittstellen : SchnittstellenPflicht u) : PflichtenAlle quelle :=\n" ++
+      "  ⟨u, verankert, null, stimmig, frisch, rang, ordinary, schnittstellen, fun c => match c with\n" ++ fall ++
       "  | ⟨_ + " ++ toString n ++ ", h⟩ => absurd h\n" ++
       "      (by have hl : u.fns.length = " ++ toString n ++ " := by decide\n          omega)⟩\n\n" ++
       "/-- PREMISE (b) OF THE GOAL THEOREM for the unit the front end builds from `quelle`. -/\n" ++
@@ -162,7 +165,7 @@ def vorlage (name src : String) : String :=
       "    {u' : UProg} {P : Gabbro.Grammatik.Programm (declOf u')}\n" ++
       "    {fs : List (declOf u').Fn} (h : Gabbro.Grammatik.uebersetzeAllg quelle = .ok ⟨u', P, fs⟩) :\n" ++
       "    ∃ hn : nullB u' = true, Gabbro.Grammatik.Zielsatz.NutzerPflicht (einheitAllg u' P hn) :=\n" ++
-      "  nutzer_aus_quelle (pflichten schnittstellen) h\n\n" ++
+      "  nutzer_aus_quelleG_alle (pflichten schnittstellen) h\n\n" ++
       "end Gabbro.Bruecke.Vorlage." ++ name ++ "\n"
     kopf ++ bools ++ pflicht ++ schluss
 

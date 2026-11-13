@@ -108,7 +108,7 @@ theorem counter_budget_stop_code {m : Mem} {pc fp : W} {d jump c : BitVec 32}
     Continuing passes carry the smaller-fuel entry in their actual runtime result.
     This composition does not by itself discharge those lowering obligations. -/
 theorem forever_runtime {D : Deklaration} {L : Lay D} {P : Programm D}
-    {f : D.Fn} {Γ : Ctx} {l : Bool} {reserved : Nat}
+    {f : D.Fn} {Γ : Ctx} {l : Bool} {reserved : Nat} {sc : List D.Lock}
     {σ0 : World D} {ρ0 : Env D (D.params f)}
     {rp cfp fp pc exit outerLeave outerNext : W} {lo K : Nat} {pr : List Nat}
     (a : D.Annahme)
@@ -124,10 +124,10 @@ theorem forever_runtime {D : Deklaration} {L : Lay D} {P : Programm D}
       | .ok σ' ρ' | .next _ σ' ρ' =>
         ∃ m', Star ⟨pc, fp⟩ m ⟨pc, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧
           EnvAt L m' fp ρ' reserved ∧ WeltAt m' L σ' ∧ Keeps fp pr m m' ∧ entry n m' σ' ρ'
-      | o => Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m pc exit pc o reserved) :
+      | o => Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m pc exit pc o reserved sc) :
     ∀ n m σ ρ, entry n m σ ρ →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m exit outerLeave outerNext
-        (foreverLauf (l := l) a body inv n σ ρ) reserved := by
+        (foreverLauf (l := l) a body inv n σ ρ) reserved sc := by
   intro n
   induction n with
   | zero =>
@@ -145,7 +145,7 @@ theorem forever_runtime {D : Deklaration} {L : Lay D} {P : Programm D}
           (∃ m', Star ⟨pc, fp⟩ m ⟨pc, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧
             EnvAt L m' fp ρ' reserved ∧ WeltAt m' L σ' ∧ Keeps fp pr m m' ∧ entry n m' σ' ρ') →
           Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m exit outerLeave outerNext
-            (foreverLauf (l := l) a body inv n σ' ρ') reserved := by
+            (foreverLauf (l := l) a body inv n σ' ρ') reserved sc := by
         intro σ' ρ' hr
         obtain ⟨m', run, frame, _, _, keeps, he'⟩ := hr
         exact Sim.prefix lower run frame keeps (ih m' σ' ρ' he')
@@ -162,11 +162,11 @@ theorem forever_runtime {D : Deklaration} {L : Lay D} {P : Programm D}
     Leave and returns retain the ordinary simulation, including its frame and ABI.
     Counter retention is derived from the body frame, never supplied separately. -/
 theorem Sim.counter_dispatch {D : Deklaration} {L : Lay D} {P : Programm D}
-    {f : D.Fn} {Γ : Ctx} {σ0 : World D} {ρ0 : Env D (D.params f)}
+    {f : D.Fn} {Γ : Ctx} {σ0 : World D} {ρ0 : Env D (D.params f)} {sc : List D.Lock}
     {rp cfp fp header back exit : W} {lo K Ks counter reserved : Nat} {pr : List Nat}
     {t : T} {m : Mem} {o : Ausgang (vertragVon D f) true Γ}
     {jump b c : BitVec 32} {value : W}
-    (body : Sim L P f σ0 ρ0 rp cfp fp lo K pr t m back exit header o reserved)
+    (body : Sim L P f σ0 ρ0 rp cfp fp lo K pr t m back exit header o reserved sc)
     (layout : WIn L fp Ks K) (hprotected : counter < lo ∨ counter ∈ pr)
     (bound : lo ≤ K)
     (initial : m.rd64 (slot fp (BitVec.ofNat 64 counter)) = some value)
@@ -177,7 +177,7 @@ theorem Sim.counter_dispatch {D : Deklaration} {L : Lay D} {P : Programm D}
       ∃ m', Star t m ⟨header, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧
         EnvAt L m' fp ρ' reserved ∧ WeltAt m' L σ' ∧ Keeps fp pr m m' ∧
         m'.rd64 (slot fp (BitVec.ofNat 64 counter)) = some value
-    | o => Sim L P f σ0 ρ0 rp cfp fp lo K pr t m header exit header o reserved := by
+    | o => Sim L P f σ0 ρ0 rp cfp fp lo K pr t m header exit header o reserved sc := by
   cases o with
   | ok σ' ρ' =>
     obtain ⟨m', run, frame, env, world, keeps, count⟩ :=

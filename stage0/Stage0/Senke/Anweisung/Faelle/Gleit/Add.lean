@@ -10,6 +10,7 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 variable [Kern] {D : Deklaration} {L : Lay D}
 variable {H : List D.Lock}
+variable {sc : List D.Lock}
 
 theorem blockFloatArithmetic_case (op : GleitOp) {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
@@ -24,8 +25,8 @@ theorem blockFloatArithmetic_case (op : GleitOp) {O : Orakel D} [TorOK L O] [Sic
     {l₁ h₁ l₂ h₂ low high : Int × Int}
     {a : Expr D Γ Λ (.fl l₁ h₁)} {b : Expr D Γ Λ (.fl l₂ h₂)}
     {rest : Block D (vertragVon D f) l (.fl low high :: Γ) Λ Λ'} :
-    (∀ {pr ex}, BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H rest) →
-    BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H
+    (∀ {pr ex}, BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc rest) →
+    BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc
       (.float op a b low high rest) := by
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   simp only [lowB, floatArithmeticBlockL_eq op, ← hlo0] at h

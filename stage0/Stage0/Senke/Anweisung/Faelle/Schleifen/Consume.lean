@@ -13,6 +13,7 @@ open Gabbro.Grammatik Runner.IR Consuming
 
 variable {D : Deklaration} {V : Vertrag D}
 variable {H : List D.Lock}
+variable {sc : List D.Lock}
 
 /-- The canonical entry point, including read bookkeeping and the exact fuel.
     Selection is reevaluated after every completed body pass. The selected
@@ -180,8 +181,8 @@ theorem consumeTraverse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Na
     {inv : Expr D Γ Λ .bool} {bound : Int} {mass : Expr D Γ Λ (.int 0 bound)}
     {body : Block D (vertragVon D f) true (.index (D.count t) :: Γ) Λ Λ} :
     (∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0
-      cens tens pr ex H body reserved) →
-    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H
+      cens tens pr ex H sc body reserved) →
+    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc
       (show Stmt D (vertragVon D f) l Γ Λ Λ from
         .consumeTraverse t member edge inv bound mass body) reserved := by
   intro ihBody c top emitted hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
@@ -261,7 +262,7 @@ theorem consumeTraverse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Na
       x.Ready mem world env →
       Sim L P f σ0 ρ0 rp cfp fp lo K (x.s :: x.counter :: x.saved :: pr)
         ⟨x.addr 39, fp⟩ mem (x.addr 41) (x.addr 44) (x.addr 41)
-        (execBlock O passes R body world env) reserved := by
+        (execBlock O passes R body world env) reserved sc := by
     intro mem world env ready
     have pre := ready.pre 39 (frei (.index (D.count t) :: Γ) reserved) cb.1 (Nat.le_refl _) rfl
     have smallBody : 16 * cb.1.length < 2 ^ 31 := consume_body_small x
@@ -324,7 +325,7 @@ theorem consumeTraverse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Na
     (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
     (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2)
     (verbrauchLauf (l := l) x.table (fun world env => execBlock O passes R body world env)
-      loop.invW loop.sel loop.massW x.bound x.fuel σ ρ) reserved
+      loop.invW loop.sel loop.massW x.bound x.fuel σ ρ) reserved sc
   exact combined
 
 

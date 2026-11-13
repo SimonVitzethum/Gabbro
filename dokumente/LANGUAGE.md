@@ -698,6 +698,16 @@ including fields of a local record. The ordinary argument types, effects and ret
 apply; hoisting preserves evaluation order and refuses unsupported movements across mutable
 reads. See `branch-return-call.gab` and `branch-return-fields.gab`.
 
+An integer `match` accepts integer literals, character literals and named integer constants
+as patterns, followed by a mandatory final `_ => { … }`. It expands to the existing ordered
+`if`/`else if`/`else` chain, with integer equality tests; there is no exhaustiveness reasoning
+over the integer range. Duplicate pattern values and binders are refused, and a name shared
+by a number constant and a tagged case is refused as ambiguous. A scrutinee is evaluated once:
+a plain local or parameter is reused, while every other expression receives a fresh local
+that cannot be spelled in source. Tagged case names keep the tagged path; an all-wildcard
+match cannot identify a numeric match and remains refused (`Modules/MatchNumber.lean`,
+`match-number.gab`).
+
 A final binder-free `_ => { … }` after at least one named tagged arm expands to the remaining
 cases in declaration order, discarding their payloads (`Modules/MatchWildcard.lean`,
 `match-wildcard.gab`). Named arms must identify one unique tagged type. A lone, repeated,

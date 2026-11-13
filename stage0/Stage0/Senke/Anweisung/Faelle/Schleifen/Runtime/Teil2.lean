@@ -17,7 +17,7 @@ variable [Kern]
     The read event, callee frame, return ABI and protected slots are inherited
     from `lowE_ok`, `choice_ok` and the explicit child induction contract.
     This is one positive pass, not yet the counter/header integration. -/
-theorem forever_source_pass {D : Deklaration} {L : Lay D} {H : List D.Lock}
+theorem forever_source_pass {D : Deklaration} {L : Lay D} {H : List D.Lock} {sc : List D.Lock}
     {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W} {cap : Nat}
@@ -30,13 +30,13 @@ theorem forever_source_pass {D : Deklaration} {L : Lay D} {H : List D.Lock}
     (inv : Expr D Γ Λ .bool) (body : Block D (vertragVon D f) true Γ Λ Λ)
     {cc cb : List II} {tc tb : Nat}
     (hcc : lowE (reserved := reserved) L inv (frei Γ reserved) = some (cc, tc))
-    (hcb : lowB (reserved := reserved) passes A L (functionFrame P f) (cens, tens) pr (exPlus ex 4) body = some (cb, tb))
+    (hcb : lowB (reserved := reserved) (sc := sc) passes A L (functionFrame P f) (cens, tens) pr (exPlus ex 4) body = some (cb, tb))
     (htc : tc ≤ Ks) (htb : tb + cap ≤ Ks) (room : frei Γ reserved + 8 ≤ Ks)
     (hs : 16 * (cc.length + 1 + cb.length + 1 + 3) < 2 ^ 31)
     (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo2 : lo ≤ frei Γ reserved)
     (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     (bodyRuns : BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp
-      σ0 ρ0 cens tens pr (exPlus ex 4) H body reserved)
+      σ0 ρ0 cens tens pr (exPlus ex 4) H sc body reserved)
     {m : Mem} {pc : W} {σ : World D} {ρ : Env D Γ}
     (hp : PreS L m pc fp K (frei Γ reserved)
       (cc ++ [ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++ cb ++
@@ -50,7 +50,7 @@ theorem forever_source_pass {D : Deklaration} {L : Lay D} {H : List D.Lock}
       (pc + BitVec.ofNat 64 (16 * code.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * code.length) + BitVec.ofInt 64 ex.2)
       (if wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ) then
-        execBlock O passes R body (σ.lese Λ inv.orte) ρ else .logik .schleife) reserved := by
+        execBlock O passes R body (σ.lese Λ inv.orte) ρ else .logik .schleife) reserved sc := by
   have protectedPrefix := functionFrame_prefix P f
   have hks := hW.ks
   have htop := lowE_top inv (frei Γ reserved) cc tc hcc
@@ -73,7 +73,7 @@ theorem forever_source_pass {D : Deklaration} {L : Lay D} {H : List D.Lock}
 
 /-- Compose the emitted counter header with the actual generic invariant/body lowering
     and induct on semantic fuel, retaining the concrete entry interface. -/
-theorem forever_counter_loop {D : Deklaration} {L : Lay D} {H : List D.Lock}
+theorem forever_counter_loop {D : Deklaration} {L : Lay D} {H : List D.Lock} {sc : List D.Lock}
     {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W} {cap : Nat}
@@ -87,13 +87,13 @@ theorem forever_counter_loop {D : Deklaration} {L : Lay D} {H : List D.Lock}
     (inv : Expr D Γ Λ .bool) (body : Block D (vertragVon D f) true Γ Λ Λ)
     {cc cb : List II} {tc tb : Nat}
     (hcc : lowE (reserved := reserved) L inv (frei Γ reserved) = some (cc, tc))
-    (hcb : lowB (reserved := reserved) passes A L (functionFrame P f) (cens, tens) (counter :: one :: pr) (exPlus ex 4) body = some (cb, tb))
+    (hcb : lowB (reserved := reserved) (sc := sc) passes A L (functionFrame P f) (cens, tens) (counter :: one :: pr) (exPlus ex 4) body = some (cb, tb))
     (htc : tc ≤ Ks) (htb : tb + cap ≤ Ks) (room : frei Γ reserved + 8 ≤ Ks)
     (hs : 16 * (cc.length + 1 + cb.length + 1 + 3) < 2 ^ 31)
     (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo2 : lo ≤ frei Γ reserved)
     (hpr : ∀ j ∈ counter :: one :: pr, j < frei Γ reserved)
     (bodyRuns : BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp
-      σ0 ρ0 cens tens (counter :: one :: pr) (exPlus ex 4) H body reserved)
+      σ0 ρ0 cens tens (counter :: one :: pr) (exPlus ex 4) H sc body reserved)
 
     {pc back exit outerLeave outerNext : W} {stop : Int} {jump b c : BitVec 32}
     (backAt : pc + 32 + BitVec.ofNat 64
@@ -124,7 +124,7 @@ theorem forever_counter_loop {D : Deklaration} {L : Lay D} {H : List D.Lock}
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m exit outerLeave outerNext
       (foreverLauf (l := l) a (execBlock O passes R body)
         (fun σ ρ => (σ.lese Λ inv.orte,
-          wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ))) budget σ ρ) reserved := by
+          wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ))) budget σ ρ) reserved sc := by
   have protectedPrefix := functionFrame_prefix P f
   have bound : frei Γ reserved ≤ K := by omega
   have inside : counter < K := by unfold frei at bound; omega
@@ -132,8 +132,8 @@ theorem forever_counter_loop {D : Deklaration} {L : Lay D} {H : List D.Lock}
   | zero =>
     have test := pre.code 0 (by simp [foreverCounter])
     simp [foreverCounter, ci] at test
-    have sc := sx_nat (d := counter) (by have := pre.small; omega)
-    exact counter_budget_stop_code test (by simpa [sc] using read)
+    have hsx := sx_nat (d := counter) (by have := pre.small; omega)
+    exact counter_budget_stop_code test (by simpa [hsx] using read)
       stopCode stopFar pre.frame stopRoom pre.small
   | succ n ih =>
     obtain ⟨m1, run, frame, hp, hu, hk, hw, keeps, count⟩ :=
@@ -163,7 +163,7 @@ theorem forever_counter_loop {D : Deklaration} {L : Lay D} {H : List D.Lock}
         Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m exit outerLeave outerNext
           (foreverLauf (l := l) a (execBlock O passes R body)
             (fun σ ρ => (σ.lese Λ inv.orte,
-              wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ))) n σ' ρ') reserved := by
+              wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ))) n σ' ρ') reserved sc := by
       intro σ' ρ' result
       obtain ⟨m2, run2, frame2, env2, world2, keeps2, count2⟩ := result
       have total := frame.trans frame2

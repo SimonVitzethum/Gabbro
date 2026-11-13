@@ -52,6 +52,7 @@ theorem anw_callElse (name : String) (args : List SExpr) (reason : String) (body
     have hB := hb (.zeichen ";" :: rest) (G + 1) (by simp only [fbA]; omega)
     simp only [parseKopfStmt]
     rw [kopf_ruf_head, hA]
+    change parseRufMitElse (parseBlock (G + 1)) name args tail = _
     exact callElse_tail (parseBlock (G + 1)) name args reason body rest hk hB
   rw [hd]
   exact parseStmt_ident (G + 3) name _ (by

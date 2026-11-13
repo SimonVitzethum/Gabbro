@@ -1,0 +1,116 @@
+// Bounded executor kernel for hand-written homogeneous state machines.
+// Each generative module use has its own bounded queue and notification bits.
+// One owner runs spawn/next/complete and owns all task state. Other threads
+// may call wake only. Task slots are never reused: stale wakers cannot name
+// another task. Task state is supplied by the owning program, not published
+// by a numeric task ID. No heap, OS service, fairness or completion assumption.
+//
+// This source is UNVERIFIED pending the lead build and ordinary G certificates.
+// It is the independent queue/waker portion, not a completed async runtime:
+// generated-future ownership/poll/drop and a blocking driver remain blocked
+// by the typed G segment simulation described in THEOREM-MAP.
+module async_executor[N: const u32 in 1 .. 64] {
+
+pub type Task = u32 in 0 ..< N;
+pub type Answer = u32 in 0 .. N;
+
+// All cross-thread signals and ring cells are atomics. Head, size and the
+// registry are accessed only by the single executor owner.
+// Footprint names are public because public contracts/effects must have a
+// closed export hull. Visibility grants no right to violate the owner role.
+pub atomic NOTIFIED : [bool; N] release;
+pub atomic RING : [Answer; N] relaxed;
+pub static mut HEAD : Task = 0;
+pub static mut SIZE : u32 in 0 .. N = 0;
+pub static mut ACTIVE : [bool; N] = false;
+pub static mut DONE : [bool; N] = false;
+pub static mut QUEUED : [bool; N] = false;
+
+// Waking cannot fail because the queue is full or busy. Multiple wakes
+// coalesce in a persistent bit. This conveys readiness, not payload ownership.
+pub fn wake(task : Task)
+    effects { writes NOTIFIED, publishes NOTIFIED }
+    costs <= 8 ops
+{
+    NOTIFIED[task] = true publishes nothing;
+}
+
+// Register a previously unused slot. The caller has already installed the
+// hand-written state machine in its exclusively owned state pool. Failure
+// leaves the task with its caller. Completed slots are deliberately not reused.
+pub fn spawn(task : Task) -> bool
+    effects { reads ACTIVE, writes ACTIVE, writes NOTIFIED, publishes NOTIFIED }
+    costs <= 32 ops
+{
+    if ACTIVE[task] { return false; }
+    ACTIVE[task] = true;
+    wake(task);
+    return true;
+}
+
+// Reserve queue space BEFORE claiming a wake. A full queue retains the bit.
+// The successful CAS is the notification-consumption linearisation point.
+fn collect(task : Task)
+    effects { reads ACTIVE, reads DONE, reads QUEUED, writes QUEUED,
+              reads HEAD, reads SIZE, writes SIZE, writes RING, publishes RING,
+              reads NOTIFIED, writes NOTIFIED, publishes NOTIFIED }
+    costs <= 128 ops
+{
+    if !ACTIVE[task] || DONE[task] || QUEUED[task] || SIZE == N { return; }
+    let claimed = NOTIFIED[task] exchange false
+        when old(NOTIFIED[task]) == true returns success publishes nothing;
+    if !claimed { return; }
+    let mut tail : u32 = HEAD + SIZE;
+    if tail >= N { tail -= N; }
+    narrow tail to 0 ..< N else { return; }
+    RING[tail] = task publishes nothing;
+    QUEUED[task] = true;
+    SIZE += 1;
+}
+
+// N is Empty; valid IDs lie strictly below it. One scan is finite and no
+// task is queued twice. A wake while queued stays latched for the next scan.
+pub fn next() -> Answer
+    effects { reads ACTIVE, reads DONE, reads QUEUED, writes QUEUED,
+              reads HEAD, writes HEAD, reads SIZE, writes SIZE,
+              reads RING, writes RING, publishes RING,
+              reads NOTIFIED, writes NOTIFIED, publishes NOTIFIED }
+    costs <= 16384 ops
+{
+    traverse task over elems of NOTIFIED by unvisited
+        touches writes NOTIFIED, writes QUEUED, writes SIZE, writes RING
+    {
+        collect(task);
+    }
+    if SIZE == 0 { return N; }
+    let head : Task = HEAD;
+    let task : Answer = RING[head];
+    // A malformed queue is not turned into a task. The generic ring
+    // invariant must prove both defensive branches unreachable.
+    narrow task to 0 ..< N else { return N; }
+    QUEUED[task] = false;
+    if head == N - 1 { HEAD = 0; } else { HEAD = head + 1; }
+    SIZE -= 1;
+    if DONE[task] { return N; }
+    return task;
+}
+
+// Call only after the selected task's poll returned Ready and transferred
+// its owned result. Later wakes are ignored; no slot resurrection or ABA.
+pub fn complete(task : Task)
+    requires ACTIVE[task], !QUEUED[task], !DONE[task]
+    ensures DONE[task]
+    effects { reads ACTIVE, reads QUEUED, reads DONE, writes DONE }
+    costs <= 8 ops
+{
+    DONE[task] = true;
+}
+
+pub fn is_complete(task : Task) -> bool
+    effects { reads DONE }
+    costs <= 8 ops
+{
+    return DONE[task];
+}
+
+}

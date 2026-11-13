@@ -299,7 +299,7 @@ def parseArme (f : Nat) (toks : List Token) :
   | 0 => .error "out of fuel"
   | f + 1 => match toks with
     | .zeichen "}" :: _ => .ok ([], toks)
-    | _ => match nimmName toks with
+    | _ => match nimmArmMuster toks with
       | .error e => .error e
       | .ok (v, rest) =>
         let (binder, rest') : Option String × List Token :=

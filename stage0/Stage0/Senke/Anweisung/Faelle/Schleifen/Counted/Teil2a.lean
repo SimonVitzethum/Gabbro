@@ -156,8 +156,8 @@ theorem CountedSim.forget {n P f σ0 ρ0 rp cfp l Γ fp lo K pr t m e eL eN rese
   | ok σ ρ => exact CountedReach.forget h
   | leave _ σ ρ => exact CountedReach.forget h
   | next _ σ ρ => exact CountedReach.forget h
-  | zurueck σ v => exact CountedRetZ.forget h
-  | why σ r => exact CountedRetWhy.forget h
+  | zurueck σ v => exact (CountedRetZ.forget h).toR
+  | why σ r => exact (CountedRetWhy.forget h).toR
   | logik c => exact CountedStops.forget h
   | hardware c => exact CountedStops.forget h
 

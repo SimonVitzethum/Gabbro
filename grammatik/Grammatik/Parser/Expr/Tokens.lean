@@ -42,6 +42,24 @@ def nimmName : List Token → Except String (String × List Token)
     | none => .error "name expected"
   | [] => .error "name expected"
 
+/-- Read decimal arm text through the lexer's structural digit reader. Avoid `String.toNat?`:
+    its slice iterator uses well-founded loop machinery that closed kernel witnesses cannot
+    unfold through the ordinary module imports. Source literals already have canonical text;
+    the printer separately checks that invariant for synthetic AST names. -/
+def armZahl? (s : String) : Option Nat :=
+  match s.toList with
+  | [] => none
+  | digits =>
+    if digits.all istZiffer then some (nimmZiffern digits 10).1 else none
+
+/-- Match patterns share the existing arm-name field. A literal's canonical decimal text
+    cannot be a source identifier (`istAnfang` excludes digits). Characters lex to `num`. -/
+def nimmArmMuster : List Token → Except String (String × List Token)
+  | .num n :: rest => .ok (toString n, rest)
+  | toks => match nimmName toks with
+    | .ok r => .ok r
+    | .error _ => .error "match pattern: integer or character literal, constant or case name expected"
+
 /-- Is this token the head word `w` (a `wort` token with this text)?
     `parse.rs` `wort_ist_anweisungskopf` decides head-vs-place by the
     NEXT token; the dispatch below does the same (see

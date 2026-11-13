@@ -5,7 +5,7 @@
   No checker rule or machine G form changes: the result is an ordinary exhaustive match.
 -/
 module
-public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil18
+public import Grammatik.Parser.Elab.Modules.MatchBodies
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.MatchWildcard
@@ -37,55 +37,14 @@ def erweitereArme (schemas : List (Uebersetze.USum STyp)) (nr : Nat)
       | _ => (arms, nr)
   | _ => (arms, nr)
 
-/-- Visit every nested statement body, threading fresh names through every copy.
-    Fuel bounds recursion exactly as in the existing source rewrite. -/
-def erweitereS (schemas : List (Uebersetze.USum STyp)) :
-    Nat → Nat → SAnw → SAnw × Nat
-  | 0, nr, s => (s, nr)
-  | n + 1, nr, s =>
-    let body := erweitereS schemas n
-    let bodies : Nat → List SAnw → List SAnw × Nat := fun nr ss =>
-      ss.foldl (fun (acc : List SAnw × Nat) t =>
-        let r := body acc.2 t
-        (acc.1 ++ [r.1], r.2)) ([], nr)
-    match s with
-    | .cond c t eis sonst =>
-      let rt := body nr t
-      let re := bodies rt.2 eis
-      match sonst with
-      | none => (.cond c rt.1 re.1 none, re.2)
-      | some b => let rb := body re.2 b; (.cond c rt.1 re.1 (some rb.1), rb.2)
-    | .elsif c b => let r := body nr b; (.elsif c r.1, r.2)
-    | .cases scrutinee arms =>
-      let expanded := erweitereArme schemas nr arms
-      let r := bodies expanded.2 expanded.1
-      (.cases scrutinee r.1, r.2)
-    | .arm name binder b => let r := body nr b; (.arm name binder r.1, r.2)
-    | .each a b c d m raw inv bdy =>
-      let r := body nr bdy
-      (.each a b c d m raw inv r.1, r.2)
-    | .retry h b => let r := body nr b; (.retry h r.1, r.2)
-    | .loop h b => let r := body nr b; (.loop h r.1, r.2)
-    | .waive ns b => let r := body nr b; (.waive ns r.1, r.2)
-    | .trim o t b => let r := body nr b; (.trim o t r.1, r.2)
-    | .locks g o b => let r := body nr b; (.locks g o r.1, r.2)
-    | .watch d b => let r := body nr b; (.watch d r.1, r.2)
-    | .block ss ende => let r := bodies nr ss; (.block r.1 ende, r.2)
-    | .bindElse x ty e g b => let r := body nr b; (.bindElse x ty e g r.1, r.2)
-    | .callElse f args g b => let r := body nr b; (.callElse f args g r.1, r.2)
-    | .callIndElse p args g b => let r := body nr b; (.callIndElse p args g r.1, r.2)
-    | .bindAxiomOptElse x ty e g b =>
-      let r := body nr b
-      (.bindAxiomOptElse x ty e g r.1, r.2)
-    | .alloc mu x ty arena count failure =>
-      match failure with
-      | none => (s, nr)
-      | some b =>
-        let r := body nr b
-        (.alloc mu x ty arena count (some r.1), r.2)
-    | .grow arena count b => let r := body nr b; (.grow arena count r.1, r.2)
-    | .child b => let r := body nr b; (.child r.1, r.2)
-    | _ => (s, nr)
+/-- Visit the same nested bodies as number matching, threading fresh names through copies. -/
+def erweitereS (schemas : List (Uebersetze.USum STyp))
+    (fuel nr : Nat) (s : SAnw) : SAnw × Nat :=
+  match MatchBodies.walk (fun _ nr e arms =>
+      let r := erweitereArme schemas nr arms
+      .ok ([.cases e r.1], r.2)) fuel [] nr s with
+  | .ok ([one], next) => (one, next)
+  | _ => (s, nr)
 
 /-- Ordinary function bodies, including gated functions; compile-time functions stay intact. -/
 def erweitereItem (schemas : List (Uebersetze.USum STyp)) (nr : Nat) :

@@ -9,6 +9,7 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 variable [Kern] {D : Deklaration} {L : Lay D}
 variable {H : List D.Lock}
+variable {sc : List D.Lock}
 
 /-- Shared handover after errno dispatch: success skips the end block, while a
     reason enters it with one extra environment slot. The gate prefix can include
@@ -24,14 +25,14 @@ private theorem discardGate_result {O : Orakel D} {passes : Nat}
     {σ' : World D} {answer : World D × Option (ErgVal D (D.aerg a) ⊕ Fin (D.agruende a))}
     (hlo0 : lo = (functionFrame P f).internalResult)
     (hwhy : valueWords (.why (D.agruende a)) = 1)
-    (hce : lowEnd passes A L (functionFrame P f) (cens, tens) pr ex err reserved = some (ce, te))
+    (hce : lowEnd passes A L (functionFrame P f) (cens, tens) pr ex err reserved sc = some (ce, te))
     (hroom : frei Γ reserved + 10 ≤ Ks) (hK : te + cap ≤ Ks) (hs : 16 * (cg ++ [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce).length < 2 ^ 31)
     (hW : WIn L fp Ks K)
     (hp : PreS L m pc fp K (frei Γ reserved) (cg ++ [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce) ρ reserved)
     (hlo : FB ≤ lo) (hlo2 : lo ≤ frei Γ reserved)
     (hu : Umf L A C dv m fp Ks K H) (hk : Kopf L f m fp K rp cfp ρ0 P σ0)
     (hpr : ∀ j ∈ pr, j < frei Γ reserved)
-    (ihErr : ∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H err reserved)
+    (ihErr : ∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc err reserved)
     (hgate :
       (∃ v m2, answer = (σ', some (.inl v)) ∧
         Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * cg.length), fp⟩ m2 ∧
@@ -48,7 +49,7 @@ private theorem discardGate_result {O : Orakel D} {passes : Nat}
       (match answer with
        | (σ, some (.inl _)) => .ok σ ρ
        | (σ, some (.inr r)) => (execEnd O passes R err σ (.cons r ρ)).schrumpf.zuAusgang
-       | (_, none) => .hardware (.annahme a)) reserved := by
+       | (_, none) => .hardware (.annahme a)) reserved sc := by
   have hks := hW.ks
   have hp' : PreS L m pc fp K (frei Γ reserved) (cg ++ ([ci 18 (16 * (ce.length + 1)) 0 0] ++ ce)) ρ reserved := by
     simpa only [List.append_assoc] using hp
@@ -98,8 +99,8 @@ theorem stmtAxiomElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     {e : Option Ty} {a : D.Ax} {args : Args D Γ Λ (D.aparams a)} {he : D.aerg a = e}
     {hcall : RufPasst D (vertragVon D f) (D.asignatur a) Λ} {hd : _} {hgd : _} {hr : 0 < D.agruende a}
     {err : Endblock D (vertragVon D f) l (reasonTy (D.agruende a) :: Γ) (nachSig D (D.asignatur a) Λ)} :
-    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H err reserved) →
-    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H
+    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc err reserved) →
+    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc
       (.axiomCallElse e a args he hcall hd hgd hr err) reserved := by
   intro ihErr c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   simp only [lowS, ← hlo0] at h

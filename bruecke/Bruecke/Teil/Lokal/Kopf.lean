@@ -11,7 +11,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
 
 variable {u : UProg} {C : Fin u.fns.length → Prop}
 
-/-- What the run of a lowered body says against its Body translation (the conclusion of `lauf`):
+/-- What the run of a lowered body says against its Body translation (the carried run conclusion):
     every `logik` outcome is a callee's, and a return has an answer table under which the Body
     run ends in a related state with the same answer. -/
 abbrev LaufZielTeilB (u : UProg) (C : Fin u.fns.length → Prop) (c : Fin u.fns.length) (O : Orakel (declOf u)) (passes : Nat)

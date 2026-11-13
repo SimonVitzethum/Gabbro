@@ -12,6 +12,7 @@ set_option linter.unusedSectionVars false
 set_option maxRecDepth 2048
 variable {reserved : Nat}
 variable [Kern] {D : Deklaration}
+variable {sc : List D.Lock}
 
 theorem putBytes_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     {ρ0 : Env D (D.params f)} {rp cfp fp pc : Runner.W} {K Ks lo : Nat} {pr : List Nat}
@@ -22,13 +23,13 @@ theorem putBytes_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     (hlo : 0 ≤ a) (hhi : b + n ≤ D.count t) (e : Expr D Γ Λ (.int 0 (256 ^ n - 1)))
     (hw : (vertragVon D f).schreibt t = true) (hl : darf D t Λ)
     {c : List II} {top : Nat} {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
-    (h : lowS (reserved := reserved) passes A L (functionFrame P f) ens pr ex (Stmt.putBytes (l := l) t field hf n i hlo hhi e hw hl) = some (c, top))
+    (h : lowS (reserved := reserved) (sc := sc) passes A L (functionFrame P f) ens pr ex (Stmt.putBytes (l := l) t field hf n i hlo hhi e hw hl) = some (c, top))
     (hK : top ≤ Ks) (hW : WIn L fp Ks K) (hp : PreS L m pc fp K (frei Γ reserved) c ρ reserved)
     (hlow : lo ≤ frei Γ reserved) (hWa : WeltAt m L σ) (hpr : ∀ j ∈ pr, j < frei Γ reserved) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2)
-      (execStmt O passes R (Stmt.putBytes (l := l) t field hf n i hlo hhi e hw hl) σ ρ) reserved := by
+      (execStmt O passes R (Stmt.putBytes (l := l) t field hf n i hlo hhi e hw hl) σ ρ) reserved sc := by
   simp only [lowS, resultWords_vertragVon] at h
   split at h
   · next hn =>

@@ -129,7 +129,8 @@ theorem lowSideEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
         exact he
 
 theorem opOf_some {op : String} {o : Gabbro.Body.BinOp} (h : opOf op = some o) :
-    (op = "==" ∧ o = .eq) ∨ (op = "<" ∧ o = .lt) ∨ (op = "<=" ∧ o = .le) := by
+    (op = "==" ∧ o = .eq) ∨ (op = "<" ∧ o = .lt) ∨ (op = "<=" ∧ o = .le) ∨
+      (op = ">" ∧ o = .gt) ∨ (op = ">=" ∧ o = .ge) ∨ (op = "!=" ∧ o = .ne) := by
   unfold opOf at h
   split at h <;> simp_all
 
@@ -184,14 +185,10 @@ theorem lowEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
                 have p1 := (ensSide_vor hr).trans hpre
                 have e1 := lowSideEns_sim hs1 hl p1 hA hT σ₀ σ ρ s₀ w β hW₀ hL₀ hW hB
                 have e2 := lowSideEns_sim hs2 hr hpre hA hT σ₀ σ ρ s₀ w β hW₀ hL₀ hW hB
-                rcases opOf_some hop with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
-                · cases h
-                  simp only [Gabbro.Body.eval, e1, e2, valOf_int, Gabbro.Body.binop]
-                  simp [Grammatik.eval, wahr?]
-                · cases h
-                  simp only [Gabbro.Body.eval, e1, e2, valOf_int, Gabbro.Body.binop]
-                  simp [Grammatik.eval, wahr?]
-                · cases h
+                rcases opOf_some hop with
+                  ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+                all_goals
+                  cases h
                   simp only [Gabbro.Body.eval, e1, e2, valOf_int, Gabbro.Body.binop]
                   simp [Grammatik.eval, wahr?]
         · cases hb

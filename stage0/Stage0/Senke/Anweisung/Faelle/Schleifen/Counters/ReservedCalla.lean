@@ -151,7 +151,7 @@ theorem body_simulation [Kern] :
       (2048 + BitVec.ofNat 64 (16 * code.length)) world Env.nil 4 := by
   have h := lowB_ok (reserved := 4) (O := O) (passes := 1) (P := tiny) (f := 2)
     (σ0 := world) (ρ0 := Env.nil) (lo := 4) (pr := [4]) (ex := (0, 0))
-    call_spec addresses_bound rfl rfl body HeldIn.nil code top lowering (by decide +kernel)
+    call_spec addresses_bound rfl rfl scopes_nil body HeldIn.nil code top lowering (by decide +kernel)
     (by decide +kernel) call_win memory 2048 world Env.nil pre (by decide) (by decide)
     surroundings head world_at (by intro j hj; simp only [List.mem_singleton] at hj; subst j; decide)
   change Reach callLayout 4096 4 256 [4] ⟨2048, 4096⟩ memory
@@ -168,7 +168,7 @@ theorem body_simulation_at [Kern] {m : Runner.Mem}
       (2048 + BitVec.ofNat 64 (16 * code.length)) world Env.nil 4 := by
   have h := lowB_ok (reserved := 4) (O := O) (passes := 1) (P := tiny) (f := 2)
     (σ0 := world) (ρ0 := Env.nil) (lo := 4) (pr := [4]) (ex := (0, 0))
-    call_spec addresses_bound rfl rfl body HeldIn.nil code top lowering (by decide +kernel)
+    call_spec addresses_bound rfl rfl scopes_nil body HeldIn.nil code top lowering (by decide +kernel)
     (by decide +kernel) call_win m 2048 world Env.nil hp (by decide) (by decide)
     hu hk hw (by intro j hj; simp only [List.mem_singleton] at hj; subst j; decide)
   exact h

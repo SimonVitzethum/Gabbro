@@ -25,6 +25,7 @@ variable [Kern]
 
 variable {D : Deklaration} {L : Lay D}
 variable {H : List D.Lock}
+variable {sc : List D.Lock}
 
 section
 variable {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
@@ -120,13 +121,13 @@ theorem exch_ok {reserved : Nat} {g : D.Glob} (hfit : aggregateFits (D.gtyp g) =
           BitVec.ofInt 64 ex.1)
         (pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn).length) + BitVec.ofNat 64 (16 * cr.length) +
           BitVec.ofInt 64 ex.2)
-        (execBlock O passes R rest σ' ρ') reserved)
+        (execBlock O passes R rest σ' ρ') reserved sc)
     (hp : PreS L m pc fp K (frei Γ reserved) (exC (frei Γ reserved) (L.ga g) cn ++ cr) ρ reserved) (hu : Umf L A C dv m fp Ks K H)
     (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn ++ cr).length))
       (pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn ++ cr).length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn ++ cr).length) + BitVec.ofInt 64 ex.2)
-      (execBlock O passes R (.exchange g neu hw hL rest) σ ρ) reserved := by
+      (execBlock O passes R (.exchange g neu hw hL rest) σ ρ) reserved sc := by
   obtain ⟨m3, s3, A, hp3, hW3⟩ := exch_head (Λ := Λ) hfit hn htn hs4 hW hp hWa
   have ih := hrest m3 _ _ hp3 (hu.agreeW hW (A.mono hlo2) hlo) (hk.agreeW hW (A.mono hlo2) (by omega)) hW3
   simp only [execBlock]
@@ -162,7 +163,7 @@ theorem awaits_ok {reserved : Nat} [SichtOK O] {g : D.Glob} (hfit : aggregateFit
         (pc + BitVec.ofNat 64 (16 * 2) + BitVec.ofNat 64 (16 * cr.length))
         (pc + BitVec.ofNat 64 (16 * 2) + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.1)
         (pc + BitVec.ofNat 64 (16 * 2) + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.2)
-        (execBlock O passes R rest σ' ρ') reserved)
+        (execBlock O passes R rest σ' ρ') reserved sc)
     (hp : PreS L m pc fp K (frei Γ reserved) ([ci 1 (frei Γ reserved) (L.ga g) 0, ci 15 (frei Γ reserved) (frei Γ reserved) 0] ++ cr) ρ reserved)
     (hu : Umf L A C dv m fp Ks K H) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
@@ -171,7 +172,7 @@ theorem awaits_ok {reserved : Nat} [SichtOK O] {g : D.Glob} (hfit : aggregateFit
         BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * ([ci 1 (frei Γ reserved) (L.ga g) 0, ci 15 (frei Γ reserved) (frei Γ reserved) 0] ++ cr).length) +
         BitVec.ofInt 64 ex.2)
-      (execBlock O passes R (.awaits g pl hpl hL hat rest) σ ρ) reserved := by
+      (execBlock O passes R (.awaits g pl hpl hL hat rest) σ ρ) reserved sc := by
   simp only [execBlock, SichtOK.sicht, ↓reduceIte]
   obtain ⟨m1, s1, A, hp1, hW1⟩ := awaits_head hfit hl hs1 hW hp hWa
   have ih := hrest m1 ((σ.fragt (.inr (.inr g))).lese Λ [.inr g]) _ hp1

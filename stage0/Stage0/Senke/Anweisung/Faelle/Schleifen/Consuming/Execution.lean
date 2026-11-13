@@ -9,6 +9,7 @@ open Gabbro.Grammatik Runner Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D} {P : Programm D} {f : D.Fn}
 variable {reserved : Nat} {x : Image L P f reserved} {Γ : Ctx} {Λ : List (Res D)}
 variable (q : Loop x Γ Λ)
+variable {sc : List D.Lock}
 
 private theorem execution_width_append (a b : List Piece) : width (a ++ b) = width a + width b := by
   induction a with
@@ -231,12 +232,12 @@ theorem correct {O : Orakel D} {passes : Nat}
     (bodyRun : ∀ m σ ρ, x.Ready m σ ρ →
       Sim L P f x.σ0 x.ρ0 x.rp x.cfp x.fp x.lo x.K
         (x.s :: x.counter :: x.saved :: x.pr) ⟨x.addr 39, x.fp⟩ m
-        (x.addr 41) (x.addr 44) (x.addr 41) (execBlock O passes R body σ ρ) reserved) :
+        (x.addr 41) (x.addr 44) (x.addr 41) (execBlock O passes R body σ ρ) reserved sc) :
     ∀ n m σ ρ, q.Entry n m σ ρ →
       Sim L P f x.σ0 x.ρ0 x.rp x.cfp x.fp x.lo x.K x.pr ⟨x.addr 2, x.fp⟩ m
         (x.addr 50) outerLeave outerNext
         (verbrauchLauf (l := l) x.table (fun σ ρ => execBlock O passes R body σ ρ)
-          q.invW q.sel q.massW x.bound n σ ρ) reserved := by
+          q.invW q.sel q.massW x.bound n σ ρ) reserved sc := by
   apply runtime x.table (fun σ ρ => execBlock O passes R body σ ρ)
     q.invW q.sel q.massW x.bound q.Entry x.low
   · intro mem σ ρ entry
@@ -307,10 +308,10 @@ theorem correct {O : Orakel D} {passes : Nat}
       · simp only [good, and_self, ↓reduceIte] at resumed ⊢
         exact Stops.prefix completeRun resumed
     | zurueck σ' value =>
-      exact RetZ.prefix completeRun
+      exact RetZR.prefix completeRun
         (prefixFrame.mono (Nat.le_trans (by decide : 2 ≤ FB) x.low)) pass
     | why σ' reason =>
-      exact RetWhy.prefix completeRun
+      exact RetWhyR.prefix completeRun
         (prefixFrame.mono (Nat.le_trans (by decide : 2 ≤ FB) x.low)) pass
     | logik code => exact Stops.prefix completeRun pass
     | hardware code => exact Stops.prefix completeRun pass

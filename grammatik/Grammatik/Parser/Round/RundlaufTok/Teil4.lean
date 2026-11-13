@@ -98,8 +98,8 @@ theorem legs_tok_n : ∀ (n : Nat) (e : SExpr), groesse e ≤ n → gut e = true
           ([.zeichen "("] ++ druckToksListe xs ++ [.zeichen ")"]) := by
         simp only [druckToks, List.cons_append, List.nil_append]
       apply legsB_kopf _ (nameTok f) _ (nameTok_form f) hd
-      intro rest' G _ _ hG
-      apply prim_rufM f xs rest' G hg.1 hxs
+      intro rest' G benign _ hG
+      apply prim_rufM f xs rest' G hg.1 hxs benign
       simp only [fb, hd, List.length_append, List.length_singleton] at hG
       omega
     | fnref p => exact blatt (fnwertLegs p) rfl

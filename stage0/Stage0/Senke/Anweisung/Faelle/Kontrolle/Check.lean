@@ -15,22 +15,23 @@ variable [Kern]
 
 variable {D : Deklaration}
 variable {H : List D.Lock}
+variable {sc : List D.Lock}
 
 /-- End blocks have no normal fallthrough target. -/
 theorem Ret.toSim {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     {ρ0 : Env D (D.params f)} {fp rp cfp : Runner.W} {lo K : Nat} {reserved : Nat} {pr : List Nat}
     {t : T} {m : Runner.Mem} {e eL eN : Runner.W} {l : Bool} {Γ : Ctx}
     {o : EndAusgang (vertragVon D f) l Γ}
-    (h : Ret L P f σ0 ρ0 fp lo K pr rp cfp t m eL eN o reserved) :
-    Sim L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN o.zuAusgang reserved := by
+    (h : Ret L P f σ0 ρ0 fp lo K pr rp cfp t m eL eN o reserved sc) :
+    Sim L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN o.zuAusgang reserved sc := by
   cases o <;> exact h
 
 theorem Ret.ofSim {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     {ρ0 : Env D (D.params f)} {fp rp cfp : Runner.W} {lo K : Nat} {reserved : Nat} {pr : List Nat}
     {t : T} {m : Runner.Mem} {e eL eN : Runner.W} {l : Bool} {Γ : Ctx}
     {o : EndAusgang (vertragVon D f) l Γ}
-    (h : Sim L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN o.zuAusgang reserved) :
-    Ret L P f σ0 ρ0 fp lo K pr rp cfp t m eL eN o reserved := by
+    (h : Sim L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN o.zuAusgang reserved sc) :
+    Ret L P f σ0 ρ0 fp lo K pr rp cfp t m eL eN o reserved sc := by
   cases o <;> exact h
 
 theorem blockCheck_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
@@ -42,9 +43,9 @@ theorem blockCheck_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cnd : Expr D Γ Λ .bool} {err : Endblock D (vertragVon D f) l Γ Λ}
     {rest : Block D (vertragVon D f) l Γ Λ Λ'} :
-    (∀ {pr ex}, EndCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H err) →
-    (∀ {pr ex}, BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H rest) →
-    BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (.check cnd err rest) := by
+    (∀ {pr ex}, EndCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc err) →
+    (∀ {pr ex}, BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc rest) →
+    BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc (.check cnd err rest) := by
   intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   simp only [lowB, ← hlo0, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨cc, tc⟩, hcc, ⟨ce, te⟩, hce, ⟨cr, tr⟩, hr, hc⟩ := h

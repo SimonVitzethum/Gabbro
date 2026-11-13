@@ -4,12 +4,24 @@ public import Stage0.Frontend.AliasMeaning
 public import Stage0.Frontend.Guard
 public import Grammatik.Parser.Elab.Konst.ErsetzungTor
 public import Stage0.Profil
+public import Grammatik.Parser.Async.Surface
 @[expose] public section
 
 
 namespace Gabbro.Stage0.Frontend
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg2
+
+/-- Recognise outer async syntax without stripping it into a synchronous
+    function. Ordinary items cannot be produced until typed reachable-state
+    representation and the G/GX segment simulation instantiate ReificationDuty. -/
+def asyncDiagnostic (tokens : List Token) (fallback : String) : String :=
+  match AsyncSource.parse tokens with
+  | .error _ => fallback
+  | .ok items =>
+    if AsyncSource.anyAsync items then
+      "async lowering: typed reachable-state representation and G/GX segment simulation are not implemented"
+    else fallback
 
 /-- Source provenance and the complete declaration normalization derivation consumed by Stage0.
     Lexing/parsing are the canonical functions; pre108 retains its visibility and name checks. -/
@@ -38,7 +50,7 @@ def source (text : String) (options : Profil.Options := {}) : Except String (Sou
   | .error _ => .error "lex"
   | .ok tokens =>
     match hp : parseTopTief tokens with
-    | .error e => .error e
+    | .error e => .error (asyncDiagnostic tokens e)
     | .ok items =>
       match Profil.prepareItems options items with
       | .error e => .error e

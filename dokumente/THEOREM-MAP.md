@@ -7131,9 +7131,9 @@ the user-logic, hardware, execution or source-to-binary conclusions of the goal 
 | `SInv.narrowOff` (field) | `grammatik/Grammatik/Gen/Text/Invers/Anweisung/Teil1.lean` | Requires `ctx.narrow = false` for printed-program read-back; it does not prove read-back with Stage 0's guard-generated bindings. |
 | `reihe_cond` | `grammatik/Grammatik/Gen/Text/Invers/Anweisung/Teil1.lean` | Given condition, branch and continuation elaboration equations, no fold expansion and `ctx.narrow = false`, a plain source `if` elaborates to the corresponding `ifBeg`/`ifElse`/`blkEnd` sequence. |
 | `effekt_rund` | `grammatik/Grammatik/Parser/Round/RundlaufItem/Teil1.lean` | Printing and reparsing an `EffGut` effect returns that effect and its comma/closing-brace suffix when the stated parser fuel bound holds. |
-| `nutzer_aus_quelleB` | `bruecke/Bruecke/Anweisung/Lokal/QuelleB.lean` | Successful `uebersetzeAllg` and computed `PflichtenB src`, including binder freshness and body duties for local bindings, give `NutzerPflicht (einheitAllg u P hn)` for the resulting unit. |
-| `nutzer_aus_quelle_teil` | `bruecke/Bruecke/Teil/Quelle.lean` | Successful source lowering, `PflichtenTeil src C` for the carried call-closed subset and explicit open-start duties give `NutzerPflicht`; open bodies and interfaces remain user duties. |
-| `nutzer_aus_quelle_teilB` | `bruecke/Bruecke/Teil/Lokal/Quelle.lean` | The partial source-duty result with local bindings, using `PflichtenTeilB src C` and explicit open-start duties for the same resulting unit. |
+| `nutzer_aus_quelleB` (removed) | `bruecke/Bruecke/Kette/Quelle.lean` | Replaced by `nutzer_aus_quelleG_alle` through the consolidated carried chain. |
+| `nutzer_aus_quelle_teil` (removed) | `bruecke/Bruecke/Kette/Quelle.lean` | Replaced by `nutzer_aus_quelleG` through the consolidated carried chain. |
+| `nutzer_aus_quelle_teilB` (removed) | `bruecke/Bruecke/Kette/Quelle.lean` | Replaced by `nutzer_aus_quelleG` through the consolidated carried chain. |
 | `lowGlobRead_sim` | `bruecke/Bruecke/Ausdruck/Glob.lean` | A successful numeric `lowGlobSide` and `GRel u σ w` make Body's `.global g` evaluation equal the encoded canonical G expression value; successful lowering already supplies the guard premise. |
 
 The emitted ticket lock's missing WAIT, failed ticket-CAS retry, WAKE and stable cross-thread

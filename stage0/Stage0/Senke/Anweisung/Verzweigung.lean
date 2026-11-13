@@ -12,6 +12,7 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 variable [Kern] {D : Deklaration}
 variable {H : List D.Lock}
+variable {sc : List D.Lock}
 
 theorem choice_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W}
@@ -28,12 +29,12 @@ theorem choice_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
       Umf L A C dv m' fp Ks K H → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * ct.length))
         (pc' + BitVec.ofNat 64 (16 * ct.length) + BitVec.ofInt 64 (exPlus ex (ce.length + 1)).1)
-        (pc' + BitVec.ofNat 64 (16 * ct.length) + BitVec.ofInt 64 (exPlus ex (ce.length + 1)).2) ot reserved)
+        (pc' + BitVec.ofNat 64 (16 * ct.length) + BitVec.ofInt 64 (exPlus ex (ce.length + 1)).2) ot reserved sc)
     (helse : b = false → ∀ m' pc', PreS L m' pc' fp K (frei Γ reserved) ce ρ reserved → Agree fp d K m m' →
       Umf L A C dv m' fp Ks K H → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * ce.length))
         (pc' + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofInt 64 ex.1)
-        (pc' + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofInt 64 ex.2) oe reserved)
+        (pc' + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofInt 64 ex.2) oe reserved sc)
     (hp : PreS L m pc fp K (frei Γ reserved) (cc ++ [ci 19 d (16 * (ct.length + 2)) 0] ++ ct ++
       [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce) ρ reserved)
     (hu : Umf L A C dv m fp Ks K H) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
@@ -44,7 +45,7 @@ theorem choice_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
         [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce).length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * (cc ++ [ci 19 d (16 * (ct.length + 2)) 0] ++ ct ++
         [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce).length) + BitVec.ofInt 64 ex.2)
-      (if b then ot else oe) reserved := by
+      (if b then ot else oe) reserved sc := by
     have hsm := hp.small
     have hsm' := hsm
     have hq : PreS L m pc fp K (frei Γ reserved) (cc ++ ([ci 19 d (16 * (ct.length + 2)) 0] ++ (ct ++

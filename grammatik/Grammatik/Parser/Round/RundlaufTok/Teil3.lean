@@ -146,6 +146,7 @@ theorem argsM : ∀ (xs : List SExpr) (rest : List Token) (F : Nat),
 /-- Calls through `parsePrimary` at token fuel (mirror of `prim_ruf_legs`). -/
 theorem prim_rufM (f : String) (xs : List SExpr) (rest : List Token) (F : Nat)
     (hf : (!istKopfWort f) = true) (hxs : ∀ x ∈ xs, LegsB (fb x) x ∧ gut x = true)
+    (benign : ruhigSuff rest = true)
     (hF : 6 * (druckToksListe xs).length + 38 ≤ F) :
     parsePrimary F (druckToks (.call f xs) ++ rest) = .ok (.call f xs, rest) := by
   have hkaf' : istKopfWort f = false := nichtWahr_falsch _ hf
@@ -157,6 +158,7 @@ theorem prim_rufM (f : String) (xs : List SExpr) (rest : List Token) (F : Nat)
   have hA := argsM xs rest F'' hxs (by omega)
   simp only [List.append_assoc] at hA ⊢
   simp only [List.nil_append, hA]
+  exact awaitSuffix_stop _ _ benign
 
 /-! ### Calls through a place (`o.is_some()`, `p->f(x)`) -/
 

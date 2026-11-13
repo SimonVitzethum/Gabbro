@@ -116,7 +116,6 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.locks_okT
 #print axioms Gabbro.Stage0.Senke.locksT_take
 #print axioms Gabbro.Stage0.Senke.locksT_give
-#print axioms Gabbro.Stage0.Senke.retFreiB_istZ
 #print axioms Gabbro.Stage0.Senke.TicketSync.call
 #print axioms Gabbro.Stage0.Senke.BildLage.sync
 #print axioms Gabbro.Stage0.Senke.HeldIn.frei
@@ -147,7 +146,6 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.choice_ok
 #print axioms Gabbro.Stage0.Senke.onTag_ok
 #print axioms Gabbro.Stage0.Senke.lowTags_ok
-#print axioms Gabbro.Stage0.Senke.retFreiArms_istZ
 #print axioms Gabbro.Stage0.Senke.onTag_ok_zeuge
 #print axioms Gabbro.Stage0.Senke.tagPayload_ok
 #print axioms Gabbro.Stage0.Senke.TagDecodeProbe.simulation_zeuge
@@ -337,7 +335,6 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.span_byte_read
 #print axioms Gabbro.Stage0.Senke.xorOrSpan_ok
 #print axioms Gabbro.Stage0.Senke.strEq_words_iff
-#print axioms Gabbro.Stage0.Senke.retFreiGrundArms_istZ
 #print axioms Gabbro.Stage0.Senke.locks_reason_zeuge
 #print axioms Gabbro.Stage0.Senke.GateProbe.word_range_images_zeuge
 -- Original-source export preservation remains connected after full-ABI integration.

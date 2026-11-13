@@ -1,5 +1,5 @@
 module
-public import Bruecke.Quelle
+public import Bruecke.Kette.Quelle
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben2
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
@@ -38,11 +38,10 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
-@[expose] public section
 
 
 /-! Wall 7 witness on the bridge side: an `entry` really becomes a declared start of `einheitAllg`
-(the statement of `nutzer_aus_quelle` is then about a unit WITH a thread root, not about the empty
+(the statement of `nutzer_aus_quelleG` is then about a unit WITH a thread root, not about the empty
 start list), and a unit without an entry keeps none. -/
 
 namespace Gabbro.Bruecke
@@ -75,6 +74,8 @@ private theorem starts_after {source : String} {characters : List Char} {tokens 
     unfold uOf
     rw [compiled]
     exact congrArg some counted
+
+@[expose] public section
 
 theorem entry_ist_start :
     (uOf entry1_ok).map (fun u => (startsAllg u).length) = some 1 := by
@@ -112,5 +113,7 @@ theorem ohne_entry_kein_start :
   case counted => cbv
 
 #print axioms entry_ist_start
+
+end
 
 end Gabbro.Bruecke

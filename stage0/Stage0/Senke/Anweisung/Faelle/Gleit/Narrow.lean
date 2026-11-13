@@ -10,6 +10,7 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 variable [Kern] {D : Deklaration} {L : Lay D}
 variable {H : List D.Lock}
+variable {sc : List D.Lock}
 
 theorem blockFloatNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
@@ -21,9 +22,9 @@ theorem blockFloatNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : N
     {low high low' high' : Int × Int} {e : Expr D Γ Λ (.fl low high)}
     {err : Endblock D (vertragVon D f) l Γ Λ}
     {rest : Block D (vertragVon D f) l (.fl low' high' :: Γ) Λ Λ'} :
-    (∀ {pr ex}, EndCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H err) →
-    (∀ {pr ex}, BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H rest) →
-    BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (.floatNarrow e low' high' err rest) := by
+    (∀ {pr ex}, EndCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc err) →
+    (∀ {pr ex}, BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc rest) →
+    BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc (.floatNarrow e low' high' err rest) := by
   intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   simp only [lowB, ← hlo0] at h
   split at h
@@ -38,7 +39,7 @@ theorem blockFloatNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : N
     simp only [floatNarrowC, List.length_append, List.length_singleton] at hs
     simp only [execBlock]
     let σr := σ.lese Λ e.orte
-    have hchoice := choice_ok (P := P) (σ0 := σ0) (ex := ex) (d := frei Γ reserved) (cc := cc) (ct := cx) (ce := ce ++ cr)
+    have hchoice := choice_ok (sc := sc) (P := P) (σ0 := σ0) (ex := ex) (d := frei Γ reserved) (cc := cc) (ct := cx) (ce := ce ++ cr)
       (b := floatRangeReject low' high' (eval σr e σr ρ).x)
       (ot := match gleitPasst low' high' (eval σr e σr ρ).x with
         | some v => (execBlock O passes R rest σr (Env.cons v ρ)).schrumpf

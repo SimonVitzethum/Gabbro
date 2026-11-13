@@ -106,14 +106,13 @@ def ensSide (u : UProg) (f : UFn) (a : Acc) : USide → Option (Expr × Acc)
   | .old p fld i =>
       (slotPlace u f (.old p fld i)).map (fun pl => (.name (oldName a.olds.length), { a with olds := a.olds ++ [pl] }))
   | .erg => some (.name "result", { a with result := true })
-  -- Arithmetic INSIDE an `ensures` side has no bridge form yet (the `old`/`result` numbering would
-  -- have to thread through the operands): REFUSED by name, so `postU` is `none` and the duty is
-  -- false, never a weaker one.
-  | .add .. | .sub .. | .mul .. | .conv .. | .band .. | .bor .. | .bxor .. => none
+  -- Pure arithmetic reuses the scalar reader without changing the accumulator. Nested
+  -- `old`/`result` still have no scalar form and are refused by `sideExpr`.
   | s => (sideExpr u f s).map (fun e => (e, a))
 
 def opOf : String → Option BinOp
-  | "==" => some .eq | "<" => some .lt | "<=" => some .le | _ => none
+  | "==" => some .eq | "<" => some .lt | "<=" => some .le
+  | ">" => some .gt | ">=" => some .ge | "!=" => some .ne | _ => none
 
 def ensExpr (u : UProg) (f : UFn) (a : Acc) : UEns → Option (Expr × Acc)
   | .tru => some (.lit (.bool true), a)

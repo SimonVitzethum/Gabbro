@@ -7,6 +7,7 @@ public import Stage0.Senke.Anweisung.Simulation
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {reserved : Nat}
+variable {sc : List D.Lock}
 
 theorem putBytesWide_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     {ρ0 : Env D (D.params f)} {rp cfp fp pc : Runner.W} {K Ks lo : Nat} {pr : List Nat}
@@ -25,7 +26,7 @@ theorem putBytesWide_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2)
-      (execStmt O passes R (Stmt.putBytes (l := l) t field hf n i lower upper e hw hl) σ ρ) reserved := by
+      (execStmt O passes R (Stmt.putBytes (l := l) t field hf n i lower upper e hw hl) σ ρ) reserved sc := by
   simp only [putBytesWideL] at made
   split at made
   · next representable =>

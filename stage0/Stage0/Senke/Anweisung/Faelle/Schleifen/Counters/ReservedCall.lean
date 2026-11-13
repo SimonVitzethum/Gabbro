@@ -102,7 +102,7 @@ theorem forever_source_pass_zeuge [Kern] :
     (by intro j hj; simp only [List.mem_singleton] at hj; subst j; decide)
     (by
       intro cb tb hcb htb hs hW m pc σ ρ hp hlo hlo2 hu hk hw hpr
-      exact lowB_ok call_spec addresses_bound rfl rfl body HeldIn.nil cb tb hcb htb hs
+      exact lowB_ok call_spec addresses_bound rfl rfl scopes_nil body HeldIn.nil cb tb hcb htb hs
         hW m pc σ ρ hp hlo hlo2 hu hk hw hpr)
     pre surroundings head world_at
   obtain ⟨m', run, _, _, world', keeps⟩ := h

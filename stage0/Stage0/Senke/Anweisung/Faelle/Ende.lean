@@ -14,6 +14,7 @@ variable [Kern]
 
 variable {D : Deklaration} {L : Lay D}
 variable {H : List D.Lock}
+variable {sc : List D.Lock}
 
 theorem endRet_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
@@ -23,15 +24,21 @@ theorem endRet_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {e : ErgExpr D Γ Λ (D.erg f)} {proof0 : _} :
-    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Endblock D (vertragVon D f) l Γ Λ from .ret e proof0) reserved := by
+    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc (show Endblock D (vertragVon D f) l Γ Λ from .ret e proof0) reserved := by
   intro c top h hK _ hW m pc σ ρ hp hlo _ hk hWa hpr
-  simp only [lowEnd, ← hlo0, resultWords_vertragVon, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨⟨ce, te⟩, he, hc⟩ := h
-  simp only [Prod.mk.injEq] at hc
-  obtain ⟨rfl, rfl⟩ := hc
-  simp only [execEnd, Ret]
-  change max te (max tens (retTop (functionFrame P f))) + cap ≤ Ks at hK
-  exact ret_ok hlo0 hens e he (by omega) m pc σ ρ hp hlo hk hW hWa
+  simp only [lowEnd] at h
+  split at h
+  · next hsc0 =>
+    -- a plain return lies outside every `locks` scope of the function
+    subst hsc0
+    simp only [← hlo0, resultWords_vertragVon, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨⟨ce, te⟩, he, hc⟩ := h
+    simp only [Prod.mk.injEq] at hc
+    obtain ⟨rfl, rfl⟩ := hc
+    simp only [execEnd, Ret]
+    change max te (max tens (retTop (functionFrame P f))) + cap ≤ Ks at hK
+    exact (ret_ok hlo0 hens e he (by omega) m pc σ ρ hp hlo hk hW hWa).toR
+  · cases h
 
 theorem endCons_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
@@ -41,9 +48,9 @@ theorem endCons_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : 
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {Λmid : List (Res D)} {s : Stmt D (vertragVon D f) l Γ Λ Λmid} {rest : Endblock D (vertragVon D f) l Γ Λmid} :
-    (∀ {pr ex}, StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H s reserved) →
-    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H rest reserved) →
-    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Endblock D (vertragVon D f) l Γ Λ from .cons s rest) reserved := by
+    (∀ {pr ex}, StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc s reserved) →
+    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc rest reserved) →
+    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc (show Endblock D (vertragVon D f) l Γ Λ from .cons s rest) reserved := by
   intro ihS ihRest c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
   simp only [lowEnd, ← hlo0, resultWords_vertragVon, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨cr, tr⟩, hr, ⟨cs, ts⟩, hs1, hc⟩ := h
@@ -88,8 +95,8 @@ theorem endBind_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : 
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {τ : Ty} {e : Expr D Γ Λ τ} {rest : Endblock D (vertragVon D f) l (τ :: Γ) Λ} :
-    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H rest reserved) →
-    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Endblock D (vertragVon D f) l Γ Λ from .bind e rest) reserved := by
+    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc rest reserved) →
+    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc (show Endblock D (vertragVon D f) l Γ Λ from .bind e rest) reserved := by
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
   simp only [lowEnd, ← hlo0, resultWords_vertragVon, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨ce, te⟩, he, ⟨cr, tr⟩, hr, hc⟩ := h

@@ -1,5 +1,8 @@
 module
-public import Bruecke.Anweisung.Zweig.Quelle
+public import Bruecke.Anweisung.Zweig.Schritt
+public import Bruecke.Anweisung.Zweig.Realisierung
+public import Bruecke.Anweisung.Lokal.SimulationB
+public import Bruecke.Quelle
 import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -204,26 +207,5 @@ theorem routine_meets : meetsU unit (wfU unit) routine koerper := by
   | _ =>
     rw [hv] at hp
     simp at hp
-
-/-! ## 3. Together -/
-
-/-- **The premises of the bridge for bodies with conditionals hold together**: the unit lowers,
-    passes every decided check, is refused by `zuBodyB` and carried by `zuBodyZ`, and every
-    function's duty over `zuBodyZ` is proved. -/
-theorem zweig_zeuge :
-    (lowerAllg unit).toOption.isSome = true ∧ nullB unit = true ∧ stimmigB unit = true ∧
-      bindFrischAllB unit = true ∧ rangB unit (rangAuto unit) = true ∧
-      ohneTransitionB unit = true ∧ zuBodyB unit routine = none ∧
-      ∀ c : Fin unit.fns.length, ∃ body, zuBodyZ unit (fnAt unit c) = some body ∧
-        meetsU unit (wfU unit) (fnAt unit c) body := by
-  refine ⟨lowered_some, checks_zeuge.1, checks_zeuge.2.1, checks_zeuge.2.2.1,
-    checks_zeuge.2.2.2.1, checks_zeuge.2.2.2.2, zuBodyB_zeuge, fun c => ?_⟩
-  have hc : c = ⟨0, by decide⟩ := Fin.ext (by
-    have := c.isLt
-    change c.val < 1 at this
-    show c.val = 0
-    omega)
-  subst hc
-  exact ⟨koerper, zuBodyZ_zeuge, routine_meets⟩
 
 end Gabbro.Bruecke.ZweigZeuge

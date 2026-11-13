@@ -1,0 +1,19 @@
+module speed_b {
+// (b) table scan: fill N slots, then sum one field with traverse.
+// Small input N=10: acc = 10, exit 10.
+table t count 10 { slot { a : u32 in 0 .. 255, } }
+static mut acc : u32 in 0 .. 600000 = 0;
+impl fn main() -> u32 in 0 .. 255
+    effects { reads t.slots, writes t.slots, reads acc, writes acc }
+{
+    traverse i over slots of t by unvisited touches writes t.slots {
+        t.slots[i].a = 1;
+    }
+    traverse j over slots of t by unvisited touches reads t.slots, reads acc, writes acc {
+        acc = (acc + t.slots[j].a) % 600000;
+    }
+    let m = acc % 251;
+    narrow m to 0 .. 250 else { return 0; }
+    return m;
+}
+}

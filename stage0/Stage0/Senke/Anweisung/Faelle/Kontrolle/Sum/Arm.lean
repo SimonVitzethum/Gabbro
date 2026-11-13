@@ -9,6 +9,7 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 variable {H : List D.Lock}
+variable {sc : List D.Lock}
 
 /-- The test writes exclusively above the complete source sum. -/
 theorem sumSpanTest_ok {m : Runner.Mem} {pc fp : Runner.W} {K s scratch k i : Nat}
@@ -52,12 +53,12 @@ variable {O : Orakel D} {passes : Nat}
   {P : Programm D} {f : D.Fn} {σ0 : World D} {ρ0 : Env D (D.params f)}
   {rp cfp fp : Runner.W} {lo Ks K : Nat} {ens : List II × Nat} {pr : List Nat}
 
-local notation "BR" => BlockRuns (reserved := reserved) O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K ens pr H
+local notation "BR" => BlockRuns (reserved := reserved) O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K ens pr H sc
 
 /-- Arm execution binds the entire payload, including its nested validity duties. -/
 theorem sumSpanArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option Ty}
     {b : Block D (vertragVon D f) l (ArmCtx Γ c) Λ Λ'} {cb : List II} {tb : Nat} {ex : Int × Int}
-    (hb : BR b) (made : lowB (reserved := reserved) passes A L (functionFrame P f) ens pr ex b = some (cb, tb))
+    (hb : BR b) (made : lowB (reserved := reserved) (sc := sc) passes A L (functionFrame P f) ens pr ex b = some (cb, tb))
     (fits : tb + cap ≤ Ks) (size : 16 * ((sumSpanPayloadC (frei Γ reserved) c).length + cb.length) < 2 ^ 31)
     (bound : frei Γ reserved + 1 + payloadWords c ≤ Ks) (hW : WIn L fp Ks K)
     (hlo : FB ≤ lo) (hlo0 : lo = (functionFrame P f).internalResult)
@@ -70,7 +71,7 @@ theorem sumSpanArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option 
       (pc + BitVec.ofNat 64 (16 * (sumSpanPayloadC (frei Γ reserved) c ++ cb).length))
       (pc + BitVec.ofNat 64 (16 * (sumSpanPayloadC (frei Γ reserved) c ++ cb).length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * (sumSpanPayloadC (frei Γ reserved) c ++ cb).length) + BitVec.ofInt 64 ex.2)
-      ((execBlock O passes R b σ (armEnv v ρ)).schrumpfArm c) reserved := by
+      ((execBlock O passes R b σ (armEnv v ρ)).schrumpfArm c) reserved sc := by
   cases c with
   | none =>
     simpa only [sumSpanPayloadC, payloadWords, copyWords, List.nil_append,

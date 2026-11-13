@@ -19,6 +19,7 @@ variable [Kern]
 
 variable {D : Deklaration} {L : Lay D}
 variable {H : List D.Lock}
+variable {sc : List D.Lock}
 
 theorem onOption_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
@@ -34,13 +35,13 @@ theorem onOption_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D �
     (hthen : ∀ (k : Zahl 0 (n - 1)), eval (σ.lese Λ o.orte) o (σ.lese Λ o.orte) ρ = some k →
       ∀ m' pc', PreS (reserved := reserved) L m' pc' fp K (frei (.index n :: Γ) reserved) ct (Env.cons (τ := .index n) k ρ) → Umf L A C dv m' fp Ks K H → Kopf L f m' fp K rp cfp ρ0 P σ0 →
       WeltAt m' L (σ.lese Λ o.orte) →
-      Sim (reserved := reserved) L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * ct.length))
+      Sim (reserved := reserved) (sc := sc) L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * ct.length))
         (pc' + BitVec.ofNat 64 (16 * ct.length) + BitVec.ofInt 64 (exPlus ex (ce.length + 1)).1)
         (pc' + BitVec.ofNat 64 (16 * ct.length) + BitVec.ofInt 64 (exPlus ex (ce.length + 1)).2)
         (execBlock O passes R t (σ.lese Λ o.orte) (Env.cons (τ := .index n) k ρ)))
     (helse : ∀ m' pc', PreS (reserved := reserved) L m' pc' fp K (frei Γ reserved) ce ρ → Umf L A C dv m' fp Ks K H → Kopf L f m' fp K rp cfp ρ0 P σ0 →
       WeltAt m' L (σ.lese Λ o.orte) →
-      Sim (reserved := reserved) L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * ce.length))
+      Sim (reserved := reserved) (sc := sc) L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * ce.length))
         (pc' + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofInt 64 ex.1)
         (pc' + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofInt 64 ex.2)
         (execBlock O passes R e (σ.lese Λ o.orte) ρ))
@@ -48,7 +49,7 @@ theorem onOption_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D �
         [ci 19 (frei Γ reserved + 1) (16 * (ct.length + 2)) 0] ++ ct ++
       [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce) ρ)
     (hu : Umf L A C dv m fp Ks K H) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
-    Sim (reserved := reserved) L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
+    Sim (reserved := reserved) (sc := sc) L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
       (pc + BitVec.ofNat 64 (16 * (cc ++ [ci 1 (frei Γ reserved + 1) (-1) 0, ci 10 (frei Γ reserved + 1) (frei Γ reserved) (frei Γ reserved + 1)] ++
         [ci 19 (frei Γ reserved + 1) (16 * (ct.length + 2)) 0] ++ ct ++
         [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce).length))
@@ -72,7 +73,7 @@ theorem onOption_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D �
     have ae := Agree.widen a1s hks
     have q1 := hq.next ae (Nat.le_refl _) (by omega)
     have hF := q1.frame
-    have sc := const_step (j := frei Γ reserved + 1) (k := -1) q1.left.code hF (by omega) hsm (by decide)
+    have hcs := const_step (j := frei Γ reserved + 1) (k := -1) q1.left.code hF (by omega) hsm (by decide)
     have acs : Agree fp (frei Γ reserved + 1) Ks m1
         (write m1 (slot fp (BitVec.ofNat 64 (frei Γ reserved + 1))) 8 (BitVec.ofInt 64 (-1)).toNat) :=
       agree_write (frameOK_sub hF hks).room (Nat.le_refl _) (by omega) _
@@ -83,7 +84,7 @@ theorem onOption_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D �
       rw [agree_rd_low ac hF.room (by omega) (by omega)]; exact hw
     have q2 := q1.next (ac.mono (Nat.le_succ _)) (Nat.le_refl _) (by omega)
     generalize write m1 (slot fp (BitVec.ofNat 64 (frei Γ reserved + 1))) 8 (BitVec.ofInt 64 (-1)).toNat = m2
-      at sc acs ac rc re q2
+      at hcs acs ac rc re q2
     have sxor := bin_star (o := 10) (d := frei Γ reserved + 1) (a := frei Γ reserved) (b := frei Γ reserved + 1)
       (g := fun x y => some (x ^^^ y)) q2.left.code rfl (by decide) q2.frame
       (by omega) (by omega) (by omega) hsm re rc rfl
@@ -103,7 +104,7 @@ theorem onOption_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D �
       ((a1s.trans ((acs.trans axs).mono (Nat.le_succ _))).mono (Nat.zero_le _))
     have hu1 := hu.agreeW hW (agreeW_of (a1.mono hlo2)) hlo
     have hk1 := hk.agreeW hW (agreeW_of (a1.mono hlo2)) (by omega)
-    have spre := s1.trans ((star_cast sc rfl (by simp)).trans sxor)
+    have spre := s1.trans ((star_cast hcs rfl (by simp)).trans sxor)
     have hbrz := h1.code 0 (by simp)
     simp only [ci, List.getElem_cons_zero, List.cons_append, Nat.mul_zero, BitVec.add_zero] at hbrz
     have h2 := h1.next (a := [ci 19 (frei Γ reserved + 1) (16 * (ct.length + 2)) 0]) (Agree.refl _ _ _ _) (Nat.le_refl _)

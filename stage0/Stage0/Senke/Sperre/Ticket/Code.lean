@@ -4,10 +4,13 @@
              now served and the waiter count. `nimmT`: take a ticket by `cas` on the next word, again until it holds;
              when the serving word holds my ticket, done, else waiters + 1, `futex_wait` on the serving word,
              waiters - 1, again. `gibT`: serving + 1 by `cas` (a LOCKED store: a plain store followed by the load of
-             the waiters could lose a wake-up); `futex_wake` when there are waiters.
+             the waiters could lose a wake-up); `futex_wake` when there are waiters. `gibTs`: the release chain of a
+             scoped return (lock stage 3), and the two scoped return codes built on it (`retScopedC`,
+             `retWhyScopedC`).
 -/
 module
 public import Stage0.Senke.Sperre.Code
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.Return
 @[expose] public section
 
 
@@ -59,5 +62,31 @@ def locksCodeT (L : Lay D) (a s : Nat) (cb : List II) (exL exN : Int) : List II 
 theorem locksCodeT_len (L : Lay D) (a s : Nat) (cb : List II) (x y : Int) :
     (locksCodeT L a s cb x y).length = cb.length + 86 := by
   simp only [locksCodeT, List.length_append, nimmT_len, gibT_len, List.length_singleton]; omega
+
+/-- **The release chain** of a scoped return: the give of every lock of `Ls`, in the order of `Ls` (the model's
+    `List.foldl World.gibt`), scratch from slot `s`. -/
+def gibTs (L : Lay D) (s : Nat) : List D.Lock → List II
+  | [] => []
+  | Lk :: Ls => gibT L (L.lk Lk) s ++ gibTs L s Ls
+
+theorem gibTs_len (L : Lay D) (s : Nat) : (Ls : List D.Lock) → (gibTs L s Ls).length = 16 * Ls.length
+  | [] => rfl
+  | Lk :: Ls => by
+    simp only [gibTs, List.length_append, gibT_len, gibTs_len L s Ls, List.length_cons]
+    omega
+
+/-- **The scoped normal return** after the result's code left it at `source`, in the model's order: the result into
+    the internal slots; the ensures and owed-invariant check `ens` (it reads the world, so it runs while every scope is
+    still held); the release chain of `scopes` (scratch from `retTop`, above the internal result and its status, so
+    the saved value survives it); the publication and `ret`, which read only the frame. -/
+def retScopedC (L : Lay D) (layout : FrameLayout) (source : Nat) (ens : List II) (scopes : List D.Lock) :
+    List II :=
+  copyWords (resultWords layout.result) layout.internalResult source ++ ens ++
+    gibTs L (retTop layout) scopes ++ publishC layout
+
+/-- **The scoped reason return**: the reason is a constant (no read of the world), so the release chain comes first
+    (scratch from `retTop`), then the ordinary reason code. -/
+def retWhyScopedC (L : Lay D) (layout : FrameLayout) (reason : Nat) (scopes : List D.Lock) : List II :=
+  gibTs L (retTop layout) scopes ++ retWhyC layout reason
 
 end Gabbro.Stage0.Senke

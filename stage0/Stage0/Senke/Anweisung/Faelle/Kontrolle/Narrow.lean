@@ -12,6 +12,7 @@ set_option maxHeartbeats 1000000
 
 variable [Kern] {D : Deklaration}
 variable {H : List D.Lock}
+variable {sc : List D.Lock}
 
 /-- Evaluate once, preserve the value, and dispatch on the outside flag. -/
 theorem narrow_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
@@ -32,20 +33,20 @@ theorem narrow_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
       Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * cx.length))
         (pc' + BitVec.ofNat 64 (16 * cx.length) + BitVec.ofInt 64 (exPlus ex (cr.length + 1)).1)
-        (pc' + BitVec.ofNat 64 (16 * cx.length) + BitVec.ofInt 64 (exPlus ex (cr.length + 1)).2) out reserved)
+        (pc' + BitVec.ofNat 64 (16 * cx.length) + BitVec.ofInt 64 (exPlus ex (cr.length + 1)).2) out reserved sc)
     (hrest : ∀ hin : low' ≤ (eval σ e σ ρ).n ∧ (eval σ e σ ρ).n ≤ high',
       ∀ m' pc', PreS L m' pc' fp K (frei (.int low' high' :: Γ) reserved) cr (Env.cons (τ := .int low' high')
         ⟨(eval σ e σ ρ).n, hin.1, hin.2⟩ ρ) reserved → Umf L A C dv m' fp Ks K H →
       Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * cr.length))
         (pc' + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.1)
-        (pc' + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.2) out reserved)
+        (pc' + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.2) out reserved sc)
     (hp : PreS L m pc fp K (frei Γ reserved) (narrowC (frei Γ reserved) low high low' high' ce cx cr) ρ reserved)
     (hu : Umf L A C dv m fp Ks K H) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
       (pc + BitVec.ofNat 64 (16 * (narrowC (frei Γ reserved) low high low' high' ce cx cr).length))
       (pc + BitVec.ofNat 64 (16 * (narrowC (frei Γ reserved) low high low' high' ce cx cr).length) + BitVec.ofInt 64 ex.1)
-      (pc + BitVec.ofNat 64 (16 * (narrowC (frei Γ reserved) low high low' high' ce cx cr).length) + BitVec.ofInt 64 ex.2) out reserved := by
+      (pc + BitVec.ofNat 64 (16 * (narrowC (frei Γ reserved) low high low' high' ce cx cr).length) + BitVec.ofInt 64 ex.2) out reserved sc := by
   let d := frei Γ reserved
   let k := narrowWords low high low' high'
   have signedX : signedWords low high ≤ k := narrowWords_source _ _ _ _
@@ -84,7 +85,7 @@ theorem narrow_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
   have changed := (Agree.widen a1 hks).trans (a2.trans a3)
   have hw3 : WeltAt m3 L σ :=
     weltAt_stab hW.lay (by have := hW.top; omega) m m3 hWa (changed.mono (Nat.zero_le _))
-  have branch := choice_ok (reserved := reserved) (P := P) (σ0 := σ0) (ex := ex)
+  have branch := choice_ok (sc := sc) (reserved := reserved) (P := P) (σ0 := σ0) (ex := ex)
     (cc := []) (ct := cx) (ce := cr) (d := d + k + 3)
     (b := decide (¬ (low' ≤ (eval σ e σ ρ).n ∧ (eval σ e σ ρ).n ≤ high')))
     (ot := out) (oe := out) (by omega) (by omega)

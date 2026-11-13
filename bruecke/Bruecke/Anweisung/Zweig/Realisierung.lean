@@ -1,14 +1,13 @@
 module
 public import Bruecke.Anweisung.Zweig.Rahmen
-public import Bruecke.Anweisung.Lokal.RealisierungB
+public import Bruecke.Anweisung.Lokal.Rahmen
 @[expose] public section
 
 /-!
-# C6, part 8: the environment that keeps every contract, for bodies with conditionals
+# Callee discovery in structured bodies
 
-`realisiertB` for the bodies `zuBodyZ` computes, rank by rank, with the frame `exec_rahmenZ`.
-Every call of a body the translation carries finds its callee (`callee_gefundenZ`), in a branch
-as well: the translation reads every statement of the flat body.
+The reader lemmas find each translated call in the flat source body and resolve its target.
+The carried realization in `Kette/` uses them to discharge the rank-decreasing callee duties.
 -/
 
 namespace Gabbro.Bruecke
@@ -108,97 +107,5 @@ theorem callee_gefundenZ {f : UFn} {body : List Gabbro.Body.Stmt} (h : zuBodyZ u
     (g : String) (args : List UArg) (hm : UStmt.call g args ∈ f.body) :
     ∃ gf, fnSuch u g = some gf :=
   stmtsBodyZ_callee f.ret _ f f.body body h g args hm
-
-/-! ## 2. The environment -/
-
-/-- **The environment exists, rank by rank** -- for the bodies with conditionals. -/
-theorem realisiertZ (S : Stimmig u)
-    (hZ : ∀ c : Fin u.fns.length, ∃ body, zuBodyZ u (fnAt u c) = some body ∧
-      meetsU u (wfU u) (fnAt u c) body)
-    (hlow : ∀ c : Fin u.fns.length, ∃ b0, lowBody u c (fnAt u c).body (fnAt u c).ret = .ok b0)
-    (rk : String → Nat) (hR : Rang u rk) : ∀ k, ∃ ρ, Realisiert u rk k ρ
-  | 0 => ⟨fun _ t => (t, none), fun _ _ _ h => absurd h (Nat.not_lt_zero _)⟩
-  | k + 1 => by
-      classical
-      obtain ⟨ρk, hk⟩ := realisiertZ S hZ hlow rk hR k
-      let ant : UFn → Gabbro.Body.State → Gabbro.Body.State × Option Gabbro.Body.Value :=
-        fun gf t =>
-          if preProp (wfU u) gf t then
-            match Gabbro.Body.finalState (Gabbro.Body.exec ρk ((zuBodyZ u gf).getD []) t) with
-            | some s' => (s', Gabbro.Body.finalValue (Gabbro.Body.exec ρk ((zuBodyZ u gf).getD []) t))
-            | none => (t, none)
-          else (t, none)
-      let ρ' : Gabbro.Body.Env := fun n t =>
-        if rk n = k then
-          match fnSuch u n with
-          | some gf => ant gf t
-          | none => ρk n t
-        else ρk n t
-      refine ⟨ρ', fun n gf hgf hlt => ?_⟩
-      by_cases hkn : rk n = k
-      · have hρ' : ∀ t, ρ' n t = ant gf t := fun t => by simp only [ρ', hkn, ↓reduceIte, hgf]
-        obtain ⟨c, rfl, hname⟩ := fnSuch_mem hgf
-        obtain ⟨body, hbody, hmeets⟩ := hZ c
-        obtain ⟨b0, hb0⟩ := hlow c
-        have hcallee : ∀ cn gf', fnSuch u cn = some gf' →
-            (∃ args, UStmt.call cn args ∈ (fnAt u c).body) →
-            Gabbro.Body.Contract ρk cn (preProp (wfU u) gf') (postP u gf') ∧
-            Gabbro.Body.Frame ρk cn gf'.puts := fun cn gf' hgf' ⟨args, hm⟩ =>
-          hk cn gf' hgf' (by have := hR c cn args hm; rw [hname] at this; omega)
-        constructor
-        · intro t hpre
-          rw [hρ' t]
-          simp only [ant, hpre, ↓reduceIte, hbody, Option.getD_some]
-          have hm := hmeets ρk t hpre.1 hpre.2
-          obtain ⟨s', hs', hpost⟩ := hyps_elim (wfU u) ρk (calleesOf (fnAt u c)) _ (fun g hg => by
-            obtain ⟨args, hm'⟩ := mem_calleesOf hg
-            obtain ⟨gf', hgf'⟩ := callee_gefundenZ hbody g args hm'
-            exact ⟨gf', hgf', hcallee g gf' hgf' ⟨args, hm'⟩⟩) hm
-          rw [hs']
-          exact hpost
-        · intro t p hp
-          rw [hρ' t]
-          simp only [ant]
-          split
-          · rw [hbody, Option.getD_some]
-            split
-            · rename_i s' hs'
-              exact exec_rahmenZ S c ρk (fnAt u c).ret ((fnAt u c).body.length + 1)
-                ((fnAt u c).body.length + 1) (fnAt u c).body (fnAt u c) (fnAt u c) b0 body rfl
-                (Sicht.refl _) hb0 hbody (fun cn gf' hgf' hm => (hcallee cn gf' hgf' hm).2)
-                t s' hs' p hp
-            · rfl
-          · rfl
-      · obtain ⟨hc, hf⟩ := hk n gf hgf (by omega)
-        refine ⟨fun t ht => ?_, fun t p hp => ?_⟩
-        · simp only [ρ', if_neg hkn]; exact hc t ht
-        · simp only [ρ', if_neg hkn]; exact hf t p hp
-
-theorem realisiert_alleZ (S : Stimmig u)
-    (hZ : ∀ c : Fin u.fns.length, ∃ body, zuBodyZ u (fnAt u c) = some body ∧
-      meetsU u (wfU u) (fnAt u c) body)
-    (hlow : ∀ c : Fin u.fns.length, ∃ b0, lowBody u c (fnAt u c).body (fnAt u c).ret = .ok b0)
-    (rk : String → Nat) (hR : Rang u rk) :
-    ∃ ρ : Gabbro.Body.Env, ∀ n gf, fnSuch u n = some gf →
-      Gabbro.Body.Contract ρ n (preProp (wfU u) gf) (postP u gf) ∧
-        Gabbro.Body.Frame ρ n gf.puts := by
-  let K := (u.fns.map (fun f => rk f.name)).foldr max 0 + 1
-  obtain ⟨ρ, hρ⟩ := realisiertZ S hZ hlow rk hR K
-  refine ⟨ρ, fun n gf hgf => hρ n gf hgf ?_⟩
-  obtain ⟨c, rfl, hname⟩ := fnSuch_mem hgf
-  have hmem : rk n ∈ u.fns.map (fun f => rk f.name) := by
-    rw [List.mem_map]
-    exact ⟨fnAt u c, List.get_mem _ _, by rw [hname]⟩
-  have : ∀ (l : List Nat) (x : Nat), x ∈ l → x ≤ l.foldr max 0 := by
-    intro l x hx
-    induction l with
-    | nil => cases hx
-    | cons y ys ih =>
-      simp only [List.foldr_cons]
-      rcases List.mem_cons.mp hx with rfl | hx
-      · exact Nat.le_max_left _ _
-      · exact Nat.le_trans (ih hx) (Nat.le_max_right _ _)
-  have := this _ _ hmem
-  omega
 
 end Gabbro.Bruecke

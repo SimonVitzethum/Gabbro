@@ -2,7 +2,7 @@ module
 public import Grammatik.Parser.Elab.UebersetzePipeline
 public import Bruecke.Pruefung
 public import Bruecke.Start
-public import Bruecke.Atomar
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -38,28 +38,11 @@ import all Init.Data.String.ToSlice
 
 
 /-!
-# P6: the duties of a SOURCE TEXT, computed in Lean -- and one generic theorem over every source
+# Source elaboration and the initial unit
 
-The principle (Simon, 2026-09-30): nothing in the compiler or the checker is there for particular
-programs; GabbroV is proved ALWAYS right by generic theorems over every source text. This file is
-that statement for premise (b) of the goal theorem:
-
-* `Pflichten src` is a `Prop` COMPUTED from the text: the Lean front end `uebersetzeAllg` elaborates
-  `src` (`uOf`), and the duties are `meetsU` of every function (the statement a person proves),
-  next to the Bool checks of the unit's shape (`nullB`, `stimmigB`, `rangB`,
-  `ohneTransitionB`) and the separate O43 duty (`SchnittstellenPflicht`). Nothing printed by
-  Rust is in it; Body proofs alone no longer close the interface-refinement component.
-* `nutzer_aus_quelle` is the theorem over EVERY `src`: if the front end accepts `src` and
-  `Pflichten src` is proved, premise (b) (`NutzerPflicht`, and with the atomic rely
-  `NutzerPflichtA`) holds for the unit `einheitAllg` built from what the front end produced.
-* `einheitAllg` is the unit: the parsed program, no lock invariant, the trivial axiom ensures, no
-  declared start, the ZERO memory (the C's statics are zero-initialised). A field whose range
-  does not contain 0 has no zero memory -- `nullB` refuses it by name, and no theorem here
-  claims anything about such a unit.
-
-What a person (or `gabbro prove --template`) supplies for a concrete text is a WITNESS `u` with
-`uOf src = some u`, checked by the kernel against the text (`decide +kernel`): an untrusted hint,
-like a proof term. The statement stays the computed one.
+`uOf` ties a duty to the Lean front end's actual output. `einheitAllg` equips that output
+with the empty lock invariant, trivial hardware contract, declared entry roots and checked
+zero memory. The consolidated source endpoints live in `Kette/Quelle.lean`.
 -/
 
 namespace Gabbro.Bruecke
@@ -68,6 +51,15 @@ open Gabbro.Grammatik
 open Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
+
+instance (u : UProg) : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length))
+
+/-- A unit without statics has no atomic global. -/
+theorem declOf_kein_atomar (u : UProg) (h : u.globs = []) :
+    ∀ g : (declOf u).Glob, (declOf u).atomar g = false := fun g => by
+  have h1 : g.val < u.globs.length := g.isLt
+  have h2 : u.globs.length = 0 := by rw [h]; rfl
+  omega
 
 /-- The elaborated program of a source text, if the Lean front end accepts it. -/
 def uOf (src : String) : Option UProg :=
@@ -151,14 +143,6 @@ def einheitAllg (u : UProg) (P : Programm (declOf u)) (h : nullB u = true) : Zie
   starts := startsAllg u
   sp0 := nullSp u h
 
-/-- The duties of a source text: THE STATEMENT, computed. `u` is not a free parameter: `uOf src =
-    some u` fixes it, so a witness can only be the front end's own output. -/
-def Pflichten (src : String) : Prop :=
-  ∃ u : UProg, uOf src = some u ∧ nullB u = true ∧ stimmigB u = true ∧
-    rangB u (rangAuto u) = true ∧ ohneTransitionB u = true ∧ SchnittstellenPflicht u ∧
-    ∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = some body ∧
-      meetsU u (wfU u) (fnAt u c) body
-
 /-- The lowering is the last stage of the front end. -/
 theorem lower_of_uebersetze {src : String} {u : UProg} {P : Programm (declOf u)}
     {fs : List (declOf u).Fn} (h : uebersetzeAllg src = .ok ⟨u, P, fs⟩) :
@@ -193,45 +177,6 @@ theorem uOf_eq {src : String} {u : UProg} {P : Programm (declOf u)} {fs : List (
   unfold uOf
   rw [h]
 
-/-- **PREMISE (b) OF THE GOAL THEOREM FOR EVERY SOURCE TEXT** the Lean front end accepts, from the
-    computed duties `Pflichten src` -- generic in `src`, no per-program fact in the statement. -/
-theorem nutzer_aus_quelle {src : String} (hp : Pflichten src) {u : UProg}
-    {P : Programm (declOf u)} {fs : List (declOf u).Fn}
-    (h : uebersetzeAllg src = .ok ⟨u, P, fs⟩) :
-    ∃ hn : nullB u = true, Zielsatz.NutzerPflicht (einheitAllg u P hn) := by
-  obtain ⟨u', hu', hn, hs, hr, hPlain, hPtr, hz⟩ := hp
-  rw [uOf_eq h] at hu'
-  injection hu' with hu'
-  subst hu'
-  exact ⟨hn, bruecke_nutzer (lower_of_uebersetze h) (stimmig_of hs hPlain) (rangAuto u) (rang_of hr) hz
-    (hPtr P fs (lower_of_uebersetze h))
-    _ rfl rfl rfl⟩
-
-/-- The same premise WITH THE ATOMIC RELY (`NutzerPflichtA`). -/
-theorem nutzerA_aus_quelle {src : String} (hp : Pflichten src) {u : UProg}
-    {P : Programm (declOf u)} {fs : List (declOf u).Fn}
-    (h : uebersetzeAllg src = .ok ⟨u, P, fs⟩) :
-    ∃ hn : nullB u = true, Zielsatz.NutzerPflichtA (einheitAllg u P hn) := by
-  obtain ⟨hn, hb⟩ := nutzer_aus_quelle hp h
-  exact ⟨hn, Zielsatz.nutzerPflichtA_ohne_atomar (declOf_kein_atomar u (nullB_globs hn)) hb⟩
-
-#print axioms nutzer_aus_quelle
-#print axioms nutzerA_aus_quelle
-
-/-! ## Enumerations of a unit built from a source
-
-The checker's Bool `akzeptiert_pruefer.akzeptiert` is decided over enumerations of the unit's functions, locks
-and carriers; a per-program instance decides it by computation (`decide`).
--/
-
-/-- `nullB` is part of the computed duties. -/
-theorem pflichten_null {src : String} (hp : Pflichten src) {u : UProg} {P : Programm (declOf u)}
-    {fs : List (declOf u).Fn} (h : uebersetzeAllg src = .ok ⟨u, P, fs⟩) : nullB u = true := by
-  obtain ⟨u', hu', hn, _⟩ := hp
-  rw [uOf_eq h] at hu'
-  injection hu' with hu'
-  subst hu'
-  exact hn
 
 /-- The enumeration of the functions of a generically lowered unit. -/
 def aufzFn (u : UProg) : Zielsatz.Aufzaehlung (declOf u).Fn := ⟨List.finRange u.fns.length, List.mem_finRange⟩

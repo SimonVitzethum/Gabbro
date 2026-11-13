@@ -113,4 +113,6 @@ theorem lowGlobRead_sim {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
   exact congrArg some (valOf_eval_heq hty.symm ls.term
     (Expr.glob (D := declOf u) i hd) he σ₀ σ ρ).symm
 
+#print axioms lowGlobRead_sim
+
 end Gabbro.Bruecke

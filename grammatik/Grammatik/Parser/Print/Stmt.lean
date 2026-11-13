@@ -21,6 +21,13 @@ namespace Gabbro.Grammatik.Parser
 
 set_option maxRecDepth 100000
 
+/-- Canonical literal arm names print as number tokens; all other strings retain the
+    ordinary name token, including synthetic AST names outside source identifier syntax. -/
+def armMusterTok (s : String) : Token :=
+  match armZahl? s with
+  | some n => if strEq s (toString n) then .num n else nameTok s
+  | none => nameTok s
+
 /-- The tokens of a raw header string (the words the reader kept as text): the lexer's tokens without the
     end marker. -/
 def rohToks (s : String) : List Token :=
@@ -129,7 +136,7 @@ def druckAnw : SAnw → List Token
   | .elsif c b => [.wort "else", .wort "if"] ++ druckToks c ++ druckAnw b
   | .cases g arms => [.wort "match"] ++ druckToks g ++ [.zeichen "{"] ++ druckAnwListe arms ++ [.zeichen "}"]
   | .arm v b t =>
-    [nameTok v] ++
+    [armMusterTok v] ++
       (match b with
         | some x => [.zeichen "(", nameTok x, .zeichen ")"]
         | none => []) ++

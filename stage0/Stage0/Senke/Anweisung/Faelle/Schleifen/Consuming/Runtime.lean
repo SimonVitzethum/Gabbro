@@ -19,7 +19,7 @@ variable [Kern]
     This theorem is a composition lemma, not an admission theorem: the
     instruction-level header/scan/post-body simulations are separate duties. -/
 theorem runtime {D : Deklaration} {L : Lay D} {P : Programm D} {f : D.Fn}
-    {Γ : Ctx} {l : Bool} {reserved : Nat}
+    {Γ : Ctx} {l : Bool} {reserved : Nat} {sc : List D.Lock}
     {σ0 : World D} {ρ0 : Env D (D.params f)}
     {rp cfp fp pc exit outerLeave outerNext : W} {lo K : Nat} {pr : List Nat}
     (t : D.Tab)
@@ -58,13 +58,13 @@ theorem runtime {D : Deklaration} {L : Lay D} {P : Programm D} {f : D.Fn}
             Reach L fp lo K pr ⟨pc, fp⟩ m exit (inv σm' ρ'.tail).1 ρ'.tail reserved
           else Stops ⟨pc, fp⟩ m (logikCode (D := D) .schleife)
         else Stops ⟨pc, fp⟩ m (logikCode (D := D) .schleife)
-      | .zurueck σ' v => RetZ L P f σ0 ρ0 fp K rp cfp ⟨pc, fp⟩ m σ' v
-      | .why σ' r => RetWhy L f fp K rp cfp ⟨pc, fp⟩ m σ' r
+      | .zurueck σ' v => RetZR L P f σ0 ρ0 fp K rp cfp sc ⟨pc, fp⟩ m σ' v
+      | .why σ' r => RetWhyR L f fp K rp cfp sc ⟨pc, fp⟩ m σ' r
       | .logik e => Stops ⟨pc, fp⟩ m (logikCode e)
       | .hardware e => Stops ⟨pc, fp⟩ m (hwCode e)) :
     ∀ n m σ ρ, entry n m σ ρ →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m exit outerLeave outerNext
-        (verbrauchLauf (l := l) t body inv sel massW bound n σ ρ) reserved := by
+        (verbrauchLauf (l := l) t body inv sel massW bound n σ ρ) reserved sc := by
   intro n
   induction n with
   | zero =>
@@ -93,7 +93,7 @@ theorem runtime {D : Deklaration} {L : Lay D} {P : Programm D} {f : D.Fn}
             (∃ m', Star ⟨pc, fp⟩ m ⟨pc, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧
               Keeps fp pr m m' ∧ entry n m' σ' ρ') →
             Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m exit outerLeave outerNext
-              (verbrauchLauf (l := l) t body inv sel massW bound n σ' ρ') reserved := by
+              (verbrauchLauf (l := l) t body inv sel massW bound n σ' ρ') reserved sc := by
           intro σ' ρ' continuation
           obtain ⟨m', run, frame, kept, next⟩ := continuation
           exact Sim.prefix lower run frame kept (ih m' σ' ρ' next)

@@ -123,6 +123,7 @@ theorem prim_ruf_legs : ∀ (f : String) (xs : List SExpr)
   have hA := args_legs xs rest F'' hxs hgl
   simp only [List.append_assoc] at hA ⊢
   simp only [List.nil_append, hA] at ⊢
+  exact awaitSuffix_stop _ _ hrs
 
 -- Call legs from head lawfulness and argument legs: the
 -- `parsePrimary` leg above, the `parseUnary` fall-through on

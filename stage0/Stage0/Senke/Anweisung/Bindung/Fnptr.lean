@@ -11,6 +11,7 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 variable [Kern] {D : Deklaration} {L : Lay D}
 variable {H : List D.Lock}
+variable {sc : List D.Lock}
 
 theorem encErg_wert {e : Option Ty} {τ : Ty} (he : e = some τ) {v : ErgVal D e} {w : Runner.W}
     (h : EncErg L e v w) : Enc L τ (ergWert he v) w := by
@@ -130,7 +131,7 @@ theorem indStmt_ok {O : Orakel D} {passes : Nat} {A : D.Fn → Nat} {C : D.Fn �
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2)
-      (execStmt O passes R (Stmt.callInd (l := l) p args hfit hr) σ ρ) reserved := by
+      (execStmt O passes R (Stmt.callInd (l := l) p args hfit hr) σ ρ) reserved sc := by
   have hb := lowInd_top hc
   have hks := hW.ks
   have hi := lowInd_ok (same := rfl) hS hA p args (σ.lese Λ (p.orte ++ args.orte)) (σ.lese Λ (p.orte ++ args.orte)) hc ht hp hu hW hWa

@@ -227,10 +227,12 @@
         `exchange` is lowered to ONE read-modify-write (`SchrittW.rmw`: the write sits directly above the message
         read; on the runner a `lock cmpxchg`);
     (3) every lock take is an acquire and every give a release. The model's lock is the FIFO ticket lock
-        (Code/Conc/Lock.lean: fetch-add on `next`, acquire spin on `now`, release advance); the lock Stage 0 emits
-        is a different one (stage0/Stage0/Senke/Sperre: owner word with `cas`, a hold count, a waiter count and
-        `futex_wait`/`futex_wake`), so `GabbroZielLeben` and `GabbroZielWarten`, which are stated over the ticket
-        lock, are NOT statements about the emitted lock;
+        (Code/Conc/Lock.lean: fetch-add on `next`, acquire spin on `now`, release advance); Stage 0 emits a ticket
+        lock of the same discipline (stage0/Stage0/Senke/Sperre/Ticket: `cas` on `next`, waiting for `serving` by
+        `futex_wait` instead of spinning, release by `cas` on `serving` and `futex_wake` of all waiters, with a
+        waiter count). Only its uncontended paths are proved (`locks_okT`); no theorem ties a futex-blocked thread
+        to the model's waiting, so `GabbroZielLeben` and `GabbroZielWarten`, stated over the model's spinning
+        lock, are still NOT statements about the emitted lock;
     (4) carriers are the locations (a table or an atomic array is one location of W);
     (5) what G reads from the outside -- foreign answers (`Orakel.wirkt`), register reads, the visibility of
         `awaits` -- is read over G's memory: the last executed write, not an older message.

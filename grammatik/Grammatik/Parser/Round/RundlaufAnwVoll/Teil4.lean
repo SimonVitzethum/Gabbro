@@ -113,6 +113,34 @@ theorem anw_cond (c : SExpr) (t : SAnw) (eis : List SAnw) (s : Option SAnw) (hc 
   simp only [List.append_assoc] at hE hT hC ⊢
   simp only [parseWenn, hC, hT, hE, List.nil_append]
 
+/-- Name patterns still use exactly the previous token reader path. -/
+theorem nimmArmMuster_nameTok (s : String) (rest : List Token) :
+    nimmArmMuster (nameTok s :: rest) = .ok (s, rest) := by
+  unfold nameTok
+  split <;> rfl
+
+/-- The numeric token case preserves the arm-name representation as well. -/
+theorem nimmArmMuster_armMusterTok (s : String) (rest : List Token) :
+    nimmArmMuster (armMusterTok s :: rest) = .ok (s, rest) := by
+  cases h : armZahl? s with
+  | none => simpa only [armMusterTok, h] using nimmArmMuster_nameTok s rest
+  | some n =>
+    simp only [armMusterTok, h]
+    by_cases hq : strEq s (toString n) = true
+    · rw [if_pos hq]
+      have he : s = toString n := strKlingt _ _ hq
+      simp only [nimmArmMuster, he]
+    · simpa only [if_neg hq] using nimmArmMuster_nameTok s rest
+
+theorem armMusterTok_ne_zeichen (s z : String) : armMusterTok s ≠ .zeichen z := by
+  cases h : armZahl? s with
+  | none => simpa only [armMusterTok, h] using nameTok_ne_zeichen s z
+  | some n =>
+    simp only [armMusterTok, h]
+    by_cases hq : strEq s (toString n) = true
+    · simp only [if_pos hq, ne_eq, reduceCtorEq, not_false_eq_true]
+    · simpa only [if_neg hq] using nameTok_ne_zeichen s z
+
 /-- The legs of a `match` arm. -/
 def ArmBein (x : SAnw) : Prop :=
   ∃ v bi b, x = .arm v bi b ∧ BlockBein b ∧ BlockKopf b
@@ -135,26 +163,26 @@ theorem arme_rund : ∀ (arms : List SAnw) (rest : List Token) (F : Nat),
     cases bi with
     | none =>
       simp only [druckAnwListe, druckAnw, List.length_append, List.length_cons, List.length_nil] at hF
-      have hd : druckAnwListe (.arm v none b :: arms) ++ .zeichen "}" :: rest = nameTok v :: .zeichen "=>" ::
+      have hd : druckAnwListe (.arm v none b :: arms) ++ .zeichen "}" :: rest = armMusterTok v :: .zeichen "=>" ::
           (druckAnw b ++ (druckAnwListe arms ++ .zeichen "}" :: rest)) := by
         simp only [druckAnwListe, druckAnw, List.append_nil, List.cons_append, List.nil_append, List.append_assoc]
       rw [hd]
       rw [hus] at hB ⊢
       simp only [List.cons_append] at hB
-      simp only [parseArme, List.cons_append, List.cons.injEq, nameTok_ne_zeichen, false_and, imp_self,
-  implies_true, nimmName, nameText_nameTok, fordereZeichen, Token.zeichen.injEq, String.reduceEq, strEq_self,
+      simp only [parseArme, List.cons_append, List.cons.injEq, armMusterTok_ne_zeichen, nameTok_ne_zeichen, false_and, imp_self,
+  implies_true, nimmArmMuster_armMusterTok, nimmName, nameText_nameTok, fordereZeichen, Token.zeichen.injEq, String.reduceEq, strEq_self,
   ↓reduceIte, hB (by simp only [fbA]; omega), hR (by omega)]
     | some y =>
       simp only [druckAnwListe, druckAnw, List.length_append, List.length_cons, List.length_nil] at hF
-      have hd : druckAnwListe (.arm v (some y) b :: arms) ++ .zeichen "}" :: rest = nameTok v ::
+      have hd : druckAnwListe (.arm v (some y) b :: arms) ++ .zeichen "}" :: rest = armMusterTok v ::
           .zeichen "(" :: nameTok y :: .zeichen ")" :: .zeichen "=>" ::
           (druckAnw b ++ (druckAnwListe arms ++ .zeichen "}" :: rest)) := by
         simp only [druckAnwListe, druckAnw, List.cons_append, List.nil_append, List.append_assoc]
       rw [hd]
       rw [hus] at hB ⊢
       simp only [List.cons_append] at hB
-      simp only [parseArme, List.cons_append, List.cons.injEq, nameTok_ne_zeichen, false_and, imp_self,
-  implies_true, nimmName, nameText_nameTok, fordereZeichen, strEq_self, ↓reduceIte, hB (by simp only [fbA]; omega),
+      simp only [parseArme, List.cons_append, List.cons.injEq, armMusterTok_ne_zeichen, nameTok_ne_zeichen, false_and, imp_self,
+  implies_true, nimmArmMuster_armMusterTok, nimmName, nameText_nameTok, fordereZeichen, strEq_self, ↓reduceIte, hB (by simp only [fbA]; omega),
   hR (by omega)]
 
 theorem anw_cases (g : SExpr) (arms : List SAnw) (hg : gut g = true) (ha : ∀ x ∈ arms, ArmBein x) :

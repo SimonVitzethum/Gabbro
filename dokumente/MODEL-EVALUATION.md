@@ -208,3 +208,29 @@ of the wave. Waves 5 and 6 needed one build each plus a rebuild after a witness 
 A measurement by an agent that can RUN the compiler was worth more than any review this day: it showed that the
 feature the lead had counted as the largest win (narrowing by the guard) removed no workaround on real code until
 equality guards were added.
+
+**After waves 10–17 (2026-11-13).** Sixteen tasks; four builds of stage0, four of the bridge, single-module
+checks of `grammatik/`.
+
+- **Opus 5.5**: the lock gate (returns inside `locks` with real releases, 82 files, blind) needed ONE kind of
+  repair — a missing implicit argument at seven call sites of one lemma — and then built; the corpus went from
+  368 to all 376 probes. Earlier in the day it found that the lead's own stage-3 statement was unprovable as
+  written and restated it with indexed return relations. Thirteen blind tasks, nine built unchanged.
+- **GPT 6.1 Sol**: seven tasks. Built unchanged or after one line: the bridge chain consolidation (166
+  declarations deleted), the six comparisons, the mutable-local snapshots (where it found the lead's continuation
+  rule unsound, with a counterexample). The contended lock paths (12 modules, 28 theorems) needed three lines
+  and corrected three points of the brief against the code. Failed first delivery: the number `match` (a keyword
+  as a name, sixteen kernel witnesses, broken round-trip proofs); its own repair then built at once. The port of
+  the async model needed eight repairs by the lead, all of the kind a port without a build produces (visibility
+  of witness definitions, a `rw` through an unreduced match, structure-literal layout). Twice it STOPPED at a
+  wall instead of weakening a statement (shadowing: the invariant-only change is false, with a counterexample
+  from the definitions) — the most valuable behaviour of the day. When a task is too large it delivers a built
+  foundation and says plainly what is missing.
+- **Muse Spark 1.3**: designs and measurements only. The runner-speed measurement and the async design were
+  usable as delivered; the speed-against-C analysis cites the language documents rather than the Lean model and
+  one earlier claim of the form "X is accepted" was false when measured. Rule kept: a Muse claim about what the
+  compiler accepts is measured before it is used; its designs name what they could not verify.
+
+Statement reviews: Sol's reading of the ported async model found five theorems whose names claim more than their
+statements (`asyncOk_refines` does not use its checker premise; `cancellation_no_leak` is relative to free
+parameters). Those are not cited as safety results until the G instance exists.

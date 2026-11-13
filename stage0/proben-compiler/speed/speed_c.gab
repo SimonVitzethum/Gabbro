@@ -1,0 +1,29 @@
+module speed_c {
+// (c) lexer-style byte scan: fill with 97 + (i % 3), count the 97 bytes.
+// Small input N=12: hits at i = 0,3,6,9 -> 4, exit 4.
+table buf count 12 { slot { b : u32 in 0 .. 255, } }
+static mut hits : u32 in 0 .. 600000 = 0;
+impl fn class(x : u32 in 0 .. 255) -> u32 in 0 .. 2
+    effects { pure }
+{
+    if x == 'a' { return 0; }
+    if x == 'b' { return 1; }
+    return 2;
+}
+impl fn main() -> u32 in 0 .. 255
+    effects { reads buf.slots, writes buf.slots, reads hits, writes hits }
+{
+    traverse i over slots of buf by unvisited touches writes buf.slots {
+        buf.slots[i].b = 97 + (i % 3);
+    }
+    traverse j over slots of buf by unvisited touches reads buf.slots, reads hits, writes hits {
+        let c = class(buf.slots[j].b);
+        if c == 0 {
+            hits = (hits + 1) % 600000;
+        }
+    }
+    let m = hits % 251;
+    narrow m to 0 .. 250 else { return 0; }
+    return m;
+}
+}

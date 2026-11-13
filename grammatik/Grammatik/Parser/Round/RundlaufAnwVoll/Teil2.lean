@@ -164,6 +164,8 @@ theorem anw_call (f : String) (xs : List SExpr) (hf : NameGut f) (hw : istAnwWor
     have hA := argsM xs (.zeichen ";" :: rest) F' (args_gut xs hxs) (by omega)
     simp only [parseKopfStmt]
     rw [show F' + 1 = F' + 1 from rfl, kopf_ruf_head, hA]
+    dsimp only
+    rw [awaitSuffix_stop _ _ (show ruhigSuff (.zeichen ";" :: rest) = true from rfl)]
     simp only [parseRufMitElse, parseRufSchwanz, strEq_semi_frage, Bool.false_eq_true, fordereZeichen, strEq_self, ↓reduceIte]
   rw [hd]
   exact parseStmt_ident (F' + 3) f _ (by

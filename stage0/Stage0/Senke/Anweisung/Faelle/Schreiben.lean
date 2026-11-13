@@ -14,6 +14,7 @@ variable [Kern]
 
 variable {D : Deklaration} {L : Lay D}
 variable {H : List D.Lock}
+variable {sc : List D.Lock}
 
 theorem assignVar_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
@@ -23,7 +24,7 @@ theorem assignVar_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {τ : Ty} {x : Var Γ τ} {e : Expr D Γ Λ τ} :
-    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Stmt D (vertragVon D f) l Γ Λ Λ from .assignVar x e) reserved := by
+    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc (show Stmt D (vertragVon D f) l Γ Λ Λ from .assignVar x e) reserved := by
   intro c top h hK _ hW m pc σ ρ hp _ hlo2 _ _ hWa hpr
   simp only [lowS, ← hlo0, resultWords_vertragVon] at h
   split at h
@@ -82,7 +83,7 @@ theorem call_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f 
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {callee : D.Fn} {args : Args D Γ Λ (D.params callee)} {proof0 : _} {proof1 : _}
     (hH : HeldIn H Λ (vertragVon D f).boden) :
-    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Stmt D (vertragVon D f) l Γ Λ (nach D callee Λ) from .call callee args proof0 proof1) reserved := by
+    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc (show Stmt D (vertragVon D f) l Γ Λ (nach D callee Λ) from .call callee args proof0 proof1) reserved := by
   intro c top h hK _ hW m pc σ ρ hp _ hlo2 hu hk hWa hpr
   simp only [lowS, ← hlo0, resultWords_vertragVon, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨ca, ta⟩, hca, hc⟩ := h
@@ -111,14 +112,20 @@ theorem ret_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f :
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {e : ErgExpr D Γ Λ (D.erg f)} {proof0 : _} :
-    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Stmt D (vertragVon D f) l Γ Λ Λ from .ret e proof0) reserved := by
+    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc (show Stmt D (vertragVon D f) l Γ Λ Λ from .ret e proof0) reserved := by
   intro c top h hK _ hW m pc σ ρ hp _ hlo2 _ hk hWa hpr
-  simp only [lowS, ← hlo0, resultWords_vertragVon, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨⟨ce, te⟩, he, hc⟩ := h
-  simp only [Prod.mk.injEq] at hc
-  obtain ⟨rfl, rfl⟩ := hc
-  simp only [execStmt, Sim]
-  change max te (max tens (retTop (functionFrame P f))) + cap ≤ Ks at hK
-  exact ret_ok (reserved := reserved) hlo0 hens e he (by omega) m pc σ ρ hp hlo2 hk hW hWa
+  simp only [lowS] at h
+  split at h
+  · next hsc0 =>
+    -- a plain return lies outside every `locks` scope of the function
+    subst hsc0
+    simp only [← hlo0, resultWords_vertragVon, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨⟨ce, te⟩, he, hc⟩ := h
+    simp only [Prod.mk.injEq] at hc
+    obtain ⟨rfl, rfl⟩ := hc
+    simp only [execStmt, Sim]
+    change max te (max tens (retTop (functionFrame P f))) + cap ≤ Ks at hK
+    exact (ret_ok (reserved := reserved) hlo0 hens e he (by omega) m pc σ ρ hp hlo2 hk hW hWa).toR
+  · cases h
 
 end Gabbro.Stage0.Senke

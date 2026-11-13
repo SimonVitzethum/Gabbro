@@ -1,0 +1,14 @@
+// Refused by source expansion: number match: duplicate pattern value (65 == 'A').
+module ir_match_number_duplicate {
+impl fn classify(k : u32 in 0 .. 100) -> u32 in 0 .. 10 {
+    match k {
+        65 => { return 3; }
+        'A' => { return 5; }
+        _ => { return 7; }
+    }
+}
+impl fn main() -> u32 in 0 .. 255 {
+    let a = classify(65);
+    return a;
+}
+}

@@ -9,13 +9,14 @@ set_option maxHeartbeats 1000000
 set_option maxRecDepth 2048
 variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 variable {H : List D.Lock}
+variable {sc : List D.Lock}
 variable {O : Orakel D} {passes : Nat}
   {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
   {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} {P : Programm D}
   {f : D.Fn} {σ0 : World D} {ρ0 : Env D (D.params f)} {rp cfp fp : Runner.W} {lo Ks K : Nat}
   {ens : List II × Nat} {pr : List Nat} {ex : Int × Int}
 
-local notation "BR" => BlockRuns (reserved := reserved) O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K ens pr H
+local notation "BR" => BlockRuns (reserved := reserved) O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K ens pr H sc
 
 /-- The source span stays below every test. Only the selected arm copies it into
     the payload binding; recursive tests never change any payload word. -/
@@ -23,7 +24,7 @@ theorem lowSumTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} (arms : Arms D (vertragVon D f) l Γ Λ Λ' cs)
     (blocks : ArmsAll (fun b => BR b) arms) {span k : Nat} {cd : List II} {top : Nat}
     (width : ∀ i : Fin cs.length, 1 + payloadWords (cs.get i) ≤ span)
-    (made : lowSumTags (reserved := reserved) passes A L (functionFrame P f) ens pr ex arms span k = some (cd, top))
+    (made : lowSumTags (reserved := reserved) (sc := sc) passes A L (functionFrame P f) ens pr ex arms span k = some (cd, top))
     (fits : top + cap ≤ Ks) (size : 16 * cd.length < 2 ^ 31)
     (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = (functionFrame P f).internalResult)
     (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
@@ -37,7 +38,7 @@ theorem lowSumTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       (pc + BitVec.ofNat 64 (16 * cd.length))
       (pc + BitVec.ofNat 64 (16 * cd.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * cd.length) + BitVec.ofInt 64 ex.2)
-      (execArms O passes R arms v σ ρ) reserved := by
+      (execArms O passes R arms v σ ρ) reserved sc := by
   cases arms with
   | nil => exact Fin.elim0 v.1
   | cons b rest =>
@@ -62,7 +63,7 @@ theorem lowSumTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
             [ci 19 (frei Γ reserved + span) (16 * ((cp ++ cb).length + 2)) 0] ++
             (cp ++ cb) ++ [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr) ρ reserved := by
         simpa only [cp, List.length_append, List.append_assoc, Int.natCast_add] using pre
-      have result := choice_ok (P := P) (σ0 := σ0) (ex := ex) (d := frei Γ reserved + span)
+      have result := choice_ok (sc := sc) (P := P) (σ0 := σ0) (ex := ex) (d := frei Γ reserved + span)
         (b := k + v.1.val == k) (ot := execArms O passes R (.cons b rest) v σ ρ)
         (oe := execArms O passes R (.cons b rest) v σ ρ)
         (by omega) (by omega)
@@ -123,7 +124,7 @@ termination_by cs.length
 theorem lowSumTags_code_bound {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs)
     (layout : FrameLayout) (span k : Nat) {code : List II} {top : Nat}
-    (made : lowSumTags (reserved := reserved) passes A L layout ens pr ex arms span k = some (code, top)) :
+    (made : lowSumTags (reserved := reserved) (sc := sc) passes A L layout ens pr ex arms span k = some (code, top)) :
     5 * cs.length ≤ code.length := by
   cases arms with
   | nil =>

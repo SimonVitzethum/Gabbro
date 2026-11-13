@@ -12,6 +12,7 @@ public import Stage0.Senke.Stopp
 public import Stage0.Senke.Tor
 public import Stage0.Senke.Tore.Code
 public import Stage0.Senke.Sperre.Code
+public import Stage0.Senke.Sperre.Ticket.Code
 public import Stage0.Senke.Anweisung.Bytes.Code
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Allocation
 @[expose] public section
@@ -94,19 +95,26 @@ def lowErg (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} : {e : Option Ty} → ErgE
   | some τ, .val e, d, reserved =>
     (lowE (reserved := reserved) L e d).map fun p => (p.1, max p.2 (d + valueWords τ))
 
-/-- A scoped normal return emits the ordinary return code; the release of the
-    scopes is ghost (`RueckgabeScoped`). -/
+/-- A scoped normal return from inside the enclosing `locks` scopes `sc` (innermost first): its cleanup names
+    exactly those scopes, none twice. The result's code, then `retScopedC`: the result saved, ensures and the owed
+    invariants checked while every scope is held, the scopes released (scratch from `retTop`), the result
+    published (`Sperre/Ticket/RueckLauf.lean`). -/
 def lowRetScoped {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)} (L : Lay D)
     (layout : FrameLayout) (ens : List II × Nat) (d : Nat)
-    (e : ErgExpr D Γ Λ V.erg) (reserved : Nat := 0) : Option (List II × Nat) := do
-  let ce ← lowErg (reserved := reserved) L e d
-  pure (ce.1 ++ retC layout d ens.1, max ce.2 (max ens.2 (retTop layout)))
+    (e : ErgExpr D Γ Λ V.erg) (Rr : RueckRessourcen D V Λ) (sc : List D.Lock) (reserved : Nat := 0) :
+    Option (List II × Nat) :=
+  if Rr.scopes = sc ∧ Rr.scopes.Nodup then do
+    let ce ← lowErg (reserved := reserved) L e d
+    pure (ce.1 ++ retScopedC L layout d ens.1 Rr.scopes, max ce.2 (max ens.2 (retTop layout + 18)))
+  else none
 
-/-- A scoped reason return emits the ordinary reason code; the release of the
-    scopes is ghost (`RueckgabeScoped`). -/
-def lowRetWhyScoped (layout : FrameLayout) {V : Vertrag D} (r : Fin V.gruende)
-    (d : Nat) : Option (List II × Nat) :=
-  some (retWhyC layout r.val, max d (retTop layout))
+/-- A scoped reason return from inside the enclosing `locks` scopes `sc`: its cleanup names exactly those scopes,
+    none twice; `retWhyScopedC` releases them, then runs the ordinary reason code. -/
+def lowRetWhyScoped (L : Lay D) (layout : FrameLayout) {V : Vertrag D} {Λ : List (Res D)} (r : Fin V.gruende)
+    (Rr : RueckRessourcen D V Λ) (sc : List D.Lock) (d : Nat) : Option (List II × Nat) :=
+  if Rr.scopes = sc ∧ Rr.scopes.Nodup then
+    some (retWhyScopedC L layout r.val Rr.scopes, max d (retTop layout + 18))
+  else none
 
 /-- Receive the entire shared return area. Its unused padding is copied as raw
     frame words; only a complete normal value or reason is interpreted by the

@@ -1,5 +1,5 @@
 module
-public import Bruecke.Simulation
+public import Bruecke.Kette.Quelle
 public import Bruecke.Pruefung
 public import Grammatik.Parser.Elab.UebersetzePipeline
 import all Init.Data.Repr
@@ -81,7 +81,8 @@ def fsZ : List (declOf uZ).Fn := ((lowerAllg uZ).toOption.get low_some).2
 
 theorem lowZ : lowerAllg uZ = .ok (PZ, fsZ) := except_ok_get low_some
 
-theorem stimmigZ : Stimmig uZ := stimmig_of (by decide) (by decide)
+theorem getragenZ : GetragenG uZ (fun _ => True) :=
+  getragenG_of_bools (by decide) (by decide) (by decide)
 
 /-- The rank check refuses the unit: `h` calls itself. -/
 theorem rang_faellt : rangB uZ (rangAuto uZ) = false := by decide
@@ -236,7 +237,8 @@ theorem rz_nlogik (f : (declOf uZ).Fn) (σ : World (declOf uZ)) (ρ : Env (declO
     split <;> (intro h; cases h)
   · intro h; cases h
 
-theorem gesenktZ : Gesenkt uZ PZ := gesenkt_of stimmigZ.ohneReq stimmigZ.ohneTransition lowZ
+theorem gesenktZ : Gesenkt uZ PZ := gesenkt_of (fun c => getragenZ.ohneReq c True.intro)
+  (fun c => getragenZ.ohneTransition c True.intro) lowZ
 
 theorem tabZ : tabIdx uZ.tabs "T" = .ok tT := rfl
 
@@ -258,12 +260,12 @@ theorem rz_respektiert : RespektiertRahmen PZ RZ := by
     subst hf
     rw [hs]
     have hW := wrel_enc uZ σ (fun _ => .int 0)
-    refine (post_iff gesenktZ gI (stimmigZ.art gI) stimmigZ.tab (stimmigZ.frei gI) (stimmigZ.olds gI)
-      (stimmigZ.post gI) (stimmigZ.boolErg gI) stimmigZ.boolTab σ σ ρ v (eintritt uZ gI σ ρ) (eintritt uZ gI σ ρ) hW
+    refine (post_iff gesenktZ gI (getragenZ.art gI True.intro) getragenZ.tab (getragenZ.frei gI True.intro) (getragenZ.olds gI True.intro)
+      (getragenZ.post gI True.intro) (getragenZ.boolErg gI True.intro) getragenZ.boolTab σ σ ρ v (eintritt uZ gI σ ρ) (eintritt uZ gI σ ρ) hW
       (eintritt_lrel gI σ ρ) hW).mp ?_
     have hv := platz hW 0
     rw [h7] at hv
-    have hwf := wf_of_wrel uZ stimmigZ.boolTab hW
+    have hwf := wf_of_wrel uZ getragenZ.boolTab hW
     simp [postU, ensList, ensClause, ensExpr, ensSide, sideExpr, slotPlace, opOf, idxExpr, clauseProp,
       clauseAux, chain, andAll, resultClause, fnAt, gI, uZ, Gabbro.Body.eval, Gabbro.Body.binop,
       eintritt] at hv ⊢
@@ -293,7 +295,7 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
   have hL0 : LRel (fnAt uZ fI) 0 ρ₀ (eintritt uZ fI σ7 .nil).local' := fun p j hj => by
     simp [fnAt, fI, uZ, paramPos] at hj
   obtain ⟨callee, σr, envA, hname, _, hsl, _, _, _, hcases, _⟩ :=
-    lowCall_sim fI (show lowCall uZ fI "g" [] = .ok ⟨Λ', gst⟩ from hgst) hx (stimmigZ.art fI) stimmigZ.tab stimmigZ.namen (fun c => (stimmigZ.art c).2.1) O0 0 RZ σ7 ρ₀ _ hW0 hL0
+    lowCall_sim fI (show lowCall uZ fI "g" [] = .ok ⟨Λ', gst⟩ from hgst) hx (getragenZ.art fI True.intro) getragenZ.tab (fun c => getragenZ.namen c True.intro) (fun c => (getragenZ.art c True.intro).2.1) O0 0 RZ σ7 ρ₀ _ hW0 hL0
   have hcallee : callee = gI := by
     rcases callee with ⟨_ | _ | _ | n, hc⟩
     · simp [fnAt, uZ] at hname
@@ -310,7 +312,7 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
     have hrun : execEnd O0 0 RZ (Endblock.cons gst rest) σ7 ρ₀ = execEnd O0 0 RZ rest σr ρ₀ := by
       simp only [execEnd, hex]
     obtain ⟨σ'', v'', hend, hsl'', _⟩ := lowEnd_sim fI (show lowEndF uZ fI .empty (Λ := Λ') = .ok rest from hrest) (rfl : endBody uZ (fnAt uZ fI) .empty = some [])
-      (stimmigZ.art fI) stimmigZ.tab O0 0 RZ σr ρ₀ _ (wrel_slots uZ hsl hW0) hL0
+      (getragenZ.art fI True.intro) getragenZ.tab O0 0 RZ σr ρ₀ _ (wrel_slots uZ hsl hW0) hL0
     have hX := execEnd_heq (V := verOf uZ fI) O0 0 RZ (ctxParams_eq uZ fI).symm
       (anfangRes_eq uZ fI).symm (PZ.rumpf fI) (Endblock.cons gst rest) hPb σ7 .nil ρ₀ HEq.rfl
     have hmain := (zurueck_heq (ctxParams_eq uZ fI).symm _ _ hX σ'' v'').mpr (hrun.trans hend)
@@ -318,8 +320,8 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
       (reqAmEintritt_wahr gesenktZ fI σ7 .nil)).1 σ'' v'' hmain
     let s1 : Gabbro.Body.State := ⟨enc uZ σ'' (fun _ => .int 0), (eintritt uZ fI σ7 .nil).local'⟩
     have hW1 : WRel uZ σ'' s1.world := wrel_enc uZ σ'' _
-    have hpost := (post_iff gesenktZ fI (stimmigZ.art fI) stimmigZ.tab (stimmigZ.frei fI)
-      (stimmigZ.olds fI) (stimmigZ.post fI) (stimmigZ.boolErg fI) stimmigZ.boolTab σ7 σ'' .nil v'' _ s1 hW0
+    have hpost := (post_iff gesenktZ fI (getragenZ.art fI True.intro) getragenZ.tab (getragenZ.frei fI True.intro)
+      (getragenZ.olds fI True.intro) (getragenZ.post fI True.intro) (getragenZ.boolErg fI True.intro) getragenZ.boolTab σ7 σ'' .nil v'' _ s1 hW0
       (eintritt_lrel fI σ7 .nil) hW1).mpr hens
     have h1 := platz hW1 1
     have h0 : ((σ''.slots tT 1 vF : Zahl 0 10)).n = 0 := by rw [hsl'', hsl]; rfl

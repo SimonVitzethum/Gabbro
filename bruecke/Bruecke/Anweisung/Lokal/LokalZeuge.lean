@@ -1,5 +1,6 @@
 module
-public import Bruecke.Anweisung.Lokal.QuelleB
+public import Bruecke.Anweisung.Lokal.SimulationB
+public import Bruecke.Quelle
 import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -41,7 +42,7 @@ import all Init.Data.String.ToSlice
 return b; }` -- as the elaborated unit (a lowered-unit witness, not a measured source-parser
 acceptance claim). The lowering accepts it, the decided per-unit checks hold (freshness of `a`
 and `b` included), `zuBody` refuses it (it has binders), `zuBodyB` gives the expected Body
-program, and its duty `meetsU` is proved: the premises of `laufB`/`bruecke_nutzerB` hold
+program, and its duty `meetsU` is proved: the local-binding premises of the consolidated chain hold
 together on a body that binds, rebinds and reads its locals.
 
 (`b = b + 1;` as in the design note is refused by the lowering itself: `b + 1` has the range
@@ -179,26 +180,5 @@ theorem routine_meets : meetsU unit (wfU unit) routine koerper := by
   | _ =>
     rw [hv] at hp
     simp at hp
-
-/-! ## 3. Together -/
-
-/-- **The premises of the bridge for bodies with local bindings hold together**: the unit
-    lowers, passes every decided check, is refused by `zuBody` and carried by `zuBodyB`, and every
-    function's duty over `zuBodyB` is proved. -/
-theorem lokal_zeuge :
-    (lowerAllg unit).toOption.isSome = true ∧ nullB unit = true ∧ stimmigB unit = true ∧
-      bindFrischAllB unit = true ∧ rangB unit (rangAuto unit) = true ∧
-      ohneTransitionB unit = true ∧ zuBody unit routine = none ∧
-      ∀ c : Fin unit.fns.length, ∃ body, zuBodyB unit (fnAt unit c) = some body ∧
-        meetsU unit (wfU unit) (fnAt unit c) body := by
-  refine ⟨lowered_some, checks_zeuge.1, checks_zeuge.2.1, checks_zeuge.2.2.1,
-    checks_zeuge.2.2.2.1, checks_zeuge.2.2.2.2, zuBody_zeuge, fun c => ?_⟩
-  have hc : c = ⟨0, by decide⟩ := Fin.ext (by
-    have := c.isLt
-    change c.val < 1 at this
-    show c.val = 0
-    omega)
-  subst hc
-  exact ⟨koerper, zuBodyB_zeuge, routine_meets⟩
 
 end Gabbro.Bruecke.LokalZeuge

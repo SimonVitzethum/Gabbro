@@ -24,6 +24,7 @@ variable [Kern]
 
 variable {D : Deklaration} {L : Lay D} {reserved : Nat}
 variable {H : List D.Lock}
+variable {sc : List D.Lock}
 
 /-! ## The loop -/
 
@@ -43,14 +44,14 @@ theorem trav_ok (hn : inW (D.count t) (D.count t) = true) (hci : lowE (reserved 
       Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ' →
       Sim L P f σ0 ρ0 rp cfp fp lo K (frei Γ reserved :: pr) ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * cb.1.length))
         (pc' + BitVec.ofNat 64 (16 * cb.1.length) + BitVec.ofInt 64 48)
-        (pc' + BitVec.ofNat 64 (16 * cb.1.length) + BitVec.ofInt 64 0) (execBlock O passes R body σ' ρ') reserved)
+        (pc' + BitVec.ofNat 64 (16 * cb.1.length) + BitVec.ofInt 64 0) (execBlock O passes R body σ' ρ') reserved sc)
     {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
     (hp : PreS L m pc fp K (frei Γ reserved) (travCode (frei Γ reserved) (D.count t) ci'.1 cb.1) ρ reserved)
     (hu : Umf L A C dv m fp Ks K H) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
       (pc + BitVec.ofNat 64 (16 * (travCode (frei Γ reserved) (D.count t) ci'.1 cb.1).length)) eL eN
       (traverseLauf (l := l) (fun σ ρ => execBlock O passes R body σ ρ)
-        (fun σ ρ => let σ := σ.lese Λ inv.orte; (σ, wahr? (eval σ inv σ ρ))) (alleIndizes (D.count t)) σ ρ) reserved := by
+        (fun σ ρ => let σ := σ.lese Λ inv.orte; (σ, wahr? (eval σ inv σ ρ))) (alleIndizes (D.count t)) σ ρ) reserved sc := by
   have hindex : valueWords (.index (D.count t)) = 1 :=
     integerWords_word (by omega) (by have h := hn; simp only [inW, Bool.and_eq_true, decide_eq_true_eq] at h; omega)
   have hctxWidth : frei (.index (D.count t) :: Γ) reserved = frei Γ reserved + 1 := by

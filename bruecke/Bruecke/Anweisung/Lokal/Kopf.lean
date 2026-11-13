@@ -11,8 +11,7 @@ public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T3.Teil1
 `lowBodyF` reads `let` and `let mut` itself (`Endblock.bind`, the scope one longer) and passes a
 slot write, a call or an assignment to `lowStmtL` (its last case, `Endblock.cons`). These are the
 three dispatch lemmas the run follows, the G facts of `Endblock.bind` (the binder's outcome is
-the rest's, `EndAusgang.schrumpf`), and `laufZiel_schritt`: one Body step to a related state
-moves the run's conclusion back over it.
+the rest's, `EndAusgang.schrumpf`), and the canonical execution equations used by the carried run simulation.
 -/
 
 namespace Gabbro.Bruecke
@@ -130,56 +129,11 @@ theorem execEnd_cons_ok {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {Λ Λ' : L
     execEnd O passes R (Endblock.cons st rest) σ ρ = execEnd O passes R rest σ₁ ρ₁ := by
   simp only [execEnd, h]
 
-/-! ## 3. The run's conclusion, and one step of it -/
-
-/-- What the run of a lowered body says against its Body translation (the conclusion of `lauf`):
-    every `logik` outcome is a callee's, and a return has an answer table under which the Body
-    run ends in a related state with the same answer. -/
-abbrev LaufZiel (u : UProg) (c : Fin u.fns.length) (O : Orakel (declOf u)) (passes : Nat)
-    (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
-    {Γ : Ctx} {Λ : List (Res (declOf u))} (b0 : Endblock (declOf u) (verOf u c) false Γ Λ)
-    (σ : World (declOf u)) (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State)
-    (bs : List Gabbro.Body.Stmt) : Prop :=
-  (∀ e, execEnd O passes R b0 σ ρ = .logik e →
-    ∃ (g : (declOf u).Fn) (σr : World (declOf u)) (envA : Env (declOf u) ((declOf u).params g)),
-      R g σr envA = .logik e) ∧
-  (∀ σ' v, execEnd O passes R b0 σ ρ = .zurueck σ' v →
-    ∃ A : List Eintrag, (∀ e ∈ A, EintragGut u e) ∧ Oben u A s.world ∧ Schluessel A ∧
-      ∀ ρB, Treu A ρB → RahmenAlle u ρB →
-        ∃ s', Gabbro.Body.finalState (Gabbro.Body.exec ρB bs s) = some s' ∧
-          Gabbro.Body.finalValue (Gabbro.Body.exec ρB bs s) = ergValOf (verOf u c).erg v ∧
-          WRel u σ' s'.world)
-
 theorem exec_cons_running (ρB : Gabbro.Body.Env) (x : Gabbro.Body.Stmt)
     (xs : List Gabbro.Body.Stmt) (s s₁ : Gabbro.Body.State)
     (h : Gabbro.Body.step ρB x s = .running s₁) :
     Gabbro.Body.exec ρB (x :: xs) s = Gabbro.Body.exec ρB xs s₁ := by
   simp only [Gabbro.Body.exec, h]
-
-/-- **One step**: where the G outcome of `b0` is the one of `b1` (for `logik` and for a return), and
-    the Body statement `x` steps to `s₁` without lowering a ghost counter, the conclusion for
-    `b1` from `s₁` over `xs` is the conclusion for `b0` from `s` over `x :: xs`. -/
-theorem laufZiel_schritt {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes : Nat}
-    {R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f}
-    {Γ Γ₁ : Ctx} {Λ Λ₁ : List (Res (declOf u))}
-    {b0 : Endblock (declOf u) (verOf u c) false Γ Λ}
-    {b1 : Endblock (declOf u) (verOf u c) false Γ₁ Λ₁}
-    {σ σ₁ : World (declOf u)} {ρ : Env (declOf u) Γ} {ρ₁ : Env (declOf u) Γ₁}
-    {s s₁ : Gabbro.Body.State} {x : Gabbro.Body.Stmt} {xs : List Gabbro.Body.Stmt}
-    (hrun : (∀ e, execEnd O passes R b0 σ ρ = .logik e → execEnd O passes R b1 σ₁ ρ₁ = .logik e) ∧
-      (∀ σ' v, execEnd O passes R b0 σ ρ = .zurueck σ' v →
-        execEnd O passes R b1 σ₁ ρ₁ = .zurueck σ' v))
-    (hstep : ∀ ρB, RahmenAlle u ρB → Gabbro.Body.step ρB x s = .running s₁)
-    (hgz : ∀ w, gz w s.world ≤ gz w s₁.world)
-    (ih : LaufZiel u c O passes R b1 σ₁ ρ₁ s₁ xs) :
-    LaufZiel u c O passes R b0 σ ρ s (x :: xs) := by
-  refine ⟨fun e h => ih.1 e (hrun.1 e h), fun σ' v h => ?_⟩
-  obtain ⟨A, hg, ho, hk, hb⟩ := ih.2 σ' v (hrun.2 σ' v h)
-  refine ⟨A, hg, oben_mono hgz ho, hk, fun ρB hT hF => ?_⟩
-  obtain ⟨s', h1, h2, h3⟩ := hb ρB hT hF
-  refine ⟨s', ?_, ?_, h3⟩
-  · rw [exec_cons_running ρB x xs s s₁ (hstep ρB hF)]; exact h1
-  · rw [exec_cons_running ρB x xs s s₁ (hstep ρB hF)]; exact h2
 
 /-- The run's outcomes of a binder are the rest's. -/
 theorem bind_lauf {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}

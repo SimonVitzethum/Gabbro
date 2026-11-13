@@ -1,7 +1,8 @@
 /-
   Scoped-return witnesses: a value return from inside two nested lock scopes
   releases both scopes innermost first and returns the value; a reason return
-  through one scope releases it. The release order is the exact
+  through one scope releases it. The lowering takes them under exactly their
+  enclosing scopes (`sc`) and emits the real releases (`retScopedC`). The release order is the exact
   `World.gibt_foldl_spur` instance (last release on top).
 -/
 module
@@ -147,9 +148,9 @@ theorem scoped_spur_zeuge :
       [Ereignis.gibt outer, Ereignis.gibt inner] ++ world.spur :=
   World.gibt_foldl_spur world [inner, outer]
 
-/-- The two-scope return lowers to nonempty code. -/
+/-- The two-scope return lowers to nonempty code under its two enclosing scopes. -/
 theorem scoped_lowS_zeuge :
-    ∃ code top, lowS 1 (fun _ => 0) lay (functionFrame program entry) post
+    ∃ code top, lowS (sc := [inner, outer]) 1 (fun _ => 0) lay (functionFrame program entry) post
       [] (0, 0) stmt = some (code, top) ∧ 0 < code.length := by
   exact ⟨_, _, rfl, by decide⟩
 
@@ -164,17 +165,20 @@ theorem scoped_why_spur_zeuge :
       [Ereignis.gibt inner] ++ world.spur :=
   World.gibt_foldl_spur world [inner]
 
-/-- The reason return through one scope lowers to nonempty code. -/
+/-- The reason return through one scope lowers to nonempty code under that scope. -/
 theorem scoped_why_lowS_zeuge :
-    ∃ code top, lowS 1 (fun _ => 0) lay (functionFrame program entry) post
+    ∃ code top, lowS (sc := [inner]) 1 (fun _ => 0) lay (functionFrame program entry) post
       [] (0, 0) stmtWhy = some (code, top) ∧ 0 < code.length := by
   exact ⟨_, _, rfl, by decide⟩
 
-/-- Both end-block forms lower. -/
+/-- Both end-block forms lower under their enclosing scopes, and not outside them: a scoped return names exactly
+    the scopes it leaves. -/
 theorem scoped_end_lowS_zeuge :
-    (lowEnd 1 (fun _ => 0) lay (functionFrame program entry) post
+    (lowEnd (sc := [inner, outer]) 1 (fun _ => 0) lay (functionFrame program entry) post
       [] (0, 0) endStmt).isSome = true ∧
+    (lowEnd (sc := [inner]) 1 (fun _ => 0) lay (functionFrame program entry) post
+      [] (0, 0) endStmtWhy).isSome = true ∧
     (lowEnd 1 (fun _ => 0) lay (functionFrame program entry) post
-      [] (0, 0) endStmtWhy).isSome = true := ⟨rfl, rfl⟩
+      [] (0, 0) endStmt).isSome = false := ⟨rfl, rfl, rfl⟩
 
 end Gabbro.Stage0.Senke.ScopedZeuge

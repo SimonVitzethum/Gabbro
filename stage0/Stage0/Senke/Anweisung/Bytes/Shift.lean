@@ -16,6 +16,7 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 variable {reserved : Nat}
 variable [Kern] {D : Deklaration}
+variable {sc : List D.Lock}
 
 /-- State-field lowering preserves G's successful write and its failed-prestate stop. -/
 theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
@@ -27,13 +28,13 @@ theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     (hn : a ≤ nach ∧ nach ≤ b) (he : D.erlaubt t field von nach = true)
     (hw : (vertragVon D f).schreibt t = true) (hl : darf D t Λ)
     {c : List II} {top : Nat} {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
-    (h : lowS (reserved := reserved) passes A L (functionFrame P f) ens pr ex (Stmt.shift (l := l) t field ht i von nach hn he hw hl) = some (c, top))
+    (h : lowS (reserved := reserved) (sc := sc) passes A L (functionFrame P f) ens pr ex (Stmt.shift (l := l) t field ht i von nach hn he hw hl) = some (c, top))
     (hK : top ≤ Ks) (hW : WIn L fp Ks K) (hp : PreS L m pc fp K (frei Γ reserved) c ρ reserved)
     (hlo : lo ≤ frei Γ reserved) (hWa : WeltAt m L σ) (hpr : ∀ j ∈ pr, j < frei Γ reserved) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2)
-      (execStmt O passes R (Stmt.shift (l := l) t field ht i von nach hn he hw hl) σ ρ) reserved := by
+      (execStmt O passes R (Stmt.shift (l := l) t field ht i von nach hn he hw hl) σ ρ) reserved sc := by
   simp only [lowS] at h
   split at h
   · next hfit =>
@@ -87,7 +88,7 @@ theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     have hWE1 := hpw.wstab m m1 hWE (a1s.mono (Nat.zero_le _))
     simp only [execStmt]
     change Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m _ _ _
-      (if old.n = von then Ausgang.ok _ ρ else .logik .vorzustand) reserved
+      (if old.n = von then Ausgang.ok _ ρ else .logik .vorzustand) reserved sc
     by_cases hv : old.n = von
     · rw [if_pos hv]
       have sg := guard_pass hp1.left.code (by have := hp.small; omega) hw1 (by simp [hv, Runner.IR.bool])

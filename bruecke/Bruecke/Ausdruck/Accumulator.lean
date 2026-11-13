@@ -62,10 +62,37 @@ theorem ensSide_vor {fn : UFn} {a a' : Acc} {sd : USide} {x : Gabbro.Body.Expr}
     · obtain ⟨_, rfl⟩ := ensSide_sonst h (fun b f ix e => hold ⟨b, f, ix, e⟩) herg
       exact Vor.refl _
 
+/-- Scalar arithmetic with a Body form cannot select the separate bounded-count lowering. -/
+theorem sideExpr_ohneCount {fn : UFn} {sd : USide} {x : Gabbro.Body.Expr}
+    (h : sideExpr u fn sd = some x) : usideHatZaehle sd = false := by
+  have recurse (sd' : USide) (hlt : sizeOf sd' < sizeOf sd) {x' : Gabbro.Body.Expr}
+      (h' : sideExpr u fn sd' = some x') : usideHatZaehle sd' = false :=
+    sideExpr_ohneCount h'
+  cases sd with
+  | add l r | sub l r | mul l r =>
+    cases hl : sideExpr u fn l with
+    | none => simp [sideExpr, hl, binE] at h
+    | some le =>
+      cases hr : sideExpr u fn r with
+      | none => simp [sideExpr, hl, hr, binE] at h
+      | some re =>
+        simp only [usideHatZaehle, recurse l (by simp_wf <;> omega) hl,
+          recurse r (by simp_wf <;> omega) hr, Bool.false_or]
+  | _ => simp_all [sideExpr, usideHatZaehle]
+termination_by sizeOf sd
+decreasing_by assumption
+
 /-- The represented comparison sides cannot select the separate bounded-count lowering. -/
 theorem ensSide_ohneCount {fn : UFn} {a a' : Acc} {sd : USide} {x : Gabbro.Body.Expr}
     (h : ensSide u fn a sd = some (x, a')) : usideHatZaehle sd = false := by
-  cases sd <;> simp_all [ensSide, sideExpr, usideHatZaehle]
+  by_cases hold : ∃ b f ix, sd = .old b f ix
+  · obtain ⟨b, f, ix, rfl⟩ := hold
+    rfl
+  · by_cases herg : sd = .erg
+    · subst herg
+      rfl
+    · exact sideExpr_ohneCount
+        (ensSide_sonst h (fun b f ix e => hold ⟨b, f, ix, e⟩) herg).1
 
 theorem ensExpr_vor {fn : UFn} : ∀ (e : UEns) {a a' : Acc} {x : Gabbro.Body.Expr},
     ensExpr u fn a e = some (x, a') → Vor a a'

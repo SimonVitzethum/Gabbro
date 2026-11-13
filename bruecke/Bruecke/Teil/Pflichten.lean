@@ -3,16 +3,12 @@ public import Bruecke.Quelle
 @[expose] public section
 
 /-!
-# Per-function bridge duties
+# Carried shape and explicit open duties
 
-This is the duty-definition checkpoint of the partial bridge. The function predicate is tied
-explicitly to the elaborated unit by `uOf src = some u`. Shape checks for tables, invariants,
-statics and the rank remain global. Pointer refinement is split by the same function predicate.
-
-These duties do NOT yet imply `NutzerPflicht`: an open declared root can have a nontrivial
-`requires`. Its body duty assumes that predicate and cannot establish it at startup. A complete
-partial bridge needs an additional start duty for open roots (or a restriction on the roots).
-No source-to-`NutzerPflicht` theorem is claimed here.
+`Getragen` restricts function shape conditions to a call-closed carried set. The global table,
+invariant and static conditions remain unchanged. `OffenePflicht` supplies canonical body
+and interface duties for its complement; `Teil/Start` states the separate open-root duty.
+`Kette/` assembles those duties with the carried Body simulation.
 -/
 
 namespace Gabbro.Bruecke
@@ -59,45 +55,6 @@ def OffenePflicht (u : UProg) (C : Fin u.fns.length → Prop) : Prop :=
     lowerAllg u = .ok (P, fs) →
       (∀ passes, KoerperGutS P passes (axWahr (declOf u)) (SperrInv.leer (declOf u)) c) ∧
       ∀ n (hf : (declOf u).passt c n = true), PtrZielVerfeinert P c n hf
-
-/-- Source duties with Body proofs only on the carried call-closed set. Unlike `Pflichten`,
-    the dependent unit is an implicit parameter; the first conjunct fixes it to the source's
-    actual elaboration. This checkpoint still lacks the open-root part of `StartPflicht`. -/
-def PflichtenTeil (src : String) {u : UProg} (C : Fin u.fns.length → Prop) : Prop :=
-  uOf src = some u ∧ nullB u = true ∧ Getragen u C ∧ rangB u (rangAuto u) = true ∧
-    SchnittstellenPflichtTeil u C ∧
-    (∀ c, C c → ∃ body, zuBody u (fnAt u c) = some body ∧
-      meetsU u (wfU u) (fnAt u c) body) ∧ OffenePflicht u C
-
-/-- Taking every function preserves all structural checks of the existing bridge. -/
-theorem getragen_of_stimmig {u : UProg} (S : Stimmig u) :
-    Getragen u (fun _ => True) where
-  geschlossen := fun _ _ _ _ _ _ => True.intro
-  boolTab := S.boolTab
-  boolErg := fun c _ => S.boolErg c
-  tab := S.tab
-  art := fun c _ => S.art c
-  namen := fun c _ => S.namen c
-  frei := fun c _ => S.frei c
-  olds := fun c _ => S.olds c
-  post := fun c _ => S.post c
-  schreibt := fun c _ => S.schreibt c
-  ohneReq := fun c _ => S.ohneReq c
-  ohneGrund := fun c _ => S.ohneGrund (fnAt u c) (List.get_mem _ _)
-  ohneInv := S.ohneInv
-  ohneGlob := S.ohneGlob
-  ohneTransition := fun c _ => S.ohneTransition c
-
-/-- Existing source duties imply the all-carried partial duties, for the very same elaboration. -/
-theorem pflichtenTeil_of_pflichten {src : String} (hp : Pflichten src) :
-    ∃ u : UProg, PflichtenTeil src (u := u) (fun _ => True) := by
-  obtain ⟨u, hu, hn, hs, hr, hPlain, hPtr, hz⟩ := hp
-  refine ⟨u, hu, hn, getragen_of_stimmig (stimmig_of hs hPlain), hr, ?_,
-    fun c _ => hz c, ?_⟩
-  · intro P fs hlow c _ n hf
-    exact hPtr P fs hlow c n hf
-  · intro c hc
-    exact (hc True.intro).elim
 
 /-- Reassemble O43 without imposing carried-target duties on open targets. -/
 theorem schnittstellen_aus_teil {u : UProg} {C : Fin u.fns.length → Prop}

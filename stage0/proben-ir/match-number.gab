@@ -1,0 +1,24 @@
+// Exit 112: inputs 1, 2, 65 ('A'), 7 (CODE), 9, 100 select 11, 13, 17, 19, 23, 29.
+// Sum: 11 + 13 = 24; + 17 = 41; + 19 = 60; + 23 = 83; + 29 = 112.
+module ir_match_number {
+const CODE : u32 = 7;
+impl fn classify(k : u32 in 0 .. 100) -> u32 in 0 .. 30 {
+    match k {
+        1 => { return 11; }
+        2 => { return 13; }
+        'A' => { return 17; }
+        CODE => { return 19; }
+        9 => { return 23; }
+        _ => { return 29; }
+    }
+}
+impl fn main() -> u32 in 0 .. 255 {
+    let a = classify(1);
+    let b = classify(2);
+    let c = classify(65);
+    let d = classify(7);
+    let e = classify(9);
+    let f = classify(100);
+    return a + b + c + d + e + f;
+}
+}

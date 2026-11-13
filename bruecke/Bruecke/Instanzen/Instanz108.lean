@@ -3,8 +3,8 @@ public import Bruecke.Pflichten
 public import Bruecke.Pruefung
 public import Grammatik.Korpus.Programme.Einheit108
 public import Bruecke.Start
-public import Bruecke.Atomar
 public import Bruecke.Quelle
+public import Bruecke.Kette.Quelle
 public import Duty.Duty0108DisjointStartLocks
 @[expose] public section
 
@@ -71,33 +71,32 @@ theorem meets_alle : ∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = s
   | ⟨0, _⟩ => exact ⟨read_a_body, rfl, read_a_meets⟩
   | ⟨1, _⟩ => exact ⟨read_c_body, rfl, read_c_meets⟩
 
-theorem stimmig : Stimmig u := stimmig_of (by decide) (by decide)
-
-theorem rang : Rang u (rangAuto u) := rang_of (by decide)
-
 /-! GENERIC-WITNESS beispiele/0108-disjoint-start-locks.gab pflichten_108
 
-    P6: the computed statement `Pflichten src108` (`Quelle.lean`), witnessed by the front end's own
+    P6: the computed statement `PflichtenAlle src108` (`Quelle.lean`), witnessed by the front end's own
     output and GabbroV's duty proofs. -/
 
 theorem pflichten_108 (hPtr : SchnittstellenPflicht u) :
-    Pflichten Gabbro.Grammatik.Parser.UebersetzeAllg2.src108 :=
-  ⟨u, uOf_eq Gabbro.Grammatik.Einheit108.uebersetzt8, by decide, by decide, by decide,
-    by decide, hPtr, meets_alle⟩
+    PflichtenAlle Gabbro.Grammatik.Parser.UebersetzeAllg2.src108 :=
+  ⟨u, uOf_eq Gabbro.Grammatik.Einheit108.uebersetzt8, by decide, by decide, by decide, by decide,
+    by decide, hPtr, fun c => by
+      obtain ⟨body, hb, hm⟩ := meets_alle c
+      exact ⟨body, zuBodyZ_of_zuBodyB (zuBodyB_of_zuBody hb), hm⟩⟩
 
 /-- Premise (b) from the Body duties and the separately owed O43 refinement. -/
 theorem nutzer_bruecke (hPtr : SchnittstellenPflicht u) :
-    Gabbro.Grammatik.Zielsatz.NutzerPflicht Gabbro.Grammatik.Einheit108.E8 :=
-  bruecke_nutzer Gabbro.Grammatik.Einheit108.low8 stimmig (rangAuto u) rang meets_alle
-    (hPtr _ _ Gabbro.Grammatik.Einheit108.low8) Gabbro.Grammatik.Einheit108.E8 rfl rfl rfl
+    Gabbro.Grammatik.Zielsatz.NutzerPflicht Gabbro.Grammatik.Einheit108.E8 := by
+  obtain ⟨hn, hp⟩ := nutzer_aus_quelleG_alle (pflichten_108 hPtr)
+    Gabbro.Grammatik.Einheit108.uebersetzt8
+  exact ⟨hp.logik, start⟩
 
 /-! BRIDGE-ATOMIC beispiele/0108-disjoint-start-locks.gab nutzerA_bruecke -/
 
 /-- The same premise WITH THE ATOMIC RELY (`NutzerPflichtA`): the parser's unit has no shared atomic. -/
 theorem nutzerA_bruecke (hPtr : SchnittstellenPflicht u) :
     Gabbro.Grammatik.Zielsatz.NutzerPflichtA Gabbro.Grammatik.Einheit108.E8 :=
-  bruecke_nutzerA Gabbro.Grammatik.Einheit108.low8 stimmig (rangAuto u) rang meets_alle
-    (hPtr _ _ Gabbro.Grammatik.Einheit108.low8) Gabbro.Grammatik.Einheit108.E8 rfl rfl rfl
+  Gabbro.Grammatik.Zielsatz.nutzerPflichtA_ohne_atomar
+    (declOf_kein_atomar u rfl) (nutzer_bruecke hPtr)
 
 #print axioms nutzerA_bruecke
 

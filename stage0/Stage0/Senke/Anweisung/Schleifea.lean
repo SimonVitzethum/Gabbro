@@ -23,6 +23,7 @@ variable [Kern]
 
 variable {D : Deklaration} {L : Lay D} {reserved : Nat}
 variable {H : List D.Lock}
+variable {sc : List D.Lock}
 
 /-! ## The loop -/
 
@@ -49,7 +50,7 @@ theorem trav_loop (hn : inW (D.count t) (D.count t) = true) (hci : lowE (reserve
       Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ' →
       Sim L P f σ0 ρ0 rp cfp fp lo K (frei Γ reserved :: pr) ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * cb.1.length))
         (pc' + BitVec.ofNat 64 (16 * cb.1.length) + BitVec.ofInt 64 48)
-        (pc' + BitVec.ofNat 64 (16 * cb.1.length) + BitVec.ofInt 64 0) (execBlock O passes R body σ' ρ') reserved) :
+        (pc' + BitVec.ofNat 64 (16 * cb.1.length) + BitVec.ofInt 64 0) (execBlock O passes R body σ' ρ') reserved sc) :
     ∀ (n k : Nat) (m' : Runner.Mem) (σ' : World D) (ρ' : Env D Γ), k + n = (D.count t).toNat →
     PreS L m' pc fp K (frei Γ reserved) (travCode (frei Γ reserved) (D.count t) ci'.1 cb.1) ρ' reserved →
     m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some (BitVec.ofNat 64 k) →
@@ -57,7 +58,7 @@ theorem trav_loop (hn : inW (D.count t) (D.count t) = true) (hci : lowE (reserve
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc + BitVec.ofNat 64 (16 * 1), fp⟩ m'
       (pc + BitVec.ofNat 64 (16 * (travCode (frei Γ reserved) (D.count t) ci'.1 cb.1).length)) eL eN
       (traverseLauf (l := l) (fun σ ρ => execBlock O passes R body σ ρ)
-        (fun σ ρ => let σ := σ.lese Λ inv.orte; (σ, wahr? (eval σ inv σ ρ))) (idxAb (D.count t) k n) σ' ρ') reserved := by
+        (fun σ ρ => let σ := σ.lese Λ inv.orte; (σ, wahr? (eval σ inv σ ρ))) (idxAb (D.count t) k n) σ' ρ') reserved sc := by
   have hindex : valueWords (.index (D.count t)) = 1 :=
     integerWords_word (by omega) (by have h := hn; simp only [inW, Bool.and_eq_true, decide_eq_true_eq] at h; omega)
   have hctxWidth : frei (.index (D.count t) :: Γ) reserved = frei Γ reserved + 1 := by
@@ -90,11 +91,11 @@ theorem trav_loop (hn : inW (D.count t) (D.count t) = true) (hci : lowE (reserve
       rw [hkc] at hw2
       have a2 := Agree.widen a2s hks
       have hc2 := hp.code.agree ((a1.trans a2).mono (Nat.le_succ _)) hp.far
-      have sc := brz_go (trav_brz2 hc2) (by omega) hp.small (lit_ok (by omega) (by omega)) hw2
-      rw [adr_eq pc (y := 13 + travCountSize (D.count t) + 2 * ci'.1.length + cb.1.length) (by push_cast; omega)] at sc
+      have hbr := brz_go (trav_brz2 hc2) (by omega) hp.small (lit_ok (by omega) (by omega)) hw2
+      rw [adr_eq pc (y := 13 + travCountSize (D.count t) + 2 * ci'.1.length + cb.1.length) (by push_cast; omega)] at hbr
       rw [step_eq pc (z := 2 + ci'.1.length) (by omega)] at sb
       rw [hlen]
-      refine ⟨m2, s1.trans (sb.trans (s2.trans sc)),
+      refine ⟨m2, s1.trans (sb.trans (s2.trans hbr)),
         agreeW_of (((a1.trans a2).mono (Nat.le_succ _)).mono hlo2), ?_, hWa2,
         keeps_of_agree (a1.trans a2) hp.frame.room (fun j hj => by have := hpr j hj; omega) (by omega)⟩
       exact envAt_agree hp.env ((a1.trans a2).mono (Nat.le_succ _)) hp.frame (Nat.le_refl _) (by omega)
@@ -170,7 +171,7 @@ theorem trav_loop (hn : inW (D.count t) (D.count t) = true) (hci : lowE (reserve
             (pc + BitVec.ofNat 64 (16 * (travCode (frei Γ reserved) (D.count t) ci'.1 cb.1).length)) eL eN
             (traverseLauf (l := l) (fun σ ρ => execBlock O passes R body σ ρ)
               (fun σ ρ => let σ := σ.lese Λ inv.orte; (σ, wahr? (eval σ inv σ ρ))) (idxAb (D.count t) (k + 1) n)
-              σ1 ρ1.tail) reserved := by
+              σ1 ρ1.tail) reserved sc := by
         intro σ1 ρ1 m4 s4 a4 e4 w4 k4
         have A14 : AgreeW L fp lo K m' m4 := (agreeW_of (A12.mono (by omega))).trans a4
         have hc4 := codeAt_agreeWIn hW A14 hp.code hp.far
@@ -255,14 +256,14 @@ theorem trav_loop (hn : inW (D.count t) (D.count t) = true) (hci : lowE (reserve
           exact Stops.prefix (pre.trans (s4.trans (s6.trans sb3))) (trav_stopped hp6 (by omega))
       | zurueck σ1 v =>
         simp only [Sim] at hb ⊢
-        exact RetZ.prefix pre (agreeW_of (A12.mono (by omega))) hb
+        exact RetZR.prefix pre (agreeW_of (A12.mono (by omega))) hb
       | logik e =>
         simp only [Sim] at hb ⊢
         exact Stops.prefix pre hb
       | hardware e =>
         simp only [Sim] at hb ⊢
         exact Stops.prefix pre hb
-      | why => exact RetWhy.prefix pre (agreeW_of (A12.mono (by omega))) hb
+      | why => exact RetWhyR.prefix pre (agreeW_of (A12.mono (by omega))) hb
 
 
 end

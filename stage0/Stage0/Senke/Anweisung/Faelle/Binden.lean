@@ -8,6 +8,7 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 variable [Kern] {D : Deklaration} {L : Lay D}
 variable {H : List D.Lock}
+variable {sc : List D.Lock}
 
 theorem bindValue_ok {P : Programm D} {f : D.Fn} {fp : Runner.W}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W}
@@ -22,12 +23,12 @@ theorem bindValue_ok {P : Programm D} {f : D.Fn} {fp : Runner.W}
       Umf L A C dv m' fp Ks K H → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * cr.length))
         (pc' + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.1)
-        (pc' + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.2) out reserved)
+        (pc' + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.2) out reserved sc)
     {m : Runner.Mem} {pc : Runner.W} (hp : PreS L m pc fp K (frei Γ reserved) (ce ++ cr) ρ reserved)
     (hu : Umf L A C dv m fp Ks K H) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * (ce ++ cr).length))
       (pc + BitVec.ofNat 64 (16 * (ce ++ cr).length) + BitVec.ofInt 64 ex.1)
-      (pc + BitVec.ofNat 64 (16 * (ce ++ cr).length) + BitVec.ofInt 64 ex.2) out.schrumpf reserved := by
+      (pc + BitVec.ofNat 64 (16 * (ce ++ cr).length) + BitVec.ofInt 64 ex.2) out.schrumpf reserved sc := by
   have hks := hW.ks
   have hpw := PreS.welt hp.left hks hWa hW.lay (by have := hW.lo; omega)
   obtain ⟨m1, s1, a1s, value⟩ := hcode m pc hpw

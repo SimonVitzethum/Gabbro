@@ -1,0 +1,36 @@
+module speed_a {
+// (a) pure arithmetic loop by recursion with fuel and decreases.
+// Each outer level runs inner(1000); tot = K * 1000.
+// Small input K=2: tot = 2000, exit = 2000 % 251 = 243.
+static mut tot : u32 in 0 .. 20000000 = 0;
+impl fn inner(n : u32 in 0 .. 1000, fuel : u32 in 0 .. 1000) -> u32 in 0 .. 1000
+    effects { pure }
+    decreases fuel
+{
+    if n == 0 { return 0; }
+    narrow n to 1 .. 1000 else { return 0; }
+    narrow fuel to 1 .. 1000 else { return 0; }
+    let r = inner(n - 1, fuel - 1);
+    narrow r to 0 .. 999 else { return 0; }
+    return r + 1;
+}
+impl fn outer(k : u32 in 0 .. 10000, fuel : u32 in 0 .. 10000)
+    effects { reads tot, writes tot }
+    decreases fuel
+{
+    if k == 0 { return; }
+    narrow k to 1 .. 10000 else { return; }
+    narrow fuel to 1 .. 10000 else { return; }
+    let a = inner(1000, 1000);
+    tot = (tot + a) % 20000000;
+    outer(k - 1, fuel - 1);
+}
+impl fn main() -> u32 in 0 .. 255
+    effects { reads tot, writes tot }
+{
+    outer(2, 2);
+    let m = tot % 251;
+    narrow m to 0 .. 250 else { return 0; }
+    return m;
+}
+}

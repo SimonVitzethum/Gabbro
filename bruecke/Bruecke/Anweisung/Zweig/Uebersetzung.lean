@@ -289,20 +289,10 @@ theorem ensExpr_sicht {fT fn : UFn} (h : Sicht u fT fn) (e : UEns) (a : Acc) :
     ensExpr_sicht h e' a'
   cases e with
   | cmp op l r =>
-    simp only [ensExpr]
-    rw [ensSide_sicht h a l]
-    cases opOf op with
-    | none => rfl
-    | some o =>
-      cases ensSide u fn a l with
-      | none => rfl
-      | some p =>
-        obtain ⟨le, a1⟩ := p
-        (try dsimp only)
-        rw [ensSide_sicht h a1 r]
+    simp only [ensExpr, ensSide_sicht h]
   | and x y =>
-    have hx := recurse x (by simp_wf; omega)
-    have hy := recurse y (by simp_wf; omega)
+    have hx := recurse x (by simp_wf <;> omega)
+    have hy := recurse y (by simp_wf <;> omega)
     simp only [ensExpr]
     rw [hx a]
     cases ensExpr u fn a x with
@@ -312,8 +302,8 @@ theorem ensExpr_sicht {fT fn : UFn} (h : Sicht u fT fn) (e : UEns) (a : Acc) :
       (try dsimp only)
       rw [hy a1]
   | or x y =>
-    have hx := recurse x (by simp_wf; omega)
-    have hy := recurse y (by simp_wf; omega)
+    have hx := recurse x (by simp_wf <;> omega)
+    have hy := recurse y (by simp_wf <;> omega)
     simp only [ensExpr]
     rw [hx a]
     cases ensExpr u fn a x with

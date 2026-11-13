@@ -14,6 +14,7 @@ variable [Kern]
 
 variable {D : Deklaration}
 variable {H : List D.Lock}
+variable {sc : List D.Lock}
 
 theorem blockNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
@@ -25,9 +26,9 @@ theorem blockNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
     {low high low' high' : Int} {e : Expr D Γ Λ (.int low high)}
     {err : Endblock D (vertragVon D f) l Γ Λ}
     {rest : Block D (vertragVon D f) l (.int low' high' :: Γ) Λ Λ'} :
-    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H err reserved) →
-    (∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H rest reserved) →
-    BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (.narrow e low' high' err rest) reserved := by
+    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc err reserved) →
+    (∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc rest reserved) →
+    BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc (.narrow e low' high' err rest) reserved := by
   intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   simp only [lowB, ← hlo0] at h
   simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
@@ -58,9 +59,9 @@ theorem endNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
     {low high low' high' : Int} {e : Expr D Γ Λ (.int low high)}
     {err : Endblock D (vertragVon D f) l Γ Λ}
     {rest : Endblock D (vertragVon D f) l (.int low' high' :: Γ) Λ} :
-    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H err reserved) →
-    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H rest reserved) →
-    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (.narrow e low' high' err rest) reserved := by
+    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc err reserved) →
+    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc rest reserved) →
+    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc (.narrow e low' high' err rest) reserved := by
   intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo2 hu hk hWa hpr
   have protectedPrefix := functionFrame_prefix P f
   simp only [lowEnd, ← hlo0, resultWords_vertragVon] at h
@@ -92,8 +93,8 @@ theorem blockNarrowRequired_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes 
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {low high low' high' : Int} {e : Expr D Γ Λ (.int low high)}
     {rest : Block D (vertragVon D f) l (.int low' high' :: Γ) Λ Λ'} :
-    (∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H rest reserved) →
-    BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (.narrowRequired e low' high' rest) reserved := by
+    (∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc rest reserved) →
+    BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc (.narrowRequired e low' high' rest) reserved := by
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   simp only [lowB, ← hlo0] at h
   simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
@@ -122,8 +123,8 @@ theorem endNarrowRequired_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : 
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {low high low' high' : Int} {e : Expr D Γ Λ (.int low high)}
     {rest : Endblock D (vertragVon D f) l (.int low' high' :: Γ) Λ} :
-    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H rest reserved) →
-    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (.narrowRequired e low' high' rest) reserved := by
+    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc rest reserved) →
+    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H sc (.narrowRequired e low' high' rest) reserved := by
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo2 hu hk hWa hpr
   have protectedPrefix := functionFrame_prefix P f
   simp only [lowEnd, ← hlo0, resultWords_vertragVon] at h

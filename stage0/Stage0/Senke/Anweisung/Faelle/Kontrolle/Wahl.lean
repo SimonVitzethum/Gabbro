@@ -19,6 +19,7 @@ variable [Kern]
 
 variable {D : Deklaration} {L : Lay D} {reserved : Nat}
 variable {H : List D.Lock}
+variable {sc : List D.Lock}
 
 theorem ite_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
@@ -34,13 +35,13 @@ theorem ite_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * ct.length))
         (pc' + BitVec.ofNat 64 (16 * ct.length) + BitVec.ofInt 64 (exPlus ex (ce.length + 1)).1)
         (pc' + BitVec.ofNat 64 (16 * ct.length) + BitVec.ofInt 64 (exPlus ex (ce.length + 1)).2)
-        (execBlock O passes R t (σ.lese Λ cnd.orte) ρ) reserved)
+        (execBlock O passes R t (σ.lese Λ cnd.orte) ρ) reserved sc)
     (helse : ∀ m' pc', PreS L m' pc' fp K (frei Γ reserved) ce ρ reserved → Umf L A C dv m' fp Ks K H → Kopf L f m' fp K rp cfp ρ0 P σ0 →
       WeltAt m' L (σ.lese Λ cnd.orte) →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * ce.length))
         (pc' + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofInt 64 ex.1)
         (pc' + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofInt 64 ex.2)
-        (execBlock O passes R e (σ.lese Λ cnd.orte) ρ) reserved)
+        (execBlock O passes R e (σ.lese Λ cnd.orte) ρ) reserved sc)
     (hp : PreS L m pc fp K (frei Γ reserved) (cc ++ [ci 19 (frei Γ reserved) (16 * (ct.length + 2)) 0] ++ ct ++
       [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce) ρ reserved)
     (hu : Umf L A C dv m fp Ks K H) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
@@ -51,7 +52,7 @@ theorem ite_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env
         [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce).length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * (cc ++ [ci 19 (frei Γ reserved) (16 * (ct.length + 2)) 0] ++ ct ++
         [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce).length) + BitVec.ofInt 64 ex.2)
-      (execStmt O passes R (.ite cnd t e) σ ρ) reserved := by
+      (execStmt O passes R (.ite cnd t e) σ ρ) reserved sc := by
   have htop := lowE_top cnd (frei Γ reserved) cc tc hcc
   simp only [execStmt]
   refine choice_ok (P := P) (σ0 := σ0) (ex := ex) (d := frei Γ reserved)

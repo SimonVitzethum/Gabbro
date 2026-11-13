@@ -1,0 +1,38 @@
+module speed_d {
+// (d) call-heavy chain: per slot, top -> mid -> leaf (3 calls).
+// Small input N=10: acc = 10, exit 10.
+table t count 10 { slot { a : u32 in 0 .. 255, } }
+static mut acc : u32 in 0 .. 600000 = 0;
+impl fn leaf(x : u32 in 0 .. 255) -> u32 in 0 .. 255
+    effects { pure }
+{
+    return (x + 1) % 256;
+}
+impl fn mid(x : u32 in 0 .. 255) -> u32 in 0 .. 255
+    effects { pure }
+{
+    let y = leaf(x);
+    return y;
+}
+impl fn top(x : u32 in 0 .. 255) -> u32 in 0 .. 255
+    effects { pure }
+{
+    let z = mid(x);
+    return z;
+}
+impl fn main() -> u32 in 0 .. 255
+    effects { reads t.slots, writes t.slots, reads acc, writes acc }
+{
+    traverse i over slots of t by unvisited touches writes t.slots {
+        t.slots[i].a = 5;
+    }
+    traverse j over slots of t by unvisited touches reads t.slots, writes t.slots, reads acc, writes acc {
+        let v = top(t.slots[j].a);
+        t.slots[j].a = v;
+        acc = (acc + 1) % 600000;
+    }
+    let m = acc % 251;
+    narrow m to 0 .. 250 else { return 0; }
+    return m;
+}
+}

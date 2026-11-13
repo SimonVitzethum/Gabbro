@@ -1,20 +1,9 @@
 /-
-  Scoped returns lower like ordinary returns; the scope release is ghost.
-
-  `Stmt/Endblock.retScoped` emits exactly the code of `ret` (`lowErg` plus the
-  shared `retC` epilogue), `retWhyScoped` exactly the code of `retWhy`
-  (`retWhyC`): the release of `R.scopes` is ghost at Stage-0 level, as it is at
-  Code level (`lowerRet`/`lowerWhy` with `Rep.gibt_foldl`). `execStmt/execEnd`
-  releases the scopes innermost first (`List.foldl World.gibt`: the trace gets
-  one `gibt` per scope with the last release on top), and the simulation keeps
-  the released world through the fold: `WeltAt` and `returnFault` see only
-  slots and globals (`World.gibt_foldl_speicher`, `eval_spurfrei`), so no
-  runtime release or invariant check is emitted -- the same release behaviour
-  as the `locks` exit, which performs `gibt` without a check. Emitting `gibT`
-  per scope would change the class of lock words and break the `AgreeW` of `RetZ`/`RetWhy`;
-  the static scope duties stay with the checker and `ScopesOkProg`. The emission
-  helpers live in `Faelle/Hilfen.lean`; the `lowS`/`lowEnd` equations come from
-  `Stage0.Senke.Anweisung`.
+  The model's release of the scopes of a scoped return leaves every cell of the world: `World.gibt` changes only
+  the trace (`World.gibt_foldl_speicher`), so the world in memory (`WeltAt_gibt_foldl`), the owed-invariant read
+  phase (`owedWorld_gibt_slots`, `owedWorld_gibt_globs`, `owedFailure_gibt`) and the fault code of a normal return
+  (`returnFault_gibt_foldl`) are those of the world before the release. The scoped returns themselves, with real
+  releases at the return site, are `Sperre/Ticket/RueckLauf.lean`.
 -/
 module
 public import Stage0.Senke.Anweisung
@@ -39,7 +28,6 @@ set_option maxHeartbeats 2000000
 variable [Kern]
 
 variable {D : Deklaration} {L : Lay D}
-variable {H : List D.Lock}
 
 section Freigabe
 
@@ -132,114 +120,6 @@ theorem returnFault_gibt_foldl (σ0 σ1 : World D) (ρ : Env D (D.params f))
       (σ1.lese (vertragVon D f).ende (P.ensures f).orte).globs := hg
   exact returnFault_lese_congr (P := P) (f := f) σ0 ρ v _ _ hps hpg
 
-/-- A normal scoped return simulates like the ordinary return on the released world. -/
-theorem RetZ_gibt_foldl {σ0 : World D} {ρ0 : Env D (D.params f)} {fp : Runner.W}
-    {K : Nat} {rp cfp : Runner.W} {t : T} {m : Runner.Mem} {σ1 : World D}
-    {v : ErgVal D (D.erg f)} (Ls : List D.Lock)
-    (h : RetZ L P f σ0 ρ0 fp K rp cfp t m σ1 v) :
-    RetZ L P f σ0 ρ0 fp K rp cfp t m (Ls.foldl World.gibt σ1) v := by
-  have hf := returnFault_gibt_foldl (P := P) (f := f) σ0 σ1 ρ0 v Ls
-  simp only [RetZ, hf] at h ⊢
-  by_cases hc : returnFault P f σ0 σ1 ρ0 v ≠ 0
-  · rw [if_pos hc] at h ⊢
-    exact h
-  · rw [if_neg hc] at h ⊢
-    obtain ⟨m', s, a, pub, world⟩ := h
-    refine ⟨m', s, a, pub, ?_⟩
-    obtain ⟨hs, hg⟩ := World.gibt_foldl_speicher σ1 Ls
-    have hws : (owedWorld P f ((Ls.foldl World.gibt σ1).lese (vertragVon D f).ende
-        (P.ensures f).orte)).slots =
-        (owedWorld P f (σ1.lese (vertragVon D f).ende (P.ensures f).orte)).slots :=
-      owedWorld_gibt_slots _ _ hs
-    have hwg : (owedWorld P f ((Ls.foldl World.gibt σ1).lese (vertragVon D f).ende
-        (P.ensures f).orte)).globs =
-        (owedWorld P f (σ1.lese (vertragVon D f).ende (P.ensures f).orte)).globs :=
-      owedWorld_gibt_globs _ _ hg
-    obtain ⟨ws, wg, wwr⟩ := world
-    refine ⟨fun t f k hk => ?_, fun g => ?_, wwr⟩
-    · have hv := ws t f k hk
-      rwa [hws]
-    · have hv := wg g
-      rwa [hwg]
-
-/-- A reason scoped return simulates like the ordinary reason return on the released world. -/
-theorem RetWhy_gibt_foldl {fp : Runner.W} {K : Nat} {rp cfp : Runner.W}
-    {t : T} {m : Runner.Mem} {σ1 : World D} {r : Fin (D.gruende f)}
-    (Ls : List D.Lock)
-    (h : RetWhy L f fp K rp cfp t m σ1 r) :
-    RetWhy L f fp K rp cfp t m (Ls.foldl World.gibt σ1) r := by
-  simp only [RetWhy] at h ⊢
-  obtain ⟨m', s, a, value, mirror, flag, world⟩ := h
-  exact ⟨m', s, a, value, mirror, flag, WeltAt_gibt_foldl world⟩
-
 end Freigabe
-
-theorem retScoped_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
-    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
-    (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
-    {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowPost L (functionFrame P f) P f (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
-    {reserved : Nat} {pr : List Nat} {ex : Int × Int}
-    {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
-    {e : ErgExpr D Γ Λ (D.erg f)} {Rr : RueckRessourcen D (vertragVon D f) Λ} :
-    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Stmt D (vertragVon D f) l Γ Λ Λ from .retScoped e Rr) reserved := by
-  intro c top h hK _ hW m pc σ ρ hp _ hlo2 _ hk hWa hpr
-  simp only [lowS, ← hlo0, resultWords_vertragVon, lowRetScoped, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨⟨ce, te⟩, he, hc⟩ := h
-  simp only [Prod.mk.injEq] at hc
-  obtain ⟨rfl, rfl⟩ := hc
-  simp only [execStmt, Sim]
-  change max te (max tens (retTop (functionFrame P f))) + cap ≤ Ks at hK
-  exact RetZ_gibt_foldl Rr.scopes (ret_ok (reserved := reserved) hlo0 hens e he (by omega) m pc σ ρ hp hlo2 hk hW hWa)
-
-theorem retWhyScoped_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
-    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
-    (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
-    {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowPost L (functionFrame P f) P f (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
-    {reserved : Nat} {pr : List Nat} {ex : Int × Int}
-    {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
-    {r : Fin (D.gruende f)} {Rr : RueckRessourcen D (vertragVon D f) Λ} :
-    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Stmt D (vertragVon D f) l Γ Λ Λ from .retWhyScoped r Rr) reserved := by
-  intro c top h hK _ hW m pc σ ρ hp _ hlo2 _ hk hWa hpr
-  simp only [lowS, ← hlo0, resultWords_vertragVon, lowRetWhyScoped, Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
-  simp only [execStmt, Sim]
-  change max (frei Γ reserved) (retTop (functionFrame P f)) + cap ≤ Ks at hK
-  exact RetWhy_gibt_foldl Rr.scopes (retWhy_ok r hlo0 (by omega) hp hk hW hWa)
-
-theorem endRetScoped_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
-    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
-    (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
-    {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowPost L (functionFrame P f) P f (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
-    {reserved : Nat} {pr : List Nat} {ex : Int × Int}
-    {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
-    {e : ErgExpr D Γ Λ (D.erg f)} {Rr : RueckRessourcen D (vertragVon D f) Λ} :
-    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Endblock D (vertragVon D f) l Γ Λ from .retScoped e Rr) reserved := by
-  intro c top h hK _ hW m pc σ ρ hp hlo _ hk hWa hpr
-  simp only [lowEnd, ← hlo0, resultWords_vertragVon, lowRetScoped, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨⟨ce, te⟩, he, hc⟩ := h
-  simp only [Prod.mk.injEq] at hc
-  obtain ⟨rfl, rfl⟩ := hc
-  simp only [execEnd, Ret]
-  change max te (max tens (retTop (functionFrame P f))) + cap ≤ Ks at hK
-  exact RetZ_gibt_foldl Rr.scopes (ret_ok hlo0 hens e he (by omega) m pc σ ρ hp hlo hk hW hWa)
-
-theorem endRetWhyScoped_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
-    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
-    (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
-    {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowPost L (functionFrame P f) P f (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
-    {reserved : Nat} {pr : List Nat} {ex : Int × Int}
-    {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
-    {r : Fin (D.gruende f)} {Rr : RueckRessourcen D (vertragVon D f) Λ} :
-    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Endblock D (vertragVon D f) l Γ Λ from .retWhyScoped r Rr) reserved := by
-  intro c top h hK _ hW m pc σ ρ hp hlo _ hk hWa hpr
-  simp only [lowEnd, ← hlo0, resultWords_vertragVon, lowRetWhyScoped, Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
-  simp only [execEnd, Ret]
-  change max (frei Γ reserved) (retTop (functionFrame P f)) + cap ≤ Ks at hK
-  exact RetWhy_gibt_foldl Rr.scopes (retWhy_ok r hlo0 (by omega) hp hk hW hWa)
 
 end Gabbro.Stage0.Senke

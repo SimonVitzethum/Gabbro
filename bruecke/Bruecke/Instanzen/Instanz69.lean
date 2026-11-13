@@ -1,5 +1,5 @@
 module
-public import Bruecke.Quelle
+public import Bruecke.Kette.Quelle
 public import Duty.Duty0069IntegerConversion
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
@@ -37,7 +37,6 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
-@[expose] public section
 
 
 /-! BRIDGE-GENERIC beispiele/0069-integer-conversion.gab nutzer
@@ -55,6 +54,8 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 set_option maxRecDepth 100000
+
+@[expose] public section
 
 -- SRC-BEGIN quelle
 /-- THE SOURCE, byte for byte, as pieces (the guardians read this block). -/
@@ -122,9 +123,13 @@ def u : UProg := { tabs := [], locks := [], fns := [{ name := "kombiniert", para
 set_option maxHeartbeats 4000000 in
 theorem lex_ok : lexL zeilen.flatten = .ok toks := by decide +kernel
 
+end
+
 private theorem parse_ok : parseTopTief toks = .ok items := rfl
 
 private theorem elab_ok : elabU (pre108 items) = .ok u := by cbv
+
+@[expose] public section
 
 theorem low_ok : (lowerAllg u).toOption.isSome = true := by decide +kernel
 
@@ -181,18 +186,22 @@ theorem pflicht_0 : ∃ body, zuBody u (fnAt u ⟨0, by decide⟩) = some body �
     meetsU u (wfU u) (fnAt u ⟨0, by decide⟩) body :=
   ⟨kombiniert_body, rfl, by rw [wfU_eq]; exact kombiniert_meets⟩
 
-theorem pflichten (hPtr : SchnittstellenPflicht u) : Pflichten quelle :=
-  ⟨u, verankert, null, stimmig, rang, by decide, hPtr, fun c => match c with
-  | ⟨0, _⟩ => pflicht_0
-  | ⟨_ + 1, h⟩ => absurd h
-      (by have hl : u.fns.length = 1 := by decide
-          omega)⟩
+theorem pflichten (hPtr : SchnittstellenPflicht u) : PflichtenAlle quelle := by
+  have duties : ∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = some body ∧
+      meetsU u (wfU u) (fnAt u c) body := fun c => match c with
+    | ⟨0, _⟩ => pflicht_0
+    | ⟨_ + 1, h⟩ => absurd h
+        (by have hl : u.fns.length = 1 := by decide
+            omega)
+  refine ⟨u, verankert, null, stimmig, by decide, rang, by decide, hPtr, fun c => ?_⟩
+  obtain ⟨body, hb, hm⟩ := duties c
+  exact ⟨body, zuBodyZ_of_zuBodyB (zuBodyB_of_zuBody hb), hm⟩
 
 /-- PREMISE (b) OF THE GOAL THEOREM for the unit the front end builds from `quelle`. -/
 theorem nutzer (hPtr : SchnittstellenPflicht u) {u' : UProg} {P : Gabbro.Grammatik.Programm (declOf u')}
     {fs : List (declOf u').Fn} (h : Gabbro.Grammatik.uebersetzeAllg quelle = .ok ⟨u', P, fs⟩) :
     ∃ hn : nullB u' = true, Gabbro.Grammatik.Zielsatz.NutzerPflicht (einheitAllg u' P hn) :=
-  nutzer_aus_quelle (pflichten hPtr) h
+  nutzer_aus_quelleG_alle (pflichten hPtr) h
 
 /-! BRIDGE-GENERIC beispiele/0069-integer-conversion.gab acceptance
 
@@ -209,5 +218,7 @@ theorem akz69 : akzeptiert_pruefer.akzeptiert (einheitAllg u P69 null)
 
 #print axioms pflichten
 #print axioms nutzer
+
+end
 
 end Gabbro.Bruecke.I69

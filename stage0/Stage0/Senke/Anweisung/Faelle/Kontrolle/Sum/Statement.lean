@@ -7,13 +7,14 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 variable {H : List D.Lock}
+variable {sc : List D.Lock}
 variable {O : Orakel D} {passes : Nat}
   {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
   {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} {P : Programm D}
   {f : D.Fn} {σ0 : World D} {ρ0 : Env D (D.params f)} {rp cfp fp : Runner.W} {lo Ks K : Nat}
   {ens : List II × Nat} {pr : List Nat}
 
-local notation "BR" => BlockRuns (reserved := reserved) O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K ens pr H
+local notation "BR" => BlockRuns (reserved := reserved) O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K ens pr H sc
 
 /-- A tag count reaching the immediate bound necessarily needs an unrepresentable
     dispatch body. Payload widths themselves impose no admission restriction. -/
@@ -23,7 +24,7 @@ theorem onSumTag_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Op
     (blocks : ArmsAll (fun b => BR b) arms) (separate : sumFits cs = false)
     (count : cs.length < 2 ^ 31)
     (hcv : lowE (reserved := reserved) L v (frei Γ reserved) = some (cv, tv))
-    (hca : lowSumTags (reserved := reserved) passes A L (functionFrame P f) ens pr ex arms (valueWords (.sum cs)) 0 = some (ca, ta))
+    (hca : lowSumTags (reserved := reserved) (sc := sc) passes A L (functionFrame P f) ens pr ex arms (valueWords (.sum cs)) 0 = some (ca, ta))
     (htv : tv ≤ Ks) (hta : ta + cap ≤ Ks) (size : 16 * (cv.length + ca.length) < 2 ^ 31)
     (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = (functionFrame P f).internalResult)
     (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
@@ -34,7 +35,7 @@ theorem onSumTag_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Op
       (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length))
       (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length) + BitVec.ofInt 64 ex.2)
-      (execStmt O passes R (.onTag v arms) σ ρ) reserved := by
+      (execStmt O passes R (.onTag v arms) σ ρ) reserved sc := by
   have htop := lowE_top v _ _ _ hcv
   have hks := hW.ks
   have pw := PreS.welt pre.left hks world hW.lay (by have := hW.lo; omega)

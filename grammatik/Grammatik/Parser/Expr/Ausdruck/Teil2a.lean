@@ -3,7 +3,7 @@ module
 public import Grammatik.Parser.Lex.Lexer
 import all Init.Data.Repr
 import all Init.Data.String.Defs
-public import Grammatik.Parser.Expr.GenericArguments
+public import Grammatik.Parser.Expr.AsyncSuffix
 
 @[expose] public section
 
@@ -261,13 +261,13 @@ def parseKopf (f : Nat) (toks : List Token) :
             | .zeichen s :: tail =>
               if strEq s "(" then do
                 let (args, remaining) ← parseArgs f tail
-                pure (.ext .instantiate (("::".intercalate segs) :: words) args, remaining)
+                awaitSuffix (.ext .instantiate (("::".intercalate segs) :: words) args) remaining
               else .error "generic instantiation without call arguments"
             | _ => .error "generic instantiation without call arguments")
           (fun tail =>
             match parseArgs f tail with
             | .ok (args, rest'') =>
-              .ok (.call ("::".intercalate segs) args, rest'')
+              awaitSuffix (.call ("::".intercalate segs) args) rest''
             | .error e => .error e)
           (fun _ => match segs with
           | [a, b] =>

@@ -3,8 +3,8 @@ public import Bruecke.Pflichten
 public import Bruecke.Pruefung
 public import Grammatik.Korpus.Programme.Einheit104
 public import Bruecke.Start
-public import Bruecke.Atomar
 public import Bruecke.Quelle
+public import Bruecke.Kette.Quelle
 public import Duty.Duty0104Referenz
 @[expose] public section
 
@@ -65,7 +65,7 @@ theorem start : Gabbro.Grammatik.Zielsatz.StartPflicht Gabbro.Grammatik.Einheit1
 
 /-! BRIDGE-CLOSED beispiele/0104-referenz.gab nutzer_bruecke
 
-    S3 instance: the simulation theorem (`Bruecke/Simulation.lean`, `bruecke_nutzer`) applied to the
+    S3 instance: the consolidated source theorem (`Kette/Quelle.lean`) applied to the
     parser's program of 104. Its premises, each checked here: the lowering (`Einheit104.low4`), the
     name conditions and the rank of the call graph (decided), and the DUTIES -- GabbroV's own
     proofs `einzahlen_meets` and `lies_meets` from `Duty0104Referenz.lean`, the statements the
@@ -83,51 +83,39 @@ theorem meets_alle : ∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = s
   | ⟨0, _⟩ => exact ⟨einzahlen_body, rfl, einzahlen_meets⟩
   | ⟨1, _⟩ => exact ⟨lies_body, rfl, lies_meets⟩
 
-theorem stimmig : Stimmig u := stimmig_of (by decide) (by decide)
-
-theorem rang : Rang u (rangAuto u) := rang_of (by decide)
-
 /-! GENERIC-WITNESS beispiele/0104-referenz.gab pflichten_104
 
     P6: the same bridge through the GENERIC theorem over every source (`Quelle.lean`). The
-    statement `Pflichten src104real` is COMPUTED from the pinned text; this file only supplies a
+    statement `PflichtenAlle src104real` is COMPUTED from the pinned text; this file only supplies a
     witness (the elaborated program, checked against the text by `verankert`'s theorem) and the
     duty proofs of GabbroV. -/
 
 theorem pflichten_104 (hPtr : SchnittstellenPflicht u) :
-    Pflichten Gabbro.Grammatik.Parser.UebersetzeAllg2.src104real :=
-  ⟨u, uOf_eq Gabbro.Grammatik.Einheit104.uebersetzt4, by decide, by decide, by decide,
-    by decide, hPtr, meets_alle⟩
+    PflichtenAlle Gabbro.Grammatik.Parser.UebersetzeAllg2.src104real :=
+  ⟨u, uOf_eq Gabbro.Grammatik.Einheit104.uebersetzt4, by decide, by decide, by decide, by decide,
+    by decide, hPtr, fun c => by
+      obtain ⟨body, hb, hm⟩ := meets_alle c
+      exact ⟨body, zuBodyZ_of_zuBodyB (zuBodyB_of_zuBody hb), hm⟩⟩
 
 /-- Premise (b) for the unit the GENERIC construction builds from the text. -/
 theorem nutzer_generisch (hPtr : SchnittstellenPflicht u) : ∃ hn : nullB u = true,
     Gabbro.Grammatik.Zielsatz.NutzerPflicht (einheitAllg u Gabbro.Grammatik.Einheit104.P4 hn) :=
-  nutzer_aus_quelle (pflichten_104 hPtr) Gabbro.Grammatik.Einheit104.uebersetzt4
+  nutzer_aus_quelleG_alle (pflichten_104 hPtr) Gabbro.Grammatik.Einheit104.uebersetzt4
 
 /-- Premise (b) from the Body duties and the separately owed O43 refinement. -/
 theorem nutzer_bruecke (hPtr : SchnittstellenPflicht u) :
-    Gabbro.Grammatik.Zielsatz.NutzerPflicht Gabbro.Grammatik.Einheit104.E4 :=
-  bruecke_nutzer Gabbro.Grammatik.Einheit104.low4 stimmig (rangAuto u) rang meets_alle
-    (hPtr _ _ Gabbro.Grammatik.Einheit104.low4) Gabbro.Grammatik.Einheit104.E4 rfl rfl rfl
-
-/-- **WITNESS of the body simulation theorem** (`bruecke_koerperGutR`): its premises hold jointly on a real
-    program with a call -- the parser's lowering of 104, the name conditions, a rank, and every
-    duty proved by GabbroV. -/
-theorem bruecke_zeuge : ∃ (u : UProg) (P : Gabbro.Grammatik.Programm (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf u))
-    (fs : List (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf u).Fn),
-    Gabbro.Grammatik.Parser.UebersetzeAllg2.lowerAllg u = .ok (P, fs) ∧ Stimmig u ∧ Rang u (rangAuto u) ∧
-    (∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = some body ∧ meetsU u (wfU u) (fnAt u c) body) ∧
-    ∃ c : Fin u.fns.length, ∃ g args, UStmt.call g args ∈ (fnAt u c).body :=
-  ⟨u, _, _, Gabbro.Grammatik.Einheit104.low4, stimmig, rang, meets_alle,
-    ⟨⟨0, by decide⟩, "lies", [.freshPtr "Konto" (.table 0 (true, false)), .val (.param "i")], by decide +kernel⟩⟩
+    Gabbro.Grammatik.Zielsatz.NutzerPflicht Gabbro.Grammatik.Einheit104.E4 := by
+  obtain ⟨hn, hp⟩ := nutzer_aus_quelleG_alle (pflichten_104 hPtr)
+    Gabbro.Grammatik.Einheit104.uebersetzt4
+  exact ⟨hp.logik, start⟩
 
 /-! BRIDGE-ATOMIC beispiele/0104-referenz.gab nutzerA_bruecke -/
 
 /-- The same premise WITH THE ATOMIC RELY (`NutzerPflichtA`): the parser's unit has no shared atomic. -/
 theorem nutzerA_bruecke (hPtr : SchnittstellenPflicht u) :
     Gabbro.Grammatik.Zielsatz.NutzerPflichtA Gabbro.Grammatik.Einheit104.E4 :=
-  bruecke_nutzerA Gabbro.Grammatik.Einheit104.low4 stimmig (rangAuto u) rang meets_alle
-    (hPtr _ _ Gabbro.Grammatik.Einheit104.low4) Gabbro.Grammatik.Einheit104.E4 rfl rfl rfl
+  Gabbro.Grammatik.Zielsatz.nutzerPflichtA_ohne_atomar
+    (declOf_kein_atomar u rfl) (nutzer_bruecke hPtr)
 
 #print axioms nutzerA_bruecke
 
@@ -135,6 +123,5 @@ theorem nutzerA_bruecke (hPtr : SchnittstellenPflicht u) :
 
 
 #print axioms nutzer_bruecke
-#print axioms bruecke_zeuge
 
 end Gabbro.Bruecke.I104

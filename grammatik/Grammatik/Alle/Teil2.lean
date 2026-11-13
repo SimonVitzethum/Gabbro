@@ -357,3 +357,5 @@ public import Grammatik.Parser.Profil.EintrittZeuge
 public import Grammatik.Parser.Elab.Konst.Calls
 public import Grammatik.Parser.Elab.Konst.Ersetzung
 public import Grammatik.Parser.Elab.Konst.ErsetzungTor
+public import Grammatik.Nebenlaeufigkeit.Async.Zeuge
+public import Grammatik.Nebenlaeufigkeit.Async.GCost

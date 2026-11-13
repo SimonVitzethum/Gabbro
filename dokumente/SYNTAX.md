@@ -1373,7 +1373,7 @@ exprstmt   = call ";" | call "?" ";" ;   (* reason propagation, above *)
    rather than additional source spellings. *)
 ifstmt     = "if" expr block { "else" "if" expr block } [ "else" block ] ;
 matchstmt  = "match" expr "{" { matcharm } "}" ;
-matcharm   = ident [ "(" ident ")" ] "=>" block ;                 (* CHANGED «SG-5a» *)
+matcharm   = ( ident [ "(" ident ")" ] | int ) "=>" block ;
 (* ONE arm per case, in declaration order: exhaustiveness is the SHAPE of the arm list, not a
    check (`M123`). Over an `option`: `Some(k) => … None => …`, `k : index into T`. Over a
    `reason` with `n` grounds: `n` arms. *)
@@ -1494,7 +1494,18 @@ work for parameters and local records. Argument/return types and effects remain 
 hoisting preserves evaluation order (`Modules/CallHoist/Expressions.lean`,
 `stage0/proben-ir/branch-return-call.gab`, `branch-return-fields.gab`).
 
-**`match` is exhaustive.** In ordinary functions, a tagged match may end in one binder-free
+In ordinary functions, `match e { 1 => { … } 'A' => { … } CODE => { … } _ => { … } }`
+on an integer is sugar for ordered integer-equality `if`/`else if` tests and a final `else`.
+Patterns are integer literals (including character literals) or named integer constants;
+the final binder-free wildcard is mandatory, with no range-enumeration exhaustiveness rule.
+Duplicate values, including equal character/number/constant spellings, and pattern binders
+are refused. A name shared by a number constant and a tagged case is ambiguous and refused.
+The scrutinee is evaluated once: a known local or parameter is reused, and every other
+expression is bound to a fresh source-inexpressible local before testing. Named tagged cases
+keep the existing tagged path; an all-wildcard list cannot identify a numeric match and stays
+refused. This adds no G form (`Modules/MatchNumber.lean`, `stage0/proben-ir/match-number.gab`).
+
+**Tagged, option and reason `match` is exhaustive.** In ordinary functions, a tagged match may end in one binder-free
 `_ => { … }` arm after at least one named arm. The named cases must identify one unique
 tagged type; the wildcard expands to its remaining cases in declaration order, discarding
 their payloads. A lone, repeated, non-final or binding wildcard stays refused, as do
@@ -3461,3 +3472,79 @@ invariant -- or a `spec fn` stating one -- by name, and a restated predicate
 is refused. Outside contract position -- loop invariants, `spec fn` bodies,
 functions without a shared side -- non-invariant shapes stay own-logic debt
 (remainder in `PROOF.md`).
+
+### Async functions and futures — model draft, not source admission
+
+This is the proposed surface syntax for Design A in
+`PLAN-LONG-RANGE.md` §2. An uncompiled outer Lean source reader and
+finite-body elaborator now exist in `Parser/Async/`; canonical G elaboration
+and the Stage-0 compiler still refuse async.
+
+```gabbro
+async fn example(input: u64) -> u64 {
+    let saved = input;
+    let first = read_first(saved).await;
+    let both = join(read_left(saved), read_right(saved)).await;
+    return saved + first + both.left + both.right;
+}
+```
+
+Calling an async function creates a nominal `Future<T>` and saves its arguments;
+it does not run the body. `.await` is restricted to async bodies. `join(a, b)`
+owns both futures and produces a future of their product. Polling a join visits
+both children left to right and retains each completed result, so a completed
+child is not polled again while its sibling remains pending.
+
+The future owns a state tag, the local values needed after each suspension,
+linear permissions and the awaited child state. Values are saved explicitly;
+there is no pointer into the caller's stack and no `Pin` requirement in this
+model. Before suspension every held lock must have been released. Owned marks
+move into the saved record exactly once; copying values cannot copy authority.
+
+A poll performs finite straight-line work until `Ready(value)` or `Pending`.
+`Pending` saves the child's updated state and is a wait stop, not an error.
+Polling after `Ready` is refused; the ready result's permissions have already
+been transferred. Cancellation invokes the destructor on the complete saved
+state, including partially completed joins, then clears storage. Its ordinary
+user contract must release every remaining owned resource exactly once. It
+does not promise to undo external effects that have already occurred.
+
+Current Lean work covers a finite straight-line semantic core, nested joins,
+static save/move annotations and generic table simulation. Typed G layout and
+control builders now generate a nominal record around a finite phase sum,
+typed saved-local slots, shape-specific child/join storage, ordinary match
+dispatch, a bounded retry poll body and release-before-clear cancellation.
+The control proof uses machine G's existing dispatch rule; lock boundaries
+use exact `HeldB none`, and poll budgets use the ordinary G cost/call gates.
+
+**Complete table-to-G reification remains open.** The builders still require
+actual expression, child-poll and destructor blocks with their ordinary
+contracts. The representation invariant connecting the semantic model's
+arbitrary frames/tasks to these finite records, full poll simulation, and
+resource transfer on Ready/cancel are missing. Thus `ReificationDuty` in
+`Async/Regeln.lean` still has no complete G instance. General control flow
+across awaits and source resolution of heterogeneous child types remain open.
+No source async case is claimed to compile. All new proof terms await the
+lead's Lean check.
+
+The outer reader handles mixed ordinary and `async fn` items, nested ordinary
+modules and `pub` visibility, and prints their complete signatures and bodies.
+The current elaborator requires
+explicit local/result types and immutable straight-line bindings; it recognises
+`let x: T = child().await`, `async::join(a(), b()).await` and a terminal
+`return child().await`. A terminal await gets a fresh generated storage slot.
+Nested awaits in expressions, mutable locals, control flow across suspension,
+generic/fallible async bodies and async inside generic module templates remain refused.
+The finite model also still refuses awaiting a future value already stored in a variable;
+the reader can retain that syntax, but child construction currently needs a call/join tree.
+Cost/resource annotations are analysis input, not canonical G certificates.
+
+`Async/Executor/Library.gab` contains an unverified generative module template
+with an explicit capacity of 1–64 tasks, one owner and externally posted
+notification bits. Each module use has separate state. Its `spawn` registers
+a previously installed task ID; it does not take ownership of a generated future.
+Task slots are not reused. Generic ring arithmetic and finite notification-trace
+facts have been written separately, without claiming source-to-G correspondence.
+Ownership-taking spawn, generated child poll/drop and a blocking `block_on` need
+the still-missing representation/segment bridge. Waking, eventual completion,
+scheduler fairness and waiting bounds remain outside the language's claims.

@@ -10,6 +10,7 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D}
 variable {H : List D.Lock}
+variable {sc : List D.Lock}
 
 /-- The arithmetic/conversion child runs once. The guard only loads its actual
     raw result; success constructs the exact finite source value in that slot. -/
@@ -37,7 +38,7 @@ theorem nativeFloatBind_ok {P : Programm D} {f : D.Fn} {fp : Runner.W}
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m'
         (pc' + BitVec.ofNat 64 (16 * cr.length))
         (pc' + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.1)
-        (pc' + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.2) (out v) reserved)
+        (pc' + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.2) (out v) reserved sc)
     {m : Runner.Mem} {pc : Runner.W}
     (pre : PreS L m pc fp K (frei Γ reserved)
       (ce ++ floatNarrowC (frei Γ reserved + 1) cc (stopC 107 (frei Γ reserved)) [] cr) ρ reserved)
@@ -50,7 +51,7 @@ theorem nativeFloatBind_ok {P : Programm D} {f : D.Fn} {fp : Runner.W}
         (stopC 107 (frei Γ reserved)) [] cr).length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * (ce ++ floatNarrowC (frei Γ reserved + 1) cc
         (stopC 107 (frei Γ reserved)) [] cr).length) + BitVec.ofInt 64 ex.2)
-      (match gleitPasst low high x with | none => .logik .bereich | some v => (out v).schrumpf) reserved := by
+      (match gleitPasst low high x with | none => .logik .bereich | some v => (out v).schrumpf) reserved sc := by
   have room := floatRangeL_room guard
   have hks := hW.ks
   have input : frei Γ reserved < Ks := by omega
@@ -61,7 +62,7 @@ theorem nativeFloatBind_ok {P : Programm D} {f : D.Fn} {fp : Runner.W}
   have u1 := umf.agreeW hW (agreeW_of (agree.mono hlo2)) hlo
   have k1 := kopf.agreeW hW (agreeW_of (agree.mono hlo2)) (by omega)
   have w1 := pw.wstab m m1 world (agreeS.mono (Nat.zero_le _))
-  have branches := choice_ok (P := P) (σ0 := σ0) (ex := ex)
+  have branches := choice_ok (sc := sc) (P := P) (σ0 := σ0) (ex := ex)
     (m := m1) (pc := pc + BitVec.ofNat 64 (16 * ce.length)) (ρ := ρ)
     (d := frei Γ reserved + 1) (cc := cc) (ct := stopC 107 (frei Γ reserved)) (ce := cr)
     (b := floatRangeReject low high x)
