@@ -177,6 +177,10 @@ public import Stage0.Senke.Sperre.Faeden.Stau
 public import Stage0.Senke.Sperre.Faeden.Kette
 public import Stage0.Senke.Sperre.Faeden.Leben
 public import Stage0.Senke.Sperre.Faeden.Zeuge
+public import Stage0.Senke.Sperre.Faeden.Karte
+public import Stage0.Senke.Sperre.Faeden.Geist
+public import Stage0.Senke.Sperre.Faeden.GeistLauf
+public import Stage0.Senke.Sperre.Faeden.Fenster
 public import Stage0.Senke.Ausdruck.Old.Pruefer
 public import Stage0.Senke.Ausdruck.Old.JudgedUnit
 public import Stage0.CompilerPruefer
