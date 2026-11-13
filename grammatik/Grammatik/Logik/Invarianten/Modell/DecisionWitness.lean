@@ -15,14 +15,19 @@ def rangeInvariant : Expr Frag.Witness.declaration [] [] .bool :=
 def rangeFormula : LProp (Observation Frag.Witness.declaration) :=
   .le (.var (.glob false)) (.konst 10)
 
+theorem range_translated_zeuge :
+    uebersetzeB (Frag.Witness.declaration.traeger ()) rangeInvariant = .ok rangeFormula := by rfl
+
 /-- This is valid because of the declared 0..10 type, not over all integers. -/
 theorem range_true_computed_zeuge :
     decideInvariant (Frag.Witness.declaration.traeger ()) rangeInvariant = .ok true := by
   apply (decideInvariant_true_iff Frag.Witness.initial (Frag.Witness.declaration.traeger ())
-    rangeInvariant rangeFormula (by rfl)).mpr
+    rangeInvariant rangeFormula range_translated_zeuge).mpr
   intro world
-  change decide ((world.globs false).n ≤ 10) = true
-  simpa only [decide_eq_true_eq] using (world.globs false).le_hi
+  apply (uebersetzeB_sound (Frag.Witness.declaration.traeger ()) rangeInvariant rangeFormula
+    range_translated_zeuge world).mpr
+  change (world.globs false).n ≤ 10
+  exact (world.globs false).le_hi
 
 theorem range_true_sound_zeuge (world : World Frag.Witness.declaration) :
     eval world rangeInvariant world .nil = true :=
@@ -37,13 +42,21 @@ def zeroInvariant : Expr Frag.Witness.declaration [] [] .bool :=
 def zeroFormula : LProp (Observation Frag.Witness.declaration) :=
   .eq (.var (.glob false)) (.konst 0)
 
+theorem zero_translated_zeuge :
+    uebersetzeB (Frag.Witness.declaration.traeger ()) zeroInvariant = .ok zeroFormula := by rfl
+
 theorem zero_false_computed_zeuge :
     decideInvariant (Frag.Witness.declaration.traeger ()) zeroInvariant = .ok false := by
   apply (decideInvariant_false_iff Frag.Witness.initial (Frag.Witness.declaration.traeger ())
-    zeroInvariant zeroFormula (by rfl)).mpr
+    zeroInvariant zeroFormula zero_translated_zeuge).mpr
   refine ⟨Frag.Witness.initial, ?_⟩
-  show wahr? (eval Frag.Witness.initial zeroInvariant Frag.Witness.initial .nil) = false
-  rfl
+  change wahr? (eval Frag.Witness.initial zeroInvariant Frag.Witness.initial .nil) = false
+  apply Bool.eq_false_iff.mpr
+  intro evaluated
+  have impossible := (uebersetzeB_sound (Frag.Witness.declaration.traeger ()) zeroInvariant
+    zeroFormula zero_translated_zeuge Frag.Witness.initial).mp evaluated
+  change (3 : Int) = 0 at impossible
+  omega
 
 theorem zero_concrete_counterexample_zeuge :
     ∃ world : World Frag.Witness.declaration,
@@ -55,18 +68,23 @@ theorem zero_concrete_counterexample_zeuge :
 theorem short_false_computed_zeuge :
     decideInvariant (Frag.Witness.declaration.traeger ()) Witness.shortInvariant = .ok false := by
   apply (decideInvariant_false_iff Frag.Witness.initial (Frag.Witness.declaration.traeger ())
-    Witness.shortInvariant Witness.shortFormula (by rfl)).mpr
+    Witness.shortInvariant Witness.shortFormula Witness.short_translated_zeuge).mpr
   refine ⟨Frag.Witness.invalidLengthWorld, ?_⟩
-  show wahr? (eval Frag.Witness.invalidLengthWorld Witness.shortInvariant
+  change wahr? (eval Frag.Witness.invalidLengthWorld Witness.shortInvariant
     Frag.Witness.invalidLengthWorld .nil) = false
-  rfl
+  apply Bool.eq_false_iff.mpr
+  intro evaluated
+  have impossible := (uebersetzeB_sound (Frag.Witness.declaration.traeger ())
+    Witness.shortInvariant Witness.shortFormula Witness.short_translated_zeuge
+    Frag.Witness.invalidLengthWorld).mp evaluated
+  change (9 : Int) ≤ 3 at impossible
+  omega
 
 theorem short_counterexample_computed_zeuge :
     (invariantCounterexample Frag.Witness.initial (Frag.Witness.declaration.traeger ())
       Witness.shortInvariant).map (fun world => assignment world (.glob false)) = some 4 := by
-  have translated : uebersetzeB (Frag.Witness.declaration.traeger ()) Witness.shortInvariant =
-      .ok Witness.shortFormula := by rfl
-  simpa only [invariantCounterexample, translated] using Witness.state_counterexample_computed_zeuge
+  simpa only [invariantCounterexample, Witness.short_translated_zeuge] using
+    Witness.state_counterexample_computed_zeuge
 
 theorem short_counterexample_sound_zeuge (world : World Frag.Witness.declaration)
     (success : invariantCounterexample Frag.Witness.initial (Frag.Witness.declaration.traeger ())
@@ -94,41 +112,43 @@ theorem generated_ranges_hold_zeuge (world : World Frag.Witness.declaration) :
     (observationBounds Frag.Witness.boundedFormula.keys).denote (assignment world) :=
   observationBounds_assignment _ world (uebersetzeB_supported
     (Frag.Witness.declaration.traeger ()) Frag.Witness.boundedLength
-    Frag.Witness.boundedFormula rfl)
+    Frag.Witness.boundedFormula Frag.Witness.boundedLength_translated_zeuge)
 
 theorem default_budget_total_zeuge :
     decideInvariant (Frag.Witness.declaration.traeger ()) rangeInvariant =
       .ok (decideB (closedInvariant rangeFormula)) :=
-  decideInvariant_total (Frag.Witness.declaration.traeger ()) rangeInvariant rangeFormula rfl
+  decideInvariant_total (Frag.Witness.declaration.traeger ()) rangeInvariant rangeFormula
+    range_translated_zeuge
 
 theorem model_validity_iff_zeuge :
     decideInvariant (Frag.Witness.declaration.traeger ()) rangeInvariant = .ok true ↔
       ∀ world : World Frag.Witness.declaration, eval world rangeInvariant world .nil = true :=
   decideInvariant_true_iff Frag.Witness.initial (Frag.Witness.declaration.traeger ())
-    rangeInvariant rangeFormula rfl
+    rangeInvariant rangeFormula range_translated_zeuge
 
 theorem model_counterexample_iff_zeuge :
     decideInvariant (Frag.Witness.declaration.traeger ()) Witness.shortInvariant = .ok false ↔
       ∃ world : World Frag.Witness.declaration, eval world Witness.shortInvariant world .nil = false :=
   decideInvariant_false_iff Frag.Witness.initial (Frag.Witness.declaration.traeger ())
-    Witness.shortInvariant Witness.shortFormula rfl
+    Witness.shortInvariant Witness.shortFormula Witness.short_translated_zeuge
 
 theorem sufficient_explicit_budget_zeuge (fuel : Nat)
     (enough : Budget (closedInvariant rangeFormula) ≤ fuel) :
     decideInvariant (Frag.Witness.declaration.traeger ()) rangeInvariant (some fuel) =
       .ok (decideB (closedInvariant rangeFormula)) :=
   decideInvariant_at_budget (Frag.Witness.declaration.traeger ()) rangeInvariant rangeFormula
-    rfl (some fuel) enough
+    range_translated_zeuge (some fuel) enough
 
 theorem insufficient_budget_refused_zeuge (fuel : Nat)
     (overrun : fuel < Budget (closedInvariant rangeFormula)) :
     decideInvariant (Frag.Witness.declaration.traeger ()) rangeInvariant (some fuel) =
       .error (.decision (.budgetExceeded 0 (Budget (closedInvariant rangeFormula)) fuel)) :=
   decideInvariant_over_budget (Frag.Witness.declaration.traeger ()) rangeInvariant rangeFormula
-    rfl fuel overrun
+    range_translated_zeuge fuel overrun
 
 theorem nonlinear_still_refused_zeuge :
     decideInvariant (Frag.Witness.declaration.traeger ()) Frag.Witness.product =
-      .error (.translation (.within "left" .nonlinear)) := by rfl
+      .error (.translation (.within "left" .nonlinear)) := by
+  simp only [decideInvariant, Frag.Witness.product_refused_zeuge]
 
 end Gabbro.Grammatik.Invarianten.Modell.DecisionWitness

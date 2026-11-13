@@ -96,11 +96,12 @@ theorem observationBounds_sound (keys : List (Observation D))
     simpa only [scalarBounds, LProp.denote, LTerm.denote, kind] using atKey
 
 /-- Every actual scalar value satisfies its declared bounds; no range hypothesis
-    is added to the invariant soundness theorem. -/
-theorem scalarBounds_value (τ : Ty) (value : Wert D τ) (term : LTerm α)
-    [DecidableEq α] (values : Assignment α)
-    (same : term.denote values = scalarValue τ value)
-    (supported : match τ with | .int _ _ | .str _ => True | _ => False) :
+    is added to the invariant soundness theorem. Support precedes the dependent
+    value so its type test does not generalize that value or the equality proof. -/
+theorem scalarBounds_value (τ : Ty)
+    (supported : match τ with | .int _ _ | .str _ => True | _ => False)
+    (value : Wert D τ) (term : LTerm α) [DecidableEq α] (values : Assignment α)
+    (same : term.denote values = scalarValue τ value) :
     (scalarBounds τ term).denote values := by
   cases τ with
   | int lo hi =>
@@ -127,9 +128,9 @@ theorem observationBounds_assignment (keys : List (Observation D)) (world : Worl
       constructor
       · have atKey := supported key (List.mem_cons.mpr (Or.inl rfl))
         cases key with
-        | glob name => exact scalarBounds_value _ (world.globs name) _ _ rfl atKey
+        | glob name => exact scalarBounds_value _ atKey (world.globs name) _ _ rfl
         | slot table field index =>
-            exact scalarBounds_value _ (world.slots table index field) _ _ rfl atKey
+            exact scalarBounds_value _ atKey (world.slots table index field) _ _ rfl
       · exact ih (fun other member => supported other (List.mem_cons.mpr (Or.inr member)))
 
 theorem scalarBounds_closed [DecidableEq α] (τ : Ty) (term : LTerm α) (bound : List α)

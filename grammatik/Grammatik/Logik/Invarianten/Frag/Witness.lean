@@ -79,17 +79,21 @@ theorem boundedLength_translated_zeuge :
     translateDeclared program () = .ok boundedFormula := by rfl
 
 theorem boundedLength_admitted_zeuge :
-    imFragmentB (declaration.traeger ()) boundedLength = true := by decide
+    imFragmentB (declaration.traeger ()) boundedLength = true := by
+  have translated : uebersetzeB (declaration.traeger ()) boundedLength = .ok boundedFormula :=
+    boundedLength_translated_zeuge
+  simp only [imFragmentB, translated]
 
 theorem boundedLength_sound_zeuge (world : World declaration) :
     eval world boundedLength world .nil = true ↔
       boundedFormula.denote (assignment world) :=
-  uebersetzeB_sound (declaration.traeger ()) boundedLength boundedFormula rfl world
+  uebersetzeB_sound (declaration.traeger ()) boundedLength boundedFormula
+    boundedLength_translated_zeuge world
 
 theorem declared_sound_zeuge (world : World declaration) :
     eval world (program.invariante ()) world .nil = true ↔
       boundedFormula.denote (assignment world) :=
-  translateDeclared_sound program () boundedFormula rfl world
+  translateDeclared_sound program () boundedFormula boundedLength_translated_zeuge world
 
 theorem carriers_sound_zeuge :
     ∀ carrier ∈ boundedLength.orte, carrier ∈ declaration.traeger () :=
@@ -97,21 +101,32 @@ theorem carriers_sound_zeuge :
 
 def initial : World declaration where
   slots := fun _ _ _ => ⟨4, by decide, by decide⟩
-  globs := fun name => if name = true then ⟨8, by decide, by decide⟩ else ⟨3, by decide, by decide⟩
+  globs := fun (name : Bool) =>
+    match name with
+    | true => ⟨8, by decide, by decide⟩
+    | false => ⟨3, by decide, by decide⟩
   spur := []
 
 theorem boundedLength_true_zeuge : eval initial boundedLength initial .nil = true := by
-  show wahr? (eval initial boundedLength initial .nil) = true
-  decide
+  apply (boundedLength_sound_zeuge initial).mpr
+  change (3 : Int) ≤ 8 ∧ (0 : Int) ≤ 3
+  constructor <;> omega
 
 def invalidLengthWorld : World declaration :=
   { initial with
-    globs := fun name => if name = true then ⟨8, by decide, by decide⟩ else ⟨9, by decide, by decide⟩ }
+    globs := fun (name : Bool) =>
+      match name with
+      | true => ⟨8, by decide, by decide⟩
+      | false => ⟨9, by decide, by decide⟩ }
 
 theorem boundedLength_false_zeuge :
     eval invalidLengthWorld boundedLength invalidLengthWorld .nil = false := by
-  show wahr? (eval invalidLengthWorld boundedLength invalidLengthWorld .nil) = false
-  decide
+  change wahr? (eval invalidLengthWorld boundedLength invalidLengthWorld .nil) = false
+  apply Bool.eq_false_iff.mpr
+  intro holds
+  have impossible := (boundedLength_sound_zeuge invalidLengthWorld).mp holds
+  change (9 : Int) ≤ 8 ∧ (0 : Int) ≤ 9 at impossible
+  omega
 
 def product : Expr declaration [] [] .bool :=
   .le (.mul (.glob false (globalAccess false)) (.glob true (globalAccess true))) (.lit 3)
@@ -136,16 +151,26 @@ theorem sorted_refused_zeuge :
 def localBound : Expr declaration [] [] .bool :=
   .forallSlots () (.le (.slot () () (.var .here) slotAccess) (.lit 10)) slotAccess
 
+def localFormula : LProp (Observation declaration) :=
+  .and (.le (.var (.slot () () 0)) (.konst 10))
+    (.and (.le (.var (.slot () () 1)) (.konst 10))
+      (.and (.le (.var (.slot () () 2)) (.konst 10)) .tru))
+
+theorem localBound_translated_zeuge :
+    uebersetzeB (declaration.traeger ()) localBound = .ok localFormula := by rfl
+
 theorem localBound_admitted_zeuge :
-    imFragmentB (declaration.traeger ()) localBound = true := by decide
+    imFragmentB (declaration.traeger ()) localBound = true := by
+  simp only [imFragmentB, localBound_translated_zeuge]
 
 /-- String contents never enter the arithmetic problem; their length does. -/
 def stringDeclaration : Deklaration :=
-  { declaration with gtyp := fun name => if name = true then .int 0 10 else .str 10 }
+  { declaration with
+    gtyp := fun (name : Bool) => match name with | true => .int 0 10 | false => .str 10 }
 
 def stringBound : Expr stringDeclaration [] [] .bool :=
-  .le (.strLen (.glob false (fun _ h => nomatch h)))
-    (.glob true (fun _ h => nomatch h))
+  .le (.strLen (Expr.glob (D := stringDeclaration) false (fun _ h => nomatch h)))
+    (Expr.glob (D := stringDeclaration) true (fun _ h => nomatch h))
 
 theorem stringBound_translated_zeuge :
     uebersetzeB (stringDeclaration.traeger ()) stringBound =
@@ -166,8 +191,9 @@ def emptyDeclaration : Deklaration :=
 
 def emptyNonlinear : Expr emptyDeclaration [] [] .bool :=
   .forallSlots ()
-    (.le (.mul (.glob false (globalAccess false)) (.glob true (globalAccess true))) (.lit 3))
-    slotAccess
+    (.le (.mul (Expr.glob (D := emptyDeclaration) false (fun _ h => nomatch h))
+      (Expr.glob (D := emptyDeclaration) true (fun _ h => nomatch h))) (.lit 3))
+    (fun _ h => nomatch h)
 
 theorem emptyNonlinear_refused_zeuge :
     uebersetzeB (emptyDeclaration.traeger ()) emptyNonlinear =
@@ -179,7 +205,7 @@ def atomicDeclaration : Deklaration :=
     ggeteilt_bewacht := fun _ h => nomatch h }
 
 def atomicBound : Expr atomicDeclaration [] [] .bool :=
-  .le (.glob false (globalAccess false)) (.lit 3)
+  .le (Expr.glob (D := atomicDeclaration) false (fun _ h => nomatch h)) (.lit 3)
 
 theorem atomicBound_refused_zeuge :
     uebersetzeB (atomicDeclaration.traeger ()) atomicBound = .error .atomicCarrier := by rfl
