@@ -1,7 +1,7 @@
 module
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.Export.ItemKind
-public import Grammatik.Parser.Elab.Export.TraversalHeader
+public import Grammatik.Parser.Elab.Export.Traversal.TraversalHeader
 public import Grammatik.Kern.Syntax.Typen.DataRights
 public import Grammatik.Parser.Elab.Uebersetze.MeasureSource
 public import Grammatik.Parser.Profil.Auswahl
@@ -60,8 +60,8 @@ def metadataReason : SItemTief → String
   | item => itemKind item ++ ": type/provider/proof duties lack a checked source binding"
 
 def check (items : List SItemTief) : Except String Unit :=
-  if items.any itemMetadata then
-    .error ("source export: " ++ ((items.find? itemMetadata).map metadataReason).getD "unsupported metadata")
+  if unitMetadata items then
+    .error ("source export: " ++ ((items.find? (unitItemMetadata items)).map metadataReason).getD "unsupported metadata")
   else .ok ()
 
 /-- Only the newly evaluable header/initializer positions need the new original-source gate. -/
@@ -81,12 +81,12 @@ def checkConstants (items : List SItemTief) : Except String Unit :=
 /-- A successful export holds no item the gate refuses. The gate ADMITS declared costs, hold bounds and pass
     bounds; that they hold is not part of this statement but of the compiler's checks (`CostBinding.holds`,
     `CostBinding.unvalued`, `HeldBinding.holds`, `ForeverBinding.holds`, the fields of `Stage0.Compiled`). -/
-theorem check_sound (items : List SItemTief) (h : check items = .ok ()) : items.any itemMetadata = false := by
+theorem check_sound (items : List SItemTief) (h : check items = .ok ()) : unitMetadata items = false := by
   unfold check at h
-  cases hm : items.any itemMetadata <;> simp_all
+  cases hm : unitMetadata items <;> simp_all
 
 /-- A unit without unsupported duties admits every guarded lowering. -/
-theorem check_clear (items : List SItemTief) (h : items.any itemMetadata = false) :
+theorem check_clear (items : List SItemTief) (h : unitMetadata items = false) :
     check items = .ok () := by simp [check, h]
 
 theorem check_sound_zeuge :
@@ -101,7 +101,7 @@ theorem check_sound_zeuge :
 /-- Every newly evaluable count/rank/initializer preserves the original unit's metadata duties. -/
 theorem checkConstants_sound (items : List SItemTief)
     (used : items.any constantExpansion = true) (accepted : checkConstants items = .ok ()) :
-    items.any itemMetadata = false :=
+    unitMetadata items = false :=
   check_sound items (by simpa only [checkConstants, used, ↓reduceIte] using accepted)
 
 set_option maxRecDepth 100000 in

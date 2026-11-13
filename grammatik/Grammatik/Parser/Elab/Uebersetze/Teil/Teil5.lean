@@ -133,7 +133,14 @@ def uSichert (ctx : UCtx) : SExpr → Except String UEns
       | .ok s => .ok (.cmp "==" (.rem s (.lit m)) (.lit 0))
   | e =>
     match uZugriff ctx e with
-    | .error x => .error (if uPraemisse x then x else "ensures clause without G form")
+    | .error x =>
+      if uPraemisse x then .error x else
+      -- By-value projections retain their declared type; a numeric field is never truthy.
+      match uSeite ctx e with
+      | .ok side =>
+        if uValueType ctx side = some .bool then .ok (.cmp "==" side (.truth true))
+        else .error "ensures clause without G form"
+      | .error _ => .error "ensures clause without G form"
     | .ok (.thru b, tb, f, ix) => do
       uReadThrough ctx b
       if uBoolFeld ctx tb f then .ok (.slotB b f ix) else .error "ensures clause without G form"

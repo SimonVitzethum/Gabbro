@@ -193,11 +193,14 @@ def uFeldBreiten (alias : List (String × (Int × Int))) (fds : List SFeld) : Li
     if 0 < w then some (fd.fname, w) else none
 
 mutual
-/-- A constant row folded at its element type: numbers by the constant evaluator, nested rows element by element. -/
+/-- A constant folded at its declared type: numbers by the constant evaluator, strings as UTF-8
+    literals, nested rows element by element. The typed literal gate checks lengths and bounds. -/
 def uKonstZeile (alias : List (String × (Int × Int))) (fns : List UKonstFn) (consts : List (String × Int))
     (ty : Ty) (value : SKonstWert) (leaf : Ty → SExpr → Option USide := fun _ _ => none) : Option USide :=
   match ty, value with
   | .int lo hi, .one e => (uKonstWert lo hi fns consts 64 e).map USide.lit
+  | .str _, .one (.ext .text [text] []) =>
+    some (.text (text.toUTF8.toList.map (fun byte => Int.ofNat byte.toNat)))
   | .arr τ _, .rows ks => uKonstZeilen alias fns consts τ ks leaf
   | τ, .one e => leaf τ e
   | _, _ => none

@@ -250,6 +250,11 @@ structure SInv (ctx : UCtx) (Γ : Ctx) (Λ : List (Res z.deklaration)) (art : Na
   /-- No transition declaration carries the name of a generated function (C04 routes such a
       call to the transition, `uNamedTransition`); the generator declares no transitions. -/
   transFrei : ∀ n, uNamedTransition ctx.zustaende n = none
+  /-- The read-back is a statement about the elaborator with the narrowing by guarding conditions OFF (the
+      default of `UCtx.narrow`, of `elabUFunktion` and of `elabExpandedWithScopes`; the canonical exporter). The
+      Stage-0 compiler reads with it on: there a printed `if` over a ranged local can start its branches with a
+      rebinding of that local, which the plain statements `uOf*` do not contain. -/
+  narrowOff : ctx.narrow = false
 
 variable {z V}
 
@@ -400,17 +405,18 @@ theorem reihe_cond (f : Nat) (ctx : UCtx) (c : SExpr) (ss : List SAnw) (els : Op
     (cv : UEns) (body elseS xs : List UStmt) (cB cE : UCtx) (hc : uBool ctx c = .ok cv)
     (h1 : uAnwReihe tabs koepfe f ctx ss = .ok (body, cB))
     (hE : (els = none ∧ elseS = []) ∨ ∃ ss2 c2, els = some (.block ss2 none) ∧ uAnwReihe tabs koepfe f ctx ss2 = .ok (elseS, c2))
-    (h2 : uAnwReihe tabs koepfe f ctx rest = .ok (xs, cE)) (hfold : needsFoldExpansion c = false) :
+    (h2 : uAnwReihe tabs koepfe f ctx rest = .ok (xs, cE)) (hfold : needsFoldExpansion c = false)
+    (hN : ctx.narrow = false) :
     uAnwReihe tabs koepfe (f + 1) ctx (.cond c (.block ss none) [] els :: rest) =
       .ok ([.ifBeg cv] ++ body ++ [.ifElse] ++ elseS ++ [.blkEnd] ++ xs, cE) := by
   rw [reihe_unexpanded tabs koepfe f ctx _ rest (by
     simp only [expandFoldStmt, expandFoldValue_no_work ctx ctx.names.length c hfold,
       bind, Except.bind, pure, Except.pure]), uAnwReiheCore]
   rcases hE with ⟨rfl, rfl⟩ | ⟨ss2, c2, rfl, he⟩
-  · simp only [uCond, hc, h1, uFoldEndeStmt, expandFoldEnd, uEndeStmt, h2, uEndetS,
+  · simp only [uCond, hN, uCondPlain, hc, h1, uFoldEndeStmt, expandFoldEnd, uEndeStmt, h2, uEndetS,
       Option.isSome_none, Bool.and_self, Bool.and_false, Bool.false_eq_true, ↓reduceIte,
       bind, Except.bind, pure, Except.pure, List.cons_append, List.nil_append, List.append_nil, List.append_assoc]
-  · simp only [uCond, hc, h1, uFoldEndeStmt, expandFoldEnd, uEndeStmt, he, h2, uEndetS,
+  · simp only [uCond, hN, uCondPlain, hc, h1, uFoldEndeStmt, expandFoldEnd, uEndeStmt, he, h2, uEndetS,
       Option.isSome_none, Bool.and_self, Bool.and_false, Bool.false_eq_true, ↓reduceIte,
       bind, Except.bind, pure, Except.pure, List.cons_append, List.nil_append, List.append_nil, List.append_nil, List.append_assoc]
 

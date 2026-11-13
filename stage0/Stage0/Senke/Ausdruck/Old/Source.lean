@@ -162,13 +162,21 @@ theorem restore_invariante (items : List SItemTief) (u : UProg)
       subst Q
       rfl
 
-/-- The full goal-theorem checker, on the final restored program and all original enumerations. -/
-def accepts (u : UProg) (P : Programm (declOf u)) : Except String Bool :=
+/-- The thread roots the compiler's check judges: the compiled entry `main` first (the image
+    starts it beside every other root, `Senke.bild`), then the unit's declared roots and every
+    run-time root twice (`Einheit.ws`). An entry that is also a declared root stands twice and
+    is judged as a pool routine: stricter than the image, never weaker. -/
+def judgedRoots (u : UProg) (main : (declOf u).Fn) : List (declOf u).Fn :=
+  main :: (u.roots ++ u.gestartet ++ u.gestartet).filterMap fun n => wurzelIdx u n
+
+/-- The full goal-theorem checker, on the final restored program and all original enumerations,
+    with the compiled entry `main` among the judged starts (`judgedRoots`). -/
+def accepts (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn) : Except String Bool :=
   letI : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length))
   letI : DecidableEq (declOf u).Ax := inferInstanceAs (DecidableEq (Fin u.axs.length))
   do
   if !sperrInvsOk u then throw "lock invariant without G form"
-  let ws : List (declOf u).Fn := (u.roots ++ u.gestartet ++ u.gestartet).filterMap fun n => wurzelIdx u n
+  let ws : List (declOf u).Fn := judgedRoots u main
   let ls : List (declOf u).Lock := List.finRange u.locks.length
   let cs : List ((declOf u).Tab ⊕ (declOf u).Glob) :=
     (List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr
@@ -177,12 +185,13 @@ def accepts (u : UProg) (P : Programm (declOf u)) : Except String Bool :=
 
 /-- `accepts` with the checker Bool that leaves out the closedness check, which is constant on the
     complete list of functions (`akzeptiertX_voll`). Compiled code runs this form. -/
-def acceptsSchnell (u : UProg) (P : Programm (declOf u)) : Except String Bool :=
+def acceptsSchnell (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn) :
+    Except String Bool :=
   letI : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length))
   letI : DecidableEq (declOf u).Ax := inferInstanceAs (DecidableEq (Fin u.axs.length))
   do
   if !sperrInvsOk u then throw "lock invariant without G form"
-  let ws : List (declOf u).Fn := (u.roots ++ u.gestartet ++ u.gestartet).filterMap fun n => wurzelIdx u n
+  let ws : List (declOf u).Fn := judgedRoots u main
   let ls : List (declOf u).Lock := List.finRange u.locks.length
   let cs : List ((declOf u).Tab ⊕ (declOf u).Glob) :=
     (List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr
@@ -191,7 +200,7 @@ def acceptsSchnell (u : UProg) (P : Programm (declOf u)) : Except String Bool :=
 
 /-- **The fast form answers exactly as the full checker.** -/
 @[csimp] theorem accepts_eq_schnell : @accepts = @acceptsSchnell := by
-  funext u P
+  funext u P main
   unfold accepts acceptsSchnell
   split
   · rfl
@@ -221,8 +230,8 @@ theorem restore_axVertrag (items : List SItemTief) (u : UProg)
 
 /-- Successful production admission retains one canonically admitted descriptor
     per source guest. In particular, an empty adapter cannot hide a guest. -/
-theorem accepts_guests (u : UProg) (P : Programm (declOf u))
-    (accepted : accepts u P = .ok true) :
+theorem accepts_guests (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn)
+    (accepted : accepts u P main = .ok true) :
     ∃ guests, sourceGuests u = .ok guests ∧ guests.length = u.guests.length ∧
       ∀ guest ∈ guests, guest.admittedB = true := by
   unfold accepts at accepted

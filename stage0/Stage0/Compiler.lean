@@ -16,6 +16,15 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
   Gabbro.Grammatik.Parser.Cover.Differenz
 
+/-- The first name that occurs twice: the entry whose table lookup answers an earlier position.
+    A list scan for the kernel, a hash map for compiled code (`Tafel`). -/
+def doppelterName (names : List String) : Option String :=
+  let table := Gabbro.Grammatik.Parser.Tafel.von (fun (entry : String × Nat) => entry.1) names.zipIdx
+  (names.zipIdx.find? fun entry =>
+    match table.finde entry.1 with
+    | some first => first.2 != entry.2
+    | none => false).map (·.1)
+
 /-- Per-loop environment fuel compiled into the image; independent of call depth. -/
 def irDurchlaeufe : Nat := 2 ^ 20
 
@@ -40,7 +49,7 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
   entry : fnIdx unit.fns (Profil.entryName options) = .ok main
   lowered : ∃ raw fs, lowerAllg unit = .ok (raw, fs) ∧
     OldSource.restore (pre108 source.prepared.elaborierbar) unit raw = .ok program
-  accepted : OldSource.accepts unit program = .ok true
+  accepted : OldSource.accepts unit program main = .ok true
   /-- The declared costs of the gate's functions hold on the final program: the K001 Bool of the model
       over every function with a declared cost (`CostBinding.holds_sound` is the bound). -/
   costs : CostBinding.holds (CostBinding.declared gateMembers) unit program irDurchlaeufe = true
@@ -110,6 +119,14 @@ def compileChecked (source : Frontend.Source text options)
     | .error error => throw error
     | .ok () => do
       let arrays ← Frontend.checkArrays unit source.scopes (uMembers declarations)
+      -- A call names its function; two functions of one name would leave the second unreachable.
+      if let some name := doppelterName (unit.fns.map (·.name)) then
+        throw ("function declared twice: " ++ name)
+      -- Constructor rewriting and function lookup must agree on the meaning of a call name.
+      let cases := Gabbro.Grammatik.Parser.Tafel.von (fun (name : String) => name)
+        (unit.sums.flatMap fun sum => sum.cases.map (·.1))
+      if let some fn := unit.fns.find? (fun fn => (cases.finde fn.name).isSome) then
+        throw ("function and case share a name: " ++ fn.name)
       match hm : fnIdx unit.fns (Profil.entryName options) with
       | .error e => throw e
       | .ok main => do
@@ -119,7 +136,7 @@ def compileChecked (source : Frontend.Source text options)
           match hr : OldSource.restore declarations unit raw with
           | .error e => throw e
           | .ok program => do
-            match ha : OldSource.accepts unit program with
+            match ha : OldSource.accepts unit program main with
             | .error e => throw e
             | .ok false => throw "refused by the checker (AkzeptiertX)"
             | .ok true => do
@@ -236,7 +253,7 @@ theorem Compiled.guest_descriptors {text : String} {options : Profil.Options}
     ∃ guests, sourceGuests result.unit = .ok guests ∧
       guests.length = result.unit.guests.length ∧
       ∀ guest ∈ guests, guest.admittedB = true :=
-  OldSource.accepts_guests result.unit result.program result.accepted
+  OldSource.accepts_guests result.unit result.program result.main result.accepted
 
 /-- Original-source scalar and function semantics, a unique acyclic alias namespace with a
     certified declaration permutation, and the identical UProg/declOf/lowerAllg endpoint
@@ -278,7 +295,7 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
         (fun u => {u with exportGate := Konst.checkSourceMetadata result.gateMembers}) = .ok result.unit ∧
     (∃ raw fs, lowerAllg result.unit = .ok (raw, fs) ∧
       OldSource.restore declarations result.unit raw = .ok result.program) ∧
-    OldSource.accepts result.unit result.program = .ok true ∧
+    OldSource.accepts result.unit result.program result.main = .ok true ∧
     (∀ item ∈ original, Frontend.ArrayMeaning result.unit scope item ∧ Frontend.ScalarStep scope item) ∧
     (∃ expanded requirements, Gabbro.Grammatik.Parser.Modules.prepare declarations =
       .ok (expanded, requirements) ∧

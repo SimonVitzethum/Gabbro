@@ -1,0 +1,9 @@
+// No payload-free initial case exists, so the existing tagged-value refusal must remain.
+module ir_tagged_slot_no_empty {
+tagged type Kind = { Node(u32 in 0 .. 9) };
+table T count 4 { slot { k : Kind, } }
+impl fn main() -> u32 in 0 .. 255 effects { reads T.slots } {
+    let a : Kind = T.slots[1].k;
+    match a { Node(v) => { return v; } }
+}
+}

@@ -179,6 +179,23 @@ inward.
 | **V2** | a checked **relation between two places** is a branch fact; under `a >= b`, `a - b` has type `0 .. a.max − b.min`. Comparison facts over directly checked places only | `if a >= b { let d = a - b; }` |
 | **V3** | a `match` on a `tagged` type narrows in the branch to the variant, payload included | exhaustive, no catch-all |
 
+**V1 as the compiler reads it today.** A condition narrows an **immutable number local or parameter** (not a
+`let mut`, a static, a slot, a field or a register) that it compares with a literal, a constant or another
+immutable number local at its declared range: `<`, `<=`, `>`, `>=`, `==`, and `&&` of such comparisons. In
+the `then` block the local is read at the intersection of its range with the bounds of the condition, in the
+`else` block (and in an `else if` chain) at the intersection with the bounds of its negation, and after the
+`if` at the bounds of the negation when the `then` block always ends (`return`, `leave`, `next` on every
+path): `let i : u32 in 0 .. 100 = …; if i < 10 { T.slots[i].v = 1; }` needs no `narrow`. `!=`, `||`, calls,
+relations between two places (V2) and a condition that bounds nothing in its branch give no fact. A block
+(the `then` block, the `else` block or `else if` chain, the code after the `if`) narrows only the bounded
+locals it mentions; a condition none of whose facts concerns a local some block mentions is read exactly as
+without this rule. The narrowed read is a rebinding of the same name at the smaller range,
+`let i : lo .. hi = i narrowed to lo .. hi`, in the total value form (the same form an `update` arm uses); it
+keeps the value the condition just proved to lie in the range, costs one range test whose fallback cannot be
+reached, and adds no exit, so no `ensures` duty is added. Declared `costs` count that test for every narrowed
+local of every block entered. The Stage-0 compiler reads with this rule; the canonical exporter and the
+read-back theorem of printed programs (`fn_ok`) state the elaborator without it (`UCtx.narrow`).
+
 What falls under none of them needs `narrow place to range else { … }` — a statement with a named
 exit, not a proof line. **The yardstick stays:** if `narrow` outgrows the remainder of the
 counter-measurement (set at ≤ 24 sites; this count is a yardstick, not re-measured here), the rule set is too small, and *that* is the

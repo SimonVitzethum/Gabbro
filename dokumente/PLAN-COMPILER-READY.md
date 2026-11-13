@@ -101,10 +101,13 @@ Grouped by stream. IDs are used in §5–§7. Estimates: LOC / full grammatik bu
 | S1 | rest of the language forms: `spec fn` with typed parameters, nested records in table slots, substring (needs the owner's language decision) | 300–800 / 1–2 / 8–15 |
 | S0m | measurement before S2: DONE (2026-11-12, agent W1-M6, run by the lead). A compiler front end written in Gabbro (source buffer, lexer, recursive-descent parser with precedence, AST in tables, symbol table with scopes, one checking pass; 1 267 lines in four files, `stage0/proben-compiler/`) compiles through Stage 0 as one unit and runs: exit 87 = 52 tokens + 35 nodes. Thirteen wanted forms were refused, each with a workaround (FINDINGS.txt there): cross-module calls that write (`use`/`pub`: "public interface is not closed"); `while`; `return f(..)` inside a branch; narrowing a value by the condition that guards it (about 60 explicit `narrow` instead); `narrow` on a record field; character literals; a wildcard `match` arm; tuples; a `bool` record field as a condition; a constructor or a computed index written straight into a table slot; a `const` string; `==` on tagged values; `next` in a `traverse` after a call-derived narrowed value. Not tried: substrings, function pointers, locks, separate compilation | done |
 | S2 | the forms S0m measured, in the order of what a compiler writer hits most: narrowing by the guarding condition and cross-module writes are the two large ones (a typing rule of the model; the closed-interface rule of modules); the others are sugar or small elaborator cases (`return f(..)` in a branch, character literals, wildcard arm, tuples over records, `bool` field conditions, slot writes of constructors, `const` strings, tagged equality, the `traverse` gate case, `narrow` on a field). `while` is a language decision (O18). Scoped returns (C11) hang on S3 stage 3. Shared locks (C10), invariant groups (C05) and statement-else (C07/C08) were NOT needed by the front end and leave the critical path until a later slice needs them | 3 000–10 000 / 2–4 / 25–60 |
+| S2 state | 2026-11-13, built and probed (corpus 356 of 364, the eight red are the scoped returns): narrowing by the guard (immutable number locals against a literal, a constant or another local's range; the `else` block; the code after a then block that always ends) and the difference of two locals under a guard (`if a >= b { return a - b; }`), both in the total `eng` form with nothing new in machine G and behind a switch of the elaborator context that only the compiler turns on, so the read-back theorems keep their text; qualified effect places (`writes b::T.slots`); `return f(..)` in a branch; character literals; the wildcard arm; `bool` record fields; equality of tagged values; named string constants; a computed read or a bare case stored into a slot; a tagged slot field read into a local; calls in a `traverse` body (the header check discharges the callees' declared effects); one-field records; option payloads in match arms; the statement's line in diagnostics; a function declared twice, or named like a case, is refused. OPEN of S2: tuples, `narrow` on a field, `while` (O18), named effect groups (O19), the relation when the read is the enclosing block's ending (`if a < b { return 0; } return a - b;` at the end of a function), u64 differences under a guard, the bool argument of a `spec fn` (import cycle) | — |
 | S3 | ticket lock (lock stage 1–3): `AgreeW` keeps lock classes (stage 1), ticket code and `locks` theorem (stage 2), held set tied to G's trace and a real release on every exit including `return` inside `locks` (stage 3; only this stage turns the eight red probes green) | 1 500–3 000 / 0–1 / 15–30 |
+| S3 state | 2026-11-13: stage 1 built. Stage 2 in parts: the ticket code, its uncontended lemmas, the class and sync invariant, the frame lemmas' ticket analogues and the new code layout (`locksCodeT`, body + 86) are built beside the old path. Found: the simulation did NOT tie the lock words to the held set (the old code survived through its hold count); the tie is added (`TicketOK`: mine iff in the held set `H`; `HeldIn H Λ floor`; `HeldIn.frei`: at `locks L` the lock is not in `H`, from the rank premise of `Stmt.locks` and the floor). The switch itself is one atomic step: `H` and `HeldIn` through `Umf` (about 50 files) and the 66 induction hypotheses of the statement simulation, `locks_ok` on the ticket code, then the old path deleted. Not proved and excluded by the sequential simulation: the contended paths (wait, `cas` retry, give with waiters) | — |
 | S4 | link step (separate compilation, verified link) — not needed for the start | 2 000–5 000 / 0–1 / 10–20 |
 | S5 | stack depth for finite call trees: `b.depth ≥ rufTief`, `abstieg` unreachable (B9, first half) | 500–1 500 / 0–1 / 3–6 |
 | S6 | `accepts` = `akzeptiertX_pruefer.akzeptiert` as a Lean equation on the unit the goal theorem uses (ws, `E.akku`, `E.pruefungen`, `besitzB`, `akkuStartB`); until proved, Stage 0 refuses units with arenas, accumulators or checks for the certified path | 800–2 500 / 0–1 / 5–10 |
+| S6 state | 2026-11-13: `accepts` judges the compiled entry `main` as a start (before, a plain `main` was judged with NO start, and the separation of `main` from `concurrent` workers was never checked); the bridge `accepts_gibt_pruefer` is on the judged `Einheit` (`einheitDer`, with the unit's real checks), its hypothesis `zertifizierbar` is used, and `Compiled.goal_checker_main` / `Emitted.goal_checker_main` state premise (a) for a plain `main` with the image's own start environment, with a joint witness. Still premises: arenas and accumulators (no exporter from the elaborated unit into the goal theorem's interfaces; `zertifizierbar` excludes them), the start lists in the general case with `concurrent`, and all of (d): the memory of the `Einheit` against the image's initial world, the thread assignment | — |
 | S7 | the lock's wait strategy as a profile binding (D17): spin for freestanding images, futex for Linux, one ticket order | 300–1 000 / 0 / 3–6 |
 
 ### V — GabbroV (R2)
@@ -112,8 +115,8 @@ Grouped by stream. IDs are used in §5–§7. Estimates: LOC / full grammatik bu
 | ID | Item | Estimate |
 |---|---|---|
 | V0 | measurement of what the bridge carries: DONE by reading (2026-11-12, spot-checked by the lead). `stmtBody` (bruecke/Bruecke/Pflichten.lean) has three arms: store through a pointer, store to a table, call; with the trailing `return` that is 4 of 34 statement forms of machine G, none of the 22 block binders, and about 15 of 64 expression forms. `Stimmig` (Lauf.lean) further demands no `requires` beside `Held`, no reason channel, no invariant, no static. The `Body` model has forms for about 12 more statements but no values for bytes, floats, references, records or linear marks | done |
-| V1 | duty generator in Lean from the elaborated unit, Stage-0 syntax | 3 000–8 000 / 1–3 / 25–60 |
-| V2 | bridge extended to every Stage-0 form: about 30 statement forms, the binders, the remaining expression forms, and the `Body` values they need; the three costliest are loops with exits, locks with atomics, and foreign/fallible/indirect calls with reason channels. Calibration: the existing bridge has about 7 000 lines for the 4 forms it carries | 12 000–40 000 / 3–6 / 40–120 |
+| V1 | the duties as a Lean TERM computed from the source, no printed duty file (design W3-M1, checked by the lead): `Pflichten src` (bruecke/Bruecke/Quelle.lean) already states the duties of a source text over `zuBody`/`meetsU`, `nutzer_aus_quelle` already derives premise (b) from it for every source text, and `vorlage` (Vorlage.lean) already prints the goal stub a user fills. V1 is what is left: a term-level stub in place of the printed one, the workflow written down, one witness. A printer of duty files (the deleted Rust tool's job) is NOT rebuilt: it would be a second register beside the computed statement | 400–900 / 0–1 / 3–8 |
+| V2 | bridge extended to every Stage-0 form: about 30 statement forms, the binders, the remaining expression forms, and the `Body` values they need; the three costliest are loops with exits, locks with atomics, and foreign/fallible/indirect calls with reason channels. Calibration: the existing bridge has about 7 000 lines for the 4 forms it carries  Order by what makes the 61 functions of `stage0/proben-compiler` provable first (W3-M1): local bindings and assignment, statics, `if`/`else`, value calls, `narrow`, a call returned from a branch, `bool` values, `match` on option and tagged; these eight with their shared scaffolding are about 10 000–20 000 lines. `Stimmig` is violated by that source at once in three conditions (statics, a `bool` result, record parameters); loops with exits, locks and fallible calls are not used by it | 12 000–40 000 / 3–6 / 40–120 |
 | V3 | GabbroV written in Gabbro with its initial Lean proof (MACHINE-IR-PLAN step 2) | see C1; after R2 |
 
 ### A — goal theorem: fewer assumptions
@@ -353,7 +356,7 @@ That is **about 23 full grammatik builds** for the goal theorem and the low-leve
 
 ## 6. Critical path and parallelism
 
-1. **To the compiler start:** S0m → S2 → S6 → V0 → V1 → V2. With S1, S2, S6 and V this is about 19 100–61 300
+1. **To the compiler start:** S0m → S2 → S6 → V0 → V1 → V2. With S1, S2, S6 and V this is about 16 500–54 200
    lines. No day count exists for it: the earlier figure "10–28 working days" (COMPILER-READY §2.3) covered S1 and a
    bridge that was assumed to carry most forms; V0 measured that it carries 4 of 34 statement forms, and S2 is
    not sized until S0m has measured it. GabbroV, and inside it the bridge (V2), is the longest single chain.
@@ -375,7 +378,7 @@ That is **about 23 full grammatik builds** for the goal theorem and the low-leve
 | Stream | Lean LOC (estimate) | Gabbro LOC (estimate) |
 |---|---|---|
 | S Stage 0 complete | 8 400–23 800 | — |
-| V GabbroV to R2 | 15 000–48 000 | — |
+| V GabbroV to R2 | 12 400–40 900 | — |
 | A fewer assumptions | 7 400–19 900 | — |
 | B more conclusions (B6 alone 30 000–80 000) | 48 000–126 000 | — |
 | C11 non-emptiness | 200–800 | — |
@@ -383,9 +386,9 @@ That is **about 23 full grammatik builds** for the goal theorem and the low-leve
 | C compiler on GIR, Lean side (C1–C5, C9) | 84 000–210 000 | — |
 | K kernel ready (K1–K6) | 26 000–72 000 | 14 000–40 000 |
 | C compiler sources and benchmarks (C7, C8) | — | 125 000–276 000 |
-| **sum** | **≈ 247 500–646 500** | **≈ 139 000–316 000** |
+| **sum** | **≈ 244 900–639 400** | **≈ 139 000–316 000** |
 
-**Everything together: about 390 000 to 965 000 new lines**, of which roughly two thirds Lean. Not included: C6
+**Everything together: about 385 000 to 955 000 new lines**, of which roughly two thirds Lean. Not included: C6
 (location assignment, scheduling, idiom cells, optimisation passes, further tables), which is sized only after C5
 has measured what one proved pass costs.
 
@@ -393,10 +396,10 @@ Parts of the sum by gate (each includes what the earlier gates need):
 
 | Up to | Lean LOC | Gabbro LOC |
 |---|---|---|
-| the compiler start (S1, S2, S6, V) | 19 100–61 300 | — |
-| R3 trusted Stage-0 output (adds the rest of S, A, B, C11) | 79 000–218 500 | — |
-| R4 low-level model (adds L) | 137 500–364 500 | — |
-| R5 kernel ready (adds C1–C5, C9, K, C7, C8) | 247 500–646 500 | 139 000–316 000 |
+| the compiler start (S1, S2, S6, V) | 16 500–54 200 | — |
+| R3 trusted Stage-0 output (adds the rest of S, A, B, C11) | 76 400–211 400 | — |
+| R4 low-level model (adds L) | 134 900–357 400 | — |
+| R5 kernel ready (adds C1–C5, C9, K, C7, C8) | 244 900–639 400 | 139 000–316 000 |
 
 Calibration (**measured**): seven Stage-0 forms took about 490 lines and 16 builds (2026-11-12); the float
 satisfiability proof about 2 100 lines; the sequential `Senke` 62 700 lines; the goal-theorem proof `ZielOrt`
@@ -430,6 +433,7 @@ model today, so their ranges are the least certain of the table.
 | O16 | a second binding (K6, AArch64) as the measure of architecture neutrality, before the kernel gate is called reached | yes |
 | O17 | further cores on x86-64 through a generated start item of the binding (K4), accepted as the one place where 16-bit and 32-bit rows exist | yes; the alternative is a single-core kernel |
 | O18 | a `while` loop (S0m: the form a compiler writer reaches for first; today recursion with a measure or `retry until … bounded` stand in) | decide: sugar over an existing loop with a user measure, or stay without |
+| O19 | named effect groups: a module declares a name for a set of its places, and other modules write `effects b::group` instead of each table (S0m: cross-module writes need every slot table of the other module in the effect clause; the qualified place `b::T.slots` is a parser case and is done without a decision) | decide: a language addition with a model rule (the group unfolds to its places before `Akzeptiert`), or stay with the listed places |
 
 O12–O17 were put to the owner on 2026-11-12 with this plan and answered "passt alles": they are confirmed. AGENTS.md
 and LOW-LEVEL-SYNTAX-PLAN.md are corrected to them in the Phase-0 documentation pass (D12–D14).

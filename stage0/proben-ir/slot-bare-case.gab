@@ -1,0 +1,19 @@
+// A case without a payload is stored into a table slot directly.
+module ir_slot_bare_case {
+tagged type Kind = { Leaf, Node(u32 in 0 .. 9) };
+table T count 4 { slot { k : Kind, } }
+impl fn kind(i : u32 in 0 .. 3) -> u32 in 0 .. 30 effects { reads T.slots } {
+    match T.slots[i].k {
+        Leaf => { return 30; }
+        Node(v) => { return v; }
+    }
+}
+impl fn main() -> u32 in 0 .. 255 effects { reads T.slots, writes T.slots } {
+    T.slots[1].k = Node(4);
+    T.slots[1].k = Leaf;
+    T.slots[2].k = Node(6);
+    let a = kind(1);
+    let b = kind(2);
+    return a + b;
+}
+}

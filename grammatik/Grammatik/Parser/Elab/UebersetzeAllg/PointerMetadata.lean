@@ -170,9 +170,9 @@ theorem elabUFunktion_checkedPointerParam
     (regs : List UReg) (zustaende : List UZustand)
     (specs : List (String × List String × SExpr)) (arrKonst : List (String × USide))
     (specTypen : List (String × List STyp))
-    (valueScope : UTypeScope) {fn : UFn}
+    (valueScope : UTypeScope) {narrow : Bool} {fn : UFn}
     (accepted : elabUFunktion consts alias tabs locks globs koepfe sig body annahmen whys sums
-      devs regs zustaende zeiger zb specs arrKonst spaces valueScope eigner specTypen = .ok fn)
+      devs regs zustaende zeiger zb specs arrKonst spaces valueScope eigner specTypen narrow = .ok fn)
     (j : Nat) (cap : DataCapTy) (kind : fn.kinds[j]? = some (.ptr cap)) :
     ∃ certificate, checkedPointerParam fn j cap = .ok certificate := by
   unfold elabUFunktion at accepted

@@ -1,0 +1,23 @@
+// A `let mut` local gets no narrowing from its guard (its value may change between the test and the use):
+// the same guarded index as in guard-narrow.gab stays refused, and only an explicit `narrow` admits it.
+module ir_probe {
+table T count 10 { slot { v : u32 in 0 .. 100, } }
+
+impl fn store(i : u32 in 0 .. 100) -> u32 in 0 .. 100
+    effects { reads T.slots, writes T.slots }
+{
+    let mut j : u32 in 0 .. 100 = i;
+    if j < 10 {
+        T.slots[j].v = 7;
+        return 1;
+    }
+    return 0;
+}
+
+impl fn main() -> u32 in 0 .. 100
+    effects { reads T.slots, writes T.slots }
+{
+    let a = store(4);
+    return a;
+}
+}

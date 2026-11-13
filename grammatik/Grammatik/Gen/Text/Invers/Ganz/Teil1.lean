@@ -181,6 +181,7 @@ theorem fnCtx_sinv {gNr : Nat → Nat} {tabs : List UTab} {locks : List ULock} {
     exact ⟨_, w, by simp only [uCtxVon, kopfVon, kanalVon, h, ↓reduceIte, Deklaration.gruende], h1, h2, h4⟩
   zb := hzb
   transFrei := hzu
+  narrowOff := rfl
 
 /-- The `requires`/`ensures` context: the body context with the held resources of `Λ'` (its locks held). -/
 theorem SInv.vertragE {V : Vertrag z.deklaration} {ctx : UCtx} {Γ : Ctx} {Λ Λ' : List (Res z.deklaration)}

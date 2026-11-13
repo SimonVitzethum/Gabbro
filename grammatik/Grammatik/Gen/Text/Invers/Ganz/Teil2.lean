@@ -10,7 +10,9 @@ open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Parser Gabbro.Gramma
 variable (z : Spez)
 variable {z}
 
-/-- **A whole function read back.** -/
+/-- **A whole function read back.** The statement is about `elabUFunktion` with its default `narrow := false`
+    (no narrowing by guarding conditions, `UCtx.narrow`; the canonical exporter); the Stage-0 compiler elaborates
+    with it on, where a printed `if` over a ranged local can gain a rebinding at the start of its branches. -/
 theorem fn_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklaration.Fn) {tabs : List UTab}
     {locks : List ULock} {globs : List UGlob} {whys : List UWhy} {regs : List UReg}
     (hL : LInv z gNr tabs locks globs whys regs) (hM : ∀ m : z.deklaration.Marke, False)

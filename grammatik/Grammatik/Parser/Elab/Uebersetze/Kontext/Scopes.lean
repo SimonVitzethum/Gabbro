@@ -117,7 +117,8 @@ structure UCtx where
   resTy : Option Ty := none
   /-- The unit's `spec fn`s (name, parameter names, predicate): inlined at every use in a contract (SUGAR, `M130`). -/
   specs : List (String × List String × SExpr) := []
-  /-- The unit's constant arrays (`const T : [u32; N] = [..]`): their folded literal at every use. -/
+  /-- The unit's typed constants (including arrays and strings): their folded literal at every use.
+      Parameters and locals take precedence over this declaration scope. -/
   arrKonst : List (String × USide) := []
   /-- The unit's device registers. -/
   regs : List UReg := []
@@ -142,6 +143,11 @@ structure UCtx where
   unknownRanges : List String := []
   /-- Declared parameter types of each predicate helper, checked before substitution. -/
   specTypen : List (String × List STyp) := []
+  /-- Narrowing by the guarding condition (`uCond`): a branch of `if` reads an immutable number local that
+      the condition bounds at the narrowed range. Off by default (the canonical exporter, the read-back of
+      printed programs, every probe); the Stage-0 compiler turns it on for function bodies
+      (`elabUFunktion (narrow := true)`). -/
+  narrow : Bool := false
 
 /-- One elaborated function: parameters with their `Ty`,
     the optional result range, the held lock names, the written
@@ -206,6 +212,13 @@ structure UFn where
 def uArtVon : Ty → UParamArt
   | .arr _ _ | .str _ | .prod .. => .wert
   | _ => .int
+
+/-- Option payloads retain only their extent in `Ty`. Recover the table position only when
+    exactly one table has that extent; never invent an identity for an ambiguous payload. -/
+def uOptionTabelle (tabs : List UTab) (count : Int) : Option Nat :=
+  match tabs.zipIdx.filter (fun (t, _) => t.count == count) with
+  | [(_, num)] => some num
+  | _ => none
 
 /-- The scope after a `let x` of a number with the computed range `w`: `x` is the first name (it
     shadows a parameter), `Block.bind` puts its type first in the context. -/

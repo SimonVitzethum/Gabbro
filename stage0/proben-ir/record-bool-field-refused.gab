@@ -1,0 +1,10 @@
+// A numeric 0..1 field must remain a number, including after an inferred binding.
+module ir_record_bool_field_refused {
+type NumericFlag = { ok : u32 in 0 .. 1, pad : u32 in 0 .. 1, };
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let r = NumericFlag(ok: 1, pad: 0);
+    let b = r.ok;
+    if b { return 42; }
+    return 0;
+}
+}

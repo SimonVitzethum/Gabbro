@@ -18,7 +18,7 @@ theorem strings_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : 
     lowCmp u Γ Λ fn er "<=" a b = .ok (.or (.strLt x y) (.strEq x y)) ∧
     lowCmp u Γ Λ fn er ">" a b = .ok (.strLt y x) ∧
     lowCmp u Γ Λ fn er ">=" a b = .ok (.or (.strLt y x) (.strEq x y)) := by
-  simp [lowCmp, first, last, gate, bind, Except.bind, pure, Except.pure]
+  simp [lowCmp, lowVglWert, first, last, gate, bind, Except.bind, pure, Except.pure]
 
 /-- Every successful string comparison retains the original unit duty check. -/
 theorem strings_gate (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (er : Option Ty)
@@ -29,7 +29,7 @@ theorem strings_gate (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : U
     (value : Expr (declOf u) Γ Λ .bool) (success : lowCmp u Γ Λ fn er op a b = .ok value) :
     u.exportGate = .ok () := by
   cases gate : u.exportGate with
-  | error error => simp only [lowCmp, first, last, gate, bind, Except.bind] at success; contradiction
+  | error error => simp only [lowCmp, lowVglWert, first, last, gate, bind, Except.bind] at success; contradiction
   | ok unit => cases unit; rfl
 
 /-- Equality and order are the canonical byte/length relations, with both operand footprints. -/
@@ -50,7 +50,7 @@ theorem references_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn
     (last : lowWertE u Γ Λ fn er b = .ok ⟨.ref region, y⟩) :
     lowCmp u Γ Λ fn er "==" a b = .ok (.refEq x y) ∧
     lowCmp u Γ Λ fn er "!=" a b = .ok (.not (.refEq x y)) := by
-  simp [lowCmp, first, last, gate, bind, Except.bind, pure, Except.pure]
+  simp [lowCmp, lowVglWert, first, last, gate, bind, Except.bind, pure, Except.pure]
 
 /-- Canonical reference equality compares cell identity within the already equal region. -/
 theorem references_meaning {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {region : Nat}

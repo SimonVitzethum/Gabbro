@@ -71,7 +71,7 @@ theorem qualified_compiled_zeuge : (compile qualifiedText).toOption.isSome = tru
 theorem portable_source_pipeline_zeuge :
     ∃ result : Compiled boolText,
       compile boolText = .ok result ∧ CanonicalSourceProgram result ∧
-      OldSource.accepts result.unit result.program = .ok true := by
+      OldSource.accepts result.unit result.program result.main = .ok true := by
   exact ⟨_, except_ok_get bool_compiled_zeuge, compile_source_program boolText _,
     Compiled.accepted _⟩
 

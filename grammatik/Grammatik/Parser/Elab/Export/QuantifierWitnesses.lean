@@ -49,7 +49,7 @@ theorem tree_quantifier_lower_zeuge :
   have inner : lowEns relationUnit [.int 0 2, .int 0 2, .int 0 2] []
       (relationFunction.mitIndex "root" 0 3) none (.cmp "<=" (.param "root") (.lit 1)) =
       .ok (.le (.var .here) (.lit 1)) := by
-    simp [lowEns, usideHatZaehle, lowCmp, parameter, lowWertE,
+    simp [lowEns, usideHatZaehle, lowCmp, lowVglWert, parameter, lowWertE,
       LowSide.wert, zahlVon, LowWert.zahl]
   have ready : (selfEdge relationUnit (⟨0, by decide⟩ : Fin relationUnit.tabs.length)
       "next").toOption.isSome = true := rfl

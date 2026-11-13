@@ -1,0 +1,8 @@
+// A constant string longer than its declared maximum must fail the typed literal gate.
+module ir_string_constant_refused {
+const Q : string max 2 = "hi!";
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let v = Q[0];
+    return v;
+}
+}

@@ -47,4 +47,17 @@ def gibT (L : Lay D) (a s : Nat) : List II :=
 theorem nimmT_len (L : Lay D) (a s : Nat) : (nimmT L a s).length = 7 + 5 + 7 + 8 + 7 + 1 := by rfl
 theorem gibT_len (L : Lay D) (a s : Nat) : (gibT L a s).length = 8 + 8 := by rfl
 
+/-- The ticket form of the code of `locks Lk { body }` around the body's code `cb` (lock stage 2b; `lowS` still
+    emits `locksCode`): take; the body (its `leave` and `next` to the two stubs after the end, at `16 * 17` and
+    `16 * 34` bytes from its end); give; over the stubs; the `leave` stub: give, on to the outer `leave` target
+    `exL`; the `next` stub: give, on to `exN` (both from the end of this code). -/
+def locksCodeT (L : Lay D) (a s : Nat) (cb : List II) (exL exN : Int) : List II :=
+  nimmT L a s ++ cb ++ gibT L a s ++ [ci 18 (16 * (1 + 2 * ((gibT L a s).length + 1))) 0 0] ++
+    gibT L a s ++ [ci 18 (16 + exL + 16 * ((gibT L a s).length + 1)) 0 0] ++
+    gibT L a s ++ [ci 18 (16 + exN) 0 0]
+
+theorem locksCodeT_len (L : Lay D) (a s : Nat) (cb : List II) (x y : Int) :
+    (locksCodeT L a s cb x y).length = cb.length + 86 := by
+  simp only [locksCodeT, List.length_append, nimmT_len, gibT_len, List.length_singleton]; omega
+
 end Gabbro.Stage0.Senke

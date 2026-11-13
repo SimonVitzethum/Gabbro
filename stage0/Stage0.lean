@@ -18,6 +18,8 @@ public import Stage0.Zeugen.Pipeline.RetireWitness
 public import Stage0.Zeugen.Annahme.LibraryWitness
 public import Stage0.Zeugen.Annahme.CheckWitness
 public import Stage0.Zeugen.Pruefung.CheckConsumerWitness
+public import Stage0.Zeugen.Pruefung.GoalCheckerWitness
+public import Stage0.Zeugen.Pruefung.FrontendDefectsZeuge
 public import Stage0.Zeugen.Ablehnung.AccWitness
 public import Stage0.Zeugen.Annahme.AlignedStaticWitness
 public import Stage0.Zeugen.Annahme.ResetRangeWitness
@@ -95,7 +97,16 @@ public import Stage0.Senke.Anweisung.Faelle.Schleifen.CountedLoop
 public import Stage0.Senke.Sperre.Proben
 public import Stage0.Senke.Sperre.Ticket.Nimm
 public import Stage0.Senke.Sperre.Ticket.Gib
+public import Stage0.Senke.Sperre.Ticket.Klasse
+public import Stage0.Senke.Sperre.Ticket.Sync
+public import Stage0.Senke.Sperre.Ticket.Paar
+public import Stage0.Senke.Sperre.Ticket.Lauf
+public import Stage0.Senke.Sperre.Ticket.Frei
+public import Stage0.Senke.Sperre.Ticket.Lage
+public import Stage0.Senke.Sperre.Ticket.Offen
 public import Stage0.Senke.Ausdruck.Old.Pruefer
+public import Stage0.Senke.Ausdruck.Old.JudgedUnit
+public import Stage0.CompilerPruefer
 
 public import Stage0.Senke.Ausdruck.Arithmetik.Proben.ScalarProbe
 

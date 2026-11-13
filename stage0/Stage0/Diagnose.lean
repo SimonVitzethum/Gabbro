@@ -49,15 +49,112 @@ def fnLine (text name : String) : Option Nat :=
   let heads := ["(", "[", " "].map fun close => "fn " ++ name ++ close
   ((text.splitOn "\n").findIdx? fun line => heads.any fun head => (line.splitOn head).length > 1).map (· + 1)
 
+/-- One diagnostic token step, using the lexer's own literal, comment and punctuation readers.
+    The last component counts consumed newlines; strings and line comments contain none.
+    This adapter never participates in compilation or acceptance. -/
+def tokenStep : List Char → Option (Option Token × List Char × Nat)
+  | '/' :: '/' :: rest => some (none, (nimmZeile rest).2, 0)
+  | source@('/' :: '*' :: rest) => do
+    let tail ← ueberBlock 1 rest
+    let consumed := source.take (source.length - tail.length)
+    some (none, tail, (consumed.filter (· == '\n')).length)
+  | '"' :: rest => do
+    let (value, tail) ← nimmText rest
+    some (some (.text (String.ofList value)), tail, 0)
+  | c :: rest =>
+    if istLeer c then some (none, rest, if c == '\n' then 1 else 0)
+    else if istZiffer c then
+      (scanZahlKopf (c :: rest)).toOption.map fun (token, tail) => (some token, tail, 0)
+    else if istAnfang c then
+      let (word, tail) := nimmFolge rest
+      let name := String.ofList (c :: word)
+      some (some (if istSchluessel name then .wort name else .ident name), tail, 0)
+    else
+      match nimmZeichen (c :: rest) with
+      | some (mark, tail) => some (some (.zeichen mark), tail, 0)
+      | none =>
+        if c == '\'' then
+          (takeCharacter rest).map fun (value, tail) => (some (.num value), tail, 0)
+        else none
+  | [] => none
+
+/-- Tokens with their original source lines. Agreement with `lex` is checked before using the
+    positions, so a future lexical extension makes the adapter decline rather than mislocate a note. -/
+def tokenLines (text : String) : Option (List (Token × Nat)) := do
+  let expected ← (lex text).toOption
+  let rec scanLines : Nat → List Char → Nat → Option (List (Token × Nat))
+    | _, [], line => some [(.ende, line)]
+    | 0, _ :: _, _ => none
+    | fuel + 1, chars@(_ :: _), line => do
+      let (token, tail, advance) ← tokenStep chars
+      let rest ← scanLines fuel tail (line + advance)
+      some (match token with | some token => (token, line) :: rest | none => rest)
+  let tokens ← scanLines (text.toList.length + 1) text.toList 1
+  if tokens.map (·.1) == expected then some tokens else none
+
+/-- The body opener of a named source function. Parsing the signature skips contract/effects
+    braces; prototypes and comments cannot be mistaken for a body. -/
+def functionBody (name : String) : List (Token × Nat) → Option (List (Token × Nat))
+  | [] => none
+  | tokens@((token, _) :: tail) =>
+    let found := match token with
+      | .wort "fn" =>
+        let raw := tokens.map (·.1)
+        match parseFnSig (raw.length * 8 + 32) "impl" raw with
+        | .ok (sig, rest) =>
+          if sig.name == name then
+            let body := tokens.drop (raw.length - rest.length)
+            match body with
+            | (.zeichen "{", _) :: _ => some body
+            | _ => none
+          else none
+        | .error _ => none
+      | _ => none
+    match found with
+    | some body => some body
+    | none => functionBody name tail
+
+/-- The N-th top-level statement, excluding a block's closing return just as `firstFailing` does.
+    The source statement count and kind must agree with the note: expansion may insert statements,
+    in which case no source location is claimed. Nested blocks are consumed by `parseStmt`. -/
+def statementLine (text name : String) (index total : Nat) (kind : String) : Option Nat := do
+  let tokens ← tokenLines text
+  let body ← functionBody name tokens
+  let raw := body.map (·.1)
+  let fuel := raw.length * 8 + 32
+  let (.block statements _, _) ← (parseBlock fuel raw).toOption | none
+  if statements.length != total then none else do
+    let statement ← statements[index - 1]?
+    if statementKind statement != kind then none else do
+      let rec locate : Nat → List (Token × Nat) → Option Nat
+        | 0, _ => none
+        | _ + 1, [] => none
+        | k + 1, current@((_, line) :: _) =>
+          if k == 0 then some line else do
+            let raw := current.map (·.1)
+            let (_, rest) ← (parseStmt fuel raw).toOption
+            locate k (current.drop (raw.length - rest.length))
+      locate index (body.drop 1)
+
+/-- Read the statement index, count and kind already printed by `notesPlain`. -/
+def statementPlace (text name note : String) : Option Nat := do
+  let suffix ← (note.splitOn " (statement ")[1]?
+  let [index, rest] := suffix.splitOn " of " | none
+  let [total, kind] := rest.splitOn ": " | none
+  statementLine text name (← index.toNat?) (← total.toNat?) ((kind.splitOn ")").headD "")
+
 /-- A note that names its function (`function NAME: ...`), with the place of the declaration added. -/
 def withLine (text : String) (place : Nat → String) (note : String) : String :=
   match (note.splitOn "function ").drop 1 with
   | rest :: _ =>
     match rest.splitOn ": " with
     | name :: _ :: _ =>
-      match fnLine text name with
-      | some line => note ++ " [declared at " ++ place line ++ "]"
-      | none => note
+      let declared := match fnLine text name with
+        | some line => note ++ " [declared at " ++ place line ++ "]"
+        | none => note
+      match statementPlace text name note with
+      | some line => declared ++ " [statement at " ++ place line ++ "]"
+      | none => declared
     | _ => note
   | [] => note
 
@@ -74,7 +171,8 @@ def notesPlain (text : String) (options : Profil.Options := {}) : List String :=
     | .ok prepared => pure prepared
   let declarations := pre108 prepared.elaborierbar
   let members := uMembers declarations
-  let refused := ((Konst.ohneKonst members).filter ExportMetadata.itemMetadata).map
+  let runtimeMembers := Konst.ohneKonst members
+  let refused := (runtimeMembers.filter (ExportMetadata.unitItemMetadata runtimeMembers)).map
     ExportMetadata.metadataReason
   let gate := refused.eraseDups.map fun reason => "export gate refuses: " ++ reason
   let derived ← match Frontend.elaborateConstantScopes members with
@@ -95,13 +193,13 @@ def notesPlain (text : String) (options : Profil.Options := {}) : List String :=
             ((Instantiation.directReferences result.items).filter fun name => !known.contains name).eraseDups.map
               fun name => "call of an undeclared function: " ++ name
         | .ok (expanded, requirements) =>
-          match elabExpandedWithScopes (expanded.map OldSource.normalizeItem) derived.scope.values
+          match Frontend.elabExpanded (expanded.map OldSource.normalizeItem) derived.scope.values
               derived.scope.types derived.scope.functions
               (Frontend.tableWithEmpty derived.scope.values derived.scope.types) requirements (ort := true) with
           | .error reason =>
             -- The statement: the shortest prefix of the function's body that answers the same error.
             let run := fun (items : List SItemTief) =>
-              match elabExpandedWithScopes items derived.scope.values derived.scope.types
+              match Frontend.elabExpanded items derived.scope.values derived.scope.types
                   derived.scope.functions
                   (Frontend.tableWithEmpty derived.scope.values derived.scope.types) requirements (ort := true) with
               | .error e => some e

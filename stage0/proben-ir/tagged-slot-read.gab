@@ -1,0 +1,26 @@
+// Typed, inferred and mutable tagged slot reads. pick runs once and updates the slot before
+// reading it. Exit: first payload 5 + second payload 7 + one visit * 10 + Leaf marker 1 = 23.
+module ir_tagged_slot_read {
+tagged type Kind = { Leaf, Node(u32 in 0 .. 9) };
+table T count 4 { slot { k : Kind, } }
+static mut visits : u32 in 0 .. 2 = 0;
+impl fn pick() -> u32 in 0 .. 3 effects { reads visits, writes visits, writes T.slots } {
+    if visits == 0 { visits = 1; } else { visits = 2; }
+    T.slots[1].k = Node(7);
+    return 1;
+}
+impl fn main() -> u32 in 0 .. 255 effects { reads visits, writes visits, reads T.slots, writes T.slots } {
+    T.slots[1].k = Node(5);
+    let a : Kind = T.slots[1].k;
+    let b = T.slots[pick()].k;
+    let mut c : Kind = T.slots[0].k;
+    c = Leaf;
+    let mut first : u32 in 0 .. 9 = 0;
+    let mut second : u32 in 0 .. 9 = 0;
+    let mut marker : u32 in 0 .. 1 = 0;
+    match a { Leaf => { first = 0; } Node(v) => { first = v; } }
+    match b { Leaf => { second = 0; } Node(v) => { second = v; } }
+    match c { Leaf => { marker = 1; } Node(v) => { marker = 0; } }
+    return first + second + visits * 10 + marker;
+}
+}

@@ -79,7 +79,7 @@ theorem nested_if_zeuge :
     erweitere (fixture [twoCases] (.cond .tru (.block [wildcardMatch] none) [] none)) =
       fixture [twoCases] (.cond .tru (.block [explicitMatch] none) [] none) := by kernel_rfl
 
-/-- Every body constructor visited by CallHoist contains the same nested match fixture. -/
+/-- Every statement constructor carrying a body contains the same nested match fixture. -/
 def bodyForms (b : SAnw) : List SAnw :=
   [.cond .tru b [.elsif .fls b] (some b), .elsif .tru b,
     .cases (.variable "outer") [.arm "A" none b], .arm "A" none b,
@@ -87,9 +87,11 @@ def bodyForms (b : SAnw) : List SAnw :=
     .retry "forever" b, .loop "forever" b, .waive [] b, .trim (.variable "x") "u8" b,
     .locks false (.variable "L") b, .watch "D" b, .block [b] none,
     .bindElse "x" none (.call "f" []) "e" b, .callElse "f" [] "e" b,
-    .callIndElse (.variable "p") [] "e" b]
+    .callIndElse (.variable "p") [] "e" b,
+    .bindAxiomOptElse "x" none (.call "f" []) "e" b,
+    .alloc false "x" none "A" (.lit 1) (some b), .grow "A" (.lit 1) b, .child b]
 
-/-- The traversal reaches all required body forms, including the three fallible-call bodies. -/
+/-- The traversal reaches every body form, including allocation and foreign failure bodies. -/
 theorem body_forms_zeuge :
     erweitere (fixture [twoCases] (.block (bodyForms wildcardMatch) none)) =
       fixture [twoCases] (.block (bodyForms explicitMatch) none) := by kernel_rfl

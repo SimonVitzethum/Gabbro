@@ -7,11 +7,14 @@
     additionally requires the ownership start (`besitzB`) and the neutral
     accumulator start (`akkuStartB`).
 
-    This file defines the `Einheit` a Stage-0 unit and its restored program
-    stand for, the Bool `zertifizierbar` saying the unit has no arena table,
-    no accumulator storage and no declared check (exactly the cases where the
-    two sides can differ), and the bridge theorem: on a certifiable unit a
-    successful `accepts` gives the goal checker's `true`. -/
+    This file defines `einheitVon` (an `Einheit` with empty arenas,
+    accumulators and checks), the Bool `zertifizierbar` saying the unit has no
+    arena table, no accumulator storage and no declared check (exactly the
+    cases where the two sides can differ), and the step theorem: a successful
+    `accepts` gives the goal checker's `true` on `einheitVon`, with the
+    compiled entry `main` among the judged starts (`judgedRoots`). The bridge
+    on the unit's judged `Einheit` (`einheitDer`), which uses
+    `zertifizierbar`, is in JudgedUnit.lean. -/
 module
 public import Stage0.Senke.Ausdruck.Old.Source
 public import Grammatik.Parser.Cover.Differenz
@@ -142,27 +145,24 @@ theorem akzeptiertX_inst (D : Deklaration) (fnEq₁ fnEq₂ : DecidableEq D.Fn)
   cases Subsingleton.elim axEq₁ axEq₂
   rfl
 
-/-- On a certifiable unit with the checker's roots, a successful `accepts`
-    gives the goal checker's `true` with the complete enumerations. The guest
-    descriptors `accepts` certifies ride along unchanged
-    (`akzeptiertX_guest_eq`); the ownership and accumulator starts hold
-    vacuously over the empty lists (`besitzB_leer`, `akkuStartB_leer`); the
-    two sides use different equality procedures, bridged by
-    `akzeptiertX_inst`. -/
-theorem accepts_gibt_pruefer (u : UProg) (P : Programm (declOf u)) (Q : AxEns (declOf u))
-    (sp : Speicher (declOf u))
+/-- **The step behind the bridge**: a successful `accepts` gives the goal checker's `true` on
+    `einheitVon`, whose arenas, accumulators and checks are empty, for EVERY unit. It says nothing
+    about a unit's own arenas, accumulators or checks: the bridge on the unit's judged `Einheit`
+    is `accepts_gibt_pruefer` (JudgedUnit.lean), which uses `zertifizierbar`. The guest
+    descriptors `accepts` certifies ride along unchanged (`akzeptiertX_guest_eq`); the ownership
+    and accumulator starts hold vacuously over the empty lists (`besitzB_leer`,
+    `akkuStartB_leer`); the two sides use different equality procedures, bridged by
+    `akzeptiertX_inst`. `hws` says the starts are exactly the roots `accepts` judged, the
+    compiled entry `main` among them (`judgedRoots`). -/
+theorem accepts_gibt_einheitVon (u : UProg) (P : Programm (declOf u)) (Q : AxEns (declOf u))
+    (sp : Speicher (declOf u)) (main : (declOf u).Fn)
     (starts gestartet : List (Σ w : (declOf u).Fn, Env (declOf u) ((declOf u).params w)))
     (hFn : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length)))
-    (hZ : zertifizierbar u = true)
-    (hws : (starts ++ gestartet ++ gestartet).map (·.1) =
-      (u.roots ++ u.gestartet ++ u.gestartet).filterMap fun n => wurzelIdx u n)
-    (h : accepts u P = .ok true) :
+    (hws : (starts ++ gestartet ++ gestartet).map (·.1) = judgedRoots u main)
+    (h : accepts u P main = .ok true) :
     akzeptiertX_pruefer.akzeptiert (einheitVon u P Q sp starts gestartet)
       (List.finRange u.fns.length) (List.finRange u.locks.length)
       ((List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr) = true := by
-  have _treue : u.checks = [] := zertifizierbar_ohne_checks u hZ
-  have _arena : ∀ t ∈ u.tabs, t.arena = false := zertifizierbar_ohne_arena u hZ
-  have _akku := zertifizierbar_ohne_akku u hZ
   unfold accepts at h
   split at h
   · cases h
@@ -207,9 +207,9 @@ theorem accepts_gibt_pruefer (u : UProg) (P : Programm (declOf u)) (Q : AxEns (d
       exact (Bool.and_eq_true _ _).mpr ⟨(Bool.and_eq_true _ _).mpr ⟨hX, hB⟩, hA⟩
 
 /-- A minimal certifiable unit: one parameterless function declared as the
-    only root. Hand-built (no `UProg` fixture exists in the neighbouring
-    probe files); it covers `zertifizierbar`, not the full bridge theorem,
-    which needs a lowered program. -/
+    only root. Hand-built; it covers `zertifizierbar` alone. The joint witness
+    of the bridge on a compiled unit is `GoalCheckerWitness.bridge_zeuge`
+    (Zeugen/Pruefung/GoalCheckerWitness.lean). -/
 def zeugenFn : UFn :=
   { name := "main", params := [], kinds := [], res := none, held := [], puts := [],
     gives := [], body := [], ret := .empty }

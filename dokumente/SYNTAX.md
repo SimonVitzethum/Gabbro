@@ -1003,6 +1003,14 @@ eff      = "reads" place | "writes" place | "locks" [ "shared" ] place | "masks"
    between Λ and the `allocs` list: linear, not affine. *)
 ```
 
+Effect places may name a table in another module as `reads b::T.slots` or
+`writes b::T.slots`, with any number of `::` path segments before `.slots`.
+The path resolves in the function's module to the same table carrier as an
+unqualified `T.slots` inside the table's module. A caller of a writer must claim
+that table in its own `effects`; qualification grants no write right by itself.
+A write claim naming an unknown table path is refused. A `pub` function naming a table
+in its head still requires that table to be `pub` (the closed export hull, N038).
+
 **Generic functions (Lean frontend, check model A).** For example:
 
 ```gabbro

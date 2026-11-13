@@ -186,7 +186,7 @@ def checkErsetzt (ms msErs : List SItemTief) : Except String Unit :=
 /-- Dropping const declarations cannot introduce a metadata duty: a unit
     whose non-const items are clean stays clean. -/
 theorem ohneKonst_sauber (ms : List SItemTief)
-    (h : (ohneKonst ms).any itemMetadata = false) :
+    (h : unitMetadata (ohneKonst ms) = false) :
     check (ohneKonst ms) = .ok () :=
   check_clear (ohneKonst ms) h
 
@@ -269,7 +269,7 @@ theorem checkSourceMetadata_from_scopes (items : List SItemTief)
 /-- The original runtime metadata check is retained without any rewrite assumption. -/
 theorem checkSourceMetadata_runtime_sound (items : List SItemTief)
     (accepted : checkSourceMetadata items = .ok ()) :
-    (ohneKonst items).any ExportMetadata.itemMetadata = false := by
+    ExportMetadata.unitMetadata (ohneKonst items) = false := by
   cases hr : konstErsetzePipeline items with
   | error error =>
     simp [checkSourceMetadata, hr, bind, Except.bind, pure, Except.pure] at accepted
@@ -285,7 +285,7 @@ theorem checkSourceMetadata_sound (items : List SItemTief)
     (accepted : checkSourceMetadata items = .ok ()) :
     ∃ rewritten, konstErsetzePipeline items = .ok rewritten ∧
       checkErsetzt items rewritten = .ok () ∧
-      (ohneKonst rewritten).any ExportMetadata.itemMetadata = false := by
+      ExportMetadata.unitMetadata (ohneKonst rewritten) = false := by
   cases hr : konstErsetzePipeline items with
   | error error =>
     simp [checkSourceMetadata, hr, bind, Except.bind, pure, Except.pure] at accepted
@@ -311,7 +311,7 @@ theorem checkSourceConstants_sound (items : List SItemTief)
     (accepted : checkSourceConstants items = .ok ()) :
     ∃ rewritten, konstErsetzePipeline items = .ok rewritten ∧
       checkErsetzt items rewritten = .ok () ∧
-      (ohneKonst rewritten).any ExportMetadata.itemMetadata = false :=
+      ExportMetadata.unitMetadata (ohneKonst rewritten) = false :=
   checkSourceMetadata_sound items (by simpa [checkSourceConstants, used] using accepted)
 
 end Gabbro.Grammatik.Parser.Konst

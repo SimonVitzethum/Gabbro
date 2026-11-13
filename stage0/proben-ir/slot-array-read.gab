@@ -1,0 +1,14 @@
+// Direct array reads keep their declared element range at a slot write, with either index scope.
+module ir_slot_array_read {
+const TEXT : [u32 in 0 .. 255; 3] = [40, 41, 42];
+table src count 3 { slot { b : u32 in 0 .. 255, } }
+impl fn store(i : u32 in 0 .. 2) effects { writes src.slots } {
+    src.slots[i].b = TEXT[i];
+}
+impl fn main() -> u32 in 0 .. 510 effects { reads src.slots, writes src.slots } {
+    let i : u32 in 0 .. 2 = 2;
+    src.slots[i].b = TEXT[i];
+    store(1);
+    return src.slots[1].b + src.slots[2].b;
+}
+}

@@ -120,7 +120,8 @@ def result : Compiled text := (compile text).toOption.get compiled_zeuge
 /-- The same checked result goes through AkzeptiertX and the ordinary lowering endpoint. -/
 theorem source_pipeline_zeuge :
     compile text = .ok result ∧ CanonicalSourceProgram result ∧
-      result.unit.fns.length = 1 ∧ OldSource.accepts result.unit result.program = .ok true := by
+      result.unit.fns.length = 1 ∧
+        OldSource.accepts result.unit result.program result.main = .ok true := by
   exact ⟨except_ok_get compiled_zeuge, compile_source_program text result, by kernel_rfl,
     result.accepted⟩
 

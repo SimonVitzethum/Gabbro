@@ -121,7 +121,8 @@ def uCtxVon (alias : List (String × (Int × Int))) (lits : List (String × Int)
     (specTypen : List (String × List STyp) := []) : UCtx :=
   { names := kopf.names, kinds := kopf.kinds, types := kopf.types, tabs := tabs, locks := locks, held := kopf.held, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, fname, bits := kopf.bits, alias, lits, globs, annahmen, whys, kanal := kopf.kanal, sums, resSum := kopf.resSum, resWhy := kopf.resWhy, resTy := kopf.resTy, regs, griffe := kopf.griffe.map (·.2), zustaende, specs, arrKonst, specTypen }
 /-- One whole function: head (pass one) plus contracts and
-    body (pass two). -/
+    body (pass two). `narrow` turns on the narrowing by guarding conditions in the body (`UCtx.narrow`): off by
+    default, on in the Stage-0 compiler. -/
 def elabUFunktion (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (koepfe : List UFnKopf) (sig : FnSig)
@@ -129,12 +130,12 @@ def elabUFunktion (consts : List (String × Int))
     (devs : List String := []) (regs : List UReg := []) (zustaende : List UZustand := [])
     (zeiger : List String := []) (zb : Nat := 0) (specs : List (String × List String × SExpr) := [])
     (arrKonst : List (String × USide) := []) (spaces : List String := []) (valueScope : UTypeScope := { types := [] }) (eigner : List String := [])
-    (specTypen : List (String × List STyp) := []) :
+    (specTypen : List (String × List STyp) := []) (narrow : Bool := false) :
     Except String UFn :=
   match elabKopf consts alias tabs locks globs whys sums sig devs zeiger zb spaces valueScope.types eigner with
   | .error e => .error e
   | .ok (kopf, schreibt) =>
-    let ctx := { uCtxVon alias consts tabs locks globs kopf sig.name annahmen whys sums regs zustaende specs arrKonst specTypen with zeiger := zeiger, zeigerBasis := zb, spaces := spaces, records := valueScope.records, namedTypes := valueScope.types, eigner := eigner }
+    let ctx := { uCtxVon alias consts tabs locks globs kopf sig.name annahmen whys sums regs zustaende specs arrKonst specTypen with zeiger := zeiger, zeigerBasis := zb, spaces := spaces, records := valueScope.records, namedTypes := valueScope.types, eigner := eigner, narrow := narrow }
     match elabFn ctx koepfe sig.klauseln koerper with
     | .error e => .error e
     | .ok (gives, needs, body, r) =>

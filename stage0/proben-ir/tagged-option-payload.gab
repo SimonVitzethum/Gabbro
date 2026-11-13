@@ -1,0 +1,21 @@
+// The tagged payload stays an option in its arm. Exit: Some(2) returns 2 + 10 = 12.
+module ir_tagged_option_payload {
+table T count 4 { slot { v : u32 in 0 .. 9, } }
+tagged type Message = { Empty, Item(option index into T) };
+impl fn value(message : Message) -> u32 in 0 .. 20 effects { pure } {
+    match message {
+        Empty => { return 0; }
+        Item(payload) => {
+            match payload {
+                Some(i) => { return i + 10; }
+                None => { return 7; }
+            }
+        }
+    }
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let selected : option index into T = Some(2);
+    let message : Message = Item(selected);
+    return value(message);
+}
+}

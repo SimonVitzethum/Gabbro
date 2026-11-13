@@ -1,0 +1,27 @@
+// Exit 42: bool fields survive construction, projection, inference, calls and returns.
+module ir_record_bool_field {
+type POut = { node : u32 in 0 .. 63, pos : u32 in 0 .. 63, ok : bool, };
+impl fn parse(ok : bool) -> POut effects { pure } {
+    return POut(node: 7, pos: 9, ok: ok);
+}
+impl fn identity(value : bool) -> bool effects { pure } { return value; }
+impl fn ready(output : POut) -> bool effects { pure } { return output.ok; }
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let literal = POut(node: 1, pos: 2, ok: true);
+    if !literal.ok { return 3; }
+    let r = parse(true);
+    if r.ok {
+        let b = r.ok;
+        let mut local = r.ok;
+        local = false;
+        if local { return 1; }
+        let copied = POut(node: r.node, pos: r.pos, ok: r.ok);
+        let yes = identity(copied.ok);
+        let returned = ready(copied);
+        let no = parse(false);
+        if no.ok { return 2; }
+        if b && yes && returned { return 42; }
+    }
+    return 0;
+}
+}

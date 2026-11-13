@@ -11,7 +11,8 @@ open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Parser Gabbro.Gramma
 
 variable {z : Spez} {V : Vertrag z.deklaration} (gNr : Nat → Nat) (tabs : List UTab) (koepfe : List UFnKopf)
 
-/-- What the run reader does with a printed statement, a block, an end block (of size below `n`). -/
+/-- What the run reader does with a printed statement, a block, an end block (of size below `n`), in every
+    context `SInv` describes (among others: the narrowing by guarding conditions is off, `SInv.narrowOff`). -/
 def RumpfSatz (n : Nat) : Prop :=
   (∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.deklaration)} (s : Stmt z.deklaration V l Γ Λ Λ') (ctx : UCtx)
       (art : Nat → UParamArt) (ss : List SAnw) (us : List UStmt),

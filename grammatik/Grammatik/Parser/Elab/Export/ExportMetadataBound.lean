@@ -34,7 +34,7 @@ theorem consuming_bound (fuel : Nat) (binder kind raw touches : String) (origin 
     Raw wrappers remain refused; selection never suppresses the retained item's duties. -/
 theorem gateT_bound (m : Auswahl.BauModus) (items selected : List SItemTief)
     (selection : selected = Auswahl.waehleL m items)
-    (clear : selected.any itemMetadata = false) :
+    (clear : unitMetadata selected = false) :
     check (Auswahl.waehleL m items) = .ok () := by
   rw [← selection]
   exact check_clear selected clear

@@ -8,6 +8,33 @@ public import Grammatik.Parser.Item.ElementTief.Kopf
 namespace Gabbro.Grammatik.Parser
 set_option maxRecDepth 100000
 
+/-- The tokens of a qualified place whose path the expression parser left in front of a suffix:
+    `m::T` (read as a ground) or a longer path (read as one name), followed by `.`. -/
+def qualOrt : SExpr → List Token → Option (List Token)
+  | .why a b, .zeichen s :: rest =>
+    if strEq s "." then some (.ident (a ++ "::" ++ b) :: .zeichen s :: rest) else none
+  | .variable v, .zeichen s :: rest =>
+    if strEq s "." then some (.ident v :: .zeichen s :: rest) else none
+  | _, _ => none
+
+/-- A place of `reads`/`writes`: the ordinary expression, and where that stops in front of the
+    suffix of a qualified path (`m::T.slots`), the path as one name with its suffixes. -/
+def parseEffektOrt (f : Nat) (toks : List Token) :
+    Except String (SExpr × List Token) :=
+  match parseOr f toks with
+  | .ok (p, r) =>
+    match qualOrt p r with
+    | some neu => parseOr f neu
+    | none => .ok (p, r)
+  | .error e => .error e
+
+/-- Behind a complete effect arm (`,` or `}` follows) there is no qualified suffix to read. -/
+theorem qualOrt_komma (p : SExpr) (r : List Token) : qualOrt p (.zeichen "," :: r) = none := by
+  cases p <;> first | rfl | simp only [qualOrt, (by decide : strEq "," "." = false), Bool.false_eq_true, ite_false]
+
+theorem qualOrt_zu (p : SExpr) (r : List Token) : qualOrt p (.zeichen "}" :: r) = none := by
+  cases p <;> first | rfl | simp only [qualOrt, (by decide : strEq "}" "." = false), Bool.false_eq_true, ite_false]
+
 /-- One effect arm of `uses`. -/
 def parseEffekt (f : Nat) (toks : List Token) :
     Except String (SEffekt × List Token) :=
@@ -15,10 +42,10 @@ def parseEffekt (f : Nat) (toks : List Token) :
   | 0 => .error "out of fuel"
   | f + 1 => match toks with
     | .wort s :: rest =>
-      if strEq s "reads" then match parseOr f rest with
+      if strEq s "reads" then match parseEffektOrt f rest with
         | .ok (p, r) => .ok (.reads p, r)
         | .error e => .error e
-      else if strEq s "writes" then match parseOr f rest with
+      else if strEq s "writes" then match parseEffektOrt f rest with
         | .ok (p, r) => .ok (.writes p, r)
         | .error e => .error e
       else if strEq s "locks" then match rest with

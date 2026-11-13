@@ -39,7 +39,14 @@ def lowArmsStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe
             else .error "lower: a match arm changes held marks"
         | _ => .error "lower: a match has fewer arms than cases"
   | Γ, fn, Λ, pe, some τ :: cs', bs, rest =>
-    (R.seq (l := l) (τ :: Γ) (fn.mitTy (bs.headD "") τ) Λ pe rest).bind fun (⟨Λ₁, b⟩, r) =>
+    -- Retain the same option identity as the source arm; lowOpt checks this kind again.
+    let scope := match τ with
+      | .opt count =>
+        match uOptionTabelle u.tabs count with
+        | some num => fn.mitOpt (bs.headD "") num count
+        | none => fn.mitTy (bs.headD "") τ
+      | _ => fn.mitTy (bs.headD "") τ
+    (R.seq (l := l) (τ :: Γ) scope Λ pe rest).bind fun (⟨Λ₁, b⟩, r) =>
       match cs' with
       | [] =>
         if h : Λ₁ = Λ then

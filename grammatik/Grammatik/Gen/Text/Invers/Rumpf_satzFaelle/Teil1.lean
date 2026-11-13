@@ -193,7 +193,7 @@ Option.bind_none, Option.bind_fun_none, reduceCtorEq] at hu
         simp only [List.isEmpty_nil, ↓reduceIte, hE.1, and_self]
       · right
         exact ⟨se, c2, by simp only [hs, Bool.false_eq_true, ↓reduceIte], hE⟩
-    have := reihe_cond tabs koepfe f ctx sc st _ tail cv tu eu xs cB cE (bool_ok H.einv c sc cv hc hcv) hT hE' hr (delabE_foldFree c hc)
+    have := reihe_cond tabs koepfe f ctx sc st _ tail cv tu eu xs cB cE (bool_ok H.einv c sc cv hc hcv) hT hE' hr (delabE_foldFree c hc) H.narrowOff
     simpa [List.append_assoc] using this
   | locks L hr body =>
     simp only [delabS] at hd

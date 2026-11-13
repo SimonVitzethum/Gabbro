@@ -1,0 +1,14 @@
+// Named string literals retain their bound; parameters and locals hide the constant.
+module ir_string_constant {
+const Q : string max 8 = "hi!";
+impl fn readQ(Q : string max 8) -> u32 in 0 .. 255 effects { pure } {
+    return Q[0];
+}
+impl fn main() -> i32 in -255 .. 510 effects { pure } {
+    let v = Q[0];
+    let Q : string max 1 = "A";
+    let local = Q[0];
+    let z = readQ("Z");
+    return v - local + z;
+}
+}

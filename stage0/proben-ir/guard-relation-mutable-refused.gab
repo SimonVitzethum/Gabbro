@@ -1,0 +1,15 @@
+// A `let mut` operand gives no relational fact (its value may change between the test and the use): the
+// difference keeps its declared range -100 .. 100, which the result 0 .. 100 refuses. guard-relation.gab is the
+// same function with immutable operands.
+module ir_probe {
+impl fn distance(a : u32 in 0 .. 100, b : u32 in 0 .. 100) -> u32 in 0 .. 100 {
+    let mut c : u32 in 0 .. 100 = a;
+    if c >= b { return c - b; }
+    return 0;
+}
+
+impl fn main() -> u32 in 0 .. 100 {
+    let x = distance(30, 12);
+    return x;
+}
+}

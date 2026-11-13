@@ -1,7 +1,7 @@
 module
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.Export.ItemKind
-public import Grammatik.Parser.Elab.Export.TraversalHeader
+public import Grammatik.Parser.Elab.Export.Traversal.TraversalHeader
 public import Grammatik.Kern.Syntax.Typen.DataRights
 public import Grammatik.Parser.Elab.Uebersetze.MeasureSource
 public import Grammatik.Parser.Profil.Auswahl
@@ -142,13 +142,27 @@ def clausesMetadataProto (clauses : List SKlausel) : Bool :=
 def accOperatorBound (m : String) : Bool :=
   strEq m "max" || strEq m "min" || strEq m "add" || strEq m "or" || strEq m "and"
 
-def itemMetadata : SItemTief → Bool
+/-- The signature inspected at a function declaration, retaining tagged wrappers. -/
+def declaredCallee : SItemTief → Option (String × List SEffekt)
+  | .fnT sig _ => some (sig.name, declaredEffects sig.klauseln)
+  | .taggedByT declaration _ => declaredCallee declaration
+  | _ => none
+
+/-- Only a uniquely declared function supplies effects; missing or ambiguous names cannot
+    justify erasing a header. Ordinary call checking still verifies those declared effects. -/
+def calleeEffects (items : List SItemTief) : CalleeEffects := fun name =>
+  match (items.filterMap declaredCallee).filter (fun entry => entry.1 == name) with
+  | [(_, effects)] => some effects
+  | _ => none
+
+def itemMetadata (item : SItemTief) (callees : CalleeEffects := fun _ => none) : Bool :=
+  match item with
   | .fnT sig body =>
     if sig.art == "library" then
       clausesMetadataWithoutLoad sig.klauseln || bodyMetadata 10000 body ||
         sig.params.any (fun p => typeMetadata p.2) || sig.res.any typeMetadata
     else (sig.art != "" && sig.art != "impl") ||
-      clausesMetadataFn sig.klauseln || bodyMetadata 10000 (eraseCovered (touchesAdmitted sig.klauseln) (sig.params.map (·.1)) 10000 body) ||
+      clausesMetadataFn sig.klauseln || bodyMetadata 10000 (eraseCovered (touchesAdmitted callees sig.klauseln) (sig.params.map (·.1)) 10000 body) ||
       sig.params.any (fun p => pointerOrMetadata p.2) || sig.res.any typeMetadata
   /- Tagged groups expand to ordinary functions before elaboration. Inspect every original
       header and implementation body, so expansion cannot erase cost/proof/type duties. -/
@@ -160,7 +174,7 @@ def itemMetadata : SItemTief → Bool
         sig.art != "impl" || clausesMetadata sig.klauseln || bodyMetadata 10000 body ||
           sig.params.any (fun p => typeMetadata p.2) || sig.res.any typeMetadata
       | _ => true
-  | .taggedByT declaration _ => itemMetadata declaration
+  | .taggedByT declaration _ => itemMetadata declaration callees
   | .moduleTemplateT .. | .moduleUseT .. => true
   | .transT _ translator _ => clausesMetadata translator.klauseln ||
       translator.params.any (fun p => typeMetadata p.2) || translator.res.any typeMetadata
@@ -229,7 +243,12 @@ def itemMetadata : SItemTief → Bool
       (ordering == some "relaxed" && !(payload.getD []).isEmpty)
   | .modT .. | .useT .. | .asmT .. | .formatT .. | .devT .. | .axiomT .. | .rcuT ..
   | .walkT .. | .entryT .. | .bootT .. | .profT .. | .gateT .. | .pubT .. | .arenaT .. => true
+/-- Inspect one item in its complete unit's signature context. -/
+def unitItemMetadata (items : List SItemTief) (item : SItemTief) : Bool :=
+  itemMetadata item (calleeEffects items)
 
+/-- A unit's unsupported duties, using its own function signatures at every item. -/
+def unitMetadata (items : List SItemTief) : Bool := items.any (unitItemMetadata items)
 
 /-- Scalar predicate parameters no longer refuse admission; erased type metadata still does. -/
 theorem spec_parameter_metadata_zeuge :

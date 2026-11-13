@@ -39,6 +39,15 @@ theorem uKonstZeile_array (alias : List (String × (Int × Int))) (fns : List UK
       uKonstZeilen alias fns consts element rows leaf := by
   rw [uKonstZeile]
 
+/-- A named string uses the same UTF-8 literal as a string at its use site. Its declared
+    maximum travels in `USide.typed` and is checked by `lowLit`, like an array's length. -/
+theorem uKonstZeile_string (alias : List (String × (Int × Int))) (fns : List UKonstFn)
+    (consts : List (String × Int)) (maximum : Nat) (text : String)
+    (leaf : Ty → SExpr → Option USide) :
+    uKonstZeile alias fns consts (.str maximum) (.one (.ext .text [text] [])) leaf =
+      some (.text (text.toUTF8.toList.map (fun byte => Int.ofNat byte.toNat))) := by
+  rw [uKonstZeile]
+
 /-- Product leaves are delegated at their complete nominal type, with no scalar fallback. -/
 theorem uKonstZeile_product (alias : List (String × (Int × Int))) (fns : List UKonstFn)
     (consts : List (String × Int)) (identity : Nat) (fields : List Ty) (source : SExpr)

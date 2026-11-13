@@ -102,6 +102,18 @@ def uBindWertAllg (ctx : UCtx) (mu : Bool) (x : String) (t : Option STyp) (e : S
     match uWertBody ctx e with
     | .ok sd =>
       match uValueType ctx sd with
+      | some .bool =>
+        -- A truth value read as a value (a `bool` record field) stays a truth value: with the
+        -- compiler's switch. Without it the binding is read as before.
+        if ctx.narrow then
+          match uBool ctx e with
+          | .error err => .error err
+          | .ok b => .ok (.bindB x b, boolCtx)
+        else if mu then .error "let mut without a type"
+        else
+          match uBindKopf ctx x .none with
+          | .error err => .error err
+          | .ok (d, ctx') => .ok (.bind x d sd, { ctx' with muts := muts })
       | some ty@(.fl ..) | some ty@(.prod ..) | some ty@(.arr ..) | some ty@(.str ..) =>
         .ok (.bindW x (some ty) sd, uMitLokal ctx x .wert ty muts)
       | _ =>

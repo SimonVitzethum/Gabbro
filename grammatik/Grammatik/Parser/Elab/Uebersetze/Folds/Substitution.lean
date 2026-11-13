@@ -1,9 +1,35 @@
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Folds.Expansion
+public import Grammatik.Parser.Namen.References
 
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
+
+mutual
+/-- All quantifier and fold binders, including binders inside nested operands.
+    Collecting every binder deliberately over-approximates the scope of a parameter. -/
+def specBinders : SExpr → List String
+  | .field a _ | .arrow a _ | .un _ a | .old a => specBinders a
+  | .index a b | .bin _ a b => specBinders a ++ specBinders b
+  | .call _ args | .built _ args => specBinderList args
+  | .ext kind names args =>
+    (if isFold kind || kind == .all || kind == .any || kind == .count
+      then names.take 1 else []) ++ specBinderList args
+  | _ => []
+
+def specBinderList : List SExpr → List String
+  | [] => []
+  | arg :: args => specBinders arg ++ specBinderList args
+end
+
+/-- Reuse the existing name collector. Including the argument's own binders also
+    covers names it hides, including names in a quantifier's outer-scope domain. -/
+def specArgumentCaptures (body arg : SExpr) : Bool :=
+  let binders := specBinders body
+  if binders.isEmpty then false
+  else (Oeffentlich.namenA [] arg ++ specBinders arg).any fun name =>
+    binders.any (strEq · name)
 
 /-- The substitution of the parameters of a `spec fn` by the arguments of a use. A quantifier binder hides the
     parameter of its name in its body (the last operand). Structural in a fuel (an expression is far shallower). -/
@@ -36,8 +62,9 @@ def sErsetze (σ : List (String × SExpr)) : Nat → SExpr → SExpr
       else .ext k ns (xs.map (sErsetze σ n))
     | e => e
 
-/-- Every use `g(a…)` of a `spec fn` `g` replaced by its predicate over the arguments (SUGAR, `M130`), also inside
-    the predicates it brings. Structural in a fuel. -/
+/-- Inline a `spec fn` only when substitution cannot capture argument names.
+    A clashing call remains for the ordinary predicate reader to refuse.
+    This shared gate also applies to `Spec.predicates`. Structural in a fuel. -/
 def uSpecEin (specs : List (String × List String × SExpr)) : Nat → SExpr → SExpr
   | 0, e => e
   | n + 1, e =>
@@ -46,7 +73,9 @@ def uSpecEin (specs : List (String × List String × SExpr)) : Nat → SExpr →
       let as' := as.map (uSpecEin specs n)
       match specs.find? (fun p => strEq p.1 f) with
       | some (_, ps, body) =>
-        if ps.length == as'.length then uSpecEin specs n (sErsetze (ps.zip as') 1000 body) else .call f as'
+        if ps.length == as'.length && !(as'.any (specArgumentCaptures body)) then
+          uSpecEin specs n (sErsetze (ps.zip as') 1000 body)
+        else .call f as'
       | none => .call f as'
     | .field a f => .field (uSpecEin specs n a) f
     | .index a i => .index (uSpecEin specs n a) (uSpecEin specs n i)

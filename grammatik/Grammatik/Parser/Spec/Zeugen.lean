@@ -90,7 +90,7 @@ private theorem spec_expression_select (specs : List (String × List String × S
           let args' := args.map (uSpecEin specs next)
           match specs.find? (fun p => strEq p.1 name) with
           | some (_, params, body) =>
-            if params.length == args'.length then
+            if params.length == args'.length && !(args'.any (specArgumentCaptures body)) then
               uSpecEin specs next (sErsetze (params.zip args') 1000 body)
             else .call name args'
           | none => .call name args'

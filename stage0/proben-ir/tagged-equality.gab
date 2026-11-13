@@ -1,0 +1,29 @@
+// Exit 42: empty cases, equal and unequal payloads, different tags and inequality.
+module ir_tagged_equality {
+tagged type Token = { End, Number(u32 in 0 .. 9), Other };
+impl fn equal(a : Token, b : Token) -> u32 in 0 .. 1 effects { pure } {
+    if a == b { return 1; }
+    return 0;
+}
+impl fn different(a : Token, b : Token) -> u32 in 0 .. 1 effects { pure } {
+    if a != b { return 1; } else { return 0; }
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let end : Token = End;
+    let other : Token = Other;
+    let a : Token = Number(5);
+    let b : Token = Number(5);
+    let c : Token = Number(6);
+    let same = equal(a, b);
+    let unequal = equal(a, c);
+    let empty = equal(end, end);
+    let tags = equal(a, end);
+    let empty_tags = equal(end, other);
+    let different_payload = different(a, c);
+    let same_payload = different(a, b);
+    if same == 1 && unequal == 0 && empty == 1 && tags == 0 && empty_tags == 0 {
+        if different_payload == 1 && same_payload == 0 { return 42; }
+    }
+    return 0;
+}
+}

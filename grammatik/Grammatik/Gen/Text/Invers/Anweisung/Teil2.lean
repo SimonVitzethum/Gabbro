@@ -63,9 +63,10 @@ theorem bindWert_int {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {ar
       Bool.false_eq_true, ↓reduceIte]
     rfl
   | some ty =>
+    have hn : ¬ ctx.narrow = true := by rw [H.narrowOff]; exact Bool.false_ne_true
     cases ty <;> simp only [ht, ScalarType] at scalar
     all_goals simp only [uBindWertAllg, wert_ok H.einv e s u hd hu, ht, uBindKopf, H.muts,
-      List.filter_nil, Bool.false_eq_true, ↓reduceIte] <;> rfl
+      List.filter_nil, Bool.false_eq_true, ↓reduceIte] <;> first | rfl | (rw [if_neg hn]; rfl)
 
 /-- `let v = p;` of a truth value. -/
 theorem bindWert_bool {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}

@@ -4,6 +4,8 @@
              `uOfSt`/`uOfBl`/`uOfEnd`, in every context `SInv` describes, the elaborator's run reader `uAnwReihe`
              (with fuel above the term's size) builds exactly the plain statements `uOf*` computes from the model
              term, and `uEnde` the trailing return; the fragment keeps the held resources (`Λ' = Λ`).
+             The contexts have the narrowing by guarding conditions off (`SInv.narrowOff`, the default of
+             `UCtx.narrow`; Stage 0 turns it on).
 -/
 module
 public import Grammatik.Gen.Text.Invers.Geraet

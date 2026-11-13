@@ -1,0 +1,11 @@
+// The string argument must permit the nested call to be bound. Exit: 10 - 3 + ASCII Z = 97.
+module ir_call_string_expression {
+impl fn readQ(q : string max 8) -> u32 in 0 .. 255 effects { pure } {
+    return q[0];
+}
+impl fn main() -> u32 in 0 .. 400 effects { pure } {
+    let v = 10;
+    let local = 3;
+    return v - local + readQ("Z");
+}
+}

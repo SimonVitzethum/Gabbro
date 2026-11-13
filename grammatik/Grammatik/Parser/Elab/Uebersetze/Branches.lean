@@ -1,6 +1,9 @@
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.CallElse
+public import Grammatik.Parser.Elab.Uebersetze.Kontext.GuardNarrowing
+public import Grammatik.Parser.Elab.Uebersetze.Kontext.GuardRelation
+public import Grammatik.Parser.Elab.Uebersetze.Tagged.Equality
 import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
@@ -48,6 +51,12 @@ def uCases
                       | .bool => UParamArt.bool
                       | .ref n => UParamArt.ref n
                       | .sum cs => ((ctxM.sums.findIdx? (fun s => s.spec = cs)).map UParamArt.sum).getD .wert
+                      -- Payload types retain the extent, whereas kinds carry the table position.
+                      -- Preserve canonical read-back when the compiler's switch is off.
+                      | .opt count =>
+                        if ctxM.narrow then
+                          ((uOptionTabelle ctxM.tabs count).map UParamArt.opt).getD .wert
+                        else uArtVon τ
                       | _ => uArtVon τ
                     some (uMitLokal ctxM k kind τ (ctxM.muts.filter (fun m => !strEq m k)), k)
                   | _, _ => none : Option (UCtx × String)) with
@@ -209,8 +218,9 @@ def uBindElse (tabs : List UTab) (koepfe : List UFnKopf)
   | _, _ => .error "let else without G form"
 
 /-- Conditional branches share the same recursive reader and preserve the terminal-if test,
-    lexical branch contexts, fold endings and continuation elaboration order. -/
-def uCond
+    lexical branch contexts, fold endings and continuation elaboration order. This is the reading of a
+    condition that bounds no local (`uCond` calls it then, unchanged). -/
+def uCondPlain
     (run : UCtx → List SAnw → Except String (List UStmt × UCtx))
     (ctx : UCtx) (c : SExpr) (ss : List SAnw) (e : Option SEnde)
     (ei : List SAnw) (els : Option SAnw) (rest : List SAnw) : Except String (List UStmt × UCtx) :=
@@ -245,5 +255,115 @@ def uCond
               let kopf := if rest.isEmpty && uEndetS 64 (.cond c (.block ss e) ei els) then UStmt.ifEnde cv
                 else UStmt.ifBeg cv
               .ok ([kopf] ++ body ++ endS ++ [UStmt.ifElse] ++ elseS ++ [UStmt.blkEnd] ++ xs, cE)
+
+/-- A condition that bounds immutable number locals (`uWaechterFakten`): each branch starts by rebinding the
+    bounded locals it reads at the narrowed range, `let x : lo .. hi = <x narrowed>` (`USide.eng`, no `else`, no
+    new return path), and elaborates in the context of the rebinding. The then branch gets the bounds of the
+    condition (`thenF`), the `else` branch (an `else if` chain is the `if` in it) those of its negation
+    (`elseF`); the continuation gets the negation (`postF`) only when the then branch always ends (a `return`,
+    `leave` or `next` on every path), because it is then reached only where the condition failed. Everything
+    else is `uCondPlain`: same order of elaboration, same fuel, same terminal-if test (a terminal `if` has no
+    continuation).
+
+    The relational facts of the condition (`uRelFakten`: `thenR`, `elseR`, `postR`, on the same paths as the
+    bounds) are applied after the rebindings (`uRelBlock`): each block reads every difference of two locals the
+    facts bound as a fresh local, bound once after the rebindings to the narrowed difference. The tests of
+    `terminal` and `thenEnds` read the source as written. -/
+def uCondGuard
+    (run : UCtx → List SAnw → Except String (List UStmt × UCtx))
+    (ctx : UCtx) (cv : UEns) (thenF elseF postF : List (String × Int × Int))
+    (thenR elseR postR : List (String × String × Int))
+    (c : SExpr) (ss : List SAnw) (e : Option SEnde)
+    (ei : List SAnw) (els : Option SAnw) (rest : List SAnw) : Except String (List UStmt × UCtx) :=
+    let (thenB, ctxT0) := uWaechterBinde ctx thenF
+    let (thenRB, ctxT, ssT, eT) := uRelBlock ctxT0 thenR ss e
+    let (elseB, ctxE0) := uWaechterBinde ctx elseF
+    match run ctxT ssT with
+    | .error err => .error err
+    | .ok (body, ctxB) =>
+      match uFoldEndeStmt ctxB eT with
+      | .error err => .error err
+      | .ok endS =>
+        let ifElse : Option SAnw :=
+          match ei with
+          | .elsif c2 b2 :: ei' => some (.block [.cond c2 b2 ei' els] .none)
+          | _ => els
+        match (match ifElse with
+            | .none => .ok []
+            | .some (.block ss2 e2) =>
+              let (elseRB, ctxE, ss2', e2') := uRelBlock ctxE0 elseR ss2 e2
+              match run ctxE ss2' with
+              | .error err => .error err
+              | .ok (b2, ctx2) =>
+                match uFoldEndeStmt ctx2 e2' with
+                | .error err => .error err
+                | .ok end2 => .ok (elseB ++ elseRB ++ b2 ++ end2)
+            | .some _ => .error "else without block" : Except String (List UStmt)) with
+        | .error err => .error err
+        | .ok elseS =>
+          let terminal := rest.isEmpty && uEndetS 64 (.cond c (.block ss e) ei els)
+          let thenEnds := e.isSome || (match ss.getLast? with | some s => uEndetTief 64 s | none => false)
+          let (post, ctxR0) : List UStmt × UCtx :=
+            if thenEnds && !terminal then uWaechterBinde ctx postF else ([], ctx)
+          let (postRB, ctxR, restR, _) : List UStmt × UCtx × List SAnw × Option SEnde :=
+            if thenEnds && !terminal then uRelBlock ctxR0 postR rest none else ([], ctxR0, rest, none)
+          match run ctxR restR with
+          | .error err => .error err
+          | .ok (xs, cE) =>
+            let kopf := if terminal then UStmt.ifEnde cv else UStmt.ifBeg cv
+            .ok ([kopf] ++ thenB ++ thenRB ++ body ++ endS ++ [UStmt.ifElse] ++ elseS ++ [UStmt.blkEnd] ++ post ++
+              postRB ++ xs, cE)
+
+/-- Conditional branches. With narrowing off (`ctx.narrow = false`, the default: the canonical exporter and
+    every statement about the elaborator's read-back) a condition is read by `uCondPlain`. With narrowing on (the
+    Stage-0 compiler, `Stage0.Frontend.elabExpanded`) the facts of the condition (`uWaechterFakten`) are kept
+    for the locals each block reads (`uWaechterGelesen`: the then block with its ending, the `else` block or
+    `else if` chain, the continuation), and so are its relational facts between two such locals (`uRelFakten`);
+    a condition with neither is read exactly as before (`uCondPlain`), one with any by `uCondGuard`. -/
+def uCond
+    (run : UCtx → List SAnw → Except String (List UStmt × UCtx))
+    (ctx : UCtx) (c : SExpr) (ss : List SAnw) (e : Option SEnde)
+    (ei : List SAnw) (els : Option SAnw) (rest : List SAnw) : Except String (List UStmt × UCtx) :=
+    if ctx.narrow then
+      let fallback := match ei with
+        | .elsif c2 b2 :: ei' => SAnw.block [.cond c2 b2 ei' els] none
+        | _ => els.getD (.block [] none)
+      match uTaggedEquality ctx c (.block ss e) fallback with
+      | .error err => .error err
+      | .ok (some expanded) => run ctx (expanded :: rest)
+      | .ok none =>
+        match uBool ctx c with
+        | .error err => .error err
+        | .ok cv =>
+          let negated := uWaechterFakten ctx cv false
+          let thenF := uWaechterGelesen (uLiestL (ss ++ [.block [] e])) (uWaechterFakten ctx cv true)
+          let elseF := uWaechterGelesen (uLiestL (ei ++ els.toList)) negated
+          -- The continuation ends with the ending of the enclosing block, which is not in `rest`:
+          -- its facts are kept whenever the then block always ends.
+          let thenEnds := e.isSome || (match ss.getLast? with | some s => uEndetTief 64 s | none => false)
+          let postF := if thenEnds then negated else []
+          -- The relational facts (`uRelFakten`) on the same paths; the continuation's only when the then block
+          -- always ends.
+          let thenR := uRelFakten ctx cv true
+          let elseR := uRelFakten ctx cv false
+          let postR := if thenEnds then elseR else []
+          match thenF, elseF, postF, thenR ++ elseR with
+          | [], [], [], [] => uCondPlain run ctx c ss e ei els rest
+          | thenF, elseF, postF, _ => uCondGuard run ctx cv thenF elseF postF thenR elseR postR c ss e ei els rest
+    else uCondPlain run ctx c ss e ei els rest
+
+/-- With the compiler's switch on, an equality of two tagged values is read as its complete
+    expansion into matches, through the ordinary checked reader. -/
+theorem uCond_tagged
+    (run : UCtx → List SAnw → Except String (List UStmt × UCtx))
+    (ctx : UCtx) (c : SExpr) (ss : List SAnw) (e : Option SEnde)
+    (ei : List SAnw) (els : Option SAnw) (rest : List SAnw) (expanded : SAnw)
+    (an : ctx.narrow = true)
+    (selected : uTaggedEquality ctx c (.block ss e)
+      (match ei with
+       | .elsif c2 b2 :: ei' => SAnw.block [.cond c2 b2 ei' els] none
+       | _ => els.getD (.block [] none)) = .ok (some expanded)) :
+    uCond run ctx c ss e ei els rest = run ctx (expanded :: rest) := by
+  simp only [uCond, an, ↓reduceIte, selected]
 
 end Gabbro.Grammatik.Parser.Uebersetze

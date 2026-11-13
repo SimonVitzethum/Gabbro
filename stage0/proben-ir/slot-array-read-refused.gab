@@ -1,0 +1,10 @@
+// Binding an array read must not admit an element range wider than the destination field.
+module ir_slot_array_read_refused {
+const TEXT : [u32 in 0 .. 511; 2] = [40, 300];
+table src count 2 { slot { b : u32 in 0 .. 255, } }
+impl fn main() -> u32 in 0 .. 255 effects { writes src.slots } {
+    let i : u32 in 0 .. 1 = 1;
+    src.slots[i].b = TEXT[i];
+    return 0;
+}
+}

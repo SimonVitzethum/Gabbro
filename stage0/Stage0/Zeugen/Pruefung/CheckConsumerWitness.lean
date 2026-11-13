@@ -60,7 +60,7 @@ def compiled : Compiled text options :=
 
 /-- Acceptance is the actual compiler's full checker result. -/
 theorem selected_accepted :
-    OldSource.accepts compiled.unit compiled.program = .ok true := compiled.accepted
+    OldSource.accepts compiled.unit compiled.program compiled.main = .ok true := compiled.accepted
 
 /-- Entry selection is retained in the source-to-program certificate. -/
 theorem selected_entry :

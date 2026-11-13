@@ -1,0 +1,6 @@
+// Two functions of one name are refused: a call could only ever reach the first.
+module ir_function_twice {
+impl fn f() -> u32 in 0 .. 9 { return 1; }
+impl fn f() -> u32 in 0 .. 9 { return 2; }
+impl fn main() -> u32 in 0 .. 255 { let a = f(); return a; }
+}

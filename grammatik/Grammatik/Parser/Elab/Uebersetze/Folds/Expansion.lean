@@ -21,23 +21,26 @@ def foldIndexRange (ctx : UCtx) : UIdx → Option (Int × Int)
   | .lit n => some (n, n)
   | .param name => foldLocalRange ctx name
 
-/-- Integer interval calculation reuses the elaborated value tree. Unknown values stay
-    refused; conversion and indexing premises are checked before their result range is used.
-    This also makes the calculation usable before an unused spec argument disappears. -/
-def foldRange (ctx : UCtx) : USide → Option (Int × Int)
+/-- Integer intervals of elaborated values. Spec arguments must check indices here
+    because their reads disappear during inlining. Ordinary folds leave index checks
+    to lowering: the declared field/element range holds for every valid index. -/
+def foldRangeWithIndexCheck (ctx : UCtx) (checkIndices : Bool) : USide → Option (Int × Int)
   | .lit n => some (n, n)
   | .param name => foldLocalRange ctx name
   | .tab table field index => do
     let table ← ctx.tabs.find? (fun tab => strEq tab.name table)
-    let bounds ← foldIndexRange ctx index
-    if !(0 ≤ bounds.1 && bounds.2 < table.count) then none else do
-      let field ← table.cols.find? (fun column => strEq column.1 field)
-      if table.bools.contains field.1 || (table.werte.any (fun entry => entry.1 == field.1)) then none
-      else some field.2
+    if checkIndices then
+      let bounds ← foldIndexRange ctx index
+      if !(0 ≤ bounds.1 && bounds.2 < table.count) then none else pure ()
+    let field ← table.cols.find? (fun column => strEq column.1 field)
+    if table.bools.contains field.1 || (table.werte.any (fun entry => entry.1 == field.1)) then none
+    else some field.2
   | .idx array index => do
     let .arr (.int lo hi) count ← uValueType ctx array | none
-    let bounds ← foldRange ctx index
-    if 0 ≤ bounds.1 && bounds.2 < (count : Int) then some (lo, hi) else none
+    if checkIndices then
+      let bounds ← foldRangeWithIndexCheck ctx checkIndices index
+      if !(0 ≤ bounds.1 && bounds.2 < (count : Int)) then none else pure ()
+    some (lo, hi)
   | .glob name => do
     let global ← ctx.globs.find? (fun global => strEq global.name name)
     let .int lo hi := global.ty | none
@@ -45,28 +48,32 @@ def foldRange (ctx : UCtx) : USide → Option (Int × Int)
   | .typed (.int lo hi) (.lit n) =>
     if lo ≤ n && n ≤ hi then some (lo, hi) else none
   | .conv lo hi value => do
-    let range ← foldRange ctx value
+    let range ← foldRangeWithIndexCheck ctx checkIndices value
     if lo ≤ range.1 && range.2 ≤ hi then some (lo, hi) else none
   | .eng value lo hi => do
-    let _ ← foldRange ctx value
+    let _ ← foldRangeWithIndexCheck ctx checkIndices value
     if lo ≤ hi then some (lo, hi) else none
   | .neg value => do
-    let (lo, hi) ← foldRange ctx value
+    let (lo, hi) ← foldRangeWithIndexCheck ctx checkIndices value
     some (-hi, -lo)
   | .add a b => do
-    let x ← foldRange ctx a
-    let y ← foldRange ctx b
+    let x ← foldRangeWithIndexCheck ctx checkIndices a
+    let y ← foldRangeWithIndexCheck ctx checkIndices b
     some (x.1 + y.1, x.2 + y.2)
   | .sub a b => do
-    let x ← foldRange ctx a
-    let y ← foldRange ctx b
+    let x ← foldRangeWithIndexCheck ctx checkIndices a
+    let y ← foldRangeWithIndexCheck ctx checkIndices b
     some (x.1 - y.2, x.2 - y.1)
   | .mul a b => do
-    let x ← foldRange ctx a
-    let y ← foldRange ctx b
+    let x ← foldRangeWithIndexCheck ctx checkIndices a
+    let y ← foldRangeWithIndexCheck ctx checkIndices b
     some (min (min (x.1*y.1) (x.1*y.2)) (min (x.2*y.1) (x.2*y.2)),
           max (max (x.1*y.1) (x.1*y.2)) (max (x.2*y.1) (x.2*y.2)))
   | _ => none
+
+/-- Ordinary folds retain field ranges even when index bounds are deferred to lowering. -/
+def foldRange (ctx : UCtx) (value : USide) : Option (Int × Int) :=
+  foldRangeWithIndexCheck ctx false value
 
 /-- The ordinary exporter defers untyped number intervals until G lowering. Carry a
     computed interval when available, and mark the others explicitly as unknown. -/

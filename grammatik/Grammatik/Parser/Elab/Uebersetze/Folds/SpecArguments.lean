@@ -20,7 +20,8 @@ def uSpecArgument (ctx : UCtx) (g : String) (i : Nat) (ty : STyp) (arg : SExpr) 
       let (statement, _) ← uBindWertAllg ctx false "#spec-argument" (some ty) arg
       let .bind _ (some (lo, hi)) value := statement
         | throw "spec argument is not an annotated integer binding"
-      let some range := foldRange ctx value | throw "spec argument interval is unresolved"
+      let some range := foldRangeWithIndexCheck ctx true value
+        | throw "spec argument interval is unresolved"
       if lo ≤ range.1 ∧ range.2 ≤ hi then pure ()
       else throw "spec argument is outside its annotated range"
     | _ => throw "spec parameter is not a scalar type"
@@ -38,6 +39,13 @@ def uSpecArgs : Nat → UCtx → SExpr → Except String Unit
     match e with
     | .call g args =>
       for arg in args do uSpecArgs n ctx arg
+      match ctx.specs.find? (fun p => strEq p.1 g) with
+      | some (_, _, body) =>
+        for (arg, i) in args.zipIdx do
+          if specArgumentCaptures body (uSpecEin ctx.specs n arg) then
+            throw ("spec " ++ g ++ ": argument " ++ toString (i + 1) ++
+              " names a binder of the predicate")
+      | none => pure ()
       match ctx.specTypen.find? (fun p => strEq p.1 g) with
       | some (_, types) =>
         if args.length != types.length then
@@ -57,7 +65,7 @@ def uSpecArgs : Nat → UCtx → SExpr → Except String Unit
       uSpecArgs n ctx a
       uSpecArgs n ctx b
     | .ext k [binder, domain] [subject, body] =>
-      if k == .all || k == .any then
+      if k == .all || k == .any || k == .count then
         uSpecArgs n ctx subject
         -- Read the predicate domain directly: array quantifiers need no traversal carrier.
         let inner ← if domain == "elems" then do

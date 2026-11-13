@@ -184,4 +184,133 @@ theorem grund_binder_zeuge :
       .block [.callElse "f" [.lit 1] "cur" (.block [.bind false "t" none (.variable "cur")] none)] none := by
   kernel_rfl
 
+/-- A call returned inside a branch is bound first; the one at the end of the function body stays:
+    `if c { return f(1); } return f(2);`. A constructed value returned in a branch stays as well. -/
+theorem zweig_rueckgabe_zeuge :
+    hebeKoerper { zeugeK with faelle := Tafel.von _ ["Num"] }
+        (.block [.cond (.variable "c") (.block [] (some (.ret (some (.call "f" [.lit 1]))))) [] none,
+          .cond (.variable "d") (.block [] (some (.ret (some (.call "Num" [.lit 3]))))) [] none]
+          (some (.ret (some (.call "f" [.lit 2]))))) =
+      .block [.cond (.variable "c") (.block [.bind false "#r0" none (.call "f" [.lit 1])]
+          (some (.ret (some (.variable "#r0"))))) [] none,
+        .cond (.variable "d") (.block [] (some (.ret (some (.call "Num" [.lit 3]))))) [] none]
+        (some (.ret (some (.call "f" [.lit 2])))) := by kernel_rfl
+
+/-- A case without a payload stored into a slot is bound first: `t.slots[i].k = End;`. -/
+theorem fall_in_slot_zeuge :
+    hebeKoerper { zeugeK with faelle := Tafel.von _ ["End"] }
+        (.block [.set (.field (.index (.field (.variable "t") "slots") (.variable "i")) "k") "="
+          (.variable "End")] none) =
+      .block [.bind false "#r0" none (.variable "End"),
+        .set (.field (.index (.field (.variable "t") "slots") (.variable "i")) "k") "=" (.variable "#r0")] none := by
+  kernel_rfl
+
+/-- A direct array read stored into a slot uses the same binding as its explicit source form. -/
+theorem slot_array_read_zeuge :
+    hebeKoerper zeugeK (.block
+        [.set (.field (.index (.field (.variable "src") "slots") (.variable "i")) "b") "="
+          (.index (.variable "TEXT") (.variable "i"))] none) =
+      .block [.bind false "#r0" none (.index (.variable "TEXT") (.variable "i")),
+        .set (.field (.index (.field (.variable "src") "slots") (.variable "i")) "b") "="
+          (.variable "#r0")] none := by kernel_rfl
+
+/-- Calls needed for the target index stay before the stored read. -/
+theorem slot_array_read_order_zeuge :
+    hebeKoerper zeugeK (.block
+        [.set (.field (.index (.field (.variable "src") "slots") (.call "f" [])) "b") "="
+          (.index (.variable "TEXT") (.variable "i"))] none) =
+      .block [.bind false "#r0" none (.call "f" []),
+        .bind false "#r1" none (.index (.variable "TEXT") (.variable "i")),
+        .set (.field (.index (.field (.variable "src") "slots") (.variable "#r0")) "b") "="
+          (.variable "#r1")] none := by kernel_rfl
+
+/-- A stateful target index and a compound target read prevent moving the indexed value. -/
+theorem slot_array_read_stays_zeuge :
+    hebeKoerper zeugeK (.block
+        [.set (.field (.index (.field (.variable "src") "slots") (.variable "s")) "b") "="
+          (.index (.variable "TEXT") (.variable "i")),
+         .set (.field (.index (.field (.variable "src") "slots") (.variable "i")) "b") "+="
+          (.index (.variable "TEXT") (.variable "i"))] none) =
+      .block
+        [.set (.field (.index (.field (.variable "src") "slots") (.variable "s")) "b") "="
+          (.index (.variable "TEXT") (.variable "i")),
+         .set (.field (.index (.field (.variable "src") "slots") (.variable "i")) "b") "+="
+          (.index (.variable "TEXT") (.variable "i"))] none := by kernel_rfl
+
+/-- A string literal reads no mutable state: its call is bound just like a numeric call. -/
+theorem string_argument_operand_zeuge :
+    hebeKoerper zeugeK (.block [] (some (.ret (some
+        (.bin "+" (.bin "-" (.variable "v") (.variable "local"))
+          (.call "f" [.ext .text ["Z"] []])))))) =
+      .block [.bind false "#r0" none (.call "f" [.ext .text ["Z"] []])]
+        (some (.ret (some (.bin "+" (.bin "-" (.variable "v") (.variable "local"))
+          (.variable "#r0"))))) := by kernel_rfl
+
+/-- A string argument does not permit a call to cross an earlier mutable read. -/
+theorem string_argument_order_zeuge :
+    hebeKoerper zeugeK (.block [.bind false "a" none
+        (.bin "+" (.variable "s") (.call "f" [.ext .text ["Z"] []]))] none) =
+      .block [.bind false "a" none
+        (.bin "+" (.variable "s") (.call "f" [.ext .text ["Z"] []]))] none := by kernel_rfl
+
+/-- The already accepted statement spelling keeps its original tree. -/
+theorem string_argument_statement_zeuge :
+    hebeKoerper zeugeK (.block [.bind false "a" none (.call "f" [.ext .text ["Z"] []])] none) =
+      .block [.bind false "a" none (.call "f" [.ext .text ["Z"] []])] none := by kernel_rfl
+
+/-- A table field's tagged type supplies the same cases as the static-read expansion. -/
+def zeugeF : Kontext :=
+  { zeugeK with
+    felder := [("T", "k", .atom "Kind")],
+    typFaelle := [("Kind", [("Leaf", false), ("Node", true)])] }
+
+/-- Both typed and inferred bindings use one slot match; mutability and annotations survive. -/
+theorem tagged_slot_read_zeuge :
+    hebeKoerper zeugeF (.block
+        [.bind false "a" (some (.atom "Kind"))
+          (.field (.index (.field (.variable "T") "slots") (.lit 1)) "k"),
+         .bind true "b" none
+          (.field (.index (.field (.variable "T") "slots") (.variable "i")) "k")] none) =
+      .block
+        [.bind true "#r0" (some (.atom "Kind")) (.variable "Leaf"),
+         .cases (.field (.index (.field (.variable "T") "slots") (.lit 1)) "k")
+          [.arm "Leaf" none (.block [.set (.variable "#r0") "=" (.variable "Leaf")] none),
+           .arm "Node" (some "#r1")
+            (.block [.set (.variable "#r0") "=" (.call "Node" [.variable "#r1"])] none)],
+         .bind false "a" (some (.atom "Kind")) (.variable "#r0"),
+         .bind true "#r2" (some (.atom "Kind")) (.variable "Leaf"),
+         .cases (.field (.index (.field (.variable "T") "slots") (.variable "i")) "k")
+          [.arm "Leaf" none (.block [.set (.variable "#r2") "=" (.variable "Leaf")] none),
+           .arm "Node" (some "#r3")
+            (.block [.set (.variable "#r2") "=" (.call "Node" [.variable "#r3"])] none)],
+         .bind true "b" (some (.atom "Kind")) (.variable "#r2")] none := by kernel_rfl
+
+/-- An index call is evaluated once, before the single match read; fresh names do not collide. -/
+theorem tagged_slot_index_call_zeuge :
+    leseFeld zeugeF 64 0 false "a" none
+        (.field (.index (.field (.variable "T") "slots") (.call "f" [])) "k") =
+      some
+        ([.bind false "#r0" none (.call "f" []),
+          .bind true "#r1" (some (.atom "Kind")) (.variable "Leaf"),
+          .cases (.field (.index (.field (.variable "T") "slots") (.variable "#r0")) "k")
+            [.arm "Leaf" none (.block [.set (.variable "#r1") "=" (.variable "Leaf")] none),
+             .arm "Node" (some "#r2")
+              (.block [.set (.variable "#r1") "=" (.call "Node" [.variable "#r2"])] none)],
+          .bind false "a" (some (.atom "Kind")) (.variable "#r1")], 3) := by kernel_rfl
+
+/-- No initial case is invented, and a local shadowing the table prevents this rewrite. -/
+theorem tagged_slot_boundaries_zeuge :
+    leseFeld { zeugeF with typFaelle := [("Kind", [("Node", true)])] } 64 0 false "a" none
+        (.field (.index (.field (.variable "T") "slots") (.lit 1)) "k") = none ∧
+    leseFeld { zeugeF with lokal := ["T"] } 64 0 false "a" none
+        (.field (.index (.field (.variable "T") "slots") (.lit 1)) "k") = none :=
+  ⟨by kernel_rfl, by kernel_rfl⟩
+
+/-- A written annotation is retained even when it disagrees with the field's declared type. -/
+theorem tagged_slot_annotation_zeuge :
+    (leseFeld zeugeF 64 0 false "a" (some (.atom "Other"))
+        (.field (.index (.field (.variable "T") "slots") (.lit 1)) "k")).map
+        (fun result => result.1.getLast?) =
+      some (some (.bind false "a" (some (.atom "Other")) (.variable "#r0"))) := by kernel_rfl
+
 end Gabbro.Grammatik.Parser.CallHoist

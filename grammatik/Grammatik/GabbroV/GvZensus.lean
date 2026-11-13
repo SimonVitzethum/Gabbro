@@ -19,3 +19,4 @@ module
 
 public import Grammatik.GabbroV.GvZensus.Teil1
 public import Grammatik.GabbroV.GvZensus.Teil2
+public import Grammatik.GabbroV.GvZensus.RecordsZeuge

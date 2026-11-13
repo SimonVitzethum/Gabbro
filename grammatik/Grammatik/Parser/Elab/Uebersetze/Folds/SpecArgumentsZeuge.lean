@@ -1,6 +1,8 @@
 /- Witnesses of the spec-argument check (`uSpecArgs`, `uSpecArgument`): each claim is decided by the kernel. -/
 module
 public import Grammatik.Parser.Elab.Uebersetze.Folds.SpecArguments
+public import Grammatik.Parser.Spec.Contract
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -72,5 +74,116 @@ theorem spec_argument_conversion_zeuge :
       .error "spec small: argument 1 does not fit its parameter type" ∧
     uSpecArgument argumentContext "small" 1 (.atom "u32") (.call "u8" [.lit 7]) = .ok () := by
   decide +kernel
+
+/-- The count binder shadows the smaller outer `value`; all 102 indices must fit. -/
+theorem spec_count_argument_refused_zeuge :
+    uSpecArgs 20 {argumentContext with
+      tabs := [{ name := "T", count := 102, cols := [] }]}
+      (.ext .count ["value", "slots"]
+        [.variable "T", .call "small" [.variable "value"]]) =
+      .error "spec small: argument 1 does not fit its parameter type" := by
+  kernel_rfl
+
+/-- The same count is accepted when its largest bound index is exactly 100. -/
+theorem spec_count_argument_accepted_zeuge :
+    uSpecArgs 20 {argumentContext with
+      tabs := [{ name := "T", count := 101, cols := [] }]}
+      (.ext .count ["value", "slots"]
+        [.variable "T", .call "small" [.variable "value"]]) = .ok () := by
+  kernel_rfl
+
+def samePredicate : SExpr :=
+  .ext .all ["y", "slots"] [.variable "T", .bin "==" (.variable "x") (.variable "y")]
+
+def captureContext : UCtx :=
+  { argumentContext with
+    names := ["y", "z"]
+    kinds := [.int, .int]
+    types := [.int 0 9, .int 0 9]
+    tabs := [{ name := "T", count := 10, cols := [] }]
+    specs := [("same", ["x"], samePredicate)]
+    specTypen := [("same", [.atom "u8"])] }
+
+/-- Capturing substitution stays a call; the original predicate is never changed to `y == y`. -/
+theorem spec_capture_uninlined_zeuge :
+    uSpecEin captureContext.specs 20 (.call "same" [.variable "y"]) =
+      .call "same" [.variable "y"] := by
+  kernel_rfl
+
+/-- The argument gate reports the precise capture error before substituting. -/
+theorem spec_capture_refused_zeuge :
+    uSpecArgs 20 captureContext (.call "same" [.variable "y"]) =
+      .error "spec same: argument 1 names a binder of the predicate" := by
+  kernel_rfl
+
+/-- A remaining spec call has no ordinary predicate G form, even with a declared spec. -/
+theorem spec_capture_downstream_refused_zeuge :
+    uSichert captureContext
+      (uSpecEin captureContext.specs 20 (.call "same" [.variable "y"])) =
+      .error "ensures clause without G form" := by
+  kernel_rfl
+
+/-- A non-clashing use still passes the type gate and inlines to the original quantifier. -/
+theorem spec_noncapturing_inline_zeuge :
+    uSpecArgs 20 captureContext (.call "same" [.variable "z"]) = .ok () ∧
+    uSpecEin captureContext.specs 20 (.call "same" [.variable "z"]) =
+      .ext .all ["y", "slots"]
+        [.variable "T", .bin "==" (.variable "z") (.variable "y")] := by
+  exact ⟨by kernel_rfl, by kernel_rfl⟩
+
+/-- The shared inliner preserves the capturing call in generic-spec contract predicates too. -/
+theorem spec_contract_capture_zeuge :
+    Spec.predicates captureContext.specs true []
+      { art := "spec", name := "contract", params := [], res := some (.atom "bool"),
+        fehler := none, klauseln := [.gives (.call "same" [.variable "y"])] } =
+      [.call "same" [.variable "y"]] := by
+  kernel_rfl
+
+/-- All quantifiers and every fold kind participate, including binders below an operand. -/
+theorem spec_capture_binder_kinds_zeuge :
+    ([XKind.all, .any, .count, .foldAdd, .foldMin, .foldMax, .foldAnd, .foldOr].all fun kind =>
+      let body := SExpr.built "wrapper" [.ext kind ["y", "slots"] [.variable "T", .tru]]
+      beqSExpr (uSpecEin [("g", ["x"], body)] 20 (.call "g" [.variable "y"]))
+        (.call "g" [.variable "y"])) = true := by
+  kernel_rfl
+
+/-- Reusing name collection must not hide the argument's outer-scope domain name. -/
+theorem spec_capture_argument_domain_zeuge :
+    specArgumentCaptures samePredicate
+      (.ext .count ["y", "elems"] [.variable "y", .tru]) = true := by
+  kernel_rfl
+
+def deferredIndexContext : UCtx :=
+  { argumentContext with
+    names := ["i"]
+    kinds := [.index 0]
+    types := [.int 0 0]
+    unknownRanges := ["i"]
+    tabs := [{ name := "T", count := 10, cols := [("v", (0, 9))] }] }
+
+/-- Ordinary table folds retain the field range; erased spec reads require index evidence. -/
+theorem fold_deferred_table_index_zeuge :
+    foldRange deferredIndexContext (.tab "T" "v" (.param "i")) = some (0, 9) ∧
+    foldRangeWithIndexCheck deferredIndexContext true (.tab "T" "v" (.param "i")) = none ∧
+    uSpecArgument deferredIndexContext "small" 1 (.atom "u8")
+      (.field (.index (.field (.variable "T") "slots") (.variable "i")) "v") =
+      .error "spec small: argument 1 does not fit its parameter type" := by
+  exact ⟨by kernel_rfl, by kernel_rfl, by kernel_rfl⟩
+
+/-- Supplying real in-bounds index evidence keeps the spec argument accepted. -/
+theorem fold_resolved_table_index_zeuge :
+    uSpecArgument {deferredIndexContext with types := [.int 0 9], unknownRanges := []}
+      "small" 1 (.atom "u8")
+      (.field (.index (.field (.variable "T") "slots") (.variable "i")) "v") = .ok () := by
+  kernel_rfl
+
+/-- Array element ranges have the same split; the strict check also survives arithmetic nesting. -/
+theorem fold_deferred_array_index_zeuge :
+    let ctx := {deferredIndexContext with
+      names := ["i", "a"], kinds := [.int, .wert], types := [.int 0 0, .arr (.int 2 7) 4]}
+    foldRange ctx (.add (.idx (.param "a") (.param "i")) (.lit 1)) = some (3, 8) ∧
+    foldRangeWithIndexCheck ctx true
+      (.add (.idx (.param "a") (.param "i")) (.lit 1)) = none := by
+  exact ⟨by kernel_rfl, by kernel_rfl⟩
 
 end Gabbro.Grammatik.Parser.Uebersetze

@@ -24,11 +24,14 @@ def mitOrt {α : Type} (ort : Bool) (name : String) (r : Except String α) : Exc
 
 /-- One shared phase body over expanded declarations. Stage 0 supplies certified source scopes
     and its checked empty-table adapter; canonical export supplies its ordinary collectors.
-    Runtime checks, declaration expansion and G elaboration are never copied into Stage 0. -/
+    Runtime checks, declaration expansion and G elaboration are never copied into Stage 0. `narrow` turns on
+    the narrowing by guarding conditions in every function body (`UCtx.narrow`): off by default (the canonical
+    exporter `elabU`), on for the Stage-0 compiler (`Stage0.Frontend.elabExpanded`). -/
 def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (functions : List UKonstFn)
     (tableLowering : List String → SItemTief → Except String UTab)
-    (staticRequirements : List (STyp × String) := []) (ort : Bool := false) : Except String UProg :=
+    (staticRequirements : List (STyp × String) := []) (ort : Bool := false) (narrow : Bool := false) :
+    Except String UProg :=
   match guestSources msE with
   | .error e => .error e
   | .ok (guests, msE) =>
@@ -164,7 +167,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   | .error e => .error e
   | .ok probeFns =>
   match uSeq (fnItems.map (fun (s, b) =>
-      mitOrt ort s.name <| elabUFunktion (spaces := spaces) (valueScope := valueScope) (eigner := eigner) (specTypen := specTypen) consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb
+      mitOrt ort s.name <| elabUFunktion (spaces := spaces) (valueScope := valueScope) (eigner := eigner) (specTypen := specTypen) (narrow := narrow) consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb
         specFns
         constants)) with
   | .error e => .error e
@@ -219,8 +222,9 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
 theorem elabExpandedWithScopes_spaces (items : List SItemTief)
     (consts : List (String × Int)) (alias : List (String × (Int × Int)))
     (functions : List UKonstFn) (tableLowering : List String → SItemTief → Except String UTab)
-    (requirements : List (STyp × String)) (u : UProg)
-    (accepted : elabExpandedWithScopes items consts alias functions tableLowering requirements = .ok u) :
+    (requirements : List (STyp × String)) (u : UProg) {narrow : Bool}
+    (accepted : elabExpandedWithScopes items consts alias functions tableLowering requirements
+      (narrow := narrow) = .ok u) :
     ∃ guests declarations, guestSources items = .ok (guests, declarations) ∧
       u.spaces = uSpaces (uOhneSenken declarations) := by
   unfold elabExpandedWithScopes at accepted

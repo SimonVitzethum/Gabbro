@@ -109,17 +109,22 @@ theorem effekt_rund (e : SEffekt) (he : EffGut e) (R : List Token) (hR : EffFolg
     parseEffekt F (druckEffekt e ++ R) = .ok (e, R) := by
   obtain ⟨h1, h2, h3⟩ := effFolge_ruhig R hR
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  have hq : ∀ p : SExpr, qualOrt p R = none := by
+    intro p
+    rcases hR with ⟨r, rfl⟩ | ⟨r, rfl⟩
+    · exact qualOrt_komma p r
+    · exact qualOrt_zu p r
   cases e with
   | reads p =>
     simp only [druckEffekt, List.length_append, List.length_singleton] at hF ⊢
     have hO := ausdruck p he R F' h1 h2 h3 (by omega)
     simp only [List.singleton_append, List.cons_append]
-    simp only [parseEffekt, (by decide : strEq "reads" "reads" = true), ite_true, List.nil_append, hO]
+    simp only [parseEffekt, (by decide : strEq "reads" "reads" = true), ite_true, List.nil_append, parseEffektOrt, hO, hq]
   | writes p =>
     simp only [druckEffekt, List.length_append, List.length_singleton] at hF ⊢
     have hO := ausdruck p he R F' h1 h2 h3 (by omega)
     simp only [List.singleton_append, List.cons_append]
-    simp only [parseEffekt, (by decide : strEq "writes" "reads" = false), (by decide : strEq "writes" "writes" = true), Bool.false_eq_true, ite_false, ite_true, List.nil_append, hO]
+    simp only [parseEffekt, (by decide : strEq "writes" "reads" = false), (by decide : strEq "writes" "writes" = true), Bool.false_eq_true, ite_false, ite_true, List.nil_append, parseEffektOrt, hO, hq]
   | locks sh p =>
     obtain ⟨he, hsh⟩ := he
     have hO := ausdruck p he R F' h1 h2 h3 (by

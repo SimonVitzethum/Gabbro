@@ -1,0 +1,8 @@
+// One ranged field uses the same record schema as a larger record. Exit: ok = 1.
+module ir_record_one_field {
+type Flag = { ok : u32 in 0 .. 1, };
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let r = Flag(ok: 1);
+    return r.ok;
+}
+}

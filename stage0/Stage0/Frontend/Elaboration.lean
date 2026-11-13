@@ -40,6 +40,16 @@ import all Init.Data.String.ToSlice
 namespace Gabbro.Stage0.Frontend
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 
+/-- The compiler's reading of expanded declarations: the shared phase body `elabExpandedWithScopes` with the
+    narrowing by guarding conditions on (`UCtx.narrow`; LANGUAGE.md section 3.2, V1). This is the ONE place
+    where Stage 0 turns it on; every Stage-0 elaboration (the compile and its diagnosis) goes through here.
+    The canonical exporter `elabU` and the read-back of printed programs keep it off. -/
+def elabExpanded (items : List SItemTief) (consts : List (String × Int))
+    (typeEnv : List (String × (Int × Int))) (functions : List UKonstFn)
+    (tableLowering : List String → SItemTief → Except String UTab)
+    (requirements : List (STyp × String) := []) (ort : Bool := false) : Except String UProg :=
+  elabExpandedWithScopes items consts typeEnv functions tableLowering requirements ort (narrow := true)
+
 /-- Expand through the canonical exporter before using the shared runtime elaborator.
     The supplied scopes retain their original-source certificates and table adapter. -/
 def elabWithScopes (items : List SItemTief) (consts : List (String × Int))
@@ -47,7 +57,7 @@ def elabWithScopes (items : List SItemTief) (consts : List (String × Int))
     (functions : List UKonstFn := uKonstFns (uOhneSenken (uMembers items)))
     (tableLowering : List String → SItemTief → Except String UTab := uTabelle consts typeEnv) : Except String UProg := do
   let (expanded, requirements) ← expandU items
-  elabExpandedWithScopes (expanded.map OldSource.normalizeItem) consts typeEnv functions tableLowering requirements
+  elabExpanded (expanded.map OldSource.normalizeItem) consts typeEnv functions tableLowering requirements
 
 /-- Equality on the expanded program, including every expansion and const-admission error.
     Both endpoints share the entire phase body, so later elaborator changes cannot drift. -/

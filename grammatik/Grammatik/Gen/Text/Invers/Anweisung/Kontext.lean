@@ -191,6 +191,7 @@ theorem SInv.push {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
   kanal := H.kanal
   zb := H.zb
   transFrei := H.transFrei
+  narrowOff := H.narrowOff
 
 theorem SInv.lock {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
     (H : SInv z V ctx Γ Λ art) (L : z.deklaration.Lock) :
@@ -228,6 +229,7 @@ theorem SInv.lock {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
   kanal := H.kanal
   zb := H.zb
   transFrei := H.transFrei
+  narrowOff := H.narrowOff
 
 /-! ### Values of a `let`: a truth value is never read as a number -/
 

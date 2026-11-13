@@ -1,0 +1,38 @@
+// Narrowing by the guarding condition: a local that the condition bounds is read at the smaller range in
+// the branch, with no `narrow` statement and no new return path.
+//   store: `if i < 10` reads `i` at 0 .. 9 in the then block (it indexes the 10 slots and `i + 20` fits the
+//          field), and at 10 .. 100 in the else block (`i - 10` is not negative);
+//   after: the then block always returns, so the rest of the function reads `i` at 0 .. 9 (the index).
+// main: store(4) writes slot 4 = 24 and answers 24; store(15) answers 5; after(4) reads slot 4 = 24;
+// after(40) returns 3 early. Exit code 24 + 5 + 24 + 3 = 56.
+module ir_probe {
+table T count 10 { slot { v : u32 in 0 .. 100, } }
+
+impl fn store(i : u32 in 0 .. 100) -> u32 in 0 .. 100
+    effects { reads T.slots, writes T.slots }
+{
+    if i < 10 {
+        T.slots[i].v = i + 20;
+        return T.slots[i].v;
+    } else {
+        return i - 10;
+    }
+}
+
+impl fn after(i : u32 in 0 .. 100) -> u32 in 0 .. 100
+    effects { reads T.slots }
+{
+    if i >= 10 { return 3; }
+    return T.slots[i].v;
+}
+
+impl fn main() -> u32 in 0 .. 400
+    effects { reads T.slots, writes T.slots }
+{
+    let a = store(4);
+    let b = store(15);
+    let c = after(4);
+    let d = after(40);
+    return a + b + c + d;
+}
+}

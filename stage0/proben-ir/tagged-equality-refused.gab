@@ -1,0 +1,10 @@
+// Distinct tagged declarations must not compare, even when their payload shapes agree.
+module ir_tagged_equality_refused {
+tagged type Left = { LeftEnd, LeftNumber(u32 in 0 .. 9) };
+tagged type Right = { RightEnd, RightNumber(u32 in 0 .. 9) };
+impl fn compare(a : Left, b : Right) -> u32 in 0 .. 1 effects { pure } {
+    if a == b { return 1; }
+    return 0;
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } { return 0; }
+}

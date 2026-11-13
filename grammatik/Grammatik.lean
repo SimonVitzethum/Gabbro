@@ -73,6 +73,7 @@ public import Grammatik.Parser.Elab.UebersetzeAllg3.Guest.Connection
 
 public import Grammatik.Parser.Elab.Export.QuantifierWitnesses
 public import Grammatik.Parser.Elab.Export.ExportMetadataBound
+public import Grammatik.Parser.Elab.Export.Traversal.TraversalHeaderZeuge
 public import Grammatik.Parser.Elab.Export.CostBinding
 public import Grammatik.Parser.Elab.Export.CostBindingZeuge
 public import Grammatik.Parser.Elab.Export.HeldBinding
@@ -81,6 +82,12 @@ public import Grammatik.Parser.Elab.Export.Held.Satz
 public import Grammatik.Parser.Elab.Export.Held.SatzZeuge
 public import Grammatik.Parser.Elab.Export.ForeverBinding
 public import Grammatik.Parser.Elab.Modules.CallHoistZeuge
+public import Grammatik.Parser.Elab.Konst.Scopes.RecordZeuge
+public import Grammatik.Parser.Elab.Uebersetze.Kontext.StringConstantsZeuge
 public import Grammatik.Parser.Elab.Modules.MatchWildcardZeuge
+public import Grammatik.Parser.Elab.Uebersetze.Records.TruthZeuge
+public import Grammatik.Parser.Elab.Uebersetze.Tagged.EqualityZeuge
+public import Grammatik.Parser.Elab.Uebersetze.Tagged.PayloadKindsZeuge
+public import Grammatik.Parser.Elab.Uebersetze.Kontext.GuardNarrowingWitness
 
 @[expose] public section

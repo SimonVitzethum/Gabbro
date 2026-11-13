@@ -1,0 +1,20 @@
+// A caller claims the table carrier of a writer in another module.
+module b {
+table T count 4 { slot { v: u32 in 0 .. 9, } }
+impl fn set(i: index into T, v: u32 in 0 .. 9)
+    effects { writes T.slots } {
+    T.slots[i].v = v;
+}
+impl fn get(i: index into T) -> u32 in 0 .. 9
+    effects { reads T.slots } {
+    return T.slots[i].v;
+}
+}
+module a {
+impl fn main() -> u32 in 0 .. 255
+    effects { reads b::T.slots, writes b::T.slots } {
+    b::set(2, 9);
+    let answer = b::get(2);
+    return answer;
+}
+}

@@ -1,0 +1,6 @@
+// Refused before lowering: a call name cannot also name a tagged case. No runtime exit.
+module ir_function_case_clash {
+tagged type T = { C, D };
+impl fn C() -> u32 in 0 .. 9 { return 1; }
+impl fn main() -> u32 in 0 .. 255 { return 0; }
+}

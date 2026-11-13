@@ -1,0 +1,29 @@
+// A call returned inside a branch or a match arm is bound first; at the end of the body it stands
+// as it is.
+module ir_branch_return_call {
+tagged type Token = { End, Other };
+impl fn twice(x : u32 in 0 .. 25) -> u32 in 0 .. 50 {
+    return x + x;
+}
+impl fn pick(a : u32 in 0 .. 1) -> u32 in 0 .. 50 {
+    if a == 1 { return twice(a); } else { return twice(3); }
+}
+impl fn arm(t : Token) -> u32 in 0 .. 50 {
+    match t {
+        End => { return twice(5); }
+        Other => { return twice(1); }
+    }
+}
+impl fn last(a : u32 in 0 .. 1) -> u32 in 0 .. 50 {
+    if a == 1 { return twice(20); }
+    return twice(a);
+}
+impl fn main() -> u32 in 0 .. 255 {
+    let e : Token = End;
+    let a = pick(1);
+    let b = pick(0);
+    let c = arm(e);
+    let d = last(1);
+    return a + b + c + d;
+}
+}

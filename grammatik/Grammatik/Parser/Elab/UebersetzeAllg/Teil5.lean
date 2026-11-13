@@ -3,7 +3,7 @@ module
 public import Grammatik.Kern.Syntax.Zucker
 public import Grammatik.Parser.Elab.Uebersetze.Records.Records
 public import Grammatik.Parser.Elab.Uebersetze
-public import Grammatik.Parser.Elab.UebersetzeAllg.Teil4
+public import Grammatik.Parser.Elab.UebersetzeAllg.Comparisons
 public import Grammatik.Parser.Elab.Generic.C09Sig
 
 @[expose] public section
@@ -201,52 +201,11 @@ def lowProductArgs (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn
 termination_by sides => 3 * sizeOf sides + 2
 decreasing_by all_goals (simp_wf <;> omega)
 
-/-- One comparison in `ensures` (G folds all but `lt`/`le`/`eq`). -/
+/-- Compare the actual typed operands through the shared value comparator. -/
 def lowCmp (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (fn : UFn) (er : Option Ty) :
     String → USide → USide → Except String (Expr (declOf u) Γ Λ .bool)
-  | op, a, b =>
-    match lowWertE u Γ Λ fn er a, lowWertE u Γ Λ fn er b with
-    | .ok ⟨.fl _ _, x⟩, .ok ⟨.fl _ _, y⟩ =>
-      match op with
-      | "<" => .ok (Expr.fllt x y)
-      | "<=" => .ok (Expr.flle x y)
-      | ">" => .ok (Expr.fllt y x)
-      | ">=" => .ok (Expr.flle y x)
-      | _ => .error "float: comparison without canonical G form"
-    | .ok ⟨.str _, x⟩, .ok ⟨.str _, y⟩ => do
-      u.exportGate
-      match op with
-      | "==" => .ok (Expr.strEq x y)
-      | "!=" => .ok (Expr.not (Expr.strEq x y))
-      | "<" => .ok (Expr.strLt x y)
-      | "<=" => .ok (Expr.or (Expr.strLt x y) (Expr.strEq x y))
-      | ">" => .ok (Expr.strLt y x)
-      | ">=" => .ok (Expr.or (Expr.strLt y x) (Expr.strEq x y))
-      | _ => .error "operator without G form"
-    | .ok ⟨.ref region, x⟩, .ok ⟨.ref other, y⟩ => do
-      u.exportGate
-      if same : other = region then
-        match op with
-        | "==" => .ok (Expr.refEq x (same ▸ y))
-        | "!=" => .ok (Expr.not (Expr.refEq x (same ▸ y)))
-        | _ => .error "source export: reference ordering has no canonical G form"
-      else .error "source export: reference equality requires the same region"
-    | _, _ =>
-    match zahlVon (lowWertE u Γ Λ fn er a) with
-    | .error e => .error e
-    | .ok s1 =>
-      match zahlVon (lowWertE u Γ Λ fn er b) with
-      | .error e => .error e
-      | .ok s2 =>
-        match op with
-        | "==" => .ok (Expr.eq s1.term s2.term)
-        | "!=" => .ok (Expr.not (Expr.eq s1.term s2.term))
-        | "<" => .ok (Expr.lt s1.term s2.term)
-        | "<=" => .ok (Expr.le s1.term s2.term)
-        | ">" => .ok (Expr.lt s2.term s1.term)
-        | ">=" => .ok (Expr.le s2.term s1.term)
-        | _ => .error "operator without G form"
+  | op, a, b => lowVglWert u op (lowWertE u Γ Λ fn er a) (lowWertE u Γ Λ fn er b)
 
 termination_by _ a b => 3 * (sizeOf a + sizeOf b) + 1
 decreasing_by all_goals (simp_wf <;> omega)

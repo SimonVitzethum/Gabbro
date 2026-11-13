@@ -37,7 +37,7 @@ def erweitereArme (schemas : List (Uebersetze.USum STyp)) (nr : Nat)
       | _ => (arms, nr)
   | _ => (arms, nr)
 
-/-- Visit the same nested bodies as CallHoist, threading fresh names through every copy.
+/-- Visit every nested statement body, threading fresh names through every copy.
     Fuel bounds recursion exactly as in the existing source rewrite. -/
 def erweitereS (schemas : List (Uebersetze.USum STyp)) :
     Nat → Nat → SAnw → SAnw × Nat
@@ -74,6 +74,17 @@ def erweitereS (schemas : List (Uebersetze.USum STyp)) :
     | .bindElse x ty e g b => let r := body nr b; (.bindElse x ty e g r.1, r.2)
     | .callElse f args g b => let r := body nr b; (.callElse f args g r.1, r.2)
     | .callIndElse p args g b => let r := body nr b; (.callIndElse p args g r.1, r.2)
+    | .bindAxiomOptElse x ty e g b =>
+      let r := body nr b
+      (.bindAxiomOptElse x ty e g r.1, r.2)
+    | .alloc mu x ty arena count failure =>
+      match failure with
+      | none => (s, nr)
+      | some b =>
+        let r := body nr b
+        (.alloc mu x ty arena count (some r.1), r.2)
+    | .grow arena count b => let r := body nr b; (.grow arena count r.1, r.2)
+    | .child b => let r := body nr b; (.child r.1, r.2)
     | _ => (s, nr)
 
 /-- Ordinary function bodies, including gated functions; compile-time functions stay intact. -/

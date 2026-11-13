@@ -17,7 +17,7 @@ def uRecordFields (text : String) : Except String (List SFeld) :=
   match lex text with
   | .error _ => .error "source export: record schema unreadable"
   | .ok tokens =>
-    match parseFeldListe (tokens.length + 1) tokens with
+    match parseFeldListe (tokens.length * 4 + 32) tokens with
     | .error e => .error e
     | .ok (fields, rest) =>
       if rest.all (fun | .ende => true | _ => false) then pure fields

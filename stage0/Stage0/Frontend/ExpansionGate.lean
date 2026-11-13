@@ -70,7 +70,7 @@ theorem checkExpansionGate_expansion {declarations expanded : List SItemTief}
 theorem checkExpansionGate_checked {declarations expanded : List SItemTief}
     {requirements : List (STyp × String)}
     (h : checkExpansionGate declarations = .ok (expanded, requirements)) :
-    (Konst.ohneKonst (uMembers expanded)).any ExportMetadata.itemMetadata = false := by
+    ExportMetadata.unitMetadata (Konst.ohneKonst (uMembers expanded)) = false := by
   have hp := checkExpansionGate_expansion h
   cases hc : Konst.checkSourceMetadata (uMembers expanded) with
   | error e =>

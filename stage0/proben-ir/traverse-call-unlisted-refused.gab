@@ -1,0 +1,25 @@
+// The helper writes calls, which the traversal header deliberately omits.
+// The caller still declares that write, so ordinary call-effect checking is not the refusal.
+module ir_traverse_call {
+table t count 3 { slot { } }
+static mut calls : u32 in 0 .. 9 = 0;
+static mut spare : u32 in 0 .. 1 = 0;
+impl fn val(i : index into t) -> u32 in 0 .. 80 effects { reads calls, writes calls } {
+    calls = (calls + 1) % 10;
+    if i == 1 { return 80; }
+    return 30;
+}
+impl fn main() -> u32 in 0 .. 200
+    effects { reads t.slots, reads calls, writes calls, writes spare }
+{
+    let mut acc : u32 in 0 .. 100 = 0;
+    traverse i over slots of t by unvisited touches reads t.slots {
+        let v = val(i);
+        let s = acc + v;
+        narrow s to 0 .. 100 else { next i; }
+        acc = s;
+    }
+    spare = 1;
+    return acc + calls;
+}
+}

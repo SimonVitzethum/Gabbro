@@ -35,7 +35,9 @@ def recordSurface (text : String) : Except String (List SRecordMember) := do
     | .ok tokens => pure tokens
     | .error _ => throw "source export: record schema unreadable"
   let tokens ← fordereZeichen "{" tokens
-  let (members, rest) ← recordMembers (tokens.length + 1) tokens
+  -- Even one ranged field descends through every expression-precedence layer. A token count
+  -- alone underestimates that depth; use the same budget as other canonical type re-readers.
+  let (members, rest) ← recordMembers (tokens.length * 4 + 32) tokens
   if rest.all (fun | .ende => true | _ => false) then pure members
   else throw "record embedding: trailing tokens"
 

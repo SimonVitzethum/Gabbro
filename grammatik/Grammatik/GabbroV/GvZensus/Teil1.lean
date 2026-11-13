@@ -341,11 +341,14 @@ def befundeElab (ms : List SItemTief) : List Befund :=
   let rawTables := sammleTabellen consts alias
     (ms.filterMap (fun | .tableT n _ _ _ _ _ _ _ => some n | _ => none)) spaces ms
   let sumOk := match uSums alias ms (werte rawTables) spaces eigner with | .ok w => w | .error _ => []
-  -- Resolve payload pointers against those same registered tables before field admission.
+  let records := match uTypes consts alias (werte rawTables) ms eigner spaces with
+    | .ok scope => scope.records
+    | .error _ => []
+  -- Resolve record fields before tagged fields, in the same order as real elaboration.
   let tabs := rawTables.map
     fun (n, r) => (n, match r with
       | .ok t =>
-        (match uSumTabs sumOk [t] with
+        (match uSumTabs sumOk (uRecordTabs records [t]) with
         | .ok [t'] => .ok t'
         | .ok _ => .ok t
         | .error e => .error e)
