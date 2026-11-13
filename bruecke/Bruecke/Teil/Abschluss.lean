@@ -47,6 +47,18 @@ theorem call_mem_calleesOf_teil {f : UFn} {n : String} {args : List UArg}
   apply mem_sortDedup_of_mem_teil
   exact List.mem_filterMap.mpr ⟨.call n args, hm, rfl⟩
 
+theorem callsIn_mem_calleesOf {f : UFn} {n : String} {args : List UArg}
+    (h : CallsIn f.body n args) : n ∈ calleesOf f := by
+  obtain ⟨st, hm, hs⟩ := h
+  apply mem_sortDedup_of_mem_teil
+  exact List.mem_filterMap.mpr ⟨st, hm, by rw [hs] <;> rfl⟩
+
+theorem callee_getragen_calls (S : Getragen u C) {c d : Fin u.fns.length}
+    (hc : C c) {n : String} {args : List UArg}
+    (hm : CallsIn (fnAt u c).body n args)
+    (hd : fnSuch u n = some (fnAt u d)) : C d :=
+  S.geschlossen c hc n (callsIn_mem_calleesOf hm) d hd
+
 theorem callee_getragen_teil (S : Getragen u C) {c d : Fin u.fns.length}
     (hc : C c) {n : String} {args : List UArg}
     (hm : UStmt.call n args ∈ (fnAt u c).body)
@@ -60,8 +72,7 @@ theorem torRuf_eq_teil {P : Programm (declOf u)} (G : GesenktC u C P)
     (g : (declOf u).Fn) (hg : C g) (σ : World (declOf u))
     (ρ : Env (declOf u) ((declOf u).params g)) : torRuf P R g σ ρ = R g σ ρ := by
   unfold torRuf
-  rw [G.req g hg]
-  rfl
+  rw [G.req g hg] <;> rfl
 
 /-- Gating preserves normal contracts and frames even for open functions: rejection is logical. -/
 theorem torRuf_rahmen_teil {D : Deklaration} {P : Programm D}

@@ -403,6 +403,8 @@ theorem pruefe_erweitert (P : Programm) (erg : Option Shape) :
       · cases h
   | .exit, Δ, Δ', h => by simp only [pruefe] at h; cases h; exact erweitert_refl _
   | .leave, Δ, Δ', h => by simp only [pruefe] at h; cases h; exact erweitert_refl _
+  | .forEach .., _, _, h => by cases h
+  | .retry .., _, _, h => by cases h
 
 theorem pruefeBlock_erweitert (P : Programm) (erg : Option Shape) :
     ∀ (b : List Stmt) (Δ Δ' : Umgebung), pruefeBlock P erg Δ b = some Δ' → erweitert Δ Δ'

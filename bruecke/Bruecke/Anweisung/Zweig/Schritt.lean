@@ -22,9 +22,9 @@ variable {u : UProg}
 
 /-- **`return [v];` inside a block** (`lowRetStmt` without crossed scopes): the G statement returns
     the value the Body `ret` returns, the world kept. -/
-theorem lowRet_sim (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames} {Λ : List (Res (declOf u))}
-    {r : URet} {st : Stmt (declOf u) (verOf u c) false Γ Λ Λ} {bst : Gabbro.Body.Stmt}
-    (h : lowRetStmt (l := false) u c Γ fn Λ [] r = .ok st) (hb : retZ u fn ns r = some bst)
+theorem lowRet_sim {loopMode : Bool} (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames} {Λ : List (Res (declOf u))}
+    {r : URet} {st : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ} {bst : Gabbro.Body.Stmt}
+    (h : lowRetStmt (l := loopMode) u c Γ fn Λ [] r = .ok st) (hb : retZ u fn ns r = some bst)
     (hU : UmfangB Γ fn ns) (hT : TabEindeutig u)
     (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
@@ -94,6 +94,44 @@ theorem lowRet_sim (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames}
               all_goals first
                 | rfl
                 | trivial
+          · cases hE
+          · cases hE
+        · cases h
+  case bool bd =>
+    simp only [retZ] at hb
+    cases hs : condZ u fn ns bd with
+    | none => rw [hs] at hb; cases hb
+    | some e =>
+      rw [hs] at hb
+      simp only [Option.map_some, Option.some.injEq] at hb
+      subst hb
+      simp only [lowRetStmt] at h
+      cases hE : lowErg u c Γ Λ fn (.bool bd) with
+      | error err => simp only [hE, Except.bind] at h; cases h
+      | ok E =>
+        simp only [hE, Except.bind] at h
+        split at h
+        · cases h
+          simp only [lowErg] at hE
+          split at hE
+          · rename_i hErg
+            split at hE
+            · cases hE
+            · rename_i ve hve
+              cases hE
+              refine ⟨_, _, rfl, wgrel_same u rfl rfl hW, fun ρB => ?_⟩
+              have herg : (verOf u c).erg = some .bool := by
+                show (vertragVon (declOf u) c).erg = _
+                rw [vErg_eq u c, hErg]
+              generalize hσl : σ.lese _ _ = σl
+              have hWl : WGRel u σl s.world := by
+                rw [← hσl]
+                exact wgrel_same u rfl rfl hW
+              have hv := lowEns_named_sim hve hs hA hT σl σl ρ s hWl hWl hL
+              rw [ergValOf_heq herg _ (evalErg σl (ErgExpr.val (D := declOf u) ve) σl ρ)
+                (evalErg_heq herg _ _ (mpr3_heq _ _ _ _) _ _ _)]
+              simp only [Gabbro.Body.step, hv]
+              all_goals rfl
           · cases hE
           · cases hE
         · cases h

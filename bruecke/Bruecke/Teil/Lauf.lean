@@ -18,8 +18,7 @@ theorem reqAmEintritt_wahr_teil {P : Programm (declOf u)} (G : GesenktC u C P)
     (f : Fin u.fns.length) (hf : C f) (σ : World (declOf u))
     (ρ : Env (declOf u) ((declOf u).params f)) : ReqAmEintritt P f σ ρ := by
   unfold ReqAmEintritt
-  rw [G.req f hf]
-  rfl
+  rw [G.req f hf] <;> rfl
 
 theorem eintrag_gut_teil {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u C)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
@@ -91,7 +90,7 @@ theorem eintrag_gut_teil {P : Programm (declOf u)} (G : GesenktC u C P) (S : Get
               simp only [List.any_eq_false, beq_iff_eq]
               intro x hx he
               subst x
-              exact hp (List.mem_append_right _ hx)
+              exact hp (writesU_global hx)
             rw [(hRR.2 callee σr envA σ' v hR).1.2 i hfalse]
         exact (hWt.2 n v' (hglob.symm.trans hv)).symm
 
@@ -100,16 +99,8 @@ theorem wgrel_rahmen_leer (c : Fin u.fns.length) {σ σ' : World (declOf u)}
     {w : Gabbro.Body.World} (h : WGRel u σ w)
     (hf : Rahmen ((declOf u).schreibt c) ((declOf u).gschreibt c) σ σ')
     (hw : writesU (fnAt u c) = []) : WGRel u σ' w := by
-  have ht : (fnAt u c).puts = [] := (List.append_eq_nil_iff.mp hw).1
-  have hg : (fnAt u c).gputs = [] := (List.append_eq_nil_iff.mp hw).2
-  apply wgrel_same u (h := h)
-  · funext t k f
-    apply hf.1 t
-    refine (sigSchreibt_eq u c t).trans ?_
-    simp only [writesAt, ht, List.any_nil]
-  · funext g
-    apply hf.2 g
-    refine (sigGSchreibt_eq u c g).trans ?_
-    simp only [writesGAt, hg, List.any_nil]
+  have : callClock ∈ writesU (fnAt u c) := by simp [writesU]
+  rw [hw] at this
+  cases this
 
 end Gabbro.Bruecke

@@ -58,12 +58,11 @@ def schreibtB (u : UProg) (fn : UFn) : Bool :=
   (fn.puts.all fun w => u.tabs.any (·.name == w)) &&
     fn.gputs.all fun w => u.globs.any (·.name == w)
 
-/-- No `bool`, option or aggregate field and no `bool` result: the bridge speaks about numbers only
-    (Body's shapes are `intIn`), so a unit with such a place is REFUSED here, by name, and
-    the all-carried source duty is false. -/
+/-- Bool table fields, options and record-typed table slots are refused by name. Record results
+    are represented by Body values and the return simulation. -/
 def keinBoolB (u : UProg) : Bool :=
   u.tabs.all (fun t => t.bools.isEmpty && t.opts.isEmpty && t.werte.isEmpty) &&
-    u.fns.all (fun f => !f.resBool && f.resTy.isNone && f.resOpt.isNone && f.resSum.isNone && f.resWhy.isNone)
+    u.fns.all (fun f => resultTypeB f && f.resOpt.isNone && f.resSum.isNone && f.resWhy.isNone)
 
 /-- Boolean, aggregate and atomic statics are refused by the unit gate. -/
 def staticsB (u : UProg) : Bool := u.globs.all fun g =>
@@ -115,7 +114,7 @@ theorem artPtrB_ok {fn : UFn} (h : artPtrB fn = true) : ArtStimmtPtr fn := by
   · rename_i q w' num' hq
     have sameTable : num' = num := by simpa using this
     subst num'
-    exact ⟨w', by rw [hq]; rfl⟩
+    exact ⟨w', by rw [hq] <;> rfl⟩
   · cases this
 
 theorem artB_ok {fn : UFn} (h : artB fn = true) : ArtStimmt fn := by
@@ -156,8 +155,7 @@ theorem oldsB_ok {fn : UFn} (h : oldsB u fn = true) : OldsKurz u fn := by
     rw [hx]
     exact of_decide_eq_true this
   · rename_i hx
-    rw [hx]
-    trivial
+    rw [hx] <;> trivial
 
 theorem postB_ok {fn : UFn} (h : postB u fn = true) : PostDef u fn :=
   fun e he => List.all_eq_true.mp h e he
@@ -190,7 +188,7 @@ theorem keinBoolB_ok (h : keinBoolB u = true) :
     exact ⟨this.1.1, this.1.2, this.2⟩
   · have := List.all_eq_true.mp h2 (fnAt u c) (List.get_mem _ _)
     simp only [Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true, Option.isNone_iff_eq_none] at this
-    exact ⟨this.1.1.1.1, this.1.1.1.2, this.1.1.2, this.1.2, this.2⟩
+    exact ⟨this.1.1.1, this.1.1.2, this.1.2, this.2⟩
 
 /-! ## The rank -/
 
@@ -200,7 +198,7 @@ def tiefe (u : UProg) : Nat → String → Nat
   | k + 1, n =>
     match fnSuch u n with
     | some f => (f.body.map fun st => match st with
-        | .call g _ => tiefe u k g + 1
+        | .call g _ | .bindCall _ g _ => tiefe u k g + 1
         | _ => 0).foldr max 0
     | none => 0
 
@@ -211,13 +209,18 @@ def rangB (u : UProg) (rk : String → Nat) : Bool :=
   (List.finRange u.fns.length).all fun c =>
     (fnAt u c).body.all fun st =>
       match st with
-      | .call g _ => decide (rk g < rk (fnAt u c).name)
+      | .call g _ | .bindCall _ g _ => decide (rk g < rk (fnAt u c).name)
       | _ => true
 
 /-- **The rank, decided.** -/
 theorem rang_of {rk : String → Nat} (h : rangB u rk = true) : Rang u rk := by
   intro c cname args hm
-  have := List.all_eq_true.mp (List.all_eq_true.mp h c (List.mem_finRange c)) _ hm
-  exact of_decide_eq_true this
+  obtain ⟨st, hm, hs⟩ := hm
+  have hh := List.all_eq_true.mp (List.all_eq_true.mp h c (List.mem_finRange c)) _ hm
+  cases st
+  case call | bindCall =>
+    cases hs
+    exact of_decide_eq_true hh
+  all_goals cases hs
 
 end Gabbro.Bruecke

@@ -8,7 +8,7 @@ public import Bruecke.Pruefung
 # Decidable binder freshness
 
 The checks follow the flat body and retain the protected names of non-integer entries.
-Every local binder has integer kind and does not add a protected source name.
+Numeric and bool local binders do not add protected source names.
 Their soundness lemmas supply `BindFrisch` for the consolidated carried chain.
 -/
 

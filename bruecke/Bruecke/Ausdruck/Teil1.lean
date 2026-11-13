@@ -36,14 +36,15 @@ def ArtStimmtPtr (fn : UFn) : Prop :=
   ∀ (j num : Nat) (w : Bool), fn.kinds[j]? = some (.ptr (.table num (true, w))) →
     ∃ w', (fn.params[j]?).map (·.2) = some (.ptr (.table num (true, w')))
 
-/-- The parameter kinds the bridge speaks about: pointers, indices and numbers. -/
+/-- The represented parameter kinds: capabilities, scalar values and record values. -/
 def ArtSchlicht : UParamArt → Bool
-  | .ptr .. | .index _ | .int => true
+  | .ptr .. | .index _ | .int | .bool | .wert | .opt _ | .why _ | .sum _ => true
   | _ => false
 
-/-- The parameter types the bridge speaks about: numbers (an index is one) and pointers. -/
+/-- The represented parameter types: numbers, bools, pointer capabilities and products. -/
 def TySchlicht : Ty → Bool
-  | .int .. | .ptr .. => true
+  | .int .. | .ptr .. | .bool | .prod .. | .opt _ | .why _ => true
+  | .sum cs => cs.all Option.isNone
   | _ => false
 
 /-- A parameter the bridge speaks about: a number or a pointer, and not the hidden result binder
@@ -51,8 +52,8 @@ def TySchlicht : Ty → Bool
 def ParamSchlicht (q : String × Ty) : Bool := TySchlicht q.2 && q.1 != "#erg"
 
 /-- The parameter conditions: the kinds agree with the types at pointers, and every parameter is
-    a pointer, an index or a number (no aggregate, reference, option, reason or `never`: the typed
-    value lowering `lowWertE` then answers the number lowering, `lowParamWert_none`). -/
+    a capability, scalar, record, option, reason or bare tagged value; reference and bottom
+    kinds remain refused. The source lowerer still checks the actual parameter types. -/
 def ArtStimmt (fn : UFn) : Prop :=
   ArtStimmtPtr fn ∧ (∀ k ∈ fn.kinds, ArtSchlicht k = true) ∧ (∀ q ∈ fn.params, ParamSchlicht q = true)
 
@@ -394,28 +395,6 @@ theorem fieldHitW_none {t : Fin u.tabs.length} (hw : (tabAt u t).werte = []) (fn
   · have hn : ∀ f, wertFeldAt u t f = none := by
       intro f; unfold wertFeldAt; rw [hw]; split <;> rfl
     simp [hn]
-
-/-- A numeric parameter in the scalar fragment bypasses the general value lookup. -/
-theorem lowParamWert_none {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {sh : Nat} {p : String}
-    (hA : ArtStimmt fn) (hN : numericParam fn p = true) : lowParamWert u Γ Λ fn sh p = none := by
-  unfold lowParamWert
-  split
-  · rfl
-  · rename_i j hj
-    unfold numericParam at hN
-    rw [paramPos_find _ _ _ hj] at hN
-    cases hpj : fn.params[j]? with
-    | none => simp [hpj] at hN
-    | some q =>
-      rw [hpj] at hN
-      obtain ⟨name, τ⟩ := q
-      cases τ <;> try { simp at hN }
-      case int lo hi =>
-        cases hkj : fn.kinds[j]? with
-        | none => rfl
-        | some k =>
-          have hk := hA.2.1 k (List.mem_of_getElem? hkj)
-          cases k <;> first | rfl | (simp [ArtSchlicht] at hk; done)
 
 /-- No aggregate field: the value lookup of a slot read through a pointer answers nothing. -/
 theorem lowDurchWert_none {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {sh : Nat}

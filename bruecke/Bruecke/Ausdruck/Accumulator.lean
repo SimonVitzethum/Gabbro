@@ -27,14 +27,14 @@ theorem Vor.trans {a b c : Acc} (h1 : Vor a b) (h2 : Vor b c) : Vor a c := by
     the accumulator. -/
 theorem ensSide_sonst {fn : UFn} {a a' : Acc} {sd : USide} {x : Gabbro.Body.Expr}
     (h : ensSide u fn a sd = some (x, a')) (h1 : ∀ b f ix, sd ≠ .old b f ix) (h2 : sd ≠ .erg) :
-    sideExprG u fn sd = some x ∧ a' = a := by
+    numericSideExprG u fn sd = some x ∧ a' = a := by
   unfold ensSide at h
   split at h
   all_goals first
     | exact absurd rfl (h1 _ _ _)
     | exact absurd rfl h2
     | (cases h; done)
-    | (cases hs : sideExprG u fn sd with
+    | (cases hs : numericSideExprG u fn sd with
        | none => rw [hs] at h; cases h
        | some e =>
          rw [hs] at h
@@ -64,21 +64,21 @@ theorem ensSide_vor {fn : UFn} {a a' : Acc} {sd : USide} {x : Gabbro.Body.Expr}
 
 /-- Scalar arithmetic with a Body form cannot select the separate bounded-count lowering. -/
 theorem sideExpr_ohneCount {fn : UFn} {sd : USide} {x : Gabbro.Body.Expr}
-    (h : sideExprG u fn sd = some x) : usideHatZaehle sd = false := by
+    (h : numericSideExprG u fn sd = some x) : usideHatZaehle sd = false := by
   have recurse (sd' : USide) (hlt : sizeOf sd' < sizeOf sd) {x' : Gabbro.Body.Expr}
-      (h' : sideExprG u fn sd' = some x') : usideHatZaehle sd' = false :=
+      (h' : numericSideExprG u fn sd' = some x') : usideHatZaehle sd' = false :=
     sideExpr_ohneCount h'
   cases sd with
   | add l r | sub l r | mul l r =>
-    cases hl : sideExprG u fn l with
-    | none => simp [sideExprG, hl, binE] at h
+    cases hl : numericSideExprG u fn l with
+    | none => simp [numericSideExprG, hl, binE] at h
     | some le =>
-      cases hr : sideExprG u fn r with
-      | none => simp [sideExprG, hl, hr, binE] at h
+      cases hr : numericSideExprG u fn r with
+      | none => simp [numericSideExprG, hl, hr, binE] at h
       | some re =>
         simp only [usideHatZaehle, recurse l (by simp_wf <;> omega) hl,
           recurse r (by simp_wf <;> omega) hr, Bool.false_or]
-  | _ => simp_all [sideExprG, usideHatZaehle]
+  | _ => simp_all [numericSideExprG, usideHatZaehle]
 termination_by sizeOf sd
 decreasing_by assumption
 
@@ -143,9 +143,13 @@ theorem ensExpr_vor {fn : UFn} : ∀ (e : UEns) {a a' : Acc} {x : Gabbro.Body.Ex
         obtain ⟨_, rfl⟩ := h
         exact ensExpr_vor x hx
       · cases h
+  | .var p, a, a', x, h => by
+      simp only [ensExpr, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨_, rfl⟩ := h
+      exact Vor.refl _
   -- All other predicates are outside the Body fragment (`ensExpr` returns `none`).
   | .slotB .., _, _, _, h | .tabB .., _, _, _, h
-  | .globB .., _, _, _, h | .var .., _, _, _, h
+  | .globB .., _, _, _, h
   | .alle .., _, _, _, h | .einige .., _, _, _, h
   | .ergB, _, _, _, h | .istSome .., _, _, _, h
   | .held .., _, _, _, h | .imp .., _, _, _, h

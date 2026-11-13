@@ -52,6 +52,7 @@ theorem orBool_true_iff (x y : Option Value) :
   · intro ⟨a, b, hx, hy, hab⟩
     simp only [hx, hy, orBool_some, hab]
 
+mutual
 def eval (s : State) : Expr → Option Value
   | .lit v => some v
   | .name n => some (s.local' n)
@@ -98,6 +99,39 @@ def eval (s : State) : Expr → Option Value
       match eval s e with
       | some (.int n) => some (.tagged t (some n))
       | _ => none
+
+  | .recOf args =>
+      match evalAll s args with
+      | some vs => some (.record vs)
+      | none => none
+  | .recGet base idx =>
+      match eval s base with
+      | some (.record vs) => vs[idx]?
+      | _ => none
+  | .recSet base idx val =>
+      match eval s base with
+      | some (.record vs) =>
+          if idx < vs.length then
+            match eval s val with
+            | some v => some (.record (vs.set idx v))
+            | none => none
+          else none
+      | _ => none
+termination_by structural e => e
+
+/-- Evaluate a list of expressions in declaration/argument order, getting stuck on the
+    first failure. Shared by record construction and call arguments. -/
+def evalAll (s : State) : List Expr → Option (List Value)
+  | [] => some []
+  | e :: es =>
+      match eval s e with
+      | some v =>
+          match evalAll s es with
+          | some vs => some (v :: vs)
+          | none => none
+      | none => none
+termination_by structural es => es
+end
 
 /-! ### 3.1 The WELL-FORMEDNESS of a place
 

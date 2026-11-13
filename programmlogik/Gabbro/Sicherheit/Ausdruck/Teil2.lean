@@ -7,24 +7,18 @@ public import Mathlib.Tactic.NormNum
 public import Mathlib.Tactic.Positivity
 public import Mathlib.Order.Lattice
 public import Gabbro.Sicherheit.Ausdruck.Teil1
+public import Gabbro.Sicherheit.Ausdruck.Record
 
 @[expose] public section
 
 namespace Gabbro.Sicherheit
 open Gabbro.Body
 
+mutual
 /-- **Der Pruefer.** `schluss D Δ e = some sh`: der Pass nimmt `e` an und gibt ihm die
     Gestalt `sh`; `none` ist die Absage. -/
 def schluss (D : Deklaration) : Lokal → Expr → Option Shape
-  | _, .lit v =>
-      -- Ein Literal traegt seine eigene Gestalt: eine Zahl den Punktbereich `[n, n]`.
-      match v with
-      | .int n => some (.intIn n n)
-      | .bool _ => some .bool
-      | .absent => some .opt
-      | .present _ => some .opt
-      | .reason _ => none
-      | .tagged _ _ => none
+  | _, .lit v => literalShape v
   | Δ, .name n => Δ n
   | _, .global g => D.global g
   | Δ, .place c i f =>
@@ -76,12 +70,30 @@ def schluss (D : Deklaration) : Lokal → Expr → Option Shape
       match schluss D Δ a with
       | some sh => if (zahl sh).isSome then some .int else none
       | none => none
+  -- Tagged construction needs the target's case declaration, as before.
   | _, .tagOf _ none => none
   | _, .tagOf _ (some _) => none
-  -- **Ein `tagged`-Wert ohne Zieltyp hat keine Gestalt** -- `Coverage.lean` nennt die
-  -- Form `constructedValue` und sagt sie ab; der Pruefer kennt den Typ nur aus dem ZIEL
-  -- (`M106`), und ein Ausdruck allein hat keines. Hier ebenso: `none`. Die Ableitung
-  -- gegen ein Ziel steht in `Anweisung.lean` (`fallPasst`).
+  | Δ, .recOf args => (schlussAll D Δ args).map Shape.record
+  | Δ, .recGet base idx =>
+      match schluss D Δ base with
+      | some (.record ss) => ss[idx]?
+      | _ => none
+  | Δ, .recSet base idx val =>
+      match schluss D Δ base, schluss D Δ val with
+      | some (.record ss), some sh =>
+          if idx < ss.length then some (.record (ss.set idx sh)) else none
+      | _, _ => none
+termination_by structural _ e => e
+
+/-- Record construction succeeds exactly when every field has an inferred shape. -/
+def schlussAll (D : Deklaration) (Δ : Lokal) : List Expr → Option (List Shape)
+  | [] => some []
+  | e :: es =>
+      match schluss D Δ e, schlussAll D Δ es with
+      | some sh, some ss => some (sh :: ss)
+      | _, _ => none
+termination_by structural es => es
+end
 
 /-- `Some` against the target option's payload bound (F10, `M101`): with no target any
     number passes, as before; with `(lo, hi)` only a ranged payload inside it does.

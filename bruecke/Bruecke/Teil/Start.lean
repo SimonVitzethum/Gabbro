@@ -45,8 +45,7 @@ theorem startPflicht_teil {u : UProg} {C : Fin u.fns.length → Prop}
   by_cases hc : C a.1
   · unfold ReqAmEintritt
     show wahr? (eval _ (P.requires a.1) _ a.2) = true
-    rw [requires_tru_of_needs_leer hlow a.1 (S.ohneReq a.1 hc)]
-    rfl
+    rw [requires_tru_of_needs_leer hlow a.1 (S.ohneReq a.1 hc)] <;> rfl
   · exact hO a ha hc
 
 /-- A single open start with an impossible requirement refutes the new duty. -/

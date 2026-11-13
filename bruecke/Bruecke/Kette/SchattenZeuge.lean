@@ -1,7 +1,6 @@
 module
-public import Bruecke.Kette.Quelle
+public import Bruecke.Kette.Formen.ZeugenSchritte
 public import Bruecke.Anweisung.Zweig.SchattenZeuge
-import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.String.Length
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -38,6 +37,9 @@ import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
 import all Grammatik.Parser.Elab.Generic.StaticConformance
+import all Grammatik.Parser.Elab.UebersetzeAllg.Teil5
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest1
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Body
 @[expose] public section
 
 namespace Gabbro.Bruecke.SchattenKetteZeuge
@@ -47,7 +49,9 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
 open SchattenZeuge
 
 set_option maxRecDepth 100000
-set_option maxHeartbeats 2000000
+set_option maxHeartbeats 400000
+
+attribute [local cbv_eval] Nat.log2_def lowEns.eq_def lowCmp.eq_def lowWertE.eq_def
 
 def source : String :=
   "module shadowing { impl fn shadow() -> u32 in 0 .. 1 { " ++
@@ -63,35 +67,30 @@ def functions : List (declOf unit).Fn :=
 theorem lowered : lowerAllg unit = .ok (program, functions) :=
   except_ok_get lowered_some_zeuge
 
+private def scanned : { tokens : List Parser.Token // Parser.lex source = .ok tokens } := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
+private def parsed : { items : List Parser.SItemTief //
+    Parser.parseTopTief scanned.val = .ok items } := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
+private theorem exported : elabU (pre108 parsed.val) = .ok unit := by cbv
+
 /-- The source anchor includes parsing, elaboration and the actual canonical lowering. -/
-theorem translated : uebersetzeAllg source = .ok ⟨unit, program, functions⟩ := by
-  kernel_rfl
+theorem translated : uebersetzeAllg source = .ok ⟨unit, program, functions⟩ :=
+  witness_translation scanned.property parsed.property exported lowered
 
 /-- O43 is discharged on the actual lowered contract, including the live self-signature.
     Neither contract component is assumed to be trivial. -/
 theorem interfaces : SchnittstellenPflicht unit := by
-  intro P fs hlow c n hf
-  have hc : c = ⟨0, (by decide)⟩ := by
-    apply Fin.ext
-    have hb : c.val < 1 := c.isLt
-    show c.val = 0
-    omega
-  subst c
-  have hn : n = 0 := by
-    have hb := passtAt_lt unit ⟨0, (by decide)⟩ n hf
-    have hl : (sigFns unit).length = 1 := by kernel_rfl
-    rw [hl] at hb
-    omega
-  subst n
-  have hp : program = P := congrArg Prod.fst (Except.ok.inj (lowered.symm.trans hlow))
-  subst P
-  constructor
-  · intro s0 ρ _
-    kernel_change (true = true)
-    rfl
-  · intro s0 s1 ρ v _ _
-    kernel_change (true = true)
-    rfl
+  apply witness_interfaces_empty
+  · rintro ⟨index, bound⟩
+    have small : index < 1 := bound
+    have zero : index = 0 := by omega
+    subst index
+    all_goals cbv
+  · intro n
+    rcases n with _ | n <;> constructor <;> cbv
 
 theorem duties : ∀ c : Fin unit.fns.length, ∃ bs,
     zuBodyZ unit (fnAt unit c) = some bs ∧ meetsU unit (wfU unit) (fnAt unit c) bs := by
@@ -109,16 +108,16 @@ theorem kind_admission_zeuge :
     bindFrischB { routine with params := [("x", .int 0 1)], kinds := [.int] } = true ∧
       bindFrischB { routine with params := [("x", .int 0 1)], kinds := [.index 0] } = false ∧
       bindFrischB { routine with params := [("x", .int 0 1)], kinds := [] } = false := by
-  decide +kernel
+  cbv
 
 theorem all_duties : PflichtenAlle source :=
-  ⟨unit, uOf_eq translated, (by decide +kernel), (by decide +kernel),
-    (by decide +kernel), (by decide +kernel), (by decide +kernel), interfaces, duties⟩
+  ⟨unit, uOf_eq translated, (by cbv), (by cbv),
+    (by cbv), (by cbv), (by cbv), interfaces, duties⟩
 
 theorem carried_duties : PflichtenTeilG source (u := unit) (fun _ => True) := by
-  refine ⟨uOf_eq translated, (by decide +kernel),
-    getragenG_of_bools (by decide +kernel) (by decide +kernel) (by decide +kernel),
-    (by decide +kernel), fun P fs hlow c _ => interfaces P fs hlow c,
+  refine ⟨uOf_eq translated, (by cbv),
+    getragenG_of_bools (by cbv) (by cbv) (by cbv),
+    (by cbv), fun P fs hlow c _ => interfaces P fs hlow c,
     fun c _ => duties c, ?_⟩
   intro c hc
   exact (hc True.intro).elim

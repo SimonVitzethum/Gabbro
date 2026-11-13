@@ -117,10 +117,10 @@ theorem RueckZ_G.vor {A : List Eintrag} {s s₁ : Gabbro.Body.State} {x : Gabbro
   obtain ⟨s', e1, e2⟩ := hb ρB hT hF
   exact ⟨s', by rw [exec_cons_running ρB x ys s s₁ (hstep ρB hF)]; exact e1, e2⟩
 
-abbrev StmtZiel_G (u : UProg) (C : Fin u.fns.length → Prop) (c : Fin u.fns.length) (O : Orakel (declOf u)) (passes : Nat)
+abbrev StmtZiel_G {loopMode : Bool} (u : UProg) (C : Fin u.fns.length → Prop) (c : Fin u.fns.length) (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
     {Γ : Ctx} {Λ Λ₁ : List (Res (declOf u))} (fn : UFn) (ids : List String)
-    (st : Stmt (declOf u) (verOf u c) false Γ Λ Λ₁) (σ : World (declOf u))
+    (st : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ₁) (σ : World (declOf u))
     (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State) (x : Gabbro.Body.Stmt) : Prop :=
   (∀ e, execStmt O passes R st σ ρ = .logik e →
     ∃ (g : (declOf u).Fn) (σr : World (declOf u)) (envA : Env (declOf u) ((declOf u).params g)),
@@ -130,10 +130,10 @@ abbrev StmtZiel_G (u : UProg) (C : Fin u.fns.length → Prop) (c : Fin u.fns.len
   (∀ σ' ρ', execStmt O passes R st σ ρ = .ok σ' ρ' →
     ∃ A s', Strecke_G u C A s s' [x] ∧ WGRel u σ' s'.world ∧ PositionalLRel fn ids 0 ρ' s'.local')
 
-abbrev BlockZiel_G (u : UProg) (C : Fin u.fns.length → Prop) (c : Fin u.fns.length) (O : Orakel (declOf u)) (passes : Nat)
+abbrev BlockZiel_G {loopMode : Bool} (u : UProg) (C : Fin u.fns.length → Prop) (c : Fin u.fns.length) (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
     {Γ : Ctx} {Λ Λ' : List (Res (declOf u))} (fn : UFn) (ids : List String)
-    (b : Block (declOf u) (verOf u c) false Γ Λ Λ') (σ : World (declOf u))
+    (b : Block (declOf u) (verOf u c) loopMode Γ Λ Λ') (σ : World (declOf u))
     (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State) (t : List Gabbro.Body.Stmt) : Prop :=
   (∀ e, execBlock O passes R b σ ρ = .logik e →
     ∃ (g : (declOf u).Fn) (σr : World (declOf u)) (envA : Env (declOf u) ((declOf u).params g)),

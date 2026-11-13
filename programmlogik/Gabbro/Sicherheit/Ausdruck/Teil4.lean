@@ -84,6 +84,7 @@ theorem schluss_sicher_wrapTo (D : Deklaration) (Γ : Typing) (hD : Deklariert D
     · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
   · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
 
+mutual
 /-- Der Sicherheitssatz fuer Ausdruecke. **BEWEIST NICHT**, dass der Pruefer in
     `gabbro-check` dasselbe rechnet wie `schluss` -- das ist die Naht (`W16`), und sie
     steht in keiner Zeile hier. Er beweist: WENN ein Pruefer so rechnet, DANN bleibt kein
@@ -95,11 +96,7 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
       ∃ v, eval s e = some v ∧ v.hasShape sh = true
   | .lit v, Δ, s, sh => by
       intro _ _ _ h
-      cases v <;> simp only [schluss, Option.some.injEq, reduceCtorEq] at h <;> subst h
-      · exact ⟨_, rfl, by simp only [Value.hasShape, Std.le_refl, and_self, decide_true]⟩
-      · exact ⟨_, rfl, by simp only [Value.hasShape]⟩
-      · exact ⟨_, rfl, by simp only [Value.hasShape]⟩
-      · exact ⟨_, rfl, by simp only [Value.hasShape]⟩
+      exact ⟨v, rfl, literalShape_sicher v sh h⟩
   | .name n, Δ, s, sh => by
       intro _ hl _ h
       exact ⟨_, rfl, hl n sh h⟩
@@ -146,6 +143,76 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
   | .tagOf t p, Δ, s, sh => by
       intro _ _ _ h
       cases p <;> simp only [schluss, reduceCtorEq] at h
+  | .recOf args, Δ, s, sh => by
+      intro hw hl hk h
+      simp only [schluss] at h
+      cases hs : schlussAll D Δ args with
+      | none => simp only [hs, Option.map_none, reduceCtorEq] at h
+      | some ss =>
+          simp only [hs, Option.map_some, Option.some.injEq] at h
+          subst sh
+          obtain ⟨vs, he, hlen, hf⟩ := schlussAll_sicher D Γ hD args Δ s ss hw hl hk hs
+          exact ⟨.record vs, by simp only [eval_recOf, he, Option.map_some], by
+            simp [hlen, hf]⟩
+  | .recGet base idx, Δ, s, sh => by
+      intro hw hl hk h
+      simp only [schluss] at h
+      split at h
+      · rename_i ss hb
+        obtain ⟨v, he, hv⟩ := schluss_sicher D Γ hD base Δ s (.record ss) hw hl hk hb
+        obtain ⟨vs, rfl, _, hf⟩ := Value.hasShape_rec_true v ss hv
+        obtain ⟨field, hg, hfield⟩ := fieldsHaveShape_get vs ss idx sh hf h
+        exact ⟨field, by rw [eval_recGet s base vs idx he, hg], hfield⟩
+      · cases h
+  | .recSet base idx val, Δ, s, sh => by
+      intro hw hl hk h
+      simp only [schluss] at h
+      split at h
+      · rename_i ss fieldShape hb hval
+        split at h
+        · rename_i hi
+          cases h
+          obtain ⟨v, he, hv⟩ := schluss_sicher D Γ hD base Δ s (.record ss) hw hl hk hb
+          obtain ⟨vs, rfl, hlen, hf⟩ := Value.hasShape_rec_true v ss hv
+          obtain ⟨field, hev, hfield⟩ := schluss_sicher D Γ hD val Δ s fieldShape hw hl hk hval
+          have hiv : idx < vs.length := by omega
+          refine ⟨.record (vs.set idx field), eval_recSet s base val vs field idx he hev hiv, ?_⟩
+          have hf' := fieldsHaveShape_setBoth vs ss idx field fieldShape hf hfield
+          simp [List.length_set, hlen, hf']
+        · cases h
+      · cases h
+termination_by structural e _ _ _ => e
+
+/-- The safety induction follows the same field-list recursion as construction. -/
+theorem schlussAll_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
+    ∀ (es : List Expr) (Δ : Lokal) (s : State) (ss : List Shape),
+      WF Γ s.world → WFL Δ s.local' → KettenWohlgeformt D s.world →
+      schlussAll D Δ es = some ss →
+      ∃ vs, evalAll s es = some vs ∧ vs.length = ss.length ∧
+        Value.fieldsHaveShape vs ss = true
+  | [], Δ, s, ss => by
+      intro _ _ _ h
+      simp only [schlussAll, Option.some.injEq] at h
+      subst ss
+      exact ⟨[], rfl, rfl, Value.fieldsHaveShape_nil_nil⟩
+  | e :: es, Δ, s, ss => by
+      intro hw hl hk h
+      simp only [schlussAll] at h
+      cases he : schluss D Δ e with
+      | none => simp only [he, reduceCtorEq] at h
+      | some sh =>
+          cases ht : schlussAll D Δ es with
+          | none => simp only [he, ht, reduceCtorEq] at h
+          | some shapes =>
+              simp only [he, ht, Option.some.injEq] at h
+              subst ss
+              obtain ⟨v, hev, hv⟩ := schluss_sicher D Γ hD e Δ s sh hw hl hk he
+              obtain ⟨vs, hes, hlen, hf⟩ := schlussAll_sicher D Γ hD es Δ s shapes hw hl hk ht
+              exact ⟨v :: vs, by simp only [evalAll, hev, hes], by
+                simp only [List.length_cons, hlen], by
+                simp only [Value.fieldsHaveShape_cons_cons, hv, hf, Bool.true_and]⟩
+termination_by structural es _ _ _ => es
+end
 
 /-- The checker with a carried option target bound is still safe: what it accepts
     evaluates, and to a value of the computed shape. For every form but `someOf`
@@ -197,6 +264,9 @@ theorem schlussMitZiel_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D
         | sum cs =>
           simp only [somePasst] at h
           cases h
+        | record ss =>
+          simp only [somePasst] at h
+          cases h
     · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
   | lit v =>
     simp only [schlussMitZiel] at h
@@ -240,6 +310,12 @@ theorem schlussMitZiel_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D
   | tagOf t p =>
     simp only [schlussMitZiel] at h
     exact schluss_sicher D Γ hD (.tagOf t p) Δ s sh hw hl hk h
+  | recOf args =>
+    exact schluss_sicher D Γ hD (.recOf args) Δ s sh hw hl hk h
+  | recGet base idx =>
+    exact schluss_sicher D Γ hD (.recGet base idx) Δ s sh hw hl hk h
+  | recSet base idx val =>
+    exact schluss_sicher D Γ hD (.recSet base idx val) Δ s sh hw hl hk h
 
 /-! ## 4. Decided examples -- the formulas above, computed
 
