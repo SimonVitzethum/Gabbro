@@ -8,9 +8,6 @@ namespace Gabbro.Grammatik.Invarianten.Frag
 
 variable {D : Deklaration}
 
-private theorem bool_not_eq_true_iff (x : Bool) : (!x) = true ↔ ¬ x = true := by
-  cases x <;> decide
-
 /-- Translate typed expressions with a concrete local environment. The public
     invariant entry point supplies `Env.nil`; only bounded slot indices extend it.
     This helper is not a symbolic translation of arbitrary function arguments.
@@ -186,7 +183,8 @@ def translate (e : Expr D Γ Λ τ) (locals : Env D Γ) :
           correct := fun world => by
             change (!wahr? (eval world body world locals)) = true ↔
               ¬ LProp.denote (assignment world) result.payload
-            exact (bool_not_eq_true_iff _).trans (not_congr (result.bool_iff world))
+            simpa only [Bool.not_eq_true', Bool.not_eq_true] using
+              not_congr (result.bool_iff world)
           supported := result.supported }
   | .strLit bytes _ => .ok
       { payload := .konst bytes.length

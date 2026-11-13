@@ -33,8 +33,9 @@ theorem infinityThreshold_sound [DecidableEq α] (name : α) (body : QF α)
       cases relation with
       | lt =>
           rcases unit with hz | hp | hn
-          · simp [minusInfinity, hz, QF.denote, atom_denote, Relation.denote,
-              term_bind, remainder_bind]
+          · simp only [minusInfinity, hz, ↓reduceIte, atom_denote, QF.denote, Relation.denote]
+            rw [term_bind name term values x, remainder_bind name term values x,
+              hz, Int.zero_mul, Int.zero_add]
           · have bound : x ≤ -(splitVar name term).2.denote values - 1 := by
               simpa [infinityThreshold, hp] using low
             simp only [minusInfinity, hp, show (1 : Int) ≠ 0 by decide, ↓reduceIte,
@@ -142,8 +143,10 @@ theorem recoverOne_sound [DecidableEq α] (name : α) (body : QF α)
       (fun y => (normalize name body).eval (values.bind name y)) with
   | none => simp only [selected, Option.map_none, reduceCtorEq] at success
   | some y =>
+      have accepted : (normalize name body).eval (values.bind name y) = true :=
+        List.find?_some (p := fun z => (normalize name body).eval (values.bind name z)) selected
       have valid := (qf_eval (normalize name body) (values.bind name y)).mp
-        (List.find?_some selected)
+        accepted
       obtain ⟨original, equation, holds⟩ := (normalize_denote name body values y).mp valid
       have nonzero : (coefficientLcm name body : Int) ≠ 0 := by
         have := coefficientLcm_pos name body

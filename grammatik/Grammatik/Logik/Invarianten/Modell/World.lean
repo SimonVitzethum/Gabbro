@@ -125,9 +125,9 @@ theorem invariant_counterexample_sound (base : World D) (keys : List (Observatio
     (success : stateCounterexample base keys formula = some world) :
     eval world expression world .nil = false := by
   have invalid := stateCounterexample_sound base keys formula supported world success
-  cases evaluated : eval world expression world .nil with
-  | false => rfl
-  | true =>
-      exact False.elim (invalid ((uebersetzeB_sound carriers expression formula translated world).mp evaluated))
+  change wahr? (eval world expression world .nil) = false
+  apply Bool.eq_false_iff.mpr
+  intro evaluated
+  exact invalid ((uebersetzeB_sound carriers expression formula translated world).mp evaluated)
 
 end Gabbro.Grammatik.Invarianten.Modell

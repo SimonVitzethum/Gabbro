@@ -19,11 +19,11 @@ def literalB : Expr D Γ Λ τ → Bool
   | .widen _ _ body => literalB body
   | _ => false
 
-private def boundIndexB : Expr D Γ Λ τ → Bool
+def boundIndexB : Expr D Γ Λ τ → Bool
   | .var .here => true
   | _ => false
 
-private def checkMemoryType : Ty → Except Refusal Unit
+def checkMemoryType : Ty → Except Refusal Unit
   | .int _ _ | .str _ => .ok ()
   | _ => .error (.unsupported "non-integer memory or string contents")
 

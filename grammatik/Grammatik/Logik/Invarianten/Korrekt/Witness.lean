@@ -15,9 +15,19 @@ def evenAbove : LProp Nat :=
 /-- Normalization's extra image constraint rules out this rational solution. -/
 def oddEquation : LProp Nat := .ex 0 (.eq (.scale 2 (.var 0)) (.konst 3))
 
-theorem evenAbove_computed_zeuge : decideB evenAbove = true := by decide
+theorem evenAbove_computed_zeuge : decideB evenAbove = true := by
+  apply (decideB_true_iff evenAbove (by rfl) (fun _ => 0)).mpr
+  refine ⟨4, ?_, ?_⟩
+  · change (3 : Int) < 4
+    decide
+  · change (2 : Int) ∣ 4
+    exact ⟨2, rfl⟩
 
-theorem oddEquation_computed_zeuge : decideB oddEquation = false := by decide
+theorem oddEquation_computed_zeuge : decideB oddEquation = false := by
+  apply (decideB_false_iff oddEquation (by rfl) (fun _ => 0)).mpr
+  rintro ⟨value, equation⟩
+  change 2 * value = 3 at equation
+  omega
 
 theorem decideB_sound_zeuge (values : Assignment Nat) : evenAbove.denote values :=
   decideB_sound evenAbove (by decide) evenAbove_computed_zeuge values

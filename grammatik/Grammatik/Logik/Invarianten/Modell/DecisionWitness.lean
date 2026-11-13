@@ -17,7 +17,12 @@ def rangeFormula : LProp (Observation Frag.Witness.declaration) :=
 
 /-- This is valid because of the declared 0..10 type, not over all integers. -/
 theorem range_true_computed_zeuge :
-    decideInvariant (Frag.Witness.declaration.traeger ()) rangeInvariant = .ok true := by rfl
+    decideInvariant (Frag.Witness.declaration.traeger ()) rangeInvariant = .ok true := by
+  apply (decideInvariant_true_iff Frag.Witness.initial (Frag.Witness.declaration.traeger ())
+    rangeInvariant rangeFormula (by rfl)).mpr
+  intro world
+  change decide ((world.globs false).n ≤ 10) = true
+  simpa only [decide_eq_true_eq] using (world.globs false).le_hi
 
 theorem range_true_sound_zeuge (world : World Frag.Witness.declaration) :
     eval world rangeInvariant world .nil = true :=
@@ -29,8 +34,16 @@ theorem range_true_sound_zeuge (world : World Frag.Witness.declaration) :
 def zeroInvariant : Expr Frag.Witness.declaration [] [] .bool :=
   .eq (.glob false (Frag.Witness.globalAccess false)) (.lit 0)
 
+def zeroFormula : LProp (Observation Frag.Witness.declaration) :=
+  .eq (.var (.glob false)) (.konst 0)
+
 theorem zero_false_computed_zeuge :
-    decideInvariant (Frag.Witness.declaration.traeger ()) zeroInvariant = .ok false := by rfl
+    decideInvariant (Frag.Witness.declaration.traeger ()) zeroInvariant = .ok false := by
+  apply (decideInvariant_false_iff Frag.Witness.initial (Frag.Witness.declaration.traeger ())
+    zeroInvariant zeroFormula (by rfl)).mpr
+  refine ⟨Frag.Witness.initial, ?_⟩
+  show wahr? (eval Frag.Witness.initial zeroInvariant Frag.Witness.initial .nil) = false
+  rfl
 
 theorem zero_concrete_counterexample_zeuge :
     ∃ world : World Frag.Witness.declaration,
@@ -41,6 +54,11 @@ theorem zero_concrete_counterexample_zeuge :
 
 theorem short_false_computed_zeuge :
     decideInvariant (Frag.Witness.declaration.traeger ()) Witness.shortInvariant = .ok false := by
+  apply (decideInvariant_false_iff Frag.Witness.initial (Frag.Witness.declaration.traeger ())
+    Witness.shortInvariant Witness.shortFormula (by rfl)).mpr
+  refine ⟨Frag.Witness.invalidLengthWorld, ?_⟩
+  show wahr? (eval Frag.Witness.invalidLengthWorld Witness.shortInvariant
+    Frag.Witness.invalidLengthWorld .nil) = false
   rfl
 
 theorem short_counterexample_computed_zeuge :

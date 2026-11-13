@@ -159,7 +159,9 @@ theorem decideInvariant_true_iff (base : World D) (carriers : List (D.Tab ⊕ D.
         have rejected : decideInvariant carriers expression = .ok false := by
           simpa only [computed] using total
         obtain ⟨world, _, invalid⟩ := decideInvariant_complete base carriers expression none rejected
-        rw [valid world] at invalid
+        have evaluated : wahr? (eval world expression world .nil) = true := valid world
+        change wahr? (eval world expression world .nil) = false at invalid
+        rw [evaluated] at invalid
         contradiction
 
 theorem decideInvariant_false_iff (base : World D) (carriers : List (D.Tab ⊕ D.Glob))
@@ -179,7 +181,9 @@ theorem decideInvariant_false_iff (base : World D) (carriers : List (D.Tab ⊕ D
         have accepted : decideInvariant carriers expression = .ok true := by
           simpa only [computed] using total
         have valid := decideInvariant_sound carriers expression none accepted world
-        rw [valid] at invalid
+        have evaluated : wahr? (eval world expression world .nil) = true := valid
+        change wahr? (eval world expression world .nil) = false at invalid
+        rw [evaluated] at invalid
         contradiction
 
 end Gabbro.Grammatik.Invarianten.Modell
