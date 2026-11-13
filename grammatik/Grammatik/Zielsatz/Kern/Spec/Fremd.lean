@@ -16,12 +16,16 @@ open Gabbro.Grammatik
 
 /-- **GABBRO_ZIEL** (since C08 R3b, 2026-11-13: WITH THE CALL-SITE DUTIES). The conclusion is the one
     of `GabbroZielVoll`, over the thread machine over GX with the atomic rely. Premise (c) no longer
-    assumes anything of a software foreign item: its `requires` is owed by the user at every call a
-    run reaches (`CallSitePflicht`), its `ensures` is relied on only where that pre held -- by the body
-    duties (`NutzerPflichtA`, whose oracle class asks the summary only at question worlds whose pre
+    assumes a software foreign item's unconditional summary: its `requires` is owed by the user at
+    every call a run reaches (`CallSitePflicht`), its `ensures` is relied on only where that pre held
+    -- by the body duties (`NutzerPflichtA`, whose oracle class asks the summary only at question worlds whose pre
     holds) and by the binding's proof (`ForeignVertrag`: under the pre, every answer meets the post;
     every answer decodes), with the post covering the declared summary (`PostDeckt`). Hardware and
-    unresolved items keep their unconditional summaries in (c) (`HardwareAnnahmenHw`). -/
+    unresolved items keep their unconditional summaries in (c) (`HardwareAnnahmenHw`). Its `GutO`
+    component still covers ALL items, including software bindings: frame respect, preservation of
+    held locks in every world, and the prescribed trace suffix when the declared write guards are
+    held, remain explicit assumptions in (c). These software obligations are not discharged by
+    `ForeignVertrag` or `CallSitePflicht`. -/
 def GabbroZiel : Prop :=
   ∀ (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),

@@ -56,22 +56,21 @@ theorem guest_failure_preserves_grants {E : Einheit D} {O : Orakel D}
 
 /-- Software contract transport is exactly C08's transport on the actual
     recorded call. The guest adds no new postcondition and assumes no OS
-    behaviour. `hpre` is the caller's user-logic duty; `hlink` binds the record
-    to the actual implementation, independently of the guest's contents. -/
+    behaviour. `hpre` is the caller's user-logic duty; `hlink` binds each stored
+    key directly to the actual implementation, and `hprov` supplies its question
+    origin. The stored key is not queried with a second question. -/
 theorem guest_service_contract {E : Einheit D} {O : Orakel D}
     {H : List (BoundaryRecord D)} {g : GuestBoundary D}
     {storage : BoundaryRecord D → List (Konzession D)}
     (h : GuestServicePflicht E O H g storage) {HA : List (AxEintrag D)}
     (hpre : CallSitePflichtFremd E.P.axVertrag HA)
-    (hlink : ∀ (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a))
-      (x : World D × Int), (⟨a, σ, ρ, x⟩ : AxEintrag D) ∈ HA →
-      D.axHerkunft a = some AxOrigin.software → O.wirkt a (σ.fragt (.inl a)) ρ = x)
+    (hlink : PasstA O HA) (hprov : SchluesselHerkunft HA)
     {a : D.Ax} {σ : World D} {ρ : Env D (D.aparams a)} {x : World D × Int}
     (hmem : (⟨a, σ, ρ, x⟩ : AxEintrag D) ∈ HA)
     (hsw : D.axHerkunft a = some AxOrigin.software)
     {v : ErgVal D (D.aerg a)} (hv : einpassenErg O.zeiger (D.aerg a) x.2 = some v) :
     AxNach E.P.axVertrag a σ ρ x.1 v :=
-  vertragANeu_sw_of_foreign h.foreign hpre hlink hmem hsw hv
+  vertragANeu_sw_of_foreign h.foreign hpre hlink hprov hmem hsw hv
 
 /-- The same obligation transports to a prefix containing the same actual
     records. This is a structural restriction of the checked invocation set,

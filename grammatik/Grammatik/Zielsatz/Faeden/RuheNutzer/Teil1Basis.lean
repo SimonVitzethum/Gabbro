@@ -74,8 +74,9 @@ theorem preQ_mitRuhe (P : Programm D) (a : D.Ax) (σ : World D)
   unfold PreQ
   change (if D.axHerkunft a = some AxOrigin.software then
     wahr? (eval (worldR σ) (ruE (P.axVertrag a).pre) (worldR σ) (envR ρ)) else true) = _
-  rw [eval_ru]
-  rfl
+  exact congrArg (fun b : Bool =>
+    if D.axHerkunft a = some AxOrigin.software then b else true)
+    (eval_ru σ σ (P.axVertrag a).pre ρ)
 
 /-- The translation back of a question world is the question world of the translation back. -/
 theorem worldZ_fragt (σ : World D.mitRuhe) (a : D.Ax) :

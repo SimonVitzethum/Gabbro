@@ -57,7 +57,7 @@ def CallSitePflicht [DecidableEq D.Fn] (E : Einheit D) : Prop :=
     ∀ (passes : Nat) (sp : Speicher D.mitRuhe)
     (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)),
     Laufzeit E sp init →
-    CallSitePflichtLauf E.P.mitRuhe O.mitRuhe passes (GeteiltV E.P E.ws)
+    CallSitePflichtLauf E.P.mitRuhe O.mitRuhe passes (GeteiltV (D := D) E.P E.ws)
       (RufStartG E.P.mitRuhe sp init)
 
 /-- Project the run duty to the replay history. The integration proof supplies
@@ -83,7 +83,7 @@ theorem CallSitePflicht.fremd [DecidableEq D.Fn] {E : Einheit D} (h : CallSitePf
     (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f))
     (hl : Laufzeit E sp init) {HA : List (AxEintrag D.mitRuhe)}
     (hrecord : ∀ e ∈ HA, CallSiteErreichbar E.P.mitRuhe O.mitRuhe passes
-      (GeteiltV E.P E.ws) (RufStartG E.P.mitRuhe sp init) ⟨e.1, e.2.1, e.2.2.1⟩) :
+      (GeteiltV (D := D) E.P E.ws) (RufStartG E.P.mitRuhe sp init) ⟨e.1, e.2.1, e.2.2.1⟩) :
     CallSitePflichtFremd E.P.mitRuhe.axVertrag HA :=
   callSitePflichtFremd_of_run (h O H hh hf passes sp init hl) hrecord (fun _ hm => hm)
 

@@ -406,9 +406,12 @@
   `GabbroZielFremd` with the foreign premise split by provenance: (c) of the above reads
   "the hardware and foreign code", but a foreign item declared SOFTWARE (`axHerkunft`) is user
   logic -- its implementation proves its declared ensures against the actual binding `O`
-  (`AxVertragOSw`, now part of (b)), and only the named hardware stays in (c')
+  (`AxVertragOSw`, now part of (b)), and the remaining assumptions stay in (c')
   (`HardwareAnnahmenHw`: frame, register locality, the ensures of every item NOT declared
   software; unresolved provenance reads as hardware, the meaning of every unit before C08).
+  `GutO` still covers software bindings as well: frame respect and preservation of held locks in
+  every world, and the prescribed trace suffix when the declared write guards are held, remain
+  assumptions in (c'), not duties discharged by `AxVertragOSw`.
   `hardwareAnnahmen_of_split` shows the pair is exactly the old (c) (`gabbro_ziel_fremd` is `gabbro_ziel_voll`
   recombined): no guarantee is weakened and nothing is newly assumed. The
   call-site form (the software contract's pre proved at each call, `CallSitePflicht`) and the
@@ -420,12 +423,16 @@
   every call a GX run reaches (`CallSitePflicht`); its `ensures` is relied on only where
   that pre held -- by the actual binding's proof (`ForeignVertrag`: under the pre at the
   question world every answer meets the post; every answer decodes), with the post covering
-  the declared summary (`PostDeckt`), and by the body duties. Premise (c) is the named
-  hardware only (`HardwareAnnahmenHw`: frame, register locality, the summaries of every item
-  NOT declared software, the native-float hardware). The unconditional software summary is
+  the declared summary (`PostDeckt`), and by the body duties. Premise (c)
+  (`HardwareAnnahmenHw`) retains `GutO` for ALL items, including software bindings: frame
+  respect and preservation of held locks in every world, and the prescribed trace suffix when the
+  declared write guards are held, remain explicit assumptions, not duties discharged by
+  `ForeignVertrag` or `CallSitePflicht`. It also retains register locality, the summaries of every
+  item NOT declared software and the native-float hardware. The unconditional software summary is
   no premise of `GabbroZiel` any more; the statement under the full summary premise keeps
-  its text as `GabbroZielVoll` (`gabbro_ziel_voll`), as do `GabbroZielSC`, `-Verbund`,
-  `-Leben`, `-Warten`, `-Profil` and `GabbroZielFremd`.
+  its text as `GabbroZielVoll` (`gabbro_ziel_voll`), as do `GabbroZielSC`, `GabbroZielVerbund`,
+  `GabbroZielVerbundSC`, `GabbroZielVerbundN`, `GabbroZielLeben`, `GabbroZielWarten`,
+  `GabbroZielTerminierung`, `GabbroZielProfil`, `GabbroZielProjekte` and `GabbroZielFremd`.
   The body duties (KoerperGut/InvGut/PflichtWP/MassPflicht, SC and atomic) quantify over every
   frame-respecting oracle of the class `AxVertragOP (PreQ P) Q`: a declared summary is
   required exactly at QUESTION worlds `σ0.fragt (.inl a)` -- the only worlds machine G asks
