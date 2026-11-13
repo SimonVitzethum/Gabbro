@@ -230,9 +230,22 @@
         (Code/Conc/Lock.lean: fetch-add on `next`, acquire spin on `now`, release advance); Stage 0 emits a ticket
         lock of the same discipline (stage0/Stage0/Senke/Sperre/Ticket: `cas` on `next`, waiting for `serving` by
         `futex_wait` instead of spinning, release by `cas` on `serving` and `futex_wake` of all waiters, with a
-        waiter count). Only its uncontended paths are proved (`locks_okT`); no theorem ties a futex-blocked thread
-        to the model's waiting, so `GabbroZielLeben` and `GabbroZielWarten`, stated over the model's spinning
-        lock, are still NOT statements about the emitted lock;
+        waiter count). Its uncontended paths are proved on the runner (`locks_okT`). Its contended behaviour is
+        proved over a model of the emitted code run by many threads at the granularity of its shared-word
+        accesses, with a futex that blocks, returns spuriously and wakes all waiters (stage0/Stage0/Senke/Sperre/
+        Faeden, `Faeden.Schritt`, at most 2147483647 threads): every run is a stuttering run of the abstract
+        ticket lock in which a futex-blocked thread is a waiting thread (`Lauf.abbild`, `Lauf.schlaeft_wartet`),
+        with the queue facts of `FifoLauf` (`Lauf.glied`, `Lauf.eindeutig`, `Lauf.kopf`, `Lauf.ordnung`) and
+        mutual exclusion (`Lauf.ausschluss`); and the conclusion of `GabbroZielLeben` holds for the emitted lock
+        (`Lauf.leben`, `Lauf.leben_warte`) under weak fairness over the threads not blocked in FUTEX_WAIT plus one
+        named futex premise: FUTEX_WAIT returns spuriously only finitely often (`Lauf.ScheinbarEndlich`). Still
+        assumed: that this access-level machine is what the runner and the OS futex do (the runner's
+        `Runner.IR.FutexOK` classifies one thread's WAIT return only, without blocked threads or interleaving).
+        Not claimed: that a thread before its draw draws (the draw is a `cas` loop on `next`, lock-free but not
+        wait-free, while the model's arrival at `locks L` is one G step); a waiting bound -- `GabbroZielWarten` is
+        still NOT a statement about the emitted lock (its `cas` loops on `next` and on the waiter count have no
+        retry bound); and neither statement is carried to the image, which needs the missing simulation of the
+        thread machine over GX (THE READING);
     (4) carriers are the locations (a table or an atomic array is one location of W);
     (5) what G reads from the outside -- foreign answers (`Orakel.wirkt`), register reads, the visibility of
         `awaits` -- is read over G's memory: the last executed write, not an older message.
