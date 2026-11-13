@@ -211,7 +211,9 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
     split at h
     · exact bin_top (fun c t h => lowE_top a d c t h) h
     · exact wideBinaryL_top h
-  | _, _, .fllt a b, d, c, top, h | _, _, .flle a b, d, c, top, h => floatExprL_top h
+  | _, _, .fllt a b, d, c, top, h | _, _, .flle a b, d, c, top, h => by
+    simp only [lowE_eqs] at h
+    exact floatExprL_top h
   | _, _, .neg a, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h

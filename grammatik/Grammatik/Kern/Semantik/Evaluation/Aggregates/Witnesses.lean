@@ -40,8 +40,7 @@ theorem arrSetW_read_zeuge : arrSetW array ⟨0, by decide⟩ false = array :=
 
 theorem arrSetW_overwrite_zeuge :
     arrSetW (arrSetW array ⟨0, by decide⟩ true) ⟨0, by decide⟩ false = array := by
-  rw [arrSetW_overwrite]
-  exact arrSetW_read_zeuge
+  exact (arrSetW_overwrite array ⟨0, by decide⟩ true false).trans arrSetW_read_zeuge
 
 /-- The same changed-field and sibling observations for a concrete record. -/
 theorem prodSetW_overwrite_zeuge :

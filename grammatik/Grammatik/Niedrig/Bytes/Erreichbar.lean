@@ -46,7 +46,10 @@ theorem writeByteFakten {c : ByteCap} {i v : Nat} {s next : ByteState}
 /-- Reachability implies the full byte invariant, also at uninitialised cells. -/
 theorem erreichbarByteOk {s : ByteState} (h : Erreichbar s) : byteOk s := by
   induction h with
-  | leer => intro _ _; decide
+  | leer =>
+      intro _ _
+      show (0 : Nat) < 256
+      decide
   | schreib c i v _ hw ih => exact writeByteByteOk c i v _ _ hw ih
 
 /-- Strong provenance form: each initialised cell has its CURRENT value
@@ -63,7 +66,8 @@ theorem erreichbarSchreibspur {s : ByteState} (h : Erreichbar s) :
       intro t j hi
       have he := (writeByteFakten hw).2
       by_cases ht : t = c.traeger ∧ j = i
-      · obtain ⟨rfl, rfl⟩ := ht
+      · obtain ⟨rfl, hj⟩ := ht
+        rw [hj]
         have hv : next.wert c.traeger i = v := by
           rw [he]
           exact schreibNachWert s c.traeger i v
