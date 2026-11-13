@@ -37,6 +37,8 @@ public import Grammatik.Logik.Ruf.FremdRuf.T7
 public import Grammatik.Logik.Ruf.FremdRuf.T8
 public import Grammatik.Logik.Ruf.FremdRuf.T9
 public import Grammatik.Logik.Ruf.FremdRuf.T10
+public import Grammatik.Logik.Ruf.FremdRuf.T10Run
+public import Grammatik.Logik.Ruf.FremdRuf.T10RunZeuge
 public import Grammatik.Logik.Ruf.FremdRuf.T11
 public import Grammatik.Logik.Ruf.FremdRuf.T12
 @[expose] public section
