@@ -368,6 +368,11 @@ public import Grammatik.Niedrig.Witnesses.Joint
 public import Grammatik.Niedrig.Authority.Realize
 public import Grammatik.Niedrig.Authority.RealizeSaetze
 public import Grammatik.Niedrig.Witnesses.Realize
+public import Grammatik.Niedrig.Authority.SimG
+public import Grammatik.Niedrig.Authority.SimGSaetze
+public import Grammatik.Niedrig.Authority.SimGMachine
+public import Grammatik.Niedrig.Witnesses.SimG
+public import Grammatik.Niedrig.Witnesses.SimGScope
 public import Grammatik.Niedrig.Maske.Maske
 public import Grammatik.Niedrig.Maske.MaskeZeuge
 public import Grammatik.Niedrig.Maske.Prio
