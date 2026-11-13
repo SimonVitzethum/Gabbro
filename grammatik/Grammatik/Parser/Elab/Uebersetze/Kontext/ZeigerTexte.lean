@@ -28,6 +28,7 @@ def uZeigerAnw : Nat → SAnw → List String
     | .cases _ as => as.flatMap (uZeigerAnw f)
     | .arm _ _ b => uZeigerAnw f b
     | .each _ _ _ _ _ _ _ b => uZeigerAnw f b
+    | .boundedLoop _ b => uZeigerAnw f b
     | .retry _ b => uZeigerAnw f b
     | .loop _ b => uZeigerAnw f b
     | .waive _ b => uZeigerAnw f b

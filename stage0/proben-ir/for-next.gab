@@ -1,0 +1,11 @@
+// A next completes the index increment; otherwise this loop would exhaust at i = 1.
+module ir_for_next {
+impl fn main() -> u64 in 0 .. 100 effects { pure } {
+    let mut sum : u64 in 0 .. 100 = 0;
+    for i in 1 ..< 5 {
+        sum = (sum + i) % 100;
+        next i;
+    }
+    return sum;
+}
+}

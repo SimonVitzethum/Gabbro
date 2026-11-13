@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Parser.Expr.Typ
 public import Grammatik.Parser.Stmt.Anweisung.IndirectElse
+public import Grammatik.Parser.Stmt.Anweisung.BoundedHeaders
 
 @[expose] public section
 
@@ -127,6 +128,8 @@ def parseStmt (f : Nat) (toks : List Token) :
       else if strEq w "transition" then parseUebergang f rest
       else if strEq w "advances" then parseSchreitet f rest
       else if strEq w "retires" then parseRetires rest
+      else if strEq w "while" then parseSchleife f rest 3
+      else if strEq w "for" then parseSchleife f rest 4
       else parsePlatzStmt f toks
     | .ident "start" :: .zeichen "{" :: rest => parseStart f rest
     | .zeichen "@" :: _ => parseLibStmt f toks
@@ -370,7 +373,11 @@ def parseSchleife (f : Nat) (toks : List Token) (art : Nat) :
       | .error e => .error e
       | .ok (b, rest') =>
         if art == 1 then .ok (.retry h b, rest')
-        else .ok (.loop h b, rest')
+        else if art == 2 then .ok (.loop h b, rest')
+        else do
+          let raw := (if art == 3 then "while " else "for ") ++ h
+          let _ ← readBoundedHeader raw
+          .ok (.boundedLoop raw b, rest')
 
 def parseBricht (f : Nat) (toks : List Token) :
     Except String (SAnw × List Token) :=

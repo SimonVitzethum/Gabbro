@@ -205,6 +205,10 @@ def recordCheckCode (heads : List UFnKopf) (c : SCheck) :
     | .each name start kind subject mode measure invariant branch =>
       let (_, inner, _) ← uLoopExport ctx name start kind subject mode measure invariant
       one inner (.each name start kind subject mode measure invariant) branch
+    | .boundedLoop raw branch =>
+      let header ← readBoundedHeader raw
+      let inner ← uLoopBodyContext ctx header
+      one inner (.boundedLoop raw) branch
     | .retry header branch =>
       one ctx (.retry header) branch
     | .loop header branch =>

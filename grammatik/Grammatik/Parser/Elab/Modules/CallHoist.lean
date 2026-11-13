@@ -176,6 +176,9 @@ def hebeS (k : Kontext) : Nat → Nat → SAnw → List SAnw × Nat
     | .each a b c d m raw inv body =>
       let y := koerper [a] nr body
       ([.each a b c d m raw inv y.1], y.2)
+    | .boundedLoop h b =>
+      let y := koerper ((boundedLoopLocals h).map Prod.fst) nr b
+      ([.boundedLoop h y.1], y.2)
     | .retry h b => let y := koerper [] nr b; ([.retry h y.1], y.2)
     | .loop h b => let y := koerper [] nr b; ([.loop h y.1], y.2)
     | .waive ns b => let y := koerper [] nr b; ([.waive ns y.1], y.2)

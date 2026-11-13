@@ -52,7 +52,7 @@ not an extension.
 | **M1** | **Range types.** An integer carries its value range, and every operation must stay inside it (Ada's trick) | `u32 in 0 ..< N`; overflow is a compile error, not a runtime check |
 | **M2** | **Linear values, ghost ones too.** A linear value must be consumed exactly once; a ghost one exists only in the proof and is erased before code generation (no byte, no heap) | `linear type`, `linear ghost type` |
 | **M3** | **Address spaces and access rights on the pointer.** A pointer carries *where* it points and *what* may be done with it; barriers follow from the space | `ptr<mmio, w> T` |
-| **M4** | **No unchecked index, no unbounded loop.** Indexing needs evidence of membership; every loop names its descent measure or its bound | `traverse`, `retry`, `forever` |
+| **M4** | **No unchecked index, no unbounded loop.** Indexing needs evidence of membership; every loop names or derives its descent measure or its bound | `traverse`, `retry`, `forever`, bounded `while` and static-range `for` |
 | **D1** | **Opaque new types**, no implicit conversion (C's `typedef` is transparent, and that is the hole) | `opaque type Pa = u64;` |
 | **D2** | **Complete layouts and exhaustive matching.** Every bit of a word is named, every enumeration exhaustive | `exhaustive`, `format`, `tagged` |
 
@@ -813,6 +813,8 @@ retry    = "retry" [ ident ] [ "until" pred ] "bounded" expr "ops"
            [ "progress" ident ] "on_exceeded" ident [ "effects" "{" efflist "}" ] block ;
 forever  = "forever" [ ident ] "per_pass" "bounded" expr "ops" "on_exceeded" ident
            "effects" "{" efflist "}" [ "progress" ident ] [ "leaves" identlist ] block ;
+while    = "while" pred "bounded" constexpr "ops" "on_exceeded" ident block ;
+for      = "for" ident "in" constexpr "..<" constexpr [ "on_exceeded" ident ] block ;
 ```
 
 **Every loop names its bound or its measure.** `traverse` iterates a declared domain (an index
@@ -821,6 +823,31 @@ ops, not a descent measure*, `progress` names **who** ends the loop (an assumpti
 falsifier — the watchdog *is* the falsifier), and `on_exceeded` is rule 3: the overrun is named,
 not interpreted; `forever` is the service loop, with `per_pass bounded` over the pass's *own* ops
 (which may depend on pass inputs: `64 + 12 * lenof(msg) ops`) and `on_exceeded` obligatory.
+
+`while c bounded N ops on_exceeded h { body }` tests `c` before each pass. It executes at
+most `N` passes, tests once more after the last permitted pass, and calls `h` exactly when
+that test is still true. Thus a false initial test skips the body even at bound zero.
+The model is `Stmt.wloop N c body overflow`, defined as `retry N (!c) body overflow`;
+the exporter emits that retry directly. There is no `progress` assumption. `N` must be a
+nonnegative closed integer expression over literals and declared constants (`+`, `-`, `*`);
+a runtime local, even one with a singleton range, is refused. The existing retry cost and
+WP rules include the condition tests, passes and named overflow. The `ops` spelling names
+the static pass bound here; the total operation cost is derived from those components.
+
+`for i in lo ..< hi { body }` uses the static bound `max(hi - lo, 0)`. Both endpoints must
+be closed integer expressions, within the machine integer range. Empty or descending ranges
+run no passes. The index is a mutable local, initialized to `lo`, scoped to the loop body,
+and incremented after each completed pass, including before `next i`; `leave i` exits without
+incrementing. The final test observes the exclusive endpoint. Arithmetic and range duties
+remain checked: the generated increment uses required narrowing, never wrapping or clipping.
+The body cannot shadow the index. The exporter examines all nested assignments and binders:
+if none can write `i`, its generated increments reach `hi` within the static bound, so no
+handler is needed. A body that writes `i`, or whose writes cannot be classified, requires
+`on_exceeded h`; it then has exactly the same bound-exhaustion semantics as `while`.
+The handler is a declared zero-argument foreign item, with the same checks as `retry`.
+Missing bounds, nonstatic bounds, noninteger ranges and missing required handlers are named
+refusals (`while.bound.missing`, `while.bound.static-natural-required`,
+`for.range.static-integer-required`, `for.on_exceeded.required-for-index-write`).
 
 An ordinary `traverse i over slots of T by unvisited` body may call functions. The compiler
 lifts calls within the body, checks their signature effects, and checks a written `touches`
@@ -1450,7 +1477,7 @@ outside the tracked discipline, the full export. See [`PLAN-DYNAMIC.md`](PLAN-DY
 
 ## 18. What deliberately does not exist
 
-`while`, `for` (as a loop), `goto`, `switch`, preprocessor, implicit conversion, `void*`,
+Unbounded `while` or `for`, `goto`, `switch`, preprocessor, implicit conversion, `void*`,
 non-exhaustive matching, exceptions, inheritance, reflection, GC, assignment as an expression, forward
 declaration, self-hosting (the checker stays Rust: a project that rebuilds its checker has
 none), user-defined quantifier domains, recursion in `spec fn`, handwritten lemmas, unnamed

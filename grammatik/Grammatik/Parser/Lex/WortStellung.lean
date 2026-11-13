@@ -80,9 +80,8 @@ theorem cNamen_in_reserviert :
 
 set_option maxRecDepth 100000
 
-/-- The closed Lean front-end vocabulary includes the independent nominal
-    table-space binder. Rust mirroring is separate integration work. -/
-theorem wortschatz_253 : wortschatz.length = 253 := by
+/-- The closed Lean front-end vocabulary includes the bounded `while` source form. -/
+theorem wortschatz_count : wortschatz.length = 254 := by
   decide
 
 /-- Every reserved word stands in the closed vocabulary: the split

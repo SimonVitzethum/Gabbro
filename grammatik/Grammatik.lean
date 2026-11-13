@@ -91,5 +91,6 @@ public import Grammatik.Parser.Elab.Uebersetze.Tagged.EqualityZeuge
 public import Grammatik.Parser.Elab.Uebersetze.Tagged.PayloadKindsZeuge
 public import Grammatik.Parser.Elab.Uebersetze.Kontext.GuardNarrowingWitness
 public import Grammatik.Parser.Elab.Uebersetze.Kontext.GuardMutableWitness
+public import Grammatik.Parser.Elab.Uebersetze.Loops.Witness
 
 @[expose] public section

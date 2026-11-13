@@ -84,6 +84,8 @@ def bodyForms (b : SAnw) : List SAnw :=
   [.cond .tru b [.elsif .fls b] (some b), .elsif .tru b,
     .cases (.variable "outer") [.arm "A" none b], .arm "A" none b,
     .each "i" none "slots" (.variable "T") "unvisited" "" none b,
+    .boundedLoop "while true bounded 3 ops on_exceeded h " b,
+    .boundedLoop "for i in 0 ..< 3 " b,
     .retry "forever" b, .loop "forever" b, .waive [] b, .trim (.variable "x") "u8" b,
     .locks false (.variable "L") b, .watch "D" b, .block [b] none,
     .bindElse "x" none (.call "f" []) "e" b, .callElse "f" [] "e" b,

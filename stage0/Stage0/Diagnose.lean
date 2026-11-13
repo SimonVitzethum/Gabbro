@@ -18,6 +18,7 @@ def statementKind : SAnw → String
   | .cases .. => "match"
   | .each x .. => "traverse " ++ x
   | .retry .. => "retry"
+  | .boundedLoop .. => "bounded loop"
   | .loop .. => "forever"
   | .locks .. => "locks"
   | .trim .. | .trimReq .. => "narrow"

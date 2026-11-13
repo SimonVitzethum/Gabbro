@@ -302,6 +302,8 @@ def eraseCovered (covered : List String → String → SAnw → Bool) : List Str
   | locals, n + 1, .waive a b => .waive a (eraseCovered covered locals n b)
   | locals, n + 1, .locks a b c => .locks a b (eraseCovered covered locals n c)
   | locals, n + 1, .watch a b => .watch a (eraseCovered covered locals n b)
+  | locals, n + 1, .boundedLoop header b =>
+    .boundedLoop header (eraseCovered covered ((boundedLoopLocals header).map Prod.fst ++ locals) n b)
   | locals, n + 1, .retry header b => .retry header (eraseCovered covered locals n b)
   | locals, n + 1, .trim a b c => .trim a b (eraseCovered covered locals n c)
   | locals, n + 1, .cond c a bs b => .cond c (eraseCovered covered locals n a)

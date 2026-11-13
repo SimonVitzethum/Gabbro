@@ -135,7 +135,7 @@ def loopHeaders : Nat → SAnw → List String
   | n + 1, .block ss _ => ss.flatMap (loopHeaders n)
   | n + 1, .bindElse _ _ _ _ b | n + 1, .bindAxiomOptElse _ _ _ _ b | n + 1, .callIndElse _ _ _ b
   | n + 1, .callElse _ _ _ b | n + 1, .waive _ b | n + 1, .locks _ _ b | n + 1, .watch _ b
-  | n + 1, .retry _ b | n + 1, .trim _ _ b | n + 1, .elsif _ b | n + 1, .arm _ _ b
+  | n + 1, .boundedLoop _ b | n + 1, .retry _ b | n + 1, .trim _ _ b | n + 1, .elsif _ b | n + 1, .arm _ _ b
   | n + 1, .each _ _ _ _ _ _ _ b => loopHeaders n b
   | n + 1, .cond _ a bs b =>
     loopHeaders n a ++ bs.flatMap (loopHeaders n) ++ (b.map (loopHeaders n)).getD []

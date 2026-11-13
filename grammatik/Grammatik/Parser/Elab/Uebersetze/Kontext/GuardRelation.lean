@@ -146,6 +146,7 @@ def uBindetS : Nat → SAnw → List String
     | .step x y => [x, y]
     | .cond _ t ei els => uBindetS f t ++ ei.flatMap (uBindetS f) ++ (els.map (uBindetS f)).getD []
     | .elsif _ b | .waive _ b | .child b | .locks _ _ b => uBindetS f b
+    | .boundedLoop raw b => (boundedLoopLocals raw).map Prod.fst ++ uBindetS f b
     | .retry l b | .loop l b | .watch l b => l :: uBindetS f b
     | .cases _ as => as.flatMap (uBindetS f)
     | .arm _ k b => k.toList ++ uBindetS f b

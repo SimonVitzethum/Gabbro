@@ -1,5 +1,6 @@
 module
 
+public import Grammatik.Parser.Stmt.BoundedRewrite
 public import Grammatik.Parser.Namen.Aufloesung.Teil1a
 public import Grammatik.Parser.Item.ElementTief.FunctionArguments
 public import Grammatik.Parser.Namen.References
@@ -313,6 +314,9 @@ def anw (k : Kontext) : SAnw → SAnw
   | .arm g b s => .arm g b (anw (k.mit b.toList) s)
   | .each b o d s m r i body =>
     .each b (ausO k o) d (aus k s) m r (ausO (k.mit [b]) i) (anw (k.mit [b]) body)
+  | .boundedLoop raw body =>
+    .boundedLoop (mapBoundedHeader (aus k) k.ruf raw)
+      (anw (k.mit ((boundedLoopLocals raw).map Prod.fst)) body)
   | .retry l s => .retry l (anw k s)
   | .loop l s => .loop l (anw k s)
   | .waive gs s => .waive gs (anw k s)

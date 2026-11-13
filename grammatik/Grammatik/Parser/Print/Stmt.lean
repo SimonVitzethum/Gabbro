@@ -152,6 +152,7 @@ def druckAnw : SAnw → List Token
         | none => []) ++
       druckAnw body
   | .retry h b => [.wort "retry"] ++ rohToks h ++ druckAnw b
+  | .boundedLoop h b => rohToks h ++ druckAnw b
   | .loop h b => [.wort "forever"] ++ rohToks h ++ druckAnw b
   | .waive ns b => [.wort "breaking"] ++ druckNamen ns ++ druckAnw b
   | .trim o t b => [.wort "narrow"] ++ druckToks o ++ [.wort "to"] ++ rohToks t ++ [.wort "else"] ++ druckAnw b

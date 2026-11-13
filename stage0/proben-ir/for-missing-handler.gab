@@ -1,0 +1,6 @@
+module ir_for_missing_handler {
+impl fn main() -> u64 in 0 .. 100 effects { pure } {
+    for i in 0 ..< 3 { i = 0; }
+    return 0;
+}
+}

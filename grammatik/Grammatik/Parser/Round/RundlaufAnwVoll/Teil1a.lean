@@ -133,6 +133,8 @@ private theorem stmt_word_dispatch {rest : List Token} (h : istOrtsFort rest = f
       else if strEq word "transition" then parseUebergang f rest
       else if strEq word "advances" then parseSchreitet f rest
       else if strEq word "retires" then parseRetires rest
+      else if strEq word "while" then parseSchleife f rest 3
+      else if strEq word "for" then parseSchleife f rest 4
       else parsePlatzStmt f (.wort word :: rest) := by
   have noArray : ∀ tail, rest ≠ .zeichen "[" :: tail := by
     rintro tail rfl

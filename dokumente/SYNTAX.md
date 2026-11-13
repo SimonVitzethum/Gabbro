@@ -84,7 +84,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
   Vertraege  requires ensures maintains refines breaking effects costs where in
               exhaustive old narrow to induction order advances retires deadline
   Wirkungen  reads writes locks masks allocs consumes borrows moves mints publishes diverges pure
-  Ablauf     if else match traverse over by touches retry forever until
+  Ablauf     if else match traverse over by touches retry forever while for until
              bounded progress on_exceeded per_pass return let mut
              unvisited consuming leave leaves next ops result
              exchange update returns insert remove relabel
@@ -1860,7 +1860,12 @@ it -- `Uebersetzung.nutzlastZert` and the closed `sumPayload_zert`.
 **The rule is not "every loop ends" but: what a loop may do stands beside it.**
 
 ```ebnf
-loopform   = traverse | retry | forever ;
+loopform   = traverse | retry | forever | whileloop | forrange ;
+
+whileloop  = "while" pred "bounded" constexpr "ops" "on_exceeded" ident block ;
+forrange   = "for" ident "in" constexpr "..<" constexpr
+             [ "on_exceeded" ident ] block ;
+(* O18: both use the existing retry rule, without a `progress` clause. *)
 
 traverse   = "traverse" ident [ "of" expr ]
              "over"  domain
@@ -1906,7 +1911,22 @@ says nothing about the run that `unvisited` does not.
 |---|---|---|---|---|
 | **`traverse`** | yes, through the set | range **and** termination by the finite index set; `by consuming` additionally the removal as a generated `ops` operation | `logik schleife` if `invariant` fails at a pass boundary | `Stmt.traverse t inv body` — iterates `alleIndizes (count t)`; the binder is `index into T` |
 | **`retry`** | yes, through `bounded` | termination as a **number**; the overrun is **named** | `logik schleife`; the overrun runs the `on_exceeded` block | `Stmt.retry n bis body ueberlauf` |
+| **`while` / `for`** | yes, through the static pass bound | `while` names an overrun; `for` derives its bound from the range | the existing retry overrun; no progress assumption | `Stmt.wloop n c body overflow = Stmt.retry n (.not c) body overflow` |
 | **`forever`** | **no — and that is permitted** | every **pass** is bounded, the **frame** stands in `effects`, the end is named | `logik schleife`; **`hardware (fortschritt a)`** if the environment does not end it | `Stmt.forever a inv body` — the passes come from outside (H2) |
+
+O18 exports `while` as `retry N (!c)` with no progress duty. `N` is a nonnegative closed
+integer expression over literals and declared constants; locals do not count as static.
+The condition is tested before each pass and once after the last permitted pass; a still-true
+condition then calls the zero-argument foreign handler. `ops` retains the retry spelling;
+`N` bounds passes, and the existing cost rule includes tests, bodies and overflow.
+
+`for` requires static integer endpoints and uses `max(hi - lo, 0)` passes. Its mutable index
+is local to the body; the generated increment also precedes `next i`, while `leave i` exits
+immediately. It uses required narrowing and retains arithmetic duties. A body may not shadow
+the index. No handler is needed for an empty range or when a recursive scan of body writes
+excludes writes to the index. Otherwise `on_exceeded h` is required and has the same semantics
+as at `while`. Unknown clauses, missing bounds, nonstatic bounds and noninteger endpoints
+are refused by name; no header clause is ignored. See LANGUAGE §9.1 for the refusal names.
 
 ```gabbro
 forever

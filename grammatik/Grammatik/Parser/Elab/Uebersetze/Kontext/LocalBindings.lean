@@ -6,7 +6,7 @@ public import Grammatik.Parser.Elab.Export.ExportMetadata
 import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
-public import Grammatik.Parser.Elab.Uebersetze.LoopHeaders
+public import Grammatik.Parser.Elab.Uebersetze.Loops.Headers
 public import Grammatik.Parser.Elab.Uebersetze.Records.Records
 
 @[expose] public section

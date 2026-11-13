@@ -1,5 +1,6 @@
 module
 
+public import Grammatik.Parser.Stmt.BoundedRewrite
 public import Grammatik.Parser.Spec.Resolve
 public import Grammatik.Parser.Namen.References
 public import Grammatik.Parser.Lex.Tafel
@@ -244,6 +245,10 @@ def Walk.statement (w : Walk) (locals : Locals) : Nat → SAnw → Except String
         | _ => locals
       return .each n (← start.mapM ex) kind (← ex subject) mode (← w.raw raw locals)
         (← inv.mapM (w.expr inner f)) (← w.statement inner f body)
+    | .boundedLoop raw body =>
+      let raw ← w.raw raw locals
+      let header ← mapBoundedHeaderM ex pure raw
+      return .boundedLoop header (← w.statement (boundedLoopLocals raw ++ locals) f body)
     | .retry raw body => return .retry (← w.raw raw locals) (← st body)
     | .loop raw body => return .loop (← w.raw raw locals) (← st body)
     | .waive ns body => return .waive ns (← st body)

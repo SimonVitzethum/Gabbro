@@ -11,8 +11,8 @@ namespace Gabbro.Grammatik.Parser
 def libraryChildren : SAnw → List SAnw
   | .block statements _ | .cases _ statements => statements
   | .cond _ yes branches no => yes :: (branches ++ no.toList)
-  | .bindElse _ _ _ _ body | .elsif _ body | .arm _ _ body |
-    .each _ _ _ _ _ _ _ body | .retry _ body | .loop _ body |
+  | .bindElse _ _ _ _ body | .bindAxiomOptElse _ _ _ _ body | .elsif _ body | .arm _ _ body |
+    .each _ _ _ _ _ _ _ body | .boundedLoop _ body | .retry _ body | .loop _ body |
     .waive _ body | .trim _ _ body | .locks _ _ body | .watch _ body |
     .grow _ _ body | .child body | .callIndElse _ _ _ body | .callElse _ _ _ body => [body]
   | .alloc _ _ _ _ _ no => no.toList
@@ -96,7 +96,7 @@ def libraryDecl (members : List SItemTief) (call : SLibraryCall) : Except String
 mutual
 def ohneBibliothekAnw : SAnw → Bool
   | .bindLib .. | .lcall .. => false
-  | .bindElse _ _ _ _ body | .elsif _ body | .arm _ _ body | .retry _ body | .loop _ body |
+  | .bindElse _ _ _ _ body | .elsif _ body | .arm _ _ body | .boundedLoop _ body | .retry _ body | .loop _ body |
     .waive _ body | .trim _ _ body | .locks _ _ body | .watch _ body | .grow _ _ body |
     .child body | .each _ _ _ _ _ _ _ body | .callIndElse _ _ _ body | .callElse _ _ _ body => ohneBibliothekAnw body
   | .cond _ yes branches no =>
@@ -164,7 +164,7 @@ end
 mutual
 def callFreeStmt : SAnw → Bool
   | .call _ _ | .callElse .. | .callIndElse .. | .lcall _ | .bindLib _ _ _ _ => false
-  | .each _ _ _ _ _ _ _ _ | .loop _ _ | .retry _ _ => false
+  | .each _ _ _ _ _ _ _ _ | .loop _ _ | .boundedLoop _ _ | .retry _ _ => false
   | .emit _ _ _ | .await _ _ _ _ | .swap _ _ _ _ => false
   | .alloc _ _ _ _ _ _ | .allocVon _ _ _ _ | .reset _ _ | .grow _ _ _ | .free _ | .genericCall _ _ _ => false
   | .child _ | .start _ | .step _ _ | .shift _ _ _ | .locks _ _ _ | .watch _ _ | .retires _ => false
@@ -272,6 +272,10 @@ def exportLibraryStmt (members : List SItemTief) : SAnw → Except String SAnw
     match exportLibraryStmt members body with
     | .error e => .error e
     | .ok body' => .ok (.each bnd o k s m raw inv body')
+  | .boundedLoop h body =>
+    match exportLibraryStmt members body with
+    | .error e => .error e
+    | .ok body' => .ok (.boundedLoop h body')
   | .retry h body =>
     match exportLibraryStmt members body with
     | .error e => .error e

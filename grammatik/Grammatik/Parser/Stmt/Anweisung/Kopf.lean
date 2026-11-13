@@ -157,6 +157,9 @@ inductive SAnw
   | retires : String → SAnw
   /-- Fallible statement call through a parenthesized function-pointer expression. -/
   | callIndElse : SExpr → List SExpr → String → SAnw → SAnw
+  /-- Bounded source sugar: the complete `while` or `for` header and its body.
+      The header reader rejects unknown clauses; export reuses `Stmt.retry`. -/
+  | boundedLoop : String → SAnw → SAnw
 deriving Repr
 
 -- Shape equality on surface trees, as a `Bool`: one recursive
@@ -207,6 +210,7 @@ def beqSAnw : SAnw → SAnw → Bool
     strEq b b2 && beqOptExpr o o2 && strEq k k2 && beqSExpr s s2 && strEq m m2 && strEq r r2 &&
       beqOptExpr i i2 && beqSAnw d d2
   | .retry h b, .retry i d => strEq h i && beqSAnw b d
+  | .boundedLoop h b, .boundedLoop i d => strEq h i && beqSAnw b d
   | .loop h b, .loop i d => strEq h i && beqSAnw b d
   | .waive inv b, .waive jnv d =>
     beqWorte inv jnv && beqSAnw b d

@@ -51,6 +51,9 @@ def walk (rewrite : Rewrite) : Nat → List String → Nat → SAnw →
         | .each a b c d m raw inv bdy => do
           let r ← body [a] nr bdy
           pure (.each a b c d m raw inv r.1, r.2)
+        | .boundedLoop h b => do
+          let r ← body ((boundedLoopLocals h).map Prod.fst) nr b
+          pure (.boundedLoop h r.1, r.2)
         | .retry h b => do
           let r ← body [] nr b
           pure (.retry h r.1, r.2)

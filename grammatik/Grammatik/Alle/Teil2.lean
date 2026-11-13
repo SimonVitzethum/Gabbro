@@ -333,6 +333,8 @@ public import Grammatik.Zielsatz.Projekte.Annahmen
 public import Grammatik.Zielsatz.Projekte.Verbund
 public import Grammatik.Zielsatz.Einbettung.Projekt
 public import Grammatik.Logik.WP.Regeln3
+public import Grammatik.Logik.WP.BoundedWhile
+public import Grammatik.Logik.WP.BoundedWhileWitness
 public import Grammatik.Logik.WP.Zeuge
 public import Grammatik.Logik.WP.ZeugeRuf
 public import Grammatik.Logik.WP.ZeugeRel

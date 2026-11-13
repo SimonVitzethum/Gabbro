@@ -191,6 +191,7 @@ def uLiestS : Nat → SAnw → List String
       uLiestE f c ++ uLiestS f t ++ ei.flatMap (uLiestS f) ++ (e.map (uLiestS f)).getD []
     | .elsif c b | .trim c _ b | .locks _ c b => uLiestE f c ++ uLiestS f b
     | .cases c as => uLiestE f c ++ as.flatMap (uLiestS f)
+    | .boundedLoop raw b => (boundedLoopExpressions raw).flatMap (uLiestE f) ++ uLiestS f b
     | .arm _ _ b | .retry _ b | .loop _ b | .waive _ b | .watch _ b | .child b => uLiestS f b
     | .each _ o _ s _ r i b =>
       (o.map (uLiestE f)).getD [] ++ uLiestE f s ++ (if strEq r "" then [] else ["*"]) ++

@@ -120,6 +120,9 @@ def entfalteFrage (k : FrageKontext) : SAnw → Except String SAnw
   | .each b o kk s m r i body => match entfalteFrage k body with
     | .error e => .error e
     | .ok body' => .ok (.each b o kk s m r i body')
+  | .boundedLoop h b => match entfalteFrage k b with
+    | .error e => .error e
+    | .ok b' => .ok (.boundedLoop h b')
   | .retry h b => match entfalteFrage k b with
     | .error e => .error e
     | .ok b' => .ok (.retry h b')
@@ -279,6 +282,7 @@ def rufNamenS : SAnw → List String
   | .cases g arms => rufNamenE g ++ rufNamenL arms
   | .arm _ _ b => rufNamenS b
   | .each _ _ _ s _ _ _ b => rufNamenE s ++ rufNamenS b
+  | .boundedLoop _ b => rufNamenS b
   | .retry _ b => rufNamenS b
   | .loop _ b => rufNamenS b
   | .waive _ b => rufNamenS b
@@ -313,6 +317,7 @@ def bindNamenS : SAnw → List String
   | .cases _ arms => bindNamenL arms
   | .arm _ bi b => bi.toList ++ bindNamenS b
   | .each b _ _ _ _ _ _ body => b :: bindNamenS body
+  | .boundedLoop raw b => (boundedLoopLocals raw).map Prod.fst ++ bindNamenS b
   | .retry _ b => bindNamenS b
   | .loop _ b => bindNamenS b
   | .waive _ b => bindNamenS b
