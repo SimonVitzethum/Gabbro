@@ -36,29 +36,11 @@ namespace Gabbro.Grammatik
   oracle on every well-formed call (`mitVorbedingung_gleich`).
   `Spec.lean` is unchanged. -/
 
-/-- A per-gate argument precondition: the declared `requires`, over the
-    world at the call and the passed arguments. -/
-abbrev AxPre (D : Deklaration) := ∀ a : D.Ax, World D → Env D (D.aparams a) → Bool
-
-/-- The hardware premise restricted to well-formed calls: whenever the
-    caller met the gate's precondition and the raw answer fits the declared
-    result type, the declared ensures holds. -/
-def AxVertragOP {D : Deklaration} (Pre : AxPre D) (Q : AxEns D) (O : Orakel D) : Prop :=
-  ∀ (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) (v : ErgVal D (D.aerg a)),
-    Pre a σ ρ = true →
-    einpassenErg O.zeiger (D.aerg a) (O.wirkt a σ ρ).2 = some v → Q a (O.wirkt a σ ρ).1 v = true
-
 /-- The caller's obligation at one call site: its arguments meet the gate's
     precondition. User logic, not hardware. -/
 def AufruferPflicht {D : Deklaration} (Pre : AxPre D) (a : D.Ax) (σ : World D)
     (ρ : Env D (D.aparams a)) : Prop :=
   Pre a σ ρ = true
-
-/-- The restricted premise is weaker: every oracle meeting the full premise
-    meets it, for every precondition. -/
-theorem axVertragOP_of_O {D : Deklaration} (Pre : AxPre D) {Q : AxEns D} {O : Orakel D}
-    (h : AxVertragO Q O) : AxVertragOP Pre Q O :=
-  fun a σ ρ v _ hfit => h a σ ρ v hfit
 
 /-- One gate call under the split premise: the caller's obligation plus the
     restricted hardware premise give the fitting answer's ensures, and the

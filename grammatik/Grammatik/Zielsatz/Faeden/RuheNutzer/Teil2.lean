@@ -56,6 +56,27 @@ theorem axVertrag_mitRuhe {Q : AxEns D} {O : Orakel D} (h : AxVertragO Q O) :
       rw [worldZ_worldR, ergZ_ergR]
       exact h a _ _ v0 hx
 
+/-- Conditional membership transports to the idle-root oracle without
+    requiring unconditional software summaries. -/
+theorem axVertragOP_mitRuhe {P : Programm D} {Q : AxEns D} {O : Orakel D}
+    (h : AxVertragOP (PreQ P) Q O) :
+    AxVertragOP (PreQ P.mitRuhe) (axEnsRuhe Q) O.mitRuhe := by
+  intro a σ ρ v hp hv
+  have hp0 : PreQ P a (worldZ σ) (envZ ρ) = true := by
+    rw [← preQ_mitRuhe P a (worldZ σ) (envZ ρ), worldR_worldZ, envR_envZ]
+    exact hp
+  change einpassenErg (D := D.mitRuhe) O.mitRuhe.zeiger ((D.aerg a).map tyR)
+    (O.wirkt a (worldZ σ) (envZ ρ)).2 = some v at hv
+  rw [einpassenErg_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)] at hv
+  cases hx : einpassenErg O.zeiger (D.aerg a) (O.wirkt a (worldZ σ) (envZ ρ)).2 with
+  | none => rw [hx] at hv; cases hv
+  | some v0 =>
+      rw [hx] at hv
+      cases hv
+      show Q a (worldZ (worldR (O.wirkt a (worldZ σ) (envZ ρ)).1)) (ergZ _ (ergR _ v0)) = true
+      rw [worldZ_worldR, ergZ_ergR]
+      exact h a _ _ v0 hp0 hx
+
 /-- **The hardware assumptions on `O` are the ones on `O.mitRuhe`.** -/
 theorem hardware_mitRuhe {O : Orakel D} {Q : AxEns D} (h : HardwareAnnahmen O Q) :
     HardwareAnnahmen O.mitRuhe (axEnsRuhe Q) :=

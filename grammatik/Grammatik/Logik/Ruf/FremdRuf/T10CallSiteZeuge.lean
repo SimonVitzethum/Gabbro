@@ -61,6 +61,16 @@ theorem traceHistory_posts (a : decl.Ax) (σ : World decl)
     qAmDatensatz_of_vertrag binding_contract traceHistory_good traceHistory_passt
       traceHistory_provenance post_cover hm rfl hv⟩
 
+/-- An unconditional full-Q fixture inhabits the conditional class, and its
+    two recorded answers retain membership through the new replay lemma. -/
+theorem traceHistory_conditional :
+    AxVertragOP (PreQ unit.P) unit.Q traceOracle ∧
+      AxVertragOP (PreQ unit.P) unit.Q (orakelAus traceOracle traceHistory) := by
+  have hQ : AxVertragO unit.Q traceOracle := fun _ _ _ _ _ => rfl
+  have hrecord : VertragA traceOracle.zeiger unit.Q traceHistory :=
+    fun _ _ _ _ _ _ _ => rfl
+  exact ⟨axVertragOP_of_O _ hQ, orakelAus_vertragOP (axVertragOP_of_O _ hQ) hrecord⟩
+
 /-- The first call of the existing program uses the good binding too. -/
 theorem trace_first_step :
     RufSchrittG (program true) traceOracle 0 (start true) 0 (afterFirst true) := by

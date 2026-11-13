@@ -54,6 +54,54 @@ def AxVertragO (Q : AxEns D) (O : Orakel D) : Prop :=
   ∀ (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) (v : ErgVal D (D.aerg a)),
     einpassenErg O.zeiger (D.aerg a) (O.wirkt a σ ρ).2 = some v → Q a (O.wirkt a σ ρ).1 v = true
 
+/-- A per-gate argument precondition: the declared `requires`, over the
+    world at the call and the passed arguments. -/
+abbrev AxPre (D : Deklaration) := ∀ a : D.Ax, World D → Env D (D.aparams a) → Bool
+
+/-- The hardware premise restricted to well-formed calls: whenever the
+    caller met the gate's precondition and the raw answer fits the declared
+    result type, the declared ensures holds. -/
+def AxVertragOP {D : Deklaration} (Pre : AxPre D) (Q : AxEns D) (O : Orakel D) : Prop :=
+  ∀ (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) (v : ErgVal D (D.aerg a)),
+    Pre a σ ρ = true →
+    einpassenErg O.zeiger (D.aerg a) (O.wirkt a σ ρ).2 = some v → Q a (O.wirkt a σ ρ).1 v = true
+
+/-- The restricted premise is weaker: every oracle meeting the full premise
+    meets it, for every precondition. -/
+theorem axVertragOP_of_O {D : Deklaration} (Pre : AxPre D) {Q : AxEns D} {O : Orakel D}
+    (h : AxVertragO Q O) : AxVertragOP Pre Q O :=
+  fun a σ ρ v _ hfit => h a σ ρ v hfit
+
+/-- The oracle class of body duties: software summaries require the interface
+    pre at the queried world; hardware and unresolved items remain unconditional.
+    This lives below the replay and foreign-call layers to avoid import cycles. -/
+def PreQ (P : Programm D) : AxPre D := fun a σ ρ =>
+  if D.axHerkunft a = some AxOrigin.software then
+    wahr? (eval σ (P.axVertrag a).pre σ ρ)
+  else true
+
+theorem preQ_hw (P : Programm D) {a : D.Ax}
+    (h : D.axHerkunft a ≠ some AxOrigin.software)
+    (σ : World D) (ρ : Env D (D.aparams a)) : PreQ P a σ ρ = true := by
+  unfold PreQ
+  rw [if_neg h]
+
+theorem preQ_sw (P : Programm D) {a : D.Ax}
+    (h : D.axHerkunft a = some AxOrigin.software)
+    (σ : World D) (ρ : Env D (D.aparams a)) :
+    PreQ P a σ ρ = wahr? (eval σ (P.axVertrag a).pre σ ρ) := by
+  unfold PreQ
+  rw [if_pos h]
+
+/-- Without software items the conditional and unconditional classes coincide. -/
+theorem axVertragOP_preQ_ohne {P : Programm D} {Q : AxEns D} {O : Orakel D}
+    (h : ∀ a : D.Ax, D.axHerkunft a ≠ some AxOrigin.software) :
+    AxVertragOP (PreQ P) Q O ↔ AxVertragO Q O := by
+  constructor
+  · intro hQ a σ ρ v hv
+    exact hQ a σ ρ v (preQ_hw P (h a) σ ρ) hv
+  · exact axVertragOP_of_O (PreQ P)
+
 /-- The declared ensures reads only the axiom's declared write carriers of
     the answer world (and the result). -/
 def AxEnsLokal (Q : AxEns D) : Prop :=
@@ -91,6 +139,19 @@ theorem orakelAus_vertrag {Q : AxEns D} {O : Orakel D} (hQ : AxVertragO Q O)
   · rename_i hex
     exact hv a σ ρ _ (Classical.choose_spec hex) v
   · exact hQ a σ ρ v
+
+/-- Conditional summaries survive replay: recorded answers satisfy the summary;
+    all other queries retain the actual oracle's conditional contract. No
+    non-decoding fallback word or extra realizability premise is required. -/
+theorem orakelAus_vertragOP {Pre : AxPre D} {Q : AxEns D} {O : Orakel D}
+    (hQ : AxVertragOP Pre Q O) {HA : List (AxEintrag D)}
+    (hv : VertragA O.zeiger Q HA) : AxVertragOP Pre Q (orakelAus O HA) := by
+  intro a σ ρ v hp
+  simp only [orakelAus]
+  split
+  · rename_i hex
+    exact hv a σ ρ _ (Classical.choose_spec hex) v
+  · exact hQ a σ ρ v hp
 
 /-- The recorded answer world agrees with the machine's answer world on the
     axiom's declared carriers, so a local declared ensures transfers. -/
