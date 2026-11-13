@@ -1,0 +1,7 @@
+module ir_tuple_arity_refused {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let pair : (u32 in 0 .. 255, bool) = (42, true);
+    let (a, b, c) = pair;
+    return a;
+}
+}

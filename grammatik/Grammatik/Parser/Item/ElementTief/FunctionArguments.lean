@@ -53,7 +53,7 @@ def literalLocals : SAnw → List String
   | .cases _ arms => arms.flatMap literalLocals
   | .arm _ binder body => binder.toList ++ literalLocals body
   | .each binder _ _ _ _ _ _ body => binder :: literalLocals body
-  | .elsif _ body | .retry _ body | .loop _ body | .waive _ body | .trim _ _ body |
+  | .elsif _ body | .boundedLoop _ body | .retry _ body | .loop _ body | .waive _ body | .trim _ _ body |
     .locks _ _ body | .watch _ body | .grow _ _ body | .child body => literalLocals body
   | .block statements _ => statements.flatMap literalLocals
   | _ => []

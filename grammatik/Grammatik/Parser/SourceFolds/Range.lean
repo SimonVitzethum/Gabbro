@@ -73,7 +73,7 @@ def hasRangeFoldAnw : SAnw → Bool
   | .each _ s _ subj _ _ inv body =>
       (s.map hasRangeFold).getD false || hasRangeFold subj ||
       (inv.map hasRangeFold).getD false || hasRangeFoldAnw body
-  | .retry _ a | .loop _ a | .trim _ _ a => hasRangeFoldAnw a
+  | .boundedLoop _ a | .retry _ a | .loop _ a | .trim _ _ a => hasRangeFoldAnw a
   | .locks _ e a => hasRangeFold e || hasRangeFoldAnw a
   | .leave _ | .next _ | .start _ | .other _ | .retires _ => false
   | .await _ _ e _ | .swap _ _ e _ | .free e => hasRangeFold e

@@ -231,6 +231,8 @@ def uAkkuInAnw : Nat → List String → SAnw → Bool
   | f + 1, ns, .each _ s _ e _ _ _ b =>
     (match s with | none => false | some x => uAkkuInExpr f ns x) || uAkkuInExpr f ns e ||
     uAkkuInAnw f ns b
+  | f + 1, ns, .boundedLoop raw b =>
+    (boundedLoopExpressions raw).any (uAkkuInExpr f ns) || uAkkuInAnw f ns b
   | f + 1, ns, .retry _ b => uAkkuInAnw f ns b
   | f + 1, ns, .loop _ b => uAkkuInAnw f ns b
   | f + 1, ns, .trim e _ b => uAkkuInExpr f ns e || uAkkuInAnw f ns b

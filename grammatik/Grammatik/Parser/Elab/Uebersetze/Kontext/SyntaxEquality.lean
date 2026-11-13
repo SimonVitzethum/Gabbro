@@ -183,7 +183,19 @@ def STyp.decEq (a b : STyp) : Decidable (a = b) := by
       constructor
       · rintro ⟨rfl, rfl⟩; rfl
       · intro h; cases h; exact ⟨rfl, rfl⟩)
+  case tuple.tuple as bs =>
+    letI := STyp.decList as bs
+    exact decidable_of_iff (as = bs) (by simp only [STyp.tuple.injEq])
 termination_by structural a
+
+def STyp.decList : (as bs : List STyp) → Decidable (as = bs)
+  | [], [] => isTrue rfl
+  | a :: as, b :: bs => by
+    letI := STyp.decEq a b
+    letI := STyp.decList as bs
+    exact decidable_of_iff (a = b ∧ as = bs) (by simp only [List.cons.injEq])
+  | [], _ :: _ | _ :: _, [] => isFalse (by intro h; cases h)
+termination_by structural as _ => as
 
 def STyp.decOption : (a b : Option STyp) → Decidable (a = b)
   | none, none => isTrue rfl

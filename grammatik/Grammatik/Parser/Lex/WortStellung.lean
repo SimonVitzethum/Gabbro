@@ -80,9 +80,9 @@ theorem cNamen_in_reserviert :
 
 set_option maxRecDepth 100000
 
-/-- The closed vocabulary after removing the four invariant-only words.
+/-- The closed vocabulary includes bounded `while` and removes the four invariant-only words.
     `by` remains a keyword for traversal and function induction. -/
-theorem wortschatz_249 : wortschatz.length = 249 := by
+theorem wortschatz_count : wortschatz.length = 250 := by
   decide
 
 /-- Removing invariant clauses also removes their words from bucket lookup;

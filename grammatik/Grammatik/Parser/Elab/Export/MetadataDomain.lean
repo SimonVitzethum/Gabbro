@@ -33,6 +33,7 @@ def consumingHeader (raw : String) : Except String (SExpr × String) := do
   | _ => throw "consuming traversal has an unsupported or duplicate header clause"
 
 def typeMetadata : STyp → Bool
+  | .tuple elements => elements.any typeMetadata
   | .raw _ | .entry .. | .wrap _ | .embed .. => true
   | .ptr _ rights (.atom target) =>
       (match Gabbro.Grammatik.DataRights.decode (fun _ => none) rights with
@@ -82,6 +83,8 @@ def bodyMetadata : Nat → SAnw → Bool
       and type-annotated binders still elaborate to no G form. -/
   | _ + 1, .alloc false _ none _ _ none => false
   | n + 1, .alloc false _ none _ _ (some body) => bodyMetadata n body
+  | n + 1, .boundedLoop header body =>
+    (readBoundedHeader header).toOption.isNone || bodyMetadata n body
   | n + 1, .retry header body => !retryHeaderBound header || bodyMetadata n body
   /- An atomic exchange and an atomic await are read completely by the elaborator: the static must be
       a declared atomic, the payload the declared one, the binder's written type the atomic's

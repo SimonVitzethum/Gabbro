@@ -374,4 +374,19 @@ inductive GrundArms : Bool → Ctx → List (Res D) → List (Res D) → Nat →
 
 end
 
+/-- `while c bounded n ops on_exceeded h { body }`: at most `n` body passes,
+    with the condition checked before each pass and once after the last pass.
+    Exhaustion runs `h` only if `c` still holds. The body owns `leave`/`next`;
+    the handler keeps the enclosing loop level. No progress assumption is needed.
+
+    This is a derived statement over `retry`, whose model already has precisely
+    this safety and exhaustion rule. Keeping one core form also shares machine-G
+    residues, acceptance checks, footprints and all generic correctness proofs.
+    The existing cost model charges the negation at each condition check. -/
+def Stmt.wloop {D : Deklaration} {V : Vertrag D}
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (n : Nat)
+    (c : Expr D Γ Λ .bool) (body : Block D V true Γ Λ Λ)
+    (ueberlauf : Block D V l Γ Λ Λ) : Stmt D V l Γ Λ Λ :=
+  .retry n (.not c) body ueberlauf
+
 end Gabbro.Grammatik

@@ -21,10 +21,10 @@ end Gabbro.Grammatik
   * `abschnittAktiv_aus` -- a lock holder is never stuck except at a `locks`
     head, from progress and `HardwareImAbschnitt`.
 
+  * `Haltezeit` is a premise here and a theorem of the checked program
+    (`haltezeit_aus`, Halten/Haltezeit.lean, since 2026-11-13).
+
   NOT proved, named:
-  * `Haltezeit` is a premise, not a consequence of the checker's `held <= N
-    ops` (`K002`): the ops-to-steps bridge (KostenG TARGET 3, F1-F9) and a
-    potential bound for a `locks` body as a residue segment are missing.
   * `Anwaerter` is a premise on the run; its static source (the threads whose
     call graph reaches `locks L`) is computed in the measurement, not
     proved to cover the run.

@@ -42,7 +42,7 @@ def wortschatz : List String :=
    "where", "in", "exhaustive", "old", "narrow", "to", "induction",
     "reads", "writes", "locks", "masks", "allocs", "consumes", "borrows", "moves", "mints", "publishes",
    "diverges", "pure", "if", "else", "match", "traverse", "over", "by",
-   "touches", "retry", "forever", "until", "bounded", "progress",
+   "touches", "retry", "forever", "while", "until", "bounded", "progress",
    "on_exceeded", "per_pass", "return", "let", "mut", "unvisited",
    "consuming", "leave", "leaves", "next", "ops", "insert", "remove",
    "relabel", "result", "exchange", "update", "returns", "ptr", "normal",
@@ -102,7 +102,7 @@ def schluesselTafelC : Char → List (List Char)
   | 't' => [['t','y','p','e'], ['t','a','g','g','e','d'], ['t','o'], ['t','r','a','v','e','r','s','e'], ['t','o','u','c','h','e','s'], ['t','r','a','n','s','l','a','t','o','r'], ['t','a','b','l','e'], ['t','r','a','n','s','i','t','i','o','n'], ['t','r','e','e'], ['t','h','r','e','a','d','s'], ['t','r','u','e'], ['t','a','r','g','e','t']]
   | 'u' => [['u','s','e'], ['u','n','t','i','l'], ['u','n','v','i','s','i','t','e','d'], ['u','p','d','a','t','e'], ['u','n','f','a','l','s','i','f','i','a','b','l','e'], ['u','8'], ['u','1','6'], ['u','3','2'], ['u','6','4']]
   | 'v' => [['v','e','c','t','o','r'], ['v','i','a']]
-  | 'w' => [['w','h','e','n'], ['w','h','e','r','e'], ['w','r','i','t','e','s'], ['w'], ['w','1','c'], ['w','r','a','p','p','i','n','g'], ['w','a','l','k']]
+  | 'w' => [['w','h','e','n'], ['w','h','e','r','e'], ['w','h','i','l','e'], ['w','r','i','t','e','s'], ['w'], ['w','1','c'], ['w','r','a','p','p','i','n','g'], ['w','a','l','k']]
   | 'x' => [['x']]
   | _ => []
 

@@ -62,6 +62,7 @@ def namenT : STyp → List String
       | .error _ => []
       | .ok ts => ts.filterMap fun | .ident name => some name | _ => none)
   | .atom s => [s]
+  | .tuple types => types.flatMap namenT
   | .path ps => ["::".intercalate ps]
   | .ptr _ _ t => namenT t
   | .index _ t => [t]

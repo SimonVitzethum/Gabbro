@@ -409,6 +409,10 @@ theorem hoistAnw_shape (source : List SItemTief) (locals : Spec.Locals)
     simp only [hoistAnw] at h
     obtain ⟨rfl⟩ := h
     exact Or.inl ⟨_, [], rfl, nilFree⟩
+  | boundedLoop raw body =>
+    simp only [hoistAnw] at h
+    obtain ⟨rfl⟩ := h
+    exact Or.inl ⟨_, [], rfl, nilFree⟩
   | retry raw body =>
     simp only [hoistAnw] at h
     obtain ⟨rfl⟩ := h

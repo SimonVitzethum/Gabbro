@@ -74,9 +74,11 @@ def FairF (R : PlanLauf P O passes) (F : Nat) : Prop :=
 def LaufzeitAnnahme (R : PlanLauf P O passes) (F : Nat) : Prop :=
   FifoSperre R ∧ FairF R F
 
-/-- **The hold-time premise.** On every stretch of `n` scheduler steps from
+/-- **The hold time.** On every stretch of `n` scheduler steps from
     `a` on which thread `u` holds `L`, `u` takes at most `h L` own steps, at
-    most `k L` of them at a `locks` head. -/
+    most `k L` of them at a `locks` head. A premise of the waiting theorems,
+    and a theorem of every run of a program the hold-bound check accepts
+    (`haltezeit_aus`, Halten/Haltezeit.lean). -/
 def Haltezeit (R : PlanLauf P O passes) (h k : D.Lock → Nat) : Prop :=
   ∀ (u : Faden) (L : D.Lock) (a n : Nat),
     (∀ i, i < n → L ∈ offen ((R.M (a + i)).faeden u).spur) →

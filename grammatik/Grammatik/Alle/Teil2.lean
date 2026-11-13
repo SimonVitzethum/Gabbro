@@ -139,12 +139,18 @@ public import Grammatik.Speichermodell.Maschine.GXMaschine
 public import Grammatik.Logik.Fortschritt.Folge
 public import Grammatik.Logik.Fortschritt.FolgeBeweis
 public import Grammatik.Logik.Fortschritt.FolgeZeuge
+public import Grammatik.Logik.Fortschritt.Halten.Haltezeit
+public import Grammatik.Logik.Fortschritt.Halten.Zeuge
 public import Grammatik.Zielsatz.Eigenschaften.FolgeZiel
 public import Grammatik.Zielsatz.Atomar.AtomarGoalZeuge
 public import Grammatik.Zielsatz.Atomar.CallSite.CallSiteGoalZeuge
 public import Grammatik.Speichermodell.Maschine.ZaehlerW
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 public import Grammatik.Zielsatz.Atomar.GabbroZielFremd
+public import Grammatik.Zielsatz.RuheLift.Fragment
+public import Grammatik.Zielsatz.RuheLift.Grenze
+public import Grammatik.Zielsatz.RuheLift.Korollar
+public import Grammatik.Zielsatz.RuheLift.Zeuge
 public import Grammatik.GabbroV.Start.GvStartPflicht
 public import Grammatik.GabbroV.GvAtomRely
 public import Grammatik.GabbroV.GvTraversal
@@ -338,6 +344,8 @@ public import Grammatik.Logik.Invarianten.Frag.Witness
 public import Grammatik.Logik.Invarianten.Elim.Witness
 public import Grammatik.Logik.Invarianten.Korrekt.Witness
 public import Grammatik.Logik.Invarianten.Modell.DecisionWitness
+public import Grammatik.Logik.WP.BoundedWhile
+public import Grammatik.Logik.WP.BoundedWhileWitness
 public import Grammatik.Logik.WP.Zeuge
 public import Grammatik.Logik.WP.ZeugeRuf
 public import Grammatik.Logik.WP.ZeugeRel
@@ -385,3 +393,7 @@ public import Grammatik.Niedrig.Uebersetzung.Zeuge
 public import Grammatik.Niedrig.Register.Register
 public import Grammatik.Niedrig.Register.RegisterSaetze
 public import Grammatik.Niedrig.Register.RegisterZeuge
+public import Grammatik.Niedrig.Bytes.Grants
+public import Grammatik.Niedrig.Bytes.GrantsSaetze
+public import Grammatik.Niedrig.Bytes.Erreichbar
+public import Grammatik.Niedrig.Bytes.GrantsZeuge

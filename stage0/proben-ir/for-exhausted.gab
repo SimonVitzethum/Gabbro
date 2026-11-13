@@ -1,0 +1,12 @@
+// Resetting i can exceed the static range length, so a handler is required. Exit 110.
+module ir_for_exhausted {
+assume tick "The probe deliberately falsifies the handler's zero-only answer." falsifier probe_tick;
+syscall overrun() -> u64 in 0 .. 0
+    abi linux arch x86_64 number 39
+    regs in { } regs out { rax } clobbers { rcx, r11 } errors { }
+    effects { pure } costs <= 8 ops assume tick falsifier probe_tick;
+impl fn main() -> u64 in 0 .. 100 effects { pure } {
+    for i in 0 ..< 3 on_exceeded overrun { i = 0; }
+    return 9;
+}
+}

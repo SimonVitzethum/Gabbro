@@ -37,6 +37,7 @@ def canonicalType (items : List SItemTief) : Nat → STyp → STyp
     | some (.typeT _ _ _ _ (some t)) => canonicalType items f t
     | _ => .atom n
   | f + 1, .ptr s r t => .ptr s r (canonicalType items f t)
+  | f + 1, .tuple types => .tuple (types.map (canonicalType items f))
   | f + 1, .array t n => .array (canonicalType items f t) n
   | f + 1, .range (.atom "u32") (.lit 0) (.lit 4294967295) false => .atom "u32"
   | f + 1, .range t lo hi b => .range (canonicalType items f t) lo hi b
@@ -49,6 +50,7 @@ def substituteType (env : List (String × STyp)) : STyp → STyp
   | .atom n => ((env.find? fun p => strEq p.1 n).map Prod.snd).getD (.atom n)
   | .path [n] => ((env.find? fun p => strEq p.1 n).map Prod.snd).getD (.path [n])
   | .ptr s r t => .ptr s r (substituteType env t)
+  | .tuple types => .tuple (types.map (substituteType env))
   | .range t lo hi b => .range (substituteType env t) lo hi b
   | .array t n => .array (substituteType env t) n
   | .wrap t => .wrap (substituteType env t)

@@ -178,6 +178,7 @@ private theorem bound_names_select (fuel : Nat) (statement : SAnw) :
             (match no with | none => [] | some body => uAkkuBinder fuel body)
         | .elsif _ body => uAkkuBinder fuel body
         | .cases _ arms => arms.flatMap (uAkkuBinder fuel)
+        | .boundedLoop raw body => (boundedLoopLocals raw).map Prod.fst ++ uAkkuBinder fuel body
         | .retry _ body | .loop _ body | .trim _ _ body | .locks _ _ body |
           .watch _ body | .waive _ body | .grow _ _ body | .child body => uAkkuBinder fuel body
         | .block statements _ => statements.flatMap (uAkkuBinder fuel)
@@ -202,7 +203,7 @@ private theorem pointer_source_select (fuel : Nat) (statement : SAnw) :
             (match no with | some body => uZeigerAnw fuel body | none => [])
         | .elsif _ body => uZeigerAnw fuel body
         | .cases _ arms => arms.flatMap (uZeigerAnw fuel)
-        | .arm _ _ body | .each _ _ _ _ _ _ _ body | .retry _ body | .loop _ body |
+        | .arm _ _ body | .each _ _ _ _ _ _ _ body | .boundedLoop _ body | .retry _ body | .loop _ body |
           .waive _ body | .trim _ _ body | .locks _ _ body | .watch _ body => uZeigerAnw fuel body
         | .alloc _ _ ty _ _ body => uZeigerTexte ty.toList ++
             (body.map (uZeigerAnw fuel)).getD []
@@ -220,7 +221,7 @@ private theorem start_source_select (fuel : Nat) (statement : SAnw) :
         | .cond _ yes alternatives no =>
           uStartNamen fuel yes ++ alternatives.flatMap (uStartNamen fuel) ++
             (no.map (uStartNamen fuel)).getD []
-        | .elsif _ body | .each _ _ _ _ _ _ _ body | .retry _ body | .loop _ body |
+        | .elsif _ body | .each _ _ _ _ _ _ _ body | .boundedLoop _ body | .retry _ body | .loop _ body |
           .locks _ _ body | .trim _ _ body => uStartNamen fuel body
         | .cases _ arms => arms.flatMap (uStartNamen fuel)
         | .arm _ _ body => uStartNamen fuel body

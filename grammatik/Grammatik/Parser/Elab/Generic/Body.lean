@@ -1,4 +1,5 @@
 module
+public import Grammatik.Parser.Stmt.BoundedRewrite
 public import Grammatik.Parser.Elab.Generic.Rewrite
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Generic
@@ -75,6 +76,10 @@ def rewriteBody (env : Environment) (bindings : Bindings) : SAnw → RewriteM SA
       (← liftResult (substituteRaw (bindings.without [binder]) raw))
       (← invariant.mapM (rewriteExpression env (bindings.without [binder])))
       (← rewriteBody env (bindings.without [binder]) body)
+  | .boundedLoop raw body =>
+    return .boundedLoop (← mapBoundedHeaderM (rewriteExpression env bindings)
+      (fun name => liftResult (substituteRaw bindings name)) raw)
+      (← rewriteBody env (bindings.without ((boundedLoopLocals raw).map Prod.fst)) body)
   | .retry label body => return .retry label (← rewriteBody env bindings body)
   | .loop label body => return .loop label (← rewriteBody env bindings body)
   | .waive reasons body => return .waive reasons (← rewriteBody env bindings body)
@@ -129,7 +134,7 @@ def rewriteStatements (env : Environment) (bindings : Bindings) :
     let names := match statement with
       | .bind _ n _ _ | .bindQ _ n _ _ | .bindElse n _ _ _ _ | .bindAxiomOpt n _ _ | .bindAxiomOptElse n _ _ _ _ |
         .bindLib _ n _ _ | .alloc _ n _ _ _ _ |
-        .allocVon _ n _ _ | .await n _ _ _ | .swap n _ _ _ => [n]
+        .allocVon _ n _ _ | .await n _ _ _ | .swap n _ _ _ => bindingNames n
       | _ => []
     let (tail, final) ← rewriteStatements env (bindings.without names) rest
     pure (rewritten :: tail, final)

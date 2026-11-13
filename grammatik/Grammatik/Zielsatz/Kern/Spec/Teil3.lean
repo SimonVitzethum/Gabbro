@@ -12,6 +12,7 @@ public import Grammatik.Logik.Fortschritt.Folge
 public import Grammatik.Logik.Ruf.Maschine.BudgetMonoton
 public import Grammatik.Logik.Fortschritt.PlanLauf
 public import Grammatik.Logik.Fortschritt.Warten
+public import Grammatik.Logik.Fortschritt.Halten.Pruefung
 public import Grammatik.Speichermodell.Adressen.Layout
 public import Grammatik.Logik.Terminierung.LaufGX
 public import Grammatik.Bausteine.Arena.Ownership.Ruhe.Lift
@@ -74,17 +75,23 @@ def GabbroZielLeben : Prop :=
           (∃ j, n ≤ j ∧ R.akt j = some t ∧ AnSperre (R.M j) t L) ∨
             ∃ u m, ∀ j, m ≤ j → L ∈ offen ((R.M j).faeden u).spur
 
-/-! ## A waiting bound (2026-10-23)
+/-! ## A waiting bound (2026-10-23; hold time derived 2026-11-13)
 
     Starvation freedom says a waiting thread gets its lock; the waiting bound says WHEN. A FIFTH statement under the
-    same four premise groups, over the runs of the ticket lock, with four named premises of the run: the scheduler's
-    fairness window `F` (`FairF`), the hold time of every critical section (`Haltezeit`), no named stop inside a
-    critical section (`HardwareImAbschnitt`) and the contenders (`Anwaerter`). See WAITING in the header. -/
+    same four premise groups, over the runs of the ticket lock, with three named premises of the run: the scheduler's
+    fairness window `F` (`FairF`), no named stop inside a critical section (`HardwareImAbschnitt`) and the contenders
+    (`Anwaerter`). The hold time of a critical section is no premise on the run (since 2026-11-13): it follows from
+    the checker's hold bounds `N` and declared costs `decl` (`haltPasst`, K002 and K001 on the source program).
+    See WAITING in the header. -/
 
 /-- **GABBRO_ZIEL_WARTEN.** On every run of the ticket lock from the runtime's start whose scheduler has fairness
-    window `F`, whose critical sections of `L` take at most `h L` own steps (`k L` of them at a nested `locks`),
-    without a named stop inside a section, and whose contenders for `L` are `Ts L`: a thread standing at `locks L`
-    at step `n0` takes `L` before step `n0 + wartezeit ls Ts h k F L`. -/
+    window `F`, of a program whose every critical section of `L` the checker bounds by `N L` (`haltPasst`: in
+    `kostenBlock`, calls only to functions of `ks` that fit their declared costs `decl`), without a named stop
+    inside a section, and whose contenders for `L` are `Ts L`: a thread standing at `locks L` at step `n0` takes `L`
+    before step `n0 + wartezeit ls Ts h h F L` with the hold time `h = haltSchranke ls N`
+    (`N L + 1 + ls.length` own steps, derived by `haltezeit_aus`). Indirect calls inside
+    sections and anywhere in functions of `ks` are refused by this check. Nested lock-head
+    steps use the conservative bound `k = h`, not a separate acquisition count. -/
 def GabbroZielWarten : Prop :=
   ∀ (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
@@ -94,15 +101,17 @@ def GabbroZielWarten : Prop :=
     ∀ (passes : Nat) (sp : Speicher D.mitRuhe)
       (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)),
       Laufzeit E sp init →                                      -- (d) the runtime, A4
-      ∀ (R : FifoLauf E.P.mitRuhe O.mitRuhe passes) (F : Nat) (h k : D.Lock → Nat) (Ts : D.Lock → List Faden),
+      ∀ (N : D.Lock → Nat) (decl : D.Fn → Nat) (ks : List D.Fn),
+        haltPasst E.P passes N decl fs.1 ks = true →   -- (a') the hold bounds, K002/K001
+      ∀ (R : FifoLauf E.P.mitRuhe O.mitRuhe passes) (F : Nat) (Ts : D.Lock → List Faden),
         R.M 0 = RufStartG E.P.mitRuhe sp init →
         FairF R.toPlanLauf F →                                  -- the scheduler's fairness window
-        Haltezeit R.toPlanLauf h k →                            -- the hold time of the sections
         HardwareImAbschnitt R.toPlanLauf →                      -- no named stop inside a section
         Anwaerter R.toPlanLauf Ts →                             -- the contenders
         ∀ (L : D.Lock) (t : Faden) (n0 : Nat), AnSperre (R.M n0) t L →
-          ∃ j, n0 ≤ j ∧ j < n0 + wartezeit (D := D.mitRuhe) ls.1 Ts h k F L ∧ R.akt j = some t ∧
-            L ∈ offen ((R.M (j + 1)).faeden t).spur
+          ∃ j, n0 ≤ j ∧
+            j < n0 + wartezeit (D := D.mitRuhe) ls.1 Ts (haltSchranke ls.1 N) (haltSchranke ls.1 N) F L ∧
+            R.akt j = some t ∧ L ∈ offen ((R.M (j + 1)).faeden t).spur
 
 /-! ## Termination (2026-10-22)
 

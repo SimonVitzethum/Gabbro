@@ -38,6 +38,7 @@ def statementProducers : SAnw → List STyp
   | .elsif e s | .trim e _ s | .locks _ e s | .grow _ e s =>
     expressionUses e ++ statementProducers s
   | .cases e arms => expressionUses e ++ statementsProducers arms
+  | .boundedLoop raw s => expressionsUses (boundedLoopExpressions raw) ++ statementProducers s
   | .arm _ _ s | .retry _ s | .loop _ s | .waive _ s | .watch _ s | .child s =>
     statementProducers s
   | .each _ start _ subject _ _ inv s =>
@@ -71,6 +72,7 @@ termination_by v => sizeOf v
 /-- Collect written dynamic types before erasing their abstract identity. -/
 def typeUses : STyp → List STyp
   | t@(.dyn ..) => [t]
+  | .tuple types => types.flatMap typeUses
   | .ptr _ _ t | .range t _ _ _ | .array t _ | .wrap t | .embed t _ _ => typeUses t
   | .entry _ none => []
   | .entry _ (some t) => typeUses t
@@ -90,7 +92,7 @@ def statementUses : SAnw → List STyp
   | .cond _ s arms none => statementUses s ++ statementsUses arms
   | .cond _ s arms (some other) => statementUses s ++ statementsUses arms ++ statementUses other
   | .cases _ arms => statementsUses arms
-  | .elsif _ s | .arm _ _ s | .each _ _ _ _ _ _ _ s | .retry _ s | .loop _ s
+  | .elsif _ s | .arm _ _ s | .each _ _ _ _ _ _ _ s | .boundedLoop _ s | .retry _ s | .loop _ s
   | .waive _ s | .trim _ _ s | .locks _ _ s | .watch _ s | .grow _ _ s | .child s =>
     statementUses s
   | .callIndElse _ _ _ body | .callElse _ _ _ body => statementUses body

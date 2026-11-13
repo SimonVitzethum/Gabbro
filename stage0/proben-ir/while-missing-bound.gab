@@ -1,0 +1,6 @@
+module ir_while_missing_bound {
+impl fn main() -> u64 in 0 .. 100 effects { pure } {
+    while false on_exceeded overrun { }
+    return 0;
+}
+}

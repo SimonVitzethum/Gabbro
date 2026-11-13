@@ -1,0 +1,15 @@
+// A false test after three passes must skip the deliberately invalid handler. Exit 3.
+module ir_while_early {
+assume tick "The probe detects an unexpected overflow call." falsifier probe_tick;
+syscall overrun() -> u64 in 0 .. 0
+    abi linux arch x86_64 number 39
+    regs in { } regs out { rax } clobbers { rcx, r11 } errors { }
+    effects { pure } costs <= 8 ops assume tick falsifier probe_tick;
+impl fn main() -> u64 in 0 .. 100 effects { pure } {
+    let mut cursor : u64 in 0 .. 100 = 0;
+    while cursor < 3 bounded 8 ops on_exceeded overrun {
+        cursor = (cursor + 1) % 100;
+    }
+    return cursor;
+}
+}

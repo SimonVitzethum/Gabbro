@@ -1,5 +1,6 @@
 module
 
+public import Grammatik.Parser.Stmt.BoundedRewrite
 public import Grammatik.Parser.Elab.Konst.Replacement
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.Export.ExportMetadata
@@ -239,6 +240,11 @@ def ersetzeSAnwIn (shadowed : List String) (fns : List UKonstFn) : SAnw → Exce
           | .ok iv' => .ok (.each b (some ov') k s' m r (some iv') d')
           | .error e => .error e
         | _, .error e => .error e
+  | .boundedLoop h b =>
+    do
+      let header ← mapBoundedHeaderM (ersetzeSExprIn shadowed fns) pure h
+      let body ← ersetzeSAnwIn ((boundedLoopLocals h).map Prod.fst ++ shadowed) fns b
+      pure (.boundedLoop header body)
   | .retry h b =>
     match ersetzeSAnwIn shadowed fns b with
     | .error e => .error e

@@ -189,6 +189,9 @@ def parsePrimary (f : Nat) (toks : List Token) :
       parseEingebaut f "aligned" 2 rest
     | .zeichen "(" :: rest => match parseOr f rest with
       | .ok (e, .zeichen ")" :: rest') => .ok (e, rest')
+      | .ok (e, .zeichen "," :: rest') => do
+        let (values, tail) ← parseTupleElements f rest'
+        parseSuffixe f (.built "#tuple" (e :: values)) tail
       | .ok (_, _) => .error "( without )"
       | .error e => .error e
     | t :: _ => match nameText t with
@@ -197,6 +200,17 @@ def parsePrimary (f : Nat) (toks : List Token) :
         else parseKopf f toks
       | none => .error "expression expected"
     | [] => .error "expression expected"
+/-- A comma has already selected a tuple; singleton/trailing-comma forms are refused. -/
+def parseTupleElements : Nat → List Token → Except String (List SExpr × List Token)
+  | 0, _ => .error "tuple expression: parser fuel exhausted"
+  | f + 1, tokens => do
+    let (value, rest) ← parseOr f tokens
+    match rest with
+    | .zeichen "," :: tail =>
+      let (values, rest) ← parseTupleElements f tail
+      pure (value :: values, rest)
+    | .zeichen ")" :: tail => pure ([value], tail)
+    | _ => throw "tuple expression: comma or closing parenthesis expected"
 /-- Ordered literal elements. Nested brackets belong to the recursively read
     expression; only the delimiter after that complete expression closes this row. -/
 def parseArrayElements (f : Nat) (toks : List Token) :
@@ -285,6 +299,7 @@ def parseSuffixe (f : Nat) (e : SExpr) (toks : List Token) :
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match toks with
+    | .zeichen "." :: .num position :: rest => parseSuffixe f (.field e (toString position)) rest
     | .zeichen "." :: t :: rest => match nameText t with
       | some s => parseSuffixe f (.field e s) rest
       | none => .error "field name expected"

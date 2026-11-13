@@ -118,6 +118,8 @@ def hatKonstRufSAnw (namen : List String) : SAnw → Bool
     hatKonstRufSExpr namen s ||
     (match i with | none => false | some v => hatKonstRufSExpr namen v) ||
     hatKonstRufSAnw namen d
+  | .boundedLoop raw b =>
+    (boundedLoopExpressions raw).any (hatKonstRufSExpr namen) || hatKonstRufSAnw namen b
   | .retry _ b => hatKonstRufSAnw namen b
   | .loop _ b => hatKonstRufSAnw namen b
   | .waive _ b => hatKonstRufSAnw namen b
