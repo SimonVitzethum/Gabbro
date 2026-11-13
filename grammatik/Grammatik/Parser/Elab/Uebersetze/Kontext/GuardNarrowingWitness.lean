@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Parser.Elab.Uebersetze.Kontext.GuardNarrowing
 public import Grammatik.Parser.Elab.Uebersetze.Kontext.GuardRelation
+public import Grammatik.Parser.Elab.Uebersetze.Kontext.GuardMutable
 public import Grammatik.Parser.Elab.Uebersetze.Folds.Expressions
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil10
 public import Grammatik.Parser.Elab.UebersetzeAllg.Teil5
@@ -61,6 +62,7 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 import all Grammatik.Parser.Elab.Uebersetze.Kontext.GuardNarrowing
 import all Grammatik.Parser.Elab.Uebersetze.Kontext.GuardRelation
+import all Grammatik.Parser.Elab.Uebersetze.Kontext.GuardMutable
 import all Grammatik.Parser.Elab.Uebersetze.Narrowing
 
 /-
@@ -144,12 +146,15 @@ public theorem guard_switch_zeuge :
   injection h with h
   exact absurd (congrArg List.length h) (by decide)
 
-/-- A `let mut` local gets no fact: the result is the plain reading of the branches. -/
+/-- A `let mut` local keeps its declared range under its original name: each branch's read is now replaced
+    by a fresh snapshot, but this diagnostic reader deliberately inspects the original name `i`. -/
 public theorem guard_mutable_no_fact_zeuge :
     stmts (uCond seen {context with muts := ["i"]} lt10 useI none [] elseI useI) =
       .ok [UStmt.ifBeg (.cmp "<" (.param "i") (.lit 10)),
+        UStmt.bind "#mut:i" (some (0, 9)) (.eng (.param "i") 0 9),
         UStmt.bind "seen" (some (0, 100)) (.param "i"),
         UStmt.ifElse,
+        UStmt.bind "#mut:i" (some (10, 100)) (.eng (.param "i") 10 100),
         UStmt.bind "seen" (some (0, 100)) (.param "i"),
         UStmt.blkEnd,
         UStmt.bind "seen" (some (0, 100)) (.param "i")] := by cbv

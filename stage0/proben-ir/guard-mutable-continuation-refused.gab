@@ -1,0 +1,10 @@
+// The then block always returns, but the else block assigns b = 0. The continuation must not use the
+// negated guard to claim b = 20: the annotated singleton binding is refused against b's declared 0 .. 20.
+module ir_probe {
+impl fn main() -> u32 in 0 .. 20 {
+    let mut b : u32 in 0 .. 20 = 20;
+    if b < 20 { return 0; } else { b = 0; }
+    let k : u32 in 20 .. 20 = b;
+    return k;
+}
+}

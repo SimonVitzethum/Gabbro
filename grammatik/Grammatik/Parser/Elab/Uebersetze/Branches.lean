@@ -3,6 +3,7 @@ module
 public import Grammatik.Parser.Elab.Uebersetze.CallElse
 public import Grammatik.Parser.Elab.Uebersetze.Kontext.GuardNarrowing
 public import Grammatik.Parser.Elab.Uebersetze.Kontext.GuardRelation
+public import Grammatik.Parser.Elab.Uebersetze.Kontext.GuardMutable
 public import Grammatik.Parser.Elab.Uebersetze.Tagged.Equality
 import all Init.Data.Repr
 import all Init.Data.String.Defs
@@ -268,16 +269,21 @@ def uCondPlain
     The relational facts of the condition (`uRelFakten`: `thenR`, `elseR`, `postR`, on the same paths as the
     bounds) are applied after the rebindings (`uRelBlock`): each block reads every difference of two locals the
     facts bound as a fresh local, bound once after the rebindings to the narrowed difference. The tests of
-    `terminal` and `thenEnds` read the source as written. -/
+    `terminal` and `thenEnds` read the source as written.
+
+    Mutable unary facts (`thenM`, `elseM`) instead use `uMutBlock`: a fresh immutable snapshot replaces only
+    straight-line reads before assignment, including the value of the first plain assignment. These facts
+    apply only to the then block and a plain else block, never an else-if chain or the continuation. -/
 def uCondGuard
     (run : UCtx → List SAnw → Except String (List UStmt × UCtx))
     (ctx : UCtx) (cv : UEns) (thenF elseF postF : List (String × Int × Int))
     (thenR elseR postR : List (String × String × Int))
+    (thenM elseM : List (String × Int × Int))
     (c : SExpr) (ss : List SAnw) (e : Option SEnde)
     (ei : List SAnw) (els : Option SAnw) (rest : List SAnw) : Except String (List UStmt × UCtx) :=
-    let (thenB, ctxT0) := uWaechterBinde ctx thenF
-    let (thenRB, ctxT, ssT, eT) := uRelBlock ctxT0 thenR ss e
-    let (elseB, ctxE0) := uWaechterBinde ctx elseF
+    let (thenMB, ctxTM, ssM, eM) := uMutBlock ctx thenM ss e
+    let (thenB, ctxT0) := uWaechterBinde ctxTM thenF
+    let (thenRB, ctxT, ssT, eT) := uRelBlock ctxT0 thenR ssM eM
     match run ctxT ssT with
     | .error err => .error err
     | .ok (body, ctxB) =>
@@ -291,13 +297,15 @@ def uCondGuard
         match (match ifElse with
             | .none => .ok []
             | .some (.block ss2 e2) =>
-              let (elseRB, ctxE, ss2', e2') := uRelBlock ctxE0 elseR ss2 e2
+              let (elseMB, ctxEM, ss2M, e2M) := uMutBlock ctx elseM ss2 e2
+              let (elseB, ctxE0) := uWaechterBinde ctxEM elseF
+              let (elseRB, ctxE, ss2', e2') := uRelBlock ctxE0 elseR ss2M e2M
               match run ctxE ss2' with
               | .error err => .error err
               | .ok (b2, ctx2) =>
                 match uFoldEndeStmt ctx2 e2' with
                 | .error err => .error err
-                | .ok end2 => .ok (elseB ++ elseRB ++ b2 ++ end2)
+                | .ok end2 => .ok (elseMB ++ elseB ++ elseRB ++ b2 ++ end2)
             | .some _ => .error "else without block" : Except String (List UStmt)) with
         | .error err => .error err
         | .ok elseS =>
@@ -311,7 +319,7 @@ def uCondGuard
           | .error err => .error err
           | .ok (xs, cE) =>
             let kopf := if terminal then UStmt.ifEnde cv else UStmt.ifBeg cv
-            .ok ([kopf] ++ thenB ++ thenRB ++ body ++ endS ++ [UStmt.ifElse] ++ elseS ++ [UStmt.blkEnd] ++ post ++
+            .ok ([kopf] ++ thenMB ++ thenB ++ thenRB ++ body ++ endS ++ [UStmt.ifElse] ++ elseS ++ [UStmt.blkEnd] ++ post ++
               postRB ++ xs, cE)
 
 /-- Conditional branches. With narrowing off (`ctx.narrow = false`, the default: the canonical exporter and
@@ -319,7 +327,8 @@ def uCondGuard
     Stage-0 compiler, `Stage0.Frontend.elabExpanded`) the facts of the condition (`uWaechterFakten`) are kept
     for the locals each block reads (`uWaechterGelesen`: the then block with its ending, the `else` block or
     `else if` chain, the continuation), and so are its relational facts between two such locals (`uRelFakten`);
-    a condition with neither is read exactly as before (`uCondPlain`), one with any by `uCondGuard`. -/
+    mutable unary facts (`uMutFakten`) apply only within a then or plain else block. A condition with no facts
+    is read exactly as before (`uCondPlain`), one with any by `uCondGuard`. -/
 def uCond
     (run : UCtx → List SAnw → Except String (List UStmt × UCtx))
     (ctx : UCtx) (c : SExpr) (ss : List SAnw) (e : Option SEnde)
@@ -347,9 +356,14 @@ def uCond
           let thenR := uRelFakten ctx cv true
           let elseR := uRelFakten ctx cv false
           let postR := if thenEnds then elseR else []
-          match thenF, elseF, postF, thenR ++ elseR with
-          | [], [], [], [] => uCondPlain run ctx c ss e ei els rest
-          | thenF, elseF, postF, _ => uCondGuard run ctx cv thenF elseF postF thenR elseR postR c ss e ei els rest
+          let thenM := uMutFakten ctx cv true
+          let elseM : List (String × Int × Int) := match ei, els with
+            | [], some (.block ..) => uMutFakten ctx cv false
+            | _, _ => []
+          match thenF, elseF, postF, thenR ++ elseR, thenM ++ elseM with
+          | [], [], [], [], [] => uCondPlain run ctx c ss e ei els rest
+          | thenF, elseF, postF, _, _ =>
+            uCondGuard run ctx cv thenF elseF postF thenR elseR postR thenM elseM c ss e ei els rest
     else uCondPlain run ctx c ss e ei els rest
 
 /-- With the compiler's switch on, an equality of two tagged values is read as its complete

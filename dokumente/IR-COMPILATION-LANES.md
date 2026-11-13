@@ -607,11 +607,11 @@ from this fixture; remaining userspace form adapters and named canonical prerequ
 The canonical frontend already collects `atomT` into atomic globals and exact
 payload lists, lowers atomic reads, publish and exchange into G, and checks
 concurrent declarations. The actual Stage-0 emitter already implements scalar
-publish (store), awaits (load), exchange (CAS loop) and exclusive recursive locks
+publish (store), awaits (load), exchange (CAS loop) and exclusive FIFO ticket locks
 (take/body/release, including leave/next release stubs). Their generic proof path
-is `lowS_ok`/`lowB_ok`/`lowEnd_ok`, `locks_ok`, `awaits_ok`, and the image theorem
+is `lowS_ok`/`lowB_ok`/`lowEnd_ok`, `locks_okT`, `awaits_ok`, and the image theorem
 consumed by `irBild_correct`. These are existing cases, not new IR-09 coverage.
-All inherited `WeltAt`, `SyncOK`, `SichtOK`, gate and runner-kernel premises remain.
+All inherited `WeltAt`, `TicketSync`, `SichtOK`, gate and runner-kernel premises remain.
 This inventory does not identify the sequential image simulation with a complete
 GX interleaving/weak-memory compiler theorem.
 
@@ -619,8 +619,10 @@ The lock-body admission gate now recursively accepts `onWhy`, `floatLit` and
 `floatOf` when their continuations are return-free. `retFreiGrundArms_istZ` and
 the extended mutual `retFreiS_istZ`/`retFreiB_istZ` prove that every admitted
 body still excludes both ordinary and reason returns. The existing actual
-`lowS` lock branch consumes this gate, and its existing generic `locks_ok`
-composition supplies release on normal completion, leave and next. Float range
+`lowS` lock branch consumes this gate, and its existing generic `locks_okT`
+composition supplies release on normal completion, leave and next under `TicketSync` and `HeldIn`. The gate
+also checks `ueberBodenB V.boden (D.rang Lk)`: together with the rank premise, `HeldIn.frei` proves
+the lock is not already held. Float range
 failures remain logic stops. No ABI representation or atomic algorithm changes.
 
 Exact remaining prerequisites/restrictions:
@@ -649,16 +651,6 @@ coverage only until IR-04 connects those source forms. The new textual case is
 reason dispatch under a lock, including loop early exits and subsequent lock
 reacquisition. Float binders must not be counted as newly accepted source forms.
 
-Measured for this extension: direct slot-4 checks of Code, OhneRet, the dependent
-statement/block/endblock and image proof chain, current Frontend/Compiler/Bindung,
-IRBild and Sperre.Proben passed in the private artifact overlay. Six textual
-source-to-IR-to-ASM cases matched: lock-reason-dispatch, why-dispatch, why-jumps,
-atomic-payload-lock (42 each), sperre and atomar (208 each). The RCU declaration
-probe refused explicitly with `item without G form`. Axiom audits of
-retFreiGrundArms_istZ, retFreiB_istZ, locks_reason_zeuge, locks_ok, lowS_ok and
-irBild_correct contain only standard axioms (the admission/emission witness
-needs only propext and Quot.sound). No grammar build or guardian ran. Scratch
-and full logs remain local in scratch/ir09; no aggregate consumer ABI was changed.
 ### IR-01 nested constant-array contract guard closure
 
 The frozen `elabWithScopes` body retains the canonical nested
@@ -1240,7 +1232,7 @@ proofs and the still missing export obligations, not a completed source theorem.
 | A06 table constants, `ops insert/remove/relabel`, `occupied f`, on represented scalar tables | `Uebersetze.lean:1132/1163/1165`, `table without G form` for non-invariant parts | Generated Fn/signatures/requires/calls/conditionals/stores (S header :31; ordinary `Stmt`/`Programm`) | `lowE_ok`/`lowS_ok`/`lowFun_spec` for generated functions. Generate freshness/reachability/leaf/occupancy contracts, exact effects and `by ops` writer discipline. No dedicated ops instruction is needed; a generic source generator proof is still missing. |
 | A07 scalar dynamic arena ceiling, constant `grow ... by n else ...`, dynamic alloc over represented storage | `Uebersetze.lean:3992` (`arena with a dynamic ceiling without G form`), :2538 (`... grow`) | `DynForm`, `Block.dynGrowB/dynAlloc` in `Bausteine/Arena/ArenaDyn.lean:270/341/362`, reducing to check/narrow/stores | `lowE_ok`/`lowB_ok`/`blockCheck_case`; canonical `dynGrow_commit`/`dynAlloc_simuliert`. Export committed counter, `used <= committed <= M`, failure and effects. Physical provision/commit is B06/C08, not established by a counter update. |
 | A08 scalar `free A[i]` and free-list allocation | `Uebersetze.lean:2538`, `stmt without G form: free`; no reuse export | `FreiForm`, `Block.freiVar` (`Arena/Struktur/Formen/ArenaAllocForm.lean:34`), `Block.freiNimm` (`Arena/Struktur/ArenaFrei.lean:386`) | Existing store/bind/check proofs; canonical `freiVar_ausfuehren`/`freiVar_lebt`, ownership `release_post`/`allocList_post` (`Arena/Ownership/Body/Forms.lean:195/125`). Attach the actual ownership judgment: consume origin, invalidate aliases, prevent double-free/use-after-free. Two emitted stores alone do not close this. |
-| A09 arena lock carriers and table/arena group invariants | `Uebersetze.lean:1181` (`arena under a lock without G form`), :4338 (`invariant carrier without G form`) | `D.braucht/traeger`, `Programm.invariante`, `Stmt.locks` (S:190/206/813/605) | `locks_ok`, `lowS_ok`/`lowB_ok`. Preserve table-cell footprints, metadata guards, rank/U003 and restores. An invariant over a counter/global has the separate C05 boundary; do not disguise that global as a table carrier. |
+| A09 arena lock carriers and table/arena group invariants | `Uebersetze.lean:1181` (`arena under a lock without G form`), :4338 (`invariant carrier without G form`) | `D.braucht/traeger`, `Programm.invariante`, `Stmt.locks` (S:190/206/813/605) | `locks_okT`, `lowS_ok`/`lowB_ok`. Preserve table-cell footprints, metadata guards, rank/U003 and restores. An invariant over a counter/global has the separate C05 boundary; do not disguise that global as a table carrier. |
 | A10 already evaluable constant expressions in counts, bounds, lock ranks, payload ranges and initializers | `Uebersetze.lean:998/1018/1022/1033/1067/1212/1805/2853/2860/3816/3892/3915/4226` | Existing typed bounds, literal indices/counts, `D.rang`, `Expr.lit`, initial values | `lowE_ok` and existing initialization. Reuse checked scopes with exact sign/range/overflow/storage width. Only expressions already denoted by the canonical constant evaluator qualify; arbitrary compile-time control/contracts are C17.  **Batch 2 bounded export:** compound counts and ranks reuse exact singleton constant bounds; scalar initializers reuse `uKonstWert` at their declared range, including intermediate overflow checks. `checkConstants` retains original-source metadata duties before normalization. The current image still zero-fills world memory: `Frontend.checkInitializers` precisely refuses newly expanded nonzero scalar initializers before image emission, and this check is retained by `compile_source_program`. Zero initializers, counts and ranks execute; nonzero initializer G preservation is not counted as image completion. General constant-function evaluation remains C17. |
 | A11 constant numeric state stages and transition through a table capability | `Uebersetze.lean:4306` (`state stage without G form`), :2513 (`transition through a pointer without G form`) | `D.erlaubt`, `Stmt.shift` (S:161/588) | `shift_ok` in `lowS_ok` :159. Preserve actual constant stage values, declared edge/range, table identity, write/guard checks and prestate failure. Do not replace numeric stages by ordinals. Edge contracts are C04. |
 | A12 implication `p => q` | `Uebersetze.lean:1604`, computed `ensures clause without G form` default | `Expr.impl = or (not p) q` (Z:139) | `lowE_ok` Boolean branches. Preserve predicate/binder scope, footprint and old/result legality, including generated contracts/invariants.  **Bounded export connected:** `implication_export/lower/meaning/scope`, original `old(global)` restoration, and character-pinned source witness. Unsupported metadata-bearing invariant/spec contexts remain refused. |
@@ -2216,7 +2208,7 @@ references in `crates/gabbro-check/src/schablonen.rs` are not a connected
 | Race/invariant boundary | RCU protects lifetime, not arbitrary in-place mutation. `beispiele/31` reads `Konten.zaehler` without the writer lock while another function writes it: that pair cannot be admitted by merely adding `observing`. Published non-atomic carriers remain immutable until grace; updates create another version, and mutable shared payload uses an independently proved atomic interface. Existing lock guards remain obligations: observing cannot bypass `D.braucht` or invalidate `SperrSichtG`. For the first complete cut, use disjoint declared carriers for versions, separate writer metadata locks and a checked version registry. Arbitrary dynamic versions require C12/C08's live region realization and an injective version-to-carrier/extent map. W currently treats a whole table as one location (`Spec.lean` header): do not silently identify different slots with independent W locations or drop table/group invariants. Any finer location extension must retain the aggregate invariant/frame results and be reviewed explicitly; otherwise such same-table updates remain refused. Full lifecycle support is not permission to accept unsafe combinations of existing clauses. |
 | GX/weak memory | Extend `Speichermodell/Atomar/AtomarLauf.RufSchrittGX`, `Maschine/GXMaschine`, `Maschine/MaschineW`, `Maschine/Sicht` and `Maschine/DRF`: RCU ledger state is authoritative, unchanged by arbitrary presentations of shared atomic values. Derive publication visibility from the actual release/acquire reads-from chain, and grace completion from a proved synchronization protocol over that history, not the latest G value or one arbitrary GX counter answer. Retired generations cannot be reintroduced by a stale root read: bind observation validity and retirement to the protocol, with validation/retry where needed. Prove **new** `RcuInvG/RcuInvGX`: every observed capability live, every reclaimed object unreachable by outstanding readers, and published invariant stable for the captured generation. User duties cover all allowed shared-atomic answers as `KoerperGutSA` does today. New synchronization steps require a matching W-protocol refinement witness; ordinary GX shared-atomic reads remain arbitrary. A new memory-order primitive needs its W rule and lowering proof before use; never assume SC. |
 | Rank, waiting and progress | RW wait edges point only to incompatible holders and retain strict rank. A grace wait is not a lock acquire and cannot inherit a fictitious rank. Admit synchronous grace only outside observations and with **no held locks**, no outstanding joins/loans whose completion readers require; keep readers free of grace/join dependency cycles through transitive callee checks. Extend the combined wait graph and `KeinWarteZyklus` proof to grace edges, using the existing lock/start/join order plus these exclusions. Retire under a writer lock, release it, wait, then reacquire in rank order if needed; defer reclaim when source cannot do that. Extend `FortschrittG/FX` to expose an actual waiting dependency, not a new unproved “hardware” stop. No starvation/grace-time bound follows without the existing separate scheduling/termination duties; synchronous grace with an infinite reader may wait, but must not create a cyclic dependency. Check same-core handler dependencies in `Eigenschaften/KernMaske` too. |
-| Export/Stage 0 | Coordinates `Uebersetze.lean:1203/1212/2538/3590/4039`: retain shared declaration/mode, `SItemTief.rcuT`, `SAnw.watch`, reclaim expression and all exits. IR-09 owns shared acquisition/release, atomics and RCU protocol; IR-07 owns lifetime transitions; IR-08/10 share C11 cleanup; IR-06/03 supply captured capability spans; IR-12 supplies starts. `stage0/Stage0/Senke/Sperre/{Code,Lauf,Sync,Satz}` currently proves exclusive `locks_ok`, not shared or RCU. Prove mode-aware assembly protocol and observation/grace/reclaim calls against G/GX/W, including nesting, early return and actual memory effects. Connect through `lowS_ok/lowB_ok/lowEnd_ok` and the function/image chain. Sequential `AgreeW` alone does not establish concurrent synchronization. Reuse the assembly runner; do not create a second runner. |
+| Export/Stage 0 | Coordinates `Uebersetze.lean:1203/1212/2538/3590/4039`: retain shared declaration/mode, `SItemTief.rcuT`, `SAnw.watch`, reclaim expression and all exits. IR-09 owns shared acquisition/release, atomics and RCU protocol; IR-07 owns lifetime transitions; IR-08/10 share C11 cleanup; IR-06/03 supply captured capability spans; IR-12 supplies starts. `stage0/Stage0/Senke/Sperre/Ticket/{Code,Sync,Satz}` currently proves exclusive `locks_okT`, not shared or RCU. Prove mode-aware assembly protocol and observation/grace/reclaim calls against G/GX/W, including nesting, early return and actual memory effects. Connect through `lowS_ok/lowB_ok/lowEnd_ok` and the function/image chain. Sequential `AgreeW` alone does not establish concurrent synchronization. Reuse the assembly runner; do not create a second runner. |
 
 Witnesses: two simultaneous readers, excluded writer, writer release followed by
 reader visibility, reader calling a reader-held function; two published versions,
@@ -2253,7 +2245,7 @@ pending the lead's module checks and standard-axiom audit.
 | Allocation export/IR | `Uebersetze.lean:3536` and `UebersetzeAllg3.lean:957/1251` separate no-else admission from A23's missing Endblock sugar. Implement both Block/Endblock required narrowing paths and source capacity obligations; keep supplied else semantics unchanged. Reuse existing `lowB_ok/lowEnd_ok` narrow/store/bind code with an explicit failed-capacity trap matching logical failure, proved unreachable under the user duty. Re-establish `ArenaReset.reset_alloc_laueft_rumpf`, fresh-generation facts and `ArenaOwnership` allocation/state agreement on the shared body. IR-07 owns capacity/liveness, IR-08 control, IR-10 duty propagation. |
 | Resource-aware return | Replace `Stmt.ret/retWhy` and `Endblock.ret/retWhy`'s bare `Λ.Perm V.ende` evidence by **new** `RueckRessourcen`: exact residual `V.ende` plus a list of locally acquired scopes to close. Exact return is its empty-cleanup case; keep one return API. A **new** scope-indexed `cleanupB` and soundness judgment traverse the actual syntax, recording each lexical acquisition/observation and borrowed signature resource. They must verify that the return's list is exactly the crossed scopes in reverse order, not an arbitrary erase of extra resources. Calls inherit held resources but never acquire permission to release the caller's signature locks. Owner moves/loans remain conserved, marks cannot be discarded as cleanup, and returned capabilities cannot borrow a scope that is about to end. Add this check to `AkzeptiertSpec(X)`/`Akzeptiert`, with proofs and export correspondence. |
 | Return G/replay | Evaluate and save the full return value/reason while all required guards still hold. Append a **new** pending-return continuation to `GRest`, retaining the saved result and exact residual resources; unwind each real `frei`/observation scope once, check its owed lock/lifetime invariant, then perform the existing value/reason pop and call-log return. The sequential `execStmt/execEnd` rules propagate the saved result while existing enclosing lock `mapWelt (·.gibt L)` releases it; never also release inside the leaf. Prove sequential/G replay equality with the pending cleanup. Generalize `GRest.anRueck_perm`/`Stmt.istRueck_perm` in `Nebenlaeufigkeit/Allgemein/Verklemmung/T2` to the residual resources **after** cleanup; immediate pop at the inner return is no longer valid. Preserve `SperrWechselG`, `InvAmGrundG`, floors, old-entry snapshots and both success/reason contracts. Leave/next keep their existing `peelFreiLeave/Next` behavior and use the same scoped cleanup relation when generalized. |
-| Return exporter/IR | Remove `UebersetzeAllg3.lean:178/799`'s `return under locks` only when scope evidence is generated. In `stage0/Stage0/Senke/Anweisung.lowS`, `Sperre/OhneRet`, `Sperre/Satz.locks_ok` and `retC`, replace the `retFreiB` gate with proved exit classification and one shared cleanup-target mechanism. Save the whole result span in reserved storage across releases/calls; emit reverse-order releases before the outer contract/return epilogue. Share ordinary/reason/observation exits with IR-08/09/10, respecting IR-03 spans and IR-10 old snapshots. Prove releases on every crossing edge, no release of an unentered scope, no double release, restored masks, preserved saved value and exact final resources. Removing `retFreiB` without this proof is explicitly insufficient. |
+| Return exporter/IR | Remove `UebersetzeAllg3.lean:178/799`'s `return under locks` only when scope evidence is generated. In `stage0/Stage0/Senke/Anweisung.lowS`, `Sperre/OhneRet`, `Sperre/Ticket/Satz.locks_okT` and `retC`, replace the `retFreiB` gate with proved exit classification and one shared cleanup-target mechanism. Save the whole result span in reserved storage across releases/calls; emit reverse-order releases before the outer contract/return epilogue. Share ordinary/reason/observation exits with IR-08/09/10, respecting IR-03 spans and IR-10 old snapshots. Prove releases on every crossing edge, no release of an unentered scope, no double release, restored masks, preserved saved value and exact final resources. Removing `retFreiB` without this proof is explicitly insufficient. |
 
 Witnesses: empty and multi-node consuming tree/queue with deletion and a falling
 measure, two eligible leaves with deterministic selection, nontrivial projection
@@ -2564,7 +2556,7 @@ implements N cells nor supplies the `min` neutral value.
 | Correct concurrency first | Use one existing exclusive lock per private carrier around the complete load/merge/store. This is a concrete safe expansion for reentrant/same-core updaters and gives live readers race-free cells. It avoids needing an unproved assertion that one hardware core implies one unfinished writer. Generate a compatible total lock-rank order and infer/check caller floors after expansion; update holds only its selected cell lock. Prove an optional lock erasure only when a C09-style unique updater lease excludes every conflicting update/read throughout the emitted sequence; this optimization is not required for completion. Never implement a plain load/store under the Rust per-core exemption, or add an unbounded CAS loop under a bounded source cost. |
 | Neutral values/operators | Use the mathematical range `[lo,hi]` plus preserved storage width `w`. `max` starts at `lo`, `min` at `hi`; `add` starts at 0, which must inhabit the declared range; bitwise `or` starts at all-zero and `and` at the w-bit all-ones pattern (signed interpretation is explicit). Require the bit-pattern neutral and every returned fold value to inhabit the declared type; reject a restricted range lacking them rather than silently use 0. Bool or/and use false/true. Prove max/min/bitwise laws on those typed encodings, extending the existing abstract `MergeMonoid` facts; its Nat-max/Bool-or instances do not prove signed word cases. Checked integer add uses mathematical sums with user range/overflow duties at each cell update **and each actual reduction prefix**. It is not automatically a total monoid on a bounded subtype, and wrapping/saturation is never implicit; wrapping needs its explicit C13 type/rule. |
 | History and quiescence | Define **new** `AccHistory` from generated update call/store records, grouped by accumulator and queried core. At the actual store, record its saved argument/core and pre/post cell values in the shared ghost history; retain an in-flight contribution until the matching release/completion. A failure before any store adds none; a later failure cannot erase a store already performed. Prove each guarded cell equals its completed fold plus any committed in-flight contribution since one-time initialization. For live reads, take/release cell locks in index order and return the fold of those recorded samples; no whole-fold linearizability claim. Define **new** `AccQuiescent` over the read interval: initialization complete and no update in flight or occurring in that interval. Derive it from a proved joined/frozen writer phase or an internal all-cell lock scope acquired in increasing rank, never from a caller-provided Bool. Under it, prove sampled fold equals fold of all contributions and the abstract neutral-start RMW chain. Conditional permutation equality for checked addition requires all compared prefixes in range; nonnegative contributions suffice if the total fits, mixed signs need the stronger prefix duty. No reset/restart of initialized cells while a writer or observation survives. |
-| Admission/Spec/IR | Add **new** `accumulatorB`/`AccumulatorAdmission` to `AkzeptiertSpec(X)` and Bool: N/identity/schema, generated private storage and lock access only, exact core binding, neutral initialization, complete call graphs/effects/floors and source expansion. Semantic query/range/quiescence facts are source-derived `NutzerPflicht(A)` duties. Add **new** `AccumulatorTreueG` to the goal for cell/history equality and conditional quiescent reduction; ordinary `RennfreiBisGA`, group invariants and `KernHaltEA` still apply. IR-09 proves actual lock protocol via `Senke/Sperre/Satz.locks_ok`; IR-02/03/13 provide checked typed merge/fold; IR-11 core binding; IR-12 one-time cell initialization/start ordering; IR-08/10 control/call closure. Connect `lowS_ok/lowB_ok/lowEnd_ok`, `Rekursion.lowFun_spec` and source/image theorems. Count generated dispatch, N reads, checks, locking and query in costs; refuse an unsupported declared bound instead of retaining the source's old constant cost. Lock-wait bounds retain the existing explicit qualifications. |
+| Admission/Spec/IR | Add **new** `accumulatorB`/`AccumulatorAdmission` to `AkzeptiertSpec(X)` and Bool: N/identity/schema, generated private storage and lock access only, exact core binding, neutral initialization, complete call graphs/effects/floors and source expansion. Semantic query/range/quiescence facts are source-derived `NutzerPflicht(A)` duties. Add **new** `AccumulatorTreueG` to the goal for cell/history equality and conditional quiescent reduction; ordinary `RennfreiBisGA`, group invariants and `KernHaltEA` still apply. IR-09 has the uncontended ticket-lock simulation `Senke/Sperre/Ticket/Satz.locks_okT`; contended WAIT/retry/WAKE and cross-thread invariants are owed (`Ticket/Offen.lean`); IR-02/03/13 provide checked typed merge/fold; IR-11 core binding; IR-12 one-time cell initialization/start ordering; IR-08/10 control/call closure. Connect `lowS_ok/lowB_ok/lowEnd_ok`, `Rekursion.lowFun_spec` and source/image theorems. Count generated dispatch, N reads, checks, locking and query in costs; refuse an unsupported declared bound instead of retaining the source's old constant cost. Lock-wait bounds retain the existing explicit qualifications. |
 
 **Spec:** add cell/history and conditional quiescent equality, with the core
 identity provenance in user logic. Do not add a per-core race exemption or make
@@ -3077,7 +3069,7 @@ Open (exact):
 - The 500-line rule: `Ausdruck.lean` (about 620 lines), `Satz.lean` and `Anweisung.lean` exceed it as they did before
   this lane; they are the `lowE`/`lowS` mutual definitions and have not been split.
 
-### IR-09 bounded inventory (base ae716338a, 2026-11-01)
+### IR-09 bounded inventory (current ticket code, 2026-11-13)
 
 Read against canonical `Kern/Syntax`, G/GX and the thread machine,
 `Parser/Elab/Uebersetze{,Allg3}`, and the actual Stage0 `lowS`/`lowB`/`lowEnd`,
@@ -3087,7 +3079,7 @@ premises; it never means the missing concurrent GX refinement is proved.
 
 | Owned form/aspect | Status and exact boundary | Connected theorem / prerequisite |
 |---|---|---|
-| Stmt `locks` (exclusive) | Compiled + connected theorem for admitted return-free bodies, including nesting, reason dispatch and loop `leave`/`next` cleanup. `retFreiB = false` or a missing body emitter refuses via `lowFunE`: `uses a form outside the IR fragment`. | `locks_ok`, `retFreiB_istZ`, mutual `lowS_ok`/`lowB_ok`/`lowEnd_ok`, `lowFun_spec`, image theorem and `irBild_correct`. `SyncOK` allows only free/mine locks and zero waiters. |
+| Stmt `locks` (exclusive) | Compiled + connected theorem for admitted return-free bodies, including nesting, reason dispatch and loop `leave`/`next` cleanup. `retFreiB = false` or a missing body emitter refuses via `lowFunE`: `uses a form outside the IR fragment`. | `locks_okT`, `retFreiB_istZ`, mutual `lowS_ok`/`lowB_ok`/`lowEnd_ok`, `lowFun_spec`, image theorem and `irBild_correct`. `TicketSync` ties next/serving words to the held set `H`, with zero waiters in this theorem; `HeldIn.frei` derives free entry from rank and floor. `lowS` also requires `ueberBodenB` and representable exit jumps. |
 | Shared lock acquisition / RCU observation | Refused: `shared lock without G form`; no mode-aware canonical source admission. | Model C10; existing exclusive lock sugar and separate RW lemmas do not establish shared source semantics. Out of this bounded implementation. |
 | Stmt `publish` | Compiled + connected theorem for represented scalar atomic/global values and the exact declared payload; scalar global-store path. | `lowS_ok` publish branch and ordinary world-store proof; image chain preserves existing `SichtOK`/gate premises. Multiword payload/value transport needs IR-03/06; concurrent release/publication preservation needs the missing concurrent proof. |
 | Block `awaits` | Compiled + connected theorem as a scalar acquiring load with the exact declared payload and a compilable continuation. | `awaits_head`/`awaits_ok` in `lowB_ok`; `SichtOK` remains required. Multiword representation: IR-03. Concurrent visibility: missing concurrent proof. |
@@ -3095,10 +3087,10 @@ premises; it never means the missing concurrent GX refinement is proved.
 | Block `exchange` | Compiled + connected theorem for represented numeric updates and compilable continuations; emitted CAS retry loop. Canonical updates other than supported guarded values refuse as `exchange update body other than guarded values without G form` (or the single-value variant). | `ex_tail`/`exch_head`/`exch_ok` in `lowB_ok`; sequential proof takes the successful CAS path. Failed CAS under interference: missing concurrent proof. Wider representation: IR-03. |
 | Endblock `exchange` | Compiled + connected theorem in the same scalar domain. | `endExchange_case` in `lowEnd_ok`; same representation, frontend-update and interference boundaries. |
 | TopLevel `atomT` / ordinary atomic reads | Compiled + connected theorem for zero-initialized Bool/numeric atomics whose range contains zero, with exact payload declarations. Device-observed atomics refuse as `atomic observed by a device without G form` (excluded device scope). Other represented types remain limited by frontend/IR-03. | Canonical atomic-global export, global load/store proofs, checked source provenance and image chain; G/GX ordering refinement remains missing. |
-| TopLevel `lockT` | Compiled + connected theorem for supported declarations with literal rank and no unsupported declaration clauses; masks other than `irqs` refuse as `lock masks something but irqs: no G form`; other unsupported shapes: `lock without G form: NAME`. Arena protection refuses as `arena under a lock without G form`. | `uSperre`, canonical checker and `LaySync`/`SyncOK` lock-word layout. Concurrent masking/ownership refinement remains missing; no hardware masking claim follows from sequential lock code. |
+| TopLevel `lockT` | Compiled + connected theorem for supported declarations with literal rank and no unsupported declaration clauses; masks other than `irqs` refuse as `lock masks something but irqs: no G form`; other unsupported shapes: `lock without G form: NAME`. Arena protection refuses as `arena under a lock without G form`. | `uSperre`, canonical checker and `LaySync`/`TicketSync` ticket-word layout. Concurrent masking/ownership refinement remains missing; no hardware masking claim follows from sequential lock code. |
 | TopLevel `rcuT` / reclamation | Refused: `item without G form`. | Model C10: domain, observation, grace and reclamation semantics/admission/export, then IR-07 lifetime and concurrent IR proof. No missing isolated RCU emitter can close this boundary. |
 | TopLevel `concT`, `start {}` roots / multiple image threads | Compiled + connected **individual-thread** theorems: roots are collected, deduplicated and spawned before main on separate stacks, using real runner OS threads. Parameterized roots refuse as `ir: a root takes parameters`; entry/reason/argument integration belongs to IR-12/03. | `spawnC_ok`, `bild_ok`/`bild_wurzel_ok`, `irBild_correct`, existing `CloneOK`. Missing: simultaneous-thread simulation against GX/thread machine (`ir_parallel`), not a missing spawn emitter. |
-| Contended lock wait / wake | Missing proof: actual `nimmC` already emits failed-CAS, waiter increments, `futexC` WAIT and retry; `gibC` emits WAKE. Existing proofs cover neither foreign ownership nor nonzero waiters. The compiler does not reject these runtime states; its sequential theorem excludes them via `SyncOK`. | `Runner.IR.Kern.ans` is arbitrary; `Runner.Mach` special-cases clone/exit, **not futex**. No existing named assumption specifies futex waiting, wakeup or memory preservation. Do not manufacture one. Selected smallest step: prove the actual failed-acquisition prefix reaches the wait branch with all three lock words unchanged, before any syscall. |
+| Contended lock wait / wake | Emitted by `nimmT`/`gibT`: take a ticket by CAS, wait on the serving word when it is not served, retry a failed ticket CAS, and wake all waiters on release. None of these contended paths has a theorem. | `Ticket/Offen.lean` lists the owed WAIT, CAS-retry, WAKE and stable cross-thread invariant statements and their required real-memory witnesses. The sequential `locks_okT` uses zero waiters and no interference; it does not reject contended runtime states. |
 | Structural/concurrent `ir_parallel` | Missing: no Stage0 theorem relating a multi-thread IR run to existing GX/thread-machine boundaries/interleavings, including atomic retries, lock interference and ordering. | Existing runner SC/TSO simulations relate IR to machine execution; individual `Star`/`AgreeW` results are not this source-concurrency theorem. No full concurrent form is counted complete here. |
 
 This inventory changes no model, source admission, emitter, ABI or named
@@ -3106,89 +3098,38 @@ assumption. Existing scalar refusals remain explicit; no RCU/shared-lock work,
 IR-03 migration, grammar rebuild or concurrent-completion claim is authorized
 by the selected bounded step.
 
-The bounded implementation adds `Sperre/Contended.nimm_contended` to the
-existing lock proof import chain. For arbitrary real code/frame/lock memory
-satisfying `LE`/`LS`, a nonzero owner different from `meW` makes the actual
-`nimmC` reach instruction 22 (the wait branch). The failed CAS returns the
-foreign owner in scratch slot four; owner, recursion count and waiter count
-remain unchanged, as do scratch slots from five on. The theorem holds for
-every existing `Kern` relation and stops before waiter bookkeeping or a syscall.
-It introduces no futex contract and does not extend `locks_ok`'s `SyncOK` domain.
+### IR-09 emitted ticket lock and current proof boundary (2026-11-13)
 
-`ContendedProbe.nimm_contended_zeuge` jointly supplies encoded instruction
-bytes, writable frame/lock memory and all execution premises: this thread is
-1, owner is 2, count is 3 and there are already 5 waiters. Execution reaches
-byte PC 352, retains all three lock words, returns owner 2 in the CAS-result
-slot and preserves the protected frame word 77. This witness is imported by
-the existing `Sperre/Proben` module.
+`stage0/Stage0/Senke/Sperre/Ticket/Code.lean` emits three words per lock:
+next ticket, serving ticket and waiter count. `nimmT` takes a ticket with CAS,
+then checks the serving word; its wait path registers a waiter, waits on the
+serving word, unregisters and checks again. `gibT` advances serving with CAS
+and, when waiters exist, requests wake-all on that word. `locksCodeT` wraps
+the body with take and release, with release stubs for `leave` and `next`
+(body length + 86 instructions). A return in the body remains refused.
 
-Measured in this worktree's private `.claude/ir09/lib` overlay: 159 Stage0 and
-12 runner dependency modules pass direct checks, including the mutual
-statement/block/endblock dispatcher, `lowFun_spec`, `IRBild` and `Haupt`.
-Seven axiom audits (new theorem and memory witness, `locks_ok`, `lowS_ok`,
-`lowFun_spec`, `irBild_correct`, cached `gabbro_ziel`) report exactly
-`propext`, `Classical.choice`, `Quot.sound`. Six existing textual
-source-to-IR-to-assembly regressions pass: lock-reason-dispatch and
-atomic-payload-lock (42), sperre and atomar (208), start-roots (23), faeden (2).
-The RCU probe still refuses with `item without G form`. Layout passes for all
-1478 Lean files; both new Lean files are below 500 lines. Every Lean invocation
-used the capped slot-2 lock with `ELAN_TOOLCHAIN` removed; grammar artifacts
-were reused, with no grammar build or full guardian. This closes only the
-foreign-owner acquisition prefix: full WAIT/WAKE, interference, ordering and
-`ir_parallel` remain open, and no additional source-form family is claimed.
+`TicketOK` relates next and serving to the thread's held set `H`: next is
+serving + 1 for a held lock, serving otherwise. `TicketSync` adds the writable,
+disjoint three-word layout and the stack/frame bounds; its waiter parameter
+defaults to zero. `HeldIn H Λ bo` ties held locks to the static resources and
+function floor. `HeldIn.frei` uses the `Stmt.locks` rank premise and the floor
+rule to prove that a newly taken lock is not in `H`. The actual `lowS` gate
+checks `retFreiB`, `ueberBodenB` and the exit-jump literals before emitting
+`locksCodeT`.
 
-### IR-09 contended WAIT/WAKE sequential facts (base 2d54e78f2, 2026-11-01)
+`locks_okT` in `Ticket/Satz.lean` composes the uncontended take, body and give
+for normal completion, `leave`, `next` and body stops. It supplies the lock
+case of the mutual statement/block/endblock simulation. `Umf` carries
+`TicketSync`, `FunSpec.run` also requires `HeldIn`, and image threads start
+with `H = []`. This is an individual-thread simulation, not a concurrent FIFO
+refinement or a proof of eventual acquisition.
 
-The owner explicitly authorized a named OS binding premise for futex, following
-`CloneOK`/`TorOK`. `Runner.IR.FutexOK spurious` now states exactly the return
-properties used here: a returning WAIT sees a different low 32-bit word or is
-classified by the explicit `spurious` relation; a successful WAKE returns a
-count at most the requested `n`. Negative WAKE error returns are allowed.
-Interruptions, mismatch/error returns and a value changed back before return
-can be classified as spurious. There is no eventual-return, release, scheduling
-or fairness premise, no hardware assumption, and no Lean postulate.
-
-`futex_prepare`, `futex_entry` and `futex_return` simulate the actual request
-setup and syscall. Memory changes during a blocking call are **separate,
-explicit client premises** (`LS` resume state and stable lock-word invariant),
-not consequences of `FutexOK`. In particular the current `AgreeK` frame keeps
-code, non-scratch frame words and the world unchanged across that boundary;
-it is not the missing general source-world interference relation.
-
-`add_waiters` proves the actual seven-instruction successful counter-CAS
-iteration without interference inside that iteration. `LockInv` describes
-stable free/held lock boundaries, including foreign owners and nonzero waiters,
-with recursion and waiter counts below `2^62`. Its counter proofs require room
-before increment and a registered waiter before decrement. `nimm_wait_entry` registers a waiter and reaches WAIT;
-`nimm_wait_retry` consumes a supplied return, unregisters that waiter and jumps
-to instruction **17**, the actual acquisition-CAS retry. `nimm_retry` either
-returns to WAIT with the foreign owner intact or acquires a free lock.
-`nimm_retry_acquired` finishes any finite actual retry history whose supplied
-resume state is free; it does not prove eventual acquisition.
-
-`gib_release` centralizes the last-release prefix through the waiter test.
-`gib_waiters_entry` proves the nonzero-waiter branch reaches WAKE-one;
-`gib_waiters_return` finishes it under an explicit response/frame premise and
-leaves owner/count zero with the same waiter count. Returning WAITs remove their
-own counter entries; WAKE itself does not decrement the counter.
-`LockOK`/`SyncOK` can now specify waiter counts, and their frame/call/monotonicity
-lemmas preserve those exact counts. Their defaults and the existing `locks_ok`
-and source-to-image theorem domains still require zero waiters and free/mine
-ownership, with all existing guarantees retained.
-
-`WaitProbe` supplies encoded instruction bytes and writable real lock/frame
-memory for acquisition after an explicit foreign release, a spurious unchanged
-WAIT followed by a failed retry, WAKE with five waiters, and nonzero-waiter
-`SyncOK` inherited by a callee. These are individual-thread `Star` facts.
-Concurrent `ir_parallel`, interference inside counter CAS loops, general world
-updates while blocked, ordering and progress remain outside this bounded proof;
-no additional source-form family is counted complete.
-
-The `lock-wait-wake` source regression uses bounded long critical sections on
-two real assembly-runner OS threads. It complements the short `sperre` probe:
-tracing the long probe exercises successful sleeping WAIT returns and WAKE-one,
-while the short probe also exercises mismatch returns. This runtime evidence
-is separate from the sequential component proofs and does not close `ir_parallel`.
+`Ticket/Offen.lean` lists what is still owed for the emitted code: the take's
+WAIT path (including its supplied futex response and return to the serving
+check), failed ticket-CAS retry, give with waiters (wake-all), and a stable
+cross-thread invariant excluding modular-counter overflow. Each needs a
+real encoded-memory witness. **There is currently no theorem for these
+contended paths.** The old lock's component proofs do not cover this code.
 
 ## IR-02 wide integer operators in `lowE` (2026-11-01)
 
@@ -3307,9 +3248,6 @@ expected exit and 45 refusals have the expected text. The old I/O probes
 `upper` compiles and exits zero with empty output instead of `ABC`, matching
 the master limitation documented above: its retired driver's implicit I/O
 convention has no image binding. No new convention is assumed here.
-The actual two-thread `lock-wait-wake` image exits 128; its trace has eight
-successful sleeping WAIT returns and ten WAKE-one calls (eight return one,
-two return zero). This evidence does not establish `ir_parallel`.
 
 The forbidden-proof scan passes for 1448 Lean files and layout for 1547;
 no master Lean file below 500 lines crosses that limit. Every Lean invocation
@@ -3345,14 +3283,14 @@ request continuation, allowing other `Tr` threads to run; a returning syscall
 alone supplies no scheduling or eventual-return claim.
 
 Reuse the connected `Sim`/`Reach`/return cases and IR-03 complete-value ABI,
-`locks_ok` and the contended `LS`/`LockInv` WAIT/retry/WAKE components,
+`locks_okT` for the uncontended ticket paths,
 `ex_tail`/`exch_ok`/`awaits_ok` and their payload/visibility premises, and
 `spawnC_ok`/image-root setup. Their existing sequential statements remain
-unchanged. In particular `SyncOK`'s free/mine condition is a local entry
-condition, not a global concurrent invariant: foreign-owned locks require
-`LockInv`, ownership from GX's open-lock traces and separate transient protocol
-states between machine instructions. `AgreeK` footprints compose the private
-frame rely; source stable-carrier preservation reuses `stabilS_relyX`,
+conditional. `TicketSync` relates lock words to this thread's held set and is
+not a global concurrent invariant. The contended ticket paths and cross-thread
+invariant listed in `Ticket/Offen.lean` must be proved, with ownership from GX's
+open-lock traces and transient protocol states between machine instructions. `AgreeK`
+footprints compose the private frame rely; source stable-carrier preservation reuses `stabilS_relyX`,
 `gx_aussen`, and `zielInvSA_schrittGX` from `Speichermodell/Atomar/AtomarLauf`.
 This relation must be maintained at request-continuation granularity
 (`Res IR.T` under `actI`), since other threads can run between the loads and

@@ -63,7 +63,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 |---|---|---|
 | **E1** | **English keywords, German running text, free identifiers** | Caprock's own practice. The vocabulary is a **closed table**; a swap costs the lexer |
 | **E2** | **Statement-oriented, assignment is NOT an expression** | `if (x = y)` is not writable; the evaluation order stays visible |
-| **E3** | **Nothing is implicit** — no conversion, no copy of a linear value, no catch-all branch, no default value | each of the four classes has a paid-for trap. The single exception is the widening of a range («SG-1»), and it is written as an attribute, not as a conversion |
+| **E3** | **Nothing is implicit** — no conversion, no copy of a linear value, exhaustive matching, no default value | each of the four classes has a paid-for trap. The single exception is the widening of a range («SG-1»), and it is written as an attribute, not as a conversion |
 | **E4** | **Contracts stand BEFORE the body, in a fixed order** | a tool that has to sort cannot say "`effects` is missing here" |
 | **E5** | **Every declaration is complete at exactly one place** | no preprocessor, no forward declaration |
 | **E6** | **Every attribute is part of the production** — NEW «SG-0» | a rule that a pass checks after the fact can be forgotten by the pass; a rule that is the shape of the derivation cannot. the retired `dokumente/CHECKER.md` §1.4 (in the history) found an obligation that vanished on a rename; under E6 it has no place to vanish from |
@@ -216,11 +216,13 @@ regbind    = ident ":" ident ;                                 (* G4 *)
 Character literals are integer sugar: `'a'` produces the same number token as `97`,
 with no new type. A literal holds one printable ASCII byte (32–126) except `'` and `\`,
 or one escape: `'\n'` (10), `'\t'` (9), `'\r'` (13), `'\0'` (0), `'\\'` (92), `'\''` (39).
-Empty, multi-character, non-ASCII, unknown-escape and unterminated literals are lexer errors.
+Empty, multi-character, non-ASCII, unknown-escape and unterminated literals are lexer errors
+(`Parser/Lex/Lexer/Teil1.lean`; `stage0/proben-ir/char-literal.gab`).
 
 String literals decode `\n` (10), `\t` (9), `\r` (13), `\0` (0), `\\` (92) and `\"` (34).
 Unknown or incomplete escapes and raw newlines are lexer errors. String bounds count the decoded
-UTF-8 bytes, including embedded zero bytes; the canonical printer escapes these six characters.
+UTF-8 bytes, including embedded zero bytes; the canonical printer escapes these six characters
+(`Parser/Lex/Lexer/Text.lean`; `stage0/proben-ir/string-escape.gab`).
 
 **One comma rule for all lists:** separating comma between the entries, trailing comma
 optional. **The `Sonderform` line (G6):** `O` (in `costexpr`), `@version` (in `format`), `Held`
@@ -547,6 +549,12 @@ linear ghost type MayWrite(ThreadId, Pa);
 linear ghost type Duty(farbtest);   // the parameter is the NAME of a `check` declaration
 ```
 
+A named string constant retains its annotation at use:
+`const Q : string max 8 = "hi!";` can be indexed as `Q[0]`. Locals and parameters hide constants
+of the same name. The literal must fit the declared maximum, and each index must be in range
+(`Kontext/StringConstantsZeuge.lean`, `stage0/proben-ir/string-constant.gab`); literal decoding
+is specified once in Lexis above.
+
 **Closed dispatch: `tagged … by S`.** The Lean frontend uses the canonical spec/impl groups
 of §6.1, including their effect arguments and full conformance check:
 
@@ -656,8 +664,8 @@ source-to-IR coverage remain separate integration work.
 | `fnptr` | the value is a function that **conforms to this signature** — the proof travels with the value | `Ty.fnptr sig`, value `{f // D.passt f sig = true}` («SG-8»; structural since 2026-10-21, `SigPasst`) |
 | `ptrty` (§3) | a capability naming a declared carrier and a right | `Ty.ptr tab rw` |
 | `linear type m [order]` | a resource in the context Λ, with a stage | `D.Marke`, `D.stufen`, `Res.marke m stufe` («SG-14») |
-| `structty`, `array`, `path` to a type | a compound is a **table with `count 1`** (a record) or `count N` (an array): the field is a slot field, the element index an index type | `D.Tab` with `count`, `Feld`, `typ` — SUGAR over §9 |
-| a record as a **VALUE** (`-> P`, `p : P`, `let x : P`, `P(a: …)` «B7») | **NO `Ty`, and that is named and priced, not an oversight.** The row above is the CARRIER lowering; it does not make a record a value. The list in this table is complete: there is no product former, so a result, a parameter or a `let` of record type has no form at all — `gabbro lean-g` refuses each by name (`LG002`) and says which carrier form does work (`ptr<normal, r> P`) | **none.** former work item `O15`: a `Ty.prod` was priced on 2026-09-15 and REFUSED — measured over all 113 corpus programs, it gains **zero**; what pays first is the `Endblock` binder (`O14` (2)) and the C side of aggregate values, which `Ty.sum` already owes |
+| `structty`, `array`, `path` to a type | Named records retain a nominal identity and ordered field types; arrays retain element type and count. Carrier access separately uses the declared table schema (§9). | `Ty.prodOf`, `Ty.arr`; `URecord.ty` in `Parser/Elab/Uebersetze/Records/Schema.lean` |
+| a record as a **value** (`-> P`, `p : P`, `let x : P`, `P(a: …)`) | Construction supplies each declared field once with its declared type; parameters, results and projections preserve the record identity. One-field records use the same rule. `bool` fields remain truth values through construction, inference, projection, calls and returns (`if r.ok`, `!r.ok`); numeric fields are not predicates. Missing/duplicate/unknown fields and unsupported placement/where/resource metadata refuse. | `URecord`, `Records.lean`, `TruthZeuge.lean`; `stage0/proben-ir/record-one-field.gab`, `record-bool-field.gab` |
 | `opaque` | no operation but equality and passing — a range `n .. n`-free `int` with no arithmetic derivable *(by absence of a constructor, not by a rule)* | `Ty.int` without `add`/… at the use site; the pass `M1` today, the derivation tomorrow |
 | `field … @ bitpos`, `embeds`, `offset_into`, `reserved`, `where` | layout is the EMITTER's; the value read is of the field's type and `where` is a check at the read (§9, `Block.check`) | layout: none («SG-16», §16 (4)) |
 
@@ -862,11 +870,17 @@ placelist  = place { "," place } ;
 | a call in expression position | SUGAR for `let t = call; … t …` (§7) | | `Block.bindCall` |
 | `x += e` etc. (§7) | SUGAR for `x = x + e` under the rules above | | `Expr.add` |
 
+For a direct condition `if a == b` or `if a != b` on tagged local names of the same declared
+type, Stage 0 expands tag equality to exhaustive matches and compares payloads only for equal
+cases (`Uebersetze/Tagged/Equality.lean`, `stage0/proben-ir/tagged-equality.gab`). Distinct tagged
+types refuse; payload equality keeps the ordinary reader's type restrictions. This does not
+provide equality for arbitrary aggregates or arbitrary effectful tagged expressions.
+
 **M1 acts here and nowhere else:** every operation must stay within the range of its result
 type — and now that is the **shape** of the derivation: `a + b` with `a, b : u32 in 0..1000`
 *is* a `u32 in 0..2000`, and at a place of a narrower type there is no constructor to put it.
-The M1 limit named in the second version — flow-sensitive narrowing — is answered as before:
-`narrow x to 1..u32::max else { … }` (§7), a statement with a named exit.
+Guard-derived ranges are available under the local rules of §7. Otherwise the explicit
+`narrow x to 1..u32::max else { … }` remains the statement with a named exit.
 
 *Lean:* `Expr : Ctx → List (Res D) → Ty → Type` (`Syntax.lean` §3); theorem `wert_total` (every
 expression has a value of its type), `im_bereich` (a number is in its range), `gleit_endlich`
@@ -1013,8 +1027,13 @@ Effect places may name a table in another module as `reads b::T.slots` or
 The path resolves in the function's module to the same table carrier as an
 unqualified `T.slots` inside the table's module. A caller of a writer must claim
 that table in its own `effects`; qualification grants no write right by itself.
+`stage0/proben-ir/module-write-qualified.gab` exercises the cross-module claim.
 A write claim naming an unknown table path is refused. A `pub` function naming a table
 in its head still requires that table to be `pub` (the closed export hull, N038).
+
+`Stage0/Compiler.lean` refuses duplicate resolved function names (`function declared twice: NAME`)
+and a function name equal to a tagged case (`function and case share a name: NAME`). There is
+one meaning for a call name; constructor expansion cannot hide a function declaration.
 
 **Generic functions (Lean frontend, check model A).** For example:
 
@@ -1141,7 +1160,7 @@ not fall.
 | `deadline <= n ops arch X falsifier p` | **by when in cycles on `X`** — a hardware outcome, not a second budget | `Hardware.fortschritt a` (the named `progress`-class assumption with its probe); §18 («SG-22») |
 | `decreases e` | the recursion depth is a parameter of the meaning | `rufAt (fuel)` → `logik (abstieg f)` |
 | `by induction over d` | names the scheme; no term | none |
-| `spec fn … = pred` | a predicate helper: inlined at every use (`M130`) | SUGAR |
+| `spec fn … = pred` | a typed predicate helper, checked before substitution (below) | SUGAR |
 | `const fn` | a translation-time number: a literal at every use | `Expr.lit` (SUGAR) |
 | `raw fn`, `prim fn`, `extern fn`, `= asm { … }` | a **foreign body**: its contract is all Gabbro knows; the body is the machine | `D.Ax` with `aparams`/`aerg`/`aschreibt`; `Stmt.axiomCall`, `Block.bindAxiom` («SG-18») |
 | `-> never`, `divergent fn` | no `return` derivable; the only exits are `leave`/`next` of an enclosing loop, a `return R::F`, or a foreign body | `Ty.never`, theorem `never_leer` |
@@ -1149,25 +1168,15 @@ not fall.
 | a **call** `f(a, b);` | the callee's `writes` ⊆ the caller's, its `consumes` ⊆ Λ, its `Held` = the held set, and a callee with `or R` is callable only through `let … else` | `Stmt.call f args hp hr` with `hp : RufPasst`, `hr : gruende = 0`; theorem `ruf_hat_alles` |
 | an **indirect call** `p(a, b);` | the same, against the signature at the **type** of `p` («SG-8») | `Stmt.callInd`, `Block.bindCallInd`; theorem `zeigerruf_hat_alles` |
 
-```gabbro
-spec fn cdt_wellformed(c: CapSpace) -> bool =
-    forall s in slots of c: c.parent_chain(s) reaches Root via parent;
-
-impl fn revoke(c: ptr<normal, rw> CapSpace, s: SlotIdx) -> Result
-    ensures   !exists k in descendants of s: k.used
-    maintains cdt_wellformed
-    effects   { writes c.slots, locks CAPS }
-    by        induction over descendants of s
-{ … }
-
-impl fn delete_leaf(c: ptr<normal, rw> CapSpace, s: SlotIdx) -> Result
-    requires  Held(CAPS), c.slots[s].used, !exists k in slots of c: k.parent == s
-    ensures   !c.slots[s].used, old(c.objects[o].refcount) == c.objects[o].refcount + 1
-    maintains cdt_wellformed, refcount_matches
-    effects   { writes c.slots, writes c.objects, locks CAPS }
-    costs     <= 200 ops
-{ … }
-```
+For example, `spec fn small(x : u32 in 0 .. 100) -> bool = x < 10;` checks each use against
+that parameter type before inlining. Integer argument intervals must be contained in the declared
+range; Boolean parameters require Boolean arguments. Arity mismatch, unresolved intervals and
+non-scalar parameter checks refuse. The caller's `0 .. 9` fits, while `0 .. 101` refuses even if
+an eventual call uses `7` (`stage0/proben-ir/spec-parameter.gab`, `spec-parameter-refused.gab`).
+`Folds/SpecArguments.lean` checks in the caller's scope, including quantifier domains. An argument
+whose names overlap a binder of the predicate is refused as `spec …: argument … names a binder of
+the predicate`, including binders within the argument; `Folds/Substitution.lean` does not inline
+that call. Expansion exhaustion refuses too. No binder capture is silently accepted.
 
 **Adapters `fn … from f` — static reuse without objects** («phase 1», `ABSTRACTION-SYNTAX-PLAN.md` §4.1).
 No new word (`from` is contextual), no new model form: an adapter desugars to an ordinary
@@ -1445,11 +1454,54 @@ The C11 emitter lowers the statement through the generated hosted driver's threa
 `LG004` refusal for it is **not re-measured** here; where it still stands, the statement has a
 checker rule and no G model.
 
+**Guard narrowing in Stage 0.** The shared reader uses `UCtx.narrow = true` for Stage 0
+(`Stage0/Frontend/Elaboration.lean`); the canonical exporter and printed-program read-back keep
+it off (`SInv.narrowOff`, `Gen/Text/Invers/Anweisung/Teil1.lean`). In `Uebersetze/Branches.lean`,
+the then block gets the guard, the else block or `else if` chain its negation, and the continuation
+gets the negation if the then block always ends (`return`, `leave`, `next` on every path).
+
+`Kontext/GuardNarrowing.lean` intersects the declared inclusive range of an immutable
+plain-number local or parameter with comparison bounds. `<`, `<=`, `>`, `>=`, equality's true
+path and inequality's false path can bound it. Excluding a literal or named constant at an
+endpoint shrinks the other path too: after `if k == 0 { return 0; }`, `0 .. 159` becomes `1 .. 159`;
+under `k != 159` it becomes `0 .. 158`. An interior exclusion gives no interval bound.
+Negation reverses polarity; true `&&` and false `||` intersect facts. Empty or unchanged
+intersections add nothing. Statics, fields, slots, registers, floats, options, index-kind
+bindings and unresolved local ranges are excluded (`guard-narrow.gab`, `guard-equality.gab`).
+
+`GuardRelation.lean` bounds a used difference of two distinct immutable number names from their
+comparison, with the same branch and continuation scope. `a >= b` makes `a - b` nonnegative;
+`a > b` makes `a - b - 1` nonnegative; `i < n` bounds `n - i - 1`. Exact integer difference and
+both operand ranges supply the interval. A fresh binding computes it once at entry; rewrites
+stop before a possible rebinding of either operand or the generated name. Mutable operands
+and unresolved ranges are excluded (`guard-relation.gab`).
+
+`GuardMutable.lean` permits unary facts for mutable number locals via an immutable snapshot at
+entry to the then block or a plain else block. Only straight-line reads before a possible
+assignment/rebinding use it. The right-hand side of the first plain assignment can use the
+snapshot, but its target and later reads use the declared mutable binding. Nested blocks,
+loops and unhandled statements are barriers. No outer mutable facts enter an `else if` chain
+or the continuation, even after a returning then block (`guard-mutable-counter.gab`,
+`guard-mutable-continuation-refused.gab`). These probes are in `stage0/proben-ir/`.
+
+Each inserted fact uses a total narrowing binding (`USide.eng`): the checked guard and unchanged
+value make its fallback unreachable. Its range test counts in costs, with no extra return
+path or `ensures` duty. Other cases still need explicit `narrow … else`.
+
+`return f(args);` inside a branch or match arm is lifted to a binding and a return of its result;
+a final top-level call remains direct. Record-field arguments such as `return nxt(r.node, r.pos);`
+work for parameters and local records. Argument/return types and effects remain checked, and
+hoisting preserves evaluation order (`Modules/CallHoist/Expressions.lean`,
+`stage0/proben-ir/branch-return-call.gab`, `branch-return-fields.gab`).
+
 **`match` is exhaustive.** In ordinary functions, a tagged match may end in one binder-free
 `_ => { … }` arm after at least one named arm. The named cases must identify one unique
 tagged type; the wildcard expands to its remaining cases in declaration order, discarding
 their payloads. A lone, repeated, non-final or binding wildcard stays refused, as do
-wildcards in option and reason matches. **Error propagation** is `let … else (e) { … }`: no hidden control flow, and the
+wildcards in option and reason matches (`Modules/MatchWildcard.lean`,
+`stage0/proben-ir/match-wildcard.gab`). A tagged payload declared as `option index into T` keeps
+that type in its arm: a nested `Some(i)`/`None` match checks `i` against the table count
+(`Uebersetze/Branches.lean`, `tagged-option-payload.gab`). **Error propagation** is `let … else (e) { … }`: no hidden control flow, and the
 `else` branch is an `endblock` — it cannot fall off, so the binding after it always has a value.
 
 **Attributes and Lean.** The **resource context** Λ («SG-6») of a position is the multiset of
@@ -1859,6 +1911,14 @@ boundary (`Block true Γ Λ Λ` in Lean — a loop body neither consumes nor all
 which is `O006` as shape). `touches`/`effects` at a loop are a **sub-contract** of the
 function's: SUGAR, the function's contract is what the theorem holds.
 
+An ordinary `traverse i over slots of T by unvisited` body may call functions. A written
+`touches` header is justified either by a covering enclosing signature or by the loop body's
+own writes and callees' signature effects. Reads impose no signature-right duty; the body check
+allows writes outside the loop to be omitted. When that check is needed, unknown callees and
+unsupported analysis refuse (`Export/Traversal/TraversalHeader.lean`).
+`stage0/proben-ir/traverse-call.gab` combines a writer call, explicit narrowing of its contribution
+and `next i`; lifting stays inside the loop and does not remove the type/effect checks.
+
 ---
 
 ## 9. Tables, traversals, formats
@@ -1937,6 +1997,21 @@ state      = "state" ident "{" { transition } "}" ;
 **`count` is the ADDRESS SPACE, `backed` the MEMORY:** `count N` says how many places the type
 knows; `backed k` names the VALUE up to which they are backed — `M103` holds every index
 against the declared bound, and with `backed` that is `k`, reached by `narrow i to 0 ..< k`.
+
+Computed slot indices are accepted when their inferred range lies inside the table count:
+`if k >= 1 { return T.slots[k - 1].v; }` needs no intermediate source binding. Binding,
+assignment-value, argument and return reads share the rule. Calls in an index are evaluated
+once at that read; hoisting cannot move them past an earlier residual mutable read
+(`Modules/CallHoist/Expressions.lean`, `stage0/proben-ir/slot-computed-index.gab`).
+A slot store may take an array read (`src.slots[i].b = TEXT[i];`) or a bare nullary case
+(`T.slots[i].k = Leaf;`) directly; the compiler retains the element range or case identity
+before the checked store (`Modules/CallHoist.lean`, `slot-array-read.gab`, `slot-bare-case.gab`).
+
+A tagged field read can initialize an annotated, inferred or mutable local, retaining the
+field's declared tagged identity. This match-based transport needs a payload-free case for its
+temporary's initial value; a call in the index executes once before the value is read
+(`Modules/CallHoist.lean`, `tagged-slot-read.gab`). The ordinary guard and index premises apply
+to every read; a store also needs a write right and a value fitting its field type.
 
 **`@version` — the REFUSAL, decided 2026-08-21.** Gabbro does not migrate between format
 versions; two `format`s of one name in one scope fall to `N001`, and `@version` has no reader.
@@ -2839,7 +2914,7 @@ falsifier.
 
 `while` · `for` · `goto` · `union` as reinterpretation · preprocessor · implicit conversion
 (the widening of a range is an **attribute**, «SG-1») · `void*` · pointer arithmetic · **the
-address of an expression** · catch-all branch · exceptions · inheritance · reflection · GC ·
+address of an expression** · non-exhaustive matching · exceptions · inheritance · reflection · GC ·
 assignment as an expression · forward declaration · self-hosting · user-defined quantifier
 domains · recursion in `spec fn` · hand-written lemmas · **the braced compound literal** (`P037`)
 · **migration between format versions** · **signed division** («SG-3»: `narrow` to `0 ..`

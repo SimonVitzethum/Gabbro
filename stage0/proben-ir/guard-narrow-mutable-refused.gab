@@ -1,5 +1,5 @@
-// A `let mut` local gets no narrowing from its guard (its value may change between the test and the use):
-// the same guarded index as in guard-narrow.gab stays refused, and only an explicit `narrow` admits it.
+// A mutable guard snapshot stops before a potential assignment: the conservative assigned-place walk
+// counts j in T.slots[j].v as a barrier. No read is replaced before it, so this indexed write stays refused.
 module ir_probe {
 table T count 10 { slot { v : u32 in 0 .. 100, } }
 

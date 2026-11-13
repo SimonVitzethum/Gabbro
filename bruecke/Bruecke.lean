@@ -24,5 +24,14 @@ public import Bruecke.Instanzen.Instanz69
 public import Bruecke.Instanzen.Instanz73
 public import Bruecke.Instanzen.StartsProbe
 public import Bruecke.Teil.Pflichten
+public import Bruecke.Teil.Quelle
+public import Bruecke.Teil.TeilZeuge
+public import Bruecke.Teil.Lokal.Pflichten
+public import Bruecke.Teil.Lokal.Quelle
+public import Bruecke.Teil.Lokal.TeilBZeuge
+public import Bruecke.Anweisung.Lokal.QuelleB
+public import Bruecke.Anweisung.Lokal.LokalZeuge
+public import Bruecke.Anweisung.Zweig.Quelle
+public import Bruecke.Anweisung.Zweig.ZweigZeuge
 @[expose] public section
 

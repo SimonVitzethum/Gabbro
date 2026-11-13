@@ -54,14 +54,14 @@ not an extension.
 | **M3** | **Address spaces and access rights on the pointer.** A pointer carries *where* it points and *what* may be done with it; barriers follow from the space | `ptr<mmio, w> T` |
 | **M4** | **No unchecked index, no unbounded loop.** Indexing needs evidence of membership; every loop names its descent measure or its bound | `traverse`, `retry`, `forever` |
 | **D1** | **Opaque new types**, no implicit conversion (C's `typedef` is transparent, and that is the hole) | `opaque type Pa = u64;` |
-| **D2** | **Complete layouts, no catch-all branch.** Every bit of a word is named, every enumeration exhaustive | `exhaustive`, `format`, `tagged` |
+| **D2** | **Complete layouts and exhaustive matching.** Every bit of a word is named, every enumeration exhaustive | `exhaustive`, `format`, `tagged` |
 
 The surface decisions **E1–E6** (`SYNTAX.md`): English keywords; statement-oriented, assignment
 is not an expression; nothing implicit; contracts before the body in a fixed order; every
 declaration complete at exactly one place; every attribute part of the production.
 
 **What falls away from C:** implicit conversion, `void*`, pointer arithmetic without a basis,
-`goto`, catch-all branches, `union` as reinterpretation, the preprocessor, exceptions,
+`goto`, non-exhaustive matches, `union` as reinterpretation, the preprocessor, exceptions,
 inheritance, GC, self-hosting. **What C keeps:** functions, pointers, structs, fixed widths,
 control flow, function pointers (with a contract, §5.6), explicit conversion between compatible
 types.
@@ -110,8 +110,15 @@ Each was a paid-for mistake in a real system; each now follows from the mechanis
 
 ## 2. Lexis and vocabulary
 
-Identifiers, numbers with `_`, comments (`//`, nesting `/* */`, doc `///`), floating-point literals (§3.5), strings only in
-`claim`, `reason`, `assume`, `section`, `unfalsifiable`.
+Identifiers, numbers with `_`, comments (`//`, nesting `/* */`, doc `///`), floating-point literals (§3.5),
+character literals and bounded string values (§3.3) are read by the Lean lexer.
+
+A character literal is an integer byte: `'a'` is `97`. It contains one printable ASCII byte other than quote/backslash, or
+`'\n'`, `'\t'`, `'\r'`, `'\0'`, `'\\'`, `'\''`. Empty, multi-character, non-ASCII and unknown-escape
+forms are refused. Strings decode `\n`, `\t`, `\r`, `\0`, `\\` and `\"`; unknown or incomplete escapes
+and raw newlines are refused. Bounds count decoded UTF-8 bytes, including zero bytes. These are the
+rules of `Parser/Lex/Lexer/Text.lean` and the character scanner in `Lexer/Teil1.lean`;
+`stage0/proben-ir/char-literal.gab` and `string-escape.gab` exercise their value uses.
 
 **The vocabulary is a closed table** (`SYNTAX.md`, the terminal and reserved-word tables are held by `cargo test`, run by `instrumente/pruefe-pruefer.py`; the retired `pruefe-wortschatz` also compared EBNF
 terminals against table words, both readings). *A new word is a language change*: it needs an
@@ -167,56 +174,52 @@ the declaring module, the conversion in both directions (`D004`).
 
 ### 3.2 The three flow rules — closed, local, predictable
 
-`narrow` alone would become a ritual (measured in the reference kernel: 102 of 255 subtractions are
-flow-sensitive, 54 of them relational), so there are exactly **three** rules. They are syntax-directed, **without
-fixpoint and without solver**: the checker keeps a *fact set* per block that grows only at the
-three named places and **dies on every write to a participating place**. Loops carry no facts
-inward.
+Stage 0 enables `UCtx.narrow` in `Stage0/Frontend/Elaboration.lean`. The shared elaborator's
+`Kontext/GuardNarrowing.lean`, `GuardRelation.lean`, `GuardMutable.lean` and `Branches.lean`
+implement these local rules; they do not use a solver or infer a loop invariant.
 
 | | Rule | Example |
 |---|---|---|
-| **V1** | a checked **range condition** narrows the checked place in the branch after it | `if x >= 1 { … }` → `x : u32 in 1 .. max` |
-| **V2** | a checked **relation between two places** is a branch fact; under `a >= b`, `a - b` has type `0 .. a.max − b.min`. Comparison facts over directly checked places only | `if a >= b { let d = a - b; }` |
-| **V3** | a `match` on a `tagged` type narrows in the branch to the variant, payload included | exhaustive, no catch-all |
+| **V1** | A guard bounds an immutable plain-number local or parameter in the selected branch. | `if i < 10` gives `i : 0 .. 9` when its declared range is `0 .. 100`. |
+| **V2** | A comparison of two immutable number locals bounds their difference in the selected branch. | Under `a >= b`, `a - b` is nonnegative; under `a > b`, `a - b - 1` is nonnegative. |
+| **V3** | A tagged match gives each arm its declared payload type. | An option-index payload remains an option for a nested `Some`/`None` match (§3.3). |
 
-**V1 as the compiler reads it today.** A condition narrows an **immutable number local or parameter** (not a
-`let mut`, a static, a slot, a field or a register) that it compares with a literal, a constant or another
-immutable number local at its declared range: `<`, `<=`, `>`, `>=`, `==`, and `&&` of such comparisons. In
-the `then` block the local is read at the intersection of its range with the bounds of the condition, in the
-`else` block (and in an `else if` chain) at the intersection with the bounds of its negation, and after the
-`if` at the bounds of the negation when the `then` block always ends (`return`, `leave`, `next` on every
-path): `let i : u32 in 0 .. 100 = …; if i < 10 { T.slots[i].v = 1; }` needs no `narrow`. `!=`, `||`, calls,
-relations between two places (V2) and a condition that bounds nothing in its branch give no fact. A block
-(the `then` block, the `else` block or `else if` chain, the code after the `if`) narrows only the bounded
-locals it mentions; a condition none of whose facts concerns a local some block mentions is read exactly as
-without this rule. The narrowed read is a rebinding of the same name at the smaller range,
-`let i : lo .. hi = i narrowed to lo .. hi`, in the total value form (the same form an `update` arm uses); it
-keeps the value the condition just proved to lie in the range, costs one range test whose fallback cannot be
-reached, and adds no exit, so no `ensures` duty is added. Declared `costs` count that test for every narrowed
-local of every block entered. The Stage-0 compiler reads with this rule; the canonical exporter and the
-read-back theorem of printed programs (`fn_ok`) state the elaborator without it (`UCtx.narrow`).
+**Immutable guard facts.** The then block gets the guard's bounds; the else block, including an
+`else if` chain, gets its negation. The continuation gets the negation when the then block always
+ends (`return`, `leave` or `next` on every path). Ordering comparisons and equality with a
+literal or named constant can shrink the inclusive declared range. Equality's true path and
+inequality's false path give a singleton. Excluding an endpoint also shrinks the opposite path:
+after `if k == 0 { return 0; }`, `k : 0 .. 159` becomes `1 .. 159`; under `k != 159` it becomes
+`0 .. 158`. Excluding an interior value gives no interval bound. Negation reverses polarity;
+`&&` on the true path and `||` on the false path combine facts. Only nonempty, proper
+intersections count. Statics, slots, fields, registers, floats, options, index-kind bindings and
+locals whose range is unresolved do not supply these plain-number facts. See `guard-narrow.gab`
+and `guard-equality.gab` in `stage0/proben-ir/`.
 
-What falls under none of them needs `narrow place to range else { … }` — a statement with a named
-exit, not a proof line. **The yardstick stays:** if `narrow` outgrows the remainder of the
-counter-measurement (set at ≤ 24 sites; this count is a yardstick, not re-measured here), the rule set is too small, and *that* is the
-refutation, not a silent growth of rules.
+**Relations.** Direct comparisons of two distinct immutable number names retain facts of the
+form `p - q >= k`, including the reversed difference and the two zero bounds of equality.
+They apply on the same branch/continuation paths as V1. The elaborator binds each used
+difference once at block entry, intersecting its exact integer range with those facts, and
+rewrites reads only until a statement may rebind either operand or the generated name.
+Mutable operands and unresolved ranges are excluded. `guard-relation.gab` exercises `a >= b`,
+`a > b` and `i < n`; this is a difference rule, not arbitrary symbolic algebra.
 
-**Two preconditions on V1/V2**, both once held silently:
+**Mutable counters.** A unary guard over a `let mut` plain number creates a fresh immutable
+snapshot at entry to the then block or a plain else block. Straight-line reads use its narrowed
+range up to the first possible assignment or rebinding. The right-hand side of the first plain
+`c = expression` can still read the snapshot; the target and all later reads keep the original
+mutable binding and its declared type. Nested blocks, loops and unhandled statements stop the
+rewrite. No outer mutable fact is passed into an `else if` chain, and none reaches the
+continuation, even after an always-ending then block: an else block could have assigned the
+local. `guard-mutable-counter.gab` is the increment/decrement form;
+`guard-mutable-continuation-refused.gab` checks that an old guard cannot justify a later singleton.
 
-* **The place must stay the same between check and use.** A place that leads through a `device`
-  register carries **no** fact: `volatile` *is* the statement "this may change between two
-  reads". The way out is the ordinary form — `let i = d.ST.IDX;` (a local binding is not
-  volatile), then test `i`.
-* **The negation of a comparison must itself be a comparison** — a total order. Over integers
-  `!(x < y)` gives `x >= y`. A partially ordered carrier (NaN) would break it (`else` would give
-  *nothing*); floats are finite by type (§3.5), so the rule holds, and any partially ordered
-  carrier the language ever gets must write both branches positively.
-
-**One exception that *generates* a fact.** A loop carries nothing inward, but a counter set to a
-constant before a bounded traversal, and inside the body only ever the target of `n += k` with a
-positive constant `k`, is bounded by the domain: at the increment `n ≤ c + (B−1)·k`, after the
-loop `n ≤ c + B·k`. Five conditions, each a refusal if missing: local scalar set from a constant;
-only `n += k`; computable domain bound; **not nested** in another loop; nothing takes its address.
+The generated bindings use total range narrowing (`USide.eng`): the tested guard and unchanged
+operands put the original value inside the selected range, so the fallback is unreachable.
+The inserted range tests count in declared costs and add no return path or new `ensures`
+obligation. The canonical exporter and printed-program read-back use the
+switch off (`SInv.narrowOff`); their statements do not establish read-back with these bindings
+inserted. Where these rules give no sufficient bound, use `narrow x to lo .. hi else { … }`.
 
 ### 3.3 New types and sums
 
@@ -226,9 +229,27 @@ mismatch `N281`–`N284`). There is **no general `option T`**: over `index into 
 table's index option; over anything else the writer spells a two-case `tagged` type. The index
 option is read by `match` (`Some(i)`/`None`) or tested by `x.is_some()` (`Expr.istSome`, a `bool`; over
 anything but an option at a place `N593`).
-`string max N` is a bounded string (one length word plus `N` bytes, no terminator).
-Literals decode `\n`, `\t`, `\r`, `\0`, `\\` and `\"`; unknown or incomplete escapes and raw
-newlines are refused. The maximum counts decoded UTF-8 bytes, including an embedded zero byte.
+An option-index payload retains its type in a tagged arm: `Item(payload)` can contain a nested
+`match payload { Some(i) => { … } None => { … } }`, with `i` bounded by the table's count
+(`Branches.lean`; `tagged-option-payload.gab`).
+
+Records are nominal product values: `type Flag = { ok : u32 in 0 .. 1, };` is a one-field record,
+and `Flag(ok: 1)` constructs it. Parameters, locals and results preserve its identity and ordered
+field types; missing, duplicate or unknown constructor fields and field metadata without a value
+rule are refused (`Uebersetze/Records/{Schema,Records}.lean`; `record-one-field.gab`). A `bool`
+field stays a truth value through construction, projection, inference, calls and returns; `if r.ok`
+and `!r.ok` work, while a numeric field is not implicitly a predicate (`record-bool-field.gab`,
+`Records/TruthZeuge.lean`).
+
+A direct `if a == b` or `if a != b` on tagged local names compares tags, then the payloads of
+equal tags. `Tagged/Equality.lean` expands it into exhaustive matches; different tagged types
+and payload types without an ordinary equality form are refused. It does not add general
+structural equality for every aggregate (`tagged-equality.gab`).
+
+`string max N` is a bounded string (one length word plus `N` bytes, no terminator). A named
+constant such as `const Q : string max 8 = "hi!";` retains its declared bound at `Q[0]`; a parameter
+or local named `Q` hides it. A literal longer than the bound is refused, and indexing still needs
+an in-range index (`Kontext/StringConstantsZeuge.lean`; `string-constant.gab`).
 
 ### 3.4 Bits, widths, shifts, overflow
 
@@ -587,6 +608,16 @@ domains, no recursion in `spec fn`, no handwritten lemmas. If a property falls o
 domains, it is **not formulable** — it migrates as a named `obligation` into the manifest (§15),
 not into a comment.
 
+A predicate helper declares typed parameters, for example
+`spec fn small(x : u32 in 0 .. 100) -> bool = x < 10;`. `Folds/SpecArguments.lean`
+checks arity and each argument in the caller's scope before substitution: integer intervals must
+fit the declared range, and `bool` parameters need Boolean arguments. Unresolved or non-scalar
+parameter checks refuse. `spec-parameter.gab` accepts a caller's `0 .. 9`; `spec-parameter-refused.gab`
+refuses `0 .. 101`, even though a particular call supplies `7`. An argument naming any binder of
+the helper's predicate is refused (`spec …: argument … names a binder of the predicate`), including
+binder names inside an argument; the elaborator does not silently capture or rename it.
+`Folds/Substitution.lean` leaves such a call uninlined, and exhausted expansion also refuses.
+
 **A domain binds the ADDRESS of an entry** — `slots of`, `elems of`, `descendants of`, `queue`
 bind an index or handle and the element is `p[i]` (from an index one gets the element, not the
 other way). `mappings of` is the one exception: it quantifies over the reachable leaf entries of
@@ -622,6 +653,16 @@ Where nothing settles — no body (`extern`, `prim`), an unresolvable edge, a ca
 more than its deeds cover — the omission is refused with the reason (`N305`). `gabbro abgeleitet`
 prints the derived clause per routine.
 
+Effect places can be qualified: `effects { reads b::T.slots, writes b::T.slots }` names the
+same table carrier that `T.slots` names in module `b`. Qualification grants no write right;
+the caller of `b::set(...)` must claim that writer's table. Unknown write paths are refused
+(`module-write-qualified.gab`; the effect-place resolver and signature checks).
+
+Stage 0 refuses a function declared twice (`function declared twice: NAME`) and a function whose
+resolved name is also a tagged case (`function and case share a name: NAME`). These checks in
+`Stage0/Compiler.lean` prevent first-match function lookup and constructor rewriting from
+assigning different meanings to the same call name.
+
 **`costs` counts operations, and the unit is defined: 1 op = one Gabbro primitive** (assignment,
 arithmetic operation, load, store). A call counts the **declared** `costs` of the callee; a
 traversal counts body × domain bound; branches count the maximum. It is a **property of the
@@ -649,6 +690,19 @@ is a specification, never code.
 `let` (with `else (e) { … }` as the **only** error propagation: the branch diverges or returns),
 assignment (not an expression), `if`, exhaustive `match`, `narrow … else`, `locks` block,
 `return`. Operator precedence is §3.4.
+
+`return f(args);` works inside an `if` branch or a match arm as well as at the end of a body.
+`Modules/CallHoist/Expressions.lean` binds a branch-returned call once before returning its
+result. Arguments can include record-field projections (`return nxt(r.node, r.pos);`),
+including fields of a local record. The ordinary argument types, effects and return type still
+apply; hoisting preserves evaluation order and refuses unsupported movements across mutable
+reads. See `branch-return-call.gab` and `branch-return-fields.gab`.
+
+A final binder-free `_ => { … }` after at least one named tagged arm expands to the remaining
+cases in declaration order, discarding their payloads (`Modules/MatchWildcard.lean`,
+`match-wildcard.gab`). Named arms must identify one unique tagged type. A lone, repeated,
+non-final or binding wildcard, or one in an option/reason match, remains refused; exhaustiveness
+is still checked on the expanded arm list.
 
 **A function that can fail says so: `-> T or R`.** Both questions — what does `e` hold, how does
 a call report failure — are answered at the *callee's declaration*, the one place an answer can be
@@ -758,6 +812,14 @@ falsifier — the watchdog *is* the falsifier), and `on_exceeded` is rule 3: the
 not interpreted; `forever` is the service loop, with `per_pass bounded` over the pass's *own* ops
 (which may depend on pass inputs: `64 + 12 * lenof(msg) ops`) and `on_exceeded` obligatory.
 
+An ordinary `traverse i over slots of T by unvisited` body may call functions. The compiler
+lifts calls within the body, checks their signature effects, and checks a written `touches`
+header either from the enclosing signature or from that body's writes and callees' declared
+effects. An effect outside the loop need not appear in the header when the body check suffices.
+`Export/Traversal/TraversalHeader.lean` refuses unknown callees or unsupported forms when the
+body check is needed. `traverse-call.gab` calls a writer, narrows a call-dependent sum and uses
+`next i` on failure; the traversal binder and local assignment ranges remain checked.
+
 ### 9.2 `by consuming` — the witness order is part of the domain
 
 The loop variable is a `linear ghost Member(domain)` that the body **must** consume. A domain
@@ -823,6 +885,21 @@ description with a generated checker — one line apart, so the choice is visibl
 carry `cost O(…)` and `runs online | offline` — an invariant without a cost figure is not an
 audit under a core lock but an outage. Wrapping is spoken (`wrapping`): a wraparound nobody
 spoke out is a mistake, one that carries the word is a design.
+
+Slot reads accept a computed index such as `T.slots[k - 1].v` when its inferred range lies
+within the table count, including a bound established by a guard. The index is evaluated at
+that read; hoisting cannot reorder it past an earlier mutable read. Binding, assignment-value,
+argument and return uses share this rule (`slot-computed-index.gab`,
+`Modules/CallHoist/Expressions.lean`). A store can use an array read directly
+(`src.slots[i].b = TEXT[i];`) or a nullary tagged case (`T.slots[i].k = Leaf;`); the compiler
+retains the array element range or case identity before the ordinary typed slot store
+(`slot-array-read.gab`, `slot-bare-case.gab`, `Modules/CallHoist.lean`).
+
+A tagged slot field can initialize a typed, inferred or mutable local; its declared tagged
+identity is retained. This match-based transport needs a payload-free case for its temporary's
+initial value. A call in the index executes once before the read, so later matching sees the captured value (`tagged-slot-read.gab`, `Modules/CallHoist.lean`). Every access still needs
+an in-range index and the carrier's guards; every store needs the declared write effect and a
+value of the field's type. No raw-address or unchecked indexing form follows.
 
 *The free list* (reuse without fragmentation) is a **pattern**: typed compartments do not
 fragment, so a head plus a `naechst` chain gives reuse of whole slots with no size classes
@@ -1364,7 +1441,7 @@ outside the tracked discipline, the full export. See [`PLAN-DYNAMIC.md`](PLAN-DY
 ## 18. What deliberately does not exist
 
 `while`, `for` (as a loop), `goto`, `switch`, preprocessor, implicit conversion, `void*`,
-catch-all branch, exceptions, inheritance, reflection, GC, assignment as an expression, forward
+non-exhaustive matching, exceptions, inheritance, reflection, GC, assignment as an expression, forward
 declaration, self-hosting (the checker stays Rust: a project that rebuilds its checker has
 none), user-defined quantifier domains, recursion in `spec fn`, handwritten lemmas, unnamed
 `break`/`continue`, lock hold time unnamed in service loops, unbounded CAS loops as a lowering

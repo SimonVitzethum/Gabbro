@@ -204,7 +204,8 @@ Not tried
 
 NEW findings (all with a minimal source text)
 ---------------------------------------------
-N1. A call returned from a branch refuses record-field arguments.
+N1. FIXED — stage0/proben-ir/branch-return-fields.gab.
+    Original finding: A call returned from a branch refuses record-field arguments.
     Even one record-field projection among the arguments fails, at the top
     level the same call compiles, and binding one field to a local does not
     help while any projection remains (entry 3 remainder).
@@ -223,7 +224,8 @@ N1. A call returned from a branch refuses record-field arguments.
           if k == 1 { return nxt(r.node, r.pos); }
           return r;
       }
-N2. A computed table-slot index is refused even when in range (entry 10
+N2. FIXED — stage0/proben-ir/slot-computed-index.gab.
+    Original finding: A computed table-slot index is refused even when in range (entry 10
     remainder). `let d = k - 1; return T.slots[d].k;` compiles.
     Minimal (`slotidx.gab`, refused with `stage0: value without G form` +
     `(statement 1 of 1: if)`):
@@ -236,7 +238,8 @@ N2. A computed table-slot index is refused even when in range (entry 10
           }
           return 0;
       }
-N3. Equality guards do not narrow; only ordering guards do. After
+N3. FIXED — stage0/proben-ir/guard-equality.gab.
+    Original finding: Equality guards do not narrow; only ordering guards do. After
     `if k == 0 { return ...; }` the compiler knows nothing about `k`
     (`guard1b.gab`, `T.slots[k - 1]` refused); after `if k >= 1` the
     subtraction compiles (`guard7.gab`). The `after` probe shape works for
@@ -246,18 +249,74 @@ N3. Equality guards do not narrow; only ordering guards do. After
       if k == 0 { return 0; }
       return T.slots[k - 1].k;   // refused: stage0: value without G form
       if k >= 1 { return k - 1; } // compiles
-N4. String literals have no escapes. `"\n"` is backslash + `n` (two bytes;
+N4. FIXED — stage0/proben-ir/string-escape.gab.
+    Original finding: String literals have no escapes. `"\n"` is backslash + `n` (two bytes;
     `T[1]` of `"a\nb"` runs 92), and a literal newline inside a string is
     refused (`stage0: lex`). Byte 10 -- and hence any multi-line text --
     cannot live in a string constant (entry 11 mechanism).
     Minimal (`s7.gab` runs 92; `s10.gab` refused with `stage0: lex`):
       const T : string max 4 = "a\nb";   // T[1] == 92, not 10
-N5. The runner crashes on a missing image instead of diagnosing it:
-    `runner <nonexistent>` dies with an illegal instruction (exit 132,
-    core dump) rather than a "file not found" error. (Stage 0 itself is
-    clean: a failed compile leaves no output file.) Do not run an image
-    path without checking the compile exit first.
-    Minimal: `runner .scratch-m/t/definitely-missing.img` -> exit 132.
+N5. OPEN — the loader is modelled; an assembly-only fix is not valid.
+    Missing images still cause SIGILL (shell status 132), without a runner
+    diagnostic. Stage 0 itself leaves no image after a failed compilation.
+    Check the compilation result before invoking the runner.
+    The loader already tests a negative open result before using the fd;
+    its error branch deliberately executes ud2. The actual loading calls
+    are open(2), lseek(8, SEEK_END), and mmap(9), not fstat or read. Negative
+    lseek results, zero lengths, and mappings other than IMG also reach ud2.
+
+    Model boundary: runner/Runner/Prog/Code.lean defines ld1, ld2, ld4,
+    ld5 and loaderI; Prog/Elf.lean includes them in the emitted ELF bytes.
+    Beweis/Lader.lean explicitly models these failures as .fault in
+    loadTree/t2/t3 and proves loader_ok and runner_entry_tso/sc over them.
+    runner.s is the generated address listing (Prog/Liste.lean), not an
+    as/ld input. Haupt.lean writes the ELF directly; runner-cpu.py checks
+    that the committed listing equals the generated listing. No external
+    assembler or linker command for runner.s exists in the build path.
+    Per the task's model-boundary restriction, no modelled code or listing
+    was changed; N5 must not be marked fixed.
+
+    Required model change: check argc before argv[1], replace loader fault
+    branches with write(2, "runner: <what>: <path>\n", ...) and
+    exit_group(127), and prove the resulting request trees in Lader.lean.
+    Define a missing-argument path placeholder. Check file length before
+    header access (16-byte header plus a complete 16-byte first instruction)
+    and reject address-range overflow before mapping or computing bounds.
+    Header bytes 0..7 contain the initial absolute frame pointer, assigned
+    to r13 and later used for slot addresses: check alignment and that at
+    least its first word lies inside the image. Bytes 8..15 are reserved
+    zero by the writers and ignored by the loader. Entry pc is fixed at
+    IMG+16; there are no magic/version/code-size/frame-size header fields.
+    These checks cannot establish bounds for all subsequent IR accesses.
+    A file-backed mmap also permits later SIGBUS on concurrent truncation;
+    a complete load-error guarantee needs a private anonymous snapshot with
+    checked reads (negative results/early EOF), reflected in loadTree.
+    Keep handler/dispatch instruction lists unchanged, regenerate the ELF
+    and listing, and recheck placement/layout and entry theorems. The existing
+    syscall instruction can express the diagnostics without a new ISA family.
+    Main's result is passed through IR sys to exit_group (Senke/Start.lean);
+    no status is reserved from 0..255. Use the requested fallback 127, which
+    can still coincide with a program result; stderr identifies a load error.
+
+    Baseline remeasured 2026-11-13, with the existing .lake/cpu/runner copied
+    from /home/simon/Dokumente/Gabbro/runner/ into .scratch-r/runner; its
+    companion listing equals the committed runner.s. No Lean/lake was run.
+    Under systemd-run --user --scope -q -p MemoryHigh=1G -p MemoryMax=2G
+    -p MemorySwapMax=0 bash .scratch-r/measure.sh, each invocation was
+    .scratch-r/runner [PATH], with stdout and stderr captured separately:
+      no argument; definitely-missing.img; empty.img; directory; short.img
+      (one zero byte): all status 132, stdout 0 bytes, stderr 0 bytes.
+      char-literal.img copied from the root stage0/.lake/ir/: status 65,
+      stdout/stderr 0 bytes; expected stage0/proben-ir/char-literal.code: 65.
+    Shell SIGILL notices are not runner stderr. No modified-runner, injected
+    syscall-failure, Lean-proof, or guardian verification was performed.
+    Corpus: guardian stage 7 compiles *.gab before running *.img; stage 8's
+    runner-cpu.py hard-codes its generated image names. Neither reads a
+    loader-case data list. Proposed loader cases: no argument, missing path,
+    denied access, directory, empty/short header, header without an instruction,
+    invalid/unaligned frame pointer, and injected size/mapping/read failures;
+    each should assert status 127 and the exact stderr line. Guardians remain
+    unchanged; these proposed cases are not automated regression coverage.
 
 Line counts (measured with `wc -l`)
 -----------------------------------

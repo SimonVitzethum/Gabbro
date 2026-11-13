@@ -7110,3 +7110,32 @@ invariants, ownership, adequacy/converse, progress/liveness, cost and budget-ste
 Lead validation remains mandatory; there is no green build, guardian result or newly completed
 language case. `git diff --check` and the changed/new Lean files' sub-500-line/module headers
 are the static checks performed by this worker.
+
+## 185. Stage-0 ticket locks, goal-checker connection and source duties (2026-11-13)
+
+The entries below describe the statements in the current source. This section records no new
+build or axiom audit. In particular, the goal-checker connection establishes premise (a), not
+the user-logic, hardware, execution or source-to-binary conclusions of the goal theorem.
+
+| Name | File | Statement and boundary |
+|---|---|---|
+| `locks_okT` | `stage0/Stage0/Senke/Sperre/Ticket/Satz.lean` | Composes the uncontended `locksCodeT` take/body/give simulation for normal completion, `leave`, `next` and body stops, under the body outcome hypotheses, `Umf`, `HeldIn`, rank and floor premises; no return or contended-path theorem. |
+| `HeldIn.frei` | `stage0/Stage0/Senke/Sperre/Ticket/Frei.lean` | From `HeldIn H Λ bo`, the rank condition for `Stmt.locks` and the floor bound, the newly taken lock is not in `H`. |
+| `TicketSync` (definition) | `stage0/Stage0/Senke/Sperre/Ticket/Sync.lean` | Stack/frame bounds and disjoint writable three-word lock layout, with `TicketOK` relating next/serving to `H` and exact waiter counts (zero by default); a thread-local simulation premise, not a cross-thread invariant. |
+| `Compiled.goal_checker` | `stage0/Stage0/CompilerPruefer.lean` | A compiled certifiable unit gives `akzeptiertX_pruefer = true` on `OldSource.einheitDer` with its entry arguments, matching declared/run-time roots, derived checks and complete enumerations. |
+| `Compiled.goal_checker_main` | `stage0/Stage0/CompilerPruefer.lean` | The same acceptance for a certifiable compiled unit with no declared or run-time roots, starting only the compiled entry with the supplied arguments. |
+| `Emitted.goal_checker_main` | `stage0/Stage0/CompilerPruefer.lean` | Acceptance on `einheitDer` with exactly the emitted image's entry environment, together with `output.starts = []`, under certifiability and empty-root premises. |
+| `OldSource.accepts_gibt_pruefer` | `stage0/Stage0/Senke/Ausdruck/Old/JudgedUnit.lean` | Successful `accepts u P main`, certifiability, derived checks and matching root names imply the goal checker's acceptance of `einheitDer u P Q sp main args roots gestartet checks`. |
+| `rufAt_keinAbstieg` | `grammatik/Grammatik/Logik/Ruf/RufKeinAbstiegTief.lean` | If `rufTief P n g = true`, `rufAt P O passes n g` cannot return `logik (abstieg hh)` for any blame target, world, environment or oracle; the admission excludes indirect calls. |
+| `HeldBinding.holds_sectionsE` | `grammatik/Grammatik/Parser/Elab/Export/Held/Satz.lean` | `holds H C u P passes = true` gives `sectionsOkE` for every function body: each lock body fits its declared `kostenBlock` bound and its callees declare costs. |
+| `SInv.narrowOff` (field) | `grammatik/Grammatik/Gen/Text/Invers/Anweisung/Teil1.lean` | Requires `ctx.narrow = false` for printed-program read-back; it does not prove read-back with Stage 0's guard-generated bindings. |
+| `reihe_cond` | `grammatik/Grammatik/Gen/Text/Invers/Anweisung/Teil1.lean` | Given condition, branch and continuation elaboration equations, no fold expansion and `ctx.narrow = false`, a plain source `if` elaborates to the corresponding `ifBeg`/`ifElse`/`blkEnd` sequence. |
+| `effekt_rund` | `grammatik/Grammatik/Parser/Round/RundlaufItem/Teil1.lean` | Printing and reparsing an `EffGut` effect returns that effect and its comma/closing-brace suffix when the stated parser fuel bound holds. |
+| `nutzer_aus_quelleB` | `bruecke/Bruecke/Anweisung/Lokal/QuelleB.lean` | Successful `uebersetzeAllg` and computed `PflichtenB src`, including binder freshness and body duties for local bindings, give `NutzerPflicht (einheitAllg u P hn)` for the resulting unit. |
+| `nutzer_aus_quelle_teil` | `bruecke/Bruecke/Teil/Quelle.lean` | Successful source lowering, `PflichtenTeil src C` for the carried call-closed subset and explicit open-start duties give `NutzerPflicht`; open bodies and interfaces remain user duties. |
+| `nutzer_aus_quelle_teilB` | `bruecke/Bruecke/Teil/Lokal/Quelle.lean` | The partial source-duty result with local bindings, using `PflichtenTeilB src C` and explicit open-start duties for the same resulting unit. |
+| `lowGlobRead_sim` | `bruecke/Bruecke/Ausdruck/Glob.lean` | A successful numeric `lowGlobSide` and `GRel u σ w` make Body's `.global g` evaluation equal the encoded canonical G expression value; successful lowering already supplies the guard premise. |
+
+The emitted ticket lock's missing WAIT, failed ticket-CAS retry, WAKE and stable cross-thread
+invariant statements are listed in `stage0/Stage0/Senke/Sperre/Ticket/Offen.lean`. The sequential
+`locks_okT` entry above supplies none of those contended-path results.

@@ -1,0 +1,16 @@
+// The increment is valid, but it ends replacement: c afterwards has its declared range 0 .. 20,
+// which cannot index the 20 slots. The snapshot's 0 .. 19 range must not reach the return.
+module ir_probe {
+table T count 20 { slot { v : u32 in 0 .. 100, } }
+
+impl fn main() -> u32 in 0 .. 100
+    effects { reads T.slots }
+{
+    let mut c : u32 in 0 .. 20 = 0;
+    if c < 20 {
+        c = c + 1;
+        return T.slots[c].v;
+    }
+    return 0;
+}
+}
