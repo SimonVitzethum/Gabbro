@@ -1,0 +1,13 @@
+// Expected exit 42: two slots match; 2 * 20 + 2 = 42.
+module c13_count_value {
+table T count 4 { slot { v : u8, } }
+impl fn main() -> u32 in 0 .. 255 effects { reads T.slots, writes T.slots } costs <= 100 ops {
+    T.slots[0].v = 1;
+    T.slots[1].v = 0;
+    T.slots[2].v = 1;
+    T.slots[3].v = 0;
+    let n = count k in slots of T : T.slots[k].v == 1;
+    let answer = n * 20 + (count k in slots of T : T.slots[k].v == 1);
+    return answer;
+}
+}

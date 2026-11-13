@@ -44,8 +44,9 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 /-- The statics of the unit: ONE value each, an integer range or `bool`, with a numeral (or `true`/`false`)
     as the initial value; explicit placement is retained for the image-layout gate. -/
-def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int))) :
-    List SItemTief → Except String (List UGlob)
+def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)))
+    (items : List SItemTief) (widths : List (String × (Int × Int)) := []) : Except String (List UGlob) :=
+  match items with
   | [] => .ok []
   | .globT m n t v al sec sh :: rest =>
     let alignment := match al with
@@ -93,9 +94,9 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
             | _, _ => .ok .null : Except String UKonst) with
         | .error e => .error e
         | .ok k =>
-        match uGlobs consts alias rest with
+        match uGlobs consts alias rest widths with
         | .error e => .error e
-        | .ok gs => .ok ({ name := n, ty, init := z, initK := k, placement := if al.isSome || sec.isSome then some ⟨[n], alignment.getD 1, sec, m⟩ else none, var := m, shared := sh, optName := match t with | .index true tn => some tn | _ => none, sumName := match ty, t with | .wert (.sum _), .atom a => some a | _, _ => none, breite := match ty with | .int _ _ => uSpeicherBreite alias t | _ => 0 } :: gs)
+        | .ok gs => .ok ({ name := n, ty, init := z, initK := k, placement := if al.isSome || sec.isSome then some ⟨[n], alignment.getD 1, sec, m⟩ else none, var := m, shared := sh, optName := match t with | .index true tn => some tn | _ => none, sumName := match ty, t with | .wert (.sum _), .atom a => some a | _, _ => none, breite := match ty with | .int _ _ => uSpeicherBreite widths t | _ => 0 } :: gs)
   | .atomT n t pub _ obs :: rest =>
     if obs.isSome then .error "atomic observed by a device without G form"
     else
@@ -112,15 +113,16 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
                 else .error "atomic starts at zero outside its range" : Except String GTy) with
         | .error e => .error e
         | .ok ty =>
-          match uGlobs consts alias rest with
+          match uGlobs consts alias rest widths with
           | .error e => .error e
-          | .ok gs => .ok ({ name := n, ty, init := 0, var := true, atomic := true, shared := true, nutzlast := nl, breite := match ty with | .int _ _ => uSpeicherBreite alias t | _ => 0 } :: gs)
-  | _ :: rest => uGlobs consts alias rest
+          | .ok gs => .ok ({ name := n, ty, init := 0, var := true, atomic := true, shared := true, nutzlast := nl, breite := match ty with | .int _ _ => uSpeicherBreite widths t | _ => 0 } :: gs)
+  | _ :: rest => uGlobs consts alias rest widths
 /-- The arenas of a unit as the PAIR the specification names (`ArenaZucker`): a table of `hi` slots with the one
     field `wert`, and the counter static `A#used` over `0 .. hi` starting at zero. A dynamic ceiling and a
     placement have no form here. -/
-def uArenen (consts : List (String × Int)) (alias : List (String × (Int × Int))) :
-    List SItemTief → Except String (List UTab × List UGlob)
+def uArenen (consts : List (String × Int)) (alias : List (String × (Int × Int)))
+    (items : List SItemTief) (widths : List (String × (Int × Int)) := []) : Except String (List UTab × List UGlob) :=
+  match items with
   | [] => .ok ([], [])
   | .arenaT n _ hi mx t pb :: rest =>
     match mx, pb with
@@ -133,14 +135,14 @@ def uArenen (consts : List (String × Int)) (alias : List (String × (Int × Int
         match uFeldTyp alias t with
         | .error e => .error e
         | .ok r =>
-          match uArenen consts alias rest with
+          match uArenen consts alias rest widths with
           | .error e => .error e
           | .ok (ts, gs) =>
             if 0 < h then
-              .ok ({ name := n, count := h, cols := [("wert", r)], arena := true, breiten := (let w := uSpeicherBreite alias t; if 0 < w then [("wert", w)] else []) } :: ts,
+              .ok ({ name := n, count := h, cols := [("wert", r)], arena := true, breiten := (let w := uSpeicherBreite widths t; if 0 < w then [("wert", w)] else []) } :: ts,
                    { name := n ++ "#used", ty := GTy.int 0 h, init := 0, var := true } :: gs)
             else .error "arena of no slots"
-  | _ :: rest => uArenen consts alias rest
+  | _ :: rest => uArenen consts alias rest widths
 /-- The closed merge operators of `accumulates` (SYNTAX.md §11.4, C15):
     `max`, `min`, `add` and the bitwise `or`/`and`. Any other operator is refused. -/
 def akkuOperatorOk (m : String) : Bool :=

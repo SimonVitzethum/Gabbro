@@ -135,7 +135,7 @@ def uBindWertFast (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (mu : 
             match callee.axErg with
             | .none => .error "call without a value"
             | .some Ty.bool => .ok (.bindAx x c xs, uMitLokal ctx x UParamArt.bool Ty.bool muts)
-            | .some (Ty.int lo hi) => .ok (.bindAx x c xs, uMitLokal ctx x UParamArt.int (Ty.int lo hi) muts)
+            | .some (Ty.int lo hi) => .ok (.bindAx x c xs, uAnnotatedBinding ctx t (uMitLokal ctx x UParamArt.int (Ty.int lo hi) muts))
             | .some (Ty.ref n) => .ok (.bindAx x c xs, uMitLokal ctx x (UParamArt.ref n) (Ty.ref n) muts)
             | .some _ => .error "answer of a foreign fn without G form"
           else if let some ty := callee.resTy then do
@@ -164,7 +164,7 @@ def uBindWertFast (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (mu : 
             | .error err => .error err
             | .ok false => .error "let: value outside the annotated range"
             | .ok true =>
-              .ok (.bindCall x c xs, uMitLokal ctx x UParamArt.int (Ty.int lo hi) muts)
+              .ok (.bindCall x c xs, uAnnotatedBinding ctx t (uMitLokal ctx x UParamArt.int (Ty.int lo hi) muts))
           | false, .none =>
             -- A call whose answer is an `option index into T` binds an option of that table.
             match callee.resOpt, t with

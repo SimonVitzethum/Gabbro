@@ -1,0 +1,6 @@
+// Expected refusal (no runtime exit): a range alias declares no unsigned word storage.
+module c13_alias_range_refused {
+type Small = u32 in 0 .. 15;
+impl fn bits(x : Small) -> u8 effects { pure } { return popcount(x); }
+impl fn main() -> u8 effects { pure } { return bits(3); }
+}

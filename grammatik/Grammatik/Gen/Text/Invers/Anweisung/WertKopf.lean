@@ -42,8 +42,10 @@ variable (z : Spez)
 variable (V : Vertrag z.deklaration) (gNr : Nat → Nat)
 variable {z V}
 
+/-- Count is now a numeric leaf; the generic missing-place refusal excludes that new form. -/
 theorem wert_fehler_blatt {ctx : UCtx} (s : SExpr) (hz : ∃ e, uZugriff ctx s = .error e) (hg : uGrenzwort ctx s = none)
-    (h1 : ∀ v, s ≠ .lit v) (h2 : ∀ p, s ≠ .variable p) (h3 : ∀ r f, s ≠ .arrow (.variable r) f) :
+    (h1 : ∀ v, s ≠ .lit v) (h2 : ∀ p, s ≠ .variable p) (h3 : ∀ r f, s ≠ .arrow (.variable r) f)
+    (h4 : ∀ names values, s ≠ .ext .count names values) :
     ∃ e, uWertBlatt ctx s = .error e := by
   obtain ⟨e, he⟩ := hz
   cases s with
@@ -53,6 +55,11 @@ theorem wert_fehler_blatt {ctx : UCtx} (s : SExpr) (hz : ∃ e, uZugriff ctx s =
     cases a with
     | «variable» r => exact absurd rfl (h3 r f)
     | _ => simp only [uWertBlatt, hg, he]; exact ⟨_, rfl⟩
+  | ext kind names values =>
+    cases kind
+    all_goals first
+      | exact False.elim (h4 names values rfl)
+      | (simp only [uWertBlatt, hg, he]; exact ⟨_, rfl⟩)
   | _ => simp only [uWertBlatt, hg, he]; exact ⟨_, rfl⟩
 
 theorem wert_bin_fehler (ctx : UCtx) (op : String) (a b : SExpr)

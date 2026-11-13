@@ -22,7 +22,7 @@ def uBindKopf (ctx : UCtx) (x : String) : Option STyp → Except String (Option 
           names := x :: ctx.names
           kinds := .int :: ctx.kinds
           types := .int lo hi :: ctx.types
-          bits := uParamBreite ty :: ctx.bits })
+          bits := uBindingBreite ctx ty :: ctx.bits })
 
 /-- The context after a local `x` of kind `k` and type `ty`. -/
 def uMitLokal (ctx : UCtx) (x : String) (k : UParamArt) (ty : Ty) (muts : List String) : UCtx :=
@@ -32,6 +32,16 @@ def uMitLokal (ctx : UCtx) (x : String) (k : UParamArt) (ty : Ty) (muts : List S
     types := ty :: ctx.types
     bits := 0 :: ctx.bits
     muts := muts }
+
+/-- A written call-result annotation carries storage metadata after the ordinary result/range checks.
+    Unannotated calls and canonical read-back retain their original contexts. -/
+def uAnnotatedBinding (before : UCtx) (annotation : Option STyp) (after : UCtx) : UCtx :=
+  match annotation with
+  | none => after
+  | some ty =>
+    if before.narrow then
+      { after with bits := uBindingBreite before ty :: before.bits }
+    else after
 
 /-- Cache each binder's exact source list objects, retaining all types and diagnostics. -/
 def uBindKopfFast (ctx : UCtx) (name : String) : Option STyp → Except String (Option (Int × Int) × UCtx)
@@ -52,7 +62,7 @@ def uBindKopfFast (ctx : UCtx) (name : String) : Option STyp → Except String (
           names := name :: ctx.names
           kinds := .int :: ctx.kinds
           types := .int lo hi :: ctx.types
-          bits := uParamBreite ty :: ctx.bits }
+          bits := uBindingBreite ctx ty :: ctx.bits }
       .ok (some (lo, hi), ctx.cacheBinding after name .int (.int lo hi) rfl rfl rfl)
 
 @[csimp] theorem uBindKopf_eq_fast : @uBindKopf = @uBindKopfFast := by

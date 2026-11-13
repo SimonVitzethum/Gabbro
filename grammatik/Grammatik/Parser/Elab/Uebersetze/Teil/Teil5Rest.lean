@@ -43,6 +43,9 @@ def uWertBlatt (ctx : UCtx) : SExpr → Except String USide
       | .ok (.ref _) => .error "reference as a number"
       | .ok _ => .ok (.param p)
       | .error e => .error e
+  | value@(.ext .count _ _) => do
+    let side ← uZSeite ctx value
+    if seiteAltErg side then .error "old or result in a body" else .ok side
   | .arrow (.variable r) f =>
     match uRefLokal ctx r with
     | .some _ => .ok (.refSlot r f)
@@ -79,6 +82,9 @@ def uWertBlattFast (ctx : UCtx) : SExpr → Except String USide
       | .ok (.ref _) => .error "reference as a number"
       | .ok _ => .ok (.param p)
       | .error e => .error e
+  | value@(.ext .count _ _) => do
+    let side ← uZSeite ctx value
+    if seiteAltErg side then .error "old or result in a body" else .ok side
   | .arrow (.variable r) f =>
     match uRefLokal ctx r with
     | .some _ => .ok (.refSlot r f)
@@ -138,6 +144,28 @@ def uParamBreite : STyp → Nat
     if strEq a "u8" then 8 else if strEq a "u16" then 16
     else if strEq a "u32" then 32 else if strEq a "u64" then 64 else 0
   | _ => 0
+
+/-- A named alias supplies a word width only when it denotes that complete unsigned word.
+    Explicitly ranged builtin storage keeps its written width (needed by nonzero scans). -/
+def uWordBindingBreite (alias : List (String × (Int × Int))) (ty : STyp)
+    (widths : List (String × (Int × Int)) := []) : Nat :=
+  match ty with
+  | .atom name =>
+    let width := uSpeicherBreite widths ty
+    if 0 < uAtomBreite name then width else
+      match uTypName alias name with
+      | .ok (lo, hi) => if lo = 0 ∧ hi = (2 : Int) ^ width - 1 then width else 0
+      | .error _ => 0
+  | _ => uSpeicherBreite widths ty
+
+/-- Compiler-only declaration widths. Canonical printed heads retain their existing metadata. -/
+def uBindingBreite (ctx : UCtx) (ty : STyp) : Nat :=
+  if ctx.narrow then uWordBindingBreite ctx.alias ty ctx.widths else uParamBreite ty
+
+/-- Read parameter storage from the written signature, after erasing device handles. -/
+def uParameterBreiten (alias : List (String × (Int × Int))) (params : List (String × STyp))
+    (widths : List (String × (Int × Int)) := []) : List Nat :=
+  params.map (fun parameter => uWordBindingBreite alias parameter.2 widths)
 
 /-- A parameter with its kind (the `param_ty` of `lean_g.rs`). -/
 def uParam (alias : List (String × (Int × Int))) (tabs : List UTab) (sums : List USum := [])

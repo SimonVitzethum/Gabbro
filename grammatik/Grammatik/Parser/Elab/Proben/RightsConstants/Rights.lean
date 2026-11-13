@@ -73,7 +73,7 @@ attribute [local cbv_eval] UebersetzeProben2.seq_select UebersetzeProben2.struct
 -- Evaluate the selected node of the canonical typed mutual before projecting
 -- its result, as in the generic count-reader witnesses.
 attribute [local cbv_eval] lowWertE.eq_def lowCmp.eq_def lowEns.eq_def
-  lowArrayValue.eq_def lowSeiteZ.eq_def
+  lowArrayValue.eq_def lowCountE.eq_def lowSeiteZ.eq_def
 
 /-- An undeclared input stage reaches the canonical lowering refusal. -/
 theorem advances_refused_zeuge :

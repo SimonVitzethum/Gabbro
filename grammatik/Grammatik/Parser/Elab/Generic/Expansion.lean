@@ -39,7 +39,7 @@ def environment (source : List SItemTief) : Environment :=
   let fns := Uebersetze.uKonstFns ordinary
   let constants := Uebersetze.uConstsRech fns ordinary []
   { declarations, constants, constantFunctions := fns,
-    aliases := Uebersetze.uAliase constants ordinary ++ Uebersetze.uAliasBreiten ordinary,
+    aliases := Uebersetze.uAliase constants ordinary,
     globals := source.filterMap sourceName, source }
 
 mutual

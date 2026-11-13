@@ -74,7 +74,7 @@ def uArrayExpr : Nat → SExpr → Bool
   | fuel + 1, expression =>
     match expression with
     | .ext .all [_, "elems"] [_, _] | .ext .any [_, "elems"] [_, _] |
-      .ext .mem ["elems"] [_, _] => true
+      .ext .mem ["elems"] [_, _] | .ext .count [_, "elems"] [_, _] => true
     | .ext _ _ values => values.any (uArrayExpr fuel)
     | .bin _ a b | .index a b => uArrayExpr fuel a || uArrayExpr fuel b
     | .un _ a | .field a _ | .arrow a _ | .old a => uArrayExpr fuel a

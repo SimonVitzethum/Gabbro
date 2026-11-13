@@ -47,17 +47,20 @@ open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 def elabExpanded (items : List SItemTief) (consts : List (String × Int))
     (typeEnv : List (String × (Int × Int))) (functions : List UKonstFn)
     (tableLowering : List String → SItemTief → Except String UTab)
-    (requirements : List (STyp × String) := []) (ort : Bool := false) : Except String UProg :=
-  elabExpandedWithScopes items consts typeEnv functions tableLowering requirements ort (narrow := true)
+    (requirements : List (STyp × String) := []) (ort : Bool := false)
+    (widths : List (String × (Int × Int)) := uAliasBreiten items) : Except String UProg :=
+  elabExpandedWithScopes items consts typeEnv functions tableLowering requirements ort (narrow := true) (widths := widths)
 
 /-- Expand through the canonical exporter before using the shared runtime elaborator.
     The supplied scopes retain their original-source certificates and table adapter. -/
 def elabWithScopes (items : List SItemTief) (consts : List (String × Int))
     (typeEnv : List (String × (Int × Int)))
     (functions : List UKonstFn := uKonstFns (uOhneSenken (uMembers items)))
-    (tableLowering : List String → SItemTief → Except String UTab := uTabelle consts typeEnv) : Except String UProg := do
+    (tableLowering : List String → SItemTief → Except String UTab := uTabelle consts typeEnv)
+    (widths : List (String × (Int × Int)) := uAliasBreiten (uMembers items)) : Except String UProg := do
   let (expanded, requirements) ← expandU items
   elabExpanded (expanded.map OldSource.normalizeItem) consts typeEnv functions tableLowering requirements
+    (widths := widths)
 
 /-- Equality on the expanded program, including every expansion and const-admission error.
     Both endpoints share the entire phase body, so later elaborator changes cannot drift. -/
@@ -65,10 +68,11 @@ theorem elabU_scopes (items : List SItemTief) :
     elabU items = ((expandU items).bind fun (expanded, requirements) => do
       checkCanonicalConstants expanded
       let consts := uConstsRech (uKonstFns expanded) expanded []
-      let types := uAliase consts expanded ++ uAliasBreiten expanded ++
+      let types := uAliase consts expanded ++
         consts.map (fun c => (c.1, (c.2, c.2)))
       elabExpandedWithScopes expanded consts types
-        (uKonstFns (uOhneSenken expanded)) (uTabelle consts types) requirements) := by
+        (uKonstFns (uOhneSenken expanded)) (uTabelle consts types) requirements
+        (widths := uAliasBreiten expanded)) := by
   rfl
 
 /-- The actual canonical consumer sees identical complete scopes on every input admitted by
@@ -77,14 +81,15 @@ theorem elabWithScopes_collector_redundant (original runtime : List SItemTief)
     (h : EnvironmentCompatible original (normalizeAliases original))
     (result : DerivedScopes original) (hr : deriveScopes original = .ok result) :
     elabWithScopes runtime result.scope.values result.scope.types result.scope.functions
-      (tableWithEmpty result.scope.values result.scope.types) =
+      (tableWithEmpty result.scope.values result.scope.types) (widths := result.scope.widths) =
       elabWithScopes runtime
         (scopes original (normalizeAliases original) (normalize_environments original h)).values
         (scopes original (normalizeAliases original) (normalize_environments original h)).types
         (scopes original (normalizeAliases original) (normalize_environments original h)).functions
         (tableWithEmpty
           (scopes original (normalizeAliases original) (normalize_environments original h)).values
-          (scopes original (normalizeAliases original) (normalize_environments original h)).types) := by
+          (scopes original (normalizeAliases original) (normalize_environments original h)).types)
+        (widths := (scopes original (normalizeAliases original) (normalize_environments original h)).widths) := by
   obtain ⟨old, he, hs⟩ := deriveScopes_of_compatible original h
   have same : result = old := Except.ok.inj (hr.symm.trans he)
   subst result

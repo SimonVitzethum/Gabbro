@@ -19,9 +19,8 @@ The Lean module-system migration and the split of every Lean file below 500 line
 
 - **One lead** (the root session) runs [PLAN-COMPILER-READY.md](dokumente/PLAN-COMPILER-READY.md) with agents
   started through T3 `delegate_task` (owner, 2026-11-12). Upper limits of agents running at the same time:
-  - **two** agents of the Claude family in all (owner, 2026-11-13; was one): Fable 5.2 (`claude-fable-5-2`),
-    Opus 5.5 (`claude-opus-5-5`) or Sonnet 5.5 (`claude-sonnet-5-5`), with at most ONE Fable 5.2 active at any
-    time (the lead session counts when it runs on Fable);
+  - agents of the Claude family (owner, 2026-11-13, latest): EITHER one Opus 5.5 (`claude-opus-5-5`) OR two
+    Sonnet 5.5 (`claude-sonnet-5-5`) at the same time, never mixed; Fable 5.2 only as the lead session;
   - **three** GPT Sol 6.1 (codex `gpt-6.1-sol`, started with `reasoningEffort: high`);
   - **five** Muse (OpenCode Muse Spark 1.3 Contributor, only through the Go access: model
     `opencode-go/muse-spark-1.3-contributor`; never `opencode/…`).
@@ -477,4 +476,8 @@ OPEN until measured; no universal speed claim.
 - **Witnesses:** every theorem with a ∀-over-syntax premise gets a `_zeuge` on a non-degenerate fixture that
   satisfies all premises jointly.
 - **Silicon over proof shape.** A green proof of a wrong hardware definition is a finding, not a result.
+- **Fast proofs only (owner, 2026-11-13).** Every proof method used must be fast: a module checks in well under two
+  minutes, no declaration takes more than a few seconds. No `decide +kernel`/kernel `rfl` over Strings or whole
+  contexts or images; prove from the general theorems with small explicit premises; heavy evaluation belongs in a
+  witness module of its own, never on the compiler path. A slow module is a finding and is fixed, not waited out.
 - **Commit the green skeleton early**, one definition per check, and never stop with work pending.

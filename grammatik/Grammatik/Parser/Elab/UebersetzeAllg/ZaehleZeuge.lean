@@ -81,7 +81,7 @@ theorem domain_exakt (n : Nat) : (alleIndizes (n : Int)).length = n := alleIndiz
 -- Keep the complete typed mutual result intact until its success/range is
 -- projected. The ordinary lowerers retain every access and range check.
 attribute [local cbv_eval] lowWertE.eq_def lowCmp.eq_def lowEns.eq_def
-  lowArrayValue.eq_def lowSeiteZ.eq_def
+  lowArrayValue.eq_def lowCountE.eq_def lowSeiteZ.eq_def
 
 /-- A table of four slots with a byte field. -/
 def zU : UProg := {tabs := [{name := "T", count := 4, cols := [("v", (0, 255))]}], locks := [], fns := []}

@@ -97,6 +97,8 @@ structure UCtx where
   narrow : Bool := false
   /-- Observationally irrelevant persistent local and unit-head indexes. -/
   lookupMemo : Merk ULookupMemo := ULookupMemo.empty
+  /-- Alias storage metadata, consulted only by width resolution, never range lookup. -/
+  widths : List (String × (Int × Int)) := []
 
 /-- One elaborated function: parameters with their `Ty`,
     the optional result range, the held lock names, the written

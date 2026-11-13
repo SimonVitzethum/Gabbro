@@ -150,8 +150,8 @@ def uSichert (ctx : UCtx) : SExpr → Except String UEns
 /-- C13: one side of a comparison with `count x in D : p` as a NUMBER at any depth of `+ - *` (`Expr.count`): the
     domains are `slots of T`, `descendants of s`, `ancestors of s` (the checked `reaches` filter) and `elems of a`
     (the index domain of a fixed array); every other form is the side of `uSeite`. The body is read under the binder
-    `x` exactly as the bodies of `forall`/`exists` over the same domain. A count in a BODY value (not in a
-    predicate) has no G form here. -/
+    `x` exactly as the bodies of `forall`/`exists` over the same domain. The body-value leaf reuses this
+    reader and rejects snapshots and result references. -/
 def uZSeite (ctx : UCtx) : SExpr → Except String USide
   | .ext .count [x, dk] [subject, body] =>
     if dk == "elems" then do

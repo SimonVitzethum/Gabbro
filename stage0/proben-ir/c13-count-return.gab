@@ -1,0 +1,7 @@
+// Expected exit 2: [1, 0, 1, 0] contains two ones.
+module c13_count_return {
+impl fn main() -> u32 in 0 .. 255 effects { pure } costs <= 100 ops {
+    let a : [u8; 4] = [1, 0, 1, 0];
+    return count i in elems of a : a[i] == 1;
+}
+}

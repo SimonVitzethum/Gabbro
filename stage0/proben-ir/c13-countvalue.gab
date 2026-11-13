@@ -1,4 +1,4 @@
-// C13 refusal: a count bound to a variable has no G form (counts live in comparisons).
+// Expected exit 1: only the first of four zero-initialised slots is set to one.
 module c13_countvalue {
 table T count 4 { slot { v : u8, } }
 impl fn main() -> u32 in 0 .. 255 effects { reads T.slots, writes T.slots } {

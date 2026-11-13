@@ -179,7 +179,8 @@ def notesPlain (text : String) (options : Profil.Options := {}) : List String :=
     | .error _ => return gate
     | .ok derived => pure derived
   let unit ← match (Frontend.elabWithScopes declarations derived.scope.values derived.scope.types
-      derived.scope.functions (Frontend.tableWithEmpty derived.scope.values derived.scope.types)).bind
+      derived.scope.functions (Frontend.tableWithEmpty derived.scope.values derived.scope.types)
+      (widths := derived.scope.widths)).bind
         (Profil.selectUnit options) with
     | .error _ =>
       -- The same elaboration once more, asked for the place: the function an error arose in.
@@ -195,13 +196,13 @@ def notesPlain (text : String) (options : Profil.Options := {}) : List String :=
         | .ok (expanded, requirements) =>
           match Frontend.elabExpanded (expanded.map OldSource.normalizeItem) derived.scope.values
               derived.scope.types derived.scope.functions
-              (Frontend.tableWithEmpty derived.scope.values derived.scope.types) requirements (ort := true) with
+              (Frontend.tableWithEmpty derived.scope.values derived.scope.types) requirements (ort := true) (widths := derived.scope.widths) with
           | .error reason =>
             -- The statement: the shortest prefix of the function's body that answers the same error.
             let run := fun (items : List SItemTief) =>
               match Frontend.elabExpanded items derived.scope.values derived.scope.types
                   derived.scope.functions
-                  (Frontend.tableWithEmpty derived.scope.values derived.scope.types) requirements (ort := true) with
+                  (Frontend.tableWithEmpty derived.scope.values derived.scope.types) requirements (ort := true) (widths := derived.scope.widths) with
               | .error e => some e
               | .ok _ => none
             let normal := expanded.map OldSource.normalizeItem

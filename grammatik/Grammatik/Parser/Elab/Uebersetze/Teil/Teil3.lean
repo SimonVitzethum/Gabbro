@@ -175,22 +175,30 @@ def uFeldTyp (alias : List (String × (Int × Int))) (ty : STyp) : Except String
 /-- C13: the declared STORAGE width in bits of a type as written: a builtin unsigned word (with or without a range),
     a `wrapping` field of one, or an alias of one (`uAliasBreiten`); `0` for everything else. It is the width the
     declaration chose, never the width the range of the type happens to fit. -/
-def uSpeicherBreite (alias : List (String × (Int × Int))) : STyp → Nat
+def uSpeicherBreite (widths : List (String × (Int × Int))) : STyp → Nat
   | .atom a =>
     if 0 < uAtomBreite a then uAtomBreite a
     else
-      match uSuch "type" alias (a ++ "#bits") with
+      match uSuch "type" widths (a ++ "#bits") with
       | .ok (w, _) => w.toNat
       | .error _ => 0
-  | .range t _ _ _ => uSpeicherBreite alias t
-  | .wrap t => uSpeicherBreite alias t
+  | .range t _ _ _ => uSpeicherBreite widths t
+  | .wrap t => uSpeicherBreite widths t
   | _ => 0
 
 /-- C13: the widths of the fields of a table, for the fields of a bare unsigned word type. -/
-def uFeldBreiten (alias : List (String × (Int × Int))) (fds : List SFeld) : List (String × Nat) :=
+def uFeldBreiten (widths : List (String × (Int × Int))) (fds : List SFeld) : List (String × Nat) :=
   fds.filterMap fun fd =>
-    let w := uSpeicherBreite alias fd.ftyp
+    let w := uSpeicherBreite widths fd.ftyp
     if 0 < w then some (fd.fname, w) else none
+
+/-- Storage annotation is separate from table admission: adapters keep their exact range
+    environment and admission theorem, while widths come only from original alias bases. -/
+def uTableWidths (widths : List (String × (Int × Int))) : SItemTief → List (String × Nat)
+  | .tableT _ _ _ _ _ _ parts _ => parts.flatMap fun
+      | .tSlot fields => uFeldBreiten widths fields
+      | _ => []
+  | _ => []
 
 mutual
 /-- A constant folded at its declared type: numbers by the constant evaluator, strings as UTF-8
@@ -324,7 +332,7 @@ def uTabelleSlots (consts : List (String × Int)) (alias : List (String × (Int 
             wraps := fs.filterMap (fun p => match p.2 with | .wrap m => some (p.1.1, m) | _ => none),
             sumNamen := fs.filterMap (fun p => match p.2 with | .summe a => some (p.1.1, a) | _ => none),
             idxNamen := fs.filterMap (fun p => match p.2 with | .idx tn => some (p.1.1, tn) | _ => none),
-            kanten := kanten, shared := sh, breiten := uFeldBreiten alias fds, owner := o }
+            kanten := kanten, shared := sh, breiten := uFeldBreiten [] fds, owner := o }
 
 /-- One table: `count` and one integer range per slot field.
 /// Invariants, `ops`, tree edges, the occupancy mark,
@@ -347,7 +355,7 @@ def uTabelle (consts : List (String × Int))
     | .ok fs =>
       if fs.all (fun p => match p.2 with | .zahl => true | _ => false) then
         .ok { name := n, count := 0, cols := fs.map (·.1), shared := sh, von := some p,
-               breiten := uFeldBreiten alias fds, owner := o }
+               breiten := uFeldBreiten [] fds, owner := o }
       else .error "open table with a field other than a number without G form"
   | _ => .error "table without G form"
 

@@ -144,7 +144,9 @@ def lowWertE (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     | .ok x => (lowIb1 bi w x).map LowSide.wert
   | .ib2 bi w a b =>
     (lowZwei (lowIb2 bi w) (zahlVon (lowWertE u Γ Λ fn er a)) (zahlVon (lowWertE u Γ Λ fn er b))).map LowSide.wert
-  | .zaehle .. | .zaehleBaum .. | .zaehleFeld .. => .error "count is read only in a comparison of a predicate"
+  | .zaehle x t p => (lowCountE u Γ Λ fn er (.zaehle x t p)).map LowSide.wert
+  | .zaehleBaum x t s d i p => (lowCountE u Γ Λ fn er (.zaehleBaum x t s d i p)).map LowSide.wert
+  | .zaehleFeld a x p => (lowCountE u Γ Λ fn er (.zaehleFeld a x p)).map LowSide.wert
   /- A nominal product value: every field elaborated at its carried type, then checked against
       a declared nominal schema -- no structural guess, no default field. -/
   | .product identity _ sides => do
@@ -170,7 +172,7 @@ def lowWertE (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     let baseE : Expr (declOf u) Γ Λ sch.ty := cast (congrArg (Expr (declOf u) Γ Λ) hsch.symm) e
     let v ← lowWertAtE u Γ Λ fn er fieldTy value
     pure ⟨sch.ty, Expr.prodSet baseE pos v⟩
-termination_by value => 3 * sizeOf value
+termination_by value => 5 * sizeOf value + 3
 decreasing_by all_goals (simp_wf <;> omega)
 
 /-- A value at the type `τ` (checking mode): an array literal element by element, everything else by `fitW`. -/
@@ -186,7 +188,7 @@ def lowWertAtE (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (e
     | .ok w => fitW τ w
     | .error e => .error e
 
-termination_by _ value => 3 * sizeOf value + 1
+termination_by _ value => 5 * sizeOf value + 4
 decreasing_by all_goals (simp_wf <;> omega)
 
 /-- Elaborate the existing ordered typed field list, keeping recursive calls visible to the
@@ -198,7 +200,7 @@ def lowProductArgs (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn
     let head ← lowWertAtE u Γ Λ fn er ty side
     let tail ← lowProductArgs u Γ Λ fn er rest
     pure (.cons head tail)
-termination_by sides => 3 * sizeOf sides + 2
+termination_by sides => 5 * sizeOf sides + 3
 decreasing_by all_goals (simp_wf <;> omega)
 
 /-- Compare the actual typed operands through the shared value comparator. -/
@@ -207,7 +209,7 @@ def lowCmp (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     String → USide → USide → Except String (Expr (declOf u) Γ Λ .bool)
   | op, a, b => lowVglWert u op (lowWertE u Γ Λ fn er a) (lowWertE u Γ Λ fn er b)
 
-termination_by _ a b => 3 * (sizeOf a + sizeOf b) + 1
+termination_by _ a b => 5 * (sizeOf a + sizeOf b) + 4
 decreasing_by all_goals (simp_wf <;> omega)
 
 /-- One `ensures` predicate. -/
@@ -322,7 +324,7 @@ def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
         | .ok b => .ok (Expr.existsSlots (D := declOf u) t b hL)
       else .error "access without held guard"
 
-termination_by predicate => 3 * sizeOf predicate
+termination_by predicate => 5 * sizeOf predicate + 1
 decreasing_by all_goals (simp_wf <;> omega)
 
 def lowArrayValue (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (er : Option Ty)
@@ -333,19 +335,12 @@ def lowArrayValue (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
       else .error "source export: array domain requires an immutable value binding"
   | _ => .error "source export: elems domain is not an array"
 
-termination_by 3 * sizeOf source + 1
+termination_by 5 * sizeOf source + 4
 decreasing_by all_goals (simp_wf <;> omega)
 
-/-- C13: one side of a comparison that holds `count x in D : p` as a number (`Expr.count`), at the arithmetic layer
-    `+ - *`; every other side is the side of `lowSideEns`. The binder `x` is an index into the exact domain:
-    * `slots of T`: the `count T` cells; an OPEN table has no static cardinality and is refused;
-    * `descendants of s` / `ancestors of s`: the same cells filtered through the checked `reaches` relation
-      (`lowEns .filtered`), so the membership is exact; the guards of `T` are required;
-    * `elems of a`: the index domain `0 ..< n` of the lexical fixed array `a`, on its private carrier, whose count
-      is the array's length by `ArrayCarrier.same`.
-    The count reads the cells its body reads, under the guards the body's own reads carry; the enumeration of the
-    indices reads none (`Expr.orte` of `count` is the body's). -/
-def lowSeiteZ (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+/-- One checked bounded fold, shared by body values and predicate comparison sides.
+    Metadata enumeration reads no cell; predicate reads retain the canonical guards. -/
+def lowCountE (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (fn : UFn) (er : Option Ty) : USide → Except String (LowSide u Γ Λ)
   | .zaehle tn x body =>
     match tabIdx u.tabs tn, ergAlsParam u fn er with
@@ -384,11 +379,29 @@ def lowSeiteZ (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     let predicate ← lowEns u (Ty.index ((declOf u).count carrier.table) :: Γ) Λ
       (fnR.mitTy binder (.index ((declOf u).count carrier.table))) none body
     pure (LowSide.zaehleVon u Γ Λ array.count (umIdx carrier.same predicate))
+  | _ => .error "source export: expected a bounded count"
+termination_by source => 5 * sizeOf source + 2
+decreasing_by all_goals (simp_wf <;> omega)
+
+/-- C13: one side of a comparison that holds `count x in D : p` as a number (`Expr.count`), at the arithmetic layer
+    `+ - *`; every other side is the side of `lowSideEns`. The binder `x` is an index into the exact domain:
+    * `slots of T`: the `count T` cells; an OPEN table has no static cardinality and is refused;
+    * `descendants of s` / `ancestors of s`: the same cells filtered through the checked `reaches` relation
+      (`lowEns .filtered`), so the membership is exact; the guards of `T` are required;
+    * `elems of a`: the index domain `0 ..< n` of the lexical fixed array `a`, on its private carrier, whose count
+      is the array's length by `ArrayCarrier.same`.
+    The count reads the cells its body reads, under the guards the body's own reads carry; the enumeration of the
+    indices reads none (`Expr.orte` of `count` is the body's). -/
+def lowSeiteZ (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) (er : Option Ty) : USide → Except String (LowSide u Γ Λ)
+  | .zaehle x t p => lowCountE u Γ Λ fn er (.zaehle x t p)
+  | .zaehleBaum x t s d i p => lowCountE u Γ Λ fn er (.zaehleBaum x t s d i p)
+  | .zaehleFeld a x p => lowCountE u Γ Λ fn er (.zaehleFeld a x p)
   | .add a b => lowZwei (fun x y => .ok (LowSide.plus x y)) (lowSeiteZ u Γ Λ fn er a) (lowSeiteZ u Γ Λ fn er b)
   | .sub a b => lowZwei (fun x y => .ok (LowSide.minus x y)) (lowSeiteZ u Γ Λ fn er a) (lowSeiteZ u Γ Λ fn er b)
   | .mul a b => lowZwei (fun x y => .ok (LowSide.times x y)) (lowSeiteZ u Γ Λ fn er a) (lowSeiteZ u Γ Λ fn er b)
   | s => zahlVon (lowWertE u Γ Λ fn er s)
-termination_by source => 3 * sizeOf source + 1
+termination_by source => 5 * sizeOf source + 4
 decreasing_by all_goals (simp_wf <;> omega)
 end
 

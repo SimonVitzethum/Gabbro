@@ -1429,16 +1429,20 @@ atomic in a contract, and ghost use. Calls inside operands depend on the checked
 call-binding expansion (A31), never on erasing the call. Open/infinite domains,
 unsized layouts and capability alignment without correspondence remain refused.
 
-*C13 grammar-side state (2026-11-02, not yet built by the lead):* the closed builtins carry their width from a
-parameter, a `let` local, a static, a field (read through a pointer or at a table), an arena element, a conversion
-`T(e)` and an alias of a word type (`UTab.breiten`, `UGlob.breite`, the `A#bits` alias entries); alias-typed
-parameters and `let`s still have no width (`kopf.bits` is pinned to `uParamBreite` by the printed-head inverse).
-`count` is a NUMBER at the `+ - *` layer of a comparison (`USide.zaehle/zaehleBaum/zaehleFeld`, one mutual block
-with `UEns`) over `slots of`, `descendants of`/`ancestors of` (the checked `reaches` filter) and `elems of` (the
-index domain of a fixed array on its carrier); open tables are refused, and a count in a BODY value is still
-refused. `sizeof` resolves to `Expr.lit` through `SpTy` (`Kern/Syntax/Profil/Speicher`) only for a declared word
-storage; the numeric `aligned(x, N)` is `x mod N = 0`. Not connected: the layout theorem is not yet consumed by the
-Stage-0 `Lay` correspondence, and the Stage-0 lowering of `count`/builtins is the Stage-0 lane's.
+*C13 grammar-side follow-up (2026-11-13, awaiting the lead's checks):* the closed builtins retain declared storage
+widths from parameters, typed locals (including annotated call results), statics, table/arena fields, nominal
+record fields and conversions. Alias-typed parameters and locals read the `A#bits` metadata only on the compiler
+path (`UCtx.narrow`); the canonical printed-head path retains `uParamBreite`. A named range alias that is not the
+complete unsigned word has no parameter/local builtin width; explicitly ranged builtin storage retains its
+written width. `count` now uses one checked fold lowerer from both body values and predicate comparisons, including
+under arithmetic, with the exact range `0 .. n`. The body reader rejects `old` and `result` inside its predicate.
+The supported domains remain `slots of`, checked descendants/ancestors, and fixed lexical array indices (`elems
+of`, with ordinary `a[i]` reads). Array-carrier discovery includes count expressions and collects lengths from
+parameter, local and constant array declarations. Open tables and unmodelled domains remain refused.
+`sizeof` still resolves to `Expr.lit` through `SpTy` (`Kern/Syntax/Profil/Speicher`) only for declared word storage;
+numeric `aligned(x, N)` is `x mod N = 0`. The source layout theorem is still not consumed by Stage-0 `Lay`
+correspondence. Stage-0 count/builtin lowering and its generic correctness cases already exist; this follow-up
+changes no Stage-0 theorem statement.
 
 **C17 — source `decreases`, bounded to the existing recursion model.**
 

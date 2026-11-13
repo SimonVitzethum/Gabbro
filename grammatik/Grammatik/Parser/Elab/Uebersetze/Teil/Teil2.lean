@@ -161,18 +161,41 @@ def uAtomBreite (a : String) : Nat :=
   if strEq a "u8" then 8 else if strEq a "u16" then 16
   else if strEq a "u32" then 32 else if strEq a "u64" then 64 else 0
 
-/-- C13: the declared storage width of every `type A = uN [in lo .. hi];` alias, as the entries `A#bits` of the alias
-    scope (`#` never occurs in a source name, so they shadow nothing): `(A#bits, (W, W))`. The width of a type
-    name is the width the declaration chose, never the width its range happens to fit. -/
-def uAliasBreiten : List SItemTief → List (String × (Int × Int))
-  | [] => []
-  | .typeT _ n _ _ (.some (.range (.atom w) _ _ _)) :: rest =>
-    if 0 < uAtomBreite w then (n ++ "#bits", ((uAtomBreite w : Int), (uAtomBreite w : Int))) :: uAliasBreiten rest
-    else uAliasBreiten rest
-  | .typeT _ n _ _ (.some (.atom w)) :: rest =>
-    if 0 < uAtomBreite w then (n ++ "#bits", ((uAtomBreite w : Int), (uAtomBreite w : Int))) :: uAliasBreiten rest
-    else uAliasBreiten rest
-  | _ :: rest => uAliasBreiten rest
+/-- The declared storage base, independent of any bounds restricting its values. -/
+def uStorageName : STyp → Option String
+  | .atom name => some name
+  | .range ty _ _ _ | .wrap ty => uStorageName ty
+  | _ => none
+
+/-- The type declaration of `name`, as the alias resolver looks it up. -/
+def uTypeDeclNamed (name : String) : SItemTief → Bool
+  | .typeT _ declared _ _ _ => strEq declared name
+  | _ => false
+
+/-- Follow source alias declarations to their builtin storage base. One fuel unit per named
+    edge makes cycles fail closed; declaration order does not affect the result. -/
+def uAliasWordWidth (items : List SItemTief) : Nat → String → Nat
+  | 0, _ => 0
+  | fuel + 1, name =>
+    if 0 < uAtomBreite name then uAtomBreite name else
+      match items.find? (uTypeDeclNamed name) with
+      | some (.typeT _ _ _ _ (some body)) =>
+        match uStorageName body with
+        | some target => uAliasWordWidth items fuel target
+        | none => 0
+      | _ => 0
+
+/-- The declared storage width of each unsigned-word alias, including chains and ranged aliases,
+    as `A#bits` entries (`#` cannot occur in source names). Read original declaration bases rather
+    than inferring widths from integer ranges; unresolved and cyclic aliases supply no width. -/
+def uAliasBreiten (items : List SItemTief) : List (String × (Int × Int)) :=
+  items.filterMap fun
+    | .typeT _ name _ _ (some body) =>
+      let width := match uStorageName body with
+        | some target => uAliasWordWidth items (items.length + 1) target
+        | none => 0
+      if 0 < width then some (name ++ "#bits", ((width : Int), (width : Int))) else none
+    | _ => none
 
 /-! ## Compile-time constants
 

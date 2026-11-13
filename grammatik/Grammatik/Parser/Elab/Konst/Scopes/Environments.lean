@@ -174,9 +174,13 @@ theorem Scopes.functionMeaning {items : List SItemTief} (scope : Scopes items) :
   rw [scope.functionOrigin]
   exact constantFunctions_sound _ _
 
-/-- The exact full name/type scope the canonical phase body consumes. -/
+/-- The exact range scope the canonical phase body consumes. -/
 def Scopes.types {original : List SItemTief} (scope : Scopes original) : List (String × (Int × Int)) :=
   scope.declared ++ scope.values.map (fun c => (c.1, (c.2, c.2)))
+
+/-- Original declarations retain storage widths independently of first-match range lookup. -/
+def Scopes.widths {original : List SItemTief} (scope : Scopes original) : List (String × (Int × Int)) :=
+  uAliasBreiten scope.aliasOrder
 
 /-- Final scalar values must leave all resolved alias ranges unchanged. -/
 def ScopeStable {items : List SItemTief} (scope : Scopes items) : Prop :=

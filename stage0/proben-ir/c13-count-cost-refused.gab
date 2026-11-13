@@ -1,0 +1,8 @@
+// Expected refusal (no runtime exit): enumerating four predicates costs more than one op.
+module c13_count_cost_refused {
+table T count 4 { slot { v : u8, } }
+impl fn main() -> u8 effects { reads T.slots } costs <= 1 ops {
+    let n = count i in slots of T : T.slots[i].v == 0;
+    return n;
+}
+}

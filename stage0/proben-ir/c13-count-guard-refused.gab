@@ -1,0 +1,8 @@
+// Expected refusal (no runtime exit): T's guard L is not held while the predicate reads T.
+module c13_count_guard_refused {
+table T count 4 { slot { v : u8, } }
+lock L protects { T } rank 1;
+impl fn main() -> u8 effects { reads T.slots } {
+    return count i in slots of T : T.slots[i].v == 0;
+}
+}

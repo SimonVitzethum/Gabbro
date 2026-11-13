@@ -34,8 +34,8 @@ def elabUExpanded (expanded : List SItemTief × List (STyp × String)) : Except 
   let (msE, requirements) := expanded
   checkCanonicalConstants msE
   let consts := uConstsRech (uKonstFns msE) msE []
-  let alias := uAliase consts msE ++ uAliasBreiten msE ++ consts.map (fun c => (c.1, (c.2, c.2)))
-  elabExpandedWithScopes msE consts alias (uKonstFns (uOhneSenken msE)) (uTabelle consts alias) requirements
+  let alias := uAliase consts msE ++ consts.map (fun c => (c.1, (c.2, c.2)))
+  elabExpandedWithScopes msE consts alias (uKonstFns (uOhneSenken msE)) (uTabelle consts alias) requirements (widths := uAliasBreiten msE)
 
 /-- Canonical export and Stage 0 consume the same expanded declarations and phase body. -/
 def elabU (items : List SItemTief) : Except String UProg :=

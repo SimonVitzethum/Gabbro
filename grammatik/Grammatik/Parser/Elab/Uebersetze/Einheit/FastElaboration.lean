@@ -9,7 +9,8 @@ set_option maxRecDepth 100000
 def elabExpandedWithScopesFast (msE : List SItemTief) (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (functions : List UKonstFn)
     (tableLowering : List String → SItemTief → Except String UTab)
-    (staticRequirements : List (STyp × String) := []) (ort : Bool := false) (narrow : Bool := false) :
+    (staticRequirements : List (STyp × String) := []) (ort : Bool := false) (narrow : Bool := false)
+    (widths : List (String × (Int × Int)) := []) :
     Except String UProg :=
   match guestSources msE with
   | .error e => .error e
@@ -21,7 +22,7 @@ def elabExpandedWithScopesFast (msE : List SItemTief) (consts : List (String × 
   | .error error => .error error
   | .ok () =>
   let ms := uOhneSenken msE
-  match uGlobs consts alias ms with
+  match uGlobs consts alias ms widths with
   | .error e => .error e
   | .ok globs0 =>
   -- Nominal space binders and linear owner marks have independent namespaces.
@@ -37,17 +38,18 @@ def elabExpandedWithScopesFast (msE : List SItemTief) (consts : List (String × 
   let tnames := ms.filterMap (fun | .tableT n _ _ _ _ _ _ _ => some n | _ => none)
   match uSeq ((ms.filter (fun
       | .tableT _ _ _ _ _ _ _ _ => true | _ => false)).map
-        (uTabelleMitRaum spaces (tableLowering tnames))) with
+        (uTabelleMitRaum spaces (fun item => (tableLowering tnames item).map fun table =>
+          { table with breiten := uTableWidths widths item }))) with
   | .error e => .error e
   | .ok tabs0 =>
-  match uArenen consts alias ms with
+  match uArenen consts alias ms widths with
   | .error e => .error e
   | .ok (arTabs, arGlobs) =>
   let tabs := uIdxTabs (tabs0 ++ arTabs ++ uArrayCarriers alias msE)
   match uOptGlobs tabs (globs0 ++ arGlobs) with
   | .error e => .error e
   | .ok globs =>
-  match uTypes consts alias tabs msE eigner spaces with
+  match uTypes consts alias tabs msE eigner spaces widths with
   | .error e => .error e
   | .ok valueScope =>
   let constants := uKonstArrays alias functions consts ms
@@ -115,6 +117,7 @@ def elabExpandedWithScopesFast (msE : List SItemTief) (consts : List (String × 
       res := none
       fname := "transition"
       alias := alias
+      widths := widths
       lits := consts
       globs := globs
       spaces := spaces
@@ -162,7 +165,7 @@ def elabExpandedWithScopesFast (msE : List SItemTief) (consts : List (String × 
   | .error e => .error e
   | .ok probeFns =>
   match uSeq (fnItems.map (fun (s, b) =>
-      mitOrt ort s.name <| elabUFunktionMemo headMemo (spaces := spaces) (valueScope := valueScope) (eigner := eigner) (specTypen := specTypen) (narrow := narrow) consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb
+      mitOrt ort s.name <| elabUFunktionMemo headMemo (spaces := spaces) (valueScope := valueScope) (eigner := eigner) (specTypen := specTypen) (narrow := narrow) (widths := widths) consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb
         specFns
         constants)) with
   | .error e => .error e
@@ -237,7 +240,7 @@ def elabExpandedWithScopesFast (msE : List SItemTief) (consts : List (String × 
 
 @[csimp] theorem elabExpandedWithScopes_eq_fast :
     @elabExpandedWithScopes = @elabExpandedWithScopesFast := by
-  funext items consts alias functions tableLowering requirements ort narrow
+  funext items consts alias functions tableLowering requirements ort narrow widths
   unfold elabExpandedWithScopes elabExpandedWithScopesFast
   simp only [elabUFunktionMemo_eq] <;> rfl
 

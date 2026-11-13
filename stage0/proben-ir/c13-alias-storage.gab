@@ -1,0 +1,10 @@
+// Expected exit 4: popcount32(3) is 2 in both the record field and the static; 2 + 2 = 4.
+module c13_alias_storage {
+type Word = u32;
+type R = { value : Word, };
+static G : Word = 3;
+impl fn main() -> u8 effects { reads G } {
+    let record = R(value: 3);
+    return popcount(record.value) + popcount(G);
+}
+}

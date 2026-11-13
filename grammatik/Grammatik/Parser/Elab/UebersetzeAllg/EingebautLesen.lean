@@ -119,7 +119,7 @@ theorem bswap_umwandlung_lesen_zeuge :
 
 /-- An alias of `u32 in 0 .. 65535` is stored in 32 bits: the width is the declaration's, not the range's. -/
 theorem alias_lesen_zeuge :
-    uSeite { cw with alias := [("W", (0, 65535)), ("W#bits", (32, 32))] }
+    uSeite { cw with alias := [("W", (0, 65535))], widths := [("W#bits", (32, 32))] }
         (.call "bswap" [.call "W" [.variable "a"]]) =
       .ok (.ib1 .bswap 32 (.conv 0 65535 (.param "a"))) := by cbv
 
@@ -243,7 +243,7 @@ theorem sizeof_lesen_zeuge :
     uSeite cw (.built "sizeof" [.variable "u8"]) = .ok (.lit 1) ∧
     uSeite cw (.built "sizeof" [.variable "a"]) = .ok (.lit 1) ∧
     uSeite ct (.built "sizeof" [.field (.index (.field (.variable "p") "slots") (.lit 0)) "v"]) = .ok (.lit 1) ∧
-    uSeite { cw with alias := [("W", (0, 65535)), ("W#bits", (32, 32))] } (.built "sizeof" [.variable "W"]) =
+    uSeite { cw with alias := [("W", (0, 65535))], widths := [("W#bits", (32, 32))] } (.built "sizeof" [.variable "W"]) =
       .ok (.lit 4) := by
   cbv
   exact ⟨rfl, rfl, rfl, rfl, rfl⟩

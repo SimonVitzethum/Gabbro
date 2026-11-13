@@ -130,12 +130,23 @@ def elabUFunktion (consts : List (String × Int))
     (devs : List String := []) (regs : List UReg := []) (zustaende : List UZustand := [])
     (zeiger : List String := []) (zb : Nat := 0) (specs : List (String × List String × SExpr) := [])
     (arrKonst : List (String × USide) := []) (spaces : List String := []) (valueScope : UTypeScope := { types := [] }) (eigner : List String := [])
-    (specTypen : List (String × List STyp) := []) (narrow : Bool := false) :
+    (specTypen : List (String × List STyp) := []) (narrow : Bool := false)
+    (widths : List (String × (Int × Int)) := []) :
     Except String UFn :=
   match elabKopf consts alias tabs locks globs whys sums sig devs zeiger zb spaces valueScope.types eigner with
   | .error e => .error e
   | .ok (kopf, schreibt) =>
-    let ctx := { uCtxVon alias consts tabs locks globs kopf sig.name annahmen whys sums regs zustaende specs arrKonst specTypen with zeiger := zeiger, zeigerBasis := zb, spaces := spaces, records := valueScope.records, namedTypes := valueScope.types, eigner := eigner, narrow := narrow }
+    let ctx :=
+      { uCtxVon alias consts tabs locks globs kopf sig.name annahmen whys sums regs zustaende specs arrKonst specTypen with
+        zeiger := zeiger
+        zeigerBasis := zb
+        spaces := spaces
+        records := valueScope.records
+        namedTypes := valueScope.types
+        eigner := eigner
+        narrow := narrow
+        widths := widths
+        bits := if narrow then uParameterBreiten alias (uOhneGriffe devs sig.params) widths else kopf.bits }
     match elabFn ctx koepfe sig.klauseln koerper with
     | .error e => .error e
     | .ok (gives, needs, body, r) =>

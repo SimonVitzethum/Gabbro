@@ -22,7 +22,8 @@ def elabUFunktionMemo (memo : Merk UHeadMemo) (consts : List (String × Int))
     (devs : List String := []) (regs : List UReg := []) (zustaende : List UZustand := [])
     (zeiger : List String := []) (zb : Nat := 0) (specs : List (String × List String × SExpr) := [])
     (arrKonst : List (String × USide) := []) (spaces : List String := []) (valueScope : UTypeScope := { types := [] }) (eigner : List String := [])
-    (specTypen : List (String × List STyp) := []) (narrow : Bool := false) :
+    (specTypen : List (String × List STyp) := []) (narrow : Bool := false)
+    (widths : List (String × (Int × Int)) := []) :
     Except String UFn :=
   match elabKopf consts alias tabs locks globs whys sums sig devs zeiger zb spaces valueScope.types eigner with
   | .error e => .error e
@@ -35,7 +36,9 @@ def elabUFunktionMemo (memo : Merk UHeadMemo) (consts : List (String × Int))
         records := valueScope.records
         namedTypes := valueScope.types
         eigner := eigner
-        narrow := narrow }
+        narrow := narrow
+        widths := widths
+        bits := if narrow then uParameterBreiten alias (uOhneGriffe devs sig.params) widths else kopf.bits }
     match elabFnMemo memo ctx koepfe sig.klauseln koerper with
     | .error e => .error e
     | .ok (gives, needs, body, r) =>
@@ -76,8 +79,8 @@ theorem elabUFunktionMemo_eq (memo : Merk UHeadMemo) (consts : List (String × I
     (devs : List String) (regs : List UReg) (zustaende : List UZustand)
     (zeiger : List String) (zb : Nat) (specs : List (String × List String × SExpr))
     (arrKonst : List (String × USide)) (spaces : List String) (valueScope : UTypeScope) (eigner : List String)
-    (specTypen : List (String × List STyp)) (narrow : Bool) :
-    elabUFunktionMemo memo consts alias tabs locks globs koepfe sig koerper annahmen whys sums devs regs zustaende zeiger zb specs arrKonst spaces valueScope eigner specTypen narrow = elabUFunktion consts alias tabs locks globs koepfe sig koerper annahmen whys sums devs regs zustaende zeiger zb specs arrKonst spaces valueScope eigner specTypen narrow := by
+    (specTypen : List (String × List STyp)) (narrow : Bool) (widths : List (String × (Int × Int))) :
+    elabUFunktionMemo memo consts alias tabs locks globs koepfe sig koerper annahmen whys sums devs regs zustaende zeiger zb specs arrKonst spaces valueScope eigner specTypen narrow widths = elabUFunktion consts alias tabs locks globs koepfe sig koerper annahmen whys sums devs regs zustaende zeiger zb specs arrKonst spaces valueScope eigner specTypen narrow widths := by
   unfold elabUFunktionMemo elabUFunktion
   simp only [elabFnMemo_eq] <;> rfl
 

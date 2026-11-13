@@ -301,13 +301,15 @@ private theorem tagged_expanded_declaration (body : Option String)
   have runtimeFunctions : uKonstFns (uOhneSenken
       [.typeT ["tagged"] "Message" [] [] (body.map STyp.raw)]) = [] := by rfl
   have collectors :
-      uAliase [] [.typeT ["tagged"] "Message" [] [] (body.map STyp.raw)] ++
-        uAliasBreiten [.typeT ["tagged"] "Message" [] [] (body.map STyp.raw)] = [] := by
+      uAliase [] [.typeT ["tagged"] "Message" [] [] (body.map STyp.raw)] = [] := by
+    cases body <;> rfl
+  have widths :
+      uAliasBreiten [.typeT ["tagged"] "Message" [] [] (body.map STyp.raw)] = [] := by
     cases body <;> rfl
   unfold elabUExpanded
   simp only [canonical, bind, Except.bind]
   simp only [sourceFunctions, values, runtimeFunctions]
-  simpa only [List.map_nil, List.append_nil, collectors, bind, Except.bind] using
+  simpa only [List.map_nil, List.append_nil, collectors, widths, bind, Except.bind] using
     tagged_scoped_declaration (body.map STyp.raw) requirements
 
 -- Expansion and each subsequent phase are certified separately. The complete

@@ -19,6 +19,8 @@ structure URecord where
   fields : List (String × Ty)
   /-- Source modifiers are retained even when their transport is refused. -/
   modifiers : List String := []
+  /-- Declared integer storage widths, independent of the resolved field intervals. -/
+  breiten : List (String × Nat) := []
   deriving DecidableEq, Repr
 
 def URecord.ty (record : URecord) : Ty := Ty.prodOf record.identity (record.fields.map (·.2))

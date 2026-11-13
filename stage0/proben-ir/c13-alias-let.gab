@@ -1,0 +1,8 @@
+// Expected exit 2: popcount32(3) = 2; the typed local retains Word's 32-bit storage.
+module c13_alias_let {
+type Word = u32;
+impl fn main() -> u8 effects { pure } {
+    let value : Word = 3;
+    return popcount(value);
+}
+}

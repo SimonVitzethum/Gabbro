@@ -1,0 +1,11 @@
+// Expected exit 5: rotl32(0x80000001, 1) = 3; 2 * popcount32(3) + 1 = 5.
+module c13_alias_width {
+type Word = u32;
+impl fn rotate(x : Word) -> Word effects { pure } { return rotl(x, 1); }
+impl fn bits(x : Word) -> u8 in 0 .. 32 effects { pure } { return popcount(x); }
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let rotated : Word = rotate(2147483649);
+    let population = bits(rotated);
+    return popcount(rotated) + population + 1;
+}
+}

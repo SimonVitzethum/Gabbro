@@ -155,7 +155,7 @@ private theorem tree_count_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf 
       .ok (LowSide.zaehleVon u Γ Λ ((declOf u).count table).toNat
         (umIdx (Int.toNat_of_nonneg nonnegative).symm
           (.and (.reaches table edge.field edge.self seed.weaken (.var .here) guard) .tru))) := by
-  simp only [lowSeiteZ, gate, found, typed, outer, ergAlsParam, bind, Except.bind,
+  simp only [lowSeiteZ, lowCountE, gate, found, typed, outer, ergAlsParam, bind, Except.bind,
     Option.isSome, finite, Bool.false_eq_true, ite_false]
   erw [dite_eq_left nonnegative, dite_eq_left guard] <;>
     simp only [lowEns, pure, Except.pure]

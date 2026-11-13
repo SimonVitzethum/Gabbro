@@ -36,6 +36,29 @@ def uRotEin : String → Option UBi
 def uFeldBreite (tb : UTab) (f : String) : Option Nat :=
   (tb.breiten.find? (fun p => strEq p.1 f)).map (·.2)
 
+/-- Resolve nominal projection bases without inferring storage from an integer interval. -/
+def uStorageValueType (ctx : UCtx) : SExpr → Option Ty
+  | .variable name =>
+    match uParamNr ctx name with
+    | .ok position => ctx.types[position]?
+    | .error _ => (ctx.globs.find? (fun global => strEq global.name name)).map (fun global => global.ty.toTy)
+  | .call name _ => (ctx.records.find? (fun schema => strEq schema.name name)).map (·.ty)
+  | .field base field => do
+    let ty ← uStorageValueType ctx base
+    let schema ← ctx.records.find? (fun schema => decide (schema.ty = ty))
+    (schema.fields.find? (fun entry => strEq entry.1 field)).map (·.2)
+  | .index base _ =>
+    match uStorageValueType ctx base with
+    | some (.arr element _) => some element
+    | _ => none
+  | _ => none
+
+/-- The selected record declaration supplies its field width, including through nested products. -/
+def uRecordBreite (ctx : UCtx) (base : SExpr) (field : String) : Option Nat := do
+  let ty ← uStorageValueType ctx base
+  let schema ← ctx.records.find? (fun schema => decide (schema.ty = ty))
+  (schema.breiten.find? (fun entry => strEq entry.1 field)).map (·.2)
+
 /-- C13: the declared STORAGE width in bits of an operand, where the declaration names it:
     * a parameter or a `let` local at a bare unsigned word (`UCtx.bits`);
     * a static of a bare unsigned word (`UGlob.breite`);
@@ -65,12 +88,13 @@ def uBreite (ctx : UCtx) : SExpr → Option Nat
         | .ok (.ptr ⟨_, _, .table num⟩) => (ctx.tabs[num]?).bind (fun tb => uFeldBreite tb f)
         | _ => none
       | .error _ => (ctx.tabs.find? (fun x => strEq x.name b)).bind (fun tb => uFeldBreite tb f)
+  | .field base field => uRecordBreite ctx base field
   | .index (.variable b) _ =>
     match ctx.tabs.find? (fun x => strEq x.name b) with
     | some tb => if tb.arena then uFeldBreite tb "wert" else none
     | none => none
   | .call f [_] =>
-    match uSpeicherBreite ctx.alias (.atom f) with
+    match uSpeicherBreite ctx.widths (.atom f) with
     | 0 => none
     | w + 1 => some (w + 1)
   | .bin op a b =>
@@ -98,7 +122,7 @@ def uSpTy (ctx : UCtx) : SExpr → Option SpTy
         match ctx.globs.find? (fun g => strEq g.name t) with
         | some _ => none
         | none =>
-          match uSpeicherBreite ctx.alias (.atom t), uTypName ctx.alias t with
+          match uSpeicherBreite ctx.widths (.atom t), uTypName ctx.alias t with
           | 0, _ => none
           | w + 1, .ok (lo, hi) => if (SpTy.wort (w + 1)).passt (.int lo hi) then some (.wort (w + 1)) else none
           | _, .error _ => none

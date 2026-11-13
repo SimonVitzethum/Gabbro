@@ -44,7 +44,7 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
   elaborated : ((Frontend.elabWithScopes
     (pre108 source.prepared.elaborierbar)
     source.scopes.values source.scopes.types source.scopes.functions
-    (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).bind (Profil.selectUnit options)).map
+    (Frontend.tableWithEmpty source.scopes.values source.scopes.types) (widths := source.scopes.widths)).bind (Profil.selectUnit options)).map
       (fun u => {u with exportGate := Konst.checkSourceMetadata gateMembers}) = .ok unit
   entry : fnIdx unit.fns (Profil.entryName options) = .ok main
   lowered : ∃ raw fs, lowerAllg unit = .ok (raw, fs) ∧
@@ -104,13 +104,13 @@ def compileChecked (source : Frontend.Source text options)
   let declarations := pre108 source.prepared.elaborierbar
   match he : (Frontend.elabWithScopes declarations
       source.scopes.values source.scopes.types source.scopes.functions
-      (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).bind (Profil.selectUnit options) with
+      (Frontend.tableWithEmpty source.scopes.values source.scopes.types) (widths := source.scopes.widths)).bind (Profil.selectUnit options) with
   | .error e => throw e
   | .ok candidate => do
     let unit := {candidate with exportGate := Konst.checkSourceMetadata gateMembers}
     have elaborated : ((Frontend.elabWithScopes declarations
         source.scopes.values source.scopes.types source.scopes.functions
-        (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).bind (Profil.selectUnit options)).map
+        (Frontend.tableWithEmpty source.scopes.values source.scopes.types) (widths := source.scopes.widths)).bind (Profil.selectUnit options)).map
           (fun u => {u with exportGate := Konst.checkSourceMetadata gateMembers}) = .ok unit := by
       rw [he]
       rfl
@@ -291,7 +291,7 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
     Konst.checkSourceConstants original = .ok () ∧
     Frontend.compileTimeSafe original = true ∧
     ((Frontend.elabWithScopes declarations scope.values scope.types scope.functions
-      (Frontend.tableWithEmpty scope.values scope.types)).bind (Profil.selectUnit options)).map
+      (Frontend.tableWithEmpty scope.values scope.types) (widths := scope.widths)).bind (Profil.selectUnit options)).map
         (fun u => {u with exportGate := Konst.checkSourceMetadata result.gateMembers}) = .ok result.unit ∧
     (∃ raw fs, lowerAllg result.unit = .ok (raw, fs) ∧
       OldSource.restore declarations result.unit raw = .ok result.program) ∧
