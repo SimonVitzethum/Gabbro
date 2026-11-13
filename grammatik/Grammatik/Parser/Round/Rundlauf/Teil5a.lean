@@ -152,11 +152,19 @@ theorem toksKopf : ∀ (n : Nat) (e : SExpr), groesse e ≤ n →
       intro h
       simp only [Token.zeichen.injEq, String.reduceEq] at h
     | built f xs =>
-      simp only [druckToks, List.cons_append] at hT
-      injection hT with ha _
-      subst ha
-      intro h
-      simp only [reduceCtorEq] at h
+      simp only [druckToks] at hT
+      split at hT
+      · simp only [List.nil_append, List.cons_append, List.singleton_append,
+          List.append_assoc] at hT
+        injection hT with ha _
+        subst ha
+        intro h
+        simp only [Token.zeichen.injEq, String.reduceEq] at h
+      · simp only [List.cons_append, List.singleton_append, List.append_assoc] at hT
+        injection hT with ha _
+        subst ha
+        intro h
+        simp only [reduceCtorEq] at h
     | old x =>
       simp only [druckToks, List.cons_append] at hT
       injection hT with ha _

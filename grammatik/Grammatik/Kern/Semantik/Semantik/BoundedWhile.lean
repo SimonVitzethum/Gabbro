@@ -43,7 +43,7 @@ theorem whileLauf_succ (schritt : World D → Env D Γ → Ausgang V true Γ)
       | .why σ' reason => .why σ' reason
       | .logik e => .logik e
       | .hardware e => .hardware e := by
-  cases h : (cond σ ρ).2 <;> simp [whileLauf, retryLauf, h]
+  cases h : (cond σ ρ).2 <;> simp [whileLauf, retryLauf, h] <;> rfl
 
 /-- The actual model statement runs this recursion, with the same read-world
     threading as retry. This identity also applies to nonempty footprints. -/
