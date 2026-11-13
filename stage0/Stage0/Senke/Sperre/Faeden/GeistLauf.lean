@@ -27,18 +27,18 @@ open Gabbro.Code.Lower (Tkt)
 def tListe (a : Abs Nat) : List Nat := a.holder.toList ++ a.queue
 
 /-- **The ghost of an abstract lock**: ticket `i` belongs to the `i`-th thread of `tListe a`; none is served yet. -/
-def tAnfang (a : Abs Nat) : Tkt := ⟨0, (tListe a).length, fun i => (tListe a)[i]?, a.holder.isSome⟩
+def tAnfang (a : Abs Nat) : Tkt := ⟨0, (tListe a).length, fun (i : Nat) => (tListe a)[i]?, a.holder.isSome⟩
 
 /-- The owners of the tickets of a list after a prefix are the rest of the list. -/
 theorem fm_liste : ∀ (q p : List Nat),
-    (List.range' p.length q.length).filterMap (fun i => (p ++ q)[i]?) = q
+    (List.range' p.length q.length).filterMap (fun (i : Nat) => (p ++ q)[i]?) = q
   | [], _ => rfl
   | x :: q, p => by
     have hx : (p ++ x :: q)[p.length]? = some x := by
       rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
     have e : p ++ x :: q = (p ++ [x]) ++ q := by simp
     have hl : (p ++ [x]).length = p.length + 1 := by simp
-    rw [List.length_cons, List.range'_succ, List.filterMap_cons_some (f := fun i => (p ++ x :: q)[i]?) hx, e,
+    rw [List.length_cons, List.range'_succ, List.filterMap_cons_some (f := fun (i : Nat) => (p ++ x :: q)[i]?) hx, e,
       ← hl, fm_liste q (p ++ [x])]
 
 theorem liste_nodup {a : Abs Nat} (ha : AbsOK a) : (tListe a).Nodup := by

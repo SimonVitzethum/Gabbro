@@ -8,7 +8,7 @@
              outside, thread 1 in the guarded body), so the run is weakly fair and has no spurious return: every
              premise of `Lauf.leben` holds on it (`zeuge_leben_satz`). The abstract ticket lock along the run
              (`zeuge_bild`) is the model run: draw 0, enter 0, draw 1, give 0, enter 1, with thread 1 in the queue
-             while it is blocked. All facts by a small kernel computation (`decide`).
+             while it is blocked. Run observations use simplification of the explicit states.
 -/
 module
 public import Stage0.Senke.Sperre.Faeden.Leben
@@ -55,9 +55,9 @@ theorem s5 : Schritt z5 1 z6 := Schritt.liestN (by decide)
 theorem s6 : Schritt z6 1 z7 := Schritt.zieht (l := 1) (by decide) (by decide)
 theorem s7 : Schritt z7 1 z8 := Schritt.wartet (k := 1) (by decide) (by decide)
 theorem s8 : Schritt z8 1 z9 := Schritt.liestInc (by decide)
-theorem s9 : Schritt z9 1 z10 := Schritt.erhoeht (by decide) (by decide)
+theorem s9 : Schritt z9 1 z10 := Schritt.erhoeht (k := 1) (s0 := 0) (lw := 0) (by decide) (by decide)
 /-- Thread 1 blocks in FUTEX_WAIT. -/
-theorem s10 : Schritt z10 1 z11 := Schritt.schlaeft (by decide) (by decide)
+theorem s10 : Schritt z10 1 z11 := Schritt.schlaeft (k := 1) (s0 := 0) (by decide) (by decide)
 theorem s11 : Schritt z11 0 z12 := Schritt.verlaesst (k := 0) (by decide)
 theorem s12 : Schritt z12 0 z13 := Schritt.liestGib (k := 0) (by decide)
 theorem s13 : Schritt z13 0 z14 := Schritt.gibt (k := 0) (ls := 0) (by decide) (by decide)
@@ -65,7 +65,7 @@ theorem s14 : Schritt z14 0 z15 := Schritt.warter (by decide) (by decide)
 /-- Thread 0's FUTEX_WAKE wakes thread 1. -/
 theorem s15 : Schritt z15 0 z16 := Schritt.weckt (by decide)
 theorem s16 : Schritt z16 1 z17 := Schritt.liestDec (by decide)
-theorem s17 : Schritt z17 1 z18 := Schritt.senkt (s0 := 0) (by decide) (by decide)
+theorem s17 : Schritt z17 1 z18 := Schritt.senkt (k := 1) (s0 := 0) (lw := 1) (by decide) (by decide)
 theorem s18 : Schritt z18 1 z19 := Schritt.tritt (k := 1) (by decide) (by decide)
 
 theorem s19 (t : Fin 2) : Schritt z19 t z19 :=
@@ -137,18 +137,24 @@ theorem zeuge_inv : Inv 2 (zeuge.z 0) := Inv.start
 
 /-- At step 11 thread 1 is blocked in FUTEX_WAIT with ticket 1 and serving value 0, and it waits at the lock. -/
 theorem zeuge_blockiert : (zeuge.z 11).pc 1 = .blockiert 1 0 ∧ (1 : Fin 2) ∈ zeuge.warte 11 := by
-  decide
+  simp [Lauf.warte, zeuge, zz, zs, z19, z18, z17, z16, z15, z14,
+    z13, z12, z11, z10, z9, z8, z7, z6, z5, z4, z3, z2, z1, z0,
+    start, Zustand.mit, upd, wecke, Ort.geweckt, Ort.haelt, bild, bildAus]
 
 /-- At step 16 the FUTEX_WAKE has woken it; at step 19 it holds the lock. -/
 theorem zeuge_geweckt : (zeuge.z 16).pc 1 = .decL 1 0 ∧ (zeuge.z 19).pc 1 = .drin 1 := by
-  decide
+  simp [zeuge, zz, zs, z19, z18, z17, z16, z15, z14,
+    z13, z12, z11, z10, z9, z8, z7, z6, z5, z4, z3, z2, z1, z0,
+    start, Zustand.mit, upd, wecke, Ort.geweckt, Ort.haelt, bild, bildAus]
 
 /-- **The abstract ticket lock along the run**: the model run of draw 0, enter 0, draw 1, give 0, enter 1. -/
 theorem zeuge_bild : (List.range 20).map (fun n => bild (zeuge.z n)) =
     [⟨none, []⟩, ⟨none, []⟩, ⟨none, []⟩, ⟨none, [0]⟩, ⟨some 0, []⟩, ⟨some 0, []⟩, ⟨some 0, []⟩,
       ⟨some 0, [1]⟩, ⟨some 0, [1]⟩, ⟨some 0, [1]⟩, ⟨some 0, [1]⟩, ⟨some 0, [1]⟩, ⟨some 0, [1]⟩,
       ⟨some 0, [1]⟩, ⟨none, [1]⟩, ⟨none, [1]⟩, ⟨none, [1]⟩, ⟨none, [1]⟩, ⟨none, [1]⟩, ⟨some 1, []⟩] := by
-  decide
+  simp [List.range_succ, zeuge, zz, zs, z19, z18, z17, z16, z15, z14,
+    z13, z12, z11, z10, z9, z8, z7, z6, z5, z4, z3, z2, z1, z0,
+    start, Zustand.mit, upd, wecke, Ort.geweckt, Ort.haelt, bild, bildAus]
 
 theorem zeuge_fair : zeuge.Fair := by
   intro t n _

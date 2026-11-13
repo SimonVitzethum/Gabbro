@@ -35,7 +35,9 @@ theorem zeuge_fifo : (∀ n, (zbei n).queue.Nodup) ∧
 
 /-- The queue along the witness is not trivial: thread 0 draws, thread 1 waits behind the holder 0, then holds. -/
 theorem zeuge_schlange : zbei 3 = ⟨none, [0]⟩ ∧ zbei 11 = ⟨some 0, [1]⟩ ∧ zbei 19 = ⟨some 1, []⟩ := by
-  decide
+  simp [zbei, Lauf.bei, Abs.karte, zeuge, zz, zs, z19, z18, z17, z16, z15, z14,
+    z13, z12, z11, z10, z9, z8, z7, z6, z5, z4, z3, z2, z1, z0,
+    start, Zustand.mit, upd, wecke, Ort.geweckt, Ort.haelt, bild, bildAus]
 
 /-- **The witness carries the model's ghost**: thread 0 holds at step 4; at step 11, blocked in FUTEX_WAIT, thread 1
     owns an outstanding ticket behind the holder 0; at step 19 thread 1 holds. -/
@@ -43,7 +45,9 @@ theorem zeuge_tkt [Conf] : ∃ gh : Nat → Tkt, (∀ n, Passt (gh n) (zbei n)) 
     (∀ n, Nach (zakt n) (gh n) (gh (n + 1))) ∧ tHalter (gh 4) = some 0 ∧ 1 ∈ tWarte (gh 11) ∧
     tHalter (gh 11) = some 0 ∧ tHalter (gh 19) = some 1 := by
   obtain ⟨gh, hP, hT⟩ := zeuge.tkt (by decide) zeuge_inv (Fenster.id zeuge)
-  have h4 : (zbei 4).holder = some 0 := by decide
+  have h4 : (zbei 4).holder = some 0 := by
+    simp [zbei, Lauf.bei, Abs.karte, zeuge, zz, zs, z4, z3, z2, z1, z0,
+      start, Zustand.mit, upd, bild, bildAus, Ort.haelt]
   have h11 : zbei 11 = ⟨some 0, [1]⟩ := zeuge_schlange.2.1
   have h19 : zbei 19 = ⟨some 1, []⟩ := zeuge_schlange.2.2
   have p4 : Passt (gh 4) (zbei 4) := hP 4
