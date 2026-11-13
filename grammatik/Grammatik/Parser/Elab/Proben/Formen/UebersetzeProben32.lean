@@ -67,21 +67,21 @@ def traeger (s : String) : Option (List (List (Nat ⊕ Nat))) :=
 /-- A table invariant; its writer holds the guard by signature. -/
 def inv_ok : String :=
   "module m { table T count 2 { slot { v : u32, } invariant I : forall k in slots of T : T.slots[k].v < 9; } lock L protects { T } rank 0; impl fn f(i : index into T) requires Held(L) effects { writes T.slots } { T.slots[i].v = 1; } }"
-theorem inv_ok_stufe : stufe inv_ok = "OK" := by decide +kernel
-theorem inv_ok_traeger : traeger inv_ok = some [[.inl 0]] := by decide +kernel
+theorem inv_ok_stufe : stufe inv_ok = "OK" := by cbv
+theorem inv_ok_traeger : traeger inv_ok = some [[.inl 0]] := by cbv
 
 /-- Planted defect (`U003`): the writer takes the guard only in a block. -/
 def inv_u003_refused : String :=
   "module m { table T count 2 { slot { v : u32, } invariant I : T.slots[0].v < 9; } lock L protects { T } rank 0; impl fn f(i : index into T) effects { writes T.slots, locks L } { locks L { T.slots[i].v = 1; } } }"
 theorem inv_u003_refused_stufe :
     stufe inv_u003_refused = "elab: a writer of an invariant's carrier does not hold all its locks" := by
-  decide +kernel
+  cbv
 
 /-- A group invariant over two tables. -/
 def gruppe_ok : String :=
   "module m { table T count 2 { slot { v : u32, } } table U count 2 { slot { w : u32, } } group G over { T, U } { invariant J : T.slots[0].v <= U.slots[0].w; } impl fn f() { } }"
-theorem gruppe_ok_stufe : stufe gruppe_ok = "OK" := by decide +kernel
-theorem gruppe_ok_traeger : traeger gruppe_ok = some [[.inl 0, .inl 1]] := by decide +kernel
+theorem gruppe_ok_stufe : stufe gruppe_ok = "OK" := by cbv
+theorem gruppe_ok_traeger : traeger gruppe_ok = some [[.inl 0, .inl 1]] := by cbv
 
 /-- Statement text is transported as a labelled scope; the ordinary invariant
     reader still checks every declared carrier and predicate. -/
@@ -94,17 +94,17 @@ def breakingText (source : String) : Option (List UStmt) := do
 
 theorem breaking_text_export_zeuge :
     breakingText "breaking I { }" = some [.breakingBeg "I", .blkEnd] := by
-  decide +kernel
+  cbv
 
 theorem breaking_multiple_text_export_zeuge :
     breakingText "breaking I, J { }" =
       some [.breakingBeg "I", .breakingBeg "J", .blkEnd, .blkEnd] := by
-  decide +kernel
+  cbv
 
 /-- An invariant declaration and its named scope elaborate through the new surface. -/
 theorem breaking_invariant_bound_zeuge :
     stufe "module m { table T count 2 { slot { v : u32, } invariant I : true; } impl fn f() { breaking I { } } }" =
       "OK" := by
-  decide +kernel
+  cbv
 
 end Gabbro.Grammatik.Parser.UebersetzeProben32

@@ -126,13 +126,19 @@ theorem zeugeProgramm_gut : ∀ it ∈ zeugeProgramm, ItemGut it := by
 theorem zeugeProgramm_rund : parseTopTief (druckItems zeugeProgramm ++ [.ende]) = .ok zeugeProgramm :=
   parseTopTief_druck zeugeProgramm zeugeProgramm_gut
 
-set_option maxHeartbeats 2000000 in
+/-- Check each item's short token list separately; the round-trip theorem
+    composes them without evaluating the rendered program in the kernel. -/
+private theorem zeugeProgramm_tokens : (druckItems zeugeProgramm).all tokGutB = true := by
+  simp only [zeugeProgramm, druckItems, List.all_append, List.all_nil,
+    Bool.and_true, Bool.and_eq_true]
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> cbv
+
 /-- The witness program from its rendered source text: lexer, then the program reader. -/
 theorem zeugeProgramm_text :
     (match lex (renderText (druckItems zeugeProgramm)) with
       | .ok toks => parseTopTief toks
       | .error _ => .error "lex") = .ok zeugeProgramm :=
-  rundlauf_programm zeugeProgramm zeugeProgramm_gut (tokGut_of_all _ (by decide +kernel))
+  rundlauf_programm zeugeProgramm zeugeProgramm_gut (tokGut_of_all _ zeugeProgramm_tokens)
 
 
 /-- A device with a mirror and two registers -- a range type, an address, a class with its stages,
