@@ -23,8 +23,8 @@ def encodeAll (items : List α) (predicate : α → World D → Bool)
   | item :: rest => do
       let head ← located "slot" (compile item)
       let tail ← encodeAll rest predicate compile
-      return
-        { payload := .and head.payload tail.payload
+      return {
+          payload := .and head.payload tail.payload
           correct := fun world => by
             change (wahr? (D := D) (predicate item world) &&
                 wahr? (D := D) (rest.all (fun entry => predicate entry world))) = true ↔

@@ -64,7 +64,9 @@ theorem short_false_computed_zeuge :
 theorem short_counterexample_computed_zeuge :
     (invariantCounterexample Frag.Witness.initial (Frag.Witness.declaration.traeger ())
       Witness.shortInvariant).map (fun world => assignment world (.glob false)) = some 4 := by
-  decide
+  have translated : uebersetzeB (Frag.Witness.declaration.traeger ()) Witness.shortInvariant =
+      .ok Witness.shortFormula := by rfl
+  simpa only [invariantCounterexample, translated] using Witness.state_counterexample_computed_zeuge
 
 theorem short_counterexample_sound_zeuge (world : World Frag.Witness.declaration)
     (success : invariantCounterexample Frag.Witness.initial (Frag.Witness.declaration.traeger ())

@@ -49,15 +49,18 @@ theorem reconstruct_sound [DecidableEq α] (body : QF α)
       simp only [reconstruct] at success
       split at success
       · rename_i accepted
+        have valid := (qf_eval body values).mp accepted
         cases success
-        exact (qf_eval body values).mp accepted
+        exact valid
       · contradiction
   | cons row rows ih =>
+      change (recoverOne row values).bind
+        (fun value => reconstruct body rows (values.bind row.name value)) = some result at success
       cases selected : recoverOne row values with
-      | none => simp [reconstruct, selected] at success
+      | none => simp only [selected, Option.bind_none, reduceCtorEq] at success
       | some value =>
           apply ih (values.bind row.name value)
-          simpa only [reconstruct, selected, Option.bind_some] using success
+          simpa only [selected, Option.bind_some] using success
 
 /-- Generic replay completeness uses the original projection at every row.
     No search radius or fuel premise is needed. -/
@@ -116,6 +119,33 @@ def counterexample [DecidableEq α] (names : List α) (formula : LProp α) :
   let body := (elimination (.not formula)).1
   let trace := eliminationTrace names body
   reconstruct body trace.rows (fun _ => 0)
+
+/-- Replay finishes from the semantic theorem, without reducing the compiled
+    matrix in the kernel. This also keeps quantified fixtures cheap. -/
+theorem reconstruct_nil_of_denote [DecidableEq α] (body : QF α)
+    (values : Assignment α) (holds : body.denote values) :
+    reconstruct body [] values = some values := by
+  have accepted := (qf_eval body values).mpr holds
+  simp only [reconstruct, accepted, ↓reduceIte]
+
+theorem counterexample_nil_of_false [DecidableEq α] (formula : LProp α)
+    (invalid : ¬ formula.denote (fun _ => 0)) :
+    counterexample [] formula = some (fun _ => 0) := by
+  apply reconstruct_nil_of_denote
+  exact (elimination_denote (.not formula) (fun _ => 0)).mpr invalid
+
+/-- An exact one-variable replay needs only the finite candidate choice. Its
+    generic soundness theorem supplies the final matrix check. -/
+theorem counterexample_single_of_recovered [DecidableEq α] (name : α)
+    (formula : LProp α) (value : Int)
+    (selected : recoverOne (recordStep name (elimination (.not formula)).1)
+      (fun _ => 0) = some value) :
+    counterexample [name] formula = some ((fun _ => 0).bind name value) := by
+  change (recoverOne (recordStep name (elimination (.not formula)).1) (fun _ => 0)).bind
+    (fun x => reconstruct (elimination (.not formula)).1 [] ((fun _ => 0).bind name x)) = _
+  rw [selected, Option.bind_some]
+  apply reconstruct_nil_of_denote
+  exact recoverOne_sound name (elimination (.not formula)).1 (fun _ => 0) value selected
 
 theorem counterexample_sound [DecidableEq α] (names : List α) (formula : LProp α)
     (values : Assignment α) (success : counterexample names formula = some values) :

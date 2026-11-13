@@ -94,8 +94,10 @@ theorem stateCounterexample_complete (base : World D) (keys : List (Observation 
     by_contra absent
     exact invalid (fun present => False.elim (absent present))
   refine ⟨snippetWorld base keys values, ?_⟩
-  simp only [stateCounterexample, selected, Option.bind_some,
-    reconstructWorld_complete base keys values bounds]
+  change (counterexample keys (stateValidity keys formula)).bind
+    (reconstructWorld base keys) = _
+  rw [selected, Option.bind_some]
+  exact reconstructWorld_complete base keys values bounds
 
 /-- The same finite observation support used for universal closure suffices to
     transfer the extracted false formula into the concrete typed world. -/
@@ -103,11 +105,13 @@ theorem stateCounterexample_sound (base : World D) (keys : List (Observation D))
     (formula : LProp (Observation D)) (supported : closedUnderB keys formula = true)
     (world : World D) (success : stateCounterexample base keys formula = some world) :
     ¬ formula.denote (assignment world) := by
+  change (counterexample keys (stateValidity keys formula)).bind
+    (reconstructWorld base keys) = some world at success
   cases selected : counterexample keys (stateValidity keys formula) with
-  | none => simp [stateCounterexample, selected] at success
+  | none => simp only [selected, Option.bind_none, reduceCtorEq] at success
   | some values =>
       have realized : reconstructWorld base keys values = some world := by
-        simpa only [stateCounterexample, selected, Option.bind_some] using success
+        simpa only [selected, Option.bind_some] using success
       have agrees := reconstructWorld_sound base keys values world realized
       have invalid := counterexample_sound keys (stateValidity keys formula) values selected
       intro holds

@@ -14,7 +14,9 @@ open Frag Elim Elim.Korrekt
     prefix must return a concrete environment rather than report no witness. -/
 theorem p16_false_assignment_computed_zeuge :
     (counterexample [] Elim.Korrekt.Witness.oddEquation).map (fun values => values 0) = some 0 := by
-  decide
+  rw [counterexample_nil_of_false _ (decideB_complete _ (by rfl)
+    Elim.Korrekt.Witness.oddEquation_computed_zeuge (fun _ => 0))]
+  rfl
 
 theorem p16_false_assignment_complete_zeuge :
     ∃ values : Assignment Nat,
@@ -28,7 +30,8 @@ def oddMatrix : LProp Nat := .eq (.scale 2 (.var 0)) (.konst 3)
 
 theorem rescaled_assignment_computed_zeuge :
     (counterexample [0] oddMatrix).map (fun values => values 0) = some (-2) := by
-  decide
+  rw [counterexample_single_of_recovered 0 oddMatrix (-2) (by decide)]
+  rfl
 
 theorem rescaled_assignment_falsifies_zeuge :
     ¬ oddMatrix.denote (fun _ => -2) := by decide
@@ -39,7 +42,9 @@ def lowerWitness : LProp Nat :=
   .not (.and (.lt (.konst 3) (.var 0)) (.dvd 2 (.var 0)))
 
 theorem boundary_assignment_computed_zeuge :
-    (counterexample [0] lowerWitness).map (fun values => values 0) = some 4 := by decide
+    (counterexample [0] lowerWitness).map (fun values => values 0) = some 4 := by
+  rw [counterexample_single_of_recovered 0 lowerWitness 4 (by decide)]
+  rfl
 
 theorem boundary_assignment_falsifies_zeuge :
     ¬ lowerWitness.denote (fun _ => 4) := by decide
@@ -50,7 +55,9 @@ def farLeft : LProp Nat :=
   .not (.and (.lt (.var 0) (.konst (-5))) (.dvd 2 (.var 0)))
 
 theorem negative_infinity_computed_zeuge :
-    (counterexample [0] farLeft).map (fun values => values 0) = some (-16) := by decide
+    (counterexample [0] farLeft).map (fun values => values 0) = some (-16) := by
+  rw [counterexample_single_of_recovered 0 farLeft (-16) (by decide)]
+  rfl
 
 theorem negative_infinity_falsifies_zeuge :
     ¬ farLeft.denote (fun _ => -16) := by decide
@@ -63,18 +70,38 @@ def dependentVariables : LProp Nat :=
 
 theorem backwards_trace_computed_zeuge :
     (counterexample [0, 1] dependentVariables).map (fun values => (values 0, values 1)) =
-      some (4, 5) := by decide
+      some (4, 5) := by
+  have rejected : decideB (universalClosure [0, 1] dependentVariables) = false := by
+    apply (decideB_false_iff _ (by decide) (fun _ => 0)).mpr
+    intro valid
+    have impossible := valid 4 5
+    exact impossible (by constructor <;> decide)
+  obtain ⟨values, selected⟩ := counterexample_complete [0, 1] dependentVariables rejected
+  have valid : values 0 = 4 ∧ values 1 = values 0 + 1 := by
+    simpa only [dependentVariables, LProp.denote, LTerm.denote, not_not] using
+      counterexample_sound [0, 1] dependentVariables values selected
+  have atOne : values 1 = 5 := by omega
+  simp only [selected, Option.map_some, valid.1, atOne]
 
 theorem counterexample_sound_zeuge (values : Assignment Nat)
     (success : counterexample [0] oddMatrix = some values) : ¬ oddMatrix.denote values :=
   counterexample_sound [0] oddMatrix values success
 
 theorem counterexample_of_exists_zeuge :
-    ∃ values : Assignment Nat, counterexample [0] lowerWitness = some values :=
-  counterexample_of_exists [0] lowerWitness (by decide)
+    ∃ values : Assignment Nat, counterexample [0] lowerWitness = some values := by
+  apply counterexample_of_exists [0] lowerWitness
+  apply (decideB_true_iff _ (by decide) (fun _ => 0)).mpr
+  refine ⟨4, ?_⟩
+  change ¬ ¬ ((3 : Int) < 4 ∧ (2 : Int) ∣ 4)
+  exact fun absent => absent ⟨by decide, ⟨2, rfl⟩⟩
 
 theorem valid_formula_has_no_counterexample_zeuge :
-    (counterexample [0] (.le (.var 0) (.var 0))).isSome = false := by decide
+    (counterexample [0] (.le (.var 0) (.var 0))).isSome = false := by
+  cases selected : counterexample [0] (.le (.var 0) (.var 0)) with
+  | none => rfl
+  | some values =>
+      exact False.elim (counterexample_sound [0] (.le (.var 0) (.var 0)) values selected
+        (Int.le_refl _))
 
 def observationValues : Assignment (Observation Frag.Witness.declaration)
   | .glob name => if name = true then 8 else 9
@@ -111,7 +138,21 @@ def shortFormula : LProp (Observation Frag.Witness.declaration) :=
 
 theorem state_counterexample_computed_zeuge :
     (stateCounterexample Frag.Witness.initial [.glob false] shortFormula).map
-      (fun world => assignment world (.glob false)) = some 4 := by decide
+      (fun world => assignment world (.glob false)) = some 4 := by
+  let values : Assignment (Observation Frag.Witness.declaration) :=
+    (fun _ => 0).bind (.glob false) 4
+  have selected : counterexample [.glob false] (stateValidity [.glob false] shortFormula) =
+      some values :=
+    counterexample_single_of_recovered (.glob false) _ 4 (by decide)
+  have bounds : (observationBounds [.glob false]).denote values := by decide
+  have realized := reconstructWorld_complete Frag.Witness.initial [.glob false] values bounds
+  change ((counterexample [.glob false] (stateValidity [.glob false] shortFormula)).bind
+    (reconstructWorld Frag.Witness.initial [.glob false])).map _ = _
+  rw [selected, Option.bind_some, realized, Option.map_some]
+  have agrees := reconstructWorld_sound Frag.Witness.initial [.glob false] values
+    (snippetWorld Frag.Witness.initial [.glob false] values) realized (.glob false) (by simp)
+  rw [agrees]
+  rfl
 
 theorem state_counterexample_complete_zeuge :
     ∃ world : World Frag.Witness.declaration,

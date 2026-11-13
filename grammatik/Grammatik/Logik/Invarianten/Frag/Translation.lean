@@ -36,8 +36,8 @@ def translate (e : Expr D Γ Λ τ) (locals : Env D Γ) :
       let offset ← located "slot.index" indexTerm.constantIndex
       let result ← encodeObservation (D.typ table field) (.slot table field offset.val)
         (fun world => world.slots table offset.val field) rfl (fun _ => rfl)
-      return
-        { payload := result.payload
+      return {
+          payload := result.payload
           correct := fun world => by
             change Represents world _ _ (world.slots table (eval world index world locals).n field)
             rw [offset.property world]
@@ -45,15 +45,15 @@ def translate (e : Expr D Γ Λ τ) (locals : Env D Γ) :
           supported := result.supported }
   | .widen _ _ body => do
       let result ← located "widen" (translate body locals)
-      return
-        { payload := result.payload
+      return {
+          payload := result.payload
           correct := result.correct
           supported := result.supported }
   | .add a b => do
       let left ← located "add.left" (translate a locals)
       let right ← located "add.right" (translate b locals)
-      return
-        { payload := .add left.payload right.payload
+      return {
+          payload := .add left.payload right.payload
           correct := fun world => by
             change left.payload.denote _ + right.payload.denote _ =
               (eval world a world locals).n + (eval world b world locals).n
@@ -64,8 +64,8 @@ def translate (e : Expr D Γ Λ τ) (locals : Env D Γ) :
   | .sub a b => do
       let left ← located "sub.left" (translate a locals)
       let right ← located "sub.right" (translate b locals)
-      return
-        { payload := .sub left.payload right.payload
+      return {
+          payload := .sub left.payload right.payload
           correct := fun world => by
             change left.payload.denote _ - right.payload.denote _ =
               (eval world a world locals).n - (eval world b world locals).n
@@ -75,8 +75,8 @@ def translate (e : Expr D Γ Λ τ) (locals : Env D Γ) :
               List.forall_mem_append] using And.intro left.supported right.supported }
   | .neg body => do
       let result ← located "neg" (translate body locals)
-      return
-        { payload := .sub (.konst 0) result.payload
+      return {
+          payload := .sub (.konst 0) result.payload
           correct := fun world => by
             change 0 - result.payload.denote _ = _
             rw [result.correct world]
@@ -89,8 +89,8 @@ def translate (e : Expr D Γ Λ τ) (locals : Env D Γ) :
       let right ← located "mul.right" (translate b locals)
       if literalB a then
         let coefficient ← left.constantIndex
-        return
-          { payload := .scale coefficient.val right.payload
+        return {
+            payload := .scale coefficient.val right.payload
             correct := fun world => by
               change coefficient.val * right.payload.denote _ =
                 (eval world a world locals).n * (eval world b world locals).n
@@ -98,8 +98,8 @@ def translate (e : Expr D Γ Λ τ) (locals : Env D Γ) :
             supported := right.supported }
       else if literalB b then
         let coefficient ← right.constantIndex
-        return
-          { payload := .scale coefficient.val left.payload
+        return {
+            payload := .scale coefficient.val left.payload
             correct := fun world => by
               change coefficient.val * left.payload.denote _ =
                 (eval world a world locals).n * (eval world b world locals).n
@@ -112,8 +112,8 @@ def translate (e : Expr D Γ Λ τ) (locals : Env D Γ) :
   | .lt a b => do
       let left ← located "lt.left" (translate a locals)
       let right ← located "lt.right" (translate b locals)
-      return
-        { payload := .lt left.payload right.payload
+      return {
+          payload := .lt left.payload right.payload
           correct := fun world => by
             change decide ((eval world a world locals).n < (eval world b world locals).n) = true ↔
               left.payload.denote _ < right.payload.denote _
@@ -125,8 +125,8 @@ def translate (e : Expr D Γ Λ τ) (locals : Env D Γ) :
   | .le a b => do
       let left ← located "le.left" (translate a locals)
       let right ← located "le.right" (translate b locals)
-      return
-        { payload := .le left.payload right.payload
+      return {
+          payload := .le left.payload right.payload
           correct := fun world => by
             change decide ((eval world a world locals).n ≤ (eval world b world locals).n) = true ↔
               left.payload.denote _ ≤ right.payload.denote _
@@ -138,8 +138,8 @@ def translate (e : Expr D Γ Λ τ) (locals : Env D Γ) :
   | .eq a b => do
       let left ← located "eq.left" (translate a locals)
       let right ← located "eq.right" (translate b locals)
-      return
-        { payload := .eq left.payload right.payload
+      return {
+          payload := .eq left.payload right.payload
           correct := fun world => by
             change decide ((eval world a world locals).n = (eval world b world locals).n) = true ↔
               left.payload.denote _ = right.payload.denote _
@@ -151,8 +151,8 @@ def translate (e : Expr D Γ Λ τ) (locals : Env D Γ) :
   | .and a b => do
       let left ← located "and.left" (translate a locals)
       let right ← located "and.right" (translate b locals)
-      return
-        { payload := .and left.payload right.payload
+      return {
+          payload := .and left.payload right.payload
           correct := fun world => by
             change (wahr? (eval world a world locals) && wahr? (eval world b world locals)) = true ↔
               LProp.denote (assignment world) left.payload ∧
@@ -165,8 +165,8 @@ def translate (e : Expr D Γ Λ τ) (locals : Env D Γ) :
   | .or a b => do
       let left ← located "or.left" (translate a locals)
       let right ← located "or.right" (translate b locals)
-      return
-        { payload := .or left.payload right.payload
+      return {
+          payload := .or left.payload right.payload
           correct := fun world => by
             change (wahr? (eval world a world locals) || wahr? (eval world b world locals)) = true ↔
               LProp.denote (assignment world) left.payload ∨
@@ -178,8 +178,8 @@ def translate (e : Expr D Γ Λ τ) (locals : Env D Γ) :
               List.forall_mem_append] using And.intro left.supported right.supported }
   | .not body => do
       let result ← located "not" (translate body locals)
-      return
-        { payload := .not result.payload
+      return {
+          payload := .not result.payload
           correct := fun world => by
             change (!wahr? (eval world body world locals)) = true ↔
               ¬ LProp.denote (assignment world) result.payload
@@ -192,15 +192,15 @@ def translate (e : Expr D Γ Λ τ) (locals : Env D Γ) :
         supported := by simp [PayloadSupported, payloadObservations, LTerm.variables] }
   | .strLen body => do
       let result ← located "strLen" (translate body locals)
-      return
-        { payload := result.payload
+      return {
+          payload := result.payload
           correct := result.correct
           supported := result.supported }
   | .strCat a b => do
       let left ← located "strCat.left" (translate a locals)
       let right ← located "strCat.right" (translate b locals)
-      return
-        { payload := .add left.payload right.payload
+      return {
+          payload := .add left.payload right.payload
           correct := fun world => by
             change left.payload.denote _ + right.payload.denote _ = _
             rw [left.correct world, right.correct world]
