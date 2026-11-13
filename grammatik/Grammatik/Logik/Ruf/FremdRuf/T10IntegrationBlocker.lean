@@ -82,7 +82,9 @@ theorem actualHistory_good (σ : World decl) :
         traceOracle.wirkt () (σ.fragt (.inl ())) (rho true)⟩ := by
     simpa only [actualHistory, List.mem_singleton] using hm
   cases a
-  have hr := congrArg (fun e : AxEintrag decl => (e.2.2.1 : Env decl [.int 0 1])) he
+  have hr := congrArg
+    (fun p : World decl × Env decl (decl.aparams ()) × (World decl × Int) => p.2.1)
+    (eq_of_heq (Sigma.mk.inj he).2)
   change ρ = rho true at hr
   rw [hr]
   exact pre_true τ
@@ -94,7 +96,8 @@ theorem foreign_trace : ForeignPflicht unit traceOracle [] where
   dekodiert := by
     intro a hsw σ ρ
     change some (Sum.inl ()) ≠ none
-    decide
+    intro h
+    cases h
   klauseln := by
     intro n
     exact Fin.elim0 n
@@ -141,7 +144,8 @@ theorem foreign_falseQ : ForeignPflicht falseQUnit traceOracle [] where
   dekodiert := by
     intro a hsw σ ρ
     change some (Sum.inl ()) ≠ none
-    decide
+    intro h
+    cases h
   klauseln := by
     intro n
     exact Fin.elim0 n

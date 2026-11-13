@@ -155,7 +155,9 @@ theorem history_good : CallSitePflichtFremd (program true).axVertrag (history tr
     simpa only [history, List.mem_cons, List.not_mem_nil, or_false] using hmem
   rcases h with h | h
   all_goals
-    have hr := congrArg (fun e : AxEintrag decl => (e.2.2.1 : Env decl [.int 0 1])) h
+    have hr := congrArg
+      (fun p : World decl × Env decl (decl.aparams ()) × (World decl × Int) => p.2.1)
+      (eq_of_heq (Sigma.mk.inj h).2)
     change ρ = rho true at hr
     rw [hr]
     exact pre_true _
@@ -172,7 +174,8 @@ theorem foreign : ForeignPflicht unit oracle [] where
   dekodiert := by
     intro a hsw σ ρ
     change some (Sum.inl ()) ≠ none
-    decide
+    intro h
+    cases h
   klauseln := by
     intro n
     exact Fin.elim0 n
@@ -237,9 +240,8 @@ theorem first_step (b : Bool) :
     The machine has no precondition check; rejecting that case is user duty. -/
 theorem second_step (b : Bool) :
     ∃ M : RufMaschineG decl, RufSchrittG (program b) oracle 0 (afterFirst b) 0 M := by
-  refine ⟨_, ?_⟩
-  refine RufSchrittG.blatt (afterFirst b) 0 false [] [] [] (call b)
-    (.ret .empty (by rfl)) .nil rfl rfl ?_ answer .nil [] rfl rfl ?_
+  refine ⟨_, RufSchrittG.blatt (afterFirst b) 0 false [] [] [] (call b)
+    (.ret .empty (by rfl)) .nil rfl rfl ?_ answer .nil [] rfl rfl ?_⟩
   · intro L
     exact nomatch L
   · intro L

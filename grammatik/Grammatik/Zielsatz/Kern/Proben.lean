@@ -144,7 +144,8 @@ theorem probeF1_widerlegt_gilt
   rintro ⟨P, S, Q, st, s⟩ hP h
   obtain rfl : P = f1P := hP
   have hl : (f1P.rumpf zHaupt).ohneLocks = true := rfl
-  refine (h.logik.1 0 zHaupt).1.2 zO zO_rahmen zO_lokal (zO_vertrag Q) (fun L σ => mischU S L σ s)
+  refine (h.logik.1 0 zHaupt).1.2 zO zO_rahmen zO_lokal (axVertragOP_of_O _ (zO_vertrag Q))
+    (fun L σ => mischU S L σ s)
     (havocOk_misch_lokal h.logik.2.1 (fun _ _ => s) (fun L _ => h.start.sperren L)) hwRuf
     (hwRuf_rahmen f1P) hwRuf_ohneLogik (zSp.welt []) .nil rfl .bereich ?_
   exact (Endblock.execH_ohne S zO _ 0 hwRuf _ hl _ _).trans

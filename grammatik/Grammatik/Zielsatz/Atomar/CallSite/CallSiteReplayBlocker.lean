@@ -48,7 +48,8 @@ theorem binding : ForeignVertrag unit traceOracle := by
     exact False.elim (Bool.false_ne_true hp)
   · intro a hsw σ ρ
     change some (Sum.inl ()) ≠ none
-    decide
+    intro h
+    cases h
 
 theorem post_cover : PostDeckt unit := by
   intro a hsw σ0 ρ σ1 v hp

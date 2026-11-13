@@ -85,9 +85,8 @@ theorem trace_first_step :
 theorem trace_second_step :
     ∃ M : RufMaschineG decl,
       RufSchrittG (program true) traceOracle 0 (afterFirst true) 0 M := by
-  refine ⟨_, ?_⟩
-  refine RufSchrittG.blatt (afterFirst true) 0 false [] [] [] (call true)
-    (.ret .empty (by rfl)) .nil rfl rfl ?_ key2 .nil [.fremd (.inl ())] rfl rfl ?_
+  refine ⟨_, RufSchrittG.blatt (afterFirst true) 0 false [] [] [] (call true)
+    (.ret .empty (by rfl)) .nil rfl rfl ?_ key2 .nil [.fremd (.inl ())] rfl rfl ?_⟩
   · intro L
     exact nomatch L
   · intro L
