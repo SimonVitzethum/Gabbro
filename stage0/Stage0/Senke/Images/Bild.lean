@@ -37,6 +37,7 @@
   signature), so neither the spawns nor the call write a parameter word.
 -/
 module
+public import Stage0.Senke.Anweisung.Fast.Function
 public import Stage0.Senke.Rekursion
 public import Stage0.Senke.Anweisung.Refusal
 public import Stage0.Senke.Welt.AlignUp
