@@ -141,4 +141,45 @@ theorem invariantCounterexample_sound (base : World D) (carriers : List (D.Tab �
       exact invariant_counterexample_sound base formula.keys carriers expression formula translated
         formula.keys_supported world reconstructed
 
+/-- Both directions of validity for every successfully translated invariant.
+    The base supplies the unobserved typed memory for the converse's refutation. -/
+theorem decideInvariant_true_iff (base : World D) (carriers : List (D.Tab ⊕ D.Glob))
+    (expression : Expr D [] Λ .bool) (formula : LProp (Observation D))
+    (translated : uebersetzeB carriers expression = .ok formula) :
+    decideInvariant carriers expression = .ok true ↔
+      ∀ world : World D, eval world expression world .nil = true := by
+  constructor
+  · intro accepted world
+    exact decideInvariant_sound carriers expression none accepted world
+  · intro valid
+    have total := decideInvariant_total carriers expression formula translated
+    cases computed : decideB (closedInvariant formula) with
+    | true => simpa only [computed] using total
+    | false =>
+        have rejected : decideInvariant carriers expression = .ok false := by
+          simpa only [computed] using total
+        obtain ⟨world, _, invalid⟩ := decideInvariant_complete base carriers expression none rejected
+        rw [valid world] at invalid
+        contradiction
+
+theorem decideInvariant_false_iff (base : World D) (carriers : List (D.Tab ⊕ D.Glob))
+    (expression : Expr D [] Λ .bool) (formula : LProp (Observation D))
+    (translated : uebersetzeB carriers expression = .ok formula) :
+    decideInvariant carriers expression = .ok false ↔
+      ∃ world : World D, eval world expression world .nil = false := by
+  constructor
+  · intro rejected
+    obtain ⟨world, _, invalid⟩ := decideInvariant_complete base carriers expression none rejected
+    exact ⟨world, invalid⟩
+  · rintro ⟨world, invalid⟩
+    have total := decideInvariant_total carriers expression formula translated
+    cases computed : decideB (closedInvariant formula) with
+    | false => simpa only [computed] using total
+    | true =>
+        have accepted : decideInvariant carriers expression = .ok true := by
+          simpa only [computed] using total
+        have valid := decideInvariant_sound carriers expression none accepted world
+        rw [valid] at invalid
+        contradiction
+
 end Gabbro.Grammatik.Invarianten.Modell

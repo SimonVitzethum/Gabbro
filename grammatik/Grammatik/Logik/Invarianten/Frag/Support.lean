@@ -31,4 +31,3 @@ theorem LProp.mem_keys [DecidableEq α] (formula : LProp α) (key : α) :
   simp only [LProp.keys, List.mem_eraseDups]
 
 end Gabbro.Grammatik.Invarianten.Frag
-

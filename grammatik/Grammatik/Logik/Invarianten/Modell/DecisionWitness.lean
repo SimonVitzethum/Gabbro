@@ -81,6 +81,18 @@ theorem default_budget_total_zeuge :
       .ok (decideB (closedInvariant rangeFormula)) :=
   decideInvariant_total (Frag.Witness.declaration.traeger ()) rangeInvariant rangeFormula rfl
 
+theorem model_validity_iff_zeuge :
+    decideInvariant (Frag.Witness.declaration.traeger ()) rangeInvariant = .ok true ↔
+      ∀ world : World Frag.Witness.declaration, eval world rangeInvariant world .nil = true :=
+  decideInvariant_true_iff Frag.Witness.initial (Frag.Witness.declaration.traeger ())
+    rangeInvariant rangeFormula rfl
+
+theorem model_counterexample_iff_zeuge :
+    decideInvariant (Frag.Witness.declaration.traeger ()) Witness.shortInvariant = .ok false ↔
+      ∃ world : World Frag.Witness.declaration, eval world Witness.shortInvariant world .nil = false :=
+  decideInvariant_false_iff Frag.Witness.initial (Frag.Witness.declaration.traeger ())
+    Witness.shortInvariant Witness.shortFormula rfl
+
 theorem sufficient_explicit_budget_zeuge (fuel : Nat)
     (enough : Budget (closedInvariant rangeFormula) ≤ fuel) :
     decideInvariant (Frag.Witness.declaration.traeger ()) rangeInvariant (some fuel) =
