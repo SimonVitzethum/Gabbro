@@ -35,14 +35,14 @@ theorem counter_initialize {m : Mem} {pc fp : W} {K counter budget : Nat}
 /-- Execute a literal in the reserved prefix and retain the complete body-entry
 interface with exactly one completed S0IR instruction. This transports the lexical
 locals, callee availability, entry snapshot, world and enclosing sentinels. -/
-theorem reserved_literal_entry {D : Deklaration} {L : Lay D} {P : Programm D}
+theorem reserved_literal_entry {D : Deklaration} {L : Lay D} {H : List D.Lock} {P : Programm D}
     {f : D.Fn} {Γ : Ctx} {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W}
     {fp pc rp cfp : W} {K Ks lo reserved cell : Nat} {pr : List Nat}
     {σ σ0 : World D} {ρ : Env D Γ} {ρ0 : Env D (D.params f)}
     {m : Mem} {code : List II} {value : Int}
     (layout : WIn L fp Ks K)
     (pre : PreS L m pc fp K (frei Γ reserved) ([ci 1 cell value 0] ++ code) ρ reserved)
-    (surround : Umf L A C dv m fp Ks K)
+    (surround : Umf L A C dv m fp Ks K H)
     (head : Kopf L f m fp K rp cfp ρ0 P σ0) (world : WeltAt m L σ)
     (abi : (functionFrame P f).internalResult ≤ lo) (low : lo ≤ cell)
     (allocated : cell < FB + reserved) (bound : frei Γ reserved ≤ K)
@@ -50,7 +50,7 @@ theorem reserved_literal_entry {D : Deklaration} {L : Lay D} {P : Programm D}
     (hprotected : ∀ j ∈ pr, j < K ∧ j ≠ cell) :
     ∃ m', Counted 1 ⟨pc, fp⟩ m ⟨pc + 16, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧
       PreS L m' (pc + 16) fp K (frei Γ reserved) code ρ reserved ∧
-      Umf L A C dv m' fp Ks K ∧ Kopf L f m' fp K rp cfp ρ0 P σ0 ∧
+      Umf L A C dv m' fp Ks K H ∧ Kopf L f m' fp K rp cfp ρ0 P σ0 ∧
       WeltAt m' L σ ∧ Keeps fp pr m m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 cell)) = some (BitVec.ofInt 64 value) := by
   have protectedPrefix := functionFrame_prefix P f
@@ -77,7 +77,7 @@ theorem reserved_literal_entry {D : Deklaration} {L : Lay D} {P : Programm D}
 /-- Exactly two emitted initialization instructions preserve the complete source entry.
     The second write protects the freshly initialized counter as well as the
     enclosing sentinels; neither value is supplied as a runtime assumption. -/
-theorem forever_initialize_entry {D : Deklaration} {L : Lay D} {P : Programm D}
+theorem forever_initialize_entry {D : Deklaration} {L : Lay D} {H : List D.Lock} {P : Programm D}
     {f : D.Fn} {Γ : Ctx} {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W}
     {fp pc rp cfp : W} {K Ks lo reserved counter one budget : Nat} {pr : List Nat}
     {σ σ0 : World D} {ρ : Env D Γ} {ρ0 : Env D (D.params f)}
@@ -85,7 +85,7 @@ theorem forever_initialize_entry {D : Deklaration} {L : Lay D} {P : Programm D}
     (layout : WIn L fp Ks K)
     (pre : PreS L m pc fp K (frei Γ reserved)
       (foreverCounterInit counter budget ++ [ci 1 one 1 0] ++ code) ρ reserved)
-    (surround : Umf L A C dv m fp Ks K)
+    (surround : Umf L A C dv m fp Ks K H)
     (head : Kopf L f m fp K rp cfp ρ0 P σ0) (world : WeltAt m L σ)
     (abi : (functionFrame P f).internalResult ≤ lo)
     (lowCounter : lo ≤ counter) (lowOne : lo ≤ one)
@@ -95,7 +95,7 @@ theorem forever_initialize_entry {D : Deklaration} {L : Lay D} {P : Programm D}
     (hprotected : ∀ j ∈ pr, j < K ∧ j ≠ counter ∧ j ≠ one) :
     ∃ m', Counted 2 ⟨pc, fp⟩ m ⟨pc + 32, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧
       PreS L m' (pc + 32) fp K (frei Γ reserved) code ρ reserved ∧
-      Umf L A C dv m' fp Ks K ∧ Kopf L f m' fp K rp cfp ρ0 P σ0 ∧
+      Umf L A C dv m' fp Ks K H ∧ Kopf L f m' fp K rp cfp ρ0 P σ0 ∧
       WeltAt m' L σ ∧ Keeps fp pr m m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 counter)) = some (BitVec.ofNat 64 budget) ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 one)) = some 1 := by

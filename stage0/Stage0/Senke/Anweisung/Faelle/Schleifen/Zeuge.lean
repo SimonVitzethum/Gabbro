@@ -59,11 +59,11 @@ theorem world_at [Kern] : WeltAt memory callLayout world := by
   cases g
   exact ValueAt.ofCellWord (w := 64) (by decide) (by decide +kernel) rfl
 
-theorem sync : SyncOK memory callLayout 4096 128 :=
+theorem sync : TicketSync memory callLayout 4096 128 [] :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide,
     (fun l => nomatch l), by decide, (fun l => nomatch l), (fun l => nomatch l), (fun l => nomatch l)⟩
 
-theorem surroundings [Kern] : Umf callLayout addresses target 2 memory 4096 128 256 :=
+theorem surroundings [Kern] : Umf callLayout addresses target 2 memory 4096 128 256 [] :=
   ⟨functions_at, by decide +kernel, by decide, sync, by decide⟩
 
 theorem head : Kopf callLayout 2 memory 4096 256 0 0 (Env.nil : Env D []) tiny world :=
@@ -81,7 +81,7 @@ local instance : SichtOK O := ⟨fun _ _ => rfl⟩
 theorem retry_case_zeuge [Kern] :
     lowS 1 addresses callLayout (functionFrame tiny 2) ([ci 1 5 1 0], 6) [] (0, 0) statement = some (code, 6) ∧
     PreS callLayout memory 2048 4096 256 5 code (Env.cons (τ := .bool) false Env.nil) ∧
-    WIn callLayout 4096 128 256 ∧ Umf callLayout addresses target 2 memory 4096 128 256 ∧
+    WIn callLayout 4096 128 256 ∧ Umf callLayout addresses target 2 memory 4096 128 256 [] ∧
     Kopf callLayout 2 memory 4096 256 0 0 (Env.nil : Env D []) tiny world ∧ WeltAt memory callLayout world ∧
     Sim callLayout tiny 2 world Env.nil 0 0 4096 4 256 [] ⟨2048, 4096⟩ memory
       (2048 + BitVec.ofNat 64 (16 * code.length)) (2048 + BitVec.ofNat 64 (16 * code.length))
@@ -89,7 +89,7 @@ theorem retry_case_zeuge [Kern] :
       (execStmt O 1 (rufAt tiny O 1 2) statement world (Env.cons (τ := .bool) false Env.nil)) := by
   refine ⟨lowered, pre, call_win, surroundings, head, world_at, ?_⟩
   have h := lowS_ok (O := O) (passes := 1) (P := tiny) (f := 2) (σ0 := world)
-    (ρ0 := Env.nil) (lo := 4) (pr := []) (ex := (0, 0)) call_spec addresses_bound rfl rfl statement code 6
+    (ρ0 := Env.nil) (lo := 4) (pr := []) (ex := (0, 0)) call_spec addresses_bound rfl rfl statement HeldIn.nil code 6
     lowered (by decide) (by decide +kernel) call_win memory 2048 world (Env.cons (τ := .bool) false Env.nil)
     pre (by decide) (by decide) surroundings head world_at (fun _ h => nomatch h)
   simpa using h

@@ -1,0 +1,39 @@
+// Equality at the lower endpoint: after `if k == 0 { return 0; }`, k is in 1 .. 159,
+// so k - 1 indexes the 159 slots. Inequality at the upper endpoint: `k != 159` makes k
+// lie in 0 .. 158 in the then block. Neither case needs an explicit `narrow` statement.
+// The computed index is bound first because the slot reader accepts only literals and local names.
+// main writes slot 0 = 11 and slot 158 = 23. after(0) = 0, after(1) = 11,
+// after(159) = 23; below(0) = 11, below(158) = 23, below(159) = 7.
+// Exit code 0 + 11 + 23 + 11 + 23 + 7 = 75.
+module ir_probe {
+table T count 159 { slot { v : u32 in 0 .. 31, } }
+
+impl fn after(k : u32 in 0 .. 159) -> u32 in 0 .. 31
+    effects { reads T.slots }
+{
+    if k == 0 { return 0; }
+    let d = k - 1;
+    return T.slots[d].v;
+}
+
+impl fn below(k : u32 in 0 .. 159) -> u32 in 0 .. 31
+    effects { reads T.slots }
+{
+    if k != 159 { return T.slots[k].v; }
+    return 7;
+}
+
+impl fn main() -> u32 in 0 .. 400
+    effects { reads T.slots, writes T.slots }
+{
+    T.slots[0].v = 11;
+    T.slots[158].v = 23;
+    let a = after(0);
+    let b = after(1);
+    let c = after(159);
+    let d = below(0);
+    let e = below(158);
+    let f = below(159);
+    return a + b + c + d + e + f;
+}
+}

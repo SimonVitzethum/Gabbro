@@ -34,13 +34,42 @@ def uWaechterBereich (ctx : UCtx) (v : String) : Option (Int × Int) :=
     | .ok .int, some (.int lo hi) => some (lo, hi)
     | _, _ => none
 
+/-- Guard bounds, including exclusion of a literal at an end of the current inclusive range `lo .. hi`.
+    Named constants have already become literals in `uBool`. Equality on the true path and inequality on
+    the false path already get their singleton bounds from `uGrenzen`; only the opposite paths need this
+    guard-specific rule. An interior exclusion gives no interval bound. Conjunctions on the true path and
+    disjunctions on the false path intersect facts, exactly as in `uGrenzen`; negation reverses polarity.
+
+    On these paths an immutable integer differs from the excluded endpoint, so it is at least `lo + 1`
+    or at most `hi - 1`. Rebinding with the total `USide.eng` therefore preserves its value: the fallback
+    cannot be reached. The shared `uGrenzen` and its `update`-arm callers retain their existing behaviour. -/
+def uWaechterGrenzen (ctx : UCtx) (v : String) (lo hi : Int) : Bool → UEns → Option Int × Option Int
+  | pos, .cmp op a b =>
+    if (pos && strEq op "!=") || (!pos && strEq op "==") then
+      let excluded : Option Int := match a, b with
+        | .param x, .lit c | .lit c, .param x => if strEq x v then some c else none
+        | _, _ => none
+      match excluded with
+      | some c =>
+        if c == lo then (some (lo + 1), none)
+        else if c == hi then (none, some (hi - 1)) else (none, none)
+      | none => (none, none)
+    else uGrenzen ctx v pos (.cmp op a b)
+  | true, .and a b =>
+    uGrenzen.uGrenzenUnd (uWaechterGrenzen ctx v lo hi true a) (uWaechterGrenzen ctx v lo hi true b)
+  | false, .or a b =>
+    uGrenzen.uGrenzenUnd (uWaechterGrenzen ctx v lo hi false a) (uWaechterGrenzen ctx v lo hi false b)
+  | pos, .not a => uWaechterGrenzen ctx v lo hi (!pos) a
+  | pos, cv => uGrenzen ctx v pos cv
+
 /-- What the guard `cv` fixes about `v` when it holds (`pos`) or fails: the narrowed range, when it is a
-    non-empty proper part of the range of `v`. The bounds are `uGrenzen`'s, the ones an `update` arm uses. -/
+    non-empty proper part of the range of `v`. Guard bounds extend the shared `uGrenzen` bounds only with
+    endpoint exclusions (`uWaechterGrenzen`). Empty and unchanged intersections still give no fact. -/
 def uWaechterEnge (ctx : UCtx) (v : String) (pos : Bool) (cv : UEns) : Option (Int × Int) :=
   match uWaechterBereich ctx v with
   | none => none
   | some (lo, hi) =>
-    let g := uGrenzen ctx v pos cv
+    let g := uWaechterGrenzen ctx v lo hi pos cv
     let lo' := match g.1 with | some a => max lo a | none => lo
     let hi' := match g.2 with | some b => min hi b | none => hi
     if lo' ≤ hi' && !(lo' == lo && hi' == hi) then some (lo', hi') else none

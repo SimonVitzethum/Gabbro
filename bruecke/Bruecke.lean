@@ -2,7 +2,10 @@ module
 public import Bruecke.Zusammen
 public import Bruecke.Pflichten
 public import Bruecke.Kodierung
+public import Bruecke.Kodierung.Glob
+public import Bruecke.Kodierung.GlobZeuge
 public import Bruecke.Ausdruck
+public import Bruecke.Ausdruck.Glob
 public import Bruecke.Anweisung
 public import Bruecke.Nachbedingung
 public import Bruecke.Lauf
@@ -19,6 +22,7 @@ public import Bruecke.Vorlage
 public import Bruecke.Instanzen.Instanz130
 public import Bruecke.Instanzen.Instanz69
 public import Bruecke.Instanzen.Instanz73
-public import Bruecke.StartsProbe
+public import Bruecke.Instanzen.StartsProbe
+public import Bruecke.Teil.Pflichten
 @[expose] public section
 

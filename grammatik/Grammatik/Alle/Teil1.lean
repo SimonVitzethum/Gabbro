@@ -168,6 +168,7 @@ public import Grammatik.Korpus.Referenz.ReferenzAR
 public import Grammatik.Korpus.Zeugnis.ZeugnisStmt3
 public import Grammatik.Parser.Lex.Lexer
 public import Grammatik.Parser.Lex.CharacterProbes
+public import Grammatik.Parser.Lex.StringZeuge
 public import Grammatik.Parser.Lex.LexerVertrauen
 public import Grammatik.Parser.Lex.LexerDoku
 public import Grammatik.Parser.Expr.Ausdruck

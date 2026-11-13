@@ -103,8 +103,9 @@ theorem keeps_of_agreeW {L : Lay D} {fp : Runner.W} {pr : List Nat} {Ks K d : Na
   fun j hj => agreeW_rdW hW ha (hp j hj) hd
 
 theorem Umf.agreeW {L : Lay D} {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {m m' : Runner.Mem}
-    {fp : Runner.W} {Ks Ks' K lo : Nat} (hW : WIn L fp Ks' K) (h : Umf L A C dv m fp Ks K) (ha : AgreeW L fp lo K m m')
-    (hlo : FB ≤ lo) : Umf L A C dv m' fp Ks K :=
+    {fp : Runner.W} {Ks Ks' K lo : Nat} {H : List D.Lock} (hW : WIn L fp Ks' K) (h : Umf L A C dv m fp Ks K H)
+    (ha : AgreeW L fp lo K m m')
+    (hlo : FB ≤ lo) : Umf L A C dv m' fp Ks K H :=
   ⟨pcode_agreeW h.code ha hW.top hW.lay.2.2 hW.ord, by
     have hFB3 : FB = 4 := rfl
     have hb := h.big

@@ -21,11 +21,14 @@ variable [Kern]
 
 variable {D : Deklaration}
 
-/-- The words of another lock, apart from the lock at `a` and above the scratch slots, keep their class. -/
+/-- The words of another lock, apart from the lock at `a` and above the scratch slots, keep their class: they are
+    not touched. -/
 theorem AgreeK.ticketKlasse {m m1 : Mem} {fp : W} {s a b : Nat} (h : AgreeK fp s a m m1)
     (hb31 : b + 24 < 2 ^ 31) (hf : fp.toNat + 8 * (s + 18) ≤ b) (hd : b + 24 ≤ a ∨ a + 24 ≤ b) :
     TicketKlasse m m1 b :=
-  TicketKlasse.ofLock (h.klasse hb31 hf hd)
+  TicketKlasse.ofWords fun k hk => rd64_keep h.rd fun j hj => h.b _
+    (fun ⟨_, h3⟩ => by rw [lk_byte (by omega) hj] at h3; omega)
+    (fun ⟨h3, h4⟩ => by rw [lk_byte (by omega) hj] at h3 h4; omega)
 
 /-- The ticket state of another lock survives. -/
 theorem AgreeK.ticketOK {m m1 : Mem} {fp : W} {s Ks : Nat} {L : Lay D} {H : List D.Lock}

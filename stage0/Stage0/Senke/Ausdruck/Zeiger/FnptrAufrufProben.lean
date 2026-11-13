@@ -112,11 +112,11 @@ theorem call_win : WIn callLayout 4096 128 256 := by
     | elem t => nomatch t
     | glob _ => rfl
 
-theorem call_sync : SyncOK callMem callLayout 4096 128 :=
+theorem call_sync : TicketSync callMem callLayout 4096 128 [] :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide,
     (fun l => nomatch l), by decide, (fun l => nomatch l), (fun l => nomatch l), (fun l => nomatch l)⟩
 
-theorem call_umf [Kern] : Umf callLayout addresses target 2 callMem 4096 128 256 :=
+theorem call_umf [Kern] : Umf callLayout addresses target 2 callMem 4096 128 256 [] :=
   ⟨targets_code, by decide +kernel, by decide, call_sync, by decide⟩
 
 theorem call_head : Kopf callLayout 2 callMem 4096 256 0 0 (Env.nil : Env D []) tiny world :=
@@ -150,7 +150,7 @@ theorem lowInd_ok_zeuge [Kern] :
     FunSpec callLayout addresses target (rufAt tiny O 1 2) 2 39 ∧
     lowInd callLayout pointer .nil = some (indirect, 9) ∧
     PreS callLayout callMem 2048 4096 256 4 indirect (Env.nil : Env D []) ∧
-    Umf callLayout addresses target 2 callMem 4096 128 256 ∧
+    Umf callLayout addresses target 2 callMem 4096 128 256 [] ∧
     WIn callLayout 4096 128 256 ∧ WeltAt callMem callLayout world ∧
     ∃ m', Star ⟨2048, 4096⟩ callMem ⟨2144, 4096⟩ m' ∧ AgreeW callLayout 4096 4 256 callMem m' ∧
       ResultAt callLayout m' (slot 4096 4) (FB + contextWords (D.params 2)) (D.erg 2)
@@ -160,7 +160,7 @@ theorem lowInd_ok_zeuge [Kern] :
   have h := lowInd_ok (same := rfl) (reserved := 0) call_spec (A := addresses)
     addresses_bound
     pointer .nil world world (c := indirect) (top := 9) (by rfl) (by decide)
-    call_pre.left call_umf call_win call_world
+    call_pre.left call_umf call_win call_world HeldIn.nil
   obtain ⟨m', steps, changed, ⟨result, _, _⟩, world'⟩ := h
   exact ⟨m', steps, changed, result, world'⟩
 
@@ -170,7 +170,7 @@ theorem indStmt_ok_zeuge [Kern] :
       (execStmt O 1 (rufAt tiny O 1 2) (Stmt.callInd (l := false) pointer .nil (fit 2) rfl) world Env.nil) := by
   exact indStmt_ok (O := O) (passes := 1) (P := tiny) (f := 2) (σ0 := world) (ρ0 := Env.nil)
     (ex := (0, 0)) call_spec addresses_bound pointer .nil (fit 2) rfl (c := indirect) (top := 9)
-    rfl (by decide) call_win call_pre.left (by decide) call_umf call_world (fun _ h => nomatch h)
+    rfl (by decide) call_win call_pre.left (by decide) call_umf call_world (fun _ h => nomatch h) HeldIn.nil
 
 /-- A concrete successful result binder: slot 4 becomes 21, and its continuation reaches the end. -/
 theorem indBind_ok_zeuge [Kern] :
@@ -179,7 +179,7 @@ theorem indBind_ok_zeuge [Kern] :
   have h := indBind_ok (τ := .int 0 100) (f := 2) (fp := 4096) (rp := 0) (cfp := 0) (ρ0 := Env.nil)
     (lo := 4) (K := 256) (Ks := 128) (pr := []) (cc := indirect) (cr := []) (tc := 9) (pc := 2048)
     call_spec addresses_bound pointer .nil rfl rfl world Env.nil rfl (by decide) (by decide) call_pre
-    call_win rfl (by decide) call_umf call_head call_world (fun _ h => nomatch h)
+    call_win rfl (by decide) call_umf call_head call_world (fun _ h => nomatch h) HeldIn.nil
     (fun σ v => Ausgang.ok (V := vertragVon D 2) (l := false) σ (Env.cons v Env.nil)) .logik .hardware
     (fun t m out => Sim callLayout tiny 2 world Env.nil 0 0 4096 4 256 [] t m 2160 2160 2160 out)
     (Sim.prefix (by decide)) (fun _ _ _ h => h) (fun _ _ _ h => h)

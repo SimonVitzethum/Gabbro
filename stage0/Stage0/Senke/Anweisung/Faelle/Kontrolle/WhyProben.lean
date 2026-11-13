@@ -134,11 +134,11 @@ theorem call_win : WIn callLayout 4096 128 256 := by
     | elem t => nomatch t
     | glob _ => rfl
 
-theorem call_sync (g : D.Fn) : SyncOK (callMem g) callLayout 4096 128 :=
+theorem call_sync (g : D.Fn) : TicketSync (callMem g) callLayout 4096 128 [] :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide,
     (fun l => nomatch l), by decide, (fun l => nomatch l), (fun l => nomatch l), (fun l => nomatch l)⟩
 
-theorem call_umf [Kern] (g : D.Fn) : Umf callLayout addresses target 2 (callMem g) 4096 128 256 :=
+theorem call_umf [Kern] (g : D.Fn) : Umf callLayout addresses target 2 (callMem g) 4096 128 256 [] :=
   ⟨targets_code g, by first | decide +kernel | (revert g; apply allFin; decide +kernel), by decide, call_sync g, by decide⟩
 
 local instance [Kern] : TorOK callLayout O where
@@ -201,7 +201,7 @@ theorem callElse_ok_zeuge [Kern] (g : D.Fn) :
     FunSpec callLayout addresses target (rufAt P O 1 2) 2 39 ∧
     lowA callLayout (Γ := []) (Λ := []) (Args.nil : Args D [] [] (D.params g)) 6 = some ([], 6) ∧
     PreS callLayout (callMem g) 2048 4096 256 4 (caller g) (Env.nil : Env D []) ∧
-    Umf callLayout addresses target 2 (callMem g) 4096 128 256 ∧
+    Umf callLayout addresses target 2 (callMem g) 4096 128 256 [] ∧
     WIn callLayout 4096 128 256 ∧ WeltAt (callMem g) callLayout world ∧ Arrived g := by
   refine ⟨call_spec, rfl, call_pre g, call_umf g, call_win, call_world g, ?_⟩
   have hn : (match rufAt P O 1 2 g world .nil with | .logik _ | .hardware _ => false | _ => true) = true := by
@@ -210,7 +210,7 @@ theorem callElse_ok_zeuge [Kern] (g : D.Fn) :
     decide +kernel
   have h := callElse_ok (reserved := 0) (g := g) (ca := []) (ta := 8) call_spec (addresses_bound g)
     (Args.nil : Args D [] [] (D.params g)) rfl world rfl (call_ht g) (call_pre g)
-    (call_hs g) (call_umf g) call_win (call_world g)
+    (call_hs g) (call_umf g) call_win (call_world g) HeldIn.nil
   rcases h with ⟨σ, v, m', hr, st, _, hp, hw⟩ | ⟨σ, r, m', hr, st, _, hp, hw⟩ |
     ⟨e, hr, _⟩ | ⟨e, hr, _⟩
   all_goals simp only [evalArgs] at hr

@@ -54,6 +54,20 @@ structure Kontext where
 /-- Whether `&&` or `||`: the right operand is evaluated conditionally. -/
 def bedingt (op : String) : Bool := strEq op "&&" || strEq op "||"
 
+/-- Only value projections rooted in a known local: no dereference, indexing, call or static.
+    Local mutability is not recorded by `binders`. Even a mutable local is private to this call
+    frame: a callee cannot assign it, so delaying its value projection past a lifted call is safe.
+    A name also listed among statics is conservatively excluded, even when shadowed. -/
+def lokalerWert (k : Kontext) : SExpr → Bool
+  | .variable x => k.lokal.contains x && !(k.statics.finde x).isSome
+  | .field e _ => lokalerWert k e
+  | _ => false
+
+/-- The index forms the existing place reader accepts without a source binding. -/
+def atomarerIndex : SExpr → Bool
+  | .lit _ | .variable _ => true
+  | _ => false
+
 /-- Whether an expression reads no mutable state and holds no call: literals, locals, constants and
     operators over them. -/
 def ruhig (k : Kontext) : Nat → SExpr → Bool
@@ -62,6 +76,7 @@ def ruhig (k : Kontext) : Nat → SExpr → Bool
   | _ + 1, .fnref _ => true
   | _ + 1, .ext .text [_] [] => true
   | _ + 1, .variable v => !(k.statics.finde v).isSome
+  | _ + 1, e@(.field _ _) => lokalerWert k e
   | n + 1, .un _ e => ruhig k n e
   | n + 1, .bin _ a b => ruhig k n a && ruhig k n b
   | n + 1, .built _ args => args.all (ruhig k n)
@@ -124,13 +139,28 @@ def hebeE (k : Kontext) : Nat → Nat → Bool → SExpr → Schritt
     else
       let rb := hebeE k n ra.2.2.1 ra.2.2.2 b
       (ra.1 ++ rb.1, .bin op ra.2.1 rb.2.1, rb.2.2.1, rb.2.2.2)
+  | n + 1, nr, sauber, .index base@(.field (.variable table) "slots") index =>
+    if k.lokal.contains table || (k.statics.finde table).isSome then
+      let ra := hebeE k n nr sauber base
+      let rb := hebeE k n ra.2.2.1 ra.2.2.2 index
+      (ra.1 ++ rb.1, .index ra.2.1 rb.2.1, rb.2.2.1, false)
+    else
+      -- A named table is not evaluated. Bind its computed index at this read, after its own
+      -- lifted calls, only if no earlier residual operand read state. The slot read itself
+      -- remains unclean: no later call may cross it. Branch recursion keeps this binding
+      -- inside the guard, where the ordinary elaborator infers its narrowed range.
+      let r := hebeE k n nr sauber index
+      if sauber && !atomarerIndex r.2.1 then
+        let name := "#r" ++ toString r.2.2.1
+        (r.1 ++ [.bind false name none r.2.1], .index base (.variable name), r.2.2.1 + 1, false)
+      else (r.1, .index base r.2.1, r.2.2.1, false)
   | n + 1, nr, sauber, .index a b =>
     let ra := hebeE k n nr sauber a
     let rb := hebeE k n ra.2.2.1 ra.2.2.2 b
     (ra.1 ++ rb.1, .index ra.2.1 rb.2.1, rb.2.2.1, false)
   | n + 1, nr, sauber, .field e name =>
     let r := hebeE k n nr sauber e
-    (r.1, .field r.2.1 name, r.2.2.1, false)
+    (r.1, .field r.2.1 name, r.2.2.1, r.2.2.2 && lokalerWert k (.field e name))
   | n + 1, nr, sauber, .arrow e name =>
     let r := hebeE k n nr sauber e
     (r.1, .arrow r.2.1 name, r.2.2.1, false)

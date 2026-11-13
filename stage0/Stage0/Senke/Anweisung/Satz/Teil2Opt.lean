@@ -4,7 +4,8 @@ public import Stage0.Senke.Anweisung.Satz.Teil4
 public import Stage0.Senke.Anweisung.Schreiben
 public import Stage0.Senke.Welt.Spans.CellStore
 public import Stage0.Senke.Welt.WordCell
-public import Stage0.Senke.Sperre.Satz
+public import Stage0.Senke.Sperre.Ticket.Satz
+public import Stage0.Senke.Sperre.OhneRet
 public import Stage0.Senke.Anweisung.Faelle.Gleit.Narrow
 public import Stage0.Senke.Anweisung.Faelle.Gleit.Literal
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Wahl
@@ -40,6 +41,7 @@ set_option linter.unusedSectionVars false
 set_option maxHeartbeats 2000000
 variable [Kern]
 variable {D : Deklaration} {L : Lay D} {V : Vertrag D}
+variable {H : List D.Lock}
 
 /-- The canonical Some-result cast binds exactly its projected value. -/
 theorem someAnswer_env {e : Option Ty} {τ : Ty} {Γ : Ctx}
@@ -74,11 +76,12 @@ theorem lowB_ok_bindAxiomOpt_some {O : Orakel D} [TorOK L O] [SichtOK O] {passes
     (hp : PreS L m pc fp K (frei Γ reserved) c ρ reserved)
     (hlo : FB ≤ lo)
     (hlo2 : lo ≤ frei Γ reserved)
-    (hu : Umf L A C dv m fp Ks K)
+    (hu : Umf L A C dv m fp Ks K H)
     (hk : Kopf L f m fp K rp cfp ρ0 P σ0)
     (hWa : WeltAt m L σ)
     (hpr : (∀ j ∈ pr, j < frei Γ reserved))
-    (ih_lowB_ok_rest : ∀ {O : Orakel D} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f} {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap) (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {fp : Runner.W} {K : Nat} {Ks : Nat} {lo : Nat} {rp : Runner.W} {cfp : Runner.W} {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat} (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowPost L (functionFrame P f) P f (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens)) {reserved : Nat} {pr : List Nat} {ex : Int × Int}, ∀ (c : List II), ∀ (top : Nat), lowB (reserved := reserved) passes A L (functionFrame P f) (cens, tens) pr ex rest = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K → ∀ (m : Runner.Mem), ∀ (pc : Runner.W), ∀ (σ : World D), ∀ (ρ : Env D (zi_τ :: Γ)), PreS L m pc fp K (frei (zi_τ :: Γ) reserved) c ρ reserved → FB ≤ lo → lo ≤ frei (zi_τ :: Γ) reserved → Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei (zi_τ :: Γ) reserved) → Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length)) (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1) (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execBlock O passes R rest σ ρ) reserved)
+    (hH : HeldIn H Λ (vertragVon D f).boden)
+    (ih_lowB_ok_rest : ∀ {O : Orakel D} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f} {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap) (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {fp : Runner.W} {K : Nat} {Ks : Nat} {lo : Nat} {rp : Runner.W} {cfp : Runner.W} {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat} (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowPost L (functionFrame P f) P f (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens)) {reserved : Nat} {pr : List Nat} {ex : Int × Int}, HeldIn H (blockAnf rest) (vertragVon D f).boden → ∀ (c : List II), ∀ (top : Nat), lowB (reserved := reserved) passes A L (functionFrame P f) (cens, tens) pr ex rest = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K → ∀ (m : Runner.Mem), ∀ (pc : Runner.W), ∀ (σ : World D), ∀ (ρ : Env D (zi_τ :: Γ)), PreS L m pc fp K (frei (zi_τ :: Γ) reserved) c ρ reserved → FB ≤ lo → lo ≤ frei (zi_τ :: Γ) reserved → Umf L A C dv m fp Ks K H → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei (zi_τ :: Γ) reserved) → Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length)) (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1) (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execBlock O passes R rest σ ρ) reserved)
     : Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length)) (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1) (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execBlock O passes R (.bindAxiomOpt (e := some zi_τ) a args he proof0 proof1 proof2 rest : Block D (vertragVon D f) l Γ Λ Λ') σ ρ) reserved :=
   by
   simp only [lowB, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
@@ -101,7 +104,7 @@ theorem lowB_ok_bindAxiomOpt_some {O : Orakel D} [TorOK L O] [SichtOK O] {passes
       ⟨by simp only [frei, contextWords_cons]; omega, next.small, next.frame,
         next.code, next.far, envAt_cons next.env value, trivial, wstab_true _ _⟩
     have ih := ih_lowB_ok_rest (O := O) (passes := passes) (σ0 := σ0)
-      (reserved := reserved) (pr := pr) (ex := ex) hS hA hlo0 hens cr tr hr
+      (reserved := reserved) (pr := pr) (ex := ex) hS hA hlo0 hens (HeldIn.sig (S := D.asignatur a) hH) cr tr hr
       (by omega) (by omega) hW m2 _ _ _ pre hlo
       (by simp only [frei, contextWords_cons] at hlo2 ⊢; omega)
       (hu.agreeW hW (changed.mono hlo2) hlo)
@@ -137,11 +140,12 @@ theorem lowEnd_ok_bindAxiomOpt_some {O : Orakel D} [TorOK L O] [SichtOK O] {pass
     (ρ : Env D Γ)
     (hp : PreS L m pc fp K (frei Γ reserved) c ρ reserved)
     (hlo : lo ≤ frei Γ reserved)
-    (hu : Umf L A C dv m fp Ks K)
+    (hu : Umf L A C dv m fp Ks K H)
     (hk : Kopf L f m fp K rp cfp ρ0 P σ0)
     (hWa : WeltAt m L σ)
     (hpr : (∀ j ∈ pr, j < frei Γ reserved))
-    (ih_lowEnd_ok_rest : ∀ {O : Orakel D} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f} {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap) (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {fp : Runner.W} {K : Nat} {Ks : Nat} {lo : Nat} {rp : Runner.W} {cfp : Runner.W} {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat} (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowPost L (functionFrame P f) P f (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens)) {reserved : Nat} {pr : List Nat} {ex : Int × Int}, ∀ (c : List II), ∀ (top : Nat), lowEnd (reserved := reserved) passes A L (functionFrame P f) (cens, tens) pr ex rest = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K → ∀ (m : Runner.Mem), ∀ (pc : Runner.W), ∀ (σ : World D), ∀ (ρ : Env D (zi_τ :: Γ)), PreS L m pc fp K (frei (zi_τ :: Γ) reserved) c ρ reserved → lo ≤ frei (zi_τ :: Γ) reserved → Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei (zi_τ :: Γ) reserved) → Ret L P f σ0 ρ0 fp lo K pr rp cfp ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1) (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execEnd O passes R rest σ ρ) reserved)
+    (hH : HeldIn H Λ (vertragVon D f).boden)
+    (ih_lowEnd_ok_rest : ∀ {O : Orakel D} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f} {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap) (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {fp : Runner.W} {K : Nat} {Ks : Nat} {lo : Nat} {rp : Runner.W} {cfp : Runner.W} {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat} (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowPost L (functionFrame P f) P f (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens)) {reserved : Nat} {pr : List Nat} {ex : Int × Int}, HeldIn H (endAnf rest) (vertragVon D f).boden → ∀ (c : List II), ∀ (top : Nat), lowEnd (reserved := reserved) passes A L (functionFrame P f) (cens, tens) pr ex rest = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K → ∀ (m : Runner.Mem), ∀ (pc : Runner.W), ∀ (σ : World D), ∀ (ρ : Env D (zi_τ :: Γ)), PreS L m pc fp K (frei (zi_τ :: Γ) reserved) c ρ reserved → lo ≤ frei (zi_τ :: Γ) reserved → Umf L A C dv m fp Ks K H → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei (zi_τ :: Γ) reserved) → Ret L P f σ0 ρ0 fp lo K pr rp cfp ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1) (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execEnd O passes R rest σ ρ) reserved)
     : Ret L P f σ0 ρ0 fp lo K pr rp cfp ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1) (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execEnd O passes R (.bindAxiomOpt (e := some zi_τ) a args he proof0 proof1 proof2 rest : Endblock D (vertragVon D f) l Γ Λ) σ ρ) reserved :=
   by
   simp only [lowEnd, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
@@ -166,7 +170,7 @@ theorem lowEnd_ok_bindAxiomOpt_some {O : Orakel D} [TorOK L O] [SichtOK O] {pass
       ⟨by simp only [frei, contextWords_cons]; omega, next.small, next.frame,
         next.code, next.far, envAt_cons next.env value, trivial, wstab_true _ _⟩
     have ih := ih_lowEnd_ok_rest (O := O) (passes := passes) (σ0 := σ0)
-      (reserved := reserved) (pr := pr) (ex := ex) hS hA hlo0 hens cr tr hr
+      (reserved := reserved) (pr := pr) (ex := ex) hS hA hlo0 hens (HeldIn.sig (S := D.asignatur a) hH) cr tr hr
       (by omega) (by omega) hW m2 _ _ _ pre
       (by simp only [frei, contextWords_cons] at hlo ⊢; omega)
       (hu.agreeW hW changed (by omega)) (hk.agreeW hW changed (by omega)) world

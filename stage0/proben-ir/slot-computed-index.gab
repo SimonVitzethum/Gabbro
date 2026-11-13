@@ -1,0 +1,38 @@
+// Exit 68: guarded(2) reads slot 1 = 17; guarded(0) returns 0.
+// The binding, assignment-value and argument reads each return 17: 17 + 0 + 17 + 17 + 17 = 68.
+module ir_slot_computed_index {
+table T count 160 { slot { k : u32 in 0 .. 31, } }
+impl fn identity(v : u32 in 0 .. 31) -> u32 in 0 .. 31 effects { pure } { return v; }
+impl fn guarded(k : u32 in 0 .. 159) -> u32 in 0 .. 31 effects { reads T.slots } {
+    if k >= 1 { return T.slots[k - 1].k; }
+    return 0;
+}
+impl fn bound(k : u32 in 0 .. 159) -> u32 in 0 .. 31 effects { reads T.slots } {
+    if k >= 1 {
+        let d = T.slots[k - 1].k;
+        return d;
+    }
+    return 0;
+}
+impl fn assigned(k : u32 in 0 .. 159) -> u32 in 0 .. 31 effects { reads T.slots } {
+    let mut d : u32 in 0 .. 31 = 0;
+    if k >= 1 { d = T.slots[k - 1].k; }
+    return d;
+}
+impl fn argument(k : u32 in 0 .. 159) -> u32 in 0 .. 31 effects { reads T.slots } {
+    if k >= 1 {
+        let d = identity(T.slots[k - 1].k);
+        return d;
+    }
+    return 0;
+}
+impl fn main() -> u32 in 0 .. 155 effects { reads T.slots, writes T.slots } {
+    T.slots[1].k = 17;
+    let a = guarded(2);
+    let b = guarded(0);
+    let c = bound(2);
+    let d = assigned(2);
+    let e = argument(2);
+    return a + b + c + d + e;
+}
+}

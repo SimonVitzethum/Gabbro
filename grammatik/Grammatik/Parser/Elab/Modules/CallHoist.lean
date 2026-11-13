@@ -53,8 +53,8 @@ def leseFeld (k : Kontext) (n nr : Nat) (mu : Bool) (x : String) (ty : Option ST
     if k.lokal.contains table then none else do
       let .atom name ← feldTyp k e | none
       let (_, faelle) ← k.typFaelle.find? (fun entry => strEq entry.1 name)
-      let ri := hebeE k n nr true index
-      let source := SExpr.field (.index (.field (.variable table) "slots") ri.2.1) field
+      let ri := hebeE k n nr true e
+      let source := ri.2.1
       let (statements, next) ← leseFaelle ri.2.2.1 mu x ty source (.atom name) faelle
       pure (ri.1 ++ statements, next)
   | _ => none

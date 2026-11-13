@@ -4,15 +4,13 @@
               lies in the thread's stack; every lock's three words lie above the world, apart from each other,
               writable; the specified waiter counts (zero by default), and a lock is mine (next = serving + 1)
               exactly when it lies in the thread's held set `H`, free (next = serving) otherwise. No thread number
-              is needed. A statement keeps the difference (`TicketSync.keepWords`, `TicketSync.agreeW`); a
-              callee's frame inherits it (`TicketSync.call`); a thread's number comes from the fields
-              (`TicketSync.me`).
+              is needed. A statement keeps the difference (`TicketSync.keepWords`, `TicketSync.agreeW`); a change
+              of the frame's slots alone keeps it (`TicketSync.agree`); a callee's frame inherits it
+              (`TicketSync.call`).
 -/
 module
-public import Stage0.Senke.Sperre.Ticket.Klasse
-public import Stage0.Senke.Sperre.Nimm
-public import Stage0.Senke.Sperre.Sync
 public import Stage0.Senke.Welt.WeltAt
+public import Stage0.Senke.Welt.Schreib
 @[expose] public section
 
 
@@ -23,6 +21,21 @@ open Gabbro.Grammatik Runner Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 
 variable {D : Deklaration}
+
+theorem lk_byte {y j : Nat} (hy : y + 8 < 2 ^ 31) (hj : j < 8) :
+    (BitVec.ofNat 64 y + BitVec.ofNat 64 j).toNat = y + j := by
+  simp only [BitVec.toNat_add, BitVec.toNat_ofNat]; omega
+
+/-- The frame of a callee at slot `F < Ks` lies in the same stack. -/
+theorem meW_call {L : Lay D} {fp : W} {Ks F : Nat} (h : fp.toNat + 8 * Ks ≤ L.sb + L.st * ((fp.toNat - L.sb) / L.st + 1))
+    (hlo : L.sb ≤ fp.toNat) (_hst : 0 < L.st) (hF : F < Ks) (hr : fp.toNat + 8 * Ks < 2 ^ 62) :
+    (fp.toNat + 8 * F - L.sb) / L.st = (fp.toNat - L.sb) / L.st := by
+  have hq := Nat.div_mul_le_self (fp.toNat - L.sb) L.st
+  have e : L.st * ((fp.toNat - L.sb) / L.st + 1) = (fp.toNat - L.sb) / L.st * L.st + L.st := by
+    rw [Nat.mul_add, Nat.mul_one, Nat.mul_comm]
+  apply Nat.div_eq_of_lt_le
+  · omega
+  · rw [Nat.add_mul, Nat.one_mul]; omega
 
 /-- The words of the ticket lock `Lk` against the held set `H`: next `n`, serving `s`, the specified waiters
     (zero by default); mine (`n = s + 1`) when `Lk ∈ H`, free (`n = s`) when not. -/
@@ -43,10 +56,6 @@ structure TicketSync (m : Mem) (L : Lay D) (fp : W) (Ks : Nat) (H : List D.Lock)
   dis : ∀ Lk Lk', Lk ≠ Lk' → L.lk Lk + 24 ≤ L.lk Lk' ∨ L.lk Lk' + 24 ≤ L.lk Lk
   wr : ∀ Lk k, k ≤ 2 → all m.wr (BitVec.ofNat 64 (L.lk Lk + 8 * k)) 8 = true
   zust : ∀ Lk, TicketOK m L H Lk (waiters Lk)
-
-theorem TicketSync.me {m : Mem} {L : Lay D} {fp : W} {Ks : Nat} {H : List D.Lock} {waiters : D.Lock → W}
-    (h : TicketSync m L fp Ks H waiters) : MeOK L fp :=
-  ⟨h.lo, h.sb31, h.st, h.st31, by have := h.room; omega⟩
 
 /-- The ticket state kept where the differences of every lock are. -/
 theorem TicketSync.keepWords {m m' : Mem} {L : Lay D} {fp : W} {Ks : Nat} {H : List D.Lock}
@@ -77,11 +86,26 @@ theorem TicketSync.keepWords {m m' : Mem} {L : Lay D} {fp : W} {Ks : Nat} {H : L
 theorem TicketSync.agreeW {m m' : Mem} {L : Lay D} {fp : W} {Ks lo K : Nat} {H : List D.Lock}
     {waiters : D.Lock → W} (h : TicketSync m L fp Ks H waiters)
     (ha : AgreeW L fp lo K m m') (hK : fp.toNat + 8 * K ≤ L.hi) : TicketSync m' L fp Ks H waiters :=
-  h.keepWords ha.rd ha.wr fun Lk => TicketKlasse.ofLock (ha.sync Lk fun k j hk hj => by
+  h.keepWords ha.rd ha.wr fun Lk => ha.sync Lk fun k j hk hj => by
     have hl := h.lay Lk
     have hsy := h.sye
     have e := lk_byte (y := L.lk Lk + 8 * k) (by omega) hj
-    exact ⟨fun ⟨_, h3⟩ => by rw [e] at h3; omega, fun ⟨_, h3⟩ => by rw [e] at h3; omega⟩)
+    exact ⟨fun ⟨_, h3⟩ => by rw [e] at h3; omega, fun ⟨_, h3⟩ => by rw [e] at h3; omega⟩
+
+/-- The ticket state kept where the bytes from `L.hi` to `L.sye` are. -/
+theorem TicketSync.keep {m m' : Mem} {L : Lay D} {fp : W} {Ks : Nat} {H : List D.Lock} {waiters : D.Lock → W}
+    (h : TicketSync m L fp Ks H waiters) (hrd : m'.rd = m.rd) (hwr : m'.wr = m.wr)
+    (hb : ∀ x : W, L.hi ≤ x.toNat → x.toNat < L.sye → m'.b x = m.b x) : TicketSync m' L fp Ks H waiters :=
+  h.keepWords hrd hwr fun Lk => TicketKlasse.ofWords fun k hk => by
+    have hl := h.lay Lk
+    have hsy := h.sye
+    exact rd64_keep hrd fun j hj => hb _ (by rw [lk_byte (by omega) hj]; omega) (by rw [lk_byte (by omega) hj]; omega)
+
+/-- A change of the frame's slots alone keeps the ticket state. -/
+theorem TicketSync.agree {m m' : Mem} {L : Lay D} {fp : W} {Ks lo K : Nat} {H : List D.Lock}
+    {waiters : D.Lock → W} (h : TicketSync m L fp Ks H waiters) (ha : Agree fp lo K m m')
+    (hK : fp.toNat + 8 * K ≤ L.hi) : TicketSync m' L fp Ks H waiters :=
+  h.keep ha.rd ha.wr fun x h1 _ => ha.b x (fun ⟨_, h3⟩ => by omega)
 
 theorem TicketSync.mono {m : Mem} {L : Lay D} {fp : W} {Ks Ks' : Nat} {H : List D.Lock}
     {waiters : D.Lock → W} (h : TicketSync m L fp Ks H waiters) (hs : Ks' ≤ Ks) :

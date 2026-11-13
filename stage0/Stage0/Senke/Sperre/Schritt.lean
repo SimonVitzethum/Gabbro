@@ -1,8 +1,8 @@
 /-
   File:      stage0/Stage0/Senke/Sperre/Schritt.lean
-  Subject:   Single instructions of the lock code (`Sperre/Code.lean`) on a state `LS`: the scratch slots `s .. s+17`
-             hold `f`, the lock's three words at `a` hold owner, count and waiters, and apart from both the memory
-             is the one the code started in (`AgreeK`). Each lemma runs instruction `i` of the code `code` at `pc`.
+  Subject:   Single instructions of the lock code (`Ticket/Code.lean`) on a state `LS`: the scratch slots `s .. s+17`
+             hold `f`, the lock's three words at `a` hold the next ticket, the serving ticket and the waiters, and apart
+             from both the memory is the one the code started in (`AgreeK`). Each lemma runs instruction `i` of the code `code` at `pc`.
 -/
 module
 public import Stage0.Senke.Sperre.Schritta
@@ -121,25 +121,6 @@ theorem ls_ld (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w) {i d e : N
   have := run_ld (t := ⟨pc + BitVec.ofNat 64 (16 * i), fp⟩) hI hra hv hw
   rwa [sx_nat (d := s + d) (by omega)] at this
 
-/-- `st e g` to the count word. -/
-theorem ls_st_count (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w) {i e g' : Nat} {A B : Int}
-    (hi : code[i]? = some (ci 16 A B 0)) (hA : A = ((s + e : Nat) : Int)) (hB : B = ((s + g' : Nat) : Int))
-    (he : e < 18) (hg' : g' < 18) (hae : f e = BitVec.ofNat 64 (a + 8)) :
-    ∃ m', Star ⟨pc + BitVec.ofNat 64 (16 * i), fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (i + 1)), fp⟩ m' ∧
-      LS m0 m' fp s a f o (f g') w := by
-  subst hA hB
-  have hI := E.ins h.ag hi
-  simp only [ci] at hI
-  have hs := E.small
-  refine ⟨_, ls_star hI (by decide) ?_, h.count E (f g')⟩
-  rw [← pc_next]
-  have hra := h.sl e he
-  rw [← sx_nat (d := s + e) (by omega), hae] at hra
-  have hrb := h.sl g' hg'
-  rw [← sx_nat (d := s + g') (by omega)] at hrb
-  exact run_st (t := ⟨pc + BitVec.ofNat 64 (16 * i), fp⟩) hI hra hrb
-    (wr64_some (by rw [h.ag.wr]; exact E.wr1))
-
 /-- `brz e L` with slot `e` zero: on at instruction `i + k`. -/
 theorem ls_brz_zero (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w) {i e k : Nat} {A Lb : Int}
     (hi : code[i]? = some (ci 19 A Lb 0)) (hA : A = ((s + e : Nat) : Int)) (hL : Lb = ((16 * k : Nat) : Int))
@@ -183,24 +164,6 @@ theorem ls_jmp (E : LE m0 pc fp s a code) (h : AgreeK fp s a m0 m) {i k : Nat} {
   exact .next
 
 end
-
-theorem sdiv_nat {x y : Nat} (hx : x < 2 ^ 63) (hy0 : 0 < y) (hy : y < 2 ^ 63) :
-    sdiv (BitVec.ofNat 64 x) (BitVec.ofNat 64 y) = some (BitVec.ofNat 64 (x / y)) := by
-  have tx : (BitVec.ofNat 64 x).toInt = x := by
-    rw [BitVec.toInt_eq_toNat_cond]; simp only [BitVec.toNat_ofNat]; split <;> omega
-  have ty : (BitVec.ofNat 64 y).toInt = y := by
-    rw [BitVec.toInt_eq_toNat_cond]; simp only [BitVec.toNat_ofNat]; split <;> omega
-  have hq : (x : Int).tdiv (y : Int) = ((x / y : Nat) : Int) := (Int.ofNat_tdiv x y).symm
-  have hle : x / y ≤ x := Nat.div_le_self x y
-  unfold sdiv
-  rw [tx, ty, hq]
-  have h1 : ¬ ((y : Int) = 0) := by omega
-  have h2 : ¬ (((x / y : Nat) : Int) < -2 ^ 63 ∨ 2 ^ 63 ≤ ((x / y : Nat) : Int)) := by
-    have h3 : ((x / y : Nat) : Int) ≤ (x : Int) := by exact_mod_cast hle
-    have h4 : (0 : Int) ≤ ((x / y : Nat) : Int) := Int.natCast_nonneg _
-    generalize ((x / y : Nat) : Int) = q at *
-    omega
-  simp only [h1, h2, ite_false, BitVec.ofInt_natCast]
 
 theorem cas_spec {m : Mem} {a e n o : W} (h : m.rd64 a = some o) (hw : all m.wr a 8 = true) :
     m.cas a e n = some (o, if o = e then write m a 8 n.toNat else m) := by

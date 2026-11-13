@@ -227,6 +227,8 @@ table's index option; over anything else the writer spells a two-case `tagged` t
 option is read by `match` (`Some(i)`/`None`) or tested by `x.is_some()` (`Expr.istSome`, a `bool`; over
 anything but an option at a place `N593`).
 `string max N` is a bounded string (one length word plus `N` bytes, no terminator).
+Literals decode `\n`, `\t`, `\r`, `\0`, `\\` and `\"`; unknown or incomplete escapes and raw
+newlines are refused. The maximum counts decoded UTF-8 bytes, including an embedded zero byte.
 
 ### 3.4 Bits, widths, shifts, overflow
 

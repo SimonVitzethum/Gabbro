@@ -6,7 +6,7 @@
 -/
 module
 public import Stage0.Senke.Sperre.Ticket.Code
-public import Stage0.Senke.Sperre.Satz
+public import Stage0.Senke.Sperre.Paar
 @[expose] public section
 
 

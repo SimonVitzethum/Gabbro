@@ -22,6 +22,7 @@ set_option linter.unusedSectionVars false
 variable [Kern]
 
 variable {D : Deklaration} {L : Lay D} {reserved : Nat}
+variable {H : List D.Lock}
 
 /-! ## The loop -/
 
@@ -44,7 +45,7 @@ theorem trav_loop (hn : inW (D.count t) (D.count t) = true) (hci : lowE (reserve
     (hlenc : 16 * (9 + travCountSize (D.count t) + ci'.1.length + cb.1.length) < 2 ^ 31) (hlo0 : lo = (functionFrame P f).internalResult)
     (htop : max ci'.2 (max cb.2 (frei Γ reserved + 9)) ≤ Ks) (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo2 : lo ≤ frei Γ reserved)
     (hpr : ∀ j ∈ pr, j < frei Γ reserved)
-    (hbody : ∀ m' pc' σ' ρ', PreS L m' pc' fp K (frei (.index (D.count t) :: Γ) reserved) cb.1 ρ' reserved → Umf L A C dv m' fp Ks K →
+    (hbody : ∀ m' pc' σ' ρ', PreS L m' pc' fp K (frei (.index (D.count t) :: Γ) reserved) cb.1 ρ' reserved → Umf L A C dv m' fp Ks K H →
       Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ' →
       Sim L P f σ0 ρ0 rp cfp fp lo K (frei Γ reserved :: pr) ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * cb.1.length))
         (pc' + BitVec.ofNat 64 (16 * cb.1.length) + BitVec.ofInt 64 48)
@@ -52,7 +53,7 @@ theorem trav_loop (hn : inW (D.count t) (D.count t) = true) (hci : lowE (reserve
     ∀ (n k : Nat) (m' : Runner.Mem) (σ' : World D) (ρ' : Env D Γ), k + n = (D.count t).toNat →
     PreS L m' pc fp K (frei Γ reserved) (travCode (frei Γ reserved) (D.count t) ci'.1 cb.1) ρ' reserved →
     m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some (BitVec.ofNat 64 k) →
-    Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ' →
+    Umf L A C dv m' fp Ks K H → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ' →
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc + BitVec.ofNat 64 (16 * 1), fp⟩ m'
       (pc + BitVec.ofNat 64 (16 * (travCode (frei Γ reserved) (D.count t) ci'.1 cb.1).length)) eL eN
       (traverseLauf (l := l) (fun σ ρ => execBlock O passes R body σ ρ)

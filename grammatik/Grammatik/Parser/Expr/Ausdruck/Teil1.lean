@@ -109,7 +109,7 @@ def zeigeTok : Token → String
   | .wort s => s
   | .num n => toString n
   | .float s => s
-  | .text s => "\"" ++ s ++ "\""
+  | .text s => String.ofList ('"' :: (druckTextZeichen s.toList ++ ['"']))
   | .zeichen s => s
   | .doku s => "///" ++ s
   | .ende => "<ende>"

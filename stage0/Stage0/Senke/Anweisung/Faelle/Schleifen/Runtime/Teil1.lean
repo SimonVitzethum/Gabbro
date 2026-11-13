@@ -21,7 +21,7 @@ variable [Kern]
     Code and callee availability follow from the simulated world-aware frame;
     the new environment and world come from execution, not preservation claims.
     The reservation retains the counter and any immutable control slots in `pr`. -/
-theorem Reach.counter_reentry {D : Deklaration} {L : Lay D} {P : Programm D}
+theorem Reach.counter_reentry {D : Deklaration} {L : Lay D} {H : List D.Lock} {P : Programm D}
     {f : D.Fn} {Γ : Ctx} {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W}
     {fp pc back rp cfp : W} {lo K Ks counter reserved : Nat} {pr : List Nat}
     {m : Mem} {σ' : World D} {ρ ρ' : Env D Γ}
@@ -30,7 +30,7 @@ theorem Reach.counter_reentry {D : Deklaration} {L : Lay D} {P : Programm D}
     (body : Reach L fp lo K pr ⟨pc, fp⟩ m back σ' ρ' reserved)
     (layout : WIn L fp Ks K)
     (pre : PreS L m pc fp K (frei Γ reserved) code ρ reserved)
-    (surround : Umf L A C dv m fp Ks K)
+    (surround : Umf L A C dv m fp Ks K H)
     (head : Kopf L f m fp K rp cfp ρ0 P σ0)
     (hprotected : counter < lo ∨ counter ∈ pr) (bound : lo ≤ K)
     (abi : (functionFrame P f).internalResult ≤ lo)
@@ -39,7 +39,7 @@ theorem Reach.counter_reentry {D : Deklaration} {L : Lay D} {P : Programm D}
     (target : back + sx jump = pc) :
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧
       PreS L m' pc fp K (frei Γ reserved) code ρ' reserved ∧
-      Umf L A C dv m' fp Ks K ∧ Kopf L f m' fp K rp cfp ρ0 P σ0 ∧
+      Umf L A C dv m' fp Ks K H ∧ Kopf L f m' fp K rp cfp ρ0 P σ0 ∧
       WeltAt m' L σ' ∧ Keeps fp pr m m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 counter)) = some value := by
   have protectedPrefix := functionFrame_prefix P f
@@ -196,7 +196,7 @@ theorem Sim.counter_dispatch {D : Deklaration} {L : Lay D} {P : Programm D}
     Counter storage is above the saved ABI parameters and below relocated locals.
     Outer counters and sentinels are retained by disjoint writes, even when they
     lie above this counter. The fuel equality is natural, without word wrapping. -/
-theorem counter_header {D : Deklaration} {L : Lay D} {P : Programm D}
+theorem counter_header {D : Deklaration} {L : Lay D} {H : List D.Lock} {P : Programm D}
     {f : D.Fn} {Γ : Ctx} {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W}
     {fp pc rp cfp : W} {K Ks lo reserved counter one n : Nat} {pr : List Nat}
     {σ σ0 : World D} {ρ : Env D Γ} {ρ0 : Env D (D.params f)}
@@ -204,7 +204,7 @@ theorem counter_header {D : Deklaration} {L : Lay D} {P : Programm D}
     (layout : WIn L fp Ks K)
     (pre : PreS L m pc fp K (frei Γ reserved)
       (foreverCounter counter one stop ++ code) ρ reserved)
-    (surround : Umf L A C dv m fp Ks K)
+    (surround : Umf L A C dv m fp Ks K H)
     (head : Kopf L f m fp K rp cfp ρ0 P σ0) (world : WeltAt m L σ)
     (abi : (functionFrame P f).internalResult ≤ lo) (low : lo ≤ counter)
     (allocated : counter < FB + reserved) (bound : frei Γ reserved ≤ K)
@@ -215,7 +215,7 @@ theorem counter_header {D : Deklaration} {L : Lay D} {P : Programm D}
     (hprotected : ∀ j ∈ pr, j < K ∧ j ≠ counter) :
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + 32, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧
       PreS L m' (pc + 32) fp K (frei Γ reserved) code ρ reserved ∧
-      Umf L A C dv m' fp Ks K ∧ Kopf L f m' fp K rp cfp ρ0 P σ0 ∧
+      Umf L A C dv m' fp Ks K H ∧ Kopf L f m' fp K rp cfp ρ0 P σ0 ∧
       WeltAt m' L σ ∧ Keeps fp pr m m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 counter)) = some (BitVec.ofNat 64 n) := by
   have protectedPrefix := functionFrame_prefix P f

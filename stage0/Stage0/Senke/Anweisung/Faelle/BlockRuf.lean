@@ -14,6 +14,7 @@ set_option linter.unusedSectionVars false
 variable [Kern]
 
 variable {D : Deklaration} {L : Lay D}
+variable {H : List D.Lock}
 
 theorem blockCall_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
@@ -22,9 +23,10 @@ theorem blockCall_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
     (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowPost L (functionFrame P f) P f (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {τ : Ty} {callee : D.Fn} {args : Args D Γ Λ (D.params callee)} {he : D.erg callee = some τ} {proof0 : _} {proof1 : _} {rest : Block D (vertragVon D f) l (τ :: Γ) (nach D callee Λ) Λ'} :
-    (∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest reserved) →
-    BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Block D (vertragVon D f) l Γ Λ Λ' from .bindCall callee args he proof0 proof1 rest) reserved := by
+    {τ : Ty} {callee : D.Fn} {args : Args D Γ Λ (D.params callee)} {he : D.erg callee = some τ} {proof0 : _} {proof1 : _} {rest : Block D (vertragVon D f) l (τ :: Γ) (nach D callee Λ) Λ'}
+    (hH : HeldIn H Λ (vertragVon D f).boden) :
+    (∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H rest reserved) →
+    BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Block D (vertragVon D f) l Γ Λ Λ' from .bindCall callee args he proof0 proof1 rest) reserved := by
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   simp only [lowB, ← hlo0, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨ca, ta⟩, hca, ⟨cr, tr⟩, hr, hc⟩ := h
@@ -36,6 +38,7 @@ theorem blockCall_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
   have hks := hW.ks
   have hct : frei Γ reserved + FB + (contextWords (D.params callee)) + 1 ≤ callTop callee (frei Γ reserved) ta := by simp only [callTop]; omega
   have hc := callC_ok (same := rfl) hS (hA callee) args (σ.lese Λ args.orte) (σ.lese Λ args.orte) hca (by omega) hp.left.left hu hW hWa
+    (HeldIn.ruf (V := vertragVon D f) hH proof0)
   simp only [execBlock]
   generalize R callee (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = o at hc ⊢
   cases o with
@@ -82,8 +85,8 @@ theorem blockAxiom_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {τ : Ty} {a : D.Ax} {args : Args D Γ Λ (D.aparams a)} {he : D.aerg a = some τ} {proof0 : _} {proof1 : _} {proof2 : _} {proof3 : _} {rest : Block D (vertragVon D f) l (τ :: Γ) Λ Λ'} :
-    (∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest reserved) →
-    BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Block D (vertragVon D f) l Γ Λ Λ' from .bindAxiom a args he proof0 proof1 proof2 proof3 rest) reserved := by
+    (∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H rest reserved) →
+    BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Block D (vertragVon D f) l Γ Λ Λ' from .bindAxiom a args he proof0 proof1 proof2 proof3 rest) reserved := by
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   simp only [lowB, ← hlo0, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨cg, tg⟩, hg, ⟨cr, tr⟩, hr, hc⟩ := h

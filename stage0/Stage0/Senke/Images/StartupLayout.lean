@@ -125,11 +125,12 @@ theorem zero_word {m : Runner.Mem} {p n y : Nat} (hz : BytesAt m p (List.replica
   simp only [Runner.Mem.rd64, all_of fun j hj => (hb j hj).1, ite_true, le_zero fun j hj => (hb j hj).2.2]
   rfl
 
-/-- The existing synchronization invariant from the unchanged zero lock span above the
-    typed world. Only these bytes must be zero; initialized source memory is unrestricted. -/
+/-- The ticket-lock invariant of a thread that holds no lock, from the unchanged zero lock span above the
+    typed world (next = serving = 0, no waiters). Only these bytes must be zero; initialized source memory is
+    unrestricted. -/
 theorem BildLage.sync (h : BildLage passes P fs pos main roots K Ks Yb A cs body n fp0 sp ρ rootArgs) {m : Runner.Mem}
     (hz : BytesAt m Yb.hi (List.replicate (Yb.sye - Yb.hi) 0)) {j : Nat} (hj : j ≤ roots.length) :
-    SyncOK m Yb (BitVec.ofNat 64 (fp0 + 8 * (Ks * j))) Ks := by
+    TicketSync m Yb (BitVec.ofNat 64 (fp0 + 8 * (Ks * j))) Ks [] := by
   have hs : Ks * (roots.length + 1) = Ks * roots.length + Ks := Nat.mul_succ Ks _
   have hm : Ks * j ≤ Ks * roots.length := Nat.mul_le_mul_left Ks hj
   have hylo := h.hylo; have hyhi := h.hyhi; have hfit := h.hfit; have hyord := h.hyord
@@ -148,6 +149,6 @@ theorem BildLage.sync (h : BildLage passes P fs pos main roots K Ks Yb A cs body
     exact (zero_word hz (by omega) (by omega) (by omega)).2
   · have := hl.1 Lk
     exact ⟨0, 0, (zero_word hz (by omega) (by omega) (by omega)).1, (zero_word hz (by omega) (by omega) (by omega)).1,
-      (zero_word hz (by omega) (by omega) (by omega)).1, Or.inl ⟨rfl, rfl⟩⟩
+      (zero_word hz (by omega) (by omega) (by omega)).1, fun hin => (List.not_mem_nil hin).elim, fun _ => rfl⟩
 
 end Gabbro.Stage0.Senke

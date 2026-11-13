@@ -97,12 +97,15 @@ public import Stage0.Senke.Anweisung.Faelle.Schleifen.CountedLoop
 public import Stage0.Senke.Sperre.Proben
 public import Stage0.Senke.Sperre.Ticket.Nimm
 public import Stage0.Senke.Sperre.Ticket.Gib
-public import Stage0.Senke.Sperre.Ticket.Klasse
 public import Stage0.Senke.Sperre.Ticket.Sync
 public import Stage0.Senke.Sperre.Ticket.Paar
 public import Stage0.Senke.Sperre.Ticket.Lauf
 public import Stage0.Senke.Sperre.Ticket.Frei
+public import Stage0.Senke.Sperre.Ticket.Bleibt
 public import Stage0.Senke.Sperre.Ticket.Lage
+public import Stage0.Senke.Sperre.Ticket.Anfang
+public import Stage0.Senke.Sperre.Ticket.Ausgang
+public import Stage0.Senke.Sperre.Ticket.Satz
 public import Stage0.Senke.Sperre.Ticket.Offen
 public import Stage0.Senke.Ausdruck.Old.Pruefer
 public import Stage0.Senke.Ausdruck.Old.JudgedUnit

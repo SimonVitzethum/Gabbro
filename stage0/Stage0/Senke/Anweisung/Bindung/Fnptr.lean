@@ -10,6 +10,7 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 variable [Kern] {D : Deklaration} {L : Lay D}
+variable {H : List D.Lock}
 
 theorem encErg_wert {e : Option Ty} {τ : Ty} (he : e = some τ) {v : ErgVal D e} {w : Runner.W}
     (h : EncErg L e v w) : Enc L τ (ergWert he v) w := by
@@ -40,8 +41,9 @@ theorem lowInd_ok {A : D.Fn → Nat} {C : D.Fn → List II}
     (args : Args D Γ Λ (D.sigNr n).params) (σ₀ σ : World D) {same : σ₀ = σ} {c : List II} {top : Nat}
     {m : Runner.Mem} {pc fp : Runner.W} {K Ks : Nat} {ρ : Env D Γ}
     (hc : lowInd L p args reserved = some (c, top)) (ht : top + cap ≤ Ks)
-    (hp : PreS L m pc fp K (frei Γ reserved) c ρ reserved) (hu : Umf L A C dv m fp Ks K)
-    (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) :
+    (hp : PreS L m pc fp K (frei Γ reserved) c ρ reserved) (hu : Umf L A C dv m fp Ks K H)
+    (hW : WIn L fp Ks K) (hWa : WeltAt m L σ)
+    (hHs : HeldIn H (Signatur.anfang D (D.sigNr n)) (D.sigNr n).boden) :
     let v := eval σ₀ p σ ρ
     match R v.1 σ (umsig v.2 (evalArgs σ₀ args σ ρ)) with
     | .ok σ' r => ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧
@@ -87,7 +89,8 @@ theorem lowInd_ok {A : D.Fn → Nat} {C : D.Fn → List II}
     simp only [Enc, hS.addr] at he
     exact congrArg some he
   have hc2 := call_ok (indirect := true) (f := (eval σ₀ p σ ρ).1) (F := frei Γ reserved) (Ks := Ks) hS hp2.code (by exact hp2.far) hp2.frame hp.small hFB
-    (by rw [hpar]; omega) (by omega) (hA _) hu2.code hu2.depth (envAt_umsig (eval σ₀ p σ ρ).2 e2) hW hWa2 hu2.sync (fun _ => hr)
+    (by rw [hpar]; omega) (by omega) (hA _) hu2.code hu2.depth (envAt_umsig (eval σ₀ p σ ρ).2 e2) hW hWa2 hu2.sync
+    (hHs.passt (D.passt_sig (eval σ₀ p σ ρ).2)) (fun _ => hr)
   dsimp only
   generalize R (eval σ₀ p σ ρ).1 σ (umsig (eval σ₀ p σ ρ).2 (evalArgs σ₀ args σ ρ)) = o at hc2 ⊢
   cases o with
@@ -122,8 +125,8 @@ theorem indStmt_ok {O : Orakel D} {passes : Nat} {A : D.Fn → Nat} {C : D.Fn �
     {σ0 : World D} {ρ0 : Env D (D.params f)} {rp cfp fp pc : Runner.W} {lo K Ks : Nat}
     {reserved : Nat} {pr : List Nat} {ex : Int × Int} {c : List II} {top : Nat} {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
     (hc : lowInd L p args reserved = some (c, top)) (ht : top + cap ≤ Ks) (hW : WIn L fp Ks K)
-    (hp : PreS L m pc fp K (frei Γ reserved) c ρ reserved) (hlo : lo ≤ frei Γ reserved) (hu : Umf L A C dv m fp Ks K)
-    (hWa : WeltAt m L σ) (hpr : ∀ j ∈ pr, j < frei Γ reserved) :
+    (hp : PreS L m pc fp K (frei Γ reserved) c ρ reserved) (hlo : lo ≤ frei Γ reserved) (hu : Umf L A C dv m fp Ks K H)
+    (hWa : WeltAt m L σ) (hpr : ∀ j ∈ pr, j < frei Γ reserved) (hH : HeldIn H Λ (vertragVon D f).boden) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2)
@@ -131,6 +134,7 @@ theorem indStmt_ok {O : Orakel D} {passes : Nat} {A : D.Fn → Nat} {C : D.Fn �
   have hb := lowInd_top hc
   have hks := hW.ks
   have hi := lowInd_ok (same := rfl) hS hA p args (σ.lese Λ (p.orte ++ args.orte)) (σ.lese Λ (p.orte ++ args.orte)) hc ht hp hu hW hWa
+    (HeldIn.ruf (V := vertragVon D f) hH hfit)
   simp only [execStmt]
   dsimp only at hi
   generalize hv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = v at hi ⊢
@@ -192,8 +196,9 @@ theorem indBind_ok {reserved : Nat} {β : Type} {A : D.Fn → Nat} {C : D.Fn →
     (hc : lowInd L p args reserved = some (cc, tc)) (ht : tc + cap ≤ Ks)
     (hreceive : receiveTop (D.sigNr n) (frei Γ reserved) ≤ Ks)
     (hp : PreS L m pc fp K (frei Γ reserved) (cc ++ receiveC (D.sigNr n) (frei Γ reserved) ++ cr) ρ reserved)
-    (hW : WIn L fp Ks K) (hlo0 : lo = (functionFrame P f).internalResult) (hlo : lo ≤ frei Γ reserved) (hu : Umf L A C dv m fp Ks K)
+    (hW : WIn L fp Ks K) (hlo0 : lo = (functionFrame P f).internalResult) (hlo : lo ≤ frei Γ reserved) (hu : Umf L A C dv m fp Ks K H)
     (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
+    (hHs : HeldIn H (Signatur.anfang D (D.sigNr n)) (D.sigNr n).boden)
     (k : World D → Wert D τ → β) (err : Logik D → β) (hwerr : Hardware D → β)
     (J : T → Runner.Mem → β → Prop)
     (jprefix : ∀ {t0 t1 m0 m1 b}, Star t0 m0 t1 m1 → AgreeW L fp lo K m0 m1 →
@@ -202,13 +207,13 @@ theorem indBind_ok {reserved : Nat} {β : Type} {A : D.Fn → Nat} {C : D.Fn →
     (jhw : ∀ t m e, Stops t m (hwCode e) → J t m (hwerr e))
     (kont : ∀ m' σ' v, let pc' := pc + BitVec.ofNat 64 (16 * (cc ++ receiveC (D.sigNr n) (frei Γ reserved)).length)
       PreS L m' pc' fp K (frei (τ :: Γ) reserved) cr (Env.cons v ρ) reserved →
-      Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ' → J ⟨pc', fp⟩ m' (k σ' v)) :
+      Umf L A C dv m' fp Ks K H → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ' → J ⟨pc', fp⟩ m' (k σ' v)) :
     J ⟨pc, fp⟩ m (indAntwort R p args he hr σ ρ k err hwerr) := by
   have hb := lowInd_top hc
   have hFB3 : FB = 4 := rfl
   have hFramePrefix := functionFrame_prefix P f
   have hks := hW.ks
-  have hi := lowInd_ok (same := rfl) hS hA p args σ σ hc ht hp.left.left hu hW hWa
+  have hi := lowInd_ok (same := rfl) hS hA p args σ σ hc ht hp.left.left hu hW hWa hHs
   dsimp only [indAntwort] at hi ⊢
   generalize hv : eval σ p σ ρ = v at hi ⊢
   obtain ⟨g, hg⟩ := v

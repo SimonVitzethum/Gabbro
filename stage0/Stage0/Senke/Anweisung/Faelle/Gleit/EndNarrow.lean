@@ -10,6 +10,7 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 variable [Kern] {D : Deklaration} {L : Lay D}
+variable {H : List D.Lock}
 
 theorem endFloatNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
@@ -21,9 +22,9 @@ theorem endFloatNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat
     {low high low' high' : Int × Int} {e : Expr D Γ Λ (.fl low high)}
     {err : Endblock D (vertragVon D f) l Γ Λ}
     {rest : Endblock D (vertragVon D f) l (.fl low' high' :: Γ) Λ} :
-    (∀ {pr ex}, EndCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex err) →
-    (∀ {pr ex}, EndFloatCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
-    EndFloatCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (.floatNarrow e low' high' err rest) := by
+    (∀ {pr ex}, EndCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H err) →
+    (∀ {pr ex}, EndFloatCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H rest) →
+    EndFloatCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (.floatNarrow e low' high' err rest) := by
   intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   simp only [lowEnd, ← hlo0] at h
   split at h

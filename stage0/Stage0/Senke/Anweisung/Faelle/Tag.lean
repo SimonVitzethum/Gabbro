@@ -16,6 +16,7 @@ set_option linter.unusedSectionVars false
 set_option maxHeartbeats 1000000
 set_option maxRecDepth 2048
 variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
+variable {H : List D.Lock}
 
 /-- The empty computation keeps the input word. -/
 theorem input_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {w : Runner.W}
@@ -109,16 +110,16 @@ def BlockRuns (O : Orakel D) (passes : Nat)
     (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)
     (L : Lay D) (A : D.Fn → Nat) (C : D.Fn → List II) (dv : Runner.W) (cap : Nat)
     (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.params f)) (rp cfp fp : Runner.W)
-    (lo Ks K : Nat) (ens : List II × Nat) (pr : List Nat)
+    (lo Ks K : Nat) (ens : List II × Nat) (pr : List Nat) (H : List D.Lock)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D (vertragVon D f) l Γ Λ Λ') (reserved : Nat := 0) : Prop :=
   ∀ ex cb tb, lowB (reserved := reserved) passes A L (functionFrame P f) ens pr ex b = some (cb, tb) → tb + cap ≤ Ks → 16 * cb.length < 2 ^ 31 →
   ∀ m pc σ ρ, PreS (reserved := reserved) L m pc fp K (frei Γ reserved) cb ρ → lo ≤ frei Γ reserved →
-    Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ reserved) →
+    Umf L A C dv m fp Ks K H → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ reserved) →
     Sim (reserved := reserved) L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * cb.length))
       (pc + BitVec.ofNat 64 (16 * cb.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * cb.length) + BitVec.ofInt 64 ex.2) (execBlock O passes R b σ ρ)
 
-local notation "BR" => BlockRuns (reserved := reserved) O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K ens pr
+local notation "BR" => BlockRuns (reserved := reserved) O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K ens pr H
 
 theorem tagArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option Ty}
     {b : Block D (vertragVon D f) l (ArmCtx Γ c) Λ Λ'} {cp cb : List II} {tb : Nat} {ex : Int × Int}
@@ -129,7 +130,7 @@ theorem tagArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option Ty}
     {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ} {w : Runner.W}
     (v : Nutzlast D.Fn D.passt c) (hw : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some w)
     (hoff : w >>> 8 = BitVec.ofNat 64 (sumOff c v))
-    (hp : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) (cp ++ cb) ρ) (hu : Umf L A C dv m fp Ks K)
+    (hp : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) (cp ++ cb) ρ) (hu : Umf L A C dv m fp Ks K H)
     (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim (reserved := reserved) L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * (cp ++ cb).length))
       (pc + BitVec.ofNat 64 (16 * (cp ++ cb).length) + BitVec.ofInt 64 ex.1)
@@ -181,7 +182,7 @@ theorem lowTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (hw : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some w)
     (htag : w &&& 255 = BitVec.ofNat 64 (k + v.1.val))
     (hoff : w >>> 8 = BitVec.ofNat 64 (sumOff (cs.get v.1) (Fall.toNutzlast _ _ _ _ v.2)))
-    (hp : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) cd ρ) (hu : Umf L A C dv m fp Ks K)
+    (hp : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) cd ρ) (hu : Umf L A C dv m fp Ks K H)
     (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim (reserved := reserved) L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * cd.length))
       (pc + BitVec.ofNat 64 (16 * cd.length) + BitVec.ofInt 64 ex.1)
@@ -250,7 +251,7 @@ theorem onTag_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Optio
     (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = (functionFrame P f).internalResult)
     (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
-    (hp : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) (cv ++ ca) ρ) (hu : Umf L A C dv m fp Ks K)
+    (hp : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) (cv ++ ca) ρ) (hu : Umf L A C dv m fp Ks K H)
     (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim (reserved := reserved) L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length))
       (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length) + BitVec.ofInt 64 ex.1)

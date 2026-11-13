@@ -14,6 +14,7 @@ set_option linter.unusedSectionVars false
 variable [Kern]
 
 variable {D : Deklaration}
+variable {H : List D.Lock}
 
 /-- End blocks have no normal fallthrough target. -/
 theorem Ret.toSim {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
@@ -41,9 +42,9 @@ theorem blockCheck_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cnd : Expr D Γ Λ .bool} {err : Endblock D (vertragVon D f) l Γ Λ}
     {rest : Block D (vertragVon D f) l Γ Λ Λ'} :
-    (∀ {pr ex}, EndCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex err) →
-    (∀ {pr ex}, BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
-    BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (.check cnd err rest) := by
+    (∀ {pr ex}, EndCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H err) →
+    (∀ {pr ex}, BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H rest) →
+    BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (.check cnd err rest) := by
   intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   simp only [lowB, ← hlo0, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨cc, tc⟩, hcc, ⟨ce, te⟩, hce, ⟨cr, tr⟩, hr, hc⟩ := h

@@ -1,0 +1,25 @@
+// Exit 30: the parameter branch yields (7, 9), its fallback (3, 4),
+// and the local-record branch yields (5, 2): 7 + 9 + 3 + 4 + 5 + 2 = 30.
+module ir_branch_return_fields {
+type POut = { node : u32 in 0 .. 63, pos : u32 in 0 .. 63, ok : bool, };
+impl fn nxt(n : u32 in 0 .. 63, p : u32 in 0 .. 63) -> POut effects { pure } {
+    return POut(node: n, pos: p, ok: true);
+}
+impl fn pick(r : POut, k : u32 in 0 .. 1) -> POut effects { pure } {
+    if k == 1 { return nxt(r.node, r.pos); }
+    return r;
+}
+impl fn local(k : u32 in 0 .. 1) -> POut effects { pure } {
+    let r = POut(node: 5, pos: 2, ok: true);
+    if k == 1 { return nxt(r.node, r.pos); }
+    return r;
+}
+impl fn main() -> u32 in 0 .. 510 effects { pure } {
+    let r = POut(node: 7, pos: 9, ok: true);
+    let s = POut(node: 3, pos: 4, ok: true);
+    let a = pick(r, 1);
+    let b = pick(s, 0);
+    let c = local(1);
+    return a.node + a.pos + b.node + b.pos + c.node + c.pos;
+}
+}

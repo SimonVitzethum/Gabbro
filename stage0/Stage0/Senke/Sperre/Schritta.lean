@@ -1,8 +1,8 @@
 /-
   File:      stage0/Stage0/Senke/Sperre/Schritt.lean
-  Subject:   Single instructions of the lock code (`Sperre/Code.lean`) on a state `LS`: the scratch slots `s .. s+17`
-             hold `f`, the lock's three words at `a` hold owner, count and waiters, and apart from both the memory
-             is the one the code started in (`AgreeK`). Each lemma runs instruction `i` of the code `code` at `pc`.
+  Subject:   Single instructions of the lock code (`Ticket/Code.lean`) on a state `LS`: the scratch slots `s .. s+17`
+             hold `f`, the lock's three words at `a` hold the next ticket, the serving ticket and the waiters, and apart
+             from both the memory is the one the code started in (`AgreeK`). Each lemma runs instruction `i` of the code `code` at `pc`.
 -/
 module
 public import Stage0.Senke.Sperre.Code
@@ -141,7 +141,7 @@ theorem LS.slot {m0 m : Mem} {pc fp : W} {s a : Nat} {code : List II} {f : Nat �
   · rw [rd64_write_far (far_slot_lk (y := a + 8) hfar htop hd (by omega) (by omega))]; exact h.c
   · rw [rd64_write_far (far_slot_lk (y := a + 16) hfar htop hd (by omega) (by omega))]; exact h.w
 
-/-- The owner word written. -/
+/-- The first word (the next ticket) written. -/
 theorem LS.owner {m0 m : Mem} {pc fp : W} {s a : Nat} {code : List II} {f : Nat → W} {o c w : W}
     (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w) (o' : W) :
     LS m0 (write m (BitVec.ofNat 64 a) 8 o'.toNat) fp s a f o' c w := by
@@ -153,7 +153,7 @@ theorem LS.owner {m0 m : Mem} {pc fp : W} {s a : Nat} {code : List II} {f : Nat 
   · rw [rd64_write_far (far_lk_lk (y := a) (z := a + 8) (by omega) (by omega) (by omega))]; exact h.c
   · rw [rd64_write_far (far_lk_lk (y := a) (z := a + 16) (by omega) (by omega) (by omega))]; exact h.w
 
-/-- The count word written. -/
+/-- The second word (the serving ticket) written. -/
 theorem LS.count {m0 m : Mem} {pc fp : W} {s a : Nat} {code : List II} {f : Nat → W} {o c w : W}
     (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w) (c' : W) :
     LS m0 (write m (BitVec.ofNat 64 (a + 8)) 8 c'.toNat) fp s a f o c' w := by

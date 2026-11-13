@@ -11,6 +11,7 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 variable {reserved : Nat}
 variable [Kern] {D : Deklaration} {L : Lay D}
+variable {H : List D.Lock}
 
 section
 variable {P : Programm D} {f : D.Fn} {fp : Runner.W}
@@ -26,12 +27,12 @@ theorem retryTest_ok (hcc : lowE (reserved := reserved) L bis (frei Γ reserved)
     (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     {oe : Ausgang (vertragVon D f) l Γ}
     (helse : ∀ m' pc', PreS L m' pc' fp K (frei Γ reserved) rest ρ reserved →
-      Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ →
+      Umf L A C dv m' fp Ks K H → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * rest.length))
         (pc' + BitVec.ofNat 64 (16 * rest.length) + BitVec.ofInt 64 ex.1)
         (pc' + BitVec.ofNat 64 (16 * rest.length) + BitVec.ofInt 64 ex.2) oe reserved)
     (hp : PreS L m pc fp K (frei Γ reserved) (retryTest (frei Γ reserved) cc rest) ρ reserved)
-    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
+    (hu : Umf L A C dv m fp Ks K H) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
       (pc + BitVec.ofNat 64 (16 * (retryTest (frei Γ reserved) cc rest).length))
       (pc + BitVec.ofNat 64 (16 * (retryTest (frei Γ reserved) cc rest).length) + BitVec.ofInt 64 ex.1)

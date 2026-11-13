@@ -156,9 +156,10 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
     pure (elseC (D.sigNr n) (frei Γ reserved) cc.1 [] ce.1,
       max cc.2 (max ((frei Γ reserved) + FB + (contextWords (D.sigNr n).params) + returnWords (D.sigNr n).erg (D.sigNr n).gruende + 1) ce.2))
   | _, Γ, _, _, .locks Lk _ body, reserved =>
-    if retFreiB body = true ∧ lit32 (16 + ex.1 + 16 * 30) = true ∧ lit32 (16 + ex.2) = true then do
-      let cb ← lowB (reserved := reserved) passes A L layout ens pr (16 * 30, 16 * 60) body
-      pure (locksCode L (L.lk Lk) ((frei Γ reserved)) cb.1 ex.1 ex.2, max (cb.2 + 1) ((frei Γ reserved) + 18))
+    if retFreiB body = true ∧ ueberBodenB V.boden (D.rang Lk) = true ∧ lit32 (16 + ex.1 + 16 * 17) = true ∧
+        lit32 (16 + ex.2) = true then do
+      let cb ← lowB (reserved := reserved) passes A L layout ens pr (16 * 17, 16 * 34) body
+      pure (locksCodeT L (L.lk Lk) ((frei Γ reserved)) cb.1 ex.1 ex.2, max (cb.2 + 1) ((frei Γ reserved) + 18))
     else none
   | _, Γ, _, _, .retScoped e _, reserved => lowRetScoped L layout ens (frei Γ reserved) e reserved
   | _, Γ, _, _, .retWhyScoped r _, reserved => lowRetWhyScoped layout r (frei Γ reserved)

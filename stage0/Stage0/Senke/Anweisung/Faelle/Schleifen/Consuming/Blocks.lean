@@ -9,6 +9,7 @@ namespace Gabbro.Stage0.Senke.Consuming
 open Gabbro.Grammatik Runner Runner.IR
 
 variable [Kern] {D : Deklaration} {L : Lay D}
+variable {H : List D.Lock}
 
 /-- Every straight-line piece is present at the offset computed by the same
     symbolic assembler that produced the admitted instruction list. -/
@@ -36,7 +37,7 @@ theorem «initialize» {P : Programm D} {f : D.Fn} {Γ : Ctx}
       count bound invariant member edge measure body) = some code)
     (layout : WIn L fp Ks K)
     (pre : PreS L m pc fp K (frei Γ reserved) code ρ reserved)
-    (surround : Umf L A C dv m fp Ks K)
+    (surround : Umf L A C dv m fp Ks K H)
     (head : Kopf L f m fp K rp cfp ρ0 P σ0) (world : WeltAt m L σ)
     (abi : (functionFrame P f).internalResult ≤ lo) (low : lo ≤ counter)
     (allocated : counter < FB + reserved) (room : frei Γ reserved ≤ K)
@@ -44,7 +45,7 @@ theorem «initialize» {P : Programm D} {f : D.Fn} {Γ : Ctx}
     (kept : ∀ j ∈ pr, j < K ∧ j ≠ counter) :
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + 16, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧
       PreS L m' pc fp K (frei Γ reserved) code ρ reserved ∧
-      Umf L A C dv m' fp Ks K ∧ Kopf L f m' fp K rp cfp ρ0 P σ0 ∧
+      Umf L A C dv m' fp Ks K H ∧ Kopf L f m' fp K rp cfp ρ0 P σ0 ∧
       WeltAt m' L σ ∧ Keeps fp pr m m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 counter)) = some (BitVec.ofNat 64 fuel) := by
   have literal : lit32 (fuel : Int) = true := lit32_nat fuelBound

@@ -53,7 +53,8 @@ theorem call_ok {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List II} {R :
     (hFB : FB ≤ F) (hT : F + FB + (contextWords (D.params f)) + 1 ≤ Ks) (hcap : F + c ≤ Ks) (hA : A f < 2 ^ 31)
     (hP : PCode m A C fp K) (hdv : m.rd64 (slot fp (BitVec.ofNat 64 2)) = some (dv + 1))
     (hE : EnvAt L m (slot fp (BitVec.ofNat 64 F)) ρa) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ)
-    (hy : SyncOK m L fp Ks)
+    {H : List D.Lock} (hy : TicketSync m L fp Ks H)
+    (hH : HeldIn H (Signatur.anfang D (D.signatur f)) (D.signatur f).boden)
     (htarget : indirect = true → m.rd64 (slot fp (BitVec.ofNat 64 F)) = some (BitVec.ofNat 64 (A f)) := by simp) :
     match R f σ ρa with
     | .ok σ' v => ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 4), fp⟩ m' ∧ AgreeW L fp F K m m' ∧
@@ -207,10 +208,10 @@ theorem call_ok {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List II} {R :
     exact hw
   have hW5 : WeltAt m5 L σ := weltAt_stab hW.lay (by have := hW.lo; omega) m m5 hWa
     ((a1s.trans (a2s.trans (a3s.trans (a4s.trans a5s)))).mono (Nat.zero_le _))
-  have hspec := hS.run f m5 (slot fp (BitVec.ofNat 64 F)) (K - F) (Ks - F) _ fp σ ρa (by omega)
+  have hspec := hS.run f m5 (slot fp (BitVec.ofNat 64 F)) (K - F) (Ks - F) _ fp σ ρa H (by omega)
     (hW.sub (by omega) hlt) (by omega)
     (frame_sub hF5 hFF) (pcode_sub (pcode_agree hP a15) hF5.lt hFF) g0 g1 g2 gE hW5
-    ((hy.agree a15 (by have := hW.top; have := hW.ord; omega)).call (by omega))
+    ((hy.agree a15 (by have := hW.top; have := hW.ord; omega)).call (by omega)) hH
   have s14 := s1.trans (s2.trans (s3.trans s4))
   cases hR : R f σ ρa with
   | ok σ' v =>

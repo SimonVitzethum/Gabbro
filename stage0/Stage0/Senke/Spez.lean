@@ -8,7 +8,8 @@ module
 public import Stage0.Senke.Funktion
 public import Stage0.Senke.Ausdruck.Aggregat.Scalar
 public import Stage0.Senke.Welt.WeltAt
-public import Stage0.Senke.Sperre.Sync
+public import Stage0.Senke.Sperre.Nimm
+public import Stage0.Senke.Sperre.Ticket.Bleibt
 @[expose] public section
 
 
@@ -74,10 +75,11 @@ structure FunSpec (L : Lay D) (A : D.Fn → Nat) (C : D.Fn → List II)
     (S : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (dv : Runner.W) (c : Nat) : Prop where
   addr : L.fa = A
   run : ∀ (f : D.Fn) (m : Runner.Mem) (fp : Runner.W) (K Ks : Nat) (rp cfp : Runner.W) (σ : World D)
-    (ρ : Env D (D.params f)),
+    (ρ : Env D (D.params f)) (H : List D.Lock),
     c ≤ Ks → WIn L fp Ks K → K < 2 ^ 31 → FrameOK m fp K → PCode m A C fp K →
     m.rd64 (slot fp (BitVec.ofNat 64 0)) = some rp → m.rd64 (slot fp (BitVec.ofNat 64 1)) = some cfp →
-    m.rd64 (slot fp (BitVec.ofNat 64 2)) = some dv → EnvAt L m fp ρ → WeltAt m L σ → SyncOK m L fp Ks →
+    m.rd64 (slot fp (BitVec.ofNat 64 2)) = some dv → EnvAt L m fp ρ → WeltAt m L σ → TicketSync m L fp Ks H →
+    HeldIn H (Signatur.anfang D (D.signatur f)) (D.signatur f).boden →
     match S f σ ρ with
     | .ok σ' v => ∃ m', Star ⟨BitVec.ofNat 64 (A f), fp⟩ m ⟨rp, cfp⟩ m' ∧ AgreeW L fp 2 K m m' ∧
         (ResultAt L m' fp (FB + contextWords (D.params f)) (D.erg f) v ∧

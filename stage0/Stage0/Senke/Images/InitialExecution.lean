@@ -26,7 +26,7 @@ theorem bild_initialized_loaded_u {u : UProg} {P : Programm (declOf u)} {passes 
     WeltAt m b.Y (initialWorld u valid) ∧
     BytesAt m b.Y.hi (List.replicate (b.Y.sye - b.Y.hi) 0) ∧
     (∀ j, j ≤ b.roots.length →
-      SyncOK m b.Y (BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * j))) b.Ks) ∧
+      TicketSync m b.Y (BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * j))) b.Ks []) ∧
     ∃ stackPayload, startStackBytes b.Ks (FB + FB) (b.args :: b.rootArgs) = some stackPayload ∧
       stackPayload.length = 8 * (b.Ks * (b.roots.length + 1)) ∧
       BytesAt m Runner.Prog.IMG (Runner.Prog.leN 8 b.fp0 ++ Runner.Prog.leN 8 b.baseReq) ∧
@@ -171,7 +171,8 @@ theorem bild_initialized_ok_u [CloneOK] {u : UProg} {P : Programm (declOf u)}
   cases outcome <;> simpa only [BitVec.ofNat_eq_ofNat] using result
 
 /-- Each root receives its own complete environment and the same derived free-lock
-    invariant. No extra SyncOK or initialized-world assumption is introduced. -/
+    invariant (`TicketSync` against the empty held set). No extra lock or initialized-world assumption is
+    introduced. -/
 theorem bild_initialized_wurzel_ok_u {u : UProg} {P : Programm (declOf u)}
     {O : Orakel (declOf u)} {passes : Nat} {fs : List (declOf u).Fn}
     {pos : (declOf u).Fn → Nat} {name : (declOf u).Fn → String} {main : (declOf u).Fn}

@@ -6,13 +6,14 @@ public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Sum.Dispatch
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
+variable {H : List D.Lock}
 variable {O : Orakel D} {passes : Nat}
   {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
   {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} {P : Programm D}
   {f : D.Fn} {σ0 : World D} {ρ0 : Env D (D.params f)} {rp cfp fp : Runner.W} {lo Ks K : Nat}
   {ens : List II × Nat} {pr : List Nat}
 
-local notation "BR" => BlockRuns (reserved := reserved) O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K ens pr
+local notation "BR" => BlockRuns (reserved := reserved) O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K ens pr H
 
 /-- A tag count reaching the immediate bound necessarily needs an unrepresentable
     dispatch body. Payload widths themselves impose no admission restriction. -/
@@ -28,7 +29,7 @@ theorem onSumTag_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Op
     (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
     (pre : PreS L m pc fp K (frei Γ reserved) (cv ++ ca) ρ reserved)
-    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (world : WeltAt m L σ) :
+    (hu : Umf L A C dv m fp Ks K H) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (world : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
       (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length))
       (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length) + BitVec.ofInt 64 ex.1)

@@ -21,18 +21,19 @@ variable {D : Deklaration} {L : Lay D}
 
 /-! ## The arguments, and a whole call -/
 
-/-- What a function's code may rely on in its frame: every code at its address, the depth in slot 2. -/
+/-- What a function's code may rely on in its frame: every code at its address, the depth in slot 2, and the ticket
+    locks against the thread's held set `H` (`TicketSync`: mine exactly the locks in `H`, the others free). -/
 structure Umf (L : Lay D) (A : D.Fn → Nat) (C : D.Fn → List II) (dv : Runner.W) (m : Runner.Mem) (fp : Runner.W)
-    (Ks K : Nat) : Prop where
+    (Ks K : Nat) (H : List D.Lock) : Prop where
   code : PCode m A C fp K
   depth : m.rd64 (slot fp (BitVec.ofNat 64 2)) = some (dv + 1)
   big : FB ≤ K
-  sync : SyncOK m L fp Ks
+  sync : TicketSync m L fp Ks H
   hiK : fp.toNat + 8 * K ≤ L.hi
 
 theorem Umf.agree {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {m m' : Runner.Mem} {fp : Runner.W}
-    {Ks K lo : Nat} (h : Umf L A C dv m fp Ks K) (ha : Agree fp lo K m m') (hF : FrameOK m fp K) (hlo : FB ≤ lo) :
-    Umf L A C dv m' fp Ks K :=
+    {Ks K lo : Nat} {H : List D.Lock} (h : Umf L A C dv m fp Ks K H) (ha : Agree fp lo K m m') (hF : FrameOK m fp K)
+    (hlo : FB ≤ lo) : Umf L A C dv m' fp Ks K H :=
   ⟨pcode_agree h.code ha, by
     have hFB3 : FB = 4 := rfl
     have hb := h.big
@@ -40,7 +41,7 @@ theorem Umf.agree {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {m m
     exact h.depth, h.big, h.sync.agree ha h.hiK, h.hiK⟩
 
 theorem Umf.mono {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {m : Runner.Mem} {fp : Runner.W}
-    {Ks Ks' K : Nat} (h : Umf L A C dv m fp Ks K) (hs : Ks' ≤ Ks) : Umf L A C dv m fp Ks' K :=
+    {Ks Ks' K : Nat} {H : List D.Lock} (h : Umf L A C dv m fp Ks K H) (hs : Ks' ≤ Ks) : Umf L A C dv m fp Ks' K H :=
   ⟨h.code, h.depth, h.big, h.sync.mono hs, h.hiK⟩
 
 theorem Pre.up {m : Runner.Mem} {pc fp : Runner.W} {K d d' : Nat} {c : List II} {Γ : Ctx} {ρ : Env D Γ}
@@ -96,8 +97,10 @@ theorem callC_ok {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, Wo
     (hA : A f < 2 ^ 31) (args : Args D Γ Λ (D.params f)) (σ₀ σ : World D) {same : σ₀ = σ} {ca : List II} {ta : Nat}
     {m : Runner.Mem} {pc fp : Runner.W} {K Ks : Nat} {ρ : Env D Γ}
     (hca : lowA L (reserved := reserved) args (frei Γ reserved + FB) = some (ca, ta)) (htop : callTop f (frei Γ reserved) ta + cap ≤ Ks)
-    (hp : PreS L m pc fp K (frei Γ reserved) (callC A f (frei Γ reserved) ca) ρ reserved) (hu : Umf L A C dv m fp Ks K)
-    (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) :
+    (hp : PreS L m pc fp K (frei Γ reserved) (callC A f (frei Γ reserved) ca) ρ reserved) {H : List D.Lock}
+    (hu : Umf L A C dv m fp Ks K H)
+    (hW : WIn L fp Ks K) (hWa : WeltAt m L σ)
+    (hH : HeldIn H (Signatur.anfang D (D.signatur f)) (D.signatur f).boden) :
     match R f σ (evalArgs σ₀ args σ ρ) with
     | .ok σ' v => ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (callC A f (frei Γ reserved) ca).length), fp⟩ m' ∧
         AgreeW L fp (frei Γ reserved) K m m' ∧
@@ -124,7 +127,7 @@ theorem callC_ok {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, Wo
   have hl4 : (callTail A f (frei Γ reserved)).length = 4 := rfl
   have hu1 := hu.agree a1 hp.frame (by omega)
   have hc := call_ok (σ := σ) hS hp1.code (by rw [← hl4]; exact hp1.far) hp1.frame hp.small hFB (by omega)
-    (by omega) hA hu1.code hu1.depth e1 hW hWa1 hu1.sync
+    (by omega) hA hu1.code hu1.depth e1 hW hWa1 hu1.sync hH
   generalize R f σ (evalArgs σ₀ args σ ρ) = o at hc ⊢
   cases o with
   | ok σ' v =>

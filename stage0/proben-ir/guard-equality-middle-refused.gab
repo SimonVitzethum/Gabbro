@@ -1,0 +1,20 @@
+// Excluding 80 from 0 .. 159 leaves a hole, which an interval cannot express.
+// The continuation still permits k = 0, so k - 1 is not a valid table index.
+module ir_probe {
+table T count 159 { slot { v : u32 in 0 .. 31, } }
+
+impl fn after(k : u32 in 0 .. 159) -> u32 in 0 .. 31
+    effects { reads T.slots }
+{
+    if k == 80 { return 0; }
+    let d = k - 1;
+    return T.slots[d].v;
+}
+
+impl fn main() -> u32 in 0 .. 31
+    effects { reads T.slots }
+{
+    let a = after(1);
+    return a;
+}
+}

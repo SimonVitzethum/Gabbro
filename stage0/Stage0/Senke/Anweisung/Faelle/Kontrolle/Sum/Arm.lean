@@ -8,6 +8,7 @@ public import Stage0.Senke.Ausdruck.Aggregat.Frame.Copy
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
+variable {H : List D.Lock}
 
 /-- The test writes exclusively above the complete source sum. -/
 theorem sumSpanTest_ok {m : Runner.Mem} {pc fp : Runner.W} {K s scratch k i : Nat}
@@ -51,7 +52,7 @@ variable {O : Orakel D} {passes : Nat}
   {P : Programm D} {f : D.Fn} {σ0 : World D} {ρ0 : Env D (D.params f)}
   {rp cfp fp : Runner.W} {lo Ks K : Nat} {ens : List II × Nat} {pr : List Nat}
 
-local notation "BR" => BlockRuns (reserved := reserved) O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K ens pr
+local notation "BR" => BlockRuns (reserved := reserved) O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K ens pr H
 
 /-- Arm execution binds the entire payload, including its nested validity duties. -/
 theorem sumSpanArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option Ty}
@@ -64,7 +65,7 @@ theorem sumSpanArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option 
     {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
     (v : Nutzlast D.Fn D.passt c) (value : PayloadAt L m fp (frei Γ reserved + 1) c v)
     (pre : PreS L m pc fp K (frei Γ reserved) (sumSpanPayloadC (frei Γ reserved) c ++ cb) ρ reserved)
-    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (world : WeltAt m L σ) :
+    (hu : Umf L A C dv m fp Ks K H) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (world : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
       (pc + BitVec.ofNat 64 (16 * (sumSpanPayloadC (frei Γ reserved) c ++ cb).length))
       (pc + BitVec.ofNat 64 (16 * (sumSpanPayloadC (frei Γ reserved) c ++ cb).length) + BitVec.ofInt 64 ex.1)

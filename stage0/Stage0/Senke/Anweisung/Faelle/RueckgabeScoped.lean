@@ -10,8 +10,8 @@
   the released world through the fold: `WeltAt` and `returnFault` see only
   slots and globals (`World.gibt_foldl_speicher`, `eval_spurfrei`), so no
   runtime release or invariant check is emitted -- the same release behaviour
-  as the `locks` exit, which performs `gibt` without a check. Emitting `gibC`
-  per scope would change lock words and break the `AgreeW` of `RetZ`/`RetWhy`;
+  as the `locks` exit, which performs `gibt` without a check. Emitting `gibT`
+  per scope would change the class of lock words and break the `AgreeW` of `RetZ`/`RetWhy`;
   the static scope duties stay with the checker and `ScopesOkProg`. The emission
   helpers live in `Faelle/Hilfen.lean`; the `lowS`/`lowEnd` equations come from
   `Stage0.Senke.Anweisung`.
@@ -39,6 +39,7 @@ set_option maxHeartbeats 2000000
 variable [Kern]
 
 variable {D : Deklaration} {L : Lay D}
+variable {H : List D.Lock}
 
 section Freigabe
 
@@ -181,7 +182,7 @@ theorem retScoped_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {e : ErgExpr D Γ Λ (D.erg f)} {Rr : RueckRessourcen D (vertragVon D f) Λ} :
-    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Stmt D (vertragVon D f) l Γ Λ Λ from .retScoped e Rr) reserved := by
+    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Stmt D (vertragVon D f) l Γ Λ Λ from .retScoped e Rr) reserved := by
   intro c top h hK _ hW m pc σ ρ hp _ hlo2 _ hk hWa hpr
   simp only [lowS, ← hlo0, resultWords_vertragVon, lowRetScoped, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨ce, te⟩, he, hc⟩ := h
@@ -199,7 +200,7 @@ theorem retWhyScoped_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} 
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {r : Fin (D.gruende f)} {Rr : RueckRessourcen D (vertragVon D f) Λ} :
-    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Stmt D (vertragVon D f) l Γ Λ Λ from .retWhyScoped r Rr) reserved := by
+    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Stmt D (vertragVon D f) l Γ Λ Λ from .retWhyScoped r Rr) reserved := by
   intro c top h hK _ hW m pc σ ρ hp _ hlo2 _ hk hWa hpr
   simp only [lowS, ← hlo0, resultWords_vertragVon, lowRetWhyScoped, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
@@ -215,7 +216,7 @@ theorem endRetScoped_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} 
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {e : ErgExpr D Γ Λ (D.erg f)} {Rr : RueckRessourcen D (vertragVon D f) Λ} :
-    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .retScoped e Rr) reserved := by
+    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Endblock D (vertragVon D f) l Γ Λ from .retScoped e Rr) reserved := by
   intro c top h hK _ hW m pc σ ρ hp hlo _ hk hWa hpr
   simp only [lowEnd, ← hlo0, resultWords_vertragVon, lowRetScoped, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨ce, te⟩, he, hc⟩ := h
@@ -233,7 +234,7 @@ theorem endRetWhyScoped_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Na
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {r : Fin (D.gruende f)} {Rr : RueckRessourcen D (vertragVon D f) Λ} :
-    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .retWhyScoped r Rr) reserved := by
+    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Endblock D (vertragVon D f) l Γ Λ from .retWhyScoped r Rr) reserved := by
   intro c top h hK _ hW m pc σ ρ hp hlo _ hk hWa hpr
   simp only [lowEnd, ← hlo0, resultWords_vertragVon, lowRetWhyScoped, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h

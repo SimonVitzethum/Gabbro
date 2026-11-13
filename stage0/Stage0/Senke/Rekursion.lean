@@ -28,7 +28,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O]
   | zero =>
     intro _
     refine ⟨hLA, ?_⟩
-    intro f m fp K Ks rp cfp σ ρ hc hW hK hF hP h0 h1 h2 hE hWa _
+    intro f m fp K Ks rp cfp σ ρ H hc hW hK hF hP h0 h1 h2 hE hWa _ _
     obtain ⟨top, lower, bound⟩ := hC f
     simp only [lowFun] at lower
     simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at lower
@@ -71,7 +71,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O]
   | succ k ih =>
     intro hn
     refine ⟨hLA, ?_⟩
-    intro f m fp K Ks rp cfp σ ρ hc hW hK hF hP h0 h1 h2 hE hWa hy
+    intro f m fp K Ks rp cfp σ ρ H hc hW hK hF hP h0 h1 h2 hE hWa hy hH
     have hks := hW.ks
     have smaller := ih (by omega)
     obtain ⟨top, lower, bound⟩ := hC f
@@ -185,7 +185,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O]
         simp only [entry, List.length_append, relocateC_length, FrameLayout.parameterWords, layout, functionFrame]
         omega
       rw [entryLength] at codeR farR
-      have surroundings : Umf Y A C (BitVec.ofNat 64 k) mR fp Ks K :=
+      have surroundings : Umf Y A C (BitVec.ofNat 64 k) mR fp Ks K H :=
         ⟨pcode_agree hP allChanged, by
           rw [agree_rd_low allChanged hF.room (by decide) (by omega), h2, ofNat_succ], by omega,
           hy.agree allChanged (by have := hW.top; have := hW.ord; omega),
@@ -198,7 +198,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O]
           cb ρ layout.bodyReserved :=
         ⟨Nat.le_refl _, hK, frameR, codeR, farR, lexical, trivial, wstab_true _ _⟩
       have result := lowEnd_ok (O := O) (passes := passes) (σ0 := σR) smaller hA
-        (lo := layout.internalResult) rfl hens (pr := []) (P.rumpf f) cb tb hb
+        (lo := layout.internalResult) rfl hens (pr := []) (P.rumpf f) hH cb tb hb
         (by omega) (by simp only [List.length_append] at lengthBound; omega) hW
         mR _ σR ρ bodyPre
         bodyFrontier

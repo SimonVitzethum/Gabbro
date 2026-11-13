@@ -190,7 +190,8 @@ float      = dec "." dec [ "e" [ "+" | "-" ] dec ] ;           (* «F» *)
 (* Maximal munch: `..` eats first, so `1..5` is a range and `1.5` a float. `1.` is refused.
    Only lower-case `e` in the exponent; `0X`/`0B` are refused (`L004`) -- one spelling. *)
 string     = quote { char } quote { quote { char } quote } ;   (* «B22» *)
-char       = ? any character except quote and newline ? ;
+char       = ? any character except quote, backslash and newline ?
+           | "\\n" | "\\t" | "\\r" | "\\0" | "\\\\" | "\\\"" ;
 quote      = ? the character U+0022 ? ;
 newline    = ? end of line ? ;
 comment    = linecomment | doccomment | blockcomment ;           (* comments vanish in the lexer *)
@@ -216,6 +217,10 @@ Character literals are integer sugar: `'a'` produces the same number token as `9
 with no new type. A literal holds one printable ASCII byte (32–126) except `'` and `\`,
 or one escape: `'\n'` (10), `'\t'` (9), `'\r'` (13), `'\0'` (0), `'\\'` (92), `'\''` (39).
 Empty, multi-character, non-ASCII, unknown-escape and unterminated literals are lexer errors.
+
+String literals decode `\n` (10), `\t` (9), `\r` (13), `\0` (0), `\\` (92) and `\"` (34).
+Unknown or incomplete escapes and raw newlines are lexer errors. String bounds count the decoded
+UTF-8 bytes, including embedded zero bytes; the canonical printer escapes these six characters.
 
 **One comma rule for all lists:** separating comma between the entries, trailing comma
 optional. **The `Sonderform` line (G6):** `O` (in `costexpr`), `@version` (in `format`), `Held`

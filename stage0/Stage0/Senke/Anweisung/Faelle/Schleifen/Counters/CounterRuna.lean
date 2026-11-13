@@ -162,7 +162,7 @@ theorem zero_counter_zeuge [Kern] : Stops ⟨2016, 4096⟩ (loaded 0) 111 := by
 /-- The live header interface, including the entire constant-size control image. -/
 structure Header (n : Nat) (m : Runner.Mem) : Prop where
   pre : PreS callLayout m 2048 4096 256 8 code (Env.nil : Env D []) 4
-  surround : Umf callLayout addresses target 2 m 4096 128 256
+  surround : Umf callLayout addresses target 2 m 4096 128 256 []
   head : Kopf callLayout 2 m 4096 256 0 0 (Env.nil : Env D []) tiny world
   world : WeltAt m callLayout world
   image : CodeAt m 2016 image

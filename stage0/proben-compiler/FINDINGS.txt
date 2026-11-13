@@ -1,240 +1,193 @@
-FINDINGS: what Stage 0 refuses in compiler-shaped Gabbro source
+FINDINGS: what Stage 0 refused in compiler-shaped Gabbro source
 ================================================================
 
 Unit: stage0/proben-compiler/ (srcbuf.gab, lex.gab, parse.gab, front.gab),
-one module `front` split over four files, compiled as one unit with
-`stage0 --ir`. It lexes a fixed 155-byte program (fn, let, if/else, return,
+one module per file (`srcbuf`, `lex`, `parse`, `front`), compiled as one unit
+with `stage0 --ir`. It lexes a fixed 155-byte program (fn, let, if/else, return,
 calls, precedence, both comment forms), parses it into a 35-node AST in
 tables, runs one scope-aware checking pass, and returns token count plus
 node count. Measured: exit 87 (52 tokens + 35 nodes) on success; 255 on
 lexer failure, 254 on parse failure, 252 on checker failure. All three
 failure exits were verified by mutating one byte of the fixed text each
 (unterminated block comment -> 255, `let = ...` -> 254, call to `maz`
--> 252). The 253 exit (integer literal wider than the value field) is a
-dead defensive branch on this text and was not triggered.
+-> 252); re-checked after every rewrite round below, most recently after
+the module split. The 253 exit (integer literal wider than the value field)
+is a dead defensive branch on this text and was not triggered.
 
-Each entry: wanted form, exact refusal, workaround, frequency.
-Frequencies are the author's judgment for a real compiler of several
-hundred thousand lines, marked (judgment).
+State 2026-11-13: the forms the compiler has gained since this file was
+written were tried on this unit, one kind at a time, compiling and running
+after each kind. Exit stayed 87 throughout; 255/254/252 were re-checked at
+the end. Counts below are sites in this unit (1.2k lines); the (judgment)
+frequency notes for a real compiler of several hundred thousand lines are
+unchanged from before.
 
-1. Write rights do not cross module boundaries
-   Wanted (one module per file, the natural split):
-     module lex {
-     impl fn next_tok(...) -> TOut { ... }
-     }
-     module front {
-     impl fn main() -> ... { lex::fill_tables(); ... }
-     }
-   and the milder variants `use lex::next_tok;` with `pub` items, and
-   qualified calls `srcbuf::fill()` to a writer from another module.
-   Refusal (explicit `use` of `pub` items, and qualified calls to `pub`
-   items alike):
-     stage0: public interface is not closed
-     note: export gate refuses: SItemTief.useT: type/provider/proof duties lack a checked source binding
-     note: elaboration: item without G form
-   Refusal (pure caller calling a writer in another module):
-     stage0: call writes without right
-     note: function main: call writes without right
-   Refusal (caller claiming the foreign write in its effects clause,
-   same file or not):
-     stage0: writes clause without G form
-     note: elaboration: function main: writes clause without G form (statement 1 of 1: call fill)
-   Workaround used: all four files share one module `front`; names are
-   kept apart by stage. Reads across modules are fine (a pure caller may
-   call a reader anywhere); only writes are confined.
-   Frequency (judgment): HIGH. Every file boundary of a multi-file
-   compiler that owns state hits this; it forces either one giant module
-   or a discipline where each module owns all writers of its tables.
+1. Write rights do not cross module boundaries -- GONE
+   The split the entry wanted is in place: `module srcbuf`, `module lex`,
+   `module parse`, `module front`, one per file. All 115 cross-module calls
+   are qualified (`srcbuf::fill()`, `lex::tok_kind(ti)`, `parse::node_a(ni)`,
+   ...). Readers need no claims (a `pure` caller may call a reader anywhere,
+   and reads through calls need no effect entry -- measured). Writers are
+   claimed with qualified effect places in `main` (8 foreign carriers):
+   `writes srcbuf::src.slots, writes srcbuf::srclen`,
+   `writes lex::toks.slots, writes lex::tok_used, writes lex::lex_err`,
+   `writes parse::nodes.slots, writes parse::node_used, writes parse::parse_err`.
+   Foreign record types project without imports (`u.node`, `u.ok` on a
+   `parse::POut` in `front::main` compile and run). The milder `use` +
+   `pub` variant compiles too (scratch probe only, the unit keeps qualified
+   calls). No `pub` items, no `use` in the unit. 0 sites remain.
 
-2. No `while` loop
+2. No `while` loop -- STILL REFUSED, unchanged
    Wanted:
      while pos < len {
          pos = pos + 1;
      }
    Refusal:
      stage0: assignment or call expected
-   Workaround used: recursion with an explicit fuel parameter plus
-   `decreases` everywhere (lexer, parser, checker, span comparison).
-   Frequency (judgment): HIGH. Every scan loop and every worklist wants
-   this shape.
+   36 `decreases` fuel recursions remain (8 front, 7 lex, 19 parse, 2 srcbuf);
+   every scan and worklist is still fuel recursion.
+   Frequency (judgment): HIGH.
 
-3. `return f(...)` from inside a branch is refused
-   Wanted:
-     if b == 32 { return skip_ws(pos + 1, fuel - 1); }
-   Refusal:
+3. `return f(...)` from inside a branch -- PARTLY
+   47 sites used `let q = f(...); return q;` (16 in lex, 18 in parse,
+   13 in front). 34 are direct `return f(...)` now. 13 remain in parse.gab:
+   a directly-returned call in a branch still refuses a RECORD-FIELD
+   projection as an argument (`r.pos`, `l.node`, ...), even when every
+   other argument is plain:
      stage0: value without G form
-     note: elaboration: function skip_ws: value without G form (statement 6 of 9: if)
-   The same call at the top level of the function body compiles, a bare
-   call statement in the same branch compiles, and a `let`-bound call in
-   the same branch compiles. Only `return <call>` inside a branch fails.
-   Workaround used: `let q = skip_ws(pos + 1, fuel - 1); return q;`
-   at all 16 such sites.
-   Frequency (judgment): HIGH. Every recursive-descent function returns
-   a sub-parse from inside a token-dispatch branch.
+     note: elaboration: function pick: value without G form (statement 1 of 1: if)
+   (scratch probe `retcall-field.gab`: `return nxt(r.node, r.pos);` in a
+   branch; the top-level `return f(r.node, r.pos);` and the branch
+   `return f(k + 1);` both compile, and binding one field to a local does
+   not help while any projection remains.) The 13 sites keep the old shape.
+   Frequency (judgment): HIGH.
 
-4. No flow-sensitive narrowing from conditions (V1/V2 of LANGUAGE.md)
-   Wanted:
-     if n >= 1 { return loop(n - 1); }
-     if a >= b { return a - b; }
-     if x == 0 { return 0; } else { return x - 1; }
-   Refusal (all three):
-     stage0: value outside range
-     note: function loop: value outside range
-   Workaround used: an explicit `narrow x to lo .. hi else { ... }`
-   before every piece of arithmetic (about sixty sites). Only `narrow`
-   statements create facts; an `if` condition narrows nothing even when
-   the bound is syntactically obvious.
-   Frequency (judgment): HIGH. Bounds checks before indexing and
-   arithmetic are the most common pattern in compiler code.
+4. No flow-sensitive narrowing from conditions -- ACCEPTED BY THE COMPILER,
+   0 SITES CONVERTED
+   Guard narrowing compiles as documented (`if i < 10` indexes, `if n >= 1`
+   subtracts, local-minus-local under `if a >= b`, facts after an ordering
+   guard whose then block returns). In this unit none of the 117 code
+   `narrow` statements could go: every bound here comes from an EQUALITY
+   guard (`if k == 0 return`, `if pos == n return`, `if e == 255 return`,
+   kind dispatch), which narrows nothing in the else/after direction
+   (scratch probe `guard1b.gab`: `if k == 0 { return 0; }` followed by
+   `T.slots[k - 1]` is refused with `stage0: value without G form`), or
+   the `narrow` doubles as validation (its else arm sets an error flag or
+   returns failure for inputs that really are out of range). Two `narrow`
+   statements disappeared with the deleted `sym_lookup_rec` (entry 13);
+   net 115 code narrows remain. The `narrow`-before-arithmetic shape stays
+   the idiom wherever the guard is an equality or a validation.
+   Frequency (judgment): HIGH.
 
-5. `narrow` does not apply to record fields (or table slots)
-   Wanted:
-     let ep = e.pos;   // no: narrow e.pos to 0 .. 63 else { ... }
+5. `narrow` does not apply to record fields (or table slots) -- STILL REFUSED,
+   unchanged
+   Wanted: `narrow e.pos to 0 .. 63`.
    Refusal:
      stage0: stmt without G form: trim
-     note: elaboration: function main: stmt without G form: trim (statement 2 of 2: narrow)
-   Workaround used: bind the field to a local first, then narrow the
-   local (9 sites in the parser).
-   Frequency (judgment): MEDIUM. Anyone returning records (positions,
-   spans, results) and checking their ranges hits this.
+     note: elaboration: function f: stmt without G form: trim (statement 1 of 1: narrow)
+   (scratch probe `narrow-field.gab`). All 9 sites keep bind-to-local-first.
+   Frequency (judgment): MEDIUM.
 
-6. Character literals do not exist
-   Wanted:
-     let c = 'a';
-   Refusal:
-     stage0: lex
-   Workaround used: numeric byte codes with a comment naming the
-   character (about forty sites in the lexer).
-   Frequency (judgment): MEDIUM. Every lexer classifier wants these.
+6. Character literals do not exist -- GONE
+   All 56 classifier numbers are character literals now (`'a'`, `' '`,
+   `'\n'`, `'\t'`, `'/'`, `'='`, ...), including narrow bounds and
+   arithmetic (`narrow b to '0' .. '9'`, `b - '0'`, both measured). The
+   fixed-text array (entry 11) uses 151 character literals plus 5 numeric
+   zero pads. 0 numeric byte codes remain in classifier position.
+   Frequency (judgment): MEDIUM.
 
-7. No wildcard match arm
-   Wanted:
-     match k { TEnd => { ... } _ => { ... } }
-   Refusal:
-     stage0: match arms without G form
-     note: elaboration: function main: match arms without G form (statement 2 of 2: match)
-   Workaround used: `if` chains over u32 kind codes (no exhaustiveness
-   proof needed anywhere in the unit).
-   Frequency (judgment): MEDIUM. Dispatch over 26 token kinds and 21
-   node kinds would otherwise be matches.
+7. No wildcard match -- STILL REFUSED for u32 dispatch, unchanged in the unit
+   The wildcard compiles only over TAGGED values; a `match` over the u32
+   kind codes is refused at the pattern:
+     stage0: name expected
+   (scratch probe `match-u32.gab`). All ~70 kind-code `if` chains remain
+   (41 parse, 27 front, plus `len == 2/3/4/6` in `kw_kind`).
+   Frequency (judgment): MEDIUM.
 
-8. No tuples
-   Wanted:
-     return (node, pos);
+8. No tuples -- STILL REFUSED, unchanged
+   Wanted: `return (node, pos);`.
    Refusal:
      stage0: ( without )
-   Workaround used: small record types (`TOut`, `POut`) constructed at
-   every return site, with the flag as `u32 in 0 .. 1` (see 9).
-   Frequency (judgment): LOW-MEDIUM. Every multi-result function
-   (lexer token plus cursor, parser node plus cursor) wants this.
+   (scratch probe `tuple.gab`). The `TOut` (30 constructions) and `POut`
+   (113 constructions) records remain.
+   Frequency (judgment): LOW-MEDIUM.
 
-9. `bool` record fields do not survive as truth values
-   Wanted:
-     type POut = { node : ..., pos : ..., ok : bool, };
-     ...
-     if r.ok { ... }
-   Refusal (condition on the field, direct or via a local):
-     stage0: number as a truth value
-     note: elaboration: function main: number as a truth value (statement 3 of 3: if)
-   and for `if r.ok` written directly:
-     stage0: ensures clause without G form
-     note: elaboration: function main: ensures clause without G form (statement 2 of 2: if)
-   Workaround used: the flag is `u32 in 0 .. 1` and every test is
-   `== 0` / `== 1`.
-   Frequency (judgment): LOW. Only flag-carrying records hit this.
+9. `bool` record fields do not survive as truth values -- GONE
+   `POut.ok` is `bool`: 1 type declaration, 113 constructions
+   (`ok: false`/`ok: true`), 29 tests (`if !r.ok`, `if !u.ok`).
+   The u32-flag idiom went with it: 3 error statics (`lex_err`,
+   `parse_err`, `check_bad`) are `bool`, and 10 flag functions return
+   `bool` (`cmp_rec`, `cmp_span`, `is_binop`, `check_expr`, `check_args`,
+   `check_seq`, `declare_params`, `check_stmt`, `declare_fns`,
+   `check_unit`) with `!`/truth-value tests at every call site. 0 `== 0` /
+   `== 1` flag tests remain (only kind-code and 255/33-sentinel
+   comparisons, which are numbers).
+   Frequency (judgment): LOW.
 
 10. A bare constructor or a computed array index cannot go straight
-    into a table slot
-    Wanted:
-      toks.slots[0].k = TA;
-      src.slots[i].b = TEXT[i];
-    Refusal (bare payload-free constructor):
-      stage0: name unknown: TA
-      note: elaboration: function main: name unknown: TA (statement 1 of 4: assignment)
-    Refusal (computed index; a parameter or a local in the same place
-    is accepted):
-      stage0: value outside range
-      note: function main: value outside range
-    Workaround used: bind to a local first (`let q = TA;` /
-    `let v = TEXT[i];`) and assign the local. Uniform idiom, three sites.
-    Frequency (judgment): LOW-MEDIUM. Table initialization and emission
-    loops hit this whenever the right-hand side is not a plain value.
+    into a table slot -- PARTLY
+    The one live copy-through-local (`let v = TEXT[k]; src.slots[k].b = v;`)
+    is now `src.slots[k].b = TEXT[k];` (measured probe shape). A COMPUTED
+    slot index is still refused even when an ordering guard makes it
+    in-range:
+      stage0: value without G form
+      note: elaboration: function f: value without G form (statement 1 of 1: if)
+    (scratch probe `slotidx.gab`: `if k >= 1 { return T.slots[k - 1].k; }`;
+    the `let d = k - 1; return T.slots[d].k;` shape compiles). No remaining
+    site needs it; the unit indexes slots with plain locals only.
+    Frequency (judgment): LOW-MEDIUM.
 
-11. `const` of string type has no form at its use
-    Wanted:
-      const Q : string max 8 = "hi!";
-      ...
-      let v = Q[0];
-    Refusal:
-      stage0: name unknown: Q
-      note: elaboration: function main: name unknown: Q (statement 1 of 1: let v)
-    (Any name, any function, including `main`.) String literals at the
-    use site work; only the named constant fails.
-    Workaround used: the fixed program text is a constant `u32` array,
-    copied once through a local (entry 10 gives the shape).
-    Frequency (judgment): LOW-MEDIUM. Shared test data, keywords and
-    diagnostics want named string constants.
+11. `const` of string type has no form at its use -- PARTLY
+    Named string constants compile and index (`const Q : string max 8`,
+    `Q[0]`), but they cannot hold this unit's text: string literals have
+    NO escapes (`"a\nb"` indexes as 97, 92, 110, 98 -- the `\n` stays two
+    characters, scratch probe `s7.gab` runs 92 for `T[1]`) and a literal
+    newline in a string is refused (`stage0: lex`, scratch probe `s10.gab`).
+    Byte 10 is therefore inexpressible in a string constant, so the text
+    stays a `u32` array -- now written with 151 character literals
+    (`'\n'`, `' '`, `'f'`, ...) plus 5 numeric zero pads, byte-identical to
+    the old numbers (verified by decoding). The `TEXT[k]`-through-local
+    copy is direct (entry 10).
+    Frequency (judgment): LOW-MEDIUM.
 
-12. No equality on tagged values
-    Wanted:
-      if a == b { ... }   // a, b : Tok
-    Refusal:
-      stage0: aggregate as a number
-      note: function eq: aggregate as a number
-    Workaround used: none needed in the unit (kinds are u32 codes, never
-    compared as aggregates); the measured alternative is `match`.
-    Frequency (judgment): LOW. Kind-code dispatch avoids the question.
+12. No equality on tagged values -- GONE (vacuous)
+    Tagged equality compiles (newest probe); the unit has 0 sites (kinds
+    are u32 codes and stay so). Nothing changed.
+    Frequency (judgment): LOW.
 
-13. `traverse` with a call-derived narrowed value plus `next`
-    Wanted: a linear table search whose body calls a helper, narrows a
-    sum that depends on the call result, and continues:
-      traverse i over slots of t by unvisited touches ... {
-          let v = val(i);
-          let s = acc + v;
-          narrow s to 0 .. 100 else { next i; }
-          acc = s;
-      }
-    Refusal:
-      stage0: source export: function type/proof/header duties lack a checked source binding: main
-      note: export gate refuses: function type/proof/header duties lack a checked source binding: main
-    The same body with `leave i` compiles; the same `next i` without the
-    call compiles; a call with `next i` over a value that does not depend
-    on the call compiles. Only the combination fails (possibly a Stage-0
-    export bug rather than a rule).
-    Workaround used: no `traverse` in the unit at all; the scope search
-    is a downward recursion with fuel, which also yields the shadowing
-    order directly.
-    Frequency (judgment): LOW. The triggering shape is rare, but it is
-    the natural spelling of "search with bail-out", so a table-heavy
-    compiler pass could meet it.
+13. `traverse` with a call-derived narrowed value plus `next` -- GONE
+    `sym_lookup_rec` (downward fuel recursion) is deleted. `sym_lookup` is
+    a `traverse i over slots of syms by unvisited touches reads syms.slots`
+    whose body calls `cmp_span`, skips dead slots with `if i < u`, and
+    overwrites `found` on every hit, so the innermost declaration wins;
+    reads through calls need no extra claims (scratch probes
+    `trav1..trav4.gab`). 1 recursion removed, 0 `traverse` workarounds left.
+    Frequency (judgment): LOW.
 
 Forms the unit needed that worked without any workaround
 --------------------------------------------------------
-- One module shared across four files, compiled as one unit.
-- Qualified reads across modules (a `pure` caller may call a reader
-  anywhere; only writes need rights, which the caller lists for its own
-  module: direct reads plus the union of callee writes).
+- One module per file, compiled as one unit (entry 1).
+- Qualified reads across modules need no effect claims; writers are
+  claimed with qualified places in the caller.
 - Recursion with an explicit fuel parameter and `decreases`, direct and
-  mutual (lexer <-> skip helpers, expression levels <-> primary); tail
-  calls at function top level; bare void calls in branches.
-- `traverse ... by unvisited` with `touches`, `leave`/`next` (scratch
-  only; kept out of the unit by entry 13).
-- `narrow ... else` with value returns, bare `return;` in void
-  functions, `narrow` after `let` for literals.
-- Records as values, parameters and function results, including a
-  four-field lexer token record; field reads, field comparisons and
-  field-to-argument passing. Only `narrow` on fields (entry 5) and
-  `bool` fields in conditions (entry 9) fail.
-- Constant arrays of `u32` with literal and variable indexing, copy
-  through a local into table slots; range-typed constants
-  (`const SRCLEN : u32 in 0 .. 160`); constant expressions at no site
-  needed beyond literals.
-- `option index into T` construction and matching (probes; the unit
-  uses a 33-sentinel downward search instead, which needs no option
-  parameters).
-- Four-parameter functions; `if` chains and `else if` shapes;
-  `let mut` locals; static mutable scalars, tables and their effects
-  (`reads`/`writes` per carrier).
+  mutual (lexer skip helpers, expression levels <-> primary).
+- `traverse ... by unvisited` with a call in the body, a live-prefix bound
+  and last-hit-wins shadowing (entry 13).
+- Guard narrowing where the guard is an ordering comparison (entry 4 probes;
+  the unit's own arithmetic sits under equality guards).
+- Character literals in comparisons, narrow bounds, array elements and
+  arithmetic (entries 6, 11).
+- `bool` fields, params, returns, locals, `!` and `&&`, `static mut bool`
+  (entry 9).
+- Direct in-branch `return f(...)` for plain arguments (entry 3); direct
+  array reads into slots (entry 10); named string constants for
+  newline-free text (entry 11); tagged equality (entry 12, unused).
+- Records as values, parameters and function results, including a `bool`
+  field; constant arrays with literal and variable indexing; `option`-free
+  33/255-sentinel searches; four-parameter functions; `if` chains and
+  `else if` shapes; `let mut` locals; static mutable scalars, tables and
+  their effects. Only field/slot `narrow` (entry 5) and `bool` in
+  conditions on u32 flags (entry 9, gone) ever failed.
+- `narrow ... else` with value returns, bare `return;` in void functions.
 - No `costs` clauses anywhere: all functions omit them and compile.
 
 Not tried
@@ -244,5 +197,72 @@ Not tried
   division executes), shifts and bit operations.
 - Function pointers, locks/atomics, `retry`/`forever`, `spec`/`impl`
   contracts, `dyn`, formats, devices, strings beyond literals.
+- `use` imports in the unit (compiles in a scratch probe; the unit keeps
+  qualified calls).
 - Separate compilation and linking of units.
 - Anything quantitative: no compile-time or run-time measurements.
+
+NEW findings (all with a minimal source text)
+---------------------------------------------
+N1. A call returned from a branch refuses record-field arguments.
+    Even one record-field projection among the arguments fails, at the top
+    level the same call compiles, and binding one field to a local does not
+    help while any projection remains (entry 3 remainder).
+    Minimal (`retcall-field.gab`, refused with `stage0: value without G
+    form` + `note: elaboration: function pick: value without G form
+    (statement 1 of 1: if)`):
+      type POut = { node : u32 in 0 .. 255, pos : u32 in 0 .. 64, ok : u32 in 0 .. 1, };
+      impl fn nxt(n : u32 in 0 .. 255, p : u32 in 0 .. 64) -> POut
+          effects { pure }
+      {
+          return POut(node: n, pos: p, ok: 1);
+      }
+      impl fn pick(r : POut, k : u32 in 0 .. 1) -> POut
+          effects { pure }
+      {
+          if k == 1 { return nxt(r.node, r.pos); }
+          return r;
+      }
+N2. A computed table-slot index is refused even when in range (entry 10
+    remainder). `let d = k - 1; return T.slots[d].k;` compiles.
+    Minimal (`slotidx.gab`, refused with `stage0: value without G form` +
+    `(statement 1 of 1: if)`):
+      table T count 160 { slot { k : u32 in 0 .. 31, } }
+      impl fn f(k : u32 in 0 .. 159) -> u32 in 0 .. 31
+          effects { reads T.slots }
+      {
+          if k >= 1 {
+              return T.slots[k - 1].k;
+          }
+          return 0;
+      }
+N3. Equality guards do not narrow; only ordering guards do. After
+    `if k == 0 { return ...; }` the compiler knows nothing about `k`
+    (`guard1b.gab`, `T.slots[k - 1]` refused); after `if k >= 1` the
+    subtraction compiles (`guard7.gab`). The `after` probe shape works for
+    the same reason. Real parser code guards almost everything with
+    equality, which bounds the worth of entry 4.
+    Minimal pair:
+      if k == 0 { return 0; }
+      return T.slots[k - 1].k;   // refused: stage0: value without G form
+      if k >= 1 { return k - 1; } // compiles
+N4. String literals have no escapes. `"\n"` is backslash + `n` (two bytes;
+    `T[1]` of `"a\nb"` runs 92), and a literal newline inside a string is
+    refused (`stage0: lex`). Byte 10 -- and hence any multi-line text --
+    cannot live in a string constant (entry 11 mechanism).
+    Minimal (`s7.gab` runs 92; `s10.gab` refused with `stage0: lex`):
+      const T : string max 4 = "a\nb";   // T[1] == 92, not 10
+N5. The runner crashes on a missing image instead of diagnosing it:
+    `runner <nonexistent>` dies with an illegal instruction (exit 132,
+    core dump) rather than a "file not found" error. (Stage 0 itself is
+    clean: a failed compile leaves no output file.) Do not run an image
+    path without checking the compile exit first.
+    Minimal: `runner .scratch-m/t/definitely-missing.img` -> exit 132.
+
+Line counts (measured with `wc -l`)
+-----------------------------------
+Before: srcbuf.gab 93, lex.gab 270, parse.gab 514, front.gab 390
+(total 1267). After: srcbuf.gab 76, lex.gab 258, parse.gab 494,
+front.gab 366 (total 1194). Net -73 lines; the drop is the deleted
+`sym_lookup_rec`, shorter returns, `bool` tests and comment updates,
+minus the module-split effect lines.

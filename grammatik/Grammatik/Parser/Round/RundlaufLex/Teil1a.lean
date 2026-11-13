@@ -19,7 +19,7 @@
     ++ exp` with a non-empty digit fraction and an exponent that is empty or `e`/`e+`/`e-`
     followed by digits (`GleitKanon`). Excluded: `_` separators, leading zeros, uppercase `E`,
     and any text that is not a float literal at all (`"1.0 rounded"`, see the CUTS).
-  - `text s`: no `"` and no newline in `s` (the lexer has no escapes).
+  - `text s`: every string value; delimiters, backslashes and controls are escaped.
   - `zeichen s`: one of the marks the lexer cuts (`markTafel`, the 48 spellings of
     `nimmZeichen`).
   - `doku`, `ende`: excluded (`lex` drops doc comments and emits `ende` itself).
@@ -77,7 +77,7 @@ def TokGut : Token → Prop
   | .wort s => nameForm s = true ∧ istSchluessel s = true
   | .num _ => True
   | .float s => GleitKanon s
-  | .text s => ∀ c ∈ s.toList, c ≠ '"' ∧ c ≠ '\n'
+  | .text _ => True
   | .zeichen s => s.toList ∈ markTafel
   | .doku _ => False
   | .ende => False
@@ -88,7 +88,7 @@ def spell : Token → List Char
   | .wort s => s.toList
   | .num n => Nat.toDigits 10 n
   | .float s => s.toList
-  | .text s => '"' :: (s.toList ++ ['"'])
+  | .text s => '"' :: (druckTextZeichen s.toList ++ ['"'])
   | .zeichen s => s.toList
   | .doku _ => []
   | .ende => []

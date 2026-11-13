@@ -1,0 +1,8 @@
+// Exit 158: LF 10 + tab 9 + CR 13 + NUL 0 + backslash 92 + quote 34 = 158.
+// The string has eight decoded bytes; escape spellings do not count towards its bound.
+module ir_string_escape {
+const TEXT : string max 8 = "a\nb\t\r\0\\\"";
+impl fn main() -> u32 in 0 .. 1530 effects { pure } {
+    return TEXT[1] + TEXT[3] + TEXT[4] + TEXT[5] + TEXT[6] + TEXT[7];
+}
+}

@@ -49,10 +49,7 @@ theorem zeigeTok_spell (t : Token) (h : TokGut t) : zeigeTok t = String.ofList (
   | wort s => simp only [zeigeTok, spell, String.ofList_toList]
   | num n => rfl
   | float s => simp only [zeigeTok, spell, String.ofList_toList]
-  | text s =>
-    simp only [zeigeTok, spell]
-    rw [show ('"' :: (s.toList ++ ['"'])) = ['"'] ++ s.toList ++ ['"'] by simp only [↓Char.isValue, List.cons_append, List.nil_append],
-      String.ofList_append, String.ofList_append, String.ofList_toList]
+  | text s => rfl
   | zeichen s => simp only [zeigeTok, spell, String.ofList_toList]
   | doku _ => exact absurd h id
   | ende => exact absurd h id

@@ -60,7 +60,7 @@ theorem scan_token (b : Bool) (t : Token) (rest : List Char) (m : Nat) (h : TokG
     rfl
   | num n => exact scan_zahl b n rest m
   | float s => exact scan_gleit b s rest m h
-  | text s => exact scan_text b s rest m h
+  | text s => exact scan_text b s rest m
   | zeichen s => exact scan_zeichen b s rest m h
   | doku _ => exact absurd h id
   | ende => exact absurd h id
@@ -127,7 +127,7 @@ def tokGutB : Token → Bool
   | .wort s => nameForm s && istSchluessel s
   | .num _ => true
   | .float _ => false
-  | .text s => s.toList.all (fun c => c != '"' && c != '\n')
+  | .text _ => true
   | .zeichen s => markTafel.contains s.toList
   | .doku _ => false
   | .ende => false
@@ -143,9 +143,7 @@ theorem tokGutB_gut : ∀ (t : Token), tokGutB t = true → TokGut t := by
     exact h
   | num n => trivial
   | float s => simp only [tokGutB, Bool.false_eq_true] at h
-  | text s =>
-    simp only [tokGutB, List.all_eq_true, Bool.and_eq_true, bne_iff_ne, ne_eq] at h
-    exact h
+  | text _ => trivial
   | zeichen s =>
     simp only [tokGutB, List.contains_iff_mem] at h
     exact h
@@ -184,10 +182,7 @@ theorem lex_render_zeuge :
     · show ['<', '<', '%'] ∈ markTafel; decide
     · exact ⟨1, ['5'], ['e', '-', '3'], by decide, by decide, by decide,
         Or.inr ⟨['e', '-'], ['3'], Or.inr (Or.inr rfl), rfl, by decide, by decide⟩⟩
-    · intro c hc
-      have : c ∈ ['a', ' ', 'b'] := hc
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at this
-      rcases this with rfl | rfl | rfl <;> decide
+    · trivial
     · show [')'] ∈ markTafel; decide
   exact ⟨h, lex_render ts h⟩
 

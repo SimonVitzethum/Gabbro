@@ -35,6 +35,7 @@ structure Image (L : Lay D) (P : Programm D) (f : D.Fn) (reserved : Nat) where
   σ0 : World D
   ρ0 : Env D (D.params f)
   pr : List Nat
+  H : List D.Lock
   layout : WIn L fp Ks K
   small : K < 2 ^ 31
   abi : lo = (functionFrame P f).internalResult
@@ -87,7 +88,7 @@ structure Ready {Γ : Ctx} (m : Mem) (σ : World D) (ρ : Env D Γ) : Prop where
   code : CodeAt m x.pc x.code
   env : EnvAt L m x.fp ρ reserved
   world : WeltAt m L σ
-  surround : Umf L x.A x.C x.dv m x.fp x.Ks x.K
+  surround : Umf L x.A x.C x.dv m x.fp x.Ks x.K x.H
   head : Kopf L f m x.fp x.K x.rp x.cfp x.ρ0 P x.σ0
 
 variable {x} {Γ : Ctx} {m m' : Mem} {σ : World D} {ρ : Env D Γ}

@@ -116,7 +116,7 @@ theorem weltAt_stab {L : Lay D} {σ : World D} {fp : Runner.W} {K : Nat} (hl : L
 def InWelt (L : Lay D) (x : Runner.W) : Prop := L.lo ≤ x.toNat ∧ x.toNat < L.hi
 
 /-- The byte `x` lies in the lock words: above the world, below `sye` (`LaySync`), in a layout whose lock
-    words end below `2 ^ 31` (as every layout with locks does, `SyncOK.sye`). -/
+    words end below `2 ^ 31` (as every layout with locks does, `TicketSync.sye`). -/
 def InSync (L : Lay D) (x : Runner.W) : Prop :=
   L.lo ≤ x.toNat ∧ L.hi ≤ x.toNat ∧ x.toNat < L.sye ∧ L.sye < 2 ^ 31
 
@@ -127,29 +127,58 @@ def LockFern (L : Lay D) (fp : Runner.W) (lo K a : Nat) : Prop :=
     ¬ inSlots fp lo K (BitVec.ofNat 64 (a + 8 * k) + BitVec.ofNat 64 j) ∧
     ¬ InWelt L (BitVec.ofNat 64 (a + 8 * k) + BitVec.ofNat 64 j)
 
-/-- What a statement keeps of the lock at `a`: its three words. -/
-def LockKlasse (m m' : Runner.Mem) (a : Nat) : Prop :=
-  ∀ k, k ≤ 2 → m'.rd64 (BitVec.ofNat 64 (a + 8 * k)) = m.rd64 (BitVec.ofNat 64 (a + 8 * k))
+/-- What a statement keeps of the ticket lock at `a`: for the words next `n`, serving `s` and waiters `w` read at
+    `a`, `a + 8`, `a + 16` in `m`, the words `n'`, `s'`, `w'` in `m'` are readable with `n' - s' = n - s` (BitVec
+    subtraction) and `w' = w`. The difference is what the free/mine invariant needs (`TicketSync`); a `locks`
+    statement leaves both tickets of its lock one higher and keeps the class. -/
+def TicketKlasse (m m' : Runner.Mem) (a : Nat) : Prop :=
+  ∀ n s w, m.rd64 (BitVec.ofNat 64 a) = some n → m.rd64 (BitVec.ofNat 64 (a + 8)) = some s →
+    m.rd64 (BitVec.ofNat 64 (a + 16)) = some w →
+    ∃ n' s' w', m'.rd64 (BitVec.ofNat 64 a) = some n' ∧ m'.rd64 (BitVec.ofNat 64 (a + 8)) = some s' ∧
+      m'.rd64 (BitVec.ofNat 64 (a + 16)) = some w' ∧ n' - s' = n - s ∧ w' = w
 
-theorem LockKlasse.refl (m : Runner.Mem) (a : Nat) : LockKlasse m m a := fun _ _ => rfl
+theorem TicketKlasse.refl (m : Runner.Mem) (a : Nat) : TicketKlasse m m a :=
+  fun _ _ _ h1 h2 h3 => ⟨_, _, _, h1, h2, h3, rfl, rfl⟩
 
-theorem LockKlasse.trans {m1 m2 m3 : Runner.Mem} {a : Nat} (h1 : LockKlasse m1 m2 a) (h2 : LockKlasse m2 m3 a) :
-    LockKlasse m1 m3 a := fun k hk => (h2 k hk).trans (h1 k hk)
+theorem TicketKlasse.trans {m1 m2 m3 : Runner.Mem} {a : Nat} (h1 : TicketKlasse m1 m2 a)
+    (h2 : TicketKlasse m2 m3 a) : TicketKlasse m1 m3 a := fun n s w e1 e2 e3 => by
+  obtain ⟨n1, s1, w1, f1, f2, f3, d1, q1⟩ := h1 n s w e1 e2 e3
+  obtain ⟨n2, s2, w2, g1, g2, g3, d2, q2⟩ := h2 n1 s1 w1 f1 f2 f3
+  exact ⟨n2, s2, w2, g1, g2, g3, by rw [d2, d1], by rw [q2, q1]⟩
+
+/-- Equal words keep the ticket class. -/
+theorem TicketKlasse.ofWords {m m' : Runner.Mem} {a : Nat}
+    (h : ∀ k, k ≤ 2 → m'.rd64 (BitVec.ofNat 64 (a + 8 * k)) = m.rd64 (BitVec.ofNat 64 (a + 8 * k))) :
+    TicketKlasse m m' a :=
+  fun n s w e1 e2 e3 => by
+    have z0 : a + 8 * 0 = a := by omega
+    have z1 : a + 8 * 1 = a + 8 := by omega
+    have z2 : a + 8 * 2 = a + 16 := by omega
+    have e0 := h 0 (by omega)
+    have e1' := h 1 (by omega)
+    have e2' := h 2 (by omega)
+    rw [z0] at e0
+    rw [z1] at e1'
+    rw [z2] at e2'
+    have f0 : m'.rd64 (BitVec.ofNat 64 a) = some n := by rw [e0]; exact e1
+    have f1 : m'.rd64 (BitVec.ofNat 64 (a + 8)) = some s := by rw [e1']; exact e2
+    have f2 : m'.rd64 (BitVec.ofNat 64 (a + 16)) = some w := by rw [e2']; exact e3
+    exact ⟨n, s, w, f0, f1, f2, rfl, rfl⟩
 
 /-- Outside the slots `lo .. K-1` of the frame at `fp`, outside the world and outside the lock words, the
-    memory is kept; no permission changes; every lock keeps its class (`LockKlasse`). What a statement of
-    one thread may change. -/
+    memory is kept; no permission changes; every lock keeps its ticket class (`TicketKlasse`). What a statement
+    of one thread may change. -/
 structure AgreeW (L : Lay D) (fp : Runner.W) (lo K : Nat) (m m' : Runner.Mem) : Prop where
   rd : m'.rd = m.rd
   wr : m'.wr = m.wr
   b : ∀ x, ¬ inSlots fp lo K x → ¬ InWelt L x → ¬ InSync L x → m'.b x = m.b x
-  sync : ∀ Lk, LockFern L fp lo K (L.lk Lk) → LockKlasse m m' (L.lk Lk)
+  sync : ∀ Lk, LockFern L fp lo K (L.lk Lk) → TicketKlasse m m' (L.lk Lk)
 
 /-- A change that keeps every byte outside the slots and the world keeps the lock words with them. -/
 theorem AgreeW.stark {L : Lay D} {fp : Runner.W} {lo K : Nat} {m m' : Runner.Mem} (rd : m'.rd = m.rd)
     (wr : m'.wr = m.wr) (b : ∀ x, ¬ inSlots fp lo K x → ¬ InWelt L x → m'.b x = m.b x) :
     AgreeW L fp lo K m m' := by
-  refine ⟨rd, wr, fun x hx hw _ => b x hx hw, fun Lk fern k hk => ?_⟩
+  refine ⟨rd, wr, fun x hx hw _ => b x hx hw, fun Lk fern => TicketKlasse.ofWords fun k hk => ?_⟩
   simp only [Runner.Mem.rd64, rd]
   rw [le_congr (m := m') (m' := m) (fun j hj => b _ (fern k j hk hj).1 (fern k j hk hj).2)]
 
@@ -161,7 +190,7 @@ instance {L : Lay D} {fp : Runner.W} {lo K : Nat} {m m' : Runner.Mem} :
     Coe (Agree fp lo K m m') (AgreeW L fp lo K m m') := ⟨agreeW_of⟩
 
 theorem AgreeW.refl (L : Lay D) (fp : Runner.W) (lo K : Nat) (m : Runner.Mem) : AgreeW L fp lo K m m :=
-  ⟨rfl, rfl, fun _ _ _ _ => rfl, fun _ _ => LockKlasse.refl _ _⟩
+  ⟨rfl, rfl, fun _ _ _ _ => rfl, fun _ _ => TicketKlasse.refl _ _⟩
 
 theorem AgreeW.trans {L : Lay D} {fp : Runner.W} {lo K : Nat} {m1 m2 m3 : Runner.Mem}
     (h1 : AgreeW L fp lo K m1 m2) (h2 : AgreeW L fp lo K m2 m3) : AgreeW L fp lo K m1 m3 :=

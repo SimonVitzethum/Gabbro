@@ -53,6 +53,10 @@ theorem HeldIn.ruf {V : Vertrag D} {S : Signatur D.Tab D.Glob D.Lock D.Marke} {H
   · obtain ⟨c', hc', hle⟩ := hp.hb c hc
     exact Or.inr ⟨c', hc', Int.lt_of_lt_of_le hlt hle⟩
 
+/-- A thread that holds no lock: the tie holds for every static held set (the image start). -/
+theorem HeldIn.nil {Λ : List (Res D)} {bo : Option Int} : HeldIn ([] : List D.Lock) Λ bo :=
+  fun _ h => (List.not_mem_nil h).elim
+
 /-- The floor rule of `Stmt.ueberBoden` for one lock, as the compiler can check it. -/
 def ueberBodenB (bo : Option Int) (r : Int) : Bool :=
   match bo with

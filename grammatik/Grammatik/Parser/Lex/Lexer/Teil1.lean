@@ -1,5 +1,6 @@
 module
 
+public import Grammatik.Parser.Lex.Lexer.Text
 import all Init.Data.Repr
 
 @[expose] public section
@@ -260,17 +261,6 @@ def nimmExponent : List Char → String × List Char
     | [] => ("", 'e' :: cs)
     | _ :: _ => ("e" ++ String.ofList d, r)
   | cs => ("", cs)
-
-/-- Take a string body: every character except the closing quote and
-    the newline (`char = any character except quote and newline` --
-    there are no escapes, so there is nothing to interpret). -/
-def nimmText : List Char → Option (List Char × List Char)
-  | [] => none
-  | '\n' :: _ => none
-  | '"' :: cs => some ([], cs)
-  | c :: cs => match nimmText cs with
-    | some (h, t) => some (c :: h, t)
-    | none => none
 
 /-- Read one ASCII byte after an opening apostrophe, including its closer.
     Character literals are numeric sugar; no character token is introduced. -/

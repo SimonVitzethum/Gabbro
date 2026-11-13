@@ -14,6 +14,7 @@ set_option linter.unusedSectionVars false
 variable [Kern]
 
 variable {D : Deklaration} {L : Lay D}
+variable {H : List D.Lock}
 
 theorem traverse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
@@ -23,8 +24,8 @@ theorem traverse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R :
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {t : D.Tab} {inv : Expr D Γ Λ .bool} {body : Block D (vertragVon D f) true (.index (D.count t) :: Γ) Λ Λ} :
-    (∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex body reserved) →
-    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Stmt D (vertragVon D f) l Γ Λ Λ from .traverse t inv body) reserved := by
+    (∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H body reserved) →
+    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Stmt D (vertragVon D f) l Γ Λ Λ from .traverse t inv body) reserved := by
   intro ihBody c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   have hindexPos := valueWords_pos (.index (D.count t))
   simp only [lowS, ← hlo0, resultWords_vertragVon] at h

@@ -17,7 +17,7 @@ theorem bild_kern [CloneOK] {O : Orakel D} [hT : TorOK Yb O] [hV : SichtOK O] {p
     (hm : BytesAt m codeBase ((spawnC (startScratch main) sp ++ startC A main n 231 true ++ rootsC A n roots ++ body).flatMap encII ++
       ((startStackBytes Ks (FB + FB) (encodeEnv Yb ρ :: rootArgs)).getD [] ++ tail)))
     (hval : ∀ τ (x : Var (D.params main) τ), ValueValid Yb τ (ρ.get x))
-    (σ : World D) (hWa : WeltAt m Yb σ) (hy : SyncOK m Yb (BitVec.ofNat 64 fp0) Ks) :
+    (σ : World D) (hWa : WeltAt m Yb σ) (hy : TicketSync m Yb (BitVec.ofNat 64 fp0) Ks []) :
     match rufAt P O passes n main σ ρ with
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m t' m' ∧ StopAt t' m' q ∧
         q.nr = BitVec.ofNat 64 231 ∧ ExitErg Yb (D.erg main) v q.a1
@@ -97,7 +97,7 @@ theorem bild_wurzel {O : Orakel D} [hT : TorOK Yb O] [hV : SichtOK O] {passes : 
     (hargs : rootArgs[j]'(by rw [h.hargsLength]; exact hj) = encodeEnv Yb ρ)
     (hval : ∀ τ (x : Var (D.params roots[j]) τ), ValueValid Yb τ (ρ.get x))
     (hWa : WeltAt m Yb σ)
-    (hy : SyncOK m Yb (BitVec.ofNat 64 (fp0 + 8 * (Ks * (j + 1)))) Ks) :
+    (hy : TicketSync m Yb (BitVec.ofNat 64 (fp0 + 8 * (Ks * (j + 1)))) Ks []) :
     match rufAt P O passes n (getElem roots j hj) σ ρ with
     | .ok _ _ => ∃ t' m' q, Star ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length + startLen + startLen * j)),
         BitVec.ofNat 64 (fp0 + 8 * (Ks * (j + 1)))⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = BitVec.ofNat 64 60

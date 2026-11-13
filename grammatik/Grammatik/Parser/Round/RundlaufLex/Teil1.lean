@@ -19,7 +19,7 @@
     ++ exp` with a non-empty digit fraction and an exponent that is empty or `e`/`e+`/`e-`
     followed by digits (`GleitKanon`). Excluded: `_` separators, leading zeros, uppercase `E`,
     and any text that is not a float literal at all (`"1.0 rounded"`, see the CUTS).
-  - `text s`: no `"` and no newline in `s` (the lexer has no escapes).
+  - `text s`: every string value; delimiters, backslashes and controls are escaped.
   - `zeichen s`: one of the marks the lexer cuts (`markTafel`, the 48 spellings of
     `nimmZeichen`).
   - `doku`, `ende`: excluded (`lex` drops doc comments and emits `ende` itself).
@@ -234,26 +234,30 @@ theorem scan_gleit (b : Bool) (s : String) (rest : List Char) (m : Nat) (h : Gle
 
 /-! ### Strings -/
 
-theorem nimmText_kanon : ∀ (cs r : List Char), (∀ c ∈ cs, c ≠ '"' ∧ c ≠ '\n') →
-    nimmText (cs ++ '"' :: r) = some (cs, r) := by
-  intro cs r h
+theorem nimmText_kanon (cs r : List Char) :
+    nimmText (druckTextZeichen cs ++ '"' :: r) = some (cs, r) := by
   induction cs with
-  | nil => simp only [↓Char.isValue, List.nil_append, nimmText]
+  | nil => rfl
   | cons c cs ih =>
-    have hc := h c (by simp only [List.mem_cons, true_or])
-    have ih' := ih (fun x hx => h x (by simp only [List.mem_cons, hx, or_true]))
-    simp only [List.cons_append]
-    rw [nimmText.eq_4]
-    · simp only [↓Char.isValue, ih']
-    · simp_all
-    · simp_all
+    by_cases hn : c = '\n'
+    · subst c; simp [druckTextZeichen, nimmText, textEscape, ih]
+    by_cases ht : c = '\t'
+    · subst c; simp [druckTextZeichen, nimmText, textEscape, ih]
+    by_cases hr : c = '\r'
+    · subst c; simp [druckTextZeichen, nimmText, textEscape, ih]
+    by_cases hz : c = Char.ofNat 0
+    · subst c; simp [druckTextZeichen, nimmText, textEscape, ih]
+    by_cases hb : c = '\\'
+    · subst c; simp [druckTextZeichen, nimmText, textEscape, ih]
+    by_cases hq : c = '"'
+    · subst c; simp [druckTextZeichen, nimmText, textEscape, ih]
+    simp [druckTextZeichen, hn, ht, hr, hz, hb, hq, nimmText, ih]
 
-theorem scan_text (b : Bool) (s : String) (rest : List Char) (m : Nat)
-    (h : ∀ c ∈ s.toList, c ≠ '"' ∧ c ≠ '\n') :
-    scan b (('"' :: (s.toList ++ ['"'])) ++ ' ' :: rest) (m + 2) =
+theorem scan_text (b : Bool) (s : String) (rest : List Char) (m : Nat) :
+    scan b (('"' :: (druckTextZeichen s.toList ++ ['"'])) ++ ' ' :: rest) (m + 2) =
       Except.map (Token.text s :: ·) (scan b rest m) := by
   simp only [List.cons_append, List.append_assoc, List.nil_append]
-  rw [scan.eq_6, nimmText_kanon _ _ h]
+  rw [scan.eq_6, nimmText_kanon]
   simp only [String.ofList_toList, ↓Char.isValue, scan_leer]
 
 /-! ### Marks -/

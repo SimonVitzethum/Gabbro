@@ -1,10 +1,8 @@
 /-
   File:      stage0/Stage0/Senke/Sperre/Code.lean
-  Subject:   The code of a lock (`PLAN-SELF-HOSTING.md` §2.1.6): three words per lock at `L.lk` -- owner (the holding
-             thread's number + 1), count, waiters. `nimmC`: the owner is me -- count + 1; else `cas owner 0 -> me`
-             and count 1, and on failure waiters + 1, `futex_wait` on the owner word, waiters - 1, again. `gibC`:
-             count - 1; at 0 `cas owner me -> 0` and `futex_wake` when there are waiters. `meC` computes the thread's
-             number from its frame: `(fp - sb) / st + 1`.
+  Subject:   Building blocks of the lock code (`Ticket/Code.lean`): `addC` adds to a word by `cas`, again until it
+             holds; `futexC` builds the request block of a `futex` call and makes it. And which statements and blocks
+             have no `ret` or `retWhy` (`retFreiS`, `retFreiB`), the condition of the body of a `locks`.
 -/
 module
 public import Stage0.Senke.Ausdruck
@@ -17,11 +15,6 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR
 
 variable {D : Deklaration}
-
-/-- The thread's number + 1 into slot `t` (scratch `t + 1`). -/
-def meC (L : Lay D) (t : Nat) : List II :=
-  [ci 17 t 0 0, ci 1 ((t : Int) + 1) L.sb 0, ci 4 t t ((t : Int) + 1), ci 1 ((t : Int) + 1) L.st 0,
-    ci 6 t t ((t : Int) + 1), ci 1 ((t : Int) + 1) 1 0, ci 3 t t ((t : Int) + 1)]
 
 /-- `w := w + d` for the word at `a` by `cas`, again until it holds (scratch from `u`): 7 instructions. -/
 def addC (a u : Nat) (d : Int) : List II :=
@@ -39,45 +32,6 @@ def futexC (a op : Nat) (v q : Nat) (vConst : Option Int) : List II :=
      | none => ci 2 ((q + 3 : Nat) : Int) v 0),
     ci 1 ((q + 4 : Nat) : Int) 0 0, ci 1 ((q + 5 : Nat) : Int) 0 0, ci 1 ((q + 6 : Nat) : Int) 0 0,
     ci 23 ((q + 7 : Nat) : Int) q 0]
-
-/-- **Take the lock** with words at `a`, scratch from slot `s` (to `s + 17`). -/
-def nimmC (L : Lay D) (a s : Nat) : List II :=
-  -- me; owner = me?
-  meC L s ++ [ci 1 ((s + 1 : Nat) : Int) a 0, ci 15 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) 0,
-    ci 14 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) s, ci 19 ((s + 1 : Nat) : Int) (16 * 7) 0] ++
-  -- mine: count + 1, done (jump over the rest: 5 + 29 + 3 instructions after this jump)
-  [ci 1 ((s + 1 : Nat) : Int) ((a + 8 : Nat) : Int) 0, ci 15 ((s + 2 : Nat) : Int) ((s + 1 : Nat) : Int) 0,
-    ci 1 ((s + 3 : Nat) : Int) 1 0, ci 3 ((s + 2 : Nat) : Int) ((s + 2 : Nat) : Int) ((s + 3 : Nat) : Int),
-    ci 16 ((s + 1 : Nat) : Int) ((s + 2 : Nat) : Int) 0, ci 18 (16 * (1 + 5 + 23 + 3)) 0 0] ++
-  -- not mine: cas owner 0 -> me; old 0: got it
-  [ci 1 ((s + 1 : Nat) : Int) a 0, ci 1 ((s + 2 : Nat) : Int) 0 0, ci 2 ((s + 3 : Nat) : Int) s 0,
-    ci 22 ((s + 4 : Nat) : Int) ((s + 1 : Nat) : Int) ((s + 2 : Nat) : Int),
-    ci 19 ((s + 4 : Nat) : Int) (16 * 24) 0] ++
-  -- wait: waiters + 1, futex_wait (owner word, the owner seen), waiters - 1, again
-  addC (a + 16) (s + 5) 1 ++ futexC a 128 (s + 4) (s + 10) none ++ addC (a + 16) (s + 5) (-1) ++
-  [ci 18 (-(16 * 27)) 0 0] ++
-  -- got it: count 1
-  [ci 1 ((s + 1 : Nat) : Int) ((a + 8 : Nat) : Int) 0, ci 1 ((s + 2 : Nat) : Int) 1 0,
-    ci 16 ((s + 1 : Nat) : Int) ((s + 2 : Nat) : Int) 0]
-
-/-- **Give the lock** with words at `a`, scratch from slot `s` (to `s + 17`). -/
-def gibC (L : Lay D) (a s : Nat) : List II :=
-  -- count - 1; not 0: done
-  [ci 1 ((s + 1 : Nat) : Int) ((a + 8 : Nat) : Int) 0, ci 15 ((s + 2 : Nat) : Int) ((s + 1 : Nat) : Int) 0,
-    ci 1 ((s + 3 : Nat) : Int) 1 0, ci 4 ((s + 2 : Nat) : Int) ((s + 2 : Nat) : Int) ((s + 3 : Nat) : Int),
-    ci 16 ((s + 1 : Nat) : Int) ((s + 2 : Nat) : Int) 0,
-    ci 19 ((s + 2 : Nat) : Int) 32 0, ci 18 (16 * (1 + 7 + 4 + 3 + 8)) 0 0] ++
-  -- 0: cas owner me -> 0
-  meC L s ++ [ci 1 ((s + 1 : Nat) : Int) a 0, ci 2 ((s + 3 : Nat) : Int) s 0, ci 1 ((s + 4 : Nat) : Int) 0 0,
-    ci 22 ((s + 5 : Nat) : Int) ((s + 1 : Nat) : Int) ((s + 3 : Nat) : Int)] ++
-  -- waiters: wake one
-  [ci 1 ((s + 1 : Nat) : Int) ((a + 16 : Nat) : Int) 0, ci 15 ((s + 2 : Nat) : Int) ((s + 1 : Nat) : Int) 0,
-    ci 19 ((s + 2 : Nat) : Int) (16 * 9) 0] ++
-  futexC a 129 0 (s + 10) (some 1)
-
-theorem meC_len (L : Lay D) (t : Nat) : (meC L t).length = 7 := by rfl
-theorem nimmC_len (L : Lay D) (a s : Nat) : (nimmC L a s).length = 7 + 4 + 6 + 5 + 7 + 8 + 7 + 1 + 3 := by rfl
-theorem gibC_len (L : Lay D) (a s : Nat) : (gibC L a s).length = 7 + 7 + 4 + 3 + 8 := by rfl
 
 variable {V : Vertrag D}
 
@@ -131,13 +85,5 @@ def retFreiGrundArms : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
   | _, _, _, _, _, .cons b rest => retFreiB b && retFreiGrundArms rest
 
 end
-
-/-- The code of `locks Lk { body }` around the body's code `cb`, with `g` the length of `gibC`: take; the body (its
-    `leave` and `next` to the two stubs after the end); give; over the stubs; the `leave` stub: give, on to the
-    outer `leave` target `exL`; the `next` stub: give, on to `exN` (both from the end of this code). -/
-def locksCode (L : Lay D) (a s : Nat) (cb : List II) (exL exN : Int) : List II :=
-  nimmC L a s ++ cb ++ gibC L a s ++ [ci 18 (16 * (1 + 2 * ((gibC L a s).length + 1))) 0 0] ++
-    gibC L a s ++ [ci 18 (16 + exL + 16 * ((gibC L a s).length + 1)) 0 0] ++
-    gibC L a s ++ [ci 18 (16 + exN) 0 0]
 
 end Gabbro.Stage0.Senke

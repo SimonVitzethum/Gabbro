@@ -24,6 +24,7 @@ set_option linter.unusedSectionVars false
 variable [Kern]
 
 variable {D : Deklaration} {L : Lay D}
+variable {H : List D.Lock}
 
 section
 variable {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
@@ -112,7 +113,7 @@ theorem exch_ok {reserved : Nat} {g : D.Glob} (hfit : aggregateFits (D.gtyp g) =
     (hpr : ∀ j ∈ pr, j < frei Γ reserved) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
     (hrest : ∀ m' σ' (ρ' : Env D (D.gtyp g :: Γ)),
       PreS L m' (pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn).length)) fp K (frei (D.gtyp g :: Γ) reserved) cr ρ' reserved →
-      Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ' →
+      Umf L A C dv m' fp Ks K H → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ' →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn).length), fp⟩ m'
         (pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn).length) + BitVec.ofNat 64 (16 * cr.length))
         (pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn).length) + BitVec.ofNat 64 (16 * cr.length) +
@@ -120,7 +121,7 @@ theorem exch_ok {reserved : Nat} {g : D.Glob} (hfit : aggregateFits (D.gtyp g) =
         (pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn).length) + BitVec.ofNat 64 (16 * cr.length) +
           BitVec.ofInt 64 ex.2)
         (execBlock O passes R rest σ' ρ') reserved)
-    (hp : PreS L m pc fp K (frei Γ reserved) (exC (frei Γ reserved) (L.ga g) cn ++ cr) ρ reserved) (hu : Umf L A C dv m fp Ks K)
+    (hp : PreS L m pc fp K (frei Γ reserved) (exC (frei Γ reserved) (L.ga g) cn ++ cr) ρ reserved) (hu : Umf L A C dv m fp Ks K H)
     (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn ++ cr).length))
       (pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn ++ cr).length) + BitVec.ofInt 64 ex.1)
@@ -156,14 +157,14 @@ theorem awaits_ok {reserved : Nat} [SichtOK O] {g : D.Glob} (hfit : aggregateFit
     (hpr : ∀ j ∈ pr, j < frei Γ reserved) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
     (hrest : ∀ m' σ' (ρ' : Env D (D.gtyp g :: Γ)),
       PreS L m' (pc + BitVec.ofNat 64 (16 * 2)) fp K (frei (D.gtyp g :: Γ) reserved) cr ρ' reserved →
-      Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ' →
+      Umf L A C dv m' fp Ks K H → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ' →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩ m'
         (pc + BitVec.ofNat 64 (16 * 2) + BitVec.ofNat 64 (16 * cr.length))
         (pc + BitVec.ofNat 64 (16 * 2) + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.1)
         (pc + BitVec.ofNat 64 (16 * 2) + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.2)
         (execBlock O passes R rest σ' ρ') reserved)
     (hp : PreS L m pc fp K (frei Γ reserved) ([ci 1 (frei Γ reserved) (L.ga g) 0, ci 15 (frei Γ reserved) (frei Γ reserved) 0] ++ cr) ρ reserved)
-    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
+    (hu : Umf L A C dv m fp Ks K H) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
       (pc + BitVec.ofNat 64 (16 * ([ci 1 (frei Γ reserved) (L.ga g) 0, ci 15 (frei Γ reserved) (frei Γ reserved) 0] ++ cr).length))
       (pc + BitVec.ofNat 64 (16 * ([ci 1 (frei Γ reserved) (L.ga g) 0, ci 15 (frei Γ reserved) (frei Γ reserved) 0] ++ cr).length) +

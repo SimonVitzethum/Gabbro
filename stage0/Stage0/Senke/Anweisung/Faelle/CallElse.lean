@@ -14,6 +14,7 @@ set_option linter.unusedSectionVars false
 set_option maxHeartbeats 1000000
 set_option maxRecDepth 2048
 variable [Kern] {D : Deklaration} {L : Lay D}
+variable {H : List D.Lock}
 
 /-- The continuation starts after the binding and branch, or after the skipped success arm. -/
 def callBranchPC (pc : Runner.W) (cc cr : List II) (area : Nat) (ok : Bool) : Runner.W :=
@@ -117,7 +118,8 @@ theorem callElse_ok {A : D.Fn → Nat} {C : D.Fn → List II}
     (hp : PreS L m pc fp K (frei Γ reserved)
       (elseC (D.signatur g) (frei Γ reserved) (callC A g (frei Γ reserved) ca) cr ce) ρ reserved)
     (hs : 16 * (elseC (D.signatur g) (frei Γ reserved) (callC A g (frei Γ reserved) ca) cr ce).length < 2 ^ 31)
-    (hu : Umf L A C dv m fp Ks K) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) :
+    (hu : Umf L A C dv m fp Ks K H) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ)
+    (hHc : HeldIn H (Signatur.anfang D (D.signatur g)) (D.signatur g).boden) :
     (∃ σ' v m2, R g σ (evalArgs σ args σ ρ) = .ok σ' v ∧
       Star ⟨pc, fp⟩ m ⟨callBranchPC pc (callC A g (frei Γ reserved) ca) cr (returnWords (D.erg g) (D.gruende g)) true, fp⟩ m2 ∧
       AgreeW L fp (frei Γ reserved) K m m2 ∧
@@ -132,7 +134,7 @@ theorem callElse_ok {A : D.Fn → Nat} {C : D.Fn → List II}
       (receiveC (D.signatur g) (frei Γ reserved) ++ [ci 19 (frei Γ reserved + FB + (contextWords (D.params g)) + returnWords (D.erg g) (D.gruende g)) (16 * (cr.length + 2)) 0] ++
        cr ++ [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce)) ρ reserved := by
     simpa only [Deklaration.params, Deklaration.erg, Deklaration.gruende, elseC, List.append_assoc, Int.natCast_add, Int.ofNat_one] using hp
-  have hc := callC_ok (same := rfl) hS hA args σ σ hca (by omega) hpc.left hu hW hWa
+  have hc := callC_ok (same := rfl) hS hA args σ σ hca (by omega) hpc.left hu hW hWa hHc
   cases hr : R g σ (evalArgs σ args σ ρ) with
   | ok σ' v =>
     rw [hr] at hc
@@ -184,10 +186,11 @@ theorem blockCallElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowPost L (functionFrame P f) P f (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {τ : Ty} {callee : D.Fn} {args : Args D Γ Λ (D.params callee)} {he : D.erg callee = some τ} {proof0 : _} {proof1 : _} {err : Endblock D (vertragVon D f) l (.why (D.gruende callee) :: Γ) (nach D callee Λ)} {rest : Block D (vertragVon D f) l (τ :: Γ) (nach D callee Λ) Λ'} :
-    (∀ {pr ex}, EndCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex err) →
-    (∀ {pr ex}, BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
-    BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Block D (vertragVon D f) l Γ Λ Λ' from .bindCallElse callee args he proof0 proof1 err rest) := by
+    {τ : Ty} {callee : D.Fn} {args : Args D Γ Λ (D.params callee)} {he : D.erg callee = some τ} {proof0 : _} {proof1 : _} {err : Endblock D (vertragVon D f) l (.why (D.gruende callee) :: Γ) (nach D callee Λ)} {rest : Block D (vertragVon D f) l (τ :: Γ) (nach D callee Λ) Λ'}
+    (hH : HeldIn H Λ (vertragVon D f).boden) :
+    (∀ {pr ex}, EndCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H err) →
+    (∀ {pr ex}, BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H rest) →
+    BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Block D (vertragVon D f) l Γ Λ Λ' from .bindCallElse callee args he proof0 proof1 err rest) := by
   intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   simp only [lowB, ← hlo0, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨ca, ta⟩, hca, ⟨ce, te⟩, hce, ⟨cr, tr⟩, hcr, hc⟩ := h
@@ -201,7 +204,8 @@ theorem blockCallElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
   have hprE : ∀ j ∈ pr, j < frei (.why (D.gruende callee) :: Γ) reserved := by
     intro j hj; have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega
   simp only [execBlock]
-  rcases callElse_ok hS (hA callee) args he (σ.lese Λ args.orte) hca (by omega) hp hs hu hW hWa with
+  rcases callElse_ok hS (hA callee) args he (σ.lese Λ args.orte) hca (by omega) hp hs hu hW hWa
+    (HeldIn.ruf (V := vertragVon D f) hH proof0) with
     ⟨σ', v, m2, hR, st, a, hp2, hw2⟩ | ⟨σ', r, m2, hR, st, a, hp2, hw2⟩ |
     ⟨e, hR, st⟩ | ⟨e, hR, st⟩
   · rw [hR]
@@ -236,10 +240,11 @@ theorem endCallElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
     (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowPost L (functionFrame P f) P f (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
-    {τ : Ty} {g : D.Fn} {args : Args D Γ Λ (D.params g)} {he : D.erg g = some τ} {proof0 : _} {proof1 : _} {err : Endblock D (vertragVon D f) l (.why (D.gruende g) :: Γ) (nach D g Λ)} {rest : Endblock D (vertragVon D f) l (τ :: Γ) (nach D g Λ)} :
-    (∀ {pr ex}, EndCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex err) →
-    (∀ {pr ex}, EndCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
-    EndCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .bindCallElse g args he proof0 proof1 err rest) := by
+    {τ : Ty} {g : D.Fn} {args : Args D Γ Λ (D.params g)} {he : D.erg g = some τ} {proof0 : _} {proof1 : _} {err : Endblock D (vertragVon D f) l (.why (D.gruende g) :: Γ) (nach D g Λ)} {rest : Endblock D (vertragVon D f) l (τ :: Γ) (nach D g Λ)}
+    (hH : HeldIn H Λ (vertragVon D f).boden) :
+    (∀ {pr ex}, EndCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H err) →
+    (∀ {pr ex}, EndCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H rest) →
+    EndCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Endblock D (vertragVon D f) l Γ Λ from .bindCallElse g args he proof0 proof1 err rest) := by
   intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo2 hu hk hWa hpr
   simp only [lowEnd, ← hlo0, resultWords_vertragVon, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨ca, ta⟩, hca, ⟨ce, te⟩, hce, ⟨cr, tr⟩, hcr, hc⟩ := h
@@ -254,7 +259,8 @@ theorem endCallElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
   have hprE : ∀ j ∈ pr, j < frei (.why (D.gruende g) :: Γ) reserved := by
     intro j hj; have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega
   simp only [execEnd]
-  rcases callElse_ok hS (hA g) args he (σ.lese Λ args.orte) hca (by omega) hp hs hu hW hWa with
+  rcases callElse_ok hS (hA g) args he (σ.lese Λ args.orte) hca (by omega) hp hs hu hW hWa
+    (HeldIn.ruf (V := vertragVon D f) hH proof0) with
     ⟨σ', v, m2, hR, st, a, hp2, hw2⟩ | ⟨σ', r, m2, hR, st, a, hp2, hw2⟩ |
     ⟨e, hR, st⟩ | ⟨e, hR, st⟩
   · rw [hR]

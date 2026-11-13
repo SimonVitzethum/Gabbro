@@ -67,11 +67,11 @@ theorem world_at [Kern] : WeltAt memory callLayout world := by
   cases g
   exact ValueAt.ofCellWord (w := 64) (by decide) (by decide +kernel) rfl
 
-theorem sync : SyncOK memory callLayout 4096 128 :=
+theorem sync : TicketSync memory callLayout 4096 128 [] :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide,
     (fun l => nomatch l), by decide, (fun l => nomatch l), (fun l => nomatch l), (fun l => nomatch l)⟩
 
-theorem surroundings [Kern] : Umf callLayout addresses target 2 memory 4096 128 256 :=
+theorem surroundings [Kern] : Umf callLayout addresses target 2 memory 4096 128 256 [] :=
   ⟨functions_at, by decide +kernel, by decide, sync, by decide⟩
 
 theorem head : Kopf callLayout 2 memory 4096 256 0 0 (Env.nil : Env D []) tiny world :=
@@ -102,7 +102,7 @@ theorem forever_source_pass_zeuge [Kern] :
     (by intro j hj; simp only [List.mem_singleton] at hj; subst j; decide)
     (by
       intro cb tb hcb htb hs hW m pc σ ρ hp hlo hlo2 hu hk hw hpr
-      exact lowB_ok call_spec addresses_bound rfl rfl body cb tb hcb htb hs
+      exact lowB_ok call_spec addresses_bound rfl rfl body HeldIn.nil cb tb hcb htb hs
         hW m pc σ ρ hp hlo hlo2 hu hk hw hpr)
     pre surroundings head world_at
   obtain ⟨m', run, _, _, world', keeps⟩ := h

@@ -9,6 +9,7 @@ public import Stage0.Senke.Ausdruck.Gleit.Slots.Test
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D}
+variable {H : List D.Lock}
 
 /-- The arithmetic/conversion child runs once. The guard only loads its actual
     raw result; success constructs the exact finite source value in that slot. -/
@@ -32,7 +33,7 @@ theorem nativeFloatBind_ok {P : Programm D} {f : D.Fn} {fp : Runner.W}
     (continuation : ∀ (v : Gleit low high) m' pc',
       PreS L m' pc' fp K (frei (.fl low high :: Γ) reserved) cr
         (Env.cons (τ := .fl low high) v ρ) reserved →
-      Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ →
+      Umf L A C dv m' fp Ks K H → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m'
         (pc' + BitVec.ofNat 64 (16 * cr.length))
         (pc' + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.1)
@@ -40,7 +41,7 @@ theorem nativeFloatBind_ok {P : Programm D} {f : D.Fn} {fp : Runner.W}
     {m : Runner.Mem} {pc : Runner.W}
     (pre : PreS L m pc fp K (frei Γ reserved)
       (ce ++ floatNarrowC (frei Γ reserved + 1) cc (stopC 107 (frei Γ reserved)) [] cr) ρ reserved)
-    (umf : Umf L A C dv m fp Ks K) (kopf : Kopf L f m fp K rp cfp ρ0 P σ0)
+    (umf : Umf L A C dv m fp Ks K H) (kopf : Kopf L f m fp K rp cfp ρ0 P σ0)
     (world : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
       (pc + BitVec.ofNat 64 (16 * (ce ++ floatNarrowC (frei Γ reserved + 1) cc

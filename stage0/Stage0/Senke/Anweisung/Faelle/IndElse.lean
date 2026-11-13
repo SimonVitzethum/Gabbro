@@ -17,6 +17,7 @@ set_option linter.unusedSectionVars false
 set_option maxHeartbeats 1000000
 set_option maxRecDepth 2048
 variable [Kern] {D : Deklaration} {L : Lay D}
+variable {H : List D.Lock}
 
 /-- Every fallible indirect call reserves the callee header, arguments and target temporary. -/
 theorem lowIndElse_top {Λ : List (Res D)} {Γ : Ctx} {n : Nat} {p : Expr D Γ Λ (.fnptr n)}
@@ -41,8 +42,9 @@ theorem lowIndElse_ok {A : D.Fn → Nat} {C : D.Fn → List II}
     (args : Args D Γ Λ (D.sigNr n).params) (σ₀ σ : World D) {same : σ₀ = σ} {c : List II} {top : Nat}
     {m : Runner.Mem} {pc fp : Runner.W} {K Ks : Nat} {ρ : Env D Γ}
     (hc : lowIndElse L p args reserved = some (c, top)) (ht : top + cap ≤ Ks)
-    (hp : PreS L m pc fp K (frei Γ reserved) c ρ reserved) (hu : Umf L A C dv m fp Ks K)
-    (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) :
+    (hp : PreS L m pc fp K (frei Γ reserved) c ρ reserved) (hu : Umf L A C dv m fp Ks K H)
+    (hW : WIn L fp Ks K) (hWa : WeltAt m L σ)
+    (hHs : HeldIn H (Signatur.anfang D (D.sigNr n)) (D.sigNr n).boden) :
     let v := eval σ₀ p σ ρ
     match R v.1 σ (umsig v.2 (evalArgs σ₀ args σ ρ)) with
     | .ok σ' r => ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧
@@ -95,7 +97,8 @@ theorem lowIndElse_ok {A : D.Fn → Nat} {C : D.Fn → List II}
     simp only [Enc, hS.addr] at he
     exact congrArg some he
   have hc2 := call_ok (indirect := true) (f := (eval σ₀ p σ ρ).1) (F := (frei Γ reserved)) (Ks := Ks) hS hp2.code (by exact hp2.far) hp2.frame hp.small hFB
-    (by rw [hpar]; omega) (by omega) (hA _) hu2.code hu2.depth (envAt_umsig (eval σ₀ p σ ρ).2 e2) hW hWa2 hu2.sync (fun _ => hr)
+    (by rw [hpar]; omega) (by omega) (hA _) hu2.code hu2.depth (envAt_umsig (eval σ₀ p σ ρ).2 e2) hW hWa2 hu2.sync
+    (hHs.passt (D.passt_sig (eval σ₀ p σ ρ).2)) (fun _ => hr)
   dsimp only
   generalize R (eval σ₀ p σ ρ).1 σ (umsig (eval σ₀ p σ ρ).2 (evalArgs σ₀ args σ ρ)) = o at hc2 ⊢
   cases o with
@@ -133,7 +136,8 @@ theorem callIndElse_ok {A : D.Fn → Nat} {C : D.Fn → List II}
     (hp : PreS L m pc fp K (frei Γ reserved)
       (elseC (D.sigNr n) (frei Γ reserved) cc cr ce) ρ reserved)
     (hs : 16 * (elseC (D.sigNr n) (frei Γ reserved) cc cr ce).length < 2 ^ 31)
-    (hu : Umf L A C dv m fp Ks K) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) :
+    (hu : Umf L A C dv m fp Ks K H) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ)
+    (hHs : HeldIn H (Signatur.anfang D (D.sigNr n)) (D.sigNr n).boden) :
     (∃ σ' v m2, R (eval σ p σ ρ).1 σ (umsig (eval σ p σ ρ).2 (evalArgs σ args σ ρ)) = .ok σ' v ∧
       Star ⟨pc, fp⟩ m ⟨callBranchPC pc cc cr (returnWords (D.sigNr n).erg (D.sigNr n).gruende) true, fp⟩ m2 ∧
       AgreeW L fp (frei Γ reserved) K m m2 ∧
@@ -148,7 +152,7 @@ theorem callIndElse_ok {A : D.Fn → Nat} {C : D.Fn → List II}
       (receiveC (D.sigNr n) (frei Γ reserved) ++ [ci 19 (frei Γ reserved + FB + (contextWords (D.sigNr n).params) + returnWords (D.sigNr n).erg (D.sigNr n).gruende) (16 * (cr.length + 2)) 0] ++
       cr ++ [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce)) ρ reserved := by
     simpa only [Deklaration.params, Deklaration.erg, Deklaration.gruende, elseC, List.append_assoc, Int.natCast_add, Int.ofNat_one] using hp
-  have hc := lowIndElse_ok (same := rfl) hS hA p args σ σ hcc (by omega) hpc.left hu hW hWa
+  have hc := lowIndElse_ok (same := rfl) hS hA p args σ σ hcc (by omega) hpc.left hu hW hWa hHs
   generalize pointerEq : eval σ p σ ρ = pointer at hc ⊢
   obtain ⟨f, hf⟩ := pointer
   dsimp only at hc ⊢

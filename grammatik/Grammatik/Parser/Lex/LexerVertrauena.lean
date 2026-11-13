@@ -127,12 +127,13 @@ def pruefeZeichen : List Char → Except VertrauenFehler Unit
     else if istUnsichtbar c then .error .unsichtbar
     else pruefeZeichen cs
 
-/-- Skip a string body starting after the opening quote (mirrors `nimmText`:
-    to the closing quote; a newline or the end stops the skip). -/
+/-- Skip a string body after its opener. An escaped quote is content, never the closer;
+    a raw newline or the end stops the skip. Invalid escapes are refused by the lexer. -/
 def ueberText : List Char → List Char
   | [] => []
   | '\n' :: cs => '\n' :: cs
   | '"' :: cs => cs
+  | '\\' :: c :: cs => if c = '\n' then '\n' :: cs else ueberText cs
   | _ :: cs => ueberText cs
 
 /-- The code characters: each string becomes one blank (so no run spans one),

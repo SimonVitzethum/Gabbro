@@ -13,6 +13,7 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 variable [Kern] {D : Deklaration} {L : Lay D}
+variable {H : List D.Lock}
 
 theorem endFloatLit_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
@@ -22,8 +23,8 @@ theorem endFloatLit_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {q low high : Int × Int} {rest : Endblock D (vertragVon D f) l (.fl low high :: Γ) Λ} :
-    (∀ {pr ex}, EndFloatCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
-    EndFloatCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .floatLit q low high rest) := by
+    (∀ {pr ex}, EndFloatCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H rest) →
+    EndFloatCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Endblock D (vertragVon D f) l Γ Λ from .floatLit q low high rest) := by
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   simp only [lowEnd, ← hlo0, floatLiteralL] at h
   cases hv : gleitPasst low high (bruch q) with
@@ -69,8 +70,8 @@ theorem endFloatOfLit_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {n : Int} {low high : Int × Int} {rest : Endblock D (vertragVon D f) l (.fl low high :: Γ) Λ} :
-    (∀ {pr ex}, EndFloatCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
-    EndFloatCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .floatOf (.lit n) low high rest) := by
+    (∀ {pr ex}, EndFloatCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H rest) →
+    EndFloatCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Endblock D (vertragVon D f) l Γ Λ from .floatOf (.lit n) low high rest) := by
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   have hx : gleitAusInt n = bruch (n, 1) := by
     simpa only [gleitAusInt] using (Gabbro.Grammatik.bruch_integer n).symm
@@ -87,8 +88,8 @@ theorem endFloatOfComputed_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes :
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {a b : Int} {e : Expr D Γ Λ (.int a b)} {low high : Int × Int} {rest : Endblock D (vertragVon D f) l (.fl low high :: Γ) Λ} :
-    (∀ {pr ex}, EndFloatCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
-    EndFloatCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .floatOf e low high rest) := by
+    (∀ {pr ex}, EndFloatCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H rest) →
+    EndFloatCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Endblock D (vertragVon D f) l Γ Λ from .floatOf e low high rest) := by
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   simp only [lowEnd, ← hlo0] at h
   split at h

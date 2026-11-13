@@ -18,6 +18,7 @@ set_option linter.unusedSectionVars false
 variable [Kern]
 
 variable {D : Deklaration} {L : Lay D} {reserved : Nat}
+variable {H : List D.Lock}
 
 theorem ite_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
@@ -28,13 +29,13 @@ theorem ite_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env
     (hs : 16 * (cc.length + 1 + ct.length + 1 + ce.length) < 2 ^ 31)
     (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = (functionFrame P f).internalResult) (hlo2 : lo ≤ frei Γ reserved)
     (hpr : ∀ j ∈ pr, j < frei Γ reserved) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
-    (hthen : ∀ m' pc', PreS L m' pc' fp K (frei Γ reserved) ct ρ reserved → Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 →
+    (hthen : ∀ m' pc', PreS L m' pc' fp K (frei Γ reserved) ct ρ reserved → Umf L A C dv m' fp Ks K H → Kopf L f m' fp K rp cfp ρ0 P σ0 →
       WeltAt m' L (σ.lese Λ cnd.orte) →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * ct.length))
         (pc' + BitVec.ofNat 64 (16 * ct.length) + BitVec.ofInt 64 (exPlus ex (ce.length + 1)).1)
         (pc' + BitVec.ofNat 64 (16 * ct.length) + BitVec.ofInt 64 (exPlus ex (ce.length + 1)).2)
         (execBlock O passes R t (σ.lese Λ cnd.orte) ρ) reserved)
-    (helse : ∀ m' pc', PreS L m' pc' fp K (frei Γ reserved) ce ρ reserved → Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 →
+    (helse : ∀ m' pc', PreS L m' pc' fp K (frei Γ reserved) ce ρ reserved → Umf L A C dv m' fp Ks K H → Kopf L f m' fp K rp cfp ρ0 P σ0 →
       WeltAt m' L (σ.lese Λ cnd.orte) →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * ce.length))
         (pc' + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofInt 64 ex.1)
@@ -42,7 +43,7 @@ theorem ite_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env
         (execBlock O passes R e (σ.lese Λ cnd.orte) ρ) reserved)
     (hp : PreS L m pc fp K (frei Γ reserved) (cc ++ [ci 19 (frei Γ reserved) (16 * (ct.length + 2)) 0] ++ ct ++
       [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce) ρ reserved)
-    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
+    (hu : Umf L A C dv m fp Ks K H) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
       (pc + BitVec.ofNat 64 (16 * (cc ++ [ci 19 (frei Γ reserved) (16 * (ct.length + 2)) 0] ++ ct ++
         [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce).length))

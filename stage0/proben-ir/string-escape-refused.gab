@@ -1,0 +1,5 @@
+// An unknown string escape is refused by the lexer before source elaboration.
+module ir_string_escape_refused {
+const TEXT : string max 3 = "a\qb";
+impl fn main() -> u32 in 0 .. 255 effects { pure } { return TEXT[0]; }
+}

@@ -345,4 +345,104 @@ public theorem relation_switch_off_zeuge :
         UStmt.ifElse,
         UStmt.blkEnd] := by cbv
 
+/-! ### Equality guards and inclusive range endpoints -/
+
+/-- `if i == 0 { use(i); return; } use(i);`: equality fixes the then value, and its failure excludes
+    the lower endpoint in the continuation, which can only be reached after the condition failed. -/
+public theorem guard_equality_after_return_zeuge :
+    stmts (uCond seen context (.bin "==" (.variable "i") (.lit 0)) useI (some (.ret none)) [] none useI) =
+      .ok [UStmt.ifBeg (.cmp "==" (.param "i") (.lit 0)),
+        UStmt.bind "i" (some (0, 0)) (.eng (.param "i") 0 0),
+        UStmt.bind "seen" (some (0, 0)) (.param "i"),
+        UStmt.ret .empty,
+        UStmt.ifElse,
+        UStmt.blkEnd,
+        UStmt.bind "i" (some (1, 100)) (.eng (.param "i") 1 100),
+        UStmt.bind "seen" (some (1, 100)) (.param "i")] := by cbv
+
+/-- `i != 100` excludes the upper endpoint in the then block; its failure fixes the else value. -/
+public theorem guard_inequality_upper_zeuge :
+    stmts (uCond seen context (.bin "!=" (.variable "i") (.lit 100)) useI none [] elseI useI) =
+      .ok [UStmt.ifBeg (.cmp "!=" (.param "i") (.lit 100)),
+        UStmt.bind "i" (some (0, 99)) (.eng (.param "i") 0 99),
+        UStmt.bind "seen" (some (0, 99)) (.param "i"),
+        UStmt.ifElse,
+        UStmt.bind "i" (some (100, 100)) (.eng (.param "i") 100 100),
+        UStmt.bind "seen" (some (100, 100)) (.param "i"),
+        UStmt.blkEnd,
+        UStmt.bind "seen" (some (0, 100)) (.param "i")] := by cbv
+
+/-- Equality to an interior value gives a singleton in the then block and no fact in the else block:
+    an interval cannot express the hole at 50. The continuation has no early-end fact either. -/
+public theorem guard_equality_middle_zeuge :
+    stmts (uCond seen context (.bin "==" (.variable "i") (.lit 50)) useI none [] elseI useI) =
+      .ok [UStmt.ifBeg (.cmp "==" (.param "i") (.lit 50)),
+        UStmt.bind "i" (some (50, 50)) (.eng (.param "i") 50 50),
+        UStmt.bind "seen" (some (50, 50)) (.param "i"),
+        UStmt.ifElse,
+        UStmt.bind "seen" (some (0, 100)) (.param "i"),
+        UStmt.blkEnd,
+        UStmt.bind "seen" (some (0, 100)) (.param "i")] := by cbv
+
+/-- The equality source with the switch off keeps the plain reading, including after an early return. -/
+public theorem guard_equality_switch_off_zeuge :
+    stmts (uCond seen {context with narrow := false} (.bin "==" (.variable "i") (.lit 0))
+        useI (some (.ret none)) [] none useI) =
+      .ok [UStmt.ifBeg (.cmp "==" (.param "i") (.lit 0)),
+        UStmt.bind "seen" (some (0, 100)) (.param "i"),
+        UStmt.ret .empty,
+        UStmt.ifElse,
+        UStmt.blkEnd,
+        UStmt.bind "seen" (some (0, 100)) (.param "i")] := by cbv
+
+/-- All four polarities at the lower and upper endpoints, interior exclusion, an impossible equality,
+    reversed operands and negation. The order is the order of the guard's local names. -/
+public theorem guard_equality_facts_zeuge :
+    ([ (.cmp "==" (.param "i") (.lit 0), true),
+       (.cmp "==" (.param "i") (.lit 0), false),
+       (.cmp "!=" (.param "i") (.lit 0), true),
+       (.cmp "!=" (.param "i") (.lit 0), false),
+       (.cmp "==" (.param "i") (.lit 100), true),
+       (.cmp "==" (.param "i") (.lit 100), false),
+       (.cmp "!=" (.param "i") (.lit 100), true),
+       (.cmp "!=" (.param "i") (.lit 100), false),
+       (.cmp "==" (.param "i") (.lit 50), false),
+       (.cmp "!=" (.param "i") (.lit 50), true),
+       (.cmp "==" (.param "i") (.lit 101), true),
+       (.cmp "==" (.lit 0) (.param "i"), false),
+       (.not (.cmp "==" (.param "i") (.lit 100)), true) ] : List (UEns × Bool)).map
+        (fun g => uWaechterFakten context g.1 g.2) =
+      [[("i", 0, 0)], [("i", 1, 100)], [("i", 1, 100)], [("i", 0, 0)],
+       [("i", 100, 100)], [("i", 0, 99)], [("i", 0, 99)], [("i", 100, 100)],
+       [], [], [], [("i", 1, 100)], [("i", 0, 99)]] := by cbv
+
+/-- True conjunctions and false disjunctions intersect the endpoint bounds; their opposite polarities
+    give nothing. False inequality already gives the singleton, also under negation or disjunction. -/
+public theorem guard_equality_composite_zeuge :
+    ([ (.and (.cmp "!=" (.param "i") (.lit 0)) (.cmp "!=" (.param "i") (.lit 100)), true),
+       (.and (.cmp "!=" (.param "i") (.lit 0)) (.cmp "!=" (.param "i") (.lit 100)), false),
+       (.or (.cmp "==" (.param "i") (.lit 0)) (.cmp "==" (.param "i") (.lit 100)), false),
+       (.or (.cmp "==" (.param "i") (.lit 0)) (.cmp "==" (.param "i") (.lit 100)), true),
+       (.not (.cmp "!=" (.param "i") (.lit 5)), true),
+       (.or (.cmp "!=" (.param "i") (.lit 5)) (.cmp "<" (.param "i") (.lit 5)), false) ] :
+        List (UEns × Bool)).map (fun g => uWaechterFakten context g.1 g.2) =
+      [[("i", 1, 99)], [], [("i", 1, 99)], [], [("i", 5, 5)], [("i", 5, 5)]] := by cbv
+
+/-- Named constants are literals before fact extraction, including with the operands reversed. -/
+public theorem guard_equality_constant_zeuge :
+    (uBool {context with lits := [("TOP", 100)]} (.bin "!=" (.variable "TOP") (.variable "i"))).map
+        (fun cv => uWaechterFakten context cv true) = .ok [("i", 0, 99)] := by cbv
+
+/-- Endpoint exclusion uses the current range; empty or unchanged results, mutable and unknown ranges
+    still give no fact. No shared `update`-arm boundary rule was added. -/
+public theorem guard_equality_limits_zeuge :
+    uWaechterFakten {context with types := [.int 10 90]} (.cmp "!=" (.param "i") (.lit 10)) true =
+        [("i", 11, 90)] ∧
+      uWaechterFakten {context with types := [.int 0 0]} (.cmp "!=" (.param "i") (.lit 0)) true = [] ∧
+      uWaechterFakten {context with types := [.int 0 0]} (.cmp "==" (.param "i") (.lit 0)) true = [] ∧
+      uWaechterFakten {context with muts := ["i"]} (.cmp "!=" (.param "i") (.lit 0)) true = [] ∧
+      uWaechterFakten {context with unknownRanges := ["i"]} (.cmp "!=" (.param "i") (.lit 0)) true = [] ∧
+      uGrenzen context "i" false (.cmp "==" (.param "i") (.lit 0)) = (none, none) := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩ <;> cbv
+
 end Gabbro.Grammatik.Parser.Uebersetze.GuardWitness

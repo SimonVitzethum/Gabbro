@@ -13,6 +13,7 @@ set_option linter.unusedSectionVars false
 variable [Kern]
 
 variable {D : Deklaration} {L : Lay D}
+variable {H : List D.Lock}
 
 theorem assignVar_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
@@ -22,7 +23,7 @@ theorem assignVar_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {τ : Ty} {x : Var Γ τ} {e : Expr D Γ Λ τ} :
-    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Stmt D (vertragVon D f) l Γ Λ Λ from .assignVar x e) reserved := by
+    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Stmt D (vertragVon D f) l Γ Λ Λ from .assignVar x e) reserved := by
   intro c top h hK _ hW m pc σ ρ hp _ hlo2 _ _ hWa hpr
   simp only [lowS, ← hlo0, resultWords_vertragVon] at h
   split at h
@@ -79,8 +80,9 @@ theorem call_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f 
     (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowPost L (functionFrame P f) P f (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
-     {callee : D.Fn} {args : Args D Γ Λ (D.params callee)} {proof0 : _} {proof1 : _} :
-    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Stmt D (vertragVon D f) l Γ Λ (nach D callee Λ) from .call callee args proof0 proof1) reserved := by
+     {callee : D.Fn} {args : Args D Γ Λ (D.params callee)} {proof0 : _} {proof1 : _}
+    (hH : HeldIn H Λ (vertragVon D f).boden) :
+    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Stmt D (vertragVon D f) l Γ Λ (nach D callee Λ) from .call callee args proof0 proof1) reserved := by
   intro c top h hK _ hW m pc σ ρ hp _ hlo2 hu hk hWa hpr
   simp only [lowS, ← hlo0, resultWords_vertragVon, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨ca, ta⟩, hca, hc⟩ := h
@@ -88,6 +90,7 @@ theorem call_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f 
   obtain ⟨rfl, rfl⟩ := hc
   have hct : frei Γ reserved + FB + (contextWords (D.params callee)) + 1 ≤ callTop callee (frei Γ reserved) ta := by simp only [callTop]; omega
   have hc := callC_ok (same := rfl) hS (hA callee) args (σ.lese Λ args.orte) (σ.lese Λ args.orte) hca (by omega) hp hu hW hWa
+    (HeldIn.ruf (V := vertragVon D f) hH proof0)
   simp only [execStmt]
   generalize R callee (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = o at hc ⊢
   cases o with
@@ -108,7 +111,7 @@ theorem ret_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f :
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {e : ErgExpr D Γ Λ (D.erg f)} {proof0 : _} :
-    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Stmt D (vertragVon D f) l Γ Λ Λ from .ret e proof0) reserved := by
+    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H (show Stmt D (vertragVon D f) l Γ Λ Λ from .ret e proof0) reserved := by
   intro c top h hK _ hW m pc σ ρ hp _ hlo2 _ hk hWa hpr
   simp only [lowS, ← hlo0, resultWords_vertragVon, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨ce, te⟩, he, hc⟩ := h

@@ -17,7 +17,7 @@ variable [Kern]
     The read event, callee frame, return ABI and protected slots are inherited
     from `lowE_ok`, `choice_ok` and the explicit child induction contract.
     This is one positive pass, not yet the counter/header integration. -/
-theorem forever_source_pass {D : Deklaration} {L : Lay D}
+theorem forever_source_pass {D : Deklaration} {L : Lay D} {H : List D.Lock}
     {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W} {cap : Nat}
@@ -36,12 +36,12 @@ theorem forever_source_pass {D : Deklaration} {L : Lay D}
     (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo2 : lo ≤ frei Γ reserved)
     (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     (bodyRuns : BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp
-      σ0 ρ0 cens tens pr (exPlus ex 4) body reserved)
+      σ0 ρ0 cens tens pr (exPlus ex 4) H body reserved)
     {m : Mem} {pc : W} {σ : World D} {ρ : Env D Γ}
     (hp : PreS L m pc fp K (frei Γ reserved)
       (cc ++ [ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++ cb ++
         [ci 18 64 0 0] ++ stopC 104 (frei Γ reserved)) ρ reserved)
-    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0 P σ0)
+    (hu : Umf L A C dv m fp Ks K H) (hk : Kopf L f m fp K rp cfp ρ0 P σ0)
     (hw : WeltAt m L σ) :
     let code := cc ++ [ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++ cb ++
       [ci 18 64 0 0] ++ stopC 104 (frei Γ reserved)
@@ -73,7 +73,7 @@ theorem forever_source_pass {D : Deklaration} {L : Lay D}
 
 /-- Compose the emitted counter header with the actual generic invariant/body lowering
     and induct on semantic fuel, retaining the concrete entry interface. -/
-theorem forever_counter_loop {D : Deklaration} {L : Lay D}
+theorem forever_counter_loop {D : Deklaration} {L : Lay D} {H : List D.Lock}
     {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W} {cap : Nat}
@@ -93,7 +93,7 @@ theorem forever_counter_loop {D : Deklaration} {L : Lay D}
     (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo2 : lo ≤ frei Γ reserved)
     (hpr : ∀ j ∈ counter :: one :: pr, j < frei Γ reserved)
     (bodyRuns : BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp
-      σ0 ρ0 cens tens (counter :: one :: pr) (exPlus ex 4) body reserved)
+      σ0 ρ0 cens tens (counter :: one :: pr) (exPlus ex 4) H body reserved)
 
     {pc back exit outerLeave outerNext : W} {stop : Int} {jump b c : BitVec 32}
     (backAt : pc + 32 + BitVec.ofNat 64
@@ -115,7 +115,7 @@ theorem forever_counter_loop {D : Deklaration} {L : Lay D}
       (foreverCounter counter one stop ++
         (cc ++ [ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++ cb ++
           [ci 18 64 0 0] ++ stopC 104 (frei Γ reserved))) ρ reserved)
-    (surround : Umf L A C dv m fp Ks K)
+    (surround : Umf L A C dv m fp Ks K H)
     (head : Kopf L f m fp K rp cfp ρ0 P σ0) (world : WeltAt m L σ)
     (read : m.rd64 (slot fp (BitVec.ofNat 64 counter)) = some (BitVec.ofNat 64 budget))
     (readOne : m.rd64 (slot fp (BitVec.ofNat 64 one)) = some 1)

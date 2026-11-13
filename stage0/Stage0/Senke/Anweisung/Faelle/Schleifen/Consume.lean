@@ -12,6 +12,7 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Consuming
 
 variable {D : Deklaration} {V : Vertrag D}
+variable {H : List D.Lock}
 
 /-- The canonical entry point, including read bookkeeping and the exact fuel.
     Selection is reevaluated after every completed body pass. The selected
@@ -179,8 +180,8 @@ theorem consumeTraverse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Na
     {inv : Expr D Γ Λ .bool} {bound : Int} {mass : Expr D Γ Λ (.int 0 bound)}
     {body : Block D (vertragVon D f) true (.index (D.count t) :: Γ) Λ Λ} :
     (∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0
-      cens tens pr ex body reserved) →
-    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex
+      cens tens pr ex H body reserved) →
+    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex H
       (show Stmt D (vertragVon D f) l Γ Λ Λ from
         .consumeTraverse t member edge inv bound mass body) reserved := by
   intro ihBody c top emitted hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
@@ -221,6 +222,7 @@ theorem consumeTraverse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Na
     σ0 := σ0
     ρ0 := ρ0
     pr := pr
+    H := H
     layout := hW
     small := hp.small
     abi := hlo0

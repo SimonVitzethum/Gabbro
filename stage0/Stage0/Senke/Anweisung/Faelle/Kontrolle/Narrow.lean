@@ -11,6 +11,7 @@ set_option linter.unusedSectionVars false
 set_option maxHeartbeats 1000000
 
 variable [Kern] {D : Deklaration}
+variable {H : List D.Lock}
 
 /-- Evaluate once, preserve the value, and dispatch on the outside flag. -/
 theorem narrow_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
@@ -27,20 +28,20 @@ theorem narrow_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
     (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     {m : Runner.Mem} {pc : Runner.W}
     (herr : ¬ (low' ≤ (eval σ e σ ρ).n ∧ (eval σ e σ ρ).n ≤ high') →
-      ∀ m' pc', PreS L m' pc' fp K (frei Γ reserved) cx ρ reserved → Umf L A C dv m' fp Ks K →
+      ∀ m' pc', PreS L m' pc' fp K (frei Γ reserved) cx ρ reserved → Umf L A C dv m' fp Ks K H →
       Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * cx.length))
         (pc' + BitVec.ofNat 64 (16 * cx.length) + BitVec.ofInt 64 (exPlus ex (cr.length + 1)).1)
         (pc' + BitVec.ofNat 64 (16 * cx.length) + BitVec.ofInt 64 (exPlus ex (cr.length + 1)).2) out reserved)
     (hrest : ∀ hin : low' ≤ (eval σ e σ ρ).n ∧ (eval σ e σ ρ).n ≤ high',
       ∀ m' pc', PreS L m' pc' fp K (frei (.int low' high' :: Γ) reserved) cr (Env.cons (τ := .int low' high')
-        ⟨(eval σ e σ ρ).n, hin.1, hin.2⟩ ρ) reserved → Umf L A C dv m' fp Ks K →
+        ⟨(eval σ e σ ρ).n, hin.1, hin.2⟩ ρ) reserved → Umf L A C dv m' fp Ks K H →
       Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * cr.length))
         (pc' + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.1)
         (pc' + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.2) out reserved)
     (hp : PreS L m pc fp K (frei Γ reserved) (narrowC (frei Γ reserved) low high low' high' ce cx cr) ρ reserved)
-    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
+    (hu : Umf L A C dv m fp Ks K H) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
       (pc + BitVec.ofNat 64 (16 * (narrowC (frei Γ reserved) low high low' high' ce cx cr).length))
       (pc + BitVec.ofNat 64 (16 * (narrowC (frei Γ reserved) low high low' high' ce cx cr).length) + BitVec.ofInt 64 ex.1)

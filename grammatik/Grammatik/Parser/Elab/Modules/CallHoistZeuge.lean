@@ -313,4 +313,117 @@ theorem tagged_slot_annotation_zeuge :
         (fun result => result.1.getLast?) =
       some (some (.bind false "a" (some (.atom "Other")) (.variable "#r0"))) := by kernel_rfl
 
+/-- A parameter's fields, including nested value fields, allow a branch-returned call. -/
+theorem zweig_feld_zeuge :
+    hebeKoerper { zeugeK with lokal := ["r"] }
+        (.block [.cond (.variable "c") (.block [] (some (.ret (some (.call "f"
+          [.field (.variable "r") "node", .field (.field (.variable "r") "inner") "pos"]))))) [] none] none) =
+      .block [.cond (.variable "c") (.block [.bind false "#r0" none (.call "f"
+        [.field (.variable "r") "node", .field (.field (.variable "r") "inner") "pos"])]
+          (some (.ret (some (.variable "#r0"))))) [] none] none := by kernel_rfl
+
+/-- Immutable and mutable local bindings both establish private value roots. -/
+theorem lokales_feld_zeuge :
+    hebeKoerper zeugeK (.block
+        [.bind false "r" none (.variable "input"), .bind true "m" none (.variable "input"),
+         .cond (.variable "c") (.block [] (some (.ret (some (.call "f"
+          [.field (.variable "r") "node", .field (.variable "m") "pos"]))))) [] none] none) =
+      .block [.bind false "r" none (.variable "input"), .bind true "m" none (.variable "input"),
+        .cond (.variable "c") (.block [.bind false "#r0" none (.call "f"
+          [.field (.variable "r") "node", .field (.variable "m") "pos"])]
+            (some (.ret (some (.variable "#r0"))))) [] none] none := by kernel_rfl
+
+/-- Nested calls retain argument order, while local projections remain frame-private values. -/
+theorem feld_aufruf_reihenfolge_zeuge :
+    hebeRet { zeugeK with lokal := ["r"] } 64 0 (.call "f"
+        [.field (.variable "r") "node", .call "g" [.field (.variable "r") "pos"]]) =
+      ([.bind false "#r0" none (.call "g" [.field (.variable "r") "pos"]),
+        .bind false "#r1" none (.call "f" [.field (.variable "r") "node", .variable "#r0"])],
+        .variable "#r1", 2) := by kernel_rfl
+
+/-- Static roots, even when shadowed, and unknown roots are never clean local projections. -/
+theorem feld_grenzen_zeuge :
+    (hebeRet { zeugeK with lokal := ["s"] } 64 0
+      (.call "f" [.field (.variable "s") "node"])).1 = [] ∧
+    (hebeRet zeugeK 64 0 (.call "f" [.field (.variable "unknown") "node"])).1 = [] :=
+  ⟨by kernel_rfl, by kernel_rfl⟩
+
+/-- A clean local argument never permits its call to cross an earlier static read. -/
+theorem feld_statik_davor_zeuge :
+    hebeE { zeugeK with lokal := ["r"] } 64 0 true
+        (.bin "+" (.variable "s") (.call "f" [.field (.variable "r") "node"])) =
+      ([], .bin "+" (.variable "s") (.call "f" [.field (.variable "r") "node"]), 0, false) := by kernel_rfl
+
+/-- The short-circuit purity test shares the same exact boundary as expression rewriting. -/
+theorem ruhig_feld_zeuge :
+    ruhig { zeugeK with lokal := ["r"] } 64 (.field (.field (.variable "r") "inner") "pos") = true ∧
+    ruhig zeugeK 64 (.field (.variable "s") "pos") = false ∧
+    ruhig zeugeK 64 (.field (.index (.field (.variable "T") "slots") (.lit 1)) "k") = false :=
+  ⟨by kernel_rfl, by kernel_rfl, by kernel_rfl⟩
+
+/-- A table field argument never becomes a clean local field, even with an atomic index. -/
+theorem feld_slot_argument_zeuge :
+    hebeRet zeugeK 64 0 (.call "f"
+        [.field (.index (.field (.variable "T") "slots") (.lit 1)) "k"]) =
+      ([], .call "f" [.field (.index (.field (.variable "T") "slots") (.lit 1)) "k"], 0) := by kernel_rfl
+
+/-- A computed slot index is bound inside its guard, before that branch's returned read. -/
+theorem berechneter_slot_zeuge :
+    hebeKoerper { zeugeK with lokal := ["k"] } (.block
+        [.cond (.bin ">=" (.variable "k") (.lit 1)) (.block [] (some (.ret (some
+          (.field (.index (.field (.variable "T") "slots") (.bin "-" (.variable "k") (.lit 1))) "k")))))
+          [] none] (some (.ret (some (.lit 0))))) =
+      .block [.cond (.bin ">=" (.variable "k") (.lit 1))
+        (.block [.bind false "#r0" none (.bin "-" (.variable "k") (.lit 1))]
+          (some (.ret (some (.field (.index (.field (.variable "T") "slots") (.variable "#r0")) "k")))))
+        [] none] (some (.ret (some (.lit 0)))) := by kernel_rfl
+
+/-- The same index lowering reaches bindings, assignment values and call arguments. -/
+theorem slot_wertpositionen_zeuge :
+    let source := SExpr.field (.index (.field (.variable "T") "slots")
+      (.bin "-" (.variable "k") (.lit 1))) "k"
+    let lowered := SExpr.field (.index (.field (.variable "T") "slots") (.variable "#r0")) "k"
+    (hebeS zeugeK 64 0 (.bind false "v" none source)).1 =
+      [.bind false "#r0" none (.bin "-" (.variable "k") (.lit 1)), .bind false "v" none lowered] ∧
+    (hebeS zeugeK 64 0 (.set (.variable "v") "=" source)).1 =
+      [.bind false "#r0" none (.bin "-" (.variable "k") (.lit 1)), .set (.variable "v") "=" lowered] ∧
+    (hebeS zeugeK 64 0 (.call "f" [source])).1 =
+      [.bind false "#r0" none (.bin "-" (.variable "k") (.lit 1)), .call "f" [lowered]] :=
+  ⟨by kernel_rfl, by kernel_rfl, by kernel_rfl⟩
+
+/-- Index calls execute before the index calculation, and the resulting slot read still blocks
+    a later call. No table read is silently classified as a private record projection. -/
+theorem slot_index_reihenfolge_zeuge :
+    hebeE zeugeK 64 0 true (.bin "+"
+        (.field (.index (.field (.variable "T") "slots") (.bin "+" (.call "f" []) (.lit 1))) "k")
+        (.call "g" [])) =
+      ([.bind false "#r0" none (.call "f" []),
+        .bind false "#r1" none (.bin "+" (.variable "#r0") (.lit 1))],
+        .bin "+" (.field (.index (.field (.variable "T") "slots") (.variable "#r1")) "k")
+          (.call "g" []), 2, false) := by kernel_rfl
+
+/-- A computed index after an earlier state read stays at its original position. -/
+theorem slot_index_bleibt_zeuge :
+    hebeE zeugeK 64 0 true (.bin "+" (.variable "s")
+        (.field (.index (.field (.variable "T") "slots") (.bin "-" (.variable "k") (.lit 1))) "k")) =
+      ([], .bin "+" (.variable "s")
+        (.field (.index (.field (.variable "T") "slots") (.bin "-" (.variable "k") (.lit 1))) "k"),
+        0, false) := by kernel_rfl
+
+/-- A stateful index is evaluated once at its own read, and still blocks later calls. -/
+theorem slot_index_statik_zeuge :
+    hebeE zeugeK 64 0 true (.bin "+"
+        (.field (.index (.field (.variable "T") "slots") (.bin "+" (.variable "s") (.lit 1))) "k")
+        (.call "g" [])) =
+      ([.bind false "#r0" none (.bin "+" (.variable "s") (.lit 1))],
+        .bin "+" (.field (.index (.field (.variable "T") "slots") (.variable "#r0")) "k")
+          (.call "g" []), 1, false) := by kernel_rfl
+
+/-- Tagged slot reads use the same computed-index binding before their single match read. -/
+theorem tagged_slot_berechnet_zeuge :
+    (leseFeld zeugeF 64 0 false "a" none
+        (.field (.index (.field (.variable "T") "slots") (.bin "-" (.variable "k") (.lit 1))) "k")).map
+          (fun result => (result.1.head?, result.2)) =
+      some (some (.bind false "#r0" none (.bin "-" (.variable "k") (.lit 1))), 3) := by kernel_rfl
+
 end Gabbro.Grammatik.Parser.CallHoist
