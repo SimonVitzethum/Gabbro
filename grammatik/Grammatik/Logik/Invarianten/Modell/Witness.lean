@@ -10,10 +10,10 @@ namespace Gabbro.Grammatik.Invarianten.Modell.Witness
 
 open Frag Elim Elim.Korrekt
 
-/-! Computed values are checked in one of two ways: semantically (through the
-    generic soundness theorems), or, where the exact candidate chosen by the trace
-    is the claim, by a kernel evaluation of ONE recovered candidate on a one-variable
-    formula (`decide +kernel`); the elaborator never runs Cooper elimination here. -/
+/-! Computed values use the generic soundness theorems or finite one-variable
+    recovery calculations. Exact candidate calculations use natural or abstract
+    keys, without reducing dependent model declarations or whole worlds.
+    The elaborator never runs quantified Cooper elimination here. -/
 
 /-- P16's false existential is false at every environment; even an empty outer
     prefix must return a concrete environment rather than report no witness. -/
@@ -166,7 +166,8 @@ theorem unobserved_field_preserved_zeuge :
       Frag.Witness.initial.slots () 1 () := by
   have absent : (.slot () () 1 : Observation Frag.Witness.declaration) ∉ snippetKeys := by
     decide
-  exact if_neg absent
+  change (if Observation.slot () () 1 ∈ snippetKeys then _ else _) = _
+  simp only [absent, ↓reduceIte]
 
 theorem snippet_false_invariant_zeuge :
     eval (snippetWorld Frag.Witness.initial snippetKeys observationValues)
@@ -203,15 +204,34 @@ theorem short_translated_zeuge :
     uebersetzeB (Frag.Witness.declaration.traeger ()) shortInvariant = .ok shortFormula := by
   rfl
 
-/-- The one recovered candidate of the typed one-variable VC, evaluated by the
-    kernel: the boundary branch `3 + 1` of `x > 3` within `0..10`. -/
+/- Keep the finite candidate calculation polymorphic in the key, so its arithmetic
+   does not unfold the observation's dependent declaration.
+   The only candidates are -2, 0 and 4; the bounds and refutation select 4. -/
+private def shortValidity (key : α) : LProp α :=
+  .imp (.and (scalarBounds (.int 0 10) (.var key)) .tru)
+    (.le (.var key) (.konst 3))
+
+private theorem short_recovered [DecidableEq α] (key : α) :
+    recoverOne (recordStep key (elimination (.not (shortValidity key))).1)
+      (fun _ => 0) = some 4 := by
+  simp [shortValidity, scalarBounds, recoverOne, recordStep, prepare, normalizedCandidates,
+    elimination, compile, charge, negateMetered, StateT.run, StateT.mk,
+    StateT.bind, StateT.pure, Except.bind, Except.pure,
+    normalize, normalizeCoefficients, normalizeAtom, coefficientLcm,
+    period, lowerBounds, infinityThreshold, witnessBelow, Int.min_def, Int.max_def,
+    atom, truth, conj, disj, QF.neg, splitVar, addTerm, subTerm, scaleTerm,
+    foldTerm, LTerm.constant?, List.find?, QF.eval, Relation.eval,
+    LTerm.denote, Assignment.bind]
+
+/-- The exact boundary candidate is checked independently of the model context;
+    the general replay theorem supplies the final compiled-matrix check. -/
 private theorem short_selected :
     counterexample [.glob false]
         (stateValidity (D := Frag.Witness.declaration) [.glob false] shortFormula) =
       some (Assignment.bind (fun _ => 0) (.glob false) 4) :=
   counterexample_single_of_recovered (.glob false)
     (stateValidity (D := Frag.Witness.declaration) [.glob false] shortFormula) 4
-    (by decide +kernel)
+    (short_recovered (.glob false))
 
 private theorem short_bounds :
     (observationBounds [(.glob false : Observation Frag.Witness.declaration)]).denote

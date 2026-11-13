@@ -26,10 +26,12 @@ theorem range_true_computed_zeuge :
   intro world
   apply (uebersetzeB_sound (Frag.Witness.declaration.traeger ()) rangeInvariant rangeFormula
     range_translated_zeuge world).mpr
-  -- The declared range, through the generic bounds lemma rather than field access
-  -- on `Wert`, whose structure is visible only after unfolding the declared type.
-  exact And.right (scalarBounds_value (Ty.int 0 10) trivial (world.globs false)
-    (.var (.glob false) : LTerm (Observation Frag.Witness.declaration)) (assignment world) rfl)
+  have bounds := observationBounds_assignment rangeFormula.keys world
+    (uebersetzeB_supported (Frag.Witness.declaration.traeger ()) rangeInvariant rangeFormula
+      range_translated_zeuge)
+  change ((0 : Int) ≤ assignment world (.glob false) ∧
+    assignment world (.glob false) ≤ 10) ∧ True at bounds
+  exact bounds.1.2
 
 theorem range_true_sound_zeuge (world : World Frag.Witness.declaration) :
     eval world rangeInvariant world .nil = true :=
@@ -85,7 +87,9 @@ theorem short_false_computed_zeuge :
 theorem short_counterexample_computed_zeuge :
     (invariantCounterexample Frag.Witness.initial (Frag.Witness.declaration.traeger ())
       Witness.shortInvariant).map (fun world => assignment world (.glob false)) = some 4 := by
-  have keys : Witness.shortFormula.keys = [.glob false] := by decide
+  have keys : Witness.shortFormula.keys = [.glob false] := by
+    simp [Witness.shortFormula, LProp.keys, LProp.freeVariables, LTerm.variables,
+      List.eraseDups_cons]
   have unfolded : invariantCounterexample Frag.Witness.initial
       (Frag.Witness.declaration.traeger ()) Witness.shortInvariant =
         stateCounterexample Frag.Witness.initial [.glob false] Witness.shortFormula := by
@@ -102,7 +106,9 @@ theorem short_counterexample_sound_zeuge (world : World Frag.Witness.declaration
     Witness.shortInvariant world success
 
 theorem repeated_keys_computed_zeuge :
-    Frag.Witness.boundedFormula.keys = [.glob false, .glob true] := by decide
+    Frag.Witness.boundedFormula.keys = [.glob false, .glob true] := by
+  simp [Frag.Witness.boundedFormula, LProp.keys, LProp.freeVariables, LTerm.variables,
+    List.eraseDups_cons]
 
 def shadowedFormula : LProp Nat :=
   .all 0 (.and (.eq (.var 0) (.var 0)) (.eq (.var 1) (.konst 0)))

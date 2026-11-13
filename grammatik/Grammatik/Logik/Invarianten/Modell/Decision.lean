@@ -96,7 +96,7 @@ private theorem decideInvariant_result (carriers : List (D.Tab ⊕ D.Glob))
   cases translated : uebersetzeB carriers expression with
   | error cause => simp [decideInvariant, translated] at success
   | ok formula =>
-      refine ⟨formula, translated, ?_⟩
+      refine ⟨formula, rfl, ?_⟩
       by_cases enough : Budget (closedInvariant formula) ≤
           allowance.getD (Budget (closedInvariant formula))
       · have computed := decideInvariant_at_budget carriers expression formula translated allowance enough
