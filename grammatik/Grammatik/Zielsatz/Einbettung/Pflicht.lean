@@ -433,18 +433,24 @@ theorem orakelΦ_regLokal {O' : Orakel D'} (hRL : RegLokal O') : RegLokal (E.ora
       exact E.bild_globs hZ (hΦ σ₁) (hΦ σ₂) hz (hg.2 g (List.mem_singleton.mpr rfl))
     · simp only [hz, Bool.false_eq_true, ↓reduceIte]
 
-/-- The induced oracle meets the axiom ensures of `D`, when the `D'`-oracle meets their images. -/
-theorem orakelΦ_axVertrag {O' : Orakel D'} {Q : AxEns D} {Q' : AxEns D'} (hQ' : AxVertragO Q' O')
+include hΦ in
+/-- The induced oracle meets the conditional ensures when related calls preserve the pre.
+    The arguments are the same embedded values, and `hΦ` relates the queried worlds. -/
+theorem orakelΦ_axVertragOP {O' : Orakel D'} {Pre : AxPre D} {Pre' : AxPre D'}
+    {Q : AxEns D} {Q' : AxEns D'} (hQ' : AxVertragOP Pre' Q' O')
+    (hPre : ∀ a (σ : World D) (σ' : World D') (ρ : Env D (D.aparams a)),
+      E.Treu hZ σ.speicher σ' → Pre a σ ρ = true → Pre' (E.ax a) σ' (E.aparamsUm a ρ) = true)
     (hQ : ∀ a (W' : World D') (v : ErgVal D (D.aerg a)),
       Q' (E.ax a) W' (castV (E.aerg a).symm (E.ergE _ v)) = Q a ((E.speicherZ hZ W'.speicher).welt []) v)
-    (hQL : AxEnsLokal Q) : AxVertragO Q (E.orakelΦ hZ pad Φ O') := by
-  intro a σ ρ v hv
+    (hQL : AxEnsLokal Q) : AxVertragOP Pre Q (E.orakelΦ hZ pad Φ O') := by
+  intro a σ ρ v hp hv
   have hw := E.axiom_wert hZ (fun _ => Option.none) O'.zeiger a
     (O'.wirkt (E.ax a) (Φ.haupt σ) (E.aparamsUm a ρ)).2 (E.aerg a)
   have hv' : einpassenErg (fun _ => Option.none) (D.aerg a) (O'.wirkt (E.ax a) (Φ.haupt σ) (E.aparamsUm a ρ)).2 =
       some v := hv
   rw [hv', Option.map_some] at hw
-  have hq := hQ' (E.ax a) (Φ.haupt σ) (E.aparamsUm a ρ) _ hw
+  have hq := hQ' (E.ax a) (Φ.haupt σ) (E.aparamsUm a ρ) _
+    (hPre a σ (Φ.haupt σ) ρ (hΦ σ) hp) hw
   rw [hQ] at hq
   show Q a (E.antwortWelt hZ pad σ _) v = true
   rw [← hq]

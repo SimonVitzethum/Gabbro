@@ -411,6 +411,21 @@
   `gabbro_ziel` recombined): no guarantee is weakened and nothing is newly assumed. The
   call-site form (the software contract's pre proved at each call, `CallSitePflicht`) and the
   provider history in the machine replace the unconditional software premise in a later step.
+
+  C08 REPLAY-BLOCKER REPAIR (2026-11-13, change of meaning of premise (b) for
+  software items). The body duties (KoerperGut/InvGut/PflichtWP, SC and atomic)
+  assume a software item's declared ensures only at calls whose interface pre
+  held: their oracle class is the pre-conditional AxVertragOP over PreQ
+  (hardware and unresolved legs unconditional). This enlarges the quantified
+  oracle class and strengthens (b): an unsatisfiable software ensures off-pre
+  no longer empties the body obligations, and bodies that depend on a software
+  answer off-pre are refused. Embeddings must carry a true source PreQ to the
+  image call with the same embedded arguments and a related world (Uebernahme.axPre).
+  The run-level CallSitePflicht, PostDeckt and ForeignVertrag are unchanged.
+  All existing goal statements retain their text and unconditional hardware
+  premises; their proofs lift full-summary oracles into the conditional class.
+  The call-site goal and the proof that the actual binding inhabits this class
+  are staged separately; no such class-membership claim is made here.
 -/
 module
 
