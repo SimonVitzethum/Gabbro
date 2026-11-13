@@ -164,8 +164,13 @@ private theorem zeugeProgramm_tokens : (druckItems zeugeProgramm).all tokGutB = 
 theorem zeugeProgramm_text :
     (match lex (renderText (druckItems zeugeProgramm)) with
       | .ok toks => parseTopTief toks
-      | .error _ => .error "lex") = .ok zeugeProgramm :=
-  rundlauf_programm zeugeProgramm zeugeProgramm_gut (tokGut_of_all _ zeugeProgramm_tokens)
+      | .error _ => .error "lex") = .ok zeugeProgramm := by
+  -- Rewrite the lexer before elaborating the program reader's result type.
+  -- Matching a complete round-trip application here can normalize the concrete
+  -- lexer while unifying the dependent match's branches.
+  rewrite [lex_render (druckItems zeugeProgramm)
+    (tokGut_of_all (druckItems zeugeProgramm) zeugeProgramm_tokens)]
+  exact zeugeProgramm_rund
 
 
 /-- A device with a mirror and two registers -- a range type, an address, a class with its stages,

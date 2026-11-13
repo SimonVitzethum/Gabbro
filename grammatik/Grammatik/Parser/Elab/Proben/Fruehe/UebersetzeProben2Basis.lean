@@ -302,9 +302,10 @@ private theorem absent_measures (unit : Uebersetze.UProg)
   rw [collected]
   rfl
 
-/-- Actual function successes, contracts and absent source measures close the
-    existing assembler without normalizing its dependent program body. -/
-theorem lowerStage_ok (unit : Uebersetze.UProg) (noInvs : unit.invs = [])
+/-- Actual invariant and function successes, contracts and absent source measures
+    close the existing assembler without normalizing its dependent program body. -/
+theorem lowerStage_checked (unit : Uebersetze.UProg)
+    (invariants : lowerInvs unit (List.finRange unit.invs.length) = .ok ())
     (functions : ∀ f : Fin unit.fns.length,
       (lowerFnAt unit f).toOption.isSome = true ∧ (fnAt unit f).decreases = none)
     (contracts : contractGate unit = true) : lowerStage unit = "OK" := by
@@ -330,7 +331,6 @@ theorem lowerStage_ok (unit : Uebersetze.UProg) (noInvs : unit.invs = [])
     split
     · rfl
     · contradiction
-  have invariants := invs_empty unit noInvs
   have functions := each_success unit (fun f => (functions f).1) (List.finRange unit.fns.length)
   have lowered : (lowerAllg unit).toOption.isSome = true := by
     unfold lowerAllg
@@ -348,6 +348,13 @@ theorem lowerStage_ok (unit : Uebersetze.UProg) (noInvs : unit.invs = [])
   unfold lowerStage
   rw [except_ok_get (ε := String) (α := Programm (declOf unit) × List (declOf unit).Fn)
     (x := lowerAllg unit) lowered]
+
+/-- Units without invariants discharge the same invariant gate by emptiness. -/
+theorem lowerStage_ok (unit : Uebersetze.UProg) (noInvs : unit.invs = [])
+    (functions : ∀ f : Fin unit.fns.length,
+      (lowerFnAt unit f).toOption.isSome = true ∧ (fnAt unit f).decreases = none)
+    (contracts : contractGate unit = true) : lowerStage unit = "OK" :=
+  lowerStage_checked unit (invs_empty unit noInvs) functions contracts
 
 /-- Preserve the exact first refusal: every failed function has this diagnostic,
     and at least one actual member fails. The ordinary invariant gate still runs. -/
