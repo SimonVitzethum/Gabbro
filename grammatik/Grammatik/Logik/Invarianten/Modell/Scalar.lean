@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Logik.Invarianten.Frag.Observation
-public import Grammatik.Logik.Invarianten.Modell.Trace
+public import Grammatik.Logik.Invarianten.Modell.Closure
 
 @[expose] public section
 
@@ -71,11 +71,6 @@ theorem decodeScalar_complete (τ : Ty) (value : Int)
       exact ⟨_, dif_pos valid⟩
   | _ => exact False.elim valid
 
-/-- The type of the observed location; a slot index changes no field type. -/
-def observationType : Observation D → Ty
-  | .glob name => D.gtyp name
-  | .slot table field _ => D.typ table field
-
 def observationBounds (keys : List (Observation D)) : LProp (Observation D) :=
   keys.foldr (fun key rest => .and (scalarBounds (observationType key) (.var key)) rest) .tru
 
@@ -99,5 +94,62 @@ theorem observationBounds_sound (keys : List (Observation D))
   apply decodeScalar_complete
   cases kind : observationType key <;>
     simpa only [scalarBounds, LProp.denote, LTerm.denote, kind] using atKey
+
+/-- Every actual scalar value satisfies its declared bounds; no range hypothesis
+    is added to the invariant soundness theorem. -/
+theorem scalarBounds_value (τ : Ty) (value : Wert D τ) (term : LTerm α)
+    [DecidableEq α] (values : Assignment α)
+    (same : term.denote values = scalarValue τ value)
+    (supported : match τ with | .int _ _ | .str _ => True | _ => False) :
+    (scalarBounds τ term).denote values := by
+  cases τ with
+  | int lo hi =>
+      change lo ≤ term.denote values ∧ term.denote values ≤ hi
+      rw [same]
+      exact ⟨value.lo_le, value.le_hi⟩
+  | str capacity =>
+      change 0 ≤ term.denote values ∧ term.denote values ≤ (capacity : Int)
+      rw [same]
+      change 0 ≤ (value.val.length : Int) ∧ (value.val.length : Int) ≤ (capacity : Int)
+      constructor
+      · omega
+      · exact_mod_cast value.property
+  | _ => exact False.elim supported
+
+theorem observationBounds_assignment (keys : List (Observation D)) (world : World D)
+    (supported : ∀ key ∈ keys, ScalarObservation key) :
+    (observationBounds keys).denote (assignment world) := by
+  induction keys with
+  | nil => trivial
+  | cons key keys ih =>
+      change (scalarBounds (observationType key) (.var key)).denote (assignment world) ∧
+        (observationBounds keys).denote (assignment world)
+      constructor
+      · have atKey := supported key (List.mem_cons.mpr (Or.inl rfl))
+        cases key with
+        | glob name => exact scalarBounds_value _ (world.globs name) _ _ rfl atKey
+        | slot table field index =>
+            exact scalarBounds_value _ (world.slots table index field) _ _ rfl atKey
+      · exact ih (fun other member => supported other (List.mem_cons.mpr (Or.inr member)))
+
+theorem scalarBounds_closed [DecidableEq α] (τ : Ty) (term : LTerm α) (bound : List α)
+    (supported : termClosedB bound term = true) :
+    closedUnderB bound (scalarBounds τ term) = true := by
+  cases τ <;> simp [scalarBounds, closedUnderB, termClosedB, supported]
+
+theorem observationBounds_closed (keys : List (Observation D)) (bound : List (Observation D))
+    (covered : ∀ key ∈ keys, key ∈ bound) :
+    closedUnderB bound (observationBounds keys) = true := by
+  induction keys with
+  | nil => rfl
+  | cons key keys ih =>
+      change (closedUnderB bound (scalarBounds (observationType key) (.var key)) &&
+        closedUnderB bound (observationBounds keys)) = true
+      rw [Bool.and_eq_true]
+      constructor
+      · apply scalarBounds_closed
+        simpa only [termClosedB, decide_eq_true_eq] using
+          covered key (List.mem_cons.mpr (Or.inl rfl))
+      · exact ih (fun other member => covered other (List.mem_cons.mpr (Or.inr member)))
 
 end Gabbro.Grammatik.Invarianten.Modell

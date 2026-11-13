@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Logik.Invarianten.Frag.Syntax
+public import Grammatik.Logik.Invarianten.Frag.Support
 public import Grammatik.Kern.Semantik.Semantik.T1.Teil1
 
 @[expose] public section
@@ -18,6 +18,16 @@ inductive Observation (D : Deklaration) where
   | glob (name : D.Glob)
   | slot (table : D.Tab) (field : D.Feld table) (index : Int)
   deriving DecidableEq
+
+def observationType : Observation D → Ty
+  | .glob name => D.gtyp name
+  | .slot table field _ => D.typ table field
+
+/-- Only these memory representations can occur in a successful translation. -/
+def ScalarObservation (key : Observation D) : Prop :=
+  match observationType key with
+  | .int _ _ | .str _ => True
+  | _ => False
 
 /-- Only the integer and string branches are admitted by the translator. The
     remaining branches make the assignment total without accepting those types. -/
@@ -55,6 +65,15 @@ def Payload (D : Deklaration) : Ty → Type
   | .str _ => LTerm (Observation D)
   | _ => Empty
 
+def payloadObservations : (τ : Ty) → Payload D τ → List (Observation D)
+  | .int _ _, term => term.variables
+  | .bool, formula => formula.freeVariables
+  | .str _, term => term.variables
+  | _, _ => []
+
+def PayloadSupported (τ : Ty) (payload : Payload D τ) : Prop :=
+  ∀ key ∈ payloadObservations τ payload, ScalarObservation key
+
 def Represents (world : World D) : (τ : Ty) → Payload D τ → Wert D τ → Prop
   | .int _ _, term, value => term.denote (assignment world) = value.n
   | .bool, formula, value => value = true ↔ formula.denote (assignment world)
@@ -66,6 +85,7 @@ def Represents (world : World D) : (τ : Ty) → Payload D τ → Wert D τ → 
 structure Encoded (D : Deklaration) (τ : Ty) (value : World D → Wert D τ) where
   payload : Payload D τ
   correct : ∀ world, Represents world τ payload (value world)
+  supported : PayloadSupported τ payload
 
 /-- A variable's integer value or string length is fixed by the supplied local
     environment. Invariant environments are empty except for bounded slot binders. -/
@@ -74,28 +94,37 @@ def encodeConstant (τ : Ty) (value : Wert D τ) :
   match τ, value with
   | .int _ _, value => .ok
       { payload := .konst value.n
-        correct := fun _ => rfl }
+        correct := fun _ => rfl
+        supported := by simp [PayloadSupported, payloadObservations, LTerm.variables] }
   | .bool, value => .ok
       { payload := if value = true then .tru else .fls
-        correct := fun _ => by cases value <;> simp [Represents, LProp.denote] }
+        correct := fun _ => by cases value <;> simp [Represents, LProp.denote]
+        supported := by
+          cases value <;> simp [PayloadSupported, payloadObservations, LProp.freeVariables] }
   | .str _, value => .ok
       { payload := .konst value.val.length
-        correct := fun _ => rfl }
+        correct := fun _ => rfl
+        supported := by simp [PayloadSupported, payloadObservations, LTerm.variables] }
   | _, _ => .error (.unsupported "non-scalar local")
 
 /-- The type test is explicit and refuses Boolean memory and every non-linear
     aggregate representation. Integer fields and string lengths share one variable. -/
 def encodeObservation (τ : Ty) (key : Observation D) (value : World D → Wert D τ)
+    (typed : observationType key = τ)
     (same : ∀ world, assignment world key = scalarValue τ (value world)) :
     Except Refusal (Encoded D τ value) :=
-  match τ, value, same with
-  | .int _ _, _, same => .ok
+  match τ, value, typed, same with
+  | .int _ _, _, typed, same => .ok
       { payload := .var key
-        correct := same }
-  | .str _, _, same => .ok
+        correct := same
+        supported := by
+          simp [PayloadSupported, payloadObservations, LTerm.variables, ScalarObservation, typed] }
+  | .str _, _, typed, same => .ok
       { payload := .var key
-        correct := same }
-  | _, _, _ => .error (.unsupported "non-integer memory or string contents")
+        correct := same
+        supported := by
+          simp [PayloadSupported, payloadObservations, LTerm.variables, ScalarObservation, typed] }
+  | _, _, _, _ => .error (.unsupported "non-integer memory or string contents")
 
 /-- Evaluate a certified constant term without consulting the world. -/
 def Encoded.constantIndex {lo hi : Int} {value : World D → Wert D (.int lo hi)}

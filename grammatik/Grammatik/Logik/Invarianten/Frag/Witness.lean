@@ -97,14 +97,14 @@ theorem carriers_sound_zeuge :
 
 def initial : World declaration where
   slots := fun _ _ _ => ⟨4, by decide, by decide⟩
-  globs := fun name => if name then ⟨8, by decide, by decide⟩ else ⟨3, by decide, by decide⟩
+  globs := fun name => if name = true then ⟨8, by decide, by decide⟩ else ⟨3, by decide, by decide⟩
   spur := []
 
 theorem boundedLength_true_zeuge : eval initial boundedLength initial .nil = true := by decide
 
 def invalidLengthWorld : World declaration :=
   { initial with
-    globs := fun name => if name then ⟨8, by decide, by decide⟩ else ⟨9, by decide, by decide⟩ }
+    globs := fun name => if name = true then ⟨8, by decide, by decide⟩ else ⟨9, by decide, by decide⟩ }
 
 theorem boundedLength_false_zeuge :
     eval invalidLengthWorld boundedLength invalidLengthWorld .nil = false := by decide
@@ -137,7 +137,7 @@ theorem localBound_admitted_zeuge :
 
 /-- String contents never enter the arithmetic problem; their length does. -/
 def stringDeclaration : Deklaration :=
-  { declaration with gtyp := fun name => if name then .int 0 10 else .str 10 }
+  { declaration with gtyp := fun name => if name = true then .int 0 10 else .str 10 }
 
 def stringBound : Expr stringDeclaration [] [] .bool :=
   .le (.strLen (.glob false (fun _ h => nomatch h)))

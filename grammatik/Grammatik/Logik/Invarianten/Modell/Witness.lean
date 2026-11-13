@@ -77,7 +77,7 @@ theorem valid_formula_has_no_counterexample_zeuge :
     (counterexample [0] (.le (.var 0) (.var 0))).isSome = false := by decide
 
 def observationValues : Assignment (Observation Frag.Witness.declaration)
-  | .glob name => if name then 8 else 9
+  | .glob name => if name = true then 8 else 9
   | .slot _ _ _ => 7
 
 def snippetKeys : List (Observation Frag.Witness.declaration) :=
