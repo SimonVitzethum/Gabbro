@@ -100,14 +100,18 @@ def initial : World declaration where
   globs := fun name => if name = true then ⟨8, by decide, by decide⟩ else ⟨3, by decide, by decide⟩
   spur := []
 
-theorem boundedLength_true_zeuge : eval initial boundedLength initial .nil = true := by decide
+theorem boundedLength_true_zeuge : eval initial boundedLength initial .nil = true := by
+  show wahr? (eval initial boundedLength initial .nil) = true
+  decide
 
 def invalidLengthWorld : World declaration :=
   { initial with
     globs := fun name => if name = true then ⟨8, by decide, by decide⟩ else ⟨9, by decide, by decide⟩ }
 
 theorem boundedLength_false_zeuge :
-    eval invalidLengthWorld boundedLength invalidLengthWorld .nil = false := by decide
+    eval invalidLengthWorld boundedLength invalidLengthWorld .nil = false := by
+  show wahr? (eval invalidLengthWorld boundedLength invalidLengthWorld .nil) = false
+  decide
 
 def product : Expr declaration [] [] .bool :=
   .le (.mul (.glob false (globalAccess false)) (.glob true (globalAccess true))) (.lit 3)

@@ -87,6 +87,43 @@ structure Encoded (D : Deklaration) (τ : Ty) (value : World D → Wert D τ) wh
   correct : ∀ world, Represents world τ payload (value world)
   supported : PayloadSupported τ payload
 
+/-- The Boolean correctness field read through `wahr?`, whose type is syntactically
+    `Bool`. `Wert D .bool` is `Bool` only after unfolding `Val`, which rewriting and
+    lemma instantiation do not do; Boolean proofs therefore go through this form. -/
+theorem Encoded.bool_iff {value : World D → Wert D Ty.bool} (encoded : Encoded D Ty.bool value)
+    (world : World D) :
+    wahr? (value world) = true ↔ LProp.denote (assignment world) encoded.payload :=
+  encoded.correct world
+
+/-- The constant formula of a Boolean value, independent of the world. -/
+def boolFormula (value : Bool) : LProp (Observation D) := cond value LProp.tru LProp.fls
+
+theorem boolFormula_represents (world : World D) (value : Bool) :
+    value = true ↔ LProp.denote (assignment world) (boolFormula (D := D) value) := by
+  cases value
+  · constructor
+    · intro h
+      cases h
+    · intro h
+      exact False.elim h
+  · constructor
+    · intro _
+      exact trivial
+    · intro _
+      rfl
+
+theorem boolFormula_observations (value : Bool) :
+    payloadObservations (D := D) Ty.bool (boolFormula (D := D) value) = [] := by
+  cases value
+  · rfl
+  · rfl
+
+theorem boolFormula_supported (value : Bool) :
+    PayloadSupported (D := D) Ty.bool (boolFormula (D := D) value) := by
+  intro key member
+  rw [boolFormula_observations] at member
+  exact False.elim (List.not_mem_nil member)
+
 /-- A variable's integer value or string length is fixed by the supplied local
     environment. Invariant environments are empty except for bounded slot binders. -/
 def encodeConstant (τ : Ty) (value : Wert D τ) :
@@ -97,10 +134,9 @@ def encodeConstant (τ : Ty) (value : Wert D τ) :
         correct := fun _ => rfl
         supported := by simp [PayloadSupported, payloadObservations, LTerm.variables] }
   | .bool, value => .ok
-      { payload := if (value : Bool) then .tru else .fls
-        correct := fun _ => by cases value <;> simp [Represents, LProp.denote]
-        supported := by
-          cases value <;> simp [PayloadSupported, payloadObservations, LProp.freeVariables] }
+      { payload := boolFormula (D := D) value
+        correct := fun world => boolFormula_represents world value
+        supported := boolFormula_supported value }
   | .str _, value => .ok
       { payload := .konst value.val.length
         correct := fun _ => rfl

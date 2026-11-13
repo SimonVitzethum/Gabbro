@@ -18,7 +18,7 @@ def encodeAll (items : List α) (predicate : α → World D → Bool)
   match items with
   | [] => .ok
       { payload := .tru
-        correct := fun _ => by simp [Represents, LProp.denote]
+        correct := fun _ => ⟨fun _ => trivial, fun _ => rfl⟩
         supported := by simp [PayloadSupported, payloadObservations, LProp.freeVariables] }
   | item :: rest => do
       let head ← located "slot" (compile item)
@@ -26,9 +26,12 @@ def encodeAll (items : List α) (predicate : α → World D → Bool)
       return
         { payload := .and head.payload tail.payload
           correct := fun world => by
-            change ((predicate item world && rest.all (fun entry => predicate entry world)) = true) ↔
-              head.payload.denote (assignment world) ∧ tail.payload.denote (assignment world)
-            rw [Bool.and_eq_true, head.correct world, tail.correct world]
+            change (wahr? (D := D) (predicate item world) &&
+                wahr? (D := D) (rest.all (fun entry => predicate entry world))) = true ↔
+              LProp.denote (assignment world) head.payload ∧
+                LProp.denote (assignment world) tail.payload
+            exact Bool.and_eq_true_iff.trans
+              (and_congr (head.bool_iff world) (tail.bool_iff world))
           supported := by
             simpa only [PayloadSupported, payloadObservations, LProp.freeVariables,
               List.forall_mem_append] using And.intro head.supported tail.supported }

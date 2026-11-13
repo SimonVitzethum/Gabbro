@@ -10,6 +10,15 @@ namespace Gabbro.Grammatik.Invarianten.Elim.Korrekt
 
 open Frag
 
+/-- A successful `Except` bind ran its first action successfully. -/
+private theorem except_bind_ok {ε σ τ : Type} {x : Except ε σ} {f : σ → Except ε τ} {y : τ}
+    (h : x >>= f = Except.ok y) : ∃ a, x = Except.ok a ∧ f a = Except.ok y := by
+  cases x with
+  | error e =>
+      have contra : (Except.error e : Except ε τ) = Except.ok y := h
+      cases contra
+  | ok a => exact ⟨a, rfl, h⟩
+
 /-- Successful executions compose through the actual StateT/Except path. -/
 theorem work_bind_success {action : Work β} {next : β → Work γ}
     {initial finish : Meter} {result : γ}
@@ -17,10 +26,8 @@ theorem work_bind_success {action : Work β} {next : β → Work γ}
     ∃ middle state, action.run initial = .ok (middle, state) ∧
       (next middle).run state = .ok (result, finish) := by
   change (action.run initial >>= fun pair => (next pair.1).run pair.2) = _ at h
-  cases first : action.run initial with
-  | error refusal => simp [first] at h
-  | ok pair =>
-      exact ⟨pair.1, pair.2, first, by simpa [first] using h⟩
+  obtain ⟨⟨middle, state⟩, first, rest⟩ := except_bind_ok h
+  exact ⟨middle, state, first, rest⟩
 
 theorem work_pure_result {value result : β} {initial finish : Meter}
     (h : (pure value : Work β).run initial = .ok (result, finish)) : result = value := by
@@ -54,7 +61,7 @@ theorem divides_denote (divisor : Int) (term : LTerm α) (values : Assignment α
   cases h : divisor.natAbs with
   | zero =>
       have hz : divisor = 0 := Int.natAbs_eq_zero.mp h
-      simp [divides, h, equalZero_denote, hz]
+      simp [divides, equalZero_denote, hz]
   | succ n =>
       simp only [divides, h, atom_denote, Relation.denote]
       rw [← h]
@@ -105,6 +112,7 @@ theorem compile_denote [DecidableEq α] (formula : LProp α)
       obtain ⟨middle, state, first, next⟩ := work_bind_success success
       have he := negateMetered_result next
       subst result
+      show _ ↔ ¬ body.denote values
       rw [neg_denote, ih _ _ _ first values]
   | and left right ihLeft ihRight =>
       obtain ⟨state, start⟩ := charge_then_success success
@@ -112,6 +120,7 @@ theorem compile_denote [DecidableEq α] (formula : LProp α)
       obtain ⟨b, stateB, hb, done⟩ := work_bind_success rest
       have he := work_pure_result done
       subst result
+      show _ ↔ left.denote values ∧ right.denote values
       rw [conj_denote, ihLeft _ _ _ ha values, ihRight _ _ _ hb values]
   | or left right ihLeft ihRight =>
       obtain ⟨state, start⟩ := charge_then_success success
@@ -119,6 +128,7 @@ theorem compile_denote [DecidableEq α] (formula : LProp α)
       obtain ⟨b, stateB, hb, done⟩ := work_bind_success rest
       have he := work_pure_result done
       subst result
+      show _ ↔ left.denote values ∨ right.denote values
       rw [disj_denote, ihLeft _ _ _ ha values, ihRight _ _ _ hb values]
   | imp left right ihLeft ihRight =>
       obtain ⟨state, start⟩ := charge_then_success success

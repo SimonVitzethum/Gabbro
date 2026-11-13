@@ -8,6 +8,9 @@ namespace Gabbro.Grammatik.Invarianten.Frag
 
 variable {D : Deklaration}
 
+private theorem bool_not_eq_true_iff (x : Bool) : (!x) = true ↔ ¬ x = true := by
+  cases x <;> decide
+
 /-- Translate typed expressions with a concrete local environment. The public
     invariant entry point supplies `Env.nil`; only bounded slot indices extend it.
     This helper is not a symbolic translation of arbitrary function arguments.
@@ -21,11 +24,11 @@ def translate (e : Expr D Γ Λ τ) (locals : Env D Γ) :
         supported := by simp [PayloadSupported, payloadObservations, LTerm.variables] }
   | .tru => .ok
       { payload := .tru
-        correct := fun _ => by simp [Represents, eval, LProp.denote]
+        correct := fun _ => ⟨fun _ => trivial, fun _ => rfl⟩
         supported := by simp [PayloadSupported, payloadObservations, LProp.freeVariables] }
   | .fls => .ok
       { payload := .fls
-        correct := fun _ => by simp [Represents, eval, LProp.denote]
+        correct := fun _ => ⟨fun h => absurd h Bool.false_ne_true, fun h => False.elim h⟩
         supported := by simp [PayloadSupported, payloadObservations, LProp.freeVariables] }
   | .var name => encodeConstant _ (locals.get name)
   | .glob name _ =>
@@ -154,9 +157,11 @@ def translate (e : Expr D Γ Λ τ) (locals : Env D Γ) :
       return
         { payload := .and left.payload right.payload
           correct := fun world => by
-            change (eval world a world locals && eval world b world locals) = true ↔
-              left.payload.denote (assignment world) ∧ right.payload.denote (assignment world)
-            rw [Bool.and_eq_true, left.correct world, right.correct world]
+            change (wahr? (eval world a world locals) && wahr? (eval world b world locals)) = true ↔
+              LProp.denote (assignment world) left.payload ∧
+                LProp.denote (assignment world) right.payload
+            exact Bool.and_eq_true_iff.trans
+              (and_congr (left.bool_iff world) (right.bool_iff world))
           supported := by
             simpa only [PayloadSupported, payloadObservations, LProp.freeVariables,
               List.forall_mem_append] using And.intro left.supported right.supported }
@@ -166,9 +171,11 @@ def translate (e : Expr D Γ Λ τ) (locals : Env D Γ) :
       return
         { payload := .or left.payload right.payload
           correct := fun world => by
-            change (eval world a world locals || eval world b world locals) = true ↔
-              left.payload.denote (assignment world) ∨ right.payload.denote (assignment world)
-            rw [Bool.or_eq_true, left.correct world, right.correct world]
+            change (wahr? (eval world a world locals) || wahr? (eval world b world locals)) = true ↔
+              LProp.denote (assignment world) left.payload ∨
+                LProp.denote (assignment world) right.payload
+            exact Bool.or_eq_true_iff.trans
+              (or_congr (left.bool_iff world) (right.bool_iff world))
           supported := by
             simpa only [PayloadSupported, payloadObservations, LProp.freeVariables,
               List.forall_mem_append] using And.intro left.supported right.supported }
@@ -177,9 +184,9 @@ def translate (e : Expr D Γ Λ τ) (locals : Env D Γ) :
       return
         { payload := .not result.payload
           correct := fun world => by
-            change (!eval world body world locals) = true ↔ ¬ result.payload.denote _
-            simpa only [Bool.not_eq_true', Bool.not_eq_true] using
-              not_congr (result.correct world)
+            change (!wahr? (eval world body world locals)) = true ↔
+              ¬ LProp.denote (assignment world) result.payload
+            exact (bool_not_eq_true_iff _).trans (not_congr (result.bool_iff world))
           supported := result.supported }
   | .strLit bytes _ => .ok
       { payload := .konst bytes.length
