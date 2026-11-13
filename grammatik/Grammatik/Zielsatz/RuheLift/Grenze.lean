@@ -56,7 +56,9 @@ theorem rufStartG_faden_init (P : Programm D) (sp : Speicher D)
        startSpur g, [RufEreignisF.eintritt g rho (sp.welt [])]⟩ := by
   unfold RufStartG
   dsimp only
-  rw [h] <;> rfl
+  generalize init t = start at h ⊢
+  cases h
+  rfl
 
 /-- The trace a thread starts with: its start function's signature locks. -/
 theorem rufStartG_spur_init (P : Programm D) (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))

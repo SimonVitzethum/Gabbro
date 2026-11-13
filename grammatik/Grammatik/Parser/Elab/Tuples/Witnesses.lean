@@ -1,6 +1,6 @@
 module
 public import Grammatik.Parser.Elab.Tuples.Frontend
-import Grammatik.Kern.Taktik.KernelRfl
+import Lean.Elab.Tactic.Cbv
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Decode
@@ -34,6 +34,7 @@ import all Init.Data.String.ToSlice
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Tuples
+attribute [local cbv_eval] strEq_apply_eq_decide
 set_option maxRecDepth 100000
 
 def byte : STyp := .range (.atom "u32") (.lit 0) (.lit 255) false
@@ -77,29 +78,30 @@ def expandedFixture : List SItemTief :=
      (some (.ret (some (.field (.variable "p") "_1")))))]
 
 /-- Small AST evaluation, without lexing a large source or building an entire program witness. -/
-theorem tuple_export_zeuge : expand fixture = .ok (expandedFixture, [generated]) := by kernel_rfl
+theorem tuple_export_zeuge : expand fixture = .ok (expandedFixture, [generated]) := by cbv
 
 theorem tuple_schema_zeuge :
     (Uebersetze.uTypes [] [] [] expandedFixture).map (fun scope =>
       scope.records.map (fun record => (record.name, record.fields))) =
-    .ok [(generated, [("_0", Ty.int 0 255), ("_1", Ty.int 0 255)])] := by kernel_rfl
+    .ok [(generated, [("_0", Ty.int 0 255), ("_1", Ty.int 0 255)])] := by cbv
 
 theorem tuple_position_zeuge :
     Uebersetze.uRecordPosition [("_0", Ty.int 0 255), ("_1", Ty.int 0 255)] "_1" =
-      .ok ⟨Ty.int 0 255, FieldAt.tail FieldAt.head⟩ := by kernel_rfl
+      .ok ⟨Ty.int 0 255, FieldAt.tail FieldAt.head⟩ := by
+  simp [Uebersetze.uRecordPosition, strEq_eq_schnell, strEqSchnell]
 
 theorem tuple_type_parser_zeuge :
     parseTyp 64 [.zeichen "(", .wort "u32", .zeichen ",", .wort "bool", .zeichen ")"] =
-      .ok (.tuple [.atom "u32", .atom "bool"], []) := by kernel_rfl
+      .ok (.tuple [.atom "u32", .atom "bool"], []) := by cbv
 
 theorem tuple_expression_parser_zeuge :
     parseOr 128 [.zeichen "(", .num 17, .zeichen ",", .num 25, .zeichen ")", .zeichen ".", .num 1] =
-      .ok (.field (.built "#tuple" [.lit 17, .lit 25]) "1", []) := by kernel_rfl
+      .ok (.field (.built "#tuple" [.lit 17, .lit 25]) "1", []) := by cbv
 
 theorem tuple_pattern_parser_zeuge :
     parseStmt 128 [.wort "let", .zeichen "(", .ident "a", .zeichen ",", .ident "_",
       .zeichen ")", .zeichen "=", .ident "p", .zeichen ";"] =
-      .ok (.bind false "#tuple-pattern,a,_" none (.variable "p"), []) := by kernel_rfl
+      .ok (.bind false "#tuple-pattern,a,_" none (.variable "p"), []) := by cbv
 
 def context : Context :=
   { items := fixture
@@ -111,25 +113,26 @@ def state : State :=
 
 theorem tuple_field_refused_zeuge :
     ((expandExpr context [("p", .atom generated)] none 32 (.field (.variable "p") "2")).run state).map Prod.fst =
-      .error "tuple field: index out of range" := by kernel_rfl
+      .error "tuple field: index out of range" := by cbv
 
 theorem tuple_arity_refused_zeuge :
     ((destructure context [("p", .atom generated)] 32 ["a", "b", "c"] none (.variable "p")).run state).map Prod.fst =
-      .error "tuple pattern: arity mismatch" := by kernel_rfl
+      .error "tuple pattern: arity mismatch" := by cbv
 
 theorem nested_pattern_refused_zeuge :
     parseTuplePattern [.zeichen "(", .ident "a"] =
-      .error "tuple pattern: nested patterns are unsupported" := rfl
+      .error "tuple pattern: nested patterns are unsupported" := by
+  simp only [parseTuplePattern]
 
 /-- A discarded component adds no field binding, while the tuple value is still bound once. -/
 theorem tuple_wildcard_zeuge :
     ((destructure context [("p", .atom generated)] 32 ["a", "_"] none (.variable "p")).run state).map
-      (fun (statements, _) => statements.length) = .ok 2 := by kernel_rfl
+      (fun (statements, _) => statements.length) = .ok 2 := by cbv
 
 /-- Equal resolved scalar types, including an alias, allocate exactly one record. -/
 theorem tuple_intern_zeuge :
     (expand [.typeT [] "Byte" [] [] (some byte),
       .protoT { producer with res := some (.tuple [.atom "Byte", byte]) },
-      .protoT { caller with res := some pair }]).map (fun (_, names) => names.length) = .ok 1 := by kernel_rfl
+      .protoT { caller with res := some pair }]).map (fun (_, names) => names.length) = .ok 1 := by cbv
 
 end Gabbro.Grammatik.Parser.Tuples

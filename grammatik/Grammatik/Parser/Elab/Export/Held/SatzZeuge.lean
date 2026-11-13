@@ -56,7 +56,8 @@ set_option maxRecDepth 100000 in
 theorem holds100_zeuge :
     ((lowerAllg sectionUnit).toOption.map fun r =>
       holds (Tafel.von _ [("L", 100)]) (Tafel.von _ []) sectionUnit r.1 0) = some true := by
-  decide +kernel
+  have projected := congrArg (Option.map (fun checks : Bool × Bool × Bool => checks.1)) holds_zeuge
+  simpa only [Option.map_map, Function.comp_def, Option.map_some] using projected
 
 /-- **The section bound is not vacuous.** On the lowered fixture unit, whose lock `L`
     declares a bound of 100, every function body satisfies the section property. -/
@@ -85,7 +86,15 @@ theorem holds_haltPasst_zeuge {r : Programm (declOf sectionUnit) × List (declOf
   simp only [Option.map_some, Option.some.injEq] at hh
   have hc : CostBinding.holds (Tafel.von _ []) sectionUnit r.1 0 = true := by rfl
   have total : ∀ L, boundOf (Tafel.von _ [("L", 100)]) sectionUnit L = some 100 := by
-    decide +kernel
+    intro L
+    have index : L = ⟨0, by decide⟩ := by
+      apply Fin.ext
+      have bound := L.isLt
+      change L.val < 1 at bound
+      omega
+    subst L
+    simp [boundOf, lockAt, sectionUnit, Tafel.finde, Tafel.von,
+      strEq_eq_schnell, strEqSchnell]
   exact holds_haltPasst _ _ _ r.1 0 (fun _ => 100) total hc hh
 
 /-- The same accepted fixture meets the runtime-program check without checking `mitRuhe`

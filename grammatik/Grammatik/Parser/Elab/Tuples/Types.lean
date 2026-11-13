@@ -21,12 +21,12 @@ structure TypeKey where
   surface : STyp
   width : Nat
 
-private def sameTypeKey (a b : TypeKey) : Bool :=
+def sameTypeKey (a b : TypeKey) : Bool :=
   a.width == b.width && match a.resolved, b.resolved with
     | some a, some b => a == b
     | _, _ => beqSTyp a.surface b.surface
 
-private def sameKeys (as bs : List TypeKey) : Bool :=
+def sameKeys (as bs : List TypeKey) : Bool :=
   as.length == bs.length && (as.zip bs).all (fun (a, b) => sameTypeKey a b)
 
 structure Record where
@@ -117,11 +117,11 @@ def position (field : String) : Option Nat :=
   | '_' :: digits => (String.ofList digits).toNat?
   | _ => field.toNat?
 
-private def integerType (lo hi : Int) : STyp :=
+def integerType (lo hi : Int) : STyp :=
   .range (.atom (if lo < 0 then "i64" else "u64"))
     (Konst.literalVonInt lo) (Konst.literalVonInt hi) false
 
-private def integerBounds (k : Context) (ty : STyp) : Option (Int × Int) := do
+def integerBounds (k : Context) (ty : STyp) : Option (Int × Int) := do
   let .int lo hi ← (uTypIn k.aliases [] k.sourceTypes.types [] []
     (canonical k (k.items.length + 1) ty)).toOption | none
   pure (lo, hi)

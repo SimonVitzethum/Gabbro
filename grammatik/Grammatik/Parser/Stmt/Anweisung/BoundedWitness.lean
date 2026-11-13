@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.Print.Stmt
+import Lean.Elab.Tactic.Cbv
 import all Grammatik.Parser.Stmt.Anweisung.BoundedHeaders
 import all Grammatik.Parser.Stmt.Anweisung.Defs2a
 import all Grammatik.Parser.Stmt.Anweisung.Defs2
@@ -44,6 +45,7 @@ import all Init.Data.String.ToSlice
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.BoundedWitness
+attribute [local cbv_eval] strEq_apply_eq_decide
 
 set_option maxRecDepth 100000
 set_option maxHeartbeats 800000
@@ -67,40 +69,40 @@ def roundTrip (text : String) : Bool :=
 
 theorem while_parser_zeuge :
     accepts "while count < 3 bounded 8 ops on_exceeded overrun { count += 1; }" = true := by
-  decide +kernel
+  cbv
 
 theorem for_parser_zeuge :
     accepts "for i in 1 ..< 5 { sum += i; }" = true ∧
     accepts "for i in 1 ..< 5 on_exceeded overrun { i = 1; }" = true := by
-  decide +kernel
+  cbv
 
 theorem while_round_trip_zeuge :
     roundTrip "while count < 3 bounded 8 ops on_exceeded overrun { count += 1; }" = true := by
-  decide +kernel
+  cbv
 
 theorem for_round_trip_zeuge :
     roundTrip "for i in 1 ..< 5 { sum += i; }" = true ∧
     roundTrip "for i in 1 ..< 5 on_exceeded overrun { next i; }" = true := by
-  decide +kernel
+  cbv
 
 theorem missing_bound_refused_zeuge :
     beqTopStmt (sourceStatement "while true on_exceeded overrun { }")
       (.error "while.bound.missing") = true := by
-  decide +kernel
+  cbv
 
 theorem missing_handler_refused_zeuge :
     beqTopStmt (sourceStatement "while true bounded 3 ops { }")
       (.error "while.on_exceeded.required") = true := by
-  decide +kernel
+  cbv
 
 theorem malformed_range_refused_zeuge :
     beqTopStmt (sourceStatement "for i in 1 .. 5 { }")
       (.error "for.range.half-open-required") = true := by
-  decide +kernel
+  cbv
 
 theorem trailing_clause_refused_zeuge :
     beqTopStmt (sourceStatement "for i in 1 ..< 5 bounded 2 ops { }")
       (.error "for.header.trailing-clause") = true := by
-  decide +kernel
+  cbv
 
 end Gabbro.Grammatik.Parser.BoundedWitness

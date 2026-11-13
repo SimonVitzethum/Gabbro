@@ -131,6 +131,11 @@ def strEqSchnell (a b : String) : Bool := decide (a = b)
     rw [beq_eq_false_iff_ne.2 differ]
     simp only [h, decide_false]
 
+/-- Proof-producing evaluation can compare literal spellings through the same
+    general equality used by compiled code, without decoding character lists. -/
+theorem strEq_apply_eq_decide (a b : String) : strEq a b = decide (a = b) :=
+  congrFun (congrFun strEq_eq_schnell a) b
+
 /-- Whitespace of the source (`lex.rs`: space, tab, CR, LF). -/
 def istLeer : Char → Bool
   | ' ' => true
