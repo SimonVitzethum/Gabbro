@@ -140,9 +140,10 @@ theorem counterexample_single_of_recovered [DecidableEq α] (name : α)
     (formula : LProp α) (value : Int)
     (selected : recoverOne (recordStep name (elimination (.not formula)).1)
       (fun _ => 0) = some value) :
-    counterexample [name] formula = some ((fun _ => 0).bind name value) := by
+    counterexample [name] formula = some (Assignment.bind (fun _ => 0) name value) := by
   change (recoverOne (recordStep name (elimination (.not formula)).1) (fun _ => 0)).bind
-    (fun x => reconstruct (elimination (.not formula)).1 [] ((fun _ => 0).bind name x)) = _
+    (fun x => reconstruct (elimination (.not formula)).1 []
+      (Assignment.bind (fun _ => 0) name x)) = _
   rw [selected, Option.bind_some]
   apply reconstruct_nil_of_denote
   exact recoverOne_sound name (elimination (.not formula)).1 (fun _ => 0) value selected

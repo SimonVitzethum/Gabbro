@@ -243,7 +243,8 @@ theorem uebersetzeB_sound (carriers : List (D.Tab ⊕ D.Glob))
   cases h : translateInvariant carriers e with
   | error cause => simp [uebersetzeB, h] at success
   | ok encoded =>
-      simp only [uebersetzeB, h, Except.ok.injEq] at success
+      simp only [uebersetzeB, h] at success
+      have payload_eq := Except.ok.inj success
       subst formula
       exact encoded.correct world
 
@@ -256,7 +257,8 @@ theorem uebersetzeB_supported (carriers : List (D.Tab ⊕ D.Glob))
   cases h : translateInvariant carriers e with
   | error cause => simp [uebersetzeB, h] at success
   | ok encoded =>
-      simp only [uebersetzeB, h, Except.ok.injEq] at success
+      simp only [uebersetzeB, h] at success
+      have payload_eq := Except.ok.inj success
       subst formula
       intro key member
       exact encoded.supported key ((encoded.payload.mem_keys key).mp member)

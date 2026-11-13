@@ -140,7 +140,7 @@ theorem state_counterexample_computed_zeuge :
     (stateCounterexample Frag.Witness.initial [.glob false] shortFormula).map
       (fun world => assignment world (.glob false)) = some 4 := by
   let values : Assignment (Observation Frag.Witness.declaration) :=
-    (fun _ => 0).bind (.glob false) 4
+    Assignment.bind (fun _ => 0) (.glob false) 4
   have selected : counterexample [.glob false] (stateValidity [.glob false] shortFormula) =
       some values :=
     counterexample_single_of_recovered (.glob false) _ 4 (by decide)
