@@ -22,6 +22,7 @@
 module
 
 public import Grammatik.Logik.Ruf.FremdRuf.T8
+public import Grammatik.Logik.Ruf.FremdRuf.T5Duties
 
 @[expose] public section
 
@@ -64,15 +65,15 @@ theorem callSitePflichtFremd_mono {ax : ∀ a : D.Ax, CallContract D (D.asignatu
     (hsub : ∀ e ∈ HA', e ∈ HA) : CallSitePflichtFremd ax HA' :=
   fun _ _ _ _ hmem hsw => h _ _ _ _ (hsub _ hmem) hsw
 
-/-- **Replay transport (software leg):** from the proved `ForeignPflicht`, the
+/-- **Replay transport (software leg):** from the proved `ForeignVertrag`, the
     call-site pre at each recorded software key and the machine linkage (the
     machine answers the record at its question-recorded key), every recorded
     software answer with a decoded value meets the contract post at the recorded
     answer world. This is the software leg of `VertragANeu`, hence the premise
     `orakelAus_vertrag_neu` replays to the machine oracle. -/
-theorem vertragANeu_sw_of_foreign {E : Einheit D} {O : Orakel D}
-    {H : List (BoundaryRecord D)} {HA : List (AxEintrag D)}
-    (hf : ForeignPflicht E O H) (hpre : CallSitePflichtFremd E.P.axVertrag HA)
+theorem vertragANeu_sw_of_vertrag {E : Einheit D} {O : Orakel D}
+    {HA : List (AxEintrag D)}
+    (hf : ForeignVertrag E O) (hpre : CallSitePflichtFremd E.P.axVertrag HA)
     (hdir : PasstA O HA) (hprov : SchluesselHerkunft HA)
     {a : D.Ax} {σ : World D} {ρ : Env D (D.aparams a)} {x : World D × Int}
     (hmem : (⟨a, σ, ρ, x⟩ : AxEintrag D) ∈ HA)
@@ -91,28 +92,50 @@ theorem vertragANeu_sw_of_foreign {E : Einheit D} {O : Orakel D}
   have h2 : einpassenErg O.zeiger (D.aerg a) (O.wirkt a (τ.fragt (.inl a)) ρ).2 = some v := by
     rw [hdir']
     exact hv
-  have hcon := hf.vertrag a hsw τ ρ hpre' v h2
+  have hcon := hf.1 a hsw τ ρ hpre' v h2
   rw [hdir'] at hcon
   rw [hτ]
   exact (congrArg wahr? (eval_spurfrei (E.P.axVertrag a).post τ (τ.fragt (.inl a))
     x.1 x.1 rfl rfl rfl rfl (ergEnv (D.aerg a) v ρ))).symm.trans hcon
 
+/-- Project the full boundary obligation to the binding proof used by replay. -/
+theorem vertragANeu_sw_of_foreign {E : Einheit D} {O : Orakel D}
+    {H : List (BoundaryRecord D)} {HA : List (AxEintrag D)}
+    (hf : ForeignPflicht E O H) (hpre : CallSitePflichtFremd E.P.axVertrag HA)
+    (hdir : PasstA O HA) (hprov : SchluesselHerkunft HA)
+    {a : D.Ax} {σ : World D} {ρ : Env D (D.aparams a)} {x : World D × Int}
+    (hmem : (⟨a, σ, ρ, x⟩ : AxEintrag D) ∈ HA)
+    (hsw : D.axHerkunft a = some AxOrigin.software)
+    {v : ErgVal D (D.aerg a)} (hv : einpassenErg O.zeiger (D.aerg a) x.2 = some v) :
+    AxNach E.P.axVertrag a σ ρ x.1 v :=
+  vertragANeu_sw_of_vertrag (foreignVertrag_of_foreign hf) hpre hdir hprov hmem hsw hv
+
 /-- **Declared ensures at each recorded software answer:** when the contract
     post implies the declared `Q`, the wiring above gives `Q` at the recorded
     answer world -- the per-record form of `axVertragOSwF_of_foreign`, with the
     unconditional pre replaced by the call-site duty. -/
-theorem qAmDatensatz_of_foreign {E : Einheit D} {O : Orakel D}
-    {H : List (BoundaryRecord D)} {HA : List (AxEintrag D)}
-    (hf : ForeignPflicht E O H) (hpre : CallSitePflichtFremd E.P.axVertrag HA)
+theorem qAmDatensatz_of_vertrag {E : Einheit D} {O : Orakel D}
+    {HA : List (AxEintrag D)}
+    (hf : ForeignVertrag E O) (hpre : CallSitePflichtFremd E.P.axVertrag HA)
     (hdir : PasstA O HA) (hprov : SchluesselHerkunft HA)
-    (hdeckt : ∀ (a : D.Ax), D.axHerkunft a = some AxOrigin.software →
-      ∀ (σ0 : World D) (ρ : Env D (D.aparams a)) (σ1 : World D) (v : ErgVal D (D.aerg a)),
-        AxNach E.P.axVertrag a σ0 ρ σ1 v → E.Q a σ1 v = true)
+    (hdeckt : PostDeckt E)
     {a : D.Ax} {σ : World D} {ρ : Env D (D.aparams a)} {x : World D × Int}
     (hmem : (⟨a, σ, ρ, x⟩ : AxEintrag D) ∈ HA)
     (hsw : D.axHerkunft a = some AxOrigin.software)
     {v : ErgVal D (D.aerg a)} (hv : einpassenErg O.zeiger (D.aerg a) x.2 = some v) :
     E.Q a x.1 v = true :=
-  hdeckt a hsw σ ρ x.1 v (vertragANeu_sw_of_foreign hf hpre hdir hprov hmem hsw hv)
+  hdeckt a hsw σ ρ x.1 v (vertragANeu_sw_of_vertrag hf hpre hdir hprov hmem hsw hv)
+
+/-- Declared ensures via the full boundary obligation and the named post cover. -/
+theorem qAmDatensatz_of_foreign {E : Einheit D} {O : Orakel D}
+    {H : List (BoundaryRecord D)} {HA : List (AxEintrag D)}
+    (hf : ForeignPflicht E O H) (hpre : CallSitePflichtFremd E.P.axVertrag HA)
+    (hdir : PasstA O HA) (hprov : SchluesselHerkunft HA) (hdeckt : PostDeckt E)
+    {a : D.Ax} {σ : World D} {ρ : Env D (D.aparams a)} {x : World D × Int}
+    (hmem : (⟨a, σ, ρ, x⟩ : AxEintrag D) ∈ HA)
+    (hsw : D.axHerkunft a = some AxOrigin.software)
+    {v : ErgVal D (D.aerg a)} (hv : einpassenErg O.zeiger (D.aerg a) x.2 = some v) :
+    E.Q a x.1 v = true :=
+  qAmDatensatz_of_vertrag (foreignVertrag_of_foreign hf) hpre hdir hprov hdeckt hmem hsw hv
 
 end Gabbro.Grammatik
