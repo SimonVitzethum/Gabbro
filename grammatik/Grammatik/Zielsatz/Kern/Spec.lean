@@ -244,9 +244,34 @@
         (Code/Conc/Lock.lean: fetch-add on `next`, acquire spin on `now`, release advance); Stage 0 emits a ticket
         lock of the same discipline (stage0/Stage0/Senke/Sperre/Ticket: `cas` on `next`, waiting for `serving` by
         `futex_wait` instead of spinning, release by `cas` on `serving` and `futex_wake` of all waiters, with a
-        waiter count). Only its uncontended paths are proved (`locks_okT`); no theorem ties a futex-blocked thread
-        to the model's waiting, so `GabbroZielLeben` and `GabbroZielWarten`, stated over the model's spinning
-        lock, are still NOT statements about the emitted lock;
+        waiter count). Its uncontended paths are proved on the runner (`locks_okT`). Its contended behaviour is
+        proved over an access-level MODEL of the emitted code (stage0/Stage0/Senke/Sperre/Faeden, `Faeden.Schritt`:
+        ONE lock, a fixed set of `N ≤ 2147483647` threads, one step per shared-word access, a futex that blocks,
+        returns spuriously and wakes all waiters; the guarded body and the code outside are steps in place). The
+        bound is the emitted WAKE count and also makes the word compares exact (`serving` mod 2^64, its low 32 bits
+        in FUTEX_WAIT). Proved over that model: every run is a stuttering run of Faeden's own abstract ticket lock
+        `Abs` in which a futex-blocked thread is a waiting thread (`Lauf.abbild`, `Lauf.schlaeft_wartet`), with
+        mutual exclusion (`Lauf.ausschluss`) and the queue facts of `FifoLauf` ADAPTED to access granularity
+        (`Lauf.glied`, `Lauf.eindeutig`, `Lauf.kopf` -- only the entering step must be the head --, `Lauf.ordnung`);
+        `Abs` simulates the model's ghost `Tkt` (Code/Conc/LockRel.lean): each draw, enter, give is `Tkt.take`,
+        `Tkt.enter`, `Tkt.leave` of the same thread with the ghost preconditions of `take_step`, `spin_enter_step`,
+        `release_step`, `Tkt.Ok` kept (`passt_zieht`, `passt_tritt`, `passt_gibt`), so an emitted run read at G's
+        steps (`Fenster`) carries a `Tkt` ghost run (`Lauf.tkt`); and the emitted lock's own liveness in the shape of
+        `GabbroZielLeben`'s conclusion (`Lauf.leben`, `Lauf.leben_warte`) under weak fairness over the threads not
+        blocked in FUTEX_WAIT plus one named futex premise: FUTEX_WAIT returns spuriously only finitely often
+        (`Lauf.ScheinbarEndlich`). Carried to the model statement: a G run COUPLED with the emitted locks -- per
+        lock, the emitted run at G granularity (`AbsLauf`, proved from `Fenster`) and G's view of the lock equal to
+        it (`GSicht`) -- is a `FifoLauf` (`fifoAus`), and `gabbro_ziel_leben` read back through the coupling is
+        `gabbroZielLeben_emittiert` / `gabbroZielLeben_faeden`, an INSTANCE under G's fairness; only threads `< N`
+        use a coupled lock (`GSicht.unter`); nesting and waiting across locks are the coupled G run's. Still
+        assumed: that the access-level model is what the runner and the OS futex do (the runner's
+        `Runner.IR.FutexOK` classifies one thread's WAIT return only, without blocked threads or interleaving), and
+        the coupling (`Fenster`, `GSicht`: G simulates the emitted code at each lock, with disjoint lock words and
+        no other code touching them); neither is proved. Not claimed: that a thread before its draw draws (the draw
+        is a `cas` loop on `next`, lock-free but not wait-free, while the model's arrival at `locks L` is one G
+        step); a waiting bound -- `GabbroZielWarten` is still NOT a statement about the emitted lock (its `cas` loops
+        on `next` and on the waiter count have no retry bound); and neither statement is carried to the image, which
+        needs the missing simulation of the thread machine over GX (THE READING);
     (4) carriers are the locations (a table or an atomic array is one location of W);
     (5) what G reads from the outside -- foreign answers (`Orakel.wirkt`), register reads, the visibility of
         `awaits` -- is read over G's memory: the last executed write, not an older message.
