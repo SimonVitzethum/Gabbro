@@ -389,15 +389,17 @@ include hΦ in
 /-- The induced oracle respects the axiom frames. -/
 theorem orakelΦ_rahmen {O' : Orakel D'} (hO' : RahmenO O') : RahmenO (E.orakelΦ hZ pad Φ O') := by
   intro a σ ρ
-  obtain ⟨hr1, hr2⟩ := hO' (E.ax a) (Φ.haupt σ) (E.aparamsUm a ρ)
+  obtain ⟨hr1, hr2⟩ := hO' (E.ax a) ((Φ.haupt σ).alsFrage (E.ax a)) (E.aparamsUm a ρ)
   refine ⟨fun t ht k f => ?_, fun g hg => ?_⟩
   · have hw : D'.aschreibt (E.ax a) (E.tab t) = false := by rw [E.aschreibt, E.tabZ_tab]; exact ht
-    have e' : (O'.wirkt (E.ax a) (Φ.haupt σ) (E.aparamsUm a ρ)).1.slots (E.tab t) = (Φ.haupt σ).slots (E.tab t) :=
-      funext fun k => funext fun f => hr1 (E.tab t) hw k f
+    have e' : (O'.wirkt (E.ax a) ((Φ.haupt σ).alsFrage (E.ax a)) (E.aparamsUm a ρ)).1.slots (E.tab t) =
+        (Φ.haupt σ).slots (E.tab t) :=
+      (funext fun k => funext fun f => hr1 (E.tab t) hw k f).trans
+        (congrFun (World.alsFrage_slots (Φ.haupt σ) (E.ax a)) (E.tab t))
     show (E.speicherZ hZ _).slots t k f = σ.slots t k f
     rw [E.speicherZ_slots hZ e', E.speicherZ_treu (hΦ σ)]; rfl
   · have hw : D'.agschreibt (E.ax a) (E.glob g) = false := by rw [E.agschreibt, E.globZ_glob]; exact hg
-    have e := hr2 (E.glob g) hw
+    have e := (hr2 (E.glob g) hw).trans (congrFun (World.alsFrage_globs (Φ.haupt σ) (E.ax a)) (E.glob g))
     show (E.speicherZ hZ _).globs g = σ.globs g
     rw [E.speicherZ_globs hZ e, E.speicherZ_treu (hΦ σ)]; rfl
 
@@ -443,17 +445,29 @@ theorem orakelΦ_axVertragOP {O' : Orakel D'} {Pre : AxPre D} {Pre' : AxPre D'}
     (hQ : ∀ a (W' : World D') (v : ErgVal D (D.aerg a)),
       Q' (E.ax a) W' (castV (E.aerg a).symm (E.ergE _ v)) = Q a ((E.speicherZ hZ W'.speicher).welt []) v)
     (hQL : AxEnsLokal Q) : AxVertragOP Pre Q (E.orakelΦ hZ pad Φ O') := by
-  intro a σ ρ v hp hv
+  intro a σ0 ρ v hp hv
+  -- the image of a question world is asked as a question world of the image item
+  obtain ⟨w0, hw0⟩ := World.alsFrage_frage (Φ.haupt (σ0.fragt (.inl a))) (E.ax a)
+  have hT : E.Treu hZ (σ0.fragt (.inl a)).speicher (w0.fragt (.inl (E.ax a))) := by
+    obtain ⟨h1, h2⟩ := hΦ (σ0.fragt (.inl a))
+    refine ⟨fun t k f => ?_, fun g => ?_⟩
+    · rw [← hw0, World.alsFrage_slots]
+      exact h1 t k f
+    · rw [← hw0, World.alsFrage_globs]
+      exact h2 g
   have hw := E.axiom_wert hZ (fun _ => Option.none) O'.zeiger a
-    (O'.wirkt (E.ax a) (Φ.haupt σ) (E.aparamsUm a ρ)).2 (E.aerg a)
-  have hv' : einpassenErg (fun _ => Option.none) (D.aerg a) (O'.wirkt (E.ax a) (Φ.haupt σ) (E.aparamsUm a ρ)).2 =
-      some v := hv
+    (O'.wirkt (E.ax a) (w0.fragt (.inl (E.ax a))) (E.aparamsUm a ρ)).2 (E.aerg a)
+  have hv' : einpassenErg (fun _ => Option.none) (D.aerg a)
+      (O'.wirkt (E.ax a) (w0.fragt (.inl (E.ax a))) (E.aparamsUm a ρ)).2 = some v := by
+    rw [← hw0]
+    exact hv
   rw [hv', Option.map_some] at hw
-  have hq := hQ' (E.ax a) (Φ.haupt σ) (E.aparamsUm a ρ) _
-    (hPre a σ (Φ.haupt σ) ρ (hΦ σ) hp) hw
+  have hq := hQ' (E.ax a) w0 (E.aparamsUm a ρ) _
+    (hPre a (σ0.fragt (.inl a)) (w0.fragt (.inl (E.ax a))) ρ hT hp) hw
   rw [hQ] at hq
-  show Q a (E.antwortWelt hZ pad σ _) v = true
-  rw [← hq]
+  show Q a (E.antwortWelt hZ pad (σ0.fragt (.inl a))
+    (O'.wirkt (E.ax a) ((Φ.haupt (σ0.fragt (.inl a))).alsFrage (E.ax a)) (E.aparamsUm a ρ)).1) v = true
+  rw [hw0, ← hq]
   exact hQL a _ _ v (fun _ _ => rfl) (fun _ _ => rfl)
 
 end Klassen

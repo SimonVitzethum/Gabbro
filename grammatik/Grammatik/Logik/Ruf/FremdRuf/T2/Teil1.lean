@@ -21,8 +21,8 @@ namespace Gabbro.Grammatik
 
   * `AxPre` -- the gate's declared argument precondition (its `requires`),
     over the call-time world and the passed arguments;
-  * `AxVertragOP Pre Q O` -- the hardware premise restricted to calls that
-    meet it (weaker than `AxVertragO`: `axVertragOP_of_O`);
+  * `AxVertragOPAlle Pre Q O` -- the hardware premise restricted to calls that
+    meet it, at every world (weaker than `AxVertragO`);
   * `AufruferPflicht Pre a σ ρ` -- the caller's obligation at one call site,
     user logic (the `V` obligation `gabbro obligations` counts at every call
     of a gate with `requires`).
@@ -49,7 +49,7 @@ def AufruferPflicht {D : Deklaration} (Pre : AxPre D) (a : D.Ax) (σ : World D)
     restate it in the gate's own effect terms. -/
 theorem fremdruf_gate_gilt_pre (g : GateData fdD) (a : fdD.Ax) (O : Orakel fdD)
     (Pre : AxPre fdD) (Q : AxEns fdD)
-    (hO : GutO O) (hQ : AxVertragOP Pre Q O)
+    (hO : GutO O) (hQ : AxVertragOPAlle Pre Q O)
     (hEff : g.eff = fdD.aschreibt a) (hEffG : g.effG = fdD.agschreibt a)
     (σ : World fdD) (ρ : Env fdD (fdD.aparams a))
     (hPflicht : AufruferPflicht Pre a σ ρ)
@@ -87,7 +87,7 @@ theorem mitVorbedingung_gleich {D : Deklaration} (Pre : AxPre D) (O : Orakel D)
     calls are exactly the ones whose answers no longer fit. -/
 theorem hardware_aus_vertragP [RootNativeFloat.Hardware] {D : Deklaration} (Pre : AxPre D) (Q : AxEns D) (O : Orakel D)
     (raus : D.Ax → Int)
-    (hO : GutO O) (hR : RegLokal O) (hQ : AxVertragOP Pre Q O)
+    (hO : GutO O) (hR : RegLokal O) (hQ : AxVertragOPAlle Pre Q O)
     (hraus : ∀ a, einpassenErg O.zeiger (D.aerg a) (raus a) = none) :
     Zielsatz.HardwareAnnahmen (mitVorbedingung Pre O raus) Q := by
   refine ⟨fun a σ ρ => hO a σ ρ, hR, ?_, inferInstance⟩
@@ -140,7 +140,7 @@ theorem fdObad_gut : GutO fdObad := by
 
 /-- The bad oracle meets the RESTRICTED premise: on every well-formed call
     it answers as `fdO`, which meets the full one. -/
-theorem fdObad_vertragP : AxVertragOP fdPre fdQ fdObad := by
+theorem fdObad_vertragP : AxVertragOPAlle fdPre fdQ fdObad := by
   intro a σ ρ v hp hfit
   cases a with
   | true => exact fdQ_vertrag true σ ρ v hfit

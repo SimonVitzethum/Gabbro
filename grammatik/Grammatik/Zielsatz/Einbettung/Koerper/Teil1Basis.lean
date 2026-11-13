@@ -54,13 +54,13 @@ theorem ruf_schritt {M : Keys D D'} {σ : World D} {σ' : World D'} (hp : PadOk 
 
 /-- An axiom through the keys. -/
 theorem ax_schluessel {M : Keys D D'} {σ : World D} {σ' : World D'}
-    (h : E.Inv hZ M σ σ') (a : D.Ax) (ρa : Env D (D.aparams a)) :
+    (h : E.Inv hZ M σ σ') (a : D.Ax) (ρa : Env D (D.aparams a)) (hq : σ'.alsFrage (E.ax a) = σ') :
     ∃ M₁ : Keys D D', Teil M M₁ ∧
       (∀ Φ, Passt Φ M₁ → (E.orakelΦ hZ pad Φ O').wirkt a σ ρa =
         (E.antwortWelt hZ pad σ (O'.wirkt (E.ax a) σ' (E.aparamsUm a ρa)).1,
           (O'.wirkt (E.ax a) σ' (E.aparamsUm a ρa)).2)) ∧ E.Inv hZ M₁ σ σ' := by
   obtain ⟨hk, hs, hΦ⟩ := E.schluessel h
-  exact ⟨_, hs, fun Φ hP => by simp only [orakelΦ, hΦ Φ hP], hk⟩
+  exact ⟨_, hs, fun Φ hP => by simp only [orakelΦ, hΦ Φ hP, hq], hk⟩
 
 /-- Pointer-free values beside each other are equal through the embedding. -/
 theorem frei_eq {τ : Ty} {v : Wert D τ} {v' : Wert D' (E.tyE τ)} (h : E.VRel hZ τ v v')

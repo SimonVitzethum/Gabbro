@@ -47,7 +47,7 @@ import all Init.Data.String.ToSlice
   across projects, ownership over the arenas of ALL projects, callbacks, threads in both
   directions, every lock -- because the conclusion is `GabbroZiel`'s own, over the composed unit.
 
-  Nothing is new in the conclusion and nothing is dropped: the proof is `gabbro_ziel` with (b)
+  Nothing is new in the conclusion and nothing is dropped: the proof is `gabbro_ziel_voll` with (b)
   composed from the projects (`nutzerPflichtA_komponiere`).
 -/
 
@@ -78,7 +78,7 @@ def GabbroZielProjekte : Prop :=
 /-- **GABBRO_ZIEL FOR PROJECTS, PROVED.** -/
 theorem gabbro_ziel_projekte : GabbroZielProjekte := by
   intro C D _ B ps fs ls cs hV hne hD hDS hC hN O hH passes sp init hL lebt0 K hK
-  exact gabbro_ziel C D (komponiere B ps) fs ls cs hC (nutzerPflichtA_komponiere hV hne hD hDS hN)
+  exact gabbro_ziel_voll C D (komponiere B ps) fs ls cs hC (nutzerPflichtA_komponiere hV hne hD hDS hN)
     O hH passes sp init hL lebt0 K hK
 
 #print axioms gabbro_ziel_projekte

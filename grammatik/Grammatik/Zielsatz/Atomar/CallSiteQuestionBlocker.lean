@@ -1,6 +1,6 @@
-/- C08 R3b: the binding contract covers question worlds, whereas the body
-   oracle class also quantifies over worlds without a question. A trace-faithful
-   binding separates these statements even with a satisfiable software pre.
+/- C08 R3b: the binding contract covers question worlds, and so does the body
+   oracle class since R3b (it quantified over every world before). A trace-faithful
+   binding separated the old class from the binding; it inhabits the new one.
    The on-pre body really calls the item and uses its result-dependent summary. -/
 module
 
@@ -110,7 +110,7 @@ theorem on_pre_body (passes : Nat) : KoerperGutA program passes summary () := by
   have hpre : PreQ program () (σ.fragt (.inl ())) (rho true) = true := by
     rw [preQ_sw program rfl]
     rfl
-  have hs := hQ () (σ.fragt (.inl ())) (rho true)
+  have hs := hQ () σ (rho true)
     (decide ((O.wirkt () (σ.fragt (.inl ())) (rho true)).2 ≠ 0)) hpre rfl
   refine ⟨?_, ?_⟩
   · intro σ' v hrun
@@ -133,27 +133,45 @@ theorem on_pre_execution :
       EndAusgang.zurueck (world.fragt (.inl ())) true := by
   rfl
 
-/-- The stronger class asks about an empty trace too. The pre still holds
-    there, but this unasked query returns false, refuting class membership. -/
-theorem not_conditional : ¬ AxVertragOP (PreQ unit.P) unit.Q oracle := by
+/-- **The old every-world class was too strong.** It asks about the empty trace too,
+    a world without the question; the pre holds there, and that never-asked query
+    returns false. So the actual, trace-faithful binding was not in it. -/
+theorem old_class_too_strong : ¬ AxVertragOPAlle (PreQ unit.P) unit.Q oracle := by
   intro h
   have hp : PreQ unit.P () world (rho true) = true := by
     rw [preQ_sw unit.P rfl]
     rfl
   exact Bool.false_ne_true (h () world (rho true) false hp rfl)
 
-/-- R3b's proposed actual-binding membership implication is false, even with
-    the hardware premise, a nontrivial passing pre, and a substantive body duty.
-    This refutes the proposed proof step, not the eventual call-site goal. -/
-theorem actual_binding_class_blocker [RootNativeFloat.Hardware] :
+/-- The question-world class holds directly: every question world carries its
+    question event, so the binding answers one, which decodes to true. -/
+theorem conditional : AxVertragOP (PreQ unit.P) unit.Q oracle := by
+  intro a σ0 ρ v _ hv
+  have he : some true = some v := hv
+  cases he
+  rfl
+
+/-- (2) on this fixture: the generic theorem puts the actual binding in the class. -/
+theorem binding_in_class [RootNativeFloat.Hardware] :
+    AxVertragOP (PreQ unit.P) unit.Q oracle :=
+  axVertragOP_of_binding binding post_cover hardware.2.2.1
+
+/-- **The repaired class separates nothing it should not.** The trace-faithful binding,
+    with a nontrivial passing pre, a substantive on-pre body duty and the hardware
+    premise, inhabits the question-world class, while the every-world class of before
+    excludes it: the counter-witness now witnesses that the OLD class was too strong. -/
+theorem question_world_witness [RootNativeFloat.Hardware] :
     ForeignVertrag unit oracle ∧ PostDeckt unit ∧ HardwareAnnahmenHw oracle unit.Q ∧
       AxVor program.axVertrag () world (rho true) ∧
       ¬ AxVor program.axVertrag () world (rho false) ∧
       (∀ passes, KoerperGutA program passes summary ()) ∧
-      ¬ AxVertragOP (PreQ unit.P) unit.Q oracle :=
-  ⟨binding, post_cover, hardware, pre_true world, pre_false world, on_pre_body, not_conditional⟩
+      AxVertragOP (PreQ unit.P) unit.Q oracle ∧
+      ¬ AxVertragOPAlle (PreQ unit.P) unit.Q oracle :=
+  ⟨binding, post_cover, hardware, pre_true world, pre_false world, on_pre_body,
+    binding_in_class, old_class_too_strong⟩
 
 end Gabbro.Grammatik.Zielsatz.CallSiteQuestionBlocker
 
 #print axioms Gabbro.Grammatik.Zielsatz.CallSiteQuestionBlocker.on_pre_body
-#print axioms Gabbro.Grammatik.Zielsatz.CallSiteQuestionBlocker.actual_binding_class_blocker
+#print axioms Gabbro.Grammatik.Zielsatz.CallSiteQuestionBlocker.conditional
+#print axioms Gabbro.Grammatik.Zielsatz.CallSiteQuestionBlocker.question_world_witness

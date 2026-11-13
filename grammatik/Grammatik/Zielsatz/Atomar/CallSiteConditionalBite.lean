@@ -64,7 +64,7 @@ theorem global_summary : AxVertragO summary (oracle 1) := by
 
 theorem conditional_summary : AxVertragOP (PreQ program) summary (oracle 0) := by
   intro a σ ρ v hp
-  have hf : PreQ program a σ ρ = false := by
+  have hf : PreQ program a (σ.fragt (.inl a)) ρ = false := by
     rw [preQ_sw program (by cases a; rfl)]
     rfl
   rw [hf] at hp

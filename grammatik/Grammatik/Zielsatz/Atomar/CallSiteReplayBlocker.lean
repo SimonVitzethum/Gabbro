@@ -62,7 +62,7 @@ theorem hardware [RootNativeFloat.Hardware] : HardwareAnnahmenHw traceOracle uni
     frame-respecting, register-local member: the unused software pre is false. -/
 theorem conditional_summary : AxVertragOP (PreQ program) unit.Q traceOracle := by
   intro a σ ρ v hp
-  have hf : PreQ program a σ ρ = false := by
+  have hf : PreQ program a (σ.fragt (.inl a)) ρ = false := by
     rw [preQ_sw program (by cases a; rfl)]
     rfl
   rw [hf] at hp

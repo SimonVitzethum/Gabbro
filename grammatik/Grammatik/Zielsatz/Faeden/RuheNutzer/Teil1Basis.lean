@@ -77,19 +77,24 @@ theorem preQ_mitRuhe (P : Programm D) (a : D.Ax) (σ : World D)
   rw [eval_ru]
   rfl
 
+/-- The translation back of a question world is the question world of the translation back. -/
+theorem worldZ_fragt (σ : World D.mitRuhe) (a : D.Ax) :
+    worldZ (σ.fragt (.inl a)) = (worldZ σ).fragt (.inl a) := rfl
+
 theorem axVertragOP_zurueck {P : Programm D} {Q : AxEns D} {O' : Orakel D.mitRuhe}
     (h : AxVertragOP (PreQ P.mitRuhe) (axEnsRuhe Q) O') :
     AxVertragOP (PreQ P) Q (Orakel.zurueck O') := by
   intro a σ ρ v hp hv
-  change einpassenErg (Orakel.zurueck O').zeiger (D.aerg a) (O'.wirkt a (worldR σ) (envR ρ)).2 =
-    some v at hv
+  change einpassenErg (Orakel.zurueck O').zeiger (D.aerg a)
+    (O'.wirkt a ((worldR σ).fragt (.inl a)) (envR ρ)).2 = some v at hv
   have e : einpassenErg (D := D.mitRuhe) O'.zeiger ((D.aerg a).map tyR)
-      (O'.wirkt a (worldR σ) (envR ρ)).2 = some (ergR (D.aerg a) v) := by
+      (O'.wirkt a ((worldR σ).fragt (.inl a)) (envR ρ)).2 = some (ergR (D.aerg a) v) := by
     rw [einpassenErg_ru (Orakel.zurueck O').zeiger O'.zeiger (fun _ => rfl), hv]
     rfl
-  have hq := h a (worldR σ) (envR ρ) (ergR (D.aerg a) v)
-    ((preQ_mitRuhe P a σ ρ).trans hp) e
-  change Q a (worldZ (O'.wirkt a (worldR σ) (envR ρ)).1)
+  have hp' : PreQ P.mitRuhe a ((worldR σ).fragt (.inl a)) (envR ρ) = true :=
+    (preQ_mitRuhe P a (σ.fragt (.inl a)) ρ).trans hp
+  have hq := h a (worldR σ) (envR ρ) (ergR (D.aerg a) v) hp' e
+  change Q a (worldZ (O'.wirkt a ((worldR σ).fragt (.inl a)) (envR ρ)).1)
     (ergZ (D.aerg a) (ergR (D.aerg a) v)) = true at hq
   rw [ergZ_ergR] at hq
   exact hq

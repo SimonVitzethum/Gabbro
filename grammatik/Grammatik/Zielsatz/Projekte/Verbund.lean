@@ -60,7 +60,7 @@ import all Init.Data.String.ToSlice
   with thread-locality and shared atomics, pool safety, write separation and the interrupt masks
   over the composed graph, the ownership check of a body against an arena of another unit, and the
   ownership start. `akzeptiertSpecX_komponiere` puts them together; `gabbro_ziel_verbund_n` is
-  `gabbro_ziel` on the linked unit.
+  `gabbro_ziel_voll` on the linked unit.
 -/
 
 namespace Gabbro.Grammatik.Zielsatz
@@ -269,7 +269,7 @@ theorem gabbro_ziel_verbund_n : GabbroZielVerbundN := by
   have hK' : specPruefer.akzeptiert (komponiere B ps) fs.1 ls.1 cs.1 = true :=
     @decide_eq_true _ (Classical.propDecidable _)
       ⟨akzeptiertSpecX_komponiere fs.2 hne hD hV hA hL, hL.besitzStart, hL.akkuStart⟩
-  exact gabbro_ziel specPruefer D (komponiere B ps) fs ls cs hK'
+  exact gabbro_ziel_voll specPruefer D (komponiere B ps) fs ls cs hK'
     (nutzerPflichtA_komponiere hV hne hD hDS hN) O hH passes sp init hLz lebt0 K hK
 
 /-! ## A library proved against a smaller rely -/

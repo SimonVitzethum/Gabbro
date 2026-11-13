@@ -3,6 +3,7 @@ module
 
 public import Grammatik.Logik.Ruf.FremdRuf.T10
 public import Grammatik.Speichermodell.Maschine.GXMaschine
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.Schritt.Fremd
 
 @[expose] public section
 
@@ -11,62 +12,6 @@ namespace Gabbro.Grammatik
 open Zielsatz
 
 variable {D : Deklaration}
-
-/-- The replay key of a foreign question, including its original arguments.
-    The key has exactly one new question event, as in `AxEintrag`. -/
-abbrev ForeignCallKey (D : Deklaration) :=
-  Σ a : D.Ax, World D × Env D (D.aparams a)
-
-def foreignCallKey {Γ : Ctx} {Λ : List (Res D)} (a : D.Ax)
-    (args : Args D Γ Λ (D.aparams a)) (σ : World D) (ρ : Env D Γ) :
-    ForeignCallKey D :=
-  let σ₁ := σ.lese Λ args.orte
-  ⟨a, σ₁.fragt (.inl a), evalArgs σ₁ args σ₁ ρ⟩
-
-/-- Only the current call is inspected; calls inside a branch or continuation
-    become heads when the machine reaches them. No oracle answer is needed. -/
-def Stmt.foreignCallKey {V : Vertrag D} {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) :
-    Option (ForeignCallKey D) :=
-  match s with
-  | .axiomCall a args .. => some (Gabbro.Grammatik.foreignCallKey a args σ ρ)
-  | .axiomCallElse _ a args .. => some (Gabbro.Grammatik.foreignCallKey a args σ ρ)
-  | _ => none
-
-def Block.foreignCallKey {V : Vertrag D} {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) :
-    Option (ForeignCallKey D) :=
-  match b with
-  | .cons s _ => s.foreignCallKey σ ρ
-  | .bindAxiom a args .. => some (Gabbro.Grammatik.foreignCallKey a args σ ρ)
-  | .bindAxiomElse a args .. => some (Gabbro.Grammatik.foreignCallKey a args σ ρ)
-  | .bindAxiomOpt _ a args .. => some (Gabbro.Grammatik.foreignCallKey a args σ ρ)
-  | .bindAxiomOptElse _ a args .. => some (Gabbro.Grammatik.foreignCallKey a args σ ρ)
-  | _ => none
-
-def Endblock.foreignCallKey {V : Vertrag D} {l : Bool} {Γ : Ctx}
-    {Λ : List (Res D)} (b : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ) :
-    Option (ForeignCallKey D) :=
-  match b with
-  | .cons s _ => s.foreignCallKey σ ρ
-  | .bindAxiom a args .. => some (Gabbro.Grammatik.foreignCallKey a args σ ρ)
-  | .bindAxiomElse a args .. => some (Gabbro.Grammatik.foreignCallKey a args σ ρ)
-  | .bindAxiomOpt _ a args .. => some (Gabbro.Grammatik.foreignCallKey a args σ ρ)
-  | .bindAxiomOptElse _ a args .. => some (Gabbro.Grammatik.foreignCallKey a args σ ρ)
-  | _ => none
-
-def GRest.foreignCallKey {V : Vertrag D} {l : Bool} {Γ : Ctx}
-    {Λ : List (Res D)} (r : GRest D V l Γ Λ) (σ : World D) (ρ : Env D Γ) :
-    Option (ForeignCallKey D) :=
-  match r with
-  | .ende b => b.foreignCallKey σ ρ
-  | .dann b _ => b.foreignCallKey σ ρ
-  | _ => none
-
-def RufMaschineG.foreignCallKey (M : RufMaschineG D) (t : Faden) :
-    Option (ForeignCallKey D) :=
-  (M.faeden t).kopf.rest.2.2.2.2.foreignCallKey (M.weltVon t)
-    (M.faeden t).kopf.rest.2.2.2.1
 
 /-- A recorded key occurs at a reachable foreign-call head, on a memory the
     atomic rely may present. This does not assert anything about the answer.
@@ -178,4 +123,40 @@ theorem callSiteErreichbar_of_gx {P : Programm D} {O : Orakel D} {passes : Nat}
     CallSiteErreichbar P O passes Tg M0 key :=
   ⟨M, sp, t, hr, hp, hk⟩
 
+
+/-! ## The actual binding in the conditional class (C08 R3b) -/
+
+/-- **(2) The actual software binding inhabits the body duties' class.** At a question
+    world `σ0.fragt (.inl a)` whose pre holds, a software item's answer meets its post
+    (`ForeignVertrag`, the pre read through `axVor_fragt`) and so its summary
+    (`PostDeckt`); every other item meets its summary unconditionally (`AxVertragOHw`).
+    Worlds without the question are never asked, and the class asks nothing there. -/
+theorem axVertragOP_of_binding {E : Einheit D} {O : Orakel D} (hf : ForeignVertrag E O)
+    (hp : PostDeckt E) (hh : AxVertragOHw E.Q O) : AxVertragOP (PreQ E.P) E.Q O := by
+  intro a σ0 ρ v hpre hv
+  by_cases hsw : D.axHerkunft a = some AxOrigin.software
+  · rw [preQ_sw E.P hsw] at hpre
+    have hvor : AxVor E.P.axVertrag a σ0 ρ := (axVor_fragt E.P.axVertrag a σ0 ρ).mpr hpre
+    exact hp a hsw σ0 ρ _ v (hf.1 a hsw σ0 ρ hvor v hv)
+  · exact hh a hsw (σ0.fragt (.inl a)) ρ v hv
+
+/-- **The run asks only where the duties hold.** Under the call-site duty, every question
+    of a reachable head is a question world whose interface pre holds (software) or one
+    with no pre (hardware), so the class gives the answer fact at every reachable question:
+    the oracle rely the replay records. -/
+theorem antwortQLauf_of_callSite {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D}
+    {Tg : D.Tab ⊕ D.Glob → Prop} {M0 : RufMaschineG D} (hQ : AxVertragOP (PreQ P) Q O)
+    (hCS : CallSitePflichtLauf P O passes Tg M0) : AntwortQLauf P O passes Q Tg M0 := by
+  intro M hr σ hσ t a σ1 ρ hk v hv
+  refine hQ a σ1 ρ v ?_ hv
+  by_cases hsw : D.axHerkunft a = some AxOrigin.software
+  · rw [preQ_sw P hsw]
+    exact hCS a (σ1.fragt (.inl a)) ρ ⟨M, σ, t, hr, hσ, hk⟩ hsw
+  · exact preQ_hw P hsw _ ρ
+
+/-- The call-site duty and the binding give the replay's whole oracle rely. -/
+theorem relyQ_of_callSite {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D}
+    {Tg : D.Tab ⊕ D.Glob → Prop} {M0 : RufMaschineG D} (hQ : AxVertragOP (PreQ P) Q O)
+    (hCS : CallSitePflichtLauf P O passes Tg M0) : RelyQ P O passes Q Tg M0 :=
+  ⟨hQ, antwortQLauf_of_callSite hQ hCS⟩
 end Gabbro.Grammatik

@@ -377,6 +377,46 @@ structure _root_.Gabbro.Grammatik.Einbettung.Phi (D D' : Deklaration) where
   atom : World D → World D'
   ruf : World D → Option (Σ f' : D'.Fn, Env D' (D'.params f'))
 
+/-! ## Question worlds (C08 R3b) -/
+
+/-- A world as the question world of item `b`: itself when its newest event already is that
+    question, else with the question recorded. Memory is unchanged. The induced oracle asks the
+    image oracle only at such worlds, the only worlds machine G asks an oracle in. -/
+noncomputable def _root_.Gabbro.Grammatik.World.alsFrage {D₀ : Deklaration} (w : World D₀)
+    (b : D₀.Ax) : World D₀ :=
+  haveI := Classical.propDecidable (∃ w0 : World D₀, w = w0.fragt (.inl b))
+  if ∃ w0 : World D₀, w = w0.fragt (.inl b) then w else w.fragt (.inl b)
+
+theorem _root_.Gabbro.Grammatik.World.alsFrage_fragt {D₀ : Deklaration} (w0 : World D₀)
+    (b : D₀.Ax) : (w0.fragt (.inl b)).alsFrage b = w0.fragt (.inl b) := by
+  unfold World.alsFrage
+  split
+  · rfl
+  · rename_i h
+    exact absurd ⟨w0, rfl⟩ h
+
+theorem _root_.Gabbro.Grammatik.World.alsFrage_frage {D₀ : Deklaration} (w : World D₀)
+    (b : D₀.Ax) : ∃ w0 : World D₀, w.alsFrage b = w0.fragt (.inl b) := by
+  unfold World.alsFrage
+  split
+  · rename_i h
+    exact h
+  · exact ⟨w, rfl⟩
+
+theorem _root_.Gabbro.Grammatik.World.alsFrage_slots {D₀ : Deklaration} (w : World D₀)
+    (b : D₀.Ax) : (w.alsFrage b).slots = w.slots := by
+  unfold World.alsFrage
+  split
+  · rfl
+  · rfl
+
+theorem _root_.Gabbro.Grammatik.World.alsFrage_globs {D₀ : Deklaration} (w : World D₀)
+    (b : D₀.Ax) : (w.alsFrage b).globs = w.globs := by
+  unfold World.alsFrage
+  split
+  · rfl
+  · rfl
+
 section Induziert
 
 variable (hS : E.SigTreu) (pad : List (Ereignis D)) (Φ : Phi D D')
@@ -407,9 +447,9 @@ noncomputable def aumweltΦ (T : D.Tab ⊕ D.Glob → Prop) (A' : AUmwelt D') : 
 /-- **The induced oracle.** Visibility of a global that carries function pointers is answered
     constantly: no awaited global carries one (`AntwortFrei.atomFrei`), and only so is the oracle
     local to the carrier it asks about. -/
-def orakelΦ (O' : Orakel D') : Orakel D where
+noncomputable def orakelΦ (O' : Orakel D') : Orakel D where
   wirkt := fun a σ ρ =>
-    let x := O'.wirkt (E.ax a) (Φ.haupt σ) (E.aparamsUm a ρ)
+    let x := O'.wirkt (E.ax a) ((Φ.haupt σ).alsFrage (E.ax a)) (E.aparamsUm a ρ)
     (E.antwortWelt hZ pad σ x.1, x.2)
   regLies := fun r σ => O'.regLies (E.reg r) (Φ.haupt σ)
   regSchreib := fun _ _ => ()

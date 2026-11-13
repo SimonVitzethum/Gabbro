@@ -19,7 +19,7 @@ namespace Gabbro.Grammatik
 theorem fremdruf_gate_gilt_pre_zeuge :
     ∃ (g : GateData fdD) (σ : World fdD) (ρ : Env fdD (fdD.aparams fdRead))
       (v : ErgVal fdD (fdD.aerg fdRead)),
-      GutO fdObad ∧ AxVertragOP fdPre fdQ fdObad ∧
+      GutO fdObad ∧ AxVertragOPAlle fdPre fdQ fdObad ∧
       g.eff = fdD.aschreibt fdRead ∧ g.effG = fdD.agschreibt fdRead ∧
       AufruferPflicht fdPre fdRead σ ρ ∧
       einpassenErg fdObad.zeiger (fdD.aerg fdRead) (fdObad.wirkt fdRead σ ρ).2 = some v ∧
@@ -45,7 +45,7 @@ theorem fremdruf_gate_gilt_pre_zeuge :
     (c) of `gabbro_ziel` in full, and on the well-formed witness read it
     answers exactly as the machine's oracle does. -/
 theorem hardware_aus_vertragP_zeuge [RootNativeFloat.Hardware] :
-    GutO fdObad ∧ RegLokal fdObad ∧ AxVertragOP fdPre fdQ fdObad ∧
+    GutO fdObad ∧ RegLokal fdObad ∧ AxVertragOPAlle fdPre fdQ fdObad ∧
       (∀ a, einpassenErg fdObad.zeiger (fdD.aerg a) (fdRaus a) = none) ∧
       ¬ AxVertragO fdQ fdObad ∧
       Zielsatz.HardwareAnnahmen (mitVorbedingung fdPre fdObad fdRaus) fdQ ∧
