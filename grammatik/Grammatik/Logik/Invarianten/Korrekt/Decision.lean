@@ -108,9 +108,11 @@ theorem decideWithBudget_at_Budget [DecidableEq α] (formula : LProp α)
     (closed : closedUnderB [] formula = true) (values : Assignment α) :
     (decideWithBudget formula (Budget formula) = .ok true ↔ formula.denote values) ∧
     (decideWithBudget formula (Budget formula) = .ok false ↔ ¬ formula.denote values) := by
-  rw [budget_sufficient formula (Budget formula) closed (by omega)]
+  have computed := budget_sufficient formula (Budget formula) closed (by omega)
   constructor
-  · simpa only [Except.ok.injEq] using decideB_true_iff formula closed values
-  · simpa only [Except.ok.injEq] using decideB_false_iff formula closed values
+  · rw [computed]
+    simpa only [Except.ok.injEq] using decideB_true_iff formula closed values
+  · rw [computed]
+    simpa only [Except.ok.injEq] using decideB_false_iff formula closed values
 
 end Gabbro.Grammatik.Invarianten.Elim.Korrekt

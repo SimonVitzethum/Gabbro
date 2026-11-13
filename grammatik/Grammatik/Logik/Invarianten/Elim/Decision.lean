@@ -116,7 +116,7 @@ def Budget [DecidableEq α] (formula : LProp α) : Nat := (elimination formula).
 /-- The total Boolean decision on CLOSED formulas. For open syntax, this only
     evaluates the remaining free variables at zero; use the refusing entry point
     below whenever closedness is not already guaranteed by construction.
-    Semantic correctness of elimination is the separate P15/P16 obligation. -/
+    `Korrekt.Decision` proves both answers correct under syntactic closedness. -/
 def decideB [DecidableEq α] (formula : LProp α) : Bool :=
   (elimination formula).1.eval (fun _ => 0)
 

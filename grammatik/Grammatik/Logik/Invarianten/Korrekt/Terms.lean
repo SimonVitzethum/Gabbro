@@ -85,14 +85,13 @@ theorem term_bind [DecidableEq α] (name : α) (term : LTerm α)
       (splitVar name term).1 * x + (splitVar name term).2.denote values := by
   rw [splitVar_denote name term (values.bind name x), bind_same, remainder_bind]
 
-/-- Every atomic coefficient is zero or a unit. Only strict inequalities require
-    this restriction in Cooper's boundary argument. Divisibility may be arbitrary. -/
+/-- Every atomic coefficient is zero or a unit, including divisibility atoms.
+    This is the normal form computed by coefficient normalization. -/
 @[expose]
 def UnitCoefficients [DecidableEq α] (name : α) : QF α → Prop
   | .tru | .fls => True
-  | .atom .lt term =>
+  | .atom _ term =>
       (splitVar name term).1 = 0 ∨ (splitVar name term).1 = 1 ∨ (splitVar name term).1 = -1
-  | .atom _ _ => True
   | .conj left right | .disj left right => UnitCoefficients name left ∧ UnitCoefficients name right
 
 theorem unit_truth [DecidableEq α] (name : α) (value : Bool) :

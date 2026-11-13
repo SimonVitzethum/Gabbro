@@ -106,7 +106,6 @@ theorem compile_denote [DecidableEq α] (formula : LProp α)
       have he := negateMetered_result next
       subst result
       rw [neg_denote, ih _ _ _ first values]
-      rfl
   | and left right ihLeft ihRight =>
       obtain ⟨state, start⟩ := charge_then_success success
       obtain ⟨a, stateA, ha, rest⟩ := work_bind_success start
@@ -114,7 +113,6 @@ theorem compile_denote [DecidableEq α] (formula : LProp α)
       have he := work_pure_result done
       subst result
       rw [conj_denote, ihLeft _ _ _ ha values, ihRight _ _ _ hb values]
-      rfl
   | or left right ihLeft ihRight =>
       obtain ⟨state, start⟩ := charge_then_success success
       obtain ⟨a, stateA, ha, rest⟩ := work_bind_success start
@@ -122,7 +120,6 @@ theorem compile_denote [DecidableEq α] (formula : LProp α)
       have he := work_pure_result done
       subst result
       rw [disj_denote, ihLeft _ _ _ ha values, ihRight _ _ _ hb values]
-      rfl
   | imp left right ihLeft ihRight =>
       obtain ⟨state, start⟩ := charge_then_success success
       obtain ⟨a, stateA, ha, rest⟩ := work_bind_success start
@@ -146,8 +143,7 @@ theorem compile_denote [DecidableEq α] (formula : LProp α)
       obtain ⟨eliminated, stateE, he, done⟩ := work_bind_success rest'
       rw [negateMetered_result done, neg_denote, eliminateMetered_result he, eliminateOne_denote,
         negateMetered_result hn]
-      simp only [neg_denote, ih _ _ _ first, LProp.denote]
-      tauto
+      simp only [neg_denote, ih _ _ _ first, LProp.denote, not_exists, not_not]
 
 /-- The unreachable error arm of `elimination` is discharged by P14's totality. -/
 theorem elimination_denote [DecidableEq α] (formula : LProp α) (values : Assignment α) :

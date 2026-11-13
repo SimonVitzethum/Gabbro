@@ -127,39 +127,50 @@ theorem normalizeCoefficients_unit [DecidableEq α] (name : α) (multiple : Nat)
       unfold normalizeCoefficients normalizeAtom
       split
       · apply unit_atom
-        cases relation <;> simp [UnitCoefficients]
-      · apply unit_atom
-        cases relation with
-        | lt =>
-            simp only [UnitCoefficients, addTerm_coefficient, scaleTerm_coefficient,
-              remainder_coefficient, splitVar, if_pos rfl]
-            split <;> simp
-        | dvd k => trivial
-        | ndvd k => trivial
+        simp [UnitCoefficients]
+      · cases relation <;> apply unit_atom <;>
+          simp only [UnitCoefficients, addTerm_coefficient, scaleTerm_coefficient,
+            remainder_coefficient, splitVar, if_pos rfl]
+        all_goals split <;> simp
   | conj left right ihLeft ihRight => exact unit_conj name _ _ ihLeft ihRight
   | disj left right ihLeft ihRight => exact unit_disj name _ _ ihLeft ihRight
 
 theorem normalize_unit [DecidableEq α] (name : α) (body : QF α) :
     UnitCoefficients name (normalize name body) :=
-  unit_conj name _ _ (unit_atom name _ _ (by trivial))
+  unit_conj name _ _ (unit_atom name _ _ (by simp [UnitCoefficients, splitVar]))
     (normalizeCoefficients_unit name _ body)
 
-/-- Multiplication by the LCM is a bijection onto its integer multiples. -/
-theorem normalize_exists [DecidableEq α] (name : α) (body : QF α) (values : Assignment α) :
-    (∃ x : Int, (normalize name body).denote (values.bind name x)) ↔
-      ∃ x : Int, body.denote (values.bind name x) := by
+/-- Preserve the witness equation as well as its truth, so model reconstruction
+    can divide a normalized witness by the computed LCM. -/
+theorem normalize_denote [DecidableEq α] (name : α) (body : QF α)
+    (values : Assignment α) (y : Int) :
+    (normalize name body).denote (values.bind name y) ↔
+      ∃ x : Int, y = (coefficientLcm name body : Int) * x ∧
+        body.denote (values.bind name x) := by
   let m := coefficientLcm name body
   have hp : 0 < m := coefficientLcm_pos name body
   have hm : m - 1 + 1 = m := by omega
   have he (x : Int) := normalizeCoefficients_denote name m body hp (dvd_refl m) values x
   simp only [normalize, conj_denote, atom_denote, Relation.denote, LTerm.denote, bind_same]
-  change (∃ y : Int, ((m - 1 + 1 : Nat) : Int) ∣ y ∧
+  change (((m - 1 + 1 : Nat) : Int) ∣ y ∧
     (normalizeCoefficients name m body).denote (values.bind name y)) ↔ _
   rw [hm]
   constructor
-  · rintro ⟨y, ⟨x, hx⟩, hbody⟩
-    exact ⟨x, (he x).mp (by simpa [hx] using hbody)⟩
-  · rintro ⟨x, hbody⟩
-    exact ⟨(m : Int) * x, ⟨x, rfl⟩, (he x).mpr hbody⟩
+  · rintro ⟨⟨x, hx⟩, hbody⟩
+    exact ⟨x, hx, (he x).mp (by simpa [hx] using hbody)⟩
+  · rintro ⟨x, rfl, hbody⟩
+    exact ⟨⟨x, rfl⟩, (he x).mpr hbody⟩
+
+/-- Multiplication by the LCM is a bijection onto its integer multiples. -/
+theorem normalize_exists [DecidableEq α] (name : α) (body : QF α) (values : Assignment α) :
+    (∃ x : Int, (normalize name body).denote (values.bind name x)) ↔
+      ∃ x : Int, body.denote (values.bind name x) := by
+  constructor
+  · rintro ⟨y, hy⟩
+    obtain ⟨x, _, hx⟩ := (normalize_denote name body values y).mp hy
+    exact ⟨x, hx⟩
+  · rintro ⟨x, hx⟩
+    exact ⟨(coefficientLcm name body : Int) * x,
+      (normalize_denote name body values _).mpr ⟨x, rfl, hx⟩⟩
 
 end Gabbro.Grammatik.Invarianten.Elim.Korrekt

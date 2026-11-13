@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Logik.Invarianten.Korrekt.Period
-public import Mathlib.Data.Nat.Find
+import Mathlib.Data.Nat.Find
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring
 
@@ -111,7 +111,12 @@ theorem witness_descent [DecidableEq α] (name : α) (body : QF α)
           apply least
           simpa only [hk] using h
     refine Or.inr ⟨x - (k : Int) * (delta : Int), prior, ?_⟩
-    convert failed using 1 <;> push_cast <;> ring
+    have samePoint : x - (k : Int) * (delta : Int) - (delta : Int) =
+        x - ((k + 1 : Nat) : Int) * (delta : Int) := by
+      push_cast
+      ring
+    rw [samePoint]
+    exact failed
 
 /-- The finite Cooper disjunction, stated independently of syntax construction.
     Indices j are zero-based in lists and denote the mathematical residue j+1. -/
