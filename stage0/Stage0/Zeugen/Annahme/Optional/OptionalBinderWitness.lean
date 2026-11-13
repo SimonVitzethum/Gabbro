@@ -133,7 +133,7 @@ theorem accepted_images :
     (image false true false).toOption.isSome = true ∧
     (image false true true).toOption.isSome = true ∧
     (image true true false).toOption.isSome = true ∧
-    (image true true true).toOption.isSome = true := by decide +kernel
+    (image true true true).toOption.isSome = true := by decide_cbv
 
 /-- Void keeps local 23, values bind 7, and both handlers consume reason 0. -/
 theorem success_and_reason_paths :
@@ -143,12 +143,12 @@ theorem success_and_reason_paths :
     observed false true false (BitVec.ofInt 64 (-9)) = 9 ∧
     observed false true true (BitVec.ofInt 64 (-9)) = 9 ∧
     observed true true false (BitVec.ofInt 64 (-9)) = 9 ∧
-    observed true true true (BitVec.ofInt 64 (-9)) = 9 := by decide +kernel
+    observed true true true (BitVec.ofInt 64 (-9)) = 9 := by decide_cbv
 
 /-- The current canonical void decoder also accepts unlisted errno words. -/
 theorem unlisted_void_answer :
     observed false true false (BitVec.ofInt 64 (-8)) = 23 ∧
-    observed false true true (BitVec.ofInt 64 (-8)) = 23 := by decide +kernel
+    observed false true true (BitVec.ofInt 64 (-8)) = 23 := by decide_cbv
 
 /-- In particular, preserving local 23 cannot be implemented by deleting the call. -/
 def observedTrace (valued fallible nested : Bool) (raw : Runner.W) : List (Ereignis (D valued fallible)) :=
@@ -162,10 +162,10 @@ theorem oracle_effect_is_retained :
     observedTrace false false true 7 = [.fremd (.inl (gate false false))] ∧
     observedTrace false true false 7 = [.fremd (.inl (gate false true))] ∧
     observedTrace false true true (BitVec.ofInt 64 (-9)) = [.fremd (.inl (gate false true))] := by
-  decide +kernel
+  decide_cbv
 
 /-- Value decoding still rejects an answer outside its declared range. -/
 theorem invalid_value_answer :
-    observed true true false 11 = -1 ∧ observed true true true 11 = -1 := by decide +kernel
+    observed true true false 11 = -1 ∧ observed true true true 11 = -1 := by decide_cbv
 
 end Gabbro.Stage0.OptionalBinderWitness

@@ -178,7 +178,7 @@ def g1S : SperrInv g1D := ⟨fun L => (L : Empty).elim, fun L _ => (L : Empty).e
 /-- Both probes pass the checker (with `haupt` declared): a refusal is (b)'s. -/
 theorem g1PA_akzeptiert : Akzeptiert g1PA g1S [g1Haupt] [] [] [g1Haupt] = true := by
   -- The answer-site check uses the well-founded `Ty.decEq` on `g1Erg` and `never`.
-  decide +kernel
+  decide_cbv
 
 /-! ## 3. The oracles -/
 
@@ -228,7 +228,7 @@ theorem g1PR_akzeptiert [RootNativeFloat.Hardware] (answers : G1FloatAnswers) :
     rfl
   simp only [Akzeptiert, Bool.and_eq_true]
   repeat' apply And.intro
-  all_goals first | exact checked | decide +kernel
+  all_goals first | exact checked | decide_cbv
 
 /-- The word of `0.5` decodes through the actual word and range guards. -/
 theorem g1_temp_wort (answers : G1FloatAnswers) :

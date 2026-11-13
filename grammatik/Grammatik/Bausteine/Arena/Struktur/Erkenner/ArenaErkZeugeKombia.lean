@@ -68,7 +68,7 @@ theorem fgdarf2 (g : FD2.Glob) : gdarf FD2 g ([] : List (Res FD2)) := by
 
 /-- The payload `7`, at the payload field's declared type. -/
 def sieben2 : Expr FD2 [] [] (FD2.typ FA2.tab FA2.feld) :=
-  Expr.umTyp (show Ty.int 0 255 = FD2.typ FA2.tab FA2.feld from by decide +kernel)
+  Expr.umTyp (show Ty.int 0 255 = FD2.typ FA2.tab FA2.feld from by rfl)
     (Expr.widen (by decide) (by decide) (Expr.lit 7))
 
 def oF2 : Orakel FD2 where
@@ -122,7 +122,7 @@ def kombiHangOk : Bool :=
   | .ok σ' _ => decide (Lf2.wert σ' 0 = 1 ∧ Rf2.wert σ' 0 = 3 ∧ LG2.st σ' = 2 ∧ FA2.kopfSt σ' = 4)
   | _ => false
 
-theorem kombiHangOk_wahr : kombiHangOk = true := by decide +kernel
+theorem kombiHangOk_wahr : kombiHangOk = true := by decide_cbv
 
 /-- **Run on the real world:** the tree `0 (right 3)` gets the left child `1` (the slot that came off the free list), the
     list `2` is as it was, the free list is empty, and the invariant of the arena holds -- as the recognizer promised. -/
@@ -167,7 +167,7 @@ def kombiVersetzenOk : Bool :=
   | .ok σ' _ => decide (Rf2.wert σ' 0 = 4 ∧ LG2.st σ' = 3 ∧ LL2.wert σ' 3 = 2 ∧ Wz2.st σ' = 0)
   | _ => false
 
-theorem kombiVersetzenOk_wahr : kombiVersetzenOk = true := by decide +kernel
+theorem kombiVersetzenOk_wahr : kombiVersetzenOk = true := by decide_cbv
 
 /-- **Run on the real world:** the leaf `3` leaves the tree and becomes the head of the list `3 -> 2`; the tree is the root
     alone; the arena invariant (both structures well formed, no slot in both) holds. -/
@@ -204,7 +204,7 @@ def doppelGliedOk : Bool :=
   | .ok σ' _ => decide (LG2.st σ' = 0 ∧ Wz2.st σ' = 0)
   | _ => false
 
-theorem doppelGliedOk_wahr : doppelGliedOk = true := by decide +kernel
+theorem doppelGliedOk_wahr : doppelGliedOk = true := by decide_cbv
 
 /-- **A slot in both structures has no derivation:** run on `wk`, the root `0` becomes the head of the list while it is
     still the root of the tree. The list is well formed, the tree is well formed -- and the slot is a member of both, which

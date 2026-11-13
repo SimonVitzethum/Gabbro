@@ -395,43 +395,43 @@ theorem wit64_wipe_blocks : (lowerFn wLay wP WFn.wipe "wipe").map (·.blks.lengt
 theorem wit64_main_blocks : (lowerFn wLay wP WFn.main "main").map (·.blks.length) = some 17 := by rfl
 
 /-- `put` lowers its division to an unsigned division, `get` its remainder to an unsigned remainder. -/
-theorem wit64_put_udiv : (lowerFn wLay wP WFn.put "put").map (usesOp .udiv) = some true := by decide +kernel
+theorem wit64_put_udiv : (lowerFn wLay wP WFn.put "put").map (usesOp .udiv) = some true := by decide_cbv
 
-theorem wit64_get_urem : (lowerFn wLay wP WFn.get "get").map (usesOp .urem) = some true := by decide +kernel
+theorem wit64_get_urem : (lowerFn wLay wP WFn.get "get").map (usesOp .urem) = some true := by decide_cbv
 
 /-- The three matches lower: `mt` has a `switch` (the reason and the tagged value), a signed branch (the
     option), the case number and the payload are an unsigned remainder and division. -/
 theorem wit64_mt_forms : (lowerFn wLay wP WFn.mt "mt").map (fun f =>
     usesTerm (fun | .sw .. => true | _ => false) f && usesTerm (fun | .brc .slt .. => true | _ => false) f &&
-    usesOp .urem f && usesOp .udiv f) = some true := by decide +kernel
+    usesOp .urem f && usesOp .udiv f) = some true := by decide_cbv
 
 /-- The failure channel: `fail` answers its word by a multiplication (`ret`) and subtraction-free reason words;
     `callf` takes the word apart with an unsigned remainder and division and branches. -/
 theorem wit64_fail_forms : (lowerFn wLay wP WFn.fail "fail").map (fun f => usesOp .mul f) = some true ∧
     (lowerFn wLay wP WFn.callf "callf").map (fun f => usesOp .urem f && usesOp .udiv f && usesOp .sub f) =
       some true := by
-  constructor <;> decide +kernel
+  constructor <;> decide_cbv
 
 /-- ... and the source meaning of `callf` is an `ok`: it takes the value arm once and the reason arm once. -/
-theorem wit64_callf_ok : isOk (rufAt wP wO 0 3 WFn.callf w0 .nil) = true := by decide +kernel
+theorem wit64_callf_ok : isOk (rufAt wP wO 0 3 WFn.callf w0 .nil) = true := by decide_cbv
 
 /-- The signed and bitwise forms lower to their instructions: signed division and remainder, and, or, xor,
     shift left, logical shift right. -/
 theorem wit64_bits_forms : (lowerFn wLay wP WFn.bits "bits").map (fun f =>
     usesOp .sdiv f && usesOp .srem f && usesOp .and f && usesOp .or f && usesOp .xor f && usesOp .shl f &&
-    usesOp .lshr f) = some true := by decide +kernel
+    usesOp .lshr f) = some true := by decide_cbv
 
-theorem wit64_bits_ok : isOk (rufAt wP wO 0 1 WFn.bits w0 .nil) = true := by decide +kernel
+theorem wit64_bits_ok : isOk (rufAt wP wO 0 1 WFn.bits w0 .nil) = true := by decide_cbv
 
 /-- ... and the source meaning of `mt` is an `ok`: the premise of the refinement is not vacuous. -/
-theorem wit64_mt_ok : isOk (rufAt wP wO 0 1 WFn.mt w0 .nil) = true := by decide +kernel
+theorem wit64_mt_ok : isOk (rufAt wP wO 0 1 WFn.mt w0 .nil) = true := by decide_cbv
 
 /-- The premise of `CallRef` is not vacuous: the source meaning of `get(1)` is an `ok`. -/
 theorem wit64_get_ok : ∃ σ' v, rufAt wP wO 0 1 WFn.get w0 (argEnv 1 (by decide) (by decide)) =
     RufAusgang.ok σ' v := ⟨_, _, rfl⟩
 
 /-- ... and so is that of `main`, which calls the other three (depth 3 suffices). -/
-theorem wit64_main_ok : isOk (rufAt wP wO 0 3 WFn.main w0 .nil) = true := by decide +kernel
+theorem wit64_main_ok : isOk (rufAt wP wO 0 3 WFn.main w0 .nil) = true := by decide_cbv
 
 end C64
 

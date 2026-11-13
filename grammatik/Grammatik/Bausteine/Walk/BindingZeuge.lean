@@ -19,7 +19,7 @@ def declaration : Deklaration := declOf unit
 
 def nodeIndex : declaration.Tab := (⟨0, by decide⟩ : Fin unit.tabs.length)
 def entryField : declaration.Feld nodeIndex :=
-  (⟨0, by decide +kernel⟩ : Fin (fieldCount unit nodeIndex))
+  (⟨0, by decide_cbv⟩ : Fin (fieldCount unit nodeIndex))
 
 def binding : WalkBinding declaration shape := {
   nodes := nodeIndex
@@ -31,7 +31,7 @@ def binding : WalkBinding declaration shape := {
   count := by rfl
   scale := { bytesPerLeaf := 4096, positive := by decide } }
 
-private theorem node_count : declaration.count binding.nodes = 2 := rfl
+theorem node_count : declaration.count binding.nodes = 2 := rfl
 
 def leafField : FieldAt shape.entry .bool := .tail .head
 def descendField : FieldAt shape.entry .bool := .tail (.tail .head)
@@ -76,7 +76,7 @@ def root : Wert declaration (.index (declaration.count binding.nodes)) :=
 theorem safe_children_zeuge :
     (visitT (binding.tree state (prodGetW leafField) (prodGetW descendField)) 1
       (binding.entries state root)).map (·.1) =
-        [[⟨0, by decide⟩, ⟨0, by decide⟩], [⟨1, by decide⟩]] := by decide +kernel
+        [[⟨0, by decide⟩, ⟨0, by decide⟩], [⟨1, by decide⟩]] := by decide_cbv
 
 /-- The generated G expansion reads two root entries and two child entries, never the leaf's child. -/
 theorem expansion_reads_zeuge :

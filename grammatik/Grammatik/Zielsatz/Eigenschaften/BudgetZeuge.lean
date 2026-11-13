@@ -84,7 +84,12 @@ def bS : Speicher bD := ⟨fun t => t.elim, fun g => g.elim⟩
 def bInit : Faden → Σ f : bD.Fn, Env bD (bD.params f) := fun _ => ⟨(), .nil⟩
 
 /-- The oracle answers nothing (there is nothing to answer). -/
-def bO : Orakel bD := ⟨fun a => a.elim, fun r => r.elim, fun r => r.elim, fun g => g.elim, fun _ => none⟩
+def bO : Orakel bD where
+  wirktL := fun a => a.elim
+  regLiesL := fun r => r.elim
+  regSchreib := fun r => r.elim
+  sichtbarL := fun g => g.elim
+  zeiger := fun _ => none
 
 def bM0 : RufMaschineG bD := RufStartG bP bS bInit
 

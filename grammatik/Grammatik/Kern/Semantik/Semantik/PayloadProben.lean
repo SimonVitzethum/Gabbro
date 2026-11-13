@@ -97,6 +97,6 @@ theorem foreign_typed_payload_refused_zeuge :
 
 theorem nested_schema_equality_zeuge :
     decide (Ty.sum [some (.arr (.sum [some .bool]) 2)] =
-      Ty.sum [some (.arr (.sum [some .bool]) 2)]) = true := by decide +kernel
+      Ty.sum [some (.arr (.sum [some .bool]) 2)]) = true := by decide_cbv
 
 end Gabbro.Grammatik.TypedPayload

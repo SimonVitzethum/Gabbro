@@ -85,22 +85,22 @@ def FA3 : FreiForm FD3 where
   tab := false
   feld := 0
   zaehl := 0
-  hz := by decide +kernel
+  hz := by decide_cbv
   hpos := by decide
   komm := 1
-  hk := by decide +kernel
+  hk := by decide_cbv
   hzwei := by decide
   kopf := 2
-  hkopf := by decide +kernel
+  hkopf := by decide_cbv
   nxt := 1
-  hnxt := by decide +kernel
+  hnxt := by decide_cbv
   hk1 := by decide
   hk2 := by decide
   hf := by decide
 
 def LL3 : LinkFeld FA3 where
   f := 2
-  hf := by decide +kernel
+  hf := by decide_cbv
   h1 := by decide
   h2 := by decide
 
@@ -108,7 +108,7 @@ def LL3 : LinkFeld FA3 where
 def HB3 : BucketKopf FA3 where
   bt := true
   hf := 0
-  hty := by decide +kernel
+  hty := by decide_cbv
   hbt := by decide
 
 /-- A clamped number, so that a value can be named without a proof. -/
@@ -306,7 +306,7 @@ def schiebOk : Bool :=
   | .ok σ' _ => decide (HB3.wert σ' 0 = 1 ∧ HB3.wert σ' 1 = 1 ∧ LL3.wert σ' 1 = 4)
   | _ => false
 
-theorem schiebOk_wahr : schiebOk = true := by decide +kernel
+theorem schiebOk_wahr : schiebOk = true := by decide_cbv
 
 /-- **A slot pushed into a second bucket while it heads the first breaks the hash table:** both chains contain slot `1`.
     (The hypothesis `hnot` of `hash_push_zug`, "the slot is on no bucket", is what the checker's `N586` establishes.) -/

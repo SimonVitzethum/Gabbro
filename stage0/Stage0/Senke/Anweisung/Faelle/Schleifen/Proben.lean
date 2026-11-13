@@ -38,7 +38,7 @@ def images : List (String × Except String (List Runner.B) × Nat) :=
 
 /-- All overflow-exit fixtures lower as complete images with nonempty loop control. -/
 theorem retry_overflow_zeuge : images.all (fun x => x.2.1.isOk) = true := by
-  decide +kernel
+  decide_cbv
 
 /-- A named progress assumption, one function and a concrete world. -/
 def uf : Parser.Uebersetze.UProg := { ControlProbe.u with annahmen := ["tick"] }
