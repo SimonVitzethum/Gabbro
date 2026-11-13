@@ -2,7 +2,7 @@
    is realizable. A body returning an off-pre software answer is refused. -/
 module
 
-public import Grammatik.Zielsatz.Atomar.CallSiteReplayBlocker
+public import Grammatik.Zielsatz.Atomar.CallSite.CallSiteReplayBlocker
 
 @[expose] public section
 

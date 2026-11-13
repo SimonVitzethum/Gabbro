@@ -4,7 +4,7 @@
    The on-pre body really calls the item and uses its result-dependent summary. -/
 module
 
-public import Grammatik.Zielsatz.Atomar.CallSiteConditionalBite
+public import Grammatik.Zielsatz.Atomar.CallSite.CallSiteConditionalBite
 
 @[expose] public section
 
