@@ -97,7 +97,7 @@ def encodeConstant (τ : Ty) (value : Wert D τ) :
         correct := fun _ => rfl
         supported := by simp [PayloadSupported, payloadObservations, LTerm.variables] }
   | .bool, value => .ok
-      { payload := if value = true then .tru else .fls
+      { payload := if (value : Bool) then .tru else .fls
         correct := fun _ => by cases value <;> simp [Represents, LProp.denote]
         supported := by
           cases value <;> simp [PayloadSupported, payloadObservations, LProp.freeVariables] }

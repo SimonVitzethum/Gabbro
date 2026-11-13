@@ -14,8 +14,8 @@ open Frag
 theorem coefficientLcm_pos [DecidableEq α] (name : α) (body : QF α) :
     0 < coefficientLcm name body := by
   induction body with
-  | tru => decide
-  | fls => decide
+  | tru => change 0 < (1 : Nat); decide
+  | fls => change 0 < (1 : Nat); decide
   | atom relation term =>
       simp only [coefficientLcm]
       split
@@ -43,7 +43,8 @@ theorem normalizeAtom_denote [DecidableEq α] (name : α) (multiple : Nat)
         (values.bind name ((multiple : Int) * x)) ↔
       relation.denote (term.denote (values.bind name x)) := by
   by_cases hz : (splitVar name term).1 = 0
-  · simp [normalizeAtom, hz, atom_denote, remainder_bind, term_bind]
+  · simp only [normalizeAtom, hz, ↓reduceIte, atom_denote, remainder_bind]
+    rw [term_bind name term values x, hz, zero_mul, zero_add]
   · have hd : (splitVar name term).1.natAbs ∣ multiple := covered.resolve_left hz
     have ha : 0 < (splitVar name term).1.natAbs := Int.natAbs_pos.mpr hz
     have hf : 0 < multiple / (splitVar name term).1.natAbs :=
@@ -124,14 +125,17 @@ theorem normalizeCoefficients_unit [DecidableEq α] (name : α) (multiple : Nat)
   | tru => trivial
   | fls => trivial
   | atom relation term =>
-      unfold normalizeCoefficients normalizeAtom
-      split
-      · apply unit_atom
-        simp [UnitCoefficients]
-      · cases relation <;> apply unit_atom <;>
+      change UnitCoefficients name (normalizeAtom name multiple relation term)
+      by_cases hz : (splitVar name term).1 = 0
+      · simp only [normalizeAtom, hz, ↓reduceIte]
+        apply unit_atom
+        exact Or.inl (remainder_coefficient name term)
+      · cases relation <;> simp only [normalizeAtom, hz, ↓reduceIte]
+        all_goals
+          apply unit_atom
           simp only [UnitCoefficients, addTerm_coefficient, scaleTerm_coefficient,
             remainder_coefficient, splitVar, if_pos rfl]
-        all_goals split <;> simp
+          split <;> simp
   | conj left right ihLeft ihRight => exact unit_conj name _ _ ihLeft ihRight
   | disj left right ihLeft ihRight => exact unit_disj name _ _ ihLeft ihRight
 

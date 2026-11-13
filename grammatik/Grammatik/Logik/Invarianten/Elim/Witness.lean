@@ -54,10 +54,10 @@ theorem zeroDivisor_true_zeuge : decideB (.dvd 0 (.konst 0) : LProp Nat) = true 
 theorem zeroDivisor_false_zeuge : decideB (.dvd 0 (.konst 1) : LProp Nat) = false := by decide
 
 theorem budget_refused_zeuge :
-    decideWithBudget (.tru : LProp Nat) 0 = .error (.budgetExceeded 0 1 0) := by decide
+    decideWithBudget (.tru : LProp Nat) 0 = .error (.budgetExceeded 0 1 0) := by rfl
 
 theorem open_refused_zeuge :
-    decideWithBudget (.eq (.var 0) (.konst 0) : LProp Nat) 100 = .error .freeVariables := by decide
+    decideWithBudget (.eq (.var 0) (.konst 0) : LProp Nat) 100 = .error .freeVariables := by rfl
 
 theorem budget_sufficient_zeuge (fuel : Nat) (enough : Budget oddEquation ≤ fuel) :
     decideWithBudget oddEquation fuel = .ok (decideB oddEquation) :=

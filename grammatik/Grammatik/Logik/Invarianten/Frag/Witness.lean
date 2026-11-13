@@ -114,7 +114,7 @@ def product : Expr declaration [] [] .bool :=
 
 theorem product_refused_zeuge :
     uebersetzeB (declaration.traeger ()) product = .error (.within "left" .nonlinear) := by
-  decide
+  rfl
 
 /-- A genuine two-index sortedness condition on a three-entry table. -/
 def sorted : Expr declaration [] [] .bool :=
@@ -126,7 +126,7 @@ def sorted : Expr declaration [] [] .bool :=
 
 theorem sorted_refused_zeuge :
     uebersetzeB (declaration.traeger ()) sorted =
-      .error (.within "forallSlots.body" .crossEntry) := by decide
+      .error (.within "forallSlots.body" .crossEntry) := by rfl
 
 /-- A nonempty, one-index local invariant is admitted. -/
 def localBound : Expr declaration [] [] .bool :=
@@ -155,7 +155,7 @@ theorem scaled_translated_zeuge :
       .ok (.le (.scale 2 (.var (.glob false))) (.konst 20)) := by rfl
 
 theorem carriers_checked_first_zeuge :
-    uebersetzeB [] product = .error .outsideCarriers := by decide
+    uebersetzeB [] product = .error .outsideCarriers := by rfl
 
 def emptyDeclaration : Deklaration :=
   { declaration with count := fun _ => 0 }
@@ -167,7 +167,7 @@ def emptyNonlinear : Expr emptyDeclaration [] [] .bool :=
 
 theorem emptyNonlinear_refused_zeuge :
     uebersetzeB (emptyDeclaration.traeger ()) emptyNonlinear =
-      .error (.within "forallSlots.body" (.within "left" .nonlinear)) := by decide
+      .error (.within "forallSlots.body" (.within "left" .nonlinear)) := by rfl
 
 def atomicDeclaration : Deklaration :=
   { declaration with
@@ -178,7 +178,7 @@ def atomicBound : Expr atomicDeclaration [] [] .bool :=
   .le (.glob false (globalAccess false)) (.lit 3)
 
 theorem atomicBound_refused_zeuge :
-    uebersetzeB (atomicDeclaration.traeger ()) atomicBound = .error .atomicCarrier := by decide
+    uebersetzeB (atomicDeclaration.traeger ()) atomicBound = .error .atomicCarrier := by rfl
 
 theorem constant_sound_zeuge (values : Assignment Nat) :
     (LTerm.add (.scale (-3) (.konst 2)) (.konst 5)).denote values = -1 :=

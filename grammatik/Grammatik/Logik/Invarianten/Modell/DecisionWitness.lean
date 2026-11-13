@@ -17,7 +17,7 @@ def rangeFormula : LProp (Observation Frag.Witness.declaration) :=
 
 /-- This is valid because of the declared 0..10 type, not over all integers. -/
 theorem range_true_computed_zeuge :
-    decideInvariant (Frag.Witness.declaration.traeger ()) rangeInvariant = .ok true := by decide
+    decideInvariant (Frag.Witness.declaration.traeger ()) rangeInvariant = .ok true := by rfl
 
 theorem range_true_sound_zeuge (world : World Frag.Witness.declaration) :
     eval world rangeInvariant world .nil = true :=
@@ -30,7 +30,7 @@ def zeroInvariant : Expr Frag.Witness.declaration [] [] .bool :=
   .eq (.glob false (Frag.Witness.globalAccess false)) (.lit 0)
 
 theorem zero_false_computed_zeuge :
-    decideInvariant (Frag.Witness.declaration.traeger ()) zeroInvariant = .ok false := by decide
+    decideInvariant (Frag.Witness.declaration.traeger ()) zeroInvariant = .ok false := by rfl
 
 theorem zero_concrete_counterexample_zeuge :
     ∃ world : World Frag.Witness.declaration,
@@ -41,7 +41,7 @@ theorem zero_concrete_counterexample_zeuge :
 
 theorem short_false_computed_zeuge :
     decideInvariant (Frag.Witness.declaration.traeger ()) Witness.shortInvariant = .ok false := by
-  decide
+  rfl
 
 theorem short_counterexample_computed_zeuge :
     (invariantCounterexample Frag.Witness.initial (Frag.Witness.declaration.traeger ())
@@ -109,6 +109,6 @@ theorem insufficient_budget_refused_zeuge (fuel : Nat)
 
 theorem nonlinear_still_refused_zeuge :
     decideInvariant (Frag.Witness.declaration.traeger ()) Frag.Witness.product =
-      .error (.translation (.within "left" .nonlinear)) := by decide
+      .error (.translation (.within "left" .nonlinear)) := by rfl
 
 end Gabbro.Grammatik.Invarianten.Modell.DecisionWitness

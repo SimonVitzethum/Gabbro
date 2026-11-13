@@ -12,11 +12,11 @@ open Frag
 
 theorem period_pos [DecidableEq α] (name : α) (body : QF α) : 0 < period name body := by
   induction body with
-  | tru => decide
-  | fls => decide
+  | tru => change 0 < (1 : Nat); decide
+  | fls => change 0 < (1 : Nat); decide
   | atom relation term =>
       cases relation with
-      | lt => decide
+      | lt => change 0 < (1 : Nat); decide
       | dvd k | ndvd k => simp only [period]; split <;> omega
   | conj left right ihLeft ihRight | disj left right ihLeft ihRight =>
       exact Int.lcm_pos (by omega) (by omega)
@@ -97,8 +97,9 @@ theorem minusInfinity_eventually [DecidableEq α] (name : α) (body : QF α)
           rcases unit with hz | hp | hn
           · refine ⟨0, ?_⟩
             intro x hx
-            simp [minusInfinity, hz, QF.denote, atom_denote, Relation.denote,
-              term_bind, remainder_bind]
+            simp only [minusInfinity, hz, ↓reduceIte, QF.denote, atom_denote,
+              remainder_bind]
+            rw [term_bind name term values x, hz, zero_mul, zero_add]
           · refine ⟨-(splitVar name term).2.denote values - 1, ?_⟩
             intro x hx
             simp only [minusInfinity, hp, show (1 : Int) ≠ 0 by decide, ↓reduceIte,
