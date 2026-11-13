@@ -89,6 +89,9 @@ public import Stage0.Senke.Bild.Rek.RueckArt
 public import Stage0.Senke.Bild.Rek.Dann
 public import Stage0.Senke.Bild.Rek.DannRueck
 public import Stage0.Senke.Bild.Rek.ZeugeDann
+public import Stage0.Senke.Bild.Rek.EndRB
+public import Stage0.Senke.Bild.Rek.EndRBSatz
+public import Stage0.Senke.Bild.Rek.EndRBVoll
 public import Stage0.Senke.Welt.MainEnv
 public import Stage0.Senke.Ausdruck.Zeiger.FnptrProben
 public import Stage0.Senke.Ausdruck.Zeiger.FnptrAufrufProben
