@@ -5,9 +5,8 @@ public import Grammatik.Parser.Elab.Uebersetze.Folds.Expressions
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
 
-/-- Preserve every named invariant as a nested G scope. This only transports the
-    source shape: the unchanged metadata gate still refuses unbound cost/runs/by
-    duties, and the G reader resolves every name against the unit declarations. -/
+/-- Preserve every named invariant as a nested G scope. The G reader resolves
+    every name against the unit declarations and retains restoration duties. -/
 def uBreaking
     (run : UCtx → List SAnw → Except String (List UStmt × UCtx))
     (ctx : UCtx) (names : List String) (body : SAnw) (rest : List SAnw) :

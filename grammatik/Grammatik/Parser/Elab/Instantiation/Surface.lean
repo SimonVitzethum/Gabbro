@@ -119,7 +119,7 @@ def field (scope : Scope) (f : SFeld) : SurfaceFacts :=
   merge (inspectType scope f.ftyp) (optional (expression scope) f.wo)
 
 def invariant (scope : Scope) (i : SGruppenInv) : SurfaceFacts :=
-  merge (expression scope i.kosten) (expression scope i.pred)
+  expression scope i.pred
 
 def transition (scope : Scope) (t : STrans) : SurfaceFacts :=
   gather [gather (t.schritte.map fun (a, b, c) =>

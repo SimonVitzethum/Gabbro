@@ -145,8 +145,9 @@
   predicate primitive costs include their loads. Reason exits (`retWhy`,
   `retWhyScoped`, `leave`, `next`) evaluate no return predicate and add no
   epilogue price. The writer's declared `costs` must cover body plus epilogue.
-  No new assumption, stop or weakened safety leg. Surface removal of the
-  invariant's own cost/runs/by clauses is a separate subsequent package.
+  Invariants have only the surface `invariant n : p;`: no independent cost,
+  execution mode or proof tail. There is one cost figure, the writer's `costs`.
+  No new assumption, stop or weakened safety leg.
 
   * `folge` -- the order of calls in every thread's call log, for every order specification the program passes
     (Folge.lean). --.

@@ -19,7 +19,7 @@ table T count N {
     slot { a : u32 in 0 .. 10, }
 
     // `s` is bound and never mentioned again.
-    invariant erstes_feld_klein cost O(n) runs offline :
+    invariant erstes_feld_klein :
         forall s in slots of T : T.slots[0].a <= 10;
 }
 

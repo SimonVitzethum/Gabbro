@@ -9,7 +9,7 @@ static mut cnt : u32 in 0 .. 100 = 30;
 static mut total : u32 in 0 .. 100 = 70;
 lock K protects { cnt, total } rank 0;
 group Summe over { cnt, total } {
-    invariant summe_bleibt cost O(1) runs online : cnt + total == 100;
+    invariant summe_bleibt : cnt + total == 100;
 }
 impl fn main() -> u32 in 0 .. 200
     maintains summe_bleibt

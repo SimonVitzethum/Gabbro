@@ -24,17 +24,12 @@ undeclared-read | PROPOSED refusal: group invariant `summe_bleibt` reads `fremd`
 # (sammle_inv_traeger collects group carriers regardless of kind; twin
 # beispiele/gift/1232). The carrier named is the first group carrier in the
 # declared effects hull (`cnt`: geschrieben_or_abgeleitet, m1.rs:7739-7771).
-# `runs online`/`runs offline` both parse in both front ends (Rust:
-# crates/gabbro-syntax/src/parse.rs:4853-4857, Laeuft::Online/Offline;
-# Lean: grammatik/Grammatik/Parser/Item/ElementTief.lean parseGruppenInv).
-# Positives and the two lock-footprint probes keep `runs online`: an online
-# invariant needs a keeper (N583, crates/gabbro-check/src/kbedingung.rs:1781+,
-# paralleling the online table invariants of beispiele/47 and beispiele/53),
-# and every online probe here names its keeper in `maintains`, so N583 stays
-# silent. The three isolation probes use `runs offline` like their gift twins
-# (281, 1232, 66): with no keeper an online invariant would co-fire N583 and
-# hide the targeted refusal (dropped-maintains isolates N496 alone; the
-# unknown-carrier shape unavoidably co-fires U002+U007 exactly as twin 281).
+# Invariants have the single surface `invariant name : predicate;`.
+# The writer's declared costs cover its body and return predicates. There is
+# no execution-mode distinction or separate invariant cost/proof declaration.
+# Probe sources were migrated for C05 on 2026-11-13; the lead must re-run
+# them against Stage 0. The historical Rust diagnostic notes above are not
+# measurements of the current compiler.
 # `main` repeats the transitive callee effects/locks and carries `maintains`
 # where it writes through a callee: E008 holds callers to their callees'
 # effects ("`effects` is compositional", wirkungen.rs:1518+) and N496 books
@@ -47,12 +42,10 @@ undeclared-read | PROPOSED refusal: group invariant `summe_bleibt` reads `fremd`
 # IR-COMPILATION-LANES.md C05 row); no existing group invariant reads a
 # global, so the shape itself is new but syntactically current.
 # broken-at-return is a STOP probe, not a refusal: no checker rule refuses a
-# false-at-return group invariant (N511 is lock-section exits only,
-# freigabe_pruef.rs:49+; N583 is no-keeper only), while the C05 Stage-0 design
+# false-at-return group invariant in the historical checker, while Stage 0
 # evaluates ensures (stop 102) then owed predicates in declaration order
 # (first failure stop 103) in the shared return epilogue
 # (IR-COMPILATION-LANES.md C05 Stage-0 row); stop 103 is `logikCode
 # .invariante` (stage0/Stage0/Senke/Stopp.lean:21-29). Hand computation:
 # 30 + 71 = 101 is not 100. Initial truth (30 + 70) holds, so closedness is
-# satisfied; the Rust checker is silent on this file (U003 held, N496 kept,
-# U006/U007 clean, no lock invariant for N511).
+# satisfied. Current source acceptance and stop results require the lead's run.

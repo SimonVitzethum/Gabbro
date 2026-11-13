@@ -93,7 +93,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
              class fields bank at stride count backed mirrors from depends owner
              assume falsifier unfalsifiable axiom lock protects rank group concurrent rcu observes reclaims
              check claim measures gates can_fail floor counterprobe expects
-             endian little big reserved cost runs online offline
+             endian little big reserved
              library payload translator for
              profile rounding fp_contract memory_model interrupt_routing
              arena capacity alloc reset grow pb blw free
@@ -1995,9 +1995,7 @@ arena      = [ "pub" ] "arena" ident "capacity" constexpr ".." constexpr [ "max"
    `N584` refuses a probe naming nothing, `N585` a probe of the wrong shape and a
    threshold no translation-time constant. *)
 slottype   = typeexpr | intty "wrapping" ;
-invariant  = "invariant" ident "cost" costexpr "runs" ( "online" | "offline" )
-             [ "by" inductlist ] ":" pred ";" ;
-costexpr   = "O" "(" expr ")" ;
+invariant  = "invariant" ident ":" pred ";" ;
 
 format     = [ "pub" ] "format" ident [ "@version" int ] [ "endian" ( "little" | "big" ) ]
              "{" { field } "}" ;
@@ -2040,7 +2038,7 @@ versions; two `format`s of one name in one scope fall to `N001`, and `@version` 
 | `free A[i];` | give exactly one slot back: the name dies statically (`N586` refuses any later read, any second `free`, borrowed and computed shapes); no `else` (freeing a live slot cannot fail) | `FreiZustand` (`ArenaDyn.lean`): high-water plus freed slots, `freiAlloc`/`freiFree` with four proved preservation theorems; the G exporter refuses by name (`LG005`) until the Block form lands |
 | `owner m` | `marke m ∈ Λ` at every access — **refused as `D026` until the producer stands**: a declared `linear` mark (`D265`), exactly one foreign minter executed once (`D266`/`D268`), every access holding it (`D267`); the first mark is minted once and travels by handoff (`kbedingung.rs::eigner`, poison `gift/694`, producers `beispiele/114`/`115`, poisons `gift/932`-`935`) | `D.eigner`, `D.braucht` (`.inr (m, s)`) — **the one construction that makes memory safety a matter of Λ**: no owner, no access; one mint, one execution, no second owner |
 | `backed k` | `narrow i to 0 ..< k` before the access — SUGAR over `narrow` | `Block.narrow` |
-| `invariant I … : p` | `I` is owed by every function whose `effects` writes `T` («SG-10»); evaluated at every `return` of such a function — and **such a function holds the locks of every carrier of `I`** (`U003` as a declaration rule: `invarianten_gehalten`), because it reads them all at `return` | `D.Inv`, `D.traeger`, `Programm.invariante`, `schuldet` → `logik (invariante i)` |
+| `invariant I : p;` | `I` is owed by every function whose `effects` writes `T` («SG-10»); evaluated at every value return, within the writer's declared `costs`. **Such a function holds the locks of every carrier of `I`** (`U003`: `invarianten_gehalten`), because it reads them all at return. Reason exits retain the invariant proof obligation. | `D.Inv`, `D.traeger`, `Programm.invariante`, `schuldet` → `logik (invariante i)` |
 | `owner m`, `shared` | a shared carrier has a guard; an unshared one belongs to one thread | `D.geteilt`, `D.geteilt_bewacht` («SG-21») |
 | `ops insert, remove` | **generated functions** with `requires` (the slot is fresh, the parent reachable, `s` a leaf — `D012`) and `writes T`; called like any function | `D.Fn` with a `Signatur`; `Stmt.call` — SUGAR over §6 |
 | `tree { parent p, child c }` | which field `reaches … via` and the domains use | `Expr.reaches t f hf` with `hf : typ t f = opt (count t)` |
@@ -2357,7 +2355,7 @@ startmember = path [ "(" [ expr { "," expr } ] ")" ] ;
 lock CAPS protects { plaetze, cdt } rank 2 masks irqs;
 atomic COLOR_DONE : bool publishes { color_report } release;
 group Zustellung over { Endpunkte, Faeden } {
-    invariant wartende_haben_grund cost O(n) runs offline :
+    invariant wartende_haben_grund :
         forall e in slots of Endpunkte :
             Faeden.slots[Endpunkte.slots[e].wartet].gruende > 0;
 }

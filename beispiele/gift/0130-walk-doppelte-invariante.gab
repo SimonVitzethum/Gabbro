@@ -21,10 +21,10 @@ walk Seitentabelle levels 4 {
     down : rahmen when it.praesent && !it.gross,
     leaf : it.praesent && it.gross,
 
-    invariant wx_getrennt cost O(n) runs online :
+    invariant wx_getrennt :
         forall m in mappings of Self : !(m.schreibbar && !m.nx);
 
-    invariant wx_getrennt cost O(n) runs offline :
+    invariant wx_getrennt :
         forall m in mappings of Self : m.va < 0xFFFF_8000_0000_0000 || !m.nutzer;
 }
 

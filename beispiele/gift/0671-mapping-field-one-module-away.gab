@@ -45,7 +45,7 @@ walk Seitentabelle levels 4 {
 
     // THE POISON: `gibtsnicht` is neither in the `format` nor among the three position
     // fields, exactly as in `gift/570` -- only the module distance is new.
-    invariant erfundenes_feld cost O(n) runs online :
+    invariant erfundenes_feld :
         forall m in mappings of Self : !m.gibtsnicht;
 }
 

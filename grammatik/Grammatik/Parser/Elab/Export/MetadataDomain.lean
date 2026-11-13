@@ -57,7 +57,7 @@ def pointerOrMetadata : STyp → Bool
   | t => typeMetadata t
 
 /-- A conservative unit domain where no cost, scheduling, proof or reservation duty can disappear.
-    Invariants are refused (no cost/runs/by binding); local annotations and nested continuations are inspected. -/
+    Invariants use the canonical predicate reader; local annotations and nested continuations are inspected. -/
 def bodyMetadata : Nat → SAnw → Bool
   | 0, _ => true
   | n + 1, .block ss _ => ss.any (bodyMetadata n)
@@ -193,7 +193,7 @@ def itemMetadata (item : SItemTief) (callees : CalleeEffects := fun _ => none) :
       parts.any fun
         | .tSlot fields => fields.any (fun field => fieldTypeMetadata field.ftyp || field.pos.isSome ||
             field.bezug.isSome || field.wo.isSome || field.reserviert || field.byOps)
-        | .tTree _ => false
+        | .tTree _ | .tInv _ => false
         | _ => true
   /- A literal hold bound is bound: the compiler checks K002 over every section of the lock
       (`HeldBinding.holds`). Reservation, mask and invariant stay refused. -/
@@ -205,7 +205,7 @@ def itemMetadata (item : SItemTief) (callees : CalleeEffects := fun _ => none) :
       the static arena commits all its slots, so the required allocation's only
       duty is the counter bound under `KoerperGutS/SA`). -/
   | .arenaT _ (.lit _) (.lit _) none ty none => typeMetadata ty
-  | .groupT .. => true
+  | .groupT .. => false
   /- Alignment is read and validated by the existing profile/uGlobs path. Names
       need its real constant environment; sections remain an unbound duty here. -/
   | .globT _ _ ty _ alignment sectionName _ => typeMetadata ty || alignment.any (fun e =>

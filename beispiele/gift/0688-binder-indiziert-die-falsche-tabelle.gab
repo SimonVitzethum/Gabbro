@@ -16,7 +16,7 @@ table A count N {
     slot { a : u32 in 0 .. 10, }
 
     // The control: the same words over the right table. Does NOT fall.
-    invariant a_klein cost O(n) runs offline :
+    invariant a_klein :
         forall s in slots of A : A.slots[s].a <= 10;
 }
 
@@ -24,7 +24,7 @@ table B count N {
     slot { b : u32 in 0 .. 10, }
 
     // The poison: `s` is a slot index of `A` and addresses `B`.
-    invariant b_klein cost O(n) runs offline :
+    invariant b_klein :
         forall s in slots of A : B.slots[s].b <= 10;
 }
 

@@ -32,7 +32,7 @@ table Objekte count N {
         benutzt : bool,
         zaehler : u32 in 0 .. 65535 by ops,
     }
-    invariant zaehler_im_bereich cost O(n) runs offline :
+    invariant zaehler_im_bereich :
         forall s in slots of Self : Self.slots[s].zaehler >= 0;
     // Nachgezogen beim Zusammenfuehren (2026-08-21): die Wortmenge von `ops` ist seit
     // `P039` geschlossen. **Diese Datei entstand parallel und trug noch erfundene Woerter**

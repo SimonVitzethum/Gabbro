@@ -15,7 +15,7 @@ lock PUNKTE protects { Endpunkte } rank 1 held <= 40 ops;
 lock PLAN   protects { Faeden }    rank 2 held <= 40 ops;
 
 group Zustellung over { Endpunkte, Faeden } {
-    invariant wartende_haben_grund cost O(n) runs offline :
+    invariant wartende_haben_grund :
         forall e in slots of Endpunkte :
             Faeden.slots[Endpunkte.slots[e].wartet].gruende > 0;
 }

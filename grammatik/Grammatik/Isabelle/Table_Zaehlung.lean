@@ -259,8 +259,8 @@ theorem doppelte_schleife_kostet_produkt (m n : Nat) : doppelt m n = m * n := by
   | zero => simp only [doppelt, Nat.zero_mul]
   | succ k ih => simp only [doppelt, ih, schritte_der_inneren, Nat.succ_mul, Nat.add_left_cancel_iff]
 
-/-- Z-8: so `cost O(n)` on such an invariant is wrong, as a
-    counterexample and not as a claim. -/
+/-- Z-8: a double traversal exceeds a single traversal; a writer's
+    declared costs must cover the complete invariant evaluation. -/
 theorem doppelt_ist_mehr_als_einfach {m n : Nat} (hm : 1 < m) (hn : 0 < n) :
     schritte n < doppelt m n := by
   obtain ⟨k, rfl⟩ : ∃ k, m = 2 + k := ⟨m - 2, by omega⟩

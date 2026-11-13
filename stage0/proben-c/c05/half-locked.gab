@@ -8,7 +8,7 @@ static mut total : u32 in 0 .. 100 = 70;
 lock A protects { cnt } rank 1;
 lock B protects { total } rank 2;
 group Paar over { cnt, total } {
-    invariant summe_bleibt cost O(1) runs online : cnt + total == 100;
+    invariant summe_bleibt : cnt + total == 100;
 }
 impl fn nimm_halb()
     maintains summe_bleibt

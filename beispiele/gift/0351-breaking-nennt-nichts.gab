@@ -30,7 +30,7 @@ table Endpunkt count N {
         anrufer : u32,
     }
 
-    invariant anrufer_im_bereich cost O(1) runs online :
+    invariant anrufer_im_bereich :
         forall e in slots of Self : Self.slots[e].anrufer >= 0;
 }
 

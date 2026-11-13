@@ -1,6 +1,6 @@
 // C05: a table invariant with a read-only observer (no writer at all).
 module c05_readonly {
-table T count 2 { slot { v : u8, } invariant small cost O(1) runs online : forall i in slots of T : T.slots[i].v == T.slots[i].v; }
+table T count 2 { slot { v : u8, } invariant small : forall i in slots of T : T.slots[i].v == T.slots[i].v; }
 lock L protects { T } rank 0;
 impl fn main() -> u32 in 0 .. 255 effects { reads T.slots, locks L } {
     locks L {

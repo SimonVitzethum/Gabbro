@@ -232,6 +232,8 @@ def delabDev : Except String (List SItemTief) := do
 def delabInv (P : Programm z.deklaration) (i : Fin z.invs.length) : Except String SItemTief := do
   let ts := (z.traeger i).map fun t => nTab t.val
   let p ← delabE z none (P.invariante i)
-  pure (.groupT ("G" ++ toString i.val) ts [{ name := "I" ++ toString i.val, kosten := .lit 1, online := false, proof := none, pred := p }])
+  pure (.groupT ("G" ++ toString i.val) ts [{
+      name := "I" ++ toString i.val
+      pred := p }])
 
 end Gabbro.Grammatik.Gen.Text

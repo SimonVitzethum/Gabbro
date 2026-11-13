@@ -35,7 +35,7 @@ table Auftraege count NAUFTRAEGE {
         buendel : option index into Auftraege,
     }
 
-    invariant rest_bleibt_im_bereich cost O(n) runs offline :
+    invariant rest_bleibt_im_bereich :
         forall s in slots of Self : Self.slots[s].rest <= 4096;
 }
 

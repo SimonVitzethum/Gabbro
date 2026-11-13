@@ -68,8 +68,9 @@ def zeugeProgramm : List SItemTief := [
     .tOps ["einfuegen", "loeschen"],
     .tTree [("parent", "eltern")],
     .tBusy "belegt",
-    .tInv { name := "klein", kosten := .lit 1, online := true, proof := none,
-            pred := .bin "<" (.variable "n") (.lit 64) }],
+    .tInv {
+      name := "klein"
+      pred := .bin "<" (.variable "n") (.lit 64) }],
   .entryT { name := "tick", vektor := some (.lit 32), via := some "idt", arch := "x86_64",
             regIn := [.binds "rdi" "arg", .reg "rsi"], regOut := [.reg "rax"],
             erhaelt := ["rbx"], kills := ["rcx"], stapel := "kstack", perCpu := true,
@@ -116,7 +117,7 @@ theorem zeugeProgramm_gut : ∀ it ∈ zeugeProgramm, ItemGut it := by
     · show _ ≠ []; simp only [ne_eq, reduceCtorEq, not_false_eq_true]
     · exact ⟨by simp only [ne_eq, List.cons_ne_self, not_false_eq_true], by intro k hk; simp only [List.mem_cons, List.not_mem_nil, or_false] at hk; subst hk; exact Or.inl rfl⟩
     · trivial
-    · exact ⟨by decide, .expr _ (by decide), by simp only [reduceCtorEq, false_implies, implies_true]⟩
+    · exact .expr _ (by decide)
   · refine .entryT _ ⟨?_, ?_, Or.inr (Or.inl rfl), by simp only [ne_eq, reduceCtorEq, not_false_eq_true]⟩
     · intro v hv; cases hv; decide
     · intro x hx; cases hx; decide
@@ -163,7 +164,8 @@ def zeugeGeraet : List SItemTief := [
       .emit (.variable "flag") .tru (renderText [.ident "zaehler"])]
       (some (.ret (some (.variable "t"))))),
   .groupT "Gruppe" ["D", "Tab"] [
-    { name := "J", kosten := .lit 1, online := true, proof := none,
+    {
+      name := "J"
       pred := .ext .all ["s", "slots"] [.variable "Tab", .bin ">=" (.variable "s") (.lit 0)] }]]
 
 theorem zeugeGeraet_gut : ∀ it ∈ zeugeGeraet, ItemGut it := by
@@ -214,8 +216,8 @@ theorem zeugeGeraet_gut : ∀ it ∈ zeugeGeraet, ItemGut it := by
             by intro t ht; simp only [List.mem_cons, List.not_mem_nil, or_false] at ht; subst ht; exact ⟨⟨by decide, by decide⟩, by simp only [reduceCtorEq, or_self, not_false_eq_true]⟩⟩, by decide⟩)
   · refine .groupT _ _ _ (by simp only [ne_eq, reduceCtorEq, not_false_eq_true]) ?_
     intro i hi; simp only [List.mem_cons, List.not_mem_nil, or_false] at hi; subst hi
-    exact ⟨by decide, .quant .all "s" "slots" [] [.variable "Tab"] _ (Or.inl rfl) (.ort _ _ (Or.inl rfl) (by decide))
-      (.expr _ (by decide)), by simp only [reduceCtorEq, false_implies, implies_true]⟩
+    exact .quant .all "s" "slots" [] [.variable "Tab"] _ (Or.inl rfl) (.ort _ _ (Or.inl rfl) (by decide))
+      (.expr _ (by decide))
 
 /-- The device witness reads back through the whole program reader. -/
 theorem zeugeGeraet_rund : parseTopTief (druckItems zeugeGeraet ++ [.ende]) = .ok zeugeGeraet :=

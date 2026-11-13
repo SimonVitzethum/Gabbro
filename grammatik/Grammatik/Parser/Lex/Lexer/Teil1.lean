@@ -57,7 +57,7 @@ def wortschatz : List String :=
    "observes", "reclaims", "group", "concurrent", "protects", "rank",
    "order", "advances", "retires", "check", "claim", "measures", "gates",
    "can_fail", "floor", "counterprobe", "expects", "endian", "little",
-   "big", "reserved", "cost", "runs", "online", "offline", "offset_into",
+   "big", "reserved", "offset_into",
    "index", "into", "option", "chain", "wrapping", "atomic", "acquire",
    "release", "seq", "relaxed", "nothing", "accumulates", "merge", "max",
    "min", "add", "or", "and", "held", "shared", "embeds", "scale", "walk",

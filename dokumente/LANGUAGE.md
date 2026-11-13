@@ -478,7 +478,7 @@ walk PageTable levels 4 {
     node : [Pte; 512],
     down : pfn when it.present && !leaf(it),
     leaf : it.present && (level == 0 || it.large),
-    invariant wx_disjoint cost O(n) runs online :
+    invariant wx_disjoint :
         forall m in mappings of Self: !(m.writable && !m.nx);
 }
 ```
@@ -882,18 +882,19 @@ variable lengths, version evolution.
 ```text
 table Slots count 80256 {
     slot { used : bool, parent : option index into Slots, gen : u32 wrapping, }
-    invariant kind_zeigt_zurueck cost O(n * kette) runs offline : forall s … ;
+    invariant kind_zeigt_zurueck : forall s … ;
     ops insert, remove, relabel, delete_leaf;
 }
 ```
 
 A format is a function; a table is **mutated state**, and the cut decides the value of the
 construct. **`ops` names the generated mutations**; per operation the generator shows *once over
-the declaration* that every `online` invariant is preserved. A handwritten mutation on a table
+the declaration* that every invariant is preserved. A handwritten mutation on a table
 with `ops` is a compile error (`D001`), a field `by ops` too (`D002`); a table *without* `ops` is
 description with a generated checker — one line apart, so the choice is visible. Invariants
-carry `cost O(…)` and `runs online | offline` — an invariant without a cost figure is not an
-audit under a core lock but an outage. Wrapping is spoken (`wrapping`): a wraparound nobody
+have the form `invariant name : predicate;`. Every writer's declared `costs` covers its body,
+its `ensures` and every owed invariant predicate at value return. Reason exits retain the
+invariant proof obligation. Wrapping is spoken (`wrapping`): a wraparound nobody
 spoke out is a mistake, one that carries the word is a design.
 
 Slot reads accept a computed index such as `T.slots[k - 1].v` when its inferred range lies
@@ -1243,8 +1244,8 @@ falls out of M2 rather than a special rule. The speech test is a second obligati
 "the measured path writes the quantity itself" is an M3 write right. `check` bodies compile only
 under `when TESTBUILD`: a gated item produces **no line of output** in the shipping build
 (`gabbro llvm --testbuild` or a build directory with `-Dbuildtype=testbuild` opens the gate); `G001` (ungated code calls a gated function), `G002`
-(any other `when` condition), `G003` (`TESTBUILD` declared as a name). `offline` invariants are
-*not* gated — a different clause with a different reader.
+(any other `when` condition), `G003` (`TESTBUILD` declared as a name). Invariant declarations
+and their return checks apply in both builds.
 
 ---
 

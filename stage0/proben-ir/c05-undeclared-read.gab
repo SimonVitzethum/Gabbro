@@ -5,7 +5,7 @@ static mut g : u8 = 0;
 static mut h : u8 = 0;
 lock L protects { A } rank 0;
 group G over { A, g } {
-    invariant same cost O(1) runs online : forall i in slots of A : A.slots[i].v == h;
+    invariant same : forall i in slots of A : A.slots[i].v == h;
 }
 impl fn main() -> u32 in 0 .. 255 effects { reads A.slots, reads g, reads h, locks L } {
     locks L {

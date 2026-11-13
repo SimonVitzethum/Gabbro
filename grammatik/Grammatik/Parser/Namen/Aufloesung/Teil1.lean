@@ -369,7 +369,7 @@ end
 
 /-- An invariant, resolved. -/
 def inv (k : Kontext) (i : SGruppenInv) : SGruppenInv :=
-  { i with kosten := aus k i.kosten, pred := aus k i.pred }
+  { i with pred := aus k i.pred }
 
 /-- A table member, resolved. -/
 def tabTeil (k : Kontext) : STabTeil → STabTeil

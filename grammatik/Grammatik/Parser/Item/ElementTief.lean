@@ -69,9 +69,8 @@ end Gabbro.Grammatik.Parser
      not split (t45).
   8. `use` paths ride split (`List String`); `SItem.useS` keeps
      them raw.
-  9. `cost O(e)` takes the name `O` in either token shape: `O`
-     is an identifier in both lexers (`kw.rs` has no `O`
-     keyword), not a keyword (t30).
+  9. Table and group invariants share `invariant name : predicate;`
+     and carry no independent evaluation mode, cost or proof tail (t30).
   10. `regdecl` takes no trailing `;` (grammar and corpus agree);
      the first cut wrongly demanded one (t03/t46).
   11. `check` takes bare `measures`/`gates` lists (no braces),

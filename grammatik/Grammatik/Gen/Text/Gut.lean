@@ -322,11 +322,10 @@ theorem gerGutB_sound (m : SGerTeil) (h : gerGutB m = true) : GerGut m := by
   | .copy a b, h => simpa [gerGutB, GerGut] using h
   | .reg r, h => exact regGutB_sound r h
 
-def invGutB (i : SGruppenInv) : Bool := gut i.kosten && predGutB 50 i.pred && i.proof.isNone
+def invGutB (i : SGruppenInv) : Bool := predGutB 50 i.pred
 
 theorem invGutB_sound (i : SGruppenInv) (h : invGutB i = true) : InvGut i := by
-  simp only [invGutB, Bool.and_eq_true, Option.isNone_iff_eq_none] at h
-  exact ⟨h.1.1, predGutB_sound 50 _ h.1.2, fun x hx => by rw [h.2] at hx; cases hx⟩
+  exact predGutB_sound 50 i.pred h
 
 def feldGutB (f : SFeld) : Bool := typGutB f.ftyp && f.pos.isNone && f.wo.isNone
 

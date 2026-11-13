@@ -5203,7 +5203,7 @@ Integration evidence: `733f1b65b` (`feat(grammar): bind C02 library admission in
 * **`AkzeptiertSpec.mitAkku`**: For arbitrary `P : Programm D`, `S : SperrInv D`, `fs ws : List D.Fn`, `A A' : List (Kernzelle.AccumulatorDecl D)`, assuming `h : AkzeptiertSpec P S fs ws A` and `ha : Kernzelle.AccumulatorAdmission P fs A'`, the conclusion is `AkzeptiertSpec P S fs ws A'`.
 
 Stage-0 boundary: Unexpanded library calls and translators with calls are refused; declared costs and other unbound clauses remain refused. The shared gate is `itemMetadata` in
-`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; its exact boundary witnesses are `libraryFn_bound`, `transT_bound`, `library_zeuge`.
+`grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean`; its exact boundary witnesses are `libraryFn_bound`, `transT_bound`, `library_zeuge`.
 
 
 ## 107. C03: integrated definitions, certificates and export boundary (2026-11-02)
@@ -5226,20 +5226,20 @@ Integration evidence: `33d5d68bd` (`test(grammatik): cover typed payload lowerin
 * **`uSumFaelle_extra_payload_refused`**: the conclusion is `(match uSumFaelle 100 [.ident "Data", .zeichen "(", .wort "u8", .zeichen ",", .wort "bool", .zeichen ")"] with | .error _ => true | .ok _ => false) = true`.
 
 Stage-0 boundary: Typed payload support does not bypass metadata checks; nested duties and unsupported local type metadata remain refused. The shared gate is `itemMetadata` in
-`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+`grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean`; `nested_duties_refused_zeuge` pins inherited refusals; `invariant_bound_zeuge` pins invariant admission (there is no package-specific `_bound` theorem in this gate).
 
 
 ## 108. C04: integrated definitions, certificates and export boundary (2026-11-02)
 
 Integration evidence: `0eaeaabbd` (`feat(export): admit state transitions to Stage 0`).
 
-`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`:
+`grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean`:
 
 * **`check_sound`**: For arbitrary `items : List SItemTief`, assuming `h : check items = .ok ()`, the conclusion is `items.any itemMetadata = false`.
 * **`check_clear`**: For arbitrary `items : List SItemTief`, assuming `h : items.any itemMetadata = false`, the conclusion is `check items = .ok ()`.
 * **`check_sound_zeuge`**: the conclusion is `let body`.
 * **`checkConstants_sound`**: For arbitrary `items : List SItemTief`, `used : items.any constantExpansion = true`, `accepted : checkConstants items = .ok ()`, the conclusion is `items.any itemMetadata = false`.
-* **`invariant_refused_zeuge`**: the conclusion is `check [.tableT "T" none (some (.lit 1)) none none false [.tInv ⟨"valid", .lit 1, true, none, .ext .imp [] [.tru, .tru]⟩]] = .error "source export: invariant cost/runs/by duties lack a checked source binding"`.
+* **`invariant_bound_zeuge`**: `check [.tableT "T" none (some (.lit 1)) none none false [.tInv ⟨"valid", .ext .imp [] [.tru, .tru]⟩]] = .ok ()`.
 * **`nested_duties_refused_zeuge`**: the conclusion is `let held`.
 * **`stateT_bound`**: For arbitrary `n : String`, `ts : List STrans`, the conclusion is `itemMetadata (.stateT n ts) = false`.
 * **`stateT_zeuge`**: the conclusion is `let tr : STrans`.
@@ -5252,7 +5252,7 @@ Integration evidence: `0eaeaabbd` (`feat(export): admit state transitions to Sta
 * **`accepted_image`**: the conclusion is `emit text 64 = .ok output`.
 
 Stage-0 boundary: Atomic transition contracts, conflicting effects and incompatible aliases remain refused by transition elaboration. The shared gate is `itemMetadata` in
-`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; its exact boundary witnesses are `stateT_bound`, `stateT_zeuge`.
+`grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean`; its exact boundary witnesses are `stateT_bound`, `stateT_zeuge`.
 
 
 ## 109. C06: integrated definitions, certificates and export boundary (2026-11-02)
@@ -5275,7 +5275,7 @@ Integration evidence: `d060d11a4` (`feat(c06): add witnesses for prefix replay a
 * **`handler_contracts`**: the conclusion is `RespektiertVertraege prog handler`.
 
 Stage-0 boundary: Indirect calls require interface refinement and caller duties; a pointer contract alone does not establish an executable source binding. The shared gate is `itemMetadata` in
-`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+`grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean`; `nested_duties_refused_zeuge` pins inherited refusals; `invariant_bound_zeuge` pins invariant admission (there is no package-specific `_bound` theorem in this gate).
 
 
 ## 110. C09: integrated definitions, certificates and export boundary (2026-11-02)
@@ -5319,7 +5319,7 @@ Integration evidence: `36662142d` (`feat(owner): ghost run ledger with G/GX cons
 * **`ownerLedger_zeuge_run`**: For arbitrary `P : Programm D`, `O : Orakel D`, `passes : Nat`, `sp : Speicher D`, `init : Faden → Σ f : D.Fn, Env D (D.params f)`, `M : RufMaschineG D`, `threads : List Faden`, assuming `hr : RufErreichbarG P O passes (RufStartG P sp init) M`, the conclusion is `OwnerInvG names minted M threads`.
 
 Stage-0 boundary: Nominal owner flow and escrow admission do not bypass the source metadata gate or establish a provider binding. The shared gate is `itemMetadata` in
-`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+`grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean`; `nested_duties_refused_zeuge` pins inherited refusals; `invariant_bound_zeuge` pins invariant admission (there is no package-specific `_bound` theorem in this gate).
 
 
 ## 111. C11: integrated definitions, certificates and export boundary (2026-11-02)
@@ -5373,7 +5373,7 @@ Integration evidence: `8abb7bd47` (`feat(grammatik): lower C11 traversal forms w
 * **`zeuge_c11_retWhy_ok`**: For arbitrary `M : Modl`, `S : Sees`, `fn : Nat`, `blks : List Block`, `st' : St`, `σ : World Wit.wD`, `ρ : Env Wit.wD [.int 0 3]`, `m : Mem`, `rs : Regs`, `ks : List Frame`, `dst : Option Reg`, assuming `h : lowerEnd Wit.wLay [] (0, 0) c11retWhy 7 ⟨10, 30⟩ = some (blks, st')` and `hM : InM M fn blks` and `hlv : LvOk M fn (0, 0)` and `hFn : FnOk Wit.wLay M` and `hCall : CallRef Wit.wLay M S (rufAt Wit.wP Wit.wO 0 1)` and `hR : Rep Wit.wLay σ m` and `hE : EnvRep Wit.wLay rs m [] ρ` and `hW : WfL Wit.wLay m` and `hc : ∀ x ∈ ([] : List Reg), x < 10`, the conclusion is `EndOk Wit.wLay [] (0, 0) M S fn 7 10 st'.r m rs ks dst (execEnd Wit.wO 0 (rufAt Wit.wP Wit.wO 0 1) c11retWhy σ ρ)`.
 
 Stage-0 boundary: Traversal lowering retains narrowing, capacity and cleanup duties; metadata-bearing unsupported nested forms remain refused. The shared gate is `itemMetadata` in
-`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+`grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean`; `nested_duties_refused_zeuge` pins inherited refusals; `invariant_bound_zeuge` pins invariant admission (there is no package-specific `_bound` theorem in this gate).
 
 
 ## 112. C12: integrated definitions, certificates and export boundary (2026-11-02)
@@ -5389,7 +5389,7 @@ Integration evidence: `4f246049c` (`feat(c12): compose owner-preserving capabili
 * **`attenuates_sound_zeuge`**: the conclusion is `let source`.
 
 Stage-0 boundary: Capability attenuation preserves ownership; descriptors alone do not establish a source memory provider binding. The shared gate is `itemMetadata` in
-`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+`grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean`; `nested_duties_refused_zeuge` pins inherited refusals; `invariant_bound_zeuge` pins invariant admission (there is no package-specific `_bound` theorem in this gate).
 
 
 ## 113. C13: integrated definitions, certificates and export boundary (2026-11-02)
@@ -5400,7 +5400,7 @@ Integration evidence: `0891322a6` (`merge: Stage-0 witness for a C13 builtin`).
 
 
 Stage-0 boundary: The builtin witness establishes its concrete emitted image; unsupported source metadata remains refused. The shared gate is `itemMetadata` in
-`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+`grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean`; `nested_duties_refused_zeuge` pins inherited refusals; `invariant_bound_zeuge` pins invariant admission (there is no package-specific `_bound` theorem in this gate).
 
 
 ## 114. C14: integrated definitions, certificates and export boundary (2026-11-02)
@@ -5439,7 +5439,7 @@ Integration evidence: `13a27e855` (`feat(grammatik): C14 stage 4, userspace entr
 * **`eintritt_laufzeit`**: For arbitrary `E : Einheit D`, `sp : Speicher D.mitRuhe`, `init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)`, `t : Faden`, `w : D.Fn`, assuming `hL : Laufzeit E sp init` and `hne : (init t).1 = some w`, the conclusion is `∃ a ∈ E.starts ++ E.gestartet, a.1 = w`.
 
 Stage-0 boundary: Profile-bound admission does not discharge unsupported source metadata or supply guest environment contracts. The shared gate is `itemMetadata` in
-`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+`grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean`; `nested_duties_refused_zeuge` pins inherited refusals; `invariant_bound_zeuge` pins invariant admission (there is no package-specific `_bound` theorem in this gate).
 
 
 ## 115. C15: integrated definitions, certificates and export boundary (2026-11-02)
@@ -5540,7 +5540,7 @@ Integration evidence: `24ba84fa8` (`feat(grammatik): C15 per-cell protocol, link
 * **`nutzerTeilO_wachs`**: For arbitrary `p : Projekt D`, `T₁ : D.Tab ⊕ D.Glob → Prop`, assuming `hL : ∀ (passes : Nat) (f : D.Fn), p.eigen f = true → KoerperGutSA p.E.P passes p.E.Q p.E.S T₁ f ∧ InvGutSA p.E.P passes p.E.Q p.E.S T₁ f ∧ InvGutGrundA p.E.P passes p.E.Q p.E.S T₁ f` and `hNeu : ∀ (passes : Nat) (f : D.Fn), p.eigen f = true → (∀ c ∈ endblockOrteP p.E.P (p.E.P.rumpf f), ¬ (OffenA c ∧ ¬ T₁ c)) ∨ (KoerperGutSA p.E.P passes p.E.Q p.E.S OffenA f ∧ InvGutSA p.E.P passes p.E.Q p.E.S OffenA f ∧ InvGutGrundA p.E.P passes p.E.Q p.E.S OffenA f)` and `hSL : SperrInvLokal p.E.S` and `hQL : AxEnsLokal p.E.Q` and `hstart : StartTeil p`, the conclusion is `NutzerTeilO p`.
 
 Stage-0 boundary: Only the five bound operators with an explicit per-cpu count pass the metadata gate; accumulator uses in bodies and contracts remain refused pending C08. The shared gate is `itemMetadata` in
-`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; its exact boundary witnesses are `accT_bound`, `accT_zeuge`.
+`grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean`; its exact boundary witnesses are `accT_bound`, `accT_zeuge`.
 
 
 ## 116. C16: integrated definitions, certificates and export boundary (2026-11-02)
@@ -5595,7 +5595,7 @@ No Lean build or kernel/axiom check was run by the implementation worker.
 * **`checkTreue_zeuge`**: the conclusion is `CheckTreueG (D`.
 
 Stage-0 boundary: Counterprobes remain refused; parameterised and reason-carrying gates and unbound sibling-check gates remain refused. The shared gate is `itemMetadata` in
-`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; its exact boundary witnesses are `checkT_bound`, `checkT_zeuge`.
+`grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean`; its exact boundary witnesses are `checkT_bound`, `checkT_zeuge`.
 
 
 ## 117. C17: integrated definitions, certificates and export boundary (2026-11-02)
@@ -5618,7 +5618,7 @@ Integration evidence: `aeea4a7bc` (`feat(const): prove soundness of checked cons
 * **`const_call_fehlerErschoepft`**: For arbitrary `c : ConstProgram`, `f : c.D.Fn`, `args : Env c.D (c.D.params f)`, `limit : Nat`, `g : c.D.Fn`, assuming `haufwand : constArbeitsSchranke c f ≤ limit` and `h : rufAt c.P (constOrakel c) 0 (constTiefenSchranke c) f (constWelt c) args = RufAusgang.logik (.abstieg g)`, the conclusion is `evalConstCall c f args limit = ConstCallResult.exhausted (constArbeitsSchranke c f) limit`.
 
 Stage-0 boundary: Checked constant evaluation retains the original metadata obligations; declared costs without a checked binding remain refused. The shared gate is `itemMetadata` in
-`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+`grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean`; `nested_duties_refused_zeuge` pins inherited refusals; `invariant_bound_zeuge` pins invariant admission (there is no package-specific `_bound` theorem in this gate).
 
 
 ## 118. C18: integrated definitions, certificates and export boundary (2026-11-02)
@@ -5636,17 +5636,19 @@ Integration evidence: `1e93b2e57` (`feat(grammatik): witness a closed static-arr
 * **`uReset_lower`**: the conclusion is `(lowerAllg uReset).toOption.isSome = true`.
 
 Stage-0 boundary: Unknown arenas, unknown statics and non-array statics remain refused; range validity and zero observation remain lowering obligations. The shared gate is `itemMetadata` in
-`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; its exact boundary witnesses are `reset_bound`, `reset_zeuge`.
+`grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean`; its exact boundary witnesses are `reset_bound`, `reset_zeuge`.
 
 
-## 119. C05: refused invariant gate (2026-11-02)
+## 119. C05: invariant admission and return costs (2026-11-13)
 
-`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`:
+`grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean`:
 
-* **`groupT_still_refused`**: For arbitrary `g : String`, `ts : List String`, `vs : List SGruppenInv`, the conclusion is `itemMetadata (.groupT g ts vs) = true`.
-* **`groupT_zeuge`**, **`invariant_refused_zeuge`**: concrete group and table invariant declarations return the missing cost/runs/by binding error.
+* **`groupT_bound`**: for arbitrary `g : String`, `ts : List String`, `vs : List SGruppenInv`, `itemMetadata (.groupT g ts vs) = false`.
+* **`groupT_zeuge`**, **`invariant_bound_zeuge`**: concrete group and table invariant declarations pass the metadata gate.
 
-Stage 0 still refuses all group and table invariants: mandatory cost/runs/by duties have no checked source binding.
+The only invariant surface is `invariant name : predicate;`. Independent cost, execution-mode and proof clauses are removed (C05 decision). `uInv` and `lowerInvAt` retain carrier resolution, declared-read and writer-lock checks. `kostenEpilog` prices `ensures` and owed predicates at value returns within the writer's declared `costs`.
+
+`invariant_clauses_refused_zeuge` (Parser/Item/ElementTiefProben3.lean) pins parse errors for each removed clause; `gruppenInv_rund` covers the simplified print/parse round trip. `inv_ok_stufe`, `glob_gruppe_ok_stufe` and `breaking_invariant_bound_zeuge` cover source elaboration. These migrated witnesses require the lead's integration build; no new build or corpus result is claimed here.
 
 ## 120. C08: foreign contracts and the split goal premise (2026-11-02)
 
@@ -5683,7 +5685,7 @@ cost, limit, induction, load, moves, quits, keeps, part, arch and refs clauses;
 providers, placement, entry handles and required allocation are not admitted merely
 by having C08 contracts. `capability_unbound_zeuge` witnesses refused owner pointers
 and entry handles; `required_allocation_refused_zeuge` witnesses refused allocation;
-`nested_duties_refused_zeuge` and `invariant_refused_zeuge` retain nested and invariant duties.
+`nested_duties_refused_zeuge` retains nested duties; `invariant_bound_zeuge` records invariant admission under C05.
 
 ## 121. C17: measure provenance and const admission supplements (2026-11-02)
 

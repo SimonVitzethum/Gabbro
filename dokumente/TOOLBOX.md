@@ -407,12 +407,11 @@ distribution behind it is rarely uniform:
 
 | Word | the rule wanted | the distribution was |
 |---|---|---|
-| `runs online` | *"without a generated check → `C001`"* | **three classes**: `table … ops` (3) carries it through a machine-checked template · `table` without `ops` (5) as an `E` duty · **`walk` (3) through nothing** |
 | `narrow … else` | add a terminator | **three constructs of one build**: `narrow … else`, `let … else`, the `exchange`-`update` body |
 | `_ =>` | strike the wildcards | **three categories**: dead defence (4) · load-bearing default (6) · real finding (1) |
 
-Three times the same move — a rule over the **surface** instead of the **thing**: a rule over the
-word `online` would have hit two working registers to reach the one that does not. The count is
+The same move recurs: a rule over the **surface** instead of the **thing** hits working
+constructs along with the faulty case. The count is
 cheaper than the rule, with three outcomes (uniform → the rule is right, now measured instead of
 assumed; several → it hits too broad, it belongs to the class, not the word; one class → the
 rule is a refusal over one case). *Addendum:* a count over **the own corpus** is self-confirming

@@ -26,7 +26,7 @@ table Endpunkt count NKERNE {
         antwortende : option index into Faden,
     }
 
-    invariant antwortpflicht_paarig cost O(1) runs online :
+    invariant antwortpflicht_paarig :
         forall e in slots of Self :
             (Self.slots[e].anrufer == None) == (Self.slots[e].antwortende == None);
 }
