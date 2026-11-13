@@ -220,7 +220,7 @@ theorem akteurSA_dannExchange {D : Deklaration} {P : Programm D} {O : Orakel D} 
       (eval ((M.weltVon u).lese Λ (.inr g :: neuE.orte)) neuE
         ((M.weltVon u).lese Λ (.inr g :: neuE.orte))
         (.cons (((M.weltVon u).lese Λ (.inr g :: neuE.orte)).globs g) ρ)),
-    spur_laenge_erw (Erw.schreibGlob _ _ _ _),
+    spur_erw_beide (Erw.schreibGlob _ _ _ _),
     gleichAuf_schreibGlob (GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg) g Λ Λ _,
     ⟨hks, hrS, hrest⟩, fun R O' U A σ0 _ _ hσ0 => ?_⟩
   have h1 := semHA_exchange S O' U A passes R g neuE hw hLg rest k σ0 ρ
@@ -338,7 +338,7 @@ theorem akteurSA_dannGleit {D : Deklaration} {P : Programm D} {O : Orakel D} {pa
     rw [eval_gleichAuf a (fun _ h => List.mem_append_right _ (List.mem_append_left _ h)) hg ρ,
       eval_gleichAuf b (fun _ h => List.mem_append_right _ (List.mem_append_right _ h)) hg ρ]
     exact hv
-  exact ⟨σ, Nat.le_refl _, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
+  exact ⟨σ, ⟨Nat.le_refl _, Nat.le_refl _⟩, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
     ⟨hks, hrS, hrest⟩, fun R O' U A σ0 _ _ hσ0 => ZErgG.folgt_of_eq (by
       rw [semHA_gleit S O' U A passes R op a b lo hi rest k σ0 ρ v (by rw [hσ0]; exact hv'),
         hσ0])⟩

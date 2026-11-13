@@ -214,10 +214,10 @@ theorem gpost_liest_geist (o : GD.Tab ⊕ GD.Glob) (ho : o ∈ GPost.orte) :
 
 /-- The witness oracle: no axioms, no registers, no globals. -/
 def GO : Orakel GD where
-  wirkt := fun a _ _ => nomatch a
-  regLies := fun r _ => nomatch r
+  wirktL := fun a _ _ => nomatch a
+  regLiesL := fun r _ => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g _ => nomatch g
+  sichtbarL := fun g _ => nomatch g
 
 /-- A witness world: ordinary slot `b`, ghost slot `c`, trace `tr`. -/
 def gwelt (b c : Bool) (tr : List (Ereignis GD)) : World GD :=

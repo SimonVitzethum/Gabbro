@@ -145,7 +145,8 @@ theorem koerperGutA_of_V {P : Programm D} {passes : Nat} (Q : AxEns D) {f : D.Fn
 def VertragA (z : Int → Option D.Fn) (Q : AxEns D) (HA : List (AxEintrag D)) : Prop :=
   ∀ (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) (x : World D × Int),
     (⟨a, σ, ρ, x⟩ : AxEintrag D) ∈ HA →
-      ∀ v : ErgVal D (D.aerg a), einpassenErg z (D.aerg a) x.2 = some v → Q a x.1 v = true
+      ∀ v : ErgVal D (D.aerg a), einpassenErg z (D.aerg a) x.2 = some v →
+        ∀ w : World D, w.slots = x.1.slots → w.globs = x.1.globs → Q a w v = true
 
 theorem vertragA_nil (z : Int → Option D.Fn) (Q : AxEns D) : VertragA z Q ([] : List (AxEintrag D)) :=
   fun _ _ _ _ h => absurd h List.not_mem_nil
@@ -154,12 +155,15 @@ theorem vertragA_nil (z : Int → Option D.Fn) (Q : AxEns D) : VertragA z Q ([] 
     oracle does and every recorded answer does. -/
 theorem orakelAus_vertrag {Q : AxEns D} {O : Orakel D} (hQ : AxVertragO Q O)
     {HA : List (AxEintrag D)} (hv : VertragA O.zeiger Q HA) : AxVertragO Q (orakelAus O HA) := by
-  intro a σ ρ v
-  simp only [orakelAus]
-  split
-  · rename_i hex
-    exact hv a σ ρ _ (Classical.choose_spec hex) v
-  · exact hQ a σ ρ v
+  intro a σ ρ v hfit
+  by_cases h : AxFrage HA a σ.ohneLese ρ
+  · obtain ⟨hs, hg, h2⟩ := orakelAus_frage_speicher O HA h
+    have hfit' : einpassenErg O.zeiger (D.aerg a) (Classical.choose h).2.2 = some v := by
+      rw [← h2]
+      exact hfit
+    exact hv a _ ρ _ (Classical.choose_spec h).1 v hfit' _ hs hg
+  · rw [orakelAus_wirkt_sonst O HA h] at hfit ⊢
+    exact hQ a σ ρ v hfit
 
 /-- (3) Conditional summaries survive replay: recorded answers satisfy the summary;
     every other question retains the actual oracle's conditional contract at the
@@ -179,11 +183,15 @@ theorem orakelAus_vertragOP {Pre : AxPre D} {Q : AxEns D} {O : Orakel D}
     axiom's declared carriers, so a local declared ensures transfers. -/
 theorem axWelt_vertrag {Q : AxEns D} (hlok : AxEnsLokal Q) (e0 : Ereignis D) (a : D.Ax)
     (κ σ₂ : World D) (v : ErgVal D (D.aerg a)) (h : Q a σ₂ v = true) :
-    Q a (axWelt e0 a κ σ₂) v = true := by
-  rw [hlok a (axWelt e0 a κ σ₂) σ₂ v (fun t ht => by
+    ∀ w : World D, w.slots = (axWelt e0 a κ σ₂).slots → w.globs = (axWelt e0 a κ σ₂).globs →
+      Q a w v = true := by
+  intro w hws hwg
+  rw [hlok a w σ₂ v (fun t ht => by
+      rw [hws]
       show (if D.aschreibt a t = true then σ₂.slots t else κ.slots t) = σ₂.slots t
       rw [if_pos ht])
     (fun g hg => by
+      rw [hwg]
       show (if D.agschreibt a g = true then σ₂.globs g else κ.globs g) = σ₂.globs g
       rw [if_pos hg])]
   exact h

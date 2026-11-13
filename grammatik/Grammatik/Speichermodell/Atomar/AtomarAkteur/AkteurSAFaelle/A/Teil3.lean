@@ -117,7 +117,7 @@ theorem akteurSA_dannOnTagSome {D : Deklaration} {P : Programm D} {O : Orakel D}
   simp only [stmtOrteP, List.append_subset] at hss
   have hw' : armWahlG arms (eval σ v σ ρ) = ⟨some τ, b, nutz⟩ := by
     rw [eval_gleichAuf v (fun _ h => List.mem_append_right _ h) hg ρ]; exact hw
-  exact ⟨σ, Nat.le_refl _, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
+  exact ⟨σ, ⟨Nat.le_refl _, Nat.le_refl _⟩, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
     ⟨armWahlG_gOk' arms _ hw' hks, fun _ h => hss.2 (armWahlG_orteP' arms _ hw' h), hrest⟩,
     fun R O' U A σ0 _ _ hσ0 => ZErgG.folgt_of_eq (by
       rw [semHA_tagSome S O' U A passes R v arms rest k σ0 ρ τ b nutz
@@ -227,7 +227,7 @@ theorem akteurSA_dannOnTagNone {D : Deklaration} {P : Programm D} {O : Orakel D}
   simp only [stmtOrteP, List.append_subset] at hss
   have hw' : armWahlG arms (eval σ v σ ρ) = ⟨none, b, nutz⟩ := by
     rw [eval_gleichAuf v (fun _ h => List.mem_append_right _ h) hg ρ]; exact hw
-  exact ⟨σ, Nat.le_refl _, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
+  exact ⟨σ, ⟨Nat.le_refl _, Nat.le_refl _⟩, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
     ⟨armWahlG_gOk' arms _ hw' hks, fun _ h => hss.2 (armWahlG_orteP' arms _ hw' h), hrest⟩,
     fun R O' U A σ0 _ _ hσ0 => ZErgG.folgt_of_eq (by
       rw [semHA_tagNone S O' U A passes R v arms rest k σ0 ρ b nutz
@@ -333,7 +333,7 @@ theorem akteurSA_dannOnGrund {D : Deklaration} {P : Programm D} {O : Orakel D} {
   simp only [stmtOrteP, List.append_subset] at hss
   have hb : grundWahlG arms (eval σ r σ ρ) = b := by
     rw [eval_gleichAuf r (fun _ h => List.mem_append_right _ h) hg ρ]; exact hw
-  refine ⟨σ, Nat.le_refl _, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
+  refine ⟨σ, ⟨Nat.le_refl _, Nat.le_refl _⟩, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
     ⟨?_, ?_, hrest⟩, fun R O' U A σ0 _ _ hσ0 => ?_⟩
   · rw [← hb]; exact grundWahlG_gOk arms _ hks
   · rw [← hb]; exact fun _ h => hss.2 (grundWahlG_orteP arms _ h)

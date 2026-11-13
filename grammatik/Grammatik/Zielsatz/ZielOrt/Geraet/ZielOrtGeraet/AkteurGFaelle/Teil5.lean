@@ -277,7 +277,7 @@ theorem akteurG_dannLocks {D : Deklaration} {P : Programm D} {O : Orakel D} {pas
   refine ⟨fadenG_lokal hF hhead ρ (.dann body (.frei L (.dann rest k)))
     (Ereignis.nimmt L (offen (M.faeden u).spur) :: (M.faeden u).spur) (fun σ hg hok => ?_), hL⟩
   obtain ⟨hks, hss, hrest⟩ := okG_dann_cons hok
-  exact ⟨σ.nimmt L, Nat.le_succ _, hg, ⟨hks, hss, hrest⟩,
+  exact ⟨σ.nimmt L, World.rang_le_nimmt σ L, hg, ⟨hks, hss, hrest⟩,
     fun R O' => ZErg.folgt_of_eq (semV_locks O' passes R L hr body rest k σ ρ)⟩
 
 set_option maxHeartbeats 4000000 in
@@ -360,6 +360,6 @@ theorem akteurG_freiGib {D : Deklaration} {P : Programm D} {O : Orakel D} {passe
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
   refine ⟨fadenG_lokal hF hhead ρ k (Ereignis.gibt L :: (M.faeden u).spur)
     (fun σ hg hok => ?_), hL⟩
-  exact ⟨σ.gibt L, Nat.le_succ _, hg, hok, fun R O' => ZErg.folgt_refl _⟩
+  exact ⟨σ.gibt L, World.rang_le_gibt σ L, hg, hok, fun R O' => ZErg.folgt_refl _⟩
 
 end Gabbro.Grammatik

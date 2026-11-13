@@ -112,7 +112,8 @@ theorem inv_anfang (σ' : World D') :
     fun _ h => absurd h List.not_mem_nil, fun _ h => absurd h List.not_mem_nil,
     fun _ h => absurd h List.not_mem_nil, fun _ h => absurd h List.not_mem_nil,
     fun _ h => absurd h List.not_mem_nil, fun _ h => absurd h List.not_mem_nil,
-    fun _ h => absurd h List.not_mem_nil⟩
+    fun _ h => absurd h List.not_mem_nil, fun _ h => absurd h List.not_mem_nil,
+    fun _ h => absurd h List.not_mem_nil, fun _ h => absurd h List.not_mem_nil⟩
 
 section Lauf
 
@@ -236,12 +237,13 @@ theorem koerperGutSA_E (hP : KoerperGutSA P passes Q S T f) : KoerperGutSA P' pa
         obtain ⟨hI, hv⟩ := hR
         have hk := hI.keyOk E
         have hT := E.phiAus_treu hZ hk σ'.speicher
+        have hTO := E.phiAus_treuO hZ hk σ'.speicher
         have hreqD : ReqAmEintritt P f ((E.speicherZ hZ σ'.speicher).welt []) (E.parZ hZ hS f ρ') := by
           unfold ReqAmEintritt
           rw [← E.req_E hZ hS hU.fort (E.inv_anfang hZ σ').treu f _ ρ' (E.envR_parZ hZ hS f ρ')]
           exact hreq
-        have hens := (hP.1 _ (E.orakelΦ_rahmen hZ hT hRO) (E.orakelΦ_regLokal hZ hT hRL)
-          (E.orakelΦ_axVertragOP hZ hT hAV hU.axPre hU.ax hQL) _ (E.umweltΦ_ok hZ hT S hSL hU.inv hU') _
+        have hens := (hP.1 _ (E.orakelΦ_rahmen hZ hTO hRO) (E.orakelΦ_regLokal hZ hTO hRL)
+          (E.orakelΦ_axVertragOP hZ hTO hAV hU.axPre hU.ax hQL) _ (E.umweltΦ_ok hZ hT S hSL hU.inv hU') _
           (E.aumweltΦ_ok hZ T A') _ (E.rufΦ_rahmen hZ hS hU.fort hp (hU.rueck pad) hT hRR)
           (E.rufΦ_ohneVorbedingung hZ hS hOV) _ _ hreqD).1 σe ve (hΦ _ (E.phiAus_passt hZ hk σ'.speicher))
         unfold EnsAmRueck at hens ⊢
@@ -262,14 +264,15 @@ theorem koerperGutSA_E (hP : KoerperGutSA P passes Q S T f) : KoerperGutSA P' pa
         obtain ⟨hl, hk⟩ := hR
         obtain ⟨g₀, rfl⟩ := hl g' rfl
         have hT := E.phiAus_treu hZ hk σ'.speicher
+        have hTO := E.phiAus_treuO hZ hk σ'.speicher
         have hreqD : ReqAmEintritt P f ((E.speicherZ hZ σ'.speicher).welt []) (E.parZ hZ hS f ρ') := by
           unfold ReqAmEintritt
           rw [← E.req_E hZ hS hU.fort (E.inv_anfang hZ σ').treu f _ ρ' (E.envR_parZ hZ hS f ρ')]
           exact hreq
         have hrunD := hΦ _ (E.phiAus_passt hZ hk σ'.speicher)
         rw [E.rufΦ_torRuf hZ hS hU.fort (hU.rueck pad) hT R'] at hrunD
-        exact (hP.1 _ (E.orakelΦ_rahmen hZ hT hRO) (E.orakelΦ_regLokal hZ hT hRL)
-          (E.orakelΦ_axVertragOP hZ hT hAV hU.axPre hU.ax hQL) _ (E.umweltΦ_ok hZ hT S hSL hU.inv hU') _
+        exact (hP.1 _ (E.orakelΦ_rahmen hZ hTO hRO) (E.orakelΦ_regLokal hZ hTO hRL)
+          (E.orakelΦ_axVertragOP hZ hTO hAV hU.axPre hU.ax hQL) _ (E.umweltΦ_ok hZ hT S hSL hU.inv hU') _
           (E.aumweltΦ_ok hZ T A') _ (E.rufΦ_rahmen hZ hS hU.fort hp (hU.rueck pad) hT hRR)
           (E.rufΦ_ohneVorbedingung hZ hS hOV) _ _ hreqD).2 g₀ hrunD
     | _ => simp only [EndRel] at hR
@@ -281,12 +284,13 @@ theorem koerperGutSA_E (hP : KoerperGutSA P passes Q S T f) : KoerperGutSA P' pa
     | logik e =>
         obtain ⟨_, hk⟩ := hR
         have hT := E.phiAus_treu hZ hk σ'.speicher
+        have hTO := E.phiAus_treuO hZ hk σ'.speicher
         have hreqD : ReqAmEintritt P f ((E.speicherZ hZ σ'.speicher).welt []) (E.parZ hZ hS f ρ') := by
           unfold ReqAmEintritt
           rw [← E.req_E hZ hS hU.fort (E.inv_anfang hZ σ').treu f _ ρ' (E.envR_parZ hZ hS f ρ')]
           exact hreq
-        exact hP.2 _ (E.orakelΦ_rahmen hZ hT hRO) (E.orakelΦ_regLokal hZ hT hRL)
-          (E.orakelΦ_axVertragOP hZ hT hAV hU.axPre hU.ax hQL) _ (E.umweltΦ_ok hZ hT S hSL hU.inv hU') _
+        exact hP.2 _ (E.orakelΦ_rahmen hZ hTO hRO) (E.orakelΦ_regLokal hZ hTO hRL)
+          (E.orakelΦ_axVertragOP hZ hTO hAV hU.axPre hU.ax hQL) _ (E.umweltΦ_ok hZ hT S hSL hU.inv hU') _
           (E.aumweltΦ_ok hZ T A') _ (E.rufΦ_rahmen hZ hS hU.fort hp (hU.rueck pad) hT hRR)
           (E.rufΦ_ohneLogik hZ hS hOL) _ _ hreqD e (hΦ _ (E.phiAus_passt hZ hk σ'.speicher))
     | _ => simp only [EndRel] at hR
@@ -305,12 +309,13 @@ theorem invGutSA_E (hP : InvGutSA P passes Q S T f) : InvGutSA P' passes Q' S' T
       obtain ⟨hI, _⟩ := hR
       have hk := hI.keyOk E
       have hT := E.phiAus_treu hZ hk σ'.speicher
+      have hTO := E.phiAus_treuO hZ hk σ'.speicher
       have hreqD : ReqAmEintritt P f ((E.speicherZ hZ σ'.speicher).welt []) (E.parZ hZ hS f ρ') := by
         unfold ReqAmEintritt
         rw [← E.req_E hZ hS hU.fort (E.inv_anfang hZ σ').treu f _ ρ' (E.envR_parZ hZ hS f ρ')]
         exact hreq
-      exact E.invAmRueck_E hZ hS hU hI.treu f (hP _ (E.orakelΦ_rahmen hZ hT hRO)
-        (E.orakelΦ_regLokal hZ hT hRL) (E.orakelΦ_axVertragOP hZ hT hAV hU.axPre hU.ax hQL) _
+      exact E.invAmRueck_E hZ hS hU hI.treu f (hP _ (E.orakelΦ_rahmen hZ hTO hRO)
+        (E.orakelΦ_regLokal hZ hTO hRL) (E.orakelΦ_axVertragOP hZ hTO hAV hU.axPre hU.ax hQL) _
         (E.umweltΦ_ok hZ hT S hSL hU.inv hU') _ (E.aumweltΦ_ok hZ T A') _
         (E.rufΦ_rahmen hZ hS hU.fort hp (hU.rueck pad) hT hRR) (E.rufΦ_ohneVorbedingung hZ hS hOV) _ _ hreqD σe ve
         (hΦ _ (E.phiAus_passt hZ hk σ'.speicher)))
@@ -331,12 +336,13 @@ theorem invGutGrundA_E (hP : InvGutGrundA P passes Q S T f) :
       obtain ⟨hI, _⟩ := hR
       have hk := hI.keyOk E
       have hT := E.phiAus_treu hZ hk σ'.speicher
+      have hTO := E.phiAus_treuO hZ hk σ'.speicher
       have hreqD : ReqAmEintritt P f ((E.speicherZ hZ σ'.speicher).welt []) (E.parZ hZ hS f ρ') := by
         unfold ReqAmEintritt
         rw [← E.req_E hZ hS hU.fort (E.inv_anfang hZ σ').treu f _ ρ' (E.envR_parZ hZ hS f ρ')]
         exact hreq
-      exact E.invAmRueck_E hZ hS hU hI.treu f (hP _ (E.orakelΦ_rahmen hZ hT hRO)
-        (E.orakelΦ_regLokal hZ hT hRL) (E.orakelΦ_axVertragOP hZ hT hAV hU.axPre hU.ax hQL) _
+      exact E.invAmRueck_E hZ hS hU hI.treu f (hP _ (E.orakelΦ_rahmen hZ hTO hRO)
+        (E.orakelΦ_regLokal hZ hTO hRL) (E.orakelΦ_axVertragOP hZ hTO hAV hU.axPre hU.ax hQL) _
         (E.umweltΦ_ok hZ hT S hSL hU.inv hU') _ (E.aumweltΦ_ok hZ T A') _
         (E.rufΦ_rahmen hZ hS hU.fort hp (hU.rueck pad) hT hRR) (E.rufΦ_ohneVorbedingung hZ hS hOV) _ _ hreqD σe re
         (hΦ _ (E.phiAus_passt hZ hk σ'.speicher)))

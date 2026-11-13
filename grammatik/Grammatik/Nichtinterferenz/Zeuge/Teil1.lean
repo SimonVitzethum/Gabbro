@@ -41,10 +41,10 @@ def nLab (dz : NDom) : nD.Tab ⊕ nD.Glob → NDom
 
 /-- The oracle: no axiom, no register; every publication visible. -/
 def nO : Orakel nD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r => nomatch r
-  sichtbar := fun _ _ => true
+  sichtbarL := fun _ _ => true
 
 theorem nO_gut : GutO nO := fun a => nomatch a
 theorem nO_lokal : RegLokal nO := ⟨fun r => (nomatch r), fun _ _ _ _ => rfl⟩

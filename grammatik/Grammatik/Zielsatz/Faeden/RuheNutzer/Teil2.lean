@@ -12,6 +12,7 @@ variable {D : Deklaration}
 
 theorem gutO_mitRuhe {O : Orakel D} (h : GutO O) : GutO O.mitRuhe := by
   intro a σ ρ
+  rw [wirkt_mitRuhe_welt O a σ ρ]
   obtain ⟨h1, h2, h3⟩ := h a (worldZ σ) (envZ ρ)
   have hh : (worldZ σ).haelt = σ.haelt := haelt_worldZ σ
   refine ⟨rahmen_worldR h1, ?_, fun ht hg => ?_⟩
@@ -39,11 +40,17 @@ theorem gutO_mitRuhe {O : Orakel D} (h : GutO O) : GutO O.mitRuhe := by
       exact List.map_congr_left fun e _ => evR_evZ e
 
 theorem regLokal_mitRuhe {O : Orakel D} (h : RegLokal O) : RegLokal O.mitRuhe :=
-  ⟨fun r _ _ hg => h.1 r _ _ (gleichAuf_worldZ hg), fun g _ _ hg => h.2 g _ _ (gleichAuf_worldZ hg)⟩
+  ⟨fun r _ _ hg => by
+      rw [regLies_mitRuhe_welt, regLies_mitRuhe_welt]
+      exact h.1 r _ _ (gleichAuf_worldZ hg),
+    fun g _ _ hg => by
+      rw [sichtbar_mitRuhe_welt, sichtbar_mitRuhe_welt]
+      exact h.2 g _ _ (gleichAuf_worldZ hg)⟩
 
 theorem axVertrag_mitRuhe {Q : AxEns D} {O : Orakel D} (h : AxVertragO Q O) :
     AxVertragO (axEnsRuhe Q) O.mitRuhe := by
   intro a σ ρ v hv
+  rw [wirkt_mitRuhe_welt O a σ ρ] at hv ⊢
   change einpassenErg (D := D.mitRuhe) O.mitRuhe.zeiger ((D.aerg a).map tyR)
     (O.wirkt a (worldZ σ) (envZ ρ)).2 = some v at hv
   rw [einpassenErg_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)] at hv

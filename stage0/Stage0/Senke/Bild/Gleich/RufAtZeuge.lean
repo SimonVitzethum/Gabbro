@@ -30,7 +30,7 @@ abbrev zeugeWeltL : World t4D := zeugeWelt.lese [] [.inl ()]
     at depth 2 (one nested call). -/
 theorem rufAt_rufRumpf_zeuge :
     RufLG VertragMarke (rufAt t4P t4O 0 2 t4F zeugeWelt Env.nil) (rufRumpf t4P t4O 0 2 t4F zeugeWeltL Env.nil) :=
-  rufAt_rufRumpf_lg (P := t4P) (passes := 0) leseblind_t4O 2 t4F zeugeWelt zeugeWeltL Env.nil
+  rufAt_rufRumpf_lg (P := t4P) (passes := 0) (leseblind_t4O.toP t4P) 2 t4F zeugeWelt zeugeWeltL Env.nil
     (weltGleich_lese _ _ _)
 
 /-- **The error set is needed**: with every `requires` false, `rufAt` answers a contract mark at the callee. -/
@@ -43,12 +43,12 @@ theorem rufAt_vertragMarke_zeuge :
 theorem t4P_gueltig : VertragGueltig t4P :=
   ⟨fun _ _ _ => rfl, fun _ _ _ _ _ => rfl, (fun i => nomatch i)⟩
 
-/-- With the fixture's trivial contracts and no invariants, a body return is a call return.
+/-- With the fixture's trivial contracts and no invariants, a body return is a call return, under any oracle.
     The world and return value stay symbolic throughout the single handler step. -/
-theorem rufAt_t4D_ok_of_body {P : Programm t4D} {n : Nat} {g : t4D.Fn} {σ σ' : World t4D}
+theorem rufAt_t4D_ok_of_body {O : Orakel t4D} {P : Programm t4D} {n : Nat} {g : t4D.Fn} {σ σ' : World t4D}
     {v : ErgVal t4D (t4D.erg g)} (hq : P.requires g = .tru) (he : P.ensures g = .tru)
-    (hb : execEnd (V := vertragVon t4D g) t4O 0 (rufAt P t4O 0 n) (P.rumpf g) σ Env.nil =
-      .zurueck σ' v) : rufAt P t4O 0 (n + 1) g σ Env.nil = .ok σ' v := by
+    (hb : execEnd (V := vertragVon t4D g) O 0 (rufAt P O 0 n) (P.rumpf g) σ Env.nil =
+      .zurueck σ' v) : rufAt P O 0 (n + 1) g σ Env.nil = .ok σ' v := by
   have hi : t4D.invs = [] := rfl
   simp only [rufAt_succ_eq, rufSchritt, hq, he, Expr.orte, World.lese, World.merke,
     List.map_nil, List.nil_append, eval, wahr?, Bool.true_eq_false, ↓reduceIte, hb, hi,
@@ -82,7 +82,7 @@ theorem t4F_body_kehrt {R : ∀ g : t4D.Fn, World t4D → Env t4D (t4D.params g)
 theorem rufAt_rufRumpf_gueltig_zeuge :
     RufLG (fun _ => False) (rufAt t4P t4O 0 2 t4F zeugeWelt Env.nil)
       (rufRumpf t4P t4O 0 2 t4F zeugeWeltL Env.nil) :=
-  rufAt_rufRumpf_gueltig (passes := 0) t4P_gueltig leseblind_t4O 2 t4F zeugeWelt zeugeWeltL Env.nil
+  rufAt_rufRumpf_gueltig (passes := 0) t4P_gueltig (leseblind_t4O.toP t4P) 2 t4F zeugeWelt zeugeWeltL Env.nil
     (weltGleich_lese _ _ _)
 
 /-- **The one-unfolding duty at the plain caller**: `requires` holds, the body under `rufAt` at depth 1 returns
@@ -112,8 +112,8 @@ theorem rufRumpf_ok_rufAt_zeuge :
     obtain ⟨σF, vF, hF⟩ := t4F_body_kehrt hG
     have hRF : rufAt t4P t4O 0 2 t4F zeugeWeltL Env.nil = .ok σF vF :=
       rufAt_t4D_ok_of_body rfl rfl hF
-    obtain ⟨σ₂, h₂, _⟩ := rufAt_ok_rufRumpf leseblind_t4O (WeltGleich.refl zeugeWeltL) hRF
+    obtain ⟨σ₂, h₂, _⟩ := rufAt_ok_rufRumpf (leseblind_t4O.toP t4P) (WeltGleich.refl zeugeWeltL) hRF
     exact ⟨σ₂, vF, h₂⟩
-  exact ⟨σ₂, v, h, rufRumpf_ok_rufAt leseblind_t4O vertragsfrei_t4F (weltGleich_lese _ _ _) h⟩
+  exact ⟨σ₂, v, h, rufRumpf_ok_rufAt (leseblind_t4O.toP t4P) vertragsfrei_t4F (weltGleich_lese _ _ _) h⟩
 
 end Gabbro.Stage0.Senke.BildLauf

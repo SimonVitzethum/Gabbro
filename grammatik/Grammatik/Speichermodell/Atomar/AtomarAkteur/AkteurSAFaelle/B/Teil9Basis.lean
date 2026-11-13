@@ -196,7 +196,7 @@ theorem akteurSA_ewigWeiter {D : Deklaration} {P : Programm D} {O : Orakel D} {p
   obtain ⟨hinv, hb, hbS, hk⟩ := hok
   have hw' : wahr? (eval σ inv σ ρ) = true := by
     rw [eval_gleichAuf inv (fun _ h => List.mem_append_right _ h) hg ρ]; exact hw
-  exact ⟨σ, Nat.le_refl _, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
+  exact ⟨σ, ⟨Nat.le_refl _, Nat.le_refl _⟩, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
     ⟨hb, hbS, hinv, hb, hbS, hk⟩, fun R O' U A σ0 _ _ hσ0 => ZErgG.folgt_of_eq (by
       rw [semHA_ewigWeiter S O' U A passes R a n inv body k σ0 ρ (by rw [hσ0]; exact hw'), hσ0])⟩
 

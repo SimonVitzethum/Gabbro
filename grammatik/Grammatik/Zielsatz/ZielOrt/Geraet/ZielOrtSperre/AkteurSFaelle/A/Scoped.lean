@@ -123,7 +123,7 @@ theorem fadenS_scopedFreigabe (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO 
       rfl)
   refine fadenS_lokal hF hr ρ _ spur' (fun σ hg hok => ?_)
   have hiσ : S.inv L σ.speicher = true := (inv_gleich hS List.mem_cons_self hg).trans hW
-  refine ⟨σ.gibt L, Nat.le_succ _,
+  refine ⟨σ.gibt L, World.rang_le_gibt σ L,
     gleichAuf_frei hg spur', trivial, ?_⟩
   intro calls O' U
   apply ZErgG.folgt_of_eq

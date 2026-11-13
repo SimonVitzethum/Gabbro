@@ -51,7 +51,7 @@ def Funk (H : List (Eintrag D)) : Prop :=
 
 /-- Every recorded key lies strictly below trace length `N`. -/
 def KurzH (N : Nat) (H : List (Eintrag D)) : Prop :=
-  ∀ e ∈ H, e.2.1.spur.length < N
+  ∀ e ∈ H, e.2.1.rang < N
 
 /-- Every recorded answer respects the callee's contract at its key. -/
 def VertraegeOk (P : Programm D) (H : List (Eintrag D)) : Prop :=
@@ -133,7 +133,7 @@ theorem kurzH_mono {N N' : Nat} {H : List (Eintrag D)} (h : KurzH N H) (hN : N �
 /-- A new entry at a key no older entry has (its trace is longer) keeps the
     record a function. -/
 theorem funk_append {H : List (Eintrag D)} (hf : Funk H) {N : Nat} (hk : KurzH N H)
-    (e : Eintrag D) (he : N ≤ e.2.1.spur.length) : Funk (H ++ [e]) := by
+    (e : Eintrag D) (he : N ≤ e.2.1.rang) : Funk (H ++ [e]) := by
   intro g σ ρ a a' h1 h2
   rcases List.mem_append.mp h1 with h1 | h1 <;> rcases List.mem_append.mp h2 with h2 | h2
   · exact hf g σ ρ a a' h1 h2
@@ -206,7 +206,7 @@ variable (P : Programm D) (O : Orakel D) (passes : Nat)
     repeats the record ends as the residue ends from `σ`. -/
 def KopfOk (F : RufRahmenG D) (W : World D) : Prop :=
   ∃ (H : List (Eintrag D)) (σ : World D),
-    ReqAmEintritt P F.f F.s0 F.rho ∧ Funk H ∧ VertraegeOk P H ∧ KurzH σ.spur.length H ∧
+    ReqAmEintritt P F.f F.s0 F.rho ∧ Funk H ∧ VertraegeOk P H ∧ KurzH σ.rang H ∧
     GleichAuf (fussOrte P F.f) σ W ∧ F.rest.2.2.2.2.okZ P (fussOrte P F.f) ∧
     ∀ R, Passt R H →
       (zErg (execEnd (V := vertragVon D F.f) O passes R (P.rumpf F.f) F.s0 F.rho)).gleich
@@ -221,7 +221,7 @@ def KopfOk (F : RufRahmenG D) (W : World D) : Prop :=
     ends from `σa` (plain call) or with `v` bound (bind-call). -/
 def WarteOk (F : RufRahmenG D) (G : Σ f : D.Fn, Env D (D.params f) × World D) : Prop :=
   ∃ (H : List (Eintrag D)) (κ : World D),
-    ReqAmEintritt P F.f F.s0 F.rho ∧ Funk H ∧ VertraegeOk P H ∧ KurzH κ.spur.length H ∧
+    ReqAmEintritt P F.f F.s0 F.rho ∧ Funk H ∧ VertraegeOk P H ∧ KurzH κ.rang H ∧
     F.rest.2.2.2.2.okZ P (fussOrte P F.f) ∧
     ReqAmEintritt P G.1 κ G.2.1 ∧
     GleichAuf ((P.requires G.1).orte ++ (P.ensures G.1).orte) κ G.2.2 ∧

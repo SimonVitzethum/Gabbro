@@ -338,7 +338,7 @@ theorem akteurSA_verbrauchFort {D : Deklaration} {P : Programm D} {O : Orakel D}
     (fun hok => fun c hc => expr_stabilX (hFS _) mass hok.2.2.2.1 c hc)
     (fun σ hg hok => ?_), hL⟩
   obtain ⟨hmem, hedge, hinv, hmass, hb, hbS, hk⟩ := hok
-  exact ⟨σ, Nat.le_refl _,
+  exact ⟨σ, ⟨Nat.le_refl _, Nat.le_refl _⟩,
     GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
     ⟨hmem, hedge, hinv, hmass, hb, hbS, hk⟩,
     fun R O' U A σ0 _ _ hσ0 => ZErgG.folgt_of_eq (by

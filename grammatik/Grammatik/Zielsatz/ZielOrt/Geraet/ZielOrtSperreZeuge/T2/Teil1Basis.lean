@@ -74,10 +74,10 @@ theorem sP_fragmentG : programmImFragmentG sP sFs = true := by decide
 
 /-- The witness oracle: no axioms, no registers, nothing visible. -/
 def sO : Orakel sD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 theorem sO_gut : GutO sO := fun a => nomatch a
 

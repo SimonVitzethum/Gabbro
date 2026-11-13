@@ -20,10 +20,10 @@ theorem geLeser_fuss : fussOrteG geP geLeser = [.inl .geraet, .inl .geraet] ∧
 
 /-- The oracle: the register answers the device's state `geraet[0]`. -/
 def geO : Orakel geD where
-  wirkt := fun a => nomatch a
-  regLies := fun _ σ => (σ.slots GeTab.geraet 0 ()).n
+  wirktL := fun a => nomatch a
+  regLiesL := fun _ σ => (σ.slots GeTab.geraet 0 ()).n
   regSchreib := fun _ _ => ()
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 theorem geO_gut : GutO geO := fun a => nomatch a
 

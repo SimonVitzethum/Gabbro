@@ -149,10 +149,10 @@ theorem kopfUnlinkFrei_zeuge (O : Orakel FD) (passes : Nat)
 
 /-- An oracle for the witness declaration (it has no axioms and no registers, so every answer is vacuous). -/
 def oF : Orakel FD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r => nomatch r
-  sichtbar := fun _ _ => false
+  sichtbarL := fun _ _ => false
 
 /-- A callee for the witness declaration (the bodies below call nothing). -/
 def rF : ∀ f : FD.Fn, World FD → Env FD (FD.params f) → RufAusgang f := fun _ _ _ => .logik .vorzustand

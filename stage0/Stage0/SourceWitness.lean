@@ -154,10 +154,10 @@ theorem noIndex {n : Nat} (h : n = 0) (i : Fin n) : False := by
 
 def emptyOracle (u : UProg) (ha : u.axs.length = 0) (hr : u.regs.length = 0) :
     Orakel (declOf u) where
-  wirkt a := (noIndex ha a).elim
-  regLies r := (noIndex hr r).elim
+  wirktL a := (noIndex ha a).elim
+  regLiesL r := (noIndex hr r).elim
   regSchreib r := (noIndex hr r).elim
-  sichtbar _ _ := true
+  sichtbarL _ _ := true
 
 def oracle : Orakel D := emptyOracle output.compiled.unit carrier_shape.2.2.1 carrier_shape.2.2.2
 

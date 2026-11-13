@@ -1,20 +1,29 @@
 /-
   File:      stage0/Stage0/Senke/Bild/Gleich/Ausgang.lean
-  Subject:   Package P1 of the closed calls of the image theorem, part 1: outcomes up to read events, and the one
-             premise on the oracle. `AusLG`/`EndLG`/`RufLG` relate two outcomes of the same shape whose worlds are
+  Subject:   Package P1 of the closed calls of the image theorem, part 1: outcomes up to read events, and the
+             premises on the oracle. `AusLG`/`EndLG`/`RufLG` relate two outcomes of the same shape whose worlds are
              `≈` (`WeltGleich`) and whose other data are equal -- or the FIRST outcome is an error whose mark lies
              in `Er` (the first side may fail early, as in `HandlerKongruenz`). `HandlerLG Er R₁ R₂` says that two
              handlers answer `≈`-related worlds with related outcomes.
 
-             **The oracle premise** (`Leseblind`). The oracle `O` answers foreign calls, register reads and
-             visibility questions from the WHOLE world, trace included. Two runs whose worlds differ by read events
-             stay related only if the oracle does not look at read events: its answers agree, and its effect
-             worlds are `≈`, on `≈` worlds. Without it the statement is false (an oracle that counts reads tells
-             `rufAt`'s run from machine G's). It holds for every oracle that ignores the trace
-             (`leseblind_still`, `Zeuge.lean`), and for the witness oracle of the call fixture.
+             **The oracle premises are theorems** (2026-11-13). Machine G hands every oracle the world WITHOUT its
+             read events (`Orakel.wirkt`, grammatik T1/Lese.lean), so every oracle is read-blind: `leseblindW_alle`,
+             `leseblindRS_alle`, `leseblind_alle`, `leseblindP_alle`. The split below is kept as the interface the
+             proofs of P1-P5 use; its two halves were once separate premises:
+             * register and visibility answers (`LeseblindRS`) -- these follow from the named hardware assumption
+               `RegLokal` (`Ruf/Hardware.lean`), which every oracle of the goal theorem meets: they depend on
+               memory only, and `≈` worlds have the same memory;
+             * foreign answers (`LeseblindW`) -- needed only where a foreign call is run. A body without a
+               foreign-call form (`axFrei`, `AxFrei.lean`) never asks for one, and the image fragment
+               (`StmtR`/`BlockR`/`EndR`) has none (`AxFreiR.lean`).
+             `Leseblind` (all three at once) is the old single premise; `LeseblindP P O` is what the program-level
+             statements take: the register/visibility half, and the foreign half OR a program without foreign
+             calls. Without read-blindness the statements would be false (an oracle that counted reads would tell
+             `rufAt`'s run from machine G's); the oracle interface rules such an oracle out.
 -/
 module
 public import Stage0.Senke.Bild.Gleich.Lesegleich
+public import Stage0.Senke.Bild.Gleich.AxFrei
 public import Grammatik.Logik.Vertraege.HandlerKongruenz.Teil1
 @[expose] public section
 
@@ -35,6 +44,67 @@ structure Leseblind (O : Orakel D) : Prop where
   regLies : ∀ (r : D.Reg) (σ σ' : World D), WeltGleich σ σ' → O.regLies r σ = O.regLies r σ'
   sichtbar : ∀ (g : D.Glob) (σ σ' : World D), WeltGleich σ σ' → O.sichtbar g σ = O.sichtbar g σ'
 
+/-- **Read-blind register and visibility answers** (the half `RegLokal` gives). -/
+structure LeseblindRS (O : Orakel D) : Prop where
+  regLies : ∀ (r : D.Reg) (σ σ' : World D), WeltGleich σ σ' → O.regLies r σ = O.regLies r σ'
+  sichtbar : ∀ (g : D.Glob) (σ σ' : World D), WeltGleich σ σ' → O.sichtbar g σ = O.sichtbar g σ'
+
+/-- **Read-blind foreign answers**: on `≈` worlds the answers agree and the effect worlds are `≈`. -/
+def LeseblindW (O : Orakel D) : Prop :=
+  ∀ (a : D.Ax) (σ σ' : World D) (ρ : Env D (D.aparams a)), WeltGleich σ σ' →
+    WeltGleich (O.wirkt a σ ρ).1 (O.wirkt a σ' ρ).1 ∧ (O.wirkt a σ ρ).2 = (O.wirkt a σ' ρ).2
+
+/-- **The oracle premise of a program**: read-blind register and visibility answers, and read-blind foreign
+    answers OR no foreign call in any body. -/
+structure LeseblindP (P : Programm D) (O : Orakel D) : Prop where
+  rs : LeseblindRS O
+  fremd : LeseblindW O ∨ FremdFrei P
+
+theorem Leseblind.rs {O : Orakel D} (h : Leseblind O) : LeseblindRS O :=
+  ⟨h.regLies, h.sichtbar⟩
+
+theorem Leseblind.w {O : Orakel D} (h : Leseblind O) : LeseblindW O :=
+  h.wirkt
+
+/-- A read-blind oracle meets the premise of every program. -/
+theorem Leseblind.toP {O : Orakel D} (h : Leseblind O) (P : Programm D) : LeseblindP P O :=
+  ⟨h.rs, Or.inl h.w⟩
+
+/-- A program without foreign calls needs only the register/visibility half. -/
+theorem leseblindP_frei {P : Programm D} {O : Orakel D} (h : LeseblindRS O) (hP : FremdFrei P) :
+    LeseblindP P O :=
+  ⟨h, Or.inr hP⟩
+
+/-- The premise of one body: its own foreign-call check, or read-blind foreign answers. -/
+theorem LeseblindP.rumpf {P : Programm D} {O : Orakel D} (h : LeseblindP P O) (g : D.Fn) :
+    (P.rumpf g).axFrei = true ∨ LeseblindW O := by
+  rcases h.fremd with hW | hF
+  · exact Or.inr hW
+  · exact Or.inl (hF g)
+
+/-! ## 1b. Every oracle is read-blind (2026-11-13) -/
+
+/-- **Every oracle's foreign answers are read-blind**: machine G hands the oracle the world without reads
+    (`Orakel.wirkt`), so `≈` worlds -- one erasure -- get one answer, one memory, and the same answered events on top
+    of traces that differ by reads. -/
+theorem leseblindW_alle (O : Orakel D) : LeseblindW O := by
+  intro a σ σ' ρ h
+  obtain ⟨h2, hs, hg, neu, e1, e2⟩ := O.wirkt_blind a h.ohneLese_eq ρ
+  refine ⟨⟨hs, hg, ?_⟩, h2⟩
+  rw [e1, e2, spurOhneLese_append, spurOhneLese_append, h.spur]
+
+/-- **Every oracle's register and visibility answers are read-blind.** -/
+theorem leseblindRS_alle (O : Orakel D) : LeseblindRS O :=
+  ⟨fun r _ _ h => O.regLies_blind r h.ohneLese_eq, fun g _ _ h => O.sichtbar_blind g h.ohneLese_eq⟩
+
+/-- **Every oracle is read-blind** (`Leseblind` is a theorem, no premise). -/
+theorem leseblind_alle (O : Orakel D) : Leseblind O :=
+  ⟨leseblindW_alle O, (leseblindRS_alle O).regLies, (leseblindRS_alle O).sichtbar⟩
+
+/-- **The oracle premise of every program holds for every oracle.** -/
+theorem leseblindP_alle (P : Programm D) (O : Orakel D) : LeseblindP P O :=
+  (leseblind_alle O).toP P
+
 /-- Two answers with `≈` worlds and the same value. -/
 inductive PaarLG {α : Type} : World D × α → World D × α → Prop
   | mk {σ σ' : World D} {x : α} : WeltGleich σ σ' → PaarLG (σ, x) (σ', x)
@@ -48,11 +118,11 @@ theorem PaarLG.of {α : Type} {p q : World D × α} (h1 : WeltGleich p.1 q.1) (h
   subst h2
   exact PaarLG.mk h1
 
-/-- A foreign call of a read-blind oracle on `≈` worlds. -/
-theorem paarLG_axiomAntwort {O : Orakel D} (hO : Leseblind O) (a : D.Ax) {σ σ' : World D}
+/-- A foreign call under read-blind foreign answers on `≈` worlds. -/
+theorem paarLG_axiomAntwort {O : Orakel D} (hO : LeseblindW O) (a : D.Ax) {σ σ' : World D}
     (h : WeltGleich σ σ') (x : Env D (D.aparams a)) :
     PaarLG (axiomAntwort O a σ x) (axiomAntwort O a σ' x) := by
-  have hw := hO.wirkt a (σ.fragt (.inl a)) (σ'.fragt (.inl a)) x (h.fragt (.inl a))
+  have hw := hO a (σ.fragt (.inl a)) (σ'.fragt (.inl a)) x (h.fragt (.inl a))
   unfold axiomAntwort
   generalize O.wirkt a (σ.fragt (.inl a)) x = A at hw ⊢
   generalize O.wirkt a (σ'.fragt (.inl a)) x = B at hw ⊢
@@ -64,11 +134,11 @@ theorem paarLG_axiomAntwort {O : Orakel D} (hO : Leseblind O) (a : D.Ax) {σ σ'
   subst h2
   exact PaarLG.mk h1
 
-/-- A fallible foreign call of a read-blind oracle on `≈` worlds. -/
-theorem paarLG_axiomAntwortSonst {O : Orakel D} (hO : Leseblind O) (a : D.Ax) {σ σ' : World D}
+/-- A fallible foreign call under read-blind foreign answers on `≈` worlds. -/
+theorem paarLG_axiomAntwortSonst {O : Orakel D} (hO : LeseblindW O) (a : D.Ax) {σ σ' : World D}
     (h : WeltGleich σ σ') (x : Env D (D.aparams a)) :
     PaarLG (axiomAntwortSonst O a σ x) (axiomAntwortSonst O a σ' x) := by
-  have hw := hO.wirkt a (σ.fragt (.inl a)) (σ'.fragt (.inl a)) x (h.fragt (.inl a))
+  have hw := hO a (σ.fragt (.inl a)) (σ'.fragt (.inl a)) x (h.fragt (.inl a))
   unfold axiomAntwortSonst
   generalize O.wirkt a (σ.fragt (.inl a)) x = A at hw ⊢
   generalize O.wirkt a (σ'.fragt (.inl a)) x = B at hw ⊢

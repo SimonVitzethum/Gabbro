@@ -347,4 +347,50 @@ theorem evalArgs_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {�
 
 /-! ## 3. Contracts -/
 
+/-! ## 4. The erasure of reads commutes with the translation -/
+
+theorem istLeseEv_evR (e : Ereignis D) : istLeseEv (evR e) = istLeseEv e := by
+  cases e <;> rfl
+
+theorem istLeseEv_evZ (e : Ereignis D.mitRuhe) : istLeseEv (evZ (D := D) e) = istLeseEv e := by
+  cases e <;> rfl
+
+theorem spurOhneLese_map_evR : ∀ s : List (Ereignis D),
+    spurOhneLese (s.map evR) = (spurOhneLese s).map evR
+  | [] => rfl
+  | e :: s => by
+      rw [List.map_cons]
+      cases h : istLeseEv e
+      · rw [spurOhneLese_cons_bleibt (evR e) ((istLeseEv_evR e).trans h), spurOhneLese_cons_bleibt e h,
+          List.map_cons, spurOhneLese_map_evR s]
+      · rw [spurOhneLese_cons_lese (evR e) ((istLeseEv_evR e).trans h), spurOhneLese_cons_lese e h,
+          spurOhneLese_map_evR s]
+
+theorem spurOhneLese_map_evZ : ∀ s : List (Ereignis D.mitRuhe),
+    spurOhneLese (s.map (evZ (D := D))) = (spurOhneLese s).map evZ
+  | [] => rfl
+  | e :: s => by
+      rw [List.map_cons]
+      cases h : istLeseEv e
+      · rw [spurOhneLese_cons_bleibt (evZ e) ((istLeseEv_evZ e).trans h), spurOhneLese_cons_bleibt e h,
+          List.map_cons, spurOhneLese_map_evZ s]
+      · rw [spurOhneLese_cons_lese (evZ e) ((istLeseEv_evZ e).trans h), spurOhneLese_cons_lese e h,
+          spurOhneLese_map_evZ s]
+
+theorem worldR_ohneLese (σ : World D) : (worldR σ).ohneLese = worldR σ.ohneLese :=
+  welt_ext rfl rfl (spurOhneLese_map_evR σ.spur)
+
+theorem worldZ_ohneLese (σ : World D.mitRuhe) : (worldZ (D := D) σ).ohneLese = worldZ σ.ohneLese :=
+  welt_ext rfl rfl (spurOhneLese_map_evZ σ.spur)
+
+theorem worldR_auf (w σ : World D) : (worldR w).auf (worldR σ) = worldR (w.auf σ) :=
+  welt_ext rfl rfl (by
+    show w.spur.map evR ++ σ.spur.map evR = (w.spur ++ σ.spur).map evR
+    rw [List.map_append])
+
+theorem worldZ_auf (w σ : World D.mitRuhe) : (worldZ (D := D) w).auf (worldZ σ) = worldZ (w.auf σ) :=
+  welt_ext rfl rfl (by
+    show w.spur.map evZ ++ σ.spur.map evZ = (w.spur ++ σ.spur).map evZ
+    rw [List.map_append])
+
 end Gabbro.Grammatik

@@ -305,7 +305,7 @@ theorem akteurSA_dannNextVerbrauch {D : Deklaration} {P : Programm D} {O : Orake
     (fun σ hg hok => ?_), hL⟩
   obtain ⟨_, _, hTR⟩ := hok
   obtain ⟨hmem, hedge, hinv, hmass, hb, hbS, hk⟩ := id hTR
-  exact ⟨σ, Nat.le_refl _,
+  exact ⟨σ, ⟨Nat.le_refl _, Nat.le_refl _⟩,
     GleichAuf.mono
       (fun _ h => List.mem_append_left _
         (stabilS_mono (fun L hL => (restb.held_iff L).mp hL) h)) hg,

@@ -413,7 +413,7 @@ def FunkU (HU : List (UEintrag D)) : Prop :=
   ∀ (L : D.Lock) (σ : World D) (s s' : Speicher D), (L, σ, s) ∈ HU → (L, σ, s') ∈ HU → s = s'
 
 def KurzU (N : Nat) (HU : List (UEintrag D)) : Prop :=
-  ∀ e ∈ HU, e.2.1.spur.length < N
+  ∀ e ∈ HU, e.2.1.rang < N
 
 /-- Every recorded source memory meets the lock's invariant. -/
 def InvU (S : SperrInv D) (HU : List (UEintrag D)) : Prop :=

@@ -199,10 +199,10 @@ theorem mP_inv : ∀ f : mD.Fn, InvGutS mP 0 (axWahr mD) mSI f := by
 /-! ## 5. Every premise, jointly -/
 
 def mO : Orakel mD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 theorem mO_gut : GutO mO := fun a => nomatch a
 

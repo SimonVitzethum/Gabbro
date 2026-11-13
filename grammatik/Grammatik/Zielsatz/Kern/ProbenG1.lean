@@ -187,10 +187,10 @@ def g1Halb : Int := 4602678819172646912
 
 /-- An oracle: `holen` writes nothing and answers the raw word `w`; `temp` answers `t`. -/
 def g1O (w t : Int) : Orakel g1D where
-  wirkt := fun _ σ _ => (σ, w)
-  regLies := fun _ _ => t
+  wirktL := fun _ σ _ => ({ σ with spur := [] }, w)
+  regLiesL := fun _ _ => t
   regSchreib := fun _ _ => ()
-  sichtbar := fun e => (nomatch e)
+  sichtbarL := fun e => (nomatch e)
 
 theorem g1O_gut (w t : Int) : GutO (g1O w t) := fun _ σ _ =>
   ⟨Rahmen.refl _ _ σ, rfl, fun _ _ =>

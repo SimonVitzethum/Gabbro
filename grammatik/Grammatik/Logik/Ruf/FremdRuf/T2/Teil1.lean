@@ -40,7 +40,7 @@ namespace Gabbro.Grammatik
     precondition. User logic, not hardware. -/
 def AufruferPflicht {D : Deklaration} (Pre : AxPre D) (a : D.Ax) (σ : World D)
     (ρ : Env D (D.aparams a)) : Prop :=
-  Pre a σ ρ = true
+  Pre a σ.ohneLese ρ = true
 
 /-- One gate call under the split premise: the caller's obligation plus the
     restricted hardware premise give the fitting answer's ensures, and the
@@ -67,17 +67,18 @@ theorem fremdruf_gate_gilt_pre (g : GateData fdD) (a : fdD.Ax) (O : Orakel fdD)
     raw word `raus a` (chosen outside the declared result type). -/
 def mitVorbedingung {D : Deklaration} (Pre : AxPre D) (O : Orakel D) (raus : D.Ax → Int) :
     Orakel D :=
-  { O with wirkt := fun a σ ρ =>
-      ((O.wirkt a σ ρ).1, if Pre a σ ρ = true then (O.wirkt a σ ρ).2 else raus a) }
+  { O with wirktL := fun a σ ρ =>
+      ((O.wirktL a σ ρ).1, if Pre a σ ρ = true then (O.wirktL a σ ρ).2 else raus a) }
 
 /-- On a well-formed call the re-dressed oracle IS the machine's oracle. -/
 theorem mitVorbedingung_gleich {D : Deklaration} (Pre : AxPre D) (O : Orakel D)
     (raus : D.Ax → Int) (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a))
     (h : AufruferPflicht Pre a σ ρ) :
     (mitVorbedingung Pre O raus).wirkt a σ ρ = O.wirkt a σ ρ := by
-  have h' : Pre a σ ρ = true := h
-  show ((O.wirkt a σ ρ).1, if Pre a σ ρ = true then (O.wirkt a σ ρ).2 else raus a) =
-    O.wirkt a σ ρ
+  have h' : Pre a σ.ohneLese ρ = true := h
+  show ((O.wirktL a σ.ohneLese ρ).1.auf σ,
+      if Pre a σ.ohneLese ρ = true then (O.wirktL a σ.ohneLese ρ).2 else raus a) =
+    ((O.wirktL a σ.ohneLese ρ).1.auf σ, (O.wirktL a σ.ohneLese ρ).2)
   rw [if_pos h']
 
 /-- **The bridge to premise (c) of `gabbro_ziel`.** Frame, register
@@ -92,12 +93,12 @@ theorem hardware_aus_vertragP [RootNativeFloat.Hardware] {D : Deklaration} (Pre 
     Zielsatz.HardwareAnnahmen (mitVorbedingung Pre O raus) Q := by
   refine ⟨fun a σ ρ => hO a σ ρ, hR, ?_, inferInstance⟩
   intro a σ ρ v hfit
-  by_cases hp : Pre a σ ρ = true
+  by_cases hp : Pre a σ.ohneLese ρ = true
   · have e := mitVorbedingung_gleich Pre O raus a σ ρ hp
     rw [e] at hfit ⊢
     exact hQ a σ ρ v hp hfit
   · have hn : ((mitVorbedingung Pre O raus).wirkt a σ ρ).2 = raus a := by
-      show (if Pre a σ ρ = true then (O.wirkt a σ ρ).2 else raus a) = raus a
+      show (if Pre a σ.ohneLese ρ = true then (O.wirktL a σ.ohneLese ρ).2 else raus a) = raus a
       rw [if_neg hp]
     have hz : (mitVorbedingung Pre O raus).zeiger = O.zeiger := rfl
     rw [hn, hz, hraus a] at hfit
@@ -123,13 +124,13 @@ def fdPre : AxPre fdD
     OTHER descriptor answers the slot value plus one -- the kernel's
     garbage for a caller's bug. -/
 def fdObad : Orakel fdD where
-  wirkt
-    | true, σ, ρ => fdO.wirkt true σ ρ
-    | false, σ, ρ => ((fdO.wirkt false σ ρ).1,
-        if fdKopf ρ = 3 then (fdO.wirkt false σ ρ).2 else (σ.slots () 0 ()).n + 1)
-  regLies := fun r _ => nomatch r
+  wirktL
+    | true, σ, ρ => fdO.wirktL true σ ρ
+    | false, σ, ρ => ((fdO.wirktL false σ ρ).1,
+        if fdKopf ρ = 3 then (fdO.wirktL false σ ρ).2 else (σ.slots () 0 ()).n + 1)
+  regLiesL := fun r _ => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g _ => nomatch g
+  sichtbarL := fun g _ => nomatch g
 
 /-- The bad oracle keeps the frames: its answer worlds are `fdO`'s. -/
 theorem fdObad_gut : GutO fdObad := by
@@ -147,9 +148,9 @@ theorem fdObad_vertragP : AxVertragOPAlle fdPre fdQ fdObad := by
   | false =>
     have h3 : fdKopf ρ = 3 := of_decide_eq_true hp
     have e : fdObad.wirkt false σ ρ = fdO.wirkt false σ ρ := by
-      show ((fdO.wirkt false σ ρ).1,
-          if fdKopf ρ = 3 then (fdO.wirkt false σ ρ).2 else (σ.slots () 0 ()).n + 1) =
-        fdO.wirkt false σ ρ
+      show ((fdO.wirktL false σ.ohneLese ρ).1.auf σ,
+          if fdKopf ρ = 3 then (fdO.wirktL false σ.ohneLese ρ).2 else (σ.ohneLese.slots () 0 ()).n + 1) =
+        ((fdO.wirktL false σ.ohneLese ρ).1.auf σ, (fdO.wirktL false σ.ohneLese ρ).2)
       rw [if_pos h3]
     rw [e] at hfit ⊢
     exact fdQ_vertrag false σ ρ v hfit

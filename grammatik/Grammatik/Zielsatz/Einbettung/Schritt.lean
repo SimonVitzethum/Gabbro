@@ -57,32 +57,39 @@ theorem castW_inj {τ σ : Ty} (h : τ = σ) {v w : Wert D τ} (e : castW h v = 
 /-! ## The keys -/
 
 /-- **The keys of a run**: pairs of a `D`-world and the `D'`-world it stood for -- the MAIN keys
-    (where a call handler, an axiom, a lock move or a register was asked) and the ATOMIC keys
+    (where a call handler, a lock move or a register was asked) and the ATOMIC keys
     (where the atomic environment was asked). They are kept apart: an atomic answer may change the
     `D'`-world without changing the `D`-world (a function pointer swapped for another one `D`
-    cannot name), and the next main key can stand at that same `D`-world. -/
+    cannot name), and the next main key can stand at that same `D`-world. The ORACLE keys are the
+    worlds WITHOUT READS (`World.ohneLese`) at which the outside was asked (a foreign call, a register,
+    a visibility): the outside answers from them only, and they are told apart by their rank. -/
 structure Keys (D D' : Deklaration) where
   haupt : List (World D × World D')
   atom : List (World D × World D')
   /-- The CALL keys: where a callee was asked, the callee of `D'` and its actual arguments (a
       function pointer among them may name a function `D` cannot name). -/
   ruf : List (World D × (Σ f' : D'.Fn, Env D' (D'.params f')))
+  /-- The ORACLE keys: the asking world without reads, and the `D'`-world asked beside it. -/
+  orakel : List (World D × World D')
 
 /-- No key yet. -/
-def Keys.leer : Keys D D' := ⟨[], [], []⟩
+def Keys.leer : Keys D D' := ⟨[], [], [], []⟩
 
 /-- `M` is among the keys `M'`. -/
 def Teil (M M' : Keys D D') : Prop :=
-  (∀ p ∈ M.haupt, p ∈ M'.haupt) ∧ (∀ p ∈ M.atom, p ∈ M'.atom) ∧ (∀ p ∈ M.ruf, p ∈ M'.ruf)
+  (∀ p ∈ M.haupt, p ∈ M'.haupt) ∧ (∀ p ∈ M.atom, p ∈ M'.atom) ∧ (∀ p ∈ M.ruf, p ∈ M'.ruf) ∧
+    (∀ p ∈ M.orakel, p ∈ M'.orakel)
 
-theorem teil_refl (M : Keys D D') : Teil M M := ⟨fun _ h => h, fun _ h => h, fun _ h => h⟩
+theorem teil_refl (M : Keys D D') : Teil M M := ⟨fun _ h => h, fun _ h => h, fun _ h => h, fun _ h => h⟩
 
 theorem teil_trans {M M₁ M₂ : Keys D D'} (h1 : Teil M M₁) (h2 : Teil M₁ M₂) : Teil M M₂ :=
-  ⟨fun p hp => h2.1 p (h1.1 p hp), fun p hp => h2.2.1 p (h1.2.1 p hp), fun p hp => h2.2.2 p (h1.2.2 p hp)⟩
+  ⟨fun p hp => h2.1 p (h1.1 p hp), fun p hp => h2.2.1 p (h1.2.1 p hp), fun p hp => h2.2.2.1 p (h1.2.2.1 p hp),
+    fun p hp => h2.2.2.2 p (h1.2.2.2 p hp)⟩
 
 /-- **The keys of a run, at the current pair `σ`, `σ'`**: every key carries its `D'`-world's
     image memory; none is longer than the current trace; a MAIN key as long as the current trace
     stood for the current `D'`-world; the main keys are functional; atomic keys of one length are
+    one key; no oracle key has a rank above the current world's, and oracle keys of one rank are
     one key. -/
 structure Inv (M : Keys D D') (σ : World D) (σ' : World D') : Prop where
   treu : E.Treu hZ σ.speicher σ'
@@ -95,25 +102,31 @@ structure Inv (M : Keys D D') (σ : World D) (σ' : World D') : Prop where
   aFunk : ∀ p ∈ M.atom, ∀ q ∈ M.atom, p.1.spur.length = q.1.spur.length → p = q
   rKurz : ∀ p ∈ M.ruf, p.1.spur.length < σ.spur.length
   rFunk : ∀ p ∈ M.ruf, ∀ q ∈ M.ruf, p.1.spur.length = q.1.spur.length → p = q
+  oEintrag : ∀ p ∈ M.orakel, E.Treu hZ p.1.speicher p.2
+  oKurz : ∀ p ∈ M.orakel, p.1.rang ≤ σ.rang
+  oFunk : ∀ p ∈ M.orakel, ∀ q ∈ M.orakel, p.1.rang = q.1.rang → p = q
 
 /-- The keys alone: every one carries its image memory, and they are functional. -/
 def KeyOk (M : Keys D D') : Prop :=
   (∀ p ∈ M.haupt, E.Treu hZ p.1.speicher p.2) ∧ (∀ p ∈ M.haupt, ∀ q ∈ M.haupt, p.1 = q.1 → p.2 = q.2) ∧
   (∀ p ∈ M.atom, E.Treu hZ p.1.speicher p.2) ∧ (∀ p ∈ M.atom, ∀ q ∈ M.atom, p.1 = q.1 → p.2 = q.2) ∧
-  (∀ p ∈ M.ruf, ∀ q ∈ M.ruf, p.1 = q.1 → p.2 = q.2)
+  (∀ p ∈ M.ruf, ∀ q ∈ M.ruf, p.1 = q.1 → p.2 = q.2) ∧
+  (∀ p ∈ M.orakel, E.Treu hZ p.1.speicher p.2) ∧ (∀ p ∈ M.orakel, ∀ q ∈ M.orakel, p.1 = q.1 → p.2 = q.2)
 
 variable {hZ}
 
 theorem Inv.keyOk {M : Keys D D'} {σ : World D} {σ' : World D'}
     (h : E.Inv hZ M σ σ') : E.KeyOk hZ M :=
   ⟨h.eintrag, h.funk, h.aEintrag, fun p hp q hq he => by rw [h.aFunk p hp q hq (by rw [he])],
-    fun p hp q hq he => by rw [h.rFunk p hp q hq (by rw [he])]⟩
+    fun p hp q hq he => by rw [h.rFunk p hp q hq (by rw [he])], h.oEintrag,
+    fun p hp q hq he => by rw [h.oFunk p hp q hq (by rw [he])]⟩
 
 /-- **The current pair as a main key.** -/
 theorem Inv.merke {M : Keys D D'} {σ : World D} {σ' : World D'}
-    (h : E.Inv hZ M σ σ') : E.Inv hZ ⟨(σ, σ') :: M.haupt, M.atom, M.ruf⟩ σ σ' := by
+    (h : E.Inv hZ M σ σ') : E.Inv hZ ⟨(σ, σ') :: M.haupt, M.atom, M.ruf, M.orakel⟩ σ σ' := by
   have neu : ∀ p ∈ M.haupt, p.1 = σ → p.2 = σ' := fun p hp he => h.gleich p hp (by rw [he])
-  refine ⟨h.treu, ?_, ?_, ?_, ?_, h.aEintrag, h.aKurz, h.aFunk, h.rKurz, h.rFunk⟩
+  refine ⟨h.treu, ?_, ?_, ?_, ?_, h.aEintrag, h.aKurz, h.aFunk, h.rKurz, h.rFunk, h.oEintrag, h.oKurz,
+    h.oFunk⟩
   · intro p hp
     rcases List.mem_cons.mp hp with rfl | hp
     · exact h.treu
@@ -133,25 +146,62 @@ theorem Inv.merke {M : Keys D D'} {σ : World D} {σ' : World D'}
     · exact neu p hp he
     · exact h.funk p hp q hq he
 
-/-- **A longer trace**: every key is now strictly shorter. -/
+/-- **A longer trace**: every key is now strictly shorter; the rank does not fall. -/
 theorem Inv.wachs {M : Keys D D'} {σ τ : World D} {σ' τ' : World D'}
-    (h : E.Inv hZ M σ σ') (hl : σ.spur.length < τ.spur.length) (ht : E.Treu hZ τ.speicher τ') :
-    E.Inv hZ M τ τ' :=
+    (h : E.Inv hZ M σ σ') (hl : σ.spur.length < τ.spur.length) (hr : σ.rang ≤ τ.rang)
+    (ht : E.Treu hZ τ.speicher τ') : E.Inv hZ M τ τ' :=
   ⟨ht, h.eintrag, fun p hp => Nat.le_of_lt (Nat.lt_of_le_of_lt (h.kurz p hp) hl),
     fun p hp he => absurd he (Nat.ne_of_lt (Nat.lt_of_le_of_lt (h.kurz p hp) hl)), h.funk,
     h.aEintrag, fun p hp => Nat.le_of_lt (Nat.lt_of_le_of_lt (h.aKurz p hp) hl), h.aFunk,
-    fun p hp => Nat.lt_trans (h.rKurz p hp) hl, h.rFunk⟩
+    fun p hp => Nat.lt_trans (h.rKurz p hp) hl, h.rFunk, h.oEintrag,
+    fun p hp => Nat.le_trans (h.oKurz p hp) hr, h.oFunk⟩
 
 /-- **A question to the outside on both sides** (`Ereignis.fremd`): the trace grows, no memory moves. -/
 theorem Inv.fragt {M : Keys D D'} {σ : World D} {σ' : World D'} (h : E.Inv hZ M σ σ')
     (q : D.Ax ⊕ D.Reg ⊕ D.Glob) (q' : D'.Ax ⊕ D'.Reg ⊕ D'.Glob) : E.Inv hZ M (σ.fragt q) (σ'.fragt q') :=
-  h.wachs E (Nat.lt_succ_self _) h.treu
+  h.wachs E (Nat.lt_succ_self _) (World.rang_le_fragt σ q) h.treu
+
+/-- **The pair a question is answered at, as an oracle key**: every earlier oracle key has a rank below
+    the asking world's (`hneu`), so the new one keeps the oracle keys apart. -/
+theorem Inv.merkeO {M : Keys D D'} {σ : World D} {σ' : World D'} (h : E.Inv hZ M σ σ')
+    (hneu : ∀ p ∈ M.orakel, p.1.rang < σ.rang) :
+    E.Inv hZ ⟨M.haupt, M.atom, M.ruf, (σ.ohneLese, σ') :: M.orakel⟩ σ σ' := by
+  have hr : σ.ohneLese.rang = σ.rang := by
+    show (spurOhneLese (spurOhneLese σ.spur)).length = (spurOhneLese σ.spur).length
+    rw [spurOhneLese_spurOhneLese]
+  refine ⟨h.treu, h.eintrag, h.kurz, h.gleich, h.funk, h.aEintrag, h.aKurz, h.aFunk, h.rKurz, h.rFunk,
+    ?_, ?_, ?_⟩
+  · intro p hp
+    rcases List.mem_cons.mp hp with rfl | hp
+    · exact h.treu
+    · exact h.oEintrag p hp
+  · intro p hp
+    rcases List.mem_cons.mp hp with rfl | hp
+    · exact Nat.le_of_eq hr
+    · exact h.oKurz p hp
+  · intro p hp q hq he
+    rcases List.mem_cons.mp hp with rfl | hp <;> rcases List.mem_cons.mp hq with rfl | hq
+    · rfl
+    · exact absurd (he.symm.trans hr) (Nat.ne_of_lt (hneu q hq))
+    · exact absurd (he.trans hr) (Nat.ne_of_lt (hneu p hp))
+    · exact h.oFunk p hp q hq he
+
+/-- **A question to the outside, its pair as an oracle key.** -/
+theorem Inv.frageO {M : Keys D D'} {σ : World D} {σ' : World D'} (h : E.Inv hZ M σ σ')
+    (q : D.Ax ⊕ D.Reg ⊕ D.Glob) (q' : D'.Ax ⊕ D'.Reg ⊕ D'.Glob) :
+    E.Inv hZ ⟨M.haupt, M.atom, M.ruf, ((σ.fragt q).ohneLese, σ'.fragt q') :: M.orakel⟩
+      (σ.fragt q) (σ'.fragt q') :=
+  (h.fragt E q q').merkeO E (fun p hp => by
+    have h1 := h.oKurz p hp
+    rw [World.rang_fragt]
+    omega)
 
 /-- **The current pair as an atomic key**, every earlier key strictly shorter. -/
 theorem Inv.merkeA {M : Keys D D'} {σ : World D} {σ' : World D'}
     (h : E.Inv hZ M σ σ') (hk : ∀ p ∈ M.atom, p.1.spur.length < σ.spur.length) :
-    E.Inv hZ ⟨M.haupt, (σ, σ') :: M.atom, M.ruf⟩ σ σ' := by
-  refine ⟨h.treu, h.eintrag, h.kurz, h.gleich, h.funk, ?_, ?_, ?_, h.rKurz, h.rFunk⟩
+    E.Inv hZ ⟨M.haupt, (σ, σ') :: M.atom, M.ruf, M.orakel⟩ σ σ' := by
+  refine ⟨h.treu, h.eintrag, h.kurz, h.gleich, h.funk, ?_, ?_, ?_, h.rKurz, h.rFunk, h.oEintrag, h.oKurz,
+    h.oFunk⟩
   · intro p hp
     rcases List.mem_cons.mp hp with rfl | hp
     · exact h.treu
@@ -174,16 +224,19 @@ theorem Inv.teil {M M' : Keys D D'} {σ : World D} {σ' : World D'}
     fun p hp => h.gleich p (hs.1 p hp), fun p hp q hq => h.funk p (hs.1 p hp) q (hs.1 q hq),
     fun p hp => h.aEintrag p (hs.2.1 p hp), fun p hp => h.aKurz p (hs.2.1 p hp),
     fun p hp q hq => h.aFunk p (hs.2.1 p hp) q (hs.2.1 q hq),
-    fun p hp => h.rKurz p (hs.2.2 p hp), fun p hp q hq => h.rFunk p (hs.2.2 p hp) q (hs.2.2 q hq)⟩
+    fun p hp => h.rKurz p (hs.2.2.1 p hp), fun p hp q hq => h.rFunk p (hs.2.2.1 p hp) q (hs.2.2.1 q hq),
+    fun p hp => h.oEintrag p (hs.2.2.2 p hp), fun p hp => h.oKurz p (hs.2.2.2 p hp),
+    fun p hp q hq => h.oFunk p (hs.2.2.2 p hp) q (hs.2.2.2 q hq)⟩
 
 /-- **A call key, and the answer's longer trace**: the pair where the callee was asked, with the
     callee of `D'` and its arguments, and the world after the answer. -/
 theorem Inv.merkeRuf {M : Keys D D'} {σ τ : World D} {σ' τ' : World D'}
     (h : E.Inv hZ M σ σ') (r : Σ f' : D'.Fn, Env D' (D'.params f'))
-    (hl : σ.spur.length < τ.spur.length) (ht : E.Treu hZ τ.speicher τ') :
-    E.Inv hZ ⟨M.haupt, M.atom, (σ, r) :: M.ruf⟩ τ τ' := by
-  have hw := h.wachs E hl ht
-  refine ⟨ht, hw.eintrag, hw.kurz, hw.gleich, hw.funk, hw.aEintrag, hw.aKurz, hw.aFunk, ?_, ?_⟩
+    (hl : σ.spur.length < τ.spur.length) (hr : σ.rang ≤ τ.rang) (ht : E.Treu hZ τ.speicher τ') :
+    E.Inv hZ ⟨M.haupt, M.atom, (σ, r) :: M.ruf, M.orakel⟩ τ τ' := by
+  have hw := h.wachs E hl hr ht
+  refine ⟨ht, hw.eintrag, hw.kurz, hw.gleich, hw.funk, hw.aEintrag, hw.aKurz, hw.aFunk, ?_, ?_, hw.oEintrag,
+    hw.oKurz, hw.oFunk⟩
   · intro p hp
     rcases List.mem_cons.mp hp with rfl | hp
     · exact hl
@@ -212,7 +265,7 @@ theorem Inv.lese {M : Keys D D'} {σ : World D} {σ' : World D'} (h : E.Inv hZ M
   cases X with
   | nil => simp only [List.map_nil]; rw [lese_nil, lese_nil]; exact h
   | cons x X =>
-      refine h.wachs E ?_ h.treu
+      refine h.wachs E ?_ (World.rang_le_lese σ Λ (x :: X)) h.treu
       rw [lese_laenge]; simp only [List.length_cons, Nat.lt_add_left_iff_pos, Nat.zero_lt_succ]
 
 theorem treu_storeSlot {s : Speicher D} {σ' : World D'} (h : E.Treu hZ s σ') (t : D.Tab) (k : Int)
@@ -267,7 +320,7 @@ theorem Inv.schreibSlot {M : Keys D D'} {σ : World D} {σ' : World D'}
     (hv : E.VRel hZ _ v (castW (E.typ t f) v')) :
     E.Inv hZ M (σ.schreibSlot t Λ k f v) (σ'.schreibSlot (E.tab t) Λ' k (E.feld t f) v') := by
   refine h.wachs E (by simp only [World.schreibSlot, World.merke, World.storeSlot, List.cons_append, List.nil_append,
-  List.length_cons, Nat.lt_add_one]) ?_
+  List.length_cons, Nat.lt_add_one]) (World.rang_le_merke (σ.storeSlot t k f v) _) ?_
   show E.Treu hZ (σ.storeSlot t k f v).speicher ((σ'.storeSlot (E.tab t) k (E.feld t f) v').merke _)
   rw [speicher_storeSlot]
   exact E.treu_storeSlot h.treu t k f v v' hv
@@ -278,7 +331,7 @@ theorem Inv.schreibGlob {M : Keys D D'} {σ : World D} {σ' : World D'}
     (v' : Wert D' (D'.gtyp (E.glob g))) (hv : E.VRel hZ _ v (castW (E.gtyp g) v')) :
     E.Inv hZ M (σ.schreibGlob g Λ v) (σ'.schreibGlob (E.glob g) Λ' v') := by
   refine h.wachs E (by simp only [World.schreibGlob, World.merke, World.storeGlob, List.cons_append, List.nil_append,
-  List.length_cons, Nat.lt_add_one]) ?_
+  List.length_cons, Nat.lt_add_one]) (World.rang_le_merke (σ.storeGlob g v) _) ?_
   show E.Treu hZ (σ.storeGlob g v).speicher ((σ'.storeGlob (E.glob g) v').merke _)
   rw [speicher_storeGlob]
   exact E.treu_storeGlob h.treu g v v' hv
@@ -305,11 +358,11 @@ theorem Inv.schreibBytes {M : Keys D D'} {σ : World D} {σ' : World D'}
 /-- The trace of a lock take and release grows by one on both sides. -/
 theorem Inv.nimmt {M : Keys D D'} {σ : World D} {σ' : World D'}
     (h : E.Inv hZ M σ σ') (L : D.Lock) (L' : D'.Lock) : E.Inv hZ M (σ.nimmt L) (σ'.nimmt L') :=
-  h.wachs E (by simp only [World.nimmt, List.length_cons, Nat.lt_add_one]) h.treu
+  h.wachs E (by simp only [World.nimmt, List.length_cons, Nat.lt_add_one]) (World.rang_le_nimmt σ L) h.treu
 
 theorem Inv.gibt {M : Keys D D'} {σ : World D} {σ' : World D'}
     (h : E.Inv hZ M σ σ') (L : D.Lock) (L' : D'.Lock) : E.Inv hZ M (σ.gibt L) (σ'.gibt L') :=
-  h.wachs E (by simp only [World.gibt, List.length_cons, Nat.lt_add_one]) h.treu
+  h.wachs E (by simp only [World.gibt, List.length_cons, Nat.lt_add_one]) (World.rang_le_gibt σ L) h.treu
 
 /-- Releasing a list of scopes on both sides keeps the keys functional:
     the `D` scopes against their `E.lock` images. -/

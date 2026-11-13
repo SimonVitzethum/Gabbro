@@ -287,7 +287,7 @@ theorem akteurG (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutG P pass
       refine ⟨fadenG_lokal hF hhead ρ _ (Ereignis.gibt L :: (M.faeden u).spur)
         (fun σ hg hok => ?_), hL⟩
       obtain ⟨_, _, hk⟩ := hok
-      exact ⟨σ.gibt L, Nat.le_succ _, hg,
+      exact ⟨σ.gibt L, World.rang_le_gibt σ L, hg,
         ⟨rfl, fun _ h => by simp only [blockOrteP, stmtOrteP, List.append_nil, List.not_mem_nil] at h, hk⟩,
         fun R O' => ZErg.folgt_of_eq (semV_peelFrei O' passes R L rest k σ ρ hleave true)⟩
     | peelFreiNext l Γ Λ L rest k ρ hnext hhead =>
@@ -295,7 +295,7 @@ theorem akteurG (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutG P pass
       refine ⟨fadenG_lokal hF hhead ρ _ (Ereignis.gibt L :: (M.faeden u).spur)
         (fun σ hg hok => ?_), hL⟩
       obtain ⟨_, _, hk⟩ := hok
-      exact ⟨σ.gibt L, Nat.le_succ _, hg,
+      exact ⟨σ.gibt L, World.rang_le_gibt σ L, hg,
         ⟨rfl, fun _ h => by simp only [blockOrteP, stmtOrteP, List.append_nil, List.not_mem_nil] at h, hk⟩,
         fun R O' => ZErg.folgt_of_eq (semV_peelFrei O' passes R L rest k σ ρ hnext false)⟩
     | peelAbbruchLeave Γ Λ Λ1 Λk rest k ρ hleave hhead =>

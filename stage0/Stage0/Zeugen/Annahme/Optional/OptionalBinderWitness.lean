@@ -110,10 +110,10 @@ def initial (valued fallible : Bool) : World (D valued fallible) where
   spur := []
 
 def oracle (valued fallible : Bool) (raw : Runner.W) : Orakel (D valued fallible) where
-  wirkt _ σ _ := (σ, rohW (binding fallible) (if fallible then 1 else 0) raw)
-  regLies r := Fin.elim0 r
+  wirktL _ σ _ := ({ σ with spur := [] }, rohW (binding fallible) (if fallible then 1 else 0) raw)
+  regLiesL r := Fin.elim0 r
   regSchreib r := Fin.elim0 r
-  sichtbar _ _ := true
+  sichtbarL _ _ := true
 
 def calls (valued fallible : Bool) (f : (D valued fallible).Fn)
     (_ : World (D valued fallible)) (_ : Env (D valued fallible) ((D valued fallible).params f)) :

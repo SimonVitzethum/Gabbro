@@ -79,7 +79,7 @@ theorem akteurSA_endeGleitNarrowOk {D : Deklaration} {P : Programm D} {O : Orake
   obtain ⟨_, _, hrS⟩ := teile2 hss
   have hv' : gleitPasst lo hi (eval σ e σ ρ).x = some v := by
     rw [eval_gleichAuf e (fun _ h => List.mem_append_right _ h) hg ρ]; exact hv
-  exact ⟨σ, Nat.le_refl _, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
+  exact ⟨σ, ⟨Nat.le_refl _, Nat.le_refl _⟩, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
     ⟨hkr, hrS⟩, fun R O' U A σ0 _ _ hσ0 => ZErgG.folgt_of_eq (by
       rw [semHA_endeGleitNarrowOk S O' U A passes R e lo hi sonst rest σ0 ρ v
         (by rw [hσ0]; exact hv'), hσ0])⟩
@@ -151,7 +151,7 @@ theorem akteurSA_endeGleitNarrowElse {D : Deklaration} {P : Programm D} {O : Ora
   obtain ⟨_, hsS, _⟩ := teile2 hss
   have hn' : gleitPasst lo hi (eval σ e σ ρ).x = none := by
     rw [eval_gleichAuf e (fun _ h => List.mem_append_right _ h) hg ρ]; exact hn
-  refine ⟨σ, Nat.le_refl _, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
+  refine ⟨σ, ⟨Nat.le_refl _, Nat.le_refl _⟩, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
     ⟨hkS, hsS⟩, fun R O' U A σ0 _ _ hσ0 => ?_⟩
   have h1 := semHA_endeGleitNarrowElse S O' U A passes R e lo hi sonst rest σ0 ρ
     (by rw [hσ0]; exact hn')

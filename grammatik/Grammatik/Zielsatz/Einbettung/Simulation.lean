@@ -104,6 +104,20 @@ theorem lese_eval' {M : Keys D D'} {σ : World D} {σ' : World D'}
   subst hX
   exact E.lese_eval hZ h T hA' hT Λ Λ' X
 
+/-- `lese_eval'`, with the oracle keys and the rank kept. -/
+theorem lese_eval'O {M : Keys D D'} {σ : World D} {σ' : World D'}
+    (h : E.Inv hZ M σ σ') {T' : D'.Tab ⊕ D'.Glob → Prop} {A' : AUmwelt D'} (hA' : HavocA T' A')
+    (hT : ∀ c, T' (E.ortE c) → T c) (Λ : List (Res D)) (Λ' : List (Res D'))
+    (X : List (D.Tab ⊕ D.Glob)) (X' : List (D'.Tab ⊕ D'.Glob)) (hX : X.map E.ortE = X') :
+    ∃ (M₁ : Keys D D') (σ₁ : World D), Teil M M₁ ∧
+      (∀ Φ, Passt Φ M₁ → leseA (E.aumweltΦ hZ Φ T A') σ Λ X = σ₁) ∧
+      E.Inv hZ M₁ σ₁ (leseA A' σ' Λ' X') ∧ M₁.orakel = M.orakel ∧ σ₁.rang = σ.rang ∧
+      ∀ {Γ : Ctx} {Λ₀ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ₀ τ) (ρ : Env D Γ)
+        (ρ' : Env D' (Γ.map E.tyE)), E.EnvR hZ ρ ρ' →
+        E.VRel hZ τ (eval σ₁ e σ₁ ρ) (eval (leseA A' σ' Λ' X') (exE E e) (leseA A' σ' Λ' X') ρ') := by
+  subst hX
+  exact E.lese_evalO hZ h T hA' hT Λ Λ' X
+
 /-- **A boundary check beside its image.** -/
 theorem pruef_sim {T' : D'.Tab ⊕ D'.Glob → Prop} {A' : AUmwelt D'} (hA' : HavocA T' A')
     (hT : ∀ c, T' (E.ortE c) → T c) {Γ : Ctx} {Λ : List (Res D)} (c : Expr D Γ Λ .bool) :

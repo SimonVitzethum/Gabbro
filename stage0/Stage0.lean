@@ -54,6 +54,8 @@ public import Stage0.Senke.Bild.EmittedZiel
 public import Stage0.Senke.Bild.Rest
 public import Stage0.Senke.Bild.Gleich.Lesegleich
 public import Stage0.Senke.Bild.Gleich.LesegleichEig
+public import Stage0.Senke.Bild.Gleich.AxFrei
+public import Stage0.Senke.Bild.Gleich.AxFreiR
 public import Stage0.Senke.Bild.Gleich.Ausgang
 public import Stage0.Senke.Bild.Gleich.Schleifen
 public import Stage0.Senke.Bild.Gleich.Verbrauch
@@ -68,9 +70,11 @@ public import Stage0.Senke.Bild.Gleich.RufAtUmkehr
 public import Stage0.Senke.Bild.Gleich.RufAtZeuge
 public import Stage0.Senke.Bild.Ruf.RufOkGleich
 public import Stage0.Senke.Bild.Ruf.KorrespondenzL
+public import Stage0.Senke.Bild.Ruf.Hardware
 public import Stage0.Senke.Bild.Ruf.ZielL
 public import Stage0.Senke.Bild.Ruf.EmittedZielL
 public import Stage0.Senke.Bild.Ruf.Zeuge
+public import Stage0.Senke.Bild.Ruf.ZeugeHardware
 public import Stage0.Senke.Bild.Rek.Maschine
 public import Stage0.Senke.Bild.Rek.Eintritt
 public import Stage0.Senke.Bild.Rek.Lauf
@@ -86,6 +90,9 @@ public import Stage0.Senke.Bild.Rek.RueckArt
 public import Stage0.Senke.Bild.Rek.Dann
 public import Stage0.Senke.Bild.Rek.DannRueck
 public import Stage0.Senke.Bild.Rek.ZeugeDann
+public import Stage0.Senke.Bild.Rek.EndRB
+public import Stage0.Senke.Bild.Rek.EndRBSatz
+public import Stage0.Senke.Bild.Rek.EndRBVoll
 public import Stage0.Senke.Welt.MainEnv
 public import Stage0.Senke.Ausdruck.Zeiger.FnptrProben
 public import Stage0.Senke.Ausdruck.Zeiger.FnptrAufrufProben

@@ -183,7 +183,7 @@ theorem akteur_dannLocks {D : Deklaration} {P : Programm D} {O : Orakel D} {pass
   refine ⟨fadenOk_lokal hF hhead ρ (.dann body (.frei L (.dann rest k)))
     (Ereignis.nimmt L (offen (M.faeden u).spur) :: (M.faeden u).spur) (fun σ hg hok => ?_), hL⟩
   obtain ⟨hks, hss, hrest⟩ := okZ_dann_cons hok
-  exact ⟨σ.nimmt L, Nat.le_succ _, hg, ⟨hks, hss, hrest⟩,
+  exact ⟨σ.nimmt L, World.rang_le_nimmt σ L, hg, ⟨hks, hss, hrest⟩,
     fun R => semZ_locks O passes R L hr body rest k σ ρ⟩
 
 set_option maxHeartbeats 4000000 in
@@ -265,7 +265,7 @@ theorem akteur_freiGib {D : Deklaration} {P : Programm D} {O : Orakel D} {passes
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
   refine ⟨fadenOk_lokal hF hhead ρ k (Ereignis.gibt L :: (M.faeden u).spur)
     (fun σ hg hok => ?_), hL⟩
-  exact ⟨σ.gibt L, Nat.le_succ _, hg, hok, fun R => ZErg.gleich_of_eq (semZ_frei O passes R L k σ ρ)⟩
+  exact ⟨σ.gibt L, World.rang_le_gibt σ L, hg, hok, fun R => ZErg.gleich_of_eq (semZ_frei O passes R L k σ ρ)⟩
 
 set_option maxHeartbeats 4000000 in
 theorem akteur_schrumpfVergiss {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}

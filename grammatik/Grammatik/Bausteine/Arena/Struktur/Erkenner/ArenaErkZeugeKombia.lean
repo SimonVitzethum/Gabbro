@@ -72,10 +72,10 @@ def sieben2 : Expr FD2 [] [] (FD2.typ FA2.tab FA2.feld) :=
     (Expr.widen (by decide) (by decide) (Expr.lit 7))
 
 def oF2 : Orakel FD2 where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r => nomatch r
-  sichtbar := fun _ _ => false
+  sichtbarL := fun _ _ => false
 
 def rF2 : ∀ f : FD2.Fn, World FD2 → Env FD2 (FD2.params f) → RufAusgang f := fun _ _ _ => .logik .vorzustand
 

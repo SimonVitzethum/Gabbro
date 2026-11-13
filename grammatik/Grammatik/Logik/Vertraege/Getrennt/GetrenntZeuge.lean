@@ -160,10 +160,10 @@ def gP : Programm gD where
 
 /-- The hardware: this declaration has no axiom, no register, no global. -/
 def gO : Orakel gD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 theorem gO_treu : TreuO gO := fun a => nomatch a
 

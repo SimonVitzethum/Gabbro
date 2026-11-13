@@ -118,7 +118,7 @@ theorem offen_frischSpur (s : List (Ereignis D)) : offen (frischSpur D ++ s) = o
   · rfl
 
 theorem frischSpur_laenge (h : Nonempty (Ereignis D)) (s : List (Ereignis D)) :
-    s.length < (frischSpur D ++ s).length := by
+    (spurOhneLese s).length < (spurOhneLese (frischSpur D ++ s)).length := by
   unfold frischSpur
   rw [dif_pos h]
   exact neutral_laenge _ s
@@ -155,6 +155,12 @@ theorem rahmenWeltF_offen (g : D.Fn) (κ s1 : World D) :
   offen_frischSpur κ.spur
 
 theorem rahmenWeltF_laenge (g : D.Fn) (κ s1 : World D) :
+    κ.rang ≤ (rahmenWeltF g κ s1).rang := by
+  show (spurOhneLese κ.spur).length ≤ (spurOhneLese (frischSpur D ++ κ.spur)).length
+  exact rang_append_le _ _
+
+/-- The recorded answer world is no shorter than its key (in events, reads included). -/
+theorem rahmenWeltF_laengeV (g : D.Fn) (κ s1 : World D) :
     κ.spur.length ≤ (rahmenWeltF g κ s1).spur.length := by
   show κ.spur.length ≤ (frischSpur D ++ κ.spur).length
   rw [List.length_append]
@@ -190,6 +196,12 @@ theorem axWeltF_rahmen (a : D.Ax) (κ σ₂ : World D) :
     rw [if_neg (by simp only [hg, Bool.false_eq_true, not_false_eq_true])]
 
 theorem axWeltF_laenge (a : D.Ax) (κ σ₂ : World D) :
+    κ.rang ≤ (axWeltF a κ σ₂).rang := by
+  show (spurOhneLese κ.spur).length ≤ (spurOhneLese (frischSpur D ++ κ.spur)).length
+  exact rang_append_le _ _
+
+/-- The recorded answer world is no shorter than its key (in events, reads included). -/
+theorem axWeltF_laengeV (a : D.Ax) (κ σ₂ : World D) :
     κ.spur.length ≤ (axWeltF a κ σ₂).spur.length := by
   show κ.spur.length ≤ (frischSpur D ++ κ.spur).length
   rw [List.length_append]
@@ -216,11 +228,15 @@ theorem axWeltF_gleichAuf {S : List (D.Tab ⊕ D.Glob)} (a : D.Ax)
 
 theorem axWeltF_vertrag {Q : AxEns D} (hlok : AxEnsLokal Q) (a : D.Ax)
     (κ σ₂ : World D) (v : ErgVal D (D.aerg a)) (h : Q a σ₂ v = true) :
-    Q a (axWeltF a κ σ₂) v = true := by
-  rw [hlok a (axWeltF a κ σ₂) σ₂ v (fun t ht => by
+    ∀ w : World D, w.slots = (axWeltF a κ σ₂).slots → w.globs = (axWeltF a κ σ₂).globs →
+      Q a w v = true := by
+  intro w hws hwg
+  rw [hlok a w σ₂ v (fun t ht => by
+      rw [hws]
       show (if D.aschreibt a t = true then σ₂.slots t else κ.slots t) = σ₂.slots t
       rw [if_pos ht])
     (fun g hg => by
+      rw [hwg]
       show (if D.agschreibt a g = true then σ₂.globs g else κ.globs g) = σ₂.globs g
       rw [if_pos hg])]
   exact h

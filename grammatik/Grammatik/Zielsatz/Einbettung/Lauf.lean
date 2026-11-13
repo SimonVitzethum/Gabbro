@@ -188,18 +188,39 @@ theorem treu_misch {σ m : World D} {σ' W' : World D'} (hσ : E.Treu hZ σ.spei
 /-- `Φ` repeats the keys. -/
 def Passt (Φ : Phi D D') (M : Keys D D') : Prop :=
   (∀ p ∈ M.haupt, Φ.haupt p.1 = p.2) ∧ (∀ p ∈ M.atom, Φ.atom p.1 = p.2) ∧
-    (∀ p ∈ M.ruf, Φ.ruf p.1 = some p.2)
+    (∀ p ∈ M.ruf, Φ.ruf p.1 = some p.2) ∧ (∀ p ∈ M.orakel, Φ.orakel p.1 = p.2)
 
 theorem passt_teil {Φ : Phi D D'} {M M' : Keys D D'} (h : Passt Φ M') (hs : Teil M M') : Passt Φ M :=
-  ⟨fun p hp => h.1 p (hs.1 p hp), fun p hp => h.2.1 p (hs.2.1 p hp), fun p hp => h.2.2 p (hs.2.2 p hp)⟩
+  ⟨fun p hp => h.1 p (hs.1 p hp), fun p hp => h.2.1 p (hs.2.1 p hp), fun p hp => h.2.2.1 p (hs.2.2.1 p hp),
+    fun p hp => h.2.2.2 p (hs.2.2.2 p hp)⟩
 
 /-- **The current pair as a main key.** -/
 theorem schluessel {M : Keys D D'} {σ : World D} {σ' : World D'}
     (h : E.Inv hZ M σ σ') :
-    E.Inv hZ ⟨(σ, σ') :: M.haupt, M.atom, M.ruf⟩ σ σ' ∧ Teil M ⟨(σ, σ') :: M.haupt, M.atom, M.ruf⟩ ∧
-      ∀ Φ, Passt Φ ⟨(σ, σ') :: M.haupt, M.atom, M.ruf⟩ → Φ.haupt σ = σ' :=
-  ⟨h.merke E, ⟨fun _ hp => List.mem_cons_of_mem _ hp, fun _ hp => hp, fun _ hp => hp⟩,
+    E.Inv hZ ⟨(σ, σ') :: M.haupt, M.atom, M.ruf, M.orakel⟩ σ σ' ∧
+      Teil M ⟨(σ, σ') :: M.haupt, M.atom, M.ruf, M.orakel⟩ ∧
+      ∀ Φ, Passt Φ ⟨(σ, σ') :: M.haupt, M.atom, M.ruf, M.orakel⟩ → Φ.haupt σ = σ' :=
+  ⟨h.merke E, ⟨fun _ hp => List.mem_cons_of_mem _ hp, fun _ hp => hp, fun _ hp => hp, fun _ hp => hp⟩,
     fun _ hP => hP.1 _ List.mem_cons_self⟩
+
+/-- **The current pair as an oracle key**, every earlier oracle key of lower rank. -/
+theorem schluesselO {M : Keys D D'} {σ : World D} {σ' : World D'}
+    (h : E.Inv hZ M σ σ') (hneu : ∀ p ∈ M.orakel, p.1.rang < σ.rang) :
+    E.Inv hZ ⟨M.haupt, M.atom, M.ruf, (σ.ohneLese, σ') :: M.orakel⟩ σ σ' ∧
+      Teil M ⟨M.haupt, M.atom, M.ruf, (σ.ohneLese, σ') :: M.orakel⟩ ∧
+      ∀ Φ, Passt Φ ⟨M.haupt, M.atom, M.ruf, (σ.ohneLese, σ') :: M.orakel⟩ → Φ.orakel σ.ohneLese = σ' :=
+  ⟨h.merkeO E hneu, ⟨fun _ hp => hp, fun _ hp => hp, fun _ hp => hp, fun _ hp => List.mem_cons_of_mem _ hp⟩,
+    fun _ hP => hP.2.2.2 _ List.mem_cons_self⟩
+
+/-- **A question to the outside on both sides, its pair as an oracle key.** -/
+theorem schluesselF {M : Keys D D'} {σ : World D} {σ' : World D'}
+    (h : E.Inv hZ M σ σ') (q : D.Ax ⊕ D.Reg ⊕ D.Glob) (q' : D'.Ax ⊕ D'.Reg ⊕ D'.Glob) :
+    E.Inv hZ ⟨M.haupt, M.atom, M.ruf, ((σ.fragt q).ohneLese, σ'.fragt q') :: M.orakel⟩ (σ.fragt q) (σ'.fragt q') ∧
+      Teil M ⟨M.haupt, M.atom, M.ruf, ((σ.fragt q).ohneLese, σ'.fragt q') :: M.orakel⟩ ∧
+      ∀ Φ, Passt Φ ⟨M.haupt, M.atom, M.ruf, ((σ.fragt q).ohneLese, σ'.fragt q') :: M.orakel⟩ →
+        Φ.orakel (σ.fragt q).ohneLese = σ'.fragt q' :=
+  ⟨h.frageO E q q', ⟨fun _ hp => hp, fun _ hp => hp, fun _ hp => hp, fun _ hp => List.mem_cons_of_mem _ hp⟩,
+    fun _ hP => hP.2.2.2 _ List.mem_cons_self⟩
 
 theorem mischT_nil (T : D.Tab ⊕ D.Glob → Prop) (σ : World D) (s : Speicher D) :
     mischT T [] σ s = σ :=
@@ -212,16 +233,16 @@ theorem havocA_nil {T' : D'.Tab ⊕ D'.Glob → Prop} {A' : AUmwelt D'} (hA' : H
 /-- **An atomic read.** The read events on both sides, the pair after them as an atomic key, and
     the `D'`-environment's answer: the induced environment answers the same at the key. A read of
     nothing asks nothing. -/
-theorem lese_schritt {M : Keys D D'} {σ : World D} {σ' : World D'}
+theorem lese_schrittO {M : Keys D D'} {σ : World D} {σ' : World D'}
     (h : E.Inv hZ M σ σ') (T : D.Tab ⊕ D.Glob → Prop) {T' : D'.Tab ⊕ D'.Glob → Prop}
     {A' : AUmwelt D'} (hA' : HavocA T' A') (hT : ∀ c, T' (E.ortE c) → T c)
     (Λ : List (Res D)) (Λ' : List (Res D')) (X : List (D.Tab ⊕ D.Glob)) :
     ∃ (M₁ : Keys D D') (σ₁ : World D), Teil M M₁ ∧
       (∀ Φ, Passt Φ M₁ → leseA (E.aumweltΦ hZ Φ T A') σ Λ X = σ₁) ∧
-      E.Inv hZ M₁ σ₁ (leseA A' σ' Λ' (X.map E.ortE)) := by
+      E.Inv hZ M₁ σ₁ (leseA A' σ' Λ' (X.map E.ortE)) ∧ M₁.orakel = M.orakel ∧ σ₁.rang = σ.rang := by
   cases X with
   | nil =>
-      refine ⟨M, σ, teil_refl M, fun Φ _ => ?_, ?_⟩
+      refine ⟨M, σ, teil_refl M, fun Φ _ => ?_, ?_, rfl, rfl⟩
       · show mischT T [] (σ.lese Λ []) _ = σ
         rw [mischT_nil, lese_nil]
       · show E.Inv hZ M σ (A' [] (σ'.lese Λ' []))
@@ -234,8 +255,9 @@ theorem lese_schritt {M : Keys D D'} {σ : World D} {σ' : World D'}
       let σl := σ.lese Λ (x :: X)
       let σl' := σ'.lese Λ' ((x :: X).map E.ortE)
       let W' := A' ((x :: X).map E.ortE) σl'
-      refine ⟨⟨M.haupt, (σl, σl') :: M.atom, M.ruf⟩, mischT T (x :: X) σl (E.speicherZ hZ W'.speicher),
-        ⟨fun _ hp => hp, fun _ hp => List.mem_cons_of_mem _ hp, fun _ hp => hp⟩, ?_, ?_⟩
+      refine ⟨⟨M.haupt, (σl, σl') :: M.atom, M.ruf, M.orakel⟩, mischT T (x :: X) σl (E.speicherZ hZ W'.speicher),
+        ⟨fun _ hp => hp, fun _ hp => List.mem_cons_of_mem _ hp, fun _ hp => hp, fun _ hp => hp⟩, ?_, ?_, rfl,
+        World.rang_lese σ Λ (x :: X)⟩
       · intro Φ hP
         show mischT T (x :: X) σl (E.speicherZ hZ (A' ((x :: X).map E.ortE) (Φ.atom σl)).speicher) = _
         rw [hP.2.1 _ List.mem_cons_self]
@@ -244,8 +266,18 @@ theorem lese_schritt {M : Keys D D'} {σ : World D} {σ' : World D'}
             (fun c hc => ⟨mischT_aussen σl _ hc, (hA' _ σl').2 _ fun ⟨h1, h2⟩ =>
               hc ⟨E.mem_map_ortE.mp h1, hT c h2⟩⟩)
         refine ⟨ht, hk.eintrag, hk.kurz, fun p hp he => absurd he (Nat.ne_of_lt ?_), hk.funk,
-          hk.aEintrag, hk.aKurz, hk.aFunk, hk.rKurz, hk.rFunk⟩
+          hk.aEintrag, hk.aKurz, hk.aFunk, hk.rKurz, hk.rFunk, hk.oEintrag, hk.oKurz, hk.oFunk⟩
         exact Nat.lt_of_le_of_lt (h.kurz p hp) hgr
+
+theorem lese_schritt {M : Keys D D'} {σ : World D} {σ' : World D'}
+    (h : E.Inv hZ M σ σ') (T : D.Tab ⊕ D.Glob → Prop) {T' : D'.Tab ⊕ D'.Glob → Prop}
+    {A' : AUmwelt D'} (hA' : HavocA T' A') (hT : ∀ c, T' (E.ortE c) → T c)
+    (Λ : List (Res D)) (Λ' : List (Res D')) (X : List (D.Tab ⊕ D.Glob)) :
+    ∃ (M₁ : Keys D D') (σ₁ : World D), Teil M M₁ ∧
+      (∀ Φ, Passt Φ M₁ → leseA (E.aumweltΦ hZ Φ T A') σ Λ X = σ₁) ∧
+      E.Inv hZ M₁ σ₁ (leseA A' σ' Λ' (X.map E.ortE)) := by
+  obtain ⟨M₁, σ₁, hs, hΦ, hI, -, -⟩ := E.lese_schrittO h T hA' hT Λ Λ' X
+  exact ⟨M₁, σ₁, hs, hΦ, hI⟩
 
 /-- **A lock move and the take.** The pair at the acquire as a main key, the `D'`-move's answer
     (the induced move answers the same there, the protected carriers of the image lock being the
@@ -266,7 +298,8 @@ theorem umwelt_schritt {M : Keys D D'} {σ : World D} {σ' : World D'}
       E.treu_misch hk.treu (fun c => c ∈ S.orte L) (fun c hc => mischU_innen S L σ _ c hc)
         (fun c hc => ⟨mischU_aussen S L σ _ c hc, (hU' (E.lock L) σ').2.1 _ (by
           rw [hSo]; exact fun hm => hc (E.mem_map_ortE.mp hm))⟩)
-    exact hk.wachs E (by simp only [World.nimmt, mischU_spur, List.length_cons, Nat.lt_add_one]) ht
+    exact hk.wachs E (by simp only [World.nimmt, mischU_spur, List.length_cons, Nat.lt_add_one])
+      (World.rang_le_nimmt (mischU S L σ (E.speicherZ hZ W'.speicher)) L) ht
 
 /-- The memory of a `D'`-world beside a `D`-memory, restricted, is that memory. -/
 theorem speicherZ_treu {s : Speicher D} {σ' : World D'} (h : E.Treu hZ s σ') :

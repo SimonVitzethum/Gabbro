@@ -258,10 +258,10 @@ theorem ntP_fussS : fussSperreB ntP ntS ntFs = true := by decide
 theorem ntP_fragmentG : programmImFragmentG ntP ntFs = true := by decide
 
 def ntO : Orakel ntD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 theorem ntO_gut : GutO ntO := fun a => nomatch a
 

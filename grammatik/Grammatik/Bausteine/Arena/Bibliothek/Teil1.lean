@@ -96,10 +96,10 @@ def bibP : Programm bibD where
     no memory; no registers, nothing visible. The run below never fires
     the axiom, so the answer is never read. -/
 def bibO : Orakel bibD where
-  wirkt := fun _ σ _ => (σ, 0)
-  regLies := fun r => nomatch r
+  wirktL := fun _ σ _ => ({ σ with spur := [] }, 0)
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 /-- The start memory: every slot reads `0`. -/
 def bibSp0 : Speicher bibD :=

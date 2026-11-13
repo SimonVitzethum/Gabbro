@@ -152,10 +152,10 @@ def gSp0 : Speicher gD :=
 
 /-- The witness oracle: no axioms, no registers, always visible. -/
 def gO : Orakel gD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun _ _ => true
+  sichtbarL := fun _ _ => true
 
 /-- The oracle is good: every conjunct closes on its empty axiom domain. -/
 theorem gO_gut : GutO gO := by

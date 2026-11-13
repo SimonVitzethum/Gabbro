@@ -115,10 +115,10 @@ theorem overlapping_multiword_image_zeuge :
   (repeat' apply And.intro) <;> kernel_rfl
 
 def oracle (bits : Nat) (canFail fail : Bool) : Orakel (D bits canFail) where
-  wirkt _ σ _ := (σ, if fail then 1 else (2 ^ 80) * (if canFail then 2 else 1))
-  regLies r := Fin.elim0 r
+  wirktL _ σ _ := ({ σ with spur := [] }, if fail then 1 else (2 ^ 80) * (if canFail then 2 else 1))
+  regLiesL r := Fin.elim0 r
   regSchreib r := Fin.elim0 r
-  sichtbar _ _ := true
+  sichtbarL _ _ := true
 
 def initial (bits : Nat) (canFail : Bool) : World (D bits canFail) where
   slots t := Fin.elim0 t

@@ -115,10 +115,10 @@ theorem check : akzeptiertX_pruefer.akzeptiert E fs [] cs = true := by decide
 theorem owner_check : checkProgram E.P FA I fs = true := by decide
 
 def O : Orakel FD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r => nomatch r
-  sichtbar := fun _ _ => true
+  sichtbarL := fun _ _ => true
 
 /-- (c) The oracle clauses hold under the explicitly supplied native CPU contract. -/
 theorem hardware [RootNativeFloat.Hardware] : HardwareAnnahmen O E.Q :=

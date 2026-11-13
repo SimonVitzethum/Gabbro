@@ -10,11 +10,14 @@
                  `slots : σ.slots = σ'.slots`, `globs : σ.globs = σ'.globs`,
                  `spur  : spurOhneLese σ.spur = spurOhneLese σ'.spur`,
                where `spurOhneLese` deletes exactly the read events (`istLeseEv`: a table or global access with
-               `schreibt = false`). Writes, `nimmt`, `gibt` and `fremd` (answers from outside) are KEPT: erasing an
-               answer would equate observably different oracles (`weltGleich_nicht_merke`, `_nicht_fragt`,
-               `_nicht_nimmt`, `_nicht_schreibSlot` in `LesegleichEig.lean`). The held locks (`offen_spurOhneLese`)
-               and the write accesses of a trace (`schreib_spurOhneLese`, `LesegleichEig.lean`) are unchanged by the
-               erasure; expressions do not see the trace at all (`WeltGleich.wert`, from `eval_spurfrei`).
+               `schreibt = false`). The erasure itself lives in the model (grammatik, Kern/Semantik/Semantik/T1/
+               Lese.lean) since 2026-11-13: machine G hands the oracle the world without reads, so `≈` worlds are
+               exactly the worlds with one erasure (`WeltGleich.iff_ohneLese`). Writes, `nimmt`, `gibt` and `fremd`
+               (answers from outside) are KEPT: erasing an answer would equate observably different oracles
+               (`weltGleich_nicht_merke`, `_nicht_fragt`, `_nicht_nimmt`, `_nicht_schreibSlot` in
+               `LesegleichEig.lean`). The held locks (`offen_spurOhneLese`) and the write accesses of a trace
+               (`schreib_spurOhneLese`, `LesegleichEig.lean`) are unchanged by the erasure; expressions do not see the
+               trace at all (`WeltGleich.wert`, from `eval_spurfrei`).
 -/
 module
 public import Grammatik.Logik.Ruf.RufLogik
@@ -29,90 +32,6 @@ set_option linter.unusedSectionVars false
 
 variable {D : Deklaration}
 
-/-! ## 1. Read events and their erasure -/
-
-/-- **A read event**: an access to a table or a global that does not write. Every other event -- a write, taking or
-    giving a lock, a question to the outside (`fremd`) -- is not a read. -/
-def istLeseEv : Ereignis D → Bool
-  | .zugriff _ schreibt _ _ => !schreibt
-  | .gzugriff _ schreibt _ _ => !schreibt
-  | .nimmt _ _ => false
-  | .gibt _ => false
-  | .fremd _ => false
-
-/-- **The trace without its read events** (newest first, order kept). -/
-def spurOhneLese : List (Ereignis D) → List (Ereignis D)
-  | [] => []
-  | e :: s => cond (istLeseEv e) (spurOhneLese s) (e :: spurOhneLese s)
-
-/-- A table write is not a read. -/
-theorem istLeseEv_schreibt (t : D.Tab) (Λ : List (Res D)) (hl : List D.Lock) :
-    istLeseEv (Ereignis.zugriff t true Λ hl) = false := rfl
-
-/-- A global write is not a read. -/
-theorem istLeseEv_gschreibt (g : D.Glob) (Λ : List (Res D)) (hl : List D.Lock) :
-    istLeseEv (Ereignis.gzugriff g true Λ hl) = false := rfl
-
-/-- Taking a lock is not a read. -/
-theorem istLeseEv_nimmt (L : D.Lock) (hl : List D.Lock) : istLeseEv (Ereignis.nimmt L hl) = false := rfl
-
-/-- Giving a lock is not a read. -/
-theorem istLeseEv_gibt (L : D.Lock) : istLeseEv (Ereignis.gibt (D := D) L) = false := rfl
-
-/-- An answer from outside is not a read: it is never erased. -/
-theorem istLeseEv_fremd (q : D.Ax ⊕ D.Reg ⊕ D.Glob) : istLeseEv (Ereignis.fremd q) = false := rfl
-
-/-- A read vanishes from the erased trace. -/
-theorem spurOhneLese_cons_lese (e : Ereignis D) (h : istLeseEv e = true) (s : List (Ereignis D)) :
-    spurOhneLese (e :: s) = spurOhneLese s := by
-  simp only [spurOhneLese, h, Bool.cond_true]
-
-/-- Every other event stays, in place. -/
-theorem spurOhneLese_cons_bleibt (e : Ereignis D) (h : istLeseEv e = false) (s : List (Ereignis D)) :
-    spurOhneLese (e :: s) = e :: spurOhneLese s := by
-  simp only [spurOhneLese, h, Bool.cond_false]
-
-/-- The erasure distributes over appending (traces grow at their head). -/
-theorem spurOhneLese_append : ∀ (a b : List (Ereignis D)),
-    spurOhneLese (a ++ b) = spurOhneLese a ++ spurOhneLese b
-  | [], _ => rfl
-  | e :: a, b => by
-      rw [List.cons_append]
-      cases h : istLeseEv e
-      · rw [spurOhneLese_cons_bleibt e h, spurOhneLese_cons_bleibt e h, spurOhneLese_append a b,
-          List.cons_append]
-      · rw [spurOhneLese_cons_lese e h, spurOhneLese_cons_lese e h, spurOhneLese_append a b]
-
-/-- **The held locks do not see reads**: the open locks of the erased trace are those of the trace. -/
-theorem offen_spurOhneLese : ∀ s : List (Ereignis D), offen (spurOhneLese s) = offen s
-  | [] => rfl
-  | e :: s => by
-      have ih := offen_spurOhneLese s
-      cases e with
-      | zugriff t w Λ hl =>
-          cases w
-          · rw [spurOhneLese_cons_lese (.zugriff t false Λ hl) rfl s]
-            exact ih
-          · rw [spurOhneLese_cons_bleibt (.zugriff t true Λ hl) rfl s]
-            exact ih
-      | gzugriff g w Λ hl =>
-          cases w
-          · rw [spurOhneLese_cons_lese (.gzugriff g false Λ hl) rfl s]
-            exact ih
-          · rw [spurOhneLese_cons_bleibt (.gzugriff g true Λ hl) rfl s]
-            exact ih
-      | nimmt L hl =>
-          rw [spurOhneLese_cons_bleibt (.nimmt L hl) rfl s]
-          show L :: offen (spurOhneLese s) = L :: offen s
-          rw [ih]
-      | gibt L =>
-          rw [spurOhneLese_cons_bleibt (.gibt L) rfl s]
-          show (offen (spurOhneLese s)).erase L = (offen s).erase L
-          rw [ih]
-      | fremd q =>
-          rw [spurOhneLese_cons_bleibt (.fremd q) rfl s]
-          exact ih
-
 /-! ## 2. The equivalence -/
 
 /-- **Two worlds equal up to read events** (`σ ≈ σ'`): the same memory, and the same trace once every read event is
@@ -121,19 +40,6 @@ structure WeltGleich (σ σ' : World D) : Prop where
   slots : σ.slots = σ'.slots
   globs : σ.globs = σ'.globs
   spur : spurOhneLese σ.spur = spurOhneLese σ'.spur
-
-/-- A read (`World.lese`) adds only read events. -/
-theorem spurOhneLese_lese (σ : World D) (Λ : List (Res D)) :
-    ∀ os : List (D.Tab ⊕ D.Glob), spurOhneLese (σ.lese Λ os).spur = spurOhneLese σ.spur
-  | [] => rfl
-  | .inl t :: os => by
-      have e : (σ.lese Λ (.inl t :: os)).spur =
-          Ereignis.zugriff t false Λ σ.haelt :: (σ.lese Λ os).spur := rfl
-      rw [e, spurOhneLese_cons_lese (.zugriff t false Λ σ.haelt) rfl, spurOhneLese_lese σ Λ os]
-  | .inr g :: os => by
-      have e : (σ.lese Λ (.inr g :: os)).spur =
-          Ereignis.gzugriff g false Λ σ.haelt :: (σ.lese Λ os).spur := rfl
-      rw [e, spurOhneLese_cons_lese (.gzugriff g false Λ σ.haelt) rfl, spurOhneLese_lese σ Λ os]
 
 /-- **A read is invisible up to `≈`.** -/
 theorem weltGleich_lese (σ : World D) (Λ : List (Res D)) (os : List (D.Tab ⊕ D.Glob)) :
@@ -168,6 +74,16 @@ theorem symm (h : WeltGleich σ σ') : WeltGleich σ' σ := ⟨h.slots.symm, h.g
 
 theorem trans (h₁ : WeltGleich σ σ') (h₂ : WeltGleich σ' σ'') : WeltGleich σ σ'' :=
   ⟨h₁.slots.trans h₂.slots, h₁.globs.trans h₂.globs, h₁.spur.trans h₂.spur⟩
+
+/-- **`≈` worlds are the worlds with one erasure**: what the oracle sees (`World.ohneLese`). -/
+theorem ohneLese_eq (h : WeltGleich σ σ') : σ.ohneLese = σ'.ohneLese :=
+  World.ohneLese_eq_of h.slots h.globs h.spur
+
+theorem of_ohneLese (h : σ.ohneLese = σ'.ohneLese) : WeltGleich σ σ' :=
+  ⟨World.slots_of_ohneLese h, World.globs_of_ohneLese h, World.spur_of_ohneLese h⟩
+
+theorem iff_ohneLese : WeltGleich σ σ' ↔ σ.ohneLese = σ'.ohneLese :=
+  ⟨ohneLese_eq, of_ohneLese⟩
 
 /-- The open locks agree. -/
 theorem offen_eq (h : WeltGleich σ σ') : offen σ.spur = offen σ'.spur := by

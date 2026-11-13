@@ -200,10 +200,10 @@ def reasonProgram (mixed : Bool) : Programm (reasonD mixed) where
   rumpf _ := .retWhy ⟨0, Nat.le_of_ble_eq_true rfl⟩ (.refl _)
 
 def reasonOracle (mixed : Bool) : Orakel (reasonD mixed) where
-  wirkt a := nomatch a
-  regLies r := nomatch r
+  wirktL a := nomatch a
+  regLiesL r := nomatch r
   regSchreib r := nomatch r
-  sichtbar _ _ := true
+  sichtbarL _ _ := true
 
 def reasonWorld (mixed : Bool) : World (reasonD mixed) where
   slots _ _ _ := ⟨0, by decide, by decide⟩

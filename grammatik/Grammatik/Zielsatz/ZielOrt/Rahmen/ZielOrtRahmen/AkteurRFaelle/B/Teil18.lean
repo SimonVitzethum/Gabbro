@@ -107,7 +107,7 @@ theorem akteurR_dannRegLiesElseFalsch {D : Deklaration} {P : Programm D} {O : Or
       false := by
     rw [eval_gleichAuf zusage (fun _ h => hzS h) (hgq.lese Λ Λ zusage.orte zusage.orte), ← hs₁]
     exact hw
-  refine ⟨(σ.fragt (.inr (.inl r))).lese Λ zusage.orte, Nat.le_trans (Nat.le_succ _) (lese_laenge (σ.fragt _) _ _), hg,
+  refine ⟨(σ.fragt (.inr (.inl r))).lese Λ zusage.orte, Nat.le_trans (World.rang_le_fragt σ _) (lese_laenge (σ.fragt _) _ _), hg,
     okG_alsBlock sonst k rest.held_iff hks.2.1 hsS hrk, fun R O' hQ => ?_⟩
   have hrl : O'.regLies r (σ.fragt (.inr (.inl r))) = O.regLies r ((M.weltVon u).fragt (.inr (.inl r))) :=
     regLies_gleich hRL hQ r (regP_ok hks.1) hg
@@ -213,7 +213,7 @@ theorem akteurR_dannAwaits {D : Deklaration} {P : Programm D} {O : Orakel D} {pa
   have hglob : ((σ.fragt (.inr (.inr g))).lese Λ [.inr g]).globs g = σ₁.globs g := by
     rw [hs₁]
     exact hg.2 g hss.1
-  refine ⟨(σ.fragt (.inr (.inr g))).lese Λ [.inr g], Nat.le_trans (Nat.le_succ _) (lese_laenge (σ.fragt _) _ _), hg, ⟨hks, hss.2, hrest⟩, fun R O' hQ => ?_⟩
+  refine ⟨(σ.fragt (.inr (.inr g))).lese Λ [.inr g], Nat.le_trans (World.rang_le_fragt σ _) (lese_laenge (σ.fragt _) _ _), hg, ⟨hks, hss.2, hrest⟩, fun R O' hQ => ?_⟩
   have hsv : O'.sichtbar g (σ.fragt (.inr (.inr g))) = true := by
     rw [sichtbar_gleich (σ := σ.fragt (.inr (.inr g))) (W := (M.weltVon u).fragt (.inr (.inr g))) hRL hQ g hss.1 hg]
     exact hvis

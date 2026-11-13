@@ -72,8 +72,8 @@ variable (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     answers. -/
 def KopfR (F : RufRahmenG D) (W : World D) : Prop :=
   ∃ (H : List (EintragV D)) (HA : List (AxEintrag D)) (σ : World D),
-    ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkR P H ∧ KurzV σ.spur.length H ∧
-    FunkA HA ∧ RahmenA HA ∧ VertragA O.zeiger Q HA ∧ KurzA σ.spur.length HA ∧
+    ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkR P H ∧ KurzV σ.rang H ∧
+    FunkA HA ∧ RahmenA HA ∧ VertragA O.zeiger Q HA ∧ KurzA σ.rang HA ∧
     GleichAuf (fussOrteG P F.f) σ W ∧ F.rest.2.2.2.2.okG P (fussOrteG P F.f) ∧
     ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D),
       PasstV R H → PasstA O' HA → GleichRS O O' →
@@ -84,8 +84,8 @@ def KopfR (F : RufRahmenG D) (W : World D) : Prop :=
     of sequential oracles. -/
 def WarteR (F : RufRahmenG D) (G : Σ f : D.Fn, Env D (D.params f) × World D) : Prop :=
   ∃ (H : List (EintragV D)) (HA : List (AxEintrag D)) (κ : World D),
-    ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkR P H ∧ KurzV κ.spur.length H ∧
-    FunkA HA ∧ RahmenA HA ∧ VertragA O.zeiger Q HA ∧ KurzA κ.spur.length HA ∧
+    ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkR P H ∧ KurzV κ.rang H ∧
+    FunkA HA ∧ RahmenA HA ∧ VertragA O.zeiger Q HA ∧ KurzA κ.rang HA ∧
     F.rest.2.2.2.2.okG P (fussOrteG P F.f) ∧
     ReqAmEintritt P G.1 κ G.2.1 ∧
     (GleichAuf ((P.requires G.1).orte ++ (P.ensures G.1).orte) κ G.2.2 ∧

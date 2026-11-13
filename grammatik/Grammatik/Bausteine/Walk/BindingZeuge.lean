@@ -36,7 +36,7 @@ private theorem node_count : declaration.count binding.nodes = 2 := rfl
 def leafField : FieldAt shape.entry .bool := .tail .head
 def descendField : FieldAt shape.entry .bool := .tail (.tail .head)
 def contract : Vertrag declaration := { schreibt := fun _ => false, gschreibt := fun _ => false, erg := none, gruende := 0, haelt := [], produziert := [] }
-def oracle : Orakel declaration := { wirkt := fun a _ _ => Fin.elim0 a, regLies := fun r _ => Fin.elim0 r, regSchreib := fun r _ => Fin.elim0 r, sichtbar := fun g _ => Fin.elim0 g }
+def oracle : Orakel declaration := { wirktL := fun a _ _ => Fin.elim0 a, regLiesL := fun r _ => Fin.elim0 r, regSchreib := fun r _ => Fin.elim0 r, sichtbarL := fun g _ => Fin.elim0 g }
 
 def rootEntries : Fin 2 → Wert declaration binding.entryTy :=
   fun index =>

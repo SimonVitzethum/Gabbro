@@ -376,6 +376,8 @@ structure _root_.Gabbro.Grammatik.Einbettung.Phi (D D' : Deklaration) where
   haupt : World D → World D'
   atom : World D → World D'
   ruf : World D → Option (Σ f' : D'.Fn, Env D' (D'.params f'))
+  /-- The `D'`-world at an ORACLE key: a world without reads where the outside was asked. -/
+  orakel : World D → World D'
 
 /-! ## Question worlds (C08 R3b) -/
 
@@ -442,16 +444,17 @@ def umweltΦ (S : SperrInv D) (U' : Umwelt D') : Umwelt D :=
 noncomputable def aumweltΦ (T : D.Tab ⊕ D.Glob → Prop) (A' : AUmwelt D') : AUmwelt D :=
   fun X σ => mischT T X σ (E.speicherZ hZ (A' (X.map E.ortE) (Φ.atom σ)).speicher)
 
-/-- **The induced oracle.** Visibility of a global that carries function pointers is answered
-    constantly: no awaited global carries one (`AntwortFrei.atomFrei`), and only so is the oracle
-    local to the carrier it asks about. -/
+/-- **The induced oracle.** Asked at a world without reads, it asks `O'` at the `D'`-world of that
+    oracle key (`Phi.orakel`) and answers the restricted memory with the neutral piece `pad` on top.
+    Visibility of a global that carries function pointers is answered constantly: no awaited global
+    carries one (`AntwortFrei.atomFrei`), and only so is the oracle local to the carrier it asks about. -/
 noncomputable def orakelΦ (O' : Orakel D') : Orakel D where
-  wirkt := fun a σ ρ =>
-    let x := O'.wirkt (E.ax a) ((Φ.haupt σ).alsFrage (E.ax a)) (E.aparamsUm a ρ)
-    (E.antwortWelt hZ pad σ x.1, x.2)
-  regLies := fun r σ => O'.regLies (E.reg r) (Φ.haupt σ)
+  wirktL := fun a ε ρ =>
+    let x := O'.wirkt (E.ax a) ((Φ.orakel ε).alsFrage (E.ax a)) (E.aparamsUm a ρ)
+    ((E.speicherZ hZ x.1.speicher).welt pad, x.2)
+  regLiesL := fun r ε => O'.regLies (E.reg r) (Φ.orakel ε)
   regSchreib := fun _ _ => ()
-  sichtbar := fun g σ => if (D.gtyp g).zeigerfrei = true then O'.sichtbar (E.glob g) (Φ.haupt σ) else true
+  sichtbarL := fun g ε => if (D.gtyp g).zeigerfrei = true then O'.sichtbar (E.glob g) (Φ.orakel ε) else true
   zeiger := fun _ => Option.none
 
 end Induziert

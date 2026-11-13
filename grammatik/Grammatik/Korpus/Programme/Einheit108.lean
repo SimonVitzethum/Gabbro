@@ -277,10 +277,10 @@ theorem nutzer8 : NutzerPflicht E8 where
 /-! ## 5. Witness data: the oracle -/
 
 def O8 : Orakel D8 where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 theorem hw8 [RootNativeFloat.Hardware] : HardwareAnnahmen O8 E8.Q :=
   ⟨(fun a => nomatch a), ⟨(fun r => nomatch r), (fun g => nomatch g)⟩,

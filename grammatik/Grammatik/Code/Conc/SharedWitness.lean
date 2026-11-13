@@ -83,10 +83,10 @@ theorem sees_shared_witness :
 
 /-- The oracle: every `await` sees the publication; nothing else is used. -/
 def cO : Orakel cD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun _ _ => true
+  sichtbarL := fun _ _ => true
 
 /-- The lowering of `let x = g awaits {..}; <nothing>` (entry label 1, continuation 2, counters `0`, `3`). -/
 def cLow : Option (List Block × St) := lowerAwait cLay [] (0, 0) () awRest 1 2 ⟨0, 3⟩
