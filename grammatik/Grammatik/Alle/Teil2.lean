@@ -365,6 +365,9 @@ public import Grammatik.Niedrig.Eingang.Rahmen
 public import Grammatik.Niedrig.Eingang.RahmenSatz
 public import Grammatik.Niedrig.Eingang.RahmenZeuge
 public import Grammatik.Niedrig.Witnesses.Joint
+public import Grammatik.Niedrig.Authority.Realize
+public import Grammatik.Niedrig.Authority.RealizeSaetze
+public import Grammatik.Niedrig.Witnesses.Realize
 public import Grammatik.Niedrig.Maske.Maske
 public import Grammatik.Niedrig.Maske.MaskeZeuge
 public import Grammatik.Niedrig.Maske.Prio
