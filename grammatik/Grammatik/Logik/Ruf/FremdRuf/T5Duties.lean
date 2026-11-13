@@ -39,6 +39,16 @@ theorem foreignVertrag_of_foreign {E : Einheit D} {O : Orakel D}
     {H : List (BoundaryRecord D)} (hf : ForeignPflicht E O H) : ForeignVertrag E O :=
   ⟨hf.vertrag, hf.dekodiert⟩
 
+/-- The binding proof supplies the full foreign duty on the empty boundary
+    history. This suffices to instantiate `CallSitePflicht`, which quantifies
+    over every history; no claim about a run's actual boundary records follows. -/
+theorem foreignPflicht_nil_of_vertrag {E : Einheit D} {O : Orakel D}
+    (hf : ForeignVertrag E O) : ForeignPflicht E O [] where
+  vertrag := hf.1
+  dekodiert := hf.2
+  klauseln := fun n => n.elim0
+  anbieter := providerRealisiert_nil O
+
 /-- No software item means no software post-refinement obligation. -/
 theorem postDeckt_ohne (E : Einheit D)
     (h : ∀ a : D.Ax, D.axHerkunft a ≠ some AxOrigin.software) : PostDeckt E :=
