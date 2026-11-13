@@ -6,9 +6,10 @@
              in `Er` (the first side may fail early, as in `HandlerKongruenz`). `HandlerLG Er R₁ R₂` says that two
              handlers answer `≈`-related worlds with related outcomes.
 
-             **The oracle premises, split.** The oracle `O` answers foreign calls, register reads and visibility
-             questions from the WHOLE world, trace included. Two runs whose worlds differ by read events stay
-             related only if the answers the runs actually ask for do not look at read events:
+             **The oracle premises are theorems** (2026-11-13). Machine G hands every oracle the world WITHOUT its
+             read events (`Orakel.wirkt`, grammatik T1/Lese.lean), so every oracle is read-blind: `leseblindW_alle`,
+             `leseblindRS_alle`, `leseblind_alle`, `leseblindP_alle`. The split below is kept as the interface the
+             proofs of P1-P5 use; its two halves were once separate premises:
              * register and visibility answers (`LeseblindRS`) -- these follow from the named hardware assumption
                `RegLokal` (`Ruf/Hardware.lean`), which every oracle of the goal theorem meets: they depend on
                memory only, and `≈` worlds have the same memory;
@@ -17,8 +18,8 @@
                (`StmtR`/`BlockR`/`EndR`) has none (`AxFreiR.lean`).
              `Leseblind` (all three at once) is the old single premise; `LeseblindP P O` is what the program-level
              statements take: the register/visibility half, and the foreign half OR a program without foreign
-             calls. Without any of it the statement is false (an oracle that counts reads tells `rufAt`'s run
-             from machine G's).
+             calls. Without read-blindness the statements would be false (an oracle that counted reads would tell
+             `rufAt`'s run from machine G's); the oracle interface rules such an oracle out.
 -/
 module
 public import Stage0.Senke.Bild.Gleich.Lesegleich
@@ -80,6 +81,29 @@ theorem LeseblindP.rumpf {P : Programm D} {O : Orakel D} (h : LeseblindP P O) (g
   rcases h.fremd with hW | hF
   · exact Or.inr hW
   · exact Or.inl (hF g)
+
+/-! ## 1b. Every oracle is read-blind (2026-11-13) -/
+
+/-- **Every oracle's foreign answers are read-blind**: machine G hands the oracle the world without reads
+    (`Orakel.wirkt`), so `≈` worlds -- one erasure -- get one answer, one memory, and the same answered events on top
+    of traces that differ by reads. -/
+theorem leseblindW_alle (O : Orakel D) : LeseblindW O := by
+  intro a σ σ' ρ h
+  obtain ⟨h2, hs, hg, neu, e1, e2⟩ := O.wirkt_blind a h.ohneLese_eq ρ
+  refine ⟨⟨hs, hg, ?_⟩, h2⟩
+  rw [e1, e2, spurOhneLese_append, spurOhneLese_append, h.spur]
+
+/-- **Every oracle's register and visibility answers are read-blind.** -/
+theorem leseblindRS_alle (O : Orakel D) : LeseblindRS O :=
+  ⟨fun r _ _ h => O.regLies_blind r h.ohneLese_eq, fun g _ _ h => O.sichtbar_blind g h.ohneLese_eq⟩
+
+/-- **Every oracle is read-blind** (`Leseblind` is a theorem, no premise). -/
+theorem leseblind_alle (O : Orakel D) : Leseblind O :=
+  ⟨leseblindW_alle O, (leseblindRS_alle O).regLies, (leseblindRS_alle O).sichtbar⟩
+
+/-- **The oracle premise of every program holds for every oracle.** -/
+theorem leseblindP_alle (P : Programm D) (O : Orakel D) : LeseblindP P O :=
+  (leseblind_alle O).toP P
 
 /-- Two answers with `≈` worlds and the same value. -/
 inductive PaarLG {α : Type} : World D × α → World D × α → Prop

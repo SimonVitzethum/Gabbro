@@ -1,16 +1,17 @@
 /-
   File:      stage0/Stage0/Senke/Bild/Ruf/Hardware.lean
-  Subject:   **The oracle premises of the image theorem come from the goal theorem's hardware assumptions.** The named
-             class `LeseblindOK` (register and visibility answers do not look at read events) follows from
-             `RegLokal`, one of the named components of `HardwareAnnahmen` (Zielsatz/Kern/Spec): a register answer
-             depends on the register's device carriers and a visibility answer on the awaited global, and `≈` worlds
-             have the same memory. So every oracle the goal theorem speaks about has it -- no premise of its own.
-             The foreign half (`LeseblindW`) is needed only by a program WITH foreign calls; a program without
-             (`FremdFrei`, a decidable check per body) has the whole program premise `LeseblindP` from the hardware
-             assumptions alone (`leseblindP_hardware`).
+  Subject:   **The oracle premises of the image theorem hold for every oracle.** Machine G hands the oracle the world
+             WITHOUT its read events (`Orakel.wirkt`, grammatik Kern/Semantik/Semantik/T1/Lese.lean, 2026-11-13), so
+             register and visibility answers (`LeseblindOK`, `leseblindOK_alle`) and foreign answers (`LeseblindW`,
+             `leseblindW_alle`) never look at read events, whatever the oracle. The register/visibility half also
+             follows from the named hardware assumption `RegLokal` (`leseblindOK_regLokal`, the route before the
+             interface was read-blind); the program premise `LeseblindP` needs neither the hardware assumptions nor a
+             program without foreign calls (`leseblindP_hardware` is kept as the special case).
 
-             Witness (`zaehlOrakel`): an oracle whose foreign answer COUNTS the trace -- read events included, so it
-             is not read-blind -- still meets the premise of every program without foreign calls.
+             Witness (`zaehlOrakel`): an oracle whose foreign answer COUNTS the history of the thread -- every question,
+             write and lock move before the call -- still answers alike before and after a read
+             (`zaehlOrakel_lese`), and still answers differently after a further question (`zaehlOrakel_fragt`):
+             the interface erases reads only, and a repeated foreign call may still answer differently.
 -/
 module
 public import Stage0.Senke.Bild.Ruf.RufOkGleich
@@ -39,22 +40,22 @@ theorem leseblindRS_regLokal {O : Orakel D} (h : RegLokal O) : LeseblindRS O :=
 theorem leseblindOK_regLokal {O : Orakel D} (h : RegLokal O) : LeseblindOK O :=
   ⟨leseblindRS_regLokal h⟩
 
-/-- **Every oracle of the goal theorem has the named oracle property.** -/
-theorem leseblindOK_hardware {O : Orakel D} {Q : AxEns D} (h : Zielsatz.HardwareAnnahmen O Q) :
-    LeseblindOK O := by
-  unfold Zielsatz.HardwareAnnahmen at h
-  exact leseblindOK_regLokal h.2.1
+/-- **Every oracle of the goal theorem has the named oracle property** (as every oracle does). -/
+theorem leseblindOK_hardware {O : Orakel D} {Q : AxEns D} (_h : Zielsatz.HardwareAnnahmen O Q) :
+    LeseblindOK O :=
+  leseblindOK_alle O
 
-/-- **The program premise from the hardware assumptions**, for a program without foreign calls. -/
+/-- **The program premise from the hardware assumptions**, for a program without foreign calls -- the special case
+    of `leseblindP_alle`. -/
 theorem leseblindP_hardware {P : Programm D} {O : Orakel D} {Q : AxEns D} (h : Zielsatz.HardwareAnnahmen O Q)
     (hP : FremdFrei P) : LeseblindP P O := by
   unfold Zielsatz.HardwareAnnahmen at h
   exact leseblindP_frei (leseblindRS_regLokal h.2.1) hP
 
-/-- An oracle that is NOT read-blind: a foreign call answers the length of the trace, read events included. Registers
-    read `0`, every publication is visible. -/
+/-- An oracle that answers from the history: a foreign call answers the length of the thread's trace without reads
+    (every question, write and lock move before it). Registers read `0`, every publication is visible. -/
 def zaehlOrakel (D : Deklaration) : Orakel D where
-  wirktL := fun _ σ _ => (σ, (σ.spur.length : Int))
+  wirktL := fun _ ε _ => ({ ε with spur := [] }, (ε.spur.length : Int))
   regLiesL := fun _ _ => 0
   regSchreib := fun _ _ => ()
   sichtbarL := fun _ _ => true
@@ -63,23 +64,22 @@ def zaehlOrakel (D : Deklaration) : Orakel D where
 theorem zaehlOrakel_regLokal (D : Deklaration) : RegLokal (zaehlOrakel D) :=
   ⟨fun _ _ _ _ => rfl, fun _ _ _ _ => rfl⟩
 
-/-- **Witness**: the counting oracle meets the program premise of every program without foreign calls, although its
-    foreign answers see read events. -/
-theorem leseblindP_zaehl {P : Programm D} (hP : FremdFrei P) : LeseblindP P (zaehlOrakel D) :=
-  leseblindP_frei (leseblindRS_regLokal (zaehlOrakel_regLokal D)) hP
+/-- The counting oracle answers the rank of the asking world. -/
+theorem zaehlOrakel_wirkt (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
+    ((zaehlOrakel D).wirkt a σ ρ).2 = (σ.rang : Int) := rfl
 
-/-- The counting oracle's foreign answer does see a read: one read of a nonempty place list changes it. -/
-theorem zaehlOrakel_sieht (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) (Λ : List (Res D))
-    {os : List (D.Tab ⊕ D.Glob)} (hne : os ≠ []) :
-    WeltGleich σ (σ.lese Λ os) ∧ ((zaehlOrakel D).wirkt a σ ρ).2 ≠ ((zaehlOrakel D).wirkt a (σ.lese Λ os) ρ).2 := by
-  refine ⟨weltGleich_lese σ Λ os, ?_⟩
-  show ((σ.spur.length : Nat) : Int) ≠ (((σ.lese Λ os).spur.length : Nat) : Int)
-  rw [lese_spur_length]
-  cases os with
-  | nil => exact absurd rfl hne
-  | cons o os =>
-      rw [List.length_cons]
-      omega
+/-- **A read is invisible to the counting oracle** (as to every oracle, `leseblindW_alle`). -/
+theorem zaehlOrakel_lese (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) (Λ : List (Res D))
+    (os : List (D.Tab ⊕ D.Glob)) :
+    ((zaehlOrakel D).wirkt a σ ρ).2 = ((zaehlOrakel D).wirkt a (σ.lese Λ os) ρ).2 :=
+  (leseblindW_alle (zaehlOrakel D) a σ (σ.lese Λ os) ρ (weltGleich_lese σ Λ os)).2
+
+/-- **A further question is visible to the counting oracle**: two calls of one foreign body may still answer
+    differently. -/
+theorem zaehlOrakel_fragt (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) (q : D.Ax ⊕ D.Reg ⊕ D.Glob) :
+    ((zaehlOrakel D).wirkt a σ ρ).2 ≠ ((zaehlOrakel D).wirkt a (σ.fragt q) ρ).2 := by
+  rw [zaehlOrakel_wirkt, zaehlOrakel_wirkt, World.rang_fragt]
+  omega
 
 #print axioms leseblindOK_hardware
 #print axioms leseblindP_hardware

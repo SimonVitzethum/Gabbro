@@ -2,13 +2,14 @@
   File:      stage0/Stage0/Senke/Bild/Ruf/ZeugeHardware.lean
   Subject:   **Witness of the discharged oracle premise and of the fragment check** (reviews H1/H3, M1, partial H2) on
              the call fixture `t4P` of `RufAdaequatRufG` (four functions; the plain caller `t4F` calls `t4G`), with
-             the COUNTING oracle `zaehlOrakel` (its foreign answer is the length of the trace, read events included;
-             not read-blind wherever a foreign call exists, `zaehlOrakel_nicht_leseblind`). Jointly:
+             the COUNTING oracle `zaehlOrakel` (its foreign answer is the length of the trace without reads: it
+             answers from the history, and a further question changes its answer, `zaehlOrakel_fragt`). Jointly:
              * the fragment check passes on the whole program by computation (`t4P_programmRB`, `rfl` over the four
                bodies -- no compiler run), so every body lies in the call fragment (`t4P_endR`) and the program has
                no foreign call (`t4P_fremdFrei`);
-             * the counting oracle meets the goal theorem's hardware assumptions (`zaehl_hardware`), and from them and
-               the check alone the program premise of the image theorems follows (`leseblindP_hardware`);
+             * the counting oracle meets the goal theorem's hardware assumptions (`zaehl_hardware`); the program
+               premise of the image theorems holds for it as for every oracle (`leseblindP_alle`), and also from the
+               hardware assumptions and the check (`leseblindP_hardware`);
              * the call obligation up to read events holds for `rufAt 1` under that oracle, and machine G realises
                the call step of `t4F` from a sequential world `≈` to (and different from) its start world.
              What it does not contain (H2, what remains): an `Emitted` value. One needs a `Frontend.Source text`
@@ -27,14 +28,6 @@ public import Stage0.Senke.Bild.Rek.EndRBVoll
 namespace Gabbro.Stage0.Senke.BildLauf
 
 open Gabbro.Grammatik Gabbro.Stage0.Senke
-
-/-! ## The counting oracle is not read-blind -/
-
-/-- **Non-vacuity**: wherever a foreign item and a table exist, the counting oracle's foreign answers see reads. -/
-theorem zaehlOrakel_nicht_leseblind {D : Deklaration} (a : D.Ax) (ρ : Env D (D.aparams a)) (σ : World D)
-    (t : D.Tab) : ¬ LeseblindW (zaehlOrakel D) := fun h =>
-  (zaehlOrakel_sieht a σ ρ [] (os := [Sum.inl t]) (List.cons_ne_nil _ _)).2
-    (h a σ (σ.lese [] [Sum.inl t]) ρ (weltGleich_lese σ [] [Sum.inl t])).2
 
 /-! ## The fragment check on the fixture -/
 
@@ -87,7 +80,7 @@ theorem zaehl_ruf_zeuge [RootNativeFloat.Hardware] :
       execStmt (zaehlOrakel t4D) 0 (rufAt t4P (zaehlOrakel t4D) 0 1) t4Ruf zeugeWeltL Env.nil = .ok σ1 Env.nil ∧
       RufLaufG t4P (zaehlOrakel t4D) 0 0 (RufStartG t4P t4Sp zeugeInit) M' ∧ WeltGleich σ1 σm1 ∧
       RandG 0 [] t4F Env.nil (t4Sp.welt []) (fun _ => False) t4FRest M' σm1 Env.nil := by
-  have hO : LeseblindP t4P (zaehlOrakel t4D) := leseblindP_hardware zaehl_hardware t4P_fremdFrei
+  have hO : LeseblindP t4P (zaehlOrakel t4D) := leseblindP_alle t4P (zaehlOrakel t4D)
   have hRuf : RufOkGleich t4P (zaehlOrakel t4D) 0 0 (fun _ => False) (rufAt t4P (zaehlOrakel t4D) 0 1)
       (Tief t4P (fun _ => False) 1) :=
     rufOk_gleich_tief hO 0 (fun _ => False) 1

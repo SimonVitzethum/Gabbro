@@ -116,8 +116,8 @@ theorem Emitted.bild_ziel_ruf [Kern] (output : Emitted src K options)
 /-- **THE IMAGE THEOREM WITH CALLS, NO CALL PREMISE.** `Emitted.bild_ziel_ruf` for the callees admitted at the
     image's call depth (`Tief P Agl (depth - 1)`), whose call obligation up to read events is proved
     (`rufOk_gleich_tief`): the decomposed prefix of `main`'s body may call every such callee. The handler relation
-    for ALL callees needs the foreign half of read-blindness or a program without foreign calls (`hfremd`;
-    `FremdFrei` is a decidable check per body). -/
+    for ALL callees needs read-blindness of the oracle, which every oracle has (`leseblindP_alle`): the theorem
+    covers programs WITH foreign calls (raw syscalls), with no premise on the oracle beyond (c). -/
 theorem Emitted.bild_ziel_tief [Kern] (output : Emitted src K options)
     (hZ : OldSource.zertifizierbar output.compiled.unit = true) (hr : output.compiled.unit.roots = [])
     (hg : output.compiled.unit.gestartet = []) (hAt : ∀ g, (declOf output.compiled.unit).atomar g = false)
@@ -128,7 +128,6 @@ theorem Emitted.bild_ziel_tief [Kern] (output : Emitted src K options)
     {Q : AxEns (declOf output.compiled.unit)} (hN : NutzerPflichtA (output.einheit Q))
     {O : Orakel (declOf output.compiled.unit)} (hH : HardwareAnnahmen O Q)
     [TorOK output.image.Y O] [SichtOK O] {m : Runner.Mem}
-    (hfremd : LeseblindW O ∨ FremdFrei output.compiled.program)
     (loaded : BytesAt m Runner.Prog.IMG output.bytes)
     {thr : Faden} {Agl : (declOf output.compiled.unit).Lock → Prop}
     {Γe : Ctx} {Λe : List (Res (declOf output.compiled.unit))}
@@ -162,7 +161,7 @@ theorem Emitted.bild_ziel_tief [Kern] (output : Emitted src K options)
             (RufStartG output.compiled.program output.sp0 (bildInit thr output.compiled.main output.args r ρr)) Me ∧
           ∃ k, StarM k ⟨pce, slot (BitVec.ofNat 64 output.image.fp0) (BitVec.ofNat 64 FB)⟩ me t m') :=
   output.bild_ziel_ruf hZ hr hg hAt hRuhig hreqr hN hH loaded
-    (rufOk_gleich_tief (P := output.compiled.program) ⟨(leseblindOK_hardware hH).blind, hfremd⟩ thr Agl
+    (rufOk_gleich_tief (P := output.compiled.program) (leseblindP_alle _ O) thr Agl
       (output.image.depth - 1)) hk
 
 #print axioms Emitted.bild_ziel_ruf

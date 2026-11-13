@@ -56,6 +56,10 @@ theorem leseblind_von (O : Orakel D) [h : LeseblindOK O] : LeseblindRS O :=
 theorem leseblindOK_von {O : Orakel D} (h : Leseblind O) : LeseblindOK O :=
   ⟨h.rs⟩
 
+/-- **Every oracle has the named property** (the oracle interface is read-blind, `leseblindRS_alle`). -/
+instance leseblindOK_alle (O : Orakel D) : LeseblindOK O :=
+  ⟨leseblindRS_alle O⟩
+
 /-! ## 2. A normal end is related only to a normal end -/
 
 /-- A statement outcome related to a normal end is a normal end with the same environment and a `≈` world. -/

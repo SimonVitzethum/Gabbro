@@ -79,7 +79,7 @@ theorem bild_ziel_fenster [DecidableEq D.Fn] {Y : Lay D} {O : Orakel D} [TorOK Y
       (.cons (.call g args hp hr) rest) pc m M σ ρ)
     (hex : execStmt O passes (rufAt P O passes k)
       (.call g args hp hr : Stmt D (vertragVon D f) l Γ Λ (nach D g Λ)) σ ρ = .ok σ1 ρ1)
-    (hg : TiefAlle P Agl k g) (hfremd : LeseblindW O ∨ FremdFrei P)
+    (hg : TiefAlle P Agl k g)
     {ΓeC : Ctx} {ΛeC : List (Res D)} {ebeC : Endblock D (vertragVon D g) false ΓeC ΛeC} {σeC : World D}
     {ρeC : Env D ΓeC}
     (hkC : Zerlegung (rufZRahmen Y O passes P A j g (rufWelt P g σ Λ args) (rufEnv g σ Λ args ρ)) Agl
@@ -106,7 +106,7 @@ theorem bild_ziel_fenster [DecidableEq D.Fn] {Y : Lay D} {O : Orakel D} [TorOK Y
             Ziel P S O passes (RufStartG P sp init) M') t m' := by
   subst hkj
   haveI : LeseblindOK O := leseblindOK_hardware hH
-  have hO : LeseblindP P O := ⟨(leseblindOK_hardware hH).blind, hfremd⟩
+  have hO : LeseblindP P O := leseblindP_alle P O
   -- the whole call as one step of the caller
   have hRuf := rufOk_gleich_tiefAlle (P := P) (passes := passes) hO thr Agl (j + 1)
   have hs : StmtR Agl (TiefAlle P Agl (j + 1)) false

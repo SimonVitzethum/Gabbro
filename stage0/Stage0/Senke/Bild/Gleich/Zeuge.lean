@@ -24,15 +24,13 @@ def stillesOrakel (D : Deklaration) : Orakel D where
   regSchreib := fun _ _ => ()
   sichtbarL := fun _ _ => true
 
-/-- **The oracle premise is satisfiable for every declaration.** -/
+/-- **The oracle premise holds** (as for every oracle, `leseblind_alle`). -/
 theorem leseblind_still (D : Deklaration) : Leseblind (stillesOrakel D) :=
-  ⟨fun _ _ _ _ h => ⟨h, rfl⟩, fun _ _ _ _ => rfl, fun _ _ _ _ => rfl⟩
+  leseblind_alle _
 
 /-- The call fixture's oracle is read-blind (the fixture has no foreign body, register or global). -/
-theorem leseblind_t4O : Leseblind t4O where
-  wirkt a := nomatch a
-  regLies r := nomatch r
-  sichtbar g := nomatch g
+theorem leseblind_t4O : Leseblind t4O :=
+  leseblind_alle _
 
 /-- The fixture's start world: every slot `0`, empty trace. -/
 abbrev zeugeWelt : World t4D := t4Sp.welt []
