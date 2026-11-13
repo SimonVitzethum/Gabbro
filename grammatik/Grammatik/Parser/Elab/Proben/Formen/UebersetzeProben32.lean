@@ -9,6 +9,7 @@
 -/
 module
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+import all Grammatik.Parser.Elab.UebersetzeAllg.Teil5
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -51,6 +52,10 @@ open Gabbro.Grammatik.Parser.UebersetzeProben3 (stufe)
 
 set_option maxRecDepth 100000
 
+-- Select the used node of the typed mutual before inspecting its result.
+-- Unfolding its shared recursion evaluates unrelated branches and contexts.
+attribute [local cbv_eval] Nat.log2_def lowWertE.eq_def lowCmp.eq_def lowEns.eq_def
+
 /-- The carriers of the invariants, read through the declaration: `.inl` a table number, `.inr` a static number. -/
 def traeger (s : String) : Option (List (List (Nat ⊕ Nat))) :=
   match lex s with
@@ -68,7 +73,9 @@ def traeger (s : String) : Option (List (List (Nat ⊕ Nat))) :=
 def inv_ok : String :=
   "module m { table T count 2 { slot { v : u32, } invariant I : forall k in slots of T : T.slots[k].v < 9; } lock L protects { T } rank 0; impl fn f(i : index into T) requires Held(L) effects { writes T.slots } { T.slots[i].v = 1; } }"
 theorem inv_ok_stufe : stufe inv_ok = "OK" := by cbv
-theorem inv_ok_traeger : traeger inv_ok = some [[.inl 0]] := by cbv
+theorem inv_ok_traeger : traeger inv_ok = some [[.inl 0]] := by
+  simp only [traeger, declOf]
+  cbv
 
 /-- Planted defect (`U003`): the writer takes the guard only in a block. -/
 def inv_u003_refused : String :=
@@ -81,7 +88,9 @@ theorem inv_u003_refused_stufe :
 def gruppe_ok : String :=
   "module m { table T count 2 { slot { v : u32, } } table U count 2 { slot { w : u32, } } group G over { T, U } { invariant J : T.slots[0].v <= U.slots[0].w; } impl fn f() { } }"
 theorem gruppe_ok_stufe : stufe gruppe_ok = "OK" := by cbv
-theorem gruppe_ok_traeger : traeger gruppe_ok = some [[.inl 0, .inl 1]] := by cbv
+theorem gruppe_ok_traeger : traeger gruppe_ok = some [[.inl 0, .inl 1]] := by
+  simp only [traeger, declOf]
+  cbv
 
 /-- Statement text is transported as a labelled scope; the ordinary invariant
     reader still checks every declared carrier and predicate. -/

@@ -126,12 +126,39 @@ theorem zeugeProgramm_gut : ∀ it ∈ zeugeProgramm, ItemGut it := by
 theorem zeugeProgramm_rund : parseTopTief (druckItems zeugeProgramm ++ [.ende]) = .ok zeugeProgramm :=
   parseTopTief_druck zeugeProgramm zeugeProgramm_gut
 
-/-- Check each item's short token list separately; the round-trip theorem
-    composes them without evaluating the rendered program in the kernel. -/
+/-- Check names without evaluating keyword lookup twice. -/
+private theorem nameTok_clean (name : String) (h : nameForm name = true) :
+    tokGutB (nameTok name) = true := by
+  cases hk : istSchluessel name <;>
+    simp only [nameTok, hk, Bool.false_eq_true, ite_false, ite_true, tokGutB,
+      h, Bool.not_false, Bool.and_true, Bool.true_and]
+
+/-- Expand only the printer's list structure, then check each distinct short
+    token condition. Raw paths use the general path law, not the scanner. -/
 private theorem zeugeProgramm_tokens : (druckItems zeugeProgramm).all tokGutB = true := by
-  simp only [zeugeProgramm, druckItems, List.all_append, List.all_nil,
-    Bool.and_true, Bool.and_eq_true]
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> cbv
+  have kern := rohToks_pfad ["kern"] (by simp) (by
+    intro name member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    subst member
+    decide)
+  have target := rohToks_pfad ["kern", "erhoehe"] (by simp) (by
+    intro name member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl <;> decide)
+  simp only [zeugeProgramm, druckItems, druckItem, druckFnSig, druckGenericParams,
+    druckParams, druckParam, druckTyp, druckKonstWert, druckKonstWert.druckKonstWerte,
+    druckKlauseln, druckKlausel, druckEffekte, druckEffekt, druckAnw, druckAnwListe,
+    druckEnde, druckToks, druckToksViele, druckExtToks, druckExtToks.druckQuant,
+    domToks, druckPlaetze, druckGrundFaelle, druckStarts, druckStart,
+    druckTabTeile, druckTabTeil, druckFelder, druckFeld, druckGruppenInv,
+    druckNamen, druckKanten, druckEingang, druckRegBinds, druckRegBind,
+    druckNamenKlammer, kern, target, rohToks_never, pfadToks,
+    strEq_self, List.isEmpty_nil, List.reverse_cons, List.reverse_nil,
+    List.append_nil, List.cons_append, List.nil_append, ite_true,
+    List.all_append, List.all_cons, List.all_nil, Bool.and_true, Bool.true_and,
+    Bool.and_self, Bool.and_eq_true]
+  repeat' apply And.intro
+  all_goals first | apply nameTok_clean; decide | cbv
 
 /-- The witness program from its rendered source text: lexer, then the program reader. -/
 theorem zeugeProgramm_text :

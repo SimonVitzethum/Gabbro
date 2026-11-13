@@ -9,6 +9,7 @@
 -/
 module
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+import all Grammatik.Parser.Elab.UebersetzeAllg.Teil5
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -52,6 +53,10 @@ open Gabbro.Grammatik.Parser.UebersetzeProben3 (stufe)
 
 set_option maxRecDepth 100000
 
+-- Select the used node of the typed mutual before inspecting its result.
+-- Unfolding its shared recursion evaluates unrelated branches and contexts.
+attribute [local cbv_eval] Nat.log2_def lowWertE.eq_def lowCmp.eq_def lowEns.eq_def
+
 /-- The carriers of the invariants, read through the declaration: `.inl` a table number, `.inr` a static
     number. -/
 def traeger (s : String) : Option (List (List (Nat ⊕ Nat))) :=
@@ -71,13 +76,17 @@ def traeger (s : String) : Option (List (List (Nat ⊕ Nat))) :=
 def glob_gruppe_ok : String :=
   "module m { static mut A : u32 = 0 shared; static mut B : u32 = 0 shared; lock L protects { A, B } rank 0; group G over { A, B } { invariant J : A <= B; } impl fn f() requires Held(L) effects { writes A } { A = 1; } }"
 theorem glob_gruppe_ok_stufe : stufe glob_gruppe_ok = "OK" := by cbv
-theorem glob_gruppe_ok_traeger : traeger glob_gruppe_ok = some [[.inr 0, .inr 1]] := by cbv
+theorem glob_gruppe_ok_traeger : traeger glob_gruppe_ok = some [[.inr 0, .inr 1]] := by
+  simp only [traeger, declOf]
+  cbv
 
 /-- A mixed group of a table and a static under one lock; the writer touches only the static. -/
 def gemischt_ok : String :=
   "module m { table T count 2 shared { slot { v : u32, } } static mut N : u32 = 0 shared; lock L protects { T, N } rank 0; group G over { T, N } { invariant J : T.slots[0].v <= N; } impl fn f() requires Held(L) effects { writes N } { N = 1; } }"
 theorem gemischt_ok_stufe : stufe gemischt_ok = "OK" := by cbv
-theorem gemischt_ok_traeger : traeger gemischt_ok = some [[.inl 0, .inr 0]] := by cbv
+theorem gemischt_ok_traeger : traeger gemischt_ok = some [[.inl 0, .inr 0]] := by
+  simp only [traeger, declOf]
+  cbv
 
 /-- Planted defect (`U003`): the writer of the static takes the group's guard only in a block. -/
 def glob_u003_refused : String :=
