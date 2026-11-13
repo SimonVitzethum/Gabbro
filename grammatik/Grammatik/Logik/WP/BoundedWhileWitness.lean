@@ -112,30 +112,43 @@ theorem exhausted_G_zeuge :
   · rw [hsp]
     exact h7
 
+/-- This fixture owes no return predicates beyond `ensures true`. -/
+private theorem epilogue_cost (finish : Bool) :
+    kostenEpilog (program finish) t4F = 0 := by
+  rfl
+
 /-- The same static bound covers both paths, independently of outer passes or
     the callee cost table (there are no calls). Negation is included. The loop
     contains no return, so its cost holds at every epilogue price; the body is
     priced at its own epilogue (C05), which is `0` here (`ensures true`, no
-    invariants). -/
+    invariants). Each slot write costs `1 + 1 + 1 = 3` (dispatch, widened
+    index, widened value), so the body costs `3 + 1 + 1 = 5` and the handler
+    `3 + 1 = 4`. The condition costs `1` for negation. Thus the loop costs
+    `2 + 3 * (5 + 1 + 2) + (2 + 1 + 4) = 33`. The whole body costs
+    `1 + 2 + 33 + (1 + 1 + 0) = 38` (binding, end dispatch, loop, return).
+    Against the old 25/29, widening adds `3 * 2 + 2 = 8` to the loop and
+    one more at the return: `33 = 25 + 8`, `38 = 29 + 8 + 1`. The negation
+    is already included in the old loop price; the derived C05 epilogue adds `0`. -/
 theorem kostenStmt_wloop_zeuge (finish : Bool) (ep : Nat) (cost : t4D.Fn → Nat) (passes : Nat) :
-    kostenStmt ep cost passes (loop finish) = 25 ∧
-      kostenEnd (kostenEpilog (program finish) t4F) cost passes (whole finish) = 29 := by
+    kostenStmt ep cost passes (loop finish) = 33 ∧
+      kostenEnd (kostenEpilog (program finish) t4F) cost passes (whole finish) = 38 := by
+  rw [epilogue_cost]
   cases finish <;> exact ⟨rfl, rfl⟩
 
 theorem wloop_scopesOk_zeuge (finish : Bool) :
     (loop finish).scopesOk [] none = true := by
   cases finish <;> rfl
 
-/-- The inherited time theorem bounds actual G steps of either body by 29,
+/-- The inherited time theorem bounds actual G steps of either body by 38,
     including the final test and the possible handler. The frame enters with
     one caller beneath it and may pop only on the run's final step. -/
 theorem frame_bound_zeuge (finish : Bool) {M' : RufMaschineG t4D}
     (run : SegLauf (program finish) t4O 0 (t4M t4F (whole finish)) M')
-    (active : aktivVor 0 1 run) : segZaehle run 0 ≤ 29 := by
+    (active : aktivVor 0 1 run) : segZaehle run 0 ≤ 38 := by
   have accepted : rufTief (program finish) 1 t4F = true := by
     cases finish <;> rfl
-  have cost : kostenTief (program finish) 0 1 t4F = 29 := by
-    cases finish <;> rfl
+  have cost : kostenTief (program finish) 0 1 t4F = 38 :=
+    (kostenStmt_wloop_zeuge finish 0 (kostenTief (program finish) 0 0) 0).2
   have entry : Eintritt (program finish) 0 t4F .nil (t4Sp.welt []) 1
       (t4M t4F (whole finish)) := ⟨rfl, rfl⟩
   have bound := frame_schritte_beschraenkt (program finish) t4O 0 0 t4F 0

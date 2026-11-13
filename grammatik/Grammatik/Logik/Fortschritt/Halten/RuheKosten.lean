@@ -23,27 +23,70 @@ theorem ibR_arbeit {ts : List Ty} {τ : Ty} (op : IntBuiltin ts τ) :
     (ibR op).arbeit = op.arbeit := by
   cases op <;> rfl
 
+private theorem cost_congr₂ (f : Nat → Nat → Nat) {a a' b b' : Nat}
+    (ha : a = a') (hb : b = b') : f a b = f a' b' := by
+  cases ha
+  cases hb
+  rfl
+
 mutual
 theorem kostenExpr_ru {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ) :
     kostenExpr (ruE e) = kostenExpr e := by
-  cases e <;> simp only [ruE, kostenExpr, kostenNutz_cast, kostenArgs_cast,
-    kostenExpr_ru, kostenNutz_ru, kostenArgs_ru, ibR_arbeit]
+  match e with
+  | .lit _ | .tru | .fls | .var _ | .glob _ _ | .ptrOf .. | .fnref .. | .oldG ..
+  | .none _ | .why .. | .forallSlots .. | .existsSlots .. | .arrNil | .strLit .. => rfl
+  | .slot _ _ i _ | .oldS _ _ i _ => exact (congrArg (1 + ·) (kostenExpr_ru i) :)
+  | .thru p _ _ _ i _ | .thruOwn p _ _ _ i _ _ _ _ _ _ =>
+    exact (cost_congr₂ (fun x y => 1 + x + y) (kostenExpr_ru p) (kostenExpr_ru i) :)
+  | .slotRef r .. => exact (congrArg (1 + ·) (kostenExpr_ru r) :)
+  | .widen _ _ a | .neg a | .not a | .some a | .istSome a | .strLen a | .strWeit _ a
+  | .prodGet a _ => exact (congrArg (1 + ·) (kostenExpr_ru a) :)
+  | .refEq a b | .add a b | .sub a b | .mul a b | .div _ _ a b | .rem _ _ a b
+  | .sdiv _ a b | .srem _ a b | .band _ _ a b | .bor _ _ _ _ _ a b
+  | .bxor _ _ _ _ _ a b | .shl _ _ _ _ _ a b | .shr _ _ _ _ _ a b
+  | .lt a b | .le a b | .eq a b | .fllt a b | .flle a b | .and a b | .or a b
+  | .reaches _ _ _ a b _ | .arrCons a b | .arrGet a b | .strCat a b | .strGet a b
+  | .strEq a b | .strLt a b | .eng a _ _ b | .prodSet a _ b =>
+    exact (cost_congr₂ (fun x y => 1 + x + y) (kostenExpr_ru a) (kostenExpr_ru b) :)
+  | .getBytes _ _ _ _ i _ _ _ => exact (congrArg (1 + ·) (kostenExpr_ru i) :)
+  | .case _ _ payload =>
+    simp only [ruE, kostenExpr, kostenNutz_cast]
+    exact (congrArg (1 + ·) (kostenNutz_ru payload) :)
+  | .arrSet a i v | .wenn a i v =>
+    exact (cost_congr₂ (· + ·)
+      (cost_congr₂ (fun x y => 1 + x + y) (kostenExpr_ru a) (kostenExpr_ru i))
+      (kostenExpr_ru v) :)
+  | .intBuiltin1 op a =>
+    exact (cost_congr₂ (· + ·) (ibR_arbeit op) (kostenExpr_ru a) :)
+  | .intBuiltin2 op a b =>
+    exact (cost_congr₂ (· + ·)
+      (cost_congr₂ (· + ·) (ibR_arbeit op) (kostenExpr_ru a)) (kostenExpr_ru b) :)
+  | .count n body => exact (congrArg (fun x => 1 + n * (x + 1)) (kostenExpr_ru body) :)
+  | .prod _ args =>
+    simp only [ruE, kostenExpr, kostenArgs_cast]
+    exact kostenArgs_ru args
 termination_by structural e
 
 theorem kostenNutz_ru {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty}
     (e : NutzlastExpr D Γ Λ c) : kostenNutz (ruN e) = kostenNutz e := by
-  cases e <;> simp only [ruN, kostenNutz, kostenExpr_ru]
+  cases e with
+  | empty => rfl
+  | val e => exact kostenExpr_ru e
 termination_by structural e
 
 theorem kostenArgs_ru {Γ : Ctx} {Λ : List (Res D)} {ts : List Ty} (args : Args D Γ Λ ts) :
     kostenArgs (ruA args) = kostenArgs args := by
-  cases args <;> simp only [ruA, kostenArgs, kostenExpr_ru, kostenArgs_ru]
+  cases args with
+  | nil => rfl
+  | cons e rest => exact cost_congr₂ (· + ·) (kostenExpr_ru e) (kostenArgs_ru rest)
 termination_by structural args
 end
 
 theorem kostenErg_ru {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty} (e : ErgExpr D Γ Λ o) :
     kostenErg (ruErg e) = kostenErg e := by
-  cases e <;> simp only [ruErg, kostenErg, kostenExpr_ru]
+  cases e with
+  | empty => rfl
+  | val e => exact kostenExpr_ru e
 
 @[simp] theorem kostenExpr_umΛ {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty} (h : Λ = Λ')
     (e : Expr D Γ Λ τ) : kostenExpr (Expr.umΛ h e) = kostenExpr e := by
@@ -60,13 +103,15 @@ theorem kostenErg_ru {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty} (e : ErgExpr
 theorem kostenEpilog_mitRuhe (P : Programm D) (f : D.Fn) :
     kostenEpilog P.mitRuhe (some f) = kostenEpilog P f := by
   have he : kostenExpr (P.mitRuhe.ensures (some f)) = kostenExpr (P.ensures f) := by
-    show kostenExpr (Expr.umΓ _ (Expr.umΛ _ (ruE (P.ensures f)))) = _
-    rw [kostenExpr_umΓ, kostenExpr_umΛ, kostenExpr_ru]
+    exact (kostenExpr_umΓ (ergCtx_map (D.params f) (D.erg f))
+      (Expr.umΛ (ende_map (vertragVon D f)) (ruE (P.ensures f)))).trans
+      ((kostenExpr_umΛ (ende_map (vertragVon D f)) (ruE (P.ensures f))).trans
+        (kostenExpr_ru (P.ensures f)))
   have hi : (fun i => kostenExpr (P.mitRuhe.invariante i)) =
       (fun i => kostenExpr (P.invariante i)) := by
     funext i
-    show kostenExpr (Expr.umΛ _ (ruE (P.invariante i))) = _
-    rw [kostenExpr_umΛ, kostenExpr_ru]
+    exact (kostenExpr_umΛ (invSicht_map (D := D) i) (ruE (P.invariante i))).trans
+      (kostenExpr_ru (P.invariante i))
   unfold kostenEpilog
   rw [he, hi]
   rfl
@@ -103,7 +148,7 @@ end Transport
 
 theorem entfZ_ru {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (s : Stmt D V l Γ Λ Λ') : entfZ (ruS s) = entfZ s := by
-  cases s <;> simp only [ruS, entfZ_nachΛ, entfZ, GEntfaltbar, ↓reduceIte]
+  cases s <;> simp only [ruS, entfZ_nachΛ, entfZ, GEntfaltbar, ↓reduceIte] <;> rfl
 
 section Costs
 variable (ep : Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
@@ -111,7 +156,7 @@ variable (ep : Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
 mutual
 theorem kostenStmt_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (s : Stmt D V l Γ Λ Λ') :
-    kostenStmt ep (fun g => g.elim 0 c) pa (ruS s) = kostenStmt ep c pa s := by
+    kostenStmt ep (fun (g : Option D.Fn) => g.elim 0 c) pa (ruS s) = kostenStmt ep c pa s := by
   cases s <;> simp only [ruS, kostenStmt_nachΛ, kostenStmt, kostenExpr_ru, kostenArgs_ru,
     kostenErg_ru, kostenBlock_ru, kostenArms_ru, kostenGrundArms_ru, kostenSonst_umΛ,
     kostenSonst_ru, Option.elim]
@@ -119,33 +164,52 @@ termination_by structural s
 
 theorem kostenBlock_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (b : Block D V l Γ Λ Λ') :
-    kostenBlock ep (fun g => g.elim 0 c) pa (ruB b) = kostenBlock ep c pa b := by
-  cases b <;> simp only [ruB, kostenBlock, kostenBlock_vorΛ, kostenStmt_ru,
+    kostenBlock ep (fun (g : Option D.Fn) => g.elim 0 c) pa (ruB b) = kostenBlock ep c pa b := by
+  cases b with
+  | bindAxiomOpt result _ _ _ _ _ _ _ => cases result
+  | bindAxiomOptElse result _ _ _ _ _ _ _ _ _ => cases result
+  | _ => skip
+  all_goals simp only [ruB, kostenBlock, kostenBlock_vorΛ, kostenStmt_ru,
     kostenExpr_ru, kostenArgs_ru, kostenBlock_ru, kostenSonst_umΛ, kostenSonst_ru, Option.elim]
 termination_by structural b
 
 theorem kostenArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (arms : Arms D V l Γ Λ Λ' cs) :
-    kostenArms ep (fun g => g.elim 0 c) pa (ruArms arms) = kostenArms ep c pa arms := by
-  cases arms <;> simp only [ruArms, kostenArms, kostenBlock_ru, kostenArms_ru]
+    kostenArms ep (fun (g : Option D.Fn) => g.elim 0 c) pa (ruArms arms) = kostenArms ep c pa arms := by
+  match arms with
+  | .nil => rfl
+  | .cons (c := payload) b rest =>
+    cases payload <;>
+      exact cost_congr₂ max (kostenBlock_ru ep c pa b) (kostenArms_ru ep c pa rest)
 termination_by structural arms
 
 theorem kostenGrundArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
     (arms : GrundArms D V l Γ Λ Λ' n) :
-    kostenGrundArms ep (fun g => g.elim 0 c) pa (ruGArms arms) = kostenGrundArms ep c pa arms := by
-  cases arms <;> simp only [ruGArms, kostenGrundArms, kostenBlock_ru, kostenGrundArms_ru]
+    kostenGrundArms ep (fun (g : Option D.Fn) => g.elim 0 c) pa (ruGArms arms) = kostenGrundArms ep c pa arms := by
+  cases arms with
+  | nil => rfl
+  | cons b rest =>
+    exact cost_congr₂ max (kostenBlock_ru ep c pa b) (kostenGrundArms_ru ep c pa rest)
 termination_by structural arms
 
 theorem kostenEnd_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) :
-    kostenEnd ep (fun g => g.elim 0 c) pa (ruEnd e) = kostenEnd ep c pa e := by
-  cases e <;> simp only [ruEnd, kostenEnd, kostenEnd_umΛ, kostenSonst_umΛ,
+    kostenEnd ep (fun (g : Option D.Fn) => g.elim 0 c) pa (ruEnd e) = kostenEnd ep c pa e := by
+  cases e with
+  | bindAxiomOpt result _ _ _ _ _ _ _ => cases result
+  | bindAxiomOptElse result _ _ _ _ _ _ _ _ _ => cases result
+  | _ => skip
+  all_goals simp only [ruEnd, kostenEnd, kostenEnd_umΛ, kostenSonst_umΛ,
     kostenExpr_ru, kostenArgs_ru, kostenErg_ru, entfZ_ru, kostenStmt_ru,
     kostenEnd_ru, kostenSonst_ru, Option.elim]
 termination_by structural e
 
 theorem kostenSonst_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) :
-    kostenSonst ep (fun g => g.elim 0 c) pa (ruEnd e) = kostenSonst ep c pa e := by
-  cases e <;> simp only [ruEnd, kostenSonst, kostenSonst_umΛ,
+    kostenSonst ep (fun (g : Option D.Fn) => g.elim 0 c) pa (ruEnd e) = kostenSonst ep c pa e := by
+  cases e with
+  | bindAxiomOpt result _ _ _ _ _ _ _ => cases result
+  | bindAxiomOptElse result _ _ _ _ _ _ _ _ _ => cases result
+  | _ => skip
+  all_goals simp only [ruEnd, kostenSonst, kostenSonst_umΛ,
     kostenExpr_ru, kostenArgs_ru, kostenErg_ru, kostenStmt_ru, kostenSonst_ru, Option.elim]
 termination_by structural e
 end
