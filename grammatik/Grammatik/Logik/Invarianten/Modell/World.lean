@@ -26,6 +26,17 @@ def snippetWorld (base : World D) (keys : List (Observation D))
       else base.globs name
     spur := base.spur }
 
+/-- A field outside the finite snippet keeps its original typed value. -/
+theorem snippetWorld_slot_of_not_mem (base : World D) (keys : List (Observation D))
+    (values : Assignment (Observation D)) (table : D.Tab) (index : Int) (field : D.Feld table)
+    (absent : Observation.slot table field index ∉ keys) :
+    (snippetWorld base keys values).slots table index field = base.slots table index field := by
+  show (if Observation.slot table field index ∈ keys then
+      (decodeScalar (D.typ table field) (values (.slot table field index))).getD
+        (base.slots table index field)
+    else base.slots table index field) = base.slots table index field
+  simp only [absent, ↓reduceIte]
+
 /-- A finite check, even though the returned world has total memory functions.
     Unsupported observations and unrepresentable values return `none`. -/
 def reconstructWorld (base : World D) (keys : List (Observation D))

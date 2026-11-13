@@ -84,19 +84,15 @@ theorem short_false_computed_zeuge :
   change (9 : Int) ≤ 3 at impossible
   omega
 
-theorem short_counterexample_computed_zeuge :
-    (invariantCounterexample Frag.Witness.initial (Frag.Witness.declaration.traeger ())
-      Witness.shortInvariant).map (fun world => assignment world (.glob false)) = some 4 := by
-  have keys : Witness.shortFormula.keys = [.glob false] := by
-    simp [Witness.shortFormula, LProp.keys, LProp.freeVariables, LTerm.variables,
-      List.eraseDups_cons]
-  have unfolded : invariantCounterexample Frag.Witness.initial
-      (Frag.Witness.declaration.traeger ()) Witness.shortInvariant =
-        stateCounterexample Frag.Witness.initial [.glob false] Witness.shortFormula := by
-    simp only [invariantCounterexample, Witness.short_translated_zeuge, keys]
-  exact (congrArg (Option.map fun world : World Frag.Witness.declaration =>
-      assignment world (.glob false)) unfolded).trans
-    Witness.state_counterexample_computed_zeuge
+/-- The model entry point returns a refuting typed state, without fixing the
+    extractor's choice among the admissible counterexample values 4..10. -/
+theorem short_counterexample_exists_zeuge :
+    ∃ world : World Frag.Witness.declaration,
+      invariantCounterexample Frag.Witness.initial (Frag.Witness.declaration.traeger ())
+        Witness.shortInvariant = some world ∧
+      eval world Witness.shortInvariant world .nil = false :=
+  decideInvariant_complete Frag.Witness.initial (Frag.Witness.declaration.traeger ())
+    Witness.shortInvariant none short_false_computed_zeuge
 
 theorem short_counterexample_sound_zeuge (world : World Frag.Witness.declaration)
     (success : invariantCounterexample Frag.Witness.initial (Frag.Witness.declaration.traeger ())
