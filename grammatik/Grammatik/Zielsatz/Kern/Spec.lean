@@ -247,6 +247,24 @@
   on that history: lifting it needs the local replay of `ziel_ort_*` to record register answers as it records
   foreign answers -- named, open.
 
+  THE OUTSIDE IS BLIND TO READS (2026-11-13, a change of meaning of (c)). The oracle answers the world WITHOUT
+  its read events (`World.ohneLese`: a table or global access with `schreibt = false` is erased; writes, lock
+  moves and the `fremd` questions stay): `Orakel` holds the raw answers `wirktL`, `regLiesL`, `sichtbarL`, and
+  G consults `Orakel.wirkt`/`regLies`/`sichtbar`, which hand them the erased world. A foreign body answers a
+  memory and the events it adds; G puts them on top of the thread's whole trace (`World.auf`), so the reads
+  stay recorded and an answer never unwrites the thread's past. Hence the oracle class of (c) narrows by
+  exactly two distinctions: an oracle that answers differently after ghost read events, and an oracle that
+  rewrites the thread's ghost trace below its own events. Both are functionally indistinguishable -- a read
+  changes no cell, takes no lock and asks nothing outside, and the trace is the model's bookkeeping, not a
+  device -- so every foreign body, device and memory system that answers from memory contents, writes, lock
+  moves and the questions asked is still an oracle of (c).
+  What a physical environment may observe of loads beyond their function -- timing, cache occupancy,
+  performance counters, trace units, DMA or interconnect snooping of load traffic -- is a physical side
+  channel and out of scope of the model (`ZeitAb` counts steps of G, not time); an environment whose answers
+  depend on the number or order of the thread's loads is not an oracle of (c). In exchange
+  read-blindness holds for EVERY oracle (`Orakel.wirkt_blind`, `regLies_blind`, `sichtbar_blind`) instead of
+  being an assumption about it; the image theorems of stage 0 use it.
+
   WHAT A GREEN BUILD COVERS. The goal statements themselves, their witnesses, and the per-program instances checked
   in under Korpus/ (among them Korpus/Programme/GenOblig104.lean and GenOblig108.lean: the unit as a G term, the
   checker premise decided IN LEAN by `decide`, and `GabbroZiel` instantiated with (b) open). Those two files were
