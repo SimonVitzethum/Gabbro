@@ -20,6 +20,24 @@ def statikTypVon (k : Kontext) : SExpr → Option STyp
     if k.lokal.contains v then none else (k.statikTyp.find? fun entry => strEq entry.1 v).map (·.2)
   | _ => none
 
+/-- Most variables are not statics. Read the immutable declaration table first,
+    avoiding a live-scope membership scan when no static can match. -/
+def statikTypVonFast (k : Kontext) : SExpr → Option STyp
+  | .variable v =>
+    match k.statikTyp.find? (fun entry => strEq entry.1 v) with
+    | none => none
+    | some entry => if k.lokal.contains v then none else some entry.2
+  | _ => none
+
+@[csimp] theorem statikTypVon_eq_fast : @statikTypVon = @statikTypVonFast := by
+  funext k e
+  cases e <;> first
+    | rfl
+    | rename_i name
+      cases hl : k.lokal.contains name <;>
+        cases ht : k.statikTyp.find? (fun entry => strEq entry.1 name) <;>
+          simp only [statikTypVon, statikTypVonFast, hl, ht] <;> rfl
+
 /-- Read a tagged place exactly once through the existing match reader. The fresh local starts
     with a declared payload-free case; every arm replaces it with the observed value. The written
     result type, when present, is retained for the ordinary elaborator to check. -/
@@ -44,6 +62,28 @@ def leseStatik (k : Kontext) (nr : Nat) (mu : Bool) (x : String) (ty : Option ST
     | some (_, faelle), some (_, typ) => leseFaelle nr mu x ty (.variable v) typ faelle
     | _, _ => none
   | _ => none
+
+/-- A missing tagged static likewise needs no scan of lexical locals. Successful
+    static lookup still applies exactly the original shadowing check. -/
+def leseStatikFast (k : Kontext) (nr : Nat) (mu : Bool) (x : String) (ty : Option STyp) :
+    SExpr → Option (List SAnw × Nat)
+  | .variable v =>
+    match k.statikFaelle.find? (fun entry => strEq entry.1 v),
+        k.statikTyp.find? (fun entry => strEq entry.1 v) with
+    | some (_, faelle), some (_, typ) =>
+      if k.lokal.contains v then none else leseFaelle nr mu x ty (.variable v) typ faelle
+    | _, _ => none
+  | _ => none
+
+@[csimp] theorem leseStatik_eq_fast : @leseStatik = @leseStatikFast := by
+  funext k nr mu x ty e
+  cases e <;> first
+    | rfl
+    | rename_i name
+      cases hl : k.lokal.contains name <;>
+        cases hf : k.statikFaelle.find? (fun entry => strEq entry.1 name) <;>
+          cases ht : k.statikTyp.find? (fun entry => strEq entry.1 name) <;>
+            simp only [leseStatik, leseStatikFast, hl, hf, ht] <;> rfl
 
 /-- A tagged slot is read where its binding stood. Only its index is rewritten: a named table
     has no evaluation before the index. Hoisted index calls run first, and the remaining index
@@ -271,5 +311,6 @@ def hebe (items : List SItemTief) : List SItemTief :=
       faelle := Tafel.von _ (fallNamen items), felder := feldNamen items, statikTyp := statikTypen items,
       statikFaelle := statikFaelleVon items, typFaelle := typFaelleVon items }
   items.map (hebeItem k)
+
 
 end Gabbro.Grammatik.Parser.CallHoist

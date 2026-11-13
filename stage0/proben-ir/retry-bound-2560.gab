@@ -1,0 +1,16 @@
+// Counter-lowered cursor loop: 0 + 1 seven times = 7; exits before bound 2560.
+// Expected exit 7 (the same source with bound 16 must return 7 too).
+module ir_retry_bound_2560 {
+assume tick "The environment permits the bounded attempt." falsifier probe_tick;
+syscall sched_yield()
+    abi linux arch x86_64 number 24
+    regs in { } regs out { rax } clobbers { rcx, r11 } errors { }
+    effects { pure } costs <= 8 ops assume tick falsifier probe_tick;
+impl fn main() -> u64 in 0 .. 100 effects { pure } {
+    let mut cursor : u64 in 0 .. 100 = 0;
+    retry attempt until cursor == 7 bounded 2560 ops progress tick on_exceeded sched_yield {
+        cursor = (cursor + 1) % 100;
+    }
+    return cursor;
+}
+}

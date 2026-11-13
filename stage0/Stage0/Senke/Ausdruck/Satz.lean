@@ -1,35 +1,6 @@
 /- Generic expression correctness, mutual with payloads and product fields. -/
 module
-public import Stage0.Senke.Ausdruck.Aggregat.Prod.ProdSet
-public import Stage0.Senke.Ausdruck.Aggregat.Prod.ProdArgsOk
-public import Stage0.Senke.Ausdruck.Referenz.Lesen
-public import Stage0.Senke.Ausdruck.Gleit.Fall
-public import Stage0.Senke.Ausdruck.Lesen
-public import Stage0.Senke.Ausdruck.Wenn
-public import Stage0.Senke.Ausdruck.Zeiger.Fnptr
-public import Stage0.Senke.Ausdruck.Tops.Eng
-public import Stage0.Senke.Ausdruck.Arithmetik.Mixed
-public import Stage0.Senke.Ausdruck.Satz.Payload
-public import Stage0.Senke.Ausdruck.Aggregat.KopieSatz
-public import Stage0.Senke.Ausdruck.Aggregat.Werte.IntegerResize
-public import Stage0.Senke.Ausdruck.Aggregat.Werte.IntegerOps
-public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Compare
-public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Eng
-public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Builtin
-public import Stage0.Senke.Ausdruck.Aggregat.Werte.StringOps
-public import Stage0.Senke.Ausdruck.Option
-public import Stage0.Senke.Anweisung.Bytes.Span.Read
-public import Stage0.Senke.Ausdruck.Quant.Satz
-public import Stage0.Senke.Ausdruck.Quant.Count
-public import Stage0.Senke.Ausdruck.Quant.Reach
-public import Stage0.Senke.Welt.WeltAt
-public import Stage0.Senke.Ausdruck.Current
-public import Stage0.Senke.Ausdruck.Referenz.CellIndex
-public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqOk
-public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringGetOk
-public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringTakeOk
-public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringExpandOk
-public import Stage0.Senke.Ausdruck.Aggregat.Frame.String.Values
+public import Stage0.Senke.Ausdruck.Satz.Imports
 @[expose] public section
 variable {currentOld : Bool}
 namespace Gabbro.Stage0.Senke
@@ -67,7 +38,8 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay rest _ ca ta ha hta m pc ρ hp) h hK hp
   | _, _, .arrGet a i, d, c, top, h, hK, m, pc, ρ, hp =>
     arrGet_ok a i (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay i _ ca ta ha hta m pc ρ hp) h hK hp
+      (fun ca ta ha hta m pc hp => lowStorage_ok (same := same) σ₀ σ hWL hLay a _ ca ta ha hta m pc ρ hp)
+      (fun q ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay i q ca ta ha hta m pc ρ hp) h hK hp
   | _, _, .arrSet a i v, d, c, top, h, hK, m, pc, ρ, hp =>
     arrSet_ok a i v (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay v d ca ta ha hta m pc ρ hp)
       (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp)
@@ -441,6 +413,22 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
   | _, _, .oldS t f i access, d, c, top, h, hK, m, pc, ρ, hp =>
     oldSlot_ok σ₀ σ hWL hLay t f i access same
       (fun ci ti lower fits m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay i _ ci ti lower fits m pc ρ hp) h hK hp
+termination_by structural _ _ e _ _ _ _ _ _ _ _ _ => e
+/-- Storage-address induction shares the exact expression induction; table row
+    indices are compiled and proved by lowE_ok before their address is formed. -/
+theorem lowStorage_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
+    (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L)
+    {same : currentOld = true → σ₀ = σ} :
+    {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) → (top : Nat) →
+    lowStorage (currentOld := currentOld) L (reserved := reserved) e d = some (c, top) → top ≤ K →
+    ∀ m pc (ρ : Env D Γ), Pre L m pc fp K d c ρ W reserved →
+      StoredOk (L := L) m pc fp K d c ρ W reserved τ (eval σ₀ e σ ρ)
+  | _, _, e, d, c, top, h, hK, m, pc, ρ, hp => by
+    apply lowStorage_sound σ₀ σ hWL e ?_ h hK hp
+    cases e <;> simp only [StorageChildrenOk]
+    all_goals first
+      | trivial
+      | exact fun q cc tt hc ht mm pp pre => lowE_ok (same := same) σ₀ σ hWL hLay _ q cc tt hc ht mm pp ρ pre
 termination_by structural _ _ e _ _ _ _ _ _ _ _ _ => e
 theorem lowE_ok_args {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
     (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} :

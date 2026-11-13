@@ -1,6 +1,7 @@
 /- Shared body traversal for source match rewrites. No expressions or model rules change. -/
 module
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil18
+public import Grammatik.Parser.Elab.Modules.CallHoist.CollectM
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.MatchBodies

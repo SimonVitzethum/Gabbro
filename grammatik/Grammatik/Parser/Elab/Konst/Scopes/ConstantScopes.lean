@@ -1,6 +1,6 @@
 module
 public import Grammatik.Parser.Elab.Konst.Scopes.Discovery
-public import Grammatik.Parser.Elab.Konst.Scopes.ConstantOrder
+public import Grammatik.Parser.Elab.Konst.Scopes.ConstantOrderFast
 public import Grammatik.Parser.Elab.Konst.Scopes.ConstantMeaning
 import all Init.Data.Repr
 import all Init.Data.String.Basic

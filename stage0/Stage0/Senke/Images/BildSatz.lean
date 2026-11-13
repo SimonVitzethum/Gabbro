@@ -30,7 +30,7 @@ theorem bild_lage {P : Programm D} {fs : List D.Fn} {pos : D.Fn → Nat} {name :
       · next hg =>
         simp only [Except.ok.injEq] at hb
         subst hb
-        obtain ⟨⟨hwhy, hrwhy, hlens, hfit, hroomK, hexK, hops, hYlo, hYhi, hYsye⟩, hfp⟩ := hg
+        obtain ⟨⟨hwhy, hrwhy, hlens, hfit, hroomK, hexK, hops, hYlo, hYhi, hYsye⟩, hfp, _⟩ := hg
         obtain ⟨hcl, hcs⟩ := lowAll_ok fs cs h1
         refine ⟨cs, cs.flatMap (·.1), _, ⟨rfl, rfl, rfl, rfl, hfp, fun g => by rw [hlens]; simp, hcl, hcs, hfs,
           by simp only [List.length_map], ?_, hwhy, hrwhy,
@@ -38,7 +38,8 @@ theorem bild_lage {P : Programm D} {fs : List D.Fn} {pos : D.Fn → Nat} {name :
           ⟨(hYdis _).spans, (hYdis _).inj, (hYdis _).grid⟩, rfl, rfl, hYsync _, hYsye, hops⟩, rfl, rfl, rfl, rfl⟩
         intro words member
         obtain ⟨start, startMem, encoded⟩ := List.mem_map.mp member
-        have fits : startScratch start.1 + 8 ≤ Ks := by
+        have fits : startScratch start.1 + 8 ≤ stackReserve Ks (maxTop cs0)
+            ((main :: starts.map (·.1)).foldl (fun top f => max top (startScratch f + 8)) 0) := by
           simpa using List.all_eq_true.mp hexK start.1
             (List.mem_cons_of_mem _ (List.mem_map.mpr ⟨start, startMem, rfl⟩))
         have above : FB + FB + contextWords (D.params start.1) + 1 ≤ startScratch start.1 := by
