@@ -68,14 +68,14 @@ theorem sekInv_pos {M M' : RufMaschineG D} {u : Faden} (hs : RufSchrittG P O pa 
     simp only [List.cons_append, List.cons.injEq] at hst
     rw [hst.1] at harb
     cases hseg with
-    | cons _ j _ p hok hb hrest =>
-      have := potRest_pos (T j) pa o.rest.2.2.2.2 harb
+    | cons _ j _ p epj hok hb hrest =>
+      have := potRest_pos epj (T j) pa o.rest.2.2.2.2 harb
       omega
 
 /-- The section frame is the head: `schrittSek` measures the step, `schrittRang` keeps the marker
     (the frame names `L`, its end signature does not) and excludes the frame's pop. -/
 theorem sekInv_kopf (hO : GutO O)
-    (hS1 : ∀ i g, S i g = true → kostenEnd (T (nx i g)) pa (P.rumpf g) ≤ T i g)
+    (hS1 : ∀ i g, S i g = true → kostenEnd (kostenEpilog P g) (T (nx i g)) pa (P.rumpf g) ≤ T i g)
     (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (fun _ => false) true (P.rumpf g) = true)
     {M M' : RufMaschineG D} {g : Faden} (hs : RufSchrittG P O pa M g M') {i : ι}
     (hrv : rufeV L (S i) (fun _ => false) true (M.faeden g).kopf.rest.2.2.2.2 = true)
@@ -112,14 +112,14 @@ theorem sekInv_kopf (hO : GutO O)
     · have e : cl' = cR := (List.cons.inj (hst'.symm.trans hstR)).1
       obtain ⟨hrvc, hdir⟩ := hB' hrv
       obtain ⟨hZ, hpot⟩ := hdir.resolve_right (fun ⟨_, hn, _⟩ => Bool.false_ne_true hn)
-      have ep : potRest (T (nx i g')) pa (M'.faeden g).kopf.rest.2.2.2.2 =
-          kostenEnd (T (nx i g')) pa (P.rumpf g') := by rw [hk']; rfl
+      have ep : potRest (kostenEpilog P g') (T (nx i g')) pa (M'.faeden g).kopf.rest.2.2.2.2 =
+          kostenEnd (kostenEpilog P g') (T (nx i g')) pa (P.rumpf g') := by rw [hk']; rfl
       have h1 := hS1 i g' hZ
-      refine ⟨kostenEnd (T (nx i g')) pa (P.rumpf g') + potSek L (T i) pa cl'.rest.2.2.2.2,
+      refine ⟨kostenEnd (kostenEpilog P g') (T (nx i g')) pa (P.rumpf g') + potSek L (T i) pa cl'.rest.2.2.2.2,
         ⟨[(M'.faeden g).kopf], cl', (M.faeden g).stapel, i,
-          potRest (T (nx i g')) pa (M'.faeden g).kopf.rest.2.2.2.2 + 0,
+          potRest (kostenEpilog P g') (T (nx i g')) pa (M'.faeden g).kopf.rest.2.2.2.2 + 0,
           by rw [hst']; try rfl, ?_, hrvc, ?_, ?_, by omega⟩, by omega⟩
-      · exact Seg.cons _ (nx i g') [] 0 (by rw [hk']; exact hS2 i g' hZ)
+      · exact Seg.cons _ (nx i g') [] 0 (kostenEpilog P g') (by rw [hk']; exact hS2 i g' hZ)
           (by rw [hk']; exact GRest.scopeChain_eintritt (P := P) g') Seg.nil
       · rw [e]; exact hcΛR L hΛL
       · rw [e, hcfR]; exact hende
@@ -140,7 +140,7 @@ theorem sekInv_kopf (hO : GutO O)
 /-- A frame above the section frame is the head: `schrittArt` measures it as in `kinv_schritt`; when it
     returns into the section frame, `schrittSek` resumes the section potential. -/
 theorem sekInv_oben (hO : GutO O)
-    (hS1 : ∀ i g, S i g = true → kostenEnd (T (nx i g)) pa (P.rumpf g) ≤ T i g)
+    (hS1 : ∀ i g, S i g = true → kostenEnd (kostenEpilog P g) (T (nx i g)) pa (P.rumpf g) ≤ T i g)
     (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (fun _ => false) true (P.rumpf g) = true)
     {M M' : RufMaschineG D} {g : Faden} (hs : RufSchrittG P O pa M g M') {i : ι}
     {oben unten : List (RufRahmenG D)} {r : RufRahmenG D} {Φo Φ : Nat}
@@ -154,29 +154,29 @@ theorem sekInv_oben (hO : GutO O)
     (A : Merkmal D) (hmR : (M.faeden g).kopf.rest.2.2.2.2.mR A) :
     ∃ Φ', SekInv T S pa L (M'.faeden g) Φ' ∧ Φ' + 1 ≤ Φ := by
   cases hseg with
-  | cons _ j _ p hokj hbj hrest =>
-    have hpos := potRest_pos (T j) pa (M.faeden g).kopf.rest.2.2.2.2 (rufSchrittG_arbeitsfaehig hs)
-    rcases schrittArt hs hbj (T j) (S j) (fun _ => false) true with
+  | cons _ j _ p epj hokj hbj hrest =>
+    have hpos := potRest_pos epj (T j) pa (M.faeden g).kopf.rest.2.2.2.2 (rufSchrittG_arbeitsfaehig hs)
+    rcases schrittArt hs hbj epj (T j) (S j) (fun _ => false) true with
       ⟨hst', hA⟩ | ⟨g', cl', rho, s0, hst', hk', hB'⟩ | ⟨cl, rst, hpop, hst', hC⟩
     · obtain ⟨hok', hpot⟩ := hA hokj
-      refine ⟨potRest (T j) pa (M'.faeden g).kopf.rest.2.2.2.2 + p + potSek L (T i) pa r.rest.2.2.2.2,
-        ⟨(M'.faeden g).kopf :: oben, r, unten, i, potRest (T j) pa (M'.faeden g).kopf.rest.2.2.2.2 + p,
+      refine ⟨potRest epj (T j) pa (M'.faeden g).kopf.rest.2.2.2.2 + p + potSek L (T i) pa r.rest.2.2.2.2,
+        ⟨(M'.faeden g).kopf :: oben, r, unten, i, potRest epj (T j) pa (M'.faeden g).kopf.rest.2.2.2.2 + p,
           by rw [hst', hst]; try rfl,
-          Seg.cons _ j oben p hok' ((rufSchrittG_scopeMove hs).same hst' hbj) hrest,
+          Seg.cons _ j oben p epj hok' ((rufSchrittG_scopeMove hs).same hst' hbj) hrest,
           hrv, hΛL, hende, Nat.le_refl _⟩, by omega⟩
     · obtain ⟨hokc, hdir⟩ := hB' hokj
       obtain ⟨hZ, hpot⟩ := hdir.resolve_right (fun ⟨_, hn, _⟩ => Bool.false_ne_true hn)
-      have ep : potRest (T (nx j g')) pa (M'.faeden g).kopf.rest.2.2.2.2 =
-          kostenEnd (T (nx j g')) pa (P.rumpf g') := by rw [hk']; rfl
+      have ep : potRest (kostenEpilog P g') (T (nx j g')) pa (M'.faeden g).kopf.rest.2.2.2.2 =
+          kostenEnd (kostenEpilog P g') (T (nx j g')) pa (P.rumpf g') := by rw [hk']; rfl
       have h1 := hS1 j g' hZ
-      refine ⟨kostenEnd (T (nx j g')) pa (P.rumpf g') + (potRest (T j) pa cl'.rest.2.2.2.2 + p) +
+      refine ⟨kostenEnd (kostenEpilog P g') (T (nx j g')) pa (P.rumpf g') + (potRest epj (T j) pa cl'.rest.2.2.2.2 + p) +
           potSek L (T i) pa r.rest.2.2.2.2,
         ⟨(M'.faeden g).kopf :: cl' :: oben, r, unten, i,
-          potRest (T (nx j g')) pa (M'.faeden g).kopf.rest.2.2.2.2 + (potRest (T j) pa cl'.rest.2.2.2.2 + p),
+          potRest (kostenEpilog P g') (T (nx j g')) pa (M'.faeden g).kopf.rest.2.2.2.2 + (potRest epj (T j) pa cl'.rest.2.2.2.2 + p),
           by rw [hst', hst]; try rfl, ?_, hrv, hΛL, hende, by omega⟩, by omega⟩
-      exact Seg.cons _ (nx j g') _ _ (by rw [hk']; exact hS2 j g' hZ)
+      exact Seg.cons _ (nx j g') _ _ (kostenEpilog P g') (by rw [hk']; exact hS2 j g' hZ)
         (by rw [hk']; exact GRest.scopeChain_eintritt (P := P) g')
-        (Seg.cons _ j oben p hokc ((rufSchrittG_scopeMove hs).push cl' hst' hbj) hrest)
+        (Seg.cons _ j oben p epj hokc ((rufSchrittG_scopeMove hs).push cl' hst' hbj) hrest)
     · cases oben with
       | nil =>
         simp only [List.nil_append] at hst
@@ -201,19 +201,19 @@ theorem sekInv_oben (hO : GutO O)
         simp only [List.cons_append] at hst
         obtain ⟨rfl, rfl⟩ := List.cons.inj (hpop.symm.trans hst)
         cases hrest with
-        | cons _ j' _ p' hokj' hbj' hrest' =>
-          obtain ⟨hokc, hpotc⟩ := hC (T j') (S j') (fun _ => false) true
-          refine ⟨potRest (T j') pa (M'.faeden g).kopf.rest.2.2.2.2 + p' + potSek L (T i) pa r.rest.2.2.2.2,
-            ⟨(M'.faeden g).kopf :: oben', r, unten, i, potRest (T j') pa (M'.faeden g).kopf.rest.2.2.2.2 + p',
+        | cons _ j' _ p' epj' hokj' hbj' hrest' =>
+          obtain ⟨hokc, hpotc⟩ := hC epj' (T j') (S j') (fun _ => false) true
+          refine ⟨potRest epj' (T j') pa (M'.faeden g).kopf.rest.2.2.2.2 + p' + potSek L (T i) pa r.rest.2.2.2.2,
+            ⟨(M'.faeden g).kopf :: oben', r, unten, i, potRest epj' (T j') pa (M'.faeden g).kopf.rest.2.2.2.2 + p',
               by rw [hst']; try rfl,
-              Seg.cons _ j' oben' p' (hokc hokj') ((rufSchrittG_scopeMove hs).pop _ _ hpop hst' hbj')
+              Seg.cons _ j' oben' p' epj' (hokc hokj') ((rufSchrittG_scopeMove hs).pop _ _ hpop hst' hbj')
                 hrest',
               hrv, hΛL, hende, Nat.le_refl _⟩, by omega⟩
 
 /-- **An own step of the holder lowers the measure by one** and keeps the section invariant while `L`
     stays held. -/
 theorem sekInv_eigen (hO : GutO O)
-    (hS1 : ∀ i g, S i g = true → kostenEnd (T (nx i g)) pa (P.rumpf g) ≤ T i g)
+    (hS1 : ∀ i g, S i g = true → kostenEnd (kostenEpilog P g) (T (nx i g)) pa (P.rumpf g) ≤ T i g)
     (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (fun _ => false) true (P.rumpf g) = true)
     {M M' : RufMaschineG D} {g : Faden} (hs : RufSchrittG P O pa M g M') {Φ : Nat}
     (hI : SekInv T S pa L (M.faeden g) Φ)
@@ -239,7 +239,7 @@ theorem sekInv_eigen (hO : GutO O)
 /-- **The engine step of a section.** Any step keeps the section invariant while `L` stays held; a
     foreign step changes nothing, an own step lowers the measure by at least one. -/
 theorem sekInv_schritt (hO : GutO O)
-    (hS1 : ∀ i g, S i g = true → kostenEnd (T (nx i g)) pa (P.rumpf g) ≤ T i g)
+    (hS1 : ∀ i g, S i g = true → kostenEnd (kostenEpilog P g) (T (nx i g)) pa (P.rumpf g) ≤ T i g)
     (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (fun _ => false) true (P.rumpf g) = true)
     {M M' : RufMaschineG D} {g u : Faden} (hs : RufSchrittG P O pa M g M') {Φ : Nat}
     (hI : SekInv T S pa L (M.faeden u) Φ)

@@ -81,7 +81,7 @@ variable {ι : Type} (T : ι → D.Fn → Nat) (S : ι → D.Fn → Bool) (nx : 
 theorem sekInv_erreichbar (hO : GutO O) (hSt : StufenM P) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hLeer : ∀ t, D.haelt (init t).1 = [])
     (hls : ∀ K, K ∈ ls)
-    (hS1 : ∀ i g, S i g = true → kostenEnd (T (nx i g)) pa (P.rumpf g) ≤ T i g)
+    (hS1 : ∀ i g, S i g = true → kostenEnd (kostenEpilog P g) (T (nx i g)) pa (P.rumpf g) ≤ T i g)
     (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (fun _ => false) true (P.rumpf g) = true)
     (i0 : ι) (hP : ∀ g, haltE (fun K => some (N K)) (T i0) (S i0) pa (P.rumpf g) = true)
     {M : RufMaschineG D} (hr : RufErreichbarG P O pa (RufStartG P sp init) M) :
@@ -145,7 +145,7 @@ theorem haltezeit_aus [DecidableEq D.Fn] {P : Programm D} {O : Orakel D} {pa : N
   rw [Bool.and_eq_true] at hK
   obtain ⟨hKP, hKH⟩ := hK
   have hfs' : ∀ h, h ∈ ks →
-      kostenEnd decl pa (P.rumpf h) ≤ decl h ∧
+      kostenEnd (kostenEpilog P h) decl pa (P.rumpf h) ≤ decl h ∧
         rufeE (fun h => ks.contains h) (fun _ => false) true (P.rumpf h) = true := by
     intro h hh
     have := List.all_eq_true.mp hKP h hh
@@ -154,7 +154,7 @@ theorem haltezeit_aus [DecidableEq D.Fn] {P : Programm D} {O : Orakel D} {pa : N
   have hP : ∀ g, haltE (fun K => some (N K)) decl (fun h => ks.contains h) pa (P.rumpf g) = true :=
     fun g => List.all_eq_true.mp hKH g (hfs g)
   have hS1 : ∀ (i : Unit) g, (fun (_ : Unit) h => ks.contains h) i g = true →
-      kostenEnd ((fun (_ : Unit) => decl) ((fun (_ : Unit) (_ : D.Fn) => ()) i g)) pa (P.rumpf g) ≤
+      kostenEnd (kostenEpilog P g) ((fun (_ : Unit) => decl) ((fun (_ : Unit) (_ : D.Fn) => ()) i g)) pa (P.rumpf g) ≤
         (fun (_ : Unit) => decl) i g :=
     fun _ h hS => (hfs' h (List.contains_iff_mem.mp hS)).1
   have hS2 : ∀ (i : Unit) g, (fun (_ : Unit) h => ks.contains h) i g = true →

@@ -12,12 +12,12 @@ variable {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res
 
 /-- Retry's static multiplier is inherited unchanged. The extra unit at each
     test is the explicitly represented boolean negation, never an uncharged op. -/
-theorem kostenStmt_wloop (cost : D.Fn → Nat) (passes n : Nat)
+theorem kostenStmt_wloop (ep : Nat) (cost : D.Fn → Nat) (passes n : Nat)
     (c : Expr D Γ Λ .bool) (body : Block D V true Γ Λ Λ)
     (ueberlauf : Block D V l Γ Λ Λ) :
-    kostenStmt cost passes (.wloop n c body ueberlauf) =
-      2 + n * (kostenBlock cost passes body + (1 + kostenExpr c) + 2) +
-        (2 + (1 + kostenExpr c) + kostenBlock cost passes ueberlauf) := rfl
+    kostenStmt ep cost passes (.wloop n c body ueberlauf) =
+      2 + n * (kostenBlock ep cost passes body + (1 + kostenExpr c) + 2) +
+        (2 + (1 + kostenExpr c) + kostenBlock ep cost passes ueberlauf) := rfl
 
 /-- Complementing the test adds no read and drops no body or handler place. -/
 theorem wloop_orte (n : Nat) (c : Expr D Γ Λ .bool)

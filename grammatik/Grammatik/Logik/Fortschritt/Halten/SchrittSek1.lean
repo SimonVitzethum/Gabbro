@@ -83,11 +83,11 @@ theorem schrittSek1 (hs : RufSchrittG1 P O pa M f M') (hb : RestScopeBalance (M.
   | blatt l Γ Λ Λ' s rest ρ hleaf hhead =>
     kopfS
     · simp_all
-    · have := kostenStmt_pos c pa s; omega
+    · have := kostenStmt_pos 0 c pa s; omega
   | dannBlatt l Γ Λ Λ' Λ'' s rest k ρ hleaf hhead =>
     kopfS
     · simp_all
-    · have := kostenStmt_pos c pa s; omega
+    · have := kostenStmt_pos 0 c pa s; omega
   | endeEntf l Γ Λ Λ' s rest ρ hent hhead =>
     kopfS
     · simp_all
@@ -104,9 +104,9 @@ theorem schrittSek1 (hs : RufSchrittG1 P O pa M f M') (hb : RestScopeBalance (M.
       rw [hw] at h
       have h2 : rufeB Z ZS EW b = true := h
       simp_all
-    · have h := kostenBlock_armWahlG c pa arms (eval σ₁ v σ₁ ρ)
+    · have h := kostenBlock_armWahlG 0 c pa arms (eval σ₁ v σ₁ ρ)
       rw [hw] at h
-      have h2 : kostenBlock c pa b ≤ kostenArms c pa arms := h
+      have h2 : kostenBlock 0 c pa b ≤ kostenArms 0 c pa arms := h
       omega
   | dannOnTagNone l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ b nutz hw =>
     kopfS
@@ -114,16 +114,16 @@ theorem schrittSek1 (hs : RufSchrittG1 P O pa M f M') (hb : RestScopeBalance (M.
       rw [hw] at h
       have h2 : rufeB Z ZS EW b = true := h
       simp_all
-    · have h := kostenBlock_armWahlG c pa arms (eval σ₁ v σ₁ ρ)
+    · have h := kostenBlock_armWahlG 0 c pa arms (eval σ₁ v σ₁ ρ)
       rw [hw] at h
-      have h2 : kostenBlock c pa b ≤ kostenArms c pa arms := h
+      have h2 : kostenBlock 0 c pa b ≤ kostenArms 0 c pa arms := h
       omega
   | dannOnGrund l Γ Λ Λ' Λ'' n r arms rest k ρ hhead σ₁ hs₁ b hw =>
     kopfS
     · have h := rufeB_grundWahlG Z ZS EW arms (eval σ₁ r σ₁ ρ) hok.1.1
       rw [hw] at h
       simp_all
-    · have h := kostenBlock_grundWahlG c pa arms (eval σ₁ r σ₁ ρ)
+    · have h := kostenBlock_grundWahlG 0 c pa arms (eval σ₁ r σ₁ ρ)
       rw [hw] at h
       omega
   | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho =>
@@ -157,8 +157,8 @@ theorem schrittSek2 (hs : RufSchrittG2 P O pa M f M') (hb : RestScopeBalance (M.
     kopfS
     · simp_all
     · have h : @List.length (Wert D (.index (D.count t))) (alleIndizes (D.count t)) *
-          (kostenBlock c pa body + kostenExpr inv + 2) ≤
-          (D.count t).toNat * (kostenBlock c pa body + kostenExpr inv + 2) :=
+          (kostenBlock 0 c pa body + kostenExpr inv + 2) ≤
+          (D.count t).toNat * (kostenBlock 0 c pa body + kostenExpr inv + 2) :=
         Nat.mul_le_mul_right _ (alleIndizes_length_toNat (D.count t))
       omega
   | rufDann l Γ Λ Λ' Λ'' g args hp hr rest k ρ hhead hΛ s0 hs0 rho =>
@@ -173,8 +173,8 @@ theorem schrittSek2 (hs : RufSchrittG2 P O pa M f M') (hb : RestScopeBalance (M.
   | wiederUeber l Γ Λ bis body ueber k ρ hhead =>
     kopfS
     · simp_all
-    · have := kostenBlock_pos c pa ueber
-      have hm : max 1 (kostenBlock c pa ueber) = kostenBlock c pa ueber := Nat.max_eq_right this
+    · have := kostenBlock_pos 0 c pa ueber
+      have hm : max 1 (kostenBlock 0 c pa ueber) = kostenBlock 0 c pa ueber := Nat.max_eq_right this
       omega
   | dannLocks l Γ Λ Λ'' L' hr body rest k ρ hhead hself hrang hfrei =>
     have hne : ¬ L' = L := fun e => hself (by rw [e]; exact hL)

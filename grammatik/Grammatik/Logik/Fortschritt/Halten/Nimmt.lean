@@ -23,7 +23,7 @@ theorem haltS_locks_some (N : D.Lock → Nat) (c : D.Fn → Nat) (Z : D.Fn → B
     (hr : ∀ M, Res.held M ∈ Λ → D.rang M < D.rang L)
     (body : Block D V l Γ (Res.held L :: Λ) (Res.held L :: Λ)) :
     haltS (fun K => some (N K)) c Z pa (Stmt.locks L hr body) =
-      (decide (kostenBlock c pa body ≤ N L) && rufeB Z (fun _ => false) true body &&
+      (decide (kostenBlock 0 c pa body ≤ N L) && rufeB Z (fun _ => false) true body &&
         haltB (fun K => some (N K)) c Z pa body) := by
   first | rfl | simp only [haltS]
 
@@ -71,7 +71,7 @@ theorem sekInv_locks (i : ι) (z : RufFadenG D) {M : RufMaschineG D} {u : Faden}
     show Res.held K ∈ Λ
     exact List.count_pos_iff.mp (by omega)
   · rw [hz]
-    show 0 + (kostenBlock (T i) pa body + potSek K (T i) pa (GRest.frei K (GRest.dann rest k))) ≤
+    show 0 + (kostenBlock 0 (T i) pa body + potSek K (T i) pa (GRest.frei K (GRest.dann rest k))) ≤
       haltSchranke ls N K
     rw [potSek_frei_gleich]
     unfold haltSchranke

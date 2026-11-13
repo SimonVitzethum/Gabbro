@@ -62,19 +62,19 @@ theorem schrittSek4 (hs : RufSchrittG4 P O pa M f M') (hb : RestScopeBalance (M.
   | peelDannLeave l Γ Λ rest b k ρ hleave hhead =>
     kopfS
     · simp_all
-    · have := kostenBlock_pos c pa rest; have := kostenBlock_pos c pa b; omega
+    · have := kostenBlock_pos 0 c pa rest; have := kostenBlock_pos 0 c pa b; omega
   | peelDannNext l Γ Λ rest b k ρ hnext hhead =>
     kopfS
     · simp_all
-    · have := kostenBlock_pos c pa rest; have := kostenBlock_pos c pa b; omega
+    · have := kostenBlock_pos 0 c pa rest; have := kostenBlock_pos 0 c pa b; omega
   | peelSchrumpfLeave l Γ Λ τ rest k ρ hleave hhead =>
     kopfS
     · simp_all
-    · have := kostenBlock_pos c pa rest; omega
+    · have := kostenBlock_pos 0 c pa rest; omega
   | peelSchrumpfNext l Γ Λ τ rest k ρ hnext hhead =>
     kopfS
     · simp_all
-    · have := kostenBlock_pos c pa rest; omega
+    · have := kostenBlock_pos 0 c pa rest; omega
   | peelFreiLeave l Γ Λ L' rest k ρ hleave hhead =>
     by_cases hne : L' = L
     · exfalso
@@ -83,7 +83,7 @@ theorem schrittSek4 (hs : RufSchrittG4 P O pa M f M') (hb : RestScopeBalance (M.
       exact hnd.not_mem_erase hL'
     · kopfSn
       · simp_all
-      · have := kostenBlock_pos c pa rest; omega
+      · have := kostenBlock_pos 0 c pa rest; omega
   | peelFreiNext l Γ Λ L' rest k ρ hnext hhead =>
     by_cases hne : L' = L
     · exfalso
@@ -92,15 +92,15 @@ theorem schrittSek4 (hs : RufSchrittG4 P O pa M f M') (hb : RestScopeBalance (M.
       exact hnd.not_mem_erase hL'
     · kopfSn
       · simp_all
-      · have := kostenBlock_pos c pa rest; omega
+      · have := kostenBlock_pos 0 c pa rest; omega
   | peelAbbruchLeave Γ Λ Λ1 Λk rest k ρ hleave hhead =>
     kopfS
     · simp_all
-    · have := kostenBlock_pos c pa rest; omega
+    · have := kostenBlock_pos 0 c pa rest; omega
   | peelAbbruchNext Γ Λ Λ1 Λk rest k ρ hnext hhead =>
     kopfS
     · simp_all
-    · have := kostenBlock_pos c pa rest; omega
+    · have := kostenBlock_pos 0 c pa rest; omega
   | _ =>
     kopfS
     · cases EW <;> simp_all

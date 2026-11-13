@@ -41,30 +41,46 @@ theorem kostenArgs_ru {Γ : Ctx} {Λ : List (Res D)} {ts : List Ty} (args : Args
 termination_by structural args
 end
 
+@[simp] theorem kostenExpr_umΓ {Γ Γ' : Ctx} {Λ : List (Res D)} {τ : Ty}
+    (h : Γ = Γ') (e : Expr D Γ Λ τ) : kostenExpr (Expr.umΓ h e) = kostenExpr e := by
+  subst h
+  rfl
+
+@[simp] theorem kostenExpr_umΛ {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty}
+    (h : Λ = Λ') (e : Expr D Γ Λ τ) : kostenExpr (Expr.umΛ h e) = kostenExpr e := by
+  subst h
+  rfl
+
+/-- User returns retain their predicate costs when the idle root is added. -/
+theorem kostenEpilog_ru (P : Programm D) (f : D.Fn) :
+    kostenEpilog P.mitRuhe (some f) = kostenEpilog P f := by
+  simp only [kostenEpilog, Programm.mitRuhe, kostenExpr_umΓ, kostenExpr_umΛ,
+    kostenExpr_ru] <;> rfl
+
 theorem kostenErg_ru {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty} (e : ErgExpr D Γ Λ o) :
     kostenErg (ruErg e) = kostenErg e := by
   cases e <;> simp only [ruErg, kostenErg, kostenExpr_ru]
 
 section Transport
-variable (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+variable (ep : Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
 
 @[simp] theorem kostenStmt_nachΛ {Λ a b : List (Res D)} (h : a = b)
-    (s : Stmt D V l Γ Λ a) : kostenStmt c pa (Stmt.nachΛ h s) = kostenStmt c pa s := by
+    (s : Stmt D V l Γ Λ a) : kostenStmt ep c pa (Stmt.nachΛ h s) = kostenStmt ep c pa s := by
   subst h
   rfl
 
 @[simp] theorem kostenBlock_vorΛ {a b Λ : List (Res D)} (h : a = b)
-    (s : Block D V l Γ a Λ) : kostenBlock c pa (Block.vorΛ h s) = kostenBlock c pa s := by
+    (s : Block D V l Γ a Λ) : kostenBlock ep c pa (Block.vorΛ h s) = kostenBlock ep c pa s := by
   subst h
   rfl
 
 @[simp] theorem kostenEnd_umΛ {a b : List (Res D)} (h : a = b)
-    (s : Endblock D V l Γ a) : kostenEnd c pa (Endblock.umΛ h s) = kostenEnd c pa s := by
+    (s : Endblock D V l Γ a) : kostenEnd ep c pa (Endblock.umΛ h s) = kostenEnd ep c pa s := by
   subst h
   rfl
 
 @[simp] theorem kostenSonst_umΛ {a b : List (Res D)} (h : a = b)
-    (s : Endblock D V l Γ a) : kostenSonst c pa (Endblock.umΛ h s) = kostenSonst c pa s := by
+    (s : Endblock D V l Γ a) : kostenSonst ep c pa (Endblock.umΛ h s) = kostenSonst ep c pa s := by
   subst h
   rfl
 end Transport
@@ -80,12 +96,12 @@ theorem entfZ_ru {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   cases s <;> simp only [ruS, entfZ_nachΛ, entfZ, GEntfaltbar, ↓reduceIte]
 
 section Costs
-variable (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
+variable (ep : Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
 
 mutual
 theorem kostenStmt_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (s : Stmt D V l Γ Λ Λ') :
-    kostenStmt (fun g => g.elim 0 c) pa (ruS s) = kostenStmt c pa s := by
+    kostenStmt ep (fun g => g.elim 0 c) pa (ruS s) = kostenStmt ep c pa s := by
   cases s <;> simp only [ruS, kostenStmt_nachΛ, kostenStmt, kostenExpr_ru, kostenArgs_ru,
     kostenErg_ru, kostenBlock_ru, kostenArms_ru, kostenGrundArms_ru, kostenSonst_umΛ,
     kostenSonst_ru, Option.elim]
@@ -93,32 +109,32 @@ termination_by structural s
 
 theorem kostenBlock_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (b : Block D V l Γ Λ Λ') :
-    kostenBlock (fun g => g.elim 0 c) pa (ruB b) = kostenBlock c pa b := by
+    kostenBlock ep (fun g => g.elim 0 c) pa (ruB b) = kostenBlock ep c pa b := by
   cases b <;> simp only [ruB, kostenBlock, kostenBlock_vorΛ, kostenStmt_ru,
     kostenExpr_ru, kostenArgs_ru, kostenBlock_ru, kostenSonst_umΛ, kostenSonst_ru, Option.elim]
 termination_by structural b
 
 theorem kostenArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (arms : Arms D V l Γ Λ Λ' cs) :
-    kostenArms (fun g => g.elim 0 c) pa (ruArms arms) = kostenArms c pa arms := by
+    kostenArms ep (fun g => g.elim 0 c) pa (ruArms arms) = kostenArms ep c pa arms := by
   cases arms <;> simp only [ruArms, kostenArms, kostenBlock_ru, kostenArms_ru]
 termination_by structural arms
 
 theorem kostenGrundArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
     (arms : GrundArms D V l Γ Λ Λ' n) :
-    kostenGrundArms (fun g => g.elim 0 c) pa (ruGArms arms) = kostenGrundArms c pa arms := by
+    kostenGrundArms ep (fun g => g.elim 0 c) pa (ruGArms arms) = kostenGrundArms ep c pa arms := by
   cases arms <;> simp only [ruGArms, kostenGrundArms, kostenBlock_ru, kostenGrundArms_ru]
 termination_by structural arms
 
 theorem kostenEnd_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) :
-    kostenEnd (fun g => g.elim 0 c) pa (ruEnd e) = kostenEnd c pa e := by
+    kostenEnd ep (fun g => g.elim 0 c) pa (ruEnd e) = kostenEnd ep c pa e := by
   cases e <;> simp only [ruEnd, kostenEnd, kostenEnd_umΛ, kostenSonst_umΛ,
     kostenExpr_ru, kostenArgs_ru, kostenErg_ru, entfZ_ru, kostenStmt_ru,
     kostenEnd_ru, kostenSonst_ru, Option.elim]
 termination_by structural e
 
 theorem kostenSonst_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) :
-    kostenSonst (fun g => g.elim 0 c) pa (ruEnd e) = kostenSonst c pa e := by
+    kostenSonst ep (fun g => g.elim 0 c) pa (ruEnd e) = kostenSonst ep c pa e := by
   cases e <;> simp only [ruEnd, kostenSonst, kostenSonst_umΛ,
     kostenExpr_ru, kostenArgs_ru, kostenErg_ru, kostenStmt_ru, kostenSonst_ru, Option.elim]
 termination_by structural e

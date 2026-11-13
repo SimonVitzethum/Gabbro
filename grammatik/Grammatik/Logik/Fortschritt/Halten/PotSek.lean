@@ -21,36 +21,37 @@ namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
 /-- **The section potential**: `potRest` up to the first `frei L`, the release `1` and the number of
-    release markers behind it. -/
+    release markers behind it. The frame's epilogue price is zero here: its return predicates run
+    after its scope releases. Callee frames retain their full epilogue price in `Seg`. -/
 def potSek (L : D.Lock) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} : GRest D V l Γ Λ → Nat
-  | .ende e => kostenEnd c pa e
-  | .dann b k => kostenBlock c pa b + potSek L c pa k
+  | .ende e => kostenEnd 0 c pa e
+  | .dann b k => kostenBlock 0 c pa b + potSek L c pa k
   | .schrumpf k => 1 + potSek L c pa k
   | .frei L' k => if L' = L then 1 + k.freis.length else 1 + potSek L c pa k
   | .trav _ inv body ks k =>
-      1 + ks.length * (kostenBlock c pa body + kostenExpr inv + 2) + potSek L c pa k
+      1 + ks.length * (kostenBlock 0 c pa body + kostenExpr inv + 2) + potSek L c pa k
   | .travRest _ inv body ks k =>
-      2 + ks.length * (kostenBlock c pa body + kostenExpr inv + 2) + potSek L c pa k
+      2 + ks.length * (kostenBlock 0 c pa body + kostenExpr inv + 2) + potSek L c pa k
   | .verbrauch _ member edge inv _ mass body rest k =>
-      1 + rest * (kostenBlock c pa body + kostenExpr member + kostenExpr edge +
+      1 + rest * (kostenBlock 0 c pa body + kostenExpr member + kostenExpr edge +
         kostenExpr inv + kostenExpr mass + 2) + potSek L c pa k
   | .verbrauchRest _ member edge inv _ mass body rest _ k =>
-      2 + rest * (kostenBlock c pa body + kostenExpr member + kostenExpr edge +
+      2 + rest * (kostenBlock 0 c pa body + kostenExpr member + kostenExpr edge +
         kostenExpr inv + kostenExpr mass + 2) + potSek L c pa k
   | .wieder n bis body ueber k =>
-      1 + n * (kostenBlock c pa body + kostenExpr bis + 2) + (2 + kostenExpr bis + kostenBlock c pa ueber) +
+      1 + n * (kostenBlock 0 c pa body + kostenExpr bis + 2) + (2 + kostenExpr bis + kostenBlock 0 c pa ueber) +
         potSek L c pa k
   | .wiederRest n bis body ueber k =>
-      2 + n * (kostenBlock c pa body + kostenExpr bis + 2) + (2 + kostenExpr bis + kostenBlock c pa ueber) +
+      2 + n * (kostenBlock 0 c pa body + kostenExpr bis + 2) + (2 + kostenExpr bis + kostenBlock 0 c pa ueber) +
         potSek L c pa k
   | .ewig _ n inv body k =>
-      1 + n * (kostenBlock c pa body + kostenExpr inv + 2) + potSek L c pa k
+      1 + n * (kostenBlock 0 c pa body + kostenExpr inv + 2) + potSek L c pa k
   | .ewigRest _ n inv body k =>
-      2 + n * (kostenBlock c pa body + kostenExpr inv + 2) + potSek L c pa k
-  | .wartet rest k => kostenBlock c pa rest + 1 + potSek L c pa k
+      2 + n * (kostenBlock 0 c pa body + kostenExpr inv + 2) + potSek L c pa k
+  | .wartet rest k => kostenBlock 0 c pa rest + 1 + potSek L c pa k
   | .wartetSonst _ err rest k =>
-      max (kostenSonst c pa err + 2 + potSek L c pa k) (kostenBlock c pa rest + 1 + potSek L c pa k)
+      max (kostenSonst 0 c pa err + 2 + potSek L c pa k) (kostenBlock 0 c pa rest + 1 + potSek L c pa k)
   | .abbruch k => 1 + potSek L c pa k
   | .zurueckgekehrt _ => 0
   | .aufraeumen _ remaining => remaining.length
@@ -101,8 +102,8 @@ theorem rufeV_frei_gleich (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {�
 theorem potSek_pos {Λ : List (Res D)} (r : GRest D V l Γ Λ)
     (h : r.arbeitsfaehig = true) : 1 ≤ potSek L c pa r := by
   cases r with
-  | ende e => exact kostenEnd_pos c pa e
-  | dann b k => have := kostenBlock_pos c pa b; simp only [potSek]; omega
+  | ende e => exact kostenEnd_pos 0 c pa e
+  | dann b k => have := kostenBlock_pos 0 c pa b; simp only [potSek]; omega
   | frei L' k => simp only [potSek]; split <;> omega
   | wartet rest k => simp only [potSek]; omega
   | wartetSonst n err rest k => simp only [potSek]; omega
