@@ -103,8 +103,14 @@ theorem short_counterexample_sound_zeuge (world : World Frag.Witness.declaration
 
 theorem repeated_keys_computed_zeuge :
     Frag.Witness.boundedFormula.keys = [.glob false, .glob true] := by
+  have different :
+      ((Observation.glob true : Observation Frag.Witness.declaration) == .glob false) =
+        false := by decide
+  have same :
+      ((Observation.glob false : Observation Frag.Witness.declaration) == .glob false) =
+        true := by decide
   simp [Frag.Witness.boundedFormula, LProp.keys, LProp.freeVariables, LTerm.variables,
-    List.eraseDups_cons]
+    List.eraseDups_cons, different, same]
 
 def shadowedFormula : LProp Nat :=
   .all 0 (.and (.eq (.var 0) (.var 0)) (.eq (.var 1) (.konst 0)))
