@@ -20,6 +20,7 @@ public import Grammatik.Kern.Syntax.Satz
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
 public import Grammatik.Kern.Syntax.Zucker
 public import Grammatik.Kern.Syntax.Syntax.ProduktZucker
+public import Grammatik.Kern.Semantik.Evaluation.Aggregates.Witnesses
 public import Grammatik.Kern.Syntax.Ziel
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.Interferenz
 public import Grammatik.Kern.Syntax.Koernung.Teil2
