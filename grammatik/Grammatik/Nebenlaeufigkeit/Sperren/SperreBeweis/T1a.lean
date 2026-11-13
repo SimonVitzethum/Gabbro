@@ -41,8 +41,16 @@ theorem passtU_leer (hE : ¬ Nonempty (Ereignis D)) (S : SperrInv D) (U : Umwelt
     (HU : List (UEintrag D)) : PasstU S U HU :=
   fun L _ _ _ => absurd ⟨.gibt L⟩ hE
 
-theorem funkA_of_passtA {O : Orakel D} {HA : List (AxEintrag D)} (h : PasstA O HA) : FunkA HA :=
-  fun a σ ρ x x' h1 h2 => (h a σ ρ x h1).symm.trans (h a σ ρ x' h2)
+/-- Without an event every world is one point, so the machine oracle's own answers are functional. -/
+theorem funkA_of_passtA (hE : ¬ Nonempty (Ereignis D)) {O : Orakel D} {HA : List (AxEintrag D)}
+    (h : PasstA O HA) : FunkA HA :=
+  ⟨fun a σ σ' ρ x x' h1 h2 _ => by
+      have e : σ = σ' := welt_eq hE σ σ'
+      subst e
+      exact ⟨rfl, (h a σ ρ x h1).symm.trans (h a σ ρ x' h2)⟩,
+    fun e _ => ⟨[], by
+      rw [List.nil_append]
+      exact congrArg World.spur (welt_eq hE _ _)⟩⟩
 
 /-- The freshness side of a call record: every key below `N` when the
     declaration has an event; every answer justified when it has none. -/
@@ -89,7 +97,7 @@ theorem kurzUB_mono {N N' : Nat} {HU : List (UEintrag D)} (h : KurzUB N HU) (hN 
     declaration has an event, justified when it has none. -/
 theorem funkV_appendB {N : Nat} {H : List (EintragV D)} (hf : FunkV H)
     (hk : KurzVB P O passes S N H) (e : EintragV D)
-    (he : Nonempty (Ereignis D) → N ≤ e.2.1.spur.length)
+    (he : Nonempty (Ereignis D) → N ≤ e.2.1.rang)
     (hb : ¬ Nonempty (Ereignis D) → Begruendet P O passes S e) : FunkV (H ++ [e]) := by
   by_cases hN : Nonempty (Ereignis D)
   · exact funkV_append hf (hk.1 hN) e (he hN)
@@ -147,9 +155,9 @@ def FortS (F : RufRahmenG D) (g : D.Fn) (X : ZErgG (vertragVon D F.f))
 def KopfS (F : RufRahmenG D) (W : World D) : Prop :=
   ∃ (H : List (EintragV D)) (HA : List (AxEintrag D)) (HU : List (UEintrag D)) (σ : World D),
     ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkR P H ∧
-    KurzVB P O passes S σ.spur.length H ∧
-    FunkA HA ∧ RahmenA HA ∧ VertragA O.zeiger Q HA ∧ KurzAB O σ.spur.length HA ∧
-    FunkU HU ∧ InvU S HU ∧ KurzUB σ.spur.length HU ∧
+    KurzVB P O passes S σ.rang H ∧
+    FunkA HA ∧ RahmenA HA ∧ VertragA O.zeiger Q HA ∧ KurzAB O σ.rang HA ∧
+    FunkU HU ∧ InvU S HU ∧ KurzUB σ.rang HU ∧
     GleichAuf (stabilS P S lok F.f F.rest.2.2.1) σ W ∧
     F.rest.2.2.2.2.okS P (fussOrteG P F.f) (sicher P lok F.f) ∧
     ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D)
@@ -165,9 +173,9 @@ def KopfS (F : RufRahmenG D) (W : World D) : Prop :=
 def WarteS (F : RufRahmenG D) (G : Σ f : D.Fn, Env D (D.params f) × World D) : Prop :=
   ∃ (H : List (EintragV D)) (HA : List (AxEintrag D)) (HU : List (UEintrag D)) (κ : World D),
     ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkR P H ∧
-    KurzVB P O passes S κ.spur.length H ∧
-    FunkA HA ∧ RahmenA HA ∧ VertragA O.zeiger Q HA ∧ KurzAB O κ.spur.length HA ∧
-    FunkU HU ∧ InvU S HU ∧ KurzUB κ.spur.length HU ∧
+    KurzVB P O passes S κ.rang H ∧
+    FunkA HA ∧ RahmenA HA ∧ VertragA O.zeiger Q HA ∧ KurzAB O κ.rang HA ∧
+    FunkU HU ∧ InvU S HU ∧ KurzUB κ.rang HU ∧
     F.rest.2.2.2.2.okS P (fussOrteG P F.f) (sicher P lok F.f) ∧
     ReqAmEintritt P G.1 κ G.2.1 ∧
     (GleichAuf ((P.requires G.1).orte ++ (P.ensures G.1).orte) κ G.2.2 ∧

@@ -23,7 +23,7 @@ theorem passtU_append {S : SperrInv D} {U : Umwelt D} {HU : List (UEintrag D)} {
   fun L σ s hmem => h L σ s (List.mem_append_left _ hmem)
 
 theorem funkU_append {HU : List (UEintrag D)} (hf : FunkU HU) {N : Nat} (hk : KurzU N HU)
-    (e : UEintrag D) (he : N ≤ e.2.1.spur.length) : FunkU (HU ++ [e]) := by
+    (e : UEintrag D) (he : N ≤ e.2.1.rang) : FunkU (HU ++ [e]) := by
   intro L σ s s' h1 h2
   rcases List.mem_append.mp h1 with h1 | h1 <;> rcases List.mem_append.mp h2 with h2 | h2
   · exact hf L σ s s' h1 h2

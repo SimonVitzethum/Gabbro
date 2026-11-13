@@ -39,7 +39,7 @@ theorem popA_kopf (e0 : Ereignis D) {F : RufRahmenG D}
     List.mem_append_right _ List.mem_cons_self
   refine ⟨H ++ [⟨G.1, κ, G.2.1, mk (antwortWelt e0 s1 κ)⟩], HA, antwortWelt e0 s1 κ, hreq,
     funkV_append hf hk _ (Nat.le_refl _), ?_, ?_, hfa, hra, hqa,
-    kurzA_mono hka (Nat.le_succ _), ?_, hok' hok, ?_⟩
+    kurzA_mono hka (antwortWelt_rang_le _ _ _), ?_, hok' hok, ?_⟩
   · intro g σ ρ a hm
     rcases List.mem_append.mp hm with hm | hm
     · exact hv g σ ρ a hm
@@ -61,10 +61,10 @@ theorem popA_kopf (e0 : Ereignis D) {F : RufRahmenG D}
         · rw [hr'] at he; cases he
   · intro e hm
     rcases List.mem_append.mp hm with hm | hm
-    · exact Nat.lt_succ_of_lt (hk e hm)
+    · exact Nat.lt_of_lt_of_le (hk e hm) (antwortWelt_rang_le _ _ _)
     · rw [List.mem_singleton] at hm
       subst hm
-      exact Nat.lt_succ_self _
+      exact antwortWelt_rang_lt _ _ _
   · exact ⟨fun t _ => congrFun hW'.1.symm t, fun g _ => congrFun hW'.2.symm g⟩
   · intro R O' hR hA hz
     have hans := hR _ _ _ _ hmem
@@ -235,13 +235,14 @@ theorem fadenA_ax (e0 : Ereignis D) {z : RufFadenG D} {W : World D} (hF : FadenA
       (xm.1.speicher.welt spur') := by
   obtain ⟨⟨H, HA, σ, hreq, hf, hv, hk, hfa, hra, hqa, hka, hg, hok0, heq⟩, hS⟩ := hF
   have hok' : r.okV P (fussOrte P z.kopf.f) := by rw [hr] at hok0; exact hok0
-  have hlen : σ.spur.length ≤ ((σ.lese Λ args.orte).fragt (.inl a)).spur.length :=
-    Nat.le_trans (lese_laenge _ _ _) (Nat.le_succ _)
+  have hlen : σ.rang ≤ ((σ.lese Λ args.orte).fragt (.inl a)).rang :=
+    Nat.le_trans (lese_laenge _ _ _) (World.rang_le_fragt _ _)
   refine ⟨⟨H, HA ++ [⟨a, (σ.lese Λ args.orte).fragt (.inl a),
       evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ,
       (axWelt e0 a ((σ.lese Λ args.orte).fragt (.inl a)) xm.1, xm.2)⟩],
     axWelt e0 a ((σ.lese Λ args.orte).fragt (.inl a)) xm.1, hreq, hf, hv,
-    kurzV_mono hk (Nat.le_trans hlen (Nat.le_succ _)), funkA_append hfa hka _ hlen, ?_, ?_, ?_,
+    kurzV_mono hk (Nat.le_trans hlen (axWelt_rang_le _ _ _ _)),
+    funkA_append hfa hka _ hlen (axWelt_spur _ _ _ _), ?_, ?_, ?_,
     ?_, hok hok', ?_⟩, hS⟩
   · intro a' σk ρk x hm
     rcases List.mem_append.mp hm with hm | hm
@@ -257,10 +258,10 @@ theorem fadenA_ax (e0 : Ereignis D) {z : RufFadenG D} {W : World D} (hF : FadenA
       exact axWelt_vertrag hlok e0 a _ _ v (hxq v hv)
   · intro e hm
     rcases List.mem_append.mp hm with hm | hm
-    · exact Nat.lt_of_lt_of_le (hka e hm) (Nat.le_trans hlen (Nat.le_succ _))
+    · exact Nat.lt_of_lt_of_le (hka e hm) (Nat.le_trans hlen (axWelt_rang_le _ _ _ _))
     · rw [List.mem_singleton] at hm
       subst hm
-      exact Nat.lt_succ_self _
+      exact axWelt_rang_lt _ _ _ _
   · have h1 := axWelt_gleichAuf (κ := (σ.lese Λ args.orte).fragt (.inl a)) e0 a
       (hg.lese Λ Λ args.orte args.orte) hxm
     exact ⟨fun t ht => h1.1 t ht, fun g hg' => h1.2 g hg'⟩

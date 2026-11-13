@@ -134,7 +134,15 @@ theorem gleichAuf_schreibBytes {S : List (D.Tab ⊕ D.Glob)} (t : D.Tab) (f : D.
 /-! ## 2. Leaves are local -/
 
 /-- The trace only grows along a leaf of the fragment (`Erw`). -/
-theorem spur_laenge_erw {σ σ' : World D} (h : Erw σ σ') : σ.spur.length ≤ σ'.spur.length := by
+theorem spur_laenge_erw {σ σ' : World D} (h : Erw σ σ') : σ.rang ≤ σ'.rang := by
+  obtain ⟨neu, e, _⟩ := h
+  show (spurOhneLese σ.spur).length ≤ (spurOhneLese σ'.spur).length
+  rw [e]
+  exact rang_append_le neu σ.spur
+
+/-- The trace grows along a leaf, in length and in rank. -/
+theorem spur_erw_beide {σ σ' : World D} (h : Erw σ σ') : σ.spur.length ≤ σ'.spur.length ∧ σ.rang ≤ σ'.rang := by
+  refine ⟨?_, spur_laenge_erw h⟩
   obtain ⟨neu, e, _⟩ := h
   rw [e, List.length_append]
   exact Nat.le_add_left _ _
@@ -149,7 +157,7 @@ theorem blatt_lokal (P : Programm D) (O : Orakel D) (passes : Nat) {V : Vertrag 
     (hg : GleichAuf S σ W) {ρ : Env D Γ} {W' : World D} {ρ' : Env D Γ}
     (h : execStmt O passes keinRuf s W ρ = .ok W' ρ') :
     ∃ σ', execStmt O passes keinRuf s σ ρ = .ok σ' ρ' ∧ GleichAuf S σ' W' ∧
-      σ.spur.length ≤ σ'.spur.length := by
+      σ.rang ≤ σ'.rang := by
   cases s with
   | assignSlot t f i e hw hL =>
       simp only [stmtOrteP] at hS
@@ -237,7 +245,7 @@ theorem blatt_lokal (P : Programm D) (O : Orakel D) (passes : Nat) {V : Vertrag 
   | transition r hk' m hm hl maske bits =>
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      exact ⟨_, rfl, hg, Nat.le_succ _⟩
+      exact ⟨_, rfl, hg, World.rang_le_fragt _ _⟩
   | publish g e payload hp hw hL =>
       simp only [stmtOrteP] at hS
       simp only [execStmt, Ausgang.ok.injEq] at h

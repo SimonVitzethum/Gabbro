@@ -104,7 +104,7 @@ theorem akteurSA_wiederSchritt {D : Deklaration} {P : Programm D} {O : Orakel D}
   obtain ⟨hbis, hb, hbS, hu, huS, hk⟩ := hok
   have hw' : wahr? (eval σ bis σ ρ) = false := by
     rw [eval_gleichAuf bis (fun _ h => List.mem_append_right _ h) hg ρ]; exact hw
-  exact ⟨σ, Nat.le_refl _, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
+  exact ⟨σ, ⟨Nat.le_refl _, Nat.le_refl _⟩, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
     ⟨hb, hbS, hbis, hb, hbS, hu, huS, hk⟩, fun R O' U A σ0 _ _ hσ0 => ZErgG.folgt_of_eq (by
       rw [semHA_wiederSchritt S O' U A passes R n bis body ueber k σ0 ρ
         (by rw [hσ0]; exact hw'), hσ0])⟩

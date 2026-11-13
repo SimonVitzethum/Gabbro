@@ -17,66 +17,66 @@ theorem blatt_lese_laenge (P : Programm D) (O : Orakel D) (passes : Nat)
     {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') (hb : s.istBlatt = true)
     (ha : s.istAxiom = false) {σ : World D} {ρ : Env D Γ} {σ' : World D} {ρ' : Env D Γ}
     (h : execStmt O passes R s σ ρ = .ok σ' ρ') :
-    (σ.lese Λ (stmtOrteP P s)).spur.length ≤ σ'.spur.length := by
+    (σ.lese Λ (stmtOrteP P s)).spur.length ≤ σ'.spur.length ∧ (σ.lese Λ (stmtOrteP P s)).rang ≤ σ'.rang := by
   cases s with
   | assignSlot t f i e hw hL =>
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      exact spur_laenge_erw (Erw.schreibSlot _ _ _ _ _ _)
+      exact spur_erw_beide (Erw.schreibSlot _ _ _ _ _ _)
   | assignThru p t ht f i e hw hL =>
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      exact spur_laenge_erw (Erw.schreibSlot _ _ _ _ _ _)
+      exact spur_erw_beide (Erw.schreibSlot _ _ _ _ _ _)
   | assignThruOwn p t ht f i e m s ho he hg hw hL =>
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      exact spur_laenge_erw (Erw.schreibSlot _ _ _ _ _ _)
+      exact spur_erw_beide (Erw.schreibSlot _ _ _ _ _ _)
   | assignSlotRef r t ht ho f e hw hL =>
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      exact spur_laenge_erw (Erw.schreibSlot _ _ _ _ _ _)
+      exact spur_erw_beide (Erw.schreibSlot _ _ _ _ _ _)
   | assignGlob g e hw hL =>
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      exact spur_laenge_erw (Erw.schreibGlob _ _ _ _)
+      exact spur_erw_beide (Erw.schreibGlob _ _ _ _)
   | putBytes t f hf n i hlo hhi e hw hL =>
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      exact spur_laenge_erw (Erw.schreibBytes _ _ _ _ _ _ _)
+      exact spur_erw_beide (Erw.schreibBytes _ _ _ _ _ _ _)
   | assignVar x e =>
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      exact Nat.le_refl _
+      exact ⟨Nat.le_refl _, Nat.le_refl _⟩
   | shift t f hτ i von nach hn he hw hL =>
       simp only [execStmt] at h
       split at h
       · simp only [Ausgang.ok.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
-        exact spur_laenge_erw (Erw.schreibSlot _ _ _ _ _ _)
+        exact spur_erw_beide (Erw.schreibSlot _ _ _ _ _ _)
       · cases h
   | regWrite r hk e =>
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      exact Nat.le_refl _
+      exact ⟨Nat.le_refl _, Nat.le_refl _⟩
   | transition r hk m hm hmk maske bits =>
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       simp only [stmtOrteP, lese_nil]
-      exact Nat.le_succ _
+      exact ⟨Nat.le_succ _, World.rang_le_fragt _ _⟩
   | publish g e payload hp hw hL =>
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      exact spur_laenge_erw (Erw.schreibGlob _ _ _ _)
+      exact spur_erw_beide (Erw.schreibGlob _ _ _ _)
   | advances =>
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       simp only [stmtOrteP, lese_nil]
-      exact Nat.le_refl _
+      exact ⟨Nat.le_refl _, Nat.le_refl _⟩
   | retires =>
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       simp only [stmtOrteP, lese_nil]
-      exact Nat.le_refl _
+      exact ⟨Nat.le_refl _, Nat.le_refl _⟩
   | axiomCall => simp only [Stmt.istAxiom, Bool.true_eq_false] at ha
   | axiomCallElse => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
   | ret e hp => simp only [execStmt, reduceCtorEq] at h
@@ -127,7 +127,7 @@ theorem fadenSA_blatt (hO : GutO O) (hQ : AxVertragO Q O)
       obtain ⟨σs, hes, hgs, _⟩ := blatt_lokalV P O passes s hleaf hax
         (fun _ h => List.mem_append_right _ h) hĝ hstep
       have hl := blatt_lese_laenge P O passes keinRuf s hleaf hax (hes O keinRuf)
-      refine ⟨σs, HX', hfx', kurzX_mono hkx' hl, hsub, Nat.le_trans (lese_laenge σ Λ _) hl,
+      refine ⟨σs, HX', hfx', kurzX_mono hkx' hl.1, hsub, Nat.le_trans (lese_laenge σ Λ _) hl.2,
         gleichAuf_stabil_iff hΛ' (GleichAuf.mono (fun _ h => List.mem_append_left _ h)
           ⟨fun t ht => hgs.1 t ht, fun g hg' => hgs.2 g hg'⟩),
         hK, fun R O' U A hPX hHA _ => ?_⟩
@@ -177,13 +177,13 @@ theorem fadenSA_locks {z : RufFadenG D} {W : World D} (hF : FadenSA P O passes Q
   rw [hr] at hg hok
   simp only at hg hok
   obtain ⟨hks, hss, hrest⟩ := okS_dann_cons hok
-  have hlen : σ.spur.length < ((mischU S L σ W.speicher).nimmt L).spur.length := by
-    show σ.spur.length < (Ereignis.nimmt L _ :: σ.spur).length
+  have hlen : σ.rang < ((mischU S L σ W.speicher).nimmt L).rang := by
+    rw [World.rang_nimmt]
     exact Nat.lt_succ_self _
   refine ⟨⟨H, HA, HU ++ [(L, σ, W.speicher)], HX, (mischU S L σ W.speicher).nimmt L, hreq, hf, hv, hm,
     kurzVBA_mono hk (Nat.le_of_lt hlen), hfa, hra, hqa, kurzAB_mono hka (Nat.le_of_lt hlen),
     funkU_append hfu (hku ⟨.gibt L⟩) _ (Nat.le_refl _), invU_append hiu L σ W.speicher hinv, ?_,
-    ⟨hfx, kurzX_mono hkx (Nat.le_of_lt hlen)⟩, ?_, ⟨hks, hss, hrest⟩, ?_⟩, hS⟩
+    ⟨hfx, kurzX_mono hkx (Nat.le_succ _)⟩, ?_, ⟨hks, hss, hrest⟩, ?_⟩, hS⟩
   · intro hN e he
     rcases List.mem_append.mp he with he | he
     · exact Nat.lt_trans (hku hN e he) hlen

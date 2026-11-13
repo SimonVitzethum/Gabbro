@@ -262,7 +262,7 @@ theorem mischT_gleichAuf_alt {T : D.Tab ⊕ D.Glob → Prop} {L X : List (D.Tab 
 
 theorem mischT_laenge (T : D.Tab ⊕ D.Glob → Prop) (X : List (D.Tab ⊕ D.Glob)) (σ : World D)
     (Λ : List (Res D)) (s : Speicher D) :
-    σ.spur.length ≤ (mischT T X (σ.lese Λ X) s).spur.length := lese_laenge σ Λ X
+    σ.rang ≤ (mischT T X (σ.lese Λ X) s).rang := lese_laenge σ Λ X
 
 /-! ## 3. A leaf through the atomic environment -/
 

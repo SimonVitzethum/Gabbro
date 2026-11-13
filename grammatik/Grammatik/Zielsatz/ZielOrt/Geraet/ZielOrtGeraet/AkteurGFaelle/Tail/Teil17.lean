@@ -223,7 +223,7 @@ theorem akteurG_dannRegLies {D : Deklaration} {P : Programm D} {O : Orakel D} {p
   obtain ⟨hks, hss, hrest⟩ := hok
   simp only [Block.gOk, Bool.and_eq_true] at hks
   simp only [blockOrteP] at hss
-  refine ⟨σ.fragt (.inr (.inl r)), Nat.le_succ _, hg, ⟨hks.2, hss, hrest⟩, fun R O' hQ => ?_⟩
+  refine ⟨σ.fragt (.inr (.inl r)), World.rang_le_fragt σ _, hg, ⟨hks.2, hss, hrest⟩, fun R O' hQ => ?_⟩
   have hrl : O'.regLies r (σ.fragt (.inr (.inl r))) = O.regLies r ((M.weltVon u).fragt (.inr (.inl r))) :=
     regLies_gleich hRL hQ r (regP_ok hks.1) hg
   exact ZErg.folgt_of_eq
@@ -332,7 +332,7 @@ theorem akteurG_dannRegLiesElseWahr {D : Deklaration} {P : Programm D} {O : Orak
       true := by
     rw [eval_gleichAuf zusage (fun _ h => hzS h) (hgq.lese Λ Λ zusage.orte zusage.orte), ← hs₁]
     exact hw
-  refine ⟨(σ.fragt (.inr (.inl r))).lese Λ zusage.orte, Nat.le_trans (Nat.le_succ _) (lese_laenge (σ.fragt _) _ _), hg, ⟨hks.2.2, hrS, hrest⟩,
+  refine ⟨(σ.fragt (.inr (.inl r))).lese Λ zusage.orte, Nat.le_trans (World.rang_le_fragt σ _) (lese_laenge (σ.fragt _) _ _), hg, ⟨hks.2.2, hrS, hrest⟩,
     fun R O' hQ => ?_⟩
   have hrl : O'.regLies r (σ.fragt (.inr (.inl r))) = O.regLies r ((M.weltVon u).fragt (.inr (.inl r))) :=
     regLies_gleich hRL hQ r (regP_ok hks.1) hg

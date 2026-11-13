@@ -29,7 +29,7 @@ theorem sim_end_regRead {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)
     : E.EndSim hZ (fun Φ => execEndHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.regRead r hk rest : Endblock D V l Γ Λ)) (execEndHA S' O' U' A' passes R' (exEnd hS (.regRead r hk rest : Endblock D V l Γ Λ))) :=
   by
   intro M σ σ' ρ ρ' hM hρ
-  obtain ⟨hk1, hs1, hΦ1⟩ := E.schluessel (hM.fragt E (.inr (.inl r)) (.inr (.inl (E.reg r))))
+  obtain ⟨hk1, hs1, hΦ1⟩ := E.schluesselF hM (.inr (.inl r)) (.inr (.inl (E.reg r)))
   have hw' := E.regLies_wert hZ (fun _ => Option.none) O'.zeiger r (O'.regLies (E.reg r) (σ'.fragt (.inr (.inl (E.reg r))))) (E.rtyp r)
   have hc : (D.rtyp r :: Γ).map E.tyE = D'.rtyp (E.reg r) :: Γ.map E.tyE := by
     rw [List.map_cons, E.rtyp]
@@ -77,7 +77,7 @@ theorem sim_end_regReadElse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
     : E.EndSim hZ (fun Φ => execEndHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.regReadElse r hk zusage sonst rest : Endblock D V l Γ Λ)) (execEndHA S' O' U' A' passes R' (exEnd hS (.regReadElse r hk zusage sonst rest : Endblock D V l Γ Λ))) :=
   by
   intro M σ σ' ρ ρ' hM hρ
-  obtain ⟨hk1, hs1, hΦ1⟩ := E.schluessel (hM.fragt E (.inr (.inl r)) (.inr (.inl (E.reg r))))
+  obtain ⟨hk1, hs1, hΦ1⟩ := E.schluesselF hM (.inr (.inl r)) (.inr (.inl (E.reg r)))
   have hw' := E.regLies_wert hZ (fun _ => Option.none) O'.zeiger r (O'.regLies (E.reg r) (σ'.fragt (.inr (.inl (E.reg r))))) (E.rtyp r)
   have hc : (D.rtyp r :: Γ).map E.tyE = D'.rtyp (E.reg r) :: Γ.map E.tyE := by
     rw [List.map_cons, E.rtyp]
@@ -166,10 +166,14 @@ theorem sim_end_awaits {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     : E.EndSim hZ (fun Φ => execEndHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.awaits g payload hp hL hat rest : Endblock D V l Γ Λ)) (execEndHA S' O' U' A' passes R' (exEnd hS (.awaits g payload hp hL hat rest : Endblock D V l Γ Λ))) :=
   by
   intro M σ σ' ρ ρ' hM hρ
-  obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval' hZ T (hM.fragt E (.inr (.inr g)) (.inr (.inr (E.glob g)))) hB.havocA hB.atom Λ (Λ.map E.resE)
+  obtain ⟨M₁, σ₁, hs, hΦ, hI, hMo, hσr, hev⟩ := E.lese_eval'O hZ T (hM.fragt E (.inr (.inr g)) (.inr (.inr (E.glob g)))) hB.havocA hB.atom Λ (Λ.map E.resE)
     [Sum.inr g] [Sum.inr (E.glob g)] rfl
   have hev0 := E.frei_alle hZ (@hev) hρ
-  obtain ⟨hk2, hs2, hΦ2⟩ := E.schluessel hI
+  obtain ⟨hk2, hs2, hΦ2⟩ := E.schluesselO hI (fun p hp => by
+    rw [hMo] at hp
+    have h1 := hM.oKurz p hp
+    rw [hσr, World.rang_fragt]
+    omega)
   have hc : (D.gtyp g :: Γ).map E.tyE = D'.gtyp (E.glob g) :: Γ.map E.tyE := by
     rw [List.map_cons, E.gtyp]
   have hzf := hZ.frei.atomFrei g hat

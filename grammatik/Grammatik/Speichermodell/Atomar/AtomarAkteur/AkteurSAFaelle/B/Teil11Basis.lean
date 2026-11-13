@@ -210,7 +210,7 @@ theorem akteurSA_dannGleitVon {D : Deklaration} {P : Programm D} {O : Orakel D} 
   simp only [blockOrteP, List.append_subset] at hss
   have hv' : gleitPasst lo hi (gleitAusInt (eval σ e σ ρ).n) = some v := by
     rw [eval_gleichAuf e (fun _ h => List.mem_append_right _ h) hg ρ]; exact hv
-  exact ⟨σ, Nat.le_refl _, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
+  exact ⟨σ, ⟨Nat.le_refl _, Nat.le_refl _⟩, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
     ⟨hks, hss.2, hrest⟩, fun R O' U A σ0 _ _ hσ0 => ZErgG.folgt_of_eq (by
       rw [semHA_gleitVon S O' U A passes R e lo hi rest k σ0 ρ v (by rw [hσ0]; exact hv'), hσ0])⟩
 

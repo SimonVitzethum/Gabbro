@@ -36,7 +36,7 @@ theorem fadenR_lokalQ {z : RufFadenG D} {W W' : World D} (hF : FadenR P O passes
     (r' : GRest D (vertragVon D z.kopf.f) l' Γ' Λ') (spur' : List (Ereignis D))
     (hstep : ∀ σ : World D, GleichAuf (fussOrteG P z.kopf.f) σ W →
       r.okG P (fussOrteG P z.kopf.f) →
-      ∃ σ', σ.spur.length ≤ σ'.spur.length ∧ GleichAuf (fussOrteG P z.kopf.f) σ' W' ∧
+      ∃ σ', σ.rang ≤ σ'.rang ∧ GleichAuf (fussOrteG P z.kopf.f) σ' W' ∧
         r'.okG P (fussOrteG P z.kopf.f) ∧
         ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D),
           GleichRS O O' → (semV O' passes R r σ ρ).folgt (semV O' passes R r' σ' ρ')) :
@@ -60,7 +60,7 @@ theorem fadenR_lokal {z : RufFadenG D} {W W' : World D} (hF : FadenR P O passes 
     (r' : GRest D (vertragVon D z.kopf.f) l' Γ' Λ') (spur' : List (Ereignis D))
     (hstep : ∀ σ : World D, GleichAuf (fussOrteG P z.kopf.f) σ W →
       r.okG P (fussOrteG P z.kopf.f) →
-      ∃ σ', σ.spur.length ≤ σ'.spur.length ∧ GleichAuf (fussOrteG P z.kopf.f) σ' W' ∧
+      ∃ σ', σ.rang ≤ σ'.rang ∧ GleichAuf (fussOrteG P z.kopf.f) σ' W' ∧
         r'.okG P (fussOrteG P z.kopf.f) ∧
         ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D),
           (semV O' passes R r σ ρ).folgt (semV O' passes R r' σ' ρ')) :

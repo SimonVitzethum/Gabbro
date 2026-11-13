@@ -37,7 +37,7 @@ theorem fadenSA_lokalQ {z : RufFadenG D} {W W' : World D}
       r.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) →
       ∃ (σ' : World D) (HX' : List (XEintrag D)), FunkX HX' ∧ KurzX σ'.spur.length HX' ∧
         (∀ e ∈ HX, e ∈ HX') ∧
-        σ.spur.length ≤ σ'.spur.length ∧ GleichAuf (stabilS P S lok z.kopf.f Λ') σ' W' ∧
+        σ.rang ≤ σ'.rang ∧ GleichAuf (stabilS P S lok z.kopf.f Λ') σ' W' ∧
         r'.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) ∧
         ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D)
           (U : Umwelt D) (A : AUmwelt D), PasstX Tg A HX' → HavocA Tg A → GleichRS O O' →
@@ -66,7 +66,7 @@ theorem fadenSA_lokal {z : RufFadenG D} {W W' : World D}
     (r' : GRest D (vertragVon D z.kopf.f) l' Γ' Λ') (spur' : List (Ereignis D))
     (hstep : ∀ σ : World D, GleichAuf (stabilS P S lok z.kopf.f Λ) σ W →
       r.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) →
-      σ.spur.length = σ.spur.length ∧ GleichAuf (stabilS P S lok z.kopf.f Λ') σ W' ∧
+      σ.rang = σ.rang ∧ GleichAuf (stabilS P S lok z.kopf.f Λ') σ W' ∧
         r'.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) ∧
         ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D)
           (U : Umwelt D) (A : AUmwelt D),
@@ -92,7 +92,7 @@ theorem fadenSA_lese {z : RufFadenG D} {W W' : World D}
       ∀ c ∈ X, c ∈ stabilS P S lok z.kopf.f Λ ∨ Tg c)
     (hstep : ∀ σ : World D, GleichAuf (stabilS P S lok z.kopf.f Λ ++ X) σ (W.lese Λr X) →
       r.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) →
-      ∃ σ' : World D, σ.spur.length ≤ σ'.spur.length ∧
+      ∃ σ' : World D, (σ.spur.length ≤ σ'.spur.length ∧ σ.rang ≤ σ'.rang) ∧
         GleichAuf (stabilS P S lok z.kopf.f Λ') σ' W' ∧
         r'.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) ∧
         ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D)
@@ -105,7 +105,7 @@ theorem fadenSA_lese {z : RufFadenG D} {W W' : World D}
   obtain ⟨HX', hfx', hkx', hsub, hrec⟩ := lese_schritt Tg hfx hkx Λr X W.speicher
   have hgX := mischT_gleichAuf hg (hX hok) Λr Λr
   obtain ⟨σ', hl, hg', hok', hsem⟩ := hstep _ hgX hok
-  refine ⟨σ', HX', hfx', kurzX_mono hkx' hl, hsub, Nat.le_trans (lese_laenge σ Λr X) hl, hg', hok',
+  refine ⟨σ', HX', hfx', kurzX_mono hkx' hl.1, hsub, Nat.le_trans (lese_laenge σ Λr X) hl.2, hg', hok',
     fun R O' U A hPX hHA hQ => hsem R O' U A σ hQ hg (hrec A hPX hHA)⟩
 
 /-- **A question to the outside, then reads** (`fadenSA_lese` after `World.fragt`): the register and visibility
@@ -121,7 +121,7 @@ theorem fadenSA_fragtLese {z : RufFadenG D} {W W' : World D}
       ∀ c ∈ X, c ∈ stabilS P S lok z.kopf.f Λ ∨ Tg c)
     (hstep : ∀ σ : World D, GleichAuf (stabilS P S lok z.kopf.f Λ ++ X) σ ((W.fragt q).lese Λr X) →
       r.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) →
-      ∃ σ' : World D, σ.spur.length ≤ σ'.spur.length ∧
+      ∃ σ' : World D, (σ.spur.length ≤ σ'.spur.length ∧ σ.rang ≤ σ'.rang) ∧
         GleichAuf (stabilS P S lok z.kopf.f Λ') σ' W' ∧
         r'.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) ∧
         ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D)
@@ -135,8 +135,8 @@ theorem fadenSA_fragtLese {z : RufFadenG D} {W W' : World D}
     lese_schritt (σ := σ.fragt q) Tg hfx (kurzX_mono hkx (Nat.le_succ _)) Λr X W.speicher
   have hgX := mischT_gleichAuf (σ := σ.fragt q) (W := W.fragt q) hg (hX hok) Λr Λr
   obtain ⟨σ', hl, hg', hok', hsem⟩ := hstep _ hgX hok
-  refine ⟨σ', HX', hfx', kurzX_mono hkx' hl, hsub,
-    Nat.le_trans (Nat.le_succ _) (Nat.le_trans (lese_laenge (σ.fragt q) Λr X) hl), hg', hok',
+  refine ⟨σ', HX', hfx', kurzX_mono hkx' hl.1, hsub,
+    Nat.le_trans (World.rang_le_fragt σ q) (Nat.le_trans (lese_laenge (σ.fragt q) Λr X) hl.2), hg', hok',
     fun R O' U A hPX hHA hQ => hsem R O' U A σ hQ hg (hrec A hPX hHA)⟩
 
 /-- Memory moved outside the head's stable carriers keeps the replay. -/

@@ -30,7 +30,7 @@ theorem fadenS_lokalQ {z : RufFadenG D} {W W' : World D} (hF : FadenS P O passes
     (r' : GRest D (vertragVon D z.kopf.f) l' Γ' Λ') (spur' : List (Ereignis D))
     (hstep : ∀ σ : World D, GleichAuf (stabilS P S lok z.kopf.f Λ) σ W →
       r.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) →
-      ∃ σ', σ.spur.length ≤ σ'.spur.length ∧ GleichAuf (stabilS P S lok z.kopf.f Λ') σ' W' ∧
+      ∃ σ', σ.rang ≤ σ'.rang ∧ GleichAuf (stabilS P S lok z.kopf.f Λ') σ' W' ∧
         r'.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) ∧
         ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D)
           (U : Umwelt D), GleichRS O O' →
@@ -57,7 +57,7 @@ theorem fadenS_lokal {z : RufFadenG D} {W W' : World D} (hF : FadenS P O passes 
     (r' : GRest D (vertragVon D z.kopf.f) l' Γ' Λ') (spur' : List (Ereignis D))
     (hstep : ∀ σ : World D, GleichAuf (stabilS P S lok z.kopf.f Λ) σ W →
       r.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) →
-      ∃ σ', σ.spur.length ≤ σ'.spur.length ∧ GleichAuf (stabilS P S lok z.kopf.f Λ') σ' W' ∧
+      ∃ σ', σ.rang ≤ σ'.rang ∧ GleichAuf (stabilS P S lok z.kopf.f Λ') σ' W' ∧
         r'.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) ∧
         ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D)
           (U : Umwelt D), (semH S O' U passes R r σ ρ).folgt (semH S O' U passes R r' σ' ρ')) :
@@ -206,7 +206,7 @@ theorem popS_kopf {F : RufRahmenG D}
   have hσa : GleichAuf (stabilS P S lok F.f F.rest.2.2.1) (rahmenWeltF G.1 κ s1) s1 :=
     rahmenWeltF_gleichAuf G.1 hfussκ hRah
   have hlen := rahmenWeltF_laenge G.1 κ s1
-  have hlt : Nonempty (Ereignis D) → κ.spur.length < (rahmenWeltF G.1 κ s1).spur.length :=
+  have hlt : Nonempty (Ereignis D) → κ.rang < (rahmenWeltF G.1 κ s1).rang :=
     fun hN => frischSpur_laenge hN κ.spur
   have hbe : ¬ Nonempty (Ereignis D) →
       Begruendet P O passes S ⟨G.1, κ, G.2.1, mk (rahmenWeltF G.1 κ s1)⟩ := by

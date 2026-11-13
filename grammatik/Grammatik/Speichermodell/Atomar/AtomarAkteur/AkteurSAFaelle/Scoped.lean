@@ -77,7 +77,7 @@ theorem fadenSA_scopedWert {z : RufFadenG D} {W : World D}
   refine fadenSA_lese hF hr ρ _ spur' Λ e.orte (fun hok => ?_) (fun σ hg hok => ?_)
   · exact erg_stabilX (hFS _) e (scopedWert_orteSA hok hret)
   · have hv := evalErg_gleichAuf e (fun _ h => List.mem_append_right _ h) hg ρ
-    refine ⟨σ, Nat.le_refl _, ?_, trivial, ?_⟩
+    refine ⟨σ, ⟨Nat.le_refl _, Nat.le_refl _⟩, ?_, trivial, ?_⟩
     · exact GleichAuf.mono (fun _ h => List.mem_append_left _ (stabilS_mono (fun L hL => R.genau.symm.mem_iff.mp (List.mem_append.mpr ((List.mem_append.mp hL).elim Or.inr Or.inl))) h)) hg
     · intro calls O' U A σ0 hQ hg0 hread
       have heq := scopedWert_semSA O' S U A passes calls r e R hret σ0 (W.lese Λ e.orte) ρ
@@ -124,7 +124,7 @@ theorem fadenSA_scopedFreigabe (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO
       rfl)
   refine fadenSA_lokalQ hF hr ρ _ spur' (fun σ HX hfx hkx hg hok => ?_)
   have hiσ : S.inv L σ.speicher = true := (inv_gleich hS List.mem_cons_self hg).trans hW
-  refine ⟨σ.gibt L, HX, hfx, kurzX_mono hkx (Nat.le_succ _), fun _ h => h, Nat.le_succ _,
+  refine ⟨σ.gibt L, HX, hfx, kurzX_mono hkx (Nat.le_succ _), fun _ h => h, World.rang_le_gibt σ L,
     gleichAuf_frei hg spur', trivial, ?_⟩
   intro calls O' U A _ _ _
   apply ZErgG.folgt_of_eq

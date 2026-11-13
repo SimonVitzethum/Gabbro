@@ -93,7 +93,7 @@ theorem fadenSA_frei (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     (fun O' U A R σ h => semHA_frei_falsch S O' U A passes R L k σ ρ h)
   refine fadenSA_lokalQ hF hr ρ k spur' (fun σ HX hfx hkx hg hok => ?_)
   have hiσ : S.inv L σ.speicher = true := (inv_gleich hS List.mem_cons_self hg).trans hW
-  exact ⟨σ.gibt L, HX, hfx, kurzX_mono hkx (Nat.le_succ _), fun _ h => h, Nat.le_succ _,
+  exact ⟨σ.gibt L, HX, hfx, kurzX_mono hkx (Nat.le_succ _), fun _ h => h, World.rang_le_gibt σ L,
     gleichAuf_frei hg spur', hok,
     fun R O' U A _ _ _ => ZErgG.folgt_of_eq (semHA_frei S O' U A passes R L k σ ρ hiσ)⟩
 
@@ -119,7 +119,7 @@ theorem fadenSA_peelFrei (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
   refine fadenSA_lokalQ hF hr ρ _ spur' (fun σ HX hfx hkx hg hok => ?_)
   have hiσ : S.inv L σ.speicher = true := (inv_gleich hS hLΛ hg).trans hW
   obtain ⟨_, _, hk⟩ := hok
-  refine ⟨σ.gibt L, HX, hfx, kurzX_mono hkx (Nat.le_succ _), fun _ h => h, Nat.le_succ _,
+  refine ⟨σ.gibt L, HX, hfx, kurzX_mono hkx (Nat.le_succ _), fun _ h => h, World.rang_le_gibt σ L,
     GleichAuf.mono (fun _ hc => stabilS_mono hΛ1 hc) ⟨fun t ht => hg.1 t ht, fun g hg' => hg.2 g hg'⟩,
     ⟨by cases x <;> rfl, fun _ hc => by cases x <;> simp only [blockOrteP, Bool.false_eq_true, ↓reduceIte, stmtOrteP, List.append_nil, List.not_mem_nil] at hc, hk⟩,
     fun R O' U A _ _ _ => ZErgG.folgt_of_eq (semHA_peelFrei S O' U A passes R L rest k σ ρ h x hiσ)⟩

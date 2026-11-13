@@ -107,7 +107,7 @@ theorem akteurSA_dannPruefFalsch {D : Deklaration} {P : Programm D} {O : Orakel 
   obtain ⟨_, hsS, _⟩ := teile2 hss
   have hw' : wahr? (eval σ c σ ρ) = false := by
     rw [eval_gleichAuf c (fun _ h => List.mem_append_right _ h) hg ρ]; exact hw
-  refine ⟨σ, Nat.le_refl _, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
+  refine ⟨σ, ⟨Nat.le_refl _, Nat.le_refl _⟩, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
     okS_alsBlock sonst k rest.held_iff hkS hsS hrk, fun R O' U A σ0 _ _ hσ0 => ?_⟩
   have h1 := semHA_pruefFalsch S O' U A passes R c sonst rest k σ0 ρ (by rw [hσ0]; exact hw')
   rw [hσ0] at h1

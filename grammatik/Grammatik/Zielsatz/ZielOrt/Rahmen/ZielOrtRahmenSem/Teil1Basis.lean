@@ -114,8 +114,8 @@ theorem rufAusV_rahmen {P : Programm D} {H : List (EintragV D)} (hv : VertraegeO
 def neutral : Ereignis D → List (Ereignis D)
   | .nimmt L h => [.gibt L, .nimmt L h]
   | .gibt L => [.gibt L, .nimmt L []]
-  | .zugriff t b Λ h => [.zugriff t b Λ h]
-  | .gzugriff g b Λ h => [.gzugriff g b Λ h]
+  | .zugriff t _ Λ h => [.zugriff t true Λ h]
+  | .gzugriff g _ Λ h => [.gzugriff g true Λ h]
   | .fremd q => [.fremd q]
 
 theorem offen_neutral (e0 : Ereignis D) (s : List (Ereignis D)) :
@@ -132,8 +132,34 @@ theorem offen_neutral (e0 : Ereignis D) (s : List (Ereignis D)) :
   | fremd => rfl
 
 theorem neutral_laenge (e0 : Ereignis D) (s : List (Ereignis D)) :
-    s.length < (neutral e0 ++ s).length := by
-  cases e0 <;> simp only [neutral, List.cons_append, List.nil_append, List.length_cons, Nat.lt_add_one] <;> omega
+    (spurOhneLese s).length < (spurOhneLese (neutral e0 ++ s)).length := by
+  cases e0 with
+  | nimmt L h =>
+      show _ < (spurOhneLese (Ereignis.gibt L :: Ereignis.nimmt L h :: s)).length
+      rw [spurOhneLese_cons_bleibt (Ereignis.gibt L) rfl, spurOhneLese_cons_bleibt (Ereignis.nimmt L h) rfl,
+        List.length_cons, List.length_cons]
+      omega
+  | gibt L =>
+      show _ < (spurOhneLese (Ereignis.gibt L :: Ereignis.nimmt L [] :: s)).length
+      rw [spurOhneLese_cons_bleibt (Ereignis.gibt L) rfl, spurOhneLese_cons_bleibt (Ereignis.nimmt L []) rfl,
+        List.length_cons, List.length_cons]
+      omega
+  | zugriff t _ Λ h =>
+      show _ < (spurOhneLese (Ereignis.zugriff t true Λ h :: s)).length
+      rw [spurOhneLese_cons_bleibt (Ereignis.zugriff t true Λ h) rfl, List.length_cons]
+      omega
+  | gzugriff g _ Λ h =>
+      show _ < (spurOhneLese (Ereignis.gzugriff g true Λ h :: s)).length
+      rw [spurOhneLese_cons_bleibt (Ereignis.gzugriff g true Λ h) rfl, List.length_cons]
+      omega
+  | fremd q =>
+      show _ < (spurOhneLese (Ereignis.fremd q :: s)).length
+      rw [spurOhneLese_cons_bleibt (Ereignis.fremd q) rfl, List.length_cons]
+      omega
+
+/-- The fresh piece puts its events on top of the trace. -/
+theorem neutral_spur (e0 : Ereignis D) (κ : List (Ereignis D)) :
+    ∃ neu : List (Ereignis D), neutral e0 ++ κ = neu ++ κ := ⟨neutral e0, rfl⟩
 
 /-- **The recorded answer world of a call to `g`**: the callee's declared
     write carriers from the machine's return world `s1`, every other carrier
@@ -156,7 +182,7 @@ theorem rahmenWelt_offen (e0 : Ereignis D) (g : D.Fn) (κ s1 : World D) :
   offen_neutral e0 κ.spur
 
 theorem rahmenWelt_laenge (e0 : Ereignis D) (g : D.Fn) (κ s1 : World D) :
-    κ.spur.length < (rahmenWelt e0 g κ s1).spur.length :=
+    κ.rang < (rahmenWelt e0 g κ s1).rang :=
   neutral_laenge e0 κ.spur
 
 /-- Two worlds agree on the carriers of `S` that `g` does not declare as

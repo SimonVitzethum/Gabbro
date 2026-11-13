@@ -109,7 +109,7 @@ theorem fadenV_scopedFreigabe
       ⟨z.stapel, ⟨z.kopf.f, z.kopf.rho, z.kopf.s0,
         ⟨l, Γ, _, ρ, .aufraeumen a remaining⟩⟩, spur', z.log⟩ (W.speicher.welt spur') := by
   refine fadenV_lokal hF hr ρ _ spur' (fun σ hg hok => ?_)
-  refine ⟨σ.gibt L, Nat.le_succ _, hg, trivial, ?_⟩
+  refine ⟨σ.gibt L, World.rang_le_gibt σ L, hg, trivial, ?_⟩
   intro calls O'
   apply ZErg.folgt_of_eq
   rfl

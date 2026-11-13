@@ -162,7 +162,7 @@ theorem popSA_kopf {F : RufRahmenG D}
   have hσa : GleichAuf (stabilS P S lok F.f F.rest.2.2.1) (rahmenWeltF G.1 κ s1) s1 :=
     rahmenWeltF_gleichAuf G.1 hfussκ hRah
   have hlen := rahmenWeltF_laenge G.1 κ s1
-  have hlt : Nonempty (Ereignis D) → κ.spur.length < (rahmenWeltF G.1 κ s1).spur.length :=
+  have hlt : Nonempty (Ereignis D) → κ.rang < (rahmenWeltF G.1 κ s1).rang :=
     fun hN => frischSpur_laenge hN κ.spur
   have hbe : ¬ Nonempty (Ereignis D) →
       BegruendetA P O passes S ⟨G.1, κ, G.2.1, mk (rahmenWeltF G.1 κ s1)⟩ := by
@@ -174,7 +174,7 @@ theorem popSA_kopf {F : RufRahmenG D}
     List.mem_append_right _ List.mem_cons_self
   refine ⟨H ++ [⟨G.1, κ, G.2.1, mk (rahmenWeltF G.1 κ s1)⟩], HA, HU, HX, rahmenWeltF G.1 κ s1,
     hreq, funkV_appendBA hf hk _ (fun _ => Nat.le_refl _) hbe, ⟨?_, ?_⟩, ?_, ?_, hfa, hra, hqa,
-    kurzAB_mono hka hlen, hfu, hiu, kurzUB_mono hku hlen, ⟨hfx, kurzX_mono hkx hlen⟩, ?_,
+    kurzAB_mono hka hlen, hfu, hiu, kurzUB_mono hku hlen, ⟨hfx, kurzX_mono hkx (rahmenWeltF_laengeV G.1 κ s1)⟩, ?_,
     hok' hok, ?_⟩
   · intro g σ ρ a hm
     rcases List.mem_append.mp hm with hm | hm

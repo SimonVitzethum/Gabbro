@@ -53,13 +53,13 @@ theorem akteurR_gruppe7 (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (
       simp only [RufMaschineG.weltVon, rufUpdateG_self]
       refine ⟨fadenR_lokal hF hhead ρ (.aufraeumen a remaining)
         (.gibt L :: (M.faeden u).spur) (fun σ hg hok => ?_), hL⟩
-      exact ⟨σ.gibt L, Nat.le_succ _, hg, trivial, fun calls O' => ZErg.folgt_refl _⟩
+      exact ⟨σ.gibt L, World.rang_le_gibt σ L, hg, trivial, fun calls O' => ZErg.folgt_refl _⟩
   | rueckFreigabeLetzte ρ a L hhead z ha =>
       simp only [RufMaschineG.weltVon, rufUpdateG_self, rufAntwortG_spur ha]
       have hdone := fadenR_lokal hF hhead (M.faeden u).kopf.rho
         (.zurueckgekehrt a : GRest D _ false _ _)
         (.gibt L :: (M.faeden u).spur) (W' := (M.weltVon u).gibt L) (fun σ hg hok => by
-          refine ⟨σ.gibt L, Nat.le_succ _, hg, trivial, fun calls O' => ?_⟩
+          refine ⟨σ.gibt L, World.rang_le_gibt σ L, hg, trivial, fun calls O' => ?_⟩
           cases a.1 <;> exact ZErg.folgt_refl _)
       refine fadenR_antwort hO hRL hQ hK e0 _ hdone hL rfl
         (by simpa only [World.speicher, World.gibt, RufMaschineG.weltVon, Speicher.welt, RufSchluesselG] using hRS) ?_
