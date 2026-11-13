@@ -17,8 +17,11 @@ def closedInvariant (formula : LProp (Observation D)) : LProp (Observation D) :=
 
 theorem closedInvariant_closed (formula : LProp (Observation D)) :
     closedUnderB [] (closedInvariant formula) = true := by
-  apply universalClosure_closedUnderB
-  simp only [List.append_nil, stateValidity, closedUnderB, Bool.and_eq_true]
+  apply universalClosure_closedUnderB formula.keys (stateValidity formula.keys formula) []
+  rw [List.append_nil]
+  change (closedUnderB formula.keys (observationBounds formula.keys) &&
+    closedUnderB formula.keys formula) = true
+  rw [Bool.and_eq_true]
   exact ⟨observationBounds_closed formula.keys formula.keys (fun _ member => member),
     formula.keys_supported⟩
 
@@ -73,7 +76,8 @@ theorem decideInvariant_total (carriers : List (D.Tab ⊕ D.Glob))
     (expression : Expr D [] Λ .bool) (formula : LProp (Observation D))
     (translated : uebersetzeB carriers expression = .ok formula) :
     decideInvariant carriers expression = .ok (decideB (closedInvariant formula)) :=
-  decideInvariant_at_budget carriers expression formula translated none (by simp)
+  decideInvariant_at_budget carriers expression formula translated none
+    (by simp only [Option.getD_none, Nat.le_refl])
 
 theorem decideInvariant_over_budget (carriers : List (D.Tab ⊕ D.Glob))
     (expression : Expr D [] Λ .bool) (formula : LProp (Observation D))
@@ -154,10 +158,10 @@ theorem decideInvariant_true_iff (base : World D) (carriers : List (D.Tab ⊕ D.
   · intro valid
     have total := decideInvariant_total carriers expression formula translated
     cases computed : decideB (closedInvariant formula) with
-    | true => simpa only [computed] using total
+    | true => exact total.trans (congrArg Except.ok computed)
     | false =>
         have rejected : decideInvariant carriers expression = .ok false := by
-          simpa only [computed] using total
+          exact total.trans (congrArg Except.ok computed)
         obtain ⟨world, _, invalid⟩ := decideInvariant_complete base carriers expression none rejected
         have evaluated : wahr? (eval world expression world .nil) = true := valid world
         change wahr? (eval world expression world .nil) = false at invalid
@@ -176,10 +180,10 @@ theorem decideInvariant_false_iff (base : World D) (carriers : List (D.Tab ⊕ D
   · rintro ⟨world, invalid⟩
     have total := decideInvariant_total carriers expression formula translated
     cases computed : decideB (closedInvariant formula) with
-    | false => simpa only [computed] using total
+    | false => exact total.trans (congrArg Except.ok computed)
     | true =>
         have accepted : decideInvariant carriers expression = .ok true := by
-          simpa only [computed] using total
+          exact total.trans (congrArg Except.ok computed)
         have valid := decideInvariant_sound carriers expression none accepted world
         have evaluated : wahr? (eval world expression world .nil) = true := valid
         change wahr? (eval world expression world .nil) = false at invalid

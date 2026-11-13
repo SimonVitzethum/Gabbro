@@ -40,13 +40,31 @@ theorem snippetWorld_observation (base : World D) (keys : List (Observation D))
     (success : decodeScalar (observationType key) (values key) = some decoded) :
     assignment (snippetWorld base keys values) key = values key := by
   have sound := decodeScalar_sound (observationType key) (values key) decoded success
+  -- `observationType` is unfolded by stating the restated hypotheses with explicit
+  -- types; no rewrite has to see through it.
   cases key with
   | glob name =>
-      simpa only [assignment, snippetWorld, member, ↓reduceIte, observationType,
-        success, Option.getD_some] using sound
+      have restated : decodeScalar (D := D) (D.gtyp name) (values (.glob name)) = some decoded :=
+        success
+      have picked : (snippetWorld base keys values).globs name = decoded := by
+        show (if Observation.glob name ∈ keys then
+            (decodeScalar (D := D) (D.gtyp name) (values (.glob name))).getD (base.globs name)
+          else base.globs name) = decoded
+        rw [if_pos member]
+        exact congrArg (fun option => Option.getD option (base.globs name)) restated
+      exact (congrArg (scalarValue (D.gtyp name)) picked).trans sound
   | slot table field index =>
-      simpa only [assignment, snippetWorld, member, ↓reduceIte, observationType,
-        success, Option.getD_some] using sound
+      have restated : decodeScalar (D := D) (D.typ table field)
+          (values (.slot table field index)) = some decoded :=
+        success
+      have picked : (snippetWorld base keys values).slots table index field = decoded := by
+        show (if Observation.slot table field index ∈ keys then
+            (decodeScalar (D := D) (D.typ table field)
+              (values (.slot table field index))).getD (base.slots table index field)
+          else base.slots table index field) = decoded
+        rw [if_pos member]
+        exact congrArg (fun option => Option.getD option (base.slots table index field)) restated
+      exact (congrArg (scalarValue (D.typ table field)) picked).trans sound
 
 theorem reconstructWorld_sound (base : World D) (keys : List (Observation D))
     (values : Assignment (Observation D)) (world : World D)

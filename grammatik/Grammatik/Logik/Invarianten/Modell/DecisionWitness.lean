@@ -26,8 +26,10 @@ theorem range_true_computed_zeuge :
   intro world
   apply (uebersetzeB_sound (Frag.Witness.declaration.traeger ()) rangeInvariant rangeFormula
     range_translated_zeuge world).mpr
-  change (world.globs false).n ≤ 10
-  exact (world.globs false).le_hi
+  -- The declared range, through the generic bounds lemma rather than field access
+  -- on `Wert`, whose structure is visible only after unfolding the declared type.
+  exact And.right (scalarBounds_value (Ty.int 0 10) trivial (world.globs false)
+    (.var (.glob false) : LTerm (Observation Frag.Witness.declaration)) (assignment world) rfl)
 
 theorem range_true_sound_zeuge (world : World Frag.Witness.declaration) :
     eval world rangeInvariant world .nil = true :=
@@ -83,7 +85,13 @@ theorem short_false_computed_zeuge :
 theorem short_counterexample_computed_zeuge :
     (invariantCounterexample Frag.Witness.initial (Frag.Witness.declaration.traeger ())
       Witness.shortInvariant).map (fun world => assignment world (.glob false)) = some 4 := by
-  simpa only [invariantCounterexample, Witness.short_translated_zeuge] using
+  have keys : Witness.shortFormula.keys = [.glob false] := by decide
+  have unfolded : invariantCounterexample Frag.Witness.initial
+      (Frag.Witness.declaration.traeger ()) Witness.shortInvariant =
+        stateCounterexample Frag.Witness.initial [.glob false] Witness.shortFormula := by
+    simp only [invariantCounterexample, Witness.short_translated_zeuge, keys]
+  exact (congrArg (Option.map fun world : World Frag.Witness.declaration =>
+      assignment world (.glob false)) unfolded).trans
     Witness.state_counterexample_computed_zeuge
 
 theorem short_counterexample_sound_zeuge (world : World Frag.Witness.declaration)

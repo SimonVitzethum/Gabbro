@@ -10,13 +10,18 @@ namespace Gabbro.Grammatik.Invarianten.Modell.Witness
 
 open Frag Elim Elim.Korrekt
 
+/-! Computed values are checked in one of two ways: semantically (through the
+    generic soundness theorems), or, where the exact candidate chosen by the trace
+    is the claim, by a kernel evaluation of ONE recovered candidate on a one-variable
+    formula (`decide +kernel`); the elaborator never runs Cooper elimination here. -/
+
 /-- P16's false existential is false at every environment; even an empty outer
     prefix must return a concrete environment rather than report no witness. -/
 theorem p16_false_assignment_computed_zeuge :
     (counterexample [] Elim.Korrekt.Witness.oddEquation).map (fun values => values 0) = some 0 := by
-  rw [counterexample_nil_of_false _ (decideB_complete _ (by rfl)
-    Elim.Korrekt.Witness.oddEquation_computed_zeuge (fun _ => 0))]
-  rfl
+  have selected := counterexample_nil_of_false Elim.Korrekt.Witness.oddEquation
+    (Elim.Korrekt.Witness.decideB_complete_zeuge (fun _ => 0))
+  exact (congrArg (Option.map fun values : Assignment Nat => values 0) selected).trans rfl
 
 theorem p16_false_assignment_complete_zeuge :
     ∃ values : Assignment Nat,
@@ -30,8 +35,8 @@ def oddMatrix : LProp Nat := .eq (.scale 2 (.var 0)) (.konst 3)
 
 theorem rescaled_assignment_computed_zeuge :
     (counterexample [0] oddMatrix).map (fun values => values 0) = some (-2) := by
-  rw [counterexample_single_of_recovered 0 oddMatrix (-2) (by decide)]
-  rfl
+  have selected := counterexample_single_of_recovered 0 oddMatrix (-2) (by decide +kernel)
+  exact (congrArg (Option.map fun values : Assignment Nat => values 0) selected).trans rfl
 
 theorem rescaled_assignment_falsifies_zeuge :
     ¬ oddMatrix.denote (fun _ => -2) := by
@@ -45,8 +50,8 @@ def lowerWitness : LProp Nat :=
 
 theorem boundary_assignment_computed_zeuge :
     (counterexample [0] lowerWitness).map (fun values => values 0) = some 4 := by
-  rw [counterexample_single_of_recovered 0 lowerWitness 4 (by decide)]
-  rfl
+  have selected := counterexample_single_of_recovered 0 lowerWitness 4 (by decide +kernel)
+  exact (congrArg (Option.map fun values : Assignment Nat => values 0) selected).trans rfl
 
 theorem boundary_assignment_falsifies_zeuge :
     ¬ lowerWitness.denote (fun _ => 4) := by
@@ -60,8 +65,8 @@ def farLeft : LProp Nat :=
 
 theorem negative_infinity_computed_zeuge :
     (counterexample [0] farLeft).map (fun values => values 0) = some (-16) := by
-  rw [counterexample_single_of_recovered 0 farLeft (-16) (by decide)]
-  rfl
+  have selected := counterexample_single_of_recovered 0 farLeft (-16) (by decide +kernel)
+  exact (congrArg (Option.map fun values : Assignment Nat => values 0) selected).trans rfl
 
 theorem negative_infinity_falsifies_zeuge :
     ¬ farLeft.denote (fun _ => -16) := by
@@ -78,16 +83,19 @@ theorem backwards_trace_computed_zeuge :
     (counterexample [0, 1] dependentVariables).map (fun values => (values 0, values 1)) =
       some (4, 5) := by
   have rejected : decideB (universalClosure [0, 1] dependentVariables) = false := by
-    apply (decideB_false_iff _ (by decide) (fun _ => 0)).mpr
+    apply (decideB_false_iff (universalClosure [0, 1] dependentVariables) (by decide)
+      (fun _ => 0)).mpr
     intro valid
-    have impossible := valid 4 5
-    exact impossible (by constructor <;> decide)
+    have impossible : ¬ ((4 : Int) = 4 ∧ (5 : Int) = 4 + 1) := valid 4 5
+    exact impossible ⟨rfl, by omega⟩
   obtain ⟨values, selected⟩ := counterexample_complete [0, 1] dependentVariables rejected
+  have invalid := counterexample_sound [0, 1] dependentVariables values selected
   have valid : values 0 = 4 ∧ values 1 = values 0 + 1 := by
-    simpa only [dependentVariables, LProp.denote, LTerm.denote, not_not] using
-      counterexample_sound [0, 1] dependentVariables values selected
+    by_contra absent
+    exact invalid absent
+  have atZero : values 0 = 4 := valid.1
   have atOne : values 1 = 5 := by omega
-  simp only [selected, Option.map_some, valid.1, atOne]
+  simp only [selected, Option.map_some, atZero, atOne]
 
 theorem counterexample_sound_zeuge (values : Assignment Nat)
     (success : counterexample [0] oddMatrix = some values) : ¬ oddMatrix.denote values :=
@@ -96,10 +104,11 @@ theorem counterexample_sound_zeuge (values : Assignment Nat)
 theorem counterexample_of_exists_zeuge :
     ∃ values : Assignment Nat, counterexample [0] lowerWitness = some values := by
   apply counterexample_of_exists [0] lowerWitness
-  apply (decideB_true_iff _ (by decide) (fun _ => 0)).mpr
+  apply (decideB_true_iff (existentialClosure [0] (.not lowerWitness)) (by decide)
+    (fun _ => 0)).mpr
   refine ⟨4, ?_⟩
   change ¬ ¬ ((3 : Int) < 4 ∧ (2 : Int) ∣ 4)
-  exact fun absent => absent ⟨by decide, ⟨2, rfl⟩⟩
+  exact fun absent => absent ⟨by omega, ⟨2, by omega⟩⟩
 
 theorem valid_formula_has_no_counterexample_zeuge :
     (counterexample [0] (.le (.var 0) (.var 0))).isSome = false := by
@@ -116,46 +125,70 @@ def observationValues : Assignment (Observation Frag.Witness.declaration)
 def snippetKeys : List (Observation Frag.Witness.declaration) :=
   [.glob false, .glob true, .slot () () 0]
 
+private theorem glob_false_mem : (.glob false : Observation Frag.Witness.declaration) ∈ snippetKeys :=
+  List.mem_cons_self
+
+private theorem glob_true_mem : (.glob true : Observation Frag.Witness.declaration) ∈ snippetKeys :=
+  List.mem_cons_of_mem _ List.mem_cons_self
+
+private theorem slot_zero_mem :
+    (.slot () () 0 : Observation Frag.Witness.declaration) ∈ snippetKeys :=
+  List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self)
+
 private theorem snippet_bounds : (observationBounds snippetKeys).denote observationValues := by
   change ((0 : Int) ≤ 9 ∧ (9 : Int) ≤ 10) ∧
     ((0 : Int) ≤ 8 ∧ (8 : Int) ≤ 10) ∧ ((0 : Int) ≤ 7 ∧ (7 : Int) ≤ 10) ∧ True
   exact ⟨⟨by omega, by omega⟩, ⟨by omega, by omega⟩, ⟨by omega, by omega⟩, trivial⟩
 
+private theorem snippet_realized :
+    reconstructWorld Frag.Witness.initial snippetKeys observationValues =
+      some (snippetWorld Frag.Witness.initial snippetKeys observationValues) :=
+  reconstructWorld_complete Frag.Witness.initial snippetKeys observationValues snippet_bounds
+
+private theorem snippet_agrees :
+    ∀ key ∈ snippetKeys,
+      assignment (snippetWorld Frag.Witness.initial snippetKeys observationValues) key =
+        observationValues key :=
+  reconstructWorld_sound Frag.Witness.initial snippetKeys observationValues _ snippet_realized
+
 theorem fields_and_globals_computed_zeuge :
     (reconstructWorld Frag.Witness.initial snippetKeys observationValues).map
       (fun world => (assignment world (.glob false), assignment world (.slot () () 0))) =
         some (9, 7) := by
-  have realized := reconstructWorld_complete Frag.Witness.initial snippetKeys observationValues
-    snippet_bounds
-  rw [realized, Option.map_some]
-  have agrees := reconstructWorld_sound Frag.Witness.initial snippetKeys observationValues
-    (snippetWorld Frag.Witness.initial snippetKeys observationValues) realized
-  rw [agrees (.glob false) (by simp [snippetKeys]),
-    agrees (.slot () () 0) (by simp [snippetKeys])]
-  rfl
+  have atGlob : assignment (snippetWorld Frag.Witness.initial snippetKeys observationValues)
+      (.glob false) = 9 := snippet_agrees _ glob_false_mem
+  have atSlot : assignment (snippetWorld Frag.Witness.initial snippetKeys observationValues)
+      (.slot () () 0) = 7 := snippet_agrees _ slot_zero_mem
+  simp only [snippet_realized, Option.map_some, atGlob, atSlot]
 
 theorem unobserved_field_preserved_zeuge :
     (snippetWorld Frag.Witness.initial snippetKeys observationValues).slots () 1 () =
-      Frag.Witness.initial.slots () 1 () := by rfl
+      Frag.Witness.initial.slots () 1 () := by
+  have absent : (.slot () () 1 : Observation Frag.Witness.declaration) ∉ snippetKeys := by
+    decide
+  exact if_neg absent
 
 theorem snippet_false_invariant_zeuge :
     eval (snippetWorld Frag.Witness.initial snippetKeys observationValues)
       Frag.Witness.boundedLength
       (snippetWorld Frag.Witness.initial snippetKeys observationValues) .nil = false := by
-  let world := snippetWorld Frag.Witness.initial snippetKeys observationValues
-  change wahr? (eval world Frag.Witness.boundedLength world .nil) = false
+  change wahr? (eval (snippetWorld Frag.Witness.initial snippetKeys observationValues)
+    Frag.Witness.boundedLength
+    (snippetWorld Frag.Witness.initial snippetKeys observationValues) .nil) = false
   apply Bool.eq_false_iff.mpr
   intro evaluated
-  have holds := (Frag.Witness.boundedLength_sound_zeuge world).mp evaluated
-  change assignment world (.glob false) ≤ assignment world (.glob true) ∧
-    0 ≤ assignment world (.glob false) at holds
-  have realized := reconstructWorld_complete Frag.Witness.initial snippetKeys observationValues
-    snippet_bounds
-  have agrees := reconstructWorld_sound Frag.Witness.initial snippetKeys observationValues
-    world realized
-  rw [agrees (.glob false) (by simp [snippetKeys]),
-    agrees (.glob true) (by simp [snippetKeys])] at holds
-  change (9 : Int) ≤ 8 ∧ (0 : Int) ≤ 9 at holds
+  have holds := (Frag.Witness.boundedLength_sound_zeuge
+    (snippetWorld Frag.Witness.initial snippetKeys observationValues)).mp evaluated
+  have atFalse : assignment (snippetWorld Frag.Witness.initial snippetKeys observationValues)
+      (.glob false) = 9 := snippet_agrees _ glob_false_mem
+  have atTrue : assignment (snippetWorld Frag.Witness.initial snippetKeys observationValues)
+      (.glob true) = 8 := snippet_agrees _ glob_true_mem
+  change assignment (snippetWorld Frag.Witness.initial snippetKeys observationValues)
+      (.glob false) ≤
+      assignment (snippetWorld Frag.Witness.initial snippetKeys observationValues) (.glob true) ∧
+    0 ≤ assignment (snippetWorld Frag.Witness.initial snippetKeys observationValues)
+      (.glob false) at holds
+  rw [atFalse, atTrue] at holds
   omega
 
 /-- A one-global end-to-end counterexample; all type bounds are generated by the
@@ -170,35 +203,50 @@ theorem short_translated_zeuge :
     uebersetzeB (Frag.Witness.declaration.traeger ()) shortInvariant = .ok shortFormula := by
   rfl
 
+/-- The one recovered candidate of the typed one-variable VC, evaluated by the
+    kernel: the boundary branch `3 + 1` of `x > 3` within `0..10`. -/
+private theorem short_selected :
+    counterexample [.glob false]
+        (stateValidity (D := Frag.Witness.declaration) [.glob false] shortFormula) =
+      some (Assignment.bind (fun _ => 0) (.glob false) 4) :=
+  counterexample_single_of_recovered (.glob false)
+    (stateValidity (D := Frag.Witness.declaration) [.glob false] shortFormula) 4
+    (by decide +kernel)
+
+private theorem short_bounds :
+    (observationBounds [(.glob false : Observation Frag.Witness.declaration)]).denote
+      (Assignment.bind (fun _ => 0) (.glob false) 4) := by
+  change ((0 : Int) ≤ 4 ∧ (4 : Int) ≤ 10) ∧ True
+  exact ⟨⟨by omega, by omega⟩, trivial⟩
+
 theorem state_counterexample_computed_zeuge :
     (stateCounterexample Frag.Witness.initial [.glob false] shortFormula).map
       (fun world => assignment world (.glob false)) = some 4 := by
-  let values : Assignment (Observation Frag.Witness.declaration) :=
-    Assignment.bind (fun _ => 0) (.glob false) 4
-  have selected : counterexample [.glob false] (stateValidity [.glob false] shortFormula) =
-      some values :=
-    counterexample_single_of_recovered (.glob false) _ 4 (by decide)
-  have bounds : (observationBounds [.glob false]).denote values := by
-    change ((0 : Int) ≤ 4 ∧ (4 : Int) ≤ 10) ∧ True
-    exact ⟨⟨by omega, by omega⟩, trivial⟩
-  have realized := reconstructWorld_complete Frag.Witness.initial [.glob false] values bounds
-  change ((counterexample [.glob false] (stateValidity [.glob false] shortFormula)).bind
-    (reconstructWorld Frag.Witness.initial [.glob false])).map _ = _
-  rw [selected, Option.bind_some, realized, Option.map_some]
-  have agrees := reconstructWorld_sound Frag.Witness.initial [.glob false] values
-    (snippetWorld Frag.Witness.initial [.glob false] values) realized (.glob false) (by simp)
-  rw [agrees]
-  rfl
+  have realized := reconstructWorld_complete Frag.Witness.initial [.glob false] _ short_bounds
+  have computed : stateCounterexample Frag.Witness.initial [.glob false] shortFormula =
+      some (snippetWorld Frag.Witness.initial [.glob false]
+        (Assignment.bind (fun _ => 0) (.glob false) 4)) := by
+    change (counterexample [.glob false]
+        (stateValidity (D := Frag.Witness.declaration) [.glob false] shortFormula)).bind
+      (reconstructWorld Frag.Witness.initial [.glob false]) = _
+    rw [short_selected, Option.bind_some]
+    exact realized
+  have atFalse : assignment (snippetWorld Frag.Witness.initial [.glob false]
+      (Assignment.bind (fun _ => 0) (.glob false) 4)) (.glob false) = 4 :=
+    reconstructWorld_sound Frag.Witness.initial [.glob false] _ _ realized (.glob false)
+      List.mem_cons_self
+  simp only [computed, Option.map_some, atFalse]
 
 theorem state_counterexample_complete_zeuge :
     ∃ world : World Frag.Witness.declaration,
       stateCounterexample Frag.Witness.initial [.glob false] shortFormula = some world := by
   apply stateCounterexample_complete
-  apply (decideB_false_iff _ (by rfl) (fun _ => 0)).mpr
+  apply (decideB_false_iff (universalClosure [.glob false]
+      (stateValidity (D := Frag.Witness.declaration) [.glob false] shortFormula))
+    (by decide) (fun _ => 0)).mpr
   intro valid
-  have atFour := valid 4
-  change (0 ≤ (4 : Int) ∧ (4 : Int) ≤ 10) ∧ True → (4 : Int) ≤ 3 at atFour
-  have impossible := atFour ⟨⟨by decide, by decide⟩, trivial⟩
+  have atFour : ((0 : Int) ≤ 4 ∧ (4 : Int) ≤ 10) ∧ True → (4 : Int) ≤ 3 := valid 4
+  have impossible := atFour ⟨⟨by omega, by omega⟩, trivial⟩
   omega
 
 theorem invariant_counterexample_sound_zeuge (world : World Frag.Witness.declaration)
@@ -217,9 +265,9 @@ theorem string_length_computed_zeuge :
     (by change (0 : Int) ≤ 3 ∧ (3 : Int) ≤ 5; constructor <;> omega)
   have length := decodeScalar_sound (.str 5) 3 decoded success
   change (decoded.val.length : Int) = 3 at length
-  rw [success, Option.map_some]
-  congr 1
-  omega
+  have natural : decoded.val.length = 3 := by omega
+  rw [success]
+  exact congrArg some natural
 
 def stringInitial : World Frag.Witness.stringDeclaration where
   slots := Frag.Witness.initial.slots
@@ -232,27 +280,34 @@ def stringInitial : World Frag.Witness.stringDeclaration where
 theorem string_world_false_computed_zeuge :
     (reconstructWorld stringInitial [.glob false] (fun _ => 3)).map
       (fun world => eval world Frag.Witness.stringBound world .nil) = some false := by
-  have bounds : (observationBounds [.glob false]).denote
+  have bounds : (observationBounds (D := Frag.Witness.stringDeclaration) [.glob false]).denote
       (fun _ : Observation Frag.Witness.stringDeclaration => 3) := by
     change ((0 : Int) ≤ 3 ∧ (3 : Int) ≤ 10) ∧ True
     exact ⟨⟨by omega, by omega⟩, trivial⟩
   have realized := reconstructWorld_complete stringInitial [.glob false] (fun _ => 3) bounds
-  rw [realized, Option.map_some]
-  congr 1
-  let world := snippetWorld stringInitial [.glob false] (fun _ => 3)
-  change wahr? (eval world Frag.Witness.stringBound world .nil) = false
-  apply Bool.eq_false_iff.mpr
-  intro evaluated
-  have holds := (uebersetzeB_sound (Frag.Witness.stringDeclaration.traeger ())
-    Frag.Witness.stringBound (.le (.var (.glob false)) (.var (.glob true)))
-    Frag.Witness.stringBound_translated_zeuge world).mp evaluated
-  change assignment world (.glob false) ≤ assignment world (.glob true) at holds
-  have agrees := reconstructWorld_sound stringInitial [.glob false] (fun _ => 3) world realized
-  rw [agrees (.glob false) (by simp)] at holds
-  have unobserved : assignment world (.glob true) = 2 := by
-    simp [world, assignment, snippetWorld, scalarValue, stringInitial]
-  rw [unobserved] at holds
-  omega
+  have agrees := reconstructWorld_sound stringInitial [.glob false] (fun _ => 3) _ realized
+  have refuted : eval (snippetWorld stringInitial [.glob false] (fun _ => 3))
+      Frag.Witness.stringBound (snippetWorld stringInitial [.glob false] (fun _ => 3)) .nil =
+        false := by
+    change wahr? (eval (snippetWorld stringInitial [.glob false] (fun _ => 3))
+      Frag.Witness.stringBound (snippetWorld stringInitial [.glob false] (fun _ => 3)) .nil) =
+        false
+    apply Bool.eq_false_iff.mpr
+    intro evaluated
+    have holds := (uebersetzeB_sound (Frag.Witness.stringDeclaration.traeger ())
+      Frag.Witness.stringBound (.le (.var (.glob false)) (.var (.glob true)))
+      Frag.Witness.stringBound_translated_zeuge
+      (snippetWorld stringInitial [.glob false] (fun _ => 3))).mp evaluated
+    have atFalse : assignment (snippetWorld stringInitial [.glob false] (fun _ => 3))
+        (.glob false) = 3 := agrees (.glob false) List.mem_cons_self
+    have atTrue : assignment (snippetWorld stringInitial [.glob false] (fun _ => 3))
+        (.glob true) = 2 := rfl
+    change assignment (snippetWorld stringInitial [.glob false] (fun _ => 3)) (.glob false) ≤
+      assignment (snippetWorld stringInitial [.glob false] (fun _ => 3)) (.glob true) at holds
+    rw [atFalse, atTrue] at holds
+    omega
+  rw [realized]
+  exact congrArg some refuted
 
 theorem negative_length_refused_zeuge :
     (decodeScalar (D := Frag.Witness.declaration) (.str 5) (-1)).isSome = false := by decide
