@@ -74,6 +74,7 @@ public import Stage0.Senke.Bild.Ruf.Hardware
 public import Stage0.Senke.Bild.Ruf.ZielL
 public import Stage0.Senke.Bild.Ruf.EmittedZielL
 public import Stage0.Senke.Bild.Ruf.Zeuge
+public import Stage0.Senke.Bild.Ruf.ZeugeHardware
 public import Stage0.Senke.Bild.Rek.Maschine
 public import Stage0.Senke.Bild.Rek.Eintritt
 public import Stage0.Senke.Bild.Rek.Lauf

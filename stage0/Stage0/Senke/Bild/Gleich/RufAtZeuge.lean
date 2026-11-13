@@ -43,12 +43,12 @@ theorem rufAt_vertragMarke_zeuge :
 theorem t4P_gueltig : VertragGueltig t4P :=
   ⟨fun _ _ _ => rfl, fun _ _ _ _ _ => rfl, (fun i => nomatch i)⟩
 
-/-- With the fixture's trivial contracts and no invariants, a body return is a call return.
+/-- With the fixture's trivial contracts and no invariants, a body return is a call return, under any oracle.
     The world and return value stay symbolic throughout the single handler step. -/
-theorem rufAt_t4D_ok_of_body {P : Programm t4D} {n : Nat} {g : t4D.Fn} {σ σ' : World t4D}
+theorem rufAt_t4D_ok_of_body {O : Orakel t4D} {P : Programm t4D} {n : Nat} {g : t4D.Fn} {σ σ' : World t4D}
     {v : ErgVal t4D (t4D.erg g)} (hq : P.requires g = .tru) (he : P.ensures g = .tru)
-    (hb : execEnd (V := vertragVon t4D g) t4O 0 (rufAt P t4O 0 n) (P.rumpf g) σ Env.nil =
-      .zurueck σ' v) : rufAt P t4O 0 (n + 1) g σ Env.nil = .ok σ' v := by
+    (hb : execEnd (V := vertragVon t4D g) O 0 (rufAt P O 0 n) (P.rumpf g) σ Env.nil =
+      .zurueck σ' v) : rufAt P O 0 (n + 1) g σ Env.nil = .ok σ' v := by
   have hi : t4D.invs = [] := rfl
   simp only [rufAt_succ_eq, rufSchritt, hq, he, Expr.orte, World.lese, World.merke,
     List.map_nil, List.nil_append, eval, wahr?, Bool.true_eq_false, ↓reduceIte, hb, hi,
