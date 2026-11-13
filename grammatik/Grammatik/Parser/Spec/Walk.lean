@@ -100,6 +100,7 @@ def Walk.type (w : Walk) (locals : Locals) : Nat → STyp → Except String STyp
         if w.resolveSpecs then throw "dyn.unexpanded-type"
         return .dyn n raw
       | .ptr s r t => do return .ptr s r (← w.type locals f t)
+      | .tuple types => return .tuple (← types.mapM (w.type locals f))
       | .range t lo hi b => do return .range (← w.type locals f t) (← w.expr locals f lo) (← w.expr locals f hi) b
       | .array t n => do return .array (← w.type locals f t) (← w.expr locals f n)
       | .wrap t => do return .wrap (← w.type locals f t)
@@ -144,7 +145,11 @@ def bindings (U : Umfeld) (locals : Locals)
     (infer : Locals → SExpr → Option STyp) : SAnw → Locals
   | .bind _ n t e | .bindQ _ n t e | .bindElse n t e _ _ | .bindAxiomOpt n t e | .bindAxiomOptElse n t e _ _ =>
     match t.orElse (fun _ => (infer locals e).orElse (fun _ => inferTypeMit U locals 128 e)) with
-    | some ty => [(n, ty)]
+    | some ty => match tuplePatternNames n with
+      | none => [(n, ty)]
+      | some names => match canonicalType U.items 128 ty with
+        | .tuple elements => (names.zip elements).filter (fun entry => !strEq entry.1 "_")
+        | _ => []
     | none => []
   | .await n t _ _ | .swap n t _ _ => (t.map fun ty => [(n, ty)]).getD []
   | .alloc _ n t _ _ _ | .allocVon _ n t _ => (t.map fun ty => [(n, ty)]).getD []

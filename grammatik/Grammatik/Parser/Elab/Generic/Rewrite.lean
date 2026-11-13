@@ -61,6 +61,7 @@ end
 /-- Type bounds may themselves contain constants or calls; use the same expression traversal. -/
 def rewriteType (env : Environment) (bindings : Bindings) : STyp → RewriteM STyp
   | .atom n => pure (surfaceType bindings.types bindings.values (.atom n))
+  | .tuple types => return .tuple (← types.mapM (rewriteType env bindings))
   | .ptr space rights ty => return .ptr space rights (← rewriteType env bindings ty)
   | .range ty lo hi ex => do
     return .range (← rewriteType env bindings ty)

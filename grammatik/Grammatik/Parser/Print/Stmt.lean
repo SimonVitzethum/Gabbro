@@ -42,6 +42,8 @@ def druckTyp : STyp → List Token
       | none => []
       | some raw => [.wort "effects", .zeichen "{"] ++ rohToks raw)
   | .atom a => [nameTok a]
+  | .tuple types => [.zeichen "("] ++
+      ((types.map druckTyp).intersperse [.zeichen ","]).flatten ++ [.zeichen ")"]
   | .path segs => pfadToks segs
   | .ptr r w t =>
     [.wort "ptr", .zeichen "<", nameTok r, .zeichen ","] ++ rohToks w ++ [.zeichen ">"] ++ druckTyp t

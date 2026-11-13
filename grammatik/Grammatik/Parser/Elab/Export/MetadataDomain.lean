@@ -33,6 +33,7 @@ def consumingHeader (raw : String) : Except String (SExpr × String) := do
   | _ => throw "consuming traversal has an unsupported or duplicate header clause"
 
 def typeMetadata : STyp → Bool
+  | .tuple elements => elements.any typeMetadata
   | .raw _ | .entry .. | .wrap _ | .embed .. => true
   | .ptr _ rights (.atom target) =>
       (match Gabbro.Grammatik.DataRights.decode (fun _ => none) rights with

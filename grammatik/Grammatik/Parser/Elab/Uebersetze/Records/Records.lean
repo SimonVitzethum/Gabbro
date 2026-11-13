@@ -49,6 +49,29 @@ def uTypePass (scope : UTypeScope) (alias : List (String × (Int × Int))) (tabs
     Except String (UTypeScope × List (Nat × SItemTief)) :=
   pending.foldlM (fun (scope, deferred) (identity, item) => do
     match item with
+    | .typeT [] name [] [] (some (.tuple elements)) =>
+      if !name.startsWith "#tuple:" || elements.length < 2 then
+        throw "source export: tuple schema must be generated with at least two fields"
+      if scope.types.any (fun entry => strEq entry.1 name) then
+        throw ("source export: duplicate type declaration: " ++ name)
+      match elements.mapM (uTypIn alias tabs scope.types spaces eigner) with
+      | .error _ => pure (scope, deferred ++ [(identity, item)])
+      | .ok types =>
+        let widths := elements.zipIdx.filterMap fun (ty, index) =>
+          let width := uSpeicherBreite alias ty
+          if width == 0 then none else some ("_" ++ toString index, width)
+        match scope.records.find? (fun record => record.name.startsWith "#tuple:" &&
+            record.fields.map (·.2) == types && record.breiten == widths) with
+        | some record => pure ({ scope with types := scope.types ++ [(name, record.ty)] }, deferred)
+        | none =>
+          let schema : URecord :=
+            { name := name
+              identity := identity
+              fields := types.zipIdx.map (fun (ty, index) => ("_" ++ toString index, ty))
+              breiten := widths }
+          pure (
+            { types := scope.types ++ [(name, schema.ty)]
+              records := scope.records ++ [schema] }, deferred)
     | .typeT flags name args order (some body) =>
       if flags.any (fun flag => flag != "pub" && flag != "export") || !args.isEmpty || !order.isEmpty then
         throw ("source export: record/type modifiers require ownership or nominal proof binding: " ++ name)
@@ -107,6 +130,14 @@ def uRecordOf : List URecord → (ty : Ty) → Except String { schema : URecord 
   | [], _ => .error "source export: unknown nominal record schema"
   | schema :: rest, ty =>
     if h : schema.ty = ty then .ok ⟨schema, h⟩ else uRecordOf rest ty
+
+/-- Generated tuple aliases share the same canonical record constructor as their schema.
+    Ordinary record names retain the existing direct lookup. -/
+def uRecordConstructor (ctx : UCtx) (name : String) : Option URecord :=
+  (ctx.records.find? (fun schema => strEq schema.name name)).orElse fun _ => do
+    if !name.startsWith "#tuple:" then none else do
+      let (_, ty) ← ctx.namedTypes.find? (fun entry => strEq entry.1 name)
+      ctx.records.find? (fun schema => decide (schema.ty = ty))
 
 /-- A resolved schema is one of the declared schemas. -/
 theorem uRecordOf_mem (records : List URecord) (ty : Ty)

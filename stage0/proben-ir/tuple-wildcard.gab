@@ -1,0 +1,10 @@
+// A wildcard discards one projection, keeping the producer evaluation. Exit 41.
+module ir_tuple_wildcard {
+impl fn make() -> (u32 in 0 .. 100, bool) effects { pure } {
+    return (41, true);
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let (a, _) = make();
+    return a;
+}
+}

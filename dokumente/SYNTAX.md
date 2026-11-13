@@ -435,7 +435,8 @@ markorder  = "order" "{" identlist "}" ;
    because it is not a body: an order says which steps are admissible on the value. *)
 typeexpr   = intty | floatty | boolty | nevertype | path | array | ptrty | structty | fnptr | variants
             | indexty | stringty     (* lane 261 *)
-            | entryfn ;              (* C-free lane, C2 slice 3 *)
+            | entryfn | tupletype ;
+tupletype  = "(" typeexpr "," typeexpr { "," typeexpr } ")" ;
 stringty   = stringkopf "max" int ;
 stringkopf = ident ;
 (* The word `string` -- contextual, NOT reserved (`parse.rs`): only `string`
@@ -784,7 +785,7 @@ fnvalue    = "&" path ;
 (* «B8»: the PRODUCER of a function pointer. `&` expects a `path`, not an expression: there is
    no address of an expression in Gabbro. CHANGED «SG-8»: `&T` for a declared carrier `T` is
    also the producer of a `ptr` -- the one address there is. *)
-primary    = int | "true" | "false" | stringlit | place | call | paren | builtin | optionexpr
+primary    = int | "true" | "false" | stringlit | place | call | paren | tupleexpr | builtin | optionexpr
             | oldexpr | "result" | reasonval | countexpr ;   (* CHANGED «SG-24», lane 261 *)
 stringlit  = string ;
 (* Lane 261: a bounded-string literal. The value is the UTF-8 bytes of the text
@@ -805,6 +806,7 @@ reasonval  = ident "::" ident ;
    value. A ground compares only against a ground of the same declaration (`M124`). *)
 optionexpr = "Some" "(" expr ")" | "None" ;
 paren      = "(" expr ")" ;
+tupleexpr  = "(" expr "," expr { "," expr } ")" ;
 call       = ( path | place ) "(" [ arglist ] ")" ;
 (* «B8»: a call over a PLACE is an indirect call; the callee is not known at translation
    time, and what is known about it stands at the type of the place (`fnptr`). A call over a
@@ -824,7 +826,7 @@ builtin    = ( "sizeof" | "lenof" ) "(" ( typeexpr | place ) ")"
            | "aligned" "(" expr "," constexpr ")" ;
 oldexpr    = "old" "(" place ")" ;                 (* EXPRESSION, not predicate; only in ensures *)
 place      = ident { placesuffix } ;
-placesuffix= "." ident | "[" expr "]" | "->" ident ;
+placesuffix= "." ident | "." int | "[" expr "]" | "->" ident ;
 placelist  = place { "," place } ;
 ```
 
@@ -1338,7 +1340,9 @@ xform      = "update" "(" ident ")"
            | expr "when" pred "returns" ident ;
 (* «C4b»: the same two clauses as at `retry` -- a bounded CAS loop, and the writer says the
    bound and the exit. *)
-letstmt    = "let" [ "mut" ] ident [ ":" typeexpr ] "=" expr ";"
+tuplepattern = "(" ( ident | "_" ) "," ( ident | "_" ) { "," ( ident | "_" ) } ")" ;
+letstmt    = "let" tuplepattern [ ":" tupletype ] "=" expr ";"
+           | "let" [ "mut" ] ident [ ":" typeexpr ] "=" expr ";"
            | "let" ident [ ":" typeexpr ] "=" ( call | place ) "else" "(" ident ")" endblock ;   (* «B14b»; CHANGED «SG-5»: endblock *)
            | "let" ident [ ":" typeexpr ] "=" call "?" ";" ;   (* reason propagation, below *)
            | "let" [ "mut" ] ident [ ":" typeexpr ] "=" libcall ";" ;   (* lane E1: binding position *)

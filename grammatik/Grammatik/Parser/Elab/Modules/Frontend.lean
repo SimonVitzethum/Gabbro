@@ -6,6 +6,7 @@ public import Grammatik.Parser.Elab.Modules.Expansion
 public import Grammatik.Parser.Elab.SourceNormalization
 public import Grammatik.Parser.Elab.Instantiation.Items
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil18
+public import Grammatik.Parser.Elab.Tuples.Frontend
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Modules
 
@@ -32,7 +33,8 @@ def prepareDetailedRaw (items : List SItemTief) : Except String Prepared := do
   let members := Uebersetze.uMembers modules.items
   let members := if syntaxList items then UebersetzeAllg2.normTopU32 members else members
   let result ← Generic.expandDetailed members modules.literals
-  let target ← Uebersetze.entzuckere result.items
+  let (tupleItems, tupleNames) ← Tuples.expand result.items
+  let target ← Uebersetze.entzuckere tupleItems
   -- Numeric scrutinees are bound once before tagged wildcard expansion and call lifting.
   let target ← MatchNumber.erweitere target
   -- Tagged wildcards become explicit arms before calls in their copied bodies are lifted.
@@ -40,7 +42,7 @@ def prepareDetailedRaw (items : List SItemTief) : Except String Prepared := do
   -- Calls inside expressions become bindings before the unit is exported (`CallHoist`).
   let target := CallHoist.hebe target
   let (target, declarationNames) ← exportDeclarationUnitDetailed target
-  let allocated := modules.generatedNames ++ result.generatedNames ++ declarationNames
+  let allocated := modules.generatedNames ++ result.generatedNames ++ tupleNames ++ declarationNames
   let generated := allocated.filter ((outputNames target).contains)
   pure ⟨target, modules.requirements ++ result.requirements, generated⟩
 

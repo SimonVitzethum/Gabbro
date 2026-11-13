@@ -72,6 +72,7 @@ termination_by v => sizeOf v
 /-- Collect written dynamic types before erasing their abstract identity. -/
 def typeUses : STyp → List STyp
   | t@(.dyn ..) => [t]
+  | .tuple types => types.flatMap typeUses
   | .ptr _ _ t | .range t _ _ _ | .array t _ | .wrap t | .embed t _ _ => typeUses t
   | .entry _ none => []
   | .entry _ (some t) => typeUses t

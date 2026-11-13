@@ -28,6 +28,7 @@ def surfaceType (types : List (String × STyp)) (values : List (String × SExpr)
     | some p => p.2
     | none => .atom n
   | .ptr s r t => .ptr s r (surfaceType types values t)
+  | .tuple ts => .tuple (ts.map (surfaceType types values))
   | .range t lo hi ex => .range (surfaceType types values t)
       (expression values lo) (expression values hi) ex
   | .array t n => .array (surfaceType types values t) (expression values n)

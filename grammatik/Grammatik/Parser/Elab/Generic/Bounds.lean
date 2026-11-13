@@ -32,6 +32,7 @@ def typeParameters (sig : FnSig) : List (String × List String) := sig.generics.
 def mentionsParameter (parameters : List (String × List String)) : STyp → Bool
   | .atom name => parameters.any (fun p => strEq p.1 name)
   | .path [name] => parameters.any (fun p => strEq p.1 name)
+  | .tuple types => types.any (mentionsParameter parameters)
   | .ptr _ _ ty | .range ty _ _ _ | .array ty _ | .wrap ty | .embed ty _ _ =>
     mentionsParameter parameters ty
   | .entry _ none => false

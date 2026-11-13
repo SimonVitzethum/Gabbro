@@ -100,6 +100,7 @@ theorem valueReferences_call (name : String) (args : List SExpr) (declared : Str
 def typeReferences (source : STyp) (declared : String → Bool := fun _ => false)
     (owner : String → Bool → Option String := fun _ _ => none) : List DependencyName :=
   match source with
+  | .tuple elements => elements.flatMap (fun ty => typeReferences ty declared owner)
   | .atom name => [.type name]
   | .range base lo hi _ => typeReferences base declared owner ++
       valueReferences lo declared owner ++ valueReferences hi declared owner
@@ -169,6 +170,7 @@ def dependencyDeclarations (items : List SItemTief) : List (DependencyName × Li
       | .error _ => none
   let head := dependencyCallReferences declared owner
   let constructor := fun name => items.any fun
+    | .typeT [] declared [] [] (some (.tuple _)) => strEq declared name && declared.startsWith "#tuple:"
     | .typeT flags declared [] [] (some (.raw _)) => strEq declared name &&
         !flags.any (fun flag => strEq flag "tagged" || strEq flag "linear")
     | _ => false
@@ -176,6 +178,8 @@ def dependencyDeclarations (items : List SItemTief) : List (DependencyName × Li
     | .function name => if constructor name then .type name else reference
     | _ => reference
   (items.filterMap fun
+    | .typeT [] name [] [] (some (.tuple elements)) =>
+      some (.type name, elements.flatMap (fun ty => typeReferences ty declared owner))
     | .typeT _ name [] _ (some ty@(.atom _))
     | .typeT _ name [] _ (some ty@(.range _ _ _ _)) => some (.type name, typeReferences ty declared owner)
     | .typeT flags name [] [] (some (.raw _)) =>

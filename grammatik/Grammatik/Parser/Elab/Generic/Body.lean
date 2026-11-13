@@ -134,7 +134,7 @@ def rewriteStatements (env : Environment) (bindings : Bindings) :
     let names := match statement with
       | .bind _ n _ _ | .bindQ _ n _ _ | .bindElse n _ _ _ _ | .bindAxiomOpt n _ _ | .bindAxiomOptElse n _ _ _ _ |
         .bindLib _ n _ _ | .alloc _ n _ _ _ _ |
-        .allocVon _ n _ _ | .await n _ _ _ | .swap n _ _ _ => [n]
+        .allocVon _ n _ _ | .await n _ _ _ | .swap n _ _ _ => bindingNames n
       | _ => []
     let (tail, final) ← rewriteStatements env (bindings.without names) rest
     pure (rewritten :: tail, final)

@@ -162,6 +162,7 @@ def uLiestE : Nat → SExpr → List String
 def uLiestT : Nat → STyp → List String
   | 0, _ => ["*"]
   | f + 1, t => match t with
+    | .tuple elements => elements.flatMap (uLiestT f)
     | .ptr _ _ b | .wrap b => uLiestT f b
     | .range b lo hi _ => uLiestT f b ++ uLiestE f lo ++ uLiestE f hi
     | .array b n => uLiestT f b ++ uLiestE f n

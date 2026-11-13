@@ -83,6 +83,7 @@ def checkLiteralQuantifier (globals locals : List String) (binder : String) :
 end
 
 def checkLiteralType (globals locals : List String) : STyp → Except String Unit
+  | .tuple types => types.forM (checkLiteralType globals locals)
   | .atom name =>
     if istTypWort name || istZuckerBreite name || name == "f32" || name == "f64" then pure ()
     else checkLiteralName globals locals name

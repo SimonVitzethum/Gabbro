@@ -1,0 +1,10 @@
+// A three-element argument supplies the literal's element types. Exit 19.
+module ir_tuple_triple {
+impl fn third(t : (u32 in 0 .. 100, u32 in 0 .. 100, u32 in 0 .. 100)) -> u32 in 0 .. 100
+    effects { pure } {
+    return t.2;
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    return third((7, 11, 19));
+}
+}

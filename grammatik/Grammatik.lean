@@ -86,6 +86,7 @@ public import Grammatik.Parser.Elab.Konst.Scopes.RecordZeuge
 public import Grammatik.Parser.Elab.Uebersetze.Kontext.StringConstantsZeuge
 public import Grammatik.Parser.Elab.Modules.MatchWildcardZeuge
 public import Grammatik.Parser.Elab.Modules.MatchNumberZeuge
+public import Grammatik.Parser.Elab.Tuples.Witnesses
 public import Grammatik.Parser.Elab.Uebersetze.Records.TruthZeuge
 public import Grammatik.Parser.Elab.Uebersetze.Tagged.EqualityZeuge
 public import Grammatik.Parser.Elab.Uebersetze.Tagged.PayloadKindsZeuge

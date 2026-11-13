@@ -80,6 +80,7 @@ end
     their enclosing application constructors removes them, including unused applications. -/
 def inspectType (scope : Scope) : STyp → SurfaceFacts
   | .atom _ | .path _ | .index _ _ | .raw _ => {}
+  | .tuple types => gather (types.map (inspectType scope))
   | .ptr _ _ ty | .wrap ty => inspectType scope ty
   | .range ty lo hi _ => gather [inspectType scope ty, expression scope lo, expression scope hi]
   | .array ty n => merge (inspectType scope ty) (expression scope n)

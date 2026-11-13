@@ -241,6 +241,24 @@ field stays a truth value through construction, projection, inference, calls and
 and `!r.ok` work, while a numeric field is not implicitly a predicate (`record-bool-field.gab`,
 `Records/TruthZeuge.lean`).
 
+Tuples use those same records: `(u32, bool)` is a tuple type, `(value, ready)` constructs
+one, and `pair.0` / `pair.1` select its zero-based fields. The frontend generates one record
+per structural element-type list in a unit; transparent aliases share it. Declared integer
+storage widths remain part of that identity, preserving field-intrinsic widths. Generated
+names start with `#tuple:` and cannot be written as source identifiers; the module pipeline
+also checks their provenance against user declarations.
+
+`let (value, ready) = make();` evaluates `make()` once and binds its fields. A wildcard,
+as in `let (value, _) = make();`, omits that field binding. Nested tuple types and expressions
+are supported; nested destructuring patterns, mutable patterns, duplicate bound names,
+wrong pattern arities and out-of-range positions are named refusals. Destructure nested
+values in successive flat bindings. Tuples require at least two elements: `(value)` remains
+grouping, `(T)` is refused as a type, and `()` is no value or type. Empty and singleton tuples
+and trailing commas are refused. A tuple annotation, function result or argument type supplies
+the element types; otherwise the frontend infers them and refuses an unknown element type.
+The ordinary record exporter checks the resulting constructions, projections and bindings;
+this sugar introduces no machine G or IR constructor (`Parser/Elab/Tuples/`).
+
 A direct `if a == b` or `if a != b` on tagged local names compares tags, then the payloads of
 equal tags. `Tagged/Equality.lean` expands it into exhaustive matches; different tagged types
 and payload types without an ordinary equality form are refused. It does not add general

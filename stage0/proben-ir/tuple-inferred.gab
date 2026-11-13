@@ -1,0 +1,10 @@
+// Infer the computed element interval before constructing the record. Exit 8.
+module ir_tuple_inferred {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let n = 7;
+    let tuple = (n + 1, true);
+    let (a, b) = tuple;
+    if b { return a; }
+    return 0;
+}
+}

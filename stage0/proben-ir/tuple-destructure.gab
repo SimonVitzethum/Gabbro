@@ -1,0 +1,10 @@
+// Evaluate the producer once, then bind both tuple fields. Exit 42.
+module ir_tuple_destructure {
+impl fn make() -> (u32 in 0 .. 100, u32 in 0 .. 100) effects { pure } {
+    return (17, 25);
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let (a, b) = make();
+    return a + b;
+}
+}

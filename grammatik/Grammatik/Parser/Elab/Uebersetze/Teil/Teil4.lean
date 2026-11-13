@@ -178,7 +178,7 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
         else .error "complement of unknown width"
       | _, _ => .error "complement of unknown width"
   | .call f [a] =>
-    match ctx.records.find? (fun schema => strEq schema.name f) with
+    match uRecordConstructor ctx f with
     | some schema => do
       let values ← uRecordSides ctx [a] (fun source smaller => uRechne ctx blatt source)
       uRecordValues schema values
@@ -199,7 +199,7 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
             | none => .error "builtin of unknown width"
         | none => blatt (.call f [a])
   | .call f [a, b] =>
-    match ctx.records.find? (fun schema => strEq schema.name f) with
+    match uRecordConstructor ctx f with
     | some schema => do
       let values ← uRecordSides ctx [a, b] (fun source smaller => uRechne ctx blatt source)
       uRecordValues schema values
@@ -255,7 +255,7 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
       | .ok value => uOldRecord value
   /- Labelled record constructors share the canonical component elaborator and schema order. -/
   | .call name args =>
-    match ctx.records.find? (fun schema => strEq schema.name name) with
+    match uRecordConstructor ctx name with
     | some schema => do
       let values ← uRecordSides ctx args (fun source smaller => uRechne ctx blatt source)
       uRecordValues schema values

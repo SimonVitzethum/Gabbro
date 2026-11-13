@@ -1,0 +1,11 @@
+// Nested types and expressions use ordinary products; patterns stay flat. Exit 42.
+module ir_tuple_nested {
+impl fn make() -> ((u32 in 0 .. 100, bool), u32 in 0 .. 100) effects { pure } {
+    return ((12, true), 30);
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let (pair, b) = make();
+    let (a, _) = pair;
+    return a + b;
+}
+}

@@ -237,6 +237,7 @@ def ausO (k : Kontext) : Option SExpr → Option SExpr
 def typ (k : Kontext) : STyp → STyp
   | .dyn n raw => .dyn (k.ref n) (raw.map (genericArgument k))
   | .atom s => .atom (k.ref s)
+  | .tuple types => .tuple (types.map (typ k))
   | .path ps => if k.nenntItem ps then .atom (k.ref ("::".intercalate ps)) else .path ps
   | .ptr r w t => .ptr r w (typ k t)
   | .index o t => .index o (k.ref t)

@@ -145,7 +145,15 @@ def parseLet (f : Nat) (toks : List Token) :
     let (m, t1) : Bool × List Token := match toks with
       | .wort "mut" :: rest => (true, rest)
       | _ => (false, toks)
-    let (name, r1) ← nimmName t1
+    let (name, r1) ← match t1 with
+      | .zeichen "(" :: rest => do
+        if m then throw "tuple pattern: mutable destructuring is unsupported"
+        let (names, rest) ← parseTuplePattern rest
+        if names.length < 2 then throw "tuple pattern: at least two elements required"
+        let bound := names.filter (fun name => !strEq name "_")
+        if bound.eraseDups.length != bound.length then throw "tuple pattern: duplicate binding"
+        pure (String.intercalate "," ("#tuple-pattern" :: names), rest)
+      | _ => nimmName t1
     let (optional, r1) := nimmFrage r1
     let (ty, r2) ← (match r1 with
       | .zeichen ":" :: r => do
@@ -153,7 +161,13 @@ def parseLet (f : Nat) (toks : List Token) :
         pure (some t, r')
       | _ => pure (none, r1))
     let nach ← fordereZeichen "=" r2
-    if optional then do
+    if (tuplePatternNames name).isSome then do
+      if optional then throw "tuple pattern: optional binding is unsupported"
+      let (statement, rest) ← parseLetExpr f m name ty nach
+      match statement with
+      | .bind .. => pure (statement, rest)
+      | _ => throw "tuple pattern: plain let binding required"
+    else if optional then do
       let (a, rest) ← parseLetExpr f m name ty nach
       match a with
       | .bind _ x t e => pure (.bindAxiomOpt x t e, rest)
