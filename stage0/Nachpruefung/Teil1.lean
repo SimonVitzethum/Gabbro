@@ -196,8 +196,9 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.QuantProbe.quant_image_zeuge
 #print axioms Gabbro.Stage0.Senke.QuantProbe.quant_refused_zeuge
 #print axioms Gabbro.Stage0.Senke.QuantProbe.reaches_refused_zeuge
-#print axioms Gabbro.Stage0.Senke.retryTest_ok
-#print axioms Gabbro.Stage0.Senke.retryC_ok
+#print axioms Gabbro.Stage0.Senke.Retrying.Image.test_run
+#print axioms Gabbro.Stage0.Senke.retry_runtime
+#print axioms Gabbro.Stage0.Senke.Retrying.Image.correct
 #print axioms Gabbro.Stage0.Senke.retry_case
 #print axioms Gabbro.Stage0.Senke.forever_zero
 #print axioms Gabbro.Stage0.Senke.forever_one_false

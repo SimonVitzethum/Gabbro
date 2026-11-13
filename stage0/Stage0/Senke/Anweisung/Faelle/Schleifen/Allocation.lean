@@ -1,7 +1,7 @@
 /- Compute simultaneous counter demand from the complete source syntax. Sequential and
    alternative branches reuse slots; only a nested fuelled loop increases the live depth.
    Each level reserves two words below lexical locals: fuel and either the
-   immutable decrement word (forever) or the saved measure (consumeTraverse). -/
+   immutable decrement word (retry/forever) or the saved measure (consumeTraverse). -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Code
 @[expose] public section
@@ -31,7 +31,7 @@ def counterDepthS {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .locks _ _ body => counterDepthB body
   | .breaking _ body => counterDepthB body
   | .traverse _ _ body => counterDepthB body
-  | .retry _ _ body ueber => max (counterDepthB body) (counterDepthB ueber)
+  | .retry _ _ body ueber => max (1 + counterDepthB body) (counterDepthB ueber)
   | .forever _ _ body => 1 + counterDepthB body
   | .axiomCall _ _ _ _ _ _ _ => 0
   | .axiomCallElse _ _ _ _ _ _ _ _ err => counterDepthE err

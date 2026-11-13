@@ -1,7 +1,4 @@
-/- Shared retry, reserved-counter and constant-size forever code.
-   Bounded retry uses finite control flow: no hidden counter can collide with a body or callee frame.
-   Each check precedes its attempt; the final check precedes the overflow block. Code size is linear in
-   the bound. Leave skips all remaining attempts; next and fallthrough reach the following check. -/
+/- Constant-size retry and forever control with source-derived reserved counters. -/
 module
 public import Stage0.Senke.Ausdruck
 public import Stage0.Senke.Stopp
@@ -24,17 +21,7 @@ def relocateC (base shift : Nat) : Nat → List II
 
 /-- A true condition skips the remaining code; false enters it. -/
 def retryTest (s : Nat) (cc rest : List II) : List II :=
-  cc ++ [ci 19 s 32 0] ++ [ci 18 (16 * (rest.length + 1)) 0 0] ++ rest
-
-/-- Unroll a static bound, lowering each body against its own leave/next targets.
-    Overflow retains the enclosing loop's targets. The usual image-size gate bounds all jumps. -/
-def retryC (s : Nat) (cc overflow : List II × Nat)
-    (body : Int × Int → Option (List II × Nat)) : Nat → Option (List II × Nat)
-  | 0 => some (retryTest s cc.1 overflow.1, max cc.2 overflow.2)
-  | n + 1 => do
-    let rest ← retryC s cc overflow body n
-    let cb ← body (16 * rest.1.length, 0)
-    pure (retryTest s cc.1 (cb.1 ++ rest.1), max cc.2 (max cb.2 rest.2))
+  cc ++ ([ci 19 s 32 0] ++ ([ci 18 (16 * (rest.length + 1)) 0 0] ++ rest))
 
 /-- Constant-size control, independent of the runtime budget. The zero branch
 enters the caller-supplied budget stop; a positive budget is decremented using
@@ -44,6 +31,37 @@ def foreverCounter (counter one : Nat) (stop : Int) : List II :=
 
 def foreverCounterInit (counter : Nat) (budget : Int) : List II :=
   [ci 1 counter budget 0]
+
+/-- Targets relative to the end of the single retry body. Fallthrough executes
+    the backedge; next jumps to the condition, and leave skips the overrun. -/
+def retryTargets (condition body overflow : Nat) : Int × Int :=
+  (16 * (overflow + 1), -(16 * (condition + body + 4 : Nat) : Int))
+
+/-- One condition, one body and one overrun block. The condition precedes the
+    fuel test even at zero, exactly as in `retryLauf`. -/
+def retryHeader (counter one scratch : Nat) (cc cb cu : List II) : List II :=
+  retryTest scratch cc
+    (foreverCounter counter one (16 * (cb.length + 3)) ++ (cb ++
+      ([ci 18 (-(16 * (cc.length + cb.length + 4 : Nat) : Int)) 0 0] ++ cu)))
+
+def retryCode (counter one scratch budget : Nat) (cc cb cu : List II) : List II :=
+  foreverCounterInit counter budget ++ [ci 1 one 1 0] ++
+    retryHeader counter one scratch cc cb cu
+
+/-- Measure a body once, lower it at its real targets, then check that length
+    is stable. Neither compilation nor the emitted image recurses on fuel. -/
+def retryC (counter one scratch budget : Nat) (condition overflow : List II × Nat)
+    (body : Int × Int → Option (List II × Nat)) : Option (List II × Nat) := do
+  if budget < 2 ^ 31 then
+    let probe ← body (0, 0)
+    let actual ← body (retryTargets condition.1.length probe.1.length overflow.1.length)
+    if actual.1.length = probe.1.length ∧
+        16 * (condition.1.length + actual.1.length + overflow.1.length + 7) < 2 ^ 31 then
+      pure (retryCode counter one scratch budget condition.1 actual.1 overflow.1,
+        max condition.2 (max actual.2 (max overflow.2
+          (max (counter + 1) (max (one + 1) (scratch + 1))))))
+    else none
+  else none
 
 /-- Body exits relative to the end of the body. Leave skips both stops and the
     backedge; next jumps directly to the counter header. -/
