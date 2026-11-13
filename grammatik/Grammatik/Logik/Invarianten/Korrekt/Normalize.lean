@@ -85,7 +85,9 @@ theorem normalizeAtom_denote [DecidableEq α] (name : α) (multiple : Nat)
     | lt =>
         simp only [normalizeAtom, hz, ↓reduceIte, atom_denote, ht, Relation.denote]
         have hf' : (0 : Int) < ((multiple / (splitVar name term).1.natAbs : Nat) : Int) := by omega
-        constructor <;> intro h <;> nlinarith
+        simpa only [mul_zero] using (Int.mul_lt_mul_left
+          (a := ((multiple / (splitVar name term).1.natAbs : Nat) : Int))
+          (b := term.denote (values.bind name x)) (c := 0) hf')
     | dvd k =>
         simp only [normalizeAtom, hz, ↓reduceIte, atom_denote, ht, Relation.denote]
         exact scaled_divisibility k _ hf _

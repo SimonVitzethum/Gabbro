@@ -109,7 +109,7 @@ theorem witness_descent [DecidableEq α] (name : α) (body : QF α)
           have least := Nat.find_min failure (show n < Nat.find failure by change n < k; omega)
           by_contra h
           apply least
-          simpa only [← hk] using h
+          simpa only [hk] using h
     refine Or.inr ⟨x - (k : Int) * (delta : Int), prior, ?_⟩
     convert failed using 1 <;> push_cast <;> ring
 
