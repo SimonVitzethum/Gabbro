@@ -15,6 +15,7 @@ def LProp.nnf (negative : Bool) : LProp α → LProp α
   | .le a b => if negative then .not (.le a b) else .le a b
   | .lt a b => if negative then .not (.lt a b) else .lt a b
   | .eq a b => if negative then .not (.eq a b) else .eq a b
+  | .dvd k t => if negative then .not (.dvd k t) else .dvd k t
   | .not body => body.nnf (!negative)
   | .and left right =>
       if negative then .or (left.nnf true) (right.nnf true)
@@ -50,6 +51,7 @@ def LProp.zeroForm : LProp α → LProp α
   | .le a b => .le (.sub a b) (.konst 0)
   | .lt a b => .lt (.sub a b) (.konst 0)
   | .eq a b => .eq (.sub a b) (.konst 0)
+  | .dvd k t => .dvd k t
   | .not body => .not body.zeroForm
   | .and left right => .and left.zeroForm right.zeroForm
   | .or left right => .or left.zeroForm right.zeroForm

@@ -32,6 +32,7 @@ inductive LProp (α : Type) where
   | imp (left right : LProp α)
   | ex (name : α) (body : LProp α)
   | all (name : α) (body : LProp α)
+  | dvd (divisor : Int) (term : LTerm α)
   deriving DecidableEq, Repr
 
 abbrev Assignment (α : Type) := α → Int
@@ -60,6 +61,7 @@ def LProp.denote [DecidableEq α] (values : Assignment α) : LProp α → Prop
   | .imp left right => left.denote values → right.denote values
   | .ex name body => ∃ value : Int, body.denote (values.bind name value)
   | .all name body => ∀ value : Int, body.denote (values.bind name value)
+  | .dvd divisor term => divisor ∣ term.denote values
 
 /-- Closed constant folding, also used to require a state-independent slot index. -/
 def LTerm.constant? : LTerm α → Option Int

@@ -334,6 +334,7 @@ public import Grammatik.Zielsatz.Projekte.Verbund
 public import Grammatik.Zielsatz.Einbettung.Projekt
 public import Grammatik.Logik.WP.Regeln3
 public import Grammatik.Logik.Invarianten.Frag.Witness
+public import Grammatik.Logik.Invarianten.Elim.Witness
 public import Grammatik.Logik.WP.Zeuge
 public import Grammatik.Logik.WP.ZeugeRuf
 public import Grammatik.Logik.WP.ZeugeRel
