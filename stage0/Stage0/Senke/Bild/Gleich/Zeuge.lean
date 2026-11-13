@@ -56,7 +56,7 @@ theorem execEnd_lg_zeuge :
       (execEnd t4O 0 (fun g σ ρ => rufRumpf t4P t4O 0 1 g (σ.lese [] [.inl ()]) ρ) t4FRumpf
         (zeugeWelt.lese [] [.inl ()]) Env.nil) :=
   execEnd_lg (passes := 0)
-    (rufRumpf_lese_vorn (P := t4P) (passes := 0) (Er := fun _ => False) leseblind_t4O 1 [] [.inl ()])
-    leseblind_t4O t4FRumpf (weltGleich_lese _ _ _) Env.nil
+    (rufRumpf_lese_vorn (P := t4P) (passes := 0) (Er := fun _ => False) (leseblind_t4O.toP t4P) 1 [] [.inl ()])
+    leseblind_t4O.rs t4FRumpf (Or.inr leseblind_t4O.w) (weltGleich_lese _ _ _) Env.nil
 
 end Gabbro.Stage0.Senke.BildLauf

@@ -3,7 +3,8 @@
   Subject:   **`rufAt` against `rufRumpf` up to read events** (package P2 of the closed calls of the image theorem,
              the short direction). `rufAt` is the call meaning of the model: it checks the callee's `requires`, runs
              the body, checks `ensures` and the owed invariants, and READS the places of all three into the trace.
-             `rufRumpf` is what machine G realises: the bare body run. Under a read-blind oracle (`Leseblind`) the two
+             `rufRumpf` is what machine G realises: the bare body run. Under the oracle premise of the program
+             (`LeseblindP`) the two
              agree up to `≈` (`WeltGleich`) EXCEPT where `rufAt` fails one of its own contract checks
              (`rufAt_rufRumpf_lg`, error set `VertragMarke`): an `ok` of `rufAt` is an `ok` of `rufRumpf` with the same
              value and a `≈` world (`rufAt_ok_rufRumpf`), likewise a reason (`rufAt_why_rufRumpf`), and every other
@@ -75,11 +76,11 @@ section Tiefe
 
 variable {P : Programm D} {O : Orakel D} {passes : Nat}
 
-/-- **`rufAt` against `rufRumpf`, for an error set closed under the three contract checks.** Under a read-blind
-    oracle, from `≈` worlds and the same arguments, `rufAt n` and `rufRumpf n` give related outcomes, or `rufAt`
+/-- **`rufAt` against `rufRumpf`, for an error set closed under the three contract checks.** Under `LeseblindP`,
+    from `≈` worlds and the same arguments, `rufAt n` and `rufRumpf n` give related outcomes, or `rufAt`
     fails early with a mark in `Er`; `Er` must contain the mark of every failing `requires`, `ensures` and owed
     invariant test (`hvor`, `hnach`, `hinv`). -/
-theorem rufAt_rufRumpf_unter (Er : Fehlermarke D → Prop) (hO : Leseblind O)
+theorem rufAt_rufRumpf_unter (Er : Fehlermarke D → Prop) (hO : LeseblindP P O)
     (hvor : ∀ (g : D.Fn) (σ : World D) (ρ : Env D (D.params g)),
       wahr? (eval σ (P.requires g) σ ρ) = false → Er (.logik (.vorbedingung g)))
     (hnach : ∀ (g : D.Fn) (σ₀ σ : World D) (ρ : Env D (D.params g)) (v : ErgVal D (D.erg g)),
@@ -97,7 +98,7 @@ theorem rufAt_rufRumpf_unter (Er : Fehlermarke D → Prop) (hO : Leseblind O)
         exact .frueh (hvor g _ ρ hq)
       rw [if_neg hq]
       have he := execEnd_lg (passes := passes)
-        (rufAt_rufRumpf_unter Er hO hvor hnach hinv n) hO (P.rumpf g)
+        (rufAt_rufRumpf_unter Er hO hvor hnach hinv n) hO.rs (P.rumpf g) (hO.rumpf g)
         ((weltGleich_lese σ (Signatur.anfang D (D.signatur g)) (P.requires g).orte).symm.trans hσ) ρ
       generalize execEnd (V := vertragVon D g) O passes (rufAt P O passes n) (P.rumpf g)
         (σ.lese (Signatur.anfang D (D.signatur g)) (P.requires g).orte) ρ = o₁ at he ⊢
@@ -130,18 +131,18 @@ theorem rufAt_rufRumpf_unter (Er : Fehlermarke D → Prop) (hO : Leseblind O)
     oracle, at every depth, `rufAt` and the body-running handler of machine G give related outcomes on `≈` worlds:
     the same shape, `≈` worlds, equal values and reasons -- unless `rufAt` fails a `requires`, `ensures` or owed
     invariant check. No user duty. -/
-theorem rufAt_rufRumpf_lg (hO : Leseblind O) :
+theorem rufAt_rufRumpf_lg (hO : LeseblindP P O) :
     ∀ n, HandlerLG VertragMarke (rufAt P O passes n) (rufRumpf P O passes n) :=
   rufAt_rufRumpf_unter VertragMarke hO (fun g _ _ _ => .vor g) (fun g _ _ _ _ _ => .nach g)
     (fun i _ _ => .inv i)
 
 /-- The same with every early failure of `rufAt` allowed (the form of the P1 handler premise). -/
-theorem rufAt_rufRumpf_lg_alle (hO : Leseblind O) (n : Nat) :
+theorem rufAt_rufRumpf_lg_alle (hO : LeseblindP P O) (n : Nat) :
     HandlerLG (fun _ => True) (rufAt P O passes n) (rufRumpf P O passes n) :=
   (rufAt_rufRumpf_lg (P := P) (O := O) (passes := passes) hO n).mono (fun _ _ => True.intro)
 
 /-- **An `ok` of `rufAt` is an `ok` of `rufRumpf`**, with the same value and a `≈` world. -/
-theorem rufAt_ok_rufRumpf (hO : Leseblind O) {n : Nat} {g : D.Fn} {σ σ' σ₁ : World D}
+theorem rufAt_ok_rufRumpf (hO : LeseblindP P O) {n : Nat} {g : D.Fn} {σ σ' σ₁ : World D}
     {ρ : Env D (D.params g)} {v : ErgVal D (D.erg g)} (hσ : WeltGleich σ σ')
     (h : rufAt P O passes n g σ ρ = .ok σ₁ v) :
     ∃ σ₂, rufRumpf P O passes n g σ' ρ = .ok σ₂ v ∧ WeltGleich σ₁ σ₂ := by
@@ -150,7 +151,7 @@ theorem rufAt_ok_rufRumpf (hO : Leseblind O) {n : Nat} {g : D.Fn} {σ σ' σ₁ 
   exact hl.ok_inv
 
 /-- **A reason of `rufAt` is the same reason of `rufRumpf`**, with a `≈` world. -/
-theorem rufAt_why_rufRumpf (hO : Leseblind O) {n : Nat} {g : D.Fn} {σ σ' σ₁ : World D}
+theorem rufAt_why_rufRumpf (hO : LeseblindP P O) {n : Nat} {g : D.Fn} {σ σ' σ₁ : World D}
     {ρ : Env D (D.params g)} {r : Fin (D.gruende g)} (hσ : WeltGleich σ σ')
     (h : rufAt P O passes n g σ ρ = .why σ₁ r) :
     ∃ σ₂, rufRumpf P O passes n g σ' ρ = .why σ₂ r ∧ WeltGleich σ₁ σ₂ := by

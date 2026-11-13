@@ -50,7 +50,8 @@ theorem Emitted.bild_ziel_aufruf [Kern] (output : Emitted src K options)
     (hreqr : ReqAmEintritt output.compiled.program r (output.sp0.welt []) ρr)
     {Q : AxEns (declOf output.compiled.unit)} (hN : NutzerPflichtA (output.einheit Q))
     {O : Orakel (declOf output.compiled.unit)} (hH : HardwareAnnahmen O Q)
-    [TorOK output.image.Y O] [SichtOK O] [LeseblindOK O] {m : Runner.Mem}
+    [TorOK output.image.Y O] [SichtOK O] {m : Runner.Mem}
+    (hfremd : LeseblindW O ∨ FremdFrei output.compiled.program)
     (loaded : BytesAt m Runner.Prog.IMG output.bytes)
     {thr : Faden} {Agl : (declOf output.compiled.unit).Lock → Prop} {j : Nat}
     (hj : output.image.depth - 1 = j + 1)
@@ -183,7 +184,7 @@ theorem Emitted.bild_ziel_aufruf [Kern] (output : Emitted src K options)
       (TiefAlle output.compiled.program Agl (output.image.depth - 1)) rest σ1 ρ1 ebeR σeR ρeR :=
     zerlegung_rahmen hkR
   have hRuf := rufOk_gleich_tiefAlle (P := output.compiled.program) (passes := output.image.passes)
-    (leseblind_von O) thr Agl (output.image.depth - 1)
+    ⟨(leseblindOK_hardware hH).blind, hfremd⟩ thr Agl (output.image.depth - 1)
   rcases hrun.weiche run0 with hvor | ⟨k, hnach⟩
   · exact Or.inl ⟨hvor, ziel_aus output.compiled.program (output.einheit Q).S Q output.fsA output.lsA
       (output.einheit Q).ws hA0 hL O hH output.image.passes output.sp0 _ hZ' _ RufErreichbarG.start⟩
@@ -194,7 +195,7 @@ theorem Emitted.bild_ziel_aufruf [Kern] (output : Emitted src K options)
       obtain ⟨n1, m1, M2, fpc, rpc, Kc, Ksc, ensc, pcI, mI, σm, sB, hRB, hr2, _, sI, hwin⟩ :=
         bild_ziel_fenster (fs := output.fsA) hcodes output.lsA hA0 hL hH hZ' hj
           (Nat.lt_of_le_of_lt (Nat.sub_le _ _) hdep) hOk hre hRe hex
-          hgT hkC
+          hgT hfremd hkC
       rcases hk2.weiche sB with hvorB | ⟨k3, hnachB⟩
       · -- inside the call
         rcases hwin hk2 hvorB with hvorI | ⟨M', hK, hr', hz'⟩ | hrue

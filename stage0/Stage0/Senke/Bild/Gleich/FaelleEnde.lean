@@ -17,37 +17,38 @@ set_option linter.unusedSectionVars false
 variable {D : Deklaration} {O : Orakel D} {passes : Nat} {Er : Fehlermarke D → Prop}
   {R₁ R₂ : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f} {V : Vertrag D}
 
-theorem ende_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
-    ∀ (b : Endblock D V l Γ Λ), EndeKinder O passes Er R₁ R₂ b → EndeLG O passes Er R₁ R₂ b
-  | .ret e _, _ => by
+theorem ende_lg (hR : HandlerLG Er R₁ R₂) (hO : LeseblindRS O) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+    ∀ (b : Endblock D V l Γ Λ),
+      (b.axFrei = true ∨ LeseblindW O) → EndeKinder O passes Er R₁ R₂ b → EndeLG O passes Er R₁ R₂ b
+  | .ret e _, _, _ => by
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ e.orte
       simp only [execEnd]
       rw [h'.ergebnis e ρ]
       exact .zurueck h'
-  | .retWhy _ _, _ => by
+  | .retWhy _ _, _, _ => by
       intro σ₁ σ₂ ρ hσ
       simp only [execEnd]
       exact .why hσ
-  | .leave _, _ => by
+  | .leave _, _, _ => by
       intro σ₁ σ₂ ρ hσ
       simp only [execEnd]
       exact .leave hσ
-  | .next _, _ => by
+  | .next _, _, _ => by
       intro σ₁ σ₂ ρ hσ
       simp only [execEnd]
       exact .next hσ
-  | .retScoped e _, _ => by
+  | .retScoped e _, _, _ => by
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ e.orte
       simp only [execEnd]
       rw [h'.ergebnis e ρ]
       exact .zurueck (WeltGleich.gibt_foldl _ h')
-  | .retWhyScoped _ _, _ => by
+  | .retWhyScoped _ _, _, _ => by
       intro σ₁ σ₂ ρ hσ
       simp only [execEnd]
       exact .why (WeltGleich.gibt_foldl _ hσ)
-  | .cons s _, hk => by
+  | .cons s _, _, hk => by
       obtain ⟨ihs, ihr⟩ := hk
       intro σ₁ σ₂ ρ hσ
       simp only [execEnd]
@@ -64,13 +65,13 @@ theorem ende_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ 
       | hardware e => exact .hardware e
       | frueh hE => exact .frueh hE
       | fruehH hE => exact .fruehH hE
-  | .bind e _, hk => by
+  | .bind e _, _, hk => by
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ e.orte
       simp only [execEnd]
       rw [h'.wert' e ρ]
       exact (hk _ _ _ h').schrumpf
-  | .bindCall f args _ _ hr _, hk => by
+  | .bindCall f args _ _ hr _, _, hk => by
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ args.orte
       simp only [execEnd]
@@ -85,7 +86,7 @@ theorem ende_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ 
       | hardware e => exact .hardware e
       | frueh hE => exact .frueh hE
       | fruehH hE => exact .fruehH hE
-  | .bindCallElse f args _ _ _ _ _, hk => by
+  | .bindCallElse f args _ _ _ _ _, _, hk => by
       obtain ⟨ihe, ihr⟩ := hk
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ args.orte
@@ -101,7 +102,7 @@ theorem ende_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ 
       | hardware e => exact .hardware e
       | frueh hE => exact .frueh hE
       | fruehH hE => exact .fruehH hE
-  | .bindCallInd p args _ _ hr _, hk => by
+  | .bindCallInd p args _ _ hr _, _, hk => by
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ (p.orte ++ args.orte)
       simp only [execEnd]
@@ -120,7 +121,7 @@ theorem ende_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ 
       | hardware e => exact .hardware e
       | frueh hE => exact .frueh hE
       | fruehH hE => exact .fruehH hE
-  | .bindCallIndElse p args he _ hr _ _, hk => by
+  | .bindCallIndElse p args he _ hr _ _, _, hk => by
       obtain ⟨ihe, ihr⟩ := hk
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ (p.orte ++ args.orte)
@@ -130,12 +131,13 @@ theorem ende_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ 
         exact (ihr _ _ _ hw).schrumpf
       · intro _ _ _ hw
         exact (ihe _ _ _ hw).schrumpf
-  | .bindAxiom a args _ _ _ _ _ _, hk => by
+  | .bindAxiom a args _ _ _ _ _ _, hX, hk => by
+      have hW : LeseblindW O := hX.resolve_left Bool.false_ne_true
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ args.orte
       simp only [execEnd]
       rw [h'.werte args ρ]
-      have hp := paarLG_axiomAntwort hO a h' (evalArgs (σ₂.lese Λ args.orte) args (σ₂.lese Λ args.orte) ρ)
+      have hp := paarLG_axiomAntwort hW a h' (evalArgs (σ₂.lese Λ args.orte) args (σ₂.lese Λ args.orte) ρ)
       generalize axiomAntwort O a (σ₁.lese Λ args.orte) _ = A at hp ⊢
       generalize axiomAntwort O a (σ₂.lese Λ args.orte) _ = B at hp ⊢
       cases hp with
@@ -143,13 +145,14 @@ theorem ende_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ 
         cases x with
         | none => exact .hardware _
         | some _ => exact (hk _ _ _ hw).schrumpf
-  | .bindAxiomElse a args _ _ _ _ _ _ _ _, hk => by
+  | .bindAxiomElse a args _ _ _ _ _ _ _ _, hX, hk => by
+      have hW : LeseblindW O := hX.resolve_left Bool.false_ne_true
       obtain ⟨ihe, ihr⟩ := hk
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ args.orte
       simp only [execEnd]
       rw [h'.werte args ρ]
-      have hp := paarLG_axiomAntwortSonst hO a h'
+      have hp := paarLG_axiomAntwortSonst hW a h'
         (evalArgs (σ₂.lese Λ args.orte) args (σ₂.lese Λ args.orte) ρ)
       generalize axiomAntwortSonst O a (σ₁.lese Λ args.orte) _ = A at hp ⊢
       generalize axiomAntwortSonst O a (σ₂.lese Λ args.orte) _ = B at hp ⊢
@@ -159,12 +162,13 @@ theorem ende_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ 
         · exact .hardware _
         · exact (ihr _ _ _ hw).schrumpf
         · exact (ihe _ _ _ hw).schrumpf
-  | .bindAxiomOpt e a args _ _ _ _ _, hk => by
+  | .bindAxiomOpt e a args _ _ _ _ _, hX, hk => by
+      have hW : LeseblindW O := hX.resolve_left Bool.false_ne_true
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ args.orte
       simp only [execEnd]
       rw [h'.werte args ρ]
-      have hp := paarLG_axiomAntwort hO a h' (evalArgs (σ₂.lese Λ args.orte) args (σ₂.lese Λ args.orte) ρ)
+      have hp := paarLG_axiomAntwort hW a h' (evalArgs (σ₂.lese Λ args.orte) args (σ₂.lese Λ args.orte) ρ)
       generalize axiomAntwort O a (σ₁.lese Λ args.orte) _ = A at hp ⊢
       generalize axiomAntwort O a (σ₂.lese Λ args.orte) _ = B at hp ⊢
       cases hp with
@@ -172,13 +176,14 @@ theorem ende_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ 
         cases x with
         | none => exact .hardware _
         | some _ => exact (hk _ _ _ hw).weiterOpt e
-  | .bindAxiomOptElse e a args _ _ _ _ _ _ _, hk => by
+  | .bindAxiomOptElse e a args _ _ _ _ _ _ _, hX, hk => by
+      have hW : LeseblindW O := hX.resolve_left Bool.false_ne_true
       obtain ⟨ihe, ihr⟩ := hk
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ args.orte
       simp only [execEnd]
       rw [h'.werte args ρ]
-      have hp := paarLG_axiomAntwortSonst hO a h'
+      have hp := paarLG_axiomAntwortSonst hW a h'
         (evalArgs (σ₂.lese Λ args.orte) args (σ₂.lese Λ args.orte) ρ)
       generalize axiomAntwortSonst O a (σ₁.lese Λ args.orte) _ = A at hp ⊢
       generalize axiomAntwortSonst O a (σ₂.lese Λ args.orte) _ = B at hp ⊢
@@ -188,7 +193,7 @@ theorem ende_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ 
         · exact .hardware _
         · exact (ihr _ _ _ hw).weiterOpt e
         · exact (ihe _ _ _ hw).schrumpf
-  | .regRead r _ _, hk => by
+  | .regRead r _ _, _, hk => by
       intro σ₁ σ₂ ρ hσ
       have hf := hσ.fragt (.inr (.inl r))
       simp only [execEnd]
@@ -196,7 +201,7 @@ theorem ende_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ 
       cases hx : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ₂.fragt (.inr (.inl r)))) with
       | none => exact .hardware _
       | some v => exact EndLG.ite ((hk _ _ (.cons v ρ) hf).schrumpf) (.hardware _)
-  | .regReadElse r _ zusage _ _, hk => by
+  | .regReadElse r _ zusage _ _, _, hk => by
       obtain ⟨ihs, ihr⟩ := hk
       intro σ₁ σ₂ ρ hσ
       have hf := hσ.fragt (.inr (.inl r))
@@ -208,20 +213,20 @@ theorem ende_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ 
           have h'' := hf.lese Λ zusage.orte
           exact EndLG.ite_eq (congrArg wahr? (h''.wert' zusage (.cons v ρ)))
             ((ihr _ _ (.cons v ρ) h'').schrumpf) (ihs _ _ ρ h'')
-  | .awaits g _ _ _ _ _, hk => by
+  | .awaits g _ _ _ _ _, _, hk => by
       intro σ₁ σ₂ ρ hσ
       have hf := hσ.fragt (.inr (.inr g))
       have h'' := hf.lese Λ [.inr g]
       simp only [execEnd]
       rw [hO.sichtbar g _ _ hf, h''.globs]
       exact EndLG.ite ((hk _ _ _ h'').schrumpf) (.hardware _)
-  | .exchange g neu _ _ _, hk => by
+  | .exchange g neu _ _ _, _, hk => by
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ (.inr g :: neu.orte)
       simp only [execEnd]
       rw [h'.globs, h'.wert' neu]
       exact (hk _ _ _ (h'.schreibGlob _ _ _)).schrumpf
-  | .narrow e lo hi _ _, hk => by
+  | .narrow e lo hi _ _, _, hk => by
       obtain ⟨ihs, ihr⟩ := hk
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ e.orte
@@ -238,7 +243,7 @@ theorem ende_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ 
             (eval (σ₂.lese Λ e.orte) e (σ₂.lese Λ e.orte) ρ).n ≤ hi) := hn ▸ h₁
         simp only [execEnd, dif_neg h₁, dif_neg h₂]
         exact ihs _ _ ρ h'
-  | .narrowRequired e lo hi _, hk => by
+  | .narrowRequired e lo hi _, _, hk => by
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ e.orte
       have hn := congrArg Zahl.n (h'.wert' e ρ)
@@ -254,14 +259,14 @@ theorem ende_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ 
             (eval (σ₂.lese Λ e.orte) e (σ₂.lese Λ e.orte) ρ).n ≤ hi) := hn ▸ h₁
         simp only [execEnd, dif_neg h₁, dif_neg h₂]
         exact .logik _
-  | .ite c _ _, hk => by
+  | .ite c _ _, _, hk => by
       obtain ⟨iht, ihe⟩ := hk
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ c.orte
       simp only [execEnd]
       rw [h'.wert' c ρ]
       exact EndLG.ite (iht _ _ ρ h') (ihe _ _ ρ h')
-  | .float _ a b lo hi _, hk => by
+  | .float _ a b lo hi _, _, hk => by
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ (a.orte ++ b.orte)
       simp only [execEnd]
@@ -270,14 +275,14 @@ theorem ende_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ 
       cases x with
       | none => exact .logik _
       | some _ => exact (hk _ _ _ h').schrumpf
-  | .floatLit q lo hi _, hk => by
+  | .floatLit q lo hi _, _, hk => by
       intro σ₁ σ₂ ρ hσ
       simp only [execEnd]
       generalize gleitPasst lo hi (bruch q) = x
       cases x with
       | none => exact .logik _
       | some _ => exact (hk _ _ _ hσ).schrumpf
-  | .floatOf e lo hi _, hk => by
+  | .floatOf e lo hi _, _, hk => by
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ e.orte
       simp only [execEnd]
@@ -286,7 +291,7 @@ theorem ende_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ 
       cases x with
       | none => exact .logik _
       | some _ => exact (hk _ _ _ h').schrumpf
-  | .floatNarrow e lo hi _ _, hk => by
+  | .floatNarrow e lo hi _ _, _, hk => by
       obtain ⟨ihs, ihr⟩ := hk
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ e.orte
