@@ -1,7 +1,7 @@
 /- Explicit configuration for the existing Stage0 runner image. This is a checked adapter,
    not semantics for boot, entrust or hardware profiles. -/
 module
-public import Stage0.LockWait
+public import Stage0.Senke.Sperre.Bindung.LockWait
 public import Grammatik.Parser.Profil.Auswahl
 public import Grammatik.Parser.Profil.Pipeline
 public import Grammatik.Parser.Profil.Register
