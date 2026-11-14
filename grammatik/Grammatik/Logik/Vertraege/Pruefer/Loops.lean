@@ -110,7 +110,8 @@ def retryInvariantCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     let branch ← branchCondition test env (done.map (fun _ _ ready _ _ => ready)) advance
     return inductiveCondition invariant branch
   let checks ← allConditions domain.values _ compilePass
-  return { formula := conj invariant checks.formula
+  return {
+      formula := conj invariant checks.formula
       sound := fun runtime world valid allowed safe => by
         have parts := (conj_denote _ _ _).mp valid
         have obligations := checks.sound runtime world parts.2

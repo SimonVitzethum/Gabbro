@@ -59,7 +59,8 @@ def checkUnitLogic (E : Einheit D) (functions : List D.Fn) (locks : List D.Lock)
   let decreases ← collect functions _ (fun f => do
     let hint ← loopHint E.loopHints f
     checkMeasure E.P E.S E.lockFormulas budget hint E.measure (zykS E.P functions) (E.sp0.welt []) f)
-  return { contracts := contracts.down
+  return {
+      contracts := contracts.down
       lockLocal := fun lock member => (lockChecks.down lock member).1
       lockInitial := fun lock member => (lockChecks.down lock member).2
       axiomLocal := fun a => axioms.down a (axiomSources.complete a)
