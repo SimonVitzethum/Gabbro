@@ -436,3 +436,5 @@ public import Grammatik.Nebenlaeufigkeit.Async.Segment.Waiting
 public import Grammatik.Nebenlaeufigkeit.Async.Segment.Duty
 public import Grammatik.Nebenlaeufigkeit.Async.Segment.Model
 public import Grammatik.Nebenlaeufigkeit.Async.Representation.Witnesses
+public import Grammatik.Kern.Semantik.Boundary.Proben
+public import Grammatik.Kern.Semantik.Boundary.TransferObstacle
