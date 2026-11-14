@@ -1,5 +1,6 @@
 module
 public import Bruecke.Kette.Block
+public import Bruecke.Kette.Ende.Simulation
 public import Bruecke.Anweisung.Match.Kopf
 public import Bruecke.Anweisung.Match.Simulation
 public import Bruecke.Kette.Formen.ReasonSchritt
@@ -289,6 +290,20 @@ theorem lauf_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u C)
           (fun σ₁ ρ₁ s₁ hW₁ hL₁ =>
             lauf_G G S c hc O passes R hRR r n k ss fn _ _ rest bs' hU hS hmemss hF' hrest hbs' σ₁ ρ₁ s₁ hW₁
               hL₁)
+      case ifEnde cnd =>
+        obtain ⟨ce, tt, te, r1, used1, used2, rfl, hce, hTZ, hEZ, rfl⟩ := stmtsBodyZ_ifEnde_some hbs
+        obtain ⟨cv, tb, eb, rest1, hcv, hT, hE, rfl⟩ := lowBodyF_ifEnde_ok hlow
+        have hF0 := bindFrischL_sonst (by rfl) hF
+        obtain ⟨hr1, hsuf1, hBt⟩ := laufEndSeq_G G S c hc O passes R hRR blockFuel k ss fn fT ns tb
+          (.ifElse :: rest1) tt (.ifElse :: r1) used1 hU hS hmemss hF0 True.intro hT hTZ
+        have h1 := (List.cons.inj hr1).2
+        subst r1
+        have hsuf1' := (List.suffix_cons _ _).trans hsuf1
+        obtain ⟨_, _, hBe⟩ := laufEndSeq_G G S c hc O passes R hRR blockFuel k rest1 fn fT
+          (ns.resume used1) eb [.blkEnd] te [.blkEnd] used2 (hU.afterSeq hTZ) hS
+          (fun st hm => hmemss st (mem_of_suffix hsuf1' hm))
+          (bindFrischL_suffix hF0 hsuf1') True.intro hE hEZ
+        exact endZiel_to_lauf (endZiel_ite_G S.tab hU hS hcv hce hBt hBe σ ρ s hW hL)
       case ifBeg cnd =>
         obtain ⟨ce, tt, te, r1, r2, bs', used1, used2, hce, hTZ, hEZ, hbs', rfl⟩ := stmtsBodyZ_ifBeg_some hbs
         have hF0 : BindFrischL (protectedNames fn.params fn.kinds) ss := bindFrischL_sonst (by rfl) hF

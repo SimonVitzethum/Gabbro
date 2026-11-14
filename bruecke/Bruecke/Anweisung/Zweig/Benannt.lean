@@ -81,6 +81,11 @@ def stmtsBodyZ (u : UProg) : Nat → UFn → BodyNames → List UStmt → URet �
     Option (List Gabbro.Body.Stmt)
   | 0, _, _, _, _ => none
   | _ + 1, fn, ns, [], r => namedEnd u fn ns r
+  | k + 1, fn, ns, .ifEnde c :: rest, .keins => do
+      let ce ← condZ u fn ns c
+      let (tb, .ifElse :: rest1, used1) ← seqZ u k fn ns rest | none
+      let (eb, [.blkEnd], _) ← seqZ u k fn (ns.resume used1) rest1 | none
+      pure [.ite ce tb eb]
   | k + 1, fn, ns, .ifBeg c :: rest, r =>
       match condZ u fn ns c with
       | none => none

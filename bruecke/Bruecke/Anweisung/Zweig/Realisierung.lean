@@ -6,6 +6,7 @@ public import Bruecke.Anweisung.Bereich.Lesen
 public import Bruecke.Anweisung.Schleife.Lesen
 public import Bruecke.Anweisung.Match.ReasonLesen
 public import Bruecke.Anweisung.Match.TagLesen
+public import Bruecke.Anweisung.Zweig.EndLesen
 @[expose] public section
 
 /-!
@@ -148,6 +149,15 @@ theorem stmtsBodyZ_callee (r : URet) : ∀ (k : Nat) (fn : UFn) (ns : BodyNames)
   | k + 1, _, _, [], _, _, _, _, hm => by obtain ⟨st, hm, _⟩ := hm; cases hm
   | k + 1, fn, ns, s0 :: ss, bs, h, g, args, hm => by
       cases s0
+      case ifEnde cnd =>
+        obtain ⟨ce, tt, te, r1, used1, used2, _, _, hT, hE, _⟩ := stmtsBodyZ_ifEnde_some h
+        rcases seqZ_callee k fn ns ss tt _ used1 hT g args (CallsIn.tail (by rfl) hm) with hf | hm1
+        · exact hf
+        · rcases seqZ_callee k fn (ns.resume used1) r1 te _ used2 hE g args
+            (CallsIn.tail (by rfl) hm1) with hf | hm2
+          · exact hf
+          · obtain ⟨st, hst, _⟩ := CallsIn.tail (by rfl) hm2
+            cases hst
       case ifBeg cnd =>
         obtain ⟨ce, tt, te, r1, r2, bs', used1, used2, _, hT, hE, hY, _⟩ := stmtsBodyZ_ifBeg_some h
         have hm' := CallsIn.tail (by rfl) hm

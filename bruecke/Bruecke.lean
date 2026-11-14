@@ -50,4 +50,5 @@ public import Bruecke.Kette.Formen.OptionZeuge
 public import Bruecke.Kette.Formen.ReasonZeuge
 public import Bruecke.Kette.Formen.TagZeuge
 public import Bruecke.Kette.Formen.StatischBoolZeuge
+public import Bruecke.Kette.Ende.Zeuge
 @[expose] public section

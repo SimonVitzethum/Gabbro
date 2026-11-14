@@ -1,5 +1,6 @@
 module
 public import Bruecke.Kette.RahmenBlock
+public import Bruecke.Kette.Ende.Rahmen
 public import Bruecke.Anweisung.Match.Kopf
 public import Bruecke.Anweisung.Match.Rahmen
 public import Bruecke.Kette.Formen.ReasonStatisch
@@ -228,6 +229,19 @@ theorem statisch_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB : G
           lowBodyF_cons_ok c r _ ss (by exact True.intro) hlow
         exact statisch_schritt_G S c hc ρB hΓ _ ss hhead hgst hx hF
           (statisch_G S c hc ρB r n k ss fn _ _ rest bs' hΓ hS hmemss hrest hbs' hFss)
+      case ifEnde cnd =>
+        obtain ⟨ce, tt, te, r1, used1, used2, rfl, hce, hTZ, hEZ, rfl⟩ := stmtsBodyZ_ifEnde_some hbs
+        obtain ⟨cv, tb, eb, rest1, hcv, hT, hE, rfl⟩ := lowBodyF_ifEnde_ok hlow
+        obtain ⟨hr1, hsuf1, hSt⟩ := statischEndSeq_G S c hc ρB blockFuel k ss fn fT ns tb
+          (.ifElse :: rest1) tt (.ifElse :: r1) used1 hΓ hS hmemss True.intro hT hTZ hFss
+        have h1 := (List.cons.inj hr1).2
+        subst r1
+        have hsuf1' := (List.suffix_cons _ _).trans hsuf1
+        obtain ⟨_, _, hSe⟩ := statischEndSeq_G S c hc ρB blockFuel k rest1 fn fT (ns.resume used1)
+          eb [.blkEnd] te [.blkEnd] used2 hΓ hS (fun st hm => hmemss st (mem_of_suffix hsuf1' hm))
+          True.intro hE hEZ
+          (fun cn gf hf ⟨args, ha⟩ => hFss cn gf hf ⟨args, ha.mono (fun _ h => mem_of_suffix hsuf1' h)⟩)
+        exact .ite _ _ _ _ hSt hSe .nil
       case ifBeg cnd =>
         obtain ⟨ce, tt, te, r1, r2, bs', used1, used2, hce, hTZ, hEZ, hbs', rfl⟩ := stmtsBodyZ_ifBeg_some hbs
         obtain ⟨Λ₁, st, rest', e, hst, hrest, rfl⟩ := lowBodyF_ifBeg_ok hlow

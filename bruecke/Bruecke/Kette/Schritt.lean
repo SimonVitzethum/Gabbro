@@ -247,21 +247,11 @@ theorem stmtZiel_ite_G {loopMode : Bool} (hT : TabEindeutig u) {c : Fin u.fns.le
     (σ : World (declOf u)) (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State)
     (hW : WGRel u σ s.world) (hL : PositionalLRel fn ns.active 0 ρ s.local') :
     StmtZiel_G u C c O passes R fn ns.active (Stmt.ite cv tb eb) σ ρ s (.ite ce tt te) := by
-  have hceN : condZ u fn ns cnd = some ce := (condZ_sicht hS ns cnd).symm.trans hce
-  obtain ⟨raw, a, hens, hold, hres, hrename⟩ := condZ_some hceN
   have hWl : WGRel u (σ.lese Λ cv.orte) s.world := wgrel_same u rfl rfl hW
-  have hvL := hL.visible (ns := ns)
-  let sv : Gabbro.Body.State := ⟨s.world, ns.visible fn s.local'⟩
-  have hB : EnsBind fn none ρ sv a sv.local' :=
-    ⟨hvL, fun hr => (by rw [hres] at hr; cases hr),
-      fun i hi => (by rw [hold] at hi; exact absurd hi (Nat.not_lt_zero _))⟩
-  have hraw := lowEns_sim (er := none) hU.art hT (σ.lese Λ cv.orte) (σ.lese Λ cv.orte)
-    ρ sv s.world sv.local' a hWl hvL hWl hB cnd hens hcv (Vor.refl a)
-  change Gabbro.Body.eval ⟨s.world, visibleBinding (ns.lookup fn) s.local'⟩ raw =
-    some (.bool (wahr? (eval (σ.lese Λ cv.orte) cv (σ.lese Λ cv.orte) ρ))) at hraw
   have hcond : Gabbro.Body.eval s ce =
       some (.bool (wahr? (eval (σ.lese Λ cv.orte) cv (σ.lese Λ cv.orte) ρ))) :=
-    (eval_renameScalar (ns.lookup fn) s raw ce hrename).trans hraw
+    lowEns_named_sim hcv ((condZ_sicht hS ns cnd).symm.trans hce) hU.art hT
+      (σ.lese Λ cv.orte) (σ.lese Λ cv.orte) ρ s hWl hWl hL
   cases hb : wahr? (eval (σ.lese Λ cv.orte) cv (σ.lese Λ cv.orte) ρ) with
   | true =>
     rw [hb] at hcond

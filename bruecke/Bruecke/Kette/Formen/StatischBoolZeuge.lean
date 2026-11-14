@@ -97,4 +97,40 @@ theorem reader_forms_zeuge :
 theorem narrow_zeuge : (zuBodyZ unit narrowing).isSome = true := by
   cbv
 
+/-- A bool static is both the condition and the stored value in a full traversal body. -/
+def traversal : UFn :=
+  { name := "toggle", params := [], kinds := [], res := none, held := [], puts := [],
+    gputs := ["err"], gives := [],
+    body := [.loopBeg "i" "T" .tru, .ifBeg (.globB "err"),
+      .assignGlobB "err" (.not (.globB "err")), .next "i", .ifElse,
+      .assignGlobB "err" .tru, .leave "i", .blkEnd, .blkEnd], ret := .empty }
+
+def traversalUnit : UProg :=
+  { unit with tabs := [{ name := "T", count := 2, cols := [("v", (0, 9))] }],
+    fns := [traversal] }
+
+def traversalBody : List Gabbro.Body.Stmt :=
+  [.forEach "i" [0, 1]
+    [.ite (.global "err")
+      [.assignGlobal "err" (.un .not (.global "err")), .exit]
+      [.assignGlobal "err" (.lit (.bool true)), .leave]]]
+
+/-- Two actual indices, both loop controls and bool-static reads/writes are read jointly. -/
+theorem traversal_bool_zeuge : staticsB traversalUnit = true ∧ nullB traversalUnit = true ∧
+    zuBodyZ traversalUnit traversal = some traversalBody := by
+  exact ⟨by cbv, by cbv, by cbv⟩
+
+def terminalTraversal : UFn :=
+  { traversal with name := "terminalToggle", resBool := true, ret := .keins,
+    body := [.ifEnde (.globB "err")] ++ traversal.body ++
+      [.ret (.bool (.globB "err")), .ifElse, .assignGlobB "err" .tru,
+        .ret (.bool .fls), .blkEnd] }
+
+/-- Terminal arms keep the bool-static traversal and both explicit bool returns. -/
+theorem terminal_traversal_bool_zeuge :
+    zuBodyZ { traversalUnit with fns := [terminalTraversal] } terminalTraversal =
+      some [.ite (.global "err") (traversalBody ++ [.ret (some (.global "err"))])
+        [.assignGlobal "err" (.lit (.bool true)), .ret (some (.lit (.bool false)))]] := by
+  cbv
+
 end Gabbro.Bruecke.StatischBoolZeuge
