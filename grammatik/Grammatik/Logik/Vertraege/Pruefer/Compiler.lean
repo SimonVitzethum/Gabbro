@@ -67,7 +67,7 @@ def statement (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           cases reply : runtime.calls f (world.lese Λ args.orte)
             (evalArgs (world.lese Λ args.orte) args (world.lese Λ args.orte) locals) <;>
             simpa only [reply, Goals.holds] using ready)
-    | _ => leafCondition policy budget.expansion code locals goals
+    | other => leafCondition policy budget.expansion other locals goals
 termination_by fuel
 
 def block (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}

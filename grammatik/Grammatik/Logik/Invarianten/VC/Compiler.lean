@@ -82,7 +82,7 @@ def extendedStatement (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
             let pre ← extendedBlock fuel body locals goals
             return opaqueLockCondition lock rank body locals goals pre
     | .forever .. => .error (.unsupported "forever requires a checked inductive invariant")
-    | _ => leafCondition expansion facts code locals goals
+    | other => leafCondition (program := program) (checked := checked) expansion facts other locals goals
 termination_by fuel
 
 def extendedBlock (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -194,10 +194,10 @@ def extendedEnd (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         return (pre.read Λ expression.orte).map (fun runtime world ready => by
           unfold Runtime.wpE at ready ⊢
           simp only [execEndH]
-          cases execEndH S runtime.oracle runtime.environment runtime.passes runtime.calls rest
+          cases result : execEndH S runtime.oracle runtime.environment runtime.passes runtime.calls rest
             (world.lese Λ expression.orte)
             (.cons (eval (world.lese Λ expression.orte) expression (world.lese Λ expression.orte) locals) locals) <;>
-            exact ready)
+            simpa only [result, EndFlow, EndAusgang.schrumpf] using ready)
     | .bindCall f args he hp hr rest => do
         let domain ← localDomain (D := D) expansion _
         let tails ← allConditions domain.values
@@ -224,8 +224,9 @@ def extendedEnd (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
                   have ready := callWP_sound f known.formula tails.formula read next validRead frame inv
                   have result := tails.sound runtime next ready (ergWert he value) (domain.complete _)
                   unfold Runtime.wpE at result
-                  cases execEndH S runtime.oracle runtime.environment runtime.passes runtime.calls rest
-                    next (.cons (ergWert he value) locals) <;> exact result
+                  cases outcome : execEndH S runtime.oracle runtime.environment runtime.passes runtime.calls rest
+                    next (.cons (ergWert he value) locals) <;>
+                    simpa only [outcome, EndFlow, EndAusgang.schrumpf] using result
               | why next reason => exact (Fin.cast hr reason).elim0
               | logik error => trivial
               | hardware error => trivial }
