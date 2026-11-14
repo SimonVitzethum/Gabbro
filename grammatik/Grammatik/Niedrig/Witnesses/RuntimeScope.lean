@@ -43,17 +43,8 @@ theorem admitted : entry.openView 7 start 4 readWriteRights OwnerWitness.child =
     .ok (opened, key) := rfl
 
 theorem released : opened.close key = .ok closed := by
-  have valid : context.Valid authority := initial_valid
-  have restored := ram_view_return valid receipt
-  change (if key = key then
-    if key.generation = opened.generations key.node then
-      match returnView authority receipt.next with
-      | .error reason => .error (.view reason)
-      | .ok next => .ok (opened.finish key [] next opened.byteLoans)
-    else .error .stale
-    else .error .order) = _
-  rw [if_pos rfl, if_pos rfl, restored]
-  rfl
+  have valid : entry.context.Valid entry.authority := initial_valid
+  exact ContextEntry.openView_close valid admitted
 
 /-- The child becomes stale; an ancestor retains a different, nonzero
     generation. This distinguishes node generations from one global epoch. -/
