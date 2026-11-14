@@ -64,7 +64,9 @@ def memory : Mem where
     This uses the runner's ordinary IR semantics and no futex response. -/
 theorem nimmT_spin_retry_zeuge [Kern] :
     ∃ m f, LS memory m 4096 4 8192 f 1 0 0 ∧ f 2 = 1 ∧ f 5 = 0 ∧
-      Star ⟨160, 4096⟩ m ⟨112, 4096⟩ m ∧ m.rd64 (slot 4096 3) = some 77 := by
+      Star ⟨160, 4096⟩ m ⟨112, 4096⟩ m ∧ m.rd64 (slot 4096 3) = some 77 ∧
+      ∃ m' f', Star ⟨112, 4096⟩ m ⟨112, 4096⟩ m' ∧
+        LS memory m' 4096 4 8192 f' 1 0 0 ∧ f' 2 = 1 := by
   have E : LE memory 0 4096 4 8192 (nimmT (layout "freestanding") 8192 4) := by
     refine ⟨⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,
       by decide, by decide, by decide, rfl, rfl, rfl, ?_, ?_⟩
@@ -87,9 +89,12 @@ theorem nimmT_spin_retry_zeuge [Kern] :
     (by decide) (by decide) (by decide)
   obtain ⟨m, f, _, state, ticket, seen, compared⟩ :=
     nimmT_check E state0 (At.whole _)
-  refine ⟨m, f, state, ticket, seen, ?_, ?_⟩
+  refine ⟨m, f, state, ticket, seen, ?_, ?_, ?_⟩
   · exact nimmT_spin_retry E state (At.whole _) rfl compared (by rw [ticket, seen]; decide)
   · rw [state.ag.rd_low (by decide) (by decide) (by decide)]
     decide
+  · obtain ⟨m', f', steps, state', keep, _⟩ :=
+      nimmT_spin_round E state (At.whole _) rfl (by rw [ticket]; decide)
+    exact ⟨m', f', steps, state', keep.trans ticket⟩
 
 end Gabbro.Stage0.Senke.WaitBindingWitness
