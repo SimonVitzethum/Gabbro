@@ -73,3 +73,8 @@ qemu_*.core
 
 # Lead and agent scratch (logs, order files, local tools) -- never repository content.
 .scratch-*
+
+# Site-specific operating manual of this checkout (servers, slots, memory caps, staffing, keys).
+# Loaded by Claude Code beside AGENTS.md; never pushed upstream (owner, 2026-11-14).
+CLAUDE.local.md
+AGENTS.local.md

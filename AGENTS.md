@@ -2,7 +2,10 @@
 
 This is the operating manual for everyone who works in this repository, human or model (`CLAUDE.md` is a
 symlink to it, so Claude Code loads the same text); it states the goal, the standing rules, the procedures and
-the pitfalls. There is no work-list file in the repository (owner, 2026-11-11): open work and findings are not
+the pitfalls. It is deliberately site-independent: it names no machines, addresses, keys, memory sizes or
+model line-up. A site keeps its concrete workflow (build hosts, slot scripts, memory caps, staffing) in an
+untracked `CLAUDE.local.md` / `AGENTS.local.md` beside it, which instantiates the general rules below and is never
+pushed. There is no work-list file in the repository (owner, 2026-11-11): open work and findings are not
 recorded in a tracked document; a lead keeps them in a gitignored scratch file. History (who decided what, when, and how earlier rounds
 were organised) is in `git log`, not here.
 
@@ -17,16 +20,10 @@ The Lean module-system migration and the split of every Lean file below 500 line
 
 ### Team
 
-- **One lead** (the root session) runs [PLAN-COMPILER-READY.md](dokumente/PLAN-COMPILER-READY.md) with agents
-  started through T3 `delegate_task` (owner, 2026-11-12). Upper limits of agents running at the same time:
-  - agents of the Claude family (owner, 2026-11-13, latest): EITHER one Opus 5.5 (`claude-opus-5-5`) OR two
-    Sonnet 5.5 (`claude-sonnet-5-5`) at the same time, never mixed; Fable 5.2 only as the lead session;
-  - **five** GPT Sol 6.1 (codex `gpt-6.1-sol`, started with `reasoningEffort: high`; owner, 2026-11-14);
-  - **five** Muse (OpenCode Muse Spark 1.3 Contributor, only through the Go access: model
-    `opencode-go/muse-spark-1.3-contributor`; never `opencode/…`).
-  Which model gets which kind of task follows [MODEL-EVALUATION.md](dokumente/MODEL-EVALUATION.md), not a fixed
-  role: the lead records there, per finished task, how well each model proves and how often it errs, and assigns
-  the next tasks by that record.
+- **One lead** runs [PLAN-COMPILER-READY.md](dokumente/PLAN-COMPILER-READY.md) with agents. The lead decides
+  everything that is not the owner's, merges, builds the integration branch and pushes. How many agents of which
+  model run at once is a site decision (local file); the assignment of task kinds to models follows the measured
+  record in [MODEL-EVALUATION.md](dokumente/MODEL-EVALUATION.md), not a fixed role.
 - **Proved theorems are reviewed, their proofs are not.** A proof is valid once it builds without `sorry` and with
   the standard axioms; what a reviewer reads is the STATEMENT: whether it says what its name and comment claim,
   whether its premises can hold together (witness), whether it is vacuous. Reviews are tasks for agents too, and
@@ -35,18 +32,15 @@ The Lean module-system migration and the split of every Lean file below 500 line
   (`stage0/`, the runner, probes) are part of it.
 - **The owner is asked only about important things**: a change of the goal statement's meaning, a rule of the
   language, a decision the plan lists as open. Everything else the lead decides.
-- **Agents check their own modules on a build-server slot (owner, 2026-11-14; before: only the lead built).**
-  Whenever a slot is free, an implementing agent checks the modules it changed before it reports:
-  `git push -f buildserver HEAD:refs/heads/agent/<branch>`, then
-  `ssh simonvitzethum@10.200.200.100 '~/agent-check.sh <branch> <package> <Module>...'` (four slots, 8 GB and
-  2 threads each, the script waits for a free slot and while the lead runs a full build). Agents build single
-  modules only, never a whole package and never the heavy probe modules (`*Proben*`, `*Probes*`); their local
-  worktrees still carry no `.lake`. The lead's integration build of the merged wave stays the acceptance.
-- **One integration branch.** The lead merges the branches of all its agents and its own work
-  into ONE integration branch and builds/checks that branch only; never one build per agent.
+- **Agents check their own modules before they report** (owner, 2026-11-14): wherever the site offers isolated
+  build slots, an implementing agent builds the modules it changed (and the ones importing them) in such a slot
+  until they are green, and reports which runs were green. Agents build single modules, never a whole package and
+  never the heavy probe modules (`*Proben*`, `*Probes*`). The lead's integration build of the merged wave stays
+  the acceptance.
+- **Agent commits are merged as they are** (see §3 Repository): no group commit over a wave.
 - **No `.py` helper scripts for agents**: none are written, kept or used. Agents work with git, `lake`, `lean` and
-  the shell. The two guardians stay root's tools.
-- Root owns form-based coverage measurement and reviews; agents implement.
+  the shell. The two guardians stay the lead's tools.
+- The lead owns form-based coverage measurement and reviews; agents implement.
 
 ### Scope: every userspace Gabbro form to Stage-0 IR
 
@@ -113,67 +107,43 @@ lines. Cover the whole language rather than repeatedly expanding infrastructure 
 Report which language cases actually compile, which remain refused, and what was measured. The broader roadmap
 below is not authorization to start adjacent projects.
 
-### Builds, memory and CPU
+### Builds, memory and CPU (general rules; the concrete caps live in the site's local file)
 
-The machine has 20 threads and 31 GB and no swap; the caps below follow the OOM/CPU overload of 2026-11-01.
-
-- **At most two Lean builds or direct Lean checks run globally**, across all worktrees, including audits,
-  witnesses and `lean --run` compiler invocations. Each holds a slot lock
-  `/home/simon/.cache/gabbro-stage0-build.slot-N.lock` (N = 1, 2) and releases it after each module/check. Never
-  run two checks in one worktree or mutate artifacts another check reads (use isolated artifact overlays); never
-  interrupt another worker's running proof.
-- **Scopes** (`systemd-run --user --scope …`):
-
-  | Run | Locks | Scope |
-  |---|---|---|
-  | full `grammatik/` build (only one globally) | both | `LEAN_NUM_THREADS=3`, `-p AllowedCPUs=0-11 -p CPUQuota=1200% -p MemoryMax=<min(MemAvailable-6G, 13G)> -p MemoryHigh=<2G below> -p MemorySwapMax=0` |
-  | Stage-0/runner `lake build` | both | `LEAN_NUM_THREADS=2`, `-p MemoryMax=<min(MemAvailable-4G, 16G)> -p MemoryHigh=<1G below> -p MemorySwapMax=0` |
-  | single-module check | one | `-p AllowedCPUs=0-11 -p CPUQuota=400% -p MemoryMax=5G -p MemoryHigh=4G -p MemorySwapMax=0` |
-
-- **Every `lake build` sets `LEAN_NUM_THREADS` (owner, 2026-11-12).** Lake has no job limit of its own; without
-  the variable it starts one `lean` per core. At the end of a full `grammatik/` build that means about fifteen
-  heavy parser probes (7–12 GB each) at once: the scope thrashes at `MemoryHigh` and finishes nothing (measured:
-  one hour stuck at job 3754/3943). Use the value of the table above (3 for a full `grammatik/` build, measured
-  ~30 min, 2 for Stage 0); a build that makes no progress for 10 minutes is stopped by its own PIDs and restarted
-  with the table's values, never left running.
-- **Rebuild single modules only (owner, 2026-11-02).** Check the changed modules and the modules that import
-  them, one module at a time in dependency order (`lake build <Module>` or `lean` on the file inside a
-  single-module scope); the module system keeps dependents unbuilt when no interface moved. A full package build
-  (`grammatik/`, `stage0/`) runs only when single-module checks cannot settle a question, at most once per C round,
-  and the lead says why in its report.
-- **Inside a single-module slot exactly ONE `lean` process runs**, with `-j4 -DElab.async=true -M4608`
-  (asynchronous elaboration is the standard; the threads of one process share its imports), module by module in
-  dependency order. Never run a `lake build` of `stage0/` inside such a slot: it spawns one `lean -M16384` per
-  module and thrashes inside the 5G scope.
-- **No swap for ANY run:** every process that can use real memory (`lean`, `lake`, the runner and
-  regression loops, guardians, Python measurement scripts) runs inside a scope with `-p MemorySwapMax=0` and a
-  MemoryMax/MemoryHigh. No exceptions.
-- **Nothing heavy starts** when the load average is above 16 or less than 8 GiB are available (`free -g` before
-  every heavy step); wait instead.
+- **Every heavy run is bounded.** `lake build`, direct `lean` checks, witnesses, guardians, the runner and
+  measurement scripts run inside a memory-limited scope (a hard limit plus a soft limit below it, so the kernel
+  reclaims before it kills) and never in swap. An abort for lack of memory is not a finding; size the next run.
+- **Every `lake build` sets `LEAN_NUM_THREADS`.** Lake has no job limit of its own; without the variable it starts
+  one `lean` per core, and at the end of a full `grammatik/` build the heavy parser probes (several GB each) start
+  together, sit at the soft limit and make no progress without failing. Choose the thread count so that
+  threads × the largest module's memory fits the scope. A build whose job counter (`[n/m]`) stands still is
+  stopped by its own PIDs and restarted with fewer threads.
+- **Cap concurrent builds by memory, not by cores.** Decide how many Lean builds may run at once from the free
+  memory and the largest module; hold a lock per build slot; never run two builds in one tree; never mutate
+  artifacts another build reads; never interrupt another worker's running proof.
+- **Nothing heavy starts** when memory or load is already tight; wait instead.
+- **Rebuild single modules (owner, 2026-11-02).** Check the changed modules and the modules that import them, in
+  dependency order; the module system keeps dependents unbuilt when no interface moved. A full package build runs
+  only when single-module checks cannot settle a question, and before a push.
 - **Heavy witness modules are not rebuilt during work.** Probe files that run the parser/elaborator in the kernel
-  (`Grammatik/Parser/Elab/Proben/**`, `*Proben*.lean`) need 7–12 GB each; they are checked only in the final
-  integration build of a round, never in single-module checks.
-- **Build less, keep working:** batch several finished edits into one check of the affected modules. While a check
-  runs or waits for memory or a slot, keep writing the next proofs and code; never stop a run because a check is
-  pending, and never end a run while a build it started still runs.
-- **One build per wave (owner, 2026-11-12).** The finished branches of a whole wave of agents are merged into the
-  integration branch and checked by ONE compiler build (and, before a push, one full `grammatik/` build); a
-  failing branch is repaired or dropped and the wave is built again, never branch by branch. The plan is to be
-  finished with as few builds as possible.
-- **A second worktree for writing (owner, 2026-11-12).** A tree is never edited while a build reads it, so a lead
-  that only builds in one tree waits most of its time. The lead keeps a writing tree beside the building one
-  (set up as in "One Mathlib for all trees"): while a build runs in one tree, the next piece is written in the
-  other and brought over by `git` when the build is done. Waiting for a build is not work.
-- **The full `grammatik/` build runs once before a push (owner, 2026-11-12)**, not after every block. A change
-  under `Parser/Elab` rebuilds nearly every parser witness, the heavy probes among them (about 30 minutes).
-  Between pushes the compiler build (`lake build stage0` in `stage0/`) is the check: it rebuilds everything
-  Stage 0 depends on. The full build and the guardians then run on the state that is pushed.
-- **One Mathlib for all trees:** the read-only store is `grammatik/.lake/packages` of the root checkout. A lead
-  tree links it with `cp -al <root>/grammatik/.lake/packages <tree>/grammatik/.lake/packages` and copies only its
-  own build part (`rsync -rlpgoD --exclude packages …`); nobody copies or rebuilds Mathlib.
-- **At most 50 GB for all worktrees together.** Root deletes every worktree right after its merge.
-- **Nothing in `/tmp`:** it is RAM. Scratch goes to `.scratch-*` inside the own worktree (`TMPDIR` points there);
-  everything in `/tmp` together stays under 100 MB, and root removes leftovers no process holds open.
+  (`Grammatik/Parser/Elab/Proben/**`, `*Proben*.lean`) are checked in the integration build, not in single-module
+  checks. Making them lighter (phase-wise certificates, small explicit facts) is always welcome.
+- **Build less, keep working:** batch finished edits into one check. While a check runs, keep writing in a second
+  tree and bring the work over by `git` afterwards; never edit a tree while a build reads it; never end a run while
+  a build it started still runs.
+- **One build per wave (owner, 2026-11-12).** The finished branches of a wave are merged into the integration
+  branch and checked by ONE compiler build (and, before a push, one full `grammatik/` build); a failing branch is
+  repaired or dropped and the wave is built again.
+- **The full `grammatik/` build runs once before a push**, not after every block; between pushes the compiler
+  build (`lake build` in `stage0/`) is the check, since it rebuilds everything Stage 0 depends on.
+- **One Mathlib for all trees.** Every tree links the read-only package store of one checkout by hard links
+  (`cp -al …/.lake/packages`) and copies only its own build output; nobody copies or rebuilds Mathlib. Build
+  output itself is never shared by hard links (Lean rewrites it in place).
+- **Disk is a budget.** Worktrees and clones are deleted right after their merge or as soon as their agent has
+  reported; logs and scratch are cleaned regularly.
+- **Scripts that running jobs execute are replaced atomically** (write a new file, then rename), never edited in
+  place: a shell reads a running script lazily and continues at old offsets.
+- **Nothing in RAM-backed temp directories** (`/tmp` on many systems): scratch goes to a `.scratch-*` directory
+  inside the own worktree and is deleted after use.
 
 ### Small files and the Lean module system (fixed rules)
 
@@ -284,7 +254,7 @@ not a deployed checker, and no bridge to any binary is built. The
   (`runner/runner.s`) executes. Nothing is rebuilt in Rust or C.
 - **Target direction: AArch64** (Armv9-A); the former Lean model of it (`arm/`) was removed on 2026-11-01 and lives
   in git history. The x86-64 hardware model is archived (branch `archive`); the one exception is the verified
-  stage-0 runner (`PLAN-SELF-HOSTING.md` §2.2, Simon 2026-10-28), whose x86-64 instruction subset is written anew and tested against the CPU.
+  stage-0 runner (`PLAN-SELF-HOSTING.md` §2.2, owner 2026-10-28), whose x86-64 instruction subset is written anew and tested against the CPU.
 - **Three targets from the start (owner, 2026-11-12):** everything is built so that x86-64, AArch64 and RISC-V 64
   are reached by adding a target table and a binding, not by changing sources, IR, passes or proofs. A program
   cross-compiles to each of them from one source, and a good compiler still reaches more than optimised C on each
@@ -336,7 +306,7 @@ not a deployed checker, and no bridge to any binary is built. The
   fix-up of a not yet pushed commit is folded into it (`git commit --fixup` + autosquash). Pushed history is
   never rewritten (no force-push).
 - **Commit every building step.** Work that builds is committed at once.
-- **Caprock** (the OS this language exists for) lies read-only in `../caprock-messbasis`: never commit into it.
+- **Caprock** (the OS this language exists for) is read-only reference material wherever a site keeps a copy: never commit into it.
 - **Tag milestones** at the push that reaches them.
 
 **Security**
@@ -345,17 +315,15 @@ not a deployed checker, and no bridge to any binary is built. The
 
 ## 4. Where things run
 
-Everything runs locally, in this checkout or in worktrees beside it: Lean builds, acceptance
-runs and QEMU stages. There is no build server. One exception (Simon, 2026-10-28): the differential tests of the
-x86-64 runner model against the CPU run on Simon's x86-64 machine (`PLAN-SELF-HOSTING.md` §2.2).
+Everything is reproducible on any machine with `elan`: Lean builds, acceptance runs and QEMU stages need no
+particular host. A site may add build hosts and slot scripts (documented only in its local file). The one
+hardware-bound stage is the differential test of the x86-64 runner model against a real x86-64 CPU
+(`PLAN-SELF-HOSTING.md` §2.2).
 
-- **GitHub:** push is `git@github.com:SimonVitzethum/Gabbro.git` with key `~/.ssh/id_ed25519_github`; fetch
-  goes over https.
-- **One heavy run at a time per tree**, with `free -g` beside it. Heavy are `lake build`, direct `lean` checks and
-  the acceptance run. Every heavy run goes under a memory scope (`systemd-run --user --scope -p
-  MemoryHigh=… -p MemoryMax=… -p MemorySwapMax=0`); the soft limit lets the kernel reclaim before the hard limit
-  kills. An abort for lack of memory is not a finding.
+- **One heavy run at a time per tree**, under a memory scope (§ Builds). Heavy are `lake build`, direct `lean`
+  checks and the acceptance run.
 - Lean comes through `elan` (`ELAN_TOOLCHAIN` must not be set).
+- Push credentials and remote names are site configuration, never written into the repository.
 
 ## 5. Procedure: branch, build, merge, push
 
@@ -374,8 +342,9 @@ x86-64 runner model against the CPU run on Simon's x86-64 machine (`PLAN-SELF-HO
 
   Exit code `0` measured and green, `1` measured and red, `2` nothing or not everything measured — that is not a
   green. A third guardian is not built: a new check becomes a Lean theorem or a stage in one of the two.
-- **Push master after checked merges**, without asking: first grep the outgoing diff for keys; never push red;
-  never force-push; if origin moved, merge first and check again. No new branches on GitHub.
+- **Push after checked merges**, without asking: first grep the outgoing diff for keys, addresses and other
+  site data; never push red; never force-push; if the remote moved, merge first and check again. No new branches
+  on the upstream remote.
 - **Delete worktrees and clones right after their merge.**
 
 ## 6. Parallel work
@@ -384,7 +353,7 @@ x86-64 runner model against the CPU run on Simon's x86-64 machine (`PLAN-SELF-HO
   this checkout; its tree is on `master` before it starts. Two runs in one tree measure a mixture.
 - A lead tree gets its warm caches (`grammatik/.lake`, `programmlogik/.lake`) as in "One Mathlib for all trees":
   Mathlib hard-linked, never copied; with no cache `lake` goes off to clone Mathlib and hangs, and a stale
-  `.lake` is worse than none. Sub-agent trees carry no `.lake`; agents check on the build-server slots (Team).
+  `.lake` is worse than none. Sub-agent trees carry no `.lake`; agents check in the site's build slots (Team).
 - Before starting work in an area, check whether another session already works there (worktrees, recent file
   times) and do not duplicate it.
 - Reviews of theorem statements are delegated like other tasks (see "Team"); the lead checks every finding before
@@ -437,18 +406,18 @@ and the sentence register went with the Rust checker.)
 **Machines**
 - **A leaked `ELAN_TOOLCHAIN` rebuilds everything under the wrong Lean.** After a toolchain incident replace a
   poisoned `.lake` with the warm master cache.
-- **Low memory kills jobs silently**, and there is no swap. Twenty parallel `lean` processes of a full rebuild
-  exceed a 15 GB hard scope; use a soft limit (`MemoryHigh`) under the hard one.
+- **Low memory kills jobs silently** when there is no swap. Many parallel `lean` processes of a full rebuild
+  exceed a hard scope; use a soft limit under the hard one and fewer threads.
 - **A full build without `LEAN_NUM_THREADS` thrashes instead of failing** (2026-11-12): the heavy probes at the
   end all start together, sit at `MemoryHigh` and make no progress for an hour, with no error. Watch the job
-  counter (`[n/m]` in the log); if it stands still, stop the run and restart it with the table's values.
+  counter (`[n/m]` in the log); if it stands still, stop the run and restart it with fewer threads.
 - **`/tmp` is RAM.** Work in real folders; scratch files go to a scratch directory inside the tree that is not
   committed, and are deleted after use.
 
 ## 10. Talking to the project owner
 
-- **German, direct, concrete.** Say what was done, what is open and what is uncertain. Never claim more than was
-  measured.
+- **In the owner's language, direct, concrete.** Say what was done, what is open and what is uncertain. Never
+  claim more than was measured.
 - **Estimates:** give ranges and name the critical path.
 - The owner follows from other devices: short status lines while long jobs run are welcome.
 - A decision that is the owner's (a change of the goal statement's meaning, a rule of the language) is asked,
@@ -468,7 +437,7 @@ G/GX concurrency, floats, contracts, call logs and budget guarantees remain; OS 
 generic.
 
 Performance against equivalent C built with `gcc -O3` or `clang -O3` (the faster of the two): minimum 100 % on every workload
-class and ISA (Simon, 2026-10-25; was 80 %), ambitious above 110 %.
+class and ISA (owner, 2026-10-25; was 80 %), ambitious above 110 %.
 Fixed-work score `100 * Ctime / Gabbrotime`, throughput score `100 * Gabbrothroughput / Cthroughput`, per
 workload and class, on full validated direct binaries with matched hardware, ISA, semantics and settings.
 Compile latency includes checking, optimisation, production, validation and Lean kernel checking. Targets are
