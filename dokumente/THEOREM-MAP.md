@@ -7196,18 +7196,23 @@ cost-checked functions are refused, even with checked pointer-type cost declarat
 
 The admitted `environment linux` / `environment freestanding` profile entry selects the execution-image binding;
 `--environment` must agree with an entry declared in source. The default remains the Linux runner image.
+`Prepared.imageEnvironment_eq` ties environment selection to the exact canonical source selection; the
+certificate carries equality between its binding and the binding extracted from that source.
 `Emitted.lockWait` proves that the selected binding survives the actual image constructor and relocation.
 `ticket_spin_no_syscall`, `locksCodeT_spin_no_syscall` and `Emitted.lock_spin_no_syscall` concern lock code only;
 the runner startup and declared gates have separate bindings. Linux retains private WAIT and WAKE-all
 (`ticket_futex_syscalls`). Both bindings keep every instruction offset and the existing uncontended simulation
 statements. The spin contention edge takes two instructions back to the serving read, preserving the complete
 memory (`nimmT_spin_retry`); its padded wait/wake blocks contain no syscall.
+`nimmT_spin_round` connects the complete serving read, comparison and retry, preserving the ticket and all
+three shared lock words along the fixed five-instruction attempt.
 
 `Sperre/Bindung/Simulation.lean` states the small safety interface `WaitModel`: a scheduled step stutters or is an
 existing ticket-machine step. `waitModel` proves both instances. For every such model, `WaitRun.inv`,
 `WaitRun.abbild`, `WaitRun.abstract`, `WaitRun.tkt` and `WaitRun.ausschluss` carry the same invariant, abstract
 FIFO order, ticket ghost and mutual exclusion. The existing machine-G coupling obligation is unchanged.
-Joint witnesses are `profile_lock_zeuge`, `nimmT_spin_retry_zeuge`, `waitModel_zeuge`, `WaitRun_tkt_zeuge` and
+Joint witnesses are `Prepared_imageEnvironment_eq_zeuge`, `profile_lock_zeuge`, `source_environment_zeuge`,
+`nimmT_spin_retry_zeuge`, `waitModel_zeuge`, `WaitRun_tkt_zeuge` and
 `image_binding_zeuge` under `Sperre/Bindung/`.
 
 **Liveness finding (no weakened theorem):** the existing `Faeden.Lauf` models Linux waiter registration,
