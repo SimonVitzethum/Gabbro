@@ -74,7 +74,7 @@ structure IrqEntryDuty (names : SystemAssumptions D) (item : D.Ax)
   origin : CtxOriginOk item
   named : D.axBeleg item = some names.IrqDelivery
   declaration : ∃ source declared, Eingang.frameOf source = .ok declared ∧
-    frame = irqFrameAt declared c.privilege.priv ∧ source.vektor = some (.lit (vector : Int))
+    frame = irqFrameAt declared c.privilege.priv ∧ source.vektor = some (.lit vector)
   checked : IrqEnterOk c frame handlers vector handler priority
   hardware : IrqDelivery handlers c.interrupt delivered
   arrival : delivered c.privilege.kern vector handler priority true

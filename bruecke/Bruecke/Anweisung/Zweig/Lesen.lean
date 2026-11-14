@@ -92,7 +92,7 @@ theorem stmtsBodyZ_bindRecord_some {k : Nat} {fn : UFn} {ns : BodyNames} {x : St
             | some ys =>
                 rw [hy] at h
                 cases h
-                exact ⟨id, fs, e, ys, rfl, he, hy, rfl⟩
+                exact ⟨id, fs, e, ys, rfl, rfl, hy, rfl⟩
 
 theorem seqZ_wenn_some {k : Nat} {fn : UFn} {ns : BodyNames} {s : UStmt} {cnd : UEns}
     {rest r : List UStmt} {xs : List Gabbro.Body.Stmt} {used : List String}

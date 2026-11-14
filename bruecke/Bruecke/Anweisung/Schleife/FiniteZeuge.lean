@@ -7,7 +7,7 @@ public import Gabbro.Body.FiniteWitness
 
 namespace Gabbro.Bruecke
 
-open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
+open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
 
 /-- Non-degenerate joint simulation witness: each pass reaches `next`, the positive
     static bound is exhausted, and the explicit handler returns. Related worlds exist
