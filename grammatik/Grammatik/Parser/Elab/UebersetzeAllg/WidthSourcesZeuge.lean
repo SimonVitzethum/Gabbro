@@ -100,8 +100,9 @@ theorem local_popcount (ctx : UCtx) (name error : String) (position width : Nat)
     uWertBody ctx (.call "popcount" [.variable name]) = .ok (.ib1 .popcount width (.param name)) := by
   have stored := local_width ctx name position width resolved declared positive
   have builtin : uBitEin "popcount" = some .popcount := by cbv
-  simp only [uWertBody, uRechne, records, List.find?_nil, integer, builtin,
+  simp only [uWertBody, uRechne, uRecordConstructor, records, List.find?_nil, integer, builtin,
     uWertBlatt, resolved, kind, stored]
+  rfl
 
 /-- Both rotation operands are read independently of the stored width. -/
 theorem local_rotl (ctx : UCtx) (name : String) (position width : Nat)
@@ -112,7 +113,7 @@ theorem local_rotl (ctx : UCtx) (name : String) (position width : Nat)
       .ok (.ib2 .rotl width (.param name) (.lit 1)) := by
   have stored := local_width ctx name position width resolved declared positive
   have builtin : uRotEin "rotl" = some .rotl := by cbv
-  simp only [uWertBody, uRechne, records, List.find?_nil, builtin,
+  simp only [uWertBody, uRechne, uRecordConstructor, records, List.find?_nil, builtin,
     uWertBlatt, resolved, kind, stored]
   rfl
 
