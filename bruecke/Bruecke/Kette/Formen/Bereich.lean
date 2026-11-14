@@ -66,13 +66,11 @@ theorem laufZiel_narrow_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes
     · constructor
       · intro e h
         simp only [execEnd, eval] at h
-        split at h
-        case isFalse hn => exact absurd hb hn
+        first | simp only [hb, and_self, dite_true, ↓reduceDIte] at h | simp only [hb, dite_false, ↓reduceDIte] at h
         exact EndAusgang.schrumpf_logik h
       · intro σ' v' h
         simp only [execEnd, eval] at h
-        split at h
-        case isFalse hn => exact absurd hb hn
+        first | simp only [hb, and_self, dite_true, ↓reduceDIte] at h | simp only [hb, dite_false, ↓reduceDIte] at h
         exact endSchrumpf_zurueck h
     · exact hs
     · exact fun w => Int.le_refl _
@@ -85,13 +83,11 @@ theorem laufZiel_narrow_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes
     have herr := hErr σl ρ s hWl hL
     refine ⟨fun e h => herr.1 e ?_, fun σ' v' h => ?_⟩
     · simp only [execEnd, eval] at h
-      split at h
-      case isTrue hp => exact absurd hp hb
+      first | simp only [hb, and_self, dite_true, ↓reduceDIte] at h | simp only [hb, dite_false, ↓reduceDIte] at h
       exact h
     · have he : execEnd O passes R err σl ρ = .zurueck σ' v' := by
         simp only [execEnd, eval] at h
-        split at h
-        case isTrue hp => exact absurd hp hb
+        first | simp only [hb, and_self, dite_true, ↓reduceDIte] at h | simp only [hb, dite_false, ↓reduceDIte] at h
         exact h
       obtain ⟨A, hg, ho, hk, hr⟩ := herr.2 σ' v' he
       refine ⟨A, hg, ho, hk, fun ρB hT hF => ?_⟩
@@ -137,17 +133,14 @@ theorem blockZiel_narrow_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel 
     have ih := hRest σl (.cons value ρ) s₁ hWl hL₁
     refine ⟨fun e h => ?_, fun σ' v' h => ?_, fun σ' ρ' h => ?_⟩
     · simp only [execBlock, eval] at h
-      split at h
-      case isFalse hn => exact absurd hb hn
+      first | simp only [hb, and_self, dite_true, ↓reduceDIte] at h | simp only [hb, dite_false, ↓reduceDIte] at h
       exact ih.1 e (schrumpfZ_logik h)
     · simp only [execBlock, eval] at h
-      split at h
-      case isFalse hn => exact absurd hb hn
+      first | simp only [hb, and_self, dite_true, ↓reduceDIte] at h | simp only [hb, dite_false, ↓reduceDIte] at h
       obtain ⟨A, hr⟩ := ih.2.1 σ' v' (schrumpfZ_zurueck h)
       exact ⟨A, RueckZ_G.vor hs (fun w => Int.le_refl _) hr⟩
     · simp only [execBlock, eval] at h
-      split at h
-      case isFalse hn => exact absurd hb hn
+      first | simp only [hb, and_self, dite_true, ↓reduceDIte] at h | simp only [hb, dite_false, ↓reduceDIte] at h
       obtain ⟨ρ'', hin, htail⟩ := schrumpfZ_ok h
       subst ρ'
       obtain ⟨A, s₂, hS, hW₂, hL₂⟩ := ih.2.2 σ' ρ'' hin
@@ -160,12 +153,10 @@ theorem blockZiel_narrow_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel 
     have herr := hErr σl ρ s hWl hL
     refine ⟨fun e h => ?_, fun σ' v' h => ?_, fun σ' ρ' h => ?_⟩
     · simp only [execBlock, eval] at h
-      split at h
-      case isTrue hp => exact absurd hp hb
+      first | simp only [hb, and_self, dite_true, ↓reduceDIte] at h | simp only [hb, dite_false, ↓reduceDIte] at h
       exact herr.1 e (EndAusgang.zuAusgang_logik h)
     · simp only [execBlock, eval] at h
-      split at h
-      case isTrue hp => exact absurd hp hb
+      first | simp only [hb, and_self, dite_true, ↓reduceDIte] at h | simp only [hb, dite_false, ↓reduceDIte] at h
       have he : execEnd O passes R err σl ρ = .zurueck σ' v' := by
         change (execEnd O passes R err σl ρ).zuAusgang = .zurueck σ' v' at h
         cases hh : execEnd O passes R err σl ρ <;>
@@ -179,8 +170,7 @@ theorem blockZiel_narrow_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel 
       obtain ⟨s', hrun, hw⟩ := hr ρB hT hF
       exact ⟨s', by simp only [Gabbro.Body.exec, hstep ρB, hrun], hw⟩
     · simp only [execBlock, eval] at h
-      split at h
-      case isTrue hp => exact absurd hp hb
+      first | simp only [hb, and_self, dite_true, ↓reduceDIte] at h | simp only [hb, dite_false, ↓reduceDIte] at h
       change (execEnd O passes R err σl ρ).zuAusgang = .ok σ' ρ' at h
       cases hh : execEnd O passes R err σl ρ <;>
         simp only [hh, EndAusgang.zuAusgang, reduceCtorEq] at h
