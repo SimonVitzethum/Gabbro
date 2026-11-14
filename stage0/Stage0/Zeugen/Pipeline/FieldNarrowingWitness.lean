@@ -77,6 +77,13 @@ def changedField : String :=
 theorem changed_field_refused_zeuge : (emit changedField 256).toOption.isSome = false := by
   decide +kernel
 
+/-- Shadowing introduces a different record, without inheriting the old field's range. -/
+def shadowedRecord : String :=
+  "module field_narrow { type Entry = { pos : u64, other : u8, }; impl fn main() -> u8 { let e : Entry = Entry(pos: 23, other: 7); narrow e.pos to 0 .. 63 else { return e.other; } let e : Entry = Entry(pos: 1000, other: 7); return e.pos; } }"
+
+theorem shadowed_record_refused_zeuge : (emit shadowedRecord 256).toOption.isSome = false := by
+  decide +kernel
+
 /-- A nonnumeric field cannot acquire an integer range through this sugar. -/
 def booleanField : String :=
   "module field_narrow { type Entry = { flag : bool, }; impl fn main() -> u8 { let e : Entry = Entry(flag: true); narrow e.flag to 0 .. 1 else { return 7; } return 0; } }"

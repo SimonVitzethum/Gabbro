@@ -77,8 +77,8 @@ theorem historical_read_zeuge : replace selected snapshot (.old selected) = .old
 
 /-- An unknown body is a conservative barrier. -/
 theorem unknown_barrier_zeuge :
-    replaceRun selected "entry" snapshot [.raw "unknown", .ret (some selected)] =
-      ([.raw "unknown", .ret (some selected)], false) := by
+    replaceRun selected "entry" snapshot [.other "unknown", .ret (some selected)] =
+      ([.other "unknown", .ret (some selected)], false) := by
   kernel_rfl
 
 /-- A field rooted outside the local scope is never turned into a stable local snapshot. -/

@@ -89,7 +89,8 @@ def elabKlauseln (ctx : UCtx) (klauseln0 : List SKlausel) :
       | _ => none))) with
     | .error e => .error e
     | .ok needs => .ok (gives, needs)
-/-- Pass two: contracts and body of one function. -/
+/-- Pass two: contracts and body of one function. Only the compiler's context switch
+    enables field snapshots; canonical export and printed-program read-back keep the body. -/
 def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln0 : List SKlausel)
     (koerper : SAnw) : Except String (List UEns × List UEns × List UStmt × URet) :=
   match elabKlauseln ctx klauseln0 with
