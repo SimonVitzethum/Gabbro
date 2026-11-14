@@ -19,11 +19,10 @@ instance (span : Span D) (layout : AdressLayout D) : Decidable (SpacePairing spa
   unfold SpacePairing
   infer_instance
 
-/-- Checker-visible span and scope conditions, including the declaration's
-    span-table lookup and nominal/backing pairing in the same premise set.
-    No ghost Authority is a syntax field. Rights, alignment, class, mapping
-    and epoch checks are retained. -/
-def BindViewOk (span : Span D) (layout : AdressLayout D) (epoch start length borrower : Nat)
+/-- All bind conditions independent of a concrete layout. A source checker
+    can decide these conditions, but must retain SpacePairing as a separate
+    obligation. In particular, a nominal name does not select a backing. -/
+def BindViewSynOk (span : Span D) (epoch start length borrower : Nat)
     (rights : DataRights) (frames : List Nat) : Prop :=
   span.Valid ∧ span.owner ∈ D.eigner span.table ∧ span.epoch = epoch ∧
   span.memoryClass = .ordinaryRam ∧ span.base ≤ start ∧
@@ -32,13 +31,56 @@ def BindViewOk (span : Span D) (layout : AdressLayout D) (epoch start length bor
   (rights.read = true → span.rights.read = true) ∧
   (rights.write = true → span.rights.write = true) ∧ rights.owner = span.rights.owner ∧
   start % span.alignment = 0 ∧ length % span.alignment = 0 ∧
-  span.mapped = true ∧ span.initialized = true ∧ borrower ∉ frames ∧ SpacePairing span layout
+  span.mapped = true ∧ span.initialized = true ∧ borrower ∉ frames
+
+instance (span : Span D) (epoch start length borrower : Nat)
+    (rights : DataRights) (frames : List Nat) :
+    Decidable (BindViewSynOk span epoch start length borrower rights frames) := by
+  unfold BindViewSynOk
+  infer_instance
+
+def bindViewSynB (span : Span D) (epoch start length borrower : Nat)
+    (rights : DataRights) (frames : List Nat) : Bool :=
+  decide (BindViewSynOk span epoch start length borrower rights frames)
+
+theorem bindViewSynB_iff (span : Span D) (epoch start length borrower : Nat)
+    (rights : DataRights) (frames : List Nat) :
+    bindViewSynB span epoch start length borrower rights frames = true ↔
+      BindViewSynOk span epoch start length borrower rights frames := by
+  simp only [bindViewSynB, decide_eq_true_eq]
+
+/-- Checker-visible span and scope conditions, including the declaration's
+    span-table lookup and nominal/backing pairing in the same premise set.
+    No ghost Authority is a syntax field. Rights, alignment, class, mapping
+    and epoch checks are retained. -/
+def BindViewOk (span : Span D) (layout : AdressLayout D) (epoch start length borrower : Nat)
+    (rights : DataRights) (frames : List Nat) : Prop :=
+  BindViewSynOk span epoch start length borrower rights frames ∧ SpacePairing span layout
 
 instance (span : Span D) (layout : AdressLayout D) (epoch start length borrower : Nat)
     (rights : DataRights) (frames : List Nat) :
     Decidable (BindViewOk span layout epoch start length borrower rights frames) := by
   unfold BindViewOk
   infer_instance
+
+/-- The split preserves every existing bind condition in both directions. -/
+theorem bindViewOk_iff_syn_pairing (span : Span D) (layout : AdressLayout D)
+    (epoch start length borrower : Nat) (rights : DataRights) (frames : List Nat) :
+    BindViewOk span layout epoch start length borrower rights frames ↔
+      BindViewSynOk span epoch start length borrower rights frames ∧ SpacePairing span layout := by
+  rfl
+
+/-- Under a correct layout and declared nominal coherence, the remaining
+    pairing obligation is exactly the chosen backing identity. -/
+theorem spacePairing_iff_backing {span : Span D} {layout : AdressLayout D}
+    (correct : LayoutOk layout) (nominal : D.tableSpace span.table = span.space.nominal) :
+    SpacePairing span layout ↔ layout.raum span.table = span.space.backing := by
+  constructor
+  · exact fun paired => paired.2.1
+  · intro backing
+    refine ⟨nominal, backing, ?_⟩
+    rw [← backing]
+    exact (correct.tabellenRaum span.table).2.trans nominal
 
 def bindViewB (span : Span D) (layout : AdressLayout D) (epoch start length borrower : Nat)
     (rights : DataRights) (frames : List Nat) : Bool :=
