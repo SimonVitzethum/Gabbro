@@ -30,8 +30,8 @@ abbrev hzV : Vertrag grobD := vertragVon grobD ()
 /-- The inner section `locks true { }`, taken while `false` is held (`rang false < rang true`). -/
 def hzInnen : Stmt grobD hzV false [] [Res.held false] [Res.held false] :=
   .locks true (fun M h => by
-    simp only [List.mem_singleton, Res.held.injEq] at h
-    subst h
+    have hM : M = false := Res.held.inj (D := grobD) (List.mem_singleton.mp h)
+    subst M
     decide) .nil
 
 /-- `locks false { locks true { } }`. -/
@@ -44,13 +44,13 @@ def hzN (L : Bool) : Nat := if L then 1 else 4
 /-- **The checker accepts the nested section at its bounds.** -/
 theorem hzAussen_geprueft :
     haltB (fun (L : Bool) => some (hzN L)) 0 (fun _ => 0) (fun _ => false) 0 hzAussen = true := by
-  decide +kernel
+  simp [hzAussen, hzInnen, hzN, haltB, haltS, kostenBlock, kostenStmt, rufeB, rufeS]
 
 /-- **The check is not vacuous**: one step less for the outer lock and the nested section is refused. -/
 theorem hzAussen_eng :
     haltB (fun (L : Bool) => some (if L then 1 else 3)) 0 (fun _ => 0) (fun _ => false) 0 hzAussen =
       false := by
-  decide +kernel
+  simp [hzAussen, hzInnen, haltB, haltS, kostenBlock, kostenStmt, rufeB, rufeS]
 
 /-- **The derived hold times**: `4 + 1 + 2` own steps for `false`, `1 + 1 + 2` for `true`. -/
 theorem hzSchranke :
@@ -70,7 +70,13 @@ theorem haltezeit_aus_zeuge : ∃ R : PlanLauf mP mO 0,
     haltSchranke (D := mD) [()] (fun _ => 20) () = 22 := by
   obtain ⟨R, h0, -, -, -, -, -, -, -, halt0, -, -⟩ := lZeuge
   have hK : haltPasst mP 0 (fun _ => 20) (fun _ => 14) mFs [mSetze] = true := by
-    decide +kernel
+    simp [haltPasst, kostenPasst, mFs, mP, mSetze, mHauptA, mHauptB, mPruefeA, mRuhe,
+      mRumpfSetze, mRumpfA, mRumpfB, mLocksA, mLocksB, mRufA, mRufB, mRestA,
+      haltE, haltS, haltB, rufeE, rufeS, rufeB, kostenEnd, kostenStmt, kostenBlock,
+      kostenEpilog, kostenExpr, kostenErg, kostenArgs, entfZ, GEntfaltbar,
+      mGleich, mAGleich, mA7, mI0, mI1, m7, m5, m30, m70,
+      schuldet, Deklaration.schreibt, Deklaration.gschreibt, Deklaration.signatur,
+      mD, mSigOf, mSigNr, mSig]
   exact ⟨R, h0, hK,
     haltezeit_aus R mO_gut mP_stufen mSp mInit mInit_leer (by rw [h0]; exact .start) (ls := [()])
       (fun L => by cases L; exact List.mem_singleton_self _) mFs_voll hK,

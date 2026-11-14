@@ -135,12 +135,7 @@ def axPre_of_contract (ax : ∀ a : D.Ax, CallContract D (D.asignatur a)) : AxPr
 theorem aufruferPflicht_axVor (ax : ∀ a : D.Ax, CallContract D (D.asignatur a))
     (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
     AufruferPflicht (axPre_of_contract ax) a σ ρ ↔ AxVor ax a σ ρ := by
-  have h : wahr? (eval σ.ohneLese (ax a).pre σ.ohneLese ρ) =
-      wahr? (eval σ (ax a).pre σ ρ) :=
-    congrArg wahr? (eval_spurfrei (ax a).pre σ.ohneLese σ σ.ohneLese σ rfl rfl rfl rfl ρ)
-  change wahr? (eval σ.ohneLese (ax a).pre σ.ohneLese ρ) = true ↔
-    wahr? (eval σ (ax a).pre σ ρ) = true
-  rw [h]
+  rfl
 
 /-- The software foreign obligations (C08, premise (b) side, over the history `H`):
     every software item's proved realization establishes the generalized contract

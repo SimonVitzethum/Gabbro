@@ -93,6 +93,7 @@ theorem axVertragOP_zurueck {P : Programm D} {Q : AxEns D} {O' : Orakel D.mitRuh
     (h : AxVertragOP (PreQ P.mitRuhe) (axEnsRuhe Q) O') :
     AxVertragOP (PreQ P) Q (Orakel.zurueck O') := by
   intro a σ ρ v hp hv
+  rw [wirkt_zurueck_welt] at hv ⊢
   change einpassenErg (Orakel.zurueck O').zeiger (D.aerg a)
     (O'.wirkt a ((worldR σ).fragt (.inl a)) (envR ρ)).2 = some v at hv
   have e : einpassenErg (D := D.mitRuhe) O'.zeiger ((D.aerg a).map tyR)
