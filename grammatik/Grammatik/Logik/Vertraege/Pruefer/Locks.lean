@@ -77,6 +77,7 @@ def scopedReturnCondition (budget : Nat)
         let read := world.lese Λ expression.orte
         have same : assignment read = assignment world := assignment_lese _ _ _
         have cleanupReady := (releases.correct read).mp (by rw [same]; exact parts.1)
+        change scopesInvH S cleanup.scopes (world.lese Λ expression.orte) = true at cleanupReady
         have ready := returned.sound runtime read (by rw [same]; exact parts.2)
         unfold Runtime.wpS
         simp only [execStmtH, cleanupReady, ↓reduceIte, Goals.holds]
