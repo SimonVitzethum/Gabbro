@@ -1324,6 +1324,13 @@ against the CAS version. Output is deterministic: same source, same bytes.
 **`extern fn` is the edge.** A foreign body whose contract is an `assume` per declaration,
 counted into the axiom layer — the edge is visible and ratchetable instead of silent. It takes
 no function pointer (`N574`) and a buffer parameter needs its length clause (`N506`).
+**Warning (owner, 2026-11-14):** C code in the same address space is neither checked nor
+restricted by anything in the language. Using even ONE `extern fn` (or letting C call an `entry`
+function, plan item A6) can in theory destroy EVERY guarantee of the goal theorem — memory safety,
+race freedom, invariants, contracts: the guarantees then hold only as far as that one named
+environment assumption holds. The contract of the foreign function must therefore name, beside
+`requires`/`ensures`, its frame (only its declared `effects`), its extents, that it keeps no
+Gabbro pointer beyond the call and starts no thread that touches Gabbro memory.
 
 **The generator also emits the ANNOTATIONS** — contracts the downstream prover reads. A
 generator that accidentally emits *weakened* contracts delivers a green proof over a weaker
