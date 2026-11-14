@@ -23,7 +23,7 @@ theorem recordIndex_lt {fs : List Ty} {ty : Ty} (i : FieldAt fs ty) : recordInde
 theorem valOfProd_get {D : Deklaration} {fs : List Ty} {ty : Ty} (i : FieldAt fs ty)
     (v : ProdVal D.Fn D.passt fs) :
     (valOfProd fs v)[recordIndex i]? = some (valOf ty (prodGetW i v)) := by
-  induction i generalizing v with
+  induction i with
   | head => rfl
   | tail i ih => exact ih (ProdVal.tl v)
 
@@ -31,11 +31,11 @@ theorem valOfProd_get {D : Deklaration} {fs : List Ty} {ty : Ty} (i : FieldAt fs
 theorem valOfProd_set {D : Deklaration} {fs : List Ty} {ty : Ty} (i : FieldAt fs ty)
     (v : ProdVal D.Fn D.passt fs) (x : Wert D ty) :
     valOfProd fs (prodSetW i v x) = (valOfProd fs v).set (recordIndex i) (valOf ty x) := by
-  induction i generalizing v with
+  induction i with
   | head => rfl
   | tail i ih =>
       simp only [prodSetW, valOfProd, recordIndex, List.set_cons_succ]
-      exact congrArg (List.cons _) (ih (ProdVal.tl v))
+      exact congrArg (List.cons _) (ih (ProdVal.tl v) x)
 
 mutual
 /-- Every representable typed value has its computed Body shape. -/
@@ -78,7 +78,7 @@ theorem valOfProd_shape {D : Deklaration} (fs : List Ty) (v : ProdVal D.Fn D.pas
           cases hs : shapesOfTys fs with
           | none => simp [shapesOfTys, ht, hs] at h
           | some rest =>
-              simp only [shapesOfTys, ht, hs, Option.bind_some, Option.some.injEq] at h
+              simp only [shapesOfTys, ht, hs, bind, Option.bind, pure, Option.some.injEq] at h
               subst ss
               obtain ⟨hlen, hf⟩ := valOfProd_shape fs (ProdVal.tl v) rest hs
               constructor
