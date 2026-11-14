@@ -93,7 +93,7 @@ def retryInvariantCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           intro n next env holds unfinished
           have ready := obligations env (domain.complete env) next holds
           have tested : eval (next.lese Λ test.orte) test (next.lese Λ test.orte) env = false := unfinished
-          simp only [tested, Bool.false_eq_true, ↓reduceIte] at ready
+          simp only [tested, wahr?, Bool.false_eq_true, ↓reduceIte] at ready
           have run := ready.1
           unfold Runtime.wpB at run ⊢
           cases result : execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body
@@ -106,11 +106,11 @@ def retryInvariantCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         · intro n next env holds finished
           have ready := obligations env (domain.complete env) next holds
           have tested : eval (next.lese Λ test.orte) test (next.lese Λ test.orte) env = true := finished
-          simpa only [tested, ↓reduceIte, Goals.holds] using ready
+          simpa only [tested, wahr?, eq_self, ↓reduceIte, Goals.holds, doneTest] using ready
         · intro next env holds unfinished
           have ready := obligations env (domain.complete env) next holds
           have tested : eval (next.lese Λ test.orte) test (next.lese Λ test.orte) env = false := unfinished
-          simp only [tested, Bool.false_eq_true, ↓reduceIte] at ready
+          simp only [tested, wahr?, Bool.false_eq_true, ↓reduceIte] at ready
           exact ready.2 }
 
 end Gabbro.Grammatik.Invarianten.VC

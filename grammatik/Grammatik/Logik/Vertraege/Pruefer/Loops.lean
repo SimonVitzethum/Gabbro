@@ -28,7 +28,7 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         (done.map (fun _ _ ready _ _ => ready)) exceeded
       return combined.map (fun runtime world ready allowed safe => by
         cases tested : eval (world.lese Λ test.orte) test (world.lese Λ test.orte) locals <;>
-          simp only [tested, Bool.false_eq_true, ↓reduceIte] at ready <;>
+          simp only [tested, wahr?, eq_self, Bool.false_eq_true, ↓reduceIte] at ready <;>
           have ready := ready allowed safe <;>
           simpa only [Runtime.wpS, Runtime.wpB, execStmtH, retryLauf, wahr?, tested,
             Bool.false_eq_true, ↓reduceIte, Goals.holds] using ready)
@@ -75,7 +75,7 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         (done.map (fun _ _ ready _ _ => ready)) advanced
       return combined.map (fun runtime world ready allowed safe => by
         cases tested : eval (world.lese Λ test.orte) test (world.lese Λ test.orte) locals <;>
-          simp only [tested, Bool.false_eq_true, ↓reduceIte] at ready <;>
+          simp only [tested, wahr?, eq_self, Bool.false_eq_true, ↓reduceIte] at ready <;>
           have ready := ready allowed safe <;>
           cases result : execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls
             body (world.lese Λ test.orte) locals <;>
@@ -129,7 +129,7 @@ def retryInvariantCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           intro n next env holds unfinished
           have ready := obligations env (domain.complete env) next holds
           have tested : eval (next.lese Λ test.orte) test (next.lese Λ test.orte) env = false := unfinished
-          simp only [tested, Bool.false_eq_true, ↓reduceIte] at ready
+          simp only [tested, wahr?, Bool.false_eq_true, ↓reduceIte] at ready
           have ready := ready allowed safe
           have run := ready.1
           unfold Runtime.wpB at run ⊢
@@ -143,12 +143,12 @@ def retryInvariantCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         · intro n next env holds finished
           have ready := obligations env (domain.complete env) next holds
           have tested : eval (next.lese Λ test.orte) test (next.lese Λ test.orte) env = true := finished
-          simp only [tested, ↓reduceIte] at ready
+          simp only [tested, wahr?, eq_self, ↓reduceIte] at ready
           simpa only [Goals.holds] using ready allowed safe
         · intro next env holds unfinished
           have ready := obligations env (domain.complete env) next holds
           have tested : eval (next.lese Λ test.orte) test (next.lese Λ test.orte) env = false := unfinished
-          simp only [tested, Bool.false_eq_true, ↓reduceIte] at ready
+          simp only [tested, wahr?, Bool.false_eq_true, ↓reduceIte] at ready
           exact (ready allowed safe).2 }
 
 end Gabbro.Grammatik.Vertraege.Pruefer
