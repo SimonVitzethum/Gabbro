@@ -6,14 +6,6 @@ public import Grammatik.Parser.Elab.UebersetzeAllg.EingebautLesen
 import all Grammatik.Parser.Elab.UebersetzeAllg.Teil5
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil4
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil5
-import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
-import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
-import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
-import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
-import all Grammatik.Parser.Elab.Generic.StaticConformance
-import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest1
-import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest2a
-import all Grammatik.Parser.Elab.UebersetzeAllg3.Body
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -55,11 +47,6 @@ set_option maxRecDepth 100000
 set_option maxHeartbeats 2000000
 set_option Elab.async false
 
--- Evaluate the actual phase equations, including module-private implementation
--- details, rather than requiring definitional reduction of the complete pipeline.
-attribute [local cbv_eval] strEq_apply_eq_decide
-attribute [local cbv_opaque] uFloatLimit
-
 attribute [local cbv_eval] uRechne.eq_def uSichert.eq_def uZSeite.eq_def
   seiteAltErg.eq_def ensAltErg.eq_def
 
@@ -81,18 +68,18 @@ def characters : List Char := [
 
 def sourceText : String := String.ofList characters
 
-theorem lexed : (lexL characters).toOption.isSome = true := by cbv
+theorem lexed : (lexL characters).toOption.isSome = true := by decide +kernel
 def tokens := (lexL characters).toOption.get lexed
 
-theorem parsed : (parseTopTief tokens).toOption.isSome = true := by cbv
+theorem parsed : (parseTopTief tokens).toOption.isSome = true := by decide +kernel
 def items := (parseTopTief tokens).toOption.get parsed
 
-theorem elaborated : (elabU (pre108 items)).toOption.isSome = true := by cbv
+theorem elaborated : (elabU (pre108 items)).toOption.isSome = true := by decide +kernel
 def unit := (elabU (pre108 items)).toOption.get elaborated
 
-theorem lowered : (UebersetzeAllg2.lowerAllg unit).toOption.isSome = true := by cbv
+theorem lowered : (UebersetzeAllg2.lowerAllg unit).toOption.isSome = true := by decide +kernel
 
-/-- The complete text-to-G pipeline, composed from the certified finite stages. -/
+/-- The complete text-to-G pipeline, with cached kernel reductions for each finite stage. -/
 theorem count_value_source_zeuge : (uebersetzeAllg sourceText).toOption.isSome = true := by
   have l := except_ok_get lexed
   have p := except_ok_get parsed
