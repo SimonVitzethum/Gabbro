@@ -73,8 +73,17 @@ def integerEquality (expression : Expr D Γ Λ (.int lo hi)) (locals : Env D Γ)
           (¬ guard.denote _ → no.val.denote _) ↔ _
         rw [guardCorrect, yes.property world, no.property world]
         by_cases fits : low ≤ (eval world value world locals).n ∧ (eval world value world locals).n ≤ high
-        · simp only [fits, true_implies, not_true_eq_false, false_implies, and_true, eval, dif_pos fits]
-        · simp only [fits, false_implies, not_false_eq_true, true_implies, true_and, eval, dif_neg fits]⟩
+        · have evaluated : eval world (.eng value low high fallback) world locals =
+              (⟨(eval world value world locals).n, fits.1, fits.2⟩ : Zahl low high) :=
+            dif_pos fits
+          have equivalent := congrArg (fun v : Wert D (.int low high) => v.n = number) evaluated
+          simp only [fits, true_implies, not_true_eq_false, false_implies, and_true]
+          exact ⟨Eq.mpr equivalent, Eq.mp equivalent⟩
+        · have evaluated : eval world (.eng value low high fallback) world locals =
+              eval world fallback world locals := dif_neg fits
+          have equivalent := congrArg (fun v : Wert D (.int low high) => v.n = number) evaluated
+          simp only [fits, false_implies, not_false_eq_true, true_implies, true_and]
+          exact ⟨Eq.mpr equivalent, Eq.mp equivalent⟩⟩
   | .wenn test positive negative => do
       let guard ← translate test locals
       let yes ← integerEquality positive locals number
