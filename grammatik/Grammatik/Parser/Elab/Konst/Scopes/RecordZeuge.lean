@@ -1,6 +1,10 @@
 module
 public import Grammatik.Parser.Elab.Konst.Scopes.ConstantOrder
-import Grammatik.Kern.Taktik.KernelRfl
+import Lean.Elab.Tactic.Cbv
+import all Grammatik.Parser.Expr.Ausdruck.Teil1
+import all Grammatik.Parser.Expr.Ausdruck.Teil2a
+import all Grammatik.Parser.Expr.Ausdruck.Teil3
+import all Grammatik.Parser.Expr.Typ
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -37,6 +41,17 @@ import all Init.Data.String.ToSlice
 namespace Gabbro.Stage0.Frontend
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 
+attribute [local cbv_eval] strEq_apply_eq_decide
+
+-- Evaluate only the actual parser nodes, without unfolding the mutual fuel tuple.
+attribute [local cbv_opaque] parseTyp parseTypNach parseOr parseOrL parseAnd parseAndL
+  parseCmp parseBit parseBitL parseAdd parseAddL parseMul parseMulL parseUnary
+  parsePrimary parseKopf parseSuffixe
+attribute [local cbv_eval] parseTyp.eq_def parseTypNach.eq_def parseOr.eq_def parseOrL.eq_def
+  parseAnd.eq_def parseAndL.eq_def parseCmp.eq_def parseBit.eq_def parseBitL.eq_def
+  parseAdd.eq_def parseAddL.eq_def parseMul.eq_def parseMulL.eq_def parseUnary.eq_def
+  parsePrimary.eq_def parseKopf.eq_def parseSuffixe.eq_def
+
 def singleFieldDeclaration : List SItemTief :=
   [.typeT [] "Flag" [] [] (some (.raw "{ ok : u32 in 0 .. 1, }"))]
 
@@ -48,14 +63,22 @@ theorem single_field_schema_zeuge :
     (uRecordFields "{ ok : u32 in 0 .. 1, }").map
         (fun fields => fields.map (fun field => (field.fname, field.ftyp))) =
       .ok [("ok", .range (.atom "u32") (.lit 0) (.lit 1) false)] :=
-  ⟨by kernel_rfl, by kernel_rfl⟩
+  ⟨by cbv, by cbv⟩
+
+private theorem single_field_dependencies :
+    dependencyDeclarations singleFieldDeclaration = [(.type "Flag", [.type "u32"])] := by
+  cbv
 
 /-- Successful expansion depends on the field's scalar type, never on the record itself. -/
 theorem single_field_dependency_zeuge :
     (dependencyDeclarations singleFieldDeclaration).map
         (fun entry => (entry.1.label, entry.2.map DependencyName.label)) =
       [("type Flag", ["type u32"])] ∧
-    (constantDepth singleFieldDeclaration 3 [] [] (.type "Flag")).map (·.1) = .ok 1 :=
-  ⟨by kernel_rfl, by kernel_rfl⟩
+    (constantDepth singleFieldDeclaration 3 [] [] (.type "Flag")).map (·.1) = .ok 1 := by
+  constructor
+  · rw [single_field_dependencies]
+    cbv
+  · simp only [constantDepth, single_field_dependencies]
+    cbv
 
 end Gabbro.Stage0.Frontend

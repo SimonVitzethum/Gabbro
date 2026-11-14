@@ -87,10 +87,10 @@ theorem OwnerMintChain.owned {names : OwnerNamespace D} {initial final : OwnerSt
     final.ledger.valid ∧ final.owns names frame token := by
   induction chain with
   | initial => exact ⟨valid, owned⟩
-  | mint prefix declaration minted ih =>
+  | mint previous declaration minted ih =>
       have result := OwnerState.mint_grant ih.1 minted
       exact ⟨result.1, result.2.1⟩
-  | handoff prefix moved ih =>
+  | handoff previous moved ih =>
       have result := OwnerState.transfer_grant ih.1 moved
       exact ⟨result.1, result.2.1⟩
 

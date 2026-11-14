@@ -66,7 +66,9 @@ theorem viewwrite_trace_ok {layout : AdressLayout D} {before after : World D}
     (before.schreibSlot write.view.span.table resources write.index write.field write.value).spur =
       .zugriff write.view.span.table true resources before.haelt :: before.spur ∧
     after.spur = before.spur := by
-  rw [write.store]
+  rcases write with ⟨view, live, active, valid, writable, index, field, extent, bytes, value, store⟩
+  dsimp only
+  rw [store]
   exact ⟨rfl, rfl, rfl, rfl, rfl⟩
 
 /-- Permission and held-lock obligations are additional to ViewWrite; the

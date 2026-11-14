@@ -3,6 +3,7 @@ public import Grammatik.Parser.Elab.Modules.MatchNumber
 public import Grammatik.Parser.Print.Stmt
 public import Grammatik.Parser.Round.RundlaufLex.Teil1a
 import Grammatik.Kern.Taktik.KernelRfl
+import Lean.Elab.Tactic.Cbv
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -37,6 +38,8 @@ import all Init.Data.String.ToSlice
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.MatchNumber
+
+attribute [local cbv_eval] strEq_apply_eq_decide
 
 def answer (n : Nat) : SAnw := .block [] (some (.ret (some (.lit n))))
 
@@ -137,7 +140,8 @@ theorem constant_zeuge :
 /-- The unit context uses evaluated integer constants, excluding truth-valued declarations. -/
 theorem context_zeuge :
     (kontext [.constT "CODE" (.atom "u32") (.one (.bin "+" (.lit 3) (.lit 4))),
-      .constT "FLAG" (.atom "bool") (.one .tru)]).constants = [("CODE", 7)] := by kernel_rfl
+      .constT "FLAG" (.atom "bool") (.one .tru)]).constants = [("CODE", 7)] := by
+  cbv
 
 theorem ambiguous_zeuge :
     erweitereMatch { constants := [("CODE", 1)], cases := ["CODE", "Other"] }
