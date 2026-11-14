@@ -181,7 +181,7 @@ theorem rufSchrittG_sauber_acting {P : Programm D} {O : Orakel D} {passes : Nat}
       rw [hcaller] at hc
       exact ⟨by simpa [GRest.sauber, GRest.stapelSauber] using hc, hr⟩
     | dannRetGrund =>
-      rename_i ρ caller rst l Γ Λ Λ' τ n err restb k ρc hcaller g rho s0 rg hn r hperm restk kk hh hpop hΛ hfg hrho hs0 hrg
+      rename_i ρ caller rst l Γ Λ Λ' τ n err restb k ρc hcaller g rho s0 rg hn r hperm restk kk hh hpop hΛ hfg hrho hs0 hrg hniedrig
       obtain ⟨hc, hr⟩ := hpopS caller rst hpop
       simp only [rufUpdateG_self]
       rw [hcaller] at hc

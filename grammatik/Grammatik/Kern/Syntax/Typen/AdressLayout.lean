@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Kern.Syntax.Typen.Teil2
+public import Grammatik.Kern.Syntax.Syntax.Teil1
 
 @[expose] public section
 
