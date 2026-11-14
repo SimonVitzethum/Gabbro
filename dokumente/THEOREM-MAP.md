@@ -7225,3 +7225,9 @@ All paths below are relative to `stage0/Stage0/Zeugen/Pipeline/`, except the las
 The integration guardian also includes `narrow-record-field.gab` (both success and failure
 paths) and `guard-relation-u64.gab` (high bits, the unsigned limit and a false guard). Emission
 certificates and actual runner execution are separate measurements.
+
+The bounded importer check also moves the existing closed 104 pins from `Teil/Teil16.lean`
+to `Pruefung/Witness/Closed104.lean`, re-exported by `Uebersetze.lean`. The five statements
+`u104elab`, `u104lower`, `u104data`, `u104fragment` and `u104fuss` are unchanged. The first
+two use kernel conversion in the isolated witness module instead of elaborator `cbv`;
+the generic Boolean equality helpers remain in `Teil16`.
