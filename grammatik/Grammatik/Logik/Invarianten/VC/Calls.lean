@@ -107,7 +107,7 @@ def typeFacts (keys : List (Observation D)) : LProp (Observation D) :=
 
 private theorem foldedTypeFacts_denote (keys : List (Observation D))
     (values : Assignment (Observation D)) :
-    (keys.foldr (fun key rest => .and (typeFact key) rest) .tru).denote values ↔
+    (keys.foldr (fun key rest => LProp.and (typeFact key) rest) LProp.tru).denote values ↔
       ∀ key ∈ keys, (typeFact key).denote values := by
   induction keys with
   | nil => exact ⟨fun _ _ member => False.elim (List.not_mem_nil member), fun _ => trivial⟩
