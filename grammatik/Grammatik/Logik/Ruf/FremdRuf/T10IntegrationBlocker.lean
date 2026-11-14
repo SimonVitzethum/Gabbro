@@ -109,7 +109,8 @@ theorem actualHistory_posts (σ : World decl) :
     AxNach unit.P.axVertrag () (σ.fragt (.inl ())) (rho true) (σ.fragt (.inl ())) () ∧
     unit.Q () (σ.fragt (.inl ())) () = true := by
   have hm : (⟨(), σ.fragt (.inl ()), rho true, (σ.fragt (.inl ()), 0)⟩ : AxEintrag decl) ∈
-      actualHistory σ := by simp only [actualHistory, traceOracle, List.mem_singleton]
+      actualHistory σ := by
+    simp only [actualHistory, List.mem_singleton, Orakel.wirkt, traceOracle, World.auf_leer]
   have hv : einpassenErg traceOracle.zeiger (decl.aerg ()) (0 : Int) = some () := rfl
   exact ⟨vertragANeu_sw_of_foreign foreign_trace (actualHistory_good σ)
       (actualHistory_passt σ) (actualHistory_provenance σ) hm rfl hv,

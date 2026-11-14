@@ -75,10 +75,14 @@ theorem invGrund (passes : Nat) (T : wD.Tab ⊕ wD.Glob → Prop) :
 /-- **(b), the user's logic with the rely**, and the start duty. -/
 theorem user : NutzerPflichtA wE where
   logik := by
-    refine ⟨fun passes f => ?_, fun L => nomatch L, fun _ _ _ _ _ _ => rfl,
-      ptrVerfeinert_trivial (fun _ _ _ => rfl) (fun _ => rfl)⟩
-    cases f
-    exact ⟨koerper passes _, invRueck passes _, invGrund passes _⟩
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · intro passes f
+      cases f
+      exact ⟨koerper passes _, invRueck passes _, invGrund passes _⟩
+    · intro L
+      exact nomatch L
+    · exact fun _ _ _ _ _ _ => rfl
+    · exact ptrVerfeinert_trivial (P := wP) (fun _ _ _ => rfl) (fun _ => rfl)
   start :=
     { sperren := fun L => nomatch L
       req := fun _ _ => rfl }
@@ -114,7 +118,7 @@ theorem zeroO_gut : GutO zeroO := by
 theorem summary_used (T : wD.Tab ⊕ wD.Glob → Prop) :
     ¬ KoerperGutSA wP 0 (fun _ _ _ => true) (SperrInv.leer wD) T () := by
   intro h
-  have hk := h.1 zeroO (gutO_rahmenO zeroO_gut) ⟨fun r => nomatch r, fun g => nomatch g⟩
+  have hk := h.1 zeroO (gutO_rahmenO zeroO_gut) ⟨(fun r => nomatch r), (fun g => nomatch g)⟩
     (fun _ _ _ _ _ _ => rfl) (fun _ σ => σ) (fun L => nomatch L) idA (havocA_id _)
     (rufAusV []) (rufAusV_rahmen (vertraegeOkR_nil wP))
     (rufAusV_ohneVorbedingung (vertraegeOkR_nil wP).1) world .nil rfl

@@ -41,18 +41,23 @@ def Koepfe (M : RufMaschineG wD.mitRuhe) : Prop :=
 theorem koepfe_start (sp : Speicher wD.mitRuhe)
     (init : Faden → Σ f : wD.mitRuhe.Fn, Env wD.mitRuhe (wD.mitRuhe.params f)) :
     Koepfe (RufStartG wE.P.mitRuhe sp init) := by
+  unfold Koepfe
   intro t
+  dsimp only [RufStartG]
   refine ⟨rfl, ?_⟩
   cases hi : init t with
   | mk f ρ =>
     cases f with
     | none =>
-      simp only [RufStartG, hi]
+      simp only [hi]
       exact Or.inl ⟨false, [], [], ρ, .empty, List.Perm.nil, rfl⟩
     | some f =>
       cases f
-      simp only [RufStartG, hi]
-      exact Or.inr ⟨false, _, _, ρ, _, _, _, _, _, _, _, _, _, by intro _ _ _; rfl, rfl⟩
+      simp only [hi]
+      refine Or.inr ⟨false, [], [], ρ, .int 0 1, ruA args,
+        _, _, _, _, _, _, _, ?_, rfl⟩
+      intro _ _ _
+      rfl
 
 /-- A G step keeps the heads. -/
 theorem koepfe_schritt {P : Programm wD.mitRuhe} {O : Orakel wD.mitRuhe} {passes : Nat}
@@ -100,8 +105,9 @@ theorem koepfe_pre {M : RufMaschineG wD.mitRuhe} (hm : Koepfe M) {t : Faden} {a 
 /-- **(b), the call-site duty**: every software call a run reaches meets `g`'s pre. -/
 theorem call_sites : CallSitePflicht wE := by
   intro O H hh hf passes sp init hl a σ ρ hreach hsw
-  obtain ⟨M, presented, t, hr, _, hk⟩ := hreach
+  obtain ⟨M, presented, t, hr, hsame, hk⟩ := hreach
   have hm : Koepfe M := by
+    clear hk hsame
     induction hr with
     | start => exact koepfe_start sp init
     | schritt M M' u _ hs ih => exact koepfe_gx ih hs

@@ -1,6 +1,7 @@
 module
 public import Grammatik.GabbroV.GvZensus.Teil1
-import Grammatik.Kern.Taktik.KernelRfl
+import all Grammatik.Parser.Elab.Uebersetze.Records.Records
+import all Grammatik.Parser.Elab.Uebersetze.Records.Embedding
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -47,6 +48,7 @@ def recordSlotItems : List SItemTief :=
                 reserviert := false, byOps := false }]]]
 
 /-- The census retains a record-typed table instead of reporting an unknown tagged type. -/
-theorem record_slot_census_zeuge : befundeElab recordSlotItems = [] := by kernel_rfl
+theorem record_slot_census_zeuge : befundeElab recordSlotItems = [] := by
+  cbv
 
 end Gabbro.Grammatik.GabbroV.GvZensus
