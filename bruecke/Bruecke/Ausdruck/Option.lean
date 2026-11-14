@@ -169,6 +169,17 @@ theorem lowCallOptionArg_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
         · cases h
       · cases h
     | _ => simp only [lowCallArgOneL] at h; cases h
+  | ptr a =>
+    cases ty with
+    | ptr cap =>
+      rcases cap with ⟨sp, ⟨rd, wr, ow⟩, tg⟩
+      cases ow <;> cases tg <;> simp only [lowCallArgOneL] at h
+      all_goals repeat' split at h
+      all_goals first | cases h | simp at h
+    | _ =>
+      simp only [lowCallArgOneL] at h
+      all_goals repeat' split at h
+      all_goals first | cases h | simp at h
   | _ =>
     cases ty <;> simp only [lowCallArgOneL] at h
     all_goals repeat' split at h

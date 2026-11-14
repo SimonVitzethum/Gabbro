@@ -227,7 +227,8 @@ theorem lowWertE_scalar_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {
             rw [h1, h2]
             rfl
   | conv lo hi x =>
-    have hb' : numericSideExprG u fn x = some eB := hb
+    have hb' : numericSideExprG u fn x = some eB := by
+      first | exact hb | (rw [numericSideExprG] at hb; exact hb) | simpa only [numericSideExprG] using hb
     cases hx : lowWertE u Γ Λ fn er x with
     | error e => simp [lowWertE, zahlVon, hx, Except.map] at h
     | ok wa =>
@@ -246,25 +247,39 @@ theorem lowWertE_scalar_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {
       · simp [Except.map] at h
   | band x y =>
     exact lowZwei_sim LowSide.and .band σ₀ σ ρ w β (lowAnd_binop σ₀ σ ρ)
-      (recurse x (by simp_wf; omega)) (recurse y (by simp_wf; omega)) h hb
+      (recurse x (by simp_wf; omega)) (recurse y (by simp_wf; omega))
+      (by first | exact h | (rw [lowWertE] at h; exact h) | (simp only [lowWertE] at h; exact h))
+      (by first | exact hb | (rw [numericSideExprG] at hb; exact hb) | (simp only [numericSideExprG] at hb; exact hb))
   | bor x y =>
     exact lowZwei_sim LowSide.or .bor σ₀ σ ρ w β (lowOr_binop σ₀ σ ρ)
-      (recurse x (by simp_wf; omega)) (recurse y (by simp_wf; omega)) h hb
+      (recurse x (by simp_wf; omega)) (recurse y (by simp_wf; omega))
+      (by first | exact h | (rw [lowWertE] at h; exact h) | (simp only [lowWertE] at h; exact h))
+      (by first | exact hb | (rw [numericSideExprG] at hb; exact hb) | (simp only [numericSideExprG] at hb; exact hb))
   | bxor x y =>
     exact lowZwei_sim LowSide.xoder .bxor σ₀ σ ρ w β (lowXor_binop σ₀ σ ρ)
-      (recurse x (by simp_wf; omega)) (recurse y (by simp_wf; omega)) h hb
+      (recurse x (by simp_wf; omega)) (recurse y (by simp_wf; omega))
+      (by first | exact h | (rw [lowWertE] at h; exact h) | (simp only [lowWertE] at h; exact h))
+      (by first | exact hb | (rw [numericSideExprG] at hb; exact hb) | (simp only [numericSideExprG] at hb; exact hb))
   | div x y =>
     exact lowZwei_sim LowSide.durch .div σ₀ σ ρ w β (lowDurch_binop σ₀ σ ρ)
-      (recurse x (by simp_wf; omega)) (recurse y (by simp_wf; omega)) h hb
+      (recurse x (by simp_wf; omega)) (recurse y (by simp_wf; omega))
+      (by first | exact h | (rw [lowWertE] at h; exact h) | (simp only [lowWertE] at h; exact h))
+      (by first | exact hb | (rw [numericSideExprG] at hb; exact hb) | (simp only [numericSideExprG] at hb; exact hb))
   | rem x y =>
     exact lowZwei_sim LowSide.rest .rem σ₀ σ ρ w β (lowRest_binop σ₀ σ ρ)
-      (recurse x (by simp_wf; omega)) (recurse y (by simp_wf; omega)) h hb
+      (recurse x (by simp_wf; omega)) (recurse y (by simp_wf; omega))
+      (by first | exact h | (rw [lowWertE] at h; exact h) | (simp only [lowWertE] at h; exact h))
+      (by first | exact hb | (rw [numericSideExprG] at hb; exact hb) | (simp only [numericSideExprG] at hb; exact hb))
   | shl x y =>
     exact lowZwei_sim LowSide.links .shl σ₀ σ ρ w β (lowLinks_binop σ₀ σ ρ)
-      (recurse x (by simp_wf; omega)) (recurse y (by simp_wf; omega)) h hb
+      (recurse x (by simp_wf; omega)) (recurse y (by simp_wf; omega))
+      (by first | exact h | (rw [lowWertE] at h; exact h) | (simp only [lowWertE] at h; exact h))
+      (by first | exact hb | (rw [numericSideExprG] at hb; exact hb) | (simp only [numericSideExprG] at hb; exact hb))
   | shr x y =>
     exact lowZwei_sim LowSide.rechts .shr σ₀ σ ρ w β (lowRechts_binop σ₀ σ ρ)
-      (recurse x (by simp_wf; omega)) (recurse y (by simp_wf; omega)) h hb
+      (recurse x (by simp_wf; omega)) (recurse y (by simp_wf; omega))
+      (by first | exact h | (rw [lowWertE] at h; exact h) | (simp only [lowWertE] at h; exact h))
+      (by first | exact hb | (rw [numericSideExprG] at hb; exact hb) | (simp only [numericSideExprG] at hb; exact hb))
   | neg x =>
     cases hsx : numericSideExprG u fn x with
     | none => simp [numericSideExprG, hsx] at hb
@@ -274,7 +289,7 @@ theorem lowWertE_scalar_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {
       cases hx : lowWertE u Γ Λ fn er x with
       | error err => simp [lowWertE, zahlVon, hx] at h
       | ok vx =>
-        obtain ⟨a, rfl, ha⟩ := recurse x (by simp_wf; omega) hx hsx
+        obtain ⟨a, rfl, ha⟩ := recurse x (by simp_wf <;> omega) hx hsx
         simp only [lowWertE, hx, zahlVon, LowSide.wert, LowWert.zahl, Except.ok.injEq] at h
         subst wv
         refine ⟨LowSide.minusEins a, rfl, ?_⟩
