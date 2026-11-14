@@ -80,7 +80,7 @@ theorem qfKeys_congr (body : QF α) (values other : Assignment α)
 /-- Quantify exactly the observations a callee may change. Unobserved cells
     require no variables; other observations retain their entry values. -/
 def havoc [DecidableEq α] (written : α → Bool) (body : QF α) : QF α :=
-  lower (universalClosure ((qfKeys body).filter written) (quoteQF body))
+  lower (universalClosure ((qfKeys body).filter written).eraseDups (quoteQF body))
 
 private theorem closure_transfer [DecidableEq α] (names : List α) (body : QF α)
     (values other : Assignment α)
@@ -100,17 +100,47 @@ private theorem closure_transfer [DecidableEq α] (names : List α) (body : QF �
       · simpa only [Assignment.bind, same, ↓reduceIte] using
           agree key member (by simp only [List.mem_cons, not_or]; exact ⟨same, absent⟩)
 
+private theorem closure_characterization [DecidableEq α] (names : List α) (body : QF α)
+    (values : Assignment α) :
+    (universalClosure names (quoteQF body)).denote values ↔
+      ∀ other, (∀ key ∈ qfKeys body, key ∉ names → values key = other key) →
+        body.denote other := by
+  constructor
+  · exact fun valid other agree => closure_transfer names body values other valid agree
+  · intro valid
+    induction names generalizing values with
+    | nil => exact (quoteQF_denote _ _).mpr (valid values (fun _ _ _ => rfl))
+    | cons name names ih =>
+        intro value
+        apply ih (values.bind name value)
+        intro other agree
+        apply valid other
+        intro key member absent
+        have different : key ≠ name := fun same =>
+          absent (List.mem_cons.mpr (Or.inl same))
+        have absentTail : key ∉ names := fun inside =>
+          absent (List.mem_cons_of_mem name inside)
+        simpa only [Assignment.bind, different, ↓reduceIte] using agree key member absentTail
+
+/-- Repeated observations add only shadowed universal binders. Removing them
+    preserves the whole formula, including every unquantified observation. -/
+theorem closure_eraseDups [DecidableEq α] (names : List α) (body : QF α)
+    (values : Assignment α) :
+    (universalClosure names.eraseDups (quoteQF body)).denote values ↔
+      (universalClosure names (quoteQF body)).denote values := by
+  simp only [closure_characterization, List.mem_eraseDups]
+
 theorem havoc_sound [DecidableEq α] (written : α → Bool) (body : QF α)
     (values other : Assignment α) (valid : (havoc written body).denote values)
     (frame : ∀ key ∈ qfKeys body, written key = false → values key = other key) :
     body.denote other := by
-  apply closure_transfer ((qfKeys body).filter written) body values other
+  apply closure_transfer ((qfKeys body).filter written).eraseDups body values other
     ((lower_denote _ values).mp valid)
   intro key member absent
   apply frame key member
   cases h : written key with
   | false => rfl
-  | true => exact False.elim (absent (List.mem_filter.mpr ⟨member, h⟩))
+  | true => exact False.elim (absent (List.mem_eraseDups.mpr (List.mem_filter.mpr ⟨member, h⟩)))
 
 /-- The list is the complete free support, with no external enumeration duty. -/
 theorem termKeys_closed [DecidableEq α] (term : LTerm α) (names : List α)
@@ -187,15 +217,15 @@ theorem closure_closed [DecidableEq α] (names bound : List α) (body : LProp α
 /-- The closed formula passed to P15/P16. Free variables are never evaluated
     at zero accidentally; they are universally bound by construction. -/
 def close [DecidableEq α] (body : QF α) : LProp α :=
-  universalClosure (qfKeys body) (quoteQF body)
+  universalClosure (qfKeys body).eraseDups (quoteQF body)
 
 theorem close_closed [DecidableEq α] (body : QF α) : closedUnderB [] (close body) = true :=
-  closure_closed (qfKeys body) [] (quoteQF body)
-    (quoteQF_closed body _ (fun _ h => by simpa only [List.append_nil] using h))
+  closure_closed (qfKeys body).eraseDups [] (quoteQF body)
+    (quoteQF_closed body _ (fun _ h => by simpa only [List.append_nil, List.mem_eraseDups] using h))
 
 theorem close_sound [DecidableEq α] (body : QF α) (accepted : decideB (close body) = true)
     (values : Assignment α) : body.denote values := by
-  apply closure_transfer (qfKeys body) body values values
+  apply closure_transfer (qfKeys body).eraseDups body values values
     (decideB_sound (close body) (close_closed body) accepted values)
   exact fun _ _ _ => rfl
 
