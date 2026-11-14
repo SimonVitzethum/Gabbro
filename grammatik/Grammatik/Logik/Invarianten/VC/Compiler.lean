@@ -56,7 +56,7 @@ def extendedStatement (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         return pre.map (fun _ _ ready => ready)
     | .retry count test body overflow =>
         if count ≤ expansion then do
-          let pre ← retryCondition test body overflow
+          let pre ← retryCondition (V := V) (l := l) test body overflow
             (fun env target => extendedBlock fuel body env target)
             (fun env target => extendedBlock fuel overflow env target) count locals goals
           return pre.map (fun _ _ ready => ready)
@@ -68,7 +68,7 @@ def extendedStatement (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
               (fun env target => extendedBlock fuel overflow env target) locals goals
     | .traverse table annotation body =>
         if (D.count table).toNat ≤ expansion then do
-          let pre ← traverseCondition table annotation body
+          let pre ← traverseCondition (V := V) (l := l) table annotation body
             (fun env target => extendedBlock fuel body env target)
             (alleIndizes (D.count table)) locals goals
           return pre.map (fun _ _ ready => ready)

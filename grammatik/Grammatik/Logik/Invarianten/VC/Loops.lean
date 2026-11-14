@@ -36,7 +36,7 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           simpa only [retryLauf, Runtime.wpB, wahr?, tested, eq_self,
             Bool.false_eq_true, ↓reduceIte, Goals.holds] using ready)
   | count + 1 => do
-      let resume := fun env => retryCondition test body overflow compileBody compileOverflow count env goals
+      let resume := fun env => retryCondition (V := V) (l := l) test body overflow compileBody compileOverflow count env goals
       let passGoals : Goals D Γ :=
         { normal := fun env => generatedFormula (resume env)
           escape := goals.normal
@@ -102,8 +102,8 @@ def traverseCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           simpa only [traverseLauf, wahr?, tested, eq_self,
             Bool.false_eq_true, ↓reduceIte, Goals.holds] using ready)
   | index :: indices => do
-      let resume := fun env => traverseCondition table annotation body compileBody indices env goals
-      let exit := fun env => traverseCondition table annotation body compileBody [] env goals
+      let resume := fun env => traverseCondition (V := V) (l := l) table annotation body compileBody indices env goals
+      let exit := fun env => traverseCondition (V := V) (l := l) table annotation body compileBody [] env goals
       let passGoals : Goals D (.index (D.count table) :: Γ) :=
         { normal := fun env => generatedFormula (resume env.tail)
           escape := fun env => generatedFormula (exit env.tail)
