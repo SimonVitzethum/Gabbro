@@ -1,4 +1,4 @@
-// erwartet: K012
+// erwartet: deadline not modelled
 // **A deadline on a machine the unit never declares.**
 //
 // Same question `A005` asks of an `assume`: a date on a machine that is never in

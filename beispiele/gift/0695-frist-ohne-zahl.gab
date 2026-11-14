@@ -1,4 +1,4 @@
-// erwartet: K011
+// erwartet: deadline not modelled
 // **A deadline that is not a number.**
 //
 // The falsifier probes one number per run; a formula (`n * 2`) is not false, it

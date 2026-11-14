@@ -171,4 +171,57 @@ theorem pub_sichtbar {items : List SItemTief} (h : huelleZu items = true)
     c ∈ oeffentlich items :=
   ((huelle_geschlossen h he).2 n hn c hc).resolve_right hs
 
+mutual
+/-- Every reason declaration of a unit: its full path (`modT`/`pubT`/`gateT` wrappers opened). -/
+def gruendeI : Pfad → SItemTief → List Pfad
+  | von, .modT p b => gruendeL (von ++ segmente p) b
+  | von, .pubT it => gruendeI von it
+  | von, .gateT it => gruendeI von it
+  | von, .whyT n _ _ => [von ++ [n]]
+  | _, _ => []
+/-- The list form. -/
+def gruendeL : Pfad → List SItemTief → List Pfad
+  | _, [] => []
+  | von, it :: rest => gruendeI von it ++ gruendeL von rest
+end
+
+mutual
+/-- Every `or R` channel of a unit: the module it stands in and the written name. -/
+def kanaeleI : Pfad → SItemTief → List (Pfad × String)
+  | von, .modT p b => kanaeleL (von ++ segmente p) b
+  | von, .pubT it => kanaeleI von it
+  | von, .gateT it => kanaeleI von it
+  | von, .fnT s _ => s.fehler.toList.map (fun r => (von, r))
+  | von, .protoT s => s.fehler.toList.map (fun r => (von, r))
+  | von, .specT s _ => s.fehler.toList.map (fun r => (von, r))
+  | von, .asmT s _ => s.fehler.toList.map (fun r => (von, r))
+  | von, .specGroupT _ _ _ fs => fs.filterMap fun s => s.fehler.map (fun r => (von, r))
+  | von, .implGroupT _ _ _ fs => fs.flatMap (kanaeleI von)
+  | von, .adaptT s _ _ _ => s.fehler.toList.map (fun r => (von, r))
+  | von, .callT c => c.fail.toList.map (fun r => (von, r))
+  | _, _ => []
+/-- The list form. -/
+def kanaeleL : Pfad → List SItemTief → List (Pfad × String)
+  | _, [] => []
+  | von, it :: rest => kanaeleI von it ++ kanaeleL von rest
+end
+
+/-- A private `reason` (no `pub`) used from outside its module is refused (`N025`): the `or R`
+    channel of a function in another module -- neither the same nor an enclosed module, nor a
+    `pub` reason. A name no reason declares stays for the elaborator (`reason unknown`). -/
+def grundSichtbar (items : List SItemTief) : Except String Unit := do
+  let pubs := oeffentlich items
+  let gruende := gruendeL [] items
+  for (von, r) in kanaeleL [] items do
+    let kurz := (segmente r).getLast?.getD r
+    let kandidaten := gruende.filter fun g => strEq (g.getLast?.getD "") kurz
+    if kandidaten.isEmpty then pure ()
+    else
+      let heimisch := kandidaten.any fun g => g.dropLast.isPrefixOf von
+      let offen := kandidaten.any fun g => decide (g ∈ pubs)
+      if !heimisch && !offen then throw ("private reason used outside its module: " ++ kurz)
+
+/-- The Boolean gate: a unit with no cross-module private `or` use. -/
+def grundSichtbarB (items : List SItemTief) : Bool := (grundSichtbar items).isOk
+
 end Gabbro.Grammatik.Parser.Oeffentlich
