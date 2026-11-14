@@ -475,7 +475,7 @@ document-figure readers this risk is small today, but the rule stands for any ne
 ## 5. When something red looks like a finding
 
 Before calling red a finding, ask who has to change: the tree or the set-up. Typical set-up causes:
-a binary older than its sources (`cargo build`, never `touch`), a stale `programmlogik/.lake` (an
+a binary older than its sources (`lake build`, never `touch`), a stale `programmlogik/.lake` (an
 `incompatible header` says something about the olean, not the program), a missing tool (exit `2`), an
 agent tree not on `master`, two runs in one tree. A guardian that aborts reads like one that passed:
 look for what it no longer printed.

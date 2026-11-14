@@ -1,7 +1,7 @@
 # The build system: `gabbro.build`, after Meson
 
 *Rewritten 2026-10-25: the line-oriented `.bau` manifest is replaced by a project file and build directories after
-Meson. Code: `crates/gabbro-cli/src/bau/` (`sprache.rs` the build language, `einheit.rs` one unit through LLVM,
+Meson. Implementation (deleted 2026-11-10, in git history): `crates/gabbro-cli/src/bau/` (`sprache.rs` the build language, `einheit.rs` one unit through LLVM,
 `mod.rs` the commands). Tests: `crates/gabbro-cli/tests/{bausystem,onramp}.rs`.*
 
 ```
@@ -119,7 +119,7 @@ could not run (no test declared, or an `aarch64` binary on a machine without `qe
 
 ## 7. Plan: linking Gabbro projects with dependencies (2026-10-25, for review)
 
-*Status: implemented in the build (2026-10-25, `bau/abh.rs`, `bau/namensraum.rs`, tests in `tests/bausystem.rs`)
+*Status: implemented in the deleted build (2026-10-25; files in git history only)
 except the open points of §7.11; the Lean side is §7.5-§7.10. Set by Simon: two or more Gabbro projects, the source of each present, each with
 its own `gabbro.build`, dependencies between them. **Everything crosses the boundary, every guarantee is kept, and
 the result is as usable as possible**: whatever works inside one project works across projects, and nothing that
@@ -196,7 +196,7 @@ library('internal', 'helper.gab')            program('app', 'app.gab', install: 
 1. Resolve the project graph (paths, versions, options, lock); evaluate each project file in its own scope.
 2. Per target: the unit = own files + every library (own, or exported by a declared dependency, and whatever those
    reach) its `use` lines reach, transitively, with project-qualified names.
-3. **Check the unit whole** (Rust checker; for certificates the Lean exporter over the same unit). Each exported
+3. **Check the unit whole** (the Lean checker; for certificates the Lean exporter over the same unit). Each exported
    library is ALSO checked alone, so an error names the project it is in.
 4. Assumptions: the projects' sets are joined (`manifest::vereinige`); only a real contradiction (same name, same
    machine, different content or precondition) is refused, and it names both projects.
@@ -228,7 +228,7 @@ across, a thread spawned back, differing but compatible assumptions). Where the 
   GabbroV re-checks exactly the obligations whose rely grew in this program, automatically, and reuses the rest --
   so both styles are usable, and neither weakens anything.
 * **L3 -- assumptions compose.** `HardwareAnnahmen O (vereinige Qs)` ⇒ each part's, given no contradiction; the
-  Rust `vereinige` gets a Lean Bool twin with a soundness theorem.
+  the deleted build's `vereinige` has a Lean Bool twin with a soundness theorem (`Annahmen.lean`).
 * **L4 -- start composes.** `StartPflicht (komponiere ps)` from each part's lock invariants at its own initializers
   (`SperrInvLokal`) and the program's root `requires`.
 * **L5 -- lock order composes.** The composed rank order is a strict order whenever each part's is and the stated
@@ -240,7 +240,7 @@ across, a thread spawned back, differing but compatible assumptions). Where the 
 ### 7.6 Name spaces (a language change: Lean model first)
 
 `use store::stock::Shelf` (and `store@2::…` when two versions are present) names a dependency's module. Lean parser
-(`Parser/`), exporter and `SYNTAX.md` first, then Rust parser and checker. Machine G is untouched (the declaration's
+(`Parser/`), exporter and `SYNTAX.md` first; the Rust parser and checker step died with the deleted tools. Machine G is untouched (the declaration's
 names are opaque); the parser theorems and the exporter's export of qualified names move. Exported heads,
 contracts, effects, costs and lock-rank constraints of a dependency are readable as its interface (`gabbro abi
 --project`), for the reader and for 7.7.
@@ -253,8 +253,8 @@ project and its dependencies sit (alone or as `store@2` under any program); `auf
 undeclared copy or a private name; `namen_getrennt`: copies share no name. Decision: versions are NOT written in
 the source (`store@2::` was planned): a project declares each dependency once, so its local name is unambiguous;
 writing a version would let a project reach a copy it did not declare. The grammar is unchanged (`path` already
-reads `store::stock::Shelf`). Rust next: the checker resolves against the visible names of the project, not the
-whole unit, and refuses a project whose own top module has the local name of one of its dependencies.
+reads `store::stock::Shelf`). Never built before the 2026-11-10 deletion: the checker resolving against the visible names of the project, not the
+whole unit, and refusing a project whose own top module has the local name of one of its dependencies.
 
 ### 7.7 Separate compilation -- the same guarantees, faster
 
@@ -269,7 +269,7 @@ Lean, done (2026-10-25, `Zielsatz/Projekte/Verbund.lean`, THEOREM-MAP §99): `ga
 number of units, each accepted ALONE, plus the link check `BindeSpec` (decided by `bindeB`, `bindeB_sound`) --
 callbacks, shared atomics, ownership across units, differing assumptions and initial memories, one lock order.
 It is a new statement beside `GabbroZielProjekte` (its own file, like that one), not a diff of `Spec.lean`; the
-two-unit `GabbroZielVerbund` stays as it is. Open: points 2 and 3, and the Rust link check.
+two-unit `GabbroZielVerbund` stays as it is. Open: points 2 and 3 (the link check itself is the Lean judgment `BindeSpec`, decided by `bindeB` with `bindeB_sound`; the Rust link check died with the deleted build).
 Until all three hold, the check results of a dependency are cached by content fingerprint (the check is
 deterministic), and the program is compiled as one unit.
 
@@ -277,7 +277,7 @@ deterministic), and the program is compiled as one unit.
 
 | Step | What | Size |
 |---|---|---|
-| 1 | name spaces in the Lean front end, then Rust (7.6) | 1-2 weeks |
+| 1 | name spaces in the Lean front end (7.6; the Rust step died with the deleted tools) | 1-2 weeks |
 | 2 | build files: `dependency`, `export:`, `dependencies:`, versions incl. several, options, `gabbro.lock`, `--fix` hints, probes (7.3/7.4) -- dependencies refused `NEEDS LEAN` until step 4 | 3-5 days |
 | 3 | Lean L1, L3, L4, L5 with witnesses | 1-2 weeks |
 | 4 | Lean L2 (open-world rely, callbacks, n-ary (b)) and L6; `Spec.lean` header, THEOREM-MAP, PROOF; then the build accepts dependencies | 2-3 weeks |
@@ -289,7 +289,7 @@ deterministic), and the program is compiled as one unit.
 Every Lean step of 7.8 is done (THEOREM-MAP §94-§99): L1-L6, name spaces, the embedding with callbacks, L3's twin
 of `vereinige` (`Annahmen.lean`), L4 (`Passend`, `StartTeil`, `startTeil_E`), the n-unit link
 (`gabbro_ziel_verbund_n`) and the grown-rely re-check on the model side (`koerperGutSA_wachs`,
-`nutzerTeilO_wachs`). Open outside the model: the Rust checker and build files (steps 1-2), GabbroV's reuse of
+`nutzerTeilO_wachs`). Open outside the model: the build files (steps 1-2; the Rust checker died with the deleted tools), GabbroV's reuse of
 certificates by fingerprint (step 5, `programmlogik/`), LLVM linkage and translation validation (step 6).
 
 Proved in Lean (THEOREM-MAP §94), all axiom lists standard:
@@ -310,7 +310,7 @@ Found while proving, and next:
   one link declaration, and re-proved (cached by content) for another. L4 (each project's own initial memory) is
   part of this embedding. L5 (one lock order) needs no theorem of its own: the whole-program acceptance decides
   `stufen` over the composed program.
-* Name spaces (7.6): Lean done (copy + path names, project-relative paths, visibility); Rust follows.
+* Name spaces (7.6): Lean done (copy + path names, project-relative paths, visibility); the corresponding checker step was never built before the 2026-11-10 deletion.
 * Witnesses still to build: a thread spawned in one project running code of the other (the callback witness is
   `einbettung_zeuge` with `rueckruf_echt`, 7.10).
 * `GabbroZielVerbund` for n units with every leg (7.7), then the build accepts dependencies.
@@ -418,9 +418,9 @@ every answer the `D'`-run receives. This needs a carrier in `D` to mark with (a 
 without any state is handled by a ghost carrier of its own). It is proof work, not a model change -- the strongest
 variant -- and it is the critical path of E2/E3.
 
-### 7.11 What the build does with dependencies (2026-10-25)
+### 7.11 What the build does with dependencies (2026-10-25; design of the build tool deleted 2026-11-10, kept as the reference for a future Lean build driver)
 
-* `dependency(...)` resolves a COPY per source and option set (`bau/abh.rs`): evaluated in its own scope, its options
+* `dependency(...)` resolves a COPY per source and option set (deleted `bau/abh.rs`): evaluated in its own scope, its options
   from `options:` and `-D<project>:<option>=<value>`, the program's `target` and `buildtype` handed down; the version
   requirement (`'>=1.2, <2'`: comparisons joined by `,`) checked against `project(version:)`. Two versions are two
   copies, each in its own name space (`store_v1_3_0`); one version from two sources, or with two option sets, is
@@ -430,8 +430,8 @@ variant -- and it is the critical path of E2/E3.
 * A target reaches a dependency through `use <dependency>::<module>::<item>` into a library the dependency marks
   `export: true`; that library and what it uses (of its own project or of ITS dependencies) join the unit. Each
   library of a dependency is also checked alone (`built store:stock`).
-* Several projects in one unit get name spaces on the tokens before the checker sees them (`bau/namensraum.rs`,
-  the rule of `Parser/Namen/Namensraum.lean`): every top-level module goes below its project's name space, a
+* Several projects in one unit get name spaces on the tokens before the checker sees them (deleted
+  `bau/namensraum.rs`, the rule of `Parser/Namen/Namensraum.lean`): every top-level module goes below its project's name space, a
   dependency's local name becomes its copy's name space, every item stands in a module, and a path whose head is a
   project the file's project does not declare -- or a module a dependency does not export -- is refused. The program
   is ONE unit for the checker, as §7.2 says; `gabbro_ziel_projekte`/`gabbro_ziel_verbund_n` are its statements.
