@@ -20,8 +20,8 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
     ∃ ls : LowSide u Γ Λ, wv = ls.wert ∧
       Gabbro.Body.eval ⟨w, β⟩ eB = some (valOf (.int ls.range.1 ls.range.2) (eval σ₀ ls.term σ ρ)) := by
   exact lowWertE_scalar_sim h hb hA hT σ₀ σ ρ w β hW hL
-    (fun sd' _ h' hb' => lowWertE_sim h' hb' hA hT σ₀ σ ρ w β hW hL)
-    (fun sd' _ h' hb' => lowWertE_recordRead_sim h' hb' hA hT σ₀ σ ρ w β hW hL)
+    (fun sd' _ _ _ h' hb' => lowWertE_sim h' hb' hA hT σ₀ σ ρ w β hW hL)
+    (fun sd' _ _ _ _ h' hb' => lowWertE_recordRead_sim h' hb' hA hT σ₀ σ ρ w β hW hL)
 termination_by 5 * sizeOf sd
 decreasing_by all_goals omega
 
@@ -72,7 +72,7 @@ theorem lowWertE_recordRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UF
           obtain ⟨hv, hty⟩ := lowParam_record_sim ht h σ₀ σ ρ β hL
           exact ⟨congrArg some hv, fun t he => (Option.some.inj he) ▸ hty⟩
   | .absent n, h, hb =>
-      cases h
+      first | cases h | (rw [lowWertE] at h; cases h) | (simp only [lowWertE, Except.ok.injEq] at h; subst h)
       simp only [recordRead, Option.some.injEq, Prod.mk.injEq] at hb
       obtain ⟨rfl, rfl⟩ := hb
       exact ⟨rfl, fun _ he => Option.some.inj he⟩
@@ -139,7 +139,8 @@ theorem lowWertE_recordRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UF
                       rw [Gabbro.Body.eval_recOf, hv]
                       rfl
   | .field base name, h, hb =>
-      exact lowWertE_field_sim h hb
+      exact lowWertE_field_sim h
+        (by first | exact hb | (rw [recordRead] at hb; exact hb) | (simp only [recordRead] at hb; exact hb))
         (fun hw hr => lowWertE_recordRead_sim hw hr hA hT σ₀ σ ρ w β hW hL)
   | .replace base name value, h, hb =>
       cases hr : recordRead u fn base with
