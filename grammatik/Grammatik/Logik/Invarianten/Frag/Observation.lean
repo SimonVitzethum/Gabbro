@@ -46,6 +46,7 @@ inductive Refusal where
   | atomicCarrier
   | nonlinear
   | crossEntry
+  | invalid (detail : String)
   | unsupported (ctorName : String)
   | within (part : String) (cause : Refusal)
   deriving DecidableEq, Repr
@@ -55,6 +56,7 @@ def Refusal.message : Refusal → String
   | .atomicCarrier => "invariant reads an atomic carrier; use a guarded scalar carrier"
   | .nonlinear => "variable multiplication; use a literal coefficient"
   | .crossEntry => "cross-entry relation; use one local predicate per slot"
+  | .invalid detail => detail
   | .unsupported ctorName => "unsupported invariant constructor: " ++ ctorName
   | .within part cause => part ++ ": " ++ cause.message
 
