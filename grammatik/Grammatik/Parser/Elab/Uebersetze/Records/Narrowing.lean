@@ -24,6 +24,7 @@ def replace (place : SExpr) (name : String) (value : SExpr) : SExpr :=
     | .field a f => .field (replace place name a) f
     | .call g args => .call g (replaceList place name args)
     | .built g args => .built g (replaceList place name args)
+    | .ext .label labels args => .ext .label labels (replaceList place name args)
     | value => value
 
 def replaceList (place : SExpr) (name : String) : List SExpr → List SExpr

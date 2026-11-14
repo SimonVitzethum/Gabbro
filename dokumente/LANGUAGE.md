@@ -203,6 +203,8 @@ difference once at block entry, intersecting its exact integer range with those 
 rewrites reads only until a statement may rebind either operand or the generated name.
 Mutable operands and unresolved ranges are excluded. `guard-relation.gab` exercises `a >= b`,
 `a > b` and `i < n`; this is a difference rule, not arbitrary symbolic algebra.
+Full-range `u64` operands use the same rule: their exact difference is a signed 65-bit
+intermediate, lowered through the existing multiword integer and total `eng` machinery.
 
 **Mutable counters.** A unary guard over a `let mut` plain number creates a fresh immutable
 snapshot at entry to the then block or a plain else block. Straight-line reads use its narrowed
@@ -220,6 +222,14 @@ The inserted range tests count in declared costs and add no return path or new `
 obligation. The canonical exporter and printed-program read-back use the
 switch off (`SInv.narrowOff`); their statements do not establish read-back with these bindings
 inserted. Where these rules give no sufficient bound, use `narrow x to lo .. hi else { … }`.
+
+**Explicit field narrowing.** Stage 0 also accepts `narrow entry.pos to 0 .. 63 else { … }`
+for a field chain rooted in a local record. It reads the field once into an immutable local
+and uses the ordinary checked `narrow` on that local. Successful subsequent field reads,
+including the enclosing block's final return, use the checked snapshot until a statement
+may mutate or rebind the containing record. Unknown statements are conservative barriers.
+The failure branch keeps the original record and range; the record's declared type and other
+fields remain intact. Globals, slots and indirect places do not acquire this local refinement.
 
 ### 3.3 New types and sums
 

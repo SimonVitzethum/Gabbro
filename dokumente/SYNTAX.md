@@ -1479,6 +1479,8 @@ comparison, with the same branch and continuation scope. `a >= b` makes `a - b` 
 both operand ranges supply the interval. A fresh binding computes it once at entry; rewrites
 stop before a possible rebinding of either operand or the generated name. Mutable operands
 and unresolved ranges are excluded (`guard-relation.gab`).
+Full-range `u64` operands use the same total `eng` form and the verified multiword
+lowering for the signed 65-bit intermediate (`guard-relation-u64.gab`).
 
 `GuardMutable.lean` permits unary facts for mutable number locals via an immutable snapshot at
 entry to the then block or a plain else block. Only straight-line reads before a possible
@@ -1491,6 +1493,13 @@ or the continuation, even after a returning then block (`guard-mutable-counter.g
 Each inserted fact uses a total narrowing binding (`USide.eng`): the checked guard and unchanged
 value make its fallback unreachable. Its range test counts in costs, with no extra return
 path or `ensures` duty. Other cases still need explicit `narrow … else`.
+
+With that compiler switch, `Records/Narrowing.lean` expands an explicit narrow of a
+local record field chain into a field snapshot and the existing local `narrow`.
+Successful reads, including the block's ending, use the snapshot until a possible
+mutation or rebinding of the root; unknown statements are barriers. Failure arms keep
+the original record. This adds no G constructor or acceptance rule
+(`narrow-record-field.gab`, `Records/NarrowingWitness.lean`).
 
 `return f(args);` inside a branch or match arm is lifted to a binding and a return of its result;
 a final top-level call remains direct. Record-field arguments such as `return nxt(r.node, r.pos);`
