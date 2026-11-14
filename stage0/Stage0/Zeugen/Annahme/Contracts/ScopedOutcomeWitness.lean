@@ -149,6 +149,12 @@ def thread {Λ : List (Res D)} (r : GRest D V false Params Λ) (σ : World D)
 def source (why : Bool) : RufMaschineG D :=
   ⟨beforeReturn.speicher, fun _ => thread (sourceRest why) beforeReturn, [], entry⟩
 
+private theorem source_held_zeuge (why : Bool) :
+    HeldIn holdings (offen ((source why).faeden 0).spur) := by
+  intro L member
+  change L ∈ [true, false]
+  simpa only [holdings, List.mem_cons, List.not_mem_nil, or_false, Res.held.injEq] using member
+
 /-- Expected successor records use the same update operation as the G rules. -/
 def successor (M : RufMaschineG D) (z : RufFadenG D) (events : Lauf D) : RufMaschineG D :=
   ⟨M.speicher, rufUpdateG M.faeden 0 z, M.lauf ++ events, M.start⟩
@@ -192,11 +198,11 @@ theorem capture_zeuge (why : Bool) :
   cases why with
   | false =>
     exact .rueckScopedWert (source false) 0 arguments (sourceRest false) resultExpr cleanup
-      rfl rfl (by decide) (by intro L _; cases L <;> decide)
+      rfl rfl (by decide) (source_held_zeuge false)
       beforeReturn rfl [] rfl (by decide) (GRest.keinNiedrig_alt _)
   | true =>
     exact .rueckScopedGrund (source true) 0 arguments (sourceRest true) reason cleanup
-      rfl rfl (by decide) (by intro L _; cases L <;> decide)
+      rfl rfl (by decide) (source_held_zeuge true)
       (by decide) (GRest.keinNiedrig_alt _)
 
 /-- The two real G7 releases have the required chronological order. -/
@@ -275,10 +281,10 @@ theorem single_reason_zeuge :
   refine ⟨?_, ?_, rfl, rfl⟩
   · exact .rueckScopedGrund singleSource 0 arguments _ reason singleCleanup
       rfl rfl (by decide) (by
-        intro L h
-        cases L
-        · decide
-        · cases List.mem_singleton.mp h) (by decide) (GRest.keinNiedrig_alt _)
+        intro L member
+        change L ∈ [false]
+        simpa only [List.mem_singleton, Res.held.injEq] using member)
+      (by decide) (GRest.keinNiedrig_alt _)
   · exact .rueckFreigabeLetzte singleCaptured 0 arguments
       ⟨.inr reason, singleWorld⟩ false rfl singleFinishedThread rfl
 
