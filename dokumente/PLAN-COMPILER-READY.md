@@ -190,7 +190,7 @@ is user code. The designs behind the items are in §4.
 |---|---|---|
 | L0 | owner decisions of §8 that change rules or the goal statement (O12–O16, decisions 1–4 of the low-level plan), each with its explicit `Spec.lean` diff | — |
 | L1 | canonical model of authority: `address<S>` as inert data, the linear `context<P>` with its ledger (live spans, space, permissions, class, owner, epoch, privilege and interrupt state), `ram_view` as the one producer of a bounded view from an address, the boot transition relation, generic preservation, joint witnesses with a real write and a privilege handoff | 8 000–20 000 / 3–5 / — |
-| L2 | device memory: register reads, writes, fallible reads and register transitions over the lifted `RegLokal` (A2); device views as a memory class of their own that `ram_view` refuses; buffers lent to a device and taken back under quiescence; **driver conformance (owner, 2026-11-14):** the device protocol is a declared contract of the device (hardware side, named in (c)); that a driver follows it is program logic — the checker decides the decidable part (access order, register types, declared transitions), the rest is proved by the user through GabbroProve | 4 000–10 000 / 1–3 / — |
+| L2 | device memory: register reads, writes, fallible reads and register transitions over the lifted `RegLokal` (A2); device views as a memory class of their own that `ram_view` refuses; buffers lent to a device and taken back under quiescence; **driver conformance (owner, 2026-11-14):** the device protocol is a declared contract of the device (hardware side, named in (c)); that a driver follows it is program logic, proved by the user through GabbroProve; the language guarantees register types, authority and declared transitions generically | 4 000–10 000 / 1–3 / — |
 | L3 | raw byte access below the type level, in hosted programs and in the kernel: byte capabilities with value flow (C01), grant generations (C08) and loans (C09); typed views over bytes need representation, endianness and layout proofs; uninitialised bytes are written before they are read | 6 000–15 000 / 2–4 / — |
 | L4 | the architectural state as a neutral interface (privilege level, translation root, interrupt mask, vector base, per-core identity) and the privileged operations as calls of binding functions over `context<P>` with contracts; no source body, no certificate per body (D12) | 5 000–12 000 / 1–3 / — |
 | L5 | entry and exit frames: interrupt and exception entry and return, system-call entry and return, thread switch and first entry of a thread, generated from the `entry` declaration (register maps, preserved set, stack) with ONE generic theorem per frame kind | 6 000–15 000 / 1–3 / — |
@@ -238,6 +238,14 @@ is user code. The designs behind the items are in §4.
 | X5 | `bedingt` → `endet` through a user measure | language decision |
 
 ---
+
+**Program logic and language capabilities (owner, 2026-11-14).** What the checker proves on its own, and what a program
+declares optionally for the checker to decide (contracts and invariants in the decidable fragment, `decreases`,
+intermediate invariants, finite-state probability and cost bounds, flow levels), counts as a capability of the
+language, not as user logic. Program logic proper — properties specific to one program that the language cannot
+carry, such as a driver following its device's protocol or the functional correctness of an algorithm — is never
+the checker's or the compiler's job: the user proves it through GabbroProve over the generic model. The direction
+of every item is to move as much as possible from the user onto the language model.
 
 ## 4. The kernel design this plan commits to
 
