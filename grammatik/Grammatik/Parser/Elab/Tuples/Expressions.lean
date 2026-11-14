@@ -30,7 +30,7 @@ def expandExpr (k : Context) (locals : Spec.Locals) (expected : Option STyp) :
       pure (.call name fields)
     | .field base field =>
       let base ← recur base
-      match field.toNat? with
+      match natural? field with
       | none => pure (.field base field)
       | some index =>
         let state ← get

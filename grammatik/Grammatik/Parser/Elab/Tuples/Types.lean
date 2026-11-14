@@ -3,6 +3,7 @@ public import Grammatik.Parser.Spec.Items
 public import Grammatik.Parser.Elab.Uebersetze.Records.Records
 public import Grammatik.Parser.Print.Stmt
 public import Grammatik.Parser.Elab.Konst.Scalar.Names
+public import Grammatik.Parser.Elab.Tuples.Natural
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Tuples
@@ -116,8 +117,8 @@ def recordFields (k : Context) (ty : STyp) : Option (List SFeld) := do
 
 def position (field : String) : Option Nat :=
   match field.toList with
-  | '_' :: digits => (String.ofList digits).toNat?
-  | _ => field.toNat?
+  | '_' :: digits => natural? (String.ofList digits)
+  | _ => natural? field
 
 def integerType (lo hi : Int) : STyp :=
   .range (.atom (if lo < 0 then "i64" else "u64"))
