@@ -40,17 +40,18 @@ def CheckedExecution (policy : CallPolicy program) (f : D.Fn) : Prop :=
 def invalidMessage (label : String) (formula : LProp (Observation D))
     (pre : QF (Observation D)) : String :=
   let matrix := writerMatrix formula .tru pre
-  match counterexample (qfKeys matrix) (quoteQF matrix) with
+  let names := (qfKeys matrix).eraseDups
+  match counterexample names (quoteQF matrix) with
   | none => label ++ ": false VC (no counterexample extracted)"
   | some values => label ++ ": false VC; counterexample in observation order = " ++
-      reprStr ((qfKeys matrix).map values)
+      reprStr (names.map values)
 
 /-- Diagnostics retain the concrete decoded arguments selected by the VC
     generator, including when the arithmetic counterexample has no memory keys. -/
 def environmentValues : {context : Ctx} → Env D context → List Int
   | [], .nil => []
   | .int _ _ :: _, .cons value rest => value.n :: environmentValues rest
-  | .bool :: _, .cons value rest => (if value then 1 else 0) :: environmentValues rest
+  | .bool :: _, .cons value rest => (if wahr? value = true then 1 else 0) :: environmentValues rest
   | τ :: _, .cons value rest => scalarValue τ value :: environmentValues rest
 
 /-- The return formula conjoins checked ensures with all owed invariants. -/
