@@ -86,7 +86,7 @@ def globAlign (u : UProg) (g : Fin u.globs.length) : Nat :=
 
 def layU (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat)
     (align : Fin u.globs.length → Nat := fun g => wordAlign (globAlign u g))
-    {lockWait : LockWait := .futex} : Lay (declOf u) where
+    (lockWait : LockWait := .futex) : Lay (declOf u) where
   ga g := b + globStartOf (List.finRange u.globs.length) 0 (globSz u) align g
   col t f := b + globEnd (List.finRange u.globs.length) 0 (globSz u) align + (((List.finRange u.tabs.length).map (tabSz u)).take t.val).sum +
     (((List.finRange (fieldCount u t)).map (colSz u t)).take f.val).sum
