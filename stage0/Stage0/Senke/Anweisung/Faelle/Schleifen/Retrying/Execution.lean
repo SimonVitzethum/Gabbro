@@ -31,9 +31,11 @@ theorem decrement {n : Nat} {m : Mem} {σ : World D} {ρ : Env D Γ}
         rcases List.mem_cons.mp hj with rfl | hj
         · exact ⟨by unfold frei at room; omega, by omega⟩
         · have := x.kept j hj; exact ⟨by omega, this.2.1⟩)
-  have atBody : x.addr x.controlIndex + 32 = x.addr x.bodyIndex :=
-    adr_eq x.pc (x := x.controlIndex) (y := x.bodyIndex) (by
+  have atBody : x.addr x.controlIndex + 32 = x.addr x.bodyIndex := by
+    have h := adr_eq x.pc (x := x.controlIndex) (y := x.bodyIndex) (J := 32) (by
       dsimp only [controlIndex, bodyIndex]; omega)
+    exact (congrArg (x.addr x.controlIndex + ·)
+      (by decide : (32 : BitVec 64) = BitVec.ofInt 64 32)).trans h
   rw [atBody] at run
   have final := ready.after frame pre.env world
   refine ⟨m1, run, frame, kept, final, count, ?_, by omega⟩
@@ -63,12 +65,12 @@ theorem correct {Λ : List (Res D)} {bis : Expr D Γ Λ .bool} {tc : Nat}
     (σ, wahr? (eval σ bis σ ρ))) overflow x.Entry x.low ?_ ?_ ?_
   · intro n m σ ρ entry done
     obtain ⟨m1, run, frame, kept, ready⟩ := x.test_run lowered top entry.1
-    simp only [done, ↓reduceIte] at run
+    try simp only [done, ↓reduceIte] at run
     exact ⟨m1, run, frame, ready.pre.env, ready.world, fun j hj => kept j (by
       simp only [List.mem_cons]; exact Or.inr (Or.inr hj))⟩
   · intro m σ ρ entry falseCond
     obtain ⟨m1, run, frame, kept, ready⟩ := x.test_run lowered top entry.1
-    simp only [falseCond, ↓reduceIte] at run
+    try simp only [falseCond, ↓reduceIte] at run
     have zero : x.read m1 x.counter 0 := by
       exact (kept x.counter List.mem_cons_self).trans entry.2.1
     have atOverflow : x.addr x.controlIndex +
@@ -85,7 +87,7 @@ theorem correct {Λ : List (Res D)} {bis : Expr D Γ Λ .bool} {tc : Nat}
       (overflowRun m1 _ ρ ready)
   · intro n m σ ρ entry falseCond
     obtain ⟨m1, testRun, testFrame, testKept, ready1⟩ := x.test_run lowered top entry.1
-    simp only [falseCond, ↓reduceIte] at testRun
+    try simp only [falseCond, ↓reduceIte] at testRun
     have start : x.Entry (n + 1) m1 (σ.lese Λ bis.orte) ρ := by
       refine ⟨ready1, ?_, ?_, entry.2.2.2⟩
       · exact (testKept x.counter List.mem_cons_self).trans entry.2.1
