@@ -63,7 +63,8 @@ theorem axiomCall_ok_inv {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D
       (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).1 ∧ ρ' = ρ ∧
     ∃ u : ErgVal D (D.aerg a), einpassenErg O.zeiger (D.aerg a) (O.wirkt a ((σ.lese Λ args.orte).fragt (.inl a))
       (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = some u := by
-  simp only [execStmt, axiomAntwort] at hst
+  simp only [execStmt, axiomAntwort, Boundary.Check.requiredB, Boundary.Check.trivial,
+    Boundary.requiredB, Bool.false_eq_true, ↓reduceIte] at hst
   split at hst
   · rename_i σx u hx
     cases hst
@@ -168,7 +169,8 @@ theorem fadenV_blatt (e0 : Ereignis D) (hO : GutO O) {z : RufFadenG D} {W : Worl
           intro O' R σ hz hw
           rw [hsem]
           apply ZErg.folgt_of_eq
-          simp only [execStmt, axiomAntwort, hw]
+          simp only [execStmt, axiomAntwort, hw, Boundary.Check.requiredB,
+            Boundary.Check.trivial, Boundary.requiredB, Bool.false_eq_true, ↓reduceIte]
           simp only [(show O'.zeiger = O.zeiger from hz), hu]
           rfl
       | _ => simp only [Stmt.istAxiom, Bool.false_eq_true] at hax
