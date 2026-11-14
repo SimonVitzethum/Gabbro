@@ -15,8 +15,10 @@ structure Results (D : Deklaration) (result : Option Ty) where
   values : List (ErgVal D result)
   complete : ∀ value, value ∈ values
 
-def results (budget : Nat) : (result : Option Ty) → Except Frag.Refusal (Results D result)
-  | none => .ok { values := [()], complete := fun value => by cases value; simp }
+def results (budget : Nat) : (result : Option Ty) → Except Invarianten.Frag.Refusal (Results D result)
+  | none => .ok
+      { values := [show ErgVal D none from ()]
+        complete := fun value => by cases value; exact List.mem_cons_self }
   | some τ => do
       let domain ← localDomain (D := D) budget τ
       return {
@@ -26,12 +28,12 @@ def results (budget : Nat) : (result : Option Ty) → Except Frag.Refusal (Resul
     equality. The canonical evalArgs remains the only argument evaluator. -/
 def arguments (budget : Nat) (args : Args D Γ Λ params) (locals : Env D Γ)
     (target : Env D params → Runtime program (fun _ => []) S → World D → Prop)
-    (compile : ∀ actual, Except Frag.Refusal (Condition (target actual))) :
-    Except Frag.Refusal (Condition (fun runtime world =>
+    (compile : ∀ actual, Except Invarianten.Frag.Refusal (Condition (target actual))) :
+    Except Invarianten.Frag.Refusal (Condition (fun runtime world =>
       target (evalArgs world args world locals) runtime world)) :=
-  match args with
-  | .nil => compile .nil
-  | .cons head tail => do
+  match params, args, target, compile with
+  | [], .nil, _, compile => compile .nil
+  | _ :: _, .cons head tail, target, compile => do
       let selected ← localSelect budget head locals
         (fun value runtime world => target (.cons value (evalArgs world tail world locals)) runtime world)
         (fun value => arguments budget tail locals
@@ -44,8 +46,8 @@ def arguments (budget : Nat) (args : Args D Γ Λ params) (locals : Env D Γ)
 def callCondition (policy : CallPolicy program) (budget : Nat) (f : D.Fn)
     (actual : Env D (D.params f)) (noReasons : D.gruende f = 0)
     (target : ErgVal D (D.erg f) → Runtime program (fun _ => []) S → World D → Prop)
-    (compile : ∀ value, Except Frag.Refusal (Condition (target value))) :
-    Except Frag.Refusal (Condition (fun runtime world => ∀ allowed,
+    (compile : ∀ value, Except Invarianten.Frag.Refusal (Condition (target value))) :
+    Except Invarianten.Frag.Refusal (Condition (fun runtime world => ∀ allowed,
       HandlerSafe policy runtime allowed →
       match runtime.calls f world actual with
       | .ok next value => target value runtime next
@@ -73,8 +75,9 @@ def callCondition (policy : CallPolicy program) (budget : Nat) (f : D.Fn)
         have parts := (conj_denote _ _ _).mp valid
         have entry := (pre.property world).mp parts.1
         cases reply : runtime.calls f world actual with
-        | ok next value => exact branches.sound runtime world parts.2 value (domain.complete value)
-            (policy.requires f world actual entry) safe.1 next reply
+        | ok next value =>
+            exact branches.sound runtime world parts.2 value (domain.complete value)
+              (policy.requires f world actual entry) safe.1 next reply
         | why next reason => exact (Fin.cast noReasons reason).elim0
         | logik error => exact safe.2 f world actual entry error reply
         | hardware _ => trivial }
