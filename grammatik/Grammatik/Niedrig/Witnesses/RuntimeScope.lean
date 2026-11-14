@@ -30,7 +30,12 @@ def key : ScopeKey := ⟨.view, 7, 3⟩
 
 def receipt : ViewResult authority context :=
   { view := writableView
-    admission := writableAdmission
+    admission := by
+      rcases writableAdmission with
+        ⟨span, owner, epoch, lender, bounds, memoryClass, permissions,
+          alignment, mapping, initialization, compatible⟩
+      exact ⟨span, owner, epoch, lender, bounds, memoryClass, permissions,
+        alignment, mapping, initialization, compatible⟩
     owners := borrowedOwners
     borrowed := rfl }
 
