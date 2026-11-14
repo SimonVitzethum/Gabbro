@@ -82,6 +82,7 @@ theorem axVertragOP_mitRuhe {P : Programm D} {Q : AxEns D} {O : Orakel D}
   | some v0 =>
       rw [hx] at hv
       cases hv
+      rw [wirkt_mitRuhe_welt]
       show Q a (worldZ (worldR (O.wirkt a ((worldZ σ).fragt (.inl a)) (envZ ρ)).1))
         (ergZ _ (ergR _ v0)) = true
       rw [worldZ_worldR, ergZ_ergR]
