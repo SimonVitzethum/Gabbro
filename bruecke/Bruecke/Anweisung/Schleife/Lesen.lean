@@ -20,26 +20,32 @@ theorem seqZ_loop_some {k : Nat} {fn : UFn} {ns : BodyNames} {x tab : String} {i
       bs = .forEach (ns.fresh x) (loopIndices u t) body :: ys := by
   cases inv
   case tru =>
-    simp only [seqZ, bind, Option.bind] at h
-    split at h
-    · cases h
-    · rename_i hgood
-      have hg : loopWritesB ss = true := by cases hh : loopWritesB ss <;> simp_all
+    cases hg : loopWritesB ss with
+    | false => simp only [seqZ, hg, Bool.not_false, ↓reduceIte] at h; cases h
+    | true =>
+      simp only [seqZ, hg, Bool.not_true, Bool.false_eq_true, ↓reduceIte] at h
       cases ht : tabIdx u.tabs tab with
-      | error e => simp only [ht, Except.toOption] at h; cases h
+      | error e => simp only [ht, Except.toOption, bind, Option.bind_none] at h; cases h
       | ok t =>
-        simp only [ht, Except.toOption] at h
-        split at h
-        · rename_i body tail allocated hbody
-          cases hy : seqZ u k fn (ns.resume allocated) tail with
-          | none => rw [hy] at h; cases h
-          | some p =>
-            obtain ⟨ys, tail', used'⟩ := p
-            rw [hy] at h
-            cases h
-            exact ⟨rfl, hg, t, body, tail, allocated, ys, ht, hbody, hy, rfl⟩
-        · cases h
-  all_goals simp only [seqZ, schrittB, namedStmt, stmtBody, Option.bind_none, Option.map_none, reduceCtorEq] at h
+        simp only [ht, Except.toOption, bind, Option.bind_some] at h
+        cases hbody : seqZ u k (fn.mitIndex x t.val ((declOf u).count t)) (ns.push x) ss with
+        | none => simp only [hbody, bind, Option.bind_none] at h; cases h
+        | some p =>
+          obtain ⟨body, ending, allocated⟩ := p
+          simp only [hbody, bind, Option.bind_some] at h
+          cases ending with
+          | nil => cases h
+          | cons marker tail =>
+            cases marker <;> try { cases h }
+            case blkEnd =>
+              cases hy : seqZ u k fn (ns.resume allocated) tail with
+              | none => simp only [hy, bind, Option.bind_none] at h; cases h
+              | some p =>
+                obtain ⟨ys, tail', used'⟩ := p
+                simp only [hy, bind, Option.bind_some, pure, Option.some.injEq, Prod.mk.injEq] at h
+                obtain ⟨rfl, rfl, rfl⟩ := h
+                exact ⟨rfl, hg, t, body, tail, allocated, ys, ht, hbody, hy, rfl⟩
+  all_goals simp only [seqZ, schrittB, namedStmt, stmtBody, bind, Option.bind_none, Option.map_none, reduceCtorEq] at h
 
 theorem stmtsBodyZ_loop_some {k : Nat} {fn : UFn} {ns : BodyNames} {x tab : String} {inv : UEns}
     {ss : List UStmt} {r : URet} {bs : List Gabbro.Body.Stmt}
@@ -52,25 +58,30 @@ theorem stmtsBodyZ_loop_some {k : Nat} {fn : UFn} {ns : BodyNames} {x tab : Stri
       bs = .forEach (ns.fresh x) (loopIndices u t) body :: ys := by
   cases inv
   case tru =>
-    simp only [stmtsBodyZ, bind, Option.bind] at h
-    split at h
-    · cases h
-    · rename_i hgood
-      have hg : loopWritesB ss = true := by cases hh : loopWritesB ss <;> simp_all
+    cases hg : loopWritesB ss with
+    | false => simp only [stmtsBodyZ, hg, Bool.not_false, ↓reduceIte] at h; cases h
+    | true =>
+      simp only [stmtsBodyZ, hg, Bool.not_true, Bool.false_eq_true, ↓reduceIte] at h
       cases ht : tabIdx u.tabs tab with
-      | error e => simp only [ht, Except.toOption] at h; cases h
+      | error e => simp only [ht, Except.toOption, bind, Option.bind_none] at h; cases h
       | ok t =>
-        simp only [ht, Except.toOption] at h
-        split at h
-        · rename_i body tail allocated hbody
-          cases hy : stmtsBodyZ u k fn (ns.resume allocated) tail r with
-          | none => rw [hy] at h; cases h
-          | some ys =>
-            rw [hy] at h
-            cases h
-            exact ⟨rfl, hg, t, body, tail, allocated, ys, ht, hbody, hy, rfl⟩
-        · cases h
-  all_goals simp only [stmtsBodyZ, schrittB, namedStmt, stmtBody, Option.bind_none, Option.map_none, reduceCtorEq] at h
+        simp only [ht, Except.toOption, bind, Option.bind_some] at h
+        cases hbody : seqZ u k (fn.mitIndex x t.val ((declOf u).count t)) (ns.push x) ss with
+        | none => simp only [hbody, bind, Option.bind_none] at h; cases h
+        | some p =>
+          obtain ⟨body, ending, allocated⟩ := p
+          simp only [hbody, bind, Option.bind_some] at h
+          cases ending with
+          | nil => cases h
+          | cons marker tail =>
+            cases marker <;> try { cases h }
+            case blkEnd =>
+              cases hy : stmtsBodyZ u k fn (ns.resume allocated) tail r with
+              | none => simp only [hy, bind, Option.bind_none] at h; cases h
+              | some ys =>
+                simp only [hy, bind, Option.bind_some, pure, Option.some.injEq] at h
+                exact ⟨rfl, hg, t, body, tail, allocated, ys, ht, hbody, hy, h.symm⟩
+  all_goals simp only [stmtsBodyZ, schrittB, namedStmt, stmtBody, bind, Option.bind_none, Option.map_none, reduceCtorEq] at h
 
 /-- The admitted loop body is a sequence of writes, so all calls lie after its marker. -/
 theorem loopWrites_calls : ∀ k fn ns ss bs tail used,
@@ -87,8 +98,7 @@ theorem loopWrites_calls : ∀ k fn ns ss bs tail used,
       exact CallsIn.tail (by rfl) hc
     case assign | assignTab | assignGlob | setVar | setVarB =>
       obtain ⟨b, fn', ns', ys, hs, hy, _⟩ := seqZ_schritt_some h (by exact True.intro)
-      obtain ⟨_, rfl, rfl⟩ := schrittB_einzeln_sicht (Sicht.refl fn) hs (by exact True.intro)
-      exact loopWrites_calls k fn ns ss ys tail used hg hy g args (CallsIn.tail (by rfl) hc)
+      exact loopWrites_calls k fn' ns' ss ys tail used hg hy g args (CallsIn.tail (by rfl) hc)
     all_goals cases hg
 
 end Gabbro.Bruecke
