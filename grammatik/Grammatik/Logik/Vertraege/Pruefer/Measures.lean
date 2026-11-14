@@ -7,7 +7,7 @@ public import Grammatik.Logik.Terminierung.Mass
 
 namespace Gabbro.Grammatik.Vertraege.Pruefer
 
-open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.VC Invarianten.Pruefer
+open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.Elim.Korrekt Invarianten.VC Invarianten.Pruefer
 
 variable {D : Deklaration} {program : Programm D} {S : SperrInv D}
 
@@ -75,7 +75,7 @@ theorem massPflicht_of_execution (measure : Mass D) (cycle : D.Fn → D.Fn → B
 def checkMeasure (program : Programm D) (S : SperrInv D) (sources : LockSources S)
     (budget : VCBudget) (hint : Option (QF (Observation D)))
     (measure : Mass D) (cycle : D.Fn → D.Fn → Bool) (anchor : World D) (f : D.Fn) :
-    Except Refusal (PLift (∀ passes Q shared,
+    Except Invarianten.Frag.Refusal (PLift (∀ passes Q shared,
       (∀ carrier, shared carrier → AtomarAusgenommen carrier) →
       MassPflicht program passes Q S shared measure cycle f)) := do
   if free : atomicFreeB program f = true then

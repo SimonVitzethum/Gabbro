@@ -121,7 +121,7 @@ theorem contractDuties_of_execution (f : D.Fn)
 /-- The Bool-facing function check constructs every proof internally. -/
 def checkFunction (program : Programm D) (S : SperrInv D) (sources : LockSources S)
     (budget : VCBudget) (hint : Option (QF (Observation D))) (f : D.Fn) :
-    Except Refusal (PLift (ContractDuties program S f)) := do
+    Except Invarianten.Frag.Refusal (PLift (ContractDuties program S f)) := do
   if free : atomicFreeB program f = true then
     let execution ← checkExecution program S (requiresPolicy program) sources budget hint f
     return ⟨contractDuties_of_execution f execution.down free⟩

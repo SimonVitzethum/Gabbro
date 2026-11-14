@@ -12,7 +12,7 @@ variable {D : Deklaration} {V : Vertrag D} {S : SperrInv D} {program : Programm 
 
 section Compiler
 
-variable (policy : CallPolicy program) (facts : ∀ lock, Except Refusal (LockFormula S lock))
+variable (policy : CallPolicy program) (facts : ∀ lock, Except Invarianten.Frag.Refusal (LockFormula S lock))
     (budget : VCBudget) (hint : Option (QF (Observation D)))
 
 mutual
@@ -21,7 +21,7 @@ mutual
     engine here: soundness refers only to execStmtH/execBlockH/execEndH. -/
 def statement (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (code : Stmt D V l Γ Λ Λ') (locals : Env D Γ) (goals : Goals D V Γ) :
-    Except Refusal (StatementCondition (S := S) policy code locals goals) :=
+    Except Invarianten.Frag.Refusal (StatementCondition (S := S) policy code locals goals) :=
   match fuel with
   | 0 => .error (.unsupported "contract VC syntax-depth budget exceeded")
   | fuel + 1 =>
@@ -67,12 +67,12 @@ def statement (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           cases reply : runtime.calls f (world.lese Λ args.orte)
             (evalArgs (world.lese Λ args.orte) args (world.lese Λ args.orte) locals) <;>
             simpa only [reply, Goals.holds] using ready)
-    | _ => leafCondition policy budget.expansion code locals goals
+    | other => leafCondition policy budget.expansion other locals goals
 termination_by fuel
 
 def block (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (code : Block D V l Γ Λ Λ') (locals : Env D Γ) (goals : Goals D V Γ) :
-    Except Refusal (BlockCondition (S := S) policy code locals goals) :=
+    Except Invarianten.Frag.Refusal (BlockCondition (S := S) policy code locals goals) :=
   match fuel with
   | 0 => .error (.unsupported "contract VC syntax-depth budget exceeded")
   | fuel + 1 =>
@@ -128,13 +128,13 @@ termination_by fuel
 
 def ending (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (code : Endblock D V l Γ Λ) (locals : Env D Γ) (goals : Goals D V Γ) :
-    Except Refusal (EndCondition (S := S) policy code locals goals) :=
+    Except Invarianten.Frag.Refusal (EndCondition (S := S) policy code locals goals) :=
   match fuel with
   | 0 => .error (.unsupported "contract VC syntax-depth budget exceeded")
   | fuel + 1 =>
     match code with
     | .ret expression _ => do
-        let pre ← returnCondition (S := S) budget.expansion expression locals goals
+        let pre ← returnCondition (S := S) budget.expansion expression locals goals.returned
         return (pre.read Λ expression.orte).map (fun _ _ ready _ _ => ready)
     | .retWhy _ _ => .ok
         { formula := goals.reason

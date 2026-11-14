@@ -50,7 +50,7 @@ def invalidMessage (label : String) (formula : LProp (Observation D))
 def environmentValues : {context : Ctx} → Env D context → List Int
   | [], .nil => []
   | .int _ _ :: _, .cons value rest => value.n :: environmentValues rest
-  | .bool :: _, .cons value rest => (if value then 1 else 0) :: environmentValues rest
+  | .bool :: _, .cons value rest => (if wahr? value then 1 else 0) :: environmentValues rest
   | τ :: _, .cons value rest => scalarValue τ value :: environmentValues rest
 
 /-- The return formula conjoins checked ensures with all owed invariants. -/
@@ -91,7 +91,7 @@ def checkEnvironment (program : Programm D) (S : SperrInv D) (policy : CallPolic
     (sources : LockSources S) (budget : VCBudget) (hint : Option (QF (Observation D)))
     (f : D.Fn) (invariants : InvariantFormula program (D.invs.filter (schuldet f)))
     (locals : Env D (D.params f)) :
-    Except Refusal (PLift (∀ (runtime : Runtime program (fun _ => []) S) world allowed,
+    Except Invarianten.Frag.Refusal (PLift (∀ (runtime : Runtime program (fun _ => []) S) world allowed,
       HandlerSafe policy runtime allowed → ReqAmEintritt program f world locals →
       runtime.wpE (program.rumpf f) (EndPost program f world locals allowed) world locals)) := do
   let requires ← translate (program.requires f) locals
@@ -118,7 +118,7 @@ def checkEnvironment (program : Programm D) (S : SperrInv D) (policy : CallPolic
 /-- Check every decoded parameter environment in a complete budgeted domain. -/
 def checkExecution (program : Programm D) (S : SperrInv D) (policy : CallPolicy program)
     (sources : LockSources S) (budget : VCBudget) (hint : Option (QF (Observation D))) (f : D.Fn) :
-    Except Refusal (PLift (CheckedExecution (S := S) policy f)) := do
+    Except Invarianten.Frag.Refusal (PLift (CheckedExecution (S := S) policy f)) := do
   let invariants ← invariantFormula program (D.invs.filter (schuldet f))
   let domain ← environments (D := D) budget.expansion (D.params f)
   let checked ← collect domain.values

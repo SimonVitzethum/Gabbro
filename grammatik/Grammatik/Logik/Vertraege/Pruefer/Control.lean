@@ -15,7 +15,7 @@ variable {D : Deklaration} {V : Vertrag D} {S : SperrInv D} {program : Programm 
 structure CallPolicy (program : Programm D) where
   holds : ∀ f, World D → Env D (D.params f) → Prop
   requires : ∀ f world locals, holds f world locals → ReqAmEintritt program f world locals
-  encode : ∀ f locals, Except Refusal { formula : QF (Observation D) //
+  encode : ∀ f locals, Except Invarianten.Frag.Refusal { formula : QF (Observation D) //
     ∀ world, formula.denote (assignment world) ↔ holds f world locals }
 
 def requiresPolicy (program : Programm D) : CallPolicy program where
@@ -33,13 +33,23 @@ def HandlerSafe (policy : CallPolicy program)
   ∀ f world locals, policy.holds f world locals → ∀ error,
     runtime.calls f world locals = .logik error → allowed error
 
+/-- Lift a condition independent of inherited errors into the strict handler
+    interface. Its arithmetic formula is unchanged. -/
+def withHandlers (policy : CallPolicy program)
+    {target : Runtime program (fun _ => []) S → World D → Prop}
+    (pre : Condition target) :
+    Condition (fun runtime world => ∀ allowed,
+      HandlerSafe policy runtime allowed → target runtime world) where
+  formula := pre.formula
+  sound := fun runtime world valid _ _ => pre.sound runtime world valid
+
 /-- Return goals depend on the actual value. Local updates only affect the
     three ordinary continuations; the function's entry arguments stay fixed. -/
 structure Goals (D : Deklaration) (V : Vertrag D) (Γ : Ctx) where
-  normal : Env D Γ → Except Refusal (QF (Observation D))
-  escape : Env D Γ → Except Refusal (QF (Observation D))
-  again : Env D Γ → Except Refusal (QF (Observation D))
-  returned : ErgVal D V.erg → Except Refusal (QF (Observation D))
+  normal : Env D Γ → Except Invarianten.Frag.Refusal (QF (Observation D))
+  escape : Env D Γ → Except Invarianten.Frag.Refusal (QF (Observation D))
+  again : Env D Γ → Except Invarianten.Frag.Refusal (QF (Observation D))
+  returned : ErgVal D V.erg → Except Invarianten.Frag.Refusal (QF (Observation D))
   reason : QF (Observation D)
 
 def Goals.holds {l : Bool} {Γ : Ctx} (goals : Goals D V Γ)

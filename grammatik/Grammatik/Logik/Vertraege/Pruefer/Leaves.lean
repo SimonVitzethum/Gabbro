@@ -13,22 +13,23 @@ variable (policy : CallPolicy program)
 
 /-- A return is checked against its actual typed result. Complete finite
     domains are budgeted; an oversized range is refused, never sampled. -/
-def returnCondition (budget : Nat) {Γ : Ctx} {Λ : List (Res D)}
-    (expression : ErgExpr D Γ Λ V.erg) (locals : Env D Γ) (goals : Goals D V Γ) :
-    Except Refusal (Condition (fun (_ : Runtime program (fun _ => []) S) world =>
-      denotes (goals.returned (evalErg world expression world locals)) world)) :=
-  match expression with
-  | .empty => requireCondition (goals.returned ())
-  | .val expression =>
+def returnCondition (budget : Nat) {Γ : Ctx} {Λ : List (Res D)} {result : Option Ty}
+    (expression : ErgExpr D Γ Λ result) (locals : Env D Γ)
+    (returned : ErgVal D result → Except Invarianten.Frag.Refusal (QF (Observation D))) :
+    Except Invarianten.Frag.Refusal (Condition (fun (_ : Runtime program (fun _ => []) S) world =>
+      denotes (returned (evalErg world expression world locals)) world)) :=
+  match result, expression, returned with
+  | none, .empty, returned => requireCondition (returned ())
+  | some _, .val expression, returned =>
       localSelect budget expression locals
-        (fun value _ world => denotes (goals.returned value) world)
-        (fun value => requireCondition (goals.returned value))
+        (fun value _ world => denotes (returned value) world)
+        (fun value => requireCondition (returned value))
 
 /-- Scalar updates reuse P20's substitution; the post is stronger at logic
     stops and value returns. Unsupported leaves have no accepting fallback. -/
 def leafCondition (budget : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (code : Stmt D V l Γ Λ Λ') (locals : Env D Γ) (goals : Goals D V Γ) :
-    Except Refusal (StatementCondition (S := S) policy code locals goals) :=
+    Except Invarianten.Frag.Refusal (StatementCondition (S := S) policy code locals goals) :=
   match code with
   | .assignGlob name expression _ _ => do
       match h : goals.normal locals with
@@ -66,7 +67,7 @@ def leafCondition (budget : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         (fun value => requireCondition (goals.normal (locals.set name value)))
       return (pre.read Λ expression.orte).map (fun _ _ valid _ _ => valid)
   | .ret expression _ => do
-      let pre ← returnCondition (S := S) budget expression locals goals
+      let pre ← returnCondition (S := S) budget expression locals goals.returned
       return (pre.read Λ expression.orte).map (fun _ _ valid _ _ => valid)
   | .retWhy _ _ => .ok
       { formula := goals.reason
