@@ -54,9 +54,9 @@ def namenO (lok : List String) : Option SExpr → List String
   | some e => namenA lok e
   | none => []
 
+mutual
 /-- **The names a type writes**: named types, paths, the table of an `index into`, and the names in
     range bounds and array lengths. -/
-mutual
 def namenT : STyp → List String
   | .dyn n raw => n :: (raw.toList.flatMap fun raw =>
       match lex raw with
