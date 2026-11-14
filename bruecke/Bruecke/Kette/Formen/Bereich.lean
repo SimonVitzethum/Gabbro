@@ -56,16 +56,20 @@ theorem laufZiel_narrow_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes
     have hs : ∀ ρB, RahmenAlleC u C ρB →
         Gabbro.Body.step ρB (narrowStep ns x lo hi (.name id) errorBody) s = .running s₁ := by
       intro ρB _
-      simp only [narrowStep, Gabbro.Body.step, ht, decide_eq_true hb, Gabbro.Body.exec, hval]
+      unfold narrowStep
+      rw [Gabbro.Body.step, ht, decide_eq_true hb]
+      simp only [Gabbro.Body.exec, Gabbro.Body.step, hval]
     have hL₁ := hL.push x (ns.fresh x) (lo, hi) (BodyNames.fresh_not_active hU.valid x) value
     apply laufZiel_schritt_teilB (b1 := rest) (σ₁ := σl) (ρ₁ := .cons value ρ)
       (s₁ := s₁) (x := narrowStep ns x lo hi (.name id) errorBody)
     · constructor
       · intro e h
-        simp only [execEnd, eval, dif_pos hb] at h
+        simp only [execEnd, eval] at h
+        rw [dif_pos hb] at h
         exact EndAusgang.schrumpf_logik h
       · intro σ' v' h
-        simp only [execEnd, eval, dif_pos hb] at h
+        simp only [execEnd, eval] at h
+        rw [dif_pos hb] at h
         exact endSchrumpf_zurueck h
     · exact hs
     · exact fun w => Int.le_refl _
@@ -73,12 +77,17 @@ theorem laufZiel_narrow_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes
   · have hstep : ∀ ρB, Gabbro.Body.step ρB (narrowStep ns x lo hi (.name id) errorBody) s =
         Gabbro.Body.exec ρB errorBody s := by
       intro ρB
-      simp only [narrowStep, Gabbro.Body.step, ht, decide_eq_false hb]
+      unfold narrowStep
+      rw [Gabbro.Body.step, ht, decide_eq_false hb]
     have herr := hErr σl ρ s hWl hL
     refine ⟨fun e h => herr.1 e ?_, fun σ' v' h => ?_⟩
-    · simpa only [execEnd, eval, dif_neg hb] using h
+    · simp only [execEnd, eval] at h
+      rw [dif_neg hb] at h
+      exact h
     · have he : execEnd O passes R err σl ρ = .zurueck σ' v' := by
-        simpa only [execEnd, eval, dif_neg hb] using h
+        simp only [execEnd, eval] at h
+        rw [dif_neg hb] at h
+        exact h
       obtain ⟨A, hg, ho, hk, hr⟩ := herr.2 σ' v' he
       refine ⟨A, hg, ho, hk, fun ρB hT hF => ?_⟩
       obtain ⟨s', hrun, hw⟩ := hr ρB hT hF
@@ -115,16 +124,21 @@ theorem blockZiel_narrow_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel 
     have hs : ∀ ρB, RahmenAlleC u C ρB →
         Gabbro.Body.step ρB (narrowStep ns x lo hi (.name id) errorBody) s = .running s₁ := by
       intro ρB _
-      simp only [narrowStep, Gabbro.Body.step, ht, decide_eq_true hb, Gabbro.Body.exec, hval]
+      unfold narrowStep
+      rw [Gabbro.Body.step, ht, decide_eq_true hb]
+      simp only [Gabbro.Body.exec, Gabbro.Body.step, hval]
     have hL₁ := hL.push x (ns.fresh x) (lo, hi) (BodyNames.fresh_not_active hU.valid x) value
     have ih := hRest σl (.cons value ρ) s₁ hWl hL₁
     refine ⟨fun e h => ?_, fun σ' v' h => ?_, fun σ' ρ' h => ?_⟩
-    · simp only [execBlock, eval, dif_pos hb] at h
+    · simp only [execBlock, eval] at h
+      rw [dif_pos hb] at h
       exact ih.1 e (schrumpfZ_logik h)
-    · simp only [execBlock, eval, dif_pos hb] at h
+    · simp only [execBlock, eval] at h
+      rw [dif_pos hb] at h
       obtain ⟨A, hr⟩ := ih.2.1 σ' v' (schrumpfZ_zurueck h)
       exact ⟨A, RueckZ_G.vor hs (fun w => Int.le_refl _) hr⟩
-    · simp only [execBlock, eval, dif_pos hb] at h
+    · simp only [execBlock, eval] at h
+      rw [dif_pos hb] at h
       obtain ⟨ρ'', hin, htail⟩ := schrumpfZ_ok h
       subst ρ'
       obtain ⟨A, s₂, hS, hW₂, hL₂⟩ := ih.2.2 σ' ρ'' hin
@@ -132,12 +146,15 @@ theorem blockZiel_narrow_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel 
   · have hstep : ∀ ρB, Gabbro.Body.step ρB (narrowStep ns x lo hi (.name id) errorBody) s =
         Gabbro.Body.exec ρB errorBody s := by
       intro ρB
-      simp only [narrowStep, Gabbro.Body.step, ht, decide_eq_false hb]
+      unfold narrowStep
+      rw [Gabbro.Body.step, ht, decide_eq_false hb]
     have herr := hErr σl ρ s hWl hL
     refine ⟨fun e h => ?_, fun σ' v' h => ?_, fun σ' ρ' h => ?_⟩
-    · simp only [execBlock, eval, dif_neg hb] at h
+    · simp only [execBlock, eval] at h
+      rw [dif_neg hb] at h
       exact herr.1 e (EndAusgang.zuAusgang_logik h)
-    · simp only [execBlock, eval, dif_neg hb] at h
+    · simp only [execBlock, eval] at h
+      rw [dif_neg hb] at h
       have he : execEnd O passes R err σl ρ = .zurueck σ' v' := by
         change (execEnd O passes R err σl ρ).zuAusgang = .zurueck σ' v' at h
         cases hh : execEnd O passes R err σl ρ <;>
@@ -150,7 +167,8 @@ theorem blockZiel_narrow_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel 
       refine ⟨A, hg, ho, hk, fun ρB hT hF => ?_⟩
       obtain ⟨s', hrun, hw⟩ := hr ρB hT hF
       exact ⟨s', by simp only [Gabbro.Body.exec, hstep ρB, hrun], hw⟩
-    · simp only [execBlock, eval, dif_neg hb] at h
+    · simp only [execBlock, eval] at h
+      rw [dif_neg hb] at h
       change (execEnd O passes R err σl ρ).zuAusgang = .ok σ' ρ' at h
       cases hh : execEnd O passes R err σl ρ <;>
         simp only [hh, EndAusgang.zuAusgang, reduceCtorEq] at h
