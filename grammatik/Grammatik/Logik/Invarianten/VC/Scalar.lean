@@ -109,12 +109,12 @@ def scalarWP (expression : Expr D Γ Λ τ) (locals : Env D Γ)
             · have selected := yes.sound world
                 ((quoteQF_denote _ _).mp (branches.1 (guardCorrect.mpr fits)))
               dsimp only [eval]
-              rw [dif_pos fits]
+              with_unfolding_all rw [dif_pos fits]
               exact selected
             · have selected := no.sound world
                 ((quoteQF_denote _ _).mp (branches.2 (fun h => fits (guardCorrect.mp h))))
               dsimp only [eval]
-              rw [dif_neg fits]
+              with_unfolding_all rw [dif_neg fits]
               exact selected }
   | .wenn condition yes no => do
       let guard ← translate condition locals
