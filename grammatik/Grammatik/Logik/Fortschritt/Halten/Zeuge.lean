@@ -77,6 +77,7 @@ theorem haltezeit_aus_zeuge : ∃ R : PlanLauf mP mO 0,
       mGleich, mAGleich, mA7, mI0, mI1, m7, m5, m30, m70,
       schuldet, Deklaration.schreibt, Deklaration.gschreibt, Deklaration.signatur,
       mD, mSigOf, mSigNr, mSig]
+    all_goals decide
   exact ⟨R, h0, hK,
     haltezeit_aus R mO_gut mP_stufen mSp mInit mInit_leer (by rw [h0]; exact .start) (ls := [()])
       (fun L => by cases L; exact List.mem_singleton_self _) mFs_voll hK,

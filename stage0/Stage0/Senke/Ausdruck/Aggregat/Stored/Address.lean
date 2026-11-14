@@ -79,7 +79,7 @@ theorem lowStorage_sound {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} {W : Runner.Me
     simp only [lowStorage, lowStorageWith, bind, Option.bind_eq_some_iff] at made
     obtain ⟨⟨ci', ti⟩, hi, made⟩ := made
     have tops := cellAddressC_top made
-    have index := eval σ₀ i σ ρ
+    let index := eval σ₀ i σ ρ
     have nonnegative := index.lo_le
     have bound : (index.n.toNat : Int) < L.count t :=
       L.bounded (by have := index.le_hi; omega)

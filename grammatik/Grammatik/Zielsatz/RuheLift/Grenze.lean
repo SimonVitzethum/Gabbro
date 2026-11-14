@@ -129,8 +129,7 @@ theorem randRuhe_start (P : Programm D) (sp : Speicher D) (thr : Faden) {f : D.F
         ((speicherR sp).welt [])]⟩ : RufFadenG D.mitRuhe))
       (rahmen_umΛ (D := D.mitRuhe) (f' := some f) (rho' := envR rho) (s0' := (speicherR sp).welt [])
         (anfang_map (D.signatur f)) (envR rho) (ruEnd (P.rumpf f)))
-  · have hL' : Res.held L ∈ Signatur.anfang D (D.signatur f) :=
-      (held_mem_map (D := D) (L := L) (Λ := Signatur.anfang D (D.signatur f))).mp hL
+  · have hL' : Res.held (D := D) L ∈ Signatur.anfang D (D.signatur f) := mem_map_rm.mp hL
     have h' := (held_anfang (D.signatur f) L).mp hL'
     rw [show (D.signatur f).haelt = [] from hf] at h'
     exact (List.not_mem_nil h').elim
