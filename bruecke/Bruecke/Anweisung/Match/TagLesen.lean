@@ -10,14 +10,14 @@ theorem tagSubject_some {fn : UFn} {ns : BodyNames} {x : String} {cs : List (Opt
     {e : Gabbro.Body.Expr} (h : tagSubject fn ns x = some (cs, e)) :
     ∃ id, valueParamTy fn x = some (.sum cs) ∧ cs.all Option.isNone = true ∧
       ns.lookup fn x = some id ∧ e = .name id := by
-  unfold tagSubject at h
+  simp only [tagSubject, bind, Option.bind] at h
   split at h
   · rename_i fields ht
     split at h
     · cases h
     · rename_i hBare
       cases hi : ns.lookup fn x with
-      | none => simp only [hi, Option.bind_none] at h; cases h
+      | none => simp only [hi, bind, Option.bind_none, Option.bind] at h <;> cases h
       | some id =>
         simp only [hi, Option.bind_some, pure, Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
@@ -37,7 +37,7 @@ theorem stmtsBodyZ_tag_some {k sidx : Nat} {fn : UFn} {ns : BodyNames} {x : Stri
     | none => simp only [he, Option.bind_none] at h; cases h
     | some pair =>
       obtain ⟨cs, e⟩ := pair
-      simp only [he, Option.bind_some] at h
+      simp only [he, bind, Option.bind_some, Option.bind] at h
       split at h
       · rename_i arms tail allocated ha
         cases hy : stmtsBodyZ u k fn (ns.resume allocated) tail r with
