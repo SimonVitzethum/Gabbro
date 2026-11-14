@@ -237,14 +237,13 @@ private theorem image8_eq : P8 = {
         · cases assembled
   have ptr : P8.ptrVertrag = ptrVertragOf uExp108 := funext assembly8.2
   have ax : P8.axVertrag = fun a => Fin.elim0 a := by funext a; exact Fin.elim0 a
-  -- Establish record eta at a variable, keeping the compiler result opaque.
-  have eta (P : Programm D8) : P = {
-      invariante := P.invariante, requires := P.requires, ensures := P.ensures,
-      rumpf := P.rumpf, unterbricht := P.unterbricht,
-      ptrVertrag := P.ptrVertrag, axVertrag := P.axVertrag } := rfl
-  have fields := eta P8
-  rewrite [inv, req, post, body, dispatch, ptr, ax] at fields
-  exact fields
+  -- Decompose the opaque compiler result once; its fields are fixed by the projections.
+  revert inv req post body dispatch ptr ax
+  generalize P8 = P
+  cases P
+  intro inv req post body dispatch ptr ax
+  subst inv req post body dispatch ptr ax
+  rfl
 
 /-! ## 3. Enumerations, unit, checker -/
 

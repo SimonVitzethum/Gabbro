@@ -259,14 +259,14 @@ theorem ptrVerfeinert4 : PtrVerfeinert P4 := by
 private theorem image4_eq : P4 = {
     invariante := fun i => Fin.elim0 i
     requires := fun _ => .tru
-    ensures := Fin.cases ensEin4 (Fin.cases ensLies4 Fin.elim0)
+    ensures := Fin.cases ensEin4 (Fin.cases ensLies4 (fun i => (Nat.not_lt_zero _ i.isLt).elim))
     rumpf := Fin.cases bodyEin4 (Fin.cases bodyLies4 (fun i => (Nat.not_lt_zero _ i.isLt).elim))
     unterbricht := fun _ => false
     ptrVertrag := ptrVertragOf uExp104
     axVertrag := fun a => Fin.elim0 a } := by
   have inv : P4.invariante = fun i => Fin.elim0 i := by funext i; exact Fin.elim0 i
   have req : P4.requires = fun _ => .tru := funext req4
-  have post : P4.ensures = Fin.cases ensEin4 (Fin.cases ensLies4 Fin.elim0) := by
+  have post : P4.ensures = Fin.cases ensEin4 (Fin.cases ensLies4 (fun i => (Nat.not_lt_zero _ i.isLt).elim)) := by
     funext f
     rcases fn_zwei f with rfl | rfl
     · exact ens_ein4
@@ -290,14 +290,13 @@ private theorem image4_eq : P4 = {
         · cases assembled
   have ptr : P4.ptrVertrag = ptrVertragOf uExp104 := funext assembly4.2
   have ax : P4.axVertrag = fun a => Fin.elim0 a := by funext a; exact Fin.elim0 a
-  -- Establish record eta at a variable, keeping the compiler result opaque.
-  have eta (P : Programm D4) : P = {
-      invariante := P.invariante, requires := P.requires, ensures := P.ensures,
-      rumpf := P.rumpf, unterbricht := P.unterbricht,
-      ptrVertrag := P.ptrVertrag, axVertrag := P.axVertrag } := rfl
-  have fields := eta P4
-  rewrite [inv, req, post, body, dispatch, ptr, ax] at fields
-  exact fields
+  -- Decompose the opaque compiler result once; its fields are fixed by the projections.
+  revert inv req post body dispatch ptr ax
+  generalize P4 = P
+  cases P
+  intro inv req post body dispatch ptr ax
+  subst inv req post body dispatch ptr ax
+  rfl
 
 /-! ## 3. The enumerations of the declaration's members -/
 
