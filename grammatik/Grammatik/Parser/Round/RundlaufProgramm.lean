@@ -242,12 +242,12 @@ theorem zeugeGeraet_gut : ∀ it ∈ zeugeGeraet, ItemGut it := by
       intro s hs
       simp only [List.mem_cons, List.not_mem_nil, or_false] at hs
       rcases hs with rfl | rfl | rfl | rfl | rfl | rfl | rfl
-      · exact .bind _ _ _ _ (by decide) trivial (by decide)
-      · exact .bindElse _ _ _ _ _ (by decide) trivial (by decide) leer
+      · exact .bind _ _ _ _ (by decide) rfl trivial (by decide)
+      · exact .bindElse _ _ _ _ _ (by decide) rfl trivial (by decide) leer
       · exact .set _ _ _ (by decide) (by decide) (by decide)
-      · exact .bind _ _ _ _ (by decide) trivial (by decide)
+      · exact .bind _ _ _ _ (by decide) rfl trivial (by decide)
       · exact .call _ _ (show nameForm _ = true by decide) (by decide) (by decide)
-      · exact .await _ _ _ _ (by decide) trivial (by decide) ⟨[.ident "zaehler"], rfl,
+      · exact .await _ _ _ _ (by decide) rfl trivial (by decide) ⟨[.ident "zaehler"], rfl,
           by intro t ht; simp only [List.mem_cons, List.not_mem_nil, or_false] at ht; subst ht; exact ⟨⟨by decide, by decide⟩, by simp only [reduceCtorEq, or_self, not_false_eq_true]⟩⟩
       · exact .emit _ _ _ (by decide) (by decide)
           (Or.inr ⟨⟨[.ident "zaehler"], rfl,

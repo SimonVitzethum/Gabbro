@@ -214,11 +214,11 @@ def EndeOk : Option SEnde → Prop
 
 /-- **The printability class of statements and blocks** (see the header). -/
 inductive AnwGut : Rolle → SAnw → Prop
-  | bind (m : Bool) (x : String) (ty : Option STyp) (e : SExpr) : x ≠ "mut" →
+  | bind (m : Bool) (x : String) (ty : Option STyp) (e : SExpr) : x ≠ "mut" → tuplePatternNames x = none →
       TypOptGut ty → gut e = true → AnwGut .anw (.bind m x ty e)
-  | bindElse (x : String) (ty : Option STyp) (e : SExpr) (f : String) (b : SAnw) : x ≠ "mut" →
+  | bindElse (x : String) (ty : Option STyp) (e : SExpr) (f : String) (b : SAnw) : x ≠ "mut" → tuplePatternNames x = none →
       TypOptGut ty → gut e = true → AnwGut .block b → AnwGut .anw (.bindElse x ty e f b)
-  | bindLib (m : Bool) (x : String) (ty : Option STyp) (c : SLibraryCall) : x ≠ "mut" →
+  | bindLib (m : Bool) (x : String) (ty : Option STyp) (c : SLibraryCall) : x ≠ "mut" → tuplePatternNames x = none →
       TypOptGut ty → LibraryCallGut c → AnwGut .anw (.bindLib m x ty c)
   | set (z : SExpr) (o : String) (w : SExpr) :
       gutPlatz z = true → istZuweis o = true → gut w = true → AnwGut .anw (.set z o w)
@@ -249,15 +249,17 @@ inductive AnwGut : Rolle → SAnw → Prop
   | next (l : String) : AnwGut .anw (.next l)
   | emit (z w : SExpr) (p : String) :
       gutPlatz z = true → gut w = true → PubGut p → AnwGut .anw (.emit z w p)
-  | await (n : String) (ty : Option STyp) (q : SExpr) (p : String) : n ≠ "mut" → TypOptGut ty → gut q = true →
+  | await (n : String) (ty : Option STyp) (q : SExpr) (p : String) :
+      n ≠ "mut" → tuplePatternNames n = none → TypOptGut ty → gut q = true →
       RohZu p → AnwGut .anw (.await n ty q p)
-  | swap (n : String) (ty : Option STyp) (o : SExpr) (k : String) : n ≠ "mut" → TypOptGut ty → gut o = true →
+  | swap (n : String) (ty : Option STyp) (o : SExpr) (k : String) :
+      n ≠ "mut" → tuplePatternNames n = none → TypOptGut ty → gut o = true →
       RohSemi k → AnwGut .anw (.swap n ty o k)
   | step (a b : String) : AnwGut .anw (.step a b)
   | retLeer : AnwGut .anw (.ret none)
   | ret (e : SExpr) : gut e = true → AnwGut .anw (.ret (some e))
   | alloc (m : Bool) (n : String) (ty : Option STyp) (t : String) (w : SExpr) (s : Option SAnw) :
-      n ≠ "mut" → TypOptGut ty → gut w = true → (∀ b, s = some b → AnwGut .block b) →
+      n ≠ "mut" → tuplePatternNames n = none → TypOptGut ty → gut w = true → (∀ b, s = some b → AnwGut .block b) →
       AnwGut .anw (.alloc m n ty t w s)
   | reset (a : String) (rg : Option (SExpr × SExpr)) :
       (∀ i n, rg = some (i, n) → gut i = true ∧ gut n = true) → AnwGut .anw (.reset a rg)
@@ -268,7 +270,7 @@ inductive AnwGut : Rolle → SAnw → Prop
   | block (ss : List SAnw) (e : Option SEnde) :
       (∀ s ∈ ss, AnwGut .anw s) → EndeOk e → EndeGut ss e → AnwGut .block (.block ss e)
   | allocVon (m : Bool) (n : String) (ty : Option STyp) (t : String) :
-      n ≠ "mut" → TypOptGut ty → AnwGut .anw (.allocVon m n ty t)
+      n ≠ "mut" → tuplePatternNames n = none → TypOptGut ty → AnwGut .anw (.allocVon m n ty t)
 
   | callElse (name : String) (args : List SExpr) (reason : String) (body : SAnw) :
       NameGut name → istAnwWort name = false → gutListe args = true → AnwGut .block body →

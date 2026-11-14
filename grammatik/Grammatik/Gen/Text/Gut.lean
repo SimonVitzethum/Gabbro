@@ -165,8 +165,9 @@ def anwGutB : Nat → Bool → SAnw → Bool
   | n + 1, true, .block ss e =>
     ss.all (anwGutB n false) && endeOkB e && (e.isSome || istEnderNicht ss)
   | _ + 1, true, _ => false
-  | _ + 1, false, .bind _ x none e => x != "mut" && gut e
-  | n + 1, false, .bindElse x none e _ b => x != "mut" && gut e && anwGutB n true b
+  | _ + 1, false, .bind _ x none e => x != "mut" && (tuplePatternNames x).isNone && gut e
+  | n + 1, false, .bindElse x none e _ b =>
+    x != "mut" && (tuplePatternNames x).isNone && gut e && anwGutB n true b
   | _ + 1, false, .set z o w => gutPlatz z && istZuweis o && gut w
   | n + 1, false, .callIndElse p xs _ b => gut p && gutListe xs && anwGutB n true b
   | n + 1, false, .callElse f xs _ b => nameForm f && !istAnwWort f && gutListe xs && anwGutB n true b
@@ -174,7 +175,8 @@ def anwGutB : Nat → Bool → SAnw → Bool
   | n + 1, false, .cond c t [] s => gut c && anwGutB n true t && s.all (anwGutB n true)
   | n + 1, false, .locks false o b => gutPlatz o && kopfName o != "shared" && anwGutB n true b
   | _ + 1, false, .emit z w p => gutPlatz z && gut w && pubGutB p
-  | _ + 1, false, .await x none q p => x != "mut" && gut q && rohZuB p
+  | _ + 1, false, .await x none q p =>
+    x != "mut" && (tuplePatternNames x).isNone && gut q && rohZuB p
   | n + 1, false, .each _ none _ s _ r i body =>
     gut s && r == "" && i.all (predGutB 50) && anwGutB n true body
   | _ + 1, false, .ret none => true
@@ -207,11 +209,11 @@ theorem anwGutB_sound : ∀ (n : Nat) (b : Bool) (s : SAnw), anwGutB n b s = tru
       simp only [Bool.false_eq_true, ite_false]
       match s, h with
       | .bind m x none e, h =>
-        simp only [anwGutB, Bool.and_eq_true, bne_iff_ne, ne_eq] at h
-        exact .bind m x none e h.1 trivial h.2
+        simp only [anwGutB, Bool.and_eq_true, bne_iff_ne, ne_eq, Option.isNone_iff_eq_none] at h
+        exact .bind m x none e h.1.1 h.1.2 trivial h.2
       | .bindElse x none e f b, h =>
-        simp only [anwGutB, Bool.and_eq_true, bne_iff_ne, ne_eq] at h
-        exact .bindElse x none e f b h.1.1 trivial h.1.2 (by simpa using ih true b h.2)
+        simp only [anwGutB, Bool.and_eq_true, bne_iff_ne, ne_eq, Option.isNone_iff_eq_none] at h
+        exact .bindElse x none e f b h.1.1.1 h.1.1.2 trivial h.1.2 (by simpa using ih true b h.2)
       | .set z o w, h =>
         simp only [anwGutB, Bool.and_eq_true] at h
         exact .set z o w h.1.1 h.1.2 h.2
@@ -235,8 +237,8 @@ theorem anwGutB_sound : ∀ (n : Nat) (b : Bool) (s : SAnw), anwGutB n b s = tru
         simp only [anwGutB, Bool.and_eq_true] at h
         exact .emit z w p h.1.1 h.1.2 (pubGutB_sound p h.2)
       | .await x none q p, h =>
-        simp only [anwGutB, Bool.and_eq_true, bne_iff_ne, ne_eq] at h
-        exact .await x none q p h.1.1 trivial h.1.2 (rohZuB_sound p h.2)
+        simp only [anwGutB, Bool.and_eq_true, bne_iff_ne, ne_eq, Option.isNone_iff_eq_none] at h
+        exact .await x none q p h.1.1.1 h.1.1.2 trivial h.1.2 (rohZuB_sound p h.2)
       | .each b none k s m r i body, h =>
         simp only [anwGutB, Bool.and_eq_true, beq_iff_eq] at h
         obtain ⟨⟨⟨hs, rfl⟩, hi⟩, hb⟩ := h

@@ -9,8 +9,8 @@ public import Grammatik.Parser.Round.RundlaufAnwVoll.Teil2a
 namespace Gabbro.Grammatik.Parser
 set_option maxRecDepth 100000
 
-theorem anw_swap (n : String) (hx : n ≠ "mut") (ty : Option STyp) (o : SExpr) (k : String)
-    (hty : TypOptGut ty) (ho : gut o = true) (hk : RohSemi k) :
+theorem anw_swap (n : String) (hx : n ≠ "mut") (ht : tuplePatternNames n = none)
+    (ty : Option STyp) (o : SExpr) (k : String) (hty : TypOptGut ty) (ho : gut o = true) (hk : RohSemi k) :
     AnwBein (.swap n ty o k) := by
   intro rest F _ hF
   obtain ⟨ts, rfl, hts⟩ := hk
@@ -24,7 +24,7 @@ theorem anw_swap (n : String) (hx : n ≠ "mut") (ty : Option STyp) (o : SExpr) 
   ↓reduceIte]
   rw [hd, parseStmt_let _ _ (by first | rfl | exact ortsFort_nameTok _ _)]
   rw [show F' + 3 = (F' + 2) + 1 from rfl,
-    parseLet_kopf (F' + 2) false n hx ty _ hty (by
+    parseLet_kopf (F' + 2) false n hx ht ty _ hty (by
       intro t ht; have := fbT_of ty t ht; simp only [fbT]; omega),
     parseLetNach_expr _ _ _ _ o ho]
   have hO := ausdruck o ho (.wort "exchange" :: (ts ++ .zeichen ";" :: rest)) (F' + 1) rfl rfl rfl

@@ -383,9 +383,14 @@ theorem holds_haltPasst (P : Programm (declOf u)) (passes : Nat)
   refine ⟨CostBinding.holds_kostenPasst C u hc, ?_⟩
   apply List.all_eq_true.mpr
   intro g _
-  rw [members]
-  rw [← bounds]
-  exact holds_haltE H C u P passes hh g
+  have key :
+      haltE (D := declOf u) (fun L => some (N L)) (kostenEpilog P g) (CostBinding.decl C u)
+        (fun x => (CostBinding.members C u).contains x) passes (P.rumpf g) =
+      haltE (D := declOf u) (fun L => some (N L)) (kostenEpilog P g) (CostBinding.decl C u)
+        (fun x => (CostBinding.costOf C u x).isSome) passes (P.rumpf g) :=
+    congrArg (fun Z => haltE (D := declOf u) (fun L => some (N L)) (kostenEpilog P g)
+      (CostBinding.decl C u) Z passes (P.rumpf g)) members
+  exact key.trans (by simpa only [bounds] using holds_haltE H C u P passes hh g)
 
 /-- **The hold bound holds, syntactically.** On a unit accepted by `HeldBinding.holds`,
     every `locks` section occurring in any function body fits under the declared bound of
