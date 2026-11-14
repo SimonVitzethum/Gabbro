@@ -250,6 +250,16 @@ theorem close_decide_true_iff [DecidableEq α] (body : QF α) :
 theorem close_decide_false_iff [DecidableEq α] (body : QF α) :
     decideB (close body) = false ↔ ∃ values, ¬ body.denote values := by
   classical
-  rw [Bool.eq_false_iff, close_decide_true_iff, not_forall]
+  constructor
+  · intro rejected
+    by_contra absent
+    have valid : ∀ values, body.denote values := by
+      intro values
+      by_contra invalid
+      exact absent ⟨values, invalid⟩
+    have accepted := (close_decide_true_iff body).mpr valid
+    exact Bool.noConfusion (rejected.symm.trans accepted)
+  · rintro ⟨values, invalid⟩
+    exact Bool.eq_false_iff.mpr (fun accepted => invalid (close_sound body accepted values))
 
 end Gabbro.Grammatik.Invarianten.VC
