@@ -28,8 +28,9 @@ def ContextEntry.finish (entry : ContextEntry D) (key : ScopeKey) (tail : List S
     scopes := tail
     generations := entry.generations.bump key.node }
 
-/-- The same executable close is used for fallthrough, both return channels,
-    leave and next. It checks the actual context stack and its current stamp
+/-- Executable close intended for fallthrough, both return channels, leave
+    and next; these G transitions are not connected to it yet.
+    It checks the actual context stack and its current stamp
     before invoking the existing escrow release. A refused close commits no
     ledger update and cannot be treated as a successful scope exit. -/
 def ContextEntry.close (entry : ContextEntry D) (key : ScopeKey) :

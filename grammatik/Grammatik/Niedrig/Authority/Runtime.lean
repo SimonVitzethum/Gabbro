@@ -28,8 +28,9 @@ inductive ScopeKind where
   | loan (id : Nat)
   deriving DecidableEq
 
-/-- A persistent node stamp, shared by the ledger's stack and the machine
-    continuation marker. The generation is read from the entry on admission. -/
+/-- A persistent node stamp stored in the ledger's lexical stack. Future
+    continuation markers must retain the same key; that connection is not
+    implemented yet. Admission reads the generation from the stored entry. -/
 structure ScopeKey where
   kind : ScopeKind
   node : Nat

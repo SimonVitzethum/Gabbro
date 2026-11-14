@@ -262,3 +262,14 @@ branches and returns error lists instead of repairing more than a few lines.
 The lead is now the bottleneck: nine agents produce unbuilt code faster than one builder can check it. What
 helped: check branches for anything on the compiler path, error files handed back verbatim, one repair task per
 delivery, and taking a layer off the integration branch when it does not converge.
+
+**Low-level views, step 2 checkpoint (2026-11-14).** GPT 6.1 Sol delivered `0ea1d479b` on
+`lowlevel-views4`: return simulation APIs, shared machine context state and executable ledger scope operations.
+The selected grammar sweep had one failing witness; its only subsequent source change repaired that leaf,
+which then built. Stage-0 return and system importers also built on the preceding snapshot. The measured goal
+axioms remain the three standard ones. This is selected-module evidence, not full integration acceptance.
+Statement review found the local cleanup and generation claims appropriately conditional; two comments
+incorrectly described the future continuation connection as already present and were corrected by the lead.
+The report accurately names the missing markers, G8 transitions, source constructors and discarded-tail
+coverage. The requested step is incomplete and contributes no completed source-to-IR case. Future assignments
+should target one connected transition and its witness rather than another broad prerequisite checkpoint.
