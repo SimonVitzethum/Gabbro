@@ -168,14 +168,12 @@ def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : L
     | none => .error "string maximum without G form"
   | t => .error ("type without G form: " ++ sTypText t)
 
-/-- The reader over the components of a tuple, in order (`mapM` without nested recursion). -/
+-- Tuple components in order: `mapM` without nested recursion.
 def uTypInList (alias : List (String × (Int × Int))) (tabs : List UTab) (named : List (String × Ty))
     (spaces eigner : List String) : List STyp → Except String (List Ty)
   | [] => pure []
   | ty :: rest => do
-    let head ← uTypIn alias tabs named spaces eigner ty
-    let tail ← uTypInList alias tabs named spaces eigner rest
-    pure (head :: tail)
+    pure ((← uTypIn alias tabs named spaces eigner ty) :: (← uTypInList alias tabs named spaces eigner rest))
 end
 
 /-- The canonical reader in a declaration environment without named value schemas. -/
