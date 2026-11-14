@@ -151,9 +151,11 @@ def source (why : Bool) : RufMaschineG D :=
 
 private theorem source_held_zeuge (why : Bool) :
     HeldIn holdings (offen ((source why).faeden 0).spur) := by
-  intro L member
-  change L ∈ [true, false]
-  simpa only [holdings, List.mem_cons, List.not_mem_nil, or_false, Res.held.injEq] using member
+  intro L _
+  change _root_.List.Mem L ([true, false] : List Bool)
+  cases L with
+  | false => exact _root_.List.mem_cons_of_mem _ (_root_.List.mem_cons_self ..)
+  | true => exact _root_.List.mem_cons_self ..
 
 /-- Expected successor records use the same update operation as the G rules. -/
 def successor (M : RufMaschineG D) (z : RufFadenG D) (events : Lauf D) : RufMaschineG D :=
@@ -282,8 +284,10 @@ theorem single_reason_zeuge :
   · exact .rueckScopedGrund singleSource 0 arguments _ reason singleCleanup
       rfl rfl (by decide) (by
         intro L member
-        change L ∈ [false]
-        simpa only [List.mem_singleton, Res.held.injEq] using member)
+        change _root_.List.Mem L ([false] : List Bool)
+        cases L with
+        | false => exact _root_.List.mem_cons_self ..
+        | true => cases _root_.List.mem_singleton.mp member)
       (by decide) (GRest.keinNiedrig_alt _)
   · exact .rueckFreigabeLetzte singleCaptured 0 arguments
       ⟨.inr reason, singleWorld⟩ false rfl singleFinishedThread rfl
