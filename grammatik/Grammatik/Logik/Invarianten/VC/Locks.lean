@@ -23,14 +23,14 @@ def Goals.releasing {Γ : Ctx} (goals : Goals D Γ) (fact : QF (Observation D)) 
   again := fun locals => (goals.again locals).map (conj fact)
   terminal := conj fact goals.terminal
 
-theorem denotes_map_conj (result : Except Refusal (QF (Observation D)))
+theorem denotes_map_conj (result : Except Frag.Refusal (QF (Observation D)))
     (fact : QF (Observation D)) (world : World D) :
     denotes (result.map (conj fact)) world ↔ fact.denote (assignment world) ∧ denotes result world := by
   cases result with
   | error cause => simp [Except.map, denotes]
   | ok formula => exact conj_denote _ _ _
 
-theorem denotes_assignment (result : Except Refusal (QF (Observation D)))
+theorem denotes_assignment (result : Except Frag.Refusal (QF (Observation D)))
     (world next : World D) (same : assignment world = assignment next) :
     denotes result world ↔ denotes result next := by
   cases result <;> simp only [denotes, same]

@@ -17,7 +17,7 @@ variable {D : Deklaration}
     an invariant at entry that the existing semantic duties do not assume. -/
 def checkInvariantVC (program : Programm D) (S : SperrInv D) (functions : List D.Fn)
     (sources : LockSources S) (budget : VCBudget := {}) :
-    Except Refusal (PLift (∀ f ∈ functions, Vertraege.Pruefer.ContractDuties program S f)) := do
+    Except Frag.Refusal (PLift (∀ f ∈ functions, Vertraege.Pruefer.ContractDuties program S f)) := do
   let _ ← invariantFormula program D.invs
   collect functions (Vertraege.Pruefer.ContractDuties program S)
     (Vertraege.Pruefer.checkFunction program S sources budget none)

@@ -35,7 +35,7 @@ theorem integerValues_complete (lo hi : Int) (value : Zahl lo hi) :
   have same : lo + ((value.n - lo).toNat : Int) = value.n := by omega
   simpa only [same, lower, upper, and_self, ↓reduceDIte]
 
-def localDomain (budget : Nat) (τ : Ty) : Except Refusal (LocalDomain D τ) :=
+def localDomain (budget : Nat) (τ : Ty) : Except Frag.Refusal (LocalDomain D τ) :=
   match τ with
   | .int lo hi =>
       if (hi - lo + 1).toNat ≤ budget then
@@ -54,7 +54,7 @@ def localDomain (budget : Nat) (τ : Ty) : Except Refusal (LocalDomain D τ) :=
 /-- Piecewise scalar initialization, including the model's narrowing fallback.
     The equality is exact in both arms, so local snapshots retain correlations. -/
 def integerEquality (expression : Expr D Γ Λ (.int lo hi)) (locals : Env D Γ) (number : Int) :
-    Except Refusal { formula : LProp (Observation D) // ∀ world,
+    Except Frag.Refusal { formula : LProp (Observation D) // ∀ world,
       formula.denote (assignment world) ↔ (eval world expression world locals).n = number } :=
   match expression with
   | .eng value low high fallback => do
@@ -93,7 +93,7 @@ def integerEquality (expression : Expr D Γ Λ (.int lo hi)) (locals : Env D Γ)
 /-- The equality relating a fresh local observation to its initializer. This
     preserves correlation with memory even if that memory is overwritten later. -/
 def localEquality (expression : Expr D Γ Λ τ) (locals : Env D Γ) (value : Wert D τ) :
-    Except Refusal { formula : LProp (Observation D) // ∀ world,
+    Except Frag.Refusal { formula : LProp (Observation D) // ∀ world,
       formula.denote (assignment world) ↔ eval world expression world locals = value } :=
   match τ with
   | .int lo hi => do
@@ -117,8 +117,8 @@ def localEquality (expression : Expr D Γ Λ τ) (locals : Env D Γ) (value : We
 def localBranches {program : Programm D} {checked : D.Fn → List D.Inv}
     (values : List (Wert D τ)) (expression : Expr D Γ Λ τ) (locals : Env D Γ)
     (target : Wert D τ → Runtime program checked S → World D → Prop)
-    (compile : ∀ value, Except Refusal (Condition (target value))) :
-    Except Refusal (Condition (fun runtime world => ∀ value ∈ values,
+    (compile : ∀ value, Except Frag.Refusal (Condition (target value))) :
+    Except Frag.Refusal (Condition (fun runtime world => ∀ value ∈ values,
       eval world expression world locals = value → target value runtime world)) :=
   match values with
   | [] => .ok
@@ -141,8 +141,8 @@ def localBranches {program : Programm D} {checked : D.Fn → List D.Inv}
 def localSelect {program : Programm D} {checked : D.Fn → List D.Inv}
     (budget : Nat) (expression : Expr D Γ Λ τ) (locals : Env D Γ)
     (target : Wert D τ → Runtime program checked S → World D → Prop)
-    (compile : ∀ value, Except Refusal (Condition (target value))) :
-    Except Refusal (Condition (fun runtime world =>
+    (compile : ∀ value, Except Frag.Refusal (Condition (target value))) :
+    Except Frag.Refusal (Condition (fun runtime world =>
       target (eval world expression world locals) runtime world)) := do
   let domain ← localDomain (D := D) budget τ
   let branches ← localBranches domain.values expression locals target compile
@@ -153,8 +153,8 @@ def localSelect {program : Programm D} {checked : D.Fn → List D.Inv}
     from the callee contract is smuggled into this conjunction. -/
 def allConditions {program : Programm D} {checked : D.Fn → List D.Inv}
     (values : List α) (target : α → Runtime program checked S → World D → Prop)
-    (compile : ∀ value, Except Refusal (Condition (target value))) :
-    Except Refusal (Condition (fun runtime world => ∀ value ∈ values, target value runtime world)) :=
+    (compile : ∀ value, Except Frag.Refusal (Condition (target value))) :
+    Except Frag.Refusal (Condition (fun runtime world => ∀ value ∈ values, target value runtime world)) :=
   match values with
   | [] => .ok
       { formula := .tru

@@ -15,8 +15,8 @@ structure CleanupFormula (S : SperrInv D) (locks : List D.Lock) where
   formula : QF (Observation D)
   correct : ∀ world, formula.denote (assignment world) ↔ scopesInvH S locks world = true
 
-def cleanupFormula (facts : ∀ lock, Except Refusal (LockFormula S lock)) :
-    (locks : List D.Lock) → Except Refusal (CleanupFormula S locks)
+def cleanupFormula (facts : ∀ lock, Except Frag.Refusal (LockFormula S lock)) :
+    (locks : List D.Lock) → Except Frag.Refusal (CleanupFormula S locks)
   | [] => .ok
       { formula := .tru
         correct := fun _ => by simp [QF.denote, scopesInvH] }
@@ -39,9 +39,9 @@ theorem assignment_cleanup (world : World D) (locks : List D.Lock) :
 /-- The straight-line rules use the same scalar substitution and call havoc
     as P18; the normal continuation may now depend on updated local values. -/
 def leafCondition {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    (budget : Nat) (facts : ∀ lock, Except Refusal (LockFormula S lock))
+    (budget : Nat) (facts : ∀ lock, Except Frag.Refusal (LockFormula S lock))
     (code : Stmt D V l Γ Λ Λ') (locals : Env D Γ) (goals : Goals D Γ) :
-    Except Refusal (StatementCondition program checked S code locals goals) :=
+    Except Frag.Refusal (StatementCondition program checked S code locals goals) :=
   match code with
   | .assignGlob name expression _ _ => do
       match h : goals.normal locals with

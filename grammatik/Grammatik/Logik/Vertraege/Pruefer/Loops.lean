@@ -16,10 +16,10 @@ variable (policy : CallPolicy program)
 def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (test : Expr D Γ Λ .bool) (body : Block D V true Γ Λ Λ)
     (overflow : Block D V l Γ Λ Λ)
-    (compileBody : ∀ locals goals, Except Refusal (BlockCondition (S := S) policy body locals goals))
-    (compileOverflow : ∀ locals goals, Except Refusal (BlockCondition (S := S) policy overflow locals goals))
+    (compileBody : ∀ locals goals, Except Invarianten.Frag.Refusal (BlockCondition (S := S) policy body locals goals))
+    (compileOverflow : ∀ locals goals, Except Invarianten.Frag.Refusal (BlockCondition (S := S) policy overflow locals goals))
     (count : Nat) (locals : Env D Γ) (goals : Goals D V Γ) :
-    Except Refusal (StatementCondition (S := S) policy (.retry count test body overflow) locals goals) :=
+    Except Invarianten.Frag.Refusal (StatementCondition (S := S) policy (.retry count test body overflow) locals goals) :=
   match count with
   | 0 => do
       let done ← requireCondition (program := program) (checked := fun _ => []) (S := S) (goals.normal locals)
@@ -84,10 +84,10 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
 def retryInvariantCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (budget count : Nat) (invariant : QF (Observation D))
     (test : Expr D Γ Λ .bool) (body : Block D V true Γ Λ Λ) (overflow : Block D V l Γ Λ Λ)
-    (compileBody : ∀ locals goals, Except Refusal (BlockCondition (S := S) policy body locals goals))
-    (compileOverflow : ∀ locals goals, Except Refusal (BlockCondition (S := S) policy overflow locals goals))
+    (compileBody : ∀ locals goals, Except Invarianten.Frag.Refusal (BlockCondition (S := S) policy body locals goals))
+    (compileOverflow : ∀ locals goals, Except Invarianten.Frag.Refusal (BlockCondition (S := S) policy overflow locals goals))
     (locals : Env D Γ) (goals : Goals D V Γ) :
-    Except Refusal (StatementCondition (S := S) policy (.retry count test body overflow) locals goals) := do
+    Except Invarianten.Frag.Refusal (StatementCondition (S := S) policy (.retry count test body overflow) locals goals) := do
   let domain ← environmentDomain (D := D) budget Γ
   let passGoals : Goals D V Γ :=
     { normal := fun _ => .ok invariant

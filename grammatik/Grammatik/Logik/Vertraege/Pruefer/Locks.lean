@@ -63,11 +63,11 @@ def lockCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
 
 /-- Lexical cleanup checks every owed lock before returning the actual value. -/
 def scopedReturnCondition (budget : Nat)
-    (facts : ∀ lock, Except Refusal (LockFormula S lock))
+    (facts : ∀ lock, Except Invarianten.Frag.Refusal (LockFormula S lock))
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (expression : ErgExpr D Γ Λ V.erg) (cleanup : RueckRessourcen D V Λ)
     (locals : Env D Γ) (goals : Goals D V Γ) :
-    Except Refusal (StatementCondition (S := S) policy (.retScoped expression cleanup) locals goals) := do
+    Except Invarianten.Frag.Refusal (StatementCondition (S := S) policy (.retScoped expression cleanup) locals goals) := do
   let releases ← cleanupFormula facts cleanup.scopes
   let returned ← returnCondition (S := S) budget expression locals goals
   return {

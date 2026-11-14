@@ -15,7 +15,7 @@ variable (policy : CallPolicy program)
     domains are budgeted; an oversized range is refused, never sampled. -/
 def returnCondition (budget : Nat) {Γ : Ctx} {Λ : List (Res D)}
     (expression : ErgExpr D Γ Λ V.erg) (locals : Env D Γ) (goals : Goals D V Γ) :
-    Except Refusal (Condition (fun (_ : Runtime program (fun _ => []) S) world =>
+    Except Invarianten.Frag.Refusal (Condition (fun (_ : Runtime program (fun _ => []) S) world =>
       denotes (goals.returned (evalErg world expression world locals)) world)) :=
   match expression with
   | .empty => requireCondition (goals.returned ())
@@ -28,7 +28,7 @@ def returnCondition (budget : Nat) {Γ : Ctx} {Λ : List (Res D)}
     stops and value returns. Unsupported leaves have no accepting fallback. -/
 def leafCondition (budget : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (code : Stmt D V l Γ Λ Λ') (locals : Env D Γ) (goals : Goals D V Γ) :
-    Except Refusal (StatementCondition (S := S) policy code locals goals) :=
+    Except Invarianten.Frag.Refusal (StatementCondition (S := S) policy code locals goals) :=
   match code with
   | .assignGlob name expression _ _ => do
       match h : goals.normal locals with
