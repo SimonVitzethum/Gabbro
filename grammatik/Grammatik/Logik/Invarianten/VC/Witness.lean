@@ -72,12 +72,12 @@ def unguardedCompiled : EndVC program noFacts unguarded .nil post :=
 /- This decision is on the VC generated from the typed G writer, rather than
    on a manually supplied preservation formula. -/
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem guarded_decided_zeuge : decideB (writerVC guardedCompiled entry .tru) = true := by
   decide
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem unguarded_decided_zeuge : decideB (writerVC unguardedCompiled entry .tru) = false := by
   decide
 
@@ -112,12 +112,12 @@ theorem counterexample_extracted_zeuge :
   writerCounterexample_complete unguardedCompiled entry .tru unguarded_decided_zeuge
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem checked_call_zeuge :
     decideB (close (callWP (D := declaration) () post post)) = true := by decide
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem unchecked_call_havoc_zeuge :
     decideB (close (callWP (D := declaration) () .tru post)) = false := by decide
 

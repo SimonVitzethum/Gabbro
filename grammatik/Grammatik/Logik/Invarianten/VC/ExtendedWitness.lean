@@ -6,7 +6,7 @@ public import Grammatik.Logik.Invarianten.VC.Witness
 @[expose] public section
 
 set_option maxRecDepth 100000
-set_option maxHeartbeats 8000000
+set_option maxHeartbeats 400000
 
 namespace Gabbro.Grammatik.Invarianten.VC.ExtendedWitness
 
@@ -67,27 +67,27 @@ def traverseCompiled : EndCondition program noFacts (SperrInv.leer declaration) 
   (compile traverseWriter).toOption.get (by decide)
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 8000000 in
+set_option maxHeartbeats 400000 in
 theorem bounded_decided_zeuge :
     decideB (Extended.writerVC boundedCompiled entry .tru) = true := by decide
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 8000000 in
+set_option maxHeartbeats 400000 in
 theorem overflow_decided_zeuge :
     decideB (Extended.writerVC overflowingCompiled entry .tru) = false := by decide
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 8000000 in
+set_option maxHeartbeats 400000 in
 theorem temporary_decided_zeuge :
     decideB (Extended.writerVC temporaryCompiled entry .tru) = true := by decide
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 8000000 in
+set_option maxHeartbeats 400000 in
 theorem mutable_decided_zeuge :
     decideB (Extended.writerVC mutableCompiled entry .tru) = true := by decide
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 8000000 in
+set_option maxHeartbeats 400000 in
 theorem traverse_decided_zeuge :
     decideB (Extended.writerVC traverseCompiled entry .tru) = true := by decide
 
@@ -101,7 +101,7 @@ def inductiveCompiled : EndCondition program noFacts (SperrInv.leer declaration)
   (extendedEnd program noFacts noLockFacts 16 (some post) 64 inductiveWriter .nil post).toOption.get (by decide)
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 8000000 in
+set_option maxHeartbeats 400000 in
 theorem inductive_decided_zeuge :
     decideB (Extended.writerVC inductiveCompiled entry .tru) = true := by decide
 
