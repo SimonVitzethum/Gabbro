@@ -3,6 +3,7 @@ public import Grammatik.Parser.Elab.Uebersetze
 public import Gabbro.Body
 public import Bruecke.Ausdruck.Readers
 public import Grammatik.Parser.Elab.Generic.SignatureData
+public import Grammatik.Parser.Elab.UebersetzeAllg.Teil2
 @[expose] public section
 
 
