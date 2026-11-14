@@ -1,5 +1,5 @@
 module
-public import Stage0.Frontend.ExportCorrectness
+public import Stage0.IRBild
 import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
