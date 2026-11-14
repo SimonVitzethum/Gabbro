@@ -3,6 +3,7 @@
 module
 
 public import Grammatik.Gen.Zeugen.Schluss.Teil3
+public import Grammatik.Gen.Zeugen.Schluss.Checked
 
 @[expose] public section
 
@@ -17,9 +18,9 @@ def structuralCompiler (e : Einsatz) : Prop := akzeptiert Einsatz.Hat gutTafel e
 theorem structuralCompiler_neutral_zeuge : NeutralKorrekt structuralCompiler :=
   ⟨fun z => gutTafel z = true, fun _ => Iff.rfl⟩
 
-theorem structuralCompiler_m_zeuge : ∀ m ∈ Mw, structuralCompiler m := by
+theorem structuralCompiler_m_zeuge : ∀ m ∈ structuralWitnesses, structuralCompiler m := by
   intro m member
-  simp only [Mw, List.mem_cons, List.not_mem_nil, or_false] at member
+  simp only [structuralWitnesses, List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · exact M99_824.e_strukturell
   · exact M47_549.e_strukturell
@@ -35,7 +36,7 @@ theorem structuralCompiler_m_zeuge : ∀ m ∈ Mw, structuralCompiler m := by
     array, and the same compiler predicate rejects the zero-less array. -/
 theorem compiler_zeugen_korrekt_zeuge :
     NeutralKorrekt structuralCompiler ∧
-    (∀ m ∈ Mw, structuralCompiler m) ∧
+    (∀ m ∈ structuralWitnesses, structuralCompiler m) ∧
     Reset.Good.e.gueltig = true ∧
     structuralCompiler Reset.Good.e ∧ ¬ structuralCompiler Reset.Bad.e := by
   refine ⟨structuralCompiler_neutral_zeuge, structuralCompiler_m_zeuge,
@@ -47,25 +48,15 @@ theorem compiler_zeugen_korrekt_zeuge :
     change false = true at bad
     exact Bool.false_ne_true bad
 
-/-- The old register/await fixture is outside the checked contract fragment.
-    Its structural cells remain good. Lock scopes alone are not a refusal:
-    opaqueLockCondition can check a scope without reified source evidence. -/
-theorem m99_refused_zeuge : M99_824.e.gueltig = false := by
-  have refused : @Vertraege.Pruefer.KontrakteGeprueftB M99_824.e.D
-      M99_824.e.P M99_824.e.S M99_824.e.fs (fun _ => none) {} (fun _ => none) = false := by
-    decide
-  cases verdict : M99_824.e.gueltig with
-  | false => rfl
-  | true =>
-    have accepted := ((M99_824.e_gueltig_iff_gates).mp verdict).2
-    rw [refused] at accepted
-    exact Bool.noConfusion accepted
+/-- Atomic reads trigger the first refusal. The contract gate also requires
+    reified lock sources, unlike the invariant gate's opaque-lock rule. -/
+theorem m99_refused_zeuge : M99_824.e.gueltig = false := GateAudit.m99_824_refused
 
 /-- W2 cannot use these fixed M/N lists: the gut_m premise is contradictory.
     This does not assert that every possible replacement table is impossible. -/
-theorem old_tafel_impossible_zeuge : ¬ Tafel Mw Nw := by
+theorem old_tafel_impossible_zeuge : ¬ Tafel structuralWitnesses structuralRefusals := by
   intro table
-  have accepted := table.gut_m M99_824.e (by simp [Mw])
+  have accepted := table.gut_m M99_824.e (by simp [structuralWitnesses])
   rw [m99_refused_zeuge] at accepted
   exact Bool.noConfusion accepted
 

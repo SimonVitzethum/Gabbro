@@ -59,13 +59,13 @@ def leanFein (z : Spez) (quelle : String) (i : Nat) (stamm : String) (P : Progra
   let flags := z.fnListe.map fun f => toString (P.unterbricht f)
   let wsT := String.intercalate ", " (ws.map fun w => s!"(⟨{fn w}, by decide⟩ : Fin z.fns.length)")
   let zsT := String.intercalate ",\n  " (zs.map FZelle.lean)
-  pure (s!"/-\n  File:      Grammatik/Gen/Zeugen/F/{stamm}.lean\n  Subject:   GENERATED fine witness (`Gen/Fein/Druck.lean`): member {i}, a valid program with the fine cells\n             below. Checked by the kernel; do not edit.\n-/\nimport Grammatik.Gen.Abdeckung.Satz.ErzeugtMN\nimport Grammatik.Gen.Erzeuger.Entscheidung\nimport Grammatik.Korpus.Zeugnis.Zeugnis.T1\nimport Grammatik.Gen.Fein.Mitglieder\n\nset_option linter.unusedTactic false\nset_option linter.unreachableTactic false\n\nnamespace Gabbro.Grammatik.Gen.Zeugen.F.{stamm}\n\nopen Gabbro.Grammatik Gabbro.Grammatik.Gen\n\nabbrev z : Spez := {quelle}.getD {i} " ++ "{}" ++
+  pure (s!"/-\n  File:      Grammatik/Gen/Zeugen/F/{stamm}.lean\n  Subject:   GENERATED fine witness (`Gen/Fein/Druck.lean`): member {i}, a valid program with the fine cells\n             below. Checked by the kernel; do not edit.\n-/\nmodule\npublic import Grammatik.Gen.Abdeckung.Satz.ErzeugtMN\npublic import Grammatik.Gen.Erzeuger.Entscheidung\npublic import Grammatik.Korpus.Zeugnis.Zeugnis.T1\npublic import Grammatik.Gen.Fein.Mitglieder\n\n@[expose] public section\n\nset_option linter.unusedTactic false\nset_option linter.unreachableTactic false\n\nnamespace Gabbro.Grammatik.Gen.Zeugen.F.{stamm}\n\nopen Gabbro.Grammatik Gabbro.Grammatik.Gen\n\nabbrev z : Spez := {quelle}.getD {i} " ++ "{}" ++
     s!"\n\n{r}\ndef h0 : Haut z.deklaration := ⟨r, fun f => [{String.intercalate ", " flags}].getD f.val false⟩\n\ndef ws : List z.deklaration.Fn := [{wsT}]\n\n" ++ vdefs ++
     (if vdefs.endsWith "\n" then "" else "\n\n") ++
     "/-- The witness as a program of the source. -/\ndef e : Einsatz := z.einsatz P ws (by decide) (by decide)\n\n" ++
-    "theorem e_gueltig : e.gueltig = true := by decide +kernel\n\n" ++
+    "theorem e_gueltig : e.gueltig = true := by decide\n\n" ++
     s!"/-- Its fine cells. -/\ndef zs : List Fein.FZelle := [\n  {zsT}]\n\n" ++
-    "theorem e_hatF : ∀ c ∈ zs, e.HatF c := by decide +kernel\n\n" ++
+    "theorem e_hatF : ∀ c ∈ zs, e.HatF c := by decide\n\n" ++
     s!"end Gabbro.Grammatik.Gen.Zeugen.F.{stamm}\n")
 
 end Gabbro.Grammatik.Gen.Fein

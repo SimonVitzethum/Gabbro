@@ -70,7 +70,7 @@ def NeutralText (R : String → Bool) : Prop :=
 def NeutralKorrektText (K : String → Prop) : Prop :=
   ∃ ψ : Zelle → Prop, ∀ s e, ausText s = .ok e → (K s ↔ ∀ z, e.Hat z → ψ z)
 
-/-- The texts of the structural witnesses (the order of `Mw`). -/
+/-- The texts of the structural witnesses (the order of `structuralWitnesses`). -/
 def mText : List String :=
   [textVon Zeugen.M99_824.z Zeugen.M99_824.P Zeugen.M99_824.ws,
    textVon Zeugen.M47_549.z Zeugen.M47_549.P Zeugen.M47_549.ws,
@@ -82,7 +82,7 @@ def mText : List String :=
    textVon Zeugen.M99_825.z Zeugen.M99_825.P Zeugen.M99_825.ws,
    Zeugen.Reset.Good.text]
 
-/-- The texts of the refused witnesses (the order of `Nw`). -/
+/-- The texts of the refused witnesses (the order of `structuralRefusals`). -/
 def nText : List String :=
   [textVon Zeugen.N16_5.z Zeugen.N16_5.P Zeugen.N16_5.ws,
    textVon Zeugen.N18_0.z Zeugen.N18_0.P Zeugen.N18_0.ws,
@@ -100,9 +100,9 @@ def nText : List String :=
    Zeugen.Reset.Bad.text]
 
 /-- **Every witness has its text**: a text in the list that reads back with the witness's cells and verdict. -/
-theorem m_texte : ∀ m ∈ Zeugen.Mw, ∃ t ∈ mText, ∃ e', ausText t = .ok e' ∧ e'.zellen = m.zellen ∧ e'.gueltig = m.gueltig := by
+theorem m_texte : ∀ m ∈ Zeugen.structuralWitnesses, ∃ t ∈ mText, ∃ e', ausText t = .ok e' ∧ e'.zellen = m.zellen ∧ e'.gueltig = m.gueltig := by
   intro m hm
-  simp only [Zeugen.Mw, List.mem_cons, List.not_mem_nil, or_false] at hm
+  simp only [Zeugen.structuralWitnesses, List.mem_cons, List.not_mem_nil, or_false] at hm
   rcases hm with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, true_or], Zeugen.M99_824.text⟩
   · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.M47_549.text⟩
@@ -114,9 +114,9 @@ theorem m_texte : ∀ m ∈ Zeugen.Mw, ∃ t ∈ mText, ∃ e', ausText t = .ok 
   · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.M99_825.text⟩
   · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, or_true], Zeugen.Reset.Good.text_reads⟩
 
-theorem n_texte : ∀ n ∈ Zeugen.Nw, ∃ t ∈ nText, ∃ e', ausText t = .ok e' ∧ e'.zellen = n.zellen ∧ e'.gueltig = n.gueltig := by
+theorem n_texte : ∀ n ∈ Zeugen.structuralRefusals, ∃ t ∈ nText, ∃ e', ausText t = .ok e' ∧ e'.zellen = n.zellen ∧ e'.gueltig = n.gueltig := by
   intro n hn
-  simp only [Zeugen.Nw, List.mem_cons, List.not_mem_nil, or_false] at hn
+  simp only [Zeugen.structuralRefusals, List.mem_cons, List.not_mem_nil, or_false] at hn
   rcases hn with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or], Zeugen.N16_5.text⟩
   · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.N18_0.text⟩
@@ -147,7 +147,7 @@ theorem compiler_text_korrekt (K : String → Prop) (hK : NeutralKorrektText K) 
   obtain ⟨ψ, hψ⟩ := hK
   let K' : Einsatz → Prop := fun e => ∀ z, e.Hat z → ψ z
   have hK' : NeutralKorrekt K' := ⟨ψ, fun _ => Iff.rfl⟩
-  have hMK : ∀ m ∈ Zeugen.Mw, K' m := by
+  have hMK : ∀ m ∈ Zeugen.structuralWitnesses, K' m := by
     intro m hm
     obtain ⟨t, htm, e', ht, hz, _⟩ := m_texte m hm
     have := (hψ t e' ht).1 (hM t htm)

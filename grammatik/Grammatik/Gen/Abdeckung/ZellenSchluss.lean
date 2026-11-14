@@ -1,5 +1,5 @@
 /-
-  Emit structural cell coverage and its accepted-program compiler theorem.
+  Emit an accepted M/refused N table and its neutral compiler theorem.
   Semantic gate refusals are not characterized by structural cells.
 -/
 module
@@ -124,14 +124,19 @@ def schlussText (gut : Zelle → Option String) (schl : Zelle → Option NGrund)
     s!"  · exact ⟨{(gut x).getD "?"}.e, by simp [Mw], {(gut x).getD "?"}.e_hat _ (by decide)⟩\n")
   let mList := String.intercalate ", " (mSt.map (· ++ ".e"))
   let nList := String.intercalate ", " (nSt.map (· ++ ".e"))
+  let mPat := String.intercalate " | " (mSt.map fun _ => "rfl")
   let nPat := String.intercalate " | " (nSt.map fun _ => "rfl")
   let zeugenText :=
-    s!"/-! ## The witnesses alone: M and N as explicit lists of programs of the source -/\n\n/-- **M**: the structural witnesses; full checker acceptance is separate. -/\ndef Mw : List Einsatz := [{mList}]\n\n/-- **N**: the refused tests. -/\ndef Nw : List Einsatz := [{nList}]\n\n" ++
+    s!"/-! ## The witnesses alone: M and N as explicit lists of programs of the source -/\n\n/-- **M**: witnesses with a full checker acceptance proof. -/\ndef Mw : List Einsatz := [{mList}]\n\n/-- **N**: the refused tests. -/\ndef Nw : List Einsatz := [{nList}]\n\n" ++
+    s!"theorem zeugen_m_akzeptiert : ∀ m ∈ Mw, m.gueltig = true := by\n  intro m hm\n  simp only [Mw, List.mem_cons, List.not_mem_nil, or_false] at hm\n" ++
+      (if mSt.isEmpty then "" else s!"  rcases hm with {mPat}\n" ++
+        String.join (mSt.map fun st => s!"  · exact {st}.e_gueltig\n")) ++ "\n" ++
     s!"theorem erreicht_mw : ∀ w ∈ erreicht, ∃ m ∈ Mw, m.Hat w := by\n  intro w hw\n  simp only [erreicht, List.mem_cons, List.not_mem_nil, or_false] at hw\n  rcases hw with {erreichtPat}\n{erreichtMF}\n" ++
-    "/-- Structural coverage suffices for the compiler theorem; no acceptance of M is claimed. -/\ntheorem zeugen_deckung : ∀ x ∈ zellAlle, x.schlecht = false →\n    (∃ m ∈ Mw, m.Hat x) ∨ (∀ e : Einsatz, e.Hat x → e.gueltig = false) := by\n" ++
+    "/-- Every good cell is witnessed in accepted M, or impossible for valid source. -/\ntheorem zeugen_deckung : ∀ x ∈ zellAlle, x.schlecht = false →\n    (∃ m ∈ Mw, m.Hat x) ∨ (∀ e : Einsatz, e.Hat x → e.gueltig = false) := by\n" ++
     s!"  intro x hx hs\n  rw [zellAlle_liste] at hx\n  simp only [List.mem_cons, List.not_mem_nil, or_false] at hx\n  rcases hx with {pat}\n{gutTF}\n" ++
     s!"theorem zeugen_n_abgelehnt : ∀ n ∈ Nw, n.gueltig = false := by\n  intro n hn\n  simp only [Nw, List.mem_cons, List.not_mem_nil, or_false] at hn\n  rcases hn with {nPat}\n" ++ String.join (nSt.map fun st => s!"  · exact {st}.e_gueltig\n") ++
     s!"\n/-- Bad-cell coverage is structural; it does not characterize semantic gate refusals. -/\ntheorem zeugen_schlecht_deckung : ∀ x ∈ zellAlle, x.schlecht = true → ∀ e : Einsatz, e.Hat x →\n    ∃ n ∈ Nw, ∀ w, n.Hat w → e.Hat w ∨ ∃ m ∈ Mw, m.Hat w := by\n  intro x hx hs\n  rw [zellAlle_liste] at hx\n  simp only [List.mem_cons, List.not_mem_nil, or_false] at hx\n  rcases hx with {pat}\n{schlTF}\n" ++
+    "\ntheorem zeugen_tafel : Tafel Mw Nw where\n  gut_m := zeugen_m_akzeptiert\n  gut := zeugen_deckung\n  n_schlecht := zeugen_n_abgelehnt\n  schlecht := zeugen_schlecht_deckung\n\n" ++
     "\n/-- **A neutral compiler correct on the witness list M is correct on every valid program of the source.** -/\ntheorem compiler_zeugen_korrekt (K : Einsatz → Prop) (hK : NeutralKorrekt K) (hM : ∀ m ∈ Mw, K m) (e : Einsatz)\n    (hv : e.gueltig = true) : K e := by\n  obtain ⟨ψ, hψ⟩ := hK\n  refine (hψ e).2 fun z hz => ?_\n  obtain ⟨m, hm, hmz⟩ := zellen_deckt zeugen_deckung e hv z hz\n  exact (hψ m).1 (hM m hm) z hmz\n\n"
   .ok (s!"/-\n  File:      Grammatik/Gen/Zeugen/Schluss.lean\n  Subject:   GENERATED (`gen-zellen-sammeln`, `ZellenSchluss.lean`): every cell of the universe has its reason, so\n             the accepted-program cell coverage yields the neutral compiler theorem. Do not edit.\n-/\n" ++
     "module\n" ++ String.join (mods.map fun m => s!"public import {m}\n") ++
