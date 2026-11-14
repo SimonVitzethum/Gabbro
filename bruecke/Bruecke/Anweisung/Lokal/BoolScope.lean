@@ -42,7 +42,7 @@ theorem artStimmt_mitBindungB {fn : UFn} {x : String}
     (h : ArtStimmt fn) (hx : x ≠ "#erg") : ArtStimmt (fn.mitBindungB x) := by
   refine ⟨fun j num wb hk => ?_, fun k hk => ?_, fun q hq => ?_⟩
   · cases j with
-    | zero => simp only [UFn.mitBindungB, List.getElem?_cons_zero, reduceCtorEq] at hk
+    | zero => simp [UFn.mitBindungB] at hk
     | succ j =>
       have hk' : fn.kinds[j]? = some (.ptr (.table num (true, wb))) := hk
       obtain ⟨w', hw'⟩ := h.1 j num wb hk'
@@ -53,7 +53,7 @@ theorem artStimmt_mitBindungB {fn : UFn} {x : String}
     · exact h.2.1 k hk
   · simp only [UFn.mitBindungB, List.mem_cons] at hq
     rcases hq with rfl | hq
-    · simp only [ParamSchlicht, TySchlicht, Bool.true_and, bne_iff_ne, hx]
+    · simp [ParamSchlicht, TySchlicht, hx]
     · exact h.2.2 q hq
 
 theorem UmfangB.bindB {Γ : Ctx} {fn : UFn} {ns : BodyNames} (h : UmfangB Γ fn ns)

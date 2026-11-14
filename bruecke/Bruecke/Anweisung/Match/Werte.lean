@@ -31,6 +31,7 @@ theorem lowOpt_named_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
         rw [hr] at hb
         cases hb
         have hv := lowIdx_sim hi σ₀ σ ρ s.world (ns.visible fn s.local') (hL.visible (ns := ns))
+        change Gabbro.Body.eval ⟨s.world, visibleBinding (ns.lookup fn) s.local'⟩ (idxExpr ix) = _ at hv
         have he := eval_renameScalar (ns.lookup fn) s (idxExpr ix) raw hr
         simp only [Gabbro.Body.eval, he, hv, eval, valOf]
   | var x =>
@@ -40,7 +41,7 @@ theorem lowOpt_named_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
     | some id =>
       rw [hid] at hb
       cases hb
-      unfold lowOpt at h
+      simp only [lowOpt] at h
       cases hj : paramPos fn.params x with
       | error err => rw [hj] at h; cases h
       | ok j =>

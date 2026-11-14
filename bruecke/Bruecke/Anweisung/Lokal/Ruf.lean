@@ -136,6 +136,7 @@ theorem lowCallArgOne_simB (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : Bo
       all_goals first
         | exact lowWertAtE_rec_sim (er := none) h hb hA hT σ₀ σ ρ s.world s.local' hW hL
         | cases h
+    | opt num | why num | sum num => cases τ <;> simp only [lowCallArgOneL] at h <;> cases h
     | _ => simp only [ArtSchlicht, Bool.false_eq_true] at hK
   | bval b =>
     simp only [argExpr] at hb
