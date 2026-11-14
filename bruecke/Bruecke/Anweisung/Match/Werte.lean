@@ -51,8 +51,9 @@ theorem lowOpt_named_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
         | some kind =>
           cases kind <;> rw [hk] at h
           case opt m =>
-            split at h
-            · cases hv : lowVar Γ j (.opt ((declOf u).count ⟨num, hn⟩)) with
+            by_cases hm : (m == num) = true
+            · simp only [hm, decide_true, ↓reduceIte, ↓reduceDIte] at h
+              cases hv : lowVar Γ j (.opt ((declOf u).count ⟨num, hn⟩)) with
               | error err => rw [hv] at h; cases h
               | ok var =>
                 rw [hv] at h
@@ -60,9 +61,12 @@ theorem lowOpt_named_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
                 have hi : ns.active[j]? = some id := by
                   simpa only [BodyNames.lookup, hj] using hid
                 simp only [Gabbro.Body.eval]
-                rw [hL.values j id hi, Nat.zero_add, nthVal_lowVar Γ j _ var ρ hv]
+                rw [hL.values j id hi]
+                try rw [Nat.zero_add]
+                rw [nthVal_lowVar Γ j _ var ρ hv]
                 rfl
-            · cases h
+            · simp only [hm, decide_false, Bool.false_eq_true, ↓reduceIte, ↓reduceDIte] at h
+              cases h
           all_goals cases h
   | slot | tab | glob => cases hb
 
