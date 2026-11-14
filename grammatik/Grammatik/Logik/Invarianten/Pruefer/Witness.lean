@@ -51,13 +51,13 @@ theorem checker_accepted_zeuge :
     rw [programAccepted, contracts]
     simp only [Bool.and_true]
     decide
-  apply Bool.and_eq_true.mpr
+  apply Bool.and_eq_true_iff.mpr
   refine ⟨?_, logic⟩
-  apply Bool.and_eq_true.mpr
+  apply Bool.and_eq_true_iff.mpr
   refine ⟨?_, accepted_zeuge⟩
-  apply Bool.and_eq_true.mpr
+  apply Bool.and_eq_true_iff.mpr
   refine ⟨?_, Kernzelle.akkuStartB_leer unit⟩
-  exact Bool.and_eq_true.mpr ⟨core, besitzB_leer rfl⟩
+  exact Bool.and_eq_true_iff.mpr ⟨core, besitzB_leer rfl⟩
 
 theorem invariant_duties_zeuge (passes : Nat) :
     InvGutSA unit.P passes unit.Q unit.S (GeteiltA unit.P unit.ws) () ∧

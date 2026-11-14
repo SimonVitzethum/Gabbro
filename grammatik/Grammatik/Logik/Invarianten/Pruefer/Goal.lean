@@ -15,7 +15,7 @@ theorem akzeptiertX_invarianten {E : Einheit D} {functions : List D.Fn} {locks :
     {carriers : List (D.Tab ⊕ D.Glob)}
     (accepted : akzeptiertX_pruefer.akzeptiert E functions locks carriers = true) :
     InvariantenGeprueft E functions locks :=
-  (invariantenGeprueftB_iff E functions locks {}).mp (Bool.and_eq_true.mp (Bool.and_eq_true.mp accepted).1).2
+  (invariantenGeprueftB_iff E functions locks {}).mp (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp accepted).1).2
 
 /-- The complete goal, on a checker-admitted unit, without a user proof of
     any table/group/global invariant. Opaque semantic lock duties remain

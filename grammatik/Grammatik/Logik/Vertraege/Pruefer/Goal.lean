@@ -16,7 +16,7 @@ theorem nutzerPflicht_of_akzeptiert {E : Einheit D}
     {carriers : List (D.Tab ⊕ D.Glob)}
     (accepted : akzeptiertX_pruefer.akzeptiert E functions.1 locks.1 carriers = true) :
     NutzerPflichtA E :=
-  nutzerPflicht_of_geprueft functions.2 locks.2 (Bool.and_eq_true.mp accepted).2
+  nutzerPflicht_of_geprueft functions.2 locks.2 (Bool.and_eq_true_iff.mp accepted).2
 
 /-- Remove the independent NutzerPflichtA premise of GabbroZielVoll.
     The headline C08 theorem retains its software call-site and binding duties. -/
