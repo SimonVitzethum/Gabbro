@@ -129,7 +129,7 @@ theorem randGL_rueck_ok {P : Programm D} {O : Orakel D} {passes : Nat} {thr : Fa
       RufLaufG P O passes thr Me M' ∧ WeltGleich σ' σ'' ∧ GepopptG M' thr (ziel v) stapel g rhoG s0G lg v σ'' ∧
       offen σ''.spur = offen σeC.spur := by
   obtain ⟨σme, hwe, ⟨log, hZe⟩, hΛe, hAe⟩ := hMe
-  have hl := execEnd_lg (passes := passes) (rufAt_rufRumpf_lg_alle (P := P) (passes := passes) j) (leseblindRS_alle O) ebeC
+  have hl := execEnd_lg (passes := passes) (rufAt_rufRumpf_lg_alle (P := P) (O := O) (passes := passes) j) (leseblindRS_alle O) ebeC
     (Or.inl (axFrei_endR hEC)) hwe ρeC
   rw [hz] at hl
   obtain ⟨σ'', hz'', hw''⟩ := hl.zurueck_inv
@@ -154,7 +154,7 @@ theorem randGL_rueck_why {P : Programm D} {O : Orakel D} {passes : Nat} {thr : F
       RufLaufG P O passes thr Me M' ∧ WeltGleich σ' σ'' ∧
       GepopptGrundG M' thr (zielG r) stapel g rhoG s0G lg r σ'' ∧ offen σ''.spur = offen σeC.spur := by
   obtain ⟨σme, hwe, ⟨log, hZe⟩, hΛe, hAe⟩ := hMe
-  have hl := execEnd_lg (passes := passes) (rufAt_rufRumpf_lg_alle (P := P) (passes := passes) j) (leseblindRS_alle O) ebeC
+  have hl := execEnd_lg (passes := passes) (rufAt_rufRumpf_lg_alle (P := P) (O := O) (passes := passes) j) (leseblindRS_alle O) ebeC
     (Or.inl (axFrei_endR hEC)) hwe ρeC
   rw [hz] at hl
   obtain ⟨σ'', hz'', hw''⟩ := hl.why_inv

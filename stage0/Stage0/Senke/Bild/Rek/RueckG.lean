@@ -139,7 +139,7 @@ theorem randGL_rueck {P : Programm D} {O : Orakel D} {passes : Nat} {thr : Faden
     have hz : execEnd O passes (rufAt P O passes j) ebeC σeC ρeC = .zurueck σ' v := hkC.zurueck hbody
     -- machine G at the callee's boundary: the body-running handler returns from a `≈` world
     obtain ⟨σme, hwe, ⟨log, hZe⟩, hΛe, hAe⟩ := hMe
-    have hl := execEnd_lg (passes := passes) (rufAt_rufRumpf_lg_alle (P := P) (passes := passes) j) (leseblindRS_alle O) ebeC
+    have hl := execEnd_lg (passes := passes) (rufAt_rufRumpf_lg_alle (P := P) (O := O) (passes := passes) j) (leseblindRS_alle O) ebeC
       (Or.inl (axFrei_endR hEC)) hwe ρeC
     rw [hz] at hl
     obtain ⟨σ'', hz'', hw''⟩ := hl.zurueck_inv
