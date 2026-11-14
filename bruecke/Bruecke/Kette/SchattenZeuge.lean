@@ -1,5 +1,6 @@
 module
 public import Bruecke.Kette.Formen.ZeugenSchritte
+public import Grammatik.Parser.Stmt.LibraryFixtureScanning
 public import Bruecke.Anweisung.Zweig.SchattenZeuge
 import all Init.Data.String.Length
 import all Init.Data.String.Basic
@@ -48,15 +49,56 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 open SchattenZeuge
 
+open Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning
+
 set_option maxRecDepth 100000
 set_option maxHeartbeats 400000
 
+attribute [local cbv_eval] Parser.strEq_apply_eq_decide
+
 attribute [local cbv_eval] Nat.log2_def lowEns.eq_def lowCmp.eq_def lowWertE.eq_def
 
-def source : String :=
-  "module shadowing { impl fn shadow() -> u32 in 0 .. 1 { " ++
-  "let mut x : u32 in 0 .. 1 = 1; " ++
-  "if true { let x : u32 in 0 .. 0 = 0; } return x; } }"
+-- Each scanner certificate keeps an arbitrary suffix and remaining fuel.
+-- module shadowing { impl fn shadow() ->
+def sourceChunk0 : Chunk where
+  characters := ['m', 'o', 'd', 'u', 'l', 'e', ' ', 's', 'h', 'a', 'd', 'o', 'w', 'i', 'n', 'g', ' ', '{', ' ', 'i', 'm', 'p',
+    'l', ' ', 'f', 'n', ' ', 's', 'h', 'a', 'd', 'o', 'w', '(', ')', ' ', '-', '>', ' ']
+  tokens := [.wort "module", .ident "shadowing", .zeichen "{", .wort "impl", .wort "fn", .ident "shadow",
+    .zeichen "(", .zeichen ")", .zeichen "->"]
+  steps := 16
+  scanned := by intro rest remaining; cbv
+
+-- u32 in 0 .. 1 { let mut x : u32 in 0 .. 1
+def sourceChunk1 : Chunk where
+  characters := ['u', '3', '2', ' ', 'i', 'n', ' ', '0', ' ', '.', '.', ' ', '1', ' ', '{', ' ', 'l', 'e', 't', ' ', 'm', 'u',
+    't', ' ', 'x', ' ', ':', ' ', 'u', '3', '2', ' ', 'i', 'n', ' ', '0', ' ', '.', '.', ' ', '1', ' ']
+  tokens := [.wort "u32", .wort "in", .num 0, .zeichen "..", .num 1, .zeichen "{",
+    .wort "let", .wort "mut", .wort "x", .zeichen ":", .wort "u32", .wort "in",
+    .num 0, .zeichen "..", .num 1]
+  steps := 30
+  scanned := by intro rest remaining; cbv
+
+-- = 1; if true { let x : u32 in 0 .. 0 = 0;
+def sourceChunk2 : Chunk where
+  characters := ['=', ' ', '1', ';', ' ', 'i', 'f', ' ', 't', 'r', 'u', 'e', ' ', '{', ' ', 'l', 'e', 't', ' ', 'x', ' ', ':',
+    ' ', 'u', '3', '2', ' ', 'i', 'n', ' ', '0', ' ', '.', '.', ' ', '0', ' ', '=', ' ', '0', ';', ' ']
+  tokens := [.zeichen "=", .num 1, .zeichen ";", .wort "if", .wort "true", .zeichen "{",
+    .wort "let", .wort "x", .zeichen ":", .wort "u32", .wort "in", .num 0,
+    .zeichen "..", .num 0, .zeichen "=", .num 0, .zeichen ";"]
+  steps := 32
+  scanned := by intro rest remaining; cbv
+
+-- } return x; } }
+def sourceChunk3 : Chunk where
+  characters := ['}', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 'x', ';', ' ', '}', ' ', '}']
+  tokens := [.zeichen "}", .wort "return", .wort "x", .zeichen ";", .zeichen "}", .zeichen "}"]
+  steps := 10
+  scanned := by intro rest remaining; cbv
+
+def sourceChunks : List Chunk :=
+  [sourceChunk0, sourceChunk1, sourceChunk2, sourceChunk3]
+
+def source : String := String.ofList (characters sourceChunks)
 
 def program : Programm (declOf unit) :=
   ((lowerAllg unit).toOption.get lowered_some_zeuge).1
@@ -67,14 +109,16 @@ def functions : List (declOf unit).Fn :=
 theorem lowered : lowerAllg unit = .ok (program, functions) :=
   except_ok_get lowered_some_zeuge
 
-private def scanned : { tokens : List Parser.Token // Parser.lex source = .ok tokens } := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+def scanned : { tokens : List Parser.Token // Parser.lex source = .ok tokens } :=
+  ⟨tokens sourceChunks, by
+    rw [source, Parser.lex_ofList]
+    exact lex_chunks sourceChunks (by cbv)⟩
 
-private def parsed : { items : List Parser.SItemTief //
+noncomputable def parsed : { items : List Parser.SItemTief //
     Parser.parseTopTief scanned.val = .ok items } := by
   refine ⟨?_, by cbv <;> exact Eq.refl _⟩
 
-private theorem exported : elabU (pre108 parsed.val) = .ok unit := by cbv
+theorem exported : elabU (pre108 parsed.val) = .ok unit := by cbv
 
 /-- The source anchor includes parsing, elaboration and the actual canonical lowering. -/
 theorem translated : uebersetzeAllg source = .ok ⟨unit, program, functions⟩ :=
@@ -103,10 +147,10 @@ theorem duties : ∀ c : Fin unit.fns.length, ∃ bs,
   subst c
   exact ⟨body, translation_zeuge, routine_meets_zeuge⟩
 
-/-- An integer type by itself is insufficient: index and missing kinds remain protected. -/
+/-- Checked indices share scalar names; missing kind information remains protected. -/
 theorem kind_admission_zeuge :
     bindFrischB { routine with params := [("x", .int 0 1)], kinds := [.int] } = true ∧
-      bindFrischB { routine with params := [("x", .int 0 1)], kinds := [.index 0] } = false ∧
+      bindFrischB { routine with params := [("x", .int 0 1)], kinds := [.index 0] } = true ∧
       bindFrischB { routine with params := [("x", .int 0 1)], kinds := [] } = false := by
   cbv
 

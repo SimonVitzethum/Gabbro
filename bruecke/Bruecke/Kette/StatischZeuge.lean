@@ -1,5 +1,7 @@
 module
 public import Bruecke.Kette.Formen.ZeugenSchritte
+public import Grammatik.Parser.Stmt.LibraryFixtureScanning
+import all Grammatik.Parser.Elab.Uebersetze.Akku.ProbenPhases
 public import Bruecke.Anweisung.Zweig.SchattenZeuge
 import all Init.Data.String.Length
 import all Init.Data.String.Basic
@@ -47,8 +49,16 @@ namespace Gabbro.Bruecke.StatischZeuge
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 
+open Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning
+
 set_option maxRecDepth 100000
 set_option maxHeartbeats 400000
+
+-- Select one actual reader node before inspecting its large-fuel callbacks.
+attribute [local cbv_opaque] uAnwReihe uAnwReiheCore uAkkuBinder uZeigerAnw uStartNamen
+attribute [local cbv_eval] row_nil row_cons core_bind core_call core_set
+  bound_names_select pointer_source_select start_source_select
+attribute [local cbv_eval] Parser.strEq_apply_eq_decide
 
 attribute [local cbv_eval] Nat.log2_def lowEns.eq_def lowCmp.eq_def lowWertE.eq_def
 
@@ -69,11 +79,74 @@ def unit : UProg :=
   { tabs := [], locks := [], fns := [writer, reader, caller],
     globs := [{ name := "counter", ty := .int 3 10, init := 7, var := true, breite := 8 }] }
 
-def source : String :=
-  "module statics { static mut counter : u8 in 3 .. 10 = 7; " ++
-  "impl fn write_counter() effects { writes counter } { counter = 9; } " ++
-  "impl fn read_counter() effects { reads counter } { let seen = counter; } " ++
-  "impl fn use_counter() effects { writes counter } { write_counter(); read_counter(); } }"
+-- Each scanner certificate keeps an arbitrary suffix and remaining fuel.
+-- module statics { static mut counter : u8
+def sourceChunk0 : Chunk where
+  characters := ['m', 'o', 'd', 'u', 'l', 'e', ' ', 's', 't', 'a', 't', 'i', 'c', 's', ' ', '{', ' ', 's', 't', 'a', 't', 'i',
+    'c', ' ', 'm', 'u', 't', ' ', 'c', 'o', 'u', 'n', 't', 'e', 'r', ' ', ':', ' ', 'u', '8', ' ']
+  tokens := [.wort "module", .ident "statics", .zeichen "{", .wort "static", .wort "mut", .ident "counter",
+    .zeichen ":", .wort "u8"]
+  steps := 16
+  scanned := by intro rest remaining; cbv
+
+-- in 3 .. 10 = 7; impl fn write_counter()
+def sourceChunk1 : Chunk where
+  characters := ['i', 'n', ' ', '3', ' ', '.', '.', ' ', '1', '0', ' ', '=', ' ', '7', ';', ' ', 'i', 'm', 'p', 'l', ' ', 'f',
+    'n', ' ', 'w', 'r', 'i', 't', 'e', '_', 'c', 'o', 'u', 'n', 't', 'e', 'r', '(', ')', ' ']
+  tokens := [.wort "in", .num 3, .zeichen "..", .num 10, .zeichen "=", .num 7,
+    .zeichen ";", .wort "impl", .wort "fn", .ident "write_counter", .zeichen "(", .zeichen ")"]
+  steps := 21
+  scanned := by intro rest remaining; cbv
+
+-- effects { writes counter } { counter = 9;
+def sourceChunk2 : Chunk where
+  characters := ['e', 'f', 'f', 'e', 'c', 't', 's', ' ', '{', ' ', 'w', 'r', 'i', 't', 'e', 's', ' ', 'c', 'o', 'u', 'n', 't',
+    'e', 'r', ' ', '}', ' ', '{', ' ', 'c', 'o', 'u', 'n', 't', 'e', 'r', ' ', '=', ' ', '9', ';', ' ']
+  tokens := [.wort "effects", .zeichen "{", .wort "writes", .ident "counter", .zeichen "}", .zeichen "{",
+    .ident "counter", .zeichen "=", .num 9, .zeichen ";"]
+  steps := 19
+  scanned := by intro rest remaining; cbv
+
+-- } impl fn read_counter() effects { reads
+def sourceChunk3 : Chunk where
+  characters := ['}', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'r', 'e', 'a', 'd', '_', 'c', 'o', 'u', 'n', 't', 'e', 'r',
+    '(', ')', ' ', 'e', 'f', 'f', 'e', 'c', 't', 's', ' ', '{', ' ', 'r', 'e', 'a', 'd', 's', ' ']
+  tokens := [.zeichen "}", .wort "impl", .wort "fn", .ident "read_counter", .zeichen "(", .zeichen ")",
+    .wort "effects", .zeichen "{", .wort "reads"]
+  steps := 16
+  scanned := by intro rest remaining; cbv
+
+-- counter } { let seen = counter; } impl fn
+def sourceChunk4 : Chunk where
+  characters := ['c', 'o', 'u', 'n', 't', 'e', 'r', ' ', '}', ' ', '{', ' ', 'l', 'e', 't', ' ', 's', 'e', 'e', 'n', ' ', '=',
+    ' ', 'c', 'o', 'u', 'n', 't', 'e', 'r', ';', ' ', '}', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ']
+  tokens := [.ident "counter", .zeichen "}", .zeichen "{", .wort "let", .ident "seen", .zeichen "=",
+    .ident "counter", .zeichen ";", .zeichen "}", .wort "impl", .wort "fn"]
+  steps := 21
+  scanned := by intro rest remaining; cbv
+
+-- use_counter() effects { writes counter }
+def sourceChunk5 : Chunk where
+  characters := ['u', 's', 'e', '_', 'c', 'o', 'u', 'n', 't', 'e', 'r', '(', ')', ' ', 'e', 'f', 'f', 'e', 'c', 't', 's', ' ',
+    '{', ' ', 'w', 'r', 'i', 't', 'e', 's', ' ', 'c', 'o', 'u', 'n', 't', 'e', 'r', ' ', '}', ' ']
+  tokens := [.ident "use_counter", .zeichen "(", .zeichen ")", .wort "effects", .zeichen "{", .wort "writes",
+    .ident "counter", .zeichen "}"]
+  steps := 14
+  scanned := by intro rest remaining; cbv
+
+-- { write_counter(); read_counter(); } }
+def sourceChunk6 : Chunk where
+  characters := ['{', ' ', 'w', 'r', 'i', 't', 'e', '_', 'c', 'o', 'u', 'n', 't', 'e', 'r', '(', ')', ';', ' ', 'r', 'e', 'a',
+    'd', '_', 'c', 'o', 'u', 'n', 't', 'e', 'r', '(', ')', ';', ' ', '}', ' ', '}']
+  tokens := [.zeichen "{", .ident "write_counter", .zeichen "(", .zeichen ")", .zeichen ";", .ident "read_counter",
+    .zeichen "(", .zeichen ")", .zeichen ";", .zeichen "}", .zeichen "}"]
+  steps := 15
+  scanned := by intro rest remaining; cbv
+
+def sourceChunks : List Chunk :=
+  [sourceChunk0, sourceChunk1, sourceChunk2, sourceChunk3, sourceChunk4, sourceChunk5, sourceChunk6]
+
+def source : String := String.ofList (characters sourceChunks)
 
 def writerBody : List Gabbro.Body.Stmt := [.assignGlobal "counter" (.lit (.int 9))]
 def readerBody : List Gabbro.Body.Stmt := [.bindName "seen" (.global "counter")]
@@ -100,14 +173,29 @@ def functions : List (declOf unit).Fn := ((lowerAllg unit).toOption.get lowered_
 
 theorem lowered : lowerAllg unit = .ok (program, functions) := except_ok_get lowered_some
 
-private def scanned : { tokens : List Parser.Token // Parser.lex source = .ok tokens } := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+def scanned : { tokens : List Parser.Token // Parser.lex source = .ok tokens } :=
+  ⟨tokens sourceChunks, by
+    rw [source, Parser.lex_ofList]
+    exact lex_chunks sourceChunks (by cbv)⟩
 
-private def parsed : { items : List Parser.SItemTief //
+noncomputable def parsed : { items : List Parser.SItemTief //
     Parser.parseTopTief scanned.val = .ok items } := by
   refine ⟨?_, by cbv <;> exact Eq.refl _⟩
 
-private theorem exported : elabU (pre108 parsed.val) = .ok unit := by cbv
+-- Retain phase outputs before proving the next phase, so no certificate repeats
+-- name resolution and module preparation while checking the exported function bodies.
+noncomputable def prepared : { items : List Parser.SItemTief // pre108 parsed.val = items } := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
+noncomputable def expanded : { result : List Parser.SItemTief × List (Parser.STyp × String) //
+    expandU prepared.val = .ok result } := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
+theorem exported : elabU (pre108 parsed.val) = .ok unit := by
+  rw [prepared.property]
+  unfold elabU
+  rw [expanded.property]
+  cbv
 
 theorem translated : uebersetzeAllg source = .ok ⟨unit, program, functions⟩ :=
   witness_translation scanned.property parsed.property exported lowered

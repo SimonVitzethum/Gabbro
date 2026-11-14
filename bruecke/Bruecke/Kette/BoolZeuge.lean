@@ -1,5 +1,6 @@
 module
 public import Bruecke.Kette.Formen.ZeugenSchritte
+public import Grammatik.Parser.Stmt.LibraryFixtureScanning
 import all Init.Data.String.Length
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -48,8 +49,12 @@ namespace Gabbro.Bruecke.BoolZeuge
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 
+open Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning
+
 set_option maxRecDepth 100000
 set_option maxHeartbeats 400000
+
+attribute [local cbv_eval] Parser.strEq_apply_eq_decide
 
 attribute [local cbv_eval] Nat.log2_def lowEns.eq_def lowCmp.eq_def lowWertE.eq_def
 
@@ -95,12 +100,92 @@ def unit : UProg :=
     locks := []
     fns := [predicate, toggle, caller] }
 
-def source : String :=
-  "module bools { impl fn is_digit(ch : u8 in 0 .. 127) -> bool { " ++
-  "return ch >= 48 && ch <= 57; } " ++
-  "impl fn toggle(enabled : bool) -> bool { let mut seen : bool = false; " ++
-  "if enabled { seen = true; } if seen { seen = false; } else { return true; } return seen; } " ++
-  "impl fn use_bools() { is_digit(55); toggle(true); } }"
+-- Each scanner certificate keeps an arbitrary suffix and remaining fuel.
+-- module bools { impl fn is_digit(ch : u8
+def sourceChunk0 : Chunk where
+  characters := ['m', 'o', 'd', 'u', 'l', 'e', ' ', 'b', 'o', 'o', 'l', 's', ' ', '{', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n',
+    ' ', 'i', 's', '_', 'd', 'i', 'g', 'i', 't', '(', 'c', 'h', ' ', ':', ' ', 'u', '8', ' ']
+  tokens := [.wort "module", .ident "bools", .zeichen "{", .wort "impl", .wort "fn", .ident "is_digit",
+    .zeichen "(", .ident "ch", .zeichen ":", .wort "u8"]
+  steps := 18
+  scanned := by intro rest remaining; cbv
+
+-- in 0 .. 127) -> bool { return ch >= 48 &&
+def sourceChunk1 : Chunk where
+  characters := ['i', 'n', ' ', '0', ' ', '.', '.', ' ', '1', '2', '7', ')', ' ', '-', '>', ' ', 'b', 'o', 'o', 'l', ' ', '{',
+    ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 'c', 'h', ' ', '>', '=', ' ', '4', '8', ' ', '&', '&', ' ']
+  tokens := [.wort "in", .num 0, .zeichen "..", .num 127, .zeichen ")", .zeichen "->",
+    .wort "bool", .zeichen "{", .wort "return", .ident "ch", .zeichen ">=", .num 48,
+    .zeichen "&&"]
+  steps := 25
+  scanned := by intro rest remaining; cbv
+
+-- ch <= 57; } impl fn toggle(enabled :
+def sourceChunk2 : Chunk where
+  characters := ['c', 'h', ' ', '<', '=', ' ', '5', '7', ';', ' ', '}', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 't', 'o',
+    'g', 'g', 'l', 'e', '(', 'e', 'n', 'a', 'b', 'l', 'e', 'd', ' ', ':', ' ']
+  tokens := [.ident "ch", .zeichen "<=", .num 57, .zeichen ";", .zeichen "}", .wort "impl",
+    .wort "fn", .ident "toggle", .zeichen "(", .ident "enabled", .zeichen ":"]
+  steps := 19
+  scanned := by intro rest remaining; cbv
+
+-- bool) -> bool { let mut seen : bool =
+def sourceChunk3 : Chunk where
+  characters := ['b', 'o', 'o', 'l', ')', ' ', '-', '>', ' ', 'b', 'o', 'o', 'l', ' ', '{', ' ', 'l', 'e', 't', ' ', 'm', 'u',
+    't', ' ', 's', 'e', 'e', 'n', ' ', ':', ' ', 'b', 'o', 'o', 'l', ' ', '=', ' ']
+  tokens := [.wort "bool", .zeichen ")", .zeichen "->", .wort "bool", .zeichen "{", .wort "let",
+    .wort "mut", .ident "seen", .zeichen ":", .wort "bool", .zeichen "="]
+  steps := 21
+  scanned := by intro rest remaining; cbv
+
+-- false; if enabled { seen = true; } if
+def sourceChunk4 : Chunk where
+  characters := ['f', 'a', 'l', 's', 'e', ';', ' ', 'i', 'f', ' ', 'e', 'n', 'a', 'b', 'l', 'e', 'd', ' ', '{', ' ', 's', 'e',
+    'e', 'n', ' ', '=', ' ', 't', 'r', 'u', 'e', ';', ' ', '}', ' ', 'i', 'f', ' ']
+  tokens := [.wort "false", .zeichen ";", .wort "if", .ident "enabled", .zeichen "{", .ident "seen",
+    .zeichen "=", .wort "true", .zeichen ";", .zeichen "}", .wort "if"]
+  steps := 20
+  scanned := by intro rest remaining; cbv
+
+-- seen { seen = false; } else { return
+def sourceChunk5 : Chunk where
+  characters := ['s', 'e', 'e', 'n', ' ', '{', ' ', 's', 'e', 'e', 'n', ' ', '=', ' ', 'f', 'a', 'l', 's', 'e', ';', ' ', '}',
+    ' ', 'e', 'l', 's', 'e', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ']
+  tokens := [.ident "seen", .zeichen "{", .ident "seen", .zeichen "=", .wort "false", .zeichen ";",
+    .zeichen "}", .wort "else", .zeichen "{", .wort "return"]
+  steps := 19
+  scanned := by intro rest remaining; cbv
+
+-- true; } return seen; } impl fn
+def sourceChunk6 : Chunk where
+  characters := ['t', 'r', 'u', 'e', ';', ' ', '}', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 's', 'e', 'e', 'n', ';', ' ', '}',
+    ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ']
+  tokens := [.wort "true", .zeichen ";", .zeichen "}", .wort "return", .ident "seen", .zeichen ";",
+    .zeichen "}", .wort "impl", .wort "fn"]
+  steps := 16
+  scanned := by intro rest remaining; cbv
+
+-- use_bools() { is_digit(55); toggle(true);
+def sourceChunk7 : Chunk where
+  characters := ['u', 's', 'e', '_', 'b', 'o', 'o', 'l', 's', '(', ')', ' ', '{', ' ', 'i', 's', '_', 'd', 'i', 'g', 'i', 't',
+    '(', '5', '5', ')', ';', ' ', 't', 'o', 'g', 'g', 'l', 'e', '(', 't', 'r', 'u', 'e', ')', ';', ' ']
+  tokens := [.ident "use_bools", .zeichen "(", .zeichen ")", .zeichen "{", .ident "is_digit", .zeichen "(",
+    .num 55, .zeichen ")", .zeichen ";", .ident "toggle", .zeichen "(", .wort "true",
+    .zeichen ")", .zeichen ";"]
+  steps := 18
+  scanned := by intro rest remaining; cbv
+
+-- } }
+def sourceChunk8 : Chunk where
+  characters := ['}', ' ', '}']
+  tokens := [.zeichen "}", .zeichen "}"]
+  steps := 3
+  scanned := by intro rest remaining; cbv
+
+def sourceChunks : List Chunk :=
+  [sourceChunk0, sourceChunk1, sourceChunk2, sourceChunk3, sourceChunk4, sourceChunk5, sourceChunk6, sourceChunk7, sourceChunk8]
+
+def source : String := String.ofList (characters sourceChunks)
 
 def predicateBody : List Gabbro.Body.Stmt :=
   [.ret (some (.bin .and (.bin .ge (.name "ch") (.lit (.int 48)))
@@ -137,14 +222,16 @@ def functions : List (declOf unit).Fn := ((lowerAllg unit).toOption.get lowered_
 
 theorem lowered : lowerAllg unit = .ok (program, functions) := except_ok_get lowered_some
 
-private def scanned : { tokens : List Parser.Token // Parser.lex source = .ok tokens } := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+def scanned : { tokens : List Parser.Token // Parser.lex source = .ok tokens } :=
+  ⟨tokens sourceChunks, by
+    rw [source, Parser.lex_ofList]
+    exact lex_chunks sourceChunks (by cbv)⟩
 
-private def parsed : { items : List Parser.SItemTief //
+noncomputable def parsed : { items : List Parser.SItemTief //
     Parser.parseTopTief scanned.val = .ok items } := by
   refine ⟨?_, by cbv <;> exact Eq.refl _⟩
 
-private theorem exported : elabU (pre108 parsed.val) = .ok unit := by cbv
+theorem exported : elabU (pre108 parsed.val) = .ok unit := by cbv
 
 theorem translated : uebersetzeAllg source = .ok ⟨unit, program, functions⟩ :=
   witness_translation scanned.property parsed.property exported lowered
@@ -162,7 +249,7 @@ theorem interfaces : SchnittstellenPflicht unit := by
 
 theorem predicate_meets : meetsU unit (wfU unit) predicate predicateBody := by
   intro ρB s hW hpre
-  change some (.bool ((s.local' "ch").hasShape (.intIn 0 127))) = some (.bool true) at hpre
+  change some (Gabbro.Body.Value.bool ((s.local' "ch").hasShape (.intIn 0 127))) = some (Gabbro.Body.Value.bool true) at hpre
   have hshape := Option.some.inj hpre
   injection hshape with hshape
   obtain ⟨n, hn, _, _⟩ := Gabbro.Body.Value.hasShape_intIn_true (s.local' "ch") 0 127 hshape
@@ -193,7 +280,7 @@ theorem toggle_exec (ρB : Gabbro.Body.Env) (s : Gabbro.Body.State) (b : Bool)
 
 theorem toggle_meets : meetsU unit (wfU unit) toggle toggleBody := by
   intro ρB s hW hpre
-  change some (.bool ((s.local' "enabled").hasShape .bool)) = some (.bool true) at hpre
+  change some (Gabbro.Body.Value.bool ((s.local' "enabled").hasShape .bool)) = some (Gabbro.Body.Value.bool true) at hpre
   have hshape := Option.some.inj hpre
   injection hshape with hshape
   obtain ⟨b, hb⟩ := Gabbro.Body.Value.hasShape_bool_true (s.local' "enabled") hshape
@@ -255,7 +342,7 @@ theorem nutzer_aus_quelleG_bool_zeuge :
 /-- Bool shadowing retains the outer value positionally and restores it at block exit. -/
 theorem shadowing_zeuge (β : Gabbro.Body.Binding) :
     PositionalLRel (caller.mitBindungB "flag") ["flag"] 0
-      (Env.cons (D := declOf unit) true Env.nil)
+      (Env.cons (D := declOf unit) (τ := .bool) true Env.nil)
       (Gabbro.Body.bindLocal (Gabbro.Body.bindLocal β "flag" (.bool true)) "flag#####" (.bool false)) := by
   have h0 : PositionalLRel caller [] 0 (Env.nil : Env (declOf unit) []) β := by
     refine ⟨rfl, List.Pairwise.nil, ?_⟩

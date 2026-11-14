@@ -1,5 +1,7 @@
 module
 public import Bruecke.Kette.Formen.ZeugenSchritte
+public import Grammatik.Parser.Stmt.LibraryFixtureScanning
+import all Grammatik.Parser.Elab.Uebersetze.Akku.ProbenPhases
 import all Init.Data.String.Length
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -48,8 +50,16 @@ namespace Gabbro.Bruecke.RufZeuge
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 
+open Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning
+
 set_option maxRecDepth 100000
 set_option maxHeartbeats 400000
+
+-- Select one actual reader node before inspecting its large-fuel callbacks.
+attribute [local cbv_opaque] uAnwReihe uAnwReiheCore uAkkuBinder uZeigerAnw uStartNamen
+attribute [local cbv_eval] row_nil row_cons core_bind core_call core_set
+  bound_names_select pointer_source_select start_source_select
+attribute [local cbv_eval] Parser.strEq_apply_eq_decide
 
 attribute [local cbv_eval] Nat.log2_def lowEns.eq_def lowCmp.eq_def lowWertE.eq_def
 
@@ -92,10 +102,57 @@ def unit : UProg :=
     locks := []
     fns := [number, answer, caller] }
 
-def source : String :=
-  "module results { impl fn number() -> u8 in 0 .. 9 { return 7; } " ++
-  "impl fn answer() -> bool { return true; } " ++
-  "impl fn use_results() { let n = number(); let ok = answer(); } }"
+-- Each scanner certificate keeps an arbitrary suffix and remaining fuel.
+-- module results { impl fn number() -> u8
+def sourceChunk0 : Chunk where
+  characters := ['m', 'o', 'd', 'u', 'l', 'e', ' ', 'r', 'e', 's', 'u', 'l', 't', 's', ' ', '{', ' ', 'i', 'm', 'p', 'l', ' ',
+    'f', 'n', ' ', 'n', 'u', 'm', 'b', 'e', 'r', '(', ')', ' ', '-', '>', ' ', 'u', '8', ' ']
+  tokens := [.wort "module", .ident "results", .zeichen "{", .wort "impl", .wort "fn", .wort "number",
+    .zeichen "(", .zeichen ")", .zeichen "->", .wort "u8"]
+  steps := 18
+  scanned := by intro rest remaining; cbv
+
+-- in 0 .. 9 { return 7; } impl fn answer()
+def sourceChunk1 : Chunk where
+  characters := ['i', 'n', ' ', '0', ' ', '.', '.', ' ', '9', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', '7', ';', ' ',
+    '}', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'a', 'n', 's', 'w', 'e', 'r', '(', ')', ' ']
+  tokens := [.wort "in", .num 0, .zeichen "..", .num 9, .zeichen "{", .wort "return",
+    .num 7, .zeichen ";", .zeichen "}", .wort "impl", .wort "fn", .ident "answer",
+    .zeichen "(", .zeichen ")"]
+  steps := 25
+  scanned := by intro rest remaining; cbv
+
+-- -> bool { return true; } impl fn
+def sourceChunk2 : Chunk where
+  characters := ['-', '>', ' ', 'b', 'o', 'o', 'l', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 't', 'r', 'u', 'e', ';',
+    ' ', '}', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ']
+  tokens := [.zeichen "->", .wort "bool", .zeichen "{", .wort "return", .wort "true", .zeichen ";",
+    .zeichen "}", .wort "impl", .wort "fn"]
+  steps := 17
+  scanned := by intro rest remaining; cbv
+
+-- use_results() { let n = number(); let ok
+def sourceChunk3 : Chunk where
+  characters := ['u', 's', 'e', '_', 'r', 'e', 's', 'u', 'l', 't', 's', '(', ')', ' ', '{', ' ', 'l', 'e', 't', ' ', 'n', ' ',
+    '=', ' ', 'n', 'u', 'm', 'b', 'e', 'r', '(', ')', ';', ' ', 'l', 'e', 't', ' ', 'o', 'k', ' ']
+  tokens := [.ident "use_results", .zeichen "(", .zeichen ")", .zeichen "{", .wort "let", .ident "n",
+    .zeichen "=", .wort "number", .zeichen "(", .zeichen ")", .zeichen ";", .wort "let",
+    .ident "ok"]
+  steps := 21
+  scanned := by intro rest remaining; cbv
+
+-- = answer(); } }
+def sourceChunk4 : Chunk where
+  characters := ['=', ' ', 'a', 'n', 's', 'w', 'e', 'r', '(', ')', ';', ' ', '}', ' ', '}']
+  tokens := [.zeichen "=", .ident "answer", .zeichen "(", .zeichen ")", .zeichen ";", .zeichen "}",
+    .zeichen "}"]
+  steps := 10
+  scanned := by intro rest remaining; cbv
+
+def sourceChunks : List Chunk :=
+  [sourceChunk0, sourceChunk1, sourceChunk2, sourceChunk3, sourceChunk4]
+
+def source : String := String.ofList (characters sourceChunks)
 
 def numberBody : List Gabbro.Body.Stmt := [.ret (some (.lit (.int 7)))]
 def answerBody : List Gabbro.Body.Stmt := [.ret (some (.lit (.bool true)))]
@@ -122,14 +179,29 @@ def functions : List (declOf unit).Fn := ((lowerAllg unit).toOption.get lowered_
 
 theorem lowered : lowerAllg unit = .ok (program, functions) := except_ok_get lowered_some
 
-private def scanned : { tokens : List Parser.Token // Parser.lex source = .ok tokens } := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+def scanned : { tokens : List Parser.Token // Parser.lex source = .ok tokens } :=
+  ⟨tokens sourceChunks, by
+    rw [source, Parser.lex_ofList]
+    exact lex_chunks sourceChunks (by cbv)⟩
 
-private def parsed : { items : List Parser.SItemTief //
+noncomputable def parsed : { items : List Parser.SItemTief //
     Parser.parseTopTief scanned.val = .ok items } := by
   refine ⟨?_, by cbv <;> exact Eq.refl _⟩
 
-private theorem exported : elabU (pre108 parsed.val) = .ok unit := by cbv
+-- Retain phase outputs before proving the next phase, so no certificate repeats
+-- name resolution and module preparation while checking the exported function bodies.
+noncomputable def prepared : { items : List Parser.SItemTief // pre108 parsed.val = items } := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
+noncomputable def expanded : { result : List Parser.SItemTief × List (Parser.STyp × String) //
+    expandU prepared.val = .ok result } := by
+  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+
+theorem exported : elabU (pre108 parsed.val) = .ok unit := by
+  rw [prepared.property]
+  unfold elabU
+  rw [expanded.property]
+  cbv
 
 theorem translated : uebersetzeAllg source = .ok ⟨unit, program, functions⟩ :=
   witness_translation scanned.property parsed.property exported lowered

@@ -1,5 +1,6 @@
 module
 public import Bruecke.Kette.Formen.ZeugenSchritte
+public import Grammatik.Parser.Stmt.LibraryFixtureScanning
 import all Init.Data.String.Length
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -45,8 +46,12 @@ import all Grammatik.Parser.Elab.UebersetzeAllg3.Body
 namespace Gabbro.Bruecke.ReasonZeuge
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
+open Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning
+
 set_option maxRecDepth 100000
 set_option maxHeartbeats 400000
+
+attribute [local cbv_eval] Parser.strEq_apply_eq_decide
 attribute [local cbv_eval] Nat.log2_def lowEns.eq_def lowCmp.eq_def lowWertE.eq_def
 
 def test : UFn :=
@@ -62,10 +67,50 @@ def unit : UProg :=
   { tabs := [], locks := [], fns := [test],
     whys := [{ name := "R", cases := ["A", "B"], descriptor := some descriptor }] }
 
-def source : String :=
-  "module reasons { reason R { A = 1 \"a\", B = 2 \"b\" exhaustive } " ++
-  "impl fn test(r : R) -> u8 in 0 .. 1 { " ++
-  "match r { A => { return 1; } B => { return 0; } } return 0; } }"
+-- Each scanner certificate keeps an arbitrary suffix and remaining fuel.
+-- module reasons { reason R { A = 1 "a", B
+def sourceChunk0 : Chunk where
+  characters := ['m', 'o', 'd', 'u', 'l', 'e', ' ', 'r', 'e', 'a', 's', 'o', 'n', 's', ' ', '{', ' ', 'r', 'e', 'a', 's', 'o',
+    'n', ' ', 'R', ' ', '{', ' ', 'A', ' ', '=', ' ', '1', ' ', '"', 'a', '"', ',', ' ', 'B', ' ']
+  tokens := [.wort "module", .ident "reasons", .zeichen "{", .wort "reason", .ident "R", .zeichen "{",
+    .ident "A", .zeichen "=", .num 1, .text "a", .zeichen ",", .ident "B"]
+  steps := 23
+  scanned := by intro rest remaining; cbv
+
+-- = 2 "b" exhaustive } impl fn test(r : R)
+def sourceChunk1 : Chunk where
+  characters := ['=', ' ', '2', ' ', '"', 'b', '"', ' ', 'e', 'x', 'h', 'a', 'u', 's', 't', 'i', 'v', 'e', ' ', '}', ' ', 'i',
+    'm', 'p', 'l', ' ', 'f', 'n', ' ', 't', 'e', 's', 't', '(', 'r', ' ', ':', ' ', 'R', ')', ' ']
+  tokens := [.zeichen "=", .num 2, .text "b", .wort "exhaustive", .zeichen "}", .wort "impl",
+    .wort "fn", .ident "test", .zeichen "(", .wort "r", .zeichen ":", .ident "R",
+    .zeichen ")"]
+  steps := 23
+  scanned := by intro rest remaining; cbv
+
+-- -> u8 in 0 .. 1 { match r { A => { return
+def sourceChunk2 : Chunk where
+  characters := ['-', '>', ' ', 'u', '8', ' ', 'i', 'n', ' ', '0', ' ', '.', '.', ' ', '1', ' ', '{', ' ', 'm', 'a', 't', 'c',
+    'h', ' ', 'r', ' ', '{', ' ', 'A', ' ', '=', '>', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ']
+  tokens := [.zeichen "->", .wort "u8", .wort "in", .num 0, .zeichen "..", .num 1,
+    .zeichen "{", .wort "match", .wort "r", .zeichen "{", .ident "A", .zeichen "=>",
+    .zeichen "{", .wort "return"]
+  steps := 28
+  scanned := by intro rest remaining; cbv
+
+-- 1; } B => { return 0; } } return 0; } }
+def sourceChunk3 : Chunk where
+  characters := ['1', ';', ' ', '}', ' ', 'B', ' ', '=', '>', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', '0', ';', ' ',
+    '}', ' ', '}', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', '0', ';', ' ', '}', ' ', '}']
+  tokens := [.num 1, .zeichen ";", .zeichen "}", .ident "B", .zeichen "=>", .zeichen "{",
+    .wort "return", .num 0, .zeichen ";", .zeichen "}", .zeichen "}", .wort "return",
+    .num 0, .zeichen ";", .zeichen "}", .zeichen "}"]
+  steps := 28
+  scanned := by intro rest remaining; cbv
+
+def sourceChunks : List Chunk :=
+  [sourceChunk0, sourceChunk1, sourceChunk2, sourceChunk3]
+
+def source : String := String.ofList (characters sourceChunks)
 
 def body : List Gabbro.Body.Stmt :=
   [.onReason (.name "r") [(caseLabel 0, [.ret (some (.lit (.int 1)))]),
@@ -88,11 +133,13 @@ def functions : List (declOf unit).Fn := ((lowerAllg unit).toOption.get lowered_
 
 theorem lowered : lowerAllg unit = .ok (program, functions) := except_ok_get lowered_some
 
-private def scanned : { tokens : List Parser.Token // Parser.lex source = .ok tokens } := by
+def scanned : { tokens : List Parser.Token // Parser.lex source = .ok tokens } :=
+  ⟨tokens sourceChunks, by
+    rw [source, Parser.lex_ofList]
+    exact lex_chunks sourceChunks (by cbv)⟩
+noncomputable def parsed : { items : List Parser.SItemTief // Parser.parseTopTief scanned.val = .ok items } := by
   refine ⟨?_, by cbv <;> exact Eq.refl _⟩
-private def parsed : { items : List Parser.SItemTief // Parser.parseTopTief scanned.val = .ok items } := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
-private theorem exported : elabU (pre108 parsed.val) = .ok unit := by cbv
+theorem exported : elabU (pre108 parsed.val) = .ok unit := by cbv
 
 theorem translated : uebersetzeAllg source = .ok ⟨unit, program, functions⟩ :=
   witness_translation scanned.property parsed.property exported lowered
@@ -109,8 +156,8 @@ theorem interfaces : SchnittstellenPflicht unit := by
 
 theorem meets : meetsU unit (wfU unit) test body := by
   intro ρB s hW hpre
-  change some (.bool (decide (s.local' "r" = .reason (caseLabel 0)) ||
-    (decide (s.local' "r" = .reason (caseLabel 1)) || false))) = some (.bool true) at hpre
+  change some (Gabbro.Body.Value.bool (decide (s.local' "r" = .reason (caseLabel 0)) ||
+    (decide (s.local' "r" = .reason (caseLabel 1)) || false))) = some (Gabbro.Body.Value.bool true) at hpre
   have hs := Option.some.inj hpre
   injection hs with hs
   simp only [Bool.or_false, Bool.or_eq_true, decide_eq_true_eq] at hs
@@ -138,7 +185,10 @@ theorem carried_duties : PflichtenTeilG source (u := unit) (fun _ => True) := by
   refine ⟨uOf_eq translated, (by cbv), getragenG_of_bools (by cbv) (by cbv) (by cbv),
     (by cbv), fun P fs hlow c _ => interfaces P fs hlow c, ?_, ?_⟩
   · intro c _
-    have hc : c = ⟨0, by decide⟩ := Fin.ext (by have h := c.isLt; change c.val < 1 at h; omega)
+    have hc : c = ⟨0, by decide⟩ := Fin.ext (by
+      change c.val = 0
+      have h : c.val < 1 := c.isLt
+      omega)
     subst c
     exact ⟨body, reader_form, meets⟩
   · intro c hc
