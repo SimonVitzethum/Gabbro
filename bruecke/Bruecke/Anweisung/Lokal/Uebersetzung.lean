@@ -131,9 +131,9 @@ decreasing_by all_goals (simp_wf <;> omega)
 theorem recordReads_sicht {fT fn : UFn} (h : Sicht u fT fn) (fields : List (Ty × USide)) :
     recordReads u fT (numericSideExprG u fT) fields =
       recordReads u fn (numericSideExprG u fn) fields := by
-  cases fields with
-  | nil => rfl
-  | cons field rest => simp only [recordReads, recordRead_sicht h field.2, recordReads_sicht h rest]
+  match fields with
+  | [] => simp only [recordReads]
+  | (ty, sd) :: rest => simp only [recordReads, recordRead_sicht h sd, recordReads_sicht h rest]
 termination_by 3 * sizeOf fields + 1
 decreasing_by all_goals (simp_wf <;> omega)
 end

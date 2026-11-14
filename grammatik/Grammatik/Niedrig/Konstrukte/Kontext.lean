@@ -32,7 +32,7 @@ theorem ctxOrigin_evidence {item : D.Ax} (checked : CtxOriginOk item) :
     have present := checked.2
     rw [evidence] at present
     cases present
-  | some named => exact ⟨checked.1, named, evidence⟩
+  | some named => exact ⟨checked.1, named, rfl⟩
 
 /-- Static linear data, without pretending to identify a source inventory with
     an arbitrary ghost context. G8 discharges that dynamic linkage. -/
