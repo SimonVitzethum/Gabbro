@@ -119,7 +119,7 @@ theorem zelle_geschrieben (K : Nat) (passes : Nat)
   have h : execEnd (oK K) passes R rumpf w0 .nil =
       (execEnd (oK K) passes R weiter ((w0.lese [] []).fragt (.inl ())) (.cons (Val.vonZelle K) .nil)).schrumpf := by
     simp only [rumpf_ist_anbieterruf, execEnd, axiomAntwort, Orakel.wirkt, oK, World.auf,
-      World.ohneLese, Args.orte, antwort_K]
+      World.ohneLese, Args.orte, antwort_K, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte]
     rfl
   rw [h]
   refine ⟨_, rfl, ?_⟩

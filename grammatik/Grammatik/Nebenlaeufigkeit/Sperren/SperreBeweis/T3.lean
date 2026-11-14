@@ -145,7 +145,7 @@ theorem fadenS_blatt (hO : GutO O) (hQ : AxVertragO Q O)
           intro O' R U σ hz hw
           rw [hsem]
           apply ZErgG.folgt_of_eq
-          simp only [execStmtH, axiomAntwort, hw]
+          simp only [execStmtH, axiomAntwort, hw, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte]
           simp only [(show O'.zeiger = O.zeiger from hz), hu]
           rfl
       | _ => simp only [Stmt.istAxiom, Bool.false_eq_true] at hax

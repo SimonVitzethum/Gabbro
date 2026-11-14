@@ -298,7 +298,7 @@ theorem axiom_offen' {O : Orakel D} (hO : GutO O) (a : D.Ax) (σ : World D)
     (hax : axiomAntwort O a σ ρ = (σ₂, v)) : offen σ₂.spur = offen σ.spur := by
   have e : σ₂ = (O.wirkt a (σ.fragt (.inl a)) ρ).1 := by
     have := congrArg Prod.fst hax
-    simp only [axiomAntwort] at this
+    simp only [axiomAntwort, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at this
     exact this.symm
   subst e
   exact (hO a (σ.fragt (.inl a)) ρ).2.1

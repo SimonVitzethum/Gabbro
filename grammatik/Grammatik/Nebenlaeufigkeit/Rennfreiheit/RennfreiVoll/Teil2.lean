@@ -38,7 +38,7 @@ local macro "delta_axiom" antwort:ident : tactic => `(tactic| (
   obtain ⟨tabs, globs, Λe, _, _, _, _, _, _, hspur⟩ := hcond hgt hgg
   have hB : Brav (M.weltVon f) σ₂ := by
     have := hl.2.trans ha.2
-    simp only [axiomAntwort] at this
+    simp only [axiomAntwort, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at this
     rw [e2]
     exact this
   refine zugriffsDelta_brav hB

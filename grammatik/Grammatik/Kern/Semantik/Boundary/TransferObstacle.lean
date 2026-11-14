@@ -64,7 +64,7 @@ theorem probe_conditional_duty_excludes_bound (O : Orakel probeD)
     (axiomAntwortSonst O () probeWorld .nil probeCheck (some probeFailure)).2 ≠
       some (.inl probeAtBound) := by
   intro accepted
-  simp only [axiomAntwortSonst, Option.isSome_some, Bool.or_true, ↓reduceIte] at accepted
+  simp only [axiomAntwortSonst, Option.isSome_some, Bool.or_true, ↓reduceIte, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at accepted
   obtain ⟨decoded, _⟩ := gate_success _ _ _ probeAtBound accepted
   have encoded := probe_at_bound_encoding O.zeiger
     (O.wirkt () (probeWorld.fragt (.inl ())) .nil).2 decoded

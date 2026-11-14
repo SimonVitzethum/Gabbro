@@ -59,7 +59,7 @@ theorem axiomAntwortSonst_contract (contracts : ∀ a : D.Ax,
       some (.inl v)) :
     (contracts a).denote (R a) (σ.fragt (.inl a))
       (O.wirkt a (σ.fragt (.inl a)) ρ).1 (ergEnv (D.aerg a) v ρ) = true := by
-  simp only [axiomAntwortSonst, Option.isSome_some, Bool.or_true, ↓reduceIte] at accepted
+  simp only [axiomAntwortSonst, Option.isSome_some, Bool.or_true, ↓reduceIte, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at accepted
   obtain ⟨decoded, checked⟩ := Boundary.gate_success _ _ _ v accepted
   have normal : entryNormalAnswer O.zeiger a
       (O.wirkt a (σ.fragt (.inl a)) ρ).2 = some v := by

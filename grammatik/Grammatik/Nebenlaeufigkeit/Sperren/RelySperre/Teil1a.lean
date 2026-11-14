@@ -168,7 +168,7 @@ theorem blatt_erhaelt_globs
             (evalArgs ((M.weltVon f).lese Λ args.orte) args
               ((M.weltVon f).lese Λ args.orte) ρ)).1 = σ1 := by
           have h1 := congrArg Prod.fst ha
-          simp only [axiomAntwort] at h1
+          simp only [axiomAntwort, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at h1
           exact h1
         have hframe := (hO a (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
           (evalArgs ((M.weltVon f).lese Λ args.orte) args

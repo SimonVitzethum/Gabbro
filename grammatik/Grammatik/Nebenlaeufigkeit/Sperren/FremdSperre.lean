@@ -215,7 +215,7 @@ theorem axiomCall_haelt_waechter
         (evalArgs (σ.lese Λ args.orte) args
           (σ.lese Λ args.orte) ρ)).1 = σ1 := by
       have h1 := congrArg Prod.fst ha
-      simp only [axiomAntwort] at h1
+      simp only [axiomAntwort, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at h1
       exact h1
     clear ha v
     obtain ⟨k, f, hne⟩ := hdiff
@@ -252,7 +252,7 @@ theorem axiomCall_haelt_waechter
     exact ⟨hguard, hguardG, hrahmen⟩
   · rename_i hx
     have h2 := congrArg Prod.snd hx
-    simp only [axiomAntwort] at h2
+    simp only [axiomAntwort, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at h2
     rw [h] at h2
     simp only [einpassenErg] at h2
     simp only [reduceCtorEq] at h2

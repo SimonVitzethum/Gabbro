@@ -71,7 +71,7 @@ theorem nie_tor_kehrt_nicht_zurueck (a : D.Ax) (h : D.aerg a = some Ty.never)
     (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
     (rest : Block D V l (τ :: Γ) Λ Λ') (σ : World D) (ρ : Env D Γ) :
     execBlock O passes R (.bindAxiom a args he hw hg hd hgd rest) σ ρ = .hardware (.annahme a) := by
-  simp only [execBlock, axiomAntwort]
+  simp only [execBlock, axiomAntwort, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte]
   have hleer : ∀ n, einpassenErg O.zeiger (D.aerg a) n = none := by
     intro n; rw [h]; rfl
   rw [hleer]

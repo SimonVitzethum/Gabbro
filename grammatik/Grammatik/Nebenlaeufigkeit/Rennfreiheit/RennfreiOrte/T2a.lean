@@ -89,7 +89,7 @@ theorem blatt_ev (P : Programm D) (O : Orakel D) (passes : Nat)
         have e1 : σ1 = (O.wirkt a ((σ.lese Λ args.orte).fragt (.inl a))
             (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).1 := by
           have := congrArg Prod.fst ha
-          simp only [axiomAntwort] at this
+          simp only [axiomAntwort, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at this
           exact this.symm
         obtain ⟨X, hX, hok⟩ := axiom_ev (C := C) (W := schreibV V) O hO a ((σ.lese Λ args.orte).fragt (.inl a))
           (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) hd hgd (hl.heldIn hh)
