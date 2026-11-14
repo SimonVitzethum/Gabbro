@@ -136,9 +136,9 @@ theorem deriveScopes_custom_negative_zeuge :
       result.scope.declared = [("Small", (-10, 100))] ∧
       ¬ EnvironmentCompatible items (normalizeAliases items) := by
   dsimp only
-  refine ⟨(deriveScopes _).toOption.get (by decide +kernel), ?_, ?_, ?_, ?_⟩
+  refine ⟨(deriveScopes _).toOption.get (by cbv), ?_, ?_, ?_, ?_⟩
   · exact Gabbro.Grammatik.except_ok_get _
-  all_goals decide +kernel
+  all_goals cbv
 
 /-- The generic prefix/lookup chain on actual original declarations, with a negative binding
     read by a later checked expression. No fabricated candidate values enter the certificate. -/

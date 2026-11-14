@@ -105,6 +105,7 @@ def uSpeicherBreite (widths : List (String × (Int × Int))) : STyp → Nat
 def uTuplePrefix (alias : List (String × (Int × Int))) (elements : List STyp) : String :=
   "#tuple:" ++ String.intercalate "," (elements.map (fun ty => toString (uSpeicherBreite alias ty))) ++ ":"
 
+mutual
 /-- A surface type as G sees it: a pointer to a table, an index
     into one, or an integer range (the `ParamTy`/`int_range` of
     `lean_g.rs`). `own@m` rights resolve against the unit's declared owner
@@ -156,7 +157,7 @@ def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : L
     | .error e, _ => .error e
     | _, none => .error "array length without G form"
   | .tuple elements => do
-    let types ← elements.mapM (uTypIn alias tabs named spaces eigner)
+    let types ← uTypInList alias tabs named spaces eigner elements
     match named.find? (fun (name, ty) => name.startsWith (uTuplePrefix alias elements) &&
         (match ty with | .prod _ fields => fields == types | _ => false)) with
     | some (_, ty) => pure ty
@@ -166,6 +167,16 @@ def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : L
     | some k => if 0 ≤ k then .ok (.str k.toNat) else .error "string of a negative maximum"
     | none => .error "string maximum without G form"
   | t => .error ("type without G form: " ++ sTypText t)
+
+/-- The reader over the components of a tuple, in order (`mapM` without nested recursion). -/
+def uTypInList (alias : List (String × (Int × Int))) (tabs : List UTab) (named : List (String × Ty))
+    (spaces eigner : List String) : List STyp → Except String (List Ty)
+  | [] => pure []
+  | ty :: rest => do
+    let head ← uTypIn alias tabs named spaces eigner ty
+    let tail ← uTypInList alias tabs named spaces eigner rest
+    pure (head :: tail)
+end
 
 /-- The canonical reader in a declaration environment without named value schemas. -/
 def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) (spaces : List String := []) (eigner : List String := []) : STyp → Except String Ty :=
