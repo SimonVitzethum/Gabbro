@@ -271,7 +271,7 @@ theorem rufRumpf_lg {P : Programm D} :
   | 0 => fun _ _ _ _ _ => .logik _
   | n + 1 => fun g σ σ' ρ h => by
       have he := execEnd_lg (passes := passes)
-        (rufRumpf_lg (P := P) (O := O) (passes := passes) (Er := Er) n) (leseblindRS_alle O) (P.rumpf g) ((leseblindP_alle P O).rumpf g) h ρ
+        (rufRumpf_lg (P := P) n) (leseblindRS_alle O) (P.rumpf g) ((leseblindP_alle P O).rumpf g) h ρ
       simp only [rufRumpf]
       generalize execEnd O passes (rufRumpf P O passes n) (P.rumpf g) σ ρ = o₁ at he ⊢
       generalize execEnd O passes (rufRumpf P O passes n) (P.rumpf g) σ' ρ = o₂ at he ⊢

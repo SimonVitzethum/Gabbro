@@ -97,7 +97,7 @@ theorem rufAt_rufRumpf_unter (Er : Fehlermarke D → Prop)
         exact .frueh (hvor g _ ρ hq)
       rw [if_neg hq]
       have he := execEnd_lg (passes := passes)
-        (rufAt_rufRumpf_unter (P := P) (O := O) (passes := passes) Er hvor hnach hinv n) (leseblindRS_alle O) (P.rumpf g) ((leseblindP_alle P O).rumpf g)
+        (rufAt_rufRumpf_unter Er hvor hnach hinv n) (leseblindRS_alle O) (P.rumpf g) ((leseblindP_alle P O).rumpf g)
         ((weltGleich_lese σ (Signatur.anfang D (D.signatur g)) (P.requires g).orte).symm.trans hσ) ρ
       generalize execEnd (V := vertragVon D g) O passes (rufAt P O passes n) (P.rumpf g)
         (σ.lese (Signatur.anfang D (D.signatur g)) (P.requires g).orte) ρ = o₁ at he ⊢
