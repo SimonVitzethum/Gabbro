@@ -94,8 +94,8 @@ def Spez.wurzelnVon (z : Spez) (P : Programm z.deklaration) (ws : List z.deklara
   ws ++ z.fnListe.filter fun f => P.unterbricht f
 
 /-- The Lean model's Bool `AkzeptiertX` on a program of a member, with the instances named once. -/
-def Spez.gutB (z : Spez) (P : Programm z.deklaration) (S : SperrInv z.deklaration) (ws : List z.deklaration.Fn) : Bool :=
-  @AkzeptiertX z.deklaration z.aufz.decFn z.aufz.decAx P S z.fnListe z.lockListe z.traegerListe ws [] [] [] []
+def Spez.gutB (z : Spez) (P : Programm z.deklaration) (ws : List z.deklaration.Fn) : Bool :=
+  @AkzeptiertX z.deklaration z.aufz.decFn z.aufz.decAx P z.sperreMax z.fnListe z.lockListe z.traegerListe ws [] [] [] [] z.lockSources
 
 /-- `nurAnB`: component `c` refuses the program and the other nine accept it. -/
 def Spez.nurB (z : Spez) (c : Fin 10) (P : Programm z.deklaration) (S : SperrInv z.deklaration)
@@ -113,7 +113,7 @@ structure Gutes (z : Spez) where
   ws : List z.deklaration.Fn
   ohneAx : z.axs = []
   boden : z.bodenOk prog = true
-  gueltig : z.gutB prog z.sperreMax (z.wurzelnVon prog ws) = true
+  gueltig : z.gutB prog (z.wurzelnVon prog ws) = true
 
 /-- A program of the source the model refuses, with its proof. -/
 structure Abgelehntes (z : Spez) where
@@ -121,12 +121,12 @@ structure Abgelehntes (z : Spez) where
   ws : List z.deklaration.Fn
   ohneAx : z.axs = []
   boden : z.bodenOk prog = true
-  abgelehnt : z.gutB prog z.sperreMax (z.wurzelnVon prog ws) = false
+  abgelehnt : z.gutB prog (z.wurzelnVon prog ws) = false
 
 /-- The proof of a `Gutes` is the statement of the goal theorem's checker: the Lean model accepts the program. -/
 theorem Gutes.akzeptiert {z : Spez} (g : Gutes z) :
     @AkzeptiertX z.deklaration z.aufz.decFn z.aufz.decAx g.prog z.sperreMax z.fnListe z.lockListe z.traegerListe
-      (z.wurzelnVon g.prog g.ws) [] [] [] [] = true :=
+      (z.wurzelnVon g.prog g.ws) [] [] [] [] z.lockSources = true :=
   g.gueltig
 
 /-- What the generator emits: a valid program or a refused one, each with its proof. -/
@@ -152,7 +152,7 @@ def Spez.erzeugeAus (z : Spez) (h : Programm z.deklaration) (ws : List z.deklara
     match hb : z.bodenOk h with
     | false => none
     | true =>
-      match hv : z.gutB h z.sperreMax (z.wurzelnVon h ws) with
+      match hv : z.gutB h (z.wurzelnVon h ws) with
       | true => some (.gut ⟨h, ws, hax, hb, hv⟩)
       | false => some (.abgelehnt ⟨h, ws, hax, hb, hv⟩)
   else none

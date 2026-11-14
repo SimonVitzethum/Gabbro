@@ -81,8 +81,8 @@ theorem e_strukturell : Adaequanz.akzeptiert Einsatz.Hat gutTafel e := by
 
 /-- Full acceptance additionally requires the invariant and contract gates. -/
 theorem e_gueltig_iff_gates : e.gueltig = true ↔
-    @Invarianten.Pruefer.programInvariantsB e.D e.P e.S e.fs (fun _ => none) {} e.ls = true ∧
-    @Vertraege.Pruefer.KontrakteGeprueftB e.D e.P e.S e.fs (fun _ => none) {} (fun _ => none) = true := by
+    @Invarianten.Pruefer.programInvariantsB e.D e.P e.S e.fs e.lockSources {} e.ls = true ∧
+    @Vertraege.Pruefer.KontrakteGeprueftB e.D e.P e.S e.fs e.lockSources {} (fun _ => none) = true := by
   rw [einsatz_akzeptiert e]
   simp only [e_strukturell, true_and]
 

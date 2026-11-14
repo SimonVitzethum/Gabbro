@@ -120,13 +120,14 @@ private theorem scopes_of_components {P : Programm D} {fs : List D.Fn}
 theorem akzeptiertX_iff (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn)
     (aks : List (Gabbro.Grammatik.Kernzelle.AccumulatorDecl D))
-    (aqs : List D.Ax := []) :
-    AkzeptiertX P S fs ls cs ws aks [] aqs = true ↔
+    (aqs : List D.Ax := [])
+    (sources : Invarianten.Pruefer.LockSources S := fun _ => none) :
+    AkzeptiertX P S fs ls cs ws aks [] aqs [] sources = true ↔
       (∀ c, komp P S fs ls cs ws c = true) ∧
         Gabbro.Grammatik.Kernzelle.accumulatorB P fs (tabsOf cs) (globsOf cs) aqs aks = true ∧
         resetB cs = true ∧
-        Invarianten.Pruefer.programInvariantsB P S fs (fun _ => none) {} ls = true ∧
-        Vertraege.Pruefer.KontrakteGeprueftB P S fs = true := by
+        Invarianten.Pruefer.programInvariantsB P S fs sources {} ls = true ∧
+        Vertraege.Pruefer.KontrakteGeprueftB P S fs sources = true := by
   unfold AkzeptiertX
   simp only [GuestBoundary.admissionB_nil, interface_components, libraryB_immer,
     checkB, List.all_nil, eindeutigeNamen, Bool.and_true, Bool.and_eq_true, and_assoc]

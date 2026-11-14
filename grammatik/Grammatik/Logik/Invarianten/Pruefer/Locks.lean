@@ -20,6 +20,18 @@ structure ReifiedLock (S : SperrInv D) (lock : D.Lock) where
 
 abbrev LockSources (S : SperrInv D) := ∀ lock, Option (ReifiedLock S lock)
 
+/-- Reify a predicate defined by a closed source expression. This transports
+    only its meaning; the checker still proves locality and every release VC. -/
+def ReifiedLock.ofExpression (resources : List (Res D))
+    (expression : Expr D [] resources .bool) (S : SperrInv D) (lock : D.Lock)
+    (meaning : ∀ memory, S.inv lock memory =
+      eval (memory.welt []) expression (memory.welt []) .nil) : ReifiedLock S lock where
+  resources := resources
+  expression := expression
+  correct world := by
+    rw [meaning]
+    exact eval_spurfrei expression _ _ _ _ rfl rfl rfl rfl .nil
+
 def lockFormula (S : SperrInv D) (sources : LockSources S) (lock : D.Lock) :
     Except Refusal (LockFormula S lock) := do
   let some source := sources lock
@@ -29,6 +41,14 @@ def lockFormula (S : SperrInv D) (sources : LockSources S) (lock : D.Lock) :
     { formula := lower encoded.payload
       correct := fun world => by
         rw [lower_denote, ← encoded.bool_iff world, source.correct world] }
+
+/-- Every produced formula denotes exactly the canonical model obligation,
+    in every world, independently of the program being checked. -/
+theorem lockFormula_sound (S : SperrInv D) (sources : LockSources S) (lock : D.Lock)
+    (fact : LockFormula S lock) (_checked : lockFormula S sources lock = .ok fact)
+    (world : World D) :
+    fact.formula.denote (assignment world) ↔ S.inv lock world.speicher = true :=
+  fact.correct world
 
 /-- Enumerate parameter values, with a proof of completeness. No arbitrary
     sample or supplied proof of a function contract participates in checking. -/

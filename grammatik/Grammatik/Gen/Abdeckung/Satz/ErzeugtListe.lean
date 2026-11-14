@@ -74,7 +74,7 @@ theorem mem_erzeugtL {z : Spez} {tbls : List (Σ f : z.deklaration.Fn, List (Lis
 
 /-- A valid program is emitted as a `Gutes`. -/
 theorem erzeugeAus_gut {z : Spez} {P : Programm z.deklaration} {ws : List z.deklaration.Fn}
-    (hax : z.axs = []) (hb : z.bodenOk P = true) (hv : z.gutB P z.sperreMax (z.wurzelnVon P ws) = true) :
+    (hax : z.axs = []) (hb : z.bodenOk P = true) (hv : z.gutB P (z.wurzelnVon P ws) = true) :
     z.erzeugeAus P ws = some (.gut ⟨P, ws, hax, hb, hv⟩) := by
   unfold Spez.erzeugeAus
   rw [dif_pos hax]
@@ -86,7 +86,7 @@ theorem erzeugeAus_gut {z : Spez} {P : Programm z.deklaration} {ws : List z.dekl
 
 /-- A refused program is emitted as an `Abgelehntes`. -/
 theorem erzeugeAus_abgelehnt {z : Spez} {P : Programm z.deklaration} {ws : List z.deklaration.Fn}
-    (hax : z.axs = []) (hb : z.bodenOk P = true) (hv : z.gutB P z.sperreMax (z.wurzelnVon P ws) = false) :
+    (hax : z.axs = []) (hb : z.bodenOk P = true) (hv : z.gutB P (z.wurzelnVon P ws) = false) :
     z.erzeugeAus P ws = some (.abgelehnt ⟨P, ws, hax, hb, hv⟩) := by
   unfold Spez.erzeugeAus
   rw [dif_pos hax]
