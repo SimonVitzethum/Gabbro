@@ -2,6 +2,8 @@ module
 
 public import Grammatik.Logik.Invarianten.VC.Writer
 public import Grammatik.Logik.Invarianten.Frag.Witness
+import Mathlib.Tactic.NormNum
+import Lean.Elab.Tactic.Omega
 
 @[expose] public section
 
@@ -99,7 +101,7 @@ theorem guarded_decided_zeuge : decideB (writerVC guardedCompiled entry .tru) = 
   rw [quoteQF_denote, guarded_formula]
   simp only [lower_denote, LProp.denote, quoteQF_denote, incrementFormula,
     incrementRange, subst_denote, post, entry, incrementTerm, LTerm.denote] at *
-  simp only [Assignment.bind, ↓reduceIte] at *
+  simp [Assignment.bind] at *
   omega
 
 /-- A concrete typed pre-state realizes the failed unguarded increment. -/
