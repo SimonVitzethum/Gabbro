@@ -132,7 +132,7 @@ theorem Inv.erhoeht (hN : N ≤ 2147483647) {σ : Zustand N} (hI : Inv N σ) {t 
 /-- **The waiter decrement**: the successful `cas` uncounts the thread; the count was at least one. -/
 theorem Inv.senkt (hN : N ≤ 2147483647) {σ : Zustand N} (hI : Inv N σ) {t : Fin N} {k s0 lw : Nat}
     (h : σ.pc t = .decC k s0 lw) (e : σ.w.wait = lw) :
-    Inv N ⟨⟨σ.w.next, σ.w.serv, (lw + 18446744073709551615) % 18446744073709551616⟩,
+    Inv N ⟨⟨σ.w.next, σ.w.serv, wrapDec lw⟩,
       upd σ.pc t (.ladeS k), σ.q⟩ := by
   have htq : t ∈ σ.q := (hI.mem t).2 (by simp [h, Ort.ticket])
   have hc : σ.q.countP (fun u => (upd σ.pc t (.ladeS k) u).gezaehlt) + 1 =
@@ -143,10 +143,11 @@ theorem Inv.senkt (hN : N ≤ 2147483647) {σ : Zustand N} (hI : Inv N σ) {t : 
   have hl := hI.laenge
   have hw := hI.wait
   refine hI.updW (o := .ladeS k)
-    ⟨σ.w.next, σ.w.serv, (lw + 18446744073709551615) % 18446744073709551616⟩ rfl rfl
+    ⟨σ.w.next, σ.w.serv, wrapDec lw⟩ rfl rfl
     (by simp [h, Ort.ticket]) (fun hh => by simp [Ort.haelt] at hh) ?_ trivial rfl
     (fun hk => by simp [h, Ort.weckt] at hk)
-  show (lw + 18446744073709551615) % 18446744073709551616 = _
+  show wrapDec lw = _
+  rw [wrapDec_eq]
   omega
 
 /-- **FUTEX_WAIT blocks** only while the low 32 bits of the serving word equal the passed value. -/
@@ -160,9 +161,8 @@ theorem Inv.schlaeft {σ : Zustand N} (hI : Inv N σ) {t : Fin N} {k s0 : Nat} (
     (upd_eq_of Ort.ticket σ.pc t _ (by simp [h, Ort.ticket])) ?_ (by rw [hf]; exact hI.wait) ?_ ?_
   · intro u hu
     by_cases hut : u = t
-    · rw [hut, upd_self] at hu
-      simp [Ort.haelt] at hu
-    · rw [upd_ne σ.pc _ hut] at hu
+    · simp [hut, upd_self, Ort.haelt] at hu
+    · simp only [upd_ne σ.pc _ hut] at hu
       exact hI.haelt u hu
   · intro u
     by_cases hut : u = t
@@ -177,7 +177,7 @@ theorem Inv.schlaeft {σ : Zustand N} (hI : Inv N σ) {t : Fin N} {k s0 : Nat} (
       left
       rw [← h2]
       exact e
-    · rw [upd_ne σ.pc _ hut] at hu
+    · simp only [upd_ne σ.pc _ hut] at hu
       rcases hI.nolost u k' s0' hu with e' | ⟨g, hg⟩
       · exact Or.inl e'
       · right
@@ -197,9 +197,8 @@ theorem Inv.keinWarter {σ : Zustand N} (hI : Inv N σ) {t : Fin N} (h : σ.pc t
     (upd_eq_of Ort.ticket σ.pc t _ (by simp [h, Ort.ticket])) ?_ (by rw [hf]; exact hI.wait) ?_ ?_
   · intro u hu
     by_cases hut : u = t
-    · rw [hut, upd_self] at hu
-      simp [Ort.haelt] at hu
-    · rw [upd_ne σ.pc _ hut] at hu
+    · simp [hut, upd_self, Ort.haelt] at hu
+    · simp only [upd_ne σ.pc _ hut] at hu
       exact hI.haelt u hu
   · intro u
     by_cases hut : u = t
@@ -212,7 +211,7 @@ theorem Inv.keinWarter {σ : Zustand N} (hI : Inv N σ) {t : Fin N} (h : σ.pc t
     by_cases hut : u = t
     · rw [hut, upd_self] at hu
       cases hu
-    · rw [upd_ne σ.pc _ hut] at hu
+    · simp only [upd_ne σ.pc _ hut] at hu
       have hm : u ∈ σ.q := (hI.mem u).2 (by simp [hu, Ort.ticket])
       have hpos : 0 < σ.q.countP (fun u => (σ.pc u).gezaehlt) :=
         List.countP_pos_iff.2 ⟨u, hm, by simp [hu, Ort.gezaehlt]⟩

@@ -203,6 +203,19 @@ def wecke (pc : Fin N → Ort) : Fin N → Ort := fun u => (pc u).geweckt
 
 theorem wecke_apply (pc : Fin N → Ort) (u : Fin N) : wecke pc u = (pc u).geweckt := rfl
 
+/-- The waiter word after a successful decrement: minus one, wrapping at 2^64. Defined by cases so
+    that the kernel never unfolds the literal addition on a variable (`wrapDec_eq` gives the closed form). -/
+def wrapDec : Nat → Nat
+  | 0 => 18446744073709551615
+  | n + 1 => n % 18446744073709551616
+
+theorem wrapDec_eq (lw : Nat) : wrapDec lw = (lw + 18446744073709551615) % 18446744073709551616 := by
+  cases lw with
+  | zero => rfl
+  | succ n =>
+    show n % 18446744073709551616 = (n + 1 + 18446744073709551615) % 18446744073709551616
+    omega
+
 /-- **One step of thread `t`.** -/
 inductive Schritt : Zustand N → Fin N → Zustand N → Prop where
   | beginnt {σ : Zustand N} {t : Fin N} : σ.pc t = .frei → Schritt σ t (σ.mit t .ladeN)
@@ -234,7 +247,7 @@ inductive Schritt : Zustand N → Fin N → Zustand N → Prop where
   | liestDec {σ : Zustand N} {t : Fin N} {k s0 : Nat} : σ.pc t = .decL k s0 →
       Schritt σ t (σ.mit t (.decC k s0 σ.w.wait))
   | senkt {σ : Zustand N} {t : Fin N} {k s0 lw : Nat} : σ.pc t = .decC k s0 lw → σ.w.wait = lw →
-      Schritt σ t ⟨⟨σ.w.next, σ.w.serv, (lw + 18446744073709551615) % 18446744073709551616⟩,
+      Schritt σ t ⟨⟨σ.w.next, σ.w.serv, wrapDec lw⟩,
         upd σ.pc t (.ladeS k), σ.q⟩
   | senktNicht {σ : Zustand N} {t : Fin N} {k s0 lw : Nat} : σ.pc t = .decC k s0 lw → σ.w.wait ≠ lw →
       Schritt σ t (σ.mit t (.decL k s0))

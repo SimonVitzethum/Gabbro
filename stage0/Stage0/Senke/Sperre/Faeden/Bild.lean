@@ -54,7 +54,7 @@ theorem bild_weckt {σ : Zustand N} {t : Fin N} (h : σ.pc t = .weck) :
   refine bildAus_gleich (fun u => ?_) σ.q
   by_cases hu : u = t
   · simp [hu, upd_self, h, Ort.haelt]
-  · rw [upd_ne _ _ hu, wecke_apply, geweckt_haelt]
+  · simp only [upd_ne _ _ hu, wecke_apply, geweckt_haelt]
 
 /-! ## 1. The three abstract steps -/
 
