@@ -38,7 +38,7 @@ The Lean module-system migration and the split of every Lean file below 500 line
 - **Agents check their own modules on a build-server slot (owner, 2026-11-14; before: only the lead built).**
   Whenever a slot is free, an implementing agent checks the modules it changed before it reports:
   `git push -f buildserver HEAD:refs/heads/agent/<branch>`, then
-  `ssh simonvitzethum@10.200.200.100 '~/agent-check.sh <branch> <package> <Module>...'` (three slots, 8 GB and
+  `ssh simonvitzethum@10.200.200.100 '~/agent-check.sh <branch> <package> <Module>...'` (four slots, 8 GB and
   2 threads each, the script waits for a free slot and while the lead runs a full build). Agents build single
   modules only, never a whole package and never the heavy probe modules (`*Proben*`, `*Probes*`); their local
   worktrees still carry no `.lake`. The lead's integration build of the merged wave stays the acceptance.
