@@ -123,10 +123,11 @@ theorem embTower : ∀ (w : String) (xs : List SExpr),
           .zeichen "(" :: (druckToksListe xs ++ [.zeichen ")"]) := by
         simp only [druckToks, ht, ite_true, List.cons_append, List.nil_append]
       simp only [hd, List.cons_append] at hP' ⊢
-      simpa only [parseUnary] using hP'
+      exact hP'
     · have hd : druckToks (.built w xs) =
           .wort w :: .zeichen "(" :: (druckToksListe xs ++ [.zeichen ")"]) := by
-        simp only [druckToks, ht, ite_false, List.cons_append, List.nil_append]
+        simp only [druckToks, ht, Bool.false_eq_true, ↓reduceIte, List.cons_append,
+          List.nil_append, List.singleton_append, List.append_assoc]
       simp only [hd, List.cons_append] at hP' ⊢
       simpa only [parseUnary] using hP'
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩

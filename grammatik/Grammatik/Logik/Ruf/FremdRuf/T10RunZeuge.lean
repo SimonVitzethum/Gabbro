@@ -243,9 +243,10 @@ theorem first_step (b : Bool) :
 theorem second_step (b : Bool) :
     ∃ M : RufMaschineG decl, RufSchrittG (program b) oracle 0 (afterFirst b) 0 M := by
   refine ⟨_, RufSchrittG.blatt (afterFirst b) 0 false [] [] [] (call b)
-    (.ret .empty (by rfl)) .nil rfl rfl ?_ key2 .nil [.fremd (.inl ())] rfl ?_ ?_⟩
+    (.ret .empty (by rfl)) .nil rfl rfl ?_ key2 .nil [.fremd (.inl ())] ?_ ?_ ?_⟩
   · intro L
     exact nomatch L
+  · cases b <;> rfl
   · cases b <;> rfl
   · intro L
     exact nomatch L
