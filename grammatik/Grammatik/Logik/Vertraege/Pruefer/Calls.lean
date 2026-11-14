@@ -15,7 +15,7 @@ structure Results (D : Deklaration) (result : Option Ty) where
   values : List (ErgVal D result)
   complete : ∀ value, value ∈ values
 
-def results (budget : Nat) : (result : Option Ty) → Except Refusal (Results D result)
+def results (budget : Nat) : (result : Option Ty) → Except Frag.Refusal (Results D result)
   | none => .ok { values := [()], complete := fun value => by cases value; simp }
   | some τ => do
       let domain ← localDomain (D := D) budget τ
@@ -26,8 +26,8 @@ def results (budget : Nat) : (result : Option Ty) → Except Refusal (Results D 
     equality. The canonical evalArgs remains the only argument evaluator. -/
 def arguments (budget : Nat) (args : Args D Γ Λ params) (locals : Env D Γ)
     (target : Env D params → Runtime program (fun _ => []) S → World D → Prop)
-    (compile : ∀ actual, Except Refusal (Condition (target actual))) :
-    Except Refusal (Condition (fun runtime world =>
+    (compile : ∀ actual, Except Frag.Refusal (Condition (target actual))) :
+    Except Frag.Refusal (Condition (fun runtime world =>
       target (evalArgs world args world locals) runtime world)) :=
   match args with
   | .nil => compile .nil
@@ -44,8 +44,8 @@ def arguments (budget : Nat) (args : Args D Γ Λ params) (locals : Env D Γ)
 def callCondition (policy : CallPolicy program) (budget : Nat) (f : D.Fn)
     (actual : Env D (D.params f)) (noReasons : D.gruende f = 0)
     (target : ErgVal D (D.erg f) → Runtime program (fun _ => []) S → World D → Prop)
-    (compile : ∀ value, Except Refusal (Condition (target value))) :
-    Except Refusal (Condition (fun runtime world => ∀ allowed,
+    (compile : ∀ value, Except Frag.Refusal (Condition (target value))) :
+    Except Frag.Refusal (Condition (fun runtime world => ∀ allowed,
       HandlerSafe policy runtime allowed →
       match runtime.calls f world actual with
       | .ok next value => target value runtime next

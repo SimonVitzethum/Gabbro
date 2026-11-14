@@ -14,7 +14,7 @@ variable {D : Deklaration}
 
 /-- A reified lock predicate is local exactly as checked from its reads. -/
 def checkLockLocal (S : SperrInv D) (sources : LockSources S) (lock : D.Lock) :
-    Except Refusal (PLift (∀ s s', (∀ c ∈ S.orte lock, TraegerGleich s s' c) →
+    Except Frag.Refusal (PLift (∀ s s', (∀ c ∈ S.orte lock, TraegerGleich s s' c) →
       S.inv lock s = S.inv lock s')) := do
   let some source := sources lock
     | .error (.unsupported "lock invariant is missing its elaborated source expression")
@@ -29,7 +29,7 @@ def checkLockLocal (S : SperrInv D) (sources : LockSources S) (lock : D.Lock) :
 /-- Oracle truth is an environment assumption. Locality of its SOURCE is a
     structural checker matter, and is independent of the oracle's truth. -/
 def checkAxiomLocal (Q : AxEns D) (sources : AxiomSources Q) (a : D.Ax) :
-    Except Refusal (PLift (∀ world next value,
+    Except Frag.Refusal (PLift (∀ world next value,
       (∀ t, D.aschreibt a t = true → world.slots t = next.slots t) →
       (∀ g, D.agschreibt a g = true → world.globs g = next.globs g) →
       Q a world value = Q a next value)) :=
@@ -44,7 +44,7 @@ def checkAxiomLocal (Q : AxEns D) (sources : AxiomSources Q) (a : D.Ax) :
 /-- Decide a universally closed implication using the same decoded type facts
     as function and invariant WPs. Refusals contain a counterexample assignment. -/
 def checkImplication (label : String) (pre : LProp (Observation D)) (post : QF (Observation D)) :
-    Except Refusal (PLift (∀ world, pre.denote (assignment world) → post.denote (assignment world))) :=
+    Except Frag.Refusal (PLift (∀ world, pre.denote (assignment world) → post.denote (assignment world))) :=
   if accepted : decideB (close (writerMatrix pre .tru post)) = true then
     .ok ⟨fun world requires => by
       have closed := (lower_denote _ (assignment world)).mp (close_sound _ accepted (assignment world))
@@ -59,7 +59,7 @@ def checkImplication (label : String) (pre : LProp (Observation D)) (post : QF (
     no entry-memory predicate is incorrectly reused in the return world. -/
 def checkPointerEnvironment (program : Programm D) (budget : VCBudget)
     (f : D.Fn) (n : Nat) (target : D.passt f n = true) (locals : Env D (D.sigNr n).params) :
-    Except Refusal (PLift (
+    Except Frag.Refusal (PLift (
       (∀ old, (program.ptrVertrag n).preHolds old locals → ReqAmEintritt program f old (umsig target locals)) ∧
       (∀ old next value, (program.ptrVertrag n).preHolds old locals →
         EnsAmRueck program f old next (umsig target locals) value →
@@ -90,7 +90,7 @@ def checkPointerEnvironment (program : Programm D) (budget : VCBudget)
     fun old next value _ ensures => returned.down value (domain.complete value) old next ensures⟩⟩
 
 def checkPointerTarget (program : Programm D) (budget : VCBudget) (f : D.Fn) (n : Nat) :
-    Except Refusal (PLift (∀ target : D.passt f n = true, PtrZielVerfeinert program f n target)) :=
+    Except Frag.Refusal (PLift (∀ target : D.passt f n = true, PtrZielVerfeinert program f n target)) :=
   if target : D.passt f n = true then do
     let domain ← environments (D := D) budget.expansion (D.sigNr n).params
     let checked ← collect domain.values _ (checkPointerEnvironment program budget f n target)
@@ -103,7 +103,7 @@ def checkPointerTarget (program : Programm D) (budget : VCBudget) (f : D.Fn) (n 
     function-pointer targets, including targets never called by this image. -/
 def checkPointers (program : Programm D) (functions : List D.Fn)
     (layout : PointerSignatures D) (budget : VCBudget := {}) :
-    Except Refusal (PLift (∀ f ∈ functions, ∀ n (target : D.passt f n = true),
+    Except Frag.Refusal (PLift (∀ f ∈ functions, ∀ n (target : D.passt f n = true),
       PtrZielVerfeinert program f n target)) := do
   let checked ← collect functions _ (fun f =>
     collect (List.range layout.count) _ (checkPointerTarget program budget f))

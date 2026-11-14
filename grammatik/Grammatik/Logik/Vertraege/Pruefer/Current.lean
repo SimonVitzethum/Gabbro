@@ -14,7 +14,7 @@ variable {D : Deklaration}
     the entry-world parameter. Unsupported forms, including `old`, are refused.
     This is a syntax calculation, not a supplied contract proof. -/
 def currentOnly (expression : Expr D Γ Λ τ) :
-    Except Refusal (PLift (∀ old world locals,
+    Except Frag.Refusal (PLift (∀ old world locals,
       eval old expression world locals = eval world expression world locals)) :=
   match expression with
   | .lit _ | .tru | .fls | .var _ | .glob .. => .ok ⟨fun _ _ _ => rfl⟩
@@ -76,7 +76,7 @@ def currentOnly (expression : Expr D Γ Λ τ) :
     relates the formula to the actual entry world, not a substituted one. -/
 def postFormula (program : Programm D) (f : D.Fn) (locals : Env D (D.params f))
     (value : ErgVal D (D.erg f)) :
-    Except Refusal { formula : QF (Observation D) // ∀ old world,
+    Except Frag.Refusal { formula : QF (Observation D) // ∀ old world,
       formula.denote (assignment world) ↔ EnsAmRueck program f old world locals value } := do
   let independent ← currentOnly (program.ensures f)
   let encoded ← translate (program.ensures f) (ergEnv (D.erg f) value locals)

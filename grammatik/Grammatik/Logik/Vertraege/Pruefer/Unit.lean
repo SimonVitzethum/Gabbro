@@ -28,7 +28,7 @@ structure CheckedUnitLogic (E : Einheit D) (functions : List D.Fn) (locks : List
     MassPflicht E.P passes Q E.S shared E.measure (zykS E.P functions) f
 
 def checkUnitLock (E : Einheit D) (lock : D.Lock) :
-    Except Refusal (PLift ((∀ s s', (∀ c ∈ E.S.orte lock, TraegerGleich s s' c) →
+    Except Frag.Refusal (PLift ((∀ s s', (∀ c ∈ E.S.orte lock, TraegerGleich s s' c) →
       E.S.inv lock s = E.S.inv lock s') ∧ E.S.inv lock E.sp0 = true)) := do
   let local ← checkLockLocal E.S E.lockFormulas lock
   let formula ← lockFormula E.S E.lockFormulas lock
@@ -37,7 +37,7 @@ def checkUnitLock (E : Einheit D) (lock : D.Lock) :
   else .error (.unsupported "lock invariant is false in the initial memory")
 
 def checkStartRequires (E : Einheit D) (start : Σ f : D.Fn, Env D (D.params f)) :
-    Except Refusal (PLift (ReqAmEintritt E.P start.1 (E.sp0.welt []) start.2)) := do
+    Except Frag.Refusal (PLift (ReqAmEintritt E.P start.1 (E.sp0.welt []) start.2)) := do
   let encoded ← translate (E.P.requires start.1) start.2
   if checked : (lower encoded.payload).eval (assignment (E.sp0.welt [])) = true then
     return ⟨(encoded.bool_iff _).mpr ((lower_denote _ _).mp ((qf_eval _ _).mp checked))⟩
@@ -46,7 +46,7 @@ def checkStartRequires (E : Einheit D) (start : Σ f : D.Fn, Env D (D.params f))
 /-- Whole-unit checking discharges all former user logic. Missing source
     representations and unsupported fragments are explicit refusals. -/
 def checkUnitLogic (E : Einheit D) (functions : List D.Fn) (locks : List D.Lock)
-    (budget : VCBudget := {}) : Except Refusal (CheckedUnitLogic E functions locks) := do
+    (budget : VCBudget := {}) : Except Frag.Refusal (CheckedUnitLogic E functions locks) := do
   let contracts ← checkContracts E.P E.S functions E.lockFormulas budget E.loopHints
   let lockChecks ← collect locks _ (checkUnitLock E)
   let some axiomSources := E.axiomSources
