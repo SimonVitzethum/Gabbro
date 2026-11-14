@@ -44,44 +44,67 @@ public import Grammatik.Parser.Elab.Uebersetze.Tagged.Schema
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 
+-- Whether a surface parameter type carries Gabbro code (`N574`): a function-pointer type,
+-- walked through pointers, arrays and tuples. `entry fn` is the exception (`N575`--`N577`:
+-- the kernel's thread-start handle, whose flow the binding owns) and never counts. Named
+-- records and sums are opaque here: a name that resolves to no table, alias, `bool` or
+-- reason case is refused downstream (`table unknown`, `type unknown`), never silently carried.
+mutual
+/-- A function-pointer type, walked through pointers, arrays and tuples. -/
+def sTypTraegtCode : STyp → Bool
+  | .raw r => r.startsWith "fn ("
+  | .entry _ _ => false
+  | .ptr _ _ t => sTypTraegtCode t
+  | .array t _ => sTypTraegtCode t
+  | .tuple ts => sTypTraegtCodeListe ts
+  | _ => false
+/-- The tuple elements. -/
+def sTypTraegtCodeListe : List STyp → Bool
+  | [] => false
+  | t :: rest => sTypTraegtCode t || sTypTraegtCodeListe rest
+end
+
 /-- The head of an `extern fn`: a foreign body, `D.Ax` -- its parameters and its answer. -/
 def uAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy)
     (name : String) (params : List (String × STyp)) (res : Option STyp) (fehler : Option String)
     (eigner : List String := []) (spaces : List String := []) :
     Except String UFnKopf :=
-  match uSeq (params.map (uParam alias tabs [] whys (spaces := spaces) (eigner := eigner))) with
-  | .error e => .error e
-  | .ok ps =>
-    match (match fehler with
-        | .none => .ok none
-        | .some r =>
-          match whys.findIdx? (fun (w : UWhy) => strEq w.name r) with
-          | .none => .error ("reason unknown: " ++ r)
-          | .some k =>
-            match whys[k]? with
-            | .some w => if w.cases.isEmpty then .error "reason without cases" else .ok (some (k, w.cases.length))
-            | .none => .error ("reason unknown: " ++ r) : Except String (Option (Nat × Nat))) with
+  match params.find? (fun (_, t) => sTypTraegtCode t) with
+  | some (n, _) => .error ("foreign parameter with a function pointer without G form: " ++ n)
+  | none =>
+    match uSeq (params.map (uParam alias tabs [] whys (spaces := spaces) (eigner := eigner))) with
     | .error e => .error e
-    | .ok kn =>
-      let base : UFnKopf :=
-        { name, names := ps.map (·.1), kinds := ps.map (·.2.2), types := ps.map (·.2.1), res := .none,
-          bits := params.map (fun p => uParamBreite p.2), held := [], ext := true, kanal := kn }
-      match res with
-      | .none => .ok base
-      | .some (.atom "never") => .ok { base with resNever := true }
-      | .some (.atom "bool") => .ok { base with resBool := true }
-      | .some (.index false tn) =>
-        match tabs.findIdx? (fun (y : UTab) => strEq y.name tn && y.von.isSome) with
-        | .some num => if kn.isSome then .error "fallible provider without G form" else .ok { base with resRef := some num }
-        | .none => .error "foreign answer `index into` a table that is not open without G form"
-      | .some t =>
-        match uErgBereich alias t with
-        | .error e => .error e
-        | .ok r => .ok { base with res := .some r }
+    | .ok ps =>
+      match (match fehler with
+          | .none => .ok none
+          | .some r =>
+            match whys.findIdx? (fun (w : UWhy) => strEq w.name r) with
+            | .none => .error ("reason unknown: " ++ r)
+            | .some k =>
+              match whys[k]? with
+              | .some w => if w.cases.isEmpty then .error "reason without cases" else .ok (some (k, w.cases.length))
+              | .none => .error ("reason unknown: " ++ r) : Except String (Option (Nat × Nat))) with
+      | .error e => .error e
+      | .ok kn =>
+        let base : UFnKopf :=
+          { name, names := ps.map (·.1), kinds := ps.map (·.2.2), types := ps.map (·.2.1), res := .none,
+            bits := params.map (fun p => uParamBreite p.2), held := [], ext := true, kanal := kn }
+        match res with
+        | .none => .ok base
+        | .some (.atom "never") => .ok { base with resNever := true }
+        | .some (.atom "bool") => .ok { base with resBool := true }
+        | .some (.index false tn) =>
+          match tabs.findIdx? (fun (y : UTab) => strEq y.name tn && y.von.isSome) with
+          | .some num => if kn.isSome then .error "fallible provider without G form" else .ok { base with resRef := some num }
+          | .none => .error "foreign answer `index into` a table that is not open without G form"
+        | .some t =>
+          match uErgBereich alias t with
+          | .error e => .error e
+          | .ok r => .ok { base with res := .some r }
 
 /-- The head of an `extern fn`: a foreign body, `D.Ax` -- its parameters and its answer. -/
 def elabAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy) (globs : List UGlob)
-    (asm : Bool) (eigner : List String := []) (spaces : List String := []) : FnSig → Except String UFnKopf
+    (asm : Bool) (eigner : List String := []) (spaces : List String := []) (erklaert : List String := []) : FnSig → Except String UFnKopf
   | { art, name, params, res, fehler, klauseln, generics := _ } =>
     -- `extern`, `raw`, `prim` and `= asm { .. }`: a foreign body (SYNTAX.md); a body-less `divergent fn` is one whose
     -- answer is `never`
@@ -91,15 +114,136 @@ def elabAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys 
     else
       match uAxKopf alias tabs whys name params (if strEq art "divergent" then some (.atom "never") else res) fehler (eigner := eigner) (spaces := spaces) with
       | .error e => .error e
-      | .ok kopf => uAxKlauseln { kopf with clauses := klauseln } tabs globs klauseln
+      | .ok kopf => uAxKlauseln { kopf with clauses := klauseln } tabs globs erklaert klauseln
+
+/-- The register a binding names: `rdi = fd` binds `rdi`, a bare `rax` names `rax`. -/
+def uBindReg : SRegBind → String
+  | .binds r _ => r
+  | .reg r => r
+
+/-- A `requires` bound on the bytes a gate moves through `p` (`N464`): `x <= lenof(p)` (or `<`),
+    with a length variable beside it -- a different parameter of the gate, the length the call
+    hands in. The mirrored `lenof(p) >= x` spellings count the same. -/
+def istLenof (p : String) : SExpr → Bool
+  | .built f [.variable q] => strEq f "lenof" && strEq q p
+  | _ => false
+
+/-- The length beside the buffer: a different parameter of the gate, the length the call
+    hands in. -/
+def istBand (params : List String) (p : String) : SExpr → Bool
+  | .variable v => !strEq v p && params.any (fun y => strEq y v)
+  | _ => false
+
+def istLaengenSchranke (params : List String) (p : String) : SExpr → Bool
+  | .bin op a b =>
+    ((strEq op "<=" || strEq op "<") && istBand params p a && istLenof p b) ||
+    ((strEq op ">=" || strEq op ">") && istLenof p a && istBand params p b)
+  | _ => false
+
+/-- The way a gate is bound: a `kernel` pairing is refused (`N068` -- the call would be paired
+    with a Gabbro kernel's dispatch entry and no assumption named, but the pairing check and
+    the stub are unbuilt), a sealed machine is refused (`A006`). A `via` variable carries no
+    binding of its own. -/
+def uTorWegPruef : SWay → Except String Unit
+  | .lit _ _ _ (.core p) =>
+    .error ("syscall gate kernel pairing without G form: " ++ "::".intercalate p)
+  | .lit _ arch _ _ =>
+    if archOffen arch then .ok ()
+    else .error ("syscall gate arch sealed without G form: " ++ arch)
+  | .via _ => .ok ()
+
+/-- The answer register against the clobbers (`N064`): what carries the answer out is not
+    destroyed. This is the string-level shadow of `TorAbi.gut` (`Hardware/Tor/Abi.lean`): the
+    elaborator cannot use that judgment directly -- the surface number is an `SExpr`, the trap
+    text and the number register do not exist yet, and registers are names here. -/
+def uTorAntwortPruef (outs : List SRegBind) (dirty : List String) : Except String Unit :=
+  match outs.find? (fun o => dirty.any (fun d => strEq d (uBindReg o))) with
+  | some o => .error ("syscall gate answer register clobbered without G form: " ++ uBindReg o)
+  | none => .ok ()
+
+/-- The handed-stack register (`N447`): the one clause that may claim stack-ness stands at most
+    once -- the stub hands one register to the child, and two names would split it. -/
+def uTorStapelPruef : List String → Except String Unit
+  | [] => .ok ()
+  | [_] => .ok ()
+  | _ :: s :: _ => .error ("syscall gate second stack clause without G form: " ++ s)
+
+/-- The `errors` map against the `or` channel (`N067`): every listed errno has exactly one arm,
+    and every target is a case of the declared channel. An errno outside the table stays what it
+    is -- the named hardware outcome "the kernel answered outside its contract" -- and is not
+    touched here. A gate without a channel carries no map; a channel that resolves nowhere is
+    refused where the head is read (`reason unknown`). -/
+def uTorFehlerPruef (fail : Option String) (whys : List UWhy)
+    (codes : List (String × Option SExpr × String)) : Except String Unit :=
+  match fail with
+  | none =>
+    match codes with
+    | [] => .ok ()
+    | (e, _, _) :: _ =>
+      .error ("syscall gate errors map without a reason channel without G form: " ++ e)
+  | some r =>
+    match whys.find? (fun w => strEq w.name r) with
+    | none => .ok ()
+    | some w =>
+      match codes.find? (fun c => 1 < (codes.filter (fun d => strEq d.1 c.1)).length) with
+      | some (e, _, _) => .error ("syscall gate error listed twice without G form: " ++ e)
+      | none =>
+        match codes.find? (fun c => !(w.cases.any (fun t => strEq t c.2.2))) with
+        | some (e, _, t) =>
+          .error ("syscall gate error target without a declared case without G form: " ++ e ++ " => " ++ t)
+        | none => .ok ()
+
+/-- The buffers a gate moves bytes through (`N464`): a parameter that points at numbers is a
+    buffer the kernel moves bytes through -- it points at `u8`/`i8`, and the gate bounds it by a
+    length clause `x <= lenof(p)` over one of its integer parameters. A pointer into a table is a
+    capability, not a transfer, and is not held to this clause. -/
+def uTorPufferPruef (tabs : List UTab) (params : List (String × STyp)) (pre : List SExpr) :
+    Except String Unit :=
+  match params with
+  | [] => .ok ()
+  | (p, .ptr _ _ z) :: rest =>
+    match z with
+    | .atom a =>
+      if strEq a "u8" || strEq a "i8" then
+        if pre.any (istLaengenSchranke (params.map (·.1)) p) then uTorPufferPruef tabs rest pre
+        else .error ("syscall gate buffer without length bound without G form: " ++ p)
+      else
+        match uTabNr tabs a with
+        | .ok _ => uTorPufferPruef tabs rest pre
+        | .error _ => .error ("syscall gate buffer without byte pointee without G form: " ++ p)
+    | _ => .error ("syscall gate buffer without byte pointee without G form: " ++ p)
+  | _ :: rest => uTorPufferPruef tabs rest pre
+
+/-- The whole binding half of a gate: answer, stack, error map, buffers. A `via` variable
+    carries no binding -- only its contract travels. -/
+def uTorBindungPruef (tabs : List UTab) (whys : List UWhy) (sc : SSyscall) : Except String Unit :=
+  match sc.way with
+  | .via _ => .ok ()
+  | .lit _ _ bind _ =>
+    match uTorAntwortPruef bind.outs bind.dirty with
+    | .error e => .error e
+    | .ok _ =>
+    match uTorStapelPruef bind.stack with
+    | .error e => .error e
+    | .ok _ =>
+    match uTorFehlerPruef sc.fail whys bind.codes with
+    | .error e => .error e
+    | .ok _ => uTorPufferPruef tabs sc.params sc.gate.pre
 
 /-- The head of a `syscall` gate (a foreign body too): the ABI half (`abi`, `number`, the registers) is the stub's,
     a precondition, a postcondition or a write has no form. -/
 def elabGateKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy) (globs : List UGlob)
     (sc : SSyscall) (eigner : List String := []) (spaces : List String := []) : Except String UFnKopf :=
+  match uTorWegPruef sc.way with
+  | .error e => .error e
+  | .ok _ =>
   match uAxKopf alias tabs whys sc.name sc.params sc.res sc.fail (eigner := eigner) (spaces := spaces) with
     | .error e => .error e
-    | .ok kopf => uAxKlauseln { kopf with clauses := sc.gate.pre.map SKlausel.needs ++ sc.gate.post.map SKlausel.gives } tabs globs [.effs sc.gate.uses]
+    | .ok kopf =>
+    match uTorBindungPruef tabs whys sc with
+    | .error e => .error e
+    | .ok _ =>
+    uAxKlauseln { kopf with clauses := sc.gate.pre.map SKlausel.needs ++ sc.gate.post.map SKlausel.gives } tabs globs [] [.effs sc.gate.uses]
 
 /-- The roots of the `start { .. };` statements of a body, in order (`fuel` bounds the nesting). -/
 def uStartNamen : Nat → SAnw → List String
