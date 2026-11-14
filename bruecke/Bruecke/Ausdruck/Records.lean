@@ -175,8 +175,7 @@ theorem lowWertE_recordRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UF
                                       refine ⟨?_, fun _ heq => Option.some.inj heq⟩
                                       rw [Gabbro.Body.eval_recSet _ _ _ _ _ _ he hev
                                         (by
-                                          rw [valOfProd_length (D := declOf u)
-                                            (schema.val.fields.map (·.2)) (eval σ₀ baseE σ ρ)]
+                                          simp only [valOfProd_length]
                                           exact recordIndex_lt pos)]
                                       rw [← valOfProd_set (D := declOf u) pos
                                         (eval σ₀ baseE σ ρ) (eval σ₀ val σ ρ)]
