@@ -15,7 +15,7 @@ theorem seqZ_narrow_some {k : Nat} {fn : UFn} {ns : BodyNames} {x : String} {lo 
       endBodyZ u k fn ns ss = some (err, .blkEnd :: tail) ∧
       seqZ u k (fn.mitBindung x (lo, hi)) (ns.push x) tail = some (ys, rest, used) ∧
       bs = narrowStep ns x lo hi e err :: ys := by
-  simp only [seqZ, Option.bind] at h
+  simp only [seqZ, bind, Option.bind] at h
   split at h
   · cases h
   · rename_i e he
@@ -37,7 +37,7 @@ theorem stmtsBodyZ_narrow_some {k : Nat} {fn : UFn} {ns : BodyNames} {x : String
       endBodyZ u k fn ns ss = some (err, .blkEnd :: tail) ∧
       stmtsBodyZ u k (fn.mitBindung x (lo, hi)) (ns.push x) tail r = some ys ∧
       bs = narrowStep ns x lo hi e err :: ys := by
-  simp only [stmtsBodyZ, Option.bind] at h
+  simp only [stmtsBodyZ, bind, Option.bind] at h
   split at h
   · cases h
   · rename_i e he

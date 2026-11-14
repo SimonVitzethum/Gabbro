@@ -20,7 +20,7 @@ theorem seqZ_loop_some {k : Nat} {fn : UFn} {ns : BodyNames} {x tab : String} {i
       bs = .forEach (ns.fresh x) (loopIndices u t) body :: ys := by
   cases inv
   case tru =>
-    simp only [seqZ, Option.bind] at h
+    simp only [seqZ, bind, Option.bind] at h
     split at h
     · cases h
     · rename_i hgood
@@ -52,7 +52,7 @@ theorem stmtsBodyZ_loop_some {k : Nat} {fn : UFn} {ns : BodyNames} {x tab : Stri
       bs = .forEach (ns.fresh x) (loopIndices u t) body :: ys := by
   cases inv
   case tru =>
-    simp only [stmtsBodyZ, Option.bind] at h
+    simp only [stmtsBodyZ, bind, Option.bind] at h
     split at h
     · cases h
     · rename_i hgood
