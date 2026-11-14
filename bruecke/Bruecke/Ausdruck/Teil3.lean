@@ -268,9 +268,12 @@ theorem lowEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
           simp only [Gabbro.Body.eval]
           rw [hB.par p j hj, nthVal_lowVar Γ _ .bool v ρ hv]
           rfl
+  | .globB p, a, a', x, g, hb, h, _ => by
+      obtain ⟨_, _, _, rfl, rfl⟩ := ensExpr_globB hb
+      simp only [lowEns] at h
+      exact lowGlobBool_sim h σ₀ σ ρ w β hW.2
   -- Unrepresented predicates contradict the existing `ensExpr` premise.
   | .slotB .., _, _, _, _, hb, _, _ | .tabB .., _, _, _, _, hb, _, _
-  | .globB .., _, _, _, _, hb, _, _
   | .alle .., _, _, _, _, hb, _, _ | .einige .., _, _, _, _, hb, _, _
   | .ergB, _, _, _, _, hb, _, _ | .istSome .., _, _, _, _, hb, _, _
   | .held .., _, _, _, _, hb, _, _ | .imp .., _, _, _, _, hb, _, _
@@ -437,9 +440,11 @@ theorem ensExpr_zuwachs {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
       simp only [ensExpr, Option.some.injEq, Prod.mk.injEq] at hb
       obtain ⟨_, rfl⟩ := hb
       exact Zuwachs.refl _ _ _
+  | .globB p, a, a', x, g, hb, h => by
+      obtain ⟨_, _, _, _, rfl⟩ := ensExpr_globB hb
+      exact Zuwachs.refl _ _ _
   -- Unrepresented predicates contradict the existing `ensExpr` premise.
   | .slotB .., _, _, _, _, hb, _ | .tabB .., _, _, _, _, hb, _
-  | .globB .., _, _, _, _, hb, _
   | .alle .., _, _, _, _, hb, _ | .einige .., _, _, _, _, hb, _
   | .ergB, _, _, _, _, hb, _ | .istSome .., _, _, _, _, hb, _
   | .held .., _, _, _, _, hb, _ | .imp .., _, _, _, _, hb, _

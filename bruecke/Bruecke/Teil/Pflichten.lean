@@ -38,7 +38,7 @@ structure Getragen (u : UProg) (C : Fin u.fns.length → Prop) : Prop where
   ohneReq : ∀ c, C c → (fnAt u c).needs = []
   ohneGrund : ∀ c, C c → (fnAt u c).gruende = 0
   ohneInv : u.invs = []
-  statics : NumericStatics u
+  statics : ScalarStatics u
   ohneTransition : ∀ c, C c → transitionOfFn u c = none
 
 /-- O43 for carried targets. The complementary targets owe the very same canonical

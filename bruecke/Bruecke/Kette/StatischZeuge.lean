@@ -212,9 +212,11 @@ theorem initial_value_zeuge : nullB unit = true ∧
   refine ⟨by cbv, fun hn => ?_⟩
   cbv
 
-/-- Unsupported static kinds and an out-of-range initializer keep explicit refusal gates. -/
+/-- Unsupported static kinds and out-of-range initializers keep explicit refusal gates;
+    a plain `bool` static passes the static gate. -/
 theorem static_refusals_zeuge :
-    staticsB { unit with globs := [{ name := "flag", ty := .bool, init := 0 }] } = false ∧
+    staticsB { unit with globs := [{ name := "flag", ty := .bool, init := 0 }] } = true ∧
+    nullB { unit with globs := [{ name := "flag", ty := .bool, init := 2 }] } = false ∧
     staticsB { unit with globs := [{ name := "array", ty := .wert (.arr (.int 0 10) 1), init := 0 }] } = false ∧
     staticsB { unit with globs := [{ name := "atomic", ty := .int 0 10, init := 0, atomic := true }] } = false ∧
     nullB { unit with globs := [{ name := "outside", ty := .int 3 10, init := 0 }] } = false := by

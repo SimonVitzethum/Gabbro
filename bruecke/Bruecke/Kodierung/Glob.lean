@@ -5,10 +5,10 @@ public import Bruecke.Kodierung.Teil2
 @[expose] public section
 
 /-!
-# Numeric statics in the bridge world
+# Scalar statics in the bridge world
 
-`GRel` complements `WRel` without changing its slot-only meaning. The lookup and the
-numeric/aggregate distinction are exactly those of `lowGlobSide`.
+`GRel` complements `WRel` without changing its slot-only meaning. The lookup is that of
+`lowGlobSide`/`lowGlobBool`: integer and bool statics have a Body value, aggregates none.
 -/
 
 namespace Gabbro.Bruecke
@@ -19,21 +19,21 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg
 
 variable (u : UProg)
 
-/-- The first static named `g`, if it is declared as an integer range.
-    Boolean and aggregate statics have no numeric bridge value. -/
+/-- The first static named `g`, if it is declared as an integer range or as `bool`.
+    Aggregate statics have no bridge value. -/
 def globWert (σ : World (declOf u)) (g : String) : Option Gabbro.Body.Value :=
   match globIdx u.globs g with
   | .error _ => none
   | .ok i =>
     match (globAt u i).ty with
-    | .int .. => some (valOf ((declOf u).gtyp i) (σ.globs i))
-    | _ => none
+    | .int .. | .bool => some (valOf ((declOf u).gtyp i) (σ.globs i))
+    | .wert _ => none
 
-/-- Every declared numeric static has its G value in the Body world. -/
+/-- Every declared scalar static has its G value in the Body world. -/
 def GRel (σ : World (declOf u)) (w : Gabbro.Body.World) : Prop :=
   ∀ g v, globWert u σ g = some v → w (.global g) = v
 
-/-- Encode slots first, then overwrite just the declared numeric statics. -/
+/-- Encode slots first, then overwrite just the declared scalar statics. -/
 def encG (σ : World (declOf u)) (base : Gabbro.Body.World) : Gabbro.Body.World := fun p =>
   match p with
   | .global g => (globWert u σ g).getD (enc u σ base p)
@@ -72,16 +72,25 @@ theorem grel_lies {σ : World (declOf u)} {w : Gabbro.Body.World} (hG : GRel u �
   apply hG
   simp only [globWert, hi, ht]
 
-/-- The range of the first static by name, only for a numeric static. -/
+/-- The Body static holds the truth value of the resolved G `bool` static. -/
+theorem grel_lies_bool {σ : World (declOf u)} {w : Gabbro.Body.World} (hG : GRel u σ w)
+    (g : String) (i : Fin u.globs.length) (hi : globIdx u.globs g = .ok i)
+    (ht : (globAt u i).ty = .bool) :
+    w (.global g) = valOf ((declOf u).gtyp i) (σ.globs i) := by
+  apply hG
+  simp only [globWert, hi, ht]
+
+/-- The shape of the first static by name: its range for a number, `bool` for a truth value. -/
 def globShape (g : String) : Option Gabbro.Body.Shape :=
   match globIdx u.globs g with
   | .error _ => none
   | .ok i =>
     match (globAt u i).ty with
     | .int lo hi => some (.intIn lo hi)
-    | _ => none
+    | .bool => some .bool
+    | .wert _ => none
 
-/-- Extend the slot typing with numeric static ranges. -/
+/-- Extend the slot typing with scalar static shapes. -/
 def shapeOfUG : Gabbro.Body.Typing := fun p =>
   match p with
   | .global g => globShape u g
@@ -114,7 +123,20 @@ theorem wfG_of_grel {σ : World (declOf u)} {w : Gabbro.Body.World} (hG : GRel u
         intro x
         simp [x.lo_le, x.le_hi]
       exact hv (σ.globs i)
-    | bool => simp [ht] at hp
+    | bool =>
+      simp only [ht, Option.some.injEq] at hp
+      subst sh
+      rw [grel_lies_bool u hG g i hi ht]
+      have hty : (declOf u).gtyp i = .bool := by
+        show (globAt u i).ty.toTy = _
+        rw [ht]
+        rfl
+      have hv : ∀ x : Wert (declOf u) ((declOf u).gtyp i),
+          (valOf ((declOf u).gtyp i) x).hasShape .bool = true := by
+        rw [hty]
+        intro x
+        first | rfl | simp [Gabbro.Body.Value.hasShape]
+      exact hv (σ.globs i)
     | wert τ => simp [ht] at hp
 
 /-- Combine the existing slot typing theorem with the independent global relation. -/
@@ -128,7 +150,7 @@ theorem wf_of_wrel_grel {σ : World (declOf u)} {w : Gabbro.Body.World}
   | field c n => exact wf_of_wrel u hB hW (.field c n) sh hp
   | global g => exact wfG_of_grel u hG g sh hp
 
-/-- Slots and numeric statics are related to the same Body world. -/
+/-- Slots and scalar statics are related to the same Body world. -/
 def WGRel (σ : World (declOf u)) (w : Gabbro.Body.World) : Prop :=
   WRel u σ w ∧ GRel u σ w
 

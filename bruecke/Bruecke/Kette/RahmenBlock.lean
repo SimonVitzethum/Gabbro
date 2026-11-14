@@ -161,7 +161,7 @@ theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB 
       obtain ⟨Λ₁, st, q, hst, hq, rfl⟩ := lowSeq_einzeln_ok hlow (by exact True.intro)
       have IH := ih n (Nat.lt_succ_self n) k ss fn _ _ q rest ys restZ used hΓ hS hmemss hq hys hFss
       exact ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _), .bindName _ _ _ IH.2.2⟩
-    case assign | assignTab | assignGlob | call =>
+    case assign | assignTab | assignGlob | assignGlobB | call =>
       obtain ⟨bT, fT', ns', ys, hstepT, hys, rfl⟩ := seqZ_schritt_some hbs (by exact True.intro)
       obtain ⟨hstepN, rfl, rfl⟩ := schrittB_einzeln_sicht hS hstepT (by exact True.intro)
       obtain ⟨hx, -, -⟩ := schrittB_stmt hstepN (fun _ _ _ h => by cases h)
@@ -191,6 +191,14 @@ theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB 
         case bool sd =>
           simp only [retZ] at hbT
           cases hse : condZ u fT ns sd with
+          | none => rw [hse] at hbT; cases hbT
+          | some e =>
+            rw [hse] at hbT
+            simp only [Option.map_some, Option.some.injEq] at hbT
+            exact ⟨_, hbT.symm⟩
+        case wert sd =>
+          simp only [retZ] at hbT
+          cases hse : namedSide u fT ns sd with
           | none => rw [hse] at hbT; cases hbT
           | some e =>
             rw [hse] at hbT

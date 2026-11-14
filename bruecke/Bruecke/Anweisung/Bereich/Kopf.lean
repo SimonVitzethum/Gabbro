@@ -131,7 +131,7 @@ theorem lowEndL_leaf_ok {loopMode : Bool} {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : 
       (lowStmtL (l := loopMode) u c Γ fn Λ st).bind (fun p =>
         (lowEndL (l := loopMode) u c Γ fn n p.1 [] ss).bind (fun e => .ok (.cons p.2 e.1, e.2))) := by
     cases st
-    case assign | assignTab | assignGlob | call | setVar | setVarB => rfl
+    case assign | assignTab | assignGlob | assignGlobB | call | setVar | setVarB => rfl
     all_goals cases hs
   rw [hd] at h
   cases hg : lowStmtL (l := loopMode) u c Γ fn Λ st with

@@ -11,7 +11,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
 variable {u : UProg}
 
 def LeseZ : UStmt → Prop
-  | .bind .. | .bindMut .. | .bindB .. | .bindCall .. | .setVar .. | .setVarB .. | .assign .. | .assignTab .. | .assignGlob .. | .call .. => True
+  | .bind .. | .bindMut .. | .bindB .. | .bindCall .. | .setVar .. | .setVarB .. | .assign .. | .assignTab .. | .assignGlob .. | .assignGlobB .. | .call .. => True
   | _ => False
 
 theorem seqZ_schritt {k : Nat} {fn : UFn} {ns : BodyNames} {s : UStmt} {rest : List UStmt}
@@ -22,7 +22,7 @@ theorem seqZ_schritt {k : Nat} {fn : UFn} {ns : BodyNames} {s : UStmt} {rest : L
            (fun p => (b :: p.1, p.2.1, p.2.2))
        | none => none) := by
   cases s
-  case bind | bindMut | bindB | bindCall | setVar | setVarB | assign | assignTab | assignGlob | call => rfl
+  case bind | bindMut | bindB | bindCall | setVar | setVarB | assign | assignTab | assignGlob | assignGlobB | call => rfl
   all_goals cases hs
 
 theorem stmtsBodyZ_schritt {k : Nat} {fn : UFn} {ns : BodyNames} {s : UStmt}
@@ -32,7 +32,7 @@ theorem stmtsBodyZ_schritt {k : Nat} {fn : UFn} {ns : BodyNames} {s : UStmt}
        | some (b, fn', ns') => (stmtsBodyZ u k fn' ns' rest r).map (b :: ·)
        | none => none) := by
   cases s
-  case bind | bindMut | bindB | bindCall | setVar | setVarB | assign | assignTab | assignGlob | call => rfl
+  case bind | bindMut | bindB | bindCall | setVar | setVarB | assign | assignTab | assignGlob | assignGlobB | call => rfl
   all_goals cases hs
 
 theorem seqZ_schritt_some {k : Nat} {fn : UFn} {ns : BodyNames} {s : UStmt}
@@ -183,7 +183,7 @@ theorem schrittB_einzeln_sicht {fT fn : UFn} {ns ns' : BodyNames}
     have hid' := (BodyNames.lookup_sicht hS ns x).symm.trans hid
     have he' := (condZ_sicht hS ns v).symm.trans he
     simp only [schrittB, hid', he']
-  case assign | assignTab | assignGlob | call =>
+  case assign | assignTab | assignGlob | assignGlobB | call =>
     obtain ⟨hb, hfT, hns⟩ := schrittB_stmt h (fun _ _ _ h => by cases h)
       (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
       (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)

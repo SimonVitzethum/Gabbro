@@ -8,11 +8,11 @@ namespace Gabbro.Bruecke
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 
-/-- Operational straight-line traversal: numeric world writes and scalar local updates.
-    Calls, branches, local bindings, nested loops and exits are explicitly refused. -/
+/-- Operational straight-line traversal: numeric world writes, scalar static writes and
+    scalar local updates. Calls, branches, local bindings, nested loops and exits are refused. -/
 def loopWritesB : List UStmt → Bool
   | .blkEnd :: _ => true
-  | .assign .. :: ss | .assignTab .. :: ss | .assignGlob .. :: ss
+  | .assign .. :: ss | .assignTab .. :: ss | .assignGlob .. :: ss | .assignGlobB .. :: ss
   | .setVar .. :: ss | .setVarB .. :: ss => loopWritesB ss
   | _ => false
 

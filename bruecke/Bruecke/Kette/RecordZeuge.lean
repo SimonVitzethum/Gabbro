@@ -356,6 +356,14 @@ theorem storage_and_contract_refusals :
     ensExpr unit identity {} (.cmp "==" (.param "r") (.param "r")) = none := by
   cbv
 
+/-- A record return inside a narrow failure branch is read like the trailing record return. -/
+theorem nested_record_return_zeuge :
+    (zuBodyZ unit { identity with
+      params := [("r", schema.ty), ("k", .int 0 255)]
+      kinds := [.wert, .int]
+      body := [.narrowBeg "k" 0 9, .ret (.wert (.param "r")), .blkEnd] }).isSome = true := by
+  cbv
+
 #print axioms nutzer_aus_quelleG_record_zeuge
 
 end Gabbro.Bruecke.RecordZeuge

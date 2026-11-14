@@ -178,7 +178,7 @@ theorem laufSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u
       | hardware err =>
         refine ⟨fun err' hh => ?_, fun σ' v' hh => ?_ , fun σ' ρ' hh => ?_⟩
         all_goals simp only [execBlock, hR] at hh; cases hh
-    case setVar | setVarB | assign | assignTab | assignGlob | call =>
+    case setVar | setVarB | assign | assignTab | assignGlob | assignGlobB | call =>
       obtain ⟨bT, fT', ns', ys, hstepT, hys, rfl⟩ := seqZ_schritt_some hbs (by exact True.intro)
       obtain ⟨hstepN, rfl, rfl⟩ := schrittB_einzeln_sicht hS hstepT (by exact True.intro)
       have hF' := bindFrischL_sonst (by rfl) hF

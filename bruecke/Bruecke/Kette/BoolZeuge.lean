@@ -364,10 +364,11 @@ theorem shadowing_reader_zeuge :
         .ret (some (.name "flag"))] := by
   cbv
 
-/-- Unsupported bool storage is still refused by its explicit gate, not silently omitted. -/
+/-- Unsupported bool storage is still refused by its explicit gate, not silently omitted:
+    bool table fields and atomic bool statics. -/
 theorem storage_refusals_zeuge :
     keinBoolB { unit with tabs := [{ name := "Flags", count := 1, cols := [], bools := ["ready"] }] } = false ∧
-      staticsB { unit with globs := [{ name := "ready", ty := .bool, init := 0 }] } = false := by
+      staticsB { unit with globs := [{ name := "ready", ty := .bool, init := 0, atomic := true }] } = false := by
   cbv
 
 #print axioms nutzer_aus_quelleG_bool_zeuge

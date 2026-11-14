@@ -97,7 +97,7 @@ theorem loopWrites_rest {loopMode : Bool} : ∀ n k ss {Γ : Ctx} (fn ft : UFn) 
       obtain ⟨_, heq, _⟩ := hB
       cases heq
       exact ⟨rfl, List.suffix_cons _ _⟩
-    case assign | assignTab | assignGlob | setVar | setVarB =>
+    case assign | assignTab | assignGlob | assignGlobB | setVar | setVarB =>
       obtain ⟨b, ft', ns', ys, hb, hy, _⟩ := seqZ_schritt_some hB (by exact True.intro)
       obtain ⟨_, hft, hns⟩ := schrittB_einzeln_sicht (Sicht.refl ft) hb (by exact True.intro)
       subst ft'

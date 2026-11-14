@@ -184,6 +184,11 @@ theorem ensExpr_sicht {fT fn : UFn} (h : Sicht u fT fn) (e : UEns) (a : Acc) :
 termination_by sizeOf e
 decreasing_by assumption
 
+theorem rawCond_sicht {fT fn : UFn} (h : Sicht u fT fn) (c : UEns) :
+    rawCond u fT c = rawCond u fn c := by
+  unfold rawCond
+  rw [ensExpr_sicht h]
+
 theorem argExpr_sicht {fT fn : UFn} (h : Sicht u fT fn) (a : UArg) :
     argExpr u fT a = argExpr u fn a := by
   cases a <;> simp only [argExpr, rawCond, ensExpr_sicht h, h.2.2.1, sideExprG_sicht h]
@@ -195,7 +200,7 @@ theorem argsExpr_sicht {fT fn : UFn} (h : Sicht u fT fn) :
 
 theorem stmtBody_sicht {fT fn : UFn} (h : Sicht u fT fn) (s : UStmt) :
     stmtBody u fT s = stmtBody u fn s := by
-  cases s <;> simp [stmtBody, h.2.1, sideExprG_sicht h, argsExpr_sicht h]
+  cases s <;> simp [stmtBody, h.2.1, sideExprG_sicht h, argsExpr_sicht h, rawCond_sicht h]
 
 
 end Gabbro.Bruecke

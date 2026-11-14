@@ -67,18 +67,20 @@ def uOf (src : String) : Option UProg :=
   | .ok ⟨u, _, _⟩ => some u
   | .error _ => none
 
-/-- Initial values are validated even for a hand-built UProg, independently of elaboration. -/
+/-- Initial values are validated even for a hand-built UProg, independently of elaboration.
+    A `bool` static is initialised by the front end with `1` (`true`) or `0` (`false`). -/
 def initialStaticsB (u : UProg) : Bool := u.globs.all fun g =>
   match g.ty with
   | .int lo hi => decide (lo ≤ g.init ∧ g.init ≤ hi)
-  | .bool | .wert _ => false
+  | .bool => decide (g.init = 0 ∨ g.init = 1)
+  | .wert _ => false
 
-/-- Zero-initialized numeric table fields and valid, non-atomic numeric static initializers. -/
+/-- Zero-initialized numeric table fields and valid, non-atomic scalar static initializers. -/
 def nullB (u : UProg) : Bool :=
   (staticsB u && initialStaticsB u) && u.tabs.all fun t => t.opts.isEmpty && t.werte.isEmpty &&
     t.cols.all fun f => decide (f.2.1 ≤ 0) && decide (0 ≤ f.2.2)
 
-theorem nullB_statics {u : UProg} (h : nullB u = true) : NumericStatics u :=
+theorem nullB_statics {u : UProg} (h : nullB u = true) : ScalarStatics u :=
   staticsB_ok (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp h).1).1
 
 theorem initial_bereich {u : UProg} (h : nullB u = true) (g : Fin u.globs.length)
@@ -89,12 +91,11 @@ theorem initial_bereich {u : UProg} (h : nullB u = true) (g : Fin u.globs.length
   simp only [ht, decide_eq_true_eq] at hg
   exact hg
 
-/-- Numeric statics admitted by this bridge are ordinary world state, never atomics. -/
-theorem declOf_numeric_kein_atomar (u : UProg) (h : NumericStatics u) :
+/-- Scalar statics admitted by this bridge are ordinary world state, never atomics. -/
+theorem declOf_scalar_kein_atomar (u : UProg) (h : ScalarStatics u) :
     ∀ g : (declOf u).Glob, (declOf u).atomar g = false := by
   intro g
-  obtain ⟨_, _, _, ha⟩ := h g
-  exact ha
+  exact (h g).2
 
 theorem nullB_tab {u : UProg} (h : nullB u = true) (t : Fin u.tabs.length) :
     (tabAt u t).opts = [] ∧ (tabAt u t).werte = [] := by
@@ -144,16 +145,10 @@ def nullSp (u : UProg) (h : nullB u = true) : Speicher (declOf u) where
     | int lo hi =>
       exact (⟨(globAt u g).init, (initial_bereich h g lo hi ht).1,
         (initial_bereich h g lo hi ht).2⟩ : Zahl lo hi)
-    | bool =>
-      exfalso
-      obtain ⟨_, _, hn, _⟩ := nullB_statics h g
-      rw [ht] at hn
-      cases hn
+    | bool => exact decide ((globAt u g).init = 1)
     | wert ty =>
       exfalso
-      obtain ⟨_, _, hn, _⟩ := nullB_statics h g
-      rw [ht] at hn
-      cases hn
+      rcases (nullB_statics h g).1 with ⟨_, _, hn⟩ | hn <;> rw [ht] at hn <;> cases hn
 
 /-- The declared thread roots of a unit: the dispatch targets of its `entry` items, each a
     parameterless function (the front end refuses any other), started with the empty environment. -/

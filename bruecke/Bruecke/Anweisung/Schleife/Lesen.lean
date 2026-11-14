@@ -96,7 +96,7 @@ theorem loopWrites_calls : ∀ k fn ns ss bs tail used,
       obtain ⟨_, hr, _⟩ := h
       cases hr
       exact CallsIn.tail (by rfl) hc
-    case assign | assignTab | assignGlob | setVar | setVarB =>
+    case assign | assignTab | assignGlob | assignGlobB | setVar | setVarB =>
       obtain ⟨b, fn', ns', ys, hs, hy, _⟩ := seqZ_schritt_some h (by exact True.intro)
       exact loopWrites_calls k fn' ns' ss ys tail used hg hy g args (CallsIn.tail (by rfl) hc)
     all_goals cases hg

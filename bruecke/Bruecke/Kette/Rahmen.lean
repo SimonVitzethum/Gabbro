@@ -219,7 +219,7 @@ theorem statisch_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB : G
         obtain ⟨Λ', gst, rest, hgst, hrest, rfl⟩ :=
           lowBodyF_cons_ok c r (.setVarB x v) ss trivial hlow
         exact .bindName _ _ _ (statisch_G S c hc ρB r n k ss fn _ _ rest bs' hΓ hS hmemss hrest hbs' hFss)
-      case assign | assignTab | assignGlob | call =>
+      case assign | assignTab | assignGlob | assignGlobB | call =>
         obtain ⟨bB, fT', ns', bs', hstep0, hbs', rfl⟩ :=
           stmtsBodyZ_schritt_some hbs (by exact True.intro)
         obtain ⟨hstepN, rfl, rfl⟩ := schrittB_einzeln_sicht hS hstep0 (by exact True.intro)

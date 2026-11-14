@@ -64,20 +64,22 @@ def keinBoolB (u : UProg) : Bool :=
   u.tabs.all (fun t => t.bools.isEmpty && t.opts.isEmpty && t.werte.isEmpty) &&
     u.fns.all (fun f => resultTypeB f && f.resOpt.isNone && f.resSum.isNone && f.resWhy.isNone)
 
-/-- Boolean, aggregate and atomic statics are refused by the unit gate. -/
+/-- Aggregate and atomic statics are refused by the unit gate; integer and bool statics pass. -/
 def staticsB (u : UProg) : Bool := u.globs.all fun g =>
   match g.ty with
-  | .int .. => !g.atomic
-  | .bool | .wert _ => false
+  | .int .. | .bool => !g.atomic
+  | .wert _ => false
 
-theorem staticsB_ok {u : UProg} (h : staticsB u = true) : NumericStatics u := by
+theorem staticsB_ok {u : UProg} (h : staticsB u = true) : ScalarStatics u := by
   intro g
   have hg := List.all_eq_true.mp h (globAt u g) (List.get_mem _ _)
   cases ht : (globAt u g).ty with
   | int lo hi =>
     simp only [ht, Bool.not_eq_eq_eq_not, Bool.not_true] at hg
-    exact ⟨lo, hi, rfl, hg⟩
-  | bool => simp only [ht, Bool.false_eq_true] at hg
+    exact ⟨.inl ⟨lo, hi, rfl⟩, hg⟩
+  | bool =>
+    simp only [ht, Bool.not_eq_eq_eq_not, Bool.not_true] at hg
+    exact ⟨.inr rfl, hg⟩
   | wert ty => simp only [ht, Bool.false_eq_true] at hg
 
 def stimmigB (u : UProg) : Bool :=

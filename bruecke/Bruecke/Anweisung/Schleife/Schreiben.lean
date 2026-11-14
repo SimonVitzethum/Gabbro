@@ -17,7 +17,7 @@ theorem loopWrite_ok {loopMode : Bool} (c : Fin u.fns.length) {Γ : Ctx} {fn : U
     (hg : loopWritesB (st :: ss) = true) (hmark : st ≠ .blkEnd)
     (hlow : lowStmtL (l := loopMode) u c Γ fn Λ st = .ok ⟨Λ', gst⟩)
     (hb : schrittB u fn ns st = some (b, fn, ns)) (hU : UmfangB Γ fn ns)
-    (hT : TabEindeutig u) (hN : NumericStatics u) (O : Orakel (declOf u)) (passes : Nat)
+    (hT : TabEindeutig u) (hN : ScalarStatics u) (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
     (σ : World (declOf u)) (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State)
     (hW : WGRel u σ s.world) (hL : PositionalLRel fn ns.active 0 ρ s.local') :
@@ -59,6 +59,18 @@ theorem loopWrite_ok {loopMode : Bool} (c : Fin u.fns.length) {Γ : Ctx} {fn : U
       simp only [hs, Except.map] at hlow
       cases hlow
       obtain ⟨σ', _, hex, _⟩ := lowAssignGlob_sim c hs hb' hN hU hT O passes R σ ρ s hW hL
+      exact ⟨σ', ρ, hex⟩
+  case assignGlobB name v =>
+    obtain ⟨hb', _, _⟩ := schrittB_stmt hb (fun _ _ _ h => by cases h)
+      (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
+    simp only [lowStmtL] at hlow
+    cases hs : lowAssignGlobBL (l := loopMode) u c Γ fn Λ name v with
+    | error e => simp only [hs, Except.map] at hlow; cases hlow
+    | ok g =>
+      simp only [hs, Except.map] at hlow
+      cases hlow
+      obtain ⟨σ', _, hex, _⟩ := lowAssignGlobB_sim c hs hb' hU hT O passes R σ ρ s hW hL
       exact ⟨σ', ρ, hex⟩
   case setVar x v =>
     obtain ⟨hn, id, e, hid, he, rfl, _, _⟩ := schrittB_setVar hb
@@ -111,7 +123,7 @@ theorem loopWrites_sim {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getra
       obtain ⟨rfl, _, _⟩ := hB
       intro σ ρ s hW hL
       exact ⟨σ, ρ, s, rfl, ⟨[], Strecke_G.leer s⟩, hW, hL⟩
-    case assign | assignTab | assignGlob | setVar | setVarB =>
+    case assign | assignTab | assignGlob | assignGlobB | setVar | setVarB =>
       obtain ⟨b, ft', ns', ys, hb, hy, rfl⟩ := seqZ_schritt_some hB (by exact True.intro)
       obtain ⟨hbN, hft, hns⟩ := schrittB_einzeln_sicht hV hb (by exact True.intro)
       subst ft' ns'

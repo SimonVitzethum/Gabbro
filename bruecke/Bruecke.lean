@@ -49,4 +49,5 @@ public import Bruecke.Kette.RecordZeuge
 public import Bruecke.Kette.Formen.OptionZeuge
 public import Bruecke.Kette.Formen.ReasonZeuge
 public import Bruecke.Kette.Formen.TagZeuge
+public import Bruecke.Kette.Formen.StatischBoolZeuge
 @[expose] public section

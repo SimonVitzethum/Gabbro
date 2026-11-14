@@ -25,7 +25,35 @@ theorem globIdx_name : ∀ (gs : List UGlob) (n : String) (g : Fin gs.length),
 
 variable (u : UProg)
 
-/-- A checked static store updates the static relation and preserves every slot. -/
+/-- The common scalar case of a static store: `n'` resolves to `j`, whose value was related. -/
+private theorem storeGlob_scalar {σ : World (declOf u)} {w : Gabbro.Body.World}
+    (h : GRel u σ w) (n : String) (i : Fin u.globs.length)
+    (hi : globIdx u.globs n = .ok i) (x : Wert (declOf u) ((declOf u).gtyp i))
+    (n' : String) (j : Fin u.globs.length) (hj : globIdx u.globs n' = .ok j)
+    (hold : globWert u σ n' = some (valOf ((declOf u).gtyp j) (σ.globs j))) :
+    Gabbro.Body.store w (.global n) (valOf ((declOf u).gtyp i) x) (.global n') =
+      valOf ((declOf u).gtyp j) ((σ.storeGlob i x).globs j) := by
+  by_cases hn : n' = n
+  · subst n'
+    rw [hi] at hj
+    cases hj
+    rw [Gabbro.Body.store_here]
+    exact congrArg (valOf _) (storeGlob_hit σ i x).symm
+  · have hp : Gabbro.Body.Place.global n' ≠ .global n := by
+      intro he
+      cases he
+      exact hn rfl
+    rw [Gabbro.Body.store_elsewhere _ _ _ _ hp]
+    have hji : j ≠ i := by
+      intro he
+      subst j
+      exact hn ((globIdx_name u.globs n' i hj).symm.trans
+        (globIdx_name u.globs n i hi))
+    rw [storeGlob_andere σ i x j hji]
+    exact h n' _ hold
+
+/-- A checked static store updates the static relation and preserves every slot.
+    It covers integer and bool statics alike. -/
 theorem wgrel_storeGlob {σ : World (declOf u)} {w : Gabbro.Body.World}
     (h : WGRel u σ w) (n : String) (i : Fin u.globs.length)
     (hi : globIdx u.globs n = .ok i) (x : Wert (declOf u) ((declOf u).gtyp i)) :
@@ -44,26 +72,11 @@ theorem wgrel_storeGlob {σ : World (declOf u)} {w : Gabbro.Body.World}
       | int lo hi' =>
         simp only [ht, Option.some.injEq] at hv
         subst v
-        by_cases hn : n' = n
-        · subst n'
-          rw [hi] at hj
-          cases hj
-          rw [Gabbro.Body.store_here]
-          exact congrArg (valOf _) (storeGlob_hit σ i x).symm
-        · have hp : Gabbro.Body.Place.global n' ≠ .global n := by
-            intro he
-            cases he
-            exact hn rfl
-          rw [Gabbro.Body.store_elsewhere _ _ _ _ hp]
-          have hji : j ≠ i := by
-            intro he
-            subst j
-            exact hn ((globIdx_name u.globs n' i hj).symm.trans
-              (globIdx_name u.globs n i hi))
-          rw [storeGlob_andere σ i x j hji]
-          apply h.2
-          simp only [globWert, hj, ht]
-      | bool => simp only [ht, reduceCtorEq] at hv
+        exact storeGlob_scalar u h.2 n i hi x n' j hj (by simp only [globWert, hj, ht])
+      | bool =>
+        simp only [ht, Option.some.injEq] at hv
+        subst v
+        exact storeGlob_scalar u h.2 n i hi x n' j hj (by simp only [globWert, hj, ht])
       | wert ty => simp only [ht, reduceCtorEq] at hv
 
 end Gabbro.Bruecke

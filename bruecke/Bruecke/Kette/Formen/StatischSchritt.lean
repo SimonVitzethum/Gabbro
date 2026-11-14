@@ -63,6 +63,11 @@ theorem statisch_schritt_G {loopMode : Bool} (S : Getragen u C) (c : Fin u.fns.l
         cases he : sideExprG u fn v with
         | none => rw [he] at hx; cases hx
         | some e => rw [he] at hx; cases hx
+      case assignGlobB n v _ =>
+        simp only [stmtBody] at hx
+        cases he : rawCond u fn v with
+        | none => rw [he] at hx; cases hx
+        | some e => rw [he] at hx; cases hx
       all_goals simp only [stmtBody, reduceCtorEq] at hx
     simp only [renameStep] at hn
     cases hr : renameStep.renameScalars (ns.lookup fn) es with

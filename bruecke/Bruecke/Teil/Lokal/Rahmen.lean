@@ -147,6 +147,21 @@ theorem stmt_statisch_teilB {loopMode : Bool} (S : Getragen u C) (c : Fin u.fns.
         rw [he] at hb
         cases hb
         exact .inr (.inl ⟨n, e, rfl, hw⟩)
+  case assignGlobB n v =>
+    simp only [lowStmtL] at h
+    cases hs : lowAssignGlobBL (l := loopMode) u c Γ fn Λ n v with
+    | error err => simp only [hs, Except.map] at h; cases h
+    | ok st =>
+      simp only [hs, Except.map] at h
+      cases h
+      have hw := lowAssignGlobB_writes c hs
+      simp only [stmtBody] at hb
+      cases he : rawCond u fn v with
+      | none => rw [he] at hb; cases hb
+      | some e =>
+        rw [he] at hb
+        cases hb
+        exact .inr (.inl ⟨n, e, rfl, hw⟩)
   case call cname args =>
     have h' : lowCallL (l := loopMode) u c Γ fn Λ cname args = .ok ⟨Λ', g⟩ := h
     unfold lowCallL at h'

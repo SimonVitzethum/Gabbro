@@ -24,6 +24,11 @@ theorem retZ_form {fn : UFn} {ns : BodyNames} {r : URet} {b : Gabbro.Body.Stmt}
     cases he : condZ u fn ns sd with
     | none => rw [he] at h; cases h
     | some e => rw [he] at h; cases h; exact ⟨some e, rfl⟩
+  case wert sd =>
+    simp only [retZ] at h
+    cases he : namedSide u fn ns sd with
+    | none => rw [he] at h; cases h
+    | some e => rw [he] at h; cases h; exact ⟨some e, rfl⟩
   all_goals cases h
 
 theorem endBodyZ_statisch {loopMode : Bool} (S : Getragen u C) (hc : C c) (ρB : Gabbro.Body.Env) :

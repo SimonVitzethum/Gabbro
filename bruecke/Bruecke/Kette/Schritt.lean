@@ -106,6 +106,20 @@ theorem stmtZiel_einzeln_G {loopMode : Bool} {P : Programm (declOf u)} (G : Gese
         lowAssignGlob_sim c stored hx S.statics hU S.tab O passes R σ ρ s hW hL
       exact stmtZiel_ok_G hex (Strecke_G.schritt (fun ρB _ => hstep ρB)
         (fun w => Int.le_of_eq (gz_store_global w n s.world val).symm)) hW₁ hL
+  case assignGlobB n v =>
+    obtain ⟨hx, -, -⟩ := schrittB_stmt hb (fun _ _ _ h => by cases h)
+      (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
+    simp only [lowStmtL] at hgst
+    cases stored : lowAssignGlobBL (l := loopMode) u c Γ fn Λ n v with
+    | error err => simp only [stored, Except.map] at hgst; cases hgst
+    | ok statement =>
+      simp only [stored, Except.map] at hgst
+      cases hgst
+      obtain ⟨σ₁, val, hex, hstep, hW₁, _⟩ :=
+        lowAssignGlobB_sim c stored hx hU S.tab O passes R σ ρ s hW hL
+      exact stmtZiel_ok_G hex (Strecke_G.schritt (fun ρB _ => hstep ρB)
+        (fun w => Int.le_of_eq (gz_store_global w n s.world val).symm)) hW₁ hL
   case call cname args =>
 
     obtain ⟨hx, -, -⟩ := schrittB_stmt hb (fun _ _ _ h => by cases h)

@@ -73,10 +73,11 @@ def namedEnd (u : UProg) (fn : UFn) (ns : BodyNames) : URet → Option (List Gab
   | .bool v => (condZ u fn ns v).map (fun e => [.ret (some e)])
   | _ => none
 
-/-- A return inside a block must remain a Body return, including its empty form. -/
+/-- A return inside a block must remain a Body return, including its empty form. A record
+    return is read like the trailing one (`namedEnd`). -/
 def retZ (u : UProg) (fn : UFn) (ns : BodyNames) : URet → Option Gabbro.Body.Stmt
   | .empty => some (.ret none)
-  | .val v => (namedSide u fn ns v).map (fun e => .ret (some e))
+  | .val v | .wert v => (namedSide u fn ns v).map (fun e => .ret (some e))
   | .bool v => (condZ u fn ns v).map (fun e => .ret (some e))
   | _ => none
 

@@ -105,10 +105,11 @@ def numericSideExpr (u : UProg) (f : UFn) : USide → Option Expr
   | .bxor a b => binE .bxor (numericSideExpr u f a) (numericSideExpr u f b)
   | _ => none
 
-/-- Only numeric, non-atomic module statics belong to this bridge fragment. -/
-def NumericStatics (u : UProg) : Prop :=
-  ∀ g : Fin u.globs.length, ∃ lo hi : Int,
-    (globAt u g).ty = .int lo hi ∧ (globAt u g).atomic = false
+/-- Only integer and bool, non-atomic module statics belong to this bridge fragment. -/
+def ScalarStatics (u : UProg) : Prop :=
+  ∀ g : Fin u.globs.length,
+    ((∃ lo hi : Int, (globAt u g).ty = .int lo hi) ∨ (globAt u g).ty = .bool) ∧
+      (globAt u g).atomic = false
 
 /-- Numeric expressions including module statics; nonnumeric static access is refused by lowering. -/
 def numericSideExprG (u : UProg) (f : UFn) : USide → Option Expr
@@ -188,6 +189,14 @@ def ensExpr (u : UProg) (f : UFn) (a : Acc) : UEns → Option (Expr × Acc)
       match ensExpr u f a x with
       | some (xe, a1) => some (.un .not xe, a1)
       | none => none
+  -- A `bool` static reads its Body global; other statics are refused (as by `lowGlobBool`).
+  | .globB g =>
+      match globIdx u.globs g with
+      | .error _ => none
+      | .ok i =>
+          match (globAt u i).ty with
+          | .bool => some (.global g, a)
+          | .int .. | .wert _ => none
   -- Bool fields have no slot encoding in this bridge and remain refused by name.
   | .slotB .. | .tabB .. => none
   | _ => none
@@ -249,6 +258,7 @@ def stmtBody (u : UProg) (f : UFn) : UStmt → Option Stmt
       | _, _ => none
   | .assignTab t fld i v => (sideExprG u f v).map (fun ve => .assign t (idxExpr i) fld ve)
   | .assignGlob g v => (sideExprG u f v).map (fun ve => .assignGlobal g ve)
+  | .assignGlobB g v => (rawCond u f v).map (fun ve => .assignGlobal g ve)
   | .call g as =>
       match fnSuch u g, argsExpr u f as with
       | some gf, some es => some (.call g (gf.params.map (·.1)) es (preExpr gf))

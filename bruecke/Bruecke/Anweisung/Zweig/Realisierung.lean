@@ -113,7 +113,7 @@ theorem seqZ_callee : ∀ (k : Nat) (fn : UFn) (ns : BodyNames) (ss : List UStmt
         · cases h'
           first | exact .inl (callee_of_schrittB hs) | exact .inl (callee_of_bindCall hs)
         · exact seqZ_callee k fn' ns' ss ys rest used hY g args h'
-      case bind | bindMut | bindB | setVar | setVarB | assign | assignTab | assignGlob =>
+      case bind | bindMut | bindB | setVar | setVarB | assign | assignTab | assignGlob | assignGlobB =>
         obtain ⟨b, fn', ns', ys, hs, hY, _⟩ := seqZ_schritt_some h (by exact True.intro)
         exact seqZ_callee k fn' ns' ss ys rest used hY g args (CallsIn.tail (by rfl) hm)
       all_goals exact absurd h (by simp only [seqZ, schrittB, namedStmt, stmtBody, Option.bind_none, Option.map_none, reduceCtorEq, not_false_eq_true])
@@ -193,7 +193,7 @@ theorem stmtsBodyZ_callee (r : URet) : ∀ (k : Nat) (fn : UFn) (ns : BodyNames)
         obtain ⟨id, fields, e, ys, rfl, he, hys, _⟩ := stmtsBodyZ_bindRecord_some h
         exact stmtsBodyZ_callee r k (fn.mitWert x (.prod id fields)) (ns.push x) ss ys hys g args
           (CallsIn.tail (by rfl) hm)
-      case bind | bindMut | bindB | setVar | setVarB | assign | assignTab | assignGlob =>
+      case bind | bindMut | bindB | setVar | setVarB | assign | assignTab | assignGlob | assignGlobB =>
         obtain ⟨b, fn', ns', bs', hs, hY, _⟩ := stmtsBodyZ_schritt_some h (by exact True.intro)
         exact stmtsBodyZ_callee r k fn' ns' ss bs' hY g args (CallsIn.tail (by rfl) hm)
       all_goals exact absurd h (by simp only [stmtsBodyZ, schrittB, namedStmt, stmtBody, Option.bind_none, Option.map_none, reduceCtorEq, not_false_eq_true])

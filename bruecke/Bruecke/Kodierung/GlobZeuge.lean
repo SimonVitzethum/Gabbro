@@ -89,16 +89,16 @@ theorem sideExprG_zeuge :
       some (.bin .add (.lit (.int 1)) (.lit (.int 2))) :=
   ⟨by kernel_rfl, by kernel_rfl, sideExprG_of_sideExpr unit routine _ _ (by kernel_rfl)⟩
 
-/-- Boolean and aggregate declarations do not acquire numeric bridge shapes or values. -/
+/-- A `bool` declaration has the Body shape `bool`; an aggregate declaration acquires neither a
+    bridge shape nor a value. -/
 theorem glob_nonnumeric_zeuge :
-    let unsupported : UProg := { unit with globs := [
+    let mixed : UProg := { unit with globs := [
       { name := "flag", ty := .bool, init := 1 },
       { name := "array", ty := .wert (.arr (.int 0 10) 1), init := 0 }] }
-    globShape unsupported "flag" = none ∧ globShape unsupported "array" = none ∧
-    ∀ σ : World (declOf unsupported),
-      globWert unsupported σ "flag" = none ∧ globWert unsupported σ "array" = none := by
+    globShape mixed "flag" = some .bool ∧ globShape mixed "array" = none ∧
+    ∀ σ : World (declOf mixed), globWert mixed σ "array" = none := by
   refine ⟨by kernel_rfl, by kernel_rfl, ?_⟩
   intro σ
-  exact ⟨by kernel_rfl, by kernel_rfl⟩
+  kernel_rfl
 
 end Gabbro.Bruecke.GlobZeuge
