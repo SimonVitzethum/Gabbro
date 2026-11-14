@@ -220,30 +220,29 @@ theorem kostenBlock_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         entfZ_ru, Option.elim_some, Option.elim_none]
         )
     try rfl
-  | .bindAxiomOpt (e := e) .. | .bindAxiomOptElse (e := e) .. =>
-    cases e <;> (
-      (try simp only [ruB, kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
-        entfZ_ru, Option.elim_some, Option.elim_none])
-      repeat
-        (first
-          | erw [kostenStmt_nachΛ]
-          | erw [kostenBlock_vorΛ]
-          | erw [kostenEnd_umΛ]
-          | erw [kostenSonst_umΛ]
-          | erw [kostenExpr_ru]
-          | erw [kostenArgs_ru]
-          | erw [kostenErg_ru]
-          | erw [kostenStmt_ru]
-          | erw [kostenBlock_ru]
-          | erw [kostenArms_ru]
-          | erw [kostenGrundArms_ru]
-          | erw [kostenEnd_ru]
-          | erw [kostenSonst_ru]
-          | simp only [kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
-        entfZ_ru, Option.elim_some, Option.elim_none]
-          )
-      try rfl
-      )
+  | .bindAxiomOpt (e := none) .. | .bindAxiomOptElse (e := none) ..
+  | .bindAxiomOpt (e := some _) .. | .bindAxiomOptElse (e := some _) .. =>
+    (try simp only [ruB, kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
+      entfZ_ru, Option.elim_some, Option.elim_none])
+    repeat
+      (first
+        | erw [kostenStmt_nachΛ]
+        | erw [kostenBlock_vorΛ]
+        | erw [kostenEnd_umΛ]
+        | erw [kostenSonst_umΛ]
+        | erw [kostenExpr_ru]
+        | erw [kostenArgs_ru]
+        | erw [kostenErg_ru]
+        | erw [kostenStmt_ru]
+        | erw [kostenBlock_ru]
+        | erw [kostenArms_ru]
+        | erw [kostenGrundArms_ru]
+        | erw [kostenEnd_ru]
+        | erw [kostenSonst_ru]
+        | simp only [kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
+      entfZ_ru, Option.elim_some, Option.elim_none]
+        )
+    try rfl
 termination_by sizeOf b
 
 theorem kostenArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
@@ -295,30 +294,29 @@ theorem kostenEnd_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V
         entfZ_ru, Option.elim_some, Option.elim_none]
         )
     try rfl
-  | .bindAxiomOpt (e := e) .. | .bindAxiomOptElse (e := e) .. =>
-    cases e <;> (
-      (try simp only [ruEnd, kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
-        entfZ_ru, Option.elim_some, Option.elim_none])
-      repeat
-        (first
-          | erw [kostenStmt_nachΛ]
-          | erw [kostenBlock_vorΛ]
-          | erw [kostenEnd_umΛ]
-          | erw [kostenSonst_umΛ]
-          | erw [kostenExpr_ru]
-          | erw [kostenArgs_ru]
-          | erw [kostenErg_ru]
-          | erw [kostenStmt_ru]
-          | erw [kostenBlock_ru]
-          | erw [kostenArms_ru]
-          | erw [kostenGrundArms_ru]
-          | erw [kostenEnd_ru]
-          | erw [kostenSonst_ru]
-          | simp only [kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
-        entfZ_ru, Option.elim_some, Option.elim_none]
-          )
-      try rfl
-      )
+  | .bindAxiomOpt (e := none) .. | .bindAxiomOptElse (e := none) ..
+  | .bindAxiomOpt (e := some _) .. | .bindAxiomOptElse (e := some _) .. =>
+    (try simp only [ruEnd, kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
+      entfZ_ru, Option.elim_some, Option.elim_none])
+    repeat
+      (first
+        | erw [kostenStmt_nachΛ]
+        | erw [kostenBlock_vorΛ]
+        | erw [kostenEnd_umΛ]
+        | erw [kostenSonst_umΛ]
+        | erw [kostenExpr_ru]
+        | erw [kostenArgs_ru]
+        | erw [kostenErg_ru]
+        | erw [kostenStmt_ru]
+        | erw [kostenBlock_ru]
+        | erw [kostenArms_ru]
+        | erw [kostenGrundArms_ru]
+        | erw [kostenEnd_ru]
+        | erw [kostenSonst_ru]
+        | simp only [kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
+      entfZ_ru, Option.elim_some, Option.elim_none]
+        )
+    try rfl
 termination_by sizeOf e
 
 theorem kostenSonst_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) :
@@ -350,30 +348,29 @@ theorem kostenSonst_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D
         entfZ_ru, Option.elim_some, Option.elim_none]
         )
     try rfl
-  | .bindAxiomOpt (e := e) .. | .bindAxiomOptElse (e := e) .. =>
-    cases e <;> (
-      (try simp only [ruEnd, kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
-        entfZ_ru, Option.elim_some, Option.elim_none])
-      repeat
-        (first
-          | erw [kostenStmt_nachΛ]
-          | erw [kostenBlock_vorΛ]
-          | erw [kostenEnd_umΛ]
-          | erw [kostenSonst_umΛ]
-          | erw [kostenExpr_ru]
-          | erw [kostenArgs_ru]
-          | erw [kostenErg_ru]
-          | erw [kostenStmt_ru]
-          | erw [kostenBlock_ru]
-          | erw [kostenArms_ru]
-          | erw [kostenGrundArms_ru]
-          | erw [kostenEnd_ru]
-          | erw [kostenSonst_ru]
-          | simp only [kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
-        entfZ_ru, Option.elim_some, Option.elim_none]
-          )
-      try rfl
-      )
+  | .bindAxiomOpt (e := none) .. | .bindAxiomOptElse (e := none) ..
+  | .bindAxiomOpt (e := some _) .. | .bindAxiomOptElse (e := some _) .. =>
+    (try simp only [ruEnd, kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
+      entfZ_ru, Option.elim_some, Option.elim_none])
+    repeat
+      (first
+        | erw [kostenStmt_nachΛ]
+        | erw [kostenBlock_vorΛ]
+        | erw [kostenEnd_umΛ]
+        | erw [kostenSonst_umΛ]
+        | erw [kostenExpr_ru]
+        | erw [kostenArgs_ru]
+        | erw [kostenErg_ru]
+        | erw [kostenStmt_ru]
+        | erw [kostenBlock_ru]
+        | erw [kostenArms_ru]
+        | erw [kostenGrundArms_ru]
+        | erw [kostenEnd_ru]
+        | erw [kostenSonst_ru]
+        | simp only [kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
+      entfZ_ru, Option.elim_some, Option.elim_none]
+        )
+    try rfl
 termination_by sizeOf e
 end
 end Costs
