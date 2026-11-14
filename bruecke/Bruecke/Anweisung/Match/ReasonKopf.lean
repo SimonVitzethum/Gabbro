@@ -11,7 +11,7 @@ theorem lowGArms_succ {fuel n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (decl
     {ss tail : List UStmt} {arms : GrundArms (declOf u) (verOf u c) false Γ Λ Λ (n + 1)}
     (h : lowGArmsL u c Γ fn (fuel + 1) Λ [] (n + 1) ss = .ok (arms, tail)) :
     ∃ (body : Block (declOf u) (verOf u c) false Γ Λ Λ)
-      (restArms : GrundArms (declOf u) (verOf u c) false Γ Λ Λ n) remaining,
+      (restArms : GrundArms (declOf u) (verOf u c) false Γ Λ Λ n), ∃ remaining,
       lowSeqL u c Γ fn fuel Λ [] ss = .ok (⟨Λ, body⟩, remaining) ∧
       ((n = 0 ∧ remaining = tail) ∨
        ∃ m rest, n = m + 1 ∧ remaining = .ifElse :: rest ∧
@@ -47,8 +47,8 @@ theorem lowGArms_succ {fuel n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (decl
 theorem lowBodyF_reason_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declOf u))}
     {x : String} {ss : List UStmt} {r : URet} {b0 : Endblock (declOf u) (verOf u c) false Γ Λ}
     (h : lowBodyF u c Γ fn (n + 1) Λ (.matchWhyBeg x :: ss) r = .ok b0) :
-    ∃ Λ₁ (st : Stmt (declOf u) (verOf u c) false Γ Λ Λ₁) tail
-      (rest : Endblock (declOf u) (verOf u c) false Γ Λ₁),
+    ∃ Λ₁, ∃ (st : Stmt (declOf u) (verOf u c) false Γ Λ Λ₁), ∃ tail,
+      ∃ (rest : Endblock (declOf u) (verOf u c) false Γ Λ₁),
       lowStructL u c Γ fn blockFuel Λ [] (.matchWhyBeg x) ss = .ok (⟨Λ₁, st⟩, tail) ∧
       lowBodyF u c Γ fn n Λ₁ tail r = .ok rest ∧ b0 = .cons st rest := by
   simp only [lowBodyF] at h

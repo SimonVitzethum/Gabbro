@@ -60,7 +60,7 @@ theorem lowBodyF_narrow_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (decl
                   cases h
                   exact ⟨j, a, b, v, err, tail, rest,
                     (by first | exact hj | rfl), (by first | exact hv | rfl),
-                    herr, hrest, rfl⟩
+                    (by first | exact herr | rfl | simp_all), hrest, rfl⟩
       all_goals cases hnum
 
 theorem lowSeq_narrow_ok {loopMode : Bool} {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declOf u))}
@@ -114,7 +114,7 @@ theorem lowSeq_narrow_ok {loopMode : Bool} {Γ : Ctx} {fn : UFn} {n : Nat} {Λ :
                   simp only [hq, Except.bind] at h
                   cases h
                   exact ⟨j, a, b, v, err, remaining, ⟨Λ', rest⟩,
-                    (by first | exact hj | rfl), (by first | exact hv | rfl), herr, hq, rfl⟩
+                    (by first | exact hj | rfl), (by first | exact hv | rfl), (by first | exact herr | rfl | simp_all), hq, rfl⟩
       all_goals cases hnum
 
 /-- Leaf statements in an explicit ending use the same canonical single-statement reader. -/
