@@ -12,7 +12,7 @@ variable {D : Deklaration}
 
 /-- Optional source evidence for a semantic lock predicate. This is part of
     the model value, not a proof submitted to or checked by the compiler.
-    Without reification the lock predicate remains user duty (b). -/
+    The concrete invariant checker refuses a used lock without reification. -/
 structure ReifiedLock (S : SperrInv D) (lock : D.Lock) where
   resources : List (Res D)
   expression : Expr D [] resources .bool
@@ -35,7 +35,7 @@ def ReifiedLock.ofExpression (resources : List (Res D))
 def lockFormula (S : SperrInv D) (sources : LockSources S) (lock : D.Lock) :
     Except Refusal (LockFormula S lock) := do
   let some source := sources lock
-    | .error (.unsupported "semantic lock invariant has no reified source formula; user duty")
+    | .error (.unsupported "semantic lock invariant has no reified source formula")
   let encoded ← translateInvariant (S.orte lock) source.expression
   return {
       formula := lower encoded.payload
