@@ -1,13 +1,20 @@
 module
 
+public import Grammatik.Niedrig.Konstrukte.Fixture
 public import Grammatik.Niedrig.Konstrukte.SichtScope
-public import Grammatik.Niedrig.Konstrukte.Zeugen
 
 @[expose] public section
 
 namespace Gabbro.Grammatik.LowLevel.Construct.Witness
 
 /-! ## P1: one receipt carries a 42 write, its read-back, and the scope close -/
+
+/-- The admission produces exactly this receipt; stated here so this module
+    does not depend on the (currently unbuilding) `Zeugen` module. -/
+theorem p1_bind_receipt :
+    bindViewStep authority initial start 4 LowLevel.Witness.readWriteRights
+        OwnerWitness.child before =
+      (.ok receipt, before) := rfl
 
 /-- 42 goes through the view, comes back, and the scope closes on one receipt. -/
 theorem p1_ram_write_read_zeuge :
@@ -18,12 +25,13 @@ theorem p1_ram_write_read_zeuge :
         (fun _ world => (.ok 0, world)) =
       (.ok ((.ok 42 : Except Nat Nat), initial), written) := by
   refine ⟨rfl, ?_⟩
-  have produced := congrArg Prod.fst bind_view_zeuge
+  have produced := congrArg Prod.fst p1_bind_receipt
   simp only [bindViewStep] at produced
   simpa only [runViewScope, produced] using
     closeViewExitStep_success (.ok 42 : Except Nat Nat) written
       (ram_view_return initial_valid receipt)
 
+#print axioms Gabbro.Grammatik.LowLevel.Construct.Witness.p1_bind_receipt
 #print axioms Gabbro.Grammatik.LowLevel.Construct.Witness.p1_ram_write_read_zeuge
 
 end Gabbro.Grammatik.LowLevel.Construct.Witness
