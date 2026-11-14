@@ -1,4 +1,4 @@
-// erwartet: N056
+// erwartet: deadline not modelled
 // **A deadline whose probe cannot refute anything.**
 //
 // `sonde_tick` resolves in-unit to a `-> u64` function: a value, and a value is

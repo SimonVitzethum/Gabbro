@@ -234,15 +234,18 @@ theorem kette104 : lex src104real = .ok tt104 ∧
 
 /-! ## 108 preprocessing: `concurrent` stripping, bare-`u32` norms -/
 
-/-- The preprocessing of the bridge instances: check `pub` (`Oeffentlich.huelleZu`), resolve every name
+/-- The preprocessing of the bridge instances: check `pub` (`Oeffentlich.huelleZu`) and private-
+    reason visibility (`Oeffentlich.grundSichtbarB`, `N025`), resolve every name
     and open the modules
     (`Aufloesung.loese`: a unit of one name space is unwrapped as `uMembers` does), then normalise
     bare `u32`, before `elabU` (`concurrent` items are elaborated into the thread roots now). -/
 def pre108 (items : List SItemTief) : List SItemTief :=
   -- Module applications must retain their lexical scopes and static requirements until elabU.
   if Modules.syntaxList items then items
-  else if Oeffentlich.huelleZu items then normTopU32 (Aufloesung.loese items)
-  -- An open export hull (or a `pub` where none may stand) refuses the unit: a lone `use` has no G form.
+  else if Oeffentlich.huelleZu items && Oeffentlich.grundSichtbarB items then
+    normTopU32 (Aufloesung.loese items)
+  -- An open export hull (or a `pub` where none may stand, or a private reason used outside its
+  -- module) refuses the unit: a lone `use` has no G form.
   else [.useT ["pub"]]
 
 /-! ## 108 pins: strip, normalise, elaborate, lower -/
