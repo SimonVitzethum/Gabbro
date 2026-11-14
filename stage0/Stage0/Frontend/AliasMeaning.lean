@@ -1,6 +1,7 @@
 module
 public import Grammatik.Parser.Elab.Konst.Scopes.AliasMeaning
 public import Stage0.Frontend.Functions
+import Lean.Elab.Tactic.Cbv
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -38,14 +39,16 @@ import all Init.Data.String.ToSlice
 namespace Gabbro.Stage0.Frontend
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 
+attribute [local cbv_eval] strEq_apply_eq_decide
+
 theorem checkAliasMeaning_sound_zeuge :
     AliasMeaning [("Byte", (0, 255)), ("Count", (0, 255))]
       (.typeT [] "Count" [] [] (some (.atom "Byte"))) :=
-  checkAliasMeaning_sound _ _ (by decide +kernel)
+  checkAliasMeaning_sound _ _ (by cbv)
 
 /-- A successful name lookup alone cannot certify a wrong alias range. -/
 theorem checkAliasMeaning_refused_zeuge :
     checkAliasMeaning [("Byte", (0, 255)), ("Count", (0, 100))]
-      (.typeT [] "Count" [] [] (some (.atom "Byte"))) = false := by decide +kernel
+      (.typeT [] "Count" [] [] (some (.atom "Byte"))) = false := by cbv
 
 end Gabbro.Stage0.Frontend
