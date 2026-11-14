@@ -154,4 +154,9 @@ def expandRun : Nat → List String → Nat → List SAnw → Option SEnde →
 termination_by structural fuel => fuel
 end
 
+-- Match the existing visitor discipline: do not normalize a large-fuel callback's
+-- body before its AST argument is supplied. The equations retain every branch.
+attribute [cbv_opaque] expand expandRun
+attribute [cbv_eval] expand.eq_def expandRun.eq_def
+
 end Gabbro.Grammatik.Parser.Uebersetze.FieldNarrowing

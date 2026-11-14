@@ -211,4 +211,9 @@ def uRelBlock (ctx : UCtx) (fs : List (String × String × Int)) (ss : List SAnw
         (acc.1 ++ [stmt], ctx', ss', e')
       else acc) ([], ctx, ss, e)
 
+-- Keep a partially applied large-fuel visitor as a function during closed cbv checks.
+-- Its canonical equation evaluates only the fully supplied statement.
+attribute [cbv_opaque] uRewriteRuntimeReads
+attribute [cbv_eval] uRewriteRuntimeReads.eq_def
+
 end Gabbro.Grammatik.Parser.Uebersetze
